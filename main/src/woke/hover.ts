@@ -64,6 +64,11 @@ export class WokeHoverTracker {
       this.updateListening()
       // A zone can appear or vanish under a mouse that isn't moving.
       if (this.listening && this.mouseX != null) this.update(this.mouseX, this.mouseY)
+      // A reloaded overlay reuses zone ids and starts out thinking the mouse is
+      // elsewhere. The mouse won't enter again, so tell it.
+      for (const zone of converted) {
+        if (zone.inside) this.emit(zone.id, true)
+      }
     })
     // The same zone is somewhere else in screen pixels after a scale change.
     const convertAgain = () => {

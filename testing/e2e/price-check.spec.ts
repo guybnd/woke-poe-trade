@@ -25,6 +25,8 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
+  // Offers arriving later would grow the window between measuring and resizing.
+  await expect(panel).toContainText('Matched: 5')
   const box = async () => (await panel.boundingBox())!
   const page = overlay.page
   const start = await box()
