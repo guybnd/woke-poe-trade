@@ -89,10 +89,19 @@
             <span class="grow" />
             <WButton v-if="!isOwnGroup" size="sm" variant="ghost" @click="toggleGroup">{{ groupHiddenByMe ? 'Show group again' : 'Hide whole group' }}</WButton>
           </div>
-          <button v-for="t in group.tiers" :key="t.tier" class="w-focusable" :class="[$style.tierRow, { [$style.active]: t.tier === selTier, [$style.off]: t.disabled, [$style.dropOk]: dragOver === t.tier }]"
-            @click="selTier = t.tier; picked = []" @contextmenu="tierMenu($event, t)"
+          <StackScale v-if="ladder" :ladder="ladder" :colour-of="stackColour" :name-of="stackTierName" @preview="previewStack" @commit="setStack" />
+          <div v-if="stuckTiers.length" class="text-xs" style="color: var(--w-warn);">{{ stuckTiers.join(', ') }} can't catch anything: a tier above takes those stacks first.</div>
+          <div v-for="t in group.tiers" :key="t.tier" class="w-focusable" role="button" tabindex="0" :class="[$style.tierRow, { [$style.tierRowStack]: hasStacks, [$style.active]: t.tier === selTier, [$style.off]: t.disabled, [$style.dropOk]: dragOver === t.tier }]"
+            @click="selTier = t.tier; picked = []" @contextmenu="tierMenu($event, t)" @keydown.enter.self="selTier = t.tier; picked = []" @keydown.space.self.prevent="selTier = t.tier; picked = []"
             @dragover="onDragOver(t, $event)" @dragleave="dragOver = dragOver === t.tier ? null : dragOver" @drop="onDrop(t, $event)">
             <span :class="$style.tierName" :title="t.tier">{{ tierName(firstLive(t)) }}<span v-if="tierChanged(t.tier)" :class="$style.dot" title="You changed this tier" /></span>
+            <span v-if="hasStacks" :class="$style.stack">
+              <template v-if="tierStack(t) != null && !t.disabled">
+                &ge; <input type="number" min="1" :max="STACK_MAX" :class="$style.stackInput" :value="stackSizeOf(t)" :aria-label="`Stack size for ${stackTierName(t.tier)}`"
+                  @click.stop @input="onStackInput(t, $event)" @change="onStackChange(t, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
+              </template>
+              <span v-else-if="ladder?.floor === t.tier" class="w-faint">smaller</span>
+            </span>
             <span :class="$style.icons" :title="t.bases.slice(0, 3).every(b => baseIcon(b)) ? undefined : t.bases.slice(0, 12).join(' · ')">
               <template v-if="t.bases.length">
                 <template v-for="b in t.bases.slice(0, 3)" :key="b"><img v-if="baseIcon(b)" v-item-tip="baseTip(b)" :src="baseIcon(b)!" :class="$style.rowArt" alt=""></template>
@@ -101,7 +110,7 @@
               <span v-else class="w-faint text-xs w-trunc">{{ conditionSummary(t) }}</span>
             </span>
             <LabelPreview :text="t.bases[0] ?? previewName(t)" :actions="firstLive(t).actions" :visibility="t.disabled ? 'Hide' : t.visibility" style="max-width: 100%; overflow: hidden;" />
-          </button>
+          </div>
         </template>
       </div>
 
@@ -314,6 +323,8 @@ import type { Visibility } from './parse'
 import { tierLabel } from './names'
 import AddItemField from './AddItemField.vue'
 import RuleNav from './RuleNav.vue'
+import StackScale from './StackScale.vue'
+import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, labelCss } from './label-style'
 import type { AddResult } from './groups'
 import { buildTree, byPrice, findBase, groupName, pickBases } from './groups'
@@ -695,10 +706,71 @@ function changedIn (type: string): number {
   return props.config.edits.filter(e => e.type === type).length
 }
 
+// ---- stack sizes ----
+
+// What you're typing or dragging: shown at once, saved when you let go.
+const stackDrafts = ref<Record<string, number>>({})
+watch(selType, () => { stackDrafts.value = {} })
+
+function stackSizeOf (t: TierNode): number | null {
+  const size = tierStack(t)
+  return size == null ? null : stackDrafts.value[t.tier] ?? size
+}
+const hasStacks = computed(() => group.value?.tiers.some(t => !t.disabled && tierStack(t) != null) ?? false)
+const ladder = computed(() => group.value ? stackLadder(group.value.tiers, stackSizeOf) : null)
+const stuckTiers = computed(() => group.value ? unreachableTiers(group.value.tiers, stackSizeOf).map(stackTierName) : [])
+
+function stackTierName (tier: string): string {
+  const t = group.value?.tiers.find(x => x.tier === tier)
+  return t ? tierName(firstLive(t)) : tier
+}
+
+function stackColour (tier: string): string {
+  const t = group.value?.tiers.find(x => x.tier === tier)
+  if (!t) return 'var(--w-panel-2)'
+  const look = readStyle(firstLive(t).actions)
+  // Gold's piles are all on black: their text is what tells them apart.
+  const c = look.background && look.background[0] + look.background[1] + look.background[2] > 120 ? look.background : look.text
+  return c ? `rgb(${c[0]}, ${c[1]}, ${c[2]})` : 'var(--w-panel-2)'
+}
+
+function previewStack (tier: string, size: number) {
+  stackDrafts.value = { ...stackDrafts.value, [tier]: size }
+}
+
+function dropStackDraft (tier: string) {
+  stackDrafts.value = Object.fromEntries(Object.entries(stackDrafts.value).filter(([k]) => k !== tier))
+}
+
+function setStack (tier: string, size: number) {
+  dropStackDraft(tier)
+  const t = group.value?.tiers.find(x => x.tier === tier)
+  if (!t || !selType.value || tierStack(t) === size) return
+  props.store.edit({ kind: 'stack', type: selType.value, tier, size })
+}
+
+function onStackInput (t: TierNode, e: Event) {
+  const size = cleanStackSize((e.target as HTMLInputElement).value)
+  if (size != null) previewStack(t.tier, size)
+}
+
+function onStackChange (t: TierNode, e: Event) {
+  const input = e.target as HTMLInputElement
+  const size = cleanStackSize(input.value)
+  // Left empty: back to what it was.
+  if (size == null) {
+    dropStackDraft(t.tier)
+    input.value = String(tierStack(t) ?? '')
+    return
+  }
+  input.value = String(size)
+  setStack(t.tier, size)
+}
+
 function touchesTier (e: FilterEdit, t: string): boolean {
   switch (e.kind) {
     case 'move': return e.from === t || e.to === t
-    case 'style': case 'visibility': case 'item': return e.tier === t
+    case 'style': case 'visibility': case 'item': case 'stack': return e.tier === t
     default: return false
   }
 }
@@ -940,6 +1012,7 @@ function iconFor (kind: FilterEdit['kind']): string {
     case 'visibility': return 'fas fa-eye'
     case 'group': return 'fas fa-eye-slash'
     case 'item': return 'fas fa-star'
+    case 'stack': return 'fas fa-layer-group'
   }
 }
 
@@ -1027,6 +1100,27 @@ function openFolder () {
   text-align: left;
   cursor: pointer;
 }
+.tierRowStack { grid-template-columns: 4.5rem 5rem 3.5rem minmax(0, 1fr); }
+.stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--w-text-sm);
+  color: var(--w-dim);
+  white-space: nowrap;
+}
+.stackInput {
+  width: 3.6rem;
+  padding: 1px 3px;
+  background: var(--w-panel);
+  color: var(--w-fg);
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.stackInput::-webkit-inner-spin-button { display: none; }
 .tierRow:hover {
   border-color: var(--w-line);
 }
