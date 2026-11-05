@@ -13,8 +13,7 @@
         <div class="flex flex-wrap items-center gap-1">
           <WSegmented v-model="config.range" :options="rangeOptions" />
           <WSegmented v-model="config.unit" :options="unitOptions" />
-          <span v-if="league" class="w-faint text-xs ml-1">{{ league }}</span>
-          <span v-if="config.unit === 'div' && !divineNow" class="text-xs" style="color: var(--w-warn);" title="Sessions saved without a divine rate need today's poe.ninja prices">Waiting for prices</span>
+          <span v-if="config.unit === 'div' && !divineNow" class="text-xs" style="color: var(--w-warn);" title="Sessions saved without a divine rate need today's poe.ninja prices">Waiting for poe.ninja prices.</span>
         </div>
       </template>
 
@@ -24,7 +23,7 @@
         <!-- ===== Strategies (A1) ===== -->
         <template v-else-if="tab === 'strategies'">
           <WEmpty v-if="!rows.length" :art="{ mechanic: 'map' }">
-            Start and end a session in Farming profit, and every map you run shows up here.
+            Maps show here after you end a session in Farming.
           </WEmpty>
           <template v-else>
             <div>
@@ -53,7 +52,7 @@
                 </span>
                 <span class="flex justify-end"><WSpark :values="row.trend" :width="48" :height="16" /></span>
               </button>
-              <div class="text-xs w-faint pt-1">Bar: {{ unitLabel }} per hour. Whisker: the range you can trust (90%), shown after {{ MIN_UNITS_FOR_RANGE }} maps. Overlapping whiskers mean it is too early to tell two strategies apart.</div>
+              <div class="text-xs w-faint pt-1">Bar: {{ unitLabel }} per hour. Whisker: 90% range. <WInfo :text="`Whiskers show after ${MIN_UNITS_FOR_RANGE} maps. Overlapping whiskers mean it is too early to tell two strategies apart.`" /></div>
             </div>
 
             <div v-if="selectedRow" :class="$style.detail">
@@ -113,7 +112,7 @@
               <button v-for="sum in sessionList" :key="sum.s.id" class="w-row px-0 w-full text-left w-focusable" :class="$style.sessGrid" @click="openId = sum.s.id"
                 @contextmenu="sessionMenu($event, sum.s)" @keydown.delete.prevent="deleteSession(sum.s)">
                 <span class="w-trunc w-dim">{{ formatSessionDate(sum.s.startedAt) }}</span>
-                <span class="w-trunc">{{ sum.s.strategy || 'Unnamed' }}<i v-if="sum.s.imported" class="fas fa-box-archive w-faint text-xs ml-1" title="From Farming profit's old history: totals only" /></span>
+                <span class="w-trunc">{{ sum.s.strategy || 'Unnamed' }}<i v-if="sum.s.imported" class="fas fa-box-archive w-faint text-xs ml-1" title="From Farming's old history: totals only" /></span>
                 <span class="text-right w-num">{{ sum.s.maps }}</span>
                 <span class="text-right w-num w-dim">{{ formatDuration(sum.s.durationMs) }}</span>
                 <span class="text-right w-num" :class="(sum.profit ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ maybe(sum.profit, true) }}</span>
@@ -136,7 +135,7 @@
               <span class="w-num flex-none" :class="(openSummary!.profit ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ maybe(openSummary!.profit, true) }}<span class="w-dim"> · {{ maybe(openSummary!.perHour) }}/h</span></span>
             </div>
 
-            <div v-if="openSession.imported" class="text-xs w-dim">This session came from Farming profit's old history, so it has totals but no maps.</div>
+            <div v-if="openSession.imported" class="text-xs w-dim">This session came from Farming's old history, so it has totals but no maps.</div>
             <div v-else-if="!openSession.runs.length" class="text-xs w-dim">No maps were recorded one by one (maps added by hand or before this update).</div>
 
             <div v-if="openSession.runs.length">
@@ -179,7 +178,7 @@
               </datalist>
               <WButton size="sm" :disabled="renameTo.trim() === openSession.strategy" @click="rename">Rename</WButton>
               <span class="grow" />
-              <WButton size="sm" variant="ghost" icon="fas fa-trash" title="Undo in the note" @click="deleteSession(openSession)">Delete</WButton>
+              <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="deleteSession(openSession)">Delete</WButton>
             </div>
           </template>
         </template>
@@ -228,7 +227,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { formatDuration } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'

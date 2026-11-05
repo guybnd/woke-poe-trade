@@ -37,7 +37,7 @@ test('Lab gems: Skip thin takes thin gems out of the list, EV and specific picks
   await expect(w).not.toContainText('Dominating Blow of Inspiring')
   await expect(w).toContainText('Summon Stone Golem of Safeguarding')
   await expect(redPool).toContainText('1 thin left out')
-  await expect(w).toContainText('unpriced and thin gems count as 0')
+  await expect(w.locator('i[aria-label*="Unpriced and thin gems count as 0"]')).toHaveCount(1)
   expect(await redEv.innerText()).not.toEqual(evBefore)
   await overlay.snap('lab gems, thin gems skipped')
 

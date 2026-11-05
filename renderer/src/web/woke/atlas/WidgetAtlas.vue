@@ -13,7 +13,7 @@
             <span class="w-accent">{{ formatChaos(scarabCost, prices.snapshot.value?.divine ?? null) }}</span></div>
           <div v-if="selected.device.trim()" class="w-dim text-xs whitespace-pre-wrap">{{ selected.device.trim() }}</div>
           <div v-if="selected.regex" class="flex items-center gap-1 text-xs">
-            <span class="w-dim">Map regex</span>
+            <span class="w-dim">Map mods</span>
             <code class="w-trunc" style="font-family: var(--w-num);">{{ selected.regex }}</code>
             <button class="w-icon-btn" title="Copy" @click="copy(selected.regex)"><i :class="copied === selected.regex ? 'fas fa-check' : 'far fa-copy'" /></button>
             <button class="w-icon-btn" title="Save to the Regex library"
@@ -26,7 +26,7 @@
       <WPanel ref="panel" :title="config.wmTitle || 'Atlas strategies'" icon="map" width="17rem"
         :updated="prices.snapshot.value?.ts ?? null" :fresh-min="60" :stale-min="360">
         <template #actions>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': sortByProfit }" title="Best earning first (from Farming profit history)"
+          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': sortByProfit }" title="Best earning first (from Farming history)"
             @click="sortByProfit = !sortByProfit"><i class="fas fa-sort-amount-down" /></button>
           <button class="w-icon-btn" :class="{ 'w-icon-btn--on': pasteOpen }" title="Paste a strategy from a guide"
             @click="pasteOpen = !pasteOpen"><i class="fas fa-paste" /></button>
@@ -87,7 +87,7 @@
             </template>
             <div v-else class="whitespace-pre-wrap">{{ selected.scarabs }}</div>
             <WButton v-if="farmingWidget && pricedScarabs.some(p => p.item)" size="sm" class="mt-1" @click="useInFarming">
-              {{ usedInFarming ? 'Set in Farming profit' : 'Use in Farming profit' }}
+              {{ usedInFarming ? 'Set in Farming' : 'Use in Farming' }}
             </WButton>
           </div>
           <div v-if="earnings.get(selected.name)" class="w-dim text-xs">
@@ -219,7 +219,7 @@ const prices = usePriceIndex()
 
 function fmt (chaos: number) { return formatChaos(chaos, prices.snapshot.value?.divine ?? null) }
 
-// Results per strategy name from every Farming profit widget's history.
+// Results per strategy name from every Farming widget's history.
 const farmingWidget = computed(() => AppConfig<FarmingWidget>(FARMING_TYPE))
 const earnings = computed(() => {
   const history = AppConfig().widgets
@@ -251,7 +251,7 @@ const scarabCost = computed(() => pricedScarabs.value.some(p => p.item)
   ? pricedScarabs.value.reduce((sum, p) => sum + (p.item ? p.item.chaos * p.qty : 0), 0)
   : null)
 
-// Puts this strategy's name and priced scarabs into Farming profit; other
+// Puts this strategy's name and priced scarabs into Farming; other
 // (non-scarab) map costs there are kept.
 function useInFarming () {
   const farm = farmingWidget.value

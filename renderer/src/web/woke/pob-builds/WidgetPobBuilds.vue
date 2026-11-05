@@ -18,7 +18,7 @@
           <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, class, skill, folder…" class="grow" />
         </template>
         <template v-if="error" #banner>
-          <WBanner>Couldn't read the builds folder: {{ error }}<template #actions><WButton size="sm" @click="refresh">Retry</WButton></template></WBanner>
+          <WBanner><span :title="error">{{ errorText }}</span><template #actions><WButton size="sm" @click="refresh">Retry</WButton></template></WBanner>
         </template>
         <template v-if="importMsg" #meta>
           <span :class="importOk ? 'w-up' : 'w-down'">{{ importMsg }}</span>
@@ -39,7 +39,7 @@
           </template>
         </WListItem>
         <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
-          Nothing matches "{{ filter }}". Search looks at names, classes, skills and folders.
+          Nothing matches "{{ filter }}".
           <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
         </WEmpty>
         <WEmpty v-else-if="!loading && !shown.length && !error" icon="fas fa-folder-open">
@@ -106,6 +106,10 @@ const builds = shallowRef<PobBuildEntry[]>([])
 const dir = shallowRef('')
 const loading = shallowRef(false)
 const error = shallowRef('')
+// A missing folder is a setting to fix, so it does not need the system's error text.
+const errorText = computed(() => error.value.includes('ENOENT')
+  ? 'No builds folder found. Set it in Settings.'
+  : `Couldn't read the builds folder: ${error.value}`)
 const filter = shallowRef('')
 const selected = shallowRef<string | null>(null)
 const details = shallowRef<PobDetails | null>(null)

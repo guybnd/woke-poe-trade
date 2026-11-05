@@ -1,7 +1,7 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- First two weeks of a league, in town and hideout: today's best buys. -->
-    <DockItem :menu="dockMenu" id="league-invest" title="League start buys" :show="dockShow"
+    <DockItem :menu="dockMenu" id="league-invest" title="League investments" :show="dockShow"
       :badge="day != null ? `D${day}` : null" :wm-id="config.wmId" card-width="21rem">
       <template #card>
         <div style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-0.5">
@@ -17,10 +17,6 @@
     </DockItem>
     <WPanel ref="panel" :title="config.wmTitle || 'League investments'" icon="divine" width="36rem" max-height="80vh"
       :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180">
-      <template #actions>
-        <WChip clickable :active="showChanged" title="Items a patch changed this league" @click="showChanged = !showChanged"><i class="fas fa-exclamation-triangle" /> Changed {{ changed.length }}</WChip>
-        <WChip clickable :active="showData" @click="showData = !showData"><i class="fas fa-database" /> Past leagues {{ histories.length }}</WChip>
-      </template>
       <template #toolbar>
         <WField v-model="config.budgetDiv" type="number" suffix="div budget" style="width: 8.5rem;" />
         <WField v-model="config.slots" type="number" suffix="items" style="width: 6rem;" />
@@ -29,28 +25,19 @@
           @update:model-value="config.horizon = Number($event)" />
         <WChip clickable :active="config.bulkOnly" title="Only items sold in bulk at one price (currency, fragments, scarabs, cards…)"
           @click="config.bulkOnly = !config.bulkOnly">Bulk only</WChip>
+        <WInfo class="ml-auto" text="Past patterns break when a patch changes drops. Prices are poe.ninja listings, not sales." />
       </template>
       <template #meta>
-        <span>{{ league || 'No league selected' }}</span><span class="w-faint">·</span>
+        <span v-if="!league">No league selected</span>
         <span class="inline-flex items-center gap-1">day
           <input :value="day ?? ''" type="number" min="0" :class="$style.dayInput"
             title="League day (0 = launch day). Clear to use the start date." @change="onDayInput"></span>
         <span v-if="config.dayOverride == null && start" class="w-faint">started {{ start }}</span>
         <span v-else-if="config.dayOverride == null" style="color: var(--w-warn);">start date unknown, enter the day</span>
         <button v-else class="w-accent hover:underline" @click="config.dayOverride = null">use start date</button>
-        <template v-if="snapshot?.divine"><span class="w-faint">·</span><span class="inline-flex items-center gap-1"><WIcon currency="divine" title="Divine Orb" /> = {{ Math.round(snapshot.divine) }}c</span></template>
       </template>
 
-      <div v-if="showChanged" :class="$style.data">
-        <div class="w-dim pb-1">
-          Items a patch changed this league (drop rates, crafting use, new sources). Their past-league history is unreliable.
-          One per line; part of a name works too (e.g. "Scarab of", "Delirium Orb"). Lines starting with # are ignored.
-        </div>
-        <textarea :value="config.changedItems ?? ''" rows="5" :class="$style.textarea" placeholder="# 3.xx changes&#10;Scarab of"
-          @change="config.changedItems = ($event.target as HTMLTextAreaElement).value" />
-        <label class="flex items-center gap-2 pt-1 w-dim"><input v-model="config.hideChanged" type="checkbox"> Hide changed items instead of flagging them</label>
-      </div>
-      <div v-if="showData || !histories.length" :class="$style.data">
+      <div v-if="historiesLoaded && !histories.length" :class="$style.data">
         <div class="w-dim pb-2">
           Import poe.ninja league dumps from
           <a href="https://poe.ninja/poe1/data" target="_blank" class="w-accent hover:underline">poe.ninja/poe1/data</a>
@@ -63,12 +50,6 @@
           </WButton>
           <span v-if="importMsg" class="text-xs" :class="importError ? 'w-down' : 'w-dim'">{{ importMsg }}</span>
           <input ref="fileInput" type="file" multiple accept=".zip,.csv" class="hidden" @change="onFiles">
-        </div>
-        <div v-for="h in histories" :key="h.league" class="w-row px-0" style="grid-template-columns: minmax(0, 1fr) auto 22px;">
-          <span class="w-trunc">{{ h.league }}</span>
-          <span class="w-faint text-xs">from {{ h.start }} · {{ h.days }} days · {{ h.items.length }} items</span>
-          <span v-if="!h.imported" class="w-faint text-xs" title="Ships with the app">built in</span>
-          <button v-else class="w-icon-btn" title="Remove (Undo in the note)" @click="remove(h)"><i class="fas fa-times" /></button>
         </div>
       </div>
 
@@ -111,9 +92,6 @@
         </div>
       </template>
 
-      <template #footer>
-        <span>Past patterns break when a patch changes drops. Prices are poe.ninja listings, not sales.</span>
-      </template>
     </WPanel>
   </Widget>
 </template>
@@ -136,7 +114,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WSegmented, WChip, WButton, WPrice, WEmpty, WIcon, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WField, WSegmented, WChip, WButton, WPrice, WEmpty, WIcon, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { ninjaIcon } from '../ui/game-icons'
 import { useLeagues } from '@/web/background/Leagues'
@@ -145,13 +123,10 @@ import { latestSnapshots } from '../market/db'
 import { formatAmount, formatChaos } from '../ui/format'
 import { isThin, itemKey } from '../market/types'
 import type { Snapshot } from '../market/types'
-import { DumpImporter, importLeagues } from './dumps'
-import type { LeagueHistory } from './dumps'
 import { THIN_RELIABILITY, opportunityKey, planBudget, rankOpportunities } from './invest'
 import type { Opportunity } from './invest'
-import { allLeagues, deleteLeague, saveLeague } from './store'
+import { histories, historiesLoaded, importError, importMsg, importing, onFiles, reloadHistories } from './league-data'
 import { leagueDay, leagueStartDates } from './league-start'
-import { readZip } from './zip'
 import DockItem from '../dock/DockItem.vue'
 import { dockIconEl, saveDock } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
@@ -184,20 +159,10 @@ const collector = useMarketCollector({ poll: true })
 const leagues = useLeagues()
 const league = computed(() => leagues.selectedId.value)
 
-const histories = shallowRef<LeagueHistory[]>([])
 const snapshot = shallowRef<Snapshot | null>(null)
 const apiStart = shallowRef<string | null>(null)
-const showData = shallowRef(false)
-const importing = shallowRef(false)
-const importMsg = shallowRef('')
-const importError = shallowRef(false)
 const fileInput = shallowRef<HTMLInputElement | null>(null)
 
-const historiesLoaded = shallowRef(false)
-async function reloadHistories () {
-  try { histories.value = await allLeagues() } catch { histories.value = [] }
-  historiesLoaded.value = true
-}
 reloadHistories()
 
 // A slow read for the previous league must not land after a newer one.
@@ -286,7 +251,6 @@ const ranked = computed(() => {
 })
 
 const rows = computed(() => ranked.value.slice(0, 60))
-const showChanged = shallowRef(false)
 const changed = computed(() => changedMatchers(props.config.changedItems))
 
 // Past leagues disagree: it fell in one and rose well in another.
@@ -324,57 +288,7 @@ const note = computed(() => {
   return ''
 })
 
-async function onFiles (e: Event) {
-  const input = e.target as HTMLInputElement
-  const files = Array.from(input.files ?? [])
-  input.value = ''
-  if (!files.length) return
-  importing.value = true
-  importError.value = false
-  importMsg.value = 'Reading files…'
-  try {
-    const importer = new DumpImporter()
-    for (const file of files) {
-      if (file.name.toLowerCase().endsWith('.zip')) {
-        for (const entry of readZip(await file.arrayBuffer())) {
-          if (isWantedCsv(entry.name)) importer.addCsv(await entry.text())
-        }
-      } else if (isWantedCsv(file.name)) {
-        importer.addCsv(await file.text())
-      }
-    }
-    const names = importer.leagues()
-    if (!names.length) throw new Error('No challenge league data found in these files.')
-    const { imported, failed } = await importLeagues(importer, saveLeague, (name) => { importMsg.value = `Processing ${name}…` })
-    importError.value = failed.length > 0
-    importMsg.value = [imported.length ? `Imported ${imported.join(', ')}.` : '', ...failed].filter(Boolean).join(' ')
-    await reloadHistories()
-  } catch (err) {
-    importError.value = true
-    importMsg.value = (err as Error).message
-  } finally {
-    importing.value = false
-  }
-}
-
-// Skip permanent, hardcore, Ruthless and SSF variants of a league.
-function isWantedCsv (path: string): boolean {
-  const name = path.split('/').pop() ?? path
-  if (!/\.(items|currency)\.csv$/i.test(name)) return false
-  return !/^(Standard|Hardcore|HC |Ruthless|SSF)/i.test(name)
-}
-
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-
-// No "are you sure": remove now, offer Undo (P9).
-async function remove (h: LeagueHistory) {
-  await deleteLeague(h.league)
-  await reloadHistories()
-  toast(`Removed ${h.league}`, {
-    anchor: panel.value?.el,
-    undo: () => { saveLeague(h).then(reloadHistories).catch(() => {}) }
-  })
-}
 
 function art (o: Opportunity) {
   return ninjaIcon(o.type, o.name) ?? undefined
@@ -415,7 +329,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
     const before = props.config.doneLeague
     props.config.doneLeague = league.value ?? undefined
     saveDock()
-    toast('League start buys won\'t show again this league', {
+    toast('League investments won\'t show again this league', {
       anchor: el,
       dock: true,
       undo: () => { props.config.doneLeague = before; saveDock() }

@@ -11,6 +11,10 @@
       <div class="flex items-center gap-2 w-full">
         <WTabs v-model="mode" :options="modeOptions" />
         <span class="flex-1" />
+        <WChip clickable :active="tabOptions.autoTrim" @click="setSearchOption(profile, mode, { autoTrim: !tabOptions.autoTrim })"
+          title="When the search is too long, leave out wanted mods first, then avoided mods that aren't in a Quick preset, longest first">
+          <i class="fas fa-cut" /> Auto-trim to fit
+        </WChip>
         <WToggle v-if="mode === 'maps'" :model-value="!profile.hideT17" @update:model-value="profile.hideT17 = !$event">Include T17 mods</WToggle>
       </div>
       <div :class="$style.regexBar">
@@ -21,11 +25,7 @@
         <WButton size="sm" variant="ghost" icon="far fa-bookmark" :disabled="!regex.text" @click="saveToLibrary" title="Keep this search in the Regex library">Save</WButton>
       </div>
       <div v-if="mode !== 'maps'" class="w-dim text-xs w-full">{{ MODE_HINT[mode] }}</div>
-      <div class="flex items-center gap-2 w-full text-xs">
-        <WChip clickable :active="tabOptions.autoTrim" @click="setSearchOption(profile, mode, { autoTrim: !tabOptions.autoTrim })"
-          title="When the search is too long, leave out wanted mods first, then avoided mods that aren't in a Quick preset, longest first">
-          <i class="fas fa-cut" /> Auto-trim to fit
-        </WChip>
+      <div v-if="regex.tooLong || regex.dropped.length" class="flex items-center gap-2 w-full text-xs">
         <span v-if="regex.tooLong" class="w-down">
           Too long by {{ regex.length - MAX_SEARCH_LENGTH }}. Biggest: {{ costliest }}
         </span>
@@ -35,8 +35,12 @@
       </div>
       <div v-if="t17Kept" class="w-warn text-xs w-full">T17 picks are kept but left out of the search. Checking a T17 map still flags them.</div>
       <div v-if="regex.missing.length" class="w-warn text-xs w-full">No unique text found for: {{ regex.missing.join(', ') }}</div>
-      <div v-if="mode === 'maps'" class="flex flex-wrap gap-1 w-full">
-        <span class="w-dim text-xs self-center mr-1">Quick:</span>
+      <button v-if="mode === 'maps'" type="button" :class="$style.fold" :aria-expanded="quickOpen" @click="quickOpen = !quickOpen">
+        <span class="w-dim">Quick presets</span>
+        <span v-if="presetsOn" class="w-accent w-num">{{ presetsOn }} on</span>
+        <i class="fas w-dim" :class="quickOpen ? 'fa-chevron-up' : 'fa-chevron-down'" />
+      </button>
+      <div v-if="mode === 'maps' && quickOpen" class="flex flex-wrap gap-1 w-full">
         <button v-for="p in presets" :key="p.preset.id" type="button"
           :class="[$style.preset, $style[p.rating]]" @click="cyclePreset(p.preset, p.rating)"
           :title="'Click: careful → can\'t run → off'">{{ p.preset.label }}</button>
@@ -64,18 +68,25 @@
     <WEmpty v-if="!visible.length" icon="fas fa-search">No mods match.</WEmpty>
     <div v-if="hiddenCount" class="w-dim text-xs p-2 text-center">{{ hiddenCount }} more. Search to narrow the list.</div>
     <template v-if="mode === 'maps'" #footer>
-      <div class="flex items-center gap-2 text-xs w-full">
+      <div class="flex flex-col gap-2 w-full">
+      <button type="button" :class="$style.fold" :aria-expanded="minsOpen" @click="minsOpen = !minsOpen">
+        <span class="w-dim">Minimums</span>
+        <span class="w-num" :class="minsSet ? 'w-accent' : 'w-dim'">{{ minsSet ? `${minsSet} set` : 'none set' }}</span>
+        <i class="fas w-dim" :class="minsOpen ? 'fa-chevron-down' : 'fa-chevron-up'" />
+      </button>
+      <div v-if="minsOpen" class="flex items-center gap-2 text-xs w-full">
         <span class="w-dim">A map needs</span>
         <WSegmented :model-value="profile.minsAny ? 'any' : 'all'" :options="MINS_MODE_OPTIONS"
           @update:model-value="profile.minsAny = $event === 'any'" />
         <span class="w-dim">of these minimums</span>
       </div>
-      <div :class="$style.mins">
+      <div v-if="minsOpen" :class="$style.mins">
         <label v-for="key in MIN_KEYS" :key="key" class="flex flex-col gap-1">
           <span class="w-dim">Min {{ MIN_LABELS[key].toLowerCase() }}</span>
           <WField type="number" :model-value="profile.mins[key] ?? ''" placeholder="any" suffix="%"
             @update:model-value="setMin(key, $event)" />
         </label>
+      </div>
       </div>
     </template>
   </WPanel>
@@ -124,6 +135,10 @@ const HEAD_LABEL: Record<ModRating, string> = { deadly: 'Avoid', warn: 'Careful'
 
 const profile = computed(() => activeProfile(props.config))
 const profileOptions = computed(() => props.config.profiles.map(p => ({ value: String(p.id), label: p.name || 'Unnamed' })))
+const quickOpen = shallowRef(false)
+const minsOpen = shallowRef(false)
+const presetsOn = computed(() => presets.value.filter(p => p.rating !== 'ok').length)
+const minsSet = computed(() => MIN_KEYS.filter(k => (profile.value.mins[k] ?? 0) > 0).length)
 const presets = computed(() => PRESETS
   .filter(preset => !(profile.value.hideT17 && preset.id === 't17-killers'))
   .map(preset => ({ preset, rating: presetRating(profile.value, preset) })))
@@ -311,6 +326,13 @@ function paste () {
   border-radius: var(--w-r-sm);
   color: var(--w-warn);
   border: 1px solid color-mix(in srgb, var(--w-warn) 45%, transparent);
+}
+.fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--w-fs-sm);
+  cursor: pointer;
 }
 .mins {
   display: grid;

@@ -2,7 +2,7 @@
   <div class="max-w-xl p-2 flex flex-col gap-3">
     <input class="w-input rounded px-1 w-48" placeholder="Widget title" v-model="title" />
     <div class="w-dim text-sm">
-      The timer reads Client.txt, so set its path in APT's general settings. A run splits when you first enter
+      The timer reads Client.txt, so set its path in Settings. A run splits when you first enter
       each new act and finishes when you reach the Epilogue after Kitava. Use the strip's buttons (with the overlay
       active) to start, pause or end a run by hand.
     </div>
@@ -21,7 +21,7 @@
         placeholder="Only follow this character's level-ups">
     </label>
     <div class="flex items-center gap-2">
-      <span class="w-dim">{{ configWidget.history.length }} saved run(s)</span>
+      <span class="w-dim">{{ configWidget.history.length }} saved {{ configWidget.history.length === 1 ? 'run' : 'runs' }}</span>
       <button class="btn" :disabled="!configWidget.history.length" @click="confirmClear = true" v-if="!confirmClear">Clear past runs</button>
       <template v-else>
         <span>Delete every saved run, including your PB?</span>
@@ -41,7 +41,7 @@ import { migrateRunTimer } from './run-timer'
 import type { RunTimerWidget } from './run-timer'
 
 export default defineComponent({
-  name: 'Campaign run timer',
+  name: 'Run timer',
   components: { WToggle, WHotkeyCell },
   props: configProp<RunTimerWidget>(),
   setup (props) {

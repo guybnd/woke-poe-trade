@@ -6,7 +6,6 @@
       pinnable card-width="24rem" @open-change="cardShown = $event">
       <template #card>
         <div :class="$style.body">
-          <button class="w-icon-btn" :class="[$style.textBtn, $style.pinBtn]" title="Choose what stays on screen" @click="openSettings"><i class="fas fa-thumbtack text-xs" /> Pin to screen</button>
           <div class="flex items-baseline gap-2">
             <span class="w-head-font w-accent w-trunc" :title="s.charName ? `Following ${s.charName}'s level-ups` : undefined">{{ s.zone || 'Waiting for a zone change' }}</span>
             <span v-if="s.level != null" class="ml-auto w-num whitespace-nowrap" :title="xpTitle">Lv {{ s.level }}
@@ -24,7 +23,7 @@
               <div v-for="(sub, j) in (i === 0 ? st.subs : [])" :key="j" :class="$style.sub" class="w-dim"><RouteParts :parts="sub" /></div>
             </div>
           </template>
-          <div v-else class="w-dim">Route finished. Good luck in maps.</div>
+          <div v-else class="w-dim">Route finished.</div>
           <div v-if="note" :class="$style.callout" class="whitespace-pre-wrap">{{ note }}</div>
           <div v-if="timer" class="flex gap-2 w-num" :class="$style.build">
             <span class="w-dim">Run</span> {{ formatClock(timer.total) }}
@@ -58,7 +57,7 @@ export default {
   widget: {
     type: CAMPAIGN_TYPE,
     instances: 'multi',
-    trNameKey: 'Campaign tracker'
+    trNameKey: 'Campaign'
   } satisfies WidgetSpec
 }
 </script>
@@ -100,7 +99,7 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
-  props.config.wmTitle = 'Campaign tracker'
+  props.config.wmTitle = 'Campaign'
   props.config.anchor = { pos: 'tc', x: 50, y: 1 }
   props.config.charName = ''
   props.config.actNotes = {}
@@ -430,7 +429,6 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   overflow: hidden;
 }
 .prog i { display: block; height: 100%; background: var(--w-accent); }
-.pinBtn { align-self: flex-end; margin-bottom: 2px; }
 .textBtn { width: auto; padding: 0 6px; gap: 4px; font-size: var(--w-fs-sm); }
 .body {
   display: flex;

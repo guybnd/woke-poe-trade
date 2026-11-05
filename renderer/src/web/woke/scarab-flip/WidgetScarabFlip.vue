@@ -1,5 +1,5 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- The best flip on hover, so a quick check doesn't open the panel. -->
     <DockItem :menu="dockMenu" id="scarab-flip" title="Flips" :show="dockShow" :wm-id="config.wmId">
       <template #card>
@@ -21,20 +21,9 @@
           @update:model-value="pickMethod($event)" />
         <WSegmented v-if="views.length > 1" :model-value="view" :options="views"
           @update:model-value="pickView($event)" />
-        <WSelect :model-value="String(config.sellDiscount)" title="What you lose selling results below the listed price"
-          :options="[0, 5, 10, 20].map(n => ({ value: String(n), label: `Sell discount ${n}%` }))"
-          @update:model-value="config.sellDiscount = Number($event)" />
-        <WChip v-if="method.id !== 'upgrade'" clickable :active="config.reroll" title="Flip results again when that is worth more than selling them"
-          @click="config.reroll = !config.reroll"><i class="fas fa-recycle" /> Reroll cheap results</WChip>
-        <WChip v-if="view === 'buy'" clickable :active="config.hideUntraded" :title="`Hide items with under ${UNTRADED_CHAOS}c traded a day: their price means little`"
-          @click="config.hideUntraded = !config.hideUntraded">Hide untraded</WChip>
       </template>
-      <template #meta>
-        <template v-if="flip">
-          <span>{{ snapshot?.league }}</span><span class="w-faint">·</span>
-          <span class="w-num">{{ family.label }}: {{ method.label.toLowerCase() }}</span>
-        </template>
-        <span v-else-if="!snapshot">Waiting for poe.ninja prices…</span>
+      <template v-if="!snapshot" #meta>
+        <span>Waiting for poe.ninja prices.</span>
       </template>
 
       <div v-if="flip?.kind === 'pool' || flip?.kind === 'upgrade'" :class="$style.verdict" class="w-num">
@@ -117,7 +106,7 @@
       </template>
 
       <template #footer>
-        <span :title="footerTitle">{{ footerText }}</span>
+        <span>{{ footerText }}</span> <WInfo :text="footerTitle" />
       </template>
     </WPanel>
   </Widget>
@@ -143,7 +132,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { Host } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
-import { WPanel, WTabs, WSegmented, WSelect, WChip, WPrice, WEmpty, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WPrice, WEmpty, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { formatAmount, formatChaos } from '../ui/format'
 import { gameIcon, moduleIcon } from '../ui/game-icons'
@@ -154,7 +143,7 @@ import DockItem from '../dock/DockItem.vue'
 import { dockIconEl } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
-import { UNTRADED_CHAOS, JACKPOT_CHAOS, buyList, flipOdds, parseExchange, rareCheapList } from './calc'
+import { JACKPOT_CHAOS, buyList, flipOdds, parseExchange, rareCheapList } from './calc'
 import type { FlipRow, UpgradeRow } from './calc'
 import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, shortName, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
@@ -327,7 +316,8 @@ const feedNote = computed(() => {
 
 const footerText = computed(() => {
   const left = pool.value?.unrated.length
-  return left ? `${family.value.source} ${left} with no weight left out.` : family.value.source
+  const short = family.value.source.split('. ')[0].replace(/\.$/, '') + '.'
+  return left ? `${short} ${left} with no weight left out.` : short
 })
 
 const footerTitle = computed(() => {

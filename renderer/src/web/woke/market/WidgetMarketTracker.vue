@@ -1,7 +1,7 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- Town and hideout, while a watched item is past one of your alerts. -->
-    <DockItem :menu="dockMenu" :wake="unseenAlerts" id="market" title="Market alerts" :show="dockShow" :badge="unseenAlerts || null"
+    <DockItem :menu="dockMenu" :wake="unseenAlerts" id="market" title="Market" :show="dockShow" :badge="unseenAlerts || null"
       tone="down" :wm-id="config.wmId" card-width="20rem" @open-change="onCard">
       <template #card>
         <div style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-0.5">
@@ -15,9 +15,9 @@
         </div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'Market tracker'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
+    <WPanel ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
       <template v-if="collector.lastError.value" #banner>
-        <WBanner>Couldn't save the latest prices ({{ collector.lastError.value }}). Showing the last saved snapshot; it retries on the next refresh.</WBanner>
+        <WBanner>Could not save the latest prices ({{ collector.lastError.value }}). This shows the last saved prices and tries again at the next refresh.</WBanner>
       </template>
       <template #tabs>
         <WTabs v-model="config.view" :options="[
@@ -33,32 +33,21 @@
             { value: '6h', label: '6h' }, { value: '24h', label: '24h' }, { value: '7d', label: '7d' }
           ]" />
           <WSelect v-if="!searching" v-model="config.typeFilter" :options="typeOptions" style="max-width: 11rem;" />
-          <WField v-if="!searching" v-model="config.minChaos" type="number" suffix="c min" style="width: 7rem;" />
           <WSegmented v-model="unit" title="Measure moves in chaos or in divines" :options="[
             { value: 'chaos', label: 'c' }, { value: 'div', label: 'div' }
           ]" />
           <WCorruptedFilter v-model="corrupted" />
-          <WChip v-if="!searching" clickable :active="!!config.showThin" title="Include items poe.ninja barely saw trade on (easy to price-fix)"
-            @click="config.showThin = !config.showThin">Thin</WChip>
         </template>
       </template>
 
-      <template #meta>
+      <template v-if="(searching && latest) || !latest || (config.view === 'movers' && !searching && divMove != null)" #meta>
         <template v-if="searching && latest">
           <span>{{ searchCount }} {{ searchCount === 1 ? 'price' : 'prices' }} for "{{ query.trim() }}"<template v-if="searchGroups.length >= PRICE_GROUP_LIMIT">, first {{ PRICE_GROUP_LIMIT }} items only</template></span><span class="w-faint">·</span>
-          <span>Category, c min and Thin don't apply to a search</span>
+          <span>Category and the Settings filters don't apply to a search</span>
         </template>
-        <template v-else-if="latest">
-          <span>{{ latest.league }}</span><span class="w-faint">·</span>
-          <span>{{ latest.items.length }} items</span>
-          <template v-if="latest.divine"><span class="w-faint">·</span>
-            <span class="inline-flex items-center gap-1"><WIcon currency="divine" /> = {{ Math.round(latest.divine) }}<WIcon currency="chaos" /></span>
-          </template>
-        </template>
-        <span v-else-if="league">Waiting for the first poe.ninja snapshot for {{ league }} (refreshes about every 30 min)…</span>
-        <span v-else>Select a league in APT's price check settings to start collecting.</span>
+        <span v-else-if="!latest && league">Waiting for poe.ninja prices.</span>
+        <span v-else-if="!latest">Select a league in Settings.</span>
         <template v-if="config.view === 'movers' && !searching && divMove != null">
-          <span class="w-faint">·</span>
           <span :title="unit === 'chaos' ? 'Moves below include this divine swing. Switch to div to remove it.' : 'Moves below are measured in divines.'">
             divine {{ divMove >= 0 ? '+' : '' }}{{ (divMove * 100).toFixed(1) }}% over {{ config.period }}</span>
         </template>
@@ -138,10 +127,6 @@
         </div>
       </template>
 
-      <template #footer>
-        <span>Prices from poe.ninja</span>
-        <span class="ml-auto w-faint">Right-click a row for actions</span>
-      </template>
     </WPanel>
   </Widget>
 </template>
@@ -155,7 +140,7 @@ export default {
   widget: {
     type: MARKET_TRACKER_TYPE,
     instances: 'multi',
-    trNameKey: 'Market tracker'
+    trNameKey: 'Market'
   } satisfies WidgetSpec
 }
 </script>
@@ -171,7 +156,7 @@ import { dailyHistory, dailyRowsForDate, latestSnapshots, snapshotAtOrBefore } f
 import { computeMovers, trendBaseline } from './analysis'
 import { PRICE_GROUP_LIMIT, groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
-import { WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WChip, WIcon, WKbd, WSkeleton, WBanner, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import { WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import type { Mover } from './analysis'
 import { isThin, itemKey, thinTitle, utcDate } from './types'
@@ -190,7 +175,7 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
-  props.config.wmTitle = 'Market tracker'
+  props.config.wmTitle = 'Market'
   props.config.anchor = popupAnchor()
   props.config.view = 'movers'
   props.config.period = '24h'

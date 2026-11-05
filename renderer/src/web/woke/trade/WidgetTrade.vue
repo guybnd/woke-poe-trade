@@ -14,7 +14,7 @@
           @toggle="toggleHistory" @reopen="reopenOffer" />
         <div v-if="!tipClosed('trade-step-key')" class="w-faint text-xs" :class="$style.hint" data-tip="trade-step-key">
           <span v-if="config.stepHotkey"><WKbd :keys="config.stepHotkey" /> next step for the top offer</span>
-          <span v-else>A "next step" key answers without the mouse. <button type="button" :class="$style.hintLink" data-open-settings @click="openSettingsPage(wm, 'Trade assistant')">Set it in Settings</button></span>
+          <span v-else>A "next step" key answers without the mouse. <button type="button" :class="$style.hintLink" data-open-settings @click="openSettingsPage(wm, 'Trades')">Set it in Settings</button></span>
           <button type="button" :class="$style.hintClose" title="Don't show this again" aria-label="Don't show this again" @click="closeTip('trade-step-key')"><i class="fas fa-times" /></button>
         </div>
       </template>
@@ -79,7 +79,7 @@ export default {
   widget: {
     type: TRADE_TYPE,
     instances: 'multi',
-    trNameKey: 'Trade assistant'
+    trNameKey: 'Trades'
   } satisfies WidgetSpec
 }
 </script>
@@ -386,7 +386,7 @@ function reply (o: Offer, id: ReplyId) {
   if (Date.now() - lastSentAt < MIN_GAP_MS) return
   const text = replyText(props.config.replies ?? DEFAULT_REPLIES, o, id)
   if (!text) {
-    toast('That reply has no text. Set it in Settings → Trade assistant.', { anchor: panel.value?.$el })
+    toast('That reply has no text. Set it in Settings → Trades.', { anchor: panel.value?.$el })
     return
   }
   lastSentAt = Date.now()

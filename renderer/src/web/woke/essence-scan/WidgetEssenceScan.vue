@@ -30,13 +30,13 @@
         <WPrice :chaos="e.rated.totalChaos || null" :divine="divine" />
       </div>
       <WEmpty v-if="!entries.length" :art="{ mechanic: 'essence' }">
-        <template v-if="running">Hover an essence monolith. Its essences get priced, and ones holding {{ flagText }} say CORRUPT.</template>
+        <template v-if="running">Hover a monolith to price it. CORRUPT marks one with {{ flagText }}.</template>
         <template v-else-if="config.hotkey">Press <WKbd :keys="config.hotkey" /> in game to start scanning.</template>
         <template v-else>Start scanning, then hover essence monoliths.</template>
       </WEmpty>
       <template #footer>
         <span class="flex-1 w-trunc">{{ entries.length }} read · flag {{ flagText }}</span>
-        <button v-if="entries.length" type="button" class="w-icon-btn" title="Clear (Undo in the note)" @click="clear"><i class="fas fa-eraser" /></button>
+        <button v-if="entries.length" type="button" class="w-icon-btn" title="Clear. You can undo." @click="clear"><i class="fas fa-eraser" /></button>
       </template>
     </WPanel>
     <Teleport to="body">
@@ -63,7 +63,7 @@
               <WPrice :chaos="sp.chaos" :divine="divine" />
             </div>
           </template>
-          <div v-if="!hasPrices" class="w-faint" style="font-size: var(--w-fs-xs);">Waiting for poe.ninja prices…</div>
+          <div v-if="!hasPrices" class="w-faint" style="font-size: var(--w-fs-xs);">Waiting for poe.ninja prices.</div>
         </div>
       </div>
     </Teleport>

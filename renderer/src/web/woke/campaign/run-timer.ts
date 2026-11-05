@@ -1,4 +1,4 @@
-// Campaign run timer: times a run from the Twilight Strand to the Epilogue,
+// Run timer: times a run from the Twilight Strand to the Epilogue,
 // with one split per act, driven by the Client.txt lines in log-parse.ts.
 // Pure functions only, so the rules are easy to follow and to test.
 
