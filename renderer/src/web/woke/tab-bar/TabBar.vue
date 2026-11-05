@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.bar" class="w-surface" :style="barStyle">
+  <div :class="$style.bar" class="w-surface" :style="barStyle" data-widget-drag>
     <template v-for="(tab, i) in pinnedTabs" :key="tab.wmId">
       <span v-if="i > 0 && !tab.iconOnly && pinnedTabs[i - 1].iconOnly" :class="$style.sep" />
       <button
@@ -180,7 +180,7 @@ const tabs = computed<Tab[]>(() => {
 })
 
 // Keep the bar on screen: it wraps onto a second row instead of running past
-// the right edge, leaving room for the widget's Move button beside it.
+// the right edge, with a margin beside it.
 const barStyle = computed(() => {
   const { pos, x } = props.config.anchor
   const room = pos.endsWith('l') ? 100 - x : pos.endsWith('r') ? x : 2 * Math.min(x, 100 - x)

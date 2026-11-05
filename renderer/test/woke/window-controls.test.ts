@@ -1,10 +1,12 @@
 // Panel window buttons and minimize: where the widget sits while collapsed,
 // which panel carries the buttons, and what a minimized panel renders.
 import { createSSRApp, h } from 'vue'
+import { createI18n } from 'vue-i18n'
 import { renderToString } from 'vue/server-renderer'
 import { describe, expect, it } from 'vitest'
 import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
 import WPanel from '@/web/woke/ui/WPanel.vue'
+import Widget from '@/web/overlay/Widget.vue'
 
 const W = 1920
 const H = 1080
@@ -40,6 +42,22 @@ describe('minimizeAnchor / restoreAnchor', () => {
     const topLeft = { left: 10, top: 10, right: 266, bottom: 42 }
     expect(restoreAnchor(state, { pos: 'tl', x: 10 / W * 100, y: 10 / H * 100 }, topLeft, W, H))
       .toEqual({ pos: 'tl', x: 10 / W * 100, y: 10 / H * 100 })
+  })
+})
+
+describe('Widget title bar', () => {
+  it('has no move button', async () => {
+    const config = { wmId: 1, wmType: 'test', wmTitle: '', wmWants: 'show', wmZorder: 1, wmFlags: [], anchor: { pos: 'tl', x: 0, y: 0 } }
+    const app = createSSRApp({
+      render: () => h(Widget, { config, moveHandles: 'corners' }, {
+        default: () => h(WPanel, { title: 'Panel' }, { default: () => 'BODY' })
+      })
+    })
+    app.use(createI18n({ legacy: false, locale: 'en', messages: { en: { widget: { hide: 'hide', edit: 'edit', move: 'move', delete: 'delete' } } } }))
+    app.provide('wm', {})
+    const html = await renderToString(app)
+    for (const label of ['Edit', 'Delete', 'Minimize', 'Hide']) expect(html).toContain(`aria-label="${label}"`)
+    expect(html).not.toContain('aria-label="Move"')
   })
 })
 

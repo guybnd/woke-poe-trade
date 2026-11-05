@@ -123,10 +123,9 @@ export default defineComponent({
     }
 
     // In title-bar order. Panels draw these as buttons; the right-click menu
-    // lists the same ones.
+    // lists the same ones, plus the options too rare to earn a button.
     const windowActions = computed(() => [
       ...(!props.readonly ? [{ id: 'edit', label: capitalize(t('widget.edit')), icon: 'fas fa-cog', active: isEditing.value, action: toggleEdit }] : []),
-      ...(props.moveHandles !== 'none' ? [{ id: 'move', label: capitalize(t('widget.move')), icon: 'fas fa-arrows-alt', active: isMoving.value, action: toggleMove }] : []),
       ...(props.removable ? [{ id: 'delete', label: capitalize(t('widget.delete')), icon: 'fas fa-trash', danger: true, action: removeWidget }] : []),
       ...(canMinimize.value
         ? [{ id: 'minimize', label: minimized.value ? 'Restore' : 'Minimize', icon: minimized.value ? 'fas fa-window-maximize' : 'fas fa-minus', action: toggleMinimize }]
@@ -149,7 +148,11 @@ export default defineComponent({
         ...entry('minimize'),
         ...entry('hide'),
         ...entry('edit'),
-        ...entry('move'),
+        // Dragging moves a widget; these handles only change the corner it
+        // stays anchored to, which sets the way it grows.
+        ...(props.moveHandles !== 'none'
+          ? [{ label: isMoving.value ? 'Done choosing anchor' : 'Choose anchor corner', icon: 'fas fa-anchor', action: toggleMove }]
+          : []),
         ...(sizes && Object.keys(sizes).length
           ? [{ label: 'Reset size', icon: 'fas fa-undo', action: () => { woke().wokeSizes = {} } }]
           : []),
