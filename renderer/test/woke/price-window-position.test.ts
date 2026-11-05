@@ -44,11 +44,18 @@ describe('floatingArea', () => {
 
 describe('movedPosition', () => {
   it('turns the first drag of a docked window into a position', () => {
-    expect(movedPosition(undefined, { left: 600, top: 0 }, 400, 250, screen)).toEqual({ x: 50, y: 25 })
+    expect(movedPosition(undefined, { left: 600, top: 0, width: 460 }, 400, 250, screen)).toEqual({ x: 50, y: 25 })
+  })
+
+  it('stops where the window is drawn, so the saved spot matches the screen', () => {
+    const p = movedPosition({ x: 0, y: 0, w: 500, h: 600 }, { left: 0, top: 0, width: 500 }, 5000, 5000, screen)
+    const l = floatingLayout(p, screen, 500)
+    expect(l.left).toBe(p.x / 100 * screen.w)
+    expect(l.top).toBe(p.y / 100 * screen.h)
   })
 
   it('keeps a saved size', () => {
-    expect(movedPosition({ x: 1, y: 1, w: 500, h: 300 }, { left: 20, top: 10 }, 0, 0, screen))
+    expect(movedPosition({ x: 1, y: 1, w: 500, h: 300 }, { left: 20, top: 10, width: 500 }, 0, 0, screen))
       .toEqual({ x: 1, y: 1, w: 500, h: 300 })
   })
 })

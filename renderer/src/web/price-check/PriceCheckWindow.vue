@@ -169,6 +169,9 @@ export default defineComponent({
     MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
       if (e.target !== 'price-check') return
 
+      // First, so the area below is for the window as it will show: an open
+      // browser forces the docked layout.
+      closeBrowser()
       if (Host.isElectron && !e.focusOverlay) {
         // everything in CSS pixels
         const width = WINDOW_REM * AppConfig().fontSize
@@ -189,7 +192,6 @@ export default defineComponent({
           }
         })
       }
-      closeBrowser()
       wm.show(props.config.wmId)
       checkPosition.value = e.position
       advancedCheck.value = e.focusOverlay
@@ -274,6 +276,8 @@ export default defineComponent({
       const el = windowEl.value
       const target = e.target as Element
       if (!el || e.button !== 0 || isBrowserShown.value || !target.closest('[data-price-title]')) return
+      // Popovers (the divine rate) render inside the title bar but aren't part of it.
+      if (target.closest('[data-tippy-root]')) return
       const button = target.closest('button')
       if (button && !button.hasAttribute('data-price-title-text')) return
       e.preventDefault()
@@ -304,7 +308,7 @@ export default defineComponent({
         const dw = x ? snapEdge('x', rect.right + ev.clientX - e.clientX, el, ev.altKey) - rect.right : null
         const dh = y ? snapEdge('y', rect.bottom + ev.clientY - e.clientY, el, ev.altKey) - rect.bottom : null
         props.config.wokeWindow = resizedPosition(startPos, rect, dw, dh, screenSize())
-      })
+      }, swallowNextClick)
     }
 
     function dock () {

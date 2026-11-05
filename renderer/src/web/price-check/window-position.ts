@@ -52,15 +52,19 @@ export function floatingArea (layout: PriceWindowLayout, screen: Screen) {
 // A drag's new position from the window's start box and the clamped offset.
 export function movedPosition (
   saved: PriceWindowPosition | undefined,
-  start: { left: number, top: number },
+  start: { left: number, top: number, width: number },
   dx: number,
   dy: number,
   screen: Screen
 ): PriceWindowPosition {
+  // The same limits floatingLayout draws with, so the saved spot is the one
+  // on screen and the window keeps following the cursor.
+  const left = Math.max(0, Math.min(start.left + dx, screen.w - start.width))
+  const top = Math.max(0, Math.min(start.top + dy, screen.h - (saved?.h ?? MIN_HEIGHT)))
   return {
     ...saved,
-    x: (start.left + dx) / screen.w * 100,
-    y: (start.top + dy) / screen.h * 100
+    x: left / screen.w * 100,
+    y: top / screen.h * 100
   }
 }
 
