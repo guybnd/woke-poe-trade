@@ -113,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { computed, inject, nextTick, ref, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
@@ -256,7 +257,7 @@ function shift (tab: Tab, dir: -1 | 1) {
 
 function resetPosition (tab: Tab) {
   const w = wm.widgets.value.find(x => x.wmId === tab.wmId) as (Widget & { anchor?: Anchor }) | undefined
-  if (w?.anchor) w.anchor = { pos: 'cc', x: 50, y: 50 }
+  if (w?.anchor) w.anchor = popupAnchor()
   show(tab)
 }
 

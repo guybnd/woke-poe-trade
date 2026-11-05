@@ -29,10 +29,11 @@ export function restoreAnchor (state: MinimizedState, current: WidgetAnchor, rec
 }
 
 // Panels opened from the tab bar or the dock open here: the empty left side of
-// the screen, just below the tab bar. A new object each time, because Widget
-// moves a panel by writing into its anchor.
+// the screen, just below the tab bar and clear of an icon row kept on the far
+// left (it draws above panels). A new object each time, because Widget moves a
+// panel by writing into its anchor.
 export function popupAnchor (): WidgetAnchor {
-  return { pos: 'tl', x: 3, y: 12 }
+  return { pos: 'tl', x: 10, y: 12 }
 }
 
 // Where those panels used to open. A saved anchor can't say whether the panel
