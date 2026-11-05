@@ -25,6 +25,7 @@ test('regex library icon: a click opens the card, and its strings can be clicked
   // A click opens the card even with the game focused. Away first: main remembers
   // the mouse from the test before, and hovering would already have opened it.
   await overlay.moveMouse(1000, 900)
+  await expect(entry).toHaveCount(0, { timeout: 2000 })
   await overlay.clickDockIconAndLeave('regex-library')
   await expect(entry).toBeVisible({ timeout: 200 })
   await expect(entry).toHaveCount(0, { timeout: 2000 })
