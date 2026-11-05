@@ -58,6 +58,7 @@ export interface Boss {
 }
 
 const POE_HOW = 'https://poe.how/economy/bosses/'
+const POEDB = 'https://poedb.tw/us/'
 
 export const BOSSES: Boss[] = ([
   {
@@ -231,16 +232,16 @@ export const BOSSES: Boss[] = ([
     tier: 'uber',
     entry: [{ name: 'Synthesising Fragment', qty: 4 }],
     runSeconds: 240,
-    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-cortex', kills: null },
+    source: { label: 'community wiki via poedb', url: POEDB + 'Venarius', kills: null, note: 'Wiki figures with no stated sample.' },
     drops: [
-      { name: 'Rational Doctrine', chance: null },
-      { name: 'Forgotten Reliquary Key', chance: null },
-      { name: 'The Apostate', chance: null },
-      { name: 'The Hook', chance: null },
-      { name: 'Nebulis', chance: null },
+      { name: 'Rational Doctrine', chance: 0.05 },
+      { name: 'Forgotten Reliquary Key', chance: 0.015 },
+      { name: 'The Apostate', chance: 0.15 },
+      { name: 'The Hook', chance: 0.03 },
+      { name: 'Nebulis', chance: 0.40 },
       { name: 'Imperfect Memories', chance: null },
-      { name: 'Circle of Ambition', chance: null },
-      { name: 'Mask of the Tribunal', chance: null },
+      { name: 'Circle of Ambition', chance: 0.10 },
+      { name: 'Mask of the Tribunal', chance: 0.30 },
       { name: 'Greater Kinetic Instability Support', chance: null, variant: '1' }
     ]
   },
@@ -376,6 +377,45 @@ export const BOSSES: Boss[] = ([
       { name: "Doryani's Invitation", chance: null },
       { name: 'Pledge of Hands', chance: null },
       { name: 'Triumvirate Authority', chance: null }
+    ]
+  },
+  {
+    id: 'sirus',
+    name: 'Sirus',
+    tier: 'pinnacle',
+    entry: [
+      { name: "Al-Hezmin's Crest", qty: 1 },
+      { name: "Baran's Crest", qty: 1 },
+      { name: "Drox's Crest", qty: 1 },
+      { name: "Veritania's Crest", qty: 1 }
+    ],
+    runSeconds: 180,
+    source: { label: 'community wiki via poedb', url: POEDB + 'Sirus%2C_Awakener_of_Worlds', kills: null, note: 'Wiki figures with no stated sample.' },
+    drops: [
+      { name: 'Hands of the High Templar', chance: 0.40 },
+      { name: 'Crown of the Inward Eye', chance: 0.35 },
+      { name: 'The Burden of Truth', chance: 0.20 },
+      { name: 'Thread of Hope', chance: 0.05 },
+      { name: "Awakener's Orb", chance: 0.15 },
+      { name: 'Orb of Dominance', chance: 0.10 },
+      { name: 'A Fate Worse Than Death', chance: 0.04 },
+      { name: 'Annihilation Support', chance: null, variant: '1' }
+    ]
+  },
+  {
+    id: 'venarius',
+    name: 'Venarius',
+    tier: 'pinnacle',
+    entry: [{ name: 'Cortex', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'community wiki via poedb', url: POEDB + 'Venarius', kills: null, note: 'Wiki figures with no stated sample.' },
+    drops: [
+      { name: 'Offering to the Serpent', chance: 0.45 },
+      { name: 'Perepiteia', chance: 0.35 },
+      { name: 'Garb of the Ephemeral', chance: 0.15 },
+      { name: 'Bottled Faith', chance: 0.05 },
+      { name: 'The Hook', chance: 0.03 },
+      { name: 'Greater Kinetic Instability Support', chance: null, variant: '1' }
     ]
   },
   {

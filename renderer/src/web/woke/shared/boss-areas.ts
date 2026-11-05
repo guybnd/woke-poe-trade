@@ -26,8 +26,8 @@ const ARENAS: Arena[] = [
   { areaIds: ['MavenBoss'], names: ['Absence of Mercy and Empathy'], bosses: ['maven', 'uber-maven'] },
   // Maven's Invitations, not the Maven fight.
   { areaIds: ['MavenHub'], names: ["The Maven's Crucible"], bosses: ['feared'] },
-  { areaIds: ['AtlasExilesBoss5'], names: ['Eye of the Storm'], bosses: ['uber-sirus'] },
-  { areaIds: ['Synthesis_MapBoss'], names: ['Cortex'], bosses: ['uber-cortex'] },
+  { areaIds: ['AtlasExilesBoss5'], names: ['Eye of the Storm'], bosses: ['sirus', 'uber-sirus'] },
+  { areaIds: ['Synthesis_MapBoss'], names: ['Cortex'], bosses: ['venarius', 'uber-cortex'] },
   { areaIds: [], names: ['The Feared'], bosses: ['feared'] },
   // The Infinite Hunger and The Black Star.
   { areaIds: [], names: ['Seething Chyme', 'Polaric Void'], bosses: [] }

@@ -7,7 +7,7 @@
         <div style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-2">
           <div v-for="r in arenaBosses" :key="r.boss.id" class="flex flex-col gap-0.5 w-num">
             <div class="w-head-font w-accent w-trunc">{{ r.boss.name }}</div>
-            <div v-for="d in r.drops.slice(0, CARD_DROPS)" :key="d.name" :class="$style.cardDrop">
+            <div v-for="d in cardDrops(r.drops, CARD_DROPS)" :key="d.name" :class="$style.cardDrop">
               <span class="w-trunc" :title="d.name">{{ d.name }}</span>
               <span class="text-right" :class="d.chance == null ? 'w-faint' : 'w-dim'">{{ d.chance == null ? '?' : pct(d.chance) }}</span>
               <span class="text-right"><WPrice :chaos="d.price" :divine="divine" /></span>
@@ -273,7 +273,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { BOSSES } from './bosses'
 import DockItem from '../dock/DockItem.vue'
 import { arenaBosses as arenaBossIds, useZone } from '../shared/zone'
-import { evaluateBoss, formatRunTime, luck, parseRunTime, priceResolver, unidentifiedTradeUrl } from './calc'
+import { bossesAtLevel, cardDrops, evaluateBoss, formatRunTime, killDropPrice, luck, parseRunTime, priceResolver, unidentifiedTradeUrl } from './calc'
 import type { BossResult, DropRow, KillRecord, PriceMode, RateSource } from './calc'
 import { OWN_RATE_KILLS } from './calc'
 
@@ -339,13 +339,13 @@ const ranked = computed(() => {
 const zone = useZone()
 const arenaBosses = computed(() => {
   const ids = zone.kind === 'boss' ? arenaBossIds(zone.areaId, zone.name) : []
-  return BOSSES.filter(b => ids.includes(b.id)).map(b => evaluateBoss(b, props.config, px.value))
+  return bossesAtLevel(BOSSES.filter(b => ids.includes(b.id)), zone.areaLevel).map(b => evaluateBoss(b, props.config, px.value))
 })
 
 const CARD_DROPS = 8
 
 // Keeps your pick when it's one of this arena's bosses (normal or uber), else
-// the first with a drop list; the log can't tell which tier you're fighting.
+// the first with a drop list.
 // The tier filter must not hide the boss the icon opened.
 function openArenaBoss () {
   const here = arenaBosses.value
@@ -512,7 +512,7 @@ function killMenu (e: MouseEvent, id: string, index: number) {
   openMenu(e, [{ label: 'Delete kill', icon: 'fas fa-trash', danger: true, action: () => deleteKill(id, index) }])
 }
 function killValue (kill: KillRecord) {
-  return kill.drops.reduce((n, d) => n + (px.value.price(d.name, d.variant) ?? 0) * d.qty, 0)
+  return kill.drops.reduce((n, d) => n + (killDropPrice(d, px.value, props.config) ?? 0) * d.qty, 0)
 }
 </script>
 
