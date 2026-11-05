@@ -59,6 +59,8 @@ export interface FlipRow {
   weightSource: 'sample' | 'tier'
   tradedChaos: number | null
   tradedPerDay: number | null
+  // Items a day this flip could use; what the Supply column grades.
+  supplyPerDay: number | null
   // Return of a flip using this item, minus its inputs and any lifeforce.
   profit: number
   // The same, per item put in: what the panel shows.
@@ -164,6 +166,7 @@ export function flipModel (quotes: Map<string, Quote>, options: FlipOptions, rec
       weightSource: s.source,
       tradedChaos,
       tradedPerDay,
+      supplyPerDay: tradedPerDay,
       profit,
       profitEach: profit / inputs,
       profitPerDay: tradedPerDay == null ? null : Math.max(0, profit) * tradedPerDay / inputs,
@@ -205,6 +208,59 @@ export function buyList<T extends { profit: number, profitPerDay: number | null,
     .sort((a, b) => (b.profitPerDay ?? 0) - (a.profitPerDay ?? 0) || b.profit - a.profit)
 }
 
+// Items traded a day at which supply counts as High and Medium. One scale for
+// every family, so a word means the same on each tab: on Allflame's feed, 5 Nov
+// 2026, scarabs ran from Low to High while no runegraft reached Medium.
+export const SUPPLY_HIGH = 100
+export const SUPPLY_MEDIUM = 20
+
+export type SupplyLevel = 'High' | 'Medium' | 'Low' | 'None'
+
+export function supplyLevel (perDay: number | null): SupplyLevel | null {
+  if (perDay == null) return null
+  // Priced, but the feed saw no trades: not the same as a thin market.
+  if (perDay <= 0) return 'None'
+  return perDay >= SUPPLY_HIGH ? 'High' : perDay >= SUPPLY_MEDIUM ? 'Medium' : 'Low'
+}
+
+export type FlipSortKey = 'item' | 'price' | 'profit' | 'supply'
+export type SortDir = 'asc' | 'desc'
+export interface FlipSort { key: FlipSortKey, dir: SortDir }
+
+export const DEFAULT_FLIP_SORT: FlipSort = { key: 'profit', dir: 'desc' }
+
+// The direction a column starts in: names A to Z, numbers biggest first.
+export function firstSortDir (key: FlipSortKey): SortDir {
+  return key === 'item' ? 'asc' : 'desc'
+}
+
+const SUPPLY_RANK: Record<SupplyLevel, number> = { None: 1, Low: 2, Medium: 3, High: 4 }
+
+// A copy of the list in the picked order. Supply is three words, so inside a
+// word the best profit comes first, whichever way the words run. `label` is the
+// name as shown, so the order matches what the column reads.
+export function sortFlips<T extends { name: string, chaos: number, profitEach: number, supplyPerDay: number | null }> (
+  rows: T[],
+  sort: FlipSort,
+  label: (name: string) => string = name => name
+): T[] {
+  const byName = (a: T, b: T) => label(a.name).localeCompare(label(b.name), 'en')
+  const rank = (r: T) => {
+    const level = supplyLevel(r.supplyPerDay)
+    return level ? SUPPLY_RANK[level] : 0
+  }
+  const sign = sort.dir === 'asc' ? 1 : -1
+  const compare = (a: T, b: T): number => {
+    switch (sort.key) {
+      case 'item': return sign * byName(a, b)
+      case 'price': return sign * (a.chaos - b.chaos) || b.profitEach - a.profitEach || byName(a, b)
+      case 'profit': return sign * (a.profitEach - b.profitEach) || byName(a, b)
+      case 'supply': return sign * (rank(a) - rank(b)) || b.profitEach - a.profitEach || byName(a, b)
+    }
+  }
+  return [...rows].sort(compare)
+}
+
 // Cheapest first, leaving out prices with no trades behind them.
 export function rareCheapList (model: FlipModel): FlipRow[] {
   return model.rows.filter(r => r.rareCheap && isTraded(r)).sort((a, b) => a.chaos - b.chaos)
@@ -225,6 +281,8 @@ export interface UpgradeRow {
   // Chaos traded a day on the thinner side, input or result.
   tradedChaos: number | null
   tradedPerDay: number | null
+  // Inputs a day the thinner side of the market allows.
+  supplyPerDay: number | null
   profitPerDay: number | null
 }
 
@@ -253,6 +311,7 @@ export function upgradeRows (quotes: Map<string, Quote>, chains: string[][], sel
         profitEach: profit / UPGRADE_INPUTS,
         tradedChaos: from.tradedChaos == null || into.tradedChaos == null ? from.tradedChaos ?? into.tradedChaos : Math.min(from.tradedChaos, into.tradedChaos),
         tradedPerDay,
+        supplyPerDay: recipesPerDay == null ? null : recipesPerDay * UPGRADE_INPUTS,
         profitPerDay: recipesPerDay == null ? null : Math.max(0, profit) * recipesPerDay
       })
     }

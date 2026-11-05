@@ -1,4 +1,5 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
+import type { FlipSort } from './calc'
 import type { FlipMethodId } from './families'
 
 // Named when the panel only did scarabs; kept so placed panels carry over.
@@ -16,4 +17,6 @@ export interface ScarabFlipWidget extends Widget {
   methods?: Record<string, FlipMethodId>
   // Harvest cost per item, in lifeforce of the craft's colour.
   lifeforcePerItem?: number
+  // The buy list's order; profit each when unset.
+  sort?: FlipSort
 }

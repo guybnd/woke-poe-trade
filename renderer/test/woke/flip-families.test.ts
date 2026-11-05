@@ -1,7 +1,7 @@
 // The flip families beyond scarabs: Harvest rerolls, catalyst recipes, tier
 // upgrades, and how each is priced.
 import { describe, it, expect } from 'vitest'
-import { buyList, flipModel, parseExchange, upgradeRows } from '@/web/woke/scarab-flip/calc'
+import { DEFAULT_FLIP_SORT, buyList, flipModel, parseExchange, sortFlips, supplyLevel, upgradeRows } from '@/web/woke/scarab-flip/calc'
 import type { Quote } from '@/web/woke/scarab-flip/calc'
 import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, shortName, unpricedShare } from '@/web/woke/scarab-flip/families'
 import type { Exchanges } from '@/web/woke/scarab-flip/families'
@@ -314,5 +314,67 @@ describe('family data', () => {
     expect(shortName('Runegraft of the Bound')).toBe('Bound')
     expect(shortName('Harvest Scarab of Doubling')).toBe('Harvest of Doubling')
     expect(shortName('Black to Opalescent Oil')).toBe('Black to Opalescent Oil')
+  })
+})
+
+describe('flip supply and sorting', () => {
+  it('grades daily volume as a word on one scale', () => {
+    expect(supplyLevel(null)).toBeNull()
+    expect(supplyLevel(0)).toBe('None')
+    expect(supplyLevel(0.5)).toBe('Low')
+    expect(supplyLevel(19.9)).toBe('Low')
+    expect(supplyLevel(20)).toBe('Medium')
+    expect(supplyLevel(99.9)).toBe('Medium')
+    expect(supplyLevel(100)).toBe('High')
+  })
+
+  it('grades an upgrade by the thinner side of the market', () => {
+    // 3000 of the input a day, but only 10 of the result, so 30 inputs.
+    const quotes = new Map([
+      ['Black Oil', { chaos: 1, tradedChaos: 3000 }],
+      ['Opalescent Oil', { chaos: 10, tradedChaos: 100 }]
+    ])
+    const [row] = upgradeRows(quotes, [['Black Oil', 'Opalescent Oil']], 0)
+    expect(row.tradedPerDay).toBe(3000)
+    expect(row.supplyPerDay).toBeCloseTo(30, 8)
+    expect(supplyLevel(row.supplyPerDay)).toBe('Medium')
+  })
+
+  const row = (name: string, chaos: number, profitEach: number, supplyPerDay: number | null) => ({ name, chaos, profitEach, supplyPerDay })
+  const a = row('Alpha', 5, 1, 500)
+  const b = row('Bravo', 1, 9, 30)
+  const c = row('Charlie', 9, 4, 5)
+  const d = row('Delta', 2, 2, 150)
+  const rows = [a, b, c, d]
+  const order = (list: typeof rows) => list.map(r => r.name[0]).join('')
+
+  it('defaults to the biggest profit each', () => {
+    expect(DEFAULT_FLIP_SORT).toEqual({ key: 'profit', dir: 'desc' })
+    expect(order(sortFlips(rows, DEFAULT_FLIP_SORT))).toBe('BCDA')
+  })
+
+  it('sorts each column both ways without touching the input', () => {
+    expect(order(sortFlips(rows, { key: 'profit', dir: 'asc' }))).toBe('ADCB')
+    expect(order(sortFlips(rows, { key: 'price', dir: 'desc' }))).toBe('CADB')
+    expect(order(sortFlips(rows, { key: 'price', dir: 'asc' }))).toBe('BDAC')
+    expect(order(sortFlips(rows, { key: 'item', dir: 'asc' }))).toBe('ABCD')
+    expect(order(sortFlips(rows, { key: 'item', dir: 'desc' }))).toBe('DCBA')
+    expect(order(rows)).toBe('ABCD')
+  })
+
+  it('sorts supply by word, best profit first inside a word in both directions', () => {
+    expect(order(sortFlips(rows, { key: 'supply', dir: 'desc' }))).toBe('DABC')
+    expect(order(sortFlips(rows, { key: 'supply', dir: 'asc' }))).toBe('CBDA')
+  })
+
+  it('puts rows with no trades below Low, and unknown supply below those', () => {
+    const none = row('Echo', 1, 100, 0)
+    const unknown = row('Foxtrot', 1, 100, null)
+    expect(order(sortFlips([...rows, none, unknown], { key: 'supply', dir: 'desc' })).slice(-3)).toBe('CEF')
+  })
+
+  it('sorts names as shown', () => {
+    const named = [row('Zed Scarab of A', 1, 1, 1), row('Abe Scarab of B', 1, 1, 1)]
+    expect(sortFlips(named, { key: 'item', dir: 'asc' }, n => n.split(' of ')[1])[0].name).toBe('Zed Scarab of A')
   })
 })
