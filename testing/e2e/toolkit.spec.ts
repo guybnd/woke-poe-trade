@@ -2,8 +2,11 @@
 // module switchboard really switches things off, first-run setup, and the
 // hide-all hotkey.
 import { test, expect } from './harness'
-import { MODULES } from '../../renderer/src/web/woke/modules'
+import { createRequire } from 'module'
 
+// By require, not import: on Node 20 an import of a TypeScript file in renderer/
+// (no "type": "module") stops every test from loading. Node 22 is fine either way.
+const { MODULES } = createRequire(import.meta.url)('../../renderer/src/web/woke/modules.ts') as typeof import('../../renderer/src/web/woke/modules')
 const WIDGET_TYPES = MODULES.flatMap(m => m.widgetTypes)
 
 test('every module\'s widget mounts and shows without errors', async ({ overlay }) => {
