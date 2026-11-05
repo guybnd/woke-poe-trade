@@ -1,9 +1,9 @@
-import path from 'path'
 import { BrowserWindow, dialog, shell, Menu, WebContents } from 'electron'
 import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { ServerEvents } from '../server'
 import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from './GameWindow'
+import { appIconFile } from '../woke/app-icon'
 
 export class OverlayWindow {
   public isInteractable = false
@@ -41,7 +41,7 @@ export class OverlayWindow {
     if (process.argv.includes('--no-overlay')) return
 
     this.window = new BrowserWindow({
-      icon: path.join(__dirname, process.env.STATIC!, 'icon.png'),
+      icon: appIconFile('png'),
       ...OVERLAY_WINDOW_OPTS,
       width: 800,
       height: 600,
@@ -161,6 +161,11 @@ export class OverlayWindow {
     } else {
       this.assertOverlayActive()
     }
+  }
+
+  // woke: the player picked another icon.
+  refreshIcon () {
+    this.window?.setIcon(appIconFile('png'))
   }
 
   updateOpts (overlayKey: string, windowTitle: string) {

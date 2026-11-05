@@ -2,7 +2,7 @@
   <div :class="$style.wizard">
     <nav :class="$style.rail" aria-label="Setup steps">
       <div :class="$style.brand">
-        <img src="/images/TransferOrb.png" alt="" :class="$style.logo">
+        <img :src="appIconUrl(config.appIcon)" alt="" :class="$style.logo">
         <div>
           <div :class="$style.name">Woke PoE Trade</div>
           <div class="w-faint">v{{ version }}</div>
@@ -171,6 +171,7 @@ import { Host } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WKbd, WToggle } from '../ui'
 import { hostRequest } from '../shared/host'
+import { appIconUrl } from '../ui/app-icon'
 import { ensureWokeConfig } from '../modules'
 import PresetBar from '../switchboard/PresetBar.vue'
 import ModuleList from '../switchboard/ModuleList.vue'

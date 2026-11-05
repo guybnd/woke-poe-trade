@@ -3,7 +3,7 @@
     enter-active-class="animate__animated animate__fadeIn"
     leave-active-class="animate__animated animate__backOutDown">
     <div :class="$style.widget" v-if="show">
-      <div :class="$style.box">
+      <div :class="$style.box" :style="{ '--mark': `url(${markUrl})` }">
         <div class="py-2 px-4">
           <div class="text-base">Woke PoE Trade</div>
           <p>{{ t('app_is_ready') }}</p>
@@ -14,14 +14,16 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Host } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
+import { appIconUrl } from '@/web/woke/ui/app-icon'
 
 const { t } = useI18n()
 
 const show = shallowRef(false)
+const markUrl = computed(() => appIconUrl(AppConfig().appIcon))
 
 Host.onEvent('MAIN->OVERLAY::overlay-attached', () => {
   if (!show.value && AppConfig().showAttachNotification) {
@@ -52,7 +54,7 @@ Host.onEvent('MAIN->OVERLAY::overlay-attached', () => {
 .box::before {
   position: absolute;
   content: '';
-  background: url('/images/TransferOrb.png') no-repeat top right/contain;
+  background: var(--mark) no-repeat top right/contain;
   right: 100%;
   width: 100%;
   height: 100%;

@@ -128,6 +128,8 @@ export interface Config {
   fontSize: number
   showAttachNotification: boolean
   woke?: WokeModulesConfig
+  // woke: id from woke/ui/app-icon.ts; unset means the default.
+  appIcon?: string
 }
 
 export const defaultConfig = (): Config => ({
@@ -598,6 +600,7 @@ export function getConfigForHost (): HostConfig {
     logKeys: config.logKeys,
     windowTitle: config.windowTitle,
     language: config.language,
-    wokeGameLog: needsGameLog(config)
+    wokeGameLog: needsGameLog(config),
+    appIcon: config.appIcon
   }
 }

@@ -5,6 +5,7 @@ import { app, BrowserWindow, dialog, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { AppUpdater } from '../AppUpdater'
+import { appIconFile } from './app-icon'
 import { appPrefs, setAppPrefs } from './app-prefs'
 import type { AppPrefs } from './app-prefs'
 import { findGameLogs } from './game-log-finder'
@@ -20,6 +21,10 @@ function pageUrl () {
   return `${base}#setup`
 }
 
+export function refreshSetupIcon () {
+  if (win && !win.isDestroyed()) win.setIcon(appIconFile('png'))
+}
+
 export function openSetupWindow () {
   if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore()
@@ -28,7 +33,7 @@ export function openSetupWindow () {
   }
   win = new BrowserWindow({
     title: 'Woke PoE Trade · Setup',
-    icon: path.join(__dirname, process.env.STATIC!, 'icon.png'),
+    icon: appIconFile('png'),
     width: 820,
     height: 600,
     minWidth: 640,

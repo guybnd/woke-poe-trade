@@ -1,5 +1,7 @@
 <template>
   <div :class="$style.bar" class="w-surface" :style="barStyle" data-widget-drag>
+    <img :src="markUrl" alt="" draggable="false" :class="$style.mark">
+    <span :class="$style.sep" />
     <template v-for="(tab, i) in pinnedTabs" :key="tab.wmId">
       <span v-if="i > 0 && !tab.iconOnly && pinnedTabs[i - 1].iconOnly" :class="$style.sep" />
       <button
@@ -119,6 +121,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { registry } from '@/web/overlay/widget-registry'
 import { AppConfig } from '@/web/Config'
+import { appIconUrl } from '../ui/app-icon'
 import { isWidgetTypeOn } from '@/web/woke/modules'
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
@@ -130,6 +133,7 @@ defineEmits<{ (e: 'paste', ev: Event): void }>()
 
 const wm = inject<WidgetManager>('wm')!
 const { t } = useI18n()
+const markUrl = computed(() => appIconUrl(AppConfig().appIcon))
 
 interface Tab {
   wmId: number
@@ -408,6 +412,7 @@ function addFirstMatch () {
   background: color-mix(in srgb, var(--w-warn) 14%, transparent);
 }
 .warnBtn:hover { background: color-mix(in srgb, var(--w-warn) 24%, transparent); }
+.mark { width: 20px; height: 20px; margin: 0 4px; flex: none; pointer-events: none; }
 .sep { width: 1px; height: 20px; background: var(--w-line); margin: 0 3px; flex: none; }
 .tab {
   position: relative;

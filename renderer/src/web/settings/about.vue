@@ -1,7 +1,7 @@
 <template>
   <div class="p-2 flex flex-col h-full items-center">
     <div class="flex flex-col items-center p-2 mb-4">
-      <img class="w-12 h-12" src="/images/TransferOrb.png">
+      <img class="w-12 h-12" :src="markUrl" alt="">
       <p class="text-base">Woke PoE Trade</p>
       <p class="">{{ t('app.version', [version]) }}</p>
       <p class="text-gray-500">Built on <a class="border-b" href="https://github.com/SnosMe/awakened-poe-trade" target="_blank">Awakened PoE Trade</a> by SnosMe</p>
@@ -33,6 +33,8 @@ import { useI18n } from 'vue-i18n'
 import { Host } from '@/web/background/IPC'
 import { DateTime } from 'luxon'
 import { reportProblem, openCrashFolder } from '@/web/woke/app/report'
+import { AppConfig } from '@/web/Config'
+import { appIconUrl } from '@/web/woke/ui/app-icon'
 
 function checkForUpdates () {
   Host.sendEvent({
@@ -86,6 +88,7 @@ export default defineComponent({
       t,
       info,
       version: Host.version,
+      markUrl: computed(() => appIconUrl(AppConfig().appIcon)),
       reportProblem,
       openCrashFolder
     }

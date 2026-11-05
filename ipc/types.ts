@@ -10,6 +10,8 @@ export interface HostConfig {
   language: string
   // woke: false when no enabled module needs Client.txt, so main stops tailing it
   wokeGameLog?: boolean
+  // woke: the icon picked in Settings > Look
+  appIcon?: string
 }
 
 export interface ShortcutAction {

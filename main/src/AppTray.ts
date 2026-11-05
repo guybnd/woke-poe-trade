@@ -1,6 +1,7 @@
 import path from 'path'
 import { app, Tray, Menu, shell, nativeImage, dialog } from 'electron'
 import type { ServerEvents } from './server'
+import { appIconFile } from './woke/app-icon'
 
 export class AppTray {
   public overlayKey = 'Shift + Space'
@@ -9,22 +10,21 @@ export class AppTray {
   // woke: opens the first-run setup window.
   onRunSetup?: () => void
 
+  private loadImage () {
+    const image = nativeImage.createFromPath(appIconFile(process.platform === 'win32' ? 'ico' : 'png'))
+    // Mac image size needs to be smaller, or else it looks huge. Size
+    // guideline is from https://iconhandbook.co.uk/reference/chart/osx/
+    return process.platform === 'darwin' ? image.resize({ width: 22, height: 22 }) : image
+  }
+
+  // woke: the player picked another icon.
+  refreshIcon () {
+    const image = this.loadImage()
+    if (!image.isEmpty()) this.tray.setImage(image)
+  }
+
   constructor (server: ServerEvents) {
-    let trayImage = nativeImage.createFromPath(
-      path.join(
-        __dirname,
-        process.env.STATIC!,
-        process.platform === "win32" ? "icon.ico" : "icon.png"
-      )
-    )
-
-    if (process.platform === 'darwin') {
-      // Mac image size needs to be smaller, or else it looks huge. Size
-      // guideline is from https://iconhandbook.co.uk/reference/chart/osx/
-      trayImage = trayImage.resize({ width: 22, height: 22 })
-    }
-
-    this.tray = new Tray(trayImage)
+    this.tray = new Tray(this.loadImage())
     // woke: makes a dev copy easy to tell apart from the packaged build.
     this.tray.setToolTip(process.env.VITE_DEV_SERVER_URL
       ? `Woke PoE Trade DEV (${process.env.WOKE_DEV_BRANCH ?? 'no launcher'})`.slice(0, 127)
