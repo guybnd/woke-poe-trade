@@ -330,7 +330,7 @@ function showIt (v: BaseVerdict) {
 
 <style module>
 .wrap {
-  max-height: min(36rem, 70vh);
+  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   padding: 6px 0 10px;
   display: flex;
   flex-direction: column;

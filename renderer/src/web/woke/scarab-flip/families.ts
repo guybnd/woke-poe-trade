@@ -54,7 +54,15 @@ const upgrade: FlipMethod = { id: 'upgrade', label: 'Vendor up a tier', inputs: 
 
 const OIL_TIERS = ['Clear', 'Sepia', 'Amber', 'Verdant', 'Teal', 'Azure', 'Indigo', 'Violet', 'Crimson', 'Black', 'Opalescent', 'Silver', 'Golden']
 const ESSENCE_TIERS = ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening']
-const ESSENCE_TYPES = Object.keys(DEAFENING_ESSENCE_WEIGHTS).map(n => n.replace('Deafening Essence of ', ''))
+// The essence sample rerolled Doubt, so it never came up as a result there. It
+// takes the average weight. Hysteria, Insanity, Horror and Delirium stay out:
+// they have no tier, so neither a reroll nor a tier upgrade can give them.
+const SAMPLED_ESSENCES = Object.values(DEAFENING_ESSENCE_WEIGHTS)
+const ESSENCE_WEIGHTS: Record<string, number> = {
+  ...DEAFENING_ESSENCE_WEIGHTS,
+  'Deafening Essence of Doubt': SAMPLED_ESSENCES.reduce((n, w) => n + w, 0) / SAMPLED_ESSENCES.length
+}
+const ESSENCE_TYPES = Object.keys(ESSENCE_WEIGHTS).map(n => n.replace('Deafening Essence of ', ''))
 
 export const FAMILIES: FlipFamily[] = [
   {
@@ -110,10 +118,10 @@ export const FAMILIES: FlipFamily[] = [
     match: name => name.includes('Essence of '),
     methods: [harvest('Primal'), upgrade],
     pool: name => name.startsWith('Deafening '),
-    weights: DEAFENING_ESSENCE_WEIGHTS,
+    weights: ESSENCE_WEIGHTS,
     rareShare: null,
     chains: ESSENCE_TYPES.map(type => ESSENCE_TIERS.map(tier => `${tier} Essence of ${type}`)),
-    source: 'Rerolls keep the tier, so only Deafening is priced. Weights: PoeData.dev, 1 dataset, version 3.20.'
+    source: 'Rerolls keep the tier, so only Deafening is priced. Weights: PoeData.dev, 1 dataset, version 3.20. That sample rerolled Doubt, so Doubt uses the average weight.'
   },
   {
     id: 'oils',
@@ -211,19 +219,19 @@ export interface BestFlip {
   name: string
   // The item to buy, when the name describes a recipe.
   item: string
-  profit: number
+  profitEach: number
   // Null when the family's volume feed is missing.
   profitPerDay: number | null
 }
 
 // The flip with the biggest supply of profit, for the dock card. Without volume
-// a flip ranks by its profit, below any flip that has volume. Low-confidence
+// a flip ranks by its profit per item, below any flip that has volume. Low-confidence
 // families stay out.
 export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: FlipOptions, lifeforcePerItem: number): BestFlip | null {
   let best: BestFlip | null = null
   const beats = (a: BestFlip, b: BestFlip) => {
     if ((a.profitPerDay != null) !== (b.profitPerDay != null)) return a.profitPerDay != null
-    return a.profitPerDay != null ? a.profitPerDay > b.profitPerDay! : a.profit > b.profit
+    return a.profitPerDay != null ? a.profitPerDay > b.profitPerDay! : a.profitEach > b.profitEach
   }
   for (const family of FAMILIES) {
     if (family.lowConfidence) continue
@@ -233,7 +241,7 @@ export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: Fli
       const rows = flip.kind === 'pool' ? flip.model.rows : flip.rows
       const top = buyList<FlipRow | UpgradeRow>(rows, true)[0]
       if (!top) continue
-      const candidate = { family, method, name: top.name, item: 'from' in top ? top.from : top.name, profit: top.profit, profitPerDay: top.profitPerDay }
+      const candidate = { family, method, name: top.name, item: 'from' in top ? top.from : top.name, profitEach: top.profitEach, profitPerDay: top.profitPerDay }
       if (!best || beats(candidate, best)) best = candidate
     }
   }

@@ -5,7 +5,7 @@
       <template #card>
         <div v-if="best" class="flex flex-col gap-0.5" style="padding: 2px var(--w-pad) 6px;">
           <span class="w-num">Best supply: <span v-item-tip="{ name: best.item, type: best.family.ninjaType }">{{ shortName(best.name) }}</span></span>
-          <span class="w-dim w-num">{{ best.family.label }}, {{ best.method.label.toLowerCase() }}, +{{ fmt(best.profit) }}<template v-if="best.profitPerDay != null">, up to {{ fmt(best.profitPerDay) }} a day</template></span>
+          <span class="w-dim w-num">{{ best.family.label }}, {{ best.method.label.toLowerCase() }}, +{{ fmt(best.profitEach) }} each<template v-if="best.profitPerDay != null">, up to {{ fmt(best.profitPerDay) }} a day</template></span>
         </div>
         <div v-else class="w-dim" style="padding: 2px var(--w-pad) 6px;">Nothing worth flipping right now</div>
       </template>
@@ -42,13 +42,13 @@
         <template v-else>
           <div class="w-row w-row--head" :class="$style.buyGrid">
             <span>{{ capitalize(family.noun) }}</span><span class="text-right">Price</span>
-            <span class="text-right" :title="profitTitle">{{ method.id === 'harvest' ? 'Profit / reroll' : 'Profit / recipe' }}</span>
+            <span class="text-right" :title="profitTitle">Profit each</span>
             <template v-if="hasVolume"><span class="text-right" :title="MARKET_TITLE">Market / day</span><span class="text-right" :title="MAX_PROFIT_TITLE">Max profit / day</span></template>
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
             <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" />
             <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
-            <span class="text-right w-up w-num">+{{ amount(r.profit) }}c</span>
+            <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
             <template v-if="hasVolume">
               <span class="text-right w-dim w-num">{{ Math.round(r.tradedPerDay ?? 0) }}</span>
               <span class="text-right w-num">{{ Math.round(r.profitPerDay ?? 0) }}c</span>
@@ -295,9 +295,12 @@ const verdictSub = computed(() => {
   const value = `A ${flipWord.value} returns ${fmt(flip.value.model.recipeValue)} on average`
   return method.value.lifeforce ? `${value}, for ${fmt(flip.value.cost)} of ${method.value.lifeforce} lifeforce` : value
 })
-const profitTitle = computed(() => method.value.id === 'upgrade'
-  ? 'Price of the next tier, minus 3 of this one'
-  : `Return of a ${flipWord.value}, minus what goes in${method.value.lifeforce ? ' and the lifeforce. Lifeforce per item is in Settings, under Market & investments.' : ''}`)
+const profitTitle = computed(() => {
+  const { inputs } = method.value
+  if (method.value.id === 'upgrade') return `What each item you put in makes: the price of the next tier after your sell discount, minus ${inputs} of this one, divided by ${inputs}.`
+  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & investments.'
+  return `What each item you put in makes: the return of a recipe, minus its ${inputs} items, divided by ${inputs}.`
+})
 
 const unpriced = computed(() => flip.value?.kind === 'pool' ? unpricedShare(family.value, flip.value.quotes) : 0)
 const warning = computed(() => {

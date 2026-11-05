@@ -5,6 +5,7 @@ import { buyList, flipModel, parseExchange, upgradeRows } from '@/web/woke/scara
 import type { Quote } from '@/web/woke/scarab-flip/calc'
 import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, shortName, unpricedShare } from '@/web/woke/scarab-flip/families'
 import type { Exchanges } from '@/web/woke/scarab-flip/families'
+import { CORRUPTION_ONLY, ESSENCE_TYPES } from '@/web/woke/essence-scan/essences'
 import type { PriceItem } from '@/web/woke/market/types'
 
 const PLAIN = { sellDiscount: 0, reroll: false }
@@ -122,6 +123,20 @@ describe('upgrades', () => {
     expect(buyList(rows, false).length).toBe(1)
   })
 
+  it('shows profit per item put in', () => {
+    const [row] = upgradeRows(quotes({ 'Black Oil': 13, 'Opalescent Oil': 44 }), [['Black Oil', 'Opalescent Oil']], 0)
+    expect(row.profitEach).toBeCloseTo(5 / 3, 8)
+    const recipe = flipRecipe(catalysts, vendorCatalyst, 0)
+    const m = flipModel(quotes({ 'Imbued Catalyst': 2, 'Prismatic Catalyst': 100 }), PLAIN, recipe)
+    const imbued = m.rows.find(r => r.name === 'Imbued Catalyst')!
+    expect(imbued.profitEach).toBeCloseTo(imbued.profit / 3, 8)
+  })
+
+  it('does not count rounding noise as profit', () => {
+    const rows = upgradeRows(quotes({ 'Violet Oil': 0.7, 'Crimson Oil': 2.1 }), [['Violet Oil', 'Crimson Oil']], 0)
+    expect(buyList(rows, true)).toEqual([])
+  })
+
   it('skips tiers with no price', () => {
     expect(upgradeRows(quotes({ 'Clear Oil': 1, 'Amber Oil': 9 }), [['Clear Oil', 'Sepia Oil', 'Amber Oil']], 0)).toEqual([])
   })
@@ -155,6 +170,39 @@ describe('priceFlip', () => {
     expect(flip.model.rows.map(r => r.name).sort()).toEqual(['Deafening Essence of Anger', 'Deafening Essence of Greed'])
     expect(flip.model.unrated).toEqual([])
     expect(flip.cost).toBeCloseTo(0.9, 8)
+  })
+
+  it('leaves the corruption-only essences out, however dear they are', () => {
+    const specials = CORRUPTION_ONLY.map(type => item('Essence', `Essence of ${type}`, 5000))
+    const reroll = priceFlip(essences, essences.methods[0], items, new Map(), PLAIN, 30)
+    const withSpecials = priceFlip(essences, essences.methods[0], [...items, ...specials], new Map(), PLAIN, 30)
+    if (reroll?.kind !== 'pool' || withSpecials?.kind !== 'pool') throw new Error('expected a pool')
+    expect(withSpecials.model.recipeValue).toBe(reroll.model.recipeValue)
+    expect(withSpecials.model.rows).toEqual(reroll.model.rows)
+    expect(withSpecials.model.unrated).toEqual([])
+    const upgrades = priceFlip(essences, essences.methods[1], [...items, ...specials], new Map(), PLAIN, 30)
+    expect(upgrades).toEqual(priceFlip(essences, essences.methods[1], items, new Map(), PLAIN, 30))
+  })
+
+  it('covers every essence type that has tiers', () => {
+    const types = essences.chains!.map(c => c[0].replace('Whispering Essence of ', ''))
+    expect([...types].sort()).toEqual([...ESSENCE_TYPES].sort())
+    for (const type of ESSENCE_TYPES) expect(essences.weights![`Deafening Essence of ${type}`]).toBeGreaterThan(0)
+  })
+
+  it('counts Doubt in rerolls and tier upgrades', () => {
+    const doubt = [
+      item('Essence', 'Deafening Essence of Doubt', 2),
+      item('Essence', 'Shrieking Essence of Doubt', 0.5),
+      ...items
+    ]
+    const reroll = priceFlip(essences, essences.methods[0], doubt, new Map(), PLAIN, 30)
+    if (reroll?.kind !== 'pool') throw new Error('expected a pool')
+    expect(reroll.model.unrated).toEqual([])
+    expect(reroll.model.rows.map(r => r.name)).toContain('Deafening Essence of Doubt')
+    const upgrades = priceFlip(essences, essences.methods[1], doubt, new Map(), PLAIN, 30)
+    if (upgrades?.kind !== 'upgrade') throw new Error('expected upgrades')
+    expect(upgrades.rows.map(r => r.name)).toContain('Shrieking to Deafening Essence of Doubt')
   })
 
   it('upgrades across every tier', () => {
@@ -227,8 +275,10 @@ describe('bestFlip', () => {
   })
 
   it('ranks by profit without volume, below any flip with volume', () => {
+    // Per item, the orb's +34c beats the oil's +23c, though the oil's recipe makes more.
     const noVolume = bestFlip(items, new Map(), PLAIN, 30)
-    expect(noVolume?.name).toBe('Black to Opalescent Oil')
+    expect(noVolume?.name).toBe("Armoursmith's Delirium Orb")
+    expect(noVolume?.profitEach).toBeCloseTo(34.1, 1)
     expect(noVolume?.profitPerDay).toBeNull()
     const oneFeed = bestFlip(items, new Map([['DeliriumOrb', feed("Armoursmith's Delirium Orb", 5, 500)]]), PLAIN, 30)
     expect(oneFeed?.family.id).toBe('delirium')

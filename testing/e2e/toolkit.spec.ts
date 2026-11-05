@@ -2,7 +2,7 @@
 // module switchboard really switches things off, first-run setup, and the
 // hide-all hotkey.
 import { test, expect } from './harness'
-import { MODULES } from '../../renderer/src/web/woke/modules'
+import { MODULES } from './woke-modules'
 
 const WIDGET_TYPES = MODULES.flatMap(m => m.widgetTypes)
 

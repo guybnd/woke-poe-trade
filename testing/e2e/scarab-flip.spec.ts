@@ -52,6 +52,7 @@ test('flips: buy list, odds and rare scarabs from recorded prices', async ({ ove
   await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
   // Volume comes from the exchange feed, so the supply columns show.
   await expect(panel.getByText('Market / day')).toBeVisible()
+  await expect(panel.getByText('Profit each')).toHaveAttribute('title', /divided by 3/)
   await expect(panel.getByText('Max profit / day')).toHaveAttribute('title', /ceiling/i)
   await expect(panel.getByText('Breach of the Hive', { exact: true })).toBeVisible()
   await overlay.snap('flips-scarabs-buy')
@@ -84,6 +85,8 @@ test('flips: a Harvest reroll tab and a known-result tab', async ({ overlay }) =
   await panel.getByRole('tab', { name: 'Oils', exact: true }).click()
   await expect(panel.getByText(/\d+ oils? worth upgrading/)).toBeVisible()
   await expect(panel.getByText('Black to Opalescent Oil', { exact: true })).toBeVisible()
+  // (43.82 - 3 x 13.38) / 3, per oil put in.
+  await expect(panel.locator('.w-row').filter({ hasText: 'Black to Opalescent Oil' }).getByText('+1.2c')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Odds', exact: true })).toHaveCount(0)
   await overlay.snap('flips-oils-upgrade')
 })

@@ -25,6 +25,8 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
+  // Offers arriving later would grow the window between measuring and resizing.
+  await expect(panel).toContainText('Matched: 5')
   const box = async () => (await panel.boundingBox())!
   const page = overlay.page
   const start = await box()
@@ -79,6 +81,23 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   expect(Math.abs(docked.y - start.y)).toBeLessThan(2)
   expect(Math.abs(docked.width - start.width)).toBeLessThan(2)
   await expect(page.getByTestId('price-window-dock')).toHaveCount(0)
+})
+
+// Hiding the window starts a delayed chart redraw. A new check removes the chart first,
+// and the redraw then has nothing to measure: NaN in the svg, page errors.
+test('a price check right after closing the window draws no broken chart', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const panel = overlay.widget('price-check')
+  const chart = panel.locator('.apexcharts-canvas svg')
+  await expect(chart).toBeVisible()
+  await overlay.page.waitForTimeout(300)
+  fakeApp.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
+  await expect(panel).toBeHidden()
+
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(chart).toBeVisible()
+  await expect(chart).toHaveAttribute('width', '48')
 })
 
 test('rare: roll presets search with the item\'s rolls', async ({ overlay, fakeApp }) => {

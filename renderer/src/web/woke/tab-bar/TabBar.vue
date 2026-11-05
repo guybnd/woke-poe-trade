@@ -119,7 +119,7 @@
         </div>
         <div :class="$style.chipHead">Size</div>
         <div :class="$style.chips">
-          <button v-for="s in RAIL_SIZES" :key="s" :class="[$style.chip, { [$style.chipOn]: (config.railSize ?? 'm') === s }]" @click="setSize(s)">{{ s.toUpperCase() }}</button>
+          <button v-for="s in RAIL_SIZES" :key="s" :class="[$style.chip, { [$style.chipOn]: (config.railSize ?? RAIL_DEFAULT_SIZE) === s }]" @click="setSize(s)">{{ s.toUpperCase() }}</button>
         </div>
         <hr :class="$style.rule">
         <button :class="$style.item" @click="resetRail(); closePopup()"><i class="fas fa-undo" />Reset position and size</button>
@@ -179,7 +179,7 @@ import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '@/web/wo
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
-import { ICON_TOOL_NAMES, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, looksLikeItem, migrateToRail, parseWidgetTitle } from './tools'
+import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, looksLikeItem, migrateToRail, parseWidgetTitle } from './tools'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
 import { WIcon, WPrice, ninjaIcon } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
@@ -249,7 +249,7 @@ const onRight = computed(() => {
 })
 const atEdge = computed(() => props.config.anchor.pos.endsWith('l') && props.config.anchor.x <= 0)
 const flat = computed(() => props.config.railFlat === true)
-const railZoom = computed(() => RAIL_ZOOM[props.config.railSize ?? 'm'])
+const railZoom = computed(() => RAIL_ZOOM[props.config.railSize ?? RAIL_DEFAULT_SIZE])
 
 // Keep every icon reachable: it scrolls instead of running off the screen.
 const railStyle = computed(() => {
@@ -486,7 +486,7 @@ function setFlat (on: boolean, place: { x?: number, y?: number, right?: boolean,
 // A rail against the right or bottom edge stays against it.
 function setSize (size: RailSize) {
   const r = railEl.value?.getBoundingClientRect()
-  if (!r || size === (props.config.railSize ?? 'm')) return
+  if (!r || size === (props.config.railSize ?? RAIL_DEFAULT_SIZE)) return
   reshape(() => { props.config.railSize = size }, {
     x: r.left / window.innerWidth * 100,
     y: r.top / window.innerHeight * 100,
