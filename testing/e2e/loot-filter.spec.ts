@@ -477,6 +477,8 @@ test('stack sizes: type a number or drag a line, the bar follows and the file ch
   await page.getByRole('button', { name: /Save \+ reload/ }).click()
   await expect.poll(() => fs.existsSync(path.join(folder, 'NeverSink (woke).filter'))).toBe(true)
   await expect.poll(() => fs.readFileSync(path.join(folder, 'NeverSink (woke).filter'), 'utf8')).toContain('StackSize >= 501')
+  // Let the reload finish here, not in the next test.
+  await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
 })
 
 test('a save nobody asked to reload waits on the dock icon, and one key sends it once', async ({ overlay, fakeApp }) => {
