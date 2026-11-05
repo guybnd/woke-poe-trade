@@ -109,3 +109,36 @@ test('rule builder, drag and drop between tiers, and presets end up in the saved
   // Chaos Orb now listed in t2divine.
   expect(text).toMatch(/\$tier->t2divine[^\n]*\n(\t[^\n]*\n)*\tBaseType == [^\n]*"Chaos Orb"/)
 })
+
+test('back from a rule returns to the same pile, by button and by the mouse back button', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: 'Preview' }).click()
+  await page.getByRole('button', { name: 'Acts', exact: true }).click()
+  await page.getByRole('button', { name: 'Reroll' }).click()
+  await page.getByRole('button', { name: 'Reroll' }).click()
+  const labels = page.locator('[class*="_drop_"]')
+  await expect(labels.first()).toBeVisible()
+  const ruled = page.locator('[class*="_drop_"]:not([title*="no rule"])')
+  const pile = async () => await labels.evaluateAll(els => els.map(e => e.getAttribute('title') + e.textContent).join('|'))
+  const before = await pile()
+  // Hidden items are on by default, so the whole pile is there.
+  expect(await labels.count()).toBe(40)
+
+  const backButton = page.getByText('Back', { exact: true })
+  await ruled.first().dispatchEvent('click')
+  await expect(backButton).toBeVisible()
+  await expect(labels).toHaveCount(0)
+  await backButton.click()
+  await expect(labels.first()).toBeVisible()
+  expect(await pile()).toBe(before)
+  await expect(backButton).toHaveCount(0)
+
+  await ruled.first().dispatchEvent('click')
+  await expect(backButton).toBeVisible()
+  await page.getByRole('tab', { name: 'Rules' }).dispatchEvent('mouseup', { button: 3, bubbles: true })
+  await expect(labels.first()).toBeVisible()
+  expect(await pile()).toBe(before)
+})

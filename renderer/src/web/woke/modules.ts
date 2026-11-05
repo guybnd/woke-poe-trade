@@ -98,6 +98,8 @@ export interface WokeModulesConfig {
   off: string[]
   // Hides (and shows again) every toolkit panel at once.
   hideAllHotkey?: string | null
+  // The loot filter editor has been put on the overlay once (Config.ts).
+  lootFilterSeeded?: boolean
   // Icon dock position and switches (dock/dock.ts).
   dock?: DockConfig
 }

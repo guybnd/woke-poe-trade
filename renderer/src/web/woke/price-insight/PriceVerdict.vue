@@ -1,47 +1,56 @@
 <template>
   <div :class="[$style.card, $style[insight.confidence]]">
-    <div v-if="!insight.range" :class="$style.row">
-      <span :class="$style.badge">{{ loading ? '…' : 'NO DATA' }}</span>
-      <span class="w-dim">{{ loading ? 'Reading listings…' : emptyText }}</span>
-      <span class="flex-1" />
-      <template v-if="!loading && headline">
-        <span class="w-dim text-xs" :title="blendTitle">Other sources say</span>
-        <w-price :class="$style.headline" :chaos="headline.chaos" :divine="divine" />
-      </template>
-      <ninja-line v-else-if="ninjaInfo" :chaos="ninjaInfo.chaos" :divine="divine" :url="ninjaInfo.url" />
-      <button v-if="ranges.length" type="button" :class="$style.sparkBtn" title="Price history" @click="historyOpen = !historyOpen">
-        <w-spark :values="sparkValues" :width="46" :height="16" />
-      </button>
+    <div v-if="!insight.range" :class="$style.hero">
+      <div :class="$style.main">
+        <div :class="$style.eyebrow">
+          <span :class="$style.badge">{{ loading ? '…' : 'NO DATA' }}</span>
+          <span>{{ loading ? 'Reading listings…' : emptyText }}</span>
+        </div>
+        <div v-if="!loading && headline" :class="$style.value">
+          <w-price :class="[$style.headline, $style.headlinePrice]" :chaos="headline.chaos" :divine="divine" />
+          <span class="w-dim text-xs" :title="blendTitle">other sources say</span>
+        </div>
+        <div v-else-if="ninjaInfo" :class="$style.value">
+          <ninja-line :chaos="ninjaInfo.chaos" :divine="divine" :url="ninjaInfo.url" />
+        </div>
+      </div>
+      <div :class="$style.side">
+        <button v-if="ranges.length" type="button" :class="[$style.sparkBtn, { [$style.on]: historyOpen }]" title="Price history" @click="historyOpen = !historyOpen">
+          <w-spark :values="sparkValues" :width="46" :height="16" />
+        </button>
+      </div>
     </div>
     <template v-else>
-      <div :class="$style.row">
-        <span :class="$style.badge" :title="CONFIDENCE_HINT[insight.confidence]">{{ CONFIDENCE_LABEL[insight.confidence] }}</span>
-        <template v-if="lowValue">
-          <span :class="$style.headline">Not worth listing</span>
-          <span class="w-dim text-xs">under {{ LOW_VALUE }}c</span>
-        </template>
-        <template v-else>
-          <span class="w-dim whitespace-nowrap" :title="blendTitle">Likely sells for</span>
-          <w-price :class="$style.headline" :chaos="headline?.chaos ?? insight.range.fair" :divine="divine" />
-        </template>
-        <template v-if="!expanded && !showStrip">
-          <span class="w-faint text-xs whitespace-nowrap">
-            <w-price :chaos="insight.range.low" :divine="divine" :unit="rangeUnit" /> – <w-price :chaos="insight.range.high" :divine="divine" :unit="rangeUnit" />
-          </span>
-        </template>
-        <span class="flex-1" />
-        <span v-if="insight.risk !== 'none'" :class="[$style.risk, $style['risk-' + insight.risk]]" :title="riskTitle"
-          @click="verdictExpanded = true">⚑ {{ RISK_LABEL[insight.risk] }}</span>
-        <button v-if="ranges.length" type="button" :class="[$style.sparkBtn, { [$style.on]: historyOpen }]"
-          :title="historyOpen ? 'Hide price history' : 'Show price history'" @click="historyOpen = !historyOpen">
-          <w-spark :values="sparkValues" :width="46" :height="16" />
-          <span v-if="expanded && sparkChange != null" class="text-xs w-num" :class="sparkChange >= 0 ? 'w-up' : 'w-down'">{{ sparkChange >= 0 ? '+' : '' }}{{ Math.round(sparkChange * 100) }}%</span>
-        </button>
-        <span v-if="!expanded && insight.risk === 'none'" class="w-dim text-xs whitespace-nowrap" :title="droppedTitle">{{ countText }}</span>
-        <button type="button" class="w-icon-btn" :title="expanded ? 'Show less' : 'Show sources, listing notes and what drives the price'"
-          @click="verdictExpanded = !verdictExpanded">
-          <i class="fas text-xs" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'" />
-        </button>
+      <div :class="$style.hero">
+        <div :class="$style.main">
+          <div :class="$style.eyebrow">
+            <span :class="$style.badge" :title="CONFIDENCE_HINT[insight.confidence]">{{ CONFIDENCE_LABEL[insight.confidence] }}</span>
+            <span class="whitespace-nowrap" :title="blendTitle">{{ lowValue ? `Under ${LOW_VALUE}c` : 'Likely sells for' }}</span>
+          </div>
+          <div :class="$style.value">
+            <span v-if="lowValue" :class="$style.headline">Not worth listing</span>
+            <w-price v-else :class="[$style.headline, $style.headlinePrice]" :chaos="headline?.chaos ?? insight.range.fair" :divine="divine" />
+            <span v-if="!expanded && !showStrip" :class="$style.range" class="whitespace-nowrap">
+              <w-price :chaos="insight.range.low" :divine="divine" :unit="rangeUnit" /> – <w-price :chaos="insight.range.high" :divine="divine" :unit="rangeUnit" />
+            </span>
+          </div>
+        </div>
+        <div :class="$style.side">
+          <div :class="$style.sideRow">
+            <button v-if="ranges.length" type="button" :class="[$style.sparkBtn, { [$style.on]: historyOpen }]"
+              :title="historyOpen ? 'Hide price history' : 'Show price history'" @click="historyOpen = !historyOpen">
+              <w-spark :values="sparkValues" :width="46" :height="16" />
+              <span v-if="sparkChange != null && !historyOpen" class="text-xs w-num" :class="sparkChange >= 0 ? 'w-up' : 'w-down'">{{ sparkChange >= 0 ? '+' : '' }}{{ Math.round(sparkChange * 100) }}%</span>
+            </button>
+            <button type="button" class="w-icon-btn" :title="expanded ? 'Show less' : 'Show sources, listing notes and what drives the price'"
+              @click="verdictExpanded = !verdictExpanded">
+              <i class="fas text-xs" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'" />
+            </button>
+          </div>
+          <span v-if="insight.risk !== 'none'" :class="[$style.risk, $style['risk-' + insight.risk]]" :title="riskTitle"
+            @click="verdictExpanded = true">⚑ {{ RISK_LABEL[insight.risk] }}</span>
+          <span v-else-if="!expanded" :class="$style.count" :title="droppedTitle">{{ countText }}</span>
+        </div>
       </div>
       <price-strip v-if="showStrip" :insight="insight" :blend="blend" :fair="headline?.chaos ?? null" :divine="divine" />
       <div v-if="showStrip && blend.points.length > 1" :class="$style.row" class="text-xs">
@@ -108,7 +117,8 @@ const props = defineProps<{
 const LOW_VALUE = 3
 const expanded = computed(() => verdictExpanded.value)
 
-const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'SOLID', medium: 'FAIR', low: 'THIN', none: 'NO DATA' }
+// 'OK', not 'Fair': this rates the data, and 'fair' already means the price.
+const CONFIDENCE_LABEL: Record<Confidence, string> = { high: 'SOLID', medium: 'OK', low: 'THIN', none: 'NO DATA' }
 const CONFIDENCE_HINT: Record<Confidence, string> = {
   high: 'Plenty of listings that agree with each other',
   medium: 'Some listings, a bit spread out',
@@ -201,33 +211,66 @@ async function copy (n: { key: string, text: string }) {
 
 <style module>
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 7px 9px;
+  gap: 6px;
+  padding: 7px 8px 7px 11px;
   margin: 0 0 8px;
   border-radius: var(--w-r-md);
-  border: 1px solid var(--w-line-strong);
+  border: 1px solid var(--w-line);
   background: var(--w-panel);
   color: var(--w-fg);
   font-family: var(--w-body);
   font-size: var(--w-text);
+  overflow: hidden;
 }
+/* The confidence reads from the edge of the card, at a glance. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--w-panel-3);
+}
+.high::before { background: var(--w-up); }
+.medium::before { background: var(--w-accent); }
+.low::before { background: var(--w-warn); }
+.low { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
+
+.hero { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.main { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.sideRow { display: flex; align-items: center; gap: 2px; }
+.eyebrow { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--w-dim); font-size: var(--w-fs-sm); line-height: 16px; }
+.value { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; line-height: 24px; }
+.range { display: inline-flex; align-items: center; gap: 3px; color: var(--w-dim); font-size: var(--w-fs-sm); }
+.count { color: var(--w-faint); font-size: var(--w-fs-xs); white-space: nowrap; padding-right: 4px; }
 .row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .badge {
   flex: none;
-  font-size: var(--w-fs-xs);
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: var(--w-r-sm);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 14px;
+  padding: 0 5px;
+  border-radius: 3px;
   background: var(--w-panel-3);
   color: var(--w-dim);
 }
-.high .badge { background: var(--w-up); color: var(--w-accent-fg); }
-.medium .badge { background: var(--w-accent); color: var(--w-accent-fg); }
-.low .badge { background: var(--w-warn); color: var(--w-accent-fg); }
-.low { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
-.headline { font-size: var(--w-fs-xl); font-weight: 600; color: var(--w-accent); }
+.high .badge { background: color-mix(in srgb, var(--w-up) 18%, transparent); color: var(--w-up); }
+.medium .badge { background: var(--w-accent-soft); color: var(--w-accent); }
+.low .badge { background: color-mix(in srgb, var(--w-warn) 18%, transparent); color: var(--w-warn); }
+.headline {
+  font-family: var(--w-head);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: var(--w-head-track);
+  color: var(--w-accent);
+  white-space: nowrap;
+}
+/* Fontin's old-style digits dip and rise: a price wants even figures. */
+.headlinePrice { font-family: var(--w-num); font-size: var(--w-fs-xl); font-weight: 600; letter-spacing: 0; }
 .risk {
   flex: none;
   font-size: var(--w-fs-xs);

@@ -85,6 +85,9 @@ test('boss runs icon: The Alluring Abyss shows Uber Atziri, and a click opens it
   await overlay.hoverDockIcon('boss-runs')
   await expect(icon.getByText('Uber Atziri')).toBeVisible()
   await expect(icon.getByText('The Vertex')).toBeVisible()
+  await expect(icon.getByText('41.7%')).toBeVisible()
+  // Run stats wait until you've logged a kill.
+  await expect(icon.getByText('Entry', { exact: true })).toHaveCount(0)
   await overlay.snap('uber atziri card from the dock icon')
 
   // A shared arena name doesn't mix in the other boss.
@@ -96,6 +99,8 @@ test('boss runs icon: The Alluring Abyss shows Uber Atziri, and a click opens it
   await overlay.hoverDockIcon('boss-runs')
   await expect(icon.getByText('The Uber Elder')).toBeVisible()
   await expect(icon.getByText('The Shaper', { exact: true })).toHaveCount(0)
+  // Level 84 is the normal fight, not Uber Uber Elder.
+  await expect(icon.getByText('Uber Uber Elder')).toHaveCount(0)
 })
 
 test('boss runs icon: a click opens the arena boss that has a drop list', async ({ overlay }) => {

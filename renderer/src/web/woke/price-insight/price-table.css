@@ -1,0 +1,147 @@
+/*
+ * Price check toolbar and listing tables (TradeListing, TradeBulk, TradeLinks).
+ * What restyles APT's chrome is scoped like the APT skin in ui/theme.css, so the
+ * "classic" theme keeps its look. Parts APT never had (counts, tags, age ranges)
+ * use the tokens in every theme, like the other woke widgets.
+ */
+
+/* ---------- toolbar ---------- */
+:root:not([data-woke-theme="classic"]) .w-pc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  margin-bottom: var(--w-s2);
+  padding: 0;
+  font-family: var(--w-body);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.w-pc-toolbar > * { flex: none; }
+:root:not([data-woke-theme="classic"]) .w-pc-toolbar > * { margin-right: 0; }
+.w-pc-toolbar [data-tippy-root] { white-space: normal; }
+.w-pc-toolbar .w-pc-grow { flex: 1 1 0; min-width: 0; }
+.w-pc-toolbar .w-pc-matched { color: var(--w-dim); }
+.w-pc-toolbar .w-pc-matched b { font-weight: 600; color: var(--w-fg); font-variant-numeric: tabular-nums; }
+/* The filter's label gives way first, so the controls on the right never clip. */
+.w-pc-toolbar .w-pc-online { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+
+:root:not([data-woke-theme="classic"]) .w-pc-online-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  height: 24px;
+  margin: 0;
+  padding: 0 4px;
+  font-family: var(--w-body);
+  font-size: 12px;
+}
+:root:not([data-woke-theme="classic"]) .w-pc-online-btn:hover { background: var(--w-panel-3); color: var(--w-fg); }
+
+:root:not([data-woke-theme="classic"]) #overlay-window .w-pc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel-3);
+  color: var(--w-fg);
+  font-family: var(--w-body);
+  font-size: 12px;
+  white-space: nowrap;
+}
+:root:not([data-woke-theme="classic"]) #overlay-window .w-pc-btn:hover { border-color: var(--w-line-strong); background: var(--w-accent-soft); }
+:root:not([data-woke-theme="classic"]) #overlay-window .w-pc-btn i { color: var(--w-dim); font-size: 10px; }
+
+/* ---------- listing table ---------- */
+:root:not([data-woke-theme="classic"]) .w-pc-scroll { min-height: 0; }
+:root:not([data-woke-theme="classic"]) .w-pc-scroll::-webkit-scrollbar { width: 8px; }
+:root:not([data-woke-theme="classic"]) .w-pc-scroll::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: 4px; }
+
+:root:not([data-woke-theme="classic"]) .w-pc-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--w-body);
+  font-size: var(--w-fs-md);
+  color: var(--w-fg);
+}
+/* No stripes: hairlines carry the rows, so fading a row can do the talking. */
+:root:not([data-woke-theme="classic"]) .w-pc-table.table-stripped tbody tr:nth-child(odd) { background: transparent; }
+:root:not([data-woke-theme="classic"]) .w-pc-table tbody td {
+  height: 24px;
+  border-bottom: 1px solid var(--w-line-soft);
+  font-variant-numeric: tabular-nums;
+}
+:root:not([data-woke-theme="classic"]) .w-pc-table tbody tr:hover td { background: var(--w-accent-soft); }
+:root:not([data-woke-theme="classic"]) .w-pc-table thead th {
+  background: var(--w-pc-window);
+  font-family: var(--w-body);
+  font-size: var(--w-fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--w-faint);
+}
+:root:not([data-woke-theme="classic"]) .w-pc-table thead th > div {
+  border-bottom: 1px solid var(--w-line-strong);
+  line-height: 20px;
+}
+
+:root:not([data-woke-theme="classic"]) .w-pc-ratio-head { font-size: var(--w-fs-xs); letter-spacing: 0; text-transform: none; }
+
+/* Price: numbers line up on the right, the coin sits after them. */
+.w-pc-price { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.w-pc-amount { min-width: 2.25rem; text-align: right; font-weight: 500; }
+.w-pc-coin { width: 16px; height: 16px; object-fit: contain; flex: none; }
+.w-pc-unit { color: var(--w-dim); font-size: var(--w-fs-sm); }
+
+/* Count: a bar for how much is for sale at this price. */
+.w-pc-count { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.w-pc-count-n { color: var(--w-dim); font-size: var(--w-fs-sm); }
+.w-pc-count-bar { display: block; width: 28px; height: 3px; border-radius: 2px; background: var(--w-panel-3); overflow: hidden; }
+.w-pc-count-bar > span { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }
+
+.w-pc-age { color: var(--w-dim); font-size: var(--w-fs-sm); text-align: right; white-space: nowrap; }
+.w-pc-age-inner { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Rows the verdict's fair range is built from get a gold edge. */
+.w-pc-table tbody tr.w-pc-in-range td:first-child { box-shadow: inset 2px 0 0 var(--w-accent); }
+.w-pc-table tbody tr.w-pc-in-range .w-pc-amount { color: var(--w-accent); }
+
+/* Older listings recede: they are the ones most likely to be gone. */
+.w-pc-table tbody tr.w-pc-aging .w-pc-age { color: var(--w-faint); }
+.w-pc-table tbody tr.w-pc-stale > td { opacity: 0.5; }
+.w-pc-table tbody tr.w-pc-ignored > td { opacity: 0.4; }
+.w-pc-table tbody tr.w-pc-stale:hover > td,
+.w-pc-table tbody tr.w-pc-ignored:hover > td { opacity: 0.85; }
+
+.w-pc-tag {
+  margin-left: var(--w-s1);
+  padding: 0 4px;
+  border-radius: 3px;
+  border: 1px solid var(--w-down);
+  color: var(--w-down);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.w-pc-you {
+  margin-left: var(--w-s1);
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--w-accent-soft);
+  color: var(--w-accent);
+  font-size: var(--w-fs-xs);
+}
+
+/* Loading rows, in the final layout so nothing jumps. */
+.w-pc-skel { display: block; height: 9px; border-radius: 3px; background: linear-gradient(90deg, var(--w-panel-2), var(--w-panel-3), var(--w-panel-2)); background-size: 200% 100%; animation: w-pc-shimmer 1.4s linear infinite; }
+@keyframes w-pc-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .w-pc-skel { animation: none; } }
+
+.w-pc-foot { padding: 5px 0 0; color: var(--w-faint); font-family: var(--w-body); font-size: var(--w-fs-xs); text-align: right; font-variant-numeric: tabular-nums; }

@@ -242,7 +242,10 @@ export class Shortcuts {
               if (action.focusOverlay && this.overlay.wasUsedRecently) {
                 this.overlay.assertOverlayActive()
               }
-            }).catch(() => {})
+            }).catch(() => {
+              // woke: nothing was under the mouse. Say so, not silence.
+              this.server.sendEventTo('last-active', { name: 'MAIN->CLIENT::item-text-failed', payload: { target: action.target } })
+            })
 
           pressKeysToCopyItemText(
             (entry.keepModKeys) ? entry.shortcut.split(' + ').filter(key => isModKey(key)) : undefined,

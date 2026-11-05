@@ -58,6 +58,7 @@ export interface Boss {
 }
 
 const POE_HOW = 'https://poe.how/economy/bosses/'
+const POEDB = 'https://poedb.tw/us/'
 
 export const BOSSES: Boss[] = ([
   {
@@ -161,8 +162,21 @@ export const BOSSES: Boss[] = ([
     tier: 'uber',
     entry: [{ name: 'Blazing Fragment', qty: 4 }],
     runSeconds: 240,
-    source: null,
-    drops: []
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-searing-exarch', kills: null },
+    drops: [
+      { name: 'The Celestial Brace', chance: null },
+      { name: 'Forbidden Flame', chance: null },
+      { name: 'Archive Reliquary Key', chance: null },
+      { name: 'Exceptional Eldritch Ember', chance: null },
+      { name: 'Curio of Absorption', chance: null },
+      { name: "Annihilation's Approach", chance: null },
+      { name: 'Eldritch Chaos Orb', chance: null },
+      { name: 'Eldritch Orb of Annulment', chance: null },
+      { name: 'The Annihilating Light', chance: null },
+      { name: 'Crystallised Omniscience', chance: null },
+      { name: 'Eldritch Exalted Orb', chance: null },
+      { name: 'Overheat Support', chance: null, variant: '1' }
+    ]
   },
   {
     id: 'uber-eater',
@@ -170,8 +184,24 @@ export const BOSSES: Boss[] = ([
     tier: 'uber',
     entry: [{ name: 'Devouring Fragment', qty: 4 }],
     runSeconds: 240,
-    source: null,
-    drops: []
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-eater-of-worlds', kills: null },
+    drops: [
+      { name: 'Nimis', chance: null },
+      { name: 'Forbidden Flesh', chance: null },
+      { name: 'Visceral Reliquary Key', chance: null },
+      { name: 'Melding of the Flesh', chance: null },
+      { name: 'Exceptional Eldritch Ichor', chance: null },
+      { name: 'Curio of Absorption', chance: null },
+      { name: 'Fruiting Astrolabe', chance: null },
+      { name: 'Curio of Consumption', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Ashes of the Stars', chance: null },
+      { name: 'Eldritch Chaos Orb', chance: null },
+      { name: 'Eldritch Orb of Annulment', chance: null },
+      { name: 'Eldritch Exalted Orb', chance: null },
+      { name: 'Ravenous Passion', chance: null },
+      { name: 'Gluttony Support', chance: null, variant: '1' }
+    ]
   },
   {
     id: 'uber-shaper',
@@ -179,8 +209,22 @@ export const BOSSES: Boss[] = ([
     tier: 'uber',
     entry: [{ name: 'Cosmic Fragment', qty: 4 }],
     runSeconds: 300,
-    source: null,
-    drops: []
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'uber-shaper', kills: 50, note: 'Small sample: treat rare drops as rough.' },
+    drops: [
+      { name: 'Sublime Vision', chance: 0.06 },
+      { name: 'The Tides of Time', chance: 0.12 },
+      { name: "Shaper's Exalted Orb", chance: 0.18 },
+      { name: 'Fragment of Shape', chance: 0.48 },
+      { name: 'Fragment of Knowledge', chance: 0.52 },
+      { name: 'Orb of Dominance', chance: 0.02 },
+      { name: 'Entropic Devastation', chance: 0.28 },
+      { name: 'Echoes of Creation', chance: 0.4 },
+      { name: 'Cosmic Reliquary Key', chance: null },
+      { name: 'Starforge', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null },
+      { name: 'Voidstorm Support', chance: null, variant: '1' }
+    ]
   },
   {
     id: 'uber-cortex',
@@ -188,8 +232,18 @@ export const BOSSES: Boss[] = ([
     tier: 'uber',
     entry: [{ name: 'Synthesising Fragment', qty: 4 }],
     runSeconds: 240,
-    source: null,
-    drops: []
+    source: { label: 'community wiki via poedb', url: POEDB + 'Venarius', kills: null, note: 'Wiki figures with no stated sample.' },
+    drops: [
+      { name: 'Rational Doctrine', chance: 0.05 },
+      { name: 'Forgotten Reliquary Key', chance: 0.015 },
+      { name: 'The Apostate', chance: 0.15 },
+      { name: 'The Hook', chance: 0.03 },
+      { name: 'Nebulis', chance: 0.40 },
+      { name: 'Imperfect Memories', chance: null },
+      { name: 'Circle of Ambition', chance: 0.10 },
+      { name: 'Mask of the Tribunal', chance: 0.30 },
+      { name: 'Greater Kinetic Instability Support', chance: null, variant: '1' }
+    ]
   },
   {
     id: 'maven',
@@ -235,8 +289,18 @@ export const BOSSES: Boss[] = ([
     tier: 'pinnacle',
     entry: [{ name: 'Incandescent Invitation', qty: 1 }],
     runSeconds: 210,
-    source: null,
-    drops: []
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'searing-exarch', kills: null },
+    drops: [
+      { name: 'Forbidden Flame', chance: null },
+      { name: 'Exceptional Eldritch Ember', chance: null },
+      { name: 'Dissolution of the Flesh', chance: null },
+      { name: 'Eldritch Chaos Orb', chance: null },
+      { name: 'Eldritch Orb of Annulment', chance: null },
+      { name: 'Dawnbreaker', chance: null },
+      { name: 'Eldritch Exalted Orb', chance: null },
+      { name: 'Dawnstrider', chance: null },
+      { name: 'Overheat Support', chance: null, variant: '1' }
+    ]
   },
   {
     id: 'uber-elder',
@@ -249,8 +313,21 @@ export const BOSSES: Boss[] = ([
       { name: 'Fragment of Emptiness', qty: 1 }
     ],
     runSeconds: 240,
-    source: null,
-    drops: []
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-elder', kills: null },
+    drops: [
+      { name: 'Orb of Dominance', chance: null },
+      { name: "Watcher's Eye", chance: null },
+      { name: 'Indigon', chance: null },
+      { name: "Shaper's Exalted Orb", chance: null },
+      { name: "Elder's Exalted Orb", chance: null },
+      { name: 'Void of the Elements', chance: null },
+      { name: 'Auspicious Ambitions', chance: null },
+      { name: 'Disintegrator', chance: null },
+      { name: 'Void Shockwave Support', chance: null, variant: '1' },
+      { name: 'Mark of the Shaper', chance: null },
+      { name: 'Mark of the Elder', chance: null },
+      { name: 'Voidfletcher', chance: null }
+    ]
   },
   {
     id: 'shaper',
@@ -263,8 +340,19 @@ export const BOSSES: Boss[] = ([
       { name: 'Fragment of the Chimera', qty: 1 }
     ],
     runSeconds: 240,
-    source: null,
-    drops: []
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'shaper', kills: null },
+    drops: [
+      { name: 'Dying Sun', chance: null },
+      { name: 'Orb of Dominance', chance: null },
+      { name: "Shaper's Exalted Orb", chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Fragment of Shape', chance: null },
+      { name: 'Fragment of Knowledge', chance: null },
+      { name: "Shaper's Touch", chance: null },
+      { name: 'Voidwalker', chance: null },
+      { name: 'Solstice Vigil', chance: null },
+      { name: 'Voidstorm Support', chance: null, variant: '1' }
+    ]
   },
   {
     id: 'atziri',
@@ -289,6 +377,45 @@ export const BOSSES: Boss[] = ([
       { name: "Doryani's Invitation", chance: null },
       { name: 'Pledge of Hands', chance: null },
       { name: 'Triumvirate Authority', chance: null }
+    ]
+  },
+  {
+    id: 'sirus',
+    name: 'Sirus',
+    tier: 'pinnacle',
+    entry: [
+      { name: "Al-Hezmin's Crest", qty: 1 },
+      { name: "Baran's Crest", qty: 1 },
+      { name: "Drox's Crest", qty: 1 },
+      { name: "Veritania's Crest", qty: 1 }
+    ],
+    runSeconds: 180,
+    source: { label: 'community wiki via poedb', url: POEDB + 'Sirus%2C_Awakener_of_Worlds', kills: null, note: 'Wiki figures with no stated sample.' },
+    drops: [
+      { name: 'Hands of the High Templar', chance: 0.40 },
+      { name: 'Crown of the Inward Eye', chance: 0.35 },
+      { name: 'The Burden of Truth', chance: 0.20 },
+      { name: 'Thread of Hope', chance: 0.05 },
+      { name: "Awakener's Orb", chance: 0.15 },
+      { name: 'Orb of Dominance', chance: 0.10 },
+      { name: 'A Fate Worse Than Death', chance: 0.04 },
+      { name: 'Annihilation Support', chance: null, variant: '1' }
+    ]
+  },
+  {
+    id: 'venarius',
+    name: 'Venarius',
+    tier: 'pinnacle',
+    entry: [{ name: 'Cortex', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'community wiki via poedb', url: POEDB + 'Venarius', kills: null, note: 'Wiki figures with no stated sample.' },
+    drops: [
+      { name: 'Offering to the Serpent', chance: 0.45 },
+      { name: 'Perepiteia', chance: 0.35 },
+      { name: 'Garb of the Ephemeral', chance: 0.15 },
+      { name: 'Bottled Faith', chance: 0.05 },
+      { name: 'The Hook', chance: 0.03 },
+      { name: 'Greater Kinetic Instability Support', chance: null, variant: '1' }
     ]
   },
   {

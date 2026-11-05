@@ -38,7 +38,7 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'range', r: HistoryRange): void }>()
 
 const W = 400
-const H = 120
+const H = 88
 
 const range = shallowRef<HistoryRange>(props.ranges[0] ?? 'mine')
 watch(() => props.ranges, (r) => {
@@ -72,7 +72,7 @@ const emptyText = computed(() => {
 </script>
 
 <style module>
-.box { display: flex; flex-direction: column; gap: 4px; }
+.box { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--w-line-soft); }
 .head { display: flex; align-items: center; gap: 6px; }
 .chart { display: block; width: 100%; height: auto; }
 .grid { stroke: var(--w-line-soft, var(--w-line)); stroke-width: 1; }

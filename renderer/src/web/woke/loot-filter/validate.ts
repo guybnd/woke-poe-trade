@@ -19,7 +19,8 @@ const CONDITION_KEYS = new Set([
   'ElderItem', 'ShaperItem', 'ShapedMap', 'ElderMap', 'GemQualityType', 'AlternateQuality', 'Scourged',
   'HasSearingExarchImplicit', 'HasEaterOfWorldsImplicit', 'ArchnemesisMod', 'BaseArmour', 'BaseEnergyShield',
   'BaseEvasion', 'BaseWard', 'BaseDefencePercentile', 'ZanaMemory', 'Continue', 'HasVaalUniqueMod', 'IsVaalUnique',
-  'TwiceCorrupted', 'UnidentifiedItemTier', 'WaystoneTier', 'HasImplicitMods', 'Sanctified', 'Unmodifiable'
+  'TwiceCorrupted', 'UnidentifiedItemTier', 'WaystoneTier', 'HasImplicitMods', 'Sanctified', 'Unmodifiable',
+  'AlwaysShow', 'Exceptional', 'MirageMap'
 ])
 
 const COLOURS = new Set(['Red', 'Green', 'Blue', 'Brown', 'White', 'Yellow', 'Cyan', 'Grey', 'Orange', 'Pink', 'Purple'])
@@ -36,8 +37,11 @@ function int (v: string | undefined, min: number, max: number): boolean {
 function checkBlock (b: FilterBlock): string[] {
   const out: string[] = []
   for (const c of b.conditions) {
-    if (!CONDITION_KEYS.has(c.key)) out.push(`unknown condition "${c.key}"`)
-    else if (LIST_KEYS.has(c.key) && !c.values.length) out.push(`${c.key} has no values`)
+    // A keyword from the source filter may be newer than this list (a new
+    // league); it mustn't block a restyle of that rule. Ours must be known.
+    if (!CONDITION_KEYS.has(c.key)) {
+      if (!b.raw.length && !b.inherited) out.push(`unknown condition "${c.key}"`)
+    } else if (LIST_KEYS.has(c.key) && !c.values.length) out.push(`${c.key} has no values`)
   }
   for (const a of b.actions) {
     if (!ACTION_KEYS.has(a.key)) { out.push(`unknown action "${a.key}"`); continue }
@@ -49,7 +53,7 @@ function checkBlock (b: FilterBlock): string[] {
         if (a.args.length < 3 || a.args.length > 4 || !a.args.every(x => int(x, 0, 255))) out.push(`${a.key} needs 3 or 4 numbers from 0 to 255`)
         break
       case 'PlayAlertSound': case 'PlayAlertSoundPositional':
-        if (!(int(a.args[0], 1, 16) || /^Sh[A-Za-z]+$/.test(a.args[0] ?? ''))) out.push(`alert sound "${a.args[0] ?? ''}" isn't 1-16`)
+        if (!(int(a.args[0], 1, 16) || a.args[0] === 'None' || /^Sh[A-Za-z]+$/.test(a.args[0] ?? ''))) out.push(`alert sound "${a.args[0] ?? ''}" isn't 1-16`)
         if (a.args[1] != null && !int(a.args[1], 0, 300)) out.push(`sound volume ${a.args[1]} is outside 0-300`)
         break
       case 'CustomAlertSound': case 'CustomAlertSoundOptional':

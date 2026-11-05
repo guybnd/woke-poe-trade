@@ -153,6 +153,7 @@ type IpcWidgetAction =
   }>
 
 type IpcItemText =
+  Event<'MAIN->CLIENT::item-text-failed', { target: string }> |
   Event<'MAIN->CLIENT::item-text', {
     target: string
     clipboard: string

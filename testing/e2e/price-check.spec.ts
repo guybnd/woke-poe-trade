@@ -124,3 +124,29 @@ test('map check hotkey (Alt+M) opens the verdict card, even before the widget is
   await expect(card).toContainText('RUN')
   await overlay.snap('map check card')
 })
+
+test('unique: improved merges same prices with a count, classic lists every listing', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-trade-searches' }] })
+  await overlay.copyItem('items/unique-kaoms-heart.txt')
+  const panel = overlay.widget('price-check')
+  const rows = panel.locator('.w-pc-table tbody tr')
+  await expect(panel.locator('.w-pc-foot')).toContainText('listings')
+  await expect(panel.locator('.w-pc-count-n').first()).toContainText('×')
+  const merged = await rows.count()
+
+  await panel.getByRole('button', { name: 'Classic' }).click()
+  await expect.poll(() => rows.count()).toBeGreaterThan(merged)
+  await expect(panel.locator('.w-pc-foot')).toHaveCount(0)
+  await panel.getByRole('button', { name: 'Improved' }).click()
+
+  // The toolbar fits: nothing runs past the window, the toggle's labels aren't clipped.
+  const edge = (await overlay.page.locator('#price-window').boundingBox())!
+  const toolbarButtons = panel.locator('.w-pc-toolbar button')
+  for (let i = 0; i < await toolbarButtons.count(); i++) {
+    const box = (await toolbarButtons.nth(i).boundingBox())!
+    expect(box.x + box.width).toBeLessThanOrEqual(edge.x + edge.width)
+  }
+  const label = panel.getByRole('button', { name: 'Improved' })
+  expect(await label.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  await overlay.snap('unique with merged listings')
+})

@@ -150,6 +150,26 @@ export function observedRates (kills: KillRecord[]): Map<string, number> {
   return out
 }
 
+// A logged drop, priced the same way as its row in the drop list.
+export function killDropPrice (d: { name: string, variant?: string }, prices: Prices, prefs: BossPrefs): number | null {
+  return dropPrice({ name: d.name, chance: null, variant: d.variant, variable: VARIABLE_ITEMS.has(d.name) }, prices, prefs).price
+}
+
+// The log doesn't name the tier of a shared arena, but its level does: uber
+// fights are level 85, normal ones 83 or 84 (real Client.txt logs).
+export function bossesAtLevel<T extends { tier: Boss['tier'] }> (bosses: T[], level: number | null): T[] {
+  if (level == null) return bosses
+  const tier = level >= 85 ? 'uber' : 'pinnacle'
+  const match = bosses.filter(b => b.tier === tier)
+  return match.length ? match : bosses
+}
+
+// For the icon's card: the most valuable first, so an expensive drop with no
+// known chance isn't hidden behind cheap ones that have one.
+export function cardDrops (drops: DropRow[], n: number): DropRow[] {
+  return [...drops].sort((a, b) => (b.price ?? -1) - (a.price ?? -1)).slice(0, n)
+}
+
 function dropList (boss: Boss, prefs: BossPrefs): BossDrop[] {
   const list: BossDrop[] = [...boss.drops]
   const known = new Set(list.map(d => d.name))
@@ -168,6 +188,9 @@ function dropList (boss: Boss, prefs: BossPrefs): BossDrop[] {
 // With this many logged kills, your own drop rates replace the community
 // ones (rates are per patch and community samples age quickly).
 export const OWN_RATE_KILLS = 20
+// A boss with no other rates uses yours from this many kills: one kill would
+// make every drop read 100% or 0%.
+export const OWN_RATE_MIN_KILLS = 5
 
 export function evaluateBoss (
   boss: Boss,
@@ -201,7 +224,7 @@ export function evaluateBoss (
       chance = mine.get(d.name) ?? 0; rateSource = 'mine'
     } else if (d.chance != null) {
       chance = d.chance; rateSource = 'community'
-    } else if (kills.length) {
+    } else if (kills.length >= OWN_RATE_MIN_KILLS) {
       chance = mine.get(d.name) ?? 0; rateSource = 'mine'
     }
     const qty = d.qty ?? 1
@@ -226,7 +249,7 @@ export function evaluateBoss (
   if (kills.length) {
     let total = 0
     for (const kill of kills) {
-      for (const d of kill.drops) total += (price(d.name, d.variant) ?? 0) * d.qty
+      for (const d of kill.drops) total += (killDropPrice(d, prices, prefs) ?? 0) * d.qty
     }
     myLoot = total / kills.length
   }

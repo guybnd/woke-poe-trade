@@ -133,6 +133,17 @@ export async function pruneNeverSink (args: { keep?: number }): Promise<void> {
   }
 }
 
+// item_filter_loaded_successfully holds the name of the filter that loaded,
+// not true or false (older games wrote true/false).
+export function filterLoaded (raw: unknown, name: string | null): boolean | null {
+  if (raw == null) return null
+  const value = String(raw)
+  if (value === 'true') return true
+  // The game may write the name with or without ".filter", in another case.
+  const stem = (s: string) => s.replace(/\.filter$/i, '').toLowerCase()
+  return name != null && value !== '' && stem(value) === stem(name)
+}
+
 // What the game itself has selected, from production_Config.ini: the filter
 // name and whether it loaded (false when the game rejected the file).
 export async function gameFilterSetting (configPath: string | null): Promise<{ name: string | null, loaded: boolean | null }> {
@@ -142,8 +153,7 @@ export async function gameFilterSetting (configPath: string | null): Promise<{ n
     const ui = parsed.UI ?? {}
     const name = typeof ui.item_filter === 'string' && ui.item_filter ? ui.item_filter : null
     const raw = ui.item_filter_loaded_successfully
-    const loaded = raw == null ? null : String(raw) === 'true'
-    return { name, loaded }
+    return { name, loaded: filterLoaded(raw, name) }
   } catch {
     return { name: null, loaded: null }
   }

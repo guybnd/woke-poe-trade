@@ -11,6 +11,7 @@ import type { OwnRule } from './rules'
 import { defaultPresets, normalizePresets } from './presets'
 import type { Presets } from './presets'
 import { popupAnchor } from '../ui/window-anchor'
+import { sortKeys } from './hotkey-match'
 
 export const LOOT_FILTER_TYPE = 'woke-loot-filter'
 // copy-item target: sample the hovered item and open its rule card.
@@ -143,6 +144,22 @@ export function initLootFilterWidget (w: LootFilterWidget) {
   w.looserHotkey = 'Alt + BracketLeft'
 }
 
+// The editor's hotkeys only register once the widget exists, so it is on every
+// overlay from the start. Already set up and hidden: adding it shows nothing.
+// `taken` lists keys already in use; two actions on one key would both die.
+export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootFilterWidget {
+  const w = { wmId, wmType: LOOT_FILTER_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as LootFilterWidget
+  initLootFilterWidget(w)
+  // Order doesn't matter: 'Shift + Alt + F' is 'Alt + Shift + F'.
+  const used = new Set(taken.map(sortKeys))
+  const free = (key: string | null) => key && !used.has(sortKeys(key)) ? key : null
+  w.sampleHotkey = free(w.sampleHotkey)
+  w.editorHotkey = free(w.editorHotkey)
+  w.stricterHotkey = free(w.stricterHotkey)
+  w.looserHotkey = free(w.looserHotkey)
+  return w
+}
+
 export function normalizeLootFilterWidget (w: LootFilterWidget) {
   if (!w.anchor) w.anchor = popupAnchor()
   if (w.sampleHotkey === undefined) w.sampleHotkey = null
@@ -225,8 +242,36 @@ export function parseStrictnessTarget (target: string): { wmId: number, dir: 'st
   return m ? { wmId: Number(m[1]), dir: m[2] as 'stricter' | 'looser' } : null
 }
 
+export function isWokeCopy (name: string): boolean {
+  return /\(woke\)\.filter$/i.test(name)
+}
+
+// The filter a copy saved by this editor was made from, when the original is
+// gone (the game empties OnlineFilters): its text without our header and rules.
+export function baseFromCopy (text: string): string {
+  const lines = text.split(/\r?\n/)
+  const out: string[] = []
+  let i = 0
+  if (/^# WOKE-LOOT-FILTER-EDITOR\b/.test(lines[0] ?? '')) {
+    while (i < lines.length && lines[i].startsWith('#') && lines[i].trim() !== '' && i < 3) i++
+    if (lines[i]?.trim() === '') i++
+  }
+  for (; i < lines.length; i++) {
+    if (/^(Show|Hide|Minimal)\b.*\$type->woke->/.test(lines[i])) {
+      i++
+      while (i < lines.length && /^\s+\S/.test(lines[i])) i++
+      if (lines[i]?.trim() !== '') i--
+      continue
+    }
+    out.push(lines[i])
+  }
+  return out.join('\n')
+}
+
 export function outputName (w: Pick<LootFilterWidget, 'sourceName' | 'saveMode' | 'sourceOnline' | 'sourceTitle'> & { neversink?: { on: boolean } }): string {
   if (w.neversink?.on) return NEVERSINK_OUTPUT
+  // Working on an edited copy itself: it stays the copy.
+  if (!w.sourceOnline && isWokeCopy(w.sourceName)) return w.sourceName
   if (w.sourceOnline) {
     const safe = (w.sourceTitle || w.sourceName).replace(/[<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
     return `${safe || 'Online filter'} (woke).filter`

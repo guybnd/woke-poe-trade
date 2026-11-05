@@ -169,6 +169,10 @@ describe('farming', () => {
     expect(arenaBosses('', 'The Alluring Abyss')).toEqual(['uber-atziri'])
     expect(arenaBosses('Unknown', 'The Alluring Abyss')).toEqual(['uber-atziri'])
     expect(arenaBosses('MapWorldsCemetery', 'Cemetery')).toEqual([])
+    // Exarch and Eater arenas have something to show on the icon's card.
+    for (const id of [...arenaBosses('MapWorldsPrimordialBoss3', ''), ...arenaBosses('MapWorldsPrimordialBoss4', '')]) {
+      expect(BOSSES.find(b => b.id === id)!.drops.length).toBeGreaterThan(0)
+    }
   })
 
   it('auto-pauses after idling, counting time only up to the limit', () => {

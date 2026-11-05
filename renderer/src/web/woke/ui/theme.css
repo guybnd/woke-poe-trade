@@ -291,6 +291,15 @@
   color: var(--w-fg);
 }
 
+/* APT's price check colours that live in component styles, not utility classes. */
+:root:not([data-woke-theme="classic"]) {
+  --w-pc-window: var(--w-panel-2);
+  --w-pc-well: var(--w-panel-solid);
+  --w-pc-raise: var(--w-panel-3);
+}
+/* Modern's panel-2 is see-through, and these sit over scrolling content. */
+:root[data-woke-theme="modern"] { --w-pc-window: var(--w-panel-solid); }
+
 /* Map APT's Tailwind greys onto the theme so price check, menus and settings
  * match the woke widgets. Only colours change; layout stays upstream's. */
 :root:not([data-woke-theme="classic"]) #overlay-window .bg-gray-900 { background-color: var(--w-panel); }

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="flex flex-wrap items-center pb-3 gap-2">
+    <div class="flex flex-wrap items-center pb-2 gap-2">
       <filter-btn-logical v-if="searchSub"
         :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
       <filter-btn-numeric v-if="filters.linkedSockets"
@@ -48,7 +48,7 @@
           : t('filters.selected_none')"
       />
     </div>
-    <div v-if="!statsVisibility.disabled && hasStats" class="mb-4" :class="(presets.length > 1) ? 'mt-1' : 'mt-4'">
+    <div v-if="!statsVisibility.disabled && hasStats" class="mb-3" :class="(presets.length > 1) ? 'mt-1' : 'mt-0'">
       <div class="flex" v-if="presets.length > 1">
         <div class="w-5 border-b border-gray-700" />
         <div class="flex divide-x border-gray-700 border-t border-l border-r rounded-t overflow-hidden">
@@ -195,7 +195,8 @@ export default defineComponent({
 
 <style lang="postcss" module>
 .presetBtn {
-  @apply border-gray-700 bg-gray-800;
+  @apply border-gray-700;
+  background: var(--w-pc-window, theme('colors.gray.800'));
   @apply px-2;
   min-width: 3rem;
 
@@ -204,7 +205,7 @@ export default defineComponent({
   }
 
   &.active {
-    background: linear-gradient(to bottom, theme('colors.gray.900'), theme('colors.gray.800'));
+    background: linear-gradient(to bottom, var(--w-pc-well, theme('colors.gray.900')), var(--w-pc-window, theme('colors.gray.800')));
   }
 }
 </style>

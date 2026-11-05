@@ -18,6 +18,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 <style module>
 .seg {
   display: inline-flex;
+  flex: none;
   border: 1px solid var(--w-line);
   border-radius: var(--w-radius-sm);
   overflow: hidden;
@@ -25,8 +26,10 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 .seg button {
   font-size: 12px;
   color: var(--w-dim);
-  padding: 2px 9px;
-  line-height: 20px;
+  padding: 0 6px;
+  line-height: 22px;
+  white-space: nowrap;
+  font-family: var(--w-body);
 }
 .seg button:hover { color: var(--w-fg); }
 .seg button + button { border-left: 1px solid var(--w-line-soft); }

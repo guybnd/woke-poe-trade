@@ -11,7 +11,7 @@ import { parseFilter, serializeFilter } from './parse'
 import type { FilterDoc } from './parse'
 import { addEdit, applyEdits, nextEditId } from './edits'
 import type { EditStatus, FilterEdit, NewFilterEdit } from './edits'
-import { HISTORY_SIZE, outputName } from './widget'
+import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { buildRuleBlocks, insertBuildBlocks } from './build-rules'
 import { useBuildRuleInput } from './build-input'
@@ -440,11 +440,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // The game's config file is only rewritten now and then, so after we've
   // sent /itemfilter it may still name the old filter: don't nag about that.
   const sentOver = ref<string | null>(null)
+  // Our copy exists, so /itemfilter has something to load.
+  const outputSaved = computed(() => lastSaved.value != null || files.value.some(f => !f.online && f.name === outputName(cfg())))
   // The game's selected filter isn't the one we save to.
   const wrongFilterInGame = computed(() => {
     const name = gameFilter.value.name
-    if (!name || !doc.value || name === sentOver.value) return false
-    return stem(outputName(cfg())).toLowerCase() !== name.toLowerCase()
+    if (!name || !doc.value || !outputSaved.value || name === sentOver.value) return false
+    // The game writes a local filter with its extension.
+    return stem(outputName(cfg())).toLowerCase() !== stem(name).toLowerCase()
   })
 
   // woke: loads can overlap (two strictness steps in a row, a quick change
@@ -482,8 +485,13 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     if (!cfg().sourceName) {
       await listFiles()
       if (seq !== loadSeq) return
-      // Pick the most recently changed NeverSink file as a starting point.
-      const ns = files.value.find(f => !f.online && /neversink/i.test(f.name) && !/\(woke\)/i.test(f.name)) ??
+      // Start from what the game is using, else the most recently changed
+      // NeverSink file.
+      await readGameFilter()
+      if (seq !== loadSeq) return
+      const inGame = gameFilter.value.name
+      const ns = files.value.find(f => inGame != null && f.name === inGame) ??
+        files.value.find(f => !f.online && /neversink/i.test(f.name) && !/\(woke\)/i.test(f.name)) ??
         files.value.find(f => f.online && /neversink/i.test(f.title ?? ''))
       if (!ns) return
       cfg().sourceName = ns.name
@@ -507,10 +515,17 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
           text = (await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: source + '.bak' })).text
         } catch (e) {
           const from = /^# Made from "([^"]+\.filter)"/m.exec(text)?.[1]
-          if (!from || from === source) throw e
-          text = (await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: from })).text
-          if (seq !== loadSeq) return
-          cfg().sourceName = from
+          if (from && from !== source) {
+            text = (await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: from })).text
+            if (seq !== loadSeq) return
+            cfg().sourceName = from
+          } else if (isWokeCopy(source)) {
+            // Original gone: recover it from the copy, and keep it for next time.
+            text = baseFromCopy(text)
+            baseNeedsBackup.value = true
+          } else {
+            throw e
+          }
         }
         if (seq !== loadSeq) return
       } else if (cfg().saveMode === 'overwrite') {
@@ -614,7 +629,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     return () => { cfg().edits = before.edits; cfg().priceTiers.moves = before.moves; rebuild() }
   }
 
-  async function save (): Promise<boolean> {
+  // reloadNow: you pressed Save + reload, so it reloads wherever you are. Saves
+  // you didn't ask to reload (quick fixes) follow reloadWhenSafe.
+  async function save (opts: { reloadNow?: boolean } = {}): Promise<boolean> {
     if (!doc.value || baseText.value == null) return false
     problems.value = validateFilter(doc.value)
     if (problems.value.length) {
@@ -625,7 +642,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     error.value = null
     try {
       const name = outputName(cfg())
-      if (!cfg().sourceOnline && cfg().saveMode === 'overwrite' && baseNeedsBackup.value) {
+      if (!cfg().sourceOnline && (cfg().saveMode === 'overwrite' || isWokeCopy(cfg().sourceName)) && baseNeedsBackup.value) {
         await hostRequest('filter-write', { dir: cfg().folder, name: cfg().sourceName + '.bak', text: baseText.value })
         baseNeedsBackup.value = false
       }
@@ -638,7 +655,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       pushHistory()
       cfg().lastVersion = doc.value.version
       lastSaved.value = Date.now()
-      if (cfg().reloadViaChat) reloadInGame()
+      if (cfg().reloadViaChat) reloadInGame(opts.reloadNow === true)
       setTimeout(() => { readGameFilter().catch(() => {}) }, 8000)
       return true
     } catch (e) {
@@ -649,8 +666,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     }
   }
 
-  // One chat command, sent because the user pressed Save. With
-  // reloadWhenSafe it waits until town/hideout, so it never lands mid-fight.
+  // One chat command, sent because you saved. Unless forced, reloadWhenSafe
+  // holds it until town/hideout.
   function reloadInGame (force = false) {
     if (!force && cfg().reloadWhenSafe && inSafeZone.value !== true) {
       pendingReload.value = true
@@ -717,6 +734,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     areaLevel,
     inSafeZone,
     pendingReload,
+    outputSaved,
     listFiles,
     load,
     edit,

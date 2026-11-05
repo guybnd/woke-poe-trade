@@ -2,9 +2,13 @@
   <WPanel ref="panel" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #actions>
+      <span v-if="config.sampleHotkey" class="w-dim text-xs flex items-center gap-1" title="Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.">
+        Find an item's rule: in game, hover it and press <WKbd :keys="config.sampleHotkey" />
+      </span>
       <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
     </template>
     <template #toolbar>
+      <WButton v-if="trail.length" size="sm" variant="ghost" icon="fas fa-arrow-left" title="Back to where you were (mouse back button)" @click="goBack">Back</WButton>
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
       <WField v-model="search" type="search" icon="fas fa-search" placeholder="Find an item or base type" style="width: 16rem;" />
@@ -143,7 +147,8 @@
       </div>
     </div>
 
-    <PreviewTab v-else-if="tab === 'preview'" :store="store" :config="config" :anchor="panel?.el" @open-rule="openRule" />
+    <!-- Rendered below, kept alive so Back returns to the same pile. -->
+    <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
@@ -220,6 +225,10 @@
       </template>
     </div>
 
+    <KeepAlive>
+      <PreviewTab v-if="store.doc.value && tab === 'preview'" :store="store" :config="config" :anchor="panel?.el" @open-rule="openRule" />
+    </KeepAlive>
+
     <template #footer>
       <div class="flex items-center gap-2 w-full">
         <span class="text-xs grow w-trunc" :style="store.error.value ? 'color: var(--w-down)' : ''" :class="store.error.value ? '' : 'w-dim'">
@@ -232,15 +241,15 @@
           </template>
         </span>
         <WButton size="sm" variant="ghost" icon="fas fa-folder-open" @click="openFolder">Folder</WButton>
-        <WButton v-if="config.reloadViaChat" size="sm" variant="ghost" title="Type /itemfilter in chat now to reload the saved filter" @click="store.reloadInGame(true)">Reload now</WButton>
-        <WButton size="sm" variant="primary" :disabled="store.saving.value || !store.doc.value" @click="store.save()">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
+        <WButton v-if="config.reloadViaChat && store.outputSaved.value" size="sm" variant="ghost" title="Type /itemfilter in chat now to reload the saved filter" @click="store.reloadInGame(true)">Reload now</WButton>
+        <WButton size="sm" variant="primary" :disabled="store.saving.value || !store.doc.value" @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
       </div>
     </template>
   </WPanel>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WListItem, WChip, WEmpty, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy } from '../ui'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'
@@ -337,7 +346,6 @@ const sourceKey = computed(() => props.config.neversink.on ? 'github' : props.co
 
 const fileOptions = computed(() => {
   const opts = props.store.files.value
-    .filter(f => f.online || !/\(woke\)\.filter$/i.test(f.name))
     .map(f => f.online
       ? { value: `online:${f.name}`, label: `${f.title ?? f.name} (online, read only)` }
       : { value: f.name, label: f.name.replace(/\.filter$/i, '') })
@@ -371,11 +379,11 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
   if (s.gameFilter.value.loaded === false) {
     return { tone: 'warn', actions: [], text: 'The game couldn\'t load your filter last time it tried. Save again; the syntax check will name the rule if one is broken.' }
   }
-  if (s.wrongFilterInGame.value && props.config.reloadViaChat) {
+  if (s.wrongFilterInGame.value) {
     return {
-      tone: 'info',
-      text: `The game is using "${s.gameFilter.value.name}", not your saved copy "${outName.value.replace(/\.filter$/i, '')}".`,
-      actions: [{ label: 'Use mine in game', primary: true, run: () => s.reloadInGame(true) }]
+      tone: 'warn',
+      text: `Your changes won't show in game: it's using "${s.gameFilter.value.name}", not your saved copy "${outName.value.replace(/\.filter$/i, '')}".`,
+      actions: props.config.reloadViaChat ? [{ label: 'Use mine in game', primary: true, run: () => s.reloadInGame(true) }] : []
     }
   }
   return null
@@ -418,12 +426,45 @@ function selectGroup (type: string) {
   picked.value = []
 }
 
+// Where a jump came from, for Back and the mouse's back button.
+interface Place { tab: typeof tab.value, type: string | null, tier: string | null, search: string }
+const trail = ref<Place[]>([])
+
+function rememberPlace () {
+  trail.value = [...trail.value.slice(-19), { tab: tab.value, type: selType.value, tier: selTier.value, search: search.value }]
+}
+
+function goBack () {
+  const place = trail.value[trail.value.length - 1]
+  if (!place) return
+  trail.value = trail.value.slice(0, -1)
+  tab.value = place.tab
+  selType.value = place.type
+  selTier.value = place.tier
+  search.value = place.search
+  picked.value = []
+}
+
+function onMouseBack (e: MouseEvent) {
+  // The editor stays mounted while hidden: only clicks on it count.
+  if (e.button !== 3 || !trail.value.length || !panel.value?.el?.contains(e.target as Node)) return
+  e.preventDefault()
+  goBack()
+}
+onMounted(() => window.addEventListener('mouseup', onMouseBack))
+onUnmounted(() => window.removeEventListener('mouseup', onMouseBack))
+
 function openRule (rule: { type: string, tier: string | null }) {
   if (rule.tier) jumpTo(rule.type, rule.tier)
-  else { search.value = ''; tab.value = 'rules'; selectGroup(rule.type) }
+  else { rememberPlace(); search.value = ''; tab.value = 'rules'; selectGroup(rule.type) }
 }
 
 function jumpTo (type: string, t: string, base?: string) {
+  rememberPlace()
+  goTo(type, t, base)
+}
+
+function goTo (type: string, t: string, base?: string) {
   search.value = ''
   tab.value = 'rules'
   selType.value = type
@@ -432,7 +473,7 @@ function jumpTo (type: string, t: string, base?: string) {
 }
 
 watch(() => props.focus, (f) => {
-  if (f) jumpTo(f.type, f.tier)
+  if (f) goTo(f.type, f.tier)
 }, { immediate: true })
 
 // Default selection once the filter loads.

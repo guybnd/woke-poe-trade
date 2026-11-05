@@ -168,11 +168,14 @@ function Ensure-DataIndexes {
 function Backup-Config {
   # The dev copy saves to the real settings, and a preview branch can change
   # them, so each start keeps a copy. The newest 20 are kept.
-  $config = Join-Path $env:APPDATA 'woke-poe-trade\apt-data\config.json'
-  if (-not (Test-Path $config)) { return }
+  # The copy runs detached too: a sandboxed session (a Claude thread) can see a
+  # stale snapshot of AppData, and the app itself reads the real file.
   $dir = Join-Path $State 'config-backups'
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
-  Copy-Item $config (Join-Path $dir ('config-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json'))
+  $dest = Join-Path $dir ('config-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json')
+  Start-Detached "cmd.exe /c copy /y `"%APPDATA%\woke-poe-trade\apt-data\config.json`" `"$dest`"" $dir | Out-Null
+  $deadline = (Get-Date).AddSeconds(3)
+  while (-not (Test-Path $dest) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100 }
   Get-ChildItem $dir -Filter 'config-*.json' | Sort-Object Name -Descending | Select-Object -Skip 20 | Remove-Item -Force
 }
 

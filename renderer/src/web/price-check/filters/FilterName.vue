@@ -1,6 +1,7 @@
 <template>
   <div class="filter-name">
-    <button class="px-2 rounded border overflow-hidden text-ellipsis"
+    <button class="filter-name-label px-2 rounded border overflow-hidden text-ellipsis"
+      :data-rarity="item.rarity"
       :class="{ 'border-gray-500': showAsActive, 'border-gray-900': !showAsActive }"
       @click="toggleAccuracy">{{ label }}</button>
     <span class="ml-auto" />
@@ -91,10 +92,21 @@ export default defineComponent({
 
 <style lang="postcss">
 .filter-name {
-  @apply bg-gray-900 mb-2 rounded;
+  @apply mb-2 rounded;
+  background: var(--w-pc-well, theme('colors.gray.900'));
   line-height: 1.25rem;
   display: flex;
   justify-content: space-between;
   white-space: nowrap;
 }
+
+/* woke: the item's name is the top of the window, in the game's rarity colours. */
+:root:not([data-woke-theme="classic"]) .filter-name-label {
+  font-size: var(--w-fs-lg);
+  color: var(--w-fg);
+}
+:root:not([data-woke-theme="classic"]) .filter-name-label[data-rarity="Normal"] { color: var(--w-r-normal); }
+:root:not([data-woke-theme="classic"]) .filter-name-label[data-rarity="Magic"] { color: var(--w-r-magic); }
+:root:not([data-woke-theme="classic"]) .filter-name-label[data-rarity="Rare"] { color: var(--w-r-rare); }
+:root:not([data-woke-theme="classic"]) .filter-name-label[data-rarity="Unique"] { color: var(--w-r-unique); filter: brightness(1.25); }
 </style>

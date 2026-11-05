@@ -37,7 +37,8 @@ function toggle () {
 
 <style lang="postcss" module>
 .btn {
-  @apply bg-gray-900 rounded;
+  @apply rounded;
+  background: var(--w-pc-well, theme('colors.gray.900'));
   @apply border border-transparent;
   @apply pl-1 pr-2;
   line-height: 1.25rem;

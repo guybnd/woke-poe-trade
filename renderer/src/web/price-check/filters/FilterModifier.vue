@@ -398,7 +398,7 @@ export default defineComponent({
 }
 
 .rollInput {
-  @apply bg-gray-900;
+  background: var(--w-pc-well, theme('colors.gray.900'));
   @apply text-gray-300;
   @apply text-center;
   @apply w-12;
@@ -435,7 +435,7 @@ export default defineComponent({
 
 .mods {
   @apply border-b-4 border-gray-500;
-  background: linear-gradient(to bottom, theme('colors.gray.800') , theme('colors.gray.900') );
+  background: linear-gradient(to bottom, var(--w-pc-window, theme('colors.gray.800')), var(--w-pc-well, theme('colors.gray.900')));
   @apply -mx-4 px-4;
   position: absolute;
   top: 100%;
@@ -477,7 +477,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   @apply -mx-1 pl-0.5 gap-x-0.5 text-gray-600;
-  text-shadow: 0 0 4px theme('colors.gray.900');
+  text-shadow: 0 0 4px var(--w-pc-well, theme('colors.gray.900'));
   overflow: clip visible;
   min-width: 0;
 
@@ -525,7 +525,7 @@ export default defineComponent({
 .tag-mercenary-utility,
 .tag-filter-group {
   @apply -mx-1 text-gray-600;
-  text-shadow: 0 0 4px theme('colors.gray.900');
+  text-shadow: 0 0 4px var(--w-pc-well, theme('colors.gray.900'));
 }
 .tag-scourge {
   @apply bg-orange-600 text-white; }

@@ -4,8 +4,8 @@
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
     <!-- @TODO: fix "Matched" text jumping (min-height: 22px) -->
-    <div class="mb-2 flex pl-2 justify-between items-baseline" style="min-height: 1.375rem;">
-      <div class="flex items-center text-gray-500">
+    <div class="w-pc-toolbar mb-2 flex pl-2 justify-between items-baseline" style="min-height: 1.375rem;">
+      <div class="w-pc-matched flex items-center text-gray-500">
         <span class="mr-1">{{ t(':matched') }}</span>
         <span v-if="!result" class="text-gray-600">...</span>
         <div v-else class="flex items-center">
@@ -25,15 +25,15 @@
       <trade-links v-if="result"
         :get-link="makeTradeLink" />
     </div>
-    <div class="layout-column overflow-y-auto overflow-x-hidden">
-      <table class="table-stripped w-full">
+    <div class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
+      <table class="w-pc-table table-stripped w-full">
         <thead>
           <tr class="text-left">
             <th :class="$style.tableHeading">
               <div class="px-2">{{ t(':price') }}</div>
             </th>
             <th :class="$style.tableHeading">
-              <div class="pl-1 pr-2 flex text-xs" style="line-height: 1.3125rem;"><span class="w-8 inline-block text-right -ml-px mr-px">{{ (selectedCurr === 'xchgChaos') ? 'chaos' : 'div' }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span class="w-8 inline-block">{{ t(':bulk') }}</span></div>
+              <div class="w-pc-ratio-head pl-1 pr-2 flex text-xs" style="line-height: 1.3125rem;"><span class="w-8 inline-block text-right -ml-px mr-px">{{ (selectedCurr === 'xchgChaos') ? 'chaos' : 'div' }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span class="w-8 inline-block">{{ t(':bulk') }}</span></div>
             </th>
             <th :class="$style.tableHeading">
               <div class="px-1">{{ t(':stock') }}</div>
@@ -41,22 +41,22 @@
             <th :class="$style.tableHeading">
               <div class="px-1">{{ t(':fulfill') }}</div>
             </th>
-            <th :class="[$style.tableHeading, { 'w-full': !showSeller }]">
-              <div class="pr-2 pl-4">
-                <span class="ml-1" style="padding-left: 0.375rem;">{{ t(':listed') }}</span>
-              </div>
-            </th>
             <th v-if="showSeller" class="w-full" :class="$style.tableHeading">
               <div class="px-2">{{ t(':seller') }}</div>
             </th>
+            <th :class="[$style.tableHeading, 'text-right', { 'w-full': !showSeller }]">
+              <div class="px-2">{{ t(':listed') }}</div>
+            </th>
           </tr>
         </thead>
-        <tbody style="overflow: scroll;">
-          <template v-for="(result, idx) in selectedResults">
-            <tr v-if="!result" :key="idx">
-              <td colspan="100" class="text-transparent">***</td>
+        <tbody>
+          <template v-if="tableLoading">
+            <tr v-for="i in SKELETON_ROWS" :key="i">
+              <td colspan="100" class="px-2"><span class="w-pc-skel" :style="{ width: 30 + ((i * 17) % 45) + '%' }" /></td>
             </tr>
-            <tr v-else :key="result.id"
+          </template>
+          <template v-else>
+            <tr v-for="result in selectedResults" :key="result.id"
               :class="{ [$style.marketRatioRow]: ('marketRatio' in result) }">
               <td class="px-2">{{ Number((result.exchangeAmount / result.itemAmount).toFixed(4)) }}</td>
               <td class="pl-1 whitespace-nowrap"><span class="w-8 inline-block text-right">{{ Number(result.exchangeAmount.toFixed(1)) }}</span><span>{{ '\u2009' }}/{{ '\u2009' }}</span><span class="w-8 inline-block">{{ Number(result.itemAmount.toFixed(1)) }}</span></td>
@@ -66,16 +66,16 @@
               <template v-else>
                 <td class="px-1 text-right">{{ result.stock }}</td>
                 <td class="px-1 text-right"><i v-if="result.stock < result.itemAmount" class="fas fa-exclamation-triangle mr-1 text-gray-500"></i>{{ Math.floor(result.stock / result.itemAmount) }}</td>
-                <td class="pr-2 pl-4 whitespace-nowrap">
-                  <div class="inline-flex items-center">
-                    <div :class="[$style.accountStatus, $style[result.accountStatus]]"></div>
-                    <div class="ml-1 font-sans text-xs">{{ result.relativeDate }}</div>
-                  </div>
-                  <span v-if="!showSeller && result.isMine" class="rounded px-1 text-gray-800 bg-gray-400 ml-1">{{ t('You') }}</span>
-                </td>
                 <td v-if="showSeller" class="px-2 whitespace-nowrap">
-                  <span v-if="result.isMine" class="rounded px-1 text-gray-800 bg-gray-400">{{ t('You') }}</span>
-                  <span v-else class="font-sans text-xs">{{ showSeller === 'ign' ? result.ign : result.accountName }}</span>
+                  <span v-if="result.isMine" class="w-pc-you">{{ t('You') }}</span>
+                  <span v-else class="w-pc-age" style="text-align: left;">{{ showSeller === 'ign' ? result.ign : result.accountName }}</span>
+                </td>
+                <td class="px-2 w-pc-age">
+                  <span v-if="!showSeller && result.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
+                  <span class="w-pc-age-inner">
+                    <span :class="[$style.accountStatus, $style[result.accountStatus]]"></span>
+                    <span>{{ result.relativeDate }}</span>
+                  </span>
                 </td>
               </template>
             </tr>
@@ -111,8 +111,10 @@ import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { artificialSlowdown } from './artificial-slowdown'
 import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
+import '@/web/woke/price-insight/price-table.css'
 
 const slowdown = artificialSlowdown(900)
+const SKELETON_ROWS = 8
 
 function useBulkApi () {
   type BulkSearchExtended = Record<'xchgChaos' | 'xchgStable', {
@@ -289,16 +291,23 @@ export default defineComponent({
     }, { immediate: true })
 
     const selectedResults = computed(() => {
-      const arr = Array<PricingResult | MarketRatio | undefined>(20)
-      if (!slowdown.isReady.value || !result.value) return arr
+      if (!slowdown.isReady.value || !result.value) return []
 
       const listed = result.value[selectedCurr.value].listedLazy.value
       const ratio = marketRatio.value[selectedCurr.value]
-      const merged = (ratio !== undefined)
+      return (ratio !== undefined)
         ? mergeWithMarketRatio(listed.slice(0, 19), ratio)
         : listed
-      arr.splice(0, merged.length, ...merged)
-      return arr
+    })
+
+    // woke: real rows only once loaded, with placeholder rows until then.
+    const tableLoading = computed(() => {
+      // Read first: this is what starts the other currency's search when it is picked.
+      const shown = selectedResults.value
+      if (!slowdown.isReady.value || !result.value) return true
+      return shown.length === 0 || 'marketRatio' in shown[0]
+        ? result.value[selectedCurr.value].listed.value == null
+        : false
     })
 
     watch(result, () => {
@@ -327,6 +336,8 @@ export default defineComponent({
       error,
       result,
       selectedResults,
+      tableLoading,
+      SKELETON_ROWS,
       selectedCurr,
       execSearch: () => {
         search(props.item, props.filters)
@@ -356,6 +367,8 @@ export default defineComponent({
 }
 
 .accountStatus {
+  display: inline-block;
+  flex: none;
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 100%;
@@ -375,13 +388,14 @@ export default defineComponent({
 
 .legacyMessage {
   @apply rounded p-2 mb-3;
-  @apply border border-gray-600 bg-gray-700;
+  @apply border border-gray-600;
+  background: var(--w-pc-raise, theme('colors.gray.700'));
   text-wrap-style: balance;
   text-align: center;
 }
 
 .marketRatioRow {
-  @apply bg-gray-700 !important;
+  background: var(--w-pc-raise, theme('colors.gray.700')) !important;
   outline: 1px solid theme('colors.gray.600');
   outline-offset: -1px;
 }

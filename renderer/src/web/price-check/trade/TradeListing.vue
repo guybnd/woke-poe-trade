@@ -3,14 +3,14 @@
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
-    <div class="mb-2 flex pl-2">
-      <div class="flex items-baseline text-gray-500 mr-2">
+    <div class="w-pc-toolbar mb-2 flex pl-2">
+      <div class="w-pc-matched flex items-baseline text-gray-500 mr-2">
         <span class="mr-1">{{ t(':matched') }}</span>
         <span v-if="!list" class="text-gray-600">...</span>
-        <span v-else>{{ list.total }}{{ list.inexact ? '+' : '' }}</span>
+        <b v-else class="font-normal">{{ list.total }}{{ list.inexact ? '+' : '' }}</b>
       </div>
-      <online-filter v-if="list" :filters="filters" api="trade" />
-      <div class="flex-1"></div>
+      <online-filter v-if="list" class="w-pc-online" :filters="filters" api="trade" />
+      <div class="w-pc-grow flex-1"></div>
       <price-view-toggle class="mr-2" />
       <trade-links v-if="list"
         :get-link="makeTradeLink" />
@@ -32,12 +32,15 @@
       :options="insightOptions"
       :divine="divine"
       :ready="slowdownReady" />
-    <div class="layout-column overflow-y-auto overflow-x-hidden">
-      <table class="table-stripped w-full">
+    <div class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
+      <table class="w-pc-table table-stripped w-full">
         <thead>
           <tr class="text-left">
             <th :class="$style.tableHeading">
               <div class="px-2">{{ t(':price') }}</div>
+            </th>
+            <th :class="$style.tableHeading">
+              <div class="px-2">&nbsp;</div>
             </th>
             <th v-if="item.stackSize" :class="$style.tableHeading">
               <div class="px-2">{{ t(':stock') }}</div>
@@ -51,53 +54,69 @@
             <th v-if="filters.quality || item.category === 'Gem'" :class="$style.tableHeading">
               <div class="px-2">{{ t(':quality') }}</div>
             </th>
-            <th :class="[$style.tableHeading, { 'w-full': !showSeller }]">
-              <div class="pr-2 pl-4">
-                <span class="ml-1" style="padding-left: 0.375rem;">{{ t(':listed') }}</span>
-              </div>
-            </th>
             <th v-if="showSeller" class="w-full" :class="$style.tableHeading">
               <div class="px-2">{{ t(':seller') }}</div>
             </th>
+            <th :class="[$style.tableHeading, 'text-right', { 'w-full': !showSeller }]">
+              <div class="px-2">{{ t(':listed') }}</div>
+            </th>
           </tr>
         </thead>
-        <tbody style="overflow: scroll;">
-          <template v-for="(result, idx) in groupedResults">
-            <tr v-if="!result" :key="idx">
-              <td colspan="100" class="text-transparent">***</td>
+        <tbody>
+          <template v-if="tableLoading">
+            <tr v-for="i in SKELETON_ROWS" :key="i">
+              <td colspan="100" class="px-2"><span class="w-pc-skel" :style="{ width: 30 + ((i * 17) % 45) + '%' }" /></td>
             </tr>
-            <tr v-else :key="result.id"
-              :class="{ [$style.ignored]: improved && insight.dropped.has(result.id) }"
-              :title="ignoredTitle(result.id)">
+          </template>
+          <template v-else>
+            <tr v-for="row in rows" :key="row.key"
+              :class="{
+                'w-pc-ignored': improved && row.dropped,
+                'w-pc-in-range': improved && inRange(row),
+                'w-pc-aging': improved && (row.band === 'aging' || (allStale && row.band === 'stale')),
+                'w-pc-stale': improved && row.band === 'stale' && !row.dropped && !allStale
+              }"
+              :title="improved ? rowTitle(row) : undefined">
               <td class="px-2 whitespace-nowrap">
-                <span :class="{ 'line-through': result.priceCurrency === 'exalted' }">{{ result.priceAmount }} {{ result.priceCurrency }}</span>
-                <span v-if="improved && fixTag(result.id)" :class="$style.fixTag">{{ fixTag(result.id) }}</span>
-                <span v-if="result.listedTimes > 2" class="rounded px-1 text-gray-800 bg-gray-400 ml-1 -mr-2"><span class="font-sans">×</span> {{ result.listedTimes }}</span>
-                <span v-else-if="!result.hasFee" :class="$style.stashListing">
-                  <img :class="$style.stashIcon" src="/images/stash.png">
-                  <i v-if="!result.hasNote" class="fas fa-question" />
+                <span class="w-pc-price">
+                  <span class="w-pc-amount" :class="{ 'line-through': row.lead.priceCurrency === 'exalted' }">{{ row.lead.priceAmount }}</span>
+                  <img v-if="coinFor(row.lead.priceCurrency)" class="w-pc-coin" :src="coinFor(row.lead.priceCurrency)" :alt="row.lead.priceCurrency">
+                  <span v-else class="w-pc-unit">{{ row.lead.priceCurrency }}</span>
                 </span>
               </td>
-              <td v-if="item.stackSize" class="px-2 text-right">{{ result.stackSize }}</td>
-              <td v-if="filters.itemLevel" class="px-2 whitespace-nowrap text-right">{{ result.itemLevel }}</td>
-              <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ result.level }}</td>
-              <td v-if="filters.quality || item.category === 'Gem'" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ result.quality }}</td>
-              <td class="pr-2 pl-4 whitespace-nowrap">
-                <div class="inline-flex items-center">
-                  <div :class="[$style.accountStatus, $style[result.accountStatus]]"></div>
-                  <div class="ml-1 font-sans text-xs">{{ result.relativeDate }}</div>
-                </div>
-                <span v-if="!showSeller && result.isMine" class="rounded px-1 text-gray-800 bg-gray-400 ml-1">{{ t('You') }}</span>
+              <td class="px-2">
+                <span class="w-pc-count">
+                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
+                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
+                  <span v-if="!row.lead.hasFee" :class="$style.stashListing" :title="row.lead.hasNote ? 'Stash listing' : 'Stash listing without a price note'">
+                    <img :class="$style.stashIcon" src="/images/stash.png">
+                    <i v-if="!row.lead.hasNote" class="fas fa-question" />
+                  </span>
+                  <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
+                </span>
               </td>
+              <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
+              <td v-if="filters.itemLevel" class="px-2 whitespace-nowrap text-right">{{ row.lead.itemLevel }}</td>
+              <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ row.lead.level }}</td>
+              <td v-if="filters.quality || item.category === 'Gem'" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
               <td v-if="showSeller" class="px-2 whitespace-nowrap">
-                <span v-if="result.isMine" class="rounded px-1 text-gray-800 bg-gray-400">{{ t('You') }}</span>
-                <span v-else class="font-sans text-xs">{{ showSeller === 'ign' ? result.ign : result.accountName }}</span>
+                <span v-if="row.lead.isMine" class="w-pc-you">{{ t('You') }}</span>
+                <span v-else class="w-pc-age" style="text-align: left;">{{ showSeller === 'ign' ? row.lead.ign : row.lead.accountName }}</span>
+              </td>
+              <td class="px-2 w-pc-age">
+                <span v-if="!showSeller && row.lead.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
+                <span class="w-pc-age-inner">
+                  <span :class="[$style.accountStatus, $style[row.status]]"></span>
+                  <span>{{ improved && row.ageText ? row.ageText : row.lead.relativeDate }}</span>
+                </span>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+    <div v-if="improved && listSettled && list && rows.length" class="w-pc-foot"
+      title="Prices come from the cheapest listings the trade site returned"><span v-if="allStale" class="w-warn">All over a week old, so they may be gone · </span>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -128,12 +147,16 @@ import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
 import PriceViewToggle from '@/web/woke/price-insight/PriceViewToggle.vue'
 import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
-import { DROP_LABEL, FIX_TAG } from '@/web/woke/price-insight/insight'
+import { FIX_TAG } from '@/web/woke/price-insight/insight'
+import { groupListings, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
+import { nowMinute } from '@/web/woke/ui/format'
+import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 
 const slowdown = artificialSlowdown(900)
 
-const SHOW_RESULTS = 20
+const SKELETON_ROWS = 8
+const COINS: Record<string, string> = { chaos: '/images/chaos.png', divine: '/images/divine.png', exalted: '/images/exa.png' }
 const API_FETCH_LIMIT = 100
 const MIN_NOT_GROUPED = 7
 const MIN_GROUPED = 10
@@ -142,6 +165,7 @@ function useTradeApi () {
   let searchId = 0
   let collapseMerchant = false
   const error = shallowRef<string | null>(null)
+  const fetching = shallowRef(false)
   const searchResult = shallowRef<SearchResult | null>(null)
   const fetchResults = shallowRef<PricingResult[]>([])
 
@@ -178,14 +202,15 @@ function useTradeApi () {
   })
 
   async function search (filters: ItemFilters, stats: FilterOrGroup[]) {
+    searchId += 1
+    const _searchId = searchId
+    fetching.value = true
     try {
-      searchId += 1
       error.value = null
       searchResult.value = null
       const _fetchResults: PricingResult[] = shallowReactive([])
       fetchResults.value = _fetchResults
 
-      const _searchId = searchId
       const request = createTradeRequest(filters, stats)
       const _searchResult = await requestTradeResultList(request, filters.trade.league)
       if (_searchId !== searchId) {
@@ -225,13 +250,16 @@ function useTradeApi () {
           return fetchMore()
         }
       }
-      return fetchMore()
+      // A later page failing leaves what already loaded on screen.
+      await fetchMore().catch((err) => { if (!_fetchResults.length) throw err })
     } catch (err) {
-      error.value = (err as Error).message
+      if (_searchId === searchId) error.value = (err as Error).message
+    } finally {
+      if (_searchId === searchId) fetching.value = false
     }
   }
 
-  return { error, searchResult, groupedResults, search }
+  return { error, searchResult, groupedResults, fetchResults, fetching, search }
 }
 
 export default defineComponent({
@@ -258,7 +286,7 @@ export default defineComponent({
       slowdown.reset(item)
     }, { immediate: true })
 
-    const { error, searchResult, groupedResults, search } = useTradeApi()
+    const { error, searchResult, groupedResults, fetchResults, fetching, search } = useTradeApi()
 
     // woke: improved view reads the same listings, nothing extra is requested
     const { insight, divine, options: insightOptions } = useInsight(groupedResults)
@@ -275,35 +303,58 @@ export default defineComponent({
 
     const { t } = useI18nNs('trade_result')
 
+    const improved = computed(() => priceView.value === 'improved')
+
+    // woke: improved merges a price into one row; classic stays one row per listing.
+    const rows = computed(() => groupListings(groupedResults.value, {
+      now: nowMinute.value,
+      merge: improved.value,
+      dropped: insight.value.dropped,
+      detail: (r) => {
+        const parts: unknown[] = []
+        if (props.item.stackSize) parts.push(r.stackSize)
+        if (props.filters.itemLevel) parts.push(r.itemLevel)
+        if (props.item.category === 'Gem') parts.push(r.level)
+        if (props.filters.quality || props.item.category === 'Gem') parts.push(r.quality)
+        if (widget.value.showSeller) parts.push(widget.value.showSeller === 'ign' ? r.ign : r.accountName)
+        return parts.join('|')
+      }
+    }))
+
+    // Fading only helps when something stays bright: a dead market gets a note instead.
+    const allStale = computed(() => rows.value.length > 0 && rows.value.every(r => r.band === 'stale'))
+
+    const maxCount = computed(() => Math.max(1, ...rows.value.map(r => r.count)))
+
+    function inRange (row: ListingRow<PricingResult & { listedTimes: number }>) {
+      const range = insight.value.range
+      const chaos = insight.value.prices.get(row.lead.id)
+      return Boolean(range && chaos != null && !row.dropped && chaos >= range.low && chaos <= range.high)
+    }
+
+    const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length))
+
     return {
       t,
       list: searchResult,
-      improved: computed(() => priceView.value === 'improved'),
+      improved,
       insight,
       insightOptions,
       divine,
       logKey,
-      fixTag (id: string) {
-        const reason = insight.value.dropped.get(id)
-        return reason ? FIX_TAG[reason] : undefined
-      },
-      ignoredTitle (id: string) {
-        const reason = priceView.value === 'improved' ? insight.value.dropped.get(id) : undefined
-        return reason ? `Ignored by the verdict: ${DROP_LABEL[reason]}` : undefined
-      },
+      rows,
+      rowTitle,
+      FIX_TAG,
+      SKELETON_ROWS,
+      coinFor: (currency: string) => COINS[currency],
+      inRange,
+      maxCount,
+      allStale,
+      showCountBar: computed(() => improved.value && maxCount.value > 1),
+      shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
+      tableLoading,
+      listSettled: computed(() => !tableLoading.value && !fetching.value),
       slowdownReady: slowdown.isReady,
-      groupedResults: computed(() => {
-        if (!slowdown.isReady.value) {
-          return Array<undefined>(SHOW_RESULTS)
-        } else {
-          return [
-            ...groupedResults.value,
-            ...(groupedResults.value.length < SHOW_RESULTS
-              ? Array<undefined>(SHOW_RESULTS - groupedResults.value.length)
-              : [])
-          ]
-        }
-      }),
       execSearch: () => { search(props.filters, props.stats) },
       error,
       showSeller: computed(() => widget.value.showSeller),
@@ -330,6 +381,8 @@ export default defineComponent({
 }
 
 .accountStatus {
+  display: inline-block;
+  flex: none;
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 100%;
@@ -342,7 +395,6 @@ export default defineComponent({
 .stashListing {
   position: relative;
   display: inline-block;
-  @apply ml-1 -mr-1;
 
   & > i {
     position: absolute;
@@ -362,26 +414,10 @@ export default defineComponent({
   vertical-align: bottom;
 }
 
-.ignored > td {
-  opacity: 0.4;
-}
-
-/* woke: price-fixing tag on ignored rows (bait, wall, dump, ghost) */
-.fixTag {
-  margin-left: 0.25rem;
-  padding: 0 0.25rem;
-  border-radius: 3px;
-  border: 1px solid var(--w-down, #e0705c);
-  color: var(--w-down, #e0705c);
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .legacyMessage {
   @apply rounded p-2 mb-3;
-  @apply border border-gray-600 bg-gray-700;
+  @apply border border-gray-600;
+  background: var(--w-pc-raise, theme('colors.gray.700'));
   text-wrap-style: balance;
   text-align: center;
 }

@@ -217,7 +217,8 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
         continue: false,
         raw: [],
         dirty: true,
-        added: true
+        added: true,
+        inherited: true
       }
       setVisibility(clone, edit.visibility)
       applyStyle(clone, edit.patch)

@@ -5,6 +5,12 @@
       <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
     </template>
 
+    <template v-if="store.wrongFilterInGame.value" #banner>
+      <WBanner tone="warn">Your changes won't show in game: it's using "{{ store.gameFilter.value.name }}", not your saved copy.
+        <template v-if="config.reloadViaChat" #actions><WButton size="sm" variant="primary" @click="store.reloadInGame(true)">Use mine in game</WButton></template>
+      </WBanner>
+    </template>
+
     <div :class="$style.body">
       <div class="flex items-center gap-2">
         <span :class="$style.itemName" class="w-trunc grow">{{ facts.name || facts.baseType }}</span>
@@ -87,10 +93,11 @@
     <template #footer>
       <div class="flex items-center gap-2 w-full">
         <span class="text-xs grow" :class="store.error.value ? '' : 'w-dim'" :style="store.error.value ? 'color: var(--w-down)' : ''">
-          {{ store.error.value ?? (store.dirty.value ? 'Unsaved changes' : (store.lastSaved.value ? 'Saved' : '')) }}
+          {{ store.error.value ?? (store.dirty.value ? 'Unsaved changes' : (store.pendingReload.value ? 'Saved, reloads in town or hideout' : (store.lastSaved.value ? 'Saved' : ''))) }}
         </span>
         <WButton size="sm" variant="ghost" @click="emit('open-editor')">Open editor</WButton>
-        <WButton size="sm" variant="primary" :disabled="store.saving.value" @click="store.save()">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
+        <WButton v-if="config.reloadViaChat && store.outputSaved.value" size="sm" variant="ghost" title="Type /itemfilter in chat now to reload the saved filter" @click="store.reloadInGame(true)">Reload now</WButton>
+        <WButton size="sm" variant="primary" :disabled="store.saving.value" @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
       </div>
     </template>
   </WPanel>
@@ -98,7 +105,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { WPanel, WButton, WSegmented, WChip, toast } from '../ui'
+import { WPanel, WBanner, WButton, WSegmented, WChip, toast } from '../ui'
 import { SAFETY_LOOK } from './safety'
 import { tierRank } from './economy'
 import LabelPreview from './LabelPreview.vue'
