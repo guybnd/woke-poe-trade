@@ -1,7 +1,7 @@
 <template>
   <div v-if="show" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
-    <div ref="verdictSlot" class="w-pc-verdict-slot" />
+    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale }" />
     <filter-name
       ref="nameComponent"
       :filters="itemFilters"
@@ -33,12 +33,22 @@
         <woke-roll-presets :stats="itemStats" :item="item" :league="itemFilters.trade.league" @apply="searchAfterPreset" />
       </template>
     </filters-block>
+    <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
+    <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
+      <div class="flex w-40" @mouseenter="handleSearchMouseenter">
+        <button class="btn w-pc-primary" @click="doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+      </div>
+      <trade-links v-if="tradeAPI === 'trade'"
+        :get-link="makeTradeLink" />
+    </div>
+    <!-- woke: shows the last search until the next one, however the filters change meanwhile. -->
     <trade-listing
-      v-if="tradeAPI === 'trade' && doSearch"
+      v-if="tradeAPI === 'trade' && searched"
       ref="tradeService"
-      :filters="itemFilters"
-      :stats="itemStats"
+      :filters="searched.filters"
+      :stats="searched.stats"
       :item="item"
+      :stale="resultsStale"
       @reset="resetTradeResults" />
     <trade-bulk
       v-if="tradeAPI === 'bulk' && doSearch"
@@ -46,13 +56,6 @@
       :filters="itemFilters"
       :item="item"
       @reset="resetTradeResults" />
-    <div v-if="!doSearch" class="flex justify-between items-center">
-      <div class="flex w-40" @mouseenter="handleSearchMouseenter">
-        <button class="btn w-pc-primary" @click="doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
-      </div>
-      <trade-links v-if="tradeAPI === 'trade'"
-        :get-link="makeTradeLink" />
-    </div>
     <p v-if="showComplexityHint" :class="$style.complexityHint">
       <i class="fas fa-info-circle" />
       {{ t('item.complexity_hint') }}
@@ -69,7 +72,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, ComponentPublicInstance } from 'vue'
+import { defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, toRaw, ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
@@ -89,7 +92,7 @@ import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { AppConfig } from '@/web/Config'
-import { FilterPreset } from './filters/interfaces'
+import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView } from '@/web/woke/price-insight/view'
@@ -135,6 +138,11 @@ export default defineComponent({
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
     const itemStats = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.stats)
     const doSearch = ref(false)
+    // woke: what the listings on screen were searched with. A copy, so ticking a mod
+    // can't reach them before the next search. Trade options are shared: the listing's
+    // own controls change them, and that searches again (see the watcher below).
+    const searched = shallowRef<{ filters: ItemFilters, stats: FilterOrGroup[] } | null>(null)
+    const resultsStale = computed(() => !doSearch.value && searched.value != null && tradeAPI.value === 'trade')
     const tradeAPI = ref<'trade' | 'bulk'>('bulk')
 
     // TradeListing.vue OR TradeBulk.vue
@@ -145,6 +153,7 @@ export default defineComponent({
     const nameComponent = ref<ComponentPublicInstance>(null!)
 
     watch(() => props.item, (item, prevItem) => {
+      searched.value = null
       const prevCurrency = (presets.value != null) ? itemFilters.value.trade.currency : null
 
       presets.value = createPresets(item, {
@@ -187,6 +196,10 @@ export default defineComponent({
       if (doSearch.value === false) return
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
+      searched.value = {
+        filters: { ...structuredClone(toRaw(itemFilters.value)), trade: itemFilters.value.trade },
+        stats: structuredClone(toRaw(itemStats.value))
+      }
 
       // NOTE: child `trade-xxx` component renders/receives props on nextTick
       nextTick(() => {
@@ -268,7 +281,7 @@ export default defineComponent({
 
     const { t } = useI18n()
 
-    const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && doSearch.value)
+    const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
 
     return {
       verdictSlot,
@@ -276,6 +289,8 @@ export default defineComponent({
       t,
       itemFilters,
       itemStats,
+      searched,
+      resultsStale,
       doSearch,
       tradeAPI,
       tradeService,
@@ -297,6 +312,7 @@ export default defineComponent({
       },
       resetTradeResults () {
         doSearch.value = false
+        searched.value = null
       },
       searchAfterPreset () {
         // stat edits reset doSearch first (watcher above), then search with the new ranges

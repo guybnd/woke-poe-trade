@@ -1,9 +1,9 @@
 <template>
-  <div v-if="!error" class="layout-column min-h-0" style="height: auto;">
+  <div v-if="!error" class="layout-column min-h-0" :class="{ 'w-pc-results-stale': stale }" style="height: auto;">
     <div v-if="item.info.exchangeable" :class="$style.legacyMessage">
       {{ t(':legacy_bulk_xchg_msg') }}
     </div>
-    <div class="w-pc-toolbar mb-2 flex pl-2">
+    <div v-show="!stale" class="w-pc-toolbar mb-2 flex pl-2">
       <div class="w-pc-matched flex items-baseline text-gray-500 mr-2">
         <span class="mr-1">{{ t(':matched') }}</span>
         <span v-if="!list" class="text-gray-600">...</span>
@@ -332,6 +332,11 @@ export default defineComponent({
     item: {
       type: Object as PropType<ParsedItem>,
       required: true
+    },
+    // Filters changed since this search: the results stay, dimmed, so nothing moves.
+    stale: {
+      type: Boolean,
+      default: false
     }
   },
   setup (props, ctx) {
@@ -428,6 +433,20 @@ export default defineComponent({
     }
 
     const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length))
+    const listSettled = computed(() => !tableLoading.value && !fetching.value)
+
+    // A new search empties the verdict for a moment. Holding its height keeps the
+    // filters under it from jumping up and back down.
+    function holdVerdictHeight () {
+      const slot = verdictSlot.value
+      if (slot) slot.style.minHeight = `${slot.offsetHeight}px`
+    }
+    function releaseVerdictHeight () {
+      if (verdictSlot.value) verdictSlot.value.style.minHeight = ''
+    }
+    watch(listSettled, (settled) => { if (settled) releaseVerdictHeight() })
+    watch(error, (err) => { if (err) releaseVerdictHeight() })
+    onUnmounted(releaseVerdictHeight)
 
     return {
       t,
@@ -469,9 +488,12 @@ export default defineComponent({
       },
       shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
       tableLoading,
-      listSettled: computed(() => !tableLoading.value && !fetching.value),
+      listSettled,
       slowdownReady: slowdown.isReady,
-      execSearch: () => { search(props.filters, props.stats) },
+      execSearch: () => {
+        holdVerdictHeight()
+        search(props.filters, props.stats)
+      },
       refresh: () => {
         // Check first: results on screen shouldn't turn into a rate limit error.
         try {
@@ -488,6 +510,7 @@ export default defineComponent({
         clearTradeCache()
         clearDriverCaches()
         measuredDrivers.value = null
+        holdVerdictHeight()
         search(props.filters, props.stats)
       },
       refreshNote,
