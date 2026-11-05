@@ -4,6 +4,9 @@
       Small icons show while you play. Rest the mouse on one for its card. Right-click for its menu.
       With the overlay open, drag the row by its grip, and click an icon for the full window.
     </div>
+    <w-setting-row label="Open cards on hover" hint="Off: a card opens only when you click its icon. A click closes it either way.">
+      <w-toggle :model-value="dock.hoverOpens !== false" @update:model-value="dock.hoverOpens = $event" />
+    </w-setting-row>
     <w-setting-row label="Peek" hint="An icon grows into one line for 5 seconds when something happens: new zone, live search hit, map counted.">
       <w-toggle v-model="dock.peeks" />
     </w-setting-row>

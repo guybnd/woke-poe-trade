@@ -44,10 +44,11 @@
 import { computed, defineComponent, inject, onMounted, onUnmounted, shallowRef, useCssModule, watch } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
+import { Host } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import { useHoverZone } from '../shared/hover'
 import type { DockEntry } from './dock'
-import { closeTip, dockArt, dockIcon, tipClosed } from './dock'
+import { closeTip, dockArt, dockCardOwner, dockConfig, dockIcon, tipClosed } from './dock'
 import DockMenu from './DockMenu.vue'
 
 const props = defineProps<{
@@ -91,7 +92,7 @@ const cardOpen = computed(() => !menuOpen.value && (showCard.value || props.host
 // Hover works while the game has focus (main process watches the mouse).
 // Both take the mouse while it's over them, so a click lands here instead of
 // walking the character there.
-const overIcon = useHoverZone(iconEl, { enabled: () => true, activate: () => true, onClick: openCard, onRightClick: openIconMenu })
+const overIcon = useHoverZone(iconEl, { enabled: () => true, activate: () => true, onClick: pressedInGame, onRightClick: openIconMenu })
 const overCard = useHoverZone(cardEl, { enabled: () => cardOpen.value, activate: () => true })
 const overMenu = useHoverZone(menuEl, { enabled: () => menuOpen.value, activate: () => true })
 const hovering = computed(() => overIcon.value || overCard.value || overMenu.value)
@@ -106,6 +107,7 @@ watch(hovering, (on) => {
   if (timer) { clearTimeout(timer); timer = null }
   if (menuOpen.value) return
   if (on === showCard.value) return
+  if (on && dockConfig().hoverOpens === false) return
   timer = setTimeout(() => { showCard.value = on }, on ? OPEN_AFTER_MS : CLOSE_AFTER_MS)
 })
 function openCard () {
@@ -113,6 +115,17 @@ function openCard () {
   menuOpen.value = false
   showCard.value = true
 }
+
+// One at a time: a new card or menu closes the one before.
+watch([showCard, menuOpen], ([card, menu]) => {
+  if (card || menu) dockCardOwner.value = props.host.key
+})
+watch(dockCardOwner, (key) => {
+  if (key === props.host.key) return
+  if (timer) { clearTimeout(timer); timer = null }
+  showCard.value = false
+  menuOpen.value = false
+})
 
 // Goes when the mouse leaves it, like the card: nothing stays on screen.
 let menuTimer: ReturnType<typeof setTimeout> | null = null
@@ -168,9 +181,30 @@ function place () {
   placement.value = cls.join(' ')
 }
 
+// While playing, a click on the icon opens its card or closes it again. One click
+// arrives twice: from main's mouse hook as the button goes down, and as a page
+// click as it comes up (only if the mouse was taken, so not always). Only the
+// hook counts, in the app; the browser demo has only the page click.
+function pressedInGame () {
+  if (wm.active.value) openCard()
+  else toggleCard()
+}
+function toggleCard () {
+  if (!cardOpen.value) {
+    openCard()
+    return
+  }
+  if (timer) { clearTimeout(timer); timer = null }
+  showCard.value = false
+  props.host.pinned = null
+}
+
 function click () {
+  if (!wm.active.value) {
+    if (!Host.isElectron) toggleCard()
+    return
+  }
   openCard()
-  if (!wm.active.value) return
   if (props.host.props.pinnable) props.host.pinned = props.host.pinned ? null : 'click'
   props.host.onClick()
 }

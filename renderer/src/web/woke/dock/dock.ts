@@ -111,6 +111,8 @@ export interface DockConfig {
   noPeek: string[]
   // Modules whose icon is switched off.
   hidden: string[]
+  // false: cards open only on a click. Unset: on hover too.
+  hoverOpens?: boolean
   // Icons dismissed for a while: until when (ms).
   dismissed?: Record<string, number>
   // Hints on dock cards you've closed for good.
@@ -164,6 +166,9 @@ let nextKey = 1
 // A plain array (not a reactive Map, which would hand back the raw entries
 // and lose their reactivity).
 export const dockEntries = shallowRef<DockEntry[]>([])
+// The icon whose card or menu opened last: opening one closes the one before.
+// A pinned card stays, since you asked it to.
+export const dockCardOwner = shallowRef<number | null>(null)
 
 // The icon and art an item shows: its own, else its module's (by id).
 export function dockIcon (p: DockItemProps): string {

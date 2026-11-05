@@ -246,6 +246,11 @@ function togglePlayingCard () {
   nextTick(() => { dockRef.value?.togglePin() })
 }
 
+// However the pin ended (a click on the icon too), outside the lab the layout goes with it.
+watch(() => dockRef.value?.pinned, (pinned, was) => {
+  if (was && !pinned && !inLab.value) openDiff.value = null
+})
+
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   const parsed = parseHotkeyTarget(e.target)
   if (!parsed || parsed.wmId !== props.config.wmId) return
