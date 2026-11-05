@@ -4,23 +4,27 @@
 // pixel sums, so the OCR worker (100-200 MB) stays unloaded.
 //
 // The panel moves (a folder row above it, a window like Faustus beside it), so
-// the SCARAB button's text is searched for on every read and slots are placed
-// from it. That text also shows on the other sub-tabs, so a symbol that only
-// the Scarab tab has confirms it.
-import { GLYPH, LABEL, REF_HEIGHT, SCARAB_SLOTS, SLOT_SIZE } from './stash-scarab-data'
+// the row symbols at the left of the tab are searched for on every read and
+// slots are placed from them. The sub-tab buttons above can't be used: their
+// number varies. The middle column of symbols confirms the match.
+import { ANCHOR, CONFIRM, REF_HEIGHT, SCARAB_LAYOUTS, SLOT_SIZE } from './stash-scarab-data'
 
 // The first pass searches a shrunk picture, this much smaller at 1440p.
 const COARSE = 4
 const COARSE_MIN = 0.6
 const COARSE_TRIES = 6
-const LABEL_MIN = 0.7
-const GLYPH_MIN = 0.6
-// Empty slots show a dim ghost of their item (about 20), filled ones are 65+,
-// on the screenshot the templates came from. Scaled by how the SCARAB text
-// compares, so a brighter or darker game keeps the same split.
-const FILLED_MIN = 40
-// The button sits in the top half of the screen in every layout seen.
+const ANCHOR_MIN = 0.7
+const CONFIRM_MIN = 0.6
+const LAYOUT_MIN = 0.7
+// A filled slot has a navy backing and an empty one a dark grey, so the corners
+// of a slot show which it is, whatever the item's colour or the screen's
+// brightness. Blue minus red on real Scarab tabs: filled 18+, empty up to about 3,
+// and the tab's own teal background comes between, so it mustn't count.
+const FILLED_BLUENESS = 10
+// The stash opens at the left, and the symbols sit in the top half of the screen,
+// in every layout seen. Windows like Faustus open beside it.
 const SEARCH_HEIGHT = 0.6
+const SEARCH_WIDTH = 0.5
 
 export interface StashSlot {
   name: string
@@ -109,7 +113,7 @@ function matchAt (img: Gray, t: Template, x: number, y: number): number {
 
 function coarseCandidates (img: Gray, t: Template): Array<{ x: number, y: number }> {
   const maxY = Math.min(img.height - t.height, Math.floor(img.height * SEARCH_HEIGHT))
-  const maxX = img.width - t.width
+  const maxX = Math.min(img.width - t.width, Math.floor(img.width * SEARCH_WIDTH))
   const hits: Array<{ x: number, y: number, score: number }> = []
   for (let y = 0; y <= maxY; y++) {
     for (let x = 0; x <= maxX; x++) {
@@ -133,18 +137,18 @@ function coarseFactor (height: number): number {
 }
 
 // Templates at the sizes this window needs, kept between reads.
-let cache: { height: number, label: Template, coarse: Template, glyph: Template } | null = null
+let cache: { height: number, anchor: Template, coarse: Template, confirm: Template } | null = null
 
 function templatesFor (height: number) {
   if (cache?.height === height) return cache
   const scale = height / REF_HEIGHT
-  const label = scaled(LABEL, scale)
+  const anchor = scaled(ANCHOR, scale)
   const coarse = coarseFactor(height)
   cache = {
     height,
-    label: template(label),
-    coarse: template(resize(label, Math.max(1, Math.floor(label.width / coarse)), Math.max(1, Math.floor(label.height / coarse)))),
-    glyph: template(scaled(GLYPH, scale))
+    anchor: template(anchor),
+    coarse: template(resize(anchor, Math.max(1, Math.floor(anchor.width / coarse)), Math.max(1, Math.floor(anchor.height / coarse)))),
+    confirm: template(scaled(CONFIRM, scale))
   }
   return cache
 }
@@ -156,42 +160,66 @@ function findTab (gray: Gray, small: Gray, scale: number): { x: number, y: numbe
   for (const hit of coarseCandidates(small, t.coarse)) {
     let best = -1
     let at = { x: 0, y: 0 }
-    const xMax = Math.min(gray.width - t.label.width, hit.x * coarse + slack)
-    const yMax = Math.min(gray.height - t.label.height, hit.y * coarse + slack)
+    const xMax = Math.min(gray.width - t.anchor.width, hit.x * coarse + slack)
+    const yMax = Math.min(gray.height - t.anchor.height, hit.y * coarse + slack)
     for (let y = Math.max(0, hit.y * coarse - slack); y <= yMax; y++) {
       for (let x = Math.max(0, hit.x * coarse - slack); x <= xMax; x++) {
-        const score = matchAt(gray, t.label, x, y)
+        const score = matchAt(gray, t.anchor, x, y)
         if (score > best) { best = score; at = { x, y } }
       }
     }
-    if (best < LABEL_MIN) continue
-    const gx = at.x + Math.round(GLYPH.dx * scale)
-    const gy = at.y + Math.round(GLYPH.dy * scale)
-    if (gx < 0 || gy < 0 || gx + t.glyph.width > gray.width || gy + t.glyph.height > gray.height) continue
-    if (matchAt(gray, t.glyph, gx, gy) >= GLYPH_MIN) return at
+    if (best < ANCHOR_MIN) continue
+    const cx = at.x + Math.round(CONFIRM.dx * scale)
+    const cy = at.y + Math.round(CONFIRM.dy * scale)
+    if (cx < 0 || cy < 0 || cx + t.confirm.width > gray.width || cy + t.confirm.height > gray.height) continue
+    if (matchAt(gray, t.confirm, cx, cy) >= CONFIRM_MIN) return at
   }
   return null
 }
 
-const LABEL_MEAN = LABEL.gray.reduce((a, b) => a + b, 0) / LABEL.gray.length
-
-function slotMean (gray: Gray, x: number, y: number, size: number): number {
-  const inset = Math.round(size / 6)
-  return regionMean(gray, x + inset, y + inset, size - inset * 2, size - inset * 2)
+// Blue minus red at a slot's corners. The middle of three, as an item can hang
+// over one corner, and the top left holds the stack count.
+function slotBlueness (bgra: Uint8Array, width: number, height: number, x: number, y: number, size: number): number {
+  const k = Math.max(3, Math.floor(size / 7))
+  const corners = [
+    [x + 1, y + size - k - 1],
+    [x + size - k - 1, y + size - k - 1],
+    [x + size - k - 1, y + 1]
+  ]
+  const values = corners.map(([cx, cy]) => {
+    let diff = 0
+    let n = 0
+    for (let j = Math.max(0, cy); j < Math.min(height, cy + k); j++) {
+      for (let i = Math.max(0, cx); i < Math.min(width, cx + k); i++) {
+        const p = (j * width + i) * 4
+        diff += bgra[p] - bgra[p + 2]
+        n++
+      }
+    }
+    return n ? diff / n : 0
+  })
+  return values.sort((a, b) => a - b)[1]
 }
 
-function regionMean (gray: Gray, x: number, y: number, width: number, height: number): number {
-  const x0 = Math.max(0, x)
-  const y0 = Math.max(0, y)
-  const x1 = Math.min(gray.width, x + width)
-  const y1 = Math.min(gray.height, y + height)
-  if (x1 <= x0 || y1 <= y0) return 0
-  let sum = 0
-  for (let j = y0; j < y1; j++) {
-    const row = j * gray.width
-    for (let i = x0; i < x1; i++) sum += gray.data[row + i]
+// Stashes differ: one has a Breach button, and its slots hold other scarabs.
+// The SCARAB button's text sits in a different spot in each, so it says which
+// table applies. An unknown layout reads as nothing, rather than a wrong table.
+function findLayout (gray: Gray, at: { x: number, y: number }, scale: number) {
+  let best: typeof SCARAB_LAYOUTS[number] | null = null
+  let bestScore = LAYOUT_MIN
+  for (const layout of SCARAB_LAYOUTS) {
+    const t = template(scaled(layout.label, scale))
+    const slack = Math.ceil(3 * scale)
+    const x0 = at.x + Math.round(layout.label.dx * scale)
+    const y0 = at.y + Math.round(layout.label.dy * scale)
+    for (let y = Math.max(0, y0 - slack); y <= Math.min(gray.height - t.height, y0 + slack); y++) {
+      for (let x = Math.max(0, x0 - slack); x <= Math.min(gray.width - t.width, x0 + slack); x++) {
+        const score = matchAt(gray, t, x, y)
+        if (score > bestScore) { bestScore = score; best = layout }
+      }
+    }
   }
-  return sum / ((x1 - x0) * (y1 - y0))
+  return best
 }
 
 // `bgra` is a screenshot of the game window.
@@ -202,13 +230,12 @@ export function readScarabTab (bgra: Uint8Array, width: number, height: number):
   const small = resize(gray, Math.floor(width / coarse), Math.floor(height / coarse))
   const at = findTab(gray, small, scale)
   if (!at) return { found: false }
+  const layout = findLayout(gray, at, scale)
+  if (!layout) return { found: false }
   const size = Math.round(SLOT_SIZE * scale)
-  const t = templatesFor(height)
-  const brightness = regionMean(gray, at.x, at.y, t.label.width, t.label.height) / LABEL_MEAN
-  const filledMin = FILLED_MIN * brightness
   return {
     found: true,
-    slots: SCARAB_SLOTS.map(s => {
+    slots: layout.slots.map(s => {
       const x = at.x + Math.round(s.dx * scale)
       const y = at.y + Math.round(s.dy * scale)
       return {
@@ -217,7 +244,7 @@ export function readScarabTab (bgra: Uint8Array, width: number, height: number):
         y: y / height,
         width: size / width,
         height: size / height,
-        filled: slotMean(gray, x, y, size) >= filledMin
+        filled: slotBlueness(bgra, width, height, x, y, size) >= FILLED_BLUENESS
       }
     })
   }

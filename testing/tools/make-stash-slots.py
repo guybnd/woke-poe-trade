@@ -1,10 +1,12 @@
 # Rebuilds main/src/woke/stash-scarab-data.ts from a screenshot of the Scarab
 # sub-tab: the SCARAB text and row symbol that find the tab, and each slot's item.
 #
-#   python testing/tools/make-stash-slots.py testing/fixtures/screens/stash-scarab-real.png
+#   python testing/tools/make-stash-slots.py testing/fixtures/screens/stash-scarab-real.png testing/fixtures/screens/stash-scarab-breach-real.png
 #
-# Needs opencv-python and numpy, and a 2560x1440 screenshot with the panel at its
-# usual top-left spot and the mouse off the tab. Item icons download from poecdn
+# Needs opencv-python and numpy, and 2560x1440 screenshots with the panel at its
+# usual top-left spot, one per layout in LAYOUTS and in that order. The game's tab
+# differs between stashes (one has a Breach button, and its slots hold other scarabs),
+# so each layout has its own table. The first screenshot gives the markers and the mouse off the tab. Item icons download from poecdn
 # into a folder under the system temp folder. Names come from matching
 # icons, one family per row and no name twice, so check new or moved slots by eye.
 import base64, json, os, sys, tempfile, urllib.request
@@ -12,10 +14,12 @@ import cv2
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-LABEL = (316, 243, 86, 22)  # x, y, width, height of the SCARAB button text
-GLYPH = (46, 310, 28, 28)   # the first row's symbol
+ANCHOR = (42, 306, 34, 182)   # x, y, width, height of the left row symbols, rows 1-3
+CONFIRM = (344, 306, 36, 182)  # the middle row symbols, rows 1-3
+# Where the SCARAB button's text sits, which tells the layouts apart.
+LAYOUTS = [(316, 243, 86, 22), (233, 243, 86, 22)]
 ROWS = [298 + 63 * k for k in range(12)]
-GROUPS = [[77, 131, 184, 238, 292], [400, 454, 508, 562, 616]]
+GROUPS = [[77, 131, 184, 238, 292], [400, 454, 508, 562, 616, 670]]
 MIN_SCORE = 0.3
 
 def fetch(path, url):
@@ -29,8 +33,8 @@ def family(name):
     word = name.split(' ')[0]
     return 'Misc' if word == 'Scarab' else word
 
-def main(shot):
-    im = cv2.imdecode(np.fromfile(shot, np.uint8), cv2.IMREAD_COLOR)
+def main(shots):
+    images = [cv2.imdecode(np.fromfile(shot, np.uint8), cv2.IMREAD_COLOR) for shot in shots]
     templates = {}
     with open(os.path.join(ROOT, 'renderer/public/data/en/items.ndjson'), encoding='utf8') as f:
         items = [json.loads(line) for line in f]
@@ -52,62 +56,80 @@ def main(shot):
     slots += [(721, 455 + 54 * k, 3) for k in range(8)]
     slots += [(784, 482 + 54 * k, 4) for k in range(7)]
 
-    def score(name, x, y):
-        a, m = templates[name]
-        r = cv2.matchTemplate(im[y - 4:y + 52, x - 4:x + 52], a, cv2.TM_CCOEFF_NORMED, mask=m)
-        r[~np.isfinite(r)] = -1
-        return float(r.max())
+    tables = []
+    for im in images:
+        def score(name, x, y):
+            a, m = templates[name]
+            r = cv2.matchTemplate(im[y - 4:y + 52, x - 4:x + 52], a, cv2.TM_CCOEFF_NORMED, mask=m)
+            r[~np.isfinite(r)] = -1
+            return float(r.max())
 
-    table = {s: sorted(((score(n, s[0], s[1]), n) for n in templates), reverse=True) for s in slots}
-    rows = {}
-    for s in slots:
-        rows.setdefault((s[1], s[2]) if s[2] < 2 else ('col', s[2]), []).append(s)
-    families = sorted({family(n) for n in templates} - {'Misc', 'Horned'})
-    candidates = []
-    for key, members in rows.items():
-        if key[0] == 'col':
-            continue
-        for fam in families:
-            best = sorted((max((sc for sc, n in table[s] if family(n) == fam), default=-1) for s in members), reverse=True)[:3]
-            candidates.append((sum(best) / len(best), key, fam))
-    candidates.sort(reverse=True)
-    row_family, used = {}, set()
-    for _, key, fam in candidates:
-        if key not in row_family and fam not in used:
-            row_family[key] = fam
-            used.add(fam)
-    named, taken = {}, set()
-    for key, members in rows.items():
-        allow = ({'Misc', 'Horned'} if members[0][2] in (3, 4) else {'Titanic'}) if key[0] == 'col' else {row_family.get(key)}
-        pool = sorted(((sc, n, s) for s in members for sc, n in table[s] if family(n) in allow and sc >= MIN_SCORE), reverse=True)
-        for _, n, s in pool:
-            if s not in named and n not in taken:
-                named[s] = n
-                taken.add(n)
+        table = {s: sorted(((score(n, s[0], s[1]), n) for n in templates), reverse=True) for s in slots}
+        rows = {}
+        for s in slots:
+            rows.setdefault((s[1], s[2]) if s[2] < 2 else ('col', s[2]), []).append(s)
+        families = sorted({family(n) for n in templates} - {'Misc', 'Horned'})
+        candidates = []
+        for key, members in rows.items():
+            if key[0] == 'col':
+                continue
+            for fam in families:
+                best = sorted((max((sc for sc, n in table[s] if family(n) == fam), default=-1) for s in members), reverse=True)[:3]
+                candidates.append((sum(best) / len(best), key, fam))
+        candidates.sort(reverse=True)
+        row_family, used = {}, set()
+        for _, key, fam in candidates:
+            if key not in row_family and fam not in used:
+                row_family[key] = fam
+                used.add(fam)
+        named, taken = {}, set()
+        for key, members in rows.items():
+            allow = ({'Misc', 'Horned'} if members[0][2] in (3, 4) else {'Titanic'}) if key[0] == 'col' else {row_family.get(key)}
+            pool = sorted(((sc, n, s) for s in members for sc, n in table[s] if family(n) in allow and sc >= MIN_SCORE), reverse=True)
+            for _, n, s in pool:
+                if s not in named and n not in taken:
+                    named[s] = n
+                    taken.add(n)
 
-    gray = im.astype(np.float32).mean(axis=2)
-    lx, ly, lw, lh = LABEL
-    gx, gy, gw, gh = GLYPH
+        tables.append(named)
+
+    gray = images[0].astype(np.float32).mean(axis=2)
+    ax, ay, aw, ah = ANCHOR
+    cx, cy, cw, ch = CONFIRM
     flat = lambda a: ','.join(str(int(v)) for v in a.flatten())
-    out = ['// Generated by testing/tools/make-stash-slots.py from a 2560x1440 screenshot of the Scarab sub-tab.',
+    out = ['// Generated by testing/tools/make-stash-slots.py from 2560x1440 screenshots of the Scarab sub-tab.',
            "// Pixels are at 1440p and scale with the game window's height. Offsets are from the top left of the",
-           "// SCARAB button's text.",
+           '// row symbols at the left of the tab, which stay put when the sub-tab buttons change.',
            '',
            'export const REF_HEIGHT = 1440',
-           f'export const LABEL = {{ width: {lw}, height: {lh}, gray: [{flat(gray[ly:ly + lh, lx:lx + lw])}] }}',
-           f'export const GLYPH = {{ dx: {gx - lx}, dy: {gy - ly}, width: {gw}, height: {gh}, gray: [{flat(gray[gy:gy + gh, gx:gx + gw])}] }}',
+           f'export const ANCHOR = {{ width: {aw}, height: {ah}, gray: [{flat(gray[ay:ay + ah, ax:ax + aw])}] }}',
+           f'export const CONFIRM = {{ dx: {cx - ax}, dy: {cy - ay}, width: {cw}, height: {ch}, gray: [{flat(gray[cy:cy + ch, cx:cx + cw])}] }}',
            '',
            'export const SLOT_SIZE = 48',
            '',
-           'export const SCARAB_SLOTS: Array<{ name: string, dx: number, dy: number }> = [']
-    for s, n in sorted(named.items(), key=lambda kv: (kv[0][1], kv[0][0])):
-        q = f'"{n}"' if "'" in n else f"'{n}'"
-        out.append(f'  {{ name: {q}, dx: {s[0] - lx}, dy: {s[1] - ly} }},')
-    out[-1] = out[-1].rstrip(',')
+           'export interface ScarabLayout {',
+           '  label: { dx: number, dy: number, width: number, height: number, gray: number[] }',
+           '  slots: Array<{ name: string, dx: number, dy: number }>',
+           '}',
+           '',
+           'export const SCARAB_LAYOUTS: ScarabLayout[] = [']
+    for im, rect, named in zip(images, LAYOUTS, tables):
+        lx, ly, lw, lh = rect
+        lg = im.astype(np.float32).mean(axis=2)[ly:ly + lh, lx:lx + lw]
+        out.append('  {')
+        out.append(f'    label: {{ dx: {lx - ax}, dy: {ly - ay}, width: {lw}, height: {lh}, gray: [{flat(lg)}] }},')
+        out.append('    slots: [')
+        for s, n in sorted(named.items(), key=lambda kv: (kv[0][1], kv[0][0])):
+            q = f'"{n}"' if "'" in n else f"'{n}'"
+            out.append(f'      {{ name: {q}, dx: {s[0] - ax}, dy: {s[1] - ay} }},')
+        out[-1] = out[-1].rstrip(',')
+        out.append('    ]')
+        out.append('  },')
+        print(f'{len(named)} slots named for layout at x={lx}')
+    out[-1] = '  }'
     out.append(']')
     with open(os.path.join(ROOT, 'main/src/woke/stash-scarab-data.ts'), 'w', encoding='utf8', newline='\n') as f:
         f.write('\n'.join(out) + '\n')
-    print(f'{len(named)} slots named, {len(slots) - len(named)} positions without a slot')
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1:])

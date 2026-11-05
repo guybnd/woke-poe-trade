@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { decodePng } from '../fake-host/png'
 import { readScarabTab } from '../../main/src/woke/stash-read'
-import { SCARAB_SLOTS } from '../../main/src/woke/stash-scarab-data'
+import { SCARAB_LAYOUTS } from '../../main/src/woke/stash-scarab-data'
 
 const SCREENS = path.resolve(__dirname, '../fixtures/screens')
 
@@ -64,14 +64,14 @@ describe('reading the scarab tab', () => {
     const res = read(tab)
     expect(res.found).toBe(true)
     if (!res.found) return
-    expect(res.slots.length).toBe(SCARAB_SLOTS.length)
+    expect(res.slots.length).toBe(SCARAB_LAYOUTS[0].slots.length)
     const by = new Map(res.slots.map(s => [s.name, s]))
     expect(by.get('Horned Scarab of Bloodlines')?.filled).toBe(true)
     expect(by.get('Breach Scarab of the Hive')?.filled).toBe(true)
     // These two show as dim ghosts in this screenshot.
     expect(by.get('Cartography Scarab of Risk')?.filled).toBe(false)
     expect(by.get('Scarab of Radiant Storms')?.filled).toBe(false)
-    expect(res.slots.filter(s => s.filled).length).toBe(SCARAB_SLOTS.length - 2)
+    expect(res.slots.filter(s => s.filled).length).toBe(113)
   })
 
   it('reads fast enough to feel instant', () => {
@@ -102,7 +102,15 @@ describe('reading the scarab tab', () => {
     // Up by the missing folder row, not sideways.
     expect(Math.round(res.slots[0].x * shot.width)).toBe(Math.round(base.slots[0].x * tab.width))
     expect(Math.round(res.slots[0].y * shot.height)).toBe(251)
-    expect(res.slots.filter(s => s.filled).length).toBe(SCARAB_SLOTS.length - 2)
+    expect(res.slots.filter(s => s.filled).length).toBe(113)
+  })
+
+  it('reads a stash with an extra sub-tab button, which moves the others', () => {
+    const res = read(screen('stash-scarab-breach-real.png'))
+    expect(res.found).toBe(true)
+    if (!res.found) return
+    expect(res.slots.length).toBe(SCARAB_LAYOUTS[1].slots.length)
+    expect(res.slots.filter(s => s.filled).length).toBe(105)
   })
 
   it('scales to a smaller window', () => {
@@ -110,7 +118,7 @@ describe('reading the scarab tab', () => {
     const res = read(shrunk(tab, 720))
     expect(res.found).toBe(true)
     if (!res.found) return
-    expect(res.slots.filter(s => s.filled).length).toBeGreaterThan(SCARAB_SLOTS.length - 6)
+    expect(res.slots.filter(s => s.filled).length).toBeGreaterThan(SCARAB_LAYOUTS[0].slots.length - 6)
   })
 
   it('refuses another sub-tab, though it shows the same button', () => {
