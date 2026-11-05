@@ -1,14 +1,19 @@
-# Rebuilds main/src/woke/stash-scarab-data.ts from a screenshot of the Scarab
-# sub-tab: the SCARAB text and row symbol that find the tab, and each slot's item.
+# Rebuilds main/src/woke/stash-scarab-data.ts from screenshots of the Scarab
+# sub-tab: the row symbols that find the tab, the SCARAB text that tells layouts
+# apart, and each slot's item.
 #
 #   python testing/tools/make-stash-slots.py testing/fixtures/screens/stash-scarab-real.png testing/fixtures/screens/stash-scarab-breach-real.png
 #
-# Needs opencv-python and numpy, and 2560x1440 screenshots with the panel at its
-# usual top-left spot, one per layout in LAYOUTS and in that order. The game's tab
-# differs between stashes (one has a Breach button, and its slots hold other scarabs),
-# so each layout has its own table. The first screenshot gives the markers and the mouse off the tab. Item icons download from poecdn
-# into a folder under the system temp folder. Names come from matching
-# icons, one family per row and no name twice, so check new or moved slots by eye.
+# Needs opencv-python and numpy, and one 2560x1440 screenshot per entry in LAYOUTS,
+# in that order, with the panel at its usual top-left spot and the mouse off the tab.
+# The tab differs between stashes (one has a Breach button, and its slots hold other
+# scarabs), so each layout has its own table. Item icons download from poecdn into a
+# folder under the system temp folder.
+#
+# Row symbols are fixed, so a row holds one family everywhere: the first screenshot
+# works out which, and the others reuse it. Filled slots choose names first, and
+# empty ghosts only take what's left. Names come from icon matching, so check new or
+# moved slots by eye.
 import base64, json, os, sys, tempfile, urllib.request
 import cv2
 import numpy as np
@@ -21,6 +26,8 @@ LAYOUTS = [(316, 243, 86, 22), (233, 243, 86, 22)]
 ROWS = [298 + 63 * k for k in range(12)]
 GROUPS = [[77, 131, 184, 238, 292], [400, 454, 508, 562, 616, 670]]
 MIN_SCORE = 0.3
+FILLED_BLUENESS = 0.3  # as in stash-read.ts
+KEEP_NAME_SCORE = 0.35
 
 def fetch(path, url):
     if not os.path.exists(path):
@@ -34,6 +41,8 @@ def family(name):
     return 'Misc' if word == 'Scarab' else word
 
 def main(shots):
+    if len(shots) != len(LAYOUTS):
+        sys.exit(f'Need {len(LAYOUTS)} screenshots, one per layout, got {len(shots)}')
     images = [cv2.imdecode(np.fromfile(shot, np.uint8), cv2.IMREAD_COLOR) for shot in shots]
     templates = {}
     with open(os.path.join(ROOT, 'renderer/public/data/en/items.ndjson'), encoding='utf8') as f:
@@ -57,7 +66,14 @@ def main(shots):
     slots += [(784, 482 + 54 * k, 4) for k in range(7)]
 
     tables = []
+    row_family = None
     for im in images:
+        def filled(s):
+            x, y = s[0], s[1]
+            corners = [im[y + 41:y + 47, x + 1:x + 7], im[y + 41:y + 47, x + 41:x + 47], im[y + 1:y + 7, x + 41:x + 47]]
+            vals = sorted((float(c[:, :, 0].mean()) - float(c[:, :, 2].mean())) / max(float(c.mean()), 1e-6) for c in corners)
+            return vals[1] >= FILLED_BLUENESS
+
         def score(name, x, y):
             a, m = templates[name]
             r = cv2.matchTemplate(im[y - 4:y + 52, x - 4:x + 52], a, cv2.TM_CCOEFF_NORMED, mask=m)
@@ -68,29 +84,49 @@ def main(shots):
         rows = {}
         for s in slots:
             rows.setdefault((s[1], s[2]) if s[2] < 2 else ('col', s[2]), []).append(s)
-        families = sorted({family(n) for n in templates} - {'Misc', 'Horned'})
-        candidates = []
-        for key, members in rows.items():
-            if key[0] == 'col':
-                continue
-            for fam in families:
-                best = sorted((max((sc for sc, n in table[s] if family(n) == fam), default=-1) for s in members), reverse=True)[:3]
-                candidates.append((sum(best) / len(best), key, fam))
-        candidates.sort(reverse=True)
-        row_family, used = {}, set()
-        for _, key, fam in candidates:
-            if key not in row_family and fam not in used:
-                row_family[key] = fam
-                used.add(fam)
+        if row_family is None:
+            families = sorted({family(n) for n in templates} - {'Misc', 'Horned'})
+            candidates = []
+            for key, members in rows.items():
+                if key[0] == 'col':
+                    continue
+                for fam in families:
+                    best = sorted((max((sc for sc, n in table[s] if family(n) == fam), default=-1) for s in members), reverse=True)[:3]
+                    candidates.append((sum(best) / len(best), key, fam))
+            candidates.sort(reverse=True)
+            row_family, used = {}, set()
+            for _, key, fam in candidates:
+                if key not in row_family and fam not in used:
+                    row_family[key] = fam
+                    used.add(fam)
         named, taken = {}, set()
+        # Most slots match between layouts: keep the first table's name where the icon agrees.
+        if tables:
+            for s, n in tables[0].items():
+                if filled(s) and next(sc for sc, name in table[s] if name == n) >= KEEP_NAME_SCORE:
+                    named[s] = n
+                    taken.add(n)
         for key, members in rows.items():
             allow = ({'Misc', 'Horned'} if members[0][2] in (3, 4) else {'Titanic'}) if key[0] == 'col' else {row_family.get(key)}
-            pool = sorted(((sc, n, s) for s in members for sc, n in table[s] if family(n) in allow and sc >= MIN_SCORE), reverse=True)
-            for _, n, s in pool:
+            # Filled slots first: their icons are bright, and a ghost shouldn't use up a name.
+            # Later layouts leave ghosts alone: they can only take the first table's name below.
+            groups = [[s for s in members if filled(s)]]
+            if not tables:
+                groups.append([s for s in members if not filled(s)])
+            for group in groups:
+                pool = sorted(((sc, n, s) for s in group for sc, n in table[s] if family(n) in allow and sc >= MIN_SCORE), reverse=True)
+                for _, n, s in pool:
+                    if s not in named and n not in taken:
+                        named[s] = n
+                        taken.add(n)
+        if tables:
+            for s, n in tables[0].items():
                 if s not in named and n not in taken:
                     named[s] = n
                     taken.add(n)
-
+        missing = [(s[0], s[1]) for s in slots if s not in named and filled(s)]
+        if missing:
+            print('Filled but unnamed, so no outline:', missing)
         tables.append(named)
 
     gray = images[0].astype(np.float32).mean(axis=2)

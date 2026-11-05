@@ -409,7 +409,7 @@ async function toggleOutlines () {
     readingStash = false
   }
   if (!read.found) {
-    stashNote("Can't read this tab. Flips reads the Scarab tab for now, with no tooltip over its top.")
+    stashNote("Can't read this tab. Scarab tab only, mouse off it.")
     return
   }
   // The same advice as the panel: no untraded prices, and hold rare and cheap ones.

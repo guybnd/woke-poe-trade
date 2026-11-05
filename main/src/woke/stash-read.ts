@@ -15,12 +15,13 @@ const COARSE_MIN = 0.6
 const COARSE_TRIES = 6
 const ANCHOR_MIN = 0.7
 const CONFIRM_MIN = 0.6
-const LAYOUT_MIN = 0.7
-// A filled slot has a navy backing and an empty one a dark grey, so the corners
-// of a slot show which it is, whatever the item's colour or the screen's
-// brightness. Blue minus red on real Scarab tabs: filled 18+, empty up to about 3,
-// and the tab's own teal background comes between, so it mustn't count.
-const FILLED_BLUENESS = 10
+// Text in the wrong spot scores about 0; thin text at small sizes about 0.6.
+const LAYOUT_MIN = 0.45
+// A filled slot has a navy backing and an empty one a dark grey, so a slot's
+// corners show which it is, whatever the item's colour. Blue minus red, as a part
+// of how bright the corner is, so a darker screen keeps the same split: filled
+// slots are far bluer than empty ghosts and the tab's own teal background.
+const FILLED_BLUENESS = 0.3
 // The stash opens at the left, and the symbols sit in the top half of the screen,
 // in every layout seen. Windows like Faustus open beside it.
 const SEARCH_HEIGHT = 0.6
@@ -177,7 +178,7 @@ function findTab (gray: Gray, small: Gray, scale: number): { x: number, y: numbe
   return null
 }
 
-// Blue minus red at a slot's corners. The middle of three, as an item can hang
+// How blue a slot's corners are. The middle of three, as an item can hang
 // over one corner, and the top left holds the stack count.
 function slotBlueness (bgra: Uint8Array, width: number, height: number, x: number, y: number, size: number): number {
   const k = Math.max(3, Math.floor(size / 7))
@@ -188,27 +189,34 @@ function slotBlueness (bgra: Uint8Array, width: number, height: number, x: numbe
   ]
   const values = corners.map(([cx, cy]) => {
     let diff = 0
-    let n = 0
+    let sum = 0
     for (let j = Math.max(0, cy); j < Math.min(height, cy + k); j++) {
       for (let i = Math.max(0, cx); i < Math.min(width, cx + k); i++) {
         const p = (j * width + i) * 4
         diff += bgra[p] - bgra[p + 2]
-        n++
+        sum += (bgra[p] + bgra[p + 1] + bgra[p + 2]) / 3
       }
     }
-    return n ? diff / n : 0
+    return sum > 0 ? diff / sum : 0
   })
   return values.sort((a, b) => a - b)[1]
 }
+
+let layoutCache: { height: number, labels: Template[] } | null = null
 
 // Stashes differ: one has a Breach button, and its slots hold other scarabs.
 // The SCARAB button's text sits in a different spot in each, so it says which
 // table applies. An unknown layout reads as nothing, rather than a wrong table.
 function findLayout (gray: Gray, at: { x: number, y: number }, scale: number) {
+  if (layoutCache?.height !== gray.height) {
+    layoutCache = { height: gray.height, labels: SCARAB_LAYOUTS.map(l => template(scaled(l.label, scale))) }
+  }
+  const labels = layoutCache.labels
   let best: typeof SCARAB_LAYOUTS[number] | null = null
   let bestScore = LAYOUT_MIN
-  for (const layout of SCARAB_LAYOUTS) {
-    const t = template(scaled(layout.label, scale))
+  for (let n = 0; n < SCARAB_LAYOUTS.length; n++) {
+    const layout = SCARAB_LAYOUTS[n]
+    const t = labels[n]
     const slack = Math.ceil(3 * scale)
     const x0 = at.x + Math.round(layout.label.dx * scale)
     const y0 = at.y + Math.round(layout.label.dy * scale)
