@@ -122,6 +122,20 @@ describe('upgrades', () => {
     expect(buyList(rows, false).length).toBe(1)
   })
 
+  it('shows profit per item put in', () => {
+    const [row] = upgradeRows(quotes({ 'Black Oil': 13, 'Opalescent Oil': 44 }), [['Black Oil', 'Opalescent Oil']], 0)
+    expect(row.profitEach).toBeCloseTo(5 / 3, 8)
+    const recipe = flipRecipe(catalysts, vendorCatalyst, 0)
+    const m = flipModel(quotes({ 'Imbued Catalyst': 2, 'Prismatic Catalyst': 100 }), PLAIN, recipe)
+    const imbued = m.rows.find(r => r.name === 'Imbued Catalyst')!
+    expect(imbued.profitEach).toBeCloseTo(imbued.profit / 3, 8)
+  })
+
+  it('does not count rounding noise as profit', () => {
+    const rows = upgradeRows(quotes({ 'Violet Oil': 0.7, 'Crimson Oil': 2.1 }), [['Violet Oil', 'Crimson Oil']], 0)
+    expect(buyList(rows, true)).toEqual([])
+  })
+
   it('skips tiers with no price', () => {
     expect(upgradeRows(quotes({ 'Clear Oil': 1, 'Amber Oil': 9 }), [['Clear Oil', 'Sepia Oil', 'Amber Oil']], 0)).toEqual([])
   })
@@ -227,8 +241,10 @@ describe('bestFlip', () => {
   })
 
   it('ranks by profit without volume, below any flip with volume', () => {
+    // Per item, the orb's +34c beats the oil's +23c, though the oil's recipe makes more.
     const noVolume = bestFlip(items, new Map(), PLAIN, 30)
-    expect(noVolume?.name).toBe('Black to Opalescent Oil')
+    expect(noVolume?.name).toBe("Armoursmith's Delirium Orb")
+    expect(noVolume?.profitEach).toBeCloseTo(34.1, 1)
     expect(noVolume?.profitPerDay).toBeNull()
     const oneFeed = bestFlip(items, new Map([['DeliriumOrb', feed("Armoursmith's Delirium Orb", 5, 500)]]), PLAIN, 30)
     expect(oneFeed?.family.id).toBe('delirium')

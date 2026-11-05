@@ -5,7 +5,7 @@
       <template #card>
         <div v-if="best" class="flex flex-col gap-0.5" style="padding: 2px var(--w-pad) 6px;">
           <span class="w-num">Best supply: <span v-item-tip="{ name: best.item, type: best.family.ninjaType }">{{ shortName(best.name) }}</span></span>
-          <span class="w-dim w-num">{{ best.family.label }}, {{ best.method.label.toLowerCase() }}, +{{ fmt(best.profit / best.method.inputs) }} each<template v-if="best.profitPerDay != null">, up to {{ fmt(best.profitPerDay) }} a day</template></span>
+          <span class="w-dim w-num">{{ best.family.label }}, {{ best.method.label.toLowerCase() }}, +{{ fmt(best.profitEach) }} each<template v-if="best.profitPerDay != null">, up to {{ fmt(best.profitPerDay) }} a day</template></span>
         </div>
         <div v-else class="w-dim" style="padding: 2px var(--w-pad) 6px;">Nothing worth flipping right now</div>
       </template>
@@ -48,7 +48,7 @@
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
             <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" />
             <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
-            <span class="text-right w-up w-num">+{{ amount(r.profit / method.inputs) }}c</span>
+            <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
             <template v-if="hasVolume">
               <span class="text-right w-dim w-num">{{ Math.round(r.tradedPerDay ?? 0) }}</span>
               <span class="text-right w-num">{{ Math.round(r.profitPerDay ?? 0) }}c</span>
@@ -296,9 +296,10 @@ const verdictSub = computed(() => {
   return method.value.lifeforce ? `${value}, for ${fmt(flip.value.cost)} of ${method.value.lifeforce} lifeforce` : value
 })
 const profitTitle = computed(() => {
-  if (method.value.id === 'upgrade') return 'What each item you put in makes: the price of the next tier, minus 3 of this one, divided by 3.'
+  const { inputs } = method.value
+  if (method.value.id === 'upgrade') return `What each item you put in makes: the price of the next tier after your sell discount, minus ${inputs} of this one, divided by ${inputs}.`
   if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & investments.'
-  return `What each item you put in makes: the return of a recipe, minus its ${method.value.inputs} items, divided by ${method.value.inputs}.`
+  return `What each item you put in makes: the return of a recipe, minus its ${inputs} items, divided by ${inputs}.`
 })
 
 const unpriced = computed(() => flip.value?.kind === 'pool' ? unpricedShare(family.value, flip.value.quotes) : 0)

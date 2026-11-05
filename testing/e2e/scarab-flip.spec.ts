@@ -85,6 +85,8 @@ test('flips: a Harvest reroll tab and a known-result tab', async ({ overlay }) =
   await panel.getByRole('tab', { name: 'Oils', exact: true }).click()
   await expect(panel.getByText(/\d+ oils? worth upgrading/)).toBeVisible()
   await expect(panel.getByText('Black to Opalescent Oil', { exact: true })).toBeVisible()
+  // (43.82 - 3 x 13.38) / 3, per oil put in.
+  await expect(panel.locator('.w-row').filter({ hasText: 'Black to Opalescent Oil' }).getByText('+1.2c')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Odds', exact: true })).toHaveCount(0)
   await overlay.snap('flips-oils-upgrade')
 })

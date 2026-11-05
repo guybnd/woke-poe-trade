@@ -61,6 +61,8 @@ export interface FlipRow {
   tradedPerDay: number | null
   // Return of a flip using this item, minus its inputs and any lifeforce.
   profit: number
+  // The same, per item put in: what the panel shows.
+  profitEach: number
   // Most profit the day's trading could supply; null without the exchange feed.
   profitPerDay: number | null
   rare: boolean
@@ -163,6 +165,7 @@ export function flipModel (quotes: Map<string, Quote>, options: FlipOptions, rec
       tradedChaos,
       tradedPerDay,
       profit,
+      profitEach: profit / inputs,
       profitPerDay: tradedPerDay == null ? null : Math.max(0, profit) * tradedPerDay / inputs,
       rare,
       rareCheap: rare && typicalRare != null && chaos < typicalRare * CHEAP_RATIO
@@ -192,10 +195,13 @@ export function isTraded (row: { tradedChaos: number | null }): boolean {
   return row.tradedChaos == null || row.tradedChaos >= UNTRADED_CHAOS
 }
 
+// Under this, a profit is rounding noise in the price sums, not a profit.
+const PROFIT_EPSILON = 1e-6
+
 // Items worth flipping, biggest supply of profit first.
 export function buyList<T extends { profit: number, profitPerDay: number | null, tradedChaos: number | null }> (rows: T[], hideUntraded: boolean): T[] {
   return rows
-    .filter(r => r.profit > 0 && (!hideUntraded || isTraded(r)))
+    .filter(r => r.profit > PROFIT_EPSILON && (!hideUntraded || isTraded(r)))
     .sort((a, b) => (b.profitPerDay ?? 0) - (a.profitPerDay ?? 0) || b.profit - a.profit)
 }
 
@@ -204,6 +210,9 @@ export function rareCheapList (model: FlipModel): FlipRow[] {
   return model.rows.filter(r => r.rareCheap && isTraded(r)).sort((a, b) => a.chaos - b.chaos)
 }
 
+// 3 of a tier give 1 of the next.
+const UPGRADE_INPUTS = 3
+
 export interface UpgradeRow {
   name: string
   from: string
@@ -211,6 +220,8 @@ export interface UpgradeRow {
   chaos: number
   // Price of 1 of the next tier, minus 3 of this one.
   profit: number
+  // The same, per item put in: what the panel shows.
+  profitEach: number
   // Chaos traded a day on the thinner side, input or result.
   tradedChaos: number | null
   tradedPerDay: number | null
@@ -226,12 +237,12 @@ export function upgradeRows (quotes: Map<string, Quote>, chains: string[][], sel
       const from = quotes.get(chain[i])
       const into = quotes.get(chain[i + 1])
       if (!from || !into) continue
-      const profit = into.chaos * (1 - sellDiscount) - 3 * from.chaos
+      const profit = into.chaos * (1 - sellDiscount) - UPGRADE_INPUTS * from.chaos
       const tradedPerDay = from.tradedChaos == null ? null : from.tradedChaos / from.chaos
       // A recipe needs buyers for the result as well as sellers of the input,
       // so the thinner side of the market is what counts.
       const intoPerDay = into.tradedChaos == null ? null : into.tradedChaos / into.chaos
-      const recipesPerDay = tradedPerDay == null ? null : Math.min(tradedPerDay / 3, intoPerDay ?? Infinity)
+      const recipesPerDay = tradedPerDay == null ? null : Math.min(tradedPerDay / UPGRADE_INPUTS, intoPerDay ?? Infinity)
       rows.push({
         // "Black Oil", "Opalescent Oil" -> "Black to Opalescent Oil"
         name: `${chain[i].split(' ')[0]} to ${chain[i + 1]}`,
@@ -239,6 +250,7 @@ export function upgradeRows (quotes: Map<string, Quote>, chains: string[][], sel
         into: chain[i + 1],
         chaos: from.chaos,
         profit,
+        profitEach: profit / UPGRADE_INPUTS,
         tradedChaos: from.tradedChaos == null || into.tradedChaos == null ? from.tradedChaos ?? into.tradedChaos : Math.min(from.tradedChaos, into.tradedChaos),
         tradedPerDay,
         profitPerDay: recipesPerDay == null ? null : Math.max(0, profit) * recipesPerDay

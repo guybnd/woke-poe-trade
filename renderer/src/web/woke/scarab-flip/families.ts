@@ -211,19 +211,19 @@ export interface BestFlip {
   name: string
   // The item to buy, when the name describes a recipe.
   item: string
-  profit: number
+  profitEach: number
   // Null when the family's volume feed is missing.
   profitPerDay: number | null
 }
 
 // The flip with the biggest supply of profit, for the dock card. Without volume
-// a flip ranks by its profit, below any flip that has volume. Low-confidence
+// a flip ranks by its profit per item, below any flip that has volume. Low-confidence
 // families stay out.
 export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: FlipOptions, lifeforcePerItem: number): BestFlip | null {
   let best: BestFlip | null = null
   const beats = (a: BestFlip, b: BestFlip) => {
     if ((a.profitPerDay != null) !== (b.profitPerDay != null)) return a.profitPerDay != null
-    return a.profitPerDay != null ? a.profitPerDay > b.profitPerDay! : a.profit > b.profit
+    return a.profitPerDay != null ? a.profitPerDay > b.profitPerDay! : a.profitEach > b.profitEach
   }
   for (const family of FAMILIES) {
     if (family.lowConfidence) continue
@@ -233,7 +233,7 @@ export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: Fli
       const rows = flip.kind === 'pool' ? flip.model.rows : flip.rows
       const top = buyList<FlipRow | UpgradeRow>(rows, true)[0]
       if (!top) continue
-      const candidate = { family, method, name: top.name, item: 'from' in top ? top.from : top.name, profit: top.profit, profitPerDay: top.profitPerDay }
+      const candidate = { family, method, name: top.name, item: 'from' in top ? top.from : top.name, profitEach: top.profitEach, profitPerDay: top.profitPerDay }
       if (!best || beats(candidate, best)) best = candidate
     }
   }
