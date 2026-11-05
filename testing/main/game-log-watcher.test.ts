@@ -37,7 +37,8 @@ beforeEach(async () => {
   lines = []
   const server = {
     onEventAnyClient: () => {},
-    sendEventTo: (_to: string, e: { payload: { lines: string[] } }) => { lines.push(...e.payload.lines) }
+    // Only new-lines events carry lines; game-log-opened carries a path.
+    sendEventTo: (_to: string, e: { payload: { lines?: string[] } }) => { if (e.payload.lines) lines.push(...e.payload.lines) }
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   watcher = new GameLogWatcher(server as any, { write: () => {} } as any)
