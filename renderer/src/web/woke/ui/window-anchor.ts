@@ -51,6 +51,7 @@ const OLD_POPUP_ANCHORS: Record<string, WidgetAnchor[]> = {
   'woke-loot-filter': [{ pos: 'cc', x: 50, y: 45 }],
   'woke-market-tracker': [{ pos: 'tl', x: 40, y: 20 }],
   'woke-pob-builds': [{ pos: 'tl', x: 25, y: 20 }],
+  'woke-scarab-flip': [{ pos: 'tl', x: 45, y: 20 }],
   'woke-regex-library': [{ pos: 'tl', x: 30, y: 30 }, { pos: 'tl', x: 35, y: 30 }],
   'woke-trade-searches': [{ pos: 'tl', x: 30, y: 25 }]
 }
