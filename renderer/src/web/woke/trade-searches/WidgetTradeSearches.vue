@@ -89,6 +89,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig, pushHostConfig } from '@/web/Config'
@@ -111,7 +112,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Trade searches'
-  props.config.anchor = { pos: 'tl', x: 30, y: 25 }
+  props.config.anchor = popupAnchor()
   props.config.enableHotkeys = true
   props.config.entries = []
   wm.show(props.config.wmId)

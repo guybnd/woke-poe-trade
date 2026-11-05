@@ -250,6 +250,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import WToggle from '../ui/WToggle.vue'
 import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -274,7 +275,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Boss runs'
-  props.config.anchor = { pos: 'cc', x: 50, y: 50 }
+  props.config.anchor = popupAnchor()
   props.config.selected = BOSSES[0].id
   props.config.sort = 'hour'
   props.config.tier = 'all'

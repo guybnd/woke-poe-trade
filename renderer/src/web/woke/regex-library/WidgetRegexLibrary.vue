@@ -57,6 +57,7 @@
 </template>
 
 <script lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import type { WidgetSpec } from '@/web/overlay/interfaces'
 import { REGEX_LIBRARY_TYPE, starterEntries } from './widget'
 import type { RegexLibraryWidget } from './widget'
@@ -73,7 +74,7 @@ export default {
       wmWants: 'hide',
       wmZorder: null,
       wmFlags: ['invisible-on-blur'],
-      anchor: { pos: 'tl', x: 35, y: 30 },
+      anchor: popupAnchor(),
       enableHotkeys: true,
       entries: starterEntries()
     }]
@@ -103,7 +104,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Regex library'
-  props.config.anchor = { pos: 'tl', x: 30, y: 30 }
+  props.config.anchor = popupAnchor()
   props.config.enableHotkeys = true
   props.config.entries = starterEntries()
   wm.show(props.config.wmId)

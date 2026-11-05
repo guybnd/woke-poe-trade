@@ -10,6 +10,7 @@ import type { StrictnessAuto } from './strictness'
 import type { OwnRule } from './rules'
 import { defaultPresets, normalizePresets } from './presets'
 import type { Presets } from './presets'
+import { popupAnchor } from '../ui/window-anchor'
 
 export const LOOT_FILTER_TYPE = 'woke-loot-filter'
 // copy-item target: sample the hovered item and open its rule card.
@@ -117,7 +118,7 @@ export function defaultPriceTiers (): PriceTiers {
 export function initLootFilterWidget (w: LootFilterWidget) {
   w.wmTitle = 'Loot filter'
   w.wmFlags = ['invisible-on-blur']
-  w.anchor = { pos: 'cc', x: 50, y: 45 }
+  w.anchor = popupAnchor()
   w.sampleHotkey = 'Alt + F'
   w.editorHotkey = 'Alt + Shift + F'
   w.folder = ''
@@ -143,7 +144,7 @@ export function initLootFilterWidget (w: LootFilterWidget) {
 }
 
 export function normalizeLootFilterWidget (w: LootFilterWidget) {
-  if (!w.anchor) w.anchor = { pos: 'cc', x: 50, y: 45 }
+  if (!w.anchor) w.anchor = popupAnchor()
   if (w.sampleHotkey === undefined) w.sampleHotkey = null
   if (w.editorHotkey === undefined) w.editorHotkey = null
   if (typeof w.folder !== 'string') w.folder = ''

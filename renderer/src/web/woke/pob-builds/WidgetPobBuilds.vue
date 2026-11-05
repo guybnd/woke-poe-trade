@@ -71,6 +71,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -90,7 +91,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'PoB builds'
-  props.config.anchor = { pos: 'tl', x: 25, y: 20 }
+  props.config.anchor = popupAnchor()
   props.config.buildsDir = ''
   props.config.pobExe = ''
   props.config.pinned = []

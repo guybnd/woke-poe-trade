@@ -68,6 +68,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch, nextTick, onUnmounted } from 'vue'
 import { useVisibleClock } from '../shared/visible-clock'
 import { Host, MainProcess } from '@/web/background/IPC'
@@ -92,7 +93,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Labyrinth'
-  props.config.anchor = { pos: 'tl', x: 30, y: 20 }
+  props.config.anchor = popupAnchor()
   props.config.urls = { normal: '', cruel: '', merciless: '', uber: '' }
   props.config.defaultDifficulty = 'uber'
   props.config.hotkeyOverlay = null

@@ -72,6 +72,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
@@ -102,7 +103,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Challenges'
-  props.config.anchor = { pos: 'tl', x: 15, y: 8 }
+  props.config.anchor = popupAnchor()
   props.config.url = ''
   props.config.hotkey = null
   props.config.dockIcon = false

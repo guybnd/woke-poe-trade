@@ -8,6 +8,7 @@ import { wokeGlobalShortcuts, wokeShortcutsFor } from './woke/shortcuts'
 import { filterAptShortcuts, needsGameLog } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
+import { movePopupsToNewSpot } from './woke/ui/window-anchor'
 import type { WokeModulesConfig } from './woke/modules'
 import type { ItemCheckWidget } from './item-check/widget'
 import type { ItemSearchWidget } from './item-search/widget'
@@ -449,6 +450,8 @@ function upgradeConfig (_config: Config): Config {
   }
   // woke: Stash search strings move into the Regex library.
   moveStashSearchToLibrary(config.widgets as Array<Record<string, any> & { wmId: number, wmType: string }>)
+  // woke: panels still on their old default spot open in the new one.
+  movePopupsToNewSpot(config.widgets as Array<Record<string, any> & { wmType: string }>)
   /* eslint-enable */
 
   return config as unknown as Config

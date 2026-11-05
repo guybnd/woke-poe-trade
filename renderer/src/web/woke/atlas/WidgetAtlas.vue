@@ -158,6 +158,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -188,7 +189,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Atlas strategies'
-  props.config.anchor = { pos: 'tl', x: 20, y: 15 }
+  props.config.anchor = popupAnchor()
   props.config.dataUrl = ''
   props.config.selectedId = null
   props.config.strategies = []
