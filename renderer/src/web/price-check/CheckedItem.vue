@@ -1,9 +1,9 @@
 <template>
   <div v-if="show" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
-    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale }">
-      <!-- The verdict's height from the start, so the first search doesn't push the mods down. -->
-      <div v-if="verdictWaiting" class="w-pc-verdict-wait">Prices show after you search</div>
+    <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
+    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale, 'w-pc-verdict-held': verdictHeld }">
+      <div v-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
     </div>
     <filter-name
       ref="nameComponent"
@@ -64,7 +64,7 @@
       {{ t('item.complexity_hint') }}
     </p>
     <stack-value :filters="itemFilters" :item="item"/>
-    <div v-if="showSupportLinks && !searched" class="mt-auto border border-dashed p-2">
+    <div v-if="showSupportLinks" class="mt-auto border border-dashed p-2">
       <div class="mb-1">{{ t('Support development on') }} <a href="https://patreon.com/awakened_poe_trade" class="inline-flex align-middle animate__animated animate__fadeInRight" target="_blank"><img class="inline h-5" src="/images/Patreon.svg"></a></div>
       <i18n-t keypath="app.thanks_3rd_party" tag="div">
         <a href="https://poeprices.info" target="_blank" class="bg-gray-900 px-1 rounded">poeprices.info</a>
@@ -143,6 +143,11 @@ export default defineComponent({
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
     const itemStats = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.stats)
     const doSearch = ref(false)
+    let searchHover: ReturnType<typeof setTimeout> | undefined
+    function cancelSearchHover () {
+      clearTimeout(searchHover)
+    }
+    onUnmounted(cancelSearchHover)
     // woke: what the listings on screen were searched with. A copy, so ticking a mod
     // can't reach them before the next search. Trade options are shared: the listing's
     // own controls change them, and that searches again (see the watcher below).
@@ -158,6 +163,7 @@ export default defineComponent({
     const nameComponent = ref<ComponentPublicInstance>(null!)
 
     watch(() => props.item, (item, prevItem) => {
+      cancelSearchHover()
       searched.value = null
       const prevCurrency = (presets.value != null) ? itemFilters.value.trade.currency : null
 
@@ -259,7 +265,6 @@ export default defineComponent({
         props.item.info.unique == null)
     })
 
-    let searchHover: ReturnType<typeof setTimeout> | undefined
     function handleSearchMouseenter (e: MouseEvent) {
       const from = e.relatedTarget as HTMLElement
       if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
@@ -275,14 +280,12 @@ export default defineComponent({
         }, resultsStale.value ? SEARCH_HOVER_MS : 0)
       }
     }
-    function cancelSearchHover () {
-      clearTimeout(searchHover)
-    }
-    onUnmounted(cancelSearchHover)
 
     const showSupportLinks = ref(false)
     watch(() => [props.item, doSearch.value], ([cItem, cInteracted], [pItem]) => {
-      if (_showSupportLinksCounter >= 13 && (!cInteracted || tradeAPI.value === 'bulk')) {
+      // Not under results kept on screen: it would squeeze them, and use up its turn.
+      const resultsShown = tradeAPI.value === 'trade' && searched.value != null
+      if (_showSupportLinksCounter >= 13 && !resultsShown && (!cInteracted || tradeAPI.value === 'bulk')) {
         showSupportLinks.value = true
         _showSupportLinksCounter = 0
       } else {
@@ -300,7 +303,7 @@ export default defineComponent({
     return {
       verdictSlot,
       wokeVerdictShown,
-      verdictWaiting: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value == null),
+      verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),
       t,
       itemFilters,
       itemStats,

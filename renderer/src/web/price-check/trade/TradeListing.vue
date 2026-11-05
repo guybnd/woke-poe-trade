@@ -438,7 +438,8 @@ export default defineComponent({
 
     // A new search's loading rows take up what the last results did.
     const skeletonRows = shallowRef(SKELETON_ROWS)
-    watch(rows, (shown) => { if (shown.length) skeletonRows.value = shown.length })
+    watch(listSettled, (settled) => { if (settled) skeletonRows.value = Math.max(rows.value.length, 1) })
+    watch(() => props.item, () => { skeletonRows.value = SKELETON_ROWS })
 
     // A new search empties the verdict for a moment. Holding its height keeps the
     // filters under it from jumping up and back down.

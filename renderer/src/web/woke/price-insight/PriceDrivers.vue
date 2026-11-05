@@ -56,7 +56,7 @@ import { ItemRarity, ParsedItem } from '@/parser'
 import type { ItemFilters, FilterOrGroup } from '@/web/price-check/filters/interfaces'
 import { WPrice } from '../ui'
 import type { Insight, InsightOptions } from './insight'
-import { driverSeed, pickCandidates, measureDrivers, runLadder, LADDER_LABEL, searchBudget, searchKey, cachedDrivers, cacheDrivers, cachedLadder, cacheLadder } from './drivers'
+import { CANCELLED, driverSeed, pickCandidates, measureDrivers, runLadder, LADDER_LABEL, searchBudget, searchKey, cachedDrivers, cacheDrivers, cachedLadder, cacheLadder } from './drivers'
 import { verdictExpanded } from './view'
 import { measuredDrivers } from './check-state'
 import type { DriverResult, LadderResult } from './drivers'
@@ -128,6 +128,10 @@ const driverSummary = computed(() => {
   return `Most of the value comes from ${top.text}.`
 })
 
+function showFailure (err: unknown) {
+  return (err as Error).message !== CANCELLED
+}
+
 async function measure () {
   if (baseFair.value == null) return
   busyDrivers.value = true
@@ -137,14 +141,13 @@ async function measure () {
   try {
     drivers.value = await measureDrivers(props.filters, props.stats, baseFair.value, candidates.value, props.options,
       (done, wait) => { drivers.value = done; waiting.value = wait }, isCancelled)
-    if (!isCancelled()) {
-      cacheDrivers(key, drivers.value)
-      shareDrivers()
-    }
+    cacheDrivers(key, drivers.value)
+    shareDrivers()
   } catch (err) {
-    error.value = (err as Error).message
+    if (showFailure(err)) error.value = (err as Error).message
   } finally {
-    busyDrivers.value = false
+    // Cancelled keeps its rows until the next search replaces this panel, so nothing moves.
+    if (!isCancelled()) busyDrivers.value = false
     waiting.value = null
   }
 }
@@ -156,11 +159,11 @@ async function widen () {
   try {
     ladder.value = await runLadder(props.filters, props.stats, candidates.value, props.options,
       (steps, wait) => { ladder.value = steps; waiting.value = wait }, isCancelled)
-    if (!isCancelled()) cacheLadder(key, ladder.value)
+    cacheLadder(key, ladder.value)
   } catch (err) {
-    error.value = (err as Error).message
+    if (showFailure(err)) error.value = (err as Error).message
   } finally {
-    busyLadder.value = false
+    if (!isCancelled()) busyLadder.value = false
     waiting.value = null
   }
 }
