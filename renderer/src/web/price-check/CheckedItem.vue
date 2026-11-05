@@ -38,7 +38,7 @@
     </filters-block>
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
-      <div class="flex w-40" @mouseenter="handleSearchMouseenter">
+      <div class="flex w-40" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
         <button class="btn w-pc-primary" @click="doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
       <trade-links v-if="tradeAPI === 'trade'"
@@ -64,7 +64,7 @@
       {{ t('item.complexity_hint') }}
     </p>
     <stack-value :filters="itemFilters" :item="item"/>
-    <div v-if="showSupportLinks" class="mt-auto border border-dashed p-2">
+    <div v-if="showSupportLinks && !searched" class="mt-auto border border-dashed p-2">
       <div class="mb-1">{{ t('Support development on') }} <a href="https://patreon.com/awakened_poe_trade" class="inline-flex align-middle animate__animated animate__fadeInRight" target="_blank"><img class="inline h-5" src="/images/Patreon.svg"></a></div>
       <i18n-t keypath="app.thanks_3rd_party" tag="div">
         <a href="https://poeprices.info" target="_blank" class="bg-gray-900 px-1 rounded">poeprices.info</a>
@@ -75,7 +75,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, toRaw, ComponentPublicInstance } from 'vue'
+import { defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, toRaw, onUnmounted, ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
@@ -101,6 +101,8 @@ import { useLeagues } from '@/web/background/Leagues'
 import { priceView } from '@/web/woke/price-insight/view'
 
 let _showSupportLinksCounter = 0
+
+const SEARCH_HOVER_MS = 150
 
 export default defineComponent({
   name: 'CheckedItem',
@@ -257,17 +259,26 @@ export default defineComponent({
         props.item.info.unique == null)
     })
 
+    let searchHover: ReturnType<typeof setTimeout> | undefined
     function handleSearchMouseenter (e: MouseEvent) {
       const from = e.relatedTarget as HTMLElement
       if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
           (nameComponent.value.$el as HTMLElement).contains(from)) {
-        doSearch.value = true
-
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur()
-        }
+        // Old results sit below this row now, so passing through on the way to them
+        // mustn't spend a search: the mouse has to stop here for a moment.
+        cancelSearchHover()
+        searchHover = setTimeout(() => {
+          doSearch.value = true
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+          }
+        }, resultsStale.value ? SEARCH_HOVER_MS : 0)
       }
     }
+    function cancelSearchHover () {
+      clearTimeout(searchHover)
+    }
+    onUnmounted(cancelSearchHover)
 
     const showSupportLinks = ref(false)
     watch(() => [props.item, doSearch.value], ([cItem, cInteracted], [pItem]) => {
@@ -303,8 +314,9 @@ export default defineComponent({
       showPredictedPrice,
       show,
       handleSearchMouseenter,
+      cancelSearchHover,
       showSupportLinks,
-      showComplexityHint: computed(() => !widget.value.builtinBrowser && !doSearch.value &&
+      showComplexityHint: computed(() => !widget.value.builtinBrowser && !doSearch.value && !searched.value &&
         props.item.info.refName === 'Mercenary Warrant'),
       presets: computed(() => presets.value.presets.map(preset =>
         ({ id: preset.id, active: (preset.id === presets.value.active) }))),

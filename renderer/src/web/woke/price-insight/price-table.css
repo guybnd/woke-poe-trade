@@ -193,7 +193,7 @@
 .w-pc-yours-tag { color: var(--w-accent); font-size: var(--w-fs-sm); }
 
 /* Filters changed since this search: old results stay put, dimmed, until the next one. */
-.w-pc-results-stale { opacity: 0.45; pointer-events: none; }
+.w-pc-results-stale { opacity: 0.45; }
 .w-pc-search-row { min-height: calc(24px * var(--w-text-scale, 1)); margin-bottom: var(--w-s2, 0.5rem); }
 .w-pc-search-row .btn { height: calc(24px * var(--w-text-scale, 1)); padding-top: 0; padding-bottom: 0; }
 

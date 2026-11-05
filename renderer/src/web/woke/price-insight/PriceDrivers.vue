@@ -13,12 +13,12 @@
         <span v-for="c in candidates" :key="c.statRef" :class="$style.cand" class="w-trunc">{{ c.text }}</span>
       </div>
       <div :class="$style.actions">
-        <button type="button" :class="$style.btn" :disabled="busy || baseFair == null || measureWait > 0" @click="measure"
+        <button type="button" :class="$style.btn" :disabled="busy || stale || baseFair == null || measureWait > 0" @click="measure"
           :title="baseFair == null ? 'Needs a price from the main search first' : measureWait > 0 ? `Would hit the trade site's rate limit. Ready in ${measureWait}s.` : 'Searches again with each mod removed to see how much the price drops'">
           <template v-if="measureWait > 0">Measure (ready in {{ measureWait }}s)</template>
           <template v-else>Measure ({{ candidates.length }} {{ candidates.length === 1 ? 'search' : 'searches' }})</template>
         </button>
-        <button v-if="fewListings && !ladder.length" type="button" :class="$style.btn" :disabled="busy || ladderWait > 0" @click="widen"
+        <button v-if="fewListings && !ladder.length" type="button" :class="$style.btn" :disabled="busy || stale || ladderWait > 0" @click="widen"
           :title="ladderWait > 0 ? `Would hit the trade site's rate limit. Ready in ${ladderWait}s.` : 'Too few listings: search again with only the key mods, then with lower rolls (up to 2 searches)'">
           Widen search<template v-if="ladderWait > 0"> ({{ ladderWait }}s)</template>
         </button>
@@ -70,6 +70,8 @@ const props = defineProps<{
   divine: number | undefined
   /** True once the main search has finished loading listings. */
   ready: boolean
+  /** Filters changed since this search: spend no more searches on the old ones. */
+  stale?: boolean
 }>()
 
 const candidates = computed(() => props.item.rarity === ItemRarity.Rare
@@ -91,7 +93,7 @@ const error = shallowRef<string | null>(null)
 const tick = shallowRef(0)
 const ticker = setInterval(() => { tick.value++ }, 1000)
 let gone = false
-const isCancelled = () => gone
+const isCancelled = () => gone || Boolean(props.stale)
 onUnmounted(() => { clearInterval(ticker); gone = true })
 const budget = computed(() => searchBudget(candidates.value.length, tick.value))
 const measureWait = computed(() => Math.ceil(budget.value.waitMs / 1000))
@@ -131,11 +133,14 @@ async function measure () {
   busyDrivers.value = true
   error.value = null
   drivers.value = []
+  const key = driverKey.value
   try {
     drivers.value = await measureDrivers(props.filters, props.stats, baseFair.value, candidates.value, props.options,
       (done, wait) => { drivers.value = done; waiting.value = wait }, isCancelled)
-    cacheDrivers(driverKey.value, drivers.value)
-    shareDrivers()
+    if (!isCancelled()) {
+      cacheDrivers(key, drivers.value)
+      shareDrivers()
+    }
   } catch (err) {
     error.value = (err as Error).message
   } finally {
@@ -147,10 +152,11 @@ async function measure () {
 async function widen () {
   busyLadder.value = true
   error.value = null
+  const key = driverKey.value
   try {
     ladder.value = await runLadder(props.filters, props.stats, candidates.value, props.options,
       (steps, wait) => { ladder.value = steps; waiting.value = wait }, isCancelled)
-    cacheLadder(driverKey.value, ladder.value)
+    if (!isCancelled()) cacheLadder(key, ladder.value)
   } catch (err) {
     error.value = (err as Error).message
   } finally {

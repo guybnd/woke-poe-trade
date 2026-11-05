@@ -37,7 +37,8 @@
         :insight="verdictInsight"
         :options="insightOptions"
         :divine="divine"
-        :ready="slowdownReady" />
+        :ready="slowdownReady"
+        :stale="stale" />
     </teleport>
     <div ref="scrollEl" class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
       <table class="w-pc-table table-stripped w-full">
@@ -449,6 +450,8 @@ export default defineComponent({
       if (verdictSlot.value) verdictSlot.value.style.minHeight = ''
     }
     watch(listSettled, (settled) => { if (settled) releaseVerdictHeight() })
+    // An error has nothing to keep on screen, and its Retry would use the old filters.
+    watch([() => props.stale, error], ([stale, err]) => { if (stale && err) ctx.emit('reset') })
     watch(error, (err) => { if (err) releaseVerdictHeight() })
     onUnmounted(releaseVerdictHeight)
 

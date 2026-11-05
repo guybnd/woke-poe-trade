@@ -80,8 +80,20 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   await expect(panel.locator('.w-pc-results-stale').first()).toBeVisible()
   expect(await top(firstRow)).toBe(before.firstRow)
 
-  // Moving the mouse from the filters onto Search searches, as it always has.
+  // Dimmed results still scroll and show their tooltips.
+  await firstRow.hover()
+  await expect(overlay.page.getByRole('tooltip')).toBeVisible()
+  await stun.hover()
+
+  // Passing over Search on the way to the results doesn't search.
   const search = (await panel.getByRole('button', { name: 'Search' }).boundingBox())!
+  await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
+  await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height + 40)
+  await overlay.page.waitForTimeout(300)
+  await expect(panel.locator('.w-pc-results-stale').first()).toBeVisible()
+
+  // Coming from the filters and stopping on Search does.
+  await stun.hover()
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
   await expect(panel.locator('.w-pc-results-stale')).toHaveCount(0)
   // Nothing above the filters collapses while the new results load.
