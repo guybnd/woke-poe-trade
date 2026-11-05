@@ -14,8 +14,8 @@
         </div>
       </template>
     </DockItem>
-    <div class="flex gap-2 min-h-0 items-start">
-      <WPanel ref="panel" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="19rem" max-height="70vh">
+    <div class="flex gap-2 min-w-0 min-h-0 items-start">
+      <WPanel ref="panel" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="19rem" max-height="70vh">
         <template #actions>
           <WChip v-if="hasHotkeys" clickable :active="config.enableHotkeys" title="Use each search's hotkey"
             @click="config.enableHotkeys = !config.enableHotkeys"><i class="fas fa-keyboard" /> Hotkeys</WChip>
@@ -53,8 +53,8 @@
         </template>
       </WPanel>
 
-      <WPanel v-if="openEntry" size-key="browser" :title="openEntry.name || openEntry.url" :scroll="false" max-height="none"
-        :class="{ [$style.flash]: flashing }" style="width: 60vw; height: 75vh;">
+      <WPanel v-if="openEntry" size-key="browser" :title="openEntry.name || openEntry.url" :scroll="false" width="60vw" height="75vh" max-height="none"
+        :class="{ [$style.flash]: flashing }">
         <template #actions>
           <WChip v-if="isLiveSearch(openEntry.url)" clickable :active="!!config.liveAlert" class="mr-1"
             :title="config.liveAlert ? 'Beeps when a new result appears. Click to turn off.' : 'Beep and flash when a new result appears on this page'"

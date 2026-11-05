@@ -37,14 +37,17 @@
 // scrolling body and a footer. Keyboard (P8): arrow keys move between rows,
 // "/" jumps to the first search field, Esc leaves a field.
 import { computed, inject, ref } from 'vue'
-import { snapEdge, clearGuides } from './snap'
+import { snapEdge, clearGuides, releaseWebviewsForDrag } from './snap'
 import WIcon from './WIcon.vue'
 import WKbd from './WKbd.vue'
 import { ago, freshness } from './format'
 
 const props = withDefaults(defineProps<{
   title?: string
+  // Starting size. Pass these rather than an inline style, which would beat
+  // the size the user dragged it to.
   width?: string
+  height?: string
   maxHeight?: string
   scroll?: boolean
   // Game art for the header: a mechanic id ("essence", "lab"), a currency
@@ -67,6 +70,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   title: undefined,
   width: undefined,
+  height: undefined,
   maxHeight: '75vh',
   scroll: true,
   icon: undefined,
@@ -83,7 +87,7 @@ const props = withDefaults(defineProps<{
 const root = ref<HTMLElement | null>(null)
 
 // ---- Size (P10, P17) ----
-interface SizedConfig { anchor?: { pos: string }, wokeSizes?: Record<string, { w?: number, h?: number }> }
+interface SizedConfig { anchor?: { pos: string, y: number }, wokeSizes?: Record<string, { w?: number, h?: number }> }
 const cfg = inject<SizedConfig | null>('wokeWidgetConfig', null)
 const canResize = computed(() => props.resizable && !!cfg?.anchor)
 const saved = computed(() => cfg?.wokeSizes?.[props.sizeKey])
@@ -94,10 +98,16 @@ const vSide = computed(() => cfg?.anchor?.pos[0] === 'b' ? 'top' : 'bottom')
 
 const boxStyle = computed(() => {
   const s = saved.value
+  const a = cfg?.anchor
+  // A fixed height stops at the screen bottom, so the resize handle stays
+  // reachable wherever the widget is dragged. Width shrinks by itself: the
+  // widget has a max-width, and panels may go narrower than their content.
+  const fixed = s?.h || props.height
+  const fit = fixed && a?.pos[0] === 't' ? `calc(${100 - a.y}vh - 4px)` : undefined
   return {
     width: s?.w ? `${s.w}px` : props.width,
-    height: s?.h ? `${s.h}px` : undefined,
-    maxHeight: s?.h ? 'none' : props.maxHeight
+    height: s?.h ? `${s.h}px` : props.height,
+    maxHeight: fit ?? (s?.h ? 'none' : props.maxHeight)
   }
 })
 
@@ -117,6 +127,7 @@ function startResize (e: MouseEvent, x: boolean, y: boolean) {
   const yGrow = (pos[0] === 'c' ? 2 : 1) * (vSide.value === 'top' ? -1 : 1)
   const xEdge = hSide.value === 'left' ? r.left : r.right
   const yEdge = vSide.value === 'top' ? r.top : r.bottom
+  const restoreWebviews = releaseWebviewsForDrag()
 
   function onMove (ev: MouseEvent) {
     const next = { ...(cfg!.wokeSizes?.[props.sizeKey] ?? {}) }
@@ -133,6 +144,7 @@ function startResize (e: MouseEvent, x: boolean, y: boolean) {
     cfg!.wokeSizes = { ...(cfg!.wokeSizes ?? {}), [props.sizeKey]: next }
   }
   function onUp () {
+    restoreWebviews()
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
     clearGuides()
@@ -196,6 +208,7 @@ defineExpose({ el: root })
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
