@@ -54,7 +54,15 @@ const upgrade: FlipMethod = { id: 'upgrade', label: 'Vendor up a tier', inputs: 
 
 const OIL_TIERS = ['Clear', 'Sepia', 'Amber', 'Verdant', 'Teal', 'Azure', 'Indigo', 'Violet', 'Crimson', 'Black', 'Opalescent', 'Silver', 'Golden']
 const ESSENCE_TIERS = ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening']
-const ESSENCE_TYPES = Object.keys(DEAFENING_ESSENCE_WEIGHTS).map(n => n.replace('Deafening Essence of ', ''))
+// The essence sample rerolled Doubt, so it never came up as a result there. It
+// takes the average weight. Hysteria, Insanity, Horror and Delirium stay out:
+// they have no tier, so neither a reroll nor a tier upgrade can give them.
+const SAMPLED_ESSENCES = Object.values(DEAFENING_ESSENCE_WEIGHTS)
+const ESSENCE_WEIGHTS: Record<string, number> = {
+  ...DEAFENING_ESSENCE_WEIGHTS,
+  'Deafening Essence of Doubt': SAMPLED_ESSENCES.reduce((n, w) => n + w, 0) / SAMPLED_ESSENCES.length
+}
+const ESSENCE_TYPES = Object.keys(ESSENCE_WEIGHTS).map(n => n.replace('Deafening Essence of ', ''))
 
 export const FAMILIES: FlipFamily[] = [
   {
@@ -110,10 +118,10 @@ export const FAMILIES: FlipFamily[] = [
     match: name => name.includes('Essence of '),
     methods: [harvest('Primal'), upgrade],
     pool: name => name.startsWith('Deafening '),
-    weights: DEAFENING_ESSENCE_WEIGHTS,
+    weights: ESSENCE_WEIGHTS,
     rareShare: null,
     chains: ESSENCE_TYPES.map(type => ESSENCE_TIERS.map(tier => `${tier} Essence of ${type}`)),
-    source: 'Rerolls keep the tier, so only Deafening is priced. Weights: PoeData.dev, 1 dataset, version 3.20.'
+    source: 'Rerolls keep the tier, so only Deafening is priced. Weights: PoeData.dev, 1 dataset, version 3.20. That sample rerolled Doubt, so Doubt uses the average weight.'
   },
   {
     id: 'oils',

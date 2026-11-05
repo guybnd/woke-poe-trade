@@ -5,6 +5,7 @@ import { buyList, flipModel, parseExchange, upgradeRows } from '@/web/woke/scara
 import type { Quote } from '@/web/woke/scarab-flip/calc'
 import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, shortName, unpricedShare } from '@/web/woke/scarab-flip/families'
 import type { Exchanges } from '@/web/woke/scarab-flip/families'
+import { CORRUPTION_ONLY, ESSENCE_TYPES } from '@/web/woke/essence-scan/essences'
 import type { PriceItem } from '@/web/woke/market/types'
 
 const PLAIN = { sellDiscount: 0, reroll: false }
@@ -169,6 +170,39 @@ describe('priceFlip', () => {
     expect(flip.model.rows.map(r => r.name).sort()).toEqual(['Deafening Essence of Anger', 'Deafening Essence of Greed'])
     expect(flip.model.unrated).toEqual([])
     expect(flip.cost).toBeCloseTo(0.9, 8)
+  })
+
+  it('leaves the corruption-only essences out, however dear they are', () => {
+    const specials = CORRUPTION_ONLY.map(type => item('Essence', `Essence of ${type}`, 5000))
+    const reroll = priceFlip(essences, essences.methods[0], items, new Map(), PLAIN, 30)
+    const withSpecials = priceFlip(essences, essences.methods[0], [...items, ...specials], new Map(), PLAIN, 30)
+    if (reroll?.kind !== 'pool' || withSpecials?.kind !== 'pool') throw new Error('expected a pool')
+    expect(withSpecials.model.recipeValue).toBe(reroll.model.recipeValue)
+    expect(withSpecials.model.rows).toEqual(reroll.model.rows)
+    expect(withSpecials.model.unrated).toEqual([])
+    const upgrades = priceFlip(essences, essences.methods[1], [...items, ...specials], new Map(), PLAIN, 30)
+    expect(upgrades).toEqual(priceFlip(essences, essences.methods[1], items, new Map(), PLAIN, 30))
+  })
+
+  it('covers every essence type that has tiers', () => {
+    const types = essences.chains!.map(c => c[0].replace('Whispering Essence of ', ''))
+    expect([...types].sort()).toEqual([...ESSENCE_TYPES].sort())
+    for (const type of ESSENCE_TYPES) expect(essences.weights![`Deafening Essence of ${type}`]).toBeGreaterThan(0)
+  })
+
+  it('counts Doubt in rerolls and tier upgrades', () => {
+    const doubt = [
+      item('Essence', 'Deafening Essence of Doubt', 2),
+      item('Essence', 'Shrieking Essence of Doubt', 0.5),
+      ...items
+    ]
+    const reroll = priceFlip(essences, essences.methods[0], doubt, new Map(), PLAIN, 30)
+    if (reroll?.kind !== 'pool') throw new Error('expected a pool')
+    expect(reroll.model.unrated).toEqual([])
+    expect(reroll.model.rows.map(r => r.name)).toContain('Deafening Essence of Doubt')
+    const upgrades = priceFlip(essences, essences.methods[1], doubt, new Map(), PLAIN, 30)
+    if (upgrades?.kind !== 'upgrade') throw new Error('expected upgrades')
+    expect(upgrades.rows.map(r => r.name)).toContain('Shrieking to Deafening Essence of Doubt')
   })
 
   it('upgrades across every tier', () => {
