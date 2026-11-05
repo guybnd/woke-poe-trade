@@ -4,6 +4,8 @@
 // ids, so without this a boss fight counted as a map in a farming session.
 // No IPC imports, so farming.ts can use it. Add a row (or a name) when a
 // fight isn't recognised. bosses [] = a boss fight with no Boss runs entry.
+// Names aren't unique: The Shaper's Realm is also the Uber Elder's arena
+// (MapWorldsElderArenaUber in real logs), so an area id always beats a name.
 interface Arena {
   areaIds: string[]
   names: string[]
@@ -11,6 +13,8 @@ interface Arena {
 }
 
 const ARENAS: Arena[] = [
+  { areaIds: ['MapAtziri1'], names: ['The Apex of Sacrifice'], bosses: ['atziri'] },
+  { areaIds: ['MapAtziri2'], names: ['The Alluring Abyss'], bosses: ['uber-atziri'] },
   { areaIds: ['MapWorldsShapersRealm'], names: ["The Shaper's Realm"], bosses: ['shaper', 'uber-shaper'] },
   { areaIds: ['MapWorldsElderArena'], names: [], bosses: [] },
   { areaIds: ['MapWorldsElderArenaUber'], names: ['Absence of Value and Meaning'], bosses: ['uber-elder', 'uber-uber-elder'] },

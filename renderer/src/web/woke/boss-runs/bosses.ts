@@ -36,7 +36,9 @@ export const VARIABLE_ITEMS = new Set([
   "Watcher's Eye",
   'Forbidden Flesh',
   'Forbidden Flame',
-  'Sublime Vision'
+  'Sublime Vision',
+  "Atziri's Splendour",
+  "Doryani's Invitation"
 ])
 
 export interface BossEntry {
@@ -124,6 +126,33 @@ export const BOSSES: Boss[] = ([
       { name: 'Curio of Decay', chance: null },
       { name: 'The Devourer of Minds', chance: null },
       { name: 'Auspicious Ambitions', chance: null }
+    ]
+  },
+  {
+    id: 'uber-atziri',
+    name: 'Uber Atziri',
+    tier: 'uber',
+    entry: [
+      { name: 'Mortal Hope', qty: 1 },
+      { name: 'Mortal Grief', qty: 1 },
+      { name: 'Mortal Rage', qty: 1 },
+      { name: 'Mortal Ignorance', qty: 1 }
+    ],
+    runSeconds: 240,
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'uber-atziri', kills: 60, note: 'Small sample: drops not seen in it have no rate.' },
+    drops: [
+      { name: 'The Vertex', chance: 0.4167 },
+      { name: "Atziri's Splendour", chance: 0.35 },
+      { name: 'Beauty', chance: 0.1333 },
+      { name: 'Triumvirate Authority', chance: 0.10 },
+      { name: "Atziri's Acuity", chance: 0.05 },
+      { name: "Atziri's Reflection", chance: 0.05 },
+      { name: "Atziri's Rule", chance: 0.0333 },
+      { name: "Atziri's Disfavour", chance: null },
+      { name: 'The Price of Devotion', chance: null },
+      { name: 'Triskaidekaphobia', chance: null },
+      { name: 'Greater Spell Echo Support', chance: null, variant: '1' },
+      { name: 'Vaal Sacrifice Support', chance: null, variant: '1' }
     ]
   },
   {
@@ -236,6 +265,31 @@ export const BOSSES: Boss[] = ([
     runSeconds: 240,
     source: null,
     drops: []
+  },
+  {
+    id: 'atziri',
+    name: 'Atziri',
+    tier: 'pinnacle',
+    entry: [
+      { name: 'Sacrifice at Dusk', qty: 1 },
+      { name: 'Sacrifice at Dawn', qty: 1 },
+      { name: 'Sacrifice at Noon', qty: 1 },
+      { name: 'Sacrifice at Midnight', qty: 1 }
+    ],
+    runSeconds: 180,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'atziri', kills: null },
+    drops: [
+      { name: 'Mortal Hope', chance: null },
+      { name: 'Mortal Grief', chance: null },
+      { name: 'Mortal Rage', chance: null },
+      { name: 'Mortal Ignorance', chance: null },
+      { name: "Atziri's Promise", chance: null },
+      { name: "Atziri's Step", chance: null },
+      { name: "Doryani's Catalyst", chance: null },
+      { name: "Doryani's Invitation", chance: null },
+      { name: 'Pledge of Hands', chance: null },
+      { name: 'Triumvirate Authority', chance: null }
+    ]
   },
   {
     id: 'feared',

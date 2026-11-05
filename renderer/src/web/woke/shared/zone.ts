@@ -22,10 +22,10 @@ export interface ZoneState {
 
 const LAB_ZONES = new Set(["Aspirants' Plaza", "Aspirant's Trial"])
 
-// Bosses an arena can hold, by its area id and its name.
+// Bosses an arena can hold: by its area id, or its name if the id isn't known
+// (names can be shared between arenas, see boss-areas.ts).
 export function arenaBosses (areaId: string, name: string): string[] {
-  const ids = [...(bossAreaIds(areaId) ?? []), ...((name && BOSS_ARENAS[name]) || [])]
-  return [...new Set(ids)]
+  return bossAreaIds(areaId) ?? ((name && BOSS_ARENAS[name]) || [])
 }
 
 export function zoneKind (areaId: string, name: string): ZoneKind {
