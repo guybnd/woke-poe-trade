@@ -191,3 +191,26 @@
   font-weight: 600;
 }
 .w-pc-yours-tag { color: var(--w-accent); font-size: var(--w-fs-sm); }
+
+/* Filters changed since this search: old results stay put, dimmed, until the next one. */
+.w-pc-results-stale { opacity: 0.45; }
+.w-pc-search-row { min-height: calc(24px * var(--w-text-scale, 1)); margin-bottom: var(--w-s2, 0.5rem); }
+.w-pc-search-row .btn { height: calc(24px * var(--w-text-scale, 1)); padding-top: 0; padding-bottom: 0; }
+
+.w-pc-verdict-slot.w-pc-verdict-held {
+  margin: -1rem -1rem 8px;
+  min-height: 33px;
+  background: var(--w-pc-well, var(--w-panel-solid));
+}
+.w-pc-verdict-wait {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 33px;
+  padding: 0 1rem;
+  background: var(--w-pc-well, var(--w-panel-solid));
+  border-bottom: 1px solid var(--w-line);
+  color: var(--w-dim);
+  font-family: var(--w-body);
+  font-size: calc(12px * var(--w-text-scale, 1));
+}

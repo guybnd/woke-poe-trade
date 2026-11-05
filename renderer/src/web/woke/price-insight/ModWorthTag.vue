@@ -1,11 +1,13 @@
 <template>
   <span v-if="w" :class="[$style.tag, $style[band]]" :title="title">{{ text }}</span>
+  <span v-else-if="priceView === 'improved' && item.rarity === ItemRarity.Rare" :class="$style.room" />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { ParsedItem } from '@/parser'
+import { ItemRarity, ParsedItem } from '@/parser'
 import { modWorth } from './check-state'
+import { priceView } from './view'
 import { worthBand, WORTH_SOURCE_LABEL } from './mod-worth'
 
 // Small "~24c" tag on a mod row: how much of the price this mod carries.
@@ -44,7 +46,11 @@ const title = computed(() => {
   padding: 0 5px;
   border-radius: var(--w-r-sm);
   white-space: nowrap;
+  /* One width from "8%" to "~24c", and before the worth arrives. */
+  min-width: calc(40px * var(--w-text-scale, 1));
+  text-align: center;
 }
+.room { flex: none; width: calc(40px * var(--w-text-scale, 1)); }
 .carry { background: var(--w-accent-soft); color: var(--w-accent); }
 .adds { background: var(--w-panel-3); color: var(--w-fg); }
 .nothing { color: var(--w-faint); }

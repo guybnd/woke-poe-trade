@@ -6,7 +6,7 @@
       <template v-else-if="!insight.range">
         <w-price v-if="headline" :class="$style.price" :title="blendTitle" :chaos="headline.chaos" :divine="divine" />
         <span :class="$style.badge">{{ blankSearch ? 'NO MODS' : (headline ? 'NO LISTINGS' : 'NO DATA') }}</span>
-        <span v-if="!headline" :class="$style.rowNote">{{ emptyText }}</span>
+        <span v-if="!headline" :class="$style.rowNote" :title="emptyText">{{ emptyText }}</span>
       </template>
       <template v-else>
         <span v-if="lowValue" :class="$style.priceText" :title="blendTitle">Not worth listing</span>
@@ -268,7 +268,8 @@ async function copy (n: { key: string, text: string }) {
 }
 /* The answer, on one row. It only wraps when the text is scaled past the window. */
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-height: 32px; padding: 2px calc(1rem - 4px) 2px 1rem; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); white-space: nowrap; }
-.rowNote { flex: 1 1 100%; white-space: normal; order: 1; padding-bottom: 4px; }
+/* Stays on the row: a second line would push the mods down when a search finds nothing. */
+.rowNote { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .price { justify-content: flex-start; font-family: var(--w-num); font-size: calc(16px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); }
 .price img { width: calc(16px * var(--w-text-scale, 1)); height: calc(16px * var(--w-text-scale, 1)); }
 .priceText { font-family: var(--w-head); font-size: calc(16px * var(--w-text-scale, 1)); color: var(--w-accent); }
