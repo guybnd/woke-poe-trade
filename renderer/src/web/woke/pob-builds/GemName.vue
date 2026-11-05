@@ -21,14 +21,14 @@ const props = withDefaults(defineProps<{
   size?: 'sm' | 'md'
   off?: boolean
   struck?: boolean
-}>(), { level: undefined, quality: undefined, note: undefined, size: 'sm', off: false, struck: false })
+}>(), { level: undefined, quality: undefined, note: undefined, size: 'md', off: false, struck: false })
 
 const colour = computed(() => gemData(props.name)?.colour ?? 'w')
 const art = computed(() => gemArt(props.name))
 </script>
 
 <style module>
-.gem { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.gem { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .off { opacity: 0.5; }
 </style>

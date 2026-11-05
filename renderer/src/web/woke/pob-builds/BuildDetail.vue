@@ -36,12 +36,14 @@
           </WChip>
         </div>
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
-        <div v-for="(g, i) in shownLinks" :key="i" :class="$style.link">
-          <SocketDots :colours="linkColours(g)" />
-          <span :class="$style.names">
+        <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
+          <div :class="$style.link">
+            <SocketDots :colours="linkColours(g)" />
+            <span v-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || g.slot }}</span>
+          </div>
+          <div :class="$style.names">
             <GemName v-for="x in orderedGems(g)" :key="x.name" :name="x.name" :level="x.level" :quality="x.quality" />
-          </span>
-          <span v-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || g.slot }}</span>
+          </div>
         </div>
         <WEmpty v-if="!shownLinks.length" icon="fas fa-gem">No gem groups in this skill set.</WEmpty>
 
@@ -53,7 +55,7 @@
           :disabled="!canTick" @click="toggleGot(g.name)">
           <span class="w-num w-faint text-xs" :class="$style.lvl">{{ g.requiredLevel }}</span>
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
-          <GemName :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
+          <GemName :class="$style.gemName" :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
           <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src">{{ g.source ?? 'trade / drop' }}</span>
         </button>
@@ -177,7 +179,7 @@ import SocketDots from './SocketDots.vue'
 import { nextGems } from './gems'
 import type { GemColour, NextGem } from './gems'
 import {
-  isGearSlot, itemSetsOf, linkColours, linkGroups, mainGroupOf, noteRuns, orderedGems, pickStage,
+  gearOrder, isGearSlot, itemSetsOf, linkColours, linkGroups, mainGroupOf, noteRuns, orderedGems, pickStage,
   relevantGems, skillSetsOf, slotLabel, socketGroups, socketRegex
 } from './build-model'
 import { itemArt } from './item-art'
@@ -271,7 +273,8 @@ const itemSets = computed(() => props.details ? itemSetsOf(props.details) : [])
 const pickedItemSet = computed(() => pickStage(itemSets.value, level.value, act.value)?.item ?? null)
 const viewItemSet = shallowRef<number | null>(null)
 const shownItemSet = computed(() => (viewItemSet.value != null ? itemSets.value[viewItemSet.value] : null) ?? pickedItemSet.value)
-const gear = computed(() => (shownItemSet.value?.slots ?? []).filter(s => isGearSlot(s.slot)))
+const gear = computed(() => (shownItemSet.value?.slots ?? []).filter(s => isGearSlot(s.slot))
+  .sort((a, b) => gearOrder(a.slot) - gearOrder(b.slot)))
 
 const mainLink = computed(() => pickedSet.value ? mainGroupOf(pickedSet.value.item.groups) : null)
 const mainColours = computed<GemColour[]>(() => mainLink.value ? linkColours(mainLink.value) : [])
@@ -374,6 +377,11 @@ function run (p: Promise<unknown>) {
   min-width: 0;
   padding: 3px 0;
 }
+.linkGroup {
+  padding: 3px 0 5px;
+  border-bottom: 1px solid var(--w-line-soft);
+}
+.linkGroup .link { padding: 0 0 3px; }
 .names {
   display: flex;
   flex-wrap: wrap;
@@ -390,9 +398,10 @@ function run (p: Promise<unknown>) {
   width: 100%;
 }
 .gemRow:not(:disabled):hover { background: var(--w-line-soft); }
-.later { opacity: 0.5; }
+.later { opacity: 0.62; }
 .lvl { width: 1.6rem; text-align: right; flex: none; }
-.src { max-width: 55%; }
+.gemName { flex: none; max-width: 62%; }
+.src { min-width: 0; }
 .rx {
   font-family: var(--w-num);
   font-size: var(--w-fs-sm);

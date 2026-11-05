@@ -1,20 +1,52 @@
 // The build detail panel looks like the game: gem colours, item art, tooltips.
 import path from 'path'
 import { test, expect, FIXTURES } from './harness'
+import type { Overlay } from './harness'
 
 const BUILDS = process.env.WOKE_POB_DIR ?? path.join(FIXTURES, 'pob')
 const BUILD = process.env.WOKE_POB_BUILD ?? 'Showcase'
 
-test('gem colours, item art and tooltips', async ({ overlay }) => {
+async function openBuild (overlay: Overlay, width: number, height: number) {
   const { page } = overlay
-  await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.setViewportSize({ width, height })
   await overlay.boot({
-    widgets: [{ wmType: 'woke-pob-builds', wmWants: 'show', buildsDir: BUILDS }],
+    widgets: [{
+      wmType: 'woke-pob-builds',
+      wmWants: 'show',
+      wmFlags: ['invisible-on-blur'],
+      anchor: { pos: 'tl', x: 5, y: 12 },
+      buildsDir: BUILDS,
+      pobExe: '',
+      pinned: [],
+      activeBuild: null,
+      followChars: {}
+    }],
     overlayActive: true
   })
   await overlay.widget('woke-pob-builds').getByText(BUILD, { exact: false }).first().click()
   const detail = page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
-  await expect(detail.getByRole('button', { name: 'Gear' })).toBeVisible()
+  await expect(detail.getByRole('tab', { name: 'Gear' })).toBeVisible()
+  return detail
+}
+
+test('at 1440p, where panels are zoomed, the tooltip stays beside the panel and on screen', async ({ overlay }) => {
+  const detail = await openBuild(overlay, 2560, 1440)
+  await detail.getByRole('tab', { name: 'Gear' }).click()
+  await detail.locator('[class*="gearRow"]').first().hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toBeVisible()
+  await overlay.page.waitForTimeout(300)
+  await overlay.snap('item tooltip 1440p')
+  const tipBox = (await tip.boundingBox())!
+  const panelBox = (await detail.boundingBox())!
+  expect(tipBox.x).toBeGreaterThanOrEqual(panelBox.x + panelBox.width)
+  expect(tipBox.x + tipBox.width).toBeLessThanOrEqual(2560)
+  expect(tipBox.y + tipBox.height).toBeLessThanOrEqual(1440)
+})
+
+test('gem colours, item art and tooltips', async ({ overlay }) => {
+  const { page } = overlay
+  const detail = await openBuild(overlay, 1920, 1080)
   await overlay.snap('leveling')
 
   const showcase = !process.env.WOKE_POB_DIR
@@ -27,11 +59,11 @@ test('gem colours, item art and tooltips', async ({ overlay }) => {
   }
 
   // A gem's tooltip.
-  await detail.locator('[class*="gem"]').first().hover()
+  await detail.locator('[class*="w-gem-"]').first().hover()
   await expect(page.getByRole('tooltip')).toBeVisible()
   await overlay.snap('gem tooltip')
 
-  await detail.getByRole('button', { name: 'Gear' }).click()
+  await detail.getByRole('tab', { name: 'Gear' }).click()
   await expect(page.getByRole('tooltip')).toHaveCount(0)
   await overlay.snap('gear')
 
@@ -65,9 +97,9 @@ test('gem colours, item art and tooltips', async ({ overlay }) => {
   await page.mouse.move(5, 5)
   await expect(tip).toHaveCount(0)
 
-  await detail.getByRole('button', { name: 'Setups' }).click()
+  await detail.getByRole('tab', { name: 'Setups' }).click()
   await overlay.snap('setups')
-  await detail.getByRole('button', { name: 'Notes' }).click()
+  await detail.getByRole('tab', { name: 'Notes' }).click()
   if (showcase) {
     await expect(detail.getByText('Fire', { exact: true })).toHaveCSS('color', 'rgb(255, 85, 85)')
   }

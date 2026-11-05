@@ -281,6 +281,14 @@ export function slotLabel (slot: string): string {
   return slot
 }
 
+// As the inventory reads: weapons and armour, then jewellery, then flasks.
+const GEAR_ORDER = ['Weapon 1', 'Weapon 2', 'Helmet', 'Body Armour', 'Gloves', 'Boots', 'Amulet', 'Ring 1', 'Ring 2', 'Ring 3', 'Belt', 'Flask 1', 'Flask 2', 'Flask 3', 'Flask 4', 'Flask 5']
+
+export function gearOrder (slot: string): number {
+  const i = GEAR_ORDER.indexOf(slot)
+  return i < 0 ? GEAR_ORDER.length : i
+}
+
 // Gear slots only: no weapon swap and no abyssal sockets.
 export function isGearSlot (slot: string): boolean {
   return !/Swap|Abyssal|Socket|Graft/i.test(slot)

@@ -74,7 +74,7 @@ const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? ti
 const data = computed(() => gem.value ? gemData(gem.value.name) : null)
 
 const FRAMES: Record<string, string> = { UNIQUE: 'unique', RELIC: 'unique', RARE: 'rare', MAGIC: 'magic' }
-const frame = computed(() => $style[gem.value ? 'gem' : FRAMES[item.value?.rarity ?? ''] ?? 'normal'])
+const frame = computed(() => $style[gem.value ? `gem-${data.value?.colour ?? 'w'}` : FRAMES[item.value?.rarity ?? ''] ?? 'normal'])
 
 const lines = computed<string[]>(() => {
   if (gem.value) return [data.value?.name ?? gem.value.name]
@@ -185,7 +185,10 @@ onUnmounted(hideTip)
 .magic { --tip: var(--w-r-magic); --tip-rgb: 136, 136, 255; }
 .rare { --tip: var(--w-r-rare); --tip-rgb: 255, 255, 119; }
 .unique { --tip: var(--w-r-unique); --tip-rgb: 175, 96, 37; }
-.gem { --tip: var(--w-r-gem); --tip-rgb: 27, 162, 155; }
+.gem-r { --tip: var(--w-gem-r); --tip-rgb: 234, 111, 95; }
+.gem-g { --tip: var(--w-gem-g); --tip-rgb: 114, 207, 100; }
+.gem-b { --tip: var(--w-gem-b); --tip-rgb: 127, 168, 242; }
+.gem-w { --tip: var(--w-gem-w); --tip-rgb: 230, 226, 216; }
 
 .head {
   position: relative;

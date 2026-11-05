@@ -21,7 +21,12 @@ export type TipContent = GemTip | ItemTip
 export const tip = shallowRef<{ content: TipContent, anchor: DOMRect } | null>(null)
 
 export function showTip (e: Event, content: TipContent) {
-  tip.value = { content, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }
+  const target = e.currentTarget as HTMLElement
+  let anchor = target.getBoundingClientRect()
+  // Items open beside their row: clear of the whole panel, not just the row.
+  const panel = content.kind === 'item' ? target.closest('[data-w-panel]')?.getBoundingClientRect() : null
+  if (panel) anchor = new DOMRect(panel.left, anchor.top, panel.width, anchor.height)
+  tip.value = { content, anchor }
 }
 
 export function hideTip () {
