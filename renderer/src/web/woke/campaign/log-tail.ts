@@ -9,6 +9,7 @@ export interface LogTail {
 }
 
 let pending: Promise<LogTail> | null = null
+let loadedPath: string | null = null
 
 async function load (): Promise<LogTail> {
   // The log watcher starts once the overlay sends its config, which can be
@@ -23,11 +24,14 @@ async function load (): Promise<LogTail> {
   return { path: null, lines: [] }
 }
 
-export function logTail (): Promise<LogTail> {
-  if (pending) return pending
+// `path`: the log now in use, when the app has moved to another one.
+export function logTail (path?: string): Promise<LogTail> {
+  if (pending && (path == null || loadedPath == null || loadedPath === path)) return pending
+  loadedPath = null
   // Not found isn't for good: the app can start before the game.
   const loading: Promise<LogTail> = load().then((tail) => {
-    if (!tail.path) pending = null
+    if (tail.path) loadedPath = tail.path
+    else pending = null
     return tail
   })
   pending = loading

@@ -2,7 +2,8 @@
 // line parsed once (parseLogLine), handed to every subscriber. Modules that
 // need what happened while the app was closed use followGameLog, which
 // replays the start-up tail first and holds live lines until it's done. If
-// Client.txt can't be found yet, the same happens again once it is.
+// Client.txt can't be found yet, or the app moves to the running game's own
+// copy, the same happens again.
 import { getCurrentScope, onScopeDispose } from 'vue'
 import { Host } from '@/web/background/IPC'
 import { parseLogLine } from '../campaign/log-parse'
@@ -21,7 +22,7 @@ export interface LogLine {
 type Batch = (lines: LogLine[]) => void
 
 const subscribers = new Set<Batch>()
-const openedSubscribers = new Set<() => void>()
+const openedSubscribers = new Set<(path: string) => void>()
 let listening = false
 
 function listen () {
@@ -33,8 +34,8 @@ function listen () {
     const batch = e.lines.map(line => ({ line, at, ev: parseLogLine(line) }))
     for (const sub of [...subscribers]) sub(batch)
   })
-  Host.onEvent('MAIN->CLIENT::game-log-opened', () => {
-    for (const sub of [...openedSubscribers]) sub()
+  Host.onEvent('MAIN->CLIENT::game-log-opened', (e) => {
+    for (const sub of [...openedSubscribers]) sub(e.path)
   })
 }
 
@@ -53,7 +54,7 @@ export function onGameLog (cb: Batch): () => void {
 
 // Live lines, after replaying the start-up tail. `since()` (ms) picks which
 // tail lines replay: only those written after it (null: none). `onTail` sees
-// the tail (path null: Client.txt wasn't found, and it's called again when it is).
+// each tail read (path null: Client.txt wasn't found, and it's called again when it is).
 export function followGameLog (opts: {
   since: () => number | null
   onLines: (lines: LogLine[], live: boolean) => void
@@ -63,19 +64,22 @@ export function followGameLog (opts: {
   let stopped = false
   let loading = false
   let missing = false
-  let openedWhileLoading = false
+  let tailPath: string | null = null
+  let openedWhileLoading: string | null = null
   const queued: LogLine[][] = []
   const stop = onGameLog((lines) => {
     if (caughtUp) opts.onLines(lines, true)
     else queued.push(lines)
   })
-  function catchUp () {
+  const isNewLog = (path: string) => missing || path !== tailPath
+  function catchUp (path?: string) {
     caughtUp = false
     loading = true
-    openedWhileLoading = false
-    logTail().then(tail => {
+    openedWhileLoading = null
+    logTail(path).then(tail => {
       if (stopped) return
       missing = tail.path == null
+      tailPath = tail.path
       opts.onTail?.(tail)
       const since = opts.since()
       if (since == null) return
@@ -91,13 +95,13 @@ export function followGameLog (opts: {
       loading = false
       if (stopped) return
       for (const lines of queued.splice(0)) opts.onLines(lines, true)
-      // It may have opened after the last try saw nothing.
-      if (missing && openedWhileLoading) catchUp()
+      // One may have opened after that read looked.
+      if (openedWhileLoading && isNewLog(openedWhileLoading)) catchUp(openedWhileLoading)
     })
   }
-  function onOpened () {
-    if (loading) openedWhileLoading = true
-    else if (missing) catchUp()
+  function onOpened (path: string) {
+    if (loading) openedWhileLoading = path
+    else if (isNewLog(path)) catchUp(path)
   }
   openedSubscribers.add(onOpened)
   catchUp()

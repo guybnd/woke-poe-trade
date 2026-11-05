@@ -1,7 +1,7 @@
 // The app can start before the game: Client.txt not found at first mustn't
 // stick once it's there.
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -28,6 +28,7 @@ function mockHost (tails: Array<{ path: string | null, lines: string[] }>) {
 }
 
 const AT_12 = '2026/11/04 12:05:00 1 2 [INFO Client 1] : You have entered Lioneye\'s Watch.'
+const NEXT = '2026/11/04 12:06:00 1 2 [INFO Client 1] : You have entered The Coast.'
 const LOG = { path: 'F:\Client.txt', lines: [AT_12] }
 const MISSING = { path: null, lines: [] }
 const OPENED = 'MAIN->CLIENT::game-log-opened'
@@ -116,6 +117,43 @@ describe('Client.txt found late', () => {
   })
 })
 
+describe('moving to another log', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.resetModules()
+    vi.doUnmock('@/web/background/IPC')
+    vi.doUnmock('@/web/woke/shared/host')
+  })
+
+  it('reads the new log\'s tail once, and shares it', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const REAL = { path: 'F:\\real\\Client.txt', lines: [AT_12] }
+    const host = mockHost([LOG, REAL])
+    const { followGameLog } = await import('@/web/woke/shared/game-log')
+    const a: Array<string | null> = []
+    const b: Array<string | null> = []
+    const got: boolean[] = []
+    followGameLog({ since: () => 0, onTail: t => a.push(t.path), onLines: (_l, live) => got.push(live) })
+    followGameLog({ since: () => null, onTail: t => b.push(t.path), onLines: () => {} })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(a).toEqual([LOG.path])
+    expect(host.requests.count).toBe(1)
+
+    host.emit(OPENED, { path: REAL.path })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(a).toEqual([LOG.path, REAL.path])
+    expect(b).toEqual([LOG.path, REAL.path])
+    expect(host.requests.count).toBe(2)
+    expect(got).toEqual([false, false])
+
+    // The same log reopened (rotated or cleared): nothing to read again.
+    host.emit(OPENED, { path: REAL.path })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(host.requests.count).toBe(2)
+  })
+})
+
 describe('GameLogWatcher', () => {
   it('waits for a set path that does not exist yet, then follows it', async () => {
     const { GameLogWatcher } = await import('../../../main/src/host-files/GameLogWatcher')
@@ -130,11 +168,15 @@ describe('GameLogWatcher', () => {
       expect(events).toEqual([])
       expect(await readGameLogTail(watcher, undefined)).toEqual({ path: null, lines: [] })
 
+      // What's already in it isn't live: that comes from the tail, once.
       writeFileSync(file, `${AT_12}\n`)
-      await vi.waitFor(() => { expect(events.length).toBe(2) }, { timeout: 5000 })
+      await vi.waitFor(() => { expect(events.length).toBe(1) }, { timeout: 5000 })
       expect(events[0]).toEqual({ name: 'MAIN->CLIENT::game-log-opened', payload: { path: file } })
-      expect(events[1]).toEqual({ name: 'MAIN->CLIENT::game-log', payload: { lines: [AT_12] } })
       expect(await readGameLogTail(watcher, undefined)).toEqual({ path: file, lines: [AT_12] })
+
+      appendFileSync(file, `${NEXT}\n`)
+      await vi.waitFor(() => { expect(events.length).toBe(2) }, { timeout: 5000 })
+      expect(events[1]).toEqual({ name: 'MAIN->CLIENT::game-log', payload: { lines: [NEXT] } })
     } finally {
       await watcher.stop()
       rmSync(dir, { recursive: true, force: true })

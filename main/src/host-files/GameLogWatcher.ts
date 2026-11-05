@@ -37,13 +37,20 @@ export function runningGameLog (): Promise<string | null> {
 // feed the run timer, farming and trade months of old events as if live.
 const NEW_LOG_MAX_BYTES = 1024 * 1024
 
+// Waiting for a log we've never read. Its existing lines aren't new, however
+// short it is: the overlay reads them from the tail when told it's open.
+const NEVER_READ = -1
+
 export function startOffset (now: { ino: number, size: number }, lastIno: number, lastOffset: number): number {
+  if (lastIno === NEVER_READ) return now.size
   if (now.ino === lastIno && now.size >= lastOffset) return lastOffset
   return now.size > NEW_LOG_MAX_BYTES ? now.size : 0
 }
 
 export class GameLogWatcher {
   private _wantedPath: string | null = null
+  // woke: the running game's log, once gameStarted has chosen it.
+  private _runningLog: string | null = null
   get actualPath () { return this._state?.path ?? null }
   private _state: {
     offset: number
@@ -69,14 +76,17 @@ export class GameLogWatcher {
   async restart (logFile: string) {
     if (this._wantedPath === logFile) return
     this._wantedPath = logFile
+    this._runningLog = null
     await this.close()
 
     if (!logFile.length) {
       // woke: an old install's Client.txt used to win for good when the app
       // started before the game. Now the newest one on this PC is only a
       // stand-in until the game starts (gameStarted).
-      const guessedPath = await runningGameLog() ?? (await findGameLogs())[0]?.path ?? null
+      const guessedPath = await runningGameLog() ?? (await findGameLogs({ quick: true }))[0]?.path ?? null
       if (this._wantedPath !== logFile || guessedPath == null) return
+      // The game started during that search: its log beats a guess.
+      if (this._runningLog) return
       logFile = guessedPath
     }
     await this.open(logFile)
@@ -88,11 +98,8 @@ export class GameLogWatcher {
     if (this._wantedPath !== '') return
     const found = await runningGameLog()
     if (!found || this._wantedPath !== '' || found === this.actualPath) return
-    try {
-      await fs.access(found)
-    } catch {
-      return
-    }
+    // Not written yet is fine (a fresh install): open waits for it.
+    this._runningLog = found
     this.logger.write(`info [GameLogWatcher] Switching to the running game's log: ${found}`)
     await this.close()
     await this.open(found)
@@ -136,13 +143,13 @@ export class GameLogWatcher {
     } catch {
       this.logger.write('error [GameLogWatcher] Failed to watch file.')
       // woke: not there yet (a set path, before the game first runs). Same as
-      // a deleted log: wait for it. No file seen yet, so -1 matches no real id.
+      // a deleted log: wait for it.
       if (this._state || this._wantedPath !== wanted) return
       watchFile(logFile, { interval: 450 }, this.handleFileChange.bind(this))
       this._state = {
         path: logFile,
         file: null,
-        ino: -1,
+        ino: NEVER_READ,
         offset: 0,
         isReading: false,
         readBuff: Buffer.allocUnsafe(64 * 1024),

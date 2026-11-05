@@ -98,8 +98,8 @@ import { closeTip, dockIconEl, hideWhilePlaying, openSettingsPage, saveDock, tip
 import { usePriceIndex } from '../market/price-index'
 import { priceResolver } from '../boss-runs/calc'
 import { useLeagues } from '@/web/background/Leagues'
-import { logTail } from '../campaign/log-tail'
-import { onGameLog } from '../shared/game-log'
+import type { LogTail } from '../campaign/log-tail'
+import { followGameLog, onGameLog } from '../shared/game-log'
 import OfferRow from './OfferRow.vue'
 import OfferHistory from './OfferHistory.vue'
 import { OPEN_FOR_MS, alreadyClosed, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip } from './book'
@@ -290,8 +290,8 @@ watch(() => shown.value.filter(o => !o.closed && o.dir === 'sell').map(o => o.id
   else endBubble()
 })
 
-// Lines handled live before the start-up read came back: that read (it
-// retries for a few seconds while the log watcher starts) can hold them too.
+// Lines handled live before a Client.txt read came back: that read can hold
+// them too.
 let replayed = false
 const seenLive = new Set<string>()
 
@@ -304,8 +304,9 @@ onGameLog((lines) => {
 })
 
 // After a restart, pick up offers from the last half hour of Client.txt. The
-// history comes first, so offers you already closed stay closed.
-loadHistory().then(() => logTail()).then(tail => {
+// history comes first, so offers you already closed stay closed. If Client.txt
+// isn't found yet, this runs again when it is.
+function restoreFromTail (tail: LogTail) {
   const since = Date.now() - 30 * 60_000
   const until = Date.now() + 60_000
   for (const line of tail.lines) {
@@ -324,7 +325,18 @@ loadHistory().then(() => logTail()).then(tail => {
     const open = shown.value.find(o => !o.closed && o.dir === 'sell')
     if (open) showBubble(open)
   }
-}).catch(() => {}).finally(() => {
+  if (tail.path) {
+    replayed = true
+    seenLive.clear()
+  }
+}
+
+let stopFollowing: (() => void) | null = null
+let unmounted = false
+loadHistory().then(() => {
+  if (unmounted) return
+  stopFollowing = followGameLog({ since: () => null, onLines: () => {}, onTail: restoreFromTail })
+}).catch(() => {
   replayed = true
   seenLive.clear()
 })
@@ -479,6 +491,8 @@ function onCard (open: boolean) {
 }
 
 onUnmounted(() => {
+  unmounted = true
+  stopFollowing?.()
   hotkeys.abort()
   clearInterval(clock)
   clearTimeout(lingerTimer)
