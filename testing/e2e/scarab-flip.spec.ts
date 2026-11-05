@@ -52,6 +52,7 @@ test('flips: buy list, odds and rare scarabs from recorded prices', async ({ ove
   await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
   // Volume comes from the exchange feed, so the supply columns show.
   await expect(panel.getByText('Market / day')).toBeVisible()
+  await expect(panel.getByText('Profit each')).toHaveAttribute('title', /divided by 3/)
   await expect(panel.getByText('Max profit / day')).toHaveAttribute('title', /ceiling/i)
   await expect(panel.getByText('Breach of the Hive', { exact: true })).toBeVisible()
   await overlay.snap('flips-scarabs-buy')
