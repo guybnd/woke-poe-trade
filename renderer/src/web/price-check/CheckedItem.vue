@@ -3,6 +3,7 @@
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <div ref="verdictSlot" class="w-pc-verdict-slot" />
     <filter-name
+      ref="nameComponent"
       :filters="itemFilters"
       :item="item">
       <template #meta>
@@ -140,6 +141,8 @@ export default defineComponent({
     const tradeService = ref<{ execSearch(): void } | null>(null)
     // FiltersBlock.vue
     const filtersComponent = ref<ComponentPublicInstance>(null!)
+    // FilterName.vue, which holds the tiles and chips
+    const nameComponent = ref<ComponentPublicInstance>(null!)
 
     watch(() => props.item, (item, prevItem) => {
       const prevCurrency = (presets.value != null) ? itemFilters.value.trade.currency : null
@@ -239,7 +242,9 @@ export default defineComponent({
     })
 
     function handleSearchMouseenter (e: MouseEvent) {
-      if ((filtersComponent.value.$el as HTMLElement).contains(e.relatedTarget as HTMLElement)) {
+      const from = e.relatedTarget as HTMLElement
+      if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
+          (nameComponent.value.$el as HTMLElement).contains(from)) {
         doSearch.value = true
 
         if (document.activeElement instanceof HTMLElement) {
@@ -275,6 +280,7 @@ export default defineComponent({
       tradeAPI,
       tradeService,
       filtersComponent,
+      nameComponent,
       showPredictedPrice,
       show,
       handleSearchMouseenter,

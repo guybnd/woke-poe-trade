@@ -8,10 +8,15 @@
         <div :class="$style.dock">
           <template v-if="config.neversink.on">
             <div class="flex items-center gap-2">
-              <span>{{ LEVEL_NAMES[config.neversink.level] }}</span>
-              <span class="w-faint text-xs">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
+              <span class="whitespace-nowrap">{{ LEVEL_NAMES[shownLevel] }}</span>
+              <span class="w-faint text-xs whitespace-nowrap">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
+              <button v-if="config.strictAuto.on && config.strictAuto.paused" type="button" :class="$style.link" @click="backToAuto">Back to auto</button>
               <span class="grow" />
-              <span class="w-faint text-xs w-num">NeverSink {{ config.neversink.version }}</span>
+              <span v-if="!config.strictAuto.paused" class="w-faint text-xs w-num whitespace-nowrap">NeverSink {{ config.neversink.version }}</span>
+            </div>
+            <div :class="$style.levels" role="group" aria-label="Strictness" @wheel.prevent="onLevelWheel">
+              <button v-for="(short, i) in LEVEL_SHORT" :key="i" type="button" :class="{ [$style.levelOn]: i === shownLevel, [$style.levelWanted]: wantedLevel === i }"
+                :title="wantedLevel === i ? `${LEVEL_NAMES[i]}: what auto would pick` : LEVEL_NAMES[i]" :aria-label="LEVEL_NAMES[i]" :aria-pressed="i === shownLevel" @click="pickNow(i)">{{ short }}</button>
             </div>
             <div v-if="config.strictAuto.on" :class="$style.ladder">
               <div v-for="(step, i) in sortedLadder" :key="i" :class="{ [$style.stepOn]: step.level === config.neversink.level }">
@@ -81,7 +86,7 @@ import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, gameIcon, toast } fr
 import DockItem from '../dock/DockItem.vue'
 import { openOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
-import { LEVEL_NAMES, LEVEL_SHORT, stepLabel } from './strictness'
+import { LEVEL_NAMES, LEVEL_SHORT, clampLevel, stepLabel } from './strictness'
 import { canTurnOff, markSeen, visibleNotices } from './notices'
 import type { Notice } from './notices'
 import SampleCard from './SampleCard.vue'
@@ -236,6 +241,41 @@ const settleTimer = setTimeout(() => { pricesSettled.value = true }, 30000)
 onUnmounted(() => { clearTimeout(settleTimer) })
 
 const dockRef = shallowRef<InstanceType<typeof DockItem> | null>(null)
+
+// The card's level row. Scrolling shows each step at once and saves once it
+// stops, so five notches write one file.
+const SCROLL_SETTLE_MS = 350
+const scrolledTo = ref<number | null>(null)
+let scrollTimer: ReturnType<typeof setTimeout> | undefined
+const shownLevel = computed(() => scrolledTo.value ?? props.config.neversink.level)
+// Only worth marking once it differs from what's on.
+const wantedLevel = computed(() => props.config.strictAuto.on && props.config.strictAuto.paused && store.ladderPick.value !== shownLevel.value ? store.ladderPick.value : null)
+
+function pickNow (level: number) {
+  clearTimeout(scrollTimer)
+  scrolledTo.value = null
+  store.pickLevel(level).catch(() => {})
+}
+
+function onLevelWheel (e: WheelEvent) {
+  if (!e.deltaY) return
+  // One level per event: how far a notch reports depends on your Windows setting.
+  const next = clampLevel(shownLevel.value + Math.sign(e.deltaY))
+  scrolledTo.value = next
+  clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => pickNow(next), SCROLL_SETTLE_MS)
+}
+function backToAuto () {
+  clearTimeout(scrollTimer)
+  scrolledTo.value = null
+  store.resumeLadder()
+  if (store.ladderPick.value == null) toast('Auto strictness is back on. It picks a level from your next map.')
+}
+
+onUnmounted(() => {
+  // A scroll still settling is still what you asked for.
+  if (scrolledTo.value != null) pickNow(scrolledTo.value)
+})
 const dockArt = computed(() => gameIcon('Orb of Scouring', 'ITEM'))
 const sortedLadder = computed(() => [...props.config.strictAuto.ladder].sort((a, b) => a.from - b.from))
 const allNotes = computed<Notice[]>(() => {
@@ -364,6 +404,44 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   border: 1px solid var(--w-line-strong);
   border-radius: var(--w-radius-sm);
   background: var(--w-accent-soft);
+}
+.link {
+  color: var(--w-accent);
+  font-size: var(--w-fs-xs);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.link:hover { text-decoration: underline; }
+.levels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.levels button {
+  position: relative;
+  padding: 5px 0;
+  font-size: var(--w-fs-xs);
+  font-weight: 600;
+  color: var(--w-dim);
+  background: var(--w-line-soft);
+  border: 0;
+  border-radius: var(--w-radius-sm);
+  cursor: pointer;
+}
+.levels button:hover { background: var(--w-accent-soft); color: var(--w-fg); }
+.levels button.levelOn { background: var(--w-accent); color: var(--w-accent-fg); }
+/* What auto would pick, while you've paused it. */
+.levels button.levelWanted::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  margin-left: -3px;
+  border: 3px solid transparent;
+  border-bottom-color: var(--w-accent);
 }
 .ladder {
   display: grid;

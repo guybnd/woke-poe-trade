@@ -160,7 +160,8 @@
     "chart": "Chart"
   },
   "filters": {
-    "selected_some": "{0} of {1}, stats",
+    "selected_some": "Stats {0} of {1}",
+    "selected_some_short": "{0} of {1}",
     "selected_none": "Stats ignored",
     "hidden_toggle": "Hidden filters",
     "collapse": "Collapse",

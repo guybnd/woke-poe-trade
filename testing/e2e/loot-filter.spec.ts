@@ -388,6 +388,53 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
   }).toMatch(/Show # \$type->woke->own [^\n]*\n(\t[^\n]*\n)*\tBaseType == "Despot Axe"/)
 })
 
+test('dock card: click or scroll a strictness, then reload from there', async ({ overlay, fakeApp }) => {
+  test.slow()
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.copyFileSync(path.join(FIXTURES, 'filters', 'neversink-sample.filter'), path.join(folder, 'NeverSink.filter'))
+  const cache = path.join(fakeApp.opts.userData, 'woke', 'neversink', '8.20.1', 'DEFAULT')
+  fs.mkdirSync(cache, { recursive: true })
+  const LEVELS = ['0-SOFT', '1-REGULAR', '2-SEMI-STRICT', '3-STRICT', '4-VERY-STRICT', '5-UBER-STRICT', '6-UBER-PLUS-STRICT']
+  for (const l of LEVELS) fs.writeFileSync(path.join(cache, `${l}.filter`), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', `${l}.filter.gz`))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), wmFlags: ['invisible-on-blur'], neversink: { on: true, version: '8.20.1', prevVersion: null, style: '', level: 2, latest: null, latestChanges: '', checkedAt: Date.now() } }] })
+  const page = overlay.page
+  fakeApp.focusGame(true)
+  const level = (name: string) => page.getByRole('button', { name, exact: true })
+  await expect(async () => {
+    await overlay.moveMouse(1000, 900)
+    await overlay.hoverDockIcon('loot-filter')
+    await expect(level('Strict')).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 20_000 })
+  const out = path.join(folder, 'NeverSink (woke).filter')
+  const saved = () => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
+
+  // A click saves, pauses auto and leaves the reload to you.
+  await level('Strict').click()
+  await expect(level('Strict')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('auto paused')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reload now' }).last()).toBeVisible()
+  await expect.poll(() => /STRICT/i.test(saved())).toBe(true)
+  await overlay.snap('dock card with a level picked')
+  expect(fakeApp.game.chat).toEqual([])
+
+  // Scrolling steps at once and saves once, when it stops.
+  const before = fs.statSync(out).mtimeMs
+  await level('Strict').hover()
+  await page.mouse.wheel(0, 100)
+  await expect(level('Very strict')).toHaveAttribute('aria-pressed', 'true')
+  await page.waitForTimeout(100)
+  await page.mouse.wheel(0, 100)
+  await expect(level('Uber strict')).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => fs.statSync(out).mtimeMs, { timeout: 5000 }).toBeGreaterThan(before)
+  expect(fakeApp.game.chat).toEqual([])
+
+  await page.getByRole('button', { name: 'Reload now' }).last().click()
+  await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
+
+  await page.getByRole('button', { name: 'Back to auto' }).click()
+  await expect(page.getByRole('button', { name: 'Back to auto' })).toHaveCount(0)
+})
+
 test('a save nobody asked to reload waits on the dock icon, and one key sends it once', async ({ overlay, fakeApp }) => {
   test.slow()
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))

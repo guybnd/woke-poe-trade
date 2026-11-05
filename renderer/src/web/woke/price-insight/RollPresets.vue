@@ -3,7 +3,6 @@
     <w-segmented :model-value="active" :options="options"
       :title="title"
       @update:model-value="pick" />
-    <span v-if="showValue" :class="$style.src" :title="sourceTitle">{{ sourceText }}</span>
   </div>
 </template>
 
@@ -29,11 +28,12 @@ const options = computed(() => [
   { value: 'low', label: 'Low' },
   { value: 'current', label: 'Approx' },
   ...(canUseHighRolls(props.stats) ? [{ value: 'high', label: 'High' }] : []),
-  ...(showValue.value ? [{ value: 'value', label: 'By value' }] : [])
+  ...(showValue.value ? [{ value: 'value', label: sourceText.value === 'measured' ? 'By value' : 'By value ≈' }] : [])
 ])
 
 const title = computed(() => 'For every ticked mod. Low: any roll of its range. Approx: a tight window around this item\'s roll, or this roll and better on map stats. High: the best quarter of its range.' +
   (showValue.value ? ' By value: tight on the mods that carry the price, loose on the rest, mods worth nothing unticked.' : '') +
+  (showValue.value ? ' ' + sourceTitle.value : '') +
   ' Runs the search.')
 
 const show = computed(() => canUseRollPresets(props.stats))
@@ -71,8 +71,12 @@ const sourceText = computed(() => {
   if (pp?.item === props.item && pp.status === 'loading') return 'asking poeprices…'
   return 'rough guess'
 })
-const sourceTitle = computed(() => 'Mod worth ' + Array.from(sources.value).map(s => WORTH_SOURCE_LABEL[s]).join(', ') +
-  '. Measure in "What drives the price" for exact numbers.')
+// A ≈ on By value marks worth that isn't measured; the source itself is on hover.
+const sourceTitle = computed(() => {
+  const known = Array.from(sources.value).map(s => WORTH_SOURCE_LABEL[s]).join(', ')
+  return 'By value now uses ' + (known ? `mod worth ${known}` : sourceText.value) +
+    '. Measure in "What drives the price" for exact numbers.'
+})
 
 // "By value" stays highlighted until a box or tick is changed by hand.
 const valueSig = shallowRef<string | null>(null)
@@ -102,12 +106,6 @@ function pick (value: string) {
 .row {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin-left: auto;
-}
-.src {
-  font-size: var(--w-fs-xs);
-  color: var(--w-faint);
-  white-space: nowrap;
 }
 </style>

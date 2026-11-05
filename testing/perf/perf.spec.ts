@@ -158,7 +158,7 @@ test('every module on: startup, a map, a price check, memory', async ({ overlay,
   // ---- price check ----
   for (let i = 0; i < 5; i++) {
     await overlay.copyItem('items/rare-ring.txt')
-    await expect(overlay.widget('price-check')).toContainText('Category: Ring')
+    await expect(overlay.widget('price-check')).toContainText('Generic')
     await overlay.pressHotkey('Escape').catch(() => {})
     fakeApp.focusGame(true)
     await page.waitForTimeout(300)

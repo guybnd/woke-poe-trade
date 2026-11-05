@@ -1,65 +1,20 @@
 <template>
   <div>
-    <div class="flex flex-wrap items-center pb-2 gap-2">
-      <filter-btn-logical v-if="searchSub"
-        :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
-      <filter-btn-numeric v-if="filters.linkedSockets"
-        :filter="filters.linkedSockets" :name="t('item.linked_sockets')" />
-      <filter-btn-numeric v-if="filters.mapTier"
-        :filter="filters.mapTier" :name="t('item.map_tier')" />
-      <filter-btn-logical v-if="filters.mapCompletionReward" readonly
-        :filter="{ disabled: false }" :text="t('item.map_foil_reward', [filters.mapCompletionReward.name])" />
-      <filter-btn-numeric v-if="filters.areaLevel"
-        :filter="filters.areaLevel" :name="t('item.area_level')" />
-      <filter-btn-numeric v-if="filters.sentinelCharge"
-        :filter="filters.sentinelCharge" :name="t('item.sentinel_charge')" />
-      <filter-btn-numeric v-if="filters.itemLevel"
-        :filter="filters.itemLevel" :name="t('item.item_level')" />
-      <filter-btn-numeric v-if="filters.stackSize"
-        :filter="filters.stackSize" :name="t('item.stock')" />
-      <filter-btn-numeric v-if="filters.whiteSockets"
-        :filter="filters.whiteSockets" :name="t('item.white_sockets')" />
-      <filter-btn-numeric v-if="filters.gemLevel"
-        :filter="filters.gemLevel" :name="t('item.gem_level')" />
-      <filter-btn-numeric v-if="filters.quality"
-        :filter="filters.quality" :name="t('item.quality')" />
-      <template v-if="filters.influences">
-        <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"
-          :filter="influence" :text="influence.value" :img="`/images/influence-${influence.value}.png`" />
-      </template>
-      <filter-btn-logical v-if="filters.rarity?.value === 'magic'"
-        :filter="filters.rarity" text="Magic" />
-      <filter-btn-logical v-if="filters.unidentified"
-        :filter="filters.unidentified" :text="t('item.unidentified')" />
-      <filter-btn-logical v-if="filters.veiled"
-        :filter="filters.veiled" :text="t('item.veiled')" />
-      <filter-btn-logical v-if="filters.foil"
-        :filter="filters.foil" :text="t('item.foil_unique')" />
-      <filter-btn-logical v-if="filters.mirrored && !filters.mirrored.hidden" active
-        :filter="filters.mirrored" :text="t(filters.mirrored.disabled ? 'item.not_mirrored' : 'item.mirrored')" />
-      <filter-btn-logical v-if="filters.split && !filters.split.hidden" active
-        :filter="filters.split" :text="t(filters.split.disabled ? 'item.not_split' : 'item.split')" />
-      <filter-btn-logical v-if="hasStats"
-        :collapse="statsVisibility.disabled"
-        :filter="statsVisibility"
-        :active="totalSelectedMods > 0"
-        :text="(totalSelectedMods > 0)
-          ? t('filters.selected_some', [totalSelectedMods, stats.length])
-          : t('filters.selected_none')"
-      />
+    <!-- The roll presets stay mounted without stats: they ask poeprices for the item. -->
+    <div :class="hasStats ? [$style.statHead, { [$style.open]: !statsVisibility.disabled }] : 'hidden'">
+      <w-segmented v-if="presets.length > 1"
+        :model-value="activePreset" :options="presetOptions"
+        @update:model-value="selectPreset" />
+      <button type="button" :class="$style.statBtn" :aria-expanded="!statsVisibility.disabled"
+        @click="statsVisibility.disabled = !statsVisibility.disabled">
+        <span>{{ (totalSelectedMods > 0)
+          ? t((presets.length > 1) ? 'filters.selected_some_short' : 'filters.selected_some', [totalSelectedMods, stats.length])
+          : t('filters.selected_none') }}</span>
+        <i class="pl-1 text-xs" :class="statsVisibility.disabled ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" />
+      </button>
       <slot name="rolls" />
     </div>
-    <div v-if="!statsVisibility.disabled && hasStats" class="mb-3" :class="(presets.length > 1) ? 'mt-1' : 'mt-0'">
-      <div class="flex" v-if="presets.length > 1">
-        <div class="w-5 border-b border-gray-700" />
-        <div class="flex divide-x border-gray-700 border-t border-l border-r rounded-t overflow-hidden">
-          <button v-for="preset in presets"
-            :class="[$style.presetBtn, { [$style.active]: preset.active }]"
-            @click="selectPreset(preset.id)"
-          >{{ t(preset.id) }}</button>
-        </div>
-        <div class="flex-1 border-b border-gray-700" />
-      </div>
+    <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
       <form @submit.prevent="handleStatsSubmit">
         <template v-for="filter of filteredStats">
           <filter-group v-if="filter.group" :key="`group_${filter.meta.tag}_${filter.meta.text}`"
@@ -96,9 +51,8 @@ import { useI18n } from 'vue-i18n'
 import UiToggle from '@/web/ui/UiToggle.vue'
 import FilterModifier from './FilterModifier.vue'
 import FilterGroup from './FilterGroup.vue'
-import FilterBtnNumeric from './FilterBtnNumeric.vue'
-import FilterBtnLogical from './FilterBtnLogical.vue'
 import UnknownModifier from './UnknownModifier.vue'
+import { WSegmented } from '@/web/woke/ui'
 import { ItemFilters, FilterOrGroup } from './interfaces'
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
 
@@ -108,9 +62,8 @@ export default defineComponent({
   components: {
     FilterModifier,
     FilterGroup,
-    FilterBtnNumeric,
-    FilterBtnLogical,
     UnknownModifier,
+    WSegmented,
     UiToggle
   },
   props: {
@@ -171,13 +124,8 @@ export default defineComponent({
           return Boolean(s.hidden) === show
         })
       }),
-      searchSub: computed(() => {
-        const { filters } = props
-        const activeSearch = (filters.searchRelaxed && !filters.searchRelaxed.disabled)
-          ? filters.searchRelaxed
-          : filters.searchExact
-        return activeSearch.sub
-      }),
+      activePreset: computed(() => props.presets.find(preset => preset.active)?.id ?? ''),
+      presetOptions: computed(() => props.presets.map(preset => ({ value: preset.id, label: t(preset.id) }))),
       showUnknownMods,
       hasStats: computed(() =>
         props.stats.length ||
@@ -194,19 +142,27 @@ export default defineComponent({
 })
 </script>
 
-<style lang="postcss" module>
-.presetBtn {
-  @apply border-gray-700;
-  background: var(--w-pc-window, theme('colors.gray.800'));
-  @apply px-2;
-  min-width: 3rem;
-
-  &:hover {
-    @apply bg-gray-700;
-  }
-
-  &.active {
-    background: linear-gradient(to bottom, var(--w-pc-well, theme('colors.gray.900')), var(--w-pc-window, theme('colors.gray.800')));
-  }
+<style module>
+.statHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: calc(32px * var(--w-text-scale, 1));
+  padding-bottom: 4px;
+  margin-bottom: 8px;
 }
+.statHead.open {
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--w-line);
+}
+.statBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  color: var(--w-fg);
+}
+.statBtn i { color: var(--w-dim); }
+.statBtn:hover i { color: var(--w-fg); }
 </style>

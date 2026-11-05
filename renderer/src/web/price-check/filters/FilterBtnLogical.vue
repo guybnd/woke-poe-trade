@@ -3,9 +3,7 @@
     @click="toggle"
   >
     <img v-if="img" :src="img" class="w-5 h-5">
-    <span class="pl-1">{{ t(text) }}</span>
-    <i v-if="collapse" class="pl-2 text-xs text-gray-400"
-      :class="filter.disabled ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" />
+    <span>{{ t(text) }}</span>
   </button>
 </template>
 
@@ -21,8 +19,7 @@ const props = defineProps({
   text: { type: String, required: true },
   img: { type: String, default: undefined },
   readonly: { type: Boolean, default: undefined },
-  active: { type: Boolean, default: undefined },
-  collapse: { type: Boolean, default: undefined }
+  active: { type: Boolean, default: undefined }
 })
 
 const { t } = useI18n()
@@ -35,18 +32,24 @@ function toggle () {
 }
 </script>
 
-<style lang="postcss" module>
+<style module>
 .btn {
-  @apply rounded;
-  background: var(--w-pc-well, theme('colors.gray.900'));
-  @apply border border-transparent;
-  @apply pl-1 pr-2;
-  line-height: calc(1.25rem * var(--w-text-scale, 1));
-  display: flex;
+  display: inline-flex;
+  flex: none;
   align-items: center;
-
-  &.active {
-    @apply border-gray-500;
-  }
+  gap: 4px;
+  min-height: calc(24px * var(--w-text-scale, 1));
+  padding: 0 8px;
+  border: 1px solid var(--w-line-soft);
+  border-radius: var(--w-radius-sm);
+  color: var(--w-faint);
+  font-size: calc(13px * var(--w-text-scale, 1));
+  white-space: nowrap;
+}
+.btn:hover { color: var(--w-fg); }
+.btn.active {
+  background: var(--w-accent-soft);
+  border-color: var(--w-line-strong);
+  color: var(--w-fg);
 }
 </style>
