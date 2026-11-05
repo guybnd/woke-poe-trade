@@ -34,9 +34,9 @@
         </div>
       </template>
     </DockItem>
-    <div v-if="visible" class="flex flex-col items-start gap-1" data-w-panel>
-      <!-- HUD strip -->
-      <div :class="$style.strip">
+    <div v-if="visible" class="flex flex-col items-start gap-1 min-w-0" data-w-panel>
+      <!-- HUD strip: no title bar, so the strip itself is the drag handle. -->
+      <div data-widget-drag :class="$style.strip">
         <template v-if="logMissing && !s.updatedAt">
           <span class="w-down"><i class="fas fa-exclamation-triangle text-xs" /> Client.txt not found.</span>
           <span class="w-dim">Set its path in Settings → General.</span>
@@ -88,7 +88,7 @@
 
       <!-- Guide card -->
       <div v-if="config.cardOpen && (s.zone || wm.active.value)" :class="$style.card">
-        <div :class="$style.cardHead">
+        <div :class="$style.cardHead" data-widget-drag>
           <span class="w-head-font">{{ current ? actLabel(current.act) : 'Campaign' }}</span>
           <span v-if="current" class="w-faint ml-auto">{{ left }} step{{ left === 1 ? '' : 's' }} left in act</span>
         </div>
@@ -112,7 +112,7 @@
         </div>
       </div>
     </div>
-    <div v-else-if="wm.active.value" :class="$style.strip" class="w-faint">Campaign tracker · hidden after the campaign</div>
+    <div v-else-if="wm.active.value" data-widget-drag :class="$style.strip" class="w-faint">Campaign tracker · hidden after the campaign</div>
   </Widget>
 </template>
 
@@ -435,6 +435,7 @@ onUnmounted(() => {
 .pill--penalty { color: var(--w-down); background: color-mix(in srgb, var(--w-down) 16%, transparent); }
 .card {
   width: 24rem;
+  max-width: 100%;
   background: var(--w-panel);
   border: 1px solid var(--w-line);
   border-radius: var(--w-r-md);

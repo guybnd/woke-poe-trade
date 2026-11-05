@@ -22,7 +22,7 @@
 import { defineComponent, PropType, computed, inject, provide, ref, shallowRef } from 'vue'
 import { Widget, Anchor, WidgetManager } from './interfaces'
 import { useI18n } from 'vue-i18n'
-import { snapMove, clearGuides } from '@/web/woke/ui/snap'
+import { snapMove, clearGuides, clampDrag, releaseWebviewsForDrag } from '@/web/woke/ui/snap'
 import { openMenu, toast } from '@/web/woke/ui/layer'
 import type { MenuEntry } from '@/web/woke/ui/layer'
 import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
@@ -248,12 +248,14 @@ export default defineComponent({
     })
 
     function startMove (pos: string, e: MouseEvent) {
+      const restoreWebviews = releaseWebviewsForDrag()
       props.config.anchor.pos = pos
       updatePosition(e)
       document.addEventListener('mousemove', updatePosition)
       document.addEventListener('mouseup', endMove)
 
       function endMove () {
+        restoreWebviews()
         document.removeEventListener('mousemove', updatePosition)
         document.removeEventListener('mouseup', endMove)
       }
@@ -270,6 +272,7 @@ export default defineComponent({
 
       const rect = widgetEl.value.getBoundingClientRect()
       const { x: startX, y: startY } = props.config.anchor
+      const restoreWebviews = releaseWebviewsForDrag()
       let dragged = false
 
       function onMove (ev: MouseEvent) {
@@ -278,14 +281,14 @@ export default defineComponent({
         if (!dragged && Math.hypot(dx, dy) < DRAG_START_PX) return
         dragged = true
         // Snaps to screen edges and other panels (Alt moves freely), then
-        // keeps the whole widget on screen.
+        // keeps it on screen (see clampDrag).
         const s = snapMove(rect, dx, dy, widgetEl.value, ev.altKey)
-        const x = Math.min(Math.max(s.dx, -rect.left), window.innerWidth - rect.right)
-        const y = Math.min(Math.max(s.dy, -rect.top), window.innerHeight - rect.bottom)
-        props.config.anchor.x = startX + x / window.innerWidth * 100
-        props.config.anchor.y = startY + y / window.innerHeight * 100
+        const c = clampDrag(rect, s.dx, s.dy, window.innerWidth, window.innerHeight)
+        props.config.anchor.x = startX + c.dx / window.innerWidth * 100
+        props.config.anchor.y = startY + c.dy / window.innerHeight * 100
       }
       function onUp () {
+        restoreWebviews()
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
         clearGuides()

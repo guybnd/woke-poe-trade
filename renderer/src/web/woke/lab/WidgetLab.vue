@@ -16,8 +16,8 @@
         <div v-if="config.notes.trim()" class="whitespace-pre-wrap w-dim text-xs" style="padding: 4px var(--w-pad);">{{ config.notes }}</div>
       </template>
     </DockItem>
-    <div class="flex gap-2 min-h-0 items-start">
-      <WPanel :title="config.wmTitle || 'Labyrinth'" icon="lab" width="14rem">
+    <div class="flex gap-2 min-w-0 min-h-0 items-start">
+      <WPanel class="shrink-0" :title="config.wmTitle || 'Labyrinth'" icon="lab" width="14rem">
         <template #meta>
           <span title="Labs reset at midnight UTC"><i class="far fa-clock" /> resets in <span class="w-num">{{ resetIn }}</span></span>
         </template>
@@ -33,8 +33,7 @@
         <div v-if="config.notes.trim()" class="whitespace-pre-wrap w-dim py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad);">{{ config.notes }}</div>
         <template #footer><span>Layouts from poelab.com</span></template>
       </WPanel>
-      <WPanel v-if="openDiff" size-key="layout" :title="`${labLabel(openDiff)} Labyrinth`" :scroll="false" max-height="none"
-        style="width: 60vw; height: 80vh;">
+      <WPanel v-if="openDiff" size-key="layout" :title="`${labLabel(openDiff)} Labyrinth`" :scroll="false" width="60vw" height="80vh" max-height="none">
         <template v-if="staleDate" #banner>
           <WBanner tone="warn">Today's layout isn't posted yet. This one is from {{ staleDate }}.</WBanner>
         </template>

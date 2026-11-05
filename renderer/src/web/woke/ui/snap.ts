@@ -59,3 +59,33 @@ export function snapEdge (axis: 'x' | 'y', at: number, self: Element | null, fre
 }
 
 export function clearGuides () { snapGuides.value = [] }
+
+// A widget past this share of the screen can't fit in most positions, so a
+// drag may push it off the far edge, leaving KEEP_VISIBLE px to grab.
+const BIG_SHARE = 0.5
+const KEEP_VISIBLE = 160
+
+function clampAxis (start: number, end: number, delta: number, screen: number) {
+  const room = screen - end
+  const big = end - start > screen * BIG_SHARE
+  const max = big ? Math.max(room, screen - KEEP_VISIBLE - start, 0) : Math.max(room, 0)
+  return Math.min(Math.max(delta, -start), max)
+}
+
+// Limits a drag of a widget whose start box is `rect`. The title bar can't
+// leave the top or left, and smaller widgets stay fully on screen.
+export function clampDrag (rect: Box, dx: number, dy: number, screenW: number, screenH: number) {
+  return {
+    dx: clampAxis(rect.left, rect.right, dx, screenW),
+    dy: clampAxis(rect.top, rect.bottom, dy, screenH)
+  }
+}
+
+// A <webview> takes the mouse once the cursor is over it, so the page would
+// stop seeing mousemove and mouseup mid-drag. Call when a drag starts; the
+// returned function gives the webviews their mouse back.
+export function releaseWebviewsForDrag () {
+  const views = [...document.querySelectorAll<HTMLElement>('webview')]
+  for (const v of views) v.style.pointerEvents = 'none'
+  return () => { for (const v of views) v.style.removeProperty('pointer-events') }
+}
