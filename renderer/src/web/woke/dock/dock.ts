@@ -34,7 +34,8 @@ export interface DockItemProps {
   into?: string
   // Widget to open when the icon is clicked with the overlay open.
   wmId?: number
-  // A click while playing does this, instead of opening the card.
+  // A click while playing does this, instead of opening the card. Ignored when
+  // hover cards are off, since a click is then the only way to open the card.
   gameClick?: () => void
   cardWidth?: string
   // Values kept on screen beside the icon.

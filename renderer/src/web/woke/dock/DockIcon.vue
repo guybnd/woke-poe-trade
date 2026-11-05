@@ -98,7 +98,7 @@ const overMenu = useHoverZone(menuEl, { enabled: () => menuOpen.value, activate:
 const hovering = computed(() => overIcon.value || overCard.value || overMenu.value)
 
 // Opens once the mouse rests on the icon, so sweeping past it doesn't pop the
-// card (a click opens it at once); closes a moment after leaving so moving
+// card (a click opens it at once, unless the icon has a gameClick); closes a moment after leaving so moving
 // onto the card doesn't flicker.
 const OPEN_AFTER_MS = 120
 const CLOSE_AFTER_MS = 250
@@ -181,14 +181,19 @@ function place () {
   placement.value = cls.join(' ')
 }
 
-// While playing, a click on the icon opens its card or closes it again. One click
+// While playing, a click on the icon opens its card or closes it again, or runs the
+// icon's gameClick if it has one. One click
 // arrives twice: from main's mouse hook as the button goes down, and as a page
 // click as it comes up (only if the mouse was taken, so not always). Only the
 // hook counts, in the app; the browser demo has only the page click.
-function pressedInGame () {
+function pressedInGame (taken: boolean) {
   if (wm.active.value) { openCard(); return }
-  if (props.host.props.gameClick) props.host.props.gameClick()
-  else toggleCard()
+  const gameClick = props.host.props.gameClick
+  // With hover cards off, a click is the only way to open the card.
+  if (!gameClick || dockConfig().hoverOpens === false) { toggleCard(); return }
+  // Not taken: the game got this click too, so it may be walking away from what
+  // gameClick would act on.
+  if (taken) gameClick()
 }
 function toggleCard () {
   if (!cardOpen.value) {

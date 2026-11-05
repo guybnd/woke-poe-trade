@@ -1,5 +1,5 @@
 // What the Flips outlines draw: one mark per filled stash slot worth a look.
-// Shown from the shortcut, gone on the next click, scroll or shortcut press.
+// Shown from the shortcut or the dock icon, gone on the next click, scroll or shortcut press.
 import { shallowRef } from 'vue'
 
 export interface StashSlot {

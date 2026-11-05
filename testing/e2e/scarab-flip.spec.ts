@@ -185,10 +185,19 @@ test('flips: clicking the dock icon outlines the stash tab, and again clears the
   await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
   await overlay.showScreen('screens/stash-scarab-real.png')
   const layer = overlay.page.locator('[data-stash-outlines]')
-  await overlay.clickDockIconAndLeave('scarab-flip')
+  await overlay.restAndClickDockIcon('scarab-flip')
   await expect(layer).toBeVisible()
-  await overlay.page.waitForTimeout(500)
-  await overlay.clickDockIconAndLeave('scarab-flip')
+  await expect.poll(() => fakeApp.game.focused).toBe(true)
+  await overlay.restAndClickDockIcon('scarab-flip')
   await expect(layer).toHaveCount(0)
-  expect(fakeApp.game.focused).toBe(true)
+})
+
+test('flips: a dock icon click the game also got reads nothing', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip' }] })
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.clickDockIconAndLeave('scarab-flip')
+  fakeApp.releaseMouse()
+  await overlay.page.waitForTimeout(300)
+  await expect(overlay.page.locator('[data-stash-outlines]')).toHaveCount(0)
 })

@@ -1,4 +1,5 @@
-import { RESERVED_SHORTCUTS, hotkeyToString } from '@ipc/KeyToCode'
+import { KeyToCode, RESERVED_SHORTCUTS, hotkeyToString } from '@ipc/KeyToCode'
+import { reservedKeyNote } from '@/web/woke/ui/hotkey-context'
 import { describe, it, expect } from 'vitest'
 import { pressedKeys, sortKeys } from '@/web/woke/loot-filter/hotkey-match'
 
@@ -24,8 +25,15 @@ describe('hotkey match', () => {
 })
 
 describe('keys the game reserves', () => {
-  it('uses the same spelling as a recorded key, so the hotkey cell can warn', () => {
-    expect(RESERVED_SHORTCUTS).toContain(hotkeyToString(['F'], true))
-    expect(RESERVED_SHORTCUTS).not.toContain(hotkeyToString(['J'], false, false, true))
+  it.each(RESERVED_SHORTCUTS)('%s is spelled the way the hotkey cell records it', (key) => {
+    const parts = key.split(' + ')
+    const last = parts[parts.length - 1]
+    expect(KeyToCode).toHaveProperty(last)
+    expect(hotkeyToString([last], parts.includes('Ctrl'))).toBe(key)
+  })
+  it('warns on the whole key, hold key included', () => {
+    expect(reservedKeyNote('Ctrl + F')).toContain("won't work")
+    expect(reservedKeyNote('F')).toBeNull()
+    expect(reservedKeyNote('Ctrl + Home')).toBeNull()
   })
 })

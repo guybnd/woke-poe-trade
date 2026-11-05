@@ -257,6 +257,17 @@ export class Overlay {
 
   // Clicks a dock icon in game, then leaves it straight away, so only the
   // click can have opened its card (the hover delay gets cancelled).
+  // A real click: the mouse rests on the icon first, so the overlay takes it.
+  async restAndClickDockIcon (moduleId: string) {
+    const box = await this.dockIcon(moduleId).boundingBox()
+    if (!box) throw new Error(`Dock icon ${moduleId} is not on screen`)
+    const [x, y] = [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)]
+    await this.moveMouse(x, y)
+    this.app.pressMouse(x, y)
+    this.app.releaseMouse()
+    await this.moveMouse(1000, 900)
+  }
+
   async clickDockIconAndLeave (moduleId: string) {
     const box = await this.dockIcon(moduleId).boundingBox()
     if (!box) throw new Error(`Dock icon ${moduleId} is not on screen`)

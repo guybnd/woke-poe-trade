@@ -279,6 +279,8 @@ type IpcWokeHover =
 type IpcWokeHoverClick =
   Event<'MAIN->OVERLAY::woke-hover-click', {
     id: string
+    // False: the mouse was not taken, so the game got this click too.
+    taken: boolean
   }>
 
 // The right mouse button went down on a zone that had already taken the mouse.

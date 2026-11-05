@@ -154,7 +154,7 @@ export class WokeHoverTracker {
     if (e.button !== LEFT_BUTTON) return
     for (const zone of this.flat) {
       if (zone.inside) {
-        this.server.sendEventTo('broadcast', { name: 'MAIN->OVERLAY::woke-hover-click', payload: { id: zone.id } })
+        this.server.sendEventTo('broadcast', { name: 'MAIN->OVERLAY::woke-hover-click', payload: { id: zone.id, taken: reachedOverlay } })
       }
     }
   }

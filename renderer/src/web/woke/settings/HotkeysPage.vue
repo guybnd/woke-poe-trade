@@ -47,7 +47,7 @@
 import { computed, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
 import { WChip, WEmpty, WField, WHotkeyCell, WSegmented, WSettingRow, WSettingSection, WToggle, normalizeKey, useHotkeyContext } from '../ui'
-import { poeBindNote } from '../ui/hotkey-context'
+import { poeBindNote, reservedKeyNote } from '../ui/hotkey-context'
 import { fieldKey, hotkeyFields } from './hotkey-fields'
 import type { HotkeyField } from './hotkey-fields'
 
@@ -63,7 +63,10 @@ const fields = computed(() => hotkeyFields(props.config))
 
 function problemOf (f: HotkeyField): string | null {
   const k = fieldKey(f)
-  if (!k || !ctx) return null
+  if (!k) return null
+  const reserved = reservedKeyNote(k)
+  if (reserved) return reserved
+  if (!ctx) return null
   const norm = normalizeKey(k)
   const uses = ctx.uses.value.get(norm) ?? []
   if (f.off) {

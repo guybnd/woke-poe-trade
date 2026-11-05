@@ -20,8 +20,9 @@ export function useHoverZone (
     // Register only while this returns true.
     enabled: () => boolean
     // The left button went down on the zone, even while the game has focus
-    // (the game gets that click too).
-    onClick?: () => void
+    // (the game gets that click too). `taken`: the mouse was already taken, so
+    // the game did not get it.
+    onClick?: (taken: boolean) => void
     // The right button went down on the zone, with the mouse already taken (so
     // the game didn't get it).
     onRightClick?: () => void
@@ -77,7 +78,7 @@ export function useHoverZone (
     sync()
   })
   const clickListener = Host.onEvent('MAIN->OVERLAY::woke-hover-click', (e) => {
-    if (e.id === zoneId) opts.onClick?.()
+    if (e.id === zoneId) opts.onClick?.(e.taken)
   })
 
   const contextListener = Host.onEvent('MAIN->OVERLAY::woke-hover-context', (e) => {
