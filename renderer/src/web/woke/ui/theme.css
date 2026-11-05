@@ -324,3 +324,5 @@ body[data-woke-hidden] [data-w-panel] { display: none !important; }
 
 /* Panel size (ui/scale.ts). */
 [data-w-panel] { zoom: var(--w-ui-scale, 1); }
+/* Zoom multiplies, and the size maths assumes one scale. */
+[data-w-panel] [data-w-panel] { zoom: 1; }

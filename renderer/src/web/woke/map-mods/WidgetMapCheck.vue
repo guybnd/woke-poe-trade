@@ -1,5 +1,5 @@
 <template>
-  <Widget :config="config" move-handles="corners" :removable="false" :readonly="true" :inline-edit="false">
+  <Widget :config="config" move-handles="corners" :removable="false" :readonly="true" :inline-edit="false" @moved="config.moved = true">
     <div class="flex flex-col gap-1 items-stretch">
       <MapVerdictCard v-if="result && mapMods" :result="result" :config="mapMods" />
       <WPanel v-else title="Map check" icon="map" width="22rem">
@@ -27,7 +27,7 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, inject, onUnmounted, shallowRef } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import type { ParsedItem } from '@/parser'
@@ -49,18 +49,12 @@ const item = shallowRef<ParsedItem | null>(null)
 const mapMods = computed(() => findMapModsConfig())
 const result = computed(() => item.value && mapMods.value ? checkMap(item.value, mapMods.value) : null)
 
-let placing = false
-watch(() => [props.config.anchor.x, props.config.anchor.y], () => {
-  if (!placing) props.config.moved = true
-}, { flush: 'sync' })
-
 // Same placement as APT's item info: next to the stash or inventory panel,
 // on the side away from the hovered item.
 function place (position: { x: number, y: number }) {
   const width = wm.size.value.width
   const poePanelWidth = wm.poePanelWidth.value
   const side = position.x > (window.screenX + width / 2) ? 'inventory' : 'stash'
-  placing = true
   props.config.anchor = {
     pos: side === 'stash' ? 'cl' : 'cr',
     y: 50,
@@ -68,7 +62,6 @@ function place (position: { x: number, y: number }) {
       ? (poePanelWidth / width) * 100
       : ((width - poePanelWidth) / width) * 100
   }
-  placing = false
 }
 
 const handler = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {

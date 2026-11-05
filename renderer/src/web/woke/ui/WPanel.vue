@@ -61,6 +61,7 @@ const props = withDefaults(defineProps<{
   width?: string
   height?: string
   maxHeight?: string
+  maxWidth?: string
   scroll?: boolean
   // Game art for the header: a mechanic id ("essence", "lab"), a currency
   // ("divine"), or an image path.
@@ -84,6 +85,7 @@ const props = withDefaults(defineProps<{
   width: undefined,
   height: undefined,
   maxHeight: '75vh',
+  maxWidth: undefined,
   scroll: true,
   icon: undefined,
   updated: undefined,
@@ -158,7 +160,7 @@ const boxStyle = computed(() => {
   return {
     width: s?.w ? `${s.w}px` : unzoom(props.width),
     height: s?.h ? `${s.h}px` : unzoom(props.height),
-    maxWidth: a ? 'calc((100vw - 8px) / var(--w-ui-scale, 1))' : undefined,
+    maxWidth: unzoom(props.maxWidth) ?? (a ? 'calc((100vw - 8px) / var(--w-ui-scale, 1))' : undefined),
     maxHeight: !cap ? base : base === 'none' ? cap : `min(${base}, ${cap})`
   }
 })
@@ -177,18 +179,20 @@ function uiScale () {
 // neighbours change how the widget grows.
 function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide | null) {
   const el = root.value
-  const anchor = cfg?.anchor
-  if (!el || !cfg || !anchor || e.button !== 0) return
+  if (!el || !cfg?.anchor || e.button !== 0) return
   e.preventDefault()
   e.stopPropagation()
-  const stopResize = cfg.beginResize?.()
+  // A settings change can replace the config mid-drag, so read the anchor fresh.
+  const anchor = () => cfg!.anchor!
   const r = el.getBoundingClientRect()
   const box = cfg.bounds?.() ?? r
   const scale = uiScale()
   const W = window.innerWidth
   const H = window.innerHeight
-  const startX = anchor.x
-  const startY = anchor.y
+  // Set on the first move, so a press that doesn't drag changes nothing.
+  let stopResize: (() => void) | undefined
+  let startX = 0
+  let startY = 0
   const movable = !!cfg.canMove
   const xEdge = hSide === 'start' ? r.left : r.right
   const yEdge = vSide === 'start' ? r.top : r.bottom
@@ -200,6 +204,11 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
   const restoreWebviews = releaseWebviewsForDrag()
 
   function onMove (ev: MouseEvent) {
+    if (!stopResize) {
+      stopResize = cfg!.beginResize?.() ?? (() => {})
+      startX = anchor().x
+      startY = anchor().y
+    }
     const next = { ...(cfg!.wokeSizes?.[props.sizeKey] ?? {}) }
     if (hSide) {
       const edge = snapEdge('x', xEdge + ev.clientX - e.clientX, snapSelf, ev.altKey)
@@ -210,10 +219,10 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
         room: hSide === 'start' ? box.left : W - box.right,
         scale,
         min: 200,
-        share: anchorShare(anchor!.pos, 'x')
+        share: anchorShare(anchor().pos, 'x')
       })
       next.w = a.size
-      if (movable) anchor!.x = startX + a.shift / W * 100
+      if (movable) anchor().x = startX + a.shift / W * 100
     }
     if (vSide) {
       const edge = snapEdge('y', yEdge + ev.clientY - e.clientY, snapSelf, ev.altKey)
@@ -224,18 +233,20 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
         room: vSide === 'start' ? box.top : H - box.bottom,
         scale,
         min: 120,
-        share: anchorShare(anchor!.pos, 'y')
+        share: anchorShare(anchor().pos, 'y')
       })
       next.h = a.size
-      if (movable) anchor!.y = startY + a.shift / H * 100
+      if (movable) anchor().y = startY + a.shift / H * 100
     }
     cfg!.wokeSizes = { ...(cfg!.wokeSizes ?? {}), [props.sizeKey]: next }
     if (movable) nextTick(holdFarEdges)
   }
   function holdFarEdges () {
     const now = el!.getBoundingClientRect()
-    if (hSide) anchor!.x += (xFixed - (hSide === 'start' ? now.right : now.left)) / W * 100
-    if (vSide) anchor!.y += (yFixed - (vSide === 'start' ? now.bottom : now.top)) / H * 100
+    // Closed mid-drag: there's nothing to measure, and a zero box would save a wild spot.
+    if (!now.width || !now.height) return
+    if (hSide) anchor().x += (xFixed - (hSide === 'start' ? now.right : now.left)) / W * 100
+    if (vSide) anchor().y += (yFixed - (vSide === 'start' ? now.bottom : now.top)) / H * 100
   }
   function onUp () {
     restoreWebviews()

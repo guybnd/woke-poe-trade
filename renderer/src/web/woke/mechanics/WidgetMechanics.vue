@@ -119,7 +119,7 @@
         </template>
       </WPanel>
 
-      <WPanel v-if="config.expanded && mech.id === 'betrayal' && showBoard" size-key="board" title="Syndicate board" width="auto" :class="$style.boardPanel">
+      <WPanel v-if="config.expanded && mech.id === 'betrayal' && showBoard" size-key="board" title="Syndicate board" width="auto" max-width="70vw">
         <template #actions>
           <WField v-model="boardQuery" icon="fas fa-search" placeholder="Search rewards" style="width: 12rem;" />
           <button class="w-icon-btn" @click="showBoard = false" title="Close"><i class="fas fa-times" /></button>
@@ -376,7 +376,7 @@ function boardMatch (member: string, div: string, reward: string) {
   gap: 4px;
 }
 .tips li::marker { color: var(--w-accent); }
-.boardPanel { max-width: 70vw; }
+
 .board {
   display: grid;
   grid-template-columns: 96px repeat(17, minmax(80px, 1fr));

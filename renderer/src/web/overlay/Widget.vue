@@ -31,6 +31,8 @@ import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
 import type { MinimizedState } from '@/web/woke/ui/window-anchor'
 
 const DRAG_START_PX = 4
+const MIN_ROOM_W_PX = 240
+const MIN_ROOM_H_PX = 240
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -61,7 +63,10 @@ export default defineComponent({
       default: true
     }
   },
-  setup (props) {
+  // 'moved': the user dragged the widget to a new spot. Resizing can shift the
+  // anchor too, but that isn't a move.
+  emits: ['moved'],
+  setup (props, { emit }) {
     const wm = inject<WidgetManager>('wm')!
     const { t } = useI18n()
     const isEditing = ref(false)
@@ -179,6 +184,7 @@ export default defineComponent({
       bakeFitShift()
       isMoving.value = !isMoving.value
       isEditing.value = false
+      fitToScreen()
     }
     // No "are you sure": delete now, offer Undo (P9).
     function removeWidget () {
@@ -298,8 +304,10 @@ export default defineComponent({
       return {
         'top': shift.y ? `calc(${anchor.y}% + ${shift.y}px)` : `${anchor.y}%`,
         'left': shift.x ? `calc(${anchor.x}% + ${shift.x}px)` : `${anchor.x}%`,
-        'max-width': `${max.w}%`,
-        'max-height': `${max.h}%`,
+        // With a floor: near a screen edge the widget keeps a usable size and
+        // fitToScreen moves it, instead of being crushed to nothing.
+        'max-width': `max(${max.w}%, ${MIN_ROOM_W_PX}px)`,
+        'max-height': `max(${max.h}%, ${MIN_ROOM_H_PX}px)`,
         'transform': translate,
         'z-index': (typeof wmZorder === 'number') ? wmZorder : undefined
       }
@@ -327,6 +335,7 @@ export default defineComponent({
     function startMove (pos: string, e: MouseEvent) {
       const restoreWebviews = releaseWebviewsForDrag()
       fitShift.value = { x: 0, y: 0 }
+      emit('moved')
       props.config.anchor.pos = pos
       updatePosition(e)
       document.addEventListener('mousemove', updatePosition)
@@ -359,7 +368,7 @@ export default defineComponent({
         const dx = ev.clientX - e.clientX
         const dy = ev.clientY - e.clientY
         if (!dragged && Math.hypot(dx, dy) < DRAG_START_PX) return
-        if (!dragged) { fitHeld = true; fitShift.value = { x: 0, y: 0 } }
+        if (!dragged) { fitHeld = true; fitShift.value = { x: 0, y: 0 }; emit('moved') }
         dragged = true
         // Snaps to screen edges and other panels (Alt moves freely), then
         // keeps it on screen (see clampDrag).
