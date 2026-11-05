@@ -2,7 +2,9 @@
   <div class="flex justify-between bg-gray-700 rounded relative p-0.5 items-center h-5"
     ref="rootEl"
     :class="$style[state.mode]"
-    @mousedown="handleMousedown">
+    title="Left-click sets min, right-click sets max"
+    @mousedown="handleMousedown"
+    @contextmenu.prevent>
     <span :class="[$style.bound, { [$style.inclusive]: state.minInclusive }]">{{ bounds.min }}</span>
     <div v-if="state.mode !== 'none'"
       :class="[$style.fill]"
@@ -11,7 +13,7 @@
     <div :class="$style.tick" :style="{ 'left': `max(0.125rem, min(${percentRoll}% - 0.0625rem, 100% - 0.25rem))` }" />
     <div v-if="popupValue"
       :class="$style.popup"
-      :style="{ '--left': `${state.percentLeft}%`, '--right': `${state.percentRight}%` }"
+      :style="(editing === 'min') ? { '--left': `${state.percentLeft}%` } : { '--right': `${state.percentRight}%` }"
     >{{ popupValue }}</div>
     <span :class="[$style.bound, { [$style.inclusive]: state.maxInclusive }]">{{ bounds.max }}</span>
   </div>
@@ -19,7 +21,7 @@
 
 <script lang="ts">
 import { defineComponent, computed, PropType, shallowRef } from 'vue'
-import { percentRoll } from '../price-check/filters/util'
+import { SliderEnd, editRange, sliderEnd, sliderValueAt } from './stat-roll-slider'
 
 export default defineComponent({
   props: {
@@ -38,6 +40,7 @@ export default defineComponent({
     const rootEl = shallowRef<HTMLDivElement>(null!)
 
     const dirty = shallowRef<typeof props['modelValue'] | null>(null)
+    const editing = shallowRef<SliderEnd>('min')
 
     const state = computed(() => {
       const min = (dirty.value) ? dirty.value[0] : props.modelValue[0]
@@ -74,12 +77,8 @@ export default defineComponent({
       const { bounds, dp } = props
       const rect = rootEl.value.getBoundingClientRect()
       const k = Math.max(0, Math.min((e.clientX - rect.x) / rect.width, 1))
-      const value = (bounds.max - bounds.min) * k + bounds.min
-      if (state.value.mode === 'min') {
-        dirty.value = [percentRoll(value, -0, Math.floor, dp), undefined]
-      } else if (state.value.mode === 'max') {
-        dirty.value = [undefined, percentRoll(value, +0, Math.ceil, dp)]
-      }
+      const value = sliderValueAt(k, bounds, editing.value, dp)
+      dirty.value = editRange(props.modelValue, editing.value, value)
     }
     function removeMousemove () {
       document.removeEventListener('mousemove', handleMousemove)
@@ -95,9 +94,12 @@ export default defineComponent({
         const { bounds } = props
         return (props.roll - bounds.min) / (bounds.max - bounds.min) * 100
       }),
-      popupValue: computed(() => state.value.mode === 'min' ? dirty.value?.[0] : dirty.value?.[1]),
+      editing,
+      popupValue: computed(() => editing.value === 'min' ? dirty.value?.[0] : dirty.value?.[1]),
       handleMousedown (e: MouseEvent) {
-        if (state.value.mode !== 'min' && state.value.mode !== 'max') return
+        const end = sliderEnd(e.button)
+        if (!end) return
+        editing.value = end
         handleMousemove(e)
         document.addEventListener('mousemove', handleMousemove)
         document.addEventListener('mouseup', removeMousemove)

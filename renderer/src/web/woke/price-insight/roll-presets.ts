@@ -8,6 +8,10 @@ export type RollPreset = 'low' | 'current'
 // Share of the tier range kept on each side of the item's roll by "Current rolls".
 const CURRENT_WINDOW = 0.1
 
+// Map and heist properties have no tiers: their bounds run up to a
+// MAX_SAFE_INTEGER placeholder, which must never reach the trade site.
+const OPEN_BOUND = Number.MAX_SAFE_INTEGER / 2
+
 type Roll = NonNullable<StatFilter['roll']>
 
 function rollable (filters: FilterOrGroup[]): StatFilter[] {
@@ -35,6 +39,12 @@ function presetRange (roll: Roll, preset: RollPreset): { min: number | undefined
     return roll.better === 1
       ? { min: bounds.min, max: undefined }
       : { min: undefined, max: bounds.max }
+  }
+  if (Math.abs(bounds.min) >= OPEN_BOUND || Math.abs(bounds.max) >= OPEN_BOUND) {
+    // No tier to take a window of: this roll or better.
+    return roll.better === 1
+      ? { min: roll.value, max: undefined }
+      : { min: undefined, max: roll.value }
   }
   const step = roll.dp ? 0.01 : 1
   const delta = Math.max((bounds.max - bounds.min) * CURRENT_WINDOW, step)

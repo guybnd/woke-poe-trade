@@ -182,15 +182,15 @@ export default defineComponent({
         return [roll.min, roll.max]
       },
       set (value) {
-        if (typeof value[0] === 'number') {
-          props.filter.roll!.min = value[0]
+        const roll = props.filter.roll!
+        const editedEl = (typeof value[0] === 'number' && value[0] !== roll.min)
+          ? inputMinEl
+          : (typeof value[1] === 'number' && value[1] !== roll.max) ? inputMaxEl : null
+        roll.min = value[0]
+        roll.max = value[1]
+        if (editedEl) {
           nextTick(() => {
-            inputMinEl.value!.focus()
-          })
-        } else if (typeof value[1] === 'number') {
-          props.filter.roll!.max = value[1]
-          nextTick(() => {
-            inputMaxEl.value!.focus()
+            editedEl.value!.focus()
           })
         }
         props.filter.disabled = false

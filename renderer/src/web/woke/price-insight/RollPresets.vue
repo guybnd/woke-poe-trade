@@ -30,7 +30,7 @@ const options = computed(() => [
   ...(showValue.value ? [{ value: 'value', label: 'By value' }] : [])
 ])
 
-const title = computed(() => 'Low rolls: any roll of each ticked mod\'s tier. Current rolls: a tight window around this item\'s rolls.' +
+const title = computed(() => 'Low rolls: any roll of each ticked mod\'s tier. Current rolls: a tight window around this item\'s rolls, or this roll and better on map stats.' +
   (showValue.value ? ' By value: tight on the mods that carry the price, loose on the rest, mods worth nothing unticked.' : '') +
   ' Runs the search.')
 
