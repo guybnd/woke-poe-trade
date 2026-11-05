@@ -38,8 +38,8 @@
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
         <div v-for="(g, i) in shownLinks" :key="i" :class="$style.link">
           <SocketDots :colours="linkColours(g)" />
-          <span class="w-rarity-gem w-trunc" :title="orderedGems(g).map(x => x.name).join(', ')">
-            {{ orderedGems(g).map(x => x.name).join(' · ') }}
+          <span :class="$style.names">
+            <GemName v-for="x in orderedGems(g)" :key="x.name" :name="x.name" :level="x.level" :quality="x.quality" />
           </span>
           <span v-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || g.slot }}</span>
         </div>
@@ -50,12 +50,12 @@
           <span class="ml-auto normal-case tracking-normal">{{ canTick ? 'click a gem once you have it' : '' }}</span>
         </div>
         <button v-for="g in gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
-          :disabled="!canTick" :title="canTick ? (got.includes(g.name) ? 'Mark as not got yet' : 'Mark as got') : ''" @click="toggleGot(g.name)">
+          :disabled="!canTick" @click="toggleGot(g.name)">
           <span class="w-num w-faint text-xs" :class="$style.lvl">{{ g.requiredLevel }}</span>
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
-          <span class="w-rarity-gem w-trunc" :class="{ 'line-through': got.includes(g.name) }">{{ g.name }}</span>
+          <GemName :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
-          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source ?? 'trade / drop' }}</span>
+          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src">{{ g.source ?? 'trade / drop' }}</span>
         </button>
       </template>
 
@@ -65,7 +65,8 @@
           <div :class="$style.heading">Links you need now</div>
           <div :class="$style.link">
             <SocketDots :colours="mainColours" />
-            <span class="w-dim w-trunc">{{ mainColours.length }}-link for {{ orderedGems(mainLink)[0]?.name }}</span>
+            <span class="w-dim whitespace-nowrap">{{ mainColours.length }}-link for</span>
+            <GemName v-if="orderedGems(mainLink)[0]" :name="orderedGems(mainLink)[0].name" />
           </div>
           <div v-if="regex" class="flex items-center gap-2 pt-1">
             <code :class="$style.rx" :title="regex.exact ? 'Exact colour orders' : 'Only these colours or white'">{{ regex.regex }}</code>
@@ -85,13 +86,18 @@
         </div>
         <div :class="$style.heading">Gear<template v-if="shownItemSet && itemSets.length > 1"> · {{ shownItemSet.title }}</template></div>
         <WEmpty v-if="!gear.length" icon="fas fa-tshirt">No items in this build. Add them in PoB's Items tab to see what to look for.</WEmpty>
-        <div v-for="(s, i) in gear" :key="i" :class="$style.gearRow" :title="[...s.item.implicits, ...s.item.mods].join('\n')">
-          <span class="w-faint text-xs" :class="$style.slot">{{ slotLabel(s.slot) }}</span>
+        <div v-for="(s, i) in gear" :key="i" :class="$style.gearRow"
+          @mouseenter="showTip($event, { kind: 'item', item: s.item })" @mouseleave="hideTip">
+          <span :class="[$style.cell, cellClass(s.item.rarity)]">
+            <img v-if="itemArt(s.item)" :src="itemArt(s.item)!" alt="" :class="['w-game-icon', $style.art]" loading="lazy" draggable="false">
+            <i v-else class="fas fa-question w-faint" />
+          </span>
           <span class="min-w-0 flex flex-col">
             <span class="w-trunc" :class="rarityClass(s.item.rarity)">{{ s.item.name }}</span>
             <span class="w-dim text-xs w-trunc">
-              <template v-if="s.item.base">{{ s.item.base }}</template>
-              <template v-if="s.item.base && keyMods(s.item).length"> · </template>{{ keyMods(s.item).join(' · ') }}
+              <span class="w-faint">{{ slotLabel(s.slot) }}</span>
+              <template v-if="s.item.base"> · {{ s.item.base }}</template>
+              <template v-if="keyMods(s.item).length"> · {{ keyMods(s.item).join(' · ') }}</template>
             </span>
           </span>
           <span class="ml-auto flex items-center gap-1.5">
@@ -116,10 +122,10 @@
             <div class="w-dim text-xs">
               {{ s.label || s.slot || `Group ${i + 1}` }}<span v-if="s.isMain" class="w-accent"> · main</span>
             </div>
-            <div class="flex flex-wrap gap-x-2">
-              <span v-for="(g, j) in s.gems" :key="j" class="w-rarity-gem" :class="{ 'line-through opacity-50': !g.enabled }">
-                {{ g.name }}<span class="w-faint text-xs w-num" v-if="g.level != null"> {{ g.level }}/{{ g.quality ?? 0 }}</span>
-              </span>
+            <div :class="$style.names">
+              <GemName v-for="(g, j) in s.gems" :key="j" :name="g.name" :level="g.level" :quality="g.quality" :off="!g.enabled" :struck="!g.enabled">
+                <span v-if="g.level != null" class="w-faint text-xs w-num">{{ g.level }}/{{ g.quality ?? 0 }}</span>
+              </GemName>
             </div>
           </div>
         </div>
@@ -145,15 +151,16 @@
 
       <!-- Notes -->
       <template v-else>
-        <div v-if="details.notes" class="whitespace-pre-wrap w-dim">{{ details.notes }}</div>
+        <div v-if="details.notes" class="whitespace-pre-wrap w-dim"><span v-for="(r, i) in noteRuns(details.notesRaw || details.notes)" :key="i" :style="r.colour ? { color: r.colour } : undefined">{{ r.text }}</span></div>
         <WEmpty v-else icon="fas fa-sticky-note">No notes in this build.</WEmpty>
       </template>
     </div>
+    <GameTooltip />
   </WPanel>
 </template>
 
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, shallowRef, useCssModule, watch } from 'vue'
 import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd, toast } from '../ui'
 import { useCopy } from '../ui/copy'
 import { SAVE_MESSAGE, saveToRegexLibrary } from '../regex-library/save'
@@ -164,16 +171,22 @@ import type { CampaignWidget } from '../campaign/widget'
 import { LOOT_FILTER_TYPE } from '../loot-filter/widget'
 import type { LootFilterWidget } from '../loot-filter/widget'
 import type { BuildRuleSwitches } from '../loot-filter/build-rules'
+import GameTooltip from './GameTooltip.vue'
+import GemName from './GemName.vue'
 import SocketDots from './SocketDots.vue'
 import { nextGems } from './gems'
-import type { GemColour } from './gems'
+import type { GemColour, NextGem } from './gems'
 import {
-  isGearSlot, itemSetsOf, linkColours, linkGroups, mainGroupOf, orderedGems, pickStage,
+  isGearSlot, itemSetsOf, linkColours, linkGroups, mainGroupOf, noteRuns, orderedGems, pickStage,
   relevantGems, skillSetsOf, slotLabel, socketGroups, socketRegex
 } from './build-model'
+import { itemArt } from './item-art'
+import { hideTip, showTip } from './tooltip'
 import { pobApi } from './widget'
 import type { PobBuildEntry, PobBuildsWidget, PobDetails, PobItem } from './widget'
 import { useActiveBuild } from './active'
+
+const $style = useCssModule()
 
 const props = defineProps<{
   config: PobBuildsWidget
@@ -189,6 +202,8 @@ const charName = build.charName
 const error = shallowRef('')
 
 const tab = shallowRef<'leveling' | 'gear' | 'setups' | 'filter' | 'notes'>('leveling')
+// The hovered row leaves with the tab, so no mouseleave comes.
+watch(tab, hideTip)
 const tabOptions = [
   { value: 'leveling', label: 'Leveling' },
   { value: 'gear', label: 'Gear' },
@@ -236,6 +251,12 @@ const campaign = computed(() => AppConfig<CampaignWidget>(CAMPAIGN_TYPE))
 const got = computed(() => campaign.value?.state.gemsGot ?? [])
 const canTick = computed(() => Boolean(campaign.value))
 
+function gemNote (g: NextGem): string {
+  const source = g.source ?? 'Not sold in the campaign: buy or drop'
+  if (!canTick.value) return source
+  return `${source}\nClick to mark as ${got.value.includes(g.name) ? 'not got yet' : 'got'}`
+}
+
 function toggleGot (name: string) {
   const state = campaign.value?.state
   if (!state) return
@@ -276,6 +297,16 @@ function rarityClass (rarity: PobItem['rarity']) {
     case 'RARE': return 'w-rarity-rare'
     case 'MAGIC': return 'w-rarity-magic'
     default: return 'w-rarity-normal'
+  }
+}
+
+function cellClass (rarity: PobItem['rarity']) {
+  switch (rarity) {
+    case 'UNIQUE':
+    case 'RELIC': return $style.cellUnique
+    case 'RARE': return $style.cellRare
+    case 'MAGIC': return $style.cellMagic
+    default: return undefined
   }
 }
 
@@ -341,11 +372,17 @@ function run (p: Promise<unknown>) {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 2px 0;
+  padding: 3px 0;
+}
+.names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  min-width: 0;
 }
 .gemRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   min-width: 0;
   padding: 2px 0;
@@ -369,11 +406,25 @@ function run (p: Promise<unknown>) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--w-line-soft);
   min-width: 0;
 }
-.slot { width: 3.6rem; flex: none; }
+.gearRow:hover { background: var(--w-line-soft); }
+/* An inventory cell, tinted by rarity as the game tints a hovered item. */
+.cell {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 30, 0.75);
+  border: 1px solid var(--w-line);
+}
+.cellUnique { background: rgba(175, 96, 37, 0.2); border-color: rgba(175, 96, 37, 0.6); }
+.cellRare { background: rgba(255, 255, 119, 0.08); border-color: rgba(255, 255, 119, 0.35); }
+.cellMagic { background: rgba(136, 136, 255, 0.12); border-color: rgba(136, 136, 255, 0.45); }
+.art { max-width: 40px; max-height: 40px; object-fit: contain; }
 .setup {
   padding: 4px 0;
   border-bottom: 1px solid var(--w-line-soft);

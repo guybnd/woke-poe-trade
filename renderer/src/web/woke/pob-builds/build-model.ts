@@ -329,6 +329,32 @@ export function buildFacts (d: PobDetails, level: number | null, act: number | n
   return facts
 }
 
+// ---- notes ----
+
+// PoB's ^0-^9 codes. Black and dark grey would vanish on the panel.
+const NOTE_COLOURS: Array<string | null> = [null, '#ff5555', '#55ff55', '#7f9fff', '#ffff55', '#ff55ff', '#55ffff', '#ffffff', '#b0b0b0', null]
+
+function readable (hex: string): string | null {
+  const n = parseInt(hex, 16)
+  const luma = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)
+  return luma < 70 ? null : `#${hex}`
+}
+
+// "^xFF0000Fire ^7and ice" -> coloured runs; null = the panel's text colour.
+export function noteRuns (raw: string): Array<{ text: string, colour: string | null }> {
+  const out: Array<{ text: string, colour: string | null }> = []
+  let colour: string | null = null
+  let at = 0
+  const push = (text: string) => { if (text) out.push({ text, colour }) }
+  for (const m of raw.matchAll(/\^x([0-9a-fA-F]{6})|\^(\d)/g)) {
+    push(raw.slice(at, m.index))
+    colour = m[1] ? readable(m[1]) : NOTE_COLOURS[Number(m[2])]
+    at = m.index + m[0].length
+  }
+  push(raw.slice(at))
+  return out
+}
+
 // ---- sockets on an item ----
 
 // "R-G-B B" -> [['r','g','b'], ['b']]

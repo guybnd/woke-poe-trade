@@ -44,6 +44,13 @@
   --w-r-gem: #1ba29b;
   --w-r-currency: #aa9e82;
   --w-r-divination: #7fb5d6;
+  --w-mod-crafted: #b4b4ff;
+  --w-mod-fractured: #a29162;
+  --w-tip-bg: rgba(6, 5, 4, 0.96);
+  --w-gem-r: #ea6f5f;       /* gem names as text: brighter than the socket dots */
+  --w-gem-g: #72cf64;
+  --w-gem-b: #7fa8f2;
+  --w-gem-w: #e6e2d8;
   --w-corrupt: #c58bd6;     /* corrupted / Vaal purple */
   --w-sock-r: #d0533f;      /* gem and socket colours */
   --w-sock-g: #57b04d;
@@ -234,6 +241,10 @@
 .w-rarity-gem { color: var(--w-r-gem); }
 .w-rarity-currency { color: var(--w-r-currency); }
 .w-rarity-divination { color: var(--w-r-divination); }
+.w-gem-r { color: var(--w-gem-r); }
+.w-gem-g { color: var(--w-gem-g); }
+.w-gem-b { color: var(--w-gem-b); }
+.w-gem-w { color: var(--w-gem-w); }
 
 /* Keyboard focus (pick K2): the hover look plus a gold edge, so the mouse and
  * the keys feel like one thing. .w-focus is set by useListNav for the active row. */

@@ -73,6 +73,18 @@ export interface PobItem {
   sockets: string
   implicits: string[]
   mods: string[]
+  // Older app versions don't send the rest.
+  modKinds?: Array<'' | 'crafted' | 'fractured'>
+  quality?: number
+  armour?: number
+  evasion?: number
+  energyShield?: number
+  ward?: number
+  itemLevel?: number
+  levelReq?: number
+  corrupted?: boolean
+  mirrored?: boolean
+  influences?: string[]
 }
 
 export interface PobItemSet {
@@ -87,6 +99,7 @@ export interface PobDetails {
   level: number | null
   mainSkill: string
   notes: string
+  notesRaw?: string
   skills: PobSkillGroup[]
   skillSets?: PobSkillSet[]
   trees: PobTreeSpec[]

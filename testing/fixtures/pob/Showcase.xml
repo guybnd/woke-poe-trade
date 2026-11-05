@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding>
+	<Build level="72" targetVersion="3_0" className="Witch" ascendClassName="Elementalist" mainSocketGroup="1"/>
+	<Skills activeSkillSet="1">
+		<SkillSet id="1" title="Act 1">
+			<Skill enabled="true" label="" slot="Body Armour">
+				<Gem nameSpec="Arc" gemId="Metadata/Items/Gems/SkillGemArc" skillId="Arc" level="20" quality="20" enabled="true"/>
+				<Gem nameSpec="Added Fire Damage" gemId="Metadata/Items/Gems/SupportGemAddedFireDamage" skillId="SupportAddedFireDamage" level="20" quality="0" enabled="true"/>
+				<Gem nameSpec="Faster Attacks" gemId="Metadata/Items/Gems/SupportGemFasterAttacks" skillId="SupportFasterAttacks" level="1" quality="0" enabled="true"/>
+				<Gem nameSpec="Controlled Destruction" gemId="Metadata/Items/Gems/SupportGemControlledDestruction" skillId="SupportControlledDestruction" level="1" quality="0" enabled="false"/>
+			</Skill>
+			<Skill enabled="true" label="Utility" slot="Boots">
+				<Gem nameSpec="Portal" gemId="Metadata/Items/Gems/SkillGemPortal" skillId="Portal" level="1" quality="0" enabled="true"/>
+				<Gem nameSpec="Vaal Grace" gemId="Metadata/Items/Gems/SkillGemVaalGrace" skillId="VaalGrace" level="1" quality="0" enabled="true"/>
+			</Skill>
+		</SkillSet>
+	</Skills>
+	<Items activeItemSet="1">
+		<Item id="1">
+			Rarity: RARE
+Dread Shell
+Vaal Regalia
+Crusader Item
+Hunter Item
+Item Level: 86
+Quality: 20
+Energy Shield: 412
+Sockets: B-B-B-R-G-W
+LevelReq: 68
+Implicits: 1
++12% to Lightning Resistance
+{crafted}+40 to maximum Energy Shield
+{fractured}82% increased Energy Shield
++62 to maximum Life
++30% to Fire Resistance
+Corrupted
+			<ModRange range="0.5" id="1"/>
+		</Item>
+		<Item id="2">
+			Rarity: UNIQUE
+Kaom&apos;s Binding
+Heavy Belt
+Item Level: 80
+LevelReq: 8
+Implicits: 1
++25 to Strength
++30 to Strength
+10% chance to Avoid being Stunned
+		</Item>
+		<Item id="3">
+			Rarity: MAGIC
+Seething Divine Life Flask of Staunching
+Item Level: 84
+Quality: 20
+Implicits: 0
+Instant Recovery when on Low Life
+Grants Immunity to Bleeding
+		</Item>
+		<Item id="4">
+			Rarity: NORMAL
+Sapphire Ring
+Implicits: 1
++20% to Cold Resistance
+		</Item>
+		<ItemSet id="1" title="Default">
+			<Slot name="Body Armour" itemId="1"/>
+			<Slot name="Belt" itemId="2"/>
+			<Slot name="Flask 1" itemId="3"/>
+			<Slot name="Ring 1" itemId="4"/>
+		</ItemSet>
+	</Items>
+	<Notes>^xFF5555Fire^7 first, then ^x55FFFFcold^7.
+^0Black reads as plain text.</Notes>
+	<Tree activeSpec="1">
+		<Spec title="Endgame"><URL>https://www.pathofexile.com/passive-skill-tree/AAAA</URL></Spec>
+	</Tree>
+</PathOfBuilding>

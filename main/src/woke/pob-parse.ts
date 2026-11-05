@@ -49,7 +49,22 @@ export interface PobItem {
   sockets: string
   implicits: string[]
   mods: string[]
+  // Same length as mods when any mod is crafted or fractured.
+  modKinds?: PobModKind[]
+  quality?: number
+  armour?: number
+  evasion?: number
+  energyShield?: number
+  ward?: number
+  itemLevel?: number
+  levelReq?: number
+  corrupted?: boolean
+  mirrored?: boolean
+  // Shaper, Elder, Crusader, Hunter, Redeemer, Warlord
+  influences?: string[]
 }
+
+export type PobModKind = '' | 'crafted' | 'fractured'
 
 export interface PobItemSlot {
   slot: string
@@ -64,6 +79,8 @@ export interface PobItemSet {
 
 export interface PobDetails extends PobSummary {
   notes: string
+  // Notes with PoB's colour codes kept (^7, ^xFFFFFF).
+  notesRaw: string
   // Groups of the active skill set.
   skills: PobSkillGroup[]
   // Every skill set (levelling builds often have one per act or level range).
@@ -172,6 +189,16 @@ function parseTrees (xml: string): PobTreeSpec[] {
 // Mod lines may start with {tags}; {variant:1,2} limits a line to variants.
 const ITEM_META = /^(Unique ID|Item Level|Quality|Sockets|LevelReq|Requires|Selected Variant|Selected Alt Variant|Variant|Has Alt Variant|League|Source|Upgrade|Radius|Limited to|Crafted|Prefix|Suffix|Catalyst|CatalystQuality|Cluster Jewel Skill|Cluster Jewel Node Count|Armour|Evasion|Energy Shield|Ward|Talisman Tier|Item Class|Shaper Item|Elder Item|Crusader Item|Hunter Item|Redeemer Item|Warlord Item|Searing Exarch Item|Eater of Worlds Item|Synthesised Item|Fractured Item|Corrupted|Mirrored|Split|Unreleased|Foulborn|Note)\b/
 
+const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShield' | 'ward' | 'itemLevel' | 'levelReq']> = [
+  [/^Quality:\s*\+?(\d+)/, 'quality'],
+  [/^Armour:\s*(\d+)/, 'armour'],
+  [/^Evasion:\s*(\d+)/, 'evasion'],
+  [/^Energy Shield:\s*(\d+)/, 'energyShield'],
+  [/^Ward:\s*(\d+)/, 'ward'],
+  [/^Item Level:\s*(\d+)/, 'itemLevel'],
+  [/^LevelReq:\s*(\d+)/, 'levelReq']
+]
+
 export function parseItemText (text: string): PobItem {
   const lines = decodeEntities(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   const item: PobItem = { rarity: '', name: '', base: '', sockets: '', implicits: [], mods: [] }
@@ -184,6 +211,7 @@ export function parseItemText (text: string): PobItem {
   }
   let variant: number | null = null
   let implicitsLeft = -1
+  const kinds: PobModKind[] = []
   for (; i < lines.length; i++) {
     const line = lines[i]
     const sel = /^Selected Variant:\s*(\d+)/.exec(line)
@@ -192,14 +220,26 @@ export function parseItemText (text: string): PobItem {
     if (sock) { item.sockets = sock[1].trim(); continue }
     const imp = /^Implicits:\s*(\d+)/.exec(line)
     if (imp) { implicitsLeft = Number(imp[1]); continue }
-    if (implicitsLeft < 0) continue
+    if (line === 'Corrupted') { item.corrupted = true; continue }
+    if (line === 'Mirrored') { item.mirrored = true; continue }
+    const influence = /^(Shaper|Elder|Crusader|Hunter|Redeemer|Warlord) Item$/.exec(line)
+    if (influence) { (item.influences ??= []).push(influence[1]); continue }
+    if (implicitsLeft < 0) {
+      for (const [re, key] of ITEM_NUMBERS) {
+        const n = re.exec(line)
+        if (n && Number(n[1]) > 0) item[key] = Number(n[1])
+      }
+      continue
+    }
     // Flags PoB writes after the mods aren't mods.
-    if (/^(Corrupted|Mirrored|Split|Unreleased|Foulborn|Fractured Item|Synthesised Item)$/.test(line)) continue
+    if (/^(Split|Unreleased|Foulborn|Fractured Item|Synthesised Item)$/.test(line)) continue
     let mod = line
     let allowed = true
+    let kind: PobModKind = ''
     for (const tag of mod.matchAll(/\{([^}]*)\}/g)) {
       const v = /^variant:([\d,]+)$/.exec(tag[1])
       if (v && variant != null && !v[1].split(',').map(Number).includes(variant)) allowed = false
+      if (tag[1] === 'crafted' || tag[1] === 'fractured') kind = tag[1]
     }
     mod = mod.replace(/\{[^}]*\}/g, '').trim()
     if (!mod) continue
@@ -208,8 +248,10 @@ export function parseItemText (text: string): PobItem {
       if (allowed) item.implicits.push(mod)
     } else if (allowed) {
       item.mods.push(mod)
+      kinds.push(kind)
     }
   }
+  if (kinds.some(Boolean)) item.modKinds = kinds
   return item
 }
 
@@ -267,6 +309,7 @@ export function parseBuild (xml: string): PobDetails {
     mainSkill: mainSkillName(skills),
     // PoB colour codes like ^7 or ^xFFFFFF are stripped.
     notes: notesMatch ? decodeEntities(notesMatch[1]).replace(/\^x[0-9a-fA-F]{6}|\^\d/g, '').trim() : '',
+    notesRaw: notesMatch ? decodeEntities(notesMatch[1]).trim() : '',
     skills,
     skillSets,
     trees: parseTrees(xml),
