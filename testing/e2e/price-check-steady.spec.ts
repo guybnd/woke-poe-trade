@@ -49,6 +49,7 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   // Through the first search too: loading, then the verdict arriving.
   expect(await top(panel.getByText('18% increased Stun and Block Recovery').first())).toBe(stunBeforeSearch)
   await expect(panel).toContainText('Matched: 12')
+  await expect(panel.locator('.w-pc-foot')).toBeVisible()
   await expect(panel.locator('.w-pc-foot')).toContainText('12 of 12')
 
   const stun = panel.getByText('18% increased Stun and Block Recovery').first()
