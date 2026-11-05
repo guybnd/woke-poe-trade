@@ -28,10 +28,15 @@
     <div v-show="!minimized" :class="[$style.body, { 'w-scroll': scroll, 'w-stale': stale }]"><slot /></div>
     <div v-if="$slots.footer" v-show="!minimized" :class="$style.footer"><slot name="footer" /></div>
     <template v-if="canResize">
-      <span :class="[$style.edgeX, hSide === 'left' ? $style.onLeft : $style.onRight]" @mousedown="startResize($event, true, false)" />
-      <span :class="[$style.edgeY, vSide === 'top' ? $style.onTop : $style.onBottom]" @mousedown="startResize($event, false, true)" />
-      <span :class="[$style.grip, hSide === 'left' ? $style.onLeft : $style.onRight, vSide === 'top' ? $style.onTop : $style.onBottom]"
-        title="Drag to resize · right-click the panel to reset" @mousedown="startResize($event, true, true)" />
+      <span v-for="s in hSides" :key="`x${s}`" :class="[$style.edgeX, s === 'start' ? $style.onLeft : $style.onRight]"
+        @mousedown="startResize($event, s, null)" />
+      <span v-for="s in vSides" :key="`y${s}`" :class="[$style.edgeY, s === 'start' ? $style.onTop : $style.onBottom]"
+        @mousedown="startResize($event, null, s)" />
+      <template v-for="h in hSides" :key="`c${h}`">
+        <span v-for="v in vSides" :key="v"
+          :class="[$style.grip, h === 'start' ? $style.onLeft : $style.onRight, v === 'start' ? $style.onTop : $style.onBottom]"
+          title="Drag to resize · right-click the panel to reset" @mousedown="startResize($event, h, v)" />
+      </template>
     </template>
   </div>
 </template>
@@ -41,8 +46,10 @@
 // the hotkey that opens it, then optional banner/tabs/toolbar/meta, a
 // scrolling body and a footer. Keyboard (P8): arrow keys move between rows,
 // "/" jumps to the first search field, Esc leaves a field.
-import { computed, inject, onBeforeUnmount, ref, useSlots } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
 import { snapEdge, clearGuides, releaseWebviewsForDrag } from './snap'
+import { anchorShare, heightCap, resizeAxis, unzoom } from './panel-fit'
+import type { Box, ResizeSide } from './panel-fit'
 import WIcon from './WIcon.vue'
 import WKbd from './WKbd.vue'
 import { ago, freshness } from './format'
@@ -94,8 +101,15 @@ const root = ref<HTMLElement | null>(null)
 // ---- Size (P10, P17) ----
 interface WindowAction { id: string, label: string, icon: string, active?: boolean, danger?: boolean, action: () => void }
 interface SizedConfig {
-  anchor?: { pos: string, y: number }
+  anchor?: { pos: string, x: number, y: number }
   wokeSizes?: Record<string, { w?: number, h?: number }>
+  // From the surrounding Widget: whether it can move, its box and element, and
+  // keeping it on screen (see Widget.vue).
+  canMove?: boolean
+  element?: HTMLElement | null
+  bounds?: () => Box | null
+  beginResize?: () => () => void
+  watchSize?: (el: Element) => () => void
   // From the surrounding Widget: its window buttons and minimized state.
   minimized?: boolean
   canMinimize?: boolean
@@ -124,10 +138,11 @@ const minimizesFromHead = computed(() => primary.value && !!cfg?.canMinimize)
 
 const canResize = computed(() => props.resizable && !!cfg?.anchor && !minimized.value)
 const saved = computed(() => cfg?.wokeSizes?.[props.sizeKey])
-// Handles sit on the sides away from the widget's anchor, so the panel grows
-// toward the mouse.
-const hSide = computed(() => cfg?.anchor?.pos[1] === 'r' ? 'left' : 'right')
-const vSide = computed(() => cfg?.anchor?.pos[0] === 'b' ? 'top' : 'bottom')
+const BOTH_SIDES: ResizeSide[] = ['start', 'end']
+// Every edge and corner resizes. A widget that can't move can't keep its far
+// edge in place, so it only has the sides away from its anchor.
+const hSides = computed<ResizeSide[]>(() => cfg?.canMove ? BOTH_SIDES : [cfg?.anchor?.pos[1] === 'r' ? 'start' : 'end'])
+const vSides = computed<ResizeSide[]>(() => cfg?.canMove ? BOTH_SIDES : [cfg?.anchor?.pos[0] === 'b' ? 'start' : 'end'])
 
 const MINIMIZED_WIDTH = '16rem'
 
@@ -135,55 +150,99 @@ const boxStyle = computed(() => {
   if (minimized.value) return primary.value ? { width: MINIMIZED_WIDTH, maxHeight: 'none' } : { display: 'none' }
   const s = saved.value
   const a = cfg?.anchor
-  // A fixed height stops at the screen bottom, so the resize handle stays
-  // reachable wherever the widget is dragged. Width shrinks by itself: the
-  // widget has a max-width, and panels may go narrower than their content.
-  const fixed = s?.h || props.height
-  const fit = fixed && a?.pos[0] === 't' ? `calc(${100 - a.y}vh - 4px)` : undefined
+  // Never taller than the room from the anchor to the screen edge, however it's
+  // anchored or sized. Width shrinks by itself: the widget has a max-width, and
+  // panels may go narrower than their content.
+  const base = s?.h || props.height ? 'none' : unzoom(props.maxHeight)
+  const cap = a ? heightCap(a.pos, a.y) : undefined
   return {
-    width: s?.w ? `${s.w}px` : props.width,
-    height: s?.h ? `${s.h}px` : props.height,
-    maxHeight: fit ?? (s?.h ? 'none' : props.maxHeight)
+    width: s?.w ? `${s.w}px` : unzoom(props.width),
+    height: s?.h ? `${s.h}px` : unzoom(props.height),
+    maxWidth: a ? 'calc((100vw - 8px) / var(--w-ui-scale, 1))' : undefined,
+    maxHeight: !cap ? base : base === 'none' ? cap : `min(${base}, ${cap})`
   }
 })
+
+let stopWatchingSize: (() => void) | undefined
+onMounted(() => { if (root.value) stopWatchingSize = cfg?.watchSize?.(root.value) })
+onBeforeUnmount(() => stopWatchingSize?.())
 
 function uiScale () {
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
 }
 
-function startResize (e: MouseEvent, x: boolean, y: boolean) {
+// Drags one or two edges; the edges opposite stay where they are. The widget's
+// anchor moves to make that so: by the rule when it can be worked out, which
+// also lifts the widget's max-size in time, then by measuring, for panels whose
+// neighbours change how the widget grows.
+function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide | null) {
   const el = root.value
-  if (!el || !cfg || e.button !== 0) return
+  const anchor = cfg?.anchor
+  if (!el || !cfg || !anchor || e.button !== 0) return
   e.preventDefault()
   e.stopPropagation()
+  const stopResize = cfg.beginResize?.()
   const r = el.getBoundingClientRect()
+  const box = cfg.bounds?.() ?? r
   const scale = uiScale()
-  const pos = cfg.anchor?.pos ?? 'tl'
-  const xGrow = (pos[1] === 'c' ? 2 : 1) * (hSide.value === 'left' ? -1 : 1)
-  const yGrow = (pos[0] === 'c' ? 2 : 1) * (vSide.value === 'top' ? -1 : 1)
-  const xEdge = hSide.value === 'left' ? r.left : r.right
-  const yEdge = vSide.value === 'top' ? r.top : r.bottom
+  const W = window.innerWidth
+  const H = window.innerHeight
+  const startX = anchor.x
+  const startY = anchor.y
+  const movable = !!cfg.canMove
+  const xEdge = hSide === 'start' ? r.left : r.right
+  const yEdge = vSide === 'start' ? r.top : r.bottom
+  const xFixed = hSide === 'start' ? r.right : r.left
+  const yFixed = vSide === 'start' ? r.bottom : r.top
+  // Neighbours in the widget move along with this panel, so they aren't snap
+  // targets: their edge sits on this one and would hold it in place.
+  const snapSelf = cfg.element ?? el
   const restoreWebviews = releaseWebviewsForDrag()
 
   function onMove (ev: MouseEvent) {
     const next = { ...(cfg!.wokeSizes?.[props.sizeKey] ?? {}) }
-    if (x) {
-      const edge = snapEdge('x', xEdge + ev.clientX - e.clientX, el, ev.altKey)
-      const w = (r.width + (edge - xEdge) * xGrow) / scale
-      next.w = Math.round(Math.min(Math.max(w, 200), (window.innerWidth - 16) / scale))
+    if (hSide) {
+      const edge = snapEdge('x', xEdge + ev.clientX - e.clientX, snapSelf, ev.altKey)
+      const a = resizeAxis({
+        side: hSide,
+        delta: edge - xEdge,
+        size: r.width,
+        room: hSide === 'start' ? box.left : W - box.right,
+        scale,
+        min: 200,
+        share: anchorShare(anchor!.pos, 'x')
+      })
+      next.w = a.size
+      if (movable) anchor!.x = startX + a.shift / W * 100
     }
-    if (y) {
-      const edge = snapEdge('y', yEdge + ev.clientY - e.clientY, el, ev.altKey)
-      const h = (r.height + (edge - yEdge) * yGrow) / scale
-      next.h = Math.round(Math.min(Math.max(h, 120), (window.innerHeight - 16) / scale))
+    if (vSide) {
+      const edge = snapEdge('y', yEdge + ev.clientY - e.clientY, snapSelf, ev.altKey)
+      const a = resizeAxis({
+        side: vSide,
+        delta: edge - yEdge,
+        size: r.height,
+        room: vSide === 'start' ? box.top : H - box.bottom,
+        scale,
+        min: 120,
+        share: anchorShare(anchor!.pos, 'y')
+      })
+      next.h = a.size
+      if (movable) anchor!.y = startY + a.shift / H * 100
     }
     cfg!.wokeSizes = { ...(cfg!.wokeSizes ?? {}), [props.sizeKey]: next }
+    if (movable) nextTick(holdFarEdges)
+  }
+  function holdFarEdges () {
+    const now = el!.getBoundingClientRect()
+    if (hSide) anchor!.x += (xFixed - (hSide === 'start' ? now.right : now.left)) / W * 100
+    if (vSide) anchor!.y += (yFixed - (vSide === 'start' ? now.bottom : now.top)) / H * 100
   }
   function onUp () {
     restoreWebviews()
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
     clearGuides()
+    stopResize?.()
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
@@ -342,8 +401,10 @@ defineExpose({ el: root })
 .grip { width: 12px; height: 12px; opacity: 0; transition: opacity var(--w-dur-in); }
 .grip.onRight.onBottom { right: 1px; bottom: 1px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 0 50%, var(--w-line-strong) 50% 60%, transparent 60% 72%, var(--w-line-strong) 72% 82%, transparent 82%); }
 .grip.onLeft.onBottom { left: 1px; bottom: 1px; cursor: nesw-resize; background: linear-gradient(225deg, transparent 0 50%, var(--w-line-strong) 50% 60%, transparent 60% 72%, var(--w-line-strong) 72% 82%, transparent 82%); }
-.grip.onRight.onTop { right: 1px; top: 1px; cursor: nesw-resize; background: linear-gradient(45deg, transparent 0 50%, var(--w-line-strong) 50% 60%, transparent 60% 72%, var(--w-line-strong) 72% 82%, transparent 82%); }
-.grip.onLeft.onTop { left: 1px; top: 1px; cursor: nwse-resize; background: linear-gradient(315deg, transparent 0 50%, var(--w-line-strong) 50% 60%, transparent 60% 72%, var(--w-line-strong) 72% 82%, transparent 82%); }
+/* Top corners sit beside the window buttons: small, and only the cursor shows. */
+.grip.onTop { width: 7px; height: 7px; }
+.grip.onRight.onTop { right: 0; top: 0; cursor: nesw-resize; }
+.grip.onLeft.onTop { left: 0; top: 0; cursor: nwse-resize; }
 .panel:hover > .grip { opacity: 1; }
 .footer {
   display: flex;

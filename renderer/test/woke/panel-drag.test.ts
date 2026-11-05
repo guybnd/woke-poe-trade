@@ -6,6 +6,7 @@ import { createSSRApp, h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clampDrag, releaseWebviewsForDrag } from '@/web/woke/ui/snap'
+import { anchorShare, fitOffset, heightCap, resizeAxis, unzoom } from '@/web/woke/ui/panel-fit'
 import WPanel from '@/web/woke/ui/WPanel.vue'
 
 const W = 1920
@@ -67,18 +68,24 @@ describe('releaseWebviewsForDrag', () => {
 })
 
 describe('WPanel size', () => {
-  async function render (wokeSizes?: Record<string, { w?: number, h?: number }>) {
+  async function render (
+    wokeSizes?: Record<string, { w?: number, h?: number }>,
+    anchor = { pos: 'tl', x: 30, y: 25 },
+    props: Record<string, unknown> = { width: '60vw', height: '75vh', maxHeight: 'none' },
+    canMove = true
+  ) {
     const app = createSSRApp({
-      render: () => h(WPanel, { sizeKey: 'browser', width: '60vw', height: '75vh', maxHeight: 'none' })
+      render: () => h(WPanel, { sizeKey: 'browser', ...props })
     })
-    app.provide('wokeWidgetConfig', { anchor: { pos: 'tl', y: 25 }, wokeSizes })
+    app.provide('wokeWidgetConfig', { anchor, wokeSizes, canMove })
     return await renderToString(app)
   }
+  const handles = (html: string) => html.match(/<span[^>]*class="[^"]*(edgeX|edgeY|grip)/g)?.length ?? 0
 
-  it('starts at the size it was given', async () => {
+  it('starts at the size it was given, as a real share of the window', async () => {
     const html = await render()
-    expect(html).toContain('width:60vw')
-    expect(html).toContain('height:75vh')
+    expect(html).toContain('width:calc(60vw / var(--w-ui-scale, 1))')
+    expect(html).toContain('height:calc(75vh / var(--w-ui-scale, 1))')
   })
 
   it('uses the size the user dragged it to', async () => {
@@ -87,11 +94,117 @@ describe('WPanel size', () => {
     expect(html).toContain('height:500px')
     expect(html).not.toContain('60vw')
     expect(html).not.toContain('height:75vh')
+    expect(html).not.toContain('height:calc(75vh /')
   })
 
-  it('stops at the screen bottom so the resize handle stays reachable', async () => {
-    expect(await render()).toContain('max-height:calc(75vh - 4px)')
-    expect(await render({ browser: { h: 900 } })).toContain('max-height:calc(75vh - 4px)')
+  it('stops at the screen edge however it is anchored', async () => {
+    const top = 'max-height:calc(max(75vh - 4px, 240px) / var(--w-ui-scale, 1))'
+    expect(await render()).toContain(top)
+    expect(await render({ browser: { h: 900 } })).toContain(top)
+    expect(await render({ browser: { h: 900 } }, { pos: 'br', x: 90, y: 60 })).toContain('max(60vh - 4px')
+    expect(await render({ browser: { h: 900 } }, { pos: 'cc', x: 50, y: 70 })).toContain('max(60vh - 4px')
+  })
+
+  it('caps a panel with its own max height by the room left too', async () => {
+    const html = await render(undefined, { pos: 'tl', x: 30, y: 50 }, { maxHeight: '75vh' })
+    expect(html).toContain('max-height:min(calc(75vh / var(--w-ui-scale, 1)), calc(max(50vh - 4px, 240px) / var(--w-ui-scale, 1)))')
+  })
+
+  it('has every edge and corner on a widget that can move', async () => {
+    expect(handles(await render())).toBe(8)
+  })
+
+  it('has only the far sides on a widget that cannot move', async () => {
+    const html = await render(undefined, { pos: 'tl', x: 30, y: 25 }, {}, false)
+    expect(handles(html)).toBe(3)
+  })
+})
+
+describe('unzoom', () => {
+  it('divides viewport units by the UI scale', () => {
+    expect(unzoom('75vh')).toBe('calc(75vh / var(--w-ui-scale, 1))')
+    expect(unzoom('60vw')).toBe('calc(60vw / var(--w-ui-scale, 1))')
+  })
+
+  it('leaves other lengths alone', () => {
+    for (const v of ['26rem', '900px', 'auto', 'none', undefined]) expect(unzoom(v)).toBe(v)
+  })
+})
+
+describe('heightCap', () => {
+  it('measures from the anchor to the far screen edge', () => {
+    expect(heightCap('tl', 10)).toContain('max(90vh - 4px')
+    expect(heightCap('bl', 10)).toContain('max(10vh - 4px')
+    expect(heightCap('cr', 30)).toContain('max(60vh - 4px')
+  })
+})
+
+describe('fitOffset', () => {
+  it('leaves a box on screen alone', () => {
+    expect(fitOffset({ left: 0, top: 0, right: W, bottom: H }, W, H)).toEqual({ x: 0, y: 0 })
+  })
+
+  it('pulls a box back from any edge', () => {
+    expect(fitOffset({ left: 1800, top: 900, right: 2100, bottom: 1200 }, W, H)).toEqual({ x: -180, y: -120 })
+    expect(fitOffset({ left: -50, top: -20, right: 300, bottom: 300 }, W, H)).toEqual({ x: 50, y: 20 })
+  })
+
+  it('keeps the top left on screen when the box is too big to fit', () => {
+    expect(fitOffset({ left: 100, top: 100, right: 2200, bottom: 1300 }, W, H)).toEqual({ x: -100, y: -100 })
+    expect(fitOffset({ left: -100, top: -100, right: 2000, bottom: 1100 }, W, H)).toEqual({ x: 100, y: 100 })
+  })
+})
+
+describe('resizeAxis', () => {
+  const base = { size: 500, room: 1000, scale: 1, min: 200, share: 0 }
+
+  it('grows toward the mouse', () => {
+    expect(resizeAxis({ ...base, side: 'end', delta: 100 }).size).toBe(600)
+    expect(resizeAxis({ ...base, side: 'start', delta: -100 }).size).toBe(600)
+  })
+
+  // Left edge, left-anchored: the anchor follows the mouse.
+  it('moves the anchor so the far edge stays put', () => {
+    expect(resizeAxis({ ...base, side: 'start', delta: -100, share: 0 }).shift).toBe(-100)
+    expect(resizeAxis({ ...base, side: 'start', delta: -100, share: 1 }).shift).toBeCloseTo(0)
+    expect(resizeAxis({ ...base, side: 'end', delta: 100, share: 0 }).shift).toBe(0)
+    expect(resizeAxis({ ...base, side: 'end', delta: 100, share: 1 }).shift).toBe(100)
+    expect(resizeAxis({ ...base, side: 'end', delta: 100, share: 0.5 }).shift).toBe(50)
+    expect(resizeAxis({ ...base, side: 'start', delta: -100, share: 0.5 }).shift).toBe(-50)
+  })
+
+  it('stops the moving edge at the screen', () => {
+    expect(resizeAxis({ ...base, side: 'end', delta: 900, room: 40 }).size).toBe(540)
+    expect(resizeAxis({ ...base, side: 'start', delta: -900, room: 40 })).toEqual({ size: 540, shift: -40 })
+  })
+
+  it('can shrink a panel with no room left, even one past the screen', () => {
+    expect(resizeAxis({ ...base, side: 'end', delta: -100, room: -300 }).size).toBe(400)
+  })
+
+  it('stops at the smallest size without moving the far edge', () => {
+    expect(resizeAxis({ ...base, side: 'start', delta: 900 })).toEqual({ size: 200, shift: 300 })
+  })
+
+  it('does not jump a panel already below the smallest size', () => {
+    expect(resizeAxis({ ...base, size: 150, side: 'end', delta: 0 }).size).toBe(150)
+  })
+
+  it('works in zoomed panel px', () => {
+    const a = resizeAxis({ ...base, size: 675, scale: 1.35, side: 'end', delta: 135, share: 1 })
+    expect(a.size).toBe(600)
+    expect(a.shift).toBeCloseTo(135)
+  })
+})
+
+describe('anchorShare', () => {
+  it('reads each axis of the anchor', () => {
+    expect(anchorShare('tl', 'x')).toBe(0)
+    expect(anchorShare('tr', 'x')).toBe(1)
+    expect(anchorShare('tc', 'x')).toBe(0.5)
+    expect(anchorShare('tl', 'y')).toBe(0)
+    expect(anchorShare('bl', 'y')).toBe(1)
+    expect(anchorShare('cl', 'y')).toBe(0.5)
   })
 })
 

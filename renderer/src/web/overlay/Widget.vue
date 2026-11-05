@@ -1,6 +1,7 @@
 <template>
   <div @mousedown="handleMouseDown" @contextmenu="handleContextMenu">
-    <div ref="widgetEl" :class="[$style.widget, { 'opacity-75': isMoving, [$style.draggable]: moveHandles !== 'none' }]" :style="widgetPosition">
+    <div ref="widgetEl" :class="[$style.widget, { 'opacity-75': isMoving, [$style.draggable]: moveHandles !== 'none' }]" :style="widgetPosition"
+      @animationend="handleAnimationEnd">
       <slot :isEditing="isEditing" :isMoving="isMoving" />
       <div v-if="isMoving">
         <div v-if="isHandleShown('tl')" :class="$style.mover" @mousedown="startMove('tl', $event)" style="left: -0.5rem; top: -0.5rem;"></div>
@@ -19,12 +20,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed, inject, provide, ref, shallowRef } from 'vue'
+import { defineComponent, PropType, computed, inject, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { Widget, Anchor, WidgetManager } from './interfaces'
 import { useI18n } from 'vue-i18n'
 import { snapMove, clearGuides, clampDrag, releaseWebviewsForDrag, swallowNextClick } from '@/web/woke/ui/snap'
 import { openMenu, toast } from '@/web/woke/ui/layer'
 import type { MenuEntry } from '@/web/woke/ui/layer'
+import { fitOffset } from '@/web/woke/ui/panel-fit'
 import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
 import type { MinimizedState } from '@/web/woke/ui/window-anchor'
 
@@ -77,10 +79,79 @@ export default defineComponent({
     const canMinimize = computed(() => props.moveHandles !== 'none' && (panels.value.length > 0 || !!woke().wokeMinimized))
     const minimized = computed(() => canMinimize.value && !!woke().wokeMinimized)
 
+    // ---- Staying on screen ----
+    // A widget that overflows is drawn shifted back on screen when it opens,
+    // changes size, or the window changes. The shift isn't saved: the overlay
+    // window can be briefly small, and a panel's content can grow for a moment,
+    // and neither should lose where the user put it. Moving or resizing the
+    // widget by hand makes the shifted spot the real one.
+    const fitShift = shallowRef({ x: 0, y: 0 })
+    let fitHeld = false
+
+    // Fixed-height panels can stick out of the widget's own box.
+    function widgetBounds () {
+      const el = widgetEl.value
+      if (!el) return null
+      const r = el.getBoundingClientRect()
+      if (!r.width && !r.height) return null
+      const box = { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+      for (const panel of el.querySelectorAll('[data-w-panel]')) {
+        const p = panel.getBoundingClientRect()
+        if (!p.width || !p.height) continue
+        box.left = Math.min(box.left, p.left)
+        box.top = Math.min(box.top, p.top)
+        box.right = Math.max(box.right, p.right)
+        box.bottom = Math.max(box.bottom, p.bottom)
+      }
+      return box
+    }
+
+    function fitToScreen () {
+      if (fitHeld || isMoving.value) return
+      const zero = { x: 0, y: 0 }
+      if (props.moveHandles === 'none') { fitShift.value = zero; return }
+      const box = widgetBounds()
+      const W = window.innerWidth
+      const H = window.innerHeight
+      if (!box || !W || !H) return
+      const { x, y } = fitShift.value
+      const next = fitOffset({ left: box.left - x, right: box.right - x, top: box.top - y, bottom: box.bottom - y }, W, H)
+      if (next.x !== x || next.y !== y) fitShift.value = next
+    }
+
+    function bakeFitShift () {
+      const { x, y } = fitShift.value
+      if (!x && !y) return
+      props.config.anchor.x += x / window.innerWidth * 100
+      props.config.anchor.y += y / window.innerHeight * 100
+      fitShift.value = { x: 0, y: 0 }
+    }
+
+    function beginResize () {
+      bakeFitShift()
+      fitHeld = true
+      return () => { fitHeld = false; fitToScreen() }
+    }
+
+    // Fires on opening too: a hidden widget has no size. Made on first use, as
+    // the panels inside mount before this component does.
+    let sizeObserver: ResizeObserver | null = null
+    const observer = () => (sizeObserver ??= new ResizeObserver(fitToScreen))
+    onMounted(() => {
+      if (widgetEl.value) observer().observe(widgetEl.value)
+      window.addEventListener('resize', fitToScreen)
+    })
+    onBeforeUnmount(() => {
+      sizeObserver?.disconnect()
+      window.removeEventListener('resize', fitToScreen)
+    })
+    watch(() => [props.config.anchor.pos, props.config.anchor.x, props.config.anchor.y], fitToScreen, { flush: 'post' })
+
     function toggleMinimize () {
       if (!widgetEl.value || !canMinimize.value) return
       const rect = widgetEl.value.getBoundingClientRect()
       const state = woke().wokeMinimized
+      fitShift.value = { x: 0, y: 0 }
       if (state) {
         props.config.anchor = restoreAnchor(state, props.config.anchor, rect, window.innerWidth, window.innerHeight)
         woke().wokeMinimized = undefined
@@ -105,6 +176,7 @@ export default defineComponent({
       }
     }
     function toggleMove () {
+      bakeFitShift()
       isMoving.value = !isMoving.value
       isEditing.value = false
     }
@@ -161,6 +233,14 @@ export default defineComponent({
       get anchor () { return props.config.anchor },
       get wokeSizes () { return woke().wokeSizes },
       set wokeSizes (v: Record<string, unknown> | undefined) { woke().wokeSizes = v },
+      get canMove () { return props.moveHandles !== 'none' },
+      get element () { return widgetEl.value },
+      bounds: widgetBounds,
+      beginResize,
+      watchSize (el: Element) {
+        observer().observe(el)
+        return () => observer().unobserve(el)
+      },
       get minimized () { return minimized.value },
       get canMinimize () { return canMinimize.value },
       get windowActions () { return windowActions.value },
@@ -181,6 +261,7 @@ export default defineComponent({
 
     const widgetPosition = computed(() => {
       const { anchor, wmZorder } = props.config
+      const shift = fitShift.value
 
       // <top, center, bottom><left, center, right>
       let translate: string | undefined
@@ -215,8 +296,8 @@ export default defineComponent({
       }
 
       return {
-        'top': `${anchor.y}%`,
-        'left': `${anchor.x}%`,
+        'top': shift.y ? `calc(${anchor.y}% + ${shift.y}px)` : `${anchor.y}%`,
+        'left': shift.x ? `calc(${anchor.x}% + ${shift.x}px)` : `${anchor.x}%`,
         'max-width': `${max.w}%`,
         'max-height': `${max.h}%`,
         'transform': translate,
@@ -245,6 +326,7 @@ export default defineComponent({
 
     function startMove (pos: string, e: MouseEvent) {
       const restoreWebviews = releaseWebviewsForDrag()
+      fitShift.value = { x: 0, y: 0 }
       props.config.anchor.pos = pos
       updatePosition(e)
       document.addEventListener('mousemove', updatePosition)
@@ -267,7 +349,9 @@ export default defineComponent({
       e.preventDefault()
 
       const rect = widgetEl.value.getBoundingClientRect()
-      const { x: startX, y: startY } = props.config.anchor
+      // From where it's drawn, which can differ from the saved spot (see fitToScreen).
+      const startX = props.config.anchor.x + fitShift.value.x / window.innerWidth * 100
+      const startY = props.config.anchor.y + fitShift.value.y / window.innerHeight * 100
       const restoreWebviews = releaseWebviewsForDrag()
       let dragged = false
 
@@ -275,6 +359,7 @@ export default defineComponent({
         const dx = ev.clientX - e.clientX
         const dy = ev.clientY - e.clientY
         if (!dragged && Math.hypot(dx, dy) < DRAG_START_PX) return
+        if (!dragged) { fitHeld = true; fitShift.value = { x: 0, y: 0 } }
         dragged = true
         // Snaps to screen edges and other panels (Alt moves freely), then
         // keeps it on screen (see clampDrag).
@@ -288,6 +373,9 @@ export default defineComponent({
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
         clearGuides()
+        // Stays where it was dropped, even partly off screen: a big panel can be
+        // pushed aside (see clampDrag), and it comes back the next time it opens.
+        fitHeld = false
         if (dragged) swallowNextClick()
       }
       document.addEventListener('mousemove', onMove)
@@ -304,6 +392,11 @@ export default defineComponent({
       widgetPosition,
       widgetEl,
       handleContextMenu,
+      // Panels rise into place when they open, which throws off a measurement
+      // taken during that.
+      handleAnimationEnd (e: AnimationEvent) {
+        if (e.animationName === 'w-enter') fitToScreen()
+      },
       handleMouseDown (e: MouseEvent) {
         // @TODO: why null check?
         if (props.config.wmId != null) {

@@ -37,7 +37,7 @@ art wherever the game has it, readable fonts (nothing under 11px).
 
 | Component | Use |
 | --- | --- |
-| `WPanel` | Widget shell. Slots: `title`, `actions`, `banner`, `tabs`, `toolbar`, `meta`, default body (scrolls), `footer`. Props: `title`, `width`, `maxHeight`, `scroll`, `icon` (game art id/path), `updated` (ms, shows data age), `hotkey`, `busy` (refresh bar), `stale` (dims body). Arrow keys move between rows, `/` focuses the search field. Inside a `Widget`, the first titled panel carries the window buttons (settings, delete, minimize, hide) and drags the widget; double-clicking its title minimizes, and right-clicking gives the same options plus Choose anchor corner and Reset size. |
+| `WPanel` | Widget shell. Slots: `title`, `actions`, `banner`, `tabs`, `toolbar`, `meta`, default body (scrolls), `footer`. Props: `title`, `width`, `maxHeight`, `scroll`, `icon` (game art id/path), `updated` (ms, shows data age), `hotkey`, `busy` (refresh bar), `stale` (dims body). Inside a movable `Widget` it resizes from every edge and corner with the opposite side staying put, and the widget is drawn back on screen if it overflows (`panel-fit.ts`). Arrow keys move between rows, `/` focuses the search field. Inside a `Widget`, the first titled panel carries the window buttons (settings, delete, minimize, hide) and drags the widget; double-clicking its title minimizes, and right-clicking gives the same options plus Choose anchor corner and Reset size. |
 | `WTabs` | Underlined tabs, `v-model` + `options: { value, label, count? }[]`. |
 | `WSegmented` | Small segmented control (periods, modes). |
 | `WField` | Text/number/search input with optional `icon` and `suffix`; Esc clears. |
