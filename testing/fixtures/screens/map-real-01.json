@@ -17,7 +17,8 @@
     "Monsters cannot be Taunted",
     "Monsters Maim on Hit with Attacks",
     "Monsters' Action Speed cannot be modified to below Base Value",
-    "Monsters' Movement Speed cannot be modified to below Base Value"
+    "Monsters' Movement Speed cannot be modified to below Base Value",
+    "Monsters' Action Speed cannot be modified to below Base Value\nMonsters' Movement Speed cannot be modified to below Base Value"
   ],
   "modLines": [
     "Players cannot inflict Exposure",

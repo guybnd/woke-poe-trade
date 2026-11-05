@@ -13,16 +13,18 @@ const MANIFEST = path.join(DATA, 'data-version.json')
 
 // Without carriage returns: a Windows checkout can add them, and the files on
 // GitHub don't have them.
+/** @param {string} text */
 export function hashData (text) {
   return createHash('sha256').update(text.replace(/\r\n/g, '\n')).digest('hex')
 }
 
 export function currentHashes () {
+  /** @type {Record<string, Record<string, string>>} */
   const out = {}
   for (const lang of LANGUAGES) {
-    out[lang] = {}
+    const hashes = out[lang] = /** @type {Record<string, string>} */ ({})
     for (const name of ['items', 'stats']) {
-      out[lang][name] = hashData(fs.readFileSync(path.join(DATA, lang, `${name}.ndjson`), 'utf8'))
+      hashes[name] = hashData(fs.readFileSync(path.join(DATA, lang, `${name}.ndjson`), 'utf8'))
     }
   }
   return out

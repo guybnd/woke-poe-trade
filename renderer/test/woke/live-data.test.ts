@@ -4,7 +4,6 @@ import fs from 'fs'
 import path from 'path'
 import { ITEM_BY_REF, STAT_BY_REF_V2, stat, useLiveData } from '@/assets/data'
 import { buildItemIndexes, buildStatIndexes } from '@/assets/data/build-indexes'
-// @ts-expect-error A plain script, with no types.
 import { currentHashes } from '@/assets/bump-data-version.mjs'
 import { loadGameData } from '../helpers/game-data'
 
