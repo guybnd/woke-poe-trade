@@ -20,6 +20,67 @@ test('currency: Ctrl+D shows the poe.ninja price and bulk exchange offers', asyn
   expect(JSON.parse(posted!.body).query.want).toEqual(['divine'])
 })
 
+test('the window can be dragged, resized, saved and put back', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const panel = overlay.page.locator('#price-window')
+  await expect(panel).toContainText('Divine Orb')
+  const box = async () => (await panel.boundingBox())!
+  const page = overlay.page
+  const start = await box()
+  const leaguePicker = page.getByText('Testleague')
+
+  // By the title bar, and the drag doesn't open the league picker.
+  const title = await leaguePicker.boundingBox()
+  await page.mouse.move(title!.x + 5, title!.y + 5)
+  await page.mouse.down()
+  await page.mouse.move(title!.x + 105, title!.y + 85, { steps: 4 })
+  await page.mouse.up()
+  const moved = await box()
+  expect(Math.abs(moved.x - start.x - 100)).toBeLessThan(10)
+  expect(Math.abs(moved.y - start.y - 80)).toBeLessThan(10)
+  await expect(page.getByTestId('price-window-dock')).toBeVisible()
+  await expect(panel).toBeVisible()
+  await expect(overlay.widget('settings')).toBeHidden()
+
+  // From the corner: the top left stays put.
+  const grip = (await page.getByTestId('price-window-resize').boundingBox())!
+  await page.mouse.move(grip.x + 6, grip.y + 6)
+  await page.mouse.down()
+  await page.mouse.move(grip.x + 66, grip.y - 44, { steps: 4 })
+  await page.mouse.up()
+  const resized = await box()
+  expect(Math.abs(resized.x - moved.x)).toBeLessThan(2)
+  expect(Math.abs(resized.y - moved.y)).toBeLessThan(2)
+  expect(Math.abs(resized.width - moved.width - 60)).toBeLessThan(10)
+  expect(Math.abs(resized.height - moved.height + 50)).toBeLessThan(10)
+  await overlay.snap('moved and resized price check')
+
+  // Saved when the window closes, and still there on the next price check.
+  fakeApp.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
+  await expect(panel).toBeHidden()
+  await fakeApp.waitForReceived('CLIENT->MAIN::save-config', (p: { contents: string }) => p.contents.includes('wokeWindow'))
+  fakeApp.clearReceived()
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(panel).toContainText('Divine Orb')
+  const again = await box()
+  // The mouse enters the window where it is now, not the docked spot.
+  const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { x: number, y: number, width: number } }
+  expect(Math.abs(tracked.area.x - resized.x)).toBeLessThan(2)
+  expect(Math.abs(tracked.area.y - resized.y)).toBeLessThan(2)
+  expect(Math.abs(tracked.area.width - resized.width)).toBeLessThan(2)
+  expect(Math.abs(again.x - resized.x)).toBeLessThan(2)
+  expect(Math.abs(again.y - resized.y)).toBeLessThan(2)
+  expect(Math.abs(again.width - resized.width)).toBeLessThan(2)
+
+  // The button puts it back.
+  await page.getByTestId('price-window-dock').click()
+  const docked = await box()
+  expect(Math.abs(docked.y - start.y)).toBeLessThan(2)
+  expect(Math.abs(docked.width - start.width)).toBeLessThan(2)
+  await expect(page.getByTestId('price-window-dock')).toHaveCount(0)
+})
+
 test('rare: roll presets search with the item\'s rolls', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/rare-ring.txt')

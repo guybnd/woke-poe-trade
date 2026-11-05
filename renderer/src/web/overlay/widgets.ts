@@ -1,3 +1,5 @@
+import type { PriceWindowPosition } from '@/web/price-check/window-position'
+
 export interface Widget {
   wmId: number
   wmType: string
@@ -36,6 +38,8 @@ export interface WidgetMenu extends Widget {
 }
 
 export interface PriceCheckWidget extends Widget {
+  // woke: where it was dragged or resized to. Unset, it stays docked.
+  wokeWindow?: PriceWindowPosition
   hotkey: string | null
   hotkeyHold: string
   hotkeyLocked: string | null

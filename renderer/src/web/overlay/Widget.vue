@@ -22,7 +22,7 @@
 import { defineComponent, PropType, computed, inject, provide, ref, shallowRef } from 'vue'
 import { Widget, Anchor, WidgetManager } from './interfaces'
 import { useI18n } from 'vue-i18n'
-import { snapMove, clearGuides, clampDrag, releaseWebviewsForDrag } from '@/web/woke/ui/snap'
+import { snapMove, clearGuides, clampDrag, releaseWebviewsForDrag, swallowNextClick } from '@/web/woke/ui/snap'
 import { openMenu, toast } from '@/web/woke/ui/layer'
 import type { MenuEntry } from '@/web/woke/ui/layer'
 import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
@@ -31,13 +31,6 @@ import type { MinimizedState } from '@/web/woke/ui/window-anchor'
 const DRAG_START_PX = 4
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
-
-// The click that ends a drag shouldn't also press whatever is under the cursor.
-function swallowNextClick () {
-  const swallow = (e: Event) => { e.stopPropagation(); e.preventDefault() }
-  document.addEventListener('click', swallow, { capture: true, once: true })
-  setTimeout(() => document.removeEventListener('click', swallow, { capture: true }))
-}
 
 export default defineComponent({
   props: {

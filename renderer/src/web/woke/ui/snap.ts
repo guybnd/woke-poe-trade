@@ -89,3 +89,10 @@ export function releaseWebviewsForDrag () {
   for (const v of views) v.style.pointerEvents = 'none'
   return () => { for (const v of views) v.style.removeProperty('pointer-events') }
 }
+
+// The click that ends a drag shouldn't also press whatever is under the cursor.
+export function swallowNextClick () {
+  const swallow = (e: Event) => { e.stopPropagation(); e.preventDefault() }
+  document.addEventListener('click', swallow, { capture: true, once: true })
+  setTimeout(() => document.removeEventListener('click', swallow, { capture: true }))
+}

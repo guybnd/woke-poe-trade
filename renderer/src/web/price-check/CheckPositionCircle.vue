@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute rounded-full" :style="{
+  <div class="fixed rounded-full" :style="{
       top: relativePos.top,
       left: relativePos.left,
       width: '5rem',

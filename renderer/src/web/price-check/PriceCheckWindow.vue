@@ -1,16 +1,20 @@
 <template>
   <div
     style="top: 0; left: 0; height: 100%; width: 100%; position: absolute;"
+    :style="floating ? { paddingTop: `${floating.top}px` } : undefined"
     class="flex grow h-full pointer-events-none" :class="{
     'flex-row': clickPosition === 'stash',
     'flex-row-reverse': clickPosition === 'inventory'
   }">
     <div v-if="!isBrowserShown" class="layout-column shrink-0"
-      style="width: var(--game-panel);">
+      :style="{ width: floating ? `${floating.gap}px` : 'var(--game-panel)' }">
     </div>
-    <div id="price-window" class="layout-column shrink-0 text-gray-200 pointer-events-auto"
-      :style="isBrowserShown ? { width: '28.75rem' } : { width: '28.75rem', height: 'auto', maxHeight: '100%', alignSelf: 'flex-start' }">
+    <div id="price-window" ref="windowEl" class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
+      :class="{ [$style.movable]: !isBrowserShown }" :style="windowStyle" @mousedown="startMove">
       <AppTitleBar @close="closePriceCheck" @click="openLeagueSelection" :title="title">
+        <button v-if="floating" data-testid="price-window-dock" title="Back to the side of the screen" @click="dock">
+          <i class="fas fa-columns" />
+        </button>
         <ui-popover v-if="stableOrbCost" trigger="click" boundary="#price-window">
           <template #target>
             <button><i class="fas fa-exchange-alt" /> {{ stableOrbCost }}</button>
@@ -50,6 +54,11 @@
           </i18n-t>
         </div>
       </div>
+      <template v-if="!isBrowserShown">
+        <span :class="$style.edgeX" @mousedown.stop="startResize($event, true, false)" />
+        <span :class="$style.edgeY" @mousedown.stop="startResize($event, false, true)" />
+        <span :class="$style.corner" data-testid="price-window-resize" @mousedown.stop="startResize($event, true, true)" />
+      </template>
     </div>
     <webview v-if="isBrowserShown" ref="iframeEl"
       class="pointer-events-auto flex-1"
@@ -87,8 +96,13 @@ import CheckPositionCircle from './CheckPositionCircle.vue'
 import AppTitleBar from '@/web/ui/AppTitlebar.vue'
 import ItemQuickPrice from '@/web/ui/ItemQuickPrice.vue'
 import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfaces'
+import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
+import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText'] }
+
+const DRAG_START_PX = 4
+const WINDOW_REM = 28.75
 
 export default defineComponent({
   widget: {
@@ -157,22 +171,20 @@ export default defineComponent({
 
       if (Host.isElectron && !e.focusOverlay) {
         // everything in CSS pixels
-        const width = 28.75 * AppConfig().fontSize
+        const width = WINDOW_REM * AppConfig().fontSize
         const screenX = ((e.position.x - window.screenX) > window.innerWidth / 2)
           ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
           : window.screenX + wm.poePanelWidth.value
+        const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
         MainProcess.sendEvent({
           name: 'OVERLAY->MAIN::track-area',
           payload: {
             holdKey: props.config.hotkeyHold,
             closeThreshold: 2.5 * AppConfig().fontSize,
             from: e.position,
-            area: {
-              x: screenX,
-              y: window.screenY,
-              width,
-              height: window.innerHeight
-            },
+            area: placed
+              ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
+              : { x: screenX, y: window.screenY, width, height: window.innerHeight },
             dpr: window.devicePixelRatio
           }
         })
@@ -219,9 +231,91 @@ export default defineComponent({
     const overlayKey = computed(() => AppConfig().overlayKey)
     const showCheckPos = computed(() => wm.active.value && props.config.showCursor)
     const isLeagueSelected = computed(() => Boolean(leagues.selectedId.value))
+
+    // woke: the window can be dragged and resized. A saved position replaces
+    // the docked spot, except beside the built-in browser, which needs the
+    // rest of the screen.
+    function screenSize () {
+      return { w: wm.size.value.width, h: wm.size.value.height }
+    }
+    const floating = computed(() => {
+      const pos = props.config.wokeWindow
+      if (!pos || isBrowserShown.value) return null
+      return floatingLayout(pos, screenSize(), WINDOW_REM * AppConfig().fontSize)
+    })
+    const windowStyle = computed(() => {
+      if (isBrowserShown.value) return { width: `${WINDOW_REM}rem` }
+      const f = floating.value
+      return {
+        width: f ? `${f.width}px` : `${WINDOW_REM}rem`,
+        height: f?.height ? `${f.height}px` : 'auto',
+        maxHeight: '100%',
+        alignSelf: 'flex-start'
+      }
+    })
+
+    const windowEl = shallowRef<HTMLElement | null>(null)
+
+    function trackMouse (onMove: (ev: MouseEvent) => void, onEnd?: () => void) {
+      const restoreWebviews = releaseWebviewsForDrag()
+      function onUp () {
+        restoreWebviews()
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        clearGuides()
+        onEnd?.()
+      }
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    }
+
+    // By the title bar: its text still opens the league picker when clicked.
+    function startMove (e: MouseEvent) {
+      const el = windowEl.value
+      const target = e.target as Element
+      if (!el || e.button !== 0 || isBrowserShown.value || !target.closest('[data-price-title]')) return
+      const button = target.closest('button')
+      if (button && !button.hasAttribute('data-price-title-text')) return
+      e.preventDefault()
+
+      const rect = el.getBoundingClientRect()
+      const startPos = props.config.wokeWindow
+      let dragged = false
+      trackMouse((ev) => {
+        const dx = ev.clientX - e.clientX
+        const dy = ev.clientY - e.clientY
+        if (!dragged && Math.hypot(dx, dy) < DRAG_START_PX) return
+        dragged = true
+        const s = snapMove(rect, dx, dy, el, ev.altKey)
+        const c = clampDrag(rect, s.dx, s.dy, window.innerWidth, window.innerHeight)
+        props.config.wokeWindow = movedPosition(startPos, rect, c.dx, c.dy, screenSize())
+      }, () => {
+        if (dragged) swallowNextClick()
+      })
+    }
+
+    function startResize (e: MouseEvent, x: boolean, y: boolean) {
+      const el = windowEl.value
+      if (!el || e.button !== 0) return
+      e.preventDefault()
+      const rect = el.getBoundingClientRect()
+      const startPos = props.config.wokeWindow
+      trackMouse((ev) => {
+        const dw = x ? snapEdge('x', rect.right + ev.clientX - e.clientX, el, ev.altKey) - rect.right : null
+        const dh = y ? snapEdge('y', rect.bottom + ev.clientY - e.clientY, el, ev.altKey) - rect.bottom : null
+        props.config.wokeWindow = resizedPosition(startPos, rect, dw, dh, screenSize())
+      })
+    }
+
+    function dock () {
+      props.config.wokeWindow = undefined
+    }
+
     const clickPosition = computed(() => {
       if (isBrowserShown.value) {
         return 'inventory'
+      } else if (floating.value) {
+        return floating.value.side
       } else {
         return checkPosition.value.x > (window.screenX + window.innerWidth / 2)
           ? 'inventory'
@@ -282,6 +376,12 @@ export default defineComponent({
       clickPosition,
       isBrowserShown,
       iframeEl,
+      floating,
+      windowStyle,
+      windowEl,
+      startMove,
+      startResize,
+      dock,
       closePriceCheck,
       title,
       stableOrbCost,
@@ -298,3 +398,11 @@ export default defineComponent({
   }
 })
 </script>
+
+<style module>
+.movable :global([data-price-title-text]) { cursor: move; }
+.edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
+.edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
+.edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }
+.corner { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+</style>
