@@ -9,6 +9,7 @@ export interface StashSlot {
   width: number
   height: number
   filled: boolean
+  count?: number | null
 }
 
 export type StashRead = { found: false } | { found: true, slots: StashSlot[] }

@@ -8,6 +8,7 @@
 // slots are placed from them. The sub-tab buttons above can't be used: their
 // number varies. The middle column of symbols confirms the match.
 import { ANCHOR, CONFIRM, REF_HEIGHT, SCARAB_LAYOUTS, SLOT_SIZE } from './stash-scarab-data'
+import { DIGITS, DIGIT_HEIGHT, DIGIT_STROKE, DIGIT_TOP } from './stash-digits-data'
 
 // The first pass searches a shrunk picture, this much smaller at 1440p.
 const COARSE = 4
@@ -35,6 +36,8 @@ export interface StashSlot {
   width: number
   height: number
   filled: boolean
+  // The stack count, or null when it can't be read for certain.
+  count: number | null
 }
 
 export type StashRead = { found: false } | { found: true, slots: StashSlot[] }
@@ -202,6 +205,87 @@ function slotBlueness (bgra: Uint8Array, width: number, height: number, x: numbe
   return values.sort((a, b) => a - b)[1]
 }
 
+// The digits are one font at one size, and only 1440p has been seen, so another
+// window size reads no counts rather than guess.
+const COUNT_MIN = 0.85
+const COUNT_WIDTH = 40
+const COUNT_DIGITS = 4
+const COUNT_NEXT = 7
+const COUNT_ROWS = [-2, -1, 0, 1, 2]
+
+// Only the stroke and the dark outline around it, as the item shows through the rest.
+const digitTemplates = DIGITS.map(d => {
+  const offsets: number[] = []
+  const values: number[] = []
+  const stroke = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < d.width && y < DIGIT_HEIGHT && d.gray[y * d.width + x] > DIGIT_STROKE
+  for (let y = 0; y < DIGIT_HEIGHT; y++) {
+    for (let x = 0; x < d.width; x++) {
+      let near = false
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) near = near || stroke(x + i, y + j)
+      if (!near) continue
+      offsets.push(y * COUNT_WIDTH + x)
+      values.push(d.gray[y * d.width + x])
+    }
+  }
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  const zeroed = values.map(v => v - mean)
+  return { digit: d.digit, width: d.width, offsets, values: zeroed, norm: Math.sqrt(zeroed.reduce((a, v) => a + v * v, 0)) }
+})
+
+function digitScore (crop: Float32Array, t: typeof digitTemplates[number], x: number, y: number): number {
+  const at = y * COUNT_WIDTH + x
+  let sum = 0
+  let sumSq = 0
+  let dot = 0
+  for (let k = 0; k < t.offsets.length; k++) {
+    const v = crop[at + t.offsets[k]]
+    sum += v
+    sumSq += v * v
+    dot += v * t.values[k]
+  }
+  const variance = sumSq - sum * sum / t.offsets.length
+  return variance > 1e-6 && t.norm > 0 ? dot / (Math.sqrt(variance) * t.norm) : -1
+}
+
+const CROP_ROWS = DIGIT_TOP + DIGIT_HEIGHT + COUNT_ROWS[COUNT_ROWS.length - 1]
+
+function readCount (bgra: Uint8Array, width: number, height: number, x0: number, y0: number): number | null {
+  if (height !== REF_HEIGHT || x0 < 0 || y0 < 0 || x0 + COUNT_WIDTH > width || y0 + CROP_ROWS > height) return null
+  // The darkest channel, as the digits are white and most items are not.
+  const crop = new Float32Array(COUNT_WIDTH * CROP_ROWS)
+  for (let y = 0; y < CROP_ROWS; y++) {
+    for (let x = 0; x < COUNT_WIDTH; x++) {
+      const p = ((y0 + y) * width + x0 + x) * 4
+      crop[y * COUNT_WIDTH + x] = Math.min(bgra[p], bgra[p + 1], bgra[p + 2])
+    }
+  }
+  let x = 0
+  let row: number | null = null
+  let digits = 0
+  let value = 0
+  while (digits < COUNT_DIGITS) {
+    let best = -1
+    let bestDigit = 0
+    let bestEnd = 0
+    let bestRow = 0
+    for (const t of digitTemplates) {
+      for (let dx = 0; dx < COUNT_NEXT && x + dx + t.width <= COUNT_WIDTH; dx++) {
+        for (const dy of row == null ? COUNT_ROWS : [row]) {
+          const score = digitScore(crop, t, x + dx, DIGIT_TOP + dy)
+          if (score > best) { best = score; bestDigit = t.digit; bestEnd = x + dx + t.width; bestRow = dy }
+        }
+      }
+    }
+    if (best < COUNT_MIN) break
+    value = value * 10 + bestDigit
+    digits++
+    x = bestEnd
+    row = bestRow
+  }
+  return digits && value ? value : null
+}
+
 let layoutCache: { height: number, labels: Template[] } | null = null
 
 // Stashes differ: one has a Breach button, and its slots hold other scarabs.
@@ -246,13 +330,15 @@ export function readScarabTab (bgra: Uint8Array, width: number, height: number):
     slots: layout.slots.map(s => {
       const x = at.x + Math.round(s.dx * scale)
       const y = at.y + Math.round(s.dy * scale)
+      const filled = slotBlueness(bgra, width, height, x, y, size) >= FILLED_BLUENESS
       return {
         name: s.name,
         x: x / width,
         y: y / height,
         width: size / width,
         height: size / height,
-        filled: slotBlueness(bgra, width, height, x, y, size) >= FILLED_BLUENESS
+        filled,
+        count: filled ? readCount(bgra, width, height, x, y) : null
       }
     })
   }

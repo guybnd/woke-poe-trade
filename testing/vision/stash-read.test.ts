@@ -148,3 +148,18 @@ describe('reading the scarab tab', () => {
     expect(read(screen('map-real-01.png')).found).toBe(false)
   })
 })
+
+describe('stack counts', () => {
+  const truth = JSON.parse(fs.readFileSync(path.join(SCREENS, 'stash-scarab-counts.json'), 'utf8')) as Record<string, Record<string, number | null>>
+  it.each([
+    ['stash-scarab-real.png', 'stash-scarab-real'],
+    ['stash-scarab-faustus-real.png', 'stash-scarab-real'],
+    ['stash-scarab-breach-real.png', 'stash-scarab-breach-real']
+  ])('reads every count in %s, checked by eye', (file, key) => {
+    const s = screen(file)
+    const res = readScarabTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    const counts = Object.fromEntries(res.slots.filter(s => s.filled).map(s => [s.name, s.count]))
+    expect(counts).toEqual(truth[key])
+  })
+})
