@@ -93,6 +93,18 @@ describe('reading the scarab tab', () => {
     expect(res.slots.filter(s => s.filled).length).toBe(base.slots.filter(s => s.filled).length)
   })
 
+  it('reads a real screenshot with Faustus open and no folder row above the tab', () => {
+    const shot = screen('stash-scarab-faustus-real.png')
+    const res = read(shot)
+    const base = read(tab)
+    expect(res.found).toBe(true)
+    if (!res.found || !base.found) return
+    // Up by the missing folder row, not sideways.
+    expect(Math.round(res.slots[0].x * shot.width)).toBe(Math.round(base.slots[0].x * tab.width))
+    expect(Math.round(res.slots[0].y * shot.height)).toBe(251)
+    expect(res.slots.filter(s => s.filled).length).toBe(SCARAB_SLOTS.length - 2)
+  })
+
   it('scales to a smaller window', () => {
     // Exactly half, a clean resample. Real smaller windows are still untested.
     const res = read(shrunk(tab, 720))
