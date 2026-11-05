@@ -411,7 +411,7 @@ function startResize (e: PointerEvent, edge: 'e' | 's' | 'se') {
 .window {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; flex-direction: column; overflow: hidden;
-  background: var(--w-panel); color: var(--w-fg);
+  background: var(--w-panel-solid); color: var(--w-fg);
   border: 1px solid var(--w-line-strong); border-radius: var(--w-r-md); box-shadow: var(--w-shadow);
   font-family: var(--w-body); font-size: var(--w-fs-md);
   animation: woke-settings-in var(--w-dur-in) var(--w-ease);

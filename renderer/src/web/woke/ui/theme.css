@@ -12,6 +12,7 @@
 :root {
   /* Surfaces */
   --w-panel: rgba(19, 17, 15, 0.94);
+  --w-panel-solid: #13110f;  /* the panel colour with no game showing through, for long reading */
   --w-panel-2: #1d1a16;
   --w-panel-3: #29241d;
   --w-line: rgba(212, 166, 74, 0.16);
@@ -113,6 +114,7 @@
 
 :root[data-woke-theme="native"] {
   --w-panel: rgba(14, 11, 8, 0.96);
+  --w-panel-solid: #0e0b08;
   --w-panel-2: #1a140e;
   --w-panel-3: #261c12;
   --w-line: #4a3a26;
@@ -137,6 +139,7 @@
 
 :root[data-woke-theme="modern"] {
   --w-panel: rgba(17, 18, 22, 0.86);
+  --w-panel-solid: #111216;
   --w-panel-2: rgba(255, 255, 255, 0.04);
   --w-panel-3: rgba(255, 255, 255, 0.08);
   --w-line: rgba(255, 255, 255, 0.08);

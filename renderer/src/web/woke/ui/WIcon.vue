@@ -47,5 +47,6 @@ const box = computed(() => {
 <style module>
 .icon { display: inline-block; vertical-align: middle; }
 .blank { display: inline-block; flex: none; }
-.fa { display: inline-grid; place-items: center; font-size: calc(var(--w-icon-sm) * 0.75); color: var(--w-dim); flex: none; }
+/* Doubled so it beats Font Awesome's own display on .fas, which leaves the glyph in the box's top left. */
+.fa.fa { display: inline-grid; place-items: center; font-size: calc(var(--w-icon-sm) * 0.75); color: var(--w-dim); flex: none; }
 </style>
