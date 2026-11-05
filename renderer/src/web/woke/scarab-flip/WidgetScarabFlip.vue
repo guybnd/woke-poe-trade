@@ -143,14 +143,14 @@ import DockItem from '../dock/DockItem.vue'
 import { dockIconEl } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
-import { JACKPOT_CHAOS, buyList, flipOdds, parseExchange, rareCheapList } from './calc'
+import { JACKPOT_CHAOS, buyList, isTraded, flipOdds, parseExchange, rareCheapList } from './calc'
 import type { FlipRow, UpgradeRow } from './calc'
 import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, shortName, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
 import type { ScarabFlipWidget } from './widget'
 import { hostRequest } from '../shared/host'
-import { buildMarks, stashMarks } from './stash-marks'
+import { buildMarks, clearStashMarks, justCleared, stashClearCount, stashMarks } from './stash-marks'
 import type { StashRead } from './stash-marks'
 
 const props = defineProps<{
@@ -363,18 +363,34 @@ function stashNote (text: string) {
   toast(text, { anchor: dockIconEl('scarab-flip'), dock: true, ms: 2500 })
 }
 
+let readingStash = false
+
 async function toggleOutlines () {
-  if (stashMarks.value.length) { stashMarks.value = []; return }
+  if (readingStash || justCleared()) return
+  if (stashMarks.value.length) { clearStashMarks(); return }
   if (!snapshot.value) { stashNote('No prices yet, so nothing to outline'); return }
   const scarabs = familyById('scarabs')
   const priced = priceFlip(scarabs, scarabs.methods[0], snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value)
   if (priced?.kind !== 'pool') { stashNote('No scarab prices yet, so nothing to outline'); return }
-  const read = await hostRequest<StashRead>('stash-read', null)
-  if (!read.found) { stashNote("Can't read this tab. Flips reads the Scarab tab for now."); return }
-  const marks = buildMarks(read.slots, new Map(priced.model.rows.map(r => [r.name, r.profitEach])))
-  if (!marks.length) {
+  const clearsBefore = stashClearCount()
+  readingStash = true
+  let read: StashRead
+  try {
+    read = await hostRequest<StashRead>('stash-read', null)
+  } finally {
+    readingStash = false
+  }
+  if (!read.found) {
+    stashNote("Can't read this tab. Flips reads the Scarab tab for now, with no tooltip over its top.")
+    return
+  }
+  // The same advice as the panel: no untraded prices, and hold rare and cheap ones.
+  const rows = priced.model.rows.filter(r => !r.rareCheap && (!props.config.hideUntraded || isTraded(r)))
+  const marks = buildMarks(read.slots, new Map(rows.map(r => [r.name, r.profitEach])))
+  // A zone change or the like while reading: these would have no click watcher.
+  if (!marks.length || clearsBefore !== stashClearCount()) {
     hostRequest('stash-watch-stop', null).catch(() => {})
-    stashNote('Nothing here is worth flipping right now')
+    if (!marks.length) stashNote('Nothing here is worth flipping right now')
     return
   }
   stashMarks.value = marks

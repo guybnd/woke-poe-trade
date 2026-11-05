@@ -15,7 +15,9 @@ const COARSE_MIN = 0.6
 const COARSE_TRIES = 6
 const LABEL_MIN = 0.7
 const GLYPH_MIN = 0.6
-// Empty slots show a dim ghost of their item (about 20), filled ones are 65+.
+// Empty slots show a dim ghost of their item (about 20), filled ones are 65+,
+// on the screenshot the templates came from. Scaled by how the SCARAB text
+// compares, so a brighter or darker game keeps the same split.
 const FILLED_MIN = 40
 // The button sits in the top half of the screen in every layout seen.
 const SEARCH_HEIGHT = 0.6
@@ -171,12 +173,18 @@ function findTab (gray: Gray, small: Gray, scale: number): { x: number, y: numbe
   return null
 }
 
+const LABEL_MEAN = LABEL.gray.reduce((a, b) => a + b, 0) / LABEL.gray.length
+
 function slotMean (gray: Gray, x: number, y: number, size: number): number {
   const inset = Math.round(size / 6)
-  const x0 = Math.max(0, x + inset)
-  const y0 = Math.max(0, y + inset)
-  const x1 = Math.min(gray.width, x + size - inset)
-  const y1 = Math.min(gray.height, y + size - inset)
+  return regionMean(gray, x + inset, y + inset, size - inset * 2, size - inset * 2)
+}
+
+function regionMean (gray: Gray, x: number, y: number, width: number, height: number): number {
+  const x0 = Math.max(0, x)
+  const y0 = Math.max(0, y)
+  const x1 = Math.min(gray.width, x + width)
+  const y1 = Math.min(gray.height, y + height)
   if (x1 <= x0 || y1 <= y0) return 0
   let sum = 0
   for (let j = y0; j < y1; j++) {
@@ -195,6 +203,9 @@ export function readScarabTab (bgra: Uint8Array, width: number, height: number):
   const at = findTab(gray, small, scale)
   if (!at) return { found: false }
   const size = Math.round(SLOT_SIZE * scale)
+  const t = templatesFor(height)
+  const brightness = regionMean(gray, at.x, at.y, t.label.width, t.label.height) / LABEL_MEAN
+  const filledMin = FILLED_MIN * brightness
   return {
     found: true,
     slots: SCARAB_SLOTS.map(s => {
@@ -206,7 +217,7 @@ export function readScarabTab (bgra: Uint8Array, width: number, height: number):
         y: y / height,
         width: size / width,
         height: size / height,
-        filled: slotMean(gray, x, y, size) >= FILLED_MIN
+        filled: slotMean(gray, x, y, size) >= filledMin
       }
     })
   }

@@ -67,3 +67,25 @@ function grade (t: number): string {
 }
 
 export const stashMarks = shallowRef<StashMark[]>([])
+
+let clears = 0
+let lastClearAt = 0
+
+export function clearStashMarks () {
+  if (!stashMarks.value.length) return
+  clears++
+  lastClearAt = performance.now()
+  stashMarks.value = []
+}
+
+// Bumped by each clear, so a read that finishes late can tell it's out of date.
+export function stashClearCount () {
+  return clears
+}
+
+// The shortcut's own key press also clears the outlines, a moment before the
+// shortcut arrives. That press means "off", not "draw them again".
+const SAME_PRESS_MS = 400
+export function justCleared () {
+  return performance.now() - lastClearAt < SAME_PRESS_MS
+}

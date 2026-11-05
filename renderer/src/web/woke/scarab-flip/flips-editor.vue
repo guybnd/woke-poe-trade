@@ -15,7 +15,7 @@
       <WToggle v-model="hideUntraded" />
     </WSettingRow>
     <WSettingRow label="Hotkey: outline flips in the open stash tab"
-      hint="Works on the Scarab tab for now. Press once to draw the outlines. They clear on the next click, scroll, Esc or Space, or when you press it again. Nothing reads the screen until you press it.">
+      hint="Works on the Scarab tab for now. Press once to draw the outlines. They clear on the next click, scroll or key press. Keep the mouse off the tab when you press it: a tooltip hides what's under it. Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="stashHotkey" />
     </WSettingRow>
   </div>

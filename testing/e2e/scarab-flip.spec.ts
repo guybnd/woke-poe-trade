@@ -131,6 +131,7 @@ test('flips: the shortcut outlines the scarab tab, and a click clears them', asy
   await expect(layer).toHaveCount(0)
 
   // The shortcut shows them again, and clears them too.
+  await overlay.page.waitForTimeout(500)
   await overlay.pressHotkey('Alt + J')
   await expect(layer).toBeVisible()
   await overlay.pressHotkey('Alt + J')

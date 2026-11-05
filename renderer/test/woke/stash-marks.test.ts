@@ -1,6 +1,6 @@
 // The Flips stash outlines: which slots get one, and in what colour.
 import { describe, it, expect } from 'vitest'
-import { CLOSE_EACH, buildMarks } from '@/web/woke/scarab-flip/stash-marks'
+import { CLOSE_EACH, buildMarks, clearStashMarks, justCleared, stashClearCount, stashMarks } from '@/web/woke/scarab-flip/stash-marks'
 import type { StashSlot } from '@/web/woke/scarab-flip/stash-marks'
 
 function slot (name: string, filled = true): StashSlot {
@@ -48,6 +48,17 @@ describe('stash marks', () => {
     expect(tiny.text).toBe('0c')
     const [long] = buildMarks([slot('long')], new Map([['long', 1.23456]]))
     expect(long.text).toBe('+1.2c')
+  })
+
+  it('clears once per set of outlines and remembers the press that did it', () => {
+    stashMarks.value = buildMarks([slot('a')], new Map([['a', 1]]))
+    const before = stashClearCount()
+    clearStashMarks()
+    expect(stashMarks.value).toEqual([])
+    expect(stashClearCount()).toBe(before + 1)
+    expect(justCleared()).toBe(true)
+    clearStashMarks()
+    expect(stashClearCount()).toBe(before + 1)
   })
 
   it('shows a small loss with a minus sign', () => {
