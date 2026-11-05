@@ -51,7 +51,11 @@ woke-dev packaged     # stop the dev copy and start the packaged build
 - Vite and Electron run detached, so they outlive the shell that started them.
   Logs go to `<folder>\.woke-dev`.
 - The tray icon's tooltip reads `Woke PoE Trade DEV (<branch>)` in the dev copy.
-- Settings changes aren't saved in dev mode (`ConfigStore`), and a DevTools
+- Settings save to the real config, shared with the packaged build, and each
+  start keeps a copy in `<folder>\.woke-dev\config-backups`. Branches from before
+  this change don't save. A plain `npm run dev` never saves. Theme, scale and
+  other browser-stored preferences are separate for dev and packaged.
+- A DevTools
   window opens alongside the overlay.
 - The overlay can be inspected on the debug port `127.0.0.1:9333`.
 

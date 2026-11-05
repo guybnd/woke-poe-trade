@@ -34,7 +34,9 @@ export class ConfigStore {
   private writing: Promise<void> = Promise.resolve()
 
   private save (contents: string, tmp: boolean) {
-    if (process.env.VITE_DEV_SERVER_URL) return
+    // woke: scripts/woke-dev.ps1 opts in, so its dev copy keeps the player's
+    // settings. A plain `npm run dev` still can't touch them.
+    if (process.env.VITE_DEV_SERVER_URL && !process.env.WOKE_DEV_SAVE_CONFIG) return
 
     if (tmp && !this.isTmpFile) {
       this.cfgPath += '.tmp'

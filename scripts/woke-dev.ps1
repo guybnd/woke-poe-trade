@@ -165,6 +165,17 @@ function Ensure-DataIndexes {
   if ($LASTEXITCODE -ne 0) { Fail 'could not generate the data index files.' }
 }
 
+function Backup-Config {
+  # The dev copy saves to the real settings, and a preview branch can change
+  # them, so each start keeps a copy. The newest 20 are kept.
+  $config = Join-Path $env:APPDATA 'woke-poe-trade\apt-data\config.json'
+  if (-not (Test-Path $config)) { return }
+  $dir = Join-Path $State 'config-backups'
+  New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  Copy-Item $config (Join-Path $dir ('config-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json'))
+  Get-ChildItem $dir -Filter 'config-*.json' | Sort-Object Name -Descending | Select-Object -Skip 20 | Remove-Item -Force
+}
+
 function Start-Dev {
   $node = (Get-Command node.exe).Source
   $viteCmd = "cmd.exe /s /c `"`"$node`" node_modules\vite\bin\vite.js --strictPort > `"$State\vite.log`" 2>&1`""
@@ -182,8 +193,9 @@ function Start-Dev {
   # WOKE_ELECTRON_ARGS: lets a thread inspect the overlay over the debug port
   # without touching hotkeys. Branches older than this script ignore it.
   # WOKE_DEV_BRANCH: shown in the tray tooltip.
+  # WOKE_DEV_SAVE_CONFIG: save settings to the real config, as the packaged build does.
   $branch = Git rev-parse --abbrev-ref HEAD
-  $mainCmd = "cmd.exe /s /c `"set `"WOKE_ELECTRON_ARGS=--remote-debugging-port=$DebugPort`" && set `"WOKE_DEV_BRANCH=$branch`" && `"$node`" build\script.mjs > `"$State\main.log`" 2>&1`""
+  $mainCmd = "cmd.exe /s /c `"set `"WOKE_ELECTRON_ARGS=--remote-debugging-port=$DebugPort`" && set `"WOKE_DEV_BRANCH=$branch`" && set `"WOKE_DEV_SAVE_CONFIG=1`" && `"$node`" build\script.mjs > `"$State\main.log`" 2>&1`""
   Set-Content (Join-Path $State 'main.pid') (Start-Detached $mainCmd (Join-Path $Repo 'main'))
 
   $deadline = (Get-Date).AddSeconds(60)
@@ -233,5 +245,6 @@ Stop-OtherBuilds
 if ($plan) { Apply-Branch $plan }
 Ensure-Deps
 Ensure-DataIndexes
+Backup-Config
 Start-Dev
 Show-Status

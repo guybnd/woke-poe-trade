@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
     <!-- The verdict on hover, so a quick check doesn't open the panel. -->
-    <DockItem id="scarab-flip" title="Scarab flip" :show="Boolean(model)" :wm-id="config.wmId">
+    <DockItem id="scarab-flip" title="Scarab flip" :show="dockShow" :wm-id="config.wmId">
       <template #card>
         <div v-if="model" class="flex flex-col gap-0.5" style="padding: 2px var(--w-pad) 6px;">
           <span class="w-num">{{ verdict }} · {{ verdictSub }}</span>
@@ -145,6 +145,7 @@ import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
 import type { Snapshot } from '../market/types'
 import DockItem from '../dock/DockItem.vue'
+import { useZone } from '../shared/zone'
 import { RARE_SHARE, UNTRADED_CHAOS, JACKPOT_CHAOS, buyList, flipModel, flipOdds, parseExchange, rareCheapList, scarabQuotes, shortScarab } from './calc'
 import type { ExchangeQuotes, ScarabRow } from './calc'
 import type { ScarabFlipWidget } from './widget'
@@ -167,6 +168,9 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 }
 
 const collector = useMarketCollector({ poll: true })
+// Town and hideout only, like the other economy icons: in a map it would sit
+// on screen and keep a hover timer running.
+const zone = useZone()
 const leagues = useLeagues()
 const league = computed(() => leagues.selectedId.value)
 
@@ -221,6 +225,7 @@ const model = computed(() => {
 })
 
 const panelIcon = moduleIcon('scarab-flip').art ?? undefined
+const dockShow = computed(() => Boolean(model.value) && (zone.kind === 'town' || zone.kind === 'hideout'))
 const hasVolume = computed(() => exchange.value != null)
 const buy = computed(() => model.value ? buyList(model.value, props.config.hideUntraded) : [])
 const rareCheap = computed(() => model.value ? rareCheapList(model.value) : [])
