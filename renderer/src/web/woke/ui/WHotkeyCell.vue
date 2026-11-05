@@ -16,7 +16,7 @@
 // Click, press a key. Esc cancels, Backspace clears (unless required).
 // Inside the settings window it also says when the key clashes.
 import { computed, shallowRef } from 'vue'
-import { KeyToCode, hotkeyToString } from '@ipc/KeyToCode'
+import { KeyToCode, RESERVED_SHORTCUTS, hotkeyToString } from '@ipc/KeyToCode'
 import WKbd from './WKbd.vue'
 import { normalizeKey, poeBindNote, useHotkeyContext } from './hotkey-context'
 
@@ -36,6 +36,7 @@ const btn = shallowRef<HTMLButtonElement | null>(null)
 const ctx = useHotkeyContext()
 
 const problem = computed(() => {
+  if (props.modelValue && RESERVED_SHORTCUTS.includes(props.modelValue)) return "The game uses this key, so it won't work here"
   if (props.quiet || !ctx || !props.modelValue) return null
   const norm = normalizeKey(props.modelValue)
   if (ctx.failed.value.has(norm)) return 'Another program holds this key'

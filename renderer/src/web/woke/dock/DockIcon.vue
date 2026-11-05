@@ -186,7 +186,8 @@ function place () {
 // click as it comes up (only if the mouse was taken, so not always). Only the
 // hook counts, in the app; the browser demo has only the page click.
 function pressedInGame () {
-  if (wm.active.value) openCard()
+  if (wm.active.value) { openCard(); return }
+  if (props.host.props.gameClick) props.host.props.gameClick()
   else toggleCard()
 }
 function toggleCard () {

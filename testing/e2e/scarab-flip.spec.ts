@@ -1,7 +1,7 @@
 // The flips panel on recorded poe.ninja prices: the verdict, each view, the
 // rare-but-cheap marks, and the families beyond scarabs.
 import type { Page } from '@playwright/test'
-import { test, expect, fixtureText } from './harness'
+import { test, expect, fixtureText, logFixture } from './harness'
 
 const DENSE = '**/poe.ninja/poe1/api/economy/current/dense/overviews*'
 const EXCHANGE = '**/poe.ninja/poe1/api/economy/exchange/current/overview*'
@@ -178,4 +178,17 @@ test('flips: the shortcut draws nothing on a tab it cannot read', async ({ overl
   await overlay.pressHotkey('Alt + J')
   await expect(overlay.page.getByText("Can't read this tab", { exact: false })).toBeVisible()
   await expect(overlay.page.locator('[data-stash-outlines]')).toHaveCount(0)
+})
+
+test('flips: clicking the dock icon outlines the stash tab, and again clears them', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip' }] })
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  await overlay.showScreen('screens/stash-scarab-real.png')
+  const layer = overlay.page.locator('[data-stash-outlines]')
+  await overlay.clickDockIconAndLeave('scarab-flip')
+  await expect(layer).toBeVisible()
+  await overlay.page.waitForTimeout(500)
+  await overlay.clickDockIconAndLeave('scarab-flip')
+  await expect(layer).toHaveCount(0)
+  expect(fakeApp.game.focused).toBe(true)
 })

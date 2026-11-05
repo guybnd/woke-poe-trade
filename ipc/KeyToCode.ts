@@ -258,3 +258,12 @@ export function isModKey (key: string) {
     key === 'Alt'
   )
 }
+
+// Keys the game uses itself: a hotkey on one of these is never registered.
+export const RESERVED_SHORTCUTS: readonly string[] = [
+  'Ctrl + C', 'Ctrl + V', 'Ctrl + A',
+  'Ctrl + F',
+  'Ctrl + Enter',
+  'Home', 'Delete', 'Enter',
+  'ArrowUp', 'ArrowRight', 'ArrowLeft'
+]

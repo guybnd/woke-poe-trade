@@ -1,3 +1,4 @@
+import { RESERVED_SHORTCUTS, hotkeyToString } from '@ipc/KeyToCode'
 import { describe, it, expect } from 'vitest'
 import { pressedKeys, sortKeys } from '@/web/woke/loot-filter/hotkey-match'
 
@@ -19,5 +20,12 @@ describe('hotkey match', () => {
 
   it('reads digits', () => {
     expect(press('Digit1', { ctrlKey: true })).toBe(sortKeys('Ctrl + 1'))
+  })
+})
+
+describe('keys the game reserves', () => {
+  it('uses the same spelling as a recorded key, so the hotkey cell can warn', () => {
+    expect(RESERVED_SHORTCUTS).toContain(hotkeyToString(['F'], true))
+    expect(RESERVED_SHORTCUTS).not.toContain(hotkeyToString(['J'], false, false, true))
   })
 })

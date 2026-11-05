@@ -34,6 +34,8 @@ export interface DockItemProps {
   into?: string
   // Widget to open when the icon is clicked with the overlay open.
   wmId?: number
+  // A click while playing does this, instead of opening the card.
+  gameClick?: () => void
   cardWidth?: string
   // Values kept on screen beside the icon.
   readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>

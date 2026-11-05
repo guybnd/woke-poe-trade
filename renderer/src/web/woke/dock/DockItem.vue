@@ -23,6 +23,7 @@ const props = withDefaults(defineProps<{
   led?: DockLed | null
   into?: string
   wmId?: number
+  gameClick?: () => void
   cardWidth?: string
   progress?: number | null
   pinnable?: boolean
@@ -37,6 +38,7 @@ const props = withDefaults(defineProps<{
   led: null,
   into: undefined,
   wmId: undefined,
+  gameClick: undefined,
   cardWidth: undefined,
   progress: null,
   pinnable: false,

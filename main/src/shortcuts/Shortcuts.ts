@@ -3,7 +3,7 @@ import { uIOhook, UiohookKey, UiohookWheelEvent } from 'uiohook-napi'
 import { noteHotkeyFailures } from '../woke/hotkey-failures'
 import { pickActions } from './pick-actions'
 import { makeRepeatGuard } from './repeat-guard'
-import { isModKey, KeyToElectron, mergeTwoHotkeys } from '../../../ipc/KeyToCode'
+import { isModKey, KeyToElectron, mergeTwoHotkeys, RESERVED_SHORTCUTS } from '../../../ipc/KeyToCode'
 import { typeInChat, stashSearch } from './text-box'
 import { WidgetAreaTracker } from '../windowing/WidgetAreaTracker'
 import { HostClipboard } from './HostClipboard'
@@ -179,13 +179,7 @@ export class Shortcuts {
       this.ocrWorker.then(w => w.updateOptions(language)).catch(() => {})
     }
 
-    const allShortcuts = new Set([
-      'Ctrl + C', 'Ctrl + V', 'Ctrl + A',
-      'Ctrl + F',
-      'Ctrl + Enter',
-      'Home', 'Delete', 'Enter',
-      'ArrowUp', 'ArrowRight', 'ArrowLeft'
-    ])
+    const allShortcuts = new Set(RESERVED_SHORTCUTS)
 
     for (const action of actions) {
       if (allShortcuts.has(action.shortcut) && action.action.type !== 'test-only') {
