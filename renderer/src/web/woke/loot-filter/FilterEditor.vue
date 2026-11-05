@@ -1,5 +1,5 @@
 <template>
-  <WPanel ref="panel" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false"
+  <WPanel ref="panel" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #actions>
       <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
@@ -973,7 +973,7 @@ function openFolder () {
 .layout {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr) 19rem;
-  height: min(36rem, 70vh);
+  flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   min-height: 0;
 }
 .tree {
@@ -1098,7 +1098,7 @@ function openFolder () {
   text-decoration: line-through;
 }
 .changes {
-  max-height: min(36rem, 70vh);
+  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   padding: 6px 0;
 }
 .buildIntro {

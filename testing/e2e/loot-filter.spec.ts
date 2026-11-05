@@ -435,6 +435,35 @@ test('dock card: click or scroll a strictness, then reload from there', async ({
   await expect(page.getByRole('button', { name: 'Back to auto' })).toHaveCount(0)
 })
 
+test('a short panel scrolls its columns: nothing runs under the footer', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  const field = page.getByPlaceholder(/add an item/i).first()
+  await expect(field).toBeAttached()
+  const save = page.getByRole('button', { name: /Save \+ reload/ })
+  for (const height of [320, 450, 560]) {
+    await field.evaluate((el, h) => { const p = el.closest('.w-surface') as HTMLElement; p.style.height = `${h}px`; p.style.maxHeight = `${h}px` }, height)
+    await field.scrollIntoViewIfNeeded()
+    const box = (await field.boundingBox())!
+    const footer = (await save.boundingBox())!
+    expect(box.y + box.height, `height ${height}`).toBeLessThanOrEqual(footer.y)
+    const onTop = await field.evaluate((el) => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.right - 6, r.top + r.height / 2) === el })
+    expect(onTop, `height ${height}`).toBe(true)
+  }
+
+  // The other tabs fit too.
+  for (const tab of ['Presets', 'NeverSink']) {
+    await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click()
+    const panel = (await save.boundingBox())!
+    const body = await save.evaluate((el) => { const p = el.closest('.w-surface')!; return { bottom: p.getBoundingClientRect().bottom, sh: p.scrollHeight, ch: p.clientHeight } })
+    expect(panel.y + panel.height, tab).toBeLessThanOrEqual(body.bottom)
+    expect(body.sh, tab).toBeLessThanOrEqual(body.ch + 4)
+  }
+})
+
 test('a save nobody asked to reload waits on the dock icon, and one key sends it once', async ({ overlay, fakeApp }) => {
   test.slow()
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))

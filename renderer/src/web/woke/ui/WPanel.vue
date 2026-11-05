@@ -25,7 +25,7 @@
     <div v-if="$slots.tabs" v-show="!minimized" :class="$style.tabs"><slot name="tabs" /></div>
     <div v-if="$slots.toolbar" v-show="!minimized" :class="$style.toolbar"><slot name="toolbar" /></div>
     <div v-if="$slots.meta" v-show="!minimized" :class="$style.meta"><slot name="meta" /></div>
-    <div v-show="!minimized" :class="[$style.body, { 'w-scroll': scroll, 'w-stale': stale }]"><slot /></div>
+    <div v-show="!minimized" :class="[$style.body, { 'w-scroll': scroll, 'w-stale': stale, [$style.bodyFill]: fill }]"><slot /></div>
     <div v-if="$slots.footer" v-show="!minimized" :class="$style.footer"><slot name="footer" /></div>
     <template v-if="canResize">
       <span v-for="s in hSides" :key="`x${s}`" :class="[$style.edgeX, s === 'start' ? $style.onLeft : $style.onRight]"
@@ -63,6 +63,9 @@ const props = withDefaults(defineProps<{
   maxHeight?: string
   maxWidth?: string
   scroll?: boolean
+  // With scroll off: the body hands its height to its children, which shrink and
+  // grow with the panel instead of running under the footer.
+  fill?: boolean
   // Game art for the header: a mechanic id ("essence", "lab"), a currency
   // ("divine"), or an image path.
   icon?: string
@@ -87,6 +90,7 @@ const props = withDefaults(defineProps<{
   maxHeight: '75vh',
   maxWidth: undefined,
   scroll: true,
+  fill: false,
   icon: undefined,
   updated: undefined,
   freshMin: 15,
@@ -401,6 +405,7 @@ defineExpose({ el: root })
 }
 .toolbar + .meta { padding-top: 0; }
 .body { min-height: 0; flex: 1; }
+.bodyFill { display: flex; flex-direction: column; overflow: hidden; }
 
 /* Resize handles: invisible edges, a small grip shows on hover. */
 .edgeX, .edgeY, .grip { position: absolute; z-index: 2; }

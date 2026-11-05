@@ -108,7 +108,7 @@ async function update () {
 
 <style module>
 .wrap {
-  max-height: min(36rem, 70vh);
+  max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   padding: 8px var(--w-pad) 12px;
   display: flex;
   flex-direction: column;
