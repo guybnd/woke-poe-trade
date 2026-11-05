@@ -68,6 +68,24 @@ test('Lab layout: goes with the overlay, comes back with it, and leaves a map on
   await expect(overlay.dockIcon('lab')).toHaveCount(0)
 })
 
+// A reloaded overlay (and the next test on this worker) reuses zone ids, and main
+// remembers the mouse was inside them: it has to say so, as the mouse won't re-enter.
+test('Lab layout: a new page knows the mouse is already on the icon', async ({ overlay }) => {
+  await boot(overlay, true)
+  await openNormal(overlay)
+  overlay.app.focusGame(true)
+  await overlay.hoverDockIcon('lab')
+  const map = overlay.page.locator(`[data-dock="lab"] img[src="${IMG}"]`)
+  await expect(map).toBeVisible()
+
+  await boot(overlay, true)
+  await openNormal(overlay)
+  overlay.app.focusGame(true)
+  await expect(overlay.dockIcon('lab')).toBeVisible()
+  await overlay.hoverDockIcon('lab')
+  await expect(map).toBeVisible()
+})
+
 test('Lab layout: the hotkey holds the card open in play, and never opens the window', async ({ overlay }) => {
   await boot(overlay, false)
   await overlay.pressHotkey(LAB.hotkeyOverlay)

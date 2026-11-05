@@ -50,7 +50,12 @@ describe('one Client.txt stream for every module', () => {
     let emit: (e: { lines: string[] }) => void = () => {}
     let listeners = 0
     vi.doMock('@/web/background/IPC', () => ({
-      Host: { onEvent: (_name: string, cb: typeof emit) => { listeners++; emit = cb; return { abort () {} } } }
+      Host: {
+        onEvent: (name: string, cb: typeof emit) => {
+          if (name === 'MAIN->CLIENT::game-log') { listeners++; emit = cb }
+          return { abort () {} }
+        }
+      }
     }))
     let release: (t: { path: string, lines: string[] }) => void = () => {}
     vi.doMock('@/web/woke/campaign/log-tail', async (orig) => ({

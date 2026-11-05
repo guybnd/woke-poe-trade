@@ -8,7 +8,13 @@ const MAX_BYTES = 256 * 1024
 export async function readGameLogTail (watcher: GameLogWatcher, args: { bytes?: number } | undefined) {
   const path = watcher.actualPath
   if (!path) return { path: null, lines: [] as string[] }
-  const file = await fs.open(path, 'r')
+  let file: fs.FileHandle
+  try {
+    file = await fs.open(path, 'r')
+  } catch {
+    // The watcher is waiting for this file to appear.
+    return { path: null, lines: [] as string[] }
+  }
   try {
     const { size } = await file.stat()
     const want = Math.min(size, Math.max(1024, Math.min(args?.bytes ?? MAX_BYTES, MAX_BYTES)))

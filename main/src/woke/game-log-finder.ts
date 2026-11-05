@@ -50,10 +50,12 @@ const DRIVE_FOLDERS = [
   'Program Files (x86)\\Steam\\steamapps\\common\\Path of Exile'
 ]
 
-async function candidates (): Promise<Array<{ path: string, source: FoundLog['source'] }>> {
+async function candidates (quick: boolean): Promise<Array<{ path: string, source: FoundLog['source'] }>> {
   const out: Array<{ path: string, source: FoundLog['source'] }> = []
-  const running = await runningGameLog()
-  if (running) out.push({ path: running, source: 'running' })
+  if (!quick) {
+    const running = await runningGameLog()
+    if (running) out.push({ path: running, source: 'running' })
+  }
   if (process.platform !== 'win32') {
     for (const p of POSSIBLE_PATH) out.push({ path: p, source: 'folder' })
     return out
@@ -62,6 +64,10 @@ async function candidates (): Promise<Array<{ path: string, source: FoundLog['so
   if (ggg) out.push({ path: path.join(ggg, 'logs', 'Client.txt'), source: 'standalone' })
   for (const lib of await steamLibraries()) {
     out.push({ path: path.join(lib, 'steamapps', 'common', 'Path of Exile', 'logs', 'Client.txt'), source: 'steam' })
+  }
+  if (quick) {
+    for (const p of POSSIBLE_PATH) out.push({ path: p, source: 'folder' })
+    return out
   }
   const drives = 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
   for (const d of drives) {
@@ -84,9 +90,12 @@ async function statOrNull (p: string) {
   }
 }
 
-export async function findGameLogs (): Promise<FoundLog[]> {
+// quick: for every app start with the game closed, so only where the PC says
+// the game is. No process check, and no sweep of every drive: a dead network
+// drive would tie up file reads for the whole app.
+export async function findGameLogs (opts: { quick?: boolean } = {}): Promise<FoundLog[]> {
   const seen = new Map<string, FoundLog>()
-  const list = await candidates()
+  const list = await candidates(opts.quick === true)
   const stats = await Promise.all(list.map(c => statOrNull(c.path)))
   list.forEach((c, i) => {
     const s = stats[i]

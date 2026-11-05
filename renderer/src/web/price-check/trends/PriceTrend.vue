@@ -19,7 +19,10 @@
           <vue-apexcharts
             type="area"
             :options="{
-              chart: { sparkline: { enabled: true }, animations: { enabled: false } },
+              // Its box has a fixed size, so it never needs a redraw. Hiding the window
+              // starts a delayed one, and if a new check removed the chart by then, it
+              // has nothing to measure and writes NaN into the svg.
+              chart: { sparkline: { enabled: true }, animations: { enabled: false }, redrawOnParentResize: false, redrawOnWindowResize: false },
               stroke: { curve: 'smooth', width: 1.5, colors: ['#7fb2e5'] },
               fill: { colors: ['#7fb2e5'], type: 'solid', opacity: 0.12 },
               tooltip: { enabled: false },

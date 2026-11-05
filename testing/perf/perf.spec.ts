@@ -14,7 +14,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { CDPSession } from '@playwright/test'
 import { test, expect, logFixture } from '../e2e/harness'
-import { MODULES } from '../../renderer/src/web/woke/modules'
+import { MODULES } from '../e2e/woke-modules'
 import { installProbe, resetProbe, readProbe, total } from './probe'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
