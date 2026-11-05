@@ -169,7 +169,7 @@
       var open = 0
       document.querySelectorAll('#overlay-window button[aria-label]').forEach(function (b) {
         var name = b.getAttribute('aria-label')
-        if (!/_open_/.test(b.className) || name === 'Market tracker') return
+        if (!/_open_/.test(b.className) || name === 'Market') return
         open++
         if (Date.now() - (clicked[name] || 0) > 700) { clicked[name] = Date.now(); b.click() }
       })

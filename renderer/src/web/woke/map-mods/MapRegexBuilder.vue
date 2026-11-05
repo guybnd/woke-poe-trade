@@ -68,6 +68,7 @@
     <WEmpty v-if="!visible.length" icon="fas fa-search">No mods match.</WEmpty>
     <div v-if="hiddenCount" class="w-dim text-xs p-2 text-center">{{ hiddenCount }} more. Search to narrow the list.</div>
     <template v-if="mode === 'maps'" #footer>
+      <div class="flex flex-col gap-2 w-full">
       <button type="button" :class="$style.fold" :aria-expanded="minsOpen" @click="minsOpen = !minsOpen">
         <span class="w-dim">Minimums</span>
         <span class="w-num" :class="minsSet ? 'w-accent' : 'w-dim'">{{ minsSet ? `${minsSet} set` : 'none set' }}</span>
@@ -85,6 +86,7 @@
           <WField type="number" :model-value="profile.mins[key] ?? ''" placeholder="any" suffix="%"
             @update:model-value="setMin(key, $event)" />
         </label>
+      </div>
       </div>
     </template>
   </WPanel>
