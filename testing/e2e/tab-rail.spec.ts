@@ -52,7 +52,7 @@ test('an old bar becomes a short rail on the left edge, below the buffs', async 
   const box = (await rail.boundingBox())!
   expect(box.x).toBe(0)
   expect(box.y).toBeGreaterThan(120)
-  expect(box.width).toBeLessThan(50)
+  expect(box.width).toBeLessThan(70)
   await expect(icon(overlay, 'Market')).toBeVisible()
   await expect(icon(overlay, 'Boss runs')).toBeVisible()
   await expect(icon(overlay, 'Lab gems')).toBeVisible() // not pinned, but open
@@ -311,8 +311,10 @@ test('the settings button appears on hover, and flips and resizes the rail with 
   await expect.poll(async () => { const b = await rail.boundingBox(); return b!.width > b!.height }).toBe(true)
   await expect(menu).toBeVisible()
 
+  await menu.getByRole('button', { name: 'S', exact: true }).click()
+  await overlay.page.waitForTimeout(100)
   const before = (await rail.boundingBox())!.height
-  await menu.getByRole('button', { name: 'XL' }).click()
+  await menu.getByRole('button', { name: 'XXL', exact: true }).click()
   await expect.poll(async () => (await rail.boundingBox())!.height).toBeGreaterThan(before * 1.3)
 
   await menu.getByRole('button', { name: 'Reset position and size' }).click()

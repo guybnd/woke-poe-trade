@@ -11,20 +11,21 @@ export interface TabBarConfig extends WidgetMenu {
   rail?: boolean
   // Laid flat, in a row. Unset: standing up.
   railFlat?: boolean
-  // Unset: M.
+  // Unset: the default size.
   railSize?: RailSize
   // Left by older versions, which had a "remove from bar" button. Every tool
   // is in the launcher now, so migrateToRail drops it.
   dismissed?: number[]
 }
 
-export type RailSize = 's' | 'm' | 'l' | 'xl'
-export const RAIL_SIZES: RailSize[] = ['s', 'm', 'l', 'xl']
-export const RAIL_ZOOM: Record<RailSize, number> = { s: 0.82, m: 1, l: 1.25, xl: 1.55 }
+export type RailSize = 's' | 'm' | 'l' | 'xl' | 'xxl'
+export const RAIL_SIZES: RailSize[] = ['s', 'm', 'l', 'xl', 'xxl']
+export const RAIL_DEFAULT_SIZE: RailSize = 'xl'
+export const RAIL_ZOOM: Record<RailSize, number> = { s: 0.82, m: 1, l: 1.25, xl: 1.55, xxl: 1.9 }
 
 // One size up or down, staying at the ends.
 export function stepRailSize (size: RailSize | undefined, dir: 1 | -1): RailSize {
-  const i = RAIL_SIZES.indexOf(size ?? 'm')
+  const i = RAIL_SIZES.indexOf(size ?? RAIL_DEFAULT_SIZE)
   return RAIL_SIZES[Math.max(0, Math.min(RAIL_SIZES.length - 1, i + dir))]
 }
 

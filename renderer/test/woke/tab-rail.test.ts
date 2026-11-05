@@ -169,8 +169,9 @@ describe('arranging the rail', () => {
   })
 
   it('steps size and stops at the ends', () => {
-    expect(stepRailSize(undefined, 1)).toBe('l')
-    expect(stepRailSize('xl', 1)).toBe('xl')
+    expect(stepRailSize(undefined, 1)).toBe('xxl')
+    expect(stepRailSize(undefined, -1)).toBe('l')
+    expect(stepRailSize('xxl', 1)).toBe('xxl')
     expect(stepRailSize('s', -1)).toBe('s')
   })
 })
