@@ -28,7 +28,7 @@ const options = computed(() => [
   { value: 'low', label: 'Low' },
   { value: 'current', label: 'Approx' },
   ...(canUseHighRolls(props.stats) ? [{ value: 'high', label: 'High' }] : []),
-  ...(showValue.value ? [{ value: 'value', label: sourceText.value === 'measured' ? 'By value' : 'By value ≈' }] : [])
+  ...(showValue.value ? [{ value: 'value', label: sourceText.value === 'measured' ? 'By value\u00a0\u00a0' : 'By value ≈' }] : [])
 ])
 
 const title = computed(() => 'For every ticked mod. Low: any roll of its range. Approx: a tight window around this item\'s roll, or this roll and better on map stats. High: the best quarter of its range.' +

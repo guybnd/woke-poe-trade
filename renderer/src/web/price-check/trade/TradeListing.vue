@@ -9,12 +9,12 @@
         <span v-if="!list" class="text-gray-600">...</span>
         <b v-else class="font-normal">{{ list.total }}{{ list.inexact ? '+' : '' }}</b>
       </div>
-      <online-filter v-if="list" class="w-pc-online" :filters="filters" api="trade" />
+      <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
       <div class="w-pc-grow flex-1"></div>
-      <button v-if="list" type="button" class="w-icon-btn mr-1" title="Search again: results are otherwise kept for 5 minutes"
+      <button type="button" class="w-icon-btn mr-1" :class="{ invisible: !list }" title="Search again: results are otherwise kept for 5 minutes"
         :disabled="fetching" @click="refresh"><i class="fas fa-sync-alt text-xs" /><span v-if="refreshNote" class="text-xs ml-1">{{ refreshNote }}</span></button>
       <price-view-toggle class="mr-2" />
-      <trade-links v-if="list"
+      <trade-links :class="{ invisible: !list }"
         :get-link="makeTradeLink" />
     </div>
     <teleport v-if="improved && verdictSlot" :to="verdictSlot">
@@ -22,7 +22,7 @@
         :item="item"
         :insight="verdictInsight"
         :divine="divine"
-        :loading="!list || !slowdownReady"
+        :loading="!list || tableLoading"
         :total="list ? list.total : null"
         :log-key="logKey"
         :league="filters.trade.league"
@@ -76,24 +76,24 @@
           </tr>
         </thead>
         <tbody>
+          <tr v-if="shownColumns.length" class="w-pc-yours" title="Red: theirs is better. Green: yours is better.">
+            <td class="px-2 w-pc-yours-tag">Yours</td>
+            <td />
+            <td v-if="item.stackSize" />
+            <td v-if="showItemLevel" class="px-2 text-right">{{ item.itemLevel }}</td>
+            <td v-if="item.category === 'Gem'" />
+            <td v-if="filters.quality || item.category === 'Gem'" />
+            <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat">{{ col.yours }}</td>
+            <td v-if="hiddenColumns.length" />
+            <td v-if="showSeller" />
+            <td />
+          </tr>
           <template v-if="tableLoading">
-            <tr v-for="i in SKELETON_ROWS" :key="i">
+            <tr v-for="i in skeletonRows" :key="i">
               <td colspan="100" class="px-2"><span class="w-pc-skel" :style="{ width: 30 + ((i * 17) % 45) + '%' }" /></td>
             </tr>
           </template>
           <template v-else>
-            <tr v-if="shownColumns.length" class="w-pc-yours" title="Red: theirs is better. Green: yours is better.">
-              <td class="px-2 w-pc-yours-tag">Yours</td>
-              <td />
-              <td v-if="item.stackSize" />
-              <td v-if="showItemLevel" class="px-2 text-right">{{ item.itemLevel }}</td>
-              <td v-if="item.category === 'Gem'" />
-              <td v-if="filters.quality || item.category === 'Gem'" />
-              <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat">{{ col.yours }}</td>
-              <td v-if="hiddenColumns.length" />
-              <td v-if="showSeller" />
-              <td />
-            </tr>
             <tr v-for="row in rows" :key="row.key"
               :class="{
                 'w-pc-ignored': improved && row.dropped,
@@ -145,8 +145,8 @@
         </tbody>
       </table>
     </div>
-    <div v-if="improved && listSettled && list && rows.length" class="w-pc-foot"
-      title="Prices come from the cheapest listings the trade site returned"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</div>
+    <div v-if="improved" class="w-pc-foot" :class="{ invisible: !(listSettled && list && rows.length) }"
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -435,6 +435,10 @@ export default defineComponent({
     const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length))
     const listSettled = computed(() => !tableLoading.value && !fetching.value)
 
+    // A new search's loading rows take up what the last results did.
+    const skeletonRows = shallowRef(SKELETON_ROWS)
+    watch(rows, (shown) => { if (shown.length) skeletonRows.value = shown.length })
+
     // A new search empties the verdict for a moment. Holding its height keeps the
     // filters under it from jumping up and back down.
     function holdVerdictHeight () {
@@ -468,7 +472,7 @@ export default defineComponent({
       },
       hideTip,
       FIX_TAG,
-      SKELETON_ROWS,
+      skeletonRows,
       coinFor: (currency: string) => COINS[currency],
       inRange,
       maxCount,

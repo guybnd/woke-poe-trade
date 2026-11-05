@@ -196,3 +196,16 @@
 .w-pc-results-stale { opacity: 0.45; pointer-events: none; }
 .w-pc-search-row { min-height: calc(24px * var(--w-text-scale, 1)); margin-bottom: var(--w-s2, 0.5rem); }
 .w-pc-search-row .btn { height: calc(24px * var(--w-text-scale, 1)); padding-top: 0; padding-bottom: 0; }
+
+.w-pc-verdict-wait {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 33px;
+  padding: 0 1rem;
+  background: var(--w-pc-well, var(--w-panel-solid));
+  border-bottom: 1px solid var(--w-line);
+  color: var(--w-dim);
+  font-family: var(--w-body);
+  font-size: calc(12px * var(--w-text-scale, 1));
+}

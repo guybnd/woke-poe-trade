@@ -1,7 +1,10 @@
 <template>
   <div v-if="show" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
-    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale }" />
+    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale }">
+      <!-- The verdict's height from the start, so the first search doesn't push the mods down. -->
+      <div v-if="verdictWaiting" class="w-pc-verdict-wait">Prices show after you search</div>
+    </div>
     <filter-name
       ref="nameComponent"
       :filters="itemFilters"
@@ -286,6 +289,7 @@ export default defineComponent({
     return {
       verdictSlot,
       wokeVerdictShown,
+      verdictWaiting: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value == null),
       t,
       itemFilters,
       itemStats,
