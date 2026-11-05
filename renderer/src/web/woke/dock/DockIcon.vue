@@ -48,7 +48,7 @@ import { Host } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import { useHoverZone } from '../shared/hover'
 import type { DockEntry } from './dock'
-import { closeTip, dockArt, dockCardOwner, dockIcon, tipClosed } from './dock'
+import { closeTip, dockArt, dockCardOwner, dockConfig, dockIcon, tipClosed } from './dock'
 import DockMenu from './DockMenu.vue'
 
 const props = defineProps<{
@@ -107,6 +107,7 @@ watch(hovering, (on) => {
   if (timer) { clearTimeout(timer); timer = null }
   if (menuOpen.value) return
   if (on === showCard.value) return
+  if (on && dockConfig().hoverOpens === false) return
   timer = setTimeout(() => { showCard.value = on }, on ? OPEN_AFTER_MS : CLOSE_AFTER_MS)
 })
 function openCard () {

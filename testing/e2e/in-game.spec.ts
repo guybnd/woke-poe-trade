@@ -196,3 +196,25 @@ test('moving from icon to icon shows one card at a time', async ({ overlay }) =>
   await expect(regex).toHaveCount(0, { timeout: 100 })
   await overlay.moveMouse(1000, 900)
 })
+
+test('with hover switched off, a card opens only on a click', async ({ overlay, fakeApp }) => {
+  await overlay.boot({
+    widgets: [{ wmType: 'woke-mechanics' }],
+    patch: (c) => { c.woke.dock = { ...c.woke.dock, hoverOpens: false } }
+  })
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  const icon = overlay.dockIcon('regex-library')
+  const entry = icon.getByRole('button', { name: 'No reflect', exact: true })
+
+  await overlay.moveMouse(1000, 900)
+  await overlay.hoverDockIcon('regex-library')
+  await overlay.page.waitForTimeout(400)
+  await expect(entry).toHaveCount(0)
+
+  const box = (await icon.boundingBox())!
+  fakeApp.pressMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2))
+  fakeApp.releaseMouse()
+  await expect(entry).toBeVisible({ timeout: 1000 })
+  await overlay.moveMouse(1000, 900)
+  await expect(entry).toHaveCount(0, { timeout: 2000 })
+})

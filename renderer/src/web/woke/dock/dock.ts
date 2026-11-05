@@ -111,6 +111,8 @@ export interface DockConfig {
   noPeek: string[]
   // Modules whose icon is switched off.
   hidden: string[]
+  // false: cards open only on a click. Unset: on hover too.
+  hoverOpens?: boolean
   // Icons dismissed for a while: until when (ms).
   dismissed?: Record<string, number>
   // Hints on dock cards you've closed for good.

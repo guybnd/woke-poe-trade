@@ -5,6 +5,9 @@
       (campaign zones, hideout, maps, the lab, boss arenas). Rest the mouse on an icon for its card.
       With the overlay open, drag the row by its grip and click an icon for the full window. Right-click an icon for its menu, and the grip to bring back dismissed icons.
     </div>
+    <w-setting-row label="Open cards on hover" hint="Off: a card opens only when you click its icon. A click closes it either way.">
+      <w-toggle :model-value="dock.hoverOpens !== false" @update:model-value="dock.hoverOpens = $event" />
+    </w-setting-row>
     <w-setting-row label="Peek" hint="An icon grows into one line for 5 seconds when something happens: new zone, live search hit, map counted.">
       <w-toggle v-model="dock.peeks" />
     </w-setting-row>
