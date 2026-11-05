@@ -1,5 +1,5 @@
-// The last chunk of Client.txt, read once per app start, so the campaign
-// widgets know where you are without waiting for a zone change.
+// The last chunk of Client.txt, read once it's found, so the campaign widgets
+// know where you are without waiting for a zone change.
 import { hostRequest } from '../shared/host'
 
 export interface LogTail {
@@ -24,8 +24,14 @@ async function load (): Promise<LogTail> {
 }
 
 export function logTail (): Promise<LogTail> {
-  if (!pending) pending = load()
-  return pending
+  if (pending) return pending
+  // Not found isn't for good: the app can start before the game.
+  const loading: Promise<LogTail> = load().then((tail) => {
+    if (!tail.path) pending = null
+    return tail
+  })
+  pending = loading
+  return loading
 }
 
 // "2026/11/04 12:22:37 …" at the start of every Client.txt line, local time.

@@ -19,7 +19,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@ipc': path.resolve(__dirname, '../ipc'),
-      '@fixtures': path.resolve(__dirname, '../testing/fixtures')
+      '@fixtures': path.resolve(__dirname, '../testing/fixtures'),
+      electron: path.resolve(__dirname, 'test/setup/electron-stub.ts')
     }
   },
   test: {

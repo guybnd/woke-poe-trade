@@ -83,6 +83,7 @@ export type IpcEvent =
   IpcSaveConfig |
   IpcUpdaterState |
   IpcGameLog |
+  IpcGameLogOpened |
   IpcClientIsActive |
   IpcLogEntry |
   IpcHostConfig |
@@ -193,6 +194,13 @@ type IpcOcrText =
 type IpcGameLog =
   Event<'MAIN->CLIENT::game-log', {
     lines: string[]
+  }>
+
+// The log watcher has a Client.txt open: a good time to read one that was
+// missing when asked for.
+type IpcGameLogOpened =
+  Event<'MAIN->CLIENT::game-log-opened', {
+    path: string
   }>
 
 type IpcUpdaterState =

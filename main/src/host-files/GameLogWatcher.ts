@@ -2,7 +2,7 @@ import { promises as fs, watchFile, unwatchFile, type Stats } from 'fs'
 import { execFile } from 'child_process'
 import path from 'path'
 import { app } from 'electron'
-import { guessFileLocation } from './utils'
+import { findGameLogs } from '../woke/game-log-finder'
 import { ServerEvents } from '../server'
 import { Logger } from '../RemoteLogger'
 
@@ -72,10 +72,10 @@ export class GameLogWatcher {
     await this.close()
 
     if (!logFile.length) {
-      // woke: an old install's Client.txt in a default folder used to win
-      // for good when the app started before the game. Now the default
-      // folders are only a stand-in until the game starts (gameStarted).
-      const guessedPath = await runningGameLog() ?? await guessFileLocation(POSSIBLE_PATH)
+      // woke: an old install's Client.txt used to win for good when the app
+      // started before the game. Now the newest one on this PC is only a
+      // stand-in until the game starts (gameStarted).
+      const guessedPath = await runningGameLog() ?? (await findGameLogs())[0]?.path ?? null
       if (this._wantedPath !== logFile || guessedPath == null) return
       logFile = guessedPath
     }
@@ -132,9 +132,31 @@ export class GameLogWatcher {
         isReading: false,
         readBuff: Buffer.allocUnsafe(64 * 1024),
       }
+      this.announce(logFile)
     } catch {
       this.logger.write('error [GameLogWatcher] Failed to watch file.')
+      // woke: not there yet (a set path, before the game first runs). Same as
+      // a deleted log: wait for it. No file seen yet, so -1 matches no real id.
+      if (this._state || this._wantedPath !== wanted) return
+      watchFile(logFile, { interval: 450 }, this.handleFileChange.bind(this))
+      this._state = {
+        path: logFile,
+        file: null,
+        ino: -1,
+        offset: 0,
+        isReading: false,
+        readBuff: Buffer.allocUnsafe(64 * 1024),
+      }
     }
+  }
+
+  // woke: the overlay stops asking after a few seconds, so say when there's a
+  // log to read. Before any lines from it, so they arrive after this.
+  private announce (path: string) {
+    this.server.sendEventTo('broadcast', {
+      name: 'MAIN->CLIENT::game-log-opened',
+      payload: { path }
+    })
   }
 
   private handleFileChange (curr: Stats) {
@@ -183,6 +205,7 @@ export class GameLogWatcher {
       }
       next.file = file
       next.ino = stats.ino
+      this.announce(next.path)
       this.readToEOF()
     }).catch(() => {
       opened?.close().catch(() => {})
