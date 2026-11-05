@@ -419,6 +419,81 @@ export const BOSSES: Boss[] = ([
     ]
   },
   {
+    id: 'infinite-hunger',
+    name: 'The Infinite Hunger',
+    tier: 'pinnacle',
+    entry: [{ name: 'Writhing Invitation', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poedb drop list, no rates yet', url: POEDB + 'The_Infinite_Hunger', kills: null },
+    drops: [
+      { name: 'Ceaseless Feast', chance: null },
+      { name: 'Black Zenith', chance: null }
+    ]
+  },
+  {
+    id: 'black-star',
+    name: 'The Black Star',
+    tier: 'pinnacle',
+    entry: [{ name: 'Polaric Invitation', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poedb drop list, no rates yet', url: POEDB + 'The_Black_Star', kills: null },
+    drops: [
+      { name: 'Polaric Devastation', chance: null },
+      { name: 'Sudden Dawn', chance: null },
+      { name: 'The Eternal Struggle', chance: null }
+    ]
+  },
+  {
+    id: 'saresh',
+    name: 'Saresh, of the Weeping Black',
+    tier: 'pinnacle',
+    entry: [{ name: 'The Black Barya', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'community wiki via poedb', url: POEDB + 'Saresh%2C_of_the_Weeping_Black', kills: null, note: 'Wiki figures with no stated sample.' },
+    drops: [
+      { name: 'Screams of the Desiccated', chance: 0.50 },
+      { name: 'The Broken Elegy', chance: 0.40 },
+      { name: 'The Sands of Time', chance: 0.10 },
+      { name: 'Transfusion Support', chance: 0.10, variant: '1' }
+    ]
+  },
+  {
+    id: 'king-in-the-mists',
+    name: 'The King in the Mists',
+    tier: 'pinnacle',
+    entry: [{ name: 'An Audience With The King', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poedb drop list, no rates yet', url: POEDB + 'The_King_in_the_Mists', kills: null },
+    drops: [{ name: 'The Light of Meaning', chance: null }]
+  },
+  {
+    id: 'sasan',
+    name: 'Sasan, the Bandit Lord',
+    tier: 'pinnacle',
+    entry: [],
+    runSeconds: 180,
+    source: { label: 'poedb drop list, no rates yet', url: POEDB + 'Sasan%2C_the_Bandit_Lord', kills: null },
+    drops: [{ name: 'The Living Blade', chance: null }]
+  },
+  {
+    id: 'black-knight',
+    name: 'The Black Knight',
+    tier: 'pinnacle',
+    entry: [],
+    runSeconds: 180,
+    source: { label: 'poedb drop list, no rates yet', url: POEDB + 'The_Black_Knight', kills: null },
+    drops: [{ name: 'Svalinn', chance: null }]
+  },
+  {
+    id: 'lazeth',
+    name: 'Lazeth, the Cyaxan Assassin',
+    tier: 'pinnacle',
+    entry: [],
+    runSeconds: 180,
+    source: null,
+    drops: []
+  },
+  {
     id: 'feared',
     name: 'The Feared',
     tier: 'pinnacle',

@@ -25,8 +25,8 @@ describe('boss runs card', () => {
     expect(ids('MapAtziri2', 80)).toEqual(['uber-atziri'])
   })
 
-  it('every arena boss but The Feared has a drop list', () => {
-    expect(BOSSES.filter(b => !b.drops.length).map(b => b.id)).toEqual(['feared'])
+  it('only bosses with no known source lack a drop list', () => {
+    expect(BOSSES.filter(b => !b.drops.length).map(b => b.id)).toEqual(['lazeth', 'feared'])
   })
 
   it('leads with the most valuable drops, known chance or not', () => {

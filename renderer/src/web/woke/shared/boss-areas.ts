@@ -18,8 +18,13 @@ const ARENAS: Arena[] = [
   { areaIds: ['MapWorldsShapersRealm'], names: ["The Shaper's Realm"], bosses: ['shaper', 'uber-shaper'] },
   { areaIds: ['MapWorldsElderArena'], names: [], bosses: [] },
   { areaIds: ['MapWorldsElderArenaUber'], names: ['Absence of Value and Meaning'], bosses: ['uber-elder', 'uber-uber-elder'] },
-  { areaIds: ['MapWorldsPrimordialBoss1'], names: [], bosses: [] },
-  { areaIds: ['MapWorldsPrimordialBoss2'], names: [], bosses: [] },
+  { areaIds: ['MapWorldsPrimordialBoss1'], names: ['Seething Chyme'], bosses: ['infinite-hunger'] },
+  { areaIds: ['MapWorldsPrimordialBoss2'], names: ['Polaric Void'], bosses: ['black-star'] },
+  { areaIds: ['SettlersBossAlleyway'], names: ['Abandoned Port'], bosses: ['sasan'] },
+  { areaIds: ['SettlersBossPirateCove'], names: ["Sailor's Folly"], bosses: ['lazeth'] },
+  { areaIds: ['SettlersBossFallenStar'], names: ['Starfall Crater'], bosses: ['black-knight'] },
+  { areaIds: ['FaridunLeagueBoss'], names: ['The Black Barya'], bosses: ['saresh'] },
+  { areaIds: ['AzmeriLeagueBoss'], names: ['Crux of Nothingness'], bosses: ['king-in-the-mists'] },
   { areaIds: ['MapWorldsPrimordialBoss3'], names: ['Absence of Patience and Wisdom'], bosses: ['exarch', 'uber-exarch'] },
   { areaIds: ['MapWorldsPrimordialBoss4'], names: ['Absence of Symmetry and Harmony'], bosses: ['eater', 'uber-eater'] },
   // The Maven's own fight.
@@ -28,9 +33,7 @@ const ARENAS: Arena[] = [
   { areaIds: ['MavenHub'], names: ["The Maven's Crucible"], bosses: ['feared'] },
   { areaIds: ['AtlasExilesBoss5'], names: ['Eye of the Storm'], bosses: ['sirus', 'uber-sirus'] },
   { areaIds: ['Synthesis_MapBoss'], names: ['Cortex'], bosses: ['venarius', 'uber-cortex'] },
-  { areaIds: [], names: ['The Feared'], bosses: ['feared'] },
-  // The Infinite Hunger and The Black Star.
-  { areaIds: [], names: ['Seething Chyme', 'Polaric Void'], bosses: [] }
+  { areaIds: [], names: ['The Feared'], bosses: ['feared'] }
 ]
 
 // By lower-cased area id.
