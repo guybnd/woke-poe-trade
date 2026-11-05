@@ -482,6 +482,21 @@ describe('sources', () => {
     expect(store.doc.value).toBeTruthy()
   })
 
+  it('a stack size set back to NeverSink\'s drops the edit, and undoes', async () => {
+    host.files.set('NeverSink.filter', neverSink('1-REGULAR'))
+    const config = widget({ sourceName: 'NeverSink.filter' })
+    const store = useLootFilter(() => config)
+    await store.load()
+    store.edit({ kind: 'stack', type: 'currency->harvest', tier: 't1lifeforce', size: 3000 })
+    expect(config.edits).toHaveLength(1)
+    expect(store.sourceStack('currency->harvest', 't1lifeforce')).toBe(4000)
+    expect(store.sourceStack('currency->harvest', 't6lifeforce')).toBeNull()
+    const undo = store.removeEdit(config.edits[0].id)
+    expect(config.edits).toHaveLength(0)
+    undo()
+    expect(config.edits).toHaveLength(1)
+  })
+
   it('a dock card pick past either end stays on the last level', async () => {
     for (let i = 0; i < 7; i++) host.neversink.set(`8.20.1//${i}`, neverSink(LEVELS[i]))
     const config = widget({ neversink: { on: true, version: '8.20.1', prevVersion: null, style: '', level: 6, latest: null, latestChanges: '', checkedAt: Date.now() } })

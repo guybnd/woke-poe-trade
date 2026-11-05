@@ -454,6 +454,18 @@ test('stack sizes: type a number or drag a line, the bar follows and the file ch
   await expect(scale.getByRole('slider').first()).toHaveAttribute('aria-valuenow', '3000')
   await field.blur()
 
+  // Esc takes back what you typed. Back to NeverSink's number is no change at all.
+  await field.fill('3500')
+  await field.press('Escape')
+  await expect(field).toHaveValue('3000')
+  await expect(scale.getByRole('slider').first()).toHaveAttribute('aria-valuenow', '3000')
+  await field.fill('4000')
+  await field.blur()
+  await expect(page.getByRole('tab', { name: /^Changes/ })).toContainText('0')
+  await field.fill('3000')
+  await field.blur()
+  await expect(page.getByRole('tab', { name: /^Changes/ })).toContainText('1')
+
   // Dragging stops at its neighbour, and the number follows.
   const line = scale.getByRole('slider').first()
   const box = (await line.boundingBox())!

@@ -48,10 +48,14 @@ const bands = computed(() => {
   return out
 })
 
-// A line stops at its neighbours, so a tier can't end up behind another.
+// A line stops at its neighbours, so a tier can't end up behind another. Tiers you
+// typed to the same number aren't neighbours: either can still move off.
 function limits (i: number) {
   const steps = props.ladder.steps
-  return { low: (steps[i + 1]?.size ?? 0) + 1, high: i > 0 ? steps[i - 1].size - 1 : STACK_MAX }
+  const size = steps[i].size
+  const below = steps.slice(i + 1).find(s => s.size < size)?.size ?? 0
+  const above = steps.slice(0, i).reverse().find(s => s.size > size)?.size ?? STACK_MAX + 1
+  return { low: below + 1, high: above - 1 }
 }
 
 function start (e: PointerEvent, i: number) {
@@ -62,9 +66,14 @@ function start (e: PointerEvent, i: number) {
   el.focus()
   el.setPointerCapture(e.pointerId)
   let size = props.ladder.steps[i].size
+  // Where on the line you took hold, so a press doesn't jump it.
+  const box = el.getBoundingClientRect()
+  const grabbed = e.clientX - (box.left + box.width / 2)
+  const startX = e.clientX
   const move = (ev: PointerEvent) => {
-    const box = root.value!.getBoundingClientRect()
-    size = Math.max(low, Math.min(high, scaleSize((ev.clientX - box.left) / box.width * 100, heldMax.value!)))
+    if (ev.clientX === startX) return
+    const bar = root.value!.getBoundingClientRect()
+    size = Math.max(low, Math.min(high, scaleSize((ev.clientX - grabbed - bar.left) / bar.width * 100, heldMax.value!)))
     emit('preview', tier, size)
   }
   const end = () => {

@@ -36,13 +36,17 @@ export interface StackLadder {
   floor: string | null
 }
 
-// Worth a scale only when the tiers differ: "Stacks of 6 or more" is all 6s.
+// Worth a scale only when one item's stacks climb through the tiers. "Stacks of 6
+// or more" is all 6s, and levelling stacks are different items that happen to share
+// numbers, so a line there wouldn't move anything along a ladder.
 export function stackLadder (tiers: TierNode[], sizeOf: (t: TierNode) => number | null): StackLadder | null {
   const steps = tiers.flatMap(t => {
     const size = t.disabled ? null : sizeOf(t)
     return size == null ? [] : [{ tier: t.tier, size }]
   }).sort((a, b) => b.size - a.size)
   if (new Set(steps.map(s => s.size)).size < 2) return null
+  const items = new Set(tiers.filter(t => steps.some(s => s.tier === t.tier)).map(t => [...t.bases].sort().join('|')))
+  if (items.size > 1) return null
   const last = Math.max(...steps.map(s => tiers.findIndex(t => t.tier === s.tier)))
   const floor = tiers.slice(last + 1).find(t => !t.disabled && t.visibility !== 'Hide' && sizeOf(t) == null)
   return { steps, floor: floor?.tier ?? null }

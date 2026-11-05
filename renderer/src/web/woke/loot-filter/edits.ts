@@ -3,6 +3,7 @@
 // names, so the same list can be reapplied to every new NeverSink version.
 import { ruleLabel } from './parse'
 import { tierLabel } from './names'
+import { STACK_MAX } from './stack'
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc, Visibility } from './parse'
 
 export type Colour = [number, number, number, number]
@@ -87,7 +88,7 @@ export function isValidEdit (e: unknown): e is FilterEdit {
     case 'style': return str('tier') && isPatch(x.patch)
     case 'visibility': return str('tier') && VISIBILITIES.includes(x.visibility as string)
     case 'group': return typeof x.hidden === 'boolean'
-    case 'stack': return str('tier') && typeof x.size === 'number' && Number.isInteger(x.size) && x.size > 0
+    case 'stack': return str('tier') && typeof x.size === 'number' && Number.isInteger(x.size) && x.size > 0 && x.size <= STACK_MAX
     case 'item': return str('tier', 'base') && VISIBILITIES.includes(x.visibility as string) && isPatch(x.patch)
     default: return false
   }
@@ -405,6 +406,8 @@ export function addEdit (list: FilterEdit[], edit: FilterEdit, opts: { separateM
       anchor: edit.anchor ?? prev.anchor,
       pin: edit.pin ?? prev.pin
     }
+  } else if (edit.kind === 'stack') {
+    merged = { ...edit, id: prev.id }
   } else if (edit.kind === 'group' && !edit.hidden) {
     merged = null
   }
@@ -487,8 +490,14 @@ export function rehomeOptions (doc: FilterDoc, edit: FilterEdit): RehomeOption[]
       break
     case 'style':
     case 'visibility':
-    case 'stack':
       for (const t of types()) for (const tier of tiersOf(doc, t)) out.push({ type: t, tier, label: place(t, tier) })
+      break
+    case 'stack':
+      for (const t of types()) {
+        for (const tier of tiersOf(doc, t)) {
+          if (blocksOf(doc, t, tier).some(b => b.conditions.some(c => c.key === 'StackSize' && c.op === '>='))) out.push({ type: t, tier, label: place(t, tier) })
+        }
+      }
       break
     case 'move':
       for (const t of types(edit.base)) for (const tier of tiersOf(doc, t, true)) if (!tier.startsWith('#')) out.push({ type: t, tier, label: ruleLabel(t, tier) })

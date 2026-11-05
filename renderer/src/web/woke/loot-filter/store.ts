@@ -10,7 +10,7 @@ import { isTownLike } from '../campaign/log-parse'
 import { onGameLog } from '../shared/game-log'
 import { parseFilter, serializeFilter } from './parse'
 import type { FilterDoc } from './parse'
-import { addEdit, applyEdits, nextEditId, readStyle } from './edits'
+import { addEdit, applyEdits, blocksOf, nextEditId, readStyle } from './edits'
 import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
 import { describeStep, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
@@ -380,8 +380,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   let settled = copySettings()
   let settleTimer: ReturnType<typeof setTimeout> | undefined
 
-  function sourceLook (type: string, tier: string): StylePatch {
-    if (baseText.value == null) return {}
+  function sourceParsed (): FilterDoc | null {
+    if (baseText.value == null) return null
     // With your presets on it: bigger labels aren't a change to reset, tier by tier.
     const presets = JSON.stringify(cfg().presets)
     if (sourceDoc?.text !== baseText.value || sourceDoc.presets !== presets) {
@@ -389,9 +389,26 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       applyPresetChanges(doc, cfg().presets)
       sourceDoc = { text: baseText.value, presets, doc }
     }
-    const blocks = sourceDoc.doc.blocks.filter(b => b.type === type && b.tier === tier)
+    return sourceDoc.doc
+  }
+
+  function sourceLook (type: string, tier: string): StylePatch {
+    const doc = sourceParsed()
+    if (!doc) return {}
+    const blocks = blocksOf(doc, type, tier)
     const b = blocks.find(x => !x.disabled) ?? blocks[0]
     return b ? readStyle(b.actions) : {}
+  }
+
+  // The tier's stack size as NeverSink has it: going back to it isn't a change.
+  function sourceStack (type: string, tier: string): number | null {
+    const doc = sourceParsed()
+    if (!doc) return null
+    for (const b of blocksOf(doc, type, tier)) {
+      const c = b.conditions.find(x => x.key === 'StackSize' && x.op === '>=')
+      if (c) return Number(c.values[0])
+    }
+    return null
   }
   let sourceDoc: { text: string, presets: string, doc: FilterDoc } | null = null
 
@@ -1049,6 +1066,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     undoStep,
     redoStep,
     sourceLook,
+    sourceStack,
     resetPrices,
     editWithUndo,
     editsWithUndo,

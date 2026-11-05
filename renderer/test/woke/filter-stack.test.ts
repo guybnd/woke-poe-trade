@@ -1,6 +1,6 @@
 // Stack sizes of a group's tiers, on NeverSink's real filter at every strictness.
 import { describe, it, expect, beforeAll } from 'vitest'
-import { addEdit, applyEdits, describeEdit, isValidEdit } from '@/web/woke/loot-filter/edits'
+import { addEdit, applyEdits, describeEdit, isValidEdit, rehomeOptions } from '@/web/woke/loot-filter/edits'
 import type { FilterEdit } from '@/web/woke/loot-filter/edits'
 import { buildTree } from '@/web/woke/loot-filter/groups'
 import type { GroupNode, TierNode } from '@/web/woke/loot-filter/groups'
@@ -34,6 +34,16 @@ describe('reading', () => {
 
   it('has no scale where every tier is the same', () => {
     expect(stackLadder(groupOf(neverSink('1-REGULAR'), 'currency->stackedsix').tiers, tierStack)).toBeNull()
+  })
+
+  it('has no scale over different items that share numbers', () => {
+    expect(stackLadder(groupOf(neverSink('1-REGULAR'), 'currency->levelingstacked').tiers, tierStack)).toBeNull()
+  })
+
+  it('keeps its scale when you type two tiers to one number', () => {
+    const g = groupOf(neverSink('1-REGULAR'), 'currency->harvest')
+    const ladder = stackLadder(g.tiers, t => t.tier === 't2lifeforce' ? 250 : tierStack(t))!
+    expect(ladder.steps.map(s => s.size)).toEqual([4000, 250, 250, 45, 20])
   })
 
   it.each(LEVELS)('no group\'s real tiers are unreachable at %s', (level) => {
@@ -87,7 +97,21 @@ describe('changing', () => {
     expect(list.map(e => e.kind === 'stack' && [e.tier, e.size])).toEqual([['t1lifeforce', 200], ['t2lifeforce', 50]])
   })
 
+  it('a second change to a tier is still that one edit', () => {
+    const first = addEdit([], stackEdit('t1lifeforce', 100, 1))
+    expect(addEdit(first, stackEdit('t1lifeforce', 200, 9))[0].id).toBe(1)
+  })
+
+  it('a failed edit is only offered tiers that have a stack size', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    const tiers = rehomeOptions(doc, stackEdit('gone', 5)).filter(o => o.type === 'currency->harvest').map(o => o.tier)
+    expect(tiers).toContain('t1lifeforce')
+    expect(tiers).not.toContain('t6lifeforce')
+    expect(tiers).not.toContain('exhide')
+  })
+
   it('checks saved edits', () => {
+    expect(isValidEdit({ ...stackEdit('t1', 5), size: 1e21 })).toBe(false)
     expect(isValidEdit(stackEdit('t1', 5))).toBe(true)
     expect(isValidEdit({ ...stackEdit('t1', 5), size: 0 })).toBe(false)
     expect(isValidEdit({ ...stackEdit('t1', 5), size: 1.5 })).toBe(false)

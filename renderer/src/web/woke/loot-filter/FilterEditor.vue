@@ -98,7 +98,7 @@
             <span v-if="hasStacks" :class="$style.stack">
               <template v-if="tierStack(t) != null && !t.disabled">
                 &ge; <input type="number" min="1" :max="STACK_MAX" :class="$style.stackInput" :value="stackSizeOf(t)" :aria-label="`Stack size for ${stackTierName(t.tier)}`"
-                  @click.stop @input="onStackInput(t, $event)" @change="onStackChange(t, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()">
+                  @click.stop @input="onStackInput(t, $event)" @change="onStackChange(t, $event)" @blur="dropStackDraft(t.tier)" @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc="cancelStack(t, $event)">
               </template>
               <span v-else-if="ladder?.floor === t.tier" class="w-faint">smaller</span>
             </span>
@@ -711,14 +711,18 @@ function changedIn (type: string): number {
 // What you're typing or dragging: shown at once, saved when you let go.
 const stackDrafts = ref<Record<string, number>>({})
 watch(selType, () => { stackDrafts.value = {} })
+// Undo or a reset moves the number out from under a draft.
+watch(() => props.config.edits, () => { stackDrafts.value = {} })
 
 function stackSizeOf (t: TierNode): number | null {
   const size = tierStack(t)
   return size == null ? null : stackDrafts.value[t.tier] ?? size
 }
-const hasStacks = computed(() => group.value?.tiers.some(t => !t.disabled && tierStack(t) != null) ?? false)
-const ladder = computed(() => group.value ? stackLadder(group.value.tiers, stackSizeOf) : null)
-const stuckTiers = computed(() => group.value ? unreachableTiers(group.value.tiers, stackSizeOf).map(stackTierName) : [])
+// Your own rules and the safety net hold copies: those change with what made them.
+const stacksEditable = computed(() => Boolean(group.value) && !group.value!.type.startsWith('woke->'))
+const hasStacks = computed(() => stacksEditable.value && group.value!.tiers.some(t => !t.disabled && tierStack(t) != null))
+const ladder = computed(() => stacksEditable.value ? stackLadder(group.value!.tiers, stackSizeOf) : null)
+const stuckTiers = computed(() => stacksEditable.value && group.value ? unreachableTiers(group.value.tiers, stackSizeOf).map(stackTierName) : [])
 
 function stackTierName (tier: string): string {
   const t = group.value?.tiers.find(x => x.tier === tier)
@@ -745,13 +749,22 @@ function dropStackDraft (tier: string) {
 function setStack (tier: string, size: number) {
   dropStackDraft(tier)
   const t = group.value?.tiers.find(x => x.tier === tier)
-  if (!t || !selType.value || tierStack(t) === size) return
-  props.store.edit({ kind: 'stack', type: selType.value, tier, size })
+  const type = selType.value
+  if (!t || !type || tierStack(t) === size) return
+  const mine = props.config.edits.find(e => e.kind === 'stack' && e.type === type && e.tier === tier)
+  if (mine && props.store.sourceStack(type, tier) === size) props.store.removeEdit(mine.id)
+  else props.store.edit({ kind: 'stack', type, tier, size })
 }
 
 function onStackInput (t: TierNode, e: Event) {
   const size = cleanStackSize((e.target as HTMLInputElement).value)
   if (size != null) previewStack(t.tier, size)
+}
+
+// Esc leaves the field the way it came. The panel blurs it right after.
+function cancelStack (t: TierNode, e: Event) {
+  dropStackDraft(t.tier)
+  ;(e.target as HTMLInputElement).value = String(tierStack(t) ?? '')
 }
 
 function onStackChange (t: TierNode, e: Event) {
