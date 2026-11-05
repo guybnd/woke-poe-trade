@@ -65,12 +65,13 @@ import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, gameIcon } from '../ui'
+import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, gameIcon, toast } from '../ui'
 import DockItem from '../dock/DockItem.vue'
 import { LEVEL_NAMES, LEVEL_SHORT, stepLabel } from './strictness'
 import SampleCard from './SampleCard.vue'
 import FilterEditor from './FilterEditor.vue'
 import { useLootFilter } from './store'
+import { pressedKeys, sortKeys } from './hotkey-match'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
 import { matchItem } from './match'
@@ -88,6 +89,9 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   wm.show(props.config.wmId)
 }
 normalizeLootFilterWidget(props.config)
+// Left over if the app closed while the sample card was open.
+if (props.config.wmZorder === 'exclusive') props.config.wmZorder = null
+props.config.wmFlags = props.config.wmFlags.filter(f => f !== 'hide-on-blur')
 // Settings can swap in a whole new config object; fill in any new fields.
 watch(() => props.config, (c) => normalizeLootFilterWidget(c))
 
@@ -98,6 +102,19 @@ const samplePosition = shallowRef({ x: 1, y: 1 })
 const focus = shallowRef<{ type: string, tier: string } | null>(null)
 const areaOverride = ref<number | null>(null)
 
+// The card shows alone, not with every open panel, and closes when you go back
+// to the game. The editor is an ordinary window.
+watch(mode, (m) => {
+  const w = props.config
+  wm.setFlag(w.wmId, 'hide-on-blur', m === 'card')
+  if (m === 'card') {
+    w.wmZorder = 'exclusive'
+  } else if (w.wmZorder === 'exclusive') {
+    w.wmZorder = null
+    if (w.wmWants === 'show') wm.bringToTop(w.wmId)
+  }
+}, { flush: 'sync' })
+
 const effectiveAreaLevel = computed(() => areaOverride.value ?? store.areaLevel.value ?? props.config.fallbackAreaLevel)
 
 const match = computed(() => {
@@ -106,13 +123,23 @@ const match = computed(() => {
   return matchItem(doc, { ...sample.value, areaLevel: effectiveAreaLevel.value })
 })
 
-async function ensureLoaded () {
-  if (!store.doc.value && !store.loading.value) {
-    await store.listFiles()
-    await store.load()
-  }
+// One load at a time: store.loading only turns on after listFiles resolves.
+let loading: Promise<void> | null = null
+function ensureLoaded () {
+  if (store.doc.value || store.loading.value || loading) return loading
+  loading = (async () => {
+    try {
+      await store.listFiles()
+      await store.load()
+    } finally {
+      loading = null
+    }
+  })()
+  return loading
 }
-ensureLoaded()
+// Never set up: read nothing until it's first used, so an overlay you haven't
+// touched stays quiet.
+if (props.config.sourceName || props.config.neversink.on) ensureLoaded()
 
 async function retry () {
   await store.listFiles()
@@ -129,6 +156,21 @@ const itemEvents = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
   wm.show(props.config.wmId)
   ensureLoaded()
 })
+
+const itemFailed = MainProcess.onEvent('MAIN->CLIENT::item-text-failed', (e) => {
+  if (e.target === LOOT_FILTER_SAMPLE_TARGET) toast('The game gave no item text for what is under the mouse.')
+})
+
+// Hotkeys only reach the game while it has focus: say so instead of nothing.
+function onOverlayKey (e: KeyboardEvent) {
+  const key = props.config.sampleHotkey
+  if (!key || e.repeat || props.config.wmWants !== 'show') return
+  // Typing or recording a hotkey somewhere in the overlay, not trying to sample.
+  const t = e.target as HTMLElement | null
+  if (t?.closest?.('input, textarea, select, [contenteditable]')) return
+  if (pressedKeys(e) === sortKeys(key)) toast(`Click into the game first, hover the item, then press ${key}.`)
+}
+window.addEventListener('keydown', onOverlayKey)
 
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   const step = parseStrictnessTarget(e.target)
@@ -147,6 +189,8 @@ const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', onOverlayKey)
+  itemFailed.abort()
   itemEvents.abort()
   hotkeys.abort()
 })
@@ -191,6 +235,7 @@ watch(() => props.config.neversink.level, (l, old) => {
 // The card is a one-off; showing the widget again from the menu opens the editor.
 watch(() => props.config.wmWants, (wants) => {
   if (wants === 'hide') mode.value = 'editor'
+  else ensureLoaded()
 })
 
 // Same placement as APT's item info: next to the stash or inventory panel,

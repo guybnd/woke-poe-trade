@@ -92,6 +92,9 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
       : parsed.info.refName
   }
   if (!baseType) baseType = nameLines[nameLines.length - 1]?.replace(/^Superior /, '')
+  // The parser's unique maps are just "Map"; filters match "Map (Tier 16)".
+  const tier = parsed?.mapTier ?? num(all.find(l => l.startsWith('Map Tier:')))
+  if (baseType === 'Map' && tier != null) baseType = `Map (Tier ${tier})`
 
   // Currency, gems and cards count as Normal for Rarity conditions.
   const textRarity = ['Normal', 'Magic', 'Rare', 'Unique'].includes(rarityText ?? '') ? rarityText as FilterRarity : 'Normal'

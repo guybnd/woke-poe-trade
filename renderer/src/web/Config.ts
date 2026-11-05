@@ -5,7 +5,8 @@ import { HostConfig, ShortcutAction } from '@ipc/types'
 import type * as widget from './overlay/widgets'
 import type { StashSearchWidget } from './stash-search/widget'
 import { wokeGlobalShortcuts, wokeShortcutsFor } from './woke/shortcuts'
-import { filterAptShortcuts, needsGameLog } from './woke/modules'
+import { LOOT_FILTER_TYPE, seedLootFilterWidget } from './woke/loot-filter/widget'
+import { ensureWokeConfig, filterAptShortcuts, isModuleOn, needsGameLog } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
 import { movePopupsToNewSpot } from './woke/ui/window-anchor'
@@ -447,6 +448,17 @@ function upgradeConfig (_config: Config): Config {
   // woke: single-instance windows are only created on a fresh config.
   if (!config.widgets.some(w => w.wmType === MAP_CHECK_TYPE)) {
     config.widgets.push(initMapCheckWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+  }
+  // woke: the filter rule hotkey works without adding the editor first.
+  // Once only, so one you removed stays removed.
+  const modules = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
+  if (!modules.woke?.lootFilterSeeded && isModuleOn(modules, 'loot-filter')) {
+    if (!config.widgets.some(w => w.wmType === LOOT_FILTER_TYPE)) {
+      const taken = [...JSON.stringify(config).matchAll(/"((?:[A-Z][a-z]+ \+ )+\w+)"/g)].map(m => m[1])
+      taken.push(`${priceCheck.hotkeyHold} + ${priceCheck.hotkey}`)
+      config.widgets.push(seedLootFilterWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1, taken))
+    }
+    ensureWokeConfig(modules).woke.lootFilterSeeded = true
   }
   // woke: Stash search strings move into the Regex library.
   moveStashSearchToLibrary(config.widgets as Array<Record<string, any> & { wmId: number, wmType: string }>)

@@ -80,7 +80,7 @@ const DROPS = 40
 
 const seed = ref(1)
 const area = ref(props.store.areaLevel.value ?? props.config.fallbackAreaLevel)
-const showHidden = ref(false)
+const showHidden = ref(true)
 const compare = ref('off')
 
 const areaOptions = computed(() => {

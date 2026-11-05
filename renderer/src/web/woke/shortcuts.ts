@@ -132,7 +132,9 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     const lf = widget as LootFilterWidget
     const actions: ShortcutAction[] = []
     if (lf.sampleHotkey) {
-      actions.push({ shortcut: lf.sampleHotkey, action: { type: 'copy-item', target: LOOT_FILTER_SAMPLE_TARGET, focusOverlay: true } })
+      // keepModKeys: an item your filter hides only has a ground label while
+      // Alt is down; letting go of it before the copy would lose the item.
+      actions.push({ shortcut: lf.sampleHotkey, keepModKeys: true, action: { type: 'copy-item', target: LOOT_FILTER_SAMPLE_TARGET, focusOverlay: true } })
     }
     if (lf.editorHotkey) {
       actions.push({ shortcut: lf.editorHotkey, keepModKeys: true, action: { type: 'trigger-event', target: editorHotkeyTarget(widget.wmId), focusOverlay: true } })
