@@ -91,7 +91,7 @@ const cardOpen = computed(() => !menuOpen.value && (showCard.value || props.host
 // Hover works while the game has focus (main process watches the mouse).
 // Both take the mouse while it's over them, so a click lands here instead of
 // walking the character there.
-const overIcon = useHoverZone(iconEl, { enabled: () => true, activate: () => true, onClick: openCard, onRightClick: openIconMenu })
+const overIcon = useHoverZone(iconEl, { enabled: () => true, activate: () => true, onClick: pressedInGame, onRightClick: openIconMenu })
 const overCard = useHoverZone(cardEl, { enabled: () => cardOpen.value, activate: () => true })
 const overMenu = useHoverZone(menuEl, { enabled: () => menuOpen.value, activate: () => true })
 const hovering = computed(() => overIcon.value || overCard.value || overMenu.value)
@@ -168,9 +168,32 @@ function place () {
   placement.value = cls.join(' ')
 }
 
+// While playing, a click on the icon opens its card or closes it again. One click
+// arrives twice: from main's mouse hook as the button goes down, and as a page
+// click as it comes up (only if the mouse was taken, so not always).
+const SAME_PRESS_MS = 1500
+let pressedAt = 0
+function pressedInGame () {
+  pressedAt = Date.now()
+  if (wm.active.value) openCard()
+  else toggleCard()
+}
+function toggleCard () {
+  if (!cardOpen.value) {
+    openCard()
+    return
+  }
+  if (timer) { clearTimeout(timer); timer = null }
+  showCard.value = false
+  props.host.pinned = null
+}
+
 function click () {
+  if (!wm.active.value) {
+    if (Date.now() - pressedAt > SAME_PRESS_MS) toggleCard()
+    return
+  }
   openCard()
-  if (!wm.active.value) return
   if (props.host.props.pinnable) props.host.pinned = props.host.pinned ? null : 'click'
   props.host.onClick()
 }

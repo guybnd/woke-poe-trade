@@ -143,3 +143,36 @@ test('boss runs icon: a click with the overlay open shows that boss despite the 
   await expect(panel.getByText('The Vertex').first()).toBeVisible()
   await overlay.snap('uber atziri drops panel')
 })
+
+test('a click on an icon closes its open card, which stays closed until the mouse comes back', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  const icon = overlay.dockIcon('regex-library')
+  const entry = icon.getByRole('button', { name: 'No reflect', exact: true })
+
+  // Main remembers the mouse on this spot from the test before.
+  await overlay.moveMouse(1000, 900)
+  await overlay.hoverDockIcon('regex-library')
+  await expect(entry).toBeVisible({ timeout: 2000 })
+  const box = (await icon.boundingBox())!
+  const x = Math.round(box.x + box.width / 2)
+  const y = Math.round(box.y + box.height / 2)
+  fakeApp.pressMouse(x, y)
+  // The same click reaching the page as the button comes up doesn't reopen it.
+  await icon.locator('span').first().click()
+  fakeApp.releaseMouse()
+  await expect(entry).toHaveCount(0, { timeout: 1000 })
+  await overlay.page.waitForTimeout(400)
+  await expect(entry).toHaveCount(0)
+
+  // A second click opens it again, then leaving and coming back does too.
+  await overlay.page.waitForTimeout(1200)
+  fakeApp.pressMouse(x, y)
+  fakeApp.releaseMouse()
+  await expect(entry).toBeVisible({ timeout: 1000 })
+  await overlay.moveMouse(1000, 900)
+  await expect(entry).toHaveCount(0, { timeout: 2000 })
+  await overlay.hoverDockIcon('regex-library')
+  await expect(entry).toBeVisible({ timeout: 2000 })
+  await overlay.moveMouse(1000, 900)
+})
