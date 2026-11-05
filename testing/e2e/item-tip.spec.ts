@@ -111,7 +111,9 @@ test('a base in a unique tier lists the uniques it can drop as, with their price
   await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+Shift+F')
   await overlay.pressHotkey('Alt + Shift + F')
   const page = overlay.page
-  await page.getByRole('button', { name: /^Uniques \d+/ }).click()
+  await page.getByRole('navigation', { name: /Where you are/ }).getByRole('button', { name: 'All' }).click()
+  await page.getByRole('button', { name: /^Uniques/ }).first().click()
+  await page.getByRole('button', { name: /^All uniques/ }).first().click()
   const tip = page.getByRole('tooltip')
 
   // Many uniques on one base: the best in full, then each with its price and grade.
