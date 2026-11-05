@@ -41,18 +41,19 @@
         <WEmpty v-if="!buy.length" icon="fas fa-recycle">No {{ family.noun }} is worth flipping this way right now.</WEmpty>
         <template v-else>
           <div class="w-row w-row--head" :class="$style.buyGrid">
-            <span>{{ capitalize(family.noun) }}</span><span class="text-right">Price</span>
-            <span class="text-right" :title="profitTitle">Profit each</span>
-            <template v-if="hasVolume"><span class="text-right" :title="MARKET_TITLE">Market / day</span><span class="text-right" :title="MAX_PROFIT_TITLE">Max profit / day</span></template>
+            <span v-for="c in buyColumns" :key="c.key" :class="c.key === 'item' ? '' : 'text-right'">
+              <button type="button" :class="[$style.sortHead, { [$style.sorted]: sort.key === c.key }]" :title="c.title" :aria-label="sortLabel(c)" @click="pickSort(c.key)">
+                <i v-if="sort.key === c.key && c.key !== 'item'" :class="sortArrow" aria-hidden="true" />
+                {{ c.label }}
+                <i v-if="sort.key === c.key && c.key === 'item'" :class="sortArrow" aria-hidden="true" />
+              </button>
+            </span>
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
             <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" />
             <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
             <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
-            <template v-if="hasVolume">
-              <span class="text-right w-dim w-num">{{ Math.round(r.tradedPerDay ?? 0) }}</span>
-              <span class="text-right w-num">{{ Math.round(r.profitPerDay ?? 0) }}c</span>
-            </template>
+            <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
           </div>
         </template>
       </template>
@@ -94,13 +95,13 @@
         <template v-else>
           <div class="w-row w-row--head" :class="$style.rareGrid">
             <span>{{ capitalize(family.noun) }}</span><span class="text-right">Price</span><span class="text-right" title="Chance per flip or drop, from the weights">Drops</span>
-            <span v-if="hasVolume" class="text-right" :title="MARKET_TITLE">Market / day</span>
+            <span v-if="hasVolume" class="text-right" :title="SUPPLY_TITLE">Supply</span>
           </div>
           <div v-for="r in rareCheap" :key="r.name" class="w-row" :class="$style.rareGrid" @contextmenu="rowMenu($event, r.name)">
             <FlipName :name="r.name" :item="r.name" :rare-cheap="r.rareCheap" />
             <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
             <span class="text-right w-dim w-num">1 in {{ Math.round(1 / r.share).toLocaleString('en-US') }}</span>
-            <span v-if="hasVolume" class="text-right w-dim w-num">{{ Math.round(r.tradedPerDay ?? 0) }}</span>
+            <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
           </div>
         </template>
       </template>
@@ -143,8 +144,8 @@ import DockItem from '../dock/DockItem.vue'
 import { dockIconEl } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
-import { JACKPOT_CHAOS, buyList, isTraded, flipOdds, parseExchange, rareCheapList } from './calc'
-import type { FlipRow, UpgradeRow } from './calc'
+import { DEFAULT_FLIP_SORT, JACKPOT_CHAOS, SUPPLY_HIGH, SUPPLY_MEDIUM, buyList, firstSortDir, isTraded, flipOdds, parseExchange, rareCheapList, sortFlips, supplyLevel } from './calc'
+import type { FlipRow, FlipSortKey, UpgradeRow } from './calc'
 import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, shortName, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
@@ -274,11 +275,38 @@ const views = computed(() => {
 })
 const view = computed(() => views.value.some(v => v.value === props.config.tab) ? props.config.tab : 'buy')
 
-const MAX_PROFIT_TITLE = 'The most you could make in a day: the profit if you bought every item the whole market traded and flipped them all. A ceiling, used to rank the list. Real profit will be far lower.'
-const MARKET_TITLE = 'How many of this item changed hands across the whole market in the last 24 hours, from poe.ninja. Not how many you could buy.'
+const SUPPLY_TITLE = `How much of this item trades a day on the in-game currency exchange, from poe.ninja: High is ${SUPPLY_HIGH} or more, Medium ${SUPPLY_MEDIUM} or more. Trade site sales aren't counted.`
+const supplyTitle = computed(() => flip.value?.kind === 'upgrade'
+  ? `${SUPPLY_TITLE} A recipe needs buyers for the next tier too, so the thinner side counts.`
+  : SUPPLY_TITLE)
 const panelIcon = moduleIcon('scarab-flip').art ?? undefined
 const hasVolume = computed(() => rows.value.some(r => r.tradedChaos != null))
-const buy = computed(() => buyList(rows.value, props.config.hideUntraded))
+const SORT_KEYS: FlipSortKey[] = ['item', 'price', 'profit', 'supply']
+// Saved configs can be edited by hand, and a tab with no volume has no Supply column.
+const sort = computed(() => {
+  const saved = props.config.sort
+  if (!saved || !SORT_KEYS.includes(saved.key) || (saved.dir !== 'asc' && saved.dir !== 'desc')) return DEFAULT_FLIP_SORT
+  return saved.key === 'supply' && !hasVolume.value ? DEFAULT_FLIP_SORT : saved
+})
+function pickSort (key: FlipSortKey) {
+  const { key: current, dir } = sort.value
+  props.config.sort = { key, dir: current !== key ? firstSortDir(key) : dir === 'asc' ? 'desc' : 'asc' }
+}
+const sortArrow = computed(() => sort.value.dir === 'asc' ? 'fas fa-caret-up' : 'fas fa-caret-down')
+const buyColumns = computed(() => {
+  const list: Array<{ key: FlipSortKey, label: string, title?: string }> = [
+    { key: 'item', label: capitalize(family.value.noun) },
+    { key: 'price', label: 'Price' },
+    { key: 'profit', label: 'Profit each', title: profitTitle.value }
+  ]
+  if (hasVolume.value) list.push({ key: 'supply', label: 'Supply', title: supplyTitle.value })
+  return list
+})
+function sortLabel (c: { key: FlipSortKey, label: string }) {
+  if (sort.value.key !== c.key) return `Sort by ${c.label}`
+  return `${c.label}, sorted ${sort.value.dir === 'asc' ? 'ascending' : 'descending'}`
+}
+const buy = computed(() => sortFlips<FlipRow | UpgradeRow>(buyList(rows.value, props.config.hideUntraded), sort.value, shortName))
 const rareCheap = computed(() => pool.value ? rareCheapList(pool.value) : [])
 const odds = computed(() => pool.value ? flipOdds(pool.value) : null)
 // Both bars use one scale, so a long value bar means more than a long chance bar.
@@ -439,8 +467,11 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 <style module>
 .verdict { display: flex; flex-direction: column; gap: 2px; padding: 8px var(--w-pad); background: var(--w-accent-soft); border-bottom: 1px solid var(--w-line); }
 .verdict b { font-size: var(--w-fs-lg); font-weight: 600; }
-.buyGrid { grid-template-columns: minmax(0, 1fr) 62px 70px 56px 80px; }
-.rareGrid { grid-template-columns: minmax(0, 1fr) 62px 76px 64px; }
+.buyGrid { grid-template-columns: minmax(0, 1fr) 62px calc(96px * var(--w-text-scale, 1)) calc(64px * var(--w-text-scale, 1)); }
+.sortHead { all: unset; cursor: pointer; white-space: nowrap; }
+.sortHead:hover, .sortHead:focus-visible { color: var(--w-text); }
+.sorted { color: var(--w-accent); }
+.rareGrid { grid-template-columns: minmax(0, 1fr) 62px 76px calc(64px * var(--w-text-scale, 1)); }
 .sourceGrid { grid-template-columns: minmax(0, 1fr) 76px 44px; }
 .note { padding: 8px var(--w-pad); color: var(--w-dim); font-size: var(--w-fs-sm); white-space: normal; overflow-wrap: anywhere; }
 .warning { color: var(--w-warn); }

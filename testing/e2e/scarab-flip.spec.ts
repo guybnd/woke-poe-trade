@@ -50,10 +50,11 @@ test('flips: buy list, odds and rare scarabs from recorded prices', async ({ ove
   const panel = overlay.widget('woke-scarab-flip')
 
   await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
-  // Volume comes from the exchange feed, so the supply columns show.
-  await expect(panel.getByText('Market / day')).toBeVisible()
-  await expect(panel.getByText('Profit each')).toHaveAttribute('title', /divided by 3/)
-  await expect(panel.getByText('Max profit / day')).toHaveAttribute('title', /ceiling/i)
+  // Volume comes from the exchange feed, so the Supply column shows, as a word.
+  await expect(panel.getByRole('button', { name: /Supply/ })).toHaveAttribute('title', /currency exchange/)
+  await expect(panel.getByText('Market / day')).toHaveCount(0)
+  await expect(panel.getByText('Max profit / day')).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: /Profit each/ })).toHaveAttribute('title', /divided by 3/)
   await expect(panel.getByText('Breach of the Hive', { exact: true })).toBeVisible()
   await overlay.snap('flips-scarabs-buy')
 
@@ -89,6 +90,39 @@ test('flips: a Harvest reroll tab and a known-result tab', async ({ overlay }) =
   await expect(panel.locator('.w-row').filter({ hasText: 'Black to Opalescent Oil' }).getByText('+1.2c')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Odds', exact: true })).toHaveCount(0)
   await overlay.snap('flips-oils-upgrade')
+})
+
+test('flips: headers sort the buy list, profit each first', async ({ overlay }) => {
+  await routePrices(overlay)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show' }] })
+  const panel = overlay.widget('woke-scarab-flip')
+  await panel.getByRole('tab', { name: 'Delirium', exact: true }).click()
+  await expect(panel.getByText(/\d+ orbs? worth rerolling/)).toBeVisible()
+
+  const body = panel.locator('.w-row:not(.w-row--head)')
+  const column = async (n: number) => await body.locator(`> :nth-child(${n})`).allInnerTexts()
+  const numbers = (cells: string[]) => cells.map(c => Number.parseFloat(c.replace(/[^\d.]/g, '')))
+  const descending = (list: number[]) => list.every((v, i) => i === 0 || list[i - 1] >= v)
+
+  const profit = numbers(await column(3))
+  expect(profit.length).toBeGreaterThan(1)
+  expect(descending(profit)).toBe(true)
+  await overlay.snap('flips-sorted-profit')
+
+  await panel.getByRole('button', { name: 'Profit each, sorted descending' }).click()
+  await expect(panel.getByRole('button', { name: 'Profit each, sorted ascending' })).toBeVisible()
+  expect(descending(numbers(await column(3)).reverse())).toBe(true)
+
+  await panel.getByRole('button', { name: 'Sort by Orb' }).click()
+  const names = await column(1)
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en')))
+
+  await panel.getByRole('button', { name: 'Sort by Supply' }).click()
+  const rank = { High: 3, Medium: 2, Low: 1 }
+  const supply = (await column(4)).map(c => rank[c.trim() as keyof typeof rank])
+  expect(supply.every(Boolean)).toBe(true)
+  expect(descending(supply)).toBe(true)
+  await overlay.snap('flips-sorted-supply')
 })
 
 test('flips: the lifeforce cost set in settings changes the panel, and blank goes back to the default', async ({ overlay }) => {

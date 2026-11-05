@@ -1,4 +1,5 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
+import type { FlipSort } from './calc'
 import type { FlipMethodId } from './families'
 
 // Named when the panel only did scarabs; kept so placed panels carry over.
@@ -18,6 +19,8 @@ export interface ScarabFlipWidget extends Widget {
   lifeforcePerItem?: number
   // Shows or clears the outlines on the open stash tab.
   stashHotkey?: string | null
+  // The buy list's order; profit each when unset.
+  sort?: FlipSort
 }
 
 export function stashHotkeyTarget (wmId: number): string {
