@@ -369,7 +369,7 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
   await page.getByRole('button', { name: /Despot Axe/ }).click()
   await expect(page.getByText('"Show it" will')).toBeVisible()
   await expect(page.getByText('Kingmaker').first()).toBeVisible()
-  await expect(page.getByText("Debeon's Dirge")).toBeVisible()
+  await expect(page.getByText("Debeon's Dirge").first()).toBeVisible()
   await expect(page.getByText('1 trash')).toBeVisible()
   await expect(page.getByText(/every unique Despot Axe shows/)).toBeVisible()
   await overlay.snap('prices tab, a hidden item opened')
