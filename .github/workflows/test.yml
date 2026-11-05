@@ -29,6 +29,13 @@ jobs:
           main/package-lock.json
     - run: npm ci
       working-directory: ./renderer
+    # Before the renderer's checks too: its tests import some of main's code.
+    # Only the TypeScript and plain JS are used; the native modules and Electron
+    # itself aren't needed for that.
+    - run: npm ci --ignore-scripts
+      working-directory: ./main
+      env:
+        ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     - run: npm run lint
       working-directory: ./renderer
     - name: Type check (app + tests)
@@ -37,12 +44,6 @@ jobs:
     - name: Unit tests
       run: npm test
       working-directory: ./renderer
-    # Only the TypeScript is checked here; the native modules and Electron
-    # itself aren't needed for that.
-    - run: npm ci --ignore-scripts
-      working-directory: ./main
-      env:
-        ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     - name: Type check (main)
       run: npx tsc --noEmit
       working-directory: ./main
