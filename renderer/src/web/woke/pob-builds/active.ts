@@ -17,6 +17,8 @@ export const useActiveBuild = createGlobalState(() => {
     return cfg.widgets.find(w => w.wmType === POB_BUILDS_TYPE && (w as PobBuildsWidget).activeBuild) as PobBuildsWidget | undefined
   })
   const relPath = computed(() => pobWidget.value?.activeBuild ?? null)
+  // Read through this, so every window agrees on the loadout in use.
+  const loadout = computed(() => relPath.value ? pobWidget.value?.loadouts?.[relPath.value] : undefined)
   const details = shallowRef<PobDetails | null>(null)
   const error = shallowRef('')
   const version = shallowRef(0)
@@ -51,6 +53,7 @@ export const useActiveBuild = createGlobalState(() => {
   return {
     pobWidget,
     relPath,
+    loadout,
     details,
     error,
     level,

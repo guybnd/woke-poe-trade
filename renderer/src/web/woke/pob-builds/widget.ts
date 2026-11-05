@@ -15,12 +15,22 @@ export interface PobBuildsWidget extends Widget {
   // Character name -> build file. When Client.txt shows that character
   // levelling, its build becomes the active one.
   followChars: Record<string, string>
+  // Build file -> the loadout picked by hand. No entry = follow your level.
+  loadouts: Record<string, LoadoutPick>
+}
+
+// Set titles, not positions: PoB can reorder sets. Sets sharing a title form
+// a loadout, so a pick also takes the same-named sets of the other kinds.
+export interface LoadoutPick {
+  skillSet?: string
+  itemSet?: string
 }
 
 export function migratePobWidget (w: PobBuildsWidget) {
   if (!w.followChars || typeof w.followChars !== 'object') w.followChars = {}
   if (!Array.isArray(w.pinned)) w.pinned = []
   if (w.activeBuild === undefined) w.activeBuild = null
+  if (!w.loadouts || typeof w.loadouts !== 'object') w.loadouts = {}
 }
 
 // Shapes returned by main/src/woke/pob-builds.ts

@@ -49,6 +49,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'market', name: 'Market tracker', description: 'Movers and watchlist from poe.ninja', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling' }, needs: ['poll', 'network'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem' }, needs: ['poll'] },
+  { id: 'scarab-flip', name: 'Scarab flip', description: 'Whether the 3-to-1 vendor recipe pays, and rare scarabs that are cheap', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
   { id: 'farming', name: 'Farming profit', description: 'Session profit per hour', group: 'economy', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar' }, needs: ['prices'] },
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['prices'] },
@@ -87,7 +88,7 @@ export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
   { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'trade-searches', 'trade', 'regex-library'] },
   { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library'] },
-  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'trade-searches', 'trade', 'regex-library'] },
+  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'trade-searches', 'trade', 'regex-library'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
 
