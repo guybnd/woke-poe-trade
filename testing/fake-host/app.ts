@@ -112,6 +112,12 @@ export class FakeApp {
     fakeHook.emit({ type: EventType.EVENT_MOUSE_MOVED, x: game.cursor.x, y: game.cursor.y, button: 0, clicks: 0, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, time: Date.now() })
   }
 
+  // Presses the left mouse button there, as the global mouse hook sees it.
+  pressMouse (x: number, y: number) {
+    game.cursor = { x: game.bounds.x + x, y: game.bounds.y + y }
+    fakeHook.emit({ type: EventType.EVENT_MOUSE_PRESSED, x: game.cursor.x, y: game.cursor.y, button: 1, clicks: 1, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, time: Date.now() })
+  }
+
   // Hover an item in game: Ctrl+C now copies this text.
   hoverItem (text: string | null) {
     game.hoveredItem = text == null ? null : text.replace(/\r?\n/g, '\r\n')

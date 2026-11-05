@@ -69,13 +69,14 @@ watch(() => props.host.peek, (p) => {
 const showCard = shallowRef(false)
 
 // Hover works while the game has focus (main process watches the mouse).
-const overIcon = useHoverZone(iconEl, { enabled: () => true })
+const overIcon = useHoverZone(iconEl, { enabled: () => true, onClick: openCard })
 const overCard = useHoverZone(cardEl, { enabled: () => showCard.value, activate: () => !!props.host.props.interactive })
 const hovering = computed(() => overIcon.value || overCard.value)
 
 // Opens once the mouse rests on the icon, so sweeping past it doesn't pop the
-// card; closes a moment after leaving so moving onto the card doesn't flicker.
-const OPEN_AFTER_MS = 400
+// card (a click opens it at once); closes a moment after leaving so moving
+// onto the card doesn't flicker.
+const OPEN_AFTER_MS = 120
 const CLOSE_AFTER_MS = 250
 let timer: ReturnType<typeof setTimeout> | null = null
 watch(hovering, (on) => {
@@ -83,6 +84,10 @@ watch(hovering, (on) => {
   if (on === showCard.value) return
   timer = setTimeout(() => { showCard.value = on }, on ? OPEN_AFTER_MS : CLOSE_AFTER_MS)
 })
+function openCard () {
+  if (timer) { clearTimeout(timer); timer = null }
+  showCard.value = true
+}
 // Entries told the card is open; extras can join or leave while it is.
 const told = new Set<DockEntry>()
 function tellOpen (open: boolean) {
@@ -118,6 +123,7 @@ function place () {
 }
 
 function click () {
+  openCard()
   if (wm.active.value) props.host.onClick()
 }
 

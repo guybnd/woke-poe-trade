@@ -4,7 +4,7 @@
       <!-- While you play: an icon in the dock, only in a zone with a mechanic;
            resting the mouse on it shows the glance card. -->
       <DockItem id="mechanics" :art="mechanicIcon(mech.id).src" :icon="mech.icon" :title="mech.label" :show="dockShow" :wm-id="config.wmId"
-        card-width="19rem" @activate="config.expanded = true">
+        card-width="19rem" interactive @activate="config.expanded = true">
         <template #card>
           <div v-if="wm.active.value" class="flex justify-end gap-1" style="padding: 2px 6px 0;">
             <button class="w-icon-btn" title="Previous mechanic" @click="step(-1)"><i class="fas fa-chevron-left" /></button>

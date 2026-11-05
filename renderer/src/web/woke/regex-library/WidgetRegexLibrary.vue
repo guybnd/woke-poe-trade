@@ -1,15 +1,15 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- Town and hideout: your hotkeyed strings at a glance. -->
-    <DockItem id="regex-library" title="Regex library" :show="dockShow" :wm-id="config.wmId" card-width="20rem">
+    <DockItem id="regex-library" title="Regex library" :show="dockShow" :wm-id="config.wmId" card-width="20rem" interactive>
       <template #card>
         <div style="padding: 4px 0 6px;">
           <button v-for="e in glance" :key="e.id" type="button" class="w-row w-full text-left" style="grid-template-columns: minmax(0, 1fr) auto;"
-            :disabled="!wm.active.value" :title="effectiveText(e)" @click="stashSearch(effectiveText(e))">
+            :title="effectiveText(e)" @click="stashSearch(effectiveText(e))">
             <span class="w-trunc">{{ e.name || effectiveText(e) }}</span>
             <WKbd v-if="e.hotkey && config.enableHotkeys" :keys="e.hotkey" />
           </button>
-          <div class="w-faint text-xs" style="padding: 2px var(--w-pad);">{{ wm.active.value ? 'Click to search your stash' : 'Open the overlay to click one' }}</div>
+          <div class="w-faint text-xs" style="padding: 2px var(--w-pad);">Click to search your stash</div>
         </div>
       </template>
     </DockItem>

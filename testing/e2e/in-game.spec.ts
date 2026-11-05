@@ -15,6 +15,30 @@ test('regex library: clicking a saved string searches the stash in game', async 
   expect(fakeApp.game.focused).toBe(true)
 })
 
+test('regex library icon: a click opens the card, and its strings can be clicked without the overlay key', async ({ overlay, fakeApp }) => {
+  // Mechanics reads the game log, which is how the dock knows the zone.
+  await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  const icon = overlay.dockIcon('regex-library')
+  const entry = icon.getByRole('button', { name: 'No reflect', exact: true })
+
+  // A click opens the card even with the game focused.
+  await overlay.clickDockIconAndLeave('regex-library')
+  await expect(entry).toBeVisible({ timeout: 200 })
+  await expect(entry).toHaveCount(0, { timeout: 2000 })
+
+  // Resting on the icon opens it too; moving onto a string makes it clickable.
+  await overlay.hoverDockIcon('regex-library')
+  await expect(entry).toBeVisible({ timeout: 2000 })
+  expect(fakeApp.game.focused).toBe(true)
+  const box = await entry.boundingBox()
+  await overlay.moveMouse(Math.round(box!.x + box!.width / 2), Math.round(box!.y + box!.height / 2))
+  await expect.poll(() => fakeApp.game.focused).toBe(false)
+  await entry.click()
+  await expect.poll(() => fakeApp.game.stashSearches).toEqual(['"!eflec"'])
+  expect(fakeApp.game.focused).toBe(true)
+})
+
 test('league mechanics icon: shows in a mechanic zone, hides in the hideout', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
   const icon = overlay.dockIcon('mechanics')

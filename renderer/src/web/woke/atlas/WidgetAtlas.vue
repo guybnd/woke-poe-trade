@@ -2,7 +2,7 @@
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- In the hideout, while you set up the map device: the strategy you picked. -->
     <DockItem id="atlas" :title="selected?.name || 'Atlas strategy'" :show="!!selected && zone.kind === 'hideout'"
-      :wm-id="config.wmId" card-width="21rem">
+      :wm-id="config.wmId" card-width="21rem" interactive>
       <template #card>
         <div v-if="selected" style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-0.5">
           <div v-for="(p, i) in pricedScarabs" :key="i" class="flex justify-between gap-2">

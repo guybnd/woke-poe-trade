@@ -14,6 +14,9 @@ export function useHoverZone (
     activate?: () => boolean
     // Register only while this returns true.
     enabled: () => boolean
+    // The left button went down on the zone, even while the game has focus
+    // (the game gets that click too).
+    onClick?: () => void
   }
 ): Ref<boolean> {
   const owner = `woke-hover-${nextOwner++}`
@@ -63,6 +66,9 @@ export function useHoverZone (
     hostInside.value = e.inside
     sync()
   })
+  const clickListener = Host.onEvent('MAIN->OVERLAY::woke-hover-click', (e) => {
+    if (e.id === zoneId) opts.onClick?.()
+  })
 
   const onEnter = () => { domInside.value = true; sync() }
   const onLeave = () => { domInside.value = false; sync() }
@@ -97,6 +103,7 @@ export function useHoverZone (
 
   onUnmounted(() => {
     listener.abort()
+    clickListener.abort()
     bind(null)
     observer?.disconnect()
     if (timer) clearInterval(timer)

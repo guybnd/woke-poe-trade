@@ -11,7 +11,8 @@ import type { UiohookMouseEvent } from 'uiohook-napi'
 import type { ServerEvents } from '../server'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 
-const ACTIVATE_DWELL_MS = 350
+const ACTIVATE_DWELL_MS = 120
+const LEFT_BUTTON = 1
 
 interface Zone {
   id: string
@@ -55,9 +56,11 @@ export class WokeHoverTracker {
     const want = this.zones.size > 0
     if (want && !this.listening) {
       uIOhook.addListener('mousemove', this.handleMouseMove)
+      uIOhook.addListener('mousedown', this.handleMouseDown)
       this.listening = true
     } else if (!want && this.listening) {
       uIOhook.removeListener('mousemove', this.handleMouseMove)
+      uIOhook.removeListener('mousedown', this.handleMouseDown)
       this.listening = false
       this.leaveActivateZone()
     }
@@ -79,6 +82,17 @@ export class WokeHoverTracker {
 
     if (inActivateZone) this.enterActivateZone()
     else this.leaveActivateZone()
+  }
+
+  private readonly handleMouseDown = (e: UiohookMouseEvent) => {
+    if (e.button !== LEFT_BUTTON) return
+    // Bring `inside` up to date first, so a click also counts as entering.
+    this.handleMouseMove(e)
+    for (const zone of this.flat) {
+      if (zone.inside) {
+        this.server.sendEventTo('broadcast', { name: 'MAIN->OVERLAY::woke-hover-click', payload: { id: zone.id } })
+      }
+    }
   }
 
   private enterActivateZone () {
