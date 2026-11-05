@@ -60,7 +60,7 @@
                 </span>
               </div>
               <div :class="$style.acts">
-                <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market tracker</WButton>
+                <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
                 <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Live listings</WButton>
@@ -387,7 +387,7 @@ function togglePin (item: PriceItem) {
   pinKeys.value = isPinned(item) ? pinKeys.value.filter(p => p !== k) : [...pinKeys.value, k].slice(-PIN_MAX)
 }
 
-// ---- Market tracker ----
+// ---- Market ----
 const tracker = computed(() => wm.widgets.value.find(w => w.wmType === MARKET_TRACKER_TYPE && isWidgetTypeOn(AppConfig(), w.wmType)) as MarketTrackerWidget | undefined)
 function isWatched (item: PriceItem) {
   return tracker.value?.watchlist?.some(w => itemKey(w) === key(item)) ?? false

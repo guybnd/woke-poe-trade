@@ -1,7 +1,7 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- In the lab: the best font gem per colour, inside the lab icon's card. -->
-    <DockItem id="lab-gems" into="lab" title="Divine Font, best per colour" :show="inLab" :wm-id="config.wmId">
+    <DockItem id="lab-gems" into="lab" title="Lab gems, best per colour" :show="inLab" :wm-id="config.wmId">
       <template #card>
         <div style="padding: 2px var(--w-pad) 6px;">
           <div v-for="r in rolls" :key="r.color" class="flex items-center gap-2">
@@ -19,10 +19,7 @@
       </template>
       <template #toolbar>
         <WSelect v-model="config.gemState" :options="GEM_STATES.map(s => ({ value: s, label: stateLabel(s) }))" title="Gem level / quality" />
-        <WSegmented v-if="config.view === 'color'" :model-value="String(config.topN)"
-          :options="[{ value: '3', label: 'Top 3' }, { value: '5', label: 'Top 5' }, { value: '8', label: 'Top 8' }]"
-          @update:model-value="config.topN = Number($event)" />
-        <template v-else>
+        <template v-if="config.view !== 'color'">
           <WSelect v-model="config.specificMode" title="The font only sometimes offers the choice of version; otherwise it's a random gem of that colour"
             :options="[{ value: 'choose', label: 'I choose the version (rare offer)' }, { value: 'random', label: 'Random version' }]" />
           <WField v-model="config.minProfit" type="number" suffix="c profit min" style="width: 9rem;" />
@@ -31,23 +28,14 @@
           @click="config.skipThin = !config.skipThin"><i class="fas fa-exclamation-circle" /> Skip thin</WChip>
         <WChip clickable :active="!!config.runner" title="Count the lab entry, the gem you insert and your run time"
           @click="config.runner = !config.runner"><i class="fas fa-running" /> Runner</WChip>
+        <WInfo class="ml-auto" :text="`EV: the best of 3 offered gems. Unpriced${config.skipThin ? ' and thin' : ''} gems count as 0. poe.ninja prices, uncorrupted only.`" />
       </template>
-      <template #meta>
-        <template v-if="snapshot">
-          <span>{{ snapshot.league }}</span><span class="w-faint">·</span>
-          <span>{{ priceCount }} gem prices</span>
-        </template>
-        <span v-else>Waiting for poe.ninja prices…</span>
+      <template v-if="!snapshot" #meta>
+        <span>Waiting for poe.ninja prices.</span>
       </template>
 
       <div v-if="config.runner" class="flex flex-wrap gap-2 items-center py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad); border-bottom: 1px solid var(--w-line);">
-        <WSelect :model-value="config.runnerLab ?? 'merciless'" title="Which lab you run"
-          :options="[{ value: 'merciless', label: 'Merciless (free entry)' }, { value: 'eternal', label: 'Eternal (Offering)' }]"
-          @update:model-value="config.runnerLab = $event === 'eternal' ? 'eternal' : 'merciless'" />
-        <WField :model-value="config.runnerGemCost ?? 1" type="number" suffix="c gem in" style="width: 7rem;"
-          title="What the gem you put in the font costs" @update:model-value="config.runnerGemCost = Number($event) || 0" />
-        <WField :model-value="config.runnerMinutes ?? 6" type="number" suffix="min / run" style="width: 7.5rem;"
-          @update:model-value="config.runnerMinutes = Number($event) || 0" />
+        <span class="w-dim text-xs">{{ config.runnerLab === 'eternal' ? 'Eternal' : 'Merciless' }}, {{ config.runnerGemCost ?? 1 }}c gem, {{ config.runnerMinutes ?? 6 }} min a run</span>
         <span class="w-dim text-xs">Entry <WPrice :chaos="entryCost" :divine="snapshot?.divine" /></span>
         <span v-if="config.view === 'color' && bestRoll" class="ml-auto w-num" title="Best colour EV for each font craft in this lab, minus entry and gems, per run and per hour">
           <span :class="runProfit >= 0 ? 'w-up' : 'w-down'">{{ fmt(runProfit) }}</span> / run
@@ -79,10 +67,6 @@
             <WPrice :chaos="g.chaos ?? 0" :divine="snapshot?.divine" />
           </div>
         </div>
-        <div class="w-faint text-xs py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad);">
-          The font shows 3 random transfigured gems of the colour you insert and you take one.
-          EV assumes you take the most valuable; unpriced{{ config.skipThin ? ' and thin' : '' }} gems count as 0.
-        </div>
       </template>
 
       <template v-else>
@@ -109,9 +93,6 @@
         </template>
       </template>
 
-      <template #footer>
-        <span>Maths from GemCheck (MIT) · poe.ninja prices, uncorrupted only</span>
-      </template>
     </WPanel>
   </Widget>
 </template>
@@ -134,7 +115,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WTabs, WSelect, WSegmented, WField, WPrice, WEmpty, WChip, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSelect, WField, WPrice, WEmpty, WChip, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
@@ -198,7 +179,6 @@ const thin = computed(() => snapshot.value ? thinGems(snapshot.value.items, prop
 
 const allPrices = computed(() => snapshot.value ? gemPrices(snapshot.value.items, props.config.gemState) : new Map<string, number>())
 const prices = computed(() => props.config.skipThin ? withoutThinGems(allPrices.value, thin.value) : allPrices.value)
-const priceCount = computed(() => allPrices.value.size)
 // The gem at the level and quality the prices here are for.
 function gemTip (name: string) {
   return { name, type: 'SkillGem', variant: props.config.gemState }

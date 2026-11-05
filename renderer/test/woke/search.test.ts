@@ -106,7 +106,7 @@ describe('corrupted', () => {
 })
 
 describe('searchNamed', () => {
-  const list = ['Loot filter editor', 'Market tracker', 'Filter bookmarks']
+  const list = ['Loot filter editor', 'Market', 'Filter bookmarks']
   it('ranks and limits', () => {
     expect(searchNamed(list, 'filter', s => s)).toEqual(['Filter bookmarks', 'Loot filter editor'])
     expect(searchNamed(list, 'filter', s => s, 1)).toEqual(['Filter bookmarks'])

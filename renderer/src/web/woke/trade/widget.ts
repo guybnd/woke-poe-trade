@@ -1,4 +1,4 @@
-// Trade assistant: settings, reply texts and hotkey targets.
+// Trades: settings, reply texts and hotkey targets.
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { Offer, StepId } from './book'
 import { offerLabel, priceLabel } from './whispers'

@@ -19,9 +19,9 @@ test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the
 // The toolkit tools the rail shows, as a player who maps would have them,
 // with the names their rail icons carry.
 const RAIL: Record<string, string> = {
-  'woke-market-tracker': 'Market tracker',
-  'woke-farming': 'Farming profit',
-  'woke-map-mods': 'Map mod checker',
+  'woke-market-tracker': 'Market',
+  'woke-farming': 'Farming',
+  'woke-map-mods': 'Map mods',
   'woke-essence-scan': 'Essence scan',
   'woke-loot-filter': 'Loot filter',
   'woke-lab': 'Labyrinth',
@@ -89,12 +89,12 @@ test('hero: the overlay open in a map, the rail on the left', async ({ overlay }
   await showGame(overlay, 'screens/essence-real-20.png', 'screenshot-0020.jpg')
   // New tools open themselves once; keep the market tracker, close the rest.
   const rail = overlay.widget('menu')
-  for (const name of Object.values(RAIL).filter(n => n !== 'Market tracker')) {
+  for (const name of Object.values(RAIL).filter(n => n !== 'Market')) {
     const icon = rail.getByRole('button', { name, exact: true })
     if (/open/.test(await icon.getAttribute('class') ?? '')) await icon.click()
     await expect(icon).not.toHaveClass(/open/)
   }
-  await expect(rail.getByRole('button', { name: 'Market tracker', exact: true })).toHaveClass(/open/)
+  await expect(rail.getByRole('button', { name: 'Market', exact: true })).toHaveClass(/open/)
   await overlay.page.mouse.move(1500, 1000)
   await save(overlay, 'hero')
 })
@@ -241,7 +241,7 @@ test('tour: market movers, with the item under the cursor', async ({ overlay }) 
     typeFilter: '',
     watchlist: rows.map(([type, name, variant]) => ({ type, name, variant }))
   }, { wmType: 'woke-scarab-flip', wmWants: 'show' }], true)
-  await closeRail(overlay, 'Market tracker')
+  await closeRail(overlay, 'Market')
   await showGame(overlay, 'screens/essence-real-20.png', 'screenshot-0020.jpg')
   const panel = overlay.widget('woke-market-tracker')
   const scarabs = overlay.widget('woke-scarab-flip')
@@ -290,7 +290,7 @@ test('tour: the regex library copies stash searches', async ({ overlay }) => {
 
 test('tour: map mods, the strings you never want to roll', async ({ overlay }) => {
   await bootWithRail(overlay, [{ wmType: 'woke-map-mods', wmWants: 'show', anchor: { pos: 'tl', x: 4, y: 12 } }], true)
-  await closeRail(overlay, 'Map mod checker')
+  await closeRail(overlay, 'Map mods')
   await showGame(overlay, 'screens/map-real-07.png', 'screenshot-0007.jpg')
   await overlay.page.mouse.move(1800, 1000)
   await save(overlay, 'tour-map-mods', { x: 0, y: 0 })

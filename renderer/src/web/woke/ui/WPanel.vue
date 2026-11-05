@@ -8,14 +8,14 @@
         <slot name="title">{{ title }}</slot>
       </span>
       <span v-if="!minimized && (updated != null || hotkey || $slots.actions)" :class="$style.actions">
-        <span v-if="updated != null" :class="[$style.age, $style[fresh]]" :title="ageTitle">
+        <span v-if="updated != null && (busy || fresh !== 'fresh')" :class="[$style.age, $style[fresh]]" :title="ageTitle">
           <span :class="$style.dot" />{{ busy ? 'refreshing' : ago(updated) }}
         </span>
         <WKbd v-if="hotkey" :keys="hotkey" :title="`Opens with ${hotkey}`" />
         <slot name="actions" />
       </span>
-      <span v-if="primary && windowActions.length" :class="$style.controls">
-        <button v-for="a in windowActions" :key="a.id" type="button" class="w-icon-btn"
+      <span v-if="primary && titleActions.length" :class="$style.controls">
+        <button v-for="a in titleActions" :key="a.id" type="button" class="w-icon-btn"
           :class="[$style.control, { 'w-icon-btn--on': a.active, [$style.danger]: a.danger }]"
           :title="a.label" :aria-label="a.label" @click="a.action()"><i :class="a.icon" /></button>
       </span>
@@ -135,7 +135,8 @@ if (props.title || props.icon || slots.title || slots.actions) {
 }
 const primary = computed(() => cfg?.isPrimaryPanel?.(panelId) ?? false)
 const minimized = computed(() => !!cfg?.minimized)
-const windowActions = computed(() => cfg?.windowActions ?? [])
+// Delete stays in the right-click menu, away from Minimize and Close.
+const titleActions = computed(() => (cfg?.windowActions ?? []).filter((a: { id: string }) => a.id !== 'delete'))
 const minimizesFromHead = computed(() => primary.value && !!cfg?.canMinimize)
 
 const canResize = computed(() => props.resizable && !!cfg?.anchor && !minimized.value)

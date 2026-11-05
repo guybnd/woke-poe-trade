@@ -29,7 +29,7 @@ export interface MapModsWidget extends Widget {
 }
 
 export function initMapModsWidget (w: MapModsWidget) {
-  w.wmTitle = 'Map mod checker'
+  w.wmTitle = 'Map mods'
   w.wmFlags = ['invisible-on-blur']
   w.anchor = { pos: 'tc', x: 50, y: 10 }
   w.hotkey = 'Alt + M'

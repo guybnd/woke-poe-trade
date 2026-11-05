@@ -59,14 +59,14 @@
       </div>
       <WEmpty v-if="!entries.length" icon="fas fa-crosshairs">
         <template v-if="rolling">Hover the map you're rerolling.</template>
-        <template v-else-if="running">Hover your maps. Each one gets a verdict, and rerolls are re-read.</template>
+        <template v-else-if="running">Hover a map to see its verdict. Rerolled maps are read again.</template>
         <template v-else-if="config.hotkey">Press <WKbd :keys="config.hotkey" /> in game to start scanning.</template>
         <template v-else>Start scanning, then hover your maps.</template>
         <div v-if="!rolling && config.rollHotkey" class="text-xs mt-1">Rerolling one map? Hover it and press <WKbd :keys="config.rollHotkey" />.</div>
       </WEmpty>
       <template #footer>
         <span class="flex-1">{{ entries.length }} scanned · profile {{ profileName }}</span>
-        <button v-if="entries.length" type="button" class="w-icon-btn" title="Clear (Undo in the note)" @click="clear"><i class="fas fa-eraser" /></button>
+        <button v-if="entries.length" type="button" class="w-icon-btn" title="Clear. You can undo." @click="clear"><i class="fas fa-eraser" /></button>
       </template>
     </WPanel>
     <Teleport to="body">

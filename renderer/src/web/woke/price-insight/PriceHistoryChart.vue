@@ -69,7 +69,7 @@ function fmt (chaos: number) {
 
 const emptyText = computed(() => {
   if (props.loading) return 'Reading saved prices…'
-  if (range.value === 'league') return 'No league history on this PC yet. Turn on the Market tracker module to save poe.ninja prices daily.'
+  if (range.value === 'league') return 'No league history on this PC yet. Turn on the Market module to save poe.ninja prices daily.'
   if (range.value === 'mine') return 'Check this search again later to build up its history.'
   return 'Not enough points to draw.'
 })

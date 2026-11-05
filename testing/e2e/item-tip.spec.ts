@@ -37,7 +37,7 @@ test('hovering a market row shows the item at the cursor, with its price', async
       config.widgets.push({
         wmId: 9001,
         wmType: 'woke-market-tracker',
-        wmTitle: 'Market tracker',
+        wmTitle: 'Market',
         wmWants: 'show',
         wmZorder: 200,
         wmFlags: [],

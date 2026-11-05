@@ -1,4 +1,4 @@
-// Trade assistant: reading trade whispers from Client.txt, following offers
+// Trades: reading trade whispers from Client.txt, following offers
 // through invite → trade → thanks → kick, and the reply texts it types.
 // Driven by testing/fixtures/client-logs/trade-hideout.txt.
 import { describe, it, expect } from 'vitest'

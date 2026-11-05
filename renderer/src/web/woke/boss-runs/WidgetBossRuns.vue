@@ -1,5 +1,5 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- In a boss arena: what can drop and how often, then your own runs if you log any. Click: this boss's drops. -->
     <DockItem :menu="dockMenu" id="boss-runs" title="Boss runs" :show="arenaBosses.length > 0"
       :badge="arenaBosses.length === 1 && arenaBosses[0].kills ? arenaBosses[0].kills : null" :wm-id="config.wmId" card-width="22rem" @activate="openArenaBoss">
@@ -32,18 +32,9 @@
       <template #toolbar>
         <WSegmented v-model="config.tier" :options="tierOptions" />
         <WSegmented v-model="config.sort" :options="sortOptions" />
-        <label class="flex items-center gap-1 w-dim text-sm" title="Drops rarer than 1 in this many runs are left out of the loot, so a short session is not judged on a jackpot it will probably never see. 0 counts every drop.">
-          Planned runs
-          <input v-model.number="config.plannedRuns" type="number" min="0" step="10" :class="$style.input" style="width: 4.5rem;">
-        </label>
-        <w-toggle v-model="config.ownEntry" class="text-sm">I own the entry items</w-toggle>
       </template>
       <template v-if="!prices.snapshot.value" #banner>
-        <WBanner tone="info">Waiting for poe.ninja prices. They load on their own within a minute or two.</WBanner>
-      </template>
-      <template v-else #meta>
-        <span>{{ prices.snapshot.value?.league }}</span>
-        <template v-if="divine"><span class="w-faint">·</span><span class="flex items-center gap-1">1 <WIcon currency="divine" title="Divine Orb" /> = {{ Math.round(divine) }}c</span></template>
+        <WBanner tone="info">Waiting for poe.ninja prices.</WBanner>
       </template>
 
       <div :class="$style.layout">
@@ -134,15 +125,15 @@
                     <WButton size="sm" icon="fas fa-external-link-alt" @click="openUnidSearch(editingRow.name)">Unidentified on trade</WButton>
                   </div>
                   </template>
-                  <div v-if="sel.excluded" class="text-xs w-dim" style="padding: 6px var(--w-pad) 0;">{{ sel.excluded }} drop(s) left out of the loot<template v-if="config.plannedRuns"> (rarer than 1 in {{ config.plannedRuns }} runs, or switched off)</template>.</div>
-                  <div v-if="sel.entryMissing.length" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">No price for {{ sel.entryMissing.join(', ') }}, so profit is hidden. Tick "I own the entry items" to count it as free.</div>
+                  <div v-if="sel.excluded" class="text-xs w-dim" style="padding: 6px var(--w-pad) 0;">{{ sel.excluded }} {{ sel.excluded === 1 ? 'drop' : 'drops' }} left out of the loot<template v-if="config.plannedRuns"> (rarer than 1 in {{ config.plannedRuns }} runs, or switched off)</template>.</div>
+                  <div v-if="sel.entryMissing.length" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">No price for {{ sel.entryMissing.join(', ') }}. Profit is hidden. <button type="button" class="w-accent hover:underline" @click="config.ownEntry = true">Count the entry as free</button></div>
                   <div class="text-xs w-faint" style="padding: 6px var(--w-pad) 0;">
                     <template v-if="sel.kills >= OWN_RATE_KILLS">Using your own drop rates from {{ sel.kills }} logged kills.</template>
                     <template v-else-if="sel.boss.source">Rates: {{ sel.boss.source.label }}. Your own rates take over after {{ OWN_RATE_KILLS }} logged kills ({{ sel.kills }} so far).</template>
                   </div>
-                  <div v-if="sel.estimated" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">"~" = estimated chance, not measured from kills ({{ ESTIMATE_SOURCE_LABEL }}). Treat loot and profit here as rough.</div>
-                  <div v-if="sel.unrated" class="text-xs w-faint" style="padding: 6px var(--w-pad);">"?" = no known drop rate; counted as 0. Log kills or type a rate under Rates &amp; sources.</div>
-                  <div v-if="sel.unpriced" class="text-xs" style="padding: 0 var(--w-pad) 6px; color: var(--w-warn);">{{ sel.unpriced }} drop(s) have no price yet and count as 0.</div>
+                  <div v-if="sel.estimated" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">~ is an estimated chance ({{ ESTIMATE_SOURCE_LABEL }}). Loot and profit are rough.</div>
+                  <div v-if="sel.unrated" class="text-xs w-faint" style="padding: 6px var(--w-pad);">? has no known drop rate and counts as 0. Log kills or type a rate under Rates &amp; sources.</div>
+                  <div v-if="sel.unpriced" class="text-xs" style="padding: 0 var(--w-pad) 6px; color: var(--w-warn);">{{ sel.unpriced }} {{ sel.unpriced === 1 ? 'drop has' : 'drops have' }} no price yet and count as 0.</div>
                 </template>
               </template>
 
@@ -178,7 +169,7 @@
                     <span class="w-dim w-num text-xs">{{ new Date(kill.ts).toLocaleDateString() }}</span>
                     <span class="w-trunc">{{ kill.drops.map(d => d.qty > 1 ? `${d.name} ×${d.qty}` : d.name).join(', ') || 'nothing of note' }}</span>
                     <WPrice :chaos="killValue(kill)" :divine="divine" />
-                    <button class="w-icon-btn" title="Delete (Undo in the note)" @click="deleteKill(sel.boss.id, killsOf(sel.boss.id).length - 1 - i)"><i class="fas fa-times" /></button>
+                    <button class="w-icon-btn" title="Delete. You can undo." @click="deleteKill(sel.boss.id, killsOf(sel.boss.id).length - 1 - i)"><i class="fas fa-times" /></button>
                   </div>
                 </template>
               </template>
@@ -193,7 +184,7 @@
                   </div>
                   <div v-else class="w-dim">No public drop data for this boss. Add its drops below and type rates you trust, or log kills.</div>
                   <div v-if="sel.estimated" style="color: var(--w-warn);">
-                    {{ sel.estimated }} drop(s) use estimated chances, not measured kills: {{ ESTIMATE_SOURCE_LABEL }}.
+                    {{ sel.estimated }} {{ sel.estimated === 1 ? 'drop uses' : 'drops use' }} estimated chances, not measured kills: {{ ESTIMATE_SOURCE_LABEL }}.
                     <a v-if="estimateUrl(sel.boss.id)" :href="estimateUrl(sel.boss.id)!" target="_blank" class="w-accent">Open source ↗</a>
                   </div>
                   <div class="w-faint text-xs">Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; jewels use unidentified trade listings.</div>
@@ -207,7 +198,7 @@
                     @change="setRate(sel.boss.id, d.name, ($event.target as HTMLInputElement).value)">
                   <span class="flex">
                     <button v-if="d.rateSource === 'custom'" class="w-icon-btn" title="Remove my rate" @click="setRate(sel.boss.id, d.name, '')"><i class="fas fa-undo" /></button>
-                    <button v-if="isExtraDrop(sel.boss.id, d.name)" class="w-icon-btn" title="Remove this drop (Undo in the note)" @click="removeDrop(sel.boss.id, d.name)"><i class="fas fa-trash" /></button>
+                    <button v-if="isExtraDrop(sel.boss.id, d.name)" class="w-icon-btn" title="Remove this drop. You can undo." @click="removeDrop(sel.boss.id, d.name)"><i class="fas fa-trash" /></button>
                   </span>
                 </div>
                 <div class="relative" style="padding: 8px var(--w-pad);">
@@ -272,7 +263,6 @@ export default {
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import WToggle from '../ui/WToggle.vue'
 import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -454,7 +444,7 @@ function spreadTitle (d: DropRow) {
   if (d.priceMode === 'unid' && d.listings != null) return `Middle of the cheapest 10 of ${d.listings} unidentified instant buyouts on trade. ${ask}`
   if (d.priceMode === 'unid') return tradePrices.pending(d.name) ? `Looking up unidentified listings on trade. Showing poe.ninja until then. ${ask}` : `No unidentified trade price right now, so this is poe.ninja. ${ask}`
   if (!d.spread) return `No poe.ninja price. ${ask}`
-  return `${d.spread.count} poe.ninja row(s), ${Math.round(d.spread.min)}c to ${Math.round(d.spread.max)}c. ${ask}`
+  return `${d.spread.count} poe.ninja ${d.spread.count === 1 ? 'row' : 'rows'}, ${Math.round(d.spread.min)}c to ${Math.round(d.spread.max)}c. ${ask}`
 }
 function toggleDrop (id: string, name: string, on: boolean, tooRare: boolean) {
   const rest = Object.fromEntries(Object.entries(props.config.dropToggles[id] ?? {}).filter(([n]) => n !== name))

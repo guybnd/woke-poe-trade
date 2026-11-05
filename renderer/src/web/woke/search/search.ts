@@ -1,5 +1,5 @@
 // Matching and grouping for the search boxes: the palette, the launcher and the
-// Market tracker all rank and group prices the same way.
+// Market all rank and group prices the same way.
 import { itemKey, isCorrupted } from '../market/types'
 import type { PriceItem, CorruptedFilter } from '../market/types'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'

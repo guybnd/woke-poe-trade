@@ -1,4 +1,4 @@
-// Map mod checker: pure rating logic, no Vue. Shared by the verdict card,
+// Map mods: pure rating logic, no Vue. Shared by the verdict card,
 // the slim strip on APT's price check and the stash regex builder.
 import type { MinStat } from './regex'
 

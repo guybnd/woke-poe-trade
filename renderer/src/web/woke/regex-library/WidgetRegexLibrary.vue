@@ -14,10 +14,6 @@
       </template>
     </DockItem>
     <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh">
-      <template #actions>
-        <WChip v-if="hasHotkeys" clickable :active="config.enableHotkeys" title="Use each entry's hotkey"
-          @click="config.enableHotkeys = !config.enableHotkeys"><i class="fas fa-keyboard" /> Hotkeys</WChip>
-      </template>
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
       </template>
@@ -40,16 +36,15 @@
         </WListItem>
       </template>
       <WEmpty v-if="!groups.length && config.entries.length" icon="fas fa-filter">
-        Nothing matches "{{ filter }}". Search looks at names, tags and categories.
+        Nothing matches "{{ filter }}".
         <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
       </WEmpty>
       <WEmpty v-else-if="!groups.length" :art="{ mechanic: 'stash' }">
-        No saved strings yet. Add them in this widget's settings, or make one on poe.re and paste it there.
+        No saved searches. Add them in Settings, or make one on poe.re and paste it there.
         <template #actions><WButton size="sm" href="https://poe.re/">Open poe.re</WButton></template>
       </WEmpty>
 
       <template #footer>
-        <span>Click to search stash · right-click for more</span>
         <a href="https://poe.re/" target="_blank" class="ml-auto w-accent hover:underline">Generate on poe.re</a>
       </template>
     </WPanel>

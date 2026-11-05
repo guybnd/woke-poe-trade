@@ -38,9 +38,6 @@
       <span :class="$style.dot" />
       <span class="flex-1">{{ text }} <span class="w-faint">(not recognised)</span></span>
     </div>
-    <template #footer>
-      <span class="flex-1">Click a mod to change its rating</span>
-    </template>
   </WPanel>
 </template>
 

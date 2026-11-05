@@ -1,4 +1,4 @@
-// Campaign tracker + run timer, driven by a recorded Client.txt.
+// Campaign + run timer, driven by a recorded Client.txt.
 import { test, expect, logFixture } from './harness'
 
 const CAMPAIGN = { wmType: 'woke-campaign', wmWants: 'show' as const }
@@ -59,15 +59,15 @@ test('nothing from the tracker on screen with the overlay open but the icon, and
   await expect(icon).not.toContainText('Step done')
 })
 
-test('pinned values stay on the icon and go when the route sleeps; the card opens settings', async ({ overlay, fakeApp }) => {
+test('pinned values stay on the icon and go when the route sleeps; the menu opens settings', async ({ overlay, fakeApp }) => {
   await overlay.boot({ widgets: [{ ...CAMPAIGN, pins: ['level'] }], overlayActive: true })
   await overlay.replayLog('client-logs/campaign-act1.txt')
   const icon = overlay.dockIcon('campaign')
   await expect(icon).toContainText('Lv 13')
   await overlay.snap('pinned level in the icon')
 
-  await overlay.hoverDockIcon('campaign')
-  await icon.getByRole('button', { name: 'Pin to screen' }).click()
+  await icon.click({ button: 'right' })
+  await overlay.page.getByRole('menuitem', { name: 'Choose what stays on screen' }).click()
   await expect(overlay.page.getByText('On screen while levelling')).toBeVisible()
   await overlay.page.keyboard.press('Escape')
 

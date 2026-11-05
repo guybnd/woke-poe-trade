@@ -5,7 +5,6 @@
     <span :class="$style.grip" :style="{ visibility: wm.active.value ? 'visible' : 'hidden' }" title="Drag to move the icon row. Double-click to stand it on its side. Right-click to bring back dismissed icons."
       @pointerdown="startDrag" @dblclick="flip" @contextmenu="gripMenu"><i class="fas fa-grip-vertical" /></span>
     <DockIcon v-for="g in groups" :key="g.host.key" :host="g.host" :extras="g.extras" :vertical="cfg.vertical" />
-    <span v-if="wm.active.value && !groups.length && !blocked" :class="$style.empty">Icon row · nothing to show here</span>
   </div>
 </template>
 
@@ -97,12 +96,4 @@ onUnmounted(() => { window.removeEventListener('pointermove', onMove) })
 .grip:hover { color: var(--w-fg); background: var(--w-panel); }
 .vertical .grip { width: 30px; height: 16px; }
 .vertical .grip i { transform: rotate(90deg); }
-.empty {
-  padding: 3px 10px;
-  font-size: calc(11px * var(--w-text-scale, 1));
-  color: var(--w-faint);
-  background: var(--w-panel);
-  border: 1px dashed var(--w-line);
-  border-radius: 999px;
-}
 </style>

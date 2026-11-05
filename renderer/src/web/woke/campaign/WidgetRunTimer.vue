@@ -134,7 +134,7 @@
               </span>
               <span class="text-right w-num" :class="!isComplete(r) && 'w-faint'">{{ formatClock(runTotal(r) ?? lastSplit(r)) }}</span>
               <span class="text-right w-num w-dim">{{ formatDate(r.startedAt) }}</span>
-              <button class="w-icon-btn" title="Delete run (Undo in the note)" @click.stop="removeRun(r.id)"><i class="fas fa-times text-xs" /></button>
+              <button class="w-icon-btn" title="Delete run. You can undo." @click.stop="removeRun(r.id)"><i class="fas fa-times text-xs" /></button>
             </div>
           </template>
         </template>
@@ -160,7 +160,7 @@ export default {
   widget: {
     type: RUN_TIMER_TYPE,
     instances: 'multi',
-    trNameKey: 'Campaign run timer'
+    trNameKey: 'Run timer'
   } satisfies WidgetSpec
 }
 </script>
@@ -197,7 +197,7 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
-  props.config.wmTitle = 'Campaign run timer'
+  props.config.wmTitle = 'Run timer'
   props.config.anchor = { pos: 'tc', x: 50, y: 1 }
   props.config.autoStart = true
   props.config.charName = ''

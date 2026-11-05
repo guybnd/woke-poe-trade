@@ -77,11 +77,9 @@
     </div>
     <p v-if="expanded && ninjaInfo" :class="$style.note"><a :class="$style.ninjaLink" :href="ninjaInfo.url" target="_blank">Open on poe.ninja ↗</a></p>
     <p v-if="expanded && insight.range && accountMissing" :class="$style.note">Your own listings may be counted here. Add your account name in settings to leave them out.</p>
-    <label v-if="expanded && canAsk" :class="$style.ppToggle">
-      <input type="checkbox" v-model="usePoeprices">
-      <span>Ask poeprices.info about rares</span>
-      <span v-if="ppStatus" class="w-faint">· {{ ppStatus }}</span>
-    </label>
+    <p v-if="expanded && canAsk && usePoeprices && ppStatus" :class="$style.ppToggle">
+      <span class="w-faint">poeprices.info: {{ ppStatus }}</span>
+    </p>
   </div>
 </template>
 

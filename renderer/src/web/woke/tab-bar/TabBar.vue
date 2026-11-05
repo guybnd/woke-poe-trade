@@ -108,9 +108,6 @@
           </div>
         </div>
         <div v-if="!launcherHasMatch && !priceGroups.length" :class="$style.none">Nothing matches "{{ launcherQuery }}"</div>
-        <div :class="$style.foot">
-          <span>Gold means open. Pin a tool to keep it on the rail. Right-click a tool for more.</span>
-        </div>
       </div>
 
       <!-- the rail's own layout and size -->
@@ -943,15 +940,6 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .pinOn, .pinOn:hover { color: var(--w-accent); }
 .row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; }
 .none { padding: 10px 8px; color: var(--w-dim); }
-.foot { padding: 6px 8px 4px; font-size: var(--w-text-sm); color: var(--w-dim); }
-.launcher .foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-  padding: 8px 8px 2px;
-  border-top: 1px solid var(--w-line);
-}
 .rowTag { flex: none; padding: 0 4px; font-size: var(--w-text-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
 

@@ -62,7 +62,7 @@ const ROW_STYLES: Array<{ value: TradeRowStyle, label: string }> = [
 ]
 
 export default defineComponent({
-  name: 'Trade assistant',
+  name: 'Trades',
   components: { WButton, WHotkeyCell, WSelect, WSettingRow, WSettingSection, WToggle },
   props: configProp<TradeWidget>(),
   setup (props) {

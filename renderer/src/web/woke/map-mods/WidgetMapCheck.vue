@@ -6,7 +6,7 @@
         <WEmpty :art="{ mechanic: 'map' }">That item isn't a map, invitation, logbook, heist contract or chart.</WEmpty>
       </WPanel>
       <div class="flex gap-1 justify-between">
-        <WButton size="sm" variant="ghost" icon="fas fa-arrow-left" @click="openRegex">Map regex</WButton>
+        <WButton size="sm" variant="ghost" icon="fas fa-arrow-left" @click="openRegex">Map mods</WButton>
         <WButton size="sm" variant="ghost" icon="fas fa-times" @click="close">Close</WButton>
       </div>
     </div>
