@@ -16,4 +16,10 @@ export interface ScarabFlipWidget extends Widget {
   methods?: Record<string, FlipMethodId>
   // Harvest cost per item, in lifeforce of the craft's colour.
   lifeforcePerItem?: number
+  // Shows or clears the outlines on the open stash tab.
+  stashHotkey?: string | null
+}
+
+export function stashHotkeyTarget (wmId: number): string {
+  return `woke-flips-stash:${wmId}`
 }

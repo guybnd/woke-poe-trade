@@ -113,3 +113,34 @@ test('flips: the lifeforce cost set in settings changes the panel, and blank goe
   await expect(panel.getByText(/for 1 c of Primal lifeforce/)).toBeAttached()
   await expect(input).toHaveValue('')
 })
+
+test('flips: the shortcut outlines the scarab tab, and a click clears them', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.showScreen('screens/stash-scarab-real.png')
+  const layer = overlay.page.locator('[data-stash-outlines]')
+  await expect(layer).toHaveCount(0)
+
+  await overlay.pressHotkey('Alt + J')
+  await expect(layer).toBeVisible()
+  await overlay.snap('flips-stash-outlines')
+  expect(await layer.locator('> div').count()).toBeGreaterThan(5)
+
+  // Nothing is left on the wrong slots after swapping tabs or moving an item.
+  fakeApp.pressMouse(400, 200)
+  fakeApp.releaseMouse()
+  await expect(layer).toHaveCount(0)
+
+  // The shortcut shows them again, and clears them too.
+  await overlay.pressHotkey('Alt + J')
+  await expect(layer).toBeVisible()
+  await overlay.pressHotkey('Alt + J')
+  await expect(layer).toHaveCount(0)
+})
+
+test('flips: the shortcut draws nothing on a tab it cannot read', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.showScreen('screens/stash-general-real.png')
+  await overlay.pressHotkey('Alt + J')
+  await expect(overlay.page.getByText("Can't read this tab", { exact: false })).toBeVisible()
+  await expect(overlay.page.locator('[data-stash-outlines]')).toHaveCount(0)
+})

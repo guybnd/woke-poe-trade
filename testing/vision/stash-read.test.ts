@@ -1,0 +1,111 @@
+// Reading the Scarab stash tab from Guy's real 2560x1440 screenshots: finding
+// it wherever the panel sits, knowing which slots hold something, and refusing
+// every other screen. Plain pixel maths, so it needs no OCR files.
+import { describe, it, expect } from 'vitest'
+import fs from 'fs'
+import path from 'path'
+import { decodePng } from '../fake-host/png'
+import { readScarabTab } from '../../main/src/woke/stash-read'
+import { SCARAB_SLOTS } from '../../main/src/woke/stash-scarab-data'
+
+const SCREENS = path.resolve(__dirname, '../fixtures/screens')
+
+function screen (file: string) {
+  const img = decodePng(fs.readFileSync(path.join(SCREENS, file)))
+  const data = new Uint8Array(img.width * img.height * 4)
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = img.data[i + 2]
+    data[i + 1] = img.data[i + 1]
+    data[i + 2] = img.data[i]
+    data[i + 3] = 255
+  }
+  return { width: img.width, height: img.height, data }
+}
+
+// The same picture moved on screen, as with Faustus open or a folder row above.
+function shifted (s: ReturnType<typeof screen>, dx: number, dy: number) {
+  const data = new Uint8Array(s.data.length)
+  for (let y = 0; y + dy < s.height; y++) {
+    const from = y * s.width * 4
+    const len = (s.width - dx) * 4
+    data.set(s.data.subarray(from, from + len), ((y + dy) * s.width + dx) * 4)
+  }
+  return { ...s, data }
+}
+
+function shrunk (s: ReturnType<typeof screen>, height: number) {
+  const width = Math.round(s.width * height / s.height)
+  const data = new Uint8Array(width * height * 4)
+  const f = s.height / height
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const sum = [0, 0, 0]
+      let n = 0
+      for (let j = Math.floor(y * f); j < Math.floor((y + 1) * f); j++) {
+        for (let i = Math.floor(x * f); i < Math.floor((x + 1) * f); i++) {
+          const p = (j * s.width + i) * 4
+          sum[0] += s.data[p]; sum[1] += s.data[p + 1]; sum[2] += s.data[p + 2]
+          n++
+        }
+      }
+      const q = (y * width + x) * 4
+      data[q] = sum[0] / n; data[q + 1] = sum[1] / n; data[q + 2] = sum[2] / n; data[q + 3] = 255
+    }
+  }
+  return { width, height, data }
+}
+
+const read = (s: { width: number, height: number, data: Uint8Array }) => readScarabTab(s.data, s.width, s.height)
+
+describe('reading the scarab tab', () => {
+  const tab = screen('stash-scarab-real.png')
+
+  it('finds the tab and tells filled slots from empty ones', () => {
+    const res = read(tab)
+    expect(res.found).toBe(true)
+    if (!res.found) return
+    expect(res.slots.length).toBe(SCARAB_SLOTS.length)
+    const by = new Map(res.slots.map(s => [s.name, s]))
+    expect(by.get('Horned Scarab of Bloodlines')?.filled).toBe(true)
+    expect(by.get('Breach Scarab of the Hive')?.filled).toBe(true)
+    // These two show as dim ghosts in this screenshot.
+    expect(by.get('Cartography Scarab of Risk')?.filled).toBe(false)
+    expect(by.get('Scarab of Radiant Storms')?.filled).toBe(false)
+    expect(res.slots.filter(s => s.filled).length).toBe(SCARAB_SLOTS.length - 2)
+  })
+
+  it('reads fast enough to feel instant', () => {
+    const t0 = performance.now()
+    read(tab)
+    const ms = performance.now() - t0
+    // eslint-disable-next-line no-console
+    console.log(`stash read: ${Math.round(ms)} ms`)
+    expect(ms).toBeLessThan(1000)
+  })
+
+  it('finds the tab wherever the panel sits, and moves the slots with it', () => {
+    const base = read(tab)
+    const res = read(shifted(tab, 640, 48))
+    expect(res.found).toBe(true)
+    if (!base.found || !res.found) return
+    expect(res.slots[0].x - base.slots[0].x).toBeCloseTo(640 / tab.width, 5)
+    expect(res.slots[0].y - base.slots[0].y).toBeCloseTo(48 / tab.height, 5)
+    expect(res.slots.filter(s => s.filled).length).toBe(base.slots.filter(s => s.filled).length)
+  })
+
+  it('scales to a smaller window', () => {
+    // Exactly half, a clean resample. Real smaller windows are still untested.
+    const res = read(shrunk(tab, 720))
+    expect(res.found).toBe(true)
+    if (!res.found) return
+    expect(res.slots.filter(s => s.filled).length).toBeGreaterThan(SCARAB_SLOTS.length - 6)
+  })
+
+  it('refuses another sub-tab, though it shows the same button', () => {
+    expect(read(screen('stash-general-real.png')).found).toBe(false)
+  })
+
+  it('refuses a screen with no stash', () => {
+    expect(read(screen('map-real-01.png')).found).toBe(false)
+  })
+})

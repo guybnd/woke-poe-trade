@@ -2,6 +2,7 @@
   <HiddenNote />
   <Dock />
   <ToolkitHealth />
+  <StashOutlines />
   <OverlayLayer />
   <GameTooltip />
   <AppNotices />
@@ -12,6 +13,7 @@ import HiddenNote from './switchboard/HiddenNote.vue'
 import Dock from './dock/Dock.vue'
 import ToolkitHealth from './dock/ToolkitHealth.vue'
 import OverlayLayer from './ui/OverlayLayer.vue'
+import StashOutlines from './scarab-flip/StashOutlines.vue'
 import GameTooltip from './ui/tooltip/GameTooltip.vue'
 import AppNotices from './app/AppNotices.vue'
 import { MainProcess } from '@/web/background/IPC'

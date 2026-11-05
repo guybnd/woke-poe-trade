@@ -14,12 +14,17 @@
     <WSettingRow label="Hide untraded" :hint="`Hide items with under ${untradedChaos}c traded a day. Their price means little.`">
       <WToggle v-model="hideUntraded" />
     </WSettingRow>
+    <WSettingRow label="Hotkey: outline flips in the open stash tab"
+      hint="Works on the Scarab tab for now. Press once to draw the outlines. They clear on the next click, scroll, Esc or Space, or when you press it again. Nothing reads the screen until you press it.">
+      <w-hotkey-cell v-model="stashHotkey" />
+    </WSettingRow>
   </div>
 </template>
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue'
 import { WSelect, WSettingRow, WToggle } from '../ui'
+import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import { configModelValue, configProp } from '@/web/settings/utils'
 import { UNTRADED_CHAOS } from './calc'
 import { DEFAULT_LIFEFORCE_PER_ITEM, parseLifeforce } from './families'
@@ -27,7 +32,7 @@ import type { ScarabFlipWidget } from './widget'
 
 export default defineComponent({
   name: 'Flips',
-  components: { WSelect, WSettingRow, WToggle },
+  components: { WSelect, WSettingRow, WToggle, WHotkeyCell },
   props: configProp<ScarabFlipWidget>(),
   setup (props) {
     const w = () => props.configWidget
@@ -38,6 +43,10 @@ export default defineComponent({
       reroll: configModelValue(w, 'reroll'),
       hideUntraded: configModelValue(w, 'hideUntraded'),
       defaultCost: DEFAULT_LIFEFORCE_PER_ITEM,
+      stashHotkey: computed({
+        get: () => props.configWidget.stashHotkey ?? null,
+        set: (key: string | null) => { props.configWidget.stashHotkey = key }
+      }),
       cost: computed(() => props.configWidget.lifeforcePerItem ?? ''),
       setCost: (e: Event) => { props.configWidget.lifeforcePerItem = parseLifeforce((e.target as HTMLInputElement).value) }
     }

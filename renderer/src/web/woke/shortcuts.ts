@@ -25,6 +25,8 @@ import { RUN_TIMER_TYPE, hotkeyTarget as timerHotkeyTarget } from './campaign/ru
 import type { RunTimerWidget } from './campaign/run-timer'
 import { FARMING_TYPE, FARMING_LOOT_TARGET } from './farming/farming'
 import type { FarmingWidget } from './farming/farming'
+import { SCARAB_FLIP_TYPE, stashHotkeyTarget } from './scarab-flip/widget'
+import type { ScarabFlipWidget } from './scarab-flip/widget'
 import { TRADE_TYPE, hotkeyTarget as tradeHotkeyTarget } from './trade/widget'
 import type { TradeWidget } from './trade/widget'
 
@@ -129,6 +131,10 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
       actions.push({ shortcut: scan.rollHotkey, keepModKeys: true, action: { type: 'trigger-event', target: rollHotkeyTarget(widget.wmId) } })
     }
     return actions
+  }
+  if (widget.wmType === SCARAB_FLIP_TYPE) {
+    const key = (widget as ScarabFlipWidget).stashHotkey
+    return key ? [{ shortcut: key, keepModKeys: true, action: { type: 'trigger-event', target: stashHotkeyTarget(widget.wmId) } }] : []
   }
   if (widget.wmType === ESSENCE_SCAN_TYPE) {
     const scan = widget as EssenceScanWidget

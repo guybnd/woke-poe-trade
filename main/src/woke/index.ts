@@ -9,6 +9,9 @@ import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, rea
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
 import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels } from './map-scan'
 import { WokeHoverTracker } from './hover'
+import { readScarabTab } from './stash-read'
+import { StashWatch } from './stash-watch'
+import { perfRecord } from './perf'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 import type { GameLogWatcher } from '../host-files/GameLogWatcher'
 import { readGameLogTail } from './game-log-tail'
@@ -75,6 +78,19 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     if (kind.canRoll) handlers[`${kind.topic}-roll`] = async () => await scanner.roll()
   }
   handlers['essence-scan-once'] = async () => await readAllEssenceLabels(poeWindow)
+  const stashWatch = new StashWatch(() => {
+    server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'stash-clear', data: null } })
+  })
+  handlers['stash-read'] = async () => {
+    const { width, height } = poeWindow.bounds
+    if (!width || !height) return { found: false }
+    const t0 = performance.now()
+    const res = readScarabTab(poeWindow.screenshot(), width, height)
+    perfRecord('Stash outlines: read', performance.now() - t0)
+    if (res.found) stashWatch.start()
+    return res
+  }
+  handlers['stash-watch-stop'] = async () => { stashWatch.stop(); return null }
 
   server.onEventAnyClient('CLIENT->MAIN::woke-request', ({ id, op, args }) => {
     // Own keys only: an op like "constructor" must not reach Object.prototype.

@@ -184,7 +184,7 @@ export const PAGES: SettingsPage[] = [
     description: 'Movers, watchlist, league-start investments and flips from poe.ninja.',
     modules: ['market', 'league-invest', 'scarab-flip'],
     widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip'],
-    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Catalyst', 'Delirium orb']
+    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb']
   },
   {
     id: 'campaign',
