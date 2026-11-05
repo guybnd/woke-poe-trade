@@ -165,7 +165,7 @@ export class OverlayWindow {
 
   // woke: the player picked another icon.
   refreshIcon () {
-    this.window?.setIcon(appIconFile('png'))
+    if (process.platform !== 'darwin') this.window?.setIcon(appIconFile('png'))
   }
 
   updateOpts (overlayKey: string, windowTitle: string) {

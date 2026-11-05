@@ -95,7 +95,7 @@ export const PAGES: SettingsPage[] = [
     icon: { fa: 'fas fa-paint-brush' },
     description: 'Theme, text size, the overlay backdrop and the row of icons you see while playing.',
     parts: [LookPage],
-    find: ['Theme', 'Panel size', 'Font size', 'Text size', 'Overlay background', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
+    find: ['Theme', 'App icon', 'Tray icon', 'Panel size', 'Font size', 'Text size', 'Overlay background', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
     aliases: ['Appearance', 'Icon row']
   },
   {

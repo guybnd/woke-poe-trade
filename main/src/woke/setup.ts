@@ -22,7 +22,7 @@ function pageUrl () {
 }
 
 export function refreshSetupIcon () {
-  if (win && !win.isDestroyed()) win.setIcon(appIconFile('png'))
+  if (process.platform !== 'darwin' && win && !win.isDestroyed()) win.setIcon(appIconFile('png'))
 }
 
 export function openSetupWindow () {
@@ -63,6 +63,16 @@ function configSaysSetupDone (): boolean {
     return (JSON.parse(raw) as { woke?: { setupDone?: boolean } }).woke?.setupDone === true
   } catch {
     return false
+  }
+}
+
+// Read before the overlay loads, so the tray opens on the saved pick.
+export function savedAppIcon (): unknown {
+  try {
+    const raw = fs.readFileSync(path.join(app.getPath('userData'), 'apt-data', 'config.json'), 'utf8')
+    return (JSON.parse(raw) as { appIcon?: unknown }).appIcon
+  } catch {
+    return undefined
   }
 }
 
