@@ -1,0 +1,793 @@
+[
+ {
+  "w": 2,
+  "h": 3,
+  "league": "Allflame",
+  "fractured": true,
+  "sockets": [
+   {
+    "group": 0,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 0,
+    "attr": "G",
+    "sColour": "W"
+   }
+  ],
+  "name": "Mind Thirst",
+  "typeLine": "Legion Sword",
+  "baseType": "Legion Sword",
+  "rarity": "Rare",
+  "ilvl": 85,
+  "identified": true,
+  "properties": [
+   {
+    "name": "One Handed Sword",
+    "values": [],
+    "displayMode": 0
+   },
+   {
+    "name": "Physical Damage",
+    "values": [
+     [
+      "158-304",
+      1
+     ]
+    ],
+    "displayMode": 0,
+    "type": 9
+   },
+   {
+    "name": "Elemental Damage",
+    "values": [
+     [
+      "57-117",
+      5
+     ]
+    ],
+    "displayMode": 0,
+    "type": 10
+   },
+   {
+    "name": "Critical Strike Chance",
+    "values": [
+     [
+      "5.00%",
+      0
+     ]
+    ],
+    "displayMode": 0,
+    "type": 12
+   },
+   {
+    "name": "Attacks per Second",
+    "values": [
+     [
+      "1.48",
+      1
+     ]
+    ],
+    "displayMode": 0,
+    "type": 13
+   },
+   {
+    "name": "Weapon Range: {0} metres",
+    "values": [
+     [
+      "1.1",
+      0
+     ]
+    ],
+    "displayMode": 3,
+    "type": 14
+   }
+  ],
+  "requirements": [
+   {
+    "name": "Level",
+    "values": [
+     [
+      "62",
+      0
+     ]
+    ],
+    "displayMode": 0,
+    "type": 62
+   },
+   {
+    "name": "Str",
+    "values": [
+     [
+      "82",
+      1
+     ]
+    ],
+    "displayMode": 1,
+    "type": 63
+   },
+   {
+    "name": "Dex",
+    "values": [
+     [
+      "70",
+      1
+     ]
+    ],
+    "displayMode": 1,
+    "type": 64
+   }
+  ],
+  "implicitMods": [
+   {
+    "description": "40% increased Global Accuracy Rating",
+    "domain": "implicit",
+    "hash": "stat.implicit.stat_624954515",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "40",
+        "max": "40"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "explicitMods": [
+   {
+    "description": "32% reduced Attribute Requirements",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_3639275092",
+    "mods": [
+     {
+      "name": "of the Apt",
+      "tier": "S1",
+      "level": 60,
+      "magnitudes": [
+       {
+        "min": "-32",
+        "max": "-32"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "Adds 14 to 31 Physical Damage",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_1940865751",
+    "mods": [
+     {
+      "name": "Annealed",
+      "tier": "P4",
+      "level": 46,
+      "magnitudes": [
+       {
+        "min": "13",
+        "max": "18"
+       },
+       {
+        "min": "27",
+        "max": "31"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "Adds 57 to 117 Cold Damage",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_1037193709",
+    "mods": [
+     {
+      "name": "Polar",
+      "tier": "P3",
+      "level": 63,
+      "magnitudes": [
+       {
+        "min": "54",
+        "max": "74"
+       },
+       {
+        "min": "108",
+        "max": "126"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "23% increased Attack Speed",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_210067635",
+    "mods": [
+     {
+      "name": "of Infamy",
+      "tier": "S2",
+      "level": 60,
+      "magnitudes": [
+       {
+        "min": "23",
+        "max": "25"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "136% increased Physical Damage",
+    "flags": {
+     "fractured": true
+    },
+    "domain": "fractured",
+    "hash": "stat.fractured.stat_1509134228",
+    "mods": [
+     {
+      "name": "Chosen",
+      "tier": "P1",
+      "level": 60,
+      "magnitudes": [
+       {
+        "min": "120",
+        "max": "139"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "21% chance to Impale Enemies on Hit with Attacks",
+    "flags": {
+     "fractured": true
+    },
+    "domain": "fractured",
+    "hash": "stat.fractured.stat_725880290",
+    "mods": [
+     {
+      "name": "Chosen",
+      "tier": "P1",
+      "level": 60,
+      "magnitudes": [
+       {
+        "min": "21",
+        "max": "25"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "frameType": 2,
+  "frameTypeId": "Rare",
+  "extended": {
+   "dps": 539.46,
+   "pdps": 410.7,
+   "edps": 128.76,
+   "dps_aug": true,
+   "pdps_aug": true
+  }
+ },
+ {
+  "w": 2,
+  "h": 3,
+  "league": "Allflame",
+  "sockets": [
+   {
+    "group": 0,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 1,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 1,
+    "attr": "I",
+    "sColour": "B"
+   },
+   {
+    "group": 2,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 2,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 2,
+    "attr": "G",
+    "sColour": "W"
+   }
+  ],
+  "name": "Rage Guardian",
+  "typeLine": "Saintly Chainmail",
+  "baseType": "Saintly Chainmail",
+  "rarity": "Rare",
+  "ilvl": 85,
+  "identified": true,
+  "properties": [
+   {
+    "name": "Armour",
+    "values": [
+     [
+      "757",
+      1
+     ]
+    ],
+    "displayMode": 0,
+    "type": 16
+   },
+   {
+    "name": "Energy Shield",
+    "values": [
+     [
+      "213",
+      1
+     ]
+    ],
+    "displayMode": 0,
+    "type": 18
+   }
+  ],
+  "requirements": [
+   {
+    "name": "Level",
+    "values": [
+     [
+      "70",
+      0
+     ]
+    ],
+    "displayMode": 0,
+    "type": 62
+   },
+   {
+    "name": "Str",
+    "values": [
+     [
+      "99",
+      0
+     ]
+    ],
+    "displayMode": 1,
+    "type": 63
+   },
+   {
+    "name": "Int",
+    "values": [
+     [
+      "115",
+      0
+     ]
+    ],
+    "displayMode": 1,
+    "type": 65
+   }
+  ],
+  "explicitMods": [
+   {
+    "description": "+111 to Armour",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_3484657501",
+    "mods": [
+     {
+      "name": "Beatified",
+      "tier": "P4",
+      "level": 46,
+      "magnitudes": [
+       {
+        "min": "86",
+        "max": "145"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "41% increased Armour and Energy Shield",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_3321629045",
+    "mods": [
+     {
+      "name": "Seraphim's",
+      "tier": "P1",
+      "level": 78,
+      "magnitudes": [
+       {
+        "min": "39",
+        "max": "42"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "+49 to maximum Energy Shield",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_4052037485",
+    "mods": [
+     {
+      "name": "Beatified",
+      "tier": "P4",
+      "level": 46,
+      "magnitudes": [
+       {
+        "min": "29",
+        "max": "48"
+       }
+      ]
+     },
+     {
+      "name": "Deacon's",
+      "tier": "P3",
+      "level": 46,
+      "magnitudes": [
+       {
+        "min": "11",
+        "max": "15"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "Regenerate 2.3 Life per second",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_3325883026",
+    "mods": [
+     {
+      "name": "of the Lizard",
+      "tier": "S10",
+      "level": 7,
+      "magnitudes": [
+       {
+        "min": "2.1",
+        "max": "8"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "+18 to maximum Mana",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_1050105434",
+    "mods": [
+     {
+      "name": "Deacon's",
+      "tier": "P3",
+      "level": 46,
+      "magnitudes": [
+       {
+        "min": "16",
+        "max": "19"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "+14% to Cold Resistance",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_4220027924",
+    "mods": [
+     {
+      "name": "of the Seal",
+      "tier": "S7",
+      "level": 14,
+      "magnitudes": [
+       {
+        "min": "12",
+        "max": "17"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "16% increased Stun and Block Recovery",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_2511217560",
+    "mods": [
+     {
+      "name": "Seraphim's",
+      "tier": "P1",
+      "level": 78,
+      "magnitudes": [
+       {
+        "min": "16",
+        "max": "17"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "+35% to Lightning Resistance",
+    "flags": {
+     "crafted": true
+    },
+    "domain": "crafted",
+    "hash": "stat.crafted.stat_1671376347",
+    "mods": [
+     {
+      "name": "of Craft",
+      "tier": "R3",
+      "level": 50,
+      "magnitudes": [
+       {
+        "min": "29",
+        "max": "35"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "frameType": 2,
+  "frameTypeId": "Rare",
+  "extended": {
+   "base_defence_percentile": 42,
+   "ar": 909,
+   "ar_aug": true,
+   "es": 255,
+   "es_aug": true
+  }
+ },
+ {
+  "w": 2,
+  "h": 4,
+  "league": "Allflame",
+  "influences": {
+   "shaper": true
+  },
+  "shaper": true,
+  "sockets": [
+   {
+    "group": 0,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 0,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 1,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 1,
+    "attr": "G",
+    "sColour": "W"
+   },
+   {
+    "group": 1,
+    "attr": "G",
+    "sColour": "W"
+   }
+  ],
+  "name": "Starforge",
+  "typeLine": "Infernal Sword",
+  "baseType": "Infernal Sword",
+  "rarity": "Unique",
+  "ilvl": 87,
+  "identified": true,
+  "properties": [
+   {
+    "name": "Two Handed Sword",
+    "values": [],
+    "displayMode": 0
+   },
+   {
+    "name": "Physical Damage",
+    "values": [
+     [
+      "313-651",
+      1
+     ]
+    ],
+    "displayMode": 0,
+    "type": 9
+   },
+   {
+    "name": "Critical Strike Chance",
+    "values": [
+     [
+      "5.00%",
+      0
+     ]
+    ],
+    "displayMode": 0,
+    "type": 12
+   },
+   {
+    "name": "Attacks per Second",
+    "values": [
+     [
+      "1.45",
+      1
+     ]
+    ],
+    "displayMode": 0,
+    "type": 13
+   },
+   {
+    "name": "Weapon Range: {0} metres",
+    "values": [
+     [
+      "1.3",
+      0
+     ]
+    ],
+    "displayMode": 3,
+    "type": 14
+   }
+  ],
+  "requirements": [
+   {
+    "name": "Level",
+    "values": [
+     [
+      "67",
+      0
+     ]
+    ],
+    "displayMode": 0,
+    "type": 62
+   },
+   {
+    "name": "Str",
+    "values": [
+     [
+      "113",
+      0
+     ]
+    ],
+    "displayMode": 1,
+    "type": 63
+   },
+   {
+    "name": "Dex",
+    "values": [
+     [
+      "113",
+      0
+     ]
+    ],
+    "displayMode": 1,
+    "type": 64
+   }
+  ],
+  "implicitMods": [
+   {
+    "description": "30% increased Global Physical Damage",
+    "domain": "implicit",
+    "hash": "stat.implicit.stat_1310194496",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "30",
+        "max": "30"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "explicitMods": [
+   {
+    "description": "405% increased Physical Damage",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_1509134228",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "400",
+        "max": "450"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "7% increased Attack Speed",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_210067635",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "5",
+        "max": "8"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "+95 to maximum Life",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_3299347043",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "90",
+        "max": "100"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "Your Physical Damage can Shock",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_3848047105",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "1",
+        "max": "1"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "20% increased Area of Effect for Attacks",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_1840985759",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "20",
+        "max": "20"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "description": "Deal no Elemental Damage",
+    "domain": "explicit",
+    "hash": "stat.explicit.stat_2998305364",
+    "mods": [
+     {
+      "magnitudes": [
+       {
+        "min": "1",
+        "max": "1"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "flavourText": [
+   "The end is written into the beginning."
+  ],
+  "frameType": 3,
+  "frameTypeId": "Unique",
+  "extended": {
+   "dps": 839.55,
+   "pdps": 839.55,
+   "edps": 0,
+   "dps_aug": true,
+   "pdps_aug": true
+  }
+ }
+]

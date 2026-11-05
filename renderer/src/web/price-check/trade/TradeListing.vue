@@ -165,6 +165,7 @@
 import { defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { hideTip, showTip } from '@/web/woke/ui/tooltip/tooltip'
+import { listingDetail } from '@/web/woke/price-insight/listing-tip-detail'
 import { useI18nNs } from '@/web/i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
 import { requestTradeResultList, requestResults, createTradeRequest, clearTradeCache, PricingResult, SearchResult } from './pathofexile-trade'
@@ -472,7 +473,7 @@ export default defineComponent({
       rows,
       rowTitle,
       showRowTip (e: MouseEvent, row: ListingRow<PricingResult & { listedTimes: number }>) {
-        if (row.lead.tipItem) showTip(e, { kind: 'item', item: row.lead.tipItem })
+        if (row.lead.tipItem) showTip(e, { kind: 'item', item: row.lead.tipItem, listing: row.lead.listedItem && listingDetail(row.lead.listedItem) })
       },
       hideTip,
       FIX_TAG,

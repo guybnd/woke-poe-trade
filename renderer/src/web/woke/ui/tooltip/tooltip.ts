@@ -3,6 +3,7 @@
 // panel passes its own gems and items.
 import { shallowRef } from 'vue'
 import type { PobItem } from '../../pob-builds/widget'
+import type { ListingDetail } from '../../price-insight/listing-tip-detail'
 import type { TipModel } from './tip-content'
 
 export interface GemTip {
@@ -17,6 +18,8 @@ export interface GemTip {
 export interface ItemTip {
   kind: 'item'
   item: PobItem
+  // A trade listing also has its tiers, rolls and weapon stats.
+  listing?: ListingDetail
 }
 
 // The market strip at the foot of a looked-up item.

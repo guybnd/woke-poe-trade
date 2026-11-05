@@ -11,6 +11,13 @@ export type ListingMod = string | {
   description?: string
   domain?: string
   flags?: { fractured?: boolean, crafted?: boolean }
+  // The mods behind this line: usually one, two when they share a stat. Uniques
+  // and implicits have no name or tier. Tier is P1, S3, or R2 for a crafted mod.
+  mods?: Array<{
+    name?: string
+    tier?: string
+    magnitudes?: Array<{ min?: string | number, max?: string | number }>
+  }>
 }
 
 export interface ListingItem {
@@ -29,7 +36,12 @@ export interface ListingItem {
   explicitMods?: ListingMod[]
   craftedMods?: ListingMod[]
   sockets?: Array<{ group: number, sColour: string }>
-  properties?: Array<{ name?: string, type?: number, values: Array<[string, number]> }>
+  fractured?: boolean
+  synthesised?: boolean
+  // In a value, the number says how the game colours it: 1 boosted, 4 fire,
+  // 5 cold, 6 lightning, 7 chaos.
+  properties?: Array<{ name?: string, type?: number, displayMode?: number, values: Array<[string, number]> }>
+  requirements?: Array<{ name?: string, displayMode?: number, values: Array<[string, number]> }>
   // Defences and dps at 20% quality, the numbers the trade filters search on.
   extended?: {
     ar?: number

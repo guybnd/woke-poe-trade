@@ -1,12 +1,49 @@
 <template>
   <Teleport to="body">
-    <div v-if="tip" ref="el" :class="[$style.tip, frame]" :style="pos" role="tooltip">
-      <header :class="[$style.head, { [$style.double]: lines.length > 1 }]">
+    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing }]" :style="pos" role="tooltip">
+      <header :class="[$style.head, { [$style.double]: lines.length > 1, [$style.art]: headArt }]" :style="headArt">
         <img v-for="(src, i) in influenceArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
         <div v-for="(l, i) in lines" :key="i">{{ l }}</div>
       </header>
 
-      <template v-if="item">
+      <template v-if="item && listing">
+        <section v-if="listing.props.length" :class="$style.block">
+          <div v-for="(line, l) in listing.props" :key="l"><span v-for="(p, i) in line" :key="i" :class="$style[`p-${p.tone}`]">{{ p.text }}</span></div>
+        </section>
+        <section v-if="listing.requires.length" :class="$style.block">
+          <div><span v-for="(p, i) in listing.requires" :key="i" :class="$style[`p-${p.tone}`]">{{ p.text }}</span></div>
+        </section>
+        <section v-if="sockets.length" :class="$style.block">
+          <div :class="$style.sockets">
+            <span :class="$style.label">Sockets:</span>
+            <SocketDots v-for="(g, i) in sockets" :key="i" :colours="g" />
+          </div>
+        </section>
+        <section v-if="item.itemLevel" :class="$style.block">
+          <div><span :class="$style.label">Item Level: </span><span :class="$style.value">{{ item.itemLevel }}</span></div>
+        </section>
+        <section v-if="listing.implicits.length" :class="$style.block">
+          <ListingModRow v-for="(line, i) in listing.implicits" :key="i" :line="line" />
+        </section>
+        <section v-if="listing.groups.length" :class="$style.block">
+          <template v-for="(group, g) in listing.groups" :key="g">
+            <div v-if="group.heading" :class="$style.modHeading">{{ group.heading }}</div>
+            <div v-else-if="g" :class="$style.modGap" />
+            <ListingModRow v-for="(line, i) in group.lines" :key="i" :line="line" />
+          </template>
+        </section>
+        <section v-if="listing.tail.length || item.corrupted || item.mirrored" :class="$style.block">
+          <div v-for="t in listing.tail" :key="t.text" :class="t.kind === 'fractured' ? $style.fractured : $style.label">{{ t.text }}</div>
+          <div v-if="item.mirrored" :class="$style.mod">Mirrored</div>
+          <div v-if="item.corrupted" :class="$style.corrupted">Corrupted</div>
+        </section>
+        <footer v-if="listing.foot.length" :class="$style.strip" class="w-num">
+          <span v-for="s in listing.foot" :key="s.label"><span :class="$style.label">{{ `${s.label} ` }}</span><span :class="$style.value">{{ s.value }}</span></span>
+          <span v-if="listing.footNote" class="w-faint" :class="$style.span">{{ listing.footNote }}</span>
+        </footer>
+      </template>
+
+      <template v-else-if="item">
         <section v-if="itemProps.length" :class="$style.block">
           <div v-for="p in itemProps" :key="p.label"><span :class="$style.label">{{ p.label }}: </span><span :class="$style.value">{{ p.value }}</span></div>
         </section>
@@ -93,6 +130,7 @@ import { socketGroups } from '../../pob-builds/build-model'
 import { gemData } from '../../pob-builds/gems'
 import type { GemColour } from '../../pob-builds/gems'
 import type { PobItem } from '../../pob-builds/widget'
+import ListingModRow from './ListingModRow.vue'
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import WSpark from '../WSpark.vue'
@@ -104,6 +142,7 @@ const el = ref<HTMLElement | null>(null)
 const placed = shallowRef<{ left: number, top: number } | null>(null)
 
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
+const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
 const lookup = computed<LookupTip | null>(() => tip.value?.content.kind === 'lookup' ? tip.value.content : null)
 // Live: the divine rate can arrive after the tooltip opens.
@@ -114,13 +153,25 @@ const moreUniques = computed(() => Math.max(0, (lookup.value?.uniques?.length ??
 const data = computed(() => gem.value ? gemData(gem.value.name) : null)
 
 const FRAMES: Record<string, string> = { UNIQUE: 'unique', RELIC: 'unique', RARE: 'rare', MAGIC: 'magic' }
-const frame = computed(() => lookup.value ? $style[lookup.value.model.frame] : $style[gem.value ? `gem-${data.value?.colour ?? 'w'}` : FRAMES[item.value?.rarity ?? ''] ?? 'normal'])
+const frameName = computed<string>(() => lookup.value ? lookup.value.model.frame : gem.value ? `gem-${data.value?.colour ?? 'w'}` : FRAMES[item.value?.rarity ?? ''] ?? 'normal')
+const frame = computed(() => $style[frameName.value])
 
 const lines = computed<string[]>(() => {
   if (lookup.value) return [lookup.value.model.name, lookup.value.model.base ?? ''].filter(Boolean)
   if (gem.value) return [data.value?.name ?? gem.value.name]
   if (!item.value) return []
   return [item.value.name, item.value.base].filter(Boolean)
+})
+
+// The game's own header art. Other frames keep the plain colour band.
+const ART_SINGLE = new Set(['normal', 'magic', 'rare', 'unique', 'currency'])
+const ART_DOUBLE = new Set(['rare', 'unique'])
+const headArt = computed(() => {
+  const double = lines.value.length > 1
+  if (!(double ? ART_DOUBLE : ART_SINGLE).has(frameName.value)) return undefined
+  const name = item.value?.rarity === 'RELIC' ? 'relic' : frameName.value
+  const file = (side: string) => `url(/images/item-frame/header-${double ? 'double-' : ''}${name}-${side}.png)`
+  return { backgroundImage: `${file('left')}, ${file('right')}, ${file('middle')}` }
 })
 
 const influenceArt = computed(() => (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`))
@@ -274,11 +325,11 @@ onUnmounted(() => {
   border: 1px solid rgba(var(--tip-rgb), 0.55);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
 }
-.normal { --tip: var(--w-r-normal); --tip-rgb: 200, 200, 200; }
-.magic { --tip: var(--w-r-magic); --tip-rgb: 136, 136, 255; }
-.rare { --tip: var(--w-r-rare); --tip-rgb: 255, 255, 119; }
-.unique { --tip: var(--w-r-unique); --tip-rgb: 175, 96, 37; }
-.currency { --tip: var(--w-r-currency); --tip-rgb: 170, 158, 130; }
+.normal { --tip: var(--w-r-normal); --tip-rgb: 200, 200, 200; --sep: url(/images/item-frame/separator-normal.png); --sep-line: 0; }
+.magic { --tip: var(--w-r-magic); --tip-rgb: 136, 136, 255; --sep: url(/images/item-frame/separator-magic.png); --sep-line: 0; }
+.rare { --tip: var(--w-r-rare); --tip-rgb: 255, 255, 119; --sep: url(/images/item-frame/separator-rare.png); --sep-line: 0; }
+.unique { --tip: var(--w-r-unique); --tip-rgb: 175, 96, 37; --sep: url(/images/item-frame/separator-unique.png); --sep-line: 0; }
+.currency { --tip: var(--w-r-currency); --tip-rgb: 170, 158, 130; --sep: url(/images/item-frame/separator-currency.png); --sep-line: 0; }
 .card { --tip: var(--w-r-divination); --tip-rgb: 127, 181, 214; }
 .gem-r { --tip: var(--w-gem-r); --tip-rgb: 234, 111, 95; }
 .gem-g { --tip: var(--w-gem-g); --tip-rgb: 114, 207, 100; }
@@ -294,6 +345,19 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(var(--tip-rgb), 0.7);
 }
 .double { padding-top: 7px; padding-bottom: 7px; }
+/* Ends fixed, the middle repeats. Sized to the header, which grows with text scale. */
+.art {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 34px;
+  padding: 2px 34px;
+  background-position: left center, right center, center;
+  background-size: auto 100%;
+  background-repeat: no-repeat, no-repeat, repeat-x;
+  border-bottom: 0;
+}
+.art.double { min-height: 54px; padding: 2px 46px; }
 .influence { position: absolute; top: 50%; width: 24px; height: 24px; transform: translateY(-50%); object-fit: contain; }
 .left { left: 5px; }
 .right { right: 5px; }
@@ -301,7 +365,7 @@ onUnmounted(() => {
 .block { padding: 5px 14px; }
 /* A line that fades out at both ends, as between the game's tooltip sections. */
 .block + .block {
-  background: linear-gradient(90deg, transparent, rgba(var(--tip-rgb), 0.6), transparent) top / 80% 1px no-repeat;
+  background: var(--sep, none) center top / auto 8px no-repeat, linear-gradient(90deg, transparent, rgba(var(--tip-rgb), var(--sep-line, 0.6)), transparent) top / 80% 1px no-repeat;
 }
 .label { color: var(--w-faint); }
 .value { color: #fff; }
@@ -311,6 +375,20 @@ onUnmounted(() => {
 .corrupted { color: var(--w-down); }
 .note { color: var(--w-dim); font-family: var(--w-body); font-size: var(--w-fs-sm); white-space: pre-line; }
 .sockets { display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* A listing's headings and tags need the room. */
+.wide { max-width: 36rem; }
+.modHeading { margin-top: 6px; color: var(--w-dim); font-size: var(--w-fs-md); }
+.modHeading:first-child { margin-top: 0; }
+.modGap { height: 8px; }
+.p-label { color: var(--w-faint); }
+.p-value { color: #fff; }
+.p-aug { color: var(--w-r-magic); }
+/* The game's damage colours, cold and fire lifted to read on the dark tooltip. */
+.p-fire { color: #d9543f; }
+.p-cold { color: #6a9fd8; }
+.p-lightning { color: #ffd700; }
+.p-chaos { color: #d02090; }
 
 .t-label { color: var(--w-faint); }
 .t-value { color: #fff; }

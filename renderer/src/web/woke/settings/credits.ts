@@ -32,6 +32,7 @@ export const CREDIT_GROUPS: CreditGroup[] = [
       { name: 'NeverSink filter', url: 'https://github.com/NeverSinkDev/NeverSink-Filter', use: 'The loot filter base and its alert sounds.', license: 'MIT' },
       { name: 'Path of Building Community', url: 'https://github.com/PathOfBuildingCommunity/PathOfBuilding', use: 'The build files and codes the PoB builds panel reads.', license: 'MIT' },
       { name: 'RePoE', url: 'https://github.com/brather1ng/RePoE', use: 'Game data behind item parsing, through Awakened PoE Trade.', license: 'MIT' },
+      { name: 'Sidekick', url: 'https://github.com/Sidekick-Poe/Sidekick', use: 'The copy of the game\'s item header and divider art in tooltips.', license: 'MIT' },
       { name: 'Atlas tree export', url: 'https://github.com/grindinggear/atlastree-export', use: 'The Atlas passive tree data, published by Grinding Gear Games.' }
     ]
   },
