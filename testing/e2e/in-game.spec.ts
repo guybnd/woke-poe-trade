@@ -98,6 +98,16 @@ test('boss runs icon: The Alluring Abyss shows Uber Atziri, and a click opens it
   await expect(icon.getByText('The Shaper', { exact: true })).toHaveCount(0)
 })
 
+test('boss runs icon: a click opens the arena boss that has a drop list', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-boss-runs' }] })
+  await overlay.log([
+    '2026/11/05 15:00:36 3725546 1186a8a3 [DEBUG Client 25552] Generating level 83 area "MapWorldsPrimordialBoss4" with seed 1',
+    '2026/11/05 15:00:37 3727812 cffb065b [INFO Client 25552] : You have entered Absence of Symmetry and Harmony.'
+  ])
+  await overlay.dockIcon('boss-runs').locator('span').first().click()
+  await expect(overlay.widget('woke-boss-runs').getByText('Forbidden Flesh').first()).toBeVisible()
+})
+
 test('boss runs icon: a click with the overlay open shows that boss despite the tier filter', async ({ overlay }) => {
   await overlay.boot({
     overlayActive: true,

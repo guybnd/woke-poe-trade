@@ -9,7 +9,7 @@
             <div class="w-head-font w-accent w-trunc">{{ r.boss.name }}</div>
             <div class="flex justify-between"><span class="w-dim">Entry</span>
               <span class="w-down"><template v-if="r.entryMissing.length">?</template><WPrice v-else :chaos="-r.entry" :divine="divine" /></span></div>
-            <div class="flex justify-between"><span class="w-dim">{{ r.myLoot != null ? 'Your average drop' : 'Average drop' }}</span><WPrice :chaos="r.myLoot ?? r.loot" :divine="divine" /></div>
+            <div class="flex justify-between"><span class="w-dim">{{ r.myLoot != null ? 'Your average drop' : 'Average drop' }}</span><WPrice :chaos="r.myLoot ?? (r.hasRates ? r.loot : null)" :divine="divine" /></div>
             <div v-if="r.ready" class="flex justify-between"><span class="w-dim">Per run</span>
               <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="r.profit" :divine="divine" /></span></div>
             <div v-if="r.kills" class="w-dim text-xs">{{ r.kills }} kill{{ r.kills === 1 ? '' : 's' }} logged</div>
@@ -338,12 +338,14 @@ const arenaBosses = computed(() => {
 
 const CARD_DROPS = 6
 
-// Keeps your pick when it's one of this arena's bosses (normal or uber); the
-// tier filter must not hide the boss the icon opened.
+// Keeps your pick when it's one of this arena's bosses (normal or uber), else
+// the first with a drop list; the log can't tell which tier you're fighting.
+// The tier filter must not hide the boss the icon opened.
 function openArenaBoss () {
   const here = arenaBosses.value
   if (!here.length) return
-  const pick = here.find(r => r.boss.id === props.config.selected) ?? here[0]
+  const pick = here.find(r => r.boss.id === props.config.selected) ??
+    here.find(r => r.drops.length) ?? here[0]
   props.config.selected = pick.boss.id
   if (props.config.tier !== 'all' && props.config.tier !== pick.boss.tier) props.config.tier = 'all'
   tab.value = 'drops'
