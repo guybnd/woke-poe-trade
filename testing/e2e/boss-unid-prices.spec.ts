@@ -78,7 +78,7 @@ test('Boss runs: unidentified jewel prices and estimated chances', async ({ over
   const row = panel.locator('.w-row').filter({ hasText: 'Sublime Vision' }).first()
   await expect(row).toBeVisible(SLOW)
   await expect(row).toContainText('~1.50%', SLOW)
-  await expect(panel).toContainText('estimated chance, not measured from kills')
+  await expect(panel).toContainText('is an estimated chance')
 
   // The opened boss's jewels are searched first, unidentified at instant buyout.
   await expect(row.getByText('unid', { exact: true })).toBeVisible(SLOW)

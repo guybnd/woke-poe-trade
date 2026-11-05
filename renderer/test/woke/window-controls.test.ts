@@ -57,7 +57,9 @@ describe('Widget title bar', () => {
     app.use(createI18n({ legacy: false, locale: 'en', messages: { en: { widget: { hide: 'hide', edit: 'edit', move: 'move', delete: 'delete' } } } }))
     app.provide('wm', {})
     const html = await renderToString(app)
-    for (const label of ['Edit', 'Delete', 'Minimize', 'Hide']) expect(html).toContain(`aria-label="${label}"`)
+    for (const label of ['Edit', 'Minimize', 'Hide']) expect(html).toContain(`aria-label="${label}"`)
+    // Delete is in the right-click menu only.
+    expect(html).not.toContain('aria-label="Delete"')
     expect(html).not.toContain('aria-label="Move"')
   })
 })

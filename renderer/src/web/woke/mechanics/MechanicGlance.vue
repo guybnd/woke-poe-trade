@@ -1,6 +1,6 @@
 <template>
   <div>
-    <WBanner v-if="!items.length" tone="info">Waiting for poe.ninja prices…</WBanner>
+    <WBanner v-if="!items.length" tone="info">Waiting for poe.ninja prices.</WBanner>
     <template v-if="mech.id === 'betrayal' && goals.length">
       <div class="w-group-label">Goals · {{ goalsDone }} of {{ goals.length }} in place</div>
       <div v-for="g in goalRows.filter(r => !r.done)" :key="g.member" class="w-row" :class="$style.grid">

@@ -18,7 +18,7 @@ async function waitForPrices (overlay: Overlay) {
 
 function bootOptions () {
   return {
-    widgets: [{ wmType: 'woke-market-tracker', wmTitle: 'Market tracker', anchor: { pos: 'tl', x: 40, y: 30 } }]
+    widgets: [{ wmType: 'woke-market-tracker', wmTitle: 'Market', anchor: { pos: 'tl', x: 40, y: 30 } }]
   }
 }
 
@@ -82,7 +82,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   await panel.getByRole('button', { name: /Corrupted gems are hidden/ }).click()
 
   await box.fill('market')
-  await expect(panel.getByRole('button', { name: /Market tracker\s*Tool/ })).toBeVisible()
+  await expect(panel.getByRole('button', { name: /Market\s*Tool/ })).toBeVisible()
   await expect(panel.getByRole('button', { name: /Market & investments/ })).toBeVisible()
   await overlay.snap('search-tools')
 
@@ -113,12 +113,12 @@ test('the launcher lists prices, and a click opens the palette on them', async (
   expect(overlay.errors).toEqual([])
 })
 
-test('Market tracker searches every price, whatever the filters', async ({ overlay }) => {
+test('Market searches every price, whatever the filters', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot({
     ...bootOptions(),
     overlayActive: true,
-    widgets: [{ wmType: 'woke-market-tracker', wmTitle: 'Market tracker', wmWants: 'show', anchor: { pos: 'tl', x: 40, y: 30 } }]
+    widgets: [{ wmType: 'woke-market-tracker', wmTitle: 'Market', wmWants: 'show', anchor: { pos: 'tl', x: 40, y: 30 } }]
   })
   const panel = overlay.widget('woke-market-tracker')
   const box = panel.getByPlaceholder('Search every price')
@@ -128,7 +128,7 @@ test('Market tracker searches every price, whatever the filters', async ({ overl
     await expect(panel.getByText('Enlighten Support')).toBeVisible({ timeout: 500 })
   }).toPass({ timeout: 20_000 })
   await expect(panel.getByText(/prices? for "enlighten"/)).toBeVisible()
-  await expect(panel.getByText('c min', { exact: true })).toBeHidden()
+  await expect(panel.getByRole('combobox')).toBeHidden()
   await overlay.snap('market-search')
 
   await panel.getByRole('button', { name: /Corrupted gems are shown/ }).click()
@@ -138,7 +138,7 @@ test('Market tracker searches every price, whatever the filters', async ({ overl
   // Watching from a result.
   await panel.getByTitle('Add to watchlist').first().click()
   await box.fill('')
-  await expect(panel.getByText('c min', { exact: true })).toBeVisible()
+  await expect(panel.getByRole('combobox')).toBeVisible()
   await panel.getByRole('tab', { name: /Watchlist/ }).click()
   await expect(panel.getByText('Enlighten Support')).toBeVisible()
   expect(overlay.errors).toEqual([])
@@ -170,7 +170,7 @@ test('hovering a result shows the item, with its price or its range', async ({ o
   await expect(tip).toContainText('Undying Flesh Talisman')
 
   // Tools aren't items.
-  await box.fill('market tracker')
-  await panel.getByRole('button', { name: /Market tracker/ }).first().hover()
+  await box.fill('market')
+  await panel.getByRole('button', { name: /Market/ }).first().hover()
   await expect(tip).toHaveCount(0)
 })

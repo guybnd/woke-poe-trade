@@ -1,4 +1,4 @@
-// Trade assistant, driven by a recorded hideout session in Client.txt: the
+// Trades, driven by a recorded hideout session in Client.txt: the
 // trade icon and its peek, one key walking a trade (one chat line per press),
 // the clickable card, and the sales log feeding Session analytics.
 import fs from 'fs'
@@ -217,7 +217,7 @@ test('the card hints link to Settings and close for good', async ({ overlay, fak
   await overlay.snap('card with hints closed')
 })
 
-test('the Settings link opens the Trade assistant page', async ({ overlay, fakeApp }) => {
+test('the Settings link opens the Trades page', async ({ overlay, fakeApp }) => {
   clearHistory(fakeApp.opts.userData)
   await overlay.boot({ widgets: [{ wmType: 'woke-trade', ping: false }] })
   await overlay.log(upTo('Kaltenhalt: Hi, I would like to buy your Headhunter'))

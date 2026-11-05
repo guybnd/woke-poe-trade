@@ -47,11 +47,11 @@ export const MODULE_GROUPS: Array<{ id: ModuleGroup, label: string }> = [
 ]
 
 export const MODULES: ModuleDef[] = [
-  { id: 'market', name: 'Market tracker', description: 'Movers and watchlist from poe.ninja', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
+  { id: 'market', name: 'Market', description: 'Movers and watchlist from poe.ninja', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling' }, needs: ['poll', 'network'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem' }, needs: ['poll'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
-  { id: 'farming', name: 'Farming profit', description: 'Session profit per hour', group: 'economy', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
+  { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'economy', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar' }, needs: ['prices'] },
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['log', 'prices'] },
 
@@ -62,14 +62,14 @@ export const MODULES: ModuleDef[] = [
   { id: 'atlas', name: 'Atlas strategies', description: 'Tree, scarabs and regex per strategy', group: 'mapping', widgetTypes: ['woke-atlas-strategies'], icon: { fa: 'fas fa-globe', item: 'Cartography Scarab of Risk' }, needs: ['network', 'prices'] },
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
-  { id: 'campaign', name: 'Campaign tracker', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', currency: 'wisdom' }, needs: ['log'] },
+  { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', currency: 'wisdom' }, needs: ['log'] },
   { id: 'run-timer', name: 'Run timer', description: 'Act splits and personal bests', group: 'campaign', widgetTypes: ['woke-run-timer'], icon: { fa: 'fas fa-stopwatch' }, needs: ['log'] },
   { id: 'lab', name: 'Lab layouts', description: "Today's poelab layout and reset countdown", group: 'campaign', widgetTypes: ['woke-lab'], icon: { fa: 'fas fa-dungeon', mechanic: 'lab' }, needs: ['hotkeys'] },
   { id: 'challenges', name: 'Challenge guide', description: 'League challenge guide with your progress', group: 'campaign', widgetTypes: ['woke-challenges'], icon: { fa: 'fas fa-trophy' }, needs: ['hotkeys', 'network', 'account'] },
 
   { id: 'pob-builds', name: 'PoB builds', description: 'Your Path of Building folder', group: 'builds', widgetTypes: ['woke-pob-builds'], icon: { fa: 'fas fa-diagram-project', item: 'Enlighten Support' }, needs: [] },
   { id: 'trade-searches', name: 'Trade searches', description: 'Saved trade site searches', group: 'builds', widgetTypes: ['woke-trade-searches'], icon: { fa: 'fas fa-search-dollar', currency: 'exalted' }, needs: ['hotkeys'] },
-  { id: 'trade', name: 'Trade assistant', description: 'Trade whispers, quick replies and a sales log', group: 'builds', widgetTypes: ['woke-trade'], icon: { fa: 'fas fa-handshake', currency: 'divine' }, needs: ['log', 'hotkeys', 'prices'] },
+  { id: 'trade', name: 'Trades', description: 'Trade whispers, quick replies and a sales log', group: 'builds', widgetTypes: ['woke-trade'], icon: { fa: 'fas fa-handshake', currency: 'divine' }, needs: ['log', 'hotkeys', 'prices'] },
   { id: 'regex-library', name: 'Regex library', description: 'Saved stash search strings', group: 'builds', widgetTypes: ['woke-regex-library'], icon: { fa: 'fas fa-search', mechanic: 'stash' }, needs: ['hotkeys'] },
 
   // APT features: only their hotkeys can be switched off.
@@ -149,6 +149,22 @@ export function setModuleOn (config: ConfigLike & { woke: WokeModulesConfig }, i
   const off = config.woke.off.filter(x => x !== id)
   if (!on) off.push(id)
   config.woke.off = off
+}
+
+// Default titles that saved configs may still hold. A title you typed stays.
+const OLD_DEFAULT_TITLES: Record<string, string> = {
+  'woke-farming|Farming profit': 'Farming',
+  'woke-market-tracker|Market tracker': 'Market',
+  'woke-map-mods|Map mod checker': 'Map mods',
+  'woke-campaign|Campaign tracker': 'Campaign',
+  'woke-run-timer|Campaign run timer': 'Run timer'
+}
+
+export function renameOldDefaultTitles (widgets: Array<{ wmType: string, wmTitle?: string }>) {
+  for (const w of widgets) {
+    const title = OLD_DEFAULT_TITLES[`${w.wmType}|${w.wmTitle}`]
+    if (title) w.wmTitle = title
+  }
 }
 
 export function ensureWokeConfig<T extends ConfigLike> (config: T): T & { woke: WokeModulesConfig } {

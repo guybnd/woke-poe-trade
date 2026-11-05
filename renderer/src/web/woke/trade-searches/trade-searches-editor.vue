@@ -6,6 +6,7 @@
       Paste a pathofexile.com/trade search link (live searches end in <code>/live</code>).
       Each search can have one hotkey for the overlay browser and one for your normal browser.
     </div>
+    <w-toggle v-model="enableHotkeys" class="mb-2">Use each search's hotkey</w-toggle>
     <w-toggle v-model="followLeague" class="mb-2">Open searches in the league picked in price check settings, even if they were saved in an older league</w-toggle>
     <dnd-container tag="div" class="flex flex-col gap-y-3"
       v-model="entries" item-key="id"
@@ -78,6 +79,10 @@ export default defineComponent({
     return {
       isValidUrl,
       title: configModelValue(() => props.configWidget, 'wmTitle'),
+      enableHotkeys: computed({
+        get: () => props.configWidget.enableHotkeys,
+        set: (v: boolean) => { props.configWidget.enableHotkeys = v }
+      }),
       followLeague: computed({
         get: () => props.configWidget.followLeague !== false,
         set: (v: boolean) => { props.configWidget.followLeague = v }

@@ -45,7 +45,7 @@ export interface SessionRecord {
   extraChaos: number
   divine: number | null
   runs: MapRun[]
-  // Brought over from Farming profit's old history: totals only.
+  // Brought over from Farming's old history: totals only.
   imported?: { costChaos: number, lootChaos: number }
 }
 

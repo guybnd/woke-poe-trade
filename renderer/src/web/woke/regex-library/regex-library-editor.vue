@@ -2,6 +2,7 @@
   <div class="max-w-xl p-2">
     <input class="w-input rounded px-1 w-48 mb-2" placeholder="Widget title"
       v-model="title" />
+    <w-toggle v-model="enableHotkeys" class="mb-2">Use each entry's hotkey</w-toggle>
     <dnd-container tag="div" class="flex flex-col gap-y-3"
       v-model="entries" item-key="id"
       handle="[data-qa=drag-handle]" :animation="200" :force-fallback="true">
@@ -60,6 +61,7 @@
 import { defineComponent, shallowRef } from 'vue'
 import DndContainer from 'vuedraggable'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, exportEntries, parseImport } from './widget'
 import type { RegexEntry, RegexLibraryWidget } from './widget'
@@ -67,7 +69,7 @@ import { parseTags } from '../shared/library'
 
 export default defineComponent({
   name: 'Regex library',
-  components: { DndContainer, WHotkeyCell },
+  components: { DndContainer, WHotkeyCell, WToggle },
   props: configProp<RegexLibraryWidget>(),
   setup (props) {
     const ioMode = shallowRef<'import' | 'export' | null>(null)
@@ -76,6 +78,7 @@ export default defineComponent({
 
     return {
       MAX_SEARCH_LENGTH,
+      enableHotkeys: configModelValue(() => props.configWidget, 'enableHotkeys'),
       canNegate,
       effectiveText,
       title: configModelValue(() => props.configWidget, 'wmTitle'),

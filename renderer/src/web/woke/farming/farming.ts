@@ -374,7 +374,7 @@ export function toSessionRecord (
   }
 }
 
-// Farming profit's old history (totals only) as analytics sessions.
+// Farming's old history (totals only) as analytics sessions.
 export function historyToRecords (history: FarmingResult[], league: string): SessionRecord[] {
   return history.map(h => ({
     id: `history-${h.endedAt}`,

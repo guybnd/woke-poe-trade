@@ -104,7 +104,7 @@ import { bundledRoute } from './route-data'
 import type { RouteOptions } from './route-parse'
 
 export default defineComponent({
-  name: 'Campaign tracker',
+  name: 'Campaign',
   components: { WToggle, WSelect, WHotkeyCell },
   props: configProp<CampaignWidget>(),
   setup (props) {

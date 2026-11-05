@@ -1,4 +1,4 @@
-// Saved sessions, shared by Farming profit (writes) and Session analytics
+// Saved sessions, shared by Farming (writes) and Session analytics
 // (reads). Files live in the main process (main/src/woke/session-store.ts).
 import { shallowRef } from 'vue'
 import { createGlobalState } from '@vueuse/core'

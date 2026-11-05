@@ -31,7 +31,6 @@
           </template>
         </WListItem>
         <div v-if="config.notes.trim()" class="whitespace-pre-wrap w-dim py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad);">{{ config.notes }}</div>
-        <template #footer><span>Layouts from poelab.com</span></template>
       </WPanel>
       <WPanel v-if="openDiff" size-key="layout" :title="`${labLabel(openDiff)} Labyrinth`" :scroll="false" width="60vw" height="80vh" max-height="none">
         <template v-if="staleDate" #banner>

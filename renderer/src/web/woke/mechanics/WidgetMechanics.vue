@@ -1,5 +1,5 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <div class="flex gap-2 min-h-0 items-start">
       <!-- While you play: an icon in the dock, only in a zone with a mechanic;
            resting the mouse on it shows the glance card. -->
@@ -16,10 +16,6 @@
       <!-- Expanded: rail of mechanics, prices, then scarabs and tips. -->
       <WPanel v-if="config.expanded" :icon="mech.id" :title="config.wmTitle || 'League mechanics'" :updated="prices.snapshot.value?.ts ?? null" :fresh-min="40" :stale-min="180" width="40rem" max-height="70vh" :scroll="false">
         <template #actions>
-          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': config.autoSwitch }" @click="config.autoSwitch = !config.autoSwitch"
-            :title="config.autoSwitch ? 'Switches mechanic when you enter its zone. Click to turn off.' : 'Click to switch mechanic when you enter its zone'">
-            <i class="fas fa-location-arrow" />
-          </button>
           <button class="w-icon-btn" title="Collapse to icon" @click="collapse"><i class="fas fa-compress-alt" /></button>
         </template>
         <div :class="$style.split">
@@ -32,7 +28,7 @@
           </div>
 
           <div class="w-scroll" :class="$style.col">
-            <WBanner v-if="!hasPrices" tone="info">Waiting for poe.ninja prices. They load on their own within a minute or two.</WBanner>
+            <WBanner v-if="!hasPrices" tone="info">Waiting for poe.ninja prices.</WBanner>
             <template v-if="mech.id === 'betrayal'">
               <div :class="$style.toolbar">
                 <WSegmented v-model="division" :options="DIVISIONS.map((d, i) => ({ value: String(i), label: d.slice(0, 5) }))" />
@@ -91,9 +87,6 @@
             </ul>
           </div>
         </div>
-        <template #footer>
-          <span>Prices from poe.ninja</span>
-        </template>
       </WPanel>
 
       <WPanel v-if="config.expanded && mech.id === 'betrayal' && showBoard" size-key="board" title="Syndicate board" width="auto" max-width="70vw">

@@ -2,16 +2,13 @@
   <WPanel ref="panel" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #actions>
-      <span v-if="config.sampleHotkey" class="w-dim text-xs flex items-center gap-1" title="Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.">
-        Find an item's rule: in game, hover it and press <WKbd :keys="config.sampleHotkey" />
-      </span>
       <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
     </template>
     <template #toolbar>
       <WButton v-if="trail.length" size="sm" variant="ghost" icon="fas fa-arrow-left" title="Back to where you were (mouse back button)" @click="goBack">Back</WButton>
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
-      <span @paste.capture="onSearchPaste">
+      <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <WField v-model="search" type="search" icon="fas fa-search" placeholder="Find an item, or paste one to see its rule" style="width: 19rem;" />
       </span>
       <span class="grow" />

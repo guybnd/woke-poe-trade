@@ -29,7 +29,7 @@
       <template v-else-if="tab === 'leveling'">
         <div class="w-dim">
           <template v-if="level != null">Level {{ level }}<template v-if="act != null && act <= 10"> · Act {{ act }}</template></template>
-          <template v-else>Level unknown: the campaign tracker reads it from Client.txt.</template>
+          <template v-else>Level unknown: Campaign reads it from Client.txt.</template>
         </div>
         <div v-if="skillSets.length > 1" class="flex flex-wrap gap-1 pt-1">
           <WChip v-if="pick" clickable :title="AUTO_HINT" @click="clearPick">Auto</WChip>

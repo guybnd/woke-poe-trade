@@ -23,11 +23,11 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 <!-- modules:start (checked against renderer/src/web/woke/modules.ts by renderer/test/woke/readme.test.ts) -->
 | Area | Module | What it does |
 | --- | --- | --- |
-| Economy | Market tracker | Movers and watchlist from poe.ninja |
+| Economy | Market | Movers and watchlist from poe.ninja |
 | Economy | Investments | League-start buys ranked from past leagues |
 | Economy | Lab gems | Divine Font gem values by colour |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
-| Economy | Farming profit | Session profit per hour |
+| Economy | Farming | Session profit per hour |
 | Economy | Session analytics | Profit per map, strategy and hour over time |
 | Economy | Boss runs | Profit per boss kill |
 | Mapping | Map mods | Danger strip on price check and map regex |
@@ -36,13 +36,13 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
 | Mapping | Atlas strategies | Tree, scarabs and regex per strategy |
 | Mapping | League mechanics | Prices and picks for each league mechanic |
-| Campaign & lab | Campaign tracker | Next steps for the act you are in |
+| Campaign & lab | Campaign | Next steps for the act you are in |
 | Campaign & lab | Run timer | Act splits and personal bests |
 | Campaign & lab | Lab layouts | Today's poelab layout and reset countdown |
 | Campaign & lab | Challenge guide | League challenge guide with your progress |
 | Builds & trade | PoB builds | Your Path of Building folder |
 | Builds & trade | Trade searches | Saved trade site searches |
-| Builds & trade | Trade assistant | Trade whispers, quick replies and a sales log |
+| Builds & trade | Trades | Trade whispers, quick replies and a sales log |
 | Builds & trade | Regex library | Saved stash search strings |
 | Price check (Awakened PoE Trade) | Price check hotkeys | Check an item under the cursor |
 | Price check (Awakened PoE Trade) | Item info hotkeys | Item info, wiki, poedb, Craft of Exile, similar items |

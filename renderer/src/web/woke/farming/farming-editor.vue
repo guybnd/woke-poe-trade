@@ -15,6 +15,7 @@
         <span class="w-dim text-sm">(counted as 0)</span>
       </div>
     </div>
+    <w-toggle v-model="autoCountMaps">Count maps from Client.txt</w-toggle>
     <w-toggle v-model="autoPause">Pause the session after 5 minutes without a zone change (resumes on the next zone)</w-toggle>
   </div>
 </template>
@@ -28,7 +29,7 @@ import { pushHostConfig } from '@/web/Config'
 import type { FarmingWidget } from './farming'
 
 export default defineComponent({
-  name: 'Farming profit',
+  name: 'Farming',
   components: { WToggle, WHotkeyCell },
   props: configProp<FarmingWidget>(),
   setup (props) {
@@ -46,6 +47,10 @@ export default defineComponent({
       junkBelow: computed({
         get: () => w().junkBelow ?? 0,
         set: (v: number) => { w().junkBelow = Math.max(0, Number(v) || 0) }
+      }),
+      autoCountMaps: computed({
+        get: () => w().autoCountMaps !== false,
+        set: (v: boolean) => { w().autoCountMaps = v }
       }),
       autoPause: computed({
         get: () => w().autoPause !== false,

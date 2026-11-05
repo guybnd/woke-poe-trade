@@ -16,10 +16,6 @@
     </DockItem>
     <div class="flex gap-2 min-w-0 min-h-0 items-start">
       <WPanel ref="panel" class="shrink-0" :title="config.wmTitle || 'Trade searches'" icon="exalted" width="19rem" max-height="70vh">
-        <template #actions>
-          <WChip v-if="hasHotkeys" clickable :active="config.enableHotkeys" title="Use each search's hotkey"
-            @click="config.enableHotkeys = !config.enableHotkeys"><i class="fas fa-keyboard" /> Hotkeys</WChip>
-        </template>
         <template #toolbar>
           <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
         </template>
@@ -41,16 +37,13 @@
           </WListItem>
         </template>
         <WEmpty v-if="!groups.length && config.entries.length" icon="fas fa-filter">
-          Nothing matches "{{ filter }}". Search looks at names, tags and categories.
+          Nothing matches "{{ filter }}".
           <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
         </WEmpty>
         <WEmpty v-else-if="!groups.length" :art="{ currency: 'exalted' }">
-          No saved searches yet. Paste a trade site link in this widget's settings to add one.
+          No saved searches. Paste a trade site link in Settings to add one.
         </WEmpty>
 
-        <template #footer>
-          <span>Opens the official trade site · right-click for more</span>
-        </template>
       </WPanel>
 
       <WPanel v-if="openEntry" size-key="browser" :title="openEntry.name || openEntry.url" :scroll="false" width="60vw" height="75vh" max-height="none"
@@ -196,7 +189,6 @@ function ping () {
 const openEntry = computed(() => props.config.entries.find(e => e.id === openId.value))
 const groups = computed(() => groupByCategory(
   props.config.entries.filter(e => matchesFilter(e, filter.value))))
-const hasHotkeys = computed(() => props.config.entries.some(e => e.hotkeyOverlay || e.hotkeyExternal))
 const overlayKey = computed(() => AppConfig().overlayKey)
 
 watch(() => props.config.enableHotkeys, () => { pushHostConfig() })

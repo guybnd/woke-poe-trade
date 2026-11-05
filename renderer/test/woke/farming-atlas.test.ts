@@ -1,4 +1,4 @@
-// Farming profit and Atlas strategies share scarab costs; either widget can
+// Farming and Atlas strategies share scarab costs; either widget can
 // exist in config before it has ever mounted (its module is off). Also what
 // Session analytics counts from the saved sessions.
 import { describe, it, expect } from 'vitest'
@@ -34,7 +34,7 @@ function session (over: Partial<SessionRecord> = {}): SessionRecord {
   return { id: 's', league: 'L', strategy: 'Boxes', startedAt: 0, endedAt: 1, durationMs: 1_200_000, maps: 2, costPerMapChaos: 10, loot: [], extraChaos: 0, divine: 100, runs: [run(), run()], ...over }
 }
 
-describe('Farming profit first mount', () => {
+describe('Farming first mount', () => {
   it('keeps what Atlas strategies set before it mounted', () => {
     const costs = [{ type: 'Scarab', name: 'Ambush Scarab', variant: '', qty: 2 }]
     const w = { strategy: 'Boxes', costs } as unknown as FarmingWidget

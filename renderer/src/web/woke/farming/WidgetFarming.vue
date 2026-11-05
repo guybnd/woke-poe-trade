@@ -1,5 +1,5 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+  <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- During a session, in maps and hideout: an icon with divines per hour
          (the map clock while you're in a map). -->
     <DockItem :menu="dockMenu" ref="dockRef" id="farming" title="Farming" :show="dockShow" :badge="dockBadge"
@@ -19,13 +19,13 @@
         </div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'Farming profit'" icon="chaos" width="27rem"
+    <WPanel ref="panel" :title="config.wmTitle || 'Farming'" icon="chaos" width="27rem"
       :updated="prices.snapshot.value?.ts ?? null" :fresh-min="40" :stale-min="180">
       <template #tabs>
         <WTabs v-model="tab" :options="tabs.map(t => ({ value: t.id, label: t.label }))" />
       </template>
       <template v-if="!prices.snapshot.value" #banner>
-        <WBanner tone="info">Waiting for poe.ninja prices. They load on their own within a minute or two.</WBanner>
+        <WBanner tone="info">Waiting for poe.ninja prices.</WBanner>
       </template>
 
       <div class="flex flex-col gap-2 py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad);">
@@ -85,8 +85,7 @@
             </div>
             <div v-if="s.autoPaused" class="text-xs w-dim"><i class="fas fa-pause-circle" /> Paused after 5 minutes without a zone change. Resumes when you change zone.</div>
             <div v-if="config.lootHotkey" class="text-xs w-faint">Hover an item in game and press <WKbd :keys="config.lootHotkey" /> to add it.</div>
-            <div v-if="t.missingPrices" class="text-xs" style="color: var(--w-warn);">{{ t.missingPrices }} item(s) have no price and count as 0.</div>
-            <w-toggle v-model="config.autoCountMaps" class="text-sm">Count maps from Client.txt</w-toggle>
+            <div v-if="t.missingPrices" class="text-xs" style="color: var(--w-warn);">{{ t.missingPrices }} {{ t.missingPrices === 1 ? 'item has' : 'items have' }} no price and count as 0.</div>
 
             <div class="relative">
               <WField v-model="lootQuery" icon="fas fa-plus" placeholder="Add loot… (e.g. Divine Orb)" class="w-full" />
@@ -130,7 +129,7 @@
               <span v-item-tip="line" class="w-trunc flex items-center gap-1"><WIcon :src="art(line)" fallback="fas fa-coins" />{{ line.name }}<span v-if="line.variant" class="w-dim ml-1">{{ line.variant }}</span></span>
               <input v-model.number="line.qty" type="number" min="0" step="1" :class="$style.input" class="w-full">
               <span class="text-right w-dim w-num">{{ linePrice(line) }}</span>
-              <button class="w-icon-btn" @click="removeCost(line)" title="Remove (Undo in the note)"><i class="fas fa-times" /></button>
+              <button class="w-icon-btn" @click="removeCost(line)" title="Remove. You can undo."><i class="fas fa-times" /></button>
             </div>
             <div class="pt-2 flex justify-between"><span class="w-dim">Per map</span><span class="w-num w-accent">{{ fmt(costPerMap) }}</span></div>
           </div>
@@ -150,7 +149,7 @@
               <span class="text-right w-num" :class="row.perHour >= 0 ? 'w-up' : 'w-down'">{{ fmt(row.perHour) }}</span>
               <span class="text-right w-num">{{ fmt(row.perMap) }}</span>
             </div>
-            <WButton variant="ghost" size="sm" icon="fas fa-trash" class="mt-2" title="Undo in the note" @click="clearHistory">Clear history</WButton>
+            <WButton variant="ghost" size="sm" icon="fas fa-trash" class="mt-2" title="You can undo" @click="clearHistory">Clear history</WButton>
           </div>
         </template>
       </div>
@@ -167,14 +166,13 @@ export default {
   widget: {
     type: FARMING_TYPE,
     instances: 'multi',
-    trNameKey: 'Farming profit'
+    trNameKey: 'Farming'
   } satisfies WidgetSpec
 }
 </script>
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import WToggle from '../ui/WToggle.vue'
 import { inject, computed, shallowRef, onUnmounted, watch, nextTick } from 'vue'
 import { useVisibleClock } from '../shared/visible-clock'
 import { AppConfig, saveConfig } from '@/web/Config'
@@ -211,7 +209,7 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
-  props.config.wmTitle = 'Farming profit'
+  props.config.wmTitle = 'Farming'
   props.config.anchor = popupAnchor()
   initFarmingData(props.config)
   wm.show(props.config.wmId)

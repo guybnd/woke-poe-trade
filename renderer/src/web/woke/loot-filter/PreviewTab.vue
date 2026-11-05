@@ -45,7 +45,7 @@
       </div>
     </div>
     <div class="w-faint text-xs" :class="$style.note">
-      A made-up pile of common and notable drops for area level {{ area }}, not a real map's loot. Click a label to open its rule, right-click for more.
+      Sample drops for area level {{ area }}. Click a label to open its rule.
     </div>
   </div>
 </template>

@@ -17,7 +17,7 @@ async function boot (overlay: Overlay, patchMenu?: (menu: any) => void) { // esl
   await overlay.boot({
     overlayActive: true,
     widgets: [
-      seed('woke-market-tracker', 'Market tracker'),
+      seed('woke-market-tracker', 'Market'),
       seed('woke-boss-runs', 'Boss runs'),
       seed('woke-map-scan', 'Map scan'),
       seed('woke-loot-filter', 'Loot filter'),
@@ -38,7 +38,7 @@ async function boot (overlay: Overlay, patchMenu?: (menu: any) => void) { // esl
   const rail = overlay.widget('menu').locator('.w-surface').first()
   await expect(rail).toBeVisible()
   if (!patchMenu) {
-    for (const name of ['Market tracker', 'Map scan', 'Loot filter', 'Challenges']) {
+    for (const name of ['Market', 'Map scan', 'Loot filter', 'Challenges']) {
       await expect(icon(overlay, name)).toHaveClass(/open/)
       await icon(overlay, name).click()
     }
@@ -53,7 +53,7 @@ test('an old bar becomes a short rail on the left edge, below the buffs', async 
   expect(box.x).toBe(0)
   expect(box.y).toBeGreaterThan(120)
   expect(box.width).toBeLessThan(50)
-  await expect(icon(overlay, 'Market tracker')).toBeVisible()
+  await expect(icon(overlay, 'Market')).toBeVisible()
   await expect(icon(overlay, 'Boss runs')).toBeVisible()
   await expect(icon(overlay, 'Lab gems')).toBeVisible() // not pinned, but open
   await expect(icon(overlay, 'Challenges')).toHaveCount(0) // not pinned, closed

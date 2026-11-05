@@ -12,7 +12,7 @@
         <span class="w-dim text-sm">once you're in maps</span>
       </div>
       <div class="w-faint text-xs">
-        <template v-if="!store.prices.lookup.value">Needs poe.ninja prices for your league; they download the first time something needs them.</template>
+        <template v-if="!store.prices.lookup.value">Waiting for poe.ninja prices.</template>
         <template v-else-if="cheap.length">{{ cheap.length }} base{{ cheap.length === 1 ? '' : 's' }}: {{ cheap.slice(0, 8).join(', ') }}<template v-if="cheap.length > 8"> and {{ cheap.length - 8 }} more</template>. A stack hides too.</template>
         <template v-else>Nothing in your filter's currency is that cheap today.</template>
       </div>

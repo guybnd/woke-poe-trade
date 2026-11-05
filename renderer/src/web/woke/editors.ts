@@ -16,6 +16,10 @@ import EssenceScanEditor from './essence-scan/essence-scan-editor.vue'
 import LootFilterEditor from './loot-filter/loot-filter-editor.vue'
 import TradeEditor from './trade/trade-editor.vue'
 import FlipsEditor from './scarab-flip/flips-editor.vue'
+import LabGemsEditor from './lab-gems/lab-gems-editor.vue'
+import BossRunsEditor from './boss-runs/boss-runs-editor.vue'
+import MarketEditor from './market/market-editor.vue'
+import LeagueInvestEditor from './league-invest/league-invest-editor.vue'
 import { REGEX_LIBRARY_TYPE } from './regex-library/widget'
 import { TRADE_SEARCHES_TYPE } from './trade-searches/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
@@ -32,6 +36,10 @@ import { ESSENCE_SCAN_TYPE } from './essence-scan/widget'
 import { LOOT_FILTER_TYPE } from './loot-filter/widget'
 import { TRADE_TYPE } from './trade/widget'
 import { SCARAB_FLIP_TYPE } from './scarab-flip/widget'
+import { LAB_GEMS_TYPE } from './lab-gems/widget'
+import { BOSS_RUNS_TYPE } from './boss-runs/widget'
+import { MARKET_TRACKER_TYPE } from './market/widget'
+import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 
 const editors: Record<string, Component> = {
   [REGEX_LIBRARY_TYPE]: RegexLibraryEditor,
@@ -49,7 +57,11 @@ const editors: Record<string, Component> = {
   [LOOT_FILTER_TYPE]: LootFilterEditor,
   [FARMING_TYPE]: FarmingEditor,
   [TRADE_TYPE]: TradeEditor,
-  [SCARAB_FLIP_TYPE]: FlipsEditor
+  [SCARAB_FLIP_TYPE]: FlipsEditor,
+  [LAB_GEMS_TYPE]: LabGemsEditor,
+  [BOSS_RUNS_TYPE]: BossRunsEditor,
+  [MARKET_TRACKER_TYPE]: MarketEditor,
+  [LEAGUE_INVEST_TYPE]: LeagueInvestEditor
 }
 
 export function wokeSettingsFor (wmType: string | undefined): Component | undefined {
