@@ -85,6 +85,9 @@ test('boss runs icon: The Alluring Abyss shows Uber Atziri, and a click opens it
   await overlay.hoverDockIcon('boss-runs')
   await expect(icon.getByText('Uber Atziri')).toBeVisible()
   await expect(icon.getByText('The Vertex')).toBeVisible()
+  await expect(icon.getByText('41.7%')).toBeVisible()
+  // Run stats wait until you've logged a kill.
+  await expect(icon.getByText('Entry', { exact: true })).toHaveCount(0)
   await overlay.snap('uber atziri card from the dock icon')
 
   // A shared arena name doesn't mix in the other boss.

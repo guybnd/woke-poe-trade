@@ -1,23 +1,29 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
-    <!-- In a boss arena: what this fight costs and pays, and what to look for. Click: this boss's drops. -->
+    <!-- In a boss arena: what can drop and how often, then your own runs if you log any. Click: this boss's drops. -->
     <DockItem id="boss-runs" title="Boss runs" :show="arenaBosses.length > 0"
       :badge="arenaBosses.length === 1 && arenaBosses[0].kills ? arenaBosses[0].kills : null" :wm-id="config.wmId" card-width="22rem" @activate="openArenaBoss">
       <template #card>
         <div style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-2">
           <div v-for="r in arenaBosses" :key="r.boss.id" class="flex flex-col gap-0.5 w-num">
             <div class="w-head-font w-accent w-trunc">{{ r.boss.name }}</div>
-            <div class="flex justify-between"><span class="w-dim">Entry</span>
-              <span class="w-down"><template v-if="r.entryMissing.length">?</template><WPrice v-else :chaos="-r.entry" :divine="divine" /></span></div>
-            <div class="flex justify-between"><span class="w-dim">{{ r.myLoot != null ? 'Your average drop' : 'Average drop' }}</span><WPrice :chaos="r.myLoot ?? (r.hasRates ? r.loot : null)" :divine="divine" /></div>
-            <div v-if="r.ready" class="flex justify-between"><span class="w-dim">Per run</span>
-              <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="r.profit" :divine="divine" /></span></div>
-            <div v-if="r.kills" class="w-dim text-xs">{{ r.kills }} kill{{ r.kills === 1 ? '' : 's' }} logged</div>
-            <div v-for="d in r.drops.filter(x => x.included).slice(0, CARD_DROPS)" :key="d.name" :class="$style.cardDrop">
+            <div v-for="d in r.drops.slice(0, CARD_DROPS)" :key="d.name" :class="$style.cardDrop">
               <span class="w-trunc" :title="d.name">{{ d.name }}</span>
-              <span class="w-dim text-right">{{ d.chance == null ? '?' : pct(d.chance) }}</span>
+              <span class="text-right" :class="d.chance == null ? 'w-faint' : 'w-dim'">{{ d.chance == null ? '?' : pct(d.chance) }}</span>
               <span class="text-right"><WPrice :chaos="d.price" :divine="divine" /></span>
             </div>
+            <div v-if="!r.drops.length" class="w-faint text-xs">No drop list for this boss yet.</div>
+            <div v-else-if="r.drops.length > CARD_DROPS" class="w-faint text-xs">+{{ r.drops.length - CARD_DROPS }} more</div>
+            <div v-if="r.drops.length && !r.hasRates" class="w-faint text-xs">Drop chances aren't known yet.</div>
+            <!-- Your own runs, once you've logged any. -->
+            <template v-if="r.kills">
+              <div class="flex justify-between" :class="$style.cardStats"><span class="w-dim">Entry</span>
+                <span class="w-down"><template v-if="r.entryMissing.length">?</template><WPrice v-else :chaos="-r.entry" :divine="divine" /></span></div>
+              <div class="flex justify-between"><span class="w-dim">Your average drop</span><WPrice :chaos="r.myLoot" :divine="divine" /></div>
+              <div v-if="r.ready" class="flex justify-between"><span class="w-dim">Per run</span>
+                <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="r.profit" :divine="divine" /></span></div>
+              <div class="w-dim text-xs">{{ r.kills }} kill{{ r.kills === 1 ? '' : 's' }} logged</div>
+            </template>
           </div>
         </div>
       </template>
@@ -336,7 +342,7 @@ const arenaBosses = computed(() => {
   return BOSSES.filter(b => ids.includes(b.id)).map(b => evaluateBoss(b, props.config, px.value))
 })
 
-const CARD_DROPS = 6
+const CARD_DROPS = 8
 
 // Keeps your pick when it's one of this arena's bosses (normal or uber), else
 // the first with a drop list; the log can't tell which tier you're fighting.
@@ -537,6 +543,7 @@ function killValue (kill: KillRecord) {
 .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; font-size: var(--w-fs-md); align-items: center; }
 .dropGrid { grid-template-columns: 16px minmax(0, 1fr) 62px 72px 72px 70px; }
 .off { opacity: 0.45; }
+.cardStats { margin-top: 4px; }
 .cardDrop { display: grid; grid-template-columns: minmax(0, 1fr) 46px 58px; gap: 6px; align-items: center; }
 .editor { padding: 8px var(--w-pad); background: var(--w-panel-2); border-bottom: 1px solid var(--w-line); }
 .rateGrid { grid-template-columns: minmax(0, 1fr) 80px 80px 22px; }
