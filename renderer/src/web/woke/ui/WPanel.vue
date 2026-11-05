@@ -2,31 +2,36 @@
   <div ref="root" class="w-surface w-enter" :class="$style.panel" :style="boxStyle" data-w-panel
     @keydown="onKey">
     <div v-if="title || $slots.title || $slots.actions || icon" :class="$style.head" data-widget-drag
-      :title="canResize && saved ? 'Double-click to reset the size' : undefined" @dblclick="resetSize">
+      :title="headTip" @dblclick="onHeadDblClick">
       <WIcon v-if="icon" v-bind="iconProps" size="md" :class="$style.icon" />
       <span :class="$style.title" class="w-trunc">
         <slot name="title">{{ title }}</slot>
       </span>
-      <span v-if="updated != null || hotkey || $slots.actions" :class="$style.actions">
+      <span v-if="!minimized && (updated != null || hotkey || $slots.actions)" :class="$style.actions">
         <span v-if="updated != null" :class="[$style.age, $style[fresh]]" :title="ageTitle">
           <span :class="$style.dot" />{{ busy ? 'refreshing' : ago(updated) }}
         </span>
         <WKbd v-if="hotkey" :keys="hotkey" :title="`Opens with ${hotkey}`" />
         <slot name="actions" />
       </span>
+      <span v-if="primary && windowActions.length" :class="$style.controls">
+        <button v-for="a in windowActions" :key="a.id" type="button" class="w-icon-btn"
+          :class="[$style.control, { 'w-icon-btn--on': a.active, [$style.danger]: a.danger }]"
+          :title="a.label" :aria-label="a.label" @click="a.action()"><i :class="a.icon" /></button>
+      </span>
       <span v-if="busy" :class="$style.busy" aria-hidden="true" />
     </div>
-    <div v-if="$slots.banner"><slot name="banner" /></div>
-    <div v-if="$slots.tabs" :class="$style.tabs"><slot name="tabs" /></div>
-    <div v-if="$slots.toolbar" :class="$style.toolbar"><slot name="toolbar" /></div>
-    <div v-if="$slots.meta" :class="$style.meta"><slot name="meta" /></div>
-    <div :class="[$style.body, { 'w-scroll': scroll, 'w-stale': stale }]"><slot /></div>
-    <div v-if="$slots.footer" :class="$style.footer"><slot name="footer" /></div>
+    <div v-if="$slots.banner" v-show="!minimized"><slot name="banner" /></div>
+    <div v-if="$slots.tabs" v-show="!minimized" :class="$style.tabs"><slot name="tabs" /></div>
+    <div v-if="$slots.toolbar" v-show="!minimized" :class="$style.toolbar"><slot name="toolbar" /></div>
+    <div v-if="$slots.meta" v-show="!minimized" :class="$style.meta"><slot name="meta" /></div>
+    <div v-show="!minimized" :class="[$style.body, { 'w-scroll': scroll, 'w-stale': stale }]"><slot /></div>
+    <div v-if="$slots.footer" v-show="!minimized" :class="$style.footer"><slot name="footer" /></div>
     <template v-if="canResize">
       <span :class="[$style.edgeX, hSide === 'left' ? $style.onLeft : $style.onRight]" @mousedown="startResize($event, true, false)" />
       <span :class="[$style.edgeY, vSide === 'top' ? $style.onTop : $style.onBottom]" @mousedown="startResize($event, false, true)" />
       <span :class="[$style.grip, hSide === 'left' ? $style.onLeft : $style.onRight, vSide === 'top' ? $style.onTop : $style.onBottom]"
-        title="Drag to resize · double-click the title to reset" @mousedown="startResize($event, true, true)" />
+        title="Drag to resize · right-click the panel to reset" @mousedown="startResize($event, true, true)" />
     </template>
   </div>
 </template>
@@ -36,7 +41,7 @@
 // the hotkey that opens it, then optional banner/tabs/toolbar/meta, a
 // scrolling body and a footer. Keyboard (P8): arrow keys move between rows,
 // "/" jumps to the first search field, Esc leaves a field.
-import { computed, inject, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, ref, useSlots } from 'vue'
 import { snapEdge, clearGuides } from './snap'
 import WIcon from './WIcon.vue'
 import WKbd from './WKbd.vue'
@@ -83,16 +88,47 @@ const props = withDefaults(defineProps<{
 const root = ref<HTMLElement | null>(null)
 
 // ---- Size (P10, P17) ----
-interface SizedConfig { anchor?: { pos: string }, wokeSizes?: Record<string, { w?: number, h?: number }> }
+interface WindowAction { id: string, label: string, icon: string, active?: boolean, danger?: boolean, action: () => void }
+interface SizedConfig {
+  anchor?: { pos: string }
+  wokeSizes?: Record<string, { w?: number, h?: number }>
+  // From the surrounding Widget: its window buttons and minimized state.
+  minimized?: boolean
+  canMinimize?: boolean
+  windowActions?: WindowAction[]
+  toggleMinimize?: () => void
+  addPanel?: (id: symbol) => void
+  removePanel?: (id: symbol) => void
+  isPrimaryPanel?: (id: symbol) => boolean
+}
 const cfg = inject<SizedConfig | null>('wokeWidgetConfig', null)
-const canResize = computed(() => props.resizable && !!cfg?.anchor)
+
+// ---- Window buttons ----
+// The widget's first titled panel carries them. While the widget is minimized
+// that panel shows only its title bar and the others hide. The contents stay
+// mounted, so a running search or a typed filter is still there on restore.
+const panelId = Symbol('panel')
+const slots = useSlots()
+if (props.title || props.icon || slots.title || slots.actions) {
+  cfg?.addPanel?.(panelId)
+  onBeforeUnmount(() => cfg?.removePanel?.(panelId))
+}
+const primary = computed(() => cfg?.isPrimaryPanel?.(panelId) ?? false)
+const minimized = computed(() => !!cfg?.minimized)
+const windowActions = computed(() => cfg?.windowActions ?? [])
+const minimizesFromHead = computed(() => primary.value && !!cfg?.canMinimize)
+
+const canResize = computed(() => props.resizable && !!cfg?.anchor && !minimized.value)
 const saved = computed(() => cfg?.wokeSizes?.[props.sizeKey])
 // Handles sit on the sides away from the widget's anchor, so the panel grows
 // toward the mouse.
 const hSide = computed(() => cfg?.anchor?.pos[1] === 'r' ? 'left' : 'right')
 const vSide = computed(() => cfg?.anchor?.pos[0] === 'b' ? 'top' : 'bottom')
 
+const MINIMIZED_WIDTH = '16rem'
+
 const boxStyle = computed(() => {
+  if (minimized.value) return primary.value ? { width: MINIMIZED_WIDTH, maxHeight: 'none' } : { display: 'none' }
   const s = saved.value
   return {
     width: s?.w ? `${s.w}px` : props.width,
@@ -141,8 +177,19 @@ function startResize (e: MouseEvent, x: boolean, y: boolean) {
   document.addEventListener('mouseup', onUp)
 }
 
-function resetSize (e: MouseEvent) {
-  if (!cfg?.wokeSizes?.[props.sizeKey] || (e.target as Element).closest('button, a, input')) return
+const headTip = computed(() => {
+  if (minimizesFromHead.value) return minimized.value ? 'Double-click to restore' : 'Double-click to minimize'
+  return canResize.value && saved.value ? 'Double-click to reset the size' : undefined
+})
+
+function onHeadDblClick (e: MouseEvent) {
+  if ((e.target as Element).closest('button, a, input')) return
+  if (minimizesFromHead.value) cfg!.toggleMinimize!()
+  else resetSize()
+}
+
+function resetSize () {
+  if (!cfg?.wokeSizes?.[props.sizeKey]) return
   cfg.wokeSizes = Object.fromEntries(Object.entries(cfg.wokeSizes).filter(([k]) => k !== props.sizeKey))
 }
 
@@ -229,6 +276,9 @@ defineExpose({ el: root })
   transform: translateY(-2px) rotate(45deg);
 }
 .actions { display: flex; align-items: center; gap: var(--w-s1); }
+.controls { display: flex; align-items: center; flex: none; }
+.control { width: 20px; height: 20px; font-size: var(--w-fs-xs); }
+.danger:hover { color: var(--w-down); }
 .age {
   display: inline-flex;
   align-items: center;

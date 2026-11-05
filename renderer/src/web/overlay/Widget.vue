@@ -1,19 +1,7 @@
 <template>
-  <div @mousedown="handleMouseDown">
+  <div @mousedown="handleMouseDown" @contextmenu="handleContextMenu">
     <div ref="widgetEl" :class="[$style.widget, { 'opacity-75': isMoving, [$style.draggable]: moveHandles !== 'none' }]" :style="widgetPosition">
       <slot :isEditing="isEditing" :isMoving="isMoving" />
-      <div class="absolute px-1" :style="actionsPosition" style="background: rgba(0,0,0,0.01);">
-        <div :class="$style.actionsPanel">
-          <button v-if="hideable" @click="hide"
-            :class="$style.action">{{ t('widget.hide') }}</button>
-          <button v-if="!readonly" @click="toggleEdit"
-            :class="[$style.action, { [$style.active]: isEditing }]">{{ t('widget.edit') }}</button>
-          <button v-if="moveHandles !== 'none'" @click="toggleMove"
-            :class="[$style.action, { [$style.active]: isMoving }]">{{ t('widget.move') }}</button>
-          <button v-if="removable" @mousedown="startRemoveTimer" @mouseup="cancelRemoveTimer" @mouseleave="cancelRemoveTimer"
-            :class="[$style.action, $style.removable, { [$style.removing]: isRemoving }]">{{ t('widget.delete') }}</button>
-        </div>
-      </div>
       <div v-if="isMoving">
         <div v-if="isHandleShown('tl')" :class="$style.mover" @mousedown="startMove('tl', $event)" style="left: -0.5rem; top: -0.5rem;"></div>
         <div v-if="isHandleShown('tc')" :class="$style.mover" @mousedown="startMove('tc', $event)" style="left: calc(50%  - 0.5rem); top: -0.5rem;"></div>
@@ -31,31 +19,18 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed, inject, provide, ref } from 'vue'
+import { defineComponent, PropType, computed, inject, provide, ref, shallowRef } from 'vue'
 import { Widget, Anchor, WidgetManager } from './interfaces'
 import { useI18n } from 'vue-i18n'
 import { snapMove, clearGuides } from '@/web/woke/ui/snap'
-
-function useRemovable (remove: () => void) {
-  const isRemoving = ref(false)
-  let tmid: ReturnType<typeof setTimeout> | null = null
-
-  function startRemoveTimer () {
-    isRemoving.value = true
-    tmid = setTimeout(remove, 1000)
-  }
-  function cancelRemoveTimer () {
-    isRemoving.value = false
-    if (tmid !== null) {
-      clearTimeout(tmid)
-      tmid = null
-    }
-  }
-
-  return { startRemoveTimer, cancelRemoveTimer, isRemoving }
-}
+import { openMenu, toast } from '@/web/woke/ui/layer'
+import type { MenuEntry } from '@/web/woke/ui/layer'
+import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
+import type { MinimizedState } from '@/web/woke/ui/window-anchor'
 
 const DRAG_START_PX = 4
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 // The click that ends a drag shouldn't also press whatever is under the cursor.
 function swallowNextClick () {
@@ -93,13 +68,110 @@ export default defineComponent({
   },
   setup (props) {
     const wm = inject<WidgetManager>('wm')!
+    const { t } = useI18n()
+    const isEditing = ref(false)
+    const isMoving = ref(false)
+    const widgetEl = ref<HTMLElement | null>(null)
+
+    type WokeConfig = { wokeSizes?: Record<string, unknown>, wokeMinimized?: MinimizedState }
+    const woke = () => props.config as unknown as WokeConfig
+
+    // woke: panels that have a title bar, first one shows the window buttons.
+    const panels = shallowRef<symbol[]>([])
+
+    // Fixed-in-place widgets are given a copy of their config, so nothing
+    // written here would stick.
+    const canMinimize = computed(() => props.moveHandles !== 'none' && (panels.value.length > 0 || !!woke().wokeMinimized))
+    const minimized = computed(() => canMinimize.value && !!woke().wokeMinimized)
+
+    function toggleMinimize () {
+      if (!widgetEl.value || !canMinimize.value) return
+      const rect = widgetEl.value.getBoundingClientRect()
+      const state = woke().wokeMinimized
+      if (state) {
+        props.config.anchor = restoreAnchor(state, props.config.anchor, rect, window.innerWidth, window.innerHeight)
+        woke().wokeMinimized = undefined
+      } else {
+        const next = minimizeAnchor(props.config.anchor, rect, window.innerWidth, window.innerHeight)
+        props.config.anchor = { ...next.pinned }
+        woke().wokeMinimized = next
+      }
+    }
+
+    function hide () {
+      wm.hide(props.config.wmId)
+    }
+    function toggleEdit () {
+      isMoving.value = false
+      if (props.inlineEdit) {
+        isEditing.value = !isEditing.value
+      } else {
+        const settings = wm.widgets.value.find(w => w.wmType === 'settings')!
+        wm.setFlag(settings.wmId, `settings::widget=${props.config.wmId}`, true)
+        wm.show(settings.wmId)
+      }
+    }
+    function toggleMove () {
+      isMoving.value = !isMoving.value
+      isEditing.value = false
+    }
+    // No "are you sure": delete now, offer Undo (P9).
+    function removeWidget () {
+      const config = props.config
+      wm.remove(config.wmId)
+      toast(`${config.wmTitle || capitalize(config.wmType)} deleted`, { ms: 10000, undo: () => { wm.widgets.value.push(config) } })
+    }
+
+    // In title-bar order. Panels draw these as buttons; the right-click menu
+    // lists the same ones.
+    const windowActions = computed(() => [
+      ...(!props.readonly ? [{ id: 'edit', label: capitalize(t('widget.edit')), icon: 'fas fa-cog', active: isEditing.value, action: toggleEdit }] : []),
+      ...(props.moveHandles !== 'none' ? [{ id: 'move', label: capitalize(t('widget.move')), icon: 'fas fa-arrows-alt', active: isMoving.value, action: toggleMove }] : []),
+      ...(props.removable ? [{ id: 'delete', label: capitalize(t('widget.delete')), icon: 'fas fa-trash', danger: true, action: removeWidget }] : []),
+      ...(canMinimize.value
+        ? [{ id: 'minimize', label: minimized.value ? 'Restore' : 'Minimize', icon: minimized.value ? 'fas fa-window-maximize' : 'fas fa-minus', action: toggleMinimize }]
+        : []),
+      ...(props.hideable ? [{ id: 'hide', label: capitalize(t('widget.hide')), icon: 'fas fa-times', action: hide }] : [])
+    ])
+
+    function handleContextMenu (e: MouseEvent) {
+      // A row inside already opened its own menu; text fields keep their own.
+      if (e.defaultPrevented || !widgetEl.value?.contains(e.target as Node)) return
+      if ((e.target as Element).closest('input, textarea, select, webview')) return
+
+      const get = (id: string) => windowActions.value.find(a => a.id === id)
+      const entry = (id: string) => {
+        const a = get(id)
+        return a ? [{ label: a.label, icon: a.icon, danger: a.danger, action: a.action }] : []
+      }
+      const sizes = woke().wokeSizes
+      const items: MenuEntry[] = [
+        ...entry('minimize'),
+        ...entry('hide'),
+        ...entry('edit'),
+        ...entry('move'),
+        ...(sizes && Object.keys(sizes).length
+          ? [{ label: 'Reset size', icon: 'fas fa-undo', action: () => { woke().wokeSizes = {} } }]
+          : []),
+        ...(get('delete') ? [{ separator: true as const }, ...entry('delete')] : [])
+      ]
+      if (items.length) openMenu(e, items)
+    }
+
     // woke: panels inside read the widget config to remember their size.
     // Through getters: the config object is replaced whenever the whole
     // config is (settings changes), while this component stays mounted.
     provide('wokeWidgetConfig', {
       get anchor () { return props.config.anchor },
-      get wokeSizes () { return (props.config as { wokeSizes?: unknown }).wokeSizes },
-      set wokeSizes (v: unknown) { (props.config as { wokeSizes?: unknown }).wokeSizes = v }
+      get wokeSizes () { return woke().wokeSizes },
+      set wokeSizes (v: Record<string, unknown> | undefined) { woke().wokeSizes = v },
+      get minimized () { return minimized.value },
+      get canMinimize () { return canMinimize.value },
+      get windowActions () { return windowActions.value },
+      toggleMinimize,
+      addPanel (id: symbol) { panels.value = [...panels.value, id] },
+      removePanel (id: symbol) { panels.value = panels.value.filter(p => p !== id) },
+      isPrimaryPanel (id: symbol) { return panels.value[0] === id }
     })
 
     const moverPosition = computed(() => {
@@ -156,35 +228,6 @@ export default defineComponent({
       }
     })
 
-    const actionsPosition = computed(() => {
-      const { anchor } = props.config
-
-      if (anchor.x <= 50 && anchor.y <= 50) {
-        return {
-          top: '0',
-          left: '100%'
-        }
-      }
-      if (anchor.x >= 50 && anchor.y <= 50) {
-        return {
-          top: '0',
-          right: '100%'
-        }
-      }
-      if (anchor.x >= 50 && anchor.y >= 50) {
-        return {
-          bottom: '0',
-          right: '100%'
-        }
-      }
-      if (anchor.x <= 50 && anchor.y >= 50) {
-        return {
-          bottom: '0',
-          left: '100%'
-        }
-      }
-    })
-
     const shownHandles = computed(() => {
       if (Array.isArray(props.moveHandles)) {
         return props.moveHandles
@@ -218,8 +261,6 @@ export default defineComponent({
 
     // woke: drag a widget directly instead of going through its Move handles.
     // Woke panels drag by their title bar; other widgets by any part that isn't a control.
-    const widgetEl = ref<HTMLElement | null>(null)
-
     function startDrag (e: MouseEvent) {
       if (e.button !== 0 || props.moveHandles === 'none' || isMoving.value || !widgetEl.value) return
       const target = e.target as Element
@@ -259,17 +300,11 @@ export default defineComponent({
       props.config.anchor.y = Math.min(Math.max(e.clientY / window.innerHeight, 0), 1) * 100
     }
 
-    const isEditing = ref(false)
-    const isMoving = ref(false)
-
-    const { t } = useI18n()
-
     return {
-      t,
       moverPosition,
       widgetPosition,
-      actionsPosition,
       widgetEl,
+      handleContextMenu,
       handleMouseDown (e: MouseEvent) {
         // @TODO: why null check?
         if (props.config.wmId != null) {
@@ -283,27 +318,7 @@ export default defineComponent({
       isHandleShown (pos: string) {
         return props.config.anchor.pos !== pos &&
           shownHandles.value.includes(pos)
-      },
-      hide () {
-        wm.hide(props.config.wmId)
-      },
-      toggleEdit () {
-        isMoving.value = false
-        if (props.inlineEdit) {
-          isEditing.value = !isEditing.value
-        } else {
-          const settings = wm.widgets.value.find(w => w.wmType === 'settings')!
-          wm.setFlag(settings.wmId, `settings::widget=${props.config.wmId}`, true)
-          wm.show(settings.wmId)
-        }
-      },
-      toggleMove () {
-        isMoving.value = !isMoving.value
-        isEditing.value = false
-      },
-      ...useRemovable(() => {
-        wm.remove(props.config.wmId)
-      })
+      }
     }
   }
 })
@@ -313,51 +328,10 @@ export default defineComponent({
 .widget {
   position: absolute;
   display: flex;
-
-  &:not(:hover) {
-    .actionsPanel {
-      display: none;
-    }
-  }
 }
 
 .draggable :global([data-widget-drag]) {
   cursor: move;
-}
-
-.actionsPanel {
-  @apply py-1;
-  color: #fff;
-  background: rgba(0,0,0, 0.4);
-  display: flex;
-  flex-direction: column;
-  @apply rounded;
-}
-
-.action {
-  @apply px-1;
-  text-align: left;
-  white-space: nowrap;
-
-  &:hover {
-    background: rgba(255,255,255, 0.15);
-  }
-
-  &.active {
-    background: rgba(0,0,0, 0.6);
-  }
-
-  &.removable {
-    background: linear-gradient(to left, transparent 50%, theme('colors.red.600') 50%);
-    background-size: 250% 100%;
-    background-position: right bottom;
-  }
-
-  &.removing {
-    background-size: 200% 100%;
-    transition: background-position 1s ease-out;
-    background-position: left bottom;
-  }
 }
 
 .mover {
