@@ -44,6 +44,27 @@ test('at 1440p, where panels are zoomed, the tooltip stays beside the panel and 
   expect(tipBox.y + tipBox.height).toBeLessThanOrEqual(1440)
 })
 
+test('the tooltip goes away when the overlay closes', async ({ overlay }) => {
+  const detail = await openBuild(overlay, 1920, 1080)
+  await detail.getByRole('tab', { name: 'Gear' }).click()
+  await detail.locator('[class*="gearRow"]').first().hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toBeVisible()
+  // Back to the game: the panel hides and no mouseleave ever comes.
+  overlay.app.focusGame(true)
+  await expect(detail).toBeHidden()
+  await expect(tip).toHaveCount(0)
+})
+
+test('gems by level have tooltips with no campaign widget, where their rows are disabled', async ({ overlay }) => {
+  const detail = await openBuild(overlay, 1920, 1080)
+  const row = detail.locator('[class*="gemRow"]').first()
+  // Rows settle once the icons have loaded; a row moving away ends a hover.
+  await overlay.page.waitForLoadState('networkidle')
+  await row.locator('[class*="w-gem-"]').hover()
+  await expect(overlay.page.getByRole('tooltip')).toBeVisible()
+})
+
 test('gem colours, item art and tooltips', async ({ overlay }) => {
   const { page } = overlay
   const detail = await openBuild(overlay, 1920, 1080)

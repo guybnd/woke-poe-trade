@@ -42,7 +42,7 @@
             <span v-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || g.slot }}</span>
           </div>
           <div :class="$style.names">
-            <GemName v-for="x in orderedGems(g)" :key="x.name" :name="x.name" :level="x.level" :quality="x.quality" />
+            <GemName v-for="(x, j) in orderedGems(g)" :key="j" :name="x.name" :level="x.level" :quality="x.quality" />
           </div>
         </div>
         <WEmpty v-if="!shownLinks.length" icon="fas fa-gem">No gem groups in this skill set.</WEmpty>
@@ -57,7 +57,7 @@
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
           <GemName :class="$style.gemName" :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
-          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src">{{ g.source ?? 'trade / drop' }}</span>
+          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source ?? 'trade / drop' }}</span>
         </button>
       </template>
 

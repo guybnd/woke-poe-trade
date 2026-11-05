@@ -56,7 +56,8 @@
 <script setup lang="ts">
 // Item and gem tooltips in the game's style, beside what's hovered. Sits on
 // the page rather than in the panel, so the panel's edges don't clip it.
-import { computed, nextTick, onUnmounted, ref, shallowRef, useCssModule, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, shallowRef, useCssModule, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
 import SocketDots from './SocketDots.vue'
 import { socketGroups } from './build-model'
 import { gemData } from './gems'
@@ -159,7 +160,21 @@ const pos = computed(() => placed.value
   ? { left: `${placed.value.left}px`, top: `${placed.value.top}px` }
   : { left: '0', top: '0', visibility: 'hidden' as const })
 
-onUnmounted(hideTip)
+// It sits outside the panel, so nothing hides it with the panel, and the
+// overlay gets no mouse events once the game has focus: without this, closing
+// the overlay mid-hover would leave it over the game. A scroll moves the row
+// away from under it.
+const wm = inject<WidgetManager | undefined>('wm', undefined)
+watch(() => wm?.active.value, hideTip)
+onMounted(() => {
+  window.addEventListener('blur', hideTip)
+  window.addEventListener('scroll', hideTip, true)
+})
+onUnmounted(() => {
+  window.removeEventListener('blur', hideTip)
+  window.removeEventListener('scroll', hideTip, true)
+  hideTip()
+})
 </script>
 
 <style module>
