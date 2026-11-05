@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.bar" class="w-surface" :style="barStyle">
+  <div :class="$style.bar" class="w-surface" :style="barStyle" data-widget-drag>
     <template v-for="(tab, i) in pinnedTabs" :key="tab.wmId">
       <span v-if="i > 0 && !tab.iconOnly && pinnedTabs[i - 1].iconOnly" :class="$style.sep" />
       <button
@@ -113,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { computed, inject, nextTick, ref, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
@@ -180,7 +181,7 @@ const tabs = computed<Tab[]>(() => {
 })
 
 // Keep the bar on screen: it wraps onto a second row instead of running past
-// the right edge, leaving room for the widget's Move button beside it.
+// the right edge, with a margin beside it.
 const barStyle = computed(() => {
   const { pos, x } = props.config.anchor
   const room = pos.endsWith('l') ? 100 - x : pos.endsWith('r') ? x : 2 * Math.min(x, 100 - x)
@@ -256,7 +257,7 @@ function shift (tab: Tab, dir: -1 | 1) {
 
 function resetPosition (tab: Tab) {
   const w = wm.widgets.value.find(x => x.wmId === tab.wmId) as (Widget & { anchor?: Anchor }) | undefined
-  if (w?.anchor) w.anchor = { pos: 'cc', x: 50, y: 50 }
+  if (w?.anchor) w.anchor = popupAnchor()
   show(tab)
 }
 

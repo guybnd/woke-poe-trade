@@ -126,3 +126,92 @@ test('gem colours, item art and tooltips', async ({ overlay }) => {
   }
   await overlay.snap('notes')
 })
+
+// Guy's kind of build: same-named sets, and only the first title reads as a stage.
+const LOADOUTS_FILE = 'Loadouts.xml'
+const day1 = 'Day 1 No Cluster'
+const later = 'Day 1.5 Clusters'
+function loadoutSeed (loadouts: Record<string, unknown>) {
+  return [
+    {
+      wmType: 'woke-pob-builds',
+      wmWants: 'show' as const,
+      wmFlags: ['invisible-on-blur'],
+      anchor: { pos: 'tl', x: 5, y: 12 },
+      buildsDir: path.join(FIXTURES, 'pob'),
+      pobExe: '',
+      pinned: [],
+      activeBuild: LOADOUTS_FILE,
+      followChars: {},
+      loadouts
+    },
+    { wmType: 'woke-campaign', wmWants: 'show' as const }
+  ]
+}
+
+test('a picked loadout reaches the other windows, is saved, and Auto undoes it', async ({ overlay }) => {
+  await overlay.boot({ widgets: loadoutSeed({}), overlayActive: true })
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  const strip = overlay.widget('woke-campaign')
+  await expect(strip).toContainText(`Your links · ${day1}`)
+  await expect(strip).toContainText('Arc')
+
+  await overlay.widget('woke-pob-builds').getByText('Loadouts', { exact: false }).first().click()
+  const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+  const chip = (name: string) => detail.getByRole('button', { name, exact: false })
+  await expect(chip(day1)).toContainText('now')
+
+  await chip(later).click()
+  await expect(chip(later)).toContainText('now')
+  await expect(chip(day1)).not.toContainText('now')
+  await expect(detail.getByText(`Links · ${later}`)).toBeVisible()
+
+  // The campaign card, on another widget, follows the pick.
+  await expect(strip).toContainText(`Your links · ${later}`)
+  await expect(strip).toContainText('Fireball')
+
+  // Gear tab: its set and "Links you need now" are the same loadout.
+  await detail.getByRole('tab', { name: 'Gear' }).click()
+  await expect(chip(later)).toContainText('now')
+  await expect(detail.locator('[class*="gearRow"]')).toContainText('Later Loop')
+  await expect(detail.getByText('Fireball').first()).toBeVisible()
+  await overlay.snap('gear follows the picked loadout')
+
+  // Setups: the matching tree is the one in use.
+  await detail.getByRole('tab', { name: 'Setups' }).click()
+  await expect(detail.getByRole('link', { name: `${later} · now` })).toBeVisible()
+  await expect.poll(() => overlay.savedWidget('woke-pob-builds')?.loadouts?.[LOADOUTS_FILE]).toEqual({ skillSet: later })
+
+  await detail.getByRole('tab', { name: 'Leveling' }).click()
+  await chip('Auto').click()
+  await expect(chip(day1)).toContainText('now')
+  await expect(strip).toContainText(`Your links · ${day1}`)
+  await expect(chip('Auto')).toHaveCount(0)
+  await expect.poll(() => overlay.savedWidget('woke-pob-builds')?.loadouts?.[LOADOUTS_FILE]).toBeUndefined()
+})
+
+test('the price check chip reads the saved loadout', async ({ overlay }) => {
+  await overlay.boot({ widgets: loadoutSeed({}) })
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  await overlay.copyItem('items/rare-ring.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel).toContainText('Category: Ring')
+  await expect(panel).not.toContainText('Your base')
+
+  await overlay.boot({ widgets: loadoutSeed({ [LOADOUTS_FILE]: { skillSet: later } }) })
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  await overlay.copyItem('items/rare-ring.txt')
+  await expect(overlay.widget('price-check')).toContainText('Your base · Ring')
+})
+
+test('a build that is not active says its loadout only applies once it is', async ({ overlay }) => {
+  const widgets = loadoutSeed({})
+  widgets[0].activeBuild = 'Showcase.xml'
+  await overlay.boot({ widgets, overlayActive: true })
+  await overlay.widget('woke-pob-builds').getByText('Loadouts', { exact: false }).first().click()
+  const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+  const hint = detail.getByText('Other windows use your active build')
+  await expect(hint).toBeVisible()
+  await detail.getByRole('button', { name: 'Make active' }).click()
+  await expect(hint).toHaveCount(0)
+})

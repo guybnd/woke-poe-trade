@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding>
+	<Build level="72" targetVersion="3_0" className="Witch" ascendClassName="Elementalist" mainSocketGroup="1"/>
+	<Skills activeSkillSet="1">
+		<SkillSet id="1" title="Day 1 No Cluster">
+			<Skill enabled="true" label="" slot="Body Armour">
+				<Gem nameSpec="Arc" gemId="Metadata/Items/Gems/SkillGemArc" skillId="Arc" level="20" quality="20" enabled="true"/>
+				<Gem nameSpec="Added Fire Damage" gemId="Metadata/Items/Gems/SupportGemAddedFireDamage" skillId="SupportAddedFireDamage" level="20" quality="0" enabled="true"/>
+			</Skill>
+		</SkillSet>
+		<SkillSet id="2" title="Day 1.5 Clusters">
+			<Skill enabled="true" label="" slot="Body Armour">
+				<Gem nameSpec="Fireball" gemId="Metadata/Items/Gems/SkillGemFireball" skillId="Fireball" level="20" quality="20" enabled="true"/>
+				<Gem nameSpec="Added Fire Damage" gemId="Metadata/Items/Gems/SupportGemAddedFireDamage" skillId="SupportAddedFireDamage" level="20" quality="0" enabled="true"/>
+			</Skill>
+		</SkillSet>
+	</Skills>
+	<Tree activeSpec="1">
+		<Spec title="Day 1 No Cluster"><URL>https://www.pathofexile.com/passive-skill-tree/AAAA</URL></Spec>
+		<Spec title="Day 1.5 Clusters"><URL>https://www.pathofexile.com/passive-skill-tree/BBBB</URL></Spec>
+	</Tree>
+	<Items activeItemSet="1">
+		<Item id="1">
+Rarity: RARE
+Early Loop
+Iron Ring
+Implicits: 0
+		</Item>
+		<Item id="2">
+Rarity: RARE
+Later Loop
+Two-Stone Ring
+Implicits: 0
+		</Item>
+		<ItemSet id="1" title="Day 1 No Cluster">
+			<Slot name="Ring 1" itemId="1"/>
+		</ItemSet>
+		<ItemSet id="2" title="Day 1.5 Clusters">
+			<Slot name="Ring 1" itemId="2"/>
+		</ItemSet>
+	</Items>
+	<Notes></Notes>
+</PathOfBuilding>

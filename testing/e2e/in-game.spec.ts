@@ -67,3 +67,72 @@ test('league mechanics icon: shows in a mechanic zone, hides in the hideout', as
   await overlay.hoverDockIcon('mechanics')
   await expect(icon).toContainText('Delve', { timeout: 5000 })
 })
+
+test('boss runs icon: The Alluring Abyss shows Uber Atziri, and a click opens its drops', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-boss-runs' }] })
+  const icon = overlay.dockIcon('boss-runs')
+  await overlay.log([
+    '2026/11/05 15:00:34 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1',
+    '2026/11/05 15:00:35 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.'
+  ])
+  await expect(icon).toHaveCount(0)
+
+  await overlay.log([
+    '2026/11/05 15:00:36 3725546 1186a8a3 [DEBUG Client 25552] Generating level 80 area "MapAtziri2" with seed 3345257283',
+    '2026/11/05 15:00:37 3727812 cffb065b [INFO Client 25552] : You have entered The Alluring Abyss.'
+  ])
+  await expect(icon).toHaveCount(1)
+  await overlay.hoverDockIcon('boss-runs')
+  await expect(icon.getByText('Uber Atziri')).toBeVisible()
+  await expect(icon.getByText('The Vertex')).toBeVisible()
+  await overlay.snap('uber atziri card from the dock icon')
+
+  // A shared arena name doesn't mix in the other boss.
+  await overlay.moveMouse(5, 5)
+  await overlay.log([
+    '2026/11/05 15:10:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 84 area "MapWorldsElderArenaUber" with seed 1',
+    '2026/11/05 15:10:01 3727812 cffb065b [INFO Client 25552] : You have entered The Shaper\'s Realm.'
+  ])
+  await overlay.hoverDockIcon('boss-runs')
+  await expect(icon.getByText('The Uber Elder')).toBeVisible()
+  await expect(icon.getByText('The Shaper', { exact: true })).toHaveCount(0)
+})
+
+test('boss runs icon: a click opens the arena boss that has a drop list', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-boss-runs' }] })
+  await overlay.log([
+    '2026/11/05 15:00:36 3725546 1186a8a3 [DEBUG Client 25552] Generating level 83 area "MapWorldsPrimordialBoss4" with seed 1',
+    '2026/11/05 15:00:37 3727812 cffb065b [INFO Client 25552] : You have entered Absence of Symmetry and Harmony.'
+  ])
+  await overlay.dockIcon('boss-runs').locator('span').first().click()
+  await expect(overlay.widget('woke-boss-runs').getByText('Forbidden Flesh').first()).toBeVisible()
+})
+
+test('boss runs icon: a click with the overlay open shows that boss despite the tier filter', async ({ overlay }) => {
+  await overlay.boot({
+    overlayActive: true,
+    widgets: [{ wmType: 'woke-boss-runs' }],
+    patch: c => {
+      const w = c.widgets.find((w: { wmType: string }) => w.wmType === 'woke-boss-runs')
+      w.wmFlags = ['invisible-on-blur']
+      w.anchor = { pos: 'cc', x: 50, y: 50 }
+      w.selected = 'shaper'
+      w.tier = 'pinnacle'
+      w.sort = 'hour'
+      w.runSeconds = {}
+      w.rates = {}
+      w.extraDrops = {}
+      w.kills = {}
+      w.ownEntry = false
+    }
+  })
+  await overlay.log([
+    '2026/11/05 15:00:36 3725546 1186a8a3 [DEBUG Client 25552] Generating level 80 area "MapAtziri2" with seed 3345257283',
+    '2026/11/05 15:00:37 3727812 cffb065b [INFO Client 25552] : You have entered The Alluring Abyss.'
+  ])
+  await overlay.dockIcon('boss-runs').locator('span').first().click()
+  const panel = overlay.widget('woke-boss-runs')
+  await expect(panel.getByText('Uber Atziri').first()).toBeVisible()
+  await expect(panel.getByText('The Vertex').first()).toBeVisible()
+  await overlay.snap('uber atziri drops panel')
+})

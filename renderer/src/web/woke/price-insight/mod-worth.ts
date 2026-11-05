@@ -7,6 +7,7 @@
 //   guess     - the known-valuable mod list plus how well the mod rolled
 
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
+import { isOpenBound } from './roll-presets'
 
 export type WorthSource = 'measured' | 'poeprices' | 'guess'
 
@@ -168,7 +169,10 @@ export function valueChanges (stats: FilterOrGroup[], worth: Map<string, ModWort
     }
     if (roll?.bounds && roll.better) {
       const b = roll.bounds
-      if (band === 'carry') {
+      if (band === 'carry' && (isOpenBound(b.min) || isOpenBound(b.max))) {
+        // No tier to take slack from: this roll or better.
+        if (roll.better === 1) { min = roll.value; max = undefined } else { min = undefined; max = roll.value }
+      } else if (band === 'carry') {
         if (roll.better === 1) {
           min = Math.max(b.min, round(roll.value - (roll.value - b.min) * CARRY_SLACK, roll.dp, Math.floor))
           max = undefined
@@ -177,9 +181,9 @@ export function valueChanges (stats: FilterOrGroup[], worth: Map<string, ModWort
           min = undefined
         }
       } else if (roll.better === 1) {
-        min = b.min; max = undefined
+        min = isOpenBound(b.min) ? undefined : b.min; max = undefined
       } else {
-        min = undefined; max = b.max
+        min = undefined; max = isOpenBound(b.max) ? undefined : b.max
       }
     }
     out.push({ statRef: s.statRef, band, disabled: false, min, max })

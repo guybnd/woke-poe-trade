@@ -78,7 +78,7 @@ export function challengesShortcuts (widget: ChallengesWidget): ShortcutAction[]
 }
 
 // Runs inside the guide page.
-export const READ_GUIDE_JS = `Array.from(document.querySelectorAll('.complete')).map((el) => {
+export const READ_GUIDE_JS = `Array.from(document.querySelectorAll('.complete')).filter((el) => el.closest('h1')).map((el) => {
   const h = el.closest('h1');
   const copy = h.cloneNode(true);
   copy.querySelector('.complete').remove();
@@ -110,12 +110,19 @@ export const READ_PROFILE_JS = `({
 export function readProfile (page: ProfilePage, attempts: number): ProfileRead {
   if (page.rows.length) return 'ok'
   if (page.notFound) return 'not-found'
-  return attempts >= 6 ? 'private' : 'waiting'
+  // A bot check can take a while, so give it most of the 20 reads.
+  return attempts >= 15 ? 'private' : 'waiting'
 }
 
 // The site's own tick buttons, so its counts and storage stay right.
 export function toggleTickJs (n: number): string {
   return `document.querySelector('.complete[data-challenge="${Number(n)}"]')?.click()`
+}
+
+// Ticks only: the site's button toggles, so a challenge already ticked there
+// (the read may be a moment old) is left alone.
+export function tickJs (n: number): string {
+  return `(() => { const el = document.querySelector('.complete[data-challenge="${Number(n)}"]'); if (el && el.dataset.complete !== 'yes') el.click() })()`
 }
 
 export function scrollToJs (anchor: string): string {
@@ -157,9 +164,10 @@ export function mergeProgress (guide: GuideRow[], profile: ProfileRow[] | null):
     const p = byName.get(nameKey(g.name))
     if (!p) return { ...g, have: null, need: null }
     matched++
-    // Only ever adds ticks: a manual tick the game disagrees with stays.
+    // Only ever adds ticks: a manual tick the game disagrees with stays. The
+    // row shows the site's own state, so an untick after the sync shows.
     if (p.done && !g.done) toTick.push(g.n)
-    return { ...g, done: g.done || p.done, have: p.have, need: p.need }
+    return { ...g, have: p.have, need: p.need }
   })
   return { rows, toTick, matched }
 }

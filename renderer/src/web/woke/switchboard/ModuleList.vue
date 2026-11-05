@@ -42,7 +42,8 @@ const NEED_LABEL: Partial<Record<ModuleNeed, string>> = {
   prices: 'prices',
   log: 'Client.txt',
   ocr: 'OCR',
-  hotkeys: 'hotkeys'
+  hotkeys: 'hotkeys',
+  account: 'account name'
 }
 const STATUS_LABEL = { running: 'Running', idle: 'Not placed', off: 'Off' } as const
 

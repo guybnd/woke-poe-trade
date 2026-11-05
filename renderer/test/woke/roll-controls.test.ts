@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { loadGameData, fixture, parseItem } from '../helpers/game-data'
 import { createExactStatFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
-import { activeRollPreset, applyRollPreset } from '@/web/woke/price-insight/roll-presets'
+import { activeRollPreset, applyRollPreset, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { editRange, sliderEnd, sliderValueAt } from '@/web/ui/stat-roll-slider'
 
 function mapStats () {
@@ -56,6 +56,9 @@ describe('roll bar', () => {
     const bounds = { min: 24, max: 40 }
     expect(sliderValueAt(0.47, bounds, 'min', false)).toBe(31)
     expect(sliderValueAt(0.47, bounds, 'max', false)).toBe(32)
+    // Rounding a fractional bound never steps outside the bar.
+    expect(sliderValueAt(0, { min: 12.5, max: 20.5 }, 'min', true)).toBeGreaterThanOrEqual(12.5)
+    expect(sliderValueAt(1, { min: 12.5, max: 20.5 }, 'max', true)).toBeLessThanOrEqual(20.5)
   })
 
   it('keeps the other end, unless the new value crosses it', () => {
@@ -64,5 +67,19 @@ describe('roll bar', () => {
     expect(editRange([26, undefined], 'max', 35)).toEqual([26, 35])
     expect(editRange([26, 30], 'min', 35)).toEqual([35, undefined])
     expect(editRange([26, 30], 'max', 20)).toEqual([undefined, 20])
+  })
+})
+
+describe('open-ended bounds', () => {
+  it('never sends the MAX_SAFE_INTEGER placeholder from any preset', () => {
+    const { stats } = mapStats()
+    for (const preset of ['low', 'current'] as const) {
+      applyRollPreset(stats, preset)
+      for (const f of stats) {
+        const r = (f as StatFilter).roll
+        if (!r) continue
+        for (const v of [r.min, r.max]) if (typeof v === 'number') expect(isOpenBound(v)).toBe(false)
+      }
+    }
   })
 })

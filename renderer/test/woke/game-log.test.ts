@@ -155,6 +155,22 @@ describe('farming', () => {
     expect(Object.values(BOSS_AREAS).flat().filter(id => !known.has(id))).toEqual([])
   })
 
+  it('knows a boss arena by area id first, since names can be shared', () => {
+    // Pairs from real Client.txt logs.
+    expect(arenaBosses('MapAtziri2', 'The Alluring Abyss')).toEqual(['uber-atziri'])
+    expect(zoneKind('MapAtziri2', '')).toBe('boss')
+    expect(zoneKind('', 'The Alluring Abyss')).toBe('boss')
+    expect(isMapArea('MapAtziri2')).toBe(false)
+    expect(arenaBosses('MapAtziri1', 'The Apex of Sacrifice')).toEqual(['atziri'])
+    // The Shaper's Realm is also the Uber Elder's arena.
+    expect(arenaBosses('MapWorldsElderArenaUber', "The Shaper's Realm")).toEqual(['uber-elder', 'uber-uber-elder'])
+    expect(arenaBosses('MapWorldsShapersRealm', "The Shaper's Realm")).toEqual(['shaper', 'uber-shaper'])
+    // Name only, before the area id is known.
+    expect(arenaBosses('', 'The Alluring Abyss')).toEqual(['uber-atziri'])
+    expect(arenaBosses('Unknown', 'The Alluring Abyss')).toEqual(['uber-atziri'])
+    expect(arenaBosses('MapWorldsCemetery', 'Cemetery')).toEqual([])
+  })
+
   it('auto-pauses after idling, counting time only up to the limit', () => {
     const s = newSession('x', 0)
     onZoneChange(s, true, 1000)

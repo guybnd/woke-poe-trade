@@ -12,6 +12,12 @@ const CURRENT_WINDOW = 0.1
 // MAX_SAFE_INTEGER placeholder, which must never reach the trade site.
 const OPEN_BOUND = Number.MAX_SAFE_INTEGER / 2
 
+// Map and heist stats use MAX_SAFE_INTEGER for "no upper bound"; the trade
+// site rejects it, so an open bound becomes an empty box.
+export function isOpenBound (n: number): boolean {
+  return Math.abs(n) >= OPEN_BOUND
+}
+
 type Roll = NonNullable<StatFilter['roll']>
 
 function rollable (filters: FilterOrGroup[]): StatFilter[] {
@@ -37,10 +43,10 @@ function presetRange (roll: Roll, preset: RollPreset): { min: number | undefined
   if (preset === 'low') {
     // Worst roll of the tier and up: positive mods keep only a min, "lower is better" mods only a max.
     return roll.better === 1
-      ? { min: bounds.min, max: undefined }
-      : { min: undefined, max: bounds.max }
+      ? { min: isOpenBound(bounds.min) ? undefined : bounds.min, max: undefined }
+      : { min: undefined, max: isOpenBound(bounds.max) ? undefined : bounds.max }
   }
-  if (Math.abs(bounds.min) >= OPEN_BOUND || Math.abs(bounds.max) >= OPEN_BOUND) {
+  if (isOpenBound(bounds.min) || isOpenBound(bounds.max)) {
     // No tier to take a window of: this roll or better.
     return roll.better === 1
       ? { min: roll.value, max: undefined }

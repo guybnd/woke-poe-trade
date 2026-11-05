@@ -130,6 +130,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { computed, defineComponent, h, inject, shallowRef, watch } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -157,7 +158,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Scarab flip'
-  props.config.anchor = { pos: 'tl', x: 45, y: 20 }
+  props.config.anchor = popupAnchor()
   props.config.tab = 'buy'
   props.config.sellDiscount = 0
   props.config.reroll = false

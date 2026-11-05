@@ -4,6 +4,7 @@ import { AppConfig, saveConfig, pushHostConfig } from '@/web/Config'
 import { isModuleOn } from '../modules'
 import { REGEX_LIBRARY_TYPE, starterEntries } from './widget'
 import type { RegexEntry, RegexLibraryWidget } from './widget'
+import { popupAnchor } from '../ui/window-anchor'
 
 export type SaveResult = 'saved' | 'exists' | 'module-off'
 
@@ -20,7 +21,7 @@ export function saveToRegexLibrary (entry: { name: string, text: string, categor
       wmWants: 'hide',
       wmZorder: null,
       wmFlags: ['invisible-on-blur'],
-      anchor: { pos: 'tl', x: 35, y: 30 },
+      anchor: popupAnchor(),
       enableHotkeys: true,
       entries: starterEntries()
     } as RegexLibraryWidget)

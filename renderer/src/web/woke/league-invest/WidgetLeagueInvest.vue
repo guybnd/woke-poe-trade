@@ -132,6 +132,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -166,7 +167,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'League investments'
-  props.config.anchor = { pos: 'tl', x: 50, y: 20 }
+  props.config.anchor = popupAnchor()
   props.config.budgetDiv = 5
   props.config.slots = 5
   props.config.horizon = 7

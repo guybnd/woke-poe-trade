@@ -19,9 +19,11 @@ export function sliderValueAt (
   dp: boolean
 ): number {
   const value = (bounds.max - bounds.min) * k + bounds.min
-  return (end === 'min')
+  const rounded = (end === 'min')
     ? percentRoll(value, -0, Math.floor, dp)
     : percentRoll(value, +0, Math.ceil, dp)
+  // Rounding a fractional bound (12.5 shown as a whole number) can step past it.
+  return Math.min(Math.max(rounded, bounds.min), bounds.max)
 }
 
 /** Sets one end. An opposite end the new value crosses is cleared, so the range stays valid. */

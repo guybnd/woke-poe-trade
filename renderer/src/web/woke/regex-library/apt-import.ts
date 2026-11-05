@@ -3,6 +3,7 @@
 // drops the old widgets. Plain config objects, no Vue.
 import { REGEX_LIBRARY_TYPE, starterEntries } from './widget'
 import type { RegexEntry } from './widget'
+import { popupAnchor } from '../ui/window-anchor'
 
 interface StashSearchLike {
   wmType: string
@@ -53,7 +54,7 @@ export function moveStashSearchToLibrary (widgets: WidgetLike[]): number {
         wmWants: 'hide',
         wmZorder: null,
         wmFlags: ['invisible-on-blur'],
-        anchor: { pos: 'tl', x: 35, y: 30 },
+        anchor: popupAnchor(),
         enableHotkeys: true,
         entries: starterEntries()
       }

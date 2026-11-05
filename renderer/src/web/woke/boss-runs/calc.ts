@@ -307,7 +307,9 @@ const UNIQUE_BASES: Record<string, string> = {
   "Watcher's Eye": 'Prismatic Jewel',
   'Forbidden Flesh': 'Cobalt Jewel',
   'Forbidden Flame': 'Crimson Jewel',
-  'Sublime Vision': 'Prismatic Jewel'
+  'Sublime Vision': 'Prismatic Jewel',
+  "Atziri's Splendour": 'Sacrificial Garb',
+  "Doryani's Invitation": 'Heavy Belt'
 }
 
 // Official trade search for unidentified copies of a unique, cheapest first.

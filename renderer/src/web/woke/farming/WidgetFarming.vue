@@ -173,6 +173,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import WToggle from '../ui/WToggle.vue'
 import { inject, computed, shallowRef, onUnmounted, watch, nextTick } from 'vue'
 import { useVisibleClock } from '../shared/visible-clock'
@@ -210,7 +211,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Farming profit'
-  props.config.anchor = { pos: 'tl', x: 60, y: 30 }
+  props.config.anchor = popupAnchor()
   props.config.strategy = ''
   props.config.costs = []
   props.config.autoCountMaps = true

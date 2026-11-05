@@ -46,7 +46,7 @@
 import { computed } from 'vue'
 import { saveConfig } from '@/web/Config'
 import { useActiveBuild } from '../pob-builds/active'
-import { actRewards, linkColours, linkGroups, orderedGems, pickStage, relevantGems, skillSetsOf, townBuys } from '../pob-builds/build-model'
+import { actRewards, linkColours, linkGroups, loadoutOf, orderedGems, relevantGems, townBuys } from '../pob-builds/build-model'
 import { gemData, nextGems } from '../pob-builds/gems'
 import SocketDots from '../pob-builds/SocketDots.vue'
 import { isTown } from './log-parse'
@@ -64,28 +64,28 @@ const build = useActiveBuild()
 const s = computed(() => props.config.state)
 const level = computed(() => s.value.level)
 const details = computed(() => props.config.showBuild ? build.details.value : null)
-// Same stage rules as skill and item sets: "Act 3" is an act, not level 3.
-const tree = computed(() => details.value ? pickStage(details.value.trees, s.value.level, s.value.act)?.item ?? null : null)
+const loadout = computed(() => details.value ? loadoutOf(details.value, s.value.level, s.value.act, build.loadout.value) : null)
+const tree = computed(() => loadout.value?.tree ?? null)
 const got = computed(() => s.value.gemsGot ?? [])
 const campaignAct = computed(() => (s.value.act != null && s.value.act <= 10) ? s.value.act : null)
 
 const buys = computed(() => (details.value && campaignAct.value != null && isTown(s.value.areaId))
-  ? townBuys(details.value, build.className.value, s.value.level, campaignAct.value, got.value).slice(0, 6)
+  ? townBuys(details.value, build.className.value, s.value.level, campaignAct.value, got.value, build.loadout.value).slice(0, 6)
   : [])
 const buyNpcs = computed(() => [...new Set(buys.value.map(b => b.npc))].join(', '))
 const rewards = computed(() => (details.value && campaignAct.value != null)
-  ? actRewards(details.value, build.className.value, s.value.level, campaignAct.value, got.value).slice(0, 3)
+  ? actRewards(details.value, build.className.value, s.value.level, campaignAct.value, got.value, build.loadout.value).slice(0, 3)
   : [])
 
 // Out of town: the next gem the build uses that you can't use yet.
 const nextGem = computed(() => {
   if (!details.value || campaignAct.value == null) return null
   const lvl = s.value.level ?? 1
-  const names = relevantGems(details.value, s.value.level, s.value.act).filter(n => !got.value.includes(n))
+  const names = relevantGems(details.value, s.value.level, s.value.act, build.loadout.value).filter(n => !got.value.includes(n))
   return nextGems(details.value, lvl, build.className.value, names).find(g => g.requiredLevel > lvl) ?? null
 })
 
-const picked = computed(() => details.value ? pickStage(skillSetsOf(details.value), s.value.level, s.value.act) : null)
+const picked = computed(() => loadout.value?.skillSet ?? null)
 const linkSet = computed(() => (picked.value?.byStage || (details.value?.skillSets?.length ?? 0) > 1) ? picked.value?.item.title ?? '' : '')
 const links = computed(() => picked.value
   ? linkGroups(picked.value.item.groups, props.maxLinks).map(g => ({

@@ -11,7 +11,7 @@
       :style="{ '--left': `${state.percentLeft}%`, '--right': `${state.percentRight}%` }"
     />
     <div :class="$style.tick" :style="{ 'left': `max(0.125rem, min(${percentRoll}% - 0.0625rem, 100% - 0.25rem))` }" />
-    <div v-if="popupValue"
+    <div v-if="popupValue != null && popupValue !== ''"
       :class="$style.popup"
       :style="(editing === 'min') ? { '--left': `${state.percentLeft}%` } : { '--right': `${state.percentRight}%` }"
     >{{ popupValue }}</div>
@@ -80,7 +80,16 @@ export default defineComponent({
       const value = sliderValueAt(k, bounds, editing.value, dp)
       dirty.value = editRange(props.modelValue, editing.value, value)
     }
+    // A right-drag that ends off the bar would open the panel's (or the
+    // browser's) menu where it lands; on Windows that menu comes after mouseup.
+    function swallowMenu (e: MouseEvent) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    let dragging = false
     function removeMousemove () {
+      dragging = false
+      setTimeout(() => document.removeEventListener('contextmenu', swallowMenu, true), 0)
       document.removeEventListener('mousemove', handleMousemove)
       document.removeEventListener('mouseup', removeMousemove)
       window.removeEventListener('blur', removeMousemove)
@@ -98,7 +107,10 @@ export default defineComponent({
       popupValue: computed(() => editing.value === 'min' ? dirty.value?.[0] : dirty.value?.[1]),
       handleMousedown (e: MouseEvent) {
         const end = sliderEnd(e.button)
-        if (!end) return
+        // A second button during a drag would switch ends and drop the first edit.
+        if (!end || dragging) return
+        dragging = true
+        if (end === 'max') document.addEventListener('contextmenu', swallowMenu, true)
         editing.value = end
         handleMousemove(e)
         document.addEventListener('mousemove', handleMousemove)

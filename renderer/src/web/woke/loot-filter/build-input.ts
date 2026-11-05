@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { useActiveBuild } from '../pob-builds/active'
-import { buildFacts, linkColours, mainGroupOf, pickStage, skillSetsOf } from '../pob-builds/build-model'
+import { buildFacts, linkColours, loadoutOf, mainGroupOf } from '../pob-builds/build-model'
 import { CATEGORY_CLASSES } from './build-rules'
 import type { BuildRuleInput } from './build-rules'
 
@@ -23,8 +23,9 @@ export function useBuildRuleInput (): ComputedRef<BuildRuleInput | null> {
     if (!d) return null
     const level = build.level.value
     const act = build.act.value
-    const facts = buildFacts(d, level, act)
-    const set = pickStage(skillSetsOf(d), level, act)?.item
+    const pick = build.loadout.value
+    const facts = buildFacts(d, level, act, pick)
+    const set = loadoutOf(d, level, act, pick).skillSet?.item
     const main = set ? mainGroupOf(set.groups) : null
     const name = (build.relPath.value ?? '').split('/').pop()!.replace(/\.xml$/i, '')
     return {

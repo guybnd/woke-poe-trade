@@ -1,18 +1,23 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
-    <!-- In a pinnacle arena: what this fight costs and pays. -->
+    <!-- In a boss arena: what this fight costs and pays, and what to look for. Click: this boss's drops. -->
     <DockItem id="boss-runs" title="Boss runs" :show="arenaBosses.length > 0"
-      :badge="arenaBosses.length === 1 && arenaBosses[0].kills ? arenaBosses[0].kills : null" :wm-id="config.wmId" card-width="20rem">
+      :badge="arenaBosses.length === 1 && arenaBosses[0].kills ? arenaBosses[0].kills : null" :wm-id="config.wmId" card-width="22rem" @activate="openArenaBoss">
       <template #card>
         <div style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-2">
           <div v-for="r in arenaBosses" :key="r.boss.id" class="flex flex-col gap-0.5 w-num">
             <div class="w-head-font w-accent w-trunc">{{ r.boss.name }}</div>
             <div class="flex justify-between"><span class="w-dim">Entry</span>
               <span class="w-down"><template v-if="r.entryMissing.length">?</template><WPrice v-else :chaos="-r.entry" :divine="divine" /></span></div>
-            <div class="flex justify-between"><span class="w-dim">{{ r.myLoot != null ? 'Your average drop' : 'Average drop' }}</span><WPrice :chaos="r.myLoot ?? r.loot" :divine="divine" /></div>
+            <div class="flex justify-between"><span class="w-dim">{{ r.myLoot != null ? 'Your average drop' : 'Average drop' }}</span><WPrice :chaos="r.myLoot ?? (r.hasRates ? r.loot : null)" :divine="divine" /></div>
             <div v-if="r.ready" class="flex justify-between"><span class="w-dim">Per run</span>
               <span :class="r.profit >= 0 ? 'w-up' : 'w-down'"><WPrice :chaos="r.profit" :divine="divine" /></span></div>
             <div v-if="r.kills" class="w-dim text-xs">{{ r.kills }} kill{{ r.kills === 1 ? '' : 's' }} logged</div>
+            <div v-for="d in r.drops.filter(x => x.included).slice(0, CARD_DROPS)" :key="d.name" :class="$style.cardDrop">
+              <span class="w-trunc" :title="d.name">{{ d.name }}</span>
+              <span class="w-dim text-right">{{ d.chance == null ? '?' : pct(d.chance) }}</span>
+              <span class="text-right"><WPrice :chaos="d.price" :divine="divine" /></span>
+            </div>
           </div>
         </div>
       </template>
@@ -250,6 +255,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import WToggle from '../ui/WToggle.vue'
 import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -274,7 +280,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Boss runs'
-  props.config.anchor = { pos: 'cc', x: 50, y: 50 }
+  props.config.anchor = popupAnchor()
   props.config.selected = BOSSES[0].id
   props.config.sort = 'hour'
   props.config.tier = 'all'
@@ -329,6 +335,21 @@ const arenaBosses = computed(() => {
   const ids = zone.kind === 'boss' ? arenaBossIds(zone.areaId, zone.name) : []
   return BOSSES.filter(b => ids.includes(b.id)).map(b => evaluateBoss(b, props.config, px.value))
 })
+
+const CARD_DROPS = 6
+
+// Keeps your pick when it's one of this arena's bosses (normal or uber), else
+// the first with a drop list; the log can't tell which tier you're fighting.
+// The tier filter must not hide the boss the icon opened.
+function openArenaBoss () {
+  const here = arenaBosses.value
+  if (!here.length) return
+  const pick = here.find(r => r.boss.id === props.config.selected) ??
+    here.find(r => r.drops.length) ?? here[0]
+  props.config.selected = pick.boss.id
+  if (props.config.tier !== 'all' && props.config.tier !== pick.boss.tier) props.config.tier = 'all'
+  tab.value = 'drops'
+}
 
 const sel = computed(() => results.value.find(r => r.boss.id === props.config.selected) ?? results.value[0] ?? null)
 const lk = computed(() => sel.value ? luckById.value.get(sel.value.boss.id) ?? null : null)
@@ -516,6 +537,7 @@ function killValue (kill: KillRecord) {
 .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; font-size: var(--w-fs-md); align-items: center; }
 .dropGrid { grid-template-columns: 16px minmax(0, 1fr) 62px 72px 72px 70px; }
 .off { opacity: 0.45; }
+.cardDrop { display: grid; grid-template-columns: minmax(0, 1fr) 46px 58px; gap: 6px; align-items: center; }
 .editor { padding: 8px var(--w-pad); background: var(--w-panel-2); border-bottom: 1px solid var(--w-line); }
 .rateGrid { grid-template-columns: minmax(0, 1fr) 80px 80px 22px; }
 .killGrid { grid-template-columns: 74px minmax(0, 1fr) 70px 22px; }

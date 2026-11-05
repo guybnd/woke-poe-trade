@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   CHALLENGES_TYPE, DEFAULT_GUIDE_URL, challengesShortcuts, guideSkinCss, guideUrl, hotkeyTarget, matchesFilter, mergeProgress,
-  parseHotkeyTarget, profileUrl, readProfile, scrollToJs, summarize, toggleTickJs
+  parseHotkeyTarget, profileUrl, readProfile, scrollToJs, summarize, tickJs, toggleTickJs
 } from '@/web/woke/challenges/widget'
 import type { ChallengesWidget, GuideRow, ProfileRow } from '@/web/woke/challenges/widget'
 import { MODULES } from '@/web/woke/modules'
@@ -57,7 +57,8 @@ describe('profile page', () => {
     expect(readProfile({ rows: profile, notFound: false }, 1)).toBe('ok')
     expect(readProfile({ rows: [], notFound: true }, 1)).toBe('not-found')
     expect(readProfile({ rows: [], notFound: false }, 1)).toBe('waiting')
-    expect(readProfile({ rows: [], notFound: false }, 6)).toBe('private')
+    expect(readProfile({ rows: [], notFound: false }, 6)).toBe('waiting')
+    expect(readProfile({ rows: [], notFound: false }, 15)).toBe('private')
   })
 })
 
@@ -67,7 +68,8 @@ describe('merging progress', () => {
     expect(toTick).toEqual([1, 15])
     expect(matched).toBe(4)
     expect(rows.find(r => r.n === 3)).toMatchObject({ have: 3, need: 4, done: false })
-    expect(rows.find(r => r.n === 15)).toMatchObject({ have: null, need: null, done: true })
+    // Shown as the site has it; the tick goes to the site, which the next read picks up.
+    expect(rows.find(r => r.n === 15)).toMatchObject({ have: null, need: null, done: false })
   })
 
   it('keeps a manual tick the game disagrees with', () => {
@@ -113,6 +115,8 @@ describe('guide page', () => {
   it('keeps page text out of the scripts it runs', () => {
     expect(scrollToJs('a"); alert("x')).toContain(JSON.stringify('a"); alert("x'))
     expect(toggleTickJs('1"]' as unknown as number)).toContain('data-challenge="NaN"')
+    expect(tickJs(3)).toContain("dataset.complete !== 'yes'")
+    expect(tickJs('1"]' as unknown as number)).toContain('data-challenge="NaN"')
   })
 
   it('hides the site list and undoes its phone layout', () => {

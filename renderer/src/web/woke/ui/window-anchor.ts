@@ -27,3 +27,41 @@ export function restoreAnchor (state: MinimizedState, current: WidgetAnchor, rec
     y: (top ? rect.top : rect.bottom) / h * 100
   }
 }
+
+// Panels opened from the tab bar or the dock open here: the empty left side of
+// the screen, just below the tab bar and clear of an icon row kept on the far
+// left (it draws above panels). A new object each time, because Widget moves a
+// panel by writing into its anchor.
+export function popupAnchor (): WidgetAnchor {
+  return { pos: 'tl', x: 10, y: 12 }
+}
+
+// Where those panels used to open. A saved anchor can't say whether the panel
+// was ever dragged, but one still exactly on its old spot wasn't, so it follows
+// the new default. HUD-style widgets aren't listed and keep their own spots.
+const OLD_POPUP_ANCHORS: Record<string, WidgetAnchor[]> = {
+  'woke-session-analytics': [{ pos: 'tc', x: 50, y: 12 }],
+  'woke-atlas-strategies': [{ pos: 'tl', x: 20, y: 15 }],
+  'woke-boss-runs': [{ pos: 'cc', x: 50, y: 50 }],
+  'woke-challenges': [{ pos: 'tl', x: 15, y: 8 }],
+  'woke-farming': [{ pos: 'tl', x: 60, y: 30 }],
+  'woke-lab': [{ pos: 'tl', x: 30, y: 20 }],
+  'woke-lab-gems': [{ pos: 'tl', x: 45, y: 20 }],
+  'woke-league-invest': [{ pos: 'tl', x: 50, y: 20 }],
+  'woke-loot-filter': [{ pos: 'cc', x: 50, y: 45 }],
+  'woke-market-tracker': [{ pos: 'tl', x: 40, y: 20 }],
+  'woke-pob-builds': [{ pos: 'tl', x: 25, y: 20 }],
+  'woke-scarab-flip': [{ pos: 'tl', x: 45, y: 20 }],
+  'woke-regex-library': [{ pos: 'tl', x: 30, y: 30 }, { pos: 'tl', x: 35, y: 30 }],
+  'woke-trade-searches': [{ pos: 'tl', x: 30, y: 25 }]
+}
+
+// A minimized panel's anchor is where its title bar was pinned, so it is left alone.
+export function movePopupsToNewSpot (widgets: Array<{ wmType: string, anchor?: WidgetAnchor, wokeMinimized?: unknown }>) {
+  for (const w of widgets) {
+    const { anchor } = w
+    if (!anchor || w.wokeMinimized) continue
+    const old = OLD_POPUP_ANCHORS[w.wmType]
+    if (old?.some(a => a.pos === anchor.pos && a.x === anchor.x && a.y === anchor.y)) w.anchor = popupAnchor()
+  }
+}

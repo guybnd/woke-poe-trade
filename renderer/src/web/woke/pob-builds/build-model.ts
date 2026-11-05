@@ -5,7 +5,7 @@
 import { MAX_SEARCH_LENGTH } from '../shared/library'
 import { baseClass, CLASS_NAMES, gemData } from './gems'
 import type { GemColour, GemSource } from './gems'
-import type { PobDetails, PobGem, PobItem, PobItemSet, PobSkillGroup, PobSkillSet } from './widget'
+import type { LoadoutPick, PobDetails, PobGem, PobItem, PobItemSet, PobSkillGroup, PobSkillSet, PobTreeSpec } from './widget'
 
 // ---- stages: "Act 2", "Level 12-28", "lvl 40", "Endgame" ----
 
@@ -49,18 +49,28 @@ export interface Picked<T> {
   item: T
   // Items whose stage starts after the picked one (for "later" gems).
   later: T[]
-  // True when the title told us where it fits; false for the active fallback.
+  // True when the title or a pick says where it fits; false for the active fallback.
   byStage: boolean
 }
 
 // The furthest stage you have reached; before the first one, the first one;
-// with no stage titles, PoB's active set.
-export function pickStage<T extends { title: string, isActive: boolean }> (items: T[], level: number | null, act: number | null): Picked<T> | null {
+// with no stage titles, PoB's active set. A title picked by hand beats all
+// of that, unless PoB no longer has a set by that name.
+export function pickStage<T extends { title: string, isActive: boolean }> (items: T[], level: number | null, act: number | null, chosen?: string): Picked<T> | null {
   if (!items.length) return null
   const staged = items
     .map(item => ({ item, stage: stageOf(item.title) }))
     .filter((x): x is { item: T, stage: Stage } => x.stage != null)
     .sort((a, b) => stageLevel(a.stage) - stageLevel(b.stage))
+  const hand = chosen != null ? items.find(i => i.title === chosen) : undefined
+  if (hand) {
+    const at = stageOf(hand.title)
+    return {
+      item: hand,
+      later: at ? staged.filter(x => stageLevel(x.stage) > stageLevel(at)).map(x => x.item) : [],
+      byStage: true
+    }
+  }
   if (!staged.length || (level == null && act == null)) {
     const item = items.find(i => i.isActive) ?? items[0]
     return { item, later: [], byStage: false }
@@ -79,6 +89,24 @@ export function skillSetsOf (d: PobDetails): PobSkillSet[] {
 
 export function itemSetsOf (d: PobDetails): PobItemSet[] {
   return d.itemSets ?? []
+}
+
+export interface Loadout {
+  skillSet: Picked<PobSkillSet> | null
+  itemSet: Picked<PobItemSet> | null
+  tree: PobTreeSpec | null
+}
+
+// The sets in use: the same answer for every window that asks.
+export function loadoutOf (d: PobDetails, level: number | null, act: number | null, pick?: LoadoutPick): Loadout {
+  // A skill set pick takes its same-named item set and tree along. An item
+  // set pick changes only the gear.
+  const skillTitle = pick?.skillSet
+  return {
+    skillSet: pickStage(skillSetsOf(d), level, act, skillTitle),
+    itemSet: pickStage(itemSetsOf(d), level, act, pick?.itemSet ?? pick?.skillSet),
+    tree: pickStage(d.trees, level, act, skillTitle)?.item ?? null
+  }
 }
 
 // ---- gems and links ----
@@ -198,11 +226,10 @@ export function gemsOf (sets: PobSkillSet[]): string[] {
 
 // Gems from the skill set for your stage and every later one; gems that
 // only earlier sets used are done with.
-export function relevantGems (d: PobDetails, level: number | null, act: number | null): string[] {
-  const sets = skillSetsOf(d)
-  const pick = pickStage(sets, level, act)
-  if (!pick || !pick.byStage) return gemsOf(sets)
-  return gemsOf([pick.item, ...pick.later])
+export function relevantGems (d: PobDetails, level: number | null, act: number | null, pick?: LoadoutPick): string[] {
+  const set = loadoutOf(d, level, act, pick).skillSet
+  if (!set || !set.byStage) return gemsOf(skillSetsOf(d))
+  return gemsOf([set.item, ...set.later])
 }
 
 export interface GemBuy {
@@ -231,10 +258,10 @@ const BUY_AHEAD = 3
 const ASSUME_BOUGHT_BELOW = 10
 
 // Build gems the vendors in this act's town sell, not ticked as got.
-export function townBuys (d: PobDetails, className: string, level: number | null, act: number, got: string[]): GemBuy[] {
+export function townBuys (d: PobDetails, className: string, level: number | null, act: number, got: string[], pick?: LoadoutPick): GemBuy[] {
   const lvl = level ?? 1
   const out: GemBuy[] = []
-  for (const name of relevantGems(d, level, act)) {
+  for (const name of relevantGems(d, level, act, pick)) {
     if (got.includes(name)) continue
     const data = gemData(name)
     if (!data) continue
@@ -252,9 +279,9 @@ export function townBuys (d: PobDetails, className: string, level: number | null
 
 // Build gems offered as a quest reward in this act, grouped by quest (you
 // pick one gem per quest).
-export function actRewards (d: PobDetails, className: string, level: number | null, act: number, got: string[]): Array<{ quest: string, npc: string, gems: string[] }> {
+export function actRewards (d: PobDetails, className: string, level: number | null, act: number, got: string[], pick?: LoadoutPick): Array<{ quest: string, npc: string, gems: string[] }> {
   const byQuest = new Map<string, { quest: string, npc: string, gems: string[] }>()
-  for (const name of relevantGems(d, level, act)) {
+  for (const name of relevantGems(d, level, act, pick)) {
     if (got.includes(name)) continue
     const src = sourcesFor(name, className).find(s => s[3] === 'q' && s[0] === act)
     if (!src) continue
@@ -310,7 +337,7 @@ export interface BuildFacts {
   weaponBases: string[]
 }
 
-export function buildFacts (d: PobDetails, level: number | null, act: number | null): BuildFacts {
+export function buildFacts (d: PobDetails, level: number | null, act: number | null, pick?: LoadoutPick): BuildFacts {
   const facts: BuildFacts = { uniques: [], bases: [], gems: [], weaponBases: [] }
   const sets = itemSetsOf(d)
   // Uniques from every item set (levelling uniques and endgame ones).
@@ -322,8 +349,8 @@ export function buildFacts (d: PobDetails, level: number | null, act: number | n
       }
     }
   }
-  const pick = pickStage(sets, level, act)?.item
-  for (const { slot, item } of pick?.slots ?? []) {
+  const worn = loadoutOf(d, level, act, pick).itemSet?.item
+  for (const { slot, item } of worn?.slots ?? []) {
     if (!isGearSlot(slot)) continue
     const base = itemBase(item)
     if (/^Weapon [12]$/.test(slot) && base) facts.weaponBases.push(base)

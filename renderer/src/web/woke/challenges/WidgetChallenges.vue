@@ -72,6 +72,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { popupAnchor } from '../ui/window-anchor'
 import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
@@ -82,7 +83,7 @@ import DockItem from '../dock/DockItem.vue'
 import { hideWhilePlaying, tickWhile } from '../dock/dock'
 import {
   READ_GUIDE_JS, READ_PROFILE_JS, guideSkinCss, guideUrl, matchesFilter, mergeProgress, parseHotkeyTarget,
-  profileUrl, readProfile, scrollToJs, summarize, toggleTickJs
+  profileUrl, readProfile, scrollToJs, summarize, tickJs, toggleTickJs
 } from './widget'
 import type { GuideRow, ProfilePage, ProfileRow } from './widget'
 
@@ -102,7 +103,7 @@ const wm = inject<WidgetManager>('wm')!
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Challenges'
-  props.config.anchor = { pos: 'tl', x: 15, y: 8 }
+  props.config.anchor = popupAnchor()
   props.config.url = ''
   props.config.hotkey = null
   props.config.dockIcon = false
@@ -171,7 +172,7 @@ function applyTicks () {
     problem.value = "Your profile's challenges don't match this guide. It may be for another league."
     return
   }
-  for (const n of merged.value.toTick) el.executeJavaScript(toggleTickJs(n)).catch(() => {})
+  for (const n of merged.value.toTick) el.executeJavaScript(tickJs(n)).catch(() => {})
 }
 
 watch(summary, (s) => {

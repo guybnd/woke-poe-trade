@@ -1,7 +1,8 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseItemText } from '../../../main/src/woke/pob-parse'
-import { noteRuns } from '@/web/woke/pob-builds/build-model'
+import { buildFacts, loadoutOf, noteRuns, relevantGems } from '@/web/woke/pob-builds/build-model'
+import type { PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
 
 describe('parseItemText', () => {
   const item = parseItemText(`
@@ -62,5 +63,74 @@ describe('noteRuns', () => {
 
   it('drops colours too dark to read on the panel', () => {
     expect(noteRuns('^0a^x101010b')).toEqual([{ text: 'a', colour: null }, { text: 'b', colour: null }])
+  })
+})
+
+describe('loadouts', () => {
+  const set = (title: string, gem: string, isActive = false): PobSkillSet => ({
+    title,
+    isActive,
+    groups: [{ label: '', slot: '', enabled: true, isMain: true, gems: [{ name: gem, level: 1, quality: 0, enabled: true }] }]
+  })
+  const items = (title: string, base: string): PobItemSet => ({
+    title,
+    isActive: false,
+    slots: [{ slot: 'Body Armour', item: { rarity: 'RARE', name: 'X', base, sockets: '', implicits: [], mods: [] } }]
+  })
+  // Guy's kind of build: same-named sets, and only "Day 1" reads as a stage.
+  const day1 = 'Leap Slam Day 1 No Cluster'
+  const day2 = 'Leap Slam Day 1.5 Clusters'
+  const d: PobDetails = {
+    className: 'Marauder',
+    ascendClassName: '',
+    level: 90,
+    mainSkill: '',
+    notes: '',
+    skills: [],
+    skillSets: [set(day1, 'Leap Slam'), set(day2, 'Cyclone')],
+    itemSets: [items(day1, 'Plate Vest'), items(day2, 'Vaal Regalia'), items('Swap', 'Simple Robe')],
+    trees: [{ title: day1, url: 'a', isActive: true }, { title: day2, url: 'b', isActive: false }]
+  }
+
+  it('follows your level with nothing picked', () => {
+    const l = loadoutOf(d, 90, null)
+    expect(l.skillSet?.item.title).toBe(day1)
+    expect(l.itemSet?.item.title).toBe(day1)
+  })
+
+  it('takes the same-named sets along with a pick', () => {
+    const l = loadoutOf(d, 90, null, { skillSet: day2 })
+    expect(l.skillSet?.item.title).toBe(day2)
+    expect(l.itemSet?.item.title).toBe(day2)
+    expect(l.tree?.title).toBe(day2)
+  })
+
+  it('lets the item set differ from the skill set', () => {
+    const l = loadoutOf(d, 90, null, { skillSet: day2, itemSet: 'Swap' })
+    expect(l.skillSet?.item.title).toBe(day2)
+    expect(l.itemSet?.item.title).toBe('Swap')
+    expect(l.tree?.title).toBe(day2)
+  })
+
+  it('an item set pick changes only the gear', () => {
+    const l = loadoutOf(d, 90, null, { itemSet: day2 })
+    expect(l.skillSet?.item.title).toBe(day1)
+    expect(l.itemSet?.item.title).toBe(day2)
+    expect(l.tree?.title).toBe(day1)
+  })
+
+  it('feeds the helpers from the pick', () => {
+    expect(relevantGems(d, 90, null, { skillSet: day2 })).toEqual(['Cyclone'])
+    expect(buildFacts(d, 90, null).bases.map(b => b.base)).toEqual(['Plate Vest'])
+    expect(buildFacts(d, 90, null, { skillSet: day2 }).bases.map(b => b.base)).toEqual(['Vaal Regalia'])
+  })
+
+  it('goes back to your level when PoB no longer has the set', () => {
+    expect(loadoutOf(d, 90, null, { skillSet: 'Renamed' }).skillSet?.item.title).toBe(day1)
+  })
+
+  it('keeps later stages in the gem list for a staged pick', () => {
+    const staged: PobDetails = { ...d, skillSets: [set('Level 12', 'Arc'), set('Level 30', 'Spark'), set('Level 50', 'Ball Lightning')] }
+    expect(relevantGems(staged, 60, null, { skillSet: 'Level 30' })).toEqual(['Spark', 'Ball Lightning'])
   })
 })

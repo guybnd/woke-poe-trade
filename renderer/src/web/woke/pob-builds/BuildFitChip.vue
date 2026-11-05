@@ -13,7 +13,7 @@ import type { ParsedItem } from '@/parser'
 import { ItemCategory, ItemRarity } from '@/parser'
 import SocketDots from './SocketDots.vue'
 import { useActiveBuild } from './active'
-import { bestFit, buildFacts, linkColours, mainGroupOf, pickStage, skillSetsOf } from './build-model'
+import { bestFit, buildFacts, linkColours, loadoutOf, mainGroupOf } from './build-model'
 import type { GemColour } from './gems'
 
 const props = defineProps<{ item: ParsedItem }>()
@@ -27,7 +27,8 @@ const fits = computed<Fit[]>(() => {
   const item = props.item
   const level = build.level.value
   const act = build.act.value
-  const facts = buildFacts(d, level, act)
+  const pick = build.loadout.value
+  const facts = buildFacts(d, level, act, pick)
   const name = item.info.refName
   const out: Fit[] = []
   if (item.category === ItemCategory.Gem) {
@@ -41,7 +42,7 @@ const fits = computed<Fit[]>(() => {
     const b = facts.bases.find(x => x.base === name)
     if (b) out.push({ label: `Your base · ${b.slot}`, title: `Your build wears a rare ${name}` })
     const sockets = /^Sockets: (.+)$/m.exec(item.rawText)?.[1]
-    const set = pickStage(skillSetsOf(d), level, act)?.item
+    const set = loadoutOf(d, level, act, pick).skillSet?.item
     const main = set ? mainGroupOf(set.groups) : null
     if (sockets && main) {
       const colours = linkColours(main)
