@@ -44,10 +44,11 @@
 import { computed, defineComponent, inject, onMounted, onUnmounted, shallowRef, useCssModule, watch } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
+import { Host } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import { useHoverZone } from '../shared/hover'
 import type { DockEntry } from './dock'
-import { closeTip, dockArt, dockIcon, tipClosed } from './dock'
+import { closeTip, dockArt, dockCardOwner, dockIcon, tipClosed } from './dock'
 import DockMenu from './DockMenu.vue'
 
 const props = defineProps<{
@@ -114,6 +115,17 @@ function openCard () {
   showCard.value = true
 }
 
+// One at a time: a new card or menu closes the one before.
+watch([showCard, menuOpen], ([card, menu]) => {
+  if (card || menu) dockCardOwner.value = props.host.key
+})
+watch(dockCardOwner, (key) => {
+  if (key === props.host.key) return
+  if (timer) { clearTimeout(timer); timer = null }
+  showCard.value = false
+  menuOpen.value = false
+})
+
 // Goes when the mouse leaves it, like the card: nothing stays on screen.
 let menuTimer: ReturnType<typeof setTimeout> | null = null
 watch(hovering, (on) => {
@@ -170,11 +182,9 @@ function place () {
 
 // While playing, a click on the icon opens its card or closes it again. One click
 // arrives twice: from main's mouse hook as the button goes down, and as a page
-// click as it comes up (only if the mouse was taken, so not always).
-const SAME_PRESS_MS = 1500
-let pressedAt = 0
+// click as it comes up (only if the mouse was taken, so not always). Only the
+// hook counts, in the app; the browser demo has only the page click.
 function pressedInGame () {
-  pressedAt = Date.now()
   if (wm.active.value) openCard()
   else toggleCard()
 }
@@ -190,7 +200,7 @@ function toggleCard () {
 
 function click () {
   if (!wm.active.value) {
-    if (Date.now() - pressedAt > SAME_PRESS_MS) toggleCard()
+    if (!Host.isElectron) toggleCard()
     return
   }
   openCard()

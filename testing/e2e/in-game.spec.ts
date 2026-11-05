@@ -22,7 +22,9 @@ test('regex library icon: a click opens the card, and its strings can be clicked
   const icon = overlay.dockIcon('regex-library')
   const entry = icon.getByRole('button', { name: 'No reflect', exact: true })
 
-  // A click opens the card even with the game focused.
+  // A click opens the card even with the game focused. Away first: main remembers
+  // the mouse from the test before, and hovering would already have opened it.
+  await overlay.moveMouse(1000, 900)
   await overlay.clickDockIconAndLeave('regex-library')
   await expect(entry).toBeVisible({ timeout: 200 })
   await expect(entry).toHaveCount(0, { timeout: 2000 })
@@ -174,5 +176,22 @@ test('a click on an icon closes its open card, which stays closed until the mous
   await expect(entry).toHaveCount(0, { timeout: 2000 })
   await overlay.hoverDockIcon('regex-library')
   await expect(entry).toBeVisible({ timeout: 2000 })
+  await overlay.moveMouse(1000, 900)
+})
+
+test('moving from icon to icon shows one card at a time', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-trade', ping: false }, { wmType: 'woke-mechanics' }] })
+  await overlay.log(['2026/11/05 10:00:00 500000000 cff94598 [INFO Client 21088] @From Kaltenhalt: Hi, I would like to buy your Tabula Rasa Simple Robe listed for 10 chaos in Standard (stash tab "Sale"; position: left 1, top 1)'])
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  const regex = overlay.dockIcon('regex-library').getByRole('button', { name: 'No reflect', exact: true })
+  const trade = overlay.dockIcon('trade').getByText('Kaltenhalt')
+
+  await overlay.moveMouse(1000, 900)
+  await overlay.hoverDockIcon('regex-library')
+  await expect(regex).toBeVisible({ timeout: 2000 })
+  await overlay.hoverDockIcon('trade')
+  await expect(trade).toBeVisible({ timeout: 2000 })
+  // At once, not after the usual delay on leaving.
+  await expect(regex).toHaveCount(0, { timeout: 100 })
   await overlay.moveMouse(1000, 900)
 })
