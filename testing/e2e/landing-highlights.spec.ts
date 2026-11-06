@@ -532,6 +532,16 @@ test('market: the flips window', async ({ overlay }) => {
   await saveAround(overlay, 'hl-flips', [panel.locator('[data-w-panel]')], 1280)
 })
 
+test('market: uniques worth disenchanting', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-disenchant', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
+  await backdrop(overlay, 'frames/town.jpg')
+  const panel = overlay.widget('woke-disenchant')
+  await expect(panel.locator('.w-row:not(.w-row--head)').first()).toBeVisible({ timeout: 15_000 })
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-disenchant', [panel.locator('[data-w-panel]')], 1280)
+})
+
 test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
   await overlay.showScreen('screens/stash-scarab-real.png')
