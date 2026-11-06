@@ -163,7 +163,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .highlight { padding: 20px 16px; }
 /* --chrome is everything in a highlight's screen but the shot, so the name, the
    plates and the shot fit in one window. The shot never goes above 1280x720,
-   half its real size, so it stays sharp. */
+   well under its real size, so it stays sharp. */
 .item {
   --chrome: 180px;
   --h: min(720px, max(280px, calc(100vh - var(--chrome))));
@@ -179,6 +179,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 @media (max-width: 1180px), (max-height: 830px) { .item { --chrome: 220px; } }
 /* And the caption to two lines. */
 @media (max-width: 860px), (max-height: 680px) { .item { --chrome: 246px; } }
+/* And Path of Building's many plates to three rows. */
+@media (max-height: 600px) { .item { --chrome: 290px; } }
 .item.wide { width: min(1280px, 100%); }
 
 .head { display: flex; flex: none; height: 54px; }
@@ -222,7 +224,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .say-more:hover .say-card, .say-more:focus .say-card { display: block; }
 
 .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-top: 1px solid #3a2412; background: #000; }
-.stage img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
+.stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
 .stage img.on { opacity: 1; pointer-events: auto; }
 
 /* ---------- and many more ---------- */
