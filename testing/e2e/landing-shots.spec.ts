@@ -242,12 +242,14 @@ test('readme banner', async ({ page }) => {
     @font-face { font-family: C; src: url(data:font/ttf;base64,${b64(path.join(fonts, 'Fontin-SmallCaps-Hinted.ttf'))}); }
     @font-face { font-family: I; src: url(data:font/ttf;base64,${b64(path.join(fonts, 'Fontin-Italic-Hinted.ttf'))}); }
     body { margin: 0; width: 1280px; height: 400px; overflow: hidden; background: #070605; position: relative; }
-    .shot { position: absolute; left: 0; top: -160px; width: 1280px; opacity: 0.42; }
+    .shot { position: absolute; left: 0; top: -30px; width: 1280px; opacity: 0.7; }
+    .fade { position: absolute; inset: 0; background: linear-gradient(rgba(7, 6, 5, 0.25), rgba(7, 6, 5, 0.45) 55%, #070605); }
     .copy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-shadow: 0 2px 18px #000; }
     h1 { margin: 0; font: 88px/1 C, serif; color: #e0c78f; }
     p { margin: 0; font: 28px I, serif; color: #e8dcc2; }
   </style>
-  <img class="shot" src="data:image/webp;base64,${b64(path.join(OUT, 'tour-market.webp'))}">
+  <img class="shot" src="data:image/webp;base64,${b64(path.join(OUT, 'hero-plaza.webp'))}">
+  <div class="fade"></div>
   <div class="copy"><h1>Woke PoE Trade</h1><p>trade macro with extra chromosomes</p></div>`)
   await page.evaluate(() => document.fonts.ready)
   const png = await page.screenshot()
