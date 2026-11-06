@@ -14,7 +14,8 @@ export const HIGHLIGHTS = [
     tag: 'See what you are up against',
     slides: [
       { label: 'Competing listings', module: 'apt-price-check', shot: 'hl-price-columns', text: 'Every listing beside yours, stat by stat. Green where yours is better, red where theirs is.', alt: 'Price check of a body armour: eight listings with energy shield, resistances and life compared to yours' },
-      { label: 'Listing tooltip', module: 'apt-price-check', shot: 'hl-price-tooltip', text: 'Hover a listing to see the item as the game shows it, with mod tiers and how good each roll is.', alt: 'Tooltip of a listed body armour with the tier and roll quality of each mod' }
+      { label: 'Listing tooltip', module: 'apt-price-check', shot: 'hl-price-tooltip', text: 'Hover a listing to see the item as the game shows it, with mod tiers and how good each roll is.', alt: 'Tooltip of a listed body armour with the tier and roll quality of each mod' },
+      { label: 'Roll bars', module: 'apt-price-check', shot: 'hl-price-bars', text: 'Shift + scroll over a listing swaps the ranges for a bar on every roll, so you see how close each one came.', alt: 'The same listing tooltip with a coloured bar and percentage for each rolled number' }
     ]
   },
   {
@@ -32,8 +33,12 @@ export const HIGHLIGHTS = [
     name: 'Path of Building',
     tag: 'Your build, no alt-tab',
     slides: [
-      { label: 'Gear and links', module: 'pob-builds', shot: 'hl-pob-gear', text: 'Your gear and gem links from your PoB folder, with item tooltips and the passive tree a click away.', alt: 'A build\'s gear tab with an item tooltip and buttons for Path of Building and the passive tree' },
-      { label: 'Levelling', module: 'pob-builds', shot: 'hl-pob-levelling', text: 'Gems by level, and where to get each one.', alt: 'A build\'s leveling tab: gem links, and each gem by level with its vendor or quest' }
+      { label: 'Gear and links', module: 'pob-builds', shot: 'hl-pob-gear', text: 'Your gear and gem links from your PoB folder, with item tooltips. The search on any item opens it in the price check.', alt: 'A build\'s gear tab with an item tooltip and a price check button on each item' },
+      { label: 'Levelling', module: 'pob-builds', shot: 'hl-pob-levelling', text: 'Gems by level, and where to get each one.', alt: 'A build\'s leveling tab: gem links, and each gem by level with its vendor or quest' },
+      { label: 'Next step', module: 'pob-builds', shot: 'hl-pob-next', text: 'What changes in your next tree, gems and gear, before you get there.', alt: 'The Next section of a build: new passive points, gems to add and drop, and the gear that changes' },
+      { label: 'Passive tree', module: 'pob-builds', shot: 'hl-pob-tree', text: 'The tree right in the overlay: your points in gold, new ones in green, respecs in red.', alt: 'Passive tree panel with allocated paths, new points and a list of what the next tree adds and removes' },
+      { label: 'Swap check', module: 'pob-builds', shot: 'hl-pob-swap', text: 'Price check a piece of gear and compare its numbers to what your build wears.', alt: 'Price check of a body armour with a tooltip comparing its numbers to the build\'s body armour' },
+      { label: 'Build icon', module: 'pob-builds', shot: 'hl-pob-hover', text: 'Your links, next tree, pantheon and stats, one hover away, even in a map.', alt: 'A small dock icon with a card showing the build\'s links and next tree' }
     ]
   },
   {
@@ -42,7 +47,7 @@ export const HIGHLIGHTS = [
     tag: 'Know what pays',
     slides: [
       { label: 'Flips', module: 'scarab-flip', shot: 'hl-flips', text: 'Vendor recipes and Harvest rerolls that pay today, sorted by profit.', alt: 'Flips window: scarabs worth vendoring, with price, profit and supply' },
-      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Bind a key or click the icon, and what is worth flipping gets outlined right in your stash tab, with the profit on each.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
+      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Bind a key or click the icon. It sees which tab is open, Scarab, Delirium, Delve, Essence or Blight, and outlines what is worth flipping, with the profit on each.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
       { label: 'Price tracker', module: 'market', shot: 'tour-market', text: 'poe.ninja prices kept as history on your PC, with movers and a watchlist.', alt: 'Market tracker watchlist with a gem\'s tooltip, beside the flips window' },
       { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' }
@@ -57,7 +62,9 @@ export const HIGHLIGHTS = [
       { label: 'League mechanics', module: 'mechanics', shot: 'hl-expedition', text: 'In Expedition, each vendor\'s currency priced, with whoever is here on top.', alt: 'Expedition card: Tujen is here, with Exotic Coinage and the other currencies priced' },
       { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
       { label: 'Challenges', module: 'challenges', shot: 'hl-challenges', text: 'Your count and what is next, on one small icon.', alt: 'Challenges card under a small icon: 23 of 40 and the next three' },
-      { label: 'Lab run', module: 'lab', shot: 'hl-lab', text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' }
+      { label: 'Lab run', module: 'lab', shot: 'hl-lab', text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' },
+      { label: 'Drop counter', module: 'drop-counter', shot: 'hl-drop-counter', text: 'A tally of the drops you care about. Press +1 while you play, and maps count themselves.', alt: 'Drop counter card: maps run, and Divine Orb, Exalted Orb and Annulment counts with how long since the last' },
+      { label: 'Death recap', module: 'death-recap', shot: 'hl-death-recap', text: 'Where you died, how long in, and the mods of the map if you checked it first.', alt: 'Death recap card: Cemetery, first death, time since entering and the map\'s mods' }
     ]
   },
   {

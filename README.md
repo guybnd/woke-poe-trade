@@ -10,7 +10,7 @@ Woke PoE Trade is an overlay for Path of Exile 1, built on [Awakened PoE Trade](
 **[Download for Windows](https://github.com/guybnd/woke-poe-trade/releases/latest)** · [Website](https://guybnd.github.io/woke-poe-trade/) · [Help](https://guybnd.github.io/woke-poe-trade/quick-start) · [FAQ](https://guybnd.github.io/woke-poe-trade/faq)
 
 ### Price check
-Every listing beside yours, stat by stat, and each listing's tiers and rolls on hover.
+Every listing beside yours, stat by stat, and each listing's tiers and rolls on hover. Shift + scroll switches to a bar on every roll.
 
 <p>
   <img src="docs/public/shots/hl-price-columns.webp" width="49%" alt="Price check of a body armour: listings with each stat compared to yours">
@@ -26,15 +26,17 @@ Alt+F on an item goes to its rule. Edit any tier in the game and it reloads.
 </p>
 
 ### Path of Building
-Your gear, gem links and gems by level, from your PoB folder.
+Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change, open the passive tree in the overlay, price check a build's item, and compare a checked item to what you wear.
 
 <p>
   <img src="docs/public/shots/hl-pob-gear.webp" width="49%" alt="A build's gear tab with an item tooltip">
-  <img src="docs/public/shots/hl-pob-levelling.webp" width="49%" alt="A build's leveling tab with each gem by level">
+  <img src="docs/public/shots/hl-pob-next.webp" width="49%" alt="A build's Next section with new points, gems and gear">
+  <img src="docs/public/shots/hl-pob-tree.webp" width="49%" alt="Passive tree panel with new points and respecs">
+  <img src="docs/public/shots/hl-pob-swap.webp" width="49%" alt="Price check comparing a body armour to the build's">
 </p>
 
 ### Market
-Flips that pay today, outlined in your stash, plus boss runs and lab gems.
+Flips that pay today, outlined in your Scarab, Delirium, Delve, Essence or Blight tab, plus boss runs and lab gems.
 
 <p>
   <img src="docs/public/shots/hl-flips.webp" width="49%" alt="Flips window: scarabs worth vendoring">
@@ -44,13 +46,15 @@ Flips that pay today, outlined in your stash, plus boss runs and lab gems.
 </p>
 
 ### On your screen
-Small icons that open when they matter: trades, league mechanics, campaign, challenges, the lab.
+Small icons that open when they matter: trades, league mechanics, campaign, challenges, the lab, your drop tally, your last death.
 
 <p>
   <img src="docs/public/shots/hl-trade.webp" width="49%" alt="Trade card with buyers and the stash position">
   <img src="docs/public/shots/hl-expedition.webp" width="49%" alt="Expedition card with vendor currencies priced">
   <img src="docs/public/shots/hl-campaign.webp" width="49%" alt="Campaign card with the zone and next steps">
   <img src="docs/public/shots/hl-lab.webp" width="49%" alt="Today's labyrinth layout in a card">
+  <img src="docs/public/shots/hl-drop-counter.webp" width="49%" alt="Drop counter card with drop counts and maps run">
+  <img src="docs/public/shots/hl-death-recap.webp" width="49%" alt="Death recap card with the map's mods">
 </p>
 
 ### Regex

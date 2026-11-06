@@ -176,6 +176,12 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText('Rage Guardian')
   await saveAround(overlay, 'hl-price-tooltip', [panel.locator('.w-pc-table'), tip], 1240)
+  // Shift + scroll over the listing swaps the ranges for a bar on each roll.
+  await overlay.page.keyboard.down('Shift')
+  await overlay.page.mouse.wheel(0, 100)
+  await expect(tip.locator('[class*="bar"]').first()).toBeVisible()
+  await saveAround(overlay, 'hl-price-bars', [panel.locator('.w-pc-table'), tip], 1240)
+  await overlay.page.keyboard.up('Shift')
 })
 
 // ---- 2. Loot filter ----
@@ -239,6 +245,134 @@ test('pob: gems by level', async ({ overlay }) => {
   const detail = await openBuild(overlay)
   await overlay.page.mouse.move(1800, 1000)
   await saveAround(overlay, 'hl-pob-levelling', [detail], 1280)
+})
+
+const showcaseInUse = () => [{
+  wmType: 'woke-pob-builds',
+  wmWants: 'hide' as const,
+  wmFlags: ['invisible-on-blur'],
+  anchor: { pos: 'tl', x: 4, y: 12 },
+  buildsDir: path.join(FIXTURES, 'pob'),
+  pobExe: '',
+  pinned: [],
+  activeBuild: 'Showcase.xml',
+  followChars: {},
+  loadouts: {}
+}]
+
+test('pob: a checked item against the one your build wears', async ({ overlay }) => {
+  await overlay.boot({ widgets: showcaseInUse() })
+  await backdrop(overlay, 'frames/town-inventory.jpg')
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  const chip = panel.locator('[data-swap-chip]')
+  await expect(chip).toContainText('Compare to your body armour')
+  await chip.hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('Against your body armour')
+  await saveAround(overlay, 'hl-pob-swap', [panel.getByText('Body Armour'), panel.getByRole('button', { name: 'Search' }), tip], 1000)
+})
+
+test('pob: the build in use, on one small icon', async ({ overlay }) => {
+  await overlay.boot({ patch: lowDock, widgets: [{ ...showcaseInUse()[0], activeBuild: 'Loadouts.xml' }] })
+  await backdrop(overlay, 'frames/hideout.jpg')
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  await overlay.hoverDockIcon('pob-builds')
+  await expect(overlay.page.getByText('Your links')).toBeVisible()
+  await saveLow(overlay, 'hl-pob-hover')
+})
+
+// The Loadouts fixture allocates four points, too few to see on a whole tree.
+// The same build with real paths from the Witch start, walked over the tree
+// data: the next set adds a path to one more notable and respecs two points.
+function grownBuildsDir () {
+  type Node = [number, number, number, string, string, string[], number[]]
+  const nodes: Node[] = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../renderer/public/data/tree/passive-tree.json'), 'utf8'))
+  const walkable = new Set(nodes.filter(n => n[3] !== 'asc' && n[3] !== 'mastery').map(n => n[0]))
+  const links = new Map<number, number[]>()
+  for (const [id, , , , , , out] of nodes) {
+    for (const to of out) {
+      if (!walkable.has(id) || !walkable.has(to)) continue
+      links.set(id, [...links.get(id) ?? [], to])
+      links.set(to, [...links.get(to) ?? [], id])
+    }
+  }
+  const WITCH = 54447
+  const from = new Map<number, number>([[WITCH, WITCH]])
+  const dist = new Map<number, number>([[WITCH, 0]])
+  for (const queue = [WITCH]; queue.length;) {
+    const at = queue.shift()!
+    for (const to of links.get(at) ?? []) {
+      if (from.has(to)) continue
+      from.set(to, at)
+      dist.set(to, dist.get(at)! + 1)
+      queue.push(to)
+    }
+  }
+  const pathTo = (id: number) => {
+    const out: number[] = []
+    for (let at = id; at !== WITCH; at = from.get(at)!) out.push(at)
+    return out
+  }
+  const notables = nodes.filter(n => n[3] === 'notable' && (dist.get(n[0]) ?? 99) >= 6 && dist.get(n[0])! <= 16).sort((a, b) => a[4].localeCompare(b[4]))
+  const picks = Array.from({ length: 9 }, (_, i) => notables[Math.floor((i + 0.5) * notables.length / 9)][0])
+  const first = new Set(picks.slice(0, 8).flatMap(pathTo))
+  const next = new Set([...first, ...pathTo(picks[8])])
+  const leaves = [...pathTo(picks[7])].filter(id => !picks.slice(0, 7).flatMap(pathTo).includes(id) && !pathTo(picks[8]).includes(id)).slice(0, 2)
+  for (const id of leaves) next.delete(id)
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-landing-pob-'))
+  const xml = fs.readFileSync(path.join(FIXTURES, 'pob/Loadouts.xml'), 'utf8')
+    .replace('nodes="94,127,223,33435"', `nodes="${[...next].join(',')}"`)
+    .replace('nodes="94,127,223"', `nodes="${[...first].join(',')}"`)
+  fs.writeFileSync(path.join(dir, 'Loadouts.xml'), xml)
+  return dir
+}
+
+async function openLevellingBuild (overlay: Overlay, buildsDir = path.join(FIXTURES, 'pob')) {
+  await overlay.boot({
+    overlayActive: true,
+    widgets: [
+      {
+        wmType: 'woke-pob-builds',
+        wmWants: 'show',
+        wmFlags: ['invisible-on-blur'],
+        anchor: { pos: 'tl', x: 4, y: 12 },
+        buildsDir,
+        pobExe: '',
+        pinned: [],
+        activeBuild: 'Loadouts.xml',
+        followChars: {},
+        loadouts: {}
+      },
+      { wmType: 'woke-campaign', wmWants: 'show' }
+    ]
+  })
+  await backdrop(overlay, 'frames/town.jpg')
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  return overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+}
+
+test('pob: what changes at the next step', async ({ overlay }) => {
+  const detail = await openLevellingBuild(overlay)
+  await expect(detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ })).toContainText('Holy Dominion')
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-pob-next', [detail], 1280)
+})
+
+test('pob: the passive tree in the overlay', async ({ overlay }) => {
+  const dir = grownBuildsDir()
+  try {
+    const detail = await openLevellingBuild(overlay, dir)
+    await detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ }).click()
+    const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('svg') }).last()
+    await expect(tree).toContainText(/\d+ new points?/)
+    // Only the tree in the picture, not the panels it opened over.
+    await detail.evaluate(el => { el.style.visibility = 'hidden' })
+    await overlay.page.mouse.move(1800, 1000)
+    await saveAround(overlay, 'hl-pob-tree', [tree], 1280)
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 // ---- 4. Market ----
@@ -368,6 +502,61 @@ test('on screen: challenges, your count and what is next', async ({ overlay }) =
   await expect(overlay.dockIcon('challenges')).toBeVisible({ timeout: 20_000 })
   await overlay.hoverDockIcon('challenges')
   await saveLow(overlay, 'hl-challenges')
+})
+
+test('on screen: the drop counter, on one small icon', async ({ overlay }) => {
+  await overlay.boot({
+    patch: lowDock,
+    widgets: [{
+      wmType: 'woke-drop-counter',
+      wmFlags: ['invisible-on-blur'],
+      wmTitle: 'Drop counter',
+      anchor: { pos: 'cc', x: 50, y: 50 },
+      items: [
+        { type: 'Currency', name: 'Divine Orb', drops: [2, 9, 21, 38] },
+        { type: 'Currency', name: 'Exalted Orb', drops: [7, 33] },
+        { type: 'Currency', name: 'Orb of Annulment', drops: [12, 25, 40] }
+      ],
+      maps: 44,
+      autoCountMaps: true,
+      layout: 'list',
+      hotkey: null
+    } as never]
+  })
+  await backdrop(overlay, 'frames/hideout.jpg')
+  await overlay.log([area('HideoutLuxurious')])
+  await expect(overlay.dockIcon('drop-counter')).toBeVisible({ timeout: 20_000 })
+  await overlay.hoverDockIcon('drop-counter')
+  await expect(overlay.dockIcon('drop-counter').getByRole('button', { name: 'Add one Divine Orb' })).toBeVisible()
+  await saveLow(overlay, 'hl-drop-counter')
+})
+
+test('on screen: the death recap names the map\'s mods', async ({ overlay, fakeApp }) => {
+  fs.rmSync(path.join(fakeApp.opts.userData, 'woke-death-recap'), { recursive: true, force: true })
+  // Log times run on from now, so the death comes a while into the map.
+  const stamp = (later = 0) => {
+    const d = new Date(Date.now() + later * 1000)
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+  }
+  const areaNow = (id: string, seed: string, level = 83) => `${stamp()} 18884906 1186a8a3 [DEBUG Client 34092] Generating level ${level} area "${id}" with seed ${seed}`
+  const info = (text: string, later = 0) => `${stamp(later)} 18887484 cffb065b [INFO Client 34092] ${text}`
+  await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-map-mods' }] })
+  // Zoomed past the frame's "You have entered" line, which names another area.
+  await backdrop(overlay, 'frames/cave-fight.jpg', 'right bottom / 130%')
+  await overlay.log([areaNow('HideoutArenaSearingExarch', '1', 60), info(': You have entered Searing Hideout.')])
+  await overlay.copyItem('items/map-rare-t16-deadly.txt', 'Alt + M')
+  await expect(overlay.page.locator('body')).toContainText('Cemetery')
+  overlay.app.focusGame(true)
+  await overlay.page.waitForTimeout(300)
+  await overlay.log([areaNow('MapWorldsCemetery', '42'), info(': You have entered Cemetery.'), info('The Maven: Show me.', 248), info(': Exile has been slain.', 252)])
+  const card = overlay.page.locator('[data-death-card]')
+  await expect(async () => {
+    await overlay.hoverDockIcon('death-recap')
+    await expect(card).toBeVisible({ timeout: 1500 })
+  }).toPass({ timeout: 20_000 })
+  await expect(card).toContainText('Exact')
+  await saveLow(overlay, 'hl-death-recap')
 })
 
 // ---- 6. Lab gems and regex ----
