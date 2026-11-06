@@ -440,7 +440,7 @@ async function toggleOutlines () {
     readingStash = false
   }
   if (!read.found) {
-    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs at 1440p, mouse off them.")
+    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs, mouse off them. All but Scarab need a game window 1080p or taller.")
     hostRequest('stash-watch-stop', null).catch(() => {})
     return
   }
