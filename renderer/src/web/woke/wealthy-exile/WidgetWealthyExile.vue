@@ -12,7 +12,6 @@
         <button class="w-icon-btn mr-1" :disabled="!canGoBack" title="Back" @click="goBack"><i class="fas fa-arrow-left" /></button>
         <button class="w-icon-btn mr-1" title="Reload" @click="reload"><i class="fas fa-sync-alt" /></button>
         <button class="w-icon-btn" title="Open in your browser" @click="openExternal"><i class="fas fa-external-link-alt" /></button>
-        <button class="w-icon-btn" title="Close" @click="close"><i class="fas fa-times" /></button>
       </template>
       <webview v-if="started" ref="siteEl" :src="url" class="pointer-events-auto w-full h-full flex" />
     </WPanel>

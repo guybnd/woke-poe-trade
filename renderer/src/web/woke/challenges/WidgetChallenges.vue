@@ -22,7 +22,6 @@
         </WButton>
         <button class="w-icon-btn mr-1" :disabled="syncing" :title="syncTitle" @click="sync"><i class="fas fa-sync-alt" /></button>
         <button class="w-icon-btn" title="Open in your browser" @click="openExternal"><i class="fas fa-external-link-alt" /></button>
-        <button class="w-icon-btn" title="Close" @click="close"><i class="fas fa-times" /></button>
       </template>
       <template v-if="problem" #banner>
         <WBanner tone="warn">{{ problem }}</WBanner>
