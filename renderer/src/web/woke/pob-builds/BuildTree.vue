@@ -15,17 +15,20 @@
     <div v-else :class="$style.wrap">
       <svg ref="svg" :class="$style.map" :viewBox="viewBox" role="img" :aria-label="`Passive tree for ${shown?.title}`"
         @wheel.prevent="zoom" @mousedown="startPan" @mousemove="movePan" @mouseup="endPan" @mouseleave="endPan" @mouseover="hover">
-        <path :d="lines['']" :class="$style.dim" />
-        <path :d="lines.remove" :class="$style.lineRemove" />
-        <path :d="lines.keep" :class="$style.lineKeep" />
-        <path :d="lines.add" :class="$style.lineAdd" />
-        <circle v-for="n in drawn" :key="n.id" :data-id="n.id" :cx="n.x" :cy="n.y" :r="n.r" :class="$style[n.cls]" />
+        <!-- Thousands of nodes: only redrawn when the trees change, not on hover or pan. -->
+        <g v-memo="[lines, drawn]">
+          <path :d="lines['']" :class="$style.dim" />
+          <path :d="lines.remove" :class="$style.lineRemove" />
+          <path :d="lines.keep" :class="$style.lineKeep" />
+          <path :d="lines.add" :class="$style.lineAdd" />
+          <circle v-for="n in drawn" :key="n.id" :data-id="n.id" :cx="n.x" :cy="n.y" :r="n.r" :class="$style[n.cls]" />
+        </g>
       </svg>
       <div :class="$style.side" class="w-scroll">
         <div v-if="previous" class="w-dim">{{ previous.title }} to <span class="w-accent">{{ shown?.title }}</span></div>
         <div v-else class="w-accent">{{ shown?.title }}</div>
         <div class="pt-1">
-          <span class="w-up">{{ diff.added }} new {{ diff.added === 1 ? 'point' : 'points' }}</span><template v-if="diff.removed">, <span class="w-down">{{ diff.removed }} to respec</span></template>
+          <span class="w-up">{{ diff.added }} new {{ diff.added === 1 ? 'point' : 'points' }}</span><template v-if="diff.addedAscendancy">, {{ diff.addedAscendancy }} ascendancy</template><template v-if="diff.removed">, <span class="w-down">{{ diff.removed }} to respec</span></template>
         </div>
         <div v-if="!diff.added && !diff.removed" class="w-dim">Same as the tree before it.</div>
 
@@ -62,20 +65,22 @@ import { fitBox, linkState, loadPassiveTree, nodeState, treeDiff } from './passi
 import type { Box, NodeState, TreeNode } from './passive-tree'
 import type { PobTreeSpec } from './widget'
 
-const props = defineProps<{ specs: PobTreeSpec[], start: string }>()
+// A new `start` object means go to that tree, even if it's the same title again.
+const props = defineProps<{ specs: PobTreeSpec[], start: { title: string } }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const trees = computed(() => realSets(props.specs))
 const at = shallowRef(0)
-const shown = computed(() => trees.value[at.value] ?? null)
+const shown = computed(() => trees.value[at.value] ?? trees.value[trees.value.length - 1] ?? null)
 const previous = computed(() => (at.value > 0 ? trees.value[at.value - 1] : null))
 
 function pick (i: number) {
   at.value = i
 }
 
-watch(() => [props.start, trees.value] as const, ([title, list]) => {
-  const i = list.findIndex(t => t.title === title)
+// Only on being asked: PoB saving the build shouldn't move you off a tree.
+watch(() => props.start, ({ title }) => {
+  const i = trees.value.findIndex(t => t.title === title)
   at.value = i < 0 ? 0 : i
 }, { immediate: true })
 
@@ -93,7 +98,7 @@ const diff = computed(() => treeDiff(tree.value, previous.value?.nodes ?? [], to
 
 // ---- drawing ----
 
-const RADIUS: Partial<Record<TreeNode['kind'], number>> = { small: 26, notable: 48, key: 72, jewel: 48 }
+const RADIUS: Partial<Record<TreeNode['kind'], number>> = { small: 26, notable: 48, key: 72, jewel: 48, start: 40 }
 
 const box = shallowRef<Box>({ x: -12000, y: -12000, w: 24000, h: 24000 })
 const viewBox = computed(() => `${box.value.x} ${box.value.y} ${box.value.w} ${box.value.h}`)
@@ -125,8 +130,8 @@ const lines = computed(() => {
   return out
 })
 
-// Frame the build whenever the tree shown or the data changes.
-watch([tree, () => shown.value], () => {
+// Frame the build whenever another tree is shown, or the data arrives.
+watch([tree, () => shown.value?.title], () => {
   const t = tree.value
   if (!t) return
   const nodes = [...toIds.value, ...fromIds.value].map(id => t.get(id)).filter((n): n is TreeNode => n != null)
@@ -138,28 +143,39 @@ watch([tree, () => shown.value], () => {
 
 const svg = shallowRef<SVGSVGElement | null>(null)
 
+// Tree units per screen pixel: the box fits inside the element with margins, so
+// the tighter side sets the scale.
+function unitsPerPixel (b: Box, rect: DOMRect) {
+  return Math.max(b.w / rect.width, b.h / rect.height)
+}
+
 function zoom (e: WheelEvent) {
   const rect = svg.value?.getBoundingClientRect()
-  if (!rect || !rect.width) return
+  if (!rect || !rect.width || !rect.height) return
   const factor = e.deltaY > 0 ? 1.2 : 1 / 1.2
   const b = box.value
   const w = Math.min(40000, Math.max(1500, b.w * factor))
-  const h = b.h * (w / b.w)
-  const px = (e.clientX - rect.left) / rect.width
-  const py = (e.clientY - rect.top) / rect.height
-  box.value = { x: b.x + (b.w - w) * px, y: b.y + (b.h - h) * py, w, h }
+  const scale = w / b.w
+  const h = b.h * scale
+  // Keeps the point under the mouse where it is.
+  const units = unitsPerPixel(b, rect)
+  const px = b.x + b.w / 2 + (e.clientX - rect.left - rect.width / 2) * units
+  const py = b.y + b.h / 2 + (e.clientY - rect.top - rect.height / 2) * units
+  box.value = { x: px - (px - b.x) * scale, y: py - (py - b.y) * scale, w, h }
 }
 
 let panFrom: { x: number, y: number, box: Box } | null = null
 
 function startPan (e: MouseEvent) {
+  // Or the drag selects the text beside it.
+  e.preventDefault()
   panFrom = { x: e.clientX, y: e.clientY, box: box.value }
 }
 
 function movePan (e: MouseEvent) {
   const rect = svg.value?.getBoundingClientRect()
-  if (!panFrom || !rect || !rect.width) return
-  const scale = panFrom.box.w / rect.width
+  if (!panFrom || !rect || !rect.width || !rect.height) return
+  const scale = unitsPerPixel(panFrom.box, rect)
   box.value = {
     ...panFrom.box,
     x: panFrom.box.x - (e.clientX - panFrom.x) * scale,

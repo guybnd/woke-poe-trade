@@ -32,6 +32,15 @@ describe('treeDiff', () => {
     expect(d.addedNames.map(n => n.name)).toEqual(['Holy Dominion'])
   })
 
+  it('counts ascendancy apart, and class and ascendancy starts not at all', () => {
+    const start = [...tree.values()].find(n => n.kind === 'start')!.id
+    const ascStart = [...tree.values()].find(n => n.kind === 'ascstart')!.id
+    const asc = [...tree.values()].filter(n => n.kind === 'asc').slice(0, 2).map(n => n.id)
+    const d = treeDiff(tree, [], [start, ascStart, ...asc, holy])
+    expect(d.added).toBe(1)
+    expect(d.addedAscendancy).toBe(2)
+  })
+
   it('still counts before the data has loaded', () => {
     expect(treeDiff(null, [1], [2, 3])).toMatchObject({ added: 2, removed: 1, addedNames: [] })
   })

@@ -416,11 +416,23 @@ export function buildFacts (d: PobDetails, level: number | null, act: number | n
 
 // ---- the next step ----
 
-// The set after this one in the file: guides list them in the order you use them.
-export function nextInFile<T extends { divider?: boolean }> (items: T[], current: T | null | undefined): T | null {
+// The next stage after this set, leaving out side sets such as "PS Swap"
+// between "25 - 32" and "32 - 40". Without stages in the titles, the next in the
+// file: guides list their sets in the order you use them.
+export function nextSet<T extends { title: string, divider?: boolean }> (items: T[], current: T | null | undefined): T | null {
   const real = realSets(items)
   const i = current ? real.indexOf(current) : -1
-  return i >= 0 ? real[i + 1] ?? null : null
+  if (i < 0) return null
+  const place = (s: Stage) => s.kind === 'end' ? Infinity : stageLevel(s)
+  const here = stageOf(real[i].title)
+  if (here && here.kind !== 'end') {
+    const later = real
+      .map(item => ({ item, stage: stageOf(item.title) }))
+      .filter((x): x is { item: T, stage: Stage } => x.stage != null && place(x.stage) > place(here))
+      .sort((a, b) => place(a.stage) - place(b.stage))
+    if (later.length) return later[0].item
+  }
+  return real[i + 1] ?? null
 }
 
 export interface GemChange { add: string[], drop: string[] }
@@ -433,16 +445,19 @@ export function gemChange (from: PobSkillSet, to: PobSkillSet): GemChange {
 
 export interface GearChange { slot: string, was: PobItem | null, now: PobItem | null }
 
-// Gear slots holding something else in the next set. Rares compare by mods too,
-// since guides name them all "New Item".
+// Gear slots holding something new in the next set: whole items compare, since
+// guides name their rares "New Item". An item moving slot, like rings changing
+// hands, isn't new.
 export function gearChange (from: PobItemSet, to: PobItemSet): GearChange[] {
-  const same = (a: PobItem | null, b: PobItem | null) => a?.name === b?.name && a?.base === b?.base && JSON.stringify(a?.mods) === JSON.stringify(b?.mods)
+  const key = (item: PobItem | null) => item ? JSON.stringify(item) : ''
+  const before = new Set(from.slots.map(s => key(s.item)))
   const slots = [...new Set([...from.slots, ...to.slots].map(s => s.slot))].filter(isGearSlot).sort((a, b) => gearOrder(a) - gearOrder(b))
   const out: GearChange[] = []
   for (const slot of slots) {
     const was = from.slots.find(s => s.slot === slot)?.item ?? null
     const now = to.slots.find(s => s.slot === slot)?.item ?? null
-    if (!same(was, now)) out.push({ slot, was, now })
+    if (key(was) === key(now) || (now && before.has(key(now)))) continue
+    out.push({ slot, was, now })
   }
   return out
 }

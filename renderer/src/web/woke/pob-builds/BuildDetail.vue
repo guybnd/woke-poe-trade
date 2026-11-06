@@ -48,7 +48,9 @@
             <span :class="$style.nextHead">
               <span>Tree: <span class="w-accent">{{ nextTree.title }}</span></span>
               <span class="ml-auto w-dim text-xs whitespace-nowrap">
-                <span class="w-up">+{{ nextTreeDiff.added }}</span><template v-if="nextTreeDiff.removed"> · <span class="w-down">-{{ nextTreeDiff.removed }} respec</span></template>
+                <template v-if="treeData">
+                  <span class="w-up">+{{ nextTreeDiff.added }}</span><template v-if="nextTreeDiff.addedAscendancy"> · {{ nextTreeDiff.addedAscendancy }} ascendancy</template>
+                </template><template v-if="treeData && nextTreeDiff.removed"> · <span class="w-down">-{{ nextTreeDiff.removed }} respec</span></template>
               </span>
             </span>
             <span v-if="nextTreeNames" class="w-dim text-xs">{{ nextTreeNames }}</span>
@@ -192,7 +194,7 @@ import { nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
   gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
-  buildDps, gearChange, gemChange, nextInFile, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel
+  buildDps, gearChange, gemChange, nextSet, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel
 } from './build-model'
 import { hideTip } from '../ui/tooltip/tooltip'
 import { loadPassiveTree, treeDiff } from './passive-tree'
@@ -400,7 +402,7 @@ const trees = computed(() => realSets(props.details?.trees ?? []))
 // ---- next step ----
 
 const treeData = shallowRef<Map<number, TreeNode> | null>(null)
-const nextTree = computed(() => nextInFile(trees.value, loadout.value?.tree))
+const nextTree = computed(() => nextSet(trees.value, loadout.value?.tree))
 // The names only come once the tree has loaded, which the count doesn't need.
 watch(nextTree, (t) => {
   if (t) loadPassiveTree().then(data => { treeData.value = data }, () => {})
@@ -410,7 +412,7 @@ const nextTreeNames = computed(() => nextTreeDiff.value.addedNames.map(n => n.na
 
 const nextGems_ = computed(() => {
   const from = shownSet.value
-  const to = nextInFile(skillSets.value, from)
+  const to = nextSet(skillSets.value, from)
   if (!from || !to) return null
   const change = gemChange(from, to)
   return change.add.length || change.drop.length ? { title: to.title, change } : null
@@ -418,7 +420,7 @@ const nextGems_ = computed(() => {
 
 const gearStep = computed(() => {
   const from = shownItemSet.value
-  const to = nextInFile(itemSets.value, from)
+  const to = nextSet(itemSets.value, from)
   if (!from || !to) return null
   const changes = gearChange(from, to)
   return changes.length ? { title: to.title, changes } : null

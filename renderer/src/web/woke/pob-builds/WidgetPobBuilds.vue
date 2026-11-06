@@ -58,7 +58,7 @@
         </WEmpty>
       </WPanel>
 
-      <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = $event" />
+      <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" />
       <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="details.trees" :start="treeAt" @close="treeAt = null" />
       <WPanel v-if="selectedBuild && detailsError" size-key="detail" title="Couldn't read the build" width="20rem">
         <div class="w-down" style="padding: var(--w-pad);">{{ detailsError }}</div>
@@ -127,7 +127,7 @@ const errorText = computed(() => error.value.includes('ENOENT')
 const filter = shallowRef('')
 const selected = shallowRef<string | null>(null)
 // The tree panel, on this tree's title.
-const treeAt = shallowRef<string | null>(null)
+const treeAt = shallowRef<{ title: string } | null>(null)
 const details = shallowRef<PobDetails | null>(null)
 const detailsError = shallowRef('')
 const importOpen = shallowRef(false)

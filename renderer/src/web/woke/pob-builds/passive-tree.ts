@@ -1,7 +1,7 @@
 // The passive tree, loaded the first time it is opened, and what changes
 // between two of a build's trees. Data: scripts/build-tree-data.mjs.
 
-export type NodeKind = 'small' | 'notable' | 'key' | 'jewel' | 'mastery' | 'asc'
+export type NodeKind = 'small' | 'notable' | 'key' | 'jewel' | 'mastery' | 'asc' | 'ascstart' | 'start'
 
 export interface TreeNode {
   id: number
@@ -32,9 +32,11 @@ export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
 }
 
 export interface TreeDiff {
-  // Points spent, as PoB counts them: every node of the tree, known or not.
+  // Passive points, as PoB counts them. Before the data loads, every node counts.
   added: number
   removed: number
+  // Ascendancy points; both are spent apart from passive points.
+  addedAscendancy: number
   // Worth naming: notables, keystones, jewel sockets, ascendancy.
   addedNames: TreeNode[]
   removedNames: TreeNode[]
@@ -49,10 +51,15 @@ export function treeDiff (nodes: Map<number, TreeNode> | null, from: number[], t
   const removed = from.filter(id => !after.has(id))
   const named = (ids: number[]) => ids
     .map(id => nodes?.get(id))
-    .filter((n): n is TreeNode => n != null && NAMED.includes(n.kind))
+    .filter((n): n is TreeNode => n != null && n.name !== '' && NAMED.includes(n.kind))
+  // Class and ascendancy starts cost nothing. Ids the data doesn't know are
+  // cluster jewel passives, which are points.
+  const kindOf = (id: number) => nodes?.get(id)?.kind
+  const isPoint = (id: number) => !['asc', 'ascstart', 'start'].includes(kindOf(id) ?? '')
   return {
-    added: added.length,
-    removed: removed.length,
+    added: added.filter(isPoint).length,
+    removed: removed.filter(isPoint).length,
+    addedAscendancy: added.filter(id => kindOf(id) === 'asc').length,
     addedNames: named(added),
     removedNames: named(removed)
   }
@@ -76,7 +83,7 @@ export interface Box { x: number, y: number, w: number, h: number }
 
 // The drawn part of the tree around these nodes.
 export function fitBox (nodes: TreeNode[], pad = 900): Box | null {
-  const drawn = nodes.filter(n => n.kind !== 'asc' && n.kind !== 'mastery')
+  const drawn = nodes.filter(n => n.kind !== 'asc' && n.kind !== 'ascstart' && n.kind !== 'mastery')
   if (!drawn.length) return null
   const xs = drawn.map(n => n.x)
   const ys = drawn.map(n => n.y)

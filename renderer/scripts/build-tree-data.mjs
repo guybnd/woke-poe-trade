@@ -5,7 +5,8 @@
 //
 // PoB is MIT licensed, and the tree is GGG's. Each node is one row:
 // [id, x, y, kind, name, stats, linked ids]. Ascendancy nodes have no place on
-// the drawn tree, so they sit at 0, 0 and are only ever listed by name.
+// the drawn tree, so they sit at 0, 0 and are only ever listed by name. They and
+// class starts are in here because builds list them among their points.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -84,15 +85,16 @@ function angle (orbit, index) {
 
 const rows = []
 for (const [id, n] of Object.entries(tree.nodes)) {
-  if (id === 'root' || n.group == null || n.isProxy || n.classStartIndex != null) continue
+  if (id === 'root' || n.group == null || n.isProxy) continue
   const group = tree.groups[n.group]
   if (!group || group.isProxy) continue
-  const kind = n.ascendancyName ? 'asc' : n.isKeystone ? 'key' : n.isNotable ? 'notable' : n.isMastery ? 'mastery' : n.isJewelSocket ? 'jewel' : 'small'
+  const kind = n.isAscendancyStart ? 'ascstart' : n.ascendancyName ? 'asc' : n.classStartIndex != null ? 'start' : n.isKeystone ? 'key' : n.isNotable ? 'notable' : n.isMastery ? 'mastery' : n.isJewelSocket ? 'jewel' : 'small'
   // Small passives are many and alike: their stats are the weight of this file
   // and nothing lists them.
-  const stats = kind === 'small' || kind === 'mastery' ? [] : n.stats ?? []
-  if (kind === 'asc') {
-    if (n.isNotable) rows.push([Number(id), 0, 0, kind, n.name, stats, []])
+  const stats = kind === 'small' || kind === 'mastery' || kind === 'start' || kind === 'ascstart' ? [] : n.stats ?? []
+  if (kind === 'ascstart' || kind === 'asc') {
+    const named = kind === 'asc' && n.isNotable
+    rows.push([Number(id), 0, 0, kind, named ? n.name : '', named ? stats : [], []])
     continue
   }
   const a = angle(n.orbit, n.orbitIndex)
@@ -102,7 +104,7 @@ for (const [id, n] of Object.entries(tree.nodes)) {
     Math.round(group.x + r * Math.sin(a)),
     Math.round(group.y - r * Math.cos(a)),
     kind,
-    kind === 'small' || kind === 'mastery' ? '' : n.name,
+    kind === 'small' || kind === 'mastery' || kind === 'start' ? '' : n.name,
     stats,
     (n.out ?? []).map(Number)
   ])
