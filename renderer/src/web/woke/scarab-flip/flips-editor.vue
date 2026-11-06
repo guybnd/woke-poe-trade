@@ -49,7 +49,7 @@ export default defineComponent({
       hideUntraded: configModelValue(w, 'hideUntraded'),
       defaultCost: DEFAULT_LIFEFORCE_PER_ITEM,
       stashTotals: computed({
-        get: () => props.configWidget.stashTotals !== false,
+        get: () => props.configWidget.stashTotals === true,
         set: (on: boolean) => { props.configWidget.stashTotals = on }
       }),
       stashHotkey: computed({

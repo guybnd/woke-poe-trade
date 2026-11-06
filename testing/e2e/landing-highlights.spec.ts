@@ -181,6 +181,92 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
   await saveAround(overlay, 'hl-price-tooltip', [panel.locator('.w-pc-table'), tip], 1240)
 })
 
+// Today's poe.ninja prices in place of the recording, for real numbers and a
+// real week of history.
+async function liveNinja (page: Page) {
+  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
+    .catch(e => { if (!process.env.WOKE_SHOTS_OFFLINE) throw e })
+  if (!live) return // A trial run with no network: the recording stands in.
+  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
+  const body = await live.text()
+  await page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+}
+
+// ---- 1b. Quick search (Ctrl+Space) ----
+
+// Opens the palette and types `query` once the saved prices have loaded.
+async function searchFor (overlay: Overlay, query: string, expected: RegExp) {
+  await overlay.pressHotkey('Ctrl + Space')
+  const panel = overlay.widget('woke-search')
+  const box = panel.getByRole('textbox', { name: 'Search' })
+  await expect(async () => {
+    await box.fill(query)
+    await expect(panel.getByRole('button', { name: expected }).first()).toBeVisible({ timeout: 500 })
+  }).toPass({ timeout: 20_000 })
+  return { panel, box, palette: panel.locator('[data-search-palette]') }
+}
+
+// The test app only knows its own league, but these prices are Allflame's.
+async function allflameLabel (palette: Locator) {
+  await palette.evaluate(root => {
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (n.textContent?.includes('Testleague')) n.textContent = n.textContent.replace('Testleague', 'Allflame')
+    }
+  })
+}
+
+test('search: any price, now and a week ago', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, palette } = await searchFor(overlay, 'mageblood', /Mageblood/)
+  await expect(panel.getByText('Trade site')).toBeVisible()
+  // First shot of a run, so the item art is still on its way from the CDN.
+  if (!process.env.WOKE_SHOTS_OFFLINE) await expect.poll(() => palette.locator('img').evaluateAll(imgs => imgs.length > 0 && imgs.every(i => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)), { timeout: 20_000 }).toBe(true)
+  await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
+  await saveAround(overlay, 'hl-search-price', [palette], 1240)
+})
+
+test('search: pin prices to compare them', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, box, palette } = await searchFor(overlay, 'divine orb', /Divine Orb/)
+  for (const [query, name] of [['divine orb', /Divine Orb/], ['headhunter', /Headhunter/], ['mirror of kalandra', /Mirror of Kalandra/]] as const) {
+    await box.fill(query)
+    await panel.getByRole('button', { name }).first().click()
+    await panel.getByRole('button', { name: 'Pin to compare' }).first().click()
+  }
+  await expect(panel.getByTitle('Remove from the comparison')).toHaveCount(3)
+  await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
+  await saveAround(overlay, 'hl-search-compare', [palette], 1240)
+})
+
+test('search: tools and settings by name', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { palette } = await searchFor(overlay, 'filter', /Loot filter editor/)
+  await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
+  await saveAround(overlay, 'hl-search-tools', [palette], 1240)
+})
+
+test('search: hover a result to see the item', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, palette } = await searchFor(overlay, 'headhunter', /Headhunter/)
+  await panel.getByRole('button', { name: /Headhunter/ }).first().hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('Leather Belt')
+  await allflameLabel(palette)
+  await saveAround(overlay, 'hl-search-hover', [palette, tip], 1240)
+})
+
 // ---- 2. Loot filter ----
 
 const BOOTS = ['Item Class: Boots', 'Rarity: Rare', 'Sol League', 'Wyvernscale Boots', '--------', 'Armour: 80', 'Evasion Rating: 80', '--------', 'Requirements:', 'Level: 62', '--------', 'Item Level: 83', '--------', '+40 to maximum Life'].join('\n')
@@ -454,6 +540,16 @@ test('market: the flips window', async ({ overlay }) => {
   await saveAround(overlay, 'hl-flips', [panel.locator('[data-w-panel]')], 1280)
 })
 
+test('market: uniques worth disenchanting', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-disenchant', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 }, wokeSizes: { main: { h: 590 } } } as never] })
+  await backdrop(overlay, 'frames/town.jpg')
+  const panel = overlay.widget('woke-disenchant')
+  await expect(panel.locator('.w-row:not(.w-row--head)').first()).toBeVisible({ timeout: 15_000 })
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-disenchant', [panel.locator('[data-w-panel]')], 1280)
+})
+
 test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
   await overlay.showScreen('screens/stash-scarab-real.png')
@@ -513,6 +609,92 @@ test('on screen: the Expedition card knows who is here', async ({ overlay }) => 
     await expect(overlay.page.getByText('Tujen is here')).toBeVisible({ timeout: 2000 })
   }).toPass({ timeout: 20_000 })
   await saveLow(overlay, 'hl-expedition')
+})
+
+// The League mechanics folder on the landing page: one card per mechanic, in
+// its own zone, with prices put in here (a sample, like the Expedition card's).
+const FLAT7 = [0, 0, 0, 0, 0, 0, 0]
+const MECHANIC_PRICES: Record<string, Array<[string, number]>> = {
+  Currency: [
+    ['Vivid Crystallised Lifeforce', 0.09], ['Primal Crystallised Lifeforce', 0.07],
+    ['Wild Crystallised Lifeforce', 0.12], ['Sacred Crystallised Lifeforce', 38]
+  ],
+  Fossil: [
+    ['Fractured Fossil', 95], ['Faceted Fossil', 62], ['Glyphic Fossil', 14], ['Hollow Fossil', 9],
+    ['Bloodstained Fossil', 7], ['Sanctified Fossil', 6], ['Gilded Fossil', 4], ['Prismatic Fossil', 3],
+    ['Pristine Fossil', 2], ['Dense Fossil', 1]
+  ],
+  Resonator: [['Prime Chaotic Resonator', 28], ['Powerful Chaotic Resonator', 4], ['Potent Chaotic Resonator', 1]],
+  Oil: [
+    ['Tainted Oil', 160], ['Golden Oil', 75], ['Prismatic Oil', 9], ['Silver Oil', 7], ['Opalescent Oil', 4],
+    ['Black Oil', 2], ['Crimson Oil', 1.5], ['Violet Oil', 1], ['Indigo Oil', 0.8], ['Azure Oil', 0.5]
+  ],
+  DeliriumOrb: [
+    ['Kalguuran Delirium Orb', 32], ['Fine Delirium Orb', 18], ['Skittering Delirium Orb', 12], ['Diviner\'s Delirium Orb', 9],
+    ['Fossilised Delirium Orb', 7], ['Blighted Delirium Orb', 4], ['Whispering Delirium Orb', 3], ['Abyssal Delirium Orb', 2]
+  ],
+  Fragment: [['Simulacrum', 95], ['Simulacrum Splinter', 1.4]],
+  Omen: [
+    ['Omen of Fortune', 340], ['Omen of the Soul Devourer', 110], ['Omen of Death\'s Door', 45], ['Omen of the Jeweller', 30],
+    ['Omen of Connections', 18], ['Omen of Amelioration', 12], ['Omen of Return', 6], ['Omen of Refreshment', 3]
+  ],
+  Beast: [
+    ['Wild Brambleback', 120], ['Fenumal Plagued Arachnid', 22], ['Vivid Vulture', 8],
+    ['Black Mórrigan', 6], ['Saqawine Rhex', 4], ['Wild Hellion Alpha', 3]
+  ]
+}
+
+async function mechanicPrices (overlay: Overlay) {
+  const recorded = fs.readFileSync(path.join(FIXTURES, 'http/poe.ninja/poe1/api/economy/current/dense/overviews.json'), 'utf8')
+  const extra = Object.entries(MECHANIC_PRICES).map(([type, lines]) =>
+    JSON.stringify({ type, lines: lines.map(([name, chaos]) => ({ name, chaos, graph: FLAT7 })) })).join(',')
+  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: recorded.replace(/\[\s*\{"type":"/, () => `[${extra},{"type":"`)
+  }))
+}
+
+// In the zone, hovering the icon.
+const MECHANIC_CARDS: Array<{ shot: string, frame: string, lines: string[], see: RegExp }> = [
+  { shot: 'hl-mech-harvest', frame: 'frames/cave-fight.jpg', lines: [area('HarvestLeagueHub')], see: /Crystallised Lifeforce/ },
+  { shot: 'hl-mech-delve', frame: 'frames/cave-fight.jpg', lines: [area('Delve_Main')], see: /Fractured Fossil/ },
+  { shot: 'hl-mech-blight', frame: 'frames/submerged-passage.jpg', lines: [area('MapWorldsBlightedCity')], see: /Tainted Oil/ },
+  { shot: 'hl-mech-delirium', frame: 'frames/submerged-passage.jpg', lines: [area('AfflictionTown1')], see: /Delirium Orb/ },
+  {
+    shot: 'hl-mech-bestiary',
+    frame: 'frames/cave-fight.jpg',
+    lines: [area('MapWorldsCaveTest'), '2026/11/05 20:49:11 18887484 cffb065b [INFO Client 34092] Einhar, Beastmaster: Exile! You came to hunt with Einhar!'],
+    see: /Wild Brambleback/
+  }
+]
+
+for (const card of MECHANIC_CARDS) {
+  test(`on screen: League mechanics folder, ${card.shot}`, async ({ overlay }) => {
+    await mechanicPrices(overlay)
+    await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-mechanics' }] })
+    await backdrop(overlay, card.frame)
+    await overlay.log(card.lines)
+    await expect(overlay.dockIcon('mechanics')).toBeVisible({ timeout: 20_000 })
+    await expect(async () => {
+      await overlay.hoverDockIcon('mechanics')
+      await expect(overlay.page.getByText(card.see).first()).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await saveLow(overlay, card.shot)
+  })
+}
+
+// Ritual has no zone of its own, so the full window, as Betrayal.
+test('on screen: League mechanics folder, Ritual omens', async ({ overlay }) => {
+  await mechanicPrices(overlay)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-mechanics' }] })
+  await backdrop(overlay, 'frames/town.jpg')
+  const w = overlay.widget('woke-mechanics')
+  await overlay.widget('menu').getByRole('button', { name: 'All tools' }).click()
+  await overlay.page.getByRole('button', { name: /League mechanics/ }).first().click()
+  await w.getByRole('tab', { name: /ritual/i }).click()
+  await expect(w.getByText('Omen of Fortune').first()).toBeVisible()
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-mech-ritual', [w.locator('[data-w-panel]').first()], 1280)
 })
 
 test('on screen: the campaign chip and its card', async ({ overlay }) => {
@@ -631,10 +813,7 @@ test('on screen: the death recap names the map\'s mods', async ({ overlay, fakeA
 
 test('market: Divine Font gem values', async ({ overlay }) => {
   // The recording has too few gems to price a font: today's live prices.
-  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
-  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
-  const body = await live.text()
-  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+  await liveNinja(overlay.page)
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-lab-gems', wmTitle: 'Lab gems', wmFlags: ['uninitialized'], anchor: { pos: 'tl', x: 40, y: 30 } }] })
   await backdrop(overlay, 'frames/town.jpg')
   const w = overlay.widget('woke-lab-gems')
@@ -666,10 +845,7 @@ const cursorOf = (screen: string): { x: number, y: number } =>
 
 // Today's prices, for the screens where the recording is too thin to show them.
 async function livePrices (overlay: Overlay) {
-  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
-  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
-  const body = await live.text()
-  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+  await liveNinja(overlay.page)
 }
 
 test('filter: today\'s prices, and the moves to pick from', async ({ overlay }) => {

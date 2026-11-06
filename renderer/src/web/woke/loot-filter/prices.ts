@@ -42,11 +42,12 @@ export function useFilterPrices (rule: () => UniqueRule) {
     return safetyLookup(snap.items, uniquesOnBase)
   })
   const breakdown = computed(() => priceBreakdown(index.snapshot.value?.items ?? [], uniquesOnBase))
+  const items = computed(() => index.snapshot.value?.items ?? [])
   const updatedAt = computed(() => index.snapshot.value?.ts ?? null)
   const league = computed(() => index.snapshot.value?.league ?? null)
   // poe.ninja is only downloaded while something wants prices.
   function wantPrices () {
     try { ninja.queuePricesFetch() } catch {}
   }
-  return { lookup, safety, pricedTypes, currentLeague, breakdown, updatedAt, league, wantPrices }
+  return { lookup, safety, pricedTypes, currentLeague, breakdown, items, updatedAt, league, wantPrices }
 }

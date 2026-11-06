@@ -1,9 +1,6 @@
 <template>
   <WPanel ref="panel" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
-    <template #actions>
-      <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
-    </template>
     <template #tabs>
       <WTabs v-model="tab" :options="tabOptions" />
     </template>

@@ -11,10 +11,10 @@ title: Common issues
 
 3. Are you playing with Vulkan renderer? Update GPU drivers.
 
-    If Awakened works for you with DirectX11/12 renderer,
+    If the app works for you with DirectX11/12 renderer,
     then problem is old Vulkan drivers for sure.
 
-4. Delete `%appdata%\awakened-poe-trade`
+4. Delete `%appdata%\woke-poe-trade`
 
     If needed, backup `apt-data` folder with your configuration inside.
 
@@ -22,26 +22,26 @@ title: Common issues
 
     Launch them later one at a time to identify **conflict**.
 
-6. Restart Awakened PoE Trade.
+6. Restart Woke PoE Trade.
 
     *(don't forget to quit first, otherwise launching second instance will do nothing).*
 
-7. As last resort, go to Discord. But if you don't describe something specific about
+7. As a last resort, [open an issue](https://github.com/guybnd/woke-poe-trade/issues). If you don't describe something specific about
     your problem, **you will most likely be directed to this page**.
 
 ---
 
 - 🔥[There are no stats to select from when price checking](/no-item-mods)
 - [Failed to load leagues](/failed-load-leagues)
-- [How to remove the stopwatch in center of screen?](https://github.com/SnosMe/awakened-poe-trade/issues/219)
-- [Sends a whisper when doing price-check](https://github.com/SnosMe/awakened-poe-trade/issues/178)
+- [How to remove the stopwatch in center of screen?](https://github.com/SnosMe/awakened-poe-trade/issues/219) (upstream)
+- [Sends a whisper when doing price-check](https://github.com/SnosMe/awakened-poe-trade/issues/178) (upstream)
 
 ## Windows
 
 - 🔥[Nothing happens when I try to price check](/nothing-happens)
-- [Can't open settings via tray icon when game is active](https://github.com/SnosMe/awakened-poe-trade/issues/265)
+- [Can't open settings via tray icon when game is active](https://github.com/SnosMe/awakened-poe-trade/issues/265) (upstream)
 
 ## Linux
 
-- [Tray icon is not shown](https://github.com/SnosMe/awakened-poe-trade/issues/106)
-- 🔥[Screen is black](https://github.com/SnosMe/awakened-poe-trade/issues/185)
+- [Tray icon is not shown](https://github.com/SnosMe/awakened-poe-trade/issues/106) (upstream)
+- 🔥[Screen is black](https://github.com/SnosMe/awakened-poe-trade/issues/185) (upstream)

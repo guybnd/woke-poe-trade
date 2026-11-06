@@ -76,6 +76,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Economy | Investments | League-start buys ranked from past leagues |
 | Economy | Lab gems | Divine Font gem values by colour |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
+| Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
 | Economy | Farming | Session profit per hour |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |
 | Economy | Session analytics | Profit per map, strategy and hour over time |

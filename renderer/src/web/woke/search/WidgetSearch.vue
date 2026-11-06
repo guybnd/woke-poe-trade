@@ -5,7 +5,7 @@
         <div v-if="pins.length" :class="$style.pins">
           <button v-for="(p, i) in pins" :key="key(p)" v-item-tip="p" :class="[$style.pin, { [$style.pinTop]: i === 0 && pins.length > 1 }]"
             title="Remove from the comparison" @click="togglePin(p)">
-            <span class="w-trunc" :class="rarityClass(p.type)">{{ p.name }}<span v-if="p.variant" class="w-dim"> {{ p.variant }}</span></span>
+            <span class="w-trunc" :class="rarityClass(p.type)">{{ p.name }}<span v-if="p.variant" class="w-dim ml-1">{{ p.variant }}</span></span>
             <WPrice :chaos="p.chaos" :divine="divine" />
           </button>
         </div>

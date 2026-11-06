@@ -4,7 +4,9 @@
     "dev": "vitepress dev"
   },
   "devDependencies": {
+    "playwright": "^1.63.0",
     "postcss": "^8.2.14",
+    "sharp": "^0.34.4",
     "tailwindcss": "3.x.x",
     "vitepress": "^1.0.0-beta.1",
     "vue": "^3.3.4"

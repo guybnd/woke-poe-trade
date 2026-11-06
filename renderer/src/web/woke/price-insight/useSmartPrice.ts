@@ -3,7 +3,7 @@ import { ItemRarity, ParsedItem } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { graphGaps } from '../market/parse'
-import { CATEGORY_TYPES } from '../market/types'
+import { typeForSlug } from '../market/types'
 import { dailyHistory } from '../market/db'
 import type { Insight } from './insight'
 import { buildBlend, headlinePrice } from './sources'
@@ -93,7 +93,7 @@ export function useSmartPrice (
     leagueRows.value = null
     let slug = ''
     try { slug = new URL(n.url).pathname.split('/')[4] ?? '' } catch {}
-    const type = CATEGORY_TYPES[slug]
+    const type = typeForSlug(slug)
     const today = { chaos: n.chaos, ts: Date.now() }
     if (!type) { leagueRows.value = leagueSeries([], today); return }
     leagueLoading.value = true

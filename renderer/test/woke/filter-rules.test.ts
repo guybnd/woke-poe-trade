@@ -95,13 +95,14 @@ describe('presets', () => {
     quiet: { on: true, keepTiers: 2 },
     bigger: { on: true, size: 40 },
     colourBlind: { on: true },
-    sixSockets: { on: true }
+    sixSockets: { on: true },
+    dust: { on: true, fromPrices: true, line: 5000 }
   }
   const lookup = () => ({ chaos: 1, thin: false }) as never
 
   function composed (level: typeof LEVELS[number], p: Presets): FilterDoc {
     const doc = parseFilter(neverSink(level))
-    insertBuildBlocks(doc, presetBlocks(doc, p, lookup))
+    insertBuildBlocks(doc, presetBlocks(doc, p, lookup, ['Iron Hat', "Assassin's Garb"]))
     applyPresetChanges(doc, p)
     return doc
   }

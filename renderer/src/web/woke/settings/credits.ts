@@ -30,6 +30,7 @@ export const CREDIT_GROUPS: CreditGroup[] = [
       { name: 'exile-leveling', url: 'https://github.com/HeartofPhos/exile-leveling', use: 'The campaign route, area data and gem sources.', license: 'MIT' },
       { name: 'GemCheck', url: 'https://github.com/Lebedevsd/GemCheck', use: 'Transfigured gem colours and the Divine Font maths.', license: 'MIT' },
       { name: 'NeverSink filter', url: 'https://github.com/NeverSinkDev/NeverSink-Filter', use: 'The loot filter base and its alert sounds.', license: 'MIT' },
+      { name: 'poe-disenchant-tool', url: 'https://github.com/deronek/poe-disenchant-tool', use: 'The logic of the Disenchant panel: dust per chaos, catalysed jewellery, gold fees and the uniques that take no quality.', license: 'MIT' },
       { name: 'Path of Building Community', url: 'https://github.com/PathOfBuildingCommunity/PathOfBuilding', use: 'The build files and codes the PoB builds panel reads.', license: 'MIT' },
       { name: 'RePoE', url: 'https://github.com/brather1ng/RePoE', use: 'Game data behind item parsing, through Awakened PoE Trade.', license: 'MIT' },
       { name: 'Sidekick', url: 'https://github.com/Sidekick-Poe/Sidekick', use: 'The copy of the game\'s item header and divider art in tooltips.', license: 'MIT' },
@@ -41,7 +42,7 @@ export const CREDIT_GROUPS: CreditGroup[] = [
     title: 'Websites we use',
     credits: [
       { name: 'Path of Exile website', url: 'https://www.pathofexile.com/trade', use: 'Listings for price checks, saved and live searches, and the Atlas tree page.' },
-      { name: 'poe.ninja', url: 'https://poe.ninja/', use: 'Prices, market trackers and league investment history.' },
+      { name: 'poe.ninja', url: 'https://poe.ninja/', use: 'Prices, market trackers, league investment history and unique listing counts.' },
       { name: 'poeprices.info', url: 'https://www.poeprices.info/', use: 'Price predictions for rare items.' },
       { name: 'PoELab', url: 'https://www.poelab.com/', use: 'The daily Labyrinth layouts in the Lab panel, for your lab runs.' },
       { name: "CraniumCarnage's challenge guide", url: 'https://craniumviolence.github.io/', use: 'The guide for the achievements window we are building.' },
