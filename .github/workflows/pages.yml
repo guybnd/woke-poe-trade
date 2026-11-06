@@ -17,6 +17,12 @@ on:
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
+# Pages refuses a deploy while another is running, so close merges wait their
+# turn. The newest waiting one wins, as it has everything the others had.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
