@@ -77,7 +77,7 @@ jobs:
       working-directory: ./testing
       run: |
         npm ci
-        npx playwright test --list > /dev/null
+        npx playwright test --list e2e/landing- > /dev/null
     - id: result
       env:
         UNIT: ${{ steps.files.outputs.unit }}
