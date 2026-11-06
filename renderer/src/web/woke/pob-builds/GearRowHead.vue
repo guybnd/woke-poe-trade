@@ -13,7 +13,7 @@
       <template v-if="!small">
         <SocketDots v-for="(grp, j) in dots" :key="j" :colours="grp" />
       </template>
-      <WButton v-if="trade" size="sm" variant="ghost" icon="fas fa-search" :title="`Search the trade site for ${name}`" @click="openTrade" />
+      <WButton v-if="canCheck" size="sm" variant="ghost" icon="fas fa-search" :title="`Price check ${name} with its stats`" @click="priceCheck" />
     </span>
   </div>
 </template>
@@ -23,12 +23,14 @@
 // head alone, so hovering a gem below shows that gem's tooltip instead.
 import { computed, useCssModule } from 'vue'
 import { WButton } from '../ui'
-import { useLeagues } from '@/web/background/Leagues'
+import { AppConfig } from '@/web/Config'
+import { Host } from '@/web/background/IPC'
 import SocketDots from './SocketDots.vue'
 import { slotLabel, socketGroups } from './build-model'
 import type { GearRow } from './build-model'
 import type { GemColour } from './gems'
 import { itemArt } from './item-art'
+import { pobItemText } from './item-text'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import type { PobItem } from './widget'
 
@@ -78,20 +80,25 @@ const cellClass = computed(() => {
   }
 })
 
-const leagues = useLeagues()
-const trade = computed(() => {
-  const it = item.value
-  const league = leagues.selectedId.value
-  if (!it || !league || (it.rarity !== 'UNIQUE' && it.rarity !== 'RELIC')) return null
-  const query = {
-    query: { status: { option: 'online' }, name: it.name, ...(it.base ? { type: it.base } : {}) },
-    sort: { price: 'asc' }
-  }
-  return `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`
-})
+// PoB writes items in English, which only the English item data can read.
+const canCheck = computed(() => Boolean(item.value) && AppConfig().language === 'en')
 
-function openTrade () {
-  if (trade.value) window.open(trade.value)
+function priceCheck (e: MouseEvent) {
+  if (!item.value) return
+  hideTip()
+  const from = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  Host.selfDispatch({
+    name: 'MAIN->CLIENT::item-text',
+    payload: {
+      clipboard: pobItemText(item.value),
+      position: {
+        x: window.screenX + from.x + from.width / 2,
+        y: window.screenY + from.y + from.height / 2
+      },
+      focusOverlay: true,
+      target: 'price-check'
+    }
+  })
 }
 </script>
 

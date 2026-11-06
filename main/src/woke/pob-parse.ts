@@ -201,7 +201,21 @@ const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShi
   [/^LevelReq:\s*(\d+)/, 'levelReq']
 ]
 
-export function parseItemText (text: string): PobItem {
+// "+(41-55) to Life" at range 0.5 is "+48 to Life", as PoB shows it. Range 1
+// is the top of the roll.
+function applyRange (line: string, range: number): string {
+  return line.replace(/([+-]?)\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g, (_, sign: string, lo: string, hi: string) => {
+    const min = Number(lo)
+    const max = Number(hi)
+    const value = min + range * (max - min)
+    const decimals = /\./.test(lo + hi) ? 2 : 0
+    const out = Number(value.toFixed(decimals))
+    return `${sign}${out}`
+  })
+}
+
+// `ranges`: PoB's <ModRange> elements, by the mod line's place in the item.
+export function parseItemText (text: string, ranges?: Map<number, number>): PobItem {
   const lines = decodeEntities(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   const item: PobItem = { rarity: '', name: '', base: '', sockets: '', implicits: [], mods: [] }
   let i = 0
@@ -215,6 +229,7 @@ export function parseItemText (text: string): PobItem {
   // picks (Watcher's Eye): a mod shows when any of them lists it.
   const variants: number[] = []
   let implicitsLeft = -1
+  let modLine = 0
   const kinds: PobModKind[] = []
   for (; i < lines.length; i++) {
     const line = lines[i]
@@ -240,12 +255,16 @@ export function parseItemText (text: string): PobItem {
     let mod = line
     let allowed = true
     let kind: PobModKind = ''
+    let range: number | undefined
+    modLine++
     for (const tag of mod.matchAll(/\{([^}]*)\}/g)) {
+      const r = /^range:([\d.]+)$/.exec(tag[1])
+      if (r) range = Number(r[1])
       const v = /^variant:([\d,]+)$/.exec(tag[1])
       if (v && variants.length && !v[1].split(',').map(Number).some(n => variants.includes(n))) allowed = false
       if (tag[1] === 'crafted' || tag[1] === 'fractured') kind = tag[1]
     }
-    mod = mod.replace(/\{[^}]*\}/g, '').trim()
+    mod = applyRange(mod.replace(/\{[^}]*\}/g, '').trim(), range ?? ranges?.get(modLine) ?? 0.5)
     if (!mod) continue
     if (implicitsLeft > 0) {
       implicitsLeft--
@@ -266,7 +285,14 @@ function parseItemSets (xml: string): PobItemSet[] {
   for (const m of block[2].matchAll(/<Item\b([^>]*)>([\s\S]*?)<\/Item>/g)) {
     const id = attrs(m[1]).id
     // Newer PoB versions put <ModRange> etc. inside <Item>; keep the text only.
-    if (id) items.set(id, parseItemText(m[2].replace(/<[^>]+>/g, '')))
+    const ranges = new Map<number, number>()
+    for (const r of m[2].matchAll(/<ModRange\b([^>]*?)\/?>/g)) {
+      const a = attrs(r[1])
+      const line = num(a.id)
+      const range = num(a.range)
+      if (line != null && range != null) ranges.set(line, range)
+    }
+    if (id) items.set(id, parseItemText(m[2].replace(/<[^>]+>/g, ''), ranges))
   }
   const slotsOf = (body: string): PobItemSlot[] => {
     const out: PobItemSlot[] = []

@@ -45,6 +45,18 @@ test('at 1440p, where panels are zoomed, the item tooltip stays at the cursor an
   expect(tipBox.y + tipBox.height).toBeLessThanOrEqual(1440)
 })
 
+test('a gear row opens the price check on that item, with its stats and resistance total', async ({ overlay }) => {
+  const detail = await openBuild(overlay, 1920, 1080)
+  await detail.getByRole('tab', { name: 'Gear' }).click()
+  const row = detail.locator('[class*="gearRow"]').filter({ hasText: 'Dread Shell' }).first()
+  await row.hover()
+  await row.getByRole('button', { name: /Price check/ }).or(row.getByTitle(/Price check/)).first().click()
+  const panel = overlay.widget('price-check')
+  await expect(panel).toContainText('total Elemental Resistance')
+  await overlay.page.waitForTimeout(500)
+  await overlay.snap('price check from build')
+})
+
 test('the tooltip goes away when the overlay closes', async ({ overlay }) => {
   const detail = await openBuild(overlay, 1920, 1080)
   await detail.getByRole('tab', { name: 'Gear' }).click()

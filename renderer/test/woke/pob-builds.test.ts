@@ -5,6 +5,23 @@ import { buildFacts, chainGems, gearLayout, loadoutOf, noteRuns, pickStage, rele
 import { nextGems } from '@/web/woke/pob-builds/gems'
 import type { PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
 
+describe('mod ranges', () => {
+  it('uses the roll PoB saved, inline or by line number, else the middle', () => {
+    const item = parseItemText(`
+      Rarity: RARE
+      Grim March
+      Warlock Boots
+      Implicits: 1
+      +(10-20) to Strength
+      {range:1}(56-74)% increased Energy Shield
+      +(41-55) to maximum Life
+      Adds (6-9) to (12-16) Fire Damage
+    `, new Map([[3, 0]]))
+    expect(item.implicits).toEqual(['+15 to Strength'])
+    expect(item.mods).toEqual(['74% increased Energy Shield', '+41 to maximum Life', 'Adds 8 to 14 Fire Damage'])
+  })
+})
+
 describe('parseItemText', () => {
   const item = parseItemText(`
     Rarity: RARE
