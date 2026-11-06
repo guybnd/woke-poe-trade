@@ -6,11 +6,14 @@
     @pointermove="handlePointerMove"
     @pointerup="handlePointerEnd"
     @pointercancel="handlePointerEnd"
+    @mousedown="handleMouseDown"
+    @dragstart.prevent
     @click.capture="swallowDragClick">
     <button type="button" :class="$style.label" @click="filter.disabled = !filter.disabled">{{ label }}</button>
     <div :class="$style.values">
     <input :class="$style.input" step="any" type="number"
       v-model.number="inputMin"
+      @input="showClamped"
       @focus="inputFocus"
       @blur="inputMinBlur"
       :style="{ width: `${1.2 + Math.max(String(inputMin).length, 2)}ch` }"
@@ -19,6 +22,7 @@
       <span>–</span>
       <input :class="$style.input" step="any" type="number" data-bound="max"
         v-model.number="inputMax"
+        @input="showClamped"
         @focus="inputFocus"
         :style="{ width: `${1.2 + Math.max(String(inputMax).length, 2)}ch` }"
         placeholder="…"
@@ -31,6 +35,7 @@
 <script lang="ts">
 import { defineComponent, PropType, computed, ref, watch } from 'vue'
 import { FilterNumeric } from './interfaces'
+import { clampToLimit, filterCeiling } from './numeric-limits'
 
 export default defineComponent({
   emits: [], // mutates filter
@@ -42,9 +47,19 @@ export default defineComponent({
     name: {
       type: String,
       required: true
+    },
+    // Highest value the game has for this filter. Stock and the like have none.
+    limit: {
+      type: Number,
+      default: undefined
     }
   },
   setup (props) {
+    let ceiling = filterCeiling(props.limit, props.filter)
+    watch(() => [props.filter, props.limit] as const, () => {
+      ceiling = filterCeiling(props.limit, props.filter)
+    })
+
     const _inputMin = ref<number | ''>('')
     watch(() => props.filter, (filter) => {
       _inputMin.value = filter.value
@@ -57,7 +72,8 @@ export default defineComponent({
 
     const inputMin = computed<number | ''>({
       get () { return _inputMin.value },
-      set (value) {
+      set (raw) {
+        const value = (typeof raw === 'number') ? clampToLimit(raw, ceiling) : raw
         _inputMin.value = value
         if (typeof value === 'number') {
           props.filter.value = value
@@ -68,7 +84,8 @@ export default defineComponent({
     })
     const inputMax = computed<number | ''>({
       get () { return _inputMax.value },
-      set (value) {
+      set (raw) {
+        const value = (typeof raw === 'number') ? clampToLimit(raw, ceiling) : raw
         _inputMax.value = value
         if (typeof value === 'number') {
           props.filter.max = value
@@ -79,6 +96,10 @@ export default defineComponent({
     })
 
     type Bound = 'min' | 'max'
+
+    function restingInputAt (target: EventTarget | null): HTMLInputElement | null {
+      return (target instanceof HTMLInputElement && document.activeElement !== target) ? target : null
+    }
 
     function boundAt (target: EventTarget | null): Bound {
       return (target as HTMLElement | null)?.dataset?.bound === 'max' ? 'max' : 'min'
@@ -98,9 +119,10 @@ export default defineComponent({
     }
 
     const DRAG_START_PX = 3
-    const DRAG_STEP_PX = 8
+    const DRAG_STEP_PX = 20
     const dragging = ref(false)
-    let drag: { startY: number, bound: Bound, applied: number } | null = null
+    // `input` is the number you pressed, if it wasn't being typed in: letting go without a drag opens it.
+    let drag: { startY: number, bound: Bound, applied: number, input: HTMLInputElement | null } | null = null
     let justDragged = false
 
     return {
@@ -114,7 +136,14 @@ export default defineComponent({
       },
       handlePointerDown (e: PointerEvent) {
         justDragged = false
-        drag = (e.button === 0) ? { startY: e.clientY, bound: boundAt(e.target), applied: 0 } : null
+        drag = (e.button === 0)
+          ? { startY: e.clientY, bound: boundAt(e.target), applied: 0, input: restingInputAt(e.target) }
+          : null
+      },
+      // Pressing a number would focus it and start selecting text, which is no use if this becomes a drag.
+      // Typing starts on release instead; a number already being typed in keeps its caret and selection.
+      handleMouseDown (e: MouseEvent) {
+        if (e.button === 0 && restingInputAt(e.target)) e.preventDefault()
       },
       handlePointerMove (e: PointerEvent) {
         if (!drag) return
@@ -139,7 +168,8 @@ export default defineComponent({
           drag.applied = steps
         }
       },
-      handlePointerEnd () {
+      handlePointerEnd (e: PointerEvent) {
+        if (e.type === 'pointerup' && drag?.input && !dragging.value) drag.input.focus()
         justDragged = dragging.value
         dragging.value = false
         drag = null
@@ -150,6 +180,12 @@ export default defineComponent({
           justDragged = false
           e.stopPropagation()
         }
+      },
+      // A capped value that doesn't change the model (6, then typing 67) wouldn't redraw the box.
+      showClamped (e: Event) {
+        const el = e.target as HTMLInputElement
+        const value = (el.dataset.bound === 'max') ? _inputMax.value : _inputMin.value
+        if (typeof value === 'number' && el.valueAsNumber !== value) el.value = String(value)
       },
       inputFocus (e: FocusEvent) {
         const target = e.target as HTMLInputElement
@@ -216,6 +252,7 @@ export default defineComponent({
   @apply bg-transparent;
   @apply select-all;
   color: inherit;
+  cursor: inherit;
 
   &:hover,
   &:focus {
@@ -226,6 +263,6 @@ export default defineComponent({
     color: var(--w-faint);
   }
 
-  &:focus { cursor: none; }
+  &:focus { cursor: text; }
 }
 </style>

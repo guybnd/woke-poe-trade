@@ -172,9 +172,9 @@ test('filter tiles change by scrolling or dragging', async ({ overlay, page }) =
   const atRest = await tile.getAttribute('class')
   await page.mouse.down()
   await page.mouse.move(x, y - 40, { steps: 5 })
-  await expect(value).toHaveValue('88')
+  await expect(value).toHaveValue('85')
   await page.mouse.move(x, y - 24, { steps: 3 })
-  await expect(value).toHaveValue('86')
+  await expect(value).toHaveValue('84')
   await page.mouse.up()
 
   // Letting go didn't count as a click on the label, which would switch the filter off.
