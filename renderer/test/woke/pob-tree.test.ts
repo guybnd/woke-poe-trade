@@ -2,12 +2,11 @@
 import fs from 'fs'
 import path from 'path'
 import { describe, expect, it } from 'vitest'
-import { fitBox, linkState, nodeState, treeDiff } from '@/web/woke/pob-builds/passive-tree'
-import type { NodeKind, TreeNode } from '@/web/woke/pob-builds/passive-tree'
+import { fitBox, linkState, nodeAt, nodeNote, nodeState, readNodes, treeDiff } from '@/web/woke/pob-builds/passive-tree'
+import type { NodeKind, TreeArt } from '@/web/woke/pob-builds/passive-tree'
 
-type Row = [number, number, number, NodeKind, string, string[], number[]]
-const rows = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/tree/passive-tree.json'), 'utf-8')) as Row[]
-const tree = new Map<number, TreeNode>(rows.map(([id, x, y, kind, name, stats, out]) => [id, { id, x, y, kind, name, stats, out }]))
+const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/tree/passive-tree.json'), 'utf-8')) as TreeArt & { nodes: Parameters<typeof readNodes>[0] }
+const tree = readNodes(data.nodes)
 const byName = (name: string) => [...tree.values()].find(n => n.name === name)!
 
 describe('passive tree data', () => {
@@ -18,6 +17,20 @@ describe('passive tree data', () => {
     expect(n.stats).toContain('+12% to all Elemental Resistances')
     expect(n.out.length).toBeGreaterThan(0)
     expect(Math.abs(n.x) + Math.abs(n.y)).toBeGreaterThan(0)
+  })
+
+  it('has art for every node it draws, and stats on small passives', () => {
+    const missing = [...tree.values()].filter(n => {
+      if (n.kind === 'small') return !data.sprites.normalActive.coords[n.icon] || !data.sprites.normalInactive.coords[n.icon]
+      if (n.kind === 'notable') return !data.sprites.notableActive.coords[n.icon] || !data.sprites.notableInactive.coords[n.icon]
+      if (n.kind === 'key') return !data.sprites.keystoneActive.coords[n.icon] || !data.sprites.keystoneInactive.coords[n.icon]
+      return false
+    })
+    expect(missing.map(n => n.name)).toEqual([])
+    expect([...tree.values()].some(n => n.kind === 'small' && n.stats.length > 0)).toBe(true)
+    for (const sheet of Object.values(data.sprites)) expect(sheet.url).toMatch(/^https:\/\/web\.poecdn\.com\//)
+    expect(data.sprites.frame.coords.NotableFrameAllocated).toBeDefined()
+    expect(data.groups.some(g => g[2] && data.sprites.groupBackground.coords[g[2]])).toBe(true)
   })
 })
 
@@ -67,9 +80,36 @@ describe('node and line states', () => {
   })
 })
 
+describe('nodeAt', () => {
+  const node = (id: number, x: number, y: number, kind: NodeKind = 'small') => ({ id, x, y, kind, name: '', stats: [], out: [], icon: '', group: 0, radius: 0, angle: 0 })
+  const view = { zoom: 0.1, ox: 0, oy: 0 }
+
+  it('takes the nearest within reach, even zoomed out', () => {
+    const nodes = [node(1, 0, 0), node(2, 1000, 0)]
+    expect(nodeAt(nodes, 12, 0, view, 18)?.id).toBe(1)
+    expect(nodeAt(nodes, 90, 0, view, 18)?.id).toBe(2)
+    expect(nodeAt(nodes, 50, 0, view, 18)).toBeNull()
+  })
+
+  it('leaves out what is not drawn', () => {
+    expect(nodeAt([node(1, 0, 0, 'asc')], 0, 0, view, 18)).toBeNull()
+  })
+
+  it('reads a big node across its whole face', () => {
+    expect(nodeAt([node(1, 0, 0, 'key')], 60, 0, { zoom: 1, ox: 0, oy: 0 }, 18)?.id).toBe(1)
+  })
+})
+
+describe('nodeNote', () => {
+  it('says what the tree does to a node', () => {
+    expect(nodeNote('add')).toContain('New')
+    expect(nodeNote('')).toBeUndefined()
+  })
+})
+
 describe('fitBox', () => {
   it('frames only what is drawn', () => {
-    const n = (x: number, y: number, kind: NodeKind) => ({ id: 1, x, y, kind, name: '', stats: [], out: [] })
+    const n = (x: number, y: number, kind: NodeKind) => ({ id: 1, x, y, kind, name: '', stats: [], out: [], icon: '', group: 0, radius: 0, angle: 0 })
     expect(fitBox([n(0, 0, 'small'), n(100, 50, 'notable'), n(9999, 9999, 'asc')], 10)).toEqual({ x: -10, y: -10, w: 120, h: 70 })
     expect(fitBox([n(1, 1, 'asc')])).toBeNull()
   })
