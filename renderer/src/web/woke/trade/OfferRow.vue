@@ -16,7 +16,7 @@
             <span :class="$style.who" class="w-trunc">{{ offer.who }}</span>
             <span v-if="statusChip" :class="[$style.chip, statusChip.up && $style.up, statusChip.down && $style.down]">{{ statusChip.text }}</span>
             <span v-if="offer.repeats" :class="$style.chip" :title="`Whispered ${offer.repeats + 1} times`">×{{ offer.repeats + 1 }}</span>
-            <span class="w-faint w-num ml-auto whitespace-nowrap">{{ age }}</span>
+            <span v-if="!canReopen" class="w-faint w-num ml-auto whitespace-nowrap">{{ age }}</span>
           </span>
           <span :class="$style.item">
             <img v-if="art && !artFailed" :src="art" alt="" :class="$style.art" @error="artFailed = true">
@@ -27,7 +27,13 @@
           </span>
         </template>
       </button>
-      <button v-if="canReopen" type="button" :class="[$style.btn, $style.action]" title="Put this offer back in the queue" data-reopen @click="$emit('reopen')">Reopen</button>
+      <span v-if="canReopen" :class="[$style.slot, $style.slotClosed]">
+        <span :class="$style.age" class="w-faint w-num">{{ age }}</span>
+        <span :class="$style.closedActions">
+          <button type="button" :class="[$style.btn, $style.action]" title="Put this offer back in the queue" data-reopen @click="$emit('reopen')">Reopen</button>
+          <button type="button" :class="[$style.btn, $style.iconBtn]" title="Remove from History" aria-label="Remove from History" data-remove @click="$emit('remove')"><i class="fas fa-times" /></button>
+        </span>
+      </span>
       <span v-else-if="oneLine" :class="[$style.slot, { [$style.slotHover]: rowStyle === 'hover' && next }]">
         <span v-if="rowStyle === 'hover' || !next" :class="$style.age" class="w-faint w-num" @click="$emit('expand')">{{ age }}</span>
         <button v-if="next" type="button" :class="[$style.btn, $style.primary, $style.action, $style.next]" :title="`${next.label} ${offer.who}`" data-next
@@ -84,7 +90,7 @@ const props = withDefaults(defineProps<{
 }>(), { rowStyle: 'hover', expanded: false })
 
 defineEmits<{
-  (e: 'expand' | 'traded' | 'dismiss' | 'reopen'): void
+  (e: 'expand' | 'traded' | 'dismiss' | 'reopen' | 'remove'): void
   (e: 'reply', id: ReplyId): void
 }>()
 
@@ -192,6 +198,13 @@ const otherButtons = computed<Array<{ id: ReplyId, label: string, title: string 
 .slotHover .next { position: absolute; inset: 0 0 0 auto; opacity: 0; pointer-events: none; }
 .row:hover .slotHover .next, .slotHover .next:focus-visible { opacity: 1; pointer-events: auto; }
 .row:hover .slotHover .age { visibility: hidden; }
+/* A closed row: its age at rest, what you can do with it on hover. */
+.slotClosed { width: calc(84px * var(--w-text-scale, 1)); }
+.slotClosed .age { cursor: default; }
+.closedActions { position: absolute; inset: 0 0 0 auto; display: flex; align-items: center; gap: 4px; opacity: 0; pointer-events: none; }
+.row:hover .closedActions, .closedActions:focus-within { opacity: 1; pointer-events: auto; }
+.row:hover .slotClosed .age, .slotClosed:focus-within .age { visibility: hidden; }
+.iconBtn { width: calc(22px * var(--w-text-scale, 1)); padding: 0; }
 .tab { display: flex; align-items: center; gap: 8px; font-size: calc(11.5px * var(--w-text-scale, 1)); line-height: 1.35; padding-top: 2px; }
 .grid { --n: 12; display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 1px; width: 49px; height: 49px; flex: none; }
 .grid i { background: color-mix(in srgb, var(--w-fg) 9%, transparent); border-radius: 0.5px; }

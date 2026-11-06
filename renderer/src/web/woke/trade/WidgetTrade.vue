@@ -9,9 +9,9 @@
         <div v-if="book.afk" class="text-xs" style="padding: 2px var(--w-pad); color: var(--w-warn);">You're AFK: buyers get your autoreply.</div>
         <OfferRow v-for="o in shown" :key="o.id" :offer="o" :expanded="o.id === expandedId" :now="now" :row-style="rowStyle"
           :step-key="o.id === frontId ? config.stepHotkey : null" :value="valueText(o)" :delta="deltaOf(o)" :art="artFor(o)"
-          @expand="expand(o)" @reply="reply(o, $event)" @traded="traded(o)" @dismiss="dismissOffer(o)" @reopen="reopenOffer(o)" />
+          @expand="expand(o)" @reply="reply(o, $event)" @traded="traded(o)" @dismiss="dismissOffer(o)" @reopen="reopenOffer(o)" @remove="removeOffer(o)" />
         <OfferHistory :offers="older" :open="historyOpen" :now="now" :row-style="rowStyle" :art-for="artFor"
-          @toggle="toggleHistory" @reopen="reopenOffer" />
+          @toggle="toggleHistory" @reopen="reopenOffer" @remove="removeOffer" />
         <div v-if="!tipClosed('trade-step-key')" class="w-faint text-xs" :class="$style.hint" data-tip="trade-step-key">
           <span v-if="config.stepHotkey"><WKbd :keys="config.stepHotkey" /> next step for the top offer</span>
           <span v-else>A "next step" key answers without the mouse. <button type="button" :class="$style.hintLink" data-open-settings @click="openSettingsPage(wm, 'Trades')">Set it in Settings</button></span>
@@ -36,9 +36,9 @@
         </WEmpty>
         <OfferRow v-for="o in shown" :key="o.id" :offer="o" :expanded="o.id === expandedId" :now="now" :row-style="rowStyle"
           :step-key="o.id === frontId ? config.stepHotkey : null" :value="valueText(o)" :delta="deltaOf(o)" :art="artFor(o)"
-          @expand="expand(o)" @reply="reply(o, $event)" @traded="traded(o)" @dismiss="dismissOffer(o)" @reopen="reopenOffer(o)" />
+          @expand="expand(o)" @reply="reply(o, $event)" @traded="traded(o)" @dismiss="dismissOffer(o)" @reopen="reopenOffer(o)" @remove="removeOffer(o)" />
         <OfferHistory :offers="older" :open="historyOpen" :now="now" :row-style="rowStyle" :art-for="artFor"
-          @toggle="toggleHistory" @reopen="reopenOffer" />
+          @toggle="toggleHistory" @reopen="reopenOffer" @remove="removeOffer" />
       </template>
 
       <template v-else>
@@ -102,7 +102,7 @@ import type { LogTail } from '../campaign/log-tail'
 import { followGameLog, onGameLog } from '../shared/game-log'
 import OfferRow from './OfferRow.vue'
 import OfferHistory from './OfferHistory.vue'
-import { OPEN_FOR_MS, alreadyClosed, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip } from './book'
+import { LOG_REPLAY_MS, OPEN_FOR_MS, alreadyClosed, applyEvent, belongsInHistory, dismiss, front, markSent, markTraded, newBook, nextStep, prune, queue, recordFor, reopen, skip } from './book'
 import type { Offer, TradeBook, TradeRecord } from './book'
 import { DEFAULT_REPLIES, REPLY_LABELS, parseHotkeyTarget, replyText } from './widget'
 import type { ReplyId } from './widget'
@@ -180,7 +180,7 @@ const anyInArea = computed(() => shown.value.some(o => !o.closed && o.inArea))
 // The history, minus what's still on show above it.
 const older = computed(() => {
   const onShow = new Set(shown.value.map(o => o.id))
-  return history.offers.value.filter(o => belongsInHistory(o) && !onShow.has(o.id) && (props.config.trackBuying !== false || o.dir === 'sell'))
+  return history.offers.value.filter(o => belongsInHistory(o) && o.removedAt == null && !onShow.has(o.id) && (props.config.trackBuying !== false || o.dir === 'sell'))
 })
 const historyOpen = shallowRef(false)
 function toggleHistory () {
@@ -207,13 +207,17 @@ function expand (o: Offer) {
 watch(frontId, (id) => { if (id == null) picked.value = null })
 
 const now = shallowRef(Date.now())
-// Ticks only while there are offers to age (the perf checks count wakeups
-// while you play).
+// Ticks only while there are offers to age or History's ages are on screen (the
+// perf checks count wakeups while you play).
+const cardOpen = shallowRef(false)
+const agesOnScreen = computed(() => historyOpen.value && older.value.length > 0 &&
+  (cardOpen.value || (wm.active.value && props.config.wmWants === 'show')))
 let clock: ReturnType<typeof setInterval> | undefined
-watch(() => book.offers.length > 0, (any) => {
+watch(() => book.offers.length > 0 || agesOnScreen.value, (any) => {
   clearInterval(clock)
   clock = undefined
   if (any) {
+    now.value = Date.now()
     clock = setInterval(() => {
       now.value = Date.now()
       prune(book, now.value)
@@ -307,7 +311,7 @@ onGameLog((lines) => {
 // history comes first, so offers you already closed stay closed. If Client.txt
 // isn't found yet, this runs again when it is.
 function restoreFromTail (tail: LogTail) {
-  const since = Date.now() - 30 * 60_000
+  const since = Date.now() - LOG_REPLAY_MS
   const until = Date.now() + 60_000
   for (const line of tail.lines) {
     if (seenLive.has(line)) continue
@@ -441,6 +445,38 @@ function reopenOffer (o: Offer) {
   if ((props.config.bubbleSeconds ?? 0) <= 0 && !bubbleId.value && open.dir === 'sell') showBubble(open)
 }
 
+// Takes a closed offer off the list for good. It leaves the book too: one that
+// ran out stays there a moment, and would be saved straight back.
+// Removing several in a row: a new note replaces the last, so its Undo takes them all.
+const UNDO_MS = 5000
+let removed: Offer[] = []
+let removedUntil = 0
+function removeOffer (o: Offer) {
+  touched()
+  const at = Date.now()
+  const rec = history.get(o.id) ?? o
+  book.offers = book.offers.filter(x => x.id !== o.id)
+  history.discard(rec, at).catch((err: Error) => toast(`Couldn't remove the offer: ${err.message}`))
+  if (at > removedUntil) removed = []
+  removed.push(rec)
+  removedUntil = at + UNDO_MS
+  const batch = removed
+  const undo = () => {
+    removed = []
+    removedUntil = 0
+    for (const r of batch) {
+      // Reopened meanwhile: the open offer stands, and saves itself when it closes.
+      if (book.offers.some(x => x.id === r.id)) continue
+      history.add(r).catch((err: Error) => toast(`Couldn't save the offer history: ${err.message}`))
+    }
+  }
+  const el: Element | undefined = panel.value?.$el
+  const text = batch.length > 1 ? `Removed ${batch.length} offers from History` : `Removed ${offerLabel(rec)} from History`
+  // Out in the game, only a dock note can be clicked.
+  if (el?.getBoundingClientRect().width) toast(text, { anchor: el, undo })
+  else toast(text, { anchor: dockIconEl('trade'), dock: true, undo })
+}
+
 // Closed offers go into the history as they close, so a restart can't lose them.
 watch(() => book.offers.filter(belongsInHistory).map(o => o.id).join(), () => {
   for (const o of book.offers) {
@@ -487,6 +523,7 @@ const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 
 function onCard (open: boolean) {
+  cardOpen.value = open
   if (open) now.value = Date.now()
 }
 
