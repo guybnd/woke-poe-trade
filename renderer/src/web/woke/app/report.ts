@@ -1,5 +1,6 @@
 // Problem reports: crash prompts in the overlay and "Report a problem" in
 // Settings → About. The main process builds the GitHub issue (crash-reports.ts).
+import type { ComponentPublicInstance } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { MODULES, isModuleOn } from '../modules'
 import { hostRequest } from '../shared/host'
@@ -20,13 +21,22 @@ export async function openCrashFolder () {
 
 // Overlay errors are kept (in memory, in main) to attach to the next report.
 let lastSent = 0
+function send (text: string) {
+  const now = Date.now()
+  if (now - lastSent < 2000 || /ResizeObserver loop/.test(text)) return
+  lastSent = now
+  hostRequest('renderer-error', { text }).catch(() => {})
+}
+
+// Vue catches errors in renders and watchers itself and only prints them, so
+// without this they never reach the window handlers below or the log.
+export function captureVueError (err: unknown, instance: ComponentPublicInstance | null, info: string) {
+  console.error(err)
+  const where = instance?.$options.name ?? instance?.$options.__name ?? 'app'
+  send(`Vue error in <${where}> (${info}): ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`)
+}
+
 export function captureRendererErrors () {
-  const send = (text: string) => {
-    const now = Date.now()
-    if (now - lastSent < 2000 || /ResizeObserver loop/.test(text)) return
-    lastSent = now
-    hostRequest('renderer-error', { text }).catch(() => {})
-  }
   window.addEventListener('error', (e) => {
     send(e.error instanceof Error ? (e.error.stack ?? e.error.message) : `${e.message} (${e.filename}:${e.lineno})`)
   })

@@ -1,0 +1,73 @@
+name: Upstream item data
+
+# Every hour: when upstream Awakened PoE Trade changes its item or stat data
+# (a new league's items), open a pull request here with the same data and the
+# version bump. Its tests are started by hand below, since a pull request made
+# by this workflow doesn't start them itself. Once merged, players' apps
+# download the data without a release.
+#
+# Needs Settings > Actions > General > "Allow GitHub Actions to create and
+# approve pull requests".
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: upstream-data
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: master
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 22
+    - name: Get upstream
+      run: |
+        repo=$(node -p "require('./.github/upstream-data.json').repo")
+        git clone --quiet --depth 300 --filter=blob:none "https://github.com/$repo.git" "$RUNNER_TEMP/upstream"
+    - name: Skip what the open pull request already has
+      id: open
+      run: |
+        head=$(git -C "$RUNNER_TEMP/upstream" rev-parse HEAD)
+        seen=""
+        if git fetch --quiet origin upstream-data 2>/dev/null; then
+          seen=$(git show FETCH_HEAD:.github/upstream-data.json | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).seen")
+        fi
+        if [ "$seen" = "$head" ]; then echo "same=true" >> "$GITHUB_OUTPUT"; echo "The upstream-data branch already has upstream $head."; fi
+    - name: Compare
+      id: compare
+      if: steps.open.outputs.same != 'true'
+      run: node scripts/upstream-data.mjs "$RUNNER_TEMP/upstream"
+    - name: Open or update the pull request
+      if: steps.compare.outputs.changed == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ steps.compare.outputs.version }}
+        UPSTREAM: ${{ steps.compare.outputs.upstream }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git checkout -B upstream-data
+        git add renderer/public/data .github/upstream-data.json
+        git commit --quiet -m "Item data from upstream $UPSTREAM (data version $VERSION)"
+        git push --force origin upstream-data
+        title="Item data from upstream ($UPSTREAM, data version $VERSION)"
+        number=$(gh pr list --head upstream-data --state open --json number --jq '.[0].number')
+        if [ -z "$number" ]; then
+          gh pr create --base master --head upstream-data --title "$title" --body-file .upstream-data-pr.md
+        else
+          gh pr edit "$number" --title "$title" --body-file .upstream-data-pr.md
+        fi
+        gh workflow run test.yml --ref upstream-data

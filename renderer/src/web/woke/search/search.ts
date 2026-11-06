@@ -125,7 +125,7 @@ export function baseUniqueName (name: string): string {
   return name.replace(/^Foulborn /, '')
 }
 
-export function tradeUrl (league: string, item: { name?: string, type?: string | { option: string, discriminator: string } }, host = 'www.pathofexile.com'): string {
+export function tradeUrl (league: string, item: { name?: string, type?: string | { option: string, discriminator: string }, filters?: object }, host = 'www.pathofexile.com'): string {
   const query = {
     query: { status: { option: 'online' }, ...item },
     sort: { price: 'asc' }

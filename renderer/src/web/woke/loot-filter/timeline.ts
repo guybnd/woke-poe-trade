@@ -190,5 +190,6 @@ const PRESET_NAMES: Record<keyof Presets, string> = {
   quiet: 'quiet mode',
   bigger: 'bigger labels',
   colourBlind: 'colour-blind colours',
-  sixSockets: '6-socket items'
+  sixSockets: '6-socket items',
+  dust: 'dust uniques'
 }

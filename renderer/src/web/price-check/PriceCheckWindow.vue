@@ -36,7 +36,10 @@
         <background-info />
         <check-position-circle v-if="showCheckPos"
           :position="checkPosition" style="z-index: -1;" />
-        <template v-if="item?.isErr()">
+        <!-- woke: an item the data doesn't have yet is searched by name. -->
+        <new-item-search v-if="newItem && leagues.selectedId.value"
+          :query="newItem" :league="leagues.selectedId.value" />
+        <template v-else-if="item?.isErr()">
           <ui-error-box class="m-4">
             <template #name>{{ t(item.error.name) }}</template>
             <p>{{ t(item.error.message) }}</p>
@@ -93,13 +96,16 @@ import RelatedItems from './related-items/RelatedItems.vue'
 import RateLimiterState from './trade/RateLimiterState.vue'
 import UnidentifiedResolver from './unidentified-resolver/UnidentifiedResolver.vue'
 import CheckPositionCircle from './CheckPositionCircle.vue'
+import NewItemSearch from '@/web/woke/new-item/NewItemSearch.vue'
+import { newItemQuery } from '@/web/woke/new-item/query'
 import AppTitleBar from '@/web/ui/AppTitlebar.vue'
 import ItemQuickPrice from '@/web/ui/ItemQuickPrice.vue'
 import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfaces'
 import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 
-type ParseError = { name: string; message: string; rawText: ParsedItem['rawText'] }
+type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
+const UNSUPPORTED = 'woke.unsupported'
 
 const DRAG_START_PX = 4
 const WINDOW_REM = 28.75
@@ -145,6 +151,7 @@ export default defineComponent({
     CheckPositionCircle,
     ItemQuickPrice,
     UiErrorBox,
+    NewItemSearch,
     UiPopover
   },
   props: {
@@ -199,11 +206,13 @@ export default defineComponent({
       item.value = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
         .andThen(item => (
           (item.category === ItemCategory.Sentinel && item.rarity !== ItemRarity.Unique))
-          ? err('item.unknown')
+          // woke: a known item that's not priced, so not searched by name either.
+          ? err(UNSUPPORTED)
           : ok(item))
         .mapErr(err => ({
-          name: `${err}`,
-          message: `${err}_help`,
+          name: err === UNSUPPORTED ? 'item.unknown' : `${err}`,
+          message: err === UNSUPPORTED ? 'item.unknown_help' : `${err}_help`,
+          unsupported: err === UNSUPPORTED,
           rawText: e.clipboard
         }))
 
@@ -233,6 +242,12 @@ export default defineComponent({
     const overlayKey = computed(() => AppConfig().overlayKey)
     const showCheckPos = computed(() => wm.active.value && props.config.showCursor)
     const isLeagueSelected = computed(() => Boolean(leagues.selectedId.value))
+    // woke: a new league's item, before the item data has it.
+    const newItem = computed(() => {
+      const res = item.value
+      if (!res?.isErr() || res.error.name !== 'item.unknown' || res.error.unsupported || AppConfig().language !== 'en') return null
+      return newItemQuery(res.error.rawText)
+    })
 
     // woke: the window can be dragged and resized. A saved position replaces
     // the docked spot, except beside the built-in browser, which needs the
@@ -397,7 +412,9 @@ export default defineComponent({
       handleIdentification,
       overlayKey,
       isLeagueSelected,
-      openLeagueSelection
+      openLeagueSelection,
+      newItem,
+      leagues
     }
   }
 })

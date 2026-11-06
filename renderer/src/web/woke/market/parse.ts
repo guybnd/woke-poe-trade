@@ -1,4 +1,4 @@
-import { CATEGORY_TYPES, SKIPPED_TYPES } from './types'
+import { SKIPPED_TYPES, typeForSlug } from './types'
 import type { PriceItem } from './types'
 
 // The shape APT keeps after splitting poe.ninja's dense overview:
@@ -14,7 +14,7 @@ const ENTRY_START = '{"name":'
 export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
   const out: PriceItem[] = []
   for (const chunk of chunks) {
-    const type = CATEGORY_TYPES[chunk.url]
+    const type = typeForSlug(chunk.url)
     if (!type || SKIPPED_TYPES.has(type)) continue
 
     let pos = chunk.lines.indexOf(ENTRY_START)

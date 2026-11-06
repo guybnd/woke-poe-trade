@@ -19,8 +19,18 @@
           :value="windowPx" @input="draftPx = Number(($event.target as HTMLInputElement).value)"
           @change="setFontSize(Number(($event.target as HTMLInputElement).value))">
       </w-setting-row>
+      <w-setting-row label="Panel opacity" hint="How much of the game shows through panels. Text stays solid.">
+        <span class="w-num w-dim">{{ panelOpacity }}%</span>
+        <input id="woke-panel-opacity" type="range" :min="MIN_PANEL_OPACITY" :max="MAX_PANEL_OPACITY" step="5" :class="$style.range"
+          :value="panelOpacity" @input="panelOpacity = Number(($event.target as HTMLInputElement).value)">
+      </w-setting-row>
+      <w-setting-row v-if="panelOpacity < MAX_PANEL_OPACITY" label="Solid when the mouse is over a panel" hint="Works while the overlay is open or the mouse is on a dock icon.">
+        <w-toggle v-model="panelSolidOnHover" />
+      </w-setting-row>
       <w-setting-row label="Darken the game while the overlay is open">
-        <w-toggle :model-value="hasBackdrop" @update:model-value="setBackdrop($event)" />
+        <span class="w-num w-dim">{{ backdropPct }}%</span>
+        <input id="woke-backdrop" type="range" min="0" :max="MAX_BACKDROP" step="5" :class="$style.range"
+          :value="backdropPct" @input="setBackdrop(Number(($event.target as HTMLInputElement).value))">
       </w-setting-row>
       <w-setting-row v-if="hasBackdrop" label="Click the dark area to go back to the game">
         <w-toggle v-model="config.overlayBackgroundClose" />
@@ -47,13 +57,14 @@ import { WField, WSettingRow, WSettingSection, WToggle } from '../ui'
 import AppearanceSettings from '../ui/AppearanceSettings.vue'
 import DockSettings from '../dock/DockSettings.vue'
 import { APP_ICONS, appIconId, appIconUrl } from '../ui/app-icon'
+import { MAX_PANEL_OPACITY, MIN_PANEL_OPACITY, panelOpacity, panelSolidOnHover } from '../ui/panel-opacity'
+import { MAX_BACKDROP, backdropColour, backdropPercent } from '../ui/see-through'
 
 const props = defineProps<{ config: Config }>()
 
-const NO_BACKDROP = 'rgba(255, 255, 255, 0)'
-const DEFAULT_BACKDROP = 'rgba(129, 139, 149, 0.15)'
-const hasBackdrop = computed(() => props.config.overlayBackground !== NO_BACKDROP)
-function setBackdrop (on: boolean) { props.config.overlayBackground = on ? DEFAULT_BACKDROP : NO_BACKDROP }
+const backdropPct = computed(() => backdropPercent(props.config.overlayBackground))
+const hasBackdrop = computed(() => backdropPct.value > 0)
+function setBackdrop (pct: number) { props.config.overlayBackground = backdropColour(pct) }
 // Stored as the root font size in px (16 = 100%). Applied on release: this
 // window resizes with it, so the slider would move under the mouse mid-drag.
 const draftPx = shallowRef<number | null>(null)

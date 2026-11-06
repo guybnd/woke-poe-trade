@@ -48,7 +48,6 @@
       <SampleCard v-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :area-level="effectiveAreaLevel"
         @close="close" @open-editor="openEditorFromCard" @area-level="areaOverride = $event" />
       <WPanel v-else title="Filter rule for this item" icon="wisdom" width="24rem" :resizable="false">
-        <template #actions><button class="w-icon-btn" title="Close" @click="close"><i class="fas fa-times" /></button></template>
         <template v-if="store.error.value" #banner>
           <WBanner>{{ store.error.value }}<template #actions><WButton size="sm" @click="retry">Retry</WButton></template></WBanner>
         </template>

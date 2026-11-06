@@ -5,8 +5,9 @@ import * as Data from './assets/data'
 import { initConfig, AppConfig } from './web/Config'
 import { Host } from './web/background/IPC'
 import { perfMark, perfTimeAsync } from './web/woke/shared/perf'
-import { captureRendererErrors } from './web/woke/app/report'
-import { checkLiveDataNow, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
+import { captureRendererErrors, captureVueError } from './web/woke/app/report'
+import { checkLiveDataNow, rescheduleLiveDataChecks, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
+import { useLeagues } from './web/background/Leagues'
 
 // woke: the first-run setup window loads this page with #setup. It needs no
 // item data, so it opens quicker.
@@ -25,7 +26,8 @@ const isSetupWindow = window.location.hash === '#setup'
   captureRendererErrors()
   if (!isSetupWindow) {
     await useDownloadedData(AppConfig().language)
-    startLiveDataChecks(() => AppConfig().language)
+    startLiveDataChecks(() => AppConfig().language, () => useLeagues().startedAt.value)
+    watch(() => useLeagues().startedAt.value, () => { rescheduleLiveDataChecks() })
   }
 
   watch(() => AppConfig().language, async () => {
@@ -37,8 +39,8 @@ const isSetupWindow = window.location.hash === '#setup'
     await I18n.loadLang(AppConfig().language)
   })
 
-  createApp(App)
-    .use(i18nPlugin)
-    .mount('#app')
+  const app = createApp(App)
+  app.config.errorHandler = captureVueError
+  app.use(i18nPlugin).mount('#app')
   perfMark('App mounted')
 })()

@@ -171,7 +171,7 @@ function draw () {
     sheets: sheets.value,
     from: fromSet.value,
     to: toSet.value,
-    colours: { keep: colour('--w-accent'), add: colour('--w-up'), remove: colour('--w-down'), off: colour('--w-line-strong'), bg: colour('--w-panel-solid') }
+    colours: { keep: colour('--w-accent'), add: colour('--w-up'), remove: colour('--w-down'), off: colour('--w-line-strong'), bg: colour('--w-panel-solid-base') }
   })
 }
 

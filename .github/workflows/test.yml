@@ -32,6 +32,7 @@ jobs:
     outputs:
       unit: ${{ steps.result.outputs.unit }}
       game: ${{ steps.result.outputs.game }}
+      site: ${{ steps.files.outputs.site }}
     steps:
     - id: files
       env:
@@ -42,17 +43,23 @@ jobs:
         unit=true
         game=true
         landing=false
+        site=true
         if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
           # GitHub lists at most 3000 files, so a list that long may be cut short.
           files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)') || files=
           if [ -n "$files" ] && [ "$(printf '%s\n' "$files" | wc -l)" -lt 3000 ]; then
             unit=false
             game=false
+            site=false
             while IFS= read -r file; do
               case "$file" in
                 # Only the website and its screenshots use these.
-                docs/*|testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
+                docs/*) site=true ;;
+                testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
                 testing/e2e/landing-*.spec.ts) landing=true ;;
+                # The landing page reads the module list, fonts and frame art
+                # from the app, and the version from main.
+                renderer/*|main/package.json) unit=true; game=true; site=true ;;
                 # A unit test checks the README's module table.
                 README.md) unit=true ;;
                 *) unit=true; game=true ;;
@@ -64,6 +71,7 @@ jobs:
         echo "unit=$unit" >> "$GITHUB_OUTPUT"
         echo "game=$game" >> "$GITHUB_OUTPUT"
         echo "landing=$landing" >> "$GITHUB_OUTPUT"
+        echo "site=$site" >> "$GITHUB_OUTPUT"
     - if: steps.files.outputs.landing == 'true'
       uses: actions/checkout@v6
     - if: steps.files.outputs.landing == 'true'
@@ -85,6 +93,35 @@ jobs:
       run: |
         echo "unit=$UNIT" >> "$GITHUB_OUTPUT"
         echo "game=$GAME" >> "$GITHUB_OUTPUT"
+
+  # The website built as Pages builds it, then checked at phone and desktop
+  # sizes (docs/scripts/check-phone.mjs). Only when docs/ changed.
+  site:
+    name: Website on phones
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.site != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: |
+          docs/package-lock.json
+          renderer/package-lock.json
+    - run: npm ci
+      working-directory: ./docs
+    # The landing page reads the module list from the app.
+    - run: npm ci
+      working-directory: ./renderer
+    - run: npx vitepress build
+      working-directory: ./docs
+    - run: npx playwright install --with-deps chromium
+      working-directory: ./docs
+    - run: node scripts/check-phone.mjs
+      working-directory: ./docs
 
   unit:
     name: Unit tests, lint, types

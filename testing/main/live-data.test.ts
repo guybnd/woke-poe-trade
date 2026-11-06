@@ -119,3 +119,52 @@ describe('cachedLiveData', () => {
     expect(await cachedLiveData({ language: 'en', bundled: 3 })).toBeNull()
   })
 })
+
+describe('tooltips and the passive tree', () => {
+  const TIPS = '{"Mirror":"new"}'
+  const TREE = '{"nodes":[]}'
+  function sharedSite (over: { tree?: string, version?: number } = {}) {
+    const manifest = {
+      format: 1,
+      version: over.version ?? 5,
+      files: { en: { items: sha(ITEMS), stats: sha(STATS) } },
+      shared: { 'tips/uniques.json': sha(TIPS), 'tree/passive-tree.json': sha(TREE), '../evil.json': sha('x') }
+    }
+    const asked: string[] = []
+    const fetcher = async (url: string) => {
+      asked.push(url)
+      const body = url.endsWith('data-version.json') ? JSON.stringify(manifest)
+        : url.endsWith('items.ndjson') ? ITEMS
+          : url.endsWith('stats.ndjson') ? STATS
+            : url.endsWith('uniques.json') ? TIPS
+              : url.endsWith('passive-tree.json') ? (over.tree ?? TREE)
+                : 'x'
+      return { ok: true, status: 200, text: async () => body }
+    }
+    return { fetcher, asked }
+  }
+
+  it('downloads only those that differ from the app\'s own, and lists them', async () => {
+    const { fetcher, asked } = sharedSite()
+    expect(await checkLiveData({ language: 'en', bundled: 3, bundledShared: { 'tree/passive-tree.json': sha(TREE) } }, fetcher)).toBe(5)
+    expect(onDisk('tips/uniques.json')).toBe(TIPS)
+    expect(fs.existsSync(path.join(liveDataRoot(), 'en', 'tree'))).toBe(false)
+    expect(JSON.parse(onDisk('shared.json'))).toEqual(['tips/uniques.json'])
+    // A name outside the fixed list is never fetched.
+    expect(asked.some(u => u.includes('evil'))).toBe(false)
+  })
+
+  it('reuses the last download\'s copy for the next version', async () => {
+    await checkLiveData({ language: 'en', bundled: 3 }, sharedSite().fetcher)
+    const next = sharedSite({ version: 6 })
+    expect(await checkLiveData({ language: 'en', bundled: 3 }, next.fetcher)).toBe(6)
+    expect(next.asked.some(u => u.endsWith('.json') && !u.endsWith('data-version.json'))).toBe(false)
+    expect(onDisk('tree/passive-tree.json')).toBe(TREE)
+  })
+
+  it('refuses a tree that doesn\'t match its hash, and keeps what it had', async () => {
+    await checkLiveData({ language: 'en', bundled: 3 }, site().fetcher)
+    await expect(checkLiveData({ language: 'en', bundled: 3 }, sharedSite({ version: 6, tree: 'tampered' }).fetcher)).rejects.toThrow('hash')
+    expect(await cachedLiveData({ language: 'en', bundled: 3 })).toBe(5)
+  })
+})

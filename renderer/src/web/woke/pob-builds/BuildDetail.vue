@@ -211,7 +211,7 @@ const props = defineProps<{
   entry: PobBuildEntry
   details: PobDetails | null
 }>()
-const emit = defineEmits<{ (e: 'close'): void, (e: 'tree', title: string): void }>()
+const emit = defineEmits<{ (e: 'close'): void, (e: 'tree' | 'compare', value: string): void }>()
 
 const build = useActiveBuild()
 const level = build.level
@@ -243,6 +243,7 @@ function setActive () {
 function moreMenu (e: MouseEvent) {
   const name = charName.value
   openMenu(e, [
+    { label: 'Compare with another build', icon: 'fas fa-balance-scale', action: () => emit('compare', props.entry.relPath) },
     { label: 'Show file', icon: 'fas fa-folder-open', action: () => run(pobApi.show(props.config, props.entry.relPath)) },
     ...(name
       ? [{

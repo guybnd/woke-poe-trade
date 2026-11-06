@@ -7,6 +7,7 @@ import '@fontsource/jetbrains-mono/400.css'
 import './theme.css'
 import './scale'
 import './density'
+import './panel-opacity'
 
 export type WokeTheme = 'hybrid' | 'native' | 'modern' | 'classic'
 

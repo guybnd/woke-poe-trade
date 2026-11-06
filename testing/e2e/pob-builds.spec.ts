@@ -343,14 +343,27 @@ test('the build in use has a dock icon, with its links on hover', async ({ overl
   await overlay.snap('build hover card')
 })
 
-test('two builds compare side by side from the list menu', async ({ overlay }) => {
+test('two builds compare side by side, picked in the window', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ ...showcaseSeed()[0], wmWants: 'show' as const }], overlayActive: true })
+  const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+  await expect(detail).toContainText('Showcase')
+  await detail.getByRole('button', { name: 'More' }).or(detail.getByTitle('More')).first().click()
+  await overlay.page.getByText('Compare with another build').click()
+  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Compare builds' })
+  await expect(panel).toContainText('Pick two builds to compare')
+  await panel.getByRole('combobox', { name: 'Second build' }).selectOption('Loadouts.xml')
+  await expect(panel).toContainText("Gear that's different")
+  await expect(panel).toContainText('Passive tree')
+
+  // The same build twice isn't a comparison.
+  await panel.getByRole('combobox', { name: 'Second build' }).selectOption('Showcase.xml')
+  await expect(panel).toContainText('same build twice')
+
+  // The list's menu still goes straight there.
   const list = overlay.widget('woke-pob-builds')
-  await expect(overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })).toContainText('Showcase')
   await list.getByRole('button', { name: /Loadouts/ }).first().click({ button: 'right' })
   await overlay.page.getByText('Compare with Showcase').click()
-  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Compare builds' })
-  await expect(panel).toContainText('Gear ·')
+  await expect(panel).toContainText("Gear that's different")
   await overlay.snap('compare builds')
 })
 

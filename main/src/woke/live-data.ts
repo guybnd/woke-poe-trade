@@ -10,6 +10,9 @@ const RAW = 'https://raw.githubusercontent.com/guybnd/woke-poe-trade/master/rend
 const FORMAT = 1
 const LANGUAGES = ['en', 'ru', 'cmn-Hant', 'ko']
 const FILES = ['items', 'stats'] as const
+// Data every language shares: item tooltips and the passive tree. Only these
+// names are ever fetched, and only when they differ from the app's own copy.
+export const SHARED_FILES = ['tips/bases.json', 'tips/gems.json', 'tips/items.json', 'tips/uniques.json', 'tree/passive-tree.json']
 const MAX_FILE_BYTES = 32 * 1024 * 1024
 // A stalled download must not hold up every later check.
 const DOWNLOAD_TIMEOUT_MS = 90_000
@@ -20,6 +23,26 @@ interface Manifest {
   format: number
   version: number
   files: Record<string, Record<string, string>>
+  // Hashes of SHARED_FILES. Older apps ignore it.
+  shared?: Record<string, string>
+}
+
+export interface CheckArgs {
+  language: unknown
+  bundled: number
+  // The app's own hashes of SHARED_FILES, from its data-version.json.
+  bundledShared?: unknown
+}
+
+function sharedHashes (value: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (value && typeof value === 'object') {
+    for (const name of SHARED_FILES) {
+      const hash = (value as Record<string, unknown>)[name]
+      if (typeof hash === 'string') out[name] = hash
+    }
+  }
+  return out
 }
 
 export const liveDataRoot = () => dataDir('live-data')
@@ -90,7 +113,16 @@ async function moveIntoPlace (fresh: string, target: string) {
   await fs.rm(old, { recursive: true, force: true }).catch(() => {})
 }
 
-async function download (lang: string, bundled: number, fetcher: Fetcher): Promise<number | null> {
+async function readIfHash (file: string, hash: string): Promise<string | null> {
+  try {
+    const text = await fs.readFile(file, 'utf8')
+    return hashOf(text) === hash ? text : null
+  } catch {
+    return null
+  }
+}
+
+async function download (lang: string, bundled: number, bundledShared: Record<string, string>, fetcher: Fetcher): Promise<number | null> {
   const manifest = JSON.parse(await getText(fetcher, `${RAW}/data-version.json`)) as Manifest | null
   if (!isManifest(manifest, lang)) throw new Error('The version file is not usable')
   const have = Math.max(bundled, await cachedVersion(lang) ?? 0)
@@ -107,22 +139,38 @@ async function download (lang: string, bundled: number, fetcher: Fetcher): Promi
   }))
 
   const root = liveDataRoot()
-  const fresh = path.join(root, `${lang}.new`)
   const target = path.join(root, lang)
+  // Tooltips and the tree: only those that differ from the app's own, taken
+  // from the last download when it already has them.
+  const shared = sharedHashes(manifest.shared)
+  const sharedTexts = await Promise.all(Object.entries(shared)
+    .filter(([name, hash]) => bundledShared[name] !== hash)
+    .map(async ([name, hash]) => {
+      const text = await readIfHash(path.join(target, name), hash) ?? await getText(fetcher, `${RAW}/${name}`)
+      if (hashOf(text) !== hash) throw new Error(`${name} doesn't match its hash`)
+      return [name, text] as const
+    }))
+
+  const fresh = path.join(root, `${lang}.new`)
   await fs.rm(fresh, { recursive: true, force: true })
   await fs.mkdir(fresh, { recursive: true })
   await Promise.all(FILES.map(async (name, i) => { await fs.writeFile(path.join(fresh, `${name}.ndjson`), texts[i]) }))
+  for (const [name, text] of sharedTexts) {
+    await fs.mkdir(path.dirname(path.join(fresh, name)), { recursive: true })
+    await fs.writeFile(path.join(fresh, name), text)
+  }
+  await fs.writeFile(path.join(fresh, 'shared.json'), JSON.stringify(sharedTexts.map(([name]) => name)))
   await fs.writeFile(path.join(fresh, 'version.json'), JSON.stringify({ version: manifest.version }))
   await moveIntoPlace(fresh, target)
   return manifest.version
 }
 
 // Returns the version to use, newly downloaded or not, or null for the bundled data.
-export function checkLiveData (args: { language: unknown, bundled: number }, fetcher: Fetcher): Promise<number | null> {
+export function checkLiveData (args: CheckArgs, fetcher: Fetcher): Promise<number | null> {
   const lang = language(args.language)
   let running = checking.get(lang)
   if (!running) {
-    running = download(lang, args.bundled, fetcher).finally(() => { checking.delete(lang) })
+    running = download(lang, args.bundled, sharedHashes(args.bundledShared), fetcher).finally(() => { checking.delete(lang) })
     checking.set(lang, running)
   }
   return running

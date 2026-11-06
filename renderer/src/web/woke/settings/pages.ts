@@ -10,6 +10,7 @@ import SettingsItemcheck from '@/web/item-check/settings-item-check.vue'
 import SettingsChat from '@/web/settings/chat.vue'
 import SettingsDebug from '@/web/settings/debug.vue'
 import PerfSettings from '../ui/PerfSettings.vue'
+import DisenchantVerdictSetting from '../disenchant/DisenchantVerdictSetting.vue'
 import ModulesSettings from '../switchboard/ModulesSettings.vue'
 import GamePage from './GamePage.vue'
 import HotkeysPage from './HotkeysPage.vue'
@@ -92,9 +93,9 @@ export const PAGES: SettingsPage[] = [
     name: 'Look & icon row',
     group: 'general',
     icon: { fa: 'fas fa-paint-brush' },
-    description: 'Theme, text size, the overlay backdrop and the row of icons you see while playing.',
+    description: 'Theme, text size, panel opacity, the overlay backdrop and the row of icons you see while playing.',
     parts: [LookPage],
-    find: ['Theme', 'App icon', 'Tray icon', 'Panel size', 'Font size', 'Text size', 'Price check window size', 'Window size', 'Overlay background', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
+    find: ['Theme', 'App icon', 'Tray icon', 'Panel size', 'Font size', 'Text size', 'Price check window size', 'Window size', 'Overlay background', 'Panel opacity', 'Transparency', 'See-through', 'Darken the game', 'Restore clipboard', 'Window title', 'Overlay ready notice', 'Icon row', 'Peek', 'Dock'],
     aliases: ['Appearance', 'Icon row']
   },
   {
@@ -137,8 +138,8 @@ export const PAGES: SettingsPage[] = [
     icon: modulePageIcon('apt-price-check'),
     description: 'Prices for the item under your cursor.',
     modules: ['apt-price-check'],
-    parts: [SettingsPricecheck],
-    find: ['Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
+    parts: [SettingsPricecheck, DisenchantVerdictSetting],
+    find: ['Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
     aliases: ['price_check.name']
   },
   {
@@ -181,10 +182,10 @@ export const PAGES: SettingsPage[] = [
     group: 'modules',
     sub: 'Trade & prices',
     icon: modulePageIcon('market'),
-    description: 'Movers, watchlist, league-start investments and flips from poe.ninja.',
-    modules: ['market', 'league-invest', 'scarab-flip'],
-    widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip'],
-    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb']
+    description: 'Movers, watchlist, league-start investments, flips and dust from poe.ninja.',
+    modules: ['market', 'league-invest', 'scarab-flip', 'disenchant'],
+    widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip', 'woke-disenchant'],
+    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee']
   },
   {
     id: 'campaign',
