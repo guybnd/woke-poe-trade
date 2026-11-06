@@ -37,8 +37,18 @@ jobs:
       run: |
         repo=$(node -p "require('./.github/upstream-data.json').repo")
         git clone --quiet --depth 300 --filter=blob:none "https://github.com/$repo.git" "$RUNNER_TEMP/upstream"
+    - name: Skip what the open pull request already has
+      id: open
+      run: |
+        head=$(git -C "$RUNNER_TEMP/upstream" rev-parse HEAD)
+        seen=""
+        if git fetch --quiet origin upstream-data 2>/dev/null; then
+          seen=$(git show FETCH_HEAD:.github/upstream-data.json | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).seen")
+        fi
+        if [ "$seen" = "$head" ]; then echo "same=true" >> "$GITHUB_OUTPUT"; echo "The upstream-data branch already has upstream $head."; fi
     - name: Compare
       id: compare
+      if: steps.open.outputs.same != 'true'
       run: node scripts/upstream-data.mjs "$RUNNER_TEMP/upstream"
     - name: Open or update the pull request
       if: steps.compare.outputs.changed == 'true'

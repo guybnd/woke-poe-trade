@@ -19,6 +19,11 @@
       <button class="btn" @click="openCaptcha">{{ t('Browser') }}</button>
     </template>
   </ui-error-box>
+  <div v-else-if="leagues.error.value" class="bg-gray-900 mt-2 mx-4 rounded py-1 px-2 flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="league-list-stale">
+    <span class="grow">Couldn't read the league list. Using last launch's.</span>
+    <button class="btn" @click="leagues.load()">{{ t('Retry') }}</button>
+    <button class="btn" @click="openCaptcha">{{ t('Browser') }}</button>
+  </div>
 </template>
 
 <script setup lang="ts">

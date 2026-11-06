@@ -104,7 +104,8 @@ import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfac
 import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 
-type ParseError = { name: string; message: string; rawText: ParsedItem['rawText'] }
+type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
+const UNSUPPORTED = 'woke.unsupported'
 
 const DRAG_START_PX = 4
 const WINDOW_REM = 28.75
@@ -205,11 +206,13 @@ export default defineComponent({
       item.value = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
         .andThen(item => (
           (item.category === ItemCategory.Sentinel && item.rarity !== ItemRarity.Unique))
-          ? err('item.unknown')
+          // woke: a known item that's not priced, so not searched by name either.
+          ? err(UNSUPPORTED)
           : ok(item))
         .mapErr(err => ({
-          name: `${err}`,
-          message: `${err}_help`,
+          name: err === UNSUPPORTED ? 'item.unknown' : `${err}`,
+          message: err === UNSUPPORTED ? 'item.unknown_help' : `${err}_help`,
+          unsupported: err === UNSUPPORTED,
           rawText: e.clipboard
         }))
 
@@ -242,7 +245,7 @@ export default defineComponent({
     // woke: a new league's item, before the item data has it.
     const newItem = computed(() => {
       const res = item.value
-      if (!res?.isErr() || res.error.name !== 'item.unknown' || AppConfig().language !== 'en') return null
+      if (!res?.isErr() || res.error.name !== 'item.unknown' || res.error.unsupported || AppConfig().language !== 'en') return null
       return newItemQuery(res.error.rawText)
     })
 

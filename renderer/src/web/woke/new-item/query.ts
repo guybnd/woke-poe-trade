@@ -2,6 +2,8 @@
 // searched by its name and base alone. Read from the copied text's first block,
 // in English only: other languages name the lines differently.
 
+import { tradeUrl } from '../search/search'
+
 export interface NewItemQuery {
   name?: string
   type: string
@@ -10,10 +12,15 @@ export interface NewItemQuery {
 }
 
 const SEPARATOR = '--------'
+const CANNOT_USE = 'You cannot use this item. Its stats will be ignored'
 
 export function newItemQuery (rawText: string): NewItemQuery | null {
-  const head = rawText.replace(/\r\n/g, '\n').split(SEPARATOR)[0]
-    .split('\n').map(line => line.trim()).filter(Boolean)
+  const sections = rawText.replace(/\r\n/g, '\n').split(SEPARATOR)
+    .map(section => section.split('\n').map(line => line.trim()).filter(Boolean))
+  let head = sections[0] ?? []
+  // An item the character can't use has a line of its own here, and its name
+  // and base in the next block.
+  if (head.includes(CANNOT_USE)) head = [...head.filter(line => line !== CANNOT_USE), ...(sections[1] ?? [])]
   const rarityAt = head.findIndex(line => line.startsWith('Rarity: '))
   if (rarityAt === -1) return null
   const rarity = head[rarityAt].slice('Rarity: '.length)
@@ -39,19 +46,25 @@ export function newItemQuery (rawText: string): NewItemQuery | null {
   }
 }
 
+function queryFields (q: NewItemQuery) {
+  return {
+    ...(q.name ? { name: q.name } : {}),
+    type: q.type,
+    filters: q.rarity ? { type_filters: { filters: { rarity: { option: q.rarity } } } } : {}
+  }
+}
+
 export function newItemTradeBody (q: NewItemQuery) {
   return {
     query: {
       status: { option: 'online' as const },
-      ...(q.name ? { name: q.name } : {}),
-      type: q.type,
-      stats: [{ type: 'and' as const, filters: [] }],
-      filters: q.rarity ? { type_filters: { filters: { rarity: { option: q.rarity } } } } : {}
+      ...queryFields(q),
+      stats: [{ type: 'and' as const, filters: [] }]
     },
     sort: { price: 'asc' as const }
   }
 }
 
 export function newItemTradeUrl (league: string, q: NewItemQuery, host = 'www.pathofexile.com'): string {
-  return `https://${host}/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(newItemTradeBody(q)))}`
+  return tradeUrl(league, queryFields(q), host)
 }

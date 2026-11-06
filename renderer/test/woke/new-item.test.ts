@@ -26,6 +26,10 @@ describe('newItemQuery', () => {
     expect(newItemQuery(text('Item Class: Rings', 'Rarity: Magic', 'Glinting Veil Ring of the Fox'))).toBeNull()
     expect(newItemQuery(text('Класс предмета: Кольца', 'Редкость: Уникальный', 'X', 'Y'))).toBeNull()
   })
+  it('reads past the line about an item the character can\'t use', () => {
+    const raw = ['Item Class: Gloves', 'Rarity: Unique', 'You cannot use this item. Its stats will be ignored', '--------', 'Veilwoven Grasp', 'Vaal Gauntlets', '--------', 'Some mod'].join('\n')
+    expect(newItemQuery(raw)).toEqual({ name: 'Veilwoven Grasp', type: 'Vaal Gauntlets', rarity: 'unique' })
+  })
   it('handles Windows line ends', () => {
     expect(newItemQuery('Rarity: Currency\r\nOrb of Veils\r\n--------\r\nStack Size: 1/10')).toEqual({ type: 'Orb of Veils' })
   })

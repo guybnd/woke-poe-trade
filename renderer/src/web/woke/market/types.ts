@@ -50,7 +50,8 @@ const LEARNED_TYPES = new Map<string, string>()
 export function slugForType (type: string): string {
   const known = SLUG_OF_TYPE.get(type)
   if (known) return known
-  const slug = type.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase() + 's'
+  const words = type.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+  const slug = words.endsWith('s') ? words : words.endsWith('y') ? `${words.slice(0, -1)}ies` : `${words}s`
   LEARNED_TYPES.set(slug, type)
   return slug
 }

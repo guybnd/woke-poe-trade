@@ -70,7 +70,7 @@ if (!changed.some(f => !f.endsWith('client_strings.js'))) {
     ...changed.map(f => `- \`${f}\``),
     '',
     `### Upstream commits since ${state.seen.slice(0, 7)}`,
-    'Code changes here are not copied. League parser fixes among them need merging by hand.',
+    'Code changes here are not copied. Merge league parser fixes among them in a pull request of their own: this branch is rebuilt from master whenever upstream changes again.',
     '',
     ...(commits.length ? commits.map(c => `- ${c}`) : ['- none']),
     ''

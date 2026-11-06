@@ -36,7 +36,8 @@ export interface TreeArt {
 let job: Promise<Map<number, TreeNode>> | null = null
 let art: TreeArt | null = null
 // A newer tree downloaded: read it the next time the tree opens.
-onSharedDataChange(() => { job = null })
+let generation = 0
+onSharedDataChange(() => { generation++; job = null })
 
 // The groups and sprites, once loadPassiveTree has finished.
 export function passiveTreeArt (): TreeArt | null {
@@ -50,17 +51,20 @@ export function readNodes (rows: Row[]): Map<number, TreeNode> {
 
 export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
   if (!job) {
+    const mine = generation
     job = fetch(dataFileUrl('tree/passive-tree.json'))
       .then(res => {
         if (!res.ok) throw new Error(`The passive tree didn't load (${res.status})`)
         return res.json() as Promise<TreeArt & { nodes: Row[] }>
       })
       .then(data => {
-        art = { groups: data.groups, sprites: data.sprites }
+        // A tree read from before a newer one arrived doesn't replace its art.
+        if (mine === generation) art = { groups: data.groups, sprites: data.sprites }
         return readNodes(data.nodes)
       })
     // A failed load can be tried again by opening the tree again.
-    job.catch(() => { job = null })
+    const failed = job
+    job.catch(() => { if (job === failed) job = null })
   }
   return job
 }

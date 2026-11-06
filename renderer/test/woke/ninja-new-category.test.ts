@@ -30,6 +30,8 @@ describe('poe.ninja categories', () => {
     expect(slugForType('AllflameEmber')).toBe('allflame-embers')
     expect(slugForType('VeilShard')).toBe('veil-shards')
     expect(typeForSlug('veil-shards')).toBe('VeilShard')
+    expect(slugForType('Memory')).toBe('memories')
+    expect(slugForType('Remnants')).toBe('remnants')
     expect(namespaceForType('UniqueIdol')).toBe('UNIQUE')
     expect(namespaceForType('VeilShard')).toBe('ITEM')
   })

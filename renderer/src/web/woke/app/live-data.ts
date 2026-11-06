@@ -17,7 +17,7 @@ export function checkDelay (leagueStartedAt: number | null, now = Date.now()): n
 }
 
 // Tooltips and the tree, when a download has newer ones than the app's own.
-let sharedInUse: { language: string, files: Set<string> } | null = null
+let sharedInUse: { language: string, version: number, files: Set<string> } | null = null
 const changeListeners = new Set<() => void>()
 
 // Where to read a file of public/data from: the download, or the app's own.
@@ -33,11 +33,14 @@ export function onSharedDataChange (fn: () => void): () => void {
   return () => { changeListeners.delete(fn) }
 }
 
+// A newer download can change a file under the same name, so the version
+// counts too.
+const sharedKey = (s: typeof sharedInUse) => s && s.files.size ? `${s.language}@${s.version}:${[...s.files].join()}` : ''
+
 function setShared (next: typeof sharedInUse) {
-  const before = sharedInUse ? [...sharedInUse.files].map(f => `${sharedInUse!.language}/${f}`).join() : ''
+  const before = sharedKey(sharedInUse)
   sharedInUse = next
-  const after = next ? [...next.files].map(f => `${next.language}/${f}`).join() : ''
-  if (before !== after) for (const fn of changeListeners) fn()
+  if (sharedKey(next) !== before) for (const fn of changeListeners) fn()
 }
 
 let inUse: { language: string, version: number } | null = null
@@ -77,7 +80,7 @@ async function apply (language: string, version: number) {
   if (mine !== latestRequest) return
   useLiveData(language, items, stats)
   inUse = { language, version }
-  setShared({ language, files: new Set(shared) })
+  setShared({ language, version, files: new Set(shared) })
 }
 
 // Data downloaded on an earlier run. Before anything needs it, at startup and
@@ -115,15 +118,32 @@ export function checkLiveDataNow () {
   if (currentLanguage) check(currentLanguage).catch(() => {})
 }
 
+let timer: ReturnType<typeof setTimeout> | undefined
+let lastCheckAt = 0
+let startedAtOf: () => number | null = () => null
+let tick: (() => void) | null = null
+
+function leagueStart (): number | null {
+  try { return startedAtOf() } catch { return null }
+}
+
 // Every 6 hours, or every 30 minutes in the picked league's first two weeks.
 export function startLiveDataChecks (getLanguage: () => string, leagueStartedAt: () => number | null = () => null) {
   if (!MainProcess.isElectron) return
   currentLanguage = getLanguage
-  const tick = () => {
+  startedAtOf = leagueStartedAt
+  tick = () => {
+    lastCheckAt = Date.now()
     check(getLanguage).catch(() => {})
-    let started: number | null = null
-    try { started = leagueStartedAt() } catch {}
-    setTimeout(tick, checkDelay(started))
+    timer = setTimeout(tick!, checkDelay(leagueStart()))
   }
-  setTimeout(tick, FIRST_CHECK_AFTER_MS)
+  timer = setTimeout(tick, FIRST_CHECK_AFTER_MS)
+}
+
+// After another league is picked: a new league's 30 minutes start now, not
+// after the 6 hours already waiting.
+export function rescheduleLiveDataChecks () {
+  if (!tick || !lastCheckAt) return
+  clearTimeout(timer)
+  timer = setTimeout(tick, Math.max(0, lastCheckAt + checkDelay(leagueStart()) - Date.now()))
 }
