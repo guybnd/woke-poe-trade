@@ -365,6 +365,8 @@ defineExpose({ el: root })
 }
 .actions { display: flex; align-items: center; gap: var(--w-s1); }
 .controls { display: flex; align-items: center; flex: none; }
+/* Keeps a panel's own chips (hotkey, age) from reading as window buttons. */
+.actions + .controls { border-left: 1px solid var(--w-line); padding-left: var(--w-s1); }
 .control { width: 20px; height: 20px; font-size: var(--w-fs-xs); }
 .danger:hover { color: var(--w-down); }
 .age {

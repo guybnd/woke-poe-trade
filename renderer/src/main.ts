@@ -5,7 +5,7 @@ import * as Data from './assets/data'
 import { initConfig, AppConfig } from './web/Config'
 import { Host } from './web/background/IPC'
 import { perfMark, perfTimeAsync } from './web/woke/shared/perf'
-import { captureRendererErrors } from './web/woke/app/report'
+import { captureRendererErrors, captureVueError } from './web/woke/app/report'
 import { checkLiveDataNow, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
 
 // woke: the first-run setup window loads this page with #setup. It needs no
@@ -37,8 +37,8 @@ const isSetupWindow = window.location.hash === '#setup'
     await I18n.loadLang(AppConfig().language)
   })
 
-  createApp(App)
-    .use(i18nPlugin)
-    .mount('#app')
+  const app = createApp(App)
+  app.config.errorHandler = captureVueError
+  app.use(i18nPlugin).mount('#app')
   perfMark('App mounted')
 })()

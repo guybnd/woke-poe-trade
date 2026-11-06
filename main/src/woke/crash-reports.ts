@@ -192,9 +192,18 @@ export function attachCrashLogger (l: Logger) {
   logger = l
 }
 
+// The first one is usually the cause and the rest its fallout (one bad render
+// can leave a window failing every update after), so the first few stay put
+// and go to the log; later ones roll.
+const KEEP_FIRST = 5
+let loggedErrors = 0
 export function noteRendererError (text: string) {
   rendererErrors.push({ at: Date.now(), text: text.slice(0, 2000) })
-  if (rendererErrors.length > 15) rendererErrors.shift()
+  if (rendererErrors.length > 15) rendererErrors.splice(KEEP_FIRST, 1)
+  if (loggedErrors < KEEP_FIRST) {
+    loggedErrors++
+    logger?.write(`error [overlay] ${text.slice(0, 2000)}`)
+  }
 }
 
 export interface PendingCrash {
