@@ -393,7 +393,8 @@ defineExpose({ el: root })
 }
 @keyframes busy { from { left: -35%; } to { left: 100%; } }
 @media (prefers-reduced-motion: reduce) { .busy { animation: none; left: 0; width: 100%; opacity: 0.5; } }
-.tabs { padding: 4px 8px 0; border-bottom: 1px solid var(--w-line); }
+.tabs { padding: 8px 8px 0; background: rgba(0, 0, 0, 0.18); }
+:global([data-woke-theme="modern"]) .tabs { padding-top: 4px; background: none; border-bottom: 1px solid var(--w-line); }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px; }
 .meta {
   display: flex;

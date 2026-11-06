@@ -7,9 +7,11 @@
         @update:model-value="setSearchOption(profile, mode, { highlight: $event as 'good' | 'bad' })" />
       <slot name="actions" />
     </template>
+    <template #tabs>
+      <WTabs v-model="mode" :options="modeOptions" />
+    </template>
     <template #toolbar>
       <div class="flex items-center gap-2 w-full">
-        <WTabs v-model="mode" :options="modeOptions" />
         <span class="flex-1" />
         <WChip clickable :active="tabOptions.autoTrim" @click="setSearchOption(profile, mode, { autoTrim: !tabOptions.autoTrim })"
           title="When the search is too long, leave out wanted mods first, then avoided mods that aren't in a Quick preset, longest first">
@@ -47,7 +49,7 @@
       </div>
       <div class="flex items-center gap-2 w-full">
         <WField v-model="search" type="search" icon="fas fa-search" :placeholder="searchHint" class="flex-1" />
-        <WTabs v-model="filter" :options="filterOptions" />
+        <WSegmented v-model="filter" :options="filterOptions" title="Which mods to list" />
       </div>
     </template>
     <template v-for="row in visible" :key="row.kind === 'head' ? `head:${row.rating}` : row.matcher">
@@ -167,7 +169,7 @@ const modeOptions = computed(() => ([['maps', 'Maps'], ['heist', 'Heist'], ['cha
 
 const filterOptions = computed(() => [
   { value: 'all', label: 'All' },
-  { value: 'picked', label: 'Picked', count: modeMods.value.filter(m => ratings.value[m]).length },
+  { value: 'picked', label: `Picked ${modeMods.value.filter(m => ratings.value[m]).length}` },
   ...(mode.value === 'maps' ? [{ value: 'danger', label: 'Danger' }, { value: 'reward', label: 'Reward' }] : [])
 ])
 

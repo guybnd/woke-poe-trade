@@ -4,6 +4,9 @@
     <template #actions>
       <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
     </template>
+    <template #tabs>
+      <WTabs v-model="tab" :options="tabOptions" />
+    </template>
     <template #toolbar>
       <WButton v-if="trail.length" size="sm" variant="ghost" icon="fas fa-arrow-left" title="Back to where you were (mouse back button)" @click="goBack">Back</WButton>
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
@@ -11,8 +14,6 @@
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <WField v-model="search" type="search" icon="fas fa-search" placeholder="Find an item, or paste one to see its rule" style="width: 19rem;" />
       </span>
-      <span class="grow" />
-      <WTabs v-model="tab" :options="tabOptions" />
     </template>
     <template v-if="store.error.value || banner" #banner>
       <WBanner v-if="store.error.value">{{ store.error.value }}
