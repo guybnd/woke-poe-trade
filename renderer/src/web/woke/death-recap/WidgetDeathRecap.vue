@@ -76,8 +76,8 @@
             <div :class="$style.bar"><div :class="$style.fill" :style="{ width: `${Math.min(100, r.rate * 100)}%` }" /></div>
           </div>
           <div class="w-dim text-xs" :class="$style.stat">
-            <template v-if="stats.rows.length">Your usual rate: {{ usualText(stats.usual) }}. Only mods above that show.</template>
-            <template v-else-if="stats.maps">{{ stats.maps }} checked {{ stats.maps === 1 ? 'map' : 'maps' }} and {{ stats.deaths }} {{ stats.deaths === 1 ? 'death' : 'deaths' }} so far. A mod shows here once it has 2 deaths and beats your usual rate.</template>
+            <template v-if="stats.rows.length">Your usual rate: {{ usualText(stats.usual) }} <WInfo text="Only mods above that show." /></template>
+            <template v-else-if="stats.maps">{{ stats.maps }} checked {{ stats.maps === 1 ? 'map' : 'maps' }} and {{ stats.deaths }} {{ stats.deaths === 1 ? 'death' : 'deaths' }} so far <WInfo text="A mod shows here once it has 2 deaths and beats your usual rate." /></template>
             <template v-else>Nothing yet. This fills in as you check maps before opening them, then die in them.</template>
           </div>
         </div>
@@ -106,7 +106,7 @@ import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel, WSelect } from '../ui'
+import { WBanner, WEmpty, WInfo, WPanel, WSelect } from '../ui'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay } from '../dock/dock'

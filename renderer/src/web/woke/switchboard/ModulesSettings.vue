@@ -2,11 +2,7 @@
   <div class="p-2 flex flex-col gap-3" style="max-width: 40rem;">
     <div class="flex items-start gap-3">
       <div class="flex-1">
-        <div class="mb-1">Modules</div>
-        <div class="w-dim text-sm">
-          A switched-off module keeps its widgets and settings but doesn't load, registers no hotkeys and stops
-          anything it was polling.
-        </div>
+        <div class="flex items-center gap-2">Modules <w-info text="A switched-off module keeps its widgets and settings but doesn't load, registers no hotkeys and stops anything it was polling." /></div>
       </div>
       <w-button size="sm" @click="runSetupAgain">Run setup again</w-button>
     </div>
@@ -25,11 +21,7 @@
     </div>
     <div class="flex items-center gap-3">
       <div class="flex-1">
-        <div>Hide all toolkit panels</div>
-        <div class="w-dim text-sm">
-          Press once to hide every panel, again to bring them back. While the game has focus, panels don't take
-          clicks anyway; this is for clearing the screen.
-        </div>
+        <div class="flex items-center gap-2">Hide all toolkit panels <w-info text="Press once to hide every panel, again to bring them back. While the game has focus, panels don't take clicks anyway; this is for clearing the screen." /></div>
       </div>
       <w-hotkey-cell v-model="hideAllHotkey" />
     </div>
@@ -45,7 +37,7 @@ export default {
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Config } from '@/web/Config'
-import { WButton } from '../ui'
+import { WButton, WInfo } from '../ui'
 import { hostRequest } from '../shared/host'
 import { ensureWokeConfig, modulesNeeding } from '../modules'
 import type { ModuleDef } from '../modules'

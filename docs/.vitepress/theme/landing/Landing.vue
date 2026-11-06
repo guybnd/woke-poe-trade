@@ -44,7 +44,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
             width="1600" height="900" loading="lazy">
         </div>
         <div class="under">
-          <p class="say" aria-live="polite">{{ h.slides[current(h)].text }}</p>
+          <p class="say" aria-live="polite">{{ h.slides[current(h)].text }}<button v-if="h.slides[current(h)].more" type="button" class="more" :aria-label="h.slides[current(h)].more">?<span class="more-card" aria-hidden="true">{{ h.slides[current(h)].more }}</span></button></p>
           <div class="sockets" role="group" :aria-label="`${h.name} slides`">
             <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="socket"
               :aria-pressed="i === current(h)" @click="shown[h.id] = i">
@@ -162,6 +162,10 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .stage img.on { opacity: 1; pointer-events: auto; }
 .under { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 900px; margin: 0 auto; padding: 22px 16px 0; text-align: center; }
 .say { color: var(--text); min-height: 56px; }
+.more { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 8px; vertical-align: 1px; border: 1px solid currentColor; border-radius: 50%; color: var(--dim); font-size: 12px; line-height: 1; cursor: help; }
+.more:hover, .more:focus-visible { color: var(--title); outline: none; }
+.more-card { display: none; position: absolute; z-index: 5; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: min(300px, 76vw); padding: 8px 10px; background: var(--ground); border: 1px solid var(--edge); border-radius: 4px; color: var(--text); font-size: 14px; line-height: 1.45; text-align: left; }
+.more:hover .more-card, .more:focus .more-card { display: block; }
 
 /* ---------- the slide buttons: linked gem sockets ---------- */
 .sockets { display: flex; justify-content: center; flex-wrap: wrap; }

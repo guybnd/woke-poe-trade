@@ -3,7 +3,7 @@
     <w-setting-section title="Updates">
       <w-setting-row label="Version"><span class="w-num">{{ prefs?.version ?? '…' }}</span></w-setting-row>
       <w-setting-row label="Update automatically" :disabled="prefs ? !prefs.canAutoUpdate : true"
-        :hint="prefs && !prefs.canAutoUpdate ? 'This copy updates by hand (portable or development build).' : 'Downloads in the background and installs when you quit.'">
+        :show-hint="prefs != null && !prefs.canAutoUpdate" :hint="prefs && !prefs.canAutoUpdate ? 'This copy updates by hand (portable or development build).' : 'Downloads in the background and installs when you quit.'">
         <w-toggle :model-value="!!prefs?.autoUpdate" :disabled="!prefs?.canAutoUpdate" @update:model-value="set({ autoUpdate: $event })" />
       </w-setting-row>
     </w-setting-section>

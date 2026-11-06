@@ -12,16 +12,15 @@
 
     <template v-if="advanced">
     <div class="flex items-center gap-2">
-      <div class="flex-1 w-dim text-sm">
-        Timings from this session. Updates every few seconds while this page is open.
-        Use "Copy report" and paste it in the project chat to share the numbers.
+      <div class="flex-1 w-dim text-sm flex items-center gap-2">
+        This session
+        <w-info text="Timings from this session. Updates every few seconds while this page is open. Use Copy report and paste it in the project chat to share the numbers." />
       </div>
       <button class="btn" @click="copyReport">{{ copied ? 'Copied' : 'Copy report' }}</button>
     </div>
 
     <section>
-      <div class="mb-1">Startup</div>
-      <div class="w-dim text-sm mb-1">Milliseconds after the app was launched.</div>
+      <div class="mb-1 flex items-center gap-2">Startup <w-info text="Milliseconds after the app was launched." /></div>
       <table :class="$style.table">
         <tr v-for="row in startupRows" :key="row.where + row.name">
           <td>{{ row.name }}</td>
@@ -32,8 +31,7 @@
     </section>
 
     <section>
-      <div class="mb-1">Timings</div>
-      <div class="w-dim text-sm mb-1">Milliseconds. "p95" is the slowest of the usual cases (95th percentile of the last 50).</div>
+      <div class="mb-1 flex items-center gap-2">Timings <w-info text="Milliseconds. &quot;p95&quot; is the slowest of the usual cases (95th percentile of the last 50)." /></div>
       <table :class="$style.table">
         <tr :class="$style.head">
           <td>What</td><td :class="$style.num">times</td><td :class="$style.num">last</td>
@@ -52,8 +50,7 @@
     </section>
 
     <section>
-      <div class="mb-1">Overlay hiccups</div>
-      <div class="w-dim text-sm mb-1">Moments the overlay was busy for 50 ms or more (it can't react during them).</div>
+      <div class="mb-1 flex items-center gap-2">Overlay hiccups <w-info text="Moments the overlay was busy for 50 ms or more (it can't react during them)." /></div>
       <div class="text-sm">
         {{ renderer.freezes.count }} this session<template v-if="renderer.freezes.recent.length">; latest:
           <span v-for="f in renderer.freezes.recent.slice(-6).reverse()" :key="f.at" :class="$style.chip">{{ f.ms }} ms, {{ ago(f.at) }}</span>
@@ -62,10 +59,7 @@
     </section>
 
     <section>
-      <div class="mb-1">CPU and memory</div>
-      <div class="w-dim text-sm mb-1">
-        Sampled every 15 seconds. CPU is percent of one core, summed over the app's processes.
-      </div>
+      <div class="mb-1 flex items-center gap-2">CPU and memory <w-info text="Sampled every 15 seconds. CPU is percent of one core, summed over the app's processes." /></div>
       <div v-if="!main?.processes.length" class="text-sm w-dim">First sample comes 15 seconds after launch.</div>
       <template v-else>
         <div class="text-sm mb-1">
@@ -94,6 +88,7 @@ export default {
 </script>
 
 <script setup lang="ts">
+import WInfo from './WInfo.vue'
 import { useCopy } from './copy'
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { hostRequest } from '../shared/host'

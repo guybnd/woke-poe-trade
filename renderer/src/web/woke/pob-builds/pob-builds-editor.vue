@@ -7,12 +7,9 @@
         placeholder="Leave empty for Documents\Path of Building\Builds">
     </label>
     <label class="flex flex-col gap-1">
-      <span>Path of Building executable (optional)</span>
+      <span class="flex items-center gap-2">Path of Building executable (optional) <w-info text="&quot;Open in PoB&quot; starts this program with the build file. When it's empty, the file opens with whatever app is set for .xml files." /></span>
       <input v-model="pobExe" class="w-input rounded px-1 leading-6"
         placeholder="e.g. C:\Users\you\AppData\Roaming\Path of Building Community\Path of Building.exe">
-      <span class="w-dim text-sm">
-        "Open in PoB" starts this program with the build file. When it's empty, the file opens with whatever app is set for .xml files.
-      </span>
     </label>
   </div>
 </template>
@@ -21,9 +18,11 @@
 import { defineComponent } from 'vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import type { PobBuildsWidget } from './widget'
+import WInfo from '../ui/WInfo.vue'
 
 export default defineComponent({
   name: 'PoB builds',
+  components: { WInfo },
   props: configProp<PobBuildsWidget>(),
   setup (props) {
     return {

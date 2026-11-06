@@ -52,7 +52,7 @@
                 </span>
                 <span class="flex justify-end"><WSpark :values="row.trend" :width="48" :height="16" /></span>
               </button>
-              <div class="text-xs w-faint pt-1">Bar: {{ unitLabel }} per hour. Whisker: 90% range. <WInfo :text="`Whiskers show after ${MIN_UNITS_FOR_RANGE} maps. Overlapping whiskers mean it is too early to tell two strategies apart.`" /></div>
+              <div class="pt-1"><WInfo :text="`Bar: ${unitLabel} per hour. Whisker: 90% range.\n\nWhiskers show after ${MIN_UNITS_FOR_RANGE} maps. Overlapping whiskers mean it is too early to tell two strategies apart.`" /></div>
             </div>
 
             <div v-if="selectedRow" :class="$style.detail">
@@ -84,7 +84,7 @@
                   {{ versusText(versus.chance) }}
                 </template>
               </div>
-              <div v-if="selectedRow.kind === 'boss'" class="text-xs w-faint">From your Boss runs kill log at today's prices, with your run time from there.</div>
+              <div v-if="selectedRow.kind === 'boss'"><WInfo text="From your Boss runs kill log at today's prices, with your run time from there." /></div>
             </div>
           </template>
           <!-- Trading (from the trade assistant's sales log) -->
@@ -198,7 +198,7 @@
               <span class="text-right w-num w-dim">{{ num(t.best) }}</span>
               <span class="text-right w-num w-dim">{{ t.minutes.toFixed(1) }}m</span>
             </div>
-            <div class="text-xs w-faint pt-1">Each map includes its share of hideout time and of loot not tied to a map. Maps you left out are not counted.</div>
+            <div class="pt-1"><WInfo text="Each map includes its share of hideout time and of loot not tied to a map. Maps you left out are not counted." /></div>
           </div>
         </template>
       </div>

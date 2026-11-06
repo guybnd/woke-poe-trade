@@ -21,15 +21,9 @@
       <input v-model.number="valueAlertChaos" type="number" min="0" step="10" class="rounded w-input px-1 block" style="width: 6rem;">
       <span>chaos (0 = off)</span>
     </label>
-    <div class="text-sm" style="color: var(--w-dim);">
-      Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition,
-      prices its essences from poe.ninja and says whether to corrupt it.
-      It compares what the monolith is worth now with an estimate of its worth after corrupting (minus a Vaal Orb),
-      and says CORRUPT only when the estimate is higher. The odds of each corrupt outcome aren't published, so the
-      estimate treats them as equally likely. Without prices it falls back to the essences ticked here: Misery, Envy,
-      Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting.
-      It only reads the screen; you still use the Remnant of Corruption yourself.
-      It needs Windows and the OCR files used by APT's heist gem reader.
+    <div class="flex items-center gap-2 text-sm" style="color: var(--w-dim);">
+      How it decides
+      <w-info :text="'Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition, prices its essences from poe.ninja and says whether to corrupt it.\n\nIt compares what the monolith is worth now with an estimate of its worth after corrupting (minus a Vaal Orb), and says CORRUPT only when the estimate is higher. The odds of each corrupt outcome aren\'t published, so the estimate treats them as equally likely.\n\nWithout prices it falls back to the essences ticked here: Misery, Envy, Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting.\n\nIt only reads the screen; you still use the Remnant of Corruption yourself. It needs Windows and the OCR files used by APT\'s heist gem reader.'" />
     </div>
   </div>
 </template>
@@ -37,14 +31,14 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
-import { WChip } from '../ui'
+import { WChip, WInfo } from '../ui'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { ESSENCE_TYPES, MEDS } from './essences'
 import type { EssenceScanWidget } from './widget'
 
 export default defineComponent({
   name: 'Essence scan',
-  components: { WHotkeyCell, WChip },
+  components: { WHotkeyCell, WChip, WInfo },
   props: configProp<EssenceScanWidget>(),
   setup (props) {
     const flagTypes = configModelValue(() => props.configWidget, 'flagTypes')

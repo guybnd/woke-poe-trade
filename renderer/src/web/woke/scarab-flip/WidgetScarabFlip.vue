@@ -61,8 +61,8 @@
 
       <template v-else-if="view === 'odds' && odds">
         <div :class="$style.note" class="w-num">
-          <template v-if="odds.medianResult != null">Half of all {{ flipWord }}s return {{ fmt(odds.medianResult) }} or less. </template>
-          Before any rerolls, a {{ flipWord }} sells for {{ fmt(odds.saleValue) }} on average.
+          <template v-if="odds.medianResult != null">Half return {{ fmt(odds.medianResult) }} or less. </template>
+          Average sale before rerolls: {{ fmt(odds.saleValue) }}.
         </div>
         <div :class="$style.legend">
           <span><i :class="[$style.key, $style.chance]" />Chance of this result</span>
@@ -90,7 +90,8 @@
 
       <template v-else-if="pool">
         <div :class="$style.note" class="w-num">
-          These drop under {{ pct(family.rareShare ?? 0) }} of the time but cost less than a third of a typical rare {{ family.noun }}<template v-if="pool.typicalRare != null"> ({{ fmt(pool.typicalRare) }})</template>, so they may rise later. Hold them rather than flipping them.
+          Rare but cheap, so they may rise later. Hold them rather than flipping them.
+          <WInfo :text="`These drop under ${pct(family.rareShare ?? 0)} of the time but cost less than a third of a typical rare ${family.noun}${pool.typicalRare != null ? ` (${fmt(pool.typicalRare)})` : ''}.`" />
         </div>
         <WEmpty v-if="!rareCheap.length" icon="fas fa-star">No exceptionally rare {{ family.noun }} is cheap right now.</WEmpty>
         <template v-else>

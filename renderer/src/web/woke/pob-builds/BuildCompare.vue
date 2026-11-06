@@ -18,7 +18,7 @@
         <span class="w-num">{{ s.b }}</span>
         <span class="w-num" :style="{ color: TONE[s.tone] }">{{ s.delta }}</span>
       </div>
-      <div v-if="result.stats.length" class="w-faint text-xs pt-1">Stats as PoB saved them, for each build's active sets.</div>
+      <div v-if="result.stats.length" class="pt-1"><WInfo text="Stats as PoB saved them, for each build's active sets." /></div>
 
       <div :class="$style.heading">Gear · {{ result.gear.length }} of {{ result.gearTotal }} differ</div>
       <div v-for="(g, i) in result.gear" :key="i" :class="$style.gear">
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { shallowRef, watch } from 'vue'
-import { WEmpty, WPanel } from '../ui'
+import { WEmpty, WInfo, WPanel } from '../ui'
 import { compareBuilds } from './compare-builds'
 import type { BuildCompare } from './compare-builds'
 import { pobApi } from './widget'

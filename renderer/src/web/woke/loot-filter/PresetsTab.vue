@@ -1,8 +1,8 @@
 <template>
   <div :class="$style.wrap" class="w-scroll">
-    <div class="w-dim text-sm">
-      Common changes in one click. They're kept across NeverSink updates and never touch your own rules or the safety net.
-      <template v-if="store.presetChanges.value"> Right now they adjust {{ store.presetChanges.value }} of NeverSink's rules.</template>
+    <div class="w-dim text-sm flex items-center gap-2">
+      <span>{{ store.presetChanges.value ? `Adjusting ${store.presetChanges.value} of NeverSink's rules` : 'Common changes in one click' }}</span>
+      <WInfo text="They're kept across NeverSink updates and never touch your own rules or the safety net." />
     </div>
 
     <div :class="$style.card">
@@ -19,7 +19,10 @@
     </div>
 
     <div :class="$style.card">
-      <WToggle v-model="p.chaosRecipe.on">Chaos recipe: unidentified item level 60-74 rares</WToggle>
+      <div class="flex items-center gap-2">
+        <WToggle v-model="p.chaosRecipe.on">Chaos recipe: unidentified item level 60-74 rares</WToggle>
+        <WInfo text="One colour per slot. Click a slot to drop it once you have enough." />
+      </div>
       <div class="flex flex-wrap gap-1">
         <WChip v-for="s in RECIPE_SLOTS" :key="s.key" clickable :active="p.chaosRecipe.slots.includes(s.key)"
           :title="p.chaosRecipe.slots.includes(s.key) ? `Stop showing ${s.label.toLowerCase()} (that slot is full)` : `Show ${s.label.toLowerCase()} again`"
@@ -27,7 +30,6 @@
           <span :class="$style.swatch" :style="{ background: `rgb(${s.colour.join(',')})` }" /> {{ s.label }}
         </WChip>
       </div>
-      <div class="w-faint text-xs">One colour per slot. Click a slot to drop it once you have enough.</div>
     </div>
 
     <div :class="$style.card">
@@ -35,8 +37,8 @@
         <WToggle v-model="p.quiet.on">Quiet mode: sounds only for tiers 1 to</WToggle>
         <WSelect :model-value="String(p.quiet.keepTiers)" :options="[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
           aria-label="Loudest tiers kept" @update:model-value="v => p.quiet.keepTiers = Number(v)" />
+        <WInfo text="Lower tiers keep their look and beam, just no alert sound." />
       </div>
-      <div class="w-faint text-xs">Lower tiers keep their look and beam, just no alert sound.</div>
     </div>
 
     <div :class="$style.card">
@@ -58,15 +60,17 @@
     </div>
 
     <div :class="$style.card">
-      <WToggle v-model="p.sixSockets.on">Show 6-socket items for the vendor</WToggle>
-      <div class="w-faint text-xs">Seven Jeweller's Orbs each, in grey, above NeverSink's rules.</div>
+      <div class="flex items-center gap-2">
+        <WToggle v-model="p.sixSockets.on">Show 6-socket items for the vendor</WToggle>
+        <WInfo text="Seven Jeweller's Orbs each, in grey, above NeverSink's rules." />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WChip, WField, WSelect, WToggle } from '../ui'
+import { WChip, WField, WInfo, WSelect, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'

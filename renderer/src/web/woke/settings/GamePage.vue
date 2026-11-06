@@ -10,7 +10,7 @@
       <w-setting-row label="Private league" hint="Type its full name, like My League (PL12345). Clear it to go back to the list.">
         <w-field :model-value="privateLeague" placeholder="My League (PL12345)" @update:model-value="setPrivate(String($event))" />
       </w-setting-row>
-      <w-setting-row label="Game language" hint="Must match the game, or item text won't be read.">
+      <w-setting-row label="Game language" show-hint hint="Must match the game, or item text won't be read.">
         <w-select :model-value="config.language" :options="LANGUAGES" @update:model-value="setLanguage($event as Config['language'])" />
       </w-setting-row>
       <w-setting-row v-if="config.language === 'cmn-Hant'" label="Realm">

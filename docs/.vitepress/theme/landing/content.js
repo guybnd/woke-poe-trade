@@ -33,7 +33,7 @@ export const HIGHLIGHTS = [
     name: 'Path of Building',
     tag: 'Your build, no alt-tab',
     slides: [
-      { label: 'Gear and links', module: 'pob-builds', shot: 'hl-pob-gear', text: 'Your gear and gem links from your PoB folder, with item tooltips. The search on any item opens it in the price check.', alt: 'A build\'s gear tab with an item tooltip and a price check button on each item' },
+      { label: 'Gear and links', module: 'pob-builds', shot: 'hl-pob-gear', text: 'Your gear and links from PoB. Search any item to price check it.', alt: 'A build\'s gear tab with an item tooltip and a price check button on each item' },
       { label: 'Levelling', module: 'pob-builds', shot: 'hl-pob-levelling', text: 'Gems by level, and where to get each one.', alt: 'A build\'s leveling tab: gem links, and each gem by level with its vendor or quest' },
       { label: 'Next step', module: 'pob-builds', shot: 'hl-pob-next', text: 'What changes in your next tree, gems and gear, before you get there.', alt: 'The Next section of a build: new passive points, gems to add and drop, and the gear that changes' },
       { label: 'Passive tree', module: 'pob-builds', shot: 'hl-pob-tree', text: 'The tree right in the overlay: your points in gold, new ones in green, respecs in red.', alt: 'Passive tree panel with allocated paths, new points and a list of what the next tree adds and removes' },
@@ -49,7 +49,7 @@ export const HIGHLIGHTS = [
     tag: 'Know what pays',
     slides: [
       { label: 'Flips', module: 'scarab-flip', shot: 'hl-flips', text: 'Vendor recipes and Harvest rerolls that pay today, sorted by profit.', alt: 'Flips window: scarabs worth vendoring, with price, profit and supply' },
-      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Bind a key or click the icon. It sees which tab is open and outlines what is worth flipping, with the profit on each. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs at 1440p.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
+      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Outlines what is worth flipping in the open tab, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs at 1440p.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
       { label: 'Price tracker', module: 'market', shot: 'tour-market', text: 'poe.ninja prices kept as history on your PC, with movers and a watchlist.', alt: 'Market tracker watchlist with a gem\'s tooltip, beside the flips window' },
       { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' }

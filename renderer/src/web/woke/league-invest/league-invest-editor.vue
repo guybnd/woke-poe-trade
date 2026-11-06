@@ -1,22 +1,17 @@
 <template>
   <div class="max-w-xl p-2 flex flex-col gap-4">
     <div class="flex flex-col gap-1">
-      <div>Changed this league</div>
-      <div class="w-dim text-sm">
-        Items a patch changed this league (drop rates, crafting use, new sources). Their past-league history is unreliable.
-        One per line. Part of a name works too, like "Scarab of". The panel ignores lines that start with #.
-      </div>
+      <div class="flex items-center gap-2">Changed this league <w-info text="Items a patch changed this league (drop rates, crafting use, new sources). Their past-league history is unreliable. One per line. Part of a name works too, like &quot;Scarab of&quot;. The panel ignores lines that start with #." /></div>
       <textarea :value="configWidget.changedItems ?? ''" rows="5" class="w-input rounded px-1 w-full" placeholder="# 3.xx changes&#10;Scarab of"
         @change="setChanged" />
       <w-toggle v-model="hideChanged">Hide changed items instead of flagging them</w-toggle>
     </div>
     <div class="flex flex-col gap-1">
       <div>Past leagues</div>
-      <div class="w-dim text-sm">
-        Import poe.ninja league dumps from
-        <a href="https://poe.ninja/poe1/data" target="_blank" class="w-accent hover:underline">poe.ninja/poe1/data</a>
-        (the .zip, or the &lt;League&gt;.items.csv and .currency.csv files). Only challenge softcore leagues are kept.
-        A few past leagues ship with the app. Your own imports of the same league replace them.
+      <div class="w-dim text-sm flex items-center gap-1">
+        <span>Import poe.ninja league dumps from
+          <a href="https://poe.ninja/poe1/data" target="_blank" class="w-accent hover:underline">poe.ninja/poe1/data</a></span>
+        <w-info text="Use the .zip, or the &lt;League&gt;.items.csv and .currency.csv files. Only challenge softcore leagues are kept. A few past leagues ship with the app. Your own imports of the same league replace them." />
       </div>
       <div class="flex items-center gap-2">
         <WButton variant="primary" size="sm" icon="fas fa-file-import" :disabled="importing" @click="fileInput?.click()">
@@ -37,14 +32,14 @@
 
 <script lang="ts">
 import { computed, defineComponent, onMounted, shallowRef } from 'vue'
-import { WButton, WToggle } from '../ui'
+import { WButton, WInfo, WToggle } from '../ui'
 import { configProp } from '@/web/settings/utils'
 import { histories, importError, importMsg, importing, onFiles, reloadHistories, removeHistory } from './league-data'
 import type { LeagueInvestWidget } from './widget'
 
 export default defineComponent({
   name: 'League investments',
-  components: { WButton, WToggle },
+  components: { WButton, WInfo, WToggle },
   props: configProp<LeagueInvestWidget>(),
   setup (props) {
     const w = () => props.configWidget

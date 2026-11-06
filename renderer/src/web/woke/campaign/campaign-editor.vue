@@ -1,9 +1,9 @@
 <template>
   <div class="max-w-xl p-2 flex flex-col gap-3">
     <input class="w-input rounded px-1 w-48" placeholder="Widget title" v-model="title" />
-    <div class="w-dim text-sm">
-      Follows the built-in levelling route from <a href="https://github.com/HeartofPhos/exile-leveling" target="_blank" class="underline">exile-leveling</a>
-      (MIT). Steps move on by themselves as you enter each zone. It reads Client.txt, so check its path in the general settings.
+    <div class="w-dim text-sm flex items-center gap-1">
+      <span>Route from <a href="https://github.com/HeartofPhos/exile-leveling" target="_blank" class="underline">exile-leveling</a> (MIT)</span>
+      <w-info text="Steps move on by themselves as you enter each zone. It reads Client.txt, so check its path in the general settings." />
     </div>
 
     <div>
@@ -34,8 +34,7 @@
     </div>
 
     <div>
-      <div class="mb-1">On screen while levelling</div>
-      <div class="w-dim text-sm mb-1">Off by default. These widen the campaign icon, and never show in maps, hideouts or on a character past the campaign. Times need the Run timer.</div>
+      <div class="mb-1 flex items-center gap-2">On screen while levelling <w-info text="Off by default. These widen the campaign icon, and never show in maps, hideouts or on a character past the campaign. Times need the Run timer." /></div>
       <div class="flex flex-col gap-1">
         <w-toggle v-for="o in PIN_OPTIONS" :key="o.id" :model-value="configWidget.pins.includes(o.id)" @update:model-value="togglePin(o.id)">{{ o.label }}</w-toggle>
       </div>
@@ -57,8 +56,7 @@
     </label>
 
     <details>
-      <summary class="cursor-pointer">Personal notes (optional)</summary>
-      <div class="w-dim text-sm my-1">Extra reminders shown on the card under the route. You don't need these.</div>
+      <summary class="cursor-pointer">Personal notes (optional) <w-info text="Extra reminders shown on the card under the route. You don't need these." /></summary>
       <div class="flex flex-col gap-1">
         <label v-for="act in acts" :key="act" class="grid gap-1 items-start" style="grid-template-columns: 5rem 1fr;">
           <span class="w-dim pt-1">{{ actLabel(act) }}</span>
@@ -93,6 +91,7 @@ const BANDITS = [
 ]
 import { defineComponent, computed } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WInfo from '../ui/WInfo.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { nextId } from '../shared/library'
 import { actLabel } from './log-parse'
@@ -105,7 +104,7 @@ import type { RouteOptions } from './route-parse'
 
 export default defineComponent({
   name: 'Campaign',
-  components: { WToggle, WSelect, WHotkeyCell },
+  components: { WToggle, WSelect, WHotkeyCell, WInfo },
   props: configProp<CampaignWidget>(),
   setup (props) {
     migrateCampaign(props.configWidget)

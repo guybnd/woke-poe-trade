@@ -66,7 +66,7 @@
       :from-ninja="Boolean(ninjaInfo)" :loading="leagueLoading" @range="onRange" />
 
     <div v-if="expanded && sourcesAddAnything(blend, headline?.from)" :class="$style.sources">
-      <div v-if="blend.points.length > 1" :class="$style.agree">{{ AGREEMENT_SENTENCE[blend.agreement] }}<template v-if="headline?.from === 'blend'">. The headline blends them, listings count most</template></div>
+      <div v-if="blend.points.length > 1" :class="$style.agree">{{ AGREEMENT_SENTENCE[blend.agreement] }} <WInfo v-if="headline?.from === 'blend'" text="The headline blends them, listings count most." /></div>
       <div v-for="p in blend.points" :key="p.key" :class="[$style.source, { [$style.off]: p.weight === 0 }]" :title="p.note">
         <span :class="{ [$style.ninjaName]: p.key === 'ninja' }">{{ p.label }}</span>
         <span class="w-num" :class="$style.sourceNote" :title="p.key === 'ninja' && ninjaGapText ? 'Listings disagree with poe.ninja, which averages recent prices. Trust the listings for rolls and corruption, poe.ninja for the going rate.' : undefined">{{ p.weight === 0 ? 'not counted' : (p.key === 'ninja' ? ninjaGapText : '') }}</span>
@@ -87,7 +87,7 @@
 import { computed, onUnmounted, toRef, watch } from 'vue'
 import { ParsedItem } from '@/parser'
 import { AppConfig } from '@/web/Config'
-import { WPrice, WSpark } from '../ui'
+import { WInfo, WPrice, WSpark } from '../ui'
 import { useCopy } from '../ui/copy'
 import { nowMinute } from '../ui/format'
 import { usePoeninja } from '@/web/background/Prices'

@@ -134,7 +134,7 @@
               <div v-if="diff.added.length"><span class="w-up">Also allocate:</span> {{ diff.added.join(', ') }}</div>
               <div v-if="diff.removed.length"><span class="w-down">Refund:</span> {{ diff.removed.join(', ') }}</div>
               <div v-if="!diff.added.length && !diff.removed.length" class="w-faint">Same notables.</div>
-              <div class="w-faint text-xs">Going from this strategy to the other; notables and keystones only.</div>
+              <div><WInfo text="Going from this strategy to the other; notables and keystones only." /></div>
             </template>
           </div>
         </div>
@@ -163,7 +163,7 @@ import { inject, computed, shallowRef, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WButton, WEmpty, WListItem, WIcon, WBanner, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WInfo, WPanel, WField, WButton, WEmpty, WListItem, WIcon, WBanner, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { SAVE_MESSAGE, saveToRegexLibrary } from '../regex-library/save'
 import { ninjaIcon } from '../ui/game-icons'
 import type { AtlasStrategy } from './widget'
