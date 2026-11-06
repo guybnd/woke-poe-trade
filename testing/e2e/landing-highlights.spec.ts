@@ -179,15 +179,6 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText('Rage Guardian')
   await saveAround(overlay, 'hl-price-tooltip', [panel.locator('.w-pc-table'), tip], 1240)
-  // Shift + scroll over the listing swaps the ranges for a bar on each roll.
-  await overlay.page.keyboard.down('Shift')
-  try {
-    await overlay.page.mouse.wheel(0, 100)
-    await expect(tip.locator('[class*="bar"]').first()).toBeVisible()
-    await saveAround(overlay, 'hl-price-bars', [panel.locator('.w-pc-table'), tip], 1240)
-  } finally {
-    await overlay.page.keyboard.up('Shift')
-  }
 })
 
 // ---- 2. Loot filter ----

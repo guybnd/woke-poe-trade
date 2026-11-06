@@ -3,7 +3,7 @@
     :move-handles="mode === 'card' ? 'none' : 'corners'" :inline-edit="false" :readonly="true">
     <!-- Strictness and anything that needs you, behind one dock icon. -->
     <DockItem :menu="dockMenu" ref="dockRef" id="loot-filter" :art="dockArt" title="Loot filter" :show="dockShow"
-      :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="22rem">
+      :badge="dockBadge" :tone="dockTone" :readouts="dockReadouts" :wm-id="config.wmId" card-width="22rem" @activate="openFromDock">
       <template #card>
         <div :class="$style.dock">
           <template v-if="config.neversink.on">
@@ -36,7 +36,7 @@
           </div>
           <div v-for="n in dockNotes" :key="n.id" class="text-xs" :style="n.warn ? 'color: var(--w-warn)' : ''">{{ n.text }}</div>
           <div v-if="dismissable.length" class="flex flex-wrap items-center gap-1">
-            <WButton size="sm" variant="ghost" @click="seeNotice">See {{ dismissable.length > 1 ? 'first' : 'it' }}</WButton>
+            <WButton size="sm" variant="primary" @click="seeNotice">{{ noticeAction(dismissable[0]) }}</WButton>
             <WButton size="sm" variant="ghost" @click="gotIt">Got it</WButton>
             <WButton v-if="dismissable.some(canTurnOff)" size="sm" variant="ghost" title="You can turn it back on in the Prices tab" @click="turnOff">Don't tell me about this</WButton>
           </div>
@@ -84,10 +84,10 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, gameIcon, toast } from '../ui'
 import DockItem from '../dock/DockItem.vue'
-import { openOverlay } from '../dock/dock'
+import { showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { LEVEL_NAMES, LEVEL_SHORT, clampLevel, stepLabel } from './strictness'
-import { canTurnOff, markSeen, visibleNotices } from './notices'
+import { canTurnOff, markSeen, noticeAction, visibleNotices } from './notices'
 import type { Notice } from './notices'
 import SampleCard from './SampleCard.vue'
 import FilterEditor from './FilterEditor.vue'
@@ -332,7 +332,16 @@ function seeNotice () {
   if (!n) return
   openTab.value = n.tab ? { tab: n.tab } : null
   mode.value = 'editor'
-  wm.show(props.config.wmId)
+  showWithOverlay(wm, props.config.wmId)
+  ensureLoaded()
+}
+
+// The icon or the card's Open row: straight to what the card is telling you. An
+// editor you can see stays on its tab; one left open stays 'show' behind the game.
+function openFromDock () {
+  const tab = dismissable.value[0]?.tab
+  if (tab && (!wm.active.value || props.config.wmWants !== 'show' || mode.value === 'card')) openTab.value = { tab }
+  mode.value = 'editor'
   ensureLoaded()
 }
 
@@ -381,7 +390,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [
     : []),
   ...(dismissable.value.length
     ? [
-        { label: 'See the notice', icon: 'fas fa-eye', action: () => { openOverlay(); seeNotice() } },
+        { label: 'See the notice', icon: 'fas fa-eye', action: seeNotice },
         { label: 'Got it', icon: 'fas fa-check', action: gotIt },
         ...(dismissable.value.some(canTurnOff) ? [{ label: "Don't tell me about this", icon: 'fas fa-bell-slash', action: turnOff }] : [])
       ]

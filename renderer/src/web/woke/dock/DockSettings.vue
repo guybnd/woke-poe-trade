@@ -2,9 +2,9 @@
   <w-setting-section title="Icon row">
     <div class="w-dim flex items-center gap-2" :class="$style.intro">
       How the icons work
-      <w-info text="Small icons show while you play. Rest the mouse on one for its card. Right-click for its menu. With the overlay open, drag the row by its grip, and click an icon for the full window." />
+      <w-info text="Small icons show while you play. Rest the mouse on one for its card. Right-click for its menu. Click one for its full window. With the overlay open, drag the row by its grip." />
     </div>
-    <w-setting-row label="Open cards on hover" hint="Off: a card opens only when you click its icon. A click closes it either way.">
+    <w-setting-row label="Open cards on hover" hint="Off: clicking an icon opens its card, and the card's Open row opens the full window.">
       <w-toggle :model-value="dock.hoverOpens !== false" @update:model-value="dock.hoverOpens = $event" />
     </w-setting-row>
     <w-setting-row label="Peek" hint="An icon grows into one line for 5 seconds when something happens: new zone, live search hit, map counted.">

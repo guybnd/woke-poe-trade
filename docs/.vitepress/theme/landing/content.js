@@ -14,8 +14,7 @@ export const HIGHLIGHTS = [
     tag: 'See what you are up against',
     slides: [
       { label: 'Competing listings', module: 'apt-price-check', shot: 'hl-price-columns', text: 'Every listing beside yours, stat by stat. Green where yours is better, red where theirs is.', alt: 'Price check of a body armour: eight listings with energy shield, resistances and life compared to yours' },
-      { label: 'Listing tooltip', module: 'apt-price-check', shot: 'hl-price-tooltip', text: 'Hover a listing to see the item as the game shows it, with mod tiers and how good each roll is.', alt: 'Tooltip of a listed body armour with the tier and roll quality of each mod' },
-      { label: 'Roll bars', module: 'apt-price-check', shot: 'hl-price-bars', text: 'Shift + scroll over a listing swaps the ranges for a bar on every roll, so you see how close each one came.', alt: 'The same listing tooltip with a coloured bar and percentage for each rolled number' }
+      { label: 'Listing tooltip', module: 'apt-price-check', shot: 'hl-price-tooltip', text: 'Hover a listing to see the item as the game shows it, with mod tiers and a line under each mod showing how good its roll is.', alt: 'Tooltip of a listed body armour with the tier and roll quality of each mod' },
     ]
   },
   {

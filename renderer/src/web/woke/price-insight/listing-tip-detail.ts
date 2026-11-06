@@ -20,22 +20,12 @@ export interface ModPart {
   range?: boolean
 }
 
-export interface RollBar {
-  low: number
-  high: number
-  // Where the marker sits on the bar, 0 to 100, low on the left.
-  at: number
-  // How good this roll is, 0 to 100. Differs from `at` for a downside.
-  quality: number
-}
-
 export interface ModLine {
   parts: ModPart[]
   tags: string[]
   kind: '' | 'crafted' | 'fractured'
   // Where the roll sits in its range, 0 to 100. Null when the line can't roll.
   quality: number | null
-  bars: RollBar[]
 }
 
 export interface ModGroup {
@@ -190,7 +180,7 @@ function biggerIsWorse (mod: Exclude<ListingMod, string>, text: string): boolean
 
 function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
   const text = modText(mod)
-  const plain: ModLine = { parts: textParts(text), tags: [], kind, quality: null, bars: [] }
+  const plain: ModLine = { parts: textParts(text), tags: [], kind, quality: null }
   if (typeof mod === 'string') return plain
   plain.tags = (mod.mods ?? []).map(m => m.tier ?? '').filter(Boolean)
 
@@ -202,7 +192,6 @@ function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
 
   const worse = biggerIsWorse(mod, text)
   const parts: ModPart[] = []
-  const bars: RollBar[] = []
   const rolls: number[] = []
   let last = 0
   aligned.forEach((at, i) => {
@@ -213,13 +202,11 @@ function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
     parts.push(...textParts(text.slice(last, end)), { text: `(${span.low}-${span.high})`, range: true })
     last = end
     const place = Math.min(1, Math.max(0, (Number(match[0]) - span.low) / (span.high - span.low)))
-    const roll = worse ? 1 - place : place
-    rolls.push(roll)
-    bars.push({ low: span.low, high: span.high, at: place * 100, quality: percent(roll) })
+    rolls.push(worse ? 1 - place : place)
   })
   if (!rolls.length) return plain
   parts.push(...textParts(text.slice(last)))
-  return { ...plain, parts, bars, quality: percent(rolls.reduce((a, b) => a + b, 0) / rolls.length) }
+  return { ...plain, parts, quality: percent(rolls.reduce((a, b) => a + b, 0) / rolls.length) }
 }
 
 function modKind (mod: ListingMod, fallback: ModLine['kind']): ModLine['kind'] {

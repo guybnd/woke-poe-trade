@@ -50,14 +50,6 @@
         <ui-radio v-model="searchStatRange" :value="0">{{ t(':fill_roll_exact') }}</ui-radio>
       </div>
     </div>
-    <div class="mb-4">
-      <div class="flex-1 mb-1">{{ t(':listing_rolls') }}</div>
-      <div class="mb-1 flex">
-        <ui-radio v-model="listingRolls" value="inline" class="mr-4">{{ t(':listing_rolls_inline') }}</ui-radio>
-        <ui-radio v-model="listingRolls" value="bars">{{ t(':listing_rolls_bars') }}</ui-radio>
-      </div>
-      <div class="italic text-gray-500">{{ t(':listing_rolls_hint') }}</div>
-    </div>
     <ui-checkbox class="mb-4"
       v-model="activateStockFilter">{{ t(':select_stock') }}</ui-checkbox>
     <ui-checkbox class="mb-4"
@@ -138,10 +130,6 @@ export default defineComponent({
       accountName: configModelValue(() => props.config, 'accountName'),
       showSeller: configModelValue(() => configWidget.value, 'showSeller'),
       activateStockFilter: configModelValue(() => configWidget.value, 'activateStockFilter'),
-      listingRolls: computed<'inline' | 'bars'>({
-        get: () => configWidget.value.listingRolls ?? 'inline',
-        set: (value) => { configWidget.value.listingRolls = value }
-      }),
       showCursor: configModelValue(() => configWidget.value, 'showCursor'),
       builtinBrowser: configModelValue(() => configWidget.value, 'builtinBrowser'),
       requestPricePrediction: configModelValue(() => configWidget.value, 'requestPricePrediction'),

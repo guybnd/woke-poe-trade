@@ -32,13 +32,12 @@
           <div><span :class="$style.label">Item Level: </span><span :class="$style.value">{{ item.itemLevel }}</span></div>
         </section>
         <section v-if="listing.implicits.length" :class="$style.block">
-          <ListingModRow v-for="(line, i) in listing.implicits" :key="i" :line="line" :bars="rollBars" />
+          <ListingModGroup :group="{ heading: '', lines: listing.implicits }" />
         </section>
         <section v-if="listing.groups.length" :class="$style.block">
           <template v-for="(group, g) in listing.groups" :key="g">
-            <div v-if="group.heading" :class="[$style.modHeading, { [$style.barsHeading]: rollBars }]">{{ group.heading }}</div>
-            <div v-else-if="g" :class="$style.modGap" />
-            <ListingModRow v-for="(line, i) in group.lines" :key="i" :line="line" :bars="rollBars" />
+            <div v-if="g && !(group.heading && listing.groups[g - 1].heading)" :class="$style.modGap" />
+            <ListingModGroup :group="group" />
           </template>
         </section>
         <section v-if="listing.tail.length || item.corrupted || item.mirrored" :class="$style.block">
@@ -133,8 +132,6 @@
 // Mounted once in the overlay.
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, shallowRef, useCssModule, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
-import { AppConfig } from '@/web/Config'
-import type { PriceCheckWidget } from '@/web/overlay/interfaces'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import SocketDots from '../../pob-builds/SocketDots.vue'
 import { socketGroups } from '../../pob-builds/build-model'
@@ -142,7 +139,7 @@ import { gemData } from '../../pob-builds/gems'
 import type { GemColour } from '../../pob-builds/gems'
 import type { PobItem } from '../../pob-builds/widget'
 import SwapCard from '../../pob-builds/SwapCard.vue'
-import ListingModRow from './ListingModRow.vue'
+import ListingModGroup from './ListingModGroup.vue'
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import WSpark from '../WSpark.vue'
@@ -155,7 +152,6 @@ const placed = shallowRef<{ left: number, top: number } | null>(null)
 
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
-const rollBars = computed(() => AppConfig<PriceCheckWidget>('price-check')?.listingRolls === 'bars')
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
 const swap = computed<SwapTip | null>(() => tip.value?.content.kind === 'swap' ? tip.value.content : null)
 const passive = computed<PassiveTip | null>(() => tip.value?.content.kind === 'passive' ? tip.value.content : null)
@@ -294,12 +290,6 @@ watch(tip, async (t) => {
   reposition()
 })
 
-// Switching how rolls are drawn changes the tip's size under a still cursor.
-watch(rollBars, async () => {
-  await nextTick()
-  reposition()
-})
-
 // Hidden until measured, so it never flashes in the wrong spot.
 const pos = computed(() => placed.value
   ? { left: `${placed.value.left}px`, top: `${placed.value.top}px` }
@@ -401,12 +391,7 @@ onUnmounted(() => {
 
 /* A listing's headings and tags need the room. */
 .wide { max-width: 46rem; --tip-range: #d9c48f; }
-.modHeading { margin-top: 6px; color: var(--w-dim); font-size: var(--w-fs-md); }
-.modHeading:first-child { margin-top: 0; }
 .modGap { height: 8px; }
-/* Lines up with the mod text in the bars view: the tag column's width, less the
-   row's pull to the left, plus the gap after the tags. */
-.barsHeading { padding-left: 3.5rem; text-align: left; }
 .p-label { color: var(--w-faint); }
 .p-value { color: #fff; }
 .p-aug { color: var(--w-r-magic); }

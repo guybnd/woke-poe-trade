@@ -94,27 +94,11 @@ describe('listingDetail on real trade responses', () => {
   })
 })
 
-describe('listingDetail, numbers and bars', () => {
+describe('listingDetail, numbers', () => {
   it('marks every number, rolled or fixed', () => {
     const numbers = (part: string) => findLine(SWORD, part).parts.filter(p => p.number).map(p => p.text)
     expect(numbers('Adds')).toEqual(['14', '31'])
     expect(numbers('reduced Attribute')).toEqual(['32'])
-  })
-
-  it('gives a bar for each number that rolls', () => {
-    expect(findLine(SWORD, 'Adds').bars).toEqual([
-      { low: 13, high: 18, at: 20, quality: 20 },
-      { low: 27, high: 31, at: 100, quality: 100 }
-    ])
-    expect(findLine(SWORD, 'reduced Attribute').bars).toEqual([])
-  })
-
-  it('leaves a downside marker where the number is, scored as bad', () => {
-    const line = listingDetail({
-      frameType: 2,
-      explicitMods: [{ description: '-20% to all Elemental Resistances', domain: 'explicit', mods: [{ name: 'A', magnitudes: [{ min: '-20', max: '-10' }] }] }]
-    }).groups[0].lines[0]
-    expect(line.bars).toEqual([{ low: 10, high: 20, at: 100, quality: 0 }])
   })
 })
 

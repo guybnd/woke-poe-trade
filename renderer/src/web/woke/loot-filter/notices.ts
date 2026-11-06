@@ -14,6 +14,21 @@ export interface Notice {
   passing?: boolean
 }
 
+// The button that goes to it. Every label says where you're going.
+export function noticeAction (n: Notice): string {
+  switch (n.id) {
+    case 'update': return 'Review update'
+    case 'prices': return `Review ${n.value} move${n.value === 1 ? '' : 's'}`
+    case 'moves-league': return 'Review moves'
+    case 'safety':
+    case 'net-prices': return 'See safety net'
+    case 'prices-old': return 'See prices'
+    case 'load': return 'See changes'
+    case 'failed': return 'Fix changes'
+    default: return 'Open editor'
+  }
+}
+
 export interface NoticeState {
   off: string[]
   seen: Record<string, string | number>

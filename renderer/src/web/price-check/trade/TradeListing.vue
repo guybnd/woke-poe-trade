@@ -104,7 +104,6 @@
               }"
               :title="improved && !row.lead.tipItem ? rowTitle(row) : undefined"
               @mouseenter="showRowTip($event, row)"
-              @wheel="switchRollView($event, row)"
               @mouseleave="hideTip">
               <td class="px-2 whitespace-nowrap">
                 <span class="w-pc-price">
@@ -173,7 +172,7 @@ import { requestTradeResultList, requestResults, createTradeRequest, clearTradeC
 import { getTradeEndpoint, preventQueueCreation, RATE_LIMIT_RULES } from './common'
 import { clearDriverCaches } from '@/web/woke/price-insight/drivers'
 import { measuredDrivers } from '@/web/woke/price-insight/check-state'
-import { AppConfig, saveConfigQuietly } from '@/web/Config'
+import { AppConfig } from '@/web/Config'
 import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { ItemFilters, FilterOrGroup } from '../filters/interfaces'
 import { ParsedItem } from '@/parser'
@@ -344,9 +343,6 @@ export default defineComponent({
   },
   setup (props, ctx) {
     const widget = computed(() => AppConfig<PriceCheckWidget>('price-check')!)
-    // One flick of a fine-stepped wheel sends many events: only a pause re-arms it.
-    const ROLL_SWITCH_GAP_MS = 200
-    let lastRollWheel = -Infinity
 
     watch(() => props.item, (item) => {
       slowdown.reset(item)
@@ -480,16 +476,6 @@ export default defineComponent({
         if (row.lead.tipItem) showTip(e, { kind: 'item', item: row.lead.tipItem, listing: row.lead.listedItem && listingDetail(row.lead.listedItem) })
       },
       hideTip,
-      // Plain scrolling stays with the results.
-      switchRollView (e: WheelEvent, row: ListingRow<PricingResult & { listedTimes: number }>) {
-        if (!e.shiftKey || !row.lead.tipItem) return
-        e.preventDefault()
-        const idle = e.timeStamp - lastRollWheel
-        lastRollWheel = e.timeStamp
-        if (idle < ROLL_SWITCH_GAP_MS) return
-        widget.value.listingRolls = widget.value.listingRolls === 'bars' ? 'inline' : 'bars'
-        saveConfigQuietly()
-      },
       FIX_TAG,
       skeletonRows,
       coinFor: (currency: string) => COINS[currency],

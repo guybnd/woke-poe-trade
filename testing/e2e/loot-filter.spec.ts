@@ -388,6 +388,54 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
   }).toMatch(/Show # \$type->woke->own [^\n]*\n(\t[^\n]*\n)*\tBaseType == "Despot Axe"/)
 })
 
+// A notice to find on the dock card, whatever the prices say.
+const MOVES_FROM_ANOTHER_LEAGUE = {
+  on: true,
+  moves: [{ type: 'uniques', base: 'Simple Robe', from: 't3', to: 't2', chaos: 1, league: 'Some Old League' }],
+  prev: null,
+  locks: [],
+  appliedAt: 1,
+  uniqueRule: 'max'
+}
+
+test('dock card: its button goes straight to the notice\'s tab, without the overlay key', async ({ overlay, fakeApp }) => {
+  test.slow()
+  await overlay.boot({ widgets: [{ ...lootFilter(filterFolder()), priceTiers: MOVES_FROM_ANOTHER_LEAGUE }] })
+  const page = overlay.page
+  fakeApp.focusGame(true)
+  const review = page.getByRole('button', { name: 'Review moves' })
+  await expect(async () => {
+    await overlay.moveMouse(1000, 900)
+    await overlay.hoverDockIcon('loot-filter')
+    await expect(review).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 30_000 })
+  await overlay.snap('loot filter card with its button')
+  const box = (await review.boundingBox())!
+  await overlay.moveMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2))
+  await review.click()
+  await expect(page.getByRole('tab', { name: /^Prices/ })).toHaveAttribute('aria-selected', 'true', { timeout: 5000 })
+  await expect.poll(() => fakeApp.game.focused).toBe(false)
+  await expect(review).toHaveCount(0)
+  fakeApp.focusGame(true) // Tests in a file share the fake game.
+})
+
+test('dock icon: a click goes straight to the first notice\'s tab', async ({ overlay, fakeApp }) => {
+  test.slow()
+  await overlay.boot({ widgets: [{ ...lootFilter(filterFolder()), priceTiers: MOVES_FROM_ANOTHER_LEAGUE }] })
+  const page = overlay.page
+  fakeApp.focusGame(true)
+  await expect(async () => {
+    await overlay.moveMouse(1000, 900)
+    await overlay.hoverDockIcon('loot-filter')
+    await expect(page.getByRole('button', { name: 'Review moves' })).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 30_000 })
+  await overlay.moveMouse(1000, 900)
+  await overlay.restAndClickDockIcon('loot-filter')
+  await expect(page.getByRole('tab', { name: /^Prices/ })).toHaveAttribute('aria-selected', 'true', { timeout: 5000 })
+  await expect.poll(() => fakeApp.game.focused).toBe(false)
+  fakeApp.focusGame(true) // Tests in a file share the fake game.
+})
+
 test('dock card: click or scroll a strictness, then reload from there', async ({ overlay, fakeApp }) => {
   test.slow()
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))

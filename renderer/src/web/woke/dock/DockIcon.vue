@@ -32,10 +32,9 @@
         <div :class="$style.extraHead"><i :class="dockIcon(ex.props)" /> {{ ex.props.title }}</div>
         <SlotOut :entry="ex" />
       </template>
-      <div v-if="!wm.active.value && host.props.wmId != null && !tipClosed('full-window')" :class="$style.foot" data-tip="full-window">
-        <span>{{ overlayKey }} then click the icon for the full window</span>
-        <button type="button" :class="$style.tipClose" title="Don't show this again" aria-label="Don't show this again" @click="closeTip('full-window')"><i class="fas fa-times" /></button>
-      </div>
+      <button v-if="host.props.wmId != null" type="button" :class="$style.open" data-dock-open @click="openFull">
+        Open {{ DOCK_NAMES[host.props.id] ?? host.props.title }} <i class="fas fa-external-link-alt" />
+      </button>
     </div>
   </span>
 </template>
@@ -45,10 +44,10 @@ import { computed, defineComponent, inject, onMounted, onUnmounted, shallowRef, 
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { Host } from '@/web/background/IPC'
-import { AppConfig } from '@/web/Config'
 import { useHoverZone } from '../shared/hover'
 import type { DockEntry } from './dock'
-import { closeTip, dockArt, dockCardOwner, dockConfig, dockIcon, tipClosed } from './dock'
+import { DOCK_NAMES, dockArt, dockCardOwner, dockConfig, dockIcon, openOverlay } from './dock'
+import { clickWhilePlaying } from './click'
 import DockMenu from './DockMenu.vue'
 
 const props = defineProps<{
@@ -58,7 +57,6 @@ const props = defineProps<{
 }>()
 
 const wm = inject<WidgetManager>('wm')!
-const overlayKey = computed(() => AppConfig().overlayKey)
 
 const rootEl = shallowRef<HTMLElement | null>(null)
 const iconEl = shallowRef<HTMLElement | null>(null)
@@ -98,8 +96,7 @@ const overMenu = useHoverZone(menuEl, { enabled: () => menuOpen.value, activate:
 const hovering = computed(() => overIcon.value || overCard.value || overMenu.value)
 
 // Opens once the mouse rests on the icon, so sweeping past it doesn't pop the
-// card (a click opens it at once, unless the icon has a gameClick); closes a moment after leaving so moving
-// onto the card doesn't flicker.
+// card; closes a moment after leaving so moving onto the card doesn't flicker.
 const OPEN_AFTER_MS = 120
 const CLOSE_AFTER_MS = 250
 let timer: ReturnType<typeof setTimeout> | null = null
@@ -181,19 +178,48 @@ function place () {
   placement.value = cls.join(' ')
 }
 
-// While playing, a click on the icon opens its card or closes it again, or runs the
-// icon's gameClick if it has one. One click
-// arrives twice: from main's mouse hook as the button goes down, and as a page
-// click as it comes up (only if the mouse was taken, so not always). Only the
-// hook counts, in the app; the browser demo has only the page click.
+// The card makes way for the window it opened.
+function closeCard () {
+  if (timer) { clearTimeout(timer); timer = null }
+  showCard.value = false
+  menuOpen.value = false
+}
+const windowUp = computed(() => wm.active.value &&
+  wm.widgets.value.some(w => w.wmId === props.host.props.wmId && w.wmWants === 'show'))
+watch(windowUp, (up) => { if (up) closeCard() })
+
+// Clicked on purpose, so the overlay opens with it.
+function openFull () {
+  closeCard()
+  props.host.pinned = null
+  if (!wm.active.value) openOverlay()
+  props.host.onClick()
+}
+
+// While playing, a click on the icon opens its full window, runs its gameClick if
+// it has one, or else opens its card or closes it again. One click arrives twice:
+// from main's mouse hook as the button goes down, and as a page click as it comes
+// up (only if the mouse was taken, so not always). Only the hook counts, in the
+// app; the browser demo has only the page click.
+let hookOpened = false
 function pressedInGame (taken: boolean) {
+  hookOpened = false
   if (wm.active.value) { openCard(); return }
-  const gameClick = props.host.props.gameClick
-  // With hover cards off, a click is the only way to open the card.
-  if (!gameClick || dockConfig().hoverOpens === false) { toggleCard(); return }
-  // Not taken: the game got this click too, so it may be walking away from what
-  // gameClick would act on.
-  if (taken) gameClick()
+  const does = clickWhilePlaying(props.host.props, dockConfig().hoverOpens)
+  if (does === 'card') {
+    toggleCard()
+    return
+  }
+  // Not taken: the game got this click too. It may be walking away from what
+  // gameClick would act on, or a skill on its way past the window's icon, or not
+  // even in focus.
+  if (!taken) return
+  if (does === 'window') {
+    hookOpened = true
+    openFull()
+  } else {
+    props.host.props.gameClick?.()
+  }
 }
 function toggleCard () {
   if (!cardOpen.value) {
@@ -206,6 +232,8 @@ function toggleCard () {
 }
 
 function click () {
+  // The other half of the click that just opened the overlay.
+  if (hookOpened) { hookOpened = false; return }
   if (!wm.active.value) {
     if (!Host.isElectron) toggleCard()
     return
@@ -323,9 +351,9 @@ const styles = useCssModule()
   letter-spacing: 0.08em;
   color: var(--w-faint);
 }
-.foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px var(--w-pad) 5px; font-size: calc(10.5px * var(--w-text-scale, 1)); color: var(--w-faint); border-top: 1px solid var(--w-line); }
-.tipClose { flex: none; background: none; border: 0; padding: 0 2px; color: var(--w-faint); font: inherit; cursor: pointer; }
-.tipClose:hover { color: var(--w-fg); }
-.tipClose:focus-visible { outline: 2px solid var(--w-accent); outline-offset: 1px; }
+.open { display: block; width: 100%; padding: 4px var(--w-pad); text-align: left; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-accent); border-top: 1px solid var(--w-line); }
+.open i { font-size: 0.8em; margin-left: 2px; }
+.open:hover { background: var(--w-accent-soft); }
+.open:focus-visible { outline: 2px solid var(--w-accent); outline-offset: -2px; }
 @media (prefers-reduced-motion: reduce) { .icon { transition: none; } }
 </style>

@@ -10,7 +10,7 @@ Woke PoE Trade is an overlay for Path of Exile 1, built on [Awakened PoE Trade](
 **[Download for Windows](https://github.com/guybnd/woke-poe-trade/releases/latest)** · [Website](https://guybnd.github.io/woke-poe-trade/) · [Help](https://guybnd.github.io/woke-poe-trade/quick-start) · [FAQ](https://guybnd.github.io/woke-poe-trade/faq)
 
 ### Price check
-Every listing beside yours, stat by stat, and each listing's tiers and rolls on hover. Shift + scroll switches to a bar on every roll.
+Every listing beside yours, stat by stat, and each listing's tiers and rolls on hover.
 
 <p>
   <img src="docs/public/shots/hl-price-columns.webp" width="49%" alt="Price check of a body armour: listings with each stat compared to yours">
