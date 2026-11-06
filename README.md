@@ -26,7 +26,7 @@ Alt+F on an item goes to its rule. Edit any tier in the game and it reloads.
 </p>
 
 ### Path of Building
-Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change, open the passive tree in the overlay, price check a build's item, and compare a checked item to what you wear.
+Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change and what each stage costs, open the passive tree in the overlay, price check a build's item, compare a checked item to what you wear, and compare two builds.
 
 <p>
   <img src="docs/public/shots/hl-pob-gear.webp" width="49%" alt="A build's gear tab with an item tooltip">

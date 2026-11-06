@@ -282,6 +282,50 @@ test('pob: the build in use, on one small icon', async ({ overlay }) => {
   await saveLow(overlay, 'hl-pob-hover')
 })
 
+test('pob: what each stage costs', async ({ overlay }) => {
+  // The recording's unique rows have no variant; the live feed's name the base.
+  const recorded = fs.readFileSync(path.join(FIXTURES, 'http/poe.ninja/poe1/api/economy/current/dense/overviews.json'), 'utf8')
+    .replace('"name":"Kaom\'s Heart",', '"name":"Kaom\'s Heart","variant":"Glorious Plate",')
+    .replace('"name":"Kingmaker",', '"name":"Kingmaker","variant":"Despot Axe",')
+    .replace('"name":"Headhunter",', '"name":"Headhunter","variant":"Leather Belt",')
+  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body: recorded }))
+  const dir = grownBuildsDir()
+  try {
+    const detail = await openLevellingBuild(overlay, dir)
+    await detail.getByRole('tab', { name: 'Gear' }).click()
+    await expect(detail.getByText('Cost of each stage')).toBeVisible()
+    const stage = detail.locator('button[class*="stage"]').filter({ hasText: 'Day 1.5 Clusters' })
+    await expect(stage).not.toContainText('unpriced', { timeout: 15_000 })
+    await stage.click()
+    await expect(detail.getByText('Headhunter')).toBeVisible()
+    await overlay.page.mouse.move(1800, 1000)
+    await saveAround(overlay, 'hl-pob-costs', [detail], 1280)
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('pob: two builds side by side', async ({ overlay }) => {
+  const dir = grownBuildsDir()
+  try {
+    await overlay.boot({ overlayActive: true, widgets: [{ ...showcaseInUse()[0], wmWants: 'show' as const, buildsDir: dir }] })
+    await backdrop(overlay, 'frames/town.jpg')
+    const list = overlay.widget('woke-pob-builds')
+    const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+    await expect(detail).toContainText('Showcase')
+    await list.getByRole('button', { name: /Loadouts/ }).first().click({ button: 'right' })
+    await overlay.page.getByText('Compare with Showcase').click()
+    const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Compare builds' })
+    await expect(panel).toContainText('Gear ·')
+    // Only the comparison in the picture, not the panel it opened beside.
+    await detail.evaluate(el => { el.style.visibility = 'hidden' })
+    await overlay.page.mouse.move(1800, 1000)
+    await saveAround(overlay, 'hl-pob-compare', [panel], 1120)
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 // The Loadouts fixture allocates four points, too few to see on a whole tree.
 // The same build with real paths from the Witch start, walked over the tree
 // data: the next set adds a path to one more notable and respecs two points.
@@ -321,10 +365,27 @@ function grownBuildsDir () {
   const leaves = [...pathTo(picks[7])].filter(id => !picks.slice(0, 7).flatMap(pathTo).includes(id) && !pathTo(picks[8]).includes(id)).slice(0, 2)
   for (const id of leaves) next.delete(id)
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-landing-pob-'))
+  // Uniques the recorded poe.ninja feed has prices for, so stages cost something.
+  const unique = (id: number, name: string, base: string) => `<Item id="${id}">\nRarity: UNIQUE\n${name}\n${base}\nImplicits: 0\n</Item>`
+  const gear = [
+    '<Items activeItemSet="1">',
+    unique(3, 'Kaom\'s Heart', 'Glorious Plate'),
+    unique(4, 'Kingmaker', 'Despot Axe'),
+    unique(5, 'Headhunter', 'Leather Belt'),
+    '<Item id="1">\nRarity: RARE\nEarly Loop\nIron Ring\nImplicits: 0\n</Item>',
+    '<ItemSet id="1" title="Day 1 No Cluster"><Slot name="Body Armour" itemId="3"/><Slot name="Ring 1" itemId="1"/></ItemSet>',
+    '<ItemSet id="2" title="Day 1.5 Clusters"><Slot name="Body Armour" itemId="3"/><Slot name="Weapon 1" itemId="4"/><Slot name="Belt" itemId="5"/><Slot name="Ring 1" itemId="1"/></ItemSet>',
+    '</Items>'
+  ].join('\n')
   const xml = fs.readFileSync(path.join(FIXTURES, 'pob/Loadouts.xml'), 'utf8')
     .replace('nodes="94,127,223,33435"', `nodes="${[...next].join(',')}"`)
     .replace('nodes="94,127,223"', `nodes="${[...first].join(',')}"`)
+    .replace(/<Items[\s\S]*<\/Items>/, () => gear)
   fs.writeFileSync(path.join(dir, 'Loadouts.xml'), xml)
+  // A second build for comparing, with a tree that shares only the first paths.
+  const other = new Set([...picks.slice(0, 3), notables[Math.floor(notables.length / 18)][0], notables[Math.floor(notables.length / 3)][0]].flatMap(pathTo))
+  fs.writeFileSync(path.join(dir, 'Showcase.xml'), fs.readFileSync(path.join(FIXTURES, 'pob/Showcase.xml'), 'utf8')
+    .replace('<Spec title="Endgame">', `<Spec title="Endgame" nodes="${[...other].join(',')}">`))
   return dir
 }
 
