@@ -3,8 +3,8 @@
 import { describe, it, expect } from 'vitest'
 import { DEFAULT_FLIP_SORT, buyList, flipModel, parseExchange, sortFlips, supplyLevel, upgradeRows } from '@/web/woke/scarab-flip/calc'
 import type { Quote } from '@/web/woke/scarab-flip/calc'
-import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, shortName, unpricedShare } from '@/web/woke/scarab-flip/families'
-import type { Exchanges } from '@/web/woke/scarab-flip/families'
+import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, shortName, unpricedShare, weightForPercent, weightRows } from '@/web/woke/scarab-flip/families'
+import type { Exchanges, WeightOverrides } from '@/web/woke/scarab-flip/families'
 import { CORRUPTION_ONLY, ESSENCE_TYPES } from '@/web/woke/essence-scan/essences'
 import type { PriceItem } from '@/web/woke/market/types'
 
@@ -376,5 +376,80 @@ describe('flip supply and sorting', () => {
   it('sorts names as shown', () => {
     const named = [row('Zed Scarab of A', 1, 1, 1), row('Abe Scarab of B', 1, 1, 1)]
     expect(sortFlips(named, { key: 'item', dir: 'asc' }, n => n.split(' of ')[1])[0].name).toBe('Zed Scarab of A')
+  })
+})
+
+describe('estimated and your own weights', () => {
+  const opts = { sellDiscount: 0, reroll: false }
+  const orbs = (): PriceItem[] => [
+    item('DeliriumOrb', 'Fine Delirium Orb', 10),
+    item('DeliriumOrb', 'Singular Delirium Orb', 10),
+    item('DeliriumOrb', 'Kalguuran Delirium Orb', 10)
+  ]
+  const family = familyById('delirium')
+  const method = family.methods[0]
+  const lifeforce: Exchanges = new Map()
+  const rows = (weights?: WeightOverrides) => {
+    const items = [...orbs(), item('Currency', 'Primal Crystallised Lifeforce', 0.01)]
+    const flip = priceFlip(family, method, items, lifeforce, opts, 30, weights)
+    if (flip?.kind !== 'pool') throw new Error('expected a pool')
+    return flip.model
+  }
+
+  it('gives an unmeasured orb the average of the others, and marks it', () => {
+    const m = rows()
+    expect(m.unrated).toEqual([])
+    const row = m.rows.find(r => r.name === 'Kalguuran Delirium Orb')!
+    expect(row.weightSource).toBe('estimate')
+    // Your own numbers don't move what an estimate is worth.
+    const fine = rows({ delirium: { 'Fine Delirium Orb': 9 } }).rows
+    const kalguuran = fine.find(r => r.name === 'Kalguuran Delirium Orb')!
+    const singular = fine.find(r => r.name === 'Singular Delirium Orb')!
+    expect(kalguuran.share / singular.share).toBeCloseTo(row.share / m.rows.find(r => r.name === 'Singular Delirium Orb')!.share, 8)
+    expect(row.share).toBeCloseTo(1 / 3, 8)
+  })
+
+  it('leaves catalysts with no weight out, since they do not estimate', () => {
+    expect(familyById('catalysts').estimateMissing).toBeFalsy()
+  })
+
+  it('marks Doubt as an estimate', () => {
+    const recipe = flipRecipe(familyById('essences'), familyById('essences').methods[0], 0)
+    expect(recipe.weightOf('Deafening Essence of Doubt')?.source).toBe('estimate')
+    expect(recipe.weightOf('Deafening Essence of Woe')?.source).toBe('sample')
+  })
+
+  it('lets your weight win, and ignores a broken one', () => {
+    const m = rows({ delirium: { 'Fine Delirium Orb': 0.5 } })
+    const fine = m.rows.find(r => r.name === 'Fine Delirium Orb')!
+    expect(fine.weightSource).toBe('yours')
+    const broken = rows({ delirium: { 'Fine Delirium Orb': Number.NaN } })
+    expect(broken.rows.find(r => r.name === 'Fine Delirium Orb')!.weightSource).toBe('sample')
+  })
+
+  it('keeps a 0 weight item as an input, but never as a result or a rare', () => {
+    const m = rows({ delirium: { 'Fine Delirium Orb': 0 } })
+    const fine = m.rows.find(r => r.name === 'Fine Delirium Orb')!
+    expect(fine.share).toBe(0)
+    expect(fine.rare).toBe(false)
+    const items = [...orbs(), item('Currency', 'Primal Crystallised Lifeforce', 0.01)]
+    const reroll = priceFlip(family, method, items, lifeforce, { sellDiscount: 0, reroll: true }, 30, { delirium: { 'Fine Delirium Orb': 0 } })
+    expect(reroll?.kind === 'pool' && Number.isFinite(reroll.model.recipeValue)).toBe(true)
+    const none = rows({ delirium: { 'Fine Delirium Orb': 0, 'Singular Delirium Orb': 0, 'Kalguuran Delirium Orb': 0 } })
+    expect(none.rows.every(r => r.share === 0)).toBe(true)
+  })
+
+  it('reaches the typed share, and keeps the others in proportion', () => {
+    const names = ['Fine Delirium Orb', 'Singular Delirium Orb', 'Kalguuran Delirium Orb', 'Not An Orb']
+    const before = weightRows(family, names)
+    expect(before.map(r => r.name)).not.toContain('Not An Orb')
+    expect(before.reduce((n, r) => n + r.percent!, 0)).toBeCloseTo(100, 8)
+    const weight = weightForPercent(family, names, undefined, 'Singular Delirium Orb', 25)
+    const after = weightRows(family, names, { 'Singular Delirium Orb': weight })
+    expect(after.find(r => r.name === 'Singular Delirium Orb')).toMatchObject({ source: 'yours' })
+    expect(after.find(r => r.name === 'Singular Delirium Orb')!.percent).toBeCloseTo(25, 8)
+    const share = (rs: typeof after, n: string) => rs.find(r => r.name === n)!.percent!
+    expect(share(after, 'Fine Delirium Orb') / share(after, 'Kalguuran Delirium Orb'))
+      .toBeCloseTo(share(before, 'Fine Delirium Orb') / share(before, 'Kalguuran Delirium Orb'), 8)
   })
 })

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { buyList, familyQuotes, flipModel, flipOdds, parseExchange, rareCheapList, shortScarab, RARE_SHARE } from '@/web/woke/scarab-flip/calc'
 import { familyById, flipRecipe } from '@/web/woke/scarab-flip/families'
 import type { ExchangeQuotes, FlipOptions, Quote } from '@/web/woke/scarab-flip/calc'
-import { SAMPLE_ROLLS, TIER_ROLLS, UNSAMPLED_TIERS } from '@/web/woke/scarab-flip/weights'
+import { SAMPLE_ROLLS } from '@/web/woke/scarab-flip/weights'
 import type { PriceItem } from '@/web/woke/market/types'
 
 const PLAIN = { sellDiscount: 0, reroll: false }
@@ -15,14 +15,14 @@ function quotes (prices: Record<string, number>, tradedChaos: number | null = 10
   return new Map<string, Quote>(Object.entries(prices).map(([name, chaos]) => [name, { chaos, tradedChaos }]))
 }
 
-// Sample counts: Harvest Scarab 649, Harvest of Doubling 218, Scarab of Wisps 212.
 const THREE = { 'Harvest Scarab': 1, 'Harvest Scarab of Doubling': 100, 'Scarab of Wisps': 10 }
-const TOTAL = 649 + 218 + 212
+const WISPS = SAMPLE_ROLLS['Scarab of Wisps']
+const TOTAL = 414 + 118 + WISPS
 
 describe('recipe value', () => {
   it('is the price of each result times its weight', () => {
     const m = model(quotes(THREE), PLAIN)
-    const ev = (649 * 1 + 218 * 100 + 212 * 10) / TOTAL
+    const ev = (414 * 1 + 118 * 100 + WISPS * 10) / TOTAL
     expect(m.recipeValue).toBeCloseTo(ev, 8)
     expect(m.buyUnder).toBeCloseTo(ev / 3, 8)
   })
@@ -30,7 +30,7 @@ describe('recipe value', () => {
   it('never gives back the scarab you put in', () => {
     const m = model(quotes(THREE), PLAIN)
     const harvest = m.rows.find(r => r.name === 'Harvest Scarab')!
-    const without = (218 * 100 + 212 * 10) / (218 + 212)
+    const without = (118 * 100 + WISPS * 10) / (118 + WISPS)
     expect(harvest.profit).toBeCloseTo(without - 3, 8)
   })
 
@@ -46,25 +46,25 @@ describe('recipe value', () => {
     expect(reroll.recipeValue).toBeGreaterThan(plain.recipeValue)
     // The answer satisfies its own definition: a result is worth at least a third of a recipe.
     const v = reroll.recipeValue
-    const again = (649 * Math.max(1, v / 3) + 218 * 100 + 212 * Math.max(10, v / 3)) / TOTAL
+    const again = (414 * Math.max(1, v / 3) + 118 * 100 + WISPS * Math.max(10, v / 3)) / TOTAL
     expect(again).toBeCloseTo(v, 6)
   })
 })
 
 describe('weights', () => {
-  it('uses the sample first, then the wiki tier, and leaves the rest out', () => {
-    const m = model(quotes({ 'Harvest Scarab': 1, 'Breach Scarab of the Hive': 1, 'Trarthan Scarab': 1 }), PLAIN)
+  it('uses the sample, and the average for what it missed', () => {
+    const m = model(quotes({ 'Harvest Scarab': 1, 'Scarab of Wisps': 1, 'Trarthan Scarab': 1 }), PLAIN)
     expect(m.rows.find(r => r.name === 'Harvest Scarab')!.weightSource).toBe('sample')
-    const breach = m.rows.find(r => r.name === 'Breach Scarab of the Hive')!
-    expect(breach.weightSource).toBe('tier')
-    expect(breach.share).toBeCloseTo(TIER_ROLLS.Common / (SAMPLE_ROLLS['Harvest Scarab'] + TIER_ROLLS.Common), 8)
-    expect(m.unrated).toEqual(['Trarthan Scarab'])
+    const trarthan = m.rows.find(r => r.name === 'Trarthan Scarab')!
+    expect(trarthan.weightSource).toBe('estimate')
+    expect(trarthan.share).toBeCloseTo(1 / 3, 8)
+    expect(m.unrated).toEqual([])
   })
 
-  it('has the whole sample, and no scarab in both lists', () => {
+  it('has the 3.28 sample, with the one scarab only 3.27 saw', () => {
     const sum = Object.values(SAMPLE_ROLLS).reduce((a, b) => a + b, 0)
-    expect(Math.abs(sum - 33333)).toBeLessThanOrEqual(1)
-    for (const name of Object.keys(UNSAMPLED_TIERS)) expect(SAMPLE_ROLLS[name], name).toBeUndefined()
+    expect(sum).toBe(22431 + SAMPLE_ROLLS['Scarab of Hunted Traitors'])
+    expect(SAMPLE_ROLLS['Breach Scarab of the Hive']).toBeGreaterThan(0)
   })
 })
 
@@ -131,12 +131,12 @@ describe('odds', () => {
     const o = flipOdds(model(quotes({ 'Harvest Scarab': 0.5, 'Horned Scarab of Bloodlines': 800 }), PLAIN))
     const low = o.buckets[0]
     const top = o.buckets[o.buckets.length - 1]
-    expect(low.chance).toBeCloseTo(649 / (649 + 34), 8)
+    expect(low.chance).toBeCloseTo(414 / (414 + 18), 8)
     expect(top.valueShare).toBeGreaterThan(0.9)
     expect(o.buckets.reduce((n, b) => n + b.chance, 0)).toBeCloseTo(1, 8)
     expect(o.buckets.reduce((n, b) => n + b.valueShare, 0)).toBeCloseTo(1, 8)
-    expect(o.jackpotOneIn).toBeCloseTo((649 + 34) / 34, 8)
-    expect(o.withoutJackpot).toBeCloseTo(649 * 0.5 / (649 + 34), 8)
+    expect(o.jackpotOneIn).toBeCloseTo((414 + 18) / 18, 8)
+    expect(o.withoutJackpot).toBeCloseTo(414 * 0.5 / (414 + 18), 8)
     expect(o.medianResult).toBe(0.5)
   })
 
