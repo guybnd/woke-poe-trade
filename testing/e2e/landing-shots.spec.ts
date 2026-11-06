@@ -234,6 +234,9 @@ test('tour: boss runs, every boss priced by its drops', async ({ overlay }) => {
 })
 
 // The README's banner: the name over the hero shot, in the game's type.
+// hero-plaza.webp isn't taken here: it's a crop (0, 173, 1720, 790) of a clean
+// 2560x1440 game screenshot, leaving out the chat, quest list and HUD. The
+// frame in fixtures/screens/frames/plaza.jpg is the same one at a lower size.
 test('readme banner', async ({ page }) => {
   const fonts = path.resolve(OUT, '../../../renderer/src/assets/font')
   const b64 = (f: string) => fs.readFileSync(f).toString('base64')
@@ -242,7 +245,7 @@ test('readme banner', async ({ page }) => {
     @font-face { font-family: C; src: url(data:font/ttf;base64,${b64(path.join(fonts, 'Fontin-SmallCaps-Hinted.ttf'))}); }
     @font-face { font-family: I; src: url(data:font/ttf;base64,${b64(path.join(fonts, 'Fontin-Italic-Hinted.ttf'))}); }
     body { margin: 0; width: 1280px; height: 400px; overflow: hidden; background: #070605; position: relative; }
-    .shot { position: absolute; left: 0; top: -30px; width: 1280px; opacity: 0.7; }
+    .shot { position: absolute; left: -80px; top: -116px; width: 1440px; opacity: 0.7; }
     .fade { position: absolute; inset: 0; background: linear-gradient(rgba(7, 6, 5, 0.25), rgba(7, 6, 5, 0.45) 55%, #070605); }
     .copy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-shadow: 0 2px 18px #000; }
     h1 { margin: 0; font: 88px/1 C, serif; color: #e0c78f; }
