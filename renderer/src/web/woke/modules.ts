@@ -51,6 +51,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling' }, needs: ['poll', 'network'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem' }, needs: ['poll'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
+  { id: 'disenchant', name: 'Disenchant', description: 'Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant', group: 'economy', widgetTypes: ['woke-disenchant'], icon: { fa: 'fas fa-hammer', currency: 'dust' }, needs: ['prices'] },
   { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'economy', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'drop-counter', name: 'Drop counter', description: 'A tally of the drops you choose, and maps run', group: 'economy', widgetTypes: ['woke-drop-counter'], icon: { fa: 'fas fa-hashtag', currency: 'divine' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar' }, needs: ['prices'] },
@@ -91,7 +92,7 @@ export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
   { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'trade-searches', 'trade', 'regex-library'] },
   { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library'] },
-  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'trade-searches', 'trade', 'regex-library'] },
+  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'disenchant', 'trade-searches', 'trade', 'regex-library'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
 
@@ -105,6 +106,9 @@ export interface WokeModulesConfig {
   lootFilterSeeded?: boolean
   // Icon dock position and switches (dock/dock.ts).
   dock?: DockConfig
+  // Price check: dust per chaos and a "disenchant it" verdict for uniques,
+  // at `line` dust per chaos or more. Off unless switched on.
+  disenchantVerdict?: { on: boolean, line: number }
 }
 
 interface ConfigLike {

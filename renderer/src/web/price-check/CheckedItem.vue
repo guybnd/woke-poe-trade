@@ -11,6 +11,7 @@
       :item="item">
       <template #meta>
         <woke-dust-chip v-if="item.dustEquivalent" :amount="item.dustEquivalent" />
+        <woke-dust-verdict-chip v-if="item.dustEquivalent" :item="item" />
       </template>
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
@@ -88,6 +89,7 @@ import { createPresets } from './filters/create-presets'
 import PricePrediction from './price-prediction/PricePrediction.vue'
 import StackValue from './expected-value/StackValue.vue'
 import WokeDustChip from '@/web/woke/price-insight/DustChip.vue'
+import WokeDustVerdictChip from '@/web/woke/disenchant/DustVerdictChip.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
 import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
@@ -109,6 +111,7 @@ export default defineComponent({
   components: {
     WokeMapStrip,
     WokeDustChip,
+    WokeDustVerdictChip,
     WokeRollPresets,
     WokeBuildFitChip,
     WokeFilterVerdictChip,

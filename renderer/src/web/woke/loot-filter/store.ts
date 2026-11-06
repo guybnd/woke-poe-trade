@@ -4,7 +4,9 @@ import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
 import { ruleBlocks } from './rules'
-import { applyPresetChanges, colourBlindActions, normalizePresets, presetBlocks, presetsOn } from './presets'
+import { DUST_ILVL, applyPresetChanges, colourBlindActions, normalizePresets, presetBlocks, presetsOn } from './presets'
+import { dustBases } from '../disenchant/calc'
+import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { clearUndoToasts } from '../ui/layer'
 import { isTownLike } from '../campaign/log-parse'
 import { onGameLog } from '../shared/game-log'
@@ -72,6 +74,12 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const presetList = shallowRef<string>('')
   const presetChanges = ref(0)
   const prices = useFilterPrices(() => cfg().priceTiers.uniqueRule)
+  // Bases for the dust preset's price rule, only while it's on.
+  const dustList = computed(() => {
+    const d = cfg().presets.dust
+    if (!d.on || !d.fromPrices || !prices.items.value.length) return null
+    return dustBases(dustUniques(), prices.items.value, d.line, DUST_ILVL, basesWithoutDust())
+  })
   // woke: with NeverSink from GitHub, the version, style and level are part
   // of the file as well (a new style used to read "saved" until you saved).
   const sourceSig = () => {
@@ -231,7 +239,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       buildCount = blocks.length
     }
     // Presets' rules, then your own rules above them: yours win.
-    const presetTop = presetBlocks(next, cfg().presets, prices.lookup.value)
+    const presetTop = presetBlocks(next, cfg().presets, prices.lookup.value, dustList.value)
     insertBuildBlocks(next, presetTop)
     insertBuildBlocks(next, ruleBlocks(cfg().rules))
     // Price moves next: your own moves (edits) are applied after them and win.

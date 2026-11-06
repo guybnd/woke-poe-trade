@@ -25,6 +25,10 @@ export interface Presets {
   colourBlind: { on: boolean }
   // 6-socket items for the vendor (7 jeweller's orbs).
   sixSockets: { on: boolean }
+  // Uniques worth disenchanting for Thaumaturgic Dust: NeverSink's own dust
+  // tiers (shipped switched off), and/or bases from today's prices where
+  // every unique gives at least `line` dust per chaos.
+  dust: { on: boolean, fromPrices: boolean, line: number }
 }
 
 export function defaultPresets (): Presets {
@@ -34,8 +38,18 @@ export function defaultPresets (): Presets {
     quiet: { on: false, keepTiers: 2 },
     bigger: { on: false, size: 36 },
     colourBlind: { on: false },
-    sixSockets: { on: false }
+    sixSockets: { on: false },
+    dust: { on: false, fromPrices: false, line: DUST_LINE }
   }
+}
+
+const DUST_LINE = 5000
+// Dust in the price rule is worked out for drops at this item level or more.
+export const DUST_ILVL = 82
+const NEVERSINK_DUST_TIERS = /^exdust\d+$/
+
+export function isNeverSinkDustTier (b: Pick<FilterBlock, 'type' | 'tier'>): boolean {
+  return b.type === 'uniques' && NEVERSINK_DUST_TIERS.test(b.tier ?? '')
 }
 
 export function normalizePresets (p: Partial<Presets> | undefined): Presets {
@@ -48,7 +62,8 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     quiet: { on: on(p?.quiet), keepTiers: Math.round(num(p?.quiet?.keepTiers, 1, 5, d.quiet.keepTiers)) },
     bigger: { on: on(p?.bigger), size: Math.round(num(p?.bigger?.size, 25, 45, d.bigger.size)) },
     colourBlind: { on: on(p?.colourBlind) },
-    sixSockets: { on: on(p?.sixSockets) }
+    sixSockets: { on: on(p?.sixSockets) },
+    dust: { on: on(p?.dust), fromPrices: typeof p?.dust?.fromPrices === 'boolean' ? p.dust.fromPrices : false, line: Math.round(num(p?.dust?.line, 100, 1_000_000, d.dust.line)) }
   }
 }
 
@@ -92,9 +107,31 @@ function look (b: FilterBlock, rgb: readonly number[], size: number): FilterBloc
   return b
 }
 
-// Rules the presets add at the top, highest first.
-export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | null): FilterBlock[] {
+// NeverSink's look for its dust tiers, so both rules look alike.
+const DUST_LOOK = [
+  { key: 'SetFontSize', args: ['45'] },
+  { key: 'SetTextColor', args: ['175', '96', '37', '255'] },
+  { key: 'SetBorderColor', args: ['175', '96', '37', '255'] },
+  { key: 'SetBackgroundColor', args: ['10', '30', '45', '255'] },
+  { key: 'PlayEffect', args: ['Purple'] },
+  { key: 'MinimapIcon', args: ['1', 'Purple', 'Star'] }
+]
+
+// Rules the presets add at the top, highest first. `dustBases` is the list
+// from today's prices (disenchant/calc.ts dustBases), or null without prices.
+export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | null, dustBases: string[] | null = null): FilterBlock[] {
   const out: FilterBlock[] = []
+  if (p.dust.on && p.dust.fromPrices && dustBases?.length) {
+    const b = addedBlock(PRESET_TYPE, 'dust', `uniques worth ${p.dust.line} dust per chaos or more`, [
+      { key: 'Rarity', op: '==', count: null, values: ['Unique'] },
+      { key: 'Replica', op: '', count: null, values: ['False'] },
+      { key: 'Foulborn', op: '', count: null, values: ['False'] },
+      { key: 'ItemLevel', op: '>=', count: null, values: [String(DUST_ILVL)] },
+      { key: 'BaseType', op: '==', count: null, values: dustBases }
+    ], 'Show', 'Presets')
+    b.actions = DUST_LOOK.map(a => ({ key: a.key, args: [...a.args] }))
+    out.push(b)
+  }
   if (p.sixSockets.on) {
     out.push(look(addedBlock(PRESET_TYPE, 'sixsockets', '6-socket items for the vendor', [
       { key: 'Sockets', op: '>=', count: null, values: ['6'] },
@@ -157,8 +194,13 @@ function tierNumber (tier: string | null): number | null {
 export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
   let changed = 0
   for (const b of doc.blocks) {
-    if (b.disabled || b.type?.startsWith('woke->')) continue
+    // NeverSink ships its dust tiers commented out.
     let touched = false
+    if (p.dust.on && b.disabled && isNeverSinkDustTier(b)) {
+      b.disabled = false
+      touched = true
+    }
+    if (b.disabled || b.type?.startsWith('woke->')) continue
     if (p.quiet.on) {
       const n = tierNumber(b.tier)
       if (n != null && n > p.quiet.keepTiers && b.actions.some(a => SOUND_KEYS.includes(a.key))) {
@@ -182,5 +224,5 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
 }
 
 export function presetsOn (p: Presets): boolean {
-  return p.cheapCurrency.on || p.chaosRecipe.on || p.quiet.on || p.bigger.on || p.colourBlind.on || p.sixSockets.on
+  return p.cheapCurrency.on || p.chaosRecipe.on || p.quiet.on || p.bigger.on || p.colourBlind.on || p.sixSockets.on || p.dust.on
 }

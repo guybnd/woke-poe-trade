@@ -61,6 +61,24 @@
 
     <div :class="$style.card">
       <div class="flex items-center gap-2">
+        <WToggle v-model="p.dust.on">Show uniques worth disenchanting for dust</WToggle>
+        <WInfo text="Switches on NeverSink's three dust tiers, which ship switched off. They list bases with a high dust value, whatever the price." />
+      </div>
+      <div v-if="p.dust.on" class="w-faint text-xs">{{ neverSinkDust ? `NeverSink's ${neverSinkDust} dust tier${neverSinkDust === 1 ? '' : 's'} switched on.` : 'This NeverSink file has no dust tiers.' }}</div>
+      <div v-if="p.dust.on" class="flex items-center gap-2">
+        <WToggle v-model="p.dust.fromPrices">Also from today's prices, at</WToggle>
+        <WField v-model.number="dustLine" type="number" suffix="dust/c" style="width: 7.5rem;" aria-label="Dust per chaos line" />
+        <WInfo :text="`Adds bases where every unique gives that much dust per chaos or more, as a drop of item level ${DUST_ILVL}+. A base with any valuable or unpriced unique is left out.`" />
+      </div>
+      <div v-if="p.dust.on && p.dust.fromPrices" class="w-faint text-xs">
+        <template v-if="!store.prices.lookup.value">Waiting for poe.ninja prices.</template>
+        <template v-else-if="dustList.length">{{ dustList.length }} base{{ dustList.length === 1 ? '' : 's' }}: {{ dustList.slice(0, 6).join(', ') }}<template v-if="dustList.length > 6"> and {{ dustList.length - 6 }} more</template>.</template>
+        <template v-else>No base passes that line today.</template>
+      </div>
+    </div>
+
+    <div :class="$style.card">
+      <div class="flex items-center gap-2">
         <WToggle v-model="p.sixSockets.on">Show 6-socket items for the vendor</WToggle>
         <WInfo text="Seven Jeweller's Orbs each, in grey, above NeverSink's rules." />
       </div>
@@ -74,7 +92,9 @@ import { WChip, WField, WInfo, WSelect, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { RECIPE_SLOTS, cheapCurrencyBases } from './presets'
+import { DUST_ILVL, RECIPE_SLOTS, cheapCurrencyBases, isNeverSinkDustTier } from './presets'
+import { dustBases } from '../disenchant/calc'
+import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { poeColour } from './colours'
 
 const props = defineProps<{
@@ -94,6 +114,17 @@ const cheap = computed(() => {
 const cheapChaos = computed({
   get: () => p.value.cheapCurrency.chaos,
   set: (v: number) => { if (Number.isFinite(v) && v > 0 && v <= 50) p.value.cheapCurrency.chaos = v }
+})
+
+// Counted on the file as built: switched on, they are no longer commented out.
+const neverSinkDust = computed(() => (props.store.doc.value?.blocks ?? []).filter(isNeverSinkDustTier).length)
+const dustList = computed(() => {
+  const items = props.store.prices.items.value
+  return items.length ? dustBases(dustUniques(), items, p.value.dust.line, DUST_ILVL, basesWithoutDust()) : []
+})
+const dustLine = computed({
+  get: () => p.value.dust.line,
+  set: (v: number) => { if (Number.isFinite(v) && v >= 100 && v <= 1_000_000) p.value.dust.line = Math.round(v) }
 })
 
 const biggerSize = computed({
