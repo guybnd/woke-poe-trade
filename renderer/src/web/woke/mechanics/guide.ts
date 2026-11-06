@@ -64,7 +64,13 @@ export const GUIDE: Record<string, MechanicGuide> = {
   },
   ritual: {
     kind: 'none',
-    gets: 'Omens by price, to decide what is worth deferring. Ritual scarabs in the full panel.',
+    gets: 'Omens and corpses by price, to decide what is worth deferring. Ritual scarabs in the full panel.',
+    when: ['Only when you open it'],
+    gap: NOT_DETECTED
+  },
+  allflame: {
+    kind: 'none',
+    gets: 'Allflame Embers by price.',
     when: ['Only when you open it'],
     gap: NOT_DETECTED
   },

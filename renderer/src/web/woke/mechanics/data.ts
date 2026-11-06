@@ -188,11 +188,24 @@ export const MECHANICS: Mechanic[] = [
     short: 'RTL',
     icon: 'fas fa-skull',
     groups: [
-      { label: 'Omens', types: ['Omen'], limit: 12 }
+      { label: 'Omens', types: ['Omen'], limit: 12 },
+      { label: 'Corpses', types: ['Corpse'], limit: 12 }
     ],
     scarabs: /Ritual/,
     tips: [
       'Defer cheap rewards so expensive ones show up again on later altars.'
+    ]
+  },
+  {
+    id: 'allflame',
+    label: 'Allflame',
+    short: 'ALF',
+    icon: 'fas fa-fire',
+    groups: [
+      { label: 'Allflame Embers', types: ['AllflameEmber'], limit: 12 }
+    ],
+    tips: [
+      'Prices are for one ember.'
     ]
   },
   {

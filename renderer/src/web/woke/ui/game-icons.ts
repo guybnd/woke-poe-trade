@@ -39,6 +39,7 @@ export const MECHANIC_ICONS: Record<string, { src?: string, item?: string, fa: s
   betrayal: { src: '/images/veiled.png', fa: 'fas fa-user-secret' },
   maven: { src: '/images/maven-witness.png', fa: 'fas fa-eye' },
   ritual: { item: 'Ritual Splinter', fa: 'fas fa-circle-notch' },
+  allflame: { item: 'Allflame Ember of Flesh', fa: 'fas fa-fire' },
   expedition: { item: 'Exotic Coinage', fa: 'fas fa-compass' },
   delirium: { item: 'Simulacrum Splinter', fa: 'fas fa-cloud' },
   blight: { item: 'Clear Oil', fa: 'fas fa-tint' },
