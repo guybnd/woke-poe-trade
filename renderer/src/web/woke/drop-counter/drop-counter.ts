@@ -66,19 +66,40 @@ export function changeMaps (w: Pick<DropCounterWidget, 'maps'>, delta: number) {
   w.maps = Math.max(0, w.maps + delta)
 }
 
-// Everything back to zero. Returns what undoes it.
-export function resetCounts (w: Pick<DropCounterWidget, 'items' | 'maps'>): () => void {
-  const maps = w.maps
-  const drops = w.items.map(l => ({ name: l.name, drops: l.drops }))
+export interface CountsBackup {
+  maps: number
+  drops: Array<{ name: string, drops: number[] }>
+}
+
+// Everything back to zero. Returns what restoreCounts needs to undo it. A save
+// swaps the config for a new copy, so undo must be given the config of that
+// moment, not hold on to this one.
+export function resetCounts (w: Pick<DropCounterWidget, 'items' | 'maps'>): CountsBackup {
+  const backup = { maps: w.maps, drops: w.items.map(l => ({ name: l.name, drops: [...l.drops] })) }
   w.maps = 0
   for (const l of w.items) l.drops = []
-  return () => {
-    w.maps = maps
-    for (const d of drops) {
-      const line = findLine(w.items, d.name)
-      if (line) line.drops = d.drops
-    }
+  return backup
+}
+
+export function restoreCounts (w: Pick<DropCounterWidget, 'items' | 'maps'>, backup: CountsBackup) {
+  w.maps = backup.maps
+  for (const d of backup.drops) {
+    const line = findLine(w.items, d.name)
+    if (line) line.drops = [...d.drops]
   }
+}
+
+// Takes one line off. Returns what restoreLine needs to put back only that one.
+export function removeLine (w: Pick<DropCounterWidget, 'items'>, name: string): { line: DropLine, index: number } | null {
+  const index = w.items.findIndex(l => sameName(l.name, name))
+  if (index < 0) return null
+  const [line] = w.items.splice(index, 1)
+  return { line: { type: line.type, name: line.name, drops: [...line.drops] }, index }
+}
+
+export function restoreLine (w: Pick<DropCounterWidget, 'items'>, removed: { line: DropLine, index: number }) {
+  if (findLine(w.items, removed.line.name)) return
+  w.items.splice(Math.min(removed.index, w.items.length), 0, removed.line)
 }
 
 function mapsWord (n: number): string {
@@ -98,5 +119,5 @@ export function lineDetail (line: DropLine, maps: number): string {
 export function peekText (line: DropLine, maps: number): string {
   const count = line.drops.length
   const before = count >= 2 ? maps - line.drops[count - 2] : null
-  return `${line.name} ${count}${before ? ` · ${mapsWord(before)} since the last` : ''}`
+  return `${line.name} ${count}${before != null && before > 0 ? ` · ${mapsWord(before)} since the last` : ''}`
 }

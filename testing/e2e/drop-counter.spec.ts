@@ -92,6 +92,28 @@ test('panel: search adds any text as its own counter, and removing can be undone
   await expect(panel.getByText('Foil unique', { exact: true })).toBeVisible()
 })
 
+test('panel: Reset counts can be undone, and removing keeps a +1 made since', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [{ ...seed({ items: [
+    { type: 'Currency', name: 'Divine Orb', drops: [4] },
+    { type: '', name: 'Foil unique', drops: [] }
+  ] }), wmWants: 'show' }] })
+  const panel = overlay.widget(TYPE)
+  const undo = overlay.page.getByRole('button', { name: 'Undo' })
+
+  await panel.getByRole('button', { name: 'Reset counts' }).click()
+  await expect(panel.getByText('None yet')).toHaveCount(2)
+  await undo.click()
+  await expect(panel.getByText('6 maps ago · 1 in 10')).toBeVisible()
+  await expect(panel.getByText('10', { exact: true })).toBeVisible()
+
+  await panel.getByRole('button', { name: 'Remove Foil unique' }).click()
+  await panel.getByRole('button', { name: 'Add one Divine Orb' }).click()
+  await expect(panel.getByText('This map · 1 in 5')).toBeVisible()
+  await undo.click()
+  await expect(panel.getByText('Foil unique', { exact: true })).toBeVisible()
+  await expect(panel.getByText('This map · 1 in 5')).toBeVisible()
+})
+
 test('Add an item on the card opens the overlay with the cursor in the search', async ({ overlay }) => {
   await overlay.boot({ widgets: [seed()] })
   await overlay.log([HIDEOUT])

@@ -2,29 +2,29 @@
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- Only the icon while playing. The card takes clicks with the game focused, but not typing, so adding an item opens the overlay. -->
     <DockItem ref="dockRef" :menu="dockMenu" id="drop-counter" title="Drop counter" :show="dockShow"
-      :badge="config.maps || null" :wm-id="config.wmId" :card-width="cardWidth">
+      :badge="config.maps || null" :wm-id="config.wmId" :card-width="cardWidth" @open-change="cardChanged">
       <template #card>
         <template v-if="config.layout === 'strip'">
           <div :class="$style.strip">
             <button type="button" :class="$style.tile" @click="changeMaps(config, 1); saveConfig()"
               @contextmenu.prevent="changeMaps(config, -1); saveConfig()"
-              @mouseenter="stripHint = 'Maps run'" @mouseleave="stripHint = ''">
+              @mouseenter="stripHover = 'maps'" @mouseleave="stripHover = null">
               <span :class="$style.tileLabel" class="w-head-font w-accent">Maps</span>
               <span :class="$style.tileCount" class="w-num">{{ config.maps }}</span>
             </button>
             <span :class="$style.stripRule" />
             <button v-for="line in config.items" :key="line.name" type="button" :class="$style.tile" :aria-label="line.name"
               @click="bump(line)" @contextmenu.prevent="unbump(line)"
-              @mouseenter="stripHint = `${line.name}: ${lineDetail(line, config.maps)}`" @mouseleave="stripHint = ''">
+              @mouseenter="stripHover = line.name" @mouseleave="stripHover = null">
               <WIcon :src="art(line)" fallback="fas fa-hashtag" :style="{ width: '34px', height: '34px' }" />
               <span :class="[$style.tileCount, { 'w-dim': !line.drops.length }]" class="w-num">{{ line.drops.length }}</span>
             </button>
             <button type="button" :class="$style.tile" aria-label="Add an item" @click="openToAdd"
-              @mouseenter="stripHint = 'Add an item'" @mouseleave="stripHint = ''">
+              @mouseenter="stripHover = 'add'" @mouseleave="stripHover = null">
               <i class="fas fa-plus w-accent" />
             </button>
           </div>
-          <div :class="$style.stripHint" class="w-dim w-trunc">{{ stripHint || 'Click adds one. Right-click takes one off.' }}</div>
+          <div :class="$style.stripHint" class="w-dim w-trunc">{{ stripHint }}</div>
         </template>
         <template v-else>
           <div :class="$style.mapsRow">
@@ -108,14 +108,14 @@ import { WPanel, WField, WButton, WEmpty, WIcon, toast } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
-import { showWithOverlay } from '../dock/dock'
+import { dockIconEl, showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { countNewMap, isMapArea } from '../farming/farming'
 import { usePriceIndex } from '../market/price-index'
 import { searchPrices, typeLabel } from '../search/search'
 import { onGameLog } from '../shared/game-log'
 import { useZone } from '../shared/zone'
-import { DROP_COUNTER_TARGET, addLine, changeMaps, findLine, initDropCounter, lineDetail, minusOne, peekText, plusOne, resetCounts } from './drop-counter'
+import { DROP_COUNTER_TARGET, addLine, changeMaps, findLine, initDropCounter, lineDetail, minusOne, peekText, plusOne, removeLine, resetCounts, restoreCounts, restoreLine } from './drop-counter'
 import type { DropCounterWidget, DropLine } from './drop-counter'
 
 const props = defineProps<{
@@ -137,7 +137,17 @@ const prices = usePriceIndex()
 const dockRef = shallowRef<InstanceType<typeof DockItem> | null>(null)
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 const searchBox = shallowRef<HTMLElement | null>(null)
-const stripHint = shallowRef('')
+const cardOpen = shallowRef(false)
+// The strip's hovered tile: 'maps', 'add', or an item name. Worked out live, so
+// it follows a click.
+const stripHover = shallowRef<string | null>(null)
+const stripHint = computed(() => {
+  const hover = stripHover.value
+  if (hover === 'maps') return 'Maps run'
+  if (hover === 'add') return 'Add an item'
+  const line = hover ? findLine(props.config.items, hover) : null
+  return line ? `${line.name}: ${lineDetail(line, props.config.maps)}` : 'Click adds one. Right-click takes one off.'
+})
 
 // Not while levelling: nothing here is about the campaign.
 const dockShow = computed(() => zone.kind !== 'campaign')
@@ -155,8 +165,16 @@ function art (x: { type: string, name: string }) {
 
 function bump (line: DropLine) {
   plusOne(props.config, line)
-  dockRef.value?.peek(peekText(line, props.config.maps))
+  // Not with the card open: it shows the count, and a growing icon can shift it
+  // from under the mouse.
+  if (!cardOpen.value) dockRef.value?.peek(peekText(line, props.config.maps))
   saveConfig()
+}
+
+function cardChanged (open: boolean) {
+  cardOpen.value = open
+  // A mouse leave can go missing in game.
+  if (!open) stripHover.value = null
 }
 
 function unbump (line: DropLine) {
@@ -213,23 +231,24 @@ function openToAdd () {
 }
 
 // --- Removing ---
+// Undo reads props.config when it runs: saving swaps the config for a new copy.
 function remove (line: DropLine) {
-  const before = props.config.items
-  props.config.items = before.filter(l => l !== line)
+  const removed = removeLine(props.config, line.name)
+  if (!removed) return
   saveConfig()
   toast(`Removed ${line.name}`, {
     anchor: panel.value?.el,
-    undo: () => { props.config.items = before; saveConfig() }
+    undo: () => { restoreLine(props.config, removed); saveConfig() }
   })
 }
 
 function reset (dock = false) {
-  const undo = resetCounts(props.config)
+  const backup = resetCounts(props.config)
   saveConfig()
   toast('Counts reset', {
-    anchor: dock ? undefined : panel.value?.el,
+    anchor: dock ? dockIconEl('drop-counter') : panel.value?.el,
     dock,
-    undo: () => { undo(); saveConfig() }
+    undo: () => { restoreCounts(props.config, backup); saveConfig() }
   })
 }
 
