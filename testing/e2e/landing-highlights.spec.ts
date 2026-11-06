@@ -181,6 +181,76 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
   await saveAround(overlay, 'hl-price-tooltip', [panel.locator('.w-pc-table'), tip], 1240)
 })
 
+// Today's poe.ninja prices in place of the recording, for real numbers and a
+// real week of history.
+async function liveNinja (page: Page) {
+  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
+    .catch(e => { if (!process.env.WOKE_SHOTS_OFFLINE) throw e })
+  if (!live) return // A trial run with no network: the recording stands in.
+  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
+  const body = await live.text()
+  await page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+}
+
+// ---- 1b. Quick search (Ctrl+Space) ----
+
+// Opens the palette and types `query` once the saved prices have loaded.
+async function searchFor (overlay: Overlay, query: string, expected: RegExp) {
+  await overlay.pressHotkey('Ctrl + Space')
+  const panel = overlay.widget('woke-search')
+  const box = panel.getByRole('textbox', { name: 'Search' })
+  await expect(async () => {
+    await box.fill(query)
+    await expect(panel.getByRole('button', { name: expected }).first()).toBeVisible({ timeout: 500 })
+  }).toPass({ timeout: 20_000 })
+  return { panel, box, palette: panel.locator('[data-search-palette]') }
+}
+
+test('search: any price, now and a week ago', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, palette } = await searchFor(overlay, 'mageblood', /Mageblood/)
+  await expect(panel.getByText('Trade site')).toBeVisible()
+  await overlay.page.mouse.move(1900, 1060)
+  await saveAround(overlay, 'hl-search-price', [palette], 1240)
+})
+
+test('search: pin prices to compare them', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, box, palette } = await searchFor(overlay, 'divine orb', /Divine Orb/)
+  for (const [query, name] of [['divine orb', /Divine Orb/], ['headhunter', /Headhunter/], ['mirror of kalandra', /Mirror of Kalandra/]] as const) {
+    await box.fill(query)
+    await panel.getByRole('button', { name }).first().click()
+    await panel.getByRole('button', { name: 'Pin to compare' }).first().click()
+  }
+  await expect(panel.getByTitle('Remove from the comparison')).toHaveCount(3)
+  await overlay.page.mouse.move(1900, 1060)
+  await saveAround(overlay, 'hl-search-compare', [palette], 1240)
+})
+
+test('search: tools and settings by name', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { palette } = await searchFor(overlay, 'filter', /Loot filter editor/)
+  await overlay.page.mouse.move(1900, 1060)
+  await saveAround(overlay, 'hl-search-tools', [palette], 1240)
+})
+
+test('search: hover a result to see the item', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, palette } = await searchFor(overlay, 'headhunter', /Headhunter/)
+  await panel.getByRole('button', { name: /Headhunter/ }).first().hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('Leather Belt')
+  await saveAround(overlay, 'hl-search-hover', [palette, tip], 1240)
+})
+
 // ---- 2. Loot filter ----
 
 const BOOTS = ['Item Class: Boots', 'Rarity: Rare', 'Sol League', 'Wyvernscale Boots', '--------', 'Armour: 80', 'Evasion Rating: 80', '--------', 'Requirements:', 'Level: 62', '--------', 'Item Level: 83', '--------', '+40 to maximum Life'].join('\n')
@@ -709,10 +779,7 @@ test('on screen: the death recap names the map\'s mods', async ({ overlay, fakeA
 
 test('market: Divine Font gem values', async ({ overlay }) => {
   // The recording has too few gems to price a font: today's live prices.
-  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
-  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
-  const body = await live.text()
-  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+  await liveNinja(overlay.page)
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-lab-gems', wmTitle: 'Lab gems', wmFlags: ['uninitialized'], anchor: { pos: 'tl', x: 40, y: 30 } }] })
   await backdrop(overlay, 'frames/town.jpg')
   const w = overlay.widget('woke-lab-gems')
@@ -745,6 +812,8 @@ const cursorOf = (screen: string): { x: number, y: number } =>
 // Today's prices, for the screens where the recording is too thin to show them.
 async function livePrices (overlay: Overlay) {
   const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
+    .catch(e => { if (!process.env.WOKE_SHOTS_OFFLINE) throw e })
+  if (!live) return // A trial run with no network: the recording stands in.
   if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
   const body = await live.text()
   await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))

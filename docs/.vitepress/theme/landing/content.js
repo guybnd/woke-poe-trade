@@ -18,6 +18,17 @@ export const HIGHLIGHTS = [
     ]
   },
   {
+    id: 'search',
+    name: 'Quick Search',
+    tag: 'Ctrl+Space, from anywhere',
+    slides: [
+      { label: 'Any price', shot: 'hl-search-price', text: 'Press Ctrl+Space and type. Any item\'s price now, a day ago and a week ago, without leaving the game.', alt: 'Search palette on Mageblood: each variant\'s price now, 24 hours ago and 7 days ago, with buttons for the wiki, poedb and the trade site' },
+      { label: 'Compare', shot: 'hl-search-compare', text: 'Pin a few prices to keep them side by side while you look up the next one.', alt: 'Search palette with Divine Orb, Headhunter and Mirror of Kalandra pinned along the top' },
+      { label: 'Item on hover', shot: 'hl-search-hover', text: 'Hover a result to see the item as the game shows it, with its price.', alt: 'Search palette with the Headhunter tooltip shown over its result' },
+      { label: 'Tools and settings', shot: 'hl-search-tools', text: 'It finds tools, actions and settings too. Paste an item from chat and it opens in price check.', alt: 'Search palette for "filter": the loot filter tool, a reload action with its hotkey, and the settings page' }
+    ]
+  },
+  {
     id: 'loot-filter',
     name: 'Loot Filter',
     tag: 'Fix it mid-map',

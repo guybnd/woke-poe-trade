@@ -35,7 +35,10 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <h1>Woke PoE Trade</h1>
         <p class="lead">trade macro with extra chromosomes</p>
         <p class="facts">An overlay for Path of Exile 1. Free, for Windows 10 and up.</p>
-        <a class="btn" :href="DOWNLOAD">Download for Windows</a>
+        <p class="actions">
+          <a class="btn" :href="DOWNLOAD">Download for Windows</a>
+          <a class="btn btn-quiet" :href="REPO">View on GitHub</a>
+        </p>
       </div>
     </header>
 
@@ -159,6 +162,9 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
   text-decoration: none;
 }
 .btn:hover { background: linear-gradient(#c28a3b, #8c5c22); }
+.btn-quiet { background: rgba(7, 6, 5, 0.6); color: var(--link) !important; }
+.btn-quiet:hover { background: rgba(7, 6, 5, 0.85); color: #fff3cf !important; }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 
 /* ---------- hero ---------- */
 .hero { position: relative; overflow: hidden; background: var(--ground); }
