@@ -8,7 +8,8 @@ import type { LoadoutPick, PobDetails, PobGem, PobItem, PobItemSet, PobSkillGrou
 
 // ---- stages: "Act 2", "Level 12-28", "lvl 40", "Endgame" ----
 
-export interface Stage { kind: 'act' | 'level', at: number }
+// 'end': past every levelling set in the build, whatever level that is.
+export interface Stage { kind: 'act' | 'level' | 'end', at: number }
 
 // Rough character level when each act starts, to compare "Act N" titles
 // with "Level N" titles.
@@ -25,12 +26,11 @@ export function stageOf (rawTitle: string): Stage | null {
   const inRange = (n: number) => n >= 1 && n <= 100
   const named = /\b(?:level|lvl|lv)\.?\s*(\d{1,3})/i.exec(title)
   if (named && inRange(Number(named[1]))) return { kind: 'level', at: Number(named[1]) }
-  // Endgame sits past any "Level 80" set, which it would otherwise lose to.
-  if (/\bend\s*game|\bfinal(?![a-z])|\blate(?:game|maps?)?(?![a-z])/i.test(title)) return { kind: 'level', at: 85 }
+  if (/\bend\s*game|\bfinal(?![a-z])|\blate(?:game|maps?)?(?![a-z])/i.test(title)) return { kind: 'end', at: 70 }
   if (/\bmaps?(?![a-z])|\bmapping/i.test(title)) return { kind: 'level', at: 70 }
   // A title that is a level or starts a range: "68", "31+", "13-Pre-Cyclone".
   // Numbers elsewhere are something else: "2 Stone", "Day 3", "6L", "5-link".
-  const bare = /^\s*(\d{1,3})\s*(?:$|\+|[-\u2013](?!\s*links?\b))/i.exec(title)
+  const bare = /^[\s([]*(\d{1,3})\s*(?:$|[)\]]|\+|to\s+\d|[-\u2013](?!\s*link))/i.exec(title)
   if (bare && inRange(Number(bare[1]))) return { kind: 'level', at: Number(bare[1]) }
   return null
 }
@@ -64,13 +64,20 @@ export interface Picked<T> {
 export function pickStage<T extends { title: string, isActive: boolean, divider?: boolean }> (allItems: T[], level: number | null, act: number | null, chosen?: string): Picked<T> | null {
   const items = realSets(allItems)
   if (!items.length) return null
-  const staged = items
+  const titled = items
     .map(item => ({ item, stage: stageOf(item.title) }))
     .filter((x): x is { item: T, stage: Stage } => x.stage != null)
+  // Endgame comes after the build's last levelling set, so it doesn't lose to
+  // a "Level 80" set, and from 70 when the levelling sets stop before that.
+  const lastLevel = Math.max(0, ...titled.filter(x => x.stage.kind !== 'end').map(x => stageLevel(x.stage)))
+  const staged = titled
+    .map(x => x.stage.kind === 'end' ? { item: x.item, stage: { ...x.stage, at: Math.max(70, lastLevel + 1) } } : x)
     .sort((a, b) => stageLevel(a.stage) - stageLevel(b.stage))
-  const hand = chosen != null ? items.find(i => i.title === chosen) : undefined
+  // Older saves hold titles with PoB's colour codes.
+  const wanted = chosen?.replace(/\^x[0-9a-fA-F]{6}|\^\d/g, '').trim()
+  const hand = wanted != null ? items.find(i => i.title === wanted) : undefined
   if (hand) {
-    const at = stageOf(hand.title)
+    const at = staged.find(x => x.item === hand)?.stage
     return {
       item: hand,
       later: at ? staged.filter(x => stageLevel(x.stage) > stageLevel(at)).map(x => x.item) : [],
@@ -81,7 +88,13 @@ export function pickStage<T extends { title: string, isActive: boolean, divider?
     const item = items.find(i => i.isActive) ?? items[0]
     return { item, later: [], byStage: false }
   }
-  const hit = staged.filter(x => reached(x.stage, level, act)).pop() ?? staged[0]
+  const hit = staged.filter(x => reached(x.stage, level, act)).pop()
+  if (!hit) {
+    // Not at any titled stage yet. An untitled set first in the file is where
+    // the build starts ("Early Game" before "Endgame"); else the earliest stage.
+    if (!staged.some(x => x.item === items[0])) return { item: items[0], later: [], byStage: false }
+    return { item: staged[0].item, later: staged.slice(1).map(x => x.item), byStage: true }
+  }
   return {
     item: hit.item,
     later: staged.filter(x => stageLevel(x.stage) > stageLevel(hit.stage)).map(x => x.item),

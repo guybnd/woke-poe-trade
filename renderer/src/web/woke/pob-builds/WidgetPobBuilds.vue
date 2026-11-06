@@ -207,14 +207,16 @@ watch(selected, (relPath) => {
   loadDetails(relPath)
 })
 
+let latestRead = 0
 async function loadDetails (relPath: string | null) {
+  const read = ++latestRead
   detailsError.value = ''
   if (!relPath) return
   try {
     const d = await pobApi.read(props.config, relPath)
-    if (selected.value === relPath) details.value = d
+    if (read === latestRead) details.value = d
   } catch (err) {
-    if (selected.value === relPath) detailsError.value = (err as Error).message
+    if (read === latestRead) detailsError.value = (err as Error).message
   }
 }
 
@@ -222,6 +224,8 @@ async function loadDetails (relPath: string | null) {
 // builds saved in PoB meanwhile appear.
 watch(() => props.config.buildsDir, refresh, { immediate: true })
 watch(() => props.config.wmWants, (wants) => { if (wants === 'show') refresh() })
+// It stays "shown" while you are in PoB or the game, so check on coming back.
+watch(wm.active, (active) => { if (active && props.config.wmWants === 'show') refresh() })
 
 function isPinned (relPath: string) {
   return props.config.pinned.includes(relPath)

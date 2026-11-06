@@ -36,17 +36,20 @@ export const useActiveBuild = createGlobalState(() => {
     reportProblem('pob-active-build', err ? `Can't read your active PoB build (${err}). Pick it again in PoB builds.` : null)
   })
 
+  // Reads can land out of order; only the newest one counts.
+  let latestRead = 0
   watch([relPath, version], async ([path]) => {
+    const read = ++latestRead
     if (!path || !pobWidget.value) { details.value = null; error.value = ''; return }
     try {
       const d = await pobApi.read(pobWidget.value, path)
-      if (relPath.value !== path) return
+      if (read !== latestRead) return
       error.value = ''
       // An unchanged file keeps its object, so nothing that reads it recalculates.
       if (JSON.stringify(d) !== JSON.stringify(details.value)) details.value = d
     } catch (err) {
       // A build you already switched away from failing doesn't matter.
-      if (relPath.value !== path) return
+      if (read !== latestRead) return
       // The file moved or was deleted; helpers just go quiet.
       details.value = null
       error.value = (err as Error).message

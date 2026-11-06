@@ -157,21 +157,23 @@ describe('bug hunt: build details', () => {
     expect(item.mods).toEqual(['First pick', 'Second pick', 'Third pick', 'Always there'])
   })
 
-  it.each(['20% quality', 'Cold 100%', 'Dmg 10.5', 'Full Plate', 'Template', 'Translate', 'Midgame {3}', 'Early Game {4}', '2 Stone', '4 Stone', 'Leap Slam Day 3', 'Pre-T16', '5-link'])('"%s" is not a stage', (title) => {
+  it.each(['20% quality', 'Cold 100%', 'Dmg 10.5', 'Full Plate', 'Template', 'Translate', 'Midgame {3}', 'Early Game {4}', '2 Stone', '4 Stone', 'Leap Slam Day 3', 'Pre-T16', '5-link', '6-linked'])('"%s" is not a stage', (title) => {
     expect(stageOf(title)).toBeNull()
   })
 
   it('still reads real stage titles', () => {
     expect(stageOf('Level 28')).toEqual({ kind: 'level', at: 28 })
     expect(stageOf('Act 5')).toEqual({ kind: 'act', at: 5 })
-    expect(stageOf('Late game')).toEqual({ kind: 'level', at: 85 })
-    expect(stageOf('Endgame')).toEqual({ kind: 'level', at: 85 })
+    expect(stageOf('Late game')).toEqual({ kind: 'end', at: 70 })
+    expect(stageOf('Endgame')).toEqual({ kind: 'end', at: 70 })
     for (const t of ['Lategame', 'LateGame', 'Late_game', 'Latemaps', 'late90', 'Endgame2', 'Final', 'Endgame {1,2}']) {
-      expect(stageOf(t)).toEqual({ kind: 'level', at: 85 })
+      expect(stageOf(t)).toEqual({ kind: 'end', at: 70 })
     }
     expect(stageOf('Level 80 - Uber Lab {4}')).toEqual({ kind: 'level', at: 80 })
     expect(stageOf('1-12')).toEqual({ kind: 'level', at: 1 })
     expect(stageOf('13-Pre-Cyclone')).toEqual({ kind: 'level', at: 13 })
+    expect(stageOf('12 to 28')).toEqual({ kind: 'level', at: 12 })
+    expect(stageOf('(12-28)')).toEqual({ kind: 'level', at: 12 })
     expect(stageOf('Cyclone Swap-Maps')).toEqual({ kind: 'level', at: 70 })
     expect(stageOf('Latest')).toBeNull()
     expect(stageOf('Maps')).toEqual({ kind: 'level', at: 70 })
@@ -189,6 +191,25 @@ describe('bug hunt: build details', () => {
     expect(pickStage(sets, 95, null)?.item.title).toBe('Endgame - Cluster {1}')
     expect(pickStage(sets, 72, null)?.item.title).toBe('Level 80 - Uber Lab {4}')
     expect(pickStage(sets, 95, null, '~~~ ENDGAME ~~~')?.item.title).toBe('Endgame - Cluster {1}')
+  })
+
+  it('reaches endgame at 70 when the levelling sets stop before that', () => {
+    const sets = ['Level 16', 'Level 67', 'Endgame'].map(title => ({ title, isActive: false }))
+    expect(pickStage(sets, 60, null)?.item.title).toBe('Level 16')
+    expect(pickStage(sets, 75, null)?.item.title).toBe('Endgame')
+  })
+
+  it('stays on an untitled first set until the first titled stage', () => {
+    const sets = ['Early Game {4}', 'Midgame {3}', 'Endgame {1,2}'].map(title => ({ title, isActive: false }))
+    const early = pickStage(sets, 20, null)
+    expect(early?.item.title).toBe('Early Game {4}')
+    expect(early?.byStage).toBe(false)
+    expect(pickStage(sets, 80, null)?.item.title).toBe('Endgame {1,2}')
+  })
+
+  it('still finds a pick saved with colour codes', () => {
+    const sets = ['Level 12', 'Level 16'].map(title => ({ title, isActive: false }))
+    expect(pickStage(sets, 20, null, '^2Level 12')?.item.title).toBe('Level 12')
   })
 
   it('in the Epilogue with no level yet, picks the furthest set rather than the first', () => {
@@ -277,7 +298,7 @@ describe('parseBuild set titles', () => {
   it('drops colour codes, so a title reads as its real stage', () => {
     expect(d.skillSets[1].title).toBe('Level 31+ - Siphon')
     expect(stageOf(d.skillSets[1].title)).toEqual({ kind: 'level', at: 31 })
-    expect(stageOf(d.trees[1].title)).toEqual({ kind: 'level', at: 85 })
+    expect(stageOf(d.trees[1].title)).toEqual({ kind: 'end', at: 70 })
   })
 
   it('marks empty sets as headings', () => {

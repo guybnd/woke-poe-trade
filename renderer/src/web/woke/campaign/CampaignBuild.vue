@@ -46,7 +46,7 @@
 import { computed } from 'vue'
 import { saveConfig } from '@/web/Config'
 import { useActiveBuild } from '../pob-builds/active'
-import { actRewards, linkColours, linkGroups, loadoutOf, orderedGems, relevantGems, townBuys } from '../pob-builds/build-model'
+import { actRewards, linkColours, linkGroups, loadoutOf, orderedGems, relevantGems, skillSetsOf, townBuys } from '../pob-builds/build-model'
 import { gemData, nextGems } from '../pob-builds/gems'
 import SocketDots from '../pob-builds/SocketDots.vue'
 import { vItemTip } from '../ui'
@@ -92,7 +92,7 @@ const nextGem = computed(() => {
 })
 
 const picked = computed(() => loadout.value?.skillSet ?? null)
-const linkSet = computed(() => (picked.value?.byStage || (details.value?.skillSets?.length ?? 0) > 1) ? picked.value?.item.title ?? '' : '')
+const linkSet = computed(() => (picked.value?.byStage || (details.value ? skillSetsOf(details.value).length : 0) > 1) ? picked.value?.item.title ?? '' : '')
 const links = computed(() => picked.value
   ? linkGroups(picked.value.item.groups, props.maxLinks).map(g => ({
       colours: linkColours(g),
