@@ -630,6 +630,9 @@ const MECHANIC_PRICES: Record<string, Array<[string, number]>> = {
     ['Omen of Fortune', 340], ['Omen of the Soul Devourer', 110], ['Omen of Death\'s Door', 45], ['Omen of the Jeweller', 30],
     ['Omen of Connections', 18], ['Omen of Amelioration', 12], ['Omen of Return', 6], ['Omen of Refreshment', 3]
   ],
+  Corpse: [
+    ['Perfect Astral Lich', 85], ['Perfect Blasphemer', 40], ['Perfect Blood Demon', 22], ['Perfect Conjuror of Rot', 9]
+  ],
   Beast: [
     ['Wild Brambleback', 120], ['Fenumal Plagued Arachnid', 22], ['Vivid Vulture', 8],
     ['Black Mórrigan', 6], ['Saqawine Rhex', 4], ['Wild Hellion Alpha', 3]
@@ -685,6 +688,7 @@ test('on screen: League mechanics folder, Ritual omens', async ({ overlay }) => 
   await overlay.page.getByRole('button', { name: /League mechanics/ }).first().click()
   await w.getByRole('tab', { name: /ritual/i }).click()
   await expect(w.getByText('Omen of Fortune').first()).toBeVisible()
+  await expect(w.getByText('Perfect Astral Lich').first()).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
   await saveAround(overlay, 'hl-mech-ritual', [w.locator('[data-w-panel]').first()], 1280)
 })

@@ -88,7 +88,7 @@ export const HIGHLIGHTS = [
           { label: 'Delve', shot: 'hl-mech-delve', focus: [700, 400, 720], text: 'Fossils ranked by price, so you only detour for the ones on top.', alt: 'Delve card: Fractured, Faceted and Glyphic Fossil priced' },
           { label: 'Blight', shot: 'hl-mech-blight', focus: [700, 420, 720], text: 'Every oil priced, top tier first.', alt: 'Blight card: Tainted, Golden and Prismatic Oil priced' },
           { label: 'Delirium', shot: 'hl-mech-delirium', focus: [700, 420, 720], text: 'Delirium orbs ranked while the fog is up.', alt: 'Delirium card: Kalguuran, Fine and Skittering Delirium Orb priced' },
-          { label: 'Ritual', shot: 'hl-mech-ritual', focus: [60, 120, 900], text: 'Omens ranked by price, so you know which ones to defer for.', alt: 'League mechanics window on Ritual: omens ranked by price, Omen of Fortune on top' },
+          { label: 'Ritual', shot: 'hl-mech-ritual', focus: [60, 120, 900], text: 'Omens and corpses ranked by price, so you know which ones to defer for.', alt: 'League mechanics window on Ritual: omens and corpses ranked by price, Omen of Fortune on top' },
           { label: 'Bestiary', shot: 'hl-mech-bestiary', focus: [700, 400, 720], text: 'When Einhar shows up, which beasts are worth catching.', alt: 'Bestiary card: Wild Brambleback, Fenumal Plagued Arachnid and Vivid Vulture priced' }
         ]
       },
