@@ -62,13 +62,16 @@ const fits = computed<Fit[]>(() => {
   return out
 })
 
-// Rings go against whichever one you wear loses least to it: that's the one
-// you would swap out.
+// Rings go against whichever one you'd lose least by replacing.
 const ORDER: Record<SwapResult['verdict'], number> = { better: 0, mixed: 1, same: 2, worse: 3 }
+
+function cost (r: SwapResult) {
+  return ORDER[r.verdict] * 100 + r.rows.filter(x => x.tone === 'down').length
+}
 
 const swap = computed<{ label: string, title: string, result: SwapResult } | null>(() => {
   const d = build.details.value
-  if (!d) return null
+  if (!d || props.item.isUnidentified) return null
   const slots = slotsFor(props.item.category)
   if (!slots.length) return null
   const worn = loadoutOf(d, build.level.value, build.act.value, build.loadout.value).itemSet?.item
@@ -78,15 +81,19 @@ const swap = computed<{ label: string, title: string, result: SwapResult } | nul
   const stats = (sets.length < 2 || worn.isActive) ? d.stats ?? null : null
   let best: { label: string, title: string, result: SwapResult } | null = null
   for (const slot of slots) {
+    const label = slot === 'Body Armour' ? 'body armour' : slotLabel(slot).toLowerCase().replace(/ \d$/, '')
+    const number = /^Ring (\d)$/.exec(slot)?.[1]
+    const title = `Against your ${label}${number ? ` ${number}` : ''}`
     const item = worn.slots.find(x => x.slot === slot)?.item
-    if (!item) continue
+    if (!item) {
+      // A third ring slot only exists with a Kalandra's Touch.
+      if (slot === 'Ring 3') continue
+      return { label, title: `Your ${label}${number ? ` ${number}` : ''} slot`, result: { verdict: 'better', summary: 'You wear nothing there in this set.', rows: [] } }
+    }
     const yours = parseClipboard(pobItemText(item))
     if (yours.isErr()) continue
     const result = swapCheck(yours.value, props.item, stats)
-    if (!best || ORDER[result.verdict] < ORDER[best.result.verdict]) {
-      const label = slot === 'Body Armour' ? 'body armour' : slotLabel(slot).toLowerCase().replace(/ \d$/, '')
-      best = { label, title: `Against your ${label}${/ 2$/.test(slot) ? ' 2' : ''}`, result }
-    }
+    if (!best || cost(result) < cost(best.result)) best = { label, title, result }
   }
   return best
 })
