@@ -46,7 +46,7 @@ export const HIGHLIGHTS = [
   {
     id: 'market',
     name: 'Market',
-    tag: 'Know what pays',
+    tag: 'Vaalstreet broker terminal in-game',
     slides: [
       { label: 'Flips', module: 'scarab-flip', shot: 'hl-flips', text: 'Vendor recipes and Harvest rerolls that pay today, sorted by profit.', alt: 'Flips window: scarabs worth vendoring, with price, profit and supply' },
       { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Outlines what is worth flipping in the open tab, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs at 1440p.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
