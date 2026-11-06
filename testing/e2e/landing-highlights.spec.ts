@@ -206,6 +206,16 @@ async function searchFor (overlay: Overlay, query: string, expected: RegExp) {
   return { panel, box, palette: panel.locator('[data-search-palette]') }
 }
 
+// The test app only knows its own league, but these prices are Allflame's.
+async function allflameLabel (palette: Locator) {
+  await palette.evaluate(root => {
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (n.textContent?.includes('Testleague')) n.textContent = n.textContent.replace('Testleague', 'Allflame')
+    }
+  })
+}
+
 test('search: any price, now and a week ago', async ({ overlay }) => {
   await liveNinja(overlay.page)
   await overlay.boot()
@@ -215,6 +225,7 @@ test('search: any price, now and a week ago', async ({ overlay }) => {
   // First shot of a run, so the item art is still on its way from the CDN.
   await expect.poll(() => palette.locator('img').evaluateAll(imgs => imgs.length > 0 && imgs.every(i => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)), { timeout: 20_000 }).toBe(true)
   await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
   await saveAround(overlay, 'hl-search-price', [palette], 1240)
 })
 
@@ -230,6 +241,7 @@ test('search: pin prices to compare them', async ({ overlay }) => {
   }
   await expect(panel.getByTitle('Remove from the comparison')).toHaveCount(3)
   await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
   await saveAround(overlay, 'hl-search-compare', [palette], 1240)
 })
 
@@ -239,6 +251,7 @@ test('search: tools and settings by name', async ({ overlay }) => {
   await backdrop(overlay, 'frames/hideout.jpg')
   const { palette } = await searchFor(overlay, 'filter', /Loot filter editor/)
   await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
   await saveAround(overlay, 'hl-search-tools', [palette], 1240)
 })
 
@@ -250,6 +263,7 @@ test('search: hover a result to see the item', async ({ overlay }) => {
   await panel.getByRole('button', { name: /Headhunter/ }).first().hover()
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText('Leather Belt')
+  await allflameLabel(palette)
   await saveAround(overlay, 'hl-search-hover', [palette, tip], 1240)
 })
 
