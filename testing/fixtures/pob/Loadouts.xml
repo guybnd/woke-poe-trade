@@ -16,8 +16,8 @@
 		</SkillSet>
 	</Skills>
 	<Tree activeSpec="1">
-		<Spec title="Day 1 No Cluster"><URL>https://www.pathofexile.com/passive-skill-tree/AAAA</URL></Spec>
-		<Spec title="Day 1.5 Clusters"><URL>https://www.pathofexile.com/passive-skill-tree/BBBB</URL></Spec>
+		<Spec title="Day 1 No Cluster" nodes="94,127,223"><URL>https://www.pathofexile.com/passive-skill-tree/AAAA</URL></Spec>
+		<Spec title="Day 1.5 Clusters" nodes="94,127,223,33435"><URL>https://www.pathofexile.com/passive-skill-tree/BBBB</URL></Spec>
 	</Tree>
 	<Items activeItemSet="1">
 		<Item id="1">

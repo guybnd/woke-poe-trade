@@ -80,6 +80,8 @@ export interface PobTreeSpec {
   isActive: boolean
   // Holds nothing: a heading such as "~~~ ENDGAME ~~~" between real sets.
   divider?: boolean
+  // Older app versions don't send it.
+  nodes?: number[]
 }
 
 export interface PobSkillSet {

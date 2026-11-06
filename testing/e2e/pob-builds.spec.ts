@@ -171,7 +171,8 @@ test('a picked loadout reaches the other windows, is saved, and Auto undoes it',
 
   // The panel opens on the build in use.
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
-  const chip = (name: string) => detail.getByRole('button', { name, exact: false })
+  // The set chips, not the Next section's button for the same set.
+  const chip = (name: string) => detail.locator('button:not([class*="next"])').filter({ hasText: name })
   await expect(chip(day1)).toContainText('now')
 
   await chip(later).click()
@@ -257,4 +258,21 @@ test('a build named after your character switches once, and Undo stops it coming
   await overlay.page.waitForTimeout(300)
   await expect(note).toHaveCount(0)
   await expect(panel.getByRole('button', { name: 'Loadouts' })).toBeVisible()
+})
+
+test('the passive tree opens in the overlay, on the next tree, with what it adds', async ({ overlay }) => {
+  await overlay.boot({ widgets: loadoutSeed({}), overlayActive: true })
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+  const next = detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ })
+  await expect(next).toContainText('+1')
+  await expect(next).toContainText('Holy Dominion')
+  await next.click()
+  const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('svg') }).last()
+  await expect(tree).toContainText('Day 1 No Cluster to Day 1.5 Clusters')
+  await expect(tree).toContainText('1 new point')
+  await expect(tree).toContainText('+12% to all Elemental Resistances')
+  await expect(tree.locator('circle').first()).toBeAttached()
+  expect(await tree.locator('circle').count()).toBeGreaterThan(1000)
+  await overlay.snap('passive tree')
 })

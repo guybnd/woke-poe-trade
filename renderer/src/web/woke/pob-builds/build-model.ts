@@ -414,6 +414,39 @@ export function buildFacts (d: PobDetails, level: number | null, act: number | n
   return facts
 }
 
+// ---- the next step ----
+
+// The set after this one in the file: guides list them in the order you use them.
+export function nextInFile<T extends { divider?: boolean }> (items: T[], current: T | null | undefined): T | null {
+  const real = realSets(items)
+  const i = current ? real.indexOf(current) : -1
+  return i >= 0 ? real[i + 1] ?? null : null
+}
+
+export interface GemChange { add: string[], drop: string[] }
+
+export function gemChange (from: PobSkillSet, to: PobSkillSet): GemChange {
+  const before = gemsOf([from])
+  const after = gemsOf([to])
+  return { add: after.filter(g => !before.includes(g)), drop: before.filter(g => !after.includes(g)) }
+}
+
+export interface GearChange { slot: string, was: PobItem | null, now: PobItem | null }
+
+// Gear slots holding something else in the next set. Rares compare by mods too,
+// since guides name them all "New Item".
+export function gearChange (from: PobItemSet, to: PobItemSet): GearChange[] {
+  const same = (a: PobItem | null, b: PobItem | null) => a?.name === b?.name && a?.base === b?.base && JSON.stringify(a?.mods) === JSON.stringify(b?.mods)
+  const slots = [...new Set([...from.slots, ...to.slots].map(s => s.slot))].filter(isGearSlot).sort((a, b) => gearOrder(a) - gearOrder(b))
+  const out: GearChange[] = []
+  for (const slot of slots) {
+    const was = from.slots.find(s => s.slot === slot)?.item ?? null
+    const now = to.slots.find(s => s.slot === slot)?.item ?? null
+    if (!same(was, now)) out.push({ slot, was, now })
+  }
+  return out
+}
+
 // ---- saved stats ----
 
 // 5604073 -> "5.6M", 63487 -> "63k", 4145 -> "4,145".

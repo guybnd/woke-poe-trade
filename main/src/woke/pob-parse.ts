@@ -42,6 +42,8 @@ export interface PobTreeSpec {
   isActive: boolean
   // Holds nothing: a heading such as "~~~ ENDGAME ~~~" between real sets.
   divider?: boolean
+  // Passive tree node ids.
+  nodes: number[]
 }
 
 export interface PobSkillSet {
@@ -206,8 +208,9 @@ function parseTrees (xml: string): PobTreeSpec[] {
     const urlMatch = /<URL>\s*([\s\S]*?)\s*<\/URL>/.exec(m[2] ?? '')
     const url = urlMatch ? decodeEntities(urlMatch[1].trim()) : ''
     // A class start, or next to it, with no points spent.
-    const empty = (a.nodes ?? '').split(',').filter(Boolean).length <= 2
-    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, ...(empty ? { divider: true } : {}) })
+    const nodes = (a.nodes ?? '').split(',').filter(Boolean).map(Number).filter(Number.isFinite)
+    const empty = nodes.length <= 2
+    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, ...(empty ? { divider: true } : {}) })
   }
   // No (or a stale) activeSpec: PoB opens the first tree.
   if (out.length && !out.some(t => t.isActive)) out[0].isActive = true
