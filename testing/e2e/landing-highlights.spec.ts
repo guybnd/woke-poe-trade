@@ -223,7 +223,7 @@ test('search: any price, now and a week ago', async ({ overlay }) => {
   const { panel, palette } = await searchFor(overlay, 'mageblood', /Mageblood/)
   await expect(panel.getByText('Trade site')).toBeVisible()
   // First shot of a run, so the item art is still on its way from the CDN.
-  await expect.poll(() => palette.locator('img').evaluateAll(imgs => imgs.length > 0 && imgs.every(i => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)), { timeout: 20_000 }).toBe(true)
+  if (!process.env.WOKE_SHOTS_OFFLINE) await expect.poll(() => palette.locator('img').evaluateAll(imgs => imgs.length > 0 && imgs.every(i => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)), { timeout: 20_000 }).toBe(true)
   await overlay.page.mouse.move(1900, 1060)
   await allflameLabel(palette)
   await saveAround(overlay, 'hl-search-price', [palette], 1240)
@@ -827,12 +827,7 @@ const cursorOf = (screen: string): { x: number, y: number } =>
 
 // Today's prices, for the screens where the recording is too thin to show them.
 async function livePrices (overlay: Overlay) {
-  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
-    .catch(e => { if (!process.env.WOKE_SHOTS_OFFLINE) throw e })
-  if (!live) return // A trial run with no network: the recording stands in.
-  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
-  const body = await live.text()
-  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+  await liveNinja(overlay.page)
 }
 
 test('filter: today\'s prices, and the moves to pick from', async ({ overlay }) => {
