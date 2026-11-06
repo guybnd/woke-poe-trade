@@ -1,613 +1,232 @@
 <script setup>
-// The landing page (index.md, layout: landing), in the overlay's Hybrid gold:
-// a short hero, then the tool tour (the overlay's rail beside one tool in
-// action), a note that every tool is a module, the headline features as
-// cards, install, FAQ.
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+// The landing page (index.md, layout: landing): the name, then one full-width
+// picture per highlight with gem sockets to step through its slides, then a
+// plain list of everything else.
+import { reactive } from 'vue'
 import { withBase } from 'vitepress'
-import { MODULES, PRESETS } from '../../../../renderer/src/web/woke/modules.ts'
-import { REPO, DOWNLOAD, HERO_FACTS, TOUR, FEATURES, MORE, INSTALL, FAQ } from './content.js'
+import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
+import { REPO, DOWNLOAD, HIGHLIGHTS } from './content.js'
 
 const shot = (name) => withBase(`/shots/${name}.webp`)
-const iconOf = (id) => MODULES.find(m => m.id === id)?.icon.fa ?? 'fas fa-circle'
 
-const toolkit = MODULES.filter(m => m.group !== 'apt')
+const shown = reactive({})
+const current = (h) => shown[h.id] ?? 0
 
-// ---- the tour ----
-// Every screen in order: a stop with `frames` gives several.
-const stops = TOUR.flatMap(g => g.stops)
-const framesOf = (s) => s.frames ?? [s]
-const screens = stops.flatMap((s, si) => framesOf(s).map((f, fi) => ({ ...f, si, fi, key: `${s.id}-${fi}` })))
-const current = ref(0) // index into stops
-const frame = ref(0) // index into the stop's frames
-const hovering = ref(false)
-const stop = computed(() => stops[current.value])
-const frames = computed(() => framesOf(stop.value))
-// A hover stop shows its second frame while the mouse is on the picture.
-const shown = computed(() => stop.value.hover ? (hovering.value ? 1 : 0) : frame.value)
-const screen = computed(() => frames.value[shown.value])
-const isShown = (sc) => sc.si === current.value && sc.fi === shown.value
-// Pictures load as they're reached (and the stop ahead), not all at once.
-const loaded = ref(new Set([0, 1]))
-const railEl = ref(null)
-let timer = null
-// Stepping by itself: the caption isn't read out then (it isn't news).
-const auto = ref(false)
-// The mouse rests on the picture (a hover stop reached by the tour opens).
-let mouseOnStage = false
+const COLOURS = ['red', 'green', 'blue', 'white']
+const colourOf = (i) => COLOURS[i % COLOURS.length]
 
-function go (i, user = true, f = 0) {
-  const n = (i + stops.length) % stops.length
-  current.value = n
-  frame.value = f
-  hovering.value = Boolean(stops[n].hover && mouseOnStage)
-  if (hovering.value) stopAuto()
-  loaded.value = new Set([...loaded.value, n, (n + 1) % stops.length])
-  if (user) stopAuto()
-  // Keep the picked tool in view in the rail (it scrolls sideways on a
-  // phone). Only the rail scrolls: the page stays where the reader is.
-  const rail = railEl.value
-  const btn = rail?.querySelector(`[data-stop="${stops[n].id}"]`)
-  if (rail && btn) {
-    const pad = 8
-    if (btn.offsetTop < rail.scrollTop) rail.scrollTop = btn.offsetTop - pad
-    else if (btn.offsetTop + btn.offsetHeight > rail.scrollTop + rail.clientHeight) rail.scrollTop = btn.offsetTop + btn.offsetHeight - rail.clientHeight + pad
-    if (btn.offsetLeft < rail.scrollLeft) rail.scrollLeft = btn.offsetLeft - pad
-    else if (btn.offsetLeft + btn.offsetWidth > rail.scrollLeft + rail.clientWidth) rail.scrollLeft = btn.offsetLeft + btn.offsetWidth - rail.clientWidth + pad
-    if (user) btn.focus({ preventScroll: true })
-  }
-}
-function pickFrame (f) {
-  stopAuto()
-  if (stop.value.hover) hovering.value = f === 1
-  else frame.value = f
-}
-// The tour steps through a stop's frames before moving on.
-function advance () {
-  if (!stop.value.hover && frame.value + 1 < frames.value.length) frame.value++
-  else go(current.value + 1, false)
-}
-function stopAuto () { clearInterval(timer); timer = null; auto.value = false }
-function onStageEnter (e) {
-  if (e.pointerType !== 'mouse') return
-  mouseOnStage = true
-  if (stop.value.hover) { stopAuto(); hovering.value = true }
-}
-function onStageLeave (e) {
-  if (e.pointerType !== 'mouse') return
-  mouseOnStage = false
-  hovering.value = false
-}
-// No hover on a touch screen: a tap opens and closes it.
-function onStageTap (e) {
-  if (stop.value.hover && e.pointerType !== 'mouse') hovering.value = !hovering.value
-}
-function onRailKey (e) {
-  const next = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key]
-  if (next == null) return
-  e.preventDefault()
-  go(current.value + next)
-}
-onMounted(() => {
-  // Steps by itself until the visitor picks a tool; never with reduced motion.
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    timer = setInterval(advance, 6500)
-    auto.value = true
-  }
-})
-onBeforeUnmount(stopAuto)
-
-// ---- modules note: pick a preset to see what it switches on ----
-const presets = PRESETS.filter(p => p.id !== 'price-check-only')
-const preset = ref('mapper')
-const presetOn = computed(() => {
-  const p = PRESETS.find(p => p.id === preset.value)
-  return p.on === 'all' ? null : new Set(p.on)
-})
-const isOn = (id) => presetOn.value == null || presetOn.value.has(id)
+const withSlide = new Set(HIGHLIGHTS.flatMap(h => h.slides.map(s => s.module)))
+const more = MODULES.filter(m => !withSlide.has(m.id))
 </script>
 
 <template>
   <div class="landing">
-    <div class="glow" aria-hidden="true"></div>
-    <header class="nav">
-      <div class="wrap nav-inner">
-        <a class="word" :href="withBase('/')"><img :src="withBase('/favicon.png')" alt="" width="24" height="24">Woke PoE Trade</a>
-        <nav class="nav-links" aria-label="Page">
-          <a href="#tour">Tour</a>
-          <a href="#features">Features</a>
-          <a href="#install">Install</a>
-          <a :href="withBase('/quick-start')">Help</a>
-          <a :href="REPO">GitHub</a>
-        </nav>
-        <a class="btn sm" :href="DOWNLOAD">Download</a>
+    <header class="hero">
+      <img class="hero-art" :src="shot('tour-market')" alt="" width="1600" height="900">
+      <div class="hero-text">
+        <h1>Woke PoE Trade</h1>
+        <p class="lead">Your toolkit, in the game.</p>
+        <p class="facts">An overlay for Path of Exile 1. Free, for Windows 10 and up.</p>
+        <a class="btn" :href="DOWNLOAD">Download for Windows</a>
       </div>
     </header>
 
     <main>
-      <section class="wrap hero" aria-labelledby="hero-title">
-        <h1 id="hero-title" class="display">Price check, plan maps and track profit <span>without leaving the game.</span></h1>
-        <p class="lede">An overlay for Path of Exile 1, built on Awakened PoE Trade. {{ toolkit.length }} tools on one rail at the edge of your screen.</p>
-        <div class="cta">
-          <a class="btn" :href="DOWNLOAD">Download for Windows</a>
-          <!-- target keeps VitePress's router off: the demo is its own page. -->
-          <a class="ghost" :href="withBase('/demo/')" target="_self">Try it in your browser</a>
+      <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
+        <div class="head">
+          <h2 :id="`${h.id}-title`">{{ h.name }}</h2>
+          <p>{{ h.tag }}</p>
         </div>
-        <p class="facts"><span v-for="f in HERO_FACTS" :key="f">{{ f }}</span></p>
-      </section>
-
-      <section id="tour" class="wrap tour-wrap" aria-label="Tool tour">
-        <div class="tour" @pointerdown="stopAuto" @focusin="stopAuto">
-          <nav ref="railEl" class="rail" aria-label="Tools" @keydown="onRailKey">
-            <template v-for="g in TOUR" :key="g.group">
-              <span class="rail-group">{{ g.group }}</span>
-              <button v-for="s in g.stops" :key="s.id" type="button" :data-stop="s.id"
-                :aria-current="stop.id === s.id" :tabindex="stop.id === s.id ? 0 : -1"
-                @click="go(stops.indexOf(s))">
-                <span class="ic" aria-hidden="true"><i :class="iconOf(s.module)"></i></span>{{ s.label }}
-              </button>
-            </template>
-          </nav>
-          <figure class="stage" :class="{ hoverable: stop.hover }"
-            @pointerenter="onStageEnter" @pointerleave="onStageLeave" @pointerup="onStageTap">
-            <template v-for="sc in screens" :key="sc.key">
-              <img v-if="loaded.has(sc.si)" :src="shot(sc.shot)" :alt="sc.alt" :class="{ on: isShown(sc) }" :aria-hidden="!isShown(sc)" width="1600" height="900">
-            </template>
-            <figcaption class="cap" :aria-live="auto ? 'off' : 'polite'">
-              <div v-if="frames.length > 1" class="frames" role="group" :aria-label="`${stop.label} screens`">
-                <button v-for="(f, i) in frames" :key="f.label" type="button" :aria-pressed="shown === i" @click.stop="pickFrame(i)">{{ f.label }}</button>
-              </div>
-              <b>{{ screen.title }}</b>
-              <span>{{ screen.text }}</span>
-            </figcaption>
-            <div class="arrows">
-              <button type="button" aria-label="Previous tool" @click.stop="go(current - 1)"><i class="fas fa-chevron-left"></i></button>
-              <button type="button" aria-label="Next tool" @click.stop="go(current + 1)"><i class="fas fa-chevron-right"></i></button>
-            </div>
-          </figure>
+        <div class="stage">
+          <img v-for="(s, i) in h.slides" :key="s.shot" :src="shot(s.shot)" :alt="s.alt"
+            :class="{ on: i === current(h) }" :aria-hidden="i !== current(h)"
+            width="1600" height="900" loading="lazy">
         </div>
-        <p class="tour-note">Every picture is the real overlay over a real game frame.</p>
-      </section>
-
-      <section id="features" class="section" aria-labelledby="features-title">
-        <div class="wrap">
-          <div class="modnote">
-            <div class="modnote-copy">
-              <strong>Every tool is a module.</strong>
-              <span>Switch off what you don't play: it leaves the rail, frees its hotkeys and stops loading. Pick how you play:</span>
-            </div>
-            <div class="presets" role="group" aria-label="Presets">
-              <button v-for="p in presets" :key="p.id" type="button" class="preset" :aria-pressed="preset === p.id" @click="preset = p.id">{{ p.label }}</button>
-            </div>
-            <ul class="toggles" aria-label="Modules in this preset">
-              <li v-for="m in toolkit" :key="m.id" :class="{ off: !isOn(m.id) }"><span class="sw" aria-hidden="true"></span>{{ m.name }}<span class="sr">{{ isOn(m.id) ? ' (on)' : ' (off)' }}</span></li>
-            </ul>
-          </div>
-
-          <h2 id="features-title" class="display title">What it does</h2>
-          <div class="bento">
-            <article v-for="(f, i) in FEATURES" :key="f.title" class="card" :class="i < 4 ? 'big' : 'mid'">
-              <img :src="shot(f.shot)" :alt="f.alt" width="1600" height="900" loading="lazy">
-              <div class="card-text">
-                <span class="n">{{ String(i + 1).padStart(2, '0') }}</span>
-                <h3>{{ f.title }}</h3>
-                <p>{{ f.text }}</p>
-                <ul v-if="f.points"><li v-for="pt in f.points" :key="pt">{{ pt }}</li></ul>
-              </div>
-            </article>
-            <div class="more">
-              <b>And more</b>
-              <span v-for="m in MORE" :key="m" class="chip">{{ m }}</span>
-            </div>
-          </div>
-          <p class="apt">Plus everything from Awakened PoE Trade: price check, item info, wiki and poedb lookups, Craft of Exile, and heist gem reading.</p>
-        </div>
-      </section>
-
-      <section id="install" class="section" aria-labelledby="install-title">
-        <div class="wrap">
-          <h2 id="install-title" class="display title">Running in a minute</h2>
-          <ol class="install">
-            <li v-for="(s, i) in INSTALL" :key="s.title">
-              <span class="n">Step {{ i + 1 }}</span>
-              <h3>{{ s.title }}</h3>
-              <p>{{ s.text }}</p>
-            </li>
-          </ol>
-          <div class="cta">
-            <a class="btn" :href="DOWNLOAD">Download for Windows</a>
-            <a class="ghost" :href="withBase('/quick-start')">Read the quick start</a>
+        <div class="under">
+          <p class="say" aria-live="polite">{{ h.slides[current(h)].text }}</p>
+          <div class="sockets" role="group" :aria-label="`${h.name} slides`">
+            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="socket"
+              :aria-pressed="i === current(h)" @click="shown[h.id] = i">
+              <span class="gem" :class="colourOf(i)" aria-hidden="true"></span>
+              <span>{{ s.label }}</span>
+            </button>
           </div>
         </div>
       </section>
 
-      <section class="section" aria-labelledby="faq-title">
-        <div class="wrap">
-          <h2 id="faq-title" class="display title">Questions</h2>
-          <div class="faq">
-            <details v-for="(f, i) in FAQ" :key="f.q" :open="i === 0">
-              <summary>{{ f.q }}</summary>
-              <p>{{ f.a }}</p>
-            </details>
-          </div>
-        </div>
+      <section class="highlight" aria-labelledby="more-title">
+        <div class="head"><h2 id="more-title">And Many More</h2></div>
+        <ul class="more">
+          <li v-for="m in more" :key="m.id"><b>{{ m.name }}</b>{{ m.description }}</li>
+        </ul>
+        <p class="end">Switch off any tool and it doesn't load, take hotkeys or poll.</p>
+        <p class="end"><a class="btn" :href="DOWNLOAD">Download for Windows</a></p>
       </section>
     </main>
 
     <footer class="foot">
-      <div class="wrap foot-inner">
-        <span>Built on <a href="https://github.com/SnosMe/awakened-poe-trade">Awakened PoE Trade</a> by SnosMe. Not affiliated with or endorsed by Grinding Gear Games.</span>
-        <span class="foot-links"><a :href="REPO">GitHub</a><a :href="withBase('/faq')">FAQ</a><a :href="`${REPO}/blob/master/LICENSE`">MIT licence</a></span>
-      </div>
+      <span>Built on <a href="https://github.com/SnosMe/awakened-poe-trade">Awakened PoE Trade</a> by SnosMe. Not affiliated with or endorsed by Grinding Gear Games.</span>
+      <span class="foot-links">
+        <a :href="withBase('/quick-start')">Help</a>
+        <a :href="withBase('/faq')">FAQ</a>
+        <a :href="REPO">GitHub</a>
+        <a :href="`${REPO}/blob/master/LICENSE`">MIT licence</a>
+      </span>
     </footer>
   </div>
 </template>
 
 <style>
-@import '@fontsource-variable/bricolage-grotesque/index.css';
-@import '@fontsource-variable/geist/index.css';
-/* The overlay's own icon font, for the rail. */
-@import '../../../../renderer/node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css';
-@import '../../../../renderer/node_modules/@fortawesome/fontawesome-free/css/solid.min.css';
+/* The game's own type, as the overlay ships it. */
+@font-face { font-family: 'Fontin SmallCaps'; src: url('../../../../renderer/src/assets/font/Fontin-SmallCaps-Hinted.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Fontin'; src: url('../../../../renderer/src/assets/font/Fontin-Regular-Hinted.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Fontin'; font-style: italic; src: url('../../../../renderer/src/assets/font/Fontin-Italic-Hinted.ttf') format('truetype'); font-display: swap; }
 </style>
 
 <style scoped>
-/* Hybrid gold on warm black, the overlay's own palette (renderer/src/web/woke/ui/theme.css). */
 .landing {
-  --bg: #0d0b09;
-  --panel: #15120f;
-  --panel-2: #1d1a16;
-  --panel-3: #29241d;
-  --line: rgba(212, 166, 74, 0.16);
-  --line-strong: rgba(212, 166, 74, 0.38);
-  --fg: #efe8db;
-  --dim: #bdb3a3;
-  --faint: #8a7f70;
-  --gold: #d4a64a;
-  --gold-hi: #f0c66e;
-  --gold-fg: #17130c;
-  --font-display: 'Bricolage Grotesque Variable', 'Segoe UI', system-ui, sans-serif;
-  --font-body: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
-  --measure: 1180px;
-  position: relative;
+  --ground: #070605;
+  --title: #e0c78f;
+  --text: #e8dcc2;
+  --dim: #b0a48e;
+  --edge: #6b4a24;
+  --link: #e8c47a;
+  --caps: 'Fontin SmallCaps', Georgia, serif;
   min-height: 100vh;
-  background: var(--bg);
-  color: var(--fg);
-  font: 16px/1.6 var(--font-body);
+  background: var(--ground);
+  color: var(--dim);
+  font: 19px/1.4 'Fontin', Georgia, serif;
   overflow-x: clip;
-  isolation: isolate;
   color-scheme: dark;
 }
-.landing a { color: inherit; }
-/* :where() keeps the reset at zero specificity, so the classes below win. */
-:where(.landing) :where(h1, h2, h3, p, ol, ul, figure) { margin: 0; padding: 0; }
-:where(.landing) :where(ol, ul) { list-style: none; }
-.glow {
-  position: absolute;
-  z-index: -1;
-  top: -360px;
-  right: -200px;
-  width: min(1100px, 120vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(138, 75, 28, 0.55), transparent);
-  pointer-events: none;
-}
-.wrap {
-  max-width: var(--measure);
-  margin: 0 auto;
-  padding-left: max(20px, env(safe-area-inset-left, 0px));
-  padding-right: max(20px, env(safe-area-inset-right, 0px));
-}
-.display {
-  font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 0.98;
-  text-wrap: balance;
-}
+.landing a { color: var(--link); }
+.landing a:hover { color: #fff3cf; }
+.landing :focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+:where(.landing) :where(h1, h2, p, ul) { margin: 0; padding: 0; }
+:where(.landing) :where(ul) { list-style: none; }
 
-/* ---------- nav ---------- */
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  padding-block: 10px;
-  background: color-mix(in oklab, var(--bg) 78%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
-}
-.nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.word {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: 800 21px var(--font-display);
-  letter-spacing: -0.04em;
+.btn {
+  display: inline-block;
+  padding: 12px 28px;
+  border: 1px solid var(--link);
+  background: linear-gradient(#a8742f, #7a4f1c);
+  color: #1a0f05 !important;
+  font: 21px var(--caps);
   text-decoration: none;
 }
-.nav-links { display: flex; gap: 4px; }
-.nav-links a {
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-weight: 500;
-  font-size: 15px;
-  color: var(--dim);
-  text-decoration: none;
-}
-.nav-links a:hover, .nav-links a:focus-visible { background: var(--panel-2); color: var(--fg); }
-
-/* ---------- buttons ---------- */
-.btn, .ghost {
-  display: inline-flex;
-  align-items: center;
-  height: 46px;
-  padding: 0 22px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 15px;
-  text-decoration: none;
-  transition: transform 150ms ease, background 150ms ease;
-}
-.btn { background: var(--gold); color: var(--gold-fg) !important; }
-.btn:hover { background: var(--gold-hi); }
-.btn.sm { height: 38px; padding: 0 18px; font-size: 14px; }
-.ghost { background: var(--panel-3); color: var(--fg); }
-.ghost:hover { background: #352e25; }
-.btn:active, .ghost:active { transform: scale(0.97); }
-.landing :focus-visible { outline: 3px solid var(--gold-hi); outline-offset: 3px; }
-.cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn:hover { background: linear-gradient(#c28a3b, #8c5c22); }
 
 /* ---------- hero ---------- */
-.hero {
-  display: grid;
-  justify-items: center;
-  text-align: center;
-  gap: 20px;
-  padding-block: 64px 40px;
-}
-.hero h1 { font-size: clamp(38px, 5.4vw, 72px); max-width: 20ch; }
-.hero h1 span { color: var(--gold-hi); }
-.lede { color: var(--dim); font-size: 18.5px; max-width: 54ch; }
-.hero .cta { justify-content: center; }
-.facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; font-size: 14px; color: var(--faint); }
-.facts span + span::before { content: '·'; margin: 0 12px; color: var(--line-strong); }
-
-/* ---------- tour ---------- */
-.tour-wrap { padding-bottom: 72px; }
-.tour {
-  display: grid;
-  grid-template-columns: 228px minmax(0, 1fr);
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 0 6px rgba(212, 166, 74, 0.04);
-}
-.rail {
+.hero { position: relative; overflow: hidden; }
+.hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center top; opacity: 0.42; }
+.hero-text {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px;
-  background: #110f0c;
-  border-right: 1px solid var(--line);
-  overflow-y: auto;
-  scrollbar-width: thin;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+}
+.hero h1 { font: 92px/1 var(--caps); color: var(--title); text-shadow: 0 2px 18px #000; }
+.lead { font-size: 26px; font-style: italic; color: var(--text); text-shadow: 0 1px 8px #000; }
+.facts { color: var(--text); text-shadow: 0 1px 8px #000; margin-bottom: 8px; }
+
+/* ---------- a highlight ---------- */
+.highlight { padding-top: 72px; }
+.head { text-align: center; padding: 0 16px 26px; }
+.head h2 { font: 54px/1.05 var(--caps); color: var(--title); }
+.head p { font-style: italic; font-size: 22px; }
+/* As wide as the page, but never taller than the window: a shot is no use cropped. */
+.stage {
   position: relative;
-  /* No height of its own: the picture sets the row, and the rail scrolls. */
-  contain: size;
+  width: min(100%, 160vh);
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  background: #0a0907;
 }
-.rail-group {
-  padding: 12px 10px 4px;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
-.rail-group:first-child { padding-top: 4px; }
-.rail button {
+.stage img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
+.stage img.on { opacity: 1; pointer-events: auto; }
+.under { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 900px; margin: 0 auto; padding: 22px 16px 0; text-align: center; }
+.say { color: var(--text); min-height: 56px; }
+
+/* ---------- the slide buttons: linked gem sockets ---------- */
+.sockets { display: flex; justify-content: center; flex-wrap: wrap; }
+.socket {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
+  gap: 6px;
+  width: 112px;
+  min-height: 66px;
+  padding: 0 2px;
   border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--dim);
-  font: 500 14.5px var(--font-body);
-  text-align: left;
+  background: none;
+  color: #a2967f;
+  font: 15px/1.15 var(--caps);
   cursor: pointer;
-  flex: none;
 }
-.rail button:hover { background: var(--panel-2); color: var(--fg); }
-.rail button[aria-current='true'] { background: rgba(212, 166, 74, 0.13); color: var(--fg); }
-.ic {
-  width: 28px;
-  height: 28px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  font-size: 12.5px;
-  color: var(--faint);
-}
-.rail button[aria-current='true'] .ic { border-color: var(--gold); color: var(--gold-hi); }
-.stage { position: relative; aspect-ratio: 16 / 9; min-width: 0; background: #0a0907; }
-.stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 350ms ease; pointer-events: none; }
-/* On top, so saving or long-pressing the picture gets the one you see. */
-.stage img.on { opacity: 1; pointer-events: auto; z-index: 1; }
-.stage .cap, .stage .arrows { z-index: 2; }
-.cap {
+.socket:hover { color: #f1e6cd; }
+.socket[aria-pressed='true'] { color: #fff3cf; }
+/* The link to the socket before it. */
+.socket + .socket::before {
+  content: '';
   position: absolute;
-  left: 18px;
-  bottom: 18px;
-  max-width: min(520px, calc(100% - 140px));
-  display: grid;
-  gap: 4px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  border: 1px solid var(--line-strong);
-  background: rgba(13, 11, 9, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  top: 12px;
+  right: calc(50% + 15px);
+  width: calc(100% - 30px);
+  height: 6px;
+  background: linear-gradient(#8a5f2d, #4a3218);
 }
-.cap b { font: 700 21px/1.2 var(--font-display); letter-spacing: -0.025em; color: var(--fg); }
-.cap span { color: var(--dim); font-size: 15px; }
-.arrows { position: absolute; right: 18px; bottom: 18px; display: flex; gap: 8px; }
-.arrows button {
-  width: 42px;
-  height: 42px;
+.gem {
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
   border-radius: 50%;
-  border: 1px solid var(--line-strong);
-  background: rgba(13, 11, 9, 0.88);
-  color: var(--fg);
-  cursor: pointer;
+  border: 3px solid #2a2118;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.9);
+  opacity: 0.6;
 }
-.arrows button:hover { background: var(--panel-3); }
-.frames { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-.frames button {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--dim);
-  font: 600 13px var(--font-body);
-  cursor: pointer;
-}
-.frames button:hover { color: var(--fg); background: var(--panel-2); }
-.frames button[aria-pressed='true'] { background: var(--gold); border-color: var(--gold); color: var(--gold-fg); }
-.stage.hoverable { cursor: zoom-in; }
-.tour-note { margin-top: 14px; text-align: center; color: var(--faint); font-size: 14px; }
+.socket:hover .gem { opacity: 0.85; }
+.socket[aria-pressed='true'] .gem { opacity: 1; border-color: var(--link); box-shadow: 0 0 14px rgba(255, 240, 190, 0.6), inset 0 0 6px rgba(0, 0, 0, 0.5); }
+.red { background: #c0392f; }
+.green { background: #4f9e3f; }
+.blue { background: #3f6fc4; }
+.white { background: #d8d4c8; }
 
-/* ---------- modules note ---------- */
-.modnote {
-  display: grid;
-  gap: 14px;
-  padding: 20px 22px;
-  margin-bottom: 56px;
-  border-radius: 18px;
-  border: 1px dashed var(--line-strong);
-  background: var(--panel);
-}
-.modnote-copy { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; color: var(--dim); }
-.modnote-copy strong { font: 700 19px var(--font-display); letter-spacing: -0.02em; color: var(--fg); }
-.presets { display: flex; flex-wrap: wrap; gap: 8px; }
-.preset {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--fg);
-  font: 600 14px var(--font-body);
-  cursor: pointer;
-}
-.preset:hover { background: var(--panel-2); }
-.preset[aria-pressed='true'] { background: var(--gold); border-color: var(--gold); color: var(--gold-fg); }
-.toggles { display: flex; flex-wrap: wrap; gap: 8px; }
-.toggles li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 6px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-size: 13.5px;
-  color: var(--fg);
-  transition: opacity 200ms ease;
-}
-.sw { position: relative; width: 26px; height: 15px; border-radius: 999px; background: var(--gold); transition: background 200ms ease; }
-.sw::after { content: ''; position: absolute; top: 2px; left: 13px; width: 11px; height: 11px; border-radius: 50%; background: var(--gold-fg); transition: left 200ms ease; }
-.toggles li.off { color: var(--faint); }
-.toggles li.off .sw { background: #3a332b; }
-.toggles li.off .sw::after { left: 2px; background: var(--faint); }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-/* ---------- features ---------- */
-.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
-.card {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-}
-.card.big { grid-column: span 3; }
-.card.mid { grid-column: span 2; }
-.card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-bottom: 1px solid var(--line); }
-.card-text { display: grid; gap: 6px; align-content: start; padding: 18px 20px 22px; }
-.card .n { font-size: 13px; font-weight: 600; color: var(--gold); letter-spacing: 0.06em; }
-.card h3 { font: 700 21px/1.2 var(--font-display); letter-spacing: -0.025em; }
-.card.mid h3 { font-size: 18.5px; }
-.card p { color: var(--dim); font-size: 15px; }
-.card ul { display: grid; gap: 4px; margin-top: 6px; }
-.card li { position: relative; padding-left: 16px; color: var(--dim); font-size: 14.5px; }
-.card li::before { content: ''; position: absolute; left: 2px; top: 0.62em; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
-.more {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 20px;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-}
-.more b { font: 700 18px var(--font-display); margin-right: 6px; }
-.chip { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); font-size: 14px; }
-.apt { margin-top: 22px; color: var(--dim); font-size: 15px; }
-
-/* ---------- sections ---------- */
-.section { padding-block: 88px; border-top: 1px solid var(--line); }
-.title { font-size: clamp(32px, 4vw, 52px); margin-bottom: 12px; }
-
-/* ---------- install ---------- */
-.install { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-block: 28px 32px; }
-.install li { border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 22px; display: grid; gap: 6px; align-content: start; }
-.install .n { font-size: 13px; font-weight: 600; color: var(--gold); letter-spacing: 0.04em; }
-.install h3 { font: 700 20px var(--font-display); letter-spacing: -0.02em; }
-.install p { color: var(--dim); font-size: 15px; }
-
-/* ---------- faq ---------- */
-.faq { display: grid; gap: 10px; max-width: 780px; margin-top: 28px; }
-.faq details { border-radius: 16px; background: var(--panel); border: 1px solid var(--line); padding: 16px 20px; }
-.faq summary { cursor: pointer; font-weight: 600; font-size: 16.5px; }
-.faq p { color: var(--dim); margin-top: 10px; max-width: 68ch; }
+/* ---------- and many more ---------- */
+.more { columns: 2; column-gap: 48px; max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+.more li { break-inside: avoid; margin-bottom: 14px; }
+.more b { display: block; font: 21px var(--caps); color: var(--text); }
+.end { text-align: center; padding: 28px 16px 0; }
 
 /* ---------- footer ---------- */
-.foot { border-top: 1px solid var(--line); padding-block: 32px; color: var(--faint); font-size: 14px; }
-.foot-inner { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
-.foot-links { display: flex; gap: 18px; }
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-top: 72px;
+  padding: 24px 16px;
+  border-top: 1px solid var(--edge);
+  font-size: 15px;
+}
+.foot-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
 
-@media (max-width: 960px) {
-  .card.big, .card.mid { grid-column: span 3; }
-}
 @media (max-width: 860px) {
-  .hero { padding-block: 44px 32px; }
-  .nav-links { display: none; }
-  /* The rail becomes a row of tools you swipe, above the picture. */
-  .tour { grid-template-columns: minmax(0, 1fr); }
-  .rail { contain: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--line); }
-  .rail-group { display: none; }
-  .cap { position: static; max-width: none; border-radius: 0; border-width: 1px 0 0; backdrop-filter: none; }
-  .arrows { display: none; }
-  .stage { aspect-ratio: auto; display: grid; }
-  .stage img { inset: 0 0 auto 0; height: auto; aspect-ratio: 16 / 9; }
-  .stage::before { content: ''; display: block; aspect-ratio: 16 / 9; }
-  .section { padding-block: 64px; }
-}
-@media (max-width: 640px) {
-  .card.big, .card.mid { grid-column: 1 / -1; }
+  .hero h1 { font-size: 54px; }
+  .hero-art { height: 480px; }
+  .head h2 { font-size: 38px; }
+  .highlight { padding-top: 56px; }
+  .more { columns: 1; }
+  /* Sockets wrap here, so their links would point at nothing. */
+  .socket + .socket::before { display: none; }
+  .socket { width: 66px; padding: 0; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .landing * { transition: none !important; }
+  .stage img { transition: none; }
 }
 </style>

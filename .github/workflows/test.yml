@@ -83,8 +83,22 @@ jobs:
     - name: Get OCR files (opencv + tesseract, from APT's release)
       run: npm run get:ocr
       working-directory: ./testing
+    # Ubuntu's mirrors sometimes crawl (8.5 minutes for 22 MB), so Chromium's system
+    # packages are kept between runs. Any that changed are downloaded as usual.
+    - name: Cache Chromium's system packages
+      uses: actions/cache@v4
+      with:
+        path: ~/apt-debs
+        key: apt-debs-${{ runner.os }}-${{ hashFiles('testing/package-lock.json') }}
+        restore-keys: apt-debs-${{ runner.os }}-
     - name: Install Chromium
-      run: npx playwright install --with-deps chromium
+      run: |
+        mkdir -p ~/apt-debs
+        sudo cp ~/apt-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+        echo "Packages from the cache: $(ls ~/apt-debs | wc -l)"
+        npx playwright install --with-deps chromium
+        cp /var/cache/apt/archives/*.deb ~/apt-debs/ 2>/dev/null || true
+        echo "Packages to keep: $(ls ~/apt-debs | wc -l)"
       working-directory: ./testing
     - name: OCR tests
       run: npm run test:main
