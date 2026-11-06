@@ -145,26 +145,21 @@ const tracker = new DeathTracker({
 
 // The game's own mod list, read off the screen after the map has drawn. It only
 // looks: nothing goes to the game. No list (collapsed) means the check stands.
-const READ_AFTER_MS = [3000, 8000]
+// Main does the waiting, so the overlay's page has no timers waking it in a map.
+const READ_WAITS_MS = [3000, 5000]
 let matcher: TooltipMatcher | null = null
 let readToken = 0
-let readTimer: ReturnType<typeof setTimeout> | undefined
 let ocrMissing = false
-onUnmounted(() => { clearTimeout(readTimer) })
+onUnmounted(() => { readToken++ })
 
 function readModList (map: MapEntry) {
-  clearTimeout(readTimer)
   const token = ++readToken
   if (ocrMissing || store.runByKey.value.get(map.key)?.match === 'screen') return
   const here = () => token === readToken && tracker.currentKey === map.key
-  const later = (i: number) => {
-    readTimer = setTimeout(() => { attempt(i).catch(() => {}) }, READ_AFTER_MS[i] - (READ_AFTER_MS[i - 1] ?? 0))
-  }
   const attempt = async (i: number) => {
-    if (!here()) return
     let lines: string[] | null = null
     try {
-      const read = await hostRequest<{ lines: string[] | null, ocrMissing?: boolean }>('area-mods-read', {}, 15_000)
+      const read = await hostRequest<{ lines: string[] | null, ocrMissing?: boolean }>('area-mods-read', { delayMs: READ_WAITS_MS[i] }, 20_000)
       // No OCR files: the checks still work. Other failures get the next try.
       if (read.ocrMissing) ocrMissing = true
       lines = read.lines
@@ -176,9 +171,9 @@ function readModList (map: MapEntry) {
       if (mods.length || weak.length) store.readFromScreen(map, mods, weak)
     }
     // Always both tries: a tooltip can hide part of the list on one of them.
-    if (i + 1 < READ_AFTER_MS.length) later(i + 1)
+    if (i + 1 < READ_WAITS_MS.length) await attempt(i + 1)
   }
-  later(0)
+  attempt(0).catch(() => {})
 }
 
 // The tail gives what happened while the app was closed, and where you are now.

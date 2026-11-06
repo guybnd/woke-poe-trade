@@ -551,8 +551,9 @@ Promise<{ labels: Array<{ lines: string[], at: { x: number, y: number } }> }> {
 // Wide enough for the longest mods in the data, about 100 characters.
 const AREA_LIST_WIDTH = 0.7
 const AREA_LIST_HEIGHT = 0.75
-export async function readAreaMods (poeWindow: GameWindow): Promise<{ lines: string[] | null, ocrMissing?: boolean }> {
+export async function readAreaMods (poeWindow: GameWindow, delayMs = 0): Promise<{ lines: string[] | null, ocrMissing?: boolean }> {
   if (!checkOcr().ok) return { lines: null, ocrMissing: true }
+  if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, Math.min(delayMs, 10_000)))
   // The capture copies the desktop, so anything in front of the game would be read.
   const bounds = poeWindow.bounds
   if (!poeWindow.hasFocus || !bounds.width || !bounds.height) return { lines: null }

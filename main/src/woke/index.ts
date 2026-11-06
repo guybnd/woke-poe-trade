@@ -80,7 +80,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     if (kind.canRoll) handlers[`${kind.topic}-roll`] = async () => await scanner.roll()
   }
   handlers['essence-scan-once'] = async () => await readAllEssenceLabels(poeWindow)
-  handlers['area-mods-read'] = async () => await readAreaMods(poeWindow)
+  handlers['area-mods-read'] = async (args) => await readAreaMods(poeWindow, Number(args?.delayMs) || 0)
   const stashWatch = new StashWatch(() => {
     server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'stash-clear', data: null } })
   })
