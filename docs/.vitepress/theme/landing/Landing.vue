@@ -5,6 +5,7 @@
 import { reactive } from 'vue'
 import { withBase } from 'vitepress'
 import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
+import { CREDIT_GROUPS } from '../../../../renderer/src/web/woke/settings/credits.ts'
 import { REPO, DOWNLOAD, HIGHLIGHTS } from './content.js'
 
 const shot = (name) => withBase(`/shots/${name}.webp`)
@@ -63,6 +64,16 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <p class="end"><a class="btn" :href="DOWNLOAD">Download for Windows</a></p>
       </section>
     </main>
+
+    <section class="credits" aria-labelledby="credits-title">
+      <h2 id="credits-title">Credits</h2>
+      <p v-for="g in CREDIT_GROUPS" :key="g.id">
+        <b>{{ g.title }}:</b>
+        <template v-for="(c, i) in g.credits" :key="c.name">
+          {{ ' ' }}<a :href="c.url">{{ c.name }}</a>{{ i < g.credits.length - 1 ? ',' : '' }}
+        </template>
+      </p>
+    </section>
 
     <footer class="foot">
       <span>Built on <a href="https://github.com/SnosMe/awakened-poe-trade">Awakened PoE Trade</a> by SnosMe. Not affiliated with or endorsed by Grinding Gear Games.</span>
@@ -203,13 +214,19 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .more b { display: block; font: 21px var(--caps); color: var(--text); }
 .end { text-align: center; padding: 28px 16px 0; }
 
+/* ---------- credits ---------- */
+.credits { max-width: 1040px; margin: 72px auto 0; padding: 0 16px; font-size: 15px; text-align: center; }
+.credits h2 { font: 24px var(--caps); color: var(--title); margin-bottom: 10px; }
+.credits p { margin-bottom: 8px; }
+.credits b { font-weight: 400; color: var(--text); }
+
 /* ---------- footer ---------- */
 .foot {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px 24px;
-  margin-top: 72px;
+  margin-top: 40px;
   padding: 24px 16px;
   border-top: 1px solid var(--edge);
   font-size: 15px;
