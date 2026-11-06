@@ -534,7 +534,7 @@ test('market: the flips window', async ({ overlay }) => {
 
 test('market: uniques worth disenchanting', async ({ overlay }) => {
   await liveNinja(overlay.page)
-  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-disenchant', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-disenchant', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 }, wokeSizes: { main: { h: 590 } } } as never] })
   await backdrop(overlay, 'frames/town.jpg')
   const panel = overlay.widget('woke-disenchant')
   await expect(panel.locator('.w-row:not(.w-row--head)').first()).toBeVisible({ timeout: 15_000 })
