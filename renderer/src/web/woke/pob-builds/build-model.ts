@@ -425,9 +425,10 @@ export function shortNumber (n: number): string {
   return Math.round(n).toLocaleString('en-US')
 }
 
-// PoB fills in full DPS only when skills are marked for it, so take the larger.
+// PoB fills in full DPS only when skills are marked for it, older files lack
+// combined DPS, and a minion build's damage is the minion's: take the largest.
 export function buildDps (stats: PobStats | undefined): number {
-  return Math.max(stats?.FullDPS ?? 0, stats?.CombinedDPS ?? 0, stats?.TotalDotDPS ?? 0)
+  return Math.max(stats?.FullDPS ?? 0, stats?.CombinedDPS ?? 0, stats?.TotalDPS ?? 0, stats?.TotalDotDPS ?? 0, stats?.MinionTotalDPS ?? 0)
 }
 
 // One line for a build in a list: its damage and how much it survives.

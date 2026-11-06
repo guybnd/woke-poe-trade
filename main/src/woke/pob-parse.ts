@@ -3,7 +3,7 @@
 // summary we need; anything missing just comes back empty.
 
 const STAT_KEYS = [
-  'FullDPS', 'CombinedDPS', 'TotalDotDPS', 'Life', 'EnergyShield', 'Mana', 'TotalEHP',
+  'FullDPS', 'CombinedDPS', 'TotalDPS', 'TotalDotDPS', 'MinionTotalDPS', 'Life', 'EnergyShield', 'Mana', 'TotalEHP',
   'FireResist', 'ColdResist', 'LightningResist', 'ChaosResist',
   'FireResistOverCap', 'ColdResistOverCap', 'LightningResistOverCap', 'ChaosResistOverCap'
 ] as const
@@ -326,12 +326,14 @@ function parseItemSets (xml: string): PobItemSet[] {
   return sets
 }
 
-// Attribute order varies between PoB versions. Minions have their own element.
+// Attribute order varies between PoB versions. Minions have their own element,
+// of which only the damage says anything about the build.
 function parseStats (xml: string): PobStats {
   const out: PobStats = {}
-  for (const m of xml.matchAll(/<PlayerStat\b([^>]*?)\/?>/g)) {
-    const a = attrs(m[1])
-    const key = STAT_KEYS.find(k => k === a.stat)
+  for (const m of xml.matchAll(/<(PlayerStat|MinionStat)\b([^>]*?)\/?>/g)) {
+    const a = attrs(m[2])
+    const name = m[1] === 'PlayerStat' ? a.stat : a.stat === 'TotalDPS' ? 'MinionTotalDPS' : ''
+    const key = name === 'MinionTotalDPS' ? name : STAT_KEYS.find(k => k === name && k !== 'MinionTotalDPS')
     const value = num(a.value)
     if (key && value != null && out[key] === undefined) out[key] = value
   }

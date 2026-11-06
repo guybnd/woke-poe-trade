@@ -108,6 +108,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.pinned = []
   props.config.activeBuild = null
   props.config.followChars = {}
+  props.config.followOff = []
   props.config.loadouts = {}
   wm.show(props.config.wmId)
 }
@@ -135,10 +136,27 @@ const active = useActiveBuild()
 
 // Follow the character Client.txt shows levelling: a build linked to that
 // name (or, failing that, one whose file name contains it) becomes active.
-function followTo (name: string, rel: string) {
-  if (rel === props.config.activeBuild) return
+// The build for this character: its link, or a build named after it unless
+// you stopped following it. Null while the list hasn't loaded.
+function followedBuild (name: string): string | null {
+  const linked = props.config.followChars[name]
+  if (linked) return builds.value.some(b => b.relPath === linked) ? linked : null
+  if (name.length < 4 || props.config.followOff.includes(name)) return null
+  const lower = name.toLowerCase()
+  return builds.value.find(b => b.name.toLowerCase().includes(lower))?.relPath ?? null
+}
+
+function followCharacter (name: string) {
+  const rel = followedBuild(name)
+  if (!rel) return
+  const linksBefore = props.config.followChars
+  const newLink = !linksBefore[name]
+  if (newLink) props.config.followChars = { ...linksBefore, [name]: rel }
   const before = props.config.activeBuild
-  const followsBefore = props.config.followChars
+  if (rel === before) {
+    if (newLink) saveConfig()
+    return
+  }
   props.config.activeBuild = rel
   saveConfig()
   const shown = builds.value.find(b => b.relPath === rel)?.name ?? rel
@@ -147,34 +165,31 @@ function followTo (name: string, rel: string) {
     dock: true,
     undo: () => {
       props.config.activeBuild = before
-      props.config.followChars = followsBefore
+      props.config.followChars = linksBefore
+      if (newLink) props.config.followOff = [...props.config.followOff, name]
       saveConfig()
     }
   })
 }
 
+// A character seen before the build list loaded waits for it. After that, only
+// a change of character switches builds, so a refresh never undoes your pick.
+let followWaiting = false
 watch(active.charName, (name) => {
   if (!name) return
-  const before = props.config.followChars
-  let rel: string | undefined = before[name]
-  if (!rel && name.length >= 4) {
-    const lower = name.toLowerCase()
-    rel = builds.value.find(b => b.name.toLowerCase().includes(lower))?.relPath
-    if (rel) props.config.followChars = { ...before, [name]: rel }
-  }
-  if (rel) followTo(name, rel)
+  followWaiting = !builds.value.length
+  if (!followWaiting) followCharacter(name)
 })
-// The name match needs the build list, which loads after mount: try it once
-// the list is in for a character that has no build linked yet.
 watch(builds, (list) => {
   const name = active.charName.value
-  if (!name || name.length < 4 || props.config.followChars[name] || !list.length) return
-  const lower = name.toLowerCase()
-  const rel = list.find(b => b.name.toLowerCase().includes(lower))?.relPath
-  if (!rel) return
-  props.config.followChars = { ...props.config.followChars, [name]: rel }
-  followTo(name, rel)
-})
+  if (!list.length || !name) return
+  if (followWaiting || !props.config.followChars[name]) {
+    followWaiting = false
+    // A linked character here means the list just came in; else look for a
+    // build named after it, which may have just been saved.
+    followCharacter(name)
+  }
+}, { immediate: false })
 
 async function doImport () {
   const input = importText.value.trim()
@@ -204,13 +219,16 @@ const groups = computed(() => groupBuilds(shown.value, props.config.pinned))
 // folder holding the build in use.
 const folderChoice = shallowRef<Record<string, boolean>>({})
 function isOpen (g: BuildGroup) {
-  if (filter.value.trim()) return true
+  if (filter.value.trim() || groups.value.length < 2) return true
   const chosen = folderChoice.value[g.folder]
   if (chosen != null) return chosen
   const firstFolder = groups.value.find(x => x.folder !== PINNED_GROUP)
-  return g.folder === PINNED_GROUP || g === firstFolder || g.builds.some(b => b.relPath === props.config.activeBuild)
+  return g.folder === PINNED_GROUP || g === firstFolder ||
+    g.builds.some(b => b.relPath === props.config.activeBuild || b.relPath === selected.value)
 }
 function toggleFolder (g: BuildGroup) {
+  // A filter shows every match, whatever is open.
+  if (filter.value.trim()) return
   folderChoice.value = { ...folderChoice.value, [g.folder]: !isOpen(g) }
 }
 const selectedBuild = computed(() => builds.value.find(b => b.relPath === selected.value) ?? null)

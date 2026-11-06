@@ -247,11 +247,15 @@ function toggleFollow () {
   const name = charName.value
   if (!name) return
   const next = Object.fromEntries(Object.entries(props.config.followChars).filter(([n]) => n !== name))
-  if (!followsMe.value) {
+  const off = props.config.followOff.filter(n => n !== name)
+  if (followsMe.value) {
+    off.push(name)
+  } else {
     next[name] = props.entry.relPath
     props.config.activeBuild = props.entry.relPath
   }
   props.config.followChars = next
+  props.config.followOff = off
   saveConfig()
 }
 

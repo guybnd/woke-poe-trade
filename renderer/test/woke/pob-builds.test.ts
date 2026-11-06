@@ -318,8 +318,9 @@ describe('saved stats', () => {
       <PlayerStat stat="Life" value="1"/>
       <PlayerStat stat="NotOurs" value="3"/>
       <MinionStat stat="EnergyShield" value="99"/>
+      <MinionStat stat="TotalDPS" value="24000000"/>
     </Build></PathOfBuilding>`)
-    expect(d.stats).toEqual({ Life: 4145, FullDPS: 5604073.8 })
+    expect(d.stats).toEqual({ Life: 4145, FullDPS: 5604073.8, MinionTotalDPS: 24000000 })
   })
 
   it('says damage and EHP on one line', () => {
@@ -328,6 +329,8 @@ describe('saved stats', () => {
     expect(statLine({})).toBe('')
     expect(statLine(undefined)).toBe('')
     expect(buildDps({ FullDPS: 0, CombinedDPS: 65000000 })).toBe(65000000)
+    expect(buildDps({ TotalDPS: 12100, TotalDotDPS: 6200 })).toBe(12100)
+    expect(buildDps({ CombinedDPS: 0, MinionTotalDPS: 24000000 })).toBe(24000000)
     expect(shortNumber(863627895)).toBe('863.6M')
     expect(shortNumber(4145)).toBe('4,145')
   })

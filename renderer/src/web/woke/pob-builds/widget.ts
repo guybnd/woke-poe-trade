@@ -15,6 +15,8 @@ export interface PobBuildsWidget extends Widget {
   // Character name -> build file. When Client.txt shows that character
   // levelling, its build becomes the active one.
   followChars: Record<string, string>
+  // Characters you stopped following: no linking them by name again.
+  followOff: string[]
   // Build file -> the loadout picked by hand. No entry = follow your level.
   loadouts: Record<string, LoadoutPick>
 }
@@ -28,6 +30,7 @@ export interface LoadoutPick {
 
 export function migratePobWidget (w: PobBuildsWidget) {
   if (!w.followChars || typeof w.followChars !== 'object') w.followChars = {}
+  if (!Array.isArray(w.followOff)) w.followOff = []
   if (!Array.isArray(w.pinned)) w.pinned = []
   if (w.activeBuild === undefined) w.activeBuild = null
   if (!w.loadouts || typeof w.loadouts !== 'object') w.loadouts = {}
@@ -35,7 +38,7 @@ export function migratePobWidget (w: PobBuildsWidget) {
 
 // Shapes returned by main/src/woke/pob-builds.ts
 export type PobStats = Partial<Record<
-  'FullDPS' | 'CombinedDPS' | 'TotalDotDPS' | 'Life' | 'EnergyShield' | 'Mana' | 'TotalEHP' |
+  'FullDPS' | 'CombinedDPS' | 'TotalDPS' | 'TotalDotDPS' | 'MinionTotalDPS' | 'Life' | 'EnergyShield' | 'Mana' | 'TotalEHP' |
   'FireResist' | 'ColdResist' | 'LightningResist' | 'ChaosResist' |
   'FireResistOverCap' | 'ColdResistOverCap' | 'LightningResistOverCap' | 'ChaosResistOverCap', number>>
 
