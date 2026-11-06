@@ -1,7 +1,7 @@
 // Stage costs and build comparison on small real-shaped builds.
 import { beforeAll, describe, expect, it } from 'vitest'
 import { stageCosts } from '@/web/woke/pob-builds/build-costs'
-import { compareBuilds } from '@/web/woke/pob-builds/compare-builds'
+import { compareBuilds, treeSentence } from '@/web/woke/pob-builds/compare-builds'
 import type { PobDetails, PobItem } from '@/web/woke/pob-builds/widget'
 import { loadGameData } from '../helpers/game-data'
 
@@ -69,10 +69,20 @@ describe('compareBuilds', () => {
 
   it('shows real changes with their direction', () => {
     const row = (label: string) => r.stats.find(s => s.label === label)!
-    expect(row('DPS')).toMatchObject({ a: '863.6M', b: '729.6M', delta: '-15.5%', tone: 'down' })
+    expect(row('Damage (DPS)')).toMatchObject({ a: '863.6M', b: '729.6M', delta: '-15.5%', tone: 'down' })
     expect(row('Energy shield')).toMatchObject({ delta: '+2,520', tone: 'up' })
-    expect(row('Total EHP')).toMatchObject({ delta: '+110%', tone: 'up' })
-    expect(row('Fire over cap')).toMatchObject({ delta: '-28', tone: 'down' })
+    expect(row('Effective health')).toMatchObject({ delta: '+110%', tone: 'up' })
+    expect(row('Fire res spare over cap')).toMatchObject({ delta: '-28', tone: 'down' })
+  })
+
+  it('counts tree points only, when told which ids are', () => {
+    const counted = compareBuilds(
+      build({}, rare('X'), [], [1, 3]),
+      build({}, rare('X'), [], [1, 9]),
+      id => id !== 9 && id !== 3
+    )
+    expect(counted.treeOnlyA).toBe(0)
+    expect(counted.treeOnlyB).toBe(0)
   })
 
   it('leaves out what is the same', () => {
@@ -82,5 +92,14 @@ describe('compareBuilds', () => {
     expect(r.gemsOnlyB).toEqual(['Controlled Destruction'])
     expect(r.treeOnlyA).toBe(1)
     expect(r.treeOnlyB).toBe(0)
+  })
+})
+
+describe('treeSentence', () => {
+  it('says it in words', () => {
+    expect(treeSentence({ treeOnlyA: 0, treeOnlyB: 0 }, 'A', 'B')).toBe('The same passive points.')
+    expect(treeSentence({ treeOnlyA: 6, treeOnlyB: 0 }, 'A', 'B')).toBe('A has 6 extra points. The rest of the tree is the same.')
+    expect(treeSentence({ treeOnlyA: 0, treeOnlyB: 1 }, 'A', 'B')).toBe('B has 1 extra point. The rest of the tree is the same.')
+    expect(treeSentence({ treeOnlyA: 2, treeOnlyB: 3 }, 'A', 'B')).toBe('2 points only in A, 3 only in B.')
   })
 })

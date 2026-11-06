@@ -62,8 +62,9 @@
         </WEmpty>
       </WPanel>
 
-      <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" />
-      <BuildCompare v-if="compareA && compareB" :config="config" :a="compareA" :b="compareB" @close="comparing = null" />
+      <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" @compare="comparing = { a: $event, b: '' }" />
+      <BuildCompare v-if="comparing" :config="config" :builds="comparePicks" :a="compareA" :b="compareB"
+        @pick="(a, b) => { comparing = { a, b } }" @close="comparing = null" />
       <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="details.trees" :start="treeAt" @close="treeAt = null" />
       <WPanel v-if="selectedBuild && detailsError" size-key="detail" title="Couldn't read the build" width="20rem">
         <div class="w-down" style="padding: var(--w-pad);">{{ detailsError }}</div>
@@ -140,6 +141,8 @@ const treeAt = shallowRef<{ title: string } | null>(null)
 const comparing = shallowRef<{ a: string, b: string } | null>(null)
 const compareA = computed(() => builds.value.find(b => b.relPath === comparing.value?.a))
 const compareB = computed(() => builds.value.find(b => b.relPath === comparing.value?.b))
+// By folder, latest league first, as in the list.
+const comparePicks = computed(() => groupBuilds(builds.value, []).flatMap(g => g.builds))
 const details = shallowRef<PobDetails | null>(null)
 const detailsError = shallowRef('')
 const importOpen = shallowRef(false)
@@ -258,8 +261,6 @@ async function refresh () {
     const before = selectedBuild.value?.mtime
     builds.value = res.builds
     dir.value = res.dir
-    // A compared build that's gone doesn't come back with the file.
-    if (comparing.value && !(compareA.value && compareB.value)) comparing.value = null
     // PoB saved the build you are looking at.
     const now = selectedBuild.value
     if (now && before != null && now.mtime !== before) loadDetails(now.relPath)
