@@ -1,6 +1,7 @@
 <template>
   <span :class="[$style.gem, `w-gem-${colour}`, { [$style.off]: off }]"
-    @mouseenter="showTip($event, { kind: 'gem', name, level, quality, note })" @mouseleave="hideTip">
+    @mouseenter="showTip($event, { kind: 'gem', name, level, quality, note })" @mouseleave="hideTip"
+    @contextmenu.capture="offerItem($event, { name })" @contextmenu="openItemMenu($event, { name })">
     <WIcon v-if="art" :src="art" :size="size" title="" /><span :class="[$style.name, { 'line-through': struck }]">{{ name }}</span><slot />
   </span>
 </template>
@@ -12,6 +13,7 @@ import WIcon from '../ui/WIcon.vue'
 import { gemData } from './gems'
 import { gemArt } from './item-art'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
+import { offerItem, openItemMenu } from '../ui/tooltip/item-menu'
 
 const props = withDefaults(defineProps<{
   name: string

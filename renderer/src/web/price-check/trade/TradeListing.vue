@@ -104,7 +104,8 @@
               }"
               :title="improved && !row.lead.tipItem ? rowTitle(row) : undefined"
               @mouseenter="showRowTip($event, row)"
-              @mouseleave="hideTip">
+              @mouseleave="hideTip"
+              @contextmenu="row.lead.tipItem && openItemMenu($event, pobMenuRef(row.lead.tipItem))">
               <td class="px-2 whitespace-nowrap">
                 <span class="w-pc-price">
                   <span class="w-pc-amount" :class="{ 'line-through': row.lead.priceCurrency === 'exalted' }">{{ row.lead.priceAmount }}</span>
@@ -165,6 +166,8 @@
 import { defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { hideTip, showTip } from '@/web/woke/ui/tooltip/tooltip'
+import { openItemMenu } from '@/web/woke/ui/tooltip/item-menu'
+import { pobMenuRef } from '@/web/woke/pob-builds/item-menu-ref'
 import { listingDetail } from '@/web/woke/price-insight/listing-tip-detail'
 import { useI18nNs } from '@/web/i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
@@ -476,6 +479,8 @@ export default defineComponent({
         if (row.lead.tipItem) showTip(e, { kind: 'item', item: row.lead.tipItem, listing: row.lead.listedItem && listingDetail(row.lead.listedItem) })
       },
       hideTip,
+      openItemMenu,
+      pobMenuRef,
       FIX_TAG,
       skeletonRows,
       coinFor: (currency: string) => COINS[currency],

@@ -414,11 +414,10 @@ function copyName (item: { name: string }) {
 }
 
 function rowMenu (e: MouseEvent, item: { type: string, name: string, variant: string }) {
+  // Watch, copy, trade and wiki are in the item strip on top (v-item-tip).
   const watched = isWatched(item)
   openMenu(e, [
-    { label: watched ? 'Stop watching' : 'Watch price', icon: watched ? 'fas fa-star' : 'far fa-star', keys: watched ? 'Del' : 'W', action: () => toggleWatch(item) },
     ...(watched ? [{ label: 'Set price alert…', icon: 'fas fa-bell', action: () => { query.value = ''; props.config.view = 'watchlist'; alertKey.value = key(item) } }] : []),
-    { label: 'Copy name', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => copyName(item) },
     { label: 'Show only this category', icon: 'fas fa-filter', action: () => { query.value = ''; props.config.view = 'movers'; props.config.typeFilter = item.type } }
   ])
 }

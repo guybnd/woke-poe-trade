@@ -15,16 +15,46 @@ export type MenuEntry =
   }
   | { separator: true }
 
-export interface MenuState { items: MenuEntry[], x: number, y: number }
+// The item a menu is about (pick C): its name, art and price at the top, then a
+// strip of big icon buttons for what any item can do (item-menu.ts).
+export interface MenuItemAction {
+  label: string
+  icon: string // Font Awesome class
+  action: () => void
+  title?: string // the longer name, on hover
+  disabled?: boolean
+}
+export interface MenuItemHead {
+  name: string
+  nameClass?: string // w-rarity-*
+  art?: string | null
+  price?: string
+  actions: MenuItemAction[]
+}
+
+export interface MenuState { items: MenuEntry[], x: number, y: number, item?: MenuItemHead }
+
+// A right-click on an item (v-item-tip) offers that item to whichever menu the
+// same click opens, so screens with their own row menu get the item strip too.
+let offered: { event: Event, head: () => MenuItemHead | null } | null = null
+export function offerMenuItem (e: Event, head: () => MenuItemHead | null) {
+  offered = { event: e, head }
+}
+function offeredItem (at: unknown): MenuItemHead | undefined {
+  if (!offered || offered.event !== at) return undefined
+  return offered.head() ?? undefined
+}
 
 export const menuState = shallowRef<MenuState | null>(null)
 
 // Open at the mouse (or a point). Destructive items go last, after a separator.
-export function openMenu (at: MouseEvent | { x: number, y: number }, items: MenuEntry[]) {
+export function openMenu (at: MouseEvent | { x: number, y: number }, items: MenuEntry[], item?: MenuItemHead) {
+  const head = item ?? offeredItem(at)
+  if (!items.length && !head) return
   const x = 'clientX' in at ? at.clientX : at.x
   const y = 'clientY' in at ? at.clientY : at.y
   if ('preventDefault' in at) at.preventDefault()
-  menuState.value = { items, x, y }
+  menuState.value = { items, x, y, item: head }
 }
 export function closeMenu () { menuState.value = null }
 

@@ -115,7 +115,7 @@ import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WInfo, WPanel, WField, WSegmented, WChip, WButton, WPrice, WEmpty, WIcon, WSkeleton, openMenu, toast, vItemTip } from '../ui'
-import { copyText } from '../ui/copy'
+import { offerItem } from '../ui/tooltip/item-menu'
 import { ninjaIcon } from '../ui/game-icons'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
@@ -295,8 +295,9 @@ function art (o: Opportunity) {
 }
 
 function rowMenu (e: MouseEvent, o: Opportunity, isChangedNow: boolean) {
+  // The item strip (copy, trade, wiki…) sits on top, wherever on the row.
+  offerItem(e, o)
   openMenu(e, [
-    { label: 'Copy name', icon: 'far fa-copy', action: () => { copyText(o.name) } },
     ...(isChangedNow
       ? []
       : [{

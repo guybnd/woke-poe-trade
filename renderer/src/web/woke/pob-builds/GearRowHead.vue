@@ -1,6 +1,7 @@
 <template>
   <div :class="small ? $style.gearRowPlain : $style.gearRow"
-    @mouseenter="row.item && showTip($event, { kind: 'item', item: row.item })" @mouseleave="hideTip">
+    @mouseenter="row.item && showTip($event, { kind: 'item', item: row.item })" @mouseleave="hideTip"
+    @contextmenu.capture="offerItem($event, menuRef)" @contextmenu="openItemMenu($event, menuRef)">
     <span :class="[$style.cell, small && $style.cellSmall, cellClass]">
       <img v-if="art" :src="art" alt="" :class="['w-game-icon', small ? $style.artSmall : $style.art]" loading="lazy" draggable="false">
       <i v-else-if="item" class="fas fa-question w-faint" />
@@ -24,17 +25,16 @@
 // head alone, so hovering a gem below shows that gem's tooltip instead.
 import { computed, useCssModule } from 'vue'
 import { WButton } from '../ui'
-import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { parseClipboard } from '@/parser'
 import SocketDots from './SocketDots.vue'
 import { slotLabel, socketGroups } from './build-model'
 import type { GearRow } from './build-model'
 import type { GemColour } from './gems'
 import { itemArt } from './item-art'
-import { pobItemText } from './item-text'
 import { openPriceCheck } from './open-price-check'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
+import { offerItem, openItemMenu } from '../ui/tooltip/item-menu'
+import { pobCheckText, pobMenuRef } from './item-menu-ref'
 import type { PobItem } from './widget'
 
 const props = defineProps<{ row: GearRow, main?: boolean, small?: boolean }>()
@@ -85,11 +85,7 @@ const cellClass = computed(() => {
 
 // PoB writes items in English, which only the English item data can read, and
 // it knows old uniques the item data doesn't. Those keep a trade site search.
-const checkText = computed(() => {
-  if (!item.value || AppConfig().language !== 'en') return null
-  const text = pobItemText(item.value)
-  return parseClipboard(text).isOk() ? text : null
-})
+const checkText = computed(() => item.value ? pobCheckText(item.value) : null)
 
 const leagues = useLeagues()
 const trade = computed(() => {
@@ -102,6 +98,9 @@ const trade = computed(() => {
   }
   return `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`
 })
+
+// The right-click item menu: price check with its stats, trade, wiki, copy.
+const menuRef = computed(() => pobMenuRef(item.value, checkText.value))
 
 function openTrade () {
   if (trade.value) window.open(trade.value)

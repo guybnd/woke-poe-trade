@@ -115,8 +115,8 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WInfo, WPanel, WTabs, WSelect, WField, WPrice, WEmpty, WChip, WSkeleton, openMenu, toast, vItemTip } from '../ui'
-import { copyText } from '../ui/copy'
+import { WInfo, WPanel, WTabs, WSelect, WField, WPrice, WEmpty, WChip, WSkeleton, vItemTip } from '../ui'
+import { openItemMenu } from '../ui/tooltip/item-menu'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
@@ -223,19 +223,9 @@ function profit (p: SpecificPick) { return pickProfit(p, props.config.specificMo
 function shownVariants (p: SpecificPick) { return props.config.skipThin ? p.variants.filter(v => !thin.value.has(v.name)) : p.variants }
 function toggle (name: string) { expanded.value = expanded.value === name ? null : name }
 
+// The item menu: price check, trade, wiki, copy, stash.
 function gemMenu (e: MouseEvent, name: string) {
-  const icon = gemIcon(name) ?? undefined
-  openMenu(e, [
-    {
-      label: `Copy "${name}"`,
-      gameIcon: icon,
-      icon: 'far fa-copy',
-      keys: 'Ctrl + C',
-      action: () => {
-        copyText(name).then(ok => { if (ok) toast(`Copied "${name}"`, { ms: 1800 }) })
-      }
-    }
-  ])
+  openItemMenu(e, gemTip(name))
 }
 function fmt (chaos: number) { return formatChaos(chaos, snapshot.value?.divine ?? null) }
 function pct (p: number) { return `${(p * 100).toFixed(1)}%` }

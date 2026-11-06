@@ -136,7 +136,8 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
-import { WInfo, WPanel, WTabs, WSegmented, WPrice, WEmpty, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WPrice, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
+import { openItemMenu } from '../ui/tooltip/item-menu'
 import { copyText } from '../ui/copy'
 import { formatAmount, formatChaos } from '../ui/format'
 import { gameIcon, moduleIcon } from '../ui/game-icons'
@@ -488,16 +489,9 @@ onUnmounted(() => { stashHotkey.abort() })
 
 function itemName (r: FlipRow | UpgradeRow) { return 'from' in r ? r.from : r.name }
 
+// The item menu: price check, trade, wiki, copy, stash.
 function rowMenu (e: MouseEvent, name: string) {
-  openMenu(e, [{
-    label: `Copy "${name}"`,
-    gameIcon: gameIcon(name) ?? undefined,
-    icon: 'far fa-copy',
-    keys: 'Ctrl + C',
-    action: () => {
-      copyText(name).then(ok => { if (ok) toast(`Copied "${name}"`, { ms: 1800 }) })
-    }
-  }])
+  openItemMenu(e, { name })
 }
 
 function capitalize (s: string) { return s[0].toUpperCase() + s.slice(1) }
