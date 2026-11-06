@@ -26,7 +26,7 @@ Alt+F on an item goes to its rule. Edit any tier in the game and it reloads.
 </p>
 
 ### Path of Building
-Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change and what each stage costs, open the passive tree in the overlay, price check a build's item, compare a checked item to what you wear, and compare two builds.
+Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change and what each stage's uniques cost, open the passive tree in the overlay, price check a build's item, compare a checked item to what you wear, and compare two builds.
 
 <p>
   <img src="docs/public/shots/hl-pob-gear.webp" width="49%" alt="A build's gear tab with an item tooltip">
@@ -36,7 +36,7 @@ Your gear, gem links and gems by level, from your PoB folder. See what your next
 </p>
 
 ### Market
-Flips that pay today, outlined in your Scarab, Delirium, Delve, Essence or Blight tab, plus boss runs and lab gems.
+Flips that pay today, outlined in your stash tab (Scarab, plus Delirium, Delve, Essence and Blight at 1440p), plus boss runs and lab gems.
 
 <p>
   <img src="docs/public/shots/hl-flips.webp" width="49%" alt="Flips window: scarabs worth vendoring">

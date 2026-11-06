@@ -178,10 +178,13 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
   await saveAround(overlay, 'hl-price-tooltip', [panel.locator('.w-pc-table'), tip], 1240)
   // Shift + scroll over the listing swaps the ranges for a bar on each roll.
   await overlay.page.keyboard.down('Shift')
-  await overlay.page.mouse.wheel(0, 100)
-  await expect(tip.locator('[class*="bar"]').first()).toBeVisible()
-  await saveAround(overlay, 'hl-price-bars', [panel.locator('.w-pc-table'), tip], 1240)
-  await overlay.page.keyboard.up('Shift')
+  try {
+    await overlay.page.mouse.wheel(0, 100)
+    await expect(tip.locator('[class*="bar"]').first()).toBeVisible()
+    await saveAround(overlay, 'hl-price-bars', [panel.locator('.w-pc-table'), tip], 1240)
+  } finally {
+    await overlay.page.keyboard.up('Shift')
+  }
 })
 
 // ---- 2. Loot filter ----
@@ -364,7 +367,6 @@ function grownBuildsDir () {
   const next = new Set([...first, ...pathTo(picks[8])])
   const leaves = [...pathTo(picks[7])].filter(id => !picks.slice(0, 7).flatMap(pathTo).includes(id) && !pathTo(picks[8]).includes(id)).slice(0, 2)
   for (const id of leaves) next.delete(id)
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-landing-pob-'))
   // Uniques the recorded poe.ninja feed has prices for, so stages cost something.
   const unique = (id: number, name: string, base: string) => `<Item id="${id}">\nRarity: UNIQUE\n${name}\n${base}\nImplicits: 0\n</Item>`
   const gear = [
@@ -381,11 +383,13 @@ function grownBuildsDir () {
     .replace('nodes="94,127,223,33435"', `nodes="${[...next].join(',')}"`)
     .replace('nodes="94,127,223"', `nodes="${[...first].join(',')}"`)
     .replace(/<Items[\s\S]*<\/Items>/, () => gear)
-  fs.writeFileSync(path.join(dir, 'Loadouts.xml'), xml)
   // A second build for comparing, with a tree that shares only the first paths.
   const other = new Set([...picks.slice(0, 3), notables[Math.floor(notables.length / 18)][0], notables[Math.floor(notables.length / 3)][0]].flatMap(pathTo))
-  fs.writeFileSync(path.join(dir, 'Showcase.xml'), fs.readFileSync(path.join(FIXTURES, 'pob/Showcase.xml'), 'utf8')
-    .replace('<Spec title="Endgame">', `<Spec title="Endgame" nodes="${[...other].join(',')}">`))
+  const showcase = fs.readFileSync(path.join(FIXTURES, 'pob/Showcase.xml'), 'utf8')
+    .replace('<Spec title="Endgame">', `<Spec title="Endgame" nodes="${[...other].join(',')}">`)
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-landing-pob-'))
+  fs.writeFileSync(path.join(dir, 'Loadouts.xml'), xml)
+  fs.writeFileSync(path.join(dir, 'Showcase.xml'), showcase)
   return dir
 }
 
