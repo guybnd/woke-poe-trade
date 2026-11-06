@@ -467,7 +467,7 @@ async function toggleOutlines () {
       if (!props.config.hideUntraded || isTraded(r)) profits.set(r.from, r.profitEach)
     }
   }
-  const marks = buildMarks(read.slots, profits, props.config.stashTotals !== false ? tabMethod.inputs : 0)
+  const marks = buildMarks(read.slots, profits, props.config.stashTotals === true ? tabMethod.inputs : 0)
   // A zone change or the like while reading: these would have no click watcher.
   if (!marks.length || clearsBefore !== stashClearCount()) {
     hostRequest('stash-watch-stop', null).catch(() => {})

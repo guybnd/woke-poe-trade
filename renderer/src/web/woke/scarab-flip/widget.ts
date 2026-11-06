@@ -21,7 +21,7 @@ export interface ScarabFlipWidget extends Widget {
   weights?: WeightOverrides
   // Shows or clears the outlines on the open stash tab.
   stashHotkey?: string | null
-  // Adds the whole stack's profit under each outline's per item figure. On when unset.
+  // Adds the whole stack's profit under each outline's per item figure. Off when unset.
   stashTotals?: boolean
   // The buy list's order; profit each when unset.
   sort?: FlipSort
