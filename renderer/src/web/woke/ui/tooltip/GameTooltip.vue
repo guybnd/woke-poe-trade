@@ -27,7 +27,7 @@
         </section>
         <section v-if="listing.groups.length" :class="$style.block">
           <template v-for="(group, g) in listing.groups" :key="g">
-            <div v-if="group.heading" :class="$style.modHeading">{{ group.heading }}</div>
+            <div v-if="group.heading" :class="[$style.modHeading, { [$style.barsHeading]: rollBars }]">{{ group.heading }}</div>
             <div v-else-if="g" :class="$style.modGap" />
             <ListingModRow v-for="(line, i) in group.lines" :key="i" :line="line" :bars="rollBars" />
           </template>
@@ -390,6 +390,9 @@ onUnmounted(() => {
 .modHeading { margin-top: 6px; color: var(--w-dim); font-size: var(--w-fs-md); }
 .modHeading:first-child { margin-top: 0; }
 .modGap { height: 8px; }
+/* Lines up with the mod text in the bars view: the tag column's width, less the
+   row's pull to the left, plus the gap after the tags. */
+.barsHeading { padding-left: 3.5rem; text-align: left; }
 .p-label { color: var(--w-faint); }
 .p-value { color: #fff; }
 .p-aug { color: var(--w-r-magic); }

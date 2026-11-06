@@ -52,6 +52,8 @@ function heat (quality: number) {
   margin: 0 -8px;
 }
 .withBars { grid-template-columns: 3.5rem 1fr 8rem; gap: 0 8px; }
+/* The side columns differ, so centred text would sit off the tooltip's middle. */
+.withBars .text { text-align: left; }
 .tags { display: inline-flex; gap: 2px; }
 .tag {
   min-width: 1.5rem;
