@@ -447,7 +447,7 @@ test('market: the flips window', async ({ overlay }) => {
 })
 
 test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
   await overlay.showScreen('screens/stash-scarab-real.png')
   await backdrop(overlay, 'frames/stash-scarabs.jpg')
   await overlay.pressHotkey('Alt + J')
