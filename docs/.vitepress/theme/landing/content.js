@@ -18,7 +18,7 @@ export const HIGHLIGHTS = [
     ]
   },
   {
-    id: 'search',
+    id: 'quick-search',
     name: 'Quick Search',
     tag: 'Ctrl+Space, from anywhere',
     slides: [
