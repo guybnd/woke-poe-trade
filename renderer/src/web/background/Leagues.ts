@@ -26,10 +26,7 @@ interface League {
 export const useLeagues = createGlobalState(() => {
   const isLoading = shallowRef(false)
   const error = shallowRef<string | null>(null)
-  // woke: last launch's list until this launch's read answers, so a failed read
-  // at a league's launch hour still has a league to price in.
-  const savedList = AppConfig().woke?.leagues?.list ?? []
-  const tradeLeagues = shallowRef<League[]>(savedList.map(id => ({ id, isPopular: true })))
+  const tradeLeagues = shallowRef<League[]>([])
   // woke: a league that opened since the last launch, offered in the price check.
   const offer = shallowRef<string | null>(null)
   let failures = 0
@@ -65,6 +62,12 @@ export const useLeagues = createGlobalState(() => {
   async function load () {
     clearTimeout(retryTimer)
     retryTimer = undefined
+    // woke: last launch's list until this launch's read answers, so a failed
+    // read at a league's launch hour still has a league to price in. Read here,
+    // not when this is first used: that can be before the settings load.
+    if (!tradeLeagues.value.length) {
+      tradeLeagues.value = (AppConfig().woke?.leagues?.list ?? []).map(id => ({ id, isPopular: true }))
+    }
     isLoading.value = true
     error.value = null
 
