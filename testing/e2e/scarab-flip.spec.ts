@@ -201,3 +201,22 @@ test('flips: a dock icon click the game also got reads nothing', async ({ overla
   await overlay.page.waitForTimeout(300)
   await expect(overlay.page.locator('[data-stash-outlines]')).toHaveCount(0)
 })
+
+test('flips: outlines show the stack total under the per item figure', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.pressHotkey('Alt + J')
+  const layer = overlay.page.locator('[data-stash-outlines]')
+  await expect(layer).toBeVisible()
+  await expect(layer.locator('br').first()).toBeAttached()
+  await overlay.snap('flips-stash-totals')
+})
+
+test('flips: the stack total can be switched off', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
+  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.pressHotkey('Alt + J')
+  const layer = overlay.page.locator('[data-stash-outlines]')
+  await expect(layer).toBeVisible()
+  await expect(layer.locator('br')).toHaveCount(0)
+})

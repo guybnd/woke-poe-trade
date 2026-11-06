@@ -18,6 +18,9 @@
       hint="Works on the Scarab tab for now. Press once to draw the outlines. They clear on the next click, scroll or key press. Keep the mouse off the tab when you press it: a tooltip hides what's under it. Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="stashHotkey" />
     </WSettingRow>
+    <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure, counting full sets of 3.">
+      <WToggle v-model="stashTotals" />
+    </WSettingRow>
   </div>
 </template>
 
@@ -43,6 +46,10 @@ export default defineComponent({
       reroll: configModelValue(w, 'reroll'),
       hideUntraded: configModelValue(w, 'hideUntraded'),
       defaultCost: DEFAULT_LIFEFORCE_PER_ITEM,
+      stashTotals: computed({
+        get: () => props.configWidget.stashTotals !== false,
+        set: (on: boolean) => { props.configWidget.stashTotals = on }
+      }),
       stashHotkey: computed({
         get: () => props.configWidget.stashHotkey ?? null,
         set: (key: string | null) => { props.configWidget.stashHotkey = key }

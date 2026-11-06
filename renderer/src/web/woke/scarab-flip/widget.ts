@@ -19,6 +19,8 @@ export interface ScarabFlipWidget extends Widget {
   lifeforcePerItem?: number
   // Shows or clears the outlines on the open stash tab.
   stashHotkey?: string | null
+  // Adds the whole stack's profit under each outline's per item figure. On when unset.
+  stashTotals?: boolean
   // The buy list's order; profit each when unset.
   sort?: FlipSort
 }

@@ -417,7 +417,7 @@ async function toggleOutlines () {
   }
   // The same advice as the panel: no untraded prices, and hold rare and cheap ones.
   const rows = priced.model.rows.filter(r => !r.rareCheap && (!props.config.hideUntraded || isTraded(r)))
-  const marks = buildMarks(read.slots, new Map(rows.map(r => [r.name, r.profitEach])))
+  const marks = buildMarks(read.slots, new Map(rows.map(r => [r.name, r.profitEach])), props.config.stashTotals !== false)
   // A zone change or the like while reading: these would have no click watcher.
   if (!marks.length || clearsBefore !== stashClearCount()) {
     hostRequest('stash-watch-stop', null).catch(() => {})

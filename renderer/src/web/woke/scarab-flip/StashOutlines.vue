@@ -7,7 +7,7 @@
       height: `${m.height * 100}%`,
       borderColor: m.color
     }">
-      <span :class="$style.text" :style="{ color: m.color }">{{ m.text }}</span>
+      <span :class="$style.text" :style="{ color: m.color }">{{ m.text }}<template v-if="m.total"><br>{{ m.total }}</template></span>
     </div>
   </div>
 </template>
@@ -59,6 +59,7 @@ onUnmounted(() => {
   padding: 0 3px;
   background: rgb(10, 10, 8);
   font: 700 calc(12px * var(--w-text-scale, 1)) / 1.25 var(--w-num, sans-serif);
+  text-align: right;
   white-space: nowrap;
 }
 </style>
