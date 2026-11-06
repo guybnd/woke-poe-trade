@@ -170,8 +170,30 @@ describe('listingDetail', () => {
     expect(line.tags).toEqual(['S1'])
   })
 
-  it('shows the plain line for a range that crosses zero', () => {
-    const line = one([{ name: 'A', magnitudes: [{ min: '-10', max: '10' }] }], '5% increased Damage')
+  // Soul Ascension, from a real listing: the cap on Eaten Souls rolls -10 to +10.
+  it('rolls a range that crosses zero, reading the number with its sign', () => {
+    const souls = [{ magnitudes: [{ min: '-10', max: '10' }] }]
+    const low = one(souls, '-5 to maximum number of Eaten Souls')
+    expect(text(low)).toBe('-5(-10 to 10) to maximum number of Eaten Souls')
+    expect(low.quality).toBe(25)
+    expect(one(souls, '+7 to maximum number of Eaten Souls').quality).toBe(85)
+    expect(one(souls, '+10 to maximum number of Eaten Souls').quality).toBe(100)
+    expect(one(souls, '-10 to maximum number of Eaten Souls').quality).toBe(0)
+  })
+
+  it('reads the sign of a crossing range from "reduced" too', () => {
+    const line = one([{ magnitudes: [{ min: '-10', max: '10' }] }], '5% reduced Attack Speed')
+    expect(text(line)).toBe('5(-10 to 10)% reduced Attack Speed')
+    expect(line.quality).toBe(25)
+  })
+
+  it('shows no roll for a fixed number, as in Eat a Soul every 0.5 seconds', () => {
+    const line = one([{ magnitudes: [{ min: '0.5', max: '0.5' }] }], 'Eat a Soul when you Hit a Rare or Unique Enemy, no more than once every 0.5 seconds')
+    expect(line.quality).toBeNull()
+  })
+
+  it('shows the plain line when two mods share a range that crosses zero', () => {
+    const line = one([{ name: 'A', magnitudes: [{ min: '-10', max: '10' }] }, { name: 'B', magnitudes: [{ min: '-5', max: '5' }] }], '5% increased Damage')
     expect(line.quality).toBeNull()
   })
 
