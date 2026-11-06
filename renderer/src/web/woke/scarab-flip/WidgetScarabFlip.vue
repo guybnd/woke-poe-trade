@@ -8,7 +8,7 @@
           <span class="w-dim w-num">{{ best.family.label }}, {{ best.method.label.toLowerCase() }}, +{{ fmt(best.profitEach) }} each<template v-if="best.profitPerDay != null">, up to {{ fmt(best.profitPerDay) }} a day</template></span>
         </div>
         <div v-else class="w-dim" style="padding: 2px var(--w-pad) 6px;">Nothing worth flipping right now</div>
-        <div v-if="clickHint" class="w-dim text-xs" style="padding: 0 var(--w-pad) 6px;">Click to outline flips in the open stash tab</div>
+        <div v-if="clickHint" class="w-dim" style="padding: 0 var(--w-pad) 6px;">Click to outline flips in the open stash tab</div>
       </template>
     </DockItem>
     <WPanel :title="config.wmTitle || 'Flips'" :icon="panelIcon" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="34rem">

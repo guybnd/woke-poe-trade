@@ -1,5 +1,5 @@
 <template>
-  <div ref="el" :class="[$style.toast, 'w-enter']" role="status">
+  <div ref="el" :class="[$style.toast, toast.below && $style.below, 'w-enter']" role="status">
     <span :class="$style.text">{{ toast.text }}</span>
     <button v-if="toast.undo" type="button" :class="$style.undo" @click="undoToast(toast.id)">Undo</button>
     <WKbd v-if="toast.undo" keys="Ctrl + Z" />
@@ -23,7 +23,8 @@ useHoverZone(el, { enabled: () => props.toast.clickable, activate: () => true })
 
 <style module>
 .toast {
-  position: fixed; z-index: 1002; transform: translate(-50%, -100%);
+  /* Not `transform`: the opening motion's end state would replace it. */
+  position: fixed; z-index: 1002; translate: -50% -100%;
   display: flex; align-items: center; gap: var(--w-s2); max-width: 360px;
   padding: 5px 6px 5px 10px; font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-fg);
   background: var(--w-panel-3); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-md);
@@ -31,6 +32,7 @@ useHoverZone(el, { enabled: () => props.toast.clickable, activate: () => true })
   zoom: var(--w-ui-scale, 1);
 }
 /* A note is never cut short: long text wraps. */
+.below { translate: -50% 0; }
 .text { min-width: 0; overflow-wrap: anywhere; }
 .undo { color: var(--w-accent); font-weight: 600; padding: 0 4px; }
 .undo:hover { text-decoration: underline; }
