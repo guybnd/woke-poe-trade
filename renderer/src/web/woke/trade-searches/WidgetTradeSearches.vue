@@ -10,7 +10,7 @@
           <div v-for="(r, i) in latest" :key="i" class="flex justify-between gap-2">
             <span v-item-tip="itemRefFromText(r.name)" class="w-trunc">{{ r.name || 'Item' }}</span><span class="w-num w-accent whitespace-nowrap">{{ r.price }}</span>
           </div>
-          <div class="w-faint text-xs mt-1">Ping {{ config.liveAlert ? 'on' : 'off' }} · open the overlay and click the icon to whisper</div>
+          <div class="w-faint text-xs mt-1">Ping {{ config.liveAlert ? 'on' : 'off' }} · click the icon to whisper</div>
         </div>
       </template>
     </DockItem>

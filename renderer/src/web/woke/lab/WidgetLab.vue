@@ -9,7 +9,7 @@
           <span title="Labs reset at midnight UTC"><i class="far fa-clock" /> resets in {{ resetIn }}</span>
         </div>
         <img v-if="cardImg" :src="cardImg" :class="$style.cardImg" alt="Today's layout">
-        <WBanner v-else-if="peekError">Couldn't load the layout ({{ peekError }}). Open the overlay and click the icon for poelab's page.</WBanner>
+        <WBanner v-else-if="peekError">Couldn't load the layout ({{ peekError }}). Click the icon for poelab's page.</WBanner>
         <div v-else-if="peekDiff" :class="$style.cardSkel" aria-busy="true" aria-label="Loading today's layout" />
         <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">Enter Aspirants' Plaza to load the layout.</div>
         <WBanner v-if="cardImg && staleOf(cardImg)" tone="warn">Today's layout isn't posted yet. This one is from {{ staleOf(cardImg) }}.</WBanner>
