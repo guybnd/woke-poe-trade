@@ -111,9 +111,9 @@ describe('ninjaFitsSearch', () => {
   it('follows the Corrupted chip, since its unique prices are uncorrupted', () => {
     const plain = fixture('items/unique-kaoms-heart.txt').replace('40(20-40)%', '23(20-40)%')
     const clean = parseItem(plain)
-    const corrupted = parseItem(plain + '
+    const corrupted = parseItem(`${plain}
 --------
-Corrupted')
+Corrupted`)
     expect(ninjaFitsSearch(clean, stats(clean), 'corrupted')).toBe(false)
     expect(ninjaFitsSearch(clean, stats(clean), 'not-corrupted')).toBe(true)
     expect(ninjaFitsSearch(corrupted, stats(corrupted), 'any')).toBe(false)
