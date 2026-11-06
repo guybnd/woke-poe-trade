@@ -1,5 +1,6 @@
 // The passive tree, loaded the first time it is opened, and what changes
 // between two of a build's trees. Data: scripts/build-tree-data.mjs.
+import { dataFileUrl, onSharedDataChange } from '../app/live-data'
 
 export type NodeKind = 'small' | 'notable' | 'key' | 'jewel' | 'mastery' | 'asc' | 'ascstart' | 'start'
 
@@ -34,6 +35,8 @@ export interface TreeArt {
 
 let job: Promise<Map<number, TreeNode>> | null = null
 let art: TreeArt | null = null
+// A newer tree downloaded: read it the next time the tree opens.
+onSharedDataChange(() => { job = null })
 
 // The groups and sprites, once loadPassiveTree has finished.
 export function passiveTreeArt (): TreeArt | null {
@@ -47,7 +50,7 @@ export function readNodes (rows: Row[]): Map<number, TreeNode> {
 
 export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
   if (!job) {
-    job = fetch(`${import.meta.env.BASE_URL}data/tree/passive-tree.json`)
+    job = fetch(dataFileUrl('tree/passive-tree.json'))
       .then(res => {
         if (!res.ok) throw new Error(`The passive tree didn't load (${res.status})`)
         return res.json() as Promise<TreeArt & { nodes: Row[] }>

@@ -12,12 +12,15 @@ const PERMANENT_HC = ['Hardcore', '專家模式']
 interface ApiLeague {
   id: string
   event?: boolean
+  startAt?: string | null
   rules: Array<{ id: string }>
 }
 
 interface League {
   id: string
   isPopular: boolean
+  // woke: from this launch's read only, not last launch's list.
+  startAt?: number
 }
 
 export const useLeagues = createGlobalState(() => {
@@ -54,6 +57,9 @@ export const useLeagues = createGlobalState(() => {
     }
   })
 
+  // woke: when the picked league opened, for the item data checks.
+  const startedAt = computed(() => tradeLeagues.value.find(league => league.id === selectedId.value)?.startAt ?? null)
+
   // woke: read once at launch. Only a failed read is tried again, after 1, 2,
   // then every 5 minutes, and that stops at the first answer.
   async function load () {
@@ -73,7 +79,8 @@ export const useLeagues = createGlobalState(() => {
           !league.rules.some(rule => rule.id === 'NoParties' ||
             (rule.id === 'HardMode' && !league.event)))
         .map(league => {
-          return { id: league.id, isPopular: true }
+          const startAt = league.startAt ? Date.parse(league.startAt) : NaN
+          return { id: league.id, isPopular: true, ...(Number.isFinite(startAt) ? { startAt } : {}) }
         })
       // woke: an empty answer would leave no league at all.
       if (!listed.length) throw new Error('The league list came back empty')
@@ -130,6 +137,7 @@ export const useLeagues = createGlobalState(() => {
     list: readonly(tradeLeagues),
     load,
     offer: readonly(offer),
+    startedAt,
     settleOffer
   }
 })
