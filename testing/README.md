@@ -1,7 +1,9 @@
 # Automated in-game testing
 
 The toolkit's checks, so a change is tested before anyone opens the game.
-Five layers, all run by CI on every pull request (`.github/workflows/test.yml`):
+Five layers, all run by CI on every pull request (`.github/workflows/test.yml`),
+except that a pull request touching only the website skips them, and pushes to
+master always run everything:
 
 | Layer | Where | What it covers |
 | --- | --- | --- |

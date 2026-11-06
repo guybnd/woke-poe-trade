@@ -2,6 +2,7 @@ name: Tests
 
 # Runs on every pull request: unit tests, type checks, and the fake-game
 # tests (the real app driven by a fake Path of Exile; see testing/README.md).
+# A pull request that only touches the website skips the work: see `changes`.
 on:
   pull_request:
   push:
@@ -14,8 +15,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Decides what a pull request needs. Both checks below are required on master,
+  # so they can't use a path filter: a check that never reports blocks the merge
+  # forever, while a job skipped by its `if` reports as passed. Pushes to master
+  # always run everything. If this job fails, its outputs are empty and both
+  # jobs still run (they test `!= 'false'`).
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      unit: ${{ steps.files.outputs.unit }}
+      game: ${{ steps.files.outputs.game }}
+    steps:
+    - id: files
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        unit=true
+        game=true
+        if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+          # GitHub lists at most 3000 files, so a list that long may be cut short.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)') || files=
+          if [ -n "$files" ] && [ "$(printf '%s\n' "$files" | wc -l)" -lt 3000 ]; then
+            unit=false
+            game=false
+            while IFS= read -r file; do
+              case "$file" in
+                # Only the website and its screenshots use these.
+                docs/*|testing/e2e/landing-*.spec.ts|testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
+                # A unit test checks the README's module table.
+                README.md) unit=true ;;
+                *) unit=true; game=true ;;
+              esac
+            done <<< "$files"
+          fi
+        fi
+        echo "Unit tests: $unit, fake-game tests: $game"
+        echo "unit=$unit" >> "$GITHUB_OUTPUT"
+        echo "game=$game" >> "$GITHUB_OUTPUT"
+
   unit:
     name: Unit tests, lint, types
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,6 +98,8 @@ jobs:
 
   game:
     name: Fake-game tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.game != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
