@@ -209,6 +209,7 @@ test('flips: outlines show the stack total under the per item figure', async ({ 
   const layer = overlay.page.locator('[data-stash-outlines]')
   await expect(layer).toBeVisible()
   await expect(layer.locator('br').first()).toBeAttached()
+  await expect(layer.locator('span').first()).toHaveText(/^[+-]\d+\.\dc[+-]\d+(\.\d)?[ck]$/)
   await overlay.snap('flips-stash-totals')
 })
 

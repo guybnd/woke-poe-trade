@@ -18,7 +18,7 @@
       hint="Works on the Scarab tab for now. Press once to draw the outlines. They clear on the next click, scroll or key press. Keep the mouse off the tab when you press it: a tooltip hides what's under it. Nothing reads the screen until you press it.">
       <w-hotkey-cell v-model="stashHotkey" />
     </WSettingRow>
-    <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure, counting full sets of 3.">
+    <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure, counting full sets of 3. Needs a 1440p game window for now.">
       <WToggle v-model="stashTotals" />
     </WSettingRow>
   </div>

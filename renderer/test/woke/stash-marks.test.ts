@@ -69,8 +69,9 @@ describe('stash marks', () => {
   it('adds the stack total for full sets of 3 only when asked', () => {
     const counted = (name: string, count: number | null) => ({ ...slot(name), count })
     const profits = new Map([['a', 2.4], ['b', 2.4], ['c', 2.4], ['d', 2.4], ['e', 100], ['f', -0.2]])
-    const marks = buildMarks([counted('a', 205), counted('b', 1), counted('c', null), counted('d', 3), counted('e', 50), counted('f', 96)], profits, true)
+    const marks = buildMarks([counted('a', 205), counted('b', 1), counted('c', null), counted('d', 3), counted('e', 50), counted('f', 96)], profits, 3)
     expect(marks.map(m => m.total)).toEqual(['+490c', undefined, undefined, '+7c', '+4.8k', '-19c'])
     expect(buildMarks([counted('a', 205)], profits)[0].total).toBeUndefined()
+    expect(buildMarks([counted('a', 3)], new Map([['a', 3316.6]]), 3)[0].total).toBe('+10k')
   })
 })

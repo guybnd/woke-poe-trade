@@ -7,6 +7,7 @@ import path from 'path'
 import { decodePng } from '../fake-host/png'
 import { readScarabTab } from '../../main/src/woke/stash-read'
 import { SCARAB_LAYOUTS } from '../../main/src/woke/stash-scarab-data'
+import { DIGITS, DIGIT_HEIGHT, DIGIT_TOP } from '../../main/src/woke/stash-digits-data'
 
 const SCREENS = path.resolve(__dirname, '../fixtures/screens')
 
@@ -161,5 +162,42 @@ describe('stack counts', () => {
     if (!res.found) throw new Error('tab not found')
     const counts = Object.fromEntries(res.slots.filter(s => s.filled).map(s => [s.name, s.count]))
     expect(counts).toEqual(truth[key])
+  })
+
+  // Paints a number into the first filled slot, the way the game spaces them.
+  function withCount (text: string) {
+    const s = screen('stash-scarab-real.png')
+    const first = readScarabTab(s.data, s.width, s.height)
+    if (!first.found) throw new Error('tab not found')
+    const slot = first.slots.find(f => f.filled)!
+    const x0 = Math.round(slot.x * s.width)
+    const y0 = Math.round(slot.y * s.height)
+    let x = x0 + 2
+    for (const ch of text) {
+      const d = DIGITS.find(g => g.digit === Number(ch))!
+      for (let j = 0; j < DIGIT_HEIGHT; j++) {
+        for (let i = 0; i < d.width; i++) {
+          const p = ((y0 + DIGIT_TOP + j) * s.width + x + i) * 4
+          s.data[p] = s.data[p + 1] = s.data[p + 2] = d.gray[j * d.width + i]
+        }
+      }
+      x += d.width + 2
+    }
+    const res = readScarabTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    return res.slots.find(f => f.name === slot.name)!.count
+  }
+
+  it('reads four digits, and refuses a number that starts with 0', () => {
+    expect(withCount('1200')).toBe(1200)
+    expect(withCount('9999')).toBe(9999)
+    expect(withCount('012')).toBeNull()
+  })
+
+  it('reads no counts at another window size', () => {
+    const s = shrunk(screen('stash-scarab-real.png'), 720)
+    const res = readScarabTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    expect(res.slots.every(f => f.count === null)).toBe(true)
   })
 })

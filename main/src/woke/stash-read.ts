@@ -208,7 +208,10 @@ function slotBlueness (bgra: Uint8Array, width: number, height: number, x: numbe
 // The digits are one font at one size, and only 1440p has been seen, so another
 // window size reads no counts rather than guess.
 const COUNT_MIN = 0.85
-const COUNT_WIDTH = 40
+// Below this the number has ended. True digits score at least 0.96 and the item
+// behind them at most 0.48, so between the two something is covering a digit.
+const COUNT_END = 0.6
+const COUNT_WIDTH = SLOT_SIZE
 const COUNT_DIGITS = 4
 const COUNT_NEXT = 7
 const COUNT_ROWS = [-2, -1, 0, 1, 2]
@@ -264,7 +267,7 @@ function readCount (bgra: Uint8Array, width: number, height: number, x0: number,
   let row: number | null = null
   let digits = 0
   let value = 0
-  while (digits < COUNT_DIGITS) {
+  for (;;) {
     let best = -1
     let bestDigit = 0
     let bestEnd = 0
@@ -277,13 +280,14 @@ function readCount (bgra: Uint8Array, width: number, height: number, x0: number,
         }
       }
     }
-    if (best < COUNT_MIN) break
+    if (best < COUNT_END) break
+    if (best < COUNT_MIN || (!digits && !bestDigit) || digits === COUNT_DIGITS) return null
     value = value * 10 + bestDigit
     digits++
     x = bestEnd
     row = bestRow
   }
-  return digits && value ? value : null
+  return digits ? value : null
 }
 
 let layoutCache: { height: number, labels: Template[] } | null = null
