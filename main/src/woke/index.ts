@@ -21,6 +21,7 @@ import { marketHandlers } from './market-store'
 import { labLayoutImage } from './lab-layout'
 import { sessionHandlers } from './session-store'
 import { tradeLogHandlers } from './trade-log'
+import { deathRecapHandlers } from './death-recap-store'
 import { docHandlers } from './data-files'
 import { browsePath, pathStat } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
@@ -56,6 +57,7 @@ const handlers: Record<string, Handler> = {
   ...marketHandlers,
   ...sessionHandlers,
   ...tradeLogHandlers,
+  ...deathRecapHandlers,
   ...docHandlers
 }
 

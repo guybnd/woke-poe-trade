@@ -77,6 +77,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Economy | Boss runs | Profit per boss kill |
 | Mapping | Map mods | Danger strip on price check and map regex |
 | Mapping | Map scan | Reads map tooltips on screen |
+| Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
 | Mapping | Atlas strategies | Tree, scarabs and regex per strategy |

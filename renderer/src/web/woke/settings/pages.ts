@@ -225,10 +225,10 @@ export const PAGES: SettingsPage[] = [
     group: 'modules',
     sub: 'Maps & atlas',
     icon: modulePageIcon('map-mods'),
-    description: 'Danger strip for map mods, profiles and weights, and the on-screen map scan.',
-    modules: ['map-mods', 'map-scan'],
+    description: 'Danger strip for map mods, profiles and weights, the on-screen map scan, and the death recap.',
+    modules: ['map-mods', 'map-scan', 'death-recap'],
     widgets: ['woke-map-mods', 'woke-map-scan'],
-    find: ['Map mod weights', 'Profiles', 'Danger strip', 'Map regex', 'Rolling mode', 'Alert when a map passes', 'Map check', 'Heist', 'Charts', 'T17', 'Nightmare'],
+    find: ['Death recap', 'Map mod weights', 'Profiles', 'Danger strip', 'Map regex', 'Rolling mode', 'Alert when a map passes', 'Map check', 'Heist', 'Charts', 'T17', 'Nightmare'],
     aliases: ['map_check.name']
   },
   {
