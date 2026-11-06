@@ -111,6 +111,8 @@ export default defineComponent({
       const max = (typeof inputMax.value === 'number') ? inputMax.value : null
       const before = [props.filter.value, props.filter.max]
       if (bound === 'max') {
+        // An empty max means no upper limit, and going down from there isn't asking for one.
+        if (max == null && by < 0) return
         inputMax.value = Math.max((max ?? min) + by, min)
       } else {
         const next = Math.max(min + by, 0)

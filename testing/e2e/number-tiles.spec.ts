@@ -97,3 +97,28 @@ test('scrolling a switched-off tile already at its limit leaves it off', async (
   await overlay.page.mouse.wheel(0, 100)
   await expect(tile).toHaveAttribute('class', on!)
 })
+
+test('scrolling down on an empty max leaves it empty, and up gives one', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/rare-cluster-large.txt')
+  const page = overlay.page
+  const tile = overlay.widget('price-check').locator('div[title^="Scroll or drag"]').filter({ has: page.locator('input[data-bound="max"]') })
+  const min = tile.locator('input').first()
+  const max = tile.locator('input[data-bound="max"]')
+  await expect(min).toHaveValue('84')
+  await expect(max).toHaveValue('100')
+
+  await max.click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Delete')
+  await max.blur()
+  await expect(max).toHaveValue('')
+
+  await max.hover()
+  await page.mouse.wheel(0, 100)
+  await page.waitForTimeout(100)
+  await expect(max).toHaveValue('')
+
+  await page.mouse.wheel(0, -100)
+  await expect(max).toHaveValue('85')
+})

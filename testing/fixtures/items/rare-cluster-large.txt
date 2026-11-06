@@ -1,0 +1,18 @@
+Item Class: Jewels
+Rarity: Rare
+Havoc Spark
+Large Cluster Jewel
+--------
+Requirements:
+Level: 54
+--------
+Item Level: 84
+--------
+Adds 8 Passive Skills (enchant)
+2 Added Passive Skills are Jewel Sockets (enchant)
+Added Small Passive Skills grant: 12% increased Fire Damage (enchant)
+--------
+{ Prefix Modifier "Blowback" (Tier: 1) }
+1 Added Passive Skill is Blowback
+{ Suffix Modifier "of Flames" (Tier: 1) }
+Added Small Passive Skills also grant: +7(6-8) to Strength
