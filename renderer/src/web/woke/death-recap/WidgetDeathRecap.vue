@@ -111,9 +111,13 @@ import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
 import { followGameLog } from '../shared/game-log'
+import { hostRequest } from '../shared/host'
+import { TooltipMatcher } from '../map-mods/tooltip-parse'
+import { allAreaMods } from '../map-mods/data'
 import DeathMods from './DeathMods.vue'
+import { parseAreaModLines } from './area-list'
 import { DeathTracker, modDeathStats, ordinal, shortTime, usualText, whenText } from './death-log'
-import type { DeathRecord, RunRecord } from './death-log'
+import type { DeathRecord, MapEntry, RunRecord } from './death-log'
 import { checkFromItem, useDeathRecap } from './store'
 import type { DeathRecapWidget } from './widget'
 
@@ -132,9 +136,53 @@ let live = false
 // A line can be in the tail and also queued live while the tail was loading.
 let tailLines = new Set<string>()
 const tracker = new DeathTracker({
-  onMap: (map) => { store.enterMap(map, live) },
+  onMap: (map) => {
+    store.enterMap(map, live)
+    if (live) readModList(map)
+  },
   onDeath: (death) => { store.addDeath(death) }
 })
+
+// The game's own mod list, read off the screen after the map has drawn. It only
+// looks: nothing goes to the game. No list (collapsed) means the check stands.
+const READ_AFTER_MS = [3000, 8000]
+let matcher: TooltipMatcher | null = null
+let readToken = 0
+let readTimer: ReturnType<typeof setTimeout> | undefined
+let ocrMissing = false
+onUnmounted(() => { clearTimeout(readTimer) })
+
+function readModList (map: MapEntry) {
+  clearTimeout(readTimer)
+  const token = ++readToken
+  if (ocrMissing || store.runByKey.value.get(map.key)?.match === 'screen') return
+  const here = () => token === readToken && tracker.currentKey === map.key
+  const later = (i: number) => {
+    readTimer = setTimeout(() => { attempt(i).catch(() => {}) }, READ_AFTER_MS[i] - (READ_AFTER_MS[i - 1] ?? 0))
+  }
+  const attempt = async (i: number) => {
+    if (!here()) return
+    let lines: string[] | null
+    try {
+      lines = (await hostRequest<{ lines: string[] | null }>('area-mods-read', {}, 15_000)).lines
+    } catch {
+      // OCR files missing or broken: the checks still work.
+      ocrMissing = true
+      return
+    }
+    if (!here()) return
+    if (lines) {
+      matcher ??= new TooltipMatcher(allAreaMods())
+      const { mods, weak } = parseAreaModLines(lines, matcher)
+      if (mods.length || weak.length) {
+        store.readFromScreen(map, mods, weak)
+        return
+      }
+    }
+    if (i + 1 < READ_AFTER_MS.length) later(i + 1)
+  }
+  later(0)
+}
 
 // The tail gives what happened while the app was closed, and where you are now.
 followGameLog({
@@ -164,12 +212,12 @@ onUnmounted(() => { items.abort() })
 const last = computed(() => store.deaths.value[0] ?? null)
 const earlier = computed(() => store.deaths.value.slice(1, 3))
 
-const STATE_LABEL = { exact: 'Exact', likely: 'Likely', unknown: 'Mods unknown' }
+const STATE_LABEL = { screen: 'From screen', exact: 'Exact', likely: 'Likely', unknown: 'Mods unknown' }
 
 function runOf (d: DeathRecord): RunRecord | null {
   return d.runKey ? store.runByKey.value.get(d.runKey) ?? null : null
 }
-function stateOf (d: DeathRecord): 'exact' | 'likely' | 'unknown' {
+function stateOf (d: DeathRecord): keyof typeof STATE_LABEL {
   return runOf(d)?.match ?? 'unknown'
 }
 function tierText (d: DeathRecord) {
@@ -255,7 +303,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
   font-weight: 600;
   white-space: nowrap;
 }
-.exact { color: var(--w-up); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
+.screen, .exact { color: var(--w-up); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
 .likely { color: var(--w-warn); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
 .unknown { color: var(--w-dim); background: var(--w-panel-3); }
 .showMore { display: block; width: 100%; padding: 7px var(--w-pad); text-align: left; }

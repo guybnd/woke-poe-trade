@@ -2,7 +2,7 @@
 // and the panel keeps the list across a restart of the page.
 import fs from 'fs'
 import path from 'path'
-import { test, expect } from './harness'
+import { test, expect, haveOcr } from './harness'
 
 const now = () => {
   const d = new Date()
@@ -76,4 +76,28 @@ test('Death recap: no icon until a death, then the checked map\'s mods', async (
   const history = JSON.parse(fs.readFileSync(saved, 'utf8'))
   expect(history.runs).toHaveLength(1)
   expect(history.runs[0]).toMatchObject({ key: 'MapWorldsCemetery:42', match: 'exact', tier: 16 })
+})
+
+test('Death recap reads the game\'s mod list on entering a map, with no check', async ({ overlay, fakeApp }) => {
+  test.skip(!haveOcr, 'OCR files missing: npm run get:ocr')
+  fs.rmSync(path.join(fakeApp.opts.userData, 'woke-death-recap'), { recursive: true, force: true })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
+  await overlay.showScreen('screens/area-mods-real-1.png')
+  await overlay.log([area('MapWorldsJungleValley', '77'), info(': You have entered Jungle Valley.')])
+
+  const saved = path.join(fakeApp.opts.userData, 'woke-death-recap', 'deaths.json')
+  const runs = () => fs.existsSync(saved) ? JSON.parse(fs.readFileSync(saved, 'utf8')).runs : []
+  await expect.poll(runs, SLOW).toHaveLength(1)
+  expect(runs()[0]).toMatchObject({ key: 'MapWorldsJungleValley:77', match: 'screen', unknown: [] })
+  expect(runs()[0].mods).toContainEqual({ matcher: 'Monsters deal #% extra Physical Damage as Lightning', roll: 137 })
+  expect(runs()[0].mods).toHaveLength(8)
+
+  await overlay.log([info(': luminyahu has been slain.')])
+  await expect(async () => {
+    await overlay.hoverDockIcon('death-recap')
+    await expect(overlay.page.locator('[data-death-card]')).toBeVisible({ timeout: 1500 })
+  }).toPass(SLOW)
+  const card = overlay.page.locator('[data-death-card]')
+  await expect(card).toContainText('From screen')
+  await expect(card).toContainText('Players are Cursed with Elemental Weakness')
 })

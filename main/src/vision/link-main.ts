@@ -69,6 +69,11 @@ export class OcrWorker {
       Comlink.transfer(image, [image.data.buffer]), opts)
   }
 
+  async scanAreaModList (corner: ImageData, refH: number) {
+    await this.ready
+    return await this.api.scanAreaModList(Comlink.transfer(corner, [corner.data.buffer]), refH)
+  }
+
   async ocrLines (lines: LineImage[]) {
     await this.ready
     return await this.api.ocrLines(

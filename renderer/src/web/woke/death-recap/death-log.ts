@@ -26,7 +26,8 @@ export interface MapCheck {
   position?: { x: number, y: number }
 }
 
-export type ModMatch = 'exact' | 'likely'
+// screen: read from the game's own list while in the map, so it's this map's.
+export type ModMatch = 'screen' | 'exact' | 'likely'
 
 // One map instance entered with a check matched to it. Runs without one aren't
 // saved: they have nothing to say about mods.
@@ -126,9 +127,17 @@ export function runFromCheck (key: string, map: { name: string, level: number, a
   }
 }
 
+export interface MapEntry {
+  key: string
+  name: string
+  level: number
+  at: number
+  returned: boolean
+}
+
 export interface LogEvents {
-  // A map opened (not returned to), with this line's time.
-  onMap: (map: { key: string, name: string, level: number, at: number }) => void
+  // A map entered, or returned to, with this line's time.
+  onMap: (map: MapEntry) => void
   onDeath: (death: Omit<DeathRecord, 'nth'>) => void
 }
 
@@ -158,6 +167,9 @@ export class DeathTracker {
 
   constructor (private readonly events: LogEvents) {}
 
+  // The instance you're in now.
+  get currentKey () { return this.key }
+
   feed (line: string, fallbackAt: number) {
     const at = lineTime(line) ?? fallbackAt
     const ev = parseLogLine(line)
@@ -179,8 +191,8 @@ export class DeathTracker {
     }
     if (ev?.kind === 'zone') {
       this.name = ev.name
-      if (isMapArea(this.areaId) && !staysInRun(this.areaId) && !this.returned) {
-        this.events.onMap({ key: this.key, name: ev.name, level: this.level, at })
+      if (isMapArea(this.areaId) && !staysInRun(this.areaId)) {
+        this.events.onMap({ key: this.key, name: ev.name, level: this.level, at, returned: this.returned })
       }
       return
     }

@@ -1,7 +1,8 @@
 <template>
   <div class="flex items-center gap-2" :class="$style.head">
     <span class="w-head-font w-accent flex-1">Mods</span>
-    <span v-if="run?.match === 'exact'" :class="[$style.tag, $style.exact]" :title="checkedText">Exact</span>
+    <span v-if="run?.match === 'screen'" :class="[$style.tag, $style.exact]" title="Read from the game's mod list while you were in this map">From screen</span>
+    <span v-else-if="run?.match === 'exact'" :class="[$style.tag, $style.exact]" :title="checkedText">Exact</span>
     <span v-else-if="run?.match === 'likely'" :class="[$style.tag, $style.likely]" :title="checkedText">
       Likely{{ (run.candidates ?? 1) > 1 ? `, 1 of ${run.candidates}` : '' }}
     </span>
@@ -23,8 +24,8 @@
     <div v-if="run.match === 'likely'" :class="$style.note">{{ likelyNote }}</div>
   </template>
   <div v-else :class="$style.note">
-    No check before this map, and the game doesn't log its mods.
-    Press <WKbd :keys="hotkey" /> on a map before opening it to save them.
+    The game doesn't log a map's mods. Keep its mod list open at the top right to have them read,
+    or press <WKbd :keys="hotkey" /> on a map before opening it.
   </div>
 </template>
 

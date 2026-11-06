@@ -12,6 +12,7 @@ import path from 'path'
 import { createRequire } from 'module'
 import { TooltipMatcher } from '../../renderer/src/web/woke/map-mods/tooltip-parse'
 import { parseMonolith } from '../../renderer/src/web/woke/essence-scan/essences'
+import { parseAreaModLines } from '../../renderer/src/web/woke/death-recap/area-list'
 
 const require = createRequire(import.meta.url)
 const SCREENS = path.resolve(__dirname, '../fixtures/screens')
@@ -26,7 +27,7 @@ let V: any
 interface Screen {
   file: string
   cursor: { x: number, y: number }
-  kind: 'map' | 'essence' | 'essence-all'
+  kind: 'map' | 'essence' | 'essence-all' | 'area-list'
   // What the screenshot shows that makes it hard, if anything.
   note?: string
   // Not checked: the scan reads from the first property line down, not the
@@ -105,6 +106,26 @@ describe.skipIf(!haveOcr)('OCR on game screenshots', () => {
       expect(parsed!.mods.map(m => m.matcher).sort(), read).toEqual([...screen.mods!].sort())
       expect(parsed!.weak.length, `lines read with low confidence; ${read}`).toBe(screen.unmatched ?? 0)
       expect(parsed!.props, read).toMatchObject(screen.props!)
+    })
+  }
+
+  for (const screen of screens('area-list')) {
+    it(`death recap reads the game's mod list in ${screen.file}`, () => {
+      const img = loadScreen(screen.file)
+      const width = Math.round(img.height * 0.46)
+      const height = Math.round(img.height * 0.75)
+      const corner = new Uint8Array(width * height * 4)
+      for (let y = 0; y < height; y++) {
+        const from = (y * img.width + img.width - width) * 4
+        corner.set(img.data.subarray(from, from + width * 4), y * width * 4)
+      }
+      const started = performance.now()
+      const images = V.scanAreaModList({ width, height, data: corner }, img.height)
+      const lines: string[] = (images ?? []).map((l: unknown) => V.ocrLine(l).trim())
+      const read = `read in ${Math.round(performance.now() - started)} ms:\n${lines.join('\n')}`
+      const parsed = parseAreaModLines(lines, matcher)
+      expect(parsed.mods.map(m => m.matcher).sort(), read).toEqual([...screen.mods!].sort())
+      expect(parsed.weak, read).toEqual([])
     })
   }
 
