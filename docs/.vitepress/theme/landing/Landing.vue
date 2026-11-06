@@ -209,6 +209,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 @media (max-height: 600px) { .item { --chrome: 290px; } }
 /* An open folder's row of plates. */
 .item.with-tray { --tray: 44px; }
+/* It wraps to two rows here. */
+@media (max-width: 1000px) { .item.with-tray { --tray: 78px; } }
 .item.wide { width: min(1280px, 100%); }
 
 .head { display: flex; flex: none; height: 54px; }
