@@ -73,6 +73,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Economy | Lab gems | Divine Font gem values by colour |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
 | Economy | Farming | Session profit per hour |
+| Economy | Drop counter | A tally of the drops you choose, and maps run |
 | Economy | Session analytics | Profit per map, strategy and hour over time |
 | Economy | Boss runs | Profit per boss kill |
 | Mapping | Map mods | Danger strip on price check and map regex |

@@ -25,6 +25,8 @@ import { RUN_TIMER_TYPE, hotkeyTarget as timerHotkeyTarget } from './campaign/ru
 import type { RunTimerWidget } from './campaign/run-timer'
 import { FARMING_TYPE, FARMING_LOOT_TARGET } from './farming/farming'
 import type { FarmingWidget } from './farming/farming'
+import { DROP_COUNTER_TYPE, DROP_COUNTER_TARGET } from './drop-counter/drop-counter'
+import type { DropCounterWidget } from './drop-counter/drop-counter'
 import { SCARAB_FLIP_TYPE, stashHotkeyTarget } from './scarab-flip/widget'
 import type { ScarabFlipWidget } from './scarab-flip/widget'
 import { TRADE_TYPE, hotkeyTarget as tradeHotkeyTarget } from './trade/widget'
@@ -120,6 +122,11 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     const farming = widget as FarmingWidget
     if (!farming.lootHotkey) return []
     return [{ shortcut: farming.lootHotkey, action: { type: 'copy-item', target: FARMING_LOOT_TARGET } }]
+  }
+  if (widget.wmType === DROP_COUNTER_TYPE) {
+    const counter = widget as DropCounterWidget
+    if (!counter.hotkey) return []
+    return [{ shortcut: counter.hotkey, action: { type: 'copy-item', target: DROP_COUNTER_TARGET } }]
   }
   if (widget.wmType === MAP_SCAN_TYPE) {
     const scan = widget as MapScanWidget

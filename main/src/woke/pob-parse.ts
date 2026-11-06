@@ -30,12 +30,15 @@ export interface PobTreeSpec {
   title: string
   url: string
   isActive: boolean
+  // Holds nothing: a heading such as "~~~ ENDGAME ~~~" between real sets.
+  divider?: boolean
 }
 
 export interface PobSkillSet {
   title: string
   isActive: boolean
   groups: PobSkillGroup[]
+  divider?: boolean
 }
 
 export type PobRarity = 'NORMAL' | 'MAGIC' | 'RARE' | 'UNIQUE' | 'RELIC' | ''
@@ -52,6 +55,8 @@ export interface PobItem {
   mods: string[]
   // Same length as mods when any mod is crafted or fractured.
   modKinds?: PobModKind[]
+  // Same length as implicits when PoB marks any as crafted, meaning an enchant.
+  implicitKinds?: PobModKind[]
   quality?: number
   armour?: number
   evasion?: number
@@ -76,6 +81,7 @@ export interface PobItemSet {
   title: string
   isActive: boolean
   slots: PobItemSlot[]
+  divider?: boolean
 }
 
 export interface PobDetails extends PobSummary {
@@ -107,6 +113,13 @@ export function decodeEntities (s: string): string {
     .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, n: string) => String.fromCodePoint(parseInt(n, 16)))
     .replace(/&amp;/g, '&')
+}
+
+const COLOUR_CODE = /\^x[0-9a-fA-F]{6}|\^\d/g
+
+// Set titles may carry PoB's colour codes (^2, ^xFFFFFF).
+function plainTitle (title: string | undefined): string {
+  return (title ?? '').replace(COLOUR_CODE, '').trim()
 }
 
 function num (value: string | undefined): number | null {
@@ -156,10 +169,12 @@ function parseSkillSets (xml: string, mainSocketGroup: number | null): PobSkillS
     i++
     const a = attrs(m[1])
     const isActive = activeSet ? a.id === activeSet : i === 1
+    const groups = parseGroups(m[2] ?? '', isActive ? mainSocketGroup : null)
     sets.push({
-      title: a.title || `Skill set ${i}`,
+      title: plainTitle(a.title) || `Skill set ${i}`,
       isActive,
-      groups: parseGroups(m[2] ?? '', isActive ? mainSocketGroup : null)
+      groups,
+      ...(groups.some(g => g.gems.length) ? {} : { divider: true })
     })
   }
   if (!sets.length) sets.push({ title: 'Default', isActive: true, groups: parseGroups(body, mainSocketGroup) })
@@ -178,7 +193,9 @@ function parseTrees (xml: string): PobTreeSpec[] {
     const a = attrs(m[1])
     const urlMatch = /<URL>\s*([\s\S]*?)\s*<\/URL>/.exec(m[2] ?? '')
     const url = urlMatch ? decodeEntities(urlMatch[1].trim()) : ''
-    out.push({ title: a.title || `Tree ${i}`, url, isActive: active === i })
+    // A class start, or next to it, with no points spent.
+    const empty = (a.nodes ?? '').split(',').filter(Boolean).length <= 2
+    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, ...(empty ? { divider: true } : {}) })
   }
   // No (or a stale) activeSpec: PoB opens the first tree.
   if (out.length && !out.some(t => t.isActive)) out[0].isActive = true
@@ -201,7 +218,24 @@ const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShi
   [/^LevelReq:\s*(\d+)/, 'levelReq']
 ]
 
-export function parseItemText (text: string): PobItem {
+const ANTONYM: Record<string, string> = { increased: 'reduced', reduced: 'increased', more: 'less', less: 'more' }
+
+// "+(41-55) to Life" at range 0.5 is "+48 to Life", as PoB shows it. Range 1
+// is the top of the roll.
+function applyRange (line: string, range: number): string {
+  return line.replace(/([+-]?)\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g, (_, sign: string, lo: string, hi: string) => {
+    const min = Number(lo)
+    const max = Number(hi)
+    const roll = min + range * (max - min)
+    const size = /\./.test(lo + hi) ? 100 : 1
+    // Rounds away from zero both ways, as PoB does.
+    const value = (sign === '-' ? -1 : 1) * Math.sign(roll) * Math.round(Math.abs(roll) * size) / size
+    return sign === '+' && value > 0 ? `+${value}` : String(value)
+  }).replace(/-(\d+(?:\.\d+)?%) (increased|reduced|more|less)\b/, (_, num: string, word: string) => `${num} ${ANTONYM[word]}`)
+}
+
+// `ranges`: PoB's <ModRange> elements, by the mod line's place in the item.
+export function parseItemText (text: string, ranges?: Map<number, number>): PobItem {
   const lines = decodeEntities(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   const item: PobItem = { rarity: '', name: '', base: '', sockets: '', implicits: [], mods: [] }
   let i = 0
@@ -215,7 +249,9 @@ export function parseItemText (text: string): PobItem {
   // picks (Watcher's Eye): a mod shows when any of them lists it.
   const variants: number[] = []
   let implicitsLeft = -1
+  let modLine = 0
   const kinds: PobModKind[] = []
+  const implicitKinds: PobModKind[] = []
   for (; i < lines.length; i++) {
     const line = lines[i]
     const sel = /^Selected (?:Alt )?Variant(?: \w+)?:\s*(\d+)/.exec(line)
@@ -240,22 +276,30 @@ export function parseItemText (text: string): PobItem {
     let mod = line
     let allowed = true
     let kind: PobModKind = ''
+    let range: number | undefined
+    modLine++
     for (const tag of mod.matchAll(/\{([^}]*)\}/g)) {
+      const r = /^range:([\d.]+)$/.exec(tag[1])
+      if (r) range = Number(r[1])
       const v = /^variant:([\d,]+)$/.exec(tag[1])
       if (v && variants.length && !v[1].split(',').map(Number).some(n => variants.includes(n))) allowed = false
       if (tag[1] === 'crafted' || tag[1] === 'fractured') kind = tag[1]
     }
-    mod = mod.replace(/\{[^}]*\}/g, '').trim()
+    mod = applyRange(mod.replace(/\{[^}]*\}/g, '').trim(), range ?? ranges?.get(modLine) ?? 0.5)
     if (!mod) continue
     if (implicitsLeft > 0) {
       implicitsLeft--
-      if (allowed) item.implicits.push(mod)
+      if (allowed) {
+        item.implicits.push(mod)
+        implicitKinds.push(kind)
+      }
     } else if (allowed) {
       item.mods.push(mod)
       kinds.push(kind)
     }
   }
   if (kinds.some(Boolean)) item.modKinds = kinds
+  if (implicitKinds.some(Boolean)) item.implicitKinds = implicitKinds
   return item
 }
 
@@ -266,7 +310,14 @@ function parseItemSets (xml: string): PobItemSet[] {
   for (const m of block[2].matchAll(/<Item\b([^>]*)>([\s\S]*?)<\/Item>/g)) {
     const id = attrs(m[1]).id
     // Newer PoB versions put <ModRange> etc. inside <Item>; keep the text only.
-    if (id) items.set(id, parseItemText(m[2].replace(/<[^>]+>/g, '')))
+    const ranges = new Map<number, number>()
+    for (const r of m[2].matchAll(/<ModRange\b([^>]*?)\/?>/g)) {
+      const a = attrs(r[1])
+      const line = num(a.id)
+      const range = num(a.range)
+      if (line != null && range != null) ranges.set(line, range)
+    }
+    if (id) items.set(id, parseItemText(m[2].replace(/<[^>]+>/g, ''), ranges))
   }
   const slotsOf = (body: string): PobItemSlot[] => {
     const out: PobItemSlot[] = []
@@ -283,7 +334,13 @@ function parseItemSets (xml: string): PobItemSet[] {
   for (const m of block[2].matchAll(/<ItemSet\b([^>]*?)(?:\/>|>([\s\S]*?)<\/ItemSet>)/g)) {
     i++
     const a = attrs(m[1])
-    sets.push({ title: a.title || `Item set ${i}`, isActive: active ? a.id === active : i === 1, slots: slotsOf(m[2] ?? '') })
+    const slots = slotsOf(m[2] ?? '')
+    sets.push({
+      title: plainTitle(a.title) || `Item set ${i}`,
+      isActive: active ? a.id === active : i === 1,
+      slots,
+      ...(slots.length ? {} : { divider: true })
+    })
   }
   if (!sets.length) {
     const outside = block[2].replace(/<Item\b[\s\S]*?<\/Item>/g, '')
@@ -312,7 +369,7 @@ export function parseBuild (xml: string): PobDetails {
     level: num(b.level),
     mainSkill: mainSkillName(skills),
     // PoB colour codes like ^7 or ^xFFFFFF are stripped.
-    notes: notesMatch ? decodeEntities(notesMatch[1]).replace(/\^x[0-9a-fA-F]{6}|\^\d/g, '').trim() : '',
+    notes: notesMatch ? decodeEntities(notesMatch[1]).replace(COLOUR_CODE, '').trim() : '',
     notesRaw: notesMatch ? decodeEntities(notesMatch[1]).trim() : '',
     skills,
     skillSets,

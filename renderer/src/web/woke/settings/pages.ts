@@ -276,6 +276,17 @@ export const PAGES: SettingsPage[] = [
     find: ['Bulk price', 'Junk below', 'Auto pause', 'Session analytics']
   },
   {
+    id: 'drop-counter',
+    name: 'Drop counter',
+    group: 'modules',
+    sub: 'Maps & atlas',
+    icon: modulePageIcon('drop-counter'),
+    description: 'A tally of the drops you choose, and maps run.',
+    modules: ['drop-counter'],
+    widgets: ['woke-drop-counter'],
+    find: ['Drop counter', 'Tally', 'Hover card', 'Maps run']
+  },
+  {
     id: 'mechanics',
     name: 'League mechanics',
     group: 'modules',

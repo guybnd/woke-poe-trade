@@ -208,7 +208,7 @@ export function strategyStats (history: FarmingResult[]): Array<{ strategy: stri
 
 // Whether entering this map is a new map (not the same instance again).
 // Records it as counted when it is.
-export function countNewMap (s: FarmingSession, areaId: string, seed: string | undefined): boolean {
+export function countNewMap (s: { lastMapInstance?: string }, areaId: string, seed: string | undefined): boolean {
   // Without a seed (older clients) every entry counts, as before.
   if (!seed) return true
   const key = `${areaId}:${seed}`

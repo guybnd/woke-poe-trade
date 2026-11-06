@@ -9,6 +9,7 @@ import AtlasEditor from './atlas/atlas-editor.vue'
 import LabEditor from './lab/lab-editor.vue'
 import ChallengesEditor from './challenges/challenges-editor.vue'
 import FarmingEditor from './farming/farming-editor.vue'
+import DropCounterEditor from './drop-counter/drop-counter-editor.vue'
 import MechanicsEditor from './mechanics/mechanics-editor.vue'
 import MapModsEditor from './map-mods/map-mods-editor.vue'
 import MapScanEditor from './map-mods/map-scan-editor.vue'
@@ -29,6 +30,7 @@ import { ATLAS_TYPE } from './atlas/widget'
 import { LAB_TYPE } from './lab/lab'
 import { CHALLENGES_TYPE } from './challenges/widget'
 import { FARMING_TYPE } from './farming/farming'
+import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
 import { MECHANICS_TYPE } from './mechanics/widget'
 import { MAP_MODS_TYPE } from './map-mods/widget'
 import { MAP_SCAN_TYPE } from './map-mods/scan'
@@ -56,6 +58,7 @@ const editors: Record<string, Component> = {
   [MECHANICS_TYPE]: MechanicsEditor,
   [LOOT_FILTER_TYPE]: LootFilterEditor,
   [FARMING_TYPE]: FarmingEditor,
+  [DROP_COUNTER_TYPE]: DropCounterEditor,
   [TRADE_TYPE]: TradeEditor,
   [SCARAB_FLIP_TYPE]: FlipsEditor,
   [LAB_GEMS_TYPE]: LabGemsEditor,
