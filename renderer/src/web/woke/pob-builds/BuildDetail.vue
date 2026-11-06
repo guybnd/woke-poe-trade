@@ -4,15 +4,11 @@
       <button @click="emit('close')" class="w-icon-btn" title="Close"><i class="fas fa-times" /></button>
     </template>
     <template #toolbar>
-      <WButton size="sm" variant="primary" icon="fas fa-external-link-alt" @click="run(pobApi.open(config, entry.relPath))">Open in PoB</WButton>
-      <WButton size="sm" @click="run(pobApi.show(config, entry.relPath))">Show file</WButton>
-      <WButton size="sm" @click="setActive" :disabled="isActive">{{ isActive ? 'Active build' : 'Make active' }}</WButton>
+      <WButton size="sm" :variant="isActive ? 'default' : 'primary'" :icon="isActive ? 'fas fa-check-circle' : undefined" :disabled="isActive"
+        :title="isActive ? 'Other windows use this build' : 'Make other windows use this build'" @click="setActive">{{ isActive ? 'In use' : 'Use build' }}</WButton>
+      <WButton size="sm" icon="fas fa-external-link-alt" @click="run(pobApi.open(config, entry.relPath))">Open in PoB</WButton>
       <WButton v-if="treeUrl" size="sm" icon="fas fa-project-diagram" title="Open this loadout's passive tree" @click="openTree">Passive tree</WButton>
-      <WButton v-if="charName" size="sm" variant="ghost" :icon="followsMe ? 'fas fa-link' : 'fas fa-unlink'"
-        :title="followsMe ? `Stop switching to this build when ${charName} levels` : `Make this the active build whenever ${charName} levels up (from Client.txt)`"
-        @click="toggleFollow">
-        {{ followsMe ? `Follows ${charName}` : `Follow ${charName}` }}
-      </WButton>
+      <WButton size="sm" variant="ghost" icon="fas fa-ellipsis-h" title="More" @click="moreMenu" />
     </template>
     <template #tabs>
       <WTabs v-model="tab" :options="tabOptions" />
@@ -25,8 +21,15 @@
     <div :class="$style.body">
       <WEmpty v-if="!details" icon="fas fa-spinner fa-spin">Loading…</WEmpty>
 
+      <div v-if="statCells.length" :class="$style.stats" :title="details?.statsSet ? `Saved in PoB for ${details.statsSet}` : 'Saved in PoB'">
+        <div v-for="c in statCells" :key="c.label" :class="$style.stat">
+          <span class="w-num" :style="c.tone ? { color: `var(--w-${c.tone})` } : undefined">{{ c.value }}</span>
+          <span class="w-faint text-xs">{{ c.label }}</span>
+        </div>
+      </div>
+
       <!-- Leveling -->
-      <template v-else-if="tab === 'leveling'">
+      <template v-if="details && tab === 'leveling'">
         <div class="w-dim">
           <template v-if="level != null">Level {{ level }}<template v-if="act != null && act <= 10"> · Act {{ act }}</template></template>
           <template v-else>Level unknown: Campaign reads it from Client.txt.</template>
@@ -37,7 +40,7 @@
             <i v-if="pick && set === shownSet" class="fas fa-thumbtack text-xs" /> {{ set.title }}<span v-if="set === shownSet" class="w-accent"> · now</span>
           </WChip>
         </div>
-        <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Make active to use this loadout there.</div>
+        <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
         <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
           <div :class="$style.link">
@@ -65,7 +68,7 @@
       </template>
 
       <!-- Gear -->
-      <template v-else-if="tab === 'gear'">
+      <template v-else-if="details && tab === 'gear'">
         <div v-for="row in setChips" :key="row.label" class="flex flex-wrap items-center gap-1 pt-1">
           <span v-if="row.label" class="w-faint text-xs">{{ row.label }}</span>
           <WChip v-if="pick && row.first" clickable :title="AUTO_HINT" @click="clearPick">Auto</WChip>
@@ -73,7 +76,7 @@
             <i v-if="pick && c.active" class="fas fa-thumbtack text-xs" /> {{ c.title }}<span v-if="c.active" class="w-accent"> · now</span>
           </WChip>
         </div>
-        <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Make active to use this loadout there.</div>
+        <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
         <WEmpty v-if="!hasGear" icon="fas fa-tshirt">No items or gems in this set. Add them in PoB to see what to look for.</WEmpty>
 
         <template v-if="layout.main">
@@ -120,14 +123,14 @@
       </template>
 
       <!-- Filter -->
-      <template v-else-if="tab === 'filter'">
+      <template v-else-if="details && tab === 'filter'">
         <WEmpty v-if="!filterWidget" icon="fas fa-filter">Add the Loot filter editor to put rules for this build into your NeverSink filter.</WEmpty>
         <template v-else>
           <div class="w-dim pb-1">
             Rules from the <span class="w-accent">active</span> build go at the top of your saved filter copy.
             Save in the loot filter editor<template v-if="filterWidget.editorHotkey"> (<WKbd :keys="filterWidget.editorHotkey" />)</template> to write them.
           </div>
-          <div v-if="!isActive" class="pb-1" style="color: var(--w-warn);">This isn't the active build; press Make active to use it for the filter.</div>
+          <div v-if="!isActive" class="pb-1" style="color: var(--w-warn);">This isn't the active build; press Use build to use it for the filter.</div>
           <div v-else-if="skillSets.length > 1" class="w-dim pb-1">Uses {{ shownSet?.title }}<template v-if="shownItemSet && shownItemSet.title !== shownSet?.title"> and {{ shownItemSet.title }}</template>.</div>
           <div v-for="r in FILTER_ROWS" :key="r.key" class="flex items-center gap-2 py-1">
             <WChip clickable :active="filterWidget.buildRules[r.key]" @click="filterWidget.buildRules[r.key] = !filterWidget.buildRules[r.key]">
@@ -139,7 +142,7 @@
       </template>
 
       <!-- Notes -->
-      <template v-else>
+      <template v-else-if="details">
         <div v-if="details.notes" class="whitespace-pre-wrap w-dim"><span v-for="(r, i) in noteRuns(details.notesRaw || details.notes)" :key="i" :style="r.colour ? { color: r.colour } : undefined">{{ r.text }}</span></div>
         <WEmpty v-else icon="fas fa-sticky-note">No notes in this build.</WEmpty>
       </template>
@@ -149,7 +152,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
-import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd } from '../ui'
+import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd, openMenu } from '../ui'
 import { AppConfig, saveConfig } from '@/web/Config'
 import { CAMPAIGN_TYPE } from '../campaign/widget'
 import type { CampaignWidget } from '../campaign/widget'
@@ -164,7 +167,7 @@ import { nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
   gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
-  realSets, relevantGems, skillSetsOf
+  buildDps, realSets, relevantGems, shortNumber, skillSetsOf
 } from './build-model'
 import { hideTip } from '../ui/tooltip/tooltip'
 import { pobApi } from './widget'
@@ -204,6 +207,41 @@ function setActive () {
   props.config.activeBuild = props.entry.relPath
   saveConfig()
 }
+
+function moreMenu (e: MouseEvent) {
+  const name = charName.value
+  openMenu(e, [
+    { label: 'Show file', icon: 'fas fa-folder-open', action: () => run(pobApi.show(props.config, props.entry.relPath)) },
+    ...(name
+      ? [{
+          label: followsMe.value ? `Stop following ${name}` : `Follow ${name}`,
+          icon: followsMe.value ? 'fas fa-unlink' : 'fas fa-link',
+          action: toggleFollow
+        }]
+      : [])
+  ])
+}
+
+// What PoB saved, for the sets active when it saved.
+const statCells = computed(() => {
+  const st = props.details?.stats
+  if (!st) return []
+  const cells: Array<{ label: string, value: string, tone?: 'up' | 'warn' }> = []
+  const dps = buildDps(st)
+  if (dps) cells.push({ label: 'DPS', value: shortNumber(dps) })
+  if (st.Life && st.Life > 1) cells.push({ label: 'life', value: shortNumber(st.Life) })
+  if (st.EnergyShield) cells.push({ label: 'ES', value: shortNumber(st.EnergyShield) })
+  if (st.TotalEHP) cells.push({ label: 'EHP', value: shortNumber(st.TotalEHP) })
+  const res = [st.FireResist, st.ColdResist, st.LightningResist]
+  if (res.every(r => r != null)) {
+    cells.push({
+      label: 'res',
+      value: res.join(' / '),
+      tone: res.every(r => (r as number) >= 75) ? 'up' : 'warn'
+    })
+  }
+  return cells
+})
 
 function toggleFollow () {
   const name = charName.value
@@ -358,6 +396,18 @@ function run (p: Promise<unknown>) {
   display: flex;
   flex-direction: column;
   gap: 1px;
+}
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  padding: 2px 0 6px;
+  border-bottom: 1px solid var(--w-line-soft);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
 }
 .heading {
   padding: 8px 0 2px;

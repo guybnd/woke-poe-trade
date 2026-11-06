@@ -2,11 +2,21 @@
 // PoB writes a predictable layout, so attribute regexes are enough for the
 // summary we need; anything missing just comes back empty.
 
+const STAT_KEYS = [
+  'FullDPS', 'CombinedDPS', 'TotalDotDPS', 'Life', 'EnergyShield', 'Mana', 'TotalEHP',
+  'FireResist', 'ColdResist', 'LightningResist', 'ChaosResist',
+  'FireResistOverCap', 'ColdResistOverCap', 'LightningResistOverCap', 'ChaosResistOverCap'
+] as const
+
+export type PobStats = Partial<Record<typeof STAT_KEYS[number], number>>
+
 export interface PobSummary {
   className: string
   ascendClassName: string
   level: number | null
   mainSkill: string
+  // What PoB worked out when the file was saved, for the sets active then.
+  stats: PobStats
 }
 
 export interface PobGem {
@@ -83,6 +93,8 @@ export interface PobItemSet {
 }
 
 export interface PobDetails extends PobSummary {
+  // The skill set active when PoB saved, which is what stats describe.
+  statsSet: string
   notes: string
   // Notes with PoB's colour codes kept (^7, ^xFFFFFF).
   notesRaw: string
@@ -314,6 +326,18 @@ function parseItemSets (xml: string): PobItemSet[] {
   return sets
 }
 
+// Attribute order varies between PoB versions. Minions have their own element.
+function parseStats (xml: string): PobStats {
+  const out: PobStats = {}
+  for (const m of xml.matchAll(/<PlayerStat\b([^>]*?)\/?>/g)) {
+    const a = attrs(m[1])
+    const key = STAT_KEYS.find(k => k === a.stat)
+    const value = num(a.value)
+    if (key && value != null && out[key] === undefined) out[key] = value
+  }
+  return out
+}
+
 function mainSkillName (skills: PobSkillGroup[]): string {
   const main = skills.find(s => s.isMain) ?? skills.find(s => s.enabled && s.gems.length)
   if (!main) return ''
@@ -332,6 +356,8 @@ export function parseBuild (xml: string): PobDetails {
     ascendClassName: (b.ascendClassName && b.ascendClassName !== 'None') ? b.ascendClassName : '',
     level: num(b.level),
     mainSkill: mainSkillName(skills),
+    stats: parseStats(xml),
+    statsSet: (skillSets.find(s => s.isActive) ?? skillSets[0])?.title ?? '',
     // PoB colour codes like ^7 or ^xFFFFFF are stripped.
     notes: notesMatch ? decodeEntities(notesMatch[1]).replace(COLOUR_CODE, '').trim() : '',
     notesRaw: notesMatch ? decodeEntities(notesMatch[1]).trim() : '',
@@ -343,6 +369,6 @@ export function parseBuild (xml: string): PobDetails {
 }
 
 export function summarize (details: PobDetails): PobSummary {
-  const { className, ascendClassName, level, mainSkill } = details
-  return { className, ascendClassName, level, mainSkill }
+  const { className, ascendClassName, level, mainSkill, stats } = details
+  return { className, ascendClassName, level, mainSkill, stats }
 }

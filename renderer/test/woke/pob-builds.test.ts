@@ -1,9 +1,10 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildFacts, chainGems, gearLayout, loadoutOf, noteRuns, pickStage, relevantGems, stageOf } from '@/web/woke/pob-builds/build-model'
+import { buildDps, buildFacts, chainGems, gearLayout, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
 import { nextGems } from '@/web/woke/pob-builds/gems'
-import type { PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
+import { PINNED_GROUP, groupBuilds } from '@/web/woke/pob-builds/widget'
+import type { PobBuildEntry, PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
 
 describe('parseItemText', () => {
   const item = parseItemText(`
@@ -306,5 +307,45 @@ describe('parseBuild set titles', () => {
     expect(d.skillSets[1].divider).toBeUndefined()
     expect(d.trees[0].divider).toBe(true)
     expect(d.trees[1].divider).toBeUndefined()
+  })
+})
+
+describe('saved stats', () => {
+  it('reads PlayerStat in either attribute order, and the first value of each', () => {
+    const d = parseBuild(`<PathOfBuilding><Build level="95" className="Witch">
+      <PlayerStat stat="Life" value="4145"/>
+      <PlayerStat value="5604073.8" stat="FullDPS"/>
+      <PlayerStat stat="Life" value="1"/>
+      <PlayerStat stat="NotOurs" value="3"/>
+      <MinionStat stat="EnergyShield" value="99"/>
+    </Build></PathOfBuilding>`)
+    expect(d.stats).toEqual({ Life: 4145, FullDPS: 5604073.8 })
+  })
+
+  it('says damage and EHP on one line', () => {
+    expect(statLine({ FullDPS: 5604073.8, CombinedDPS: 1120814.8, TotalEHP: 63487 })).toBe('5.6M · 63k EHP')
+    expect(statLine({ CombinedDPS: 0, TotalEHP: 433761 })).toBe('434k EHP')
+    expect(statLine({})).toBe('')
+    expect(statLine(undefined)).toBe('')
+    expect(buildDps({ FullDPS: 0, CombinedDPS: 65000000 })).toBe(65000000)
+    expect(shortNumber(863627895)).toBe('863.6M')
+    expect(shortNumber(4145)).toBe('4,145')
+  })
+})
+
+describe('groupBuilds', () => {
+  const b = (relPath: string, folder: string, mtime: number) => ({ relPath, folder, mtime, name: relPath } as PobBuildEntry)
+
+  it('puts folders by latest save, pinned first, and nothing twice', () => {
+    const groups = groupBuilds([b('a', '328', 5), b('c', '329', 9), b('d', '', 1), b('e', '329', 7)], ['a'])
+    expect(groups.map(g => g.folder)).toEqual([PINNED_GROUP, '329', ''])
+    expect(groups[1].builds.map(x => x.relPath)).toEqual(['c', 'e'])
+    expect(groups[2].label).toBe('Other')
+  })
+
+  it('keeps a subfolder with its top folder', () => {
+    const groups = groupBuilds([b('a', '3.27/phys dot', 5), b('c', '3.27', 9)], [])
+    expect(groups.map(g => g.folder)).toEqual(['3.27'])
+    expect(groups[0].builds).toHaveLength(2)
   })
 })

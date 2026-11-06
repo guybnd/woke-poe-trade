@@ -157,7 +157,7 @@ test('a picked loadout reaches the other windows, is saved, and Auto undoes it',
   await expect(strip).toContainText(`Your links · ${day1}`)
   await expect(strip).toContainText('Arc')
 
-  await overlay.widget('woke-pob-builds').getByText('Loadouts', { exact: false }).first().click()
+  // The panel opens on the build in use.
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
   const chip = (name: string) => detail.getByRole('button', { name, exact: false })
   await expect(chip(day1)).toContainText('now')
@@ -212,6 +212,6 @@ test('a build that is not active says its loadout only applies once it is', asyn
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
   const hint = detail.getByText('Other windows use your active build')
   await expect(hint).toBeVisible()
-  await detail.getByRole('button', { name: 'Make active' }).click()
+  await detail.getByRole('button', { name: 'Use build' }).click()
   await expect(hint).toHaveCount(0)
 })

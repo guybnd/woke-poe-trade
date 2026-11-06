@@ -26,18 +26,28 @@
 
         <WSkeleton v-if="loading && !builds.length" :rows="6" />
 
-        <WListItem v-for="b in shown" :key="b.relPath" :active="selected === b.relPath" :title="b.relPath" @select="select(b)"
-          @contextmenu="buildMenu($event, b)" @keydown.p.prevent="togglePin(b.relPath)">
-          <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="Active build" />
-          <span class="w-trunc">{{ b.name }}</span>
-          <template #sub>{{ describe(b) }}<template v-if="b.folder"> · {{ b.folder }}</template></template>
-          <template #actions>
-            <button @click="togglePin(b.relPath)" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }"
-              :title="isPinned(b.relPath) ? 'Unpin' : 'Pin to top'">
-              <i class="fas fa-thumbtack" />
-            </button>
+        <template v-for="g in groups" :key="g.folder">
+          <button v-if="groups.length > 1" type="button" :class="$style.folder" class="w-focusable" :aria-expanded="isOpen(g)" @click="toggleFolder(g)">
+            <i class="fas text-xs" :class="isOpen(g) ? 'fa-chevron-down' : 'fa-chevron-right'" />
+            <span class="w-trunc">{{ g.label }}</span>
+            <span class="ml-auto w-num">{{ g.builds.length }}</span>
+          </button>
+          <template v-if="isOpen(g)">
+            <WListItem v-for="b in g.builds" :key="b.relPath" :active="selected === b.relPath" :title="b.relPath" @select="select(b)"
+              @contextmenu="buildMenu($event, b)" @keydown.p.prevent="togglePin(b.relPath)">
+              <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
+              <span class="w-trunc">{{ b.name }}</span>
+              <span class="ml-auto w-num w-dim text-xs whitespace-nowrap" title="Saved in PoB">{{ statLine(b.stats) }}</span>
+              <template #sub>{{ describe(b) }}<template v-if="b.folder.includes('/')"> · {{ b.folder.split('/').slice(1).join('/') }}</template></template>
+              <template #actions>
+                <button @click="togglePin(b.relPath)" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }"
+                  :title="isPinned(b.relPath) ? 'Unpin' : 'Pin to top'">
+                  <i class="fas fa-thumbtack" />
+                </button>
+              </template>
+            </WListItem>
           </template>
-        </WListItem>
+        </template>
         <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
           Nothing matches "{{ filter }}".
           <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
@@ -75,12 +85,13 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu } from '../ui'
+import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast } from '../ui'
 import { saveConfig } from '@/web/Config'
 import BuildDetail from './BuildDetail.vue'
 import { useActiveBuild } from './active'
-import { buildMatches, describe, migratePobWidget, pobApi, sortBuilds } from './widget'
-import type { PobBuildEntry, PobDetails } from './widget'
+import { statLine } from './build-model'
+import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, pobApi } from './widget'
+import type { BuildGroup, PobBuildEntry, PobDetails } from './widget'
 
 const props = defineProps<{
   config: PobBuildsWidget
@@ -124,18 +135,34 @@ const active = useActiveBuild()
 
 // Follow the character Client.txt shows levelling: a build linked to that
 // name (or, failing that, one whose file name contains it) becomes active.
+function followTo (name: string, rel: string) {
+  if (rel === props.config.activeBuild) return
+  const before = props.config.activeBuild
+  const followsBefore = props.config.followChars
+  props.config.activeBuild = rel
+  saveConfig()
+  const shown = builds.value.find(b => b.relPath === rel)?.name ?? rel
+  // Takes the mouse in game: it came from your character changing, and Undo needs a click.
+  toast(`Now using ${shown} for ${name}`, {
+    dock: true,
+    undo: () => {
+      props.config.activeBuild = before
+      props.config.followChars = followsBefore
+      saveConfig()
+    }
+  })
+}
+
 watch(active.charName, (name) => {
   if (!name) return
-  let rel: string | undefined = props.config.followChars[name]
+  const before = props.config.followChars
+  let rel: string | undefined = before[name]
   if (!rel && name.length >= 4) {
     const lower = name.toLowerCase()
     rel = builds.value.find(b => b.name.toLowerCase().includes(lower))?.relPath
-    if (rel) props.config.followChars = { ...props.config.followChars, [name]: rel }
+    if (rel) props.config.followChars = { ...before, [name]: rel }
   }
-  if (rel && rel !== props.config.activeBuild) {
-    props.config.activeBuild = rel
-    saveConfig()
-  }
+  if (rel) followTo(name, rel)
 })
 // The name match needs the build list, which loads after mount: try it once
 // the list is in for a character that has no build linked yet.
@@ -146,10 +173,7 @@ watch(builds, (list) => {
   const rel = list.find(b => b.name.toLowerCase().includes(lower))?.relPath
   if (!rel) return
   props.config.followChars = { ...props.config.followChars, [name]: rel }
-  if (rel !== props.config.activeBuild) {
-    props.config.activeBuild = rel
-    saveConfig()
-  }
+  followTo(name, rel)
 })
 
 async function doImport () {
@@ -173,8 +197,22 @@ async function doImport () {
   }
 }
 
-const shown = computed(() => sortBuilds(builds.value, props.config.pinned)
-  .filter(b => buildMatches(b, filter.value)))
+const shown = computed(() => builds.value.filter(b => buildMatches(b, filter.value)))
+const groups = computed(() => groupBuilds(shown.value, props.config.pinned))
+
+// By hand, for this session. Until then: pinned, the latest folder, and the
+// folder holding the build in use.
+const folderChoice = shallowRef<Record<string, boolean>>({})
+function isOpen (g: BuildGroup) {
+  if (filter.value.trim()) return true
+  const chosen = folderChoice.value[g.folder]
+  if (chosen != null) return chosen
+  const firstFolder = groups.value.find(x => x.folder !== PINNED_GROUP)
+  return g.folder === PINNED_GROUP || g === firstFolder || g.builds.some(b => b.relPath === props.config.activeBuild)
+}
+function toggleFolder (g: BuildGroup) {
+  folderChoice.value = { ...folderChoice.value, [g.folder]: !isOpen(g) }
+}
 const selectedBuild = computed(() => builds.value.find(b => b.relPath === selected.value) ?? null)
 
 async function refresh () {
@@ -188,6 +226,7 @@ async function refresh () {
     // PoB saved the build you are looking at.
     const now = selectedBuild.value
     if (now && before != null && now.mtime !== before) loadDetails(now.relPath)
+    openOnActive()
     // PoB may have saved the active build meanwhile.
     active.reload()
   } catch (err) {
@@ -196,6 +235,15 @@ async function refresh () {
   } finally {
     loading.value = false
   }
+}
+
+// Opening the panel shows the build in use, unless you are looking at one.
+let openPending = true
+function openOnActive () {
+  if (!openPending) return
+  openPending = false
+  const rel = props.config.activeBuild
+  if (!selected.value && rel && builds.value.some(b => b.relPath === rel)) selected.value = rel
 }
 
 function select (b: PobBuildEntry) {
@@ -223,7 +271,11 @@ async function loadDetails (relPath: string | null) {
 // Reload when the folder changes, and whenever the widget is shown, so
 // builds saved in PoB meanwhile appear.
 watch(() => props.config.buildsDir, refresh, { immediate: true })
-watch(() => props.config.wmWants, (wants) => { if (wants === 'show') refresh() })
+watch(() => props.config.wmWants, (wants) => {
+  if (wants !== 'show') return
+  openPending = true
+  refresh()
+})
 // It stays "shown" while you are in PoB or the game, so check on coming back.
 watch(wm.active, (active) => { if (active && props.config.wmWants === 'show') refresh() })
 
@@ -236,7 +288,7 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
   const active = props.config.activeBuild === b.relPath
   openMenu(e, [
     { label: selected.value === b.relPath ? 'Hide details' : 'Show details', icon: 'fas fa-info-circle', keys: 'Enter', action: () => select(b) },
-    { label: active ? 'Active build' : 'Make active build', icon: 'fas fa-check-circle', disabled: active, action: () => { props.config.activeBuild = b.relPath; saveConfig() } },
+    { label: active ? 'In use' : 'Use build', icon: 'fas fa-check-circle', disabled: active, action: () => { props.config.activeBuild = b.relPath; saveConfig() } },
     { label: pinned ? 'Unpin' : 'Pin to top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(b.relPath) }
   ])
 }
@@ -248,3 +300,21 @@ function togglePin (relPath: string) {
 }
 
 </script>
+
+<style module>
+.folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px var(--w-pad);
+  text-align: left;
+  font-size: var(--w-fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--w-dim);
+  background: var(--w-panel-2);
+  border-bottom: 1px solid var(--w-line-soft);
+}
+.folder:hover { color: var(--w-fg); }
+</style>

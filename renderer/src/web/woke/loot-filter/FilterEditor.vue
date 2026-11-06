@@ -178,7 +178,7 @@
     <!-- build rules -->
     <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll">
       <WEmpty v-if="!buildInput" icon="fas fa-user-cog">
-        No active build. Pick one in PoB builds and press "Make active"; its gems, link colours and uniques can then be added to your filter here.
+        No active build. Pick one in PoB builds and press "Use build"; its gems, link colours and uniques can then be added to your filter here.
       </WEmpty>
       <template v-else>
         <div class="w-dim text-sm" :class="$style.buildIntro">

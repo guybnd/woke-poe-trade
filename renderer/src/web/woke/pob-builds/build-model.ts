@@ -4,7 +4,7 @@
 // Pure functions; no Vue, no app data imports.
 import { baseClass, CLASS_NAMES, gemData } from './gems'
 import type { GemColour, GemSource } from './gems'
-import type { LoadoutPick, PobDetails, PobGem, PobItem, PobItemSet, PobSkillGroup, PobSkillSet, PobTreeSpec } from './widget'
+import type { LoadoutPick, PobDetails, PobGem, PobItem, PobItemSet, PobSkillGroup, PobSkillSet, PobStats, PobTreeSpec } from './widget'
 
 // ---- stages: "Act 2", "Level 12-28", "lvl 40", "Endgame" ----
 
@@ -412,6 +412,29 @@ export function buildFacts (d: PobDetails, level: number | null, act: number | n
     if (data && !facts.gems.includes(data.name)) facts.gems.push(data.name)
   }
   return facts
+}
+
+// ---- saved stats ----
+
+// 5604073 -> "5.6M", 63487 -> "63k", 4145 -> "4,145".
+export function shortNumber (n: number): string {
+  const abs = Math.abs(n)
+  if (abs >= 1e9) return `${(n / 1e9).toFixed(1)}B`
+  if (abs >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+  if (abs >= 1e4) return `${Math.round(n / 1e3)}k`
+  return Math.round(n).toLocaleString('en-US')
+}
+
+// PoB fills in full DPS only when skills are marked for it, so take the larger.
+export function buildDps (stats: PobStats | undefined): number {
+  return Math.max(stats?.FullDPS ?? 0, stats?.CombinedDPS ?? 0, stats?.TotalDotDPS ?? 0)
+}
+
+// One line for a build in a list: its damage and how much it survives.
+export function statLine (stats: PobStats | undefined): string {
+  const dps = buildDps(stats)
+  const ehp = stats?.TotalEHP ?? 0
+  return [dps ? shortNumber(dps) : '', ehp ? `${shortNumber(ehp)} EHP` : ''].filter(Boolean).join(' · ')
 }
 
 // ---- notes ----
