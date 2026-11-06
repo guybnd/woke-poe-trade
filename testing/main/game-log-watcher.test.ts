@@ -105,9 +105,14 @@ describe('GameLogWatcher', () => {
     fs.writeFileSync(swap, 'months of old lines\n'.repeat(100_000))
     fs.renameSync(file, path.join(dir, 'old.txt'))
     fs.renameSync(swap, file)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    fs.appendFileSync(file, 'fresh\n')
-    await until(() => lines.includes('fresh'))
+    // Until the watcher has noticed the swap it skips to the end of the file, and
+    // a line written before that is skipped with the rest, so keep writing it.
+    const end = Date.now() + 20_000
+    while (!lines.includes('fresh') && Date.now() < end) {
+      fs.appendFileSync(file, 'fresh\n')
+      await new Promise(resolve => setTimeout(resolve, 600))
+    }
+    expect(lines).toContain('fresh')
     expect(lines).not.toContain('months of old lines')
   })
 
