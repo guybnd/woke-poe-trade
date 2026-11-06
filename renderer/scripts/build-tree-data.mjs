@@ -4,9 +4,11 @@
 //   npm run tree-data -- "%APPDATA%/Path of Building Community/TreeData/3_29/tree.lua"
 //
 // PoB is MIT licensed, and the tree is GGG's. Each node is one row:
-// [id, x, y, kind, name, stats, linked ids]. Ascendancy nodes have no place on
-// the drawn tree, so they sit at 0, 0 and are only ever listed by name. They and
-// class starts are in here because builds list them among their points.
+// [id, x, y, kind, name, stats, linked ids, icon, group, orbit radius, angle].
+// Ascendancy nodes have no place on the drawn tree, so they sit at 0, 0 and are
+// only ever listed by name. They and class starts are in here because builds
+// list them among their points. The art is GGG's, read from the addresses in
+// PoB's sprites.lua, and cached by the app like item art.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -14,6 +16,8 @@ import { fileURLToPath } from 'node:url'
 const RENDERER = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(RENDERER, 'public/data/tree/passive-tree.json')
 const SOURCE = process.argv[2]
+const SPRITE_KINDS = ['normalActive', 'notableActive', 'keystoneActive', 'normalInactive', 'notableInactive', 'keystoneInactive', 'masteryInactive', 'frame', 'groupBackground', 'background']
+const FRAMES = ['PSSkillFrame', 'PSSkillFrameActive', 'NotableFrameUnallocated', 'NotableFrameAllocated', 'KeystoneFrameUnallocated', 'KeystoneFrameAllocated', 'JewelFrameUnallocated', 'JewelFrameAllocated']
 if (!SOURCE) throw new Error('Usage: npm run tree-data -- <path to PoB TreeData/<version>/tree.lua>')
 
 function parseLua (src) {
@@ -83,20 +87,27 @@ function angle (orbit, index) {
   return deg * Math.PI / 180
 }
 
+const groupIndex = new Map()
+const groups = []
+const used = new Set()
 const rows = []
 for (const [id, n] of Object.entries(tree.nodes)) {
   if (id === 'root' || n.group == null || n.isProxy) continue
   const group = tree.groups[n.group]
   if (!group || group.isProxy) continue
   const kind = n.isAscendancyStart ? 'ascstart' : n.ascendancyName ? 'asc' : n.classStartIndex != null ? 'start' : n.isKeystone ? 'key' : n.isNotable ? 'notable' : n.isMastery ? 'mastery' : n.isJewelSocket ? 'jewel' : 'small'
-  // Small passives are many and alike: their stats are the weight of this file
-  // and nothing lists them.
-  const stats = kind === 'small' || kind === 'mastery' || kind === 'start' || kind === 'ascstart' ? [] : n.stats ?? []
+  const stats = kind === 'mastery' || kind === 'start' || kind === 'ascstart' ? [] : n.stats ?? []
   if (kind === 'ascstart' || kind === 'asc') {
     const named = kind === 'asc' && n.isNotable
     rows.push([Number(id), 0, 0, kind, named ? n.name : '', named ? stats : [], []])
     continue
   }
+  if (!groupIndex.has(n.group)) {
+    groupIndex.set(n.group, groups.length)
+    groups.push([Math.round(group.x), Math.round(group.y), group.background?.image ?? '', group.background?.isHalfImage ? 1 : 0])
+  }
+  const icon = kind === 'mastery' ? n.inactiveIcon : n.icon
+  if (icon) used.add(icon)
   const a = angle(n.orbit, n.orbitIndex)
   const r = radii[n.orbit]
   rows.push([
@@ -104,12 +115,30 @@ for (const [id, n] of Object.entries(tree.nodes)) {
     Math.round(group.x + r * Math.sin(a)),
     Math.round(group.y - r * Math.cos(a)),
     kind,
-    kind === 'small' || kind === 'mastery' || kind === 'start' ? '' : n.name,
+    kind === 'start' ? '' : n.name,
     stats,
-    (n.out ?? []).map(Number)
+    (n.out ?? []).map(Number),
+    icon ?? '',
+    groupIndex.get(n.group),
+    r,
+    Math.round(a * 1000) / 1000
   ])
 }
 
+// Every group gets its background, including those with no node drawn yet.
+const sheets = parseLua(readFileSync(join(dirname(SOURCE), 'sprites.lua'), 'utf8')).sprites
+const sprites = {}
+for (const kind of SPRITE_KINDS) {
+  const sheet = sheets[kind]
+  const coords = {}
+  for (const [key, c] of Object.entries(sheet.coords)) {
+    const wanted = kind === 'frame' ? FRAMES.includes(key) : kind === 'groupBackground' || kind === 'background' || used.has(key)
+    if (wanted) coords[key] = [c.x, c.y, c.w, c.h]
+  }
+  sprites[kind] = { url: sheet.filename, coords }
+}
+
 mkdirSync(dirname(OUT), { recursive: true })
-writeFileSync(OUT, JSON.stringify(rows))
-console.log(`${rows.length} nodes, ${JSON.stringify(rows).length} bytes -> ${OUT}`)
+const out = JSON.stringify({ nodes: rows, groups, sprites })
+writeFileSync(OUT, out)
+console.log(`${rows.length} nodes, ${out.length} bytes -> ${OUT}`)

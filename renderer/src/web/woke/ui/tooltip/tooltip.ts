@@ -59,7 +59,16 @@ export interface SwapTip {
   result: SwapResult
 }
 
-export type TipContent = GemTip | ItemTip | LookupTip | SwapTip
+// A passive tree node, framed as the game frames its kind.
+export interface PassiveTip {
+  kind: 'passive'
+  name: string
+  stats: string[]
+  frame: 'normal' | 'rare' | 'unique'
+  note?: string
+}
+
+export type TipContent = GemTip | ItemTip | LookupTip | SwapTip | PassiveTip
 
 export const tip = shallowRef<{ content: TipContent, anchor: DOMRect } | null>(null)
 
