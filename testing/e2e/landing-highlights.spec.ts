@@ -11,7 +11,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { fileURLToPath } from 'url'
 import type { Locator, Page } from '@playwright/test'
-import { test, expect, FIXTURES, logFixture } from './harness'
+import { test, expect, FIXTURES, haveOcr, logFixture } from './harness'
 import type { Overlay } from './harness'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
@@ -649,4 +649,161 @@ test('regex: the clipboard of saved searches', async ({ overlay }) => {
   await expect(panel).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
   await saveAround(overlay, 'hl-regex-clipboard', [panel], 1120)
+})
+
+// ---- More slides: price moves, maps, Betrayal, investments, setup ----
+
+const cursorOf = (screen: string): { x: number, y: number } =>
+  JSON.parse(fs.readFileSync(path.join(FIXTURES, `screens/${screen}.json`), 'utf8')).cursor
+
+// Today's prices, for the screens where the recording is too thin to show them.
+async function livePrices (overlay: Overlay) {
+  const live = await fetch('https://poe.ninja/poe1/api/economy/current/dense/overviews?league=Allflame')
+  if (!live.ok) throw new Error(`poe.ninja answered ${live.status}`)
+  const body = await live.text()
+  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+}
+
+test('filter: today\'s prices, and the moves to pick from', async ({ overlay }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  try {
+    fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+    await livePrices(overlay)
+    await overlay.boot({ overlayActive: true, widgets: [{ ...lootFilter(folder), wmWants: 'show' }] })
+    await backdrop(overlay, 'frames/town.jpg')
+    await overlay.page.getByRole('tab', { name: /^Prices/ }).click()
+    await expect(overlay.page.getByText(/\d+ items? would move/)).toBeVisible({ timeout: 20_000 })
+    await overlay.page.mouse.move(1800, 1000)
+    await saveAround(overlay, 'hl-filter-moves', [overlay.page.locator('[data-w-panel]').filter({ hasText: 'would move' }).first()], 1280)
+  } finally {
+    fs.rmSync(folder, { recursive: true, force: true })
+  }
+})
+
+test('maps: map scan marks what your build can\'t run', async ({ overlay }) => {
+  test.skip(!haveOcr, 'OCR files missing: npm run get:ocr')
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-map-mods' }] })
+  await overlay.showScreen('screens/map-real-07.png')
+  await backdrop(overlay, 'landing/screenshot-0007.jpg')
+  const cursor = cursorOf('map-real-07')
+  await overlay.moveMouse(cursor.x, cursor.y)
+  await overlay.pressHotkey('Alt + S')
+  const badge = overlay.page.locator('[class*="badge"]').first()
+  await expect(badge).toContainText('CARE', { timeout: 20_000 })
+  await overlay.page.waitForTimeout(500)
+  await writeWebp(overlay.page, 'hl-map-scan', await overlay.page.screenshot({ clip: { x: 0, y: 0, width: 1280, height: 720 } }))
+})
+
+test('maps: essence scan says whether to corrupt', async ({ overlay }) => {
+  test.skip(!haveOcr, 'OCR files missing: npm run get:ocr')
+  await livePrices(overlay)
+  await overlay.boot({ widgets: [{ wmType: 'woke-essence-scan', wmWants: 'show' }] })
+  await overlay.showScreen('screens/essence-real-25.png')
+  await backdrop(overlay, 'landing/screenshot-0025.jpg')
+  const cursor = cursorOf('essence-real-25')
+  await overlay.moveMouse(cursor.x, cursor.y)
+  await overlay.pressHotkey('Alt + E')
+  const card = overlay.page.getByText('CORRUPT', { exact: true }).filter({ visible: true })
+  await expect(card).toBeVisible({ timeout: 20_000 })
+  await saveAround(overlay, 'hl-essence-scan', [card], 1280)
+})
+
+// An atlas tree link taking the real notables for these mechanics.
+async function atlasTreeLink (words: RegExp) {
+  const res = await fetch('https://raw.githubusercontent.com/grindinggear/atlastree-export/master/data.json')
+  if (!res.ok) throw new Error(`Atlas data answered ${res.status}`)
+  const { nodes } = await res.json() as { nodes: Record<string, { skill?: number, name?: string, stats?: string[], isNotable?: boolean }> }
+  const ids = Object.values(nodes)
+    .filter(n => n.isNotable && n.skill != null && words.test(`${n.name} ${(n.stats ?? []).join(' ')}`))
+    .map(n => n.skill as number)
+    .slice(0, 30)
+  const bytes = Buffer.alloc(7 + ids.length * 2)
+  bytes.writeUInt32BE(4, 0)
+  ids.forEach((id, i) => bytes.writeUInt16BE(id, 7 + i * 2))
+  return `https://www.pathofexile.com/fullscreen-atlas-skill-tree/${bytes.toString('base64url')}`
+}
+
+test('maps: atlas strategies keep tree, scarabs and regex together', async ({ overlay }) => {
+  await livePrices(overlay)
+  const treeUrl = await atlasTreeLink(/Essence/)
+  await overlay.boot({
+    overlayActive: true,
+    widgets: [{
+      wmType: 'woke-atlas-strategies',
+      wmTitle: 'Atlas strategies',
+      wmWants: 'show',
+      wmFlags: ['invisible-on-blur'],
+      anchor: { pos: 'tl', x: 4, y: 12 },
+      dataUrl: '',
+      selectedId: 1,
+      strategies: [
+        { id: 1, name: 'Essence farm', league: 'Allflame', tags: ['currency', 'juiced'], treeUrl, scarabs: '2x Essence Scarab of Calcification\n2x Essence Scarab of Adaptation', device: 'Kirac: 8 mod maps\nAtlas: Essence wheel', regex: '"!eflec|t regen" "m q.*[2-9].%"', notes: 'Corrupt anything essence scan marks.' },
+        { id: 2, name: 'Scarab farm', league: 'Allflame', tags: ['scarabs'], treeUrl: '', scarabs: '', device: '', regex: '', notes: '' },
+        { id: 3, name: 'Ritual', league: 'Allflame', tags: ['currency'], treeUrl: '', scarabs: '', device: '', regex: '', notes: '' }
+      ]
+    } as never]
+  })
+  await backdrop(overlay, 'frames/town.jpg')
+  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Essence farm' }).first()
+  await expect(panel).toBeVisible()
+  await overlay.page.waitForTimeout(3000)
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-atlas', [panel], 1280)
+})
+
+test('on screen: Betrayal, the slots worth having', async ({ overlay }) => {
+  await livePrices(overlay)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-mechanics' }] })
+  await backdrop(overlay, 'frames/town.jpg')
+  const w = overlay.widget('woke-mechanics')
+  await overlay.widget('menu').getByRole('button', { name: 'All tools' }).click()
+  await overlay.page.getByRole('button', { name: /League mechanics/ }).first().click()
+  await w.getByRole('tab', { name: /betrayal/i }).click()
+  await expect(w.locator('[title="Star this slot"]').first()).toBeVisible()
+  await w.getByText('Inter', { exact: true }).click()
+  for (const i of [0, 3, 7]) await w.locator('[title="Star this slot"]').nth(i).click()
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-betrayal', [w.locator('[data-w-panel]').first()], 1280)
+})
+
+test('market: league-start investments', async ({ overlay }) => {
+  await livePrices(overlay)
+  await overlay.boot({
+    overlayActive: true,
+    widgets: [{
+      wmType: 'woke-league-invest',
+      wmTitle: 'League investments',
+      wmWants: 'show',
+      wmFlags: ['invisible-on-blur'],
+      anchor: { pos: 'tl', x: 4, y: 12 },
+      budgetDiv: 5,
+      slots: 5,
+      horizon: 7,
+      bulkOnly: false,
+      minMultiple: 1.2,
+      leagueStart: '',
+      dayOverride: 3
+    } as never]
+  })
+  await backdrop(overlay, 'frames/town.jpg')
+  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'League investments' }).first()
+  await expect(panel).toBeVisible()
+  await overlay.page.waitForTimeout(5000)
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-invest', [panel], 1280)
+})
+
+test('setup: pick how you play', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ firstRun: true, overlayActive: true })
+  const page = overlay.page
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto(`${fakeApp.url}#setup`)
+  await page.reload()
+  await page.getByRole('button', { name: /Tools/ }).click()
+  await page.getByRole('radio', { name: 'Mapper' }).click()
+  await page.mouse.move(1800, 1000)
+  // The test build's version number isn't a real one.
+  await page.getByText('v0.0.0-test').evaluate(el => { el.style.visibility = 'hidden' })
+  await page.waitForTimeout(500)
+  await writeWebp(page, 'hl-setup', await page.screenshot())
 })

@@ -24,7 +24,8 @@ export const HIGHLIGHTS = [
     slides: [
       { label: 'Alt+F on an item', module: 'loot-filter', shot: 'hl-filter-item', text: 'Hover any drop, press Alt+F, and you are on its rule. Hide it, re-tier it or restyle it.', alt: 'A pair of rare boots on the ground, beside the filter rule card for them with its tier and look' },
       { label: 'The editor', module: 'loot-filter', shot: 'tour-filter-rules', text: 'Every tier styled as it drops. Save, and it reloads in game.', alt: 'Loot filter editor: the currency tiers with their game-styled labels' },
-      { label: 'Safety net', module: 'loot-filter', shot: 'tour-filter-prices', text: 'Today\'s prices re-tier your filter, and a safety net shows anything valuable it would hide.', alt: 'Loot filter prices tab: a hidden Headhunter caught by the safety net' }
+      { label: 'Price updates', module: 'loot-filter', shot: 'hl-filter-moves', text: 'Today\'s poe.ninja prices show which items should change tier. Tick the moves you want, and it saves and reloads in game.', alt: 'Loot filter prices tab: 143 items that would move tier, each with its price and a tick box' },
+      { label: 'Safety net', module: 'loot-filter', shot: 'tour-filter-prices', text: 'A safety net shows anything valuable your filter would hide, so a price jump does not cost you a drop.', alt: 'Loot filter prices tab: a hidden Headhunter caught by the safety net' }
     ]
   },
   {
@@ -51,7 +52,8 @@ export const HIGHLIGHTS = [
       { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Outlines what is worth flipping in the open tab, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs at 1440p.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
       { label: 'Price tracker', module: 'market', shot: 'tour-market', text: 'poe.ninja prices kept as history on your PC, with movers and a watchlist.', alt: 'Market tracker watchlist with a gem\'s tooltip, beside the flips window' },
-      { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' }
+      { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' },
+      { label: 'Investments', module: 'league-invest', shot: 'hl-invest', text: 'What rose most reliably from this day in past leagues, split across your budget.', alt: 'League investments window: a suggested split of a 5 divine budget, and items ranked by how often they rose' }
     ]
   },
   {
@@ -61,11 +63,22 @@ export const HIGHLIGHTS = [
     slides: [
       { label: 'Trades', module: 'trade', shot: 'hl-trade', text: 'Whispers become cards with the stash spot. Invite, trade, thank and kick in a click.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' },
       { label: 'League mechanics', module: 'mechanics', shot: 'hl-expedition', text: 'In Expedition, each vendor\'s currency priced, with whoever is here on top.', alt: 'Expedition card: Tujen is here, with Exotic Coinage and the other currencies priced' },
+      { label: 'Betrayal', module: 'mechanics', shot: 'hl-betrayal', text: 'Star the Syndicate slots you want, and it tells you who to move when you meet them.', alt: 'League mechanics window on Betrayal: each member and slot with its reward and price, some starred' },
       { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
       { label: 'Challenges', module: 'challenges', shot: 'hl-challenges', text: 'Your count and what is next, on one small icon.', alt: 'Challenges card under a small icon: 23 of 40 and the next three' },
       { label: 'Lab run', module: 'lab', shot: 'hl-lab', text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' },
       { label: 'Drop counter', module: 'drop-counter', shot: 'hl-drop-counter', text: 'A tally of the drops you care about. Press +1 while you play, and maps count themselves.', alt: 'Drop counter card: maps run, and Divine Orb, Exalted Orb and Annulment counts with how long since the last' },
       { label: 'Death recap', module: 'death-recap', shot: 'hl-death-recap', text: 'Where you died, how long in, and the mods of the map if you checked it first.', alt: 'Death recap card: Cemetery, first death, time since entering and the map\'s mods' }
+    ]
+  },
+  {
+    id: 'maps',
+    name: 'Maps',
+    tag: 'Know before you run it',
+    slides: [
+      { label: 'Map scan', module: 'map-scan', shot: 'hl-map-scan', text: 'Press Alt+S on a map. It reads the tooltip and flags the mods you said to watch.', alt: 'Map scan reading a T16 map tooltip and marking it CARE for max res down' },
+      { label: 'Essence scan', module: 'essence-scan', shot: 'hl-essence-scan', text: 'Press Alt+E on a monolith to see whether corrupting it pays, at today\'s prices.', alt: 'Essence scan beside a monolith, saying CORRUPT with what each essence is worth' },
+      { label: 'Atlas strategies', module: 'atlas', shot: 'hl-atlas', text: 'Each strategy\'s tree, priced scarabs, map device and regex, in one place.', alt: 'Atlas strategies window: an essence strategy with its scarabs, map device, notes and what to allocate' }
     ]
   },
   {
@@ -75,6 +88,14 @@ export const HIGHLIGHTS = [
     slides: [
       { label: 'Maker', module: 'map-mods', shot: 'hl-regex-maker', text: 'Pick the map mods you avoid and want, and get the stash search for them.', alt: 'Map mods window: avoid, careful and want choices and the search string it builds' },
       { label: 'Clipboard', module: 'regex-library', shot: 'hl-regex-clipboard', text: 'Your saved strings and the classics, one click from the stash search.', alt: 'Regex library with saved stash search strings' }
+    ]
+  },
+  {
+    id: 'setup',
+    name: 'Your Setup',
+    tag: 'Only the tools you play with',
+    slides: [
+      { label: 'Pick your tools', shot: 'hl-setup', text: 'Start from a preset, then switch each tool on or off. A tool that is off does not load, take hotkeys or poll.', alt: 'First-run setup: presets for how you play, and a switch for each tool' }
     ]
   }
 ]
