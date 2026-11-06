@@ -440,3 +440,17 @@ describe('next step', () => {
     expect(relinked.map(c => c.slot)).toEqual(['Helmet'])
   })
 })
+
+describe('tree jewels', () => {
+  it('reads the jewels socketed in each tree', () => {
+    const d = parseBuild(`<PathOfBuilding><Build level="95"></Build>
+      <Tree activeSpec="1"><Spec title="A" nodes="1,2,3"><Sockets><Socket nodeId="5" itemId="7"/><Socket nodeId="6" itemId="0"/></Sockets></Spec></Tree>
+      <Items><Item id="7">Rarity: UNIQUE
+Watcher's Eye
+Prismatic Jewel
+Implicits: 0
++1 to Strength</Item></Items>
+    </PathOfBuilding>`)
+    expect(d.trees[0].jewels.map(j => j.name)).toEqual(["Watcher's Eye"])
+  })
+})

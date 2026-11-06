@@ -198,12 +198,29 @@ export const usePoeninja = createGlobalState(() => {
     load(true)
   })
 
+  // woke: every variant of an item, for when only its name is known.
+  function findPricesByName (ns: string, name: string): NinjaDenseInfo[] {
+    const searchString = JSON.stringify({ name, variant: '' }).replace('""}', '"')
+    const out: NinjaDenseInfo[] = []
+    for (const { ns: rowNs, lines } of PRICES_DB) {
+      if (rowNs !== ns) continue
+      let at = lines.indexOf(searchString)
+      while (at !== -1) {
+        const end = lines.indexOf('}', at)
+        out.push(JSON.parse(lines.slice(at, end + 1)))
+        at = lines.indexOf(searchString, end)
+      }
+    }
+    return out
+  }
+
   return {
     xchgRate: readonly(xchgRate),
     updatedAt: readonly(updatedAt),
     isLoading: readonly(isLoading),
     findPriceByQuery,
     findPriceByName,
+    findPricesByName,
     autoCurrency,
     queuePricesFetch,
     initialLoading: () => isLoading.value && !PRICES_DB.length

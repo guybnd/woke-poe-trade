@@ -21,10 +21,10 @@
       <div v-if="result.stats.length" class="w-faint text-xs pt-1">Stats as PoB saved them, for each build's active sets.</div>
 
       <div :class="$style.heading">Gear · {{ result.gear.length }} of {{ result.gearTotal }} differ</div>
-      <div v-for="g in result.gear" :key="g.slot" :class="$style.gear">
+      <div v-for="(g, i) in result.gear" :key="i" :class="$style.gear">
         <span class="w-dim">{{ g.slot }}</span>
         <span class="w-trunc" :class="rarity(g.a)">{{ itemName(g.a) }}</span>
-        <span class="w-trunc" :class="rarity(g.b)">{{ itemName(g.b) }}</span>
+        <span class="w-trunc" :class="rarity(g.b)">{{ itemName(g.a) === itemName(g.b) ? 'Same base, other mods' : itemName(g.b) }}</span>
       </div>
 
       <template v-if="result.gemsOnlyA.length || result.gemsOnlyB.length">
@@ -58,7 +58,7 @@ const error = shallowRef('')
 
 // Follows a save in PoB too, since the entries come from the refreshed list.
 let latest = 0
-watch(() => [props.a.relPath, props.a.mtime, props.b.relPath, props.b.mtime], async () => {
+watch(() => [props.a.relPath, props.a.mtime, props.b.relPath, props.b.mtime].join('\n'), async () => {
   const read = ++latest
   error.value = ''
   try {

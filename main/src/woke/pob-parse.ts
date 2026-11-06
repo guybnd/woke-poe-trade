@@ -44,6 +44,8 @@ export interface PobTreeSpec {
   divider?: boolean
   // Passive tree node ids.
   nodes: number[]
+  // Jewels socketed in this tree.
+  jewels: PobItem[]
 }
 
 export interface PobSkillSet {
@@ -199,7 +201,7 @@ function parseSkillSets (xml: string, mainSocketGroup: number | null): PobSkillS
   return sets
 }
 
-function parseTrees (xml: string): PobTreeSpec[] {
+function parseTrees (xml: string, items: Map<string, PobItem>): PobTreeSpec[] {
   const tree = /<Tree\b([^>]*)>([\s\S]*?)<\/Tree>/.exec(xml)
   if (!tree) return []
   const active = num(attrs(tree[1]).activeSpec)
@@ -213,7 +215,12 @@ function parseTrees (xml: string): PobTreeSpec[] {
     // A class start, or next to it, with no points spent.
     const nodes = (a.nodes ?? '').split(',').filter(Boolean).map(Number).filter(Number.isFinite)
     const empty = nodes.length <= 2
-    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, ...(empty ? { divider: true } : {}) })
+    const jewels: PobItem[] = []
+    for (const j of (m[2] ?? '').matchAll(/<Socket\b([^>]*?)\/?>/g)) {
+      const item = items.get(attrs(j[1]).itemId ?? '')
+      if (item) jewels.push(item)
+    }
+    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, jewels, ...(empty ? { divider: true } : {}) })
   }
   // No (or a stale) activeSpec: PoB opens the first tree.
   if (out.length && !out.some(t => t.isActive)) out[0].isActive = true
@@ -321,10 +328,10 @@ export function parseItemText (text: string, ranges?: Map<number, number>): PobI
   return item
 }
 
-function parseItemSets (xml: string): PobItemSet[] {
+function parseItems (xml: string): Map<string, PobItem> {
   const block = /<Items\b([^>]*)>([\s\S]*?)<\/Items>/.exec(xml)
-  if (!block) return []
   const items = new Map<string, PobItem>()
+  if (!block) return items
   for (const m of block[2].matchAll(/<Item\b([^>]*)>([\s\S]*?)<\/Item>/g)) {
     const id = attrs(m[1]).id
     // Newer PoB versions put <ModRange> etc. inside <Item>; keep the text only.
@@ -337,6 +344,12 @@ function parseItemSets (xml: string): PobItemSet[] {
     }
     if (id) items.set(id, parseItemText(m[2].replace(/<[^>]+>/g, ''), ranges))
   }
+  return items
+}
+
+function parseItemSets (xml: string, items: Map<string, PobItem>): PobItemSet[] {
+  const block = /<Items\b([^>]*)>([\s\S]*?)<\/Items>/.exec(xml)
+  if (!block) return []
   const slotsOf = (body: string): PobItemSlot[] => {
     const out: PobItemSlot[] = []
     for (const s of body.matchAll(/<Slot\b([^>]*?)\/?>/g)) {
@@ -408,6 +421,7 @@ export function parseBuild (xml: string): PobDetails {
   const buildTag = /<Build\b([^>]*)>/.exec(xml)
   const b = buildTag ? attrs(buildTag[1]) : {}
   const skillSets = parseSkillSets(xml, num(b.mainSocketGroup))
+  const items = parseItems(xml)
   const skills = (skillSets.find(s => s.isActive) ?? skillSets[0])?.groups ?? []
   const notesMatch = /<Notes>([\s\S]*?)<\/Notes>/.exec(xml)
   return {
@@ -424,8 +438,8 @@ export function parseBuild (xml: string): PobDetails {
     notesRaw: notesMatch ? decodeEntities(notesMatch[1]).trim() : '',
     skills,
     skillSets,
-    trees: parseTrees(xml),
-    itemSets: parseItemSets(xml)
+    trees: parseTrees(xml, items),
+    itemSets: parseItemSets(xml, items)
   }
 }
 

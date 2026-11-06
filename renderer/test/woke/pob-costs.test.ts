@@ -29,7 +29,7 @@ describe('stageCosts', () => {
   } as unknown as PobDetails
 
   it('adds priced uniques, counts rares, and leaves headings and swap out', () => {
-    const costs = stageCosts(d, item => item.info.refName === 'Seven-League Step' ? 1000 : null)
+    const costs = stageCosts(d, item => item.name === 'Seven-League Step' ? { chaos: 1000 } : null)
     expect(costs.map(c => c.title)).toEqual(['Start', 'End'])
     expect(costs[0]).toMatchObject({ chaos: 0, uniques: [] })
     expect(costs[0].rares).toHaveLength(1)
@@ -37,6 +37,19 @@ describe('stageCosts', () => {
     expect(costs[1].uniques.map(r => r.item.name)).toEqual(['Seven-League Step'])
     expect(costs[1].unpriced.map(r => r.item.name)).toEqual(["Kaom's Binding"])
     expect(costs[1].rares).toHaveLength(1)
+    expect(costs[1].atLeast).toBe(true)
+  })
+
+  it('starts a range at its lowest, and adds jewels from the same-named tree', () => {
+    const withTree = {
+      itemSets: [{ title: 'End', isActive: true, slots: [{ slot: 'Belt', item: unique('Mageblood', 'Heavy Belt') }] }],
+      trees: [{ title: 'End', isActive: true, url: '', nodes: [1, 2, 3], jewels: [unique('Watcher\'s Eye', 'Prismatic Jewel'), rare('Cobalt Jewel')] }]
+    } as unknown as PobDetails
+    const [cost] = stageCosts(withTree, item => item.name === 'Mageblood' ? { chaos: 13000, high: 90000 } : { chaos: 500 })
+    expect(cost.chaos).toBe(13500)
+    expect(cost.atLeast).toBe(true)
+    expect(cost.uniques.map(r => r.slot)).toEqual(['Belt', 'Tree'])
+    expect(cost.rares).toEqual([])
   })
 })
 
