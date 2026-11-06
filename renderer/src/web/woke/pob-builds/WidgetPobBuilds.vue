@@ -261,12 +261,6 @@ async function refresh () {
     const before = selectedBuild.value?.mtime
     builds.value = res.builds
     dir.value = res.dir
-    // A compared build that's gone leaves its side to pick again.
-    if (comparing.value) {
-      const gone = (rel: string) => rel && !builds.value.some(b => b.relPath === rel)
-      if (gone(comparing.value.a)) comparing.value = { ...comparing.value, a: '' }
-      if (gone(comparing.value.b)) comparing.value = { ...comparing.value, b: '' }
-    }
     // PoB saved the build you are looking at.
     const now = selectedBuild.value
     if (now && before != null && now.mtime !== before) loadDetails(now.relPath)

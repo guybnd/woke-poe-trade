@@ -75,6 +75,16 @@ describe('compareBuilds', () => {
     expect(row('Fire res spare over cap')).toMatchObject({ delta: '-28', tone: 'down' })
   })
 
+  it('counts tree points only, when told which ids are', () => {
+    const counted = compareBuilds(
+      build({}, rare('X'), [], [1, 2, 3]),
+      build({}, rare('X'), [], [1, 9]),
+      id => id !== 9 && id !== 3
+    )
+    expect(counted.treeOnlyA).toBe(0)
+    expect(counted.treeOnlyB).toBe(0)
+  })
+
   it('leaves out what is the same', () => {
     expect(r.gear.map(g => g.slot)).toEqual(['Helmet'])
     expect(r.gearTotal).toBe(2)
@@ -87,7 +97,7 @@ describe('compareBuilds', () => {
 
 describe('treeSentence', () => {
   it('says it in words', () => {
-    expect(treeSentence({ treeOnlyA: 0, treeOnlyB: 0 }, 'A', 'B')).toBe('The same passive tree.')
+    expect(treeSentence({ treeOnlyA: 0, treeOnlyB: 0 }, 'A', 'B')).toBe('The same passive points.')
     expect(treeSentence({ treeOnlyA: 6, treeOnlyB: 0 }, 'A', 'B')).toBe('A has 6 extra points. The rest of the tree is the same.')
     expect(treeSentence({ treeOnlyA: 0, treeOnlyB: 1 }, 'A', 'B')).toBe('B has 1 extra point. The rest of the tree is the same.')
     expect(treeSentence({ treeOnlyA: 2, treeOnlyB: 3 }, 'A', 'B')).toBe('2 points only in A, 3 only in B.')

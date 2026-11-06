@@ -66,6 +66,7 @@
 import { computed, shallowRef, watch } from 'vue'
 import { WEmpty, WInfo, WPanel, WSelect } from '../ui'
 import { compareBuilds, treeSentence } from './compare-builds'
+import { loadPassiveTree } from './passive-tree'
 import type { BuildCompare } from './compare-builds'
 import { pobApi } from './widget'
 import type { PobBuildEntry, PobBuildsWidget, PobItem } from './widget'
@@ -86,19 +87,29 @@ const error = shallowRef('')
 
 // Follows a save in PoB too, since the entries come from the refreshed list.
 let latest = 0
-watch(() => [props.a?.relPath, props.a?.mtime, props.b?.relPath, props.b?.mtime].join('\n'), async () => {
+async function compare () {
   const read = ++latest
   error.value = ''
   result.value = null
   const { a, b } = props
   if (!a || !b || a === b) return
   try {
-    const [x, y] = await Promise.all([pobApi.read(props.config, a.relPath), pobApi.read(props.config, b.relPath)])
-    if (read === latest) result.value = compareBuilds(x, y)
+    const [x, y, tree] = await Promise.all([
+      pobApi.read(props.config, a.relPath),
+      pobApi.read(props.config, b.relPath),
+      loadPassiveTree().catch(() => null)
+    ])
+    // Starts and ascendancy aren't passive points.
+    const isPoint = (id: number) => !['asc', 'ascstart', 'start'].includes(tree?.get(id)?.kind ?? '')
+    if (read === latest) result.value = compareBuilds(x, y, isPoint)
   } catch (err) {
     if (read === latest) error.value = (err as Error).message
   }
-}, { immediate: true })
+}
+
+watch(() => [props.a?.relPath, props.a?.mtime, props.b?.relPath, props.b?.mtime].join('\n'), compare, { immediate: true })
+// A reload may fix a read that failed, with the file's date unchanged.
+watch(() => props.builds, () => { if (error.value) compare() })
 
 function itemName (item: PobItem | null) {
   if (!item) return 'nothing'

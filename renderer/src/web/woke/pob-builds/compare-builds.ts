@@ -59,7 +59,8 @@ function activeOf<T extends { isActive: boolean }> (sets: T[] | undefined): T | 
   return sets?.find(s => s.isActive) ?? sets?.[0]
 }
 
-export function compareBuilds (a: PobDetails, b: PobDetails): BuildCompare {
+// `isPoint`: whether a tree node id costs a passive point, when that's known.
+export function compareBuilds (a: PobDetails, b: PobDetails, isPoint: (id: number) => boolean = () => true): BuildCompare {
   const stats: StatCompare[] = []
   for (const s of STATS) {
     const x = s.read(a.stats ?? {})
@@ -87,8 +88,8 @@ export function compareBuilds (a: PobDetails, b: PobDetails): BuildCompare {
   const setB = activeOf(b.skillSets)
   const gemsA = setA ? gemsOf([setA]) : []
   const gemsB = setB ? gemsOf([setB]) : []
-  const treeA = activeOf(a.trees)?.nodes ?? []
-  const treeB = activeOf(b.trees)?.nodes ?? []
+  const treeA = (activeOf(a.trees)?.nodes ?? []).filter(isPoint)
+  const treeB = (activeOf(b.trees)?.nodes ?? []).filter(isPoint)
 
   return {
     stats,
@@ -104,7 +105,8 @@ export function compareBuilds (a: PobDetails, b: PobDetails): BuildCompare {
 // The passive trees in a sentence.
 export function treeSentence (r: Pick<BuildCompare, 'treeOnlyA' | 'treeOnlyB'>, a: string, b: string): string {
   const points = (n: number) => `${n} extra ${n === 1 ? 'point' : 'points'}`
-  if (!r.treeOnlyA && !r.treeOnlyB) return 'The same passive tree.'
+  // Points only: mastery picks and jewels aren't compared.
+  if (!r.treeOnlyA && !r.treeOnlyB) return 'The same passive points.'
   if (!r.treeOnlyB) return `${a} has ${points(r.treeOnlyA)}. The rest of the tree is the same.`
   if (!r.treeOnlyA) return `${b} has ${points(r.treeOnlyB)}. The rest of the tree is the same.`
   return `${r.treeOnlyA} ${r.treeOnlyA === 1 ? 'point' : 'points'} only in ${a}, ${r.treeOnlyB} only in ${b}.`
