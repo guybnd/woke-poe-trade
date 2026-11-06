@@ -108,6 +108,18 @@ describe('ninjaFitsSearch', () => {
     expect(ninjaFitsSearch(kaom, stats(kaom))).toBe(true)
   })
 
+  it('follows the Corrupted chip, since its unique prices are uncorrupted', () => {
+    const plain = fixture('items/unique-kaoms-heart.txt').replace('40(20-40)%', '23(20-40)%')
+    const clean = parseItem(plain)
+    const corrupted = parseItem(plain + '
+--------
+Corrupted')
+    expect(ninjaFitsSearch(clean, stats(clean), 'corrupted')).toBe(false)
+    expect(ninjaFitsSearch(clean, stats(clean), 'not-corrupted')).toBe(true)
+    expect(ninjaFitsSearch(corrupted, stats(corrupted), 'any')).toBe(false)
+    expect(ninjaFitsSearch(corrupted, stats(corrupted), 'corrupted')).toBe(false)
+  })
+
   it('counts a good property roll', () => {
     const roll = { value: 1062, min: 1062, max: undefined, default: { min: 1062, max: 1091 }, bounds: { min: 916, max: 1091 }, dp: false, isNegated: false, tradeInvert: false }
     const pdps = { statRef: 'Physical DPS: #', tag: 'property', disabled: false, roll, sources: [], tradeId: [], text: '' } as never

@@ -2,7 +2,7 @@
 // so listings found without them say nothing about it. Pure functions.
 
 import { ItemRarity, ParsedItem } from '@/parser'
-import type { FilterOrGroup, ItemFilters } from '@/web/price-check/filters/interfaces'
+import type { FilterOrGroup, ItemFilters, CorruptedSearch } from '@/web/price-check/filters/interfaces'
 import { isTopTierFilter } from '@/web/price-check/filters/create-stat-filters'
 
 const GOOD_ROLL = 0.5
@@ -31,9 +31,10 @@ export function isBlankRareSearch (item: ParsedItem, filters: ItemFilters, stats
  * Whether poe.ninja's price covers what this search looks for. Its unique
  * prices are for any roll, uncorrupted and without a Foulborn mod.
  */
-export function ninjaFitsSearch (item: ParsedItem, stats: FilterOrGroup[]): boolean {
+export function ninjaFitsSearch (item: ParsedItem, stats: FilterOrGroup[], corrupted?: CorruptedSearch): boolean {
   if (item.rarity !== ItemRarity.Unique) return true
-  if (item.isCorrupted || item.isFoulborn) return false
+  if (item.isFoulborn || corrupted === 'corrupted') return false
+  if (item.isCorrupted && corrupted !== 'not-corrupted') return false
   return !stats.some(s => {
     if (s.group || s.disabled || s.hidden || s.statRef === BASE_PERCENTILE) return false
     const { roll } = s

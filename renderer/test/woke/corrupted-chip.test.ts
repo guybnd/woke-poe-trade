@@ -47,6 +47,12 @@ describe('Corrupted chip', () => {
     expect(opening(unique() + CORRUPTED)).toBe<CorruptedSearch>('any')
   })
 
+  it('opens gems on the same terms', () => {
+    const gem = fixture('items/gem-enlighten.txt')
+    expect(opening(gem)).toBe<CorruptedSearch>('not-corrupted')
+    expect(opening(gem + CORRUPTED)).toBe<CorruptedSearch>('any')
+  })
+
   it('opens a corrupted magic jewel on Corrupted', () => {
     expect(opening(JEWEL + CORRUPTED)).toBe<CorruptedSearch>('corrupted')
   })
