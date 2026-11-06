@@ -73,13 +73,15 @@ export interface SwapResult {
 }
 
 const LIFE = '+# to maximum Life'
+const FLAT_ES = '+# to maximum Energy Shield'
 const SPEED = '#% increased Movement Speed'
 
 // Ones that decide the verdict, in the order shown.
 const KEY_STATS: Array<{ label: string, read: (item: ParsedItem, totals: Map<string, number>) => number, unit?: string }> = [
   { label: 'Movement speed', read: (_, t) => t.get(SPEED) ?? 0, unit: '%' },
   { label: 'Life', read: (_, t) => t.get(LIFE) ?? 0 },
-  { label: 'Energy shield', read: i => i.armourES ?? 0 },
+  // On jewellery it's only in the mods; on armour they're in its number already.
+  { label: 'Energy shield', read: (i, t) => i.armourES ?? t.get(FLAT_ES) ?? 0 },
   { label: 'Armour', read: i => i.armourAR ?? 0 },
   { label: 'Evasion', read: i => i.armourEV ?? 0 }
 ]
@@ -100,7 +102,10 @@ export function swapCheck (yours: ParsedItem, theirs: ParsedItem, stats: PobStat
   let gains = 0
   let losses = 0
 
+  // A build on Chaos Inoculation has 1 life, so life means nothing to it.
+  const noLife = stats?.Life != null && stats.Life <= 1
   for (const s of KEY_STATS) {
+    if (noLife && s.label === 'Life') continue
     const a = s.read(yours, yourStats)
     const b = s.read(theirs, theirStats)
     if (a === b) continue
@@ -125,42 +130,49 @@ export function swapCheck (yours: ParsedItem, theirs: ParsedItem, stats: PobStat
     }
     const over = stats?.[`${e}ResistOverCap`]
     const now = stats?.[`${e}Resist`]
+    // Most builds leave chaos uncapped on purpose: it shows, but doesn't decide.
+    const counts = e !== 'Chaos'
     if (over != null && now != null) {
+      // At the cap when over it, or at the usual cap with nothing to spare.
+      const capped = over > 0 || now >= 75
       const next = over + delta
-      if (next < 0) {
-        // Under the cap by more than you were over it.
+      if (!capped) {
+        row.note = `${now}% to ${now + delta}%`
+        if (counts) { if (delta > 0) gains++; else losses++ }
+      } else if (next < 0) {
         row.note = `${now}% to ${now + next}%: under your cap`
         row.tone = 'down'
-        losses++
         broken.push(`${e} ${now}% to ${now + next}%`)
-      } else if (over > 0 || delta < 0) {
+      } else {
         row.note = `over cap ${over} to ${next}: no change`
         row.tone = 'dim'
         if (delta > 0) wasted = true
-      } else if (delta > 0) {
-        gains++
       }
-    } else if (delta > 0) {
-      gains++
-    } else {
-      losses++
+    } else if (counts) {
+      if (delta > 0) gains++
+      else losses++
     }
     rows.push(row)
   }
 
-  // Everything else on either item, as a plain list.
+  // Everything else on either item, as a plain list. Mods with no number count too.
   const seen = new Set([LIFE, SPEED])
+  let others = false
   for (const ref of [...yourStats.keys(), ...theirStats.keys()]) {
     if (seen.has(ref) || resistancesOf(ref).length) continue
     seen.add(ref)
+    const has = yourStats.has(ref)
+    const gets = theirStats.has(ref)
     const a = yourStats.get(ref) ?? 0
     const b = theirStats.get(ref) ?? 0
-    if (a === b) continue
+    if (has && gets && a === b) continue
+    // What feeds an armour piece's own number is already in it.
+    if (!/(Energy Shield|Armour|Evasion Rating)$/.test(ref)) others = true
     rows.push({
       label: ref.replace(/^[+-]?#%?\s*/, '').replace(/#/g, '').trim(),
-      yours: yourStats.has(ref) ? String(a) : 'none',
-      theirs: theirStats.has(ref) ? String(b) : 'none',
-      delta: !theirStats.has(ref) ? 'lost' : !yourStats.has(ref) ? 'new' : signed(b - a),
+      yours: has ? (a ? String(a) : 'yes') : 'none',
+      theirs: gets ? (b ? String(b) : 'yes') : 'none',
+      delta: !gets ? 'lost' : !has ? 'new' : signed(b - a),
       tone: 'dim'
     })
   }
@@ -169,11 +181,17 @@ export function swapCheck (yours: ParsedItem, theirs: ParsedItem, stats: PobStat
     return { verdict: 'worse', summary: `Drops you under the cap: ${broken.join(', ')}.`, rows }
   }
   if (!rows.length) return { verdict: 'same', summary: 'The same numbers as yours.', rows }
-  if (losses && !gains) {
+  // The other mods may be why either item is worth wearing, and only PoB can
+  // weigh those. So a verdict needs them out of the way.
+  if (gains && losses) return { verdict: 'mixed', summary: 'A trade-off: see what you give up.', rows }
+  if (others) {
+    const lead = gains ? 'More of what your build counts on' : losses ? 'Less of what your build counts on' : 'Neither is ahead on what your build counts on'
+    return { verdict: 'mixed', summary: `${lead}, but the other mods differ too.`, rows }
+  }
+  if (losses) {
     const why = wasted ? ' Your resistances are already over the cap, and you lose the rest.' : ''
     return { verdict: 'worse', summary: `Worse for this build.${why}`, rows }
   }
-  if (gains && !losses) return { verdict: 'better', summary: 'Better for this build.', rows }
-  if (gains) return { verdict: 'mixed', summary: 'A trade-off: see what you give up.', rows }
-  return { verdict: 'same', summary: "Nothing here changes what your build counts on, so it's down to the other mods.", rows }
+  if (gains) return { verdict: 'better', summary: 'Better for this build.', rows }
+  return { verdict: 'same', summary: 'Nothing here changes what your build counts on.', rows }
 }

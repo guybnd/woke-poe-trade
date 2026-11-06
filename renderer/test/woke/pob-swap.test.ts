@@ -64,6 +64,50 @@ describe('swapCheck', () => {
   })
 })
 
+describe('swapCheck verdicts it must not overclaim', () => {
+  it('losing chaos on an uncapped build is not a broken cap', () => {
+    const r = swapCheck(boots(['+10% to Chaos Resistance']), boots(['+90 to maximum Life']), { ...CAPPED, ChaosResist: 30, ChaosResistOverCap: 0 })
+    expect(r.verdict).toBe('better')
+    expect(r.summary).not.toContain('under the cap')
+  })
+
+  it('uncapped elemental resistance counts, without a cap claim', () => {
+    const r = swapCheck(boots(['+20% to Fire Resistance']), boots([]), { ...CAPPED, FireResist: 40, FireResistOverCap: 0 })
+    expect(r.verdict).toBe('worse')
+    expect(r.rows[0].note).toBe('40% to 20%')
+  })
+
+  it("won't call an item better when other mods differ", () => {
+    const r = swapCheck(boots(['+20 to Strength']), boots(['+60 to maximum Life']), null)
+    expect(r.verdict).toBe('mixed')
+    expect(r.summary).toContain('other mods')
+  })
+
+  it('shows a mod with no number', () => {
+    const r = swapCheck(boots([]), boots(['Cannot be Stunned']), null)
+    expect(r.rows.map(x => x.delta)).toEqual(['new'])
+    expect(r.verdict).toBe('mixed')
+  })
+
+  it('ignores life on Chaos Inoculation', () => {
+    const r = swapCheck(boots(['+100 to maximum Life']), boots([]), { Life: 1 })
+    expect(r.rows).toEqual([])
+    expect(r.verdict).toBe('same')
+  })
+
+  it('reads flat energy shield on jewellery', () => {
+    const ring = (mods: string[]) => item(`
+      Rarity: RARE
+      Test Loop
+      Moonstone Ring
+      Implicits: 0
+      ${mods.join('\n')}
+    `)
+    const r = swapCheck(ring([]), ring(['+40 to maximum Energy Shield']), null)
+    expect(r.rows.find(x => x.label === 'Energy shield')?.delta).toBe('+40')
+  })
+})
+
 describe('slotsFor', () => {
   it('knows gear, and nothing else', () => {
     expect(slotsFor(ItemCategory.Ring)).toContain('Ring 2')

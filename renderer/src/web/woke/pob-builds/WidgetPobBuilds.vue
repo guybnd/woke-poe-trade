@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- While you play: an icon for the build in use; resting on it shows the card. -->
-    <DockItem id="pob-builds" :title="activeName" :show="Boolean(active.details.value)" :wm-id="config.wmId" card-width="24rem">
+    <DockItem id="pob-builds" :title="activeName" :show="Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId" :wm-id="config.wmId" card-width="24rem">
       <template #card><BuildHoverCard /></template>
     </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
