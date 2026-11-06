@@ -4,11 +4,11 @@
 import type { PobItem } from './widget'
 
 const RARITY: Record<PobItem['rarity'], string> = {
-  NORMAL: 'Normal',
-  MAGIC: 'Magic',
-  RARE: 'Rare',
-  UNIQUE: 'Unique',
-  RELIC: 'Unique',
+  'NORMAL': 'Normal',
+  'MAGIC': 'Magic',
+  'RARE': 'Rare',
+  'UNIQUE': 'Unique',
+  'RELIC': 'Unique',
   '': 'Normal'
 }
 
@@ -16,8 +16,8 @@ const RARITY: Record<PobItem['rarity'], string> = {
 // know, so plain ones go under "Unique Modifier" on every rarity.
 const MOD_HEADING = {
   '': '{ Unique Modifier }',
-  crafted: '{ Master Crafted Prefix Modifier }',
-  fractured: '{ Fractured Prefix Modifier }'
+  'crafted': '{ Master Crafted Prefix Modifier }',
+  'fractured': '{ Fractured Prefix Modifier }'
 } as const
 
 export function pobItemText (item: PobItem): string {
