@@ -248,7 +248,7 @@ test('readme banner', async ({ page }) => {
     p { margin: 0; font: 28px I, serif; color: #e8dcc2; }
   </style>
   <img class="shot" src="data:image/webp;base64,${b64(path.join(OUT, 'tour-market.webp'))}">
-  <div class="copy"><h1>Woke PoE Trade</h1><p>Your toolkit, in the game.</p></div>`)
+  <div class="copy"><h1>Woke PoE Trade</h1><p>trade macro with extra chromosomes</p></div>`)
   await page.evaluate(() => document.fonts.ready)
   const png = await page.screenshot()
   const webp = await page.evaluate(async (src) => {

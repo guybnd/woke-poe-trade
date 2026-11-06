@@ -23,7 +23,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
       <img class="hero-art" :src="shot('tour-market')" alt="" width="2560" height="1440">
       <div class="hero-text">
         <h1>Woke PoE Trade</h1>
-        <p class="lead">Your toolkit, in the game.</p>
+        <p class="lead">trade macro with extra chromosomes</p>
         <p class="facts">An overlay for Path of Exile 1. Free, for Windows 10 and up.</p>
         <a class="btn" :href="DOWNLOAD">Download for Windows</a>
       </div>
