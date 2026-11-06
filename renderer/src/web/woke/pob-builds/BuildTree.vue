@@ -48,9 +48,10 @@
 <script setup lang="ts">
 // A build's passive tree inside the overlay, drawn with the game's art, with
 // what a tree adds over the one before it. Saves opening a browser over the game.
-import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WChip, WEmpty, WPanel } from '../ui'
-import { hideTip, showTipAt } from '../ui/tooltip/tooltip'
+import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { realSets } from './build-model'
 import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, treeDiff } from './passive-tree'
 import type { TreeNode, View } from './passive-tree'
@@ -172,21 +173,22 @@ function resize () {
   // Keeps the same point in the middle.
   const dx = (w - base.value.width) / 2
   const dy = (h - base.value.height) / 2
-  const first = base.value.width <= 300
   for (const c of [base.value, ring.value]) {
     c.width = w
     c.height = h
   }
-  if (first) fit()
+  if (!fitted) fit()
   else view.value = { ...view.value, ox: view.value.ox + dx, oy: view.value.oy + dy }
   schedule()
 }
 
 // Frames this tree and the one before it.
+let fitted = false
 function fit () {
   const t = tree.value
   const canvas = base.value
   if (!t || !canvas?.width) return
+  fitted = true
   const nodes = [...toIds.value, ...fromIds.value].map(id => t.get(id)).filter((n): n is TreeNode => n != null)
   const b = fitBox(nodes) ?? { x: -12000, y: -12000, w: 24000, h: 24000 }
   const zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.min(canvas.width / b.w, canvas.height / b.h)))
@@ -206,11 +208,20 @@ watch(box, (el) => {
 watch([() => shown.value?.title, tree], () => { nextTick(fit) })
 watch([fromSet, toSet, sheets], schedule)
 
+// The overlay can close with no mouse event: leaving the game's focus ends a
+// drag, and the tooltip going away with it ends the hover, so both start fresh.
+const wm = inject<WidgetManager>('wm')
+watch(() => wm?.active.value, (active) => { if (!active) endPan() })
+watch(tip, (t) => {
+  if (t || !hovered.value) return
+  hovered.value = null
+  drawRing()
+})
+
 onBeforeUnmount(() => {
   observer?.disconnect()
   if (frame) cancelAnimationFrame(frame)
-  window.removeEventListener('mousemove', movePan)
-  window.removeEventListener('mouseup', endPan)
+  endPan()
   hideTip()
 })
 
@@ -249,6 +260,11 @@ function startPan (e: MouseEvent) {
 
 function movePan (e: MouseEvent) {
   if (!panFrom) return
+  // Let go somewhere that never told us.
+  if (!e.buttons) {
+    endPan()
+    return
+  }
   const p = canvasPoint(e)
   view.value = { ...view.value, ox: panFrom.ox + p.x - panFrom.x, oy: panFrom.oy + p.y - panFrom.y }
   schedule()
@@ -271,7 +287,7 @@ function setHovered (n: TreeNode | null) {
   }
   showTipAt(ring.value, {
     kind: 'passive',
-    name: n.name || 'Passive',
+    name: n.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
     stats: n.stats,
     frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' ? 'rare' : 'normal',
     note: nodeNote(nodeState(n.id, fromSet.value, toSet.value))

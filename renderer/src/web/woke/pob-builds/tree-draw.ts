@@ -107,7 +107,6 @@ export function drawTree (d: DrawInput) {
         const m = nodes.get(id)
         if (!m || !NODE_RADIUS[m.kind] || m.kind === 'mastery') continue
         if (linkState(state(n.id), state(m.id)) !== lit) continue
-        if (!onScreen(n.x, n.y) && !onScreen(m.x, m.y)) continue
         ctx.moveTo(X(n.x), Y(n.y))
         const centre = n.group === m.group && n.radius === m.radius && n.radius > 0 ? art.groups[n.group] : null
         if (centre) {
@@ -127,8 +126,18 @@ export function drawTree (d: DrawInput) {
   line('keep', colours.keep, 3.5)
   line('add', colours.add, 4)
 
+  // Masteries have no lit art here, so a ring says which you have.
   for (const n of nodes.values()) {
-    if (n.kind === 'mastery' && onScreen(n.x, n.y)) sprite('masteryInactive', n.icon, n.x, n.y)
+    if (n.kind !== 'mastery' || !onScreen(n.x, n.y)) continue
+    sprite('masteryInactive', n.icon, n.x, n.y)
+    const s = state(n.id)
+    if (s) {
+      ctx.beginPath()
+      ctx.arc(X(n.x), Y(n.y), (NODE_RADIUS.mastery ?? 70) * view.zoom + px, 0, 2 * Math.PI)
+      ctx.strokeStyle = s === 'add' ? colours.add : s === 'remove' ? colours.remove : colours.keep
+      ctx.lineWidth = 2 * px
+      ctx.stroke()
+    }
   }
 
   for (const n of nodes.values()) {

@@ -334,7 +334,7 @@ test('pob: two builds side by side', async ({ overlay }) => {
 // data: the next set adds a path to one more notable and respecs two points.
 function grownBuildsDir () {
   type Node = [number, number, number, string, string, string[], number[]]
-  const nodes: Node[] = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../renderer/public/data/tree/passive-tree.json'), 'utf8'))
+  const { nodes }: { nodes: Node[] } = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../renderer/public/data/tree/passive-tree.json'), 'utf8'))
   const walkable = new Set(nodes.filter(n => n[3] !== 'asc' && n[3] !== 'mastery').map(n => n[0]))
   const links = new Map<number, number[]>()
   for (const [id, , , , , , out] of nodes) {
@@ -429,7 +429,7 @@ test('pob: the passive tree in the overlay', async ({ overlay }) => {
   try {
     const detail = await openLevellingBuild(overlay, dir)
     await detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ }).click()
-    const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('svg') }).last()
+    const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('canvas') }).last()
     await expect(tree).toContainText(/\d+ new points?/)
     // Only the tree in the picture, not the panels it opened over.
     await detail.evaluate(el => { el.style.visibility = 'hidden' })
