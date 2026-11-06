@@ -117,6 +117,9 @@ describe('GameLogWatcher', () => {
   })
 
   it('switches to a file swapped in under the same name', async () => {
+    // watchFile compares each look with its first: a swap before that first look
+    // is no change, and nothing is written after it. So follow the file first.
+    await appendUntilSeen('first')
     const swap = path.join(dir, 'swap.txt')
     fs.writeFileSync(swap, 'swapped in, and long enough to pass the old size easily\n')
     fs.renameSync(file, path.join(dir, 'old.txt'))
