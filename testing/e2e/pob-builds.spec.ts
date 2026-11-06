@@ -276,3 +276,38 @@ test('the passive tree opens in the overlay, on the next tree, with what it adds
   expect(await tree.locator('circle').count()).toBeGreaterThan(1000)
   await overlay.snap('passive tree')
 })
+
+function showcaseSeed () {
+  return [{
+    wmType: 'woke-pob-builds',
+    wmWants: 'hide' as const,
+    wmFlags: ['invisible-on-blur'],
+    anchor: { pos: 'tl', x: 5, y: 12 },
+    buildsDir: path.join(FIXTURES, 'pob'),
+    pobExe: '',
+    pinned: [],
+    activeBuild: 'Showcase.xml',
+    followChars: {},
+    loadouts: {}
+  }]
+}
+
+test('the price check compares an item to the one your build wears', async ({ overlay }) => {
+  await overlay.boot({ widgets: showcaseSeed() })
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const chip = overlay.widget('price-check').locator('[data-swap-chip]')
+  await expect(chip).toContainText('Compare to your body armour')
+  await chip.hover()
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('Against your body armour')
+  await expect(tip).toContainText('Yours')
+  await overlay.snap('swap check')
+})
+
+test('the build in use has a dock icon, with its links on hover', async ({ overlay }) => {
+  await overlay.boot({ widgets: showcaseSeed() })
+  await overlay.hoverDockIcon('pob-builds')
+  const card = overlay.page.getByText('Your links')
+  await expect(card).toBeVisible()
+  await overlay.snap('build hover card')
+})

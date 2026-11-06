@@ -1,5 +1,9 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
+    <!-- While you play: an icon for the build in use; resting on it shows the card. -->
+    <DockItem id="pob-builds" :title="activeName" :show="Boolean(active.details.value)" :wm-id="config.wmId" card-width="24rem">
+      <template #card><BuildHoverCard /></template>
+    </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
       <WPanel :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
         <template #actions>
@@ -88,7 +92,9 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast } from '../ui'
 import { saveConfig } from '@/web/Config'
+import DockItem from '../dock/DockItem.vue'
 import BuildDetail from './BuildDetail.vue'
+import BuildHoverCard from './BuildHoverCard.vue'
 import BuildTree from './BuildTree.vue'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
@@ -137,6 +143,7 @@ const importMsg = shallowRef('')
 const importOk = shallowRef(false)
 
 const active = useActiveBuild()
+const activeName = computed(() => (active.relPath.value ?? '').split('/').pop()?.replace(/\.xml$/i, '') || 'PoB builds')
 
 // Follow the character Client.txt shows levelling: a build linked to that
 // name (or, failing that, one whose file name contains it) becomes active.

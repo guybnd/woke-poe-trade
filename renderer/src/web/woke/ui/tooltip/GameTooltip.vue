@@ -1,12 +1,13 @@
 <template>
   <Teleport to="body">
-    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing }]" :style="pos" role="tooltip">
+    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap }]" :style="pos" role="tooltip">
       <header :class="[$style.head, { [$style.double]: lines.length > 1, [$style.art]: headArt }]" :style="headArt">
         <img v-for="(src, i) in influenceArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
         <div v-for="(l, i) in lines" :key="i">{{ l }}</div>
       </header>
 
-      <template v-if="item && listing">
+      <SwapCard v-if="swap" :swap="swap" />
+      <template v-else-if="item && listing">
         <section v-if="listing.props.length" :class="$style.block">
           <div v-for="(line, l) in listing.props" :key="l"><span v-for="(p, i) in line" :key="i" :class="$style[`p-${p.tone}`]">{{ p.text }}</span></div>
         </section>
@@ -132,12 +133,13 @@ import { socketGroups } from '../../pob-builds/build-model'
 import { gemData } from '../../pob-builds/gems'
 import type { GemColour } from '../../pob-builds/gems'
 import type { PobItem } from '../../pob-builds/widget'
+import SwapCard from '../../pob-builds/SwapCard.vue'
 import ListingModRow from './ListingModRow.vue'
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
-import type { GemTip, LookupTip } from './tooltip'
+import type { GemTip, LookupTip, SwapTip } from './tooltip'
 
 const $style = useCssModule()
 const el = ref<HTMLElement | null>(null)
@@ -147,6 +149,7 @@ const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ?
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
 const rollBars = computed(() => AppConfig<PriceCheckWidget>('price-check')?.listingRolls === 'bars')
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
+const swap = computed<SwapTip | null>(() => tip.value?.content.kind === 'swap' ? tip.value.content : null)
 const lookup = computed<LookupTip | null>(() => tip.value?.content.kind === 'lookup' ? tip.value.content : null)
 // Live: the divine rate can arrive after the tooltip opens.
 const { xchgRate } = usePoeninja()
@@ -160,6 +163,7 @@ const frameName = computed<string>(() => lookup.value ? lookup.value.model.frame
 const frame = computed(() => $style[frameName.value])
 
 const lines = computed<string[]>(() => {
+  if (swap.value) return [swap.value.title]
   if (lookup.value) return [lookup.value.model.name, lookup.value.model.base ?? ''].filter(Boolean)
   if (gem.value) return [data.value?.name ?? gem.value.name]
   if (!item.value) return []

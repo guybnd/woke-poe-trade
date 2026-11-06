@@ -129,6 +129,8 @@ export interface PobDetails {
   mainSkill: string
   stats?: PobStats
   statsSet?: string
+  pantheonMajor?: string
+  pantheonMinor?: string
   notes: string
   notesRaw?: string
   skills: PobSkillGroup[]

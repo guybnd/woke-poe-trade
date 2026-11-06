@@ -4,6 +4,7 @@
 import { shallowRef } from 'vue'
 import type { PobItem } from '../../pob-builds/widget'
 import type { ListingDetail } from '../../price-insight/listing-tip-detail'
+import type { SwapResult } from '../../pob-builds/swap-check'
 import type { TipModel } from './tip-content'
 
 export interface GemTip {
@@ -51,7 +52,14 @@ export interface LookupTip {
   uniques?: TipBaseUnique[]
 }
 
-export type TipContent = GemTip | ItemTip | LookupTip
+// A checked item against the one your build wears there.
+export interface SwapTip {
+  kind: 'swap'
+  title: string
+  result: SwapResult
+}
+
+export type TipContent = GemTip | ItemTip | LookupTip | SwapTip
 
 export const tip = shallowRef<{ content: TipContent, anchor: DOMRect } | null>(null)
 

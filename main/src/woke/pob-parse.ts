@@ -97,6 +97,9 @@ export interface PobItemSet {
 }
 
 export interface PobDetails extends PobSummary {
+  // PoB's ids, such as "TheBrineKing". Empty when none is set.
+  pantheonMajor: string
+  pantheonMinor: string
   // The skill set active when PoB saved, which is what stats describe.
   statsSet: string
   notes: string
@@ -379,6 +382,21 @@ function parseStats (xml: string): PobStats {
   return out
 }
 
+// The active config set's choice, or the one older PoB files keep on <Build>.
+function configChoice (xml: string, name: string, legacy: string | undefined): string {
+  const config = /<Config\b([^>]*)>([\s\S]*?)<\/Config>/.exec(xml)
+  let body = config?.[2] ?? ''
+  const active = config ? attrs(config[1]).activeConfigSet : undefined
+  for (const m of body.matchAll(/<ConfigSet\b([^>]*)>([\s\S]*?)<\/ConfigSet>/g)) {
+    if (attrs(m[1]).id === active) { body = m[2]; break }
+  }
+  for (const m of body.matchAll(/<Input\b([^>]*?)\/?>/g)) {
+    const a = attrs(m[1])
+    if (a.name === name) return a.string && a.string !== 'None' ? a.string : ''
+  }
+  return legacy && legacy !== 'None' ? legacy : ''
+}
+
 function mainSkillName (skills: PobSkillGroup[]): string {
   const main = skills.find(s => s.isMain) ?? skills.find(s => s.enabled && s.gems.length)
   if (!main) return ''
@@ -398,6 +416,8 @@ export function parseBuild (xml: string): PobDetails {
     level: num(b.level),
     mainSkill: mainSkillName(skills),
     stats: parseStats(xml),
+    pantheonMajor: configChoice(xml, 'pantheonMajorGod', b.pantheonMajorGod),
+    pantheonMinor: configChoice(xml, 'pantheonMinorGod', b.pantheonMinorGod),
     statsSet: (skillSets.find(s => s.isActive) ?? skillSets[0])?.title ?? '',
     // PoB colour codes like ^7 or ^xFFFFFF are stripped.
     notes: notesMatch ? decodeEntities(notesMatch[1]).replace(COLOUR_CODE, '').trim() : '',
