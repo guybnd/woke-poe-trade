@@ -93,6 +93,8 @@ function requiresLine (item: ListingItem): PropPart[] {
 interface Span {
   low: number
   high: number
+  // Below zero to above it: the range keeps its signs and the number is read with its own.
+  signed?: boolean
 }
 
 function tidy (n: number): number {
@@ -105,6 +107,14 @@ function lineSpans (mod: Exclude<ListingMod, string>): Span[] | null {
   const count = Math.max(0, ...mods.map(m => m.magnitudes?.length ?? 0))
   const spans: Span[] = []
   for (let i = 0; i < count; i++) {
+    // A roll that can land on either side of zero, like "(-10-10) to maximum
+    // number of Eaten Souls". Only ever seen on a single mod.
+    const only = mods.length === 1 ? mods[0].magnitudes?.[i] : undefined
+    const [lo, hi] = [Number(only?.min), Number(only?.max)]
+    if (only && lo < 0 && hi > 0) {
+      spans.push({ low: tidy(lo), high: tidy(hi), signed: true })
+      continue
+    }
     let low = 0
     let high = 0
     for (const m of mods) {
@@ -125,14 +135,17 @@ function lineSpans (mod: Exclude<ListingMod, string>): Span[] | null {
 const MAX_BOOST = 2
 
 function fits (value: number, span: Span): boolean {
+  if (span.signed) return value >= span.low - 0.05 && value <= span.high * MAX_BOOST + 0.05
   return value >= span.low * 0.99 - 0.05 && value <= span.high * MAX_BOOST + 0.05
 }
 
 /** For each span, the index of its number in the text, or null if they don't line up. */
-function alignSpans (numbers: number[], spans: Span[]): number[] | null {
+function alignSpans (numbers: number[], signedNumbers: number[], spans: Span[]): number[] | null {
   if (numbers.length === spans.length) {
-    return spans.every((s, i) => fits(numbers[i], s)) ? spans.map((_, i) => i) : null
+    return spans.every((s, i) => fits(s.signed ? signedNumbers[i] : numbers[i], s)) ? spans.map((_, i) => i) : null
   }
+  // A roll past zero has no safe match among other numbers on the line.
+  if (spans.some(s => s.signed)) return null
   const out: number[] = []
   let from = 0
   for (const span of spans) {
@@ -167,11 +180,20 @@ function textParts (text: string): ModPart[] {
   return parts.filter(p => p.text)
 }
 
+/** The number as the stat has it: "-5" and "5% reduced" are both below zero. */
+function signedValue (text: string, match: RegExpMatchArray): number {
+  const value = Number(match[0])
+  const before = text[(match.index ?? 0) - 1]
+  return before === '-' || /\b(?:reduced|less)\b/.test(text) ? -value : value
+}
+
 /** Whether a bigger number on this line is the worse roll, as with "-20% to all Resistances". */
-function biggerIsWorse (mod: Exclude<ListingMod, string>, text: string): boolean {
-  const negative = (mod.mods ?? []).some(m => Number(m.magnitudes?.[0]?.min) < 0 || Number(m.magnitudes?.[0]?.max) < 0)
+function biggerIsWorse (mod: Exclude<ListingMod, string>, text: string, spans: Span[]): boolean {
   const line = linesToStatStrings(text.split('\n')).next()
   const better = line.done ? undefined : tryParseTranslation(line.value, ModifierType.Explicit, undefined)?.stat.better
+  // Numbers past zero are placed by their real sign, so only the stat's direction counts.
+  if (spans.some(s => s.signed)) return better === -1
+  const negative = (mod.mods ?? []).some(m => Number(m.magnitudes?.[0]?.min) < 0 || Number(m.magnitudes?.[0]?.max) < 0)
   if (better === 1) return negative
   if (better === -1) return !negative
   // Not in the game data, or neither way is better: only a written minus says.
@@ -187,10 +209,10 @@ function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
   const spans = lineSpans(mod)
   if (!spans?.length) return plain
   const found = Array.from(text.matchAll(NUMBER))
-  const aligned = alignSpans(found.map(m => Number(m[0])), spans)
+  const aligned = alignSpans(found.map(m => Number(m[0])), found.map(m => signedValue(text, m)), spans)
   if (!aligned) return plain
 
-  const worse = biggerIsWorse(mod, text)
+  const worse = biggerIsWorse(mod, text, spans)
   const parts: ModPart[] = []
   const rolls: number[] = []
   let last = 0
@@ -199,9 +221,10 @@ function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
     if (span.low === span.high) return
     const match = found[at]
     const end = match.index + match[0].length
-    parts.push(...textParts(text.slice(last, end)), { text: `(${span.low}-${span.high})`, range: true })
+    parts.push(...textParts(text.slice(last, end)), { text: span.signed ? `(${span.low} to ${span.high})` : `(${span.low}-${span.high})`, range: true })
     last = end
-    const place = Math.min(1, Math.max(0, (Number(match[0]) - span.low) / (span.high - span.low)))
+    const value = span.signed ? signedValue(text, match) : Number(match[0])
+    const place = Math.min(1, Math.max(0, (value - span.low) / (span.high - span.low)))
     rolls.push(worse ? 1 - place : place)
   })
   if (!rolls.length) return plain
