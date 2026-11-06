@@ -49,7 +49,7 @@
       <div v-else :class="$style.columns">
         <div :class="$style.left">
           <div class="w-group-label">Deaths</div>
-          <template v-for="d in shown" :key="d.id">
+          <template v-for="d in visible" :key="d.id">
             <button type="button" :class="[$style.death, { [$style.on]: selected?.id === d.id }]" data-death-row @click="picked = d.id">
               <div class="flex items-center gap-2">
                 <span class="flex-1 w-trunc font-semibold">{{ d.name }}</span>
@@ -59,6 +59,9 @@
             </button>
             <div v-if="selected?.id === d.id && d.runKey" :class="$style.detail"><DeathMods :run="runOf(d)" /></div>
           </template>
+          <button v-if="shown.length > visible.length" type="button" class="w-accent text-xs" :class="$style.showMore" @click="limit += ROW_PAGE">
+            Show more ({{ shown.length - visible.length }} older)
+          </button>
         </div>
         <div class="min-w-0">
           <div class="flex items-baseline gap-2 w-group-label">
@@ -126,6 +129,8 @@ const store = useDeathRecap()
 store.load()
 
 let live = false
+// A line can be in the tail and also queued live while the tail was loading.
+let tailLines = new Set<string>()
 const tracker = new DeathTracker({
   onMap: (map) => { store.enterMap(map, live) },
   onDeath: (death) => { store.addDeath(death) }
@@ -136,11 +141,14 @@ followGameLog({
   since: () => null,
   onTail: (tail) => {
     live = false
+    tailLines = new Set(tail.lines)
     for (const line of tail.lines) tracker.feed(line, Date.now())
   },
   onLines: (lines) => {
     live = true
-    for (const { line, at } of lines) tracker.feed(line, at)
+    for (const { line, at } of lines) {
+      if (!tailLines.delete(line)) tracker.feed(line, at)
+    }
   }
 })
 
@@ -149,7 +157,7 @@ const items = MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
   if (!e.clipboard.startsWith('Item Class: Maps')) return
   const item = parseClipboard(e.clipboard).unwrapOr(null)
   const check = item && checkFromItem(item, Date.now())
-  if (check) store.addCheck(check)
+  if (check) store.addCheck({ ...check, position: e.position })
 })
 onUnmounted(() => { items.abort() })
 
@@ -187,10 +195,15 @@ const characterOptions = computed(() => [
 const shown = computed(() => store.deaths.value
   .filter(d => character.value === ALL || d.character === character.value))
 
+// The panel stays mounted while hidden, so it doesn't draw every saved death.
+const ROW_PAGE = 100
+const limit = shallowRef(ROW_PAGE)
+const visible = computed(() => shown.value.slice(0, limit.value))
+
 const picked = shallowRef<string | null>(null)
 const selected = computed(() => shown.value.find(d => d.id === picked.value) ?? shown.value[0] ?? null)
 
-const stats = computed(() => modDeathStats(store.runs.value, store.deaths.value))
+const stats = computed(() => modDeathStats(store.runs.value, shown.value))
 
 function openLog () {
   showWithOverlay(wm, props.config.wmId)
@@ -245,6 +258,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .exact { color: var(--w-up); background: color-mix(in srgb, var(--w-up) 14%, transparent); }
 .likely { color: var(--w-warn); background: color-mix(in srgb, var(--w-warn) 14%, transparent); }
 .unknown { color: var(--w-dim); background: var(--w-panel-3); }
+.showMore { display: block; width: 100%; padding: 7px var(--w-pad); text-align: left; }
 .stat { padding: 7px var(--w-pad); border-top: 1px solid var(--w-line-soft); }
 .bar { height: 4px; margin-top: 5px; border-radius: 2px; background: var(--w-panel-3); }
 .fill { height: 4px; border-radius: 2px; background: var(--w-down); }

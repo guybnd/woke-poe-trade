@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape, checked against Guy's log.
 import { describe, expect, it } from 'vitest'
-import { DeathTracker, areaName, levelFits, matchCheck, modDeathStats, ordinal, shortTime, slainName } from '@/web/woke/death-recap/death-log'
+import { DeathTracker, areaName, deathGroup, levelFits, matchCheck, modDeathStats, ordinal, shortTime, slainName } from '@/web/woke/death-recap/death-log'
 import type { DeathRecord, MapCheck, RunRecord } from '@/web/woke/death-recap/death-log'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
@@ -90,6 +90,22 @@ describe('reading deaths from Client.txt', () => {
       slain('15:03:30')
     ])
     expect(deaths.map(d => d.runKey)).toEqual(['MapWorldsBeach:7', null, null])
+  })
+
+  it('keeps the run through map-launched encounter and tower areas, without counting a new map', () => {
+    const { maps, deaths } = follow([
+      area('15:00:00', 'MapWorldsBeach', '7'),
+      entered('15:00:01', 'Beach'),
+      area('15:01:00', 'MapAtlasEncounter_Foo', '8'),
+      entered('15:01:01', 'Foo'),
+      slain('15:01:30'),
+      area('15:02:00', 'ChayulaLeagueTowerBoss', '9'),
+      slain('15:02:30')
+    ])
+    expect(maps).toHaveLength(1)
+    expect(deaths.map(d => d.runKey)).toEqual(['MapWorldsBeach:7', 'MapWorldsBeach:7'])
+    expect(deathGroup(deaths[0])).toBe(deathGroup(deaths[1]))
+    expect(deathGroup({ ...deaths[0], character: 'friend' })).not.toBe(deathGroup(deaths[0]))
   })
 
   it('ignores a death before any area is known', () => {

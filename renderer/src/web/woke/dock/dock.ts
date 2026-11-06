@@ -90,6 +90,7 @@ export const DOCK_NAMES: Record<string, string> = {
   'lab-gems': 'Lab gems',
   'challenges': 'Challenge guide',
   'mechanics': 'League mechanics',
+  'death-recap': 'Death recap',
   'farming': 'Farming',
   'boss-runs': 'Boss runs',
   'map-scan': 'Map scan',

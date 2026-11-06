@@ -7,7 +7,7 @@ import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import { prepareMapStat } from '@/web/map-check/prepare-map-stats'
 import { hostRequest } from '../shared/host'
-import { matchCheck, runFromCheck } from './death-log'
+import { deathGroup, matchCheck, runFromCheck } from './death-log'
 import type { DeathRecord, MapCheck, RunRecord } from './death-log'
 
 const MAX_DEATHS = 1000
@@ -15,6 +15,8 @@ const MAX_RUNS = 3000
 const MAX_CHECKS = 200
 const SAVE_DELAY_MS = 1000
 const RETRY_MS = 30_000
+// Rerolling a map in place: the mouse comes back to within a slot of where it was.
+const SAME_SLOT_PX = 30
 
 // The mods on a map's item text. Null for anything else, and for items with
 // nothing to say: hidden mods, or text with no mods at all such as a search result.
@@ -68,10 +70,18 @@ export const useDeathRecap = createGlobalState(() => {
   function recount (list: DeathRecord[]): DeathRecord[] {
     const seen = new Map<string, number>()
     return [...list].reverse().map(d => {
-      const nth = (seen.get(d.key) ?? 0) + 1
-      seen.set(d.key, nth)
+      const group = deathGroup(d)
+      const nth = (seen.get(group) ?? 0) + 1
+      seen.set(group, nth)
       return d.nth === nth ? d : { ...d, nth }
     }).reverse()
+  }
+
+  // Once old deaths drop off, maps from before them would count as no deaths.
+  function pruneRuns () {
+    if (deaths.value.length < MAX_DEATHS) return
+    const oldest = deaths.value[deaths.value.length - 1].at
+    if (runs.value.some(r => r.at < oldest)) runs.value = runs.value.filter(r => r.at >= oldest)
   }
 
   function load () {
@@ -86,6 +96,7 @@ export const useDeathRecap = createGlobalState(() => {
         deaths.value = heard.length ? recount(merged) : merged
         const savedKeys = new Set(saved.runs.map(r => r.key))
         runs.value = newestFirst([...runs.value.filter(r => !savedKeys.has(r.key)), ...saved.runs]).slice(0, MAX_RUNS)
+        pruneRuns()
         loaded = true
         loadError.value = ''
         if (dirty) save()
@@ -99,7 +110,13 @@ export const useDeathRecap = createGlobalState(() => {
 
   function addCheck (check: MapCheck) {
     const same = JSON.stringify([check.name, check.tier, check.mods, check.unknown])
-    checks = checks.filter(c => JSON.stringify([c.name, c.tier, c.mods, c.unknown]) !== same)
+    const at = check.position
+    checks = checks.filter(c => {
+      if (JSON.stringify([c.name, c.tier, c.mods, c.unknown]) === same) return false
+      const rerolled = at && c.position && c.name === check.name && c.tier === check.tier &&
+        Math.abs(c.position.x - at.x) <= SAME_SLOT_PX && Math.abs(c.position.y - at.y) <= SAME_SLOT_PX
+      return !rerolled
+    })
     checks.push(check)
     if (checks.length > MAX_CHECKS) checks = checks.slice(-MAX_CHECKS)
   }
@@ -117,8 +134,10 @@ export const useDeathRecap = createGlobalState(() => {
 
   function addDeath (death: Omit<DeathRecord, 'nth'>) {
     if (deaths.value.some(d => d.id === death.id)) return
-    const nth = deaths.value.filter(d => d.key === death.key).length + 1
+    const group = deathGroup(death)
+    const nth = deaths.value.filter(d => deathGroup(d) === group).length + 1
     deaths.value = newestFirst([{ ...death, nth }, ...deaths.value]).slice(0, MAX_DEATHS)
+    pruneRuns()
     save()
   }
 

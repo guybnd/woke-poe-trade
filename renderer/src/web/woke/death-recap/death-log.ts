@@ -22,6 +22,8 @@ export interface MapCheck {
   mods: ModLine[]
   // Lines the stat data couldn't read.
   unknown: string[]
+  // Where the mouse was. The same spot again means this map, rerolled.
+  position?: { x: number, y: number }
 }
 
 export type ModMatch = 'exact' | 'likely'
@@ -130,6 +132,17 @@ export interface LogEvents {
   onDeath: (death: Omit<DeathRecord, 'nth'>) => void
 }
 
+// Reached from inside a map, on top of the areas farming counts: they stay that
+// map's run. Only keeps a run that's going, so one entered from a hideout has none.
+function staysInRun (areaId: string): boolean {
+  return isMapSideArea(areaId) || /^(MapAtlasEncounter|ChayulaLeagueTower)/i.test(areaId)
+}
+
+// Which deaths count together for "2nd death in this map".
+export function deathGroup (d: Pick<DeathRecord, 'key' | 'runKey' | 'character'>): string {
+  return `${d.runKey ?? d.key}|${d.character}`
+}
+
 // Follows Client.txt in order. Replaying lines is safe: the store drops a death
 // it has already saved.
 export class DeathTracker {
@@ -157,13 +170,16 @@ export class DeathTracker {
       this.voices = []
       this.returned = this.visited.has(this.key)
       this.visited.add(this.key)
-      if (isMapArea(ev.areaId)) this.runKey = this.key
-      else if (!isMapSideArea(ev.areaId)) this.runKey = null
+      if (staysInRun(ev.areaId)) {
+        // Keeps the run.
+      } else {
+        this.runKey = isMapArea(ev.areaId) ? this.key : null
+      }
       return
     }
     if (ev?.kind === 'zone') {
       this.name = ev.name
-      if (isMapArea(this.areaId) && !this.returned) {
+      if (isMapArea(this.areaId) && !staysInRun(this.areaId) && !this.returned) {
         this.events.onMap({ key: this.key, name: ev.name, level: this.level, at })
       }
       return

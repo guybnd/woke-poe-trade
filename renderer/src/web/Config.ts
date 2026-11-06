@@ -494,6 +494,9 @@ function upgradeConfig (_config: Config): Config {
   }
   if (!config.widgets.some(w => w.wmType === DEATH_RECAP_TYPE)) {
     config.widgets.push(initDeathRecapWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+    // New to this config: stays off for anyone who has Map mods off, like "Price check only".
+    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
+    if (!isModuleOn(woke, 'map-mods')) ensureWokeConfig(woke).woke.off.push('death-recap')
   }
   // woke: the search hotkey. A key you already use elsewhere isn't taken over.
   {
