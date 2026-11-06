@@ -63,6 +63,7 @@
       </WPanel>
 
       <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" />
+      <BuildCompare v-if="compareA && compareB" :config="config" :a="compareA" :b="compareB" @close="comparing = null" />
       <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="details.trees" :start="treeAt" @close="treeAt = null" />
       <WPanel v-if="selectedBuild && detailsError" size-key="detail" title="Couldn't read the build" width="20rem">
         <div class="w-down" style="padding: var(--w-pad);">{{ detailsError }}</div>
@@ -93,6 +94,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast } from '../ui'
 import { saveConfig } from '@/web/Config'
 import DockItem from '../dock/DockItem.vue'
+import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
 import BuildTree from './BuildTree.vue'
@@ -134,6 +136,10 @@ const filter = shallowRef('')
 const selected = shallowRef<string | null>(null)
 // The tree panel, on this tree's title.
 const treeAt = shallowRef<{ title: string } | null>(null)
+// Two builds side by side, by file.
+const comparing = shallowRef<{ a: string, b: string } | null>(null)
+const compareA = computed(() => builds.value.find(b => b.relPath === comparing.value?.a))
+const compareB = computed(() => builds.value.find(b => b.relPath === comparing.value?.b))
 const details = shallowRef<PobDetails | null>(null)
 const detailsError = shallowRef('')
 const importOpen = shallowRef(false)
@@ -319,7 +325,14 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
   openMenu(e, [
     { label: selected.value === b.relPath ? 'Hide details' : 'Show details', icon: 'fas fa-info-circle', keys: 'Enter', action: () => select(b) },
     { label: active ? 'In use' : 'Use build', icon: 'fas fa-check-circle', disabled: active, action: () => { props.config.activeBuild = b.relPath; saveConfig() } },
-    { label: pinned ? 'Unpin' : 'Pin to top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(b.relPath) }
+    { label: pinned ? 'Unpin' : 'Pin to top', icon: 'fas fa-thumbtack', keys: 'P', action: () => togglePin(b.relPath) },
+    ...(selectedBuild.value && selectedBuild.value.relPath !== b.relPath
+      ? [{
+          label: `Compare with ${selectedBuild.value.name}`,
+          icon: 'fas fa-balance-scale',
+          action: () => { comparing.value = { a: selectedBuild.value!.relPath, b: b.relPath } }
+        }]
+      : [])
   ])
 }
 

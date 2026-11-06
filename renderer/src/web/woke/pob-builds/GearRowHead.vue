@@ -27,13 +27,13 @@ import { WButton } from '../ui'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { parseClipboard } from '@/parser'
-import { Host } from '@/web/background/IPC'
 import SocketDots from './SocketDots.vue'
 import { slotLabel, socketGroups } from './build-model'
 import type { GearRow } from './build-model'
 import type { GemColour } from './gems'
 import { itemArt } from './item-art'
 import { pobItemText } from './item-text'
+import { openPriceCheck } from './open-price-check'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import type { PobItem } from './widget'
 
@@ -108,21 +108,7 @@ function openTrade () {
 }
 
 function priceCheck (e: MouseEvent) {
-  if (!checkText.value) return
-  hideTip()
-  const from = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  Host.selfDispatch({
-    name: 'MAIN->CLIENT::item-text',
-    payload: {
-      clipboard: checkText.value,
-      position: {
-        x: window.screenX + from.x + from.width / 2,
-        y: window.screenY + from.y + from.height / 2
-      },
-      focusOverlay: true,
-      target: 'price-check'
-    }
-  })
+  if (item.value) openPriceCheck(item.value, e)
 }
 </script>
 

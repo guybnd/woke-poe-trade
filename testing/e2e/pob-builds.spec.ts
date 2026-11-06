@@ -311,3 +311,22 @@ test('the build in use has a dock icon, with its links on hover', async ({ overl
   await expect(card).toBeVisible()
   await overlay.snap('build hover card')
 })
+
+test('two builds compare side by side from the list menu', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ ...showcaseSeed()[0], wmWants: 'show' as const }], overlayActive: true })
+  const list = overlay.widget('woke-pob-builds')
+  await expect(overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })).toContainText('Showcase')
+  await list.getByRole('button', { name: /Loadouts/ }).first().click({ button: 'right' })
+  await overlay.page.getByText('Compare with Showcase').click()
+  const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Compare builds' })
+  await expect(panel).toContainText('Gear ·')
+  await overlay.snap('compare builds')
+})
+
+test('the Gear tab says what each stage costs', async ({ overlay }) => {
+  await overlay.boot({ widgets: loadoutSeed({}), overlayActive: true })
+  const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
+  await detail.getByRole('tab', { name: 'Gear' }).click()
+  await expect(detail.getByText('Cost of each stage')).toBeVisible()
+  await overlay.snap('stage costs')
+})

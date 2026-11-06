@@ -140,6 +140,8 @@
           </div>
         </template>
 
+        <BuildCosts :details="details" />
+
         <template v-if="trees.length > 1">
           <div :class="$style.heading">Passive trees</div>
           <a v-for="t in trees" :key="t.title + t.url" :href="safeUrl(t.url)" target="_blank"
@@ -186,6 +188,7 @@ import type { CampaignWidget } from '../campaign/widget'
 import { LOOT_FILTER_TYPE } from '../loot-filter/widget'
 import type { LootFilterWidget } from '../loot-filter/widget'
 import type { BuildRuleSwitches } from '../loot-filter/build-rules'
+import BuildCosts from './BuildCosts.vue'
 import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
 import GemName from './GemName.vue'
