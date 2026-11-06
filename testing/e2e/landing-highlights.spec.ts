@@ -352,7 +352,7 @@ test('on screen: the campaign chip and its card', async ({ overlay }) => {
 
 test('on screen: today\'s lab stays one hover away', async ({ overlay }) => {
   const IMG = 'https://www.poelab.com/wp-content/labfiles/normal.jpg'
-  const layout = fs.readFileSync(path.join(FIXTURES, 'screens/landing/lab-layout.jpg'))
+  const layout = fs.readFileSync(path.join(FIXTURES, 'lab-layout.jpg'))
   await overlay.page.route(IMG, route => route.fulfill({ contentType: 'image/jpeg', body: layout }))
   const LAB = { wmType: 'woke-lab', wmTitle: 'Labyrinth', wmWants: 'show' as const, wmFlags: ['invisible-on-blur'], anchor: { pos: 'tl', x: 10, y: 10 }, urls: { normal: '', cruel: '', merciless: '', uber: '' }, defaultDifficulty: 'normal', hotkeyOverlay: 'Ctrl + Alt + L', hotkeyExternal: null, notes: '' }
   await overlay.boot({ patch: lowDock, overlayActive: true, widgets: [LAB] })

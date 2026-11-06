@@ -59,7 +59,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <ul class="more">
           <li v-for="m in more" :key="m.id"><b>{{ m.name }}</b>{{ m.description }}</li>
         </ul>
-        <p class="end">Every tool is off until you turn it on.</p>
+        <p class="end">Switch off any tool and it doesn't load, take hotkeys or poll.</p>
         <p class="end"><a class="btn" :href="DOWNLOAD">Download for Windows</a></p>
       </section>
     </main>

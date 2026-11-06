@@ -18,7 +18,7 @@ export default defineConfig({
   head: [
     ['link', { rel: 'shortcut icon', type: 'image/png', href: `${BASE}favicon.png` }],
     ['meta', { name: 'theme-color', content: '#0d0b09' }],
-    ['meta', { property: 'og:image', content: `https://guybnd.github.io${BASE}shots/hero.webp` }]
+    ['meta', { property: 'og:image', content: `https://guybnd.github.io${BASE}shots/readme-banner.webp` }]
   ],
   markdown: {
     theme: 'light-plus',

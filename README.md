@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f8a3a)](LICENSE)
 [![Path of Exile 1](https://img.shields.io/badge/Path%20of%20Exile-1-8a4b1c)](https://www.pathofexile.com)
 
-Woke PoE Trade is an overlay for Path of Exile 1, built on [Awakened PoE Trade](https://github.com/SnosMe/awakened-poe-trade). Every tool is off until you turn it on.
+Woke PoE Trade is an overlay for Path of Exile 1, built on [Awakened PoE Trade](https://github.com/SnosMe/awakened-poe-trade). Switch off any tool and it doesn't load, take hotkeys or poll.
 
 **[Download for Windows](https://github.com/guybnd/woke-poe-trade/releases/latest)** · [Website](https://guybnd.github.io/woke-poe-trade/) · [Help](https://guybnd.github.io/woke-poe-trade/quick-start) · [FAQ](https://guybnd.github.io/woke-poe-trade/faq)
 
