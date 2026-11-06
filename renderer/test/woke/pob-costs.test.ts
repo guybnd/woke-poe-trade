@@ -77,7 +77,7 @@ describe('compareBuilds', () => {
 
   it('counts tree points only, when told which ids are', () => {
     const counted = compareBuilds(
-      build({}, rare('X'), [], [1, 2, 3]),
+      build({}, rare('X'), [], [1, 3]),
       build({}, rare('X'), [], [1, 9]),
       id => id !== 9 && id !== 3
     )
