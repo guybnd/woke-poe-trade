@@ -1,4 +1,4 @@
-<img src="docs/public/shots/readme-banner.webp" alt="Woke PoE Trade: trade macro with extra chromosomes. The overlay open in a map with the market tracker.">
+<img src="docs/public/shots/readme-banner.webp" alt="Woke PoE Trade: trade macro with extra chromosomes. Aspirants' Plaza behind the title.">
 
 [![Release](https://img.shields.io/github/v/release/guybnd/woke-poe-trade?include_prereleases&color=d4a64a&label=release)](https://github.com/guybnd/woke-poe-trade/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-3a6ea5)](https://github.com/guybnd/woke-poe-trade/releases)

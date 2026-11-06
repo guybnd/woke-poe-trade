@@ -11,6 +11,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { buildTip, kindOfNinjaType, packFiles } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, onTipHide, showTipAt } from './tooltip'
+import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
 import type { TipBaseUnique, TipMarket } from './tooltip'
 
 export interface ItemTipRef {
@@ -29,18 +30,27 @@ const SHOW_DELAY_MS = 60
 
 const pack: TipPack = {}
 const loading = new Map<keyof TipPack, Promise<void>>()
+// woke: newer tooltips downloaded: read them on the next hover.
+// A read still running from before is dropped, not kept.
+let generation = 0
+onSharedDataChange(() => {
+  generation++
+  loading.clear()
+  for (const key of Object.keys(pack)) Reflect.deleteProperty(pack, key)
+})
 
 function loadFile (file: keyof TipPack): Promise<void> {
   let job = loading.get(file)
   if (!job) {
-    job = fetch(`${import.meta.env.BASE_URL}data/tips/${file}.json`)
+    const mine = generation
+    job = fetch(dataFileUrl(`tips/${file}.json`))
       .then(r => {
         if (!r.ok) throw new Error(`${r.status}`)
         return r.json()
       })
-      .then(data => { pack[file] = data })
+      .then(data => { if (mine === generation) pack[file] = data })
       // Leaves the file out so the next hover tries again.
-      .catch(() => { loading.delete(file) })
+      .catch(() => { if (mine === generation) loading.delete(file) })
     loading.set(file, job)
   }
   return job

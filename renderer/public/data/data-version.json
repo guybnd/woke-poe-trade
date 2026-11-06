@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "version": 1,
+  "version": 2,
   "files": {
     "en": {
       "items": "af8391e58698dacbd393361eea12e304d1abed83f50453dac4e5804de8775c6f",
@@ -18,5 +18,12 @@
       "items": "500f7fd43932f1505d7a3fdf23ab093d7e6bd38d3fab54a105a191ba817a3b0c",
       "stats": "c2f890c5358cff8e79ce5fbff09838f9ac2e04d7270631241c72f597434e5319"
     }
+  },
+  "shared": {
+    "tips/bases.json": "e6acc636f73896e672033c2bb0b2057ded716de18c8632b71257b6fdadb5ab7d",
+    "tips/gems.json": "39a60641cd26441c790dd04bad1cd0daf8f6d7739ee88590b7ffdd1e5503ec9c",
+    "tips/items.json": "9e645258577bb753c05a8f04984b8d8f1af1cd7d6ace6addc649f540272439ad",
+    "tips/uniques.json": "5c4d2848f4dcf7ff47704d2db0624f502d94563666a395936fe7bd526a588c0f",
+    "tree/passive-tree.json": "9ec599c7bfd29ef0232c66c6cc529f382cd902c74224f1ccd2f57791bac00cbb"
   }
 }

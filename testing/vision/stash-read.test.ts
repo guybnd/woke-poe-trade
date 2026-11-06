@@ -58,6 +58,46 @@ function shrunk (s: ReturnType<typeof screen>, height: number) {
   return { width, height, data }
 }
 
+// Any other window height: area averaged down, interpolated up, as a game drawn
+// at that size is closer to either than to a plain pixel pick.
+function resized (s: ReturnType<typeof screen>, height: number) {
+  const f = s.height / height
+  const width = Math.round(s.width / f)
+  const data = new Uint8Array(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const q = (y * width + x) * 4
+      for (let c = 0; c < 3; c++) {
+        let v = 0
+        if (f > 1) {
+          let area = 0
+          for (let j = Math.floor(y * f); j < Math.min(s.height, Math.ceil((y + 1) * f)); j++) {
+            const wy = Math.min(j + 1, (y + 1) * f) - Math.max(j, y * f)
+            for (let i = Math.floor(x * f); i < Math.min(s.width, Math.ceil((x + 1) * f)); i++) {
+              const w = wy * (Math.min(i + 1, (x + 1) * f) - Math.max(i, x * f))
+              v += s.data[(j * s.width + i) * 4 + c] * w
+              area += w
+            }
+          }
+          v /= area
+        } else {
+          const sx = Math.min(s.width - 1, Math.max(0, (x + 0.5) * f - 0.5))
+          const sy = Math.min(s.height - 1, Math.max(0, (y + 0.5) * f - 0.5))
+          const i = Math.min(Math.floor(sx), s.width - 2)
+          const j = Math.min(Math.floor(sy), s.height - 2)
+          const fx = sx - i
+          const fy = sy - j
+          const at = (a: number, b: number) => s.data[(b * s.width + a) * 4 + c]
+          v = (at(i, j) * (1 - fx) + at(i + 1, j) * fx) * (1 - fy) + (at(i, j + 1) * (1 - fx) + at(i + 1, j + 1) * fx) * fy
+        }
+        data[q + c] = Math.round(v)
+      }
+      data[q + 3] = 255
+    }
+  }
+  return { width, height, data }
+}
+
 const read = (s: { width: number, height: number, data: Uint8Array }) => readScarabTab(s.data, s.width, s.height)
 
 describe('reading the scarab tab', () => {
@@ -196,11 +236,37 @@ describe('stack counts', () => {
     expect(withCount('012')).toBeNull()
   })
 
-  it('reads no counts at another window size', () => {
+  it('reads no counts below about 1000p, where the digits are too small to trust', () => {
     const s = shrunk(screen('stash-scarab-real.png'), 720)
     const res = readScarabTab(s.data, s.width, s.height)
     if (!res.found) throw new Error('tab not found')
     expect(res.slots.every(f => f.count === null)).toBe(true)
+  })
+
+  it('reads fast enough at 2160p too', () => {
+    const s = resized(screen('stash-essence-real.png'), 2160)
+    readStashTab(s.data, s.width, s.height)
+    const t0 = performance.now()
+    readStashTab(s.data, s.width, s.height)
+    expect(performance.now() - t0).toBeLessThan(1500)
+  })
+
+  // Real screenshots at these sizes are still to come, so the 1440p ones stand in.
+  it.each([
+    ['stash-scarab-real.png', 'stash-scarab-real', 1080],
+    ['stash-scarab-breach-real.png', 'stash-scarab-breach-real', 1080],
+    ['stash-scarab-real.png', 'stash-scarab-real', 1200],
+    ['stash-scarab-real.png', 'stash-scarab-real', 1600],
+    ['stash-scarab-real.png', 'stash-scarab-real', 2160],
+    ['stash-scarab-breach-real.png', 'stash-scarab-breach-real', 2160]
+  ])('reads every count in %s (%s) at %ip', (file, key, height) => {
+    const s = resized(screen(file), height)
+    const res = readScarabTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    // A slot whose count is hidden at 1440p can read either way here, as its
+    // corner colour sits near the line.
+    const counts = Object.fromEntries(res.slots.filter(s => s.count != null).map(s => [s.name, s.count]))
+    expect(counts).toEqual(Object.fromEntries(Object.entries(truth[key]).filter(([, n]) => n != null)))
   })
 })
 
@@ -238,8 +304,21 @@ describe('the other flip tabs', () => {
     expect(readStashTab(b.data, b.width, b.height).found).toBe(false)
   })
 
-  it('reads none of them at another window size', () => {
+  it('reads none of them below about 1000p, where counts are too small to trust', () => {
     const s = shrunk(screen('stash-delirium-real.png'), 720)
+    expect(readStashTab(s.data, s.width, s.height).found).toBe(false)
+  })
+
+  it.each(TABS.flatMap(([file, family]) => [1080, 2160].map(h => [file, family, h] as const)))('knows %s (%s) at %ip, and reads its counts', (file, family, height) => {
+    const s = resized(screen(file), height)
+    const res = readStashTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    expect(res.family).toBe(family)
+    expect(Object.fromEntries(res.slots.map(f => [f.name, f.count]))).toEqual(truth[family])
+  })
+
+  it('refuses the General tab at 1080p too', () => {
+    const s = resized(screen('stash-general-real.png'), 1080)
     expect(readStashTab(s.data, s.width, s.height).found).toBe(false)
   })
 })

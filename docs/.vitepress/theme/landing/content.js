@@ -49,7 +49,7 @@ export const HIGHLIGHTS = [
     tag: 'Vaalstreet broker terminal in-game',
     slides: [
       { label: 'Flips', module: 'scarab-flip', shot: 'hl-flips', text: 'Vendor recipes and Harvest rerolls that pay today, sorted by profit.', alt: 'Flips window: scarabs worth vendoring, with price, profit and supply' },
-      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Outlines what is worth flipping in the open tab, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs at 1440p.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
+      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'hl-stash-outlines', text: 'Outlines what is worth flipping in the open tab, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs from 1080p up.', alt: 'A scarab stash tab with the worthwhile stacks outlined and their profit' },
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
       { label: 'Price tracker', module: 'market', shot: 'tour-market', text: 'poe.ninja prices kept as history on your PC, with movers and a watchlist.', alt: 'Market tracker watchlist with a gem\'s tooltip, beside the flips window' },
       { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' },

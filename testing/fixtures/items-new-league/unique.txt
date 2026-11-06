@@ -1,0 +1,11 @@
+Item Class: Gloves
+Rarity: Unique
+Veilwoven Grasp
+Vaal Gauntlets
+--------
+Armour: 120
+--------
+Item Level: 84
+--------
+{ Unique Modifier }
++50 to maximum Life

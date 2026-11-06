@@ -20,7 +20,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 <template>
   <div class="landing">
     <header class="hero">
-      <img class="hero-art" :src="shot('tour-market')" alt="" width="2560" height="1440">
+      <img class="hero-art" :src="shot('hero-plaza')" alt="" width="1720" height="617">
       <div class="hero-text">
         <h1>Woke PoE Trade</h1>
         <p class="lead">trade macro with extra chromosomes</p>
@@ -143,8 +143,15 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
 /* ---------- hero ---------- */
 .hero { position: relative; overflow: hidden; background: var(--ground); }
-.hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center top; opacity: 0.42; }
+.hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center top; opacity: 0.7; }
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(7, 6, 5, 0.25), rgba(7, 6, 5, 0.45) 55%, var(--ground));
+}
 .hero-text {
+  z-index: 1;
   position: absolute;
   inset: 0;
   display: flex;

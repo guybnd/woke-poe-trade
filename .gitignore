@@ -48,3 +48,4 @@ main/build/cv-ocr
 .flux/open-prompts.json.tmp
 .flux/memory/
 .flux-store/
+.upstream-data-pr.md

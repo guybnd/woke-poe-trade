@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { ITEM_BY_REF, STAT_BY_REF_V2, stat, useLiveData } from '@/assets/data'
 import { buildItemIndexes, buildStatIndexes } from '@/assets/data/build-indexes'
-import { currentHashes } from '@/assets/bump-data-version.mjs'
+import { currentHashes, sharedHashes, SHARED } from '@/assets/bump-data-version.mjs'
 import { loadGameData } from '../helpers/game-data'
 
 const DATA = path.resolve(__dirname, '../../public/data')
@@ -69,5 +69,16 @@ describe('data-version.json', () => {
     const manifest = JSON.parse(read('', 'data-version.json')) as { format: number, version: number, files: unknown }
     expect(manifest.format).toBe(1)
     expect(manifest.files).toEqual(currentHashes())
+  })
+
+  it('has the tooltips\' and tree\'s hashes too. If not: node src/assets/bump-data-version.mjs', () => {
+    const manifest = JSON.parse(read('', 'data-version.json')) as { shared: unknown }
+    expect(manifest.shared).toEqual(sharedHashes())
+  })
+
+  it('lists the same shared files main downloads', () => {
+    const main = fs.readFileSync(path.resolve(__dirname, '../../../main/src/woke/live-data.ts'), 'utf8')
+    const listed = /SHARED_FILES = (\[[^\]]*\])/.exec(main)![1].replace(/'/g, '"')
+    expect(JSON.parse(listed)).toEqual(SHARED)
   })
 })

@@ -109,6 +109,9 @@ export interface WokeModulesConfig {
   // Price check: dust per chaos and a "disenchant it" verdict for uniques,
   // at `line` dust per chaos or more. Off unless switched on.
   disenchantVerdict?: { on: boolean, line: number }
+  // The league list from the last launch that read it, and every league seen,
+  // so a failed read keeps a league and a new one can be offered (Leagues.ts).
+  leagues?: { list: string[], known: string[] }
 }
 
 interface ConfigLike {

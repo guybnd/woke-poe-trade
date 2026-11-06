@@ -6,7 +6,8 @@ import { initConfig, AppConfig } from './web/Config'
 import { Host } from './web/background/IPC'
 import { perfMark, perfTimeAsync } from './web/woke/shared/perf'
 import { captureRendererErrors } from './web/woke/app/report'
-import { checkLiveDataNow, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
+import { checkLiveDataNow, rescheduleLiveDataChecks, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
+import { useLeagues } from './web/background/Leagues'
 
 // woke: the first-run setup window loads this page with #setup. It needs no
 // item data, so it opens quicker.
@@ -25,7 +26,8 @@ const isSetupWindow = window.location.hash === '#setup'
   captureRendererErrors()
   if (!isSetupWindow) {
     await useDownloadedData(AppConfig().language)
-    startLiveDataChecks(() => AppConfig().language)
+    startLiveDataChecks(() => AppConfig().language, () => useLeagues().startedAt.value)
+    watch(() => useLeagues().startedAt.value, () => { rescheduleLiveDataChecks() })
   }
 
   watch(() => AppConfig().language, async () => {
