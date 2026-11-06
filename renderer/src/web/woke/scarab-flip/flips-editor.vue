@@ -21,6 +21,7 @@
     <WSettingRow label="Show stack total on stash outlines" hint="Adds the whole stack's profit under the per item figure, counting whole recipes: threes for a vendor recipe, every item for a Harvest reroll. Needs a 1440p game window for now.">
       <WToggle v-model="stashTotals" />
     </WSettingRow>
+    <FlipsWeights :config-widget="configWidget" />
   </div>
 </template>
 
@@ -28,6 +29,7 @@
 import { computed, defineComponent } from 'vue'
 import { WSelect, WSettingRow, WToggle } from '../ui'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import FlipsWeights from './flips-weights.vue'
 import { configModelValue, configProp } from '@/web/settings/utils'
 import { UNTRADED_CHAOS } from './calc'
 import { DEFAULT_LIFEFORCE_PER_ITEM, parseLifeforce } from './families'
@@ -35,7 +37,7 @@ import type { ScarabFlipWidget } from './widget'
 
 export default defineComponent({
   name: 'Flips',
-  components: { WSelect, WSettingRow, WToggle, WHotkeyCell },
+  components: { WSelect, WSettingRow, WToggle, WHotkeyCell, FlipsWeights },
   props: configProp<ScarabFlipWidget>(),
   setup (props) {
     const w = () => props.configWidget

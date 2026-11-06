@@ -25,7 +25,6 @@ export const DELIRIUM_WEIGHTS: Record<string, number> = {
   "Cartographer's Delirium Orb": 0.029854,
   "Diviner's Delirium Orb": 0.058411,
   'Fine Delirium Orb': 0.12635,
-  'Foreboding Delirium Orb': 0.049252,
   'Fossilised Delirium Orb': 0.033023,
   'Fragmented Delirium Orb': 0.030608,
   "Jeweller's Delirium Orb": 0.10164,
@@ -35,7 +34,6 @@ export const DELIRIUM_WEIGHTS: Record<string, number> = {
   "Thaumaturge's Delirium Orb": 0.028411,
   'Timeless Delirium Orb': 0.02851,
   'Whispering Delirium Orb': 0.050956,
-  'Amorphous Delirium Orb': 0.032181,
   'Imperial Delirium Orb': 0.052327
 }
 
@@ -65,8 +63,7 @@ export const FOSSIL_WEIGHTS: Record<string, number> = {
   'Scorched Fossil': 0.10242,
   'Serrated Fossil': 0.023604,
   'Shuddering Fossil': 0.02646,
-  'Tangled Fossil': 0.0021763,
-  'Perfect Fossil': 0.017962
+  'Tangled Fossil': 0.0021763
 }
 
 // Patch 3.20.0. Calculated item weights for Essences using BAYESIAN method from 1 dataset.
@@ -112,6 +109,8 @@ export const RUNEGRAFT_WEIGHTS: Record<string, number> = {
   'Runegraft of the River': 0.078234,
   'Runegraft of the Sinistral': 0.083391,
   'Runegraft of the Soulwick': 0.0083963,
+  // In the sample's list, but it never came up.
+  'Runegraft of the Angler': 0,
   'Runegraft of the Warp': 0.027064,
   'Runegraft of the Witchmark': 0.0042755
 }

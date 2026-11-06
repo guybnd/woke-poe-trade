@@ -276,3 +276,35 @@ for (const [where, patch, size] of [['high', undefined, null], ['low', lowDock, 
     expect(box.y + box.height <= icon.y || box.y >= icon.y + icon.height).toBe(true)
   })
 }
+
+test('flips: an unmeasured orb is marked EST, and Settings sets your own weight', async ({ overlay }) => {
+  const dense = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
+  const lines: Array<[string, number, number]> = [...ORBS, ['Kalguuran Delirium Orb', 2, 0]]
+  dense.itemOverviews.push({ type: 'DeliriumOrb', lines: lines.map(([name, chaos]) => ({ name, chaos, graph: [] })) })
+  dense.currencyOverviews[0].lines.push({ name: 'Primal Crystallised Lifeforce', chaos: 0.033, graph: [] })
+  await overlay.page.route(DENSE, route => route.fulfill({ json: dense }))
+  await overlay.page.route(EXCHANGE, route => route.fulfill({ json: exchangeFeed([]) }))
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show' }] })
+
+  const panel = overlay.widget('woke-scarab-flip')
+  await panel.getByRole('tab', { name: 'Delirium', exact: true }).click()
+  await expect(panel.getByText(/1 estimated/)).toBeVisible()
+  const row = panel.locator('.w-row').filter({ hasText: 'Kalguuran' })
+  await expect(row.getByText('EST', { exact: true })).toBeVisible()
+  await overlay.snap('flips-est')
+
+  await panel.getByRole('button', { name: 'Weights', exact: true }).click()
+  const weights = overlay.page.locator('[data-flip-weights]')
+  await expect(weights).toBeInViewport()
+  const kalguuran = weights.getByLabel('Kalguuran', { exact: true })
+  const line = kalguuran.locator('xpath=..')
+  await expect(line.getByText('Estimated')).toBeVisible()
+  await kalguuran.fill('25')
+  await kalguuran.blur()
+  await expect(kalguuran).toHaveValue('25')
+  await expect(line.getByText('Yours')).toBeVisible()
+  await overlay.snap('flips-weights')
+
+  await line.getByRole('button', { name: 'Reset' }).click()
+  await expect(line.getByText('Estimated')).toBeVisible()
+})

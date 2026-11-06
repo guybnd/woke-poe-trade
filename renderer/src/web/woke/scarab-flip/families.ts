@@ -1,7 +1,7 @@
 // Every flip the panel prices. Recipes and costs: poewiki.net's Vendor recipe
 // system and Harvest crafting pages.
-import { RARE_SHARE, buyList, familyQuotes, flipModel, scarabWeight, shortScarab, upgradeRows } from './calc'
-import type { ExchangeQuotes, FlipModel, FlipOptions, FlipRecipe, FlipRow, ItemWeight, Quote, UpgradeRow } from './calc'
+import { RARE_SHARE, averageWeight, buyList, familyQuotes, flipModel, scarabWeight, shortScarab, upgradeRows } from './calc'
+import type { ExchangeQuotes, FlipModel, FlipOptions, FlipRecipe, FlipRow, ItemWeight, Quote, UpgradeRow, WeightSource } from './calc'
 import { CATALYST_WEIGHTS, DEAFENING_ESSENCE_WEIGHTS, DELIRIUM_WEIGHTS, FOSSIL_WEIGHTS, RUNEGRAFT_WEIGHTS } from './family-weights'
 import type { PriceItem } from '../market/types'
 
@@ -40,11 +40,17 @@ export interface FlipFamily {
   pool?: (name: string) => boolean
   weights?: Record<string, number>
   weightOf?: (name: string) => ItemWeight | null
+  // Items with no measured weight take the average of the rest.
+  estimateMissing?: boolean
+  // Weights in the list above that are stand-ins, not measurements.
+  estimated?: string[]
   rareShare: number | null
   // Lines of items from lowest tier to highest, for the 'upgrade' method.
   chains?: string[][]
   // Where the weights come from, for the footer.
   source: string
+  // The same in a few words, for a row in Settings.
+  sourceShort?: string
   lowConfidence?: string
 }
 
@@ -73,8 +79,10 @@ export const FAMILIES: FlipFamily[] = [
     match: name => name.includes('Scarab'),
     methods: [vendor3(true)],
     weightOf: scarabWeight,
+    estimateMissing: true,
     rareShare: RARE_SHARE,
-    source: 'Weights: 33,333 vendor rolls from version 3.27, linked from the PoE Wiki. Very rare scarabs rest on only a few rolls. Scarabs the sample missed use the average weight of their wiki rarity tier.'
+    sourceShort: 'PoeData 3.28',
+    source: 'Weights: 22,431 vendor rolls from version 3.28, from PoeData.dev. Very rare scarabs rest on only a few rolls. Scarabs it missed use the average.'
   },
   {
     id: 'catalysts',
@@ -85,6 +93,7 @@ export const FAMILIES: FlipFamily[] = [
     // The vendor recipe says only "random", so the same type can come back.
     methods: [vendor3(false), harvest('Vivid')],
     weights: CATALYST_WEIGHTS,
+    sourceShort: 'PoeData 3.25',
     rareShare: null,
     source: 'Weights: PoeData.dev, 6 datasets, version 3.25.'
   },
@@ -96,6 +105,8 @@ export const FAMILIES: FlipFamily[] = [
     match: name => name.endsWith(' Delirium Orb'),
     methods: [harvest('Primal')],
     weights: DELIRIUM_WEIGHTS,
+    sourceShort: 'PoeData 3.22',
+    estimateMissing: true,
     rareShare: null,
     source: 'Weights: PoeData.dev, 5 datasets, version 3.22.'
   },
@@ -107,6 +118,7 @@ export const FAMILIES: FlipFamily[] = [
     match: name => name.endsWith(' Fossil'),
     methods: [harvest('Wild')],
     weights: FOSSIL_WEIGHTS,
+    sourceShort: 'PoeData 3.19',
     rareShare: 0.005,
     source: 'Weights: PoeData.dev, 9 datasets, version 3.19.'
   },
@@ -119,6 +131,8 @@ export const FAMILIES: FlipFamily[] = [
     methods: [harvest('Primal'), upgrade],
     pool: name => name.startsWith('Deafening '),
     weights: ESSENCE_WEIGHTS,
+    sourceShort: 'PoeData 3.20',
+    estimated: ['Deafening Essence of Doubt'],
     rareShare: null,
     chains: ESSENCE_TYPES.map(type => ESSENCE_TIERS.map(tier => `${tier} Essence of ${type}`)),
     source: 'Rerolls keep the tier, so only Deafening is priced. Weights: PoeData.dev, 1 dataset, version 3.20. That sample rerolled Doubt, so Doubt uses the average weight.'
@@ -142,6 +156,8 @@ export const FAMILIES: FlipFamily[] = [
     match: name => name.startsWith('Runegraft of '),
     methods: [vendor3(false)],
     weights: RUNEGRAFT_WEIGHTS,
+    sourceShort: 'PoeData 3.27',
+    estimateMissing: true,
     rareShare: null,
     source: 'Weights: PoeData.dev, 1 dataset, version 3.27.',
     lowConfidence: 'Low confidence: thin trading, one sample, and much of the average rests on a few very expensive results.'
@@ -168,17 +184,33 @@ export function harvestCost (method: FlipMethod, lifeforcePerItem: number, items
   return chaos ? chaos * Math.max(0, lifeforcePerItem) : null
 }
 
-export function flipRecipe (family: FlipFamily, method: FlipMethod, cost: number): FlipRecipe {
-  const weights = family.weights
+// Your own weights, by family and item name. 0: it never comes up.
+export type WeightOverrides = Record<string, Record<string, number>>
+
+function measuredWeight (family: FlipFamily, name: string): ItemWeight | null {
+  if (family.weightOf) return family.weightOf(name)
+  const weight = family.weights?.[name]
+  if (weight == null) return null
+  return { weight, source: family.estimated?.includes(name) ? 'estimate' : 'sample' }
+}
+
+function ownWeight (own: Record<string, number> | undefined, name: string): number | null {
+  const weight = own?.[name]
+  return typeof weight === 'number' && Number.isFinite(weight) && weight >= 0 ? weight : null
+}
+
+export function flipRecipe (family: FlipFamily, method: FlipMethod, cost: number, own?: Record<string, number>): FlipRecipe {
   return {
     inputs: method.inputs,
     cost,
     excludeInput: method.excludeInput,
     rareShare: family.rareShare,
-    weightOf: family.weightOf ?? (name => {
-      const weight = weights?.[name]
-      return weight ? { weight, source: 'sample' } : null
-    })
+    estimateMissing: family.estimateMissing,
+    listedOf: name => measuredWeight(family, name),
+    weightOf: (name) => {
+      const weight = ownWeight(own, name)
+      return weight != null ? { weight, source: 'yours' } : measuredWeight(family, name)
+    }
   }
 }
 
@@ -199,7 +231,8 @@ export function priceFlip (
   items: PriceItem[],
   exchanges: Exchanges,
   options: FlipOptions,
-  lifeforcePerItem: number
+  lifeforcePerItem: number,
+  weights?: WeightOverrides
 ): FlipResult | null {
   const all = familyQuotes(items, family.ninjaType, family.match, exchanges.get(family.ninjaType) ?? null)
   if (!all.size) return null
@@ -210,7 +243,7 @@ export function priceFlip (
   if (!quotes.size) return { kind: 'no-pool' }
   const cost = harvestCost(method, lifeforcePerItem, items, exchanges.get('Currency') ?? null)
   if (cost == null) return { kind: 'no-cost' }
-  return { kind: 'pool', model: flipModel(quotes, options, flipRecipe(family, method, cost)), quotes, cost }
+  return { kind: 'pool', model: flipModel(quotes, options, flipRecipe(family, method, cost, weights?.[family.id])), quotes, cost }
 }
 
 export interface BestFlip {
@@ -227,7 +260,7 @@ export interface BestFlip {
 // The flip with the biggest supply of profit, for the dock card. Without volume
 // a flip ranks by its profit per item, below any flip that has volume. Low-confidence
 // families stay out.
-export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: FlipOptions, lifeforcePerItem: number): BestFlip | null {
+export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: FlipOptions, lifeforcePerItem: number, weights?: WeightOverrides): BestFlip | null {
   let best: BestFlip | null = null
   const beats = (a: BestFlip, b: BestFlip) => {
     if ((a.profitPerDay != null) !== (b.profitPerDay != null)) return a.profitPerDay != null
@@ -236,7 +269,7 @@ export function bestFlip (items: PriceItem[], exchanges: Exchanges, options: Fli
   for (const family of FAMILIES) {
     if (family.lowConfidence) continue
     for (const method of family.methods) {
-      const flip = priceFlip(family, method, items, exchanges, options, lifeforcePerItem)
+      const flip = priceFlip(family, method, items, exchanges, options, lifeforcePerItem, weights)
       if (flip?.kind !== 'pool' && flip?.kind !== 'upgrade') continue
       const rows = flip.kind === 'pool' ? flip.model.rows : flip.rows
       const top = buyList<FlipRow | UpgradeRow>(rows, true)[0]
@@ -259,4 +292,38 @@ export function unpricedShare (family: FlipFamily, priced: Map<string, Quote>): 
     if (!priced.has(name)) missing += weight
   }
   return total ? missing / total : 0
+}
+
+export interface WeightRow {
+  name: string
+  // Null: no weight, so it sits out of the flip.
+  percent: number | null
+  source: WeightSource | null
+}
+
+// A family's items with the weight each one flips with. Null: it sits out.
+function familyWeights (family: FlipFamily, names: string[], own?: Record<string, number>) {
+  const recipe = flipRecipe(family, family.methods[0], 0, own)
+  const live = names.filter(name => family.match(name) && (!family.pool || family.pool(name))).sort((a, b) => a.localeCompare(b, 'en'))
+  const known = live.map(name => ({ name, found: recipe.weightOf(name) }))
+  const rated = known.flatMap(k => k.found ? [k.name] : [])
+  const average = family.estimateMissing && rated.length ? averageWeight(rated, recipe) : null
+  return known.map(({ name, found }) => ({
+    name,
+    weight: found?.weight ?? average,
+    source: found?.source ?? (average != null ? 'estimate' as const : null)
+  }))
+}
+
+// What the Settings list shows: each item as a share of the results.
+export function weightRows (family: FlipFamily, names: string[], own?: Record<string, number>): WeightRow[] {
+  const items = familyWeights(family, names, own)
+  const total = items.reduce((n, i) => n + (i.weight ?? 0), 0)
+  return items.map(({ name, weight, source }) => ({ name, source, percent: weight != null && total > 0 ? weight / total * 100 : null }))
+}
+
+// The weight that makes `name` this share of the results, under 100%, the rest staying as they are.
+export function weightForPercent (family: FlipFamily, names: string[], own: Record<string, number> | undefined, name: string, percent: number): number {
+  const others = familyWeights(family, names, own).reduce((n, i) => n + (i.name === name ? 0 : i.weight ?? 0), 0)
+  return percent * others / (100 - percent)
 }
