@@ -212,6 +212,8 @@ test('search: any price, now and a week ago', async ({ overlay }) => {
   await backdrop(overlay, 'frames/hideout.jpg')
   const { panel, palette } = await searchFor(overlay, 'mageblood', /Mageblood/)
   await expect(panel.getByText('Trade site')).toBeVisible()
+  // First shot of a run, so the item art is still on its way from the CDN.
+  await expect.poll(() => palette.locator('img').evaluateAll(imgs => imgs.length > 0 && imgs.every(i => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)), { timeout: 20_000 }).toBe(true)
   await overlay.page.mouse.move(1900, 1060)
   await saveAround(overlay, 'hl-search-price', [palette], 1240)
 })
