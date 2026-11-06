@@ -57,6 +57,9 @@ async function showGame (overlay: Overlay, fixture: string, backdrop: string) {
 // Saves the page, or a 16:9 part of it to zoom in on, as a 1600x900 webp
 // encoded by the page's own canvas.
 async function save (overlay: Overlay, name: string, clip?: { x: number, y: number, width?: number, height?: number }) {
+  // Tests sharing the machine can trip the app's port notice: not for the picture.
+  const notice = overlay.page.getByRole('button', { name: 'Dismiss' })
+  if (await notice.count()) await notice.first().click()
   await overlay.page.waitForTimeout(400)
   // Item art from web.poecdn that didn't load (offline) would show as broken.
   await overlay.page.evaluate(() => {
@@ -142,7 +145,7 @@ test('tour: market movers, with the item under the cursor', async ({ overlay }) 
     watchlist: rows.map(([type, name, variant]) => ({ type, name, variant }))
   }, { wmType: 'woke-scarab-flip', wmWants: 'show' }], true)
   await closeRail(overlay, 'Market')
-  await showGame(overlay, 'screens/essence-real-20.png', 'screenshot-0020.jpg')
+  await showGame(overlay, 'screens/essence-real-20.png', '../frames/town.jpg')
   const panel = overlay.widget('woke-market-tracker')
   const scarabs = overlay.widget('woke-scarab-flip')
   await expect(scarabs.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
@@ -174,7 +177,7 @@ async function openFilter (overlay: Overlay, folder: string, hideUniques: boolea
   await closeRail(overlay, 'Loot filter')
   const icon = overlay.widget('menu').getByRole('button', { name: 'Loot filter', exact: true })
   if (!/open/.test(await icon.getAttribute('class') ?? '')) await icon.click()
-  await showGame(overlay, 'screens/essence-real-26.png', 'screenshot-0026.jpg')
+  await showGame(overlay, 'screens/essence-real-26.png', '../frames/town.jpg')
 }
 
 for (const [tab, name, ready] of [
@@ -217,7 +220,7 @@ test('tour: boss runs, every boss priced by its drops', async ({ overlay }) => {
     customPrices: {}
   }], true)
   await closeRail(overlay)
-  await showGame(overlay, 'screens/essence-real-17.png', 'screenshot-0012.jpg')
+  await showGame(overlay, 'screens/essence-real-17.png', '../frames/town.jpg')
   await overlay.log(area('MapAtziri2', 80, 'The Alluring Abyss'))
   const panel = overlay.widget('woke-boss-runs')
   await panel.getByText('Uber Atziri', { exact: true }).first().click()

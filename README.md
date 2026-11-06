@@ -21,7 +21,7 @@ Every listing beside yours, stat by stat, and each listing's tiers and rolls on 
 Alt+F on an item goes to its rule. Edit any tier in the game and it reloads.
 
 <p>
-  <img src="docs/public/shots/hl-filter-item.webp" width="49%" alt="The filter rule card for a hovered Divine Orb">
+  <img src="docs/public/shots/hl-filter-item.webp" width="49%" alt="Rare boots on the ground beside their filter rule card">
   <img src="docs/public/shots/tour-filter-rules.webp" width="49%" alt="Loot filter editor with game-styled tiers">
 </p>
 

@@ -22,7 +22,7 @@ export const HIGHLIGHTS = [
     name: 'Loot Filter',
     tag: 'Fix it mid-map',
     slides: [
-      { label: 'Alt+F on an item', module: 'loot-filter', shot: 'hl-filter-item', text: 'Hover any drop, press Alt+F, and you are on its rule. Hide it, re-tier it or restyle it.', alt: 'The filter rule card for a hovered Divine Orb, with its tier and look' },
+      { label: 'Alt+F on an item', module: 'loot-filter', shot: 'hl-filter-item', text: 'Hover any drop, press Alt+F, and you are on its rule. Hide it, re-tier it or restyle it.', alt: 'A pair of rare boots on the ground, beside the filter rule card for them with its tier and look' },
       { label: 'The editor', module: 'loot-filter', shot: 'tour-filter-rules', text: 'Every tier styled as it drops. Save, and it reloads in game.', alt: 'Loot filter editor: the currency tiers with their game-styled labels' },
       { label: 'Safety net', module: 'loot-filter', shot: 'tour-filter-prices', text: 'Today\'s prices re-tier your filter, and a safety net shows anything valuable it would hide.', alt: 'Loot filter prices tab: a hidden Headhunter caught by the safety net' }
     ]

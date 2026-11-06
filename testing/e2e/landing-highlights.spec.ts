@@ -7,6 +7,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import zlib from 'zlib'
 import { fileURLToPath } from 'url'
 import type { Locator, Page } from '@playwright/test'
 import { test, expect, FIXTURES, logFixture } from './harness'
@@ -17,14 +18,14 @@ const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-ra
 
 test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
 
-async function backdrop (overlay: Overlay, file: string) {
+async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
   const data = fs.readFileSync(path.join(FIXTURES, 'screens', file)).toString('base64')
   const type = file.endsWith('.png') ? 'image/png' : 'image/jpeg'
-  await overlay.page.evaluate((url) => {
+  await overlay.page.evaluate(([url, place]) => {
     const root = document.documentElement
     root.style.minHeight = '100vh'
-    root.style.background = `#000 url(${url}) center / cover no-repeat`
-  }, `data:${type};base64,${data}`)
+    root.style.background = `#000 url(${url}) ${place} no-repeat`
+  }, [`data:${type};base64,${data}`, place])
 }
 
 // A 16:9 window of the 1920x1080 page around these elements, as large as they
@@ -66,25 +67,6 @@ async function writeWebp (from: Page, name: string, png: Buffer) {
   await page.close()
   fs.mkdirSync(OUT, { recursive: true })
   fs.writeFileSync(path.join(OUT, `${name}.webp`), Buffer.from(webp.split(',')[1], 'base64'))
-}
-
-// The stash fixture is black beside the stash: draw its left part over a game frame.
-async function stashOverGame (overlay: Overlay) {
-  const b64 = (f: string) => fs.readFileSync(path.join(FIXTURES, 'screens', f)).toString('base64')
-  await overlay.page.evaluate(async ([stash, game]) => {
-    const load = async (src: string) => { const i = new Image(); i.src = src; await i.decode(); return i }
-    const [s, g] = await Promise.all([load(stash), load(game)])
-    const c = document.createElement('canvas')
-    c.width = s.width
-    c.height = s.height
-    const ctx = c.getContext('2d')!
-    ctx.drawImage(g, 0, 0, c.width, c.height)
-    const edge = Math.round(s.width * 0.34)
-    ctx.drawImage(s, 0, 0, edge, s.height, 0, 0, edge, s.height)
-    const root = document.documentElement
-    root.style.minHeight = '100vh'
-    root.style.background = `#000 url(${c.toDataURL('image/jpeg', 0.92)}) center / cover no-repeat`
-  }, [`data:image/png;base64,${b64('stash-scarab-real.png')}`, `data:image/jpeg;base64,${b64('landing/screenshot-0020.jpg')}`])
 }
 
 const area = (id: string, level = 83) => `2026/11/05 20:49:09 18884906 1186a8a3 [DEBUG Client 34092] Generating level ${level} area "${id}" with seed 1`
@@ -172,7 +154,7 @@ async function tierListings (page: Page) {
 test('price check: competing listings, each stat against yours', async ({ overlay }) => {
   await statListings(overlay.page)
   await overlay.boot()
-  await backdrop(overlay, 'landing/screenshot-0017.jpg')
+  await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   await panel.getByRole('button', { name: 'Search' }).click()
@@ -185,7 +167,7 @@ test('price check: competing listings, each stat against yours', async ({ overla
 test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) => {
   await tierListings(overlay.page)
   await overlay.boot()
-  await backdrop(overlay, 'landing/screenshot-0017.jpg')
+  await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   await panel.getByRole('button', { name: 'Search' }).click()
@@ -198,16 +180,19 @@ test('price check: a listing\'s tooltip, tiers and rolls', async ({ overlay }) =
 
 // ---- 2. Loot filter ----
 
+const BOOTS = ['Item Class: Boots', 'Rarity: Rare', 'Sol League', 'Wyvernscale Boots', '--------', 'Armour: 80', 'Evasion Rating: 80', '--------', 'Requirements:', 'Level: 62', '--------', 'Item Level: 83', '--------', '+40 to maximum Life'].join('\n')
+
 const lootFilter = (folder: string) => ({ wmType: 'woke-loot-filter', wmFlags: ['invisible-on-blur'], sampleHotkey: 'Alt + F', editorHotkey: 'Alt + Shift + F', folder, sourceName: 'NeverSink.filter' })
 
 test('filter: Alt+F from the item to its rule', async ({ overlay, fakeApp }) => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
   try {
-    fs.copyFileSync(path.join(FIXTURES, 'filters', 'neversink-sample.filter'), path.join(folder, 'NeverSink.filter'))
+    fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
     await overlay.boot({ widgets: [lootFilter(folder)] })
-    await backdrop(overlay, 'landing/screenshot-0026.jpg')
+    // Zoomed and moved so the card doesn't cover the label on the ground.
+    await backdrop(overlay, 'frames/item-on-ground.jpg', '-540px -140px / 125%')
     await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
-    await overlay.copyItem('items/currency-divine.txt', 'Alt + F')
+    await overlay.copyItem(BOOTS, 'Alt + F')
     const card = overlay.page.getByText('Filter rule for this item')
     await expect(card).toBeVisible()
     await saveAround(overlay, 'hl-filter-item', [overlay.page.locator('[data-w-panel]').filter({ has: card })], 1120)
@@ -233,7 +218,7 @@ async function openBuild (overlay: Overlay) {
       followChars: {}
     }]
   })
-  await backdrop(overlay, 'landing/screenshot-0026.jpg')
+  await backdrop(overlay, 'frames/town.jpg')
   await overlay.widget('woke-pob-builds').getByText('Showcase', { exact: false }).first().click()
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
   await expect(detail.getByRole('tab', { name: 'Gear' })).toBeVisible()
@@ -260,7 +245,7 @@ test('pob: gems by level', async ({ overlay }) => {
 
 test('market: the flips window', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
-  await backdrop(overlay, 'landing/screenshot-0020.jpg')
+  await backdrop(overlay, 'frames/town.jpg')
   const panel = overlay.widget('woke-scarab-flip')
   await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
@@ -270,41 +255,31 @@ test('market: the flips window', async ({ overlay }) => {
 test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
   await overlay.showScreen('screens/stash-scarab-real.png')
-  await stashOverGame(overlay)
+  await backdrop(overlay, 'frames/stash-scarabs.jpg')
   await overlay.pressHotkey('Alt + J')
   const layer = overlay.page.locator('[data-stash-outlines]')
   await expect(layer).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
   await overlay.page.waitForTimeout(500)
-  await writeWebp(overlay.page, 'hl-stash-outlines', await overlay.page.screenshot({ clip: { x: 0, y: 40, width: 1440, height: 810 } }))
+  await writeWebp(overlay.page, 'hl-stash-outlines', await overlay.page.screenshot({ clip: { x: 0, y: 0, width: 1440, height: 810 } }))
 })
 
 // ---- 5. On screen ----
 
-// The icon row low on the screen, over the calmest frame there is, a little
-// darker still so the card is what you read.
+// The icon row low on the screen, just above the skill bar.
 const lowDock = (config: { woke?: Record<string, unknown> }) => {
   config.woke = { ...config.woke, dock: { x: 20, y: 80, vertical: false, noPeek: [], hidden: [], dismissed: {} } }
 }
 
-async function calmFrame (overlay: Overlay) {
-  const jpg = fs.readFileSync(path.join(FIXTURES, 'screens/landing/screenshot-0010.jpg')).toString('base64')
-  await overlay.page.evaluate((url) => {
-    const root = document.documentElement
-    root.style.minHeight = '100vh'
-    root.style.background = `linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), #000 url(${url}) center / cover no-repeat`
-  }, `data:image/jpeg;base64,${jpg}`)
-}
-
 async function saveLow (overlay: Overlay, name: string) {
   await overlay.page.waitForTimeout(500)
-  await writeWebp(overlay.page, name, await overlay.page.screenshot({ clip: { x: 0, y: 135, width: 1360, height: 765 } }))
+  await writeWebp(overlay.page, name, await overlay.page.screenshot({ clip: { x: 0, y: 315, width: 1360, height: 765 } }))
 }
 
 test('on screen: trade offers waiting', async ({ overlay }) => {
   const lines = logFixture('client-logs/trade-hideout.txt')
   await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-trade', stepHotkey: 'F3', busyHotkey: 'F4', ping: false }] })
-  await calmFrame(overlay)
+  await backdrop(overlay, 'frames/hideout.jpg')
   await overlay.log(lines.slice(0, lines.findIndex(l => l.includes('#Spammer')) + 1))
   await overlay.hoverDockIcon('trade')
   await expect(overlay.dockIcon('trade')).toContainText('xXLeagueStartXx', { timeout: 5000 })
@@ -328,7 +303,7 @@ test('on screen: the Expedition card knows who is here', async ({ overlay }) => 
     body: recorded.replace(/\[\s*\{"type":"/, () => `[${artifacts},{"type":"`)
   }))
   await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-mechanics' }] })
-  await calmFrame(overlay)
+  await backdrop(overlay, 'frames/cave-fight.jpg')
   await overlay.log([area('ExpeditionBattlegroundGraves'), '2026/11/05 20:49:11 18887484 cffb065b [INFO Client 34092] Tujen, the Haggler: Oi! Over here!'])
   await expect(overlay.dockIcon('mechanics')).toBeVisible({ timeout: 20_000 })
   await expect(async () => {
@@ -341,12 +316,13 @@ test('on screen: the Expedition card knows who is here', async ({ overlay }) => 
 test('on screen: the campaign chip and its card', async ({ overlay }) => {
   const pins = ['level', 'run', 'delta', 'step']
   await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-campaign', wmWants: 'show', pins }, { wmType: 'woke-run-timer', wmWants: 'show' }] })
-  await calmFrame(overlay)
-  await overlay.replayLog('client-logs/campaign-act1.txt')
+  await backdrop(overlay, 'frames/submerged-passage.jpg')
+  const log = logFixture('client-logs/campaign-act1.txt')
+  await overlay.log(log.slice(0, log.findIndex(l => l.includes('You have entered The Submerged Passage')) + 1))
   const icon = overlay.dockIcon('campaign')
-  await expect(icon).toContainText('Lv 13')
+  await expect(icon).toBeVisible({ timeout: 20_000 })
   await overlay.hoverDockIcon('campaign')
-  await expect(icon).toContainText('The Southern Forest')
+  await expect(icon).toContainText('The Submerged Passage')
   await saveLow(overlay, 'hl-campaign')
 })
 
@@ -356,7 +332,7 @@ test('on screen: today\'s lab stays one hover away', async ({ overlay }) => {
   await overlay.page.route(IMG, route => route.fulfill({ contentType: 'image/jpeg', body: layout }))
   const LAB = { wmType: 'woke-lab', wmTitle: 'Labyrinth', wmWants: 'show' as const, wmFlags: ['invisible-on-blur'], anchor: { pos: 'tl', x: 10, y: 10 }, urls: { normal: '', cruel: '', merciless: '', uber: '' }, defaultDifficulty: 'normal', hotkeyOverlay: 'Ctrl + Alt + L', hotkeyExternal: null, notes: '' }
   await overlay.boot({ patch: lowDock, overlayActive: true, widgets: [LAB] })
-  await calmFrame(overlay)
+  await backdrop(overlay, 'frames/plaza.jpg')
   await overlay.widget('woke-lab').getByText('Normal', { exact: true }).click()
   await overlay.page.locator('webview').evaluate((el, src) => {
     (el as unknown as { executeJavaScript: () => Promise<string> }).executeJavaScript = async () => src
@@ -388,7 +364,7 @@ test('on screen: challenges, your count and what is next', async ({ overlay }) =
       summary: { done: 23, total: 40, next: [{ n: 24, name: 'Stacked Scarabs' }, { n: 25, name: 'Corrupted Crystals' }, { n: 26, name: 'Cross Contamination' }] }
     } as never]
   })
-  await calmFrame(overlay)
+  await backdrop(overlay, 'frames/town.jpg')
   await expect(overlay.dockIcon('challenges')).toBeVisible({ timeout: 20_000 })
   await overlay.hoverDockIcon('challenges')
   await saveLow(overlay, 'hl-challenges')
@@ -403,7 +379,7 @@ test('market: Divine Font gem values', async ({ overlay }) => {
   const body = await live.text()
   await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-lab-gems', wmTitle: 'Lab gems', wmFlags: ['uninitialized'], anchor: { pos: 'tl', x: 40, y: 30 } }] })
-  await backdrop(overlay, 'landing/screenshot-0017.jpg')
+  await backdrop(overlay, 'frames/town.jpg')
   const w = overlay.widget('woke-lab-gems')
   await expect(w.getByText('Red pool').locator('..')).not.toContainText('EV 0 c', { timeout: 15_000 })
   await overlay.page.mouse.move(1800, 1000)
@@ -412,14 +388,14 @@ test('market: Divine Font gem values', async ({ overlay }) => {
 
 test('regex: the maker writes the stash search', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-map-mods', wmWants: 'show', anchor: { pos: 'tl', x: 4, y: 12 } }] })
-  await backdrop(overlay, 'landing/screenshot-0007.jpg')
+  await backdrop(overlay, 'frames/stash-maps.jpg')
   await overlay.page.mouse.move(1800, 1000)
   await saveAround(overlay, 'hl-regex-maker', [overlay.widget('woke-map-mods').locator('[data-w-panel]')], 1280)
 })
 
 test('regex: the clipboard of saved searches', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-regex-library', wmWants: 'show', anchor: { pos: 'tl', x: 4, y: 12 } }] })
-  await backdrop(overlay, 'landing/screenshot-0020.jpg')
+  await backdrop(overlay, 'frames/stash-maps.jpg')
   const panel = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Regex library' }).last()
   await expect(panel).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
