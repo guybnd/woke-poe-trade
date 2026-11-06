@@ -12,6 +12,16 @@ const shot = (name) => withBase(`/shots/${name}.webp`)
 
 const shown = reactive({})
 const current = (h) => shown[h.id] ?? 0
+// A plate can be a folder, like one in the stash: picking it opens a row of its
+// own plates under the others. It remembers which of them was open.
+const inner = reactive({})
+const innerAt = (key) => inner[key] ?? 0
+const open = (h) => h.slides[current(h)]
+const folderKey = (h) => `${h.id}/${current(h)}`
+// What is on show: the plate's slide, or the open one in its folder.
+const slide = (h) => open(h).folder ? open(h).folder[innerAt(folderKey(h))] : open(h)
+// Every picture a highlight can show, folders included, for the stage.
+const pictures = (h) => h.slides.flatMap(s => s.folder ?? [s])
 
 const withSlide = new Set(HIGHLIGHTS.flatMap(h => h.slides.map(s => s.module)))
 const more = MODULES.filter(m => !withSlide.has(m.id))
@@ -31,7 +41,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
     <main>
       <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
-        <div class="item">
+        <div class="item" :class="{ 'with-tray': open(h).folder }">
           <div class="head">
             <i aria-hidden="true"></i>
             <div>
@@ -42,17 +52,26 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
           </div>
           <div class="plates" role="group" :aria-label="`${h.name} slides`">
             <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="plate"
-              :aria-pressed="i === current(h)" @click="shown[h.id] = i">
+              :class="{ folder: s.folder }" :aria-pressed="i === current(h)"
+              :aria-expanded="s.folder ? i === current(h) : undefined" @click="shown[h.id] = i">
+              <i aria-hidden="true"></i>
+              <span><b v-if="s.folder" class="folder-mark" aria-hidden="true"></b>{{ s.label }}<small v-if="s.folder" class="folder-count">{{ s.folder.length }}</small></span>
+              <i aria-hidden="true"></i>
+            </button>
+          </div>
+          <div v-if="open(h).folder" class="plates sub" role="group" :aria-label="open(h).label">
+            <button v-for="(s, j) in open(h).folder" :key="s.label" type="button" class="plate"
+              :aria-pressed="j === innerAt(folderKey(h))" @click="inner[folderKey(h)] = j">
               <i aria-hidden="true"></i>
               <span>{{ s.label }}</span>
               <i aria-hidden="true"></i>
             </button>
           </div>
           <div class="sep" aria-hidden="true"></div>
-          <p class="say" aria-live="polite">{{ h.slides[current(h)].text }}<button v-if="h.slides[current(h)].more" type="button" class="say-more" :aria-label="h.slides[current(h)].more">?<span class="say-card" aria-hidden="true">{{ h.slides[current(h)].more }}</span></button></p>
+          <p class="say" aria-live="polite">{{ slide(h).text }}<button v-if="slide(h).more" type="button" class="say-more" :aria-label="slide(h).more">?<span class="say-card" aria-hidden="true">{{ slide(h).more }}</span></button></p>
           <div class="stage">
-            <img v-for="(s, i) in h.slides" :key="s.shot" :src="shot(s.shot)" :alt="s.alt"
-              :class="{ on: i === current(h) }" :aria-hidden="i !== current(h)"
+            <img v-for="s in pictures(h)" :key="s.shot" :src="shot(s.shot)" :alt="s.alt"
+              :class="{ on: s === slide(h) }" :aria-hidden="s !== slide(h)"
               width="2560" height="1440" loading="lazy">
           </div>
         </div>
@@ -173,7 +192,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
    well under its real size, so it stays sharp. */
 .item {
   --chrome: 180px;
-  --h: min(720px, max(280px, calc(100vh - var(--chrome))));
+  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px))));
   display: flex;
   flex-direction: column;
   width: min(calc(var(--h) * 16 / 9), 100%);
@@ -188,6 +207,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 @media (max-width: 860px), (max-height: 680px) { .item { --chrome: 246px; } }
 /* And Path of Building's many plates to three rows. */
 @media (max-height: 600px) { .item { --chrome: 290px; } }
+/* An open folder's row of plates. */
+.item.with-tray { --tray: 44px; }
 .item.wide { width: min(1280px, 100%); }
 
 .head { display: flex; flex: none; height: 54px; }
@@ -219,6 +240,18 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .plate[aria-pressed='true'] i:first-child { background-image: url('../../../../renderer/public/images/item-frame/header-unique-left.png'); }
 .plate[aria-pressed='true'] i:last-child { background-image: url('../../../../renderer/public/images/item-frame/header-unique-right.png'); }
 .plate[aria-pressed='true'] span { background-image: url('../../../../renderer/public/images/item-frame/header-unique-middle.png'); }
+
+/* A folder plate: a small folder drawn before the name, the count after. */
+.folder-mark { position: relative; flex: none; width: 13px; height: 10px; margin: 2px 6px 0 2px; border: 1.5px solid currentColor; border-radius: 1px; }
+.folder-mark::before { content: ''; position: absolute; left: -1.5px; top: -4px; width: 5px; height: 2px; border: 1.5px solid currentColor; border-bottom: 0; border-radius: 1px 1px 0 0; }
+.folder-count { margin-left: 6px; font-size: 13px; color: var(--dim); }
+.plate[aria-pressed='true'] .folder-count { color: var(--unique); }
+/* Its row: smaller plates in a tray hung from the row above, like an open
+   stash folder. */
+.plates.sub { margin: 4px 14px 2px; padding: 5px 6px 4px; border: 1px solid #4a3218; border-top-color: var(--unique); background: linear-gradient(rgba(175, 96, 37, 0.12), transparent 70%); }
+.plates.sub .plate { height: 28px; font-size: 14.5px; }
+.plates.sub .plate i { width: 20px; background-size: auto 28px; }
+.plates.sub .plate span { background-size: auto 28px; }
 
 .sep { flex: none; height: 8px; background: url('../../../../renderer/public/images/item-frame/separator-unique.png') center no-repeat; }
 

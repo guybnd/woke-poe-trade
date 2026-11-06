@@ -507,6 +507,92 @@ test('on screen: the Expedition card knows who is here', async ({ overlay }) => 
   await saveLow(overlay, 'hl-expedition')
 })
 
+// The League mechanics folder on the landing page: one card per mechanic, in
+// its own zone, with prices put in here (a sample, like the Expedition card's).
+const FLAT7 = [0, 0, 0, 0, 0, 0, 0]
+const MECHANIC_PRICES: Record<string, Array<[string, number]>> = {
+  Currency: [
+    ['Vivid Crystallised Lifeforce', 0.09], ['Primal Crystallised Lifeforce', 0.07],
+    ['Wild Crystallised Lifeforce', 0.12], ['Sacred Crystallised Lifeforce', 38]
+  ],
+  Fossil: [
+    ['Fractured Fossil', 95], ['Faceted Fossil', 62], ['Glyphic Fossil', 14], ['Hollow Fossil', 9],
+    ['Bloodstained Fossil', 7], ['Sanctified Fossil', 6], ['Gilded Fossil', 4], ['Prismatic Fossil', 3],
+    ['Pristine Fossil', 2], ['Dense Fossil', 1]
+  ],
+  Resonator: [['Prime Chaotic Resonator', 28], ['Powerful Chaotic Resonator', 4], ['Potent Chaotic Resonator', 1]],
+  Oil: [
+    ['Tainted Oil', 160], ['Golden Oil', 75], ['Prismatic Oil', 9], ['Silver Oil', 7], ['Opalescent Oil', 4],
+    ['Black Oil', 2], ['Crimson Oil', 1.5], ['Violet Oil', 1], ['Indigo Oil', 0.8], ['Azure Oil', 0.5]
+  ],
+  DeliriumOrb: [
+    ['Kalguuran Delirium Orb', 32], ['Fine Delirium Orb', 18], ['Skittering Delirium Orb', 12], ['Diviner\'s Delirium Orb', 9],
+    ['Fossilised Delirium Orb', 7], ['Blighted Delirium Orb', 4], ['Whispering Delirium Orb', 3], ['Abyssal Delirium Orb', 2]
+  ],
+  Fragment: [['Simulacrum', 95], ['Simulacrum Splinter', 1.4]],
+  Omen: [
+    ['Omen of Fortune', 340], ['Omen of the Soul Devourer', 110], ['Omen of Death\'s Door', 45], ['Omen of the Jeweller', 30],
+    ['Omen of Connections', 18], ['Omen of Amelioration', 12], ['Omen of Return', 6], ['Omen of Refreshment', 3]
+  ],
+  Beast: [
+    ['Wild Brambleback', 120], ['Fenumal Plagued Arachnid', 22], ['Vivid Vulture', 8],
+    ['Black Mórrigan', 6], ['Saqawine Rhex', 4], ['Wild Hellion Alpha', 3]
+  ]
+}
+
+async function mechanicPrices (overlay: Overlay) {
+  const recorded = fs.readFileSync(path.join(FIXTURES, 'http/poe.ninja/poe1/api/economy/current/dense/overviews.json'), 'utf8')
+  const extra = Object.entries(MECHANIC_PRICES).map(([type, lines]) =>
+    JSON.stringify({ type, lines: lines.map(([name, chaos]) => ({ name, chaos, graph: FLAT7 })) })).join(',')
+  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: recorded.replace(/\[\s*\{"type":"/, () => `[${extra},{"type":"`)
+  }))
+}
+
+// In the zone, hovering the icon.
+const MECHANIC_CARDS: Array<{ shot: string, frame: string, lines: string[], see: RegExp }> = [
+  { shot: 'hl-mech-harvest', frame: 'frames/cave-fight.jpg', lines: [area('HarvestLeagueHub')], see: /Crystallised Lifeforce/ },
+  { shot: 'hl-mech-delve', frame: 'frames/cave-fight.jpg', lines: [area('Delve_Main')], see: /Fractured Fossil/ },
+  { shot: 'hl-mech-blight', frame: 'frames/submerged-passage.jpg', lines: [area('MapWorldsBlightedCity')], see: /Tainted Oil/ },
+  { shot: 'hl-mech-delirium', frame: 'frames/submerged-passage.jpg', lines: [area('AfflictionTown1')], see: /Delirium Orb/ },
+  {
+    shot: 'hl-mech-bestiary',
+    frame: 'frames/cave-fight.jpg',
+    lines: [area('MapWorldsCaveTest'), '2026/11/05 20:49:11 18887484 cffb065b [INFO Client 34092] Einhar, Beastmaster: Exile! You came to hunt with Einhar!'],
+    see: /Wild Brambleback/
+  }
+]
+
+for (const card of MECHANIC_CARDS) {
+  test(`on screen: League mechanics folder, ${card.shot}`, async ({ overlay }) => {
+    await mechanicPrices(overlay)
+    await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-mechanics' }] })
+    await backdrop(overlay, card.frame)
+    await overlay.log(card.lines)
+    await expect(overlay.dockIcon('mechanics')).toBeVisible({ timeout: 20_000 })
+    await expect(async () => {
+      await overlay.hoverDockIcon('mechanics')
+      await expect(overlay.page.getByText(card.see).first()).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20_000 })
+    await saveLow(overlay, card.shot)
+  })
+}
+
+// Ritual has no zone of its own, so the full window, as Betrayal.
+test('on screen: League mechanics folder, Ritual omens', async ({ overlay }) => {
+  await mechanicPrices(overlay)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-mechanics' }] })
+  await backdrop(overlay, 'frames/town.jpg')
+  const w = overlay.widget('woke-mechanics')
+  await overlay.widget('menu').getByRole('button', { name: 'All tools' }).click()
+  await overlay.page.getByRole('button', { name: /League mechanics/ }).first().click()
+  await w.getByRole('tab', { name: /ritual/i }).click()
+  await expect(w.getByText('Omen of Fortune').first()).toBeVisible()
+  await overlay.page.mouse.move(1800, 1000)
+  await saveAround(overlay, 'hl-mech-ritual', [w.locator('[data-w-panel]').first()], 1280)
+})
+
 test('on screen: the campaign chip and its card', async ({ overlay }) => {
   const pins = ['level', 'run', 'delta', 'step']
   await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-campaign', wmWants: 'show', pins }, { wmType: 'woke-run-timer', wmWants: 'show' }] })

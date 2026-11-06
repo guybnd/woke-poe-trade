@@ -62,8 +62,21 @@ export const HIGHLIGHTS = [
     tag: 'Only when it matters',
     slides: [
       { label: 'Trades', module: 'trade', shot: 'hl-trade', text: 'Whispers become cards with the stash spot. Invite, trade, thank and kick in a click.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' },
-      { label: 'League mechanics', module: 'mechanics', shot: 'hl-expedition', text: 'In Expedition, each vendor\'s currency priced, with whoever is here on top.', alt: 'Expedition card: Tujen is here, with Exotic Coinage and the other currencies priced' },
-      { label: 'Betrayal', module: 'mechanics', shot: 'hl-betrayal', text: 'Star the Syndicate slots you want, and it tells you who to move when you meet them.', alt: 'League mechanics window on Betrayal: each member and slot with its reward and price, some starred' },
+      {
+        label: 'League mechanics',
+        module: 'mechanics',
+        // A folder, like one in the stash: its own row of plates, one per mechanic.
+        folder: [
+          { label: 'Expedition', shot: 'hl-expedition', text: 'Each vendor\'s currency priced, with whoever is here on top.', alt: 'Expedition card: Tujen is here, with Exotic Coinage and the other currencies priced' },
+          { label: 'Betrayal', shot: 'hl-betrayal', text: 'Star the Syndicate slots you want, and it tells you who to move when you meet them.', alt: 'League mechanics window on Betrayal: each member and slot with its reward and price, some starred' },
+          { label: 'Harvest', shot: 'hl-mech-harvest', text: 'Which lifeforce colour to open, priced per 100.', alt: 'Harvest card: the three lifeforce colours priced per 100, Wild on top' },
+          { label: 'Delve', shot: 'hl-mech-delve', text: 'Fossils ranked by price, so you only detour for the ones on top.', alt: 'Delve card: Fractured, Faceted and Glyphic Fossil priced' },
+          { label: 'Blight', shot: 'hl-mech-blight', text: 'Every oil priced, top tier first.', alt: 'Blight card: Tainted, Golden and Prismatic Oil priced' },
+          { label: 'Delirium', shot: 'hl-mech-delirium', text: 'Delirium orbs ranked while the fog is up.', alt: 'Delirium card: Kalguuran, Fine and Skittering Delirium Orb priced' },
+          { label: 'Ritual', shot: 'hl-mech-ritual', text: 'Omens ranked by price, so you know which ones to defer for.', alt: 'League mechanics window on Ritual: omens ranked by price, Omen of Fortune on top' },
+          { label: 'Bestiary', shot: 'hl-mech-bestiary', text: 'When Einhar shows up, which beasts are worth catching.', alt: 'Bestiary card: Wild Brambleback, Fenumal Plagued Arachnid and Vivid Vulture priced' }
+        ]
+      },
       { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
       { label: 'Challenges', module: 'challenges', shot: 'hl-challenges', text: 'Your count and what is next, on one small icon.', alt: 'Challenges card under a small icon: 23 of 40 and the next three' },
       { label: 'Lab run', module: 'lab', shot: 'hl-lab', text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' },
