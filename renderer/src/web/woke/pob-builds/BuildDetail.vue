@@ -110,9 +110,9 @@
           </div>
         </template>
 
-        <template v-if="details.trees.length > 1">
+        <template v-if="trees.length > 1">
           <div :class="$style.heading">Passive trees</div>
-          <a v-for="t in details.trees" :key="t.title + t.url" :href="safeUrl(t.url)" target="_blank"
+          <a v-for="t in trees" :key="t.title + t.url" :href="safeUrl(t.url)" target="_blank"
             class="block w-trunc py-0.5 hover:underline" :class="t === loadout?.tree ? '' : 'w-dim'">
             <i class="fas fa-external-link-alt text-xs w-faint" /> {{ t.title }}<span v-if="t === loadout?.tree" class="w-accent"> · now</span>
           </a>
@@ -164,7 +164,7 @@ import { nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
   gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
-  relevantGems, skillSetsOf
+  realSets, relevantGems, skillSetsOf
 } from './build-model'
 import { hideTip } from '../ui/tooltip/tooltip'
 import { pobApi } from './widget'
@@ -320,8 +320,9 @@ const setChips = computed(() => {
   return rows
 })
 
+const trees = computed(() => realSets(props.details?.trees ?? []))
 const treeUrl = computed(() => {
-  const tree = loadout.value?.tree ?? props.details?.trees[0]
+  const tree = loadout.value?.tree ?? trees.value[0]
   return tree ? safeUrl(tree.url) : undefined
 })
 

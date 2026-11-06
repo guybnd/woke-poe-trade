@@ -182,8 +182,12 @@ async function refresh () {
   error.value = ''
   try {
     const res = await pobApi.list(props.config)
+    const before = selectedBuild.value?.mtime
     builds.value = res.builds
     dir.value = res.dir
+    // PoB saved the build you are looking at.
+    const now = selectedBuild.value
+    if (now && before != null && now.mtime !== before) loadDetails(now.relPath)
     // PoB may have saved the active build meanwhile.
     active.reload()
   } catch (err) {
@@ -198,8 +202,12 @@ function select (b: PobBuildEntry) {
   selected.value = selected.value === b.relPath ? null : b.relPath
 }
 
-watch(selected, async (relPath) => {
+watch(selected, (relPath) => {
   details.value = null
+  loadDetails(relPath)
+})
+
+async function loadDetails (relPath: string | null) {
   detailsError.value = ''
   if (!relPath) return
   try {
@@ -208,7 +216,7 @@ watch(selected, async (relPath) => {
   } catch (err) {
     if (selected.value === relPath) detailsError.value = (err as Error).message
   }
-})
+}
 
 // Reload when the folder changes, and whenever the widget is shown, so
 // builds saved in PoB meanwhile appear.

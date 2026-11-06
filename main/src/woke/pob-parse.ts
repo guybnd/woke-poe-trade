@@ -30,12 +30,15 @@ export interface PobTreeSpec {
   title: string
   url: string
   isActive: boolean
+  // Holds nothing: a heading such as "~~~ ENDGAME ~~~" between real sets.
+  divider?: boolean
 }
 
 export interface PobSkillSet {
   title: string
   isActive: boolean
   groups: PobSkillGroup[]
+  divider?: boolean
 }
 
 export type PobRarity = 'NORMAL' | 'MAGIC' | 'RARE' | 'UNIQUE' | 'RELIC' | ''
@@ -76,6 +79,7 @@ export interface PobItemSet {
   title: string
   isActive: boolean
   slots: PobItemSlot[]
+  divider?: boolean
 }
 
 export interface PobDetails extends PobSummary {
@@ -107,6 +111,13 @@ export function decodeEntities (s: string): string {
     .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, n: string) => String.fromCodePoint(parseInt(n, 16)))
     .replace(/&amp;/g, '&')
+}
+
+const COLOUR_CODE = /\^x[0-9a-fA-F]{6}|\^\d/g
+
+// Set titles may carry PoB's colour codes (^2, ^xFFFFFF).
+function plainTitle (title: string | undefined): string {
+  return (title ?? '').replace(COLOUR_CODE, '').trim()
 }
 
 function num (value: string | undefined): number | null {
@@ -156,10 +167,12 @@ function parseSkillSets (xml: string, mainSocketGroup: number | null): PobSkillS
     i++
     const a = attrs(m[1])
     const isActive = activeSet ? a.id === activeSet : i === 1
+    const groups = parseGroups(m[2] ?? '', isActive ? mainSocketGroup : null)
     sets.push({
-      title: a.title || `Skill set ${i}`,
+      title: plainTitle(a.title) || `Skill set ${i}`,
       isActive,
-      groups: parseGroups(m[2] ?? '', isActive ? mainSocketGroup : null)
+      groups,
+      ...(groups.some(g => g.gems.length) ? {} : { divider: true })
     })
   }
   if (!sets.length) sets.push({ title: 'Default', isActive: true, groups: parseGroups(body, mainSocketGroup) })
@@ -178,7 +191,9 @@ function parseTrees (xml: string): PobTreeSpec[] {
     const a = attrs(m[1])
     const urlMatch = /<URL>\s*([\s\S]*?)\s*<\/URL>/.exec(m[2] ?? '')
     const url = urlMatch ? decodeEntities(urlMatch[1].trim()) : ''
-    out.push({ title: a.title || `Tree ${i}`, url, isActive: active === i })
+    // A class start, or next to it, with no points spent.
+    const empty = (a.nodes ?? '').split(',').filter(Boolean).length <= 2
+    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, ...(empty ? { divider: true } : {}) })
   }
   // No (or a stale) activeSpec: PoB opens the first tree.
   if (out.length && !out.some(t => t.isActive)) out[0].isActive = true
@@ -283,7 +298,13 @@ function parseItemSets (xml: string): PobItemSet[] {
   for (const m of block[2].matchAll(/<ItemSet\b([^>]*?)(?:\/>|>([\s\S]*?)<\/ItemSet>)/g)) {
     i++
     const a = attrs(m[1])
-    sets.push({ title: a.title || `Item set ${i}`, isActive: active ? a.id === active : i === 1, slots: slotsOf(m[2] ?? '') })
+    const slots = slotsOf(m[2] ?? '')
+    sets.push({
+      title: plainTitle(a.title) || `Item set ${i}`,
+      isActive: active ? a.id === active : i === 1,
+      slots,
+      ...(slots.length ? {} : { divider: true })
+    })
   }
   if (!sets.length) {
     const outside = block[2].replace(/<Item\b[\s\S]*?<\/Item>/g, '')
@@ -312,7 +333,7 @@ export function parseBuild (xml: string): PobDetails {
     level: num(b.level),
     mainSkill: mainSkillName(skills),
     // PoB colour codes like ^7 or ^xFFFFFF are stripped.
-    notes: notesMatch ? decodeEntities(notesMatch[1]).replace(/\^x[0-9a-fA-F]{6}|\^\d/g, '').trim() : '',
+    notes: notesMatch ? decodeEntities(notesMatch[1]).replace(COLOUR_CODE, '').trim() : '',
     notesRaw: notesMatch ? decodeEntities(notesMatch[1]).trim() : '',
     skills,
     skillSets,

@@ -68,12 +68,15 @@ export interface PobTreeSpec {
   title: string
   url: string
   isActive: boolean
+  // Holds nothing: a heading such as "~~~ ENDGAME ~~~" between real sets.
+  divider?: boolean
 }
 
 export interface PobSkillSet {
   title: string
   isActive: boolean
   groups: PobSkillGroup[]
+  divider?: boolean
 }
 
 export type PobRarity = 'NORMAL' | 'MAGIC' | 'RARE' | 'UNIQUE' | 'RELIC' | ''
@@ -103,6 +106,7 @@ export interface PobItemSet {
   title: string
   isActive: boolean
   slots: Array<{ slot: string, item: PobItem }>
+  divider?: boolean
 }
 
 export interface PobDetails {

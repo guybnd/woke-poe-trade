@@ -6,6 +6,7 @@ import { AppConfig } from '@/web/Config'
 import { isWidgetTypeOn } from '../modules'
 import { CAMPAIGN_TYPE } from '../campaign/widget'
 import type { CampaignWidget } from '../campaign/widget'
+import { Host } from '@/web/background/IPC'
 import { reportProblem } from '../dock/health'
 import { POB_BUILDS_TYPE, pobApi } from './widget'
 import type { PobBuildsWidget, PobDetails } from './widget'
@@ -36,11 +37,13 @@ export const useActiveBuild = createGlobalState(() => {
   })
 
   watch([relPath, version], async ([path]) => {
-    error.value = ''
-    if (!path || !pobWidget.value) { details.value = null; return }
+    if (!path || !pobWidget.value) { details.value = null; error.value = ''; return }
     try {
       const d = await pobApi.read(pobWidget.value, path)
-      if (relPath.value === path) details.value = d
+      if (relPath.value !== path) return
+      error.value = ''
+      // An unchanged file keeps its object, so nothing that reads it recalculates.
+      if (JSON.stringify(d) !== JSON.stringify(details.value)) details.value = d
     } catch (err) {
       // A build you already switched away from failing doesn't matter.
       if (relPath.value !== path) return
@@ -49,6 +52,10 @@ export const useActiveBuild = createGlobalState(() => {
       error.value = (err as Error).message
     }
   }, { immediate: true })
+
+  // PoB may have saved it since: read again whenever it is about to matter.
+  Host.onEvent('MAIN->OVERLAY::focus-change', (state) => { if (state.overlay) version.value++ })
+  Host.onEvent('MAIN->CLIENT::item-text', () => { version.value++ })
 
   return {
     pobWidget,

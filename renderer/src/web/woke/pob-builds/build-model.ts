@@ -14,7 +14,9 @@ export interface Stage { kind: 'act' | 'level', at: number }
 // with "Level N" titles.
 const ACT_START_LEVEL = [0, 1, 13, 23, 33, 40, 45, 50, 55, 61, 64]
 
-export function stageOf (title: string): Stage | null {
+export function stageOf (rawTitle: string): Stage | null {
+  // "{3}" is the guide's item variant note, not a level.
+  const title = rawTitle.replace(/\{[^}]*\}/g, ' ')
   const act = /\b(?:act|a)\s*(\d{1,2})\b/i.exec(title)
   if (act) {
     const n = Number(act[1])
@@ -23,11 +25,13 @@ export function stageOf (title: string): Stage | null {
   const inRange = (n: number) => n >= 1 && n <= 100
   const named = /\b(?:level|lvl|lv)\.?\s*(\d{1,3})/i.exec(title)
   if (named && inRange(Number(named[1]))) return { kind: 'level', at: Number(named[1]) }
-  if (/\bend\s*game|\bmaps?(?![a-z])|\bmapping|\bfinal(?![a-z])|\blate(?:game|maps?)?(?![a-z])/i.test(title)) return { kind: 'level', at: 70 }
-  // A bare number, but not "6L"/"5 link", "T16" or "20%": those aren't levels.
-  // The \d stops "20%" from backing off to a "2" followed by "0%".
-  const bare = /(?<![\w.])(\d{1,3})(?!\d|\s*(?:l\b|links?\b|-?link|%|\.\d))/i.exec(title)
-  if (bare && !/\bt(?:ier)?\s*$/i.test(title.slice(0, bare.index)) && inRange(Number(bare[1]))) return { kind: 'level', at: Number(bare[1]) }
+  // Endgame sits past any "Level 80" set, which it would otherwise lose to.
+  if (/\bend\s*game|\bfinal(?![a-z])|\blate(?:game|maps?)?(?![a-z])/i.test(title)) return { kind: 'level', at: 85 }
+  if (/\bmaps?(?![a-z])|\bmapping/i.test(title)) return { kind: 'level', at: 70 }
+  // A title that is a level or starts a range: "68", "31+", "13-Pre-Cyclone".
+  // Numbers elsewhere are something else: "2 Stone", "Day 3", "6L", "5-link".
+  const bare = /^\s*(\d{1,3})\s*(?:$|\+|[-\u2013](?!\s*links?\b))/i.exec(title)
+  if (bare && inRange(Number(bare[1]))) return { kind: 'level', at: Number(bare[1]) }
   return null
 }
 
@@ -57,7 +61,8 @@ export interface Picked<T> {
 // The furthest stage you have reached; before the first one, the first one;
 // with no stage titles, PoB's active set. A title picked by hand beats all
 // of that, unless PoB no longer has a set by that name.
-export function pickStage<T extends { title: string, isActive: boolean }> (items: T[], level: number | null, act: number | null, chosen?: string): Picked<T> | null {
+export function pickStage<T extends { title: string, isActive: boolean, divider?: boolean }> (allItems: T[], level: number | null, act: number | null, chosen?: string): Picked<T> | null {
+  const items = realSets(allItems)
   if (!items.length) return null
   const staged = items
     .map(item => ({ item, stage: stageOf(item.title) }))
@@ -84,12 +89,19 @@ export function pickStage<T extends { title: string, isActive: boolean }> (items
   }
 }
 
+// Sets that are headings between real ones aren't sets you can use. A build
+// with nothing else keeps them, so it still shows something.
+export function realSets<T extends { divider?: boolean }> (items: T[]): T[] {
+  const real = items.filter(i => !i.divider)
+  return real.length ? real : items
+}
+
 export function skillSetsOf (d: PobDetails): PobSkillSet[] {
-  return d.skillSets?.length ? d.skillSets : [{ title: 'Default', isActive: true, groups: d.skills }]
+  return d.skillSets?.length ? realSets(d.skillSets) : [{ title: 'Default', isActive: true, groups: d.skills }]
 }
 
 export function itemSetsOf (d: PobDetails): PobItemSet[] {
-  return d.itemSets ?? []
+  return realSets(d.itemSets ?? [])
 }
 
 export interface Loadout {

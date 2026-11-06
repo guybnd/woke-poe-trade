@@ -1,6 +1,6 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
-import { parseItemText } from '../../../main/src/woke/pob-parse'
+import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
 import { buildFacts, chainGems, gearLayout, loadoutOf, noteRuns, pickStage, relevantGems, stageOf } from '@/web/woke/pob-builds/build-model'
 import { nextGems } from '@/web/woke/pob-builds/gems'
 import type { PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
@@ -157,22 +157,38 @@ describe('bug hunt: build details', () => {
     expect(item.mods).toEqual(['First pick', 'Second pick', 'Third pick', 'Always there'])
   })
 
-  it.each(['20% quality', 'Cold 100%', 'Dmg 10.5', 'Full Plate', 'Template', 'Translate'])('"%s" is not a stage', (title) => {
+  it.each(['20% quality', 'Cold 100%', 'Dmg 10.5', 'Full Plate', 'Template', 'Translate', 'Midgame {3}', 'Early Game {4}', '2 Stone', '4 Stone', 'Leap Slam Day 3', 'Pre-T16', '5-link'])('"%s" is not a stage', (title) => {
     expect(stageOf(title)).toBeNull()
   })
 
   it('still reads real stage titles', () => {
     expect(stageOf('Level 28')).toEqual({ kind: 'level', at: 28 })
     expect(stageOf('Act 5')).toEqual({ kind: 'act', at: 5 })
-    expect(stageOf('Late game')).toEqual({ kind: 'level', at: 70 })
-    expect(stageOf('Endgame')).toEqual({ kind: 'level', at: 70 })
-    for (const t of ['Lategame', 'LateGame', 'Late_game', 'Latemaps', 'late90', 'Endgame2', 'Final']) {
-      expect(stageOf(t)).toEqual({ kind: 'level', at: 70 })
+    expect(stageOf('Late game')).toEqual({ kind: 'level', at: 85 })
+    expect(stageOf('Endgame')).toEqual({ kind: 'level', at: 85 })
+    for (const t of ['Lategame', 'LateGame', 'Late_game', 'Latemaps', 'late90', 'Endgame2', 'Final', 'Endgame {1,2}']) {
+      expect(stageOf(t)).toEqual({ kind: 'level', at: 85 })
     }
+    expect(stageOf('Level 80 - Uber Lab {4}')).toEqual({ kind: 'level', at: 80 })
+    expect(stageOf('1-12')).toEqual({ kind: 'level', at: 1 })
+    expect(stageOf('13-Pre-Cyclone')).toEqual({ kind: 'level', at: 13 })
+    expect(stageOf('Cyclone Swap-Maps')).toEqual({ kind: 'level', at: 70 })
     expect(stageOf('Latest')).toBeNull()
     expect(stageOf('Maps')).toEqual({ kind: 'level', at: 70 })
     expect(stageOf('68')).toEqual({ kind: 'level', at: 68 })
     expect(stageOf('6L')).toBeNull()
+  })
+
+  it('takes the endgame set over a Level 80 one at level 95, and skips headings', () => {
+    const sets = [
+      { title: 'Level 80 - Uber Lab {4}', isActive: false },
+      { title: '~~~ ENDGAME ~~~', isActive: false, divider: true },
+      { title: 'Midgame {3}', isActive: false },
+      { title: 'Endgame - Cluster {1}', isActive: false }
+    ]
+    expect(pickStage(sets, 95, null)?.item.title).toBe('Endgame - Cluster {1}')
+    expect(pickStage(sets, 72, null)?.item.title).toBe('Level 80 - Uber Lab {4}')
+    expect(pickStage(sets, 95, null, '~~~ ENDGAME ~~~')?.item.title).toBe('Endgame - Cluster {1}')
   })
 
   it('in the Epilogue with no level yet, picks the furthest set rather than the first', () => {
@@ -249,5 +265,25 @@ describe('gear layout', () => {
     const l = gearLayout([], [{ ...group('Helmet', []), gems: [gem('')] }])
     expect(l.main).toBeNull()
     expect(l.linked).toEqual([])
+  })
+})
+
+describe('parseBuild set titles', () => {
+  const d = parseBuild(`<PathOfBuilding><Build level="95"></Build>
+    <Skills activeSkillSet="2"><SkillSet id="1" title="^2~~~ LEVELING ~~~"></SkillSet><SkillSet id="2" title="^xFAA4BDLevel 31+ - Siphon"><Skill><Gem nameSpec="Spark"/></Skill></SkillSet></Skills>
+    <Tree activeSpec="2"><Spec title="^2Heading" nodes="1,2"></Spec><Spec title="^1Endgame" nodes="1,2,3,4"></Spec></Tree>
+    </PathOfBuilding>`)
+
+  it('drops colour codes, so a title reads as its real stage', () => {
+    expect(d.skillSets[1].title).toBe('Level 31+ - Siphon')
+    expect(stageOf(d.skillSets[1].title)).toEqual({ kind: 'level', at: 31 })
+    expect(stageOf(d.trees[1].title)).toEqual({ kind: 'level', at: 85 })
+  })
+
+  it('marks empty sets as headings', () => {
+    expect(d.skillSets[0].divider).toBe(true)
+    expect(d.skillSets[1].divider).toBeUndefined()
+    expect(d.trees[0].divider).toBe(true)
+    expect(d.trees[1].divider).toBeUndefined()
   })
 })
