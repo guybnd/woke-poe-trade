@@ -52,6 +52,8 @@ export interface PobItem {
   mods: string[]
   // Same length as mods when any mod is crafted or fractured.
   modKinds?: PobModKind[]
+  // Same length as implicits when PoB marks any as crafted, meaning an enchant.
+  implicitKinds?: PobModKind[]
   quality?: number
   armour?: number
   evasion?: number
@@ -201,17 +203,20 @@ const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShi
   [/^LevelReq:\s*(\d+)/, 'levelReq']
 ]
 
+const ANTONYM: Record<string, string> = { increased: 'reduced', reduced: 'increased', more: 'less', less: 'more' }
+
 // "+(41-55) to Life" at range 0.5 is "+48 to Life", as PoB shows it. Range 1
 // is the top of the roll.
 function applyRange (line: string, range: number): string {
   return line.replace(/([+-]?)\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g, (_, sign: string, lo: string, hi: string) => {
     const min = Number(lo)
     const max = Number(hi)
-    const value = min + range * (max - min)
-    const decimals = /\./.test(lo + hi) ? 2 : 0
-    const out = Number(value.toFixed(decimals))
-    return `${sign}${out}`
-  })
+    const roll = min + range * (max - min)
+    const size = /\./.test(lo + hi) ? 100 : 1
+    // Rounds away from zero both ways, as PoB does.
+    const value = (sign === '-' ? -1 : 1) * Math.sign(roll) * Math.round(Math.abs(roll) * size) / size
+    return sign === '+' && value > 0 ? `+${value}` : String(value)
+  }).replace(/-(\d+(?:\.\d+)?%) (increased|reduced|more|less)\b/, (_, num: string, word: string) => `${num} ${ANTONYM[word]}`)
 }
 
 // `ranges`: PoB's <ModRange> elements, by the mod line's place in the item.
@@ -231,6 +236,7 @@ export function parseItemText (text: string, ranges?: Map<number, number>): PobI
   let implicitsLeft = -1
   let modLine = 0
   const kinds: PobModKind[] = []
+  const implicitKinds: PobModKind[] = []
   for (; i < lines.length; i++) {
     const line = lines[i]
     const sel = /^Selected (?:Alt )?Variant(?: \w+)?:\s*(\d+)/.exec(line)
@@ -268,13 +274,17 @@ export function parseItemText (text: string, ranges?: Map<number, number>): PobI
     if (!mod) continue
     if (implicitsLeft > 0) {
       implicitsLeft--
-      if (allowed) item.implicits.push(mod)
+      if (allowed) {
+        item.implicits.push(mod)
+        implicitKinds.push(kind)
+      }
     } else if (allowed) {
       item.mods.push(mod)
       kinds.push(kind)
     }
   }
   if (kinds.some(Boolean)) item.modKinds = kinds
+  if (implicitKinds.some(Boolean)) item.implicitKinds = implicitKinds
   return item
 }
 

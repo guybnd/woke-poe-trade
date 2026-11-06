@@ -20,6 +20,32 @@ describe('mod ranges', () => {
     expect(item.implicits).toEqual(['+15 to Strength'])
     expect(item.mods).toEqual(['74% increased Energy Shield', '+41 to maximum Life', 'Adds 8 to 14 Fire Damage'])
   })
+
+  it('writes negative rolls as PoB does', () => {
+    const item = parseItemText(`
+      Rarity: RARE
+      Agony Whorl
+      Manifold Ring
+      Implicits: 0
+      +(-10--4) to Total Mana Cost of Skills
+      -(10-20)% to Chaos Resistance
+      (-20--10)% increased Mana Cost of Skills
+      +(0-0)% to Fire Resistance
+    `)
+    expect(item.mods).toEqual(['-7 to Total Mana Cost of Skills', '-15% to Chaos Resistance', '15% reduced Mana Cost of Skills', '0% to Fire Resistance'])
+  })
+
+  it('remembers which implicits PoB marks crafted', () => {
+    const item = parseItemText(`
+      Rarity: RARE
+      A
+      Heavy Belt
+      Implicits: 2
+      +25 to Strength
+      {crafted}Allocates Tranquility
+    `)
+    expect(item.implicitKinds).toEqual(['', 'crafted'])
+  })
 })
 
 describe('parseItemText', () => {

@@ -87,6 +87,7 @@ export interface PobItem {
   mods: string[]
   // Older app versions don't send the rest.
   modKinds?: Array<'' | 'crafted' | 'fractured'>
+  implicitKinds?: Array<'' | 'crafted' | 'fractured'>
   quality?: number
   armour?: number
   evasion?: number

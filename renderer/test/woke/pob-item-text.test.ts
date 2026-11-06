@@ -58,6 +58,19 @@ describe('pobItemText', () => {
     expect(item.sockets).toBeDefined()
   })
 
+  it('reads an enchant as an enchant', () => {
+    const item = read(`
+      Rarity: RARE
+      Grim March
+      Warlock Boots
+      Implicits: 1
+      {crafted}10% increased Movement Speed if you haven't been Hit Recently
+      +108 to maximum Life
+    `)
+    expect(item.unknownModifiers).toEqual([])
+    expect(item.statsByType.some(s => s.sources.some(x => x.modifier.info.type === 'enchant'))).toBe(true)
+  })
+
   it('reads a base PoB tells apart in brackets', () => {
     const item = read(`
       Rarity: RARE

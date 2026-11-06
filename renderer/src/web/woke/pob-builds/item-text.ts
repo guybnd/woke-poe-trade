@@ -41,10 +41,11 @@ export function pobItemText (item: PobItem): string {
 
   if (item.sockets) sections.push([`Sockets: ${item.sockets} `])
   if (item.itemLevel) sections.push([`Item Level: ${item.itemLevel}`])
-  // An anoint is an enchant; PoB lists it with the implicits.
-  const anoints = item.implicits.filter(line => line.startsWith('Allocates '))
-  const implicits = item.implicits.filter(line => !anoints.includes(line))
-  if (anoints.length) sections.push(anoints.map(line => `${line} (enchant)`))
+  // PoB lists enchants with the implicits, marked crafted. Anoints may not be.
+  const isEnchant = (line: string, i: number) => item.implicitKinds?.[i] === 'crafted' || line.startsWith('Allocates ')
+  const enchants = item.implicits.filter(isEnchant)
+  const implicits = item.implicits.filter((line, i) => !isEnchant(line, i))
+  if (enchants.length) sections.push(enchants.map(line => `${line} (enchant)`))
   if (implicits.length) sections.push(['{ Implicit Modifier }', ...implicits])
 
   const mods: string[] = []
