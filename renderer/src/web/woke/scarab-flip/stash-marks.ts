@@ -12,7 +12,7 @@ export interface StashSlot {
   count?: number | null
 }
 
-export type StashRead = { found: false } | { found: true, slots: StashSlot[] }
+export type StashRead = { found: false } | { found: true, family: string, slots: StashSlot[] }
 
 export interface StashMark {
   name: string

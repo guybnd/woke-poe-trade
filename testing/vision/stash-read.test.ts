@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 import { decodePng } from '../fake-host/png'
-import { readScarabTab } from '../../main/src/woke/stash-read'
+import { readScarabTab, readStashTab } from '../../main/src/woke/stash-read'
 import { SCARAB_LAYOUTS } from '../../main/src/woke/stash-scarab-data'
 import { DIGITS, DIGIT_HEIGHT, DIGIT_TOP } from '../../main/src/woke/stash-digits-data'
 
@@ -199,5 +199,45 @@ describe('stack counts', () => {
     const res = readScarabTab(s.data, s.width, s.height)
     if (!res.found) throw new Error('tab not found')
     expect(res.slots.every(f => f.count === null)).toBe(true)
+  })
+})
+
+describe('the other flip tabs', () => {
+  const truth = JSON.parse(fs.readFileSync(path.join(SCREENS, 'stash-tabs-counts.json'), 'utf8')) as Record<string, Record<string, number | null>>
+  const TABS = [
+    ['stash-delirium-real.png', 'delirium'],
+    ['stash-delve-real.png', 'fossils'],
+    ['stash-essence-real.png', 'essences'],
+    ['stash-blight-real.png', 'oils']
+  ]
+
+  it.each(TABS)('knows %s, and reads its counts, checked by eye', (file, family) => {
+    const s = screen(file)
+    const res = readStashTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    expect(res.family).toBe(family)
+    expect(Object.fromEntries(res.slots.map(f => [f.name, f.count]))).toEqual(truth[family])
+    expect(res.slots.filter(f => f.filled).length).toBe(Object.values(truth[family]).filter(Boolean).length)
+  })
+
+  it.each(TABS)('finds %s moved on screen', (file, family) => {
+    const s = shifted(screen(file), 24, 47)
+    const res = readStashTab(s.data, s.width, s.height)
+    if (!res.found) throw new Error('tab not found')
+    expect(res.family).toBe(family)
+    expect(Object.fromEntries(res.slots.map(f => [f.name, f.count]))).toEqual(truth[family])
+  })
+
+  it('still says scarabs for the Scarab tab, and nothing for the General tab', () => {
+    const a = screen('stash-scarab-real.png')
+    const read = readStashTab(a.data, a.width, a.height)
+    expect(read.found && read.family).toBe('scarabs')
+    const b = screen('stash-general-real.png')
+    expect(readStashTab(b.data, b.width, b.height).found).toBe(false)
+  })
+
+  it('reads none of them at another window size', () => {
+    const s = shrunk(screen('stash-delirium-real.png'), 720)
+    expect(readStashTab(s.data, s.width, s.height).found).toBe(false)
   })
 })

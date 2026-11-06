@@ -9,7 +9,7 @@ import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, rea
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
 import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels } from './map-scan'
 import { WokeHoverTracker } from './hover'
-import { readScarabTab } from './stash-read'
+import { readStashTab } from './stash-read'
 import { StashWatch } from './stash-watch'
 import { perfRecord } from './perf'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
@@ -85,7 +85,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     const { width, height } = poeWindow.bounds
     if (!width || !height) return { found: false }
     const t0 = performance.now()
-    const res = readScarabTab(poeWindow.screenshot(), width, height)
+    const res = readStashTab(poeWindow.screenshot(), width, height)
     perfRecord('Stash outlines: read', performance.now() - t0)
     if (res.found) stashWatch.start()
     return res

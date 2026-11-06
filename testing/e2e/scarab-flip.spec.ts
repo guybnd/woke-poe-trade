@@ -221,3 +221,32 @@ test('flips: the stack total can be switched off', async ({ overlay }) => {
   await expect(layer).toBeVisible()
   await expect(layer.locator('br')).toHaveCount(0)
 })
+
+// With no prices for a tab, the note names what it found, not the Scarab tab.
+for (const [shot, noun] of [['stash-delve-real', 'fossil'], ['stash-essence-real', 'essence']]) {
+  test(`flips: the hotkey knows ${shot}`, async ({ overlay }) => {
+    await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+    await overlay.showScreen(`screens/${shot}.png`)
+    await overlay.pressHotkey('Alt + J')
+    await expect(overlay.page.getByText(`No ${noun} prices yet, so nothing to outline`)).toBeVisible()
+  })
+}
+
+for (const [shot, name] of [['stash-delirium-real', 'Delirium'], ['stash-blight-real', 'Blight']]) {
+  test(`flips: the hotkey outlines the ${name} tab from its own prices`, async ({ overlay }) => {
+    await routePrices(overlay)
+    await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+    await overlay.showScreen(`screens/${shot}.png`)
+    await overlay.pressHotkey('Alt + J')
+    const layer = overlay.page.locator('[data-stash-outlines]')
+    await expect(layer).toBeVisible()
+    await overlay.snap(`flips-stash-${name}`)
+  })
+}
+
+test('flips: a tab with no flips says which tabs work', async ({ overlay }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.showScreen('screens/stash-general-real.png')
+  await overlay.pressHotkey('Alt + J')
+  await expect(overlay.page.getByText(/Outlines work on Scarab, Delirium, Delve, Essence and Blight/)).toBeVisible()
+})

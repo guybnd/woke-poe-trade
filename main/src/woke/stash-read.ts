@@ -1,6 +1,6 @@
-// Reads the Scarab sub-tab of the stash from one screenshot, for the Flips
-// outlines. The tab's layout is fixed, so nothing is recognised item by item:
-// find the tab on screen, then check which of its known slots are lit. Plain
+﻿// Reads a flip's stash sub-tab from one screenshot, for the Flips outlines. A
+// tab's layout is fixed, so nothing is recognised item by item: find the tab on
+// screen, then check which of its known slots hold something. Plain
 // pixel sums, so the OCR worker (100-200 MB) stays unloaded.
 //
 // The panel moves (a folder row above it, a window like Faustus beside it), so
@@ -9,6 +9,7 @@
 // number varies. The middle column of symbols confirms the match.
 import { ANCHOR, CONFIRM, REF_HEIGHT, SCARAB_LAYOUTS, SLOT_SIZE } from './stash-scarab-data'
 import { DIGITS, DIGIT_HEIGHT, DIGIT_STROKE, DIGIT_TOP } from './stash-digits-data'
+import { STASH_TABS } from './stash-tabs-data'
 
 // The first pass searches a shrunk picture, this much smaller at 1440p.
 const COARSE = 4
@@ -40,7 +41,7 @@ export interface StashSlot {
   count: number | null
 }
 
-export type StashRead = { found: false } | { found: true, slots: StashSlot[] }
+export type StashRead = { found: false } | { found: true, family: string, slots: StashSlot[] }
 
 interface Gray { width: number, height: number, data: Float32Array }
 
@@ -157,21 +158,35 @@ function templatesFor (height: number) {
   return cache
 }
 
+// The best full-size match around one coarse hit.
+function refineHit (gray: Gray, t: Template, hit: { x: number, y: number }, coarse: number) {
+  const slack = coarse * 2
+  let best = -1
+  let at = { x: 0, y: 0 }
+  const xMax = Math.min(gray.width - t.width, hit.x * coarse + slack)
+  const yMax = Math.min(gray.height - t.height, hit.y * coarse + slack)
+  for (let y = Math.max(0, hit.y * coarse - slack); y <= yMax; y++) {
+    for (let x = Math.max(0, hit.x * coarse - slack); x <= xMax; x++) {
+      const score = matchAt(gray, t, x, y)
+      if (score > best) { best = score; at = { x, y } }
+    }
+  }
+  return { at, best }
+}
+
+function refine (gray: Gray, t: Template, hits: Array<{ x: number, y: number }>, coarse: number, min: number) {
+  for (const hit of hits) {
+    const { at, best } = refineHit(gray, t, hit, coarse)
+    if (best >= min) return at
+  }
+  return null
+}
+
 function findTab (gray: Gray, small: Gray, scale: number): { x: number, y: number } | null {
   const t = templatesFor(gray.height)
   const coarse = coarseFactor(gray.height)
-  const slack = coarse * 2
   for (const hit of coarseCandidates(small, t.coarse)) {
-    let best = -1
-    let at = { x: 0, y: 0 }
-    const xMax = Math.min(gray.width - t.anchor.width, hit.x * coarse + slack)
-    const yMax = Math.min(gray.height - t.anchor.height, hit.y * coarse + slack)
-    for (let y = Math.max(0, hit.y * coarse - slack); y <= yMax; y++) {
-      for (let x = Math.max(0, hit.x * coarse - slack); x <= xMax; x++) {
-        const score = matchAt(gray, t.anchor, x, y)
-        if (score > best) { best = score; at = { x, y } }
-      }
-    }
+    const { at, best } = refineHit(gray, t.anchor, hit, coarse)
     if (best < ANCHOR_MIN) continue
     const cx = at.x + Math.round(CONFIRM.dx * scale)
     const cy = at.y + Math.round(CONFIRM.dy * scale)
@@ -209,12 +224,17 @@ function slotBlueness (bgra: Uint8Array, width: number, height: number, x: numbe
 // window size reads no counts rather than guess.
 const COUNT_MIN = 0.85
 // Below this the number has ended. True digits score at least 0.96 and the item
-// behind them at most 0.48, so between the two something is covering a digit.
+// behind them at most about 0.8 on bright fossils. In between, a white shape means
+// something is covering a digit, and anything else is just the item.
 const COUNT_END = 0.6
+const COUNT_WHITE = 170
 const COUNT_WIDTH = SLOT_SIZE
 const COUNT_DIGITS = 4
 const COUNT_NEXT = 7
-const COUNT_ROWS = [-2, -1, 0, 1, 2]
+// Slots differ in size between tabs, so the first digit can start further in.
+const COUNT_FIRST = 16
+const COUNT_SETTLE = 1
+const COUNT_ROWS = [-2, -1, 0, 1, 2, 3, 4, 5, 6]
 
 // Only the stroke and the dark outline around it, as the item shows through the rest.
 const digitTemplates = DIGITS.map(d => {
@@ -251,6 +271,17 @@ function digitScore (crop: Float32Array, t: typeof digitTemplates[number], x: nu
   return variance > 1e-6 && t.norm > 0 ? dot / (Math.sqrt(variance) * t.norm) : -1
 }
 
+function strokeBrightness (crop: Float32Array, t: typeof digitTemplates[number], at: number): number {
+  let sum = 0
+  let n = 0
+  for (let k = 0; k < t.offsets.length; k++) {
+    if (t.values[k] <= 0) continue
+    sum += crop[at + t.offsets[k]]
+    n++
+  }
+  return n ? sum / n : 0
+}
+
 const CROP_ROWS = DIGIT_TOP + DIGIT_HEIGHT + COUNT_ROWS[COUNT_ROWS.length - 1]
 
 function readCount (bgra: Uint8Array, width: number, height: number, x0: number, y0: number): number | null {
@@ -272,15 +303,22 @@ function readCount (bgra: Uint8Array, width: number, height: number, x0: number,
     let bestDigit = 0
     let bestEnd = 0
     let bestRow = 0
-    for (const t of digitTemplates) {
-      for (let dx = 0; dx < COUNT_NEXT && x + dx + t.width <= COUNT_WIDTH; dx++) {
+    let bestAt = 0
+    let bestT = digitTemplates[0]
+    // Leftmost first: a narrow digit also fits inside a wider one, a little further on.
+    let foundAt = -1
+    for (let dx = 0; dx < (digits ? COUNT_NEXT : COUNT_FIRST); dx++) {
+      if (foundAt >= 0 && dx > foundAt + COUNT_SETTLE) break
+      for (const t of digitTemplates) {
+        if (x + dx + t.width > COUNT_WIDTH) continue
         for (const dy of row == null ? COUNT_ROWS : [row]) {
           const score = digitScore(crop, t, x + dx, DIGIT_TOP + dy)
-          if (score > best) { best = score; bestDigit = t.digit; bestEnd = x + dx + t.width; bestRow = dy }
+          if (score > best) { best = score; bestDigit = t.digit; bestEnd = x + dx + t.width; bestRow = dy; bestAt = (DIGIT_TOP + dy) * COUNT_WIDTH + x + dx; bestT = t }
         }
       }
+      if (foundAt < 0 && best >= COUNT_MIN) foundAt = dx
     }
-    if (best < COUNT_END) break
+    if (best < COUNT_END || (best < COUNT_MIN && strokeBrightness(crop, bestT, bestAt) < COUNT_WHITE)) break
     if (best < COUNT_MIN || (!digits && !bestDigit) || digits === COUNT_DIGITS) return null
     value = value * 10 + bestDigit
     digits++
@@ -318,12 +356,73 @@ function findLayout (gray: Gray, at: { x: number, y: number }, scale: number) {
   return best
 }
 
+// The other tabs were all seen at 1440p, and only a stack count tells their full
+// slots from empty ones: their backings vary too much for the blueness test.
+const OTHER_TAB_MIN = 0.93
+// How far a tab's picture has been seen to move, and a little more: a folder row
+// moves it down, a window like Faustus to the side.
+const OTHER_TAB_SLACK = { x: 120, y: 130 }
+let otherTabs: Array<{ family: string, full: Template, coarse: Template, tab: typeof STASH_TABS[number] }> | null = null
+
+function hitsNear (small: Gray, t: Template, home: { x: number, y: number }) {
+  const hits: Array<{ x: number, y: number, score: number }> = []
+  const yMax = Math.min(small.height - t.height, Math.floor((home.y + OTHER_TAB_SLACK.y) / COARSE))
+  const xMax = Math.min(small.width - t.width, Math.floor((home.x + OTHER_TAB_SLACK.x) / COARSE))
+  for (let y = Math.max(0, Math.floor((home.y - OTHER_TAB_SLACK.y) / COARSE)); y <= yMax; y++) {
+    for (let x = Math.max(0, Math.floor((home.x - OTHER_TAB_SLACK.x) / COARSE)); x <= xMax; x++) {
+      const score = matchAt(small, t, x, y)
+      if (score >= COARSE_MIN) hits.push({ x, y, score })
+    }
+  }
+  return hits.sort((a, b) => b.score - a.score).slice(0, COARSE_TRIES)
+}
+
+function readOtherTab (bgra: Uint8Array, width: number, height: number, gray: Gray, small: Gray): StashRead {
+  if (height !== REF_HEIGHT) return { found: false }
+  otherTabs ??= STASH_TABS.map(tab => {
+    const image = { width: tab.anchor.width, height: tab.anchor.height, data: Float32Array.from(tab.anchor.gray) }
+    return {
+      family: tab.family,
+      full: template(image),
+      coarse: template(resize(image, Math.floor(image.width / COARSE), Math.floor(image.height / COARSE))),
+      tab
+    }
+  })
+  for (const t of otherTabs) {
+    const at = refine(gray, t.full, hitsNear(small, t.coarse, t.tab.anchor), COARSE, OTHER_TAB_MIN)
+    if (!at) continue
+    const size = t.tab.size
+    return {
+      found: true,
+      family: t.family,
+      slots: t.tab.slots.map(s => {
+        const x = at.x + s.dx
+        const y = at.y + s.dy
+        const count = readCount(bgra, width, height, x, y)
+        return { name: s.name, x: x / width, y: y / height, width: size / width, height: size / height, filled: count != null, count }
+      })
+    }
+  }
+  return { found: false }
+}
+
 // `bgra` is a screenshot of the game window.
-export function readScarabTab (bgra: Uint8Array, width: number, height: number): StashRead {
-  const scale = height / REF_HEIGHT
+export function readStashTab (bgra: Uint8Array, width: number, height: number): StashRead {
   const gray = toGray(bgra, width, height)
   const coarse = coarseFactor(height)
   const small = resize(gray, Math.floor(width / coarse), Math.floor(height / coarse))
+  const scarab = readScarabIn(bgra, width, height, gray, small)
+  return scarab.found ? scarab : readOtherTab(bgra, width, height, gray, small)
+}
+
+export function readScarabTab (bgra: Uint8Array, width: number, height: number): StashRead {
+  const gray = toGray(bgra, width, height)
+  const coarse = coarseFactor(height)
+  return readScarabIn(bgra, width, height, gray, resize(gray, Math.floor(width / coarse), Math.floor(height / coarse)))
+}
+
+function readScarabIn (bgra: Uint8Array, width: number, height: number, gray: Gray, small: Gray): StashRead {
+  const scale = height / REF_HEIGHT
   const at = findTab(gray, small, scale)
   if (!at) return { found: false }
   const layout = findLayout(gray, at, scale)
@@ -331,6 +430,7 @@ export function readScarabTab (bgra: Uint8Array, width: number, height: number):
   const size = Math.round(SLOT_SIZE * scale)
   return {
     found: true,
+    family: 'scarabs',
     slots: layout.slots.map(s => {
       const x = at.x + Math.round(s.dx * scale)
       const y = at.y + Math.round(s.dy * scale)

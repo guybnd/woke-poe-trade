@@ -400,9 +400,6 @@ async function toggleOutlines () {
   if (readingStash || justCleared()) return
   if (stashMarks.value.length) { clearStashMarks(); return }
   if (!snapshot.value) { stashNote('No prices yet, so nothing to outline'); return }
-  const scarabs = familyById('scarabs')
-  const priced = priceFlip(scarabs, scarabs.methods[0], snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value)
-  if (priced?.kind !== 'pool') { stashNote('No scarab prices yet, so nothing to outline'); return }
   const clearsBefore = stashClearCount()
   readingStash = true
   let read: StashRead
@@ -412,12 +409,32 @@ async function toggleOutlines () {
     readingStash = false
   }
   if (!read.found) {
-    stashNote("Can't read this tab. Scarab tab only, mouse off it.")
+    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs, mouse off them.")
+    hostRequest('stash-watch-stop', null).catch(() => {})
     return
   }
-  // The same advice as the panel: no untraded prices, and hold rare and cheap ones.
-  const rows = priced.model.rows.filter(r => !r.rareCheap && (!props.config.hideUntraded || isTraded(r)))
-  const marks = buildMarks(read.slots, new Map(rows.map(r => [r.name, r.profitEach])), props.config.stashTotals !== false ? scarabs.methods[0].inputs : 0)
+  // The method the panel has picked for this family, and the same advice as the
+  // panel: no untraded prices, and hold rare and cheap ones.
+  const tabFamily = familyById(read.family)
+  const picked = props.config.methods?.[tabFamily.id]
+  const tabMethod = tabFamily.methods.find(m => m.id === picked) ?? tabFamily.methods[0]
+  const priced = priceFlip(tabFamily, tabMethod, snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value)
+  if (priced?.kind !== 'pool' && priced?.kind !== 'upgrade') {
+    hostRequest('stash-watch-stop', null).catch(() => {})
+    stashNote(`No ${tabFamily.noun} prices yet, so nothing to outline`)
+    return
+  }
+  const profits = new Map<string, number>()
+  if (priced.kind === 'pool') {
+    for (const r of priced.model.rows) {
+      if (!r.rareCheap && (!props.config.hideUntraded || isTraded(r))) profits.set(r.name, r.profitEach)
+    }
+  } else {
+    for (const r of priced.rows) {
+      if (!props.config.hideUntraded || isTraded(r)) profits.set(r.from, r.profitEach)
+    }
+  }
+  const marks = buildMarks(read.slots, profits, props.config.stashTotals !== false ? tabMethod.inputs : 0)
   // A zone change or the like while reading: these would have no click watcher.
   if (!marks.length || clearsBefore !== stashClearCount()) {
     hostRequest('stash-watch-stop', null).catch(() => {})
