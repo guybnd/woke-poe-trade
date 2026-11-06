@@ -105,6 +105,9 @@ export interface WokeModulesConfig {
   lootFilterSeeded?: boolean
   // Icon dock position and switches (dock/dock.ts).
   dock?: DockConfig
+  // The league list from the last launch that read it, and every league seen,
+  // so a failed read keeps a league and a new one can be offered (Leagues.ts).
+  leagues?: { list: string[], known: string[] }
 }
 
 interface ConfigLike {

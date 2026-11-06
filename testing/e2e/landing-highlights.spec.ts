@@ -447,7 +447,7 @@ test('market: the flips window', async ({ overlay }) => {
 })
 
 test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
   await overlay.showScreen('screens/stash-scarab-real.png')
   await backdrop(overlay, 'frames/stash-scarabs.jpg')
   await overlay.pressHotkey('Alt + J')
@@ -673,6 +673,8 @@ test('filter: today\'s prices, and the moves to pick from', async ({ overlay }) 
     await backdrop(overlay, 'frames/town.jpg')
     await overlay.page.getByRole('tab', { name: /^Prices/ }).click()
     await expect(overlay.page.getByText(/\d+ items? would move/)).toBeVisible({ timeout: 20_000 })
+    // The test app only knows its own league, but these prices are Allflame's.
+    await overlay.page.getByText(/Testleague · prices/).evaluate(el => { el.textContent = (el.textContent ?? '').replace('Testleague', 'Allflame') })
     await overlay.page.mouse.move(1800, 1000)
     await saveAround(overlay, 'hl-filter-moves', [overlay.page.locator('[data-w-panel]').filter({ hasText: 'would move' }).first()], 1280)
   } finally {
@@ -691,7 +693,7 @@ test('maps: map scan marks what your build can\'t run', async ({ overlay }) => {
   const badge = overlay.page.locator('[class*="badge"]').first()
   await expect(badge).toContainText('CARE', { timeout: 20_000 })
   await overlay.page.waitForTimeout(500)
-  await writeWebp(overlay.page, 'hl-map-scan', await overlay.page.screenshot({ clip: { x: 0, y: 0, width: 1280, height: 720 } }))
+  await writeWebp(overlay.page, 'hl-map-scan', await overlay.page.screenshot({ clip: { x: 0, y: 165, width: 960, height: 540 } }))
 })
 
 test('maps: essence scan says whether to corrupt', async ({ overlay }) => {

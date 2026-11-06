@@ -81,6 +81,34 @@ function resize (src: Gray, width: number, height: number): Gray {
   return { width, height, data }
 }
 
+// Linear interpolation, for making a picture bigger.
+function enlarge (src: Gray, width: number, height: number): Gray {
+  const data = new Float32Array(width * height)
+  const sx = src.width / width
+  const sy = src.height / height
+  for (let y = 0; y < height; y++) {
+    const fy0 = Math.min(src.height - 1, Math.max(0, (y + 0.5) * sy - 0.5))
+    const j = Math.min(Math.floor(fy0), Math.max(0, src.height - 2))
+    const j1 = Math.min(j + 1, src.height - 1)
+    const fy = fy0 - j
+    for (let x = 0; x < width; x++) {
+      const fx0 = Math.min(src.width - 1, Math.max(0, (x + 0.5) * sx - 0.5))
+      const i = Math.min(Math.floor(fx0), Math.max(0, src.width - 2))
+      const i1 = Math.min(i + 1, src.width - 1)
+      const fx = fx0 - i
+      const top = src.data[j * src.width + i] * (1 - fx) + src.data[j * src.width + i1] * fx
+      const low = src.data[j1 * src.width + i] * (1 - fx) + src.data[j1 * src.width + i1] * fx
+      data[y * width + x] = top * (1 - fy) + low * fy
+    }
+  }
+  return { width, height, data }
+}
+
+// To another size: area averaged down, interpolated up.
+function resample (src: Gray, width: number, height: number): Gray {
+  return width <= src.width && height <= src.height ? resize(src, width, height) : enlarge(src, width, height)
+}
+
 interface Template { width: number, height: number, data: Float32Array, norm: number }
 
 // Zero mean, so a match doesn't depend on how bright the screen is.
@@ -220,8 +248,8 @@ function slotBlueness (bgra: Uint8Array, width: number, height: number, x: numbe
   return values.sort((a, b) => a - b)[1]
 }
 
-// The digits are one font at one size, and only 1440p has been seen, so another
-// window size reads no counts rather than guess.
+// The digits were captured at 1440p. At another window size the count's corner
+// is resampled to 1440p first, so the same digit pictures and limits apply.
 const COUNT_MIN = 0.85
 // Below this the number has ended. True digits score at least 0.96 and the item
 // behind them at most about 0.8 on bright fossils. In between, a white shape means
@@ -236,42 +264,95 @@ const COUNT_FIRST = 16
 const COUNT_SETTLE = 1
 const COUNT_ROWS = [-2, -1, 0, 1, 2, 3, 4, 5, 6]
 
-// Only the stroke and the dark outline around it, as the item shows through the rest.
-const digitTemplates = DIGITS.map(d => {
-  const offsets: number[] = []
-  const values: number[] = []
-  const stroke = (x: number, y: number) =>
-    x >= 0 && y >= 0 && x < d.width && y < DIGIT_HEIGHT && d.gray[y * d.width + x] > DIGIT_STROKE
-  for (let y = 0; y < DIGIT_HEIGHT; y++) {
-    for (let x = 0; x < d.width; x++) {
-      let near = false
-      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) near = near || stroke(x + i, y + j)
-      if (!near) continue
-      offsets.push(y * COUNT_WIDTH + x)
-      values.push(d.gray[y * d.width + x])
-    }
-  }
+interface DigitTemplate {
+  digit: number
+  width: number
+  offsets: number[]
+  // Zero mean, at 1440p.
+  values: number[]
+  norm: number
+  // The same digit taken to the window's size and back, as the corner is: the
+  // round trip softens the strokes, so a softened digit matches better.
+  soft: number[] | null
+  softNorm: number
+  // How bright the stroke must be to say something white covers a digit. Softened
+  // strokes are dimmer, so this drops with them.
+  white: number
+}
+
+function zeroMean (values: number[]) {
   const mean = values.reduce((a, b) => a + b, 0) / values.length
   const zeroed = values.map(v => v - mean)
-  return { digit: d.digit, width: d.width, offsets, values: zeroed, norm: Math.sqrt(zeroed.reduce((a, v) => a + v * v, 0)) }
-})
+  return { values: zeroed, norm: Math.sqrt(zeroed.reduce((a, v) => a + v * v, 0)) }
+}
 
-function digitScore (crop: Float32Array, t: typeof digitTemplates[number], x: number, y: number): number {
+// Only the stroke and the dark outline around it, as the item shows through the rest.
+function digitTemplatesFor (scale: number): DigitTemplate[] {
+  return DIGITS.map(d => {
+    const offsets: number[] = []
+    const values: number[] = []
+    const at: number[] = []
+    const stroke = (x: number, y: number) =>
+      x >= 0 && y >= 0 && x < d.width && y < DIGIT_HEIGHT && d.gray[y * d.width + x] > DIGIT_STROKE
+    for (let y = 0; y < DIGIT_HEIGHT; y++) {
+      for (let x = 0; x < d.width; x++) {
+        let near = false
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) near = near || stroke(x + i, y + j)
+        if (!near) continue
+        offsets.push(y * COUNT_WIDTH + x)
+        values.push(d.gray[y * d.width + x])
+        at.push(y * d.width + x)
+      }
+    }
+    const sharp = zeroMean(values)
+    let soft: ReturnType<typeof zeroMean> | null = null
+    let white = COUNT_WHITE
+    if (scale !== 1) {
+      const full = { width: d.width, height: DIGIT_HEIGHT, data: Float32Array.from(d.gray) }
+      const there = resample(full, Math.max(2, Math.round(d.width * scale)), Math.max(2, Math.round(DIGIT_HEIGHT * scale)))
+      const back = resample(there, d.width, DIGIT_HEIGHT)
+      const raw = at.map(k => back.data[k])
+      soft = zeroMean(raw)
+      const strokes = sharp.values.flatMap((v, k) => v > 0 ? [k] : [])
+      const mean = (list: number[]) => strokes.reduce((a, k) => a + list[k], 0) / strokes.length
+      white = COUNT_WHITE * Math.min(1, mean(raw) / mean(values))
+    }
+    return { digit: d.digit, width: d.width, offsets, values: sharp.values, norm: sharp.norm, soft: soft?.values ?? null, softNorm: soft?.norm ?? 0, white }
+  })
+}
+
+const digitCache = new Map<number, DigitTemplate[]>()
+function digitTemplates (scale: number): DigitTemplate[] {
+  let t = digitCache.get(scale)
+  if (!t) {
+    if (digitCache.size > 4) digitCache.clear()
+    t = digitTemplatesFor(scale)
+    digitCache.set(scale, t)
+  }
+  return t
+}
+
+function digitScore (crop: Float32Array, t: DigitTemplate, x: number, y: number): number {
   const at = y * COUNT_WIDTH + x
   let sum = 0
   let sumSq = 0
   let dot = 0
+  let softDot = 0
   for (let k = 0; k < t.offsets.length; k++) {
     const v = crop[at + t.offsets[k]]
     sum += v
     sumSq += v * v
     dot += v * t.values[k]
+    if (t.soft) softDot += v * t.soft[k]
   }
   const variance = sumSq - sum * sum / t.offsets.length
-  return variance > 1e-6 && t.norm > 0 ? dot / (Math.sqrt(variance) * t.norm) : -1
+  if (variance <= 1e-6) return -1
+  const sharp = t.norm > 0 ? dot / (Math.sqrt(variance) * t.norm) : -1
+  const soft = t.soft && t.softNorm > 0 ? softDot / (Math.sqrt(variance) * t.softNorm) : -1
+  return Math.max(sharp, soft)
 }
 
-function strokeBrightness (crop: Float32Array, t: typeof digitTemplates[number], at: number): number {
+function strokeBrightness (crop: Float32Array, t: DigitTemplate, at: number): number {
   let sum = 0
   let n = 0
   for (let k = 0; k < t.offsets.length; k++) {
@@ -284,32 +365,105 @@ function strokeBrightness (crop: Float32Array, t: typeof digitTemplates[number],
 
 const CROP_ROWS = DIGIT_TOP + DIGIT_HEIGHT + COUNT_ROWS[COUNT_ROWS.length - 1]
 
-function readCount (bgra: Uint8Array, width: number, height: number, x0: number, y0: number): number | null {
-  if (height !== REF_HEIGHT || x0 < 0 || y0 < 0 || x0 + COUNT_WIDTH > width || y0 + CROP_ROWS > height) return null
-  // The darkest channel, as the digits are white and most items are not.
+// The darkest channel, as the digits are white and most items are not.
+function darkest (bgra: Uint8Array, width: number, x: number, y: number): number {
+  const p = (y * width + x) * 4
+  return Math.min(bgra[p], bgra[p + 1], bgra[p + 2])
+}
+
+// The count's corner at 1440p size, its top left at (x0, y0) in the window,
+// which can fall between pixels. A bigger window is area averaged down, a
+// smaller one interpolated up.
+function countCrop (bgra: Uint8Array, width: number, height: number, x0: number, y0: number, scale: number): Float32Array | null {
+  if (x0 < 0 || y0 < 0 || x0 + COUNT_WIDTH * scale > width || y0 + CROP_ROWS * scale > height) return null
   const crop = new Float32Array(COUNT_WIDTH * CROP_ROWS)
+  if (scale === 1 && Number.isInteger(x0) && Number.isInteger(y0)) {
+    for (let y = 0; y < CROP_ROWS; y++) {
+      for (let x = 0; x < COUNT_WIDTH; x++) crop[y * COUNT_WIDTH + x] = darkest(bgra, width, x0 + x, y0 + y)
+    }
+    return crop
+  }
   for (let y = 0; y < CROP_ROWS; y++) {
     for (let x = 0; x < COUNT_WIDTH; x++) {
-      const p = ((y0 + y) * width + x0 + x) * 4
-      crop[y * COUNT_WIDTH + x] = Math.min(bgra[p], bgra[p + 1], bgra[p + 2])
+      let v = 0
+      if (scale > 1) {
+        const left = x0 + x * scale
+        const right = left + scale
+        const top = y0 + y * scale
+        const bottom = top + scale
+        let area = 0
+        for (let j = Math.floor(top); j < Math.min(height, Math.ceil(bottom)); j++) {
+          const wy = Math.min(j + 1, bottom) - Math.max(j, top)
+          for (let i = Math.floor(left); i < Math.min(width, Math.ceil(right)); i++) {
+            const w = wy * (Math.min(i + 1, right) - Math.max(i, left))
+            v += darkest(bgra, width, i, j) * w
+            area += w
+          }
+        }
+        v = area ? v / area : 0
+      } else {
+        const sx = Math.min(width - 1, Math.max(0, x0 + (x + 0.5) * scale - 0.5))
+        const sy = Math.min(height - 1, Math.max(0, y0 + (y + 0.5) * scale - 0.5))
+        const i = Math.min(Math.floor(sx), width - 2)
+        const j = Math.min(Math.floor(sy), height - 2)
+        const fx = sx - i
+        const fy = sy - j
+        v = (darkest(bgra, width, i, j) * (1 - fx) + darkest(bgra, width, i + 1, j) * fx) * (1 - fy) +
+          (darkest(bgra, width, i, j + 1) * (1 - fx) + darkest(bgra, width, i + 1, j + 1) * fx) * fy
+      }
+      crop[y * COUNT_WIDTH + x] = v
     }
   }
+  return crop
+}
+
+// Below about 1000 pixels tall the digits are too few pixels to tell apart for
+// certain, so a smaller window reads no counts rather than guess.
+const COUNT_MIN_SCALE = 0.7
+
+// Where the slot's corner falls between window pixels, as a part of a 1440p
+// pixel. The game's digits sit on its own pixel grid, so another window size
+// tries a few and keeps the longest number, then the surest: a phase that
+// misses a digit reads a shorter number, so the longest one is the full count.
+const COUNT_PHASES = [0, -1 / 3, 1 / 3]
+
+function readCount (bgra: Uint8Array, width: number, height: number, x0: number, y0: number, scale: number): number | null {
+  if (scale < COUNT_MIN_SCALE) return null
+  const templates = digitTemplates(scale)
+  if (scale === 1) {
+    const crop = countCrop(bgra, width, height, x0, y0, 1)
+    return crop ? readCountIn(crop, templates)?.value ?? null : null
+  }
+  let best: { value: number, digits: number, score: number } | null = null
+  for (const py of COUNT_PHASES) {
+    for (const px of COUNT_PHASES) {
+      const crop = countCrop(bgra, width, height, x0 + px * scale, y0 + py * scale, scale)
+      const read = crop && readCountIn(crop, templates)
+      if (read && (!best || read.digits > best.digits || (read.digits === best.digits && read.score > best.score))) best = read
+    }
+  }
+  return best?.value ?? null
+}
+
+// The number in one corner, and how sure the least sure digit is.
+function readCountIn (crop: Float32Array, templates: DigitTemplate[]): { value: number, digits: number, score: number } | null {
   let x = 0
   let row: number | null = null
   let digits = 0
   let value = 0
+  let worst = 1
   for (;;) {
     let best = -1
     let bestDigit = 0
     let bestEnd = 0
     let bestRow = 0
     let bestAt = 0
-    let bestT = digitTemplates[0]
+    let bestT = templates[0]
     // Leftmost first: a narrow digit also fits inside a wider one, a little further on.
     let foundAt = -1
     for (let dx = 0; dx < (digits ? COUNT_NEXT : COUNT_FIRST); dx++) {
       if (foundAt >= 0 && dx > foundAt + COUNT_SETTLE) break
-      for (const t of digitTemplates) {
+      for (const t of templates) {
         if (x + dx + t.width > COUNT_WIDTH) continue
         for (const dy of row == null ? COUNT_ROWS : [row]) {
           const score = digitScore(crop, t, x + dx, DIGIT_TOP + dy)
@@ -318,14 +472,15 @@ function readCount (bgra: Uint8Array, width: number, height: number, x0: number,
       }
       if (foundAt < 0 && best >= COUNT_MIN) foundAt = dx
     }
-    if (best < COUNT_END || (best < COUNT_MIN && strokeBrightness(crop, bestT, bestAt) < COUNT_WHITE)) break
+    if (best < COUNT_END || (best < COUNT_MIN && strokeBrightness(crop, bestT, bestAt) < bestT.white)) break
     if (best < COUNT_MIN || (!digits && !bestDigit) || digits === COUNT_DIGITS) return null
     value = value * 10 + bestDigit
     digits++
+    worst = Math.min(worst, best)
     x = bestEnd
     row = bestRow
   }
-  return digits ? value : null
+  return digits ? { value, digits, score: worst } : null
 }
 
 let layoutCache: { height: number, labels: Template[] } | null = null
@@ -356,41 +511,56 @@ function findLayout (gray: Gray, at: { x: number, y: number }, scale: number) {
   return best
 }
 
-// The other tabs were all seen at 1440p, and only a stack count tells their full
-// slots from empty ones: their backings vary too much for the blueness test.
+// The other tabs were captured at 1440p and are scaled to the window like the
+// Scarab tab. Only a stack count tells their full slots from empty ones: their
+// backings vary too much for the blueness test.
 const OTHER_TAB_MIN = 0.93
+// Scaled, the picture lands between pixels and true matches score about 0.9, while
+// the best wrong spot seen scores about 0.55.
+const OTHER_TAB_SCALED_MIN = 0.85
 // How far a tab's picture has been seen to move, and a little more: a folder row
 // moves it down, a window like Faustus to the side.
 const OTHER_TAB_SLACK = { x: 120, y: 130 }
-let otherTabs: Array<{ full: Template, coarse: Template, tab: typeof STASH_TABS[number] }> | null = null
+let otherTabs: { height: number, tabs: Array<{ full: Template, coarse: Template, tab: typeof STASH_TABS[number] }> } | null = null
 
-function readOtherTab (bgra: Uint8Array, width: number, height: number, gray: Gray, small: Gray): StashRead {
-  if (height !== REF_HEIGHT) return { found: false }
-  otherTabs ??= STASH_TABS.map(tab => {
-    const image = { width: tab.anchor.width, height: tab.anchor.height, data: Float32Array.from(tab.anchor.gray) }
+function otherTabsFor (height: number) {
+  if (otherTabs?.height === height) return otherTabs.tabs
+  const scale = height / REF_HEIGHT
+  const coarse = coarseFactor(height)
+  const tabs = STASH_TABS.map(tab => {
+    const image = scaled(tab.anchor, scale)
     return {
       full: template(image),
-      coarse: template(resize(image, Math.floor(image.width / COARSE), Math.floor(image.height / COARSE))),
+      coarse: template(resize(image, Math.max(1, Math.floor(image.width / coarse)), Math.max(1, Math.floor(image.height / coarse)))),
       tab
     }
   })
-  for (const t of otherTabs) {
+  otherTabs = { height, tabs }
+  return tabs
+}
+
+function readOtherTab (bgra: Uint8Array, width: number, height: number, gray: Gray, small: Gray): StashRead {
+  const scale = height / REF_HEIGHT
+  // Without counts every slot would read empty.
+  if (scale < COUNT_MIN_SCALE) return { found: false }
+  const coarse = coarseFactor(height)
+  for (const t of otherTabsFor(height)) {
     const near = {
-      x: Math.floor(t.tab.anchor.x / COARSE),
-      y: Math.floor(t.tab.anchor.y / COARSE),
-      slackX: Math.ceil(OTHER_TAB_SLACK.x / COARSE),
-      slackY: Math.ceil(OTHER_TAB_SLACK.y / COARSE)
+      x: Math.floor(t.tab.anchor.x * scale / coarse),
+      y: Math.floor(t.tab.anchor.y * scale / coarse),
+      slackX: Math.ceil(OTHER_TAB_SLACK.x * scale / coarse),
+      slackY: Math.ceil(OTHER_TAB_SLACK.y * scale / coarse)
     }
-    const at = refine(gray, t.full, coarseCandidates(small, t.coarse, near), COARSE, OTHER_TAB_MIN)
+    const at = refine(gray, t.full, coarseCandidates(small, t.coarse, near), coarse, scale === 1 ? OTHER_TAB_MIN : OTHER_TAB_SCALED_MIN)
     if (!at) continue
-    const size = t.tab.size
+    const size = Math.round(t.tab.size * scale)
     return {
       found: true,
       family: t.tab.family,
       slots: t.tab.slots.map(s => {
-        const x = at.x + s.dx
-        const y = at.y + s.dy
-        const count = readCount(bgra, width, height, x, y)
+        const x = at.x + Math.round(s.dx * scale)
+        const y = at.y + Math.round(s.dy * scale)
+        const count = readCount(bgra, width, height, at.x + s.dx * scale, at.y + s.dy * scale, scale)
         return { name: s.name, x: x / width, y: y / height, width: size / width, height: size / height, filled: count != null, count }
       })
     }
@@ -428,7 +598,7 @@ function readScarabIn (bgra: Uint8Array, width: number, height: number, gray: Gr
         width: size / width,
         height: size / height,
         filled,
-        count: filled ? readCount(bgra, width, height, x, y) : null
+        count: filled ? readCount(bgra, width, height, at.x + s.dx * scale, at.y + s.dy * scale, scale) : null
       }
     })
   }

@@ -41,6 +41,38 @@ export const CATEGORY_TYPES: Record<string, string> = {
   'skill-gems': 'SkillGem'
 }
 
+// woke: a category poe.ninja adds for a new league, such as its currency, is
+// still read. Its page slug follows poe.ninja's pattern ('AllflameEmber' ->
+// 'allflame-embers'), and lookups by slug learn it when prices load.
+const SLUG_OF_TYPE = new Map(Object.entries(CATEGORY_TYPES).map(([slug, type]) => [type, slug]))
+const LEARNED_TYPES = new Map<string, string>()
+
+export function slugForType (type: string): string {
+  const known = SLUG_OF_TYPE.get(type)
+  if (known) return known
+  const words = type.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+  const slug = words.endsWith('s') ? words : words.endsWith('y') ? `${words.slice(0, -1)}ies` : `${words}s`
+  LEARNED_TYPES.set(slug, type)
+  return slug
+}
+
+export function isListedType (type: string): boolean {
+  return SLUG_OF_TYPE.has(type)
+}
+
+export function typeForSlug (slug: string): string | undefined {
+  return CATEGORY_TYPES[slug] ?? LEARNED_TYPES.get(slug)
+}
+
+// The namespace APT's item data files a type's items under.
+export function namespaceForType (type: string): string {
+  if (type === 'DivinationCard') return 'DIVINATION_CARD'
+  if (type === 'Beast') return 'CAPTURED_BEAST'
+  if (type === 'SkillGem') return 'GEM'
+  if (type.startsWith('Unique')) return 'UNIQUE'
+  return 'ITEM'
+}
+
 // Base types are tens of thousands of rows (item level x influence) and not
 // useful for flipping, so they are not stored.
 export const SKIPPED_TYPES = new Set(['BaseType'])
