@@ -4,7 +4,7 @@ import { test, expect } from './harness'
 
 test('a new league\'s unique is searched by name until the item data has it', async ({ overlay, fakeApp }) => {
   await overlay.boot()
-  await overlay.copyItem('items/unique-new-league.txt')
+  await overlay.copyItem('items-new-league/unique.txt')
   const panel = overlay.widget('price-check')
   await expect(panel.getByTestId('new-item-search')).toBeVisible()
   await expect(panel).toContainText('Veilwoven Grasp')
