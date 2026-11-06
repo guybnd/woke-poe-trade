@@ -16,6 +16,13 @@ describe('numeric filter limits', () => {
     expect(clampToLimit(5000, filterCeiling(undefined, { value: 1 }))).toBe(5000)
   })
 
+  it('keeps the room after the value is lowered', () => {
+    const filter = { value: 33 }
+    filterCeiling(NUMERIC_LIMITS.quality, filter)
+    filter.value = 25
+    expect(filterCeiling(NUMERIC_LIMITS.quality, filter)).toBe(33)
+  })
+
   it('makes room for an item above the limit', () => {
     expect(filterCeiling(NUMERIC_LIMITS.quality, { value: 33 })).toBe(33)
     expect(filterCeiling(NUMERIC_LIMITS.itemLevel, { value: 84, max: 101 })).toBe(101)

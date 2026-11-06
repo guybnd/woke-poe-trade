@@ -109,13 +109,14 @@ export default defineComponent({
     function nudge (bound: Bound, by: number) {
       const min = (typeof inputMin.value === 'number') ? inputMin.value : 0
       const max = (typeof inputMax.value === 'number') ? inputMax.value : null
+      const before = [props.filter.value, props.filter.max]
       if (bound === 'max') {
         inputMax.value = Math.max((max ?? min) + by, min)
       } else {
         const next = Math.max(min + by, 0)
         inputMin.value = (max != null) ? Math.min(next, max) : next
       }
-      props.filter.disabled = false
+      if (before[0] !== props.filter.value || before[1] !== props.filter.max) props.filter.disabled = false
     }
 
     const DRAG_START_PX = 3
@@ -143,12 +144,17 @@ export default defineComponent({
       // Pressing a number would focus it and start selecting text, which is no use if this becomes a drag.
       // Typing starts on release instead; a number already being typed in keeps its caret and selection.
       handleMouseDown (e: MouseEvent) {
-        if (e.button === 0 && restingInputAt(e.target)) e.preventDefault()
+        if (e.button === 0 && restingInputAt(e.target)) {
+          e.preventDefault()
+          // That also keeps focus where it was, so a number being typed in elsewhere has to let go here.
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+        }
       },
       handlePointerMove (e: PointerEvent) {
         if (!drag) return
-        // The press ended outside the tile, before a drag captured the pointer.
-        if (!dragging.value && !(e.buttons & 1)) {
+        // The press ended where this tile couldn't see it: outside it, or with the overlay closing mid-drag.
+        if (!(e.buttons & 1)) {
+          dragging.value = false
           drag = null
           return
         }

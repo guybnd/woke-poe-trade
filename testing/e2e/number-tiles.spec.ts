@@ -68,4 +68,32 @@ test('number tiles stop at game limits, drag from the number, and a click still 
   await links.click()
   await page.keyboard.type('2')
   await expect(links).toHaveValue('2')
+
+  // Pressing another number takes the focus away from this one, even if that press becomes a drag.
+  const other = panel.locator('div[title^="Scroll or drag"]').filter({ hasNotText: 'Links' }).first().locator('input').first()
+  at = await press(page, other)
+  await expect(links).not.toBeFocused()
+  await page.mouse.up()
+  await expect(other).toBeFocused()
+  await other.blur()
+})
+
+test('scrolling a switched-off tile already at its limit leaves it off', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  const tile = panel.locator('div[title^="Scroll or drag"]').filter({ hasText: 'Links' })
+  const on = await tile.getAttribute('class')
+  await tile.getByRole('button').click()
+  await expect(tile).not.toHaveAttribute('class', on!)
+  const off = await tile.getAttribute('class')
+
+  await tile.hover()
+  await overlay.page.mouse.wheel(0, -100)
+  await overlay.page.waitForTimeout(100)
+  await expect(tile).toHaveAttribute('class', off!)
+
+  // A value that does change is one you want searched.
+  await overlay.page.mouse.wheel(0, 100)
+  await expect(tile).toHaveAttribute('class', on!)
 })
