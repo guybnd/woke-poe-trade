@@ -11,9 +11,9 @@
 
 :root {
   /* Surfaces */
-  --w-panel: rgba(19, 17, 15, 0.94);
-  --w-panel-solid: #13110f;  /* the panel colour with no game showing through, for long reading */
-  --w-panel-2: #1d1a16;
+  --w-panel-base: rgba(19, 17, 15, 0.94);
+  --w-panel-solid-base: #13110f;  /* the panel colour with no game showing through, for long reading */
+  --w-panel-2-base: #1d1a16;
   --w-panel-3: #29241d;
   --w-line: rgba(212, 166, 74, 0.16);
   --w-line-soft: rgba(212, 166, 74, 0.07);
@@ -121,9 +121,9 @@
 }
 
 :root[data-woke-theme="native"] {
-  --w-panel: rgba(14, 11, 8, 0.96);
-  --w-panel-solid: #0e0b08;
-  --w-panel-2: #1a140e;
+  --w-panel-base: rgba(14, 11, 8, 0.96);
+  --w-panel-solid-base: #0e0b08;
+  --w-panel-2-base: #1a140e;
   --w-panel-3: #261c12;
   --w-line: #4a3a26;
   --w-line-soft: rgba(138, 106, 58, 0.18);
@@ -146,9 +146,9 @@
 }
 
 :root[data-woke-theme="modern"] {
-  --w-panel: rgba(17, 18, 22, 0.86);
-  --w-panel-solid: #111216;
-  --w-panel-2: rgba(255, 255, 255, 0.04);
+  --w-panel-base: rgba(17, 18, 22, 0.86);
+  --w-panel-solid-base: #111216;
+  --w-panel-2-base: rgba(255, 255, 255, 0.04);
   --w-panel-3: rgba(255, 255, 255, 0.08);
   --w-line: rgba(255, 255, 255, 0.08);
   --w-line-soft: rgba(255, 255, 255, 0.04);
@@ -302,9 +302,9 @@ body { font-size: calc(1rem * var(--w-text-scale, 1)); }
 :root[data-woke-theme="hybrid"] #price-window,
 :root:not([data-woke-theme]) .w-pc-side,
 :root[data-woke-theme="hybrid"] .w-pc-side {
-  --w-panel-2: #1a1713;
-  --w-panel-solid: #0f0d0a;
-  --w-panel: #0f0d0a;
+  --w-panel-2-base: #1a1713;
+  --w-panel-solid-base: #0f0d0a;
+  --w-panel-base: #0f0d0a;
   --w-panel-3: #27221b;
   --w-line: #40372a;
   --w-line-soft: #2b251c;
@@ -317,19 +317,19 @@ body { font-size: calc(1rem * var(--w-text-scale, 1)); }
   --w-up: #7fcf90;
   --w-down: #ef8474;
   --w-ninja: #93c1e4;
-  --w-pc-window: #1a1713;
-  --w-pc-well: #0f0d0a;
+  --w-pc-window-base: #1a1713;
+  --w-pc-well-base: #0f0d0a;
   --w-pc-raise: #27221b;
 }
 
 /* APT's price check colours that live in component styles, not utility classes. */
 :root:not([data-woke-theme="classic"]) {
-  --w-pc-window: var(--w-panel-2);
-  --w-pc-well: var(--w-panel-solid);
+  --w-pc-window-base: var(--w-panel-2-base);
+  --w-pc-well-base: var(--w-panel-solid-base);
   --w-pc-raise: var(--w-panel-3);
 }
 /* Modern's panel-2 is see-through, and these sit over scrolling content. */
-:root[data-woke-theme="modern"] { --w-pc-window: var(--w-panel-solid); }
+:root[data-woke-theme="modern"] { --w-pc-window-base: var(--w-panel-solid-base); }
 
 /* Map APT's Tailwind greys onto the theme so price check, menus and settings
  * match the woke widgets. Only colours change; layout stays upstream's. */
@@ -357,3 +357,32 @@ body[data-woke-hidden] [data-w-panel] { display: none !important; }
 [data-w-panel] { zoom: var(--w-ui-scale, 1); }
 /* Zoom multiplies, and the size maths assumes one scale. */
 [data-w-panel] [data-w-panel] { zoom: 1; }
+
+/* ---------- Panel opacity (Settings > Look & icon row > Overlay) ----------
+ * Themes and the price check set the *-base colours; the surface tokens are
+ * derived from them. Below 100% (data-woke-panel-see) every overlay element
+ * mixes them with transparent, so backgrounds fade and text stays solid. Each
+ * element works it out for itself, so with "solid on hover" only the hovered
+ * panel (and the chain above the mouse) goes back to full colour. Hover only
+ * fires while the overlay takes the mouse: when it's open, or over a dock icon. */
+:root, #price-window, .w-pc-side {
+  --w-panel: var(--w-panel-base);
+  --w-panel-2: var(--w-panel-2-base);
+  --w-panel-solid: var(--w-panel-solid-base);
+  --w-pc-window: var(--w-pc-window-base);
+  --w-pc-well: var(--w-pc-well-base);
+}
+:root[data-woke-panel-see] #overlay-window * {
+  --w-panel: color-mix(in srgb, var(--w-panel-base) calc(var(--w-panel-opacity, 1) * 100%), transparent);
+  --w-panel-2: color-mix(in srgb, var(--w-panel-2-base) calc(var(--w-panel-opacity, 1) * 100%), transparent);
+  --w-panel-solid: color-mix(in srgb, var(--w-panel-solid-base) calc(var(--w-panel-opacity, 1) * 100%), transparent);
+  --w-pc-window: color-mix(in srgb, var(--w-pc-window-base) calc(var(--w-panel-opacity, 1) * 100%), transparent);
+  --w-pc-well: color-mix(in srgb, var(--w-pc-well-base) calc(var(--w-panel-opacity, 1) * 100%), transparent);
+}
+:root[data-woke-panel-see][data-woke-panel-hover="solid"] #overlay-window *:hover {
+  --w-panel: var(--w-panel-base);
+  --w-panel-2: var(--w-panel-2-base);
+  --w-panel-solid: var(--w-panel-solid-base);
+  --w-pc-window: var(--w-pc-window-base);
+  --w-pc-well: var(--w-pc-well-base);
+}

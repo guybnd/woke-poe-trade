@@ -144,7 +144,7 @@ const onScreen = computed(() => props.config.wmWants === 'show' && wm.active.val
 function onGuideLoaded () {
   const el = guideEl.value
   if (!el) return
-  const bg = getComputedStyle(el).getPropertyValue('--w-panel-2').trim() || '#1d1a16'
+  const bg = getComputedStyle(el).getPropertyValue('--w-panel-2-base').trim() || '#1d1a16'
   el.insertCSS(guideSkinCss(bg)).catch(() => {})
 }
 watch(guideEl, (el, old) => {
