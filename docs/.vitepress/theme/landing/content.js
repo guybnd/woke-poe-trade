@@ -3,8 +3,8 @@
 // overlay over a real game frame). `module` is the app's module id
 // (renderer/src/web/woke/modules.ts): modules with a slide stay off the plain
 // list at the end, which comes from the app itself so it can't drift.
-// `focus` is what a phone shows of the shot: [x, y, width] in the shot's pixels
-// (2560x1440), a 4:5 box on the window that matters (docs/scripts/phone-shots.mjs).
+// `focus` is what a phone shows of the shot: [x, y, width] measured as if the
+// shot were 2560x1440 (smaller shots are scaled), a 4:5 box on the window that matters (docs/scripts/phone-shots.mjs).
 // Keep the width near 900 so its text stays readable on a phone.
 
 export const REPO = 'https://github.com/guybnd/woke-poe-trade'

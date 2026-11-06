@@ -69,14 +69,16 @@ function reveal (h) {
 
 // The "?" card beside a caption opens on a tap too, not only on hover.
 const tip = ref(null)
-const closeTip = () => { tip.value = null }
-const onKey = (e) => { if (e.key === 'Escape') closeTip() }
+// A press anywhere but on a "?" closes it. pointerdown, as iOS Safari doesn't
+// pass taps on plain text up to a document click listener.
+const closeTip = (e) => { if (!e.target.closest?.('.say-more')) tip.value = null }
+const onKey = (e) => { if (e.key === 'Escape') tip.value = null }
 onMounted(() => {
-  document.addEventListener('click', closeTip)
+  document.addEventListener('pointerdown', closeTip)
   document.addEventListener('keydown', onKey)
 })
 onBeforeUnmount(() => {
-  document.removeEventListener('click', closeTip)
+  document.removeEventListener('pointerdown', closeTip)
   document.removeEventListener('keydown', onKey)
 })
 
@@ -416,7 +418,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
   .plate span, .plates.sub .plate span { background-size: auto 44px; }
   .plates.sub { margin: 4px 8px 2px; padding: 5px 8px 4px; }
   /* The picture: the crop on the window, swiped sideways for the next slide. */
-  .stage { aspect-ratio: 4 / 5; touch-action: pan-y; }
+  .stage { aspect-ratio: 4 / 5; touch-action: pan-y pinch-zoom; }
   .whole { display: flex; }
   .foot-links a { padding: 10px 0; }
 }

@@ -16,11 +16,17 @@ const MANIFEST = fileURLToPath(new URL('../.vitepress/cache/phone-shots.json', i
 
 export const PHONE = { width: 720, height: 900 }
 const WIDE = 1280
+// Bump when the way copies are made changes, so old ones are remade.
+const RECIPE = 2
 
-// The slide's focus, [x, y, width] in the shot's own pixels (2560x1440), as a
-// 4:5 box inside the shot. A slide without one gets the middle.
+// The slide's focus, [x, y, width] as if the shot were 2560x1440 (some are
+// smaller, all 16:9), as a 4:5 box inside the shot. A slide without one gets
+// the middle.
 export function focusBox ([x, y, w], shot = { width: 2560, height: 1440 }) {
-  w = Math.min(w, shot.width, Math.floor(shot.height * 4 / 5))
+  const scale = shot.width / 2560
+  x *= scale
+  y *= shot.height / 1440
+  w = Math.min(Math.round(w * scale), shot.width, Math.floor(shot.height * 4 / 5))
   const h = Math.round(w * 5 / 4)
   return {
     left: Math.max(0, Math.min(Math.round(x), shot.width - w)),
@@ -49,7 +55,7 @@ export async function makePhoneShots () {
     if (!file.endsWith('.webp')) continue
     const name = file.slice(0, -5)
     const src = `${SHOTS}${file}`
-    const key = `${statSync(src).mtimeMs}|${focus.get(name) ?? ''}`
+    const key = `${RECIPE}|${statSync(src).mtimeMs}|${focus.get(name) ?? ''}`
     next[name] = key
     const wide = `${SHOTS}1280/${file}`
     const phone = `${SHOTS}phone/${file}`

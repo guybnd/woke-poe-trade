@@ -57,6 +57,9 @@ jobs:
                 docs/*) site=true ;;
                 testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
                 testing/e2e/landing-*.spec.ts) landing=true ;;
+                # The landing page reads the module list, fonts and frame art
+                # from the app, and the version from main.
+                renderer/*|main/package.json) unit=true; game=true; site=true ;;
                 # A unit test checks the README's module table.
                 README.md) unit=true ;;
                 *) unit=true; game=true ;;

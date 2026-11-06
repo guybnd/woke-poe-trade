@@ -3,11 +3,12 @@
 // desktops the 1280px copies, and swiping, "Whole screen" and the "?" cards
 // work. Run from docs/: node scripts/check-phone.mjs
 import { spawn } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { HIGHLIGHTS } from '../.vitepress/theme/landing/content.js'
 
 const PORT = 4179
-const URL = `http://localhost:${PORT}/woke-poe-trade/`
+const SITE = `http://localhost:${PORT}/woke-poe-trade/`
 const failures = []
 const fail = (msg) => { failures.push(msg); console.error(`FAIL ${msg}`) }
 
@@ -15,10 +16,14 @@ for (const s of HIGHLIGHTS.flatMap(h => h.slides.flatMap(s => s.folder ?? [s])))
   if (!s.focus) fail(`slide "${s.label}" (${s.shot}) has no focus for its phone crop`)
 }
 
-const server = spawn('npx', ['vitepress', 'preview', '--port', String(PORT)], { stdio: 'ignore', shell: process.platform === 'win32' })
+// Not through npx, so killing it stops the server itself.
+const server = spawn(process.execPath, [fileURLToPath(new URL('../node_modules/vitepress/bin/vitepress.js', import.meta.url)), 'preview', '--port', String(PORT)], { stdio: 'ignore' })
+let exited = false
+server.on('exit', () => { exited = true })
 try {
   for (let i = 0; ; i++) {
-    try { if ((await fetch(URL)).ok) break } catch {}
+    if (exited) throw new Error(`vitepress preview stopped (port ${PORT} taken?)`)
+    try { if ((await fetch(SITE)).ok) break } catch {}
     if (i > 60) throw new Error('vitepress preview did not start')
     await new Promise(r => setTimeout(r, 500))
   }
@@ -27,7 +32,9 @@ try {
     const ctx = await browser.newContext({ viewport: { width, height }, isMobile: phone, hasTouch: phone })
     const page = await ctx.newPage()
     page.on('pageerror', e => fail(`${name}: ${e.message}`))
-    await page.goto(URL, { waitUntil: 'networkidle' })
+    // Vue's hydration mismatches only reach the console.
+    page.on('console', m => { if (m.type() === 'error' || /hydration/i.test(m.text())) fail(`${name}: console: ${m.text()}`) })
+    await page.goto(SITE, { waitUntil: 'networkidle' })
     // Walk down the page so every lazy picture loads.
     await page.evaluate(async () => {
       for (let y = 0; y < document.body.scrollHeight; y += 300) { scrollTo(0, y); await new Promise(r => setTimeout(r, 40)) }
@@ -39,6 +46,7 @@ try {
     if (wide > 0) fail(`${name}: the page is ${wide}px wider than the screen`)
 
     const pictures = await page.$$eval('.stage picture.on img', imgs => imgs.map(i => ({ src: i.currentSrc, w: i.naturalWidth })))
+    if (pictures.length !== HIGHLIGHTS.length) fail(`${name}: ${pictures.length} pictures on show, want one for each of the ${HIGHLIGHTS.length} highlights`)
     for (const p of pictures) {
       const want = phone ? '/shots/phone/' : '/shots/1280/'
       if (!p.src.includes(want)) fail(`${name}: showed ${p.src}, not a picture from ${want}`)
