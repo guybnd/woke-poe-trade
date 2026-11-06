@@ -155,26 +155,35 @@ function menuRef (ref: ItemTipRef | null | undefined): ItemMenuRef | null {
 }
 
 // Before the row's own handlers: whatever menu this click opens shows the item.
-// The innermost item wins, since capture runs outside in.
-function offer (e: Event) {
-  leave()
-  offerItem(e as MouseEvent, menuRef(refs.get(e.currentTarget as HTMLElement)))
+// One listener for the whole page, capturing, so it runs first; the innermost
+// item under the mouse wins.
+let offering = false
+function watchRightClicks () {
+  if (offering) return
+  offering = true
+  document.addEventListener('contextmenu', (e) => {
+    for (let el = e.target as Element | null; el; el = el.parentElement) {
+      const ref = refs.get(el as HTMLElement)
+      if (ref?.name) { offerItem(e, menuRef(ref)); return }
+    }
+  }, true)
 }
 
 // After them: nothing opened a menu, so the item's alone. An ancestor row that
 // opens its own later replaces it, still with the item on top.
 function menu (e: Event) {
+  // The menu opens where the tooltip would be in the way.
+  leave()
   openItemMenu(e as MouseEvent, menuRef(refs.get(e.currentTarget as HTMLElement)))
 }
 
 export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefined> = {
   mounted (el, binding) {
     watchHoverZones()
+    watchRightClicks()
     refs.set(el, binding.value)
     el.addEventListener('mouseenter', enter)
     el.addEventListener('mouseleave', leave)
-    // The right-click menu opens where the tooltip would be in the way.
-    el.addEventListener('contextmenu', offer, true)
     el.addEventListener('contextmenu', menu)
   },
   updated (el, binding) {
@@ -187,7 +196,6 @@ export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefine
   beforeUnmount (el) {
     el.removeEventListener('mouseenter', enter)
     el.removeEventListener('mouseleave', leave)
-    el.removeEventListener('contextmenu', offer, true)
     el.removeEventListener('contextmenu', menu)
     if (hovered === el) leave()
   }
