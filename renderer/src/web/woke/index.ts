@@ -24,6 +24,7 @@ import WidgetAtlas from './atlas/WidgetAtlas.vue'
 import WidgetLab from './lab/WidgetLab.vue'
 import WidgetChallenges from './challenges/WidgetChallenges.vue'
 import WidgetFarming from './farming/WidgetFarming.vue'
+import WidgetDropCounter from './drop-counter/WidgetDropCounter.vue'
 import WidgetMechanics from './mechanics/WidgetMechanics.vue'
 import WidgetMapMods from './map-mods/WidgetMapMods.vue'
 import WidgetMapCheck from './map-mods/WidgetMapCheck.vue'
@@ -52,6 +53,7 @@ export const wokeWidgets: WidgetComponent[] = [
   WidgetLab as unknown as WidgetComponent,
   WidgetChallenges as unknown as WidgetComponent,
   WidgetFarming as unknown as WidgetComponent,
+  WidgetDropCounter as unknown as WidgetComponent,
   WidgetMechanics as unknown as WidgetComponent,
   WidgetMapMods as unknown as WidgetComponent,
   WidgetMapCheck as unknown as WidgetComponent,
