@@ -162,23 +162,20 @@ function readModList (map: MapEntry) {
   }
   const attempt = async (i: number) => {
     if (!here()) return
-    let lines: string[] | null
+    let lines: string[] | null = null
     try {
-      lines = (await hostRequest<{ lines: string[] | null }>('area-mods-read', {}, 15_000)).lines
-    } catch {
-      // OCR files missing or broken: the checks still work.
-      ocrMissing = true
-      return
-    }
-    if (!here()) return
+      const read = await hostRequest<{ lines: string[] | null, ocrMissing?: boolean }>('area-mods-read', {}, 15_000)
+      // No OCR files: the checks still work. Other failures get the next try.
+      if (read.ocrMissing) ocrMissing = true
+      lines = read.lines
+    } catch {}
+    if (ocrMissing || !here()) return
     if (lines) {
       matcher ??= new TooltipMatcher(allAreaMods())
       const { mods, weak } = parseAreaModLines(lines, matcher)
-      if (mods.length || weak.length) {
-        store.readFromScreen(map, mods, weak)
-        return
-      }
+      if (mods.length || weak.length) store.readFromScreen(map, mods, weak)
     }
+    // Always both tries: a tooltip can hide part of the list on one of them.
     if (i + 1 < READ_AFTER_MS.length) later(i + 1)
   }
   later(0)

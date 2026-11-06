@@ -548,13 +548,14 @@ Promise<{ labels: Array<{ lines: string[], at: { x: number, y: number } }> }> {
 // Only looks at the screen and reads it; no input goes to the game. Null when
 // the list isn't showing. The worker only loads once blue text is there, so a
 // collapsed list costs one screenshot.
-const AREA_LIST_WIDTH = 0.46
+// Wide enough for the longest mods in the data, about 100 characters.
+const AREA_LIST_WIDTH = 0.7
 const AREA_LIST_HEIGHT = 0.75
-export async function readAreaMods (poeWindow: GameWindow): Promise<{ lines: string[] | null }> {
-  const check = checkOcr()
-  if (!check.ok) throw new Error(check.message!)
+export async function readAreaMods (poeWindow: GameWindow): Promise<{ lines: string[] | null, ocrMissing?: boolean }> {
+  if (!checkOcr().ok) return { lines: null, ocrMissing: true }
+  // The capture copies the desktop, so anything in front of the game would be read.
   const bounds = poeWindow.bounds
-  if (!bounds.width || !bounds.height) return { lines: null }
+  if (!poeWindow.hasFocus || !bounds.width || !bounds.height) return { lines: null }
   const t0 = performance.now()
   const width = Math.min(bounds.width, Math.round(bounds.height * AREA_LIST_WIDTH))
   const height = Math.round(bounds.height * AREA_LIST_HEIGHT)

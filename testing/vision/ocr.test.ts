@@ -109,10 +109,43 @@ describe.skipIf(!haveOcr)('OCR on game screenshots', () => {
     })
   }
 
+  describe('finding the list', () => {
+    const cols = 400
+    const rows = 300
+    const lineH = 20
+    const mask = (lines: Array<[y: number, h: number]>) => {
+      const m = new Uint8Array(cols * rows)
+      for (const [y, h] of lines) {
+        for (let r = y; r < y + h; r++) m.fill(255, r * cols + 100, r * cols + cols - 4)
+      }
+      return m
+    }
+
+    it('wants two lines, so a tooltip touching the edge is no list', () => {
+      expect(V.areaModStack(mask([[10, 12]]), cols, rows, lineH)).toBeNull()
+    })
+
+    it('keeps the lines either side of a hidden stretch', () => {
+      expect(V.areaModStack(mask([[10, 12], [28, 12], [100, 12], [118, 12]]), cols, rows, lineH)).toHaveLength(4)
+    })
+
+    it('splits two lines joined by a descender', () => {
+      expect(V.areaModStack(mask([[10, 12], [28, 34]]), cols, rows, lineH)).toHaveLength(3)
+    })
+
+    it('wants the text at the very edge', () => {
+      const m = new Uint8Array(cols * rows)
+      for (const y of [10, 28]) {
+        for (let r = y; r < y + 12; r++) m.fill(255, r * cols + 100, r * cols + cols - 30)
+      }
+      expect(V.areaModStack(m, cols, rows, lineH)).toBeNull()
+    })
+  })
+
   for (const screen of screens('area-list')) {
     it(`death recap reads the game's mod list in ${screen.file}`, () => {
       const img = loadScreen(screen.file)
-      const width = Math.round(img.height * 0.46)
+      const width = Math.round(img.height * 0.7)
       const height = Math.round(img.height * 0.75)
       const corner = new Uint8Array(width * height * 4)
       for (let y = 0; y < height; y++) {

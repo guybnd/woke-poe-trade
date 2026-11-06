@@ -524,31 +524,45 @@ export function scanAreaModList (img: ImageData, refH: number): LineImage[] | nu
   const full = Bindings.cvMatFromImage(img)
   const hsv = new cv.Mat()
   const blue = new cv.Mat()
+  const grey = new cv.Mat()
   cv.cvtColor(full, hsv, cv.COLOR_BGR2HSV_FULL)
   cv.inRange(hsv, blueMin, blueMax, blue)
+  cv.inRange(hsv, greyMin, greyMax, grey)
   const lineH = Math.round(refH * 0.0185)
   const stack = areaModStack(blue.data as Uint8Array, blue.cols, blue.rows, lineH)
   const lines = stack?.slice(0, MAX_LINES).map(l =>
-    cutLine(blue.data as Uint8Array, blue.data as Uint8Array, hsv.data as Uint8Array, blue.cols, l, lineH)) ?? null
-  hsv.delete(); blue.delete(); full.delete()
+    cutLine(blue.data as Uint8Array, grey.data as Uint8Array, hsv.data as Uint8Array, blue.cols, l, lineH)) ?? null
+  grey.delete(); hsv.delete(); blue.delete(); full.delete()
   return lines
 }
 
+// Right-aligned lines against the edge. Null for fewer than two, which is more
+// likely a tooltip that happens to touch the edge than the list.
 export function areaModStack (blue: Uint8Array, cols: number, rows: number, lineH: number): Span[] | null {
-  const lines = textBlobs(blue, cols, rows, lineH).filter(b => {
+  const lines: Span[] = []
+  for (const b of textBlobs(blue, cols, rows, lineH)) {
     const h = b.y1 - b.y0 + 1
     const w = b.x1 - b.x0 + 1
-    return h >= lineH * 0.3 && h <= lineH * 1.4 && w >= lineH * 1.5 && b.n >= w * h * 0.06 &&
-      b.x1 >= cols - lineH * 2
-  }).sort((a, b) => a.y0 - b.y0)
+    if (h < lineH * 0.3 || h > lineH * 2.6 || w < lineH * 1.5 || b.n < w * h * 0.06) continue
+    if (b.x1 < cols - lineH * 0.6) continue
+    if (h <= lineH * 1.4) {
+      lines.push(b)
+      continue
+    }
+    // Two lines joined by a descender.
+    const mid = Math.round((b.y0 + b.y1) / 2)
+    lines.push({ ...b, y1: mid - 1 }, { ...b, y0: mid })
+  }
+  lines.sort((a, b) => a.y0 - b.y0)
+  // The gap allows a few lines hidden, by a tooltip say.
   const tol = Math.max(3, lineH * 0.6)
   let best: Span[] | null = null
   let run: Span[] = []
   for (const l of lines) {
     const last = run[run.length - 1]
-    if (last && (l.y0 - last.y1 > lineH * 1.5 || Math.abs(l.x1 - last.x1) > tol)) run = []
+    if (last && (l.y0 - last.y1 > lineH * 6 || Math.abs(l.x1 - last.x1) > tol)) run = []
     run.push(l)
-    if (!best || run.length > best.length) best = run
+    if (run.length >= 2 && (!best || run.length > best.length)) best = run
   }
   return best
 }

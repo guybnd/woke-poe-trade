@@ -135,6 +135,9 @@ export const useDeathRecap = createGlobalState(() => {
   // Mods read off the screen in this map. They beat a check, which only guessed.
   function readFromScreen (map: MapEntry, mods: ModLine[], unknown: string[]) {
     const before = runByKey.value.get(map.key)
+    // Part of the list was hidden, or this wasn't the list at all.
+    const count = (r: { mods?: ModLine[], unknown?: string[] }) => (r.mods?.length ?? 0) + (r.unknown?.length ?? 0)
+    if (before && count({ mods, unknown }) < count(before)) return
     const run: RunRecord = {
       key: map.key,
       name: map.name,

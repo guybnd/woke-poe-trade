@@ -203,6 +203,12 @@ describe('the game mod list', () => {
     expect(weak).toEqual([])
   })
 
+  it('drops a misread total that matched a mod, and keeps other quantity mods', () => {
+    const data = new TooltipMatcher(['#% increased Pack size', '#% increased quantity of Artifacts dropped by Monsters'])
+    const { mods } = parseAreaModLines(['547% increasfh Pack sive', '20% increased quantity of Artifacts dropped by Monsters'], data)
+    expect(mods.map(m => m.matcher)).toEqual(['#% increased quantity of Artifacts dropped by Monsters'])
+  })
+
   it('finds nothing in text that is no mod list', () => {
     expect(parseAreaModLines(['Area is corrupted', ''], matcher)).toEqual({ mods: [], weak: [] })
   })
