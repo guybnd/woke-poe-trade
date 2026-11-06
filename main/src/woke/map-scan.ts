@@ -544,6 +544,51 @@ Promise<{ labels: Array<{ lines: string[], at: { x: number, y: number } }> }> {
   }
 }
 
+// Death recap's read of the game's own map mod list (top right, when open).
+// Only looks at the screen and reads it; no input goes to the game. Null when
+// the list isn't showing. The worker only loads once blue text is there, so a
+// collapsed list costs one screenshot.
+// Wide enough for the longest mods in the data, about 100 characters.
+const AREA_LIST_WIDTH = 0.7
+const AREA_LIST_HEIGHT = 0.75
+export async function readAreaMods (poeWindow: GameWindow, delayMs = 0): Promise<{ lines: string[] | null, ocrMissing?: boolean }> {
+  if (!checkOcr().ok) return { lines: null, ocrMissing: true }
+  if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, Math.min(delayMs, 10_000)))
+  // The capture copies the desktop, so anything in front of the game would be read.
+  const bounds = poeWindow.bounds
+  if (!poeWindow.hasFocus || !bounds.width || !bounds.height) return { lines: null }
+  const t0 = performance.now()
+  const width = Math.min(bounds.width, Math.round(bounds.height * AREA_LIST_WIDTH))
+  const height = Math.round(bounds.height * AREA_LIST_HEIGHT)
+  const corner = cropRegion(poeWindow.screenshot(), bounds.width, bounds.height,
+    { x: bounds.width - width, y: 0, width, height })
+  if (!hasBlueText(corner, bounds.height)) return { lines: null }
+  let worker: OcrWorker
+  try {
+    worker = await getWorker()
+  } catch (err) {
+    sharedWorker = null
+    throw err
+  }
+  try {
+    const lines = await worker.scanAreaModList({ width, height, data: corner }, bounds.height)
+    perfRecord('Death recap: map mod list', performance.now() - t0)
+    return { lines }
+  } finally {
+    releaseWorker()
+  }
+}
+
+// BGRA. Mod text is #8888FF; this is loose on purpose, as the worker looks properly.
+function hasBlueText (bgra: Uint8Array, refH: number): boolean {
+  const need = Math.round((refH / 1080) * (refH / 1080) * 400)
+  let found = 0
+  for (let i = 0; i < bgra.length; i += 4) {
+    if (bgra[i] > 110 && bgra[i] > bgra[i + 2] * 1.3 && bgra[i] > bgra[i + 1] * 1.3 && ++found >= need) return true
+  }
+  return false
+}
+
 // Same units as uiohook's mouse events: physical pixels on Windows.
 function cursorInScreenPixels (): { x: number, y: number } {
   const p = screen.getCursorScreenPoint()

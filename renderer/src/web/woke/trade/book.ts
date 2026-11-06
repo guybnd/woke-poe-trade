@@ -40,6 +40,8 @@ export interface Offer extends TradeOffer {
   closed: 'done' | 'dismissed' | 'expired' | null
   // In a saved history record: when it was reopened, so a restart brings it back.
   reopenedAt?: number | null
+  // Removed from the history but still needed to stop a restart reopening it.
+  removedAt?: number | null
 }
 
 // A finished trade, for the sales log.
@@ -68,6 +70,8 @@ export interface TradeBook {
 
 export const OPEN_FOR_MS = 30 * 60_000
 export const CLOSED_SHOWN_MS = 90_000
+// How far back a restart reads Client.txt for offers.
+export const LOG_REPLAY_MS = 30 * 60_000
 
 export function newBook (): TradeBook {
   return { offers: [], lastTarget: null, afk: false }
@@ -277,6 +281,12 @@ export function reopen (book: TradeBook, o: Offer, at: number): Offer {
 // Reading Client.txt again after a restart finds whispers you already closed.
 export function alreadyClosed (history: Offer[], o: Pick<Offer, 'dir' | 'who' | 'item' | 'at'>): boolean {
   return history.some(h => h.dir === o.dir && h.who === o.who && h.item === o.item && (h.closedAt ?? 0) >= o.at)
+}
+
+// Whether a whisper a restart can still read could be older than this closing.
+// If not, nothing needs the record to stay closed, so it can really be deleted.
+export function replayCouldReopen (o: Pick<Offer, 'closedAt'>, now: number): boolean {
+  return (o.closedAt ?? 0) >= now - LOG_REPLAY_MS
 }
 
 // Marks a trade as done by hand (no "Trade accepted" seen). Returns the offer

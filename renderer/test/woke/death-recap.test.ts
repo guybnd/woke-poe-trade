@@ -1,7 +1,9 @@
 // Log lines are in the real Client.txt's shape, checked against Guy's log.
 import { describe, expect, it } from 'vitest'
 import { DeathTracker, areaName, deathGroup, levelFits, matchCheck, modDeathStats, ordinal, shortTime, slainName } from '@/web/woke/death-recap/death-log'
-import type { DeathRecord, MapCheck, RunRecord } from '@/web/woke/death-recap/death-log'
+import { parseAreaModLines } from '@/web/woke/death-recap/area-list'
+import { TooltipMatcher } from '@/web/woke/map-mods/tooltip-parse'
+import type { DeathRecord, MapCheck, MapEntry, RunRecord } from '@/web/woke/death-recap/death-log'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
 const area = (time: string, id: string, seed: string, level = 83) =>
@@ -11,7 +13,7 @@ const entered = (time: string, name: string) => info(time, `: You have entered $
 const slain = (time: string, who = 'luminyahu') => info(time, `: ${who} has been slain.`)
 
 function follow (lines: string[]) {
-  const maps: Array<{ key: string, name: string }> = []
+  const maps: MapEntry[] = []
   const deaths: Array<Omit<DeathRecord, 'nth'>> = []
   const tracker = new DeathTracker({
     onMap: (m) => { maps.push(m) },
@@ -43,7 +45,7 @@ describe('reading deaths from Client.txt', () => {
       info('15:27:21', 'The Searing Exarch: Burn.'),
       slain('15:27:24')
     ])
-    expect(maps).toHaveLength(1)
+    expect(maps.map(m => m.returned)).toEqual([false, true])
     expect(deaths).toHaveLength(2)
     expect(deaths[0]).toMatchObject({
       character: 'luminyahu',
@@ -183,4 +185,31 @@ describe('mods you die to', () => {
 it('formats', () => {
   expect([1, 2, 3, 4, 11, 12, 13, 21].map(ordinal)).toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st'])
   expect([5000, 117_000, 3_720_000].map(shortTime)).toEqual(['5s', '1:57', '1h 02m'])
+})
+
+describe('the game mod list', () => {
+  const matcher = new TooltipMatcher(['Area contains many Totems', 'Players are Cursed with Elemental Weakness'])
+
+  it('keeps the mods and leaves out the totals and Area is corrupted', () => {
+    const { mods, weak } = parseAreaModLines([
+      'Area contains many Totems',
+      'Players are Cursed with Elemental Weakness',
+      '179% increased Quantity of Items found in this Area',
+      '82% increased Rarity of Items found in this Area',
+      '54% increased Pack size',
+      'Area is corrupted'
+    ], matcher)
+    expect(mods.map(m => m.matcher)).toEqual(['Area contains many Totems', 'Players are Cursed with Elemental Weakness'])
+    expect(weak).toEqual([])
+  })
+
+  it('drops a misread total that matched a mod, and keeps other quantity mods', () => {
+    const data = new TooltipMatcher(['#% increased Pack size', '#% increased quantity of Artifacts dropped by Monsters'])
+    const { mods } = parseAreaModLines(['547% increasfh Pack sive', '20% increased quantity of Artifacts dropped by Monsters'], data)
+    expect(mods.map(m => m.matcher)).toEqual(['#% increased quantity of Artifacts dropped by Monsters'])
+  })
+
+  it('finds nothing in text that is no mod list', () => {
+    expect(parseAreaModLines(['Area is corrupted', ''], matcher)).toEqual({ mods: [], weak: [] })
+  })
 })

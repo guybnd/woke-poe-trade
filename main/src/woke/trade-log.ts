@@ -23,7 +23,7 @@ async function readFile (file: string): Promise<TradeRecord[]> {
 
 const queued = writeQueue()
 
-// Offers you dismissed or that ran out, so none is ever lost: one file for all
+// Offers you dismissed or that ran out, kept until you remove them: one file for all
 // leagues, newest last. <userData>/woke-offer-history/offers.json
 interface OfferRecord { id: string, [k: string]: unknown }
 const historyFile = () => path.join(dataDir('woke-offer-history'), 'offers.json')
@@ -48,7 +48,7 @@ export const tradeLogHandlers: Record<string, (args: Args) => Promise<unknown>> 
       return true
     })
   },
-  // Only when an offer was replaced by a newer copy of itself.
+  // An offer replaced by a newer copy of itself, or removed from the history.
   'offer-history-delete': async ({ id }) => {
     return await queued(async () => {
       const list = await readHistory()

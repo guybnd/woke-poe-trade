@@ -7,7 +7,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { importBuild, listBuilds, openBuild, readBuild, showBuild } from './pob-builds'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
-import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels } from './map-scan'
+import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
 import { WokeHoverTracker } from './hover'
 import { readStashTab } from './stash-read'
 import { StashWatch } from './stash-watch'
@@ -80,6 +80,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     if (kind.canRoll) handlers[`${kind.topic}-roll`] = async () => await scanner.roll()
   }
   handlers['essence-scan-once'] = async () => await readAllEssenceLabels(poeWindow)
+  handlers['area-mods-read'] = async (args) => await readAreaMods(poeWindow, Number(args?.delayMs) || 0)
   const stashWatch = new StashWatch(() => {
     server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'stash-clear', data: null } })
   })

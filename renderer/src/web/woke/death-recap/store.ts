@@ -8,7 +8,7 @@ import { ModifierType } from '@/parser/modifiers'
 import { prepareMapStat } from '@/web/map-check/prepare-map-stats'
 import { hostRequest } from '../shared/host'
 import { deathGroup, matchCheck, runFromCheck } from './death-log'
-import type { DeathRecord, MapCheck, RunRecord } from './death-log'
+import type { DeathRecord, MapCheck, MapEntry, ModLine, RunRecord } from './death-log'
 
 const MAX_DEATHS = 1000
 const MAX_RUNS = 3000
@@ -123,12 +123,32 @@ export const useDeathRecap = createGlobalState(() => {
 
   // A map opened. Replayed lines (live false) don't use up checks: a check
   // made now says nothing about a map from before it.
-  function enterMap (map: { key: string, name: string, level: number, at: number }, live: boolean) {
-    if (!live || runByKey.value.has(map.key)) return
+  function enterMap (map: MapEntry, live: boolean) {
+    if (!live || map.returned || runByKey.value.has(map.key)) return
     const found = matchCheck(checks, map)
     if (!found) return
     checks = checks.filter(c => c !== found.check)
     runs.value = [runFromCheck(map.key, map, found), ...runs.value].slice(0, MAX_RUNS)
+    save()
+  }
+
+  // Mods read off the screen in this map. They beat a check, which only guessed.
+  function readFromScreen (map: MapEntry, mods: ModLine[], unknown: string[]) {
+    const before = runByKey.value.get(map.key)
+    // Part of the list was hidden, or this wasn't the list at all.
+    const count = (r: { mods?: ModLine[], unknown?: string[] }) => (r.mods?.length ?? 0) + (r.unknown?.length ?? 0)
+    if (before && count({ mods, unknown }) < count(before)) return
+    const run: RunRecord = {
+      key: map.key,
+      name: map.name,
+      level: map.level,
+      at: before?.at ?? map.at,
+      tier: before?.tier,
+      mods,
+      unknown,
+      match: 'screen'
+    }
+    runs.value = [run, ...runs.value.filter(r => r.key !== map.key)].slice(0, MAX_RUNS)
     save()
   }
 
@@ -141,5 +161,5 @@ export const useDeathRecap = createGlobalState(() => {
     save()
   }
 
-  return { deaths, runs, runByKey, sessionDeaths, loadError, load, addCheck, enterMap, addDeath }
+  return { deaths, runs, runByKey, sessionDeaths, loadError, load, addCheck, enterMap, readFromScreen, addDeath }
 })

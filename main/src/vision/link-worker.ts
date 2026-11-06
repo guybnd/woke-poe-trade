@@ -4,7 +4,7 @@ import nodeEndpoint from 'comlink/dist/umd/node-adapter'
 import * as Bindings from './wasm-bindings'
 import { HeistGemFinder } from './HeistGemFinder'
 import { ImageData } from './utils'
-import { scanTooltip, ocrLine } from '../woke/map-scan-vision'
+import { scanTooltip, scanAreaModList, ocrLine } from '../woke/map-scan-vision'
 import type { ScanOptions, LineImage } from '../woke/map-scan-vision'
 import { scanEssenceLabel, scanAllEssenceLabels } from '../woke/essence-scan-vision'
 
@@ -48,6 +48,11 @@ const WorkerBody = {
   async ocrLines (lines: LineImage[]) {
     await _changeLangPromise
     return lines.map(ocrLine)
+  },
+  // woke death recap: the game's list of the area's mods
+  async scanAreaModList (corner: ImageData, refH: number) {
+    await _changeLangPromise
+    return scanAreaModList(corner, refH)?.map(ocrLine) ?? null
   },
   // woke essence scan mode
   async scanEssenceLabel (screenshot: ImageData, opts: ScanOptions) {

@@ -1,0 +1,18 @@
+{
+  "kind": "area-list",
+  "cursor": {
+    "x": 0,
+    "y": 0
+  },
+  "note": "The game's own mod list, open in the top right, with the performance overlay on",
+  "mods": [
+    "All Monster Damage from Hits always Ignites",
+    "Area contains many Totems",
+    "Buffs on Players expire #% faster",
+    "Monsters Poison on Hit",
+    "Monsters deal #% extra Physical Damage as Lightning",
+    "Monsters take #% reduced Extra Damage from Critical Strikes",
+    "Players are Cursed with Elemental Weakness",
+    "Unique Bosses are Possessed"
+  ]
+}
