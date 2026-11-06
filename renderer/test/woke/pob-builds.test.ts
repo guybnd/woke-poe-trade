@@ -1,7 +1,7 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildDps, buildFacts, chainGems, gearLayout, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
+import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
 import { nextGems } from '@/web/woke/pob-builds/gems'
 import { PINNED_GROUP, groupBuilds } from '@/web/woke/pob-builds/widget'
 import type { PobBuildEntry, PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
@@ -393,5 +393,50 @@ describe('groupBuilds', () => {
     const groups = groupBuilds([b('a', '3.27/phys dot', 5), b('c', '3.27', 9)], [])
     expect(groups.map(g => g.folder)).toEqual(['3.27'])
     expect(groups[0].builds).toHaveLength(2)
+  })
+})
+
+describe('next step', () => {
+  const gem = (name: string) => ({ name, level: 1, quality: 0, enabled: true })
+  const set = (title: string, gems: string[]) => ({ title, isActive: false, groups: [{ label: '', slot: '', enabled: true, isMain: false, gems: gems.map(gem) }] })
+
+  it('finds the next set in the file, past headings', () => {
+    const list = [{ title: 'A' }, { title: 'heading', divider: true }, { title: 'B' }]
+    expect(nextSet(list, list[0])?.title).toBe('B')
+    expect(nextSet(list, list[2])).toBeNull()
+    expect(nextSet(list, null)).toBeNull()
+  })
+
+  it('goes by stage past a side set, and by file order without stages', () => {
+    const list = ['25 - 32', 'PS Swap', '32 - 40', 'Endgame', 'Mageblood'].map(title => ({ title }))
+    expect(nextSet(list, list[0])?.title).toBe('32 - 40')
+    expect(nextSet(list, list[2])?.title).toBe('Endgame')
+    expect(nextSet(list, list[1])?.title).toBe('32 - 40')
+    expect(nextSet(list, list[3])?.title).toBe('Mageblood')
+  })
+
+  it('says which gems come and go', () => {
+    expect(gemChange(set('A', ['Arc', 'Frostbite']), set('B', ['Arc', 'Spark']))).toEqual({ add: ['Spark'], drop: ['Frostbite'] })
+  })
+
+  it('lists gear slots that change, in inventory order, and tells rares apart by mods', () => {
+    const item = (name: string, mods: string[]) => ({ rarity: 'RARE', name, base: 'Heavy Belt', sockets: '', implicits: [], mods }) as never
+    const from = { title: 'A', isActive: false, slots: [{ slot: 'Belt', item: item('New Item', ['+10 to Life']) }, { slot: 'Weapon 1', item: item('X', []) }, { slot: 'Helmet', item: item('H', []) }] }
+    const to = { title: 'B', isActive: false, slots: [{ slot: 'Belt', item: item('New Item', ['+50 to Life']) }, { slot: 'Weapon 1', item: item('Y', []) }, { slot: 'Helmet', item: item('H', []) }] }
+    expect(gearChange(from, to).map(c => c.slot)).toEqual(['Weapon 1', 'Belt'])
+  })
+
+  it('leaves out items changing slot, and sees sockets changing', () => {
+    const item = (name: string, sockets = '') => ({ rarity: 'UNIQUE', name, base: 'B', sockets, implicits: [], mods: [] }) as never
+    const moved = gearChange(
+      { title: 'A', isActive: false, slots: [{ slot: 'Ring 1', item: item('X') }, { slot: 'Ring 2', item: item('Y') }] },
+      { title: 'B', isActive: false, slots: [{ slot: 'Ring 1', item: item('Y') }, { slot: 'Ring 2', item: item('X') }] }
+    )
+    expect(moved).toEqual([])
+    const relinked = gearChange(
+      { title: 'A', isActive: false, slots: [{ slot: 'Helmet', item: item('X', 'R-G') }] },
+      { title: 'B', isActive: false, slots: [{ slot: 'Helmet', item: item('X', 'R-R') }] }
+    )
+    expect(relinked.map(c => c.slot)).toEqual(['Helmet'])
   })
 })

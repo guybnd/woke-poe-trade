@@ -7,7 +7,7 @@
       <WButton size="sm" :variant="isActive ? 'default' : 'primary'" :icon="isActive ? 'fas fa-check-circle' : undefined" :disabled="isActive"
         :title="isActive ? 'Other windows use this build' : 'Make other windows use this build'" @click="setActive">{{ isActive ? 'In use' : 'Use build' }}</WButton>
       <WButton size="sm" icon="fas fa-external-link-alt" @click="run(pobApi.open(config, entry.relPath))">Open in PoB</WButton>
-      <WButton v-if="treeUrl" size="sm" icon="fas fa-project-diagram" title="Open this loadout's passive tree" @click="openTree">Passive tree</WButton>
+      <WButton v-if="trees.length" size="sm" icon="fas fa-project-diagram" title="This loadout's passive tree" @click="emit('tree', loadout?.tree?.title ?? trees[0].title)">Passive tree</WButton>
       <WButton size="sm" variant="ghost" icon="fas fa-ellipsis-h" title="More" @click="moreMenu" />
     </template>
     <template #tabs>
@@ -26,6 +26,7 @@
           <span class="w-num" :style="c.tone ? { color: `var(--w-${c.tone})` } : undefined">{{ c.value }}</span>
           <span class="w-faint text-xs">{{ c.label }}</span>
         </div>
+        <div v-if="statsElsewhere" :class="$style.statsFor" class="w-faint text-xs">Saved for {{ details?.statsSet }}</div>
       </div>
 
       <!-- Leveling -->
@@ -41,6 +42,32 @@
           </WChip>
         </div>
         <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
+        <template v-if="nextTree || nextGems_ || gearStep">
+          <div :class="$style.heading">Next</div>
+          <button v-if="nextTree" type="button" :class="$style.next" class="w-focusable" title="Show on the tree" @click="emit('tree', nextTree.title)">
+            <span :class="$style.nextHead">
+              <span>Tree: <span class="w-accent">{{ nextTree.title }}</span></span>
+              <span class="ml-auto w-dim text-xs whitespace-nowrap">
+                <template v-if="treeData">
+                  <span class="w-up">+{{ nextTreeDiff.added }}</span><template v-if="nextTreeDiff.addedAscendancy"> · {{ nextTreeDiff.addedAscendancy }} ascendancy</template>
+                </template><template v-if="treeData && nextTreeDiff.removed"> · <span class="w-down">-{{ nextTreeDiff.removed }} respec</span></template>
+              </span>
+            </span>
+            <span v-if="nextTreeNames" class="w-dim text-xs">{{ nextTreeNames }}</span>
+          </button>
+          <div v-if="nextGems_" :class="$style.next">
+            <span :class="$style.nextHead"><span>Gems: <span class="w-accent">{{ nextGems_.title }}</span></span></span>
+            <span v-if="nextGems_.change.add.length" :class="$style.names"><span class="w-up text-xs">Add</span><GemName v-for="g in nextGems_.change.add" :key="g" :name="g" /></span>
+            <span v-if="nextGems_.change.drop.length" class="w-dim text-xs">Drop {{ nextGems_.change.drop.join(', ') }}</span>
+          </div>
+          <div v-if="gearStep" :class="$style.next">
+            <span :class="$style.nextHead"><span>Gear: <span class="w-accent">{{ gearStep.title }}</span></span></span>
+            <span v-for="c in gearStep.changes.slice(0, 4)" :key="c.slot" class="text-xs w-trunc">
+              <span class="w-dim">{{ slotLabel(c.slot) }}:</span> {{ c.now ? (c.now.rarity === 'UNIQUE' || c.now.rarity === 'RELIC' ? c.now.name : c.now.base || c.now.name) : 'nothing' }}
+            </span>
+            <span v-if="gearStep.changes.length > 4" class="w-dim text-xs">and {{ gearStep.changes.length - 4 }} more</span>
+          </div>
+        </template>
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
         <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
           <div :class="$style.link">
@@ -167,9 +194,11 @@ import { nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
   gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
-  buildDps, realSets, relevantGems, shortNumber, skillSetsOf
+  buildDps, gearChange, gemChange, nextSet, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel
 } from './build-model'
 import { hideTip } from '../ui/tooltip/tooltip'
+import { loadPassiveTree, treeDiff } from './passive-tree'
+import type { TreeNode } from './passive-tree'
 import { pobApi } from './widget'
 import type { LoadoutPick, PobBuildEntry, PobBuildsWidget, PobDetails } from './widget'
 import { useActiveBuild } from './active'
@@ -179,7 +208,7 @@ const props = defineProps<{
   entry: PobBuildEntry
   details: PobDetails | null
 }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void, (e: 'tree', title: string): void }>()
 
 const build = useActiveBuild()
 const level = build.level
@@ -221,6 +250,12 @@ function moreMenu (e: MouseEvent) {
       : [])
   ])
 }
+
+// A levelling build is usually saved on its last set, far from where you are.
+const statsElsewhere = computed(() => {
+  const saved = props.details?.statsSet
+  return Boolean(saved && skillSets.value.length > 1 && saved !== shownSet.value?.title)
+})
 
 // What PoB saved, for the sets active when it saved.
 const statCells = computed(() => {
@@ -363,14 +398,33 @@ const setChips = computed(() => {
 })
 
 const trees = computed(() => realSets(props.details?.trees ?? []))
-const treeUrl = computed(() => {
-  const tree = loadout.value?.tree ?? trees.value[0]
-  return tree ? safeUrl(tree.url) : undefined
+
+// ---- next step ----
+
+const treeData = shallowRef<Map<number, TreeNode> | null>(null)
+const nextTree = computed(() => nextSet(trees.value, loadout.value?.tree))
+// The names only come once the tree has loaded, which the count doesn't need.
+watch(nextTree, (t) => {
+  if (t) loadPassiveTree().then(data => { treeData.value = data }, () => {})
+}, { immediate: true })
+const nextTreeDiff = computed(() => treeDiff(treeData.value, loadout.value?.tree?.nodes ?? [], nextTree.value?.nodes ?? []))
+const nextTreeNames = computed(() => nextTreeDiff.value.addedNames.map(n => n.name).join(', '))
+
+const nextGems_ = computed(() => {
+  const from = shownSet.value
+  const to = nextSet(skillSets.value, from)
+  if (!from || !to) return null
+  const change = gemChange(from, to)
+  return change.add.length || change.drop.length ? { title: to.title, change } : null
 })
 
-function openTree () {
-  if (treeUrl.value) window.open(treeUrl.value)
-}
+const gearStep = computed(() => {
+  const from = shownItemSet.value
+  const to = nextSet(itemSets.value, from)
+  if (!from || !to) return null
+  const changes = gearChange(from, to)
+  return changes.length ? { title: to.title, changes } : null
+})
 
 // ---- filter ----
 
@@ -408,6 +462,7 @@ function run (p: Promise<unknown>) {
   padding: 2px 0 6px;
   border-bottom: 1px solid var(--w-line-soft);
 }
+.statsFor { flex-basis: 100%; }
 .stat {
   display: flex;
   flex-direction: column;
@@ -452,6 +507,26 @@ function run (p: Promise<unknown>) {
 .lvl { width: 1.6rem; text-align: right; flex: none; }
 .gemName { flex: none; max-width: 62%; }
 .src { min-width: 0; }
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+  padding: 5px 8px;
+  text-align: left;
+  background: var(--w-panel-2);
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+}
+button.next:hover { border-color: var(--w-line-strong); }
+.nextHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
 .rowWrap {
   padding: 4px 0 5px;
   border-bottom: 1px solid var(--w-line-soft);
