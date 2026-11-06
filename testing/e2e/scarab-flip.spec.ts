@@ -251,14 +251,15 @@ test('flips: a tab with no flips says which tabs work', async ({ overlay }) => {
   await expect(overlay.page.getByText(/Outlines work on Scarab, Delirium, Delve, Essence and Blight/)).toBeVisible()
 })
 
-// The dock's usual spot is low on the screen, where a note must stand on the icon.
+// A dock low on the screen, where a note must stand on the icon. Left, so the note can't centre on it.
 const lowDock = (config: { woke?: Record<string, unknown> }) => {
-  config.woke = { ...config.woke, dock: { x: 20, y: 90, vertical: false, noPeek: [], hidden: [], dismissed: {} } }
+  config.woke = { ...config.woke, dock: { x: 0, y: 90, vertical: false, noPeek: [], hidden: [], dismissed: {} } }
 }
 
-for (const [where, patch] of [['high', undefined], ['low', lowDock]] as const) {
+for (const [where, patch, size] of [['high', undefined, null], ['low', lowDock, null], ['low at 1440p', lowDock, { width: 2560, height: 1440 }]] as const) {
   test(`flips: the long note beside a ${where} icon is whole, and clear of the icon`, async ({ overlay }) => {
     await overlay.boot({ patch, widgets: [{ wmType: 'woke-scarab-flip' }] })
+    if (size) await overlay.page.setViewportSize(size)
     await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
     await overlay.showScreen('screens/stash-general-real.png')
     await overlay.restAndClickDockIcon('scarab-flip')
@@ -268,6 +269,8 @@ for (const [where, patch] of [['high', undefined], ['low', lowDock]] as const) {
     const box = (await note.boundingBox())!
     const icon = (await overlay.dockIcon('scarab-flip').boundingBox())!
     const view = overlay.page.viewportSize()!
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(view.width)
     expect(box.y).toBeGreaterThanOrEqual(0)
     expect(box.y + box.height).toBeLessThanOrEqual(view.height)
     expect(box.y + box.height <= icon.y || box.y >= icon.y + icon.height).toBe(true)

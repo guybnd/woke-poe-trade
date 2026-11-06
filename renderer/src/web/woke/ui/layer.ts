@@ -32,10 +32,13 @@ export interface Toast {
   id: number
   text: string
   undo?: () => void
+  // Where it wants to be, in screen pixels: centred on x, with its top at y. The
+  // note fits itself to the window once it knows its size (see ToastRow).
   x: number
   y: number
-  // Hangs down from `y`. Otherwise it stands on it.
-  below: boolean
+  // A dock icon's top and bottom: the note stands above it if there's room,
+  // else hangs below it.
+  beside?: { top: number, bottom: number }
   // Takes the mouse while it's over it, so Undo can be clicked in game.
   clickable: boolean
 }
@@ -47,22 +50,17 @@ let nextId = 1
 // Shown at the bottom of `anchor` (usually the panel), else the screen; 5 s.
 // `dock`: from a dock icon's menu, while you may be playing. Sits clear of the
 // row, so nothing moves under it, and Undo can be clicked.
-const DOCK_NOTE_ROOM = 120
-
 export function toast (text: string, opts: { undo?: () => void, anchor?: Element | null, ms?: number, dock?: boolean } = {}) {
   const box = opts.anchor?.getBoundingClientRect()
   // A hidden panel has no size: its corner would put the note off screen.
   const r = box && box.width > 0 && box.height > 0 ? box : undefined
-  // An icon at the very top has no room above it, however few lines the note has.
-  const below = Boolean(r && opts.dock && r.top <= DOCK_NOTE_ROOM)
   const t: Toast = {
     id: nextId++,
     text,
     undo: opts.undo,
-    // A note is at most 360 px wide and centred here: keep it on screen.
-    x: Math.max(180, Math.min(window.innerWidth - 180, r ? r.left + r.width / 2 : window.innerWidth / 2)),
-    y: !r ? window.innerHeight - 80 : !opts.dock ? r.bottom - 10 : below ? r.bottom + 6 : r.top - 6,
-    below,
+    x: r ? r.left + r.width / 2 : window.innerWidth / 2,
+    y: r ? r.bottom - 10 : window.innerHeight - 80,
+    beside: r && opts.dock ? { top: r.top, bottom: r.bottom } : undefined,
     clickable: opts.dock === true && opts.undo != null
   }
   toasts.value = [...toasts.value.filter(o => Math.abs(o.y - t.y) > 4 || Math.abs(o.x - t.x) > 4), t]
