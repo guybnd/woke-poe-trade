@@ -8,7 +8,7 @@
         <span class="w-trunc" :class="[$style.name, menu.item.nameClass]">{{ menu.item.name }}</span>
         <span v-if="menu.item.price" class="w-num" :class="$style.price">{{ menu.item.price }}</span>
       </div>
-      <div :class="$style.strip" role="group" :aria-label="menu.item.name">
+      <div :class="$style.strip" data-strip role="group" :aria-label="menu.item.name">
         <button v-for="(a, i) in menu.item.actions" :key="i" type="button" role="menuitem" :class="$style.act"
           :disabled="a.disabled" :title="a.title" :aria-label="a.title ?? a.label" @click="pickAction(a)">
           <i :class="a.icon" />
@@ -103,7 +103,24 @@ function move (dir: 1 | -1) {
   }
 }
 
+// Left and Right walk the item strip; with no list under it, Up and Down too.
+function stripKey (e: KeyboardEvent): boolean {
+  if (!menu.value?.item) return false
+  const listEmpty = !menu.value.items.some(it => !('separator' in it) && !it.disabled)
+  const dir = e.key === 'ArrowRight' || (listEmpty && e.key === 'ArrowDown') ? 1 : e.key === 'ArrowLeft' || (listEmpty && e.key === 'ArrowUp') ? -1 : 0
+  if (!dir) return false
+  const buttons = [...(menuEl.value?.querySelectorAll<HTMLButtonElement>('[data-strip] button:not(:disabled)') ?? [])]
+  if (!buttons.length) return false
+  e.preventDefault()
+  const at = buttons.indexOf(document.activeElement as HTMLButtonElement)
+  const next = at < 0 ? (dir === 1 ? 0 : buttons.length - 1) : (at + dir + buttons.length) % buttons.length
+  hl.value = -1
+  buttons[next].focus()
+  return true
+}
+
 function onMenuKey (e: KeyboardEvent) {
+  if (stripKey(e)) return
   if (e.key === 'ArrowDown') { e.preventDefault(); move(1) } else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1) } else if (e.key === 'Escape') { e.preventDefault(); closeMenu() } else if (e.key === 'Enter' && hl.value >= 0) {
     e.preventDefault()
     pick(menu.value!.items[hl.value])

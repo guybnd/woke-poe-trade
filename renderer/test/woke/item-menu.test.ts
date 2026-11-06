@@ -40,6 +40,17 @@ describe('priceCheckInput', () => {
     expect(input('Cleave', 'gem')!.item!.category).toBe(ItemCategory.Gem)
   })
 
+  it('checks a Vaal gem as corrupted', () => {
+    expect(input('Vaal Grace', 'gem')!.item!.isCorrupted).toBe(true)
+  })
+
+  it('has no price check for a Foulborn unique, or a currency outside English', () => {
+    const hh = ITEM_BY_REF('UNIQUE', 'Headhunter')![0]
+    expect(priceCheckInput({ name: 'Foulborn Headhunter' }, 'unique', hh)).toBeNull()
+    const orb = ITEM_BY_REF('ITEM', 'Divine Orb')![0]
+    expect(priceCheckInput({ name: 'Divine Orb' }, 'item', orb, false)).toBeNull()
+  })
+
   it('has no price check for a plain base, and uses a build item\'s own text', () => {
     expect(input('Rustic Sash', 'item')).toBeNull()
     expect(priceCheckInput({ name: 'Dread Shell', text: 'TEXT' }, 'item', undefined)).toEqual({ clipboard: 'TEXT' })
@@ -53,6 +64,12 @@ describe('tradeQuery', () => {
     expect(tradeQuery({ name: 'Foulborn Headhunter' }, 'unique', hh)).toEqual({ name: 'Headhunter', type: 'Leather Belt' })
     expect(tradeQuery({ name: 'Dread Shell', base: 'Two-Stone Ring' }, 'item', undefined)).toEqual({ type: 'Two-Stone Ring' })
     expect(tradeQuery({ name: 'Cleave' }, 'gem', undefined)).toEqual({ type: 'Cleave' })
+  })
+
+  it('searches a transfigured gem as its plain gem and which one', () => {
+    const t = ITEM_BY_REF('GEM', 'Cleave of Rage')![0]
+    expect(t.gem?.transfigured).toBe(true)
+    expect(tradeQuery({ name: 'Cleave of Rage' }, 'gem', t)).toEqual({ type: { option: 'Cleave', discriminator: t.tradeDisc } })
   })
 })
 

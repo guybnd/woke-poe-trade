@@ -79,17 +79,23 @@ export function stackText (name: string, rarity: 'Currency' | 'Divination Card',
 
 export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 
-export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined): PriceCheckInput | null {
+// `english`: the game text below is English, which the parser reads only with
+// the English item data.
+export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): PriceCheckInput | null {
   if (ref.text) return { clipboard: ref.text }
   if (!info) return null
+  // The item data has no Foulborn uniques: it would price the plain one.
+  if (ref.name.startsWith('Foulborn ')) return null
   if (kind === 'unique') {
     const item = createVirtualItem({ rarity: ItemRarity.Unique, info })
     return { clipboard: item.rawText, item }
   }
   if (kind === 'gem') {
-    const item = createVirtualItem({ category: ItemCategory.Gem, info, gemLevel: 1 })
+    // Vaal gems are always corrupted; searching uncorrupted ones finds none.
+    const item = createVirtualItem({ category: ItemCategory.Gem, info, gemLevel: 1, isCorrupted: !!info.gem?.vaal })
     return { clipboard: item.rawText, item }
   }
+  if (!english) return null
   if (kind === 'card') return { clipboard: stackText(info.refName, 'Divination Card', 'Divination Cards') }
   // Currency, scarabs, essences, fragments, tattoos: what trades in bulk.
   if (info.tradeTag) return { clipboard: stackText(info.refName, 'Currency', 'Stackable Currency') }
@@ -98,7 +104,9 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
 
 // ---- trade site ----
 
-export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): { name?: string, type?: string } {
+export type TradeType = string | { option: string, discriminator: string }
+
+export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): { name?: string, type?: TradeType } {
   if (kind === 'unique') {
     const name = info?.name ?? plainName(ref.name)
     // Other languages' trade sites take the name alone.
@@ -106,5 +114,10 @@ export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | un
     return base ? { name, type: base } : { name }
   }
   if (ref.base) return { type: info?.name ?? ref.base }
+  // The trade site lists a transfigured gem as its plain gem plus which one.
+  const plain = info?.gem?.transfigured && info.gem.normalVariant && info.tradeDisc
+    ? ITEM_BY_REF('GEM', info.gem.normalVariant)?.[0]
+    : undefined
+  if (plain && info?.tradeDisc) return { type: { option: plain.name, discriminator: info.tradeDisc } }
   return { type: info?.name ?? ref.name }
 }

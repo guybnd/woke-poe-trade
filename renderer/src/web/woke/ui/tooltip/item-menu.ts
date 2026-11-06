@@ -54,7 +54,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
   const divine = usePoeninja().xchgRate.value
   const price = market ? formatChaos(market.chaos, divine) : undefined
 
-  const check = priceCheckInput(ref, kind, info)
+  const check = priceCheckInput(ref, kind, info, AppConfig().language === 'en')
   const actions: MenuItemAction[] = [
     {
       label: 'Price',
@@ -120,7 +120,8 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
   })
 
   const tracker = marketTracker()
-  if (tracker && market && ref.type) {
+  // Market keeps its own Watch nowhere else, so this shows before prices load.
+  if (tracker && ref.type) {
     const entry = { type: ref.type, name: ref.name, variant: ref.variant || '' }
     const watched = (tracker.watchlist ?? []).some(w => itemKey(w) === itemKey(entry))
     actions.push({
@@ -128,11 +129,12 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
       title: watched ? 'Stop watching its price in Market' : 'Watch its price in Market',
       icon: watched ? 'fas fa-star' : 'far fa-star',
       action: () => {
-        const list = tracker.watchlist ?? []
+        const before = tracker.watchlist ?? []
         tracker.watchlist = watched
-          ? list.filter(w => itemKey(w) !== itemKey(entry))
-          : [...list, entry]
-        toast(watched ? `Stopped watching ${ref.name}` : `Watching ${ref.name} in Market`, { ms: 1800 })
+          ? before.filter(w => itemKey(w) !== itemKey(entry))
+          : [...before, entry]
+        // Undo puts back its price alerts too.
+        toast(watched ? `Stopped watching ${ref.name}` : `Watching ${ref.name} in Market`, { undo: () => { tracker.watchlist = before } })
       }
     })
   }
