@@ -47,3 +47,17 @@ describe('poe.ninja categories', () => {
     expect(parseDenseChunks(chunksSeen).map(i => i.type)).toContain('VeilShard')
   })
 })
+
+describe('a big category we don\'t list', () => {
+  it('is left out', async () => {
+    const rows = Array.from({ length: 600 }, (_, i) => `{"name":"Enchant ${i}","chaos":1,"graph":[]}`).join(',')
+    body = `{"currencyOverviews":[{"type":"Currency","lines":[{"name":"Divine Orb","chaos":180,"graph":[]}]}],"itemOverviews":[{"type":"HelmetEnchant","lines":[${rows}]}]}`
+    vi.resetModules()
+    const { usePoeninja: fresh } = await import('@/web/background/Prices')
+    const ninja = fresh()
+    ninja.queuePricesFetch()
+    await settle()
+    expect(ninja.findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })?.chaos).toBe(180)
+    expect(ninja.findPriceByQuery({ ns: 'ITEM', name: 'Enchant 3', variant: undefined })).toBeNull()
+  })
+})

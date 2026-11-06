@@ -247,6 +247,14 @@ function readOverviews (jsonBlob: string): PriceDatabase {
   return database
 }
 
+const MAX_UNLISTED_ENTRIES = 500
+
+function entryCount (lines: string): number {
+  let count = 0
+  for (let at = lines.indexOf('{"name":'); at !== -1; at = lines.indexOf('{"name":', at + 1)) count++
+  return count
+}
+
 function splitJsonBlob (jsonBlob: string): PriceDatabase {
   const NINJA_OVERVIEW = '{"type":"'
 
@@ -275,8 +283,13 @@ function splitJsonBlob (jsonBlob: string): PriceDatabase {
       seenBlocks.add(block)
       // A category we don't list yet is searched after the ones we do, so it
       // can't take over a name they share.
-      const into = isListedType(type) ? database : unlisted
-      into.push({ ns: isSupported.ns, url: isSupported.url, lines })
+      if (isListedType(type)) {
+        database.push({ ns: isSupported.ns, url: isSupported.url, lines })
+      } else if (entryCount(lines) <= MAX_UNLISTED_ENTRIES) {
+        // A big category we don't list (enchants, cluster jewels) isn't a
+        // league's new currency, and would fill the market tracker.
+        unlisted.push({ ns: isSupported.ns, url: isSupported.url, lines })
+      }
     }
 
     if (endPos === -1) break
