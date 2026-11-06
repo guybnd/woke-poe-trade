@@ -49,3 +49,6 @@ main/build/cv-ocr
 .flux/memory/
 .flux-store/
 .upstream-data-pr.md
+# Made from docs/public/shots by docs/scripts/phone-shots.mjs
+docs/public/shots/1280
+docs/public/shots/phone

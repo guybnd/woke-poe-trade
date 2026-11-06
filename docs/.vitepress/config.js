@@ -1,11 +1,15 @@
 import { defineConfig } from 'vitepress'
 import { readFileSync } from 'node:fs'
+import { makePhoneShots } from '../scripts/phone-shots.mjs'
 
 // The app's version, so download links name the right files.
 const APP_VERSION = JSON.parse(readFileSync(new URL('../../main/package.json', import.meta.url), 'utf8')).version
 const REPO = 'https://github.com/guybnd/woke-poe-trade'
 
 const BASE = '/woke-poe-trade/'
+
+// The landing page's phone crops and 1280px copies of its shots (not in git).
+await makePhoneShots()
 
 export default defineConfig({
   title: 'Woke PoE Trade',
