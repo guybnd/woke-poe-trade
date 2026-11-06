@@ -223,12 +223,12 @@ test('flips: the stack total can be switched off', async ({ overlay }) => {
 })
 
 // With no prices for a tab, the note names what it found, not the Scarab tab.
-for (const [shot, noun] of [['stash-delve-real', 'fossil'], ['stash-essence-real', 'essence']]) {
+for (const [shot, note] of [['stash-delve-real', 'No fossil prices yet'], ['stash-essence-real', 'No Primal lifeforce price yet']]) {
   test(`flips: the hotkey knows ${shot}`, async ({ overlay }) => {
     await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
     await overlay.showScreen(`screens/${shot}.png`)
     await overlay.pressHotkey('Alt + J')
-    await expect(overlay.page.getByText(`No ${noun} prices yet, so nothing to outline`)).toBeVisible()
+    await expect(overlay.page.getByText(`${note}, so nothing to outline`)).toBeVisible()
   })
 }
 

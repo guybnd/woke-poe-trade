@@ -399,7 +399,9 @@ let readingStash = false
 async function toggleOutlines () {
   if (readingStash || justCleared()) return
   if (stashMarks.value.length) { clearStashMarks(); return }
-  if (!snapshot.value) { stashNote('No prices yet, so nothing to outline'); return }
+  // Held here, as a league change during the read clears it.
+  const prices = snapshot.value
+  if (!prices) { stashNote('No prices yet, so nothing to outline'); return }
   const clearsBefore = stashClearCount()
   readingStash = true
   let read: StashRead
@@ -409,7 +411,7 @@ async function toggleOutlines () {
     readingStash = false
   }
   if (!read.found) {
-    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs, mouse off them.")
+    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs at 1440p, mouse off them.")
     hostRequest('stash-watch-stop', null).catch(() => {})
     return
   }
@@ -418,10 +420,12 @@ async function toggleOutlines () {
   const tabFamily = familyById(read.family)
   const picked = props.config.methods?.[tabFamily.id]
   const tabMethod = tabFamily.methods.find(m => m.id === picked) ?? tabFamily.methods[0]
-  const priced = priceFlip(tabFamily, tabMethod, snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value)
+  const priced = priceFlip(tabFamily, tabMethod, prices.items, exchanges.value, options.value, lifeforcePerItem.value)
   if (priced?.kind !== 'pool' && priced?.kind !== 'upgrade') {
     hostRequest('stash-watch-stop', null).catch(() => {})
-    stashNote(`No ${tabFamily.noun} prices yet, so nothing to outline`)
+    stashNote(priced?.kind === 'no-cost'
+      ? `No ${tabMethod.lifeforce ?? ''} lifeforce price yet, so nothing to outline`
+      : `No ${tabFamily.noun} prices yet, so nothing to outline`)
     return
   }
   const profits = new Map<string, number>()

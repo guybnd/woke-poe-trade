@@ -87,8 +87,9 @@ let clears = 0
 let lastClearAt = 0
 
 export function clearStashMarks () {
-  if (!stashMarks.value.length) return
+  // Counted even with none drawn, so a read in progress knows it's out of date.
   clears++
+  if (!stashMarks.value.length) return
   lastClearAt = performance.now()
   stashMarks.value = []
 }

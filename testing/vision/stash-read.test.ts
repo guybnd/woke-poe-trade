@@ -5,7 +5,9 @@ import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 import { decodePng } from '../fake-host/png'
-import { readScarabTab, readStashTab } from '../../main/src/woke/stash-read'
+import { readStashTab } from '../../main/src/woke/stash-read'
+
+const readScarabTab = readStashTab
 import { SCARAB_LAYOUTS } from '../../main/src/woke/stash-scarab-data'
 import { DIGITS, DIGIT_HEIGHT, DIGIT_TOP } from '../../main/src/woke/stash-digits-data'
 

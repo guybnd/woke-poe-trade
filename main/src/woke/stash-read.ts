@@ -1,4 +1,4 @@
-﻿// Reads a flip's stash sub-tab from one screenshot, for the Flips outlines. A
+// Reads a flip's stash sub-tab from one screenshot, for the Flips outlines. A
 // tab's layout is fixed, so nothing is recognised item by item: find the tab on
 // screen, then check which of its known slots hold something. Plain
 // pixel sums, so the OCR worker (100-200 MB) stays unloaded.
@@ -116,12 +116,12 @@ function matchAt (img: Gray, t: Template, x: number, y: number): number {
   return variance > 1e-6 && t.norm > 0 ? dot / (Math.sqrt(variance) * t.norm) : -1
 }
 
-function coarseCandidates (img: Gray, t: Template): Array<{ x: number, y: number }> {
-  const maxY = Math.min(img.height - t.height, Math.floor(img.height * SEARCH_HEIGHT))
-  const maxX = Math.min(img.width - t.width, Math.floor(img.width * SEARCH_WIDTH))
+function coarseCandidates (img: Gray, t: Template, near?: { x: number, y: number, slackX: number, slackY: number }): Array<{ x: number, y: number }> {
+  const maxY = Math.min(img.height - t.height, near ? near.y + near.slackY : Math.floor(img.height * SEARCH_HEIGHT))
+  const maxX = Math.min(img.width - t.width, near ? near.x + near.slackX : Math.floor(img.width * SEARCH_WIDTH))
   const hits: Array<{ x: number, y: number, score: number }> = []
-  for (let y = 0; y <= maxY; y++) {
-    for (let x = 0; x <= maxX; x++) {
+  for (let y = near ? Math.max(0, near.y - near.slackY) : 0; y <= maxY; y++) {
+    for (let x = near ? Math.max(0, near.x - near.slackX) : 0; x <= maxX; x++) {
       const score = matchAt(img, t, x, y)
       if (score < COARSE_MIN) continue
       const near = hits.find(h => Math.abs(h.x - x) <= t.width && Math.abs(h.y - y) <= t.height)
@@ -362,39 +362,31 @@ const OTHER_TAB_MIN = 0.93
 // How far a tab's picture has been seen to move, and a little more: a folder row
 // moves it down, a window like Faustus to the side.
 const OTHER_TAB_SLACK = { x: 120, y: 130 }
-let otherTabs: Array<{ family: string, full: Template, coarse: Template, tab: typeof STASH_TABS[number] }> | null = null
-
-function hitsNear (small: Gray, t: Template, home: { x: number, y: number }) {
-  const hits: Array<{ x: number, y: number, score: number }> = []
-  const yMax = Math.min(small.height - t.height, Math.floor((home.y + OTHER_TAB_SLACK.y) / COARSE))
-  const xMax = Math.min(small.width - t.width, Math.floor((home.x + OTHER_TAB_SLACK.x) / COARSE))
-  for (let y = Math.max(0, Math.floor((home.y - OTHER_TAB_SLACK.y) / COARSE)); y <= yMax; y++) {
-    for (let x = Math.max(0, Math.floor((home.x - OTHER_TAB_SLACK.x) / COARSE)); x <= xMax; x++) {
-      const score = matchAt(small, t, x, y)
-      if (score >= COARSE_MIN) hits.push({ x, y, score })
-    }
-  }
-  return hits.sort((a, b) => b.score - a.score).slice(0, COARSE_TRIES)
-}
+let otherTabs: Array<{ full: Template, coarse: Template, tab: typeof STASH_TABS[number] }> | null = null
 
 function readOtherTab (bgra: Uint8Array, width: number, height: number, gray: Gray, small: Gray): StashRead {
   if (height !== REF_HEIGHT) return { found: false }
   otherTabs ??= STASH_TABS.map(tab => {
     const image = { width: tab.anchor.width, height: tab.anchor.height, data: Float32Array.from(tab.anchor.gray) }
     return {
-      family: tab.family,
       full: template(image),
       coarse: template(resize(image, Math.floor(image.width / COARSE), Math.floor(image.height / COARSE))),
       tab
     }
   })
   for (const t of otherTabs) {
-    const at = refine(gray, t.full, hitsNear(small, t.coarse, t.tab.anchor), COARSE, OTHER_TAB_MIN)
+    const near = {
+      x: Math.floor(t.tab.anchor.x / COARSE),
+      y: Math.floor(t.tab.anchor.y / COARSE),
+      slackX: Math.ceil(OTHER_TAB_SLACK.x / COARSE),
+      slackY: Math.ceil(OTHER_TAB_SLACK.y / COARSE)
+    }
+    const at = refine(gray, t.full, coarseCandidates(small, t.coarse, near), COARSE, OTHER_TAB_MIN)
     if (!at) continue
     const size = t.tab.size
     return {
       found: true,
-      family: t.family,
+      family: t.tab.family,
       slots: t.tab.slots.map(s => {
         const x = at.x + s.dx
         const y = at.y + s.dy
@@ -413,12 +405,6 @@ export function readStashTab (bgra: Uint8Array, width: number, height: number): 
   const small = resize(gray, Math.floor(width / coarse), Math.floor(height / coarse))
   const scarab = readScarabIn(bgra, width, height, gray, small)
   return scarab.found ? scarab : readOtherTab(bgra, width, height, gray, small)
-}
-
-export function readScarabTab (bgra: Uint8Array, width: number, height: number): StashRead {
-  const gray = toGray(bgra, width, height)
-  const coarse = coarseFactor(height)
-  return readScarabIn(bgra, width, height, gray, resize(gray, Math.floor(width / coarse), Math.floor(height / coarse)))
 }
 
 function readScarabIn (bgra: Uint8Array, width: number, height: number, gray: Gray, small: Gray): StashRead {

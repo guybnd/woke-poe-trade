@@ -50,7 +50,7 @@ describe('stash marks', () => {
     expect(long.text).toBe('+1.2c')
   })
 
-  it('clears once per set of outlines and remembers the press that did it', () => {
+  it('counts every clear, so a read in progress knows, and remembers the press that did it', () => {
     stashMarks.value = buildMarks([slot('a')], new Map([['a', 1]]))
     const before = stashClearCount()
     clearStashMarks()
@@ -58,7 +58,7 @@ describe('stash marks', () => {
     expect(stashClearCount()).toBe(before + 1)
     expect(justCleared()).toBe(true)
     clearStashMarks()
-    expect(stashClearCount()).toBe(before + 1)
+    expect(stashClearCount()).toBe(before + 2)
   })
 
   it('shows a small loss with a minus sign', () => {
