@@ -1,7 +1,7 @@
 <script setup>
-// The landing page (index.md, layout: landing): the name, then one full-width
-// picture per highlight with gem sockets to step through its slides, then a
-// plain list of everything else.
+// The landing page (index.md, layout: landing): the name, then one item tooltip
+// per highlight, built from the game's own frame art, with name plates to step
+// through its slides, then a plain list of everything else.
 import { reactive } from 'vue'
 import { withBase } from 'vitepress'
 import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
@@ -13,9 +13,6 @@ const shot = (name) => withBase(`/shots/${name}.webp`)
 const shown = reactive({})
 const current = (h) => shown[h.id] ?? 0
 
-const COLOURS = ['red', 'green', 'blue', 'white']
-const colourOf = (i) => COLOURS[i % COLOURS.length]
-
 const withSlide = new Set(HIGHLIGHTS.flatMap(h => h.slides.map(s => s.module)))
 const more = MODULES.filter(m => !withSlide.has(m.id))
 </script>
@@ -23,7 +20,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 <template>
   <div class="landing">
     <header class="hero">
-      <img class="hero-art" :src="shot('tour-market')" alt="" width="1600" height="900">
+      <img class="hero-art" :src="shot('tour-market')" alt="" width="2560" height="1440">
       <div class="hero-text">
         <h1>Woke PoE Trade</h1>
         <p class="lead">Your toolkit, in the game.</p>
@@ -34,34 +31,47 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
     <main>
       <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
-        <div class="head">
-          <h2 :id="`${h.id}-title`">{{ h.name }}</h2>
-          <p>{{ h.tag }}</p>
-        </div>
-        <div class="stage">
-          <img v-for="(s, i) in h.slides" :key="s.shot" :src="shot(s.shot)" :alt="s.alt"
-            :class="{ on: i === current(h) }" :aria-hidden="i !== current(h)"
-            width="1600" height="900" loading="lazy">
-        </div>
-        <div class="under">
-          <p class="say" aria-live="polite">{{ h.slides[current(h)].text }}<button v-if="h.slides[current(h)].more" type="button" class="say-more" :aria-label="h.slides[current(h)].more">?<span class="say-card" aria-hidden="true">{{ h.slides[current(h)].more }}</span></button></p>
-          <div class="sockets" role="group" :aria-label="`${h.name} slides`">
-            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="socket"
+        <div class="item">
+          <div class="head">
+            <i aria-hidden="true"></i>
+            <div>
+              <h2 :id="`${h.id}-title`">{{ h.name }}</h2>
+              <p>{{ h.tag }}</p>
+            </div>
+            <i aria-hidden="true"></i>
+          </div>
+          <div class="plates" role="group" :aria-label="`${h.name} slides`">
+            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="plate"
               :aria-pressed="i === current(h)" @click="shown[h.id] = i">
-              <span class="gem" :class="colourOf(i)" aria-hidden="true"></span>
+              <i aria-hidden="true"></i>
               <span>{{ s.label }}</span>
+              <i aria-hidden="true"></i>
             </button>
+          </div>
+          <div class="sep" aria-hidden="true"></div>
+          <p class="say" aria-live="polite">{{ h.slides[current(h)].text }}<button v-if="h.slides[current(h)].more" type="button" class="say-more" :aria-label="h.slides[current(h)].more">?<span class="say-card" aria-hidden="true">{{ h.slides[current(h)].more }}</span></button></p>
+          <div class="stage">
+            <img v-for="(s, i) in h.slides" :key="s.shot" :src="shot(s.shot)" :alt="s.alt"
+              :class="{ on: i === current(h) }" :aria-hidden="i !== current(h)"
+              width="2560" height="1440" loading="lazy">
           </div>
         </div>
       </section>
 
       <section class="highlight" aria-labelledby="more-title">
-        <div class="head"><h2 id="more-title">And Many More</h2></div>
-        <ul class="more">
-          <li v-for="m in more" :key="m.id"><b>{{ m.name }}</b>{{ m.description }}</li>
-        </ul>
-        <p class="end">Switch off any tool and it doesn't load, take hotkeys or poll.</p>
-        <p class="end"><a class="btn" :href="DOWNLOAD">Download for Windows</a></p>
+        <div class="item wide">
+          <div class="head">
+            <i aria-hidden="true"></i>
+            <div><h2 id="more-title">And Many More</h2></div>
+            <i aria-hidden="true"></i>
+          </div>
+          <ul class="more">
+            <li v-for="m in more" :key="m.id"><b>{{ m.name }}</b>{{ m.description }}</li>
+          </ul>
+          <div class="sep" aria-hidden="true"></div>
+          <p class="end">Switch off any tool and it doesn't load, take hotkeys or poll.</p>
+          <p class="end"><a class="btn" :href="DOWNLOAD">Download for Windows</a></p>
+        </div>
       </section>
     </main>
 
@@ -97,6 +107,9 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 <style scoped>
 .landing {
   --ground: #070605;
+  --unique: #af6025;
+  --unique-on: #e8924a;
+  --magic: #8888ff;
   --title: #e0c78f;
   --text: #e8dcc2;
   --dim: #b0a48e;
@@ -104,7 +117,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
   --link: #e8c47a;
   --caps: 'Fontin SmallCaps', Georgia, serif;
   min-height: 100vh;
-  background: var(--ground);
+  /* Empty stash panel from the game, tiled. */
+  background: var(--ground) url('./stone.jpg');
   color: var(--dim);
   font: 19px/1.4 'Fontin', Georgia, serif;
   overflow-x: clip;
@@ -128,7 +142,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .btn:hover { background: linear-gradient(#c28a3b, #8c5c22); }
 
 /* ---------- hero ---------- */
-.hero { position: relative; overflow: hidden; }
+.hero { position: relative; overflow: hidden; background: var(--ground); }
 .hero-art { display: block; width: 100%; height: 620px; object-fit: cover; object-position: center top; opacity: 0.42; }
 .hero-text {
   position: absolute;
@@ -145,81 +159,81 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .lead { font-size: 26px; font-style: italic; color: var(--text); text-shadow: 0 1px 8px #000; }
 .facts { color: var(--text); text-shadow: 0 1px 8px #000; margin-bottom: 8px; }
 
-/* ---------- a highlight ---------- */
-.highlight { padding-top: 72px; }
-.head { text-align: center; padding: 0 16px 26px; }
-.head h2 { font: 54px/1.05 var(--caps); color: var(--title); }
-.head p { font-style: italic; font-size: 22px; }
-/* As wide as the page, but never taller than the window: a shot is no use cropped. */
-.stage {
-  position: relative;
-  width: min(100%, 160vh);
+/* ---------- a highlight: an item tooltip, frame art from the game ---------- */
+.highlight { padding: 20px 16px; }
+/* --chrome is everything in a highlight's screen but the shot, so the name, the
+   plates and the shot fit in one window. The shot never goes above 1280x720,
+   half its real size, so it stays sharp. */
+.item {
+  --chrome: 180px;
+  --h: min(720px, max(280px, calc(100vh - var(--chrome))));
+  display: flex;
+  flex-direction: column;
+  width: min(calc(var(--h) * 16 / 9), 100%);
   margin: 0 auto;
-  aspect-ratio: 16 / 9;
-  background: #0a0907;
+  background: rgba(0, 0, 0, 0.93);
+  border: 1px solid var(--unique);
+  box-shadow: 0 0 30px #000;
 }
-.stage img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
-.stage img.on { opacity: 1; pointer-events: auto; }
-.under { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 900px; margin: 0 auto; padding: 22px 16px 0; text-align: center; }
-.say { position: relative; color: var(--text); min-height: 56px; }
-.say-more { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 8px; vertical-align: 1px; border: 1px solid currentColor; border-radius: 50%; color: var(--dim); font-size: 12px; line-height: 1; cursor: help; }
-.say-more:hover, .say-more:focus-visible { color: var(--title); outline: none; }
-.say-card { display: none; position: absolute; z-index: 5; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: min(300px, 76vw); padding: 8px 10px; background: var(--ground); border: 1px solid var(--edge); border-radius: 4px; color: var(--text); font-size: 14px; line-height: 1.45; text-align: left; }
-.say-more:hover .say-card, .say-more:focus .say-card { display: block; }
+/* The plates wrap to two rows here. */
+@media (max-width: 1180px), (max-height: 830px) { .item { --chrome: 220px; } }
+/* And the caption to two lines. */
+@media (max-width: 860px), (max-height: 680px) { .item { --chrome: 246px; } }
+.item.wide { width: min(1280px, 100%); }
 
-/* ---------- the slide buttons: linked gem sockets ---------- */
-.sockets { display: flex; justify-content: center; flex-wrap: wrap; }
-.socket {
-  position: relative;
+.head { display: flex; flex: none; height: 54px; }
+.head i { flex: none; width: 44px; background: no-repeat; }
+.head i:first-child { background-image: url('../../../../renderer/public/images/item-frame/header-double-unique-left.png'); }
+.head i:last-child { background-image: url('../../../../renderer/public/images/item-frame/header-double-unique-right.png'); }
+.head > div {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  width: 112px;
-  min-height: 66px;
-  padding: 0 2px;
-  border: 0;
-  background: none;
-  color: #a2967f;
-  font: 15px/1.15 var(--caps);
-  cursor: pointer;
+  justify-content: center;
+  background: url('../../../../renderer/public/images/item-frame/header-double-unique-middle.png') repeat-x;
+  color: var(--unique);
+  white-space: nowrap;
 }
-.socket:hover { color: #f1e6cd; }
-.socket[aria-pressed='true'] { color: #fff3cf; }
-/* The link to the socket before it. */
-.socket + .socket::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  right: calc(50% + 15px);
-  width: calc(100% - 30px);
-  height: 6px;
-  background: linear-gradient(#8a5f2d, #4a3218);
-}
-.gem {
-  width: 30px;
-  height: 30px;
-  box-sizing: border-box;
-  border-radius: 50%;
-  border: 3px solid #2a2118;
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.9);
-  opacity: 0.6;
-}
-.socket:hover .gem { opacity: 0.85; }
-.socket[aria-pressed='true'] .gem { opacity: 1; border-color: var(--link); box-shadow: 0 0 14px rgba(255, 240, 190, 0.6), inset 0 0 6px rgba(0, 0, 0, 0.5); }
-.red { background: #c0392f; }
-.green { background: #4f9e3f; }
-.blue { background: #3f6fc4; }
-.white { background: #d8d4c8; }
+.head h2 { font: 24px/25px var(--caps); }
+.head p { font: 16px/19px var(--caps); }
+
+.plates { display: flex; flex: none; flex-wrap: wrap; justify-content: center; gap: 2px; padding: 6px 6px 2px; }
+.plate { display: flex; height: 34px; padding: 0; border: 0; background: none; color: #c8c8c8; font: 16px var(--caps); white-space: nowrap; cursor: pointer; }
+.plate i { flex: none; width: 24px; background: no-repeat; }
+.plate i:first-child { background-image: url('../../../../renderer/public/images/item-frame/header-normal-left.png'); }
+.plate i:last-child { background-image: url('../../../../renderer/public/images/item-frame/header-normal-right.png'); background-position: right; }
+.plate span { display: flex; align-items: center; padding: 0 2px; background: url('../../../../renderer/public/images/item-frame/header-normal-middle.png') repeat-x; }
+.plate:hover { color: #fff; }
+.plate[aria-pressed='true'] { color: var(--unique-on); }
+.plate[aria-pressed='true'] i:first-child { background-image: url('../../../../renderer/public/images/item-frame/header-unique-left.png'); }
+.plate[aria-pressed='true'] i:last-child { background-image: url('../../../../renderer/public/images/item-frame/header-unique-right.png'); }
+.plate[aria-pressed='true'] span { background-image: url('../../../../renderer/public/images/item-frame/header-unique-middle.png'); }
+
+.sep { flex: none; height: 8px; background: url('../../../../renderer/public/images/item-frame/separator-unique.png') center no-repeat; }
+
+.say { position: relative; flex: none; min-height: 30px; padding: 2px 12px; color: var(--magic); font-size: 17px; line-height: 26px; text-align: center; }
+@media (max-width: 860px), (max-height: 680px) { .say { min-height: 56px; } }
+@media (max-width: 480px) { .say { min-height: 82px; } }
+.say-more { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 8px; vertical-align: 1px; padding: 0; background: none; border: 1px solid currentColor; border-radius: 50%; color: var(--dim); font-size: 12px; line-height: 1; cursor: help; }
+.say-more:hover, .say-more:focus-visible { color: var(--title); outline: none; }
+.say-card { display: none; position: absolute; z-index: 5; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: min(300px, 76vw); padding: 8px 10px; background: var(--ground); border: 1px solid var(--unique); color: var(--text); font-size: 14px; line-height: 1.45; text-align: left; }
+.say-more:hover .say-card, .say-more:focus .say-card { display: block; }
+
+.stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-top: 1px solid #3a2412; background: #000; }
+.stage img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
+.stage img.on { opacity: 1; pointer-events: auto; }
 
 /* ---------- and many more ---------- */
-.more { columns: 2; column-gap: 48px; max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+.more { columns: 2; column-gap: 48px; padding: 18px 28px 6px; }
 .more li { break-inside: avoid; margin-bottom: 14px; }
 .more b { display: block; font: 21px var(--caps); color: var(--text); }
-.end { text-align: center; padding: 28px 16px 0; }
+.end { text-align: center; padding: 10px 16px; }
+.end:last-child { padding-bottom: 22px; }
 
 /* ---------- credits ---------- */
-.credits { max-width: 1040px; margin: 72px auto 0; padding: 0 16px; font-size: 15px; text-align: center; }
+.credits { max-width: 1040px; margin: 52px auto 0; padding: 0 16px; font-size: 15px; text-align: center; }
 .credits h2 { font: 24px var(--caps); color: var(--title); margin-bottom: 10px; }
 .credits p { margin-bottom: 8px; }
 .credits b { font-weight: 400; color: var(--text); }
@@ -240,12 +254,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 @media (max-width: 860px) {
   .hero h1 { font-size: 54px; }
   .hero-art { height: 480px; }
-  .head h2 { font-size: 38px; }
-  .highlight { padding-top: 56px; }
   .more { columns: 1; }
-  /* Sockets wrap here, so their links would point at nothing. */
-  .socket + .socket::before { display: none; }
-  .socket { width: 66px; padding: 0; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .stage img { transition: none; }
