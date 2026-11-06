@@ -201,18 +201,23 @@ function openFull () {
 // from main's mouse hook as the button goes down, and as a page click as it comes
 // up (only if the mouse was taken, so not always). Only the hook counts, in the
 // app; the browser demo has only the page click.
-let hookOpenedAt = 0
+let hookOpened = false
 function pressedInGame (taken: boolean) {
+  hookOpened = false
   if (wm.active.value) { openCard(); return }
   const does = clickWhilePlaying(props.host.props, dockConfig().hoverOpens)
   if (does === 'card') {
     toggleCard()
-  } else if (does === 'window') {
-    hookOpenedAt = Date.now()
+    return
+  }
+  // Not taken: the game got this click too. It may be walking away from what
+  // gameClick would act on, or a skill on its way past the window's icon, or not
+  // even in focus.
+  if (!taken) return
+  if (does === 'window') {
+    hookOpened = true
     openFull()
-  } else if (taken) {
-    // Not taken: the game got this click too, so it may be walking away from what
-    // gameClick would act on.
+  } else {
     props.host.props.gameClick?.()
   }
 }
@@ -228,9 +233,7 @@ function toggleCard () {
 
 function click () {
   // The other half of the click that just opened the overlay.
-  const sameClick = Date.now() - hookOpenedAt < 1500
-  hookOpenedAt = 0
-  if (sameClick) return
+  if (hookOpened) { hookOpened = false; return }
   if (!wm.active.value) {
     if (!Host.isElectron) toggleCard()
     return

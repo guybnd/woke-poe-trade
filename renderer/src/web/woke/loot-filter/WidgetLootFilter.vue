@@ -337,10 +337,10 @@ function seeNotice () {
 }
 
 // The icon or the card's Open row: straight to what the card is telling you. An
-// editor already open stays on its tab.
+// editor you can see stays on its tab; one left open stays 'show' behind the game.
 function openFromDock () {
   const tab = dismissable.value[0]?.tab
-  if (tab && (props.config.wmWants !== 'show' || mode.value === 'card')) openTab.value = { tab }
+  if (tab && (!wm.active.value || props.config.wmWants !== 'show' || mode.value === 'card')) openTab.value = { tab }
   mode.value = 'editor'
   ensureLoaded()
 }

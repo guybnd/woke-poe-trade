@@ -15,23 +15,16 @@ test('regex library: clicking a saved string searches the stash in game', async 
   expect(fakeApp.game.focused).toBe(true)
 })
 
-test('regex library icon: a click opens the card, and its strings can be clicked without the overlay key', async ({ overlay, fakeApp }) => {
+test('regex library icon: resting on it opens the card, and its strings can be clicked without the overlay key', async ({ overlay, fakeApp }) => {
   // Mechanics reads the game log, which is how the dock knows the zone.
   await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
   await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
   const icon = overlay.dockIcon('regex-library')
   const entry = icon.getByRole('button', { name: 'No reflect', exact: true })
 
-  // A click opens the card even with the game focused. Away first: main remembers
-  // the mouse from the test before, and hovering would already have opened it.
+  // Over a string the game keeps focus (keys still reach it) while the card takes
+  // the click. Away first: main remembers the mouse from the test before.
   await overlay.moveMouse(1000, 900)
-  await expect(entry).toHaveCount(0, { timeout: 2000 })
-  await overlay.clickDockIconAndLeave('regex-library')
-  await expect(entry).toBeVisible({ timeout: 200 })
-  await expect(entry).toHaveCount(0, { timeout: 2000 })
-
-  // Resting on the icon opens it too. Over a string the game keeps focus (keys
-  // still reach it) while the card takes the click.
   await overlay.hoverDockIcon('regex-library')
   await expect(entry).toBeVisible({ timeout: 2000 })
   expect(fakeApp.game.focused).toBe(true)
@@ -147,7 +140,7 @@ test('boss runs icon: a click with the overlay open shows that boss despite the 
   await overlay.snap('uber atziri drops panel')
 })
 
-test('a click on an icon closes its open card, which stays closed until the mouse comes back', async ({ overlay, fakeApp }) => {
+test('a click on an icon opens its full window straight away, and the card makes way', async ({ overlay, fakeApp }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
   await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
   const icon = overlay.dockIcon('regex-library')
@@ -157,27 +150,36 @@ test('a click on an icon closes its open card, which stays closed until the mous
   await overlay.moveMouse(1000, 900)
   await overlay.hoverDockIcon('regex-library')
   await expect(entry).toBeVisible({ timeout: 2000 })
+  expect(fakeApp.game.focused).toBe(true)
   const box = (await icon.boundingBox())!
-  const x = Math.round(box.x + box.width / 2)
-  const y = Math.round(box.y + box.height / 2)
-  fakeApp.pressMouse(x, y)
-  // The same click reaching the page as the button comes up doesn't reopen it.
+  fakeApp.pressMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2))
+  // The same click reaching the page as the button comes up doesn't reopen the card.
   await icon.locator('span').first().click()
   fakeApp.releaseMouse()
-  await expect(entry).toHaveCount(0, { timeout: 1000 })
+  await expect(overlay.widget('woke-regex-library').getByPlaceholder(/Filter by name/)).toBeVisible({ timeout: 2000 })
+  await expect.poll(() => fakeApp.game.focused).toBe(false)
   await overlay.page.waitForTimeout(400)
   await expect(entry).toHaveCount(0)
+  await overlay.snap('window open from an icon click')
+  fakeApp.focusGame(true) // Tests in a file share the fake game.
+})
 
-  // A second click opens it again, then leaving and coming back does too.
-  await overlay.page.waitForTimeout(1200)
-  fakeApp.pressMouse(x, y)
-  fakeApp.releaseMouse()
-  await expect(entry).toBeVisible({ timeout: 1000 })
+test('a card\'s Open row opens the full window', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
+  await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+  const icon = overlay.dockIcon('regex-library')
   await overlay.moveMouse(1000, 900)
-  await expect(entry).toHaveCount(0, { timeout: 2000 })
   await overlay.hoverDockIcon('regex-library')
-  await expect(entry).toBeVisible({ timeout: 2000 })
-  await overlay.moveMouse(1000, 900)
+  const row = icon.getByRole('button', { name: /^Open / })
+  await expect(row).toBeVisible({ timeout: 2000 })
+  await overlay.snap('card with its Open row')
+  const box = (await row.boundingBox())!
+  await overlay.moveMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2))
+  await row.click()
+  await expect(overlay.widget('woke-regex-library').getByPlaceholder(/Filter by name/)).toBeVisible({ timeout: 2000 })
+  await expect.poll(() => fakeApp.game.focused).toBe(false)
+  await expect(row).toHaveCount(0)
+  fakeApp.focusGame(true) // Tests in a file share the fake game.
 })
 
 test('moving from icon to icon shows one card at a time', async ({ overlay }) => {
@@ -187,9 +189,12 @@ test('moving from icon to icon shows one card at a time', async ({ overlay }) =>
   const regex = overlay.dockIcon('regex-library').getByRole('button', { name: 'No reflect', exact: true })
   const trade = overlay.dockIcon('trade').getByText('Kaltenhalt')
 
-  await overlay.moveMouse(1000, 900)
-  await overlay.hoverDockIcon('regex-library')
-  await expect(regex).toBeVisible({ timeout: 2000 })
+  // The offer's peek can still be widening the icon row, moving the icon away.
+  await expect(async () => {
+    await overlay.moveMouse(1000, 900)
+    await overlay.hoverDockIcon('regex-library')
+    await expect(regex).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 15_000 })
   await overlay.hoverDockIcon('trade')
   await expect(trade).toBeVisible({ timeout: 2000 })
   // At once, not after the usual delay on leaving.
@@ -212,9 +217,21 @@ test('with hover switched off, a card opens only on a click', async ({ overlay, 
   await expect(entry).toHaveCount(0)
 
   const box = (await icon.boundingBox())!
-  fakeApp.pressMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2))
+  const x = Math.round(box.x + box.width / 2)
+  const y = Math.round(box.y + box.height / 2)
+  fakeApp.pressMouse(x, y)
   fakeApp.releaseMouse()
   await expect(entry).toBeVisible({ timeout: 1000 })
   await overlay.moveMouse(1000, 900)
   await expect(entry).toHaveCount(0, { timeout: 2000 })
+
+  // A second click closes it, and the same click reaching the page doesn't reopen it.
+  await overlay.moveMouse(x, y)
+  fakeApp.pressMouse(x, y)
+  fakeApp.releaseMouse()
+  await expect(entry).toBeVisible({ timeout: 1000 })
+  fakeApp.pressMouse(x, y)
+  await icon.locator('span').first().click()
+  fakeApp.releaseMouse()
+  await expect(entry).toHaveCount(0, { timeout: 1000 })
 })

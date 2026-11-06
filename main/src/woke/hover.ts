@@ -138,8 +138,9 @@ export class WokeHoverTracker {
   }
 
   private readonly handleMouseDown = (e: UiohookMouseEvent) => {
-    // Only if the mouse was already taken did this click reach the overlay.
-    const reachedOverlay = this.overlay.isMouseTaken
+    // Only if the mouse was already taken, or a card already has focus, did this
+    // click reach the overlay.
+    const reachedOverlay = this.overlay.isMouseTaken || this.overlay.isCardActive
     // Bring `inside` up to date first, so a click also counts as entering.
     const inActivateZone = this.update(e.x, e.y)
     this.heldButtons.add(e.button)
