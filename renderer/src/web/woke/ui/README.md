@@ -44,6 +44,8 @@ art wherever the game has it, readable fonts (nothing under 11px).
 | `WSelect` | Select with `options: { value, label }[]`. |
 | `WButton` | `variant`: default, primary, ghost, danger; `size`: md, sm; `icon`; `href` renders a link. |
 | `WListItem` | Clickable list row with `sub` line and trailing `actions`; `active` highlights. |
+| `WInfo` | A "?" with the explanation in a card on hover or focus (`text`; a blank line starts a paragraph). Use it instead of grey paragraphs: warnings, empty states and prompts you need right then stay on screen. Not inside dock cards or game tooltips, where the mouse can't reach it, and no links in `text`, since the card takes no clicks. |
+| `WSettingRow` hint | `hint` shows behind a "?" on the label. `show-hint` keeps it on screen, for what goes wrong if it's missed. |
 | `WPrice` | Chaos value with the chaos/divine icon; switches to divines at 1 div unless `unit` is forced. |
 | `WDelta` | Ratio change as a coloured percentage (`0.12` → `+12%`). |
 | `WSpark` | Sparkline with area fill and endpoint, coloured by direction. |

@@ -3,10 +3,10 @@
 // fossils and essences through Harvest rerolls. Which is which: families.ts.
 import { median } from '../analytics/stats'
 import type { PriceItem } from '../market/types'
-import { SAMPLE_ROLLS, TIER_ROLLS, UNSAMPLED_TIERS } from './weights'
+import { SAMPLE_ROLLS } from './weights'
 
 // Scarabs: drop chance at or under this counts as exceptionally rare. The
-// sample has a clear gap: nothing falls between 0.10% and 0.53%.
+// sample has a clear gap: nothing falls between 0.10% and 0.51%.
 export const RARE_SHARE = 0.0015
 // A rare item is cheap when it costs under this part of a typical rare one.
 export const CHEAP_RATIO = 1 / 3
@@ -27,9 +27,12 @@ export interface FlipOptions {
   reroll: boolean
 }
 
+// 'estimate': nothing measured it, so it takes an average. 'yours': set in Settings.
+export type WeightSource = 'sample' | 'estimate' | 'yours'
+
 export interface ItemWeight {
   weight: number
-  source: 'sample' | 'tier'
+  source: WeightSource
 }
 
 export interface FlipRecipe {
@@ -42,13 +45,16 @@ export interface FlipRecipe {
   // Chance at or under which an item counts as rare; null: no rare marks.
   rareShare: number | null
   weightOf: (name: string) => ItemWeight | null
+  // Items with no weight take the average of the rest, instead of sitting out.
+  estimateMissing?: boolean
+  // The weight before your own numbers, which the average is taken from: changing
+  // one item mustn't move what an unmeasured one is worth. Missing: weightOf.
+  listedOf?: (name: string) => ItemWeight | null
 }
 
 export function scarabWeight (name: string): ItemWeight | null {
   const rolls = SAMPLE_ROLLS[name]
-  if (rolls) return { weight: rolls, source: 'sample' }
-  const tier = UNSAMPLED_TIERS[name]
-  return tier ? { weight: TIER_ROLLS[tier], source: 'tier' } : null
+  return rolls ? { weight: rolls, source: 'sample' } : null
 }
 
 export interface FlipRow {
@@ -56,7 +62,7 @@ export interface FlipRow {
   chaos: number
   // Chance of being the result of a flip, before the input is removed.
   share: number
-  weightSource: 'sample' | 'tier'
+  weightSource: WeightSource
   tradedChaos: number | null
   tradedPerDay: number | null
   // Items a day this flip could use; what the Supply column grades.
@@ -129,13 +135,26 @@ export function familyQuotes (
   return quotes
 }
 
+// What an unmeasured item is worth: the average of what's listed, or failing that, of what you set.
+export function averageWeight (names: string[], recipe: Pick<FlipRecipe, 'weightOf' | 'listedOf'>): number {
+  const weights = (of: (name: string) => ItemWeight | null) => names.flatMap(name => of(name)?.weight ?? [])
+  const listed = recipe.listedOf ? weights(recipe.listedOf) : []
+  const from = listed.length ? listed : weights(recipe.weightOf)
+  return from.reduce((n, w) => n + w, 0) / from.length
+}
+
 export function flipModel (quotes: Map<string, Quote>, options: FlipOptions, recipe: FlipRecipe): FlipModel {
-  const pool: Array<{ name: string, quote: Quote, weight: number, source: 'sample' | 'tier' }> = []
-  const unrated: string[] = []
+  const pool: Array<{ name: string, quote: Quote, weight: number, source: WeightSource }> = []
+  let unrated: string[] = []
   for (const [name, quote] of quotes) {
     const w = recipe.weightOf(name)
     if (w) pool.push({ name, quote, weight: w.weight, source: w.source })
     else unrated.push(name)
+  }
+  if (recipe.estimateMissing && pool.length) {
+    const average = averageWeight(pool.map(s => s.name), recipe)
+    for (const name of unrated) pool.push({ name, quote: quotes.get(name)!, weight: average, source: 'estimate' })
+    unrated = []
   }
   const total = pool.reduce((n, s) => n + s.weight, 0)
   const keep = 1 - options.sellDiscount
@@ -147,7 +166,7 @@ export function flipModel (quotes: Map<string, Quote>, options: FlipOptions, rec
   const recipeValue = rerollFloor == null ? plainValue : rerollFloor * inputs + cost
   const worth = (chaos: number) => Math.max(chaos * keep, rerollFloor ?? 0)
 
-  const isRare = (weight: number) => recipe.rareShare != null && weight / total <= recipe.rareShare
+  const isRare = (weight: number) => recipe.rareShare != null && weight > 0 && weight / total <= recipe.rareShare
   const typicalRare = median(pool.filter(s => isRare(s.weight)).map(s => s.quote.chaos))
 
   const rows: FlipRow[] = pool.map(s => {
@@ -162,7 +181,7 @@ export function flipModel (quotes: Map<string, Quote>, options: FlipOptions, rec
     return {
       name: s.name,
       chaos,
-      share: s.weight / total,
+      share: total > 0 ? s.weight / total : 0,
       weightSource: s.source,
       tradedChaos,
       tradedPerDay,

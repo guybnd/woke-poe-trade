@@ -2,9 +2,9 @@
   <div class="max-w-xl p-2">
     <input class="w-input rounded px-1 w-48 mb-2" placeholder="Widget title"
       v-model="title" />
-    <div class="w-dim text-sm mb-2">
-      Paste a pathofexile.com/trade search link (live searches end in <code>/live</code>).
-      Each search can have one hotkey for the overlay browser and one for your normal browser.
+    <div class="w-dim text-sm mb-2 flex items-center gap-2">
+      Paste a pathofexile.com/trade search link
+      <w-info text="Live searches end in /live. Each search can have one hotkey for the overlay browser and one for your normal browser." />
     </div>
     <w-toggle v-model="enableHotkeys" class="mb-2">Use each search's hotkey</w-toggle>
     <w-toggle v-model="followLeague" class="mb-2">Open searches in the league picked in price check settings, even if they were saved in an older league</w-toggle>
@@ -62,6 +62,7 @@ import WToggle from '../ui/WToggle.vue'
 import { computed, defineComponent, shallowRef } from 'vue'
 import DndContainer from 'vuedraggable'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WInfo from '../ui/WInfo.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { parseTags } from '../shared/library'
 import { emptyEntry, exportEntries, isValidUrl, parseImport } from './widget'
@@ -69,7 +70,7 @@ import type { TradeSearchEntry, TradeSearchesWidget } from './widget'
 
 export default defineComponent({
   name: 'Trade searches',
-  components: { WToggle, DndContainer, WHotkeyCell },
+  components: { WToggle, DndContainer, WHotkeyCell, WInfo },
   props: configProp<TradeSearchesWidget>(),
   setup (props) {
     const ioMode = shallowRef<'import' | 'export' | null>(null)

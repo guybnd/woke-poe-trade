@@ -24,7 +24,8 @@ export function itemRefFromText (text: string, lookup: Lookup = ITEM_BY_REF): It
     return { name: clean }
   }
 
-  const words = clean.split(' ')
+  // Whispers put a comma after the name: "Windscream, Reinforced Greaves".
+  const words = clean.replace(/, /g, ' ').split(' ')
   // "Dying Sun Ruby Flask": a unique's name, then its own base.
   for (let n = words.length - 1; n >= 1; n--) {
     const base = words.slice(n).join(' ')

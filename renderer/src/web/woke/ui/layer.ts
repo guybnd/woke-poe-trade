@@ -32,8 +32,13 @@ export interface Toast {
   id: number
   text: string
   undo?: () => void
+  // Where it wants to be, in screen pixels: centred on x, with its top at y. The
+  // note fits itself to the window once it knows its size (see ToastRow).
   x: number
   y: number
+  // A dock icon's top and bottom: the note stands above it if there's room,
+  // else hangs below it.
+  beside?: { top: number, bottom: number }
   // Takes the mouse while it's over it, so Undo can be clicked in game.
   clickable: boolean
 }
@@ -53,9 +58,9 @@ export function toast (text: string, opts: { undo?: () => void, anchor?: Element
     id: nextId++,
     text,
     undo: opts.undo,
-    // A note is at most 360 px wide and centred here: keep it on screen.
-    x: Math.max(180, Math.min(window.innerWidth - 180, r ? r.left + r.width / 2 : window.innerWidth / 2)),
-    y: !r ? window.innerHeight - 80 : !opts.dock ? r.bottom - 10 : r.top > 60 ? r.top - 6 : r.bottom + 44,
+    x: r ? r.left + r.width / 2 : window.innerWidth / 2,
+    y: r ? r.bottom - 10 : window.innerHeight - 80,
+    beside: r && opts.dock ? { top: r.top, bottom: r.bottom } : undefined,
     clickable: opts.dock === true && opts.undo != null
   }
   toasts.value = [...toasts.value.filter(o => Math.abs(o.y - t.y) > 4 || Math.abs(o.x - t.x) > 4), t]

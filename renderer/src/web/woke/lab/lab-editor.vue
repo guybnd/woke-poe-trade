@@ -16,8 +16,7 @@
         placeholder="Gems you're after, trial status, tips…" />
     </label>
     <div>
-      <div class="mb-1">Layout pages</div>
-      <div class="w-dim text-sm mb-1">Leave empty to use poelab.com's daily pages.</div>
+      <div class="mb-1 flex items-center gap-2">Layout pages <w-info text="Leave empty to use poelab.com's daily pages." /></div>
       <div class="grid gap-1 items-center" style="grid-template-columns: 6rem 1fr;">
         <template v-for="d in DIFFICULTIES" :key="d">
           <span class="w-dim">{{ labLabel(d) }}</span>
@@ -34,13 +33,14 @@ import WToggle from '../ui/WToggle.vue'
 import WSelect from '../ui/WSelect.vue'
 import { computed, defineComponent } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
+import WInfo from '../ui/WInfo.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { DEFAULT_LAB_URLS, DIFFICULTIES, labLabel } from './lab'
 import type { LabDifficulty, LabWidget } from './lab'
 
 export default defineComponent({
   name: 'Labyrinth',
-  components: { WToggle, WSelect, WHotkeyCell },
+  components: { WToggle, WSelect, WHotkeyCell, WInfo },
   props: configProp<LabWidget>(),
   setup (props) {
     return {

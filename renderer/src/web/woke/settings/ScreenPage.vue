@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.page">
     <w-setting-section title="Text recognition">
-      <w-setting-row label="OCR engine" :hint="ocr === null ? 'Checking…' : ocr.ok ? 'Loads on first use and closes again when idle.' : ocr.message ?? 'Not available'">
+      <w-setting-row label="OCR engine" :show-hint="!ocr?.ok" :hint="ocr === null ? 'Checking…' : ocr.ok ? 'Loads on first use and closes again when idle.' : ocr.message ?? 'Not available'">
         <span v-if="ocr" :class="[$style.chip, ocr.ok ? $style.ok : $style.bad]">{{ ocr.ok ? 'Ready' : 'Problem' }}</span>
       </w-setting-row>
     </w-setting-section>
@@ -13,10 +13,10 @@
     </w-setting-section>
 
     <w-setting-section title="Keys">
-      <w-setting-row v-for="f in keys" :key="f.id" :label="f.label" :hint="f.off ? 'Module off' : undefined">
+      <w-setting-row v-for="f in keys" :key="f.id" :label="f.label" show-hint :hint="f.off ? 'Module off' : undefined">
         <w-hotkey-cell :model-value="f.get()" :label="f.label" @update:model-value="f.set($event)" />
       </w-setting-row>
-      <w-setting-row v-if="!keys.length" label="No scan keys yet" hint="Turn on map scan or essence scan, then open its page once to add it." />
+      <w-setting-row v-if="!keys.length" label="No scan keys yet" show-hint hint="Turn on map scan or essence scan, then open its page once to add it." />
     </w-setting-section>
   </div>
 </template>

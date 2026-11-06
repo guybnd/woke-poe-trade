@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.page">
     <div :class="$style.how">
-      <p :class="$style.howText">In a zone with a mechanic, <b>an icon appears in the dock</b>. Rest the mouse on it for that mechanic's <b>top prices</b>; click it with the overlay open for <b>the full panel</b>. The launcher opens the panel any time.</p>
+      <span class="flex items-center gap-2 w-dim" :class="$style.howText">How it works <WInfo text="In a zone with a mechanic, an icon appears in the dock. Rest the mouse on it for that mechanic's top prices; click it with the overlay open for the full panel. The launcher opens the panel any time." /></span>
       <w-toggle v-model="autoSwitch" title="With the panel open, entering a mechanic's zone switches it to that mechanic">Panel follows my zone</w-toggle>
     </div>
 
@@ -85,7 +85,7 @@ export default { name: 'League mechanics' }
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
-import { WIcon, WToggle } from '../ui'
+import { WIcon, WInfo, WToggle } from '../ui'
 import { usePriceIndex } from '../market/price-index'
 import MechanicGlance from './MechanicGlance.vue'
 import { MECHANICS, mechanicById } from './data'

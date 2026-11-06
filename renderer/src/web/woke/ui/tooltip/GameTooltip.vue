@@ -7,6 +7,14 @@
       </header>
 
       <SwapCard v-if="swap" :swap="swap" />
+      <template v-else-if="passive">
+        <section v-if="passive.stats.length" :class="$style.block">
+          <div v-for="(line, i) in passive.stats" :key="i" :class="$style.mod">{{ line }}</div>
+        </section>
+        <section v-if="passive.note" :class="$style.block">
+          <div :class="$style.label">{{ passive.note }}</div>
+        </section>
+      </template>
       <template v-else-if="item && listing">
         <section v-if="listing.props.length" :class="$style.block">
           <div v-for="(line, l) in listing.props" :key="l"><span v-for="(p, i) in line" :key="i" :class="$style[`p-${p.tone}`]">{{ p.text }}</span></div>
@@ -136,7 +144,7 @@ import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
-import type { GemTip, LookupTip, SwapTip } from './tooltip'
+import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
 
 const $style = useCssModule()
 const el = ref<HTMLElement | null>(null)
@@ -146,6 +154,7 @@ const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ?
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
 const swap = computed<SwapTip | null>(() => tip.value?.content.kind === 'swap' ? tip.value.content : null)
+const passive = computed<PassiveTip | null>(() => tip.value?.content.kind === 'passive' ? tip.value.content : null)
 const lookup = computed<LookupTip | null>(() => tip.value?.content.kind === 'lookup' ? tip.value.content : null)
 // Live: the divine rate can arrive after the tooltip opens.
 const { xchgRate } = usePoeninja()
@@ -155,11 +164,12 @@ const moreUniques = computed(() => Math.max(0, (lookup.value?.uniques?.length ??
 const data = computed(() => gem.value ? gemData(gem.value.name) : null)
 
 const FRAMES: Record<string, string> = { UNIQUE: 'unique', RELIC: 'unique', RARE: 'rare', MAGIC: 'magic' }
-const frameName = computed<string>(() => lookup.value ? lookup.value.model.frame : gem.value ? `gem-${data.value?.colour ?? 'w'}` : FRAMES[item.value?.rarity ?? ''] ?? 'normal')
+const frameName = computed<string>(() => passive.value ? passive.value.frame : lookup.value ? lookup.value.model.frame : gem.value ? `gem-${data.value?.colour ?? 'w'}` : FRAMES[item.value?.rarity ?? ''] ?? 'normal')
 const frame = computed(() => $style[frameName.value])
 
 const lines = computed<string[]>(() => {
   if (swap.value) return [swap.value.title]
+  if (passive.value) return [passive.value.name]
   if (lookup.value) return [lookup.value.model.name, lookup.value.model.base ?? ''].filter(Boolean)
   if (gem.value) return [data.value?.name ?? gem.value.name]
   if (!item.value) return []

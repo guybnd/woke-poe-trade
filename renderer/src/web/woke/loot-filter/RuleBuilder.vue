@@ -4,8 +4,8 @@
       <WField :model-value="rule.name" aria-label="Rule name" style="flex: 1; min-width: 0;" @update:model-value="v => rule.name = cleanValue(String(v)) || rule.name" />
       <WToggle v-model="rule.on" :title="rule.on ? 'Switch this rule off' : 'Switch it on'" />
       <button class="w-icon-btn" title="Delete this rule" aria-label="Delete this rule" @click="emit('delete')"><i class="fas fa-trash" /></button>
+      <WInfo text="Goes above NeverSink's rules, so it wins for every item it catches." />
     </div>
-    <div class="w-faint text-xs">Goes above NeverSink's rules, so it wins for every item it catches.</div>
 
     <div class="w-group-label" :class="$style.label">When the item is</div>
     <div v-for="(c, i) in rule.conditions" :key="i" :class="$style.cond">
@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { BASE_FACTS } from './base-facts'
 import { computed } from 'vue'
-import { WChip, WField, WSegmented, WToggle } from '../ui'
+import { WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
 import type { FilterCondition } from './parse'

@@ -18,7 +18,7 @@
   <div v-for="(g, i) in guides" :key="`g${i}`" :class="[$style.guide, g.axis === 'x' ? $style.gx : $style.gy]"
     :style="g.axis === 'x' ? { left: `${g.at}px` } : { top: `${g.at}px` }" />
 
-  <ToastRow v-for="t in list" :key="t.id" :toast="t" :style="{ left: `${t.x / scale}px`, top: `${t.y / scale}px` }" />
+  <ToastRow v-for="t in list" :key="t.id" :toast="t" />
 </template>
 
 <script setup lang="ts">

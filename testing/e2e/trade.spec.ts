@@ -106,6 +106,7 @@ test('offers close on click, show the next step on hover, and a dismissed one ca
   await overlay.snap('dismissed offer with Reopen')
 
   // Back where it left off: Trade is next, not Invite.
+  await row.hover()
   await reopen.click()
   await expect(row.locator('[data-reply="trade"]')).toBeVisible()
   await expect(reopen).toHaveCount(0)
@@ -193,6 +194,7 @@ test('the skip key moves the bubble on, and reopening brings it back', async ({ 
     await row.locator('[data-reply="dismiss"]').click()
   }
   await expect(bubble).toHaveCount(0)
+  await icon.locator('[data-offer="Kaltenhalt"]').hover()
   await icon.locator('[data-offer="Kaltenhalt"] [data-reopen]').click()
   await expect(bubble).toContainText('Kaltenhalt')
 })
@@ -243,9 +245,48 @@ test('the history keeps old offers across restarts and reopens them', async ({ o
   await expect(trade.locator('[data-offer="Ignithor"]')).toHaveCount(0)
   await toggle.click()
   await overlay.snap('offer history open')
+  await trade.locator('[data-offer="Ignithor"]').hover()
   await trade.locator('[data-offer="Ignithor"] [data-reopen]').click()
   await expect(trade.locator('[data-offer="Ignithor"] [data-reply="invite"]')).toBeVisible()
   await expect(trade.locator('[data-offer-history]')).toHaveCount(0)
+})
+
+test('a history row shows its age until hovered, and its × removes it with an undo', async ({ overlay, fakeApp }) => {
+  const dir = path.join(fakeApp.opts.userData, 'woke-offer-history')
+  const file = path.join(dir, 'offers.json')
+  fs.mkdirSync(dir, { recursive: true })
+  const at = Date.now() - 3 * 86_400_000
+  const offer = (id: string, who: string) => ({
+    id, dir: 'sell', who, body: 'x', item: 'Windscream, Reinforced Greaves', qty: 1, bulk: false,
+    price: { amount: 10, currency: 'Chaos Orb' }, league: 'Testleague', tab: null, note: '',
+    at, lastAt: at, repeats: 0, step: 0, inArea: false, traded: false, offline: false, messages: [],
+    skippedAt: null, actedAt: null, closedAt: at + 60_000, closed: 'dismissed'
+  })
+  fs.writeFileSync(file, JSON.stringify([offer('h-1', 'Ignithor'), offer('h-2', 'Kaltenhalt')]))
+  await overlay.boot({ widgets: [{ ...TRADE, wmWants: 'show' as const, tab: 'offers' }], overlayActive: true })
+  const trade = overlay.widget('woke-trade')
+  await trade.locator('[data-offer-history] > button').first().click()
+  const row = trade.locator('[data-offer="Ignithor"]')
+  const other = trade.locator('[data-offer="Kaltenhalt"]')
+  const reopen = row.locator('[data-reopen]')
+  const remove = row.locator('[data-remove]')
+  const actions = reopen.locator('..')
+
+  await other.hover()
+  await expect(actions).toHaveCSS('opacity', '0')
+  await expect(row).toContainText('2d')
+  await row.hover()
+  await expect(actions).toHaveCSS('opacity', '1')
+  await overlay.snap('history row on hover with Reopen and remove')
+
+  await remove.click()
+  await expect(row).toHaveCount(0)
+  await expect.poll(() => fs.readFileSync(file, 'utf8')).not.toContain('Ignithor')
+  await overlay.snap('history row removed with undo')
+
+  await overlay.page.getByRole('button', { name: 'Undo' }).click()
+  await expect(row).toHaveCount(1)
+  await expect.poll(() => fs.readFileSync(file, 'utf8')).toContain('Ignithor')
 })
 
 test('an offer reopened before a restart comes back open, old as it is', async ({ overlay, fakeApp }) => {

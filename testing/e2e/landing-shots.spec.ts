@@ -5,7 +5,8 @@
 //
 //   WOKE_LANDING_SHOTS=1 npx playwright test landing-shots
 //
-// Each shot is written to docs/public/shots/<name>.webp at 1600x900.
+// Each shot is written to docs/public/shots/<name>.webp at double resolution, so the page
+// can show it at 1280x720 and stay sharp.
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -16,6 +17,7 @@ import type { Overlay } from './harness'
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
 
 test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
+test.use({ deviceScaleFactor: 2 })
 
 // The toolkit tools the rail shows, as a player who maps would have them,
 // with the names their rail icons carry.
@@ -54,7 +56,7 @@ async function showGame (overlay: Overlay, fixture: string, backdrop: string) {
   }, `data:image/jpeg;base64,${jpg}`)
 }
 
-// Saves the page, or a 16:9 part of it to zoom in on, as a 1600x900 webp
+// Saves the page, or a 16:9 part of it to zoom in on, as a webp
 // encoded by the page's own canvas.
 async function save (overlay: Overlay, name: string, clip?: { x: number, y: number, width?: number, height?: number }) {
   // Tests sharing the machine can trip the app's port notice: not for the picture.
@@ -72,8 +74,9 @@ async function save (overlay: Overlay, name: string, clip?: { x: number, y: numb
     img.src = src
     await img.decode()
     const canvas = document.createElement('canvas')
-    canvas.width = 1600
-    canvas.height = 900
+    const scale = Math.min(1, 2560 / img.naturalWidth)
+    canvas.width = img.naturalWidth * scale
+    canvas.height = img.naturalHeight * scale
     const ctx = canvas.getContext('2d')!
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)

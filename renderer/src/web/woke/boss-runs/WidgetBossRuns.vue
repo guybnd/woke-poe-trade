@@ -127,12 +127,15 @@
                   </template>
                   <div v-if="sel.excluded" class="text-xs w-dim" style="padding: 6px var(--w-pad) 0;">{{ sel.excluded }} {{ sel.excluded === 1 ? 'drop' : 'drops' }} left out of the loot<template v-if="config.plannedRuns"> (rarer than 1 in {{ config.plannedRuns }} runs, or switched off)</template>.</div>
                   <div v-if="sel.entryMissing.length" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">No price for {{ sel.entryMissing.join(', ') }}. Profit is hidden. <button type="button" class="w-accent hover:underline" @click="config.ownEntry = true">Count the entry as free</button></div>
-                  <div class="text-xs w-faint" style="padding: 6px var(--w-pad) 0;">
-                    <template v-if="sel.kills >= OWN_RATE_KILLS">Using your own drop rates from {{ sel.kills }} logged kills.</template>
-                    <template v-else-if="sel.boss.source">Rates: {{ sel.boss.source.label }}. Your own rates take over after {{ OWN_RATE_KILLS }} logged kills ({{ sel.kills }} so far).</template>
+                  <div class="text-xs w-faint flex items-center gap-2" style="padding: 6px var(--w-pad) 0;">
+                    <span v-if="sel.kills >= OWN_RATE_KILLS">Using your own drop rates from {{ sel.kills }} logged kills</span>
+                    <span v-else-if="sel.boss.source">Rates: {{ sel.boss.source.label }} · {{ sel.kills }} of {{ OWN_RATE_KILLS }} kills</span>
+                    <WInfo v-if="(sel.kills < OWN_RATE_KILLS && sel.boss.source) || sel.unrated" :text="[
+                      sel.kills < OWN_RATE_KILLS && sel.boss.source ? `Your own rates take over after ${OWN_RATE_KILLS} logged kills.` : '',
+                      sel.unrated ? '? has no known drop rate and counts as 0. Log kills or type a rate under Rates & sources.' : ''
+                    ].filter(Boolean).join('\n\n')" />
                   </div>
                   <div v-if="sel.estimated" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">~ is an estimated chance ({{ ESTIMATE_SOURCE_LABEL }}). Loot and profit are rough.</div>
-                  <div v-if="sel.unrated" class="text-xs w-faint" style="padding: 6px var(--w-pad);">? has no known drop rate and counts as 0. Log kills or type a rate under Rates &amp; sources.</div>
                   <div v-if="sel.unpriced" class="text-xs" style="padding: 0 var(--w-pad) 6px; color: var(--w-warn);">{{ sel.unpriced }} {{ sel.unpriced === 1 ? 'drop has' : 'drops have' }} no price yet and count as 0.</div>
                 </template>
               </template>
@@ -158,7 +161,7 @@
                     <WButton variant="ghost" @click="logging = null">Cancel</WButton>
                   </div>
                 </div>
-                <WEmpty v-else-if="!sel.kills" :art="{ mechanic: 'maven' }">Log each kill's drops. Bosses without public rates use your own kill rates.</WEmpty>
+                <WEmpty v-else-if="!sel.kills" :art="{ mechanic: 'maven' }">Log each kill's drops. <WInfo text="Bosses without public rates use your own kill rates." /></WEmpty>
                 <template v-else>
                   <div class="flex gap-4" style="padding: 8px var(--w-pad);">
                     <span class="w-dim">My average loot <WPrice :chaos="sel.myLoot" :divine="divine" class="w-accent" /></span>
@@ -187,7 +190,7 @@
                     {{ sel.estimated }} {{ sel.estimated === 1 ? 'drop uses' : 'drops use' }} estimated chances, not measured kills: {{ ESTIMATE_SOURCE_LABEL }}.
                     <a v-if="estimateUrl(sel.boss.id)" :href="estimateUrl(sel.boss.id)!" target="_blank" class="w-accent">Open source ↗</a>
                   </div>
-                  <div class="w-faint text-xs">Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; jewels use unidentified trade listings.</div>
+                  <div><WInfo text="Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; jewels use unidentified trade listings." /></div>
                 </div>
                 <div class="w-row w-row--head" :class="$style.rateGrid"><span>Drop</span><span>Source</span><span class="text-right">Chance %</span><span /></div>
                 <div v-for="d in sel.drops" :key="d.name" class="w-row" :class="$style.rateGrid">
@@ -266,7 +269,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WTabs, WSegmented, WField, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WField, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { useLeagues } from '@/web/background/Leagues'

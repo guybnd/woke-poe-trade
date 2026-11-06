@@ -5,6 +5,7 @@
   <StashOutlines />
   <OverlayLayer />
   <GameTooltip />
+  <HelpCard />
   <AppNotices />
 </template>
 
@@ -15,6 +16,7 @@ import ToolkitHealth from './dock/ToolkitHealth.vue'
 import OverlayLayer from './ui/OverlayLayer.vue'
 import StashOutlines from './scarab-flip/StashOutlines.vue'
 import GameTooltip from './ui/tooltip/GameTooltip.vue'
+import HelpCard from './ui/HelpCard.vue'
 import AppNotices from './app/AppNotices.vue'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'

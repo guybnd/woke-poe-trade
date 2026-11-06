@@ -44,15 +44,16 @@
         </button>
       </div>
     </div>
-    <div class="w-faint text-xs" :class="$style.note">
-      Sample drops for area level {{ area }}. Click a label to open its rule.
+    <div class="w-faint text-xs flex items-center gap-2" :class="$style.note">
+      Area level {{ area }}
+      <WInfo text="Sample drops for this area level. Click a label to open its rule." />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
-import { WBanner, WButton, WSegmented, WSelect, WSkeleton, WToggle, openMenu, toast } from '../ui'
+import { WBanner, WButton, WInfo, WSegmented, WSelect, WSkeleton, WToggle, openMenu, toast } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'

@@ -22,7 +22,7 @@
         <WButton size="sm" icon="fas fa-copy" @click="copyProfile">Copy</WButton>
         <WButton v-if="w.profiles.length > 1" size="sm" variant="danger" icon="fas fa-trash" @click="removeProfile">Delete</WButton>
       </div>
-      <div class="w-dim text-sm">One profile per build. Pick mods to avoid or want, and minimum quantity etc., in the Map mods overlay widget. Maps, heist and charts each keep their own picks.</div>
+      <div class="flex items-center gap-2 w-dim text-sm">How profiles work <w-info text="One profile per build. Pick mods to avoid or want, and minimum quantity etc., in the Map mods overlay widget. Maps, heist and charts each keep their own picks." /></div>
       <div v-if="dead.length" class="text-sm flex items-center gap-2 flex-wrap" style="color: var(--w-warn);">
         <span :title="dead.join('\n')">{{ dead.length }} rated {{ dead.length === 1 ? "mod isn't" : "mods aren't" }} in the game any more, so {{ dead.length === 1 ? 'it' : 'they' }} can't match a map.</span>
         <WButton size="sm" @click="removeDead">Remove</WButton>
@@ -30,8 +30,7 @@
     </section>
 
     <section class="flex flex-col gap-2">
-      <span class="w-group-label" style="padding: 0;">Juice weights</span>
-      <div class="w-dim text-sm">How much each stat counts toward the juice score. Set a stat to 0 to ignore it.</div>
+      <span class="w-group-label flex items-center gap-2" style="padding: 0;">Juice weights <w-info text="How much each stat counts toward the juice score. Set a stat to 0 to ignore it." /></span>
       <div class="grid gap-x-4 gap-y-2 items-center" style="grid-template-columns: auto 1fr auto;">
         <template v-for="key in WEIGHT_KEYS" :key="key">
           <span>{{ WEIGHT_LABELS[key] }}</span>
@@ -49,7 +48,7 @@
 import { defineComponent, computed } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
-import { WButton, WField, WSelect } from '../ui'
+import { WButton, WField, WInfo, WSelect } from '../ui'
 import { everyStatLine } from './data'
 import { copyOfProfile, deadRatings } from './rules'
 import type { JuiceWeights } from './rules'
@@ -69,7 +68,7 @@ const WEIGHT_LABELS: Record<keyof JuiceWeights, string> = {
 
 export default defineComponent({
   name: 'Map mods',
-  components: { WHotkeyCell, WButton, WField, WSelect },
+  components: { WHotkeyCell, WButton, WField, WInfo, WSelect },
   props: configProp<MapModsWidget>(),
   setup (props) {
     const w = computed(() => {

@@ -178,12 +178,12 @@
     <!-- build rules -->
     <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll">
       <WEmpty v-if="!buildInput" icon="fas fa-user-cog">
-        No active build. Pick one in PoB builds and press "Use build"; its gems, link colours and uniques can then be added to your filter here.
+        No active build. Pick one in PoB builds. <WInfo text="Press Use build there, and its gems, link colours and uniques can be added to your filter here." />
       </WEmpty>
       <template v-else>
-        <div class="w-dim text-sm" :class="$style.buildIntro">
-          Rules for <span class="w-accent">{{ buildInput.buildName }}</span> go at the top of your saved copy, ahead of NeverSink's own.
-          They follow the active build, and you can restyle them under Rules › Your build.
+        <div class="w-dim text-sm flex items-center gap-2" :class="$style.buildIntro">
+          <span>Rules for <span class="w-accent">{{ buildInput.buildName }}</span></span>
+          <WInfo text="They go at the top of your saved copy, ahead of NeverSink's own. They follow the active build, and you can restyle them under Rules › Your build." />
         </div>
         <div v-for="r in buildRows" :key="r.key" :class="$style.changeRow">
           <WChip clickable :active="config.buildRules[r.key]" :title="config.buildRules[r.key] ? 'Turn off' : 'Turn on'" @click="config.buildRules[r.key] = !config.buildRules[r.key]">
@@ -243,7 +243,7 @@
       <div class="w-group-label" :class="$style.historyLabel">Share</div>
       <div :class="$style.changeRow">
         <i class="fas fa-share-alt w-dim" />
-        <span class="grow min-w-0 text-sm w-dim">Your changes, own rules and presets as one code, for a friend or your other PC.</span>
+        <span class="grow min-w-0 text-sm w-dim">Share your changes as a code <WInfo text="Your changes, own rules and presets as one code, for a friend or your other PC." /></span>
         <WButton size="sm" :icon="copied === 'share' ? 'fas fa-check' : 'fas fa-copy'" @click="copyShareCode">{{ copied === 'share' ? 'Copied' : 'Copy code' }}</WButton>
       </div>
       <div :class="$style.changeRow">
@@ -293,7 +293,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { WPanel, WButton, WSelect, WField, WTabs, WListItem, WChip, WEmpty, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WPanel, WButton, WSelect, WField, WTabs, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'

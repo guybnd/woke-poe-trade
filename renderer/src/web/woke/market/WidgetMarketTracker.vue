@@ -42,8 +42,8 @@
 
       <template v-if="(searching && latest) || !latest || (config.view === 'movers' && !searching && divMove != null)" #meta>
         <template v-if="searching && latest">
-          <span>{{ searchCount }} {{ searchCount === 1 ? 'price' : 'prices' }} for "{{ query.trim() }}"<template v-if="searchGroups.length >= PRICE_GROUP_LIMIT">, first {{ PRICE_GROUP_LIMIT }} items only</template></span><span class="w-faint">·</span>
-          <span>Category and the Settings filters don't apply to a search</span>
+          <span>{{ searchCount }} {{ searchCount === 1 ? 'price' : 'prices' }} for "{{ query.trim() }}"<template v-if="searchGroups.length >= PRICE_GROUP_LIMIT">, first {{ PRICE_GROUP_LIMIT }} items only</template></span>
+          <WInfo text="Category and the Settings filters don't apply to a search." />
         </template>
         <span v-else-if="!latest && league">Waiting for poe.ninja prices.</span>
         <span v-else-if="!latest">Select a league in Settings.</span>
@@ -156,7 +156,7 @@ import { dailyHistory, dailyRowsForDate, latestSnapshots, snapshotAtOrBefore } f
 import { computeMovers, trendBaseline } from './analysis'
 import { PRICE_GROUP_LIMIT, groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
-import { WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import type { Mover } from './analysis'
 import { isThin, itemKey, thinTitle, utcDate } from './types'

@@ -91,6 +91,7 @@
 
       <WPanel v-if="config.expanded && mech.id === 'betrayal' && showBoard" size-key="board" title="Syndicate board" width="auto" max-width="70vw">
         <template #actions>
+          <WInfo text="Click a slot to star it. Green = top 10% by value now." />
           <WField v-model="boardQuery" icon="fas fa-search" placeholder="Search rewards" style="width: 12rem;" />
           <button class="w-icon-btn" @click="showBoard = false" title="Close"><i class="fas fa-times" /></button>
         </template>
@@ -112,7 +113,6 @@
             </button>
           </template>
         </div>
-        <template #footer><span>Click a slot to star it. Green = top 10% by value now.</span></template>
       </WPanel>
     </div>
   </Widget>
@@ -136,7 +136,7 @@ export default {
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { toast, WPanel, WSegmented, WButton, WPrice, WField, WSelect, WBanner, WIcon, vItemTip } from '../ui'
+import { toast, WInfo, WPanel, WSegmented, WButton, WPrice, WField, WSelect, WBanner, WIcon, vItemTip } from '../ui'
 import { usePriceIndex } from '../market/price-index'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'

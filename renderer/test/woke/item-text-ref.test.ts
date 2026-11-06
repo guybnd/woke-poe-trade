@@ -20,6 +20,12 @@ describe('itemRefFromText', () => {
     expect(ref('Dying Sun Ruby Flask')).toEqual({ name: 'Dying Sun' })
     expect(ref("Foulborn Kitava's Thirst Zealot Helmet")).toEqual({ name: "Foulborn Kitava's Thirst" })
   })
+  it('reads the name and base a whisper puts a comma between', () => {
+    expect(ref('Dying Sun, Ruby Flask')).toEqual({ name: 'Dying Sun' })
+    expect(ref("Foulborn Kitava's Thirst, Zealot Helmet")).toEqual({ name: "Foulborn Kitava's Thirst" })
+    expect(ref('Doom Fang, Titan Greaves')).toEqual({ name: 'Titan Greaves' })
+    expect(ref('Dying Sun, Titan Greaves')).toEqual({ name: 'Titan Greaves' })
+  })
   it('reads the trade site name split over lines', () => {
     expect(ref('Dying Sun\nRuby Flask')).toEqual({ name: 'Dying Sun' })
   })

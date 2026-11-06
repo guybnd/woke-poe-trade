@@ -3,24 +3,29 @@
     <div :class="$style.text">
       <div :class="$style.label">
         <slot name="label">{{ label }}</slot>
+        <WInfo v-if="hint && !showHint" :text="hint" />
         <span v-if="restart" :class="$style.restart">Restart to apply</span>
       </div>
-      <div v-if="hint || $slots.hint" :class="$style.hint"><slot name="hint">{{ hint }}</slot></div>
+      <div v-if="hint && showHint" :class="$style.hint">{{ hint }}</div>
     </div>
     <div v-if="$slots.default" :class="$style.control"><slot /></div>
   </div>
 </template>
 
 <script setup lang="ts">
-// One setting: label and a short hint on the left, the control on the right.
+// One setting: label on the left, the control on the right. `hint` explains it
+// behind a "?"; `showHint` keeps it on screen, for what goes wrong if it's missed.
 // `stack` puts the control under the text, for wide fields and lists.
+import WInfo from './WInfo.vue'
+
 withDefaults(defineProps<{
   label: string
   hint?: string
+  showHint?: boolean
   stack?: boolean
   disabled?: boolean
   restart?: boolean
-}>(), { hint: undefined, stack: false, disabled: false, restart: false })
+}>(), { hint: undefined, showHint: false, stack: false, disabled: false, restart: false })
 </script>
 
 <style module>

@@ -113,7 +113,7 @@
         </template>
 
         <template v-else-if="tab === 'costs'">
-          <div class="w-dim">What one map costs to run: map, scarabs, compasses, etc.<template v-if="config.strategy.trim()"> Saved for <span style="color: var(--w-fg);">{{ config.strategy.trim() }}</span>; switching strategy switches costs.</template></div>
+          <div class="w-dim flex items-center gap-2"><span>What one map costs to run<template v-if="config.strategy.trim()"> · <span style="color: var(--w-fg);">{{ config.strategy.trim() }}</span></template></span> <WInfo text="Map, scarabs, compasses and so on. Saved per atlas strategy, so switching strategy switches costs." /></div>
           <div v-if="filledFromAtlas" class="text-xs w-faint"><i class="fas fa-globe" /> Scarabs filled from the atlas strategy "{{ filledFromAtlas }}".</div>
           <div class="relative">
             <WField v-model="costQuery" icon="fas fa-plus" placeholder="Add an input…" class="w-full" />
@@ -178,7 +178,7 @@ import { useVisibleClock } from '../shared/visible-clock'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WTabs, WField, WButton, WEmpty, WKbd, WIcon, WBanner, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WField, WButton, WEmpty, WKbd, WIcon, WBanner, toast, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'

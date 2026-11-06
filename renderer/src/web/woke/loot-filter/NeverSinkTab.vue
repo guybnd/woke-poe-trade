@@ -3,15 +3,12 @@
     <div :class="$style.card">
       <div class="flex items-center gap-3">
         <WToggle :model-value="ns.on" @update:model-value="store.useGitHub($event)">Get NeverSink from GitHub and keep it up to date</WToggle>
+        <WInfo :text="`All seven strictness levels are downloaded into the app's own folder, so your game's filter list doesn't fill up. Your changes are saved to &quot;${NEVERSINK_OUTPUT.replace('.filter', '')}&quot;.\n\nIf you customise on FilterBlade, leave this off and keep picking your own file.`" />
         <span class="grow" />
         <span v-if="ns.on && ns.version" class="w-dim text-xs w-num">
           Version {{ ns.version }}<template v-if="ns.checkedAt"> · checked {{ agoPhrase(ns.checkedAt) }}</template>
         </span>
         <WButton v-if="ns.on" size="sm" variant="ghost" icon="fas fa-sync" :disabled="store.checking.value" @click="store.checkForUpdate(true)">Check now</WButton>
-      </div>
-      <div class="w-faint text-xs">
-        All seven strictness levels are downloaded into the app's own folder, so your game's filter list doesn't fill up. Your changes are saved to
-        "{{ NEVERSINK_OUTPUT.replace('.filter', '') }}". If you customise on FilterBlade, leave this off and keep picking your own file.
       </div>
     </div>
 
@@ -44,6 +41,7 @@
       <div :class="$style.card">
         <div class="flex items-center gap-3">
           <WToggle v-model="config.strictAuto.on">Change strictness by the area level of my last {{ RECENT_MAPS }} maps</WToggle>
+          <WInfo text="Switches only when you enter town or your hideout, never mid-map, and says so with Undo. Press Reload now to use the new strictness." />
           <span class="grow" />
           <template v-if="config.strictAuto.on && config.strictAuto.paused">
             <span class="text-xs" style="color: var(--w-warn);">Paused after a manual change</span>
@@ -56,14 +54,13 @@
             <WSelect :model-value="String(step.level)" :options="levelOptions" @update:model-value="v => step.level = Number(v)" />
           </div>
         </div>
-        <div class="w-faint text-xs">Switches only when you enter town or your hideout, never mid-map, and says so with Undo. Press Reload now to use the new strictness.</div>
       </div>
 
       <div class="w-group-label" :class="$style.label">Look</div>
       <div class="flex items-center gap-2" :class="$style.row">
         <span class="w-dim text-sm">NeverSink style</span>
         <WSelect :model-value="ns.style" :options="styleOptions" style="width: 12rem;" @update:model-value="v => store.setStyle(v)" />
-        <span class="w-faint text-xs">Colour themes NeverSink publishes. Your restyles stay on top.</span>
+        <WInfo text="Colour themes NeverSink publishes. Your restyles stay on top." />
       </div>
     </template>
   </div>
@@ -71,7 +68,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WButton, WKbd, WSelect, WToggle, agoPhrase, toast } from '../ui'
+import { WButton, WInfo, WKbd, WSelect, WToggle, agoPhrase, toast } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { NEVERSINK_OUTPUT } from './widget'

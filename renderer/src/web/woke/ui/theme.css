@@ -265,6 +265,7 @@ body { font-size: calc(1rem * var(--w-text-scale, 1)); }
 }
 
 /* Opening motion (pick M1). WPanel and WMenu use it; any popup can add .w-enter. */
+/* Ends on `transform: none` and holds it, so an element using this can't place itself with transform. */
 @keyframes w-enter { from { opacity: 0; transform: translateY(var(--w-rise)); } to { opacity: 1; transform: none; } }
 .w-enter { animation: w-enter var(--w-dur-in) var(--w-ease) both; }
 

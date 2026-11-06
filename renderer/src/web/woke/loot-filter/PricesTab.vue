@@ -70,15 +70,16 @@
         <WToggle v-model="config.safetyNet.on">Always show anything worth</WToggle>
         <WField v-model.number="minChaos" type="number" suffix="c" style="width: 5.5rem;" aria-label="Safety net value in chaos" />
         <span class="w-dim text-xs">{{ config.safetyNet.on ? `${store.safetyCount.value} hidden item${store.safetyCount.value === 1 ? '' : 's'} caught right now` : 'off' }}</span>
+        <WInfo :text="'One rule at the top of your filter, white on red with a short red beam and an alert sound, for valuable items the rest of the filter would hide.\n\nThin markets count, since a junk price only costs you a click. It can\'t judge rares, gems, cluster jewels or maps, which have no one price for a base.'" />
       </div>
-      <div class="w-faint text-xs">One rule at the top of your filter, white on red with a short red beam and an alert sound, for valuable items the rest of the filter would hide. Thin markets count, since a junk price only costs you a click. It can't judge rares, gems, cluster jewels or maps, which have no one price for a base.</div>
       <WToggle :model-value="dockNotice" @update:model-value="setDockNotice">Tell me on the dock icon</WToggle>
     </div>
 
     <div class="w-group-label" :class="$style.label">Valuable items your filter hides or shows small</div>
     <WEmpty v-if="!rows.length" icon="fas fa-check">Nothing worth {{ Math.min(config.safetyNet.minChaos, 10) }}c or more is hidden or shown small.</WEmpty>
     <div v-if="rows.length" class="w-dim text-xs" :class="$style.summary">
-      {{ hiddenCount }} hidden<template v-if="caughtCount">; your {{ config.safetyNet.minChaos }}c safety net still shows {{ caughtCount }}</template>. Click one to see what you'd get.
+      {{ hiddenCount }} hidden<template v-if="caughtCount">; your {{ config.safetyNet.minChaos }}c safety net still shows {{ caughtCount }}</template>
+      <WInfo text="Click one to see what you'd get." />
     </div>
     <template v-for="r in rows" :key="r.key">
       <button v-item-tip="baseTip(r.v.group.type, r.v.base)" type="button" class="w-focusable" :class="[$style.row, $style.healthRow, { [$style.open]: openRow === r.key }]" :aria-expanded="openRow === r.key" @click="openRow = openRow === r.key ? null : r.key">
@@ -106,7 +107,7 @@
             <span class="w-num text-xs" :class="$style[`${i.grade}Text`]">{{ i.chaos != null ? `${Math.round(i.chaos)}c` : 'no price' }}</span>
             <span class="text-xs" :class="$style[`${i.grade}Text`]">{{ GRADE_LABEL[i.grade] }}{{ i.thin ? ', thin market' : '' }}</span>
           </div>
-          <div v-if="r.trash" class="w-dim text-xs" style="margin-top: 5px;">{{ r.trash }} of {{ r.items.length }} {{ r.trash === 1 ? 'is' : 'are' }} trash. A trash drop looks the same on the ground until you identify it.</div>
+          <div v-if="r.trash" class="w-dim text-xs flex items-center gap-1" style="margin-top: 5px;">{{ r.trash }} of {{ r.items.length }} {{ r.trash === 1 ? 'is' : 'are' }} trash <WInfo text="A trash drop looks the same on the ground until you identify it." /></div>
         </div>
         <div class="min-w-0">
           <div class="text-sm" :class="$style.detailHead">"Show it" will</div>
@@ -124,7 +125,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, WPrice, WSegmented, WToggle, agoPhrase, gameIcon, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WField, WInfo, WPrice, WSegmented, WToggle, agoPhrase, gameIcon, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
 import { TURN_OFF_IDS } from './notices'
 import { gradeItems, GRADE_LABEL, healthKey, isDismissed, priceBar, showEffect, trashCount } from './health'
 import { usePoeninja } from '@/web/background/Prices'

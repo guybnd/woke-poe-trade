@@ -1,8 +1,8 @@
 <template>
   <w-setting-section title="Icon row">
-    <div class="w-dim" :class="$style.intro">
-      Small icons show while you play. Rest the mouse on one for its card. Right-click for its menu.
-      With the overlay open, drag the row by its grip, and click an icon for the full window.
+    <div class="w-dim flex items-center gap-2" :class="$style.intro">
+      How the icons work
+      <w-info text="Small icons show while you play. Rest the mouse on one for its card. Right-click for its menu. With the overlay open, drag the row by its grip, and click an icon for the full window." />
     </div>
     <w-setting-row label="Open cards on hover" hint="Off: a card opens only when you click its icon. A click closes it either way.">
       <w-toggle :model-value="dock.hoverOpens !== false" @update:model-value="dock.hoverOpens = $event" />
@@ -10,7 +10,7 @@
     <w-setting-row label="Peek" hint="An icon grows into one line for 5 seconds when something happens: new zone, live search hit, map counted.">
       <w-toggle v-model="dock.peeks" />
     </w-setting-row>
-    <w-setting-row label="Stand the row on its side" hint="A column instead of a row.">
+    <w-setting-row label="Stand the row on its side">
       <w-toggle v-model="dock.vertical" />
     </w-setting-row>
     <w-setting-row label="Position" hint="Default: right of the stash, at the top.">
@@ -36,7 +36,7 @@ export default {
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Config } from '@/web/Config'
-import { WButton, WSettingRow, WSettingSection, WToggle } from '../ui'
+import { WButton, WInfo, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { ensureWokeConfig } from '../modules'
 import { DEFAULT_DOCK, DOCK_NAMES, DOCK_ORDER } from './dock'
 import type { DockConfig } from './dock'

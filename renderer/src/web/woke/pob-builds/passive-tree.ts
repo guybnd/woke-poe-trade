@@ -11,20 +11,51 @@ export interface TreeNode {
   name: string
   stats: string[]
   out: number[]
+  icon: string
+  // Index into the art's groups, with the orbit around that group's centre.
+  group: number
+  radius: number
+  // Clockwise from up, in radians.
+  angle: number
 }
 
-type Row = [number, number, number, NodeKind, string, string[], number[]]
+type Row = [number, number, number, NodeKind, string, string[], number[], string, number, number, number]
+
+export interface SpriteSheet {
+  url: string
+  coords: Record<string, [number, number, number, number]>
+}
+
+export interface TreeArt {
+  // x, y, background sprite ('' for none), and whether it's half a circle.
+  groups: Array<[number, number, string, number]>
+  sprites: Record<string, SpriteSheet>
+}
 
 let job: Promise<Map<number, TreeNode>> | null = null
+let art: TreeArt | null = null
+
+// The groups and sprites, once loadPassiveTree has finished.
+export function passiveTreeArt (): TreeArt | null {
+  return art
+}
+
+export function readNodes (rows: Row[]): Map<number, TreeNode> {
+  return new Map(rows.map(([id, x, y, kind, name, stats, out, icon, group, radius, angle]) =>
+    [id, { id, x, y, kind, name, stats, out, icon: icon ?? '', group: group ?? 0, radius: radius ?? 0, angle: angle ?? 0 }]))
+}
 
 export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
   if (!job) {
     job = fetch(`${import.meta.env.BASE_URL}data/tree/passive-tree.json`)
       .then(res => {
         if (!res.ok) throw new Error(`The passive tree didn't load (${res.status})`)
-        return res.json() as Promise<Row[]>
+        return res.json() as Promise<TreeArt & { nodes: Row[] }>
       })
-      .then(rows => new Map(rows.map(([id, x, y, kind, name, stats, out]) => [id, { id, x, y, kind, name, stats, out }])))
+      .then(data => {
+        art = { groups: data.groups, sprites: data.sprites }
+        return readNodes(data.nodes)
+      })
     // A failed load can be tried again by opening the tree again.
     job.catch(() => { job = null })
   }
@@ -42,6 +73,8 @@ export interface TreeDiff {
   removedNames: TreeNode[]
 }
 
+// Notables, keystones and sockets, plus what the small passives never are: asc
+// notables come named, and asc smalls don't.
 const NAMED: NodeKind[] = ['notable', 'key', 'jewel', 'asc']
 
 export function treeDiff (nodes: Map<number, TreeNode> | null, from: number[], to: number[]): TreeDiff {
@@ -90,4 +123,37 @@ export function fitBox (nodes: TreeNode[], pad = 900): Box | null {
   const x = Math.min(...xs) - pad
   const y = Math.min(...ys) - pad
   return { x, y, w: Math.max(...xs) + pad - x, h: Math.max(...ys) + pad - y }
+}
+
+// ---- finding a node under the mouse ----
+
+export interface View { zoom: number, ox: number, oy: number }
+
+// Drawn size in tree units, at the size the game gives them.
+export const NODE_RADIUS: Partial<Record<NodeKind, number>> = { small: 34, notable: 54, key: 82, jewel: 54, mastery: 70, start: 40 }
+
+// The node nearest a point on the canvas, within reach: never less than `reach`
+// pixels, since small passives are tiny when zoomed out.
+export function nodeAt (nodes: Iterable<TreeNode>, x: number, y: number, view: View, reach: number): TreeNode | null {
+  let best: TreeNode | null = null
+  let bestDist = Infinity
+  for (const n of nodes) {
+    const r = NODE_RADIUS[n.kind]
+    if (!r) continue
+    const limit = Math.max(reach, r * view.zoom)
+    const dx = n.x * view.zoom + view.ox - x
+    const dy = n.y * view.zoom + view.oy - y
+    if (Math.abs(dx) > limit || Math.abs(dy) > limit) continue
+    const dist = dx * dx + dy * dy
+    if (dist <= limit * limit && dist < bestDist) {
+      best = n
+      bestDist = dist
+    }
+  }
+  return best
+}
+
+// What a node's tooltip says about it in this tree.
+export function nodeNote (state: NodeState): string | undefined {
+  return state === 'add' ? 'New in this tree' : state === 'remove' ? 'Goes away in this tree' : state === 'keep' ? 'Allocated' : undefined
 }

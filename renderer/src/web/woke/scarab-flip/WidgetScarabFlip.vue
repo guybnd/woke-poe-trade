@@ -8,7 +8,7 @@
           <span class="w-dim w-num">{{ best.family.label }}, {{ best.method.label.toLowerCase() }}, +{{ fmt(best.profitEach) }} each<template v-if="best.profitPerDay != null">, up to {{ fmt(best.profitPerDay) }} a day</template></span>
         </div>
         <div v-else class="w-dim" style="padding: 2px var(--w-pad) 6px;">Nothing worth flipping right now</div>
-        <div v-if="clickHint" class="w-dim text-xs" style="padding: 0 var(--w-pad) 6px;">Click to outline flips in the open stash tab</div>
+        <div v-if="clickHint" class="w-dim" style="padding: 0 var(--w-pad) 6px;">Click to outline flips in the open stash tab</div>
       </template>
     </DockItem>
     <WPanel :title="config.wmTitle || 'Flips'" :icon="panelIcon" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="34rem">
@@ -51,7 +51,7 @@
             </span>
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
-            <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" />
+            <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
             <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
             <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
@@ -61,8 +61,8 @@
 
       <template v-else-if="view === 'odds' && odds">
         <div :class="$style.note" class="w-num">
-          <template v-if="odds.medianResult != null">Half of all {{ flipWord }}s return {{ fmt(odds.medianResult) }} or less. </template>
-          Before any rerolls, a {{ flipWord }} sells for {{ fmt(odds.saleValue) }} on average.
+          <template v-if="odds.medianResult != null">Half return {{ fmt(odds.medianResult) }} or less. </template>
+          Average sale before rerolls: {{ fmt(odds.saleValue) }}.
         </div>
         <div :class="$style.legend">
           <span><i :class="[$style.key, $style.chance]" />Chance of this result</span>
@@ -90,7 +90,8 @@
 
       <template v-else-if="pool">
         <div :class="$style.note" class="w-num">
-          These drop under {{ pct(family.rareShare ?? 0) }} of the time but cost less than a third of a typical rare {{ family.noun }}<template v-if="pool.typicalRare != null"> ({{ fmt(pool.typicalRare) }})</template>, so they may rise later. Hold them rather than flipping them.
+          Rare but cheap, so they may rise later. Hold them rather than flipping them.
+          <WInfo :text="`These drop under ${pct(family.rareShare ?? 0)} of the time but cost less than a third of a typical rare ${family.noun}${pool.typicalRare != null ? ` (${fmt(pool.typicalRare)})` : ''}.`" />
         </div>
         <WEmpty v-if="!rareCheap.length" icon="fas fa-star">No exceptionally rare {{ family.noun }} is cheap right now.</WEmpty>
         <template v-else>
@@ -99,7 +100,7 @@
             <span v-if="hasVolume" class="text-right" :title="SUPPLY_TITLE">Supply</span>
           </div>
           <div v-for="r in rareCheap" :key="r.name" class="w-row" :class="$style.rareGrid" @contextmenu="rowMenu($event, r.name)">
-            <FlipName :name="r.name" :item="r.name" :rare-cheap="r.rareCheap" />
+            <FlipName :name="r.name" :item="r.name" :rare-cheap="r.rareCheap" :source="r.weightSource" />
             <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
             <span class="text-right w-dim w-num">1 in {{ Math.round(1 / r.share).toLocaleString('en-US') }}</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
@@ -108,7 +109,7 @@
       </template>
 
       <template #footer>
-        <span>{{ footerText }}</span> <WInfo :text="footerTitle" />
+        <span>{{ footerText }}</span> <button v-if="pool" type="button" :class="$style.weightsLink" @click="openWeights">Weights</button> <WInfo :text="footerTitle" />
       </template>
     </WPanel>
   </Widget>
@@ -130,6 +131,7 @@ export default {
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
 import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch } from 'vue'
+import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { Host, MainProcess } from '@/web/background/IPC'
@@ -142,11 +144,11 @@ import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
 import type { Snapshot } from '../market/types'
 import DockItem from '../dock/DockItem.vue'
-import { dockConfig, dockIconEl } from '../dock/dock'
+import { dockConfig, dockIconEl, openSettingsPage } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 import { DEFAULT_FLIP_SORT, JACKPOT_CHAOS, SUPPLY_HIGH, SUPPLY_MEDIUM, buyList, firstSortDir, isTraded, flipOdds, parseExchange, rareCheapList, sortFlips, supplyLevel } from './calc'
-import type { FlipRow, FlipSortKey, UpgradeRow } from './calc'
+import type { FlipRow, FlipSortKey, UpgradeRow, WeightSource } from './calc'
 import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, shortName, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
@@ -255,7 +257,7 @@ const lifeforcePerItem = computed(() => parseLifeforce(props.config.lifeforcePer
 const options = computed(() => ({ sellDiscount: props.config.sellDiscount / 100, reroll: props.config.reroll }))
 
 const flip = computed(() => snapshot.value
-  ? priceFlip(family.value, method.value, snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value)
+  ? priceFlip(family.value, method.value, snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)
   : null)
 const pool = computed(() => flip.value?.kind === 'pool' ? flip.value.model : null)
 const rows = computed<Array<FlipRow | UpgradeRow>>(() => {
@@ -264,7 +266,7 @@ const rows = computed<Array<FlipRow | UpgradeRow>>(() => {
 })
 // Only for the icon, which is off in maps, so maps don't pay for the ranking.
 const best = computed(() => snapshot.value && dockShow.value
-  ? bestFlip(snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value)
+  ? bestFlip(snapshot.value.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)
   : null)
 
 // Odds and rarity need weights, so a known-result flip only has its list.
@@ -350,28 +352,49 @@ const feedNote = computed(() => {
   return feed === undefined ? 'Prices: poe.ninja. Volume is still loading.' : "Prices: poe.ninja. Volume is missing because the exchange feed didn't load."
 })
 
+const countOf = (source: WeightSource) => pool.value?.rows.filter(r => r.weightSource === source).length ?? 0
+
 const footerText = computed(() => {
   const left = pool.value?.unrated.length
   const short = family.value.source.split('. ')[0].replace(/\.$/, '') + '.'
-  return left ? `${short} ${left} with no weight left out.` : short
+  const marks = [
+    countOf('estimate') ? `${countOf('estimate')} estimated` : '',
+    countOf('yours') ? `${countOf('yours')} yours` : '',
+    left ? `${left} with no weight left out` : ''
+  ].filter(Boolean)
+  return marks.length ? `${short} ${marks.join(', ')}.` : short
 })
 
+// The page opens at its top, with Market and Investments above these.
+function openWeights () {
+  openSettingsPage(wm, 'market')
+  const scroll = (tries: number) => {
+    const list = document.querySelector('[data-flip-weights]')
+    if (list) list.scrollIntoView({ block: 'start' })
+    else if (tries > 0) setTimeout(() => { scroll(tries - 1) }, 50)
+  }
+  scroll(20)
+}
+
 const footerTitle = computed(() => {
-  const tiers = pool.value?.rows.filter(r => r.weightSource === 'tier').length ?? 0
+  const estimated = countOf('estimate')
   const left = pool.value?.unrated.join(', ')
   return [
     family.value.source,
-    tiers ? `${tiers} scarabs use the average weight of their wiki rarity tier.` : '',
+    estimated ? `${estimated} with no measured weight use the average. EV leans on those guesses: check them in Settings.` : '',
     left ? `No weight, left out: ${left}.` : '',
     feedNote.value
-  ].filter(Boolean).join('\n')
+  ].filter(Boolean).join('\n\n')
 })
+
+const WEIGHT_CHIP = 'flex: none; padding: 0 3px; border: 1px solid currentColor; border-radius: 2px; font-size: calc(10px * var(--w-text-scale, 1)); font-weight: 600; line-height: 1.3;'
 
 const FlipName = defineComponent({
   props: {
     name: { type: String, required: true },
     item: { type: String, required: true },
-    rareCheap: { type: Boolean, default: false }
+    rareCheap: { type: Boolean, default: false },
+    source: { type: String as PropType<WeightSource>, default: undefined }
   },
   setup (p) {
     return () => {
@@ -381,6 +404,12 @@ const FlipName = defineComponent({
         h('span', { class: 'w-trunc' }, shortName(p.name)),
         p.rareCheap
           ? h('i', { class: 'fas fa-star w-warn', style: 'flex: none; font-size: calc(11px * var(--w-text-scale, 1));', title: 'Exceptionally rare and cheap: it may rise later, so think before flipping it' })
+          : null,
+        p.source === 'estimate'
+          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight: uses the average of the others. Change it in Settings.' }, 'EST')
+          : null,
+        p.source === 'yours'
+          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-info);', title: 'Your own weight, from Settings.' }, 'YOURS')
           : null
       ])
     }
@@ -420,7 +449,7 @@ async function toggleOutlines () {
   const tabFamily = familyById(read.family)
   const picked = props.config.methods?.[tabFamily.id]
   const tabMethod = tabFamily.methods.find(m => m.id === picked) ?? tabFamily.methods[0]
-  const priced = priceFlip(tabFamily, tabMethod, prices.items, exchanges.value, options.value, lifeforcePerItem.value)
+  const priced = priceFlip(tabFamily, tabMethod, prices.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)
   if (priced?.kind !== 'pool' && priced?.kind !== 'upgrade') {
     hostRequest('stash-watch-stop', null).catch(() => {})
     stashNote(priced?.kind === 'no-cost'
@@ -496,6 +525,8 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .verdict { display: flex; flex-direction: column; gap: 2px; padding: 8px var(--w-pad); background: var(--w-accent-soft); border-bottom: 1px solid var(--w-line); }
 .verdict b { font-size: var(--w-fs-lg); font-weight: 600; }
 .buyGrid { grid-template-columns: minmax(0, 1fr) 62px calc(96px * var(--w-text-scale, 1)) calc(64px * var(--w-text-scale, 1)); }
+.weightsLink { all: unset; cursor: pointer; color: var(--w-accent); }
+.weightsLink:hover, .weightsLink:focus-visible { text-decoration: underline; }
 .sortHead { all: unset; cursor: pointer; white-space: nowrap; }
 .sortHead:hover, .sortHead:focus-visible { color: var(--w-text); }
 .sorted { color: var(--w-accent); }

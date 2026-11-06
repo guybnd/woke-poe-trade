@@ -3,7 +3,8 @@
 //
 //   WOKE_LANDING_SHOTS=1 npx playwright test landing-highlights
 //
-// Each shot is written to docs/public/shots/<name>.webp at 1600x900.
+// Each shot is written to docs/public/shots/<name>.webp at double resolution, so the page
+// can show it at 1280x720 and stay sharp.
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -17,6 +18,7 @@ const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../do
 const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
 
 test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
+test.use({ deviceScaleFactor: 2 })
 
 async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
   const data = fs.readFileSync(path.join(FIXTURES, 'screens', file)).toString('base64')
@@ -29,7 +31,7 @@ async function backdrop (overlay: Overlay, file: string, place = 'center / cover
 }
 
 // A 16:9 window of the 1920x1080 page around these elements, as large as they
-// need and no smaller than `min`, kept on the page. Saved at 1600x900.
+// need and no smaller than `min`, kept on the page.
 async function saveAround (overlay: Overlay, name: string, around: Locator[], min = 1120) {
   const { page } = overlay
   await page.waitForTimeout(500)
@@ -57,8 +59,9 @@ async function writeWebp (from: Page, name: string, png: Buffer) {
     img.src = src
     await img.decode()
     const canvas = document.createElement('canvas')
-    canvas.width = 1600
-    canvas.height = 900
+    const scale = Math.min(1, 2560 / img.naturalWidth)
+    canvas.width = img.naturalWidth * scale
+    canvas.height = img.naturalHeight * scale
     const ctx = canvas.getContext('2d')!
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
@@ -325,7 +328,7 @@ test('pob: two builds side by side', async ({ overlay }) => {
 // data: the next set adds a path to one more notable and respecs two points.
 function grownBuildsDir () {
   type Node = [number, number, number, string, string, string[], number[]]
-  const nodes: Node[] = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../renderer/public/data/tree/passive-tree.json'), 'utf8'))
+  const { nodes }: { nodes: Node[] } = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../renderer/public/data/tree/passive-tree.json'), 'utf8'))
   const walkable = new Set(nodes.filter(n => n[3] !== 'asc' && n[3] !== 'mastery').map(n => n[0]))
   const links = new Map<number, number[]>()
   for (const [id, , , , , , out] of nodes) {
@@ -420,7 +423,7 @@ test('pob: the passive tree in the overlay', async ({ overlay }) => {
   try {
     const detail = await openLevellingBuild(overlay, dir)
     await detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ }).click()
-    const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('svg') }).last()
+    const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('canvas') }).last()
     await expect(tree).toContainText(/\d+ new points?/)
     // Only the tree in the picture, not the panels it opened over.
     await detail.evaluate(el => { el.style.visibility = 'hidden' })
@@ -439,7 +442,7 @@ test('market: the flips window', async ({ overlay }) => {
   const panel = overlay.widget('woke-scarab-flip')
   await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
   await overlay.page.mouse.move(1800, 1000)
-  await saveAround(overlay, 'hl-flips', [panel], 1280)
+  await saveAround(overlay, 'hl-flips', [panel.locator('[data-w-panel]')], 1280)
 })
 
 test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {

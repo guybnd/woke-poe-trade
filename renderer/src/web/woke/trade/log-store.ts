@@ -3,6 +3,7 @@
 import { shallowRef } from 'vue'
 import { createGlobalState } from '@vueuse/core'
 import { hostRequest } from '../shared/host'
+import { replayCouldReopen } from './book'
 import type { Offer, TradeRecord } from './book'
 
 export const useTradeLog = createGlobalState(() => {
@@ -40,17 +41,23 @@ export const useTradeLog = createGlobalState(() => {
   return { trades, loaded, error, load, add, remove }
 })
 
-// Offers closed without a trade (dismissed, sold elsewhere, ran out), kept for
-// good so a wrong click is never final. Newest first.
+// Offers closed without a trade (dismissed, sold elsewhere, ran out), kept until
+// you remove them, so a wrong click is never final. Newest first.
 export const useOfferHistory = createGlobalState(() => {
   const offers = shallowRef<Offer[]>([])
   const byClosed = (a: Offer, b: Offer) => (b.closedAt ?? 0) - (a.closedAt ?? 0)
+  // Deleted here while a read may still be on its way with them in it.
+  const deleted = new Set<string>()
 
   async function load (): Promise<void> {
     const list = await hostRequest<Offer[]>('offer-history-list', {})
     // Anything added while this was on its way wins.
     const mine = new Set(offers.value.map(o => o.id))
-    offers.value = [...offers.value, ...list.filter(o => !mine.has(o.id))].sort(byClosed)
+    offers.value = [...offers.value, ...list.filter(o => !mine.has(o.id) && !deleted.has(o.id))].sort(byClosed)
+    // Removed offers a restart can no longer bring back have done their job.
+    for (const o of offers.value) {
+      if (o.removedAt != null && !replayCouldReopen(o, Date.now())) remove(o.id).catch(() => {})
+    }
   }
 
   function get (id: string): Offer | undefined {
@@ -60,6 +67,8 @@ export const useOfferHistory = createGlobalState(() => {
   async function add (o: Offer): Promise<void> {
     const plain = JSON.parse(JSON.stringify(o)) as Offer
     delete plain.reopenedAt
+    delete plain.removedAt
+    deleted.delete(plain.id)
     offers.value = [plain, ...offers.value.filter(x => x.id !== plain.id)].sort(byClosed)
     try {
       await hostRequest('offer-history-add', { offer: plain })
@@ -74,7 +83,7 @@ export const useOfferHistory = createGlobalState(() => {
   async function markReopened (id: string, at: number): Promise<void> {
     const rec = get(id)
     if (!rec) return
-    const plain = { ...rec, reopenedAt: at }
+    const plain = { ...rec, reopenedAt: at, removedAt: null }
     offers.value = offers.value.map(x => x.id === id ? plain : x)
     await hostRequest('offer-history-add', { offer: plain })
   }
@@ -85,11 +94,38 @@ export const useOfferHistory = createGlobalState(() => {
   }
 
   async function remove (id: string): Promise<void> {
+    deleted.add(id)
     offers.value = offers.value.filter(x => x.id !== id)
     await hostRequest('offer-history-delete', { id })
   }
 
-  return { offers, load, get, add, markReopened, forgetReopened, remove }
+  // Your own removal of a row. While a restart could still read its whisper, a
+  // hidden record stays to keep the offer closed; after that it's deleted.
+  async function discard (o: Offer, at: number): Promise<void> {
+    const before = get(o.id)
+    const others = offers.value.filter(x => x.id !== o.id)
+    try {
+      if (replayCouldReopen(o, at)) {
+        const plain = JSON.parse(JSON.stringify(o)) as Offer
+        delete plain.reopenedAt
+        plain.removedAt = at
+        offers.value = [plain, ...others].sort(byClosed)
+        await hostRequest('offer-history-add', { offer: plain })
+      } else {
+        deleted.add(o.id)
+        offers.value = others
+        await hostRequest('offer-history-delete', { id: o.id })
+      }
+    } catch (err) {
+      // Only this row goes back: others may have changed meanwhile.
+      deleted.delete(o.id)
+      const rest = offers.value.filter(x => x.id !== o.id)
+      offers.value = before ? [before, ...rest].sort(byClosed) : rest
+      throw err
+    }
+  }
+
+  return { offers, load, get, add, markReopened, forgetReopened, remove, discard }
 })
 
 const DAY_MS = 24 * 3_600_000

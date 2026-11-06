@@ -268,13 +268,33 @@ test('the passive tree opens in the overlay, on the next tree, with what it adds
   await expect(next).toContainText('+1')
   await expect(next).toContainText('Holy Dominion')
   await next.click()
-  const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('svg') }).last()
-  await expect(tree).toContainText('Day 1 No Cluster to Day 1.5 Clusters')
+  const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('canvas') }).last()
+  // On its own, even from the Next card: comparing is only ever asked for.
+  await expect(tree).toContainText('4 points')
+  await expect(tree).toContainText('Key passives')
+  await expect(tree).not.toContainText('1 new point')
+  await overlay.snap('passive tree on its own')
+
+  await tree.getByRole('switch').click()
+  await expect(tree).toContainText('Changes from Day 1 No Cluster')
   await expect(tree).toContainText('1 new point')
   await expect(tree).toContainText('+12% to all Elemental Resistances')
-  await expect(tree.locator('circle').first()).toBeAttached()
-  expect(await tree.locator('circle').count()).toBeGreaterThan(1000)
+  await expect(tree.locator('canvas').first()).toBeVisible()
+  await overlay.page.waitForTimeout(800)
   await overlay.snap('passive tree')
+
+  // Sweeps until the mouse lands on a node: its stats come up at the cursor.
+  const box = (await tree.locator('canvas').first().boundingBox())!
+  const tip = overlay.page.getByRole('tooltip')
+  let found = false
+  for (let y = box.y + 20; y < box.y + box.height && !found; y += 25) {
+    for (let x = box.x + 20; x < box.x + box.width && !found; x += 25) {
+      await overlay.page.mouse.move(x, y)
+      found = await tip.isVisible()
+    }
+  }
+  expect(found).toBe(true)
+  await overlay.snap('passive tree tooltip')
 })
 
 function showcaseSeed () {

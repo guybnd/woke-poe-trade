@@ -25,13 +25,13 @@
       <w-setting-row v-if="hasBackdrop" label="Click the dark area to go back to the game">
         <w-toggle v-model="config.overlayBackgroundClose" />
       </w-setting-row>
-      <w-setting-row label="Say when the overlay is ready" hint="A short note after the game starts.">
+      <w-setting-row label="Say when the overlay is ready">
         <w-toggle v-model="config.showAttachNotification" />
       </w-setting-row>
-      <w-setting-row label="Put back what was on the clipboard" hint="After price check copies an item.">
+      <w-setting-row label="Put back what was on the clipboard">
         <w-toggle v-model="config.restoreClipboard" />
       </w-setting-row>
-      <w-setting-row label="Game window title" hint="Only change this for a renamed game window." restart>
+      <w-setting-row label="Game window title" show-hint hint="Only change this for a renamed game window." restart>
         <w-field v-model="config.windowTitle" />
       </w-setting-row>
     </w-setting-section>

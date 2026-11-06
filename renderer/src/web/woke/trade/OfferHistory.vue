@@ -6,7 +6,7 @@
       <span class="w-faint w-num">{{ offers.length }}</span>
     </button>
     <template v-if="open">
-      <OfferRow v-for="o in visible" :key="o.id" :offer="o" :now="now" :row-style="rowStyle" :art="artFor(o)" @reopen="$emit('reopen', o)" />
+      <OfferRow v-for="o in visible" :key="o.id" :offer="o" :now="now" :row-style="rowStyle" :art="artFor(o)" @reopen="$emit('reopen', o)" @remove="$emit('remove', o)" />
       <button v-if="offers.length > limit" type="button" :class="$style.more" @click="limit += PAGE">Show older ({{ offers.length - limit }} more)</button>
     </template>
   </div>
@@ -31,7 +31,7 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'toggle'): void
-  (e: 'reopen', o: Offer): void
+  (e: 'reopen' | 'remove', o: Offer): void
 }>()
 
 const limit = shallowRef(PAGE)
