@@ -9,7 +9,7 @@ import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import type { Locator, Page } from '@playwright/test'
-import { test, expect, FIXTURES } from './harness'
+import { test, expect, FIXTURES, logFixture } from './harness'
 import type { Overlay } from './harness'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
@@ -281,6 +281,36 @@ test('market: scarabs to buy, outlined in your stash', async ({ overlay }) => {
 
 // ---- 5. On screen ----
 
+// The icon row low on the screen, over the calmest frame there is, a little
+// darker still so the card is what you read.
+const lowDock = (config: { woke?: Record<string, unknown> }) => {
+  config.woke = { ...config.woke, dock: { x: 20, y: 80, vertical: false, noPeek: [], hidden: [], dismissed: {} } }
+}
+
+async function calmFrame (overlay: Overlay) {
+  const jpg = fs.readFileSync(path.join(FIXTURES, 'screens/landing/screenshot-0010.jpg')).toString('base64')
+  await overlay.page.evaluate((url) => {
+    const root = document.documentElement
+    root.style.minHeight = '100vh'
+    root.style.background = `linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), #000 url(${url}) center / cover no-repeat`
+  }, `data:image/jpeg;base64,${jpg}`)
+}
+
+async function saveLow (overlay: Overlay, name: string) {
+  await overlay.page.waitForTimeout(500)
+  await writeWebp(overlay.page, name, await overlay.page.screenshot({ clip: { x: 0, y: 135, width: 1360, height: 765 } }))
+}
+
+test('on screen: trade offers waiting', async ({ overlay }) => {
+  const lines = logFixture('client-logs/trade-hideout.txt')
+  await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-trade', stepHotkey: 'F3', busyHotkey: 'F4', ping: false }] })
+  await calmFrame(overlay)
+  await overlay.log(lines.slice(0, lines.findIndex(l => l.includes('#Spammer')) + 1))
+  await overlay.hoverDockIcon('trade')
+  await expect(overlay.dockIcon('trade')).toContainText('xXLeagueStartXx', { timeout: 5000 })
+  await saveLow(overlay, 'hl-trade')
+})
+
 test('on screen: the Expedition card knows who is here', async ({ overlay }) => {
   const FLAT = [0, 0, 0, 0, 0, 0]
   const recorded = fs.readFileSync(path.join(FIXTURES, 'http/poe.ninja/poe1/api/economy/current/dense/overviews.json'), 'utf8')
@@ -297,16 +327,27 @@ test('on screen: the Expedition card knows who is here', async ({ overlay }) => 
     contentType: 'application/json',
     body: recorded.replace(/\[\s*\{"type":"/, () => `[${artifacts},{"type":"`)
   }))
-  await overlay.boot({ widgets: [{ wmType: 'woke-mechanics' }] })
-  await backdrop(overlay, 'landing/screenshot-0020.jpg')
+  await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-mechanics' }] })
+  await calmFrame(overlay)
   await overlay.log([area('ExpeditionBattlegroundGraves'), '2026/11/05 20:49:11 18887484 cffb065b [INFO Client 34092] Tujen, the Haggler: Oi! Over here!'])
-  const icon = overlay.dockIcon('mechanics')
-  await expect(icon).toBeVisible({ timeout: 20_000 })
+  await expect(overlay.dockIcon('mechanics')).toBeVisible({ timeout: 20_000 })
   await expect(async () => {
     await overlay.hoverDockIcon('mechanics')
     await expect(overlay.page.getByText('Tujen is here')).toBeVisible({ timeout: 2000 })
   }).toPass({ timeout: 20_000 })
-  await saveAround(overlay, 'hl-expedition', [overlay.page.locator('[data-dock="mechanics"]')], 1120)
+  await saveLow(overlay, 'hl-expedition')
+})
+
+test('on screen: the campaign chip and its card', async ({ overlay }) => {
+  const pins = ['level', 'run', 'delta', 'step']
+  await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-campaign', wmWants: 'show', pins }, { wmType: 'woke-run-timer', wmWants: 'show' }] })
+  await calmFrame(overlay)
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  const icon = overlay.dockIcon('campaign')
+  await expect(icon).toContainText('Lv 13')
+  await overlay.hoverDockIcon('campaign')
+  await expect(icon).toContainText('The Southern Forest')
+  await saveLow(overlay, 'hl-campaign')
 })
 
 test('on screen: today\'s lab stays one hover away', async ({ overlay }) => {
@@ -314,8 +355,8 @@ test('on screen: today\'s lab stays one hover away', async ({ overlay }) => {
   const layout = fs.readFileSync(path.join(FIXTURES, 'screens/landing/lab-layout.jpg'))
   await overlay.page.route(IMG, route => route.fulfill({ contentType: 'image/jpeg', body: layout }))
   const LAB = { wmType: 'woke-lab', wmTitle: 'Labyrinth', wmWants: 'show' as const, wmFlags: ['invisible-on-blur'], anchor: { pos: 'tl', x: 10, y: 10 }, urls: { normal: '', cruel: '', merciless: '', uber: '' }, defaultDifficulty: 'normal', hotkeyOverlay: 'Ctrl + Alt + L', hotkeyExternal: null, notes: '' }
-  await overlay.boot({ overlayActive: true, widgets: [LAB] })
-  await backdrop(overlay, 'landing/screenshot-0017.jpg')
+  await overlay.boot({ patch: lowDock, overlayActive: true, widgets: [LAB] })
+  await calmFrame(overlay)
   await overlay.widget('woke-lab').getByText('Normal', { exact: true }).click()
   await overlay.page.locator('webview').evaluate((el, src) => {
     (el as unknown as { executeJavaScript: () => Promise<string> }).executeJavaScript = async () => src
@@ -329,11 +370,12 @@ test('on screen: today\'s lab stays one hover away', async ({ overlay }) => {
     await overlay.hoverDockIcon('lab')
     await expect(map).toBeVisible({ timeout: 2000 })
   }).toPass({ timeout: 20_000 })
-  await saveAround(overlay, 'hl-lab', [map, overlay.page.locator('[data-dock="lab"]')], 1280)
+  await saveLow(overlay, 'hl-lab')
 })
 
 test('on screen: challenges, your count and what is next', async ({ overlay }) => {
   await overlay.boot({
+    patch: lowDock,
     widgets: [{
       wmType: 'woke-challenges',
       wmTitle: 'Challenges',
@@ -346,10 +388,10 @@ test('on screen: challenges, your count and what is next', async ({ overlay }) =
       summary: { done: 23, total: 40, next: [{ n: 24, name: 'Stacked Scarabs' }, { n: 25, name: 'Corrupted Crystals' }, { n: 26, name: 'Cross Contamination' }] }
     } as never]
   })
-  await backdrop(overlay, 'landing/screenshot-0017.jpg')
+  await calmFrame(overlay)
   await expect(overlay.dockIcon('challenges')).toBeVisible({ timeout: 20_000 })
   await overlay.hoverDockIcon('challenges')
-  await saveAround(overlay, 'hl-challenges', [overlay.page.locator('[data-dock="challenges"]')], 1120)
+  await saveLow(overlay, 'hl-challenges')
 })
 
 // ---- 6. Lab gems and regex ----

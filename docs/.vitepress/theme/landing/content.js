@@ -53,9 +53,9 @@ export const HIGHLIGHTS = [
     name: 'On Your Screen',
     tag: 'Only when it matters',
     slides: [
-      { label: 'Trades', module: 'trade', shot: 'tour-trade', text: 'Whispers become cards with the stash spot. One key invites, trades, thanks and kicks.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' },
+      { label: 'Trades', module: 'trade', shot: 'hl-trade', text: 'Whispers become cards with the stash spot. One key invites, trades, thanks and kicks.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' },
       { label: 'League mechanics', module: 'mechanics', shot: 'hl-expedition', text: 'In Expedition, each vendor\'s currency priced, with whoever is here on top.', alt: 'Expedition card: Tujen is here, with Exotic Coinage and the other currencies priced' },
-      { label: 'Campaign', module: 'campaign', shot: 'tour-campaign', text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
+      { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
       { label: 'Challenges', module: 'challenges', shot: 'hl-challenges', text: 'Your count and what is next, on one small icon.', alt: 'Challenges card under a small icon: 23 of 40 and the next three' },
       { label: 'Lab run', module: 'lab', shot: 'hl-lab', text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' }
     ]

@@ -47,9 +47,9 @@ Flips that pay today, outlined in your stash, plus boss runs and lab gems.
 Small icons that open when they matter: trades, league mechanics, campaign, challenges, the lab.
 
 <p>
-  <img src="docs/public/shots/tour-trade.webp" width="49%" alt="Trade card with buyers and the stash position">
+  <img src="docs/public/shots/hl-trade.webp" width="49%" alt="Trade card with buyers and the stash position">
   <img src="docs/public/shots/hl-expedition.webp" width="49%" alt="Expedition card with vendor currencies priced">
-  <img src="docs/public/shots/tour-campaign.webp" width="49%" alt="Campaign card with the zone and next steps">
+  <img src="docs/public/shots/hl-campaign.webp" width="49%" alt="Campaign card with the zone and next steps">
   <img src="docs/public/shots/hl-lab.webp" width="49%" alt="Today's labyrinth layout in a card">
 </p>
 

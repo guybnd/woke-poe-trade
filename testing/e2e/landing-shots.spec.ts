@@ -10,7 +10,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { test, expect, FIXTURES, logFixture } from './harness'
+import { test, expect, FIXTURES } from './harness'
 import type { Overlay } from './harness'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
@@ -112,29 +112,6 @@ const area = (id: string, level: number, name: string) => [
   `2026/11/05 15:00:36 3725546 1186a8a3 [DEBUG Client 25552] Generating level ${level} area "${id}" with seed 1`,
   `2026/11/05 15:00:37 3727812 cffb065b [INFO Client 25552] : You have entered ${name}.`
 ]
-
-test('tour: the campaign card on hover', async ({ overlay }) => {
-  // The chip carries the values you pin: level and XP penalty, run and act time, the step.
-  const pins = ['level', 'run', 'delta', 'step']
-  await bootWithRail(overlay, [{ wmType: 'woke-campaign', wmWants: 'show', pins }, { wmType: 'woke-run-timer', wmWants: 'show' }])
-  await showGame(overlay, 'screens/essence-real-17.png', 'screenshot-0017.jpg')
-  await overlay.replayLog('client-logs/campaign-act1.txt')
-  const icon = overlay.dockIcon('campaign')
-  await expect(icon).toContainText('Lv 13')
-  await overlay.hoverDockIcon('campaign')
-  await expect(icon).toContainText('The Southern Forest')
-  await save(overlay, 'tour-campaign', { x: 640, y: 0, width: 1120, height: 630 })
-})
-
-test('tour: trade offers waiting in the hideout', async ({ overlay }) => {
-  const lines = logFixture('client-logs/trade-hideout.txt')
-  await bootWithRail(overlay, [{ wmType: 'woke-trade', stepHotkey: 'F3', busyHotkey: 'F4', ping: false }])
-  await showGame(overlay, 'screens/essence-real-17.png', 'screenshot-0010.jpg')
-  await overlay.log(lines.slice(0, lines.findIndex(l => l.includes('#Spammer')) + 1))
-  await overlay.hoverDockIcon('trade')
-  await expect(overlay.dockIcon('trade')).toContainText('xXLeagueStartXx', { timeout: 5000 })
-  await save(overlay, 'tour-trade', { x: 120, y: 0 })
-})
 
 test('tour: market movers, with the item under the cursor', async ({ overlay }) => {
   const dense = path.join(FIXTURES, 'http/poe.ninja/poe1/api/economy/current/dense/overviews.json')
