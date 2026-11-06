@@ -1,6 +1,6 @@
 <template>
   <span :class="[$style.q, { [$style.on]: open }]" role="img" :aria-label="text" tabindex="0"
-    @mouseenter="show" @mouseleave="hide" @focus="show" @blur="hide" title="" @click.stop.prevent @mousedown.stop @dblclick.stop>?</span>
+    @mouseenter="show" @mouseleave="hide" @focus="onFocus" @blur="hide" title="" @click.stop.prevent @mousedown.stop @dblclick.stop>?</span>
 </template>
 
 <script setup lang="ts">
@@ -15,6 +15,9 @@ const owner = {}
 const open = computed(() => helpTip.value?.owner === owner)
 function show (e: Event) { showHelp(owner, e.currentTarget as HTMLElement, props.text) }
 function hide () { hideHelp(owner) }
+// Keyboard only: a clicked "?" keeps focus, and would reopen its card when the
+// window gets focus back, with the mouse somewhere else.
+function onFocus (e: FocusEvent) { if ((e.currentTarget as HTMLElement).matches(':focus-visible')) show(e) }
 onBeforeUnmount(hide)
 </script>
 
