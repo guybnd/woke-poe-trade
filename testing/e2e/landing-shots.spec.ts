@@ -1,7 +1,7 @@
 // Screenshots for the landing page (docs/index.md) and the README: the real
 // overlay drawn over real game screens, for the tools shown as a whole window
 // (landing-highlights.spec.ts takes the close-ups). Not part of the normal run; take them
-// again after a module's look changes:
+// again after a module's look changes (the README has the command for all of them):
 //
 //   WOKE_LANDING_SHOTS=1 npx playwright test landing-shots
 //

@@ -19,7 +19,9 @@ jobs:
   # so they can't use a path filter: a check that never reports blocks the merge
   # forever, while a job skipped by its `if` reports as passed. Pushes to master
   # always run everything. If this job fails, its outputs are empty and both
-  # jobs still run (they test `!= 'false'`).
+  # jobs still run (they test `!= 'false'`). So a landing spec that no longer
+  # loads fails here and sends the pull request through the full tests, where
+  # it fails a required check; failing this job alone wouldn't block a merge.
   changes:
     name: What changed
     runs-on: ubuntu-latest
@@ -28,8 +30,8 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      unit: ${{ steps.files.outputs.unit }}
-      game: ${{ steps.files.outputs.game }}
+      unit: ${{ steps.result.outputs.unit }}
+      game: ${{ steps.result.outputs.game }}
     steps:
     - id: files
       env:
@@ -39,6 +41,7 @@ jobs:
       run: |
         unit=true
         game=true
+        landing=false
         if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
           # GitHub lists at most 3000 files, so a list that long may be cut short.
           files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)') || files=
@@ -48,7 +51,8 @@ jobs:
             while IFS= read -r file; do
               case "$file" in
                 # Only the website and its screenshots use these.
-                docs/*|testing/e2e/landing-*.spec.ts|testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
+                docs/*|testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
+                testing/e2e/landing-*.spec.ts) landing=true ;;
                 # A unit test checks the README's module table.
                 README.md) unit=true ;;
                 *) unit=true; game=true ;;
@@ -59,6 +63,28 @@ jobs:
         echo "Unit tests: $unit, fake-game tests: $game"
         echo "unit=$unit" >> "$GITHUB_OUTPUT"
         echo "game=$game" >> "$GITHUB_OUTPUT"
+        echo "landing=$landing" >> "$GITHUB_OUTPUT"
+    - if: steps.files.outputs.landing == 'true'
+      uses: actions/checkout@v6
+    - if: steps.files.outputs.landing == 'true'
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: testing/package-lock.json
+    - name: Check the landing specs still load
+      if: steps.files.outputs.landing == 'true'
+      working-directory: ./testing
+      run: |
+        npm ci
+        npx playwright test --list > /dev/null
+    - id: result
+      env:
+        UNIT: ${{ steps.files.outputs.unit }}
+        GAME: ${{ steps.files.outputs.game }}
+      run: |
+        echo "unit=$UNIT" >> "$GITHUB_OUTPUT"
+        echo "game=$GAME" >> "$GITHUB_OUTPUT"
 
   unit:
     name: Unit tests, lint, types
