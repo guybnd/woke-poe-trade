@@ -79,6 +79,7 @@
     <WEmpty v-if="!rows.length" icon="fas fa-check">Nothing worth {{ Math.min(config.safetyNet.minChaos, 10) }}c or more is hidden or shown small.</WEmpty>
     <div v-if="rows.length" class="w-dim text-xs" :class="$style.summary">
       {{ hiddenCount }} hidden<template v-if="caughtCount">; your {{ config.safetyNet.minChaos }}c safety net still shows {{ caughtCount }}</template>
+      <WInfo text="Click one to see what you'd get." />
     </div>
     <template v-for="r in rows" :key="r.key">
       <button v-item-tip="baseTip(r.v.group.type, r.v.base)" type="button" class="w-focusable" :class="[$style.row, $style.healthRow, { [$style.open]: openRow === r.key }]" :aria-expanded="openRow === r.key" @click="openRow = openRow === r.key ? null : r.key">

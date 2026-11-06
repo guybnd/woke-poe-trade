@@ -384,7 +384,7 @@ const footerTitle = computed(() => {
     estimated ? `${estimated} with no measured weight use the average. EV leans on those guesses: check them in Settings.` : '',
     left ? `No weight, left out: ${left}.` : '',
     feedNote.value
-  ].filter(Boolean).join('\n')
+  ].filter(Boolean).join('\n\n')
 })
 
 const WEIGHT_CHIP = 'flex: none; padding: 0 3px; border: 1px solid currentColor; border-radius: 2px; font-size: calc(10px * var(--w-text-scale, 1)); font-weight: 600; line-height: 1.3;'

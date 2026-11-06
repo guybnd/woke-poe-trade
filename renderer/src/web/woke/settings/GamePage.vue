@@ -16,7 +16,7 @@
       <w-setting-row v-if="config.language === 'cmn-Hant'" label="Realm">
         <w-select :model-value="config.realm" :options="REALMS" @update:model-value="setRealm($event as Config['realm'])" />
       </w-setting-row>
-      <w-setting-row v-if="config.language !== 'en' && config.realm === 'pc-ggg'" label="Trade site"
+      <w-setting-row v-if="config.language !== 'en' && config.realm === 'pc-ggg'" label="Trade site" :show-hint="forcedIntl"
         :hint="forcedIntl ? 'Always the international site for this language.' : 'Search on the international site instead of your language\'s.'">
         <w-toggle v-model="config.useIntlSite" :disabled="forcedIntl">www.pathofexile.com</w-toggle>
       </w-setting-row>
@@ -40,7 +40,7 @@
         <w-path-field v-model="config.gameConfig" kind="file" :extensions="['ini']" empty-text="Not set"
           placeholder="…\Documents\My Games\Path of Exile\production_Config.ini" />
       </w-setting-row>
-      <w-setting-row stack label="Loot filter folder" :disabled="!lootFilter"
+      <w-setting-row stack label="Loot filter folder" :disabled="!lootFilter" :show-hint="!lootFilter"
         :hint="lootFilter ? 'Where the loot filter editor finds your filters.' : 'Used by the loot filter editor once you add it.'">
         <w-path-field v-if="lootFilter" :model-value="lootFilter.folder || null" kind="dir" empty-text="Default folder"
           placeholder="Documents\My Games\Path of Exile" @update:model-value="lootFilter.folder = $event ?? ''" />

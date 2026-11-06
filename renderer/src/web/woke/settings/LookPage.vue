@@ -31,7 +31,7 @@
       <w-setting-row label="Put back what was on the clipboard">
         <w-toggle v-model="config.restoreClipboard" />
       </w-setting-row>
-      <w-setting-row label="Game window title" hint="Only change this for a renamed game window." restart>
+      <w-setting-row label="Game window title" show-hint hint="Only change this for a renamed game window." restart>
         <w-field v-model="config.windowTitle" />
       </w-setting-row>
     </w-setting-section>

@@ -9,7 +9,7 @@
       </div>
       <div :class="$style.value">
         <span :class="$style.headline">{{ amount(insight.fair) }}</span>
-        <span :class="$style.each">each<template v-if="need > 1 && !insight.fewWithStock"> · {{ amount(insight.fair * need) }} for {{ need }}</template><WInfo v-if="insight.fewWithStock && need > 1" class="ml-1" :text="`Few of the cheapest offers have stock for ${need}, so smaller ones are counted too.`" /></span>
+        <span :class="$style.each">each<template v-if="need > 1 && !insight.fewWithStock"> · {{ amount(insight.fair * need) }} for {{ need }}</template><template v-if="insight.fewWithStock && need > 1"> · small stacks counted</template><WInfo v-if="insight.fewWithStock && need > 1" class="ml-1" :text="`Few of the cheapest offers have stock for ${need}, so smaller ones are counted too.`" /></span>
       </div>
       <div v-if="insight.floor > insight.low" :class="$style.note">An offer at {{ amount(insight.low) }} sits far under the rest, so it may be worth buying</div>
       <div v-if="insight.lowStock" :class="$style.note">{{ insight.lowStock }} {{ insight.lowStock === 1 ? 'offer' : 'offers' }} with under {{ need }} in stock left out</div>

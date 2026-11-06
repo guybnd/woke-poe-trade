@@ -16,7 +16,7 @@
       <w-setting-row v-for="f in keys" :key="f.id" :label="f.label" show-hint :hint="f.off ? 'Module off' : undefined">
         <w-hotkey-cell :model-value="f.get()" :label="f.label" @update:model-value="f.set($event)" />
       </w-setting-row>
-      <w-setting-row v-if="!keys.length" label="No scan keys yet" hint="Turn on map scan or essence scan, then open its page once to add it." />
+      <w-setting-row v-if="!keys.length" label="No scan keys yet" show-hint hint="Turn on map scan or essence scan, then open its page once to add it." />
     </w-setting-section>
   </div>
 </template>
