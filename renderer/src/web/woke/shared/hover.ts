@@ -8,9 +8,23 @@ import { Host } from '@/web/background/IPC'
 let nextOwner = 1
 
 // Bumped when zones may have moved with no size change (dock icons shifting as
-// one comes or goes): otherwise main has the old place for up to 2 s.
+// one comes or goes): otherwise main has the old place until the next check.
 const zonesMoved = shallowRef(0)
 export function hoverZonesMoved () { zonesMoved.value++ }
+
+// One slow check for every zone, not a timer each: a dock icon that stays up
+// through a map has three zones, and timers wake the overlay while you play.
+const CHECK_MS = 6000
+const checks = new Set<() => void>()
+let checkTimer: ReturnType<typeof setInterval> | null = null
+function addCheck (fn: () => void) {
+  checks.add(fn)
+  checkTimer ??= setInterval(() => { for (const check of checks) check() }, CHECK_MS)
+}
+function removeCheck (fn: () => void) {
+  checks.delete(fn)
+  if (!checks.size && checkTimer) { clearInterval(checkTimer); checkTimer = null }
+}
 
 export function useHoverZone (
   el: Ref<HTMLElement | null | undefined>,
@@ -106,12 +120,11 @@ export function useHoverZone (
 
   // Widgets move by changing their anchor, which also changes the rect;
   // a cheap periodic check covers drags and window moves (sent only if changed).
-  let timer: ReturnType<typeof setInterval> | null = null
   onMounted(() => {
     observer = new ResizeObserver(() => send())
     bind(el.value)
     send()
-    timer = setInterval(send, 2000)
+    addCheck(send)
   })
   watch(el, (node) => { bind(node); send() })
   watch(() => [opts.enabled(), opts.activate?.()], () => send())
@@ -123,7 +136,7 @@ export function useHoverZone (
     contextListener.abort()
     bind(null)
     observer?.disconnect()
-    if (timer) clearInterval(timer)
+    removeCheck(send)
     lastSent = null
     post([])
   })
