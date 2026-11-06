@@ -10,6 +10,8 @@ import { LAB_TYPE, hotkeyTarget as labHotkeyTarget } from './lab/lab'
 import type { LabWidget } from './lab/lab'
 import { CHALLENGES_TYPE, challengesShortcuts } from './challenges/widget'
 import type { ChallengesWidget } from './challenges/widget'
+import { WEALTHY_EXILE_TYPE, wealthyExileShortcuts } from './wealthy-exile/widget'
+import type { WealthyExileWidget } from './wealthy-exile/widget'
 import { MAP_MODS_TYPE, MAP_MODS_TARGET } from './map-mods/widget'
 import type { MapModsWidget } from './map-mods/widget'
 import { MAP_SCAN_TYPE, rollHotkeyTarget, scanHotkeyTarget } from './map-mods/scan'
@@ -107,6 +109,7 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     return actions
   }
   if (widget.wmType === CHALLENGES_TYPE) return challengesShortcuts(widget as ChallengesWidget)
+  if (widget.wmType === WEALTHY_EXILE_TYPE) return wealthyExileShortcuts(widget as WealthyExileWidget)
   if (widget.wmType === MAP_MODS_TYPE) {
     const mapMods = widget as MapModsWidget
     const actions: ShortcutAction[] = []

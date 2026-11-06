@@ -40,6 +40,7 @@ import WidgetDeathRecap from './death-recap/WidgetDeathRecap.vue'
 import WidgetTrade from './trade/WidgetTrade.vue'
 import WidgetDisenchant from './disenchant/WidgetDisenchant.vue'
 import WidgetSearch from './search/WidgetSearch.vue'
+import WidgetWealthyExile from './wealthy-exile/WidgetWealthyExile.vue'
 
 type WidgetComponent = Component & { widget: WidgetSpec }
 
@@ -69,7 +70,8 @@ export const wokeWidgets: WidgetComponent[] = [
   WidgetSessionAnalytics as unknown as WidgetComponent,
   WidgetDeathRecap as unknown as WidgetComponent,
   WidgetTrade as unknown as WidgetComponent,
-  WidgetDisenchant as unknown as WidgetComponent
+  WidgetDisenchant as unknown as WidgetComponent,
+  WidgetWealthyExile as unknown as WidgetComponent
 ]
 
 export { wokeSettingsFor } from './editors'

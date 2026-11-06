@@ -59,7 +59,7 @@ export const CREDIT_GROUPS: CreditGroup[] = [
     id: 'inspiration',
     title: 'Inspiration',
     credits: [
-      { name: 'Wealthy Exile', url: 'https://wealthyexile.com/', use: 'The idea behind the farming session tracker.' }
+      { name: 'Wealthy Exile', url: 'https://wealthyexile.com/', use: 'The idea behind the farming session tracker, and the site in the Wealthy Exile window.' }
     ]
   },
   {

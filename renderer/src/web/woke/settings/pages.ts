@@ -182,10 +182,10 @@ export const PAGES: SettingsPage[] = [
     group: 'modules',
     sub: 'Trade & prices',
     icon: modulePageIcon('market'),
-    description: 'Movers, watchlist, league-start investments, flips and dust from poe.ninja.',
-    modules: ['market', 'league-invest', 'scarab-flip', 'disenchant'],
-    widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip', 'woke-disenchant'],
-    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee']
+    description: 'Movers, watchlist, league-start investments, flips and dust from poe.ninja, and Wealthy Exile.',
+    modules: ['market', 'league-invest', 'scarab-flip', 'disenchant', 'wealthy-exile'],
+    widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip', 'woke-disenchant', 'woke-wealthy-exile'],
+    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Wealthy Exile', 'Net worth']
   },
   {
     id: 'campaign',

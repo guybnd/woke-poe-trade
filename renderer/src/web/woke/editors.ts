@@ -22,6 +22,7 @@ import BossRunsEditor from './boss-runs/boss-runs-editor.vue'
 import MarketEditor from './market/market-editor.vue'
 import LeagueInvestEditor from './league-invest/league-invest-editor.vue'
 import DisenchantEditor from './disenchant/disenchant-editor.vue'
+import WealthyExileEditor from './wealthy-exile/wealthy-exile-editor.vue'
 import { REGEX_LIBRARY_TYPE } from './regex-library/widget'
 import { TRADE_SEARCHES_TYPE } from './trade-searches/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
@@ -44,6 +45,7 @@ import { BOSS_RUNS_TYPE } from './boss-runs/widget'
 import { MARKET_TRACKER_TYPE } from './market/widget'
 import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 import { DISENCHANT_TYPE } from './disenchant/widget'
+import { WEALTHY_EXILE_TYPE } from './wealthy-exile/widget'
 
 const editors: Record<string, Component> = {
   [REGEX_LIBRARY_TYPE]: RegexLibraryEditor,
@@ -67,7 +69,8 @@ const editors: Record<string, Component> = {
   [BOSS_RUNS_TYPE]: BossRunsEditor,
   [MARKET_TRACKER_TYPE]: MarketEditor,
   [LEAGUE_INVEST_TYPE]: LeagueInvestEditor,
-  [DISENCHANT_TYPE]: DisenchantEditor
+  [DISENCHANT_TYPE]: DisenchantEditor,
+  [WEALTHY_EXILE_TYPE]: WealthyExileEditor
 }
 
 export function wokeSettingsFor (wmType: string | undefined): Component | undefined {

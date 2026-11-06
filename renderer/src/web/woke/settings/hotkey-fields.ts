@@ -42,6 +42,7 @@ const WOKE_KEYS: Record<string, { page: string, keys: Array<[string, string]> }>
   'woke-campaign': { page: 'campaign', keys: [['hotkeyCard', 'Campaign: keep the card open'], ['hotkeyNext', 'Campaign: step done'], ['hotkeyPrev', 'Campaign: step back']] },
   'woke-run-timer': { page: 'campaign', keys: [['hotkeyPause', 'Run timer: pause / resume'], ['hotkeySplits', 'Run timer: show / hide splits']] },
   'woke-lab': { page: 'lab', keys: [['hotkeyOverlay', 'Lab layout in the overlay'], ['hotkeyExternal', 'Lab layout in your browser']] },
+  'woke-wealthy-exile': { page: 'market', keys: [['hotkey', 'Show / hide Wealthy Exile']] },
   'woke-challenges': { page: 'challenges', keys: [['hotkey', 'Show / hide the challenge guide']] },
   'woke-map-mods': { page: 'map-mods', keys: [['hotkey', 'Check the hovered map'], ['regexHotkey', 'Paste the map regex']] },
   'woke-map-scan': { page: 'map-mods', keys: [['hotkey', 'Map scan on / off'], ['rollHotkey', 'Map scan: rolling mode']] },
