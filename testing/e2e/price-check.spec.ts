@@ -151,6 +151,40 @@ test('rare: the Generic / Base switch changes the title and the search', async (
   await expect(title).toHaveText('Ring')
 })
 
+test('unique: the Corrupted chip cycles Any, Corrupted, Uncorrupted at one width', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/unique-kaoms-heart-corrupted.txt')
+  const panel = overlay.widget('price-check')
+  const chip = panel.locator('[data-corrupted-chip]')
+  const shown = chip.locator('span.shown')
+  await expect(shown).toHaveText('Any')
+  const width = (await chip.boundingBox())!.width
+  await overlay.snap('corrupted chip on any')
+
+  const lastOption = () => {
+    const r = fakeApp.requests.filter(r => r.url.includes('/api/trade/search/')).pop()
+    return r ? JSON.parse(r.body).query.filters.misc_filters?.filters.corrupted?.option ?? 'none' : undefined
+  }
+  await expect.poll(lastOption).toBe('none')
+
+  for (const [label, option] of [['Corrupted', 'true'], ['Uncorrupted', 'false']]) {
+    await chip.click()
+    await expect(shown).toHaveText(label)
+    expect((await chip.boundingBox())!.width).toBe(width)
+    await overlay.snap(`corrupted chip on ${label}`)
+    // Moving from a filter onto Search runs the search and removes the button,
+    // so Playwright's click or hover would wait for it forever.
+    const search = (await panel.getByRole('button', { name: 'Search', exact: true }).boundingBox())!
+    await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
+    await expect.poll(lastOption).toBe(option)
+  }
+
+  // Back on Any: the search is the first one again, so it answers from the cache.
+  await chip.click()
+  await expect(shown).toHaveText('Any')
+  expect((await chip.boundingBox())!.width).toBe(width)
+})
+
 test('filter tiles change by scrolling or dragging', async ({ overlay, page }) => {
   await overlay.boot()
   await overlay.copyItem('items/rare-ring.txt')

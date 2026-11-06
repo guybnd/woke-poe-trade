@@ -1,6 +1,8 @@
 import type { ItemInfluence, ItemCategory } from '@/parser'
 import { ModifierType, ModifierMechanic, type StatCalculated } from '@/parser/modifiers'
 
+export type CorruptedSearch = 'any' | 'corrupted' | 'not-corrupted'
+
 export interface FilterPreset {
   id: string
   filters: ItemFilters
@@ -30,8 +32,7 @@ export interface ItemFilters {
   linkedSockets?: FilterNumeric
   whiteSockets?: FilterNumeric
   corrupted?: {
-    value: boolean
-    exact?: boolean
+    search: CorruptedSearch
   }
   fractured?: {
     value: false

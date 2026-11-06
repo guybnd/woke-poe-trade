@@ -11,9 +11,14 @@
           :options="scopeOptions"
           title="What the search looks for. Generic: any item of this category. Base: only this base type."
           @update:model-value="setScope" />
-        <button v-if="filters.corrupted" type="button"
-          class="filter-name-corrupted" :class="{ on: corrupted }"
-          @click="corrupted = !corrupted">{{ t(corrupted ? 'item.corrupted' : 'item.not_corrupted') }}</button>
+        <button v-if="filters.corrupted" type="button" data-corrupted-chip
+          class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
+          title="Corrupted filter. Click to change: Any, Corrupted, Uncorrupted."
+          @click="cycleCorrupted">
+          <!-- Every label stays in the grid cell, so the chip keeps its width and stays under the mouse. -->
+          <span v-for="state of corruptedStates" :key="state.search"
+            :class="{ shown: state.search === filters.corrupted.search }">{{ t(state.label) }}</span>
+        </button>
         <filter-btn-logical v-if="searchSub"
           :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
         <filter-btn-logical v-if="filters.mapCompletionReward" readonly
@@ -65,7 +70,7 @@
 import { defineComponent, PropType, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ParsedItem } from '@/parser'
-import type { ItemFilters } from './interfaces'
+import type { CorruptedSearch, ItemFilters } from './interfaces'
 import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
 import { WSegmented } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
@@ -126,17 +131,24 @@ export default defineComponent({
       }
     }
 
-    const corrupted = computed<boolean>({
-      get () { return props.filters.corrupted!.value },
-      set (value) { props.filters.corrupted!.value = value }
-    })
+    const corruptedStates: Array<{ search: CorruptedSearch, label: string }> = [
+      { search: 'any', label: 'item.corrupted_any' },
+      { search: 'corrupted', label: 'item.corrupted' },
+      { search: 'not-corrupted', label: 'item.not_corrupted' }
+    ]
+    function cycleCorrupted () {
+      const filter = props.filters.corrupted!
+      const at = corruptedStates.findIndex(state => state.search === filter.search)
+      filter.search = corruptedStates[(at + 1) % corruptedStates.length].search
+    }
 
     return {
       t,
       label,
       baseName,
       setScope,
-      corrupted,
+      corruptedStates,
+      cycleCorrupted,
       searchSub: computed(() => activeSearch.value.sub),
       scopeOptions: [
         { value: 'generic', label: 'Generic' },
@@ -187,6 +199,9 @@ export default defineComponent({
 }
 .filter-name-chips:empty { display: none; }
 .filter-name-corrupted {
+  display: inline-grid;
+  justify-items: center;
+  align-items: center;
   min-height: calc(24px * var(--w-text-scale, 1));
   padding: 0 8px;
   border: 1px solid var(--w-line-soft);
@@ -195,6 +210,8 @@ export default defineComponent({
   font-size: calc(13px * var(--w-text-scale, 1));
   white-space: nowrap;
 }
+.filter-name-corrupted > span { grid-area: 1 / 1; visibility: hidden; }
+.filter-name-corrupted > span.shown { visibility: visible; }
 .filter-name-corrupted:hover { color: var(--w-fg); }
 .filter-name-corrupted.on {
   border-color: var(--w-down);

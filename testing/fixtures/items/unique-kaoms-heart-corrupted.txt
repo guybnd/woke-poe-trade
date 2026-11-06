@@ -1,0 +1,23 @@
+Item Class: Body Armours
+Rarity: Unique
+Kaom's Heart
+Glorious Plate
+--------
+Armour: 1013 (augmented)
+--------
+Requirements:
+Level: 68
+Str: 191
+--------
+Sockets: R
+--------
+Item Level: 86
+--------
+{ Unique Modifier — Damage, Elemental, Fire }
+40(20-40)% increased Fire Damage
+{ Unique Modifier — Life }
++500 to maximum Life
+--------
+The warrior who fears will fall.
+--------
+Corrupted

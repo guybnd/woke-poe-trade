@@ -86,6 +86,7 @@
     "info": "아이템 정보",
     "corrupted": "타락",
     "not_corrupted": "타락되지 않은",
+    "corrupted_any": "타락 무관",
     "mod_tier": "티어: {0}",
     "mod_rank": "등급: {0}",
     "mod_pseudo": "Pseudo",

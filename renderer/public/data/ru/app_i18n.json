@@ -112,6 +112,7 @@
     "info": "Проверка предмета",
     "corrupted": "Осквернен",
     "not_corrupted": "Не осквернен",
+    "corrupted_any": "Любой",
     "mod_tier": "Уровень: {0}",
     "mod_rank": "Ранг: {0}",
     "mod_pseudo": "Псевдо",

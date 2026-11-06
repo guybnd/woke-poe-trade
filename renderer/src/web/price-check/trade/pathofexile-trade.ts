@@ -331,8 +331,8 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     }
   }
 
-  if (filters.corrupted?.value === false || filters.corrupted?.exact) {
-    propSet(query.filters, 'misc_filters.filters.corrupted.option', String(filters.corrupted.value))
+  if (filters.corrupted && filters.corrupted.search !== 'any') {
+    propSet(query.filters, 'misc_filters.filters.corrupted.option', String(filters.corrupted.search === 'corrupted'))
   }
   if (filters.fractured?.value === false) {
     propSet(query.filters, 'misc_filters.filters.fractured_item.option', String(false))
