@@ -8,7 +8,7 @@ import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import { applyEdits, isValidEdit, readStyle } from '@/web/woke/loot-filter/edits'
 import type { FilterEdit } from '@/web/woke/loot-filter/edits'
-import { CONDITION_KINDS, newCondition, newRule, ruleBlocks, ruleProblem, RULE_TYPE } from '@/web/woke/loot-filter/rules'
+import { CONDITION_KINDS, ITEM_TIERS, newCondition, newRule, ruleBlocks, ruleProblem, RULE_TYPE, tierLit } from '@/web/woke/loot-filter/rules'
 import type { OwnRule } from '@/web/woke/loot-filter/rules'
 import { PRESET_TYPE, RECIPE_SLOTS, applyPresetChanges, defaultPresets, normalizePresets, presetBlocks } from '@/web/woke/loot-filter/presets'
 import type { Presets } from '@/web/woke/loot-filter/presets'
@@ -61,6 +61,17 @@ describe('the rule builder', () => {
     expect(ruleProblem(rule({ conditions: [{ key: 'ItemLevel', op: '>=', count: null, values: ['1.5'] }] }))).toMatch(/whole number/)
     expect(ruleProblem(rule({ conditions: [{ key: 'BaseType', op: '==', count: null, values: ['a"b'] }] }))).toMatch(/can't read/)
     expect(ruleProblem(rule({ conditions: [{ key: 'NotAThing', op: '', count: null, values: ['1'] }] }))).toMatch(/can't read/)
+  })
+
+  it('item tier buttons write "this tier and up" and light what a rule covers', () => {
+    const lit = (op: string, v: number) => ITEM_TIERS.filter(t => tierLit(op, v, t))
+    expect(lit('>=', 4)).toEqual([4, 5])
+    expect(lit('>=', 5)).toEqual([5])
+    expect(lit('==', 3)).toEqual([3])
+    expect(lit('<', 3)).toEqual([1, 2])
+    const doc = withRules(parseFilter('Show\n'), [rule({ conditions: [newCondition('Rarity'), newCondition('UnidentifiedItemTier')] })])
+    expect(serializeFilter(doc)).toContain('UnidentifiedItemTier >= 4')
+    expect(ruleProblem(rule({ conditions: [{ key: 'UnidentifiedItemTier', op: '>=', count: null, values: ['6'] }] }))).toMatch(/1 to 5/)
   })
 
   it('skips a broken or switched-off rule rather than breaking the file', () => {

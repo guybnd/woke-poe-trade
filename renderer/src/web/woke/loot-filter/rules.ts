@@ -16,7 +16,7 @@ export interface OwnRule {
   patch: StylePatch
 }
 
-export type ConditionInput = 'list' | 'number' | 'rarity' | 'bool' | 'influence'
+export type ConditionInput = 'list' | 'number' | 'rarity' | 'bool' | 'influence' | 'tier'
 
 export interface ConditionKind {
   key: string
@@ -49,12 +49,28 @@ export const CONDITION_KINDS: ConditionKind[] = [
   { key: 'Mirrored', label: 'Mirrored', input: 'bool' },
   { key: 'FracturedItem', label: 'Fractured', input: 'bool' },
   { key: 'SynthesisedItem', label: 'Synthesised', input: 'bool' },
-  { key: 'HasInfluence', label: 'Influence', input: 'influence' }
+  { key: 'HasInfluence', label: 'Influence', input: 'influence' },
+  // 3.30: magic and rare drops carry a tier, 1 to 5.
+  { key: 'UnidentifiedItemTier', label: 'Item tier', input: 'tier', min: 1, max: 5 }
 ]
 
 export const RARITIES = ['Normal', 'Magic', 'Rare', 'Unique']
 export const INFLUENCES = ['Shaper', 'Elder', 'Crusader', 'Hunter', 'Redeemer', 'Warlord']
 export const NUMBER_OPS = ['>=', '<=', '==', '>', '<']
+
+export const ITEM_TIERS = [1, 2, 3, 4, 5]
+
+// Which tier buttons a tier condition lights. Ours are always "this tier and
+// up"; a hand-written or NeverSink one can use any compare.
+export function tierLit (op: string, value: number, tier: number): boolean {
+  switch (op || '==') {
+    case '>=': return tier >= value
+    case '>': return tier > value
+    case '<=': return tier <= value
+    case '<': return tier < value
+    default: return tier === value
+  }
+}
 
 export function conditionKind (key: string): ConditionKind | undefined {
   return CONDITION_KINDS.find(k => k.key === key)
@@ -67,6 +83,7 @@ export function newCondition (key: string): FilterCondition {
     case 'rarity': return { key, op: '==', count: null, values: ['Rare'] }
     case 'bool': return { key, op: '', count: null, values: ['False'] }
     case 'influence': return { key, op: '', count: null, values: ['None'] }
+    case 'tier': return { key, op: '>=', count: null, values: ['4'] }
     default: return { key, op: '==', count: null, values: [] }
   }
 }
@@ -86,7 +103,7 @@ export function ruleProblem (r: OwnRule): string | null {
   for (const c of r.conditions) {
     if (!c.values.length) return `${conditionKind(c.key)?.label ?? c.key} is empty`
     const kind = conditionKind(c.key)
-    if (kind?.input === 'number') {
+    if (kind?.input === 'number' || kind?.input === 'tier') {
       const n = Number(c.values[0])
       if (!Number.isInteger(n) || (kind.min != null && n < kind.min) || (kind.max != null && n > kind.max)) {
         return `${kind.label} must be a whole number from ${kind.min} to ${kind.max}`

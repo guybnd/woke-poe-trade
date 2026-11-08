@@ -48,6 +48,13 @@
         <template v-else-if="kindOf(c) === 'bool'">
           <WSegmented :model-value="c.values[0] ?? 'False'" :options="[{ value: 'True', label: 'Yes' }, { value: 'False', label: 'No' }]" @update:model-value="v => c.values = [v]" />
         </template>
+        <template v-else-if="kindOf(c) === 'tier'">
+          <span class="flex items-center gap-1" role="group" aria-label="Item tier and up">
+            <button v-for="t in ITEM_TIERS" :key="t" type="button" :class="[$style.tier, tierLit(c.op, Number(c.values[0]), t) && $style.tierOn]"
+              :aria-pressed="tierLit(c.op, Number(c.values[0]), t)" :title="t === 5 ? 'Tier 5 only' : `Tier ${t} and up`"
+              @click="c.op = '>='; c.values = [String(t)]">T{{ t }}</button>
+          </span>
+        </template>
         <template v-else-if="kindOf(c) === 'influence'">
           <select :value="c.values[0]" :class="$style.select" aria-label="Influence" @change="c.values = [($event.target as HTMLSelectElement).value]">
             <option value="None">None</option>
@@ -82,7 +89,7 @@ import type { LootFilterStore } from './store'
 import type { FilterCondition } from './parse'
 import { readStyle } from './edits'
 import type { StylePatch } from './edits'
-import { CONDITION_KINDS, INFLUENCES, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, newCondition, ruleProblem, ruleTier } from './rules'
+import { CONDITION_KINDS, INFLUENCES, ITEM_TIERS, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, newCondition, ruleProblem, ruleTier, tierLit } from './rules'
 import type { OwnRule } from './rules'
 import { everyDrop } from './drops'
 import { matchItem } from './match'
@@ -166,6 +173,9 @@ const copyFrom = computed(() => {
 </script>
 
 <style module>
+.tier { min-width: 2rem; padding: 2px 0; border: 1px solid var(--w-line); background: var(--w-panel-2); color: var(--w-dim); font-size: var(--w-fs-sm, 12px); cursor: pointer; }
+.tier:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.tierOn, .tierOn:hover { border-color: var(--w-accent); background: var(--w-accent); color: var(--w-accent-fg); font-weight: 600; }
 .builder {
   display: flex;
   flex-direction: column;
