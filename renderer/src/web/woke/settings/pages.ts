@@ -102,11 +102,10 @@ export const PAGES: SettingsPage[] = [
     id: 'screen',
     name: 'Screen reading',
     group: 'general',
-    icon: modulePageIcon('apt-heist-ocr'),
+    icon: { fa: 'fas fa-eye' },
     description: 'Text recognition (OCR) for the scans that read the game screen.',
     parts: [ScreenPage],
-    modules: ['apt-heist-ocr'],
-    find: ['OCR', 'Text recognition', 'Heist gems', 'Map scan', 'Essence scan']
+    find: ['OCR', 'Text recognition', 'Map scan', 'Essence scan']
   },
   {
     id: 'builds',

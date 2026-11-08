@@ -19,7 +19,6 @@ import { movePopupsToNewSpot } from './woke/ui/window-anchor'
 import type { WokeModulesConfig } from './woke/modules'
 import type { ItemCheckWidget } from './item-check/widget'
 import { BOOKMARKS_TARGET } from './woke/item-lookup/lookup'
-import type { ItemSearchWidget } from './item-search/widget'
 import { registry as widgetRegistry } from './overlay/widget-registry.js'
 
 const _config = shallowRef<Config | null>(null)
@@ -403,9 +402,6 @@ function upgradeConfig (_config: Config): Config {
     const priceCheck = config.widgets.find(w => w.wmType === 'price-check') as widget.PriceCheckWidget
     priceCheck.builtinBrowser = false
 
-    const itemSearch = config.widgets.find(w => w.wmType === 'item-search') as ItemSearchWidget
-    itemSearch.ocrGemsKey = null
-
     const itemCheck = config.widgets.find(w => w.wmType === 'item-check') as ItemCheckWidget
     itemCheck.maps.profile = 1
     for (const stat of itemCheck.maps.selectedStats) {
@@ -644,15 +640,6 @@ export function getConfigForHost (): HostConfig {
             type: 'trigger-event',
             target: `stopwatch-reset:${widget.wmId}`
           }
-        })
-      }
-    } else if (widget.wmType === 'item-search') {
-      const itemSearch = widget as ItemSearchWidget
-      if (itemSearch.ocrGemsKey) {
-        actions.push({
-          shortcut: itemSearch.ocrGemsKey,
-          keepModKeys: true,
-          action: { type: 'ocr-text', target: 'heist-gems' }
         })
       }
     }

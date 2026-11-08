@@ -87,8 +87,7 @@ export const GUIDE: Record<string, MechanicGuide> = {
   heist: {
     kind: 'zone',
     gets: 'Replica uniques by price, to check before you choose a reward room.',
-    when: ['You enter the Rogue Harbour, a contract or a blueprint'],
-    tool: { text: 'Heist gem reader: reads gem names on screen', go: 'Screen reading', page: 'screen' }
+    when: ['You enter the Rogue Harbour, a contract or a blueprint']
   },
   bestiary: {
     kind: 'npc',

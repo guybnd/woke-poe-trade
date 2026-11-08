@@ -56,13 +56,6 @@ export class OcrWorker {
     await this.api.loadModel(data, name)
   }
 
-  async findHeistGems (image: ImageData) {
-    await this.ready
-    const result = await this.api.findHeistGems(
-      Comlink.transfer(image, [image.data.buffer]))
-    return result
-  }
-
   async scanMapTooltip (image: ImageData, opts: ScanOptions) {
     await this.ready
     return await this.api.scanMapTooltip(

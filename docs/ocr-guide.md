@@ -2,7 +2,8 @@
 title: OCR Guide
 ---
 
-This guide will help you to setup and perform OCR using Woke PoE Trade.
+Map scan, essence scan and death recap read the game screen with OCR.
+The installer ships the OCR files; this guide is for setting them up by hand.
 
 ### OCR Setup ###
 
@@ -24,24 +25,3 @@ This guide will help you to setup and perform OCR using Woke PoE Trade.
    ```
 
 4. Restart the application.
-
-### Widget configuration ###
-
-1. Open the widget by clicking near the Settings button.
-   ![](https://i.imgur.com/Y0RJune.png)
-
-   I prefer to place it at the bottom.
-   ![](https://i.imgur.com/bkNDKYg.png)
-
-2. Edit the widget and assign a hotkey.
-   ![](https://i.imgur.com/GeOMcal.png)
-
-### Rules to follow before pressing the hotkey ###
-
-1. Both icons should be fully visible.
-   ![](https://i.imgur.com/Mu6B6it.png)
-
-2. The text should not be occluded by health bar or other elements.
-   ![](https://i.imgur.com/cM2i3Rk.png)
-
-Happy hunting!

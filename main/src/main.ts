@@ -100,7 +100,7 @@ app.on('ready', async () => {
       perfMark('hotkeys ready')
       eventPipe.onEventAnyClient('CLIENT->MAIN::update-host-config', (cfg) => {
         overlay.updateOpts(cfg.overlayKey, cfg.windowTitle)
-        shortcuts.updateActions(cfg.shortcuts, cfg.stashScroll, cfg.logKeys, cfg.restoreClipboard, cfg.language)
+        shortcuts.updateActions(cfg.shortcuts, cfg.stashScroll, cfg.logKeys, cfg.restoreClipboard)
         if (cfg.wokeGameLog === false) gameLogWatcher.stop()
         else gameLogWatcher.restart(cfg.clientLog ?? '')
         gameConfig.readConfig(cfg.gameConfig ?? '')

@@ -99,7 +99,6 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Builds & trade | Regex library | Saved stash search strings |
 | Price check (Awakened PoE Trade) | Price check hotkeys | Check an item under the cursor |
 | Price check (Awakened PoE Trade) | Item info hotkeys | Item info, wiki, poedb, Craft of Exile, similar items |
-| Price check (Awakened PoE Trade) | Heist gem OCR | Reads heist gem names; loads the OCR worker on first use |
 <!-- modules:end -->
 
 ## Quick start

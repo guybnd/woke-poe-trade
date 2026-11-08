@@ -29,7 +29,6 @@
     "@types/ini": "^4.1.1",
     "@types/node": "^24.12.2",
     "@types/ws": "^8.18.1",
-    "@wokwi/bmp-ts": "^3.0.0",
     "comlink": "^4.4.2",
     "electron": "^43.8.7",
     "electron-builder": "^26.9.0",

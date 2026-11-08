@@ -107,8 +107,6 @@ export function hotkeyFields (config: Config): HotkeyField[] {
     const rows: Array<[string, string]> = [['hotkey', 'Item info'], ['wikiKey', 'Open item on the wiki'], ['poedbKey', 'Open item on poedb'], ['craftOfExileKey', 'Open item on Craft of Exile'], ['stashSearchKey', 'Search similar items in stash']]
     for (const [prop, label] of rows) out.push({ id: `ic-${prop}`, label, group: 'Item info', page: 'item-info', off, ...field(ic, prop) })
   }
-  const heist = find('item-search')
-  if (heist) out.push({ id: 'heist', label: 'Read heist gem names', group: 'Screen reading', page: 'screen', off: !isModuleOn(config, 'apt-heist-ocr'), ...field(heist, 'ocrGemsKey') })
   const delve = find('delve-grid')
   if (delve) out.push({ id: 'delve', label: 'Delve grid', group: 'Tools', page: null, off: false, ...field(delve, 'toggleKey') })
   for (const sw of many('timer')) {

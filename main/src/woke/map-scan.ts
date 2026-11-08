@@ -19,7 +19,7 @@ import { ocrDir, USER_OCR_DIR } from './ocr-dir'
 const LOCK_LEAVE = 0.024
 // Stop after this long without the game focused, so it can't run forever.
 const IDLE_STOP_MS = 30 * 60 * 1000
-// Files the OCR worker loads (the same ones APT's heist gem reader uses).
+// Files the OCR worker loads.
 // The worker swallows load errors, so they're checked up front instead.
 const OCR_FILES = ['tesseract-core-simd.js', 'opencv.js', 'eng.traineddata']
 
@@ -499,7 +499,7 @@ export class ScreenScanner {
       this.failures++
       if (this.failures === 1) this.logger.write(`error [${this.kind.topic}] ${String(err)}`)
       if (this.failures >= 5) {
-        this.stop(`OCR failed: ${String(err)}. Check that the OCR files are installed (the same ones APT's heist gem OCR uses).`)
+        this.stop(`OCR failed: ${String(err)}. Check that the OCR files are installed.`)
       }
     }
   }

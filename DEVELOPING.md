@@ -97,7 +97,7 @@ build of this app (or just the settings when it's plain APT).
    draft is published on GitHub.
 
 `npm run package` in `main/` downloads the OCR data into `main/build/cv-ocr`
-first (`build/fetch-ocr.mjs`), so map scan, essence scan and heist gem OCR work
+first (`build/fetch-ocr.mjs`), so map scan, essence scan and death recap work
 without a manual download.
 
 Useful flags: `--setup` opens the first-run setup window again, `--no-updates`

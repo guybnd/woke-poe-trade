@@ -22,9 +22,6 @@ export interface ShortcutAction {
     focusOverlay?: boolean
     target: string
   } | {
-    type: 'ocr-text'
-    target: 'heist-gems'
-  } | {
     type: 'trigger-event'
     target: string
     // Make the overlay interactive too (a panel you work in, not a glance).
@@ -89,7 +86,6 @@ export type IpcEvent =
   IpcHostConfig |
   IpcWidgetAction |
   IpcItemText |
-  IpcOcrText |
   IpcConfigChanged |
   IpcUserAction |
   // woke modules (see main/src/woke, renderer/src/web/woke)
@@ -181,14 +177,6 @@ type IpcItemText =
     item?: unknown
     position: { x: number, y: number }
     focusOverlay: boolean
-  }>
-
-type IpcOcrText =
-  Event<'MAIN->CLIENT::ocr-text', {
-    target: string
-    pressTime: number
-    ocrTime: number
-    paragraphs: string[]
   }>
 
 type IpcGameLog =

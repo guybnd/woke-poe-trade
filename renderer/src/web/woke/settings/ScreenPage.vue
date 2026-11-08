@@ -36,7 +36,7 @@ function setOn (id: string, on: boolean) { setModuleOn(ensureWokeConfig(props.co
 
 const SCAN_TYPES = ['woke-map-scan', 'woke-essence-scan']
 const keys = computed(() => hotkeyFields(props.config).filter(f =>
-  f.id === 'heist' || SCAN_TYPES.some(t => props.config.widgets.some(w => w.wmType === t && f.id.startsWith(`${w.wmId}-`)))))
+  SCAN_TYPES.some(t => props.config.widgets.some(w => w.wmType === t && f.id.startsWith(`${w.wmId}-`)))))
 
 const ocr = shallowRef<{ ok: boolean, message: string | null } | null>(null)
 hostRequest<{ ok: boolean, message: string | null }>('ocr-check', null)

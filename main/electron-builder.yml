@@ -47,7 +47,7 @@ files:
     to: "."
 extraMetadata:
   main: "main.js"
-# OCR data (opencv + tesseract) for map scan, essence scan and heist gems,
+# OCR data (opencv + tesseract) for map scan, essence scan and death recap,
 # fetched by build/fetch-ocr.mjs.
 extraResources:
   - from: "build/cv-ocr"

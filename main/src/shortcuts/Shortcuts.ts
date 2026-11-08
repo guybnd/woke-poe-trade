@@ -7,7 +7,6 @@ import { isModKey, KeyToElectron, mergeTwoHotkeys, RESERVED_SHORTCUTS } from '..
 import { typeInChat, stashSearch } from './text-box'
 import { WidgetAreaTracker } from '../windowing/WidgetAreaTracker'
 import { HostClipboard } from './HostClipboard'
-import { OcrWorker } from '../vision/link-main'
 import type { ShortcutAction } from '../../../ipc/types'
 import type { Logger } from '../RemoteLogger'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
@@ -17,8 +16,6 @@ import type { ServerEvents } from '../server'
 import { perfRecord } from '../woke/perf'
 
 type UiohookKeyT = keyof typeof UiohookKey
-// woke: the heist gem OCR worker shuts down after this long unused.
-const OCR_IDLE_MS = 5 * 60 * 1000
 const FOCUS_SETTLE_MS = 120
 const FOCUS_WAIT_MS = 600
 const UiohookToName = Object.fromEntries(Object.entries(UiohookKey).map(([k, v]) => ([v, k])))
@@ -85,8 +82,6 @@ export class Shortcuts {
   private logKeys = false
   private areaTracker: WidgetAreaTracker
   private clipboard: HostClipboard
-  private ocrWorker: Promise<OcrWorker> | null = null
-  private ocrLanguage = ''
 
   static async create (
     logger: Logger,
@@ -164,20 +159,11 @@ export class Shortcuts {
     actions: ShortcutAction[],
     stashScroll: boolean,
     logKeys: boolean,
-    restoreClipboard: boolean,
-    language: string
+    restoreClipboard: boolean
   ) {
     this.stashScroll = stashScroll
     this.logKeys = logKeys
     this.clipboard.updateOptions(restoreClipboard)
-    this.ocrLanguage = language
-    // woke: the heist gem OCR worker (opencv + tesseract, 100-200 MB) used to
-    // load at startup whenever the hotkey was set. It now loads on the first
-    // press and shuts down after a few idle minutes; a loaded one follows a
-    // language change.
-    if (this.ocrWorker) {
-      this.ocrWorker.then(w => w.updateOptions(language)).catch(() => {})
-    }
 
     const allShortcuts = new Set(RESERVED_SHORTCUTS)
 
@@ -198,31 +184,6 @@ export class Shortcuts {
       this.unregister()
       this.register()
     }
-  }
-
-  private ocrIdleTimer: ReturnType<typeof setTimeout> | undefined
-
-  private getOcrWorker () {
-    const language = this.ocrLanguage
-    if (!this.ocrWorker) {
-      const starting = OcrWorker.create().then(async w => { await w.updateOptions(language); return w })
-      // A worker that failed to start (OCR files not downloaded yet, say) is
-      // tried again on the next press instead of failing until it idles out.
-      starting.catch((err) => {
-        this.logger.write(`error [Shortcuts] Heist gem OCR failed to start: ${(err as Error)?.message ?? err}`)
-        if (this.ocrWorker === starting) this.ocrWorker = null
-      })
-      this.ocrWorker = starting
-    }
-    const current = this.ocrWorker
-    // woke: free it once heist gems haven't been read for a while.
-    clearTimeout(this.ocrIdleTimer)
-    this.ocrIdleTimer = setTimeout(() => {
-      const worker = this.ocrWorker
-      this.ocrWorker = null
-      worker?.then(async w => { await w.terminate() }).catch(() => {})
-    }, OCR_IDLE_MS)
-    return current
   }
 
   private register () {
@@ -287,28 +248,6 @@ export class Shortcuts {
             (entry.keepModKeys) ? entry.shortcut.split(' + ').filter(key => isModKey(key)) : undefined,
             this.gameConfig.showModsKey
           )
-        } else if (entry.action.type === 'ocr-text' && entry.action.target === 'heist-gems') {
-          if (process.platform !== 'win32') return
-
-          const { action } = entry
-          const pressTime = Date.now()
-          const imageData = this.poeWindow.screenshot()
-          const image = {
-            width: this.poeWindow.bounds.width,
-            height: this.poeWindow.bounds.height,
-            data: imageData
-          }
-          this.getOcrWorker().then(w => w.findHeistGems(image)).then(result => {
-            this.server.sendEventTo('last-active', {
-              name: 'MAIN->CLIENT::ocr-text',
-              payload: {
-                target: action.target,
-                pressTime,
-                ocrTime: result.elapsed,
-                paragraphs: result.recognized.map(p => p.text)
-              }
-            })
-          }).catch(() => {})
         }
       })
 

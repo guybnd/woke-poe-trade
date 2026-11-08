@@ -2,13 +2,11 @@ import { parentPort } from 'worker_threads'
 import * as Comlink from 'comlink'
 import nodeEndpoint from 'comlink/dist/umd/node-adapter'
 import * as Bindings from './wasm-bindings'
-import { HeistGemFinder } from './HeistGemFinder'
 import { ImageData } from './utils'
 import { scanTooltip, scanAreaModList, ocrLine } from '../woke/map-scan-vision'
 import type { ScanOptions, LineImage } from '../woke/map-scan-vision'
 import { scanEssenceLabel, scanAllEssenceLabels } from '../woke/essence-scan-vision'
 
-let _heistGems: HeistGemFinder
 let _changeLangPromise = Promise.resolve()
 // woke: the language to fall back to when our own model fails to load.
 let _lastLang: { lang: string, binDir: string } | null = null
@@ -16,7 +14,6 @@ let _lastLang: { lang: string, binDir: string } | null = null
 const WorkerBody = {
   async init (binDir: string) {
     await Bindings.init(binDir)
-    _heistGems = await HeistGemFinder.create(binDir)
   },
   async changeLanguage (lang: string, binDir: string) {
     await _changeLangPromise
@@ -34,10 +31,6 @@ const WorkerBody = {
       if (_lastLang) await Bindings.changeLanguage(_lastLang.lang, _lastLang.binDir)
     }).catch(() => {})
     await load
-  },
-  async findHeistGems (screenshot: ImageData) {
-    await _changeLangPromise
-    return _heistGems.ocrScreenshot(screenshot)
   },
   // woke map scan mode
   async scanMapTooltip (screenshot: ImageData, opts: ScanOptions) {

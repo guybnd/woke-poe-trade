@@ -289,7 +289,7 @@ export async function startFakeApp (opts: FakeAppOptions): Promise<FakeApp> {
   const shortcuts = await Shortcuts.create(logger, overlay, poeWindow, gameConfig, eventPipe)
   eventPipe.onEventAnyClient('CLIENT->MAIN::update-host-config', (cfg) => {
     overlay.updateOpts(cfg.overlayKey, cfg.windowTitle)
-    shortcuts.updateActions(cfg.shortcuts, cfg.stashScroll, cfg.logKeys, cfg.restoreClipboard, cfg.language)
+    shortcuts.updateActions(cfg.shortcuts, cfg.stashScroll, cfg.logKeys, cfg.restoreClipboard)
     // The fake game's Client.txt, whatever the settings say.
     if (cfg.wokeGameLog === false) gameLogWatcher.stop()
     else app.logWatcherReady = Promise.all([app.logWatcherReady, gameLogWatcher.restart(app.clientLogPath)])

@@ -80,9 +80,6 @@ test('every module on: startup, a map, a price check, memory', async ({ overlay,
         if (c.widgets.some((w: { wmType: string }) => w.wmType === wmType)) continue
         c.widgets.push({ wmId: id++, wmType, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: ['uninitialized'] })
       }
-      // Heist gem OCR with a hotkey set (it's off by default).
-      const itemSearch = c.widgets.find((w: { wmType: string }) => w.wmType === 'item-search')
-      if (itemSearch) itemSearch.ocrGemsKey = 'Alt + G'
       details.widgets = Object.fromEntries(c.widgets.map((w: { wmId: number, wmType: string }) => [`widget-${w.wmId}`, w.wmType]))
     }
   })
@@ -171,7 +168,7 @@ test('every module on: startup, a map, a price check, memory', async ({ overlay,
   // ---- memory ----
   fakeApp.focusGame(true)
   await page.waitForTimeout(500)
-  // Heist gem OCR, map scan and essence scan load theirs on first use.
+  // Map scan, essence scan and death recap load theirs on first use.
   record('memory.ocrWorkers', 'OCR workers loaded (no scan used yet)', fakeApp.ocrWorkers(), '', 'count')
   record('memory.heap', 'Overlay JS heap after GC', await heapAfterGc(cdp), 'MB', 'size')
   const m = await cdpMetrics(cdp)

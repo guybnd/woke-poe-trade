@@ -78,8 +78,7 @@ export const MODULES: ModuleDef[] = [
 
   // APT features: only their hotkeys can be switched off.
   { id: 'apt-price-check', name: 'Price check hotkeys', description: 'Check an item under the cursor', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['hotkeys'] },
-  { id: 'apt-item-info', name: 'Item info hotkeys', description: 'Item info, wiki, poedb, Craft of Exile, similar items', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-info-circle', item: 'Scroll of Wisdom' }, needs: ['hotkeys'] },
-  { id: 'apt-heist-ocr', name: 'Heist gem OCR', description: 'Reads heist gem names; loads the OCR worker on first use', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-eye' }, needs: ['ocr', 'hotkeys'] }
+  { id: 'apt-item-info', name: 'Item info hotkeys', description: 'Item info, wiki, poedb, Craft of Exile, similar items', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-info-circle', item: 'Scroll of Wisdom' }, needs: ['hotkeys'] }
 ]
 
 export interface Preset {
@@ -186,12 +185,10 @@ export function ensureWokeConfig<T extends ConfigLike> (config: T): T & { woke: 
 export function filterAptShortcuts (config: ConfigLike, actions: ShortcutAction[]): ShortcutAction[] {
   const priceCheck = isModuleOn(config, 'apt-price-check')
   const itemInfo = isModuleOn(config, 'apt-item-info')
-  const heistOcr = isModuleOn(config, 'apt-heist-ocr')
   const ITEM_INFO_TARGETS = ['item-check', 'open-wiki', 'open-craft-of-exile', 'open-poedb', 'search-similar']
   return actions.filter(({ action }) => {
     if (action.type === 'copy-item' && action.target === 'price-check') return priceCheck
     if (action.type === 'copy-item' && ITEM_INFO_TARGETS.includes(action.target)) return itemInfo
-    if (action.type === 'ocr-text' && action.target === 'heist-gems') return heistOcr
     if (action.type === 'trigger-event' && action.target === BOOKMARKS_TARGET) return itemInfo
     return true
   })
