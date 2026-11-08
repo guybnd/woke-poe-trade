@@ -21,6 +21,10 @@ const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-ra
 
 // WOKE_LANDING_CLIPS=1 records the clips instead (the `clip:` tests at the end).
 test.skip(!process.env.WOKE_LANDING_SHOTS && !process.env.WOKE_LANDING_CLIPS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
+// A clips run leaves the stills alone.
+test.beforeEach(({}, info) => { // eslint-disable-line no-empty-pattern
+  test.skip(!process.env.WOKE_LANDING_SHOTS && !info.title.startsWith('clip:'), 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
+})
 test.use({ deviceScaleFactor: 2 })
 
 async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
@@ -1126,6 +1130,12 @@ test.describe('clips', () => {
     await clip.hold(1200)
     await clip.poster()
     await clip.hold(2000)
+    // A click in game clears them, as the clip began.
+    overlay.app.pressMouse(...rest)
+    overlay.app.releaseMouse()
+    await clip.click()
+    await expect(overlay.page.locator('[data-stash-outlines]')).toBeHidden()
+    await clip.hold(700)
     await clip.save()
   })
 

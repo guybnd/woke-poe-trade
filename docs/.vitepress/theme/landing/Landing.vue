@@ -45,8 +45,17 @@ function playClips () {
     else if (!want && !v.paused) v.pause()
   }
 }
-// On a phone the clip fills the 4:5 crop, centred where the still's crop is.
-const clipAt = (s) => `${s.focus ? Math.round(Math.min(100, (s.focus[0] + s.focus[2] / 2) / 25.6)) : 50}% 50%`
+// On a phone the clip fills the 4:5 crop where the still's crop is. For
+// object-fit: cover, p% puts the left edge at p * (video width - shown width):
+// a 16:9 clip in a 4:5 box shows 0.45 of its width, so a crop centred at c
+// (a fraction of the width) needs p = (c - 0.225) / 0.55.
+const clipAt = (s) => {
+  const c = s.focus ? (s.focus[0] + s.focus[2] / 2) / 2560 : 0.5
+  return `${Math.round(Math.max(0, Math.min(1, (c - 0.225) / 0.55)) * 1000) / 10}% 50%`
+}
+// The clip shows once it plays, fading over its still, so a slow load or its
+// first frame never flashes a blank stage.
+const playing = reactive({})
 
 // Picking a plate, or a plate in the open folder (j).
 function go (h, i, j = -1) {
@@ -185,8 +194,9 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
                   sizes="(max-width: 1312px) calc(100vw - 34px), 1280px" :alt="s.alt"
                   width="2560" height="1440" loading="lazy">
               </picture>
-              <video v-if="motion && s.clip" :class="{ on: s === slide(h) }" :style="{ objectPosition: clipAt(s) }"
-                muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true">
+              <video v-if="motion && s.clip" :class="{ on: s === slide(h), playing: playing[s.clip] }" :style="{ objectPosition: clipAt(s) }"
+                muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"
+                @playing="playing[s.clip] = true">
                 <source :src="clipFile(s.clip, 'webm')" type="video/webm">
                 <source :src="clipFile(s.clip, 'mp4')" type="video/mp4">
               </video>
@@ -195,9 +205,10 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" /></svg>Whole screen
             </button>
           </div>
-          <div v-if="h.slides.length > 1" class="strip" role="group" :aria-label="`${h.name} pictures`">
-            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="thumb"
-              :class="{ clip: thumbOf(h, i).clip }" :aria-pressed="i === current(h)" :aria-label="s.label" :title="s.label" @click="go(h, i)">
+          <!-- The plates above already name these, for keyboards and screen readers. -->
+          <div v-if="h.slides.length > 1" class="strip" aria-hidden="true">
+            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="thumb" tabindex="-1"
+              :class="{ clip: thumbOf(h, i).clip }" :aria-pressed="i === current(h)" :title="s.label" @click="go(h, i)">
               <img :src="thumb(thumbOf(h, i).shot)" alt="" width="320" height="180" loading="lazy">
             </button>
           </div>
@@ -350,7 +361,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 @media (max-width: 1000px) { .item.with-tray { --tray: 78px; } }
 .item.wide { width: min(1280px, 100%); }
 /* The strip of pictures under the shot. */
-.item.with-strip { --strip: 80px; }
+.item.with-strip { --strip: 84px; }
 
 .head { display: flex; flex: none; height: 54px; }
 .head i { flex: none; width: 44px; background: no-repeat; }
@@ -409,7 +420,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .stage picture { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
 .stage picture.on { opacity: 1; pointer-events: auto; }
 .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
-.stage video.on { opacity: 1; }
+.stage video.on.playing { opacity: 1; }
 
 /* The strip: every slide's picture under the shot, as the plates above are
    its names, so it shows there is more to see. A clip's has a play mark. */

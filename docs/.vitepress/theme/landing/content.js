@@ -8,8 +8,10 @@
 // Keep the width near 900 so its text stays readable on a phone.
 // `clip` is a looping recording of the tool in use, public/clips/<clip>.mp4 and
 // .webm, recorded by the `clip:` tests in landing-highlights.spec.ts. Its still
-// (`shot`, the clip's first frame) shows before it plays, in the picture strip,
-// and instead of it for visitors who turned motion off.
+// (`shot`, a frame the test picks) shows before it plays, in the picture strip,
+// and instead of it for visitors who turned motion off. A clip's focus is 1152
+// wide, the share of a 16:9 clip a phone's 4:5 stage shows, so the still's crop
+// and the clip's match.
 
 export const REPO = 'https://github.com/guybnd/woke-poe-trade'
 export const DOWNLOAD = `${REPO}/releases/latest`
@@ -20,7 +22,7 @@ export const HIGHLIGHTS = [
     name: 'Price Check',
     tag: 'See what you are up against',
     slides: [
-      { label: 'Competing listings', module: 'apt-price-check', shot: 'clip-price-check', clip: 'clip-price-check', focus: [960, 0, 920], text: 'Every listing beside yours, stat by stat. Green where yours is better, red where theirs is. Hover one to see its tiers and rolls.', alt: 'Price check of a body armour: the mouse moves down the listings, each compared stat by stat to yours, and the tooltip of each opens with its mod tiers' },
+      { label: 'Competing listings', module: 'apt-price-check', shot: 'clip-price-check', clip: 'clip-price-check', focus: [900, 0, 1152], text: 'Every listing beside yours, stat by stat. Green where yours is better, red where theirs is. Hover one to see its tiers and rolls.', alt: 'Price check of a body armour: the mouse moves down the listings, each compared stat by stat to yours, and the tooltip of each opens with its mod tiers' },
       { label: 'Listing tooltip', module: 'apt-price-check', shot: 'hl-price-tooltip', focus: [1060, 90, 920], text: 'Hover a listing to see the item as the game shows it, with mod tiers and a line under each mod showing how good its roll is.', alt: 'Tooltip of a listed body armour with the tier and roll quality of each mod' },
     ]
   },
@@ -29,7 +31,7 @@ export const HIGHLIGHTS = [
     name: 'Path of Building',
     tag: 'Your build, no alt-tab',
     slides: [
-      { label: 'Loadouts', module: 'pob-builds', shot: 'clip-pob', clip: 'clip-pob', focus: [950, 0, 1150], text: 'Switch loadouts, flip through the gear and filter tabs, and open the passive tree with what the next tree changes.', alt: 'PoB builds: switching loadout, then the Gear and Filter tabs, then the passive tree with the changes of the next tree marked' },
+      { label: 'Loadouts', module: 'pob-builds', shot: 'clip-pob', clip: 'clip-pob', focus: [950, 0, 1152], text: 'Switch loadouts, flip through the gear and filter tabs, and open the passive tree with what the next tree changes.', alt: 'PoB builds: switching loadout, then the Gear and Filter tabs, then the passive tree with the changes of the next tree marked' },
       { label: 'Gear and links', module: 'pob-builds', shot: 'hl-pob-gear', focus: [800, 130, 920], text: 'Your gear and links from PoB. Search any item to price check it.', alt: 'A build\'s gear tab with an item tooltip and a price check button on each item' },
       { label: 'Levelling', module: 'pob-builds', shot: 'hl-pob-levelling', focus: [780, 220, 900], text: 'Gems by level, and where to get each one.', alt: 'A build\'s leveling tab: gem links, and each gem by level with its vendor or quest' },
       { label: 'Next step', module: 'pob-builds', shot: 'hl-pob-next', focus: [770, 160, 900], text: 'What changes in your next tree, gems and gear, before you get there.', alt: 'The Next section of a build: new passive points, gems to add and drop, and the gear that changes' },
@@ -45,7 +47,7 @@ export const HIGHLIGHTS = [
     name: 'Loot Filter',
     tag: 'Fix it mid-map',
     slides: [
-      { label: 'Alt+F on an item', module: 'loot-filter', shot: 'clip-filter', clip: 'clip-filter', focus: [1250, 0, 1150], text: 'Hover any drop, press Alt+F, and you are on its rule. Move it to another tier in one click, or hide or restyle it.', alt: 'Rare boots on the ground: Alt+F opens their filter rule card, and a click moves them from tier 1 to tier 3' },
+      { label: 'Alt+F on an item', module: 'loot-filter', shot: 'clip-filter', clip: 'clip-filter', focus: [1250, 0, 1152], text: 'Hover any drop, press Alt+F, and you are on its rule. Move it to another tier in one click, or hide or restyle it.', alt: 'Rare boots on the ground: Alt+F opens their filter rule card, and a click moves them from tier 1 to tier 3' },
       { label: 'The editor', module: 'loot-filter', shot: 'tour-filter-rules', focus: [680, 280, 900], text: 'Every tier styled as it drops. Save, and it reloads in game.', alt: 'Loot filter editor: the currency tiers with their game-styled labels' },
       { label: 'Price updates', module: 'loot-filter', shot: 'hl-filter-moves', focus: [300, 280, 900], text: 'Today\'s poe.ninja prices show which items should change tier. Tick the moves you want, and it saves and reloads in game.', alt: 'Loot filter prices tab: 143 items that would move tier, each with its price and a tick box' },
       { label: 'Safety net', module: 'loot-filter', shot: 'tour-filter-prices', focus: [380, 200, 900], text: 'A safety net shows anything valuable your filter would hide, so a price jump does not cost you a drop.', alt: 'Loot filter prices tab: a hidden Headhunter caught by the safety net' }
@@ -56,7 +58,7 @@ export const HIGHLIGHTS = [
     name: 'Market',
     tag: 'Vaalstreet broker terminal in-game',
     slides: [
-      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'clip-market', clip: 'clip-market', focus: [320, 0, 1150], text: 'Click the Flips icon on a stash tab and it outlines what is worth flipping, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs from 1080p up.', alt: 'A Delirium orb stash tab: a click on the Flips icon outlines the orbs worth rerolling, each with its profit' },
+      { label: 'Stash highlighter', module: 'scarab-flip', shot: 'clip-market', clip: 'clip-market', focus: [320, 0, 1152], text: 'Click the Flips icon on a stash tab and it outlines what is worth flipping, with the profit on each.', more: 'Bind a key or click the icon. Scarab tabs work at any size; Delirium, Delve, Essence and Blight tabs from 1080p up.', alt: 'A Delirium orb stash tab: a click on the Flips icon outlines the orbs worth rerolling, each with its profit' },
       { label: 'Flips', module: 'scarab-flip', shot: 'hl-flips', focus: [310, 100, 900], text: 'Vendor recipes and Harvest rerolls that pay today, sorted by profit.', alt: 'Flips window: scarabs worth vendoring, with price, profit and supply' },
       { label: 'Disenchant', module: 'disenchant', shot: 'hl-disenchant', focus: [380, 140, 1040], text: 'Every unique ranked by Thaumaturgic Dust per chaos at today\'s prices, with the gold fee if you want it counted.', alt: 'Disenchant window: uniques ranked by dust per chaos, with price, dust and gold fee' },
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', focus: [600, 140, 1040], text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
@@ -70,7 +72,7 @@ export const HIGHLIGHTS = [
     name: 'On Your Screen',
     tag: 'Only when it matters',
     slides: [
-      { label: 'Mechanics window', module: 'mechanics', shot: 'clip-on-screen', clip: 'clip-on-screen', focus: [300, 0, 1150], text: 'Every league mechanic in one window: what to pick and what it is worth, a tab each.', alt: 'League mechanics window: clicking through the Delve, Blight, Delirium, Ritual and Harvest tabs, each with its items priced' },
+      { label: 'Mechanics window', module: 'mechanics', shot: 'clip-on-screen', clip: 'clip-on-screen', focus: [300, 0, 1152], text: 'Every league mechanic in one window: what to pick and what it is worth, a tab each.', alt: 'League mechanics window: clicking through the Delve, Blight, Delirium, Ritual and Harvest tabs, each with its items priced' },
       { label: 'Trades', module: 'trade', shot: 'hl-trade', focus: [740, 320, 760], text: 'Whispers become cards with the stash spot. Invite, trade, thank and kick in a click.', alt: 'Trade card in the hideout: buyers with the item, price and stash position' },
       {
         label: 'League mechanics',
@@ -99,7 +101,7 @@ export const HIGHLIGHTS = [
     name: 'Quick Search',
     tag: 'Ctrl+Space, from anywhere',
     slides: [
-      { label: 'Type anything', shot: 'clip-search', clip: 'clip-search', focus: [300, 0, 1150], text: 'Press Ctrl+Space and type. Prices, tools and settings come up as you go.', alt: 'Search palette: typing divine, then filter, then headhunter, each bringing up its results, and the Headhunter tooltip on hover' },
+      { label: 'Type anything', shot: 'clip-search', clip: 'clip-search', focus: [300, 0, 1152], text: 'Press Ctrl+Space and type. Prices, tools and settings come up as you go.', alt: 'Search palette: typing divine, then filter, then headhunter, each bringing up its results, and the Headhunter tooltip on hover' },
       { label: 'Any price', shot: 'hl-search-price', focus: [180, 130, 900], text: 'Press Ctrl+Space and type. Any item\'s price now, a day ago and a week ago, without leaving the game.', alt: 'Search palette on Mageblood: each variant\'s price now, 24 hours ago and 7 days ago, with buttons for the wiki, poedb and the trade site' },
       { label: 'Compare', shot: 'hl-search-compare', focus: [190, 140, 900], text: 'Pin a few prices to keep them side by side while you look up the next one.', alt: 'Search palette with Divine Orb, Headhunter and Mirror of Kalandra pinned along the top' },
       { label: 'Item on hover', shot: 'hl-search-hover', focus: [560, 200, 900], text: 'Hover a result to see the item as the game shows it, with its price.', alt: 'Search palette with the Headhunter tooltip shown over its result' },

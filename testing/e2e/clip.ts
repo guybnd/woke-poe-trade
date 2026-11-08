@@ -46,6 +46,11 @@ export class Clip {
   private camera: Rect = { x: 0, y: 0, width: 1920, height: 1080 }
   private aim: Rect = this.camera
   private posterFrame = 0
+  // The clip time of the last frame, so the camera eases at the same speed
+  // through holds and moves.
+  private lastFrame = 0
+  // Whether the page mouse is where the cursor is (the last move was `page`).
+  private overPage = false
 
   private constructor (readonly page: Page, readonly name: string, private cdp: CDPSession, at: [number, number]) {
     this.dir = fs.mkdtempSync(path.join(os.tmpdir(), `woke-clip-${name}-`))
@@ -80,13 +85,19 @@ export class Clip {
   // rendered straight at the clip's size (a clip with a scale re-renders at
   // that scale; without one the shot comes at CSS pixels).
   private async frame (seconds = 1 / FPS) {
-    const k = 0.14
+    // 14% of the way each 1/30 s, whatever the frame's real length.
+    const now = Date.now()
+    const dt = seconds > 0 ? seconds : this.lastFrame ? (now - this.lastFrame) / 1000 : 1 / FPS
+    this.lastFrame = now
+    const k = 1 - Math.pow(1 - 0.14, Math.min(dt, 1) * FPS)
     const c = this.camera
     const a = this.aim
     this.camera = { x: c.x + (a.x - c.x) * k, y: c.y + (a.y - c.y) * k, width: c.width + (a.width - c.width) * k, height: c.height + (a.height - c.height) * k }
     if (Math.abs(this.camera.width - a.width) < 0.5 && Math.abs(this.camera.x - a.x) < 0.5 && Math.abs(this.camera.y - a.y) < 0.5) this.camera = a
     const cam = this.camera
-    const shot = await this.cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 92, optimizeForSpeed: true, clip: { ...cam, scale: OUT_WIDTH / cam.width } })
+    // The shot comes at the clip's scale times the device's pixel ratio: this
+    // makes it OUT_WIDTH wide.
+    const shot = await this.cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 92, optimizeForSpeed: true, clip: { ...cam, scale: OUT_WIDTH / cam.width / this.view[2] } })
     const file = path.join(this.dir, `f${String(this.frames.length).padStart(5, '0')}.jpg`)
     fs.writeFileSync(file, Buffer.from(shot.data, 'base64'))
     this.frames.push({ file, seconds })
@@ -128,13 +139,16 @@ export class Clip {
       await this.frame()
     }
     this.x = x; this.y = y
+    this.overPage = mode === 'page'
   }
 
+  // The cursor's press. It clicks the page only when the last move was over
+  // the page; after a `game` move the test makes the in-game click itself.
   async click () {
     await this.cursorAt(this.x, this.y, 0.85)
-    await this.page.mouse.down()
+    if (this.overPage) await this.page.mouse.down()
     await this.frame(); await this.frame()
-    await this.page.mouse.up()
+    if (this.overPage) await this.page.mouse.up()
     await this.cursorAt(this.x, this.y)
     await this.frame()
   }
@@ -176,11 +190,27 @@ export class Clip {
 
   // Encodes the frames (already at the clip's size) to MP4 and WebM, and the still.
   async save () {
+    try {
+      await this.encode()
+    } finally {
+      this.discard()
+    }
+    return { seconds: this.frames.reduce((s, f) => s + f.seconds, 0), frames: this.frames.length }
+  }
+
+  // Drops the frames on disk: after saving, or from a test that failed.
+  discard () {
+    fs.rmSync(this.dir, { recursive: true, force: true })
+    this.cdp.detach().catch(() => {})
+  }
+
+  private async encode () {
     if (this.frames.length < 2) throw new Error(`Clip ${this.name} has ${this.frames.length} frames`)
     const lines: string[] = []
-    for (const f of this.frames) lines.push(`file '${f.file.replace(/\\/g, '/')}'`, `duration ${Math.max(0.001, f.seconds).toFixed(4)}`)
+    const entry = (file: string) => `file '${file.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`
+    for (const f of this.frames) lines.push(entry(f.file), `duration ${Math.max(0.001, f.seconds).toFixed(4)}`)
     // The concat demuxer drops the last frame's duration unless it is listed again.
-    lines.push(`file '${this.frames[this.frames.length - 1].file.replace(/\\/g, '/')}'`)
+    lines.push(entry(this.frames[this.frames.length - 1].file))
     const list = path.join(this.dir, 'list.txt')
     fs.writeFileSync(list, lines.join('\n'))
     fs.mkdirSync(CLIPS, { recursive: true })
@@ -191,13 +221,15 @@ export class Clip {
       if (r.status !== 0) throw new Error(`ffmpeg failed for ${this.name}: ${r.stderr || r.error}`)
     }
     const input = ['-f', 'concat', '-safe', '0', '-i', list, '-vf', vf, '-an']
-    const mp4 = path.join(CLIPS, `${this.name}.mp4`)
+    // Both encoded beside the old ones first, so a failed encode never leaves
+    // a new MP4 next to an old WebM.
+    const mp4 = path.join(this.dir, 'clip.mp4')
+    const webm = path.join(this.dir, 'clip.webm')
     run([...input, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4])
-    run([...input, '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', path.join(CLIPS, `${this.name}.webm`)])
+    run([...input, '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', webm])
     run(['-i', this.frames[this.posterFrame].file, '-vf', `scale=${OUT_WIDTH}:${OUT_WIDTH * 9 / 16}:flags=lanczos`, '-c:v', 'libwebp', '-quality', '86', path.join(SHOTS, `${this.name}.webp`)])
-    const seconds = this.frames.reduce((s, f) => s + f.seconds, 0)
-    fs.rmSync(this.dir, { recursive: true, force: true })
-    return { seconds, frames: this.frames.length }
+    fs.copyFileSync(mp4, path.join(CLIPS, `${this.name}.mp4`))
+    fs.copyFileSync(webm, path.join(CLIPS, `${this.name}.webm`))
   }
 }
 
