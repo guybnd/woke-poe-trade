@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-158
 title: 'Landing: streamer feedback (GitHub link, hidden tabs, GIF slides)'
-status: In Progress
+status: Todo
 priority: None
 effort: L
 assignee: unassigned
 tags:
   - landing
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Event Horizon
 history:
   - type: activity
     user: Agent
@@ -95,12 +95,18 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-08T11:00:01.279Z'
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-08T11:31:04.039Z'
+    comment: Claim by claude-code@guy-pc expired (no heartbeat for 30 min)
+    id: a-2026-11-08t11-31-04-039z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-08T11:31:04.067Z'
 swimlane: null
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-08T11:00:01.279Z'
-  expiresAt: '2026-11-08T11:30:01.279Z'
 ---
 > **TL;DR** Replace the landing slides with scripted looping clips of the real overlay (MP4/WebM), add a picture strip under each shot while keeping the name plates as tabs, and reorder the sections. GitHub link failure was not reproducible.
 
