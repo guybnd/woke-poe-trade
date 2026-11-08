@@ -17,8 +17,9 @@ async function overlayWindow () {
   return null
 }
 
-// Same tag the price check, trade searches and lab use, loading a local page
-// (no network in CI).
+// Same tag the price check, trade searches and lab use, loading a file from the
+// app's own server (no network in CI; webviews only load web pages, so not a
+// data: URL).
 const WEBVIEW_CHECK = `new Promise((resolve) => {
   const wv = document.createElement('webview')
   wv.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:100px'
@@ -26,7 +27,7 @@ const WEBVIEW_CHECK = `new Promise((resolve) => {
   wv.addEventListener('did-finish-load', () => done(true))
   wv.addEventListener('did-fail-load', (e) => done(false, e.errorDescription))
   setTimeout(() => done(false, 'timed out'), 15000)
-  wv.src = 'data:text/html,<p>webview ok</p>'
+  wv.src = location.origin + '/icon.png'
   document.body.appendChild(wv)
 })`
 
