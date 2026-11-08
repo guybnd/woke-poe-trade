@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url'
 import type { Locator, Page } from '@playwright/test'
 import { test, expect, FIXTURES, haveOcr, logFixture, fixtureText } from './harness'
 import { Clip, around } from './clip'
+import type { Rect } from './clip'
 import type { Overlay } from './harness'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
@@ -1123,6 +1124,43 @@ test.describe('clips', () => {
     await clip.moveTo(...rest, 700, 'game', game)
     await expect(overlay.page.locator('[data-stash-outlines]')).toBeVisible({ timeout: 15_000 })
     await clip.hold(3200)
+    await clip.save()
+  })
+
+  test('clip: on screen, through the League mechanics tabs', async ({ overlay }) => {
+    await mechanicPrices(overlay)
+    await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-mechanics' }] })
+    await backdrop(overlay, 'frames/town.jpg')
+    const page = overlay.page
+    const w = overlay.widget('woke-mechanics')
+    await overlay.widget('menu').getByRole('button', { name: 'All tools' }).click()
+    await page.getByRole('button', { name: /League mechanics/ }).first().click()
+    const tabs = w.getByRole('tab')
+    await expect(tabs.first()).toBeVisible()
+    console.log('tabs', await tabs.allTextContents())
+    const names = [/harvest/i, /delve/i, /blight/i, /delirium/i, /ritual/i]
+    // A first pass so the camera holds still on the widest tab.
+    const seen: Array<Rect | null> = []
+    for (const name of names) {
+      await w.getByRole('tab', { name }).click()
+      await page.waitForTimeout(300)
+      seen.push(await w.locator('[data-w-panel]').first().boundingBox())
+    }
+    await w.getByRole('tab', { name: names[0] }).click()
+    const tb = (await w.getByRole('tab', { name: names[0] }).boundingBox())!
+    const rest: [number, number] = [tb.x + 40, tb.y + 140]
+    await page.mouse.move(...rest)
+    await page.waitForTimeout(500)
+    const clip = await Clip.start(page, 'clip-on-screen', rest, around(seen, 760, 24))
+    await clip.hold(1400)
+    for (const name of [...names.slice(1), names[0]]) {
+      const b = (await w.getByRole('tab', { name }).boundingBox())!
+      await clip.moveTo(b.x + b.width / 2, b.y + b.height / 2, 500)
+      await clip.click()
+      await clip.hold(name === names[0] ? 600 : 1700)
+    }
+    await clip.moveTo(...rest, 500)
+    await clip.hold(500)
     await clip.save()
   })
 
