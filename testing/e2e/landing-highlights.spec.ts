@@ -12,12 +12,14 @@ import zlib from 'zlib'
 import { fileURLToPath } from 'url'
 import type { Locator, Page } from '@playwright/test'
 import { test, expect, FIXTURES, haveOcr, logFixture } from './harness'
+import { Clip, around } from './clip'
 import type { Overlay } from './harness'
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
 const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
 
-test.skip(!process.env.WOKE_LANDING_SHOTS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
+// WOKE_LANDING_CLIPS=1 records the clips instead (the `clip:` tests at the end).
+test.skip(!process.env.WOKE_LANDING_SHOTS && !process.env.WOKE_LANDING_CLIPS, 'Set WOKE_LANDING_SHOTS=1 to take the landing page screenshots')
 test.use({ deviceScaleFactor: 2 })
 
 async function backdrop (overlay: Overlay, file: string, place = 'center / cover') {
@@ -996,4 +998,164 @@ test('setup: pick how you play', async ({ overlay, fakeApp }) => {
   await page.getByText('v0.0.0-test').evaluate(el => { el.style.visibility = 'hidden' })
   await page.waitForTimeout(500)
   await writeWebp(page, 'hl-setup', await page.screenshot())
+})
+
+// ---- Clips: the same setups, recorded while the overlay is used ----
+//
+//   WOKE_LANDING_CLIPS=1 npx playwright test landing-highlights -g "clip:"
+//
+// Each writes docs/public/clips/<name>.mp4, .webm and a .webp poster (see clip.ts).
+
+// The stat listings again, now with each mod's tier and roll range, so
+// hovering a row shows the full listing tooltip.
+const NAMES = ['Doom Shell', 'Rapture Wrap', 'Corpse Pelt', 'Gale Cloak', 'Mind Mantle', 'Sol Coat', 'Dusk Veil', 'Storm Shroud']
+function tiered (value: number, ladder: Array<[string, string, number, number]>) {
+  const hit = ladder.find(([, , min, max]) => value >= min && value <= max) ?? ladder[ladder.length - 1]
+  return [{ name: hit[0], tier: hit[1], level: 1, magnitudes: [{ min: String(hit[2]), max: String(hit[3]) }] }]
+}
+const LIFE: Array<[string, string, number, number]> = [['Rapturous', 'P1', 130, 139], ['Prime', 'P2', 120, 129], ['Fecund', 'P3', 110, 119], ['Vigorous', 'P4', 100, 109]]
+const RES: Array<[string, string, number, number]> = [['of Tzteosh', 'S1', 46, 48], ['of Haast', 'S2', 42, 45], ['of the Furnace', 'S3', 36, 41], ['of the Volcano', 'S4', 30, 35]]
+const COLD: Array<[string, string, number, number]> = [['of Ephij', 'S1', 46, 48], ['of the Polar Bear', 'S2', 42, 45], ['of the Ice', 'S3', 36, 41], ['of the Tundra', 'S4', 30, 35]]
+const CHAOS: Array<[string, string, number, number]> = [['of Bameth', 'S1', 31, 35], ['of Exile', 'S2', 26, 30], ['of Expulsion', 'S3', 21, 25]]
+
+async function richListings (page: Page) {
+  await page.route('**/api/trade/search/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({ id: 'q', total: 42, result: LISTINGS.map((_, i) => `r${i}`) })
+  }))
+  await page.route('**/api/trade/fetch/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({
+      result: route.request().url().split('/fetch/')[1].split('?')[0].split(',').map(id => {
+        const n = Number(id.slice(1))
+        const [amount, es, life, fire, cold, chaos] = LISTINGS[n]
+        return {
+          id,
+          item: {
+            ilvl: 86,
+            frameType: 2,
+            rarity: 'Rare',
+            identified: true,
+            name: NAMES[n],
+            typeLine: 'Twilight Regalia',
+            baseType: 'Twilight Regalia',
+            properties: [{ name: 'Energy Shield', values: [[String(es), 1]], displayMode: 0, type: 18 }],
+            requirements: [{ name: 'Level', values: [['68', 0]], displayMode: 0, type: 62 }],
+            extended: { es, es_aug: true },
+            explicitMods: [
+              { description: `+${life} to maximum Life`, domain: 'explicit', hash: 'stat.explicit.stat_3299347043', mods: tiered(life, LIFE) },
+              { description: `+${fire}% to Fire Resistance`, domain: 'explicit', hash: 'stat.explicit.stat_3372524247', mods: tiered(fire, RES) },
+              { description: `+${cold}% to Cold Resistance`, domain: 'explicit', hash: 'stat.explicit.stat_4220027924', mods: tiered(cold, COLD) },
+              { description: `+${chaos}% to Chaos Resistance`, domain: 'explicit', hash: 'stat.explicit.stat_2923486259', mods: tiered(chaos, CHAOS) }
+            ]
+          },
+          listing: {
+            indexed: new Date(Date.now() - n * 7 * 60_000).toISOString(),
+            fee: 1,
+            price: { amount, currency: 'chaos' },
+            account: { name: `seller${id}`, lastCharacterName: `char${id}` }
+          }
+        }
+      })
+    })
+  }))
+}
+
+test.describe('clips', () => {
+  test.skip(!process.env.WOKE_LANDING_CLIPS, 'Set WOKE_LANDING_CLIPS=1 to record the landing page clips')
+  test.setTimeout(120_000)
+
+
+  test('clip: pob, tabs, tree and loadouts', async ({ overlay }) => {
+    const dir = grownBuildsDir()
+    try {
+      const detail = await openLevellingBuild(overlay, dir)
+      await expect(detail.getByRole('tab', { name: 'Gear' })).toBeVisible()
+      const page = overlay.page
+      const list = page.locator('[data-w-panel]').filter({ hasText: 'PoB builds' }).first()
+      const panels = around([await detail.boundingBox(), await list.boundingBox()], 880)
+      const rest: [number, number] = [900, 420]
+      await page.mouse.move(...rest)
+      const clip = await Clip.start(page, 'clip-pob', rest, panels)
+      const to = async (target: Locator, ms = 550) => {
+        const b = (await target.boundingBox())!
+        await clip.moveTo(b.x + Math.min(b.width / 2, 60), b.y + b.height / 2, ms)
+        await clip.click()
+      }
+      await clip.hold(600)
+      // Change loadout: the next stage's gems, links and gear.
+      await to(detail.getByRole('button', { name: /^Day 1\.5 Clusters$/ }))
+      await clip.hold(1500)
+      // Through the tabs.
+      await to(detail.getByRole('tab', { name: 'Gear' }))
+      await clip.hold(1300)
+      const row = detail.locator('[class*="gearRow"]').first()
+      if (await row.count()) {
+        const rb = (await row.boundingBox())!
+        await clip.moveTo(rb.x + 60, rb.y + rb.height / 2, 450)
+        await clip.hold(1400)
+      }
+      await to(detail.getByRole('tab', { name: 'Filter' }))
+      await clip.hold(1100)
+      await to(detail.getByRole('tab', { name: 'Leveling' }))
+      await clip.hold(600)
+      // The passive tree, with what the next tree changes.
+      await to(detail.getByRole('button', { name: 'Passive tree' }))
+      const tree = page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: page.locator('canvas') }).last()
+      await expect(tree).toBeVisible()
+      clip.look(around([await detail.boundingBox(), await tree.boundingBox()], 1280))
+      await clip.hold(1200)
+      await to(tree.getByRole('switch'), 500)
+      await clip.hold(2200)
+      await to(tree.getByTitle('Close').first(), 500)
+      clip.look(panels)
+      await clip.hold(700)
+      // Back to the first loadout, as the clip began.
+      await to(detail.getByRole('button', { name: /^Day 1 No Cluster/ }))
+      await clip.moveTo(...rest, 500)
+      await clip.hold(600)
+      await clip.save()
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('clip: price check, hover the listings', async ({ overlay }) => {
+    await richListings(overlay.page)
+    await overlay.boot()
+    await backdrop(overlay, 'frames/town-inventory.jpg')
+    await overlay.copyItem('items/rare-body-armour-es.txt')
+    const panel = overlay.widget('price-check')
+    await panel.getByRole('button', { name: 'Search' }).click()
+    await expect(panel.locator('.w-pc-foot')).toBeVisible()
+    await allflameLabel(panel)
+    const rows = panel.locator('.w-pc-table tbody tr:not(.w-pc-yours)')
+    const table = (await panel.locator('.w-pc-table').boundingBox())!
+    const rest: [number, number] = [table.x + table.width + 90, table.y + 120]
+    const order = [0, 2, 5, 3]
+    // A first pass to learn where the tooltips open, so the camera holds still.
+    const seen = [table]
+    for (const i of order) {
+      const rb = (await rows.nth(i).boundingBox())!
+      await overlay.page.mouse.move(rb.x + rb.width * 0.32, rb.y + rb.height / 2)
+      const tip = overlay.page.getByRole('tooltip')
+      await expect(tip).toBeVisible()
+      seen.push(await tip.boundingBox())
+    }
+    await overlay.page.mouse.move(...rest)
+    await expect(overlay.page.getByRole('tooltip')).toBeHidden()
+    const clip = await Clip.start(overlay.page, 'clip-price-check', rest, around(seen, 1240))
+    await clip.hold(700)
+    for (const i of order) {
+      const rb = (await rows.nth(i).boundingBox())!
+      await clip.moveTo(rb.x + rb.width * 0.32, rb.y + rb.height / 2, 420)
+      await expect(overlay.page.getByRole('tooltip')).toBeVisible()
+      await clip.hold(1500)
+    }
+    await clip.moveTo(...rest, 600)
+    await clip.hold(500)
+    await clip.save()
+  })
 })
