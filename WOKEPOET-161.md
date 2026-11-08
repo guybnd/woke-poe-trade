@@ -20,7 +20,22 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-08T16:12:10.981Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-08T16:36:31.452Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/276 opened (branch
+      claude/stacked-deck-tracker). D2 allowed: PL sheet is public view-only
+      with no terms; weights bundled with credit. Local typecheck/lint/vitest
+      pass; adversarial review and full e2e running.
+    id: a-2026-11-08t16-36-31-452z
+  - type: activity
+    user: Agent
+    date: '2026-11-08T16:36:31.995Z'
+    comment: Updated implementation link.
+    id: a-2026-11-08t16-36-31-995z
 needsAction: null
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/276'
 ---
 Stacked Deck tracker module. Guy's picks from mockup https://claude.ai/artifact/N4HKYnpmThD6DB3bQQ5atB : A1 + A3, B1, C1 + C2 + C3, D1 + D2.
 
