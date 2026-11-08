@@ -1123,7 +1123,9 @@ test.describe('clips', () => {
     clip.look(view)
     await clip.moveTo(...rest, 700, 'game', game)
     await expect(overlay.page.locator('[data-stash-outlines]')).toBeVisible({ timeout: 15_000 })
-    await clip.hold(3200)
+    await clip.hold(1200)
+    await clip.poster()
+    await clip.hold(2000)
     await clip.save()
   })
 
@@ -1201,6 +1203,7 @@ test.describe('clips', () => {
     await clip.moveTo(hb.x + 120, hb.y + hb.height / 2, 600)
     await expect(tip).toBeVisible()
     await allflameLabel(palette)
+    await clip.poster()
     await clip.hold(2000)
     await clip.moveTo(...rest, 600)
     await box.fill('')
@@ -1234,7 +1237,9 @@ test.describe('clips', () => {
         await clip.click()
       }
       await go(/^Tier 3/)
-      await clip.hold(1300)
+      await clip.hold(500)
+      await clip.poster()
+      await clip.hold(800)
       // Close the card: back to the ground, as the clip began.
       const close = (await panel.locator('button:has(i.fa-times)').last().boundingBox())!
       await clip.moveTo(close.x + close.width / 2, close.y + close.height / 2, 700)
@@ -1288,7 +1293,9 @@ test.describe('clips', () => {
       clip.look(around([await detail.boundingBox(), await tree.boundingBox()], 1280))
       await clip.hold(1200)
       await to(tree.getByRole('switch'), 500)
-      await clip.hold(2200)
+      await clip.hold(1200)
+      await clip.poster()
+      await clip.hold(1000)
       await to(tree.getByTitle('Close').first(), 500)
       clip.look(panels)
       await clip.hold(700)
@@ -1306,36 +1313,36 @@ test.describe('clips', () => {
     await richListings(overlay.page)
     await overlay.boot()
     await backdrop(overlay, 'frames/town-inventory.jpg')
-    await overlay.copyItem('items/rare-body-armour-es.txt')
+    const page = overlay.page
+    const game = (x: number, y: number) => overlay.app.moveMouse(x, y)
+    // The whole screen, so the checker looks as Awakened PoE Trade users know it.
+    const rest: [number, number] = [1420, 470]
+    const clip = await Clip.start(page, 'clip-price-check', rest, { x: 0, y: 0, width: 1920, height: 1080 })
+    await clip.hold(700)
+    // The body armour the character wears.
+    await clip.moveTo(1582, 300, 700, 'game', game)
+    await clip.keys(['Ctrl', 'D'], 1500, 390, () => overlay.copyItem('items/rare-body-armour-es.txt'))
     const panel = overlay.widget('price-check')
-    await panel.getByRole('button', { name: 'Search' }).click()
+    const search = panel.getByRole('button', { name: 'Search' })
+    await expect(search).toBeVisible()
+    await allflameLabel(panel)
+    const sb = (await search.boundingBox())!
+    await clip.moveTo(sb.x + sb.width / 2, sb.y + sb.height / 2, 700)
+    await clip.click()
+    await clip.hold(900)
     await expect(panel.locator('.w-pc-foot')).toBeVisible()
     await allflameLabel(panel)
+    await clip.hold(500)
     const rows = panel.locator('.w-pc-table tbody tr:not(.w-pc-yours)')
-    const table = (await panel.locator('.w-pc-table').boundingBox())!
-    const rest: [number, number] = [table.x + table.width + 90, table.y + 120]
-    const order = [0, 2, 5, 3]
-    // A first pass to learn where the tooltips open, so the camera holds still.
-    const seen = [table]
-    for (const i of order) {
-      const rb = (await rows.nth(i).boundingBox())!
-      await overlay.page.mouse.move(rb.x + rb.width * 0.32, rb.y + rb.height / 2)
-      const tip = overlay.page.getByRole('tooltip')
-      await expect(tip).toBeVisible()
-      seen.push(await tip.boundingBox())
-    }
-    await overlay.page.mouse.move(...rest)
-    await expect(overlay.page.getByRole('tooltip')).toBeHidden()
-    const clip = await Clip.start(overlay.page, 'clip-price-check', rest, around(seen, 1240))
-    await clip.hold(700)
-    for (const i of order) {
+    for (const [n, i] of [0, 2, 5, 3].entries()) {
       const rb = (await rows.nth(i).boundingBox())!
       await clip.moveTo(rb.x + rb.width * 0.32, rb.y + rb.height / 2, 420)
-      await expect(overlay.page.getByRole('tooltip')).toBeVisible()
+      await expect(page.getByRole('tooltip')).toBeVisible()
+      if (n === 0) await clip.poster()
       await clip.hold(1500)
     }
-    await clip.moveTo(...rest, 600)
-    await clip.hold(500)
+    await clip.moveTo(...rest, 700)
+    await clip.hold(700)
     await clip.save()
   })
 })

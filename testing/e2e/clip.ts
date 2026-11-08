@@ -1,7 +1,8 @@
 // Short looping clips for the landing page: a test drives the overlay through
 // a Clip, which takes a frame of its camera's part of the page after every
-// step, then encodes the frames with ffmpeg into docs/public/clips/<name>.mp4, .webm and a .webp
-// poster. The clip tests are at the end of landing-highlights.spec.ts.
+// step, then encodes the frames with ffmpeg into docs/public/clips/<name>.mp4
+// and .webm, with a still (see `poster`) as docs/public/shots/<name>.webp. The clip
+// tests are at the end of landing-highlights.spec.ts.
 //
 // Frames are screenshots rendered at the clip's 1920x1080 (the screencast API
 // only sends CSS pixels, which is blurry once cropped). A screenshot takes tens of
@@ -19,6 +20,9 @@ import { fileURLToPath } from 'url'
 import type { CDPSession, Page } from '@playwright/test'
 
 export const CLIPS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/clips')
+// The first frame goes with the stills, so the site makes its phone crop and
+// thumbnail like any shot's (docs/scripts/phone-shots.mjs).
+const SHOTS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/public/shots')
 
 export interface Rect { x: number, y: number, width: number, height: number }
 
@@ -41,6 +45,7 @@ export class Clip {
   // The part of the page the clip shows, eased toward `aim` a little each frame.
   private camera: Rect = { x: 0, y: 0, width: 1920, height: 1080 }
   private aim: Rect = this.camera
+  private posterFrame = 0
 
   private constructor (readonly page: Page, readonly name: string, private cdp: CDPSession, at: [number, number]) {
     this.dir = fs.mkdtempSync(path.join(os.tmpdir(), `woke-clip-${name}-`))
@@ -153,6 +158,13 @@ export class Clip {
     await this.page.evaluate(() => { document.getElementById('clip-keys')!.style.display = 'none' })
   }
 
+  // Makes the frame on show now the still: the clip's picture before it
+  // plays, in the picture strip, and for visitors who turned motion off.
+  async poster () {
+    await this.frame()
+    this.posterFrame = this.frames.length - 1
+  }
+
   // Types into the focused box, a key every `perKey` ms of clip time, with
   // the page's real response caught by a short hold after each key.
   async type (text: string, perKey = 110) {
@@ -162,7 +174,7 @@ export class Clip {
     }
   }
 
-  // Encodes the frames (already at the clip's size) to MP4, WebM and a poster.
+  // Encodes the frames (already at the clip's size) to MP4 and WebM, and the still.
   async save () {
     if (this.frames.length < 2) throw new Error(`Clip ${this.name} has ${this.frames.length} frames`)
     const lines: string[] = []
@@ -182,9 +194,7 @@ export class Clip {
     const mp4 = path.join(CLIPS, `${this.name}.mp4`)
     run([...input, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4])
     run([...input, '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2', path.join(CLIPS, `${this.name}.webm`)])
-    // The first frame as the poster: what shows before the clip plays, and
-    // instead of it with reduced motion.
-    run(['-i', mp4, '-frames:v', '1', '-c:v', 'libwebp', '-quality', '86', path.join(CLIPS, `${this.name}.webp`)])
+    run(['-i', this.frames[this.posterFrame].file, '-vf', `scale=${OUT_WIDTH}:${OUT_WIDTH * 9 / 16}:flags=lanczos`, '-c:v', 'libwebp', '-quality', '86', path.join(SHOTS, `${this.name}.webp`)])
     const seconds = this.frames.reduce((s, f) => s + f.seconds, 0)
     fs.rmSync(this.dir, { recursive: true, force: true })
     return { seconds, frames: this.frames.length }

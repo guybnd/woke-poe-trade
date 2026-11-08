@@ -4,6 +4,7 @@
 //   shots/1280/<name>.webp   the whole shot at 1280px wide, for most screens
 //   shots/phone/<name>.webp  a 4:5 crop on the slide's `focus` (content.js) at
 //                            720x900, so a phone shows the window, not a dot
+//   shots/thumb/<name>.webp  the whole shot at 320px wide, for the picture strip
 // A copy is remade when its shot or its focus changes.
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -16,8 +17,9 @@ const MANIFEST = fileURLToPath(new URL('../.vitepress/cache/phone-shots.json', i
 
 export const PHONE = { width: 720, height: 900 }
 const WIDE = 1280
+const THUMB = 320
 // Bump when the way copies are made changes, so old ones are remade.
-const RECIPE = 2
+const RECIPE = 3
 
 // The slide's focus, [x, y, width] as if the shot were 2560x1440 (some are
 // smaller, all 16:9), as a 4:5 box inside the shot. A slide without one gets
@@ -50,6 +52,7 @@ export async function makePhoneShots () {
   mkdirSync(fileURLToPath(new URL('../.vitepress/cache/', import.meta.url)), { recursive: true })
   mkdirSync(`${SHOTS}1280`, { recursive: true })
   mkdirSync(`${SHOTS}phone`, { recursive: true })
+  mkdirSync(`${SHOTS}thumb`, { recursive: true })
   const jobs = []
   for (const file of readdirSync(SHOTS)) {
     if (!file.endsWith('.webp')) continue
@@ -59,10 +62,12 @@ export async function makePhoneShots () {
     next[name] = key
     const wide = `${SHOTS}1280/${file}`
     const phone = `${SHOTS}phone/${file}`
-    if (made[name] === key && existsSync(wide) && (!focus.has(name) || existsSync(phone))) continue
+    const small = `${SHOTS}thumb/${file}`
+    if (made[name] === key && existsSync(wide) && existsSync(small) && (!focus.has(name) || existsSync(phone))) continue
     jobs.push((async () => {
       const meta = await sharp(src).metadata()
       await sharp(src).resize({ width: Math.min(WIDE, meta.width) }).webp({ quality: 82 }).toFile(wide)
+      await sharp(src).resize({ width: THUMB }).webp({ quality: 78 }).toFile(small)
       if (focus.has(name)) {
         await sharp(src).extract(focusBox(focus.get(name), meta)).resize(PHONE.width, PHONE.height).webp({ quality: 84 }).toFile(phone)
       }
@@ -70,5 +75,5 @@ export async function makePhoneShots () {
   }
   await Promise.all(jobs)
   writeFileSync(MANIFEST, JSON.stringify(next, null, 1))
-  if (jobs.length) console.log(`landing: made phone and 1280px copies of ${jobs.length} shots`)
+  if (jobs.length) console.log(`landing: made phone, 1280px and thumbnail copies of ${jobs.length} shots`)
 }

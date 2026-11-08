@@ -1,7 +1,8 @@
 // Checks the built site (npx vitepress build first) at phone and desktop sizes:
 // nothing wider than the screen, thumb-sized plates, phones get the crops and
-// desktops the 1280px copies, and swiping, "Whole screen" and the "?" cards
-// work. Run from docs/: node scripts/check-phone.mjs
+// desktops the 1280px copies, the picture strip loads and picks slides, the
+// clip on show plays (and none load with reduced motion), and swiping, "Whole
+// screen" and the "?" cards work. Run from docs/: node scripts/check-phone.mjs
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
@@ -53,6 +54,34 @@ try {
       else if (!p.w) fail(`${name}: ${p.src} did not load`)
     }
 
+    // The picture strip: every thumbnail loaded, and one picks its slide.
+    // (Ones scrolled out of a phone's strip wait until it is swiped to them.)
+    const thumbs = await page.$$eval('.strip img', imgs => imgs.map(i => {
+      const r = i.getBoundingClientRect()
+      const s = i.closest('.strip').getBoundingClientRect()
+      return { src: i.getAttribute('src'), w: i.naturalWidth, shown: r.right > s.left && r.left < s.right }
+    }))
+    const wantThumbs = HIGHLIGHTS.filter(h => h.slides.length > 1).reduce((n, h) => n + h.slides.length, 0)
+    if (thumbs.length !== wantThumbs) fail(`${name}: ${thumbs.length} thumbnails in the strips, want ${wantThumbs}`)
+    for (const t of thumbs) if (t.shown && !t.w) fail(`${name}: thumbnail ${t.src} did not load`)
+    await page.click('#market .strip .thumb:nth-child(2)')
+    if (await page.$eval('#market .plates [aria-pressed="true"]', b => b.textContent.trim()) !== HIGHLIGHTS.find(h => h.id === 'market').slides[1].label) {
+      fail(`${name}: the second thumbnail did not pick the second slide`)
+    }
+    await page.click('#market .strip .thumb:nth-child(1)')
+
+    // The first highlight's clip plays once it is on screen; clips elsewhere wait.
+    const clipped = HIGHLIGHTS.filter(h => h.slides[0].clip)
+    if (clipped.length) {
+      await page.$eval(`#${clipped[0].id}`, el => el.scrollIntoView({ block: 'center' }))
+      await page.waitForFunction((id) => {
+        const v = document.querySelector(`#${id} .stage video.on`)
+        return v && !v.paused && v.readyState >= 2
+      }, clipped[0].id, { timeout: 15_000 }).catch(() => fail(`${name}: the ${clipped[0].id} clip did not play`))
+      const playing = await page.$$eval('.stage video', vs => vs.filter(v => !v.paused).length)
+      if (playing > 1) fail(`${name}: ${playing} clips play at once`)
+    }
+
     if (phone) {
       const small = await page.$$eval('.plate', ps => ps.map(p => p.getBoundingClientRect().height).filter(h => h < 44))
       if (small.length) fail(`${name}: ${small.length} plates are under 44px tall`)
@@ -92,6 +121,16 @@ try {
     await ctx.close()
     console.log(`${name}: checked`)
   }
+  // Visitors who turned motion off get the stills, and no clip loads.
+  const still = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+  const page = await still.newPage()
+  const clipLoads = []
+  page.on('request', r => { if (r.url().includes('/clips/')) clipLoads.push(r.url()) })
+  await page.goto(SITE, { waitUntil: 'networkidle' })
+  if (await page.$$eval('.stage video', vs => vs.length)) fail('reduced motion: clips are on the page')
+  if (clipLoads.length) fail(`reduced motion: ${clipLoads.length} clips loaded`)
+  await still.close()
+  console.log('reduced motion: checked')
   await browser.close()
 } finally {
   server.kill()

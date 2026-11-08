@@ -1,7 +1,8 @@
 <script setup>
 // The landing page (index.md, layout: landing): the name, then one item tooltip
 // per highlight, built from the game's own frame art, with name plates to step
-// through its slides, then a plain list of everything else.
+// through its slides and a strip of their pictures under the shot, then a plain
+// list of everything else. A slide with a `clip` plays it over its still.
 import { reactive, ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { withBase } from 'vitepress'
 import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
@@ -13,6 +14,8 @@ const shot = (name) => withBase(`/shots/${name}.webp`)
 // crop on its `focus` that phones show.
 const sized = (name) => withBase(`/shots/1280/${name}.webp`)
 const phoneShot = (name) => withBase(`/shots/phone/${name}.webp`)
+const thumb = (name) => withBase(`/shots/thumb/${name}.webp`)
+const clipFile = (name, ext) => withBase(`/clips/${name}.${ext}`)
 
 const shown = reactive({})
 const current = (h) => shown[h.id] ?? 0
@@ -26,13 +29,36 @@ const folderKey = (h) => `${h.id}/${current(h)}`
 const slide = (h) => open(h).folder ? open(h).folder[innerAt(folderKey(h))] : open(h)
 // Every picture a highlight can show, folders included, for the stage.
 const pictures = (h) => h.slides.flatMap(s => s.folder ?? [s])
+// A plate's picture in the strip: a folder shows its open slide.
+const thumbOf = (h, i) => h.slides[i].folder ? h.slides[i].folder[innerAt(`${h.id}/${i}`)] : h.slides[i]
+
+// Clips: none in the page as built, and none for visitors who turned motion
+// off, who get the still. Only the clip on show in a highlight that is on
+// screen plays; it starts over each time its slide is picked.
+const motion = ref(false)
+const onScreen = new Set()
+let watcher = null
+function playClips () {
+  for (const v of document.querySelectorAll('.landing .stage video')) {
+    const want = v.classList.contains('on') && onScreen.has(v.closest('section')?.id)
+    if (want && v.paused) v.play().catch(() => {})
+    else if (!want && !v.paused) v.pause()
+  }
+}
+// On a phone the clip fills the 4:5 crop, centred where the still's crop is.
+const clipAt = (s) => `${s.focus ? Math.round(Math.min(100, (s.focus[0] + s.focus[2] / 2) / 25.6)) : 50}% 50%`
 
 // Picking a plate, or a plate in the open folder (j).
 function go (h, i, j = -1) {
   shown[h.id] = i
   if (j >= 0) inner[`${h.id}/${i}`] = j
   tip.value = null
-  nextTick(() => reveal(h))
+  nextTick(() => {
+    reveal(h)
+    const v = document.querySelector(`#${h.id} .stage video.on`)
+    if (v) v.currentTime = 0
+    playClips()
+  })
 }
 // Every slide in order, folders opened, for swiping through them.
 const steps = (h) => h.slides.flatMap((s, i) => s.folder ? s.folder.map((_, j) => [i, j]) : [[i, -1]])
@@ -76,10 +102,21 @@ const onKey = (e) => { if (e.key === 'Escape') tip.value = null }
 onMounted(() => {
   document.addEventListener('pointerdown', closeTip)
   document.addEventListener('keydown', onKey)
+  motion.value = !matchMedia('(prefers-reduced-motion: reduce)').matches
+  watcher = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) onScreen.add(e.target.id)
+      else onScreen.delete(e.target.id)
+    }
+    playClips()
+  }, { threshold: 0.35 })
+  for (const el of document.querySelectorAll('.landing section.highlight[id]')) watcher.observe(el)
+  nextTick(playClips)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', closeTip)
   document.removeEventListener('keydown', onKey)
+  watcher?.disconnect()
 })
 
 // Phones show a crop: "Whole screen" opens the full shot over the page.
@@ -112,7 +149,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 
     <main>
       <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
-        <div class="item" :class="{ 'with-tray': open(h).folder }">
+        <div class="item" :class="{ 'with-tray': open(h).folder, 'with-strip': h.slides.length > 1 }">
           <div class="head">
             <i aria-hidden="true"></i>
             <div>
@@ -141,14 +178,27 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
           <div class="sep" aria-hidden="true"></div>
           <p class="say" aria-live="polite">{{ slide(h).text }}<button v-if="slide(h).more" type="button" class="say-more" :class="{ open: tip === h.id }" :aria-label="slide(h).more" :aria-expanded="tip === h.id" @click.stop="tip = tip === h.id ? null : h.id">?<span class="say-card" aria-hidden="true">{{ slide(h).more }}</span></button></p>
           <div class="stage" @touchstart.passive="touchStart" @touchend.passive="touchEnd(h, $event)">
-            <picture v-for="s in pictures(h)" :key="s.shot" :class="{ on: s === slide(h) }" :aria-hidden="s !== slide(h)">
-              <source media="(max-width: 600px)" :srcset="phoneShot(s.shot)" width="720" height="900">
-              <img :src="sized(s.shot)" :srcset="`${sized(s.shot)} 1280w, ${shot(s.shot)} 2560w`"
-                sizes="(max-width: 1312px) calc(100vw - 34px), 1280px" :alt="s.alt"
-                width="2560" height="1440" loading="lazy">
-            </picture>
+            <template v-for="s in pictures(h)" :key="s.shot">
+              <picture :class="{ on: s === slide(h) }" :aria-hidden="s !== slide(h)">
+                <source media="(max-width: 600px)" :srcset="phoneShot(s.shot)" width="720" height="900">
+                <img :src="sized(s.shot)" :srcset="`${sized(s.shot)} 1280w, ${shot(s.shot)} 2560w`"
+                  sizes="(max-width: 1312px) calc(100vw - 34px), 1280px" :alt="s.alt"
+                  width="2560" height="1440" loading="lazy">
+              </picture>
+              <video v-if="motion && s.clip" :class="{ on: s === slide(h) }" :style="{ objectPosition: clipAt(s) }"
+                muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true">
+                <source :src="clipFile(s.clip, 'webm')" type="video/webm">
+                <source :src="clipFile(s.clip, 'mp4')" type="video/mp4">
+              </video>
+            </template>
             <button type="button" class="whole" @click="view(slide(h))">
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" /></svg>Whole screen
+            </button>
+          </div>
+          <div v-if="h.slides.length > 1" class="strip" role="group" :aria-label="`${h.name} pictures`">
+            <button v-for="(s, i) in h.slides" :key="s.label" type="button" class="thumb"
+              :class="{ clip: thumbOf(h, i).clip }" :aria-pressed="i === current(h)" :aria-label="s.label" :title="s.label" @click="go(h, i)">
+              <img :src="thumb(thumbOf(h, i).shot)" alt="" width="320" height="180" loading="lazy">
             </button>
           </div>
         </div>
@@ -279,7 +329,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
    well under its real size, so it stays sharp. */
 .item {
   --chrome: 180px;
-  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px))));
+  --h: min(720px, max(280px, calc(100vh - var(--chrome) - var(--tray, 0px) - var(--strip, 0px))));
   display: flex;
   flex-direction: column;
   width: min(calc(var(--h) * 16 / 9), 100%);
@@ -299,6 +349,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 /* It wraps to two rows here. */
 @media (max-width: 1000px) { .item.with-tray { --tray: 78px; } }
 .item.wide { width: min(1280px, 100%); }
+/* The strip of pictures under the shot. */
+.item.with-strip { --strip: 80px; }
 
 .head { display: flex; flex: none; height: 54px; }
 .head i { flex: none; width: 44px; background: no-repeat; }
@@ -356,6 +408,20 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-top: 1px solid #3a2412; background: #000; }
 .stage picture { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
 .stage picture.on { opacity: 1; pointer-events: auto; }
+.stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
+.stage video.on { opacity: 1; }
+
+/* The strip: every slide's picture under the shot, as the plates above are
+   its names, so it shows there is more to see. A clip's has a play mark. */
+.strip { display: flex; flex: none; gap: 6px; padding: 7px 8px; overflow-x: auto; scrollbar-width: none; border-top: 1px solid #3a2412; background: #000; }
+.strip::-webkit-scrollbar { display: none; }
+.strip > :first-child { margin-left: auto; }
+.strip > :last-child { margin-right: auto; }
+.thumb { position: relative; flex: 0 1 116px; min-width: 76px; aspect-ratio: 16 / 9; padding: 0; border: 1px solid #3a2412; background: #000; opacity: 0.55; cursor: pointer; transition: opacity 150ms ease; }
+.thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.thumb:hover { opacity: 0.85; }
+.thumb[aria-pressed='true'] { opacity: 1; border-color: var(--unique-on); box-shadow: 0 0 0 1px var(--unique-on); }
+.thumb.clip::after { content: ''; position: absolute; right: 5px; bottom: 5px; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent #fff; filter: drop-shadow(0 0 2px #000); }
 .stage img { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* Phones only: the crop's way back to the whole shot. */
 .whole { display: none; position: absolute; right: 8px; bottom: 8px; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; background: rgba(7, 6, 5, 0.85); border: 1px solid var(--unique); color: var(--text); font: 15px var(--caps); cursor: pointer; }
@@ -419,6 +485,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
   .plates.sub { margin: 4px 8px 2px; padding: 5px 8px 4px; }
   /* The picture: the crop on the window, swiped sideways for the next slide. */
   .stage { aspect-ratio: 4 / 5; touch-action: pan-y pinch-zoom; }
+  .strip { mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 24px), transparent); }
+  .thumb { flex: none; width: 92px; }
   .whole { display: flex; }
   .foot-links a { padding: 10px 0; }
 }
@@ -427,6 +495,6 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
   .phone-note { display: block; color: var(--text); font-size: 16px; text-shadow: 0 1px 8px #000; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .stage picture { transition: none; }
+  .stage picture, .thumb { transition: none; }
 }
 </style>
