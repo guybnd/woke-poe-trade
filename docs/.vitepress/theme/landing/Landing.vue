@@ -149,8 +149,8 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <p class="lead">trade macro with extra chromosomes</p>
         <p class="facts">An overlay for Path of Exile 1. Free, for Windows 10 and up.</p>
         <p class="actions">
-          <a class="btn" :href="DOWNLOAD">Download for Windows</a>
-          <a class="btn btn-quiet" :href="REPO">View on GitHub</a>
+          <a class="btn" :href="DOWNLOAD">Download on GitHub</a>
+          <a class="btn btn-quiet" :href="REPO">Open source on GitHub</a>
         </p>
         <p class="phone-note">On a phone? Open this page on your PC to install.</p>
       </div>
@@ -227,7 +227,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
           </ul>
           <div class="sep" aria-hidden="true"></div>
           <p class="end">Switch off any tool and it doesn't load, take hotkeys or poll.</p>
-          <p class="end"><a class="btn" :href="DOWNLOAD">Download for Windows</a></p>
+          <p class="end"><a class="btn" :href="DOWNLOAD">Download on GitHub</a></p>
           <p class="end phone-note">On a phone? Open this page on your PC to install.</p>
         </div>
       </section>
