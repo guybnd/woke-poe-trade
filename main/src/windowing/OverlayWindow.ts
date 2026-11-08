@@ -4,6 +4,7 @@ import type { ServerEvents } from '../server'
 import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from './GameWindow'
 import { appIconFile } from '../woke/app-icon'
+import { openWebLink } from '../woke/web-guard'
 
 export class OverlayWindow {
   public isInteractable = false
@@ -76,7 +77,7 @@ export class OverlayWindow {
     })
 
     this.window.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
+      openWebLink((url) => shell.openExternal(url), details.url)
       return { action: 'deny' }
     })
   }

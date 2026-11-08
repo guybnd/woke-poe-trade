@@ -2,7 +2,7 @@
 
 // woke: must stay the first import (pins the data folder, migrates old data).
 import './woke/user-data'
-import { app, powerMonitor } from 'electron'
+import { app, powerMonitor, session, shell } from 'electron'
 import { uIOhook } from 'uiohook-napi'
 import os from 'node:os'
 import { startServer, eventPipe, httpRoutes, configFlushed } from './server'
@@ -23,6 +23,7 @@ import { startCrashReporting, attachCrashLogger } from './woke/crash-reports'
 import { initSetup, maybeOpenSetup, openSetupWindow, refreshSetupIcon, savedAppIcon } from './woke/setup'
 import { setAppIcon } from './woke/app-icon'
 import { saveBeforeQuit } from './woke/quit-flush'
+import { guardWebContents } from './woke/web-guard'
 
 if (!app.requestSingleInstanceLock()) {
   app.exit()
@@ -44,6 +45,8 @@ app.on('second-instance', () => { tray?.notifyAlreadyRunning() })
 
 app.on('ready', async () => {
   perfMark('app ready')
+  // woke: before any window: webviews locked down, links only to the browser.
+  guardWebContents(app, session.defaultSession, (url) => shell.openExternal(url))
   setAppIcon(savedAppIcon())
   const appTray = new AppTray(eventPipe)
   tray = appTray

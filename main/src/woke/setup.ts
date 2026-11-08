@@ -12,6 +12,7 @@ import { findGameLogs } from './game-log-finder'
 import { migration } from './user-data'
 import { registerWokeHandler } from './index'
 import { dismissCrashes, noteRendererError, openCrashFolder, openReport, pendingCrash } from './crash-reports'
+import { openWebLink } from './web-guard'
 
 let win: BrowserWindow | null = null
 let port = 0
@@ -45,7 +46,7 @@ export function openSetupWindow () {
   })
   win.setMenu(null)
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    openWebLink((url) => shell.openExternal(url), details.url)
     return { action: 'deny' }
   })
   // Keep our title, not the page's.

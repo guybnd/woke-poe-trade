@@ -240,7 +240,36 @@ export function dismissCrashes () {
   }
 }
 
-export function issueUrl (r: CrashReport, context?: string): string {
+// A public issue must not carry the player's name: their Windows user folder
+// shows up in paths, and the user name on its own in some errors.
+export interface ScrubNames { home?: string, user?: string }
+
+function escapeRe (s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+export function scrubText (text: string, names: ScrubNames = localNames()): string {
+  let out = text
+  const home = names.home?.replace(/[\\/]+$/, '')
+  if (home && home.length > 3) {
+    // Either slash, any case (Windows paths).
+    const parts = home.split(/[\\/]+/).map(escapeRe)
+    out = out.replace(new RegExp(parts.join('[\\\\/]+'), 'gi'), '~')
+  }
+  // Any other user folder, e.g. from a path the game reported.
+  out = out.replace(/([A-Za-z]:[\\/]+Users[\\/]+)[^\\/\s"'<>]+/gi, '$1<user>')
+  out = out.replace(/(\/(?:home|Users)\/)[^/\s"'<>]+/g, '$1<user>')
+  const user = names.user
+  if (user && user.length >= 3) out = out.replace(new RegExp(`\\b${escapeRe(user)}\\b`, 'gi'), '<user>')
+  return out
+}
+
+function localNames (): ScrubNames {
+  let user: string | undefined
+  try { user = os.userInfo().username } catch {}
+  return { home: os.homedir(), user }
+}
+
+export function issueUrl (r: CrashReport, context?: string, names: ScrubNames = localNames()): string {
+  const scrub = (text: string) => scrubText(text, names)
   const when = new Date(r.at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
   const head = [
     r.kind === 'manual' ? '**What went wrong?**' : '**What were you doing when it happened?**',
@@ -250,21 +279,21 @@ export function issueUrl (r: CrashReport, context?: string): string {
     '**Details** (added by the app)',
     `- Version: ${r.version} (Electron ${r.electron}, ${r.os})`,
     `- When: ${when}`,
-    r.kind === 'manual' ? null : `- What happened: ${r.title}`,
-    context ? `- ${context}` : null
+    r.kind === 'manual' ? null : `- What happened: ${scrub(r.title)}`,
+    context ? `- ${scrub(context)}` : null
   ].filter(l => l != null).join('\n')
 
   const block = (label: string, text: string) => text.trim()
     ? `\n\n<details><summary>${label}</summary>\n\n\`\`\`\n${text.trim()}\n\`\`\`\n</details>`
     : ''
 
-  const title = r.kind === 'manual' ? 'Problem report' : `Crash: ${r.title}`
-  let logLines = r.log.split('\n')
+  const title = r.kind === 'manual' ? 'Problem report' : `Crash: ${scrub(r.title)}`
+  let logLines = scrub(r.log).split('\n')
   // GitHub refuses very long URLs; drop the oldest log lines until it fits.
   for (;;) {
     const body = head +
-      block('Error', r.kind === 'manual' ? '' : r.detail.slice(0, 2500)) +
-      block('Overlay errors', r.rendererErrors.join('\n\n').slice(0, 1500)) +
+      block('Error', r.kind === 'manual' ? '' : scrub(r.detail).slice(0, 2500)) +
+      block('Overlay errors', scrub(r.rendererErrors.join('\n\n')).slice(0, 1500)) +
       block('Log', logLines.join('\n'))
     const url = `${ISSUES_URL}?${new URLSearchParams({ title, body, labels: r.kind === 'manual' ? 'bug' : 'crash' }).toString()}`
     // Never cut inside a %XX escape: GitHub rejects a malformed URL.
