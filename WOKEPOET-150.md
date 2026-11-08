@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-150
 title: A. Filter editor accepts the item tier condition
-status: Ready
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -44,6 +44,39 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-08T10:03:03.028Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 5c41c62. Item tier conditions are written unquoted and
+      round-trip, with a test. It's live in the dev build. No docs needed: no
+      user-facing text changed.
+    completionComment: true
+    date: '2026-11-08T10:41:21.184Z'
+    id: c-2026-11-08t10-41-21-184z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-08T10:41:21.437Z'
 needsAction: null
+baselineCommit: 4b4955af5e8527b5b62ac15c25b895bfe1dca024
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/266'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/loot-filter/parse.ts
+    additions: 1
+    deletions: 1
+  - file: renderer/src/web/woke/scarab-flip/WidgetScarabFlip.vue
+    additions: 4
+    deletions: 3
+  - file: renderer/src/web/woke/scarab-flip/families.ts
+    additions: 15
+    deletions: 0
+  - file: renderer/test/woke/filter-parse.test.ts
+    additions: 8
+    deletions: 0
+  - file: renderer/test/woke/flip-families.test.ts
+    additions: 23
+    deletions: 1
 ---
 Add the new tier condition (likely `UnidentifiedItemTier`, confirm from 3.30 patch notes / NeverSink 3.30) to `loot-filter/parse.ts`, `validate.ts`, `match.ts` so NeverSink 3.30 filters load without "unknown condition" warnings. Matching returns unknown until the parser knows an item's tier (D). Before launch.
