@@ -1,6 +1,6 @@
 ---
 id: WOKEPOET-149
-title: Prepare toolkit for 3.30 Covens of Umbra
+title: 'Epic: 3.30 Covens of Umbra readiness'
 status: Grooming
 priority: High
 effort: None
@@ -36,8 +36,22 @@ history:
       name + scarab views behind a 3.30 flag), C (mocks for the tier badge in
       filter rules and price check). D-H wait for real patch notes / day-one
       item copies.
+  - type: activity
+    user: Agent
+    date: '2026-11-08T09:53:41.222Z'
+    comment: Updated title.
+    id: a-2026-11-08t09-53-41-222z
 swimlane: require-input
 needsAction: null
+subtasks:
+  - WOKEPOET-150
+  - WOKEPOET-151
+  - WOKEPOET-152
+  - WOKEPOET-153
+  - WOKEPOET-154
+  - WOKEPOET-155
+  - WOKEPOET-156
+  - WOKEPOET-157
 ---
 ## What's coming (3.30 Covens of Umbra, launches Fri 13 Nov 2026 19:00 UTC; Allflame ends 9 Nov)
 Sources: GGG ExileCon announcement (forum thread 4012710, thin on detail), Maxroll reveal summary, Output Lag recaps. **3.30 patch notes are not out yet** (forum patch-notes list tops at 3.29.3c on 8 Nov); expect them ~11-12 Nov.
