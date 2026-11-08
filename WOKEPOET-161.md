@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-161
 title: Stacked deck tracker
-status: In Progress
+status: Ready
 priority: Medium
 effort: L
 assignee: unassigned
@@ -34,6 +34,27 @@ history:
     date: '2026-11-08T16:36:31.995Z'
     comment: Updated implementation link.
     id: a-2026-11-08t16-36-31-995z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/276 ready to merge once
+      GitHub CI is green (it was still running at handoff). Built: A1 dock icon
+      (shows only while a session runs, glows while opening, New session, opens
+      the window), A3+C2 big-hit popup with an optional chime, B1 card table,
+      result, without-top-card result and running chart, Stacked decks tab in
+      Session analytics, C1 open-or-sell chip on price check, D1 own average per
+      deck, D2 Prohibited Library 3.29 weights bundled with credit, C3 expected
+      value and luck percentile. Adversarial review found 9 issues, all fixed.
+      Local: tsc, lint, vitest 2782 pass, stacked-decks e2e 3/3. The only
+      full-suite failure (tab-rail) also fails on master.
+    date: '2026-11-08T16:49:02.353Z'
+    completionComment: true
+    id: c-2026-11-08t16-49-02-353z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-08T16:49:02.353Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/276'
 ---
