@@ -80,7 +80,7 @@ import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
-import { dockIconEl, showWithOverlay } from '../dock/dock'
+import { dockIconEl, showWithOverlay, tickWhile } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { followGameLog } from '../shared/game-log'
 import { lineTime } from '../campaign/log-tail'
@@ -166,14 +166,17 @@ const opening = computed(() => !!session.value && now.value - session.value.last
 // still belong to this session.
 let caughtUp = false
 const mountedAt = Date.now()
-const caughtUpTimer = setTimeout(() => { caughtUp = true }, 20_000)
-const tick = setInterval(() => {
+// Or 20 s after start-up, if no log was read (no timer: the tick checks).
+const isCaughtUp = () => caughtUp || Date.now() - mountedAt >= 20_000
+// Ticks only while there's a session or an ended one still to save, so
+// nothing wakes up while you play without opening decks.
+const stopTick = tickWhile(() => !!props.config.session || !!props.config.ended?.length, () => {
   now.value = Date.now()
   const s = props.config.session
-  if (caughtUp && s && isOver(s, now.value)) finish()
+  if (isCaughtUp() && s && isOver(s, now.value)) finish()
   saveEnded()
 }, 5_000)
-onUnmounted(() => { clearInterval(tick); clearTimeout(caughtUpTimer) })
+onUnmounted(stopTick)
 
 // Ends the session. It goes into the history now, or once prices and the
 // league are known (a session can end during the start-up log read).
