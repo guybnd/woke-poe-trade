@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<{
   gameClick?: () => void
   cardWidth?: string
   progress?: number | null
+  glow?: boolean
   pinnable?: boolean
   readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>
   menu?: DockMenuAction[]
@@ -41,6 +42,7 @@ const props = withDefaults(defineProps<{
   gameClick: undefined,
   cardWidth: undefined,
   progress: null,
+  glow: false,
   pinnable: false,
   readouts: undefined,
   menu: undefined,

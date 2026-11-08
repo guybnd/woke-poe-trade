@@ -34,3 +34,17 @@ describe('session store', () => {
     expect(text.slice(1).split('\r\n')).toEqual(['map,drops', 'Maelström,1x Doppelgänger Guise'])
   })
 })
+
+describe('deck session store', () => {
+  it('keeps Stacked Deck sessions in their own folder, apart from the farming sessions', async () => {
+    const deck = { id: 'd1', league: 'Allflame', decks: 2, draws: ['Rain of Chaos', 'The Doctor'] }
+    await sessionHandlers['deck-sessions-save']({ session: deck })
+    const decksDir = path.join(process.env.WOKE_FAKE_USER_DATA!, 'woke-deck-sessions')
+    expect(fs.existsSync(path.join(decksDir, 'Allflame', 'd1.json'))).toBe(true)
+    expect(await sessionHandlers['deck-sessions-list']({})).toEqual([deck])
+    expect((await sessionHandlers['sessions-list']({}) as Array<{ id: string }>).map(s => s.id)).not.toContain('d1')
+    await sessionHandlers['deck-sessions-delete']({ id: 'd1' })
+    expect(fs.existsSync(path.join(decksDir, 'Allflame', 'd1.json'))).toBe(false)
+    expect(await sessionHandlers['deck-sessions-list']({})).toEqual([])
+  })
+})

@@ -10,6 +10,7 @@ import { LOOT_FILTER_TYPE, seedLootFilterWidget } from './woke/loot-filter/widge
 import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './woke/death-recap/widget'
+import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './woke/stacked-decks/deck'
 import { SEARCH_TYPE, initSearchWidget, moveSearchKey } from './woke/search/widget'
 import type { SearchWidget } from './woke/search/widget'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
@@ -493,6 +494,12 @@ function upgradeConfig (_config: Config): Config {
     // New to this config: stays off for anyone who has Map mods off, like "Price check only".
     const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
     if (!isModuleOn(woke, 'map-mods')) ensureWokeConfig(woke).woke.off.push('death-recap')
+  }
+  if (!config.widgets.some(w => w.wmType === STACKED_DECKS_TYPE)) {
+    config.widgets.push(initStackedDecksWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+    // New to this config: stays off for anyone who has Farming off, like "Price check only".
+    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
+    if (woke.woke && !isModuleOn(woke, 'farming')) woke.woke.off.push('stacked-decks')
   }
   // woke: the search hotkey. A key you already use elsewhere isn't taken over.
   {

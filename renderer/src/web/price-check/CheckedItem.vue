@@ -15,6 +15,7 @@
       </template>
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
+      <woke-deck-verdict-chip :item="item" />
     </filter-name>
     <woke-map-strip :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
@@ -93,6 +94,7 @@ import WokeDustVerdictChip from '@/web/woke/disenchant/DustVerdictChip.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
 import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
+import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
@@ -115,6 +117,7 @@ export default defineComponent({
     WokeRollPresets,
     WokeBuildFitChip,
     WokeFilterVerdictChip,
+    WokeDeckVerdictChip,
     PricePrediction,
     TradeListing,
     TradeBulk,

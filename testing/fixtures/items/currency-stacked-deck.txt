@@ -1,0 +1,8 @@
+Item Class: Stackable Currency
+Rarity: Currency
+Stacked Deck
+--------
+Stack Size: 7/10
+--------
+Right click to draw a random Divination Card from the deck.
+Shift click to unstack.

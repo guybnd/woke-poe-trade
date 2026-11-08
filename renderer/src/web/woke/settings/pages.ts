@@ -287,6 +287,17 @@ export const PAGES: SettingsPage[] = [
     find: ['Drop counter', 'Tally', 'Hover card', 'Maps run']
   },
   {
+    id: 'stacked-decks',
+    name: 'Stacked decks',
+    group: 'modules',
+    sub: 'Maps & atlas',
+    icon: modulePageIcon('stacked-decks'),
+    description: 'Cards from the Stacked Decks you open: profit, big hits, luck, and whether to open or sell them.',
+    modules: ['stacked-decks'],
+    widgets: ['woke-stacked-decks'],
+    find: ['Stacked Deck', 'Divination card', 'Big hit', 'Open or sell', 'Prohibited Library']
+  },
+  {
     id: 'mechanics',
     name: 'League mechanics',
     group: 'modules',

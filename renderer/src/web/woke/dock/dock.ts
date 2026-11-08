@@ -42,6 +42,8 @@ export interface DockItemProps {
   readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>
   // A ring around the icon, 0 to 1.
   progress?: number | null
+  // A soft pulse around the icon while something is happening.
+  glow?: boolean
   // With the overlay open, a click keeps the card open until the next click.
   pinnable?: boolean
   // This icon's own rows in its right-click menu.
@@ -73,7 +75,7 @@ export interface DockEntry {
 
 // Fixed order, so icons don't jump around as they come and go.
 export const DOCK_ORDER = [
-  'toolkit', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'farming', 'drop-counter', 'boss-runs', 'death-recap',
+  'toolkit', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'farming', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap',
   'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'league-invest', 'scarab-flip', 'wealthy-exile', 'loot-filter'
 ]
 
@@ -93,6 +95,7 @@ export const DOCK_NAMES: Record<string, string> = {
   'death-recap': 'Death recap',
   'farming': 'Farming',
   'drop-counter': 'Drop counter',
+  'stacked-decks': 'Stacked decks',
   'boss-runs': 'Boss runs',
   'map-scan': 'Map scan',
   'essence-scan': 'Essence scan',

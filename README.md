@@ -80,6 +80,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
 | Economy | Farming | Session profit per hour |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |
+| Economy | Stacked decks | Cards from the Stacked Decks you open: profit, big hits and luck |
 | Economy | Session analytics | Profit per map, strategy and hour over time |
 | Economy | Boss runs | Profit per boss kill |
 | Mapping | Map mods | Danger strip on price check and map regex |
@@ -138,6 +139,6 @@ cd testing && WOKE_DEMO_RECORD=1 npx playwright test demo-record
 
 ## Credits
 
-Built on [Awakened PoE Trade](https://github.com/SnosMe/awakened-poe-trade) by SnosMe (MIT), which also uses [libuiohook](https://github.com/kwhat/libuiohook), [RePoE](https://github.com/brather1ng/RePoE), [poeprices.info](https://www.poeprices.info/) and [poe.ninja](https://poe.ninja/). Lab layouts come from [poelab](https://www.poelab.com/).
+Built on [Awakened PoE Trade](https://github.com/SnosMe/awakened-poe-trade) by SnosMe (MIT), which also uses [libuiohook](https://github.com/kwhat/libuiohook), [RePoE](https://github.com/brather1ng/RePoE), [poeprices.info](https://www.poeprices.info/) and [poe.ninja](https://poe.ninja/). Lab layouts come from [poelab](https://www.poelab.com/). Stacked Deck card weights are a snapshot of the [Prohibited Library](https://docs.google.com/spreadsheets/d/1PmGES_e1on6K7O5ghHuoorEjruAVb7dQ5m7PGrW7t80)'s community research, with thanks; the idea of a deck tracker comes from [Soothsayer](https://github.com/navali-creations/soothsayer), whose code isn't used.
 
 Not affiliated with or endorsed by Grinding Gear Games.
