@@ -226,9 +226,25 @@ jobs:
       working-directory: ./testing
     # The real Electron app (not the fake host): overlay page loads, <webview>
     # works, process count and memory. See testing/electron/smoke.mjs.
+    # Electron's zip comes from GitHub releases, which sometimes answers 504 for
+    # a while. Keep it between runs, and try a few times when it isn't kept yet.
+    - name: Cache Electron
+      uses: actions/cache@v4
+      with:
+        path: .electron-cache
+        key: electron-${{ runner.os }}-${{ hashFiles('main/package-lock.json') }}
+        restore-keys: electron-${{ runner.os }}-
     - name: Get Electron
-      run: node node_modules/electron/install.js
+      run: |
+        for try in 1 2 3 4; do
+          node node_modules/electron/install.js && exit 0
+          [ "$try" = 4 ] && exit 1
+          echo "Electron download failed (try $try), waiting $((try * 30)) s"
+          sleep $((try * 30))
+        done
       working-directory: ./main
+      env:
+        electron_config_cache: ${{ github.workspace }}/.electron-cache
     - name: Build main
       run: node build/script.mjs --prod
       working-directory: ./main
