@@ -11,13 +11,17 @@ on:
 
 permissions:
   contents: write
+  # Build provenance: a signed record, checkable by anyone, that the installer
+  # was built here from this tag (gh attestation verify <file> -R guybnd/woke-poe-trade).
+  id-token: write
+  attestations: write
 
 jobs:
   windows:
     runs-on: windows-2022
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-node@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
     - name: Check tag matches version
@@ -38,14 +42,37 @@ jobs:
     - run: npm run build
       working-directory: ./main
     # releaseType: draft in electron-builder.yml keeps the release unpublished.
+    # Code signing: electron-builder signs when a certificate is set in the repo
+    # secrets (WIN_CSC_LINK = base64 .pfx, WIN_CSC_KEY_PASSWORD) and builds
+    # unsigned, as before, when they're empty. See SECURITY.md.
     - run: npm run package -- --win -p always
       working-directory: ./main
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/upload-artifact@v7
+        CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+    - name: Checksums
+      shell: bash
+      working-directory: ./main/dist
+      run: |
+        sha256sum *.exe > SHA256SUMS.txt
+        cat SHA256SUMS.txt
+    - name: Build provenance
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+      with:
+        subject-path: main/dist/*.exe
+    # Next to the installers on the draft release, so players can check a download.
+    - name: Attach checksums to the release
+      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release upload "$GITHUB_REF_NAME" main/dist/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: windows-installer
         path: |
           main/dist/*.exe
           main/dist/latest.yml
+          main/dist/SHA256SUMS.txt
         retention-days: 14

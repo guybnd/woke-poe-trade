@@ -110,6 +110,17 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 
 Run Path of Exile in Windowed or Windowed Fullscreen. The [help pages](https://guybnd.github.io/woke-poe-trade/issues) cover the common problems.
 
+## Privacy and safety
+
+- **Nothing is sent to the developer.** No accounts, no analytics, no tracking. Crash reports stay on your PC; Report opens a GitHub issue you read and send yourself.
+- **Sites it uses, only when a tool needs them:** pathofexile.com (trade, your public profile for the challenge guide), poe.ninja and poeprices.info (prices), poelab, Wealthy Exile, the wiki, poedb, Craft of Exile, poe.how, pobb.in and pastebin (build imports), GitHub (updates, new item data, NeverSink filters and GGG's atlas tree). Switched-off tools make no requests.
+- **Keyboard and clipboard.** A keyboard hook listens for the hotkeys you set. A price check presses Ctrl+C once to copy the item; stash searches and chat commands are pasted when you press a key or click. One press, one action, as in Awakened PoE Trade. It never moves or clicks the mouse.
+- **Game files.** It never touches the game's install. It follows `Client.txt` for zones, trades and deaths, reads the PoB builds and loot filters in folders you pick, and writes only what you ask for: a loot filter you edit, a build you import. Screen reading (map and essence scans) works on screenshots that never leave your PC.
+- **Local only.** The overlay talks to the app through a server on 127.0.0.1 that refuses other web pages.
+- **Builds.** Installers are built by [GitHub Actions](.github/workflows/release.yml) from the tagged commit, with a `SHA256SUMS.txt` and [build provenance](https://github.com/guybnd/woke-poe-trade/attestations) (`gh attestation verify <file> -R guybnd/woke-poe-trade`). The app is not code-signed yet, so Windows shows a SmartScreen warning.
+
+To report a security problem, see [SECURITY.md](SECURITY.md).
+
 ## Development
 
 See [DEVELOPING.md](DEVELOPING.md) for running the app from source, and [testing/README.md](testing/README.md) for the tests, including the fake game every pull request runs against.

@@ -73,9 +73,9 @@ jobs:
         echo "landing=$landing" >> "$GITHUB_OUTPUT"
         echo "site=$site" >> "$GITHUB_OUTPUT"
     - if: steps.files.outputs.landing == 'true'
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - if: steps.files.outputs.landing == 'true'
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
         cache: npm
@@ -103,8 +103,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-node@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
         cache: npm
@@ -130,8 +130,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-node@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
         cache: npm
@@ -166,8 +166,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-node@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
         cache: npm
@@ -189,7 +189,7 @@ jobs:
     - run: npm ci
       working-directory: ./testing
     - name: Cache OCR files
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: testing/.cache/cv-ocr
         key: cv-ocr-v3.20.10007
@@ -199,7 +199,7 @@ jobs:
     # Ubuntu's mirrors sometimes crawl (8.5 minutes for 22 MB), so Chromium's system
     # packages are kept between runs. Any that changed are downloaded as usual.
     - name: Cache Chromium's system packages
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/apt-debs
         key: apt-debs-${{ runner.os }}-${{ hashFiles('testing/package-lock.json') }}
@@ -229,7 +229,7 @@ jobs:
     # Electron's zip comes from GitHub releases, which sometimes answers 504 for
     # a while. Keep it between runs, and try a few times when it isn't kept yet.
     - name: Cache Electron
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: .electron-cache
         key: electron-${{ runner.os }}-${{ hashFiles('main/package-lock.json') }}
@@ -253,7 +253,7 @@ jobs:
       working-directory: ./testing
     - name: Upload report (screenshots of every scenario)
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: fake-game-report
         path: |
