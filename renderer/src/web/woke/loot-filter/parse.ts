@@ -327,7 +327,7 @@ const BARE_KEYS = new Set([
   'Height', 'Width', 'LinkedSockets', 'Sockets', 'SocketGroup', 'CorruptedMods',
   'EnchantmentPassiveNum', 'MemoryStrands', 'Rarity', 'HasInfluence', 'BaseArmour',
   'BaseEnergyShield', 'BaseEvasion', 'BaseWard', 'BaseDefencePercentile',
-  'HasSearingExarchImplicit', 'HasEaterOfWorldsImplicit', 'ZanaMemory'
+  'HasSearingExarchImplicit', 'HasEaterOfWorldsImplicit', 'ZanaMemory', 'UnidentifiedItemTier', 'WaystoneTier'
 ])
 
 export function formatCondition (c: FilterCondition): string {

@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { DEFAULT_FLIP_SORT, buyList, flipModel, parseExchange, sortFlips, supplyLevel, upgradeRows } from '@/web/woke/scarab-flip/calc'
 import type { Quote } from '@/web/woke/scarab-flip/calc'
-import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, shortName, unpricedShare, weightForPercent, weightRows } from '@/web/woke/scarab-flip/families'
+import { FAMILIES, bestFlip, familyById, flipRecipe, harvestCost, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare, weightForPercent, weightRows } from '@/web/woke/scarab-flip/families'
 import type { Exchanges, WeightOverrides } from '@/web/woke/scarab-flip/families'
 import { CORRUPTION_ONLY, ESSENCE_TYPES } from '@/web/woke/essence-scan/essences'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -451,5 +451,27 @@ describe('estimated and your own weights', () => {
     const share = (rs: typeof after, n: string) => rs.find(r => r.name === n)!.percent!
     expect(share(after, 'Fine Delirium Orb') / share(after, 'Kalguuran Delirium Orb'))
       .toBeCloseTo(share(before, 'Fine Delirium Orb') / share(before, 'Kalguuran Delirium Orb'), 8)
+  })
+})
+
+describe('families poe.ninja prices', () => {
+  const item = (type: string, name: string): PriceItem => ({ type, name, variant: '', chaos: 1 })
+
+  it('drops the scarab tab when the league has no scarab prices (3.30)', () => {
+    const items = [item('DeliriumOrb', 'Fine Delirium Orb'), item('Oil', 'Golden Oil')]
+    const ids = pricedFamilies(items).map(f => f.id)
+    expect(ids).not.toContain('scarabs')
+    expect(ids).toContain('delirium')
+    expect(shownFamily('scarabs', pricedFamilies(items)).id).toBe(ids[0])
+  })
+
+  it('keeps every family before any prices arrive, or when none match', () => {
+    expect(pricedFamilies(null)).toBe(FAMILIES)
+    expect(pricedFamilies([item('Currency', 'Chaos Orb')])).toBe(FAMILIES)
+  })
+
+  it('keeps the picked family when it is priced', () => {
+    const items = [item('Scarab', 'Ambush Scarab'), item('Oil', 'Golden Oil')]
+    expect(shownFamily('oils', pricedFamilies(items)).id).toBe('oils')
   })
 })

@@ -176,6 +176,21 @@ export function familyById (id: string | undefined): FlipFamily {
   return FAMILIES.find(f => f.id === id) ?? FAMILIES[0]
 }
 
+// The families poe.ninja prices in this league. Scarabs leave the game in 3.30
+// and league items like Runegrafts come and go, so a family with no prices gets
+// no tab. With no prices at all yet, every family stays, so the panel can still
+// say what it is waiting for.
+export function pricedFamilies (items: PriceItem[] | null | undefined): FlipFamily[] {
+  if (!items?.length) return FAMILIES
+  const priced = FAMILIES.filter(f => items.some(i => i.type === f.ninjaType && f.match(i.name)))
+  return priced.length ? priced : FAMILIES
+}
+
+// The picked family, or the first priced one when the picked one has no prices.
+export function shownFamily (id: string | undefined, families: FlipFamily[]): FlipFamily {
+  return families.find(f => f.id === id) ?? families[0] ?? familyById(id)
+}
+
 // Chaos for one Harvest craft on one item, or null with no lifeforce price.
 export function harvestCost (method: FlipMethod, lifeforcePerItem: number, items: PriceItem[], currency: Map<string, Quote> | null): number | null {
   if (!method.lifeforce) return 0

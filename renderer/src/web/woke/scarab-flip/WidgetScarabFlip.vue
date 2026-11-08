@@ -13,7 +13,7 @@
     </DockItem>
     <WPanel :title="config.wmTitle || 'Flips'" :icon="panelIcon" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="34rem">
       <template #tabs>
-        <WTabs :model-value="family.id" :options="FAMILIES.map(f => ({ value: f.id, label: f.label }))"
+        <WTabs :model-value="family.id" :options="families.map(f => ({ value: f.id, label: f.label }))"
           @update:model-value="config.family = $event" />
       </template>
       <template #toolbar>
@@ -150,7 +150,7 @@ import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 import { DEFAULT_FLIP_SORT, JACKPOT_CHAOS, SUPPLY_HIGH, SUPPLY_MEDIUM, buyList, firstSortDir, isTraded, flipOdds, parseExchange, rareCheapList, sortFlips, supplyLevel } from './calc'
 import type { FlipRow, FlipSortKey, UpgradeRow, WeightSource } from './calc'
-import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, shortName, unpricedShare } from './families'
+import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
 import type { ScarabFlipWidget } from './widget'
@@ -243,7 +243,8 @@ async function fetchExchange (id: string, type: string) {
 watch([league, collector.revision], load, { immediate: true })
 
 const dockShow = computed(() => Boolean(snapshot.value) && (zone.kind === 'town' || zone.kind === 'hideout'))
-const family = computed(() => familyById(props.config.family))
+const families = computed(() => pricedFamilies(snapshot.value?.items))
+const family = computed(() => shownFamily(props.config.family, families.value))
 const method = computed(() => {
   const picked = props.config.methods?.[family.value.id]
   return family.value.methods.find(m => m.id === picked) ?? family.value.methods[0]

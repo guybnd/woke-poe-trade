@@ -133,6 +133,14 @@ describe('the save check', () => {
     expect(fix('Show\n\tNotAThing True\n', own)[0]).toMatch(/unknown condition/)
   })
 
+  it('writes an item tier rule the way a 3.30 filter spells it', () => {
+    const doc = parseFilter('Show\n\tRarity Rare\n\tUnidentifiedItemTier >= 4\n\tSetFontSize 40\n')
+    const b = doc.blocks[0]
+    b.dirty = true
+    expect(formatBlock(b)).toContain('\tUnidentifiedItemTier >= 4')
+    expect(validateFilter(doc)).toEqual([])
+  })
+
   it('a keyword from the source filter never blocks a save', () => {
     expect(fix('Show\n\tBrandNewLeagueThing True\n\tSetFontSize 40\n')).toEqual([])
   })
