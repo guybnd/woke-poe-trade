@@ -40,6 +40,16 @@ history:
       GitHub link: nothing broken on the site; need from Guy where the streamer
       clicked/saw it. Likely GitHub search hides the repo because it's a 0-star
       fork; fix is Guy's "Leave fork network" in repo settings.
+  - type: activity
+    user: Agent
+    date: '2026-11-08T10:55:08.625Z'
+    comment: >-
+      Guy: streamer opened the site from a chat link and clicked the GitHub
+      button. Headless click test of both repo links (header "View on GitHub",
+      footer "GitHub") from 5 entry URL variants, logged out: all land on the
+      repo page. Not reproducible; asked Guy for a VOD timestamp. Likely a
+      GitHub-side error page or the streamer's browser.
+    id: a-2026-11-08t10-55-08-625z
 swimlane: require-input
 needsAction: null
 ---
