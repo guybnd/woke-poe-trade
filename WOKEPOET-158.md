@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-158
 title: 'Landing: streamer feedback (GitHub link, hidden tabs, GIF slides)'
-status: Todo
+status: Done
 priority: None
 effort: L
 assignee: unassigned
@@ -116,8 +116,52 @@ history:
       camera/scale/cleanup). check-phone passes locally, CI green. Merge blocked
       on PC; asked the cloud merge step to squash-merge.
     id: a-2026-11-08t12-05-53-962z
+  - type: comment
+    user: Agent
+    comment: >-
+      Live on guybnd.github.io/woke-poe-trade via PR #268 (squash 836238c, Pages
+      deploy succeeded): six looping clips (price check on the whole screen), a
+      picture strip under each shot, new section order. GitHub link failure not
+      reproducible; likely a GitHub-side error page.
+    date: '2026-11-08T12:07:37.789Z'
+    completionComment: true
+    id: c-2026-11-08t12-07-37-789z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-08T12:07:37.789Z'
+  - type: comment
+    user: Agent
+    comment: Merged as 836238c and live on the site.
+    completionComment: true
+    date: '2026-11-08T12:07:41.614Z'
+    id: c-2026-11-08t12-07-41-614z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-08T12:07:41.844Z'
 swimlane: null
 needsAction: null
+baselineCommit: 4b4955af5e8527b5b62ac15c25b895bfe1dca024
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/268'
+diffSummary:
+  - file: renderer/src/web/woke/loot-filter/parse.ts
+    additions: 1
+    deletions: 1
+  - file: renderer/src/web/woke/scarab-flip/WidgetScarabFlip.vue
+    additions: 4
+    deletions: 3
+  - file: renderer/src/web/woke/scarab-flip/families.ts
+    additions: 15
+    deletions: 0
+  - file: renderer/test/woke/filter-parse.test.ts
+    additions: 8
+    deletions: 0
+  - file: renderer/test/woke/flip-families.test.ts
+    additions: 23
+    deletions: 1
 ---
 > **TL;DR** Replace the landing slides with scripted looping clips of the real overlay (MP4/WebM), add a picture strip under each shot while keeping the name plates as tabs, and reorder the sections. GitHub link failure was not reproducible.
 
