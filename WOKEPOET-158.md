@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - landing
 createdBy: Agent
-updatedBy: Event Horizon
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -105,6 +105,17 @@ history:
     to: Todo
     user: Event Horizon
     date: '2026-11-08T11:31:04.067Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-08T12:05:53.962Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/268: 6 clips (price check
+      whole screen per Guy), picture strip, new order. Adversarial review
+      findings fixed (phone clip crop math, fade-in on playing, strip
+      aria-hidden, clips-only runs skip stills, market loop, recorder
+      camera/scale/cleanup). check-phone passes locally, CI green. Merge blocked
+      on PC; asked the cloud merge step to squash-merge.
+    id: a-2026-11-08t12-05-53-962z
 swimlane: null
 needsAction: null
 ---
