@@ -1164,6 +1164,50 @@ test.describe('clips', () => {
     await clip.save()
   })
 
+  test('clip: quick search, type and pick', async ({ overlay }) => {
+    await liveNinja(overlay.page)
+    await overlay.boot()
+    await backdrop(overlay, 'frames/hideout.jpg')
+    const page = overlay.page
+    // Open it once to learn its size with results, then start empty.
+    const { panel, box, palette } = await searchFor(overlay, 'headhunter', /Headhunter/)
+    await panel.getByRole('button', { name: /Headhunter/ }).first().hover()
+    const tip = page.getByRole('tooltip')
+    await expect(tip).toBeVisible()
+    const view = around([await palette.boundingBox(), await tip.boundingBox()], 1000, 30)
+    await box.fill('')
+    const pb = (await box.boundingBox())!
+    const rest: [number, number] = [pb.x + pb.width + 60, pb.y + 220]
+    await page.mouse.move(...rest)
+    await page.waitForTimeout(400)
+    await allflameLabel(palette)
+    const clip = await Clip.start(page, 'clip-search', rest, view)
+    await clip.hold(700)
+    const show = async (query: string, expected: RegExp, pause = 1400) => {
+      await box.focus()
+      await clip.type(query, 95)
+      await expect(panel.getByRole('button', { name: expected }).first()).toBeVisible({ timeout: 10_000 })
+      await allflameLabel(palette)
+      await clip.hold(pause)
+    }
+    await show('divine', /Divine Orb/)
+    await box.fill('')
+    await clip.hold(250)
+    await show('filter', /Loot filter editor/)
+    await box.fill('')
+    await clip.hold(250)
+    await show('headhunter', /Headhunter/, 500)
+    const hb = (await panel.getByRole('button', { name: /Headhunter/ }).first().boundingBox())!
+    await clip.moveTo(hb.x + 120, hb.y + hb.height / 2, 600)
+    await expect(tip).toBeVisible()
+    await allflameLabel(palette)
+    await clip.hold(2000)
+    await clip.moveTo(...rest, 600)
+    await box.fill('')
+    await clip.hold(600)
+    await clip.save()
+  })
+
   test('clip: filter, re-tier an item from the ground', async ({ overlay, fakeApp }) => {
     const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
     try {
