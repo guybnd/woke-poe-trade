@@ -79,10 +79,25 @@ describe('Client.txt found late', () => {
     followGameLog({ since: () => 0, onLines: (lines, live) => { got.push(live) } })
     await vi.advanceTimersByTimeAsync(11_000)
     host.emit(OPENED, { path: LOG.path })
-    host.emit('MAIN->CLIENT::game-log', { lines: [AT_12] })
+    // A line written after the tail was read.
+    host.emit('MAIN->CLIENT::game-log', { lines: [AT_12.replace(' 1 2 ', ' 3 4 ')] })
     expect(got).toEqual([])
     await vi.advanceTimersByTimeAsync(0)
     expect(got).toEqual([false, true])
+  })
+
+  it('drops a held live line that the late replay already had', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const host = mockHost([MISSING, MISSING, MISSING, MISSING, LOG])
+    const { followGameLog } = await import('@/web/woke/shared/game-log')
+    const got: Array<[string, boolean]> = []
+    followGameLog({ since: () => 0, onLines: (lines, live) => { for (const l of lines) got.push([l.line, live]) } })
+    await vi.advanceTimersByTimeAsync(11_000)
+    host.emit(OPENED, { path: LOG.path })
+    host.emit('MAIN->CLIENT::game-log', { lines: [AT_12] })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(got.filter(([line]) => line === AT_12)).toEqual([[AT_12, false]])
   })
 
   it('catches an open that lands after the last try saw nothing', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  IDLE_END_MS, calibration, expectedValue, isBigHit, isOver, luckPercentile, openOrSell, ownAverage,
+  IDLE_END_MS, MAX_SIMULATED_DECKS, REPLAY_MAX_MS, calibration, markSeen, replaySince, expectedValue, isBigHit, isOver, luckPercentile, openOrSell, ownAverage,
   parseCardLine, recordPrice, runningResult, startSession, toRecord, totals
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
@@ -121,7 +121,7 @@ describe('community weights (D2) and luck (C3)', () => {
   it('calibrates the weights by your own decks only once there are enough', () => {
     const e = expectedValue(tiny, price)!
     expect(calibration({ decks: 100, perDeck: 400, perDeckTrimmed: 400 }, e)).toBe(1)
-    expect(calibration({ decks: 600, perDeck: 300, perDeckTrimmed: e.perDeck * 1.2 }, e)).toBeCloseTo(1.2)
+    expect(calibration({ decks: 600, perDeck: e.perDeck * 1.2, perDeckTrimmed: 1 }, e)).toBeCloseTo(1.2)
     // A wild ratio is kept in range.
     expect(calibration({ decks: 600, perDeck: 1e6, perDeckTrimmed: 1e6 }, e)).toBe(1.6)
   })
@@ -135,6 +135,37 @@ describe('community weights (D2) and luck (C3)', () => {
     expect(mid).toBeGreaterThan(0.3)
     expect(mid).toBeLessThan(0.7)
     expect(luckPercentile(e, 10, 7.5, 1, 7)).toBe(mid)
+  })
+})
+
+describe('luck for long sessions', () => {
+  it('uses a normal curve past the simulation cap', () => {
+    const e = expectedValue({ patch: 't', samples: 1, weights: { 'Rain of Chaos': 1, 'The Lover': 1 } }, price)!
+    const n = MAX_SIMULATED_DECKS * 2
+    expect(luckPercentile(e, n, 0.75 * n)).toBeCloseTo(0.5, 2)
+    expect(luckPercentile(e, n, 0.75 * n + 100)).toBeGreaterThan(0.99)
+  })
+})
+
+describe('replay marks', () => {
+  const T = new Date(2026, 10, 8, 18, 4, 11).getTime()
+  const a = '2026/11/08 18:04:11 1 a [INFO Client 1] : Card drawn from the deck: <divination>{The Lover}'
+  const b = '2026/11/08 18:04:11 2 a [INFO Client 1] : Card drawn from the deck: <divination>{The Lover}'
+
+  it('counts a line once, and another line of the same second', () => {
+    const w = { seenUntil: null as number | null, seenLines: [] as string[] }
+    expect(markSeen(w, a, T)).toBe(true)
+    expect(markSeen(w, a, T)).toBe(false)
+    expect(markSeen(w, b, T + 400)).toBe(true)
+    expect(w).toEqual({ seenUntil: T, seenLines: [a, b] })
+    expect(markSeen(w, 'later', T + 1000)).toBe(true)
+    expect(w.seenLines).toEqual(['later'])
+  })
+
+  it('replays from the second of the last card, at most half a day back', () => {
+    expect(replaySince(T, T + 60_000)).toBe(T - 1000)
+    expect(replaySince(T, T + REPLAY_MAX_MS * 3)).toBe(T + REPLAY_MAX_MS * 2)
+    expect(replaySince(null, T)).toBeNull()
   })
 })
 

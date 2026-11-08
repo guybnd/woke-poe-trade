@@ -41,19 +41,25 @@ export interface LiveSession {
 export interface StackedDecksWidget extends Widget {
   anchor: Anchor
   session: LiveSession | null
-  // Last Client.txt time read (ms), so cards drawn while the app was closed
-  // are counted at the next start.
+  // Time of the last card counted (the log's own, ms), and the card lines of
+  // that second, so cards drawn while the app was closed are counted at the
+  // next start, and none twice.
   seenUntil: number | null
+  seenLines?: string[]
+  // Sessions that ended before prices or the league were known: saved once they are.
+  ended?: LiveSession[]
   // Big hit: a popup at or above this many divines, and a sound if on.
   hitDiv: number
   hitPopup: boolean
   hitSound: boolean
 }
 
-export function initStackedDecks (w: Pick<StackedDecksWidget, 'session' | 'seenUntil' | 'hitDiv' | 'hitPopup' | 'hitSound'>) {
+export function initStackedDecks (w: Pick<StackedDecksWidget, 'session' | 'seenUntil' | 'seenLines' | 'ended' | 'hitDiv' | 'hitPopup' | 'hitSound'>) {
   w.session = null
   // Cards already in Client.txt from before are not counted.
   w.seenUntil = Date.now()
+  w.seenLines = []
+  w.ended = []
   w.hitDiv = 1
   w.hitPopup = true
   w.hitSound = false
@@ -85,6 +91,34 @@ export function startSession (at: number, league: string, deckChaos: number | nu
 
 export function isOver (s: LiveSession, now: number): boolean {
   return now - s.lastAt >= IDLE_END_MS
+}
+
+// Cards drawn while the app was closed count, but only from the last
+// half a day: switching the module back on weeks later doesn't bring back
+// old decks as a session of today's league.
+export const REPLAY_MAX_MS = 12 * 3600_000
+
+// Where the start-up replay begins: the second of the last card counted (its
+// lines are skipped by seenLines), or half a day ago if that's later.
+export function replaySince (seenUntil: number | null, now: number): number | null {
+  if (seenUntil == null) return null
+  return Math.max(seenUntil - 1000, now - REPLAY_MAX_MS)
+}
+
+// Moves the "last card counted" mark to a card line at `t` (the log's time).
+// Returns false for a line already counted.
+export function markSeen (w: Pick<StackedDecksWidget, 'seenUntil' | 'seenLines'>, line: string, t: number): boolean {
+  const sec = Math.floor(t / 1000) * 1000
+  const last = w.seenUntil != null ? Math.floor(w.seenUntil / 1000) * 1000 : null
+  if (last != null && sec < last) return true
+  if (last != null && sec === last) {
+    if (w.seenLines?.includes(line)) return false
+    w.seenLines = [...(w.seenLines ?? []), line]
+    return true
+  }
+  w.seenUntil = sec
+  w.seenLines = [line]
+  return true
 }
 
 // --- Saved sessions (files next to Session analytics, main/src/woke/session-store.ts) ---
@@ -297,7 +331,8 @@ export const MIN_CALIBRATION_DECKS = 500
 
 export function calibration (own: OwnAverage | null, expected: Expected | null): number {
   if (!own || !expected || own.decks < MIN_CALIBRATION_DECKS || expected.perDeck <= 0) return 1
-  return Math.min(1.6, Math.max(0.7, own.perDeckTrimmed / expected.perDeck))
+  // Like for like: both are plain averages over every draw.
+  return Math.min(1.6, Math.max(0.7, own.perDeck / expected.perDeck))
 }
 
 // --- C3: luck ---
@@ -315,8 +350,27 @@ function rng (seed: number) {
 
 // Share of simulated sessions of `decks` decks that got less than `got`
 // chaos from their cards (0–1), by the weights scaled by `scale`.
+// Simulated card draws are capped; past this many decks a session's total is
+// close enough to a normal curve.
+export const MAX_SIMULATED_DECKS = 5000
+
+function normalBelow (z: number): number {
+  // Abramowitz and Stegun 7.1.26, good to about 1e-7.
+  const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2)
+  const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2)
+  return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2
+}
+
 export function luckPercentile (e: Expected, decks: number, got: number, scale = 1, seed = 1): number | null {
   if (decks <= 0 || !e.values.length) return null
+  if (decks > MAX_SIMULATED_DECKS) {
+    let mean = 0
+    let sq = 0
+    for (let i = 0; i < e.values.length; i++) { mean += e.chances[i] * e.values[i]; sq += e.chances[i] * e.values[i] ** 2 }
+    const sd = Math.sqrt(Math.max(0, sq - mean * mean) * decks)
+    if (!sd) return got / scale >= mean * decks ? 1 : 0
+    return normalBelow((got / scale - mean * decks) / sd)
+  }
   // Cumulative chances, for picking a card by binary search.
   const cum = new Float64Array(e.chances.length)
   let acc = 0

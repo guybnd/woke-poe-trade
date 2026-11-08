@@ -73,7 +73,7 @@ export default {
 import { computed, inject, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { saveConfig } from '@/web/Config'
+import { beforeQuitSave, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WEmpty, WIcon, WPanel, toast } from '../ui'
 import { formatChaos } from '../ui/format'
@@ -83,9 +83,10 @@ import DockItem from '../dock/DockItem.vue'
 import { dockIconEl, showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
 import { followGameLog } from '../shared/game-log'
+import { lineTime } from '../campaign/log-tail'
 import DeckSummary from './DeckSummary.vue'
 import OwnAverageLine from './OwnAverageLine.vue'
-import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, initStackedDecks, isBigHit, isOver, parseCardLine, recordPrice, startSession, toRecord, totals } from './deck'
+import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, recordPrice, replaySince, startSession, toRecord, totals } from './deck'
 import type { StackedDecksWidget } from './deck'
 import { useDeckPrices, useLuck } from './prices'
 import { useDeckStore } from './store'
@@ -108,7 +109,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 const store = useDeckStore()
 store.load()
 const leagues = useLeagues()
-const { price, deckChaos, divine, fetch: fetchPrices } = useDeckPrices()
+const { price, deckChaos, divine, ready: pricesReady, fetch: fetchPrices } = useDeckPrices()
 fetchPrices()
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
@@ -118,6 +119,22 @@ const sessionDeck = computed(() => session.value?.deckChaos ?? deckChaos.value)
 const sessionDivine = computed(() => session.value?.divine ?? divine.value)
 const lastRecord = computed(() => store.records.value[0] ?? null)
 
+// --- Saving: cards can come several a second, so the config is saved a
+// moment after the last one (and on quit), not on every card. ---
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+function flushSave () {
+  if (saveTimer === undefined) return
+  clearTimeout(saveTimer)
+  saveTimer = undefined
+  saveConfig()
+}
+function saveSoon () {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(flushSave, 2_000)
+}
+beforeQuitSave.add(flushSave)
+onUnmounted(() => { beforeQuitSave.delete(flushSave); flushSave() })
+
 // Prices that arrive after the session started are its prices.
 watch([deckChaos, divine, session], () => {
   const s = props.config.session
@@ -125,7 +142,7 @@ watch([deckChaos, divine, session], () => {
   let changed = false
   if (s.deckChaos == null && deckChaos.value != null) { s.deckChaos = deckChaos.value; changed = true }
   if (s.divine == null && divine.value != null) { s.divine = divine.value; changed = true }
-  if (changed) saveConfig()
+  if (changed) saveSoon()
 })
 
 const money = (chaos: number) => formatChaos(chaos, sessionDivine.value)
@@ -133,10 +150,12 @@ const signed = (chaos: number) => `${chaos > 0 ? '+' : ''}${money(chaos)}`
 const art = (name: string) => ninjaIcon('DivinationCard', name) ?? undefined
 const clock = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 
-// Luck (C3), worked out only while the window shows it.
+// Luck (C3): only while the window is on screen, since it simulates sessions.
+const windowShown = computed(() => props.config.wmWants === 'show' && wm.active.value)
 const luckInput = computed(() => {
   const s = session.value
-  return s ? { draws: s.draws, got: totals(s.draws, price.value, null).got, id: s.id } : null
+  if (!s || !windowShown.value) return null
+  return { draws: s.draws, got: totals(s.draws, price.value, null).got, id: s.id }
 })
 const luck = useLuck(luckInput, price, store.records)
 
@@ -146,29 +165,48 @@ const opening = computed(() => !!session.value && now.value - session.value.last
 // Not before the start-up log read: cards drawn while the app was closed may
 // still belong to this session.
 let caughtUp = false
+const mountedAt = Date.now()
 const caughtUpTimer = setTimeout(() => { caughtUp = true }, 20_000)
 const tick = setInterval(() => {
   now.value = Date.now()
   const s = props.config.session
   if (caughtUp && s && isOver(s, now.value)) finish()
+  saveEnded()
 }, 5_000)
 onUnmounted(() => { clearInterval(tick); clearTimeout(caughtUpTimer) })
 
-// Saves the session in the history and clears it.
+// Ends the session. It goes into the history now, or once prices and the
+// league are known (a session can end during the start-up log read).
 function finish () {
   const s = props.config.session
   props.config.session = null
-  saveConfig()
-  if (!s?.draws.length) return
-  const record = toRecord(s, s.lastAt, price.value, deckChaos.value, divine.value)
-  store.save(record).catch((err: Error) => {
-    toast(`Couldn't save the deck session: ${err.message}`)
-  })
+  if (s?.draws.length) props.config.ended = [...(props.config.ended ?? []), s]
+  saveSoon()
+  saveEnded()
 }
+
+// Without poe.ninja for a few minutes, saved anyway: its cards show no price.
+const PRICE_WAIT_MS = 3 * 60_000
+function saveEnded () {
+  const ended = props.config.ended
+  if (!ended?.length) return
+  const league = leagues.selectedId.value
+  if ((!pricesReady.value || !league) && Date.now() - mountedAt < PRICE_WAIT_MS) return
+  props.config.ended = []
+  saveSoon()
+  for (const s of ended) {
+    const record = toRecord({ ...s, league: s.league || league || '' }, s.lastAt, price.value, deckChaos.value, divine.value)
+    store.save(record).catch((err: Error) => {
+      toast(`Couldn't save the deck session: ${err.message}`)
+    })
+  }
+}
+watch([pricesReady, () => leagues.selectedId.value], saveEnded)
 
 function newSession (fromDock: boolean) {
   const had = props.config.session?.draws.length ?? 0
   finish()
+  flushSave()
   if (had) toast('Saved. The next card starts a new session.', { anchor: fromDock ? dockIconEl('stacked-decks') : panel.value?.el, dock: fromDock })
 }
 
@@ -198,14 +236,17 @@ function showHit (h: Omit<Hit, 'key'>) {
 }
 
 followGameLog({
-  since: () => props.config.seenUntil,
-  onTail: () => { setTimeout(() => { caughtUp = true }, 0) },
+  since: () => replaySince(props.config.seenUntil, Date.now()),
+  // Only a real read: with no Client.txt yet (the game not started), cards
+  // from before may still come for this session.
+  onTail: (tail) => { if (tail.path) setTimeout(() => { caughtUp = true }, 0) },
   onLines (lines, live) {
     let changed = false
     let best: Omit<Hit, 'key'> | null = null
     for (const { line, at } of lines) {
       const name = parseCardLine(line)
       if (!name) continue
+      if (!markSeen(props.config, line, lineTime(line) ?? at)) continue
       let s = props.config.session
       if (s && at - s.lastAt >= IDLE_END_MS) {
         finish()
@@ -217,7 +258,6 @@ followGameLog({
       }
       s.draws.push(name)
       s.lastAt = Math.max(s.lastAt, at)
-      props.config.seenUntil = Math.max(props.config.seenUntil ?? 0, at)
       changed = true
       if (live) {
         const chaos = price.value(name)
@@ -229,7 +269,7 @@ followGameLog({
     if (!changed) return
     now.value = Date.now()
     fetchPrices()
-    saveConfig()
+    saveSoon()
     if (best && props.config.session) {
       best.result = totals(props.config.session.draws, price.value, sessionDeck.value).result
       showHit(best)

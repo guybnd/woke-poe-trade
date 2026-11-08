@@ -29,7 +29,8 @@ export function useDeckPrices () {
   })
   const deckChaos = computed<number | null>(() => lookup('ITEM', STACKED_DECK))
   const divine = computed<number | null>(() => ninja.xchgRate.value ?? null)
-  return { price, deckChaos, divine, fetch: () => { ninja.queuePricesFetch() } }
+  const ready = computed(() => ninja.updatedAt.value != null)
+  return { price, deckChaos, divine, ready, fetch: () => { ninja.queuePricesFetch() } }
 }
 
 export interface Luck {
@@ -68,8 +69,20 @@ export function luckFor (draws: string[], got: number, id: string, price: PriceO
 }
 
 export function useLuck (session: Ref<{ draws: string[], got: number, id: string } | null>, price: Ref<PriceOf>, history: Ref<DeckRecord[]>) {
+  // The same session, cards, prices and history give the last answer: the
+  // config is swapped for a copy on every save, which would rerun it.
+  let lastKey = ''
+  let lastPrice: PriceOf | null = null
+  let last: Luck | null = null
   return computed(() => {
     const s = session.value
-    return s ? luckFor(s.draws, s.got, s.id, price.value, history.value) : null
+    if (!s) return null
+    const px = price.value
+    const key = `${s.id}:${s.draws.length}:${s.got}:${history.value.length}`
+    if (key === lastKey && px === lastPrice) return last
+    lastKey = key
+    lastPrice = px
+    last = luckFor(s.draws, s.got, s.id, px, history.value)
+    return last
   })
 }

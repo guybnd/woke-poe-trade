@@ -6,7 +6,9 @@ import { test, expect, fixtureText } from './harness'
 
 const TYPE = 'woke-stacked-decks'
 const DENSE = '**/poe.ninja/poe1/api/economy/current/dense/overviews*'
-const card = (name: string) => `2026/11/08 18:04:11 3725546 1186a8a3 [INFO Client 4567] : Card drawn from the deck: <divination>{${name}}`
+// Each line has its own tick counter, as in the game's log.
+let tick = 3725546
+const card = (name: string) => `2026/11/08 18:04:11 ${tick++} 1186a8a3 [INFO Client 4567] : Card drawn from the deck: <divination>{${name}}`
 
 // The fixture's prices (Divine Orb 180c, The Doctor 900c, Rain of Chaos 0.5c),
 // with a Stacked Deck at 3c and The Lover at 1c.
@@ -60,7 +62,8 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   await expect(icon.locator('[data-deck="card"]').first()).toContainText('The Doctor')
   await overlay.snap('stacked decks dock card')
 
-  expect(overlay.savedWidget(TYPE).session.draws).toEqual(['Rain of Chaos', 'The Lover', 'The Doctor'])
+  // Saved a moment after the last card.
+  await expect.poll(() => overlay.savedWidget(TYPE)?.session?.draws, { timeout: 10_000 }).toEqual(['Rain of Chaos', 'The Lover', 'The Doctor'])
 
   // New session saves this one and takes the icon away until the next card.
   const newSession = icon.getByRole('button', { name: 'New session' })

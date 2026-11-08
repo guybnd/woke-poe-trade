@@ -90,11 +90,17 @@ export function followGameLog (opts: {
         if (at != null && at > sinceSec) replay.push({ line, at, ev: parseLogLine(line) })
       }
       if (replay.length) opts.onLines(replay, false)
+      // Lines that arrived live while the tail was read can be in it too
+      // (each line has its own counter, so the same text is the same line).
+      if (replay.length && queued.length) {
+        const replayed = new Set(replay.map(l => l.line))
+        for (let i = 0; i < queued.length; i++) queued[i] = queued[i].filter(l => !replayed.has(l.line))
+      }
     }).catch(() => {}).finally(() => {
       caughtUp = true
       loading = false
       if (stopped) return
-      for (const lines of queued.splice(0)) opts.onLines(lines, true)
+      for (const lines of queued.splice(0)) if (lines.length) opts.onLines(lines, true)
       // One may have opened after that read looked.
       if (openedWhileLoading && isNewLog(openedWhileLoading)) catchUp(openedWhileLoading)
     })
