@@ -14,6 +14,34 @@ history:
     user: Agent
     date: '2026-11-08T10:49:23.143Z'
     comment: Created ticket.
+    id: a-2026-11-08t10-49-23-143z
+  - type: comment
+    user: Agent
+    comment: >-
+      Mocks: https://claude.ai/artifact/9eajenQsaiuLiTzPiKZ8P8. Tabs: A
+      arrows+count, B autoplay with progress (recommended), C picture tabs.
+      Motion: M1 real looping clips as MP4/WebM (recommended, needs an
+      off-stream recording session), M2 zoom+labels on stills, M3 hero reel.
+      GitHub link: nothing broken on the site; need from Guy where the streamer
+      clicked/saw it. Likely GitHub search hides the repo because it's a 0-star
+      fork; fix is Guy's "Leave fork network" in repo settings.
+    date: '2026-11-08T10:53:18.012Z'
+    id: c-2026-11-08t10-53-18-012z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-08T10:53:18.012Z'
+    comment: >-
+      Mocks: https://claude.ai/artifact/9eajenQsaiuLiTzPiKZ8P8. Tabs: A
+      arrows+count, B autoplay with progress (recommended), C picture tabs.
+      Motion: M1 real looping clips as MP4/WebM (recommended, needs an
+      off-stream recording session), M2 zoom+labels on stills, M3 hero reel.
+      GitHub link: nothing broken on the site; need from Guy where the streamer
+      clicked/saw it. Likely GitHub search hides the repo because it's a 0-star
+      fork; fix is Guy's "Leave fork network" in repo settings.
+swimlane: require-input
+needsAction: null
 ---
 From a streamer visit (2026-11-08):
 1. GitHub link "went nowhere" for the streamer, works for Guy.
