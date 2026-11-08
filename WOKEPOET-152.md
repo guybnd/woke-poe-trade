@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-152
 title: 'C. Mocks: item tier in filter rules and price check'
-status: Grooming
+status: Ready
 priority: Medium
 effort: None
 assignee: unassigned
@@ -42,7 +42,36 @@ history:
       filter rules (D number row, E five tier buttons), plus yes/no on F (a
       strictness row that hides magic and rare items below a tier).** My
       recommendation: A + E + F.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked A (tier chip by the name in price check) and E (T1-T5 buttons
+      in filter rules). No F.
+    date: '2026-11-08T15:12:16.795Z'
+    id: c-2026-11-08t15-12-16-795z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-08T15:12:16.795Z'
+    comment: >-
+      Guy picked A (tier chip by the name in price check) and E (T1-T5 buttons
+      in filter rules). No F.
+  - type: comment
+    user: Agent
+    comment: >-
+      **Mocks done, and Guy picked A and E.** E is being built in WOKEPOET-159
+      (PR #273). A is folded into WOKEPOET-153, which waits on a launch-day item
+      copy.
+    date: '2026-11-08T15:12:35.307Z'
+    completionComment: true
+    id: c-2026-11-08t15-12-35-307z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-08T15:12:35.307Z'
+swimlane: null
 needsAction: null
 ---
 Options for showing tier 1-5 on items: filter RuleBuilder control, strictness rows, price check badge. Guy picks before D builds it.
