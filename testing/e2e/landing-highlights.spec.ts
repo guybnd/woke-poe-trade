@@ -11,7 +11,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { fileURLToPath } from 'url'
 import type { Locator, Page } from '@playwright/test'
-import { test, expect, FIXTURES, haveOcr, logFixture } from './harness'
+import { test, expect, FIXTURES, haveOcr, logFixture, fixtureText } from './harness'
 import { Clip, around } from './clip'
 import type { Overlay } from './harness'
 
@@ -1063,10 +1063,68 @@ async function richListings (page: Page) {
   }))
 }
 
+// Delirium orb prices for the stash outlines (Allflame, 5 Nov 2026: chaos, and
+// chaos traded in a day), as scarab-flip.spec.ts routes them.
+const DELI_ORBS: Array<[string, number, number]> = [
+  ["Armoursmith's Delirium Orb", 12.3, 812],
+  ["Jeweller's Delirium Orb", 16.89, 1866],
+  ["Blacksmith's Delirium Orb", 17.1, 1607],
+  ['Whispering Delirium Orb', 7, 70],
+  ['Fine Delirium Orb', 37.55, 5701],
+  ["Diviner's Delirium Orb", 34.6, 496]
+]
+async function deliriumPrices (page: Page) {
+  const dense = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
+  dense.itemOverviews.push({ type: 'DeliriumOrb', lines: DELI_ORBS.map(([name, chaos]) => ({ name, chaos, graph: [] })) })
+  dense.currencyOverviews[0].lines.push({ name: 'Primal Crystallised Lifeforce', chaos: 0.033, graph: [] })
+  await page.route('**/poe.ninja/poe1/api/economy/current/dense/overviews*', route => route.fulfill({ json: dense }))
+  await page.route('**/poe.ninja/poe1/api/economy/exchange/current/overview*', route => {
+    const rows = new URL(route.request().url()).searchParams.get('type') === 'DeliriumOrb' ? DELI_ORBS : []
+    return route.fulfill({ json: { core: { primary: 'chaos', items: [], rates: {} }, items: rows.map(([name]) => ({ id: name, name })), lines: rows.map(([name, primaryValue, volumePrimaryValue]) => ({ id: name, primaryValue, volumePrimaryValue })) } })
+  })
+}
+
 test.describe('clips', () => {
   test.skip(!process.env.WOKE_LANDING_CLIPS, 'Set WOKE_LANDING_CLIPS=1 to record the landing page clips')
   test.setTimeout(120_000)
 
+
+  test('clip: market, outline the Delirium tab', async ({ overlay }) => {
+    await deliriumPrices(overlay.page)
+    await overlay.boot({ patch: lowDock, widgets: [{ wmType: 'woke-scarab-flip' } as never] })
+    await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
+    // The app reads the recorded Delirium tab. It only has the stash panel, so
+    // the page shows that panel over a whole stash frame (whose folder list is
+    // already blurred, as the recording's is not).
+    await overlay.showScreen('screens/stash-delirium-real.png')
+    await backdrop(overlay, 'frames/stash-scarabs.jpg')
+    const deli = fs.readFileSync(path.join(FIXTURES, 'screens/stash-delirium-real.png')).toString('base64')
+    await overlay.page.evaluate((url) => {
+      const d = document.createElement('div')
+      Object.assign(d.style, { position: 'fixed', left: '0', top: '0', width: '688px', height: '1080px', background: `url(${url}) 0 0 / 1920px 1080px no-repeat`, pointerEvents: 'none' })
+      document.body.prepend(d)
+    }, `data:image/png;base64,${deli}`)
+    const icon = (await overlay.dockIcon('scarab-flip').boundingBox())!
+    // The tab and its slots, close up; and the icon, down by the stash's search box.
+    const view = around([{ x: 20, y: 100, width: 650, height: 460 }], 700, 10)
+    const down = around([{ x: 30, y: 560, width: 630, height: 1 }, icon], 700, 30)
+    const rest: [number, number] = [745, 330]
+    const game = (x: number, y: number) => overlay.app.moveMouse(x, y)
+    const clip = await Clip.start(overlay.page, 'clip-market', rest, view)
+    await clip.hold(700)
+    clip.look(down)
+    await clip.moveTo(icon.x + icon.width / 2, icon.y + icon.height / 2, 900, 'game', game)
+    await clip.hold(1100)
+    overlay.app.pressMouse(Math.round(icon.x + icon.width / 2), Math.round(icon.y + icon.height / 2))
+    overlay.app.releaseMouse()
+    await clip.click()
+    // Off the tab, so no tooltip hides what is under it.
+    clip.look(view)
+    await clip.moveTo(...rest, 700, 'game', game)
+    await expect(overlay.page.locator('[data-stash-outlines]')).toBeVisible({ timeout: 15_000 })
+    await clip.hold(3200)
+    await clip.save()
+  })
 
   test('clip: filter, re-tier an item from the ground', async ({ overlay, fakeApp }) => {
     const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
