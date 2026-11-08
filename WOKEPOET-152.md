@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-152
 title: 'C. Mocks: item tier in filter rules and price check'
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -71,7 +71,30 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-08T15:12:35.307Z'
+  - type: comment
+    user: Agent
+    comment: 'Guy picked A and E. E shipped in #273. A continues in WOKEPOET-153.'
+    completionComment: true
+    date: '2026-11-08T15:21:05.632Z'
+    id: c-2026-11-08t15-21-05-632z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-08T15:21:05.870Z'
 swimlane: null
 needsAction: null
+baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
+implementationLink: 'https://claude.ai/artifact/XR9H8kNY9NnKJiE6hFmR5F'
+diffSummary:
+  - file: renderer/src/web/woke/loot-filter/RuleBuilder.vue
+    additions: 11
+    deletions: 1
+  - file: renderer/src/web/woke/loot-filter/rules.ts
+    additions: 20
+    deletions: 3
+  - file: renderer/test/woke/filter-rules.test.ts
+    additions: 12
+    deletions: 1
 ---
 Options for showing tier 1-5 on items: filter RuleBuilder control, strictness rows, price check badge. Guy picks before D builds it.
