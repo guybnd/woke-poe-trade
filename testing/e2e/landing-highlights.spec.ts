@@ -1068,6 +1068,46 @@ test.describe('clips', () => {
   test.setTimeout(120_000)
 
 
+  test('clip: filter, re-tier an item from the ground', async ({ overlay, fakeApp }) => {
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+    try {
+      fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+      await overlay.boot({ widgets: [lootFilter(folder)] })
+      await backdrop(overlay, 'frames/item-on-ground.jpg', '-540px -140px / 125%')
+      await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+      // The boots' label on the ground, and where the card opens beside it.
+      const label = { x: 160, y: 450, width: 365, height: 85 }
+      const card = { x: 665, y: 85, width: 432, height: 911 }
+      const top = around([label, { ...card, height: 540 }], 1040, 60)
+      const rest: [number, number] = [640, 760]
+      const game = (x: number, y: number) => overlay.app.moveMouse(x, y)
+      const clip = await Clip.start(overlay.page, 'clip-filter', rest, top)
+      await clip.hold(600)
+      await clip.moveTo(label.x + 190, label.y + 45, 650, 'game', game)
+      await clip.keys(['Alt', 'F'], label.x + 110, label.y + 120, () => overlay.copyItem(BOOTS, 'Alt + F'))
+      const panel = overlay.page.locator('[data-w-panel]').filter({ has: overlay.page.getByText('Filter rule for this item') })
+      await expect(panel).toBeVisible()
+      await clip.hold(700)
+      const go = async (name: string | RegExp, ms = 600) => {
+        const b = (await panel.getByRole('button', { name }).first().boundingBox())!
+        await clip.moveTo(b.x + Math.min(b.width / 2, 50), b.y + b.height / 2, ms)
+        await clip.click()
+      }
+      await go(/^Tier 3/)
+      await clip.hold(1300)
+      // Close the card: back to the ground, as the clip began.
+      const close = (await panel.locator('button:has(i.fa-times)').last().boundingBox())!
+      await clip.moveTo(close.x + close.width / 2, close.y + close.height / 2, 700)
+      await clip.click()
+      await expect(panel).toBeHidden()
+      await clip.moveTo(...rest, 800, 'none')
+      await clip.hold(900)
+      await clip.save()
+    } finally {
+      fs.rmSync(folder, { recursive: true, force: true })
+    }
+  })
+
   test('clip: pob, tabs, tree and loadouts', async ({ overlay }) => {
     const dir = grownBuildsDir()
     try {
