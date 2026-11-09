@@ -139,6 +139,16 @@ history:
       tests (2,793), lint, typecheck and build pass, and the price-check e2e
       specs (15) pass.
     id: a-2026-11-09t05-05-57-386z
+  - type: activity
+    user: Agent
+    date: '2026-11-09T07:27:55.829Z'
+    comment: >-
+      Review fixes committed as 6c55f832. PR
+      https://github.com/guybnd/woke-poe-trade/pull/277 is open, and the
+      coordinator was asked to merge it in the cloud (merging from this PC was
+      refused). The dev build is switched to woke/harvest-swap so Guy can try it
+      now. Once it merges, switch the dev build back to master.
+    id: a-2026-11-09t07-27-55-829z
 swimlane: require-input
 needsAction: null
 ---
