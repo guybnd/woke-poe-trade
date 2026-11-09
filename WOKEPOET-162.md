@@ -43,6 +43,17 @@ history:
       Also: show resistance swaps only when a single element is ticked (they
       don't change total-res pricing)? Needs two in-game checks: does the damage
       swap hit +1 Fire Spell gems, and what happens to two-element res mods.
+  - type: comment
+    user: Agent
+    comment: >-
+      Added Genteel's Ducat (3.29 Allflame) attribute swap to the page. It picks
+      the new attribute at random, so it's shown as two outcomes with an
+      average. It only works when the item has a single one-attribute mod, works
+      on small clusters since 3.29.3, and it's unknown whether ducats stay in
+      the game for 3.30.
+    date: '2026-11-09T04:03:22.514Z'
+    selfAttested: true
+    id: c-2026-11-09t04-03-22-514z
 swimlane: require-input
 needsAction: null
 ---
