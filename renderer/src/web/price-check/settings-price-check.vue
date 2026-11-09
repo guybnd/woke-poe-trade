@@ -30,6 +30,14 @@
         <input v-model="accountName" class="rounded bg-gray-900 px-1 block w-full mb-1 font-poe" />
       </div>
     </div>
+    <div class="mb-4" data-window-style>
+      <div class="flex-1 mb-1">Window style</div>
+      <div class="flex">
+        <ui-radio v-model="windowStyle" value="standard" class="mr-4">Standard</ui-radio>
+        <ui-radio v-model="windowStyle" value="poe">PoE</ui-radio>
+      </div>
+      <div class="italic text-gray-500">PoE draws the filters like the game's item tooltip: click a line to search for it.</div>
+    </div>
     <div class="mb-2">
       <div class="flex-1 mb-1">{{ t(':show_seller') }}</div>
       <div class="mb-1 flex">
@@ -129,6 +137,10 @@ export default defineComponent({
       }),
       accountName: configModelValue(() => props.config, 'accountName'),
       showSeller: configModelValue(() => configWidget.value, 'showSeller'),
+      windowStyle: computed<'standard' | 'poe'>({
+        get: () => configWidget.value.wokeWindowStyle ?? 'standard',
+        set: (value) => { configWidget.value.wokeWindowStyle = value }
+      }),
       activateStockFilter: configModelValue(() => configWidget.value, 'activateStockFilter'),
       showCursor: configModelValue(() => configWidget.value, 'showCursor'),
       builtinBrowser: configModelValue(() => configWidget.value, 'builtinBrowser'),

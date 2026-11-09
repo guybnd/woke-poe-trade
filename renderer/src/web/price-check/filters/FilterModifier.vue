@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild }]">
+  <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild, 'w-poe-row': poe, 'w-poe-child': poe && splitChild }]">
     <div v-if="showSourceInfo" :class="$style['mods']">
       <div class="pl-5 py-1" v-for="(source, idx) of filter.sources" :key="idx">
         <source-info :source="source" :filter="filter" />
@@ -8,7 +8,8 @@
     <div class="flex flex-col min-w-0 flex-1">
       <div class="flex items-baseline">
         <div class="flex items-baseline min-w-0 mr-2">
-          <button :class="[$style.checkbox, { [$style.checked]: !isDisabled, [$style.uncheckedHint]: isDisabled && groupExpanded }]"
+          <span v-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierText === 'T1' }">{{ poeTierText }}</span>
+          <button :class="[$style.checkbox, { [$style.checked]: !isDisabled, [$style.uncheckedHint]: isDisabled && groupExpanded }, 'w-pc-check']"
             @click="toggleFilter" type="submit">
             <i :class="isDisabled ? 'far fa-square' : 'fas fa-check-square'" />
           </button>
@@ -17,7 +18,13 @@
               :src="filter.mercenary.icon">
             <span v-if="filter.not && miniFilter"
               :class="[$style.tag, $style['tag-not']]">{{ t('filters.tag_not') }}</span>
-            <div class="search-text flex-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-scale, 1));">
+            <!-- woke: PoE mode wraps long mods in the game's colours, never cut short. -->
+            <span v-if="poe" class="w-poe-row-text" :class="`w-poe-k-${poeKind.kind}`" :title="poeKind.label">
+              <img v-if="poeKind.icon" class="w-poe-icon" :src="poeKind.icon" alt="">
+              <span v-else-if="poeKind.corrupted" class="w-poe-corrupt" />
+              <item-modifier-text class="w-pc-modtext" :text="text" :roll="roll?.value" />
+            </span>
+            <div v-else class="search-text flex-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-scale, 1));">
               <span class="truncate"><item-modifier-text :text="text" :roll="roll?.value" /></span>
               <span class="search-text-full whitespace-pre-wrap"><item-modifier-text :text="text" :roll="roll?.value" /></span>
             </div>
@@ -27,7 +34,7 @@
             <i :class="groupExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
           </button>
         </div>
-        <filter-modifier-tiers v-if="miniFilter && !showInputs"
+        <filter-modifier-tiers v-if="miniFilter && !showInputs && !poe"
           :filter="filter" :item="item"
           :class="{ 'mr-4': Boolean(rollOptions) }" />
         <slot name="inputs">
@@ -40,10 +47,15 @@
             <img v-for="img of rollTags"
               :class="$style.rollTag" :src="img">
             <div class="flex gap-x-px">
-              <input :class="$style['rollInput']" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
+              <input :class="[$style['rollInput'], 'w-roll-input', { 'w-poe-drag': poe }]" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMinEl"
-                v-model.number="inputMin" @focus="inputFocus($event, 'min')" @mousewheel.stop>
-              <input :class="$style['rollInput']" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
+                v-model.number="inputMin" @focus="inputFocus($event, 'min')" @mousewheel.stop
+                @mousedown="poe && minDrag.onMouseDown($event)"
+                @pointerdown="poe && minDrag.onPointerDown($event)"
+                @pointermove="poe && minDrag.onPointerMove($event)"
+                @pointerup="poe && minDrag.onPointerUp($event)"
+                @pointercancel="poe && minDrag.onPointerUp($event)">
+              <input :class="[$style['rollInput'], 'w-roll-input']" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMaxEl"
                 v-model.number="inputMax" @focus="inputFocus($event, 'max')" @mousewheel.stop>
             </div>
@@ -71,13 +83,20 @@
         <div class="min-w-0 flex items-start gap-x-2" :class="showSlider ? 'flex-initial overflow-hidden' : 'flex-1'">
           <span v-if="filter.not"
             :class="[$style['tag'], $style['tag-not']]">{{ t('filters.tag_not') }}</span>
-          <button v-if="showTag && canSplit" type="button"
+          <button v-if="poe && fracIds" type="button" class="w-poe-chip" :class="{ on: fracOnly }"
+            title="Search only items where this mod is fractured"
+            @click="toggleFractured">Fractured only</button>
+          <button v-if="poe && canSplit" type="button" class="w-poe-ptag"
+            :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
+            @click="actions!.toggleSplit(filter)">Pseudo ×{{ filter.sources.length }} {{ isSplit ? '▴' : '▾' }}</button>
+          <template v-else-if="poe" />
+          <button v-else-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
             :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
             @click="actions!.toggleSplit(filter)">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ filter.sources.length > 1 ? ` x ${filter.sources.length}` : '' }} <i :class="isSplit ? 'fas fa-caret-up' : 'fas fa-caret-down'" /></button>
           <span v-else-if="showTag"
             :class="[$style['tag'], $style[`tag-${tag}`]]">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ (filter.sources.length > 1) ? ` x ${filter.sources.length}` : null }}</span>
-          <filter-modifier-tiers v-if="!showBounds()"
+          <filter-modifier-tiers v-if="!showBounds() && !poe"
             :filter="filter" :item="item" />
           <filter-modifier-options v-if="rollOptions"
             show-checked="always"
@@ -119,6 +138,9 @@ import { getTradeMaxQuality } from '@/parser/calc-q20.js'
 import { FilterTag, StatFilter, INTERNAL_TRADE_IDS, ItemHasEmptyModifier } from './interfaces'
 import SourceInfo from './SourceInfo.vue'
 import { SearchMode as MercSearchMode } from './pseudo/mercenary.js'
+import { ModifierType } from '@/parser/modifiers'
+import { poeLook, poeTier, fracturedIds } from '@/web/woke/price-insight/poe-kind'
+import { useDragNumber } from '@/web/woke/price-insight/drag-number'
 
 export default defineComponent({
   components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, SourceInfo, StatRollSlider, UiPopover },
@@ -140,6 +162,10 @@ export default defineComponent({
       default: undefined
     },
     grouped: {
+      type: Boolean
+    },
+    // woke: PoE mode (price-insight/window-style.ts).
+    poe: {
       type: Boolean
     }
   },
@@ -260,7 +286,42 @@ export default defineComponent({
 
     const { t } = useI18n()
 
+    // woke: PoE mode's "Fractured only": the row searches the fractured copy of its mod.
+    const fracIds = computed(() => props.poe ? fracturedIds(props.filter) : undefined)
+    const fracOnly = computed(() => fracIds.value != null && props.filter.tradeId.join() === fracIds.value.join())
+    function toggleFractured () {
+      const ids = fracIds.value
+      if (!ids) return
+      props.filter.tradeId = fracOnly.value
+        ? props.filter.sources[0].stat.stat.trade.ids[ModifierType.Explicit]
+        : ids
+      props.filter.disabled = false
+    }
+
+    const minDrag = useDragNumber({
+      get: () => {
+        const roll = props.filter.roll!
+        return typeof roll.min === 'number' ? roll.min : roll.value
+      },
+      set: (v) => {
+        props.filter.roll!.min = v
+        props.filter.disabled = false
+      },
+      step: () => {
+        const roll = props.filter.roll!
+        if (roll.dp) return 0.1
+        const b = roll.bounds
+        return (b && b.max - b.min > 50) ? 5 : 1
+      }
+    })
+
     return {
+      fracIds,
+      fracOnly,
+      toggleFractured,
+      minDrag,
+      poeKind: computed(() => poeLook(props.filter)),
+      poeTierText: computed(() => poeTier(props.filter)),
       actions,
       canSplit,
       isSplit,

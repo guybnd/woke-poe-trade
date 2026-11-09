@@ -1,5 +1,40 @@
 <template>
-  <div :class="[$style.tile, { [$style.active]: !filter.disabled, [$style.dragging]: dragging }]"
+  <!-- woke: PoE mode's number chip. The label switches the filter; the number types,
+       scrolls or drags sideways, and changing it switches the filter on. -->
+  <span v-if="chip" class="w-poe-nchip" :class="{ on: !filter.disabled, dragging }"
+    :data-numeric-chip="label"
+    @wheel.prevent.stop="handleWheel"
+    @pointerdown="handlePointerDown"
+    @pointermove="handlePointerMove"
+    @pointerup="handlePointerEnd"
+    @pointercancel="handlePointerEnd"
+    @mousedown="handleMouseDown"
+    @dragstart.prevent>
+    <button type="button" class="w-poe-nlab" :aria-pressed="!filter.disabled"
+      @click="filter.disabled = !filter.disabled">{{ label }}</button>
+    <button type="button" class="w-poe-arr" tabindex="-1" aria-label="Less" @click="nudge('min', -1)">‹</button>
+    <input class="w-poe-ninp" step="any" type="number" :aria-label="label"
+      v-model.number="inputMin"
+      @input="showClamped"
+      @focus="inputFocus"
+      @blur="inputMinBlur"
+      @keydown.up.prevent="nudge('min', 1)"
+      @keydown.down.prevent="nudge('min', -1)"
+      :style="{ width: `${0.6 + Math.max(String(inputMin).length, 1)}ch` }"
+    >
+    <template v-if="'max' in filter">
+      <span class="w-poe-ndash">–</span>
+      <input class="w-poe-ninp" step="any" type="number" data-bound="max" :aria-label="`${label} max`"
+        v-model.number="inputMax"
+        @input="showClamped"
+        @focus="inputFocus"
+        :style="{ width: `${0.6 + Math.max(String(inputMax).length, 1)}ch` }"
+        placeholder="…"
+      >
+    </template>
+    <button type="button" class="w-poe-arr" tabindex="-1" aria-label="More" @click="nudge('min', 1)">›</button>
+  </span>
+  <div v-else :class="[$style.tile, { [$style.active]: !filter.disabled, [$style.dragging]: dragging }]"
     title="Click to turn on or off. Scroll, or drag a number up and down, to change it"
     @wheel.prevent.stop="handleWheel"
     @pointerdown="handlePointerDown"
@@ -54,6 +89,10 @@ export default defineComponent({
     limit: {
       type: Number,
       default: undefined
+    },
+    // woke: PoE mode's inline chip, dragged sideways.
+    chip: {
+      type: Boolean
     }
   },
   setup (props) {
@@ -124,10 +163,10 @@ export default defineComponent({
     }
 
     const DRAG_START_PX = 3
-    const DRAG_STEP_PX = 20
+    const DRAG_STEP_PX = props.chip ? 8 : 20
     const dragging = ref(false)
     // `input` is the number you pressed, if it wasn't being typed in: letting go without a drag opens it.
-    let drag: { startY: number, bound: Bound, applied: number, input: HTMLInputElement | null } | null = null
+    let drag: { startX: number, startY: number, bound: Bound, applied: number, input: HTMLInputElement | null } | null = null
     let justDragged = false
     // How the press began: on a number (types or drags, never switches), and the filter's state then.
     // Pressing elsewhere blurs a number being typed in, and an emptied one switches the filter off on blur.
@@ -139,6 +178,7 @@ export default defineComponent({
       inputMin,
       inputMax,
       dragging,
+      nudge,
       handleWheel (e: WheelEvent) {
         if (e.deltaY !== 0) nudge(boundAt(e.target), (e.deltaY < 0) ? 1 : -1)
       },
@@ -149,7 +189,7 @@ export default defineComponent({
           ? { onInput: e.target instanceof HTMLInputElement, wasDisabled: props.filter.disabled }
           : null
         drag = (e.button === 0 && e.target instanceof HTMLInputElement)
-          ? { startY: e.clientY, bound: boundAt(e.target), applied: 0, input: restingInputAt(e.target) }
+          ? { startX: e.clientX, startY: e.clientY, bound: boundAt(e.target), applied: 0, input: restingInputAt(e.target) }
           : null
       },
       // Pressing a number would focus it and start selecting text, which is no use if this becomes a drag.
@@ -169,7 +209,8 @@ export default defineComponent({
           drag = null
           return
         }
-        const up = drag.startY - e.clientY
+        // The chip drags sideways, the tile up and down.
+        const up = props.chip ? e.clientX - drag.startX : drag.startY - e.clientY
         if (!dragging.value) {
           if (Math.abs(up) < DRAG_START_PX) return
           dragging.value = true

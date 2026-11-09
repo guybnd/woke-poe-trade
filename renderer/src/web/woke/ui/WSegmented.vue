@@ -1,5 +1,5 @@
 <template>
-  <span :class="$style.seg">
+  <span :class="[$style.seg, 'w-seg']">
     <button v-for="opt in options" :key="opt.value" type="button"
       :aria-pressed="opt.value === modelValue"
       :class="{ [$style.on]: opt.value === modelValue }"

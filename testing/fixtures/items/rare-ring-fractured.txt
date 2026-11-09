@@ -1,0 +1,25 @@
+Item Class: Rings
+Rarity: Rare
+Doom Loop
+Two-Stone Ring
+--------
+Requirements:
+Level: 56
+--------
+Item Level: 84
+--------
+{ Implicit Modifier — Elemental, Fire, Cold, Resistance }
++14(12-16)% to Fire and Cold Resistances
+--------
+{ Prefix Modifier "Rotund" (Tier: 3) — Life }
++64(60-69) to maximum Life
+{ Fractured Prefix Modifier "Resplendent" (Tier: 3) — Damage, Physical, Attack }
+Adds 7(6-9) to 13(12-15) Physical Damage to Attacks
+{ Suffix Modifier "of the Rainbow" (Tier: 4) — Elemental, Fire, Cold, Lightning, Resistance }
++11(11-12)% to all Elemental Resistances
+{ Suffix Modifier "of the Volcano" (Tier: 3) — Elemental, Fire, Resistance }
++38(36-41)% to Fire Resistance
+{ Suffix Modifier "of Tzteosh" (Tier: 1) — Elemental, Lightning, Resistance }
++46(46-48)% to Lightning Resistance
+--------
+Fractured Item

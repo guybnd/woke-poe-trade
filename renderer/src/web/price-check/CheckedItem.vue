@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="p-4 layout-column min-h-0">
+  <div v-if="show" class="p-4 layout-column min-h-0" @keydown.enter="searchOnEnter">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
     <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale, 'w-pc-verdict-held': verdictHeld }">
@@ -117,6 +117,7 @@ import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
+import { poeMode } from '@/web/woke/price-insight/window-style'
 
 let _showSupportLinksCounter = 0
 
@@ -332,6 +333,13 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
 
     return {
+      // woke: PoE mode searches on Enter from anywhere in the window; a focused button keeps its own Enter.
+      searchOnEnter (e: KeyboardEvent) {
+        if (!poeMode.value || e.repeat) return
+        const el = e.target as HTMLElement
+        if (el.closest('button, a, textarea, select, [role="button"], [role="menu"]')) return
+        doSearch.value = true
+      },
       swap,
       showFlipTab,
       verdictSlot,

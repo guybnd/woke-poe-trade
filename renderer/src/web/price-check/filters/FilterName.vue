@@ -1,5 +1,6 @@
 <template>
-  <div class="filter-name">
+  <!-- woke: PoE mode puts the same parts in a 2x2 grid: name | poe.ninja, scope and chips | numbers. -->
+  <div class="filter-name" :class="{ 'w-poe-head': poe }">
     <div class="filter-name-main">
       <div class="filter-name-title">
         <span class="filter-name-label" :data-rarity="item.rarity" :title="label">{{ label }}</span>
@@ -40,27 +41,28 @@
         <filter-btn-logical v-if="filters.split && !filters.split.hidden" active
           :filter="filters.split" :text="t(filters.split.disabled ? 'item.not_split' : 'item.split')" />
         <slot name="meta" />
-        <slot />
+        <slot v-if="!poe" />
       </div>
+      <div v-if="poe" class="w-poe-head-aside"><slot /></div>
     </div>
     <div class="filter-name-tiles">
-      <filter-btn-numeric v-if="filters.linkedSockets" :limit="NUMERIC_LIMITS.links"
+      <filter-btn-numeric :chip="poe" v-if="filters.linkedSockets" :limit="NUMERIC_LIMITS.links"
         :filter="filters.linkedSockets" :name="t('item.linked_sockets')" />
-      <filter-btn-numeric v-if="filters.mapTier" :limit="NUMERIC_LIMITS.mapTier"
+      <filter-btn-numeric :chip="poe" v-if="filters.mapTier" :limit="NUMERIC_LIMITS.mapTier"
         :filter="filters.mapTier" :name="t('item.map_tier')" />
-      <filter-btn-numeric v-if="filters.areaLevel" :limit="NUMERIC_LIMITS.areaLevel"
+      <filter-btn-numeric :chip="poe" v-if="filters.areaLevel" :limit="NUMERIC_LIMITS.areaLevel"
         :filter="filters.areaLevel" :name="t('item.area_level')" />
-      <filter-btn-numeric v-if="filters.sentinelCharge"
+      <filter-btn-numeric :chip="poe" v-if="filters.sentinelCharge"
         :filter="filters.sentinelCharge" :name="t('item.sentinel_charge')" />
-      <filter-btn-numeric v-if="filters.itemLevel" :limit="NUMERIC_LIMITS.itemLevel"
+      <filter-btn-numeric :chip="poe" v-if="filters.itemLevel" :limit="NUMERIC_LIMITS.itemLevel"
         :filter="filters.itemLevel" :name="t('trade_result.item_level')" />
-      <filter-btn-numeric v-if="filters.stackSize"
+      <filter-btn-numeric :chip="poe" v-if="filters.stackSize"
         :filter="filters.stackSize" :name="t('item.stock')" />
-      <filter-btn-numeric v-if="filters.whiteSockets" :limit="NUMERIC_LIMITS.sockets"
+      <filter-btn-numeric :chip="poe" v-if="filters.whiteSockets" :limit="NUMERIC_LIMITS.sockets"
         :filter="filters.whiteSockets" :name="t('item.white_sockets')" />
-      <filter-btn-numeric v-if="filters.gemLevel" :limit="NUMERIC_LIMITS.gemLevel"
+      <filter-btn-numeric :chip="poe" v-if="filters.gemLevel" :limit="NUMERIC_LIMITS.gemLevel"
         :filter="filters.gemLevel" :name="t('item.gem_level')" />
-      <filter-btn-numeric v-if="filters.quality" :limit="NUMERIC_LIMITS.quality"
+      <filter-btn-numeric :chip="poe" v-if="filters.quality" :limit="NUMERIC_LIMITS.quality"
         :filter="filters.quality" :name="t('item.quality')" />
     </div>
   </div>
@@ -76,6 +78,7 @@ import { WSegmented } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
 import FilterBtnLogical from './FilterBtnLogical.vue'
+import { poeMode } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
   name: 'FilterName',
@@ -145,6 +148,7 @@ export default defineComponent({
 
     return {
       t,
+      poe: poeMode,
       NUMERIC_LIMITS,
       label,
       baseName,

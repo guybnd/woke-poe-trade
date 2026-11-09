@@ -1,5 +1,5 @@
 <template>
-  <button :class="[$style.btn, { [$style.active]: (active != null) ? active : !filter.disabled }]"
+  <button :class="[$style.btn, 'w-logical', { [$style.active]: (active != null) ? active : !filter.disabled, on: (active != null) ? active : !filter.disabled }]"
     @click="toggle"
   >
     <img v-if="img" :src="img" class="w-5 h-5">

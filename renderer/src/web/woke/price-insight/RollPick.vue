@@ -1,8 +1,8 @@
 <template>
-  <div :class="$style.pick">
+  <div :class="[$style.pick, 'w-rollpick']">
     <button v-for="o in OPTIONS" :key="o.value" type="button"
-      :class="{ [$style.on]: active === o.value }" :title="o.title" :aria-label="o.title"
-      @click="choose(o.value)">{{ o.label }}</button>
+      :class="{ [$style.on]: active === o.value }" :title="o.title" :aria-label="o.title" :aria-pressed="active === o.value"
+      @click="choose(o.value)"><span :class="{ 'w-sym': o.value === 'current' }">{{ o.label }}</span></button>
   </div>
 </template>
 

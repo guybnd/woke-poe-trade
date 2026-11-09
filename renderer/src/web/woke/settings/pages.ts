@@ -138,7 +138,7 @@ export const PAGES: SettingsPage[] = [
     description: 'Prices for the item under your cursor.',
     modules: ['apt-price-check'],
     parts: [SettingsPricecheck, DisenchantVerdictSetting, defineAsyncComponent(() => import('../harvest-swap/SwapSetting.vue'))],
-    find: ['Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
+    find: ['Window style', 'PoE mode', 'Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
     aliases: ['price_check.name']
   },
   {

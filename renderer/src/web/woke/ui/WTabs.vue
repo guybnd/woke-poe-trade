@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.tabs" role="tablist">
+  <div :class="[$style.tabs, 'w-tabs']" role="tablist">
     <button v-for="opt in options" :key="opt.value" type="button" role="tab"
       :aria-selected="opt.value === modelValue"
       :class="[$style.tab, { [$style.active]: opt.value === modelValue }]"

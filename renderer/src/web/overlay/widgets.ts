@@ -56,6 +56,8 @@ export interface PriceCheckWidget extends Widget {
   showCursor: boolean
   requestPricePrediction: boolean
   builtinBrowser: boolean
+  // woke: 'poe' draws the filters like the game's tooltip (price-insight/window-style.ts). Unset is standard.
+  wokeWindowStyle?: 'standard' | 'poe'
 }
 
 export interface StopwatchWidget extends Widget {

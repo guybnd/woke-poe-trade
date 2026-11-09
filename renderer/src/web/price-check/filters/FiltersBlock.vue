@@ -16,15 +16,21 @@
     </div>
     <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
       <!-- woke: one right-click listener for every row (price-insight/stat-actions.ts). -->
-      <form @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu">
-        <template v-for="(filter, i) of filteredStats">
+      <form @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu" :class="{ 'w-poe-well': poeMode }">
+        <template v-for="{ filter, i } of shownStats">
+          <!-- woke: PoE mode's gold lines between properties, enchants, implicits and the rest. -->
+          <div v-if="poeMode && sepBefore.has(i)" :key="`sep_${i}`" class="w-poe-sep" />
           <filter-group v-if="filter.group" :key="`group_${filter.meta.tag}_${filter.meta.text}`"
             :group="filter"
             :item="item" />
+          <filter-line-poe v-else-if="poeMode && filter.disabled" :key="`line_${filter.tag}_${filter.text}`"
+            :data-stat-row="i"
+            :filter="filter" />
           <filter-modifier v-else :key="`${filter.tag}_${filter.text}`"
             :data-stat-row="i"
             :filter="filter"
             :item="item"
+            :poe="poeMode"
             :show-sources="showFilterSources" />
         </template>
         <div v-if="!filteredStats.length && !showUnknownMods"
@@ -53,6 +59,9 @@ import { useI18n } from 'vue-i18n'
 import UiToggle from '@/web/ui/UiToggle.vue'
 import FilterModifier from './FilterModifier.vue'
 import FilterGroup from './FilterGroup.vue'
+import FilterLinePoe from './FilterLinePoe.vue'
+import { poeMode } from '@/web/woke/price-insight/window-style'
+import { poeSection, PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
 import { WSegmented } from '@/web/woke/ui'
 import { ItemFilters, FilterOrGroup } from './interfaces'
@@ -65,6 +74,7 @@ export default defineComponent({
   components: {
     FilterModifier,
     FilterGroup,
+    FilterLinePoe,
     UnknownModifier,
     WSegmented,
     UiToggle
@@ -116,8 +126,36 @@ export default defineComponent({
       })
     })
 
+    // PoE mode lists rows in the tooltip's order: properties, enchants, implicits, the rest.
+    // `i` stays the row's place in filteredStats, which the right-click menu reads.
+    const SECTION_ORDER = { property: 0, enchant: 1, implicit: 2, explicit: 3 }
+    const shownStats = computed(() => {
+      let parent: PoeSection = 'explicit'
+      const rows = filteredStats.value.map((filter, i) => {
+        // A split total's mods stay under it, whatever kind each one is.
+        const section = (!filter.group && actions?.isChild(filter))
+          ? parent
+          : (parent = poeSection(filter.group ? filter.meta : filter))
+        return { filter, i, section }
+      })
+      if (!poeMode.value) return rows
+      return rows.sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section] || a.i - b.i)
+    })
+    // The rows a gold separator goes above.
+    const sepBefore = computed(() => {
+      const out = new Set<number>()
+      const rows = shownStats.value
+      for (let k = 1; k < rows.length; k++) {
+        if (rows[k].section !== rows[k - 1].section) out.add(rows[k].i)
+      }
+      return out
+    })
+
     return {
       t,
+      poeMode,
+      shownStats,
+      sepBefore,
       openRowMenu (e: MouseEvent) {
         const row = (e.target as HTMLElement).closest<HTMLElement>('[data-stat-row]')
         const filter = row && filteredStats.value[Number(row.dataset.statRow)]
