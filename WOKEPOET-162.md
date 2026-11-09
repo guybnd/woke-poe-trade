@@ -101,6 +101,20 @@ history:
     date: '2026-11-09T04:37:52.498Z'
     selfAttested: true
     id: c-2026-11-09t04-37-52-498z
+  - type: comment
+    user: Agent
+    comment: >-
+      Added a "What players would hate, and the fix" table to the page. Key
+      rules: the main price is always the item as it is; mark only mods whose
+      swap changes the price; ship only families checked in game and price at
+      the bottom of the tier; still one search; show cost in lifeforce and
+      chaos, "no price yet" when unpriced; flip profit needs at least 3 listings
+      per element using medians and the fixed-price filter; ducat swaps show
+      both outcomes; no popups; families in one data file, switched off until
+      checked against 3.30.
+    date: '2026-11-09T04:38:26.941Z'
+    selfAttested: true
+    id: c-2026-11-09t04-38-26-941z
 swimlane: require-input
 needsAction: null
 ---
