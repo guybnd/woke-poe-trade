@@ -87,6 +87,20 @@ history:
     date: '2026-11-09T04:36:38.329Z'
     selfAttested: true
     id: c-2026-11-09t04-36-38-329z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy approved the direction ("looks good"). Gaps I raised: (1) mods that
+      work together, e.g. Fire damage + Fire penetration, need joint pricing or
+      a half-swapped warning; (2) two swappable mods = 9 combinations, show the
+      best single swap and the best pair; (3) splitting by element only sees the
+      fetched listings, so cap it at one extra fetch page; (4) catalyst quality
+      swap on jewellery is a possible later family; (5) re-check 3.30 notes
+      (Gwennen coin flip, ducats, lifeforce prices). Still open: D button layout
+      (second line vs folded into the marker) and the default cost limit.
+    date: '2026-11-09T04:37:52.498Z'
+    selfAttested: true
+    id: c-2026-11-09t04-37-52-498z
 swimlane: require-input
 needsAction: null
 ---
