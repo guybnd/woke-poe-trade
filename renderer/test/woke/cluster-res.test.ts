@@ -6,6 +6,7 @@ import { loadGameData, parseItem } from '../helpers/game-data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
+import { splitFilters } from '@/web/woke/price-insight/pseudo-split'
 
 // vi.mock is hoisted above the imports.
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
@@ -56,12 +57,13 @@ describe('cluster jewel resistance', () => {
   it('adds a ticked total row that searches any element at the same number', () => {
     const { filters, stats, all } = setup(cluster(LIGHTNING))
     const total = stats.find(s => s.statRef === '+#% total Elemental Resistance')
-    const plain = stats.find(s => s.statRef === 'Added Small Passive Skills also grant: +#% to Lightning Resistance')
+    // The line folds under the row, and splitting the row brings it back.
+    expect(stats.some(s => s.statRef === 'Added Small Passive Skills also grant: +#% to Lightning Resistance')).toBe(false)
+    const parts = splitFilters(total!, stats, parseItem(cluster(LIGHTNING)), 10)
+    expect(parts.map(p => [p.statRef, p.roll?.value])).toEqual([['Added Small Passive Skills also grant: +#% to Lightning Resistance', 2]])
     expect(total).toBeDefined()
     expect(total!.roll!.value).toBe(2)
     expect(total!.disabled).toBe(false)
-    expect(plain!.disabled).toBe(true)
-    expect(stats.indexOf(total!)).toBeLessThan(stats.indexOf(plain!))
 
     total!.roll!.min = 2
     const body = createTradeRequest(filters, all)
@@ -97,11 +99,10 @@ Added Small Passive Skills also grant: +3(2-3)% to all Elemental Resistances`
 ${ALL}`))
     expect(stats.some(s => s.statRef === '+#% total Elemental Resistance')).toBe(false)
     const any = stats.find(s => s.text.includes('Fire, Cold or Lightning'))!
-    const lightning = stats.find(s => s.statRef === 'Added Small Passive Skills also grant: +#% to Lightning Resistance' && s !== any)!
     const allRes = stats.find(s => s.statRef === 'Added Small Passive Skills also grant: +#% to all Elemental Resistances')!
     expect(any.disabled).toBe(false)
     expect(any.roll!.value).toBe(2)
-    expect(lightning.disabled).toBe(true)
+    expect(stats.filter(s => s.statRef === 'Added Small Passive Skills also grant: +#% to Lightning Resistance')).toEqual([any])
     expect(allRes.disabled).toBe(false)
 
     const body = createTradeRequest(filters, all)

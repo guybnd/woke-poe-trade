@@ -74,7 +74,7 @@
           <button v-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
             :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-            @click="actions!.toggleSplit(filter)">{{ t(`filters.tag_${tag.replace('-', '_')}`) }} x {{ filter.sources.length }} <i :class="isSplit ? 'fas fa-caret-up' : 'fas fa-caret-down'" /></button>
+            @click="actions!.toggleSplit(filter)">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ filter.sources.length > 1 ? ` x ${filter.sources.length}` : '' }} <i :class="isSplit ? 'fas fa-caret-up' : 'fas fa-caret-down'" /></button>
           <span v-else-if="showTag"
             :class="[$style['tag'], $style[`tag-${tag}`]]">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ (filter.sources.length > 1) ? ` x ${filter.sources.length}` : null }}</span>
           <filter-modifier-tiers v-if="!showBounds()"

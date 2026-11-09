@@ -75,9 +75,9 @@ export function addClusterResPseudo (filters: StatFilter[], item: ParsedItem, pe
       roll: structuredClone(plain.roll),
       disabled: false
     }
-    plain.disabled = true
     allRes[0].disabled = false
-    filters.splice(filters.indexOf(plain), 0, any)
+    // The line itself folds under the row; its Pseudo chip opens it again.
+    filters.splice(filters.indexOf(plain), 1, any)
     return
   }
 
@@ -101,8 +101,8 @@ export function addClusterResPseudo (filters: StatFilter[], item: ParsedItem, pe
     }]
   }, percent, item)
   total.tradeId = [...CLUSTER_RES_TRADE_IDS]
-  // Ticked like total resistance on other gear; the line itself is left out.
+  // Ticked like total resistance on other gear. The line folds under the row;
+  // its Pseudo chip opens it again.
   total.disabled = false
-  plain.disabled = true
-  filters.splice(filters.indexOf(plain), 0, total)
+  filters.splice(filters.indexOf(plain), 1, total)
 }

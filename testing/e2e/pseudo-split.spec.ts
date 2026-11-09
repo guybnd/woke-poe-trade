@@ -62,3 +62,37 @@ test('switching presets folds an open split, so coming back finds the total as i
   await chip.click()
   await expect(fireRow).toHaveCount(1)
 })
+
+test("a cluster jewel's resistance row folds its line away and the chip opens it", async ({ overlay }) => {
+  await overlay.page.route('**/api/trade/search/**', (route) => route.abort())
+  await overlay.boot()
+  await overlay.copyItem(`Item Class: Jewels
+Rarity: Rare
+Eagle Spark
+Small Cluster Jewel
+--------
+Requirements:
+Level: 54
+--------
+Item Level: 84
+--------
+Adds 3 Passive Skills (enchant)
+Added Small Passive Skills grant: 6% increased Mana Reservation Efficiency of Skills (enchant)
+--------
+{ Prefix Modifier "Potent" (Tier: 1) — }
+Added Small Passive Skills have 35% increased Effect
+{ Suffix Modifier "of the Storm" (Tier: 5) — Elemental, Lightning, Resistance }
+Added Small Passive Skills also grant: +2(2-3)% to Lightning Resistance
+{ Suffix Modifier "of the Prism" (Tier: 4) — Elemental, Fire, Cold, Lightning, Resistance }
+Added Small Passive Skills also grant: +3(2-3)% to all Elemental Resistances
+--------
+Place into an allocated Small, Medium or Large Jewel Socket on the Passive Skill Tree. Added passives do not interact with jewel radiuses. Right click to remove from the Socket.`)
+  const panel = overlay.widget('price-check')
+  await expect(panel.getByRole('button', { name: /2% to Fire, Cold or Lightning Resistance$/ })).toHaveCount(1)
+  const line = panel.getByRole('button', { name: /also grant: \+?2% to Lightning Resistance$/ })
+  await expect(line).toHaveCount(0)
+  // Only one row for the mod until the chip opens it.
+  await panel.locator('button[title^="Split into"]').click()
+  await expect(line).toHaveCount(1)
+  await overlay.snap('cluster-res-split')
+})

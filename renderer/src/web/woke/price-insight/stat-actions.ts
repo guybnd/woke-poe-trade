@@ -7,6 +7,7 @@ import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { exclude, include, splitFilters, tierBound } from './pseudo-split'
+import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
 import { openMenu, copyText, toast } from '@/web/woke/ui'
 import type { MenuEntry } from '@/web/woke/ui'
 import type { SwapController } from '@/web/woke/harvest-swap/useSwap'
@@ -68,7 +69,9 @@ export function provideStatActions (
   const isChild = (f: StatFilter) => version.value >= 0 && children.has(toRaw(f))
   const isSplit = (f: StatFilter) => version.value >= 0 && splits.has(toRaw(f))
   const canSplit = (f: StatFilter) =>
-    f.tag === ModifierType.Pseudo && f.option == null && f.sources.length >= 2 && !isChild(f)
+    f.tag === ModifierType.Pseudo && f.option == null && !isChild(f) &&
+    // A cluster jewel's resistance row folds its one line away too.
+    (f.sources.length >= 2 || (f.sources.length === 1 && clusterResColumnStats(f) != null))
 
   function toggleSplit (f: StatFilter) {
     const list = stats.value
@@ -154,7 +157,7 @@ export function provideStatActions (
     if (canSplit(f)) {
       items.push(isSplit(f)
         ? { label: 'Fold back into the total', icon: 'fas fa-compress', action: () => toggleSplit(f) }
-        : { label: `Split into its ${f.sources.length} mods`, icon: 'fas fa-expand', action: () => toggleSplit(f) })
+        : { label: f.sources.length > 1 ? `Split into its ${f.sources.length} mods` : 'Show the mod behind it', icon: 'fas fa-expand', action: () => toggleSplit(f) })
     }
     items.push({
       label: 'Copy mod text',
