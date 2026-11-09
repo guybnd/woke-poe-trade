@@ -225,9 +225,29 @@ describe('listingDetail, catalyst quality', () => {
 
   it('reads a raised roll against the raised range and keeps the shown range', () => {
     const [line] = lines(belt('Quality (Attribute Modifiers)', [dex]))
-    expect(text(line)).toBe('+51(43-50) to Dexterity')
+    // 43 is the raw roll, drawn small after the raised number.
+    expect(text(line)).toBe('+5143(43-50) to Dexterity')
+    expect(line.parts.find(p => p.raw)?.text).toBe('43')
     // 43-50 at 20% is 51-60: 51 is the lowest roll.
     expect(line.quality).toBe(0)
+  })
+
+  it('shows the raw roll: 56 at 20% was a 47', () => {
+    const top = { ...dex, description: '+56 to Dexterity', mods: [{ name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '30', max: '50' }] }] }
+    const [line] = lines(belt('Quality (Attribute Modifiers)', [top]))
+    expect(text(line)).toBe('+5647(30-50) to Dexterity')
+    expect(line.quality).toBe(83)
+  })
+
+  it('shows no raw roll where nothing was raised or two mods share the line', () => {
+    expect(lines(belt('Quality', [dex]))[0].parts.some(p => p.raw)).toBe(false)
+    // Life isn't raised by attribute quality.
+    expect(byStat(belt('Quality (Attribute Modifiers)', [dex, { ...life, description: '+84 to maximum Life' }]))[1].parts.some(p => p.raw)).toBe(false)
+    const shared = { description: '+72 to Dexterity', domain: 'explicit', mods: [
+      { name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '53' }] },
+      { name: 'Hybrid', tier: 'P5', magnitudes: [{ min: '1', max: '8' }] }
+    ] }
+    expect(lines(belt('Quality (Attribute Modifiers)', [shared]))[0].parts.some(p => p.raw)).toBe(false)
   })
 
   it('counts the top raised roll as perfect', () => {

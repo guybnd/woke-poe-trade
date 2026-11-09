@@ -19,6 +19,8 @@ export interface ModPart {
   number?: boolean
   // The mod's possible range for the number before it.
   range?: boolean
+  // The roll before a catalyst raised the number before it, drawn small: "56⁴⁷(30-50)".
+  raw?: boolean
 }
 
 export interface ModLine {
@@ -147,6 +149,15 @@ function raise (n: number, percent: number): number {
   if (!percent) return n
   const dp = Number.isInteger(n) ? 0 : 2
   return Math.sign(n) * incrRoll(Math.abs(n), percent, dp)
+}
+
+/** The roll a catalyst raised to this number: the lowest one that raises to it. Null if none in the range does. */
+function unraise (value: number, percent: number, range: Span): number | null {
+  const factor = (100 + percent) / 100
+  const whole = Number.isInteger(range.low) && Number.isInteger(range.high)
+  const raw = whole ? Math.ceil(value / factor - 1e-9) : tidy(value / factor)
+  if (whole && raise(raw, percent) !== value) return null
+  return raw >= range.low && raw <= range.high ? raw : null
 }
 
 type ModOf = NonNullable<Exclude<ListingMod, string>['mods']>[number]
@@ -282,7 +293,13 @@ function buildLine (mod: ListingMod, kind: ModLine['kind'], catalyst: Catalyst |
     if (range.low === range.high) return
     const match = found[at]
     const end = match.index + match[0].length
-    parts.push(...textParts(text.slice(last, end)), { text: range.signed ? `(${range.low} to ${range.high})` : `(${range.low}-${range.high})`, range: true })
+    const before = textParts(text.slice(last, end))
+    const raised = span.low !== range.low || span.high !== range.high
+    const raw = catalyst && raised && (mod.mods ?? []).length === 1 && !span.signed
+      ? unraise(Number(match[0]), catalyst.percent, range)
+      : null
+    if (raw != null) before.push({ text: String(raw), raw: true })
+    parts.push(...before, { text: range.signed ? `(${range.low} to ${range.high})` : `(${range.low}-${range.high})`, range: true })
     last = end
     const value = span.signed ? signedValue(text, match) : Number(match[0])
     const place = span.high === span.low ? 1 : Math.min(1, Math.max(0, (value - span.low) / (span.high - span.low)))

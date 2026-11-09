@@ -7,7 +7,7 @@
       <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}</div>
       <div v-for="(line, l) in chunk.lines" :key="l">
         <span :class="[$style.line, kindClass(line)]">
-          <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else>{{ p.text }}</span></template>
+          <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else>{{ p.text }}</span></template>
           <template v-if="line.quality != null">
             <i :class="$style.track"><i :style="{ width: `${line.quality}%`, background: rollColour(line.quality) }" /></i>
             <span class="w-num" :class="$style.quality" :style="{ color: rollColour(line.quality) }">{{ line.quality }}%</span>
@@ -86,6 +86,8 @@ function rollColour (quality: number) {
 .crafted { color: var(--w-mod-crafted); }
 .fractured { color: var(--w-mod-fractured); }
 .number { color: #fff; font-family: var(--w-num); font-size: var(--w-fs-md); font-weight: 600; }
+/* The roll before catalyst quality, small and in the quality's blue. */
+.raw { color: #8888ff; font-family: var(--w-num); font-size: var(--w-fs-xs); vertical-align: super; line-height: 0; margin-left: 1px; }
 .range { color: var(--tip-range); font-family: var(--w-num); font-size: var(--w-fs-md); }
 .track { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.12); border-radius: 1px; }
 .track > i { display: block; height: 100%; }
