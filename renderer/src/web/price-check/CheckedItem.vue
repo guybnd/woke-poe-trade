@@ -1,5 +1,6 @@
 <template>
-  <div v-if="show" class="p-4 layout-column min-h-0">
+  <!-- woke: in PoE mode the rows wait for its code (one chunk), so they never redraw from Standard. -->
+  <div v-if="show && (!poeMode || poeOn)" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
     <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale, 'w-pc-verdict-held': verdictHeld }">
@@ -118,7 +119,7 @@ import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
-import { poeMode } from '@/web/woke/price-insight/window-style'
+import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
 
 let _showSupportLinksCounter = 0
 
@@ -178,7 +179,7 @@ export default defineComponent({
     // as when the overlay has just opened or a clicked line turned into a row).
     // A button reached with Tab keeps its own Enter; one the mouse clicked doesn't.
     function searchOnEnter (e: KeyboardEvent) {
-      if (e.key !== 'Enter' || !poeMode.value || e.repeat || e.isComposing || e.defaultPrevented) return
+      if (e.key !== 'Enter' || !poeOn.value || e.repeat || e.isComposing || e.defaultPrevented) return
       const win = document.getElementById('price-window')
       // Hidden, the window keeps its last item: Enter must never search for it.
       if (!win || win.offsetParent == null) return
@@ -190,7 +191,12 @@ export default defineComponent({
       e.preventDefault()
       doSearch.value = true
     }
-    document.addEventListener('keydown', searchOnEnter)
+    // Listening only while PoE mode is on.
+    watch(poeOn, (on) => {
+      if (on) document.addEventListener('keydown', searchOnEnter)
+      else document.removeEventListener('keydown', searchOnEnter)
+    }, { immediate: true })
+    watch(poeMode, (on) => { if (on) loadPoeKit().catch(() => {}) }, { immediate: true })
     onUnmounted(() => document.removeEventListener('keydown', searchOnEnter))
     // woke: what the listings on screen were searched with. A copy, so ticking a mod
     // can't reach them before the next search. Trade options are shared: the listing's
@@ -355,6 +361,8 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
 
     return {
+      poeMode,
+      poeOn,
       swap,
       showFlipTab,
       verdictSlot,

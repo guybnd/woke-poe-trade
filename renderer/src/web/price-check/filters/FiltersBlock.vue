@@ -23,10 +23,10 @@
           <filter-group v-if="filter.group" :key="`group_${filter.meta.tag}_${filter.meta.text}`"
             :group="filter"
             :item="item" />
-          <filter-line-poe v-else-if="poeMode && filter.disabled" :key="`line_${filter.tag}_${filter.text}`"
+          <component :is="poeKit!.FilterLinePoe" v-else-if="poeMode && filter.disabled" :key="`line_${filter.tag}_${filter.text}`"
             :data-stat-row="i"
             :filter="filter" />
-          <filter-modifier v-else :key="`${filter.tag}_${filter.text}`"
+          <filter-modifier v-else :key="`${filter.tag}_${filter.text}_${poeMode}`"
             :data-stat-row="i"
             :filter="filter"
             :item="item"
@@ -59,9 +59,8 @@ import { useI18n } from 'vue-i18n'
 import UiToggle from '@/web/ui/UiToggle.vue'
 import FilterModifier from './FilterModifier.vue'
 import FilterGroup from './FilterGroup.vue'
-import FilterLinePoe from './FilterLinePoe.vue'
-import { poeMode } from '@/web/woke/price-insight/window-style'
-import { poeSection, PoeSection } from '@/web/woke/price-insight/poe-kind'
+import { poeOn as poeMode, poeKit } from '@/web/woke/price-insight/window-style'
+import type { PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
 import { WSegmented } from '@/web/woke/ui'
 import { ItemFilters, FilterOrGroup } from './interfaces'
@@ -74,7 +73,6 @@ export default defineComponent({
   components: {
     FilterModifier,
     FilterGroup,
-    FilterLinePoe,
     UnknownModifier,
     WSegmented,
     UiToggle
@@ -133,9 +131,11 @@ export default defineComponent({
       let parent: PoeSection = 'explicit'
       const rows = filteredStats.value.map((filter, i) => {
         // A split total's mods stay under it, whatever kind each one is.
+        const kit = poeKit.value
+        if (!kit) return { filter, i, section: parent }
         const section = (!filter.group && actions?.isChild(filter))
           ? parent
-          : (parent = poeSection(filter.group ? filter.meta : filter))
+          : (parent = kit.poeSection(filter.group ? filter.meta : filter))
         return { filter, i, section }
       })
       if (!poeMode.value) return rows
@@ -154,6 +154,7 @@ export default defineComponent({
     return {
       t,
       poeMode,
+      poeKit,
       shownStats,
       sepBefore,
       openRowMenu (e: MouseEvent) {

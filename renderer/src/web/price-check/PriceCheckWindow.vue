@@ -10,8 +10,8 @@
       :style="{ width: floating ? `${floating.gap}px` : 'var(--game-panel)' }">
     </div>
     <div id="price-window" ref="windowEl" class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
-      :class="{ [$style.movable]: !isBrowserShown, 'w-poe': poeMode }" :style="windowStyle" @mousedown="startMove"
-      @keydown.esc="poeMode && onEsc($event)">
+      :class="{ [$style.movable]: !isBrowserShown, 'w-poe': poeOn }" :style="windowStyle" @mousedown="startMove"
+      v-on="poeOn ? { keydown: onEsc } : {}">
       <AppTitleBar @close="closePriceCheck" @click="openLeagueSelection" :title="title">
         <button v-if="floating" data-testid="price-window-dock" title="Back to the side of the screen" @click="dock">
           <i class="fas fa-columns" />
@@ -103,7 +103,7 @@ import AppTitleBar from '@/web/ui/AppTitlebar.vue'
 import ItemQuickPrice from '@/web/ui/ItemQuickPrice.vue'
 import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfaces'
 import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
-import { poeMode } from '@/web/woke/price-insight/window-style'
+import { poeOn } from '@/web/woke/price-insight/window-style'
 import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 
@@ -364,7 +364,7 @@ export default defineComponent({
 
     // woke: PoE mode closes on Esc; in a box being typed in, Esc only leaves the box.
     function onEsc (e: KeyboardEvent) {
-      if (e.defaultPrevented) return
+      if (e.key !== 'Escape' || e.defaultPrevented) return
       const el = e.target as HTMLElement
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
         el.blur()
@@ -405,7 +405,7 @@ export default defineComponent({
     const { t } = useI18n()
 
     return {
-      poeMode,
+      poeOn,
       onEsc,
       t,
       clickPosition,

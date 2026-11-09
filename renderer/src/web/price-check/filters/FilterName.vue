@@ -78,7 +78,7 @@ import { WSegmented } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
 import FilterBtnLogical from './FilterBtnLogical.vue'
-import { poeMode } from '@/web/woke/price-insight/window-style'
+import { poeOn } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
   name: 'FilterName',
@@ -148,7 +148,7 @@ export default defineComponent({
 
     return {
       t,
-      poe: poeMode,
+      poe: poeOn,
       NUMERIC_LIMITS,
       label,
       baseName,

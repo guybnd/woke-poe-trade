@@ -19,7 +19,7 @@
             <span v-if="filter.not && miniFilter"
               :class="[$style.tag, $style['tag-not']]">{{ t('filters.tag_not') }}</span>
             <!-- woke: PoE mode wraps long mods in the game's colours, never cut short. -->
-            <span v-if="poe" class="w-poe-row-text" :class="`w-poe-k-${poeKind.kind}`" :title="poeKind.label">
+            <span v-if="poeKind" class="w-poe-row-text" :class="`w-poe-k-${poeKind.kind}`" :title="poeKind.label">
               <img v-if="poeKind.icon" class="w-poe-icon" :src="poeKind.icon" alt="">
               <span v-else-if="poeKind.corrupted" class="w-poe-corrupt" />
               <item-modifier-text class="w-pc-modtext" :text="text" :roll="roll?.value" />
@@ -54,11 +54,7 @@
               <input :class="[$style['rollInput'], 'w-roll-input', { 'w-poe-drag': poe }]" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMinEl"
                 v-model.number="inputMin" @focus="inputFocus($event, 'min')" @mousewheel.stop
-                @mousedown="poe && minDrag.onMouseDown($event)"
-                @pointerdown="poe && minDrag.onPointerDown($event)"
-                @pointermove="poe && minDrag.onPointerMove($event)"
-                @pointerup="poe && minDrag.onPointerUp($event)"
-                @pointercancel="poe && minDrag.onPointerUp($event)">
+                v-on="minDrag ?? {}">
               <input :class="[$style['rollInput'], 'w-roll-input']" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMaxEl"
                 v-model.number="inputMax" @focus="inputFocus($event, 'max')" @mousewheel.stop>
@@ -144,8 +140,7 @@ import { FilterTag, StatFilter, INTERNAL_TRADE_IDS, ItemHasEmptyModifier } from 
 import SourceInfo from './SourceInfo.vue'
 import { SearchMode as MercSearchMode } from './pseudo/mercenary.js'
 import { ModifierType } from '@/parser/modifiers'
-import { poeLook, poeTier, fracturedIds } from '@/web/woke/price-insight/poe-kind'
-import { useDragNumber } from '@/web/woke/price-insight/drag-number'
+import { poeKit } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
   components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, SourceInfo, StatRollSlider, UiPopover },
@@ -296,7 +291,9 @@ export default defineComponent({
     const { t } = useI18n()
 
     // woke: PoE mode's "Fractured only": the row searches the fractured copy of its mod.
-    const fracIds = computed(() => props.poe ? fracturedIds(props.filter) : undefined)
+    // PoE mode's code (poe-kit.ts) is loaded before a PoE row is drawn.
+    const kit = props.poe ? poeKit.value : null
+    const fracIds = computed(() => kit?.fracturedIds(props.filter))
     const fracOnly = computed(() => fracIds.value != null && props.filter.tradeId.join() === fracIds.value.join())
     function toggleFractured () {
       const ids = fracIds.value
@@ -307,7 +304,8 @@ export default defineComponent({
       props.filter.disabled = false
     }
 
-    const minDrag = useDragNumber({
+    // Only PoE rows listen for the drag.
+    const drag = kit?.useDragNumber({
       get: () => {
         const roll = props.filter.roll!
         return typeof roll.min === 'number' ? roll.min : roll.value
@@ -324,6 +322,13 @@ export default defineComponent({
         return (b && b.max - b.min > 50) ? 5 : 1
       }
     })
+    const minDrag = drag && {
+      mousedown: drag.onMouseDown,
+      pointerdown: drag.onPointerDown,
+      pointermove: drag.onPointerMove,
+      pointerup: drag.onPointerUp,
+      pointercancel: drag.onPointerUp
+    }
 
     return {
       catalyst,
@@ -333,8 +338,8 @@ export default defineComponent({
       fracOnly,
       toggleFractured,
       minDrag,
-      poeKind: computed(() => poeLook(props.filter)),
-      poeTierText: computed(() => poeTier(props.filter)),
+      poeKind: computed(() => kit?.poeLook(props.filter)),
+      poeTierText: computed(() => kit?.poeTier(props.filter) ?? ''),
       actions,
       canSplit,
       isSplit,
