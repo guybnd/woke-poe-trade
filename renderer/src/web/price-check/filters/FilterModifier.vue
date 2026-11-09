@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.filter, { [$style.grouped]: grouped }]">
+  <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild }]">
     <div v-if="showSourceInfo" :class="$style['mods']">
       <div class="pl-5 py-1" v-for="(source, idx) of filter.sources" :key="idx">
         <source-info :source="source" :filter="filter" />
@@ -71,7 +71,11 @@
         <div class="min-w-0 flex items-start gap-x-2" :class="showSlider ? 'flex-initial overflow-hidden' : 'flex-1'">
           <span v-if="filter.not"
             :class="[$style['tag'], $style['tag-not']]">{{ t('filters.tag_not') }}</span>
-          <span v-if="showTag"
+          <button v-if="showTag && canSplit" type="button"
+            :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
+            :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
+            @click="actions!.toggleSplit(filter)">{{ t(`filters.tag_${tag.replace('-', '_')}`) }} x {{ filter.sources.length }} <i :class="isSplit ? 'fas fa-caret-up' : 'fas fa-caret-down'" /></button>
+          <span v-else-if="showTag"
             :class="[$style['tag'], $style[`tag-${tag}`]]">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ (filter.sources.length > 1) ? ` x ${filter.sources.length}` : null }}</span>
           <filter-modifier-tiers v-if="!showBounds()"
             :filter="filter" :item="item" />
@@ -108,6 +112,7 @@ import WokeModWorthTag from '@/web/woke/price-insight/ModWorthTag.vue'
 import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
+import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
@@ -142,6 +147,11 @@ export default defineComponent({
     // woke: the ⇄ marker's code only loads for a mod that can be swapped.
     const swap = useSwap()
     const hasSwap = computed(() => !props.filter.group && swap?.candidateFor(props.filter) != null)
+    // woke: pseudo split and the right-click menu (price-insight/stat-actions.ts).
+    const actions = useStatActions()
+    const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
+    const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
+    const splitChild = computed(() => actions?.isChild(props.filter) ?? false)
     const $style = useCssModule()
 
     watch(() => props.filter.disabled && props.groupExpanded, (uncheckedHint) => {
@@ -251,6 +261,10 @@ export default defineComponent({
     const { t } = useI18n()
 
     return {
+      actions,
+      canSplit,
+      isSplit,
+      splitChild,
       hasSwap,
       t,
       showTag,
@@ -352,6 +366,16 @@ export default defineComponent({
 </script>
 
 <style lang="postcss" module>
+.filter.splitChild {
+  padding-left: theme('spacing.5');
+  border-bottom-style: dashed;
+}
+
+.splitTag {
+  cursor: pointer;
+  &:hover { filter: brightness(1.25); }
+}
+
 .filter {
   padding: theme('spacing.2') 0;
   border-bottom: 1px solid theme('colors.gray.700');

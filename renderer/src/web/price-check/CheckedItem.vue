@@ -105,6 +105,7 @@ import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
+import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { AppConfig } from '@/web/Config'
@@ -224,6 +225,8 @@ export default defineComponent({
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
     const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
     const showFlipTab = computed(() => swap.candidates.value.length > 0)
+    // woke: pseudo split and the stat rows' right-click menu.
+    provideStatActions(computed(() => props.item), itemStats, () => widget.value.searchStatRange, swap)
 
     watch(() => [props.item, doSearch.value], () => {
       if (doSearch.value === false) return

@@ -15,12 +15,14 @@
       <slot name="rolls" />
     </div>
     <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
-      <form @submit.prevent="handleStatsSubmit">
-        <template v-for="filter of filteredStats">
+      <!-- woke: one right-click listener for every row (price-insight/stat-actions.ts). -->
+      <form @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu">
+        <template v-for="(filter, i) of filteredStats">
           <filter-group v-if="filter.group" :key="`group_${filter.meta.tag}_${filter.meta.text}`"
             :group="filter"
             :item="item" />
           <filter-modifier v-else :key="`${filter.tag}_${filter.text}`"
+            :data-stat-row="i"
             :filter="filter"
             :item="item"
             :show-sources="showFilterSources" />
@@ -55,6 +57,7 @@ import UnknownModifier from './UnknownModifier.vue'
 import { WSegmented } from '@/web/woke/ui'
 import { ItemFilters, FilterOrGroup } from './interfaces'
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
+import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 
 export default defineComponent({
   name: 'FiltersBlock',
@@ -101,9 +104,29 @@ export default defineComponent({
     )
 
     const { t } = useI18n()
+    const actions = useStatActions()
+
+    const filteredStats = computed(() => {
+      const show = showHidden.value
+      return props.stats.filter(s => {
+        if (s.group) {
+          return Boolean(s.meta.hidden) === show
+        }
+        return Boolean(s.hidden) === show
+      })
+    })
 
     return {
       t,
+      openRowMenu (e: MouseEvent) {
+        const row = (e.target as HTMLElement).closest<HTMLElement>('[data-stat-row]')
+        const filter = row && filteredStats.value[Number(row.dataset.statRow)]
+        if (!actions || !filter || filter.group) return
+        // Typing in a min or max keeps the usual text menu.
+        if ((e.target as HTMLElement).closest('input')) return
+        e.preventDefault()
+        actions.menu(e, filter)
+      },
       statsVisibility,
       showHidden,
       showFilterSources,
@@ -115,15 +138,7 @@ export default defineComponent({
           return !stat.disabled
         }).length
       }),
-      filteredStats: computed(() => {
-        const show = showHidden.value
-        return props.stats.filter(s => {
-          if (s.group) {
-            return Boolean(s.meta.hidden) === show
-          }
-          return Boolean(s.hidden) === show
-        })
-      }),
+      filteredStats,
       activePreset: computed(() => props.presets.find(preset => preset.active)?.id ?? ''),
       presetOptions: computed(() => props.presets.map(preset => ({ value: preset.id, label: t(preset.id) }))),
       showUnknownMods,
