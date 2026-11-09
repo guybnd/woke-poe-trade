@@ -38,10 +38,14 @@ export function isClusterResTotal (filter: StatFilter): boolean {
     filter.tradeId.every((id, i) => id === CLUSTER_RES_TRADE_IDS[i])
 }
 
+// Only for the item's own preset: the base-item preset keeps a fractured line as
+// it is, since that's what makes the base.
 export function addClusterResPseudo (filters: StatFilter[], item: ParsedItem, percent: number): void {
   const lines = filters.filter(f => CHANGEABLE.has(f.tag) && LINES.some(l => l.ref === f.statRef))
-  if (lines.length !== 1) return
-  const plain = lines[0]
+  // An uncorrupted fractured mod is listed twice, as explicit and (hidden) as
+  // fractured: still one line.
+  if (new Set(lines.map(f => f.statRef)).size !== 1) return
+  const plain = lines.find(f => f.tag === ModifierType.Explicit) ?? lines[0]
   if (plain.sources.length !== 1) return
   const info = LINES.find(l => l.ref === plain.statRef)!
   const source = plain.sources[0]
@@ -61,7 +65,8 @@ export function addClusterResPseudo (filters: StatFilter[], item: ParsedItem, pe
     }]
   }, percent, item)
   total.tradeId = [...CLUSTER_RES_TRADE_IDS]
-  total.disabled = plain.disabled
+  // Ticked like total resistance on other gear; the line itself is left out.
+  total.disabled = false
   plain.disabled = true
   filters.splice(filters.indexOf(plain), 0, total)
 }

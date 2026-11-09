@@ -115,7 +115,6 @@ export function createExactStatFilters (
 
   if (item.category === ItemCategory.ClusterJewel) {
     applyClusterJewelRules(ctx.filters, true)
-    addClusterResPseudo(ctx.filters, item, ctx.searchInRange)
   } if (
     item.category === ItemCategory.HeistContract ||
     item.category === ItemCategory.HeistBlueprint

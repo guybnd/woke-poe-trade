@@ -59,10 +59,10 @@ describe('cluster jewel resistance', () => {
     const plain = stats.find(s => s.statRef === 'Added Small Passive Skills also grant: +#% to Lightning Resistance')
     expect(total).toBeDefined()
     expect(total!.roll!.value).toBe(2)
+    expect(total!.disabled).toBe(false)
     expect(plain!.disabled).toBe(true)
     expect(stats.indexOf(total!)).toBeLessThan(stats.indexOf(plain!))
 
-    total!.disabled = false
     total!.roll!.min = 2
     const body = createTradeRequest(filters, all)
     const group = body.query.stats.find(g => g.type === 'count' && g.filters.length === 4)!
@@ -72,6 +72,21 @@ describe('cluster jewel resistance', () => {
     expect(byId['explicit.stat_2709692542']).toBe(2) // cold
     expect(byId['explicit.stat_2250780084']).toBe(2) // lightning
     expect(byId['explicit.stat_2669029667']).toBeCloseTo(2 / 3) // all elemental
+  })
+
+  it('counts an uncorrupted fractured line once', () => {
+    const fractured = cluster(LIGHTNING.replace('{ Suffix', '{ Fractured Suffix')) + '\n--------\nFractured Item'
+    const { stats } = setup(fractured)
+    expect(stats.some(s => s.statRef === '+#% total Elemental Resistance' && !s.disabled)).toBe(true)
+  })
+
+  it('leaves the base-item preset alone, where a fractured line is what makes the base', () => {
+    const fractured = cluster(LIGHTNING.replace('{ Suffix', '{ Fractured Suffix')) + '\n--------\nFractured Item'
+    const item = parseItem(fractured)
+    const presets = createPresets(item, OPTS)
+    for (const preset of presets.presets.filter(p => p.id !== presets.active)) {
+      expect(preset.stats.some(s => !('group' in s && s.group) && s.statRef === '+#% total Elemental Resistance')).toBe(false)
+    }
   })
 
   it('leaves a jewel with two resistance lines alone: one line at a time can not add them up', () => {
