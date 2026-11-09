@@ -137,6 +137,48 @@ describe('re-tier from prices', () => {
     expect(parseFilter(text).blocks).toHaveLength(parseFilter(FILTER).blocks.length)
   })
 
+  // NeverSink's t5alchemy is defined by the Orb of Alchemy: a cheap league
+  // must not hide every alch (Guy saw them land in t8trans), nor move the
+  // Chaos Orb, the price unit, out of t4chaos.
+  it('never moves a tier namesake, and drops a stored move of one', () => {
+    const cur = (vis: string, tier: string, bases: string[]) => [
+      `${vis} # %H1 $type->currency $tier->${tier}`,
+      '\tClass == "Stackable Currency"',
+      `\tBaseType == ${bases.map(b => `"${b}"`).join(' ')}`,
+      ''
+    ].join('\n')
+    const text = [
+      cur('Show', 't1exalted', ['Divine Orb', 'Hinekora\'s Lock']),
+      cur('Show', 't4chaos', ['Chaos Orb', 'Vaal Orb', 'Gemcutter\'s Prism']),
+      cur('Show', 't5alchemy', ['Orb of Alchemy', 'Orb of Scouring', 'Regal Orb']),
+      cur('Hide', 't8trans', ['Orb of Transmutation', 'Alteration Shard', 'Orb of Augmentation'])
+    ].join('\n')
+    const c = (name: string, chaos: number): PriceItem => ({ type: 'Currency', name, variant: '', chaos, gaps: 0 })
+    const prices = priceLookup([
+      c('Divine Orb', 500), c('Hinekora\'s Lock', 2000),
+      c('Chaos Orb', 1), c('Vaal Orb', 3), c('Gemcutter\'s Prism', 4),
+      c('Orb of Alchemy', 0.008), c('Orb of Scouring', 0.5), c('Regal Orb', 0.4),
+      c('Orb of Transmutation', 0.002), c('Alteration Shard', 0.001), c('Orb of Augmentation', 0.01)
+    ], noUniques)
+    const CUR = ECONOMY_GROUPS.find(g => g.type === 'currency')!
+    const plan = planRetier(parseFilter(text), prices, { groups: [CUR] })
+    const bases = plan.moves.map(m => m.base)
+    expect(bases).not.toContain('Orb of Alchemy')
+    expect(bases).not.toContain('Chaos Orb')
+    expect(bases).not.toContain('Orb of Transmutation')
+    // An old stored move of one isn't applied; the others still are.
+    const doc = parseFilter(text)
+    expect(applyPriceMoves(doc, [
+      { type: 'currency', base: 'Orb of Alchemy', from: 't5alchemy', to: 't8trans', chaos: 0.008 },
+      { type: 'currency', base: 'Regal Orb', from: 't5alchemy', to: 't8trans', chaos: 0.05 }
+    ])).toBe(1)
+    const alch = matchItem(doc, { baseType: 'Orb of Alchemy', itemClass: 'Stackable Currency', stackSize: 1, influences: [] } as any)
+    expect(alch.final?.block.tier).toBe('t5alchemy')
+    expect(alch.visibility).toBe('Show')
+    const regal = matchItem(doc, { baseType: 'Regal Orb', itemClass: 'Stackable Currency', stackSize: 1, influences: [] } as any)
+    expect(regal.final?.block.tier).toBe('t8trans')
+  })
+
   it('folds repeated moves and drops one that returns home', () => {
     const a = { type: 'divination', base: 'X', from: 't3', to: 't2', chaos: 1 }
     const merged = mergeMoves([a], [{ ...a, from: 't2', to: 't1' }])

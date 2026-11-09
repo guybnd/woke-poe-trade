@@ -186,6 +186,32 @@ export function tierRank (tier: string, siblings: string[], group?: EconomyGroup
   return n
 }
 
+// NeverSink names some currency tiers after the orb that defines them
+// (t4chaos, t5alchemy, t8trans...). That orb is the tier's yardstick, not an
+// item priced into it, so prices never move it out: a cheap league would
+// otherwise hide every Orb of Alchemy, and Chaos Orb is the price unit itself.
+// Only tiers whose namesake still lives there: NeverSink 8.x keeps Divine in
+// t1exalted, Exalted in t4chaos and Scrap in t7chance, so those names are
+// history and don't count.
+const TIER_NAMESAKES: Record<string, string> = {
+  annul: 'Orb of Annulment',
+  chaos: 'Chaos Orb',
+  alchemy: 'Orb of Alchemy',
+  chance: 'Orb of Chance',
+  trans: 'Orb of Transmutation'
+}
+
+export function isTierNamesake (type: string, tier: string, base: string): boolean {
+  if (type !== 'currency') return false
+  const m = /^t\d+([a-z]+)$/.exec(tier)
+  return m != null && TIER_NAMESAKES[m[1]] === base
+}
+
+// Stored moves that still apply (an old move of a namesake doesn't).
+export function livePriceMoves<T extends { type: string, from: string, base: string }> (moves: T[]): T[] {
+  return moves.filter(m => !isTierNamesake(m.type, m.from, m.base))
+}
+
 function baseTypeValues (b: FilterBlock): string[] {
   return b.conditions.find(c => c.key === 'BaseType' && c.op === '==')?.values ?? []
 }
@@ -316,7 +342,7 @@ export function planRetier (doc: FilterDoc, lookup: PriceLookup, opts: PlanOptio
     for (const [base, price] of prices) {
       const band = home.get(base)!
       const cur = anchors.indexOf(band)
-      if (cur < 0) continue
+      if (cur < 0 || isTierNamesake(group.type, band.tier, base)) continue
       const up = bandFor(price.chaos / (1 + buffer))
       const down = bandFor(price.chaos * (1 + bufferDown))
       const target = up < cur ? up : (down > cur ? down : cur)
@@ -361,8 +387,10 @@ export function mergeMoves (stored: PriceMove[], next: PriceMove[]): PriceMove[]
 // Applies stored price moves to a fresh parse. A move only holds while the item
 // is still where it moved it from: when NeverSink has re-tiered it (an update),
 // NeverSink's newer call wins and the next plan looks at it again.
+// A move that took a tier's namesake out (stored before that was refused) is
+// dropped.
 export function applyPriceMoves (doc: FilterDoc, moves: PriceMove[]): number {
-  const edits: FilterEdit[] = moves
+  const edits: FilterEdit[] = livePriceMoves(moves)
     .filter(m => blocksOf(doc, m.type).some(b => (b.tier === m.from || b.tier === m.to) && blockHasBase(b, m.base)))
     .map((m, i) => ({ id: -1 - i, kind: 'move', type: m.type, base: m.base, from: m.from, to: m.to }))
   return applyEdits(doc, edits).filter(s => s.ok).length

@@ -16,7 +16,7 @@ test('number tiles stop at game limits, drag from the number, and a click still 
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const page = overlay.page
   const panel = overlay.widget('price-check')
-  const tile = panel.locator('div[title^="Scroll or drag"]').filter({ hasText: 'Links' })
+  const tile = panel.locator('div[title^="Click to turn"]').filter({ hasText: 'Links' })
   const links = tile.locator('input').first()
   await expect(links).toHaveValue('6')
 
@@ -70,7 +70,7 @@ test('number tiles stop at game limits, drag from the number, and a click still 
   await expect(links).toHaveValue('2')
 
   // Pressing another number takes the focus away from this one, even if that press becomes a drag.
-  const other = panel.locator('div[title^="Scroll or drag"]').filter({ hasNotText: 'Links' }).first().locator('input').first()
+  const other = panel.locator('div[title^="Click to turn"]').filter({ hasNotText: 'Links' }).first().locator('input').first()
   at = await press(page, other)
   await expect(links).not.toBeFocused()
   await page.mouse.up()
@@ -82,9 +82,9 @@ test('scrolling a switched-off tile already at its limit leaves it off', async (
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  const tile = panel.locator('div[title^="Scroll or drag"]').filter({ hasText: 'Links' })
+  const tile = panel.locator('div[title^="Click to turn"]').filter({ hasText: 'Links' })
   const on = await tile.getAttribute('class')
-  await tile.getByRole('button').click()
+  await tile.getByText('Links', { exact: true }).click()
   await expect(tile).not.toHaveAttribute('class', on!)
   const off = await tile.getAttribute('class')
 
@@ -102,7 +102,7 @@ test('scrolling down on an empty max leaves it empty, and up gives one', async (
   await overlay.boot()
   await overlay.copyItem('items/rare-cluster-large.txt')
   const page = overlay.page
-  const tile = overlay.widget('price-check').locator('div[title^="Scroll or drag"]').filter({ has: page.locator('input[data-bound="max"]') })
+  const tile = overlay.widget('price-check').locator('div[title^="Click to turn"]').filter({ has: page.locator('input[data-bound="max"]') })
   const min = tile.locator('input').first()
   const max = tile.locator('input[data-bound="max"]')
   await expect(min).toHaveValue('84')

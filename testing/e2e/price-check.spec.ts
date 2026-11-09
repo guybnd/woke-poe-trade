@@ -203,15 +203,41 @@ test('filter tiles change by scrolling or dragging', async ({ overlay, page }) =
   await page.mouse.wheel(0, 100)
   await expect(value).toHaveValue('83')
 
+  // Only the number drags: pressing the label and moving does nothing to the value.
   const atRest = await tile.getAttribute('class')
   await page.mouse.down()
   await page.mouse.move(x, y - 40, { steps: 5 })
+  await expect(value).toHaveValue('83')
+  await page.mouse.move(x + 400, y - 40, { steps: 2 }) // let go outside, so it's no click
+  await page.mouse.up()
+  await expect(tile).toHaveAttribute('class', atRest!)
+
+  const num = (await value.boundingBox())!
+  const nx = num.x + num.width / 2
+  const ny = num.y + num.height / 2
+  await page.mouse.move(nx, ny)
+  await page.mouse.down()
+  await page.mouse.move(nx, ny - 40, { steps: 5 })
   await expect(value).toHaveValue('85')
-  await page.mouse.move(x, y - 24, { steps: 3 })
+  await page.mouse.move(nx, ny - 24, { steps: 3 })
   await expect(value).toHaveValue('84')
   await page.mouse.up()
 
-  // Letting go didn't count as a click on the label, which would switch the filter off.
+  // Letting go of a drag isn't a click on the box, which would switch the filter off.
+  await expect(tile).toHaveAttribute('class', atRest!)
+
+  // A press that starts on the number and lets go beside it doesn't switch it either.
+  await page.mouse.move(nx, ny)
+  await page.mouse.down()
+  await page.mouse.move(x, y, { steps: 2 })
+  await page.mouse.up()
+  await expect(tile).toHaveAttribute('class', atRest!)
+  await value.blur()
+
+  // Clicking anywhere else in the box, label or edge, switches it off and on.
+  await page.mouse.click(x, y)
+  await expect(tile).not.toHaveAttribute('class', atRest!)
+  await page.mouse.click(box.x + 3, box.y + box.height - 3)
   await expect(tile).toHaveAttribute('class', atRest!)
 })
 
