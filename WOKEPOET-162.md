@@ -54,6 +54,17 @@ history:
     date: '2026-11-09T04:03:22.514Z'
     selfAttested: true
     id: c-2026-11-09t04-03-22-514z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy's direction is drawn as mock D: a ⇄ marker on each swappable mod with
+      this / any / specific element buttons, an "All swaps" button, and a cost
+      limit plus per-family toggles in settings. Max res on jewels is now marked
+      swappable. Open questions: show the buttons as a second line, or folded
+      into the marker? Default automatic cost limit (20c drawn)?
+    date: '2026-11-09T04:35:09.029Z'
+    selfAttested: true
+    id: c-2026-11-09t04-35-09-029z
 swimlane: require-input
 needsAction: null
 ---
