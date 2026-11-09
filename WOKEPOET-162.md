@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-162
 title: Price items on their best Harvest resistance/damage swap
-status: Grooming
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -149,8 +149,62 @@ history:
       refused). The dev build is switched to woke/harvest-swap so Guy can try it
       now. Once it merges, switch the dev build back to master.
     id: a-2026-11-09t07-27-55-829z
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: Guy picked the direction and said "let's go for it".
+    date: '2026-11-09T07:51:01.316Z'
+    id: c-2026-11-09t07-51-01-316z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-09T07:51:01.316Z'
+    comment: Guy picked the direction and said "let's go for it".
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as f9f18825 (PR #277), all checks green, and the dev build now runs
+      master with it. Swappable mods get a ⇄ marker, there's a Flip tab, and
+      searches run only on a click. Not checked in game: +1 Fire Spell gems and
+      two-element res mods, neither of which is offered.
+    date: '2026-11-09T07:51:02.767Z'
+    completionComment: true
+    id: c-2026-11-09t07-51-02-767z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-09T07:51:02.767Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as f9f18825 and live in the dev build on master. Swappable mods get
+      a ⇄ marker with costs and This only / Any / pick-an-element searches, and
+      a Flip tab shows per-element sell price, cost and profit. Searches run
+      only on a click. Families and the highlight limit are in Settings, Price
+      check.
+    completionComment: true
+    date: '2026-11-09T07:51:06.837Z'
+    id: c-2026-11-09t07-51-06-837z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-09T07:51:07.098Z'
+swimlane: null
 needsAction: null
+baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/277'
+diffSummary:
+  - file: renderer/src/web/woke/loot-filter/RuleBuilder.vue
+    additions: 11
+    deletions: 1
+  - file: renderer/src/web/woke/loot-filter/rules.ts
+    additions: 20
+    deletions: 3
+  - file: renderer/test/woke/filter-rules.test.ts
+    additions: 12
+    deletions: 1
 ---
 > **TL;DR:** Price check should also consider what an item is worth after a Harvest swap (Fire/Cold/Lightning resistance or elemental damage), and show the swap cost in lifeforce. Design pass first: analysis + mocks for Guy to pick.
 
