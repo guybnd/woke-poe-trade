@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-166
 title: 'Price check: "PoE mode" window style (Settings > Prices: Standard / PoE)'
-status: In Progress
+status: Ready
 priority: Medium
 effort: L
 assignee: Agent
@@ -10,7 +10,7 @@ tags:
   - ui
   - feature
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -34,10 +34,29 @@ history:
     date: '2026-11-09T15:56:27.279Z'
     comment: Claimed by claude-code@guy-pc
     id: a-2026-11-09t15-56-27-279z
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-09T15:56:27.279Z'
-  expiresAt: '2026-11-09T16:26:27.279Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-09T16:09:25.778Z'
+    comment: Updated implementation link.
+    id: a-2026-11-09t16-09-25-778z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/290 (branch
+      claude/price-check-poe-mode, on master + #288). Typecheck/lint clean, unit
+      all pass, e2e full suite passes except pre-existing tab-rail:280 (fails on
+      base too). Adversarial review done, findings fixed. Not merged:
+      coordinator merges after #288.
+    date: '2026-11-09T16:09:27.094Z'
+    completionComment: true
+    id: c-2026-11-09t16-09-27-094z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-09T16:09:27.094Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/290'
+needsAction: null
 ---
 Guy approved 2026-11-09. Design: branch claude/project-thread-c5mri8, design-mocks/price-check-poe-mode/ (PoeParts.dc.html = A4 main, Scen*.dc.html, HISTORY.md). Canvas https://claude.ai/artifact/MYHd5nhtF1dvB6vE243m9n.
 
