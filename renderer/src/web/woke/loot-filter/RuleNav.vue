@@ -60,7 +60,7 @@
             <img v-if="iconOf(c)" :src="iconOf(c)!" :class="$style.art" alt="">
             <i v-else :class="[c.fa, $style.fa]" aria-hidden="true" />
             <span class="w-trunc grow">{{ c.label }}</span>
-            <span v-if="changedInCat(c)" :class="$style.changed" class="text-xs" :title="`You changed ${changedInCat(c)} thing(s) here`">{{ changedInCat(c) }}</span>
+            <span v-if="changedInCat(c)" :class="$style.changed" class="text-xs" :title="`You changed ${changedInCat(c)} thing${changedInCat(c) === 1 ? '' : 's'} here`">{{ changedInCat(c) }}</span>
             <span class="w-faint text-xs w-num">{{ c.groupCount }}</span>
             <i class="fas fa-chevron-right w-faint text-xs" aria-hidden="true" />
           </span>
@@ -84,7 +84,7 @@
         <WListItem v-for="g in here.chapter.groups" :key="g.type" :active="g.type === selType" :data-here="g.type === selType || undefined" @select="emit('select', g.type)" @contextmenu="emit('group-menu', $event, g.type)">
           <span class="flex items-center gap-2 w-full min-w-0" :class="{ [$style.off]: g.hidden }">
             <span class="w-trunc grow" :title="nameOf(g)">{{ shortGroupName(nameOf(g)) }}</span>
-            <span v-if="changedIn(g.type)" :class="$style.changed" class="text-xs" :title="`You changed ${changedIn(g.type)} thing(s) here`">{{ changedIn(g.type) }}</span>
+            <span v-if="changedIn(g.type)" :class="$style.changed" class="text-xs" :title="`You changed ${changedIn(g.type)} thing${changedIn(g.type) === 1 ? '' : 's'} here`">{{ changedIn(g.type) }}</span>
             <span class="w-faint text-xs w-num">{{ g.tiers.length }}</span>
           </span>
           <template #actions>

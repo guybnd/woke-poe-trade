@@ -20,14 +20,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed, inject, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
+import { defineComponent, PropType, computed, inject, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { Widget, Anchor, WidgetManager } from './interfaces'
 import { useI18n } from 'vue-i18n'
 import { snapMove, clearGuides, clampDrag, releaseWebviewsForDrag, swallowNextClick } from '@/web/woke/ui/snap'
 import { openMenu, toast } from '@/web/woke/ui/layer'
 import type { MenuEntry } from '@/web/woke/ui/layer'
 import { fitOffset } from '@/web/woke/ui/panel-fit'
-import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
+import { minimizeAnchor, onRestoreRequest, restoreAnchor } from '@/web/woke/ui/window-anchor'
 import type { MinimizedState } from '@/web/woke/ui/window-anchor'
 
 const DRAG_START_PX = 4
@@ -166,6 +166,17 @@ export default defineComponent({
         woke().wokeMinimized = next
       }
     }
+
+    // Asked to open while minimized: restore. A widget that was hidden has no
+    // size until it draws, and restoreAnchor may need the bar's spot, so wait
+    // for that.
+    function restoreIfMinimized () {
+      if (!minimized.value) return
+      nextTick(() => { if (minimized.value) toggleMinimize() })
+    }
+    let stopRestore = onRestoreRequest(props.config.wmId, restoreIfMinimized)
+    watch(() => props.config.wmId, (id) => { stopRestore(); stopRestore = onRestoreRequest(id, restoreIfMinimized) })
+    onBeforeUnmount(() => stopRestore())
 
     function hide () {
       wm.hide(props.config.wmId)

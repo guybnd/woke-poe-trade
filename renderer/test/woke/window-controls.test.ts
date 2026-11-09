@@ -4,7 +4,7 @@ import { createSSRApp, h } from 'vue'
 import { createI18n } from 'vue-i18n'
 import { renderToString } from 'vue/server-renderer'
 import { describe, expect, it } from 'vitest'
-import { minimizeAnchor, restoreAnchor } from '@/web/woke/ui/window-anchor'
+import { minimizeAnchor, onRestoreRequest, requestRestore, restoreAnchor } from '@/web/woke/ui/window-anchor'
 import WPanel from '@/web/woke/ui/WPanel.vue'
 import Widget from '@/web/overlay/Widget.vue'
 import type { Anchor, Widget as WidgetConfig } from '@/web/overlay/interfaces'
@@ -43,6 +43,30 @@ describe('minimizeAnchor / restoreAnchor', () => {
     const topLeft = { left: 10, top: 10, right: 266, bottom: 42 }
     expect(restoreAnchor(state, { pos: 'tl', x: 10 / W * 100, y: 10 / H * 100 }, topLeft, W, H))
       .toEqual({ pos: 'tl', x: 10 / W * 100, y: 10 / H * 100 })
+  })
+})
+
+describe('opening a minimized window', () => {
+  it('asks that widget, and only that one, to restore', () => {
+    const calls: number[] = []
+    const stop1 = onRestoreRequest(1, () => calls.push(1))
+    const stop2 = onRestoreRequest(2, () => calls.push(2))
+    requestRestore(2)
+    requestRestore(99)
+    expect(calls).toEqual([2])
+    stop1(); stop2()
+    requestRestore(1)
+    expect(calls).toEqual([2])
+  })
+
+  it("a stale unregister leaves a remounted widget's restorer alone", () => {
+    const calls: string[] = []
+    const stopOld = onRestoreRequest(5, () => calls.push('old'))
+    const stopNew = onRestoreRequest(5, () => calls.push('new'))
+    stopOld()
+    requestRestore(5)
+    expect(calls).toEqual(['new'])
+    stopNew()
   })
 })
 

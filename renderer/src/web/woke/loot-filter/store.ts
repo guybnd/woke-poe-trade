@@ -32,6 +32,9 @@ import { publishActiveFilter } from './active-filter'
 import { LEVEL_NAMES, clampLevel, ladderTarget, ladderZone, levelForArea, pushArea } from './strictness'
 import { toast } from '../ui'
 
+// "1 change", "3 changes".
+export const countOf = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
 // First line of every file the editor writes; marks a filter as ours.
 export const WOKE_MARK = '# WOKE-LOOT-FILTER-EDITOR'
 
@@ -909,8 +912,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     return [
       WOKE_MARK,
       cfg().neversink.on
-        ? `# Made from NeverSink ${d.version ?? ''} ${LEVEL_NAMES[cfg().neversink.level]}${cfg().neversink.style ? ` (${cfg().neversink.style.toLowerCase()} style)` : ''}, downloaded from GitHub, with ${cfg().edits.length} change(s).`
-        : `# Made from "${cfg().sourceOnline ? `${cfg().sourceTitle} (online filter, this copy doesn't auto-update)` : cfg().sourceName}"${d.version ? ` (NeverSink ${d.version})` : ''} with ${cfg().edits.length} change(s)${buildBlockCount.value ? ` and ${buildBlockCount.value} build rule(s) for ${buildInput.value?.buildName ?? 'your build'}` : ''}.`,
+        ? `# Made from NeverSink ${d.version ?? ''} ${LEVEL_NAMES[cfg().neversink.level]}${cfg().neversink.style ? ` (${cfg().neversink.style.toLowerCase()} style)` : ''}, downloaded from GitHub, with ${countOf(cfg().edits.length, 'change')}.`
+        : `# Made from "${cfg().sourceOnline ? `${cfg().sourceTitle} (online filter, this copy doesn't auto-update)` : cfg().sourceName}"${d.version ? ` (NeverSink ${d.version})` : ''} with ${countOf(cfg().edits.length, 'change')}${buildBlockCount.value ? ` and ${countOf(buildBlockCount.value, 'build rule')} for ${buildInput.value?.buildName ?? 'your build'}` : ''}.`,
       '# This file is rewritten on every save from the loot filter editor; change it there.',
       ''
     ]
@@ -919,7 +922,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   function pushHistory (edits: FilterEdit[], moves: PriceMove[]) {
     const last = cfg().history[0]
     if (last && JSON.stringify([last.edits, last.moves]) === JSON.stringify([edits, moves])) return
-    const label = `${edits.length} change(s)${moves.length ? `, ${moves.length} price move(s)` : ''}`
+    const label = `${countOf(edits.length, 'change')}${moves.length ? `, ${countOf(moves.length, 'price move')}` : ''}`
     cfg().history = [{ ts: Date.now(), label, edits, moves }, ...cfg().history].slice(0, HISTORY_SIZE)
   }
 

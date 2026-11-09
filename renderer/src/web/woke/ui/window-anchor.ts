@@ -28,6 +28,19 @@ export function restoreAnchor (state: MinimizedState, current: WidgetAnchor, rec
   }
 }
 
+// Opening a window on purpose (a dock card's Open, a hotkey, a launcher row)
+// also brings it back from minimized: a title bar alone isn't what was asked
+// for. Each mounted Widget registers how to restore itself; the window
+// manager's show() calls it.
+const restorers = new Map<number, () => void>()
+export function onRestoreRequest (wmId: number, restore: () => void) {
+  restorers.set(wmId, restore)
+  return () => { if (restorers.get(wmId) === restore) restorers.delete(wmId) }
+}
+export function requestRestore (wmId: number) {
+  restorers.get(wmId)?.()
+}
+
 // Panels opened from the rail or the dock open here: the empty left side of
 // the screen, beside the rail and clear of an icon row kept on the far
 // left (it draws above panels). A new object each time, because Widget moves a

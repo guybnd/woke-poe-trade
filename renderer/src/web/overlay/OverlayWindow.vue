@@ -41,6 +41,7 @@ import { AppConfig, saveConfig, pushHostConfig } from '@/web/Config'
 import LoadingAnimation from './LoadingAnimation.vue'
 import { WokeOverlay } from '@/web/woke'
 import { isWidgetTypeOn } from '@/web/woke/modules'
+import { requestRestore } from '@/web/woke/ui/window-anchor'
 // ---
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
@@ -153,6 +154,7 @@ export default defineComponent({
         hide(topmostWidget.wmId)
       }
       widgets.value.find(_ => _.wmId === wmId)!.wmWants = 'show'
+      requestRestore(wmId)
     }
 
     function hide (wmId: WMID) {
