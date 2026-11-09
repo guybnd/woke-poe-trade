@@ -16,13 +16,17 @@
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
       <woke-deck-verdict-chip :item="item" />
+      <!-- woke: the poe.ninja price folded onto the name row; its chevron opens the card below. -->
+      <price-trend v-if="showTrendCard && !ninjaCardOpen" inline
+        :item="item"
+        :filters="itemFilters" />
     </filter-name>
     <woke-map-strip :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
     <template v-if="!wokeVerdictShown">
       <price-prediction v-if="showPredictedPrice" class="mb-4"
         :item="item" />
-      <price-trend v-else
+      <price-trend v-else-if="ninjaCardOpen"
         :item="item"
         :filters="itemFilters" />
     </template>
@@ -112,7 +116,7 @@ import { AppConfig } from '@/web/Config'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
-import { priceView } from '@/web/woke/price-insight/view'
+import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
 
 let _showSupportLinksCounter = 0
 
@@ -332,6 +336,8 @@ export default defineComponent({
       showFlipTab,
       verdictSlot,
       wokeVerdictShown,
+      ninjaCardOpen,
+      showTrendCard: computed(() => !wokeVerdictShown.value && !showPredictedPrice.value),
       verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),
       t,
       itemFilters,

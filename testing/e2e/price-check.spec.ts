@@ -90,6 +90,8 @@ test('a price check right after closing the window draws no broken chart', async
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   const chart = panel.locator('.apexcharts-canvas svg')
+  // The poe.ninja card starts folded onto the name row; open it to draw the chart.
+  await panel.getByRole('button', { name: /poe\.ninja/ }).click()
   await expect(chart).toBeVisible()
   await overlay.page.waitForTimeout(300)
   fakeApp.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
@@ -97,7 +99,7 @@ test('a price check right after closing the window draws no broken chart', async
 
   await overlay.copyItem('items/currency-divine.txt')
   await expect(chart).toBeVisible()
-  await expect(chart).toHaveAttribute('width', '48')
+  await expect(chart).toHaveAttribute('width', '40')
 })
 
 test('rare: roll presets search with the item\'s rolls', async ({ overlay, fakeApp }) => {
@@ -284,4 +286,28 @@ test('unique: improved merges same prices with a count, classic lists every list
   const label = panel.getByRole('button', { name: 'Improved' })
   expect(await label.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await overlay.snap('unique with merged listings')
+})
+
+test('the poe.ninja card folds onto the name row and stays as left', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const panel = overlay.widget('price-check')
+  const chip = panel.getByRole('button', { name: /poe\.ninja/ })
+  const fold = panel.getByTitle('Fold onto the name row')
+  // Folded by default: the price sits on the name row, the same height as the title.
+  await expect(chip).toBeVisible()
+  await expect(fold).toHaveCount(0)
+  const title = (await panel.locator('.filter-name-title').boundingBox())!
+  const chipBox = (await chip.boundingBox())!
+  expect(Math.abs(chipBox.y - title.y)).toBeLessThan(8)
+
+  await chip.click()
+  await expect(fold).toBeVisible()
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(fold).toBeVisible()
+  expect(await overlay.page.evaluate(() => localStorage.getItem('woke.ninjaCardOpen'))).toBe('1')
+
+  await fold.click()
+  await expect(chip).toBeVisible()
+  expect(await overlay.page.evaluate(() => localStorage.getItem('woke.ninjaCardOpen'))).toBe('0')
 })

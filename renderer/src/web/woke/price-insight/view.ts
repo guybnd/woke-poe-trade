@@ -40,3 +40,17 @@ export function collapseForNewItem (item: unknown): void {
   verdictExpanded.value = false
   historyOpen.value = false
 }
+
+// The poe.ninja card above the filters (before a search): folded into a chip on
+// the name row by default, so it costs no height. Remembered between checks and restarts.
+const NINJA_KEY = 'woke.ninjaCardOpen'
+function readNinjaOpen (): boolean {
+  try { return localStorage.getItem(NINJA_KEY) === '1' } catch { return false }
+}
+export const ninjaCardOpen = shallowRef(readNinjaOpen())
+watch(ninjaCardOpen, (v) => {
+  try { localStorage.setItem(NINJA_KEY, v ? '1' : '0') } catch {}
+})
+window.addEventListener('storage', (e) => {
+  if (e.key === NINJA_KEY) ninjaCardOpen.value = e.newValue === '1'
+})

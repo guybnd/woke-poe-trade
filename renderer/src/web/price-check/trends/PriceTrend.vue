@@ -1,5 +1,15 @@
 <template>
-  <div v-if="trend" :class="$style.card">
+  <!-- woke: folded, the price is a chip on the name row and costs no height. -->
+  <!-- Holds its place while the price "loads", so the chips around it don't move. -->
+  <button v-if="inline && trend" type="button" :class="[$style.chip, { invisible: !isValuableBasetype && !slowdown.isReady.value }]"
+    title="poe.ninja price. Click to show its 7-day trend" @click="ninjaCardOpen = true">
+    <span :class="$style.source">poe.ninja</span>
+    <span :class="$style.chipValue">{{ priceText }}</span>
+    <img :class="$style.chipCoin" :src="trend.price.currency === 'div' ? '/images/divine.png' : '/images/chaos.png'" :alt="trend.price.currency">
+    <i class="fas fa-chevron-down" :class="$style.chev" />
+  </button>
+  <template v-else-if="inline" />
+  <div v-else-if="trend" :class="$style.card">
     <div v-if="!isValuableBasetype && !slowdown.isReady.value" class="flex flex-1 items-center">
       <div><i class="fas fa-dna fa-spin text-gray-600"></i></div>
       <i18n-t keypath="trade_result.getting_price" class="pl-2">
@@ -8,14 +18,14 @@
     </div>
     <template v-else>
       <div :class="$style.main">
-        <div :class="$style.source">poe.ninja<template v-if="isValuableBasetype">, {{ t(':base_item') }}</template></div>
-        <div :class="$style.value">
+        <span :class="$style.source">poe.ninja<template v-if="isValuableBasetype">, {{ t(':base_item') }}</template></span>
+        <span :class="$style.value">
           <span>{{ priceText }}</span>
           <img :class="$style.coin" :src="trend.price.currency === 'div' ? '/images/divine.png' : '/images/chaos.png'" :alt="trend.price.currency">
-        </div>
+        </span>
       </div>
-      <div v-if="trend.change" @click="openNinja" :class="$style['trend-btn']">
-        <div class="w-12 h-8">
+      <div v-if="trend.change" @click="openNinja" :class="$style['trend-btn']" title="Open on poe.ninja">
+        <div class="w-10 h-5">
           <vue-apexcharts
             type="area"
             :options="{
@@ -38,20 +48,24 @@
             }]"
           />
         </div>
-        <div class="text-right">
-          <div class="leading-tight whitespace-nowrap">
-            <i v-if="trend.change.forecast === 'down'" class="fas fa-angle-double-down pr-1 w-down"></i>
-            <i v-if="trend.change.forecast === 'up'" class="fas fa-angle-double-up pr-1 w-up"></i>
-            <span v-if="trend.change.forecast === 'const'" class="pr-1 w-faint">±</span>
-            <span>{{ trend.change.text }}</span>
-          </div>
-          <div class="leading-tight w-dim">{{ t(':graph_7d') }}</div>
-        </div>
+        <span class="whitespace-nowrap">
+          <i v-if="trend.change.forecast === 'down'" class="fas fa-angle-double-down pr-1 w-down"></i>
+          <i v-if="trend.change.forecast === 'up'" class="fas fa-angle-double-up pr-1 w-up"></i>
+          <span v-if="trend.change.forecast === 'const'" class="pr-1 w-faint">±</span>
+          <span>{{ trend.change.text }}</span>
+          <span class="w-dim pl-1">{{ t(':graph_7d') }}</span>
+        </span>
       </div>
     </template>
+    <button type="button" class="w-icon-btn" title="Fold onto the name row" @click="ninjaCardOpen = false">
+      <i class="fas fa-chevron-up text-xs" />
+    </button>
   </div>
   <div v-else-if="showFallback" :class="$style.card">
     <div :class="$style.source">poe.ninja has no price for this</div>
+    <button type="button" class="w-icon-btn" title="Hide" @click="ninjaCardOpen = false">
+      <i class="fas fa-chevron-up text-xs" />
+    </button>
   </div>
 </template>
 
@@ -68,6 +82,7 @@ import { ParsedItem } from '@/parser'
 import { artificialSlowdown } from '../trade/artificial-slowdown'
 import { ItemFilters } from '../filters/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
+import { ninjaCardOpen } from '@/web/woke/price-insight/view'
 
 const slowdown = artificialSlowdown(800)
 
@@ -83,6 +98,11 @@ export default defineComponent({
     filters: {
       type: Object as PropType<ItemFilters>,
       required: true
+    },
+    /** Folded: a chip on the name row instead of the card. */
+    inline: {
+      type: Boolean,
+      default: false
     }
   },
   setup (props) {
@@ -137,7 +157,8 @@ export default defineComponent({
           item.info.refName !== 'Mercenary Warrant' // need vertical space
         )
       }),
-      slowdown
+      slowdown,
+      ninjaCardOpen
     }
   }
 })
@@ -180,26 +201,43 @@ function deltaFromGraph (graphPoints: Array<number | null>) {
 .card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 3rem;
+  gap: 10px;
+  min-height: 32px;
   margin: 0 -1rem 0.5rem;
-  padding: 8px 1rem;
+  padding: 2px calc(1rem - 4px) 2px 1rem;
   background: var(--w-pc-well, transparent);
   border-top: 1px solid var(--w-line-soft);
   border-bottom: 1px solid var(--w-line);
   font-family: var(--w-body);
   font-variant-numeric: tabular-nums;
 }
-.main { flex: 1 1 auto; min-width: 0; }
+.main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .source { font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-ninja); }
-.value { display: flex; align-items: center; gap: 6px; font-size: calc(24px * var(--w-text-scale, 1)); line-height: calc(30px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-fg); }
-.coin { width: 22px; height: 22px; object-fit: contain; }
+.value { display: inline-flex; align-items: center; gap: 4px; font-size: calc(16px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-fg); }
+.coin { width: calc(16px * var(--w-text-scale, 1)); height: calc(16px * var(--w-text-scale, 1)); object-fit: contain; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  min-height: calc(24px * var(--w-text-scale, 1));
+  padding: 0 6px 0 8px;
+  border: 1px solid var(--w-line-soft);
+  border-radius: var(--w-radius-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &:hover { border-color: var(--w-line); background: var(--w-panel-3); }
+}
+.chipValue { font-size: calc(13px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-fg); }
+.chipCoin { width: calc(14px * var(--w-text-scale, 1)); height: calc(14px * var(--w-text-scale, 1)); object-fit: contain; }
+.chev { font-size: calc(9px * var(--w-text-scale, 1)); color: var(--w-dim); }
 .trend-btn {
   display: flex;
   align-items: center;
   flex: none;
-  gap: 8px;
-  padding: 2px 6px;
+  gap: 6px;
+  padding: 1px 6px;
   border: 1px solid var(--w-line-soft);
   border-radius: var(--w-r-sm);
   font-size: var(--w-fs-xs);

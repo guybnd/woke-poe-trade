@@ -168,15 +168,19 @@ export default defineComponent({
   gap: 12px;
   margin-bottom: 0.5rem;
 }
+/* woke: the name and its chips share one row, and wrap only when they don't fit. */
 .filter-name-main {
   display: flex;
   flex: 1;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 12px;
   min-width: 0;
 }
 .filter-name-title {
   display: flex;
+  flex: 0 1 auto;
+  max-width: 100%;
   align-items: baseline;
   gap: 8px;
   min-width: 0;
@@ -193,8 +197,10 @@ export default defineComponent({
   font-size: calc(12px * var(--w-text-scale, 1));
   color: var(--w-dim);
 }
+/* Takes what the title leaves and wraps inside, so the first chips stay beside the title. */
 .filter-name-chips {
   display: flex;
+  flex: 1 1 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
