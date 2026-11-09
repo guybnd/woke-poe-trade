@@ -77,6 +77,16 @@ history:
     date: '2026-11-09T04:36:06.136Z'
     selfAttested: true
     id: c-2026-11-09t04-36-06-136z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy: the flip screen should only appear when the item has swappable mods.
+      Mock E is now a "Flip ⇄" tab in the price check, showing each swap outcome
+      with its sell price, cost and profit. The Flips-panel recipe table is kept
+      as an optional later step.
+    date: '2026-11-09T04:36:38.329Z'
+    selfAttested: true
+    id: c-2026-11-09t04-36-38-329z
 swimlane: require-input
 needsAction: null
 ---
