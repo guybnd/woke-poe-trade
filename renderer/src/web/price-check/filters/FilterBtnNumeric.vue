@@ -1,6 +1,6 @@
 <template>
   <div :class="[$style.tile, { [$style.active]: !filter.disabled, [$style.dragging]: dragging }]"
-    title="Scroll or drag up and down to change the value"
+    title="Click to turn on or off. Scroll, or drag a number up and down, to change it"
     @wheel.prevent.stop="handleWheel"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
@@ -8,8 +8,10 @@
     @pointercancel="handlePointerEnd"
     @mousedown="handleMouseDown"
     @dragstart.prevent
-    @click.capture="swallowDragClick">
-    <button type="button" :class="$style.label" @click="filter.disabled = !filter.disabled">{{ label }}</button>
+    role="button" tabindex="0" :aria-pressed="!filter.disabled"
+    @keydown.enter.space="handleKey"
+    @click="handleClick">
+    <span :class="$style.label">{{ label }}</span>
     <div :class="$style.values">
     <input :class="$style.input" step="any" type="number"
       v-model.number="inputMin"
@@ -127,6 +129,9 @@ export default defineComponent({
     // `input` is the number you pressed, if it wasn't being typed in: letting go without a drag opens it.
     let drag: { startY: number, bound: Bound, applied: number, input: HTMLInputElement | null } | null = null
     let justDragged = false
+    // How the press began: on a number (types or drags, never switches), and the filter's state then.
+    // Pressing elsewhere blurs a number being typed in, and an emptied one switches the filter off on blur.
+    let press: { onInput: boolean, wasDisabled: boolean } | null = null
 
     return {
       // Some of these strings are written for "Links: 6", and the value has its own line here.
@@ -137,9 +142,13 @@ export default defineComponent({
       handleWheel (e: WheelEvent) {
         if (e.deltaY !== 0) nudge(boundAt(e.target), (e.deltaY < 0) ? 1 : -1)
       },
+      // Only the numbers drag. The rest of the box is a switch for the filter.
       handlePointerDown (e: PointerEvent) {
         justDragged = false
-        drag = (e.button === 0)
+        press = (e.button === 0)
+          ? { onInput: e.target instanceof HTMLInputElement, wasDisabled: props.filter.disabled }
+          : null
+        drag = (e.button === 0 && e.target instanceof HTMLInputElement)
           ? { startY: e.clientY, bound: boundAt(e.target), applied: 0, input: restingInputAt(e.target) }
           : null
       },
@@ -182,12 +191,24 @@ export default defineComponent({
         dragging.value = false
         drag = null
       },
-      // Letting go after a drag on the label mustn't also switch the filter off.
-      swallowDragClick (e: MouseEvent) {
+      // Pressing a number types in it or drags it, so only the rest of the box switches the filter.
+      // Letting go of a drag lands on the box (it holds the pointer), and mustn't switch it either.
+      // A press that began on a number and was let go elsewhere in the box still lands here, so it's the
+      // press that counts, not where the click ended up.
+      handleClick (e: MouseEvent) {
+        const began = press
+        press = null
         if (justDragged) {
           justDragged = false
-          e.stopPropagation()
+          return
         }
+        if (e.target instanceof HTMLInputElement || !began || began.onInput) return
+        props.filter.disabled = !began.wasDisabled
+      },
+      handleKey (e: KeyboardEvent) {
+        if (e.target !== e.currentTarget) return
+        e.preventDefault()
+        props.filter.disabled = !props.filter.disabled
       },
       // A capped value that doesn't change the model (6, then typing 67) wouldn't redraw the box.
       showClamped (e: Event) {
@@ -224,7 +245,8 @@ export default defineComponent({
   border: 1px solid var(--w-line-soft);
   border-radius: var(--w-radius-sm);
   color: var(--w-faint);
-  cursor: ns-resize;
+  cursor: pointer;
+  user-select: none;
 
   &.active {
     background: var(--w-accent-soft);
@@ -233,7 +255,7 @@ export default defineComponent({
   }
 
   &.dragging {
-    user-select: none;
+    cursor: ns-resize;
     border-color: var(--w-accent);
   }
 }
@@ -242,9 +264,9 @@ export default defineComponent({
   font-size: calc(12px * var(--w-text-scale, 1));
   line-height: calc(16px * var(--w-text-scale, 1));
   white-space: nowrap;
-
-  &:hover { color: var(--w-fg); }
 }
+
+.tile:hover .label { color: var(--w-fg); }
 
 .values {
   display: flex;
@@ -260,7 +282,7 @@ export default defineComponent({
   @apply bg-transparent;
   @apply select-all;
   color: inherit;
-  cursor: inherit;
+  cursor: ns-resize;
 
   &:hover,
   &:focus {
