@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-163
 title: 'Split pseudo totals into their mods, and a right-click menu on stat rows'
-status: Grooming
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -59,8 +59,49 @@ history:
       Merge handed to the cloud thread. Guy was in game, so the dev build
       restart waits.
     id: a-2026-11-09t10-07-27-378z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #279 merged as 7fd7da86, with all checks green. It adds the pseudo
+      split (A) and the stat row right-click menu. The dev build switches to
+      master once Guy is out of the game.
+    date: '2026-11-09T10:19:39.752Z'
+    completionComment: true
+    id: c-2026-11-09t10-19-39-752z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-09T10:19:39.752Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 7fd7da86. Clicking a Pseudo xN chip splits the total into its
+      mods, each with its own min and ⇄, and clicking again folds them back.
+      Right-clicking a stat row gives: search only this, exclude/include, min
+      presets, price as an element, split/fold, and copy mod text.
+    completionComment: true
+    date: '2026-11-09T10:19:45.286Z'
+    id: c-2026-11-09t10-19-45-286z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-09T10:19:45.566Z'
 swimlane: null
 needsAction: null
+baselineCommit: e67d6ec4dad47efdb249e0afdf27705a03528309
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/279'
+diffSummary:
+  - file: renderer/src/web/woke/loot-filter/RuleBuilder.vue
+    additions: 11
+    deletions: 1
+  - file: renderer/src/web/woke/loot-filter/rules.ts
+    additions: 20
+    deletions: 3
+  - file: renderer/test/woke/filter-rules.test.ts
+    additions: 12
+    deletions: 1
 ---
 > **TL;DR:** Guy wants to click a pseudo chip (e.g. "total Elemental Resistance, Pseudo ×2") to split it into its mods, mainly so each gets a swap ⇄, plus right-click actions on stat rows. Mocks: https://claude.ai/artifact/QXX8betDrvkdL9ZS93YZ2d
 

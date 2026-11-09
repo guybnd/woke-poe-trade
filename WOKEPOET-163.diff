@@ -1,0 +1,129 @@
+diff --git a/renderer/src/web/woke/loot-filter/RuleBuilder.vue b/renderer/src/web/woke/loot-filter/RuleBuilder.vue
+index 40b3991a..e7570f69 100644
+--- a/renderer/src/web/woke/loot-filter/RuleBuilder.vue
++++ b/renderer/src/web/woke/loot-filter/RuleBuilder.vue
+@@ -48,6 +48,13 @@
+         <template v-else-if="kindOf(c) === 'bool'">
+           <WSegmented :model-value="c.values[0] ?? 'False'" :options="[{ value: 'True', label: 'Yes' }, { value: 'False', label: 'No' }]" @update:model-value="v => c.values = [v]" />
+         </template>
++        <template v-else-if="kindOf(c) === 'tier'">
++          <span class="flex items-center gap-1" role="group" aria-label="Item tier and up">
++            <button v-for="t in ITEM_TIERS" :key="t" type="button" :class="[$style.tier, tierLit(c.op, Number(c.values[0]), t) && $style.tierOn]"
++              :aria-pressed="tierLit(c.op, Number(c.values[0]), t)" :title="t === 5 ? 'Tier 5 only' : `Tier ${t} and up`"
++              @click="c.op = '>='; c.values = [String(t)]">T{{ t }}</button>
++          </span>
++        </template>
+         <template v-else-if="kindOf(c) === 'influence'">
+           <select :value="c.values[0]" :class="$style.select" aria-label="Influence" @change="c.values = [($event.target as HTMLSelectElement).value]">
+             <option value="None">None</option>
+@@ -82,7 +89,7 @@ import type { LootFilterStore } from './store'
+ import type { FilterCondition } from './parse'
+ import { readStyle } from './edits'
+ import type { StylePatch } from './edits'
+-import { CONDITION_KINDS, INFLUENCES, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, newCondition, ruleProblem, ruleTier } from './rules'
++import { CONDITION_KINDS, INFLUENCES, ITEM_TIERS, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, newCondition, ruleProblem, ruleTier, tierLit } from './rules'
+ import type { OwnRule } from './rules'
+ import { everyDrop } from './drops'
+ import { matchItem } from './match'
+@@ -166,6 +173,9 @@ const copyFrom = computed(() => {
+ </script>
+ 
+ <style module>
++.tier { min-width: 2rem; padding: 2px 0; border: 1px solid var(--w-line); background: var(--w-panel-2); color: var(--w-dim); font-size: var(--w-fs-sm, 12px); cursor: pointer; }
++.tier:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
++.tierOn, .tierOn:hover { border-color: var(--w-accent); background: var(--w-accent); color: var(--w-accent-fg); font-weight: 600; }
+ .builder {
+   display: flex;
+   flex-direction: column;
+diff --git a/renderer/src/web/woke/loot-filter/rules.ts b/renderer/src/web/woke/loot-filter/rules.ts
+index 9c0019fb..e895cbea 100644
+--- a/renderer/src/web/woke/loot-filter/rules.ts
++++ b/renderer/src/web/woke/loot-filter/rules.ts
+@@ -16,7 +16,7 @@ export interface OwnRule {
+   patch: StylePatch
+ }
+ 
+-export type ConditionInput = 'list' | 'number' | 'rarity' | 'bool' | 'influence'
++export type ConditionInput = 'list' | 'number' | 'rarity' | 'bool' | 'influence' | 'tier'
+ 
+ export interface ConditionKind {
+   key: string
+@@ -49,13 +49,29 @@ export const CONDITION_KINDS: ConditionKind[] = [
+   { key: 'Mirrored', label: 'Mirrored', input: 'bool' },
+   { key: 'FracturedItem', label: 'Fractured', input: 'bool' },
+   { key: 'SynthesisedItem', label: 'Synthesised', input: 'bool' },
+-  { key: 'HasInfluence', label: 'Influence', input: 'influence' }
++  { key: 'HasInfluence', label: 'Influence', input: 'influence' },
++  // 3.30: magic and rare drops carry a tier, 1 to 5.
++  { key: 'UnidentifiedItemTier', label: 'Item tier', input: 'tier', min: 1, max: 5 }
+ ]
+ 
+ export const RARITIES = ['Normal', 'Magic', 'Rare', 'Unique']
+ export const INFLUENCES = ['Shaper', 'Elder', 'Crusader', 'Hunter', 'Redeemer', 'Warlord']
+ export const NUMBER_OPS = ['>=', '<=', '==', '>', '<']
+ 
++export const ITEM_TIERS = [1, 2, 3, 4, 5]
++
++// Which tier buttons a tier condition lights. Ours are always "this tier and
++// up"; a hand-written or NeverSink one can use any compare.
++export function tierLit (op: string, value: number, tier: number): boolean {
++  switch (op || '==') {
++    case '>=': return tier >= value
++    case '>': return tier > value
++    case '<=': return tier <= value
++    case '<': return tier < value
++    default: return tier === value
++  }
++}
++
+ export function conditionKind (key: string): ConditionKind | undefined {
+   return CONDITION_KINDS.find(k => k.key === key)
+ }
+@@ -67,6 +83,7 @@ export function newCondition (key: string): FilterCondition {
+     case 'rarity': return { key, op: '==', count: null, values: ['Rare'] }
+     case 'bool': return { key, op: '', count: null, values: ['False'] }
+     case 'influence': return { key, op: '', count: null, values: ['None'] }
++    case 'tier': return { key, op: '>=', count: null, values: ['4'] }
+     default: return { key, op: '==', count: null, values: [] }
+   }
+ }
+@@ -86,7 +103,7 @@ export function ruleProblem (r: OwnRule): string | null {
+   for (const c of r.conditions) {
+     if (!c.values.length) return `${conditionKind(c.key)?.label ?? c.key} is empty`
+     const kind = conditionKind(c.key)
+-    if (kind?.input === 'number') {
++    if (kind?.input === 'number' || kind?.input === 'tier') {
+       const n = Number(c.values[0])
+       if (!Number.isInteger(n) || (kind.min != null && n < kind.min) || (kind.max != null && n > kind.max)) {
+         return `${kind.label} must be a whole number from ${kind.min} to ${kind.max}`
+diff --git a/renderer/test/woke/filter-rules.test.ts b/renderer/test/woke/filter-rules.test.ts
+index b2814c33..9d34541c 100644
+--- a/renderer/test/woke/filter-rules.test.ts
++++ b/renderer/test/woke/filter-rules.test.ts
+@@ -8,7 +8,7 @@ import { validateFilter } from '@/web/woke/loot-filter/validate'
+ import { matchItem } from '@/web/woke/loot-filter/match'
+ import { applyEdits, isValidEdit, readStyle } from '@/web/woke/loot-filter/edits'
+ import type { FilterEdit } from '@/web/woke/loot-filter/edits'
+-import { CONDITION_KINDS, newCondition, newRule, ruleBlocks, ruleProblem, RULE_TYPE } from '@/web/woke/loot-filter/rules'
++import { CONDITION_KINDS, ITEM_TIERS, newCondition, newRule, ruleBlocks, ruleProblem, RULE_TYPE, tierLit } from '@/web/woke/loot-filter/rules'
+ import type { OwnRule } from '@/web/woke/loot-filter/rules'
+ import { PRESET_TYPE, RECIPE_SLOTS, applyPresetChanges, defaultPresets, normalizePresets, presetBlocks } from '@/web/woke/loot-filter/presets'
+ import type { Presets } from '@/web/woke/loot-filter/presets'
+@@ -63,6 +63,17 @@ describe('the rule builder', () => {
+     expect(ruleProblem(rule({ conditions: [{ key: 'NotAThing', op: '', count: null, values: ['1'] }] }))).toMatch(/can't read/)
+   })
+ 
++  it('item tier buttons write "this tier and up" and light what a rule covers', () => {
++    const lit = (op: string, v: number) => ITEM_TIERS.filter(t => tierLit(op, v, t))
++    expect(lit('>=', 4)).toEqual([4, 5])
++    expect(lit('>=', 5)).toEqual([5])
++    expect(lit('==', 3)).toEqual([3])
++    expect(lit('<', 3)).toEqual([1, 2])
++    const doc = withRules(parseFilter('Show\n'), [rule({ conditions: [newCondition('Rarity'), newCondition('UnidentifiedItemTier')] })])
++    expect(serializeFilter(doc)).toContain('UnidentifiedItemTier >= 4')
++    expect(ruleProblem(rule({ conditions: [{ key: 'UnidentifiedItemTier', op: '>=', count: null, values: ['6'] }] }))).toMatch(/1 to 5/)
++  })
++
+   it('skips a broken or switched-off rule rather than breaking the file', () => {
+     const broken = rule({ conditions: [] })
+     const off = rule({ id: 2, on: false, conditions: [newCondition('Rarity')] })
