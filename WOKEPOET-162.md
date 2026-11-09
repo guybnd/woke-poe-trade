@@ -115,6 +115,17 @@ history:
     date: '2026-11-09T04:38:26.941Z'
     selfAttested: true
     id: c-2026-11-09t04-38-26-941z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy's rule: no extra trade searches unless the user means them. The normal
+      price check stays exactly as today. Swap searches run only on a ⇄ button,
+      "All swaps", or opening the Flip tab, one search per press. The cost limit
+      only highlights swaps and never searches. Other elements are not folded
+      into the normal search.
+    date: '2026-11-09T04:39:10.205Z'
+    selfAttested: true
+    id: c-2026-11-09t04-39-10-205z
 swimlane: require-input
 needsAction: null
 ---
