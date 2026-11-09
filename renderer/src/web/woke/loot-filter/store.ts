@@ -20,7 +20,7 @@ import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { buildRuleBlocks, insertBuildBlocks } from './build-rules'
 import { useBuildRuleInput } from './build-input'
-import { applyPriceMoves, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
+import { applyPriceMoves, isTierNamesake, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
 import type { EconomyGroup, PriceMove, RetierPlan } from './economy'
 import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
 import { isDismissed } from './health'
@@ -89,6 +89,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // With no league known yet (leagues still loading, or the fetch failed) a move
   // isn't called foreign.
   const inLeague = (m: PriceMove) => !m.league || !prices.currentLeague.value || m.league === prices.currentLeague.value
+  // A tier's namesake (Orb of Alchemy in t5alchemy) no longer moves: an old
+  // stored move of one is dropped.
+  if (cfg().priceTiers.moves.some(m => isTierNamesake(m.type, m.from, m.base))) {
+    cfg().priceTiers.moves = cfg().priceTiers.moves.filter(m => !isTierNamesake(m.type, m.from, m.base))
+  }
   const activeMoves = () => cfg().priceTiers.on ? cfg().priceTiers.moves.filter(inLeague) : []
   const moveKey = (m: PriceMove) => [m.type, m.base, m.from, m.to]
   const extraSig = () => {
