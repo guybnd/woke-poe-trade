@@ -88,7 +88,7 @@
             @click="toggleFractured">Fractured only</button>
           <button v-if="poe && canSplit" type="button" class="w-poe-ptag"
             :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-            @click="actions!.toggleSplit(filter)">Pseudo ×{{ filter.sources.length }} {{ isSplit ? '▴' : '▾' }}</button>
+            @click="actions!.toggleSplit(filter)">{{ t('filters.tag_pseudo') }} ×{{ filter.sources.length }} {{ isSplit ? '▴' : '▾' }}</button>
           <template v-else-if="poe" />
           <button v-else-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
@@ -304,7 +304,8 @@ export default defineComponent({
         return typeof roll.min === 'number' ? roll.min : roll.value
       },
       set: (v) => {
-        props.filter.roll!.min = v
+        const max = props.filter.roll!.max
+        props.filter.roll!.min = (typeof max === 'number') ? Math.min(v, max) : v
         props.filter.disabled = false
       },
       step: () => {

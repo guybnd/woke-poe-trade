@@ -12,7 +12,7 @@
     </button>
     <button v-if="canSplit" type="button" class="w-poe-ptag"
       :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-      @click="actions!.toggleSplit(filter)">Pseudo ×{{ filter.sources.length }} {{ isSplit ? '▴' : '▾' }}</button>
+      @click="actions!.toggleSplit(filter)">{{ t('filters.tag_pseudo') }} ×{{ filter.sources.length }} {{ isSplit ? '▴' : '▾' }}</button>
   </div>
 </template>
 

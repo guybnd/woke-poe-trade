@@ -11,7 +11,7 @@
     </div>
     <div id="price-window" ref="windowEl" class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
       :class="{ [$style.movable]: !isBrowserShown, 'w-poe': poeMode }" :style="windowStyle" @mousedown="startMove"
-      @keydown.esc="poeMode && closePriceCheck()">
+      @keydown.esc="poeMode && onEsc($event)">
       <AppTitleBar @close="closePriceCheck" @click="openLeagueSelection" :title="title">
         <button v-if="floating" data-testid="price-window-dock" title="Back to the side of the screen" @click="dock">
           <i class="fas fa-columns" />
@@ -362,6 +362,17 @@ export default defineComponent({
       }
     })
 
+    // woke: PoE mode closes on Esc; in a box being typed in, Esc only leaves the box.
+    function onEsc (e: KeyboardEvent) {
+      if (e.defaultPrevented) return
+      const el = e.target as HTMLElement
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.blur()
+        return
+      }
+      closePriceCheck()
+    }
+
     function closePriceCheck () {
       if (isBrowserShown.value || !Host.isElectron) {
         wm.hide(props.config.wmId)
@@ -395,6 +406,7 @@ export default defineComponent({
 
     return {
       poeMode,
+      onEsc,
       t,
       clickPosition,
       isBrowserShown,

@@ -1,0 +1,23 @@
+Item Class: Jewels
+Rarity: Unique
+Watcher's Eye
+Prismatic Jewel
+--------
+Limited to: 1
+--------
+Item Level: 86
+--------
+{ Unique Modifier — Defences, Energy Shield }
+5(4-6)% increased maximum Energy Shield
+{ Unique Modifier — Life }
+5(4-6)% increased maximum Life
+{ Unique Modifier — Mana }
+5(4-6)% increased maximum Mana
+{ Unique Modifier — Aura }
+Gain 15(10-15)% of Physical Damage as Extra Lightning Damage while affected by Wrath
+--------
+One by one, they stood their ground against a creature
+they had no hope of understanding, let alone defeating,
+and one by one, they became a part of it.
+--------
+Place into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket.

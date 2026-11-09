@@ -11,7 +11,8 @@
     @mousedown="handleMouseDown"
     @dragstart.prevent>
     <button type="button" class="w-poe-nlab" :aria-pressed="!filter.disabled"
-      @click="filter.disabled = !filter.disabled">{{ label }}</button>
+      @pointerdown="pressLabel"
+      @click="toggleFromLabel">{{ label }}</button>
     <button type="button" class="w-poe-arr" tabindex="-1" aria-label="Less" @click="nudge('min', -1)">‹</button>
     <input class="w-poe-ninp" step="any" type="number" :aria-label="label"
       v-model.number="inputMin"
@@ -172,7 +173,17 @@ export default defineComponent({
     // Pressing elsewhere blurs a number being typed in, and an emptied one switches the filter off on blur.
     let press: { onInput: boolean, wasDisabled: boolean } | null = null
 
+    // The state when the label was pressed: pressing it blurs an emptied box, which
+    // switches the filter off before the click lands.
+    let labelWasDisabled: boolean | null = null
+
     return {
+      pressLabel () { labelWasDisabled = props.filter.disabled },
+      toggleFromLabel () {
+        const was = labelWasDisabled ?? props.filter.disabled
+        labelWasDisabled = null
+        props.filter.disabled = !was
+      },
       // Some of these strings are written for "Links: 6", and the value has its own line here.
       label: computed(() => props.name.replace(/[:：]\s*$/, '')),
       inputMin,

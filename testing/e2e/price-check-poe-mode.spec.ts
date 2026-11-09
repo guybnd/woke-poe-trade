@@ -62,11 +62,17 @@ test('PoE mode: unpicked mods are tooltip lines, clicking one picks it', async (
   await expect(picked.locator('.w-poe-row-text')).toHaveCSS('white-space', 'normal')
   expect(fakeApp.requests.filter(r => r.url.includes('/api/trade/search')).length).toBe(before)
 
-  // Enter searches.
-  await picked.locator('.w-roll-input').first().focus()
+  // Enter searches, right after the click: the line it was is gone, so nothing has focus.
   await overlay.page.keyboard.press('Enter')
   await expect.poll(() => fakeApp.requests.filter(r => r.url.includes('/api/trade/search')).length).toBeGreaterThan(before)
   await overlay.snap('poe mode picked row and results')
+
+  // Esc in a box only leaves the box; Esc again closes the window.
+  const box = picked.locator('.w-roll-input').first()
+  await box.focus()
+  await overlay.page.keyboard.press('Escape')
+  await expect(box).not.toBeFocused()
+  await expect(win).toBeVisible()
 })
 
 test('PoE mode: number chips toggle on the label and change by wheel without a search', async ({ overlay, fakeApp }) => {
@@ -142,7 +148,9 @@ test('PoE mode: other items keep their features', async ({ overlay }) => {
     ['items/gem-enlighten.txt', 'gem'],
     ['items/map-rare-t16.txt', 'map'],
     ['items/rare-cluster-large.txt', 'cluster'],
-    ['items/rare-eldritch.txt', 'eldritch']
+    ['items/rare-eldritch.txt', 'eldritch'],
+    ['items/unique-watchers-eye.txt', 'watchers eye'],
+    ['items/magic-flask.txt', 'flask']
   ] as const) {
     await overlay.copyItem(file)
     const win = overlay.page.locator('#price-window')

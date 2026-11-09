@@ -174,7 +174,7 @@
 #price-window.w-poe .w-poe-arr {
   width: 12px;
   height: calc(20px * var(--w-text-scale, 1));
-  font: 700 13px var(--poe-num);
+  font: 700 calc(13px * var(--w-text-scale, 1)) var(--poe-num);
   color: var(--poe-gold-t);
   opacity: 0;
   transition: opacity 80ms;
@@ -222,7 +222,7 @@
 }
 #price-window.w-poe .w-poe-not {
   font-family: var(--poe-num);
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--w-text-scale, 1));
   padding: 0 4px;
   border: 1px solid #8a3a30;
   border-radius: 2px;
@@ -234,7 +234,7 @@
   flex: none;
   width: 20px;
   text-align: center;
-  font: 600 11px var(--poe-num);
+  font: 600 calc(11px * var(--w-text-scale, 1)) var(--poe-num);
   font-variant-numeric: tabular-nums;
   color: var(--w-faint);
 }
@@ -272,7 +272,7 @@
 /* ---- A picked row: the original row, PoE parts, wrapping text ---- */
 #price-window.w-poe .w-poe-row {
   margin: 2px 6px;
-  padding: 6px 8px 6px 0;
+  padding: 6px 8px 6px 4px;
   border: 1px solid #5a4a30;
   border-radius: 2px;
   background: linear-gradient(rgba(227, 183, 95, .10), rgba(227, 183, 95, .04));

@@ -1,0 +1,20 @@
+Item Class: Utility Flasks
+Rarity: Magic
+Alchemist's Quicksilver Flask
+--------
+Quality: +20% (augmented)
+Lasts 4.80 Seconds
+Consumes 20 of 50 Charges on use
+Currently has 50 Charges
+40% increased Movement Speed
+--------
+Requirements:
+Level: 4
+--------
+Item Level: 84
+--------
+{ Prefix Modifier "Alchemist's" (Tier: 1) — Flask }
+25% increased effect
+33% reduced Duration
+--------
+Right click to drink. Can only hold charges while in belt. Refills as you kill monsters.
