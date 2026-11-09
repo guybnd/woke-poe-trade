@@ -84,7 +84,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, toRaw, onUnmounted, ComponentPublicInstance } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, toRaw, onUnmounted, ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
@@ -104,7 +104,6 @@ import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
 import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
-import WokeSwapFlip from '@/web/woke/harvest-swap/SwapFlip.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
@@ -122,7 +121,8 @@ export default defineComponent({
   name: 'CheckedItem',
   components: {
     WokeMapStrip,
-    WokeSwapFlip,
+    // Loads when the Flip tab is first opened.
+    WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
     WTabs,
     WokeDustChip,
     WokeDustVerdictChip,

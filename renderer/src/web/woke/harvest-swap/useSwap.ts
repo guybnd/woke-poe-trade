@@ -1,15 +1,16 @@
 // Shared state of the swap markers and the Flip tab for one price check.
 // Nothing here searches on its own: every search starts from a click.
 
-import { computed, inject, InjectionKey, provide, reactive, ref, Ref, ComputedRef, watch } from 'vue'
+import { computed, inject, InjectionKey, provide, reactive, ref, Ref, ComputedRef, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
-import { detectSwaps, SwapCandidate } from './detect'
-import { DEFAULT_HIGHLIGHT_CHAOS } from './families'
-import { buildSwapRequest, requestKey, runSwapSearch, SwapMode, SwapSearchResult } from './search'
+// Detection loads with the first price check, not at startup.
+import type { SwapCandidate } from './detect'
+// The search code loads on the first swap search, not with the price check.
+import type { SwapMode, SwapSearchResult } from './search'
 
 export interface SwapRun {
   /** Tells a run's answer from a newer run's for the same mod. */
@@ -48,7 +49,11 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
   const config = computed(() => AppConfig().woke?.harvestSwap)
 
   // Only where the trade site prices the item: bulk-priced items can't show the Flip tab.
-  const candidates = computed(() => enabled.value ? detectSwaps(item.value, stats.value, config.value) : [])
+  const detectCode = shallowRef<typeof import('./detect') | null>(null)
+  import('./detect').then(code => { detectCode.value = code }).catch(() => { /* no markers: the price check works as before */ })
+  const candidates = computed(() => (enabled.value && detectCode.value)
+    ? detectCode.value.detectSwaps(item.value, stats.value, config.value)
+    : [])
   const runs = reactive(new Map<StatFilter, SwapRun>())
   const view = ref<'results' | 'flip'>('results')
   let runId = 0
@@ -66,19 +71,28 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
   }
 
   function cheap (cand: SwapCandidate): boolean {
-    const limit = config.value?.highlightChaos ?? DEFAULT_HIGHLIGHT_CHAOS
+    const limit = config.value?.highlightChaos ?? detectCode.value!.DEFAULT_HIGHLIGHT_CHAOS
     const costs = cand.targets.map(t => cost(cand, t))
     if (costs.some(c => c == null)) return true
     return Math.min(...costs as number[]) <= limit
   }
 
-  function currentKey (cand: SwapCandidate, mode: SwapMode): string {
-    return requestKey(buildSwapRequest(filters.value, stats.value, cand, mode))
+  const searchCode = shallowRef<typeof import('./search') | null>(null)
+  async function loadSearch () {
+    if (!searchCode.value) searchCode.value = await import('./search')
+    return searchCode.value
+  }
+
+  function currentKey (cand: SwapCandidate, mode: SwapMode): string | null {
+    const code = searchCode.value
+    return code && code.requestKey(code.buildSwapRequest(filters.value, stats.value, cand, mode))
   }
 
   function stale (cand: SwapCandidate): boolean {
     const r = runs.get(cand.filter)
-    return r?.state === 'done' && r.result!.request !== currentKey(cand, r.mode)
+    if (r?.state !== 'done') return false
+    const key = currentKey(cand, r.mode)
+    return key != null && r.result!.request !== key
   }
 
   async function run (cand: SwapCandidate, mode: SwapMode) {
@@ -89,6 +103,7 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     const id = ++runId
     runs.set(cand.filter, { id, mode, state: 'loading' })
     try {
+      const { runSwapSearch } = await loadSearch()
       const result = await runSwapSearch(
         filters.value, stats.value, cand, mode,
         { ...options.value, accountName: AppConfig().accountName },
@@ -109,6 +124,7 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
       if (now?.id === id) runs.set(cand.filter, { ...now, refining: undefined, ...patch })
     }
     try {
+      const { runSwapSearch } = await loadSearch()
       const one = await runSwapSearch(
         filters.value, stats.value, cand, key,
         { ...options.value, accountName: AppConfig().accountName },

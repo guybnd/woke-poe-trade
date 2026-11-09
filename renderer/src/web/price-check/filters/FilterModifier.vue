@@ -35,7 +35,7 @@
             class="flex items-baseline gap-x-1 shrink-0 ml-auto">
             <div v-if="showQ20Notice"
               :class="$style.qualityLabel">{{ t('item.prop_quality', [calcQuality]) }}</div>
-            <woke-swap-marker v-if="!filter.group" :filter="filter" />
+            <woke-swap-marker v-if="hasSwap" :filter="filter" />
             <woke-mod-worth-tag v-if="!filter.group" :stat-ref="filter.statRef" :item="item" />
             <img v-for="img of rollTags"
               :class="$style.rollTag" :src="img">
@@ -96,7 +96,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, computed, ref, nextTick, useCssModule, watch } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, computed, ref, nextTick, useCssModule, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import UiPopover from '@/web/ui/Popover.vue'
 import StatRollSlider from '../../ui/StatRollSlider.vue'
@@ -105,9 +105,9 @@ import ModifierAnointment from './FilterModifierAnointment.vue'
 import FilterModifierOptions, { RollOption } from './FilterModifierOptions.vue'
 import FilterModifierTiers from './FilterModifierTiers.vue'
 import WokeModWorthTag from '@/web/woke/price-insight/ModWorthTag.vue'
-import WokeSwapMarker from '@/web/woke/harvest-swap/SwapMarker.vue'
 import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
+import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
@@ -116,7 +116,7 @@ import SourceInfo from './SourceInfo.vue'
 import { SearchMode as MercSearchMode } from './pseudo/mercenary.js'
 
 export default defineComponent({
-  components: { WokeModWorthTag, WokeSwapMarker, WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, SourceInfo, StatRollSlider, UiPopover },
+  components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, SourceInfo, StatRollSlider, UiPopover },
   emits: ['update:groupExpanded'],
   props: {
     filter: {
@@ -139,6 +139,9 @@ export default defineComponent({
     }
   },
   setup (props, ctx) {
+    // woke: the ⇄ marker's code only loads for a mod that can be swapped.
+    const swap = useSwap()
+    const hasSwap = computed(() => !props.filter.group && swap?.candidateFor(props.filter) != null)
     const $style = useCssModule()
 
     watch(() => props.filter.disabled && props.groupExpanded, (uncheckedHint) => {
@@ -248,6 +251,7 @@ export default defineComponent({
     const { t } = useI18n()
 
     return {
+      hasSwap,
       t,
       showTag,
       showQ20Notice,

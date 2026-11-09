@@ -1,7 +1,7 @@
 // The settings window's pages: General (shared settings), Modules (one page
 // per module or pair of modules) and App. Each page lists the setting labels
 // it holds so search can find them without rendering every page.
-import type { Component } from 'vue'
+import { defineAsyncComponent, type Component } from 'vue'
 import { CURRENCY_ICONS, MECHANIC_ICONS } from '../ui/game-icons'
 import { MODULES } from '../modules'
 
@@ -11,7 +11,6 @@ import SettingsChat from '@/web/settings/chat.vue'
 import SettingsDebug from '@/web/settings/debug.vue'
 import PerfSettings from '../ui/PerfSettings.vue'
 import DisenchantVerdictSetting from '../disenchant/DisenchantVerdictSetting.vue'
-import SwapSetting from '../harvest-swap/SwapSetting.vue'
 import ModulesSettings from '../switchboard/ModulesSettings.vue'
 import GamePage from './GamePage.vue'
 import HotkeysPage from './HotkeysPage.vue'
@@ -138,7 +137,7 @@ export const PAGES: SettingsPage[] = [
     icon: modulePageIcon('apt-price-check'),
     description: 'Prices for the item under your cursor.',
     modules: ['apt-price-check'],
-    parts: [SettingsPricecheck, DisenchantVerdictSetting, SwapSetting],
+    parts: [SettingsPricecheck, DisenchantVerdictSetting, defineAsyncComponent(() => import('../harvest-swap/SwapSetting.vue'))],
     find: ['Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
     aliases: ['price_check.name']
   },
