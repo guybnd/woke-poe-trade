@@ -1,0 +1,21 @@
+Item Class: Belts
+Rarity: Rare
+Kraken Lock
+Heavy Belt
+--------
+Quality (Attribute Modifiers): +20% (augmented)
+--------
+Requirements:
+Level: 44
+--------
+Item Level: 84
+--------
+{ Implicit Modifier — Attribute — 20% Increased }
++30(25-35) to Strength
+--------
+{ Prefix Modifier "Fecund" (Tier: 4) — Life }
++80(70-79) to maximum Life
+{ Suffix Modifier "of the Lynx" (Tier: 4) — Attribute — 20% Increased }
++47(30-50) to Dexterity
+{ Suffix Modifier "of the Volcano" (Tier: 5) — Elemental, Fire, Resistance }
++21(18-23)% to Fire Resistance

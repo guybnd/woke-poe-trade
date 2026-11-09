@@ -110,6 +110,7 @@ import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
+import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { AppConfig } from '@/web/Config'
@@ -229,6 +230,8 @@ export default defineComponent({
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
     const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
     const showFlipTab = computed(() => swap.candidates.value.length > 0)
+    // woke: the Q tag on rows a catalyst raised.
+    provideCatalystFilter(itemStats)
     // woke: pseudo split and the stat rows' right-click menu.
     provideStatActions(computed(() => props.item), itemStats,
       // The same range the item's other rows got (create-stat-filters.ts).
