@@ -113,13 +113,13 @@ export interface Catalyst {
 
 const CATALYST_LINES: Record<string, (text: string) => boolean> = {
   'Attribute': t => /\b(?:Strength|Dexterity|Intelligence|Attributes)\b/.test(t) && !/Requirements?\b/.test(t),
-  'Resistance': t => /\bResistances?\b/.test(t) && !/Penetrat/.test(t),
-  'Life and Mana': t => /\b(?:Life|Mana)\b/.test(t),
+  'Resistance': t => /\bResistances?\b/.test(t) && !/Penetrat|^Minions\b/.test(t),
+  'Life and Mana': t => /\b(?:Life|Mana)\b/.test(t) && !/\bwhile Leeching\b/.test(t),
   'Defence': t => /\b(?:Armour|Evasion|Energy Shield)\b/.test(t),
   'Elemental Damage': t => /\b(?:Fire|Cold|Lightning|Elemental) Damage\b/.test(t),
-  'Physical and Chaos Damage': t => /\b(?:Physical|Chaos) Damage\b/.test(t),
-  'Attack': t => /\b(?:Attacks?|Accuracy)\b/.test(t),
-  'Caster': t => /\b(?:Spells?|Cast Speed)\b/.test(t) && !/\bBlock\b/.test(t),
+  'Physical and Chaos Damage': t => /\b(?:Physical|Chaos) Damage\b/.test(t) && !/\btaken\b/.test(t),
+  'Attack': t => /\b(?:Attacks?|Accuracy)\b/.test(t) && !/\bBlock\b/.test(t),
+  'Caster': t => /\b(?:Spells?|Cast Speed)\b/.test(t) && !/\b(?:Block|Suppress)\b/.test(t),
   'Speed': t => /\b(?:Attack|Cast|Movement) Speed\b/.test(t),
   'Critical': t => /\bCritical Strike\b/.test(t)
 }
@@ -131,24 +131,28 @@ export function catalystOf (item: ListingItem): Catalyst | null {
   return kind && percent > 0 ? { kind, percent } : null
 }
 
-/** Whether the catalyst raises this line. Prefix and suffix quality go by the mods' tiers. */
-function catalystRaises (catalyst: Catalyst, mod: Exclude<ListingMod, string>, text: string, implicit: boolean): boolean {
+/** How much the catalyst raises each mod on this line, in percent. Prefix and suffix quality go by the mods' tiers. */
+function catalystBoost (catalyst: Catalyst | null, text: string, implicit: boolean): (m: ModOf) => number {
+  if (!catalyst) return () => 0
   if (catalyst.kind === 'Prefix' || catalyst.kind === 'Suffix') {
-    const tiers = (mod.mods ?? []).map(m => m.tier ?? '')
-    return !implicit && tiers.length > 0 && tiers.every(t => t.startsWith(catalyst.kind[0]))
+    const letter = catalyst.kind[0]
+    return m => !implicit && m.tier?.startsWith(letter) ? catalyst.percent : 0
   }
-  return CATALYST_LINES[catalyst.kind]?.(text) ?? false
+  const raised = CATALYST_LINES[catalyst.kind]?.(text) ?? false
+  return () => raised ? catalyst.percent : 0
 }
 
-/** The range as the game raises it: truncated, to whole numbers unless the range has decimals. */
-function raise (span: Span, percent: number): Span {
-  const dp = Number.isInteger(span.low) && Number.isInteger(span.high) ? 0 : 2
-  const scale = (n: number) => Math.sign(n) * incrRoll(Math.abs(n), percent, dp)
-  return { ...span, low: scale(span.low), high: scale(span.high) }
+/** A magnitude as the game raises it: truncated, to whole numbers unless it has decimals. */
+function raise (n: number, percent: number): number {
+  if (!percent) return n
+  const dp = Number.isInteger(n) ? 0 : 2
+  return Math.sign(n) * incrRoll(Math.abs(n), percent, dp)
 }
+
+type ModOf = NonNullable<Exclude<ListingMod, string>['mods']>[number]
 
 /** One span per number the line rolls. Two mods on one line add together. Null if it can't be read. */
-function lineSpans (mod: Exclude<ListingMod, string>): Span[] | null {
+function lineSpans (mod: Exclude<ListingMod, string>, boost: (m: ModOf) => number = () => 0): Span[] | null {
   const mods = mod.mods ?? []
   const count = Math.max(0, ...mods.map(m => m.magnitudes?.length ?? 0))
   const spans: Span[] = []
@@ -156,7 +160,7 @@ function lineSpans (mod: Exclude<ListingMod, string>): Span[] | null {
     // A roll that can land on either side of zero, like "(-10-10) to maximum
     // number of Eaten Souls". Only ever seen on a single mod.
     const only = mods.length === 1 ? mods[0].magnitudes?.[i] : undefined
-    const [lo, hi] = [Number(only?.min), Number(only?.max)]
+    const [lo, hi] = [Number(only?.min), Number(only?.max)].map(n => raise(n, boost(mods[0])))
     if (only && lo < 0 && hi > 0) {
       spans.push({ low: tidy(lo), high: tidy(hi), signed: true })
       continue
@@ -164,8 +168,9 @@ function lineSpans (mod: Exclude<ListingMod, string>): Span[] | null {
     let low = 0
     let high = 0
     for (const m of mods) {
-      const a = Number(m.magnitudes?.[i]?.min ?? 0)
-      const b = Number(m.magnitudes?.[i]?.max ?? 0)
+      // Each mod is raised on its own before they add up, as the game does.
+      const a = raise(Number(m.magnitudes?.[i]?.min ?? 0), boost(m))
+      const b = raise(Number(m.magnitudes?.[i]?.max ?? 0), boost(m))
       if (!Number.isFinite(a) || !Number.isFinite(b) || a * b < 0) return null
       // A "reduced" stat is sent negative but shown as a positive number.
       low += Math.min(Math.abs(a), Math.abs(b))
@@ -254,12 +259,17 @@ function buildLine (mod: ListingMod, kind: ModLine['kind'], catalyst: Catalyst |
 
   const shown = lineSpans(mod)
   if (!shown?.length) return plain
-  // What the roll is read against: the shown range, raised by a matching catalyst.
-  const spans = catalyst && catalystRaises(catalyst, mod, text, implicit)
-    ? shown.map(s => raise(s, catalyst.percent))
-    : shown
   const found = Array.from(text.matchAll(NUMBER))
-  const aligned = alignSpans(found.map(m => Number(m[0])), found.map(m => signedValue(text, m)), spans)
+  const numbers = found.map(m => Number(m[0]))
+  const signed = found.map(m => signedValue(text, m))
+  // What the roll is read against: the shown range, raised by a matching catalyst.
+  // A raised range the numbers don't fit means the line guess was wrong: read it unraised.
+  let spans = catalyst ? lineSpans(mod, catalystBoost(catalyst, text, implicit)) ?? shown : shown
+  let aligned = alignSpans(numbers, signed, spans)
+  if (!aligned && spans !== shown) {
+    spans = shown
+    aligned = alignSpans(numbers, signed, spans)
+  }
   if (!aligned) return plain
 
   const worse = biggerIsWorse(mod, text, spans)

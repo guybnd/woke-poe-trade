@@ -259,4 +259,36 @@ describe('listingDetail, catalyst quality', () => {
   it('ignores plain quality', () => {
     expect(lines(belt('Quality', [dex]))[0].quality).toBe(100)
   })
+
+  it('raises each mod on a shared line before adding them, as the game does', () => {
+    const shared = { description: '+72 to Dexterity', domain: 'explicit', mods: [
+      { name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '53' }] },
+      { name: 'Hybrid', tier: 'P5', magnitudes: [{ min: '1', max: '8' }] }
+    ] }
+    // 53 and 8 at 20% are 63 and 9: 72 is the top.
+    expect(lines(belt('Quality (Attribute Modifiers)', [shared]))[0].quality).toBe(100)
+  })
+
+  it('raises only the prefix of a line shared by a prefix and a suffix', () => {
+    const shared = { description: '+60 to maximum Life', domain: 'explicit', mods: [
+      { name: 'Fecund', tier: 'P2', magnitudes: [{ min: '40', max: '49' }] },
+      { name: 'of Life', tier: 'S1', magnitudes: [{ min: '5', max: '10' }] }
+    ] }
+    // 48-58 raised plus 5-10: 53-68.
+    expect(lines(belt('Quality (Prefix Modifiers)', [shared]))[0].quality).toBe(46)
+  })
+
+  it('falls back to the shown range when the raised one does not fit', () => {
+    const str = { description: '+44 to Strength', domain: 'explicit', mods: [{ magnitudes: [{ min: '40', max: '55' }] }] }
+    const [line] = lines(belt('Quality (Attribute Modifiers)', [str]))
+    expect(text(line)).toBe('+44(40-55) to Strength')
+    expect(line.quality).toBe(26)
+  })
+
+  it('leaves lines that only name the catalyst kind in passing', () => {
+    const minion = { description: 'Minions have +15% to all Elemental Resistances', mods: [{ magnitudes: [{ min: '10', max: '20' }] }] }
+    expect(listingDetail(belt('Quality (Resistance Modifiers)', [], [minion])).implicits[0].quality).toBe(50)
+    const suppress = { description: '+10% chance to Suppress Spell Damage', domain: 'explicit', mods: [{ name: 'A', tier: 'S1', magnitudes: [{ min: '8', max: '12' }] }] }
+    expect(lines(belt('Quality (Caster Modifiers)', [suppress]))[0].quality).toBe(50)
+  })
 })
