@@ -311,7 +311,7 @@ import type { LootFilterStore } from './store'
 import { outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { OWN_RULE_TYPE, addEdit, conditionSignature, describeEdit, moveTargets, nextEditId, readStyle, rehome, rehomeOptions } from './edits'
-import { ECONOMY_GROUPS } from './economy'
+import { ECONOMY_GROUPS, livePriceMoves } from './economy'
 import { baseTipRef } from './base-tip'
 import { priceGrade } from './health'
 import type { RehomeOption } from './edits'
@@ -397,7 +397,7 @@ const targets = computed(() => props.store.doc.value && selType.value ? moveTarg
 const outName = computed(() => props.config.sourceName ? outputName(props.config) : '—')
 
 // Stored moves only count while re-tiering is on: otherwise they aren't applied.
-const activePriceMoves = computed(() => props.config.priceTiers.on ? props.config.priceTiers.moves.length : 0)
+const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMoves(props.config.priceTiers.moves).length : 0)
 
 const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },

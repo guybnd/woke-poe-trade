@@ -20,15 +20,15 @@
       <div :class="$style.applyBar">
         <span v-if="store.pricesTooOld.value"><b>Prices are too old</b> to move anything until they update</span>
         <span v-else><b>{{ moves.length ? `${moves.length} item${moves.length > 1 ? 's' : ''}` : 'Nothing' }}</b> {{ moves.length ? 'would move' : 'to move: tiers match today\'s prices' }}</span>
-        <button v-if="config.priceTiers.moves.length" type="button" :class="$style.link" class="w-focusable text-xs" :aria-expanded="showMoved" @click="showMoved = !showMoved">{{ config.priceTiers.moves.length }} moved so far <i :class="showMoved ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /></button>
+        <button v-if="movedList.length" type="button" :class="$style.link" class="w-focusable text-xs" :aria-expanded="showMoved" @click="showMoved = !showMoved">{{ movedList.length }} moved so far <i :class="showMoved ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /></button>
         <span class="grow" />
         <WButton v-if="moves.length" size="sm" variant="ghost" @click="keepAll">Keep all where they are</WButton>
-        <WButton v-if="config.priceTiers.moves.length" size="sm" variant="ghost" icon="fas fa-undo" title="Put every price group back on NeverSink's own tiers" @click="reset">Back to NeverSink's tiers</WButton>
+        <WButton v-if="movedList.length" size="sm" variant="ghost" icon="fas fa-undo" title="Put every price group back on NeverSink's own tiers" @click="reset">Back to NeverSink's tiers</WButton>
         <WButton v-if="moves.length" size="sm" variant="primary" :disabled="!pickedMoves.length" @click="apply">Apply {{ pickedMoves.length }} and save</WButton>
       </div>
       <template v-if="showMoved">
         <div class="w-group-label" :class="$style.label">Moved by prices</div>
-        <div v-for="m in config.priceTiers.moves" :key="'d' + m.type + m.base" :class="$style.row">
+        <div v-for="m in movedList" :key="'d' + m.type + m.base" :class="$style.row">
           <LabelPreview :text="m.base" :actions="lookOf(m.type, m.to)" :extras="false" />
           <button type="button" :class="$style.link" class="w-focusable text-xs w-trunc" :title="`Open ${groupLabel(m.type)} ${m.to} in Rules`" @click="emit('open-rule', { type: m.type, tier: m.to, base: m.base })">{{ groupLabel(m.type) }} <i class="fas fa-external-link-alt" /></button>
           <span class="w-num text-xs w-dim">{{ tierLabel(m.from) }} → {{ tierLabel(m.to) }}</span>
@@ -132,7 +132,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { ECONOMY_GROUPS, NET_GROUPS, lockKey, tierRank } from './economy'
+import { ECONOMY_GROUPS, NET_GROUPS, livePriceMoves, lockKey, tierRank } from './economy'
 import type { PriceMove, PriceSkip } from './economy'
 import { conditionSignature } from './edits'
 import { baseTipRef } from './base-tip'
@@ -231,6 +231,8 @@ const uniqueOptions = [
 // Ticked by default, except what a price alone would hide. Unticked rows stay
 // put this time.
 const picked = reactive<Record<string, boolean>>({})
+// Stored moves that still apply (an old move of a tier's namesake doesn't).
+const movedList = computed(() => livePriceMoves(props.config.priceTiers.moves))
 // A row that starts hiding at another strictness is a new choice.
 const pickKey = (m: PriceMove) => `${m.type}|${m.base}|${m.hides ? 'hides' : ''}`
 watch(moves, (list) => {

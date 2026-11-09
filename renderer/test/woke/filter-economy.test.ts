@@ -148,7 +148,7 @@ describe('re-tier from prices', () => {
       ''
     ].join('\n')
     const text = [
-      cur('Show', 't2divine', ['Divine Orb', 'Hinekora\'s Lock']),
+      cur('Show', 't1exalted', ['Divine Orb', 'Hinekora\'s Lock']),
       cur('Show', 't4chaos', ['Chaos Orb', 'Vaal Orb', 'Gemcutter\'s Prism']),
       cur('Show', 't5alchemy', ['Orb of Alchemy', 'Orb of Scouring', 'Regal Orb']),
       cur('Hide', 't8trans', ['Orb of Transmutation', 'Alteration Shard', 'Orb of Augmentation'])
