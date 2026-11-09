@@ -292,3 +292,11 @@ describe('listingDetail, catalyst quality', () => {
     expect(lines(belt('Quality (Caster Modifiers)', [suppress]))[0].quality).toBe(50)
   })
 })
+
+describe('listingDetail, game link markup', () => {
+  it('shows a linked property name as its text', () => {
+    const d = listingDetail({ frameType: 2, properties: [{ name: '[Intangibility|Intangibility]', type: 0, displayMode: 0, values: [['32%', 0]] }], explicitMods: ['+1 to [Armour]'] })
+    expect(d.props[0].map(p => p.text).join('')).toBe('Intangibility: 32%')
+    expect(text(d.groups[0].lines[0])).toBe('+1 to Armour')
+  })
+})

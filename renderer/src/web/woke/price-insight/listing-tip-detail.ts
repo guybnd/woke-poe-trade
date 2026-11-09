@@ -4,7 +4,7 @@
 import { ModifierType } from '@/parser/modifiers'
 import { incrRoll } from '@/parser/advanced-mod-desc'
 import { linesToStatStrings, tryParseTranslation } from '@/parser/stat-translations'
-import { modDomain, modText, ListingItem, ListingMod } from './listing-tip'
+import { modDomain, modText, stripLinks, ListingItem, ListingMod } from './listing-tip'
 
 export type PartTone = 'label' | 'value' | 'aug' | 'fire' | 'cold' | 'lightning' | 'chaos'
 
@@ -59,7 +59,7 @@ function valueTone (id: number): PartTone {
 }
 
 function propLine (prop: NonNullable<ListingItem['properties']>[number]): PropPart[] {
-  const name = prop.name ?? ''
+  const name = stripLinks(prop.name ?? '')
   if (!prop.values.length) return [{ text: name, tone: 'label' }]
   if (prop.displayMode === TEMPLATE_MODE) {
     return name.split(/(\{\d+\}|%\d+)/).filter(Boolean).map((piece) => {
@@ -83,9 +83,9 @@ function requiresLine (item: ListingItem): PropPart[] {
     if (!value) continue
     if (parts.length) parts.push({ text: ', ', tone: 'label' })
     if (req.displayMode === VALUE_FIRST_MODE) {
-      parts.push({ text: value[0], tone: valueTone(value[1]) }, { text: ` ${req.name ?? ''}`, tone: 'label' })
+      parts.push({ text: value[0], tone: valueTone(value[1]) }, { text: ` ${stripLinks(req.name ?? '')}`, tone: 'label' })
     } else {
-      parts.push({ text: `${req.name ?? ''} `, tone: 'label' }, { text: value[0], tone: valueTone(value[1]) })
+      parts.push({ text: `${stripLinks(req.name ?? '')} `, tone: 'label' }, { text: value[0], tone: valueTone(value[1]) })
     }
   }
   return parts.length ? [{ text: 'Requires ', tone: 'label' }, ...parts] : []

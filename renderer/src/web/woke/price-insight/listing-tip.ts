@@ -60,8 +60,14 @@ const RARITY: Record<number, PobRarity> = { 0: 'NORMAL', 1: 'MAGIC', 2: 'RARE', 
 // Quality goes by type: its name varies, as in "Quality (Attack Modifiers)".
 const QUALITY_TYPE = 6
 
+// The trade site keeps the game's link markup: "[Intangibility|Intangibility]"
+// shows as its second half, and "[Armour]" as its word.
+export function stripLinks (text: string): string {
+  return text.replace(/\[([^\]|]*)\|([^\]]*)\]/g, '$2').replace(/\[([^\]|]+)\]/g, '$1')
+}
+
 export function modText (mod: ListingMod): string {
-  return typeof mod === 'string' ? mod : mod.description ?? ''
+  return stripLinks(typeof mod === 'string' ? mod : mod.description ?? '')
 }
 
 export function modDomain (mod: ListingMod): string {
@@ -80,7 +86,7 @@ function socketsText (sockets: ListingItem['sockets']): string {
 }
 
 function propNumber (item: ListingItem, match: (p: { name?: string, type?: number }) => boolean): number | undefined {
-  const raw = item.properties?.find(match)?.values[0]?.[0]
+  const raw = item.properties?.find(p => match({ name: p.name && stripLinks(p.name), type: p.type }))?.values[0]?.[0]
   if (raw == null) return undefined
   const n = Number(raw.replace(/[^\d.]/g, ''))
   return Number.isFinite(n) && n > 0 ? n : undefined
