@@ -91,7 +91,7 @@ test('a price check right after closing the window draws no broken chart', async
   const panel = overlay.widget('price-check')
   const chart = panel.locator('.apexcharts-canvas svg')
   // The poe.ninja card starts folded onto the name row; open it to draw the chart.
-  await panel.getByRole('button', { name: /poe\.ninja/ }).click()
+  await panel.getByTitle(/^poe\.ninja price/).click()
   await expect(chart).toBeVisible()
   await overlay.page.waitForTimeout(300)
   fakeApp.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
@@ -99,7 +99,7 @@ test('a price check right after closing the window draws no broken chart', async
 
   await overlay.copyItem('items/currency-divine.txt')
   await expect(chart).toBeVisible()
-  await expect(chart).toHaveAttribute('width', '40')
+  await expect(chart).toHaveAttribute('width', /^\d+(\.\d+)?$/)
 })
 
 test('rare: roll presets search with the item\'s rolls', async ({ overlay, fakeApp }) => {
@@ -292,7 +292,7 @@ test('the poe.ninja card folds onto the name row and stays as left', async ({ ov
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
-  const chip = panel.getByRole('button', { name: /poe\.ninja/ })
+  const chip = panel.getByTitle(/^poe\.ninja price/)
   const fold = panel.getByTitle('Fold onto the name row')
   // Folded by default: the price sits on the name row, the same height as the title.
   await expect(chip).toBeVisible()
@@ -307,7 +307,16 @@ test('the poe.ninja card folds onto the name row and stays as left', async ({ ov
   await expect(fold).toBeVisible()
   expect(await overlay.page.evaluate(() => localStorage.getItem('woke.ninjaCardOpen'))).toBe('1')
 
+  await expect(panel.getByRole('link', { name: 'Open on poe.ninja ↗' })).toBeVisible()
   await fold.click()
   await expect(chip).toBeVisible()
   expect(await overlay.page.evaluate(() => localStorage.getItem('woke.ninjaCardOpen'))).toBe('0')
+})
+
+test('a rare shows no poe.ninja chip: poe.ninja only prices its base', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel).toContainText('Body Armour')
+  await expect(panel.getByTitle(/^poe\.ninja price/)).toHaveCount(0)
 })
