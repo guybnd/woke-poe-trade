@@ -65,6 +65,18 @@ history:
     date: '2026-11-09T04:35:09.029Z'
     selfAttested: true
     id: c-2026-11-09t04-35-09-029z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy asked for a flip screen. Drawn as mock E: a Swaps tab in the Flips
+      panel. Each row is a recipe (the swap mod plus companion mods), showing
+      buy element, sell element, buy and sell prices, swap cost, Profit and
+      Supply. Scans run on click, one search per recipe split by element, plus a
+      "from your price checks" line. Recommendation: build it after D, since it
+      reuses D's swap search.
+    date: '2026-11-09T04:36:06.136Z'
+    selfAttested: true
+    id: c-2026-11-09t04-36-06-136z
 swimlane: require-input
 needsAction: null
 ---
