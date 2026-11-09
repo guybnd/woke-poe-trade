@@ -11,6 +11,7 @@ import SettingsChat from '@/web/settings/chat.vue'
 import SettingsDebug from '@/web/settings/debug.vue'
 import PerfSettings from '../ui/PerfSettings.vue'
 import DisenchantVerdictSetting from '../disenchant/DisenchantVerdictSetting.vue'
+import SwapSetting from '../harvest-swap/SwapSetting.vue'
 import ModulesSettings from '../switchboard/ModulesSettings.vue'
 import GamePage from './GamePage.vue'
 import HotkeysPage from './HotkeysPage.vue'
@@ -137,7 +138,7 @@ export const PAGES: SettingsPage[] = [
     icon: modulePageIcon('apt-price-check'),
     description: 'Prices for the item under your cursor.',
     modules: ['apt-price-check'],
-    parts: [SettingsPricecheck, DisenchantVerdictSetting],
+    parts: [SettingsPricecheck, DisenchantVerdictSetting, SwapSetting],
     find: ['Disenchant or sell', 'Dust per chaos', 'Show seller', 'Fill rolls', 'Stock filter', 'Price prediction', 'Built-in browser', 'Auto search', 'Collapse listings'],
     aliases: ['price_check.name']
   },

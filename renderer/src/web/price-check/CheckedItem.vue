@@ -46,9 +46,16 @@
       <trade-links v-if="tradeAPI === 'trade'"
         :get-link="makeTradeLink" />
     </div>
+    <!-- woke: the Flip tab, only for items with a mod a swap can change. It searches only on a click. -->
+    <w-tabs v-if="showFlipTab" class="mt-2"
+      :model-value="swap.view.value"
+      :options="[{ value: 'results', label: 'Results' }, { value: 'flip', label: 'Flip ⇄', count: swap.candidates.value.length }]"
+      @update:model-value="v => { swap.view.value = v as 'results' | 'flip' }" />
+    <woke-swap-flip v-if="showFlipTab && swap.view.value === 'flip'" :swap="swap" />
     <!-- woke: shows the last search until the next one, however the filters change meanwhile. -->
     <trade-listing
       v-if="tradeAPI === 'trade' && searched"
+      v-show="!(showFlipTab && swap.view.value === 'flip')"
       ref="tradeService"
       :filters="searched.filters"
       :stats="searched.stats"
@@ -97,6 +104,9 @@ import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
 import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
+import WokeSwapFlip from '@/web/woke/harvest-swap/SwapFlip.vue'
+import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
+import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { AppConfig } from '@/web/Config'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
@@ -112,6 +122,8 @@ export default defineComponent({
   name: 'CheckedItem',
   components: {
     WokeMapStrip,
+    WokeSwapFlip,
+    WTabs,
     WokeDustChip,
     WokeDustVerdictChip,
     WokeRollPresets,
@@ -208,6 +220,10 @@ export default defineComponent({
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
     }, { immediate: true })
+
+    // woke: swappable mods (harvest-swap/). Made after the presets exist.
+    const swap = provideSwap(computed(() => props.item), itemFilters, itemStats)
+    const showFlipTab = computed(() => tradeAPI.value === 'trade' && swap.candidates.value.length > 0)
 
     watch(() => [props.item, doSearch.value], () => {
       if (doSearch.value === false) return
@@ -307,6 +323,8 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
 
     return {
+      swap,
+      showFlipTab,
       verdictSlot,
       wokeVerdictShown,
       verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),

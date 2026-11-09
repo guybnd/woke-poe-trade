@@ -192,6 +192,14 @@ function listingStats (item: ListingItem, category: ItemCategory | undefined): L
   return stats
 }
 
+/** Stat refs of a listing's explicit-kind mods (explicit, fractured, crafted), for telling which of several mods it has. */
+export function listingStatRefs (item: ListingItem | undefined, category: ItemCategory | undefined): string[] {
+  if (!item) return []
+  return listingStats(item, category)
+    .filter(stat => !['implicit', 'enchant'].includes(stat.domain))
+    .map(stat => stat.ref)
+}
+
 /** A fractured mod still counts as an explicit one on the trade site. */
 function domainMatches (domains: string[], domain: string): boolean {
   if (domains.includes(domain)) return true

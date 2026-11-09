@@ -7,6 +7,7 @@
 //
 // Kept free of Vue component and widget imports: Config.ts imports this file.
 import { BOOKMARKS_TARGET } from './item-lookup/lookup'
+import type { HarvestSwapConfig } from './harvest-swap/families'
 import type { DockConfig } from './dock/dock'
 import type { ShortcutAction } from '@ipc/types'
 
@@ -110,6 +111,8 @@ export interface WokeModulesConfig {
   // Price check: dust per chaos and a "disenchant it" verdict for uniques,
   // at `line` dust per chaos or more. Off unless switched on.
   disenchantVerdict?: { on: boolean, line: number }
+  // Price check: swappable-mod families switched on or off, and the highlight limit (harvest-swap/).
+  harvestSwap?: HarvestSwapConfig
   // The league list from the last launch that read it, and every league seen,
   // so a failed read keeps a league and a new one can be offered (Leagues.ts).
   leagues?: { list: string[], known: string[] }
