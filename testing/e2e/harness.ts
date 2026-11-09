@@ -133,6 +133,9 @@ export class Overlay {
         ...rest
       })
     }
+    // The price check's specs check the Standard layout; PoE mode (the default) has its own spec.
+    const priceCheck = config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check')
+    if (priceCheck && priceCheck.wokeWindowStyle == null) priceCheck.wokeWindowStyle = 'standard'
     opts.patch?.(config)
     // Leave the page that's open (the default config capture, or an earlier
     // boot) first: it can still save its own settings on the way out, which

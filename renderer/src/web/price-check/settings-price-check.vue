@@ -138,7 +138,7 @@ export default defineComponent({
       accountName: configModelValue(() => props.config, 'accountName'),
       showSeller: configModelValue(() => configWidget.value, 'showSeller'),
       windowStyle: computed<'standard' | 'poe'>({
-        get: () => configWidget.value.wokeWindowStyle ?? 'standard',
+        get: () => configWidget.value.wokeWindowStyle ?? 'poe',
         set: (value) => { configWidget.value.wokeWindowStyle = value }
       }),
       activateStockFilter: configModelValue(() => configWidget.value, 'activateStockFilter'),

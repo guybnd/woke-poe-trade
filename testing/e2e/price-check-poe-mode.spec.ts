@@ -1,5 +1,5 @@
-// Price check "PoE mode" (Settings > Price check > Window style). Standard is the
-// window as it was; PoE draws unpicked mods as tooltip lines in the game's colours,
+// Price check "PoE mode" (Settings > Price check > Window style), the default.
+// Standard is the window as it was; PoE draws unpicked mods as tooltip lines in the game's colours,
 // and a picked one as the usual row with boxes.
 import { test, expect } from './harness'
 
@@ -7,30 +7,36 @@ const poe = (config: any) => {
   config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle = 'poe'
 }
 
-test('the setting switches the window style, Standard by default', async ({ overlay }) => {
+// A config that never picked a style, as a new install or an update has.
+const unpicked = (config: any) => {
+  delete config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle
+}
+
+test('PoE is the default window style, and Settings switches it to Standard', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
-  await overlay.boot()
+  await overlay.boot({ patch: unpicked })
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const win = overlay.page.locator('#price-window')
   await expect(win).toContainText('Energy Shield')
-  await expect(win).not.toHaveClass(/w-poe/)
-  await expect(win.locator('.w-poe-line')).toHaveCount(0)
+  await expect(win).toHaveClass(/w-poe/)
+  await expect(win.locator('.w-poe-line').first()).toBeVisible()
 
-  await overlay.boot({ overlayActive: true })
+  await overlay.boot({ overlayActive: true, patch: unpicked })
   await overlay.widget('menu').locator('.fa-cog').click()
   const settings = overlay.widget('settings')
   await settings.getByText('Price check', { exact: true }).first().click()
   const row = settings.locator('[data-window-style]')
   await expect(row).toContainText('Window style')
-  await row.getByText('PoE', { exact: true }).click()
-  await expect.poll(() => overlay.savedWidget('price-check')?.wokeWindowStyle).toBe('poe')
+  await row.getByText('Standard', { exact: true }).click()
+  await expect.poll(() => overlay.savedWidget('price-check')?.wokeWindowStyle).toBe('standard')
 
-  // Back to the game, and the next check is drawn the PoE way.
+  // Back to the game, and the next check is the Standard window.
   overlay.app.focusGame(true)
   await expect.poll(() => overlay.app.registeredHotkeys().length).toBeGreaterThan(0)
   await overlay.copyItem('items/rare-body-armour-es.txt')
-  await expect(win).toHaveClass(/w-poe/)
-  await expect(win.locator('.w-poe-line').first()).toBeVisible()
+  await expect(win).toContainText('Energy Shield')
+  await expect(win).not.toHaveClass(/w-poe/)
+  await expect(win.locator('.w-poe-line')).toHaveCount(0)
 })
 
 test('PoE mode: unpicked mods are tooltip lines, clicking one picks it', async ({ overlay, fakeApp }) => {
