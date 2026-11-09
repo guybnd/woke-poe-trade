@@ -141,7 +141,7 @@ export default defineComponent({
     // Fires on opening too: a hidden widget has no size. Made on first use, as
     // the panels inside mount before this component does.
     let sizeObserver: ResizeObserver | null = null
-    const observer = () => (sizeObserver ??= new ResizeObserver(fitToScreen))
+    const observer = () => (sizeObserver ??= new ResizeObserver(() => { tryPendingRestore(); fitToScreen() }))
     onMounted(() => {
       if (widgetEl.value) observer().observe(widgetEl.value)
       window.addEventListener('resize', fitToScreen)
@@ -154,6 +154,7 @@ export default defineComponent({
 
     function toggleMinimize () {
       if (!widgetEl.value || !canMinimize.value) return
+      restorePending = false
       const rect = widgetEl.value.getBoundingClientRect()
       const state = woke().wokeMinimized
       fitShift.value = { x: 0, y: 0 }
@@ -167,12 +168,20 @@ export default defineComponent({
       }
     }
 
-    // Asked to open while minimized: restore. A widget that was hidden has no
-    // size until it draws, and restoreAnchor may need the bar's spot, so wait
-    // for that.
+    // Asked to open while minimized: restore. restoreAnchor may need the bar's
+    // spot on screen, and a widget that isn't drawn yet (hidden, or the overlay
+    // still coming up) has no box, so it waits until the widget has a size.
+    let restorePending = false
+    function tryPendingRestore () {
+      if (!restorePending) return
+      if (!minimized.value) { restorePending = false; return }
+      if (!widgetBounds()) return
+      toggleMinimize()
+    }
     function restoreIfMinimized () {
       if (!minimized.value) return
-      nextTick(() => { if (minimized.value) toggleMinimize() })
+      restorePending = true
+      nextTick(tryPendingRestore)
     }
     let stopRestore = onRestoreRequest(props.config.wmId, restoreIfMinimized)
     watch(() => props.config.wmId, (id) => { stopRestore(); stopRestore = onRestoreRequest(id, restoreIfMinimized) })
