@@ -126,6 +126,19 @@ history:
     date: '2026-11-09T04:39:10.205Z'
     selfAttested: true
     id: c-2026-11-09t04-39-10-205z
+  - type: activity
+    user: Agent
+    date: '2026-11-09T05:05:57.386Z'
+    comment: >-
+      Built on branch woke/harvest-swap (clone E:\Git\woke-harvest-swap). The
+      adversarial review found 4 issues, all fixed: listings were credited to
+      the wrong element, results went stale after a filter edit, the price split
+      was lopsided (fixed with a click-only per-element search), and markers
+      showed on bulk-priced items. The fake-game e2e test found a false
+      random-target warning caused by reactive proxy identity; also fixed. Unit
+      tests (2,793), lint, typecheck and build pass, and the price-check e2e
+      specs (15) pass.
+    id: a-2026-11-09t05-05-57-386z
 swimlane: require-input
 needsAction: null
 ---
