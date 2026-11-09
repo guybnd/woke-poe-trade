@@ -2,6 +2,7 @@
 // tier and roll, and the numbers the trade filters search on. The trade site
 // sends all of it with the listing. Pure functions.
 import { ModifierType } from '@/parser/modifiers'
+import { incrRoll } from '@/parser/advanced-mod-desc'
 import { linesToStatStrings, tryParseTranslation } from '@/parser/stat-translations'
 import { modDomain, modText, ListingItem, ListingMod } from './listing-tip'
 
@@ -99,6 +100,51 @@ interface Span {
 
 function tidy (n: number): number {
   return Number(n.toFixed(2))
+}
+
+// A catalyst's quality on a ring, amulet or belt raises the mods it matches, so
+// "+51(30-50) to Dexterity" at 20% is a 42.5 roll, not a perfect one. The trade
+// site sends no mod tags, so each catalyst's tag is matched on the line's words.
+// Ranges stay as the game shows them; only the roll is read against the raised range.
+export interface Catalyst {
+  kind: string
+  percent: number
+}
+
+const CATALYST_LINES: Record<string, (text: string) => boolean> = {
+  'Attribute': t => /\b(?:Strength|Dexterity|Intelligence|Attributes)\b/.test(t) && !/Requirements?\b/.test(t),
+  'Resistance': t => /\bResistances?\b/.test(t) && !/Penetrat/.test(t),
+  'Life and Mana': t => /\b(?:Life|Mana)\b/.test(t),
+  'Defence': t => /\b(?:Armour|Evasion|Energy Shield)\b/.test(t),
+  'Elemental Damage': t => /\b(?:Fire|Cold|Lightning|Elemental) Damage\b/.test(t),
+  'Physical and Chaos Damage': t => /\b(?:Physical|Chaos) Damage\b/.test(t),
+  'Attack': t => /\b(?:Attacks?|Accuracy)\b/.test(t),
+  'Caster': t => /\b(?:Spells?|Cast Speed)\b/.test(t) && !/\bBlock\b/.test(t),
+  'Speed': t => /\b(?:Attack|Cast|Movement) Speed\b/.test(t),
+  'Critical': t => /\bCritical Strike\b/.test(t)
+}
+
+export function catalystOf (item: ListingItem): Catalyst | null {
+  const prop = item.properties?.find(p => p.type === QUALITY_TYPE)
+  const kind = /^Quality \((.+) Modifiers\)$/.exec(prop?.name ?? '')?.[1]
+  const percent = Number(prop?.values[0]?.[0]?.replace(/[^\d.]/g, ''))
+  return kind && percent > 0 ? { kind, percent } : null
+}
+
+/** Whether the catalyst raises this line. Prefix and suffix quality go by the mods' tiers. */
+function catalystRaises (catalyst: Catalyst, mod: Exclude<ListingMod, string>, text: string, implicit: boolean): boolean {
+  if (catalyst.kind === 'Prefix' || catalyst.kind === 'Suffix') {
+    const tiers = (mod.mods ?? []).map(m => m.tier ?? '')
+    return !implicit && tiers.length > 0 && tiers.every(t => t.startsWith(catalyst.kind[0]))
+  }
+  return CATALYST_LINES[catalyst.kind]?.(text) ?? false
+}
+
+/** The range as the game raises it: truncated, to whole numbers unless the range has decimals. */
+function raise (span: Span, percent: number): Span {
+  const dp = Number.isInteger(span.low) && Number.isInteger(span.high) ? 0 : 2
+  const scale = (n: number) => Math.sign(n) * incrRoll(Math.abs(n), percent, dp)
+  return { ...span, low: scale(span.low), high: scale(span.high) }
 }
 
 /** One span per number the line rolls. Two mods on one line add together. Null if it can't be read. */
@@ -200,14 +246,18 @@ function biggerIsWorse (mod: Exclude<ListingMod, string>, text: string, spans: S
   return negative && text.startsWith('-')
 }
 
-function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
+function buildLine (mod: ListingMod, kind: ModLine['kind'], catalyst: Catalyst | null = null, implicit = false): ModLine {
   const text = modText(mod)
   const plain: ModLine = { parts: textParts(text), tags: [], kind, quality: null }
   if (typeof mod === 'string') return plain
   plain.tags = (mod.mods ?? []).map(m => m.tier ?? '').filter(Boolean)
 
-  const spans = lineSpans(mod)
-  if (!spans?.length) return plain
+  const shown = lineSpans(mod)
+  if (!shown?.length) return plain
+  // What the roll is read against: the shown range, raised by a matching catalyst.
+  const spans = catalyst && catalystRaises(catalyst, mod, text, implicit)
+    ? shown.map(s => raise(s, catalyst.percent))
+    : shown
   const found = Array.from(text.matchAll(NUMBER))
   const aligned = alignSpans(found.map(m => Number(m[0])), found.map(m => signedValue(text, m)), spans)
   if (!aligned) return plain
@@ -218,13 +268,14 @@ function buildLine (mod: ListingMod, kind: ModLine['kind']): ModLine {
   let last = 0
   aligned.forEach((at, i) => {
     const span = spans[i]
-    if (span.low === span.high) return
+    const range = shown[i]
+    if (range.low === range.high) return
     const match = found[at]
     const end = match.index + match[0].length
-    parts.push(...textParts(text.slice(last, end)), { text: span.signed ? `(${span.low} to ${span.high})` : `(${span.low}-${span.high})`, range: true })
+    parts.push(...textParts(text.slice(last, end)), { text: range.signed ? `(${range.low} to ${range.high})` : `(${range.low}-${range.high})`, range: true })
     last = end
     const value = span.signed ? signedValue(text, match) : Number(match[0])
-    const place = Math.min(1, Math.max(0, (value - span.low) / (span.high - span.low)))
+    const place = span.high === span.low ? 1 : Math.min(1, Math.max(0, (value - span.low) / (span.high - span.low)))
     rolls.push(worse ? 1 - place : place)
   })
   if (!rolls.length) return plain
@@ -261,7 +312,7 @@ function headingOf (mod: ListingMod, kind: ModLine['kind']): string {
 
 const AFFIX_ORDER: Record<Affix, number> = { 'Prefix': 0, 'Suffix': 1, 'Crafted': 2, '': 3 }
 
-function buildGroups (item: ListingItem): ModGroup[] {
+function buildGroups (item: ListingItem, catalyst: Catalyst | null): ModGroup[] {
   const listed = (item.explicitMods ?? []).filter(m => !['enchant', 'implicit'].includes(modDomain(m)))
   const entries: Array<{ mod: ListingMod, kind: ModLine['kind'] }> = [
     ...(item.fracturedMods ?? []).map(mod => ({ mod, kind: 'fractured' as const })),
@@ -273,7 +324,7 @@ function buildGroups (item: ListingItem): ModGroup[] {
   const groups: Array<ModGroup & { order: number }> = []
   for (const { mod, kind } of entries) {
     const heading = headingOf(mod, kind)
-    const line = buildLine(mod, kind)
+    const line = buildLine(mod, kind, catalyst)
     const firstTier = typeof mod === 'string' ? undefined : mod.mods?.[0]?.tier
     const known = groups.find(g => g.heading === heading)
     if (known) known.lines.push(line)
@@ -322,11 +373,12 @@ export function listingDetail (item: ListingItem): ListingDetail {
   if (item.fractured) tail.push({ text: 'Fractured Item', kind: 'fractured' })
   if (item.synthesised) tail.push({ text: 'Synthesised Item', kind: 'dim' })
   const foot = footStats(item)
+  const catalyst = catalystOf(item)
   return {
     props: (item.properties ?? []).map(propLine),
     requires: requiresLine(item),
-    implicits: implicitMods.filter(modText).map(m => buildLine(m, '')),
-    groups: buildGroups(item),
+    implicits: implicitMods.filter(modText).map(m => buildLine(m, '', catalyst, true)),
+    groups: buildGroups(item, catalyst),
     tail,
     foot,
     // These numbers assume 20% quality, what the trade filters search on.

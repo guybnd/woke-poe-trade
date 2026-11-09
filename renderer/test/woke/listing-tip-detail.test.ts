@@ -207,3 +207,56 @@ describe('listingDetail', () => {
     expect(listingDetail({ frameType: 2, extended: { dps: 0 } }).foot).toEqual([])
   })
 })
+
+describe('listingDetail, catalyst quality', () => {
+  const belt = (quality: string, mods: ListingItem['explicitMods'], implicitMods: ListingItem['implicitMods'] = []): ListingItem => ({
+    frameType: 2,
+    properties: [{ name: quality, type: 6, displayMode: 0, values: [['+20%', 1]] }],
+    implicitMods,
+    explicitMods: mods
+  })
+  const dex = { description: '+51 to Dexterity', domain: 'explicit', mods: [{ name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '50' }] }] }
+  const life = { description: '+80 to maximum Life', domain: 'explicit', mods: [{ name: 'Fecund', tier: 'P2', magnitudes: [{ min: '70', max: '79' }] }] }
+  const lines = (item: ListingItem) => listingDetail(item).groups.flatMap(g => g.lines)
+  const byStat = (item: ListingItem) => {
+    const all = lines(item)
+    return [all.find(l => text(l).includes('Dexterity'))!, all.find(l => text(l).includes('Life'))!]
+  }
+
+  it('reads a raised roll against the raised range and keeps the shown range', () => {
+    const [line] = lines(belt('Quality (Attribute Modifiers)', [dex]))
+    expect(text(line)).toBe('+51(43-50) to Dexterity')
+    // 43-50 at 20% is 51-60: 51 is the lowest roll.
+    expect(line.quality).toBe(0)
+  })
+
+  it('counts the top raised roll as perfect', () => {
+    const top = { ...dex, description: '+60 to Dexterity' }
+    expect(lines(belt('Quality (Attribute Modifiers)', [top]))[0].quality).toBe(100)
+  })
+
+  it('leaves lines of other kinds alone', () => {
+    const [dexLine, lifeLine] = byStat(belt('Quality (Attribute Modifiers)', [dex, life]))
+    expect(dexLine.quality).toBe(0)
+    // (80 - 70) / 9, capped
+    expect(lifeLine.quality).toBe(100)
+  })
+
+  it('raises implicits too', () => {
+    const imp = { description: '+30 to Strength', mods: [{ magnitudes: [{ min: '25', max: '35' }] }] }
+    // 25-35 at 20% is 30-42.
+    expect(listingDetail(belt('Quality (Attribute Modifiers)', [], [imp])).implicits[0].quality).toBe(0)
+  })
+
+  it('raises prefixes only by tier for prefix quality', () => {
+    const [dexLine, lifeLine] = byStat(belt('Quality (Prefix Modifiers)', [dex, { ...life, description: '+84 to maximum Life' }]))
+    // A suffix, not raised: 51 is past 43-50.
+    expect(dexLine.quality).toBe(100)
+    // 70-79 at 20% is 84-94.
+    expect(lifeLine.quality).toBe(0)
+  })
+
+  it('ignores plain quality', () => {
+    expect(lines(belt('Quality', [dex]))[0].quality).toBe(100)
+  })
+})
