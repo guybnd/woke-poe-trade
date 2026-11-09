@@ -346,11 +346,31 @@ export function calculatedStatToFilter (
   return filter
 }
 
+const ABYSS_SOCKETS = 'Has # Abyssal Sockets'
+// Uniques whose variants differ only in abyssal socket count (unique tips data).
+export const VARIABLE_ABYSS_SOCKETS = new Set([
+  'Bubonic Trail',
+  'Lightpoacher',
+  'Tombfist',
+  'Shroud of the Lightless',
+  'Command of the Pit',
+  'Hale Negator'
+])
+
 function hideNotVariableStat (filter: StatFilter, item: ParsedItem) {
   if (item.rarity !== ItemRarity.Unique || (
     filter.tag !== FilterTag.Explicit &&
     filter.tag !== FilterTag.Property
   )) return
+
+  // woke: these uniques drop with different socket counts, and the game text shows no range,
+  // so the count looks fixed. It sets the price, so search the exact count.
+  if (filter.roll && filter.statRef === ABYSS_SOCKETS && VARIABLE_ABYSS_SOCKETS.has(item.info.refName)) {
+    filter.roll.min = filter.roll.value
+    filter.roll.max = filter.roll.value
+    filter.disabled = false
+    return
+  }
 
   // always show stat increased by Catalyst
   if (item.quality && JEWELLERY.has(item.category!) &&

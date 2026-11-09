@@ -2,7 +2,7 @@
 // roll bar where left-click sets the min and right-click the max.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { loadGameData, fixture, parseItem } from '../helpers/game-data'
-import { createExactStatFilters } from '@/web/price-check/filters/create-stat-filters'
+import { createExactStatFilters, initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { activeRollPreset, applyRollPreset, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { editRange, sliderEnd, sliderValueAt } from '@/web/ui/stat-roll-slider'
@@ -67,6 +67,30 @@ describe('roll bar', () => {
     expect(editRange([26, undefined], 'max', 35)).toEqual([26, 35])
     expect(editRange([26, 30], 'min', 35)).toEqual([35, undefined])
     expect(editRange([26, 30], 'max', 20)).toEqual([undefined, 20])
+  })
+})
+
+describe('unique abyssal socket count', () => {
+  beforeAll(loadGameData)
+
+  function sockets (text: string) {
+    const item = parseItem(text)
+    const stats = initUiModFilters(item, { searchStatRange: 10 })
+    return stats.find((f): f is StatFilter => !f.group && f.statRef === 'Has # Abyssal Sockets')!
+  }
+
+  it('shows, ticks and pins the count on a unique that drops with 1 or 2', () => {
+    const filter = sockets(fixture('items/unique-bubonic-trail.txt'))
+    expect(filter.hidden).toBeFalsy()
+    expect(filter.disabled).toBe(false)
+    expect(filter.roll).toMatchObject({ value: 2, min: 2, max: 2 })
+  })
+
+  it('pins a single socket too, so 2-socket listings stay out', () => {
+    const text = fixture('items/unique-bubonic-trail.txt')
+      .replace('Sockets: A A', 'Sockets: A')
+      .replace('Has 2 Abyssal Sockets', 'Has 1 Abyssal Socket')
+    expect(sockets(text).roll).toMatchObject({ value: 1, min: 1, max: 1 })
   })
 })
 

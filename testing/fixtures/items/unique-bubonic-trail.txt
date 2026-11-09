@@ -1,0 +1,29 @@
+Item Class: Boots
+Rarity: Unique
+Bubonic Trail
+Murder Boots
+--------
+Evasion Rating: 189
+Energy Shield: 49
+--------
+Requirements:
+Level: 69
+Dex: 82
+Int: 42
+--------
+Sockets: A A
+--------
+Item Level: 84
+--------
+{ Unique Modifier }
+Has 2 Abyssal Sockets
+{ Unique Modifier }
+Triggers Level 20 Death Walk when Equipped
+{ Unique Modifier — Elemental, Ailment }
+52(40-60)% reduced Duration of Elemental Ailments on You while affected by a Rare Abyss Jewel
+{ Unique Modifier — Speed }
+28(24-32)% increased Movement Speed while affected by a Magic Abyss Jewel
+{ Unique Modifier }
+20(16-24)% increased Reservation Efficiency of Skills while affected by a Unique Abyss Jewel
+--------
+Even the dead serve the Lightless.
