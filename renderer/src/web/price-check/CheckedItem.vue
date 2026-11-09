@@ -222,8 +222,8 @@ export default defineComponent({
     }, { immediate: true })
 
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
-    const swap = provideSwap(computed(() => props.item), itemFilters, itemStats)
-    const showFlipTab = computed(() => tradeAPI.value === 'trade' && swap.candidates.value.length > 0)
+    const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
+    const showFlipTab = computed(() => swap.candidates.value.length > 0)
 
     watch(() => [props.item, doSearch.value], () => {
       if (doSearch.value === false) return

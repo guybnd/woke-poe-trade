@@ -192,12 +192,12 @@ function listingStats (item: ListingItem, category: ItemCategory | undefined): L
   return stats
 }
 
-/** Stat refs of a listing's explicit-kind mods (explicit, fractured, crafted), for telling which of several mods it has. */
-export function listingStatRefs (item: ListingItem | undefined, category: ItemCategory | undefined): string[] {
+/** A listing's explicit-kind stats (explicit, fractured, crafted) with their numbers, for telling which of several mods it has. */
+export function listingExplicitStats (item: ListingItem | undefined, category: ItemCategory | undefined): Array<{ ref: string, value: number }> {
   if (!item) return []
   return listingStats(item, category)
     .filter(stat => !['implicit', 'enchant'].includes(stat.domain))
-    .map(stat => stat.ref)
+    .map(({ ref, value }) => ({ ref, value }))
 }
 
 /** A fractured mod still counts as an explicit one on the trade site. */

@@ -19,12 +19,24 @@
             <w-price :chaos="p.chaos" :divine="divine" />
             <span class="w-num w-dim">{{ p.key === cand.from ? '—' : costText(cand, p.key) }}</span>
             <span class="w-num" :class="toneOf(profit(cand, p.key))">{{ profitText(profit(cand, p.key)) }}</span>
-            <span class="w-num" :class="{ 'w-faint': p.listings < MIN_LISTINGS }">{{ p.listings < MIN_LISTINGS ? `${p.listings}, too few` : p.listings }}</span>
+            <span class="w-num" :class="{ 'w-faint': p.listings < MIN_LISTINGS }">
+              <template v-if="p.listings >= MIN_LISTINGS">{{ p.listings }}</template>
+              <template v-else-if="runOf(cand)!.refining === p.key">searching…</template>
+              <button v-else-if="runOf(cand)!.mode === 'any'" type="button" :class="$style.link"
+                :title="`Only ${p.listings} among the cheapest listings. Search ${KEY_LABEL[p.key]} on its own (1 search).`"
+                @click="swap.refine(cand, p.key)">{{ p.listings }}, search alone</button>
+              <template v-else>{{ p.listings }}, too few</template>
+            </span>
           </div>
           <div v-if="cand.family.random && average(cand) != null" :class="$style.row">
             <span class="w-dim">Average of both</span><span /><span /><span class="w-num" :class="toneOf(average(cand))">{{ profitText(average(cand)) }}</span><span />
           </div>
         </div>
+        <div v-if="swap.stale(cand)" :class="$style.warn">
+          Your filters changed since this search.
+          <button type="button" :class="$style.link" @click="swap.run(cand, runOf(cand)!.mode)">Check again (1 search)</button>
+        </div>
+        <div v-if="runOf(cand)!.error" :class="$style.warn">{{ runOf(cand)!.error }}</div>
         <div v-if="runOf(cand)!.mode !== 'any'" class="w-faint" :class="$style.small">Only {{ KEY_LABEL[runOf(cand)!.mode] }} was searched. Press Any on the ⇄ to compare with your item.</div>
         <div v-if="cand.randomTarget" :class="$style.warn">Another mod is hit by the same craft, so the swap may land on that one instead.</div>
       </template>
@@ -112,4 +124,5 @@ function costText (cand: SwapCandidate, key: string): string {
 .head { color: var(--w-faint); font-size: var(--w-fs-xs); text-transform: uppercase; letter-spacing: 0.04em; }
 .small { font-size: var(--w-fs-xs); }
 .warn { color: var(--w-warn); font-size: var(--w-fs-xs); }
+.link { color: var(--w-accent); text-decoration: underline; text-underline-offset: 2px; }
 </style>

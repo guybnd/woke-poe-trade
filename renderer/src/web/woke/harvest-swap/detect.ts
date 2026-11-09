@@ -1,6 +1,7 @@
 // Which of a price-checked item's mods a swap can change, and into what.
 // Pure: no Vue, no IO, so the rules can be tested on parsed items.
 
+import { toRaw } from 'vue'
 import { ItemRarity, ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
@@ -67,7 +68,9 @@ export function detectSwaps (item: ParsedItem, stats: FilterOrGroup[], config?: 
     const sourceRef = source.stat.stat.ref
     if (family.members[0][key] !== sourceRef) continue
 
-    const others = onItem.filter(mod => mod !== source.modifier)
+    // The price check's filters are reactive copies, so compare the plain objects.
+    const sourceMod = toRaw(source.modifier)
+    const others = onItem.filter(mod => toRaw(mod) !== sourceMod)
     const otherRefs = statRefs(others)
 
     if (family.random) {

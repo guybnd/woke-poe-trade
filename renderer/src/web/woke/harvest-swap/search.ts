@@ -9,7 +9,7 @@ import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/f
 import { createTradeRequest, PricingResult, requestResults, requestTradeResultList } from '@/web/price-check/trade/pathofexile-trade'
 import type { TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { buildInsight, InsightOptions } from '@/web/woke/price-insight/insight'
-import { listingStatRefs } from '@/web/woke/price-insight/stat-columns'
+import { listingExplicitStats } from '@/web/woke/price-insight/stat-columns'
 import type { SwapCandidate } from './detect'
 
 /** "any" searches every key at once; a key searches that one only. */
@@ -46,13 +46,20 @@ export function keyRefs (cand: SwapCandidate): Record<string, string> {
   return member
 }
 
+/** The lowest roll the swap search asks for: the bottom of the tier, which a swap is sure to give. */
+export function searchedMin (cand: SwapCandidate): number | undefined {
+  if (cand.family.anyRoll) return undefined
+  const min = cand.tierMin ?? cand.filter.roll?.min
+  return typeof min === 'number' ? min : undefined
+}
+
 export function buildSwapRequest (filters: ItemFilters, stats: FilterOrGroup[], cand: SwapCandidate, mode: SwapMode): TradeRequest {
   const refs = keyRefs(cand)
   const tradeId = swapKeys(cand, mode).flatMap(k => k === cand.from ? cand.filter.tradeId : targetTradeIds(cand.filter, refs[k]))
+  const min = searchedMin(cand)
   const roll = cand.filter.roll && {
     ...cand.filter.roll,
-    // A swap rerolls inside the tier, so the bottom of the tier is what a swap is sure to give.
-    min: cand.family.anyRoll ? '' as const : (cand.tierMin ?? cand.filter.roll.min),
+    min: min ?? '' as const,
     max: '' as const
   }
   const swapped: StatFilter = { ...cand.filter, tradeId, roll, disabled: false }
@@ -76,12 +83,16 @@ export function priceByKey (
   category: ItemCategory | undefined
 ): KeyPrice[] {
   const groups = new Map<string, PricingResult[]>(keys.map(k => [k, []]))
+  const min = searchedMin(cand)
   for (const listing of listings) {
-    const has = new Set(listingStatRefs(listing.listedItem, category))
-    // Every member the family has for this key counts, so a pseudo filter's
-    // listings are matched by the plain mod they carry.
-    const key = keys.find(k => cand.family.members.some(m => has.has(m[k])))
-    if (key) groups.get(key)!.push(listing)
+    const listed = listingExplicitStats(listing.listedItem, category)
+    // A key counts when the listing has its plain mod at the searched roll or
+    // better. A listing that has the item's element too low, but another one high
+    // enough, only matched the search on the other one.
+    const fits = keys.filter(k => listed.some(s =>
+      s.ref === cand.family.members[0][k] && (min == null || s.value >= min)))
+    // Fits several: no telling which one the buyer paid for.
+    if (fits.length === 1) groups.get(fits[0])!.push(listing)
   }
   return keys.map(key => {
     const group = groups.get(key)!
@@ -94,6 +105,8 @@ export function priceByKey (
 export interface SwapSearchResult {
   prices: KeyPrice[]
   total: number
+  /** The search as sent (requestKey), to spot a result made with older filters. */
+  request: string
 }
 
 export async function runSwapSearch (
@@ -111,5 +124,10 @@ export async function runSwapSearch (
   for (let i = 0; i < ids.length; i += 10) {
     listings.push(...await requestResults(search.id, ids.slice(i, i + 10), { accountName: opts.accountName }))
   }
-  return { prices: priceByKey(listings, cand, swapKeys(cand, mode), opts, category), total: search.total }
+  return { prices: priceByKey(listings, cand, swapKeys(cand, mode), opts, category), total: search.total, request: requestKey(body) }
+}
+
+/** Tells two swap searches apart, so a result is known to be out of date after a filter change. */
+export function requestKey (body: TradeRequest): string {
+  return JSON.stringify(body)
 }

@@ -1,6 +1,7 @@
 // Swappable mods: which mods get a ⇄, what a swap search sends, and how the
 // listings that come back are split by element.
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
 import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 
 import { createPresets } from '@/web/price-check/filters/create-presets'
@@ -68,6 +69,12 @@ describe('detectSwaps', () => {
     expect(byRef['#% increased Fire Damage']?.targets).toEqual(['cold', 'lightning'])
     expect(byRef['#% increased Fire Damage']?.randomTarget).toBe(false)
     expect(byRef['#% increased maximum Life']).toBeUndefined()
+  })
+
+  it('tells its own mod apart from the others when the filters are reactive, as in the app', () => {
+    const { item, stats } = setup(jewel([MAX_COLD, LIFE].join('\n')))
+    const found = detectSwaps(item, reactive(stats) as FilterOrGroup[])
+    expect(found.map(c => c.randomTarget)).toEqual([false])
   })
 
   it("doesn't offer an element the item already has", () => {
@@ -177,7 +184,11 @@ describe('priceByKey', () => {
       listing('d', 300, ['15% increased Cold Damage']),
       listing('e', 310, ['15% increased Cold Damage']),
       listing('f', 320, ['14% increased Cold Damage']),
-      listing('g', 50, ['15% increased Lightning Damage'])
+      listing('g', 50, ['15% increased Lightning Damage']),
+      // Fire under the searched roll: it only matched on Lightning.
+      listing('h', 55, ['10% increased Fire Damage', '15% increased Lightning Damage']),
+      // Both elements high enough: no telling which one the price is for.
+      listing('i', 999, ['15% increased Fire Damage', '15% increased Cold Damage'])
     ]
     const prices = priceByKey(listings, cand, ['fire', 'cold', 'lightning'], { divine: 200 }, (item as ParsedItem).category)
     const by = Object.fromEntries(prices.map(p => [p.key, p]))
@@ -185,6 +196,6 @@ describe('priceByKey', () => {
     expect(by.cold.listings).toBe(3)
     expect(by.fire.chaos).toBeGreaterThan(90)
     expect(by.cold.chaos!).toBeGreaterThan(by.fire.chaos!)
-    expect(by.lightning).toEqual({ key: 'lightning', listings: 1, chaos: null })
+    expect(by.lightning).toEqual({ key: 'lightning', listings: 2, chaos: null })
   })
 })
