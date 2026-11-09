@@ -20,14 +20,27 @@ export function catalystQualityFilter (stats: FilterOrGroup[]): StatFilter | und
   return stats.filter(isFilter).find(f => f.sources[0]?.stat.stat.jewelleryQuality != null)
 }
 
-/** The percent a catalyst raised this row by, or undefined if it didn't. */
+/**
+ * The percent a catalyst raised this row by, or undefined if it didn't. A total
+ * counts only when every mod behind it was raised: "total maximum Life" from an
+ * uncatalysed Life prefix and a catalysed Strength suffix gets no tag.
+ */
 export function raisedBy (filter: StatFilter): number | undefined {
   let out: number | undefined
   for (const source of filter.sources) {
+    if (!source.stat.roll || source.stat.roll.unscalable) continue
     const incr = source.modifier.info.rollIncr
-    if (incr && source.stat.roll && !source.stat.roll.unscalable) out = Math.max(out ?? 0, incr)
+    if (!incr) return undefined
+    out = Math.max(out ?? 0, incr)
   }
   return out
+}
+
+/** The quality the tag names: the filter's minimum once it's edited, else the raise. */
+export function tagQuality (filter: StatFilter, quality: StatFilter): number | undefined {
+  const raised = raisedBy(filter)
+  if (raised == null) return undefined
+  return typeof quality.roll?.min === 'number' ? quality.roll.min : raised
 }
 
 export function toggleCatalyst (stats: FilterOrGroup[]): void {

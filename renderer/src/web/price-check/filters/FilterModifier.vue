@@ -117,7 +117,7 @@ import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
-import { raisedBy, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
+import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
@@ -156,7 +156,7 @@ export default defineComponent({
     const actions = useStatActions()
     // woke: the Q tag on rows a catalyst raised (price-insight/catalyst-filter.ts).
     const catalyst = useCatalystFilter()
-    const qTag = computed(() => catalyst?.filter.value ? raisedBy(props.filter) : undefined)
+    const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, catalyst.filter.value) : undefined)
     const qOn = computed(() => catalyst?.filter.value?.disabled === false)
     const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
     const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
