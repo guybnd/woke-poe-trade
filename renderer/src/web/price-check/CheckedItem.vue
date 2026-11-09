@@ -226,7 +226,9 @@ export default defineComponent({
     const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
     const showFlipTab = computed(() => swap.candidates.value.length > 0)
     // woke: pseudo split and the stat rows' right-click menu.
-    provideStatActions(computed(() => props.item), itemStats, () => widget.value.searchStatRange, swap)
+    provideStatActions(computed(() => props.item), itemStats,
+      // The same range the item's other rows got (create-stat-filters.ts).
+      () => props.item.rarity === ItemRarity.Normal ? 100 : widget.value.searchStatRange, swap)
 
     watch(() => [props.item, doSearch.value], () => {
       if (doSearch.value === false) return

@@ -6,7 +6,7 @@ import { inject, InjectionKey, provide, ref, Ref, toRaw, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
-import { splitFilters } from './pseudo-split'
+import { exclude, include, splitFilters, tierBound } from './pseudo-split'
 import { openMenu, copyText, toast } from '@/web/woke/ui'
 import type { MenuEntry } from '@/web/woke/ui'
 import type { SwapController } from '@/web/woke/harvest-swap/useSwap'
@@ -47,7 +47,19 @@ export function provideStatActions (
   let children = new WeakSet<StatFilter>()
   // Bumped on every split and fold, so rows that ask redraw.
   const version = ref(0)
-  watch([item, stats], () => {
+  // A new item or another preset: fold every open split in the list it was
+  // made in, so switching back finds that preset as it was.
+  watch([item, stats], (_, [, oldStats]) => {
+    if (oldStats) {
+      for (const [raw, open] of splits) {
+        for (const child of open.children) {
+          const at = oldStats.findIndex(s => toRaw(s) === child)
+          if (at >= 0) oldStats.splice(at, 1)
+        }
+        const total = oldStats.find(s => toRaw(s) === raw)
+        if (total && isFilter(total)) total.disabled = open.wasDisabled
+      }
+    }
     splits = new Map()
     children = new WeakSet()
     version.value++
@@ -102,23 +114,25 @@ export function provideStatActions (
     })
     if (f.tag === ModifierType.Explicit || f.tag === ModifierType.Fractured || f.tag === ModifierType.Crafted) {
       items.push(f.not
-        ? { label: 'Include it again', icon: 'fas fa-plus', action: () => { f.not = undefined } }
-        : { label: 'Exclude it (items without)', icon: 'fas fa-ban', action: () => { f.not = true; f.disabled = false } })
+        ? { label: 'Include it again', icon: 'fas fa-plus', action: () => include(f) }
+        : { label: 'Exclude it (items without)', icon: 'fas fa-ban', action: () => exclude(f) })
     }
 
     const roll = f.roll
-    if (roll) {
-      const tierMin = f.sources.length === 1 ? f.sources[0].stat.roll?.min : undefined
+    if (roll && !f.not) {
+      // Where lower is better the bound that matters is the max, as the
+      // price check's own Low/Approx/High set it.
+      const lowerBetter = roll.better === -1
+      const word = lowerBetter ? 'Max' : 'Min'
+      const setBound = (v: number) => {
+        if (lowerBetter) { roll.max = v; roll.min = '' } else { roll.min = v; roll.max = '' }
+        f.disabled = false
+      }
       items.push({ separator: true })
-      items.push({
-        label: `Min: my roll (${roll.value})`,
-        action: () => { roll.min = roll.value; f.disabled = false }
-      })
-      if (tierMin != null && f.sources[0].modifier.info.tier != null) {
-        items.push({
-          label: `Min: bottom of tier (${tierMin})`,
-          action: () => { roll.min = tierMin; f.disabled = false }
-        })
+      items.push({ label: `${word}: my roll (${roll.value})`, action: () => setBound(roll.value) })
+      const tier = tierBound(f)
+      if (tier != null) {
+        items.push({ label: `${word}: ${lowerBetter ? 'top' : 'bottom'} of tier (${tier})`, action: () => setBound(tier) })
       }
       items.push({ label: 'Clear min and max', action: () => { roll.min = ''; roll.max = '' } })
     }

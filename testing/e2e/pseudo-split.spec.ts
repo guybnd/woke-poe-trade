@@ -45,3 +45,20 @@ test('Search only this unticks every other stat', async ({ overlay }) => {
   await overlay.page.getByText('Search only this').click()
   await expect(panel.getByRole('button', { name: /^1 of \d+/ })).toBeVisible()
 })
+
+test('switching presets folds an open split, so coming back finds the total as it was', async ({ overlay }) => {
+  await overlay.page.route('**/api/trade/search/**', (route) => route.abort())
+  await overlay.boot()
+  await overlay.copyItem('items/rare-ring.txt')
+  const panel = overlay.widget('price-check')
+  const chip = panel.getByRole('button', { name: /pseudo x 4/i }).first()
+  const fireRow = panel.getByRole('button', { name: /^\+?38% to Fire Resistance$/ })
+  await chip.click()
+  await expect(fireRow).toHaveCount(1)
+  await panel.getByRole('button', { name: 'Base item' }).click()
+  await panel.getByRole('button', { name: 'Pseudo', exact: true }).click()
+  await expect(fireRow).toHaveCount(0)
+  // The chip splits again rather than saying the mods are already listed.
+  await chip.click()
+  await expect(fireRow).toHaveCount(1)
+})
