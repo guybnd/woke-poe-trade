@@ -927,7 +927,9 @@ function everyTradeIdToQuery (stat: BareStatFilter) {
 function tradeIdToQuery (id: string, stat: BareStatFilter) {
   let roll = stat.roll
 
-  const divMinMax = id.startsWith('{div_by_100}') ? 100 : 1
+  // {div_by_N}: the stat counts N times in the filter's number (woke: cluster all-res).
+  const divBy = /^\{div_by_(\d+)\}/.exec(id)
+  const divMinMax = divBy ? Number(divBy[1]) : 1
   if (id.startsWith('{empty}') ||
     (id.startsWith('{empty_if_100}') && roll?.value === 100)
   ) {

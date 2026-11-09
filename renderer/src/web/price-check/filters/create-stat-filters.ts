@@ -13,6 +13,7 @@ import { applyFlaskHybridMod } from './pseudo/flasks'
 import { applyHeistRules } from './pseudo/heist'
 import { filterTimelessJewelKeystones } from './pseudo/timeless-jewel'
 import { decodeOils, applyAnointmentRules } from './pseudo/anointments'
+import { addClusterResPseudo } from './pseudo/cluster-res'
 import { StatBetter } from '@/assets/data'
 
 export interface FiltersCreationContext {
@@ -114,6 +115,7 @@ export function createExactStatFilters (
 
   if (item.category === ItemCategory.ClusterJewel) {
     applyClusterJewelRules(ctx.filters, true)
+    addClusterResPseudo(ctx.filters, item, ctx.searchInRange)
   } if (
     item.category === ItemCategory.HeistContract ||
     item.category === ItemCategory.HeistBlueprint
@@ -462,6 +464,7 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
 
   if (item.category === ItemCategory.ClusterJewel && item.rarity !== ItemRarity.Unique) {
     applyClusterJewelRules(ctx.filters, false)
+    addClusterResPseudo(ctx.filters, item, ctx.searchInRange)
   } else if (item.category === ItemCategory.Flask) {
     applyFlaskRules(ctx.filters)
     applyFlaskHybridMod(ctx)
