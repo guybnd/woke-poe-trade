@@ -140,6 +140,33 @@ test('PoE mode: a fractured mod gets "Fractured only" once picked', async ({ ove
   await overlay.snap('poe mode fractured only')
 })
 
+test('PoE mode: the catalyst Q tag shows on picked rows and unpicked lines, and searches only on a click', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: poe })
+  await overlay.copyItem('items/rare-belt-catalysed.txt')
+  const win = overlay.page.locator('#price-window')
+  const searches = () => fakeApp.requests.filter(r => r.url.includes('/api/trade/search')).length
+  // Unpicked tooltip lines carry it.
+  const line = win.locator('.w-poe-line', { has: overlay.page.locator('[data-catalyst-tag]') }).first()
+  await expect(line).toBeVisible()
+  const text = (await line.locator('.w-poe-line-text').innerText()).trim()
+  const tag = line.locator('[data-catalyst-tag]')
+  await expect(tag).toHaveText('Q20')
+  const before = searches()
+  await tag.click()
+  // It switches the catalyst filter, not the line, and doesn't search by itself.
+  await expect(tag).toHaveClass('w-poe-qtag on')
+  await expect(line).toBeVisible()
+  expect(searches()).toBe(before)
+  // Picked, the row keeps it, still on.
+  await line.locator('.w-poe-line-text').click()
+  const row = win.locator('.w-poe-row', { hasText: text.slice(0, 10) })
+  await expect(row.locator('[data-catalyst-tag]')).toHaveText('Q20')
+  expect(searches()).toBe(before)
+  await overlay.snap('poe mode catalyst tag')
+  await win.locator('.btn.w-pc-primary').click()
+  await expect.poll(() => fakeApp.requests.some(r => r.url.includes('/api/trade/search') && r.body.includes('pseudo_jewellery_attribute_quality'))).toBe(true)
+})
+
 test('PoE mode: other items keep their features', async ({ overlay }) => {
   await overlay.boot({ patch: poe })
   for (const [file, name] of [

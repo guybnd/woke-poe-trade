@@ -4,6 +4,7 @@
 import { ItemRarity, ParsedItem } from '@/parser'
 import type { FilterOrGroup, ItemFilters, CorruptedSearch } from '@/web/price-check/filters/interfaces'
 import { isTopTierFilter } from '@/web/price-check/filters/create-stat-filters'
+import { catalystQualityFilter } from './catalyst-filter'
 
 const GOOD_ROLL = 0.5
 const BASE_PERCENTILE = 'Base Percentile: #%'
@@ -35,6 +36,8 @@ export function ninjaFitsSearch (item: ParsedItem, stats: FilterOrGroup[], corru
   if (item.rarity !== ItemRarity.Unique) return true
   if (item.isFoulborn || corrupted === 'corrupted') return false
   if (item.isCorrupted && corrupted !== 'not-corrupted') return false
+  // Its prices are for any catalyst quality, so a search for one (the Q tag) isn't covered.
+  if (catalystQualityFilter(stats)?.disabled === false) return false
   return !stats.some(s => {
     if (s.group || s.disabled || s.hidden || s.statRef === BASE_PERCENTILE) return false
     const { roll } = s

@@ -115,6 +115,20 @@
 }
 #price-window.w-poe .w-poe-ptag:hover { color: var(--w-dim); border-color: #5a4c39; }
 
+/* The catalyst's Q tag on an unpicked line: square, blue like the game's quality. */
+.w-poe-qtag {
+  flex: none;
+  font: 700 calc(11px * var(--w-text-scale, 1)) Inter, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 2px;
+  color: var(--w-r-magic);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w-r-magic) 45%, transparent);
+}
+.w-poe-qtag:hover { box-shadow: inset 0 0 0 1px var(--w-r-magic); }
+.w-poe-qtag.on { color: #fff; background: color-mix(in srgb, var(--w-r-magic) 45%, transparent); box-shadow: inset 0 0 0 1px var(--w-r-magic); }
+
 /* ---- Header: 2x2 grid ---- */
 #price-window.w-poe .w-poe-head {
   display: grid;

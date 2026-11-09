@@ -44,6 +44,10 @@
               :class="$style.qualityLabel">{{ t('item.prop_quality', [calcQuality]) }}</div>
             <woke-swap-marker v-if="hasSwap" :filter="filter" />
             <woke-mod-worth-tag v-if="!filter.group" :stat-ref="filter.statRef" :item="item" />
+            <button v-if="qTag != null" type="button" data-catalyst-tag
+              class="w-num" :class="[$style.qTag, { [$style.qOn]: qOn }]"
+              :title="qOn ? 'Only items with this catalyst quality or more. Click to search any quality.' : 'A catalyst raised this line. Click to only find items with the same catalyst quality.'"
+              @click.stop="catalyst!.toggle()">Q{{ qTag }}</button>
             <img v-for="img of rollTags"
               :class="$style.rollTag" :src="img">
             <div class="flex gap-x-px">
@@ -132,6 +136,7 @@ import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
+import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
@@ -175,6 +180,10 @@ export default defineComponent({
     const hasSwap = computed(() => !props.filter.group && swap?.candidateFor(props.filter) != null)
     // woke: pseudo split and the right-click menu (price-insight/stat-actions.ts).
     const actions = useStatActions()
+    // woke: the Q tag on rows a catalyst raised (price-insight/catalyst-filter.ts).
+    const catalyst = useCatalystFilter()
+    const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, catalyst.filter.value) : undefined)
+    const qOn = computed(() => catalyst?.filter.value?.disabled === false)
     const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
     const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
     const splitChild = computed(() => actions?.isChild(props.filter) ?? false)
@@ -317,6 +326,9 @@ export default defineComponent({
     })
 
     return {
+      catalyst,
+      qTag,
+      qOn,
       fracIds,
       fracOnly,
       toggleFractured,
@@ -392,7 +404,7 @@ export default defineComponent({
         const increased = props.filter.sources.some(source =>
           source.modifier.info.rollIncr &&
           source.stat.roll && !source.stat.roll.unscalable)
-        if (increased) {
+        if (increased && qTag.value == null) {
           out.push('/images/increased.png')
         }
         return out
@@ -640,6 +652,15 @@ export default defineComponent({
 .tag-pseudo,
 .tag-not {
   @apply bg-gray-700 text-black; }
+
+/* The catalyst's tag: blue like the game's quality, filled while it filters. */
+.qTag {
+  font-size: var(--w-fs-xs); font-weight: 700; line-height: 1; align-self: center;
+  padding: 1px 3px; border-radius: 2px;
+  color: var(--w-r-magic); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w-r-magic) 45%, transparent);
+}
+.qTag:hover { box-shadow: inset 0 0 0 1px var(--w-r-magic); }
+.qOn { color: #fff; background: color-mix(in srgb, var(--w-r-magic) 45%, transparent); box-shadow: inset 0 0 0 1px var(--w-r-magic); }
 
 .rollTag {
   width: theme('width.5');
