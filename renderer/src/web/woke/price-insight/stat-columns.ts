@@ -5,7 +5,7 @@ import { linesToStatStrings, tryParseTranslation } from '@/parser/stat-translati
 import type { ItemCategory } from '@/parser'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { pseudoRuleStats } from '@/web/price-check/filters/pseudo'
-import { CLUSTER_RES_STATS, isClusterResTotal } from '@/web/price-check/filters/pseudo/cluster-res'
+import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
 import { roundRoll } from '@/web/price-check/filters/util'
 import { modDomain, modText, ListingItem, ListingMod } from './listing-tip'
 
@@ -102,7 +102,8 @@ function columnSource (filter: StatFilter): ColumnSource | null {
   // Any other item.* filter (map rewards, heist jobs...) has nothing to read.
   if (id.startsWith('item.')) return null
   // A cluster jewel's resistance total is searched by its lines, not a pseudo id.
-  if (isClusterResTotal(filter)) return { kind: 'total', stats: CLUSTER_RES_STATS, negated: false }
+  const clusterStats = clusterResColumnStats(filter)
+  if (clusterStats) return { kind: 'total', stats: clusterStats, negated: false }
   if (id.startsWith('pseudo.')) {
     const stats = pseudoRuleStats(filter.statRef)
     return stats ? { kind: 'total', stats, negated: filter.roll?.isNegated ?? false } : null

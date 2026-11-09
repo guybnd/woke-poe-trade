@@ -89,7 +89,28 @@ describe('cluster jewel resistance', () => {
     }
   })
 
-  it('leaves a jewel with two resistance lines alone: one line at a time can not add them up', () => {
+  it('with an element line and an all-res line, ticks both and lets the element be any', () => {
+    // The jewel from Guy's screenshot: Lightning 2% and all Elemental 3%.
+    const ALL = `{ Suffix Modifier "of the Prism" (Tier: 4) — Elemental, Fire, Cold, Lightning, Resistance }
+Added Small Passive Skills also grant: +3(2-3)% to all Elemental Resistances`
+    const { filters, stats, all } = setup(cluster(`${LIGHTNING}
+${ALL}`))
+    expect(stats.some(s => s.statRef === '+#% total Elemental Resistance')).toBe(false)
+    const any = stats.find(s => s.text.includes('Fire, Cold or Lightning'))!
+    const lightning = stats.find(s => s.statRef === 'Added Small Passive Skills also grant: +#% to Lightning Resistance' && s !== any)!
+    const allRes = stats.find(s => s.statRef === 'Added Small Passive Skills also grant: +#% to all Elemental Resistances')!
+    expect(any.disabled).toBe(false)
+    expect(any.roll!.value).toBe(2)
+    expect(lightning.disabled).toBe(true)
+    expect(allRes.disabled).toBe(false)
+
+    const body = createTradeRequest(filters, all)
+    const group = body.query.stats.find(g => g.type === 'count' && g.filters.length === 3)!
+    expect(group.filters.map(f => f.id).sort()).toEqual(['explicit.stat_1790411851', 'explicit.stat_2250780084', 'explicit.stat_2709692542'])
+    expect(body.query.stats[0].filters.some(f => f.id === 'explicit.stat_2669029667')).toBe(true)
+  })
+
+  it('leaves a jewel with two element lines alone: one line at a time can not add them up', () => {
     const { stats } = setup(cluster(`${LIGHTNING}\n${FIRE}`))
     expect(stats.some(s => s.statRef === '+#% total Elemental Resistance')).toBe(false)
   })
