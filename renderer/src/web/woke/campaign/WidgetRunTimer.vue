@@ -338,7 +338,7 @@ const dockMenu = computed<DockMenuAction[]>(() => run.value
   text-transform: var(--w-caps-case);
   letter-spacing: 0.08em;
   color: var(--w-faint);
-  font-family: var(--w-caps-face);
+  /* No face of its own: the HUD strip is small caps in every theme. */
 }
 .time { font-size: var(--w-fs-lg); }
 .hero {

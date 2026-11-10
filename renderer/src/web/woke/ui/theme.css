@@ -86,6 +86,7 @@
   --w-caps-face: var(--w-body);
   --w-caps-case: uppercase;
   --w-fs-caps: var(--w-fs-xs);
+  --w-caps-weight: 600;   /* the game look drops to 400: Fontin small caps has no bold, so 600 is smeared */
   --w-mono: "JetBrains Mono", ui-monospace, monospace;
   /* All times the Text size setting (ui/text-scale.ts). */
   --w-fs-xs: calc(11px * var(--w-text-scale, 1));    /* column labels, key caps */
