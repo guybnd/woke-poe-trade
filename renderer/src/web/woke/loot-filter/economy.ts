@@ -264,6 +264,10 @@ export interface RetierPlan {
 export interface PlanOptions {
   // `${type}|${base}` keys of items the user placed by hand.
   locked?: Set<string>
+  // Price moves in the doc that took an item out of NeverSink's tier for it
+  // (movesOutOfPlace). Tier prices are worked out from where NeverSink put
+  // these, or every apply would shift the lines and turn up more.
+  moved?: PriceMove[]
   buffer?: number
   bufferDown?: number
   groups?: EconomyGroup[]
@@ -311,8 +315,19 @@ export function planRetier (doc: FilterDoc, lookup: PriceLookup, opts: PlanOptio
       const p = lookup(group, base)
       if (p && p.chaos > 0) prices.set(base, p)
     }
+    // Each tier's price comes from NeverSink's own list for it: a base a price
+    // move put here still counts for the tier it came from.
+    const byTier = new Map(bands.map(b => [b.tier, b]))
+    const origin = new Map<string, TierBand>()
+    for (const m of opts.moved ?? []) {
+      if (m.type !== group.type || home.get(m.base)?.tier !== m.to) continue
+      const from = byTier.get(m.from)
+      if (from) origin.set(m.base, from)
+    }
+    const members = new Map(bands.map(b => [b, [] as string[]]))
+    for (const [base, band] of home) members.get(origin.get(base) ?? band)!.push(base)
     for (const band of bands) {
-      const values = band.bases.map(b => prices.get(b)).filter(p => p && !p.thin).map(p => p!.chaos)
+      const values = members.get(band)!.map(b => prices.get(b)).filter(p => p && !p.thin).map(p => p!.chaos)
       band.priced = values.length
       band.median = values.length ? median(values) : null
     }
@@ -382,6 +397,17 @@ export function mergeMoves (stored: PriceMove[], next: PriceMove[]): PriceMove[]
     else out[i] = { ...m, from: first }
   }
   return out
+}
+
+// The stored moves that take an item out of the tier NeverSink lists it in,
+// read off a fresh parse before the moves go on. A move to where NeverSink has
+// since put the item itself changes nothing, so its old tier isn't its home.
+export function movesOutOfPlace (doc: FilterDoc, moves: PriceMove[]): PriceMove[] {
+  return moves.filter(m => {
+    const blocks = blocksOf(doc, m.type)
+    return blocks.some(b => b.tier === m.from && blockHasBase(b, m.base)) &&
+      !blocks.some(b => b.tier === m.to && blockHasBase(b, m.base))
+  })
 }
 
 // Applies stored price moves to a fresh parse. A move only holds while the item

@@ -66,7 +66,12 @@ export function normalizeMapModsWidget (w: MapModsWidget) {
   if (!w.anchor) w.anchor = { pos: 'tc', x: 50, y: 10 }
   if (!Array.isArray(w.profiles) || !w.profiles.length) w.profiles = [defaultProfile()]
   if (!w.profiles.some(p => p.id === w.activeProfile)) w.activeProfile = w.profiles[0].id
-  w.weights = { ...DEFAULT_JUICE_WEIGHTS, ...(w.weights ?? {}) }
+  // Only write when a weight is missing. The settings page normalizes on every
+  // render, and a fresh object each time re-triggered it forever (froze the app).
+  const weights = w.weights as Partial<JuiceWeights> | undefined
+  if (!weights || (Object.keys(DEFAULT_JUICE_WEIGHTS) as Array<keyof JuiceWeights>).some(k => typeof weights[k] !== 'number')) {
+    w.weights = { ...DEFAULT_JUICE_WEIGHTS, ...(weights ?? {}) }
+  }
   if (typeof w.stripOnPriceCheck !== 'boolean') w.stripOnPriceCheck = true
   if (w.hotkey === undefined) w.hotkey = null
   if (w.regexHotkey === undefined) w.regexHotkey = null

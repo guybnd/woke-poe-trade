@@ -20,7 +20,7 @@ import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { buildRuleBlocks, insertBuildBlocks } from './build-rules'
 import { useBuildRuleInput } from './build-input'
-import { applyPriceMoves, livePriceMoves, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
+import { applyPriceMoves, livePriceMoves, lockKey, lockedByEdits, mergeMoves, movesOutOfPlace, planRetier, tierRank } from './economy'
 import type { EconomyGroup, PriceMove, RetierPlan } from './economy'
 import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
 import { isDismissed } from './health'
@@ -95,6 +95,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // A tier's namesake (Orb of Alchemy in t5alchemy) no longer moves: an old
   // stored move of one is ignored, and dropped on the next apply.
   const activeMoves = () => cfg().priceTiers.on ? livePriceMoves(cfg().priceTiers.moves).filter(inLeague) : []
+  // Price moves that took an item out of NeverSink's tier. Set with the doc,
+  // so the plan reads both from one rebuild.
+  let priceMoved: PriceMove[] = []
   const moveKey = (m: PriceMove) => [m.type, m.base, m.from, m.to]
   const extraSig = () => {
     const parts: unknown[] = [activeMoves().map(moveKey), cfg().safetyNet.on ? safetyList.value : '']
@@ -249,7 +252,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     insertBuildBlocks(next, ruleBlocks(cfg().rules))
     // Price moves next: your own moves (edits) are applied after them and win.
     let movesFit = 0
-    if (activeMoves().length) movesFit = applyPriceMoves(next, activeMoves())
+    let outOfPlace: PriceMove[] = []
+    if (activeMoves().length) {
+      outOfPlace = movesOutOfPlace(next, activeMoves())
+      movesFit = applyPriceMoves(next, activeMoves())
+    }
     const isNetEdit = (e: FilterEdit) => e.type === SAFETY_RULE_TYPE
     const results = new Map(applyEdits(next, cfg().edits.filter(e => !isNetEdit(e))).map(r => [r.edit.id, r]))
     // Quiet mode, bigger labels, colour-blind colours: over NeverSink's rules
@@ -288,7 +295,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       if (lookup || netCount) netList = JSON.stringify(bases)
     }
     for (const r of applyEdits(next, cfg().edits.filter(isNetEdit))) results.set(r.edit.id, r)
-    return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
+    return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
   }
 
   // Own rules and presets as last built, to rebuild when the UI edits them.
@@ -307,6 +314,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     presetChanges.value = c.presetChanges
     presetList.value = c.presetSig
     statuses.value = cfg().edits.map(e => c.results.get(e.id)!)
+    priceMoved = c.outOfPlace
     doc.value = c.doc
     publishActiveFilter(api)
   }
@@ -328,7 +336,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const d = doc.value
     const lookup = prices.lookup.value
     if (!d || !lookup || !cfg().priceTiers.on || pricesTooOld.value) return null
-    return planRetier(d, lookup, { locked: locked.value })
+    return planRetier(d, lookup, { locked: locked.value, moved: priceMoved })
   })
   // Valuable items the filter (without the safety net) hides or shows small.
   const health = computed<BaseVerdict[]>(() => {

@@ -14,6 +14,10 @@ const marks: Array<{ name: string, ms: number }> = []
 const series = new Map<string, Series>()
 const freezes: Array<{ at: number, ms: number }> = []
 let freezeCount = 0
+// Long tasks while the overlay loads (parsing data, first draw) are expected;
+// they're counted apart so the headline only counts freezes after that.
+const STARTUP_MS = 20_000
+let startupFreezeCount = 0
 
 export function perfMark (name: string): void {
   if (marks.some(m => m.name === name)) return
@@ -77,7 +81,7 @@ export function rendererPerf () {
     timeOrigin: Math.round(performance.timeOrigin),
     startup,
     timings: [...series].map(([name, s]) => summarize(name, s)),
-    freezes: { count: freezeCount, recent: [...freezes] },
+    freezes: { count: freezeCount, startupCount: startupFreezeCount, recent: [...freezes] },
     heapMb: heapMb()
   }
 }
@@ -114,6 +118,10 @@ perfMark('Bundle evaluated')
 try {
   new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
+      if (entry.startTime < STARTUP_MS) {
+        startupFreezeCount++
+        continue
+      }
       freezeCount++
       perfRecord('Overlay busy (blocks ≥ 50 ms)', entry.duration)
       freezes.push({ at: Math.round(performance.timeOrigin + entry.startTime), ms: Math.round(entry.duration) })

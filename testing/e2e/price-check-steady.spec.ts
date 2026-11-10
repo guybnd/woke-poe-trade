@@ -44,15 +44,15 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  const stunBeforeSearch = await top(panel.getByText('18% increased Stun and Block Recovery').first())
+  const stunBeforeSearch = await top(panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first())
   await panel.getByRole('button', { name: 'Search' }).click()
   // Through the first search too: loading, then the verdict arriving.
-  expect(await top(panel.getByText('18% increased Stun and Block Recovery').first())).toBe(stunBeforeSearch)
+  expect(await top(panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first())).toBe(stunBeforeSearch)
   await expect(panel).toContainText('Matched: 12')
   await expect(panel.locator('.w-pc-foot')).toBeVisible()
   await expect(panel.locator('.w-pc-foot')).toContainText('12 of 12')
 
-  const stun = panel.getByText('18% increased Stun and Block Recovery').first()
+  const stun = panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first()
   expect(await top(stun)).toBe(stunBeforeSearch)
   const life = panel.getByText('total maximum Life').first()
   const window = overlay.page.locator('#price-window')

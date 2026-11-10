@@ -6,7 +6,7 @@ import { ModifierType } from '@/parser/modifiers'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 
-export type PoeKind = 'local' | 'pseudo' | 'enchant' | 'implicit' | 'explicit' | 'crafted' | 'fractured' | 'scourge'
+export type PoeKind = 'local' | 'pseudo' | 'enchant' | 'implicit' | 'explicit' | 'crafted' | 'fractured' | 'scourge' | 'foulborn'
 export type PoeSection = 'property' | 'enchant' | 'implicit' | 'explicit'
 
 export interface PoeLook {
@@ -50,6 +50,8 @@ export function poeLook (filter: StatFilter): PoeLook {
     case FilterTag.Crafted: return { kind: 'crafted', label: 'Crafted modifier' }
     case FilterTag.Fractured: return { kind: 'fractured', label: 'Fractured modifier' }
     case FilterTag.Scourge: return { kind: 'scourge', label: 'Scourge modifier' }
+    // A unique's mod the Genesis Tree mutated: it sets the price, so it stands out.
+    case FilterTag.Foulborn: return { kind: 'foulborn', label: 'Foulborn modifier' }
     case FilterTag.Corruption: return { kind: 'implicit', label: 'Corruption implicit', corrupted: true }
     case FilterTag.Synthesised: return { kind: 'implicit', label: 'Synthesised implicit' }
     case FilterTag.Eldritch: return { kind: 'implicit', label: 'Eldritch implicit' }
@@ -69,24 +71,33 @@ export function poeSection (filter: StatFilter): PoeSection {
     case FilterTag.Synthesised:
     case FilterTag.Eldritch:
     case FilterTag.Vestigial:
-    case FilterTag.Foulborn:
       return 'implicit'
   }
   return 'explicit'
 }
 
-/** The tier the Alt tooltip shows, or '' when the mod has none.
- *  A line several mods add up to (a total or a pseudo) shows each mod's tier, "T1/3",
- *  as long as every one has a tier: an implicit or crafted part has none. */
+/** The tier the Alt tooltip shows ("T2"), or the rank an implicit or crafted mod has
+ *  instead ("R3"), or '' when the mod has neither.
+ *  A line several mods add up to (a total or a pseudo) shows each mod's, "T1/3" or "T1/R3",
+ *  as long as every one has a tier or rank. */
 export function poeTier (filter: StatFilter): string {
   // A property (Energy Shield: 1210) is the item's number, not a mod line.
   if (!filter.sources.length || filter.tag === FilterTag.Property) return ''
-  const tiers: number[] = []
-  for (const { modifier } of filter.sources) {
-    if (modifier.info.tier == null) return ''
-    tiers.push(modifier.info.tier)
+  const marks: string[] = []
+  for (const { modifier: { info } } of filter.sources) {
+    if (info.tier != null) marks.push(`T${info.tier}`)
+    else if (info.rank != null) marks.push(`R${info.rank}`)
+    else return ''
   }
-  return `T${tiers.join('/')}`
+  // Past three mods, the best tier and a plus, so the left column stays narrow.
+  if (marks.length > 3) {
+    const tiers = filter.sources.map(s => s.modifier.info.tier).filter((t): t is number => t != null)
+    return tiers.length ? `T${Math.min(...tiers)}+` : `${marks[0]}+`
+  }
+  // All tiers read "T1/3"; a mix keeps each letter, "T1/R3".
+  return marks.every(m => m[0] === 'T')
+    ? `T${marks.map(m => m.slice(1)).join('/')}`
+    : marks.join('/')
 }
 
 /** Gold, as T1 in the Alt tooltip: every mod behind the line is tier 1. */

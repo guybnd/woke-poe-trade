@@ -103,7 +103,7 @@ test('ticked stats get columns, coloured against the checked item', async ({ ove
   expect(await fits()).toBe(true)
 
   // A fifth ticked stat goes behind the header's +1, and the table still fits.
-  await panel.getByText('18% increased Stun and Block Recovery').first().click()
+  await panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first().click()
   // Moving from a filter onto Search runs the search and removes the button,
   // so Playwright's click or hover would wait for it forever.
   const search = (await panel.getByRole('button', { name: 'Search' }).boundingBox())!
