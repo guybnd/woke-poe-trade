@@ -281,6 +281,11 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.package != 'false' }}
     runs-on: windows-2022
     timeout-minutes: 40
+    # Electron's zip comes from GitHub releases, which sometimes answers 504.
+    # Keep it between runs (npm ci and electron-builder both read this cache).
+    env:
+      electron_config_cache: ${{ github.workspace }}/.electron-cache
+      ELECTRON_CACHE: ${{ github.workspace }}/.electron-cache
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -294,6 +299,12 @@ jobs:
       working-directory: ./renderer
     - run: npm run build
       working-directory: ./renderer
+    - name: Cache Electron
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: .electron-cache
+        key: electron-${{ runner.os }}-${{ hashFiles('main/package-lock.json') }}
+        restore-keys: electron-${{ runner.os }}-
     - run: npm ci
       working-directory: ./main
     - run: npm run build

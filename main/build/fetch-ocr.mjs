@@ -26,7 +26,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cv-ocr-'))
 const zip = path.join(tmp, 'cv-ocr.zip')
 fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()))
 
-// 7za ships with electron-builder, so this works on every build machine.
+// 7zip-bin (a dev dependency) ships 7za for every build machine.
 const require = createRequire(import.meta.url)
 const { path7za } = require('7zip-bin')
 try { fs.chmodSync(path7za, 0o755) } catch {}
