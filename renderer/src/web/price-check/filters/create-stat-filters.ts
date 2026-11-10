@@ -22,6 +22,8 @@ export interface FiltersCreationContext {
   filters: StatFilter[]
   groups: FilterGroup[]
   statsByType: StatCalculated[]
+  /** woke: local mods folded into a property total (Energy Shield, Physical DPS...). */
+  inTotal?: StatCalculated[]
 }
 
 export function createExactStatFilters (
@@ -186,8 +188,44 @@ export function initUiModFilters (
   }
 
   finalFilterTweaks(ctx)
+  addInTotalMods(ctx)
 
   return [...ctx.filters, ...ctx.groups]
+}
+
+// woke: the local mods a property total is made of (+57 to maximum Energy Shield,
+// 110% increased Energy Shield...) come back as unticked rows, placed by where
+// their mod sits on the item, so PoE mode reads like the game's tooltip. Added
+// after the auto-ticking so nothing picks them; Standard keeps them with the
+// hidden rows (FiltersBlock).
+function addInTotalMods (ctx: FiltersCreationContext) {
+  if (!ctx.inTotal?.length) return
+  const { item } = ctx
+  const modAt = new Map(item.newMods.map((mod, i) => [mod, i]))
+  // A row's place on the item: its first mod's. Rows with no mod (properties) have none.
+  const placeOf = (sources: StatFilter['sources']) => {
+    let at = Infinity
+    for (const s of sources) at = Math.min(at, modAt.get(s.modifier) ?? Infinity)
+    return at
+  }
+  for (const calc of ctx.inTotal) {
+    // An uncorrupted fractured mod also comes back as a hidden Fractured row
+    // made from the same mod; this row replaces it, so the mod is listed once.
+    const twin = ctx.filters.findIndex(f => f.sources === calc.sources)
+    if (twin >= 0) ctx.filters.splice(twin, 1)
+    const filter = calculatedStatToFilter(calc, ctx.searchInRange, item)
+    filter.disabled = true
+    filter.hidden = undefined
+    filter.inTotal = true
+    const mine = placeOf(calc.sources)
+    const next = ctx.filters.findIndex(f => {
+      if (f.tag === FilterTag.Property) return false
+      const at = placeOf(f.sources)
+      return at !== Infinity && at > mine
+    })
+    if (next < 0) ctx.filters.push(filter)
+    else ctx.filters.splice(next, 0, filter)
+  }
 }
 
 export function calculatedStatToFilter (

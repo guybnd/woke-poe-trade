@@ -53,5 +53,6 @@ export function ninjaFitsSearch (item: ParsedItem, stats: FilterOrGroup[], corru
 /** A rare searched without one of its T1 or T2 mods: too low a bar to call it worthless. */
 export function skipsTopMods (item: ParsedItem, stats: FilterOrGroup[]): boolean {
   if (item.rarity !== ItemRarity.Rare || item.isVeiled) return false
-  return stats.some(s => !s.group && s.disabled && !s.hidden && isTopTierFilter(s, item))
+  // A local mod already counted in a property total is searched through that total.
+  return stats.some(s => !s.group && s.disabled && !s.hidden && !s.inTotal && isTopTierFilter(s, item))
 }

@@ -139,6 +139,8 @@ export interface StatFilter {
     value: number // NOTE: mutable in UI
   }
   hidden?: string
+  /** woke: a local mod already counted in a property total; PoE mode lists it, Standard hides it. */
+  inTotal?: true
   disabled: boolean // NOTE: mutable in UI
 }
 

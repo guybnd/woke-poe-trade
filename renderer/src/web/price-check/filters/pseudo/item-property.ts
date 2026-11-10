@@ -234,6 +234,10 @@ function weaponProps (ctx: FiltersCreationContext) {
 }
 
 function removeUsedStats (ctx: FiltersCreationContext, stats: Set<string>) {
+  // woke: the local mods behind a property total are kept aside, so PoE mode can
+  // still list them as the game's tooltip does (initUiModFilters adds them back).
+  const used = ctx.statsByType.filter(m => stats.has(m.stat.ref))
+  ctx.inTotal = [...(ctx.inTotal ?? []), ...used]
   ctx.statsByType = ctx.statsByType.filter(m => !stats.has(m.stat.ref))
 }
 
