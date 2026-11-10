@@ -76,9 +76,11 @@ export function soleMod (f: StatFilter): ParsedModifier | undefined {
 /** Picks a row at its tier's worst roll (its own roll without a tier): the
  *  bar any copy of the mod at that tier clears. */
 export function pickAtTier (f: StatFilter) {
+  // An excluded line is searched as having the mod again.
+  if (f.not) include(f)
   const roll = f.roll
   f.disabled = false
-  if (!roll || f.not) return
+  if (!roll) return
   const bound = tierBound(f) ?? roll.value
   if (roll.better === -1) { roll.max = bound; roll.min = '' } else { roll.min = bound; roll.max = '' }
 }

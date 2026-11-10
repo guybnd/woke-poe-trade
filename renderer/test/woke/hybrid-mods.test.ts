@@ -1,7 +1,7 @@
 // Splitting a local line two mods add up to into its mods, boxing a hybrid's
 // lines together and searching that one mod; and "Adds # to #" lines' numbers.
 import { describe, it, expect, beforeAll, vi } from 'vitest'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { loadGameData, fixture, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
@@ -10,6 +10,7 @@ import { rollPair } from '@/web/woke/price-insight/roll-pair'
 
 // The menu and toasts need a page; nothing here opens one.
 vi.mock('@/web/woke/ui', () => ({ openMenu: vi.fn(), copyText: vi.fn(), toast: vi.fn() }))
+vi.mock('@/web/woke/price-insight/window-style', () => ({ poeOn: { value: true } }))
 
 function setup (name: string) {
   const item = parseItem(fixture(`items/${name}`))
@@ -60,6 +61,41 @@ describe('a local line two mods add up to', () => {
     ])
     // The other mod's share stays unticked.
     expect(rows().find(f => f.roll?.value === 120 && f.inTotal)!.disabled).toBe(true)
+  })
+
+  it('folding puts a moved line back under the row it followed, even right under the line', () => {
+    const { stats, actions, rows, row } = setup('rare-body-armour-es.txt')
+    // Stun right under the 162% line, then the rest.
+    const list = stats.value
+    const stun = list.splice(list.indexOf(row('Stun and Block Recovery')), 1)[0]
+    list.splice(list.indexOf(row('increased Energy Shield')) + 1, 0, stun)
+    const before = rows().map(f => f.text)
+    const line = row('increased Energy Shield')
+    actions.toggleSplit(line)
+    actions.toggleSplit(line)
+    expect(rows().map(f => f.text)).toEqual(before)
+  })
+
+  it('a new preset list folds the split, moved line included', async () => {
+    const { stats, actions, rows, row } = setup('rare-body-armour-es.txt')
+    const first = stats.value
+    const before = rows().map(f => f.text)
+    actions.toggleSplit(row('increased Energy Shield'))
+    stats.value = [...first.slice(0, 1)]
+    await nextTick()
+    stats.value = first
+    await nextTick()
+    expect(rows().map(f => f.text)).toEqual(before)
+  })
+
+  it('searching a hybrid includes an excluded line of it again', () => {
+    const { actions, rows, row } = setup('rare-body-armour-es.txt')
+    const stun = row('Stun and Block Recovery')
+    stun.not = true
+    actions.searchMod(stun)
+    const picked = rows().find(f => f.text.includes('Stun and Block Recovery'))!
+    expect(picked.not).toBeUndefined()
+    expect(picked.roll?.min).toBe(17)
   })
 
   it('a hybrid on its own lines searches from the right-click action without a split', () => {

@@ -8,6 +8,7 @@ import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { exclude, include, isHybrid, pickAtTier, soleMod, splitByMod, splitFilters, tierBound } from './pseudo-split'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
+import { poeOn } from './window-style'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
 import { openMenu, copyText, toast } from '@/web/woke/ui'
 import type { MenuEntry } from '@/web/woke/ui'
@@ -17,8 +18,9 @@ interface Split {
   children: StatFilter[]
   /** The total's own tick before the split, put back when folding. */
   wasDisabled: boolean
-  /** A hybrid's other lines moved under its row, each with the row it followed. */
-  moved: Array<{ row: StatFilter, after: StatFilter | undefined }>
+  /** A hybrid's other lines moved under its row, each with the row it followed
+   *  before the split (none: it was first) and its place then. */
+  moved: Array<{ row: StatFilter, after: StatFilter | undefined, index: number }>
 }
 
 /** A line in a hybrid mod's box: the box's mod, and where in the box it sits. */
@@ -67,11 +69,9 @@ export function provideStatActions (
   // made in, so switching back finds that preset as it was.
   watch([item, stats], (_, [, oldStats]) => {
     if (oldStats) {
-      for (const [raw, open] of splits) {
-        for (const child of open.children) {
-          const at = oldStats.findIndex(s => toRaw(s) === child)
-          if (at >= 0) oldStats.splice(at, 1)
-        }
+      // Latest first, so each fold finds the rows its split saw.
+      for (const [raw, open] of [...splits].reverse()) {
+        fold(oldStats, open)
         const total = oldStats.find(s => toRaw(s) === raw)
         if (total && isFilter(total)) total.disabled = open.wasDisabled
       }
@@ -98,26 +98,33 @@ export function provideStatActions (
   const rowsOf = (list: FilterOrGroup[], mod: ParsedModifier) =>
     list.filter(isFilter).map(s => toRaw(s) as StatFilter).filter(s => soleMod(s) === mod)
 
+  // Takes a split's rows out of the list and puts a hybrid's moved lines back.
+  function fold (list: FilterOrGroup[], open: Split) {
+    for (const child of open.children) {
+      const i = at(list, child)
+      if (i >= 0) list.splice(i, 1)
+      hybrids.delete(child)
+    }
+    for (const { row } of open.moved) {
+      hybrids.delete(row)
+      const i = at(list, row)
+      if (i >= 0) list.splice(i, 1)
+    }
+    // Each after the row it followed (gone: at its old place). Last first, so
+    // lines that followed the same row keep their order.
+    for (const { row, after, index } of [...open.moved].sort((a, b) => b.index - a.index)) {
+      const j = after ? at(list, after) : -1
+      const to = (j >= 0) ? j + 1 : (after ? Math.min(index, list.length) : 0)
+      list.splice(to, 0, row)
+    }
+  }
+
   function toggleSplit (f: StatFilter) {
     const list = stats.value
     const raw = toRaw(f)
     const open = splits.get(raw)
     if (open) {
-      for (const child of open.children) {
-        const i = at(list, child)
-        if (i >= 0) list.splice(i, 1)
-        hybrids.delete(child)
-      }
-      // A hybrid's other lines go back where they were.
-      for (const { row, after } of [...open.moved].reverse()) {
-        const i = at(list, row)
-        hybrids.delete(row)
-        if (i < 0) continue
-        const [moved] = list.splice(i, 1)
-        const j = after ? at(list, after) : -1
-        if (j >= 0) list.splice(j + 1, 0, moved)
-        else list.push(moved)
-      }
+      fold(list, open)
       f.disabled = open.wasDisabled
       splits.delete(raw)
       version.value++
@@ -132,6 +139,8 @@ export function provideStatActions (
       return
     }
     const wasDisabled = f.disabled
+    // The list as it was, for putting moved lines back on fold.
+    const orig = list.map(s => toRaw(s) as FilterOrGroup)
     const start = at(list, raw)
     list.splice(start + 1, 0, ...made)
     // Spliced in as reactive copies; remember the plain objects behind them.
@@ -140,20 +149,32 @@ export function provideStatActions (
     // A hybrid mod's row takes its mod's other lines under it, boxed together.
     const moved: Split['moved'] = []
     if (byMod) {
-      for (const child of added) {
+      const plan = added.map(child => {
         const mod = soleMod(child)
-        if (!mod || !isHybrid(mod)) continue
+        const rows = (mod && isHybrid(mod))
+          ? rowsOf(list, mod).filter(row => row !== child && !children.has(row) && !hybrids.has(row))
+          : []
+        return { child, mod, rows }
+      })
+      const moving = new Set(plan.flatMap(p => p.rows))
+      for (const { rows } of plan) {
+        for (const row of rows) {
+          const index = orig.indexOf(row)
+          // The nearest row above it that stays put.
+          let k = index - 1
+          while (k >= 0 && moving.has(orig[k] as StatFilter)) k--
+          const before = orig[k]
+          moved.push({ row, after: (before && isFilter(before)) ? before : undefined, index })
+        }
+      }
+      for (const { child, mod, rows } of plan) {
+        if (!mod || !rows.length) continue
         const box = [child]
-        for (const row of rowsOf(list, mod)) {
-          if (row === child || children.has(row) || hybrids.has(row)) continue
-          const i = at(list, row)
-          const before = list[i - 1]
-          const [r] = list.splice(i, 1)
+        for (const row of rows) {
+          const [r] = list.splice(at(list, row), 1)
           list.splice(at(list, child) + box.length, 0, r)
-          moved.push({ row, after: (before && isFilter(before)) ? toRaw(before) as StatFilter : undefined })
           box.push(row)
         }
-        if (box.length < 2) continue
         box.forEach((row, k) => hybrids.set(row, { mod, first: k === 0, last: k === box.length - 1 }))
       }
     }
@@ -229,7 +250,8 @@ export function provideStatActions (
 
     items.push({ separator: true })
     const mod = soleMod(f)
-    if (mod && isHybrid(mod)) {
+    // PoE mode only: Standard hides the local rows such a search ticks.
+    if (poeOn.value && mod && isHybrid(mod)) {
       const name = [mod.info.tier != null ? `T${mod.info.tier}` : '', mod.info.name ?? ''].filter(Boolean).join(' ')
       items.push({ label: `Search this hybrid mod${name ? ` (${name})` : ''}`, icon: 'fas fa-link', action: () => searchMod(f) })
     }
