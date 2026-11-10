@@ -15,7 +15,40 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-10T02:55:37.526Z'
+    comment: Created ticket.
+    id: a-2026-11-10t02-55-37-526z
+  - type: activity
+    user: Agent
+    date: '2026-11-10T02:55:37.526Z'
     comment: Created as subtask of WOKEPOET-168.
+    id: a-2026-11-10t02-55-37-526z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked GitHub Issues (2026-11-10). No code change is needed: the crash
+      Report button, docs/issues.md and the README already point at /issues/new.
+      The only step is switching Issues on, and the PC's safety check refused
+      that from here (repo settings change). Guy: tick Issues at
+      https://github.com/guybnd/woke-poe-trade/settings (General, Features).
+      After that, check https://github.com/guybnd/woke-poe-trade/issues/new
+      loads and close this ticket.
+    date: '2026-11-10T06:10:44.755Z'
+    id: c-2026-11-10t06-10-44-755z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-10T06:10:44.755Z'
+    comment: >-
+      Guy picked GitHub Issues (2026-11-10). No code change is needed: the crash
+      Report button, docs/issues.md and the README already point at /issues/new.
+      The only step is switching Issues on, and the PC's safety check refused
+      that from here (repo settings change). Guy: tick Issues at
+      https://github.com/guybnd/woke-poe-trade/settings (General, Features).
+      After that, check https://github.com/guybnd/woke-poe-trade/issues/new
+      loads and close this ticket.
+swimlane: require-input
+needsAction: null
 ---
 Review finding A4. Issues and Discussions are disabled on guybnd/woke-poe-trade, but these send players to `/issues/new`:
 - `main/src/woke/crash-reports.ts:12` (`ISSUES_URL`, the crash Report button)
