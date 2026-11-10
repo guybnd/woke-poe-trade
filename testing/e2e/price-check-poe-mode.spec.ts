@@ -245,3 +245,36 @@ test('PoE mode lists the local Energy Shield mod behind the total, once; Standar
   await expect(win).toContainText('Energy Shield')
   await expect(win.getByText('increased Energy Shield')).toHaveCount(0)
 })
+
+test('PoE mode: a local line two mods add up to splits, and a hybrid box searches that mod', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: poe })
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const win = overlay.page.locator('#price-window')
+  await expect(win).toHaveClass(/w-poe/)
+  const line = win.locator('.w-poe-line', { hasText: '162' })
+  await line.getByRole('button', { name: /2 mods/ }).click()
+  const box = win.locator('.w-poe-line.w-poe-hybrid')
+  await expect(box).toHaveCount(2)
+  await expect(box.first()).toContainText('42')
+  await expect(box.first()).toContainText("Seraphim's")
+  await expect(box.last()).toContainText('Stun and Block Recovery')
+  await overlay.snap('poe mode hybrid box')
+
+  const searches = fakeApp.requests.filter(r => r.url.includes('/api/trade/search')).length
+  await box.last().locator('.w-poe-line-text').click()
+  // Both of the mod's lines are picked rows now, at the bottom of their tier; no search spent.
+  const picked = win.locator('.w-poe-row')
+  await expect(picked.filter({ hasText: 'Stun and Block Recovery' })).toHaveCount(1)
+  await expect(picked.filter({ hasText: 'increased Energy Shield' })).toHaveCount(1)
+  await expect(win.locator('.w-poe-line', { hasText: '120' })).toHaveCount(1)
+  expect(fakeApp.requests.filter(r => r.url.includes('/api/trade/search')).length).toBe(searches)
+  await overlay.snap('poe mode hybrid picked')
+})
+
+test('PoE mode: added damage lines read with both numbers', async ({ overlay }) => {
+  await overlay.boot({ patch: poe })
+  await overlay.copyItem('items/rare-sword-local-phys.txt')
+  const win = overlay.page.locator('#price-window')
+  await expect(win.locator('.w-poe-line', { hasText: 'Physical Damage' }).filter({ hasText: 'Adds' })).toContainText(/Adds\s*30\s*to\s*60/)
+  await overlay.snap('poe mode adds line')
+})

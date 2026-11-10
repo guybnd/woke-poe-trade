@@ -19,6 +19,8 @@ export interface ParsedStat {
     value: number
     min: number
     max: number
+    /** woke: both rolled numbers of an "Adds # to #" line; value is their average. */
+    pair?: [number, number]
   }
 }
 
@@ -214,7 +216,10 @@ export function tryParseTranslation (
             dp: found.stat.dp || combination.values.some(stat => stat.decimal),
             value: getRollOrMinmaxAvg(combination.values.map(stat => stat.roll)),
             min: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.min ?? stat.roll)),
-            max: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.max ?? stat.roll))
+            max: getRollOrMinmaxAvg(combination.values.map(stat => stat.bounds?.max ?? stat.roll)),
+            pair: (combination.values.length === 2)
+              ? [combination.values[0].roll, combination.values[1].roll]
+              : undefined
           }
         : undefined
     }

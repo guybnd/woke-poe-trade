@@ -6,7 +6,8 @@ import { inject, InjectionKey, provide, ref, Ref, toRaw, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
-import { exclude, include, splitFilters, tierBound } from './pseudo-split'
+import { exclude, include, isHybrid, pickAtTier, soleMod, splitByMod, splitFilters, tierBound } from './pseudo-split'
+import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
 import { openMenu, copyText, toast } from '@/web/woke/ui'
 import type { MenuEntry } from '@/web/woke/ui'
@@ -16,6 +17,15 @@ interface Split {
   children: StatFilter[]
   /** The total's own tick before the split, put back when folding. */
   wasDisabled: boolean
+  /** A hybrid's other lines moved under its row, each with the row it followed. */
+  moved: Array<{ row: StatFilter, after: StatFilter | undefined }>
+}
+
+/** A line in a hybrid mod's box: the box's mod, and where in the box it sits. */
+export interface HybridPart {
+  mod: ParsedModifier
+  first: boolean
+  last: boolean
 }
 
 export interface StatActions {
@@ -25,6 +35,10 @@ export interface StatActions {
   /** A row that came out of a split. */
   isChild: (filter: StatFilter) => boolean
   toggleSplit: (filter: StatFilter) => void
+  /** A line boxed with the rest of its hybrid mod, after a split. */
+  hybridPart: (filter: StatFilter) => HybridPart | undefined
+  /** Ticks every line of the row's one hybrid mod at its tier's worst roll. */
+  searchMod: (filter: StatFilter) => void
   menu: (e: MouseEvent, filter: StatFilter) => void
 }
 
@@ -46,6 +60,7 @@ export function provideStatActions (
   // Keyed by the plain objects: rows reach here as reactive copies.
   let splits = new Map<StatFilter, Split>()
   let children = new WeakSet<StatFilter>()
+  let hybrids = new WeakMap<StatFilter, HybridPart>()
   // Bumped on every split and fold, so rows that ask redraw.
   const version = ref(0)
   // A new item or another preset: fold every open split in the list it was
@@ -63,15 +78,25 @@ export function provideStatActions (
     }
     splits = new Map()
     children = new WeakSet()
+    hybrids = new WeakMap()
     version.value++
   })
 
   const isChild = (f: StatFilter) => version.value >= 0 && children.has(toRaw(f))
   const isSplit = (f: StatFilter) => version.value >= 0 && splits.has(toRaw(f))
   const canSplit = (f: StatFilter) =>
-    f.tag === ModifierType.Pseudo && f.option == null && !isChild(f) &&
+    // A local line two mods add up to (120% and 42% increased Energy Shield).
+    (f.inTotal === true && f.sources.length >= 2 && !isChild(f)) ||
+    (f.tag === ModifierType.Pseudo && f.option == null && !isChild(f) &&
     // A cluster jewel's resistance row folds its one line away too.
-    (f.sources.length >= 2 || (f.sources.length === 1 && clusterResColumnStats(f) != null))
+    (f.sources.length >= 2 || (f.sources.length === 1 && clusterResColumnStats(f) != null)))
+  const hybridPart = (f: StatFilter) => version.value >= 0 ? hybrids.get(toRaw(f)) : undefined
+
+  // A row of the list by its plain object.
+  const at = (list: FilterOrGroup[], raw: StatFilter) => list.findIndex(s => toRaw(s) === raw)
+  // The rows that are this one mod's alone, as plain objects.
+  const rowsOf = (list: FilterOrGroup[], mod: ParsedModifier) =>
+    list.filter(isFilter).map(s => toRaw(s) as StatFilter).filter(s => soleMod(s) === mod)
 
   function toggleSplit (f: StatFilter) {
     const list = stats.value
@@ -79,27 +104,76 @@ export function provideStatActions (
     const open = splits.get(raw)
     if (open) {
       for (const child of open.children) {
-        const at = list.findIndex(s => toRaw(s) === child)
-        if (at >= 0) list.splice(at, 1)
+        const i = at(list, child)
+        if (i >= 0) list.splice(i, 1)
+        hybrids.delete(child)
+      }
+      // A hybrid's other lines go back where they were.
+      for (const { row, after } of [...open.moved].reverse()) {
+        const i = at(list, row)
+        hybrids.delete(row)
+        if (i < 0) continue
+        const [moved] = list.splice(i, 1)
+        const j = after ? at(list, after) : -1
+        if (j >= 0) list.splice(j + 1, 0, moved)
+        else list.push(moved)
       }
       f.disabled = open.wasDisabled
       splits.delete(raw)
       version.value++
       return
     }
-    const made = splitFilters(f, list, item.value, percent())
+    const byMod = f.inTotal === true
+    const made = byMod
+      ? splitByMod(f, item.value, percent())
+      : splitFilters(f, list, item.value, percent())
     if (!made.length) {
       toast('Its mods are already listed on their own.')
       return
     }
-    const at = list.findIndex(s => toRaw(s) === raw)
-    list.splice(at + 1, 0, ...made)
+    const wasDisabled = f.disabled
+    const start = at(list, raw)
+    list.splice(start + 1, 0, ...made)
     // Spliced in as reactive copies; remember the plain objects behind them.
-    const added = list.slice(at + 1, at + 1 + made.length).map(s => toRaw(s) as StatFilter)
+    const added = list.slice(start + 1, start + 1 + made.length).map(s => toRaw(s) as StatFilter)
     for (const c of added) children.add(c)
-    splits.set(raw, { children: added, wasDisabled: f.disabled })
+    // A hybrid mod's row takes its mod's other lines under it, boxed together.
+    const moved: Split['moved'] = []
+    if (byMod) {
+      for (const child of added) {
+        const mod = soleMod(child)
+        if (!mod || !isHybrid(mod)) continue
+        const box = [child]
+        for (const row of rowsOf(list, mod)) {
+          if (row === child || children.has(row) || hybrids.has(row)) continue
+          const i = at(list, row)
+          const before = list[i - 1]
+          const [r] = list.splice(i, 1)
+          list.splice(at(list, child) + box.length, 0, r)
+          moved.push({ row, after: (before && isFilter(before)) ? toRaw(before) as StatFilter : undefined })
+          box.push(row)
+        }
+        if (box.length < 2) continue
+        box.forEach((row, k) => hybrids.set(row, { mod, first: k === 0, last: k === box.length - 1 }))
+      }
+    }
+    splits.set(raw, { children: added, wasDisabled, moved })
     f.disabled = true
     version.value++
+  }
+
+  function searchMod (f: StatFilter) {
+    const mod = soleMod(f)
+    if (!mod) return
+    // Its share of a line it adds up to with another mod comes out first.
+    for (const s of [...stats.value]) {
+      if (isFilter(s) && s.inTotal && canSplit(s) && !isSplit(s) && s.sources.some(src => toRaw(src.modifier) === mod)) {
+        toggleSplit(s)
+      }
+    }
+    for (const row of stats.value) {
+      if (isFilter(row) && soleMod(row) === mod) pickAtTier(row)
+    }
   }
 
   function menu (e: MouseEvent, f: StatFilter) {
@@ -154,6 +228,11 @@ export function provideStatActions (
     }
 
     items.push({ separator: true })
+    const mod = soleMod(f)
+    if (mod && isHybrid(mod)) {
+      const name = [mod.info.tier != null ? `T${mod.info.tier}` : '', mod.info.name ?? ''].filter(Boolean).join(' ')
+      items.push({ label: `Search this hybrid mod${name ? ` (${name})` : ''}`, icon: 'fas fa-link', action: () => searchMod(f) })
+    }
     if (canSplit(f)) {
       items.push(isSplit(f)
         ? { label: 'Fold back into the total', icon: 'fas fa-compress', action: () => toggleSplit(f) }
@@ -167,7 +246,7 @@ export function provideStatActions (
     openMenu(e, items)
   }
 
-  const actions: StatActions = { canSplit, isSplit, isChild, toggleSplit, menu }
+  const actions: StatActions = { canSplit, isSplit, isChild, toggleSplit, hybridPart, searchMod, menu }
   provide(KEY, actions)
   return actions
 }

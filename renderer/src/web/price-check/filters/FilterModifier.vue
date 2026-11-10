@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild, 'w-poe-row': poe, 'w-poe-child': poe && splitChild }]">
+  <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild, 'w-poe-row': poe, 'w-poe-child': poe && (splitChild || hybridPart) }]">
     <div v-if="showSourceInfo" :class="$style['mods']">
       <div class="pl-5 py-1" v-for="(source, idx) of filter.sources" :key="idx">
         <source-info :source="source" :filter="filter" />
@@ -88,7 +88,7 @@
             @click="toggleFractured">Fractured only</button>
           <button v-if="poe && canSplit" type="button" class="w-poe-ptag"
             :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-            @click="actions!.toggleSplit(filter)">{{ t('filters.tag_pseudo') }} ×{{ filter.sources.length }} {{ isSplit ? '▴' : '▾' }}</button>
+            @click="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
           <template v-else-if="poe" />
           <button v-else-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
@@ -182,6 +182,8 @@ export default defineComponent({
     const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
     const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
     const splitChild = computed(() => actions?.isChild(props.filter) ?? false)
+    // A hybrid's other line, moved under its split row: indented with it.
+    const hybridPart = computed(() => actions?.hybridPart(props.filter) != null)
     const $style = useCssModule()
 
     watch(() => props.filter.disabled && props.groupExpanded, (uncheckedHint) => {
@@ -344,6 +346,7 @@ export default defineComponent({
       canSplit,
       isSplit,
       splitChild,
+      hybridPart,
       hasSwap,
       t,
       showTag,

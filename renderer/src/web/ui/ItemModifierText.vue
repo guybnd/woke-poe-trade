@@ -15,16 +15,22 @@ import { computed, defineProps } from 'vue'
 const props = defineProps<{
   text: string
   roll?: number
+  /** woke: one value per #, in order ("Adds 30 to 60"), over roll for each. */
+  rolls?: readonly number[]
 }>()
 
 const parts = computed(() => {
   const res = [] as Array<{ text: string, placeholder?: boolean }>
+  let n = 0
   props.text.split(/(?<![#])[+-]?[#]/gm).forEach((text, idx, parts) => {
     if (text !== '') {
       res.push({ text })
     }
     if (idx !== (parts.length - 1)) {
-      if (props.roll == null) {
+      const own = props.rolls?.[n++]
+      if (own != null) {
+        res.push({ text: String(own), placeholder: true })
+      } else if (props.roll == null) {
         res.push({ text: '#' })
       } else {
         res.push({

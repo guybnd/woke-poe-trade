@@ -1,0 +1,26 @@
+Item Class: Body Armours
+Rarity: Rare
+Golem Hide
+Triumphant Lamellar
+--------
+Armour: 1650 (augmented)
+Evasion Rating: 1820 (augmented)
+--------
+Requirements:
+Level: 69
+Str: 95
+Dex: 116
+--------
+Sockets: R-G-G-R-G-G
+--------
+Item Level: 84
+--------
+{ Prefix Modifier "Sentinel's" (Tier: 1) — Defences, Armour, Evasion }
++92(81-100) to Armour
++85(73-87) to Evasion Rating
+{ Prefix Modifier "Unfaltering" (Tier: 1) — Defences, Armour, Evasion }
+105(101-110)% increased Armour and Evasion
+{ Prefix Modifier "Fecund" (Tier: 1) — Life }
++115(110-129) to maximum Life
+{ Suffix Modifier "of the Ice" (Tier: 1) — Elemental, Cold, Resistance }
++44(42-45)% to Cold Resistance

@@ -308,6 +308,25 @@
 }
 .w-poe-line.w-poe-dimmed .w-poe-line-text { opacity: .55; }
 .w-poe-line.w-poe-child { margin-left: 28px; }
+/* A local line's own mod name, after a split. */
+.w-poe-modname {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: calc(10.5px * var(--w-text-scale, 1));
+  color: var(--w-faint);
+  white-space: nowrap;
+}
+/* A hybrid mod's lines, boxed together: clicking any searches the whole mod. */
+.w-poe-line.w-poe-hybrid {
+  margin-left: 28px;
+  border: 1px dashed #8a6f42;
+  border-top-style: none;
+  border-bottom-style: none;
+  border-radius: 0;
+  background: rgba(227, 183, 95, .05);
+}
+.w-poe-line.w-poe-hybrid-first { border-top-style: dashed; border-top-left-radius: 2px; border-top-right-radius: 2px; }
+.w-poe-line.w-poe-hybrid-last { border-bottom-style: dashed; border-bottom-left-radius: 2px; border-bottom-right-radius: 2px; }
+.w-poe-line.w-poe-hybrid .w-poe-modname { color: #c8a46a; }
 
 /* ---- A picked row: the original row, PoE parts, wrapping text ---- */
 #price-window.w-poe .w-poe-row {
