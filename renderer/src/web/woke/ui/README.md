@@ -84,7 +84,7 @@ Put `v-item-tip="{ name, type?, variant?, prices?, noPrice? }"` on a row or name
 
 ## Utility classes
 
-`w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,
+`w-verdict` (a verdict strip: gold wash and small caps headline `<b>` in the game look), `w-corners` (lit corner marks on a framed window that isn't a WPanel), `w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,
 `w-group-label`, `w-num` (tabular mono digits), `w-dim`, `w-faint`, `w-up`,
 `w-down`, `w-mono`, `w-stale`, `w-enter`, `w-flash`, `w-focusable` (keyboard-reachable row), `w-accent`, `w-trunc`, `w-icon-btn`, `w-surface`, and item colours
 `w-rarity-{normal,magic,rare,unique,gem,currency,divination}`; gem names by

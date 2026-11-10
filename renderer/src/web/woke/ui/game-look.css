@@ -66,6 +66,17 @@
   box-shadow: var(--w-frame-shadow) !important;
 }
 
+/* A verdict strip (P7) reads as a game heading: a gold wash and a small caps headline. */
+:root[data-woke-look="game"] .w-verdict {
+  background: linear-gradient(color-mix(in srgb, var(--w-accent) 12%, transparent), color-mix(in srgb, var(--w-accent) 3%, transparent));
+}
+:root[data-woke-look="game"] .w-verdict b {
+  font-family: var(--w-label);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: var(--w-gold-hi);
+}
+
 /* Lit corner marks on a framed window that isn't a WPanel (Settings). */
 :root[data-woke-look="game"] .w-corners::after {
   content: "";

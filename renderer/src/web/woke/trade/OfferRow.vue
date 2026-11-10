@@ -186,7 +186,7 @@ const otherButtons = computed<Array<{ id: ReplyId, label: string, title: string 
 .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .dotUp { background: var(--w-up); }
 .dotDown { background: var(--w-down); }
-.chip { font-size: calc(10.5px * var(--w-text-scale, 1)); line-height: calc(14px * var(--w-text-scale, 1)); border-radius: var(--w-r-pill); padding: 0 6px; border: 1px solid var(--w-line-strong, var(--w-line)); color: var(--w-dim); white-space: nowrap; }
+.chip { font-size: var(--w-fs-xs); line-height: calc(14px * var(--w-text-scale, 1)); border-radius: var(--w-r-pill); padding: 0 6px; border: 1px solid var(--w-line-strong, var(--w-line)); color: var(--w-dim); white-space: nowrap; }
 .up { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 45%, transparent); }
 .down { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 45%, transparent); }
 .item { display: flex; align-items: center; gap: 6px; min-width: 0; }

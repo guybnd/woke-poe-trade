@@ -354,7 +354,7 @@ const styles = useCssModule()
 .extraHead {
   padding: 4px var(--w-pad) 2px;
   border-top: 1px solid var(--w-line);
-  font-size: calc(10.5px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--w-faint);

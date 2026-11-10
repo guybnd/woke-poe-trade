@@ -4,16 +4,16 @@
       <div v-if="query.name" class="text-base text-orange-400">{{ query.name }}</div>
       <div class="text-base">{{ query.type }}</div>
     </div>
-    <div class="bg-gray-900 rounded px-2 py-1 border-l-2 border-yellow-600">
+    <div class="rounded px-2 py-1" style="background: var(--w-panel); border-left: 2px solid var(--w-accent)">
       New item. Searched by name only. Mod filters come with the next item data update.
     </div>
-    <div v-if="state === 'loading'" class="text-gray-500"><i class="fas fa-dna fa-spin" /> Searching…</div>
+    <div v-if="state === 'loading'" class="w-dim"><i class="fas fa-dna fa-spin" /> Searching…</div>
     <div v-else-if="state === 'error'" class="text-red-400">{{ error }}</div>
     <template v-else>
-      <div class="text-gray-500">{{ total }} listed</div>
+      <div class="w-dim">{{ total }} listed</div>
       <div v-for="row in rows" :key="row.id" class="flex justify-between gap-2 font-mono text-sm">
         <span>{{ row.priceAmount }} {{ row.priceCurrency }}</span>
-        <span class="text-gray-500 truncate">{{ row.relativeDate }}</span>
+        <span class="w-dim truncate">{{ row.relativeDate }}</span>
       </div>
     </template>
     <div><button class="btn" @click="openTrade">Open on trade site</button></div>

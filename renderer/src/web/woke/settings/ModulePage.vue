@@ -108,7 +108,7 @@ const uses = computed(() => {
   color: var(--w-info); background: color-mix(in srgb, var(--w-info) 8%, transparent); font-size: var(--w-fs-xs);
 }
 .use:hover { background: color-mix(in srgb, var(--w-info) 16%, transparent); }
-.use i { font-size: calc(9px * var(--w-text-scale, 1)); }
+.use i { font-size: var(--w-fs-xs); }
 /* Game look: a square link chip in small caps, like the other chips. */
 :global([data-woke-look="game"]) .use {
   font-family: var(--w-label); font-size: var(--w-fs-md); letter-spacing: 0.03em; border-radius: var(--w-r-sm);

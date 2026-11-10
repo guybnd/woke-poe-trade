@@ -27,7 +27,7 @@
         <span>Waiting for poe.ninja prices.</span>
       </template>
 
-      <div v-if="flip?.kind === 'pool' || flip?.kind === 'upgrade'" :class="$style.verdict" class="w-num">
+      <div v-if="flip?.kind === 'pool' || flip?.kind === 'upgrade'" :class="$style.verdict" class="w-num w-verdict">
         <b>{{ verdict }}</b>
         <span class="w-dim">{{ verdictSub }}</span>
       </div>
@@ -389,7 +389,7 @@ const footerTitle = computed(() => {
   ].filter(Boolean).join('\n\n')
 })
 
-const WEIGHT_CHIP = 'flex: none; padding: 0 3px; border: 1px solid currentColor; border-radius: var(--w-r-sm); font-size: calc(10px * var(--w-text-scale, 1)); font-weight: 600; line-height: 1.3;'
+const WEIGHT_CHIP = 'flex: none; padding: 0 3px; border: 1px solid currentColor; border-radius: var(--w-r-sm); font-size: var(--w-fs-xs); font-weight: 600; line-height: 1.3;'
 
 const FlipName = defineComponent({
   props: {
