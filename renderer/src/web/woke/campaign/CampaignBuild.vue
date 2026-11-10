@@ -123,10 +123,11 @@ function safeUrl (url: string) {
 }
 .k {
   padding-top: 3px;
-  font-size: var(--w-fs-xs);
-  text-transform: uppercase;
+  font-size: var(--w-fs-caps);
+  text-transform: var(--w-caps-case);
   letter-spacing: 0.08em;
   color: var(--w-faint);
+  font-family: var(--w-caps-face);
 }
 .row {
   display: flex;

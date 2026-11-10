@@ -416,10 +416,11 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   justify-content: space-between;
   align-items: baseline;
   margin-top: 4px;
-  font-size: var(--w-fs-xs);
+  font-size: var(--w-fs-caps);
   letter-spacing: 0.06em;
-  text-transform: uppercase;
+  text-transform: var(--w-caps-case);
   color: var(--w-dim);
+  font-family: var(--w-caps-face);
 }
 .prog {
   height: 4px;

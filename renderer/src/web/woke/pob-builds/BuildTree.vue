@@ -425,9 +425,10 @@ function openWeb () {
 }
 .heading {
   padding: 10px 0 2px;
-  font-size: var(--w-fs-xs);
-  text-transform: uppercase;
+  font-size: var(--w-fs-caps);
+  text-transform: var(--w-caps-case);
   letter-spacing: 0.08em;
   color: var(--w-faint);
+  font-family: var(--w-caps-face);
 }
 </style>

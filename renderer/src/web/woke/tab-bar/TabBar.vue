@@ -949,7 +949,8 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   font-weight: 600;
   color: var(--w-dim);
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: var(--w-caps-case);
+  font-family: var(--w-caps-face);
 }
 .item {
   display: flex;

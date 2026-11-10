@@ -74,5 +74,5 @@ function resetPosition () {
   display: grid; grid-template-columns: minmax(0, 1fr) 4rem 4rem; align-items: center;
   min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); font-size: var(--w-fs-md);
 }
-.thead { color: var(--w-dim); font-size: var(--w-fs-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+.thead { color: var(--w-dim); font-size: var(--w-fs-caps); text-transform: var(--w-caps-case); letter-spacing: 0.06em; font-family: var(--w-caps-face); }
 </style>

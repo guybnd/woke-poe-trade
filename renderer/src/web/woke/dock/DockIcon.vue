@@ -377,10 +377,11 @@ const styles = useCssModule()
 .extraHead {
   padding: 4px var(--w-pad) 2px;
   border-top: 1px solid var(--w-line);
-  font-size: var(--w-fs-xs);
-  text-transform: uppercase;
+  font-size: var(--w-fs-caps);
+  text-transform: var(--w-caps-case);
   letter-spacing: 0.08em;
   color: var(--w-faint);
+  font-family: var(--w-caps-face);
 }
 .open { display: block; width: 100%; padding: 4px var(--w-pad); text-align: left; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-accent); border-top: 1px solid var(--w-line); }
 .open i { font-size: 0.8em; margin-left: 2px; }

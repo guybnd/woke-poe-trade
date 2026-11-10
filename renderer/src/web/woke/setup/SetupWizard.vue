@@ -375,7 +375,7 @@ async function finish () {
   border-radius: var(--w-radius-sm);
   background: var(--w-panel);
 }
-.rec { margin-left: 6px; font-size: var(--w-fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--w-accent); }
+.rec { margin-left: 6px; font-size: var(--w-fs-caps); letter-spacing: 0.06em; text-transform: var(--w-caps-case); color: var(--w-accent); font-family: var(--w-caps-face); }
 .list { display: flex; flex-direction: column; border: 1px solid var(--w-line); border-radius: var(--w-radius-sm); overflow: hidden; }
 .opt, .toggle {
   display: flex;

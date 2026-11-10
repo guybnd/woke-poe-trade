@@ -334,10 +334,11 @@ const dockMenu = computed<DockMenuAction[]>(() => run.value
 .where { font-size: var(--w-fs-lg); max-width: 16rem; }
 .sep { width: 1px; align-self: stretch; background: var(--w-line); }
 .k {
-  font-size: var(--w-fs-xs);
-  text-transform: uppercase;
+  font-size: var(--w-fs-caps);
+  text-transform: var(--w-caps-case);
   letter-spacing: 0.08em;
   color: var(--w-faint);
+  font-family: var(--w-caps-face);
 }
 .time { font-size: var(--w-fs-lg); }
 .hero {

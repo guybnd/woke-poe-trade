@@ -558,7 +558,7 @@ const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divine
   border-radius: var(--w-r-sm);
 }
 .kv { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2px 12px; }
-.k { font-size: var(--w-fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--w-faint); margin-bottom: 2px; }
+.k { font-size: var(--w-fs-caps); text-transform: var(--w-caps-case); letter-spacing: 0.08em; color: var(--w-faint); margin-bottom: 2px; font-family: var(--w-caps-face); }
 .bar { height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); position: relative; overflow: hidden; }
 .bar i { position: absolute; inset: 0 auto 0 0; background: var(--w-accent); border-radius: var(--w-r-sm); }
 .timeBar { height: 4px; border-radius: var(--w-r-sm); background: var(--w-panel-3); position: relative; overflow: hidden; }

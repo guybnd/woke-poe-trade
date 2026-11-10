@@ -443,7 +443,7 @@ function startResize (e: PointerEvent, edge: 'e' | 's' | 'se') {
   width: 15rem; flex: none; overflow-y: auto; padding: var(--w-s1) var(--w-s2) var(--w-s3);
   border-right: 1px solid var(--w-line); background: var(--w-panel-2); display: flex; flex-direction: column; gap: 1px;
 }
-.group { font-size: var(--w-fs-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--w-faint); padding: var(--w-s3) var(--w-s2) var(--w-s1); }
+.group { font-size: var(--w-fs-caps); font-weight: 600; letter-spacing: 0.08em; text-transform: var(--w-caps-case); color: var(--w-faint); padding: var(--w-s3) var(--w-s2) var(--w-s1); font-family: var(--w-caps-face); }
 .sub { font-size: var(--w-fs-xs); color: var(--w-faint); padding: var(--w-s2) var(--w-s2) 2px var(--w-s3); }
 .item {
   display: flex; align-items: center; gap: var(--w-s2); min-height: var(--w-row-h); padding: 0 var(--w-s2);

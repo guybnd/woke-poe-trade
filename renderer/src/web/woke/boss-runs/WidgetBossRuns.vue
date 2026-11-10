@@ -567,7 +567,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
   gap: 10px;
   padding: 0 var(--w-pad) 8px;
 }
-.k { font-size: var(--w-fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--w-faint); }
+.k { font-size: var(--w-fs-caps); text-transform: var(--w-caps-case); letter-spacing: 0.08em; color: var(--w-faint); font-family: var(--w-caps-face); }
 .big { font-family: var(--w-num); font-size: var(--w-fs-xl); font-weight: 500; display: flex; }
 .body { display: flex; flex: 1; min-height: 0; }
 .side { width: 15rem; flex: none; padding: 10px var(--w-pad); display: flex; flex-direction: column; gap: 10px; }

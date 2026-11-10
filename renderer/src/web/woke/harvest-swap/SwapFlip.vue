@@ -121,7 +121,7 @@ function costText (cand: SwapCandidate, key: string): string {
 .table { display: flex; flex-direction: column; }
 .row { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.9fr 0.9fr; gap: var(--w-s2); align-items: center; padding: 2px 0; border-bottom: 1px solid var(--w-line); }
 .row > :nth-child(n+2) { text-align: right; justify-content: flex-end; }
-.head { color: var(--w-faint); font-size: var(--w-fs-xs); text-transform: uppercase; letter-spacing: 0.04em; }
+.head { color: var(--w-faint); font-size: var(--w-fs-caps); text-transform: var(--w-caps-case); letter-spacing: 0.04em; font-family: var(--w-caps-face); }
 .small { font-size: var(--w-fs-xs); }
 .warn { color: var(--w-warn); font-size: var(--w-fs-xs); }
 .link { color: var(--w-accent); text-decoration: underline; text-underline-offset: 2px; }
