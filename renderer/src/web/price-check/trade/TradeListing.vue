@@ -385,9 +385,10 @@ export default defineComponent({
     const improved = computed(() => priceView.value === 'improved')
 
     const showItemLevel = computed(() => Boolean(props.filters.itemLevel && !props.filters.itemLevel.disabled))
-    // A suggested Quality box that is still off (a 0% item waiting at 20) adds no column.
+    // Quality gets a column on gems, and on other items once the search asks for it:
+    // most gear now has a Quality box, and an unused one mustn't take a stat column's room.
     const showQuality = computed(() => props.item.category === 'Gem' || Boolean(
-      props.filters.quality && (!props.filters.quality.disabled || !props.filters.quality.suggested)))
+      props.filters.quality && !props.filters.quality.disabled))
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
