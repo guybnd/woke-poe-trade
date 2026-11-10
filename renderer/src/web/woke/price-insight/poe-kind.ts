@@ -88,6 +88,11 @@ export function poeTier (filter: StatFilter): string {
     else if (info.rank != null) marks.push(`R${info.rank}`)
     else return ''
   }
+  // Past three mods, the best tier and a plus, so the left column stays narrow.
+  if (marks.length > 3) {
+    const tiers = filter.sources.map(s => s.modifier.info.tier).filter((t): t is number => t != null)
+    return tiers.length ? `T${Math.min(...tiers)}+` : `${marks[0]}+`
+  }
   // All tiers read "T1/3"; a mix keeps each letter, "T1/R3".
   return marks.every(m => m[0] === 'T')
     ? `T${marks.map(m => m.slice(1)).join('/')}`

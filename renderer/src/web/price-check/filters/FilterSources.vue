@@ -38,6 +38,6 @@ export default defineComponent({
 .source + .source { margin-top: 2px; }
 /* Fixed line boxes: the rolls' number font loads late, and its own line height
    would grow each line a pixel and nudge every row below. */
-.source :global(div) { line-height: 20px; }
+.source :global(div) { line-height: calc(20px * var(--w-text-scale, 1)); }
 .source :global(.font-exo2) { line-height: 1; }
 </style>

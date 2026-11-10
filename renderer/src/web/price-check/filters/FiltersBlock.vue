@@ -156,9 +156,8 @@ export default defineComponent({
     })
     // "Mod details": each mod once, under the first line it feeds, so a hybrid
     // or a mod in a total isn't listed again under every line it adds to.
-    const sourcesShown = computed(() => {
+    const sourcesFound = computed(() => {
       const out = new Map<StatFilter, StatFilter['sources']>()
-      if (!showFilterSources.value) return out
       const seen = new Set<object>()
       // Visible lines claim their mods first; a faded hidden line only gets what's left.
       const rows = shownStats.value.map(r => r.filter)
@@ -201,8 +200,9 @@ export default defineComponent({
       showFilterSources,
       isHiddenRow,
       hiddenCount,
-      sourcesShown,
-      hasAnySources: computed(() => filteredStats.value.some(s => !s.group && hasSourceInfo(s))),
+      sourcesShown: computed(() => showFilterSources.value ? sourcesFound.value : new Map<StatFilter, StatFilter['sources']>()),
+      // No toggle when it would list nothing, a split total's mods being their own rows.
+      hasAnySources: computed(() => sourcesFound.value.size > 0),
       totalSelectedMods: computed(() => {
         return props.stats.filter(stat => {
           if (stat.group) {
