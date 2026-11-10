@@ -328,7 +328,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const d = doc.value
     const lookup = prices.lookup.value
     if (!d || !lookup || !cfg().priceTiers.on || pricesTooOld.value) return null
-    return planRetier(d, lookup, { locked: locked.value })
+    return planRetier(d, lookup, { locked: locked.value, moved: activeMoves() })
   })
   // Valuable items the filter (without the safety net) hides or shows small.
   const health = computed<BaseVerdict[]>(() => {

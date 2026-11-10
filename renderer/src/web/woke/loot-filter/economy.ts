@@ -264,6 +264,9 @@ export interface RetierPlan {
 export interface PlanOptions {
   // `${type}|${base}` keys of items the user placed by hand.
   locked?: Set<string>
+  // Price moves already in the doc. Tier prices are worked out from where
+  // NeverSink put these, or every apply would shift the lines and turn up more.
+  moved?: PriceMove[]
   buffer?: number
   bufferDown?: number
   groups?: EconomyGroup[]
@@ -311,8 +314,19 @@ export function planRetier (doc: FilterDoc, lookup: PriceLookup, opts: PlanOptio
       const p = lookup(group, base)
       if (p && p.chaos > 0) prices.set(base, p)
     }
+    // Each tier's price comes from NeverSink's own list for it: a base a price
+    // move put here still counts for the tier it came from.
+    const byTier = new Map(bands.map(b => [b.tier, b]))
+    const origin = new Map<string, TierBand>()
+    for (const m of opts.moved ?? []) {
+      if (m.type !== group.type || home.get(m.base)?.tier !== m.to) continue
+      const from = byTier.get(m.from)
+      if (from) origin.set(m.base, from)
+    }
+    const members = new Map(bands.map(b => [b, [] as string[]]))
+    for (const [base, band] of home) members.get(origin.get(base) ?? band)!.push(base)
     for (const band of bands) {
-      const values = band.bases.map(b => prices.get(b)).filter(p => p && !p.thin).map(p => p!.chaos)
+      const values = members.get(band)!.map(b => prices.get(b)).filter(p => p && !p.thin).map(p => p!.chaos)
       band.priced = values.length
       band.median = values.length ? median(values) : null
     }
