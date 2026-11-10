@@ -81,9 +81,12 @@ registerActions()
 MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
   if (e.target !== 'item-check') return
 
+  // woke: a key pressed over nothing leaves a hidden page alone.
+  const parsed = parseClipboard(e.clipboard).unwrapOr(null)
+  if (!parsed && lookup.value) return
   lookup.value = null
   checkPosition.value = e.position
-  item.value = parseClipboard(e.clipboard).unwrapOr(null)
+  item.value = parsed
   if (item.value) {
     wm.show(props.config.wmId)
   }
@@ -91,9 +94,15 @@ MainProcess.onEvent('MAIN->CLIENT::item-text', (e) => {
 
 props.config.wmWants = 'hide'
 
-// woke: the wiki, poedb and Craft of Exile keys open a page in this widget. It
-// goes when the widget does, so nothing stays loaded over the game.
+// woke: the wiki, poedb and Craft of Exile keys open a page in this widget.
+// Closing the overlay only hides an open page, like the price check browser,
+// so the same page is back when the overlay opens again; the item info card
+// still closes with the overlay. Closing the page, or a new check, ends it.
 const lookupKey = ref(0)
+watch(() => Boolean(lookup.value), (open) => {
+  wm.setFlag(props.config.wmId, 'hide-on-blur', !open)
+  wm.setFlag(props.config.wmId, 'invisible-on-blur', open)
+}, { immediate: true })
 watch(lookup, (request) => {
   if (!request) return
   lookupKey.value++
