@@ -27,7 +27,31 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-10T03:16:00.896Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged in #295: main.yml replaced by a "Windows package" job in Tests
+      (runs on main/ or workflow changes, and on master; green on the PR). Left:
+      adding "Windows package" to the "CI must pass on master" ruleset. My
+      permission settings blocked me from changing the ruleset. Guy: add it in
+      GitHub (Settings → Rules → CI must pass on master → required checks), or
+      allow me and I'll do it.
+    date: '2026-11-10T03:35:09.326Z'
+    id: c-2026-11-10t03-35-09-326z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-10T03:35:09.326Z'
+    comment: >-
+      Merged in #295: main.yml replaced by a "Windows package" job in Tests
+      (runs on main/ or workflow changes, and on master; green on the PR). Left:
+      adding "Windows package" to the "CI must pass on master" ruleset. My
+      permission settings blocked me from changing the ruleset. Guy: add it in
+      GitHub (Settings → Rules → CI must pass on master → required checks), or
+      allow me and I'll do it.
 needsAction: null
+swimlane: require-input
 ---
 Review finding A2. The last 30 runs of `.github/workflows/main.yml` are all cancelled (last success 2026-11-05): the Linux package job fails and fail-fast cancels Windows and macOS. It isn't a required check, so nobody was told. It also packages macOS and Linux, which are never released.
 
