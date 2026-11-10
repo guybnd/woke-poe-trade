@@ -2,7 +2,7 @@
 // while prices stay the same.
 import { describe, it, expect } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
-import { applyPriceMoves, mergeMoves, planRetier, priceLookup } from '@/web/woke/loot-filter/economy'
+import { applyPriceMoves, mergeMoves, movesOutOfPlace, planRetier, priceLookup } from '@/web/woke/loot-filter/economy'
 import type { PriceMove } from '@/web/woke/loot-filter/economy'
 import type { PriceItem } from '@/web/woke/market/types'
 
@@ -26,11 +26,19 @@ const TEXT = Object.entries(TIERS).map(([t, l]) => block(t, l.map(x => x[0]))).j
 const PRICES: PriceItem[] = Object.values(TIERS).flat().map(([name, chaos]) => ({ type: 'DivinationCard', name, variant: '', chaos, gaps: 0 }))
 const lookup = priceLookup(PRICES, () => [])
 
+// What the editor does to a fresh parse: notes the moves that take an item out
+// of NeverSink's tier, puts them on, then plans.
+function moveOn (doc: ReturnType<typeof parseFilter>, stored: PriceMove[]): PriceMove[] {
+  const out = movesOutOfPlace(doc, stored)
+  applyPriceMoves(doc, stored)
+  return out
+}
+
 // What the editor does: stored moves go on a fresh parse, then it plans.
 function round (stored: PriceMove[], withMoved: boolean) {
   const doc = parseFilter(TEXT)
-  applyPriceMoves(doc, stored)
-  return planRetier(doc, lookup, withMoved ? { moved: stored } : {})
+  const moved = moveOn(doc, stored)
+  return planRetier(doc, lookup, withMoved ? { moved } : {})
 }
 
 // Filters with tiers whose prices drifted at random: medians that move with
@@ -52,8 +60,8 @@ function applies (text: string, look: ReturnType<typeof priceLookup>, withMoved:
   let stored: PriceMove[] = []
   for (let n = 0; n < 6; n++) {
     const doc = parseFilter(text)
-    applyPriceMoves(doc, stored)
-    const plan = planRetier(doc, look, withMoved ? { moved: stored } : {})
+    const moved = moveOn(doc, stored)
+    const plan = planRetier(doc, look, withMoved ? { moved } : {})
     if (!plan.moves.length) return n
     stored = mergeMoves(stored, plan.moves)
   }
@@ -83,8 +91,25 @@ describe('re-tiering settles', () => {
     expect(stored.find(m => m.base === 'D1')).toBeTruthy()
     const cheap = priceLookup(PRICES.map(p => p.name === 'D1' ? { ...p, chaos: 2 } : p), () => [])
     const doc = parseFilter(TEXT)
-    applyPriceMoves(doc, stored)
-    const back = planRetier(doc, cheap, { moved: stored }).moves.find(m => m.base === 'D1')
+    const moved = moveOn(doc, stored)
+    const back = planRetier(doc, cheap, { moved }).moves.find(m => m.base === 'D1')
     expect(back?.to).toBe('t4')
+  })
+
+  it('a move NeverSink has since made itself doesn\'t count for the old tier', () => {
+    const stored = mergeMoves([], round([], true).moves)
+    const d1 = stored.find(m => m.base === 'D1')!
+    // NeverSink's update lists D1 where the price move put it.
+    const text = Object.entries(TIERS).map(([t, l]) => block(t, [
+      ...l.map(x => x[0]).filter(b => b !== 'D1'),
+      ...(t === d1.to ? ['D1'] : [])
+    ])).join('\n')
+    const plan = (moves: PriceMove[]) => {
+      const doc = parseFilter(text)
+      return planRetier(doc, lookup, { moved: moveOn(doc, moves) })
+    }
+    expect(movesOutOfPlace(parseFilter(text), stored).some(m => m.base === 'D1')).toBe(false)
+    // The same plan as if the move had never been stored.
+    expect(plan(stored).moves).toEqual(plan(stored.filter(m => m.base !== 'D1')).moves)
   })
 })

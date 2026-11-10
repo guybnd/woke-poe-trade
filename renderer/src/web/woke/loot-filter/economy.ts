@@ -264,8 +264,9 @@ export interface RetierPlan {
 export interface PlanOptions {
   // `${type}|${base}` keys of items the user placed by hand.
   locked?: Set<string>
-  // Price moves already in the doc. Tier prices are worked out from where
-  // NeverSink put these, or every apply would shift the lines and turn up more.
+  // Price moves in the doc that took an item out of NeverSink's tier for it
+  // (movesOutOfPlace). Tier prices are worked out from where NeverSink put
+  // these, or every apply would shift the lines and turn up more.
   moved?: PriceMove[]
   buffer?: number
   bufferDown?: number
@@ -396,6 +397,17 @@ export function mergeMoves (stored: PriceMove[], next: PriceMove[]): PriceMove[]
     else out[i] = { ...m, from: first }
   }
   return out
+}
+
+// The stored moves that take an item out of the tier NeverSink lists it in,
+// read off a fresh parse before the moves go on. A move to where NeverSink has
+// since put the item itself changes nothing, so its old tier isn't its home.
+export function movesOutOfPlace (doc: FilterDoc, moves: PriceMove[]): PriceMove[] {
+  return moves.filter(m => {
+    const blocks = blocksOf(doc, m.type)
+    return blocks.some(b => b.tier === m.from && blockHasBase(b, m.base)) &&
+      !blocks.some(b => b.tier === m.to && blockHasBase(b, m.base))
+  })
 }
 
 // Applies stored price moves to a fresh parse. A move only holds while the item
