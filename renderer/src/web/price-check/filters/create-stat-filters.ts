@@ -571,12 +571,37 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
   }
 
   if (item.rarity === ItemRarity.Unique) {
-    const countVisible = ctx.filters.reduce((cnt, filter) => filter.hidden ? cnt : cnt + 1, 0)
-    if (countVisible <= 3) {
-      enableAllFilters(ctx.filters)
-    }
+    tickUniqueStandouts(ctx.filters, item)
     // woke: a good armour base rarely sets a unique's price, and ticking it hides the cheap ones.
     if (basePercentile) basePercentile.disabled = true
+  }
+}
+
+// woke: most of a unique's rolls barely move its price, and ticking them all hides the
+// cheap copies. A unique starts from its name alone, plus what sets this copy apart:
+// corruption implicits, foulborn, vestigial and variant mods (left as set above), and
+// rolls near the top of their range.
+export const UNIQUE_HIGH_ROLL = 0.9
+const UNIQUE_ROLL_TAGS = new Set<FilterTag>([
+  FilterTag.Explicit,
+  FilterTag.Implicit,
+  FilterTag.Pseudo,
+  FilterTag.Property
+])
+const UNIQUE_KEEP_IDS = new Set(['item.memory_strands', 'item.base_percentile'])
+
+function tickUniqueStandouts (filters: StatFilter[], item: ParsedItem) {
+  for (const filter of filters) {
+    if (filter.hidden) continue
+    if (filter.tag === FilterTag.Corruption) {
+      filter.disabled = false
+      continue
+    }
+    if (!UNIQUE_ROLL_TAGS.has(filter.tag)) continue
+    if (UNIQUE_KEEP_IDS.has(filter.tradeId[0])) continue
+    if (filter.statRef === ABYSS_SOCKETS && VARIABLE_ABYSS_SOCKETS.has(item.info.refName)) continue
+    const goodness = filter.roll?.bounds ? filter.roll.goodness : undefined
+    filter.disabled = !(goodness != null && goodness >= UNIQUE_HIGH_ROLL)
   }
 }
 
