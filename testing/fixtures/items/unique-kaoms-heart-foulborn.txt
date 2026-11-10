@@ -1,0 +1,21 @@
+Item Class: Body Armours
+Rarity: Unique
+Foulborn Kaom's Heart
+Glorious Plate
+--------
+Armour: 1013 (augmented)
+--------
+Requirements:
+Level: 68
+Str: 191
+--------
+Sockets: R
+--------
+Item Level: 86
+--------
+{ Foulborn Unique Modifier — Damage, Chaos }
+12% increased Chaos Damage for each Corrupted Item Equipped
+{ Unique Modifier — Life }
++500 to maximum Life
+--------
+The warrior who fears will fall.

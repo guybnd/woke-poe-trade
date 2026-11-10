@@ -6,7 +6,7 @@ import { ModifierType } from '@/parser/modifiers'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 
-export type PoeKind = 'local' | 'pseudo' | 'enchant' | 'implicit' | 'explicit' | 'crafted' | 'fractured' | 'scourge'
+export type PoeKind = 'local' | 'pseudo' | 'enchant' | 'implicit' | 'explicit' | 'crafted' | 'fractured' | 'scourge' | 'foulborn'
 export type PoeSection = 'property' | 'enchant' | 'implicit' | 'explicit'
 
 export interface PoeLook {
@@ -50,6 +50,8 @@ export function poeLook (filter: StatFilter): PoeLook {
     case FilterTag.Crafted: return { kind: 'crafted', label: 'Crafted modifier' }
     case FilterTag.Fractured: return { kind: 'fractured', label: 'Fractured modifier' }
     case FilterTag.Scourge: return { kind: 'scourge', label: 'Scourge modifier' }
+    // A unique's mod the Genesis Tree mutated: it sets the price, so it stands out.
+    case FilterTag.Foulborn: return { kind: 'foulborn', label: 'Foulborn modifier' }
     case FilterTag.Corruption: return { kind: 'implicit', label: 'Corruption implicit', corrupted: true }
     case FilterTag.Synthesised: return { kind: 'implicit', label: 'Synthesised implicit' }
     case FilterTag.Eldritch: return { kind: 'implicit', label: 'Eldritch implicit' }
@@ -69,7 +71,6 @@ export function poeSection (filter: StatFilter): PoeSection {
     case FilterTag.Synthesised:
     case FilterTag.Eldritch:
     case FilterTag.Vestigial:
-    case FilterTag.Foulborn:
       return 'implicit'
   }
   return 'explicit'

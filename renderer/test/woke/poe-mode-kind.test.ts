@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { loadGameData, parseItem } from '../helpers/game-data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
+import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { poeLook, poeSection, poeTier, isTopTier, fracturedIds } from '@/web/woke/price-insight/poe-kind'
 
@@ -88,5 +89,23 @@ describe('PoE mode stat rows', () => {
     // Rows without a fractured mod have no such switch.
     const life = stats.find(s => s.text.includes('maximum Life') && s.tag === 'explicit')
     if (life) expect(fracturedIds(life)).toBeUndefined()
+  })
+})
+
+describe('foulborn rows', () => {
+  beforeAll(loadGameData)
+
+  it('a foulborn mod gets its own colour and sits with the explicit mods', () => {
+    const item = parseItem([
+      'Item Class: Body Armours', 'Rarity: Unique', 'Foulborn Kaom\'s Heart', 'Glorious Plate', '--------',
+      'Armour: 1013 (augmented)', '--------', 'Item Level: 86', '--------',
+      '{ Foulborn Unique Modifier — Damage, Chaos }', '12% increased Chaos Damage for each Corrupted Item Equipped',
+      '{ Unique Modifier — Life }', '+500 to maximum Life', '--------', ''
+    ].join('\n'))
+    const stats = initUiModFilters(item, { searchStatRange: 10 }) as StatFilter[]
+    const foul = stats.find(s => s.text.includes('Corrupted Item'))!
+    expect(foul.tag).toBe('foulborn')
+    expect(poeLook(foul)).toMatchObject({ kind: 'foulborn', label: 'Foulborn modifier' })
+    expect(poeSection(foul)).toBe('explicit')
   })
 })
