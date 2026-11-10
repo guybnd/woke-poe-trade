@@ -18,10 +18,10 @@
       <span v-if="badge != null && badge !== ''" :class="[$style.badge, $style['tone-' + (host.props.tone ?? 'accent')]]">{{ badge }}</span>
       <span v-if="host.props.led" :class="[$style.led, $style['led-' + host.props.led]]" />
     </span>
-    <div v-if="menuOpen" ref="menuEl" class="w-corners" :class="[$style.card, placement]">
+    <div v-if="menuOpen" ref="menuEl" :class="[$style.card, placement]">
       <DockMenu :host="host" :extras="extras" @close="menuOpen = false" />
     </div>
-    <div v-if="cardOpen" ref="cardEl" class="w-corners" :class="[$style.card, placement]"
+    <div v-if="cardOpen" ref="cardEl" :class="[$style.card, placement]"
       :style="{ width: host.props.cardWidth ?? '20rem' }">
       <div :class="$style.cardHead">
         <i :class="dockIcon(host.props)" class="w-accent" />
@@ -352,9 +352,23 @@ const styles = useCssModule()
   font-size: var(--w-fs-md);
 }
 /* The game look (P5): bronze frame, centred small caps title over a gold fade line. */
-:global([data-woke-look="game"]) .card { font-family: var(--w-body); border-color: var(--w-frame); box-shadow: var(--w-frame-shadow); }
+/* Corner marks as background layers: a card scrolls, and an ::after overlay would scroll away with it. */
+:global([data-woke-look="game"]) .card {
+  font-family: var(--w-body); border-color: var(--w-frame); box-shadow: var(--w-frame-shadow);
+  --c: linear-gradient(var(--w-frame-hi), var(--w-frame-hi));
+  background-image: var(--c), var(--c), var(--c), var(--c), var(--c), var(--c), var(--c), var(--c);
+  background-repeat: no-repeat;
+  background-size: 10px 2px, 2px 10px, 10px 2px, 2px 10px, 10px 2px, 2px 10px, 10px 2px, 2px 10px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+}
+:global([data-woke-look="game"]) .cardHead :global(:is(.w-accent, .w-head-font):not(i)) { font-family: var(--w-label); letter-spacing: 0.04em; }
+:global([data-woke-look="game"]) .cardHead :global(:is(.w-accent, .w-head-font)) { color: var(--w-gold); }
 :global([data-woke-look="game"]) .cardHead {
-  position: relative; justify-content: center; background: var(--w-head-ground); border-bottom-color: transparent;
+  position: relative; justify-content: center; border-bottom-color: transparent;
+  /* The top corner marks, since the header covers the card's own. */
+  --c: linear-gradient(var(--w-frame-hi), var(--w-frame-hi));
+  background: var(--c) 0 0 / 10px 2px no-repeat, var(--c) 0 0 / 2px 10px no-repeat,
+    var(--c) 100% 0 / 10px 2px no-repeat, var(--c) 100% 0 / 2px 10px no-repeat, var(--w-head-ground);
   font-family: var(--w-label); font-size: var(--w-fs-lg); letter-spacing: 0.04em; color: var(--w-gold);
 }
 :global([data-woke-look="game"]) .cardHead::after {

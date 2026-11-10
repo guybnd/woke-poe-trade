@@ -92,9 +92,10 @@
 }
 
 /* APT's radios, checkboxes and toggles: a gold mark when picked. */
-:root[data-woke-look="game"] #overlay-window .w-apt-choice > i { color: var(--w-frame-hi); }
-:root[data-woke-look="game"] #overlay-window .w-apt-choice.on > i { color: var(--w-gold-hi); }
-:root[data-woke-look="game"] #overlay-window .w-apt-choice:hover > i { color: var(--w-gold); }
+/* Disabled ones keep APT's grey. */
+:root[data-woke-look="game"] #overlay-window .w-apt-choice:not(:disabled) > i { color: var(--w-frame-hi); }
+:root[data-woke-look="game"] #overlay-window .w-apt-choice:not(:disabled):hover > i { color: var(--w-gold); }
+:root[data-woke-look="game"] #overlay-window .w-apt-choice.on:not(:disabled) > i { color: var(--w-gold-hi); }
 
 /* Hints read upright: italic Fontin was the hardest text to read in Settings. */
 :root[data-woke-look="game"] [data-w-settings] .italic { font-style: normal; }
