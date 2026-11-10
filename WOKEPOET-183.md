@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-183
 title: 'UI 3: roll the game look out panel by panel'
-status: In Progress
+status: Todo
 priority: Medium
 effort: XL
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: claude-code@GUY-PC
+updatedBy: Event Horizon
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -41,11 +41,17 @@ history:
     to: In Progress
     user: claude-code@GUY-PC
     date: '2026-11-10T05:11:33.957Z'
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-10T05:41:52.944Z'
+    comment: Claim by claude-code@GUY-PC expired (no heartbeat for 30 min)
+    id: a-2026-11-10t05-41-52-944z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-10T05:41:53.042Z'
 needsAction: null
-claim:
-  holder: claude-code@GUY-PC
-  claimedAt: '2026-11-10T05:11:33.957Z'
-  expiresAt: '2026-11-10T05:41:33.957Z'
 ---
 > **TL;DR** Roll the game look from 182 (PR #296) out to every panel, area by area, in a few PRs. Each panel's charter leftovers get cleared in the same pass, so each panel is touched once.
 
