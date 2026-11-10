@@ -313,6 +313,7 @@ function finishFolderRename (from: string) {
   if (renaming.value !== `folder:${from}`) return
   renaming.value = null
   renameFolder(props.config, from, draft.value)
+  pickingIcon.value = null
   saveConfig()
 }
 function startEntryRename (entry: TradeSearchEntry) { draft.value = entry.name; renaming.value = `entry:${entry.id}` }
@@ -349,9 +350,9 @@ function dropInto (folder: string) {
 function folderMenu (e: MouseEvent, folder: string, index: number) {
   const items: MenuEntry[] = [
     { label: 'Rename', icon: 'fas fa-pen', action: () => { draft.value = folder; renaming.value = `folder:${folder}` } },
-    { label: 'Change icon', icon: 'far fa-image', action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } },
-    { label: 'Move up', icon: 'fas fa-arrow-up', disabled: index === 0, action: () => { moveFolder(props.config, folder, -1); saveConfig() } },
-    { label: 'Move down', icon: 'fas fa-arrow-down', disabled: index === folders.value.length - 1, action: () => { moveFolder(props.config, folder, 1); saveConfig() } },
+    { label: 'Change icon', icon: 'far fa-image', disabled: folder === UNCATEGORIZED, action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } },
+    { label: 'Move up', icon: 'fas fa-arrow-up', disabled: index === 0 || folder === UNCATEGORIZED, action: () => { moveFolder(props.config, folder, -1); saveConfig() } },
+    { label: 'Move down', icon: 'fas fa-arrow-down', disabled: index === folders.value.length - 1 || folder === UNCATEGORIZED, action: () => { moveFolder(props.config, folder, 1); saveConfig() } },
     { separator: true },
     { label: 'Delete folder', icon: 'fas fa-trash', danger: true, disabled: folder === UNCATEGORIZED, action: () => removeFolder(folder) }
   ]
@@ -360,16 +361,22 @@ function folderMenu (e: MouseEvent, folder: string, index: number) {
 
 // No "are you sure": the searches move to Uncategorized, with Undo.
 function removeFolder (folder: string) {
-  const before = JSON.parse(JSON.stringify({ entries: props.config.entries, folders: props.config.folders ?? [], view: props.config.view })) as
-    { entries: TradeSearchEntry[], folders: TradeSearchFolder[], view?: string }
+  // Undo puts back only what the delete changed, so opens and renames since stay.
+  const moved = props.config.entries.filter(e => folderOf(e) === folder).map(e => ({ id: e.id, category: e.category }))
+  const folders: TradeSearchFolder[] = JSON.parse(JSON.stringify(props.config.folders ?? []))
+  const { view: viewBefore, lastFolder } = props.config
   deleteFolder(props.config, folder)
   saveConfig()
   toast(`Deleted "${folder}". Its searches are in ${UNCATEGORIZED}.`, {
     anchor: panel.value?.el,
     undo: () => {
-      props.config.entries = before.entries
-      props.config.folders = before.folders
-      props.config.view = before.view
+      for (const m of moved) {
+        const e = props.config.entries.find(e => e.id === m.id)
+        if (e && !e.category) e.category = m.category
+      }
+      props.config.folders = folders
+      props.config.view = viewBefore
+      props.config.lastFolder = lastFolder
       saveConfig()
     }
   })

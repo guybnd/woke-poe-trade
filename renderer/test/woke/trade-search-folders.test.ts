@@ -56,6 +56,16 @@ describe('folders', () => {
   })
 })
 
+describe('Uncategorized', () => {
+  it('is never stored, so it leaves the rail once empty', () => {
+    const w = widget([entry(1, 'a', ''), entry(2, 'b', 'Gems')])
+    ensureFolder(w, 'Gems').icon = 'item:Chaos Orb'
+    expect(w.folders!.map(f => f.name)).toEqual(['Gems'])
+    w.entries[0].category = 'Gems'
+    expect(folderNames(w)).toEqual(['Gems'])
+  })
+})
+
 describe('views and sort', () => {
   const list = [
     entry(1, 'Old', 'Gems', { lastOpened: NOW - 10 * DAY, openCount: 9 }),

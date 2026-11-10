@@ -136,8 +136,9 @@ export function deleteFolder (widget: TradeSearchesWidget, name: string): void {
 }
 
 // Lists the folder in the rail order (adding it if it's only a category so far) and returns its record.
+// Uncategorized is never stored: it shows only while it holds searches.
 export function ensureFolder (widget: TradeSearchesWidget, name: string): TradeSearchFolder {
-  const order = folderNames(widget)
+  const order = folderNames(widget).filter(n => n !== UNCATEGORIZED)
   if (!order.includes(name)) order.push(name)
   const byName = new Map((widget.folders ?? []).map(f => [f.name, f]))
   widget.folders = order.map(n => byName.get(n) ?? { name: n })
@@ -209,13 +210,14 @@ export function parseImport (json: string, existing: TradeSearchEntry[]): TradeS
       tags: strList(r.tags),
       notes: str(r.notes),
       hotkeyOverlay: null,
-      hotkeyExternal: null
+      hotkeyExternal: null,
+      pinned: r.pinned === true ? true : undefined
     }))
 }
 
 export function exportEntries (entries: TradeSearchEntry[]): string {
   return JSON.stringify(
-    entries.map(({ name, url, category, tags, notes }) => ({ name, url, category, tags, notes })),
+    entries.map(({ name, url, category, tags, notes, pinned }) => ({ name, url, category, tags, notes, ...(pinned ? { pinned } : {}) })),
     null, 2)
 }
 

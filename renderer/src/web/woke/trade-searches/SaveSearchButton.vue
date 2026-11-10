@@ -38,7 +38,7 @@ import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WButton } from '../ui'
-import { TRADE_SEARCHES_TYPE, SAVED_FROM_PRICE_CHECK, emptyEntry, isValidUrl, nameFromTradeUrl } from './widget'
+import { TRADE_SEARCHES_TYPE, SAVED_FROM_PRICE_CHECK, UNCATEGORIZED, emptyEntry, folderNames, isValidUrl, nameFromTradeUrl } from './widget'
 import type { TradeSearchesWidget } from './widget'
 
 const props = defineProps<{ getLink: () => string, suggestName?: () => string }>()
@@ -62,10 +62,11 @@ const savedAs = computed(() => {
   return widget.entries.find(e => e.url === url.value)
 })
 
+// The rail's folders, empty ones too.
 const folders = computed(() => {
-  const set = new Set<string>([SAVED_FROM_PRICE_CHECK])
-  for (const e of target.value?.entries ?? []) if (e.category.trim()) set.add(e.category.trim())
-  return [...set]
+  const widget = target.value
+  const list = widget ? folderNames(widget).filter(f => f !== UNCATEGORIZED) : []
+  return list.includes(SAVED_FROM_PRICE_CHECK) ? list : [...list, SAVED_FROM_PRICE_CHECK]
 })
 
 function proposedName (link: string): string {
