@@ -8,7 +8,6 @@
     "dev": "node build/script.mjs",
     "build": "tsc --noEmit && node build/script.mjs --prod",
     "package": "node build/fetch-ocr.mjs && electron-builder build",
-    "postinstall": "patch-package --patch-dir build",
     "fetch-ocr": "node build/fetch-ocr.mjs",
     "ocr-bench": "esbuild ocr-bench/bench.ts --bundle --platform=node --outfile=dist/ocr-bench.js --log-level=warning && node dist/ocr-bench.js",
     "ocr-train-lines": "esbuild ocr-bench/train-lines.ts --bundle --platform=node --outfile=dist/ocr-train-lines.js --log-level=warning && node dist/ocr-train-lines.js"
@@ -29,13 +28,13 @@
     "@types/ini": "^4.1.1",
     "@types/node": "^24.12.2",
     "@types/ws": "^8.18.1",
+    "7zip-bin": "^5.2.0",
     "comlink": "^4.4.2",
     "electron": "^43.8.7",
     "electron-builder": "^26.9.0",
     "electron-updater": "^6.8.3",
     "esbuild": "^0.28.0",
     "ini": "^6.0.0",
-    "patch-package": "^8.0.1",
     "typescript": "^6.0.2",
     "ws": "^8.20.0"
   },

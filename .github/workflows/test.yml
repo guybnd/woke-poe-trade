@@ -15,10 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides what a pull request needs. Both checks below are required on master,
+  # Decides what a pull request needs. The checks below are required on master,
   # so they can't use a path filter: a check that never reports blocks the merge
   # forever, while a job skipped by its `if` reports as passed. Pushes to master
-  # always run everything. If this job fails, its outputs are empty and both
+  # always run everything. If this job fails, its outputs are empty and all
   # jobs still run (they test `!= 'false'`). So a landing spec that no longer
   # loads fails here and sends the pull request through the full tests, where
   # it fails a required check; failing this job alone wouldn't block a merge.
@@ -32,6 +32,7 @@ jobs:
     outputs:
       unit: ${{ steps.result.outputs.unit }}
       game: ${{ steps.result.outputs.game }}
+      package: ${{ steps.result.outputs.package }}
       site: ${{ steps.files.outputs.site }}
     steps:
     - id: files
@@ -42,6 +43,7 @@ jobs:
       run: |
         unit=true
         game=true
+        package=true
         landing=false
         site=true
         if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
@@ -50,6 +52,7 @@ jobs:
           if [ -n "$files" ] && [ "$(printf '%s\n' "$files" | wc -l)" -lt 3000 ]; then
             unit=false
             game=false
+            package=false
             site=false
             while IFS= read -r file; do
               case "$file" in
@@ -59,7 +62,10 @@ jobs:
                 testing/e2e/landing-*.spec.ts) landing=true ;;
                 # The landing page reads the module list, fonts and frame art
                 # from the app, and the version from main.
-                renderer/*|main/package.json) unit=true; game=true; site=true ;;
+                renderer/*) unit=true; game=true; site=true ;;
+                # Install and packaging live in main/ and the workflows.
+                main/package.json) unit=true; game=true; site=true; package=true ;;
+                main/*|.github/workflows/*) unit=true; game=true; package=true ;;
                 # A unit test checks the README's module table.
                 README.md) unit=true ;;
                 *) unit=true; game=true ;;
@@ -67,9 +73,10 @@ jobs:
             done <<< "$files"
           fi
         fi
-        echo "Unit tests: $unit, fake-game tests: $game"
+        echo "Unit tests: $unit, fake-game tests: $game, Windows package: $package"
         echo "unit=$unit" >> "$GITHUB_OUTPUT"
         echo "game=$game" >> "$GITHUB_OUTPUT"
+        echo "package=$package" >> "$GITHUB_OUTPUT"
         echo "landing=$landing" >> "$GITHUB_OUTPUT"
         echo "site=$site" >> "$GITHUB_OUTPUT"
     - if: steps.files.outputs.landing == 'true'
@@ -90,9 +97,11 @@ jobs:
       env:
         UNIT: ${{ steps.files.outputs.unit }}
         GAME: ${{ steps.files.outputs.game }}
+        PACKAGE: ${{ steps.files.outputs.package }}
       run: |
         echo "unit=$UNIT" >> "$GITHUB_OUTPUT"
         echo "game=$GAME" >> "$GITHUB_OUTPUT"
+        echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
 
   # The website built as Pages builds it, then checked at phone and desktop
   # sizes (docs/scripts/check-phone.mjs). Only when docs/ changed.
@@ -261,3 +270,40 @@ jobs:
           testing/test-results
           testing/perf-results
         retention-days: 14
+
+  # The Windows installer built as release.yml builds it, without publishing,
+  # so a broken install or package step fails a pull request instead of the
+  # next release tag. Only when main/ or a workflow changed (and on master):
+  # the Windows runner is slow. Windows only, since nothing else is released.
+  package:
+    name: Windows package
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.package != 'false' }}
+    runs-on: windows-2022
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: |
+          renderer/package-lock.json
+          main/package-lock.json
+    - run: npm ci
+      working-directory: ./renderer
+    - run: npm run build
+      working-directory: ./renderer
+    - run: npm ci
+      working-directory: ./main
+    - run: npm run build
+      working-directory: ./main
+    # Never publishes: releases come from release.yml (tags).
+    - run: npm run package -- --win -p never
+      working-directory: ./main
+    - name: Test build
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: windows-test-build
+        path: main/dist/*.exe
+        retention-days: 7

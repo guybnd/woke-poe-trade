@@ -11,7 +11,7 @@ Note that these 2 both depend on each other, and one cannot run without the othe
 
 The most up-to-date instructions can always be derived from CI:
 
-[.github/workflows/main.yml](https://github.com/SnosMe/awakened-poe-trade/blob/master/.github/workflows/main.yml)
+[.github/workflows/test.yml](.github/workflows/test.yml) (the "Windows package" job builds the installer) and [.github/workflows/release.yml](.github/workflows/release.yml)
 
 Here's what that looks like as of 2026-08-01.
 
