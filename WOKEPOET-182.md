@@ -3,14 +3,14 @@ id: WOKEPOET-182
 title: >-
   UI 2: move the picked game-look pieces into woke/ui as shared components and
   tokens
-status: In Progress
+status: Todo
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: claude-code@GUY-PC
+updatedBy: Event Horizon
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -89,11 +89,17 @@ history:
     to: In Progress
     user: claude-code@GUY-PC
     date: '2026-11-10T04:36:11.649Z'
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-10T05:07:22.669Z'
+    comment: Claim by claude-code@GUY-PC expired (no heartbeat for 30 min)
+    id: a-2026-11-10t05-07-22-669z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-10T05:07:22.702Z'
 needsAction: null
-claim:
-  holder: claude-code@GUY-PC
-  claimedAt: '2026-11-10T04:36:11.649Z'
-  expiresAt: '2026-11-10T05:06:11.649Z'
 ---
 > **TL;DR** Turn the price check's PoE look into theme tokens and shared parts in `woke/ui`, so Hybrid and Native get the game look (S3 + T1) everywhere and Modern and Classic stay as they are. The price check's Window style becomes a layout-only "Filter layout".
 
