@@ -1,10 +1,11 @@
 <template>
   <!-- woke: PoE mode (window-style.ts). An unpicked stat row drawn as a tooltip line;
-       clicking it picks it, and FiltersBlock then draws it as a FilterModifier row. -->
+       clicking anywhere on it, empty space too, picks it, and FiltersBlock then draws it as a FilterModifier row. -->
   <div class="w-poe-line" :class="{ 'w-poe-child': isChild, 'w-poe-dimmed': isSplit, 'w-poe-hybrid': hybrid, 'w-poe-hybrid-first': hybrid?.first, 'w-poe-hybrid-last': hybrid?.last }"
-    :title="hybrid ? 'One hybrid mod. Click to search it: each of its lines at the bottom of its tier.' : look.label">
+    :title="hybrid ? 'One hybrid mod. Click to search it: each of its lines at the bottom of its tier.' : look.label"
+    @click="pick">
     <span class="w-poe-tier" :class="{ 'w-poe-t1': tier === 'T1' }">{{ tier }}</span>
-    <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`" @click="pick">
+    <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
       <img v-else-if="look.icon" class="w-poe-icon" :src="look.icon" alt="">
       <img v-if="filter.mercenary?.icon" class="w-poe-icon" :src="filter.mercenary.icon" alt="">
@@ -17,10 +18,10 @@
     <button v-if="qTag != null" type="button" data-catalyst-tag
       class="w-poe-qtag" :class="{ on: qOn }"
       :title="qOn ? 'Only items with this catalyst quality or more. Click to search any quality.' : 'A catalyst raised this line. Click to only find items with the same catalyst quality.'"
-      @click="catalyst!.toggle()">Q{{ qTag }}</button>
+      @click.stop="catalyst!.toggle()">Q{{ qTag }}</button>
     <button v-if="canSplit" type="button" class="w-poe-ptag"
       :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-      @click="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
+      @click.stop="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
   </div>
 </template>
 

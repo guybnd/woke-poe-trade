@@ -166,7 +166,7 @@
     "selected_none": "Stats ignored",
     "hidden_toggle": "Hidden filters",
     "collapse": "Collapse",
-    "mods_toggle": "Item's mods",
+    "mods_toggle": "Mod details",
     "empty": "No relevant stats were found",
     "tier": "Tier {0}",
     "tier_gilded": "Unique",
