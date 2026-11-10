@@ -120,7 +120,8 @@ export default defineComponent({
         if (s.group) {
           return Boolean(s.meta.hidden) === show
         }
-        return Boolean(s.hidden) === show
+        // A local mod already in a property total is a hidden row in Standard only.
+        return Boolean(s.hidden || (s.inTotal && !poeMode.value)) === show
       })
     })
 
