@@ -2,7 +2,7 @@
   <div :class="$style.titlebar" data-price-title>
     <slot />
     <button @click="emit('click')" class="truncate" data-price-title-text>{{ title }}</button>
-    <button @click.stop="emit('close')" tabindex="-1"
+    <button @click.stop="emit('close')" tabindex="-1" data-price-close
       :class="[$style.button, $style.close]" title="Close"><i class="fas fa-window-close"></i></button>
   </div>
 </template>

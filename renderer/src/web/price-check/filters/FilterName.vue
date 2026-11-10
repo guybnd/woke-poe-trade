@@ -232,6 +232,8 @@ export default defineComponent({
   font-size: calc(13px * var(--w-text-scale, 1));
   white-space: nowrap;
 }
+/* The chip's own title shows over the orb too. */
+.filter-name-corrupted img { pointer-events: none; }
 .filter-name-corrupted-labels { display: inline-grid; justify-items: center; }
 .filter-name-corrupted-labels > span { grid-area: 1 / 1; visibility: hidden; }
 .filter-name-corrupted-labels > span.shown { visibility: visible; }
