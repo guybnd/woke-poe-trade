@@ -62,8 +62,42 @@ history:
 
       2. Which findings should become tickets? I'd start with A1, A2 and A4
       today.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy: turn all findings into tickets; UI to follow the price check's game
+      look across the tool. Done: WOKEPOET-169 (UI epic, subtasks follow) and
+      170-180. Existing tickets got notes: 149 (3.30), 53 (signing); 121 covers
+      the duplicate drafts. Rooftap format question unanswered, report stays as
+      is.
+    date: '2026-11-10T02:56:32.965Z'
+    id: c-2026-11-10t02-56-32-965z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-10T02:56:32.965Z'
+    comment: >-
+      Guy: turn all findings into tickets; UI to follow the price check's game
+      look across the tool. Done: WOKEPOET-169 (UI epic, subtasks follow) and
+      170-180. Existing tickets got notes: 149 (3.30), 53 (signing); 121 covers
+      the duplicate drafts. Rooftap format question unanswered, report stays as
+      is.
+swimlane: null
 needsAction: null
+subtasks:
+  - WOKEPOET-169
+  - WOKEPOET-170
+  - WOKEPOET-171
+  - WOKEPOET-172
+  - WOKEPOET-173
+  - WOKEPOET-174
+  - WOKEPOET-175
+  - WOKEPOET-176
+  - WOKEPOET-177
+  - WOKEPOET-178
+  - WOKEPOET-179
+  - WOKEPOET-180
 ---
 Guy asked for a holistic review of woke-poe-trade: architecture, code quality, bugs and risk, UX consistency against the UI charter, performance, tests/CI, docs/landing, product gaps.
 

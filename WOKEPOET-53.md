@@ -30,5 +30,16 @@ history:
     date: '2026-11-05T11:08:35.574Z'
     selfAttested: true
     id: c-2026-11-05t11-08-35-574z
+  - type: comment
+    user: Agent
+    comment: >-
+      From the project review (WOKEPOET-168, finding B3): no signing secrets are
+      set on the repo (`WIN_CSC_LINK` is empty), so the installer and
+      auto-updates are unsigned and SmartScreen warns. Decision for Guy: buy
+      signing (Azure Trusted Signing is the cheap route) or say on the download
+      page that the warning is expected.
+    date: '2026-11-10T02:56:31.237Z'
+    selfAttested: true
+    id: c-2026-11-10t02-56-31-237z
 ---
 > **TL;DR** C8. Update timing is fine, but there's no way back from a bad release, no code signing, update errors aren't logged (AppUpdater.ts), and it installs only on quit, which tray apps rarely do. Signing costs money, so that part is Guy's decision. Consider replacing the PowerShell call in runningGameLog, which antivirus tools dislike. Logging the error is an easy first step.

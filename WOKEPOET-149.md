@@ -41,6 +41,18 @@ history:
     date: '2026-11-08T09:53:41.222Z'
     comment: Updated title.
     id: a-2026-11-08t09-53-41-222z
+  - type: comment
+    user: Agent
+    comment: >-
+      From the project review (WOKEPOET-168, finding A3): launch is 13 Nov and
+      this epic has no plan picked. Proposed day-one minimum: (1) a "being
+      updated for 3.30" banner on the scarab-based tools (Flips, Atlas
+      strategies, scarab stash outlines) and the mechanics guide; (2) unknown
+      filter keywords treated as a warning so a new NeverSink file still loads;
+      (3) a 0.4.x release out before launch, which needs WOKEPOET-170 first.
+    date: '2026-11-10T02:56:29.597Z'
+    selfAttested: true
+    id: c-2026-11-10t02-56-29-597z
 swimlane: require-input
 needsAction: null
 subtasks:
