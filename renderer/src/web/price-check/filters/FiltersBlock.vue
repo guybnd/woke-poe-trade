@@ -159,7 +159,9 @@ export default defineComponent({
       const out = new Map<StatFilter, StatFilter['sources']>()
       if (!showFilterSources.value) return out
       const seen = new Set<object>()
-      for (const { filter } of shownStats.value) {
+      // Visible lines claim their mods first; a faded hidden line only gets what's left.
+      const rows = shownStats.value.map(r => r.filter)
+      for (const filter of [...rows.filter(f => !isHiddenRow(f)), ...rows.filter(isHiddenRow)]) {
         if (filter.group || !hasSourceInfo(filter)) continue
         const fresh = filter.sources.filter(s => !seen.has(s.modifier))
         for (const s of fresh) seen.add(s.modifier)
