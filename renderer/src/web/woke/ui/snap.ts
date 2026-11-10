@@ -11,7 +11,11 @@ export const snapGuides = shallowRef<Guide[]>([])
 
 interface Box { left: number, top: number, right: number, bottom: number }
 
-function targets (self: Element | null) {
+export interface SnapTargets { xs: number[], ys: number[] }
+
+// Measures every open panel, which costs a layout: during a move, take them
+// once at the start (the other panels don't move) and pass them in.
+export function snapTargets (self: Element | null): SnapTargets {
   const xs = [0, INSET, window.innerWidth - INSET, window.innerWidth]
   const ys = [0, INSET, window.innerHeight - INSET, window.innerHeight]
   for (const el of document.querySelectorAll('[data-w-panel]')) {
@@ -37,9 +41,9 @@ function nearest (edges: number[], lines: number[]): { delta: number, at: number
 
 // Moves a panel whose start box is `rect` by (dx, dy); returns the snapped
 // offset. Hold Alt to move freely.
-export function snapMove (rect: Box, dx: number, dy: number, self: Element | null, free = false) {
+export function snapMove (rect: Box, dx: number, dy: number, self: Element | null, free = false, known?: SnapTargets) {
   if (free) { snapGuides.value = []; return { dx, dy } }
-  const { xs, ys } = targets(self)
+  const { xs, ys } = known ?? snapTargets(self)
   const sx = nearest([rect.left + dx, rect.right + dx, (rect.left + rect.right) / 2 + dx], xs)
   const sy = nearest([rect.top + dy, rect.bottom + dy], ys)
   const guides: Guide[] = []
@@ -52,7 +56,7 @@ export function snapMove (rect: Box, dx: number, dy: number, self: Element | nul
 // Snaps one moving edge (screen px) during a resize.
 export function snapEdge (axis: 'x' | 'y', at: number, self: Element | null, free = false) {
   if (free) { snapGuides.value = []; return at }
-  const { xs, ys } = targets(self)
+  const { xs, ys } = snapTargets(self)
   const s = nearest([at], axis === 'x' ? xs : ys)
   snapGuides.value = s ? [{ axis, at: s.at }] : []
   return s ? s.at : at

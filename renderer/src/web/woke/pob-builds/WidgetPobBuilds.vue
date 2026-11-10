@@ -355,12 +355,13 @@ function togglePin (relPath: string) {
   width: 100%;
   padding: 5px var(--w-pad);
   text-align: left;
-  font-size: var(--w-fs-xs);
+  font-size: var(--w-fs-caps);
   letter-spacing: 0.08em;
-  text-transform: uppercase;
+  text-transform: var(--w-caps-case);
   color: var(--w-dim);
   background: var(--w-panel-2);
   border-bottom: 1px solid var(--w-line-soft);
+  font-family: var(--w-caps-face);
 }
 .folder:hover { color: var(--w-fg); }
 </style>

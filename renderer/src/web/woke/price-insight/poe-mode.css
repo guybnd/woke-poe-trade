@@ -262,6 +262,7 @@
   margin: 0 6px;
   padding: 3px 30px;
   border-radius: var(--w-r-sm);
+  cursor: pointer;
 }
 #price-window .w-poe-line:hover { background: var(--w-accent-soft); }
 /* The tier sits just before the text it belongs to; a far-left gutter left it

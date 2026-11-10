@@ -367,10 +367,11 @@ const dockMenu = computed<DockMenuAction[]>(() => selected.value?.regex
 <style module>
 .heading {
   padding: 4px 0 2px;
-  font-size: var(--w-fs-xs);
-  text-transform: uppercase;
+  font-size: var(--w-fs-caps);
+  text-transform: var(--w-caps-case);
   letter-spacing: 0.08em;
   color: var(--w-faint);
+  font-family: var(--w-caps-face);
 }
 .group {
   padding: 3px 0;

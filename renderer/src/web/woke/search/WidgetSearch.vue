@@ -567,7 +567,7 @@ const dataNote = computed(() => {
 .input::placeholder { color: var(--w-faint); }
 .panes { flex: 1 1 26rem; min-height: 0; display: grid; grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .list { border-right: 1px solid var(--w-line); padding-bottom: var(--w-s1); }
-.head { padding: 8px var(--w-pad) 3px; font-size: var(--w-fs-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--w-dim); }
+.head { padding: 8px var(--w-pad) 3px; font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); font-family: var(--w-caps-face); }
 .res { display: flex; align-items: center; gap: var(--w-s2); width: 100%; min-height: 40px; padding: 2px var(--w-pad); text-align: left; }
 .res:hover { background: var(--w-panel-2); }
 .sel, .sel:hover { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
@@ -578,7 +578,7 @@ const dataNote = computed(() => {
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }
 .title { display: flex; align-items: center; gap: var(--w-s2); margin-bottom: var(--w-s2); font-size: var(--w-fs-lg); }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 76px 52px 52px 50px; column-gap: 6px; align-items: center; }
-.gridHead { height: 24px; font-size: var(--w-fs-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--w-dim); border-bottom: 1px solid var(--w-line); }
+.gridHead { min-height: calc(24px * var(--w-text-scale, 1)); font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); border-bottom: 1px solid var(--w-line); font-family: var(--w-caps-face); }
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowBtns { display: flex; justify-content: flex-end; gap: 2px; }
 .acts { display: flex; flex-wrap: wrap; gap: var(--w-s1); margin-top: var(--w-s3); }

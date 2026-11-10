@@ -196,7 +196,7 @@ test('PoE mode: other items keep their features', async ({ overlay }) => {
 // At a big window and text size (20px, 115%), the toggles under the filters each
 // keep their label on one line, apart from the well, in both window styles.
 for (const style of ['poe', 'standard']) {
-  test(`${style}: Hidden filters and Item's mods stay on one line at a big size`, async ({ overlay }) => {
+  test(`${style}: Hidden filters and Mod details stay on one line at a big size`, async ({ overlay }) => {
     await overlay.page.setViewportSize({ width: 2560, height: 1440 })
     await overlay.boot({
       patch: (config: any) => {
@@ -212,7 +212,7 @@ for (const style of ['poe', 'standard']) {
     const win = overlay.page.locator('#price-window')
     const foot = win.locator('.w-pc-stat-foot')
     await expect(foot).toBeVisible()
-    const toggles = foot.locator('button').filter({ hasText: /Hidden filters|Item's mods/ })
+    const toggles = foot.locator('button').filter({ hasText: /Hidden filters|Mod details/ })
     await expect(toggles).toHaveCount(2)
     for (let i = 0; i < 2; i++) {
       const h = await toggles.nth(i).evaluate(el => {

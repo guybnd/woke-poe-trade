@@ -23,7 +23,8 @@
 import { defineComponent, PropType, computed, inject, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue'
 import { Widget, Anchor, WidgetManager } from './interfaces'
 import { useI18n } from 'vue-i18n'
-import { snapMove, clearGuides, clampDrag, releaseWebviewsForDrag, swallowNextClick } from '@/web/woke/ui/snap'
+import { snapMove, snapTargets, clearGuides, clampDrag, releaseWebviewsForDrag, swallowNextClick } from '@/web/woke/ui/snap'
+import type { SnapTargets } from '@/web/woke/ui/snap'
 import { openMenu, toast } from '@/web/woke/ui/layer'
 import type { MenuEntry } from '@/web/woke/ui/layer'
 import { fitOffset } from '@/web/woke/ui/panel-fit'
@@ -377,38 +378,84 @@ export default defineComponent({
       if (target.closest('.w-surface') && !target.closest('[data-widget-drag]')) return
       e.preventDefault()
 
-      const rect = widgetEl.value.getBoundingClientRect()
+      const el = widgetEl.value
+      const rect = el.getBoundingClientRect()
       // From where it's drawn, which can differ from the saved spot (see fitToScreen).
       const startX = props.config.anchor.x + fitShift.value.x / window.innerWidth * 100
       const startY = props.config.anchor.y + fitShift.value.y / window.innerHeight * 100
       const restoreWebviews = releaseWebviewsForDrag()
       let dragged = false
+      let targets: SnapTargets | undefined
+      let last: MouseEvent | null = null
+      let frame = 0
+      let offset = { dx: 0, dy: 0 }
+      let anchorAtStart: Anchor | null = null
 
+      // While dragging, the widget is only shifted on screen (CSS translate, at
+      // most once a frame): the panel isn't rebuilt or laid out again for every
+      // mouse move, which made big panels lag. The new spot is saved on release.
+      function place () {
+        frame = 0
+        const ev = last
+        if (!ev) return
+        const dx = ev.clientX - e.clientX
+        const dy = ev.clientY - e.clientY
+        // Snaps to screen edges and other panels (Alt moves freely), then
+        // keeps it on screen (see clampDrag).
+        targets ??= snapTargets(el)
+        const s = snapMove(rect, dx, dy, el, ev.altKey, targets)
+        offset = clampDrag(rect, s.dx, s.dy, window.innerWidth, window.innerHeight)
+        el.style.translate = `${offset.dx}px ${offset.dy}px`
+      }
       function onMove (ev: MouseEvent) {
         const dx = ev.clientX - e.clientX
         const dy = ev.clientY - e.clientY
         if (!dragged && Math.hypot(dx, dy) < DRAG_START_PX) return
-        if (!dragged) { fitHeld = true; fitShift.value = { x: 0, y: 0 }; emit('moved') }
-        dragged = true
-        // Snaps to screen edges and other panels (Alt moves freely), then
-        // keeps it on screen (see clampDrag).
-        const s = snapMove(rect, dx, dy, widgetEl.value, ev.altKey)
-        const c = clampDrag(rect, s.dx, s.dy, window.innerWidth, window.innerHeight)
-        props.config.anchor.x = startX + c.dx / window.innerWidth * 100
-        props.config.anchor.y = startY + c.dy / window.innerHeight * 100
+        if (!dragged) {
+          dragged = true
+          fitHeld = true
+          // fitToScreen's shift becomes part of the drag, so nothing jumps.
+          const { x, y } = fitShift.value
+          if (x || y) {
+            props.config.anchor.x += x / window.innerWidth * 100
+            props.config.anchor.y += y / window.innerHeight * 100
+            fitShift.value = { x: 0, y: 0 }
+          }
+          el.style.willChange = 'translate'
+          anchorAtStart = props.config.anchor
+          emit('moved')
+        }
+        last = ev
+        if (!frame) frame = requestAnimationFrame(place)
       }
+      // The window losing focus mid-drag (Esc, Alt+Tab) can swallow the
+      // mouseup: the drag ends there too, so the shift isn't left unsaved.
       function onUp () {
         restoreWebviews()
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
+        window.removeEventListener('blur', onUp)
+        if (dragged) {
+          if (frame) cancelAnimationFrame(frame)
+          place()
+          // A widget's own mouseup can run first and place it itself (the rail
+          // dropped on an edge lies flat under the buffs): that spot wins.
+          if (props.config.anchor === anchorAtStart) {
+            props.config.anchor.x = startX + offset.dx / window.innerWidth * 100
+            props.config.anchor.y = startY + offset.dy / window.innerHeight * 100
+          }
+          el.style.removeProperty('translate')
+          el.style.removeProperty('will-change')
+          swallowNextClick()
+        }
         clearGuides()
         // Stays where it was dropped, even partly off screen: a big panel can be
         // pushed aside (see clampDrag), and it comes back the next time it opens.
         fitHeld = false
-        if (dragged) swallowNextClick()
       }
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
+      window.addEventListener('blur', onUp)
     }
 
     function updatePosition (e: MouseEvent) {

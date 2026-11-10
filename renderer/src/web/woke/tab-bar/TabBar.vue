@@ -945,11 +945,12 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 
 .head {
   padding: 5px 8px 3px;
-  font-size: var(--w-fs-sm);
-  font-weight: 600;
+  font-size: var(--w-fs-caps);
+  font-weight: var(--w-caps-weight);
   color: var(--w-dim);
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: var(--w-caps-case);
+  font-family: var(--w-caps-face);
 }
 .item {
   display: flex;

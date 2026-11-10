@@ -145,7 +145,8 @@ function setOverride (member: string, di: number, e: Event) {
 .list { flex: none; width: 13.5rem; padding: var(--w-s1); border-right: 1px solid var(--w-line); }
 .listHead {
   padding: var(--w-s2) 6px 2px;
-  font-size: var(--w-fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--w-dim);
+  font-size: var(--w-fs-caps); letter-spacing: 0.06em; text-transform: var(--w-caps-case); color: var(--w-dim);
+  font-family: var(--w-caps-face);
 }
 .item {
   display: flex; align-items: center; gap: var(--w-s2); width: 100%;
@@ -170,7 +171,8 @@ function setOverride (member: string, di: number, e: Event) {
 .text { flex: 1 1 15rem; min-width: 0; display: flex; flex-direction: column; gap: var(--w-s3); }
 .sect {
   margin: 0 0 4px;
-  font-size: var(--w-fs-xs); font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--w-dim);
+  font-size: var(--w-fs-caps); font-weight: 400; letter-spacing: 0.08em; text-transform: var(--w-caps-case); color: var(--w-dim);
+  font-family: var(--w-caps-face);
 }
 .para { margin: 0; }
 .when { margin: 0; padding-left: 16px; list-style: disc; display: grid; gap: 2px; }

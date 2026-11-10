@@ -58,10 +58,11 @@ const others = computed(() => rows.value.filter(r => r !== here.value))
   background: var(--w-accent-soft);
 }
 .hereLabel {
-  font-size: var(--w-fs-xs);
+  font-size: var(--w-fs-caps);
   letter-spacing: 0.08em;
-  text-transform: uppercase;
+  text-transform: var(--w-caps-case);
   color: var(--w-accent);
+  font-family: var(--w-caps-face);
 }
 .hereRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 3px; }
 .herePrice { flex: none; font-size: var(--w-fs-lg); font-weight: 600; }

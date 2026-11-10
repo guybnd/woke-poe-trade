@@ -19,7 +19,7 @@ withDefaults(defineProps<{ title?: string, hint?: string }>(), { title: undefine
   display: flex; align-items: center; gap: var(--w-s2);
   padding-bottom: var(--w-s1); border-bottom: 1px solid var(--w-line);
 }
-.title { flex: 1; font-size: var(--w-fs-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--w-accent); }
+.title { flex: 1; font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.08em; text-transform: var(--w-caps-case); color: var(--w-accent); font-family: var(--w-caps-face); }
 .actions { display: flex; gap: var(--w-s2); }
 .hint { color: var(--w-dim); font-size: var(--w-fs-sm); padding-top: var(--w-s2); }
 .body { display: flex; flex-direction: column; }

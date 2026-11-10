@@ -11,6 +11,10 @@
   --w-num: Inter, system-ui, sans-serif;
   --w-small: Inter, system-ui, sans-serif;  /* text below 13px: Fontin reads too small there */
   --w-label: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
+  --w-caps-face: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
+  --w-caps-case: none;
+  --w-fs-caps: var(--w-fs-md);
+  --w-caps-weight: 400;
   --w-r-sm: 2px;
   --w-r-md: 2px;
 }

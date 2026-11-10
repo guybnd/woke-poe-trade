@@ -1,10 +1,5 @@
 <template>
   <div :class="[$style.filter, { [$style.grouped]: grouped, [$style.splitChild]: splitChild, 'w-poe-row': poe, 'w-poe-child': poe && (splitChild || hybridPart) }]">
-    <div v-if="showSourceInfo" :class="$style['mods']">
-      <div class="pl-5 py-1" v-for="(source, idx) of filter.sources" :key="idx">
-        <source-info :source="source" :filter="filter" />
-      </div>
-    </div>
     <div class="flex flex-col min-w-0 flex-1">
       <div class="flex items-baseline">
         <div class="flex items-baseline min-w-0 mr-2">
@@ -69,7 +64,7 @@
       </div>
       <div class="flex pt-px" v-if="!miniFilter">
         <div class="w-5 flex items-start">
-          <ui-popover v-if="isHidden" tag-name="div" class="flex" placement="right-start" boundary="#price-window">
+          <ui-popover v-if="isHidden" tag-name="div" class="flex" placement="right-start" boundary="#price-window" append-to="#price-window">
             <template #target>
               <span class="text-xs leading-none text-gray-600 cursor-pointer">
                 <i class="fas fa-eye-slash" :class="{ 'faa-ring': !isDisabled }"></i>
@@ -137,13 +132,12 @@ import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
 import { FilterTag, StatFilter, INTERNAL_TRADE_IDS, ItemHasEmptyModifier } from './interfaces'
-import SourceInfo from './SourceInfo.vue'
 import { SearchMode as MercSearchMode } from './pseudo/mercenary.js'
 import { ModifierType } from '@/parser/modifiers'
 import { poeKit } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
-  components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, SourceInfo, StatRollSlider, UiPopover },
+  components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
   emits: ['update:groupExpanded'],
   props: {
     filter: {
@@ -153,9 +147,6 @@ export default defineComponent({
     item: {
       type: Object as PropType<ParsedItem>,
       required: true
-    },
-    showSources: {
-      type: Boolean
     },
     groupExpanded: {
       type: Boolean,
@@ -418,18 +409,6 @@ export default defineComponent({
         return out
       }),
       hiddenReason: computed(() => t(props.filter.hidden!)),
-      showSourceInfo: computed(() =>
-        props.showSources &&
-        props.filter.sources.length &&
-        props.filter.option == null && (
-          props.filter.tag === FilterTag.Pseudo ||
-          (
-            props.filter.sources.length >= 2 ||
-            props.filter.sources[0].modifier.info.name != null ||
-            props.filter.sources[0].modifier.info.tier != null ||
-            props.filter.sources[0].modifier.info.rank != null
-          )
-        )),
       showBounds: () => props.item.rarity === ItemRarity.Unique,
       // Map and heist stats have no real range to draw, only a placeholder top.
       showSlider: computed(() => {
@@ -553,22 +532,6 @@ export default defineComponent({
 .miniRollOptions {
   margin: -99px 0; /* not allowed to extend baseline */
   margin-left: auto;
-}
-
-.mods {
-  @apply border-b-4 border-gray-500;
-  background: linear-gradient(to bottom, var(--w-pc-window, theme('colors.gray.800')), var(--w-pc-well, theme('colors.gray.900')));
-  @apply -mx-4 px-4;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.filter:not(:hover) > .mods {
-  display: none;
 }
 
 .tag {

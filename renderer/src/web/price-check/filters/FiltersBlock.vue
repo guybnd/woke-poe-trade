@@ -21,17 +21,23 @@
           <!-- woke: PoE mode's gold lines between properties, enchants, implicits and the rest. -->
           <div v-if="poeMode && sepBefore.has(i)" :key="`sep_${i}`" class="w-poe-sep" />
           <filter-group v-if="filter.group" :key="`group_${filter.meta.tag}_${filter.meta.text}`"
+            :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
             :group="filter"
             :item="item" />
           <component :is="poeKit!.FilterLinePoe" v-else-if="poeMode && filter.disabled" :key="`line_${filter.tag}_${filter.text}`"
+            :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
             :data-stat-row="i"
             :filter="filter" />
           <filter-modifier v-else :key="`${filter.tag}_${filter.text}_${poeMode}`"
+            :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
             :data-stat-row="i"
             :filter="filter"
             :item="item"
-            :poe="poeMode"
-            :show-sources="showFilterSources" />
+            :poe="poeMode" />
+          <filter-sources v-if="showFilterSources && !filter.group && hasSourceInfo(filter)"
+            :key="`src_${filter.tag}_${filter.text}`"
+            :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
+            :filter="filter" />
         </template>
         <div v-if="!filteredStats.length && !showUnknownMods"
           class="border-b border-gray-700 py-2">{{ t('filters.empty') }}</div>
@@ -45,9 +51,9 @@
       <div class="w-pc-stat-foot flex flex-wrap gap-x-4" :class="$style.foot">
         <button @click="statsVisibility.disabled = !statsVisibility.disabled" class="w-pc-collapse bg-gray-700 px-2 py-1 text-gray-400 leading-none rounded-b w-40 whitespace-nowrap"
           >{{ t('filters.collapse') }} <i class="fas fa-chevron-up pl-1 text-xs text-gray-600"></i></button>
-        <ui-toggle v-if="filteredStats.length !== stats.length" title="List the filters the price check keeps out of the way, such as rolls that can't vary, in place of the others. Doesn't change the search."
+        <ui-toggle v-if="hiddenCount > 0" title="Show the filters the price check keeps out of the way, such as rolls that can't vary, faded in among the others. Doesn't change the search."
           v-model="showHidden" class="text-gray-400 pt-2 whitespace-nowrap">{{ t('filters.hidden_toggle') }}</ui-toggle>
-        <ui-toggle title="Under the filters, show the item's mods behind them where known: prefix or suffix, name, tier and what each adds. Doesn't change the search."
+        <ui-toggle v-if="hasAnySources" title="Under each line, show the mods behind it: prefix or suffix, name, tier and what each adds. Doesn't change the search."
           v-model="showFilterSources" class="ml-auto text-gray-400 pt-2 whitespace-nowrap">{{ t('filters.mods_toggle') }}</ui-toggle>
       </div>
     </div>
@@ -60,6 +66,7 @@ import { useI18n } from 'vue-i18n'
 import UiToggle from '@/web/ui/UiToggle.vue'
 import FilterModifier from './FilterModifier.vue'
 import FilterGroup from './FilterGroup.vue'
+import FilterSources, { hasSourceInfo } from './FilterSources.vue'
 import { poeOn as poeMode, poeKit } from '@/web/woke/price-insight/window-style'
 import type { PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
@@ -74,6 +81,7 @@ export default defineComponent({
   components: {
     FilterModifier,
     FilterGroup,
+    FilterSources,
     UnknownModifier,
     WSegmented,
     UiToggle
@@ -115,16 +123,16 @@ export default defineComponent({
     const { t } = useI18n()
     const actions = useStatActions()
 
-    const filteredStats = computed(() => {
-      const show = showHidden.value
-      return props.stats.filter(s => {
-        if (s.group) {
-          return Boolean(s.meta.hidden) === show
-        }
-        // A local mod already in a property total is a hidden row in Standard only.
-        return Boolean(s.hidden || (s.inTotal && !poeMode.value)) === show
-      })
-    })
+    function isHiddenRow (s: FilterOrGroup): boolean {
+      if (s.group) return Boolean(s.meta.hidden)
+      // A local mod already in a property total is a hidden row in Standard only.
+      return Boolean(s.hidden || (s.inTotal && !poeMode.value))
+    }
+    const hiddenCount = computed(() => props.stats.filter(isHiddenRow).length)
+    // "Hidden filters" shows the hidden rows faded in their place among the rest.
+    const filteredStats = computed(() => showHidden.value
+      ? props.stats
+      : props.stats.filter(s => !isHiddenRow(s)))
 
     // PoE mode lists rows in the tooltip's order: properties, enchants, implicits, the rest.
     // `i` stays the row's place in filteredStats, which the right-click menu reads.
@@ -171,6 +179,10 @@ export default defineComponent({
       statsVisibility,
       showHidden,
       showFilterSources,
+      isHiddenRow,
+      hiddenCount,
+      hasSourceInfo,
+      hasAnySources: computed(() => filteredStats.value.some(s => !s.group && hasSourceInfo(s))),
       totalSelectedMods: computed(() => {
         return props.stats.filter(stat => {
           if (stat.group) {
@@ -223,4 +235,7 @@ export default defineComponent({
 .statBtn:hover i { color: var(--w-fg); }
 /* The toggles a step smaller than the window's text, so both fit beside Collapse. */
 .foot > button + button { font-size: .85em; }
+/* A row "Hidden filters" brought back: faded until pointed at. */
+.hiddenRow { opacity: .5; transition: opacity .1s; }
+.hiddenRow:hover { opacity: .85; }
 </style>
