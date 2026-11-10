@@ -32,6 +32,7 @@
         </ui-popover>
         <i v-else-if="xchgRateLoading()" class="fas fa-dna fa-spin px-2" />
         <div v-else class="w-8" />
+        <template #end><price-style-menu /></template>
       </AppTitleBar>
       <div class="grow layout-column min-h-0 bg-gray-800">
         <background-info />
@@ -100,6 +101,7 @@ import CheckPositionCircle from './CheckPositionCircle.vue'
 import NewItemSearch from '@/web/woke/new-item/NewItemSearch.vue'
 import { newItemQuery } from '@/web/woke/new-item/query'
 import AppTitleBar from '@/web/ui/AppTitlebar.vue'
+import PriceStyleMenu from '@/web/woke/price-insight/PriceStyleMenu.vue'
 import ItemQuickPrice from '@/web/ui/ItemQuickPrice.vue'
 import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfaces'
 import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
@@ -155,6 +157,7 @@ export default defineComponent({
     ItemQuickPrice,
     UiErrorBox,
     NewItemSearch,
+    PriceStyleMenu,
     UiPopover
   },
   props: {

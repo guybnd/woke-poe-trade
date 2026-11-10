@@ -13,11 +13,12 @@ import './panel-opacity'
 
 export type WokeTheme = 'hybrid' | 'native' | 'modern' | 'classic'
 
-export const WOKE_THEMES: Array<{ id: WokeTheme, label: string, hint: string }> = [
-  { id: 'hybrid', label: 'Hybrid', hint: 'The game look: bronze frames, bevelled buttons, Fontin text' },
-  { id: 'native', label: 'PoE-native', hint: 'The game look on darker bronze, roomier rows' },
-  { id: 'modern', label: 'Modern', hint: 'Frosted glass, rounded, cool accent' },
-  { id: 'classic', label: 'Classic APT', hint: 'Leave APT widgets as upstream ships them' }
+// `short` is for tight spots, like the rail's layout popup.
+export const WOKE_THEMES: Array<{ id: WokeTheme, label: string, short: string, hint: string }> = [
+  { id: 'hybrid', label: 'Hybrid', short: 'Hybrid', hint: 'The game look: bronze frames, bevelled buttons, Fontin text' },
+  { id: 'native', label: 'PoE-native', short: 'Native', hint: 'The game look on darker bronze, roomier rows' },
+  { id: 'modern', label: 'Modern', short: 'Modern', hint: 'Frosted glass, rounded, cool accent' },
+  { id: 'classic', label: 'Classic APT', short: 'Classic', hint: 'Leave APT widgets as upstream ships them' }
 ]
 
 const STORAGE_KEY = 'woke.theme'
