@@ -6,7 +6,7 @@
     </template>
     <button v-else
       @click="open(true)" class="w-pc-btn bg-gray-700 text-gray-400 rounded px-2">{{ t('Trade') }} <i class="fas fa-external-link-alt text-xs" /></button>
-    <woke-save-search :get-link="getLink" class="w-pc-btn ml-1" />
+    <woke-save-search :get-link="getLink" :suggest-name="suggestName" class="w-pc-btn ml-1" />
   </div>
 </template>
 
@@ -25,6 +25,11 @@ export default defineComponent({
     getLink: {
       type: Function as PropType<() => string>,
       required: true
+    },
+    // woke: the name the save box offers (the item, not the link's id).
+    suggestName: {
+      type: Function as PropType<() => string>,
+      default: undefined
     }
   },
   setup (props) {

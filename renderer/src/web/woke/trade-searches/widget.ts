@@ -26,6 +26,8 @@ export interface TradeSearchesWidget extends Widget {
   followLeague?: boolean
   // Beep and flash when an open live search shows a new result (default off).
   liveAlert?: boolean
+  // The folder the price check's save box last saved to.
+  lastFolder?: string
 }
 
 export type OpenTarget = 'overlay' | 'external'

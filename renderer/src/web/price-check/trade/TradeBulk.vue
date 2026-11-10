@@ -26,7 +26,7 @@
         </div>
       </div>
       <trade-links v-if="result"
-        :get-link="makeTradeLink" />
+        :get-link="makeTradeLink" :suggest-name="() => item.info.name" />
     </div>
     <div class="w-pc-scroll layout-column overflow-y-auto overflow-x-hidden">
       <table class="w-pc-table table-stripped w-full">

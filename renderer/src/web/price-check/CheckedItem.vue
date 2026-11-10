@@ -49,7 +49,7 @@
         <button class="btn w-pc-primary" @click="doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
       <trade-links v-if="tradeAPI === 'trade'"
-        :get-link="makeTradeLink" />
+        :get-link="makeTradeLink" :suggest-name="() => proposeSearchName(item, itemStats)" />
     </div>
     <!-- woke: the Flip tab, only for items with a mod a swap can change. It searches only on a click. -->
     <w-tabs v-if="showFlipTab" class="mt-2"
@@ -95,6 +95,7 @@ import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
 import TradeBulk from './trade/TradeBulk.vue'
 import TradeLinks from './trade/TradeLinks.vue'
+import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import { apiToSatisfySearch, getTradeEndpoint } from './trade/common'
 import PriceTrend from './trends/PriceTrend.vue'
 import FiltersBlock from './filters/FiltersBlock.vue'
@@ -361,6 +362,7 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
 
     return {
+      proposeSearchName,
       poeMode,
       poeOn,
       swap,

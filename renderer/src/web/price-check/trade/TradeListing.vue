@@ -14,7 +14,7 @@
       <button type="button" class="w-icon-btn mr-1" :class="{ invisible: !list }" title="Search again: results are otherwise kept for 5 minutes"
         :disabled="fetching" @click="refresh"><i class="fas fa-sync-alt text-xs" /><span v-if="refreshNote" class="text-xs ml-1">{{ refreshNote }}</span></button>
       <trade-links :class="{ invisible: !list }"
-        :get-link="makeTradeLink" />
+        :get-link="makeTradeLink" :suggest-name="suggestName" />
     </div>
     <teleport v-if="improved && verdictSlot" :to="verdictSlot">
       <price-verdict
@@ -182,6 +182,7 @@ import { artificialSlowdown } from './artificial-slowdown'
 import { useRetryCountdown } from './retry-countdown'
 import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
+import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import PriceVerdict from '@/web/woke/price-insight/PriceVerdict.vue'
 import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
 import { priceView } from '@/web/woke/price-insight/view'
@@ -532,6 +533,7 @@ export default defineComponent({
       rateLimited,
       showSeller: computed(() => widget.value.showSeller),
       makeTradeLink,
+      suggestName: () => proposeSearchName(props.item, props.stats),
       openTradeLink () {
         showBrowser(makeTradeLink())
         ctx.emit('reset')
