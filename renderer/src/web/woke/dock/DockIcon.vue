@@ -18,10 +18,10 @@
       <span v-if="badge != null && badge !== ''" :class="[$style.badge, $style['tone-' + (host.props.tone ?? 'accent')]]">{{ badge }}</span>
       <span v-if="host.props.led" :class="[$style.led, $style['led-' + host.props.led]]" />
     </span>
-    <div v-if="menuOpen" ref="menuEl" :class="[$style.card, placement]">
+    <div v-if="menuOpen" ref="menuEl" class="w-corners" :class="[$style.card, placement]">
       <DockMenu :host="host" :extras="extras" @close="menuOpen = false" />
     </div>
-    <div v-if="cardOpen" ref="cardEl" :class="[$style.card, placement]"
+    <div v-if="cardOpen" ref="cardEl" class="w-corners" :class="[$style.card, placement]"
       :style="{ width: host.props.cardWidth ?? '20rem' }">
       <div :class="$style.cardHead">
         <i :class="dockIcon(host.props)" class="w-accent" />
@@ -334,7 +334,7 @@ const styles = useCssModule()
   border-radius: var(--w-radius);
   box-shadow: var(--w-shadow);
   color: var(--w-fg);
-  font-size: calc(12.5px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-md);
 }
 .below { top: calc(100% + 6px); left: 0; }
 .above { bottom: calc(100% + 6px); left: 0; }
@@ -349,7 +349,16 @@ const styles = useCssModule()
   padding: 4px var(--w-pad);
   background: var(--w-header-bg);
   border-bottom: 1px solid var(--w-line);
-  font-size: calc(13px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-md);
+}
+/* The game look (P5): bronze frame, centred small caps title over a gold fade line. */
+:global([data-woke-look="game"]) .card { font-family: var(--w-body); border-color: var(--w-frame); box-shadow: var(--w-frame-shadow); }
+:global([data-woke-look="game"]) .cardHead {
+  position: relative; justify-content: center; background: var(--w-head-ground); border-bottom-color: transparent;
+  font-family: var(--w-label); font-size: var(--w-fs-lg); letter-spacing: 0.04em; color: var(--w-gold);
+}
+:global([data-woke-look="game"]) .cardHead::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; pointer-events: none; background: var(--w-gold-fade);
 }
 .extraHead {
   padding: 4px var(--w-pad) 2px;
