@@ -523,7 +523,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .weightsLink { all: unset; cursor: pointer; color: var(--w-accent); }
 .weightsLink:hover, .weightsLink:focus-visible { text-decoration: underline; }
 .sortHead { all: unset; cursor: pointer; white-space: nowrap; }
-.sortHead:hover, .sortHead:focus-visible { color: var(--w-fs-md); }
+.sortHead:hover, .sortHead:focus-visible { color: var(--w-fg); }
 .sorted { color: var(--w-accent); }
 .rareGrid { grid-template-columns: minmax(0, 1fr) 62px 76px calc(64px * var(--w-text-scale, 1)); }
 .sourceGrid { grid-template-columns: minmax(0, 1fr) 76px 44px; }

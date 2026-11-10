@@ -1,6 +1,6 @@
 <template>
   <div :class="$style.wrap">
-    <input :class="$style.field" :value="modelValue ?? ''" :placeholder="placeholder" spellcheck="false"
+    <input class="w-mono" :class="$style.field" :value="modelValue ?? ''" :placeholder="placeholder" spellcheck="false"
       @change="emit('update:modelValue', ($event.target as HTMLInputElement).value.trim() || null)">
     <span v-if="status" :class="[$style.chip, $style[status.kind]]" :title="status.title">{{ status.text }}</span>
     <w-button size="sm" @click="browse">Browse</w-button>

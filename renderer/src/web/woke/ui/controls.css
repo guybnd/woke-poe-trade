@@ -26,8 +26,9 @@
   color: var(--w-fg);
   white-space: nowrap;
 }
-.w-btn:hover { background: var(--w-panel-3); }
-.w-btn:disabled { opacity: 0.5; pointer-events: none; }
+.w-btn:hover:not(:disabled) { background: var(--w-panel-3); }
+/* Disabled buttons keep their hover title: it often says why. */
+.w-btn:disabled { opacity: 0.5; cursor: default; }
 .w-btn--sm { padding: 1px 7px; font-size: var(--w-fs-sm); }
 .w-btn--primary { background: var(--w-accent); border-color: var(--w-accent); color: var(--w-accent-fg); }
 .w-btn--primary:hover { background: var(--w-accent); filter: brightness(1.1); }
@@ -35,10 +36,12 @@
 .w-btn--ghost:hover { color: var(--w-fg); }
 .w-btn--danger { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 40%, transparent); }
 
-/* Bronze bevel. A selector list, not :is(), so .w-btn keeps class weight and its variants below win. */
+/* Bronze bevel. A selector list, not :is(), so .w-btn keeps class weight and its variants below win.
+   The price check's buttons take two ids to beat price-table.css, which loads later. Small caps
+   never go under 13px (P19). */
 :root[data-woke-look="game"] :is(.w-btn, .w-skin-btn):not(.w-btn--ghost),
 :root[data-woke-look="game"] #overlay-window .btn,
-:root[data-woke-look="game"] #price-window .w-pc-btn {
+:root[data-woke-look="game"] #overlay-window #price-window :is(.w-pc-btn, .btn) {
   font-family: var(--w-label);
   letter-spacing: 0.03em;
   color: var(--w-gold);
@@ -47,14 +50,16 @@
   border-radius: var(--w-r-sm);
   box-shadow: var(--w-bevel-shadow);
 }
-:root[data-woke-look="game"] :is(.w-btn, .w-skin-btn):not(.w-btn--ghost):hover,
-:root[data-woke-look="game"] #overlay-window .btn:hover,
-:root[data-woke-look="game"] #price-window .w-pc-btn:hover {
+:root[data-woke-look="game"] :is(.w-btn--sm, .w-skin-btn) { font-size: var(--w-fs-md); }
+:root[data-woke-look="game"] :is(.w-btn, .w-skin-btn):not(.w-btn--ghost, .w-btn--danger, .w-btn--primary, .w-skin-primary, :disabled):hover,
+:root[data-woke-look="game"] #overlay-window .btn:not(.w-pc-primary, :disabled):hover,
+:root[data-woke-look="game"] #overlay-window #price-window :is(.w-pc-btn, .btn):not(.w-pc-primary, :disabled):hover {
   border-color: var(--w-frame-hi);
   color: var(--w-gold-hi);
 }
 :root[data-woke-look="game"] :is(.w-btn.w-btn--primary, .w-skin-btn.w-skin-primary),
-:root[data-woke-look="game"] #price-window .btn.w-pc-primary {
+:root[data-woke-look="game"] #overlay-window #price-window .btn.w-pc-primary {
+  font-family: var(--w-label);
   background: var(--w-bevel-primary);
   border-color: var(--w-frame-lit);
   color: var(--w-gold-hi);
@@ -133,21 +138,27 @@ button.w-chip:hover { color: var(--w-fg); }
 .w-seg > button[aria-pressed="true"] { background: var(--w-accent-soft); color: var(--w-accent); }
 
 /* Bevelled parts, the active one pressed in. */
-:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) {
+:root[data-woke-look="game"] .w-seg,
+:root[data-woke-look="game"] #price-window .w-rollpick {
   border: 1px solid var(--w-frame);
   border-radius: var(--w-r-sm);
   box-shadow: 0 1px 0 #000;
 }
-:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button {
+:root[data-woke-look="game"] .w-seg > button,
+:root[data-woke-look="game"] #price-window .w-rollpick > button {
   font-family: var(--w-label);
+  font-size: var(--w-fs-md);
   letter-spacing: 0.03em;
   color: var(--w-gold);
   background: var(--w-bevel);
   box-shadow: var(--w-bevel-shadow);
 }
-:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button + button { border-left: 1px solid var(--w-well-line); }
-:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button:hover { color: var(--w-gold-hi); }
-:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button[aria-pressed="true"] {
+:root[data-woke-look="game"] .w-seg > button + button,
+:root[data-woke-look="game"] #price-window .w-rollpick > button + button { border-left: 1px solid var(--w-well-line); }
+:root[data-woke-look="game"] .w-seg > button:hover,
+:root[data-woke-look="game"] #price-window .w-rollpick > button:hover { color: var(--w-gold-hi); }
+:root[data-woke-look="game"] .w-seg > button[aria-pressed="true"],
+:root[data-woke-look="game"] #price-window .w-rollpick > button[aria-pressed="true"] {
   background: var(--w-pressed);
   color: var(--w-gold-hi);
   box-shadow: var(--w-pressed-shadow);
@@ -182,21 +193,28 @@ button.w-chip:hover { color: var(--w-fg); }
   border: 1px solid var(--w-line);
   border-radius: var(--w-r-sm);
 }
-.w-field, .w-select, .w-input:focus { outline: none; border-color: var(--w-accent); }
-.w-field, .w-input::placeholder { color: var(--w-faint); }
-:root[data-woke-look="game"] :is(.w-field, .w-select, .w-input, #price-window .w-roll-input) {
+.w-field:focus, .w-select:focus, .w-input:focus { outline: none; border-color: var(--w-accent); }
+.w-field::placeholder, .w-input::placeholder { color: var(--w-faint); }
+/* Selector lists, so .w-input keeps class weight and .w-input-bad's red still wins. */
+:root[data-woke-look="game"] :is(.w-field, .w-select, .w-input),
+:root[data-woke-look="game"] #price-window .w-roll-input {
   font-family: var(--w-num);
   background: var(--w-well);
   border: 1px solid var(--w-well-line);
   border-radius: var(--w-r-sm);
   box-shadow: var(--w-well-shadow);
 }
-:root[data-woke-look="game"] :is(.w-field, .w-select, .w-input, #price-window .w-roll-input):focus {
+:root[data-woke-look="game"] :is(.w-field, .w-select, .w-input):focus,
+:root[data-woke-look="game"] #price-window .w-roll-input:focus {
   border-color: var(--w-frame-hi);
   box-shadow: var(--w-well-shadow), 0 0 0 1px rgba(227, 183, 95, 0.3);
 }
 :root[data-woke-look="game"] #price-window .w-roll-input { color: var(--w-gold-hi); font-weight: 600; font-variant-numeric: tabular-nums; }
 :root[data-woke-look="game"] .w-select option { background: var(--w-well); }
+
+/* Monospace fields (regex, paths, import text) keep their face. */
+:root[data-woke-look="game"] :is([data-w-panel], .w-surface, [data-w-settings]) :is(.font-mono, .w-mono),
+:root[data-woke-look="game"] :is(.w-input, .w-field).font-mono { font-family: var(--w-mono); }
 
 /* ---------- Switch: a square bronze slot, gold when on ---------- */
 :root[data-woke-look="game"] .w-toggle-track {

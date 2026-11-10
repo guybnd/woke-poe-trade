@@ -29,8 +29,8 @@
 }
 
 /* Numbers, prices, fields and key caps stay Inter: Fontin's old-style digits
- * misread ("22,431"). */
-:root[data-woke-look="game"] :is([data-w-panel], .w-surface, #price-window, [data-w-settings]) :is(input, select, textarea, kbd) {
+ * misread ("22,431"). The price window's body is Inter already. */
+:root[data-woke-look="game"] :is([data-w-panel], .w-surface, [data-w-settings]) :is(input, select, textarea, kbd) {
   font-family: var(--w-num);
 }
 
