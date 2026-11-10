@@ -389,6 +389,7 @@ export default defineComponent({
       let last: MouseEvent | null = null
       let frame = 0
       let offset = { dx: 0, dy: 0 }
+      let anchorAtStart: Anchor | null = null
 
       // While dragging, the widget is only shifted on screen (CSS translate, at
       // most once a frame): the panel isn't rebuilt or laid out again for every
@@ -421,6 +422,7 @@ export default defineComponent({
             fitShift.value = { x: 0, y: 0 }
           }
           el.style.willChange = 'translate'
+          anchorAtStart = props.config.anchor
           emit('moved')
         }
         last = ev
@@ -436,8 +438,12 @@ export default defineComponent({
         if (dragged) {
           if (frame) cancelAnimationFrame(frame)
           place()
-          props.config.anchor.x = startX + offset.dx / window.innerWidth * 100
-          props.config.anchor.y = startY + offset.dy / window.innerHeight * 100
+          // A widget's own mouseup can run first and place it itself (the rail
+          // dropped on an edge lies flat under the buffs): that spot wins.
+          if (props.config.anchor === anchorAtStart) {
+            props.config.anchor.x = startX + offset.dx / window.innerWidth * 100
+            props.config.anchor.y = startY + offset.dy / window.innerHeight * 100
+          }
           el.style.removeProperty('translate')
           el.style.removeProperty('will-change')
           swallowNextClick()
