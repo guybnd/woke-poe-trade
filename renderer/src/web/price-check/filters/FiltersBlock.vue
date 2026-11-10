@@ -13,7 +13,7 @@
         <i class="pl-1 text-xs" :class="statsVisibility.disabled ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" />
       </button>
       <!-- woke: up here, not under the list, so it stays in reach however long the details make it. -->
-      <ui-toggle v-if="!statsVisibility.disabled && hasAnySources" data-mods-toggle title="Under the lines, show the mods behind them: prefix or suffix, name, tier and what each adds. Each mod once. Doesn't change the search."
+      <ui-toggle v-if="!statsVisibility.disabled && hasAnySources" data-mods-toggle title="Under each total, show the mods it adds up: prefix or suffix, name, tier and what each adds. Doesn't change the search."
         v-model="showFilterSources" :class="$style.headToggle">{{ t('filters.mods_toggle') }}</ui-toggle>
       <slot name="rolls" />
     </div>
@@ -109,7 +109,8 @@ export default defineComponent({
   setup (props, ctx) {
     const statsVisibility = shallowReactive({ disabled: false })
     const showHidden = shallowRef(false)
-    const showFilterSources = shallowRef(false)
+    // On by default: a total's mods are what the line hides.
+    const showFilterSources = shallowRef(true)
 
     watch(() => props.item, () => {
       showHidden.value = false
@@ -162,7 +163,8 @@ export default defineComponent({
       // Visible lines claim their mods first; a faded hidden line only gets what's left.
       const rows = shownStats.value.map(r => r.filter)
       for (const filter of [...rows.filter(f => !isHiddenRow(f)), ...rows.filter(isHiddenRow)]) {
-        if (filter.group || !hasSourceInfo(filter)) continue
+        // A split total already lists its mods as their own rows.
+        if (filter.group || !hasSourceInfo(filter) || actions?.isSplit(filter)) continue
         const fresh = filter.sources.filter(s => !seen.has(s.modifier))
         for (const s of fresh) seen.add(s.modifier)
         if (fresh.length) out.set(filter, fresh)

@@ -25,6 +25,8 @@ const emit = defineEmits<{
   align-items: center;
   height: calc(1.5rem * var(--w-text-scale, 1));
   line-height: calc(1.5rem * var(--w-text-scale, 1));
+  /* woke: a full-height window must not squeeze the bar, which nudged everything below it. */
+  flex-shrink: 0;
 
   button {
     @apply px-2 pt-px;
