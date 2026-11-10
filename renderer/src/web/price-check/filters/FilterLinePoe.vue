@@ -3,7 +3,7 @@
        clicking anywhere on it, empty space too, picks it, and FiltersBlock then draws it as a FilterModifier row. -->
   <div class="w-poe-line" :class="{ 'w-poe-child': isChild, 'w-poe-dimmed': isSplit, 'w-poe-hybrid': hybrid, 'w-poe-hybrid-first': hybrid?.first, 'w-poe-hybrid-last': hybrid?.last }"
     :title="hybrid ? 'One hybrid mod. Click to search it: each of its lines at the bottom of its tier.' : look.label"
-    @click="pick">
+    @click="onClick">
     <span class="w-poe-tier" :class="{ 'w-poe-t1': tier === 'T1' }">{{ tier }}</span>
     <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
@@ -18,10 +18,10 @@
     <button v-if="qTag != null" type="button" data-catalyst-tag
       class="w-poe-qtag" :class="{ on: qOn }"
       :title="qOn ? 'Only items with this catalyst quality or more. Click to search any quality.' : 'A catalyst raised this line. Click to only find items with the same catalyst quality.'"
-      @click.stop="catalyst!.toggle()">Q{{ qTag }}</button>
+      @click="catalyst!.toggle()">Q{{ qTag }}</button>
     <button v-if="canSplit" type="button" class="w-poe-ptag"
       :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-      @click.stop="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
+      @click="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
   </div>
 </template>
 
@@ -58,6 +58,14 @@ const modName = computed(() => {
 const text = computed(() => INTERNAL_TRADE_IDS.includes(props.filter.tradeId[0])
   ? t(props.filter.tradeId[0], ['#', '#'])
   : props.filter.text)
+
+// Anywhere on the line picks it, apart from its own Q tag and split buttons.
+// No stopPropagation on those: the overlay's own click listeners must still see every click.
+function onClick (e: MouseEvent) {
+  const btn = (e.target as HTMLElement).closest('button')
+  if (btn && !btn.classList.contains('w-poe-line-text')) return
+  pick()
+}
 
 function pick () {
   // A line of a hybrid's box searches the whole mod.
