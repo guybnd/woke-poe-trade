@@ -3,11 +3,25 @@ name: Release
 # Push a tag like v0.1.0 (it must match main/package.json "version") to build
 # the Windows installer and attach it to a DRAFT release. Players and the
 # auto-updater only see it after someone presses Publish on GitHub.
+#
+# Or run it by hand on master: it drafts v<main/package.json version> from that
+# commit, with the notes given, and with "publish" ticked it publishes the draft
+# (GitHub then makes the tag). That needs no tag push, so it works from anywhere
+# that can start a workflow.
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      notes:
+        description: Release notes (Markdown)
+        required: false
+        default: ''
+      publish:
+        description: Publish the release once every file is on it
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -25,13 +39,33 @@ jobs:
       with:
         node-version: 22
     - name: Check tag matches version
-      if: ${{ startsWith(github.ref, 'refs/tags/') }}
       shell: bash
       run: |
         version=$(node -p "require('./main/package.json').version")
-        if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+        if [[ "$GITHUB_REF" == refs/tags/* && "v$version" != "$GITHUB_REF_NAME" ]]; then
           echo "Tag $GITHUB_REF_NAME does not match main/package.json version $version"
           exit 1
+        fi
+        echo "RELEASE_TAG=v$version" >> "$GITHUB_ENV"
+    # One draft, made before packaging. electron-builder uploads the installer,
+    # the portable exe and the blockmap at once, and with no release there yet
+    # each upload made its own draft: the stray blockmap-only drafts on every
+    # release so far. With this one in place they all find it.
+    - name: Draft the release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NOTES: ${{ inputs.notes }}
+      run: |
+        found=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq "[.[] | select(.tag_name == \"$RELEASE_TAG\")] | map(if .draft then \"draft\" else \"published\" end) | join(\" \")")
+        if [[ "$found" == *published* ]]; then
+          echo "$RELEASE_TAG is already published. Bump main/package.json first."
+          exit 1
+        fi
+        if [ -z "$found" ]; then
+          gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
+        elif [ -n "$NOTES" ]; then
+          gh release edit "$RELEASE_TAG" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
         fi
     - run: npm ci
       working-directory: ./renderer
@@ -63,11 +97,33 @@ jobs:
         subject-path: main/dist/*.exe
     # Next to the installers on the draft release, so players can check a download.
     - name: Attach checksums to the release
-      if: ${{ startsWith(github.ref, 'refs/tags/') }}
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload "$GITHUB_REF_NAME" main/dist/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
+      run: gh release upload "$RELEASE_TAG" main/dist/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
+    # Every file on one release, and no second draft for this tag left behind.
+    - name: Check the release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        version=${RELEASE_TAG#v}
+        ids=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq ".[] | select(.tag_name == \"$RELEASE_TAG\" and .draft) | .id")
+        if [ "$(echo "$ids" | grep -c .)" != "1" ]; then
+          echo "Expected one draft for $RELEASE_TAG, found: $ids"
+          exit 1
+        fi
+        assets=$(gh api "repos/$GITHUB_REPOSITORY/releases/$ids" --jq '[.assets[].name] | join(" ")')
+        echo "Files: $assets"
+        for f in "Woke-PoE-Trade-Setup-$version.exe" "Woke-PoE-Trade-Setup-$version.exe.blockmap" "Woke-PoE-Trade-$version-portable.exe" latest.yml SHA256SUMS.txt; do
+          [[ " $assets " == *" $f "* ]] || { echo "Missing $f"; exit 1; }
+        done
+    - name: Publish
+      if: ${{ inputs.publish && github.ref == 'refs/heads/master' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release edit "$RELEASE_TAG" --draft=false --latest -R "$GITHUB_REPOSITORY"
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: windows-installer
