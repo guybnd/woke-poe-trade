@@ -79,4 +79,13 @@ describe('unique price check defaults', () => {
     expect(on.some(t => /Energy Shield per Level/.test(t))).toBe(true)
     expect(on.some(t => /Spell Skill Gems|Blind|Mana per Level/.test(t))).toBe(false)
   })
+
+  it('ticks a total that holds a corruption implicit', () => {
+    const on = ticked(kaom('30',
+      '{ Corruption Implicit Modifier — Elemental, Resistance }',
+      '+10(8-12)% to all Elemental Resistances',
+      '--------'
+    ).replace('The warrior who fears will fall.\n', 'The warrior who fears will fall.\n--------\nCorrupted\n'))
+    expect(on.some(t => /Elemental Resistance/.test(t))).toBe(true)
+  })
 })

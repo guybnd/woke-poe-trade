@@ -1,5 +1,5 @@
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
-import { ModifierType, StatCalculated, statSourcesTotal, translateStatWithRoll } from '@/parser/modifiers'
+import { ModifierMechanic, ModifierType, StatCalculated, statSourcesTotal, translateStatWithRoll } from '@/parser/modifiers'
 import { JEWELLERY } from '@/parser/meta'
 import { getPropQuality, QUALITY_CHANGING_ENCHANT } from '@/parser/calc-q20'
 import { percentRoll, percentRollDelta, roundRoll } from './util'
@@ -590,14 +590,24 @@ const UNIQUE_ROLL_TAGS = new Set<FilterTag>([
 ])
 const UNIQUE_KEEP_IDS = new Set(['item.memory_strands', 'item.base_percentile'])
 
+const UNIQUE_STANDOUT_MECHANICS = new Set<ModifierMechanic | undefined>([
+  ModifierMechanic.Corruption,
+  ModifierMechanic.Foulborn,
+  ModifierMechanic.Vestigial
+])
+
 function tickUniqueStandouts (filters: StatFilter[], item: ParsedItem) {
   for (const filter of filters) {
     if (filter.hidden) continue
-    if (filter.tag === FilterTag.Corruption) {
+    // A total (all resistances) can swallow a corruption or foulborn mod; it carries it.
+    if (filter.tag === FilterTag.Corruption ||
+      filter.sources.some(s => UNIQUE_STANDOUT_MECHANICS.has(s.modifier.info.mechanic))) {
       filter.disabled = false
       continue
     }
     if (!UNIQUE_ROLL_TAGS.has(filter.tag)) continue
+    // Which mod the foulborn one replaced sets the price, so its other mods stay as set.
+    if (item.isFoulborn && filter.tag === FilterTag.Explicit) continue
     if (UNIQUE_KEEP_IDS.has(filter.tradeId[0])) continue
     if (filter.statRef === ABYSS_SOCKETS && VARIABLE_ABYSS_SOCKETS.has(item.info.refName)) continue
     const goodness = filter.roll?.bounds ? filter.roll.goodness : undefined
