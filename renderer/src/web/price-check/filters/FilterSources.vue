@@ -10,15 +10,12 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue'
 import SourceInfo from './SourceInfo.vue'
-import { FilterTag, StatFilter } from './interfaces'
+import { StatFilter } from './interfaces'
 
-// A row has details to show when its mods are known by name, tier or rank,
-// or it adds several mods up (a pseudo or a total).
+// Only a line several mods add up to (a pseudo or a total) has details to show:
+// a one-mod line would only repeat itself, and its tier is already beside it.
 export function hasSourceInfo (filter: StatFilter): boolean {
-  if (!filter.sources.length || filter.option != null) return false
-  if (filter.tag === FilterTag.Pseudo || filter.sources.length >= 2) return true
-  const { info } = filter.sources[0].modifier
-  return info.name != null || info.tier != null || info.rank != null
+  return filter.option == null && filter.sources.length >= 2
 }
 
 export default defineComponent({
@@ -39,4 +36,8 @@ export default defineComponent({
   font-size: 0.9em;
 }
 .source + .source { margin-top: 2px; }
+/* Fixed line boxes: the rolls' number font loads late, and its own line height
+   would grow each line a pixel and nudge every row below. */
+.source :global(div) { line-height: calc(20px * var(--w-text-scale, 1)); }
+.source :global(.font-exo2) { line-height: 1; }
 </style>

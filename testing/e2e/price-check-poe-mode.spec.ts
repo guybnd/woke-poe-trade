@@ -229,21 +229,22 @@ for (const style of ['poe', 'standard']) {
   })
 }
 
-// Mod details lists each mod once, under the first line it feeds, with no "#%" struck lines,
-// and its toggle sits above the list, so it turns off however long the list grows.
-test('PoE mode: Mod details lists each mod once and turns off again', async ({ overlay }) => {
+// Mod details, on by default, lists the mods behind each total once; a one-mod line has none.
+// Its toggle sits above the list, so it turns off however long the list grows.
+test('PoE mode: Mod details shows the mods behind totals, once, and turns off', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot({ patch: poe })
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const win = overlay.page.locator('#price-window')
   await expect(win).toContainText('Energy Shield')
   const toggle = win.locator('[data-mods-toggle]')
-  await toggle.click()
   const sources = win.locator('.w-pc-sources')
   await expect(sources.first()).toBeVisible()
   // Seraphim's (a hybrid: ES and stun recovery) is behind three lines, listed once.
   await expect(sources.filter({ hasText: 'Seraphim' })).toHaveCount(1)
   await expect(sources.filter({ hasText: 'Unassailable' })).toHaveCount(1)
+  // Life is one mod: no details under it.
+  await expect(sources.filter({ hasText: 'Fecund' })).toHaveCount(0)
   expect((await sources.allInnerTexts()).join(' ')).not.toContain('#%')
   expect(await win.locator('.w-pc-sources .line-through').count()).toBe(0)
   // A total shows its mods' tiers.
@@ -270,7 +271,7 @@ test('PoE mode lists the local Energy Shield mod behind the total, once; Standar
   await overlay.copyItem('items/rare-body-armour-es.txt')
   await expect(win).not.toHaveClass(/w-poe/)
   await expect(win).toContainText('Energy Shield')
-  await expect(win.getByText('increased Energy Shield')).toHaveCount(0)
+  await expect(win.locator('[data-stat-row]').getByText('increased Energy Shield')).toHaveCount(0)
 })
 
 test('PoE mode: a local line two mods add up to splits, and a hybrid box searches that mod', async ({ overlay, fakeApp }) => {

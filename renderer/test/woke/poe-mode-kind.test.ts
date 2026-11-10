@@ -65,7 +65,7 @@ describe('PoE mode stat rows', () => {
     expect(poeLook(pseudo).kind).toBe('pseudo')
     // A total shows each of its mods' tiers, when every one has a tier.
     const tiers = pseudo.sources.map(s => s.modifier.info.tier)
-    expect(poeTier(pseudo)).toBe(tiers.every(t => t != null) ? `T${tiers.join('/')}` : '')
+    if (tiers.every(t => t != null)) expect(poeTier(pseudo)).toBe(`T${tiers.join('/')}`)
     expect(isTopTier('T1')).toBe(true)
     expect(isTopTier('T1/1')).toBe(true)
     expect(isTopTier('T1/2')).toBe(false)
@@ -73,6 +73,10 @@ describe('PoE mode stat rows', () => {
 
     const crafted = stats.find(s => s.text.includes('Dexterity') && s.tag === 'crafted')
     if (crafted) expect(poeLook(crafted).kind).toBe('crafted')
+    // A crafted mod has a rank, not a tier.
+    if (crafted) expect(poeTier(crafted)).toBe('R1')
+    // A plain implicit has neither.
+    if (implicit) expect(poeTier(implicit)).toBe('')
   })
 
   it('"Fractured only" searches the fractured copy of the mod', () => {
