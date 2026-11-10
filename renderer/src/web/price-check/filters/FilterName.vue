@@ -3,7 +3,11 @@
   <div class="filter-name" :class="{ 'w-poe-head': poe }">
     <div class="filter-name-main">
       <div class="filter-name-title">
-        <span class="filter-name-label" :data-rarity="item.rarity" :title="label">{{ label }}</span>
+        <!-- woke: with a Generic/Base choice, clicking the name switches it, like the switch below. -->
+        <button v-if="filters.searchRelaxed" type="button" class="filter-name-label filter-name-cycle" data-scope-cycle
+          :data-rarity="item.rarity" :title="`${label}. Click to search ${filters.searchRelaxed.disabled ? 'any item of this category' : 'only this base type'}.`"
+          @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ label }}</button>
+        <span v-else class="filter-name-label" :data-rarity="item.rarity" :title="label">{{ label }}</span>
         <span v-if="baseName" class="filter-name-base">{{ baseName }}</span>
       </div>
       <div class="filter-name-chips">
@@ -16,9 +20,13 @@
           class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
           title="Corrupted filter. Click to change: Any, Corrupted, Uncorrupted."
           @click="cycleCorrupted">
-          <!-- Every label stays in the grid cell, so the chip keeps its width and stays under the mouse. -->
-          <span v-for="state of corruptedStates" :key="state.search"
-            :class="{ shown: state.search === filters.corrupted.search }">{{ t(state.label) }}</span>
+          <!-- The Vaal Orb says what the chip is about. Every label stays in the grid cell,
+               so the chip keeps its width and stays under the mouse. -->
+          <w-icon item="Vaal Orb" size="sm" title="" />
+          <span class="filter-name-corrupted-labels">
+            <span v-for="state of corruptedStates" :key="state.search"
+              :class="{ shown: state.search === filters.corrupted.search }">{{ t(state.label) }}</span>
+          </span>
         </button>
         <filter-btn-logical v-if="searchSub"
           :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
@@ -74,7 +82,7 @@ import { useI18n } from 'vue-i18n'
 import type { ParsedItem } from '@/parser'
 import type { CorruptedSearch, ItemFilters } from './interfaces'
 import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
-import { WSegmented } from '@/web/woke/ui'
+import { WIcon, WSegmented } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
 import FilterBtnLogical from './FilterBtnLogical.vue'
@@ -82,7 +90,7 @@ import { poeOn } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
   name: 'FilterName',
-  components: { FilterBtnNumeric, FilterBtnLogical, WSegmented },
+  components: { FilterBtnNumeric, FilterBtnLogical, WSegmented, WIcon },
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -196,6 +204,8 @@ export default defineComponent({
   font-size: calc(18px * var(--w-text-scale, 1));
   line-height: calc(24px * var(--w-text-scale, 1));
 }
+.filter-name-cycle { cursor: pointer; text-align: left; min-width: 0; }
+.filter-name-cycle:hover { text-decoration: underline dotted; text-underline-offset: 4px; }
 .filter-name-base {
   flex: none;
   font-size: calc(12px * var(--w-text-scale, 1));
@@ -211,9 +221,9 @@ export default defineComponent({
 }
 .filter-name-chips:empty { display: none; }
 .filter-name-corrupted {
-  display: inline-grid;
-  justify-items: center;
+  display: inline-flex;
   align-items: center;
+  gap: 5px;
   min-height: calc(24px * var(--w-text-scale, 1));
   padding: 0 8px;
   border: 1px solid var(--w-line-soft);
@@ -222,8 +232,11 @@ export default defineComponent({
   font-size: calc(13px * var(--w-text-scale, 1));
   white-space: nowrap;
 }
-.filter-name-corrupted > span { grid-area: 1 / 1; visibility: hidden; }
-.filter-name-corrupted > span.shown { visibility: visible; }
+/* The chip's own title shows over the orb too. */
+.filter-name-corrupted img { pointer-events: none; }
+.filter-name-corrupted-labels { display: inline-grid; justify-items: center; }
+.filter-name-corrupted-labels > span { grid-area: 1 / 1; visibility: hidden; }
+.filter-name-corrupted-labels > span.shown { visibility: visible; }
 .filter-name-corrupted:hover { color: var(--w-fg); }
 .filter-name-corrupted.on {
   border-color: var(--w-down);

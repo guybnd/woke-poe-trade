@@ -151,6 +151,13 @@ test('rare: the Generic / Base switch changes the title and the search', async (
 
   await scope.getByText('Generic').click()
   await expect(title).toHaveText('Ring')
+
+  // Clicking the title switches it too, both ways.
+  await title.click()
+  await expect(title).toHaveText('Two-Stone Ring')
+  await expect(scope.getByText('Base')).toHaveAttribute('aria-pressed', 'true')
+  await title.click()
+  await expect(title).toHaveText('Ring')
 })
 
 test('unique: the Corrupted chip cycles Any, Corrupted, Uncorrupted at one width', async ({ overlay, fakeApp }) => {

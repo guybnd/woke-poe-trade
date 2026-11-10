@@ -13,6 +13,44 @@
   box-shadow: var(--w-frame-shadow);
 }
 
+/* The title bar: dark header, gold fade line, the league centred in small caps between diamonds. */
+:root[data-woke-look="game"] #price-window [data-price-title] {
+  position: relative;
+  height: calc(28px * var(--w-text-scale, 1));
+  background: var(--w-head-ground);
+  color: var(--w-gold);
+}
+:root[data-woke-look="game"] #price-window [data-price-title]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: var(--w-gold-fade);
+}
+:root[data-woke-look="game"] #price-window [data-price-title] > button,
+:root[data-woke-look="game"] #price-window [data-price-title] > * > button { color: var(--w-gold); background: none; }
+:root[data-woke-look="game"] #price-window [data-price-title] button:hover { color: var(--w-gold-hi); background: none; }
+/* The close button by name: an open popover appends itself to the bar, so :last-child moves. */
+:root[data-woke-look="game"] #price-window [data-price-title] > [data-price-close]:hover { color: var(--w-bad-fg); }
+:root[data-woke-look="game"] #price-window [data-price-title-text] {
+  font-family: var(--w-label);
+  font-size: var(--w-fs-lg);
+  letter-spacing: 0.04em;
+}
+:root[data-woke-look="game"] #price-window [data-price-title-text]::before,
+:root[data-woke-look="game"] #price-window [data-price-title-text]::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 10px;
+  background: var(--w-frame-lit);
+  transform: translateY(-2px) rotate(45deg);
+}
+
 #price-window .w-sym { font-family: var(--w-num); font-weight: 700; }
 
 /* ---- Tooltip-line chips: square item tags ---- */
