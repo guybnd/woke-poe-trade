@@ -102,7 +102,8 @@
 
 /* The pseudo total's quiet tag: small and square, no gold. */
 #price-window.w-poe .w-poe-ptag {
-  font-family: var(--poe-num);
+  font-family: var(--poe-font);
+  letter-spacing: .03em;
   font-size: calc(10.5px * var(--w-text-scale, 1));
   line-height: calc(15px * var(--w-text-scale, 1));
   padding: 0 6px;
@@ -113,6 +114,7 @@
   white-space: nowrap;
   flex: none;
 }
+#price-window.w-poe .w-poe-row .w-poe-ptag { align-self: center; }
 #price-window.w-poe .w-poe-ptag:hover { color: var(--w-dim); border-color: #5a4c39; }
 
 /* The catalyst's Q tag on an unpicked line: square, blue like the game's quality. */
@@ -206,6 +208,27 @@
   border-radius: 2px;
   box-shadow: inset 0 0 0 1px #000;
 }
+/* Under the well: Collapse and the two toggles, the size of the window's other small labels.
+   The window's base font is the game's at the price check size, so one-word labels
+   wrapped and ran into the well. */
+#price-window.w-poe .w-pc-stat-foot {
+  margin-top: 6px;
+  align-items: center;
+  row-gap: 4px;
+  font-family: var(--poe-font);
+  font-size: calc(14px * var(--w-text-scale, 1));
+  line-height: 1.2;
+}
+#price-window.w-poe .w-pc-stat-foot > * { padding-top: 0; font-size: inherit; }
+#price-window.w-poe .w-pc-collapse {
+  width: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--poe-chip-line);
+  border-radius: 2px;
+  background: #110e0a;
+  color: var(--w-dim);
+}
+#price-window.w-poe .w-pc-collapse:hover { border-color: var(--poe-bronze-hi); color: var(--poe-gold-hi); }
 #price-window.w-poe .w-poe-sep {
   height: 1px;
   margin: 6px 30px;
@@ -260,19 +283,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
   gap: 6px;
   margin: 0 6px;
   padding: 3px 30px;
   border-radius: 2px;
 }
 .w-poe-line:hover { background: var(--w-accent-soft); }
-.w-poe-line > .w-poe-tier { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); }
+/* The tier sits just before the text it belongs to; a far-left gutter left it
+   stranded from centred lines. No tier, no gap. */
+#price-window.w-poe .w-poe-line > .w-poe-tier { width: auto; }
+#price-window.w-poe .w-poe-line > .w-poe-tier:empty { display: none; }
 .w-poe-line-text {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-width: 0;
   max-width: 100%;
   text-align: center;
   font-family: FontinSmallCaps, Fontin, Georgia, serif;

@@ -38,6 +38,14 @@
       </div>
       <div class="italic text-gray-500">PoE draws the filters like the game's item tooltip: click a line to search for it.</div>
     </div>
+    <div class="mb-4" data-price-view>
+      <div class="flex-1 mb-1">Listings</div>
+      <div class="flex">
+        <ui-radio v-model="priceView" value="improved" class="mr-4">Improved</ui-radio>
+        <ui-radio v-model="priceView" value="classic">Classic</ui-radio>
+      </div>
+      <div class="italic text-gray-500">Improved adds a verdict and a fair price over the listings; Classic is APT's plain listing table.</div>
+    </div>
     <div class="mb-2">
       <div class="flex-1 mb-1">{{ t(':show_seller') }}</div>
       <div class="mb-1 flex">
@@ -115,6 +123,7 @@ import { ItemFilters } from './filters/interfaces.js'
 import { configModelValue, configProp, findWidget } from '../settings/utils.js'
 import type { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { useLeagues } from '../background/Leagues'
+import { priceView } from '@/web/woke/price-insight/view'
 
 export default defineComponent({
   name: 'price_check.name',
@@ -137,6 +146,7 @@ export default defineComponent({
       }),
       accountName: configModelValue(() => props.config, 'accountName'),
       showSeller: configModelValue(() => configWidget.value, 'showSeller'),
+      priceView,
       windowStyle: computed<'standard' | 'poe'>({
         get: () => configWidget.value.wokeWindowStyle ?? 'poe',
         set: (value) => { configWidget.value.wokeWindowStyle = value }

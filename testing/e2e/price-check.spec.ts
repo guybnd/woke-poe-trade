@@ -271,10 +271,12 @@ test('unique: improved merges same prices with a count, classic lists every list
   await expect(panel.locator('.w-pc-count-n').first()).toContainText('×')
   const merged = await rows.count()
 
-  await panel.getByRole('button', { name: 'Classic' }).click()
+  // The switch lives in Settings > Price check > Listings, not in the window.
+  await expect(panel.getByRole('button', { name: 'Classic' })).toHaveCount(0)
+  await setPriceView(overlay.page, 'classic')
   await expect.poll(() => rows.count()).toBeGreaterThan(merged)
   await expect(panel.locator('.w-pc-foot')).toHaveCount(0)
-  await panel.getByRole('button', { name: 'Improved' }).click()
+  await setPriceView(overlay.page, 'improved')
 
   // The toolbar fits: nothing runs past the window, the toggle's labels aren't clipped.
   const edge = (await overlay.page.locator('#price-window').boundingBox())!
@@ -283,9 +285,20 @@ test('unique: improved merges same prices with a count, classic lists every list
     const box = (await toolbarButtons.nth(i).boundingBox())!
     expect(box.x + box.width).toBeLessThanOrEqual(edge.x + edge.width)
   }
-  const label = panel.getByRole('button', { name: 'Improved' })
-  expect(await label.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await overlay.snap('unique with merged listings')
+})
+
+test('Settings > Price check > Listings switches Classic and Improved', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true })
+  await overlay.widget('menu').locator('.fa-cog').click()
+  const settings = overlay.widget('settings')
+  await settings.getByText('Price check', { exact: true }).first().click()
+  const row = settings.locator('[data-price-view]')
+  await expect(row).toContainText('Listings')
+  await row.getByText('Classic', { exact: true }).click()
+  await expect.poll(() => overlay.page.evaluate(() => localStorage.getItem('woke.priceView'))).toBe('classic')
+  await row.getByText('Improved', { exact: true }).click()
+  await expect.poll(() => overlay.page.evaluate(() => localStorage.getItem('woke.priceView'))).toBe('improved')
 })
 
 test('the poe.ninja card folds onto the name row and stays as left', async ({ overlay }) => {
@@ -320,3 +333,11 @@ test('a rare shows no poe.ninja chip: poe.ninja only prices its base', async ({ 
   await expect(panel).toContainText('Body Armour')
   await expect(panel.getByTitle(/^poe\.ninja price/)).toHaveCount(0)
 })
+
+// What Settings > Price check > Listings does, without opening Settings.
+async function setPriceView (page: import('@playwright/test').Page, v: 'classic' | 'improved') {
+  await page.evaluate((v) => {
+    localStorage.setItem('woke.priceView', v)
+    window.dispatchEvent(new StorageEvent('storage', { key: 'woke.priceView', newValue: v }))
+  }, v)
+}

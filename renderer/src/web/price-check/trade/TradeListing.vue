@@ -13,7 +13,6 @@
       <div class="w-pc-grow flex-1"></div>
       <button type="button" class="w-icon-btn mr-1" :class="{ invisible: !list }" title="Search again: results are otherwise kept for 5 minutes"
         :disabled="fetching" @click="refresh"><i class="fas fa-sync-alt text-xs" /><span v-if="refreshNote" class="text-xs ml-1">{{ refreshNote }}</span></button>
-      <price-view-toggle class="mr-2" />
       <trade-links :class="{ invisible: !list }"
         :get-link="makeTradeLink" />
     </div>
@@ -185,7 +184,6 @@ import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
 import PriceVerdict from '@/web/woke/price-insight/PriceVerdict.vue'
 import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
-import PriceViewToggle from '@/web/woke/price-insight/PriceViewToggle.vue'
 import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG } from '@/web/woke/price-insight/insight'
@@ -323,7 +321,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
 }
 
 export default defineComponent({
-  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers, PriceViewToggle },
+  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers },
   emits: ['reset'],
   props: {
     filters: {
