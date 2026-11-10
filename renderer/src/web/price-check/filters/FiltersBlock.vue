@@ -41,7 +41,7 @@
         </template>
         <input type="submit" class="hidden" />
       </form>
-      <!-- woke: the toggles keep their label on one line; with no room they move under Collapse. -->
+      <!-- woke: the toggles keep their label on one line; with no room one moves to a second line. -->
       <div class="w-pc-stat-foot flex flex-wrap gap-x-4" :class="$style.foot">
         <button @click="statsVisibility.disabled = !statsVisibility.disabled" class="w-pc-collapse bg-gray-700 px-2 py-1 text-gray-400 leading-none rounded-b w-40 whitespace-nowrap"
           >{{ t('filters.collapse') }} <i class="fas fa-chevron-up pl-1 text-xs text-gray-600"></i></button>

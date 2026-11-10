@@ -192,3 +192,39 @@ test('PoE mode: other items keep their features', async ({ overlay }) => {
     await overlay.snap(`poe mode ${name}`)
   }
 })
+
+// At a big window and text size (20px, 115%), the toggles under the filters each
+// keep their label on one line, apart from the well, in both window styles.
+for (const style of ['poe', 'standard']) {
+  test(`${style}: Hidden filters and Item's mods stay on one line at a big size`, async ({ overlay }) => {
+    await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+    await overlay.boot({
+      patch: (config: any) => {
+        config.fontSize = 20
+        config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle = style
+      }
+    })
+    await overlay.page.evaluate(() => {
+      localStorage.setItem('woke.textScale', '115')
+      window.dispatchEvent(new StorageEvent('storage', { key: 'woke.textScale' }))
+    })
+    await overlay.copyItem('items/rare-ring.txt')
+    const win = overlay.page.locator('#price-window')
+    const foot = win.locator('.w-pc-stat-foot')
+    await expect(foot).toBeVisible()
+    const toggles = foot.locator('button').filter({ hasText: /Hidden filters|Item's mods/ })
+    await expect(toggles).toHaveCount(2)
+    for (let i = 0; i < 2; i++) {
+      const h = await toggles.nth(i).evaluate(el => {
+        const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3
+        return el.getBoundingClientRect().height / lh
+      })
+      expect(h).toBeLessThan(1.9)
+    }
+    if (style === 'poe') {
+      const well = (await win.locator('.w-poe-well').boundingBox())!
+      const footBox = (await foot.boundingBox())!
+      expect(footBox.y).toBeGreaterThanOrEqual(well.y + well.height)
+    }
+  })
+}

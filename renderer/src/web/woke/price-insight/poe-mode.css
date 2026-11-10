@@ -219,7 +219,7 @@
   font-size: calc(14px * var(--w-text-scale, 1));
   line-height: 1.2;
 }
-#price-window.w-poe .w-pc-stat-foot > * { padding-top: 0; font-size: inherit; }
+#price-window.w-poe .w-pc-stat-foot > * { padding-top: 0; font-size: inherit; height: auto; min-height: 1.375rem; }
 #price-window.w-poe .w-pc-collapse {
   width: auto;
   padding: 4px 12px;
