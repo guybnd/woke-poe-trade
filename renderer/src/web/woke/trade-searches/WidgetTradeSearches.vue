@@ -52,7 +52,6 @@
           <WChip v-if="isLiveSearch(openEntry.url)" clickable :active="!!config.liveAlert" class="mr-1"
             :title="config.liveAlert ? 'Beeps when a new result appears. Click to turn off.' : 'Beep and flash when a new result appears on this page'"
             @click="config.liveAlert = !config.liveAlert"><i class="fas fa-bell" /> Ping</WChip>
-          <span class="w-faint text-xs whitespace-nowrap mr-1">{{ overlayKey }} to interact</span>
           <button @click="open(openEntry, 'external')" class="w-icon-btn" title="Open in your browser">
             <i class="fas fa-external-link-alt" />
           </button>
@@ -85,7 +84,7 @@ export default {
 import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
-import { AppConfig, pushHostConfig } from '@/web/Config'
+import { pushHostConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
@@ -189,7 +188,6 @@ function ping () {
 const openEntry = computed(() => props.config.entries.find(e => e.id === openId.value))
 const groups = computed(() => groupByCategory(
   props.config.entries.filter(e => matchesFilter(e, filter.value))))
-const overlayKey = computed(() => AppConfig().overlayKey)
 
 watch(() => props.config.enableHotkeys, () => { pushHostConfig() })
 
@@ -201,15 +199,14 @@ watch(liveOpen, (open) => {
   if (open) livePoll = setInterval(pollLive, 1500)
 }, { immediate: true })
 
-// A search you opened stays over the game until you close it, like before,
-// except a live search: it keeps running out of sight and its dock icon
-// shows new results. The list alone shows only with the overlay open.
+// The list and an open search both go away with the overlay and come back
+// with it: a page left over the game couldn't be clicked. A live search keeps
+// running out of sight and its dock icon shows new results.
 hideWhilePlaying(props.config)
-watch(openEntry, (entry) => {
+watch(openEntry, () => {
   unseen.value = 0
   total.value = -1
   latest.value = []
-  wm.setFlag(props.config.wmId, 'invisible-on-blur', !entry || isLiveSearch(entry.url))
 })
 
 function open (entry: TradeSearchEntry, where: OpenTarget) {
