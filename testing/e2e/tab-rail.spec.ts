@@ -150,7 +150,7 @@ test('an item pasted into the launcher goes to the price check, other text is a 
   await expect(page.getByRole('button', { name: 'Challenges', exact: true })).toHaveCount(0)
   await paste(ITEM)
   await expect(box).toHaveCount(0)
-  await expect(overlay.widget('price-check')).toContainText('Generic')
+  await expect(overlay.widget('price-check').locator('[data-scope-cycle]')).toBeVisible()
 })
 
 test('Ctrl V anywhere in the overlay price checks a copied item', async ({ overlay }) => {
@@ -160,7 +160,7 @@ test('Ctrl V anywhere in the overlay price checks a copied item', async ({ overl
   await page.evaluate(t => navigator.clipboard.writeText(t), ITEM)
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press('Control+V')
-  await expect(overlay.widget('price-check')).toContainText('Generic')
+  await expect(overlay.widget('price-check').locator('[data-scope-cycle]')).toBeVisible()
 })
 
 test('Ctrl V does nothing while the overlay is closed', async ({ overlay }) => {
@@ -173,7 +173,7 @@ test('Ctrl V does nothing while the overlay is closed', async ({ overlay }) => {
     document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
   }, ITEM)
   await page.waitForTimeout(300)
-  await expect(overlay.widget('price-check')).not.toContainText('Generic')
+  await expect(overlay.widget('price-check').locator('[data-scope-cycle]')).toHaveCount(0)
 })
 
 test('opening a tool from the launcher gets the launcher out of the way', async ({ overlay }) => {
@@ -200,7 +200,7 @@ test('Ctrl V with the launcher open and focus off its box closes the launcher', 
   const launcher = page.locator('[class*="launcher"]')
   await launcher.getByRole('button', { name: 'Pin Challenges to the rail' }).click()
   await page.keyboard.press('Control+V')
-  await expect(overlay.widget('price-check')).toContainText('Generic')
+  await expect(overlay.widget('price-check').locator('[data-scope-cycle]')).toBeVisible()
   await expect(launcher).toHaveCount(0)
 })
 
@@ -213,7 +213,7 @@ test('Ctrl V leaves Settings alone', async ({ overlay }) => {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press('Control+V')
   await page.waitForTimeout(300)
-  await expect(overlay.widget('price-check')).not.toContainText('Generic')
+  await expect(overlay.widget('price-check').locator('[data-scope-cycle]')).toHaveCount(0)
 })
 
 test('the launcher lists tools not placed yet, and clicking one opens it', async ({ overlay }) => {

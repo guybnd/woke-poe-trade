@@ -208,7 +208,7 @@ test('the price check chip reads the saved loadout', async ({ overlay }) => {
   await overlay.replayLog('client-logs/campaign-act1.txt')
   await overlay.copyItem('items/rare-ring.txt')
   const panel = overlay.widget('price-check')
-  await expect(panel).toContainText('Generic')
+  await expect(panel.locator('[data-scope-cycle]')).toBeVisible()
   await expect(panel).not.toContainText('Your base')
 
   await overlay.boot({ widgets: loadoutSeed({ [LOADOUTS_FILE]: { skillSet: later } }) })

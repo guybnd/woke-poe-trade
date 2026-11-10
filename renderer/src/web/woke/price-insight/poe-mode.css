@@ -108,13 +108,12 @@
 #price-window .w-poe-qtag:hover { box-shadow: inset 0 0 0 1px var(--w-r-magic); }
 #price-window .w-poe-qtag.on { color: var(--w-fg); background: color-mix(in srgb, var(--w-r-magic) 45%, transparent); box-shadow: inset 0 0 0 1px var(--w-r-magic); }
 
-/* ---- Header: 2x2 grid ---- */
+/* ---- Header: one row (name, chips, numbers, then poe.ninja and verdicts at the end) that wraps when it runs out of width ---- */
 #price-window.w-poe .w-poe-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "name aside" "chips nums";
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: 8px 6px;
   padding-bottom: 10px;
   margin: 0 -16px 10px;
   padding-left: 16px;
@@ -122,12 +121,12 @@
   border-bottom: 1px solid var(--w-chip-line);
 }
 #price-window.w-poe .w-poe-head .filter-name-main { display: contents; }
-#price-window.w-poe .w-poe-head .filter-name-title { grid-area: name; }
+#price-window.w-poe .w-poe-head .filter-name-title { order: 1; margin-right: 6px; }
 #price-window.w-poe .w-poe-head .filter-name-label { font-family: var(--w-label); font-size: calc(19px * var(--w-text-scale, 1)); letter-spacing: .03em; }
-#price-window.w-poe .w-poe-head .filter-name-chips { grid-area: chips; flex: initial; }
-#price-window.w-poe .w-poe-head-aside { grid-area: aside; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+#price-window.w-poe .w-poe-head .filter-name-chips { order: 2; flex: initial; }
+#price-window.w-poe .w-poe-head .filter-name-tiles { order: 3; max-width: none; align-items: center; justify-content: flex-start; }
+#price-window.w-poe .w-poe-head-aside { order: 4; margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
 #price-window.w-poe .w-poe-head-aside:empty { display: none; }
-#price-window.w-poe .w-poe-head .filter-name-tiles { grid-area: nums; max-width: none; align-items: center; }
 #price-window.w-poe .w-poe-head .filter-name-chips > *,
 #price-window.w-poe .w-poe-head .filter-name-tiles > * { min-height: calc(24px * var(--w-text-scale, 1)); }
 

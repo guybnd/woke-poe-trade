@@ -106,7 +106,7 @@ test('rare: roll presets search with the item\'s rolls', async ({ overlay, fakeA
   await overlay.boot()
   await overlay.copyItem('items/rare-ring.txt')
   const panel = overlay.widget('price-check')
-  await expect(panel).toContainText('Generic')
+  await expect(panel.locator('.filter-name-label')).toHaveText('Ring')
   const rollPresets = panel.locator('[data-roll-presets]')
   await expect(rollPresets.getByText('Low')).toBeVisible()
   const lastSearch = () => {
@@ -128,16 +128,17 @@ test('rare: roll presets search with the item\'s rolls', async ({ overlay, fakeA
   await overlay.snap('rare ring with current rolls')
 })
 
-test('rare: the Generic / Base switch changes the title and the search', async ({ overlay, fakeApp }) => {
+test('rare: clicking the title switches Generic / Base, and the search follows', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/rare-ring.txt')
   const panel = overlay.widget('price-check')
   const title = panel.locator('.filter-name-label')
-  const scope = panel.locator('[data-search-scope]')
+  // The title is the only scope switch now.
+  await expect(panel.locator('[data-search-scope]')).toHaveCount(0)
   await expect(title).toHaveText('Ring')
   await overlay.snap('filter header on generic')
 
-  await scope.getByText('Base').click()
+  await title.click()
   await expect(title).toHaveText('Two-Stone Ring')
   // Moving from a filter onto Search runs the search and removes the button,
   // so Playwright's click or hover would wait for it forever.
@@ -149,13 +150,6 @@ test('rare: the Generic / Base switch changes the title and the search', async (
   }).toEqual('Two-Stone Ring')
   await overlay.snap('filter header on base')
 
-  await scope.getByText('Generic').click()
-  await expect(title).toHaveText('Ring')
-
-  // Clicking the title switches it too, both ways.
-  await title.click()
-  await expect(title).toHaveText('Two-Stone Ring')
-  await expect(scope.getByText('Base')).toHaveAttribute('aria-pressed', 'true')
   await title.click()
   await expect(title).toHaveText('Ring')
 })

@@ -3,19 +3,14 @@
   <div class="filter-name" :class="{ 'w-poe-head': poe }">
     <div class="filter-name-main">
       <div class="filter-name-title">
-        <!-- woke: with a Generic/Base choice, clicking the name switches it, like the switch below. -->
+        <!-- woke: with a Generic/Base choice, clicking the name switches it: the category, or this base type. -->
         <button v-if="filters.searchRelaxed" type="button" class="filter-name-label filter-name-cycle" data-scope-cycle
           :data-rarity="item.rarity" :title="`${label}. Click to search ${filters.searchRelaxed.disabled ? 'any item of this category' : 'only this base type'}.`"
-          @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ label }}</button>
+          @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ label }}<i class="fas fa-right-left filter-name-swap" aria-hidden="true" /></button>
         <span v-else class="filter-name-label" :data-rarity="item.rarity" :title="label">{{ label }}</span>
         <span v-if="baseName" class="filter-name-base">{{ baseName }}</span>
       </div>
       <div class="filter-name-chips">
-        <w-segmented v-if="filters.searchRelaxed" data-search-scope
-          :model-value="filters.searchRelaxed.disabled ? 'base' : 'generic'"
-          :options="scopeOptions"
-          title="What the search looks for. Generic: any item of this category. Base: only this base type."
-          @update:model-value="setScope" />
         <button v-if="filters.corrupted" type="button" data-corrupted-chip
           class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
           title="Corrupted filter. Click to change: Any, Corrupted, Uncorrupted."
@@ -82,7 +77,7 @@ import { useI18n } from 'vue-i18n'
 import type { ParsedItem } from '@/parser'
 import type { CorruptedSearch, ItemFilters } from './interfaces'
 import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
-import { WIcon, WSegmented } from '@/web/woke/ui'
+import { WIcon } from '@/web/woke/ui'
 import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
 import FilterBtnLogical from './FilterBtnLogical.vue'
@@ -90,7 +85,7 @@ import { poeOn } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
   name: 'FilterName',
-  components: { FilterBtnNumeric, FilterBtnLogical, WSegmented, WIcon },
+  components: { FilterBtnNumeric, FilterBtnLogical, WIcon },
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -111,7 +106,7 @@ export default defineComponent({
         : filters.searchExact
     })
 
-    // The title is what the search looks for, so the switch below it changes the title.
+    // The title is what the search looks for, so clicking it to switch scope changes it.
     const label = computed(() => {
       const search = activeSearch.value
 
@@ -163,11 +158,7 @@ export default defineComponent({
       setScope,
       corruptedStates,
       cycleCorrupted,
-      searchSub: computed(() => activeSearch.value.sub),
-      scopeOptions: [
-        { value: 'generic', label: 'Generic' },
-        { value: 'base', label: 'Base' }
-      ]
+      searchSub: computed(() => activeSearch.value.sub)
     }
   }
 })
@@ -206,6 +197,14 @@ export default defineComponent({
 }
 .filter-name-cycle { cursor: pointer; text-align: left; min-width: 0; }
 .filter-name-cycle:hover { text-decoration: underline dotted; text-underline-offset: 4px; }
+/* The swap mark says the name is a switch; it lights with the name on hover. */
+.filter-name-swap {
+  margin-left: 6px;
+  font-size: calc(10px * var(--w-text-scale, 1));
+  vertical-align: middle;
+  color: var(--w-faint);
+}
+.filter-name-cycle:hover .filter-name-swap { color: var(--w-dim); }
 .filter-name-base {
   flex: none;
   font-size: calc(12px * var(--w-text-scale, 1));
