@@ -54,6 +54,14 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-10T12:53:20.268Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-10T13:21:48.333Z'
+    comment: >-
+      PR #321 is up to date. The review fixes and perf trims are in, and local
+      typecheck, lint, unit, perf and e2e pass. The one tab-rail failure also
+      fails on master. The PR is handed to the merge thread.
+    id: a-2026-11-10t13-21-48-333z
 swimlane: null
 needsAction: null
 ---
