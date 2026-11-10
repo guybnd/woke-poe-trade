@@ -77,10 +77,11 @@ export function moduleIcon (moduleId: string): { art: string | null, fa: string 
   const m = MODULES.find(_ => _.id === moduleId)
   if (!m) return { art: null, fa: 'fas fa-window-maximize' }
   const i = m.icon
-  const art = i.mechanic ? mechanicIcon(i.mechanic).src
-    : i.currency ? CURRENCY_ICONS[i.currency] ?? null
-      : i.item ? gameIcon(i.item)
-        : null
+  const art = i.src ? i.src
+    : i.mechanic ? mechanicIcon(i.mechanic).src
+      : i.currency ? CURRENCY_ICONS[i.currency] ?? null
+        : i.item ? gameIcon(i.item)
+          : null
   return { art, fa: i.fa }
 }
 

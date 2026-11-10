@@ -30,9 +30,9 @@
 
       <div v-if="listingsError" class="w-down" :class="$style.note">Couldn't count listings: {{ listingsError }}</div>
       <WSkeleton v-if="!snapshot" :rows="8" />
-      <WEmpty v-else-if="!uniques.length" icon="fas fa-hammer">The item data has no dust values, so there's nothing to rank.</WEmpty>
-      <WEmpty v-else-if="!allRows.length" icon="fas fa-hammer">poe.ninja has no unique prices for {{ league }} yet.</WEmpty>
-      <WEmpty v-else-if="!ranked.length" icon="fas fa-hammer">No unique matches these filters.</WEmpty>
+      <WEmpty v-else-if="!uniques.length" icon="fas fa-hammer" :art="{ currency: 'dust' }">The item data has no dust values, so there's nothing to rank.</WEmpty>
+      <WEmpty v-else-if="!allRows.length" icon="fas fa-hammer" :art="{ currency: 'dust' }">poe.ninja has no unique prices for {{ league }} yet.</WEmpty>
+      <WEmpty v-else-if="!ranked.length" icon="fas fa-hammer" :art="{ currency: 'dust' }">No unique matches these filters.</WEmpty>
       <template v-else>
         <div class="w-row w-row--head" :class="[$style.grid, { [$style.withCounts]: counts }]">
           <span>Unique</span>

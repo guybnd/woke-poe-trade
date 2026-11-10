@@ -43,7 +43,7 @@
       <template v-if="characters.length > 1" #actions>
         <WSelect v-model="character" class="mr-1" :options="characterOptions" />
       </template>
-      <WEmpty v-if="!store.deaths.value.length" icon="fas fa-skull">
+      <WEmpty v-if="!store.deaths.value.length" icon="fas fa-skull" :art="{ item: 'Portal Scroll' }">
         No deaths saved yet. They're read from the game's log as they happen.
       </WEmpty>
       <div v-else :class="$style.columns">

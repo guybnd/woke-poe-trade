@@ -33,7 +33,10 @@ export interface ModuleDef {
 
 export interface ModuleIcon {
   fa: string
-  // Game art: a league mechanic's icon, bundled currency, or an item by name.
+  // Game art: a bundled image (heist rewards and quest items the item data
+  // lacks, in /images/art), a league mechanic's icon, bundled currency, or an
+  // item by name.
+  src?: string
   mechanic?: string
   currency?: string
   item?: string
@@ -49,33 +52,33 @@ export const MODULE_GROUPS: Array<{ id: ModuleGroup, label: string }> = [
 
 export const MODULES: ModuleDef[] = [
   { id: 'market', name: 'Market', description: 'Movers and watchlist from poe.ninja', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
-  { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling' }, needs: ['poll', 'network'] },
-  { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem' }, needs: ['poll'] },
+  { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
+  { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem', item: "Gemcutter's Prism" }, needs: ['poll'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
   { id: 'disenchant', name: 'Disenchant', description: 'Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant', group: 'economy', widgetTypes: ['woke-disenchant'], icon: { fa: 'fas fa-hammer', currency: 'dust' }, needs: ['prices'] },
-  { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet' }, needs: ['hotkeys', 'network'] },
+  { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet', src: '/images/art/crested-golden-idol.png' }, needs: ['hotkeys', 'network'] },
   { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'economy', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
-  { id: 'drop-counter', name: 'Drop counter', description: 'A tally of the drops you choose, and maps run', group: 'economy', widgetTypes: ['woke-drop-counter'], icon: { fa: 'fas fa-hashtag', currency: 'divine' }, needs: ['log', 'prices', 'hotkeys'] },
+  { id: 'drop-counter', name: 'Drop counter', description: 'A tally of the drops you choose, and maps run', group: 'economy', widgetTypes: ['woke-drop-counter'], icon: { fa: 'fas fa-hashtag', src: '/images/art/o-eternal.png' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'stacked-decks', name: 'Stacked decks', description: 'Cards from the Stacked Decks you open: profit, big hits and luck', group: 'economy', widgetTypes: ['woke-stacked-decks'], icon: { fa: 'fas fa-layer-group', item: 'Stacked Deck' }, needs: ['log', 'prices'] },
-  { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar' }, needs: ['prices'] },
+  { id: 'session-analytics', name: 'Session analytics', description: 'Profit per map, strategy and hour over time', group: 'economy', widgetTypes: ['woke-session-analytics'], icon: { fa: 'fas fa-chart-bar', item: 'Eternal Orb' }, needs: ['prices'] },
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['log', 'prices'] },
 
-  { id: 'map-mods', name: 'Map mods', description: 'Danger strip on price check and map regex', group: 'mapping', widgetTypes: ['woke-map-mods'], icon: { fa: 'fas fa-map', mechanic: 'map' }, needs: ['hotkeys'] },
+  { id: 'map-mods', name: 'Map mods', description: 'Danger strip on price check and map regex', group: 'mapping', widgetTypes: ['woke-map-mods'], icon: { fa: 'fas fa-map', item: 'Nightmare Map' }, needs: ['hotkeys'] },
   { id: 'map-scan', name: 'Map scan', description: 'Reads map tooltips on screen', group: 'mapping', widgetTypes: ['woke-map-scan'], icon: { fa: 'fas fa-crosshairs', mechanic: 'map' }, needs: ['ocr', 'hotkeys'] },
-  { id: 'death-recap', name: 'Death recap', description: 'Where you died, and the mods of maps you checked', group: 'mapping', widgetTypes: ['woke-death-recap'], icon: { fa: 'fas fa-skull' }, needs: ['log'] },
+  { id: 'death-recap', name: 'Death recap', description: 'Where you died, and the mods of maps you checked', group: 'mapping', widgetTypes: ['woke-death-recap'], icon: { fa: 'fas fa-skull', item: 'Portal Scroll' }, needs: ['log'] },
   { id: 'essence-scan', name: 'Essence scan', description: 'Reads essence monoliths and flags MEDS', group: 'mapping', widgetTypes: ['woke-essence-scan'], icon: { fa: 'fas fa-flask', mechanic: 'essence' }, needs: ['ocr', 'hotkeys', 'prices'] },
   { id: 'loot-filter', name: 'Loot filter editor', description: 'Edit the NeverSink rule for a sampled item', group: 'mapping', widgetTypes: ['woke-loot-filter'], icon: { fa: 'fas fa-filter', item: 'Orb of Scouring' }, needs: ['log', 'hotkeys'] },
   { id: 'atlas', name: 'Atlas strategies', description: 'Tree, scarabs and regex per strategy', group: 'mapping', widgetTypes: ['woke-atlas-strategies'], icon: { fa: 'fas fa-globe', item: 'Cartography Scarab of Risk' }, needs: ['network', 'prices'] },
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
-  { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', currency: 'wisdom' }, needs: ['log'] },
+  { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', src: '/images/art/admiral-darnaws-papers.png' }, needs: ['log'] },
   { id: 'run-timer', name: 'Run timer', description: 'Act splits and personal bests', group: 'campaign', widgetTypes: ['woke-run-timer'], icon: { fa: 'fas fa-stopwatch' }, needs: ['log'] },
   { id: 'lab', name: 'Lab layouts', description: "Today's poelab layout and reset countdown", group: 'campaign', widgetTypes: ['woke-lab'], icon: { fa: 'fas fa-dungeon', mechanic: 'lab' }, needs: ['hotkeys'] },
-  { id: 'challenges', name: 'Challenge guide', description: 'League challenge guide with your progress', group: 'campaign', widgetTypes: ['woke-challenges'], icon: { fa: 'fas fa-trophy' }, needs: ['hotkeys', 'network', 'account'] },
+  { id: 'challenges', name: 'Challenge guide', description: 'League challenge guide with your progress', group: 'campaign', widgetTypes: ['woke-challenges'], icon: { fa: 'fas fa-trophy', src: '/images/art/ez-myrae-tome.png' }, needs: ['hotkeys', 'network', 'account'] },
 
   { id: 'pob-builds', name: 'PoB builds', description: 'Your Path of Building folder', group: 'builds', widgetTypes: ['woke-pob-builds'], icon: { fa: 'fas fa-diagram-project', item: 'Enlighten Support' }, needs: [] },
   { id: 'trade-searches', name: 'Trade searches', description: 'Saved trade site searches', group: 'builds', widgetTypes: ['woke-trade-searches'], icon: { fa: 'fas fa-search-dollar', currency: 'exalted' }, needs: ['hotkeys'] },
-  { id: 'trade', name: 'Trades', description: 'Trade whispers, quick replies and a sales log', group: 'builds', widgetTypes: ['woke-trade'], icon: { fa: 'fas fa-handshake', currency: 'divine' }, needs: ['log', 'hotkeys', 'prices'] },
+  { id: 'trade', name: 'Trades', description: 'Trade whispers, quick replies and a sales log', group: 'builds', widgetTypes: ['woke-trade'], icon: { fa: 'fas fa-handshake', src: '/images/art/bust-of-emperor-caspiro.png' }, needs: ['log', 'hotkeys', 'prices'] },
   { id: 'regex-library', name: 'Regex library', description: 'Saved stash search strings', group: 'builds', widgetTypes: ['woke-regex-library'], icon: { fa: 'fas fa-search', mechanic: 'stash' }, needs: ['hotkeys'] },
 
   // APT features: only their hotkeys can be switched off.

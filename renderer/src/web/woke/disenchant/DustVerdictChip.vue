@@ -1,6 +1,6 @@
 <template>
   <span v-if="verdict" :class="[$style.chip, verdict.disenchant ? $style.good : $style.dim]" :title="title">
-    <template v-if="verdict.disenchant"><i class="fas fa-hammer" :class="$style.icon" /> Disenchant · </template>{{ amount }} dust/c
+    <template v-if="verdict.disenchant"><img src="/images/dust.png" alt="" :class="$style.icon"> Disenchant · </template>{{ amount }} dust/c
   </span>
 </template>
 
@@ -58,5 +58,5 @@ const title = computed(() => {
 }
 .good { color: var(--w-up); background: color-mix(in srgb, var(--w-up) 12%, transparent); }
 .dim { color: var(--w-dim); }
-.icon { font-size: var(--w-fs-xs); }
+.icon { width: calc(14px * var(--w-text-scale, 1)); height: calc(14px * var(--w-text-scale, 1)); vertical-align: -2px; object-fit: contain; }
 </style>

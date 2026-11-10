@@ -57,6 +57,7 @@ export interface SettingsPage {
 function modulePageIcon (moduleId: string): PageIcon {
   const i = MODULES.find(m => m.id === moduleId)?.icon
   if (!i) return { fa: 'fas fa-puzzle-piece' }
+  if (i.src) return { art: i.src, fa: i.fa }
   if (i.item) return { item: i.item, fa: i.fa }
   if (i.mechanic) {
     const m = MECHANIC_ICONS[i.mechanic]
