@@ -64,7 +64,7 @@
       </div>
       <div class="flex pt-px" v-if="!miniFilter">
         <div class="w-5 flex items-start">
-          <ui-popover v-if="isHidden" tag-name="div" class="flex" placement="right-start" boundary="#price-window">
+          <ui-popover v-if="isHidden" tag-name="div" class="flex" placement="right-start" boundary="#price-window" append-to="#price-window">
             <template #target>
               <span class="text-xs leading-none text-gray-600 cursor-pointer">
                 <i class="fas fa-eye-slash" :class="{ 'faa-ring': !isDisabled }"></i>

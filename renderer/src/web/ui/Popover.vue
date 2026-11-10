@@ -25,6 +25,11 @@ export default defineComponent({
       type: String,
       default: undefined
     },
+    // A selector for the popup's parent: lets it escape a faded or clipped row.
+    appendTo: {
+      type: String,
+      default: undefined
+    },
     placement: {
       type: String as PropType<Placement>,
       default: undefined
@@ -57,6 +62,9 @@ export default defineComponent({
         arrow: props.arrow,
         delay: props.delay,
         maxWidth: 'none',
+        ...(props.appendTo
+          ? { appendTo: (ref: Element) => document.querySelector(props.appendTo!) ?? ref.parentNode as Element }
+          : {}),
         popperOptions: {
           modifiers: [
             ...(props.boundary
