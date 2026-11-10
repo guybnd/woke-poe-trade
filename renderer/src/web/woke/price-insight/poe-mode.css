@@ -32,7 +32,8 @@
 }
 :root[data-woke-look="game"] #price-window [data-price-title] > button,
 :root[data-woke-look="game"] #price-window [data-price-title] > * > button { color: var(--w-gold); background: none; }
-:root[data-woke-look="game"] #price-window [data-price-title] button:hover { color: var(--w-gold-hi); background: none; }
+:root[data-woke-look="game"] #price-window [data-price-title] > button:hover,
+:root[data-woke-look="game"] #price-window [data-price-title] > * > button:hover { color: var(--w-gold-hi); background: none; }
 /* The close button by name: an open popover appends itself to the bar, so :last-child moves. */
 :root[data-woke-look="game"] #price-window [data-price-title] > [data-price-close]:hover { color: var(--w-bad-fg); }
 :root[data-woke-look="game"] #price-window [data-price-title-text] {

@@ -31,8 +31,16 @@ test('the price check palette switches the look and the filter layout', async ({
   await expect(win).toContainText('Energy Shield')
   await expect(win).toHaveClass(/w-poe/)
 
-  await win.getByRole('button', { name: 'Look and filter layout' }).click()
+  const palette = win.getByRole('button', { name: 'Look and filter layout' })
   const pop = win.getByRole('dialog', { name: 'Look and filter layout' })
+  // Esc closes the menu, not the window.
+  await palette.click()
+  await expect(pop).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(pop).toHaveCount(0)
+  await expect(win).toBeVisible()
+
+  await palette.click()
   await expect(pop).toBeVisible()
   await expect(pop.getByRole('button', { name: 'Hybrid' })).toHaveAttribute('aria-pressed', 'true')
   await expect(pop.getByRole('button', { name: 'Tooltip lines' })).toHaveAttribute('aria-pressed', 'true')
@@ -52,8 +60,14 @@ test('the price check palette switches the look and the filter layout', async ({
   await expect(pop).toHaveCount(0)
   expect(await win.boundingBox()).toEqual(before)
 
-  // The next check keeps Rows.
+  // The next check keeps Rows, and a menu left open when the window hid is gone.
+  await palette.click()
+  await expect(pop).toBeVisible()
+  overlay.app.sendToOverlay({ name: 'MAIN->OVERLAY::hide-exclusive-widget', payload: undefined })
+  await expect(win).toBeHidden()
+  await expect.poll(() => overlay.savedWidget('price-check')?.wokeWindowStyle).toBe('standard')
   await overlay.copyItem('items/rare-body-armour-es.txt')
   await expect(win).toContainText('Energy Shield')
   await expect(win).not.toHaveClass(/w-poe/)
+  await expect(pop).toHaveCount(0)
 })

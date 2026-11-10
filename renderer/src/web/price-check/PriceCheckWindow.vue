@@ -441,6 +441,8 @@ export default defineComponent({
 
 <style module>
 .movable :global([data-price-title-text]) { cursor: move; }
+/* With the style menu's own auto margin, the league sits centred between the side controls. */
+:global(#price-window [data-price-title-text]) { margin-left: auto; }
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
 .edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }

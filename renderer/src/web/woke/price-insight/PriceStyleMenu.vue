@@ -1,10 +1,10 @@
 <template>
-  <span :class="$style.wrap" data-price-style>
+  <span :class="$style.wrap" data-price-style @keydown.esc.stop="open = false">
     <button :class="[$style.btn, { [$style.btnOn]: open }]" title="Look and filter layout" aria-label="Look and filter layout"
       :aria-expanded="open" @click="open = !open"><i class="fas fa-palette" /></button>
     <template v-if="open">
       <div :class="$style.backdrop" @mousedown.stop="open = false" />
-      <div :class="$style.pop" role="dialog" aria-label="Look and filter layout" @mousedown.stop @keydown.esc.stop="open = false">
+      <div :class="$style.pop" role="dialog" aria-label="Look and filter layout" @mousedown.stop>
         <div :class="$style.head">Look</div>
         <div :class="$style.looks">
           <button v-for="t in WOKE_THEMES" :key="t.id" :class="[$style.look, { [$style.on]: wokeTheme === t.id }]"
@@ -26,7 +26,7 @@
 <script setup lang="ts">
 // The price check's quick style switch (title bar palette): the theme, which sets
 // the look of every panel, and Settings > Price check > Filter layout.
-import { computed, shallowRef } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
 import { wokeTheme, WOKE_THEMES } from '../ui'
@@ -38,6 +38,11 @@ const LAYOUTS: Array<{ id: Layout, label: string }> = [
 ]
 
 const open = shallowRef(false)
+// The window only hides (v-show), so close the menu with it: a stale one would
+// greet the next check with a backdrop that eats the first click.
+watch(() => AppConfig<PriceCheckWidget>('price-check')?.wmWants, (wants) => {
+  if (wants !== 'show') open.value = false
+})
 const layout = computed<Layout>(() =>
   AppConfig<PriceCheckWidget>('price-check')?.wokeWindowStyle === 'standard' ? 'standard' : 'poe')
 
@@ -50,8 +55,9 @@ function setLayout (id: Layout) {
 </script>
 
 <style module>
-.wrap { position: relative; display: inline-flex; }
-.btn.btnOn { color: var(--w-accent); }
+.wrap { position: relative; display: inline-flex; margin-left: auto; }
+/* Beats poe-mode.css's gold title bar buttons (:root[...] #price-window [data-price-title] > * > button). */
+:global(:root) :global(#price-window) .wrap > .btn.btnOn { color: var(--w-accent); }
 .backdrop { position: fixed; inset: 0; z-index: 40; }
 .pop {
   position: absolute; right: 0; top: calc(100% + 4px); z-index: 41; box-sizing: border-box; width: 300px;
