@@ -3,7 +3,7 @@ id: WOKEPOET-185
 title: >-
   UI 5: safe zones, so panels and popups never sit on globes, flasks, skills or
   minimap
-status: Grooming
+status: Archived
 priority: Medium
 effort: M
 assignee: unassigned
@@ -43,7 +43,25 @@ history:
       on drop, my pick), B (can't enter) or C (warn only), and choose whether
       amber zones count as red. Default if there's no answer: A, with zones
       shown only while dragging.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Won't do: Guy decided players place panels wherever they want, with no
+      slide-out, block or warning. The charter's P2 drag bullet was updated to
+      match.
+    date: '2026-11-10T08:57:51.609Z'
+    id: c-2026-11-10t08-57-51-609z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-10T08:57:51.609Z'
+  - type: status_change
+    from: Grooming
+    to: Archived
+    user: Agent
+    date: '2026-11-10T08:57:51.609Z'
+swimlane: null
 needsAction: null
 ---
 Charter P2. The review found no safe-zone code: `panel-fit.ts` keeps panels on screen, but nothing stops one being dropped over the life and mana globes, flasks, skill bar, minimap or boss bar. Work the red zones out from the game's 16:9 layout (holds on ultrawide and 4K), snap dragged panels out of them, and place popups beside the cursor clear of them. Mock the snap behaviour first.
