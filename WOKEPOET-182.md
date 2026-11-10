@@ -3,14 +3,14 @@ id: WOKEPOET-182
 title: >-
   UI 2: move the picked game-look pieces into woke/ui as shared components and
   tokens
-status: Todo
+status: Ready
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Event Horizon
+updatedBy: Agent
 parentId: WOKEPOET-169
 history:
   - type: activity
@@ -99,6 +99,32 @@ history:
     to: Todo
     user: Event Horizon
     date: '2026-11-10T05:07:22.702Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      **PR #296 is ready to merge**
+      (https://github.com/guybnd/woke-poe-trade/pull/296, branch ui-game-look @
+      1747bcb0, built in clone E:\Git\woke-ui-look) and is on the dev build.
+      Hybrid and Native get the S3 game look through `data-woke-look="game"`.
+      New `ui/controls.css` is the one owner of buttons, chips, segments, tabs,
+      fields, the toggle and key caps. New `ui/game-look.css` holds fonts, rows,
+      group labels and Settings hints. WPanel has the frame, corner marks, gold
+      fade and centred title. The colours in poe-mode.css are now tokens, and
+      Settings shows "Filter layout" (Tooltip lines / Rows). The old size tokens
+      are retired and literal radii are on tokens. The README and the charter
+      (P5, P14, P19) are updated. The adversarial review found 8 bugs; all are
+      fixed. Checks: tsc, lint, vitest 2856 and build all pass. Playwright: 197
+      passed. tab-rail drag fails on master too. **Left for 183:** verdict
+      strips, the Settings nav and its APT radios, the Refresh pill and link
+      chips, and dock cards.
+    date: '2026-11-10T05:09:46.008Z'
+    completionComment: true
+    id: c-2026-11-10t05-09-46-008z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-10T05:09:46.009Z'
 needsAction: null
 ---
 > **TL;DR** Turn the price check's PoE look into theme tokens and shared parts in `woke/ui`, so Hybrid and Native get the game look (S3 + T1) everywhere and Modern and Classic stay as they are. The price check's Window style becomes a layout-only "Filter layout".
