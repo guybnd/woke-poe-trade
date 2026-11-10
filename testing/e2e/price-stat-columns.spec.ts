@@ -82,13 +82,13 @@ test('ticked stats get columns, coloured against the checked item', async ({ ove
 
   const rows = panel.locator('tbody tr:not(.w-pc-yours)')
   const esCell = (row: number) => rows.nth(row).locator('td.w-pc-stat').first()
-  // Theirs is higher, so theirs is better: red. Lower: green. Equal: plain.
+  // Higher than yours: orange with an up arrow. Lower: blue. Equal: plain.
   await expect(esCell(2)).toHaveText('1231')
-  await expect(esCell(2)).toHaveClass(/w-pc-stat-theirs/)
+  await expect(esCell(2)).toHaveClass(/w-pc-stat-higher/)
   await expect(esCell(0)).toHaveText('1192')
-  await expect(esCell(0)).toHaveClass(/w-pc-stat-yours/)
+  await expect(esCell(0)).toHaveClass(/w-pc-stat-lower/)
   await expect(esCell(1)).toHaveText('1210')
-  await expect(esCell(1)).not.toHaveClass(/w-pc-stat-(theirs|yours)/)
+  await expect(esCell(1)).not.toHaveClass(/w-pc-stat-(higher|lower)/)
 
   // Same price, different numbers: two rows, not one row that hides a number.
   await expect(rows).toHaveCount(LISTINGS.length)

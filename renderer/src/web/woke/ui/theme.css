@@ -34,6 +34,9 @@
   --w-up: #6cc77a;
   --w-down: #e0675a;
   --w-warn: #e3b341;
+  /* Neutral higher / lower pair: says which way, not good or bad. Safe for red-green colour blindness. */
+  --w-higher: #f5a04a;
+  --w-lower: #5eb0f2;
   --w-info: #7fb5d6;
 
   /* PoE item colours (same in every theme) */

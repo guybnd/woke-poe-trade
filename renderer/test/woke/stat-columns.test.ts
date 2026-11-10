@@ -160,7 +160,7 @@ describe('listing values', () => {
     }
     for (const col of columns) {
       const value = listingStatValue(listing, col, armour.category)
-      expect([col.label, statTone(value, col)]).toEqual([col.label, ''])
+      expect([col.label, statTone(value, col)]).toEqual([col.label, null])
     }
   })
 
@@ -181,29 +181,36 @@ describe('listing values', () => {
 })
 
 describe('colours', () => {
-  it('higher on theirs is red, lower is green, when higher is better', () => {
+  it('says higher or lower than yours, not better or worse', () => {
     const column = onlyColumn(filter({ value: 100 }))
-    expect(statTone(120, column)).toBe('theirs')
-    expect(statTone(80, column)).toBe('yours')
-    expect(statTone(100, column)).toBe('')
+    expect(statTone(120, column)?.dir).toBe('higher')
+    expect(statTone(80, column)?.dir).toBe('lower')
+    expect(statTone(100, column)).toBeNull()
   })
 
-  it('flips when lower is better', () => {
-    const column = onlyColumn(filter({ value: 100, better: -1 }))
-    expect(statTone(120, column)).toBe('yours')
-    expect(statTone(80, column)).toBe('theirs')
+  it('keeps to the number when lower is better, or neither is', () => {
+    expect(statTone(120, onlyColumn(filter({ value: 100, better: -1 })))?.dir).toBe('higher')
+    expect(statTone(80, onlyColumn(filter({ value: 100, better: 0, min: 5, max: 200 })))?.dir).toBe('lower')
   })
 
-  it('stays plain when neither is better or there is no value', () => {
-    expect(statTone(120, onlyColumn(filter({ value: 100, better: 0, min: 5, max: 200 })))).toBe('')
-    expect(statTone(null, onlyColumn(filter({ value: 100 })))).toBe('')
+  it('builds with distance from yours, full at 5%', () => {
+    const column = onlyColumn(filter({ value: 1210 }))
+    expect(statTone(1203, column)?.strength).toBeCloseTo(0.12, 2)
+    expect(statTone(1241, column)?.strength).toBeCloseTo(0.51, 2)
+    expect(statTone(1271, column)?.strength).toBe(1)
+    expect(statTone(1100, column)?.strength).toBe(1)
+    expect(statTone(5, onlyColumn(filter({ value: 0, min: 0, max: 10 })))?.strength).toBe(1)
+  })
+
+  it('stays plain with no value', () => {
+    expect(statTone(null, onlyColumn(filter({ value: 100 })))).toBeNull()
   })
 
   it('compares the numbers as shown, so equal-looking ones stay plain', () => {
-    expect(statTone(100.4, onlyColumn(filter({ value: 100 })))).toBe('')
+    expect(statTone(100.4, onlyColumn(filter({ value: 100 })))).toBeNull()
     const decimals = { ...onlyColumn(filter({ value: 1.3 })), dp: true }
-    expect(statTone(1.3, decimals)).toBe('')
-    expect(statTone(1.31, decimals)).toBe('theirs')
+    expect(statTone(1.3, decimals)).toBeNull()
+    expect(statTone(1.31, decimals)?.dir).toBe('higher')
   })
 })
 
@@ -211,7 +218,7 @@ describe('showing them', () => {
   it('doesn\'t round yours a second time, which can change it', () => {
     // 1.15 truncates to 1.14 through float error, in the filter and here alike.
     const speed = { ...onlyColumn(filter({ value: 1.14 })), dp: true }
-    expect(statTone(1.15, speed)).toBe('')
+    expect(statTone(1.15, speed)).toBeNull()
   })
 
   it('formats whole numbers, decimals and missing values', () => {

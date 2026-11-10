@@ -167,13 +167,21 @@
 
 .w-pc-foot { padding: 5px 0 0; color: var(--w-faint); font-family: var(--w-body); font-size: var(--w-fs-xs); text-align: right; font-variant-numeric: tabular-nums; }
 
-/* A column per ticked stat. Red: this listing has the better number. Green: yours does. */
+/* A column per ticked stat. Orange: their number is higher than yours, blue: lower.
+   Neutral on purpose. The colour builds with distance from yours (--w-pc-stat-k, 0 to 1),
+   and a small arrow says which way so it reads without colour too. */
 .w-pc-table .w-pc-stat-head { text-align: right; }
 .w-pc-table .w-pc-stat-head > div { padding: 0 4px; }
 .w-pc-stat-more { color: var(--w-accent); text-transform: none; letter-spacing: 0; }
 .w-pc-table td.w-pc-stat { padding: 0 4px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.w-pc-table td.w-pc-stat-theirs { color: var(--w-down); }
-.w-pc-table td.w-pc-stat-yours { color: var(--w-up); }
+.w-pc-table td.w-pc-stat-higher { --w-pc-stat-hue: var(--w-higher); }
+.w-pc-table td.w-pc-stat-lower { --w-pc-stat-hue: var(--w-lower); }
+.w-pc-table td:is(.w-pc-stat-higher, .w-pc-stat-lower) {
+  color: color-mix(in oklab, var(--w-pc-stat-hue) calc(30% + 70% * var(--w-pc-stat-k, 1)), var(--w-fg));
+}
+.w-pc-table td:is(.w-pc-stat-higher, .w-pc-stat-lower)::before { font-size: 0.65em; margin-right: 2px; vertical-align: 0.1em; }
+.w-pc-table td.w-pc-stat-higher::before { content: "\25B2"; }
+.w-pc-table td.w-pc-stat-lower::before { content: "\25BC"; }
 
 /* The checked item's own numbers stay on screen under the column labels. */
 .w-pc-table { --w-pc-head-h: calc(1.5rem * var(--w-text-scale, 1) + 1px); }

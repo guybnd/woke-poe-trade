@@ -236,16 +236,27 @@ export function formatStatValue (value: number | null, column: StatColumn): stri
   return value == null ? '–' : String(roundRoll(value, column.dp))
 }
 
-export type StatTone = 'theirs' | 'yours' | ''
+/** Where their number sits against yours. Neutral on purpose: higher isn't called good or bad. */
+export interface StatTone {
+  dir: 'higher' | 'lower'
+  /** 0 to 1: how far from yours, full at {@link STAT_FULL_AT}. Fixed to yours, so it never shifts as listings load. */
+  strength: number
+}
 
-/** Who has the better number. "theirs" shows red, "yours" shows green. */
-export function statTone (value: number | null, column: StatColumn): StatTone {
-  if (value == null || !column.better) return ''
+/** A listing this far from yours, as a share of yours, gets full colour. Real listings for one search sit close together. */
+export const STAT_FULL_AT = 0.05
+
+export function statTone (value: number | null, column: StatColumn): StatTone | null {
+  if (value == null) return null
   // The filter's own rounding, or the same mods on a listing could look different.
   // `yours` went through it already, and a second pass can change the number.
   const diff = roundRoll(value, column.dp) - column.yours
-  if (diff === 0) return ''
-  return (diff > 0) === (column.better === 1) ? 'theirs' : 'yours'
+  if (diff === 0) return null
+  const share = column.yours === 0 ? 1 : Math.abs(diff) / Math.abs(column.yours)
+  return {
+    dir: diff > 0 ? 'higher' : 'lower',
+    strength: Math.round(Math.min(1, share / STAT_FULL_AT) * 100) / 100
+  }
 }
 
 const STAT_WIDTH = 50

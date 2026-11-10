@@ -76,7 +76,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="shownColumns.length" class="w-pc-yours" title="Red: theirs is better. Green: yours is better.">
+          <tr v-if="shownColumns.length" class="w-pc-yours" title="Orange: their number is higher than yours. Blue: lower. The further from yours, the stronger the colour.">
             <td class="px-2 w-pc-yours-tag">Yours</td>
             <td />
             <td v-if="item.stackSize" />
@@ -128,7 +128,7 @@
               <td v-if="showItemLevel" class="px-2 whitespace-nowrap text-right">{{ row.lead.itemLevel }}</td>
               <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ row.lead.level }}</td>
               <td v-if="showQuality" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
-              <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}</td>
+              <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)" :style="toneStyle(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}</td>
               <td v-if="hiddenColumns.length" />
               <td v-if="showSeller" class="px-2 whitespace-nowrap">
                 <span v-if="row.lead.isMine" class="w-pc-you">{{ t('You') }}</span>
@@ -502,7 +502,11 @@ export default defineComponent({
       formatStatValue,
       toneClass (listing: PricingResult, col: StatColumn) {
         const tone = statTone(statValue(listing, col), col)
-        return tone ? `w-pc-stat-${tone}` : undefined
+        return tone ? `w-pc-stat-${tone.dir}` : undefined
+      },
+      toneStyle (listing: PricingResult, col: StatColumn) {
+        const tone = statTone(statValue(listing, col), col)
+        return tone ? { '--w-pc-stat-k': tone.strength } : undefined
       },
       shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
       tableLoading,
