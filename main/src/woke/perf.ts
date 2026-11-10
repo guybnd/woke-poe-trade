@@ -11,6 +11,7 @@ const PROCESS_SAMPLES = 40 // 10 minutes
 // A long session: one reading every 5 minutes for a day, to show a slow climb.
 const HISTORY_EVERY = 20
 const HISTORY_SAMPLES = 288
+const HISTORY_SKIP = 4
 
 interface Series { count: number, max: number, recent: number[] }
 
@@ -75,7 +76,10 @@ export function startProcessSampler (isGameFocused: () => boolean): void {
     for (const m of metrics) {
       const t = byType.get(m.type) ?? { cpuPercent: 0, memoryMb: 0 }
       t.cpuPercent += m.cpu.percentCPUUsage
-      t.memoryMb += m.memory.workingSetSize / 1024
+      // Private memory (KB) where Windows reports it: the working set also
+      // counts pages shared between processes (Chromium's DLLs), so summing
+      // it over every process counts those several times.
+      t.memoryMb += (m.memory.privateBytes ?? m.memory.workingSetSize) / 1024
       byType.set(m.type, t)
     }
     const list = [...byType].map(([type, v]) => ({ type, cpuPercent: round1(v.cpuPercent), memoryMb: Math.round(v.memoryMb) }))
@@ -87,7 +91,9 @@ export function startProcessSampler (isGameFocused: () => boolean): void {
       byType: list
     })
     if (processSamples.length > PROCESS_SAMPLES) processSamples.shift()
-    if (samplesTaken++ % HISTORY_EVERY === 0) {
+    // Skip the first minute: memory peaks while the app starts up.
+    const n = samplesTaken++ - HISTORY_SKIP
+    if (n >= 0 && n % HISTORY_EVERY === 0) {
       const newest = processSamples[processSamples.length - 1]
       history.push({
         at: newest.at,

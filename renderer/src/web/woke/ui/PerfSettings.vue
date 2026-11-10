@@ -52,14 +52,14 @@
     <section>
       <div class="mb-1 flex items-center gap-2">Overlay hiccups <w-info text="Moments the overlay was busy for 50 ms or more (it can't react during them)." /></div>
       <div class="text-sm">
-        {{ renderer.freezes.count }} this session<template v-if="renderer.freezes.recent.length">; latest:
+        {{ renderer.freezes.count }} this session<template v-if="renderer.freezes.startupCount"> (plus {{ renderer.freezes.startupCount }} while starting up)</template><template v-if="renderer.freezes.recent.length">; latest:
           <span v-for="f in renderer.freezes.recent.slice(-6).reverse()" :key="f.at" :class="$style.chip">{{ f.ms }} ms, {{ ago(f.at) }}</span>
         </template>
       </div>
     </section>
 
     <section>
-      <div class="mb-1 flex items-center gap-2">CPU and memory <w-info text="Sampled every 15 seconds. CPU is percent of one core, summed over the app's processes." /></div>
+      <div class="mb-1 flex items-center gap-2">CPU and memory <w-info text="Sampled every 15 seconds. CPU is percent of one core, summed over the app's processes. Memory is private memory, also summed." /></div>
       <div v-if="!main?.processes.length" class="text-sm w-dim">First sample comes 15 seconds after launch.</div>
       <template v-else>
         <div class="text-sm mb-1">
