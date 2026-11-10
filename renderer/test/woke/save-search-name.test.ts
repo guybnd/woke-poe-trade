@@ -16,7 +16,7 @@ describe('shortStatLabel', () => {
     ['+#% to Fire Resistance', 'Fire Resistance'],
     ['#% increased Spell Damage', 'Spell Damage'],
     ['Adds # to # Cold Damage to Attacks', 'Adds Cold Damage to Attacks'],
-    ['+#% total Elemental Resistance', 'total Elemental Resistance']
+    ['+#% total Elemental Resistance', 'Elemental Resistance']
   ])('%s → %s', (text, out) => {
     expect(shortStatLabel(text)).toBe(out)
   })
@@ -54,7 +54,7 @@ describe('proposeSearchName', () => {
   it('keeps a long name short', () => {
     const stats = [stat('#% increased Damage with Hits against Enemies that are on Low Life'), stat('#% increased Critical Strike Chance for Spells while Dual Wielding')]
     const name = proposeSearchName(createVirtualItem({ info: info('Imperial Claw'), rarity: ItemRarity.Rare }), stats)
-    expect(name.length).toBeLessThanOrEqual(60)
+    expect(name.length).toBeLessThanOrEqual(70)
     expect(name.endsWith('…')).toBe(true)
   })
 })

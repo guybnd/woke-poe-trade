@@ -6,7 +6,7 @@ import type { ParsedItem } from '@/parser'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 
-const MAX_LENGTH = 60
+const MAX_LENGTH = 70
 const MAX_STATS = 2
 
 // "+#% to Fire Resistance" → "Fire Resistance", "Adds # to # Cold Damage to Attacks" → "Adds Cold Damage to Attacks".
@@ -16,7 +16,7 @@ export function shortStatLabel (text: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^Adds to /i, 'Adds ')
-    .replace(/^(to|increased) /i, '')
+    .replace(/^(to|increased|total) /i, '')
     .replace(/:$/, '')
     .trim()
 }

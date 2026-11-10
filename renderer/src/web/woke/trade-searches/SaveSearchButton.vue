@@ -83,6 +83,8 @@ async function toggle () {
   open.value = true
   await nextTick()
   place()
+  // It's hidden until placed, and a hidden field can't take focus.
+  await nextTick()
   nameInput.value?.focus()
   nameInput.value?.select()
 }

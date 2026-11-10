@@ -16,6 +16,19 @@ export interface TradeSearchEntry {
   hotkeyOverlay: string | null
   // Opens the search in the system browser.
   hotkeyExternal: string | null
+  // Shown first, in the Pinned view.
+  pinned?: boolean
+  // When it was last opened (ms) and how often, for the Recent view and sorting.
+  lastOpened?: number
+  openCount?: number
+}
+
+// A folder is the `category` its searches share. This only adds its place in
+// the rail and its icon; a folder with no searches stays while it's listed here.
+export interface TradeSearchFolder {
+  name: string
+  // A FOLDER_ICONS key: "item:<English name>" or "mechanic:<id>".
+  icon?: string
 }
 
 export interface TradeSearchesWidget extends Widget {
@@ -28,6 +41,117 @@ export interface TradeSearchesWidget extends Widget {
   liveAlert?: boolean
   // The folder the price check's save box last saved to.
   lastFolder?: string
+  // Folder order and icons (see TradeSearchFolder).
+  folders?: TradeSearchFolder[]
+  // The rail's picked view ("all", "pinned", "recent", "live", "folder:<name>") and the list's sort.
+  view?: string
+  sort?: SearchSort
+}
+
+export type SearchSort = 'opened' | 'name' | 'count' | 'added'
+
+export const UNCATEGORIZED = 'Uncategorized'
+export const RECENT_DAYS = 7
+
+export const FOLDER_ICONS: string[] = [
+  'item:Chaos Orb', 'item:Divine Orb', 'item:Exalted Orb', 'item:Mirror of Kalandra',
+  'item:Orb of Alchemy', 'item:Orb of Fusing', "item:Jeweller's Orb", 'item:Chromatic Orb',
+  'item:Vaal Orb', "item:Gemcutter's Prism", 'item:Orb of Annulment', "item:Cartographer's Chisel",
+  'mechanic:map', 'mechanic:essence', 'mechanic:delve', 'mechanic:expedition',
+  'mechanic:delirium', 'mechanic:blight', 'mechanic:harvest', 'mechanic:legion',
+  'mechanic:breach', 'mechanic:heist', 'mechanic:sanctum', 'mechanic:stash'
+]
+
+export function folderOf (entry: TradeSearchEntry): string {
+  return entry.category.trim() || UNCATEGORIZED
+}
+
+// Folders in rail order: the user's order first, then any others by name.
+export function folderNames (widget: Pick<TradeSearchesWidget, 'entries' | 'folders'>): string[] {
+  const listed = (widget.folders ?? []).map(f => f.name)
+  const seen = new Set(listed)
+  const others = [...new Set(widget.entries.map(folderOf))].filter(n => !seen.has(n)).sort((a, b) => a.localeCompare(b))
+  return [...listed, ...others]
+}
+
+export function folderIcon (widget: Pick<TradeSearchesWidget, 'folders'>, name: string): string | undefined {
+  return widget.folders?.find(f => f.name === name)?.icon
+}
+
+export function inView (entry: TradeSearchEntry, view: string, now: number): boolean {
+  switch (view) {
+    case 'pinned': return Boolean(entry.pinned)
+    case 'recent': return entry.lastOpened != null && now - entry.lastOpened < RECENT_DAYS * 86_400_000
+    case 'live': return isLiveSearch(entry.url)
+    case 'all': return true
+    default: return view.startsWith('folder:') && folderOf(entry) === view.slice(7)
+  }
+}
+
+export function sortEntries (entries: TradeSearchEntry[], sort: SearchSort): TradeSearchEntry[] {
+  const list = [...entries]
+  const byName = (a: TradeSearchEntry, b: TradeSearchEntry) => (a.name || a.url).localeCompare(b.name || b.url)
+  switch (sort) {
+    case 'name': return list.sort(byName)
+    case 'count': return list.sort((a, b) => (b.openCount ?? 0) - (a.openCount ?? 0) || byName(a, b))
+    case 'added': return list.sort((a, b) => b.id - a.id)
+    default: return list.sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0) || b.id - a.id)
+  }
+}
+
+// Pinned searches lead whatever the sort.
+export function pinnedFirst (entries: TradeSearchEntry[]): TradeSearchEntry[] {
+  return [...entries.filter(e => e.pinned), ...entries.filter(e => !e.pinned)]
+}
+
+// Renames a folder (merging into one of that name if it exists). Returns the new name.
+export function renameFolder (widget: TradeSearchesWidget, from: string, to: string): string {
+  const name = to.trim()
+  if (!name || name === from) return from
+  for (const e of widget.entries) {
+    if (folderOf(e) === from) e.category = name === UNCATEGORIZED ? '' : name
+  }
+  const folders = widget.folders ?? []
+  const old = folders.find(f => f.name === from)
+  const target = folders.find(f => f.name === name)
+  if (old && target) {
+    target.icon ??= old.icon
+    widget.folders = folders.filter(f => f !== old)
+  } else if (old) {
+    old.name = name
+  }
+  if (widget.view === `folder:${from}`) widget.view = `folder:${name}`
+  if (widget.lastFolder === from) widget.lastFolder = name
+  return name
+}
+
+// Removes a folder; its searches go to Uncategorized.
+export function deleteFolder (widget: TradeSearchesWidget, name: string): void {
+  for (const e of widget.entries) {
+    if (folderOf(e) === name) e.category = ''
+  }
+  widget.folders = (widget.folders ?? []).filter(f => f.name !== name)
+  if (widget.view === `folder:${name}`) widget.view = 'all'
+  if (widget.lastFolder === name) widget.lastFolder = undefined
+}
+
+// Lists the folder in the rail order (adding it if it's only a category so far) and returns its record.
+export function ensureFolder (widget: TradeSearchesWidget, name: string): TradeSearchFolder {
+  const order = folderNames(widget)
+  if (!order.includes(name)) order.push(name)
+  const byName = new Map((widget.folders ?? []).map(f => [f.name, f]))
+  widget.folders = order.map(n => byName.get(n) ?? { name: n })
+  return widget.folders.find(f => f.name === name)!
+}
+
+export function moveFolder (widget: TradeSearchesWidget, name: string, by: -1 | 1): void {
+  ensureFolder(widget, name)
+  const list = widget.folders!
+  const i = list.findIndex(f => f.name === name)
+  const j = i + by
+  if (j < 0 || j >= list.length) return
+  ;[list[i], list[j]] = [list[j], list[i]]
+  widget.folders = [...list]
 }
 
 export type OpenTarget = 'overlay' | 'external'

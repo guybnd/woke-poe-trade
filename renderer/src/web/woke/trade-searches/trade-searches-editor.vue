@@ -24,7 +24,7 @@
           </button>
           <input v-model="entry.name" placeholder="name"
             class="w-input px-1 col-start-2 leading-6 rounded">
-          <input v-model="entry.category" placeholder="category (e.g. Flips, Gear)"
+          <input v-model="entry.category" placeholder="folder (e.g. Flips, Gear)"
             class="w-input px-1 leading-6 rounded">
           <input :value="entry.tags.join(', ')" @change="setTags(entry, $event)" placeholder="tags, comma separated"
             class="w-input px-1 col-start-2 col-span-2 leading-6 rounded">
