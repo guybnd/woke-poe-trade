@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-181
 title: 'UI 1: audit the PoE mode kit and mock the game look on four panels'
-status: Grooming
+status: Done
 priority: High
 effort: M
 assignee: unassigned
@@ -69,7 +69,52 @@ history:
       E:\Git\woke-ui-look (mock/css, testing/e2e/zz-mock-look.spec.ts, not
       committed). The page lists the charter edits each strength needs (P5, P14,
       P19) and five build findings for WOKEPOET-182.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked S3 + T1 (2026-11-10 04:27Z, "S3 t1"), against my recommendation
+      of S2 + T1.
+
+
+      S3: the full game look. It has the frame, the price check controls, Fontin
+      for all text except numbers, a near-black ground, gold fade row lines,
+      centred titles between diamonds and bronze corner marks. Numbers stay in
+      Inter.
+
+      T1: the look is part of the theme. Hybrid (the default) and Native both
+      get it. Modern and Classic keep their own looks. The price check's Window
+      style keeps only its layout job, as "Filter layout: Tooltip lines / Rows".
+
+
+      Mocks: https://claude.ai/artifact/7K32ckPi6gY99EKvJs8Dtv. Mock CSS:
+      E:\Git\woke-ui-look\mock\css\s1-s3.css (not committed).
+    date: '2026-11-10T04:27:34.508Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-10t04-27-34-508z
+  - type: comment
+    user: Agent
+    comment: Guy picked S3 + T1.
+    date: '2026-11-10T04:27:42.512Z'
+    id: c-2026-11-10t04-27-42-512z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-10T04:27:42.512Z'
+    comment: Guy picked S3 + T1.
+  - type: comment
+    user: Agent
+    comment: 'Mocks delivered, and Guy picked S3 + T1. Build notes are on WOKEPOET-182.'
+    date: '2026-11-10T04:27:43.544Z'
+    completionComment: true
+    id: c-2026-11-10t04-27-43-544z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-10T04:27:43.544Z'
+swimlane: null
 needsAction: null
 ---
 First step of the epic; everything else waits on Guy's pick here.
