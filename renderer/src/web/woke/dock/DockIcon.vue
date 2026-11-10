@@ -273,14 +273,8 @@ const styles = useCssModule()
 .icon:hover, .hot, .peek { opacity: 1; }
 .hot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--w-accent) 35%, transparent); }
 .peek { background: var(--w-panel); padding-right: 10px; }
-.glow { opacity: 1; animation: dock-glow 1.6s ease-in-out infinite; }
-@keyframes dock-glow {
-  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--w-accent) 30%, transparent); }
-  50% { box-shadow: 0 0 10px 2px color-mix(in srgb, var(--w-accent) 55%, transparent); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .glow { animation: none; box-shadow: 0 0 6px 1px color-mix(in srgb, var(--w-accent) 45%, transparent); }
-}
+/* A steady glow while something is running (P15: nothing pulses for attention). */
+.glow { opacity: 1; box-shadow: 0 0 6px 1px color-mix(in srgb, var(--w-accent) 45%, transparent); }
 .ring { position: absolute; left: -4px; top: -4px; pointer-events: none; }
 .ringTrack { fill: none; stroke: var(--w-line); stroke-width: 2.5; }
 .ringFill { fill: none; stroke: var(--w-accent); stroke-width: 2.5; }
