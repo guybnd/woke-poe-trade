@@ -4,7 +4,6 @@ import isDeepEqual from 'fast-deep-equal'
 import { Host } from '@/web/background/IPC'
 import { HostConfig, ShortcutAction } from '@ipc/types'
 import type * as widget from './overlay/widgets'
-import type { StashSearchWidget } from './stash-search/widget'
 import { wokeGlobalShortcuts, wokeShortcutsFor } from './woke/shortcuts'
 import { LOOT_FILTER_TYPE, seedLootFilterWidget } from './woke/loot-filter/widget'
 import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog } from './woke/modules'
@@ -445,12 +444,6 @@ function upgradeConfig (_config: Config): Config {
     priceCheck.defaultCurrency = null
   }
 
-  for (const widget of config.widgets) {
-    if (widget.wmType === 'stash-search') {
-      (widget as StashSearchWidget).enableHotkeys ??= true
-    }
-  }
-
   if (config.configVersion < 17) {
     for (const widget of config.widgets) {
       for (let i = 0; i < widget.wmFlags.length; ++i) {
@@ -619,19 +612,8 @@ export function getConfigForHost (): HostConfig {
   actions.push(...wokeGlobalShortcuts(config))
   for (const widget of config.widgets) {
     actions.push(...wokeShortcutsFor(widget, config))
-    if (widget.wmType === 'stash-search') {
-      const stashSearch = widget as StashSearchWidget
-      if (!stashSearch.enableHotkeys) continue
-
-      for (const entry of stashSearch.entries) {
-        if (entry.hotkey) {
-          actions.push({
-            shortcut: entry.hotkey,
-            action: { type: 'stash-search', text: entry.text }
-          })
-        }
-      }
-    } else if (widget.wmType === 'timer') {
+    // (APT's Stash search widgets are moved into the Regex library on load.)
+    if (widget.wmType === 'timer') {
       const stopwatch = widget as widget.StopwatchWidget
       if (stopwatch.toggleKey) {
         actions.push({

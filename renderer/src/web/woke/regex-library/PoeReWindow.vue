@@ -4,7 +4,6 @@
       <template #actions>
         <WButton size="sm" variant="primary" icon="fas fa-download" class="mr-1" data-qa="poe-re-save"
           title="Save the string poe.re has built to your Regex library" @click="startSave">Save to library</WButton>
-        <button class="w-icon-btn mr-1" :disabled="!canGoBack" title="Back" @click="goBack"><i class="fas fa-arrow-left" /></button>
         <button class="w-icon-btn mr-1" title="Reload" @click="reload"><i class="fas fa-sync-alt" /></button>
         <button class="w-icon-btn" title="Open in your browser" @click="openExternal"><i class="fas fa-external-link-alt" /></button>
       </template>
@@ -39,8 +38,6 @@ const props = defineProps<{
 
 type WebviewEl = HTMLElement & {
   getURL: () => string
-  canGoBack: () => boolean
-  goBack: () => void
   reload: () => void
   executeJavaScript: (code: string) => Promise<unknown>
 }
@@ -51,21 +48,10 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 const siteEl = shallowRef<WebviewEl | null>(null)
 // The site loads the first time the window is on screen, not at launch.
 const started = shallowRef(false)
-const canGoBack = shallowRef(false)
 const pending = ref<{ text: string, name: string, category: string } | null>(null)
 
 const onScreen = computed(() => props.config.wmWants === 'show' && wm.active.value)
 watch(onScreen, (yes) => { if (yes) started.value = true }, { immediate: true })
-
-function onNavigated () {
-  try { canGoBack.value = siteEl.value?.canGoBack() ?? false } catch { canGoBack.value = false }
-}
-watch(siteEl, (el, old) => {
-  old?.removeEventListener('did-navigate', onNavigated)
-  old?.removeEventListener('did-navigate-in-page', onNavigated)
-  el?.addEventListener('did-navigate', onNavigated)
-  el?.addEventListener('did-navigate-in-page', onNavigated)
-})
 
 // A webview throws if asked before it has attached.
 function currentUrl (): string {
@@ -74,10 +60,6 @@ function currentUrl (): string {
     if (at && /^https:\/\//i.test(at)) return at
   } catch { /* Not attached yet. */ }
   return POE_RE_URL
-}
-
-function goBack () {
-  try { siteEl.value?.goBack() } catch { /* Not attached yet. */ }
 }
 
 function reload () {
