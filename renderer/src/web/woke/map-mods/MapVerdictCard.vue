@@ -127,7 +127,7 @@ function cycle (matcher: string, current: ModRating) {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
 }
 .prop {
   display: flex;
@@ -156,7 +156,7 @@ button.mod:hover { background: var(--w-accent-soft); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }
 .dot.good { background: var(--w-up); }
-.tag { font-size: var(--w-text-sm); white-space: nowrap; }
+.tag { font-size: var(--w-fs-sm); white-space: nowrap; }
 .tag.deadly { color: var(--w-down); }
 .tag.warn { color: var(--w-warn); }
 .tag.good { color: var(--w-up); }

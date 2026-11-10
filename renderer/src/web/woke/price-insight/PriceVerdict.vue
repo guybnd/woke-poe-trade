@@ -263,22 +263,22 @@ async function copy (n: { key: string, text: string }) {
   background: var(--w-pc-well, var(--w-panel-solid));
   border-bottom: 1px solid var(--w-line);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
   font-variant-numeric: tabular-nums;
 }
 /* The answer, on one row. It only wraps when the text is scaled past the window. */
-.row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-height: 32px; padding: 2px calc(1rem - 4px) 2px 1rem; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); white-space: nowrap; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-height: 32px; padding: 2px calc(1rem - 4px) 2px 1rem; font-size: var(--w-fs-sm); color: var(--w-dim); white-space: nowrap; }
 /* Stays on the row: a second line would push the mods down when a search finds nothing. */
 .rowNote { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.price { justify-content: flex-start; font-family: var(--w-num); font-size: calc(16px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); }
+.price { justify-content: flex-start; font-family: var(--w-num); font-size: var(--w-fs-lg); font-weight: 600; color: var(--w-accent); }
 .price img { width: calc(16px * var(--w-text-scale, 1)); height: calc(16px * var(--w-text-scale, 1)); }
-.priceText { font-family: var(--w-head); font-size: calc(16px * var(--w-text-scale, 1)); color: var(--w-accent); }
+.priceText { font-family: var(--w-head); font-size: var(--w-fs-lg); color: var(--w-accent); }
 .warn { color: var(--w-warn); }
 .warnHigh { color: var(--w-down); }
 .count { color: var(--w-dim); font-size: var(--w-fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.note { margin: 0; padding: 0 1rem 8px; color: var(--w-dim); font-size: calc(12px * var(--w-text-scale, 1)); line-height: calc(17px * var(--w-text-scale, 1)); }
+.note { margin: 0; padding: 0 1rem 8px; color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); }
 /* One line of facts, for whoever wants them. */
-.line { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; min-height: 28px; padding: 2px calc(1rem - 4px) 2px 1rem; border-top: 1px solid var(--w-line-soft); font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); white-space: nowrap; }
+.line { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; min-height: 28px; padding: 2px calc(1rem - 4px) 2px 1rem; border-top: 1px solid var(--w-line-soft); font-size: var(--w-fs-sm); color: var(--w-dim); white-space: nowrap; }
 .fact { display: inline-flex; align-items: center; gap: 4px; }
 .factPrice { color: var(--w-fg); font-weight: 600; }
 .ninjaPrice { color: var(--w-ninja); font-weight: 600; }
@@ -290,7 +290,7 @@ async function copy (n: { key: string, text: string }) {
   letter-spacing: .05em;
   line-height: calc(14px * var(--w-text-scale, 1));
   padding: 0 5px;
-  border-radius: 3px;
+  border-radius: var(--w-r-sm);
   border: 1px solid var(--w-line);
   color: var(--w-dim);
 }
@@ -300,7 +300,7 @@ async function copy (n: { key: string, text: string }) {
 .sparkBtn { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 1px 4px; margin: 0 -4px; border-radius: var(--w-r-sm); border: 1px solid transparent; }
 .sparkBtn:hover, .sparkBtn.on { border-color: var(--w-line-strong); background: var(--w-panel-3); }
 .signals { display: flex; flex-direction: column; gap: 2px; padding: 6px 1rem; color: var(--w-fg); background: color-mix(in srgb, var(--w-down) 10%, transparent); border-top: 1px solid color-mix(in srgb, var(--w-down) 35%, transparent); }
-.signal { font-size: calc(12px * var(--w-text-scale, 1)); line-height: calc(17px * var(--w-text-scale, 1)); }
+.signal { font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); }
 .flag { color: var(--w-down); }
 .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(160px * var(--w-text-scale, 1)), 1fr)); gap: 4px 8px; padding: 6px 1rem; border-top: 1px solid var(--w-line-soft); }
 .note2 {
@@ -312,11 +312,11 @@ async function copy (n: { key: string, text: string }) {
   border-radius: var(--w-r-sm);
   border: 1px solid var(--w-line);
   background: var(--w-panel-3);
-  font-size: calc(12px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-sm);
   white-space: nowrap;
 }
 .note2:hover { border-color: var(--w-accent); }
-.sources { display: flex; flex-direction: column; gap: 2px; padding: 6px 1rem; border-top: 1px solid var(--w-line-soft); font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); }
+.sources { display: flex; flex-direction: column; gap: 2px; padding: 6px 1rem; border-top: 1px solid var(--w-line-soft); font-size: var(--w-fs-sm); color: var(--w-dim); }
 .agree { color: var(--w-dim); margin-bottom: 2px; }
 .source { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; }
 .source.off { opacity: .6; }
@@ -325,5 +325,5 @@ async function copy (n: { key: string, text: string }) {
 .ninjaName { color: var(--w-ninja); }
 .ninjaLink { color: var(--w-ninja); justify-self: start; }
 .ninjaLink:hover { text-decoration: underline; }
-.ppToggle { display: flex; align-items: center; gap: 6px; padding: 0 1rem 8px; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); }
+.ppToggle { display: flex; align-items: center; gap: 6px; padding: 0 1rem 8px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 </style>

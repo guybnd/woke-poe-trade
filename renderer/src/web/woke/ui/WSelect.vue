@@ -1,5 +1,5 @@
 <template>
-  <select :class="$style.select" :value="modelValue" @change="onChange">
+  <select :class="['w-select', $style.select]" :value="modelValue" @change="onChange">
     <option v-for="opt in options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
   </select>
 </template>
@@ -18,12 +18,7 @@ function onChange (e: Event) { emit('update:modelValue', (e.target as HTMLSelect
   height: calc(26px * var(--w-text-scale, 1));
   min-width: 0;
   padding: 0 6px;
-  font-size: calc(12.5px * var(--w-text-scale, 1));
-  color: var(--w-fg);
-  background: var(--w-panel-2);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-radius-sm);
+  font-size: var(--w-fs-md);
 }
-.select:focus { outline: none; border-color: var(--w-accent); }
-.select option { background: #15130f; }
+.select option { background: var(--w-panel-solid); }
 </style>

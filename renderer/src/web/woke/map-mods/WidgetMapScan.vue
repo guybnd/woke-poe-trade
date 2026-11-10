@@ -381,7 +381,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   border-bottom: 1px solid var(--w-line);
   text-align: center;
 }
-.tally > div { display: flex; flex-direction: column; font-size: var(--w-text-sm); }
+.tally > div { display: flex; flex-direction: column; font-size: var(--w-fs-sm); }
 .tally :global(.w-num) { font-size: var(--w-fs-xl); }
 .entry { display: flex; align-items: center; gap: 8px; padding: 3px var(--w-pad); font-size: var(--w-fs-md); }
 .tag {
@@ -424,7 +424,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   background: var(--w-panel);
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
   border: 1px solid var(--w-line-strong);
   border-radius: var(--w-r-md);
   box-shadow: var(--w-shadow);

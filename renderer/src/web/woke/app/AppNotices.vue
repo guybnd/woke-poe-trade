@@ -96,11 +96,11 @@ async function dismiss () {
   gap: 8px;
   padding: 4px 6px 4px 12px;
   font-family: var(--w-body);
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   color: var(--w-fg);
   background: var(--w-panel);
   border: 1px solid var(--w-line-strong);
-  border-radius: 999px;
+  border-radius: var(--w-r-pill);
   box-shadow: var(--w-shadow);
   white-space: nowrap;
 }

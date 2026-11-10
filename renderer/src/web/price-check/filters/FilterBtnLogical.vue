@@ -1,5 +1,5 @@
 <template>
-  <button :class="[$style.btn, 'w-logical', { [$style.active]: (active != null) ? active : !filter.disabled, on: (active != null) ? active : !filter.disabled }]"
+  <button :class="[$style.btn, 'w-logical', 'w-skin-chip', { [$style.active]: (active != null) ? active : !filter.disabled, on: (active != null) ? active : !filter.disabled }]"
     @click="toggle"
   >
     <img v-if="img" :src="img" class="w-5 h-5">
@@ -33,6 +33,7 @@ function toggle () {
 </script>
 
 <style module>
+/* The plain look; the game look reskins .w-skin-chip (ui/controls.css). */
 .btn {
   display: inline-flex;
   flex: none;

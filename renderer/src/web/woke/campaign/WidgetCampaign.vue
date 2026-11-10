@@ -424,7 +424,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 .prog {
   height: 4px;
   margin-bottom: 3px;
-  border-radius: 2px;
+  border-radius: var(--w-r-sm);
   background: var(--w-line);
   overflow: hidden;
 }

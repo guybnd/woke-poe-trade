@@ -81,7 +81,7 @@ function statusLine (m: ModuleDef) {
   border-bottom: 1px solid var(--w-line-soft);
 }
 .name { font-weight: 500; color: var(--w-fg); }
-.desc { font-size: var(--w-text-sm); color: var(--w-dim); }
+.desc { font-size: var(--w-fs-sm); color: var(--w-dim); }
 .tags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .switch {
   width: 30px;

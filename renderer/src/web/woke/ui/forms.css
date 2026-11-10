@@ -1,12 +1,5 @@
-/* Plain form fields in module settings editors (instead of Tailwind greys). */
-.w-input {
-  background: var(--w-panel-2);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-  color: var(--w-fg);
-}
-.w-input:focus { outline: none; border-color: var(--w-accent); }
-.w-input::placeholder { color: var(--w-faint); }
+/* Plain form fields in module settings editors (instead of Tailwind greys).
+ * .w-input's look is in controls.css, shared with WField and WSelect. */
 .w-input-bad { border-color: var(--w-down); background: color-mix(in srgb, var(--w-down) 14%, var(--w-panel-2)); }
 .w-btn-soft { background: var(--w-panel-3); color: var(--w-dim); border-radius: var(--w-r-sm); }
 .w-btn-soft:hover { color: var(--w-fg); }

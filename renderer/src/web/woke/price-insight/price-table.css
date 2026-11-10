@@ -14,7 +14,7 @@
   margin-bottom: var(--w-s2);
   padding: 0;
   font-family: var(--w-body);
-  font-size: calc(12px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-sm);
   white-space: nowrap;
 }
 .w-pc-toolbar > * { flex: none; }
@@ -35,7 +35,7 @@
   margin: 0;
   padding: 0 4px;
   font-family: var(--w-body);
-  font-size: calc(12px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-sm);
 }
 :root:not([data-woke-theme="classic"]) .w-pc-online-btn i { display: none; }
 :root:not([data-woke-theme="classic"]) .w-pc-online-btn:hover { background: var(--w-panel-3); color: var(--w-fg); }
@@ -51,16 +51,16 @@
   background: var(--w-panel-3);
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: calc(12px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-sm);
   white-space: nowrap;
 }
 :root:not([data-woke-theme="classic"]) #overlay-window .w-pc-btn:hover { border-color: var(--w-line-strong); background: var(--w-accent-soft); }
-:root:not([data-woke-theme="classic"]) #overlay-window .w-pc-btn i { color: var(--w-dim); font-size: calc(10px * var(--w-text-scale, 1)); }
+:root:not([data-woke-theme="classic"]) #overlay-window .w-pc-btn i { color: var(--w-dim); font-size: var(--w-fs-xs); }
 
 /* ---------- listing table ---------- */
 :root:not([data-woke-theme="classic"]) .w-pc-scroll { min-height: 0; }
 :root:not([data-woke-theme="classic"]) .w-pc-scroll::-webkit-scrollbar { width: 8px; }
-:root:not([data-woke-theme="classic"]) .w-pc-scroll::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: 4px; }
+:root:not([data-woke-theme="classic"]) .w-pc-scroll::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: var(--w-r-sm); }
 
 :root:not([data-woke-theme="classic"]) .w-pc-table {
   border-collapse: separate;
@@ -102,7 +102,7 @@
 /* Count: a bar for how much is for sale at this price. */
 .w-pc-count { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .w-pc-count-n { color: var(--w-dim); font-size: var(--w-fs-sm); }
-.w-pc-count-bar { display: block; width: 28px; height: 3px; border-radius: 2px; background: var(--w-panel-3); overflow: hidden; }
+.w-pc-count-bar { display: block; width: 28px; height: 3px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }
 .w-pc-count-bar > span { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }
 
 .w-pc-age { color: var(--w-dim); font-size: var(--w-fs-sm); text-align: right; white-space: nowrap; }
@@ -126,7 +126,7 @@
 /* Meets the title bar and the window's edges once it holds a verdict. */
 .w-pc-verdict-slot:has(> *) { margin: -1rem -1rem 8px; }
 .w-pc-verdict-slot::-webkit-scrollbar { width: 8px; }
-.w-pc-verdict-slot::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: 4px; }
+.w-pc-verdict-slot::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: var(--w-r-sm); }
 .w-pc-scroll { min-height: 7rem; }
 
 :root:not([data-woke-theme="classic"]) #overlay-window .w-pc-primary {
@@ -142,10 +142,10 @@
 .w-pc-tag {
   margin-left: var(--w-s1);
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--w-r-sm);
   border: 1px solid var(--w-down);
   color: var(--w-down);
-  font-size: calc(10px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-xs);
   font-weight: 600;
   line-height: calc(14px * var(--w-text-scale, 1));
   text-transform: uppercase;
@@ -154,14 +154,14 @@
 .w-pc-you {
   margin-left: var(--w-s1);
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--w-r-sm);
   background: var(--w-accent-soft);
   color: var(--w-accent);
   font-size: var(--w-fs-xs);
 }
 
 /* Loading rows, in the final layout so nothing jumps. */
-.w-pc-skel { display: block; height: 9px; border-radius: 3px; background: linear-gradient(90deg, var(--w-panel-2), var(--w-panel-3), var(--w-panel-2)); background-size: 200% 100%; animation: w-pc-shimmer 1.4s linear infinite; }
+.w-pc-skel { display: block; height: 9px; border-radius: var(--w-r-sm); background: linear-gradient(90deg, var(--w-panel-2), var(--w-panel-3), var(--w-panel-2)); background-size: 200% 100%; animation: w-pc-shimmer 1.4s linear infinite; }
 @keyframes w-pc-shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .w-pc-skel { animation: none; } }
 
@@ -212,5 +212,5 @@
   border-bottom: 1px solid var(--w-line);
   color: var(--w-dim);
   font-family: var(--w-body);
-  font-size: calc(12px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-sm);
 }

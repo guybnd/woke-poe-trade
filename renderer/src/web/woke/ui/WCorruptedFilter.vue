@@ -1,5 +1,5 @@
 <template>
-  <button type="button" :class="[$style.btn, $style[modelValue]]" :title="TITLES[modelValue]"
+  <button type="button" :class="['w-skin-chip', $style.btn, $style[modelValue], { on: modelValue === 'only', 'w-chip--corrupt': modelValue === 'only' }]" :title="TITLES[modelValue]"
     :aria-label="TITLES[modelValue]" @click="emit('update:modelValue', NEXT[modelValue])">
     <WIcon item="Vaal Orb" size="sm" title="" />
     <span v-if="modelValue === 'only'" :class="$style.label">Only</span>
@@ -25,6 +25,7 @@ const TITLES: Record<CorruptedFilter, string> = {
 </script>
 
 <style module>
+/* The plain look; the game look reskins .w-skin-chip (ui/controls.css). */
 .btn {
   display: inline-flex;
   align-items: center;

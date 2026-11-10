@@ -282,7 +282,7 @@ function copy (tier: string) {
   grid-template-columns: 3.5rem minmax(0, 1fr);
   gap: 8px 10px;
   align-items: center;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
 }
 .colours { gap: 4px 10px; }
 .cantPlay { opacity: 0.45; }
@@ -302,7 +302,7 @@ function copy (tier: string) {
 .mark:hover { outline: 2px solid var(--w-warn); outline-offset: 1px; }
 .foldBody {
   padding: 2px 6px 6px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
 }
 .fold {
   display: flex;
@@ -314,7 +314,7 @@ function copy (tier: string) {
   border: 1px solid transparent;
   border-radius: var(--w-r-sm);
   color: var(--w-dim);
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   text-align: left;
   cursor: pointer;
 }
@@ -348,7 +348,7 @@ function copy (tier: string) {
 .beam {
   width: 4px;
   height: 16px;
-  border-radius: 2px;
+  border-radius: var(--w-r-sm);
 }
 .fill {
   width: 10px;
@@ -365,6 +365,6 @@ function copy (tier: string) {
   border: 1px solid var(--w-line);
   border-radius: var(--w-r-sm);
   padding: 2px 4px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
 }
 </style>

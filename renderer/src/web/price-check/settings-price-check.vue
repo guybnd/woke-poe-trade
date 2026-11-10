@@ -31,12 +31,12 @@
       </div>
     </div>
     <div class="mb-4" data-window-style>
-      <div class="flex-1 mb-1">Window style</div>
+      <div class="flex-1 mb-1">Filter layout</div>
       <div class="flex">
-        <ui-radio v-model="windowStyle" value="standard" class="mr-4">Standard</ui-radio>
-        <ui-radio v-model="windowStyle" value="poe">PoE</ui-radio>
+        <ui-radio v-model="windowStyle" value="poe" class="mr-4">Tooltip lines</ui-radio>
+        <ui-radio v-model="windowStyle" value="standard">Rows</ui-radio>
       </div>
-      <div class="italic text-gray-500">PoE draws the filters like the game's item tooltip: click a line to search for it.</div>
+      <div class="italic text-gray-500">Tooltip lines draws the filters like the game's item tooltip: click a line to search for it. The look follows your theme.</div>
     </div>
     <div class="mb-4" data-price-view>
       <div class="flex-1 mb-1">Listings</div>

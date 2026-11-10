@@ -72,7 +72,7 @@ const labelStyle = computed(() => {
   white-space: nowrap;
   align-items: center;
   gap: 6px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
 }
 .beam {
   display: inline-block;

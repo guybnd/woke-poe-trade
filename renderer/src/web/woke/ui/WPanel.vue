@@ -348,13 +348,12 @@ defineExpose({ el: root })
 .title {
   flex: 1;
   font-family: var(--w-head);
-  font-size: var(--w-head-size);
+  font-size: var(--w-fs-lg);
   letter-spacing: var(--w-head-track);
   color: var(--w-fg);
 }
-:global([data-woke-theme="native"]) .title { color: var(--w-accent); }
-/* Diamond marker only when there's no game icon. */
-:global(:root:not([data-woke-theme="native"]):not([data-woke-theme="modern"])) .head > .title:first-child::before {
+/* Classic: a diamond marker when there's no game icon. */
+:global([data-woke-theme="classic"]) .head > .title:first-child::before {
   content: "";
   display: inline-block;
   width: 5px;
@@ -363,6 +362,56 @@ defineExpose({ el: root })
   background: var(--w-accent);
   transform: translateY(-2px) rotate(45deg);
 }
+/* The game look (P5): bronze frame with lit corner marks, a dark header with a
+   gold line that fades at both ends, the title centred between two diamonds. */
+:global([data-woke-look="game"]) .panel {
+  border-color: var(--w-frame);
+  box-shadow: var(--w-frame-shadow);
+}
+:global([data-woke-look="game"]) .panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  --c: linear-gradient(var(--w-frame-hi), var(--w-frame-hi));
+  background: var(--c), var(--c), var(--c), var(--c), var(--c), var(--c), var(--c), var(--c);
+  background-repeat: no-repeat;
+  background-size: 10px 2px, 2px 10px, 10px 2px, 2px 10px, 10px 2px, 2px 10px, 10px 2px, 2px 10px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+}
+:global([data-woke-look="game"]) .head {
+  background: var(--w-head-ground);
+  border-bottom-color: transparent;
+}
+:global([data-woke-look="game"]) .head::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: var(--w-gold-fade);
+}
+:global([data-woke-look="game"]) .title {
+  font-family: var(--w-label);
+  color: var(--w-gold);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+:global([data-woke-look="game"]) .title::before,
+:global([data-woke-look="game"]) .title::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 10px;
+  background: var(--w-frame-lit);
+  transform: translateY(-2px) rotate(45deg);
+}
+:global([data-woke-theme="modern"]) .title { font-size: var(--w-fs-md); }
+:global([data-woke-look="game"]) .footer { border-top-color: var(--w-well-line); }
 .actions { display: flex; align-items: center; gap: var(--w-s1); }
 .controls { display: flex; align-items: center; flex: none; }
 /* Keeps a panel's own chips (hotkey, age) from reading as window buttons. */
@@ -374,6 +423,7 @@ defineExpose({ el: root })
   align-items: center;
   gap: 4px;
   margin-right: 2px;
+  font-family: var(--w-small);
   font-size: var(--w-fs-xs);
   color: var(--w-dim);
   white-space: nowrap;
@@ -403,6 +453,7 @@ defineExpose({ el: root })
   flex-wrap: wrap;
   gap: 4px 8px;
   padding: 6px var(--w-pad);
+  font-family: var(--w-small);
   font-size: var(--w-fs-sm);
   color: var(--w-dim);
 }
@@ -432,6 +483,7 @@ defineExpose({ el: root })
   gap: 8px;
   padding: 5px var(--w-pad);
   border-top: 1px solid var(--w-line);
+  font-family: var(--w-small);
   font-size: var(--w-fs-sm);
   color: var(--w-dim);
 }

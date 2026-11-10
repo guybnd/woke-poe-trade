@@ -290,7 +290,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .state {
   flex: none;
   padding: 0 6px;
-  border-radius: 4px;
+  border-radius: var(--w-r-sm);
   font-size: 0.85em;
   font-weight: 600;
   white-space: nowrap;
@@ -300,6 +300,6 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .unknown { color: var(--w-dim); background: var(--w-panel-3); }
 .showMore { display: block; width: 100%; padding: 7px var(--w-pad); text-align: left; }
 .stat { padding: 7px var(--w-pad); border-top: 1px solid var(--w-line-soft); }
-.bar { height: 4px; margin-top: 5px; border-radius: 2px; background: var(--w-panel-3); }
-.fill { height: 4px; border-radius: 2px; background: var(--w-down); }
+.bar { height: 4px; margin-top: 5px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
+.fill { height: 4px; border-radius: var(--w-r-sm); background: var(--w-down); }
 </style>

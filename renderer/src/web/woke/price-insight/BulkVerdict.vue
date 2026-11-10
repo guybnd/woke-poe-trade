@@ -70,10 +70,10 @@ const fast = computed(() => {
   background: var(--w-pc-well, var(--w-panel-solid));
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
   font-variant-numeric: tabular-nums;
 }
-.eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; color: var(--w-dim); font-size: calc(12px * var(--w-text-scale, 1)); line-height: calc(16px * var(--w-text-scale, 1)); }
+.eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(16px * var(--w-text-scale, 1)); }
 .count { color: var(--w-dim); font-size: var(--w-fs-xs); white-space: nowrap; }
 .badge {
   flex: none;
@@ -82,7 +82,7 @@ const fast = computed(() => {
   letter-spacing: .05em;
   line-height: calc(14px * var(--w-text-scale, 1));
   padding: 0 5px;
-  border-radius: 3px;
+  border-radius: var(--w-r-sm);
   border: 1px solid var(--w-line);
   color: var(--w-dim);
 }
@@ -91,7 +91,7 @@ const fast = computed(() => {
 .low .badge { color: var(--w-warn); border-color: currentColor; }
 .value { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .headline { font-family: var(--w-num); font-size: calc(28px * var(--w-text-scale, 1)); line-height: calc(32px * var(--w-text-scale, 1)); font-weight: 600; color: var(--w-accent); white-space: nowrap; }
-.each { color: var(--w-dim); font-size: calc(12px * var(--w-text-scale, 1)); }
-.note { color: var(--w-dim); font-size: calc(12px * var(--w-text-scale, 1)); line-height: calc(17px * var(--w-text-scale, 1)); }
-.prices { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: calc(12px * var(--w-text-scale, 1)); }
+.each { color: var(--w-dim); font-size: var(--w-fs-sm); }
+.note { color: var(--w-dim); font-size: var(--w-fs-sm); line-height: calc(17px * var(--w-text-scale, 1)); }
+.prices { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--w-fs-sm); }
 </style>

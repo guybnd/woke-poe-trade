@@ -46,6 +46,10 @@
   --w-r-divination: #7fb5d6;
   --w-mod-crafted: #b4b4ff;
   --w-mod-fractured: #a29162;
+  --w-mod-enchant: #b8daf2;
+  --w-mod-scourge: #ff9b52;
+  --w-mod-pseudo: #d8c08a;
+  --w-mod-corrupted: #d23a2a;
   --w-tip-bg: rgba(6, 5, 4, 0.96);
   --w-gem-r: #ea6f5f;       /* gem names as text: brighter than the socket dots */
   --w-gem-g: #72cf64;
@@ -66,14 +70,17 @@
   --w-s-b: #4a78d0;
   --w-s-w: #d9d4c8;
 
-  /* Type (P19). Inter is picked for small sizes on a dark, busy background;
-   * numbers use the same family with even-width digits (.w-num). Fontin small
-   * caps is for titles of 15px and up only. Nothing goes below --w-fs-xs. */
+  /* Type (P19). The game look (game-look.css) reads in Fontin from 13px up;
+   * text below 13px (--w-small), numbers (--w-num, .w-num), fields and key caps
+   * stay Inter with even-width digits. --w-head is Fontin small caps for titles,
+   * --w-label the face of buttons, tabs, chips and group labels. Nothing goes
+   * below --w-fs-xs. */
   --w-head: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
-  --w-head-size: calc(15px * var(--w-text-scale, 1));
   --w-head-track: 0.03em;
   --w-body: Inter, system-ui, sans-serif;
   --w-num: Inter, system-ui, sans-serif;
+  --w-small: var(--w-body);
+  --w-label: var(--w-body);
   --w-mono: "JetBrains Mono", ui-monospace, monospace;
   /* All times the Text size setting (ui/text-scale.ts). */
   --w-fs-xs: calc(11px * var(--w-text-scale, 1));    /* column labels, key caps */
@@ -81,8 +88,6 @@
   --w-fs-md: calc(13px * var(--w-text-scale, 1));    /* rows, body, buttons */
   --w-fs-lg: calc(15px * var(--w-text-scale, 1));    /* titles, key values */
   --w-fs-xl: calc(18px * var(--w-text-scale, 1));    /* the verdict (P7) */
-  --w-text: var(--w-fs-md);
-  --w-text-sm: var(--w-fs-sm);
 
   /* Spacing: 4px grid (P14) */
   --w-s1: 4px;
@@ -92,7 +97,8 @@
   --w-s5: 20px;
   --w-s6: 24px;
 
-  /* Shape: three radii */
+  /* Shape: three radii. The game look squares both to 2px (P14); the pill is
+   * for badges only. */
   --w-r-sm: 4px;
   --w-r-md: 6px;
   --w-r-pill: 999px;
@@ -113,6 +119,61 @@
   --w-icon-sm: 16px;
   --w-icon-md: 20px;
   --w-icon-lg: 24px;
+
+  /* The game look's parts (P5, P14), used by controls.css and game-look.css.
+   * Hybrid and Native carry these values; the plain look (Modern, Classic)
+   * resets them to neutral ones below, so a rule using them never shows bronze. */
+  --w-frame: #6b5636;              /* bronze frame line */
+  --w-frame-hi: #a8884f;           /* lit frame: hover, corner marks */
+  --w-frame-lit: #c7a25a;          /* primary button edge, diamonds */
+  --w-frame-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(255, 226, 160, 0.06), 0 10px 30px rgba(0, 0, 0, 0.6);
+  --w-gold: #d9c08a;               /* label text on bronze */
+  --w-gold-hi: #ffe2a0;            /* lit label text */
+  --w-bevel: linear-gradient(#2b251c, #16130f);
+  --w-bevel-shadow: inset 0 1px 0 rgba(255, 226, 160, 0.09);
+  --w-bevel-primary: linear-gradient(#6d4d1f, #3c290f);
+  --w-bevel-primary-shadow: inset 0 1px 0 rgba(255, 226, 160, 0.25), 0 0 6px rgba(227, 183, 95, 0.25);
+  --w-pressed: linear-gradient(#120f0b, #1f1912);   /* the active choice, pressed in */
+  --w-pressed-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(227, 183, 95, 0.35);
+  --w-well: #070605;               /* recessed field ground */
+  --w-well-line: #3a3023;
+  --w-well-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.9);
+  --w-chip-line: #4a3d29;
+  --w-chip-ground: #110e0a;
+  --w-chip-on: linear-gradient(#2a2216, #17120c);
+  --w-head-ground: linear-gradient(#2c2419, #15110c);
+  --w-gold-fade: linear-gradient(90deg, transparent, #8a7040 20%, #c7a25a 50%, #8a7040 80%, transparent);
+  --w-row-fade: linear-gradient(90deg, transparent, rgba(138, 112, 64, 0.35) 15%, rgba(138, 112, 64, 0.35) 85%, transparent);
+  --w-bad-line: #8a3a30;           /* a "not" or corrupted choice */
+  --w-bad-fg: #ff8a7a;
+  --w-bad-ground: linear-gradient(#2a1410, #170b08);
+}
+
+:root[data-woke-look="plain"] {
+  --w-frame: var(--w-line-strong);
+  --w-frame-hi: var(--w-accent);
+  --w-frame-lit: var(--w-accent);
+  --w-frame-shadow: var(--w-shadow);
+  --w-gold: var(--w-fg);
+  --w-gold-hi: var(--w-accent);
+  --w-bevel: var(--w-panel-2);
+  --w-bevel-shadow: none;
+  --w-bevel-primary: var(--w-accent);
+  --w-bevel-primary-shadow: none;
+  --w-pressed: var(--w-accent-soft);
+  --w-pressed-shadow: none;
+  --w-well: var(--w-panel-2);
+  --w-well-line: var(--w-line);
+  --w-well-shadow: none;
+  --w-chip-line: var(--w-line-strong);
+  --w-chip-ground: transparent;
+  --w-chip-on: var(--w-accent-soft);
+  --w-head-ground: var(--w-header-bg);
+  --w-gold-fade: linear-gradient(var(--w-line), var(--w-line));
+  --w-row-fade: linear-gradient(var(--w-line-soft), var(--w-line-soft));
+  --w-bad-line: color-mix(in srgb, var(--w-down) 55%, transparent);
+  --w-bad-fg: var(--w-down);
+  --w-bad-ground: color-mix(in srgb, var(--w-down) 14%, transparent);
 }
 
 :root[data-woke-density="compact"] { --w-row-h: calc(24px * var(--w-text-scale, 1)); }
@@ -136,7 +197,6 @@
   --w-accent: #c8a35a;
   --w-accent-fg: #1a120a;
   --w-accent-soft: rgba(200, 163, 90, 0.14);
-  --w-head-size: 15px;
   --w-head-track: 0.06em;
   --w-body: Fontin, FrizQuadrataC, Georgia, serif;
   --w-num: Fontin, FrizQuadrataC, Georgia, serif;
@@ -163,7 +223,6 @@
   --w-accent-fg: #0d0f1a;
   --w-accent-soft: rgba(154, 168, 255, 0.12);
   --w-head: Inter, system-ui, sans-serif;
-  --w-head-size: 13px;
   --w-head-track: 0;
   --w-r-sm: 7px;
   --w-r-md: 12px;
@@ -182,7 +241,7 @@ body { font-size: calc(1rem * var(--w-text-scale, 1)); }
   box-shadow: var(--w-shadow);
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
   line-height: 1.45;
 }
 
@@ -236,7 +295,7 @@ body { font-size: calc(1rem * var(--w-text-scale, 1)); }
 
 .w-scroll { overflow-y: auto; min-height: 0; }
 .w-scroll::-webkit-scrollbar { width: 8px; }
-.w-scroll::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: 4px; }
+.w-scroll::-webkit-scrollbar-thumb { background: var(--w-panel-3); border-radius: var(--w-r-sm); }
 
 .w-rarity-normal { color: var(--w-r-normal); }
 .w-rarity-magic { color: var(--w-r-magic); }

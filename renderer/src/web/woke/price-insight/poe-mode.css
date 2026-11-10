@@ -1,135 +1,72 @@
-/* PoE mode (Settings > Price check > Window style). The price check's warm stone
- * tokens (ui/theme.css) dressed as the game's UI: bronze bevel buttons, pressed-in
- * active segments, recessed wells, square chips, 2px corners, Fontin SC labels.
- * Numbers stay in Inter (tabular), and ≈, which Fontin SC lacks, too.
- * Everything here is under #price-window.w-poe, so Standard is untouched. */
+/* The price check's "Tooltip lines" filter layout (Settings > Price check >
+ * Filter layout): the filters drawn as the game's item tooltip, a 2x2 header
+ * and number chips. Layout rules are under #price-window.w-poe. The look
+ * (bronze, bevels, Fontin) comes from the theme's tokens (ui/theme.css), so
+ * Hybrid and Native draw it in the game look and Modern and Classic in their
+ * own. Buttons, segments, tabs, chips and fields are ui/controls.css's.
+ * Numbers stay in Inter (tabular), and ≈, which Fontin SC lacks, too. */
 
-#price-window.w-poe {
-  --poe-bronze: #6b5636;
-  --poe-bronze-hi: #a8884f;
-  --poe-gold-t: #d9c08a;
-  --poe-gold-hi: #ffe2a0;
-  --poe-chip-line: #4a3d29;
-  --poe-well: #070605;
-  --poe-font: FontinSmallCaps, Fontin, Georgia, serif;
-  --poe-num: Inter, system-ui, sans-serif;
-  border: 1px solid var(--poe-bronze);
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(255, 226, 160, .06), 0 10px 30px rgba(0, 0, 0, .6);
+/* The window's frame follows the theme, in either filter layout. */
+:root[data-woke-look="game"] #price-window {
+  border: 1px solid var(--w-frame);
+  border-radius: var(--w-r-sm);
+  box-shadow: var(--w-frame-shadow);
 }
 
-#price-window.w-poe .w-sym { font-family: var(--poe-num); font-weight: 700; }
+#price-window.w-poe .w-sym { font-family: var(--w-num); font-weight: 700; }
 
-/* ---- Buttons: bronze bevel ---- */
-#price-window.w-poe .btn,
-#price-window.w-poe .w-pc-btn {
-  font-family: var(--poe-font);
-  letter-spacing: .03em;
-  color: var(--poe-gold-t);
-  background: linear-gradient(#2b251c, #16130f);
-  border: 1px solid var(--poe-bronze);
-  border-radius: 2px;
-  box-shadow: inset 0 1px 0 rgba(255, 226, 160, .09);
-}
-#price-window.w-poe .btn:hover,
-#price-window.w-poe .w-pc-btn:hover { border-color: var(--poe-bronze-hi); color: var(--poe-gold-hi); }
-#price-window.w-poe .btn.w-pc-primary {
-  background: linear-gradient(#6d4d1f, #3c290f);
-  border-color: #c7a25a;
-  color: var(--poe-gold-hi);
-  box-shadow: inset 0 1px 0 rgba(255, 226, 160, .25), 0 0 6px rgba(227, 183, 95, .25);
-}
-
-/* ---- Segmented controls and tabs: the active part pressed in ---- */
-#price-window.w-poe .w-seg,
-#price-window.w-poe .w-rollpick {
-  border: 1px solid var(--poe-bronze);
-  border-radius: 2px;
-  box-shadow: 0 1px 0 #000;
-}
-#price-window.w-poe .w-seg > button,
-#price-window.w-poe .w-rollpick > button,
-#price-window.w-poe .w-tabs > button {
-  font-family: var(--poe-font);
-  letter-spacing: .03em;
-  color: var(--poe-gold-t);
-  background: linear-gradient(#2b251c, #16130f);
-  box-shadow: inset 0 1px 0 rgba(255, 226, 160, .09);
-}
-#price-window.w-poe .w-seg > button + button,
-#price-window.w-poe .w-rollpick > button + button { border-left-color: #3a3023; }
-#price-window.w-poe .w-seg > button:hover,
-#price-window.w-poe .w-rollpick > button:hover,
-#price-window.w-poe .w-tabs > button:hover { color: var(--poe-gold-hi); }
-#price-window.w-poe .w-seg > button[aria-pressed="true"],
-#price-window.w-poe .w-rollpick > button[aria-pressed="true"],
-#price-window.w-poe .w-tabs > button[aria-selected="true"] {
-  background: linear-gradient(#120f0b, #1f1912);
-  color: var(--poe-gold-hi);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .9), inset 0 -1px 0 rgba(227, 183, 95, .35);
-}
-
-/* ---- Square item-tag chips ---- */
-#price-window.w-poe .w-logical,
-#price-window.w-poe .filter-name-corrupted,
+/* ---- Tooltip-line chips: square item tags ---- */
 #price-window.w-poe .w-poe-chip,
 #price-window.w-poe .w-poe-nchip {
-  font-family: var(--poe-font);
+  font-family: var(--w-label);
   letter-spacing: .03em;
-  border-radius: 2px;
-  border: 1px solid var(--poe-chip-line);
-  background: #110e0a;
+  border-radius: var(--w-r-sm);
+  border: 1px solid var(--w-chip-line);
+  background: var(--w-chip-ground);
   color: var(--w-dim);
 }
-#price-window.w-poe .w-logical.on,
 #price-window.w-poe .w-poe-chip.on,
 #price-window.w-poe .w-poe-nchip.on {
-  border-color: var(--poe-bronze-hi);
-  color: var(--poe-gold-hi);
-  background: linear-gradient(#2a2216, #17120c);
-}
-#price-window.w-poe .filter-name-corrupted.on {
-  color: #ff8a7a;
-  border-color: #8a3a30;
-  background: linear-gradient(#2a1410, #170b08);
+  border-color: var(--w-frame-hi);
+  color: var(--w-gold-hi);
+  background: var(--w-chip-on);
 }
 #price-window.w-poe .w-poe-chip {
-  font-size: calc(12px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-md);
   line-height: calc(18px * var(--w-text-scale, 1));
   padding: 0 7px;
   white-space: nowrap;
 }
 
-/* The pseudo total's quiet tag: small and square, no gold. */
+/* The pseudo total's quiet tag: small and square, no gold. Under 13px, so Inter. */
 #price-window.w-poe .w-poe-ptag {
-  font-family: var(--poe-font);
-  letter-spacing: .03em;
-  font-size: calc(10.5px * var(--w-text-scale, 1));
+  font-family: var(--w-small);
+  font-size: var(--w-fs-xs);
   line-height: calc(15px * var(--w-text-scale, 1));
   padding: 0 6px;
-  border-radius: 2px;
-  border: 1px solid #3a3124;
+  border-radius: var(--w-r-sm);
+  border: 1px solid var(--w-well-line);
   background: transparent;
   color: var(--w-faint);
   white-space: nowrap;
   flex: none;
 }
 #price-window.w-poe .w-poe-row .w-poe-ptag { align-self: center; }
-#price-window.w-poe .w-poe-ptag:hover { color: var(--w-dim); border-color: #5a4c39; }
+#price-window.w-poe .w-poe-ptag:hover { color: var(--w-dim); border-color: var(--w-line-strong); }
 
 /* The catalyst's Q tag on an unpicked line: square, blue like the game's quality. */
-.w-poe-qtag {
+#price-window .w-poe-qtag {
   flex: none;
-  font: 700 calc(11px * var(--w-text-scale, 1)) Inter, system-ui, sans-serif;
+  font: 700 var(--w-fs-xs) var(--w-num);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   padding: 2px 4px;
-  border-radius: 2px;
+  border-radius: var(--w-r-sm);
   color: var(--w-r-magic);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--w-r-magic) 45%, transparent);
 }
-.w-poe-qtag:hover { box-shadow: inset 0 0 0 1px var(--w-r-magic); }
-.w-poe-qtag.on { color: #fff; background: color-mix(in srgb, var(--w-r-magic) 45%, transparent); box-shadow: inset 0 0 0 1px var(--w-r-magic); }
+#price-window .w-poe-qtag:hover { box-shadow: inset 0 0 0 1px var(--w-r-magic); }
+#price-window .w-poe-qtag.on { color: var(--w-fg); background: color-mix(in srgb, var(--w-r-magic) 45%, transparent); box-shadow: inset 0 0 0 1px var(--w-r-magic); }
 
 /* ---- Header: 2x2 grid ---- */
 #price-window.w-poe .w-poe-head {
@@ -142,11 +79,11 @@
   margin: 0 -16px 10px;
   padding-left: 16px;
   padding-right: 16px;
-  border-bottom: 1px solid var(--poe-chip-line);
+  border-bottom: 1px solid var(--w-chip-line);
 }
 #price-window.w-poe .w-poe-head .filter-name-main { display: contents; }
 #price-window.w-poe .w-poe-head .filter-name-title { grid-area: name; }
-#price-window.w-poe .w-poe-head .filter-name-label { font-family: var(--poe-font); font-size: calc(19px * var(--w-text-scale, 1)); letter-spacing: .03em; }
+#price-window.w-poe .w-poe-head .filter-name-label { font-family: var(--w-label); font-size: calc(19px * var(--w-text-scale, 1)); letter-spacing: .03em; }
 #price-window.w-poe .w-poe-head .filter-name-chips { grid-area: chips; flex: initial; }
 #price-window.w-poe .w-poe-head-aside { grid-area: aside; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
 #price-window.w-poe .w-poe-head-aside:empty { display: none; }
@@ -161,12 +98,12 @@
   gap: 1px;
   height: calc(24px * var(--w-text-scale, 1));
   padding: 0 2px 0 8px;
-  font-size: calc(12.5px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-md);
   user-select: none;
 }
 #price-window.w-poe .w-poe-nchip.dragging { cursor: ew-resize; border-color: var(--w-accent); }
 #price-window.w-poe .w-poe-nlab { font: inherit; color: inherit; padding-right: 2px; }
-#price-window.w-poe .w-poe-nlab:hover { color: var(--poe-gold-hi); }
+#price-window.w-poe .w-poe-nlab:hover { color: var(--w-gold-hi); }
 #price-window.w-poe .w-poe-ninp {
   height: calc(20px * var(--w-text-scale, 1));
   min-width: 2ch;
@@ -174,7 +111,7 @@
   border-bottom: 1px dashed transparent;
   background: transparent;
   color: inherit;
-  font: 600 calc(13px * var(--w-text-scale, 1)) var(--poe-num);
+  font: 600 var(--w-fs-md) var(--w-num);
   font-variant-numeric: tabular-nums;
   text-align: center;
   outline: none;
@@ -184,28 +121,28 @@
 }
 #price-window.w-poe .w-poe-ninp::-webkit-inner-spin-button,
 #price-window.w-poe .w-poe-ninp::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-#price-window.w-poe .w-poe-ninp:focus { cursor: text; background: var(--poe-well); box-shadow: inset 0 1px 3px #000; }
-#price-window.w-poe .w-poe-nchip:hover .w-poe-ninp:not(:focus) { border-bottom-color: var(--poe-bronze-hi); }
-#price-window.w-poe .w-poe-ndash { font-family: var(--poe-num); }
+#price-window.w-poe .w-poe-ninp:focus { cursor: text; background: var(--w-well); box-shadow: var(--w-well-shadow); }
+#price-window.w-poe .w-poe-nchip:hover .w-poe-ninp:not(:focus) { border-bottom-color: var(--w-frame-hi); }
+#price-window.w-poe .w-poe-ndash { font-family: var(--w-num); }
 #price-window.w-poe .w-poe-arr {
   width: 12px;
   height: calc(20px * var(--w-text-scale, 1));
-  font: 700 calc(13px * var(--w-text-scale, 1)) var(--poe-num);
-  color: var(--poe-gold-t);
+  font: 700 var(--w-fs-md) var(--w-num);
+  color: var(--w-gold);
   opacity: 0;
   transition: opacity 80ms;
 }
 #price-window.w-poe .w-poe-nchip:hover .w-poe-arr,
 #price-window.w-poe .w-poe-nchip:focus-within .w-poe-arr { opacity: 1; }
-#price-window.w-poe .w-poe-arr:hover { color: var(--poe-gold-hi); }
+#price-window.w-poe .w-poe-arr:hover { color: var(--w-gold-hi); }
 
 /* ---- The filter well: a recessed tooltip ---- */
 #price-window.w-poe .w-poe-well {
   margin: 0 -6px;
   padding: 8px 0 6px;
   background: var(--w-pc-well);
-  border: 1px solid var(--poe-chip-line);
-  border-radius: 2px;
+  border: 1px solid var(--w-chip-line);
+  border-radius: var(--w-r-sm);
   box-shadow: inset 0 0 0 1px #000;
 }
 /* Under the well: Collapse and the two toggles, the size of the window's other small labels.
@@ -215,35 +152,35 @@
   margin-top: 6px;
   align-items: center;
   row-gap: 4px;
-  font-family: var(--poe-font);
-  font-size: calc(14px * var(--w-text-scale, 1));
+  font-family: var(--w-label);
+  font-size: var(--w-fs-md);
   line-height: 1.2;
 }
 #price-window.w-poe .w-pc-stat-foot > * { padding-top: 0; font-size: inherit; height: auto; min-height: 1.375rem; }
 #price-window.w-poe .w-pc-collapse {
   width: auto;
   padding: 4px 12px;
-  border: 1px solid var(--poe-chip-line);
-  border-radius: 2px;
-  background: #110e0a;
+  border: 1px solid var(--w-chip-line);
+  border-radius: var(--w-r-sm);
+  background: var(--w-chip-ground);
   color: var(--w-dim);
 }
-#price-window.w-poe .w-pc-collapse:hover { border-color: var(--poe-bronze-hi); color: var(--poe-gold-hi); }
+#price-window.w-poe .w-pc-collapse:hover { border-color: var(--w-frame-hi); color: var(--w-gold-hi); }
 #price-window.w-poe .w-poe-sep {
   height: 1px;
   margin: 6px 30px;
-  background: linear-gradient(90deg, transparent, #8a7040, transparent);
+  background: var(--w-gold-fade);
 }
 
 /* Mod colours, as in the game's tooltip. */
-#price-window.w-poe .w-poe-k-local { color: #c8c8c8; }
-#price-window.w-poe .w-poe-k-pseudo { color: #d8c08a; }
-#price-window.w-poe .w-poe-k-enchant { color: #b8daf2; }
+#price-window.w-poe .w-poe-k-local { color: var(--w-r-normal); }
+#price-window.w-poe .w-poe-k-pseudo { color: var(--w-mod-pseudo); }
+#price-window.w-poe .w-poe-k-enchant { color: var(--w-mod-enchant); }
 #price-window.w-poe .w-poe-k-implicit,
-#price-window.w-poe .w-poe-k-explicit { color: #8888ff; }
-#price-window.w-poe .w-poe-k-crafted { color: #b4b4ff; }
-#price-window.w-poe .w-poe-k-fractured { color: #a29162; }
-#price-window.w-poe .w-poe-k-scourge { color: #ff9b52; }
+#price-window.w-poe .w-poe-k-explicit { color: var(--w-r-magic); }
+#price-window.w-poe .w-poe-k-crafted { color: var(--w-mod-crafted); }
+#price-window.w-poe .w-poe-k-fractured { color: var(--w-mod-fractured); }
+#price-window.w-poe .w-poe-k-scourge { color: var(--w-mod-scourge); }
 /* ItemModifierText's own greys and fonts give way to the line's colour. */
 #price-window.w-poe .w-pc-modtext,
 #price-window.w-poe .w-pc-modtext > span { color: inherit !important; font-family: inherit; font-weight: inherit; }
@@ -255,15 +192,15 @@
   width: 7px;
   height: 7px;
   transform: rotate(45deg);
-  background: #d23a2a;
+  background: var(--w-mod-corrupted);
 }
 #price-window.w-poe .w-poe-not {
-  font-family: var(--poe-num);
-  font-size: calc(10.5px * var(--w-text-scale, 1));
+  font-family: var(--w-num);
+  font-size: var(--w-fs-xs);
   padding: 0 4px;
-  border: 1px solid #8a3a30;
-  border-radius: 2px;
-  color: #ff8a7a;
+  border: 1px solid var(--w-bad-line);
+  border-radius: var(--w-r-sm);
+  color: var(--w-bad-fg);
 }
 
 /* Tier gutter, like the Alt tooltip: T1 gold, others faint. */
@@ -271,14 +208,14 @@
   flex: none;
   width: 20px;
   text-align: center;
-  font: 600 calc(11px * var(--w-text-scale, 1)) var(--poe-num);
+  font: 600 var(--w-fs-xs) var(--w-num);
   font-variant-numeric: tabular-nums;
   color: var(--w-faint);
 }
-#price-window.w-poe .w-poe-tier.w-poe-t1 { color: var(--poe-gold-hi); }
+#price-window.w-poe .w-poe-tier.w-poe-t1 { color: var(--w-gold-hi); }
 
 /* An unpicked line: centred, as in the tooltip. Clicking it picks it. */
-.w-poe-line {
+#price-window .w-poe-line {
   position: relative;
   display: flex;
   align-items: center;
@@ -286,14 +223,14 @@
   gap: 6px;
   margin: 0 6px;
   padding: 3px 30px;
-  border-radius: 2px;
+  border-radius: var(--w-r-sm);
 }
-.w-poe-line:hover { background: var(--w-accent-soft); }
+#price-window .w-poe-line:hover { background: var(--w-accent-soft); }
 /* The tier sits just before the text it belongs to; a far-left gutter left it
    stranded from centred lines. No tier, no gap. */
 #price-window.w-poe .w-poe-line > .w-poe-tier { width: auto; }
 #price-window.w-poe .w-poe-line > .w-poe-tier:empty { display: none; }
-.w-poe-line-text {
+#price-window .w-poe-line-text {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -301,52 +238,52 @@
   min-width: 0;
   max-width: 100%;
   text-align: center;
-  font-family: FontinSmallCaps, Fontin, Georgia, serif;
-  font-size: calc(15px * var(--w-text-scale, 1));
+  font-family: var(--w-label);
+  font-size: var(--w-fs-lg);
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.w-poe-line.w-poe-dimmed .w-poe-line-text { opacity: .55; }
-.w-poe-line.w-poe-child { margin-left: 28px; }
+#price-window .w-poe-line.w-poe-dimmed .w-poe-line-text { opacity: .55; }
+#price-window .w-poe-line.w-poe-child { margin-left: 28px; }
 /* A local line's own mod name, after a split. */
-.w-poe-modname {
-  font-family: Inter, system-ui, sans-serif;
-  font-size: calc(10.5px * var(--w-text-scale, 1));
+#price-window .w-poe-modname {
+  font-family: var(--w-small);
+  font-size: var(--w-fs-xs);
   color: var(--w-faint);
   white-space: nowrap;
 }
 /* A hybrid mod's lines, boxed together: clicking any searches the whole mod. */
-.w-poe-line.w-poe-hybrid {
+#price-window .w-poe-line.w-poe-hybrid {
   margin-left: 28px;
-  border: 1px dashed #8a6f42;
+  border: 1px dashed var(--w-frame-hi);
   border-top-style: none;
   border-bottom-style: none;
   border-radius: 0;
-  background: rgba(227, 183, 95, .05);
+  background: color-mix(in srgb, var(--w-accent) 5%, transparent);
 }
-.w-poe-line.w-poe-hybrid-first { border-top-style: dashed; border-top-left-radius: 2px; border-top-right-radius: 2px; }
-.w-poe-line.w-poe-hybrid-last { border-bottom-style: dashed; border-bottom-left-radius: 2px; border-bottom-right-radius: 2px; }
-.w-poe-line.w-poe-hybrid .w-poe-modname { color: #c8a46a; }
+#price-window .w-poe-line.w-poe-hybrid-first { border-top-style: dashed; border-top-left-radius: var(--w-r-sm); border-top-right-radius: var(--w-r-sm); }
+#price-window .w-poe-line.w-poe-hybrid-last { border-bottom-style: dashed; border-bottom-left-radius: var(--w-r-sm); border-bottom-right-radius: var(--w-r-sm); }
+#price-window .w-poe-line.w-poe-hybrid .w-poe-modname { color: var(--w-gold); }
 
 /* ---- A picked row: the original row, PoE parts, wrapping text ---- */
 #price-window.w-poe .w-poe-row {
   margin: 2px 6px;
   padding: 6px 8px 6px 4px;
-  border: 1px solid #5a4a30;
-  border-radius: 2px;
-  background: linear-gradient(rgba(227, 183, 95, .10), rgba(227, 183, 95, .04));
-  box-shadow: inset 0 1px 0 rgba(255, 226, 160, .06);
+  border: 1px solid var(--w-frame);
+  border-radius: var(--w-r-sm);
+  background: linear-gradient(color-mix(in srgb, var(--w-accent) 10%, transparent), color-mix(in srgb, var(--w-accent) 4%, transparent));
+  box-shadow: var(--w-bevel-shadow);
   align-items: flex-start;
 }
 #price-window.w-poe .w-poe-row.w-poe-child { margin-left: 28px; padding-left: 0; border-style: solid; }
 #price-window.w-poe .w-poe-row > div > div:first-child,
 #price-window.w-poe .w-poe-row > div > div:first-child > div:first-child { align-items: flex-start; }
 #price-window.w-poe .w-poe-row .w-poe-tier { margin-top: 3px; }
-#price-window.w-poe .w-poe-row .w-pc-check { margin-top: 2px; color: var(--poe-gold-hi); }
+#price-window.w-poe .w-poe-row .w-pc-check { margin-top: 2px; color: var(--w-gold-hi); }
 #price-window.w-poe .w-poe-row-text {
   display: inline;
-  font-family: var(--poe-font);
-  font-size: calc(15px * var(--w-text-scale, 1));
+  font-family: var(--w-label);
+  font-size: var(--w-fs-lg);
   line-height: 1.3;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -356,20 +293,8 @@
 #price-window.w-poe .w-poe-row-text > .w-poe-corrupt { margin-right: 5px; vertical-align: -3px; }
 #price-window.w-poe .w-poe-row-text > .w-poe-corrupt { vertical-align: 1px; }
 
-/* Recessed input wells */
-#price-window.w-poe .w-roll-input {
-  border-radius: 2px;
-  border: 1px solid #3a3023;
-  background: var(--poe-well);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .9);
-  color: var(--poe-gold-hi);
-  font-family: var(--poe-num);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-#price-window.w-poe .w-roll-input:focus { border-color: var(--poe-bronze-hi); box-shadow: inset 0 1px 4px rgba(0, 0, 0, .9), 0 0 0 1px rgba(227, 183, 95, .3); }
 #price-window.w-poe .w-roll-input.w-poe-drag:not(:focus) { cursor: ew-resize; }
 
 /* Labels in the rest of the window */
 #price-window.w-poe .w-pc-verdict-wait,
-#price-window.w-poe [data-roll-presets] { font-family: var(--poe-font); }
+#price-window.w-poe [data-roll-presets] { font-family: var(--w-label); }

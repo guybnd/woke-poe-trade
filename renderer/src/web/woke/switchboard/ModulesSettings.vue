@@ -14,7 +14,7 @@
         <span :class="[$style.dot, { [$style.dotOn]: s.on }]" />
         <div class="min-w-0">
           <div>{{ s.name }}</div>
-          <div class="w-dim w-trunc" style="font-size: var(--w-text-sm)">{{ s.detail }}</div>
+          <div class="w-dim w-trunc" style="font-size: var(--w-fs-sm)">{{ s.detail }}</div>
         </div>
         <span class="w-dim" style="font-size: calc(11px * var(--w-text-scale, 1))">{{ s.on ? 'On' : 'Off' }}</span>
       </div>
@@ -102,7 +102,7 @@ function runSetupAgain () {
   border-radius: var(--w-radius);
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
   padding-bottom: 6px;
 }
 .svc {

@@ -1,0 +1,218 @@
+/*
+ * Shared controls: the one owner of how buttons, chips, segmented controls,
+ * tabs, fields, switches and key caps look. The W* components render these
+ * classes; other parts (APT's .btn, the price check's chips) join them by
+ * class instead of styling their own. A part that keeps its own plain look
+ * (OfferRow, FilterBtnLogical, WCorruptedFilter) takes only the game skin:
+ * w-skin-btn (+ w-skin-primary) or w-skin-chip.
+ *
+ * Plain rules carry one class of weight, enough to beat Tailwind's button
+ * reset. The game look (Hybrid, Native: data-woke-look="game") then reskins
+ * colour, edge, face and corners over whatever sizing a part has.
+ */
+
+/* ---------- Buttons ---------- */
+.w-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--w-fs-md);
+  font-weight: 500;
+  line-height: calc(18px * var(--w-text-scale, 1));
+  padding: 3px 10px;
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel-2);
+  color: var(--w-fg);
+  white-space: nowrap;
+}
+.w-btn:hover { background: var(--w-panel-3); }
+.w-btn:disabled { opacity: 0.5; pointer-events: none; }
+.w-btn--sm { padding: 1px 7px; font-size: var(--w-fs-sm); }
+.w-btn--primary { background: var(--w-accent); border-color: var(--w-accent); color: var(--w-accent-fg); }
+.w-btn--primary:hover { background: var(--w-accent); filter: brightness(1.1); }
+.w-btn--ghost { background: none; border-color: transparent; color: var(--w-dim); }
+.w-btn--ghost:hover { color: var(--w-fg); }
+.w-btn--danger { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 40%, transparent); }
+
+/* Bronze bevel. A selector list, not :is(), so .w-btn keeps class weight and its variants below win. */
+:root[data-woke-look="game"] :is(.w-btn, .w-skin-btn):not(.w-btn--ghost),
+:root[data-woke-look="game"] #overlay-window .btn,
+:root[data-woke-look="game"] #price-window .w-pc-btn {
+  font-family: var(--w-label);
+  letter-spacing: 0.03em;
+  color: var(--w-gold);
+  background: var(--w-bevel);
+  border: 1px solid var(--w-frame);
+  border-radius: var(--w-r-sm);
+  box-shadow: var(--w-bevel-shadow);
+}
+:root[data-woke-look="game"] :is(.w-btn, .w-skin-btn):not(.w-btn--ghost):hover,
+:root[data-woke-look="game"] #overlay-window .btn:hover,
+:root[data-woke-look="game"] #price-window .w-pc-btn:hover {
+  border-color: var(--w-frame-hi);
+  color: var(--w-gold-hi);
+}
+:root[data-woke-look="game"] :is(.w-btn.w-btn--primary, .w-skin-btn.w-skin-primary),
+:root[data-woke-look="game"] #price-window .btn.w-pc-primary {
+  background: var(--w-bevel-primary);
+  border-color: var(--w-frame-lit);
+  color: var(--w-gold-hi);
+  box-shadow: var(--w-bevel-primary-shadow);
+  filter: none;
+}
+:root[data-woke-look="game"] .w-btn.w-btn--ghost { font-family: var(--w-label); letter-spacing: 0.03em; }
+:root[data-woke-look="game"] .w-btn.w-btn--danger { color: var(--w-bad-fg); border-color: var(--w-bad-line); }
+
+/* ---------- Chips: tags and toggles ---------- */
+.w-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--w-fs-xs);
+  line-height: calc(16px * var(--w-text-scale, 1));
+  padding: 1px 7px;
+  border-radius: var(--w-r-pill);
+  border: 1px solid var(--w-line-strong);
+  color: var(--w-dim);
+  white-space: nowrap;
+}
+button.w-chip:hover { color: var(--w-fg); }
+.w-chip.on {
+  color: var(--w-accent);
+  border-color: color-mix(in srgb, var(--w-accent) 45%, transparent);
+  background: var(--w-accent-soft);
+}
+/* Square item-tag chips in small caps. Small caps read small, so 13px is the floor (P19).
+   Selector lists, not :is(), so each part keeps its own weight. */
+:root[data-woke-look="game"] :is(.w-chip, .w-skin-chip),
+:root[data-woke-look="game"] #price-window .filter-name-corrupted {
+  font-family: var(--w-label);
+  font-size: max(var(--w-fs-md), 1em);
+  letter-spacing: 0.03em;
+  border-radius: var(--w-r-sm);
+  border: 1px solid var(--w-chip-line);
+  background: var(--w-chip-ground);
+  color: var(--w-dim);
+}
+:root[data-woke-look="game"] :is(button.w-chip, button.w-skin-chip):hover { color: var(--w-gold-hi); border-color: var(--w-frame-hi); }
+:root[data-woke-look="game"] :is(.w-chip, .w-skin-chip).on {
+  border-color: var(--w-frame-hi);
+  color: var(--w-gold-hi);
+  background: var(--w-chip-on);
+}
+:root[data-woke-look="game"] #price-window .filter-name-corrupted.on {
+  color: var(--w-bad-fg);
+  border-color: var(--w-bad-line);
+  background: var(--w-bad-ground);
+}
+:root[data-woke-look="game"] :is(.w-chip, .w-skin-chip).on.w-chip--corrupt {
+  color: var(--w-corrupt);
+  border-color: color-mix(in srgb, var(--w-corrupt) 60%, transparent);
+  background: color-mix(in srgb, var(--w-corrupt) 14%, var(--w-chip-ground));
+}
+
+/* ---------- Segmented controls ---------- */
+.w-seg {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+  overflow: hidden;
+}
+.w-seg > button {
+  font-size: var(--w-fs-sm);
+  color: var(--w-dim);
+  padding: 0 6px;
+  line-height: calc(22px * var(--w-text-scale, 1));
+  white-space: nowrap;
+  font-family: var(--w-body);
+}
+.w-seg > button:hover { color: var(--w-fg); }
+.w-seg > button + button { border-left: 1px solid var(--w-line-soft); }
+.w-seg > button[aria-pressed="true"] { background: var(--w-accent-soft); color: var(--w-accent); }
+
+/* Bevelled parts, the active one pressed in. */
+:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) {
+  border: 1px solid var(--w-frame);
+  border-radius: var(--w-r-sm);
+  box-shadow: 0 1px 0 #000;
+}
+:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button {
+  font-family: var(--w-label);
+  letter-spacing: 0.03em;
+  color: var(--w-gold);
+  background: var(--w-bevel);
+  box-shadow: var(--w-bevel-shadow);
+}
+:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button + button { border-left: 1px solid var(--w-well-line); }
+:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button:hover { color: var(--w-gold-hi); }
+:root[data-woke-look="game"] :is(.w-seg, #price-window .w-rollpick) > button[aria-pressed="true"] {
+  background: var(--w-pressed);
+  color: var(--w-gold-hi);
+  box-shadow: var(--w-pressed-shadow);
+}
+
+/* ---------- Tabs ---------- */
+/* WTabs keeps its own stash-tab shape; the game look gives it bevels and presses the open one in. */
+:root[data-woke-look="game"] .w-tabs { border-bottom-color: var(--w-frame); }
+:root[data-woke-look="game"] .w-tabs > [role="tab"] {
+  font-family: var(--w-label);
+  letter-spacing: 0.03em;
+  color: var(--w-gold);
+  background: var(--w-bevel);
+  border: 1px solid var(--w-well-line);
+  border-bottom-color: var(--w-frame);
+  border-radius: var(--w-r-sm) var(--w-r-sm) 0 0;
+  box-shadow: var(--w-bevel-shadow);
+}
+:root[data-woke-look="game"] .w-tabs > [role="tab"]:hover { color: var(--w-gold-hi); border-color: var(--w-frame); }
+:root[data-woke-look="game"] .w-tabs > [role="tab"][aria-selected="true"] {
+  color: var(--w-gold-hi);
+  background: var(--w-pressed);
+  border-color: var(--w-frame);
+  border-bottom-color: transparent;
+  box-shadow: var(--w-pressed-shadow);
+}
+
+/* ---------- Fields: recessed wells. Their text is Inter (numbers, P19). ---------- */
+.w-field, .w-select, .w-input {
+  color: var(--w-fg);
+  background: var(--w-panel-2);
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+}
+.w-field, .w-select, .w-input:focus { outline: none; border-color: var(--w-accent); }
+.w-field, .w-input::placeholder { color: var(--w-faint); }
+:root[data-woke-look="game"] :is(.w-field, .w-select, .w-input, #price-window .w-roll-input) {
+  font-family: var(--w-num);
+  background: var(--w-well);
+  border: 1px solid var(--w-well-line);
+  border-radius: var(--w-r-sm);
+  box-shadow: var(--w-well-shadow);
+}
+:root[data-woke-look="game"] :is(.w-field, .w-select, .w-input, #price-window .w-roll-input):focus {
+  border-color: var(--w-frame-hi);
+  box-shadow: var(--w-well-shadow), 0 0 0 1px rgba(227, 183, 95, 0.3);
+}
+:root[data-woke-look="game"] #price-window .w-roll-input { color: var(--w-gold-hi); font-weight: 600; font-variant-numeric: tabular-nums; }
+:root[data-woke-look="game"] .w-select option { background: var(--w-well); }
+
+/* ---------- Switch: a square bronze slot, gold when on ---------- */
+:root[data-woke-look="game"] .w-toggle-track {
+  border-radius: var(--w-r-sm);
+  background: var(--w-well);
+  border-color: var(--w-frame);
+  box-shadow: inset 0 1px 3px #000;
+}
+:root[data-woke-look="game"] .w-toggle-knob { border-radius: 1px; background: var(--w-gold); }
+:root[data-woke-look="game"] .w-toggle.on .w-toggle-track { background: var(--w-bevel-primary); border-color: var(--w-frame-lit); }
+:root[data-woke-look="game"] .w-toggle.on .w-toggle-knob { background: var(--w-gold-hi); }
+
+/* ---------- Key caps: square, Inter ---------- */
+:root[data-woke-look="game"] .w-kbd {
+  font-family: var(--w-num);
+  border-radius: var(--w-r-sm);
+  border-color: var(--w-chip-line);
+  background: var(--w-chip-ground);
+}

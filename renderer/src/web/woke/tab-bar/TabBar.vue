@@ -754,7 +754,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   overflow-y: auto;
   scrollbar-width: none;
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
 }
 .rail.atEdge { border-left: 0; border-radius: 0 var(--w-r-md) var(--w-r-md) 0; }
 .flat { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
@@ -834,7 +834,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   background: var(--w-tip-bg);
   color: var(--w-fg);
   font-family: var(--w-head);
-  font-size: var(--w-head-size);
+  font-size: var(--w-fs-lg);
   letter-spacing: var(--w-head-track);
   white-space: nowrap;
   pointer-events: none;
@@ -875,7 +875,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   box-shadow: var(--w-shadow);
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
 }
 
 .launcher { box-sizing: border-box; width: 900px; max-width: calc(100vw - 8px); padding: 10px; background: var(--w-panel-solid); }
@@ -904,13 +904,13 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   outline: 0;
   background: none;
   color: var(--w-fg);
-  font: var(--w-text)/calc(18px * var(--w-text-scale, 1)) var(--w-body);
+  font: var(--w-fs-md)/calc(18px * var(--w-text-scale, 1)) var(--w-body);
 }
 .findInput::placeholder { color: var(--w-dim); }
 .prices { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--w-line); }
 .priceRow { display: flex; align-items: center; gap: 9px; width: 100%; height: 32px; padding: 0 7px; border-radius: var(--w-r-sm); text-align: left; }
 .priceRow:hover { background: var(--w-accent-soft); }
-.priceSub { color: var(--w-dim); font-size: var(--w-text-sm); white-space: nowrap; }
+.priceSub { color: var(--w-dim); font-size: var(--w-fs-sm); white-space: nowrap; }
 .priceNow { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
 .cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 10px; align-items: start; }
 .row {
@@ -940,12 +940,12 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .pinOn, .pinOn:hover { color: var(--w-accent); }
 .row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; }
 .none { padding: 10px 8px; color: var(--w-dim); }
-.rowTag { flex: none; padding: 0 4px; font-size: var(--w-text-sm); color: var(--w-dim); }
+.rowTag { flex: none; padding: 0 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
 
 .head {
   padding: 5px 8px 3px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   font-weight: 600;
   color: var(--w-dim);
   letter-spacing: 0.05em;

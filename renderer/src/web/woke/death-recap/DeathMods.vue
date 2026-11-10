@@ -97,7 +97,7 @@ button.mod:not(:disabled):hover { background: var(--w-accent-soft); }
 .tag {
   flex: none;
   padding: 0 6px;
-  border-radius: 4px;
+  border-radius: var(--w-r-sm);
   font-size: 0.85em;
   font-weight: 600;
   white-space: nowrap;

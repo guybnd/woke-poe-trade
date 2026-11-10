@@ -13,12 +13,12 @@
         <span v-for="c in candidates" :key="c.statRef" :class="$style.cand" class="w-trunc">{{ c.text }}</span>
       </div>
       <div :class="$style.actions">
-        <button type="button" :class="$style.btn" :disabled="busy || stale || baseFair == null || measureWait > 0" @click="measure"
+        <button type="button" class="w-btn" :disabled="busy || stale || baseFair == null || measureWait > 0" @click="measure"
           :title="baseFair == null ? 'Needs a price from the main search first' : measureWait > 0 ? `Would hit the trade site's rate limit. Ready in ${measureWait}s.` : 'Searches again with each mod removed to see how much the price drops'">
           <template v-if="measureWait > 0">Measure (ready in {{ measureWait }}s)</template>
           <template v-else>Measure ({{ candidates.length }} {{ candidates.length === 1 ? 'search' : 'searches' }})</template>
         </button>
-        <button v-if="fewListings && !ladder.length" type="button" :class="$style.btn" :disabled="busy || stale || ladderWait > 0" @click="widen"
+        <button v-if="fewListings && !ladder.length" type="button" class="w-btn" :disabled="busy || stale || ladderWait > 0" @click="widen"
           :title="ladderWait > 0 ? `Would hit the trade site's rate limit. Ready in ${ladderWait}s.` : 'Too few listings: search again with only the key mods, then with lower rolls (up to 2 searches)'">
           Widen search<template v-if="ladderWait > 0"> ({{ ladderWait }}s)</template>
         </button>
@@ -180,10 +180,10 @@ async function widen () {
   background: var(--w-pc-well, var(--w-panel-solid));
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
 }
 .head { display: flex; align-items: center; gap: 6px; }
-.title { font-family: var(--w-head); font-size: var(--w-head-size); letter-spacing: var(--w-head-track); color: var(--w-accent); }
+.title { font-family: var(--w-head); font-size: var(--w-fs-lg); letter-spacing: var(--w-head-track); color: var(--w-accent); }
 .cands { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .cand {
   max-width: 100%;
@@ -193,15 +193,6 @@ async function widen () {
   background: var(--w-panel-3);
 }
 .actions { display: flex; gap: 6px; }
-.btn {
-  padding: 2px 10px;
-  border-radius: var(--w-r-sm);
-  border: 1px solid var(--w-line-strong);
-  background: var(--w-panel-2);
-  font-size: var(--w-fs-md);
-}
-.btn:hover:not(:disabled) { background: var(--w-accent-soft); }
-.btn:disabled { opacity: 0.5; }
 .driver { display: grid; grid-template-columns: minmax(0, 1fr) 60px auto; align-items: center; gap: 8px; }
 .step { display: flex; align-items: center; gap: 6px; }
 .bar { height: 5px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }

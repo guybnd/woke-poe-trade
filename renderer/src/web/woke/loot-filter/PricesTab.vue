@@ -422,7 +422,7 @@ function showIt (v: BaseVerdict) {
   margin-top: 3px;
 }
 .bigArt { width: 26px; height: 26px; object-fit: contain; display: block; }
-.bar { height: 6px; background: var(--w-panel-3); border-radius: 3px; overflow: hidden; }
+.bar { height: 6px; background: var(--w-panel-3); border-radius: var(--w-r-sm); overflow: hidden; }
 .bar i { display: block; height: 100%; }
 .g_high { background: var(--w-accent); }
 .g_mid { background: var(--w-dim); }

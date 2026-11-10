@@ -280,7 +280,7 @@ function onKey (e: KeyboardEvent) {
   align-items: baseline;
   gap: 2px;
   padding: 4px 8px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   border-bottom: 1px solid var(--w-line-soft);
 }
 .crumb {
@@ -303,7 +303,7 @@ function onKey (e: KeyboardEvent) {
   justify-content: space-between;
   gap: 8px;
   padding: 6px var(--w-pad);
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   color: var(--w-dim);
 }
 .changed { color: var(--w-warn); white-space: nowrap; }

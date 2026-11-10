@@ -387,7 +387,7 @@ function unknownKeys (m: BlockMatch): string[] {
 .tierName {
   width: 5.5rem;
   flex-shrink: 0;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   color: var(--w-dim);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -425,7 +425,7 @@ function unknownKeys (m: BlockMatch): string[] {
   padding: 0 5px;
   border: 1px solid var(--w-line-strong);
   border-bottom-width: 2px;
-  border-radius: 3px;
+  border-radius: var(--w-r-sm);
 }
 .num {
   width: 3.2rem;

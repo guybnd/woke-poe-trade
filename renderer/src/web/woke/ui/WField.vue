@@ -1,7 +1,7 @@
 <template>
   <span :class="$style.wrap">
     <i v-if="icon" :class="[icon, $style.icon]" />
-    <input :class="[$style.field, { [$style.withIcon]: icon }]" :type="type" :value="modelValue" :placeholder="placeholder"
+    <input :class="['w-field', $style.field, { [$style.withIcon]: icon }]" :type="type" :value="modelValue" :placeholder="placeholder"
       @input="onInput" @keydown.esc="clearOnEsc && type !== 'number' && emit('update:modelValue', '')">
     <span v-if="suffix" :class="$style.suffix">{{ suffix }}</span>
   </span>
@@ -33,15 +33,9 @@ function onInput (e: Event) {
   min-width: 0;
   height: calc(26px * var(--w-text-scale, 1));
   padding: 0 8px;
-  font-size: calc(12.5px * var(--w-text-scale, 1));
-  color: var(--w-fg);
-  background: var(--w-panel-2);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-radius-sm);
+  font-size: var(--w-fs-md);
 }
-.field::placeholder { color: var(--w-faint); }
-.field:focus { outline: none; border-color: var(--w-accent); }
 .withIcon { padding-left: 26px; }
-.icon { position: absolute; left: 9px; font-size: calc(11px * var(--w-text-scale, 1)); color: var(--w-faint); pointer-events: none; }
-.suffix { margin-left: 5px; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); white-space: nowrap; }
+.icon { position: absolute; left: 9px; font-size: var(--w-fs-xs); color: var(--w-faint); pointer-events: none; }
+.suffix { margin-left: 5px; font-size: var(--w-fs-sm); font-family: var(--w-small); color: var(--w-dim); white-space: nowrap; }
 </style>

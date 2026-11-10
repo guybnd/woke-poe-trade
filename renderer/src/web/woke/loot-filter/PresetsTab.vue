@@ -158,7 +158,7 @@ function toggleSlot (key: string) {
   display: inline-block;
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--w-r-sm);
 }
 .dot {
   display: inline-block;

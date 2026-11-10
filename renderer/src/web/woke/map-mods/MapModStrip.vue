@@ -65,7 +65,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
   background: var(--w-panel);
   color: var(--w-fg);
   font-family: var(--w-body);
-  font-size: var(--w-text);
+  font-size: var(--w-fs-md);
 }
 .skip { border-color: color-mix(in srgb, var(--w-down) 55%, transparent); }
 .careful { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
@@ -88,7 +88,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .run .headline { color: var(--w-up); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip {
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   padding: 0 7px;
   border-radius: var(--w-r-pill);
   background: var(--w-panel-2);
@@ -96,7 +96,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 }
 .warnChip { color: var(--w-warn); background: color-mix(in srgb, var(--w-warn) 12%, transparent); }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
-.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-text-sm); }
+.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }

@@ -1,5 +1,5 @@
-// Price check "PoE mode" (Settings > Price check > Window style), the default.
-// Standard is the window as it was; PoE draws unpicked mods as tooltip lines in the game's colours,
+// Price check "Tooltip lines" filter layout (Settings > Price check > Filter layout), the default.
+// Rows is the window as it was; Tooltip lines draws unpicked mods as tooltip lines in the game's colours,
 // and a picked one as the usual row with boxes.
 import { test, expect } from './harness'
 
@@ -12,7 +12,7 @@ const unpicked = (config: any) => {
   delete config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle
 }
 
-test('PoE is the default window style, and Settings switches it to Standard', async ({ overlay }) => {
+test('Tooltip lines is the default filter layout, and Settings switches it to Rows', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot({ patch: unpicked })
   await overlay.copyItem('items/rare-body-armour-es.txt')
@@ -26,11 +26,11 @@ test('PoE is the default window style, and Settings switches it to Standard', as
   const settings = overlay.widget('settings')
   await settings.getByText('Price check', { exact: true }).first().click()
   const row = settings.locator('[data-window-style]')
-  await expect(row).toContainText('Window style')
-  await row.getByText('Standard', { exact: true }).click()
+  await expect(row).toContainText('Filter layout')
+  await row.getByText('Rows', { exact: true }).click()
   await expect.poll(() => overlay.savedWidget('price-check')?.wokeWindowStyle).toBe('standard')
 
-  // Back to the game, and the next check is the Standard window.
+  // Back to the game, and the next check is the Rows layout.
   overlay.app.focusGame(true)
   await expect.poll(() => overlay.app.registeredHotkeys().length).toBeGreaterThan(0)
   await overlay.copyItem('items/rare-body-armour-es.txt')

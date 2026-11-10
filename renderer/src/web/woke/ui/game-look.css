@@ -1,0 +1,70 @@
+/*
+ * The game look (pick S3 + T1, WOKEPOET-181): Hybrid and Native set
+ * <html data-woke-look="game"> (theme.ts). Fontin is the reading face from 13px
+ * up, numbers stay Inter with even-width digits, corners are 2px, rows part with
+ * gold lines that fade at both ends. Panel frames are WPanel's; controls are in
+ * controls.css. Modern and Classic (data-woke-look="plain") never match here.
+ */
+
+:root[data-woke-look="game"] {
+  --w-body: Fontin, FrizQuadrataC, Georgia, serif;
+  --w-num: Inter, system-ui, sans-serif;
+  --w-small: Inter, system-ui, sans-serif;  /* text below 13px: Fontin reads too small there */
+  --w-label: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
+  --w-r-sm: 2px;
+  --w-r-md: 2px;
+}
+/* Hybrid's ground goes near black, like the game's tooltip. Native has its own. */
+:root[data-woke-look="game"]:not([data-woke-theme="native"]) {
+  --w-panel-base: rgba(10, 8, 6, 0.96);
+  --w-panel-solid-base: #0a0806;
+  --w-header-bg: var(--w-head-ground);
+}
+
+/* The price check stays Inter for its tables, listings and verdict: they are
+ * mostly numbers. Its labels, chips and tooltip lines wear Fontin through
+ * --w-label (poe-mode.css, controls.css). */
+:root[data-woke-look="game"] :is(#price-window, .w-pc-side) {
+  --w-body: Inter, system-ui, sans-serif;
+}
+
+/* Numbers, prices, fields and key caps stay Inter: Fontin's old-style digits
+ * misread ("22,431"). */
+:root[data-woke-look="game"] :is([data-w-panel], .w-surface, #price-window, [data-w-settings]) :is(input, select, textarea, kbd) {
+  font-family: var(--w-num);
+}
+
+/* APT's own fields in Settings: recessed wells, or they vanish on the near-black ground. */
+:root[data-woke-look="game"] [data-w-settings] :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"], [type="color"], label input, .w-field, .w-select, .w-input) {
+  background: var(--w-well);
+  border: 1px solid var(--w-well-line);
+  border-radius: var(--w-r-sm);
+  box-shadow: var(--w-well-shadow);
+}
+
+/* Rows part with a gold line that fades at both ends, like the tooltip's. */
+:root[data-woke-look="game"] .w-row:not(.w-row--head) {
+  border-bottom-color: transparent;
+  background-image: var(--w-row-fade);
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+}
+/* Column heads and group labels: small caps, never under 13px (P19). */
+:root[data-woke-look="game"] :is(.w-row--head, .w-group-label) {
+  font-family: var(--w-label);
+  font-size: var(--w-fs-md);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  color: var(--w-gold);
+}
+
+/* APT's own window shell gets the bronze frame too. */
+:root[data-woke-look="game"] .widget-default-style {
+  border-color: var(--w-frame);
+  border-radius: var(--w-r-sm) !important;
+  box-shadow: var(--w-frame-shadow) !important;
+}
+
+/* Hints read upright: italic Fontin was the hardest text to read in Settings. */
+:root[data-woke-look="game"] [data-w-settings] .italic { font-style: normal; }

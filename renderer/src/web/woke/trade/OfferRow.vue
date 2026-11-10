@@ -30,13 +30,13 @@
       <span v-if="canReopen" :class="[$style.slot, $style.slotClosed]">
         <span :class="$style.age" class="w-faint w-num">{{ age }}</span>
         <span :class="$style.closedActions">
-          <button type="button" :class="[$style.btn, $style.action]" title="Put this offer back in the queue" data-reopen @click="$emit('reopen')">Reopen</button>
-          <button type="button" :class="[$style.btn, $style.iconBtn]" title="Remove from History" aria-label="Remove from History" data-remove @click="$emit('remove')"><i class="fas fa-times" /></button>
+          <button type="button" class="w-skin-btn" :class="[$style.btn, $style.action]" title="Put this offer back in the queue" data-reopen @click="$emit('reopen')">Reopen</button>
+          <button type="button" class="w-skin-btn" :class="[$style.btn, $style.iconBtn]" title="Remove from History" aria-label="Remove from History" data-remove @click="$emit('remove')"><i class="fas fa-times" /></button>
         </span>
       </span>
       <span v-else-if="oneLine" :class="[$style.slot, { [$style.slotHover]: rowStyle === 'hover' && next }]">
         <span v-if="rowStyle === 'hover' || !next" :class="$style.age" class="w-faint w-num" @click="$emit('expand')">{{ age }}</span>
-        <button v-if="next" type="button" :class="[$style.btn, $style.primary, $style.action, $style.next]" :title="`${next.label} ${offer.who}`" data-next
+        <button v-if="next" type="button" class="w-skin-btn w-skin-primary" :class="[$style.btn, $style.primary, $style.action, $style.next]" :title="`${next.label} ${offer.who}`" data-next
           @click="$emit('reply', next.id)">{{ next.label }}</button>
       </span>
     </div>
@@ -52,18 +52,18 @@
       <div v-if="offer.note" class="w-dim text-xs w-trunc" :title="offer.note">"{{ offer.note }}"</div>
       <div v-for="(m, i) in offer.messages" :key="i" class="w-dim text-xs w-trunc" :title="m">› {{ m }}</div>
       <div :class="$style.btns" style="padding-top: 4px;">
-        <button v-for="b in stepButtons" :key="b.id" type="button" :class="[$style.btn, { [$style.primary]: b.primary }]"
+        <button v-for="b in stepButtons" :key="b.id" type="button" class="w-skin-btn" :class="[$style.btn, { [$style.primary]: b.primary, 'w-skin-primary': b.primary }]"
           :title="b.title" :data-reply="b.id" @click="$emit('reply', b.id)">
           {{ b.label }}<WKbd v-if="b.primary && stepKey" :keys="stepKey" :class="$style.kbd" />
         </button>
       </div>
       <div :class="$style.btns">
-        <button v-for="b in otherButtons" :key="b.id" type="button" :class="$style.btn"
+        <button v-for="b in otherButtons" :key="b.id" type="button" class="w-skin-btn" :class="$style.btn"
           :title="b.title" :data-reply="b.id" @click="$emit('reply', b.id)">{{ b.label }}</button>
         <span class="ml-auto" />
-        <button type="button" :class="$style.btn" :title="offer.dir === 'sell' ? 'Log it as sold without a trade window seen' : 'Log it as bought'"
+        <button type="button" class="w-skin-btn" :class="$style.btn" :title="offer.dir === 'sell' ? 'Log it as sold without a trade window seen' : 'Log it as bought'"
           :aria-label="offer.dir === 'sell' ? 'Log it as sold' : 'Log it as bought'" data-reply="traded" @click="$emit('traded')"><i class="fas fa-check" /></button>
-        <button type="button" :class="$style.btn" title="Remove this offer" aria-label="Remove this offer" data-reply="dismiss" @click="$emit('dismiss')"><i class="fas fa-times" /></button>
+        <button type="button" class="w-skin-btn" :class="$style.btn" title="Remove this offer" aria-label="Remove this offer" data-reply="dismiss" @click="$emit('dismiss')"><i class="fas fa-times" /></button>
       </div>
     </template>
   </div>
@@ -186,7 +186,7 @@ const otherButtons = computed<Array<{ id: ReplyId, label: string, title: string 
 .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .dotUp { background: var(--w-up); }
 .dotDown { background: var(--w-down); }
-.chip { font-size: calc(10.5px * var(--w-text-scale, 1)); line-height: calc(14px * var(--w-text-scale, 1)); border-radius: 999px; padding: 0 6px; border: 1px solid var(--w-line-strong, var(--w-line)); color: var(--w-dim); white-space: nowrap; }
+.chip { font-size: calc(10.5px * var(--w-text-scale, 1)); line-height: calc(14px * var(--w-text-scale, 1)); border-radius: var(--w-r-pill); padding: 0 6px; border: 1px solid var(--w-line-strong, var(--w-line)); color: var(--w-dim); white-space: nowrap; }
 .up { color: var(--w-up); border-color: color-mix(in srgb, var(--w-up) 45%, transparent); }
 .down { color: var(--w-down); border-color: color-mix(in srgb, var(--w-down) 45%, transparent); }
 .item { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -210,6 +210,7 @@ const otherButtons = computed<Array<{ id: ReplyId, label: string, title: string 
 .grid i { background: color-mix(in srgb, var(--w-fg) 9%, transparent); border-radius: 0.5px; }
 .grid i.on { background: var(--w-accent); box-shadow: 0 0 4px var(--w-accent); }
 .btns { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-top: 2px; }
+/* Colours here are the plain look's; the game look reskins .w-skin-btn (ui/controls.css). */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: none; min-height: calc(22px * var(--w-text-scale, 1)); font-size: calc(11.5px * var(--w-text-scale, 1)); line-height: calc(20px * var(--w-text-scale, 1)); padding: 0 8px; border-radius: var(--w-r-sm, 3px);
   border: 1px solid var(--w-line-strong, var(--w-line)); background: var(--w-panel-solid, transparent); color: var(--w-fg); cursor: pointer; white-space: nowrap; }
 .btn:hover { background: color-mix(in srgb, var(--w-fg) 12%, var(--w-panel-solid, transparent)); }

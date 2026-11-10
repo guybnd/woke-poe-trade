@@ -19,7 +19,7 @@ const widths = [58, 44, 51, 36, 62, 47]
 .row { display: flex; }
 .row:hover { background: none; }
 .bar {
-  height: 10px; border-radius: 3px;
+  height: 10px; border-radius: var(--w-r-sm);
   background: linear-gradient(90deg, var(--w-panel-2), var(--w-panel-3), var(--w-panel-2));
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;

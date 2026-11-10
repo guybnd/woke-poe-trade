@@ -31,7 +31,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
   display: inline-flex;
   align-items: baseline;
   white-space: nowrap;
-  font-size: calc(12.5px * var(--w-text-scale, 1));
+  font-size: var(--w-fs-md);
   font-weight: 500;
   color: var(--w-dim);
   padding: 5px 12px 6px;
@@ -39,7 +39,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
   background: linear-gradient(var(--w-panel-3), var(--w-panel-2));
   border: 1px solid var(--w-line);
   border-bottom-color: var(--w-line-strong);
-  border-radius: 5px 5px 0 0;
+  border-radius: var(--w-r-md) var(--w-r-md) 0 0;
   box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.06);
 }
 .tab:hover { color: var(--w-fg); border-color: var(--w-line-strong); }

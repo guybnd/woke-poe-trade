@@ -1,7 +1,7 @@
 <template>
   <button type="button" role="switch" :aria-checked="modelValue" :disabled="disabled"
-    :class="[$style.wrap, { [$style.on]: modelValue }]" @click="emit('update:modelValue', !modelValue)">
-    <span :class="$style.track"><span :class="$style.knob" /></span>
+    :class="['w-toggle', $style.wrap, { [$style.on]: modelValue, on: modelValue }]" @click="emit('update:modelValue', !modelValue)">
+    <span class="w-toggle-track" :class="$style.track"><span class="w-toggle-knob" :class="$style.knob" /></span>
     <span v-if="$slots.default" :class="$style.label"><slot /></span>
   </button>
 </template>

@@ -74,7 +74,7 @@ function rollColour (quality: number) {
   font-size: var(--w-fs-sm);
   font-weight: 600;
   line-height: 1.35;
-  border-radius: 2px;
+  border-radius: var(--w-r-sm);
 }
 .t1 { background: var(--w-accent); color: var(--w-accent-fg); }
 .t2 { color: var(--w-accent); box-shadow: inset 0 0 0 1px var(--w-accent); }

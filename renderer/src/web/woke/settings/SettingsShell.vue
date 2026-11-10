@@ -1,5 +1,5 @@
 <template>
-  <div ref="winEl" :class="$style.window" :style="sizeStyle" @keydown="onKeydown">
+  <div ref="winEl" :class="$style.window" :style="sizeStyle" data-w-settings @keydown="onKeydown">
     <header :class="$style.bar">
       <span :class="$style.title">Settings</span>
       <label :class="[$style.search, { [$style.searchOn]: query }]">

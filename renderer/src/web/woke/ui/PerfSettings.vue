@@ -218,7 +218,7 @@ async function copyReport () {
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .where { color: rgb(113, 128, 150); width: 1%; white-space: nowrap; }
 .chip { margin-left: 6px; white-space: nowrap; }
-.dot { width: 10px; height: 10px; border-radius: 5px; flex: none; background: rgb(113, 128, 150); }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: rgb(113, 128, 150); }
 .dot.good { background: rgb(72, 187, 120); }
 .dot.warn { background: rgb(236, 201, 75); }
 .dot.bad { background: rgb(245, 101, 101); }

@@ -1,6 +1,6 @@
 <template>
   <span :class="$style.keys">
-    <kbd v-for="k in parts" :key="k" :class="$style.kbd">{{ k }}</kbd>
+    <kbd v-for="k in parts" :key="k" class="w-kbd" :class="$style.kbd">{{ k }}</kbd>
   </span>
 </template>
 
@@ -21,7 +21,7 @@ const parts = computed(() => (props.keys ?? '').split('+').map(s => s.trim()).fi
   padding: 0 5px;
   border: 1px solid var(--w-line-strong);
   border-bottom-width: 2px;
-  border-radius: 3px;
+  border-radius: var(--w-r-sm);
   color: var(--w-fg);
 }
 </style>

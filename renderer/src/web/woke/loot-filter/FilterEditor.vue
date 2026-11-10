@@ -1096,7 +1096,7 @@ function openFolder () {
 }
 .groupTitle {
   font-family: var(--w-head);
-  font-size: var(--w-head-size);
+  font-size: var(--w-fs-lg);
 }
 .tierRow {
   display: grid;
@@ -1116,7 +1116,7 @@ function openFolder () {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   color: var(--w-dim);
   white-space: nowrap;
 }
@@ -1140,7 +1140,7 @@ function openFolder () {
   border-color: var(--w-line-strong);
 }
 .tierName {
-  font-size: var(--w-text-sm);
+  font-size: var(--w-fs-sm);
   color: var(--w-dim);
   overflow: hidden;
   text-overflow: ellipsis;

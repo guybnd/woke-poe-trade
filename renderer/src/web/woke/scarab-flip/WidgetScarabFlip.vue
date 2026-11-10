@@ -389,7 +389,7 @@ const footerTitle = computed(() => {
   ].filter(Boolean).join('\n\n')
 })
 
-const WEIGHT_CHIP = 'flex: none; padding: 0 3px; border: 1px solid currentColor; border-radius: 2px; font-size: calc(10px * var(--w-text-scale, 1)); font-weight: 600; line-height: 1.3;'
+const WEIGHT_CHIP = 'flex: none; padding: 0 3px; border: 1px solid currentColor; border-radius: var(--w-r-sm); font-size: calc(10px * var(--w-text-scale, 1)); font-weight: 600; line-height: 1.3;'
 
 const FlipName = defineComponent({
   props: {
@@ -523,17 +523,17 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 .weightsLink { all: unset; cursor: pointer; color: var(--w-accent); }
 .weightsLink:hover, .weightsLink:focus-visible { text-decoration: underline; }
 .sortHead { all: unset; cursor: pointer; white-space: nowrap; }
-.sortHead:hover, .sortHead:focus-visible { color: var(--w-text); }
+.sortHead:hover, .sortHead:focus-visible { color: var(--w-fs-md); }
 .sorted { color: var(--w-accent); }
 .rareGrid { grid-template-columns: minmax(0, 1fr) 62px 76px calc(64px * var(--w-text-scale, 1)); }
 .sourceGrid { grid-template-columns: minmax(0, 1fr) 76px 44px; }
 .note { padding: 8px var(--w-pad); color: var(--w-dim); font-size: var(--w-fs-sm); white-space: normal; overflow-wrap: anywhere; }
 .warning { color: var(--w-warn); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0 var(--w-pad) 6px; color: var(--w-dim); font-size: var(--w-fs-sm); }
-.key { display: inline-block; width: 10px; height: 7px; border-radius: 2px; margin-right: 4px; }
+.key { display: inline-block; width: 10px; height: 7px; border-radius: var(--w-r-sm); margin-right: 4px; }
 .bucket { display: grid; grid-template-columns: 58px minmax(0, 1fr) 40px 40px; gap: 8px; align-items: center; padding: 3px var(--w-pad); }
 .track { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.fill { height: 7px; border-radius: 2px; min-width: 1px; }
+.fill { height: 7px; border-radius: var(--w-r-sm); min-width: 1px; }
 .chance { background: var(--w-dim); }
 .value { background: var(--w-accent); }
 </style>

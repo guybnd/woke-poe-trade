@@ -390,7 +390,7 @@ async function finish () {
 .optOn { background: var(--w-accent-soft); }
 .toggle { justify-content: space-between; cursor: default; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { padding: 3px 12px; border-radius: 999px; border: 1px solid var(--w-line); color: var(--w-dim); }
+.chip { padding: 3px 12px; border-radius: var(--w-r-pill); border: 1px solid var(--w-line); color: var(--w-dim); }
 .chip:hover { color: var(--w-fg); }
 .chipOn { border-color: var(--w-accent); color: var(--w-accent); background: var(--w-accent-soft); }
 .keys { display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; align-items: center; }
