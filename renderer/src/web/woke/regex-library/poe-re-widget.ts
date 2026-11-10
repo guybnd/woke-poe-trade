@@ -6,7 +6,11 @@ import { popupAnchor } from '../ui/window-anchor'
 export const POE_RE_TYPE = 'woke-poe-re'
 export const POE_RE_URL = 'https://poe.re/'
 
-export type PoeReWidget = Widget & { anchor: Anchor }
+export type PoeReWidget = Widget & {
+  anchor: Anchor
+  // The library window that last opened it: Save goes there.
+  libraryId?: number
+}
 
 export function initPoeReWidget (wmId: number): PoeReWidget {
   return {
@@ -25,10 +29,12 @@ export function initPoeReWidget (wmId: number): PoeReWidget {
 export const READ_RESULT_JS = `(() => {
   const t = document.querySelector('.rrb-result-text')
   const h = document.querySelector('h1.page-header')
-  return { text: t ? t.textContent : '', page: h ? h.textContent : '', path: location.pathname }
+  return { found: !!t, text: t ? t.textContent : '', page: h ? h.textContent : '', path: location.pathname }
 })()`
 
 export interface PoeReResult {
+  // poe.re's result box is on the page (empty when nothing is picked yet).
+  found: boolean
   text: string
   page: string
   path: string
@@ -37,7 +43,7 @@ export interface PoeReResult {
 export function asResult (v: unknown): PoeReResult {
   const o = (v && typeof v === 'object') ? v as Record<string, unknown> : {}
   const s = (x: unknown) => typeof x === 'string' ? x : ''
-  return { text: s(o.text).trim(), page: s(o.page).trim(), path: s(o.path) }
+  return { found: o.found === true, text: s(o.text).trim(), page: s(o.page).trim(), path: s(o.path) }
 }
 
 // poe.re's page (its first path segment) as a library category.
@@ -77,4 +83,11 @@ export function anchorBeside (r: { left: number, top: number, right: number }, w
   const gap = 8
   if ((r.left + r.right) / 2 <= w / 2) return { pos: 'tl', x: Math.min(r.right + gap, w) / w * 100, y }
   return { pos: 'tr', x: Math.max(r.left - gap, 0) / w * 100, y }
+}
+
+// Clipboard text that could be a search string: one line, no longer than the
+// game takes. Anything else (item text, a page, a note) isn't offered.
+export function clipboardSearch (text: string, max: number): string {
+  const t = text.trim()
+  return t && !/[\r\n]/.test(t) && t.length <= max ? t : ''
 }

@@ -15,7 +15,7 @@
       <label v-if="canNegate(draft.text)" class="flex items-center gap-1 cursor-pointer w-dim" title='Wraps the term as "!…" so the search highlights items WITHOUT it'>
         <input v-model="draft.negate" type="checkbox"> Exclude
       </label>
-      <span class="flex items-center gap-1 w-dim">Hotkey <WHotkeyCell v-model="draft.hotkey" quiet /></span>
+      <span class="flex items-center gap-1 w-dim">Hotkey <WHotkeyCell v-model="draft.hotkey" /></span>
       <button v-if="!showNotes" type="button" class="w-accent hover:underline ml-auto" @click="showNotes = true">+ Notes</button>
     </div>
     <div :class="$style.acts">

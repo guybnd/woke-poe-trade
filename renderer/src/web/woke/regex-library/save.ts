@@ -8,11 +8,13 @@ import { popupAnchor } from '../ui/window-anchor'
 
 export type SaveResult = 'saved' | 'exists' | 'module-off'
 
-export function saveToRegexLibrary (entry: { name: string, text: string, category: string }): SaveResult {
+// `libraryId`: the library window to save into (the first one when it's gone or not given).
+export function saveToRegexLibrary (entry: { name: string, text: string, category: string }, libraryId?: number): SaveResult {
   const config = AppConfig()
   if (!isModuleOn(config, 'regex-library')) return 'module-off'
   const text = entry.text.trim()
-  let lib = config.widgets.find(w => w.wmType === REGEX_LIBRARY_TYPE) as RegexLibraryWidget | undefined
+  let lib = (config.widgets.find(w => w.wmType === REGEX_LIBRARY_TYPE && w.wmId === libraryId) ??
+    config.widgets.find(w => w.wmType === REGEX_LIBRARY_TYPE)) as RegexLibraryWidget | undefined
   if (!lib) {
     config.widgets.push({
       wmId: Math.max(0, ...config.widgets.map(w => w.wmId)) + 1,

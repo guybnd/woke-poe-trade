@@ -21,6 +21,8 @@
 
       <RegexEntryForm v-if="editing === 'new'" :key="'new'" :entry="newDraft" @save="saveEntry" @cancel="editing = null" />
 
+      <!-- One click listener for every row's pencil and bin (data-act). -->
+      <div @click="onRowAction">
       <template v-for="group in groups" :key="group.category">
         <div class="w-group-label">{{ group.category }}</div>
         <template v-for="entry in group.entries" :key="entry.id">
@@ -34,10 +36,10 @@
           <WKbd v-if="entry.hotkey && config.enableHotkeys" :keys="entry.hotkey" class="ml-auto" />
           <template v-if="entry.name" #sub><span class="w-mono">{{ effectiveText(entry) }}</span></template>
           <template #actions>
-            <button :class="$style.hoverOnly" class="w-icon-btn" title="Edit" data-qa="regex-edit" @click="edit(entry)">
+            <button :class="$style.hoverOnly" class="w-icon-btn" title="Edit" data-qa="regex-edit" data-act="edit" :data-id="entry.id">
               <i class="fas fa-pen" />
             </button>
-            <button :class="$style.hoverOnly" class="w-icon-btn" title="Remove (Undo for a moment after)" data-qa="regex-remove" @click="remove(entry)">
+            <button :class="$style.hoverOnly" class="w-icon-btn" title="Remove (Undo for a moment after)" data-qa="regex-remove" data-act="remove" :data-id="entry.id">
               <i class="far fa-trash-alt" />
             </button>
             <button @click="copy(entry)" class="w-icon-btn" :class="{ 'w-up': copied === String(entry.id) }" title="Copy to clipboard">
@@ -47,6 +49,7 @@
         </WListItem>
         </template>
       </template>
+      </div>
       <WEmpty v-if="!groups.length && config.entries.length" icon="fas fa-filter">
         Nothing matches "{{ filter }}".
         <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
@@ -94,13 +97,12 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { inject, computed, watch, shallowRef } from 'vue'
+import { inject, computed, watch, shallowRef, defineAsyncComponent } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast } from '../ui'
-import RegexEntryForm from './RegexEntryForm.vue'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
 import { MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
@@ -125,14 +127,18 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   wm.show(props.config.wmId)
 }
 
+// The edit form's code loads the first time a form opens.
+const RegexEntryForm = defineAsyncComponent(() => import('./RegexEntryForm.vue'))
+
 const filter = shallowRef('')
 // The entry open in the form: an id, 'new' for one being added, or none.
 const editing = shallowRef<number | 'new' | null>(null)
 const newDraft = shallowRef<RegexEntry>(emptyEntry([]))
 const { copied, copy: copyText } = useCopy(1200)
 
+// The entry open in the form stays listed while you filter, so its edits aren't lost.
 const groups = computed(() => groupByCategory(
-  props.config.entries.filter(e => matchesFilter(e, filter.value))))
+  props.config.entries.filter(e => e.id === editing.value || matchesFilter(e, filter.value))))
 
 const zone = useZone()
 const dockShow = computed(() => props.config.entries.length > 0 && (zone.kind === 'town' || zone.kind === 'hideout'))
@@ -171,13 +177,25 @@ function edit (entry: RegexEntry) {
   editing.value = entry.id
 }
 
+function onRowAction (e: MouseEvent) {
+  const btn = (e.target as Element).closest<HTMLElement>('[data-act]')
+  if (!btn) return
+  const entry = props.config.entries.find(x => String(x.id) === btn.dataset.id)
+  if (!entry) return
+  if (btn.dataset.act === 'edit') edit(entry)
+  else if (btn.dataset.act === 'remove') remove(entry)
+}
+
 function saveEntry (entry: RegexEntry) {
   const list = props.config.entries
   if (editing.value === 'new') {
     // Ids can move on while the form is open (a save from poe.re): take a fresh one.
     props.config.entries = [...list, { ...entry, id: emptyEntry(list).id }]
-  } else {
+  } else if (list.some(e => e.id === entry.id)) {
     props.config.entries = list.map(e => e.id === entry.id ? entry : e)
+  } else {
+    // Removed (in Settings, say) while the form was open: keep the edit as a new entry.
+    props.config.entries = [...list, { ...entry, id: emptyEntry(list).id }]
   }
   editing.value = null
   // A new entry must show even if the filter would hide it.
@@ -187,18 +205,26 @@ function saveEntry (entry: RegexEntry) {
 }
 
 function openPoeRe () {
-  openPoeReWindow(wm, panel.value?.el)
+  openPoeReWindow(wm, props.config.wmId, panel.value?.el)
 }
 
 // No "are you sure": remove now, offer Undo (P9).
 function remove (entry: RegexEntry) {
   if (editing.value === entry.id) editing.value = null
-  const before = props.config.entries
-  props.config.entries = before.filter(e => e.id !== entry.id)
+  const at = props.config.entries.findIndex(e => e.id === entry.id)
+  if (at < 0) return
+  const removed = props.config.entries[at]
+  props.config.entries = props.config.entries.filter(e => e.id !== entry.id)
   pushHostConfig()
   toast(`Removed "${entry.name || effectiveText(entry)}"`, {
     anchor: panel.value?.el,
-    undo: () => { props.config.entries = before; pushHostConfig() }
+    // Puts back just this entry: edits and saves made since stay.
+    undo: () => {
+      const list = props.config.entries
+      if (list.some(e => e.id === removed.id)) return
+      props.config.entries = [...list.slice(0, at), removed, ...list.slice(at)]
+      pushHostConfig()
+    }
   })
 }
 

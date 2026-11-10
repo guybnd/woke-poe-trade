@@ -1,6 +1,6 @@
 // The poe.re window: what it reads from the page, and how it names a saved string.
 import { describe, it, expect } from 'vitest'
-import { POE_RE_TYPE, anchorBeside, asResult, categoryFor, initPoeReWidget, isDefaultAnchor, suggestName } from '@/web/woke/regex-library/poe-re-widget'
+import { POE_RE_TYPE, anchorBeside, asResult, clipboardSearch, categoryFor, initPoeReWidget, isDefaultAnchor, suggestName } from '@/web/woke/regex-library/poe-re-widget'
 
 describe('poe.re window config', () => {
   it('is kept out of the tab bar and the launcher', () => {
@@ -15,14 +15,21 @@ describe('poe.re window config', () => {
 
 describe('reading poe.re', () => {
   it('trims what the page gives back', () => {
-    expect(asResult({ text: '  "y: (n|m)" \n', page: ' Vendor Regex ', path: '/vendor' }))
-      .toEqual({ text: '"y: (n|m)"', page: 'Vendor Regex', path: '/vendor' })
+    expect(asResult({ found: true, text: '  "y: (n|m)" \n', page: ' Vendor Regex ', path: '/vendor' }))
+      .toEqual({ found: true, text: '"y: (n|m)"', page: 'Vendor Regex', path: '/vendor' })
   })
 
   it('treats anything else as empty', () => {
-    expect(asResult(null)).toEqual({ text: '', page: '', path: '' })
-    expect(asResult('nope')).toEqual({ text: '', page: '', path: '' })
-    expect(asResult({ text: 5, page: null })).toEqual({ text: '', page: '', path: '' })
+    expect(asResult(null)).toEqual({ found: false, text: '', page: '', path: '' })
+    expect(asResult('nope')).toEqual({ found: false, text: '', page: '', path: '' })
+    expect(asResult({ text: 5, page: null })).toEqual({ found: false, text: '', page: '', path: '' })
+  })
+
+  it('only offers clipboard text that could be a search string', () => {
+    expect(clipboardSearch('  "!eflec"  ', 250)).toBe('"!eflec"')
+    expect(clipboardSearch('Item Class: Rings\nRarity: Rare', 250)).toBe('')
+    expect(clipboardSearch('x'.repeat(251), 250)).toBe('')
+    expect(clipboardSearch('   ', 250)).toBe('')
   })
 })
 

@@ -12,7 +12,7 @@ export type { PoeReWidget } from './poe-re-widget'
 
 // The first time, it opens beside the library instead of over it (where every
 // new window starts). Once it's been placed or moved it stays put.
-export function openPoeReWindow (wm: WidgetManager, beside?: Element | null) {
+export function openPoeReWindow (wm: WidgetManager, libraryId: number, beside?: Element | null) {
   if (!Host.isElectron) {
     window.open(POE_RE_URL)
     return
@@ -24,6 +24,7 @@ export function openPoeReWindow (wm: WidgetManager, beside?: Element | null) {
     w = config.widgets[config.widgets.length - 1]
   }
   const poeRe = w as PoeReWidget
+  poeRe.libraryId = libraryId
   if (beside && isDefaultAnchor(poeRe.anchor)) poeRe.anchor = anchorBeside(beside.getBoundingClientRect(), window.innerWidth, window.innerHeight)
   showWithOverlay(wm, w.wmId)
   wm.bringToTop(w.wmId)
