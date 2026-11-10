@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-187
 title: 'Regex library: edit, create, delete in window; poe.re in app browser'
-status: Grooming
+status: In Progress
 priority: None
 effort: None
 assignee: unassigned
@@ -34,7 +34,27 @@ history:
       style (A row buttons + in-place form, B edit mode switch, C edit page) and
       one poe.re option (P1 tab in the library window with Save bar, P2 separate
       in-app window). Recommended A + P1.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked A + P2. Built on branch claude/regex-library-edit; review
+      running.
+    date: '2026-11-10T12:53:19.871Z'
+    id: c-2026-11-10t12-53-19-871z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-10T12:53:19.871Z'
+    comment: >-
+      Guy picked A + P2. Built on branch claude/regex-library-edit; review
+      running.
+  - type: status_change
+    from: Grooming
+    to: In Progress
+    user: Agent
+    date: '2026-11-10T12:53:20.268Z'
+swimlane: null
 needsAction: null
 ---
 Guy: the Regex library window has no visible create/edit/delete, and "Generate on poe.re" opens the external browser.
