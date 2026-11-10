@@ -14,6 +14,14 @@ history:
     user: Agent
     date: '2026-11-10T02:14:30.718Z'
     comment: Created ticket.
+    id: a-2026-11-10t02-14-30-718z
+  - type: activity
+    user: Agent
+    date: '2026-11-10T02:22:02.678Z'
+    comment: >-
+      PR #293 open, review fixes in 66ff8e65, local checks pass. Preview live on
+      woke/preview-layout-defence. Waiting for cloud merge.
+    id: a-2026-11-10t02-22-02-678z
 ---
 Guy's screenshot (PoE window style): Hidden filters / Item's mods labels wrap into two oversized lines and crowd the filter well; T1 tag stranded in a far-left gutter; pseudo ×N tag misaligned. Also move the Classic/Improved switch from the window to Settings > Price check.
 
