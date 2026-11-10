@@ -63,7 +63,7 @@ jobs:
           exit 1
         fi
         if [ -z "$found" ]; then
-          gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
+          gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" --title "Woke PoE Trade ${RELEASE_TAG#v}" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
         elif [ -n "$NOTES" ]; then
           gh release edit "$RELEASE_TAG" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
         fi
