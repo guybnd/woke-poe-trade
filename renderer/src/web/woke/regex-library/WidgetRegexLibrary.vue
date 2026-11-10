@@ -13,16 +13,15 @@
         </div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh">
+    <!-- One click listener for the panel's own buttons and every row's pencil and bin (data-act). -->
+    <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
-        <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" @click="startNew">New</WButton>
+        <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
       </template>
 
       <RegexEntryForm v-if="editing === 'new'" :key="'new'" :entry="newDraft" @save="saveEntry" @cancel="editing = null" />
 
-      <!-- One click listener for every row's pencil and bin (data-act). -->
-      <div @click="onRowAction">
       <template v-for="group in groups" :key="group.category">
         <div class="w-group-label">{{ group.category }}</div>
         <template v-for="entry in group.entries" :key="entry.id">
@@ -49,7 +48,6 @@
         </WListItem>
         </template>
       </template>
-      </div>
       <WEmpty v-if="!groups.length && config.entries.length" icon="fas fa-filter">
         Nothing matches "{{ filter }}".
         <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
@@ -57,14 +55,14 @@
       <WEmpty v-else-if="!groups.length && editing !== 'new'" :art="{ mechanic: 'stash' }">
         No saved searches yet. Add one, or build one on poe.re and save it from there.
         <template #actions>
-          <WButton size="sm" icon="fas fa-plus" @click="startNew">New</WButton>
-          <WButton size="sm" @click="openPoeRe">Open poe.re</WButton>
+          <WButton size="sm" icon="fas fa-plus" data-act="new">New</WButton>
+          <WButton size="sm" data-act="poe-re">Open poe.re</WButton>
         </template>
       </WEmpty>
 
       <template #footer>
         <button type="button" class="ml-auto w-accent hover:underline" data-qa="regex-poe-re" title="Opens poe.re inside the app; save what you build straight to this list"
-          @click="openPoeRe">Generate on poe.re</button>
+          data-act="poe-re">Generate on poe.re</button>
       </template>
     </WPanel>
   </Widget>
@@ -177,9 +175,11 @@ function edit (entry: RegexEntry) {
   editing.value = entry.id
 }
 
-function onRowAction (e: MouseEvent) {
+function onAction (e: MouseEvent) {
   const btn = (e.target as Element).closest<HTMLElement>('[data-act]')
   if (!btn) return
+  if (btn.dataset.act === 'new') { startNew(); return }
+  if (btn.dataset.act === 'poe-re') { openPoeRe(); return }
   const entry = props.config.entries.find(x => String(x.id) === btn.dataset.id)
   if (!entry) return
   if (btn.dataset.act === 'edit') edit(entry)
