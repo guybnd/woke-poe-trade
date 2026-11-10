@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ItemRarity } from '@/parser'
 import { createVirtualItem } from '@/parser/ParsedItem'
 import type { BaseType } from '@/assets/data'
+import { FilterTag } from '@/web/price-check/filters/interfaces'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { proposeSearchName, shortStatLabel } from '@/web/woke/trade-searches/propose-name'
 
@@ -29,6 +30,7 @@ describe('proposeSearchName', () => {
 
   it('names a rare by its base and first two ticked stats', () => {
     const stats: FilterOrGroup[] = [
+      stat('Total DPS: #', { tag: FilterTag.Property }),
       stat('+# to maximum Life', { disabled: true }),
       stat('+#% to Fire Resistance'),
       stat('+#% to Fire Resistance'),
