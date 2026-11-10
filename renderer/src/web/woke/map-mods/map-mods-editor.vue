@@ -45,7 +45,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, watch } from 'vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { WButton, WField, WInfo, WSelect } from '../ui'
@@ -71,10 +71,10 @@ export default defineComponent({
   components: { WHotkeyCell, WButton, WField, WInfo, WSelect },
   props: configProp<MapModsWidget>(),
   setup (props) {
-    const w = computed(() => {
-      normalizeMapModsWidget(props.configWidget)
-      return props.configWidget
-    })
+    // Normalize in a watcher, never inside a computed: writes from a computed
+    // re-dirty it and loop. Pre-flush, so it runs before each render.
+    watch(() => props.configWidget, normalizeMapModsWidget, { immediate: true })
+    const w = computed(() => props.configWidget)
     const profile = computed(() => activeProfile(w.value))
     const dead = computed(() => deadRatings(profile.value.ratings, everyStatLine()))
     const profileOptions = computed(() => w.value.profiles.map(p => ({ value: String(p.id), label: p.name || 'Unnamed' })))
