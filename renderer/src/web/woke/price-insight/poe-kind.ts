@@ -75,11 +75,23 @@ export function poeSection (filter: StatFilter): PoeSection {
   return 'explicit'
 }
 
-/** The tier the Alt tooltip shows, or '' when the mod has none. */
+/** The tier the Alt tooltip shows, or '' when the mod has none.
+ *  A line several mods add up to (a total or a pseudo) shows each mod's tier, "T1/3",
+ *  as long as every one has a tier: an implicit or crafted part has none. */
 export function poeTier (filter: StatFilter): string {
-  if (filter.tag === FilterTag.Pseudo || filter.sources.length !== 1) return ''
-  const tier = filter.sources[0].modifier.info.tier
-  return tier != null ? `T${tier}` : ''
+  // A property (Energy Shield: 1210) is the item's number, not a mod line.
+  if (!filter.sources.length || filter.tag === FilterTag.Property) return ''
+  const tiers: number[] = []
+  for (const { modifier } of filter.sources) {
+    if (modifier.info.tier == null) return ''
+    tiers.push(modifier.info.tier)
+  }
+  return `T${tiers.join('/')}`
+}
+
+/** Gold, as T1 in the Alt tooltip: every mod behind the line is tier 1. */
+export function isTopTier (tier: string): boolean {
+  return /^T1(\/1)*$/.test(tier)
 }
 
 /** The trade ids that search only fractured copies of this mod, when the row

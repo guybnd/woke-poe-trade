@@ -4,7 +4,7 @@
   <div class="w-poe-line" :class="{ 'w-poe-child': isChild, 'w-poe-dimmed': isSplit, 'w-poe-hybrid': hybrid, 'w-poe-hybrid-first': hybrid?.first, 'w-poe-hybrid-last': hybrid?.last }"
     :title="hybrid ? 'One hybrid mod. Click to search it: each of its lines at the bottom of its tier.' : look.label"
     @click="onClick">
-    <span class="w-poe-tier" :class="{ 'w-poe-t1': tier === 'T1' }">{{ tier }}</span>
+    <span class="w-poe-tier" :class="{ 'w-poe-t1': isTopTier(tier) }">{{ tier }}</span>
     <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
       <img v-else-if="look.icon" class="w-poe-icon" :src="look.icon" alt="">
@@ -30,7 +30,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ItemModifierText from '@/web/ui/ItemModifierText.vue'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
-import { poeLook, poeTier } from '@/web/woke/price-insight/poe-kind'
+import { poeLook, poeTier, isTopTier } from '@/web/woke/price-insight/poe-kind'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { rollPair } from '@/web/woke/price-insight/roll-pair'
 import { INTERNAL_TRADE_IDS, StatFilter } from './interfaces'

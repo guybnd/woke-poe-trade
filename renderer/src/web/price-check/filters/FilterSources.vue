@@ -1,7 +1,7 @@
 <template>
   <!-- woke: "Mod details". The mods behind a row, shown under it while the toggle is on. -->
   <div class="w-pc-sources" :class="$style.sources">
-    <div v-for="(source, idx) of filter.sources" :key="idx" :class="$style.source">
+    <div v-for="(source, idx) of sources" :key="idx" :class="$style.source">
       <source-info :source="source" :filter="filter" />
     </div>
   </div>
@@ -24,7 +24,9 @@ export function hasSourceInfo (filter: StatFilter): boolean {
 export default defineComponent({
   components: { SourceInfo },
   props: {
-    filter: { type: Object as PropType<StatFilter>, required: true }
+    filter: { type: Object as PropType<StatFilter>, required: true },
+    // The row's mods not already listed under an earlier line.
+    sources: { type: Array as PropType<StatFilter['sources']>, required: true }
   }
 })
 </script>

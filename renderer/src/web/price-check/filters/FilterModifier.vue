@@ -3,7 +3,7 @@
     <div class="flex flex-col min-w-0 flex-1">
       <div class="flex items-baseline">
         <div class="flex items-baseline min-w-0 mr-2">
-          <span v-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierText === 'T1' }">{{ poeTierText }}</span>
+          <span v-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierTop }">{{ poeTierText }}</span>
           <button :class="[$style.checkbox, { [$style.checked]: !isDisabled, [$style.uncheckedHint]: isDisabled && groupExpanded }, 'w-pc-check']"
             @click="toggleFilter" type="submit">
             <i :class="isDisabled ? 'far fa-square' : 'fas fa-check-square'" />
@@ -333,6 +333,7 @@ export default defineComponent({
       minDrag,
       poeKind: computed(() => kit?.poeLook(props.filter)),
       poeTierText: computed(() => kit?.poeTier(props.filter) ?? ''),
+      poeTierTop: computed(() => kit?.isTopTier(kit.poeTier(props.filter)) ?? false),
       actions,
       canSplit,
       isSplit,

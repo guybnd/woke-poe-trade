@@ -244,7 +244,9 @@
 /* Tier gutter, like the Alt tooltip: T1 gold, others faint. */
 #price-window.w-poe .w-poe-tier {
   flex: none;
-  width: 20px;
+  /* At least the gutter; a total's "T1/3" widens it. */
+  min-width: 20px;
+  white-space: nowrap;
   text-align: center;
   font: 600 var(--w-fs-xs) var(--w-num);
   font-variant-numeric: tabular-nums;
@@ -267,7 +269,7 @@
 #price-window .w-poe-line:hover { background: var(--w-accent-soft); }
 /* The tier sits just before the text it belongs to; a far-left gutter left it
    stranded from centred lines. No tier, no gap. */
-#price-window.w-poe .w-poe-line > .w-poe-tier { width: auto; }
+#price-window.w-poe .w-poe-line > .w-poe-tier { width: auto; min-width: 0; }
 #price-window.w-poe .w-poe-line > .w-poe-tier:empty { display: none; }
 #price-window .w-poe-line-text {
   display: inline-flex;

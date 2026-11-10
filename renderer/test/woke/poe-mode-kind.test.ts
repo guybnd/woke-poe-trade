@@ -5,7 +5,7 @@ import { loadGameData, parseItem } from '../helpers/game-data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
-import { poeLook, poeSection, poeTier, fracturedIds } from '@/web/woke/price-insight/poe-kind'
+import { poeLook, poeSection, poeTier, isTopTier, fracturedIds } from '@/web/woke/price-insight/poe-kind'
 
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
 vi.mock('@/web/Config', () => ({
@@ -62,7 +62,13 @@ describe('PoE mode stat rows', () => {
     }
     const pseudo = stats.find(s => s.tag === 'pseudo')!
     expect(poeLook(pseudo).kind).toBe('pseudo')
-    expect(poeTier(pseudo)).toBe('')
+    // A total shows each of its mods' tiers, when every one has a tier.
+    const tiers = pseudo.sources.map(s => s.modifier.info.tier)
+    expect(poeTier(pseudo)).toBe(tiers.every(t => t != null) ? `T${tiers.join('/')}` : '')
+    expect(isTopTier('T1')).toBe(true)
+    expect(isTopTier('T1/1')).toBe(true)
+    expect(isTopTier('T1/2')).toBe(false)
+    expect(isTopTier('T10')).toBe(false)
 
     const crafted = stats.find(s => s.text.includes('Dexterity') && s.tag === 'crafted')
     if (crafted) expect(poeLook(crafted).kind).toBe('crafted')
