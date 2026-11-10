@@ -20,7 +20,7 @@
       </template>
     </DockItem>
 
-    <WPanel ref="panel" :title="config.wmTitle || 'Trades'" icon="divine" width="26rem" max-height="70vh" :hotkey="config.stepHotkey">
+    <WPanel ref="panel" :title="config.wmTitle || 'Trades'" :icon="panelIcon" width="26rem" max-height="70vh" :hotkey="config.stepHotkey">
       <template v-if="log.error.value" #banner>
         <WBanner>Couldn't read the sales log: {{ log.error.value }}
           <template #actions><WButton size="sm" @click="log.load(true)">Retry</WButton></template>
@@ -91,7 +91,7 @@ import { AppConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WTabs, WEmpty, WButton, WBanner, WSkeleton, WKbd, openMenu, toast } from '../ui'
-import { gameIcon } from '../ui/game-icons'
+import { gameIcon, moduleIcon } from '../ui/game-icons'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { closeTip, dockIconEl, hideWhilePlaying, openSettingsPage, saveDock, tipClosed } from '../dock/dock'
@@ -110,6 +110,8 @@ import { artNames, offerLabel, parseTradeLine, priceLabel } from './whispers'
 import { bulkDelta, priceChaos } from './value'
 import { formatChaos } from '../ui/format'
 import { tradeTotals, tradesInRange, useOfferHistory, useTradeLog } from './log-store'
+// The header shows the module's own art, the same as the dock and tab bar.
+const panelIcon = moduleIcon('trade').art ?? 'divine'
 
 const props = defineProps<{
   config: TradeWidget

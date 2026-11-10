@@ -1,6 +1,6 @@
 <template>
   <div :class="$style.empty">
-    <WIcon v-if="art" v-bind="art" size="lg" />
+    <WIcon v-if="art" v-bind="art" :fallback="icon" size="lg" />
     <i v-else-if="icon" :class="[icon, $style.icon]" />
     <div :class="$style.text"><slot /></div>
     <div v-if="$slots.actions" :class="$style.actions"><slot name="actions" /></div>

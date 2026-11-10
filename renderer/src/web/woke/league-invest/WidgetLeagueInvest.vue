@@ -15,7 +15,7 @@
         </div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'League investments'" icon="divine" width="36rem" max-height="80vh"
+    <WPanel ref="panel" :title="config.wmTitle || 'League investments'" :icon="panelIcon" width="36rem" max-height="80vh"
       :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180">
       <template #toolbar>
         <WField v-model="config.budgetDiv" type="number" suffix="div budget" style="width: 8.5rem;" />
@@ -116,7 +116,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WInfo, WPanel, WField, WSegmented, WChip, WButton, WPrice, WEmpty, WIcon, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { offerItem } from '../ui/tooltip/item-menu'
-import { ninjaIcon } from '../ui/game-icons'
+import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
@@ -134,6 +134,8 @@ import { useZone } from '../shared/zone'
 import { useVisibleClock } from '../shared/visible-clock'
 import type { LeagueInvestWidget } from './widget'
 import { changedMatchers, isChanged } from './widget'
+// The header shows the module's own art, the same as the dock and tab bar.
+const panelIcon = moduleIcon('league-invest').art ?? 'divine'
 
 const props = defineProps<{
   config: LeagueInvestWidget

@@ -13,7 +13,7 @@
         </div>
       </template>
     </DockItem>
-    <WPanel :title="config.wmTitle || 'Lab gems'" icon="lab" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
+    <WPanel :title="config.wmTitle || 'Lab gems'" :icon="panelIcon" :updated="snapshot?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
       <template #tabs>
         <WTabs v-model="config.view" :options="[{ value: 'color', label: 'Colour roll' }, { value: 'specific', label: 'Specific gem' }]" />
       </template>
@@ -128,6 +128,9 @@ import type { LabGemsWidget } from './widget'
 import { gemIcon } from './icons'
 import DockItem from '../dock/DockItem.vue'
 import { useZone } from '../shared/zone'
+import { moduleIcon } from '../ui/game-icons'
+// The header shows the module's own art, the same as the dock and tab bar.
+const panelIcon = moduleIcon('lab-gems').art ?? 'lab'
 
 const props = defineProps<{
   config: LabGemsWidget

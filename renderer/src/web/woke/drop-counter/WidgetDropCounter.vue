@@ -47,7 +47,7 @@
       </template>
     </DockItem>
 
-    <WPanel ref="panel" :title="config.wmTitle || 'Drop counter'" icon="divine" width="24rem">
+    <WPanel ref="panel" :title="config.wmTitle || 'Drop counter'" :icon="panelIcon" width="24rem">
       <div class="flex flex-col gap-2 py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad);">
         <div ref="searchBox" class="relative">
           <WField v-model="query" icon="fas fa-plus" placeholder="Add an item" class="w-full" @keydown.enter="addFirst" />
@@ -105,7 +105,7 @@ import { saveConfig } from '@/web/Config'
 import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import { WPanel, WField, WButton, WEmpty, WIcon, toast } from '../ui'
-import { ninjaIcon } from '../ui/game-icons'
+import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
 import { dockIconEl, showWithOverlay } from '../dock/dock'
@@ -117,6 +117,8 @@ import { onGameLog } from '../shared/game-log'
 import { useZone } from '../shared/zone'
 import { DROP_COUNTER_TARGET, addLine, changeMaps, findLine, initDropCounter, lineDetail, minusOne, peekText, plusOne, removeLine, resetCounts, restoreCounts, restoreLine } from './drop-counter'
 import type { DropCounterWidget, DropLine } from './drop-counter'
+// The header shows the module's own art, the same as the dock and tab bar.
+const panelIcon = moduleIcon('drop-counter').art ?? 'divine'
 
 const props = defineProps<{
   config: DropCounterWidget

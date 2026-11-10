@@ -1,5 +1,5 @@
 <template>
-  <WPanel :title="config.wmTitle || 'Map mods'" icon="map" width="44rem" max-height="85vh">
+  <WPanel :title="config.wmTitle || 'Map mods'" :icon="panelIcon" width="44rem" max-height="85vh">
     <template #actions>
       <WSelect :model-value="String(config.activeProfile)" :options="profileOptions"
         @update:model-value="config.activeProfile = Number($event)" title="Build profile" />
@@ -108,6 +108,9 @@ import type { MinStat } from './regex'
 import { modsForMode, profileRegex, tier17Mods } from './data'
 import { activeProfile } from './widget'
 import type { MapModsWidget } from './widget'
+import { moduleIcon } from '../ui/game-icons'
+// The header shows the module's own art, the same as the dock and tab bar.
+const panelIcon = moduleIcon('map-mods').art ?? 'map'
 
 const props = defineProps<{ config: MapModsWidget }>()
 

@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
-    <WPanel ref="panel" :title="config.wmTitle || 'Session analytics'" icon="divine" width="34rem" :busy="busy">
+    <WPanel ref="panel" :title="config.wmTitle || 'Session analytics'" :icon="panelIcon" width="34rem" :busy="busy">
       <template v-if="store.error.value" #banner>
         <WBanner>Couldn't read your saved sessions: {{ store.error.value }}
           <template #actions><WButton size="sm" @click="reload">Retry</WButton></template>
@@ -232,7 +232,7 @@ import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
-import { ninjaIcon } from '../ui/game-icons'
+import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { hostRequest } from '../shared/host'
 import { BOSSES } from '../boss-runs/bosses'
@@ -250,6 +250,8 @@ import {
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
+// The header shows the module's own art, the same as the dock and tab bar.
+const panelIcon = moduleIcon('session-analytics').art ?? 'divine'
 
 const props = defineProps<{
   config: AnalyticsWidget
