@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-171
 title: 'Build workflow: Windows only, and a failure must be seen'
-status: In Progress
+status: Ready
 priority: High
 effort: S
 assignee: unassigned
@@ -50,8 +50,32 @@ history:
       permission settings blocked me from changing the ruleset. Guy: add it in
       GitHub (Settings → Rules → CI must pass on master → required checks), or
       allow me and I'll do it.
+  - type: comment
+    user: Agent
+    comment: Guy added "Windows package" to the master ruleset.
+    date: '2026-11-10T04:34:09.004Z'
+    id: c-2026-11-10t04-34-09-004z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-10T04:34:09.004Z'
+    comment: Guy added "Windows package" to the master ruleset.
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged in #295; "Windows package" is now required on master (renderer-only
+      PRs report it as skipped, so they aren't blocked).
+    date: '2026-11-10T04:34:09.646Z'
+    completionComment: true
+    id: c-2026-11-10t04-34-09-646z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-10T04:34:09.646Z'
 needsAction: null
-swimlane: require-input
+swimlane: null
 ---
 Review finding A2. The last 30 runs of `.github/workflows/main.yml` are all cancelled (last success 2026-11-05): the Linux package job fails and fail-fast cancels Windows and macOS. It isn't a required check, so nobody was told. It also packages macOS and Linux, which are never released.
 
