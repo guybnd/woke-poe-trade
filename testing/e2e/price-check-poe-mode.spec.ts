@@ -192,3 +192,20 @@ test('PoE mode: other items keep their features', async ({ overlay }) => {
     await overlay.snap(`poe mode ${name}`)
   }
 })
+
+test('PoE mode lists the local Energy Shield mod behind the total, once; Standard keeps it hidden', async ({ overlay }) => {
+  await overlay.boot({ patch: poe })
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const win = overlay.page.locator('#price-window')
+  await expect(win).toHaveClass(/w-poe/)
+  const local = win.locator('.w-poe-line', { hasText: 'increased Energy Shield' })
+  await expect(local).toHaveCount(1)
+  await expect(local).toContainText('162')
+  await overlay.snap('poe mode local es mod')
+
+  await overlay.boot({})
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  await expect(win).not.toHaveClass(/w-poe/)
+  await expect(win).toContainText('Energy Shield')
+  await expect(win.getByText('increased Energy Shield')).toHaveCount(0)
+})
