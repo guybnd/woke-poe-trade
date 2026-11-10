@@ -69,6 +69,8 @@
   color: var(--w-gold-hi);
   background: var(--w-chip-on);
 }
+/* A suggested number (a 0% quality item waits at 20): dashed until it's switched on. */
+#price-window.w-poe .w-poe-nchip.suggested { border-style: dashed; }
 #price-window.w-poe .w-poe-chip {
   font-size: var(--w-fs-md);
   line-height: calc(18px * var(--w-text-scale, 1));

@@ -99,6 +99,8 @@ export interface FilterNumeric {
   value: number
   max?: number | undefined
   disabled: boolean
+  // The value is a suggestion, not the item's own (a 0% quality item waits at 20), so it shows dashed while off.
+  suggested?: boolean
 }
 
 export type FilterOrGroup =

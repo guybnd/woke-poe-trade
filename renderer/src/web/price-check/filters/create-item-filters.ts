@@ -1,6 +1,6 @@
 import type { ItemFilters } from './interfaces'
 import { ParsedItem, ItemCategory, ItemRarity } from '@/parser'
-import { MAGIC_ONLY_OR_UNIQUE_ITEM, CONSUMABLE_CRAFTABLE_ITEM, JEWELLERY } from '@/parser/meta'
+import { MAGIC_ONLY_OR_UNIQUE_ITEM, CONSUMABLE_CRAFTABLE_ITEM, JEWELLERY, WEAPON, ARMOUR } from '@/parser/meta'
 import { getPropQuality } from '@/parser/calc-q20'
 import { tradeTag } from '../trade/common'
 import { ModifierType } from '@/parser/modifiers'
@@ -264,6 +264,10 @@ export function createFilters (
       }
     }
   }
+  // Any item that takes quality gets the box, so you can ask for more than it has (a 27% Twilight Regalia).
+  if (!filters.quality && takesQuality(item)) {
+    filters.quality = suggestedQuality(item.quality ?? 0)
+  }
 
   if (item.sockets?.linked) {
     filters.linkedSockets = {
@@ -490,7 +494,12 @@ function createGemFilters (
     disabled: (item.gemLevel! < item.info.gem!.maxLevel)
   }
 
-  if (item.quality) {
+  if (!item.quality) {
+    // Empower, Enlighten and Enhance take no quality.
+    if (!SPECIAL_SUPPORT_GEM.includes(item.info.refName)) {
+      filters.quality = suggestedQuality(0)
+    }
+  } else {
     filters.quality = {
       value: item.quality,
       disabled: (item.info.gem!.maxLevel === 1) ? false
@@ -501,6 +510,26 @@ function createGemFilters (
   }
 
   return filters
+}
+
+const TAKES_QUALITY = new Set<ItemCategory>([
+  ...WEAPON,
+  ...ARMOUR,
+  ItemCategory.Quiver,
+  ItemCategory.Flask,
+  ItemCategory.Tincture,
+  ItemCategory.Map
+])
+
+function takesQuality (item: ParsedItem): boolean {
+  return TAKES_QUALITY.has(item.category!)
+}
+
+// Off, and waiting at 20: the usual question is what a 20% copy is worth. More than 20 keeps its own value.
+function suggestedQuality (quality: number) {
+  return (quality >= 20)
+    ? { value: quality, disabled: true }
+    : { value: 20, disabled: true, suggested: true }
 }
 
 function t (opts: CreateOptions, info: BaseType) {

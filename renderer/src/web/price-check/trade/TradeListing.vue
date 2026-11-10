@@ -58,7 +58,7 @@
             <th v-if="item.category === 'Gem'" :class="$style.tableHeading">
               <div class="px-2">{{ t(':gem_level') }}</div>
             </th>
-            <th v-if="filters.quality || item.category === 'Gem'" :class="$style.tableHeading">
+            <th v-if="showQuality" :class="$style.tableHeading">
               <div class="px-2">{{ t(':quality') }}</div>
             </th>
             <th v-for="col in shownColumns" :key="col.key" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="col.title">
@@ -82,7 +82,7 @@
             <td v-if="item.stackSize" />
             <td v-if="showItemLevel" class="px-2 text-right">{{ item.itemLevel }}</td>
             <td v-if="item.category === 'Gem'" />
-            <td v-if="filters.quality || item.category === 'Gem'" />
+            <td v-if="showQuality" />
             <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat">{{ col.yours }}</td>
             <td v-if="hiddenColumns.length" />
             <td v-if="showSeller" />
@@ -127,7 +127,7 @@
               <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
               <td v-if="showItemLevel" class="px-2 whitespace-nowrap text-right">{{ row.lead.itemLevel }}</td>
               <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ row.lead.level }}</td>
-              <td v-if="filters.quality || item.category === 'Gem'" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
+              <td v-if="showQuality" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
               <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}</td>
               <td v-if="hiddenColumns.length" />
               <td v-if="showSeller" class="px-2 whitespace-nowrap">
@@ -385,6 +385,9 @@ export default defineComponent({
     const improved = computed(() => priceView.value === 'improved')
 
     const showItemLevel = computed(() => Boolean(props.filters.itemLevel && !props.filters.itemLevel.disabled))
+    // A suggested Quality box that is still off (a 0% item waiting at 20) adds no column.
+    const showQuality = computed(() => props.item.category === 'Gem' || Boolean(
+      props.filters.quality && (!props.filters.quality.disabled || !props.filters.quality.suggested)))
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
@@ -395,7 +398,7 @@ export default defineComponent({
       if (props.item.stackSize) width += WIDTH_NUMBER_COLUMN
       if (showItemLevel.value) width += WIDTH_NUMBER_COLUMN
       if (props.item.category === 'Gem') width += WIDTH_NUMBER_COLUMN
-      if (props.filters.quality || props.item.category === 'Gem') width += WIDTH_NUMBER_COLUMN
+      if (showQuality.value) width += WIDTH_NUMBER_COLUMN
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
       if (listings.some(r => !r.hasFee)) width += WIDTH_STASH_ICON
@@ -417,7 +420,7 @@ export default defineComponent({
         if (props.item.stackSize) parts.push(r.stackSize)
         if (showItemLevel.value) parts.push(r.itemLevel)
         if (props.item.category === 'Gem') parts.push(r.level)
-        if (props.filters.quality || props.item.category === 'Gem') parts.push(r.quality)
+        if (showQuality.value) parts.push(r.quality)
         if (widget.value.showSeller) parts.push(widget.value.showSeller === 'ign' ? r.ign : r.accountName)
         // Different numbers can't share a row: the row only shows one of them.
         for (const col of shownColumns.value) parts.push(formatStatValue(statValue(r, col), col))
@@ -490,6 +493,7 @@ export default defineComponent({
       // The stat columns need the bar's room.
       showCountBar: computed(() => improved.value && maxCount.value > 1 && !shownColumns.value.length),
       showItemLevel,
+      showQuality,
       scrollEl,
       shownColumns,
       hiddenColumns,

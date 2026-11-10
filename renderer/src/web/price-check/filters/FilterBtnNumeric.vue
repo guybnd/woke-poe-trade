@@ -1,7 +1,7 @@
 <template>
   <!-- woke: PoE mode's number chip. The label switches the filter; the number types,
        scrolls or drags sideways, and changing it switches the filter on. -->
-  <span v-if="chip" class="w-poe-nchip" :class="{ on: !filter.disabled, dragging }"
+  <span v-if="chip" class="w-poe-nchip" :class="{ on: !filter.disabled, suggested: filter.suggested && filter.disabled, dragging }"
     :data-numeric-chip="label"
     @wheel.prevent.stop="handleWheel"
     @pointerdown="handlePointerDown"
@@ -35,7 +35,7 @@
     </template>
     <button type="button" class="w-poe-arr" tabindex="-1" aria-label="More" @click="nudge('min', 1)">›</button>
   </span>
-  <div v-else :class="[$style.tile, { [$style.active]: !filter.disabled, [$style.dragging]: dragging }]"
+  <div v-else :class="[$style.tile, { [$style.active]: !filter.disabled, [$style.suggested]: filter.suggested && filter.disabled, [$style.dragging]: dragging }]"
     title="Click to turn on or off. Scroll, or drag a number up and down, to change it"
     @wheel.prevent.stop="handleWheel"
     @pointerdown="handlePointerDown"
@@ -305,6 +305,9 @@ export default defineComponent({
     border-color: var(--w-line-strong);
     color: var(--w-dim);
   }
+
+  /* A suggested value, not the item's own. */
+  &.suggested { border-style: dashed; }
 
   &.dragging {
     cursor: ns-resize;
