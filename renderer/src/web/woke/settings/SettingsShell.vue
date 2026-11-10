@@ -1,5 +1,5 @@
 <template>
-  <div ref="winEl" :class="$style.window" :style="sizeStyle" data-w-settings @keydown="onKeydown">
+  <div ref="winEl" class="w-corners" :class="$style.window" :style="sizeStyle" data-w-settings @keydown="onKeydown">
     <header :class="$style.bar">
       <span :class="$style.title">Settings</span>
       <label :class="[$style.search, { [$style.searchOn]: query }]">
@@ -456,6 +456,23 @@ function startResize (e: PointerEvent, edge: 'e' | 's' | 'se') {
 .icon { width: var(--w-icon-md); height: var(--w-icon-md); flex: none; display: grid; place-items: center; }
 .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge { font-size: var(--w-fs-xs); font-weight: 600; color: #fff; background: var(--w-down); border-radius: var(--w-r-pill); padding: 0 6px; line-height: calc(16px * var(--w-text-scale, 1)); }
+/* The game look (P5): bronze frame, dark header with a gold fade line, small caps
+   group labels, the open page pressed in. */
+:global([data-woke-look="game"]) .window { border-color: var(--w-frame); box-shadow: var(--w-frame-shadow); }
+:global([data-woke-look="game"]) .bar { position: relative; background: var(--w-head-ground); border-bottom-color: transparent; }
+:global([data-woke-look="game"]) .bar::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; pointer-events: none; background: var(--w-gold-fade);
+}
+:global([data-woke-look="game"]) .title { font-family: var(--w-label); color: var(--w-gold-hi); letter-spacing: 0.04em; }
+:global([data-woke-look="game"]) .search { background: var(--w-well); border-color: var(--w-well-line); box-shadow: var(--w-well-shadow); }
+:global([data-woke-look="game"]) .search:focus-within, :global([data-woke-look="game"]) .searchOn { border-color: var(--w-frame-hi); }
+:global([data-woke-look="game"]) .search input { font-family: var(--w-num); }
+:global([data-woke-look="game"]) .group {
+  font-family: var(--w-label); font-size: var(--w-fs-md); font-weight: 400; text-transform: none; letter-spacing: 0.04em; color: var(--w-gold);
+}
+:global([data-woke-look="game"]) .nav { border-right-color: var(--w-well-line); }
+:global([data-woke-look="game"]) .active { color: var(--w-gold-hi); background: var(--w-pressed); box-shadow: inset 0 1px 3px #000, inset 2px 0 0 var(--w-frame-lit); }
+:global([data-woke-look="game"]) .pageTitle { font-family: var(--w-label); color: var(--w-gold-hi); }
 .quit {
   margin-top: var(--w-s4); padding: var(--w-s1) var(--w-s2); text-align: left; color: var(--w-faint); font-size: var(--w-fs-sm);
   border-radius: var(--w-r-sm);

@@ -1,5 +1,5 @@
 <template>
-  <button @click="updateInput" :class="$style.toggle">
+  <button @click="updateInput" :class="[$style.toggle, 'w-apt-choice', { on: modelValue }]">
     <i v-if="modelValue" class="fas fa-toggle-on pr-1 text-gray-300"></i>
     <i v-else class="fas fa-toggle-off pr-1 text-gray-600"></i>
     <slot />

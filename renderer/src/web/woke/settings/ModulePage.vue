@@ -109,6 +109,12 @@ const uses = computed(() => {
 }
 .use:hover { background: color-mix(in srgb, var(--w-info) 16%, transparent); }
 .use i { font-size: calc(9px * var(--w-text-scale, 1)); }
+/* Game look: a square link chip in small caps, like the other chips. */
+:global([data-woke-look="game"]) .use {
+  font-family: var(--w-label); font-size: var(--w-fs-md); letter-spacing: 0.03em; border-radius: var(--w-r-sm);
+  border-color: var(--w-chip-line); background: var(--w-chip-ground); color: var(--w-gold);
+}
+:global([data-woke-look="game"]) .use:hover { border-color: var(--w-frame-hi); color: var(--w-gold-hi); background: var(--w-chip-on); }
 .editor { padding-top: var(--w-s2); }
 .note { font-size: var(--w-fs-sm); padding: var(--w-s2) 0; }
 </style>

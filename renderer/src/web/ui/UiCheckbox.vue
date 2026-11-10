@@ -1,7 +1,7 @@
 <template>
   <button
     @click="updateInput"
-    :class="$style['checkbox']">
+    :class="[$style['checkbox'], 'w-apt-choice', { on: modelValue === values[0] }]">
     <i v-if="modelValue !== values[0]" class="far fa-square"></i>
     <i v-else class="fas fa-check-square"></i>
     <slot />

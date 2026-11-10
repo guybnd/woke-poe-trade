@@ -66,5 +66,24 @@
   box-shadow: var(--w-frame-shadow) !important;
 }
 
+/* Lit corner marks on a framed window that isn't a WPanel (Settings). */
+:root[data-woke-look="game"] .w-corners::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  --c: linear-gradient(var(--w-frame-hi), var(--w-frame-hi));
+  background: var(--c), var(--c), var(--c), var(--c), var(--c), var(--c), var(--c), var(--c);
+  background-repeat: no-repeat;
+  background-size: 10px 2px, 2px 10px, 10px 2px, 2px 10px, 10px 2px, 2px 10px, 10px 2px, 2px 10px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+}
+
+/* APT's radios, checkboxes and toggles: a gold mark when picked. */
+:root[data-woke-look="game"] #overlay-window .w-apt-choice > i { color: var(--w-frame-hi); }
+:root[data-woke-look="game"] #overlay-window .w-apt-choice.on > i { color: var(--w-gold-hi); }
+:root[data-woke-look="game"] #overlay-window .w-apt-choice:hover > i { color: var(--w-gold); }
+
 /* Hints read upright: italic Fontin was the hardest text to read in Settings. */
 :root[data-woke-look="game"] [data-w-settings] .italic { font-style: normal; }

@@ -1,5 +1,5 @@
 <template>
-  <button @click="updateInput" :class="$style.radio">
+  <button @click="updateInput" :class="[$style.radio, 'w-apt-choice', { on: isChecked }]">
     <i v-if="!isChecked" class="far fa-circle"></i>
     <i v-else class="fas fa-check-circle"></i>
     <slot />
