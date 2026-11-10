@@ -5,6 +5,13 @@
       <w-segmented v-if="presets.length > 1"
         :model-value="activePreset" :options="presetOptions"
         @update:model-value="selectPreset" />
+      <!-- woke: one box for every row. Unticks all; again brings back the picks it cleared. Never searches. -->
+      <button v-if="stats.length" type="button" :class="[$style.allBox, { [$style.allOn]: totalSelectedMods > 0 }]" data-all-box
+        :title="(totalSelectedMods > 0) ? 'Untick every mod. Searches only when you press Search.' : 'Tick the mods back. Searches only when you press Search.'"
+        :aria-label="(totalSelectedMods > 0) ? 'Untick all mods' : 'Tick mods back'"
+        @click="toggleAll">
+        <i :class="(totalSelectedMods === 0) ? 'far fa-square' : (totalSelectedMods === stats.length) ? 'fas fa-check-square' : 'fas fa-minus-square'" />
+      </button>
       <button type="button" :class="$style.statBtn" :aria-expanded="!statsVisibility.disabled"
         @click="statsVisibility.disabled = !statsVisibility.disabled">
         <span>{{ (totalSelectedMods > 0)
@@ -111,6 +118,27 @@ export default defineComponent({
     const showHidden = shallowRef(false)
     const showFilterSources = shallowRef(false)
 
+    // The picks the box last cleared, so a second click brings them back.
+    let clearedPicks: FilterOrGroup[] | null = null
+    watch(() => props.stats, () => { clearedPicks = null })
+    const isTicked = (s: FilterOrGroup) => s.group ? !s.meta.disabled : !s.disabled
+    const setTicked = (s: FilterOrGroup, on: boolean) => {
+      if (s.group) s.meta.disabled = !on
+      else s.disabled = !on
+    }
+    function toggleAll () {
+      const ticked = props.stats.filter(isTicked)
+      if (ticked.length) {
+        clearedPicks = ticked
+        ticked.forEach(s => { setTicked(s, false) })
+      } else {
+        // Nothing cleared by the box yet: tick the rows on show.
+        const back = clearedPicks ?? props.stats.filter(s => !isHiddenRow(s))
+        back.forEach(s => { setTicked(s, true) })
+        clearedPicks = null
+      }
+    }
+
     watch(() => props.item, () => {
       showHidden.value = false
       statsVisibility.disabled = false
@@ -195,6 +223,7 @@ export default defineComponent({
         actions.menu(e, filter)
       },
       statsVisibility,
+      toggleAll,
       showHidden,
       showFilterSources,
       isHiddenRow,
@@ -250,6 +279,9 @@ export default defineComponent({
   color: var(--w-fg);
 }
 .statBtn i { color: var(--w-dim); }
+.allBox { display: flex; color: var(--w-dim); }
+.allBox.allOn { color: var(--w-fg); }
+.allBox:hover { color: var(--w-fg); }
 .statBtn:hover i { color: var(--w-fg); }
 /* The toggles a step smaller than the window's text, so both fit beside Collapse. */
 .foot > button + button { font-size: .85em; }
