@@ -2,8 +2,10 @@
   <div>
     <div :class="$style['modinfo']">{{ modText }}</div>
     <div v-for="stat of stats" :key="stat.text" class="flex items-baseline">
-      <ItemModifierText :text="stat.text" :roll="stat.roll" :class="{ 'line-through': !stat.contributes }" />
-      <div v-if="stat.contributes && stat.contribution" :class="$style['contribution']">{{ stat.contribution }}</div>
+      <!-- woke: a line of the mod that feeds another filter, dimmed with its roll, not struck through as "#%". -->
+      <ItemModifierText :text="stat.text" :roll="stat.roll" :class="{ [$style.other]: !stat.contributes }" />
+      <!-- The share of a total, or a share unlike the roll (a pseudo counts "to all" three times). -->
+      <div v-if="stat.contributes && stat.contribution && (filter.sources.length >= 2 || stat.contribution !== stat.roll)" :class="$style['contribution']">{{ stat.contribution }}</div>
     </div>
   </div>
 </template>
@@ -54,8 +56,11 @@ const stats = computed(() => {
 
   return stats.map((parsed) => {
     if (parsed.stat.ref !== contribStat.ref) {
+      // The same catalyst boost as the line that feeds the row, so a mod's lines agree.
+      parsed = applyIncr(props.source.modifier.info, parsed) ?? parsed
       return {
         text: parsed.translation.string,
+        roll: parsed.roll ? roundRoll(parsed.roll.value * (parsed.translation.negate ? -1 : 1), parsed.roll.dp) : undefined,
         contributes: false
       }
     }
@@ -84,6 +89,8 @@ const stats = computed(() => {
   @apply text-gray-500;
   font-style: italic;
 }
+
+.other { opacity: .55; }
 
 .contribution {
   margin-left: auto;

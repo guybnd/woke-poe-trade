@@ -12,6 +12,9 @@
           : t('filters.selected_none') }}</span>
         <i class="pl-1 text-xs" :class="statsVisibility.disabled ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" />
       </button>
+      <!-- woke: up here, not under the list, so it stays in reach however long the details make it. -->
+      <ui-toggle v-if="!statsVisibility.disabled && hasAnySources" data-mods-toggle title="Under the lines, show the mods behind them: prefix or suffix, name, tier and what each adds. Each mod once. Doesn't change the search."
+        v-model="showFilterSources" :class="$style.headToggle">{{ t('filters.mods_toggle') }}</ui-toggle>
       <slot name="rolls" />
     </div>
     <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
@@ -34,10 +37,11 @@
             :filter="filter"
             :item="item"
             :poe="poeMode" />
-          <filter-sources v-if="showFilterSources && !filter.group && hasSourceInfo(filter)"
+          <filter-sources v-if="!filter.group && sourcesShown.has(filter)"
             :key="`src_${filter.tag}_${filter.text}`"
             :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
-            :filter="filter" />
+            :filter="filter"
+            :sources="sourcesShown.get(filter)!" />
         </template>
         <div v-if="!filteredStats.length && !showUnknownMods"
           class="border-b border-gray-700 py-2">{{ t('filters.empty') }}</div>
@@ -53,8 +57,6 @@
           >{{ t('filters.collapse') }} <i class="fas fa-chevron-up pl-1 text-xs text-gray-600"></i></button>
         <ui-toggle v-if="hiddenCount > 0" title="Show the filters the price check keeps out of the way, such as rolls that can't vary, faded in among the others. Doesn't change the search."
           v-model="showHidden" class="text-gray-400 pt-2 whitespace-nowrap">{{ t('filters.hidden_toggle') }}</ui-toggle>
-        <ui-toggle v-if="hasAnySources" title="Under each line, show the mods behind it: prefix or suffix, name, tier and what each adds. Doesn't change the search."
-          v-model="showFilterSources" class="ml-auto text-gray-400 pt-2 whitespace-nowrap">{{ t('filters.mods_toggle') }}</ui-toggle>
       </div>
     </div>
   </div>
@@ -71,7 +73,7 @@ import { poeOn as poeMode, poeKit } from '@/web/woke/price-insight/window-style'
 import type { PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
 import { WSegmented } from '@/web/woke/ui'
-import { ItemFilters, FilterOrGroup } from './interfaces'
+import { ItemFilters, FilterOrGroup, StatFilter } from './interfaces'
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 
@@ -151,6 +153,22 @@ export default defineComponent({
       if (!poeMode.value) return rows
       return rows.sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section] || a.i - b.i)
     })
+    // "Mod details": each mod once, under the first line it feeds, so a hybrid
+    // or a mod in a total isn't listed again under every line it adds to.
+    const sourcesShown = computed(() => {
+      const out = new Map<StatFilter, StatFilter['sources']>()
+      if (!showFilterSources.value) return out
+      const seen = new Set<object>()
+      // Visible lines claim their mods first; a faded hidden line only gets what's left.
+      const rows = shownStats.value.map(r => r.filter)
+      for (const filter of [...rows.filter(f => !isHiddenRow(f)), ...rows.filter(isHiddenRow)]) {
+        if (filter.group || !hasSourceInfo(filter)) continue
+        const fresh = filter.sources.filter(s => !seen.has(s.modifier))
+        for (const s of fresh) seen.add(s.modifier)
+        if (fresh.length) out.set(filter, fresh)
+      }
+      return out
+    })
     // The rows a gold separator goes above.
     const sepBefore = computed(() => {
       const out = new Set<number>()
@@ -181,7 +199,7 @@ export default defineComponent({
       showFilterSources,
       isHiddenRow,
       hiddenCount,
-      hasSourceInfo,
+      sourcesShown,
       hasAnySources: computed(() => filteredStats.value.some(s => !s.group && hasSourceInfo(s))),
       totalSelectedMods: computed(() => {
         return props.stats.filter(stat => {
@@ -235,6 +253,11 @@ export default defineComponent({
 .statBtn:hover i { color: var(--w-fg); }
 /* The toggles a step smaller than the window's text, so both fit beside Collapse. */
 .foot > button + button { font-size: .85em; }
+.headToggle {
+  font-size: .85em;
+  white-space: nowrap;
+  color: var(--w-dim);
+}
 /* A row "Hidden filters" brought back: faded until pointed at. */
 .hiddenRow { opacity: .5; transition: opacity .1s; }
 .hiddenRow:hover { opacity: .85; }

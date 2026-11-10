@@ -193,8 +193,8 @@ test('PoE mode: other items keep their features', async ({ overlay }) => {
   }
 })
 
-// At a big window and text size (20px, 115%), the toggles under the filters each
-// keep their label on one line, apart from the well, in both window styles.
+// At a big window and text size (20px, 115%), Hidden filters under the list and Mod details
+// in the header each keep their label on one line, in both window styles.
 for (const style of ['poe', 'standard']) {
   test(`${style}: Hidden filters and Mod details stay on one line at a big size`, async ({ overlay }) => {
     await overlay.page.setViewportSize({ width: 2560, height: 1440 })
@@ -212,10 +212,10 @@ for (const style of ['poe', 'standard']) {
     const win = overlay.page.locator('#price-window')
     const foot = win.locator('.w-pc-stat-foot')
     await expect(foot).toBeVisible()
-    const toggles = foot.locator('button').filter({ hasText: /Hidden filters|Mod details/ })
-    await expect(toggles).toHaveCount(2)
-    for (let i = 0; i < 2; i++) {
-      const h = await toggles.nth(i).evaluate(el => {
+    const toggles = [foot.locator('button', { hasText: 'Hidden filters' }), win.locator('[data-mods-toggle]')]
+    for (const toggle of toggles) {
+      await expect(toggle).toHaveCount(1)
+      const h = await toggle.evaluate(el => {
         const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3
         return el.getBoundingClientRect().height / lh
       })
@@ -228,6 +228,33 @@ for (const style of ['poe', 'standard']) {
     }
   })
 }
+
+// Mod details lists each mod once, under the first line it feeds, with no "#%" struck lines,
+// and its toggle sits above the list, so it turns off however long the list grows.
+test('PoE mode: Mod details lists each mod once and turns off again', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot({ patch: poe })
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const win = overlay.page.locator('#price-window')
+  await expect(win).toContainText('Energy Shield')
+  const toggle = win.locator('[data-mods-toggle]')
+  await toggle.click()
+  const sources = win.locator('.w-pc-sources')
+  await expect(sources.first()).toBeVisible()
+  // Seraphim's (a hybrid: ES and stun recovery) is behind three lines, listed once.
+  await expect(sources.filter({ hasText: 'Seraphim' })).toHaveCount(1)
+  await expect(sources.filter({ hasText: 'Unassailable' })).toHaveCount(1)
+  expect((await sources.allInnerTexts()).join(' ')).not.toContain('#%')
+  expect(await win.locator('.w-pc-sources .line-through').count()).toBe(0)
+  // A total shows its mods' tiers.
+  await expect(win.locator('.w-poe-tier', { hasText: 'T1/1' }).first()).toBeVisible()
+  await overlay.snap('poe mode mod details')
+  const box = (await toggle.boundingBox())!
+  const first = (await sources.first().boundingBox())!
+  expect(box.y).toBeLessThan(first.y)
+  await toggle.click()
+  await expect(sources).toHaveCount(0)
+})
 
 test('PoE mode lists the local Energy Shield mod behind the total, once; Standard keeps it hidden', async ({ overlay }) => {
   await overlay.boot({ patch: poe })
