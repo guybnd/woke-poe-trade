@@ -495,8 +495,8 @@ function createGemFilters (
   }
 
   if (!item.quality) {
-    // Empower, Enlighten and Enhance take no quality.
-    if (!SPECIAL_SUPPORT_GEM.includes(item.info.refName)) {
+    // Empower, Enlighten and Enhance take no quality, Awakened ones included.
+    if (!SPECIAL_SUPPORT_GEM.includes(item.info.refName.replace(/^Awakened /, ''))) {
       filters.quality = suggestedQuality(0)
     }
   } else {
@@ -515,7 +515,7 @@ function createGemFilters (
 const TAKES_QUALITY = new Set<ItemCategory>([
   ...WEAPON,
   ...ARMOUR,
-  ItemCategory.Quiver,
+  // Quivers are left out: like rings, their quality is catalyst quality, searched on the mod.
   ItemCategory.Flask,
   ItemCategory.Tincture,
   ItemCategory.Map

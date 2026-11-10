@@ -31,6 +31,11 @@ describe('Quality filter', () => {
     expect(qualityOf(fixture('items/gem-enlighten.txt'))).toBeUndefined()
   })
 
+  it('gives none to Awakened Enhance either', () => {
+    const text = fixture('items/gem-enlighten.txt').replace(/Enlighten Support/g, 'Awakened Enhance Support').replace('Level: 3 (Max)', 'Level: 1')
+    expect(qualityOf(text)).toBeUndefined()
+  })
+
   it('gives body armour with no quality a box waiting at 20, off', () => {
     expect(qualityOf(fixture('items/unique-kaoms-heart.txt'))).toEqual({ value: 20, disabled: true, suggested: true })
   })
