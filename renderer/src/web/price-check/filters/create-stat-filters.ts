@@ -209,6 +209,10 @@ function addInTotalMods (ctx: FiltersCreationContext) {
     return at
   }
   for (const calc of ctx.inTotal) {
+    // An uncorrupted fractured mod also comes back as a hidden Fractured row
+    // made from the same mod; this row replaces it, so the mod is listed once.
+    const twin = ctx.filters.findIndex(f => f.sources === calc.sources)
+    if (twin >= 0) ctx.filters.splice(twin, 1)
     const filter = calculatedStatToFilter(calc, ctx.searchInRange, item)
     filter.disabled = true
     filter.hidden = undefined

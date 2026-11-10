@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { loadGameData, fixture, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
+import { skipsTopMods } from '@/web/woke/price-insight/search-scope'
 
 function rows (name: string) {
   const item = parseItem(fixture(`items/${name}`))
@@ -37,5 +38,25 @@ describe('local mods in a property total', () => {
 
   it('adds nothing for items without a property total', () => {
     expect(rows('rare-ring.txt').some(f => f.inTotal)).toBe(false)
+  })
+})
+
+describe('local mods in a property total, other uses', () => {
+  beforeAll(loadGameData)
+
+  it('a fractured local mod is listed once', () => {
+    const list = rows('rare-fractured.txt')
+    const local = list.filter(f => f.inTotal)
+    expect(local.length).toBeGreaterThan(0)
+    for (const f of local) {
+      expect(list.filter(o => o.sources === f.sources)).toHaveLength(1)
+    }
+  })
+
+  it('an unticked local mod does not count as a skipped top mod', () => {
+    const item = parseItem(fixture('items/rare-body-armour-es.txt'))
+    const stats = initUiModFilters(item, { searchStatRange: 10 })
+    const plain = stats.filter(f => f.group || !f.inTotal)
+    expect(skipsTopMods(item, stats)).toBe(skipsTopMods(item, plain))
   })
 })

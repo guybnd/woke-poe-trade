@@ -40,7 +40,8 @@ export function worthBand (w: ModWorth): WorthBand {
 }
 
 function statList (stats: FilterOrGroup[]): StatFilter[] {
-  return stats.filter((f): f is StatFilter => !f.group && !f.hidden && !f.not)
+  // A local mod in a property total is worth what the total is: count it once.
+  return stats.filter((f): f is StatFilter => !f.group && !f.hidden && !f.not && !f.inTotal)
 }
 
 const STOP_WORDS = new Set(['to', 'total', 'pseudo', 'implicit', 'crafted', 'fractured', 'enchant', 'explicit', 'of', 'a', 'an', 'the'])
