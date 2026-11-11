@@ -43,7 +43,26 @@ history:
       **Should Flips get a Threads tab, pricing Frayed Thread to a random Thread
       (and Cryptic Astrolabe to a random Astrolabe)?** It would go in once
       poe.ninja prices Threads, a few days into the league. My default is yes.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy, 2026-11-11: "Yes we will need thread flips but remain to be seen if
+      they can be rerolled at all". On launch day, check what a Thread can be
+      turned into: a 3-for-1 vendor, a Harvest reroll, or only Frayed Thread to
+      a random Thread. Then build the tab for what exists.
+    date: '2026-11-11T05:04:24.640Z'
+    id: c-2026-11-11t05-04-24-640z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-11T05:04:24.640Z'
+    comment: >-
+      Guy, 2026-11-11: "Yes we will need thread flips but remain to be seen if
+      they can be rerolled at all". On launch day, check what a Thread can be
+      turned into: a 3-for-1 vendor, a Harvest reroll, or only Frayed Thread to
+      a random Thread. Then build the tab for what exists.
+swimlane: null
 needsAction: null
 ---
 > TL;DR: the Scarabs tab already hides itself (#266). The other 3.30 changes Flips needs are below. The Threads tab waits on Guy's yes.
