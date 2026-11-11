@@ -95,7 +95,8 @@ const rows = []
 // mastery has, by id.
 const masteryEffects = {}
 for (const [id, n] of Object.entries(tree.nodes)) {
-  for (const e of n.masteryEffects ?? []) masteryEffects[e.effect] = e.stats ?? []
+  // Each line is one mod, wrapped in the data: joined, so totals read it whole.
+  for (const e of n.masteryEffects ?? []) masteryEffects[e.effect] = (e.stats ?? []).map(l => l.replace(/\s*\n\s*/g, ' '))
   if (id === 'root' || n.group == null || n.isProxy) continue
   const group = tree.groups[n.group]
   if (!group || group.isProxy) continue

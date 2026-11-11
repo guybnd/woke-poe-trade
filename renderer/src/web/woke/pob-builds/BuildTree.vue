@@ -349,13 +349,21 @@ function setHovered (n: TreeNode | null) {
     hideTip()
     return
   }
-  const picked = n.kind === 'mastery' && toSet.value.has(n.id) ? nodeOf.value(n.id) : undefined
+  // A mastery shows the effect picked in the tree it's in; comparing, one
+  // dropped or changed shows the earlier pick too.
+  const before = n.kind === 'mastery' && previous.value && fromSet.value.has(n.id) && tree.value
+    ? withMasteries(tree.value, previous.value.masteries)(n.id)
+    : undefined
+  const picked = n.kind === 'mastery' && toSet.value.has(n.id) ? nodeOf.value(n.id) : before
+  const was = before?.stats.length && picked !== before && before.stats.join() !== picked?.stats.join()
+    ? `Was: ${before.stats.join('; ')}`
+    : undefined
   showTipAt(ring.value, {
     kind: 'passive',
     name: n.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
     stats: picked?.stats.length ? picked.stats : n.stats,
     frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' ? 'rare' : 'normal',
-    note: nodeNote(nodeState(n.id, fromSet.value, toSet.value))
+    note: [nodeNote(nodeState(n.id, fromSet.value, toSet.value)), was].filter(Boolean).join(' · ') || undefined
   })
 }
 
