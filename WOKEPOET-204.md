@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-204
 title: 'PoB J: show picked mastery effects on the tree'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -32,6 +32,18 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-11T07:28:50.626Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #330.'
+    date: '2026-11-11T08:02:48.346Z'
+    completionComment: true
+    id: c-2026-11-11t08-02-48-346z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-11T08:02:48.346Z'
 needsAction: null
+reviewState: null
 ---
 > TL;DR: Guy's #11. Parse Spec masteryEffects; tree data gains masteryEffects (effect id -> stats); tree tooltip, Totals and search use the picked effect. Branch pob-mastery.

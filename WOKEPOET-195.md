@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-195
 title: 'PoB A: compact Next section with hoverable nodes and items, collapsible'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -59,7 +59,19 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-11T07:28:51.829Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #331.'
+    date: '2026-11-11T08:02:49.100Z'
+    completionComment: true
+    id: c-2026-11-11t08-02-49-100z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-11T08:02:49.100Z'
 swimlane: null
 needsAction: null
+reviewState: null
 ---
 > TL;DR: Guy's #1 and #5. Next (tree / gems / gear) takes too much room; node names and items aren't hoverable. Make it compact, hoverable, and collapsible. Mocks first.

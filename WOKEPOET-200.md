@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-200
 title: 'PoB F: Trades tab linked to a saved-searches folder'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -61,7 +61,19 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-11T07:28:53.968Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #331.'
+    date: '2026-11-11T08:02:50.685Z'
+    completionComment: true
+    id: c-2026-11-11t08-02-50-685z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-11T08:02:50.685Z'
 swimlane: null
 needsAction: null
+reviewState: null
 ---
 > TL;DR: Guy's #7. A tab in the build panel listing the saved trade searches of a folder linked to the build. Mocks first.

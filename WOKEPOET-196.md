@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-196
 title: 'PoB B: hover a link group to see the item it sits on'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -35,6 +35,18 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-11T06:50:58.594Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #327.'
+    date: '2026-11-11T08:02:44.596Z'
+    completionComment: true
+    id: c-2026-11-11t08-02-44-596z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-11T08:02:44.596Z'
 needsAction: null
+reviewState: null
 ---
 > TL;DR: Guy's #2. In Leveling › Links, hovering a group shows the item from the matching item set in its slot, without adding rows.

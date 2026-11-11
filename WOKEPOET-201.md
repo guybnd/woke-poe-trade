@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-201
 title: 'PoB G: tree "Changes from" dropdown'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -35,6 +35,18 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-11T06:51:01.255Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #327.'
+    date: '2026-11-11T08:02:46.098Z'
+    completionComment: true
+    id: c-2026-11-11t08-02-46-098z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-11T08:02:46.098Z'
 needsAction: null
+reviewState: null
 ---
 > TL;DR: Guy's #8. In the passive tree, "Changes from" becomes a dropdown of the build's tree sets.
