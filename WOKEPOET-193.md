@@ -14,7 +14,40 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-11T05:16:25.251Z'
+    comment: Created ticket.
+    id: a-2026-11-11t05-16-25-251z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T05:16:25.251Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-11t05-16-25-251z
+  - type: comment
+    user: Agent
+    comment: >-
+      **Pick a layout** from the mocks:
+      https://claude.ai/artifact/T6SUHyMaVhjVFMNUws5Yzv. A = hover card on each
+      room (reuses essence scan OCR, cheapest). B = one read rings every ticked
+      room (needs icon matching from 3.30 screenshots, riskiest before launch).
+      C = dock "this temple" card, goes with A or B. **Default if no answer: A +
+      C.** A screenshot of the temple view with a room hovered would help either
+      way.
+    date: '2026-11-11T05:19:42.933Z'
+    id: c-2026-11-11t05-19-42-933z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-11T05:19:42.933Z'
+    comment: >-
+      **Pick a layout** from the mocks:
+      https://claude.ai/artifact/T6SUHyMaVhjVFMNUws5Yzv. A = hover card on each
+      room (reuses essence scan OCR, cheapest). B = one read rings every ticked
+      room (needs icon matching from 3.30 screenshots, riskiest before launch).
+      C = dock "this temple" card, goes with A or B. **Default if no answer: A +
+      C.** A screenshot of the temple view with a room hovered would help either
+      way.
+swimlane: require-input
+needsAction: null
 ---
 > **TL;DR** New scan tool for the Incursion temple (Alva's temple view): read rooms by OCR, highlight the important T1/T2/T3 rooms. Room list configurable, all on by default. Use 3.30 names. Mocks first, Guy picks, then build.
 

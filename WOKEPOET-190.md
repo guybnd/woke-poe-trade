@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-190
 title: K. Harvest swap and craft costs for 3.30
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -37,7 +37,39 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-11T05:10:09.024Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 786c117 and live in the dev build. Still open: confirm in game
+      which second lifeforce colour the bench asks for, then drop the "about".
+    completionComment: true
+    date: '2026-11-11T05:19:45.556Z'
+    id: c-2026-11-11t05-19-45-556z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-11T05:19:45.881Z'
 needsAction: null
+baselineCommit: 92ec973d050a54c53ee9e8b34249723293766ecd
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/324'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/harvest-swap/SwapMarker.vue
+    additions: 4
+    deletions: 3
+  - file: renderer/src/web/woke/harvest-swap/detect.ts
+    additions: 1
+    deletions: 1
+  - file: renderer/src/web/woke/harvest-swap/families.ts
+    additions: 46
+    deletions: 12
+  - file: renderer/src/web/woke/harvest-swap/useSwap.ts
+    additions: 4
+    deletions: 3
+  - file: renderer/test/woke/harvest-swap.test.ts
+    additions: 19
+    deletions: 0
 ---
 > TL;DR: Harvest swap prices use the old 500-of-one-colour cost. 3.30 changes it to 300 each of two colours.
 
