@@ -29,12 +29,25 @@ const head = git('rev-parse', 'HEAD')
 // Line ends aside: a Windows checkout may have added carriage returns.
 const read = (file) => fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n') : null
 
+// Upstream's copy of a file at the last commit copied, or null when unknown.
+function seenCopy (rel) {
+  try {
+    return execFileSync('git', ['-C', UPSTREAM, 'show', `${state.seen}:${rel}`], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).replace(/\r\n/g, '\n')
+  } catch {
+    return null
+  }
+}
+
 const changed = []
 for (const lang of LANGUAGES) {
   for (const name of FILES) {
     const rel = `${DATA}/${lang}/${name}`
     const theirs = read(path.join(UPSTREAM, rel))
     if (theirs == null) continue
+    // Only a file upstream itself changed is copied: our own launch-day patch
+    // (scripts/trade-data-patch.mjs) must not be undone by upstream's old copy.
+    const seen = seenCopy(rel)
+    if (seen != null && seen.trim() === theirs.trim()) continue
     if (theirs !== read(path.join(ROOT, rel))) {
       fs.writeFileSync(path.join(ROOT, rel), theirs)
       changed.push(rel)
