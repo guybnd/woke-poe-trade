@@ -126,7 +126,9 @@ export default {
 import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
-import { pushHostConfig, saveConfig } from '@/web/Config'
+import { AppConfig, pushHostConfig, saveConfig } from '@/web/Config'
+import { POB_BUILDS_TYPE } from '../pob-builds/widget'
+import type { PobBuildsWidget } from '../pob-builds/widget'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WSelect, WChip, WKbd, WEmpty, WListItem, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
@@ -311,7 +313,15 @@ function finishNewFolder () {
 function finishFolderRename (from: string) {
   if (renaming.value !== `folder:${from}`) return
   renaming.value = null
-  renameFolder(props.config, from, draft.value)
+  const to = renameFolder(props.config, from, draft.value)
+  // Builds whose Trades tab shows this folder keep showing it.
+  for (const w of AppConfig().widgets) {
+    if (w.wmType !== POB_BUILDS_TYPE) continue
+    const links = (w as PobBuildsWidget).tradeFolders
+    if (links && Object.values(links).includes(from)) {
+      (w as PobBuildsWidget).tradeFolders = Object.fromEntries(Object.entries(links).map(([rel, f]) => [rel, f === from ? to : f]))
+    }
+  }
   pickingIcon.value = null
   saveConfig()
 }

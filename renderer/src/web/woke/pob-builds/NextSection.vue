@@ -28,7 +28,7 @@
       <!-- Gear -->
       <div v-if="gear" :class="$style.row">
         <span :class="$style.label">Gear</span>
-        <span v-for="c in gear.changes" :key="c.slot" :class="$style.named" :title="slotLabel(c.slot)"
+        <span v-for="c in gear.changes" :key="c.slot" :class="$style.named"
           @mouseenter="c.now && showTip($event, { kind: 'item', item: c.now })" @mouseleave="hideTip">
           <img v-if="c.now && itemArt(c.now)" :src="itemArt(c.now)!" alt="" :class="['w-game-icon', $style.art]" loading="lazy" draggable="false">
           <span :class="[$style.name, c.now ? rarityClass(c.now) : 'w-dim']">{{ c.now ? itemLabel(c.now) : `no ${slotLabel(c.slot).toLowerCase()}` }}</span>

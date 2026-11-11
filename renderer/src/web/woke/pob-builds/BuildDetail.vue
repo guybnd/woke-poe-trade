@@ -321,7 +321,9 @@ function withoutKind (kind: keyof LoadoutPick): LoadoutPick | null {
 // Clicking the set you picked by hand unpicks just that one; any other click
 // pins it. A skill set takes its same-named item set and tree along.
 function chooseSkillSet (title: string) {
-  setPick(pick.value?.skillSet === title ? withoutKind('skillSet') : { skillSet: title })
+  // Linked, a set pick is the whole loadout: unpicking goes back to Auto.
+  if (linked.value && canUnlink.value) setPick(pick.value?.skillSet === title && !pick.value.itemSet ? null : { skillSet: title })
+  else setPick(pick.value?.skillSet === title ? withoutKind('skillSet') : { skillSet: title })
 }
 
 // Item sets can differ from the skill set, so the skill set stays as it was.
@@ -376,7 +378,13 @@ const hasGear = computed(() => Boolean(layout.value.main || layout.value.loose.l
 // both; two when PoB's names differ or the two are showing different sets.
 // Gems and gear move together unless you unlink them for this build.
 const linked = computed(() => !(props.config.unlinkedSets ?? []).includes(props.entry.relPath))
-const canUnlink = computed(() => skillSets.value.length > 1 && itemSets.value.length > 1)
+// Only sets PoB names alike can move together; differently named ones are
+// always picked apart.
+const sameNames = computed(() => {
+  const titles = (sets: Array<{ title: string }>) => sets.map(s => s.title).sort().join('\n')
+  return titles(skillSets.value) === titles(itemSets.value)
+})
+const canUnlink = computed(() => skillSets.value.length > 1 && itemSets.value.length > 1 && sameNames.value)
 function toggleLinked () {
   const rel = props.entry.relPath
   const list = props.config.unlinkedSets ?? []
@@ -393,10 +401,9 @@ function toggleLinked () {
 const setChips = computed(() => {
   const skills = skillSets.value
   const items = itemSets.value
-  const titles = (sets: Array<{ title: string }>) => sets.map(s => s.title).sort().join('\n')
   // Linked (the default): one row, and a pick takes the same-named gear set
   // and tree along. Unlinked: gems and gear are picked apart.
-  const together = linked.value || (skills.length > 1 && titles(skills) === titles(items) && shownSet.value?.title === shownItemSet.value?.title)
+  const together = canUnlink.value ? linked.value : skills.length < 2 || items.length < 2
   const skillChips = skills.map(set => ({
     title: set.title,
     active: set === shownSet.value,
