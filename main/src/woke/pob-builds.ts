@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs'
+import { promises as fs, constants as fsConstants } from 'fs'
 import type { Dirent } from 'fs'
 import path from 'path'
 import zlib from 'zlib'
@@ -143,8 +143,19 @@ async function fetchCode (input: string): Promise<string> {
 }
 
 function safeFileName (name: string): string {
-  const s = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
-  return s || 'Imported build'
+  return cleanName(name) || 'Imported build'
+}
+
+// What Windows takes as a file or folder name: no trailing dots or spaces
+// (other programs can't open those) and none of its device names ("CON").
+function cleanName (name: string): string {
+  const s = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '')
+  return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(s) ? `${s}_` : s
+}
+
+// Windows paths ignore case: "lev" and "Lev" are one folder.
+function samePath (a: string, b: string): boolean {
+  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
 export async function importBuild (args: { dir?: string, input: string, name?: string }): Promise<{ relPath: string }> {
@@ -162,4 +173,80 @@ export async function importBuild (args: { dir?: string, input: string, name?: s
   }
   await fs.writeFile(path.join(folder, file), xml, 'utf8')
   return { relPath: `Imported/${file}` }
+}
+
+// ---- managing build files from the list ----
+
+function relOf (root: string, full: string): string {
+  return path.relative(root, full).split(path.sep).join('/')
+}
+
+// A free name in `folder`: "Name.xml", else "Name (2).xml" and on.
+async function freeName (folder: string, base: string): Promise<string> {
+  let file = `${base}.xml`
+  for (let i = 2; ; i++) {
+    try { await fs.access(path.join(folder, file)) } catch { return file }
+    file = `${base} (${i}).xml`
+  }
+}
+
+// A folder under the builds folder, from what was typed ("3.30/Leveling").
+function resolveFolder (root: string, folder: unknown): string {
+  const parts = (typeof folder === 'string' ? folder : '').split(/[\\/]+/).map(cleanName).filter(Boolean)
+  if (parts.some(p => p === '.' || p === '..')) throw new Error('Not a folder name')
+  if (parts.length > MAX_DEPTH) throw new Error('That folder is too deep for the build list')
+  const full = path.resolve(root, ...parts)
+  if (full !== root && !full.startsWith(root + path.sep)) throw new Error('Folder is outside the builds folder')
+  return full
+}
+
+export async function renameBuild (args: { dir?: string, relPath: string, name: string }): Promise<{ relPath: string }> {
+  const from = resolveBuild(args?.dir, args?.relPath)
+  const root = path.resolve(resolveDir(args?.dir))
+  const base = typeof args?.name === 'string' ? cleanName(args.name.replace(/\.xml$/i, '')) : ''
+  if (!base) throw new Error('Type a name')
+  const folder = path.dirname(from)
+  if (`${base}.xml` === path.basename(from)) return { relPath: relOf(root, from) }
+  // Only a change of case: Windows sees the same file, so rename in place.
+  const sameFile = `${base}.xml`.toLowerCase() === path.basename(from).toLowerCase()
+  const to = path.join(folder, sameFile ? `${base}.xml` : await freeName(folder, base))
+  await fs.rename(from, to)
+  return { relPath: relOf(root, to) }
+}
+
+export async function moveBuild (args: { dir?: string, relPath: string, folder: string }): Promise<{ relPath: string }> {
+  const from = resolveBuild(args?.dir, args?.relPath)
+  const root = path.resolve(resolveDir(args?.dir))
+  const folder = resolveFolder(root, args?.folder)
+  if (samePath(folder, path.dirname(from))) return { relPath: relOf(root, from) }
+  await fs.mkdir(folder, { recursive: true })
+  const to = path.join(folder, await freeName(folder, path.basename(from, path.extname(from))))
+  await fs.rename(from, to)
+  return { relPath: relOf(root, to) }
+}
+
+export async function duplicateBuild (args: { dir?: string, relPath: string }): Promise<{ relPath: string }> {
+  const from = resolveBuild(args?.dir, args?.relPath)
+  const root = path.resolve(resolveDir(args?.dir))
+  const folder = path.dirname(from)
+  const to = path.join(folder, await freeName(folder, `${path.basename(from, path.extname(from))} (copy)`))
+  await fs.copyFile(from, to, fsConstants.COPYFILE_EXCL)
+  return { relPath: relOf(root, to) }
+}
+
+// To the Recycle Bin. Returns the file's text so Undo can put it back.
+export async function deleteBuild (args: { dir?: string, relPath: string }): Promise<{ xml: string }> {
+  const full = resolveBuild(args?.dir, args?.relPath)
+  const xml = await fs.readFile(full, 'utf8')
+  await shell.trashItem(full)
+  summaryCache.delete(full)
+  return { xml }
+}
+
+// Undo of a delete: writes the build back, never over a file that's there.
+export async function restoreBuild (args: { dir?: string, relPath: string, xml: string }): Promise<void> {
+  const full = resolveBuild(args?.dir, args?.relPath)
+  if (typeof args?.xml !== 'string' || !/<PathOfBuilding/.test(args.xml)) throw new Error('That is not a Path of Building build')
+  await fs.mkdir(path.dirname(full), { recursive: true })
+  await fs.writeFile(full, args.xml, { encoding: 'utf8', flag: 'wx' })
 }

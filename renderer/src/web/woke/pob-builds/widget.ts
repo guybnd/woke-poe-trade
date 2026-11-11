@@ -160,7 +160,44 @@ export const pobApi = {
   show: (cfg: PobBuildsWidget, relPath: string) =>
     hostRequest<void>('pob-show', { dir: dirArg(cfg), relPath }),
   import: async (cfg: PobBuildsWidget, input: string) =>
-    hostRequest<{ relPath: string }>('pob-import', { dir: dirArg(cfg), input })
+    hostRequest<{ relPath: string }>('pob-import', { dir: dirArg(cfg), input }),
+  rename: (cfg: PobBuildsWidget, relPath: string, name: string) =>
+    hostRequest<{ relPath: string }>('pob-rename', { dir: dirArg(cfg), relPath, name }),
+  move: (cfg: PobBuildsWidget, relPath: string, folder: string) =>
+    hostRequest<{ relPath: string }>('pob-move', { dir: dirArg(cfg), relPath, folder }),
+  duplicate: (cfg: PobBuildsWidget, relPath: string) =>
+    hostRequest<{ relPath: string }>('pob-duplicate', { dir: dirArg(cfg), relPath }),
+  delete: (cfg: PobBuildsWidget, relPath: string) =>
+    hostRequest<{ xml: string }>('pob-delete', { dir: dirArg(cfg), relPath }),
+  restore: (cfg: PobBuildsWidget, relPath: string, xml: string) =>
+    hostRequest<void>('pob-restore', { dir: dirArg(cfg), relPath, xml })
+}
+
+// After a build file moves: every setting that names it follows it. `to` null
+// forgets it (deleted). Returns what to put back for Undo.
+export function moveBuildRefs (w: PobBuildsWidget, from: string, to: string | null): () => void {
+  // Undo puts back only this build's references, so other changes made since stay.
+  const at = to ?? from
+  const pinAt = w.pinned.indexOf(from)
+  const wasActive = w.activeBuild === from
+  const chars = Object.entries(w.followChars).filter(([, rel]) => rel === from).map(([c]) => c)
+  const before = w.loadouts[from]
+  const undo = () => {
+    w.pinned = w.pinned.filter(p => p !== at)
+    if (pinAt >= 0) w.pinned = [...w.pinned.slice(0, pinAt), from, ...w.pinned.slice(pinAt)]
+    if (wasActive && (w.activeBuild === at || w.activeBuild == null)) w.activeBuild = from
+    w.followChars = { ...Object.fromEntries(Object.entries(w.followChars).filter(([c, rel]) => !(chars.includes(c) && rel === at))), ...Object.fromEntries(chars.map(c => [c, from])) }
+    const rest = Object.fromEntries(Object.entries(w.loadouts).filter(([rel]) => rel !== at))
+    w.loadouts = before ? { ...rest, [from]: before } : rest
+  }
+  w.pinned = to ? w.pinned.map(p => p === from ? to : p) : w.pinned.filter(p => p !== from)
+  if (w.activeBuild === from) w.activeBuild = to
+  w.followChars = Object.fromEntries(Object.entries(w.followChars)
+    .flatMap(([c, rel]) => rel !== from ? [[c, rel]] : to ? [[c, to]] : []))
+  const pick = w.loadouts[from]
+  const loadouts = Object.fromEntries(Object.entries(w.loadouts).filter(([rel]) => rel !== from))
+  w.loadouts = pick && to ? { ...loadouts, [to]: pick } : loadouts
+  return undo
 }
 
 export function buildMatches (b: PobBuildEntry, query: string): boolean {

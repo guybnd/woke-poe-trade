@@ -5,7 +5,7 @@
       <template #card><BuildHoverCard /></template>
     </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
-      <WPanel :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
+      <WPanel ref="panel" :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
         <template #actions>
           <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a pobb.in / pastebin link or PoB code">
             <i class="fas fa-file-import" />
@@ -37,8 +37,16 @@
             <span class="ml-auto w-num">{{ g.builds.length }}</span>
           </button>
           <template v-if="isOpen(g)">
-            <WListItem v-for="b in g.builds" :key="b.relPath" :active="selected === b.relPath" :title="b.relPath" @select="select(b)"
-              @contextmenu="buildMenu($event, b)" @keydown.p.prevent="togglePin(b.relPath)">
+            <template v-for="b in g.builds" :key="b.relPath">
+            <div v-if="editing?.relPath === b.relPath" :class="$style.editRow">
+              <span class="w-faint text-xs whitespace-nowrap">{{ editing.kind === 'rename' ? 'Name' : 'Folder' }}</span>
+              <input data-draft v-model="draft" :class="['w-field', $style.edit]" spellcheck="false" :list="editing.kind === 'move' ? 'pob-folders' : undefined"
+                :placeholder="editing.kind === 'move' ? 'Empty: the top of the builds folder' : ''"
+                @keydown.enter.prevent="finishEdit" @keydown.esc.prevent="editing = null" @blur="editing = null">
+            </div>
+            <WListItem v-else :active="selected === b.relPath" :title="b.relPath" @select="select(b)"
+              @contextmenu="buildMenu($event, b)" @keydown.p.prevent="togglePin(b.relPath)"
+              @keydown.f2.prevent="startEdit(b, 'rename')" @keydown="$event.key === 'Delete' && ($event.preventDefault(), removeBuild(b))">
               <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
               <span class="w-trunc">{{ b.name }}</span>
               <span class="ml-auto w-num w-dim text-xs whitespace-nowrap" title="Saved in PoB">{{ statLine(b.stats) }}</span>
@@ -50,8 +58,10 @@
                 </button>
               </template>
             </WListItem>
+            </template>
           </template>
         </template>
+        <datalist id="pob-folders"><option v-for="f in folders" :key="f" :value="f" /></datalist>
         <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
           Nothing matches "{{ filter }}".
           <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
@@ -89,7 +99,7 @@ export default {
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { inject, computed, shallowRef, watch } from 'vue'
+import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast } from '../ui'
@@ -101,7 +111,7 @@ import BuildHoverCard from './BuildHoverCard.vue'
 import BuildTree from './BuildTree.vue'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
-import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, pobApi } from './widget'
+import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi } from './widget'
 import type { BuildGroup, PobBuildEntry, PobDetails } from './widget'
 
 const props = defineProps<{
@@ -335,8 +345,96 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
           icon: 'fas fa-balance-scale',
           action: () => { comparing.value = { a: selectedBuild.value!.relPath, b: b.relPath } }
         }]
-      : [])
+      : []),
+    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit(b, 'rename') },
+    { label: 'Duplicate', icon: 'fas fa-clone', action: () => duplicateBuild(b) },
+    { label: 'Move to folder', icon: 'fas fa-folder', action: () => startEdit(b, 'move') },
+    { label: 'Delete', icon: 'fas fa-trash-alt', keys: 'Del', action: () => removeBuild(b) }
   ])
+}
+
+// ---- rename, move, duplicate, delete ----
+// Settings that name the build follow its file. PoB still has the old path if
+// the build is open there: its next save writes the old file again.
+
+const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
+const editing = shallowRef<{ relPath: string, kind: 'rename' | 'move' } | null>(null)
+const draft = shallowRef('')
+const folders = computed(() => [...new Set(builds.value.map(b => b.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b)))
+
+function note (text: string, undo?: () => void) {
+  toast(text, { anchor: panel.value?.el, undo })
+}
+
+function startEdit (b: PobBuildEntry, kind: 'rename' | 'move') {
+  draft.value = kind === 'rename' ? b.name : b.folder
+  editing.value = { relPath: b.relPath, kind }
+  nextTick(() => {
+    const input = panel.value?.el?.querySelector<HTMLInputElement>('[data-draft]')
+    input?.focus()
+    input?.select()
+  })
+}
+
+async function finishEdit () {
+  const edit = editing.value
+  if (!edit) return
+  editing.value = null
+  const b = builds.value.find(x => x.relPath === edit.relPath)
+  if (!b) return
+  const text = draft.value.trim()
+  if (edit.kind === 'rename' ? !text || text === b.name : text.toLowerCase() === b.folder.toLowerCase()) return
+  try {
+    const { relPath } = edit.kind === 'rename'
+      ? await pobApi.rename(props.config, b.relPath, text)
+      : await pobApi.move(props.config, b.relPath, text)
+    if (relPath === b.relPath) return
+    followFile(b.relPath, relPath)
+    await refresh()
+    const back = () => {
+      const call = edit.kind === 'rename' ? pobApi.rename(props.config, relPath, b.name) : pobApi.move(props.config, relPath, b.folder)
+      call.then(r => { followFile(relPath, r.relPath); return refresh() }, (err: Error) => note(err.message))
+    }
+    note(edit.kind === 'rename' ? `Renamed to ${relPath.split('/').pop()!.replace(/\.xml$/i, '')}` : `Moved to ${relPath.includes('/') ? relPath.slice(0, relPath.lastIndexOf('/')) : 'the builds folder'}`, back)
+  } catch (err) {
+    note((err as Error).message)
+  }
+}
+
+function followFile (from: string, to: string) {
+  moveBuildRefs(props.config, from, to)
+  if (selected.value === from) selected.value = to
+  saveConfig()
+}
+
+async function duplicateBuild (b: PobBuildEntry) {
+  try {
+    const { relPath } = await pobApi.duplicate(props.config, b.relPath)
+    await refresh()
+    selected.value = relPath
+    startEdit(builds.value.find(x => x.relPath === relPath) ?? b, 'rename')
+  } catch (err) {
+    note((err as Error).message)
+  }
+}
+
+async function removeBuild (b: PobBuildEntry) {
+  try {
+    const { xml } = await pobApi.delete(props.config, b.relPath)
+    const putBack = moveBuildRefs(props.config, b.relPath, null)
+    if (selected.value === b.relPath) selected.value = null
+    saveConfig()
+    await refresh()
+    note(`Moved ${b.name} to the Recycle Bin`, () => {
+      pobApi.restore(props.config, b.relPath, xml).then(() => {
+        putBack()
+        saveConfig()
+        return refresh()
+      }, (err: Error) => note(err.message))
+    })
+  } catch (err) {
+    note((err as Error).message)
+  }
 }
 
 function togglePin (relPath: string) {
@@ -348,6 +446,14 @@ function togglePin (relPath: string) {
 </script>
 
 <style module>
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: var(--w-s2);
+  padding: 4px var(--w-s2);
+  border-bottom: 1px solid var(--w-line-soft);
+}
+.edit { flex: 1; min-width: 0; height: var(--w-row-h); padding: 0 var(--w-s2); }
 .folder {
   display: flex;
   align-items: center;
