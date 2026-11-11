@@ -37,6 +37,37 @@ history:
       data only arrives when SnosMe pushes it. If upstream lags past launch, we
       need our own export of stats and items from the 3.30 client.
     id: a-2026-11-11t05-10-11-226z
+  - type: comment
+    user: Agent
+    comment: >-
+      **Own data instead of upstream APT: A, a full exporter, or B, a 3.30 patch
+      layer?** Guy wants our own data (2026-11-11). Upstream's ndjson generator
+      is private; only the dat reader (SnosMe/poe-dat-viewer lib/src/cli) is
+      public. **A**: export the 3.30 dat tables and write a converter into the
+      items/stats.ndjson schema (renderer/src/assets/data/interfaces.ts). About
+      2-3 days, English first, maintained every league. **B (recommended)**: at
+      launch, read trade site /api/trade/data/stats and /items, then add new or
+      reworded stats and new items on top of upstream data. About 1 day, English
+      only, and it falls away once upstream updates.
+    date: '2026-11-11T05:15:09.405Z'
+    id: c-2026-11-11t05-15-09-405z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-11T05:15:09.405Z'
+    comment: >-
+      **Own data instead of upstream APT: A, a full exporter, or B, a 3.30 patch
+      layer?** Guy wants our own data (2026-11-11). Upstream's ndjson generator
+      is private; only the dat reader (SnosMe/poe-dat-viewer lib/src/cli) is
+      public. **A**: export the 3.30 dat tables and write a converter into the
+      items/stats.ndjson schema (renderer/src/assets/data/interfaces.ts). About
+      2-3 days, English first, maintained every league. **B (recommended)**: at
+      launch, read trade site /api/trade/data/stats and /items, then add new or
+      reworded stats and new items on top of upstream data. About 1 day, English
+      only, and it falls away once upstream updates.
+swimlane: require-input
+needsAction: null
 ---
 > TL;DR: regenerate item and stat data from the 3.30 client on launch day. Without it, price check misses every mod GGG reworded.
 
