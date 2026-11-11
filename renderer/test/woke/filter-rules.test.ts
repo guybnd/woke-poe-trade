@@ -68,10 +68,10 @@ describe('the rule builder', () => {
     expect(lit('>=', 4)).toEqual([4, 5])
     expect(lit('>=', 5)).toEqual([5])
     expect(lit('==', 3)).toEqual([3])
-    expect(lit('<', 3)).toEqual([1, 2])
+    expect(lit('<', 3)).toEqual([2])
     const doc = withRules(parseFilter('Show\n'), [rule({ conditions: [newCondition('Rarity'), newCondition('UnidentifiedItemTier')] })])
     expect(serializeFilter(doc)).toContain('UnidentifiedItemTier >= 4')
-    expect(ruleProblem(rule({ conditions: [{ key: 'UnidentifiedItemTier', op: '>=', count: null, values: ['6'] }] }))).toMatch(/1 to 5/)
+    expect(ruleProblem(rule({ conditions: [{ key: 'UnidentifiedItemTier', op: '>=', count: null, values: ['1'] }] }))).toMatch(/2 to 5/)
   })
 
   it('skips a broken or switched-off rule rather than breaking the file', () => {

@@ -50,15 +50,16 @@ export const CONDITION_KINDS: ConditionKind[] = [
   { key: 'FracturedItem', label: 'Fractured', input: 'bool' },
   { key: 'SynthesisedItem', label: 'Synthesised', input: 'bool' },
   { key: 'HasInfluence', label: 'Influence', input: 'influence' },
-  // 3.30: magic and rare drops carry a tier, 1 to 5.
-  { key: 'UnidentifiedItemTier', label: 'Item tier', input: 'tier', min: 1, max: 5 }
+  // 3.30: magic and rare drops from Act 6 on can carry a tier, 2 to 5.
+  { key: 'UnidentifiedItemTier', label: 'Item tier', input: 'tier', min: 2, max: 5 }
 ]
 
 export const RARITIES = ['Normal', 'Magic', 'Rare', 'Unique']
 export const INFLUENCES = ['Shaper', 'Elder', 'Crusader', 'Hunter', 'Redeemer', 'Warlord']
 export const NUMBER_OPS = ['>=', '<=', '==', '>', '<']
 
-export const ITEM_TIERS = [1, 2, 3, 4, 5]
+// 3.30 patch notes: tiers run from 2 to 5; an item with no tier has none.
+export const ITEM_TIERS = [2, 3, 4, 5]
 
 // Which tier buttons a tier condition lights. Ours are always "this tier and
 // up"; a hand-written or NeverSink one can use any compare.
