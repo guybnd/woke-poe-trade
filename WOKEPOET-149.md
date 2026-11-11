@@ -65,6 +65,11 @@ subtasks:
   - WOKEPOET-156
   - WOKEPOET-157
   - WOKEPOET-159
+  - WOKEPOET-188
+  - WOKEPOET-189
+  - WOKEPOET-190
+  - WOKEPOET-191
+  - WOKEPOET-192
 ---
 ## What's coming (3.30 Covens of Umbra, launches Fri 13 Nov 2026 19:00 UTC; Allflame ends 9 Nov)
 Sources: GGG ExileCon announcement (forum thread 4012710, thin on detail), Maxroll reveal summary, Output Lag recaps. **3.30 patch notes are not out yet** (forum patch-notes list tops at 3.29.3c on 8 Nov); expect them ~11-12 Nov.
