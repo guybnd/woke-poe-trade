@@ -100,3 +100,12 @@ describe('real shapes of stat lines', () => {
     expect(group('+20 to Strength and Intelligence')).toBe('Attributes and pools')
   })
 })
+
+describe('picked masteries in the totals', () => {
+  it('count the picked effect, through the node lookup', () => {
+    const map = new Map([node(1, ['10% increased maximum Life']), node(8, [], 'mastery', 'Life Mastery')].map(n => [n.id, n]))
+    const nodeOf = (id: number) => id === 8 ? { ...map.get(8)!, stats: ['10% increased maximum Life'] } : map.get(id)
+    expect(treeTotals(map, [1, 8], nodeOf).find(t => /Life/.test(t.text))?.amount).toBe('20%')
+    expect(treeTotals(map, [1, 8]).find(t => /Life/.test(t.text))?.amount).toBe('10%')
+  })
+})

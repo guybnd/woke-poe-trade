@@ -35,6 +35,8 @@ export interface TreeArt {
 
 let job: Promise<Map<number, TreeNode>> | null = null
 let art: TreeArt | null = null
+// Mastery effect id -> its stat lines.
+let masteryEffects: Record<string, string[]> = {}
 // A newer tree downloaded: read it the next time the tree opens.
 let generation = 0
 onSharedDataChange(() => { generation++; job = null })
@@ -42,6 +44,22 @@ onSharedDataChange(() => { generation++; job = null })
 // The groups and sprites, once loadPassiveTree has finished.
 export function passiveTreeArt (): TreeArt | null {
   return art
+}
+
+// What a picked mastery gives, once loadPassiveTree has finished; [] when the
+// data is older than mastery effects.
+export function masteryStats (effect: number | undefined): string[] {
+  return effect != null ? masteryEffects[effect] ?? [] : []
+}
+
+// The tree's nodes with each picked mastery holding its picked effect's text.
+export function withMasteries (nodes: Map<number, TreeNode>, masteries: Record<number, number> | undefined): (id: number) => TreeNode | undefined {
+  return (id) => {
+    const n = nodes.get(id)
+    const effect = masteries?.[id]
+    if (!n || n.kind !== 'mastery' || effect == null) return n
+    return { ...n, stats: masteryStats(effect) }
+  }
 }
 
 export function readNodes (rows: Row[]): Map<number, TreeNode> {
@@ -55,11 +73,14 @@ export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
     job = fetch(dataFileUrl('tree/passive-tree.json'))
       .then(res => {
         if (!res.ok) throw new Error(`The passive tree didn't load (${res.status})`)
-        return res.json() as Promise<TreeArt & { nodes: Row[] }>
+        return res.json() as Promise<TreeArt & { nodes: Row[], masteryEffects?: Record<string, string[]> }>
       })
       .then(data => {
         // A tree read from before a newer one arrived doesn't replace its art.
-        if (mine === generation) art = { groups: data.groups, sprites: data.sprites }
+        if (mine === generation) {
+          art = { groups: data.groups, sprites: data.sprites }
+          masteryEffects = data.masteryEffects ?? {}
+        }
         return readNodes(data.nodes)
       })
     // A failed load can be tried again by opening the tree again.

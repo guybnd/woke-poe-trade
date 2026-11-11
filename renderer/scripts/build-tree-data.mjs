@@ -91,7 +91,12 @@ const groupIndex = new Map()
 const groups = []
 const used = new Set()
 const rows = []
+// Mastery effect id -> its stat lines: builds save which effect each picked
+// mastery has, by id.
+const masteryEffects = {}
 for (const [id, n] of Object.entries(tree.nodes)) {
+  // Each line is one mod, wrapped in the data: joined, so totals read it whole.
+  for (const e of n.masteryEffects ?? []) masteryEffects[e.effect] = (e.stats ?? []).map(l => l.replace(/\s*\n\s*/g, ' '))
   if (id === 'root' || n.group == null || n.isProxy) continue
   const group = tree.groups[n.group]
   if (!group || group.isProxy) continue
@@ -139,6 +144,6 @@ for (const kind of SPRITE_KINDS) {
 }
 
 mkdirSync(dirname(OUT), { recursive: true })
-const out = JSON.stringify({ nodes: rows, groups, sprites })
+const out = JSON.stringify({ nodes: rows, groups, sprites, masteryEffects })
 writeFileSync(OUT, out)
 console.log(`${rows.length} nodes, ${out.length} bytes -> ${OUT}`)

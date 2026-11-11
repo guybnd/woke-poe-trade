@@ -47,7 +47,7 @@
             </div>
           </template>
           <div v-if="!groups.length" class="w-dim pt-2">Nothing in this tree says that.</div>
-          <div class="w-faint text-xs pt-2">From this tree only: no gear, jewels, ascendancy or masteries.</div>
+          <div class="w-faint text-xs pt-2">From this tree and its masteries only: no gear, jewels or ascendancy.</div>
         </div>
       </div>
     </div>
@@ -62,7 +62,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WButton, WChip, WEmpty, WField, WPanel, WSelect } from '../ui'
 import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { realSets } from './build-model'
-import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, treeDiff } from './passive-tree'
+import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, treeDiff, withMasteries } from './passive-tree'
 import type { TreeNode, View } from './passive-tree'
 import { filterTotals, groupTotals, matchingNodes, treeTotals } from './tree-totals'
 import { drawTree, loadSheets } from './tree-draw'
@@ -138,10 +138,12 @@ const query = shallowRef('')
 // The nodes behind the total under the mouse.
 const rowIds = shallowRef<number[] | null>(null)
 
-const totals = computed(() => tree.value ? treeTotals(tree.value, toIds.value) : [])
+// Picked masteries read as their effect, in totals and tooltips.
+const nodeOf = computed(() => tree.value ? withMasteries(tree.value, shown.value?.masteries) : () => undefined)
+const totals = computed(() => tree.value ? treeTotals(tree.value, toIds.value, nodeOf.value) : [])
 const groups = computed(() => groupTotals(filterTotals(totals.value, query.value)))
 const searching = computed(() => sideOpen.value && query.value.trim().length >= 2)
-const searchHits = computed(() => (searching.value && tree.value) ? matchingNodes(tree.value.values(), query.value) : [])
+const searchHits = computed(() => (searching.value && tree.value) ? matchingNodes([...tree.value.keys()].map(id => nodeOf.value(id)!), query.value) : [])
 const litCount = computed(() => searchHits.value.length)
 const lit = computed(() => rowIds.value ?? searchHits.value)
 // The row under the mouse can go with no mouseleave.
@@ -347,12 +349,21 @@ function setHovered (n: TreeNode | null) {
     hideTip()
     return
   }
+  // A mastery shows the effect picked in the tree it's in; comparing, one
+  // dropped or changed shows the earlier pick too.
+  const before = n.kind === 'mastery' && previous.value && fromSet.value.has(n.id) && tree.value
+    ? withMasteries(tree.value, previous.value.masteries)(n.id)
+    : undefined
+  const picked = n.kind === 'mastery' && toSet.value.has(n.id) ? nodeOf.value(n.id) : before
+  const was = before?.stats.length && picked !== before && before.stats.join() !== picked?.stats.join()
+    ? `Was: ${before.stats.join('; ')}`
+    : undefined
   showTipAt(ring.value, {
     kind: 'passive',
     name: n.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
-    stats: n.stats,
+    stats: picked?.stats.length ? picked.stats : n.stats,
     frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' ? 'rare' : 'normal',
-    note: nodeNote(nodeState(n.id, fromSet.value, toSet.value))
+    note: [nodeNote(nodeState(n.id, fromSet.value, toSet.value)), was].filter(Boolean).join(' · ') || undefined
   })
 }
 

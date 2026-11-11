@@ -52,12 +52,12 @@ function round (n: number) {
   return Math.round(n * 100) / 100
 }
 
-export function treeTotals (nodes: Map<number, TreeNode>, ids: number[]): TreeTotal[] {
+export function treeTotals (nodes: Map<number, TreeNode>, ids: number[], nodeOf: (id: number) => TreeNode | undefined = id => nodes.get(id)): TreeTotal[] {
   const leading = new Map<string, { plus: boolean, percent: boolean, sum: number, rest: string, search: string, ids: number[] }>()
   const inside = new Map<string, { sum: number, line: string, ids: number[] }>()
   const plain = new Map<string, number[]>()
   for (const id of new Set(ids)) {
-    const n = nodes.get(id)
+    const n = nodeOf(id)
     // Ascendancy has its own points and text; it would swamp the sums' meaning.
     if (!n || n.kind === 'asc') continue
     for (const line of n.stats.flatMap(statLines)) {
