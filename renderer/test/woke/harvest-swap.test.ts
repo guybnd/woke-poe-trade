@@ -199,3 +199,22 @@ describe('priceByKey', () => {
     expect(by.lightning).toEqual({ key: 'lightning', listings: 2, chaos: null })
   })
 })
+
+describe('3.30 swap costs', () => {
+  it('prices 300 of the target colour, 300 of the cheaper other one, and a Rancour for damage', async () => {
+    const { SWAP_FAMILIES, swapChaos, swapCostText } = await import('@/web/woke/harvest-swap/families')
+    const price: Record<string, number> = {
+      'Wild Crystallised Lifeforce': 0.1,
+      'Vivid Crystallised Lifeforce': 0.05,
+      'Primal Crystallised Lifeforce': 0.08,
+      'Crystallised Rancour': 4
+    }
+    const lookup = (name: string) => price[name] ?? null
+    const res = SWAP_FAMILIES.find(f => f.id === 'res')!.cost('fire')
+    expect(swapCostText(res)).toBe('300 Wild + 300 Vivid or Primal')
+    expect(swapChaos(res, lookup)).toBeCloseTo(300 * 0.1 + 300 * 0.05)
+    const dmg = SWAP_FAMILIES.find(f => f.id === 'eleDamage')!.cost('cold')
+    expect(swapChaos(dmg, lookup)).toBeCloseTo(300 * 0.05 + 300 * 0.08 + 4)
+    expect(swapChaos(dmg, name => name === 'Crystallised Rancour' ? null : 1)).toBeNull()
+  })
+})

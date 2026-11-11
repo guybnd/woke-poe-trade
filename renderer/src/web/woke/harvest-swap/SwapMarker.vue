@@ -34,7 +34,7 @@ import { computed } from 'vue'
 import UiPopover from '@/web/ui/Popover.vue'
 import { WChip } from '../ui'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
-import { KEY_LABEL } from './families'
+import { KEY_LABEL, swapCostText } from './families'
 import { useSwap } from './useSwap'
 
 // The ⇄ next to a mod a swap can change. Its buttons pick what that mod is
@@ -50,8 +50,9 @@ function costText (to: string): string {
   const c = cand.value!
   const pay = c.family.cost(to)
   const chaos = swap!.cost(c, to)
-  const what = `${pay.amount} ${pay.item.replace(' Crystallised Lifeforce', '')}`
-  return chaos == null ? `${what} · no price yet` : `${what} ≈ ${chaos >= 10 ? Math.round(chaos) : chaos.toFixed(1)}c`
+  const what = swapCostText(pay)
+  const about = pay.estimate ? 'about ' : ''
+  return chaos == null ? `${what} · no price yet` : `${what} ≈ ${about}${chaos >= 10 ? Math.round(chaos) : chaos.toFixed(1)}c`
 }
 </script>
 

@@ -2,8 +2,11 @@
 //
 // Harvest (poedb Horticrafting list, checked 2026-11-09): "Change a modifier that
 // grants Fire Resistance / Fire Damage into a similar-tier modifier that grants
-// Cold ..." for every pair of Fire, Cold and Lightning. The target colour of
-// lifeforce pays: to Fire is Wild, to Cold Vivid, to Lightning Primal.
+// Cold ..." for every pair of Fire, Cold and Lightning. Up to 3.29 the target
+// colour paid 500: to Fire is Wild, to Cold Vivid, to Lightning Primal.
+// 3.30 patch notes: a swap costs "300 Lifeforce of two different types", and a
+// damage swap a Crystallised Rancour too. Which second colour isn't stated, so
+// until it's seen in game the target colour plus the cheaper other one is used.
 // Physical, attack and caster crafts are random reforges, not swaps, so they
 // aren't here.
 //
@@ -16,10 +19,32 @@
 
 export type SwapFamilyId = 'res' | 'maxRes' | 'eleDamage' | 'flatDamage' | 'attribute'
 
-export interface SwapCost {
-  /** poe.ninja item name of what pays for the swap. */
-  item: string
+export interface SwapPart {
+  /** poe.ninja item names that can pay this part; the cheapest is counted. */
+  items: readonly string[]
   amount: number
+}
+
+export interface SwapCost {
+  parts: readonly SwapPart[]
+  /** Part of the cost is a guess, shown as such. */
+  estimate?: true
+}
+
+/** What one swap costs in chaos, from a price lookup; null when a part has no price. */
+export function swapChaos (cost: SwapCost, price: (item: string) => number | null): number | null {
+  let total = 0
+  for (const part of cost.parts) {
+    const prices = part.items.map(price).filter((c): c is number => c != null && c > 0)
+    if (!prices.length) return null
+    total += Math.min(...prices) * part.amount
+  }
+  return total
+}
+
+/** "300 Wild + 300 Vivid or Primal + 1 Rancour" */
+export function swapCostText (cost: SwapCost): string {
+  return cost.parts.map(p => `${p.amount} ${p.items.map(i => i.replace(' Crystallised Lifeforce', '').replace('Crystallised ', '')).join(' or ')}`).join(' + ')
 }
 
 export interface SwapFamily {
@@ -60,8 +85,17 @@ const LIFEFORCE: Record<string, string> = {
   cold: 'Vivid Crystallised Lifeforce',
   lightning: 'Primal Crystallised Lifeforce'
 }
-export const HARVEST_SWAP_AMOUNT = 500
-const harvestCost = (to: string): SwapCost => ({ item: LIFEFORCE[to], amount: HARVEST_SWAP_AMOUNT })
+export const HARVEST_SWAP_AMOUNT = 300
+function harvestCost (rancour: boolean) {
+  return (to: string): SwapCost => ({
+    parts: [
+      { items: [LIFEFORCE[to]], amount: HARVEST_SWAP_AMOUNT },
+      { items: ELEMENTS.filter(e => e !== to).map(e => LIFEFORCE[e]), amount: HARVEST_SWAP_AMOUNT },
+      ...(rancour ? [{ items: ['Crystallised Rancour'], amount: 1 }] : [])
+    ],
+    estimate: true
+  })
+}
 
 function byElement (template: string): Record<string, string> {
   return {
@@ -80,7 +114,7 @@ export const SWAP_FAMILIES: readonly SwapFamily[] = [
     onlyTicked: true,
     defaultOn: true,
     catches: /\b(Fire|Cold|Lightning)\b.*Resistances?$/,
-    cost: harvestCost
+    cost: harvestCost(false)
   },
   {
     id: 'maxRes',
@@ -89,7 +123,7 @@ export const SWAP_FAMILIES: readonly SwapFamily[] = [
     members: [byElement('+#% to maximum {} Resistance')],
     defaultOn: true,
     catches: /maximum .*\b(Fire|Cold|Lightning)\b.*Resistance/,
-    cost: harvestCost
+    cost: harvestCost(false)
   },
   {
     id: 'eleDamage',
@@ -98,7 +132,7 @@ export const SWAP_FAMILIES: readonly SwapFamily[] = [
     members: [byElement('#% increased {} Damage')],
     defaultOn: true,
     catches: /\b(Fire|Cold|Lightning)\b Damage/,
-    cost: harvestCost
+    cost: harvestCost(true)
   },
   {
     id: 'flatDamage',
@@ -112,7 +146,7 @@ export const SWAP_FAMILIES: readonly SwapFamily[] = [
     anyRoll: true,
     defaultOn: false,
     catches: /\b(Fire|Cold|Lightning)\b Damage/,
-    cost: harvestCost
+    cost: harvestCost(true)
   },
   {
     id: 'attribute',
@@ -125,7 +159,7 @@ export const SWAP_FAMILIES: readonly SwapFamily[] = [
     random: true,
     defaultOn: false,
     catches: /\b(Strength|Dexterity|Intelligence|all Attributes)\b/,
-    cost: () => ({ item: "Genteel's Ducat", amount: 1 })
+    cost: () => ({ parts: [{ items: ["Genteel's Ducat"], amount: 1 }] })
   }
 ]
 

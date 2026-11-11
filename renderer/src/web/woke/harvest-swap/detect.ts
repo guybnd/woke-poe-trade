@@ -99,4 +99,4 @@ export function detectSwaps (item: ParsedItem, stats: FilterOrGroup[], config?: 
   return out
 }
 
-export { DEFAULT_HIGHLIGHT_CHAOS } from './families'
+export { DEFAULT_HIGHLIGHT_CHAOS, swapChaos } from './families'
