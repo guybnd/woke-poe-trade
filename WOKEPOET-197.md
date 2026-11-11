@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-197
 title: 'PoB C: tie the gem and gear set pickers together'
-status: Grooming
+status: Ready
 priority: None
 effort: None
 assignee: unassigned
@@ -48,6 +48,17 @@ history:
     user: Agent
     date: '2026-11-11T07:04:31.526Z'
     comment: 'Guy picked C1 (one row, link toggle).'
+  - type: comment
+    user: Agent
+    comment: 'C1 built in PR #331 (link chip, unlinkedSets).'
+    date: '2026-11-11T07:28:52.978Z'
+    completionComment: true
+    id: c-2026-11-11t07-28-52-978z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-11T07:28:52.978Z'
 swimlane: null
 needsAction: null
 ---

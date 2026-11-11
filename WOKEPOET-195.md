@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-195
 title: 'PoB A: compact Next section with hoverable nodes and items, collapsible'
-status: Grooming
+status: Ready
 priority: None
 effort: None
 assignee: unassigned
@@ -48,6 +48,17 @@ history:
     user: Agent
     date: '2026-11-11T07:04:31.480Z'
     comment: Guy picked A1 with icons (names plus game art per notable/gem/item).
+  - type: comment
+    user: Agent
+    comment: 'A1 with icons built in PR #331 (NextSection.vue, PassiveIcon.vue).'
+    date: '2026-11-11T07:28:51.829Z'
+    completionComment: true
+    id: c-2026-11-11t07-28-51-829z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-11T07:28:51.829Z'
 swimlane: null
 needsAction: null
 ---

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-200
 title: 'PoB F: Trades tab linked to a saved-searches folder'
-status: Grooming
+status: Ready
 priority: None
 effort: None
 assignee: unassigned
@@ -50,6 +50,17 @@ history:
     user: Agent
     date: '2026-11-11T07:04:31.575Z'
     comment: Guy picked F1 (Trades tab).
+  - type: comment
+    user: Agent
+    comment: 'F1 built in PR #331 (BuildTrades.vue, tradeFolders).'
+    date: '2026-11-11T07:28:53.968Z'
+    completionComment: true
+    id: c-2026-11-11t07-28-53-968z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-11T07:28:53.968Z'
 swimlane: null
 needsAction: null
 ---
