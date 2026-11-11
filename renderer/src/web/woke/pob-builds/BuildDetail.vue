@@ -42,32 +42,8 @@
           </WChip>
         </div>
         <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
-        <template v-if="nextTree || nextGems_ || gearStep">
-          <div :class="$style.heading">Next</div>
-          <button v-if="nextTree" type="button" :class="$style.next" class="w-focusable" title="Show on the tree" @click="emit('tree', nextTree.title)">
-            <span :class="$style.nextHead">
-              <span>Tree: <span class="w-accent">{{ nextTree.title }}</span></span>
-              <span class="ml-auto w-dim text-xs whitespace-nowrap">
-                <template v-if="treeData">
-                  <span class="w-up">+{{ nextTreeDiff.added }}</span><template v-if="nextTreeDiff.addedAscendancy"> · {{ nextTreeDiff.addedAscendancy }} ascendancy</template>
-                </template><template v-if="treeData && nextTreeDiff.removed"> · <span class="w-down">-{{ nextTreeDiff.removed }} respec</span></template>
-              </span>
-            </span>
-            <span v-if="nextTreeNames" class="w-dim text-xs">{{ nextTreeNames }}</span>
-          </button>
-          <div v-if="nextGems_" :class="$style.next">
-            <span :class="$style.nextHead"><span>Gems: <span class="w-accent">{{ nextGems_.title }}</span></span></span>
-            <span v-if="nextGems_.change.add.length" :class="$style.names"><span class="w-up text-xs">Add</span><GemName v-for="g in nextGems_.change.add" :key="g" :name="g" /></span>
-            <span v-if="nextGems_.change.drop.length" class="w-dim text-xs">Drop {{ nextGems_.change.drop.join(', ') }}</span>
-          </div>
-          <div v-if="gearStep" :class="$style.next">
-            <span :class="$style.nextHead"><span>Gear: <span class="w-accent">{{ gearStep.title }}</span></span></span>
-            <span v-for="c in gearStep.changes.slice(0, 4)" :key="c.slot" class="text-xs w-trunc">
-              <span class="w-dim">{{ slotLabel(c.slot) }}:</span> {{ c.now ? (c.now.rarity === 'UNIQUE' || c.now.rarity === 'RELIC' ? c.now.name : c.now.base || c.now.name) : 'nothing' }}
-            </span>
-            <span v-if="gearStep.changes.length > 4" class="w-dim text-xs">and {{ gearStep.changes.length - 4 }} more</span>
-          </div>
-        </template>
+        <NextSection v-if="nextTree || nextGems_ || gearStep" :config="config" :tree="nextTree ?? null" :diff="treeData ? nextTreeDiff : null"
+          :gems="nextGems_" :gear="gearStep" @tree="emit('tree', $event)" />
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
         <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
           <div :class="$style.link">
@@ -194,6 +170,7 @@ import BuildCosts from './BuildCosts.vue'
 import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
 import GemName from './GemName.vue'
+import NextSection from './NextSection.vue'
 import SocketDots from './SocketDots.vue'
 import { GEM_CLASS, gemWhere, nextGems } from './gems'
 import type { NextGem } from './gems'
@@ -420,7 +397,6 @@ watch(nextTree, (t) => {
   if (t) loadPassiveTree().then(data => { treeData.value = data }, () => {})
 }, { immediate: true })
 const nextTreeDiff = computed(() => treeDiff(treeData.value, loadout.value?.tree?.nodes ?? [], nextTree.value?.nodes ?? []))
-const nextTreeNames = computed(() => nextTreeDiff.value.addedNames.map(n => n.name).join(', '))
 
 const nextGems_ = computed(() => {
   const from = shownSet.value

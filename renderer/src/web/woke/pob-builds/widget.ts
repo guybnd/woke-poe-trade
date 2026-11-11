@@ -19,6 +19,8 @@ export interface PobBuildsWidget extends Widget {
   followOff: string[]
   // Build file -> the loadout picked by hand. No entry = follow your level.
   loadouts: Record<string, LoadoutPick>
+  // The build panel's Next section folded to one line.
+  nextFolded?: boolean
 }
 
 // Set titles, not positions: PoB can reorder sets. Sets sharing a title form
