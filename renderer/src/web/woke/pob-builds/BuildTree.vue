@@ -82,13 +82,15 @@ const fromAt = shallowRef<number | null>(null)
 const fromIndex = computed(() => {
   const n = trees.value.length
   if (n < 2) return -1
-  if (fromAt.value != null && fromAt.value !== at.value && fromAt.value < n) return fromAt.value
-  return at.value > 0 ? Math.min(at.value, n) - 1 : 1
+  // `shown` falls back to the last tree when saving in PoB dropped sets.
+  const cur = Math.min(at.value, n - 1)
+  if (fromAt.value != null && fromAt.value !== cur && fromAt.value < n) return fromAt.value
+  return cur > 0 ? cur - 1 : 1
 })
 const earlier = computed(() => trees.value[fromIndex.value] ?? null)
 const fromOptions = computed(() => trees.value
   .map((t, i) => ({ value: String(i), label: t.title }))
-  .filter(o => Number(o.value) !== at.value))
+  .filter(o => Number(o.value) !== Math.min(at.value, trees.value.length - 1)))
 // Off, the picked tree on its own. On, what it changes from the other tree.
 // Only the switch or the dropdown turns it on: comparing is always asked for.
 const changes = shallowRef(false)

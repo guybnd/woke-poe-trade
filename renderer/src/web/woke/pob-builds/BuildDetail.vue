@@ -74,7 +74,7 @@
             <SocketDots :colours="linkColours(g)" />
             <span v-if="linkItem(g)" :class="$style.linkItem" class="ml-auto text-xs whitespace-nowrap"
               @mouseenter="showTip($event, { kind: 'item', item: linkItem(g)! })" @mouseleave="hideTip">{{ g.label || slotLabel(g.slot) }}</span>
-            <span v-else-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || g.slot }}</span>
+            <span v-else-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || slotLabel(g.slot) }}</span>
           </div>
           <div :class="$style.names">
             <GemName v-for="(x, j) in orderedGems(g)" :key="j" :name="x.name" :level="x.level" :quality="x.quality" />
