@@ -507,3 +507,15 @@ describe('undoing a delete keeps what changed since', () => {
     expect(w.followChars).toEqual({ Alice: 'a.xml', Carol: 'b2.xml' })
   })
 })
+
+describe('per-build panel settings follow the file', () => {
+  it('moves the set link and the Trades folder, and undo puts them back', () => {
+    const w = { pinned: [], activeBuild: null, followChars: {}, loadouts: {}, unlinkedSets: ['a.xml'], tradeFolders: { 'a.xml': 'My build' } } as unknown as PobBuildsWidget
+    const undo = moveBuildRefs(w, 'a.xml', 'b.xml')
+    expect(w.unlinkedSets).toEqual(['b.xml'])
+    expect(w.tradeFolders).toEqual({ 'b.xml': 'My build' })
+    undo()
+    expect(w.unlinkedSets).toEqual(['a.xml'])
+    expect(w.tradeFolders).toEqual({ 'a.xml': 'My build' })
+  })
+})

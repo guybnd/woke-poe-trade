@@ -197,7 +197,21 @@ export function moveBuildRefs (w: PobBuildsWidget, from: string, to: string | nu
   const pick = w.loadouts[from]
   const loadouts = Object.fromEntries(Object.entries(w.loadouts).filter(([rel]) => rel !== from))
   w.loadouts = pick && to ? { ...loadouts, [to]: pick } : loadouts
-  return undo
+  // The set link and the Trades folder: keyed by the file, so they follow it too.
+  const wasUnlinked = (w.unlinkedSets ?? []).includes(from)
+  const folder = w.tradeFolders?.[from]
+  const moveExtras = (a: string, b: string | null) => {
+    if (wasUnlinked) w.unlinkedSets = [...(w.unlinkedSets ?? []).filter(r => r !== a), ...(b ? [b] : [])]
+    if (folder != null) {
+      const rest = Object.fromEntries(Object.entries(w.tradeFolders ?? {}).filter(([rel]) => rel !== a))
+      w.tradeFolders = b ? { ...rest, [b]: folder } : rest
+    }
+  }
+  moveExtras(from, to)
+  return () => {
+    undo()
+    moveExtras(at, from)
+  }
 }
 
 export function buildMatches (b: PobBuildEntry, query: string): boolean {
