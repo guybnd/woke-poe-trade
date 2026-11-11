@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
 import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
 import { nextGems } from '@/web/woke/pob-builds/gems'
-import { PINNED_GROUP, groupBuilds } from '@/web/woke/pob-builds/widget'
-import type { PobBuildEntry, PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
+import { PINNED_GROUP, groupBuilds, moveBuildRefs } from '@/web/woke/pob-builds/widget'
+import type { PobBuildEntry, PobBuildsWidget, PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
 
 describe('mod ranges', () => {
   it('uses the roll PoB saved, inline or by line number, else the middle', () => {
@@ -452,5 +452,32 @@ Implicits: 0
 +1 to Strength</Item></Items>
     </PathOfBuilding>`)
     expect(d.trees[0].jewels.map(j => j.name)).toEqual(["Watcher's Eye"])
+  })
+})
+
+describe('settings follow a renamed or deleted build', () => {
+  const widget = () => ({
+    pinned: ['a.xml', 'b.xml'],
+    activeBuild: 'a.xml',
+    followChars: { Alice: 'a.xml', Bob: 'b.xml' },
+    loadouts: { 'a.xml': { skillSet: 'Level 33' } }
+  }) as unknown as PobBuildsWidget
+  it('moves pins, the build in use, followed characters and the loadout', () => {
+    const w = widget()
+    moveBuildRefs(w, 'a.xml', 'x/a.xml')
+    expect(w.pinned).toEqual(['x/a.xml', 'b.xml'])
+    expect(w.activeBuild).toBe('x/a.xml')
+    expect(w.followChars).toEqual({ Alice: 'x/a.xml', Bob: 'b.xml' })
+    expect(w.loadouts).toEqual({ 'x/a.xml': { skillSet: 'Level 33' } })
+  })
+  it('forgets a deleted build, and undo puts it all back', () => {
+    const w = widget()
+    const undo = moveBuildRefs(w, 'a.xml', null)
+    expect(w.pinned).toEqual(['b.xml'])
+    expect(w.activeBuild).toBeNull()
+    expect(w.followChars).toEqual({ Bob: 'b.xml' })
+    expect(w.loadouts).toEqual({})
+    undo()
+    expect(w).toEqual(widget())
   })
 })
