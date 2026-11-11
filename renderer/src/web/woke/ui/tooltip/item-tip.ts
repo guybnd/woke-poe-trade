@@ -15,7 +15,7 @@ import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName } from './item-menu-logic'
 import type { ItemMenuRef } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
-import type { TipBaseUnique, TipMarket } from './tooltip'
+import type { TipBaseUnique, TipContent, TipMarket } from './tooltip'
 
 export interface ItemTipRef {
   name: string
@@ -27,6 +27,10 @@ export interface ItemTipRef {
   prices?: { low: number, high: number, count: number }
   // Just the item's text, where a price isn't the point.
   noPrice?: boolean
+  // A last line under the text, such as where to get a gem.
+  note?: string
+  // Shown when the tooltip data has nothing for the name.
+  fallback?: TipContent
 }
 
 const SHOW_DELAY_MS = 60
@@ -127,11 +131,17 @@ function enter (e: Event) {
   timer = setTimeout(() => {
     tipFor(ref).then(({ model, market, uniques }) => {
       if (mine !== seq || !el.isConnected) return
+      if (model && ref.note) model = { ...model, sections: [...model.sections, ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] }
       if (model) showTipAt(el, { kind: 'lookup', model, market, uniques })
+      else if (ref.fallback) showTipAt(el, ref.fallback)
       // No text for it, but a price is still worth showing.
       else if (market) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: [] }, market })
       else hideTip()
-    }).catch(() => { if (mine === seq) hideTip() })
+    }).catch(() => {
+      if (mine !== seq) return
+      if (ref.fallback && el.isConnected) showTipAt(el, ref.fallback)
+      else hideTip()
+    })
   }, SHOW_DELAY_MS)
 }
 

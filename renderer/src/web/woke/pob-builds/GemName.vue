@@ -1,7 +1,5 @@
 <template>
-  <span :class="[$style.gem, `w-gem-${colour}`, { [$style.off]: off }]"
-    @mouseenter="showTip($event, { kind: 'gem', name, level, quality, note: note ?? where })" @mouseleave="hideTip"
-    @contextmenu.capture="offerItem($event, { name })" @contextmenu="openItemMenu($event, { name })">
+  <span v-item-tip="tipRef" :class="[$style.gem, `w-gem-${colour}`, { [$style.off]: off }]">
     <WIcon v-if="art" :src="art" :size="size" title="" /><span :class="[$style.name, { 'line-through': struck }]">{{ name }}</span><slot />
   </span>
 </template>
@@ -12,8 +10,8 @@ import { computed, inject } from 'vue'
 import WIcon from '../ui/WIcon.vue'
 import { GEM_CLASS, gemData, gemWhere } from './gems'
 import { gemArt } from './item-art'
-import { hideTip, showTip } from '../ui/tooltip/tooltip'
-import { offerItem, openItemMenu } from '../ui/tooltip/item-menu'
+import { vItemTip } from '../ui/tooltip/item-tip'
+import type { ItemTipRef } from '../ui/tooltip/item-tip'
 
 const props = withDefaults(defineProps<{
   name: string
@@ -30,6 +28,22 @@ const art = computed(() => gemArt(props.name))
 // Inside a build panel: where that build's class gets the gem.
 const cls = inject(GEM_CLASS, null)
 const where = computed(() => cls ? gemWhere(props.name, cls.value) || undefined : undefined)
+
+// The game's full gem tooltip at this gem's level and quality, as other
+// screens show it, with where to get it under; the short one if the data
+// lacks the gem.
+const tipRef = computed<ItemTipRef>(() => {
+  const note = props.note ?? where.value
+  const level = props.level ?? 1
+  return {
+    name: gemData(props.name)?.name ?? props.name,
+    type: 'SkillGem',
+    variant: props.quality ? `${level}/${props.quality}` : String(level),
+    noPrice: true,
+    note,
+    fallback: { kind: 'gem', name: props.name, level: props.level, quality: props.quality, note }
+  }
+})
 </script>
 
 <style module>
