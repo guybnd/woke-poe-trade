@@ -170,11 +170,19 @@ export const pobApi = {
 // After a build file moves: every setting that names it follows it. `to` null
 // forgets it (deleted). Returns what to put back for Undo.
 export function moveBuildRefs (w: PobBuildsWidget, from: string, to: string | null): () => void {
-  const before = {
-    pinned: w.pinned,
-    activeBuild: w.activeBuild,
-    followChars: w.followChars,
-    loadouts: w.loadouts
+  // Undo puts back only this build's references, so other changes made since stay.
+  const at = to ?? from
+  const pinAt = w.pinned.indexOf(from)
+  const wasActive = w.activeBuild === from
+  const chars = Object.entries(w.followChars).filter(([, rel]) => rel === from).map(([c]) => c)
+  const before = w.loadouts[from]
+  const undo = () => {
+    w.pinned = w.pinned.filter(p => p !== at)
+    if (pinAt >= 0) w.pinned = [...w.pinned.slice(0, pinAt), from, ...w.pinned.slice(pinAt)]
+    if (wasActive && (w.activeBuild === at || w.activeBuild == null)) w.activeBuild = from
+    w.followChars = { ...Object.fromEntries(Object.entries(w.followChars).filter(([c, rel]) => !(chars.includes(c) && rel === at))), ...Object.fromEntries(chars.map(c => [c, from])) }
+    const rest = Object.fromEntries(Object.entries(w.loadouts).filter(([rel]) => rel !== at))
+    w.loadouts = before ? { ...rest, [from]: before } : rest
   }
   w.pinned = to ? w.pinned.map(p => p === from ? to : p) : w.pinned.filter(p => p !== from)
   if (w.activeBuild === from) w.activeBuild = to
@@ -183,7 +191,7 @@ export function moveBuildRefs (w: PobBuildsWidget, from: string, to: string | nu
   const pick = w.loadouts[from]
   const loadouts = Object.fromEntries(Object.entries(w.loadouts).filter(([rel]) => rel !== from))
   w.loadouts = pick && to ? { ...loadouts, [to]: pick } : loadouts
-  return () => { Object.assign(w, before) }
+  return undo
 }
 
 export function buildMatches (b: PobBuildEntry, query: string): boolean {

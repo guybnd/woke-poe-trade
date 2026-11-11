@@ -481,3 +481,16 @@ describe('settings follow a renamed or deleted build', () => {
     expect(w).toEqual(widget())
   })
 })
+
+describe('undoing a delete keeps what changed since', () => {
+  it('puts back only the deleted build references', () => {
+    const w = { pinned: ['a.xml', 'b.xml'], activeBuild: 'a.xml', followChars: { Alice: 'a.xml' }, loadouts: {} } as unknown as PobBuildsWidget
+    const undo = moveBuildRefs(w, 'a.xml', null)
+    moveBuildRefs(w, 'b.xml', 'b2.xml')
+    w.followChars = { ...w.followChars, Carol: 'b2.xml' }
+    undo()
+    expect(w.pinned).toEqual(['a.xml', 'b2.xml'])
+    expect(w.activeBuild).toBe('a.xml')
+    expect(w.followChars).toEqual({ Alice: 'a.xml', Carol: 'b2.xml' })
+  })
+})

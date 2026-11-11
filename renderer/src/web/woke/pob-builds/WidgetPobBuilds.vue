@@ -42,11 +42,11 @@
               <span class="w-faint text-xs whitespace-nowrap">{{ editing.kind === 'rename' ? 'Name' : 'Folder' }}</span>
               <input data-draft v-model="draft" :class="['w-field', $style.edit]" spellcheck="false" :list="editing.kind === 'move' ? 'pob-folders' : undefined"
                 :placeholder="editing.kind === 'move' ? 'Empty: the top of the builds folder' : ''"
-                @keydown.enter.prevent="finishEdit" @keydown.esc.prevent="editing = null" @blur="finishEdit">
+                @keydown.enter.prevent="finishEdit" @keydown.esc.prevent="editing = null" @blur="editing = null">
             </div>
             <WListItem v-else :active="selected === b.relPath" :title="b.relPath" @select="select(b)"
               @contextmenu="buildMenu($event, b)" @keydown.p.prevent="togglePin(b.relPath)"
-              @keydown.f2.prevent="startEdit(b, 'rename')" @keydown.delete.prevent="removeBuild(b)">
+              @keydown.f2.prevent="startEdit(b, 'rename')" @keydown="$event.key === 'Delete' && ($event.preventDefault(), removeBuild(b))">
               <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
               <span class="w-trunc">{{ b.name }}</span>
               <span class="ml-auto w-num w-dim text-xs whitespace-nowrap" title="Saved in PoB">{{ statLine(b.stats) }}</span>
@@ -383,7 +383,7 @@ async function finishEdit () {
   const b = builds.value.find(x => x.relPath === edit.relPath)
   if (!b) return
   const text = draft.value.trim()
-  if (edit.kind === 'rename' ? !text || text === b.name : text === b.folder) return
+  if (edit.kind === 'rename' ? !text || text === b.name : text.toLowerCase() === b.folder.toLowerCase()) return
   try {
     const { relPath } = edit.kind === 'rename'
       ? await pobApi.rename(props.config, b.relPath, text)

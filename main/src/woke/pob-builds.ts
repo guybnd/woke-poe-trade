@@ -143,8 +143,19 @@ async function fetchCode (input: string): Promise<string> {
 }
 
 function safeFileName (name: string): string {
-  const s = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
-  return s || 'Imported build'
+  return cleanName(name) || 'Imported build'
+}
+
+// What Windows takes as a file or folder name: no trailing dots or spaces
+// (other programs can't open those) and none of its device names ("CON").
+function cleanName (name: string): string {
+  const s = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '')
+  return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(s) ? `${s}_` : s
+}
+
+// Windows paths ignore case: "lev" and "Lev" are one folder.
+function samePath (a: string, b: string): boolean {
+  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
 export async function importBuild (args: { dir?: string, input: string, name?: string }): Promise<{ relPath: string }> {
@@ -181,7 +192,7 @@ async function freeName (folder: string, base: string): Promise<string> {
 
 // A folder under the builds folder, from what was typed ("3.30/Leveling").
 function resolveFolder (root: string, folder: unknown): string {
-  const parts = (typeof folder === 'string' ? folder : '').split(/[\\/]+/).map(p => p.trim()).filter(Boolean).map(safeFileName)
+  const parts = (typeof folder === 'string' ? folder : '').split(/[\\/]+/).map(cleanName).filter(Boolean)
   if (parts.some(p => p === '.' || p === '..')) throw new Error('Not a folder name')
   if (parts.length > MAX_DEPTH) throw new Error('That folder is too deep for the build list')
   const full = path.resolve(root, ...parts)
@@ -192,8 +203,8 @@ function resolveFolder (root: string, folder: unknown): string {
 export async function renameBuild (args: { dir?: string, relPath: string, name: string }): Promise<{ relPath: string }> {
   const from = resolveBuild(args?.dir, args?.relPath)
   const root = path.resolve(resolveDir(args?.dir))
-  if (typeof args?.name !== 'string' || !args.name.trim()) throw new Error('Type a name')
-  const base = safeFileName(args.name.replace(/\.xml$/i, ''))
+  const base = typeof args?.name === 'string' ? cleanName(args.name.replace(/\.xml$/i, '')) : ''
+  if (!base) throw new Error('Type a name')
   const folder = path.dirname(from)
   if (`${base}.xml` === path.basename(from)) return { relPath: relOf(root, from) }
   // Only a change of case: Windows sees the same file, so rename in place.
@@ -207,7 +218,7 @@ export async function moveBuild (args: { dir?: string, relPath: string, folder: 
   const from = resolveBuild(args?.dir, args?.relPath)
   const root = path.resolve(resolveDir(args?.dir))
   const folder = resolveFolder(root, args?.folder)
-  if (folder === path.dirname(from)) return { relPath: relOf(root, from) }
+  if (samePath(folder, path.dirname(from))) return { relPath: relOf(root, from) }
   await fs.mkdir(folder, { recursive: true })
   const to = path.join(folder, await freeName(folder, path.basename(from, path.extname(from))))
   await fs.rename(from, to)
