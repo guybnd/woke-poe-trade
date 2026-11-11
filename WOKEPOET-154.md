@@ -98,6 +98,13 @@ history:
       changed.
     pin: true
     id: c-2026-11-11t05-31-50-288z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T05:39:55.866Z'
+    comment: >-
+      PR #325 merged as 99b64c0; the dev build is on it. What's left is the
+      launch-day run: check, then apply, then bump-data-version, then PR.
+    id: a-2026-11-11t05-39-55-866z
 swimlane: null
 needsAction: null
 ---
