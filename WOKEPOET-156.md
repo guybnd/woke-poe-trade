@@ -26,6 +26,16 @@ history:
     date: '2026-11-11T04:22:27.883Z'
     comment: Updated description.
     id: a-2026-11-11t04-22-27-883z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T05:10:14.925Z'
+    comment: >-
+      Waits for launch. `mechanics/guide.ts` requires each "when" line to be
+      checked against a real Client.txt (for example, whether Oshabi still
+      speaks once Harvest moves into maps). The Thread price groups need
+      poe.ninja's 3.30 category name. The Vials group empties by itself once
+      nobody trades vials.
+    id: a-2026-11-11t05-10-14-925z
 ---
 > TL;DR: rewrite the atlas strategies and mechanics guide text for 3.30. The tree data loads by itself, but our text and presets don't.
 

@@ -14,7 +14,22 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-11T04:22:43.762Z'
+    comment: Created ticket.
+    id: a-2026-11-11t04-22-43-762z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T04:22:43.762Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-11t04-22-43-762z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T05:10:12.930Z'
+    comment: >-
+      Parked until NeverSink's 3.30 filter is out (last NeverSink commit: 8.20.2
+      on 2026-10-15). Our groups (`economy.ts`) key on NeverSink's `$type->tier`
+      sections, and the Thread section names and item classes aren't known yet.
+      Pick this up when NeverSink pushes 3.30.
+    id: a-2026-11-11t05-10-12-930z
 ---
 > TL;DR: what our filter groups, drop table and safety net need for 3.30 items. Most of it lands through NeverSink's 3.30 filter; this ticket covers our own lists.
 

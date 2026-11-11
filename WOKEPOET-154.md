@@ -26,6 +26,17 @@ history:
     date: '2026-11-11T04:22:13.290Z'
     comment: Updated description. Changed priority to High.
     id: a-2026-11-11t04-22-13-290z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T05:10:11.226Z'
+    comment: >-
+      Checked the pipeline on 2026-11-11. Item and stat data comes from upstream
+      Awakened PoE Trade through `.github/workflows/upstream-data.yml`, which
+      runs hourly (cron 17 * * * *); the last runs succeeded. It bumps
+      data-version itself. Risk: upstream's last commit was 2026-09-24, so 3.30
+      data only arrives when SnosMe pushes it. If upstream lags past launch, we
+      need our own export of stats and items from the 3.30 client.
+    id: a-2026-11-11t05-10-11-226z
 ---
 > TL;DR: regenerate item and stat data from the 3.30 client on launch day. Without it, price check misses every mod GGG reworded.
 

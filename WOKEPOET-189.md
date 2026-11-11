@@ -40,7 +40,29 @@ history:
       (Mirage, Viridian Wildwood, buried Sentinels, Evocators, Mirror of
       Delirium)?** Options: mark them as a plus (green), or leave them neutral.
       My default is green.
-swimlane: require-input
+  - type: activity
+    user: Agent
+    date: '2026-11-11T05:10:15.903Z'
+    comment: >-
+      The Atlas Drops mod wording comes with the 3.30 stat data (WOKEPOET-154).
+      Wait for it rather than guess the string.
+    id: a-2026-11-11t05-10-15-903z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy, 2026-11-11: the game already colours these suffixes differently, so
+      the map checker leaves them neutral and adds no highlight of its own.
+    date: '2026-11-11T05:10:52.166Z'
+    id: c-2026-11-11t05-10-52-166z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-11T05:10:52.166Z'
+    comment: >-
+      Guy, 2026-11-11: the game already colours these suffixes differently, so
+      the map checker leaves them neutral and adds no highlight of its own.
+swimlane: null
 needsAction: null
 ---
 > TL;DR: map mods changed in 3.30. Quantity became Atlas Drops, rare maps get new content suffixes, and some corruption outcomes are gone.

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-190
 title: K. Harvest swap and craft costs for 3.30
-status: Grooming
+status: Ready
 priority: Medium
 effort: None
 assignee: unassigned
@@ -14,7 +14,30 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-11T04:22:38.177Z'
+    comment: Created ticket.
+    id: a-2026-11-11t04-22-38-177z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T04:22:38.177Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-11t04-22-38-177z
+  - type: comment
+    user: Agent
+    comment: >-
+      **Swap costs follow 3.30: 300 each of two colours, plus a Rancour for
+      damage swaps.** The second colour is unconfirmed, so the cheaper one is
+      counted and the price reads "about". PR
+      https://github.com/guybnd/woke-poe-trade/pull/324. Local checks pass. On
+      launch day, check which second colour the bench really asks for.
+    date: '2026-11-11T05:10:09.024Z'
+    completionComment: true
+    id: c-2026-11-11t05-10-09-024z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-11T05:10:09.024Z'
+needsAction: null
 ---
 > TL;DR: Harvest swap prices use the old 500-of-one-colour cost. 3.30 changes it to 300 each of two colours.
 
