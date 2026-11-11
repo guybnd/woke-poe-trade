@@ -21,6 +21,8 @@ export interface PobBuildsWidget extends Widget {
   loadouts: Record<string, LoadoutPick>
   // The build panel's Next section folded to one line.
   nextFolded?: boolean
+  // Builds whose gem and gear sets are picked apart (linked by default).
+  unlinkedSets?: string[]
 }
 
 // Set titles, not positions: PoB can reorder sets. Sets sharing a title form

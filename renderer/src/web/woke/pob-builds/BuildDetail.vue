@@ -35,10 +35,14 @@
           <template v-if="level != null">Level {{ level }}<template v-if="act != null && act <= 10"> · Act {{ act }}</template></template>
           <template v-else>Level unknown: Campaign reads it from Client.txt.</template>
         </div>
-        <div v-if="skillSets.length > 1" class="flex flex-wrap gap-1 pt-1">
-          <WChip v-if="pick" clickable :title="AUTO_HINT" @click="clearPick">Auto</WChip>
-          <WChip v-for="(set, i) in skillSets" :key="i" clickable :active="set === shownSet" :title="pickHint(set === shownSet, pick?.skillSet === set.title, loadout?.skillSet?.byStage)" @click="chooseSkillSet(set.title)">
-            <i v-if="pick && set === shownSet" class="fas fa-thumbtack text-xs" /> {{ set.title }}<span v-if="set === shownSet" class="w-accent"> · now</span>
+        <div v-for="row in setChips" :key="row.label" class="flex flex-wrap items-center gap-1 pt-1">
+          <WChip v-if="canUnlink && row.first" clickable :active="linked" :title="linked ? 'Gems, gear and tree move together. Click to pick them apart' : 'Gems and gear are picked apart. Click to move them together'" @click="toggleLinked">
+            <i class="fas text-xs" :class="linked ? 'fa-link' : 'fa-unlink'" /><template v-if="!linked"> {{ row.label }}</template>
+          </WChip>
+          <span v-else-if="row.label" class="w-faint text-xs">{{ row.label }}</span>
+          <WChip v-if="pick && row.first" clickable :title="AUTO_HINT" @click="clearPick">Auto</WChip>
+          <WChip v-for="(c, i) in row.chips" :key="i" clickable :active="c.active" :title="c.hint" @click="c.choose()">
+            <i v-if="pick && c.active" class="fas fa-thumbtack text-xs" /> {{ c.title }}<span v-if="c.active" class="w-accent"> · now</span>
           </WChip>
         </div>
         <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
@@ -75,7 +79,10 @@
       <!-- Gear -->
       <template v-else-if="details && tab === 'gear'">
         <div v-for="row in setChips" :key="row.label" class="flex flex-wrap items-center gap-1 pt-1">
-          <span v-if="row.label" class="w-faint text-xs">{{ row.label }}</span>
+          <WChip v-if="canUnlink && row.first" clickable :active="linked" :title="linked ? 'Gems, gear and tree move together. Click to pick them apart' : 'Gems and gear are picked apart. Click to move them together'" @click="toggleLinked">
+            <i class="fas text-xs" :class="linked ? 'fa-link' : 'fa-unlink'" /><template v-if="!linked"> {{ row.label }}</template>
+          </WChip>
+          <span v-else-if="row.label" class="w-faint text-xs">{{ row.label }}</span>
           <WChip v-if="pick && row.first" clickable :title="AUTO_HINT" @click="clearPick">Auto</WChip>
           <WChip v-for="(c, i) in row.chips" :key="i" clickable :active="c.active" :title="c.hint" @click="c.choose()">
             <i v-if="pick && c.active" class="fas fa-thumbtack text-xs" /> {{ c.title }}<span v-if="c.active" class="w-accent"> · now</span>
@@ -362,24 +369,42 @@ const hasGear = computed(() => Boolean(layout.value.main || layout.value.loose.l
 
 // One row of chips while skill and item sets go together, where a pick moves
 // both; two when PoB's names differ or the two are showing different sets.
+// Gems and gear move together unless you unlink them for this build.
+const linked = computed(() => !(props.config.unlinkedSets ?? []).includes(props.entry.relPath))
+const canUnlink = computed(() => skillSets.value.length > 1 && itemSets.value.length > 1)
+function toggleLinked () {
+  const rel = props.entry.relPath
+  const list = props.config.unlinkedSets ?? []
+  if (linked.value) {
+    props.config.unlinkedSets = [...list, rel]
+  } else {
+    props.config.unlinkedSets = list.filter(r => r !== rel)
+    // Linking again brings the gear back to the gems' stage.
+    if (pick.value?.itemSet) setPick(withoutKind('itemSet'))
+  }
+  saveConfig()
+}
+
 const setChips = computed(() => {
   const skills = skillSets.value
   const items = itemSets.value
   const titles = (sets: Array<{ title: string }>) => sets.map(s => s.title).sort().join('\n')
-  const together = skills.length > 1 && titles(skills) === titles(items) && shownSet.value?.title === shownItemSet.value?.title
+  // Linked (the default): one row, and a pick takes the same-named gear set
+  // and tree along. Unlinked: gems and gear are picked apart.
+  const together = linked.value || (skills.length > 1 && titles(skills) === titles(items) && shownSet.value?.title === shownItemSet.value?.title)
   const skillChips = skills.map(set => ({
     title: set.title,
     active: set === shownSet.value,
     hint: pickHint(set === shownSet.value, pick.value?.skillSet === set.title, loadout.value?.skillSet?.byStage),
     choose: () => chooseSkillSet(set.title)
   }))
-  if (together) return [{ label: '', first: true, chips: skillChips }]
   const itemChips = items.map(set => ({
     title: set.title,
     active: set === shownItemSet.value,
     hint: pickHint(set === shownItemSet.value, pick.value?.itemSet === set.title, loadout.value?.itemSet?.byStage),
     choose: () => chooseItemSet(set.title)
   }))
+  if (together) return skills.length > 1 || items.length > 1 ? [{ label: '', first: true, chips: skills.length > 1 ? skillChips : itemChips }] : []
   const rows: Array<{ label: string, first: boolean, chips: typeof skillChips }> = []
   if (skills.length > 1) rows.push({ label: 'Gems', first: true, chips: skillChips })
   if (items.length > 1) rows.push({ label: 'Gear', first: !rows.length, chips: itemChips })
