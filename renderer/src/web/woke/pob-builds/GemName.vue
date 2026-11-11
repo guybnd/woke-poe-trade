@@ -1,6 +1,6 @@
 <template>
   <span :class="[$style.gem, `w-gem-${colour}`, { [$style.off]: off }]"
-    @mouseenter="showTip($event, { kind: 'gem', name, level, quality, note })" @mouseleave="hideTip"
+    @mouseenter="showTip($event, { kind: 'gem', name, level, quality, note: note ?? where })" @mouseleave="hideTip"
     @contextmenu.capture="offerItem($event, { name })" @contextmenu="openItemMenu($event, { name })">
     <WIcon v-if="art" :src="art" :size="size" title="" /><span :class="[$style.name, { 'line-through': struck }]">{{ name }}</span><slot />
   </span>
@@ -8,9 +8,9 @@
 
 <script setup lang="ts">
 // A gem's name in its attribute's colour, with its art and tooltip.
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import WIcon from '../ui/WIcon.vue'
-import { gemData } from './gems'
+import { GEM_CLASS, gemData, gemWhere } from './gems'
 import { gemArt } from './item-art'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { offerItem, openItemMenu } from '../ui/tooltip/item-menu'
@@ -27,6 +27,9 @@ const props = withDefaults(defineProps<{
 
 const colour = computed(() => gemData(props.name)?.colour ?? 'w')
 const art = computed(() => gemArt(props.name))
+// Inside a build panel: where that build's class gets the gem.
+const cls = inject(GEM_CLASS, null)
+const where = computed(() => cls ? gemWhere(props.name, cls.value) || undefined : undefined)
 </script>
 
 <style module>

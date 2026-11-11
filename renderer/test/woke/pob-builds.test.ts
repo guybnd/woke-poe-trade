@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
 import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
-import { nextGems } from '@/web/woke/pob-builds/gems'
+import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
 import { PINNED_GROUP, groupBuilds } from '@/web/woke/pob-builds/widget'
 import type { PobBuildEntry, PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
 
@@ -452,5 +452,18 @@ Implicits: 0
 +1 to Strength</Item></Items>
     </PathOfBuilding>`)
     expect(d.trees[0].jewels.map(j => j.name)).toEqual(["Watcher's Eye"])
+  })
+})
+
+describe('where a gem comes from, for a gem tooltip', () => {
+  it('names the quest reward and the first vendor for the build class', () => {
+    expect(gemWhere('Ruthless', 'Slayer')).toBe('Reward: Mercy Mission (Act 1)\nBuy from Nessa: Mercy Mission (Act 1)')
+  })
+  it('leaves out a reward the class does not get', () => {
+    expect(gemWhere('Frostblink', 'Slayer')).toBe('Buy from Nessa: Breaking Some Eggs (Act 1)')
+  })
+  it('says when the campaign does not hand it out', () => {
+    expect(gemWhere('Kinetic Blast of Clustering', 'Witch')).toBe('Not in the campaign: buy or drop')
+    expect(gemWhere('Not A Gem', 'Witch')).toBe('')
   })
 })
