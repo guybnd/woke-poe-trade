@@ -66,7 +66,39 @@ history:
       launch, read trade site /api/trade/data/stats and /items, then add new or
       reworded stats and new items on top of upstream data. About 1 day, English
       only, and it falls away once upstream updates.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Guy picked B on 2026-11-11 ("Yeah let''s go B"). Built in PR #325.'
+    date: '2026-11-11T05:31:46.446Z'
+    id: c-2026-11-11t05-31-46-446z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-11T05:31:46.446Z'
+    comment: 'Guy picked B on 2026-11-11 ("Yeah let''s go B"). Built in PR #325.'
+  - type: comment
+    user: Agent
+    comment: >-
+      **Launch-day steps (PR #325):** once the trade site shows 3.30 items and
+      mods, run `node scripts/trade-data-patch.mjs check` and read the report.
+      Then run `node scripts/trade-data-patch.mjs apply`, then `node
+      renderer/src/assets/bump-data-version.mjs`, and commit and PR. Players get
+      the data live, without a release. Baseline: the 3.29 lists saved
+      2026-11-11 in `scripts/trade-baseline/`. Bases outside jewel, accessory
+      and flask are listed under "Left out", to add by hand. `upstream-data.mjs`
+      now only copies files upstream changed, so the hourly job won't revert
+      this; when upstream ships 3.30, its files replace ours.
+    date: '2026-11-11T05:31:50.288Z'
+    selfAttested: true
+    summary: >-
+      Launch day: run trade-data-patch.mjs check, then apply, then
+      bump-data-version, then commit and PR. Baseline is 3.29 in
+      scripts/trade-baseline. The upstream copy only takes files upstream
+      changed.
+    pin: true
+    id: c-2026-11-11t05-31-50-288z
+swimlane: null
 needsAction: null
 ---
 > TL;DR: regenerate item and stat data from the 3.30 client on launch day. Without it, price check misses every mod GGG reworded.
