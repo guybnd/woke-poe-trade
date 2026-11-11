@@ -503,26 +503,7 @@ function run (p: Promise<unknown>) {
 .lvl { width: 1.6rem; text-align: right; flex: none; }
 .gemName { flex: none; max-width: 62%; }
 .src { min-width: 0; }
-.next {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  min-width: 0;
-  margin-top: 4px;
-  padding: 5px 8px;
-  text-align: left;
-  background: var(--w-panel-2);
-  border: 1px solid var(--w-line);
-  border-radius: var(--w-r-sm);
-}
 button.next:hover { border-color: var(--w-line-strong); }
-.nextHead {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-}
 .rowWrap {
   padding: 4px 0 5px;
   border-bottom: 1px solid var(--w-line-soft);
