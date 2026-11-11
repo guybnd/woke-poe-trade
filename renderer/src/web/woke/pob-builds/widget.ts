@@ -83,6 +83,8 @@ export interface PobTreeSpec {
   // Older app versions don't send these.
   nodes?: number[]
   jewels?: PobItem[]
+  // Mastery node id -> the effect picked on it.
+  masteries?: Record<number, number>
 }
 
 export interface PobSkillSet {

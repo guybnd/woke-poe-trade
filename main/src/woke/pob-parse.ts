@@ -46,6 +46,8 @@ export interface PobTreeSpec {
   nodes: number[]
   // Jewels socketed in this tree.
   jewels: PobItem[]
+  // Mastery node id -> the effect picked on it.
+  masteries?: Record<number, number>
 }
 
 export interface PobSkillSet {
@@ -220,7 +222,10 @@ function parseTrees (xml: string, items: Map<string, PobItem>): PobTreeSpec[] {
       const item = items.get(attrs(j[1]).itemId ?? '')
       if (item) jewels.push(item)
     }
-    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, jewels, ...(empty ? { divider: true } : {}) })
+    // masteryEffects="{node,effect},{node,effect}"
+    const masteries: Record<number, number> = {}
+    for (const p of (a.masteryEffects ?? '').matchAll(/\{(\d+),(\d+)\}/g)) masteries[Number(p[1])] = Number(p[2])
+    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, jewels, masteries, ...(empty ? { divider: true } : {}) })
   }
   // No (or a stale) activeSpec: PoB opens the first tree.
   if (out.length && !out.some(t => t.isActive)) out[0].isActive = true
