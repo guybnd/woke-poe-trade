@@ -23,6 +23,8 @@ export interface PobBuildsWidget extends Widget {
   nextFolded?: boolean
   // Builds whose gem and gear sets are picked apart (linked by default).
   unlinkedSets?: string[]
+  // Build file -> its Trade searches folder, for the build panel's Trades tab.
+  tradeFolders?: Record<string, string>
 }
 
 // Set titles, not positions: PoB can reorder sets. Sets sharing a title form

@@ -155,6 +155,9 @@
         </template>
       </template>
 
+      <!-- Trades -->
+      <BuildTrades v-else-if="details && tab === 'trades'" :config="config" :entry="entry" />
+
       <!-- Notes -->
       <template v-else-if="details">
         <div v-if="details.notes" class="whitespace-pre-wrap w-dim"><span v-for="(r, i) in noteRuns(details.notesRaw || details.notes)" :key="i" :style="r.colour ? { color: r.colour } : undefined">{{ r.text }}</span></div>
@@ -174,6 +177,7 @@ import { LOOT_FILTER_TYPE } from '../loot-filter/widget'
 import type { LootFilterWidget } from '../loot-filter/widget'
 import type { BuildRuleSwitches } from '../loot-filter/build-rules'
 import BuildCosts from './BuildCosts.vue'
+import BuildTrades from './BuildTrades.vue'
 import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
 import GemName from './GemName.vue'
@@ -205,7 +209,7 @@ const act = build.act
 const charName = build.charName
 const error = shallowRef('')
 
-const tab = shallowRef<'leveling' | 'gear' | 'filter' | 'notes'>('leveling')
+const tab = shallowRef<'leveling' | 'gear' | 'filter' | 'notes' | 'trades'>('leveling')
 // The hovered row leaves with the tab, so no mouseleave comes.
 watch(tab, hideTip)
 onBeforeUnmount(hideTip)
@@ -213,7 +217,8 @@ const tabOptions = [
   { value: 'leveling', label: 'Leveling' },
   { value: 'gear', label: 'Gear' },
   { value: 'filter', label: 'Filter' },
-  { value: 'notes', label: 'Notes' }
+  { value: 'notes', label: 'Notes' },
+  { value: 'trades', label: 'Trades' }
 ]
 
 const isActive = computed(() => props.config.activeBuild === props.entry.relPath)
