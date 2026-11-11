@@ -38,8 +38,11 @@ const tipRef = computed<ItemTipRef>(() => {
   return {
     name: gemData(props.name)?.name ?? props.name,
     type: 'SkillGem',
-    variant: props.quality ? `${level}/${props.quality}` : String(level),
+    // Vaal gems are always corrupted.
+    variant: (props.quality ? `${level}/${props.quality}` : String(level)) + (/^Vaal /.test(props.name) ? 'c' : ''),
     noPrice: true,
+    // The menu as before: priced by name, PoB's levels aren't poe.ninja's.
+    menu: { name: props.name },
     note,
     fallback: { kind: 'gem', name: props.name, level: props.level, quality: props.quality, note }
   }

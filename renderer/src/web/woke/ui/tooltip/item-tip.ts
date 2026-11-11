@@ -31,6 +31,8 @@ export interface ItemTipRef {
   note?: string
   // Shown when the tooltip data has nothing for the name.
   fallback?: TipContent
+  // The right-click menu's item, when it differs from the tooltip's.
+  menu?: ItemMenuRef
 }
 
 const SHOW_DELAY_MS = 60
@@ -160,6 +162,7 @@ function watchHoverZones () {
 
 function menuRef (ref: ItemTipRef | null | undefined): ItemMenuRef | null {
   if (!ref?.name) return null
+  if (ref.menu) return ref.menu
   // A base's unique list or a price range isn't one item's price.
   return { name: ref.name, type: ref.type, variant: ref.variant, noPrice: ref.noPrice || !!ref.prices || !!ref.uniques }
 }
