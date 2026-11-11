@@ -37,7 +37,18 @@ history:
     comment: >-
       Mocks A1-A3 at https://claude.ai/artifact/HNY4e82bdeByYoJB8AAj6r: which
       Next layout? Recommend A1 (one line per step, foldable).
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: Guy picked A1 with icons (names plus game art per notable/gem/item).
+    date: '2026-11-11T07:04:31.480Z'
+    id: c-2026-11-11t07-04-31-480z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-11T07:04:31.480Z'
+    comment: Guy picked A1 with icons (names plus game art per notable/gem/item).
+swimlane: null
 needsAction: null
 ---
 > TL;DR: Guy's #1 and #5. Next (tree / gems / gear) takes too much room; node names and items aren't hoverable. Make it compact, hoverable, and collapsible. Mocks first.

@@ -39,7 +39,18 @@ history:
       Mocks F1 (Trades tab) / F2 (top-bar button with list) at
       https://claude.ai/artifact/HNY4e82bdeByYoJB8AAj6r. Recommend F1, as Guy
       asked for a tab.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: Guy picked F1 (Trades tab).
+    date: '2026-11-11T07:04:31.575Z'
+    id: c-2026-11-11t07-04-31-575z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-11T07:04:31.575Z'
+    comment: Guy picked F1 (Trades tab).
+swimlane: null
 needsAction: null
 ---
 > TL;DR: Guy's #7. A tab in the build panel listing the saved trade searches of a folder linked to the build. Mocks first.
