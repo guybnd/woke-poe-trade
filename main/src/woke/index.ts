@@ -4,7 +4,7 @@ import { net } from 'electron'
 import type { ServerEvents } from '../server'
 import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from '../windowing/GameWindow'
-import { importBuild, listBuilds, openBuild, readBuild, showBuild } from './pob-builds'
+import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, openBuild, readBuild, renameBuild, restoreBuild, showBuild } from './pob-builds'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
 import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
@@ -34,6 +34,11 @@ const handlers: Record<string, Handler> = {
   'pob-open': openBuild,
   'pob-show': showBuild,
   'pob-import': importBuild,
+  'pob-rename': renameBuild,
+  'pob-move': moveBuild,
+  'pob-duplicate': duplicateBuild,
+  'pob-delete': deleteBuild,
+  'pob-restore': restoreBuild,
   'filter-list': listFilters,
   'filter-read': readFilter,
   'filter-write': writeFilter,
