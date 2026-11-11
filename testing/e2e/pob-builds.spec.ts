@@ -264,9 +264,10 @@ test('the passive tree opens in the overlay, on the next tree, with what it adds
   await overlay.boot({ widgets: loadoutSeed({}), overlayActive: true })
   await overlay.replayLog('client-logs/campaign-act1.txt')
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
-  const next = detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ })
-  await expect(next).toContainText('+1')
-  await expect(next).toContainText('Holy Dominion')
+  // Next's tree line: what the next tree adds; its Tree label opens it.
+  const next = detail.getByTitle('Show Day 1.5 Clusters on the tree')
+  await expect(next.locator('..')).toContainText('+1')
+  await expect(next.locator('..')).toContainText('Holy Dominion')
   await next.click()
   const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('canvas') }).last()
   // On its own, even from the Next card: comparing is only ever asked for.

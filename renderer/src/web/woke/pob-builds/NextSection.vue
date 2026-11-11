@@ -1,6 +1,6 @@
 <template>
   <div :class="$style.wrap">
-    <button type="button" :class="$style.head" class="w-focusable" :aria-expanded="!folded" @click="toggle">
+    <button type="button" :class="$style.nextHead" class="w-focusable" :aria-expanded="!folded" @click="toggle">
       <i class="fas text-xs" :class="folded ? 'fa-chevron-right' : 'fa-chevron-down'" />
       <span>Next · <span class="w-accent">{{ stage }}</span></span>
       <span v-if="folded" class="ml-auto w-dim text-xs w-trunc">{{ summary }}</span>
@@ -8,7 +8,7 @@
     <template v-if="!folded">
       <!-- Tree -->
       <div v-if="tree" :class="$style.row">
-        <button type="button" :class="$style.label" class="w-focusable" :title="`Show ${tree.title} on the tree`" @click="emit('tree', tree.title)">Tree</button>
+        <button type="button" :class="$style.nextLabel" class="w-focusable" :title="`Show ${tree.title} on the tree`" @click="emit('tree', tree.title)">Tree</button>
         <span v-if="diff" class="w-num whitespace-nowrap">
           <span class="w-up">+{{ diff.added }}</span><span v-if="diff.addedAscendancy" class="w-dim"> · {{ diff.addedAscendancy }} asc</span><span v-if="diff.removed" class="w-down"> · −{{ diff.removed }}</span>
         </span>
@@ -109,7 +109,7 @@ function rarityClass (item: PobItem): string {
 
 <style module>
 .wrap { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
-.head {
+.nextHead {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -123,7 +123,7 @@ function rarityClass (item: PobItem): string {
   color: var(--w-faint);
   font-family: var(--w-caps-face);
 }
-.head:hover { color: var(--w-fg); }
+.nextHead:hover { color: var(--w-fg); }
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -131,8 +131,8 @@ function rarityClass (item: PobItem): string {
   gap: 3px 8px;
   min-width: 0;
 }
-.label { width: 2.6rem; flex: none; text-align: left; color: var(--w-dim); font-size: var(--w-fs-sm); }
-button.label:hover { color: var(--w-fg); text-decoration: underline; }
+.label, .nextLabel { width: 2.6rem; flex: none; text-align: left; color: var(--w-dim); font-size: var(--w-fs-sm); }
+button.nextLabel:hover { color: var(--w-fg); text-decoration: underline; }
 .named { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; cursor: default; }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .art { max-width: 22px; max-height: 22px; object-fit: contain; flex: none; }

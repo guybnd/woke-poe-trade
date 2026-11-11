@@ -514,7 +514,7 @@ async function openLevellingBuild (overlay: Overlay, buildsDir = path.join(FIXTU
 
 test('pob: what changes at the next step', async ({ overlay }) => {
   const detail = await openLevellingBuild(overlay)
-  await expect(detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ })).toContainText('Holy Dominion')
+  await expect(detail.getByTitle('Show Day 1.5 Clusters on the tree').locator('..')).toContainText('Holy Dominion')
   await overlay.page.mouse.move(1800, 1000)
   await saveAround(overlay, 'hl-pob-next', [detail], 1280)
 })
@@ -523,7 +523,7 @@ test('pob: the passive tree in the overlay', async ({ overlay }) => {
   const dir = grownBuildsDir()
   try {
     const detail = await openLevellingBuild(overlay, dir)
-    await detail.getByRole('button', { name: /Tree: Day 1\.5 Clusters/ }).click()
+    await detail.getByTitle('Show Day 1.5 Clusters on the tree').click()
     const tree = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Passive tree' }).filter({ has: overlay.page.locator('canvas') }).last()
     await tree.getByRole('switch').click()
     await expect(tree).toContainText(/\+\d+/)
