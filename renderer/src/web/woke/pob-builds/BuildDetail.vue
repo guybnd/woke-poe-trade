@@ -72,7 +72,9 @@
         <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
           <div :class="$style.link">
             <SocketDots :colours="linkColours(g)" />
-            <span v-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || g.slot }}</span>
+            <span v-if="linkItem(g)" :class="$style.linkItem" class="ml-auto text-xs whitespace-nowrap"
+              @mouseenter="showTip($event, { kind: 'item', item: linkItem(g)! })" @mouseleave="hideTip">{{ g.label || slotLabel(g.slot) }}</span>
+            <span v-else-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || slotLabel(g.slot) }}</span>
           </div>
           <div :class="$style.names">
             <GemName v-for="(x, j) in orderedGems(g)" :key="j" :name="x.name" :level="x.level" :quality="x.quality" />
@@ -180,7 +182,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, provide, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd, openMenu } from '../ui'
 import { AppConfig, saveConfig } from '@/web/Config'
 import { CAMPAIGN_TYPE } from '../campaign/widget'
@@ -193,17 +195,17 @@ import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
 import GemName from './GemName.vue'
 import SocketDots from './SocketDots.vue'
-import { nextGems } from './gems'
+import { GEM_CLASS, gemWhere, nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
   gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
   buildDps, gearChange, gemChange, nextSet, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel
 } from './build-model'
-import { hideTip } from '../ui/tooltip/tooltip'
+import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { loadPassiveTree, treeDiff } from './passive-tree'
 import type { TreeNode } from './passive-tree'
 import { pobApi } from './widget'
-import type { LoadoutPick, PobBuildEntry, PobBuildsWidget, PobDetails } from './widget'
+import type { LoadoutPick, PobBuildEntry, PobBuildsWidget, PobDetails, PobItem, PobSkillGroup } from './widget'
 import { useActiveBuild } from './active'
 
 const props = defineProps<{
@@ -345,6 +347,7 @@ const shownSet = computed(() => loadout.value?.skillSet?.item ?? null)
 const shownLinks = computed(() => shownSet.value ? linkGroups(shownSet.value.groups, 4) : [])
 
 const className = computed(() => build.className.value || props.details?.ascendClassName || props.details?.className || '')
+provide(GEM_CLASS, className)
 const gems = computed(() => props.details
   ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value))
   : [])
@@ -354,7 +357,7 @@ const got = computed(() => campaign.value?.state.gemsGot ?? [])
 const canTick = computed(() => Boolean(campaign.value))
 
 function gemNote (g: NextGem): string {
-  const source = g.source ?? 'Not sold in the campaign: buy or drop'
+  const source = gemWhere(g.name, className.value) || 'Not sold in the campaign: buy or drop'
   if (!canTick.value) return source
   return `${source}\nClick to mark as ${got.value.includes(g.name) ? 'not got yet' : 'got'}`
 }
@@ -372,6 +375,11 @@ function toggleGot (name: string) {
 const itemSets = computed(() => props.details ? itemSetsOf(props.details) : [])
 const shownItemSet = computed(() => loadout.value?.itemSet?.item ?? null)
 const mainLink = computed(() => shownSet.value ? mainGroupOf(shownSet.value.groups) : null)
+// The item a link group sits on in the shown gear set, for its hover.
+function linkItem (g: PobSkillGroup): PobItem | null {
+  if (!g.slot) return null
+  return shownItemSet.value?.slots.find(x => x.slot === g.slot)?.item ?? null
+}
 const layout = computed(() => gearLayout(shownItemSet.value?.slots ?? [], shownSet.value?.groups ?? []))
 const hasGear = computed(() => Boolean(layout.value.main || layout.value.loose.length || layout.value.linked.length || layout.value.plain.length))
 
@@ -480,6 +488,13 @@ function run (p: Promise<unknown>) {
   color: var(--w-faint);
   font-family: var(--w-caps-face);
 }
+.linkItem {
+  color: var(--w-dim);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: default;
+}
+.linkItem:hover { color: var(--w-fg); }
 .link {
   display: flex;
   align-items: center;

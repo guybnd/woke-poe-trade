@@ -17,9 +17,12 @@
           <template v-else>{{ diff.added }} {{ diff.added === 1 ? 'point' : 'points' }}</template>
           <template v-if="diff.addedAscendancy"> · {{ diff.addedAscendancy }} ascendancy</template>
         </span>
-        <button v-if="earlier" type="button" :class="$style.changes" class="w-focusable" role="switch" :aria-checked="changes" @click="changes = !changes">
-          <i :class="changes ? 'fas fa-check-square' : 'far fa-square'" /> Changes from {{ earlier.title }}
-        </button>
+        <span v-if="earlier" :class="$style.changes">
+          <button type="button" :class="$style.switch" class="w-focusable" role="switch" :aria-checked="changes" @click="changes = !changes">
+            <i :class="changes ? 'fas fa-check-square' : 'far fa-square'" /> Changes from
+          </button>
+          <WSelect :model-value="String(fromIndex)" :options="fromOptions" title="Tree to compare against" @update:model-value="pickFrom" />
+        </span>
         <WButton size="sm" :variant="sideOpen ? 'primary' : 'default'" icon="fas fa-list" :aria-pressed="sideOpen" @click="sideOpen = !sideOpen">Totals</WButton>
       </div>
     </template>
@@ -56,7 +59,7 @@
 // what a tree adds over the one before it. Saves opening a browser over the game.
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { WButton, WChip, WEmpty, WField, WPanel } from '../ui'
+import { WButton, WChip, WEmpty, WField, WPanel, WSelect } from '../ui'
 import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { realSets } from './build-model'
 import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, treeDiff } from './passive-tree'
@@ -73,10 +76,29 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const trees = computed(() => realSets(props.specs))
 const at = shallowRef(0)
 const shown = computed(() => trees.value[at.value] ?? trees.value[trees.value.length - 1] ?? null)
-const earlier = computed(() => (at.value > 0 ? trees.value[at.value - 1] : null))
-// Off, the picked tree on its own. On, what it changes from the one before.
-// Only the switch turns it on: comparing is always something you asked for.
+// The tree to compare against: the one picked in the dropdown, else the one
+// before (or after, for the first tree).
+const fromAt = shallowRef<number | null>(null)
+const fromIndex = computed(() => {
+  const n = trees.value.length
+  if (n < 2) return -1
+  // `shown` falls back to the last tree when saving in PoB dropped sets.
+  const cur = Math.min(at.value, n - 1)
+  if (fromAt.value != null && fromAt.value !== cur && fromAt.value < n) return fromAt.value
+  return cur > 0 ? cur - 1 : 1
+})
+const earlier = computed(() => trees.value[fromIndex.value] ?? null)
+const fromOptions = computed(() => trees.value
+  .map((t, i) => ({ value: String(i), label: t.title }))
+  .filter(o => Number(o.value) !== Math.min(at.value, trees.value.length - 1)))
+// Off, the picked tree on its own. On, what it changes from the other tree.
+// Only the switch or the dropdown turns it on: comparing is always asked for.
 const changes = shallowRef(false)
+
+function pickFrom (v: string) {
+  fromAt.value = Number(v)
+  changes.value = true
+}
 const previous = computed(() => changes.value ? earlier.value : null)
 
 function pick (i: number) {
@@ -88,6 +110,7 @@ watch(() => props.start, ({ title }) => {
   const i = trees.value.findIndex(t => t.title === title)
   at.value = i < 0 ? 0 : i
   changes.value = false
+  fromAt.value = null
 }, { immediate: true })
 
 const tree = shallowRef<Map<number, TreeNode> | null>(null)
@@ -387,7 +410,9 @@ function openWeb () {
   font-size: var(--w-fs-sm);
   color: var(--w-dim);
 }
-.changes:hover { color: var(--w-fg); }
+.switch { display: inline-flex; align-items: center; gap: 6px; }
+.switch:hover { color: var(--w-fg); }
+.changes :global(select) { max-width: 10rem; }
 .tools {
   display: flex;
   align-items: center;

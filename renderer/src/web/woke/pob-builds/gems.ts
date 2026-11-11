@@ -4,6 +4,7 @@
 // LICENSE-exile-leveling.txt): { name: { l: required level, a: colour,
 // s: sources } }, colour = r/g/b/w (primary attribute), source = [act, quest,
 // npc, 'q' (quest reward) | 'v' (vendor), class mask].
+import type { InjectionKey, Ref } from 'vue'
 import raw from './gem-sources.json'
 import type { PobDetails } from './widget'
 
@@ -85,6 +86,24 @@ function sourceFor (name: string, cls: string): string | null {
   if (!pick) return null
   return `${pick[3] === 'q' ? 'Reward' : 'Buy from ' + pick[2]}: ${pick[1]} (Act ${pick[0]})`
 }
+
+// Every way the class gets the gem in the campaign: the quest reward, and the
+// first vendor that sells it. One line each, for a gem's tooltip.
+export function gemWhere (name: string, className: string): string {
+  const entry = DATA[name] ?? DATA[`${name} Support`]
+  if (!entry) return gemData(name) ? 'Not in the campaign: buy or drop' : ''
+  const idx = CLASSES.indexOf(baseClass(className))
+  const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')
+  const reward = fits.find(s => s[3] === 'q')
+  const vendor = fits.filter(s => s[3] === 'v').sort((a, b) => a[0] - b[0])[0]
+  const lines: string[] = []
+  if (reward) lines.push(`Reward: ${reward[1]} (Act ${reward[0]})`)
+  if (vendor) lines.push(`Buy from ${vendor[2]}: ${vendor[1]} (Act ${vendor[0]})`)
+  return lines.length ? lines.join('\n') : 'Not sold to this class in the campaign: buy or drop'
+}
+
+// The build panel hands its class to every gem name inside it.
+export const GEM_CLASS = Symbol('pob gem class') as InjectionKey<Ref<string>>
 
 export function requiredLevel (name: string): number | null {
   return gemData(name)?.requiredLevel ?? null
