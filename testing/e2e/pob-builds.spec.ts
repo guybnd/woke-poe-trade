@@ -173,9 +173,12 @@ test('a picked loadout reaches the other windows, is saved, and Auto undoes it',
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
   // The set chips, not the buttons for the same set in Next and the stage costs.
   const chip = (name: string) => detail.locator('button:not([class*="next"]):not([class*="stage"])').filter({ hasText: name })
+  // The campaign card stays open over part of the panel (the test reads it
+  // after each pick), so chips are clicked without aiming the mouse.
+  const pickChip = (name: string) => chip(name).dispatchEvent('click')
   await expect(chip(day1)).toContainText('now')
 
-  await chip(later).click()
+  await pickChip(later)
   await expect(chip(later)).toContainText('now')
   await expect(chip(day1)).not.toContainText('now')
   await expect(detail.getByText(`Links · ${later}`)).toBeVisible()
@@ -185,7 +188,7 @@ test('a picked loadout reaches the other windows, is saved, and Auto undoes it',
   await expect(strip).toContainText('Fireball')
 
   // Gear tab: its set and the gems on its items are the same loadout.
-  await detail.getByRole('tab', { name: 'Gear' }).click()
+  await detail.getByRole('tab', { name: 'Gear' }).dispatchEvent('click')
   await expect(chip(later)).toContainText('now')
   await expect(detail.locator('[class*="gearRow"]').filter({ hasText: 'Later Loop' })).toBeVisible()
   await expect(detail.getByText('Fireball').first()).toBeVisible()
@@ -195,8 +198,8 @@ test('a picked loadout reaches the other windows, is saved, and Auto undoes it',
   await expect(detail.getByRole('link', { name: `${later} · now` })).toBeVisible()
   await expect.poll(() => overlay.savedWidget('woke-pob-builds')?.loadouts?.[LOADOUTS_FILE]).toEqual({ skillSet: later })
 
-  await detail.getByRole('tab', { name: 'Leveling' }).click()
-  await chip('Auto').click()
+  await detail.getByRole('tab', { name: 'Leveling' }).dispatchEvent('click')
+  await pickChip('Auto')
   await expect(chip(day1)).toContainText('now')
   await expect(strip).toContainText(`Your links · ${day1}`)
   await expect(chip('Auto')).toHaveCount(0)
