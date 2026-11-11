@@ -23,6 +23,13 @@ describe('trade data patch', () => {
     expect(r.reworded).toEqual([])
   })
 
+  it('gives a new id with a known text to that stat instead of a second stat', () => {
+    const ours = [{ ref: '+# to maximum Life', better: 1, matchers: [{ string: '+# to maximum Life' }], trade: { ids: { explicit: ['explicit.stat_3'] } as Record<string, string[]> } }]
+    const r = diff({ stats: [], items: [], static: [] }, { stats: [stat('scourge.stat_3', '+# to maximum Life', 'scourge')], items: [], static: [] }, ours, [])
+    expect(r.newStats).toEqual([])
+    expect(ours[0].trade.ids.scourge).toEqual(['scourge.stat_3'])
+  })
+
   it('adds new stats once per text, new uniques, bases and exchange items', () => {
     const r = diff(
       { stats: [], items: [{ group: 'jewel', name: null, type: 'Cobalt Jewel' }], static: [] },

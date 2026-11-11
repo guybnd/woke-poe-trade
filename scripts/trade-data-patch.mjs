@@ -65,7 +65,9 @@ export function diff (before, after, statLines, itemLines) {
   const stats = statLines.flatMap(s => s.stats ?? [s])
   const byId = new Map()
   for (const s of stats) for (const ids of Object.values(s.trade.ids)) for (const id of ids) byId.set(id, s)
-  const report = { newStats: [], reworded: [], newItems: [], skipped: [] }
+  const byText = new Map()
+  for (const s of stats) for (const m of s.matchers) if (!byText.has(m.string.trim())) byText.set(m.string.trim(), s)
+  const report = { newStats: [], newIds: [], reworded: [], newItems: [], skipped: [] }
 
   // One id can carry several texts (an atlas "in your Maps" line and the map's
   // own "in Area" line), so an id is reworded only when its text is new to it.
@@ -82,7 +84,15 @@ export function diff (before, after, statLines, itemLines) {
     if (!prev) {
       const ours = byId.get(e.id)
       if (ours) continue
-      // One stat per text, holding every kind's id.
+      // A text we already match gets the new id (a new kind of an old stat),
+      // so two stats never share a text. Otherwise one new stat per text,
+      // holding every kind's id.
+      const known = byText.get(text)
+      if (known) {
+        ;(known.trade.ids[e.type] ??= []).push(e.id)
+        report.newIds.push({ id: e.id, text })
+        continue
+      }
       let stat = added.get(text)
       if (!stat) {
         stat = { ref: text, better: 1, matchers: [{ string: text }], trade: { ids: {} } }
@@ -152,6 +162,8 @@ async function main () {
 
   console.log(`New stats: ${report.newStats.length}`)
   for (const s of report.newStats) console.log(`  + ${s.ref}`)
+  console.log(`New ids on known stats: ${report.newIds.length}`)
+  for (const n of report.newIds) console.log(`  + ${n.id}  ${n.text}`)
   console.log(`Reworded stats: ${report.reworded.length}`)
   for (const r of report.reworded) console.log(`  ~ ${r.from}  ->  ${r.to}`)
   console.log(`New items: ${report.newItems.length}`)
