@@ -78,7 +78,22 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-11t05-23-40-565z
-swimlane: null
+  - type: comment
+    user: Agent
+    comment: >-
+      Parked: send 3.30 screenshots of Alva's temple view (several temples, all
+      tiers, one with a room hovered) to resume building B.
+    date: '2026-11-11T05:23:41.710Z'
+    id: c-2026-11-11t05-23-41-710z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-11T05:23:41.710Z'
+    comment: >-
+      Parked: send 3.30 screenshots of Alva's temple view (several temples, all
+      tiers, one with a room hovered) to resume building B.
+swimlane: require-input
 needsAction: null
 ---
 > **TL;DR** Guy picked **B** (2026-11-11): one hotkey read of Alva's temple view, ring + short name on every ticked room, coloured by tier (orange T3, blue T2, grey T1), cleared on Esc/close. Room list configurable, all on. **Do not release until the icon atlas is built from real 3.30 screenshots.**
