@@ -24,6 +24,7 @@ subtasks:
   - WOKEPOET-199
   - WOKEPOET-200
   - WOKEPOET-201
+  - WOKEPOET-202
 ---
 > TL;DR: Guy's eight improvement ideas for the PoB build panel (thread 2026-11-11). Layout changes get mocks first; the hover and dropdown changes are built directly.
 
