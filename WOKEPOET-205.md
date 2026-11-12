@@ -3,7 +3,7 @@ id: WOKEPOET-205
 title: >-
   PoB tree: show socketed jewels and their effects (timeless, cluster, radius
   jewels)
-status: Grooming
+status: Done
 priority: None
 effort: L
 assignee: unassigned
@@ -57,6 +57,44 @@ history:
       install at runtime (quiet when missing), tooltips/totals/search show the
       rewritten passives.
     id: a-2026-11-12t10-12-22-180z
+  - type: comment
+    user: Agent
+    comment: >-
+      All three parts are merged. #373 added the jewel sockets and radius rings.
+      #387 grew the cluster jewel subtrees the way PoB does. #392 added the
+      Timeless jewel rewrites, read from the PoB install.
+    date: '2026-11-12T10:28:32.955Z'
+    completionComment: true
+    id: c-2026-11-12t10-28-32-955z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-12T10:28:32.955Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Jewels in the PoB tree, merged in three PRs: #373 (sockets and radius
+      rings), #387 (cluster jewel subtrees, c7ae20de) and #392 (Timeless jewel
+      rewrites from the PoB install, d1625a52). Not covered: the Abyss
+      conquerors, Thread of Hope's variable ring and Impossible Escape's
+      keystone ring.
+    completionComment: true
+    date: '2026-11-12T10:28:34.517Z'
+    id: c-2026-11-12t10-28-34-517z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T10:28:34.821Z'
+needsAction: null
+baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/392'
+swimlane: null
+diffSummary:
+  - file: scripts/upstream-data.mjs
+    additions: 21
+    deletions: 1
 ---
 > TL;DR: Guy (2026-11-11): support and render every kind of jewel in the passive tree view, with their effects. Bigger work, later; mocks first.
 
