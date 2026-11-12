@@ -43,7 +43,7 @@
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { WSpark } from '../ui'
 import { agoPhrase, formatAmount } from '../ui/format'
-import { divine as divineRate, historyNow, ledger, onStatus, pricePrefs, setLeague, summary, valuation, wantPrices } from './store'
+import { divine as divineRate, historyNow, ledger, onStatus, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
 import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { ReaderStatus } from './widget'
 import Coin from './Coin.vue'
@@ -68,14 +68,16 @@ onUnmounted(() => { clearInterval(clock) })
 watch(() => props.status, (s) => { if (s) onStatus(s) })
 watch(() => props.league, (id) => { setLeague(id) })
 
-const v = valuation
+// Just after a league switch the store still holds the old league's read.
+const sameLeague = computed(() => stashNow.value?.league === props.league && (!props.status?.league || props.status.league === props.league))
+const v = computed(() => sameLeague.value ? valuation.value : null)
 const signedOut = computed(() => props.status?.error?.kind === 'signed-out' || (props.status != null && !props.status.account))
-const today = computed(() => summary.value?.sinceYesterdayDiv ?? null)
-const spark = computed(() => seriesFor(ledger.value.points, historyNow.value.days, '7d', now.value, divineRate.value).map(p => p.div))
+const today = computed(() => sameLeague.value ? summary.value?.sinceYesterdayDiv ?? null : null)
+const spark = computed(() => !sameLeague.value ? [] : seriesFor(ledger.value.points, historyNow.value.days, '7d', now.value, divineRate.value).map(p => p.div))
 // The last read's changes, if that read had any to compare.
 const diff = computed(() => {
   const d = ledger.value.diffs[ledger.value.diffs.length - 1]
-  return d && d.at === historyNow.value.countedReadAt ? d : null
+  return sameLeague.value && d && d.at === historyNow.value.countedReadAt ? d : null
 })
 const changes = computed(() => topCardChanges(diff.value, pricePrefs.value.ignored))
 const waitMs = computed(() => refreshWaitMs(props.status, now.value))
