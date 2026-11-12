@@ -24,6 +24,7 @@
                 :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? undefined" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
+                <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
                 <i v-else :class="e.icon" :style="{ width: 'var(--w-icon-md)', textAlign: 'center' }" />
                 <span :class="$style.resName">
                   <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : undefined">{{ e.name }}</span>
@@ -81,6 +82,7 @@
                 <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
               </div>
             </template>
+            <LookupDetail v-else-if="selected?.kind === 'lookup'" :card="selected.card" :divine="divine" @act="act" />
             <template v-else-if="selected">
               <div :class="$style.title"><i :class="selected.icon" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ selected.about }}</p>
@@ -141,6 +143,10 @@ import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../es
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel } from './search'
 import type { PriceGroup } from './search'
+import LookupDetail from './LookupDetail.vue'
+import { isImageIcon } from './lookups/types'
+import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
+import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import type { SearchWidget } from './widget'
 
@@ -154,7 +160,8 @@ interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
 interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, action: () => void }
-type Entry = PriceEntry | ItemEntry | ActionEntry
+interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
+type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
 const query = shallowRef('')
 const corrupted = shallowRef<CorruptedFilter>('any')
@@ -195,6 +202,7 @@ function gameItems (): BaseType[] {
 function tipOf (entry: Entry) {
   if (entry.kind === 'price') return groupTip(entry.group)
   if (entry.kind === 'item') return { name: entry.info.refName }
+  if (entry.kind === 'lookup') return entry.card.tip ?? null
   return null
 }
 
@@ -285,6 +293,48 @@ function settingEntries (): ActionEntry[] {
   }))
 }
 
+// ---- lookups: answers, facts and the web ----
+const lookupContext = computed<LookupContext>(() => {
+  const prices = new Map<string, number>()
+  for (const i of snapshot.value?.items ?? []) {
+    if (!i.variant || !prices.has(i.name)) prices.set(i.name, i.chaos)
+  }
+  const league = leagues.selectedId.value
+  return {
+    price: (name) => name === 'Chaos Orb' ? 1 : prices.get(name) ?? null,
+    divine: divine.value,
+    now: Date.now(),
+    league: league ? { name: league, startedAt: leagues.startedAt.value } : null
+  }
+})
+const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).filter(i => i.type === 'Currency').map(i => i.name))])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, webLookup])
+
+function lookupCards (q: string): LookupCard[] {
+  const ctx = { ...lookupContext.value, now: Date.now() }
+  return lookups.value.flatMap(l => l(q, ctx))
+}
+// One section per card group, in the order they came; `only` keeps those
+// groups, `skip` leaves them out.
+function cardSections (cards: LookupCard[], only: string[] | null, skip: string[] = []) {
+  const byGroup = new Map<string, Entry[]>()
+  for (const card of cards) {
+    if (only ? !only.includes(card.group) : skip.includes(card.group)) continue
+    const list = byGroup.get(card.group) ?? []
+    list.push({ kind: 'lookup', id: `l:${card.id}`, name: card.name, sub: card.sub, icon: card.icon, card })
+    byGroup.set(card.group, list)
+  }
+  return [...byGroup].map(([label, entries]) => ({ label, entries }))
+}
+function act (action: LookupAction) {
+  if ('url' in action) window.open(action.url)
+  else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
+  else {
+    query.value = action.search
+    focusInput()
+  }
+}
+
 // ---- results ----
 const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
   if (!open.value) return []
@@ -298,12 +348,16 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
   const priced = pricedNames.value
   const other = searchNamed(gameItems().filter(i => !priced.has(i.refName)), q, i => i.name, 8)
     .map((info): ItemEntry => ({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: snapshot.value ? 'No poe.ninja price' : 'No price', info }))
+  const cards = lookupCards(q)
   const out = [
+    ...cardSections(cards, ['Answer']),
     { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
     { label: 'Other items', entries: other as Entry[] },
+    ...cardSections(cards, null, ['Answer', 'Search the web']),
     { label: 'Tools', entries: searchNamed(toolEntries(), q, e => e.name) as Entry[] },
     { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
-    { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] }
+    { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] },
+    ...cardSections(cards, ['Search the web'])
   ]
   return out.filter(s => s.entries.length)
 })
@@ -349,6 +403,8 @@ function run (entry: Entry) {
     else openTrade(entry)
   } else if (entry.kind === 'item') {
     openLookup(entry, 'wiki')
+  } else if (entry.kind === 'lookup') {
+    if (entry.card.actions[0]) act(entry.card.actions[0])
   } else {
     entry.action()
   }

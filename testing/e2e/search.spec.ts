@@ -57,7 +57,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   const { panel, box } = await waitForPrices(overlay)
 
   await expect(panel.getByText('Trade site')).toBeVisible()
-  await expect(panel.getByText('Wiki')).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
   await expect(panel.getByText('Live listings')).toBeVisible()
   await overlay.snap('search-unique')
 
@@ -173,4 +173,23 @@ test('hovering a result shows the item, with its price or its range', async ({ o
   await box.fill('market')
   await panel.getByRole('button', { name: /Market/ }).first().hover()
   await expect(tip).toHaveCount(0)
+})
+
+test('currency maths and countdowns answer first, and the web is always offered', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('3 div')
+  const first = panel.locator('[data-selected]')
+  await expect(first).toContainText(/3 Divine Orb = [\d,.]+ c/)
+  await expect(panel.getByRole('button', { name: /^Copy / })).toBeVisible()
+  await expect(panel.getByText(/Search poewiki for "3 div"/)).toBeVisible()
+  await overlay.snap('search-currency-maths')
+
+  await box.fill('lab reset')
+  await expect(first).toContainText(/Lab layout resets in/)
+  await overlay.snap('search-lab-reset')
 })
