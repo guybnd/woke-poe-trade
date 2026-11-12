@@ -36,11 +36,13 @@ import { defineComponent, provide, shallowRef, watch, readonly, computed, onMoun
 import { useI18n } from 'vue-i18n'
 import { Host } from '@/web/background/IPC'
 import { Widget, WidgetManager } from './interfaces'
+import type { PriceCheckWidget } from './widgets'
 import { registry } from './widget-registry.js'
 import { AppConfig, saveConfig, pushHostConfig } from '@/web/Config'
 import LoadingAnimation from './LoadingAnimation.vue'
 import { WokeOverlay } from '@/web/woke'
-import { isWidgetTypeOn } from '@/web/woke/modules'
+import { isModuleOn, isWidgetTypeOn } from '@/web/woke/modules'
+import { addEssenceScanWidget } from '@/web/woke/essence-scan/widget'
 import { requestRestore } from '@/web/woke/ui/window-anchor'
 // ---
 import { usePoeninja } from '@/web/background/Prices'
@@ -57,6 +59,14 @@ export default defineComponent({
   setup () {
     usePoeninja()
     useLeagues().load()
+
+    // woke: Essence scan switched on from anywhere gets its panel, so its
+    // on/off hotkey exists (the scan only starts from that key or the panel).
+    watch(() => isModuleOn(AppConfig(), 'essence-scan'), (on, was) => {
+      if (!on || was !== false) return
+      const pc = AppConfig<PriceCheckWidget>('price-check')
+      if (addEssenceScanWidget(AppConfig(), pc ? `${pc.hotkeyHold} + ${pc.hotkey}` : null)) { pushHostConfig(); saveConfig() }
+    })
 
     const active = shallowRef(!Host.isElectron)
     const gameFocused = shallowRef(false)

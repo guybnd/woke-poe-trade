@@ -52,6 +52,17 @@ export function seedEssenceScanWidget (wmId: number, taken: string[] = []): Esse
   return w
 }
 
+// Puts a seeded widget on `config` when there's none. Returns whether it did.
+// `priceCheckKey` is the price check's held + pressed key, kept out of reach.
+export function addEssenceScanWidget<W extends object> (config: { widgets: W[] }, priceCheckKey: string | null): boolean {
+  if (config.widgets.some(w => (w as unknown as Widget).wmType === ESSENCE_SCAN_TYPE)) return false
+  const taken = [...JSON.stringify(config).matchAll(/"((?:[A-Z][a-z]+ \+ )+\w+)"/g)].map(m => m[1])
+  if (priceCheckKey) taken.push(priceCheckKey)
+  const wmId = Math.max(0, ...config.widgets.map(w => (w as unknown as Widget).wmId)) + 1
+  config.widgets.push(seedEssenceScanWidget(wmId, taken) as unknown as W)
+  return true
+}
+
 export function normalizeEssenceScanWidget (w: EssenceScanWidget) {
   if (!w.anchor) w.anchor = { pos: 'tr', x: 98, y: 30 }
   if (w.hotkey === undefined) w.hotkey = null

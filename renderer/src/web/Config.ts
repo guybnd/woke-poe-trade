@@ -6,7 +6,7 @@ import { HostConfig, ShortcutAction } from '@ipc/types'
 import type * as widget from './overlay/widgets'
 import { wokeGlobalShortcuts, wokeShortcutsFor } from './woke/shortcuts'
 import { LOOT_FILTER_TYPE, seedLootFilterWidget } from './woke/loot-filter/widget'
-import { ESSENCE_SCAN_TYPE, seedEssenceScanWidget } from './woke/essence-scan/widget'
+import { addEssenceScanWidget } from './woke/essence-scan/widget'
 import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './woke/death-recap/widget'
@@ -521,11 +521,7 @@ function upgradeConfig (_config: Config): Config {
   // woke: essence scan's on/off hotkey works once the module is on, without
   // adding the panel first. Once only, so one you removed stays removed.
   if (!modules.woke?.essenceScanSeeded && isModuleOn(modules, 'essence-scan')) {
-    if (!config.widgets.some(w => w.wmType === ESSENCE_SCAN_TYPE)) {
-      const taken = [...JSON.stringify(config).matchAll(/"((?:[A-Z][a-z]+ \+ )+\w+)"/g)].map(m => m[1])
-      taken.push(`${priceCheck.hotkeyHold} + ${priceCheck.hotkey}`)
-      config.widgets.push(seedEssenceScanWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1, taken))
-    }
+    addEssenceScanWidget(config, `${priceCheck.hotkeyHold} + ${priceCheck.hotkey}`)
     ensureWokeConfig(modules).woke.essenceScanSeeded = true
   }
   // woke: map mod ratings follow mods the game has reworded.

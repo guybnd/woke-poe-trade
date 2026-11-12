@@ -16,16 +16,14 @@
       <w-setting-row v-for="f in keys" :key="f.id" :label="f.label" show-hint :hint="f.off ? 'Module off' : undefined">
         <w-hotkey-cell :model-value="f.get()" :label="f.label" @update:model-value="f.set($event)" />
       </w-setting-row>
-      <w-setting-row v-if="!keys.length" label="No scan keys yet" show-hint hint="Turn on map scan or essence scan above to get its key." />
+      <w-setting-row v-if="!keys.length" label="No scan keys yet" show-hint hint="Turn on Essence scan above, or add Map scan on the Map mods page. Keys show here the next time settings opens." />
     </w-setting-section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, shallowRef } from 'vue'
-import { AppConfig } from '@/web/Config'
+import { computed, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
-import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WHotkeyCell, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { MODULES, ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
 import { hostRequest } from '../shared/host'
@@ -34,18 +32,9 @@ import { hotkeyFields } from './hotkey-fields'
 const props = defineProps<{ config: Config }>()
 
 const scanModules = MODULES.filter(m => m.needs.includes('ocr'))
-const SCAN_TYPES = ['woke-map-scan', 'woke-essence-scan']
-const wm = inject<WidgetManager | null>('wm', null)
-function setOn (id: string, on: boolean) {
-  setModuleOn(ensureWokeConfig(props.config), id, on)
-  // A scan only starts from its panel's hotkey or Start button, so switching
-  // it on without one did nothing. The new panel opens with its key.
-  const type = MODULES.find(m => m.id === id)?.widgetTypes.find(t => SCAN_TYPES.includes(t))
-  // The live list too: a panel made here joins our copy only once it's set up.
-  const has = (c: Config) => c.widgets.some(w => w.wmType === type)
-  if (on && wm && type && !has(props.config) && !has(AppConfig())) wm.create(type)
-}
+function setOn (id: string, on: boolean) { setModuleOn(ensureWokeConfig(props.config), id, on) }
 
+const SCAN_TYPES = ['woke-map-scan', 'woke-essence-scan']
 const keys = computed(() => hotkeyFields(props.config).filter(f =>
   SCAN_TYPES.some(t => props.config.widgets.some(w => w.wmType === t && f.id.startsWith(`${w.wmId}-`)))))
 
