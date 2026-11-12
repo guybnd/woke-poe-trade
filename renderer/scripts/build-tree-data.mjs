@@ -146,6 +146,9 @@ for (const [id, n] of Object.entries(tree.nodes)) {
   ])
 }
 
+// Before the sprites: a cluster's icons must be in the cut sheets.
+const clusters = clusterData()
+
 // Every group gets its background, including those with no node drawn yet.
 const sheets = FROM_GGG
   ? Object.fromEntries(Object.entries(tree.sprites).map(([kind, zooms]) => [kind, zooms[SPRITE_ZOOM] ?? Object.values(zooms).at(-1)]))
@@ -170,7 +173,75 @@ if (FROM_GGG && existsSync(OUT)) {
   }
 }
 
+// Cluster jewels grow small trees off the outer sockets. The game's tree
+// data has the sockets, their proxy groups and the notables; how a jewel's
+// nodes are laid out is PoB's Data/ClusterJewels.lua (MIT), next to the tree
+// file or in PoB's install. PoB's PassiveSpec:BuildSubgraph does the layout,
+// and renderer/src/web/woke/pob-builds/cluster-graph.ts does it the same way.
+function clusterData () {
+  const candidates = [
+    join(dirname(SOURCE), 'ClusterJewels.lua'),
+    join(process.env.APPDATA ?? '', 'Path of Building Community/Data/ClusterJewels.lua')
+  ]
+  const file = candidates.find(f => existsSync(f))
+  if (!file) {
+    console.warn('No ClusterJewels.lua found: cluster jewels will not be drawn.')
+    return null
+  }
+  const cj = parseLua(readFileSync(file, 'utf8'))
+  const sockets = {}
+  const proxies = {}
+  const named = {}
+  for (const [id, n] of Object.entries(tree.nodes)) {
+    if (n.expansionJewel) {
+      const e = n.expansionJewel
+      sockets[id] = { size: e.size, index: e.index, proxy: Number(e.proxy), ...(e.parent ? { parent: Number(e.parent) } : {}) }
+    }
+    if (n.isProxy && tree.groups[n.group]) {
+      const g = tree.groups[n.group]
+      proxies[id] = [Math.round(g.x), Math.round(g.y), n.orbit, n.orbitIndex]
+    }
+    // Notables and keystones a cluster can add are in the data without a place.
+    if ((n.isNotable || n.isKeystone) && n.group == null && n.name) {
+      named[n.name] = { stats: n.stats ?? [], icon: n.icon ?? '', key: n.isKeystone ? 1 : 0 }
+      if (n.icon) used.add(n.icon)
+    }
+  }
+  // A small passive that grants nothing.
+  used.add('Art/2DArt/SkillIcons/passives/MasteryBlank.png')
+  const jewels = {}
+  for (const [base, j] of Object.entries(cj.jewels)) {
+    const skills = {}
+    for (const [tag, sk] of Object.entries(j.skills)) {
+      skills[tag] = { name: sk.name, icon: sk.icon, stats: sk.stats ?? [], enchant: sk.enchant ?? [] }
+      if (sk.icon) used.add(sk.icon)
+    }
+    jewels[base] = {
+      size: j.size,
+      sizeIndex: j.sizeIndex,
+      minNodes: j.minNodes,
+      maxNodes: j.maxNodes,
+      small: j.smallIndicies,
+      notable: j.notableIndicies,
+      socket: j.socketIndicies,
+      total: j.totalIndicies,
+      skills
+    }
+  }
+  return {
+    sockets,
+    proxies,
+    named,
+    jewels,
+    sortOrder: cj.notableSortOrder,
+    keystones: cj.keystones,
+    // proxy node id -> its orbit offset per cluster size index
+    orbitOffsets: cj.orbitOffsets,
+    orbitRadii: radii,
+    skillsPerOrbit: perOrbit
+  }
+}
 mkdirSync(dirname(OUT), { recursive: true })
-const out = JSON.stringify({ nodes: rows, groups, sprites, masteryEffects })
+const out = JSON.stringify({ nodes: rows, groups, sprites, masteryEffects, ...(clusters ? { clusters } : {}) })
 writeFileSync(OUT, out)
 console.log(`${rows.length} nodes, ${out.length} bytes -> ${OUT}`)

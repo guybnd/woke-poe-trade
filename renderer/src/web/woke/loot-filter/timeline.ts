@@ -7,6 +7,7 @@ import { DEFAULT_BG, DEFAULT_FONT, DEFAULT_TEXT, describeEdit, isPatch, isValidE
 import { ruleLabel } from './parse'
 import type { OwnRule } from './rules'
 import type { Presets } from './presets'
+import { defaultPresets } from './presets'
 import type { PriceMove } from './economy'
 
 export interface Settings {
@@ -175,8 +176,10 @@ export function describeStep (before: Settings, after: Settings, lookOf: (type: 
     }
   }
   if (!same(before.presets, after.presets)) {
-    const key = (Object.keys(after.presets) as Array<keyof Presets>).find(k => !same(before.presets[k], after.presets[k]))
-    parts.push(key ? `Preset: ${PRESET_NAMES[key]} ${after.presets[key].on ? (before.presets[key].on ? 'changed' : 'on') : 'off'}` : 'Changed presets')
+    // A snapshot from before a preset existed reads it as its default.
+    const was = (k: keyof Presets) => before.presets[k] ?? defaultPresets()[k]
+    const key = (Object.keys(after.presets) as Array<keyof Presets>).find(k => !same(was(k), after.presets[k]))
+    parts.push(key ? `Preset: ${PRESET_NAMES[key]} ${after.presets[key].on ? (was(key).on ? 'changed' : 'on') : 'off'}` : 'Changed presets')
   }
   if (!same(before.locks, after.locks) && !parts.length) {
     parts.push(after.locks.length > before.locks.length ? 'Kept an item where it is' : 'Let prices move an item again')
@@ -191,5 +194,17 @@ const PRESET_NAMES: Record<keyof Presets, string> = {
   bigger: 'bigger labels',
   colourBlind: 'colour-blind colours',
   sixSockets: '6-socket items',
-  dust: 'dust uniques'
+  dust: 'dust uniques',
+  hideGear: 'hide white and blue gear',
+  cheapCards: 'hide cheap cards',
+  lowMaps: 'hide low maps',
+  hideFlasks: 'hide flasks',
+  cheapUniques: 'hide cheap uniques',
+  cheapSplinters: 'hide cheap splinters',
+  msBoots: 'movement speed boots',
+  hideRgb: 'hide R-G-B items',
+  vendorQuality: 'quality gems and flasks',
+  volume: 'drop sound volume',
+  beams: 'fewer beams',
+  weapons: 'weapons for your build'
 }

@@ -1,5 +1,5 @@
 <template>
-  <div ref="box" :class="$style.chart" @mousemove="onMove" @mouseleave="hover = null">
+  <div ref="box" :class="$style.chart" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
     <svg :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" :class="$style.svg" aria-hidden="true">
       <template v-if="mode === 'total'">
         <path v-if="area" :d="area" :class="$style.area" />
@@ -11,12 +11,18 @@
       <line v-if="goalY != null" x1="0" :x2="W" :y1="goalY" :y2="goalY" :class="$style.goal" vector-effect="non-scaling-stroke" />
     </svg>
     <span v-for="m in marks" :key="m.at" :class="$style.mark" :style="{ left: m.x + '%', top: m.y + '%' }" />
-    <template v-if="hover">
-      <span :class="$style.dot" :style="{ left: hover.x + '%', top: hover.y + '%' }" />
-      <div :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align]]" :style="{ left: hover.x + '%', top: hover.y + '%' }">
-        <b class="w-num">{{ when(hover.p.at) }} · {{ fmt(hover.p.div) }}<Coin /><template v-if="hover.p.netDiv != null"> · {{ signed(hover.p.netDiv) }}<Coin /></template></b>
-        <span v-if="hover.p.top.length">{{ hover.p.top.join(', ') }}</span>
-        <span v-else-if="hover.p.daily" class="w-dim">That day's last read</span>
+    <template v-if="shown">
+      <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
+      <!-- Follows the mouse; a click keeps it open (pinned), and then its item
+           names take the item tooltip and menu. -->
+      <div ref="tipEl" :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align], { [$style.pinned]: !!pinned }]"
+        :style="{ left: shown.x + '%', top: shown.y + '%' }" data-chart-card>
+        <b class="w-num">{{ when(shown.p.at) }} · {{ fmt(shown.p.div) }}<Coin /><template v-if="shown.p.netDiv != null"> · {{ signed(shown.p.netDiv) }}<Coin /></template></b>
+        <span v-if="shown.p.top.length">
+          <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="pinned && tipOf ? topTip(t) : null" :class="{ [$style.item]: !!pinned }">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
+        </span>
+        <span v-else-if="shown.p.daily" class="w-dim">That day's last read</span>
+        <span v-if="!pinned && shown.p.top.length && tipOf" class="w-dim">Click to keep this open</span>
       </div>
     </template>
     <div v-if="series.length < 2" :class="$style.empty" class="w-dim text-xs">The line fills in as you refresh.</div>
@@ -26,8 +32,11 @@
 <script setup lang="ts">
 // The net worth line (B1): a point per refresh, big gains marked, hover for
 // what changed. By category (B2): the same points stacked. Goal line (D6).
-import { computed, shallowRef } from 'vue'
+import { computed, onUnmounted, shallowRef, watch } from 'vue'
+import { vItemTip } from '../ui'
+import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import { formatAmount } from '../ui/format'
+import { parseTop } from './tips'
 import Coin from './Coin.vue'
 import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
@@ -38,6 +47,8 @@ const props = defineProps<{
   big: Set<number>
   mode: 'total' | 'category'
   goalDiv: number | null
+  // The item tooltip for a name in a pinned card.
+  tipOf?: (name: string, count: number) => ItemTipRef
 }>()
 
 const W = 400
@@ -53,7 +64,39 @@ const CAT_COLOUR: Record<Category, string> = {
 }
 
 const box = shallowRef<HTMLElement | null>(null)
-const hover = shallowRef<{ p: SeriesPoint, x: number, y: number } | null>(null)
+type At = { p: SeriesPoint, x: number, y: number }
+const hover = shallowRef<At | null>(null)
+// A clicked point's card stays until a click elsewhere, Esc, or new points.
+const pinned = shallowRef<At | null>(null)
+const shown = computed(() => pinned.value ?? hover.value)
+const tipEl = shallowRef<HTMLElement | null>(null)
+const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.name, Math.abs(x.count)) }
+
+function onClick (e: MouseEvent) {
+  if (tipEl.value?.contains(e.target as Node)) return
+  const h = hover.value
+  pinned.value = !h || (pinned.value && pinned.value.p.at === h.p.at) ? null : h
+}
+function outside (e: PointerEvent) {
+  if (!box.value?.contains(e.target as Node)) pinned.value = null
+}
+function onKey (e: KeyboardEvent) {
+  if (e.key === 'Escape') pinned.value = null
+}
+watch(pinned, (on, was) => {
+  if (on && !was) {
+    document.addEventListener('pointerdown', outside, true)
+    document.addEventListener('keydown', onKey)
+  } else if (!on && was) {
+    document.removeEventListener('pointerdown', outside, true)
+    document.removeEventListener('keydown', onKey)
+  }
+})
+watch(() => [props.series, props.mode], () => { pinned.value = null })
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', outside, true)
+  document.removeEventListener('keydown', onKey)
+})
 
 const span = computed(() => {
   const s = props.series
@@ -69,7 +112,7 @@ const span = computed(() => {
   return { t0, t1: t1 === t0 ? t0 + 1 : t1, lo, hi }
 })
 
-const place = computed(() => hover.value ? tipPlacement(hover.value.x, hover.value.y) : { below: false, align: 'center' as const })
+const place = computed(() => shown.value ? tipPlacement(shown.value.x, shown.value.y) : { below: false, align: 'center' as const })
 
 const xOf = (at: number) => (at - span.value.t0) / (span.value.t1 - span.value.t0) * W
 const yOf = (v: number) => H - PAD - (v - span.value.lo) / (span.value.hi - span.value.lo) * (H - 2 * PAD)
@@ -132,6 +175,9 @@ function when (at: number) {
   background: var(--w-panel-solid); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
   padding: 4px 7px; font-size: var(--w-fs-xs); color: var(--w-fg); box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
 }
+.pinned { pointer-events: auto; border-color: var(--w-gold); }
+.item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+.chart { cursor: pointer; }
 .above { --ty: calc(-100% - 10px); }
 .below { --ty: 12px; }
 .center { transform: translate(-50%, var(--ty)); }

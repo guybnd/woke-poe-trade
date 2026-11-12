@@ -107,13 +107,26 @@ describe('presets', () => {
     bigger: { on: true, size: 40 },
     colourBlind: { on: true },
     sixSockets: { on: true },
-    dust: { on: true, fromPrices: true, line: 5000 }
+    dust: { on: true, fromPrices: true, line: 5000 },
+    hideGear: { on: true },
+    cheapCards: { on: true, chaos: 2 },
+    lowMaps: { on: true, tier: 14 },
+    hideFlasks: { on: true },
+    cheapUniques: { on: true, chaos: 2 },
+    cheapSplinters: { on: true, chaos: 2 },
+    msBoots: { on: true },
+    hideRgb: { on: true },
+    vendorQuality: { on: true },
+    volume: { on: true, percent: 60 },
+    beams: { on: true, keepTiers: 2 },
+    weapons: { on: true, archetype: 'auto' }
   }
   const lookup = () => ({ chaos: 1, thin: false }) as never
+  const breakdown = () => [{ name: 'x', chaos: 1, thin: false }]
 
   function composed (level: typeof LEVELS[number], p: Presets): FilterDoc {
     const doc = parseFilter(neverSink(level))
-    insertBuildBlocks(doc, presetBlocks(doc, p, lookup, ['Iron Hat', "Assassin's Garb"]))
+    insertBuildBlocks(doc, presetBlocks(doc, p, lookup, ['Iron Hat', "Assassin's Garb"], { breakdown, build: { uniqueBases: [], weaponClasses: ['Wands'] } }))
     applyPresetChanges(doc, p)
     return doc
   }
@@ -125,6 +138,39 @@ describe('presets', () => {
     expect(out.blocks.length).toBe(doc.blocks.length)
     expect(out.blocks.filter(b => b.type === PRESET_TYPE).length).toBeGreaterThan(8)
     expect(parseFilter(serializeFilter(out)).blocks.map(b => b.actions)).toEqual(out.blocks.map(b => b.actions))
+  })
+
+  it.each(LEVELS)('the second batch does what it says at %s', (level) => {
+    const out = composed(level, all)
+    // A tier 5 map in a tier 16 zone hides; in a tier 1 zone it is progress.
+    const map = ring({ itemClass: 'Maps', baseType: 'Strand Map', rarity: 'Normal', mapTier: 5, areaLevel: 83 })
+    expect(matchItem(out, map).visibility).toBe('Hide')
+    // ...as NeverSink itself has them (the strictest levels hide even those).
+    const plain = parseFilter(neverSink(level))
+    for (const keep of [{ ...map, areaLevel: 68 }, { ...map, rarity: 'Unique' as const }]) {
+      expect(matchItem(out, keep).visibility).toBe(matchItem(plain, keep).visibility)
+    }
+    // White gear and R-G-B items in maps.
+    const gloves = ring({ itemClass: 'Gloves', baseType: 'Iron Gauntlets', rarity: 'Normal', itemLevel: 75, areaLevel: 75, socketGroups: ['RGB'], width: 2, height: 2 })
+    expect(matchItem(out, gloves).visibility).toBe('Hide')
+    // 20% quality gem while levelling.
+    const gem = ring({ itemClass: 'Skill Gems', baseType: 'Fireball', rarity: 'Normal', quality: 20, gemLevel: 1, areaLevel: 40, itemLevel: 40 })
+    expect(matchItem(out, gem).final?.block.tier).toBe('vendorgems')
+    // What NeverSink ranks higher keeps its rule.
+    const same = (f: ItemFacts) => expect(matchItem(out, f).visibility).toBe(matchItem(plain, f).visibility)
+    same(ring({ itemClass: 'Rings', baseType: 'Vermillion Ring', rarity: 'Normal', itemLevel: 84, areaLevel: 84 }))
+    same(ring({ itemClass: 'Rings', baseType: 'Amethyst Ring', rarity: 'Normal', itemLevel: 84, areaLevel: 84 }))
+    same({ ...map, influences: ['Shaper'] })
+    same(ring({ itemClass: 'Utility Flasks', baseType: 'Quicksilver Flask', rarity: 'Magic', quality: 20, itemLevel: 84, areaLevel: 75 }))
+    for (const g of [{ gemLevel: 21, quality: 20, corrupted: true }, { gemLevel: 1, quality: 23 }]) {
+      const f = ring({ itemClass: 'Skill Gems', baseType: 'Fireball', rarity: 'Normal', areaLevel: 70, itemLevel: 70, ...g })
+      expect(matchItem(out, f).final?.block.tier).toBe(matchItem(plain, f).final?.block.tier)
+    }
+    // Every sound is at 60% or less.
+    for (const b of out.blocks) {
+      if (b.disabled) continue
+      for (const a of b.actions) if (a.key === 'PlayAlertSound' && a.args[1]) expect(Number(a.args[1])).toBeLessThanOrEqual(180)
+    }
   })
 
   it('chaos recipe shows unidentified rares of the right level, per slot', () => {

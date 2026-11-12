@@ -1,0 +1,437 @@
+# Excerpts of NeverSink's filter (0-SOFT) for the second batch of presets. Long base lists cut to ten.
+
+Show # %H8 $type->maps->influenced $tier->infconquerors
+	HasInfluence Crusader Hunter Redeemer Warlord
+	Rarity Normal Magic Rare
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 100 0 122 255
+	SetBorderColor 100 0 122 255
+	SetBackgroundColor 255 255 255 255
+	PlayAlertSound 1 300
+	PlayEffect Red
+	MinimapIcon 0 Red Square
+
+Show # %D5 $type->socketslinks $tier->rgbsmall2
+	Width 1
+	Height <= 4
+	Rarity Normal Magic Rare
+	SocketGroup "RGB"
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 255 255 255
+	SetBackgroundColor 155 138 138 255
+	PlayAlertSound 2 300
+	PlayEffect Grey
+	MinimapIcon 2 Grey Hexagon
+
+Show # %D4 $type->socketslinks $tier->rgbmedium
+	Width 2
+	Height 3
+	Rarity Normal Magic Rare
+	SocketGroup "RGB"
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 255 255 255
+	SetBackgroundColor 155 138 138 255
+	PlayAlertSound 2 300
+	PlayEffect Grey
+	MinimapIcon 2 Grey Hexagon
+
+Show # %DS3 $type->socketslinks $tier->6sockets
+	Sockets >= 6
+	Height 3
+	Rarity Normal Magic Rare
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 255 255 255
+	SetBackgroundColor 155 138 138 255
+	PlayAlertSound 2 300
+	PlayEffect Grey
+	MinimapIcon 2 Grey Hexagon
+
+Show # %D1 $type->normalcraft->extra $tier->earlyendgame4link
+	Mirrored False
+	Corrupted False
+	LinkedSockets >= 4
+	Rarity Normal Magic Rare
+	Class == "Body Armours" "Boots" "Gloves" "Helmets"
+	AreaLevel <= 75
+	AreaLevel >= 68
+	SetBorderColor 100 100 100 150
+	SetBackgroundColor 20 20 0 180
+
+Show # %D5 $type->crafting->generalgear $tier->t1_86
+	Mirrored False
+	Corrupted False
+	ItemLevel >= 86
+	Rarity Normal Magic Rare
+	BaseType == "Conquest Lamellar" "Crystal Belt" "Leviathan Greaves" "Necrotic Armour" "Paladin Boots" "Phantom Boots" "Royal Plate" "Sacred Chainmail" "Sacrificial Garb" "Syndicate's Garb"
+	SetBorderColor 200 200 0 255
+
+Show # %D2 $type->crafting->generalgear $tier->t3_84
+	Mirrored False
+	Corrupted False
+	ItemLevel >= 84
+	Rarity Normal Magic Rare
+	BaseType == "Convening Wand" "Eclipse Staff" "Karui Sceptre" "Lathi" "Sambar Sceptre"
+	SetBorderColor 200 200 0 185
+
+Show # %D2 $type->endgameflasks $tier->any20qualflask
+	Quality >= 20
+	Rarity Normal
+	Class == "Hybrid Flasks" "Life Flasks" "Mana Flasks" "Utility Flasks"
+	AreaLevel >= 68
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 255 255 255
+	SetBackgroundColor 155 138 138 255
+	PlayEffect Grey Temp
+
+Show # %D3 $type->endgameflasks $tier->anyutility
+	Mirrored False
+	Corrupted False
+	Rarity Normal Magic
+	Class == "Utility Flasks"
+	AreaLevel >= 68
+	SetFontSize 40
+	SetBorderColor 0 0 0 255
+	SetBackgroundColor 25 100 75
+	PlayEffect Grey Temp
+
+#Show # %D4 $type->endgamergb $tier->rgbmedium
+#	Width 2
+#	Height 3
+#	Rarity Normal Magic Rare
+#	SocketGroup "RGB"
+#	AreaLevel >= 68
+#	AreaLevel <= 83
+#	SetFontSize 45
+#	SetTextColor 255 255 255 255
+#	SetBorderColor 255 255 255 255
+#	SetBackgroundColor 155 138 138 255
+#	PlayAlertSound 2 300
+#	PlayEffect Grey
+#	MinimapIcon 2 Grey Hexagon
+
+Hide # $type->hidelayer $tier->normalmagicendgame
+	Rarity Normal Magic
+	Class == "Amulets" "Belts" "Body Armours" "Boots" "Bows" "Claws" "Daggers" "Gloves" "Helmets" "One Hand Axes"
+	AreaLevel >= 68
+	SetFontSize 18
+	SetBorderColor 0 0 0 0
+	SetBackgroundColor 20 20 0 0
+	DisableDropSound True
+
+Show # $type->gems->exceptional $tier->t1
+	Class == "Skill Gems" "Support Gems"
+	BaseType == "Awakened Empower Support" "Awakened Enhance Support" "Awakened Enlighten Support" "Congregation Support" "Cooldown Recovery Support" "Eclipse Support" "Enlighten Support" "Greater Ancestral Call Support" "Greater Multistrike Support" "Greater Spell Echo Support"
+	SetFontSize 45
+	SetTextColor 0 0 125 255
+	SetBorderColor 0 0 125 255
+	SetBackgroundColor 255 255 255 255
+	PlayAlertSound 6 300
+	PlayEffect Red
+	MinimapIcon 0 Red Star
+
+Show # %D7 $type->gems->generic $tier->qt1
+	Quality >= 23
+	Class == "Skill Gems" "Support Gems"
+	SetFontSize 45
+	SetTextColor 20 240 240 255
+	SetBorderColor 20 240 240 255
+	SetBackgroundColor 6 0 60 255
+	PlayAlertSound 2 300
+	PlayEffect White
+	MinimapIcon 1 Yellow Triangle
+
+Show # $type->gems->generic $tier->decogemsvaalbgdrop
+	Class == "Skill Gems" "Support Gems"
+	BaseType "Vaal"
+	SetFontSize 35
+	SetBorderColor 0 0 0
+	SetBackgroundColor 55 0 0 255
+	Continue
+
+Show # %D5 $type->gems->generic $tier->qt2
+	Quality >= 20
+	Class == "Skill Gems" "Support Gems"
+	SetFontSize 45
+	SetTextColor 20 240 240 255
+	SetBorderColor 20 240 240 255
+	SetBackgroundColor 6 0 60 255
+	PlayAlertSound 2 300
+	PlayEffect White
+	MinimapIcon 1 Yellow Triangle
+
+Show # %D4 $type->gems->generic $tier->qt3
+	Quality >= 13
+	Class == "Skill Gems" "Support Gems"
+	SetFontSize 45
+	SetTextColor 30 190 190 255
+	SetBorderColor 30 190 190 255
+	PlayAlertSound 2 300
+	PlayEffect Grey
+	MinimapIcon 1 White Triangle
+
+Show # %H0 $type->gems->generic $tier->any
+	Class == "Skill Gems" "Support Gems"
+	SetFontSize 30
+	SetTextColor 40 130 130 255
+	SetBorderColor 0 0 0
+
+Show # $type->uniques->maps $tier->restex
+	Rarity Unique
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 255 0 255 255
+	SetBorderColor 255 0 255 255
+	SetBackgroundColor 100 0 100 255
+	PlayAlertSound 3 300
+	PlayEffect Pink
+	MinimapIcon 0 Pink Circle
+
+Show # %H5 $type->maps->blighted $tier->any
+	BlightedMap True
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 145 30 220 255
+	SetBorderColor 145 30 220 255
+	SetBackgroundColor 200 200 200 255
+	PlayAlertSound 5 300
+	PlayEffect Purple
+	MinimapIcon 1 Purple Square
+
+Show # $type->maps $tier->deco_zone4general
+	MapTier >= 1
+	MapTier <= 5
+	Class == "Maps"
+	SetBorderColor 200 200 200 255
+	Continue
+
+Show # %D3 $type->maps $tier->deco_mapup_t3
+	MapTier >= 3
+	Class == "Maps"
+	AreaLevel < 70
+	SetBorderColor 220 50 0 255
+	Continue
+
+Show # $type->maps $tier->maps_a_t16
+	MapTier >= 16
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 0 0 0 255
+	SetBackgroundColor 235 235 235 255
+	PlayAlertSound 5 300
+	PlayEffect Yellow
+	MinimapIcon 1 Red Square
+
+Show # %H5 $type->maps $tier->maps_a_t14
+	MapTier 14
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 0 0 0 255
+	SetBackgroundColor 235 235 235 255
+	PlayAlertSound 5 300
+	PlayEffect Yellow
+	MinimapIcon 1 Red Square
+
+Show # %H4 $type->maps $tier->maps_b_t13
+	MapTier 13
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 0 0 0 255
+	SetBackgroundColor 200 200 200 255
+	PlayAlertSound 5 300
+	PlayEffect Yellow
+	MinimapIcon 1 Red Square
+
+Show # %H4 $type->maps $tier->maps_d_t3
+	MapTier 3
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBackgroundColor 20 20 0 255
+	PlayAlertSound 4 300
+	PlayEffect White
+	MinimapIcon 2 White Square
+
+Show # $type->maps $tier->restex
+	Class == "Maps"
+	SetFontSize 45
+	SetTextColor 255 0 255 255
+	SetBorderColor 255 0 255 255
+	SetBackgroundColor 100 0 100 255
+	PlayAlertSound 3 300
+	PlayEffect Pink
+	MinimapIcon 0 Pink Circle
+
+Show # %D5 $type->currency->stackedsplinterslow $tier->t3
+	StackSize >= 10
+	Class == "Stackable Currency"
+	BaseType == "Timeless Eternal Empire Splinter" "Timeless Karui Splinter" "Timeless Templar Splinter" "Timeless Vaal Splinter"
+	SetFontSize 45
+	SetTextColor 0 0 0 255
+	SetBorderColor 0 0 0 255
+	SetBackgroundColor 249 150 25 255
+	PlayAlertSound 2 300
+	PlayEffect White
+	MinimapIcon 2 White Circle
+
+Show # %HS3 $type->currency->splinter $tier->t3
+	Class == "Stackable Currency"
+	BaseType == "Timeless Eternal Empire Splinter" "Timeless Karui Splinter" "Timeless Templar Splinter" "Timeless Vaal Splinter"
+	SetFontSize 40
+	SetTextColor 255 255 255 255
+	SetBorderColor 115 115 115 255
+	SetBackgroundColor 65 20 80
+	PlayEffect Purple Temp
+	MinimapIcon 2 Grey Kite
+
+Show # %H4 $type->currency->splinter->simulacrum $tier->t5
+	Class == "Stackable Currency"
+	BaseType == "Simulacrum Splinter"
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 130 15 255 255
+	SetBackgroundColor 65 20 80
+	PlayAlertSound 2 300
+	PlayEffect Purple Temp
+	MinimapIcon 2 Grey Kite
+
+Show # $type->divination $tier->t1
+	Class == "Divination Cards"
+	BaseType == "Apocalypse" "Brother's Gift" "Choking Guilt" "Damnation" "Darker Half" "Desecrated Virtue" "Divine Beauty" "Divine Justice" "Father's Love" "Fire Of Unknown Origin"
+	SetFontSize 45
+	SetTextColor 0 0 255 255
+	SetBorderColor 0 0 255 255
+	SetBackgroundColor 255 255 255 255
+	PlayAlertSound 6 300
+	PlayEffect Red
+	MinimapIcon 0 Red Star
+
+Show # %D4 $type->divination $tier->exstack
+	StackSize >= 3
+	Class == "Divination Cards"
+	SetFontSize 45
+	SetTextColor 0 0 0 255
+	SetBorderColor 0 0 0 255
+	SetBackgroundColor 39 141 192 255
+	PlayAlertSound 2 300
+	PlayEffect White
+	MinimapIcon 2 White Triangle
+
+Show # %H0 $type->divination $tier->t5
+	Class == "Divination Cards"
+	BaseType == "A Mother's Parting Gift" "A Note in the Wind" "Alivia's Grace" "Alone in the Darkness" "Audacity" "Azure Rage" "Bound by Flame" "Boundless Realms" "Call to the First Ones" "Cartographer's Delight"
+	SetFontSize 35
+	SetTextColor 39 141 192 255
+	SetBorderColor 39 141 192 255
+	SetBackgroundColor 20 20 0 255
+
+Show # $type->divination $tier->restex
+	Class == "Divination Cards"
+	SetFontSize 45
+	SetTextColor 255 0 255 255
+	SetBorderColor 255 0 255 255
+	SetBackgroundColor 100 0 100 255
+	PlayAlertSound 3 300
+	PlayEffect Pink
+	MinimapIcon 0 Pink Circle
+
+Show # $type->uniques $tier->ex6link
+	LinkedSockets 6
+	Rarity Unique
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 255 255 255
+	SetBackgroundColor 175 96 37 255
+	PlayAlertSound 1 300
+	PlayEffect Red
+	MinimapIcon 0 Yellow Star
+
+Show # $type->uniques $tier->t1
+	Rarity Unique
+	BaseType == "Assembled Eye Jewel" "Candlestick Relic" "Crusader Boots" "Dusk Blade" "Engraved Greatsword" "Fishing Rod" "Fluted Bascinet" "Formless Ring" "Foul Staff" "Fugitive Ring"
+	SetFontSize 45
+	SetTextColor 175 96 37 255
+	SetBorderColor 175 96 37 255
+	SetBackgroundColor 255 255 255 255
+	PlayAlertSound 6 300
+	PlayEffect Red
+	MinimapIcon 0 Red Star
+
+#Show # $type->uniques $tier->exdust1
+#	Rarity Unique
+#	BaseType == "Arcanist Gloves" "Arcanist Slippers" "Crystal Belt" "Deerskin Gloves" "Deicide Mask" "Demon Dagger" "Diamond Ring" "Eternal Sword" "Ezomyte Dagger" "Fiend Dagger"
+#	SetFontSize 45
+#	SetTextColor 175 96 37 255
+#	SetBorderColor 175 96 37 255
+#	SetBackgroundColor 10 30 45 255
+#	PlayAlertSound 3 300
+#	PlayEffect Purple
+#	MinimapIcon 1 Purple Star
+
+Show # %D4 $type->uniques $tier->5link
+	LinkedSockets 5
+	Rarity Unique
+	SetFontSize 45
+	SetTextColor 0 0 0 255
+	SetBorderColor 0 0 0 255
+	SetBackgroundColor 175 96 37 255
+	PlayAlertSound 2 300
+	PlayEffect Blue
+	MinimapIcon 1 Blue Star
+
+Show # %H3 $type->uniques $tier->hideable
+	Rarity Unique
+	BaseType == "Ambusher" "Ancient Greaves" "Antique Greaves" "Antique Rapier" "Arcanist Gloves" "Arcanist Slippers" "Ashbark Tincture" "Assassin Bow" "Assassin's Garb" "Auric Mace"
+	SetFontSize 40
+	SetTextColor 175 96 37 255
+	SetBorderColor 175 96 37 255
+	SetBackgroundColor 20 20 0 255
+	PlayAlertSound 3 300
+	PlayEffect Brown
+	MinimapIcon 2 Brown Star
+
+Show # $type->uniques $tier->restex
+	Rarity Unique
+	SetFontSize 45
+	SetTextColor 255 0 255 255
+	SetBorderColor 255 0 255 255
+	SetBackgroundColor 100 0 100 255
+	PlayAlertSound 3 300
+	PlayEffect Pink
+	MinimapIcon 0 Pink Circle
+
+Show # %D3 $type->leveling->flasks->quality $tier->max
+	Quality >= 20
+	Rarity Normal
+	Class == "Hybrid Flasks" "Life Flasks" "Mana Flasks" "Tinctures" "Utility Flasks"
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 255 255 255
+	SetBackgroundColor 155 138 138 255
+	PlayEffect Grey Temp
+
+Show # %D5 $type->leveling->rare->exotics $tier->movementbootshigh
+	ItemLevel <= 67
+	Rarity Normal Magic Rare
+	Class == "Boots"
+	HasExplicitMod "Cheetah's" "Gazelle's" "Stallion's"
+	SetFontSize 45
+	SetTextColor 0 240 190 255
+	SetBorderColor 0 240 190 255
+	SetBackgroundColor 20 20 0 255
+	PlayAlertSound 3 300
+	PlayEffect Blue
+	MinimapIcon 1 Blue Diamond
+
+Show # $type->anyremaining $tier->restex
+	SetFontSize 45
+	SetTextColor 255 0 255 255
+	SetBorderColor 255 0 255 255
+	SetBackgroundColor 100 0 100 255
+	PlayAlertSound 3 300
+	PlayEffect Pink
+	MinimapIcon 0 Pink Circle

@@ -65,7 +65,7 @@
             </div>
           </template>
           <div v-if="!groups.length" class="w-dim pt-2">Nothing in this tree says that.</div>
-          <div class="w-faint text-xs pt-2">From this tree, its masteries and the jewels in its sockets: no gear or ascendancy. Timeless and cluster jewels, and jewels inside cluster sockets, aren't counted yet.</div>
+          <div class="w-faint text-xs pt-2">From this tree, its masteries, its jewels and their cluster passives: no gear or ascendancy. Timeless jewels' changes aren't counted yet.</div>
         </div>
       </div>
     </div>
@@ -83,7 +83,8 @@ import { treeHotkeyOf } from './widget'
 import { useActiveBuild } from './active'
 import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { realSets } from './build-model'
-import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, treeDiff, withMasteries } from './passive-tree'
+import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, passiveTreeClusters, treeDiff, withMasteries } from './passive-tree'
+import { buildClusters } from './cluster-graph'
 import type { TreeNode, View } from './passive-tree'
 import { filterTotals, groupTotals, matchingNodes, treeTotals } from './tree-totals'
 import { drawTree, loadSheets } from './tree-draw'
@@ -142,12 +143,42 @@ watch(() => props.start, ({ title }) => {
   fromAt.value = changes.value ? from : null
 }, { immediate: true })
 
-const tree = shallowRef<Map<number, TreeNode> | null>(null)
+const baseTree = shallowRef<Map<number, TreeNode> | null>(null)
+// The shown tree's cluster jewels grow their own small trees off the outer
+// sockets (cluster-graph.ts); they join the tree's nodes for everything else.
+const clusterBuild = computed(() => {
+  const t = baseTree.value
+  const data = passiveTreeClusters()
+  const art = passiveTreeArt()
+  if (!t || !data || !art) return null
+  const at = new Map((shown.value?.sockets ?? []).map(s => [s.node, s.item]))
+  const built = buildClusters(data, t, node => at.get(node), art.groups.length)
+  // Comparing: the other tree's clusters too, so points it has that this one
+  // doesn't are drawn. Where both have a cluster in one socket, the shown
+  // tree's jewel names the nodes (ids follow the socket, not the jewel).
+  const other = previous.value
+  if (other) {
+    const was = new Map((other.sockets ?? []).map(s => [s.node, s.item]))
+    const have = new Set(built.nodes.map(n => n.id))
+    const more = buildClusters(data, t, node => was.get(node), art.groups.length + built.groups.length)
+    built.nodes.push(...more.nodes.filter(n => !have.has(n.id)))
+    built.groups.push(...more.groups)
+  }
+  return built
+})
+const tree = computed(() => {
+  const t = baseTree.value
+  const added = clusterBuild.value?.nodes
+  if (!t || !added?.length) return t
+  const all = new Map(t)
+  for (const n of added) all.set(n.id, n)
+  return all
+})
 const sheets = shallowRef<Sheets>(new Map())
 const error = shallowRef('')
 onMounted(() => {
   loadPassiveTree().then(t => {
-    tree.value = t
+    baseTree.value = t
     const art = passiveTreeArt()
     if (art) loadSheets(art).then(loaded => { sheets.value = loaded }, () => {})
   }, (err: Error) => { error.value = err.message })
@@ -223,7 +254,9 @@ function schedule () {
 function draw () {
   const canvas = base.value
   const t = tree.value
-  const art = passiveTreeArt()
+  const baseArt = passiveTreeArt()
+  // The cluster rings' centres join the art's groups, for their orbit arcs.
+  const art = baseArt && { ...baseArt, groups: [...baseArt.groups, ...(clusterBuild.value?.groups ?? [])] }
   const ctx = canvas?.getContext('2d')
   if (!canvas || !ctx || !t || !art) return
   const css = getComputedStyle(canvas)
@@ -356,7 +389,8 @@ watch(box, (el) => {
 })
 
 // Not when the switch flips: you may be looking at a part of the tree.
-watch([() => shown.value?.title, tree], () => { nextTick(fit) })
+// The base tree only: a build's clusters rebuilding (PoB saved it) keeps the view.
+watch([() => shown.value?.title, baseTree], () => { nextTick(fit) })
 watch([fromSet, toSet, sheets, jewels], schedule)
 watch(lit, drawRing)
 

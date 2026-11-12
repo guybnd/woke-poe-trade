@@ -71,6 +71,9 @@ export interface PobItem {
   sockets: string
   // A jewel's radius as PoB writes it ("Large", "Variable"), if it has one.
   radius?: string
+  // A cluster jewel's small-passive skill id and node count, as PoB writes them.
+  clusterSkill?: string
+  clusterNodeCount?: number
   implicits: string[]
   mods: string[]
   // Same length as mods when any mod is crafted or fractured.
@@ -295,6 +298,10 @@ export function parseItemText (text: string, ranges?: Map<number, number>): PobI
     const line = lines[i]
     const sel = /^Selected (?:Alt )?Variant(?: \w+)?:\s*(\d+)/.exec(line)
     if (sel) { variants.push(Number(sel[1])); continue }
+    const cskill = /^Cluster Jewel Skill:\s*(\S+)/.exec(line)
+    if (cskill) { item.clusterSkill = cskill[1]; continue }
+    const ccount = /^Cluster Jewel Node Count:\s*(\d+)/.exec(line)
+    if (ccount) { item.clusterNodeCount = Number(ccount[1]); continue }
     const rad = /^Radius:\s*(.+)$/.exec(line)
     if (rad) { item.radius = rad[1].trim(); continue }
     const sock = /^Sockets:\s*(.*)$/.exec(line)
