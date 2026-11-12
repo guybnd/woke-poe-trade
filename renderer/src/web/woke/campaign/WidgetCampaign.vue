@@ -121,12 +121,15 @@ watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${p
   // Saved characters' step times are numbered for the old route too. Their
   // step stays: their own area isn't known (the log names no character).
   for (const c of Object.values(props.config.chars ?? {})) c.state.stepStarts = {}
+  // The last-level-up snapshot is in old step numbers: no rollback from it.
+  lastOwn.charName = ''
   // Asleep, or somewhere the route never goes (a map, a hideout): keep the place.
   if (props.config.state.asleep || !props.config.state.areaId) return
   // Step numbers mean other steps now, so their times are gone.
   props.config.state.stepStarts = {}
   const step = resyncTo(route.value, props.config.state.areaId)
   if (step > 0) props.config.step = step
+  remember()
 })
 
 const current = computed<RouteStep | undefined>(() => route.value.steps[props.config.step])
@@ -350,7 +353,6 @@ function apply (ev: LogEvent, at: number): boolean {
     }
     streak = 0
     followedLevelAt = at
-    remember()
     // The followed name changed (a pin moved in Settings, or the first level-up
     // after a new character's Strand): take that character's own route out.
     if (ev.charName !== state.charName && (state.charName || props.config.chars?.[ev.charName])) {
@@ -361,6 +363,7 @@ function apply (ev: LogEvent, at: number): boolean {
     state.charName = ev.charName
     state.className = ev.className
     state.level = ev.level
+    remember()
   }
   return true
 }
