@@ -6,6 +6,9 @@ import { matchRank } from '../search'
 import type { PriceItem } from '../../market/types'
 import type { Lookup, LookupCard, LookupContext, LookupRow } from './types'
 
+// Words in many members' rewards: searching them would list everyone.
+const STOP = /^(scarabs?|crafting|bench|trapped|chest|uniques?|items?)\b/i
+
 export function memberCard (member: string, ctx: LookupContext, overrides: Record<string, string> = {}): LookupCard {
   const rows: LookupRow[] = DIVISIONS.map((division, di) => {
     const reward = overrides[`${member}|${di}`]?.trim() || REWARDS[member][di]
@@ -32,11 +35,12 @@ export function betrayalLookup (overrides: () => Record<string, string> = () => 
     if (q.length < 3) return []
     const over = overrides()
     const byName = MEMBERS.filter(m => { const r = matchRank(m, q); return r >= 0 && r < 2 })
-    // A reward: "veiled", "tainted", "fracture". Four letters, a word start.
-    const byReward = q.length >= 4
+    // A reward: "veiled", "tainted", "fracture". The start of what it gives,
+    // from 4 letters, and not words every member has ("scarab", "bench").
+    const byReward = q.length >= 4 && !STOP.test(q)
       ? MEMBERS.filter(m => !byName.includes(m) && REWARDS[m].some((r, di) => {
-          const k = matchRank(over[`${m}|${di}`]?.trim() || r, q)
-          return k >= 0 && k < 2
+          const what = (over[`${m}|${di}`]?.trim() || r).replace(/^(Crafting bench|Trapped chest): /, '')
+          return matchRank(what, q) === 0
         }))
       : []
     return [...byName, ...byReward].slice(0, 4).map(m => memberCard(m, ctx, over))

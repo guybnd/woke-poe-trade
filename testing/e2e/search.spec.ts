@@ -276,3 +276,20 @@ test('a keystone says what it does, and a Betrayal member lists their rewards', 
   await expect(panel.getByText('Research: Crafting bench: veiled chaos', { exact: true })).toBeVisible()
   await overlay.snap('search-betrayal')
 })
+
+test('the ? button lists things to try, and picking one searches it', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('')
+  await panel.getByRole('button', { name: 'What can I search for?' }).click()
+  await expect(box).toHaveValue('?')
+  await expect(panel.getByText('Vendor recipes', { exact: true })).toBeVisible()
+  await overlay.snap('search-help')
+  await panel.getByText('chaos recipe', { exact: true }).dblclick()
+  await expect(box).toHaveValue('chaos recipe')
+  await expect(panel.locator('[data-selected]')).toContainText('Chaos Orb')
+})

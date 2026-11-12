@@ -20,15 +20,18 @@ export function passiveList (
   clusterNamed: Record<string, { stats: string[], key: number }> | null
 ): Passive[] {
   const out = new Map<string, Passive>()
+  // By name and kind: "Sanctuary" is both a notable and a Guardian node.
   for (const n of nodes) {
     const kind = KINDS[n.kind]
-    if (!kind || !n.name || out.has(n.name)) continue
-    // Small ascendancy nodes ("+20 to Strength") aren't worth a card.
-    if (kind === 'Ascendancy notable' && !n.stats.length) continue
-    out.set(n.name, { name: n.name, kind, stats: n.stats.flatMap(s => s.split('\n')) })
+    const name = n.name?.trim()
+    if (!kind || !name || out.has(`${kind}|${name}`)) continue
+    // Class markers on the ascendancy trees, not passives.
+    if (kind === 'Ascendancy notable' && /(Ascendancy|Display)$/.test(name)) continue
+    out.set(`${kind}|${name}`, { name, kind, stats: n.stats.flatMap(s => s.split('\n')) })
   }
   for (const [name, c] of Object.entries(clusterNamed ?? {})) {
-    if (!out.has(name)) out.set(name, { name, kind: c.key ? 'Cluster jewel keystone' : 'Cluster jewel notable', stats: c.stats.flatMap(s => s.split('\n')) })
+    const kind: PassiveKind = c.key ? 'Cluster jewel keystone' : 'Cluster jewel notable'
+    if (!out.has(`${kind}|${name}`)) out.set(`${kind}|${name}`, { name, kind, stats: c.stats.flatMap(s => s.split('\n')) })
   }
   return [...out.values()]
 }
@@ -36,7 +39,7 @@ export function passiveList (
 export function passiveCard (p: Passive): LookupCard {
   const slug = encodeURIComponent(p.name.replaceAll("'", '').replaceAll(' ', '_'))
   return {
-    id: `passive:${p.name}`,
+    id: `passive:${p.kind}:${p.name}`,
     group: 'Passive tree',
     name: p.name,
     sub: p.kind,
