@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- While you play: an icon for the build in use; resting on it shows the card. -->
-    <DockItem id="pob-builds" :title="activeName" :show="Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId" :wm-id="config.wmId" card-width="24rem">
+    <DockItem id="pob-builds" :menu="pinMenu" :title="activeName" :show="Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId" :wm-id="config.wmId" card-width="24rem">
       <template #card><BuildHoverCard /></template>
     </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
@@ -109,7 +109,9 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
-import { treePin } from './build-pins'
+import { buildPinChoices, treePin } from './build-pins'
+import { isPinned, togglePin as togglePinned } from '../pins/pins'
+import type { DockMenuAction } from '../dock/dock'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
 import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi } from './widget'
@@ -166,6 +168,14 @@ const importMsg = shallowRef('')
 const importOk = shallowRef(false)
 
 const active = useActiveBuild()
+// Right-click the icon to pin any piece of the build in use.
+const pinMenu = computed<DockMenuAction[]>(() => {
+  const d = active.details.value
+  const rel = active.relPath.value
+  if (!d || !rel) return []
+  return buildPinChoices(rel, activeName.value, d, active.level.value, active.act.value, active.loadout.value)
+    .map(c => ({ label: c.label, icon: c.pin.icon, checked: isPinned(c.pin.id), action: () => togglePinned(c.pin) }))
+})
 const activeName = computed(() => (active.relPath.value ?? '').split('/').pop()?.replace(/\.xml$/i, '') || 'PoB builds')
 
 // Follow the character Client.txt shows levelling: a build linked to that

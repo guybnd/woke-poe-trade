@@ -5,11 +5,16 @@
       <span class="w-trunc" :class="$style.label">{{ a.label }}</span>
       <i v-if="a.checked" class="fas fa-check w-accent" :class="$style.tick" />
     </button>
+    <button type="button" role="menuitem" :class="$style.item" data-menu-pin-card @click="run(pinCard)">
+      <i class="fas fa-thumbtack" :class="$style.ic" />
+      <span class="w-trunc" :class="$style.label">{{ cardPinned ? 'Unpin card' : 'Pin card on screen' }}</span>
+      <i v-if="cardPinned" class="fas fa-check w-accent" :class="$style.tick" />
+    </button>
     <button v-if="host.props.wmId != null" type="button" role="menuitem" :class="$style.item" @click="run(openFull)">
       <i class="fas fa-expand-alt" :class="$style.ic" />
       <span class="w-trunc" :class="$style.label">Open {{ name }}</span>
     </button>
-    <div v-if="hasRows" :class="$style.sep" />
+    <div :class="$style.sep" />
     <div :class="$style.head">Dismiss this icon</div>
     <div :class="$style.chips">
       <button v-for="c in chips" :key="c.what" type="button" role="menuitem" :class="$style.chip" @click="dismiss(c.what)">{{ c.label }}</button>
@@ -36,7 +41,8 @@ import { AppConfig, pushHostConfig, saveConfig } from '@/web/Config'
 import { useZone } from '../shared/zone'
 import { MODULES, ensureWokeConfig, setModuleOn } from '../modules'
 import { toast } from '../ui'
-import { DOCK_NAMES, DOCK_PEEKS, dismissIcons, dockConfig, dockIconEl, ensureDockConfig, openOverlay, saveDock } from './dock'
+import { DOCK_NAMES, DOCK_PEEKS, dismissIcons, dockConfig, dockIcon, dockIconEl, dockPinId, ensureDockConfig, openOverlay, saveDock } from './dock'
+import { addPin, isPinned, removePin } from '../pins/pins'
 import type { DismissFor, DockEntry } from './dock'
 import { hereScope } from './dismiss-rules'
 
@@ -49,7 +55,17 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const zone = useZone()
 const id = computed(() => props.host.props.id)
 const name = computed(() => DOCK_NAMES[id.value] ?? props.host.props.title)
-const hasRows = computed(() => (props.host.props.menu?.length ?? 0) > 0 || props.host.props.wmId != null)
+
+// The icon's card as a pin, set beside the icon.
+const cardPinned = computed(() => isPinned(dockPinId(id.value)))
+function pinCard () {
+  const pid = dockPinId(id.value)
+  if (cardPinned.value) { removePin(pid); return }
+  const r = dockIconEl(id.value)?.getBoundingClientRect()
+  const at = r ? { x: r.left / window.innerWidth * 100, y: (r.bottom + 6) / window.innerHeight * 100 } : undefined
+  props.host.pinned = null
+  addPin({ id: pid, kind: 'dock', title: props.host.props.title, icon: dockIcon(props.host.props), data: { id: id.value }, at })
+}
 
 // Toolkit health only speaks up when something is wrong: never for good.
 const chips = computed(() => {

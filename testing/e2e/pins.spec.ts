@@ -152,3 +152,49 @@ test('PoB pieces pin: a gear slot and the tree stay with the overlay closed', as
   await page.waitForTimeout(800)
   await overlay.snap('pinned build pieces')
 })
+
+test('the PoB icon menu pins the tree and gear of the build in use; any icon menu pins its card', async ({ overlay, fakeApp }) => {
+  const { page } = overlay
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await overlay.boot({
+    widgets: [{
+      wmType: 'woke-pob-builds',
+      wmFlags: ['invisible-on-blur'],
+      anchor: { pos: 'tl', x: 5, y: 12 },
+      buildsDir: path.join(FIXTURES, 'pob'),
+      pobExe: '',
+      pinned: [],
+      activeBuild: 'Showcase.xml',
+      followChars: {},
+      loadouts: {}
+    }, counter]
+  })
+  await overlay.log([HIDEOUT])
+  const rightClick = async (id: string) => {
+    await overlay.hoverDockIcon(id)
+    const box = (await overlay.dockIcon(id).boundingBox())!
+    await page.waitForTimeout(50)
+    fakeApp.pressMouse(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2), 2)
+    fakeApp.releaseMouse(2)
+  }
+  await rightClick('pob-builds')
+  const menu = overlay.dockIcon('pob-builds').locator('[data-dock-menu]')
+  await menu.getByRole('menuitem', { name: 'Passive tree' }).click()
+  await expect(page.locator('[data-pin^="pob-tree:"]').locator('canvas').first()).toBeVisible()
+  await overlay.moveMouse(1000, 900)
+  await page.waitForTimeout(400)
+
+  await rightClick('pob-builds')
+  await expect(menu.getByRole('menuitem', { name: /Body · Dread Shell/ })).toBeVisible()
+  await menu.getByRole('menuitem', { name: /Body · Dread Shell/ }).click()
+  await expect(page.locator('[data-pin^="pob-slot:"]')).toContainText('Dread Shell')
+  await overlay.moveMouse(1000, 900)
+  await page.waitForTimeout(400)
+
+  await rightClick('drop-counter')
+  await overlay.dockIcon('drop-counter').locator('[data-menu-pin-card]').click()
+  await expect(page.locator('[data-pin="dock:drop-counter"]')).toContainText('Divine Orb')
+  await overlay.moveMouse(1000, 900)
+  await page.waitForTimeout(600)
+  await overlay.snap('pinned from menus')
+})

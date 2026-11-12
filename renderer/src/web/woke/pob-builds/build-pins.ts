@@ -1,8 +1,8 @@
 // The pieces of a PoB build you can pin while you play (pick C, plus the
 // short next-step card, pick B): the tree, one gear slot, one gem chain.
 import type { Pin } from '../pins/pins'
-import { slotLabel } from './build-model'
-import type { PobSkillGroup } from './widget'
+import { gearLayout, loadoutOf, mainGroupOf, slotLabel } from './build-model'
+import type { LoadoutPick, PobDetails, PobSkillGroup } from './widget'
 
 export type BuildPiece = 'tree' | 'slot' | 'gems' | 'next'
 
@@ -38,4 +38,25 @@ export function slotPin (relPath: string, slot: string): NewPin {
 export function gemsPin (relPath: string, groups: PobSkillGroup[], g: PobSkillGroup): NewPin {
   const key = groupKey(groups, g)
   return { id: `pob-gems:${relPath}:${key}`, kind: 'pob-gems', title: groupTitle(g), icon: 'fas fa-gem', data: { relPath, group: key } }
+}
+
+// Everything of a build you can pin, for the icon's right-click menu: the
+// tree, the next step, the main skill, then each item in the gear set in use.
+export function buildPinChoices (relPath: string, build: string, d: PobDetails, level: number | null, act: number | null, pick?: LoadoutPick): Array<{ label: string, pin: NewPin }> {
+  const out: Array<{ label: string, pin: NewPin }> = []
+  if (d.trees.length) out.push({ label: 'Passive tree', pin: treePin(relPath, build) })
+  out.push({ label: 'Next step', pin: nextPin(relPath, build) })
+  const loadout = loadoutOf(d, level, act, pick)
+  const groups = loadout.skillSet?.item.groups ?? []
+  const main = mainGroupOf(groups)
+  if (main) {
+    const pin = gemsPin(relPath, groups, main)
+    out.push({ label: `Main skill · ${pin.title}`, pin })
+  }
+  const layout = gearLayout(loadout.itemSet?.item.slots ?? [], groups)
+  for (const r of [layout.main, ...layout.linked, ...layout.plain]) {
+    if (!r?.item) continue
+    out.push({ label: `${slotLabel(r.slot)} · ${r.item.name}`, pin: slotPin(relPath, r.slot) })
+  }
+  return out
 }
