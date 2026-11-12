@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
-import { allFolders, claimRegexFolders, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
+import { allFolders, claimRegexFolders, dropDraft, isDirty, saveDraft, setDraft, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
 import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
 import type { AtlasStrategy } from '@/web/woke/atlas/strategies'
 import { parseGuideText } from '@/web/woke/atlas/guide'
@@ -207,5 +207,25 @@ describe('mechanics on the atlas tree', () => {
   it('colours mechanics by the order they were picked', () => {
     expect(litColour(['Breach', 'Ritual'], 'Ritual')).toBe(LIT_COLOURS[1])
     expect(litColour(['Breach'], 'Breach')).toBe(LIT_COLOURS[0])
+  })
+})
+
+describe('unsaved tree edits', () => {
+  it('keeps an edit as a draft until saved, and drops one back at the saved tree', () => {
+    const s = { ...emptyStrategy([]), id: 4, treeUrl: 'saved' }
+    const w = { drafts: {} } as unknown as Parameters<typeof setDraft>[0]
+    setDraft(w, s, 'edited')
+    expect(isDirty(w, s)).toBe(true)
+    expect(workingTree(w, s)).toBe('edited')
+    setDraft(w, s, 'saved')
+    expect(isDirty(w, s)).toBe(false)
+    expect(w.drafts).toEqual({})
+    setDraft(w, s, 'edited')
+    saveDraft(w, s)
+    expect(s.treeUrl).toBe('edited')
+    expect(w.drafts).toEqual({})
+    setDraft(w, s, 'again')
+    dropDraft(w, s)
+    expect(workingTree(w, s)).toBe('edited')
   })
 })

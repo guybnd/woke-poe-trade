@@ -20,6 +20,24 @@
         <template #actions><WButton size="sm" @click="startOver">Start over</WButton></template>
       </WBanner>
     </template>
+    <template #meta>
+      <span v-if="!dirty && !savingAs" class="w-faint">Click a passive to take the path to it, click a taken one to refund it. Right-click a taken one that needs a type to pick it.</span>
+      <div v-else :class="$style.unsaved">
+        <template v-if="savingAs">
+          <span class="w-dim whitespace-nowrap">Save as</span>
+          <input ref="nameField" v-model="newName" class="w-field" :class="$style.name" spellcheck="false" placeholder="New strategy name"
+            @keydown.enter.prevent="saveAs" @keydown.esc.prevent="savingAs = false">
+          <WButton size="sm" variant="primary" :disabled="!newName.trim()" @click="saveAs">Save</WButton>
+          <WButton size="sm" variant="ghost" @click="savingAs = false">Cancel</WButton>
+        </template>
+        <template v-else>
+          <span class="w-accent whitespace-nowrap" title="The tree has changes you haven't saved"><span :class="$style.dot" /> Unsaved changes</span>
+          <WButton size="sm" variant="primary" icon="fas fa-save" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')">Save</WButton>
+          <WButton size="sm" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs">Save as…</WButton>
+          <WButton size="sm" variant="ghost" title="Go back to the saved tree" @click="emit('discard')">Discard</WButton>
+        </template>
+      </div>
+    </template>
     <template #toolbar>
       <span class="w-num text-xs whitespace-nowrap" :class="over ? 'w-down' : 'w-dim'" :title="over ? 'More points than the atlas has' : undefined">
         {{ used }} / {{ model.points }} points
@@ -53,9 +71,6 @@
         </div>
       </div>
     </div>
-    <template #meta>
-      <span class="w-faint">Click a passive to take the path to it, click a taken one to refund it. Right-click a taken one that needs a type to pick it.</span>
-    </template>
   </WPanel>
 </template>
 
@@ -89,13 +104,34 @@ const props = defineProps<{
   listOpen?: boolean
   bare?: boolean
   pin?: () => Omit<Pin, 'opacity' | 'spots'>
+  // The tree differs from what's saved.
+  dirty?: boolean
+  // The name Save as suggests.
+  name?: string
 }>()
 const emit = defineEmits<{
-  (e: 'update:treeUrl', url: string): void
+  (e: 'update:treeUrl' | 'save-as', text: string): void
   (e: 'update:lit', lit: string[]): void
   (e: 'update:listOpen', open: boolean): void
-  (e: 'close'): void
+  (e: 'close' | 'save' | 'discard'): void
 }>()
+
+// ---- save, save as ----
+
+const savingAs = shallowRef(false)
+const newName = shallowRef('')
+const nameField = shallowRef<HTMLInputElement | null>(null)
+function startSaveAs () {
+  newName.value = `${props.name || 'Untitled'} (new)`
+  savingAs.value = true
+  nextTick(() => { nameField.value?.focus(); nameField.value?.select() })
+}
+function saveAs () {
+  const name = newName.value.trim()
+  if (!name) return
+  savingAs.value = false
+  emit('save-as', name)
+}
 
 // ---- mechanics ----
 
@@ -214,6 +250,7 @@ function redo () {
 
 function keys (e: KeyboardEvent) {
   if (!e.ctrlKey) return
+  if (e.key === 's') { e.preventDefault(); if (props.dirty) emit('save'); return }
   if (e.key === 'z') { e.preventDefault(); undo() } else if (e.key === 'y') { e.preventDefault(); redo() }
 }
 
@@ -552,6 +589,9 @@ function openWeb () {
   flex: none;
 }
 .find { width: 11rem; }
+.unsaved { display: flex; align-items: center; gap: 6px; width: 100%; flex-wrap: wrap; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; vertical-align: middle; }
+.name { flex: 1; min-width: 8rem; }
 .bare { display: flex; width: 30rem; height: 26rem; }
 .bare .map { height: 100%; }
 .mechs {

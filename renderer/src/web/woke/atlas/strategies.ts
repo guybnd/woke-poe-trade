@@ -53,6 +53,9 @@ export interface AtlasWidget extends Widget {
   lit?: string[]
   // The mechanic list on the tree folded away.
   mechanicsHidden?: boolean
+  // Tree edits not saved yet: strategy id -> the edited tree link. Kept with
+  // the config, so closing the overlay loses nothing.
+  drafts?: Record<string, string>
 }
 
 export function emptyStrategy (list: AtlasStrategy[]): AtlasStrategy {
@@ -197,4 +200,34 @@ export function claimRegexFolders (strategies: AtlasStrategy[]) {
   for (const s of strategies) {
     if (!s.regexFolder) s.regexFolder = freeRegexFolder(s, strategies)
   }
+}
+
+// ---- unsaved tree edits ----
+
+// The tree being worked on: the unsaved edit if there is one, else the saved tree.
+export function workingTree (w: Pick<AtlasWidget, 'drafts'>, s: Pick<AtlasStrategy, 'id' | 'treeUrl'>): string {
+  return w.drafts?.[s.id] ?? s.treeUrl
+}
+
+export function isDirty (w: Pick<AtlasWidget, 'drafts'>, s: Pick<AtlasStrategy, 'id' | 'treeUrl'>): boolean {
+  const d = w.drafts?.[s.id]
+  return d != null && d !== s.treeUrl
+}
+
+// An edit: kept as a draft, or dropped once it's back to the saved tree.
+export function setDraft (w: AtlasWidget, s: AtlasStrategy, url: string) {
+  const rest = Object.fromEntries(Object.entries(w.drafts ?? {}).filter(([id]) => id !== String(s.id)))
+  w.drafts = url === s.treeUrl ? rest : { ...rest, [s.id]: url }
+}
+
+export function dropDraft (w: AtlasWidget, s: Pick<AtlasStrategy, 'id'>) {
+  if (w.drafts?.[s.id] == null) return
+  w.drafts = Object.fromEntries(Object.entries(w.drafts).filter(([id]) => id !== String(s.id)))
+}
+
+export function saveDraft (w: AtlasWidget, s: AtlasStrategy) {
+  const d = w.drafts?.[s.id]
+  if (d == null) return
+  s.treeUrl = d
+  dropDraft(w, s)
 }
