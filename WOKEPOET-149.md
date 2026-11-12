@@ -53,6 +53,19 @@ history:
     date: '2026-11-10T02:56:29.597Z'
     selfAttested: true
     id: c-2026-11-10t02-56-29-597z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked "Do more" on 2026-11-12 and said yes to starting the day-one
+      minimum. Merged as #353 (2e9f776): a "being updated for 3.30" banner on
+      the mechanics guide and atlas strategies (remove both when WOKEPOET-156
+      lands), plus a test that keeps unknown filter keywords loading and saving.
+      The Flips scarab tab already drops out (#151). Still open: the 0.4.3
+      release waits on Guy's go, and he hasn't said what "more" covers yet.
+    date: '2026-11-12T04:53:38.774Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-12t04-53-38-774z
 swimlane: require-input
 needsAction: null
 subtasks:
