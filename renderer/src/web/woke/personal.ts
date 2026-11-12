@@ -42,5 +42,7 @@ export async function loadPersonal (): Promise<void> {
   } catch (e) {
     console.warn('[personal] could not load', e)
     personalOn.value = false
+    // Nothing to show it with: don't leave main reading.
+    if (!personalForced.value) hostRequest('personal-set', { on: false }).catch(() => {})
   }
 }

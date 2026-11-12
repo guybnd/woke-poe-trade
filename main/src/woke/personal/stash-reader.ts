@@ -299,7 +299,8 @@ export class StashReader {
       const anyRead = cache?.tabs.some(t => t.readAt != null && t.readAt >= (cache?.listedAt ?? 0))
       report({ running: false, progress: null, waiting, error, account: this.account, lastReadAt: anyRead ? this.deps.now() : this.status.lastReadAt })
     } finally {
-      if (cache && changed) {
+      // Turned off meanwhile: write nothing more.
+      if (cache && changed && !this.stopped) {
         const toSave = cache
         await queued(async () => { await writeAtomic(cacheFile(league), JSON.stringify(toSave)) })
       }

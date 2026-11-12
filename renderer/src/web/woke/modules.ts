@@ -138,7 +138,9 @@ const moduleByWidget = shallowReactive(new Map<string, ModuleDef>())
 for (const m of MODULES) for (const t of m.widgetTypes) moduleByWidget.set(t, m)
 // Widget types of a module that was removed: their placed widgets stay in
 // config but count as off (not mounted, no hotkeys).
-const removedTypes = reactive(new Set<string>())
+// Opt-in widget types start out removed, so a widget placed while the stash
+// reader was on stays off after a restart with it off (addModule clears it).
+const removedTypes = reactive(new Set<string>(['woke-net-worth']))
 const optInIds = reactive(new Set<string>())
 
 // Opt-in modules (the stash reader, personal.ts) join the list when turned on,

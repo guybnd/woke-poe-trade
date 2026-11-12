@@ -151,6 +151,10 @@ describe('stash reader on and off at runtime', () => {
     expect(PAGE_BY_ID.has('net-worth')).toBe(false)
   })
 
+  it('a Net worth widget left in config counts as off while the reader is off', () => {
+    expect(isWidgetTypeOn({ woke: { setupDone: true, off: [] }, widgets: [] }, 'woke-net-worth')).toBe(false)
+  })
+
   it('the Modules list shows no experimental row until unlocked', async () => {
     const config = { woke: { setupDone: true, off: [] }, widgets: [] }
     const html = await renderToString(createSSRApp({ render: () => h(ModuleList, { config, showStatus: true, includeApt: true }) }))
