@@ -117,8 +117,8 @@ export default defineComponent({
   setup (props, ctx) {
     const statsVisibility = shallowReactive({ disabled: false })
     const showHidden = shallowRef(false)
-    // On by default: a total's mods are what the line hides.
-    const showFilterSources = shallowRef(true)
+    // Off by default (Guy's call): the toggle opens each total's mods.
+    const showFilterSources = shallowRef(false)
 
     // The picks the box last cleared, per preset's list, so a second click brings them back.
     let clearedPicks = new WeakMap<FilterOrGroup[], FilterOrGroup[]>()

@@ -1,6 +1,15 @@
 <template>
-  <WPanel title="Atlas tree" size-key="tree" width="44rem" height="36rem" max-height="85vh">
+  <!-- Pinned: only the tree, with the plan and the lit mechanics. -->
+  <div v-if="bare" :class="$style.bare">
+    <div ref="box" :class="$style.map">
+      <canvas ref="base" :class="$style.layer" role="img" aria-label="Atlas passive tree" />
+      <canvas ref="ring" :class="$style.layer" />
+    </div>
+  </div>
+  <WPanel v-else title="Atlas tree" size-key="tree" width="44rem" height="36rem" max-height="85vh">
     <template #actions>
+      <button class="w-icon-btn" :class="{ 'w-icon-btn--on': listOpen }" title="Mechanics: light a mechanic's passives" @click="emit('update:listOpen', !listOpen)"><i class="fas fa-list" /></button>
+      <PinButton v-if="pin" :make="pin" title="Pin the tree over the game: clicks go through to the game's atlas" />
       <button class="w-icon-btn" title="Undo (Ctrl + Z)" :disabled="!undoStack.length" @click="undo"><i class="fas fa-undo" /></button>
       <button class="w-icon-btn" title="Redo (Ctrl + Y)" :disabled="!redoStack.length" @click="redo"><i class="fas fa-redo" /></button>
       <button class="w-icon-btn" title="Fit the allocated part (or double-click the tree)" @click="fit"><i class="fas fa-compress-arrows-alt" /></button>
@@ -27,6 +36,22 @@
       <canvas ref="base" :class="$style.layer" role="img" aria-label="Atlas passive tree" />
       <canvas ref="ring" :class="$style.layer" :style="{ cursor: panning ? 'grabbing' : hovered ? 'pointer' : 'grab' }"
         @wheel.prevent="zoom" @mousedown="startPan" @mousemove="hover" @mouseleave="setHovered(null)" @dblclick="fit" @contextmenu.prevent />
+      <!-- The mechanics (pick A): click to light a mechanic's passives in its own colour. -->
+      <div v-if="listOpen" :class="$style.mechs" @wheel.stop>
+        <div :class="$style.mechsHead">
+          <span>Mechanics</span>
+          <button v-if="lit.length" type="button" class="w-focusable" @click="emit('update:lit', [])">Clear</button>
+        </div>
+        <div :class="$style.mechsRows" class="w-scroll">
+          <button v-for="m in mechanicRows" :key="m.name" type="button" :class="$style.mech" class="w-focusable"
+            :aria-pressed="liveLit.includes(m.name)" :title="`${m.name}: ${m.taken} of ${m.total} passives taken`"
+            @click="toggleLit(m.name)" @mouseenter="preview = m.name" @mouseleave="preview = ''">
+            <span :class="$style.swatch" :style="liveLit.includes(m.name) ? { background: litColour(liveLit, m.name) } : undefined" />
+            <span class="w-trunc">{{ m.name.replace(/^The /, '') }}</span>
+            <span :class="$style.count" class="w-num"><span :class="m.taken ? 'w-accent' : ''">{{ m.taken }}</span>/{{ m.total }}</span>
+          </button>
+        </div>
+      </div>
     </div>
     <template #meta>
       <span class="w-faint">Click a passive to take the path to it, click a taken one to refund it. Right-click a taken one that needs a type to pick it.</span>
@@ -50,10 +75,54 @@ import { decodeTree } from './tree'
 import { encodeAtlasTree, pathTo, pointsUsed, refundSet } from './atlas-tree'
 import type { AtlasTreeModel } from './atlas-tree'
 import { treeWarnings } from './loadout'
+import { litColour } from './mechanic-colours'
+import PinButton from '../pins/PinButton.vue'
+import type { Pin } from '../pins/pins'
 import type { ThreadSlot } from './widget'
 
-const props = defineProps<{ model: AtlasTreeModel, treeUrl: string, threads: ThreadSlot[] }>()
-const emit = defineEmits<{ (e: 'update:treeUrl', url: string): void, (e: 'close'): void }>()
+// `lit`: mechanics lit, in picked order. `bare`: only the tree, for a pin.
+const props = defineProps<{
+  model: AtlasTreeModel
+  treeUrl: string
+  threads: ThreadSlot[]
+  lit: string[]
+  listOpen?: boolean
+  bare?: boolean
+  pin?: () => Omit<Pin, 'opacity' | 'spots'>
+}>()
+const emit = defineEmits<{
+  (e: 'update:treeUrl', url: string): void
+  (e: 'update:lit', lit: string[]): void
+  (e: 'update:listOpen', open: boolean): void
+  (e: 'close'): void
+}>()
+
+// ---- mechanics ----
+
+// The mechanic under the mouse in the list: lit until it leaves.
+const preview = shallowRef('')
+const mechanicRows = computed(() => {
+  const rows = new Map<string, { name: string, taken: number, total: number }>()
+  for (const name of props.model.mechanics) rows.set(name, { name, taken: 0, total: 0 })
+  for (const [id, name] of props.model.mechanicOf) {
+    const r = rows.get(name)
+    if (!r) continue
+    r.total++
+    if (alloc.value.nodes.has(id)) r.taken++
+  }
+  // What the plan uses first, then the biggest.
+  return [...rows.values()].sort((a, b) => b.taken - a.taken || b.total - a.total || a.name.localeCompare(b.name))
+})
+
+// Lit mechanics this atlas has: an older league's names keep no colour slot.
+const liveLit = computed(() => props.lit.filter(m => props.model.mechanics.includes(m)))
+
+function toggleLit (name: string) {
+  const off = liveLit.value.includes(name)
+  // Turning one off shows at once, not when the mouse leaves its row.
+  if (off) preview.value = ''
+  emit('update:lit', off ? liveLit.value.filter(m => m !== name) : [...liveLit.value, name])
+}
 
 const { copied, copy } = useCopy()
 
@@ -185,7 +254,7 @@ watch(() => props.model, (m) => {
 }, { immediate: true })
 
 const query = shallowRef('')
-const lit = computed(() => {
+const hits = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (q.length < 2) return []
   const out: TreeNode[] = []
@@ -265,8 +334,17 @@ function drawRing () {
     ctx.stroke()
   }
   const css = getComputedStyle(canvas)
+  // Lit mechanics: a ring in the mechanic's colour round each of its passives.
+  const showing = preview.value && !liveLit.value.includes(preview.value) ? [...liveLit.value, preview.value] : liveLit.value
+  if (showing.length) {
+    for (const [id, name] of props.model.mechanicOf) {
+      if (!showing.includes(name)) continue
+      const n = props.model.nodes.get(id)
+      if (n) circle(n, litColour(showing, name), 2, 2.5)
+    }
+  }
   const found = css.getPropertyValue('--w-info').trim()
-  for (const n of lit.value) circle(n, found, 3, 2.5)
+  for (const n of hits.value) circle(n, found, 3, 2.5)
   // A dot on each taken passive that needs a type, so a missing pick shows.
   for (const id of props.model.variants.keys()) {
     const n = props.model.nodes.get(id)
@@ -314,7 +392,7 @@ watch(box, (el) => {
 })
 
 watch([toSet, sheets, () => alloc.value], schedule)
-watch(lit, drawRing)
+watch([hits, preview, liveLit], drawRing)
 
 const wm = inject<WidgetManager>('wm')
 watch(() => wm?.active.value, (active) => { if (!active) endPan() })
@@ -387,7 +465,7 @@ function endPan (e?: MouseEvent) {
 }
 
 function click (e: MouseEvent, button: number) {
-  if (unreadable.value) return
+  if (unreadable.value || props.bare) return
   const p = canvasPoint(e)
   const n = nodeAt(props.model.nodes.values(), p.x, p.y, view.value, 14 * pxRatio())
   if (!n || n.kind === 'mastery' || n.kind === 'start') return
@@ -436,7 +514,7 @@ function setHovered (n: TreeNode | null) {
     name: n.name || 'Atlas passive',
     stats,
     frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'wormhole' ? 'rare' : 'normal',
-    note
+    note: [props.model.mechanicOf.get(n.id), note].filter(Boolean).join(' · ')
   })
 }
 
@@ -474,5 +552,48 @@ function openWeb () {
   flex: none;
 }
 .find { width: 11rem; }
+.bare { display: flex; width: 30rem; height: 26rem; }
+.bare .map { height: 100%; }
+.mechs {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 12.5rem;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--w-panel-solid-base) 88%, transparent);
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+}
+.mechsHead {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: var(--w-fs-caps);
+  text-transform: var(--w-caps-case);
+  letter-spacing: 0.08em;
+  font-family: var(--w-caps-face);
+  color: var(--w-faint);
+  border-bottom: 1px solid var(--w-line);
+}
+.mechsHead button { color: var(--w-dim); text-transform: none; letter-spacing: 0; font-family: inherit; }
+.mechsHead button:hover { color: var(--w-fg); }
+.mechsRows { flex: 1; min-height: 0; overflow-y: auto; padding: 2px; }
+.mech {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 6px;
+  border-radius: var(--w-r-sm);
+  color: var(--w-dim);
+  font-size: var(--w-fs-sm);
+  text-align: left;
+}
+.mech:hover { color: var(--w-fg); background: var(--w-line-soft); }
+.mech[aria-pressed="true"] { color: var(--w-fg); background: var(--w-panel-2); }
+.swatch { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--w-line-strong); }
+.count { margin-left: auto; flex: none; color: var(--w-faint); font-size: var(--w-fs-sm); }
 .warn { color: var(--w-warn, var(--w-accent)); }
 </style>

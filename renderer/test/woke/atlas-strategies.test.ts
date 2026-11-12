@@ -2,6 +2,7 @@
 // share links, folders, strategy codes, Threads from guide text, and regex
 // folders in the Regex library.
 import { describe, it, expect } from 'vitest'
+import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
 import { allFolders, claimRegexFolders, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
@@ -190,5 +191,21 @@ describe('each strategy keeps its own regex folder', () => {
   it('leaves its folder out of a strategy code', () => {
     const code = strategyCode([{ ...emptyStrategy([]), id: 1, name: 'A', regexFolder: 'Atlas strategies/A' }])
     expect(atob(code.slice('woke-atlas:'.length))).not.toContain('regexFolder')
+  })
+})
+
+describe('mechanics on the atlas tree', () => {
+  it('names each passive after its wheel\'s mastery', () => {
+    const model = readAtlasTree(atlas)
+    expect(model.mechanics).toEqual(['Threads'])
+    expect(model.mechanicOf.get(3)).toBe('Threads')
+    // The start and the mastery itself are not lit.
+    expect(model.mechanicOf.has(100)).toBe(false)
+    expect(model.mechanicOf.has(9)).toBe(false)
+  })
+
+  it('colours mechanics by the order they were picked', () => {
+    expect(litColour(['Breach', 'Ritual'], 'Ritual')).toBe(LIT_COLOURS[1])
+    expect(litColour(['Breach'], 'Breach')).toBe(LIT_COLOURS[0])
   })
 })

@@ -1,15 +1,16 @@
 <template>
   <template v-if="!blocked">
-    <PinFrame v-for="s in shown" :key="s.pin.id" :pin="s.pin" :index="s.index">
+    <PinFrame v-for="s in shown" :key="s.pin.id" :pin="s.pin" :index="s.index" :click-through="s.pin.kind === 'atlas-tree'">
       <DockPin v-if="s.dock" :host="s.dock.host" :extras="s.dock.extras" />
       <PobPin v-else-if="isPobPin(s.pin)" :pin="s.pin" />
+      <AtlasPin v-else-if="s.pin.kind === 'atlas-tree'" :pin="s.pin" />
     </PinFrame>
   </template>
 </template>
 
 <script setup lang="ts">
 // Everything you pinned, on screen whether the overlay is open or not.
-import { computed, inject, nextTick, onUnmounted, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, nextTick, onUnmounted, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { dockConfig, dockEntries, isDismissed } from '../dock/dock'
 import type { DockEntry } from '../dock/dock'
@@ -19,6 +20,9 @@ import type { Pin } from './pins'
 import PinFrame from './PinFrame.vue'
 import DockPin from './DockPin.vue'
 import PobPin from './PobPin.vue'
+
+// Its code (and the atlas tree data) loads only when an atlas tree is pinned.
+const AtlasPin = defineAsyncComponent(() => import('../atlas/AtlasPin.vue'))
 
 const wm = inject<WidgetManager>('wm')!
 
