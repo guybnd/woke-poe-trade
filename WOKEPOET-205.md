@@ -48,6 +48,15 @@ history:
     date: '2026-11-12T08:23:43.779Z'
     selfAttested: true
     id: c-2026-11-12t08-23-43-779z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T10:12:22.180Z'
+    comment: >-
+      Cluster jewels merged as #387 (c7ae20de). Timeless jewel rewrites in
+      progress on claude/pob-timeless: main reads PoB's seed tables from the PoB
+      install at runtime (quiet when missing), tooltips/totals/search show the
+      rewritten passives.
+    id: a-2026-11-12t10-12-22-180z
 ---
 > TL;DR: Guy (2026-11-11): support and render every kind of jewel in the passive tree view, with their effects. Bigger work, later; mocks first.
 

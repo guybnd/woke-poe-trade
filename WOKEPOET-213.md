@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-213
 title: 'Loot filter presets, second batch (12 one-click presets)'
-status: In Progress
+status: Done
 priority: Medium
 effort: L
 assignee: unassigned
@@ -33,6 +33,45 @@ history:
       fixed with real-NeverSink tests. Asked the coordinator to merge via the
       cloud thread.
     id: a-2026-11-12t10-04-52-979z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #389 reviewed (4 bugs fixed), local checks pass, squash-merged as
+      736b6420.
+    date: '2026-11-12T10:12:56.836Z'
+    completionComment: true
+    id: c-2026-11-12t10-12-56-836z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-12T10:12:56.837Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 736b6420: 12 new loot filter presets (all off by default),
+      review fixes included. Skipped: stacked-deck card list (tool has none),
+      unbonused-map rule (NeverSink has none; keeps progress maps instead),
+      tiered drops (TODO for 3.30), regal recipe (Guy said no). Dev build not
+      switched: it's running another thread's branch
+      (claude/project-thread-ttahrs).
+    completionComment: true
+    date: '2026-11-12T10:13:02.666Z'
+    id: c-2026-11-12t10-13-02-666z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T10:13:03.002Z'
+needsAction: null
+reviewState: approved
+baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/389'
+swimlane: null
+diffSummary:
+  - file: scripts/upstream-data.mjs
+    additions: 21
+    deletions: 1
 ---
 Guy's picks for a second batch of Presets tab rows (all default off): hide white/blue gear in maps, cheap div cards, maps below tier N, flasks in maps, cheap uniques in maps, cheap splinter stacks, MS boots while levelling, R-G-B items in maps, 20% quality gems/flasks for the vendor, drop sound volume %, beams/icons for top tiers only, weapons for a build type while levelling (Auto from PoB / Caster / Melee / Bow / Minion).
 
