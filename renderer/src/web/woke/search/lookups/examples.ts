@@ -4,90 +4,58 @@ import type { LookupCard } from './types'
 
 interface Example { query: string, shows: string }
 
+// The surprising ones first: what each kind of lookup knows that you'd
+// otherwise alt-tab to a wiki for.
 export const EXAMPLES: Array<{ group: string, icon: string, about: string, items: Example[] }> = [
   {
-    group: 'Prices and items',
-    icon: 'fas fa-coins',
-    about: 'Any item name gives its poe.ninja prices, the wiki, poedb and the trade site. Paste a copied item to price check it.',
+    group: 'Is it worth it?',
+    icon: 'fas fa-scale-balanced',
+    about: 'Prices put side by side, so you know before you farm, craft or turn in.',
     items: [
-      { query: 'mageblood', shows: 'Every Mageblood price, by flask count' },
-      { query: 'divine orb', shows: 'Its price now, a day and a week ago' }
+      { query: 'headhunter', shows: 'The div card set that makes one, and if the set is cheaper' },
+      { query: 'uber maven', shows: 'Entry cost against loot per kill' },
+      { query: 'awakened enlighten', shows: 'Which boss drops it, and how often' },
+      { query: '1 mirror in div', shows: "Any currency in any other, at today's price" }
     ]
   },
   {
-    group: 'Quick answers',
-    icon: 'fas fa-calculator',
-    about: 'Currency maths at today\'s prices, and countdowns.',
+    group: 'Leveling',
+    icon: 'fas fa-person-running',
+    about: 'Vendor tricks and gem sources for the campaign.',
     items: [
-      { query: '3.5 div', shows: 'In chaos' },
-      { query: '1 mirror in div', shows: 'One currency in another' },
-      { query: 'lab reset', shows: 'When the lab layout changes' },
-      { query: 'league', shows: 'League start countdown, or the league\'s day' }
-    ]
-  },
-  {
-    group: 'Bosses and drops',
-    icon: 'fas fa-dragon',
-    about: 'Entry cost, loot per kill and drop rates, from Boss runs.',
-    items: [
-      { query: 'uber maven', shows: 'Entry, loot per kill, top drops' },
-      { query: 'reality frag', shows: 'The boss a fragment opens' },
-      { query: 'progenesis', shows: 'Which bosses drop it, and how often' }
-    ]
-  },
-  {
-    group: 'Div card sets',
-    icon: 'fas fa-layer-group',
-    about: 'A full set against what it turns into.',
-    items: [
-      { query: 'the doctor', shows: 'Set price against Headhunter' },
-      { query: 'headhunter', shows: 'The cards that turn into it' }
-    ]
-  },
-  {
-    group: 'Vendor recipes',
-    icon: 'fas fa-store',
-    about: 'By what you get, what you sell, or a nickname.',
-    items: [
-      { query: '6l', shows: 'Sell a 6-link for 20 Fusing' },
-      { query: 'chaos recipe', shows: 'The full rare set recipes' },
-      { query: 'movement speed', shows: 'Boots + Quicksilver Flask' }
-    ]
-  },
-  {
-    group: 'Gems',
-    icon: 'fas fa-gem',
-    about: 'Which quest gives a gem, which vendor sells it, and for which classes.',
-    items: [
-      { query: 'leap slam', shows: 'Quest reward and vendors by class' },
+      { query: 'rustic sash', shows: 'Sell it with a weapon: up to 84% physical damage' },
+      { query: 'movement speed', shows: 'Boots + Quicksilver Flask = faster boots' },
+      { query: 'herald of ash', shows: 'Which quest gives it free, for your class' },
       { query: 'ice nova of frostbolts', shows: 'Where transfigured gems come from' }
     ]
   },
   {
-    group: 'Passive tree',
-    icon: 'fas fa-dharmachakra',
-    about: 'Keystones, notables, ascendancy and cluster jewel notables.',
+    group: 'Endgame',
+    icon: 'fas fa-dungeon',
+    about: 'The things you look up every league.',
     items: [
-      { query: 'resolute tech', shows: 'What a keystone does' },
+      { query: 'veiled', shows: 'Which Betrayal member gives veiled crafts' },
+      { query: 'reality frag', shows: 'The boss a fragment opens, and what it drops' },
+      { query: 'vaal fireball', shows: 'How to get a Vaal gem' },
+      { query: 'lab reset', shows: 'When the lab layout changes' }
+    ]
+  },
+  {
+    group: 'Build questions',
+    icon: 'fas fa-dharmachakra',
+    about: 'What a passive does, without opening the tree.',
+    items: [
+      { query: 'sanctuary', shows: 'Same name, tree notable and Guardian node' },
       { query: 'lord of drought', shows: 'A cluster jewel notable' }
     ]
   },
   {
-    group: 'Betrayal',
-    icon: 'fas fa-user-secret',
-    about: 'A member\'s reward in each division, priced.',
+    group: 'Vendor money',
+    icon: 'fas fa-store',
+    about: 'Recipes by what you get, what you sell, or a nickname.',
     items: [
-      { query: 'aisling', shows: 'Rewards in every division' },
-      { query: 'veiled', shows: 'Who gives a reward' }
-    ]
-  },
-  {
-    group: 'Tools and settings',
-    icon: 'fas fa-sliders',
-    about: 'Open a tool, run its action, or jump to a Settings page. Anything else ends with a poewiki and poedb search.',
-    items: [
-      { query: 'market', shows: 'Open a tool' },
-      { query: 'hotkeys', shows: 'A Settings page' }
+      { query: '6l', shows: 'A 6-link sells for 20 Fusing' },
+      { query: 'chaos recipe', shows: 'Full rare sets, and how to get 3x' }
     ]
   }
 ]

@@ -287,7 +287,7 @@ test('the ? button lists things to try, and picking one searches it', async ({ o
   await box.fill('')
   await panel.getByRole('button', { name: 'What can I search for?' }).click()
   await expect(box).toHaveValue('?')
-  await expect(panel.getByText('Vendor recipes', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Vendor money', { exact: true })).toBeVisible()
   await overlay.snap('search-help')
   await panel.getByText('chaos recipe', { exact: true }).dblclick()
   await expect(box).toHaveValue('chaos recipe')
@@ -302,7 +302,7 @@ test('an empty search box shows things to try', async ({ overlay }) => {
   const { panel, box } = await waitForPrices(overlay)
 
   await box.fill('')
-  await expect(panel.getByText('Vendor recipes', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Vendor money', { exact: true })).toBeVisible()
   await expect(panel.getByText('chaos recipe', { exact: true })).toBeVisible()
   await overlay.snap('search-empty')
 })
