@@ -37,6 +37,8 @@
             { value: 'chaos', label: 'c' }, { value: 'div', label: 'div' }
           ]" />
           <WCorruptedFilter v-model="corrupted" />
+          <WChip v-if="!searching" clickable :active="!config.showThin" title="Leave thin-market items out: poe.ninja had no price on 3 or more of the last 7 days, so their moves are easy to fake."
+            @click="config.showThin = !config.showThin"><i class="fas fa-exclamation-circle" /> Skip thin</WChip>
         </template>
       </template>
 
@@ -156,7 +158,7 @@ import { dailyHistory, dailyRowsForDate, latestSnapshots, snapshotAtOrBefore } f
 import { computeMovers, trendBaseline } from './analysis'
 import { PRICE_GROUP_LIMIT, groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
-import { WInfo, WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WSelect, WField, WPrice, WDelta, WSpark, WEmpty, WIcon, WKbd, WSkeleton, WBanner, WChip, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import type { Mover } from './analysis'
 import { isThin, itemKey, thinTitle, utcDate } from './types'

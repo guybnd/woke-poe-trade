@@ -16,7 +16,7 @@
       </div>
     </template>
     <ExpeditionGlance v-else-if="mech.id === 'expedition'" :items="items" :divine="divine" :vendor="vendor" />
-    <MechanicPrices v-else-if="mech.groups.length" :mech="mech" :items="items" :divine="divine" :top="3" />
+    <MechanicPrices v-else-if="mech.groups.length" :mech="mech" :items="items" :divine="divine" :top="3" :skip-thin="config.skipThin !== false" />
     <div v-else class="w-dim text-xs" :class="$style.pad">{{ mech.tips[0] }}</div>
   </div>
 </template>

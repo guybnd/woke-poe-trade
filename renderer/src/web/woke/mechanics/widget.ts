@@ -18,6 +18,8 @@ export interface MechanicsWidget extends Widget {
   betrayalOverrides: Record<string, string>
   // Where each Syndicate member is now (division index), set by the player.
   betrayalAt?: Record<string, number>
+  // Leave thin-market prices out of the lists and the Best pick (unset: on).
+  skipThin?: boolean
   // The icon's position was checked against the stash area once.
   posChecked?: boolean
 }

@@ -44,7 +44,13 @@
                 <WPrice :chaos="row.chaos" :divine="divine" class="justify-end" :class="{ 'w-up': isHot(row.chaos) }" />
               </div>
             </template>
-            <MechanicPrices v-else :mech="mech" :items="items" :divine="divine" />
+            <template v-else>
+              <div v-if="mech.groups.length" :class="$style.toolbar">
+                <WChip clickable :active="config.skipThin !== false" title="Leave thin-market prices out: poe.ninja had no price on 3 or more of the last 7 days, so they're easy to fake."
+                  @click="config.skipThin = config.skipThin === false"><i class="fas fa-exclamation-circle" /> Skip thin</WChip>
+              </div>
+              <MechanicPrices :mech="mech" :items="items" :divine="divine" :skip-thin="config.skipThin !== false" />
+            </template>
           </div>
 
           <div class="w-scroll" :class="$style.col">
@@ -138,7 +144,7 @@ export default {
 import { inject, computed, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { toast, WInfo, WPanel, WSegmented, WButton, WPrice, WField, WSelect, WBanner, WIcon, vItemTip } from '../ui'
+import { toast, WInfo, WPanel, WSegmented, WButton, WPrice, WField, WSelect, WBanner, WIcon, WChip, vItemTip } from '../ui'
 import { usePriceIndex } from '../market/price-index'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
