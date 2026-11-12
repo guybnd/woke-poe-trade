@@ -1,9 +1,7 @@
 // What the build tree overlay draws: the active build's nodes and lines, in
 // tree coordinates, with sample points along each line so the main process
 // can tell which are already lit (allocated) in game.
-import { shallowRef } from 'vue'
 import type { TreeArt, TreeNode } from './passive-tree'
-import { dockCardOwner } from '../dock/dock'
 import { NODE_RADIUS } from './passive-tree'
 
 // Drawn in game and read by the fit (main/src/woke/tree-fit.ts).
@@ -86,32 +84,4 @@ export function takenNodes (path: BuildPath, lit: boolean[]): Set<number> {
   path.lines.forEach((l, i) => { if (lit[i]) { taken.add(l.a); taken.add(l.b) } })
   for (const n of path.nodes) if (n.kind === 'start') taken.add(n.id)
   return taken
-}
-
-// The overlay layer (TreeOverlay.vue) registers here, so the dock icon, its
-// card and its menu can draw the tree as the hotkey does.
-interface TreeDrawer {
-  isOn: () => boolean
-  // quiet: no note when the tree isn't open. Whether it drew.
-  start: (quiet?: boolean) => Promise<boolean>
-  stop: () => void
-}
-let drawer: TreeDrawer | null = null
-
-// Whether the build is drawn on the tree now, for the card and menu.
-export const treeOn = shallowRef(false)
-
-export function registerTreeDrawer (d: TreeDrawer): () => void {
-  drawer = d
-  return () => { if (drawer === d) drawer = null }
-}
-
-// Draws the build over the game's tree, or hides it when it shows.
-// Whether the tree is drawn now (or was just hidden).
-export async function toggleBuildTree (quiet = false): Promise<boolean> {
-  if (!drawer) return false
-  if (drawer.isOn()) { drawer.stop(); return true }
-  // A dock card or menu over the tree would be in the screenshot.
-  dockCardOwner.value = -1
-  return await drawer.start(quiet)
 }
