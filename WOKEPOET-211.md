@@ -76,6 +76,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T05:24:06.322Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-12T11:04:14.498Z'
+    comment: >-
+      Follow-ups all merged and live on the dev build (master 66101e1f): #372
+      atlas art, #379 mechanic filter + pinned tree, #383 unsaved/Save/Save as +
+      mechanic icons, #386 tree totals in the loadout, #390 type list at the
+      notable (T1), #394 new icon (Maps wheel), #396 pick order + points slider
+      (O1, pin follows).
+    id: a-2026-11-12t11-04-14-498z
 swimlane: null
 needsAction: null
 ---

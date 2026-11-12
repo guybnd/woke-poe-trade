@@ -13,6 +13,15 @@ history:
     user: Agent
     date: '2026-11-12T10:37:43.421Z'
     comment: Created ticket.
+    id: a-2026-11-12t10-37-43-421z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T11:04:15.832Z'
+    comment: >-
+      Merged #395 (currency maths, countdowns, web search) as 971204d3. #397
+      (boss cards, where it drops) up for merge. Next: div card set value,
+      recipes, gems, tree, Betrayal, "?" card.
+    id: a-2026-11-12t11-04-15-832z
 ---
 > **TL;DR:** Ctrl+Space search learns new lookups Guy picked on 2026-11-12, plus a "?" card with examples at the end.
 
