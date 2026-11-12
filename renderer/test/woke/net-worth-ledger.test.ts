@@ -2,7 +2,7 @@
 // points and big gains, the goal's ETA, price moves and the change view.
 import { describe, it, expect } from 'vitest'
 import {
-  addPoint, bigGains, filterLines, pickFilter, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
+  addPoint, bigGains, filterLines, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
 } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint, SeriesPoint } from '@/web/woke/net-worth/ledger'
 import { valueStash } from '@/web/woke/net-worth/valuation'
@@ -169,29 +169,39 @@ describe('End session from Net worth', () => {
 })
 
 describe('table filters', () => {
-  // Guy's case: the Fragment tab picked, then the Currency chip: currency
-  // inside the Fragment tab, an empty table, though Currency is 7515 div.
+  // Guy's two "Currency" tabs, a Fragment tab, and a category picked too.
   const lines = [
     { key: 'd', name: 'Divine Orb', category: 'currency' as const, tabIds: ['cur1'], chaos: 7000 },
     { key: 'c', name: 'Chaos Orb', category: 'currency' as const, tabIds: ['cur2'], chaos: 2 },
     { key: 'w', name: 'Simulacrum', category: 'fragments' as const, tabIds: ['frag'], chaos: 300 }
   ]
-  const none = { cat: 'all' as const, tab: 'all', query: '', minChaos: 0 }
+  const none = { cat: 'all' as const, tabs: [] as string[], query: '', minChaos: 0 }
 
-  it('picking a category after a tab shows that category everywhere', () => {
-    const inFrag = pickFilter(none, { tab: 'frag' })
-    const currency = pickFilter(inFrag, { cat: 'currency' })
-    expect(currency).toMatchObject({ cat: 'currency', tab: 'all' })
-    expect(filterLines(lines, currency).map(l => l.key)).toEqual(['d', 'c'])
+  it('clicking tab labels picks several; All clears', () => {
+    let t = toggleTab([], 'cur1')
+    t = toggleTab(t, 'cur2')
+    expect(t).toEqual(['cur1', 'cur2'])
+    expect(filterLines(lines, { ...none, tabs: t }).map(l => l.key)).toEqual(['d', 'c'])
+    expect(toggleTab(t, 'cur1')).toEqual(['cur2'])
+    expect(toggleTab(t, 'all')).toEqual([])
   })
 
-  it('picking a tab clears the category; the same category again clears it', () => {
-    expect(pickFilter({ ...none, cat: 'currency' }, { tab: 'frag' })).toMatchObject({ cat: 'all', tab: 'frag' })
-    expect(pickFilter({ ...none, cat: 'currency' }, { cat: 'currency' })).toMatchObject({ cat: 'all' })
+  it('tabs and a category combine; with nothing in common the table is empty (pills show why)', () => {
+    expect(filterLines(lines, { ...none, tabs: ['frag', 'cur2'], cat: 'currency' }).map(l => l.key)).toEqual(['c'])
+    expect(filterLines(lines, { ...none, tabs: ['frag'], cat: 'currency' })).toEqual([])
   })
 
   it('two tabs of the same name stay apart: tabs filter by id', () => {
-    expect(filterLines(lines, { ...none, tab: 'cur2' }).map(l => l.key)).toEqual(['c'])
+    expect(filterLines(lines, { ...none, tabs: ['cur2'] }).map(l => l.key)).toEqual(['c'])
+  })
+})
+
+describe('chart hover card', () => {
+  it('goes below a point near the top, and opens inwards at the sides', () => {
+    expect(tipPlacement(50, 5)).toEqual({ below: true, align: 'center' })
+    expect(tipPlacement(50, 90)).toEqual({ below: false, align: 'center' })
+    expect(tipPlacement(2, 90).align).toBe('left')
+    expect(tipPlacement(98, 10)).toEqual({ below: true, align: 'right' })
   })
 })
 
@@ -207,5 +217,18 @@ describe('units as icons', () => {
     expect(chaos).toContain('/images/chaos.png')
     expect(chaos).toContain('alt="c"')
     expect(chaos).toContain('title="120 chaos"')
+  })
+})
+
+describe('sections', () => {
+  it('a section switched off stays off until switched on', async () => {
+    const { sectionOn, setSection } = await import('@/web/woke/net-worth/widget')
+    const w = { hiddenSections: [] } as never as Parameters<typeof sectionOn>[0]
+    expect(sectionOn(w, 'chart')).toBe(true)
+    setSection(w, 'chart', false)
+    setSection(w, 'chart', false)
+    expect(w.hiddenSections).toEqual(['chart'])
+    setSection(w, 'chart', true)
+    expect(sectionOn(w, 'chart')).toBe(true)
   })
 })

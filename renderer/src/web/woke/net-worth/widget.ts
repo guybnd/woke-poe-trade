@@ -14,6 +14,26 @@ export interface NetWorthWidget extends Widget {
   goal?: { name: string, div: number } | null
   // The item table's Each and Total columns: divines (d) or chaos (c).
   tableUnits?: { each: 'd' | 'c', total: 'd' | 'c' }
+  // The summary's details and the tab row, open or folded (H1, T1).
+  detailsOpen?: boolean
+  tabsOpen?: boolean
+  // Sections switched off in the ⚙ flyout or Settings.
+  hiddenSections?: Section[]
+}
+
+export type Section = 'chart' | 'numbers' | 'moves' | 'changes' | 'where' | 'tabs'
+export const SECTIONS: Array<{ id: Section, label: string }> = [
+  { id: 'chart', label: 'Chart' },
+  { id: 'numbers', label: 'Numbers' },
+  { id: 'moves', label: 'Price moves' },
+  { id: 'changes', label: 'Since last refresh' },
+  { id: 'where', label: 'Where it is' },
+  { id: 'tabs', label: 'Tab labels' }
+]
+export const sectionOn = (w: NetWorthWidget, id: Section) => !w.hiddenSections?.includes(id)
+export function setSection (w: NetWorthWidget, id: Section, on: boolean) {
+  const rest = (w.hiddenSections ?? []).filter(s => s !== id)
+  w.hiddenSections = on ? rest : [...rest, id]
 }
 
 export const hideBelowOf = (w: NetWorthWidget) => typeof w.hideBelowDiv === 'number' && w.hideBelowDiv >= 0 ? w.hideBelowDiv : 1

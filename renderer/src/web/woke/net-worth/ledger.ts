@@ -249,20 +249,30 @@ export function groupByRefresh (diffs: StashDiff[], n = 3): ChangeGroup[] {
 
 // ---------- table filters ----------
 
-export interface TableFilter { cat: Category | 'all', tab: string, query: string, minChaos: number }
+// tabs: the picked tab ids; none picked is every tab. A category and tabs can
+// combine: the window shows each as a pill, so an empty table explains itself.
+export interface TableFilter { cat: Category | 'all', tabs: string[], query: string, minChaos: number }
 
-// One of category or tab at a time: picking one clears the other. Both at
-// once made "Currency" inside the Fragment tab, an empty table.
-export function pickFilter (f: TableFilter, pick: { cat: Category | 'all' } | { tab: string }): TableFilter {
-  if ('cat' in pick) return { ...f, cat: f.cat === pick.cat ? 'all' : pick.cat, tab: 'all' }
-  return { ...f, tab: pick.tab, cat: 'all' }
+// A click on a tab label: adds or drops that tab; 'all' clears the pick.
+export function toggleTab (tabs: string[], id: string): string[] {
+  if (id === 'all') return []
+  return tabs.includes(id) ? tabs.filter(t => t !== id) : [...tabs, id]
 }
 
 export function filterLines<L extends { category: Category, tabIds: string[], name: string, chaos: number }> (lines: L[], f: TableFilter): L[] {
   const q = f.query.trim().toLowerCase()
   return lines.filter(l =>
     (f.cat === 'all' || l.category === f.cat) &&
-    (f.tab === 'all' || l.tabIds.includes(f.tab)) &&
+    (!f.tabs.length || l.tabIds.some(t => f.tabs.includes(t))) &&
     (!q || l.name.toLowerCase().includes(q)) &&
     l.chaos >= f.minChaos)
+}
+
+// ---------- chart hover card ----------
+
+// Where the hover card sits around a point (x, y in % of the chart): above,
+// or below when the point is in the top half (the window's edge would cut
+// it); centred, or opening inwards near the left and right edges.
+export function tipPlacement (x: number, y: number): { below: boolean, align: 'center' | 'left' | 'right' } {
+  return { below: y < 50, align: x < 25 ? 'left' : x > 75 ? 'right' : 'center' }
 }

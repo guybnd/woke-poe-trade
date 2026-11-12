@@ -13,7 +13,7 @@
     <span v-for="m in marks" :key="m.at" :class="$style.mark" :style="{ left: m.x + '%', top: m.y + '%' }" />
     <template v-if="hover">
       <span :class="$style.dot" :style="{ left: hover.x + '%', top: hover.y + '%' }" />
-      <div :class="[$style.tip, hover.x > 60 ? $style.tipLeft : '']" :style="{ left: hover.x + '%', top: hover.y + '%' }">
+      <div :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align]]" :style="{ left: hover.x + '%', top: hover.y + '%' }">
         <b class="w-num">{{ when(hover.p.at) }} · {{ fmt(hover.p.div) }}<Coin /><template v-if="hover.p.netDiv != null"> · {{ signed(hover.p.netDiv) }}<Coin /></template></b>
         <span v-if="hover.p.top.length">{{ hover.p.top.join(', ') }}</span>
         <span v-else-if="hover.p.daily" class="w-dim">That day's last read</span>
@@ -29,6 +29,7 @@
 import { computed, shallowRef } from 'vue'
 import { formatAmount } from '../ui/format'
 import Coin from './Coin.vue'
+import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 
@@ -67,6 +68,8 @@ const span = computed(() => {
   if (hi === lo) { hi += 1; lo = Math.max(0, lo - 1) }
   return { t0, t1: t1 === t0 ? t0 + 1 : t1, lo, hi }
 })
+
+const place = computed(() => hover.value ? tipPlacement(hover.value.x, hover.value.y) : { below: false, align: 'center' as const })
 
 const xOf = (at: number) => (at - span.value.t0) / (span.value.t1 - span.value.t0) * W
 const yOf = (v: number) => H - PAD - (v - span.value.lo) / (span.value.hi - span.value.lo) * (H - 2 * PAD)
@@ -124,11 +127,15 @@ function when (at: number) {
 .mark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); transform: translate(-50%, -50%); pointer-events: none; }
 .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--w-fg); box-shadow: 0 0 0 2px var(--w-panel-solid), 0 0 0 3px var(--w-gold); transform: translate(-50%, -50%); pointer-events: none; }
 .tip {
-  position: absolute; z-index: 5; pointer-events: none; transform: translate(-50%, calc(-100% - 10px));
+  position: absolute; z-index: 5; pointer-events: none;
   display: flex; flex-direction: column; gap: 1px; max-width: 260px; white-space: normal;
   background: var(--w-panel-solid); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
   padding: 4px 7px; font-size: var(--w-fs-xs); color: var(--w-fg); box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
 }
-.tipLeft { transform: translate(calc(-100% + 10px), calc(-100% - 10px)); }
+.above { --ty: calc(-100% - 10px); }
+.below { --ty: 12px; }
+.center { transform: translate(-50%, var(--ty)); }
+.left { transform: translate(-10px, var(--ty)); }
+.right { transform: translate(calc(-100% + 10px), var(--ty)); }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; }
 </style>

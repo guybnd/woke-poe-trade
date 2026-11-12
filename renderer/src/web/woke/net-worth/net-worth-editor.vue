@@ -11,6 +11,10 @@
       <w-field v-model="goalDiv" type="number" suffix="div" />
     </div>
     <w-toggle v-model="dockIcon">Show an icon in the dock</w-toggle>
+    <div class="flex flex-col gap-1">
+      <span>Sections in the window</span>
+      <w-toggle v-for="s in SECTIONS" :key="s.id" :model-value="sectionOn(configWidget, s.id)" @update:model-value="setSection(configWidget, s.id, $event)">{{ s.label }}</w-toggle>
+    </div>
   </div>
 </template>
 
@@ -20,7 +24,7 @@ import WField from '../ui/WField.vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
-import { hideBelowOf } from './widget'
+import { SECTIONS, hideBelowOf, sectionOn, setSection } from './widget'
 import type { NetWorthWidget } from './widget'
 
 export default defineComponent({
@@ -30,6 +34,9 @@ export default defineComponent({
   setup (props) {
     const w = () => props.configWidget
     return {
+      SECTIONS,
+      sectionOn,
+      setSection,
       hotkey: configModelValue(() => props.configWidget, 'hotkey'),
       dockIcon: computed({
         get: () => w().dockIcon !== false,
