@@ -96,7 +96,7 @@ import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMen
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, dropDraft, isDirty, saveDraft, setDraft, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
 import type { FolderNode } from './widget'
@@ -160,7 +160,7 @@ const hasScarabs = computed(() => props.config.strategies.some(s => /scarab/i.te
 
 function describe (s: AtlasStrategy): string {
   const threads = s.threads.map(t => `${t.count} ${t.type}`).join(', ')
-  return [threads || (s.treeUrl ? 'No Threads' : 'Empty'), ...s.tags].filter(Boolean).join(' · ')
+  return [threads || (workingTree(props.config, s) ? 'No Threads' : 'Empty'), ...s.tags].filter(Boolean).join(' · ')
 }
 
 // ---- the list: nested folders ----
@@ -309,6 +309,7 @@ function remove (s: AtlasStrategy) {
   const wasSelected = props.config.selectedId === s.id
   props.config.strategies = props.config.strategies.filter(o => o.id !== s.id)
   if (wasSelected) props.config.selectedId = null
+  const drafts = takeDrafts(props.config, [s.id])
   // Undo puts back this strategy only, so anything made since stays.
   toast(`Removed "${s.name || 'Untitled'}"`, {
     anchor: panel.value?.el,
@@ -317,6 +318,7 @@ function remove (s: AtlasStrategy) {
       const list = [...props.config.strategies]
       list.splice(Math.min(at, list.length), 0, s)
       props.config.strategies = list
+      restoreDrafts(props.config, drafts)
       if (wasSelected) props.config.selectedId = s.id
     }
   })
@@ -383,12 +385,14 @@ function removeFolder (path: string) {
   props.config.strategies = props.config.strategies.filter(s => !gone.has(s.id))
   props.config.folders = (props.config.folders ?? []).filter(f => !goneFolders.includes(f))
   if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = null
-  // Undo puts back what this removed, keeping anything made since.
+  const drafts = takeDrafts(props.config, gone)
   toast(gone.size ? `Removed "${path}" and ${gone.size} ${gone.size === 1 ? 'strategy' : 'strategies'}` : `Removed "${path}"`, {
     anchor: panel.value?.el,
     undo: () => {
       const have = new Set(props.config.strategies.map(s => s.id))
-      props.config.strategies = [...props.config.strategies, ...removed.filter(s => !have.has(s.id))]
+      const back = removed.filter(s => !have.has(s.id))
+      props.config.strategies = [...props.config.strategies, ...back]
+      restoreDrafts(props.config, Object.fromEntries(Object.entries(drafts).filter(([id]) => back.some(s => String(s.id) === id))))
       props.config.folders = [...new Set([...(props.config.folders ?? []), ...goneFolders])]
       if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = selectedBefore
     }

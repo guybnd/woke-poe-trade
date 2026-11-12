@@ -64,7 +64,9 @@
           <button v-for="m in mechanicRows" :key="m.name" type="button" :class="$style.mech" class="w-focusable"
             :aria-pressed="liveLit.includes(m.name)" :title="`${m.name}: ${m.taken} of ${m.total} passives taken`"
             @click="toggleLit(m.name)" @mouseenter="preview = m.name" @mouseleave="preview = ''">
-            <span :class="$style.swatch" :style="liveLit.includes(m.name) ? { background: litColour(liveLit, m.name) } : undefined" />
+            <span :class="$style.icon" :style="liveLit.includes(m.name) ? { borderColor: litColour(liveLit, m.name), boxShadow: `0 0 0 1px ${litColour(liveLit, m.name)}` } : undefined">
+              <span v-if="model.mechanicArt.get(m.name)" :class="$style.art" :style="artStyle(m.name)" />
+            </span>
             <span class="w-trunc">{{ m.name.replace(/^The /, '') }}</span>
             <span :class="$style.count" class="w-num"><span :class="m.taken ? 'w-accent' : ''">{{ m.taken }}</span>/{{ m.total }}</span>
           </button>
@@ -152,6 +154,13 @@ const mechanicRows = computed(() => {
 
 // Lit mechanics this atlas has: an older league's names keep no colour slot.
 const liveLit = computed(() => props.lit.filter(m => props.model.mechanics.includes(m)))
+
+// The mastery icon, cut from its sheet and scaled to the row.
+const ICON_PX = 26
+function artStyle (name: string) {
+  const a = props.model.mechanicArt.get(name)!
+  return { width: `${a.w}px`, height: `${a.h}px`, backgroundImage: `url(${a.url})`, backgroundPosition: `-${a.x}px -${a.y}px`, zoom: ICON_PX / Math.max(a.w, a.h) }
+}
 
 function toggleLit (name: string) {
   const off = liveLit.value.includes(name)
@@ -633,7 +642,20 @@ function openWeb () {
 }
 .mech:hover { color: var(--w-fg); background: var(--w-line-soft); }
 .mech[aria-pressed="true"] { color: var(--w-fg); background: var(--w-panel-2); }
-.swatch { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--w-line-strong); }
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--w-panel-solid-base);
+}
+.art { display: block; background-repeat: no-repeat; }
+.mech:not([aria-pressed="true"]) .art { opacity: 0.6; }
+.mech:hover .art { opacity: 1; }
 .count { margin-left: auto; flex: none; color: var(--w-faint); font-size: var(--w-fs-sm); }
 .warn { color: var(--w-warn, var(--w-accent)); }
 </style>

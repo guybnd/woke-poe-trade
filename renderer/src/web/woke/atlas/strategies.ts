@@ -3,6 +3,7 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
 import { strategyRegexFolder } from '../regex-library/folder-names'
+import { decodeTree } from './tree'
 
 export const ATLAS_TYPE = 'woke-atlas-strategies'
 
@@ -85,6 +86,11 @@ export function migrateAtlasWidget (w: AtlasWidget) {
   }
   if (!Array.isArray(w.folders)) w.folders = []
   if (!Array.isArray(w.closedFolders)) w.closedFolders = []
+  // A draft whose strategy is gone would land on the next one given its id.
+  if (w.drafts) {
+    const ids = new Set(w.strategies.map(s => String(s.id)))
+    w.drafts = Object.fromEntries(Object.entries(w.drafts).filter(([id]) => ids.has(id)))
+  }
 }
 
 export function strategyMatches (s: AtlasStrategy, query: string): boolean {
@@ -214,10 +220,37 @@ export function isDirty (w: Pick<AtlasWidget, 'drafts'>, s: Pick<AtlasStrategy, 
   return d != null && d !== s.treeUrl
 }
 
+// Two links to the same tree: same passives and picked types, in any order.
+export function sameTree (a: string, b: string): boolean {
+  if (a === b) return true
+  try {
+    const x = decodeTree(a)
+    const y = decodeTree(b)
+    const key = (t: typeof x) => [[...t.nodes].sort((m, n) => m - n).join(','), t.masteries.map(m => `${m.node}:${m.effect}`).sort().join(',')].join('|')
+    return key(x) === key(y)
+  } catch {
+    return false
+  }
+}
+
 // An edit: kept as a draft, or dropped once it's back to the saved tree.
 export function setDraft (w: AtlasWidget, s: AtlasStrategy, url: string) {
   const rest = Object.fromEntries(Object.entries(w.drafts ?? {}).filter(([id]) => id !== String(s.id)))
-  w.drafts = url === s.treeUrl ? rest : { ...rest, [s.id]: url }
+  w.drafts = sameTree(url, s.treeUrl) ? rest : { ...rest, [s.id]: url }
+}
+
+// Removing strategies takes their drafts with them (so a new strategy given
+// the same id starts clean); Undo puts them back.
+export function takeDrafts (w: AtlasWidget, ids: Iterable<number>): Record<string, string> {
+  const want = new Set([...ids].map(String))
+  const taken = Object.fromEntries(Object.entries(w.drafts ?? {}).filter(([id]) => want.has(id)))
+  if (Object.keys(taken).length) w.drafts = Object.fromEntries(Object.entries(w.drafts ?? {}).filter(([id]) => !want.has(id)))
+  return taken
+}
+
+export function restoreDrafts (w: AtlasWidget, taken: Record<string, string>) {
+  if (!Object.keys(taken).length) return
+  w.drafts = { ...taken, ...(w.drafts ?? {}) }
 }
 
 export function dropDraft (w: AtlasWidget, s: Pick<AtlasStrategy, 'id'>) {
