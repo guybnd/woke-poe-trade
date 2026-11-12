@@ -32,7 +32,7 @@
       <template #toolbar>
         <WSegmented v-model="config.tier" :options="tierOptions" />
         <WSegmented v-model="config.sort" :options="sortOptions" />
-        <WChip clickable :active="!!config.skipThin" title="Leave thin-market poe.ninja prices out: they count as unpriced, so loot and profit become a floor."
+        <WChip clickable :active="!!config.skipThin" title="Count drops priced from a thin poe.ninja market as 0, so loot and profit are a floor. Entry costs stay as they are."
           @click="config.skipThin = !config.skipThin"><i class="fas fa-exclamation-circle" /> Skip thin</WChip>
       </template>
       <template v-if="!prices.snapshot.value" #banner>
@@ -104,7 +104,7 @@
                     <input type="checkbox" :checked="d.included" :aria-label="`Count ${d.name}`" @change="toggleDrop(sel.boss.id, d.name, ($event.target as HTMLInputElement).checked, d.tooRare)">
                     <span v-item-tip="{ name: d.name, type: typeByName.get(d.name) }" class="w-trunc flex items-center gap-1">
                       <WIcon :src="art(d.name)" fallback="fas fa-gem" /><span class="w-trunc">{{ d.name }}</span><span v-if="d.qty > 1" class="w-dim">×{{ d.qty }}</span>
-                      <i v-if="thinByName.has(d.name)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(thinByName.get(d.name)!)" />
+                      <i v-if="dropThin(d)" class="fas fa-exclamation-circle w-faint" :title="d.priceSource === 'thin' ? `${thinTitle(dropThin(d)!)} Counted as 0 (Skip thin).` : thinTitle(dropThin(d)!)" />
                       <WChip v-if="d.tooRare" :title="`Rarer than 1 in ${config.plannedRuns} runs`">rare</WChip>
                     </span>
                     <span class="text-right w-num" :class="d.rateSource === 'community' ? 'w-dim' : d.rateSource === 'none' ? 'w-faint' : d.rateSource === 'estimate' ? '' : 'w-accent'" :style="d.rateSource === 'estimate' ? 'color: var(--w-warn);' : ''" :title="rateTitle(d.rateSource)">{{ d.chance == null ? '?' : (d.rateSource === 'estimate' ? '~' : '') + pct(d.chance) }}</span>
@@ -265,8 +265,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { isThin, thinTitle } from '../market/types'
-import type { PriceItem } from '../market/types'
+import { thinTitle } from '../market/types'
 import { WInfo, WPanel, WTabs, WSegmented, WField, WButton, WEmpty, WPrice, WChip, WListItem, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
@@ -321,15 +320,12 @@ const divine = computed(() => prices.snapshot.value?.divine ?? null)
 const tradePrices = useTradePrices()
 const px = computed(() => {
   const league = prices.snapshot.value?.league ?? ''
-  const items = prices.snapshot.value?.items ?? []
-  return priceResolver(props.config.skipThin ? items.filter(i => !isThin(i)) : items, name => tradePrices.get(league, name))
+  return priceResolver(prices.snapshot.value?.items ?? [], name => tradePrices.get(league, name))
 })
-// Drops whose poe.ninja price comes from a thin market, by name.
-const thinByName = computed(() => {
-  const out = new Map<string, PriceItem>()
-  for (const i of prices.snapshot.value?.items ?? []) if (isThin(i) && !out.has(i.name)) out.set(i.name, i)
-  return out
-})
+// The thin poe.ninja row a drop is priced from, if that's where its price came from.
+function dropThin (d: { name: string, variant?: string, priceSource: string | null }) {
+  return d.priceSource === 'ninja' || d.priceSource === 'thin' ? px.value.thin(d.name, d.variant) : null
+}
 
 // Trade lookups only while this panel is on screen.
 const onScreen = computed(() => props.config.wmWants === 'show' && wm.active.value)

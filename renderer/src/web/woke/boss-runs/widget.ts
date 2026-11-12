@@ -10,7 +10,4 @@ export interface BossRunsWidget extends Widget, BossPrefs {
   selected: string
   sort: BossSort
   tier: 'all' | 'uber' | 'pinnacle'
-  // Thin-market poe.ninja prices count as unpriced (unset: off, so totals
-  // match what the market shows).
-  skipThin?: boolean
 }

@@ -55,4 +55,20 @@ describe('boss runs card', () => {
     expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs())).toBe(300)
     expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs({ priceModes: { 'Forbidden Flame': 'custom' }, customPrices: { 'Forbidden Flame': 5000 } }))).toBe(5000)
   })
+
+  it('Skip thin counts a drop as 0 only when the row that prices it is thin', () => {
+    const prices = priceResolver([
+      { name: 'Awakened Enlighten Support', variant: '1', chaos: 900, gaps: 0 },
+      { name: 'Awakened Enlighten Support', variant: '5/20', chaos: 50, gaps: 5 },
+      { name: 'Sacrificial Heart', variant: '', chaos: 40, gaps: 4 }
+    ] as Parameters<typeof priceResolver>[0])
+    const on = prefs({ skipThin: true })
+    // The '1' row prices the gem and isn't thin: another variant's gaps don't matter.
+    expect(prices.thin('Awakened Enlighten Support', '1')).toBeNull()
+    expect(killDropPrice({ name: 'Awakened Enlighten Support', variant: '1' }, prices, on)).toBe(900)
+    // A thin row counts as 0 with Skip thin, never as another variant's price.
+    expect(prices.thin('Sacrificial Heart')).not.toBeNull()
+    expect(killDropPrice({ name: 'Sacrificial Heart' }, prices, on)).toBe(0)
+    expect(killDropPrice({ name: 'Sacrificial Heart' }, prices, prefs())).toBe(40)
+  })
 })

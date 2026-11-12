@@ -3,6 +3,7 @@ import { VARIABLE_ITEMS } from './bosses'
 import { ESTIMATED_RATES } from './estimates'
 import { formatClock } from '../ui/format'
 import type { Boss, BossDrop } from './bosses'
+import { isThin } from '../market/types'
 import type { PriceItem } from '../market/types'
 
 export interface KillDrop {
@@ -39,12 +40,16 @@ export interface BossPrefs {
   priceModes: Record<string, PriceMode>
   // Typed-in price in chaos (e.g. what unidentified copies sell for), by item name.
   customPrices: Record<string, number>
+  // A drop whose poe.ninja row is a thin market counts as 0, so loot and
+  // profit are a floor (unset: off). Entry costs are never touched.
+  skipThin?: boolean
 }
 
 // 'unid' = unidentified trade listings; 'median' is the poe.ninja price.
 export type PriceMode = 'unid' | 'min' | 'median' | 'custom'
 // Where the price on a row came from.
-export type PriceSource = 'trade' | 'ninja' | 'custom'
+// 'thin': poe.ninja's row is a thin market and Skip thin counts it as 0.
+export type PriceSource = 'trade' | 'ninja' | 'custom' | 'thin'
 
 // Price found on official trade, for drops poe.ninja can't price properly.
 export interface TradeQuote {
@@ -61,6 +66,8 @@ export interface VariantStats {
 
 export interface Prices {
   price: (name: string, variant?: string) => number | null
+  // The row price() reads, when it's a thin market.
+  thin: (name: string, variant?: string) => PriceItem | null
   variants: (name: string) => VariantStats | null
   trade: (name: string) => TradeQuote | null
 }
@@ -129,18 +136,23 @@ export function priceResolver (items: PriceItem[], trade: (name: string) => Trad
     const median = values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2
     return { min: values[0], median, max: values[values.length - 1], count: values.length }
   }
-  const price = (name: string, variant?: string): number | null => {
+  const row = (name: string, variant?: string): PriceItem | null => {
     const list = byName.get(name)
     if (!list?.length) return null
     if (variant != null) {
       const exact = list.find(i => i.variant === variant)
-      if (exact) return exact.chaos
+      if (exact) return exact
     }
     const plain = list.find(i => i.variant === '')
-    if (plain) return plain.chaos
-    return Math.min(...list.map(i => i.chaos))
+    if (plain) return plain
+    return list.reduce((a, b) => b.chaos < a.chaos ? b : a)
   }
-  return { price, variants, trade }
+  const price = (name: string, variant?: string): number | null => row(name, variant)?.chaos ?? null
+  const thin = (name: string, variant?: string): PriceItem | null => {
+    const r = row(name, variant)
+    return r && isThin(r) ? r : null
+  }
+  return { price, variants, trade, thin }
 }
 
 export interface DropPrice {
@@ -161,6 +173,7 @@ export function dropPrice (d: BossDrop, prices: Prices, prefs: BossPrefs): DropP
   const quote = prices.trade(d.name)
   if (mode == null) {
     const ninja = prices.price(d.name, d.variant)
+    if (ninja != null && prefs.skipThin && prices.thin(d.name, d.variant)) return { price: 0, spread: null, mode, source: 'thin', listings: null }
     if (ninja != null) return { price: ninja, spread: null, mode, source: 'ninja', listings: null }
     if (quote) return { price: quote.chaos, spread: null, mode, source: 'trade', listings: quote.listings }
     return { price: null, spread: null, mode, source: null, listings: null }
