@@ -62,19 +62,32 @@
         </section>
 
         <section v-if="showChanges || shown.where" :class="[$style.cols, { [$style.one]: !(showChanges && shown.where) }]">
-          <div v-if="showChanges">
+          <div v-if="showChanges" :class="[$style.changesCol, { [$style.capped]: shown.where }]">
             <div :class="$style.colHead">
               <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
               <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
             </div>
-            <div v-for="g in groups" :key="g.key" :class="$style.group">
-              <div :class="$style.groupHead"><span class="w-trunc">{{ g.title }}</span><b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b></div>
-              <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
-                <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
-                <span class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
-                <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
+            <!-- The newest groups; the two latest open, the rest one row each. The
+                 list scrolls inside, never stretching the window. -->
+            <div :class="$style.scrollBox">
+              <div :class="$style.scroll">
+                <div v-for="(g, i) in groups.slice(0, groupLimit)" :key="g.key" :class="$style.group">
+                  <button type="button" :class="$style.groupHead" :aria-expanded="groupOpen(g.key, i)" @click="toggleGroup(g.key, i)">
+                    <i :class="groupOpen(g.key, i) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
+                    <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template></span>
+                    <b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b>
+                  </button>
+                  <template v-if="groupOpen(g.key, i)">
+                    <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
+                      <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
+                      <span class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
+                      <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
+                    </div>
+                    <div v-if="g.lines.length > 5" class="w-dim text-xs">+{{ g.lines.length - 5 }} more</div>
+                  </template>
+                </div>
+                <button v-if="groups.length > groupLimit" type="button" :class="$style.clear" class="text-xs" @click="groupLimit += GROUP_STEP">Show older ({{ groups.length - groupLimit }})</button>
               </div>
-              <div v-if="g.lines.length > 5" class="w-dim text-xs">+{{ g.lines.length - 5 }} more</div>
             </div>
             <div v-if="session" :class="$style.sessionFoot">
               <span class="w-dim text-xs">Gains are read when you enter your hideout</span>
@@ -91,19 +104,27 @@
         </section>
       </template>
 
-      <!-- T1: one thin line; the tab labels open under it -->
+      <!-- T1: one line with the tab labels in it; when they don't fit it fades
+           out at the right, and the chevron (or the fade) opens them all below -->
       <section v-if="shown.tabs" :class="$style.tabLine">
-        <button type="button" :class="$style.toggle" :aria-expanded="tabsOpen" @click="config.tabsOpen = !tabsOpen">
-          <i :class="tabsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /> Tabs
+        <button v-if="tabsOverflow" type="button" :class="$style.toggle" :aria-expanded="expanded" @click="config.tabsOpen = !expanded">
+          <i :class="expanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /> Tabs
         </button>
-        <span class="w-trunc" :class="tabs.length ? '' : 'w-dim'">
-          <template v-if="tabs.length">{{ tabs.map(nameOfTab).join(', ') }} · <span class="w-num">{{ div(selectedChaos) }}</span><Coin :chaos="!divine" /></template>
-          <template v-else>All tabs</template>
-        </span>
-        <button v-if="tabs.length" type="button" :class="$style.clear" title="Every tab again" @click="tabs = []">All</button>
+        <span v-else :class="$style.caps">Tabs</span>
+        <button type="button" :class="[$style.tabLabel, { [$style.tabOn]: !tabs.length }]" :aria-pressed="!tabs.length" title="Every tab" @click="tabs = []">All tabs</button>
+        <div :class="$style.stripBox">
+          <div ref="strip" :class="[$style.strip, { [$style.fade]: tabsOverflow && !expanded, [$style.ghost]: expanded }]" :aria-hidden="expanded" @scroll="unscroll">
+            <button v-for="t in inlineLabels" :key="t.id" type="button" :class="[$style.tabLabel, { [$style.tabOn]: tabs.includes(t.id) }]" :tabindex="expanded ? -1 : undefined"
+              :style="t.colour ? { '--tab-colour': t.colour } : undefined" :aria-pressed="tabs.includes(t.id)" :title="t.title" @click="tabs = toggleTab(tabs, t.id)">
+              {{ t.name }}<span :class="$style.tabCount">{{ t.count }}</span>
+            </button>
+          </div>
+          <button v-if="tabsOverflow && !expanded" type="button" :class="$style.fadeHit" title="Show every tab" aria-label="Show every tab" @click="config.tabsOpen = true" />
+        </div>
+        <span v-if="tabs.length" class="w-num text-xs" :class="$style.picked" :title="inChaos(selectedChaos)">{{ tabs.length }} picked · {{ div(selectedChaos) }}<Coin :chaos="!divine" /></span>
         <span class="w-dim text-xs" :class="$style.synced">{{ tabValues.length }} synced</span>
       </section>
-      <section v-if="shown.tabs && tabsOpen" :class="$style.tabLabels">
+      <section v-if="shown.tabs && expanded" :class="$style.tabLabels">
         <button v-for="t in tabLabels" :key="t.id" type="button" :class="[$style.tabLabel, { [$style.tabOn]: tabs.includes(t.id) }]"
           :style="t.colour ? { '--tab-colour': t.colour } : undefined" :aria-pressed="tabs.includes(t.id)" :title="t.title" @click="tabs = toggleTab(tabs, t.id)">
           {{ t.name }}<span :class="$style.tabCount">{{ t.count }}</span>
@@ -113,9 +134,14 @@
       <section :class="$style.chips">
         <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
         <WChip v-if="cat !== 'all'" clickable active :title="`Only ${catLabel}. Click to show every category`" @click="cat = 'all'">{{ catLabel }} ×</WChip>
-        <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }}<Coin /></WChip>
+        <HideChip v-if="divine" :value="hideBelow" :on="config.hideDivOn === true" :idle="floor.limiting === 'chaos'"
+          :title="floor.limiting === 'chaos' ? 'The chaos limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
+          @on="config.hideDivOn = $event" @value="config.hideBelowDiv = $event" />
+        <HideChip chaos :value="hideBelowChaos" :on="config.hideChaosOn === true" :idle="floor.limiting === 'div'"
+          :title="floor.limiting === 'div' ? 'The divine limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
+          @on="config.hideChaosOn = $event" @value="config.hideBelowChaos = $event" />
       </section>
-      <ItemTable :lines="tableLines" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || hideSmall" :divine="divine" :changes="changes" :tab-names="tabNames"
+      <ItemTable :lines="tableLines" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
         @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
 
       <div class="w-dim text-xs" :class="$style.foot">
@@ -124,6 +150,8 @@
           <template v-if="status?.skipped"> · {{ status.skipped }} remove-only skipped</template>
           <template v-if="v.unpriced"> · {{ v.unpriced }} {{ v.unpriced === 1 ? 'item' : 'items' }} unpriced (rares aren't searched)
             <button type="button" :class="$style.clear" :aria-pressed="showUnpriced" title="List them, to set your own price" @click="showUnpriced = !showUnpriced">{{ showUnpriced ? 'hide' : 'show' }}</button></template>
+          <template v-if="hiddenByValue"> · {{ hiddenByValue }} hidden by value
+            <button type="button" :class="$style.clear" title="Switch the Hide &lt; limits off" @click="showHidden">show</button></template>
           <template v-if="ignoredCount"> · {{ ignoredCount }} ignored
             <button type="button" :class="$style.clear" :aria-pressed="showIgnored" title="List them, to stop ignoring one" @click="showIgnored = !showIgnored">{{ showIgnored ? 'hide' : 'show' }}</button></template>
         </span>
@@ -137,7 +165,7 @@
 // Net worth, pick A1 "Ledger", decluttered (H1 + T1): one summary line with
 // the rest under Details, a thin tab line that opens to the labels, and a
 // sections flyout to switch parts off.
-import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, openMenu, toast } from '../ui'
@@ -149,15 +177,16 @@ import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { bigGains, change24h, filterLines, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
 import { divine, historyNow, leagueNow, ledger, setIgnored, setMyPrice, summary, tabValues, valuation, wantPrices } from './store'
-import { SECTIONS, hideBelowOf, sectionOn, setSection } from './widget'
+import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
+import HideChip from './HideChip.vue'
 
 const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
 
@@ -281,7 +310,22 @@ const session = computed(() => {
 })
 const groups = computed(() => {
   const s = farming.value
-  return s ? groupByRuns(ledger.value.diffs, s.runs ?? [], s.startedAt) : groupByRefresh(ledger.value.diffs)
+  return s ? groupByRuns(ledger.value.diffs, s.runs ?? [], s.startedAt) : groupByRefresh(ledger.value.diffs, ledger.value.diffs.length)
+})
+// The newest 5 groups, "Show older" adds more; the newest 2 open, the rest
+// folded to their header unless clicked.
+const GROUP_STEP = 5
+const groupLimit = shallowRef(GROUP_STEP)
+const groupToggled = shallowRef<Record<string, boolean>>({})
+const groupOpen = (key: string, i: number) => groupToggled.value[key] ?? i < 2
+function toggleGroup (key: string, i: number) {
+  groupToggled.value = { ...groupToggled.value, [key]: !groupOpen(key, i) }
+}
+// A session starting or ending is a different list.
+watch(farming, (now, before) => {
+  if (!!now === !!before && now?.startedAt === before?.startedAt) return
+  groupLimit.value = GROUP_STEP
+  groupToggled.value = {}
 })
 function endSession () {
   const w = farmingWidget.value
@@ -296,11 +340,13 @@ function clearFilters () {
   cat.value = 'all'
   tabs.value = []
   query.value = ''
-  hideSmall.value = false
+  props.config.hideDivOn = false
+  props.config.hideChaosOn = false
 }
 const query = shallowRef('')
-const hideSmall = shallowRef(false)
 const hideBelow = computed(() => hideBelowOf(props.config))
+const hideBelowChaos = computed(() => hideBelowChaosOf(props.config))
+const floor = computed(() => valueFloor(props.config, divine.value))
 
 const cats = computed(() => {
   const val = v.value
@@ -310,7 +356,6 @@ const cats = computed(() => {
 })
 
 const tabNames = computed(() => new Map(tabValues.value.map(t => [t.id, t.name])))
-const nameOfTab = (id: string) => tabNames.value.get(id) ?? '?'
 const catLabel = computed(() => CATEGORIES.find(c => c.id === cat.value)?.label ?? '')
 const selectedChaos = computed(() => tabValues.value.filter(t => tabs.value.includes(t.id)).reduce((x, t) => x + t.chaos, 0))
 const tabLabels = computed(() => {
@@ -329,6 +374,31 @@ const tabLabels = computed(() => {
     }
   })
 })
+// The labels in the tab row: the picked ones first when they don't all fit.
+const inlineLabels = computed(() => tabsOverflow.value ? selectedFirst(tabLabels.value, tabs.value) : tabLabels.value)
+// Do they fit on the row? Measured on the strip, again when it's resized or the
+// labels change. Opened (tabsOpen) only means something when they don't.
+const strip = shallowRef<HTMLElement | null>(null)
+const tabsOverflow = shallowRef(false)
+const expanded = computed(() => tabsOpen.value && tabsOverflow.value)
+// A focused label would scroll the row sideways; it stays put.
+function unscroll (e: Event) { (e.currentTarget as HTMLElement).scrollLeft = 0 }
+function measureTabs () {
+  const el = strip.value
+  tabsOverflow.value = !!el && el.scrollWidth > el.clientWidth + 1
+}
+let tabsResize: ResizeObserver | null = null
+watch(strip, (el, _, onCleanup) => {
+  if (!el || typeof ResizeObserver === 'undefined') return
+  tabsResize = new ResizeObserver(measureTabs)
+  tabsResize.observe(el)
+  measureTabs()
+  onCleanup(() => { tabsResize?.disconnect(); tabsResize = null })
+}, { flush: 'post' })
+watch(tabLabels, () => { nextTick(measureTabs) }, { flush: 'post' })
+// The game font arriving later widens the labels without resizing the row.
+onMounted(() => { document.fonts?.ready.then(measureTabs).catch(() => {}) })
+
 // Tabs that are gone (tabs chosen again) drop out of the pick.
 watch(tabValues, (list) => {
   const ids = new Set(list.map(t => t.id))
@@ -341,11 +411,22 @@ const showIgnored = shallowRef(false)
 const tableLines = computed(() => {
   const val = v.value
   if (!val) return []
-  const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: hideSmall.value && divine.value ? hideBelow.value * divine.value : 0 }
+  const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: floor.value.minChaos }
   const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...(showIgnored.value ? val.ignoredLines : [])]
   return [...filterLines(val.lines, f), ...filterLines(extra, { ...f, minChaos: 0 })]
 })
 const ignoredCount = computed(() => v.value?.ignoredLines.length ?? 0)
+// Rows the value chips hide (the other filters aside).
+const hiddenByValue = computed(() => {
+  const val = v.value
+  if (!val || !floor.value.minChaos) return 0
+  const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: 0 }
+  return filterLines(val.lines, f).length - filterLines(val.lines, { ...f, minChaos: floor.value.minChaos }).length
+})
+function showHidden () {
+  props.config.hideDivOn = false
+  props.config.hideChaosOn = false
+}
 watch(ignoredCount, (n) => { if (!n) showIgnored.value = false })
 
 // ---------- your prices and ignored items (row menu) ----------
@@ -406,7 +487,17 @@ function refresh () {
 .colHead { display: flex; justify-content: space-between; gap: var(--w-s2); margin-bottom: 2px; }
 .colHead b { font-weight: 500; font-size: var(--w-fs-sm); }
 .group { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
-.groupHead { display: flex; justify-content: space-between; gap: var(--w-s2); font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px dashed var(--w-line); }
+.groupHead { display: flex; align-items: baseline; gap: 6px; width: 100%; font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px dashed var(--w-line); text-align: left; cursor: pointer; }
+.groupHead:hover { color: var(--w-fg); }
+.groupHead > span { flex: 1 1 auto; min-width: 0; }
+.groupHead > i { font-size: calc(8px * var(--w-text-scale, 1)); width: 8px; flex: none; }
+.changesCol { display: flex; flex-direction: column; }
+.scrollBox { flex: 1 1 auto; min-height: 0; }
+.scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+/* Beside "Where it is": as tall as that column (at least 240px), scrolling inside. */
+.capped { min-height: 240px; }
+.capped .scrollBox { position: relative; }
+.capped .scroll { position: absolute; inset: 0; max-height: none; }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
@@ -417,7 +508,15 @@ function refresh () {
 .catOn { background: var(--w-panel-3); box-shadow: inset 2px 0 var(--w-gold); }
 .tabLine { display: flex; align-items: center; gap: var(--w-s2); padding: 4px var(--w-pad); border-bottom: 1px solid var(--w-line); font-size: var(--w-fs-sm); min-width: 0; }
 .clear { font-size: var(--w-fs-xs); color: var(--w-dim); text-decoration: underline; cursor: pointer; }
-.synced { margin-left: auto; white-space: nowrap; }
+.synced { white-space: nowrap; flex: none; }
+.picked { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; color: var(--w-gold); flex: none; }
+.stripBox { position: relative; flex: 1 1 auto; min-width: 0; }
+.strip { display: flex; gap: 3px; overflow: hidden; white-space: nowrap; }
+.strip.fade { mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); }
+.strip > * { flex: none; }
+.ghost { visibility: hidden; }
+.fadeHit { position: absolute; top: 0; right: 0; bottom: 0; width: 56px; cursor: pointer; }
+.fadeHit:hover { background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--w-gold) 18%, transparent)); }
 .tabLabels { display: flex; flex-wrap: wrap; gap: 3px; padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); }
 .tabLabel { display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 8px; font-size: var(--w-fs-xs); color: var(--w-dim); background: var(--w-panel-2); border: 1px solid var(--w-line); border-top: 3px solid var(--tab-colour, var(--w-line)); border-radius: var(--w-r-sm) var(--w-r-sm) 0 0; cursor: pointer; white-space: nowrap; }
 .tabLabel:hover { color: var(--w-fg); }

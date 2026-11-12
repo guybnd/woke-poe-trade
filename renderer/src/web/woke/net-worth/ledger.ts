@@ -263,6 +263,11 @@ export function toggleTab (tabs: string[], id: string): string[] {
   return tabs.includes(id) ? tabs.filter(t => t !== id) : [...tabs, id]
 }
 
+// Picked tabs first, then the rest (each in tab order).
+export function selectedFirst<T extends { id: string }> (list: T[], picked: string[]): T[] {
+  return [...list.filter(t => picked.includes(t.id)), ...list.filter(t => !picked.includes(t.id))]
+}
+
 export function filterLines<L extends { category: Category, tabIds: string[], name: string, chaos: number }> (lines: L[], f: TableFilter): L[] {
   const q = f.query.trim().toLowerCase()
   return lines.filter(l =>

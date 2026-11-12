@@ -1,8 +1,10 @@
 // The Net worth window's numbers (A1 Ledger): per-tab value, liquid, chart
 // points and big gains, the goal's ETA, price moves and the change view.
 import { describe, it, expect } from 'vitest'
+import { nudgeHide, valueFloor } from '@/web/woke/net-worth/widget'
+import type { NetWorthWidget } from '@/web/woke/net-worth/widget'
 import {
-  addPoint, bigGains, filterLines, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
+  addPoint, bigGains, filterLines, selectedFirst, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
 } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint, SeriesPoint } from '@/web/woke/net-worth/ledger'
 import { valueStash } from '@/web/woke/net-worth/valuation'
@@ -230,5 +232,33 @@ describe('sections', () => {
     expect(w.hiddenSections).toEqual(['chart'])
     setSection(w, 'chart', true)
     expect(sectionOn(w, 'chart')).toBe(true)
+  })
+})
+
+describe('selectedFirst', () => {
+  it('puts picked tabs first, each group in tab order', () => {
+    const list = ['a', 'b', 'c', 'd'].map(id => ({ id }))
+    expect(selectedFirst(list, ['d', 'b']).map(t => t.id)).toEqual(['b', 'd', 'a', 'c'])
+    expect(selectedFirst(list, []).map(t => t.id)).toEqual(['a', 'b', 'c', 'd'])
+  })
+})
+
+describe('value chips', () => {
+  const w = (x: Partial<NetWorthWidget>) => x as NetWorthWidget
+  it('the higher limit in chaos wins, and says which', () => {
+    expect(valueFloor(w({}), 200)).toEqual({ minChaos: 0, limiting: null })
+    expect(valueFloor(w({ hideDivOn: true }), 200)).toEqual({ minChaos: 200, limiting: 'div' })
+    expect(valueFloor(w({ hideChaosOn: true }), 200)).toEqual({ minChaos: 10, limiting: 'chaos' })
+    expect(valueFloor(w({ hideDivOn: true, hideChaosOn: true }), 200)).toEqual({ minChaos: 200, limiting: 'div' })
+    expect(valueFloor(w({ hideDivOn: true, hideChaosOn: true, hideBelowChaos: 500 }), 200)).toEqual({ minChaos: 500, limiting: 'chaos' })
+    expect(valueFloor(w({ hideDivOn: true, hideBelowDiv: 0.5, hideChaosOn: true }), 200)).toEqual({ minChaos: 100, limiting: 'div' })
+  })
+  it('the divine limit needs a rate', () => {
+    expect(valueFloor(w({ hideDivOn: true }), null)).toEqual({ minChaos: 0, limiting: null })
+    expect(valueFloor(w({ hideDivOn: true, hideChaosOn: true }), null)).toEqual({ minChaos: 10, limiting: 'chaos' })
+  })
+  it('scrolls in small steps low and bigger ones higher', () => {
+    expect([nudgeHide(10, 1, true), nudgeHide(20, 1, true), nudgeHide(20, -1, true), nudgeHide(100, 1, true), nudgeHide(100, -1, true), nudgeHide(0, -1, true)]).toEqual([11, 25, 19, 125, 95, 0])
+    expect([nudgeHide(1, 1, false), nudgeHide(2, 1, false), nudgeHide(2, -1, false), nudgeHide(0.5, -1, false), nudgeHide(1.3, 1, false)]).toEqual([1.5, 3, 1.5, 0, 2])
   })
 })

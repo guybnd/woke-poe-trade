@@ -3,8 +3,10 @@
     <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
       <span>Hotkey: show or hide net worth</span>
       <w-hotkey-cell v-model="hotkey" />
-      <span>"Hide small" hides items under</span>
+      <span>"Hide &lt;" in divines</span>
       <w-field v-model="hideBelow" type="number" suffix="div" />
+      <span>"Hide &lt;" in chaos</span>
+      <w-field v-model="hideChaos" type="number" suffix="c" />
       <span>Goal name</span>
       <w-field v-model="goalName" placeholder="e.g. Mirror" />
       <span>Goal</span>
@@ -24,7 +26,7 @@ import WField from '../ui/WField.vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
-import { SECTIONS, hideBelowOf, sectionOn, setSection } from './widget'
+import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection } from './widget'
 import type { NetWorthWidget } from './widget'
 
 export default defineComponent({
@@ -45,6 +47,10 @@ export default defineComponent({
       hideBelow: computed({
         get: () => hideBelowOf(w()),
         set: (v: string | number) => { const n = Number(v); w().hideBelowDiv = Number.isFinite(n) && n >= 0 ? n : 1 }
+      }),
+      hideChaos: computed({
+        get: () => hideBelowChaosOf(w()),
+        set: (v: string | number) => { const n = Number(v); w().hideBelowChaos = Number.isFinite(n) && n >= 0 ? n : 10 }
       }),
       // No goal: an empty or zero target.
       goalName: computed({
