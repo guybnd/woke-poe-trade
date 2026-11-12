@@ -75,7 +75,8 @@
       <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" @compare="comparing = { a: $event, b: '' }" />
       <BuildCompare v-if="comparing" :config="config" :builds="comparePicks" :a="compareA" :b="compareB"
         @pick="(a, b) => { comparing = { a, b } }" @close="comparing = null" />
-      <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="details.trees" :start="treeAt" @close="treeAt = null" />
+      <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="details.trees" :start="treeAt"
+        :pin="() => treePin(selectedBuild!.relPath, selectedBuild!.name)" @close="treeAt = null" />
       <WPanel v-if="selectedBuild && detailsError" size-key="detail" title="Couldn't read the build" width="20rem">
         <div class="w-down" style="padding: var(--w-pad);">{{ detailsError }}</div>
       </WPanel>
@@ -109,6 +110,7 @@ import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
 import BuildTree from './BuildTree.vue'
+import { treePin } from './build-pins'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
 import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi } from './widget'

@@ -27,7 +27,8 @@ describe('text scale', () => {
     expect(parse(null)).toBe(100)
     expect(parse('junk')).toBe(100)
     expect(parse('125')).toBe(125)
-    expect(parse('10')).toBe(100)
+    expect(parse('80')).toBe(80)
+    expect(parse('10')).toBe(70)
     expect(parse('900')).toBe(150)
   })
 

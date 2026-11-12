@@ -1,6 +1,17 @@
 <template>
-  <WPanel title="Passive tree" size-key="tree" width="60rem" max-height="85vh">
+  <!-- Pinned: only the tree, with what's still to take lit. -->
+  <div v-if="bare" :class="$style.bare">
+    <WEmpty v-if="error" icon="fas fa-exclamation-triangle">{{ error }}</WEmpty>
+    <WEmpty v-else-if="!tree" icon="fas fa-spinner fa-spin">Loading…</WEmpty>
+    <div v-else ref="box" :class="$style.map">
+      <canvas ref="base" :class="$style.layer" role="img" :aria-label="`Passive tree for ${shown?.title}`" />
+      <canvas ref="ring" :class="$style.layer" :style="{ cursor: panning ? 'grabbing' : hovered ? 'pointer' : 'grab' }"
+        @wheel.prevent="zoom" @mousedown="startPan" @mousemove="moved" @mouseleave="left" @dblclick="fit" />
+    </div>
+  </div>
+  <WPanel v-else title="Passive tree" size-key="tree" width="60rem" max-height="85vh">
     <template #actions>
+      <PinButton v-if="pin" :make="pin" title="Pin the tree: keep it on screen while you allocate points" />
       <button class="w-icon-btn" title="Fit the build (or double-click the tree)" @click="fit"><i class="fas fa-compress-arrows-alt" /></button>
       <button v-if="webUrl" class="w-icon-btn" title="Open on the website" @click="openWeb"><i class="fas fa-external-link-alt" /></button>
       <button class="w-icon-btn" title="Close" @click="emit('close')"><i class="fas fa-times" /></button>
@@ -68,9 +79,12 @@ import { filterTotals, groupTotals, matchingNodes, treeTotals } from './tree-tot
 import { drawTree, loadSheets } from './tree-draw'
 import type { Sheets } from './tree-draw'
 import type { PobTreeSpec } from './widget'
+import PinButton from '../pins/PinButton.vue'
+import type { Pin } from '../pins/pins'
 
 // A new `start` object means go to that tree, even if it's the same title again.
-const props = defineProps<{ specs: PobTreeSpec[], start: { title: string } }>()
+// `bare`: only the tree, for a pin. `from`: the tree to show changes from.
+const props = defineProps<{ specs: PobTreeSpec[], start: { title: string }, bare?: boolean, from?: string, pin?: () => Omit<Pin, 'opacity' | 'spots'> }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const trees = computed(() => realSets(props.specs))
@@ -109,8 +123,9 @@ function pick (i: number) {
 watch(() => props.start, ({ title }) => {
   const i = trees.value.findIndex(t => t.title === title)
   at.value = i < 0 ? 0 : i
-  changes.value = false
-  fromAt.value = null
+  const from = props.from != null ? trees.value.findIndex(t => t.title === props.from) : -1
+  changes.value = from >= 0 && from !== at.value
+  fromAt.value = changes.value ? from : null
 }, { immediate: true })
 
 const tree = shallowRef<Map<number, TreeNode> | null>(null)
@@ -406,6 +421,8 @@ function openWeb () {
   overflow: hidden;
   border-right: 1px solid var(--w-line);
 }
+.bare { display: flex; width: 26rem; height: 20rem; }
+.bare .map { border-right: 0; }
 .layer {
   position: absolute;
   inset: 0;

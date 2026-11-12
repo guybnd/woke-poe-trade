@@ -1,6 +1,7 @@
 <template>
   <HiddenNote />
   <Dock />
+  <PinLayer />
   <ToolkitHealth />
   <StashOutlines />
   <OverlayLayer />
@@ -12,6 +13,7 @@
 <script setup lang="ts">
 import HiddenNote from './switchboard/HiddenNote.vue'
 import Dock from './dock/Dock.vue'
+import PinLayer from './pins/PinLayer.vue'
 import ToolkitHealth from './dock/ToolkitHealth.vue'
 import OverlayLayer from './ui/OverlayLayer.vue'
 import StashOutlines from './scarab-flip/StashOutlines.vue'

@@ -1,10 +1,14 @@
 <template>
   <div :class="$style.wrap">
-    <button type="button" :class="$style.nextHead" class="w-focusable" :aria-expanded="!folded" @click="toggle">
-      <i class="fas text-xs" :class="folded ? 'fa-chevron-right' : 'fa-chevron-down'" />
-      <span>Next · <span class="w-accent">{{ stage }}</span></span>
-      <span v-if="folded" class="ml-auto w-dim text-xs w-trunc">{{ summary }}</span>
-    </button>
+    <div :class="$style.headRow">
+      <button v-if="!alwaysOpen" type="button" :class="$style.nextHead" class="w-focusable" :aria-expanded="!folded" @click="toggle">
+        <i class="fas text-xs" :class="folded ? 'fa-chevron-right' : 'fa-chevron-down'" />
+        <span>Next · <span class="w-accent">{{ stage }}</span></span>
+        <span v-if="folded" class="ml-auto w-dim text-xs w-trunc">{{ summary }}</span>
+      </button>
+      <span v-else :class="$style.nextHead">Next · <span class="w-accent">{{ stage }}</span></span>
+      <PinButton v-if="pin" :make="pin" title="Pin the next step: keep it on screen while you play" />
+    </div>
     <template v-if="!folded">
       <!-- Tree -->
       <div v-if="tree" :class="$style.row">
@@ -45,6 +49,8 @@
 import { computed, shallowRef, watch } from 'vue'
 import { saveConfig } from '@/web/Config'
 import GemName from './GemName.vue'
+import PinButton from '../pins/PinButton.vue'
+import type { Pin } from '../pins/pins'
 import PassiveIcon from './PassiveIcon.vue'
 import { itemArt } from './item-art'
 import { slotLabel } from './build-model'
@@ -59,10 +65,14 @@ const props = defineProps<{
   diff: TreeDiff | null
   gems: { title: string, change: GemChange } | null
   gear: { title: string, changes: GearChange[] } | null
+  alwaysOpen?: boolean
+  // Offers a pin for the next step.
+  pin?: () => Omit<Pin, 'opacity' | 'spots'>
 }>()
 const emit = defineEmits<{ (e: 'tree', title: string): void }>()
 
-const folded = computed(() => props.config.nextFolded === true)
+// Pinned, it never folds away.
+const folded = computed(() => !props.alwaysOpen && props.config.nextFolded === true)
 function toggle () {
   hideTip()
   props.config.nextFolded = !folded.value
@@ -109,6 +119,7 @@ function rarityClass (item: PobItem): string {
 
 <style module>
 .wrap { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.headRow { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .nextHead {
   display: flex;
   align-items: center;

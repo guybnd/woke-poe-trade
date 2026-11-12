@@ -17,6 +17,7 @@
       </template>
       <span v-if="badge != null && badge !== ''" :class="[$style.badge, $style['tone-' + (host.props.tone ?? 'accent')]]">{{ badge }}</span>
       <span v-if="host.props.led" :class="[$style.led, $style['led-' + host.props.led]]" />
+      <i v-if="offDock" class="fas fa-thumbtack" :class="$style.pinMark" title="Pinned: the card is on screen" />
     </span>
     <div v-if="menuOpen" ref="menuEl" :class="[$style.card, placement]">
       <DockMenu :host="host" :extras="extras" @close="menuOpen = false" />
@@ -26,6 +27,9 @@
       <div :class="$style.cardHead">
         <i :class="dockIcon(host.props)" class="w-accent" />
         <span class="w-head-font w-accent w-trunc">{{ host.props.title }}</span>
+        <button type="button" :class="$style.pinBtn" class="w-focusable" data-dock-pin
+          title="Pin: keep this card on screen while you play, and drag it anywhere" aria-label="Pin this card"
+          @click="pinCard"><i class="fas fa-thumbtack" /></button>
       </div>
       <SlotOut :entry="host" />
       <template v-for="ex in extras" :key="ex.key">
@@ -46,7 +50,8 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { Host } from '@/web/background/IPC'
 import { useHoverZone } from '../shared/hover'
 import type { DockEntry } from './dock'
-import { DOCK_NAMES, dockArt, dockCardOwner, dockConfig, dockIcon, openOverlay } from './dock'
+import { DOCK_NAMES, dockArt, dockCardOwner, dockConfig, dockIcon, dockPinId, holdOpen, openOverlay } from './dock'
+import { addPin, isPinned } from '../pins/pins'
 import { clickWhilePlaying } from './click'
 import DockMenu from './DockMenu.vue'
 
@@ -85,7 +90,9 @@ const showCard = shallowRef(false)
 // The right-click menu takes the card's place while it's open.
 const menuOpen = shallowRef(false)
 // Open from hovering, or held open by a pin.
-const cardOpen = computed(() => !menuOpen.value && (showCard.value || props.host.pinned != null))
+// A card pinned off the dock shows there instead.
+const offDock = computed(() => isPinned(dockPinId(props.host.props.id)))
+const cardOpen = computed(() => !offDock.value && !menuOpen.value && (showCard.value || props.host.pinned != null))
 
 // Hover works while the game has focus (main process watches the mouse).
 // Both take the mouse while it's over them, so a click lands here instead of
@@ -141,8 +148,8 @@ function openIconMenu () {
 const told = new Set<DockEntry>()
 function tellOpen (open: boolean) {
   const now = open ? [props.host, ...props.extras] : []
-  for (const e of told) if (!now.includes(e)) { e.onOpen(false); told.delete(e) }
-  for (const e of now) if (!told.has(e)) { e.onOpen(true); told.add(e) }
+  for (const e of told) if (!now.includes(e)) { holdOpen(e, false); told.delete(e) }
+  for (const e of now) if (!told.has(e)) { holdOpen(e, true); told.add(e) }
 }
 watch(cardOpen, (open) => {
   if (open) place()
@@ -176,6 +183,15 @@ function place () {
     if (r.left > window.innerWidth * 0.6) cls.push(styles.alignEnd)
   }
   placement.value = cls.join(' ')
+}
+
+// Takes the card off the dock, where it stood, as a pin you can drag anywhere.
+function pinCard () {
+  const r = cardEl.value?.getBoundingClientRect()
+  const at = r ? { x: r.left / window.innerWidth * 100, y: r.top / window.innerHeight * 100 } : undefined
+  addPin({ id: dockPinId(props.host.props.id), kind: 'dock', title: props.host.props.title, icon: dockIcon(props.host.props), data: { id: props.host.props.id }, at })
+  props.host.pinned = null
+  closeCard()
 }
 
 // The card makes way for the window it opened.
@@ -367,6 +383,22 @@ const styles = useCssModule()
 }
 :global([data-woke-look="game"]) .cardHead::after {
   content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; pointer-events: none; background: var(--w-gold-fade);
+}
+.pinBtn {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: var(--w-radius-sm);
+  color: var(--w-dim);
+  font-size: var(--w-fs-xs);
+}
+.pinBtn:hover { color: var(--w-fg); background: var(--w-accent-soft); }
+.pinMark {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  font-size: var(--w-fs-xs);
+  color: var(--w-accent);
+  pointer-events: none;
 }
 .extraHead {
   padding: 4px var(--w-pad) 2px;

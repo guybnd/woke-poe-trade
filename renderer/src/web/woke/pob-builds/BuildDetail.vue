@@ -47,7 +47,7 @@
         </div>
         <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
         <NextSection v-if="nextTree || nextGems_ || gearStep" :config="config" :tree="nextTree ?? null" :diff="treeData ? nextTreeDiff : null"
-          :gems="nextGems_" :gear="gearStep" @tree="emit('tree', $event)" />
+          :gems="nextGems_" :gear="gearStep" :pin="() => nextPin(entry.relPath, entry.name)" @tree="emit('tree', $event)" />
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
         <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
           <div :class="$style.link">
@@ -55,6 +55,7 @@
             <span v-if="linkItem(g)" :class="$style.linkItem" class="ml-auto text-xs whitespace-nowrap"
               @mouseenter="showTip($event, { kind: 'item', item: linkItem(g)! })" @mouseleave="hideTip">{{ g.label || slotLabel(g.slot) }}</span>
             <span v-else-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || slotLabel(g.slot) }}</span>
+            <PinButton :class="$style.rowPin" :make="() => gemsPin(entry.relPath, shownSet!.groups, g)" title="Pin this gem chain: keep it on screen while you play" />
           </div>
           <div :class="$style.names">
             <GemName v-for="(x, j) in orderedGems(g)" :key="j" :name="x.name" :level="x.level" :quality="x.quality" />
@@ -93,6 +94,7 @@
 
         <template v-if="layout.main">
           <div :class="[$style.rowWrap, $style.main]">
+            <PinButton :class="$style.cornerPin" :make="() => slotPin(entry.relPath, layout.main!.slot)" title="Pin this item: keep it on screen while you shop" />
             <GearRowHead :row="layout.main" main />
             <div :class="$style.chains">
               <GemChain v-for="(g, i) in layout.main.groups" :key="i" :group="g" />
@@ -103,6 +105,7 @@
         <template v-if="layout.loose.length">
           <div :class="$style.heading">Gems PoB doesn't tie to an item</div>
           <div v-for="(g, i) in layout.loose" :key="i" :class="$style.loose">
+            <PinButton :class="$style.cornerPin" :make="() => gemsPin(entry.relPath, shownSet!.groups, g)" title="Pin this gem chain: keep it on screen while you play" />
             <div v-if="g === mainLink" class="w-accent text-xs">Main skill</div>
             <GemChain :group="g" />
           </div>
@@ -111,6 +114,7 @@
         <template v-if="layout.linked.length">
           <div :class="$style.heading">{{ layout.main || layout.loose.length ? 'Other links' : 'Gear' }}<template v-if="shownItemSet && itemSets.length > 1"> · {{ shownItemSet.title }}</template></div>
           <div v-for="r in layout.linked" :key="r.slot" :class="$style.rowWrap">
+            <PinButton :class="$style.cornerPin" :make="() => slotPin(entry.relPath, r.slot)" title="Pin this item: keep it on screen while you shop" />
             <GearRowHead :row="r" />
             <div v-if="r.groups.length" :class="$style.chains">
               <GemChain v-for="(g, i) in r.groups" :key="i" :group="g" />
@@ -121,7 +125,10 @@
         <template v-if="layout.plain.length">
           <div :class="$style.heading">Other gear</div>
           <div :class="$style.plain">
-            <GearRowHead v-for="r in layout.plain" :key="r.slot" :row="r" small />
+            <div v-for="r in layout.plain" :key="r.slot" :class="$style.plainRow">
+              <GearRowHead :row="r" small />
+              <PinButton :class="$style.cornerPin" :make="() => slotPin(entry.relPath, r.slot)" title="Pin this item: keep it on screen while you shop" />
+            </div>
           </div>
         </template>
 
@@ -183,6 +190,8 @@ import GemChain from './GemChain.vue'
 import GemName from './GemName.vue'
 import NextSection from './NextSection.vue'
 import SocketDots from './SocketDots.vue'
+import PinButton from '../pins/PinButton.vue'
+import { gemsPin, nextPin, slotPin } from './build-pins'
 import { GEM_CLASS, gemWhere, nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
@@ -515,6 +524,13 @@ function run (p: Promise<unknown>) {
   min-width: 0;
   padding: 3px 0;
 }
+/* Pins show on the row under the mouse, or once pinned. */
+.cornerPin { position: absolute; top: 2px; right: 0; z-index: 1; }
+.plainRow { position: relative; min-width: 0; }
+.rowPin { flex: none; }
+.cornerPin:not([aria-pressed="true"]), .rowPin:not([aria-pressed="true"]) { opacity: 0; }
+.rowWrap:hover .cornerPin, .loose:hover .cornerPin, .plainRow:hover .cornerPin, .linkGroup:hover .rowPin,
+.cornerPin:focus-visible, .rowPin:focus-visible { opacity: 1; }
 .linkGroup {
   padding: 3px 0 5px;
   border-bottom: 1px solid var(--w-line-soft);
@@ -542,6 +558,7 @@ function run (p: Promise<unknown>) {
 .src { min-width: 0; }
 button.next:hover { border-color: var(--w-line-strong); }
 .rowWrap {
+  position: relative;
   padding: 4px 0 5px;
   border-bottom: 1px solid var(--w-line-soft);
   min-width: 0;
@@ -562,6 +579,7 @@ button.next:hover { border-color: var(--w-line-strong); }
   min-width: 0;
 }
 .loose {
+  position: relative;
   padding: 4px 0 5px;
   border-bottom: 1px solid var(--w-line-soft);
 }

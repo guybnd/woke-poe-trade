@@ -5,7 +5,7 @@
 // storage event.
 import { shallowRef, watch } from 'vue'
 
-export const MIN_TEXT_SCALE = 100
+export const MIN_TEXT_SCALE = 70
 export const MAX_TEXT_SCALE = 150
 const STORAGE_KEY = 'woke.textScale'
 

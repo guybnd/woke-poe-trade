@@ -203,6 +203,22 @@ export function registerDockEntry (props: DockItemProps, slots: Slots, onOpen: (
 
 // Whether a module's icon has its place in the row now, even if dismissed for a
 // while (the run timer stays out of the row while the campaign icon is away).
+// The pin that holds an icon's card off the dock.
+export function dockPinId (id: string): string {
+  return `dock:${id}`
+}
+
+// Cards are shown from more than one place (the dock, a pin). The widget hears
+// it opened when the first one shows it and closed when the last one stops.
+const openHolds = new WeakMap<DockEntry, number>()
+export function holdOpen (entry: DockEntry, open: boolean) {
+  const n = openHolds.get(entry) ?? 0
+  const next = Math.max(0, n + (open ? 1 : -1))
+  openHolds.set(entry, next)
+  if (n === 0 && next > 0) entry.onOpen(true)
+  else if (n > 0 && next === 0) entry.onOpen(false)
+}
+
 export function dockIconShowing (id: string): boolean {
   return !dockConfig().hidden.includes(id) && dockEntries.value.some(e => e.props.id === id && e.props.show)
 }
