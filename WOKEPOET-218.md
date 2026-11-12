@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-218
 title: 'Bug hunt round 2: 38 bugs across the toolkit'
-status: In Progress
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -20,6 +20,25 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-12T11:20:14.620Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-12T11:55:03.761Z'
+    comment: Updated implementation link.
+    id: a-2026-11-12t11-55-03-761z
+  - type: comment
+    user: Agent
+    comment: >-
+      37 of 38 fixed in #400 (squash 0a0e9ab9), live on the dev build.
+      WOKEPOET-221 (tree overlay drag bounds) left in Backlog: needs a DPI check
+      of the game window bounds vs uiohook coordinates first.
+    date: '2026-11-12T11:55:07.544Z'
+    selfAttested: true
+    id: c-2026-11-12t11-55-07-544z
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-12T11:55:08.139Z'
 subtasks:
   - WOKEPOET-219
   - WOKEPOET-220
@@ -60,5 +79,6 @@ subtasks:
   - WOKEPOET-255
   - WOKEPOET-256
 needsAction: null
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/400'
 ---
 Guy asked (2026-11-12) for ~40 bugs and to fix every high-confidence one without asking unless a fix changes product design. Each bug is a subtask. Fixes land in one PR from branch claude/bug-hunt-3 (commits per area). Ledger: E:\Git\woke-poe-trade-bughunt\.bughunt\ledger.md.
