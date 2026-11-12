@@ -8,8 +8,8 @@
           <span>{{ cardDiff ? labLabel(cardDiff) + ' Labyrinth' : 'Labyrinth' }}<template v-if="cardDiff && !labDiff && !openDiff"> · your last lab, until the first room</template></span>
           <span title="Labs reset at midnight UTC"><i class="far fa-clock" /> resets in {{ resetIn }}</span>
         </div>
-        <!-- In the plaza only: which lab you're about to run, starting on your last. -->
-        <div v-if="inPlaza && !openDiff" class="flex gap-1 flex-wrap" style="padding: 0 var(--w-pad) 4px;">
+        <!-- In the plaza only, when layouts load there: which lab you're about to run, starting on your last. -->
+        <div v-if="inPlaza && !openDiff && config.autoOpen !== false" class="flex gap-1 flex-wrap" style="padding: 0 var(--w-pad) 4px;">
           <WChip v-for="d in DIFFICULTIES" :key="d" clickable :active="cardDiff === d" @click="pickPlaza(d)">{{ labLabel(d) }}</WChip>
         </div>
         <img v-if="cardImg" :src="cardImg" :class="$style.cardImg" alt="Today's layout">
