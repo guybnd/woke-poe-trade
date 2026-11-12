@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-176
 title: Rewrite the help pages for this app
-status: Grooming
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -15,7 +15,27 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-10T02:55:51.524Z'
+    comment: Created ticket.
+    id: a-2026-11-10t02-55-51-524z
+  - type: activity
+    user: Agent
+    date: '2026-11-10T02:55:51.524Z'
     comment: Created as subtask of WOKEPOET-168.
+    id: a-2026-11-10t02-55-51-524z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #364 (b800a5a4): a Tools help page listing every module (kept in
+      step with modules.ts by a test), and the FAQ rewritten for this app.
+    date: '2026-11-12T06:52:51.540Z'
+    completionComment: true
+    id: c-2026-11-12t06-52-51-540z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T06:52:51.540Z'
+needsAction: null
 ---
 Review finding B5.
 - `docs/faq.md` never mentions this app; none of the 28 tools has a help page.
