@@ -46,11 +46,11 @@
             <img v-for="img of rollTags"
               :class="$style.rollTag" :src="img">
             <div class="flex gap-x-px">
-              <input :class="[$style['rollInput'], 'w-roll-input', { 'w-poe-drag': poe }]" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
+              <input :class="[$style['rollInput'], 'w-roll-input', { 'w-poe-drag': poe, [$style.catOnly]: catOnly === 'above', 'w-roll-cat': catOnly === 'above' }]" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMinEl"
                 v-model.number="inputMin" @focus="inputFocus($event, 'min')" @mousewheel.stop
                 v-on="minDrag ?? {}">
-              <input :class="[$style['rollInput'], 'w-roll-input']" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
+              <input :class="[$style['rollInput'], 'w-roll-input', { [$style.catOnly]: catOnly === 'below', 'w-roll-cat': catOnly === 'below' }]" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMaxEl"
                 v-model.number="inputMax" @focus="inputFocus($event, 'max')" @mousewheel.stop>
             </div>
@@ -104,10 +104,14 @@
           :roll="roll.value"
           :dp="roll.dp"
           :bounds="roll.bounds"
+          :plain="roll.plain"
         />
         <woke-roll-pick v-if="showRollPick" :filter="filter" />
         <div v-else style="width: calc(2*3rem + 1px)" />
       </div>
+      <div v-if="catOnly && !miniFilter && roll?.plain" :class="$style.catHint" data-catalyst-hint>{{ catOnly === 'above'
+        ? `Above ${roll.plain.max}: only catalysed items match.`
+        : `Below ${roll.plain.min}: only catalysed items match.` }}</div>
     </div>
     <modifier-anointment class="self-center" :filter="filter" />
   </div>
@@ -128,6 +132,7 @@ import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
+import { onlyCatalysed } from '@/web/ui/catalyst-zone'
 import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
@@ -170,6 +175,10 @@ export default defineComponent({
     const catalyst = useCatalystFilter()
     const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, catalyst.filter.value) : undefined)
     const qOn = computed(() => catalyst?.filter.value?.disabled === false)
+    // woke: the search leaves out every item without catalyst quality (Guy's pick B).
+    const catOnly = computed(() => props.filter.roll && !props.filter.disabled
+      ? onlyCatalysed(props.filter.roll.min, props.filter.roll.max, props.filter.roll.plain, props.filter.roll.bounds)
+      : undefined)
     const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
     const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
     const splitChild = computed(() => actions?.isChild(props.filter) ?? false)
@@ -327,6 +336,7 @@ export default defineComponent({
       catalyst,
       qTag,
       qOn,
+      catOnly,
       fracIds,
       fracOnly,
       toggleFractured,
@@ -626,6 +636,16 @@ export default defineComponent({
   @apply bg-gray-700 text-black; }
 
 /* The catalyst's tag: blue like the game's quality, filled while it filters. */
+/* woke: a min (or max) only catalysed items reach. */
+.rollInput.catOnly {
+  color: var(--w-r-magic);
+  border-color: color-mix(in srgb, var(--w-r-magic) 55%, transparent);
+}
+.catHint {
+  font-size: var(--w-fs-xs);
+  color: var(--w-r-magic);
+  padding-left: 1.25rem;
+}
 .qTag {
   font-size: var(--w-fs-xs); font-weight: 700; line-height: 1; align-self: center;
   padding: 1px 3px; border-radius: 2px;

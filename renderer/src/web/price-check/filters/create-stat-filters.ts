@@ -362,6 +362,10 @@ export function calculatedStatToFilter (
     filterDefault.min = Math.max(filterDefault.min, filterBounds.min)
     filterDefault.max = Math.min(filterDefault.max, filterBounds.max)
 
+    const plain = (reach && (reach.min > roll.min || reach.max < roll.max))
+      ? { min: percentRoll(reach.min, -0, Math.floor, dp), max: percentRoll(reach.max, +0, Math.ceil, dp) }
+      : undefined
+
     filter.roll = {
       value: roundRoll(roll.value, dp),
       min: undefined,
@@ -370,6 +374,7 @@ export function calculatedStatToFilter (
       bounds: (roll.min !== roll.max && calc.stat.better !== StatBetter.NotComparable)
         ? filterBounds
         : undefined,
+      plain: (roll.min !== roll.max && calc.stat.better !== StatBetter.NotComparable) ? plain : undefined,
       dp: dp,
       isNegated: false,
       tradeInvert: calc.stat.trade.inverted,
@@ -510,6 +515,10 @@ function filterAdjustmentForNegate (
   if (swap.bounds && roll.bounds) {
     roll.bounds.min = -1 * swap.bounds.max
     roll.bounds.max = -1 * swap.bounds.min
+  }
+  if (swap.plain && roll.plain) {
+    roll.plain.min = -1 * swap.plain.max
+    roll.plain.max = -1 * swap.plain.min
   }
 
   roll.default.min = -1 * swap.default.max

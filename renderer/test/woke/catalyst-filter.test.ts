@@ -6,6 +6,7 @@ import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { catalystQualityFilter, raisedBy, tagQuality, toggleCatalyst } from '@/web/woke/price-insight/catalyst-filter'
 import { ninjaFitsSearch } from '@/web/woke/price-insight/search-scope'
 import { ItemRarity, ParsedItem } from '@/parser'
+import { catalystBands, onlyCatalysed } from '@/web/ui/catalyst-zone'
 
 function beltStats () {
   const item = parseItem(fixture('items/rare-belt-catalysed.txt'))
@@ -83,11 +84,13 @@ describe('catalysed roll range', () => {
     const ele = auxium().find(f => f.text.includes('Elemental Damage with Attack Skills'))!
     expect(ele.roll?.value).toBe(30)
     expect(ele.roll?.bounds).toEqual({ min: 20, max: 30 })
+    expect(ele.roll?.plain).toEqual({ min: 20, max: 25 })
   })
 
   it('leaves rows no catalyst raised alone', () => {
     const mana = auxium().find(f => f.text.includes('maximum Mana'))!
     expect(mana.roll?.bounds).toEqual({ min: 45, max: 55 })
+    expect(mana.roll?.plain).toBeUndefined()
   })
 
   it('widens a rare\'s catalysed row the same way', () => {
@@ -95,5 +98,28 @@ describe('catalysed roll range', () => {
     const str = beltStats().find(f => f.text.includes('Strength'))!
     expect(str.roll?.value).toBe(36)
     expect(str.roll?.bounds).toEqual({ min: 25, max: 42 })
+  })
+})
+
+describe('catalyst-only part of the slider', () => {
+  it('stripes the part above the uncatalysed max', () => {
+    expect(catalystBands({ min: 20, max: 30 }, { min: 20, max: 25 })).toEqual([{ left: 50, right: 0 }])
+    expect(catalystBands({ min: 20, max: 30 }, undefined)).toEqual([])
+  })
+
+  it('stripes the part below on a negated row', () => {
+    expect(catalystBands({ min: -30, max: -20 }, { min: -25, max: -20 })).toEqual([{ left: 0, right: 50 }])
+  })
+
+  it('says when only catalysed items can match', () => {
+    const plain = { min: 20, max: 25 }
+    const bounds = { min: 20, max: 30 }
+    expect(onlyCatalysed(27, undefined, plain, bounds)).toBe('above')
+    expect(onlyCatalysed(25, undefined, plain, bounds)).toBeUndefined()
+    expect(onlyCatalysed(27, undefined, undefined, bounds)).toBeUndefined()
+    // No band below 20 here, and nothing at all past 30.
+    expect(onlyCatalysed('', 19, plain, bounds)).toBeUndefined()
+    expect(onlyCatalysed(31, undefined, plain, bounds)).toBeUndefined()
+    expect(onlyCatalysed('', -27, { min: -25, max: -20 }, { min: -30, max: -20 })).toBe('below')
   })
 })
