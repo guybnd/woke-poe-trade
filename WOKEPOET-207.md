@@ -32,17 +32,34 @@ history:
       Pick an option per question on
       https://claude.ai/artifact/QUBtX3QL74E3mUT4BWvPGv (PoB pin, card pin,
       smaller text, see-through pins), and say what "hideout repo" means there.
-swimlane: require-input
+  - type: activity
+    user: Agent
+    date: '2026-11-12T00:53:13.707Z'
+    comment: Updated description.
+    id: a-2026-11-12t00-53-13-707z
+  - type: comment
+    user: Agent
+    comment: Guy picked; building.
+    date: '2026-11-12T00:53:13.777Z'
+    id: c-2026-11-12t00-53-13-777z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T00:53:13.777Z'
+    comment: Guy picked; building.
+swimlane: null
 needsAction: null
 ---
-Player feedback (Jacket, Discord): pin the PoB build on screen while buying gear and allocating points; pin expanded dock cards so they stay open in maps; let text go smaller; pinned tree/build see-through ("don't need it full blast"). "Hideout repo" unclear, asked on the mock page.
+Player feedback (Jacket, Discord): pin PoB build while buying/allocating, pin dock cards in maps, smaller text, see-through pinned tree, "hideout repo".
 
-Today (master 337d5118):
-- PoB panel is `invisible-on-blur`: vanishes when the game takes focus. Its "Pin to top" only sorts the build list.
-- Dock cards: only campaign and lab are pinnable. Click pin ('click') ends when the overlay closes; key pin ('key') is campaign/lab only (dock/DockItem.vue togglePin).
-- Text size 100–150% (woke/ui/text-scale.ts), Panel size 70–160% (Auto = 135% at 1440p).
-- Panel opacity (Settings › Look) fades backgrounds only; text and the tree drawing stay solid.
+Guy's picks (2026-11-12, https://claude.ai/artifact/QUBtX3QL74E3mUT4BWvPGv db picks/current):
+- PoB: C (pin single pieces: tree, gear slot, gem chain), plus B (short to-do card: shopping list + next points) as its own pin.
+- Cards: A (pin button on every card), and pinned cards detach from the dock and move freely.
+- Text: B (Text size floor 70% + separate size for pinned things).
+- Opacity: C (per-pin opacity, wheel over ◐; solid on hover).
+- Hideout repo: "reposition" = pinned things keep a separate spot in hideout vs maps.
 
-Mocks with pick buttons: https://claude.ai/artifact/QUBtX3QL74E3mUT4BWvPGv (picks saved in its db at picks/current). Recommended: PoB A (pin whole panel), cards A (pin button on every card), text A (floor 70%), see-through B (own Pinned opacity, solid on hover).
+Plan: one shared pin layer (floating, draggable, per-pin opacity/size, per-area position) → cards → PoB pieces.
 
-No code until Guy picks.
+Today (master 337d5118): PoB panel invisible-on-blur; only campaign/lab cards pinnable (click pin ends on overlay close); text 100–150%; Panel opacity fades backgrounds only.
