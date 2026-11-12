@@ -227,3 +227,18 @@ test('a div card compares its full set with the reward', async ({ overlay }) => 
   await expect(panel.getByText('Reward: Headhunter')).toBeVisible()
   await overlay.snap('search-card-set')
 })
+
+test('a vendor recipe shows what to sell and what you get', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('6 link')
+  const recipe = panel.getByText('20 × Orb of Fusing').first()
+  await expect(recipe).toBeVisible()
+  await recipe.click()
+  await expect(panel.getByText('An item with 6 linked sockets', { exact: true })).toBeVisible()
+  await overlay.snap('search-recipe')
+})
