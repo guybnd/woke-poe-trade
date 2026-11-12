@@ -189,7 +189,16 @@ function startReader (ctx: PersonalContext): () => void {
     choice: async (league) => (await readLeagueTabs(league)).choice
   })
   readSavedAccount().then(a => { if (a && live) reader.restoreAccount(a) }).catch(() => {})
-  const worn = new WornReader({ fetch: sessionFetch, now: () => Date.now(), account: () => reader.account ?? reader.fallbackAccount })
+  const worn = new WornReader({
+    fetch: sessionFetch,
+    now: () => Date.now(),
+    account: () => reader.account ?? reader.fallbackAccount,
+    signedOut: () => {
+      if (!live || !reader.account) return
+      reader.signedOut()
+      saveAccount(null).catch(() => {})
+    }
+  })
 
   const authStatus = async (verify: boolean) => {
     if (verify) {
@@ -270,9 +279,8 @@ function startReader (ctx: PersonalContext): () => void {
     },
     // The gear the character wears now, for the price check's compare.
     'worn-items': async (args) => {
-      const character = typeof args?.character === 'string' ? args.character.trim() : ''
-      if (!character) return { error: 'No character yet.' }
-      return await worn.read(character, args?.fresh === true).catch((e: Error) => ({ error: e.message }))
+      const hint = typeof args?.character === 'string' ? args.character.trim() : ''
+      return await worn.read(hint).catch((e: Error) => ({ error: e.message }))
     }
   }
   for (const op of READER_OPS) ctx.register(op, ops[op])

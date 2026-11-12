@@ -6,7 +6,7 @@
   <!-- A small icon, top right of the price check header (poe-mode.css). -->
   <span v-if="swap" :class="$style.swap" class="w-swap-icon" role="button" tabindex="0" data-swap-chip
     :aria-label="`Compare to your ${swap.label}`"
-    @mouseenter="showSwap" @mouseleave="hideTip" @focus="showSwap" @blur="hideTip">
+    @mouseenter="enter" @mouseleave="leave" @focus="enter" @blur="leave">
     <i class="fas fa-balance-scale" />
   </span>
 </template>
@@ -24,7 +24,7 @@ import { slotsFor, swapCheck } from './swap-check'
 import type { SwapResult } from './swap-check'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import type { PobItem, PobStats } from './widget'
-import { askWornGear, wornFailed, wornGear } from './worn-gear'
+import { askWornGear, worn, WORN_STALE_MS } from './worn-gear'
 import { personalOn } from '../personal'
 
 const props = defineProps<{ item: ParsedItem }>()
@@ -93,35 +93,57 @@ function compare (slots: string[], worn: Array<{ slot: string, item: PobItem }>,
   return best
 }
 
-const character = computed(() => build.charName.value)
+const hint = computed(() => build.charName.value)
 const slots = computed(() => props.item.isUnidentified ? [] : slotsFor(props.item.category))
 
 // The game's own answer when the stash reader is on; PoB's set otherwise.
-watch([slots, character], ([s, c]) => { if (s.length && c) askWornGear(c) }, { immediate: true })
+watch([() => props.item, personalOn], ([, on]) => { if (slots.value.length && on) askWornGear(hint.value) }, { immediate: true })
+
+function readTime (at: number) {
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
 
 const swap = computed<Swap | null>(() => {
   const s = slots.value
   if (!s.length) return null
-  const c = character.value
-  const gear = wornGear.value
-  if (personalOn.value && c) {
-    if (gear?.character === c) return compare(s, gear.slots, null, `Yours: what ${c} wears now.`, 'You wear nothing there.')
-    if (wornFailed.value !== c) {
+  let why = ''
+  if (personalOn.value) {
+    const { gear, error, pending } = worn.value
+    const fresh = gear && !error && Date.now() - gear.readAt < WORN_STALE_MS
+    if (gear && (fresh || pending)) {
+      return compare(s, gear.slots, null, `Yours: what ${gear.character} wore at ${readTime(gear.readAt)}, read from pathofexile.com.`, 'You wear nothing there.')
+    }
+    if (pending && !gear) {
       const { label } = slotName(s[0])
       return { label, title: `Against your ${label}`, source: '', result: READING }
     }
+    if (error) why = ` Couldn't read your gear: ${error}`
   }
   const d = build.details.value
   if (!d) return null
   const picked = loadoutOf(d, build.level.value, build.act.value, build.loadout.value).itemSet
-  const worn = picked?.item
-  if (!worn) return null
+  const set = picked?.item
+  if (!set) return null
   // What PoB saved only describes this gear if it's the set it saved on.
   const sets = realSets(d.itemSets ?? [])
-  const stats = (sets.length < 2 || worn.isActive) ? d.stats ?? null : null
-  const setName = worn.title ? `the "${worn.title}" set` : 'its gear'
-  return compare(s, worn.slots, stats, `Yours: your PoB build's ${setName}, not what you wear in game.`, 'Your PoB set has nothing there.')
+  const stats = (sets.length < 2 || set.isActive) ? d.stats ?? null : null
+  const setName = set.title ? `the "${set.title}" set` : 'its gear'
+  return compare(s, set.slots, stats, `Yours: your PoB build's ${setName}, not what you wear in game.${why}`, 'Your PoB set has nothing there.')
 })
+
+// An open tooltip follows the answer (the gear read lands while you hover).
+let hovered: Event | null = null
+watch(swap, () => { if (hovered) showSwap(hovered) })
+
+function enter (e: Event) {
+  hovered = e
+  showSwap(e)
+}
+
+function leave () {
+  hovered = null
+  hideTip()
+}
 
 function showSwap (e: Event) {
   if (swap.value) showTip(e, { kind: 'swap', title: swap.value.title, source: swap.value.source, result: swap.value.result })

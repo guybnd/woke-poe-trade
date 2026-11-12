@@ -48,13 +48,12 @@ export function pobItemText (item: PobItem): string {
   if (enchants.length) sections.push(enchants.map(line => `${line} (enchant)`))
   if (implicits.length) sections.push(['{ Implicit Modifier }', ...implicits])
 
+  // A heading on every line: the parser reads lines under one heading as one
+  // mod, and keeps one value per stat in it, so two "% increased Energy
+  // Shield" lines would lose one.
   const mods: string[] = []
-  let heading = ''
   item.mods.forEach((line, i) => {
-    const next: string = MOD_HEADING[item.modKinds?.[i] ?? '']
-    if (next !== heading) mods.push(next)
-    heading = next
-    mods.push(line)
+    mods.push(MOD_HEADING[item.modKinds?.[i] ?? ''], line)
   })
   if (mods.length) sections.push(mods)
 

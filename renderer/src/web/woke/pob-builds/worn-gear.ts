@@ -14,29 +14,41 @@ export interface WornGear {
 
 type Reply = WornGear | { error: string }
 
-// The last gear read, and the character a read failed for (so the compare
-// falls back to PoB instead of waiting).
-export const wornGear = shallowRef<WornGear | null>(null)
-export const wornFailed = shallowRef<string | null>(null)
+// After this long without a good read, the gear we have is too old to call yours.
+export const WORN_STALE_MS = 10 * 60_000
 
-let asking: string | null = null
+export interface WornState {
+  gear: WornGear | null
+  // The last ask failed (gear may still hold an older read).
+  error: string | null
+  // An ask is under way.
+  pending: boolean
+}
 
-// Main keeps it for a minute, so asking on every price check is cheap.
-export function askWornGear (character: string) {
-  if (!personalOn.value || !character || asking === character) return
-  asking = character
-  hostRequest<Reply>('worn-items', { character }, 20_000)
+export const worn = shallowRef<WornState>({ gear: null, error: null, pending: false })
+
+let seq = 0
+
+// Main keeps the gear a minute and a failure a minute, so asking on every
+// price check of gear costs at most one call a minute.
+export function askWornGear (hint: string) {
+  if (!personalOn.value) return
+  const mine = ++seq
+  worn.value = { ...worn.value, pending: true }
+  hostRequest<Reply>('worn-items', { character: hint }, 20_000)
     .then((r) => {
+      if (mine !== seq) return
       if ('error' in r) {
-        if (wornGear.value?.character !== character) wornFailed.value = character
+        worn.value = { gear: worn.value.gear, error: r.error, pending: false }
         return
       }
-      wornFailed.value = null
       // Same gear as before: keep the object, so nothing recalculates.
-      const prev = wornGear.value
-      if (prev && prev.character === r.character && JSON.stringify(prev.slots) === JSON.stringify(r.slots)) return
-      wornGear.value = r
+      const prev = worn.value.gear
+      const same = prev && prev.character === r.character && JSON.stringify(prev.slots) === JSON.stringify(r.slots)
+      worn.value = { gear: same ? { ...prev, readAt: r.readAt } : r, error: null, pending: false }
     })
-    .catch(() => { if (wornGear.value?.character !== character) wornFailed.value = character })
-    .finally(() => { if (asking === character) asking = null })
+    .catch((e: Error) => {
+      if (mine !== seq) return
+      worn.value = { gear: worn.value.gear, error: e.message, pending: false }
+    })
 }

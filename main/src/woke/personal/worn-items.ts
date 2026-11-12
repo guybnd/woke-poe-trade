@@ -5,7 +5,7 @@
 import type { PobItem, PobModKind, PobRarity } from '../pob-parse'
 import { RateLimiter } from './rate-limit'
 import { POE_SITE, isSignedOut } from './stash-reader'
-import type { Fetcher } from './stash-reader'
+import type { Fetcher, HttpReply } from './stash-reader'
 
 // The game's equipment slots, in PoB's names. Flasks, jewels and the
 // second weapon set don't take part in the compare.
@@ -23,7 +23,9 @@ const SLOTS: Record<string, string> = {
   Offhand: 'Weapon 2'
 }
 
-const RARITY: Record<number, PobRarity> = { 0: 'NORMAL', 1: 'MAGIC', 2: 'RARE', 3: 'UNIQUE', 9: 'RELIC' }
+// 10: supporter foil uniques. A frame we don't know still counts as a unique,
+// so the slot isn't taken for empty.
+const RARITY: Record<number, PobRarity> = { 0: 'NORMAL', 1: 'MAGIC', 2: 'RARE', 3: 'UNIQUE', 9: 'RELIC', 10: 'UNIQUE' }
 
 const INFLUENCE: Record<string, string> = {
   shaper: 'Shaper', elder: 'Elder', crusader: 'Crusader', redeemer: 'Redeemer', hunter: 'Hunter', warlord: 'Warlord'
@@ -49,6 +51,9 @@ export function cleanMod (line: string): string {
   return line.replace(/\[([^\]|]*)\|([^\]]*)\]/g, '$2').replace(/\[([^\]|]*)\]/g, '$1').trim()
 }
 
+// The game marks some names with <<set:MS>> style tags.
+const tagless = (s: string) => s.replace(/<<[^>]*>>/g, '').trim()
+
 function property (item: Raw, name: string): number | undefined {
   const props = Array.isArray(item.properties) ? item.properties as Raw[] : []
   const p = props.find(x => x && x.name === name)
@@ -72,18 +77,18 @@ function socketText (item: Raw): string {
   return out
 }
 
-export function wornItem (raw: Raw): PobItem | null {
-  const rarity = RARITY[typeof raw.frameType === 'number' ? raw.frameType : -1]
-  if (!rarity) return null
-  const name = str(raw.name)
-  const typeLine = str(raw.typeLine)
-  const baseType = str(raw.baseType) || typeLine
+export function wornItem (raw: Raw): PobItem {
+  const rarity = RARITY[typeof raw.frameType === 'number' ? raw.frameType : -1] ?? 'UNIQUE'
+  const name = tagless(str(raw.name))
+  const typeLine = tagless(str(raw.typeLine))
+  const baseType = tagless(str(raw.baseType)) || typeLine
   const named = rarity === 'RARE' || rarity === 'UNIQUE' || rarity === 'RELIC'
 
   const enchants = lines(raw.enchantMods)
   const implicits = lines(raw.implicitMods)
   const fractured = lines(raw.fracturedMods)
-  const explicit = lines(raw.explicitMods)
+  // Foulborn uniques' mutated mods count like any other.
+  const explicit = [...lines(raw.explicitMods), ...lines(raw.mutatedMods)]
   const crafted = lines(raw.craftedMods)
   const mods = [...fractured, ...explicit, ...crafted]
   const modKinds: PobModKind[] = [...fractured.map(() => 'fractured' as const), ...explicit.map(() => '' as const), ...crafted.map(() => 'crafted' as const)]
@@ -94,7 +99,8 @@ export function wornItem (raw: Raw): PobItem | null {
 
   const item: PobItem = {
     rarity,
-    name: named ? name : typeLine,
+    // A normal item's typeLine may carry "Superior" or "Synthesised": the base reads surely.
+    name: named ? name : rarity === 'NORMAL' ? baseType : typeLine,
     base: named ? baseType : '',
     sockets: socketText(raw),
     // item-text.ts writes implicits PoB marks crafted as enchants.
@@ -128,50 +134,112 @@ export function parseWornItems (body: string): WornSlot[] | null {
   for (const raw of json.items as Raw[]) {
     const slot = SLOTS[str(raw?.inventoryId)]
     if (!slot) continue
-    const item = wornItem(raw)
-    if (item) out.push({ slot, item })
+    out.push({ slot, item: wornItem(raw) })
   }
   return out
 }
 
+// Gear is read again after a minute; the character list (to know which one
+// you play) after five. A failed read is not tried again for a minute.
 export const CACHE_MS = 60_000
+export const CHARS_MS = 5 * 60_000
+export const RETRY_MS = 60_000
+
+// Longest wait between two calls of one read.
+const MAX_WAIT_MS = 5_000
+
+export const SIGNED_OUT = 'Signed out of pathofexile.com.'
+
+// The character you last played, from get-characters. null: the reply
+// didn't say.
+export function lastActive (body: string): string | null {
+  try {
+    const list = JSON.parse(body) as unknown
+    if (!Array.isArray(list)) return null
+    const hit = (list as Raw[]).find(c => c?.lastActive === true)
+    return hit && typeof hit.name === 'string' ? hit.name : null
+  } catch {
+    return null
+  }
+}
+
+interface Deps {
+  fetch: Fetcher
+  now: () => number
+  sleep?: (ms: number) => Promise<void>
+  account: () => string | null
+  // A redirect, 401 or 403: the login has expired.
+  signedOut: () => void
+}
+
+class Refused extends Error {}
 
 export class WornReader {
   private limiter = new RateLimiter()
-  private cache: WornGear | null = null
+  private gear: (WornGear & { account: string }) | null = null
+  private chars: { account: string, at: number, name: string | null } | null = null
+  private failed: { key: string, at: number, error: string } | null = null
   private running: Promise<WornReply> | null = null
-  private runningFor = ''
 
-  constructor (private deps: { fetch: Fetcher, now: () => number, account: () => string | null }) {}
+  constructor (private deps: Deps) {}
 
-  // Fresh: skip the cache (you just swapped gear).
-  read (character: string, fresh = false): Promise<WornReply> {
-    const now = this.deps.now()
-    const c = this.cache
-    if (!fresh && c && c.character === character && now - c.readAt < CACHE_MS) return Promise.resolve(c)
-    if (this.running && this.runningFor === character) return this.running
-    this.runningFor = character
-    const run = this.fetch(character).finally(() => { if (this.running === run) this.running = null })
+  // hint: the character the game log last named, for when the site doesn't say.
+  read (hint: string): Promise<WornReply> {
+    if (this.running) return this.running
+    const run = this.run(hint).finally(() => { this.running = null })
     this.running = run
     return run
   }
 
-  private async fetch (character: string): Promise<WornReply> {
+  private async run (hint: string): Promise<WornReply> {
     const account = this.deps.account()
-    if (!account) return { error: 'Signed out of pathofexile.com.' }
+    if (!account) return { error: SIGNED_OUT }
     const now = this.deps.now()
-    // Never wait in line: the price check shows PoB instead.
-    if (this.limiter.delay(now) > 0) return { error: 'pathofexile.com asked us to slow down.' }
-    this.limiter.record(now)
-    const q = new URLSearchParams({ accountName: account, character, realm: 'pc' })
-    const reply = await this.deps.fetch(`${POE_SITE}/character-window/get-items?${q.toString()}`)
+    const key = `${account}\n${hint}`
+    if (this.failed?.key === key && now - this.failed.at < RETRY_MS) return { error: this.failed.error }
+    try {
+      let chars = this.chars
+      if (!chars || chars.account !== account || now - chars.at > CHARS_MS) {
+        const q = new URLSearchParams({ accountName: account, realm: 'pc' })
+        const r = await this.get(`${POE_SITE}/character-window/get-characters?${q.toString()}`)
+        chars = { account, at: this.deps.now(), name: lastActive(r.body) }
+        this.chars = chars
+      }
+      const character = chars.name ?? hint
+      if (!character) return { error: 'No character yet.' }
+      const g = this.gear
+      if (g && g.account === account && g.character === character && this.deps.now() - g.readAt < CACHE_MS) {
+        return { character: g.character, readAt: g.readAt, slots: g.slots }
+      }
+      const q = new URLSearchParams({ accountName: account, character, realm: 'pc' })
+      const reply = await this.get(`${POE_SITE}/character-window/get-items?${q.toString()}`)
+      const slots = parseWornItems(reply.body)
+      if (!slots) throw new Refused(`Couldn't read ${character}'s gear.`)
+      const gear = { character, readAt: this.deps.now(), slots }
+      this.gear = { ...gear, account }
+      this.failed = null
+      return gear
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e)
+      this.failed = { key, at: this.deps.now(), error }
+      return { error }
+    }
+  }
+
+  // Waits a moment between its own calls, never longer: the price check
+  // shows PoB meanwhile.
+  private async get (url: string): Promise<HttpReply> {
+    const wait = this.limiter.delay(this.deps.now())
+    if (wait > MAX_WAIT_MS) throw new Refused('Too many gear reads; trying again soon.')
+    if (wait > 0) await (this.deps.sleep ?? (async (ms) => { await new Promise(resolve => setTimeout(resolve, ms)) }))(wait)
+    this.limiter.record(this.deps.now())
+    const reply = await this.deps.fetch(url)
     this.limiter.update(reply.status, reply.headers, this.deps.now())
-    if (isSignedOut(reply)) return { error: 'Signed out of pathofexile.com.' }
-    if (reply.status !== 200) return { error: `pathofexile.com answered ${reply.status}.` }
-    const slots = parseWornItems(reply.body)
-    if (!slots) return { error: `Couldn't read ${character}'s gear.` }
-    const gear: WornGear = { character, readAt: this.deps.now(), slots }
-    this.cache = gear
-    return gear
+    if (isSignedOut(reply)) {
+      this.deps.signedOut()
+      throw new Refused(SIGNED_OUT)
+    }
+    if (reply.status !== 200) throw new Refused(`pathofexile.com answered ${reply.status}.`)
+    return reply
   }
 }

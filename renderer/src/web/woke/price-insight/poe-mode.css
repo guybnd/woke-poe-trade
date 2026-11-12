@@ -125,13 +125,15 @@
 /* The name has the first row to itself, with room on the right for the compare icon;
    chips, numbers and the poe.ninja chip share the second. */
 #price-window.w-poe .w-poe-head { position: relative; }
-#price-window.w-poe .w-poe-head .filter-name-title { order: 1; flex-basis: 100%; padding-right: 32px; box-sizing: border-box; }
+#price-window.w-poe .w-poe-head .filter-name-title { order: 1; margin-right: 6px; }
+#price-window.w-poe .w-poe-head:has(.w-swap-icon) .filter-name-title { flex-basis: 100%; margin-right: 0; padding-right: 32px; box-sizing: border-box; }
 #price-window.w-poe .w-poe-head .w-swap-icon { position: absolute; top: 0; right: 12px; margin: 0; }
 #price-window.w-poe .w-poe-head .filter-name-label { font-family: var(--w-label); font-size: calc(19px * var(--w-text-scale, 1)); letter-spacing: .03em; }
 #price-window.w-poe .w-poe-head .filter-name-chips { order: 2; flex: initial; }
 #price-window.w-poe .w-poe-head .filter-name-tiles { order: 3; max-width: none; align-items: center; justify-content: flex-start; }
 #price-window.w-poe .w-poe-head-aside { order: 4; margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
-#price-window.w-poe .w-poe-head-aside:empty { display: none; }
+#price-window.w-poe .w-poe-head-aside:empty,
+#price-window.w-poe .w-poe-head-aside:not(:has(> :not(.w-swap-icon))) { display: contents; }
 #price-window.w-poe .w-poe-head .filter-name-chips > *,
 #price-window.w-poe .w-poe-head .filter-name-tiles > * { min-height: calc(24px * var(--w-text-scale, 1)); }
 
