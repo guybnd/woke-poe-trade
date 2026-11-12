@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <DockItem :menu="dockMenu" :wake="unseenCorrupt" id="essence-scan" title="Essence scan" :show="running || paused || !!message || config.iconWhenOff"
+    <DockItem :menu="dockMenu" :wake="unseenCorrupt" id="essence-scan" title="Essence scan" :show="running || paused || !!message || (config.iconWhenOff && zone.kind === 'map')"
       :game-click="running ? undefined : startFromIcon"
       :led="message ? 'error' : paused ? 'warn' : running ? 'on' : null" :badge="unseenCorrupt || null"
       :wm-id="config.wmId" card-width="18rem" @open-change="onCard">
@@ -310,9 +310,11 @@ function startFromIcon () {
 // does nothing with the game in the background or stops a scan you started.
 // Quiet on purpose: a failed start shows on the icon, never a panel over the
 // game, and is tried again in the next map.
+// Only a map entered while the app runs: the last map read back from the log
+// at start-up would load the OCR workers before any scan was asked for.
 watch(() => [zone.kind, zone.seed, props.config.autoInMaps] as const, async ([kind, seed, auto]) => {
   if (kind === 'map') {
-    if (!auto || seed === autoScan.stoppedSeed || seed === autoScan.failedSeed) return
+    if (!auto || !zone.live || seed === autoScan.stoppedSeed || seed === autoScan.failedSeed) return
     try {
       const res = await hostRequest<{ running: boolean }>('essence-scan-auto-start', null)
       if (res.running) running.value = true

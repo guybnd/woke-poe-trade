@@ -8,11 +8,11 @@
     </div>
     <label class="flex items-center gap-2">
       <input v-model="autoInMaps" type="checkbox">
-      <span>Start in maps: scan by itself in every map, stop in town and hideout</span>
+      <span>Start in maps: scan by itself in every map, stop in town and hideout. Uses about 430 MB more memory while in maps.</span>
     </label>
     <label class="flex items-center gap-2">
       <input v-model="iconWhenOff" type="checkbox">
-      <span>Show the dock icon while the scan is off (click it to start)</span>
+      <span>In maps, show the dock icon while the scan is off (click it to start)</span>
     </label>
     <div>
       <div class="mb-1">Corrupt when the monolith holds any of these</div>

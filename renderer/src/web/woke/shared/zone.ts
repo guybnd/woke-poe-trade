@@ -20,6 +20,8 @@ export interface ZoneState {
   kind: ZoneKind | null
   // When the current instance was generated (ms), 0 if unknown.
   enteredAt: number
+  // Entered while the app was watching, not read back from the log at start-up.
+  live: boolean
 }
 
 const LAB_ZONES = new Set(["Aspirants' Plaza", "Aspirant's Trial"])
@@ -41,11 +43,12 @@ export function zoneKind (areaId: string, name: string): ZoneKind {
   return 'other'
 }
 
-export const zone = shallowReactive<ZoneState>({ areaId: '', areaLevel: null, seed: '', name: '', kind: null, enteredAt: 0 })
+export const zone = shallowReactive<ZoneState>({ areaId: '', areaLevel: null, seed: '', name: '', kind: null, enteredAt: 0, live: false })
 
-function apply (ev: LogEvent | null, at: number) {
+function apply (ev: LogEvent | null, at: number, live: boolean) {
   if (!ev) return
   if (ev.kind === 'area') {
+    zone.live = live
     zone.areaId = ev.areaId
     zone.areaLevel = ev.areaLevel
     zone.seed = ev.seed ?? ''
@@ -69,7 +72,7 @@ export function useZone (): ZoneState {
   const scope = effectScope(true)
   scope.run(() => followGameLog({
     since: () => 0,
-    onLines: (lines) => { for (const l of lines) apply(l.ev, l.at) }
+    onLines: (lines, live) => { for (const l of lines) apply(l.ev, l.at, live) }
   }))
   return zone
 }

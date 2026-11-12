@@ -16,9 +16,11 @@ export interface EssenceScanWidget extends Widget {
   // (chaos) in total, even with nothing flagged. 0 turns it off.
   valueAlertChaos: number
   // Scan mode starts by itself when you enter a map and stops in town and
-  // hideout. The hotkey still stops it for the rest of that map.
+  // hideout. The hotkey still stops it for the rest of that map. Off by
+  // default: the scan's OCR worker holds about 430 MB while it runs.
   autoInMaps: boolean
-  // The dock icon stays while the scan is off, so you can see and start it.
+  // In maps, the dock icon stays while the scan is off, so you can see and
+  // start it.
   iconWhenOff: boolean
 }
 
@@ -49,8 +51,8 @@ export function initEssenceScanWidget (w: EssenceScanWidget) {
   w.onceHotkey = null
   w.flagTypes = [...MEDS]
   w.valueAlertChaos = 50
-  w.autoInMaps = true
-  w.iconWhenOff = false
+  w.autoInMaps = false
+  w.iconWhenOff = true
 }
 
 // Scan mode only starts from the widget's hotkey or its Start button, so a
@@ -81,6 +83,6 @@ export function normalizeEssenceScanWidget (w: EssenceScanWidget) {
   if (w.onceHotkey === undefined) w.onceHotkey = null
   if (!Array.isArray(w.flagTypes)) w.flagTypes = [...MEDS]
   if (typeof w.valueAlertChaos !== 'number' || !Number.isFinite(w.valueAlertChaos)) w.valueAlertChaos = 50
-  if (typeof w.autoInMaps !== 'boolean') w.autoInMaps = true
-  if (typeof w.iconWhenOff !== 'boolean') w.iconWhenOff = false
+  if (typeof w.autoInMaps !== 'boolean') w.autoInMaps = false
+  if (typeof w.iconWhenOff !== 'boolean') w.iconWhenOff = true
 }
