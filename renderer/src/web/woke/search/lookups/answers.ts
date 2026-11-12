@@ -37,9 +37,11 @@ export interface CurrencyQuery { amount: number, from: string, to: string | null
 
 // "3.5 div", "450c", "2k chaos", "12 div in chaos", "1 mirror to div".
 export function parseCurrencyQuery (query: string, names: (text: string) => string | null): CurrencyQuery | null {
-  const m = /^\s*(\d[\d,]*(?:\.\d+)?|\.\d+)\s*(k)?\s*([a-z'][a-z' ]*?)\s*(?:\s(?:in|to|as)\s+([a-z'][a-z' ]*?))?\s*$/i.exec(query)
+  const m = /^\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?|\.\d+)\s*(k)?\s*([a-z'][a-z' ]*?)\s*(?:\s(?:in|to|as)\s+([a-z'][a-z' ]*?))?\s*$/i.exec(query)
   if (!m) return null
-  let amount = Number(m[1].replace(/,/g, ''))
+  // "1,200" groups thousands; "1,5" is a decimal comma.
+  const digits = /,\d{3}(?:\D|$)/.test(m[1]) ? m[1].replace(/,/g, '') : m[1].replace(',', '.')
+  let amount = Number(digits)
   if (m[2]) amount *= 1000
   if (!Number.isFinite(amount) || amount <= 0) return null
   const from = names(m[3])
@@ -50,7 +52,8 @@ export function parseCurrencyQuery (query: string, names: (text: string) => stri
 }
 
 function bigNumber (n: number): string {
-  return Math.abs(n) >= 1000 ? Math.round(n).toLocaleString('en-US') : formatAmount(n)
+  if (Math.abs(n) >= 1000) return Math.round(n).toLocaleString('en-US')
+  return Math.abs(n) >= 0.1 ? String(+n.toFixed(2)) : formatAmount(n)
 }
 
 export function currencyLookup (currencyNames: readonly string[]): Lookup {
@@ -59,7 +62,9 @@ export function currencyLookup (currencyNames: readonly string[]): Lookup {
     const alias = ALIASES.get(t)
     if (alias) return alias
     if (t.length < 3) return null
-    return currencyNames.find(n => matchRank(n, t) === 0) ?? null
+    // Only a name it can't be confused with: "10 orb" could be any orb.
+    const hits = currencyNames.filter(n => matchRank(n, t) === 0)
+    return hits.length === 1 ? hits[0] : hits.find(n => n.toLowerCase() === t) ?? null
   }
   return (query, ctx) => {
     const q = parseCurrencyQuery(query, names)
@@ -103,15 +108,18 @@ export function currencyLookup (currencyNames: readonly string[]): Lookup {
 // The next league, while it hasn't started. Moves with GAME_PATCH each league.
 export const NEXT_LEAGUE = { name: 'Covens of Umbra', patch: '3.30', startsAt: Date.UTC(2026, 10, 13, 19) }
 
-const LAB_WORDS = ['lab reset', 'labyrinth reset', 'lab layout', 'reset', 'countdown', 'timer']
-const LEAGUE_WORDS = ['league start', 'league end', 'league day', 'new league', 'countdown', 'timer', 'launch']
+// A phrase's start, with at least its first word typed in full, so "res" or
+// "star" (Resolute Technique, Starforge) stay item searches.
+const LAB_WORDS = ['lab reset', 'lab layout', 'lab timer', 'labyrinth reset', 'reset', 'countdown']
+const LEAGUE_WORDS = ['league start', 'league end', 'league day', 'league timer', 'next league', 'countdown']
 
-function wanted (query: string, words: string[]): boolean {
-  return words.some(w => matchRank(w, query) >= 0 && matchRank(w, query) < 2)
+function wanted (query: string, phrases: string[]): boolean {
+  const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
+  return phrases.some(p => p.startsWith(q) && q.length >= p.split(' ')[0].length)
 }
 
 function localTime (ts: number): string {
-  return new Date(ts).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+  return new Date(ts).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 function days (ms: number): string {
@@ -125,7 +133,7 @@ export const countdownLookup: Lookup = (query, ctx) => {
     const ms = msUntilLabReset(ctx.now)
     out.push({
       id: 'answer:lab-reset',
-      group: 'Answer',
+      group: 'Countdowns',
       name: `Lab layout resets in ${formatDuration(ms)}`,
       sub: 'Countdown',
       icon: 'fas fa-hourglass-half',
@@ -142,7 +150,7 @@ export const countdownLookup: Lookup = (query, ctx) => {
     if (NEXT_LEAGUE.startsAt > ctx.now) {
       out.push({
         id: 'answer:league-next',
-        group: 'Answer',
+        group: 'Countdowns',
         name: `${NEXT_LEAGUE.name} starts in ${days(NEXT_LEAGUE.startsAt - ctx.now)}`,
         sub: `Patch ${NEXT_LEAGUE.patch} countdown`,
         icon: 'fas fa-flag-checkered',
@@ -151,11 +159,12 @@ export const countdownLookup: Lookup = (query, ctx) => {
       })
     }
     const league = ctx.league
-    if (league?.startedAt && league.startedAt <= ctx.now) {
+    // Standard and other permanent leagues started years ago: no day count.
+    if (league?.startedAt && league.startedAt <= ctx.now && ctx.now - league.startedAt < 200 * 86400e3) {
       const day = Math.floor((ctx.now - league.startedAt) / 86400e3) + 1
       out.push({
         id: 'answer:league-day',
-        group: 'Answer',
+        group: 'Countdowns',
         name: `Day ${day} of ${league.name}`,
         sub: 'League age',
         icon: 'fas fa-calendar-day',

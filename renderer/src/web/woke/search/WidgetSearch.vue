@@ -34,10 +34,7 @@
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
               </button>
             </template>
-            <div v-if="!entries.length" :class="$style.none">
-              <template v-if="queryOk">Nothing matches "{{ query.trim() }}".</template>
-              <template v-else>Type an item, a tool or a setting. Items you look up show here next time.</template>
-            </div>
+            <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting. Items you look up show here next time.</div>
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
@@ -122,7 +119,7 @@ import { ITEM_BY_REF, ITEMS_ITERATOR } from '@/assets/data'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
 import { MODULES, isWidgetTypeOn } from '../modules'
@@ -297,7 +294,9 @@ function settingEntries (): ActionEntry[] {
 const lookupContext = computed<LookupContext>(() => {
   const prices = new Map<string, number>()
   for (const i of snapshot.value?.items ?? []) {
-    if (!i.variant || !prices.has(i.name)) prices.set(i.name, i.chaos)
+    // A currency wins its name over a same-named row of another type.
+    if (i.variant || (prices.has(i.name) && i.type !== 'Currency')) continue
+    prices.set(i.name, i.chaos)
   }
   const league = leagues.selectedId.value
   return {
@@ -311,7 +310,8 @@ const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).f
 const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, webLookup])
 
 function lookupCards (q: string): LookupCard[] {
-  const ctx = { ...lookupContext.value, now: Date.now() }
+  // Re-read every 30 s, so countdowns tick while the palette is open.
+  const ctx = { ...lookupContext.value, now: nowMinute.value }
   return lookups.value.flatMap(l => l(q, ctx))
 }
 // One section per card group, in the order they came; `only` keeps those

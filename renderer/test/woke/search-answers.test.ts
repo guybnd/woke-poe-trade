@@ -20,6 +20,7 @@ describe('parseCurrencyQuery', () => {
     expect(parseCurrencyQuery('450c', names)).toEqual({ amount: 450, from: 'Chaos Orb', to: null })
     expect(parseCurrencyQuery('2k chaos', names)).toEqual({ amount: 2000, from: 'Chaos Orb', to: null })
     expect(parseCurrencyQuery('1,200 c in div', names)).toEqual({ amount: 1200, from: 'Chaos Orb', to: 'Divine Orb' })
+    expect(parseCurrencyQuery('1,5 div', names)).toEqual({ amount: 1.5, from: 'Divine Orb', to: null })
   })
   it('ignores what is not currency maths', () => {
     expect(parseCurrencyQuery('div', names)).toBeNull()
@@ -44,6 +45,13 @@ describe('currencyLookup', () => {
     expect(card.name).toBe('1 Mirror of Kalandra = 500 Divine Orb')
     expect(currency('10 orb of annul', ctx())[0].name).toBe('10 Orb of Annulment = 40 c')
   })
+  it('keeps decimals under a thousand', () => {
+    expect(currency('12.5 div', ctx())[0].name).toBe('12.5 Divine Orb = 3,000 c')
+    expect(currency('3000c', ctx())[0].name).toBe('3,000 Chaos Orb = 12.5 div')
+  })
+  it('leaves a name that fits several currencies alone', () => {
+    expect(currency('10 orb', ctx())).toEqual([])
+  })
   it('stays quiet without a price', () => {
     expect(currency('3 div', ctx({ price: n => n === 'Chaos Orb' ? 1 : null }))).toEqual([])
     expect(currency('Mageblood', ctx())).toEqual([])
@@ -61,9 +69,12 @@ describe('countdownLookup', () => {
     expect(before[0].name).toBe(`${NEXT_LEAGUE.name} starts in 1d 9h 00m`)
     const after = countdownLookup('league', ctx({ now: NEXT_LEAGUE.startsAt + 3 * 86400e3, league: { name: 'Covens of Umbra', startedAt: NEXT_LEAGUE.startsAt } }))
     expect(after.map(c => c.name)).toEqual(['Day 4 of Covens of Umbra'])
+    const standard = countdownLookup('league', ctx({ now: NEXT_LEAGUE.startsAt + 86400e3, league: { name: 'Standard', startedAt: Date.UTC(2013, 0, 23) } }))
+    expect(standard).toEqual([])
   })
   it('stays out of unrelated searches', () => {
     expect(countdownLookup('mageblood', ctx())).toEqual([])
+    for (const q of ['star', 'start', 'res', 'time', 'la', 'end', 'new']) expect(countdownLookup(q, ctx())).toEqual([])
     expect(countdownLookup('labyrinth', ctx()).map(c => c.id)).toEqual(['answer:lab-reset'])
   })
 })
