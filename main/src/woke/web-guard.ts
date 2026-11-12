@@ -57,6 +57,13 @@ export function openWebLink (open: OpenExternal, url: unknown): boolean {
   return true
 }
 
+// The personal stash reader's pathofexile.com sign-in window may browse the
+// web (the site's login, Steam's), unlike the app's own windows.
+const signInWindows = new WeakSet<WebContents>()
+export function allowSignInWindow (contents: WebContents) {
+  signInWindows.add(contents)
+}
+
 // Locks down every webview the overlay attaches and the pages inside it.
 export function guardWebContents (app: App, session: Session, open: OpenExternal) {
   const dev = process.env.VITE_DEV_SERVER_URL
@@ -88,6 +95,7 @@ export function guardWebContents (app: App, session: Session, open: OpenExternal
       // replace it opens in the system browser instead.
       contents.on('will-navigate', (event, url) => {
         if (isOwnPage(url, dev)) return
+        if (signInWindows.has(contents) && isWebUrl(url)) return
         event.preventDefault()
         openWebLink(open, url)
       })

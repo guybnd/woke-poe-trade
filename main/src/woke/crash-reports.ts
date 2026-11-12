@@ -257,6 +257,8 @@ export function scrubText (text: string, names: ScrubNames = localNames()): stri
   // Any other user folder, e.g. from a path the game reported.
   out = out.replace(/([A-Za-z]:[\\/]+Users[\\/]+)[^\\/\s"'<>]+/gi, '$1<user>')
   out = out.replace(/(\/(?:home|Users)\/)[^/\s"'<>]+/g, '$1<user>')
+  // A pathofexile.com login cookie must never end up in a report.
+  out = out.replace(/(POESESSID[=:"'\s]+)[0-9a-f]{16,}/gi, '$1<hidden>')
   const user = names.user
   if (user && user.length >= 3) out = out.replace(new RegExp(`\\b${escapeRe(user)}\\b`, 'gi'), '<user>')
   return out

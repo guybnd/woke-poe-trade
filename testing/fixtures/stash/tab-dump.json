@@ -1,0 +1,8 @@
+{"numTabs":3,"items":[
+ {"w":2,"h":3,"icon":"https://web.poecdn.com/hh.png","name":"<<set:MS>><<set:M>><<set:S>>Headhunter","typeLine":"Leather Belt","baseType":"Leather Belt","identified":true,"ilvl":84,"frameType":3,"implicitMods":["+32 to maximum Life"],"explicitMods":["+50 to Strength","When you Kill a Rare monster, you gain its Modifiers for 60 seconds"],"x":0,"y":0},
+ {"w":1,"h":1,"icon":"https://web.poecdn.com/gem.png","name":"","typeLine":"Awakened Spell Echo Support","baseType":"Awakened Spell Echo Support","identified":true,"frameType":4,"corrupted":true,"properties":[{"name":"Level","values":[["5 (Max)",0]],"displayMode":0},{"name":"Quality","values":[["+20%",1]],"displayMode":0}],"x":2,"y":0},
+ {"w":2,"h":4,"icon":"https://web.poecdn.com/body.png","name":"Doom Shell","typeLine":"Astral Plate","baseType":"Astral Plate","identified":true,"ilvl":86,"frameType":2,"sockets":[{"group":0,"attr":"S"},{"group":0,"attr":"S"},{"group":0,"attr":"D"},{"group":1,"attr":"I"}],"explicitMods":["+90 to maximum Life"],"craftedMods":["+20% to Fire Resistance"],"x":3,"y":0},
+ {"w":1,"h":1,"icon":"https://web.poecdn.com/map.png","name":"","typeLine":"Strand Map","baseType":"Strand Map","identified":true,"frameType":0,"properties":[{"name":"Map Tier","values":[["16",0]],"displayMode":0}],"x":5,"y":0},
+ {"w":1,"h":1,"icon":"https://web.poecdn.com/card.png","stackSize":3,"maxStackSize":10,"name":"","typeLine":"The Apothecary","baseType":"The Apothecary","identified":true,"frameType":6,"x":6,"y":0},
+ {"w":1,"h":1,"icon":"","name":"","typeLine":"","frameType":0,"x":7,"y":0}
+]}
