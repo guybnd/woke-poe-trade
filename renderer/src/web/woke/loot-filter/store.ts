@@ -247,7 +247,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       buildCount = blocks.length
     }
     // Presets' rules, then your own rules above them: yours win.
-    const presetTop = presetBlocks(next, cfg().presets, prices.lookup.value, dustList.value)
+    const presetTop = presetBlocks(next, cfg().presets, prices.lookup.value, dustList.value, {
+      breakdown: cfg().presets.cheapUniques.on ? prices.breakdown.value : null,
+      build: input ? { uniqueBases: input.uniqueBases, weaponClasses: input.weaponClasses } : null
+    })
     insertBuildBlocks(next, presetTop)
     insertBuildBlocks(next, ruleBlocks(cfg().rules))
     // Price moves next: your own moves (edits) are applied after them and win.
