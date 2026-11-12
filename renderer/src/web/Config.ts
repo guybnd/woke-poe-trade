@@ -25,6 +25,10 @@ import { registry as widgetRegistry } from './overlay/widget-registry.js'
 
 const _config = shallowRef<Config | null>(null)
 let _lastSavedConfig: Config | null = null
+// woke: main echoes every save to every page, this one included. Our own echo
+// is older than what we hold (a panel mounting after the save has set itself
+// up since), so taking it would undo that.
+const _ownSavesInFlight: string[] = []
 
 export function AppConfig (): Config
 export function AppConfig<T extends widget.Widget> (type: string): T | undefined
@@ -38,6 +42,10 @@ export function AppConfig (type?: string) {
 
 export function updateConfig (updates: Config) {
   _config.value = deepReactive(JSON.parse(JSON.stringify(updates)))
+  applyFontSize()
+}
+
+function applyFontSize () {
   document.documentElement.style.fontSize = `${_config.value!.fontSize}px`
 }
 
@@ -49,10 +57,12 @@ export function saveConfig (opts?: { isTemporary: boolean }) {
 
   if (!isDeepEqual(rawConfig, _lastSavedConfig)) {
     _lastSavedConfig = JSON.parse(JSON.stringify(rawConfig))
+    const contents = JSON.stringify(AppConfig())
+    _ownSavesInFlight.push(contents)
     Host.sendEvent({
       name: 'CLIENT->MAIN::save-config',
       payload: {
-        contents: JSON.stringify(AppConfig()),
+        contents,
         isTemporary: opts?.isTemporary ?? false
       }
     })
@@ -80,6 +90,14 @@ export function pushHostConfig () {
 
 export async function initConfig () {
   Host.onEvent('MAIN->CLIENT::config-changed', (e) => {
+    const own = _ownSavesInFlight.indexOf(e.contents)
+    if (own !== -1) {
+      // Echoes come back in order, so earlier ones were lost or already seen.
+      _ownSavesInFlight.splice(0, own + 1)
+      // Settings changes the size in place; the echo was what applied it.
+      applyFontSize()
+      return
+    }
     _lastSavedConfig = JSON.parse(e.contents) // should be a deep copy
     updateConfig(JSON.parse(e.contents))
   })
