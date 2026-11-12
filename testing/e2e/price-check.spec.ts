@@ -342,3 +342,13 @@ async function setPriceView (page: import('@playwright/test').Page, v: 'classic'
     window.dispatchEvent(new StorageEvent('storage', { key: 'woke.priceView', newValue: v }))
   }, v)
 }
+
+test('an item price check can\'t read offers its copied text to copy', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem(['Item Class: Woven Things', 'Woven Thread of Testing', '--------', 'Stack Size: 1/10', ''].join('\n'))
+  const panel = overlay.widget('price-check')
+  await expect(panel).toContainText('Woven Thread of Testing')
+  await expect(panel.getByRole('button', { name: 'Copy text' })).toBeVisible()
+  // No Rarity line, so there's no name to search by.
+  await expect(panel.getByRole('button', { name: 'Search on trade' })).toHaveCount(0)
+})

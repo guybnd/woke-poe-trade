@@ -46,6 +46,8 @@
             <template #name>{{ t(item.error.name) }}</template>
             <p>{{ t(item.error.message) }}</p>
           </ui-error-box>
+          <!-- woke: a way on from an item that can't be read -->
+          <unreadable-item :raw-text="item.error.rawText" :league="leagues.selectedId.value ?? null" />
           <pre class="bg-gray-900 rounded m-4 overflow-x-hidden p-2">{{ item.error.rawText }}</pre>
         </template>
         <template v-else-if="item?.isOk()">
@@ -99,6 +101,7 @@ import RateLimiterState from './trade/RateLimiterState.vue'
 import UnidentifiedResolver from './unidentified-resolver/UnidentifiedResolver.vue'
 import CheckPositionCircle from './CheckPositionCircle.vue'
 import NewItemSearch from '@/web/woke/new-item/NewItemSearch.vue'
+import UnreadableItem from '@/web/woke/new-item/UnreadableItem.vue'
 import { newItemQuery } from '@/web/woke/new-item/query'
 import AppTitleBar from '@/web/ui/AppTitlebar.vue'
 import PriceStyleMenu from '@/web/woke/price-insight/PriceStyleMenu.vue'
@@ -157,6 +160,7 @@ export default defineComponent({
     ItemQuickPrice,
     UiErrorBox,
     NewItemSearch,
+    UnreadableItem,
     PriceStyleMenu,
     UiPopover
   },
