@@ -127,7 +127,7 @@ function colourOf (l: ValuedLine) {
 
 function tipOf (l: ValuedLine): ItemTipRef {
   const tabs = l.tabIds.map(nameOfTab)
-  return { name: l.tipName, variant: l.variant, note: tabs.length ? `In ${tabs.join(', ')}` : undefined, menu: menuOf(l) }
+  return { name: l.tipName, variant: l.variant, count: l.count, note: tabs.length ? `In ${tabs.join(', ')}` : undefined, menu: menuOf(l) }
 }
 function menuOf (l: ValuedLine): ItemMenuRef {
   // Gems, cards and currency: no rarity, so the menu looks them up by name.

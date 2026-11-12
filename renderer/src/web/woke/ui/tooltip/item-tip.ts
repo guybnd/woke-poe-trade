@@ -10,7 +10,7 @@ import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
 import { buildTip, kindOfNinjaType, packFiles } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
-import { hideTip, onTipHide, showTipAt } from './tooltip'
+import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName } from './item-menu-logic'
 import type { ItemMenuRef } from './item-menu-logic'
@@ -33,6 +33,8 @@ export interface ItemTipRef {
   fallback?: TipContent
   // The right-click menu's item, when it differs from the tooltip's.
   menu?: ItemMenuRef
+  // How many of it (a stack, a stash line): the price strip adds their value.
+  count?: number
 }
 
 const SHOW_DELAY_MS = 60
@@ -76,14 +78,7 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   const info = ninja.findPriceByQuery({ ns, name: ref.name, variant: ref.variant || undefined }) ??
     (ref.variant ? null : ninja.findPriceByName(ns, ref.name))
   if (!info) return null
-  const graph = (info.graph ?? []).filter((v): v is number => v != null)
-  return {
-    chaos: info.chaos,
-    variant: ref.variant ? undefined : info.variant,
-    // The last point is the % change over the whole line.
-    change: graph.length ? graph[graph.length - 1] / 100 : null,
-    graph
-  }
+  return marketFromRow(info, ref)
 }
 
 async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, market: TipMarket | null, uniques?: TipBaseUnique[] }> {

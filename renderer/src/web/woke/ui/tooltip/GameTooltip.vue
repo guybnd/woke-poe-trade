@@ -115,11 +115,13 @@
           <span class="w-dim" :class="$style.span">{{ lookup.market.range.count }} prices</span>
         </footer>
         <footer v-else-if="lookup.market" :class="$style.strip">
-          <WPrice :chaos="lookup.market.chaos" :divine="xchgRate ?? null" />
+          <!-- One's price from poe.ninja; with a count, what they're worth together. -->
+          <WPrice :chaos="lookup.market.chaos" :divine="xchgRate ?? null" /><span class="w-dim">each</span>
+          <span v-if="lookup.market.chaos > 0 && lookup.market.chaos < 1" class="w-dim">({{ perChaos(lookup.market.chaos) }} per c)</span>
+          <template v-if="lookup.market.count"><span class="w-faint">·</span><WPrice :chaos="lookup.market.chaos * lookup.market.count" :divine="xchgRate ?? null" /><span class="w-dim">for {{ lookup.market.count }}</span></template>
           <span v-if="lookup.market.variant" class="w-dim">{{ lookup.market.variant }}</span>
-          <WDelta :value="lookup.market.change" title="Change over 7 days" />
-          <WSpark :values="lookup.market.graph" :width="88" :height="20" />
-          <span class="w-faint" :class="$style.span">7 days</span>
+          <span :class="$style.span" title="poe.ninja's price over the last 7 days"><WDelta :value="lookup.market.change" title="Change over 7 days" /> <span class="w-dim">7d</span></span>
+          <WSpark :values="lookup.market.graph" :width="72" :height="20" />
         </footer>
       </template>
     </div>
@@ -155,6 +157,8 @@ const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.co
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
 const swap = computed<SwapTip | null>(() => tip.value?.content.kind === 'swap' ? tip.value.content : null)
 const passive = computed<PassiveTip | null>(() => tip.value?.content.kind === 'passive' ? tip.value.content : null)
+// Cheap currency the way traders say it: 1 / price, "5.4 per c".
+const perChaos = (chaos: number) => { const n = 1 / chaos; return n >= 10 ? Math.round(n).toString() : n.toFixed(1) }
 const lookup = computed<LookupTip | null>(() => tip.value?.content.kind === 'lookup' ? tip.value.content : null)
 // Live: the divine rate can arrive after the tooltip opens.
 const { xchgRate } = usePoeninja()
@@ -439,6 +443,8 @@ onUnmounted(() => {
 
 /* The price at the foot of a looked-up item. */
 .strip {
+  flex-wrap: wrap;
+  row-gap: 2px;
   display: flex;
   align-items: center;
   gap: var(--w-s2);
