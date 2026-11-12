@@ -7,20 +7,8 @@ const NOW = 1_000_000_000
 
 function run (over: Partial<CampaignRun> = {}): CampaignRun {
   return {
-    id: 1,
-    startedAt: 0,
-    elapsedMs: 600_000,
-    runningSince: null,
-    act: 4,
-    zone: 'Highgate',
-    zoneSinceMs: 540_000,
-    charName: 'A',
-    className: 'Witch',
-    level: 34,
-    splits: [],
-    finished: false,
-    marks: [],
-    ...over
+    id: 1, startedAt: 0, elapsedMs: 600_000, runningSince: null, act: 4, zone: 'Highgate', zoneSinceMs: 540_000,
+    charName: 'A', className: 'Witch', level: 34, splits: [], finished: false, marks: [], ...over
   } as CampaignRun
 }
 

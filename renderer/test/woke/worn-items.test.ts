@@ -106,19 +106,17 @@ describe('worn items', () => {
   it('an armour with two increased Energy Shield mods, against itself, shows no differences', () => {
     const copied = fs.readFileSync(path.resolve(__dirname, '../../../testing/fixtures/items/rare-body-armour-es.txt'), 'utf8').replace(/\r\n/g, '\n')
     const checked = parseClipboard(copied)._unsafeUnwrap()
-    const worn = parseWornItems(JSON.stringify({
-      items: [{
-        inventoryId: 'BodyArmour',
-        frameType: 2,
-        name: 'Doom Shell',
-        typeLine: 'Twilight Regalia',
-        baseType: 'Twilight Regalia',
-        ilvl: 86,
-        properties: [{ name: 'Quality', values: [['+20%', 1]] }, { name: 'Energy Shield', values: [['1210', 1]] }],
-        sockets: [0, 0, 0, 0, 0, 0].map(() => ({ group: 0, sColour: 'B' })),
-        explicitMods: ['120% increased Energy Shield', '42% increased Energy Shield', '18% increased Stun and Block Recovery', '+120 to maximum Life', '+34% to Fire Resistance', '+34% to Cold Resistance', '+31% to Chaos Resistance']
-      }]
-    }))![0].item
+    const worn = parseWornItems(JSON.stringify({ items: [{
+      inventoryId: 'BodyArmour',
+      frameType: 2,
+      name: 'Doom Shell',
+      typeLine: 'Twilight Regalia',
+      baseType: 'Twilight Regalia',
+      ilvl: 86,
+      properties: [{ name: 'Quality', values: [['+20%', 1]] }, { name: 'Energy Shield', values: [['1210', 1]] }],
+      sockets: [0, 0, 0, 0, 0, 0].map(() => ({ group: 0, sColour: 'B' })),
+      explicitMods: ['120% increased Energy Shield', '42% increased Energy Shield', '18% increased Stun and Block Recovery', '+120 to maximum Life', '+34% to Fire Resistance', '+34% to Cold Resistance', '+31% to Chaos Resistance']
+    }] }))![0].item
     const yours = parseClipboard(pobItemText(worn))._unsafeUnwrap()
     const r = swapCheck(yours, checked, null)
     expect(r.rows).toEqual([])
@@ -126,14 +124,12 @@ describe('worn items', () => {
   })
 
   it('reads foil uniques, normal bases by their base and Foulborn mods', () => {
-    const items = parseWornItems(JSON.stringify({
-      items: [
-        { ...TIMEPIECE, frameType: 10 },
-        { inventoryId: 'Belt', frameType: 0, typeLine: 'Synthesised Leather Belt', baseType: 'Leather Belt', implicitMods: ['+30 to maximum Life'] },
-        { ...TIMEPIECE, inventoryId: 'Ring', frameType: 42, name: '<<set:MS>>Odd', typeLine: 'Gold Ring' },
-        { ...TIMEPIECE, inventoryId: 'Ring2', mutatedMods: ['+1 to Level of all Skill Gems'] }
-      ]
-    }))!
+    const items = parseWornItems(JSON.stringify({ items: [
+      { ...TIMEPIECE, frameType: 10 },
+      { inventoryId: 'Belt', frameType: 0, typeLine: 'Synthesised Leather Belt', baseType: 'Leather Belt', implicitMods: ['+30 to maximum Life'] },
+      { ...TIMEPIECE, inventoryId: 'Ring', frameType: 42, name: '<<set:MS>>Odd', typeLine: 'Gold Ring' },
+      { ...TIMEPIECE, inventoryId: 'Ring2', mutatedMods: ['+1 to Level of all Skill Gems'] }
+    ] }))!
     expect(items.map(x => x.item.rarity)).toEqual(['UNIQUE', 'NORMAL', 'UNIQUE', 'UNIQUE'])
     expect(items[1].item.name).toBe('Leather Belt')
     expect(items[2].item.name).toBe('Odd')

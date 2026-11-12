@@ -1,10 +1,10 @@
 // Loot filter editor: parsing a NeverSink-style filter, finding the rule
 // an item hits, and the edits written back.
 import { describe, it, expect, beforeAll } from 'vitest'
-import { fixture, loadGameData, parseItem, FIXTURES } from '../helpers/game-data'
+import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 import fs from 'fs'
 import path from 'path'
-
+import { FIXTURES } from '../helpers/game-data'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import { itemFacts } from '@/web/woke/loot-filter/item-facts'

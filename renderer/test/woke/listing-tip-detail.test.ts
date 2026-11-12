@@ -243,14 +243,10 @@ describe('listingDetail, catalyst quality', () => {
     expect(lines(belt('Quality', [dex]))[0].parts.some(p => p.raw)).toBe(false)
     // Life isn't raised by attribute quality.
     expect(byStat(belt('Quality (Attribute Modifiers)', [dex, { ...life, description: '+84 to maximum Life' }]))[1].parts.some(p => p.raw)).toBe(false)
-    const shared = {
-      description: '+72 to Dexterity',
-      domain: 'explicit',
-      mods: [
-        { name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '53' }] },
-        { name: 'Hybrid', tier: 'P5', magnitudes: [{ min: '1', max: '8' }] }
-      ]
-    }
+    const shared = { description: '+72 to Dexterity', domain: 'explicit', mods: [
+      { name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '53' }] },
+      { name: 'Hybrid', tier: 'P5', magnitudes: [{ min: '1', max: '8' }] }
+    ] }
     expect(lines(belt('Quality (Attribute Modifiers)', [shared]))[0].parts.some(p => p.raw)).toBe(false)
   })
 
@@ -285,27 +281,19 @@ describe('listingDetail, catalyst quality', () => {
   })
 
   it('raises each mod on a shared line before adding them, as the game does', () => {
-    const shared = {
-      description: '+72 to Dexterity',
-      domain: 'explicit',
-      mods: [
-        { name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '53' }] },
-        { name: 'Hybrid', tier: 'P5', magnitudes: [{ min: '1', max: '8' }] }
-      ]
-    }
+    const shared = { description: '+72 to Dexterity', domain: 'explicit', mods: [
+      { name: 'of the Lynx', tier: 'S2', magnitudes: [{ min: '43', max: '53' }] },
+      { name: 'Hybrid', tier: 'P5', magnitudes: [{ min: '1', max: '8' }] }
+    ] }
     // 53 and 8 at 20% are 63 and 9: 72 is the top.
     expect(lines(belt('Quality (Attribute Modifiers)', [shared]))[0].quality).toBe(100)
   })
 
   it('raises only the prefix of a line shared by a prefix and a suffix', () => {
-    const shared = {
-      description: '+60 to maximum Life',
-      domain: 'explicit',
-      mods: [
-        { name: 'Fecund', tier: 'P2', magnitudes: [{ min: '40', max: '49' }] },
-        { name: 'of Life', tier: 'S1', magnitudes: [{ min: '5', max: '10' }] }
-      ]
-    }
+    const shared = { description: '+60 to maximum Life', domain: 'explicit', mods: [
+      { name: 'Fecund', tier: 'P2', magnitudes: [{ min: '40', max: '49' }] },
+      { name: 'of Life', tier: 'S1', magnitudes: [{ min: '5', max: '10' }] }
+    ] }
     // 48-58 raised plus 5-10: 53-68.
     expect(lines(belt('Quality (Prefix Modifiers)', [shared]))[0].quality).toBe(46)
   })

@@ -412,7 +412,7 @@ describe('sources', () => {
     expect(again.doc.value!.blocks.map(b => b.raw)).toEqual(source.blocks.map(b => b.raw))
   })
 
-  it('a missing file is an error you can act on, not a blank screen', async () => {
+    it('a missing file is an error you can act on, not a blank screen', async () => {
     const config = widget({ sourceName: 'Gone.filter' })
     const store = useLootFilter(() => config)
     await store.load()

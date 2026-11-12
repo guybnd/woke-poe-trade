@@ -94,3 +94,4 @@ describe('row operations', () => {
     expect(tierBound(fireRow())).toBe(36)
   })
 })
+

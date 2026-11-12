@@ -120,13 +120,8 @@ describe('price insight (trade listings)', () => {
 
 describe('essence corruption', () => {
   const PRICES: Record<string, number> = {
-    'Deafening Essence of Misery': 6,
-    'Deafening Essence of Envy': 4,
-    'Shrieking Essence of Greed': 0.5,
-    'Essence of Horror': 45,
-    'Essence of Hysteria': 20,
-    'Essence of Insanity': 25,
-    'Essence of Delirium': 30
+    'Deafening Essence of Misery': 6, 'Deafening Essence of Envy': 4, 'Shrieking Essence of Greed': 0.5,
+    'Essence of Horror': 45, 'Essence of Hysteria': 20, 'Essence of Insanity': 25, 'Essence of Delirium': 30
   }
   const price = (name: string) => PRICES[name] ?? null
 
@@ -244,15 +239,8 @@ describe('atlas tree', () => {
 
 describe('boss runs', () => {
   const NO_PREFS: BossPrefs = {
-    runSeconds: {},
-    rates: {},
-    extraDrops: {},
-    kills: {},
-    ownEntry: false,
-    plannedRuns: 0,
-    dropToggles: {},
-    priceModes: {},
-    customPrices: {}
+    runSeconds: {}, rates: {}, extraDrops: {}, kills: {}, ownEntry: false, plannedRuns: 0,
+    dropToggles: {}, priceModes: {}, customPrices: {}
   }
 
   it('boss data is sane', () => {
