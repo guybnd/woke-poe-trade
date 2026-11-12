@@ -66,12 +66,31 @@ try {
 const out = process.env.GITHUB_OUTPUT
 const say = (line) => { if (out) fs.appendFileSync(out, line + '\n'); else console.log(line) }
 
+// Upstream's English files replace ours whole, so whatever our launch-day
+// patch (scripts/trade-data-patch.mjs) added and upstream still lacks is run
+// again on top. It only adds; a failed run (the trade site down or refusing
+// the runner) leaves upstream's files as they are and says so in the PR.
+function reapplyPatch () {
+  if (!changed.some(f => f.startsWith(`${DATA}/en/`))) return null
+  if (!fs.existsSync(path.join(ROOT, 'scripts/trade-baseline/stats.json'))) return null
+  try {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts/trade-data-patch.mjs'), 'apply'], { encoding: 'utf8', timeout: 180_000 })
+    const lines = out.split('\n').filter(Boolean)
+    const counts = lines.filter(l => /^(New|Reworded|Left out)/.test(l))
+    const shown = lines.filter(l => /^\s+[+~]/.test(l)).slice(0, 40)
+    return ['```', ...counts, ...shown, '```'].join('\n')
+  } catch (e) {
+    return `Could not run it: ${String(e.message ?? e).split('\n')[0]}. Run \`node scripts/trade-data-patch.mjs apply\` on this branch by hand.`
+  }
+}
+
 if (!changed.some(f => !f.endsWith('client_strings.js'))) {
   // Only data reaching players is worth a pull request; the rest waits for one.
   for (const rel of changed) execFileSync('git', ['-C', ROOT, 'checkout', '--', rel])
   say('changed=false')
   console.log(`Upstream ${head.slice(0, 7)}: item and stat data unchanged. ${commits.length} new upstream commits.`)
 } else {
+  const patch = reapplyPatch()
   execFileSync(process.execPath, [path.join(ROOT, 'renderer/src/assets/bump-data-version.mjs')], { stdio: 'inherit' })
   fs.writeFileSync(STATE, JSON.stringify({ ...state, seen: head }, null, 2) + '\n')
   const version = JSON.parse(fs.readFileSync(path.join(ROOT, DATA, 'data-version.json'), 'utf8')).version
@@ -86,7 +105,8 @@ if (!changed.some(f => !f.endsWith('client_strings.js'))) {
     'Code changes here are not copied. Merge league parser fixes among them in a pull request of their own: this branch is rebuilt from master whenever upstream changes again.',
     '',
     ...(commits.length ? commits.map(c => `- ${c}`) : ['- none']),
-    ''
+    '',
+    ...(patch ? ['### Our trade-site data patch, run again on top', patch, ''] : [])
   ].join('\n')
   fs.writeFileSync(path.join(ROOT, '.upstream-data-pr.md'), body)
   say('changed=true')
