@@ -56,6 +56,9 @@ export interface AtlasWidget extends Widget {
   mechanicsHidden?: boolean
   // The loadout's Tree totals folded to one line.
   totalsFolded?: boolean
+  // The points slider per strategy: how many of its points, in the order
+  // taken, the tree (and a pinned tree) shows. Missing: all of them.
+  pointsAt?: Record<string, number>
   // Tree edits not saved yet: strategy id -> the edited tree link. Kept with
   // the config, so closing the overlay loses nothing.
   drafts?: Record<string, string>
@@ -265,4 +268,9 @@ export function saveDraft (w: AtlasWidget, s: AtlasStrategy) {
   if (d == null) return
   s.treeUrl = d
   dropDraft(w, s)
+}
+
+export function setPointsAt (w: AtlasWidget, s: Pick<AtlasStrategy, 'id'>, at: number | null) {
+  const rest = Object.fromEntries(Object.entries(w.pointsAt ?? {}).filter(([id]) => id !== String(s.id)))
+  w.pointsAt = at == null ? rest : { ...rest, [s.id]: at }
 }

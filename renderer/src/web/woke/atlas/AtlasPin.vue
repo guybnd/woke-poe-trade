@@ -3,7 +3,7 @@
   <WEmpty v-else-if="atlasDataError && !atlasTree" icon="fas fa-exclamation-triangle">{{ atlasDataError }}</WEmpty>
   <WEmpty v-else-if="atlasTreeError" icon="fas fa-exclamation-triangle">{{ atlasTreeError }}</WEmpty>
   <WEmpty v-else-if="!atlasTree" icon="fas fa-spinner fa-spin">Loading…</WEmpty>
-  <AtlasTree v-else bare :model="atlasTree" :tree-url="widget ? workingTree(widget, strategy) : strategy.treeUrl" :threads="strategy.threads" :lit="widget?.lit ?? []" />
+  <AtlasTree v-else bare :model="atlasTree" :tree-url="widget ? workingTree(widget, strategy) : strategy.treeUrl" :threads="strategy.threads" :lit="widget?.lit ?? []" :points-at="widget?.pointsAt?.[strategy.id] ?? null" />
 </template>
 
 <script setup lang="ts">

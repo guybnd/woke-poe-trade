@@ -288,3 +288,9 @@ describe('atlas totals', () => {
     expect(atlasTotals(model, [100, 1, 2, 3], {})[0].rows.map(r => r.text)).toContain('No type picked')
   })
 })
+
+describe('the plan\'s order', () => {
+  it('keeps the order passives were taken through a link', () => {
+    expect(decodeTree(encodeAtlasTree([3, 1, 2], {})).nodes).toEqual([3, 1, 2])
+  })
+})

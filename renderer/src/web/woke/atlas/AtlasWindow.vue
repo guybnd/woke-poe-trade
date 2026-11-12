@@ -73,6 +73,7 @@
         <AtlasTree v-if="!config.treeHidden && atlasTree" :key="selected.id" :model="atlasTree" :tree-url="workingTree(config, selected)" :threads="selected.threads"
           :lit="config.lit ?? []" :list-open="!config.mechanicsHidden" :pin="() => atlasTreePin(config, selected!)"
           :dirty="isDirty(config, selected)" :name="selected.name"
+          :points-at="config.pointsAt?.[selected.id] ?? null" @update:points-at="setPointsAt(config, selected!, $event)"
           @update:tree-url="setDraft(config, selected!, $event)" @update:lit="config.lit = $event" @update:list-open="config.mechanicsHidden = !$event"
           @save="saveDraft(config, selected!)" @discard="dropDraft(config, selected!)" @save-as="saveTreeAs"
           @close="config.treeHidden = true" />
@@ -96,7 +97,7 @@ import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMen
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, setPointsAt, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
 import type { FolderNode } from './widget'
