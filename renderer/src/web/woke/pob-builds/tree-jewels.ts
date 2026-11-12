@@ -81,3 +81,61 @@ export function jewelStats (item: PobItem): string[] {
   if (isTimeless(item) || isCluster(item)) return []
   return [...item.implicits, ...item.mods]
 }
+
+// ---- Timeless jewels ----
+
+// What a Timeless jewel does to one passive, worked out in the main process
+// from the Path of Building install (main/src/woke/pob-timeless.ts).
+// `replace` swaps the passive's name and stats; otherwise the stats are added.
+export interface TimelessRewrite {
+  replace: boolean
+  name?: string
+  stats: string[]
+}
+
+export interface TimelessAnswer {
+  // No PoB install with the seed tables: nothing can be shown.
+  found: boolean
+  jewels: Array<Record<number, TimelessRewrite> | null>
+}
+
+export interface TimelessAsk {
+  jewels: Array<{ mods: string[], nodes: Array<{ id: number, kind: 'small' | 'notable' | 'key', name: string }> }>
+}
+
+// The Timeless jewels to ask about, with the tree's own passives in each
+// ring (cluster passives are never conquered).
+export function timelessAsk (nodes: Map<number, TreeNode>, jewels: SocketedJewel[]): { asked: SocketedJewel[], ask: TimelessAsk } {
+  const asked = jewels.filter(j => isTimeless(j.item) && j.radius != null)
+  return {
+    asked,
+    ask: {
+      jewels: asked.map(j => ({
+        mods: j.item.mods,
+        nodes: nodesInRadius(nodes, j)
+          .filter(n => n.id < 0x10000)
+          .map(n => ({ id: n.id, kind: n.kind as 'small' | 'notable' | 'key', name: n.name }))
+      }))
+    }
+  }
+}
+
+// Node id → its rewrite and the jewel that made it. The first jewel in
+// socket order wins where two rings overlap, as in changedBy.
+export function timelessByNode (asked: SocketedJewel[], answer: TimelessAnswer): Map<number, { rewrite: TimelessRewrite, jewel: SocketedJewel }> {
+  const out = new Map<number, { rewrite: TimelessRewrite, jewel: SocketedJewel }>()
+  asked.forEach((jewel, i) => {
+    const r = answer.jewels[i]
+    if (!r) return
+    for (const [id, rewrite] of Object.entries(r)) {
+      if (!out.has(Number(id))) out.set(Number(id), { rewrite, jewel })
+    }
+  })
+  return out
+}
+
+export function rewritten (node: TreeNode, rewrite: TimelessRewrite): TreeNode {
+  return rewrite.replace
+    ? { ...node, name: rewrite.name ?? node.name, stats: rewrite.stats }
+    : { ...node, stats: [...node.stats, ...rewrite.stats] }
+}

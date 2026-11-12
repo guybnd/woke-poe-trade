@@ -58,7 +58,7 @@
             </div>
           </template>
           <div v-if="!groups.length" class="w-dim pt-2">Nothing in this tree says that.</div>
-          <div class="w-faint text-xs pt-2">From this tree, its masteries, its jewels and their cluster passives: no gear or ascendancy. Timeless jewels' changes aren't counted yet.</div>
+          <div class="w-faint text-xs pt-2">From this tree, its masteries, its jewels and their cluster passives: no gear or ascendancy. {{ timelessFootnote }}</div>
         </div>
       </div>
     </div>
@@ -78,7 +78,9 @@ import { buildClusters } from './cluster-graph'
 import type { TreeNode, View } from './passive-tree'
 import { filterTotals, groupTotals, matchingNodes, treeTotals } from './tree-totals'
 import { drawTree, loadSheets } from './tree-draw'
-import { changedBy, isTimeless, jewelStats, nodesInRadius, socketedJewels } from './tree-jewels'
+import { changedBy, isTimeless, jewelStats, nodesInRadius, rewritten, socketedJewels, timelessAsk, timelessByNode } from './tree-jewels'
+import type { TimelessAnswer } from './tree-jewels'
+import { hostRequest } from '../shared/host'
 import type { Sheets } from './tree-draw'
 import type { PobTreeSpec } from './widget'
 import PinButton from '../pins/PinButton.vue'
@@ -190,6 +192,32 @@ const rowIds = shallowRef<number[] | null>(null)
 const jewels = computed(() => socketedJewels(shown.value?.sockets).filter(j => toSet.value.has(j.node)))
 const jewelAt = computed(() => new Map(jewels.value.map(j => [j.node, j])))
 
+// What Timeless jewels do to the passives in their rings, worked out by the
+// main process from the Path of Building install. Null while it's asked, and
+// when there's no Timeless jewel or the ask failed.
+const timeless = shallowRef<{ found: boolean, missed: boolean, by: ReturnType<typeof timelessByNode> } | null>(null)
+const timelessQuestion = computed(() => tree.value ? timelessAsk(tree.value, jewels.value) : null)
+let timelessAskId = 0
+watch(() => JSON.stringify(timelessQuestion.value?.ask ?? null), () => {
+  const id = ++timelessAskId
+  timeless.value = null
+  const q = timelessQuestion.value
+  if (!q?.asked.length) return
+  hostRequest<TimelessAnswer>('pob-timeless', q.ask, 60_000)
+    .then(answer => {
+      if (id !== timelessAskId) return
+      timeless.value = { found: answer.found, missed: answer.jewels.some(j => !j), by: timelessByNode(q.asked, answer) }
+    })
+    .catch(() => {})
+}, { immediate: true })
+const timelessFootnote = computed(() => {
+  if (!timelessQuestion.value?.asked.length) return ''
+  const t = timeless.value
+  if (!t) return "Timeless jewels' changes aren't counted."
+  if (!t.found) return "Timeless jewels' changes need Path of Building installed."
+  return t.missed ? "Some Timeless jewels' changes aren't counted." : "Timeless jewels' changes come from your Path of Building install."
+})
+
 // Picked masteries read as their effect, and a socket as its jewel's mods,
 // in totals and tooltips.
 const nodeOf = computed(() => {
@@ -198,7 +226,9 @@ const nodeOf = computed(() => {
   return (id: number) => {
     const n = base(id)
     const j = jewelAt.value.get(id)
-    return n && j ? { ...n, stats: jewelStats(j.item) } : n
+    if (n && j) return { ...n, stats: jewelStats(j.item) }
+    const t = n && timeless.value?.by.get(id)
+    return t ? rewritten(n, t.rewrite) : n
   }
 })
 const totals = computed(() => tree.value ? treeTotals(tree.value, toIds.value, nodeOf.value) : [])
@@ -474,15 +504,23 @@ function setHovered (n: TreeNode | null) {
     return
   }
   const by = tree.value ? changedBy(tree.value, jewels.value, n) : null
-  const changedNote = by
-    ? isTimeless(by.item)
-      ? `In the ring of ${by.item.name}, which changes this passive. Its new stats aren't shown yet.`
-      : `In the ring of ${by.item.name}, which can change this passive.`
-    : undefined
+  const conquered = timeless.value?.by.get(n.id)
+  const shownNode = conquered ? rewritten(n, conquered.rewrite) : n
+  const changedNote = conquered
+    ? conquered.rewrite.replace
+      ? `Was ${n.name}, changed by ${conquered.jewel.item.name}.`
+      : `${conquered.rewrite.stats.length === 1 ? 'The last line is' : `The last ${conquered.rewrite.stats.length} lines are`} from ${conquered.jewel.item.name}.`
+    : by
+      ? isTimeless(by.item)
+        ? timeless.value && !timeless.value.found
+          ? `In the ring of ${by.item.name}, which changes this passive. Its new stats need Path of Building installed.`
+          : `In the ring of ${by.item.name}, which changes this passive. Its new stats aren't shown.`
+        : `In the ring of ${by.item.name}, which can change this passive.`
+      : undefined
   showTipAt(ring.value, {
     kind: 'passive',
-    name: n.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
-    stats: picked?.stats.length ? picked.stats : n.stats,
+    name: shownNode.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
+    stats: picked?.stats.length ? picked.stats : shownNode.stats,
     frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' ? 'rare' : 'normal',
     note: [nodeNote(nodeState(n.id, fromSet.value, toSet.value)), was, changedNote].filter(Boolean).join(' · ') || undefined
   })

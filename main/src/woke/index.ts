@@ -5,6 +5,7 @@ import type { ServerEvents } from '../server'
 import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from '../windowing/GameWindow'
 import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, openBuild, readBuild, renameBuild, restoreBuild, showBuild } from './pob-builds'
+import { timelessRewrites } from './pob-timeless'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
 import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
@@ -40,6 +41,7 @@ const handlers: Record<string, Handler> = {
   'pob-duplicate': duplicateBuild,
   'pob-delete': deleteBuild,
   'pob-restore': restoreBuild,
+  'pob-timeless': timelessRewrites,
   'filter-list': listFilters,
   'filter-read': readFilter,
   'filter-write': writeFilter,
