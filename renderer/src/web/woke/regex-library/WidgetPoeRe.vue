@@ -4,16 +4,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { POE_RE_TYPE, initPoeReWidget } from './poe-re-widget'
+import { widgetPoeReSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: POE_RE_TYPE,
-    instances: 'single',
-    initInstance: () => initPoeReWidget(0)
-  } satisfies WidgetSpec
-}
+export default { widget: widgetPoeReSpec }
 </script>
 
 <script setup lang="ts">

@@ -63,16 +63,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { LOOT_FILTER_TYPE } from './widget'
+import { widgetLootFilterSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: LOOT_FILTER_TYPE,
-    instances: 'multi',
-    trNameKey: 'Loot filter'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetLootFilterSpec }
 </script>
 
 <script setup lang="ts">

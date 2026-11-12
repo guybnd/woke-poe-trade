@@ -7,7 +7,7 @@ import type * as widget from './overlay/widgets'
 import { wokeGlobalShortcuts, wokeShortcutsFor } from './woke/shortcuts'
 import { LOOT_FILTER_TYPE, seedLootFilterWidget } from './woke/loot-filter/widget'
 import { addEssenceScanWidget } from './woke/essence-scan/widget'
-import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog } from './woke/modules'
+import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog, WOKE_CONFIG_VERSION } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './woke/death-recap/widget'
 import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './woke/stacked-decks/deck'
@@ -535,6 +535,9 @@ function upgradeConfig (_config: Config): Config {
   renameOldDefaultTitles(config.widgets as Array<{ wmType: string, wmTitle?: string }>)
   // woke: panels still on their old default spot open in the new one.
   movePopupsToNewSpot(config.widgets as Array<Record<string, any> & { wmType: string }>)
+  // woke: the fix-ups above are safe to rerun. One that isn't checks
+  // `(modules.woke.version ?? 0) < N`, runs once, and WOKE_CONFIG_VERSION goes to N.
+  if (modules.woke) modules.woke.version = Math.max(modules.woke.version ?? 0, WOKE_CONFIG_VERSION)
   /* eslint-enable */
 
   return config as unknown as Config

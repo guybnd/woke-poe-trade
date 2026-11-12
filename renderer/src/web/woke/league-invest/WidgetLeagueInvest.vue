@@ -97,16 +97,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { LEAGUE_INVEST_TYPE } from './widget'
+import { widgetLeagueInvestSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: LEAGUE_INVEST_TYPE,
-    instances: 'multi',
-    trNameKey: 'League investments'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetLeagueInvestSpec }
 </script>
 
 <script setup lang="ts">

@@ -158,17 +158,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { FARMING_TYPE } from './farming'
+import { widgetFarmingSpec } from '../widget-specs'
 import type { FarmingWidget } from './farming'
 
-export default {
-  widget: {
-    type: FARMING_TYPE,
-    instances: 'multi',
-    trNameKey: 'Farming'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetFarmingSpec }
 </script>
 
 <script setup lang="ts">

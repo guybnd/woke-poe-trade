@@ -11,71 +11,64 @@ import './shared/perf'
 import './ui'
 import './app/prefetch'
 import WokeOverlayRoot from './WokeOverlay.vue'
+import { defineAsyncComponent } from 'vue'
 import type { Component } from 'vue'
+import * as specs from './widget-specs'
+import { pushHostConfig } from '@/web/Config'
 import type { WidgetSpec } from '@/web/overlay/interfaces'
-
-import WidgetRegexLibrary from './regex-library/WidgetRegexLibrary.vue'
-import WidgetTradeSearches from './trade-searches/WidgetTradeSearches.vue'
-import WidgetMarketTracker from './market/WidgetMarketTracker.vue'
-import WidgetPobBuilds from './pob-builds/WidgetPobBuilds.vue'
-import WidgetCampaign from './campaign/WidgetCampaign.vue'
-import WidgetRunTimer from './campaign/WidgetRunTimer.vue'
-import WidgetAtlas from './atlas/WidgetAtlas.vue'
-import WidgetLab from './lab/WidgetLab.vue'
-import WidgetChallenges from './challenges/WidgetChallenges.vue'
-import WidgetFarming from './farming/WidgetFarming.vue'
-import WidgetDropCounter from './drop-counter/WidgetDropCounter.vue'
-import WidgetStackedDecks from './stacked-decks/WidgetStackedDecks.vue'
-import WidgetMechanics from './mechanics/WidgetMechanics.vue'
-import WidgetMapMods from './map-mods/WidgetMapMods.vue'
-import WidgetMapCheck from './map-mods/WidgetMapCheck.vue'
-import WidgetMapScan from './map-mods/WidgetMapScan.vue'
-import WidgetEssenceScan from './essence-scan/WidgetEssenceScan.vue'
-import WidgetLabGems from './lab-gems/WidgetLabGems.vue'
-import WidgetLeagueInvest from './league-invest/WidgetLeagueInvest.vue'
-import WidgetBossRuns from './boss-runs/WidgetBossRuns.vue'
-import WidgetScarabFlip from './scarab-flip/WidgetScarabFlip.vue'
-import WidgetLootFilter from './loot-filter/WidgetLootFilter.vue'
-import WidgetSessionAnalytics from './analytics/WidgetSessionAnalytics.vue'
-import WidgetDeathRecap from './death-recap/WidgetDeathRecap.vue'
-import WidgetTrade from './trade/WidgetTrade.vue'
-import WidgetDisenchant from './disenchant/WidgetDisenchant.vue'
-import WidgetSearch from './search/WidgetSearch.vue'
-import WidgetWealthyExile from './wealthy-exile/WidgetWealthyExile.vue'
-import WidgetPoeRe from './regex-library/WidgetPoeRe.vue'
 
 type WidgetComponent = Component & { widget: WidgetSpec }
 
+// Each widget's code loads the first time one of its type is mounted. The
+// overlay mounts only widgets of switched-on modules, so a tool that's off
+// never loads. The spec stays at hand for the registry and config defaults.
+function lazy (spec: WidgetSpec, load: () => Promise<{ default: Component }>): WidgetComponent {
+  return Object.assign(defineAsyncComponent(() => load().then(m => { hostConfigAfterMount(); return m })), { widget: spec })
+}
+
+// A widget fills in config defaults (its hotkeys among them) when it mounts.
+// The overlay sends main its hotkeys once at start, before a lazy widget is
+// in; so send them again just after one mounts. Several at once send once.
+let hostConfigQueued = false
+function hostConfigAfterMount () {
+  if (hostConfigQueued) return
+  hostConfigQueued = true
+  setTimeout(() => {
+    hostConfigQueued = false
+    pushHostConfig()
+  }, 50)
+}
+
 export const wokeWidgets: WidgetComponent[] = [
-  WidgetSearch as unknown as WidgetComponent,
-  WidgetRegexLibrary as unknown as WidgetComponent,
-  WidgetTradeSearches as unknown as WidgetComponent,
-  WidgetMarketTracker as unknown as WidgetComponent,
-  WidgetPobBuilds as unknown as WidgetComponent,
-  WidgetCampaign as unknown as WidgetComponent,
-  WidgetRunTimer as unknown as WidgetComponent,
-  WidgetAtlas as unknown as WidgetComponent,
-  WidgetLab as unknown as WidgetComponent,
-  WidgetChallenges as unknown as WidgetComponent,
-  WidgetFarming as unknown as WidgetComponent,
-  WidgetDropCounter as unknown as WidgetComponent,
-  WidgetStackedDecks as unknown as WidgetComponent,
-  WidgetMechanics as unknown as WidgetComponent,
-  WidgetMapMods as unknown as WidgetComponent,
-  WidgetMapCheck as unknown as WidgetComponent,
-  WidgetMapScan as unknown as WidgetComponent,
-  WidgetEssenceScan as unknown as WidgetComponent,
-  WidgetLabGems as unknown as WidgetComponent,
-  WidgetLeagueInvest as unknown as WidgetComponent,
-  WidgetBossRuns as unknown as WidgetComponent,
-  WidgetScarabFlip as unknown as WidgetComponent,
-  WidgetLootFilter as unknown as WidgetComponent,
-  WidgetSessionAnalytics as unknown as WidgetComponent,
-  WidgetDeathRecap as unknown as WidgetComponent,
-  WidgetTrade as unknown as WidgetComponent,
-  WidgetDisenchant as unknown as WidgetComponent,
-  WidgetWealthyExile as unknown as WidgetComponent,
-  WidgetPoeRe as unknown as WidgetComponent
+  lazy(specs.widgetRegexLibrarySpec, () => import('./regex-library/WidgetRegexLibrary.vue')),
+  lazy(specs.widgetTradeSearchesSpec, () => import('./trade-searches/WidgetTradeSearches.vue')),
+  lazy(specs.widgetMarketTrackerSpec, () => import('./market/WidgetMarketTracker.vue')),
+  lazy(specs.widgetPobBuildsSpec, () => import('./pob-builds/WidgetPobBuilds.vue')),
+  lazy(specs.widgetCampaignSpec, () => import('./campaign/WidgetCampaign.vue')),
+  lazy(specs.widgetRunTimerSpec, () => import('./campaign/WidgetRunTimer.vue')),
+  lazy(specs.widgetAtlasSpec, () => import('./atlas/WidgetAtlas.vue')),
+  lazy(specs.widgetLabSpec, () => import('./lab/WidgetLab.vue')),
+  lazy(specs.widgetChallengesSpec, () => import('./challenges/WidgetChallenges.vue')),
+  lazy(specs.widgetFarmingSpec, () => import('./farming/WidgetFarming.vue')),
+  lazy(specs.widgetDropCounterSpec, () => import('./drop-counter/WidgetDropCounter.vue')),
+  lazy(specs.widgetStackedDecksSpec, () => import('./stacked-decks/WidgetStackedDecks.vue')),
+  lazy(specs.widgetMechanicsSpec, () => import('./mechanics/WidgetMechanics.vue')),
+  lazy(specs.widgetMapModsSpec, () => import('./map-mods/WidgetMapMods.vue')),
+  lazy(specs.widgetMapCheckSpec, () => import('./map-mods/WidgetMapCheck.vue')),
+  lazy(specs.widgetMapScanSpec, () => import('./map-mods/WidgetMapScan.vue')),
+  lazy(specs.widgetEssenceScanSpec, () => import('./essence-scan/WidgetEssenceScan.vue')),
+  lazy(specs.widgetLabGemsSpec, () => import('./lab-gems/WidgetLabGems.vue')),
+  lazy(specs.widgetLeagueInvestSpec, () => import('./league-invest/WidgetLeagueInvest.vue')),
+  lazy(specs.widgetBossRunsSpec, () => import('./boss-runs/WidgetBossRuns.vue')),
+  lazy(specs.widgetScarabFlipSpec, () => import('./scarab-flip/WidgetScarabFlip.vue')),
+  lazy(specs.widgetLootFilterSpec, () => import('./loot-filter/WidgetLootFilter.vue')),
+  lazy(specs.widgetSessionAnalyticsSpec, () => import('./analytics/WidgetSessionAnalytics.vue')),
+  lazy(specs.widgetDeathRecapSpec, () => import('./death-recap/WidgetDeathRecap.vue')),
+  lazy(specs.widgetTradeSpec, () => import('./trade/WidgetTrade.vue')),
+  lazy(specs.widgetDisenchantSpec, () => import('./disenchant/WidgetDisenchant.vue')),
+  lazy(specs.widgetSearchSpec, () => import('./search/WidgetSearch.vue')),
+  lazy(specs.widgetWealthyExileSpec, () => import('./wealthy-exile/WidgetWealthyExile.vue')),
+  lazy(specs.widgetPoeReSpec, () => import('./regex-library/WidgetPoeRe.vue'))
 ]
 
 export { wokeSettingsFor } from './editors'

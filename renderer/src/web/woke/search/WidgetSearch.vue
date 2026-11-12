@@ -101,17 +101,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { SEARCH_TYPE, initSearchWidget } from './widget'
+import { widgetSearchSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: SEARCH_TYPE,
-    instances: 'single',
-    trNameKey: 'Search',
-    initInstance: () => initSearchWidget(0)
-  } satisfies WidgetSpec
-}
+export default { widget: widgetSearchSpec }
 </script>
 
 <script setup lang="ts">

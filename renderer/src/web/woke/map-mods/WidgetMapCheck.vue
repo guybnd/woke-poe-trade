@@ -14,16 +14,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { MAP_CHECK_TYPE, initMapCheckWidget } from './map-check'
+import { widgetMapCheckSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: MAP_CHECK_TYPE,
-    instances: 'single',
-    initInstance: () => initMapCheckWidget(0)
-  } satisfies WidgetSpec
-}
+export default { widget: widgetMapCheckSpec }
 </script>
 
 <script setup lang="ts">

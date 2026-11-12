@@ -98,16 +98,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { LAB_GEMS_TYPE } from './widget'
+import { widgetLabGemsSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: LAB_GEMS_TYPE,
-    instances: 'multi',
-    trNameKey: 'Lab gems'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetLabGemsSpec }
 </script>
 
 <script setup lang="ts">

@@ -99,17 +99,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { MAP_SCAN_TYPE } from './scan'
+import { widgetMapScanSpec } from '../widget-specs'
 import type { MapScanWidget } from './scan'
 
-export default {
-  widget: {
-    type: MAP_SCAN_TYPE,
-    instances: 'multi',
-    trNameKey: 'Map scan'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetMapScanSpec }
 </script>
 
 <script setup lang="ts">

@@ -1,5 +1,5 @@
 {
-  "bundle.startupJs": 2215,
+  "bundle.startupJs": 1640,
   "bundle.allJs": 5120,
   "startup.bundle": 294,
   "startup.mounted": 915,
@@ -22,5 +22,5 @@
   "memory.ocrWorkers": 0,
   "memory.heap": 21,
   "memory.nodes": 10678,
-  "memory.listeners": 2300
+  "memory.listeners": 2360
 }

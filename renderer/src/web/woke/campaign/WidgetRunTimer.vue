@@ -152,17 +152,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { RUN_TIMER_TYPE } from './run-timer'
+import { widgetRunTimerSpec } from '../widget-specs'
 import type { RunTimerWidget } from './run-timer'
 
-export default {
-  widget: {
-    type: RUN_TIMER_TYPE,
-    instances: 'multi',
-    trNameKey: 'Run timer'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetRunTimerSpec }
 </script>
 
 <script setup lang="ts">

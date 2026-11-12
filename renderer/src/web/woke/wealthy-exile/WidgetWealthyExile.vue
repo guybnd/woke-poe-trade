@@ -19,17 +19,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { WEALTHY_EXILE_TYPE } from './widget'
+import { widgetWealthyExileSpec } from '../widget-specs'
 import type { WealthyExileWidget } from './widget'
 
-export default {
-  widget: {
-    type: WEALTHY_EXILE_TYPE,
-    instances: 'multi',
-    trNameKey: 'Wealthy Exile'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetWealthyExileSpec }
 </script>
 
 <script setup lang="ts">

@@ -50,6 +50,16 @@ function Find-Electrons {
     Where-Object { $_.ExecutablePath -like '*woke-poe-trade*\main\node_modules\electron\*' -and $_.CommandLine -match '\s\.$' }
 }
 
+# The cmd.exe launchers Start-Dev made (they redirect into this script's
+# logs), still running even when their pid file points elsewhere: an Electron
+# that exited can leave its launcher and `node build\script.mjs` behind, which
+# keep main.log open and make the next start fail.
+function Find-Launchers ([string[]]$Logs = @('main.log', 'vite.log')) {
+  $paths = $Logs | ForEach-Object { Join-Path $State $_ }
+  Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
+    Where-Object { $cmd = $_.CommandLine; $cmd -and ($paths | Where-Object { $cmd.IndexOf($_, [StringComparison]::OrdinalIgnoreCase) -ge 0 }) }
+}
+
 function Kill-Tree ($procId) {
   & cmd /c "taskkill /T /F /PID $procId >nul 2>&1"
 }
@@ -62,6 +72,7 @@ function Stop-Dev {
       Remove-Item $pidFile -Force
     }
   }
+  foreach ($proc in @(Find-Launchers)) { Kill-Tree $proc.ProcessId }
   foreach ($proc in @(Find-Electrons)) {
     # The watcher restarts Electron on a rebuild, so it has to go too.
     $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.ParentProcessId)"
@@ -240,6 +251,8 @@ function Start-Dev {
   while (-not (Listener $HostPort)) {
     if ((Get-Date) -gt $deadline) {
       Get-Content "$State\main.log" -Tail 20 -ErrorAction SilentlyContinue | Write-Host
+      $current = [int](Get-Content (Join-Path $State 'main.pid'))
+      if (@(Find-Launchers 'main.log' | Where-Object { $_.ProcessId -ne $current }).Count) { Fail "the app did not start: an older dev launcher still writes to $State\main.log. Run woke-dev stop, then try again." }
       Fail "the app did not start, see $State\main.log. Another copy may hold the single-instance lock."
     }
     Start-Sleep -Milliseconds 300

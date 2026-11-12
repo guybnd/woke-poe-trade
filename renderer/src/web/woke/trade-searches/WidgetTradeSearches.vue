@@ -109,17 +109,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { TRADE_SEARCHES_TYPE } from './widget'
+import { widgetTradeSearchesSpec } from '../widget-specs'
 import type { TradeSearchesWidget } from './widget'
 
-export default {
-  widget: {
-    type: TRADE_SEARCHES_TYPE,
-    instances: 'multi',
-    trNameKey: 'Trade searches'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetTradeSearchesSpec }
 </script>
 
 <script setup lang="ts">

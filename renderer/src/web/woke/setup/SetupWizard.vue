@@ -172,7 +172,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WKbd, WToggle } from '../ui'
 import { hostRequest } from '../shared/host'
 import { appIconUrl } from '../ui/app-icon'
-import { ensureWokeConfig } from '../modules'
+import { ensureWokeConfig, WOKE_CONFIG_VERSION } from '../modules'
 import PresetBar from '../switchboard/PresetBar.vue'
 import ModuleList from '../switchboard/ModuleList.vue'
 import { fieldKey, hotkeyFields } from '../settings/hotkey-fields'
@@ -309,7 +309,10 @@ function go (i: number) {
 
 async function finish () {
   finishing.value = true
-  ensureWokeConfig(AppConfig()).woke.setupDone = true
+  const woke = ensureWokeConfig(AppConfig()).woke
+  woke.setupDone = true
+  // A fresh config is already in today's shape: no woke fix-up is due on it.
+  woke.version ??= WOKE_CONFIG_VERSION
   persist()
   try {
     await hostRequest('setup-finish', {})

@@ -1,5 +1,9 @@
 // Transfigured gems by colour, from GemCheck (https://github.com/Lebedevsd/GemCheck,
 // data/gem_colors_transfigured.json). Used under the MIT licence below.
+// Added by hand (not in GemCheck), colours from poedb: Chain Hook of Angling,
+// Divine Blast of Radiance, Holy Hammers of Spirals, Holy Sweep of Hammerfalls,
+// Reap of Butchery (red) and Frost Wall of Encroachment (blue). The "of
+// Trarthus" gems aren't in the Lab's font.
 //
 // MIT License
 //
@@ -30,8 +34,10 @@ export const TRANSFIGURED_GEMS: Record<'r' | 'g' | 'b', string[]> = {
     'Bladestorm of Uncertainty',
     'Boneshatter of Carnage',
     'Boneshatter of Complex Trauma',
+    'Chain Hook of Angling',
     'Cleave of Rage',
     'Consecrated Path of Endurance',
+    'Divine Blast of Radiance',
     'Dominating Blow of Inspiring',
     'Earthquake of Amplification',
     'Earthshatter of Fragility',
@@ -41,6 +47,8 @@ export const TRANSFIGURED_GEMS: Record<'r' | 'g' | 'b', string[]> = {
     'Glacial Hammer of Shattering',
     'Ground Slam of Earthshaking',
     'Holy Flame Totem of Ire',
+    'Holy Hammers of Spirals',
+    'Holy Sweep of Hammerfalls',
     'Ice Crash of Cadence',
     'Infernal Blow of Immolation',
     'Leap Slam of Groundbreaking',
@@ -48,6 +56,7 @@ export const TRANSFIGURED_GEMS: Record<'r' | 'g' | 'b', string[]> = {
     'Perforate of Bloodshed',
     'Perforate of Duality',
     'Rage Vortex of Berserking',
+    'Reap of Butchery',
     'Searing Bond of Detonation',
     'Shield Crush of the Chieftain',
     'Shockwave Totem of Authority',
@@ -171,6 +180,7 @@ export const TRANSFIGURED_GEMS: Record<'r' | 'g' | 'b', string[]> = {
     'Forbidden Rite of Soul Sacrifice',
     'Frost Bomb of Forthcoming',
     'Frost Bomb of Instability',
+    'Frost Wall of Encroachment',
     'Frostblink of Wintry Blast',
     'Galvanic Field of Intensity',
     'Glacial Cascade of the Fissure',
