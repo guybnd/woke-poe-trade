@@ -45,7 +45,8 @@ export function isCluster (item: PobItem): boolean {
 
 export function socketedJewels (sockets: Array<{ node: number, item: PobItem }> | undefined): SocketedJewel[] {
   return (sockets ?? []).map(({ node, item }) => {
-    const radius = item.radius ? JEWEL_RADIUS[item.radius] ?? null : null
+    // Impossible Escape's ring is around a keystone, not its socket: not drawn yet.
+    const radius = item.radius && item.name !== 'Impossible Escape' ? JEWEL_RADIUS[item.radius] ?? null : null
     return { node, item, radius, changes: radius != null && (isTimeless(item) || RADIUS_CHANGERS.has(item.name)) }
   })
 }
