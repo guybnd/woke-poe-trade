@@ -1,7 +1,7 @@
 // The settings window's pages: General (shared settings), Modules (one page
 // per module or pair of modules) and App. Each page lists the setting labels
 // it holds so search can find them without rendering every page.
-import { defineAsyncComponent, type Component } from 'vue'
+import { defineAsyncComponent, shallowReactive, type Component } from 'vue'
 import { CURRENCY_ICONS, MECHANIC_ICONS } from '../ui/game-icons'
 import { MODULES } from '../modules'
 
@@ -67,7 +67,8 @@ function modulePageIcon (moduleId: string): PageIcon {
   return { fa: i.fa }
 }
 
-export const PAGES: SettingsPage[] = [
+// Reactive: the stash reader's page joins and leaves at runtime.
+export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   // ---------- General ----------
   {
     id: 'game',
@@ -392,16 +393,22 @@ export const PAGES: SettingsPage[] = [
     parts: [CreditsPage],
     find: ['Credits', 'License', ...CREDIT_NAMES]
   }
-]
+])
 
-export const PAGE_BY_ID = new Map(PAGES.map(p => [p.id, p]))
+export const PAGE_BY_ID = shallowReactive(new Map(PAGES.map(p => [p.id, p])))
 
-// Personal-only pages join at startup (personal.ts), after `after`.
+// Opt-in pages (the stash reader, personal.ts) join when turned on, after `after`.
 export function addPage (page: SettingsPage, after?: string) {
   if (PAGE_BY_ID.has(page.id)) return
   const at = after ? PAGES.findIndex(p => p.id === after) : -1
   PAGES.splice(at >= 0 ? at + 1 : PAGES.length, 0, page)
   PAGE_BY_ID.set(page.id, page)
+}
+
+export function removePage (id: string) {
+  const at = PAGES.findIndex(p => p.id === id)
+  if (at >= 0) PAGES.splice(at, 1)
+  PAGE_BY_ID.delete(id)
 }
 
 export function pageForWidgetType (wmType: string): SettingsPage | undefined {

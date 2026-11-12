@@ -55,10 +55,13 @@ export function wokeGlobalShortcuts (config: { woke?: { setupDone: boolean, off:
   return out
 }
 
-// Personal-only widgets add their hotkeys at startup (personal.ts).
+// Opt-in widgets (the stash reader, personal.ts) add their hotkeys when turned on.
 const extraShortcuts = new Map<string, (widget: Widget) => ShortcutAction[]>()
 export function addWidgetShortcuts (wmType: string, fn: (widget: Widget) => ShortcutAction[]) {
   extraShortcuts.set(wmType, fn)
+}
+export function removeWidgetShortcuts (wmType: string) {
+  extraShortcuts.delete(wmType)
 }
 
 export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: boolean, off: string[], hideAllHotkey?: string | null }, widgets: Widget[] }): ShortcutAction[] {

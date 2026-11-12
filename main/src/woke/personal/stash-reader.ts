@@ -67,6 +67,7 @@ export const AUTO_EVERY_MS = 10 * 60 * 1000
 // Stop rather than wait longer than this between calls.
 export const MAX_WAIT_MS = 90 * 1000
 
+const STOPPED: ReaderError = { kind: 'failed', message: 'The stash reader is off.' }
 const SIGNED_OUT: ReaderError = { kind: 'signed-out', message: 'Signed out of pathofexile.com. Sign in again in Settings › Game & league.' }
 
 const cacheFile = (league: string) => path.join(dataDir('woke-personal'), 'stash', `${leagueName(league)}.json`)
@@ -130,6 +131,8 @@ export class StashReader {
   private lastQuietTry = 0
   // A sign-out during a read must not be undone by that read finishing.
   private signOutCount = 0
+  // Turned off by the player: no more calls, a read under way ends at its next one.
+  private stopped = false
 
   constructor (private deps: ReaderDeps) {
     this.limiter = deps.limiter ?? new RateLimiter()
@@ -164,18 +167,26 @@ export class StashReader {
     this.set({ account: null, error: SIGNED_OUT })
   }
 
+  stop () {
+    this.stopped = true
+    this.signOutCount++
+  }
+
   signedIn (account: string) {
+    if (this.stopped) return
     this.account = account
     this.set({ account, error: this.status.error?.kind === 'signed-out' ? null : this.status.error })
   }
 
   // Waits for the rate limiter, then asks; turns refusals into a Stop.
   private async get (url: string): Promise<HttpReply> {
+    if (this.stopped) throw new Stop(STOPPED)
     const wait = this.limiter.delay(this.deps.now())
     if (wait > MAX_WAIT_MS) {
       throw new Stop({ kind: 'rate-limited', message: 'pathofexile.com asked us to slow down. The rest is read later.', retryAt: this.deps.now() + wait })
     }
     if (wait > 0) await this.deps.sleep(wait)
+    if (this.stopped) throw new Stop(STOPPED)
     this.limiter.record(this.deps.now())
     const reply = await this.deps.fetch(url)
     this.limiter.update(reply.status, reply.headers, this.deps.now())
@@ -198,6 +209,7 @@ export class StashReader {
   }
 
   read (mode: ReadMode): Promise<ReaderStatus> {
+    if (this.stopped) return Promise.resolve(this.current)
     if (this.running) return this.running
     const run = this.run(mode).finally(() => { this.running = null })
     this.running = run

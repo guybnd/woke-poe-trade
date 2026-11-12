@@ -106,7 +106,10 @@ export function initSetup (appUpdater: AppUpdater) {
   })
   registerWokeHandler('setup-prefs', async () => prefsView())
   registerWokeHandler('setup-prefs-set', async (patch: Partial<AppPrefs> & { openAtLogin?: boolean }) => {
-    setAppPrefs(patch)
+    // The stash reader switches only through personal-set, which starts and
+    // stops it too.
+    const { experimental: _e, stashReader: _s, ...rest } = patch ?? {}
+    setAppPrefs(rest)
     if (typeof patch.autoUpdate === 'boolean') appUpdater.setAutoDownload(patch.autoUpdate)
     if (typeof patch.openAtLogin === 'boolean' && canStartWithWindows()) {
       app.setLoginItemSettings({ openAtLogin: patch.openAtLogin })

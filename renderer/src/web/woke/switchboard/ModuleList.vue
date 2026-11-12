@@ -1,7 +1,7 @@
 <template>
   <div>
     <template v-for="group in groups" :key="group.id">
-      <div class="w-group-label">{{ group.label }}</div>
+      <div class="w-group-label" @click="onGroupLabel(group.id, $event)">{{ group.label }}</div>
       <div v-for="m in group.modules" :key="m.id" :class="$style.row">
         <button type="button" role="switch" :aria-checked="isOn(m)" :aria-label="m.name"
           :class="[$style.switch, { [$style.on]: isOn(m) }]" @click="toggle(m)" />
@@ -18,16 +18,22 @@
           </template>
         </div>
       </div>
+      <experimental-rows v-if="showStatus && group.id === 'economy' && (experimentalUnlocked || personalForced)" />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import {
   MODULES, MODULE_GROUPS, isModuleOn, isModuleRunning, setModuleOn, widgetCount
 } from '../modules'
-import type { ModuleDef, ModuleNeed, WokeModulesConfig } from '../modules'
+import type { ModuleDef, ModuleGroup, ModuleNeed, WokeModulesConfig } from '../modules'
+import { Host } from '@/web/background/IPC'
+import { experimentalUnlocked, personalForced } from '../personal'
+
+// Only once unlocked: no cost for everyone else.
+const ExperimentalRows = defineAsyncComponent(() => import('./ExperimentalRows.vue'))
 
 const props = defineProps<{
   config: { woke: WokeModulesConfig, widgets: Array<{ wmType: string }> }
@@ -49,7 +55,18 @@ const STATUS_LABEL = { running: 'Running', idle: 'Not placed', off: 'Off' } as c
 
 const groups = computed(() => MODULE_GROUPS
   .filter(g => props.includeApt || g.id !== 'apt')
-  .map(g => ({ ...g, modules: MODULES.filter(m => m.group === g.id) })))
+  // The stash reader's module has its own row (ExperimentalRows).
+  .map(g => ({ ...g, modules: MODULES.filter(m => m.group === g.id && !m.optIn) })))
+
+// Clicking Economy 5 times in Settings shows the experimental rows
+// (experimental.ts, loaded on the first click).
+function onGroupLabel (id: ModuleGroup, e: MouseEvent) {
+  if (!props.showStatus || id !== 'economy' || !Host.isElectron) return
+  if (experimentalUnlocked.value || personalForced.value) return
+  const at = Date.now()
+  const anchor = (e.currentTarget as Element | null)?.closest('[data-w-settings]') ?? null
+  import('./experimental').then(m => m.tapEconomy(at, anchor)).catch(() => {})
+}
 
 function isOn (m: ModuleDef) { return isModuleOn(props.config, m.id) }
 function toggle (m: ModuleDef) { setModuleOn(props.config, m.id, !isOn(m)) }

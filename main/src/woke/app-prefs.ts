@@ -11,9 +11,14 @@ export interface AppPrefs {
   autoUpdate: boolean
   // After a crash, offer to report it on the next launch.
   crashPrompt: boolean
+  // Settings › Modules shows experimental rows (unlocked by clicking the
+  // Economy heading 5 times).
+  experimental: boolean
+  // The player turned the stash reader on (personal/index.ts). Off by default.
+  stashReader: boolean
 }
 
-const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true }
+const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false }
 
 const file = () => path.join(app.getPath('userData'), 'apt-data', 'woke-app.json')
 

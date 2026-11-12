@@ -76,9 +76,13 @@ const editors: Record<string, Component> = {
   [WEALTHY_EXILE_TYPE]: WealthyExileEditor
 }
 
-// Personal-only widgets add theirs at startup (personal.ts).
+// Opt-in widgets (the stash reader, personal.ts) add theirs when turned on.
 export function addEditor (wmType: string, editor: Component) {
   editors[wmType] = editor
+}
+
+export function removeEditor (wmType: string) {
+  delete editors[wmType] // eslint-disable-line @typescript-eslint/no-dynamic-delete
 }
 
 export function wokeSettingsFor (wmType: string | undefined): Component | undefined {

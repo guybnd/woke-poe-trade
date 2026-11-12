@@ -1,11 +1,12 @@
-// The personal stash reader (main/src/woke/personal): off without
-// personal.flag, the rate limiter, the reply parser and a whole read against
+// The stash reader (main/src/woke/personal): off unless the player turns it
+// on (or personal.flag), on and off at runtime, the rate limiter, the reply parser and a whole read against
 // fixtures. No live calls.
 import { describe, it, expect, beforeEach } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { initPersonal, personalFlagOn, PERSONAL_FLAG } from '../../main/src/woke/personal'
+import { initPersonal, personalFlagOn, PERSONAL_FLAG, READER_OPS } from '../../main/src/woke/personal'
+import type { PersonalPrefs } from '../../main/src/woke/personal'
 import { RateLimiter, parseRateHeaders, parseRetryAfter } from '../../main/src/woke/personal/rate-limit'
 import { entersHideout, parseStashReply, StashApiError } from '../../main/src/woke/personal/stash-parse'
 import { StashReader, readCache, AUTO_TABS } from '../../main/src/woke/personal/stash-reader'
@@ -13,17 +14,25 @@ import type { HttpReply, ReaderStatus } from '../../main/src/woke/personal/stash
 
 const fixture = (name: string) => fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'stash', name), 'utf8')
 
-function fakeContext () {
+function fakeContext (prefs: PersonalPrefs = { experimental: false, stashReader: false }) {
+  const handlers = new Map<string, unknown>()
   const ops: string[] = []
   const gameLog = { onLines: null as ((lines: string[]) => void) | null }
+  let signOuts = 0
   return {
     ops,
+    handlers,
     gameLog,
+    prefs,
+    signOuts: () => signOuts,
     ctx: {
-      register: (op: string) => { ops.push(op) },
+      register: (op: string, h: unknown) => { ops.push(op); handlers.set(op, h) },
+      unregister: (op: string) => { handlers.delete(op) },
       broadcast: () => {},
       logger: { write: () => {} } as never,
-      gameLog: gameLog as never
+      gameLog,
+      prefs: { get: () => ({ ...prefs }), set: (patch: Partial<PersonalPrefs>) => { Object.assign(prefs, patch) } },
+      signOut: async () => { signOuts++ }
     }
   }
 }
@@ -32,11 +41,19 @@ beforeEach(() => {
   process.env.WOKE_FAKE_USER_DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-personal-'))
 })
 
-describe('personal.flag gate', () => {
-  it('registers nothing and leaves the game log alone without the flag', () => {
+describe('stash reader gate', () => {
+  it('registers nothing and leaves the game log alone for a player who never turned it on', () => {
     const { ops, gameLog, ctx } = fakeContext()
     expect(personalFlagOn()).toBe(false)
-    expect(initPersonal(ctx)).toBe(false)
+    const control = initPersonal(ctx)
+    expect(control.state()).toEqual({ on: false, forced: false, unlocked: false })
+    expect(ops).toEqual([])
+    expect(gameLog.onLines).toBeNull()
+  })
+
+  it('unlocked but not turned on is still nothing', () => {
+    const { ops, gameLog, ctx } = fakeContext({ experimental: true, stashReader: false })
+    expect(initPersonal(ctx).state()).toEqual({ on: false, forced: false, unlocked: true })
     expect(ops).toEqual([])
     expect(gameLog.onLines).toBeNull()
   })
@@ -46,13 +63,109 @@ describe('personal.flag gate', () => {
     expect(personalFlagOn()).toBe(false)
   })
 
-  it('turns on with the flag', () => {
+  it('turns on with the flag, and the switch cannot turn it off', async () => {
     fs.writeFileSync(path.join(process.env.WOKE_FAKE_USER_DATA!, PERSONAL_FLAG), '')
-    const { ops, gameLog, ctx } = fakeContext()
-    expect(initPersonal(ctx)).toBe(true)
-    expect(ops).toContain('stash-read')
-    expect(ops).toContain('stash-sign-in')
+    const { handlers, gameLog, ctx, signOuts } = fakeContext()
+    const control = initPersonal(ctx)
+    expect(control.state()).toEqual({ on: true, forced: true, unlocked: true })
+    expect([...handlers.keys()].sort()).toEqual([...READER_OPS].sort())
     expect(gameLog.onLines).toBeTypeOf('function')
+    expect(await control.setOn(false)).toMatchObject({ on: true, forced: true })
+    expect(await control.setUnlocked(false)).toMatchObject({ on: true })
+    expect(handlers.size).toBe(READER_OPS.length)
+    expect(signOuts()).toBe(0)
+  })
+
+  it('starts on when the player turned it on last time', () => {
+    const { handlers, gameLog, ctx } = fakeContext({ experimental: true, stashReader: true })
+    expect(initPersonal(ctx).state().on).toBe(true)
+    expect(handlers.has('stash-reader-read')).toBe(true)
+    expect(gameLog.onLines).toBeTypeOf('function')
+  })
+
+  it('a stashReader pref without the unlock does not start it', () => {
+    const { ops, ctx } = fakeContext({ experimental: false, stashReader: true })
+    expect(initPersonal(ctx).state().on).toBe(false)
+    expect(ops).toEqual([])
+  })
+
+  it('never takes the OCR stash read op name', () => {
+    expect(READER_OPS).not.toContain('stash-read')
+    expect(READER_OPS).not.toContain('stash-watch-stop')
+  })
+})
+
+describe('stash reader on and off at runtime', () => {
+  it('cannot be turned on while experimental settings are hidden', async () => {
+    const { ops, prefs, ctx } = fakeContext()
+    const control = initPersonal(ctx)
+    expect(await control.setOn(true)).toMatchObject({ on: false })
+    expect(ops).toEqual([])
+    expect(prefs.stashReader).toBe(false)
+  })
+
+  it('turning on registers the reader and hooks the game log; off removes both and signs out', async () => {
+    const { handlers, gameLog, prefs, ctx, signOuts } = fakeContext()
+    const control = initPersonal(ctx)
+    expect(await control.setUnlocked(true)).toEqual({ on: false, forced: false, unlocked: true })
+    expect(prefs.experimental).toBe(true)
+    expect(handlers.size).toBe(0)
+
+    expect(await control.setOn(true)).toEqual({ on: true, forced: false, unlocked: true })
+    expect(prefs.stashReader).toBe(true)
+    expect([...handlers.keys()].sort()).toEqual([...READER_OPS].sort())
+    expect(gameLog.onLines).toBeTypeOf('function')
+
+    expect(await control.setOn(false)).toEqual({ on: false, forced: false, unlocked: true })
+    expect(prefs.stashReader).toBe(false)
+    expect(handlers.size).toBe(0)
+    expect(gameLog.onLines).toBeNull()
+    expect(signOuts()).toBe(1)
+
+    // And back on again.
+    await control.setOn(true)
+    expect(handlers.size).toBe(READER_OPS.length)
+  })
+
+  it('off leaves a game log hook it did not set alone', async () => {
+    const { gameLog, ctx } = fakeContext({ experimental: true, stashReader: true })
+    const control = initPersonal(ctx)
+    const other = () => {}
+    gameLog.onLines = other
+    await control.setOn(false)
+    expect(gameLog.onLines).toBe(other)
+  })
+
+  it('hiding experimental settings turns the reader off too', async () => {
+    const { handlers, prefs, ctx, signOuts } = fakeContext({ experimental: true, stashReader: true })
+    const control = initPersonal(ctx)
+    expect(await control.setUnlocked(false)).toEqual({ on: false, forced: false, unlocked: false })
+    expect(prefs).toEqual({ experimental: false, stashReader: false })
+    expect(handlers.size).toBe(0)
+    expect(signOuts()).toBe(1)
+  })
+
+  it('switches apply in order', async () => {
+    const { handlers, ctx } = fakeContext({ experimental: true, stashReader: false })
+    const control = initPersonal(ctx)
+    const results = await Promise.all([control.setOn(true), control.setOn(false), control.setOn(true)])
+    expect(results.map(r => r.on)).toEqual([true, false, true])
+    expect(handlers.size).toBe(READER_OPS.length)
+  })
+
+  it('a reader turned off makes no more calls', async () => {
+    let calls = 0
+    const reader = new StashReader({
+      fetch: async () => { calls++; return { status: 200, headers: {}, body: '{"accountName":"x"}' } },
+      now: () => 0,
+      sleep: async () => {},
+      onStatus: () => {}
+    })
+    await reader.setLeague('Standard')
+    reader.stop()
+    const s = await reader.read('manual')
+    expect(calls).toBe(0)
+    expect(s.running).toBe(false)
   })
 })
 

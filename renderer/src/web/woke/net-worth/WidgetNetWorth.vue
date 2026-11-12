@@ -118,7 +118,7 @@ const cardText = computed(() => {
 })
 
 function refresh () {
-  hostRequest('stash-read', null, 15 * 60_000).catch(() => {})
+  hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
 }
 
 const dockMenu = computed<DockMenuAction[]>(() => [

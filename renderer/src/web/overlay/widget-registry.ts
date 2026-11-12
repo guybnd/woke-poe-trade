@@ -1,4 +1,4 @@
-import type { Component } from 'vue'
+import { shallowReactive, type Component } from 'vue'
 import type { WidgetSpec } from './interfaces'
 import WidgetTimer from '../stopwatch/WidgetTimer.vue'
 import WidgetMenu from './WidgetMenu.vue'
@@ -13,7 +13,9 @@ import { wokeWidgets } from '../woke'
 type WidgetComponent = Component & { widget: WidgetSpec }
 
 export const registry = {
-  widgets: [] as WidgetComponent[],
+  // woke: reactive, so a widget type turned on or off at runtime (the stash
+  // reader) shows up in or leaves the launcher right away.
+  widgets: shallowReactive<WidgetComponent[]>([]),
 
   getWidgetComponent (wmType: string) {
     return this.widgets.find(component => component.widget.type === wmType)

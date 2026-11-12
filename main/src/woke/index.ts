@@ -103,15 +103,29 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   }
   handlers['stash-watch-stop'] = async () => { stashWatch.stop(); return null }
 
-  // Personal-only features (personal.flag in the data folder). Off: nothing
-  // is registered but this answer.
+  // The stash reader: off unless the player turned it on (or personal.flag).
+  // Off, nothing is registered but these three answers.
+  const personalOps = new Set<string>()
   const personal = initPersonal({
-    register: (op, handler) => { handlers[op] = handler },
+    register: (op, handler) => {
+      // Never over an always-on handler: turning it off would remove that one.
+      if (Object.prototype.hasOwnProperty.call(handlers, op)) {
+        logger.write(`error [personal] ${op} is taken`)
+        return
+      }
+      handlers[op] = handler
+      personalOps.add(op)
+    },
+    unregister: (op) => {
+      if (personalOps.delete(op)) delete handlers[op] // eslint-disable-line @typescript-eslint/no-dynamic-delete
+    },
     broadcast: (topic, data) => { server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic, data } }) },
     logger,
     gameLog
   })
-  handlers['personal-flag'] = async () => personal
+  handlers['personal-flag'] = async () => personal.state()
+  handlers['personal-set'] = async (args) => await personal.setOn(args?.on === true)
+  handlers['experimental-set'] = async (args) => await personal.setUnlocked(args?.unlocked === true)
 
   server.onEventAnyClient('CLIENT->MAIN::woke-request', ({ id, op, args }) => {
     // Own keys only: an op like "constructor" must not reach Object.prototype.

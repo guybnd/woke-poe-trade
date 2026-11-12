@@ -139,7 +139,7 @@ const errorLine = computed(() => {
 
 function refresh () {
   diffAll.value = false
-  hostRequest('stash-read', null, 15 * 60_000).catch(() => {})
+  hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
 }
 </script>
 

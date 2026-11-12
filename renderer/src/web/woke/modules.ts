@@ -6,6 +6,7 @@
 // module with a placed widget needs them.
 //
 // Kept free of Vue component and widget imports: Config.ts imports this file.
+import { reactive, shallowReactive } from 'vue'
 import { BOOKMARKS_TARGET } from './item-lookup/lookup'
 import type { HarvestSwapConfig } from './harvest-swap/families'
 import type { DockConfig } from './dock/dock'
@@ -29,6 +30,10 @@ export interface ModuleDef {
   // art when there is some (resolved by moduleIcon in ui/game-icons.ts).
   icon: ModuleIcon
   needs: ModuleNeed[]
+  // Listed only while its own switch is on (the stash reader, under
+  // Settings > Modules > Economy), and always on while listed: presets and
+  // module switches leave it alone.
+  optIn?: boolean
 }
 
 export interface ModuleIcon {
@@ -50,7 +55,8 @@ export const MODULE_GROUPS: Array<{ id: ModuleGroup, label: string }> = [
   { id: 'apt', label: 'Price check (Awakened PoE Trade)' }
 ]
 
-export const MODULES: ModuleDef[] = [
+// Reactive: the stash reader's module joins and leaves at runtime.
+export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'market', name: 'Market', description: 'Movers and watchlist from poe.ninja', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem', item: "Gemcutter's Prism" }, needs: ['poll'] },
@@ -84,7 +90,7 @@ export const MODULES: ModuleDef[] = [
   // APT features: only their hotkeys can be switched off.
   { id: 'apt-price-check', name: 'Price check hotkeys', description: 'Check an item under the cursor', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['hotkeys'] },
   { id: 'apt-item-info', name: 'Item info hotkeys', description: 'Item info, wiki, poedb, Craft of Exile, similar items', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-info-circle', item: 'Scroll of Wisdom' }, needs: ['hotkeys'] }
-]
+])
 
 export interface Preset {
   id: string
@@ -128,24 +134,45 @@ interface ConfigLike {
   widgets: Array<{ wmType: string }>
 }
 
-const moduleByWidget = new Map<string, ModuleDef>()
+const moduleByWidget = shallowReactive(new Map<string, ModuleDef>())
 for (const m of MODULES) for (const t of m.widgetTypes) moduleByWidget.set(t, m)
+// Widget types of a module that was removed: their placed widgets stay in
+// config but count as off (not mounted, no hotkeys).
+const removedTypes = reactive(new Set<string>())
+const optInIds = reactive(new Set<string>())
 
-// Personal-only modules (personal.ts) join the list at startup, before the
-// overlay mounts, and only when main says personal.flag is there.
+// Opt-in modules (the stash reader, personal.ts) join the list when turned on,
+// and only then.
 export function addModule (def: ModuleDef, after?: string) {
   if (MODULES.some(m => m.id === def.id)) return
   const at = after ? MODULES.findIndex(m => m.id === after) : -1
   MODULES.splice(at >= 0 ? at + 1 : MODULES.length, 0, def)
-  for (const t of def.widgetTypes) moduleByWidget.set(t, def)
+  if (def.optIn) optInIds.add(def.id)
+  for (const t of def.widgetTypes) {
+    moduleByWidget.set(t, def)
+    removedTypes.delete(t)
+  }
+}
+
+export function removeModule (id: string) {
+  const at = MODULES.findIndex(m => m.id === id)
+  if (at < 0) return
+  const [def] = MODULES.splice(at, 1)
+  optInIds.delete(def.id)
+  for (const t of def.widgetTypes) {
+    moduleByWidget.delete(t)
+    removedTypes.add(t)
+  }
 }
 
 export function isModuleOn (config: ConfigLike, id: string): boolean {
+  if (optInIds.has(id)) return true
   return !config.woke?.off.includes(id)
 }
 
 // Core APT widgets (no module) are always on.
 export function isWidgetTypeOn (config: ConfigLike, wmType: string): boolean {
+  if (removedTypes.has(wmType)) return false
   const m = moduleByWidget.get(wmType)
   return !m || isModuleOn(config, m.id)
 }
@@ -168,7 +195,7 @@ export function applyPreset (config: ConfigLike & { woke: WokeModulesConfig }, p
   const aptOff = config.woke.off.filter(id => id.startsWith('apt-'))
   const wokeOff = preset.on === 'all'
     ? []
-    : MODULES.filter(m => m.group !== 'apt' && !(preset.on as string[]).includes(m.id)).map(m => m.id)
+    : MODULES.filter(m => m.group !== 'apt' && !m.optIn && !(preset.on as string[]).includes(m.id)).map(m => m.id)
   config.woke.off = [...aptOff, ...wokeOff]
 }
 

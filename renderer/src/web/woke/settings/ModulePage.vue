@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.page">
     <w-setting-section v-if="modules.length">
-      <w-setting-row v-for="m in modules" :key="m.id" :label="m.name" :hint="m.description">
+      <w-setting-row v-for="m in switchable" :key="m.id" :label="m.name" :hint="m.description">
         <w-toggle :model-value="isModuleOn(config, m.id)" @update:model-value="setOn(m.id, $event)" />
       </w-setting-row>
       <div v-if="uses.length" :class="$style.uses">
@@ -58,6 +58,8 @@ const APT_EDITORS: Record<string, Component> = {
 const editorFor = (type: string) => wokeSettingsFor(type) ?? APT_EDITORS[type]
 
 const modules = computed(() => (props.page.modules ?? []).map(id => MODULES.find(m => m.id === id)!).filter(Boolean))
+// An opt-in module's switch is in Settings > Modules.
+const switchable = computed(() => modules.value.filter(m => !m.optIn))
 function setOn (id: string, on: boolean) { setModuleOn(ensureWokeConfig(props.config), id, on) }
 
 const titleFor = (type: string) => MODULES.find(m => m.widgetTypes.includes(type))?.name ?? 'Settings'

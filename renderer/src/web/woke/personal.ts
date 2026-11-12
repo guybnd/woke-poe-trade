@@ -1,24 +1,44 @@
-// Personal-only features: on only when main finds personal.flag in the app's
-// data folder. Off (every player's copy), nothing here loads: no module, no
-// widget, no settings, no listeners. On, the code loads as its own chunk.
+// The stash reader (net worth from your own stash tabs). Off for every player
+// unless they turn it on in Settings › Modules, a row hidden until they click
+// the Economy heading 5 times; personal.flag in the data folder keeps it on.
+// Main owns the switch (woke-app.json). Off, nothing here loads: no module,
+// widget, settings or listeners. On, the code loads as its own chunk.
 import { shallowRef } from 'vue'
 import { Host } from '@/web/background/IPC'
 import { hostRequest } from './shared/host'
 
-export const personalOn = shallowRef(false)
+// What main answers (main/src/woke/personal/index.ts).
+export interface PersonalState {
+  on: boolean
+  // personal.flag: always on, the switch can't turn it off.
+  forced: boolean
+  // The experimental rows are shown.
+  unlocked: boolean
+}
 
-// Runs once at startup, before the overlay mounts.
+export const personalOn = shallowRef(false)
+export const personalForced = shallowRef(false)
+export const experimentalUnlocked = shallowRef(false)
+
+export function takePersonal (s: Partial<PersonalState> | null | undefined) {
+  personalOn.value = s?.on === true
+  personalForced.value = s?.forced === true
+  experimentalUnlocked.value = s?.unlocked === true
+}
+
+// Runs once at startup, before the overlay mounts. The switch itself is in
+// personal-switch.ts, loaded once experimental settings are shown.
 export async function loadPersonal (): Promise<void> {
   if (!Host.isElectron) return
+  let s: PersonalState | null = null
   try {
-    personalOn.value = await hostRequest<boolean>('personal-flag', null, 5000) === true
-  } catch {
-    personalOn.value = false
-  }
+    s = await hostRequest<PersonalState>('personal-flag', null, 5000)
+  } catch {}
+  takePersonal(s)
   if (!personalOn.value) return
   try {
     const { enableNetWorth } = await import('./net-worth/enable')
-    enableNetWorth()
+    enableNetWorth(false)
   } catch (e) {
     console.warn('[personal] could not load', e)
     personalOn.value = false
