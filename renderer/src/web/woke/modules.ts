@@ -108,8 +108,15 @@ export const PRESETS: Preset[] = [
 ]
 
 // Stored in config.json as `woke`.
+// Woke's own config version, kept apart from APT's configVersion (that one
+// stays upstream's numbering). Raise it with a fix-up in Config.ts that
+// mustn't run twice.
+export const WOKE_CONFIG_VERSION = 1
+
 export interface WokeModulesConfig {
   setupDone: boolean
+  // WOKE_CONFIG_VERSION this config was last upgraded to; unset before 1.
+  version?: number
   off: string[]
   // Hides (and shows again) every toolkit panel at once.
   hideAllHotkey?: string | null
