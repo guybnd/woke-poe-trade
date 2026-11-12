@@ -4,7 +4,7 @@ import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
 import { ruleBlocks } from './rules'
-import { DUST_ILVL, applyPresetChanges, colourBlindActions, normalizePresets, presetBlocks, presetsOn } from './presets'
+import { DUST_ILVL, applyPresetChanges, colourBlindActions, normalizePresets, presetBlocks, presetsOn, scaleVolume } from './presets'
 import { dustBases } from '../disenchant/calc'
 import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { clearUndoToasts } from '../ui/layer'
@@ -20,7 +20,7 @@ import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { buildRuleBlocks, insertBuildBlocks } from './build-rules'
 import { useBuildRuleInput } from './build-input'
-import { applyPriceMoves, livePriceMoves, lockKey, lockedByEdits, mergeMoves, movesOutOfPlace, planRetier, tierRank } from './economy'
+import { NET_GROUPS, applyPriceMoves, livePriceMoves, lockKey, lockedByEdits, mergeMoves, movesOutOfPlace, planRetier, tierRank } from './economy'
 import type { EconomyGroup, PriceMove, RetierPlan } from './economy'
 import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
 import { isDismissed } from './health'
@@ -281,17 +281,24 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
         : lastLookup(cfg().safetyNet.last, line)
       const verdicts = auditBases(next, known, line)
       const bases = netFromAudit(verdicts, v => heldBack(v))
+      const stackHeld = (group: EconomyGroup, base: string) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base)
+      const last = cfg().safetyNet.last
       if (lookup) {
-        const stacks = stackNet(next, lookup, line, (group, base) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base))
+        const stacks = stackNet(next, lookup, line, stackHeld)
         if (Object.keys(stacks).length) bases.stacks = stacks
-      } else if (cfg().safetyNet.last?.stacks) {
-        // Only names this filter lists, as with the rest of the list.
+      } else if (last?.stacks && !(last.line != null && line > last.line)) {
+        // Only names this filter lists, as with the rest of the list, and not
+        // what you held back since. A line raised since can't rely on them.
         const listed = new Set(next.blocks.flatMap(b => b.conditions.flatMap(c => c.key === 'BaseType' ? c.values : [])))
-        const kept = Object.entries(cfg().safetyNet.last!.stacks!).map(([size, list]) => [size, list.filter(b => listed.has(b))] as const).filter(([, list]) => list.length)
+        const held = (base: string) => NET_GROUPS.some(g => !g.unique && stackHeld(g, base))
+        const kept = Object.entries(last.stacks).map(([size, list]) => [size, list.filter(b => listed.has(b) && !held(b))] as const).filter(([, list]) => list.length)
         if (kept.length) bases.stacks = Object.fromEntries(kept)
       }
       const netBlocks = safetyBlocks(bases)
       if (cfg().presets.colourBlind.on) netBlocks.forEach(colourBlindActions)
+      // The drop sound volume preset reaches the net's sound too.
+      const volume = cfg().presets.volume
+      if (volume.on && volume.percent < 100) netBlocks.forEach(b => scaleVolume(b, volume.percent))
       insertBuildBlocks(next, netBlocks)
       if (lookup) netFresh = { ...valuableFromAudit(verdicts), line, ...(bases.stacks ? { stacks: bases.stacks } : {}) }
       netCount = bases.plain.length + bases.unique.length + Object.values(bases.stacks ?? {}).reduce((n, l) => n + l.length, 0)
@@ -636,12 +643,30 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       toast(`Loot filter is already ${LEVEL_NAMES[next]}`)
       return
     }
+    const before = ns.level
     const wasPaused = cfg().strictAuto.paused
     if (cfg().strictAuto.on) cfg().strictAuto.paused = true
-    const undo = await setLevel(next)
+    const mine = levelSwitch + 1
+    const undo = await setLevel(next).catch(() => null)
+    // A newer key press took over: that one tells.
+    if (mine !== levelSwitch) return
+    if (!undo) {
+      await levelNotSwitched(before, wasPaused, next)
+      return
+    }
     toast(`Loot filter: ${LEVEL_NAMES[next]}${cfg().strictAuto.on && !wasPaused ? ' · auto strictness paused' : ''}`, {
-      undo: undo ? () => { cfg().strictAuto.paused = wasPaused; undo() } : undefined
+      undo: () => { cfg().strictAuto.paused = wasPaused; undo() }
     })
+  }
+
+  // A switch that didn't save: back to the level the game file still is, so
+  // the next try (a key press, the ladder in the next town) switches again.
+  async function levelNotSwitched (before: number, wasPaused: boolean, next: number) {
+    const why = error.value
+    cfg().neversink.level = before
+    cfg().strictAuto.paused = wasPaused
+    await load().catch(() => {})
+    toast(`Couldn't switch to ${LEVEL_NAMES[next]}.${why ? ` ${why}` : ''}`)
   }
 
   // The dock card: a level you picked. Picking what the ladder wants isn't taking
@@ -702,8 +727,15 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     }
     ladderHeldFor = null
     const top = Math.max(...recentAreas.value)
-    setLevel(target, { auto: true }).then(undo => {
-      if (!undo) return
+    const before = ns.level
+    const wasPaused = cfg().strictAuto.paused
+    const mine = levelSwitch + 1
+    setLevel(target, { auto: true }).catch(() => null).then(async undo => {
+      if (mine !== levelSwitch) return
+      if (!undo) {
+        await levelNotSwitched(before, wasPaused, target)
+        return
+      }
       toast(`Loot filter: ${LEVEL_NAMES[target]}, for area level ${top} maps.${cfg().reloadViaChat ? ` ${reloadHint()}` : ''}`, {
         undo: () => { cfg().strictAuto.paused = true; undo() }
       })

@@ -120,7 +120,8 @@ export function describeCondition (c: FilterCondition): string {
   const kind = conditionKind(c.key)
   const label = kind?.label ?? c.key
   switch (kind?.input) {
-    case 'number': return `${label} ${c.op || '='} ${c.values[0]}`
+    // "Item tier >= 4": a tier condition is a compare like a number.
+    case 'number': case 'tier': return `${label} ${c.op || '='} ${c.values[0]}`
     case 'bool': return c.values[0] === 'True' ? label : `not ${label.toLowerCase()}`
     case 'rarity': return `${c.op && c.op !== '==' ? `${c.op} ` : ''}${c.values.join(', ')}`
     default: return `${label}: ${c.values.slice(0, 3).join(', ')}${c.values.length > 3 ? ` +${c.values.length - 3}` : ''}`

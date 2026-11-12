@@ -7,7 +7,7 @@ import type { FilterBlock, FilterDoc } from './parse'
 import { ECONOMY_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { RULE_TYPE, addedBlock } from './rules'
-import { WEAPON_CLASSES } from './build-rules'
+import { BUILD_RULE_TYPE, WEAPON_CLASSES } from './build-rules'
 
 export const PRESET_TYPE = 'woke->preset'
 
@@ -472,15 +472,18 @@ const isEarlyMapGear = (b: FilterBlock) => b.type === 'normalcraft->extra' ||
     b.conditions.some(c => c.key === 'ItemLevel' && c.op === '>=' && Number(c.values[0]) < 86) &&
     !b.conditions.some(c => c.key === 'BaseType' && c.values.some(v => JEWELLERY.test(v))))
 
-// Drops Normal and Magic from a block's Rarity. False when nothing is left.
+// Drops Normal and Magic from a block's Rarity. False when nothing is left:
+// the Rarity then stays as it was (the game refuses an empty one) and the
+// caller hides the block.
 function onlyRares (b: FilterBlock): boolean | null {
   const at = b.conditions.findIndex(c => c.key === 'Rarity' && (c.op === '' || c.op === '=' || c.op === '=='))
   if (at < 0) return null
   const c = b.conditions[at]
   const left = c.values.filter(v => v !== 'Normal' && v !== 'Magic')
   if (left.length === c.values.length) return null
+  if (!left.length) return false
   b.conditions[at] = { ...c, values: left }
-  return left.length > 0
+  return true
 }
 
 // NeverSink's 20% quality gem tier: the vendor rule goes right above it.
@@ -503,12 +506,81 @@ function hideBlock (b: FilterBlock): void {
   b.actions.push({ key: 'DisableDropSound', args: ['True'] })
 }
 
-const VOLUME_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional']
+// The volume is the second argument of each, custom sounds included.
+const VOLUME_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
 const BEAM_KEYS = ['PlayEffect', 'MinimapIcon']
+
+// A block's drop sounds at `percent` of their volume. Returns true when it
+// changed one.
+export function scaleVolume (b: FilterBlock, percent: number): boolean {
+  let touched = false
+  b.actions = b.actions.map(a => {
+    if (!VOLUME_KEYS.includes(a.key) || a.args[1] == null || !Number.isFinite(Number(a.args[1]))) return a
+    touched = true
+    return { key: a.key, args: [a.args[0], String(Math.max(1, Math.round(Number(a.args[1]) * percent / 100))), ...a.args.slice(2)] }
+  })
+  return touched
+}
+
+// The lowest map tier a block catches, from a `MapTier >=` or `>`.
+function mapTierFloor (b: FilterBlock): number | null {
+  let floor: number | null = null
+  for (const c of b.conditions) {
+    if (c.key !== 'MapTier' || (c.op !== '>=' && c.op !== '>')) continue
+    const n = Number(c.values[0]) + (c.op === '>' ? 1 : 0)
+    if (Number.isFinite(n)) floor = floor == null ? n : Math.max(floor, n)
+  }
+  return floor
+}
+
+// NeverSink's plain unique tiers: a Rarity and a list of bases, nothing more.
+const isPlainUniqueTier = (b: FilterBlock) => b.type === 'uniques' && !b.disabled && !b.continue && !isNeverSinkDustTier(b) &&
+  b.conditions.some(c => c.key === 'BaseType' && c.op === '==') &&
+  b.conditions.every(c => c.key === 'Rarity' || (c.key === 'BaseType' && c.op === '=='))
+
+function removeBlock (doc: FilterDoc, b: FilterBlock): void {
+  doc.chunks.splice(doc.chunks.indexOf(b), 1)
+  doc.blocks.splice(doc.blocks.indexOf(b), 1)
+  doc.blocks.forEach((x, i) => { x.index = i })
+}
+
+// The cheap uniques rule, at the top of the file, would hide NeverSink's
+// exceptions too (Shaper and Elder amulets, abyssal sockets, unsocketed,
+// vestigial, Crucible). A copy goes right above each of NeverSink's plain
+// unique tiers instead, with the bases that tier lists, so those exceptions
+// still decide first. Bases no plain tier lists go above the catch-all.
+function placeCheapUniques (doc: FilterDoc): void {
+  const top = doc.blocks.find(b => b.type === PRESET_TYPE && b.tier === 'cheapuniques')
+  const list = top?.conditions.find(c => c.key === 'BaseType')
+  if (!top || !list) return
+  const left = new Set(list.values)
+  const copy = (names: string[]): FilterBlock => ({
+    ...top,
+    conditions: top.conditions.map(c => ({ ...c, values: c.key === 'BaseType' ? names : [...c.values] })),
+    actions: top.actions.map(a => ({ key: a.key, args: [...a.args] }))
+  })
+  const placed: Array<[FilterBlock, FilterBlock]> = []
+  for (const b of doc.blocks) {
+    if (!isPlainUniqueTier(b)) continue
+    const names = b.conditions.find(c => c.key === 'BaseType')!.values.filter(v => left.has(v))
+    if (!names.length) continue
+    names.forEach(v => left.delete(v))
+    placed.push([b, copy(names)])
+  }
+  // Not a NeverSink filter: the rule stays where it is.
+  if (!placed.length) return
+  const restex = doc.blocks.find(b => b.type === 'uniques' && b.tier === 'restex' && !b.disabled)
+  if (left.size && restex) placed.push([restex, copy([...left])])
+  if (!left.size || restex) removeBlock(doc, top)
+  else list.values = [...left]
+  for (const [anchor, b] of placed) insertBefore(doc, anchor, b)
+}
 
 // Adjusts NeverSink's rules in place. Returns how many rules changed.
 export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
   let changed = 0
+  // Hidden copies to put above NeverSink's open-ended top map rule.
+  const mapCopies: Array<[FilterBlock, FilterBlock]> = []
   for (const b of doc.blocks) {
     // NeverSink ships its dust tiers commented out.
     let touched = false
@@ -519,14 +591,11 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     if (b.disabled || b.type === RULE_TYPE) continue
     // Volume follows every drop sound but your own rules': build rules and
     // the presets' own too.
-    if (p.volume.on && p.volume.percent < 100) {
-      b.actions = b.actions.map(a => {
-        if (!VOLUME_KEYS.includes(a.key) || a.args[1] == null || !Number.isFinite(Number(a.args[1]))) return a
-        touched = true
-        return { key: a.key, args: [a.args[0], String(Math.max(1, Math.round(Number(a.args[1]) * p.volume.percent / 100))), ...a.args.slice(2)] }
-      })
-    }
+    if (p.volume.on && p.volume.percent < 100 && scaleVolume(b, p.volume.percent)) touched = true
     if (b.type?.startsWith('woke->')) {
+      // Build rules and the presets' own beams and icons get the colour-blind
+      // colours too; your own rules keep what you picked.
+      if (p.colourBlind.on && (b.type === BUILD_RULE_TYPE || b.type === PRESET_TYPE) && colourBlindActions(b)) touched = true
       if (touched) { b.dirty = true; changed++ }
       continue
     }
@@ -569,6 +638,19 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
         hideBlock(b)
         b.conditions = [...b.conditions, cond('HasInfluence', '', ['None']), cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])]
         touched = true
+      } else if (cap == null) {
+        // NeverSink's top rule (MapTier >= 16) has no cap: a hidden copy above
+        // it takes the tiers below the line, and higher ones still reach it.
+        const floor = mapTierFloor(b)
+        if (floor != null && floor < p.lowMaps.tier) {
+          const top = p.lowMaps.tier - 1
+          mapCopies.push([b, addedBlock(PRESET_TYPE, 'lowmaps', `maps below tier ${p.lowMaps.tier}`, [
+            ...b.conditions,
+            cond('MapTier', '<', [p.lowMaps.tier]),
+            cond('HasInfluence', '', ['None']),
+            cond('AreaLevel', '>=', [MAP_LEVEL_BASE + top])
+          ], 'Hide', 'Presets')])
+        }
       }
     }
     if (p.bigger.on && b.visibility !== 'Hide') {
@@ -583,6 +665,8 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     if (p.colourBlind.on && colourBlindActions(b)) touched = true
     if (touched) { b.dirty = true; changed++ }
   }
+  for (const [anchor, b] of mapCopies) { insertBefore(doc, anchor, b); changed++ }
+  placeCheapUniques(doc)
   // Stricter files ship that tier switched off; it still marks the place.
   const gemAnchor = p.vendorQuality.on ? doc.blocks.find(isQualityGemTier) : undefined
   if (gemAnchor) {
