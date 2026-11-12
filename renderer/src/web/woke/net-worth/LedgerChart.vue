@@ -14,7 +14,7 @@
     <template v-if="hover">
       <span :class="$style.dot" :style="{ left: hover.x + '%', top: hover.y + '%' }" />
       <div :class="[$style.tip, hover.x > 60 ? $style.tipLeft : '']" :style="{ left: hover.x + '%', top: hover.y + '%' }">
-        <b class="w-num">{{ when(hover.p.at) }} · {{ fmt(hover.p.div) }} div<template v-if="hover.p.netDiv != null"> · {{ signed(hover.p.netDiv) }} div</template></b>
+        <b class="w-num">{{ when(hover.p.at) }} · {{ fmt(hover.p.div) }}<Coin /><template v-if="hover.p.netDiv != null"> · {{ signed(hover.p.netDiv) }}<Coin /></template></b>
         <span v-if="hover.p.top.length">{{ hover.p.top.join(', ') }}</span>
         <span v-else-if="hover.p.daily" class="w-dim">That day's last read</span>
       </div>
@@ -28,6 +28,7 @@
 // what changed. By category (B2): the same points stacked. Goal line (D6).
 import { computed, shallowRef } from 'vue'
 import { formatAmount } from '../ui/format'
+import Coin from './Coin.vue'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
 

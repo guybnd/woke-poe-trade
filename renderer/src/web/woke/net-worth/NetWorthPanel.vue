@@ -20,10 +20,10 @@
       <section :class="$style.hero">
         <div>
           <div :class="$style.caps">Total</div>
-          <div :class="$style.big" class="w-num">{{ div(v.chaos) }}<small>div</small></div>
-          <div class="w-dim text-xs">≈ {{ compact(v.chaos) }} chaos · liquid {{ div(liquid) }} div</div>
+          <div :class="$style.big" class="w-num" :title="inChaos(v.chaos)">{{ div(v.chaos) }}<Coin :chaos="!divine" /></div>
+          <div class="w-dim text-xs">≈ {{ compact(v.chaos) }}<Coin chaos /> · liquid <span :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></span></div>
           <div v-if="goal" class="text-xs" :class="$style.goalLine">
-            {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }} div ·
+            {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
             <template v-if="eta.reached">reached</template>
             <template v-else-if="eta.days != null">about {{ etaText(eta.days) }} at this rate</template>
             <template v-else>no ETA yet</template>
@@ -43,14 +43,14 @@
 
       <!-- KPIs -->
       <section :class="$style.kpis">
-        <div><span :class="$style.caps">Since yesterday</span><b class="w-num" :class="tone(sum?.sinceYesterdayDiv)">{{ signedOrDash(sum?.sinceYesterdayDiv) }}</b></div>
-        <div><span :class="$style.caps">Per hour today</span><b class="w-num" :class="tone(perHourDiv)">{{ signedOrDash(perHourDiv) }}</b></div>
-        <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)">{{ session ? `${signed(session.div)} · ${duration(session.ms)}` : '—' }}</b></div>
-        <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc">{{ best.name }} {{ div(best.chaos) }}</b></div>
+        <div><span :class="$style.caps">Since yesterday</span><b class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="sum?.sinceYesterdayDiv != null ? inChaos(sum.sinceYesterdayDiv * (divine ?? 1)) : undefined">{{ signedOrDash(sum?.sinceYesterdayDiv) }}<Coin v-if="sum?.sinceYesterdayDiv != null" /></b></div>
+        <div><span :class="$style.caps">Per hour today</span><b class="w-num" :class="tone(perHourDiv)" :title="sum?.perHourChaos != null ? inChaos(sum.perHourChaos) : undefined">{{ signedOrDash(perHourDiv) }}<Coin v-if="perHourDiv != null" :chaos="!divine" /></b></div>
+        <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
+        <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
       </section>
       <section v-if="moves.length" :class="$style.moves" class="text-xs">
         <span :class="$style.caps">Price moves today</span>
-        <span v-for="m in moves" :key="m.key">{{ m.name }} <span :class="tone(m.change)">{{ signedPct(m.change) }} ({{ signed(m.valueChaos / (divine ?? 1)) }} div)</span></span>
+        <span v-for="m in moves" :key="m.key">{{ m.name }} <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
       </section>
 
       <!-- What changed | Where it is -->
@@ -58,15 +58,15 @@
         <div>
           <div :class="$style.colHead">
             <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
-            <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }} div<template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}/h</template></b>
+            <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
           </div>
           <div v-if="!groups.length" class="w-dim text-xs">Changes show after two full reads.</div>
           <div v-for="g in groups" :key="g.key" :class="$style.group">
-            <div :class="$style.groupHead"><span class="w-trunc">{{ g.title }}</span><b class="w-num" :class="tone(g.netChaos)">{{ signed(g.netChaos / (divine ?? 1)) }}</b></div>
+            <div :class="$style.groupHead"><span class="w-trunc">{{ g.title }}</span><b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b></div>
             <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
               <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon">
               <span class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
-              <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}</span>
+              <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
             </div>
             <div v-if="g.lines.length > 5" class="w-dim text-xs">+{{ g.lines.length - 5 }} more</div>
           </div>
@@ -79,7 +79,7 @@
           <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
           <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
             :aria-pressed="cat === c.id" @click="pickCat(c.id)">
-            <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num">{{ div(c.chaos) }}</b>
+            <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
           </button>
         </div>
       </section>
@@ -90,7 +90,7 @@
         <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
         <WChip clickable :active="cat === 'all'" @click="pickCat('all')">All</WChip>
         <WChip v-for="c in CATEGORIES" :key="c.id" clickable :active="cat === c.id" @click="pickCat(c.id)">{{ c.label }}</WChip>
-        <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }} div</WChip>
+        <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }}<Coin /></WChip>
       </section>
       <ItemTable :lines="tableLines" :filtered="cat !== 'all' || tab !== 'all' || !!query.trim() || hideSmall" @clear="clearFilters" :divine="divine" :changes="changes" :tab-names="tabNames" />
 
@@ -128,6 +128,7 @@ import { hideBelowOf } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
 import LedgerChart from './LedgerChart.vue'
+import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 
 const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
@@ -170,6 +171,9 @@ watch(() => props.status?.league, () => { picked.value = false; picking.value = 
 
 // ---------- numbers ----------
 const fmt = (n: number) => formatAmount(n)
+// The chaos behind a divine figure, for hover titles.
+const inChaos = (chaos: number) => `${formatAmount(Math.round(chaos))} chaos`
+const unit = computed(() => divine.value ? 'd' : 'c')
 const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatAmount(n)
 const toDiv = (chaos: number) => divine.value ? chaos / divine.value : chaos
 const div = (chaos: number) => {
@@ -272,7 +276,7 @@ const tabNames = computed(() => new Map(tabValues.value.map(t => [t.id, t.name])
 const tabOptions = computed(() => {
   const prev = ledger.value.tabChaos.prev
   return [
-    { value: 'all', label: 'All', count: v.value ? div(v.value.chaos) : undefined },
+    { value: 'all', label: 'All', count: v.value ? `${div(v.value.chaos)} ${unit.value}` : undefined },
     ...tabValues.value.map(t => {
       const change = prev[t.id] != null ? toDiv(t.chaos - prev[t.id]) : null
       if (UNREADABLE.has(t.type)) {
@@ -281,9 +285,9 @@ const tabOptions = computed(() => {
       return {
         value: t.id,
         label: t.name,
-        count: div(t.chaos),
+        count: `${div(t.chaos)} ${unit.value}`,
         colour: t.colour ?? undefined,
-        title: `${t.name}: ${div(t.chaos)} div${change != null && Math.abs(change) >= 0.05 ? ` · ${signed(change)} div since the read before` : ''}`
+        title: `${t.name}: ${div(t.chaos)} ${unit.value} (${inChaos(t.chaos)})${change != null && Math.abs(change) >= 0.05 ? ` · ${signed(change)} ${unit.value} since the read before` : ''}`
       }
     })
   ]

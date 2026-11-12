@@ -5,7 +5,7 @@
         <th v-for="c in COLS" :key="c.id" :class="[c.id === 'name' ? $style.left : '', sort === c.id ? $style.on : '']"
           :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" tabindex="0"
           @click="sortBy(c.id)" @keydown.enter.prevent="sortBy(c.id)" @keydown.space.prevent="sortBy(c.id)">
-          {{ c.label }}<template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
+          {{ c.label }}<Coin v-if="c.id === 'unit' || c.id === 'chaos'" :chaos="!divine" /><template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
         </th>
       </tr>
     </thead>
@@ -18,8 +18,8 @@
           </span>
         </td>
         <td class="w-num">{{ qty(l.count) }}</td>
-        <td class="w-num w-dim">{{ div(l.unitChaos) }}</td>
-        <td class="w-num">{{ div(l.chaos) }}</td>
+        <td class="w-num w-dim" :title="`${qty(Math.round(l.unitChaos * 10) / 10)} chaos`">{{ div(l.unitChaos) }}</td>
+        <td class="w-num" :title="`${qty(Math.round(l.chaos))} chaos`">{{ div(l.chaos) }}</td>
         <td><span :class="$style.share"><i :style="{ width: Math.max(2, l.chaos / top * 100) + '%' }" /></span></td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
@@ -44,6 +44,7 @@ import { openItemMenu } from '../ui/tooltip/item-menu'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
+import Coin from './Coin.vue'
 
 const props = defineProps<{
   lines: ValuedLine[]
@@ -105,7 +106,8 @@ const more = computed(() => Math.max(0, props.lines.length - limit.value))
 const top = computed(() => Math.max(1, ...props.lines.map(l => l.chaos)))
 
 const div = (chaos: number) => {
-  if (!props.divine) return `${formatAmount(chaos)}c`
+  // The unit is in the column header.
+  if (!props.divine) return formatAmount(chaos)
   const d = chaos / props.divine
   return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d >= 0.01 ? d.toFixed(2) : d.toFixed(4)
 }
