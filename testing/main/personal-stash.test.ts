@@ -277,7 +277,7 @@ describe('StashReader', () => {
   }
 
   const normal = (u: URL): HttpReply => {
-    if (u.pathname.endsWith('get-account-name')) return { status: 200, headers: {}, body: '{"accountName":"Guy#1234"}' }
+    if (u.pathname.endsWith('/my-account')) return { status: 200, headers: {}, body: PROFILE }
     const tab = Number(u.searchParams.get('tabIndex'))
     return { status: 200, headers: RATE, body: tab === 0 ? fixture('tab-list.json') : fixture('tab-dump.json') }
   }
@@ -296,8 +296,8 @@ describe('StashReader', () => {
   })
 
   it('stops when signed out', async () => {
-    const { reader, calls } = makeReader((u) => u.pathname.endsWith('get-account-name')
-      ? { status: 200, headers: {}, body: '{"accountName":"Guy#1234"}' }
+    const { reader, calls } = makeReader((u) => u.pathname.endsWith('/my-account')
+      ? { status: 200, headers: {}, body: PROFILE }
       : { status: 403, headers: RATE, body: '' })
     await reader.setLeague('Mercenaries')
     const s = await reader.read('manual')
@@ -356,8 +356,44 @@ describe('StashReader quiet reads after a failure', () => {
   })
 })
 
+// What pathofexile.com/my-account sends when signed in (cut down).
+const PROFILE = '<!DOCTYPE html><html lang="en">\n<head>\n<title>View Profile - Path of Exile - Guy#1234</title>' +
+  '<meta property="og:title" content="View Profile - Path of Exile - Guy#1234"></head><body>' +
+  '<span class="profile-link"><a href="/account/view-profile/Guy-1234">Guy#1234</a></span></body></html>'
+
+describe('account name', () => {
+  it('reads it from the account page, since get-account-name is gone', async () => {
+    const { fetchAccountName } = await import('../../main/src/woke/personal/stash-reader')
+    const asked: string[] = []
+    const name = await fetchAccountName(async (url) => {
+      asked.push(new URL(url).pathname)
+      return { status: 200, headers: {}, body: PROFILE }
+    })
+    expect(name).toBe('Guy#1234')
+    expect(asked).toEqual(['/my-account'])
+  })
+
+  it('signed out: the account page redirects to the login', async () => {
+    const { fetchAccountName } = await import('../../main/src/woke/personal/stash-reader')
+    expect(await fetchAccountName(async () => ({ status: 302, headers: { location: '/login' }, body: '' }))).toBeNull()
+  })
+
+  it('a page it does not know (the old 404, a login form) is no answer, not a name', async () => {
+    const { fetchAccountName } = await import('../../main/src/woke/personal/stash-reader')
+    expect(await fetchAccountName(async () => ({ status: 404, headers: {}, body: '<!DOCTYPE html><title>Path of Exile</title>' }))).toBeUndefined()
+    expect(await fetchAccountName(async () => ({ status: 200, headers: {}, body: '<title>Login - Path of Exile</title>' }))).toBeUndefined()
+  })
+
+  it('reads the title, the og:title, and decodes entities', async () => {
+    const { profileName } = await import('../../main/src/woke/personal/stash-reader')
+    expect(profileName('<title>\n View Profile - Path of Exile - a&amp;b#1 \n</title>')).toBe('a&b#1')
+    expect(profileName('<meta property="og:title" content="View Profile - Path of Exile - x_y#77">')).toBe('x_y#77')
+    expect(profileName('<title>Path of Exile</title>')).toBeNull()
+  })
+})
+
 describe('review fixes', () => {
-  const ok = { status: 200, headers: {}, body: '{"accountName":"Guy#1234"}' }
+  const ok = { status: 200, headers: {}, body: PROFILE }
 
   it('a busy or Cloudflare answer is not a sign-out', async () => {
     const { fetchAccountName } = await import('../../main/src/woke/personal/stash-reader')
@@ -373,7 +409,7 @@ describe('review fixes', () => {
     const reader: StashReader = new StashReader({
       fetch: async (url) => {
         const u = new URL(url)
-        if (u.pathname.endsWith('get-account-name')) return ok
+        if (u.pathname.endsWith('/my-account')) return ok
         if (u.searchParams.get('tabIndex') === '1' && switchNow) { const f = switchNow; switchNow = null; await f() }
         return { status: 200, headers: {}, body: u.searchParams.get('tabIndex') === '0' ? fixture('tab-list.json') : fixture('tab-dump.json') }
       },

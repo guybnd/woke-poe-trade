@@ -104,19 +104,27 @@ export function isSignedOut (reply: HttpReply) {
   return reply.status === 403 && !/^\s*</.test(reply.body)
 }
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", '#x27': "'" }
+
+// The signed-in account from the /my-account page: its title is
+// "View Profile - Path of Exile - Name#1234". Null when it isn't that page.
+export function profileName (html: string): string | null {
+  const m = /<title>\s*View Profile - Path of Exile - ([^<]+?)\s*<\/title>/i.exec(html) ??
+    /property="og:title"\s+content="View Profile - Path of Exile - ([^"]+)"/i.exec(html)
+  const name = m?.[1].replace(/&(amp|lt|gt|quot|#39|#x27);/g, (_, e: string) => ENTITIES[e]).trim()
+  return name || null
+}
+
 // The account name, null when signed out, undefined when the site didn't say
-// (busy, down, rate-limited): keep what we knew.
+// (busy, down, rate-limited, a page we don't know): keep what we knew.
+// GGG removed /character-window/get-account-name (404 since 2026), so this
+// reads the account page instead; signed out, it redirects to the login.
 export async function fetchAccountName (fetch: Fetcher, limiter?: RateLimiter, now = Date.now): Promise<string | null | undefined> {
-  const r = await fetch(`${POE_SITE}/character-window/get-account-name`)
+  const r = await fetch(`${POE_SITE}/my-account`)
   limiter?.update(r.status, r.headers, now())
   if (isSignedOut(r)) return null
   if (r.status !== 200) return undefined
-  try {
-    const name = (JSON.parse(r.body) as { accountName?: unknown }).accountName
-    return typeof name === 'string' && name ? name : null
-  } catch {
-    return undefined
-  }
+  return profileName(r.body) ?? undefined
 }
 
 export class StashReader {

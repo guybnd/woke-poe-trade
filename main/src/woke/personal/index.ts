@@ -73,7 +73,8 @@ export const sessionFetch: Fetcher = (url) => new Promise<HttpReply>((resolve, r
     method: 'GET',
     useSessionCookies: true,
     redirect: 'manual',
-    headers: { 'user-agent': app.userAgentFallback, accept: 'application/json' }
+    // JSON for the stash, HTML for /my-account (the account name).
+    headers: { 'user-agent': app.userAgentFallback, accept: 'application/json, text/html;q=0.9' }
   })
   const timer = setTimeout(() => { req.abort(); reject(new Error('pathofexile.com did not answer.')) }, TIMEOUT_MS)
   req.on('redirect', (status, _method, _url, headers) => {
