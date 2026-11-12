@@ -36,6 +36,18 @@ history:
     date: '2026-11-12T06:41:39.427Z'
     selfAttested: true
     id: c-2026-11-12t06-41-39-427z
+  - type: comment
+    user: Agent
+    comment: >-
+      Part one shipped in 0.4.3 (#373): jewels in sockets with tooltips, PoB's
+      radius rings, changed passives marked for Timeless and rewriting uniques,
+      and jewel mods in totals. Part two is still to do: Timeless node rewrites
+      (PoB lookup tables, zlib), cluster jewel subtrees (PoB cluster data),
+      Thread of Hope's variable ring, Impossible Escape's keystone ring, and
+      jewels inside cluster sockets.
+    date: '2026-11-12T08:23:43.779Z'
+    selfAttested: true
+    id: c-2026-11-12t08-23-43-779z
 ---
 > TL;DR: Guy (2026-11-11): support and render every kind of jewel in the passive tree view, with their effects. Bigger work, later; mocks first.
 
