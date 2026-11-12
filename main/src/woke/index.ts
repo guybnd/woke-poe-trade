@@ -25,6 +25,7 @@ import { deathRecapHandlers } from './death-recap-store'
 import { docHandlers } from './data-files'
 import { browsePath, pathStat } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
+import { initPersonal } from './personal'
 
 type Handler = (args: any) => Promise<unknown> // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -99,6 +100,16 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     return res
   }
   handlers['stash-watch-stop'] = async () => { stashWatch.stop(); return null }
+
+  // Personal-only features (personal.flag in the data folder). Off: nothing
+  // is registered but this answer.
+  const personal = initPersonal({
+    register: (op, handler) => { handlers[op] = handler },
+    broadcast: (topic, data) => { server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic, data } }) },
+    logger,
+    gameLog
+  })
+  handlers['personal-flag'] = async () => personal
 
   server.onEventAnyClient('CLIENT->MAIN::woke-request', ({ id, op, args }) => {
     // Own keys only: an op like "constructor" must not reach Object.prototype.

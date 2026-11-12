@@ -8,6 +8,7 @@ import { perfMark, perfTimeAsync } from './web/woke/shared/perf'
 import { captureRendererErrors, captureVueError } from './web/woke/app/report'
 import { checkLiveDataNow, rescheduleLiveDataChecks, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
 import { useLeagues } from './web/background/Leagues'
+import { loadPersonal } from './web/woke/personal'
 
 // woke: the first-run setup window loads this page with #setup. It needs no
 // item data, so it opens quicker.
@@ -17,7 +18,11 @@ const isSetupWindow = window.location.hash === '#setup'
   // woke: settings may have to save while loading (see initConfig), which needs
   // the connection first.
   await perfTimeAsync('Startup: connect to app', Host.init())
-  await perfTimeAsync('Startup: load settings', initConfig())
+  // woke: personal-only features (personal.flag) join before anything mounts.
+  await Promise.all([
+    perfTimeAsync('Startup: load settings', initConfig()),
+    isSetupWindow ? Promise.resolve() : loadPersonal()
+  ])
   // woke: these two don't depend on each other, so load them side by side.
   const [i18nPlugin] = await Promise.all([
     perfTimeAsync('Startup: load translations', I18n.init(AppConfig().language)),
