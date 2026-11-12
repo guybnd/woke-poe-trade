@@ -4,6 +4,7 @@
   <PinLayer />
   <ToolkitHealth />
   <StashOutlines />
+  <TreeOverlay />
   <OverlayLayer />
   <GameTooltip />
   <HelpCard />
@@ -17,6 +18,7 @@ import PinLayer from './pins/PinLayer.vue'
 import ToolkitHealth from './dock/ToolkitHealth.vue'
 import OverlayLayer from './ui/OverlayLayer.vue'
 import StashOutlines from './scarab-flip/StashOutlines.vue'
+import TreeOverlay from './pob-builds/TreeOverlay.vue'
 import GameTooltip from './ui/tooltip/GameTooltip.vue'
 import HelpCard from './ui/HelpCard.vue'
 import AppNotices from './app/AppNotices.vue'

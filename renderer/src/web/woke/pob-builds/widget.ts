@@ -27,6 +27,24 @@ export interface PobBuildsWidget extends Widget {
   tradeFolders?: Record<string, string>
   // Build file -> your own notes on it, shown in the Notes tab.
   myNotes?: Record<string, string>
+  // Draws the active build over the game's passive tree. Missing = the
+  // default key; null = off.
+  treeHotkey?: string | null
+}
+
+export const TREE_HOTKEY_DEFAULT = 'Alt + T'
+const TREE_TARGET = 'woke-pob-tree-overlay'
+
+export function treeHotkeyOf (w: PobBuildsWidget): string | null {
+  return w.treeHotkey === undefined ? TREE_HOTKEY_DEFAULT : w.treeHotkey
+}
+
+export function treeHotkeyTarget (): string {
+  return TREE_TARGET
+}
+
+export function isTreeHotkeyTarget (target: string): boolean {
+  return target === TREE_TARGET
 }
 
 // Set titles, not positions: PoB can reorder sets. Sets sharing a title form

@@ -30,6 +30,8 @@ import type { FarmingWidget } from './farming/farming'
 import { DROP_COUNTER_TYPE, DROP_COUNTER_TARGET } from './drop-counter/drop-counter'
 import type { DropCounterWidget } from './drop-counter/drop-counter'
 import { SCARAB_FLIP_TYPE, stashHotkeyTarget } from './scarab-flip/widget'
+import { POB_BUILDS_TYPE, treeHotkeyOf, treeHotkeyTarget } from './pob-builds/widget'
+import type { PobBuildsWidget } from './pob-builds/widget'
 import type { ScarabFlipWidget } from './scarab-flip/widget'
 import { TRADE_TYPE, hotkeyTarget as tradeHotkeyTarget } from './trade/widget'
 import type { TradeWidget } from './trade/widget'
@@ -152,6 +154,10 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
       actions.push({ shortcut: scan.rollHotkey, keepModKeys: true, action: { type: 'trigger-event', target: rollHotkeyTarget(widget.wmId) } })
     }
     return actions
+  }
+  if (widget.wmType === POB_BUILDS_TYPE) {
+    const key = treeHotkeyOf(widget as PobBuildsWidget)
+    return key ? [{ shortcut: key, keepModKeys: true, action: { type: 'trigger-event', target: treeHotkeyTarget() } }] : []
   }
   if (widget.wmType === SCARAB_FLIP_TYPE) {
     const key = (widget as ScarabFlipWidget).stashHotkey

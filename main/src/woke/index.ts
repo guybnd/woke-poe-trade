@@ -11,6 +11,7 @@ import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels, 
 import { WokeHoverTracker } from './hover'
 import { readStashTab } from './stash-read'
 import { StashWatch } from './stash-watch'
+import { TreeOverlay } from './tree-overlay'
 import { perfRecord } from './perf'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 import type { GameLogWatcher } from '../host-files/GameLogWatcher'
@@ -102,6 +103,13 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     return res
   }
   handlers['stash-watch-stop'] = async () => { stashWatch.stop(); return null }
+
+  const treeOverlay = new TreeOverlay(poeWindow, (data) => {
+    server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'tree-overlay', data } })
+  })
+  handlers['tree-overlay-points'] = async (args) => { treeOverlay.setPoints(args); return null }
+  handlers['tree-overlay-fit'] = async (args) => treeOverlay.hasPoints ? treeOverlay.fit(args) : { ok: false, reason: 'no-points' }
+  handlers['tree-overlay-stop'] = async () => { treeOverlay.stop(); return null }
 
   // The stash reader: off unless the player turned it on (or personal.flag).
   // Off, nothing is registered but these three answers.

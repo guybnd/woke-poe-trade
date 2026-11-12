@@ -1,0 +1,6 @@
+{
+  "note": "Guy's passive tree at 2560x1440 (64 colours). zoom/ox/oy: screen = tree * zoom + offset, fitted by hand-checked overlay.",
+  "zoom": 0.72267,
+  "ox": 1770.7,
+  "oy": -465.7
+}
