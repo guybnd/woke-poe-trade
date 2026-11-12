@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-207
 title: 'Pins for PoB build and dock cards, smaller text, see-through pins'
-status: Grooming
+status: Ready
 priority: None
 effort: None
 assignee: unassigned
@@ -59,6 +59,22 @@ history:
       Known limit: cards that mark alerts seen on open (market, essence) only do
       it once while pinned.
     id: a-2026-11-12t01-13-05-221z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 73b41410 (PR #338) and live on the dev build (master). Pins for
+      every dock card (they detach and drag), plus PoB tree, gear slot, gem
+      chain and next step. Each pin has its own see-through level and a separate
+      spot in hideout/town vs elsewhere. Text goes down to 70%, with a Pinned
+      size slider. Waiting on Guy's in-game try.
+    date: '2026-11-12T01:36:49.137Z'
+    completionComment: true
+    id: c-2026-11-12t01-36-49-137z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-12T01:36:49.137Z'
 swimlane: null
 needsAction: null
 ---
