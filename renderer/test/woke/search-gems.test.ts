@@ -32,12 +32,19 @@ describe('gemCard', () => {
   })
 })
 
+describe('Vaal gems', () => {
+  it('say to corrupt the base gem', () => {
+    expect(gemCard('Vaal Fireball', table)!.sections.at(-1)!.text![0]).toMatch(/corrupt a Fireball with a Vaal Orb/)
+  })
+})
+
 describe('gemLookup', () => {
   it('needs four letters and stays off unknown names', () => {
     const lookup = gemLookup(table, ['Fireball', 'Ice Nova', 'Ice Nova of Frostbolts'])
     expect(lookup('fire', ctx).map(c => c.title)).toEqual(['Fireball'])
     expect(lookup('ice nova', ctx).map(c => c.title)).toEqual(['Ice Nova', 'Ice Nova of Frostbolts'])
     expect(lookup('ice', ctx)).toEqual([])
+    expect(gemLookup(table, ['Arc', 'Arcane Surge Support'])('arc', ctx).map(c => c.title)).toEqual(['Arc'])
     expect(gemLookup(null, ['Fireball'])('fireball', ctx)).toEqual([])
   })
 })

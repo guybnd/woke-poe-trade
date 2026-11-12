@@ -346,10 +346,14 @@ function loadGems () {
   if (gemTable.value) return
   import('../pob-builds/gem-sources.json').then(m => {
     const table = m.default as unknown as GemTable
-    // The item list isn't loaded yet: try again on the next open.
-    if (!gameItems().length) return
-    const transfigured = gameItems().filter(i => i.namespace === 'GEM' && transfiguredBase(i.name, table)).map(i => i.name)
-    gemNames.value = [...Object.keys(table), ...transfigured]
+    const gems = gameItems().filter(i => i.namespace === 'GEM')
+    // The item list isn't loaded yet: try again shortly while it's open.
+    if (!gems.length) {
+      if (open.value) setTimeout(loadGems, 2000)
+      return
+    }
+    // Only gems in the game: the table also holds removed and test gems.
+    gemNames.value = gems.filter(i => table[i.refName] || (i.gem?.transfigured && transfiguredBase(i.refName, table))).map(i => i.refName)
     gemTable.value = table
   }).catch(() => {})
 }
