@@ -56,6 +56,17 @@ export interface Valuation {
   unpriced: number
 }
 
+// Gems by poe.ninja's variant ("1", "20", "21/20c", "1/20"), as price check
+// names them (price-check/trends/getDetailsId.ts).
+export function gemVariant (item: StashItemLike): string {
+  const level = item.gemLevel ?? 1
+  let v = level >= 20 ? String(level) : '1'
+  const q = item.quality ?? 0
+  if (q) v += `/${q >= 16 && q <= 20 ? 20 : q}`
+  if (item.corrupted) v += 'c'
+  return v
+}
+
 export function itemKey (item: StashItemLike): string {
   const name = item.frame === 3 && item.name ? `${item.name} ${item.typeLine}` : item.typeLine
   const parts = [name]

@@ -242,3 +242,55 @@ describe('StashReader quiet reads after a failure', () => {
     expect(calls).toBe(2)
   })
 })
+
+describe('review fixes', () => {
+  const ok = { status: 200, headers: {}, body: '{"accountName":"Guy#1234"}' }
+
+  it('a busy or Cloudflare answer is not a sign-out', async () => {
+    const { fetchAccountName } = await import('../../main/src/woke/personal/stash-reader')
+    expect(await fetchAccountName(async () => ({ status: 503, headers: {}, body: '' }))).toBeUndefined()
+    expect(await fetchAccountName(async () => ({ status: 403, headers: {}, body: '<html>cf</html>' }))).toBeUndefined()
+    expect(await fetchAccountName(async () => ({ status: 401, headers: {}, body: '' }))).toBeNull()
+    expect(await fetchAccountName(async () => ok)).toBe('Guy#1234')
+  })
+
+  it('a league switch mid-read keeps the old run out of the new league', async () => {
+    let clock = 9_000_000
+    let switchNow: (() => Promise<void>) | null = null
+    const reader: StashReader = new StashReader({
+      fetch: async (url) => {
+        const u = new URL(url)
+        if (u.pathname.endsWith('get-account-name')) return ok
+        if (u.searchParams.get('tabIndex') === '1' && switchNow) { const f = switchNow; switchNow = null; await f() }
+        return { status: 200, headers: {}, body: u.searchParams.get('tabIndex') === '0' ? fixture('tab-list.json') : fixture('tab-dump.json') }
+      },
+      now: () => clock,
+      sleep: async (ms) => { clock += ms },
+      onStatus: () => {}
+    })
+    await reader.setLeague('Mercenaries')
+    switchNow = async () => { await reader.setLeague('Standard') }
+    const s = await reader.read('manual')
+    expect(s.league).toBe('Standard')
+    expect(s.lastReadAt).toBeNull()
+    expect(s.running).toBe(false)
+  })
+
+  it('a sign-out during a read stays', async () => {
+    let clock = 9_000_000
+    const reader: StashReader = new StashReader({
+      fetch: async (url) => {
+        const u = new URL(url)
+        if (u.searchParams.get('tabIndex') === '1') reader.signedOut()
+        return { status: 200, headers: {}, body: u.searchParams.get('tabIndex') === '0' ? fixture('tab-list.json') : fixture('tab-dump.json') }
+      },
+      now: () => clock,
+      sleep: async (ms) => { clock += ms },
+      onStatus: () => {}
+    })
+    reader.account = 'Guy#1234'
+    await reader.setLeague('Mercenaries')
+    const s = await reader.read('manual')
+    expect(s.error?.kind).toBe('signed-out')
+  })
+})

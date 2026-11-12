@@ -143,12 +143,12 @@ export function initPersonal (ctx: PersonalContext): boolean {
     sleep: async (ms) => { await new Promise(resolve => setTimeout(resolve, ms)) },
     onStatus: (s) => { ctx.broadcast('stash-reader', s) }
   })
-  readSavedAccount().then(a => { if (a && !reader.account) reader.account = a }).catch(() => {})
+  readSavedAccount().then(a => { if (a) reader.restoreAccount(a) }).catch(() => {})
 
   const authStatus = async (verify: boolean) => {
     if (verify) {
       const name = await fetchAccountName(sessionFetch).catch(() => undefined)
-      // undefined: no answer (offline). Keep what we knew.
+      // undefined: no answer (offline, busy). Keep what we knew.
       if (name === null) {
         reader.signedOut()
         await saveAccount(null)

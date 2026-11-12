@@ -2,15 +2,16 @@
 // Never a trade search: rares and other gear without a poe.ninja row stay
 // unpriced.
 import { usePoeninja } from '@/web/background/Prices'
+import { gemVariant } from './valuation'
 import type { Category, Priced, PriceOf, StashItemLike } from './valuation'
 
 const FRAGMENT_SLUGS = new Set(['fragments', 'scarabs', 'invitations', 'artifacts'])
 
 interface Row { chaos: number, variant?: string }
 
-// Gems are listed as "20/20" or "20/20c"; pick that one, else the cheapest.
+// Gems by poe.ninja's variant (gemVariant), else the cheapest.
 function gemRow (rows: Row[], item: StashItemLike): Row | undefined {
-  const want = `${item.gemLevel ?? 1}/${item.quality ?? 0}${item.corrupted ? 'c' : ''}`
+  const want = gemVariant(item)
   return rows.find(r => r.variant === want) ?? cheapest(rows)
 }
 

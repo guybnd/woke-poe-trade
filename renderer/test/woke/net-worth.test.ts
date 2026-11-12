@@ -101,3 +101,15 @@ describe('stash gains', () => {
     expect(gainsBetween(gains, 400, 500).reads).toBe(0)
   })
 })
+
+describe('gem variants', () => {
+  it('names gems like poe.ninja', async () => {
+    const { gemVariant } = await import('@/web/woke/net-worth/valuation')
+    const gem = (gemLevel: number, quality: number, corrupted = false) => item('Empower Support', 1, { frame: 4, gemLevel, quality, corrupted })
+    expect(gemVariant(gem(1, 0))).toBe('1')
+    expect(gemVariant(gem(20, 0))).toBe('20')
+    expect(gemVariant(gem(21, 20, true))).toBe('21/20c')
+    expect(gemVariant(gem(5, 18))).toBe('1/20')
+    expect(gemVariant(gem(20, 23, true))).toBe('20/23c')
+  })
+})

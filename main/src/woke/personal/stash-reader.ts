@@ -96,18 +96,25 @@ class Stop extends Error {
   constructor (readonly error: ReaderError) { super(error.message) }
 }
 
-export function isSignedOutStatus (status: number) {
-  return status === 401 || status === 403 || (status >= 300 && status < 400)
+// Signed out: 401, a redirect (to the login page), or a 403 from the site
+// itself. A 403 page from Cloudflare (HTML) or a 5xx says nothing about it.
+export function isSignedOut (reply: HttpReply) {
+  if (reply.status === 401 || (reply.status >= 300 && reply.status < 400)) return true
+  return reply.status === 403 && !/^\s*</.test(reply.body)
 }
 
-export async function fetchAccountName (fetch: Fetcher): Promise<string | null> {
+// The account name, null when signed out, undefined when the site didn't say
+// (busy, down, rate-limited): keep what we knew.
+export async function fetchAccountName (fetch: Fetcher, limiter?: RateLimiter, now = Date.now): Promise<string | null | undefined> {
   const r = await fetch(`${POE_SITE}/character-window/get-account-name`)
-  if (r.status !== 200) return null
+  limiter?.update(r.status, r.headers, now())
+  if (isSignedOut(r)) return null
+  if (r.status !== 200) return undefined
   try {
     const name = (JSON.parse(r.body) as { accountName?: unknown }).accountName
     return typeof name === 'string' && name ? name : null
   } catch {
-    return null
+    return undefined
   }
 }
 
@@ -121,6 +128,8 @@ export class StashReader {
   account: string | null = null
   // Quiet reads count from the last try, so a failing one isn't retried at every hideout.
   private lastQuietTry = 0
+  // A sign-out during a read must not be undone by that read finishing.
+  private signOutCount = 0
 
   constructor (private deps: ReaderDeps) {
     this.limiter = deps.limiter ?? new RateLimiter()
@@ -142,8 +151,16 @@ export class StashReader {
     this.set({ league, lastReadAt: last, waiting: 0, error: null })
   }
 
+  // Used before the first status, from the saved account.
+  restoreAccount (account: string) {
+    if (this.account) return
+    this.account = account
+    this.set({ account })
+  }
+
   signedOut () {
     this.account = null
+    this.signOutCount++
     this.set({ account: null, error: SIGNED_OUT })
   }
 
@@ -165,7 +182,7 @@ export class StashReader {
     if (reply.status === 429) {
       throw new Stop({ kind: 'rate-limited', message: 'pathofexile.com asked us to slow down. The rest is read later.', retryAt: this.limiter.blockedUntil })
     }
-    if (isSignedOutStatus(reply.status)) throw new Stop(SIGNED_OUT)
+    if (isSignedOut(reply)) throw new Stop(SIGNED_OUT)
     if (reply.status !== 200) throw new Stop({ kind: 'failed', message: `pathofexile.com answered ${reply.status}.` })
     return reply
   }
@@ -206,13 +223,19 @@ export class StashReader {
       return this.current
     }
     this.set({ running: true, progress: null, error: null })
+    const signOuts = this.signOutCount
+    // Switched league or signed out meanwhile: this run's result isn't news.
+    const stale = () => this.league !== league || this.signOutCount !== signOuts
+    const report = (patch: Partial<ReaderStatus>) => {
+      this.set(stale() ? { running: false, progress: null } : patch)
+    }
     let cache: StashCache | null = null
     let changed = false
     let waiting = 0
     try {
       let account = this.account
       if (!account) {
-        account = await fetchAccountName(this.deps.fetch)
+        account = await fetchAccountName(this.deps.fetch, this.limiter, this.deps.now) ?? null
         if (account) this.signedIn(account)
       }
       account ??= this.fallbackAccount
@@ -223,7 +246,8 @@ export class StashReader {
       const now = this.deps.now()
 
       const first = this.parse((await this.get(stashUrl(league, account, 0, true))).body)
-      const listed = first.tabs ?? []
+      // No tab list in the reply: keep the one we had.
+      const listed = first.tabs ?? kept?.tabs.map(({ readAt: _r, items: _i, ...t }) => t) ?? []
       const byId = new Map((kept?.tabs ?? []).map(t => [t.id, t]))
       const tabs: CachedTab[] = listed.map(t => ({ ...t, readAt: byId.get(t.id)?.readAt ?? null, items: byId.get(t.id)?.items ?? [] }))
       cache = { version: 1, league, account, listedAt: now, tabs }
@@ -253,15 +277,15 @@ export class StashReader {
           waiting += todo.length - i
           throw e
         }
-        this.set({ progress: { done: i + 2, total } })
+        if (!stale()) this.set({ progress: { done: i + 2, total } })
       }
-      this.set({ running: false, progress: null, lastReadAt: this.deps.now(), waiting, error: null })
+      report({ running: false, progress: null, lastReadAt: this.deps.now(), waiting, error: null })
     } catch (e) {
       const error: ReaderError = e instanceof Stop ? e.error : { kind: 'failed', message: e instanceof Error ? e.message : String(e) }
       if (error.kind === 'signed-out') this.account = null
       // Tabs read before the stop still count.
       const anyRead = cache?.tabs.some(t => t.readAt != null && t.readAt >= (cache?.listedAt ?? 0))
-      this.set({ running: false, progress: null, waiting, error, account: this.account, lastReadAt: anyRead ? this.deps.now() : this.status.lastReadAt })
+      report({ running: false, progress: null, waiting, error, account: this.account, lastReadAt: anyRead ? this.deps.now() : this.status.lastReadAt })
     } finally {
       if (cache && changed) {
         const toSave = cache

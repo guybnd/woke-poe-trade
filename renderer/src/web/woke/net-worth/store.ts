@@ -67,6 +67,9 @@ async function countRead (id: string, readAt: number) {
   stash.value = await hostRequest<CachedStash | null>('stash-cache', { league: id }).catch(() => stash.value)
   const v = valuation.value
   if (!v || loadedFor !== id) return
+  // A tab never read counts as empty: until every tab has been read once, a
+  // later read would book its contents as new. Nothing is counted till then.
+  if (!stash.value?.tabs.length || stash.value.tabs.some(t => t.readAt == null)) return
   const baseKey = `${id}-baseline`
   const before = await hostRequest<Baseline | null>('doc-get', { collection: COLLECTION, key: baseKey }).catch(() => null)
   const since = history.value.countedReadAt
@@ -92,7 +95,8 @@ function queue (fn: () => Promise<void>) {
 export function onStatus (s: ReaderStatus) {
   status.value = s
   const id = league.value
-  if (!id || s.running || s.lastReadAt == null) return
+  // A status for another league (switched mid-read) isn't this league's read.
+  if (!id || s.league !== id || s.running || s.lastReadAt == null) return
   const readAt = s.lastReadAt
   queue(async () => {
     await loadLeague(id)
