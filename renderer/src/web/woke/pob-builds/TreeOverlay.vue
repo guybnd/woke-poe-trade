@@ -7,7 +7,7 @@
 // The active PoB build drawn over the game's own passive tree, from a hotkey.
 // Drawn over the game, so it never takes a click. Only what's still to take
 // shows; lit (allocated) lines in game are left alone.
-import { inject, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
@@ -19,9 +19,9 @@ import { loadoutOf } from './build-model'
 import { loadPassiveTree, passiveTreeArt, NODE_RADIUS } from './passive-tree'
 import type { TreeNode } from './passive-tree'
 import { buildPath, fitPoints, probesOf, takenNodes } from './tree-overlay'
-import { markTreeOverlaySeen, registerTreeDrawer, treeOn } from './tree-toggle'
+import { markTreeOverlaySeen, registerTreeDrawer, treeOn, treeOverlaySeen } from './tree-toggle'
 import type { BuildPath } from './tree-overlay'
-import { isTreeHotkeyTarget } from './widget'
+import { isTreeHotkeyTarget, treeHotkeyOf } from './widget'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
@@ -184,9 +184,32 @@ const unregister = registerTreeDrawer({
   start,
   stop
 })
+// A one-time tip the first time you open the game's tree (P) with a build in
+// use: how to draw it. Gone for good once shown, or once you've drawn it
+// (treeOverlaySeen, which also clears the card's New and the panel tip).
+// Only the default P: the game lets you rebind it, and then the card and
+// panel are where you find it.
+const TIP_KEY = 'woke-tree-overlay-tip'
+const tipShown = shallowRef(readTip())
+function readTip () { try { return localStorage.getItem(TIP_KEY) === '1' } catch { return true } }
+const tipWanted = computed(() => !tipShown.value && !treeOverlaySeen.value && Boolean(active.details.value))
+watch(tipWanted, (want) => { hostRequest('tree-overlay-tip', want).catch(() => {}) }, { immediate: true })
+function showTip () {
+  if (!tipWanted.value || on.value) return
+  tipShown.value = true
+  try { localStorage.setItem(TIP_KEY, '1') } catch {}
+  const w = active.pobWidget.value
+  const key = w ? treeHotkeyOf(w) : null
+  toast(key
+    ? `Tip: press ${key} to draw your build on the passive tree. Clicking the build's dock icon does it too.`
+    : 'Tip: click the build\'s dock icon to draw your build on the passive tree.', { ms: 8000 })
+}
+
 const events = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
-  if (topic !== 'tree-overlay' || !on.value) return
-  const e = data as { kind: 'move', dx: number, dy: number } | { kind: 'settle' } | { kind: 'hide' }
+  if (topic !== 'tree-overlay') return
+  const e = data as { kind: 'move', dx: number, dy: number } | { kind: 'settle' } | { kind: 'hide' } | { kind: 'tree-key' }
+  if (e.kind === 'tree-key') { showTip(); return }
+  if (!on.value) return
   if (e.kind === 'move') {
     if (view && !busy) { view.ox += e.dx; view.oy += e.dy; draw() }
   } else if (e.kind === 'hide') {

@@ -15,6 +15,8 @@ export type TreeOverlayEvent =
   // asks once its drawing is off the screen, so the capture can't see it).
   | { kind: 'settle' }
   | { kind: 'hide' }
+  // P pressed in game while the tip is wanted (see watchTreeKey).
+  | { kind: 'tree-key' }
 
 const MODIFIERS = new Set<number>([
   UiohookKey.Ctrl, UiohookKey.CtrlRight,
@@ -85,6 +87,23 @@ export class TreeOverlay {
   stop () {
     this.last = null
     this.stopWatching()
+  }
+
+  // The one-time "press the hotkey" tip: tells the renderer when P (the
+  // game's passive tree key) is pressed in game. Only a key listener; on
+  // until the renderer has shown the tip.
+  private tipOn = false
+  watchTreeKey (on: boolean) {
+    if (on === this.tipOn) return
+    this.tipOn = on
+    if (on) uIOhook.on('keydown', this.onTreeKey)
+    else uIOhook.removeListener('keydown', this.onTreeKey)
+  }
+
+  private readonly onTreeKey = (e: UiohookKeyboardEvent) => {
+    if (e.keycode !== UiohookKey.P || e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return
+    if (!this.poeWindow.hasFocus || this.watching) return
+    this.emit({ kind: 'tree-key' })
   }
 
   private startWatching () {

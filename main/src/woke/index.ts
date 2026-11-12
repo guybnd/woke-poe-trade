@@ -110,6 +110,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   handlers['tree-overlay-points'] = async (args) => { treeOverlay.setPoints(args); return null }
   handlers['tree-overlay-fit'] = async (args) => treeOverlay.hasPoints ? treeOverlay.fit(args) : { ok: false, reason: 'no-points' }
   handlers['tree-overlay-stop'] = async () => { treeOverlay.stop(); return null }
+  handlers['tree-overlay-tip'] = async (on) => { treeOverlay.watchTreeKey(on === true); return null }
 
   // The stash reader: off unless the player turned it on (or personal.flag).
   // Off, nothing is registered but these three answers.
