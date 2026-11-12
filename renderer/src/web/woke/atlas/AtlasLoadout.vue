@@ -112,16 +112,29 @@
       </template>
 
       <!-- The tree, read -->
-      <div :class="$style.heading" class="flex items-center">
-        <span>Tree</span>
+      <button type="button" :class="[$style.heading, $style.fold]" class="flex items-center w-focusable" :aria-expanded="!config.totalsFolded"
+        title="What the taken passives add up to" @click="config.totalsFolded = !config.totalsFolded">
+        <i class="fas text-xs" :class="config.totalsFolded ? 'fa-chevron-right' : 'fa-chevron-down'" />
+        <span>Tree totals</span>
         <span v-if="view" class="ml-auto normal-case tracking-normal w-dim w-num">{{ view.total }} points · {{ notableCount }} notables</span>
-      </div>
+      </button>
       <div v-if="!treeUrl" class="w-faint">
         Nothing taken yet. <button type="button" class="w-accent hover:underline" @click="emit('show-tree')">Open the tree</button> and click passives, or paste a link:
       </div>
       <input v-if="editing || !treeUrl" :value="strategy.treeUrl" class="w-field" spellcheck="false" placeholder="pathofexile.com atlas tree link"
         @change="pasteLink(($event.target as HTMLInputElement).value)">
       <WSkeleton v-else-if="!atlasData && !decodeError && !atlasDataError" :rows="3" :value="false" />
+      <template v-else-if="config.totalsFolded" />
+      <!-- What the taken passives add up to, by mechanic (Guy's pick). Hover lights them on the tree. -->
+      <template v-else-if="totals">
+        <WField v-if="totals.length > 1" v-model="totalsQuery" icon="fas fa-search" placeholder="Find a stat" />
+        <div v-for="g in shownTotals" :key="g.mechanic" :class="$style.group">
+          <div class="w-accent text-xs">{{ g.mechanic.replace(/^The /, '') }}</div>
+          <div v-for="r in g.rows" :key="r.text" :class="$style.total" @mouseenter="totalsHover = r.ids" @mouseleave="totalsHover = null">{{ r.text }}</div>
+        </div>
+        <div v-if="!shownTotals.length" class="w-faint text-xs">{{ totalsQuery ? 'No taken passive says that.' : 'Nothing taken yet.' }}</div>
+        <div v-if="view?.unknown" class="w-faint text-xs">{{ view.unknown }} not in the tree data (an old link, or old data)</div>
+      </template>
       <template v-else-if="view">
         <div v-for="g in view.groups" :key="g.mechanic" :class="$style.group">
           <div class="w-accent text-xs flex items-center gap-1"><WIcon :mechanic="g.mechanic.toLowerCase()" fallback="fas fa-circle" />{{ g.mechanic }} <span class="w-faint w-num">{{ g.nodes.length }}</span></div>
@@ -153,9 +166,9 @@
 // The strategy on the right of the Atlas window: what each map takes (Threads,
 // currency), its regexes (kept in the Regex library), notes, and the tree read
 // as notables by mechanic.
-import { computed, nextTick, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
-import { WButton, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { formatChaos } from '../ui/format'
 import { usePriceIndex } from '../market/price-index'
@@ -168,6 +181,8 @@ import type { RegexEntry } from '../regex-library/widget'
 import { decodeTree, diffTrees, overview } from './tree'
 import type { AtlasNode, DecodedTree } from './tree'
 import type { AtlasTreeModel } from './atlas-tree'
+import { atlasTotals, filterTotals } from './totals'
+import { totalsHover } from './totals-hover'
 import { hasOneTypeKeystone, parseCostLines, priceLines, priceThreads, threadCap, treeWarnings } from './loadout'
 import { MAX_THREAD_SLOTS, THREAD_TYPES, dropDraft, regexFolderOf } from './widget'
 import { strategyCode } from './strategy-code'
@@ -215,6 +230,20 @@ const view = computed(() => {
   const start = props.atlasTree?.start
   return overview(start != null ? { ...t, nodes: t.nodes.filter(id => id !== start) } : t, props.atlasData)
 })
+// ---- totals ----
+
+const totalsQuery = shallowRef('')
+const totals = computed(() => {
+  const t = decoded.value?.tree
+  if (!t || !props.atlasTree) return null
+  return atlasTotals(props.atlasTree, t.nodes, Object.fromEntries(t.masteries.map(m => [m.node, m.effect])))
+})
+const shownTotals = computed(() => filterTotals(totals.value ?? [], totalsQuery.value))
+watch(() => props.strategy.id, () => { totalsQuery.value = ''; totalsHover.value = null })
+// A row can go while the mouse is on it (an edit, a search): its rings go too.
+watch(shownTotals, () => { totalsHover.value = null })
+onBeforeUnmount(() => { totalsHover.value = null })
+
 const notableCount = computed(() => view.value?.groups.reduce((n, g) => n + g.nodes.length, 0) ?? 0)
 const picks = computed(() => new Map((decoded.value?.tree?.masteries ?? []).map(m => [m.node, m.effect])))
 function pickOf (id: number): string {
@@ -424,6 +453,10 @@ button.empty:hover { color: var(--w-fg); }
 }
 .code, .mono { font-family: var(--w-num); font-size: var(--w-fs-sm); }
 .code { color: var(--w-dim); }
+.fold { width: 100%; gap: 6px; text-align: left; }
+.fold:hover { color: var(--w-fg); }
+.total { padding: 1px 4px; line-height: 1.35; color: var(--w-dim); border-radius: var(--w-r-sm); }
+.total:hover { background: var(--w-line-soft); color: var(--w-fg); }
 .group {
   padding: 3px 0;
   border-bottom: 1px solid var(--w-line-soft);

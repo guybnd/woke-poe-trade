@@ -262,4 +262,29 @@ describe('atlas totals', () => {
     expect(filterTotals(groups, 'ritual')[0].rows).toHaveLength(1)
     expect(filterTotals(groups, 'nothing')).toEqual([])
   })
+
+  it('adds only amounts: tiers, ranges and counts stay as written, signs stay', () => {
+    const line = (stats: string[]) => ({ ...atlas.nodes[1], stats })
+    const data = {
+      ...atlas,
+      nodes: {
+        ...atlas.nodes,
+        1: line(['Tier 1-15 Maps found have 7% chance to become 1 tier higher', '10% increased chance to contain Memory Tears (Tier 16+)', 'Expeditions in your Maps have +1 Remnants']),
+        2: { ...line(['Tier 1-15 Maps found have 7% chance to become 1 tier higher', '10% increased chance to contain Memory Tears (Tier 16+)', 'Expeditions in your Maps have +1 Remnants']), skill: 2 }
+      }
+    }
+    const rows = atlasTotals(readAtlasTree(data), [100, 1, 2], {})[0].rows.map(r => r.text)
+    expect(rows).toEqual([
+      'Tier 1-15 Maps found have 14% chance to become 1 tier higher',
+      '20% increased chance to contain Memory Tears (Tier 16+)',
+      'Expeditions in your Maps have +2 Remnants'
+    ])
+  })
+
+  it('reads a typed notable with no stat of its own as its picked type', () => {
+    const data = { ...atlas, nodes: { ...atlas.nodes, 3: { ...atlas.nodes[3], stats: [] } } }
+    const model = readAtlasTree(data)
+    expect(atlasTotals(model, [100, 1, 2, 3], { 3: 52289 })[0].rows.map(r => r.text)).toContain('Breach')
+    expect(atlasTotals(model, [100, 1, 2, 3], {})[0].rows.map(r => r.text)).toContain('No type picked')
+  })
 })

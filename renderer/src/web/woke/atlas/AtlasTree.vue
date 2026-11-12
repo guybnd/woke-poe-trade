@@ -6,10 +6,9 @@
       <canvas ref="ring" :class="$style.layer" />
     </div>
   </div>
-  <WPanel v-else title="Atlas tree" size-key="tree" :width="totalsOpen ? '62rem' : '44rem'" height="36rem" max-height="85vh">
+  <WPanel v-else title="Atlas tree" size-key="tree" width="44rem" height="36rem" max-height="85vh">
     <template #actions>
       <button class="w-icon-btn" :class="{ 'w-icon-btn--on': listOpen }" title="Mechanics: light a mechanic's passives" @click="emit('update:listOpen', !listOpen)"><i class="fas fa-list" /></button>
-      <button class="w-icon-btn" :class="{ 'w-icon-btn--on': totalsOpen }" title="Totals: what the taken passives add up to" @click="emit('update:totalsOpen', !totalsOpen)"><i class="fas fa-calculator" /></button>
       <PinButton v-if="pin" :make="pin" title="Pin the tree over the game: clicks go through to the game's atlas" />
       <button class="w-icon-btn" title="Undo (Ctrl + Z)" :disabled="!undoStack.length" @click="undo"><i class="fas fa-undo" /></button>
       <button class="w-icon-btn" title="Redo (Ctrl + Y)" :disabled="!redoStack.length" @click="redo"><i class="fas fa-redo" /></button>
@@ -21,9 +20,8 @@
         <template #actions><WButton size="sm" @click="startOver">Start over</WButton></template>
       </WBanner>
     </template>
-    <template #meta>
-      <span v-if="!dirty && !savingAs" class="w-faint">Click a passive to take the path to it, click a taken one to refund it. Right-click a taken one that needs a type to pick it.</span>
-      <div v-else :class="$style.unsaved">
+    <template v-if="dirty || savingAs" #meta>
+      <div :class="$style.unsaved">
         <template v-if="savingAs">
           <span class="w-dim whitespace-nowrap">Save as</span>
           <input ref="nameField" v-model="newName" class="w-field" :class="$style.name" spellcheck="false" placeholder="New strategy name"
@@ -51,7 +49,6 @@
       </div>
     </template>
 
-    <div :class="$style.wrap">
     <div ref="box" :class="$style.map" tabindex="0" @keydown="keys">
       <canvas ref="base" :class="$style.layer" role="img" aria-label="Atlas passive tree" />
       <canvas ref="ring" :class="$style.layer" :style="{ cursor: panning ? 'grabbing' : hovered ? 'pointer' : 'grab' }"
@@ -75,18 +72,6 @@
         </div>
       </div>
     </div>
-    <!-- Totals (pick S1): the taken passives summed, by mechanic. -->
-    <div v-if="totalsOpen" :class="$style.totals">
-      <WField v-model="totalsQuery" icon="fas fa-search" placeholder="Find a stat" />
-      <div :class="$style.totalsList" class="w-scroll">
-        <template v-for="g in shownTotals" :key="g.mechanic">
-          <div :class="$style.totalsHead" :style="liveLit.includes(g.mechanic) ? { color: litColour(liveLit, g.mechanic) } : undefined">{{ g.mechanic.replace(/^The /, '') }}</div>
-          <div v-for="(r, i) in g.rows" :key="i" :class="$style.total" @mouseenter="rowIds = r.ids" @mouseleave="rowIds = null">{{ r.text }}</div>
-        </template>
-        <div v-if="!shownTotals.length" class="w-faint text-xs pt-2">{{ totalsQuery ? 'No taken passive says that.' : 'Take passives to see what they add up to.' }}</div>
-      </div>
-    </div>
-    </div>
   </WPanel>
 </template>
 
@@ -107,7 +92,7 @@ import { encodeAtlasTree, pathTo, pointsUsed, refundSet } from './atlas-tree'
 import type { AtlasTreeModel } from './atlas-tree'
 import { treeWarnings } from './loadout'
 import { litColour } from './mechanic-colours'
-import { atlasTotals, filterTotals } from './totals'
+import { totalsHover } from './totals-hover'
 import PinButton from '../pins/PinButton.vue'
 import type { Pin } from '../pins/pins'
 import type { ThreadSlot } from './widget'
@@ -119,7 +104,6 @@ const props = defineProps<{
   threads: ThreadSlot[]
   lit: string[]
   listOpen?: boolean
-  totalsOpen?: boolean
   bare?: boolean
   pin?: () => Omit<Pin, 'opacity' | 'spots'>
   // The tree differs from what's saved.
@@ -130,7 +114,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:treeUrl' | 'save-as', text: string): void
   (e: 'update:lit', lit: string[]): void
-  (e: 'update:listOpen' | 'update:totalsOpen', open: boolean): void
+  (e: 'update:listOpen', open: boolean): void
   (e: 'close' | 'save' | 'discard'): void
 }>()
 
@@ -150,14 +134,6 @@ function saveAs () {
   savingAs.value = false
   emit('save-as', name)
 }
-
-// ---- totals ----
-
-const totalsQuery = shallowRef('')
-// The passives behind the total under the mouse.
-const rowIds = shallowRef<number[] | null>(null)
-const totals = computed(() => props.totalsOpen ? atlasTotals(props.model, alloc.value.nodes, alloc.value.variants) : [])
-const shownTotals = computed(() => filterTotals(totals.value, totalsQuery.value))
 
 // ---- mechanics ----
 
@@ -415,7 +391,8 @@ function drawRing () {
   }
   const found = css.getPropertyValue('--w-info').trim()
   for (const n of hits.value) circle(n, found, 3, 2.5)
-  for (const id of rowIds.value ?? []) {
+  // A pinned tree doesn't follow the window's hover.
+  for (const id of (props.bare ? null : totalsHover.value) ?? []) {
     const n = props.model.nodes.get(id)
     if (n) circle(n, css.getPropertyValue('--w-fg').trim(), 4, 2.5)
   }
@@ -466,7 +443,7 @@ watch(box, (el) => {
 })
 
 watch([toSet, sheets, () => alloc.value], schedule)
-watch([hits, preview, liveLit, rowIds], drawRing)
+watch([hits, preview, liveLit, totalsHover], drawRing)
 
 const wm = inject<WidgetManager>('wm')
 watch(() => wm?.active.value, (active) => { if (!active) endPan() })
@@ -605,31 +582,9 @@ function openWeb () {
 </script>
 
 <style module>
-.wrap { display: flex; min-height: 0; }
-.totals {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 18rem;
-  min-width: 0;
-  height: min(560px, 68vh);
-  padding: 8px var(--w-pad);
-  border-left: 1px solid var(--w-line);
-}
-.totalsList { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overflow-wrap: anywhere; margin-top: 4px; }
-.totalsHead {
-  padding: 8px 0 2px;
-  font-size: var(--w-fs-caps);
-  text-transform: var(--w-caps-case);
-  letter-spacing: 0.08em;
-  color: var(--w-accent);
-  font-family: var(--w-caps-face);
-}
-.total { padding: 2px 4px; line-height: 1.35; color: var(--w-dim); border-radius: var(--w-r-sm); }
-.total:hover { background: var(--w-line-soft); color: var(--w-fg); }
 .map {
   position: relative;
   flex: 1;
-  min-width: 0;
   height: min(560px, 68vh);
   overflow: hidden;
   outline: none;

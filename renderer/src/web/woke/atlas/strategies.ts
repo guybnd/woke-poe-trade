@@ -54,8 +54,8 @@ export interface AtlasWidget extends Widget {
   lit?: string[]
   // The mechanic list on the tree folded away.
   mechanicsHidden?: boolean
-  // The Totals column beside the tree.
-  totalsOpen?: boolean
+  // The loadout's Tree totals folded to one line.
+  totalsFolded?: boolean
   // Tree edits not saved yet: strategy id -> the edited tree link. Kept with
   // the config, so closing the overlay loses nothing.
   drafts?: Record<string, string>

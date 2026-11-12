@@ -15,7 +15,10 @@ export interface AtlasTotalGroup {
 // Passives on the paths between wheels.
 export const GENERAL = 'General'
 
-const NUMBER = /[+-]?\d+(?:\.\d+)?/g
+// Only amounts add up: a number before "%" or after "+" ("10%", "+1 Remnants").
+// Tiers, ranges ("Tier 1-15") and counts in the text stay as written.
+const AMOUNT = /(?<=\+)\d+(?:\.\d+)?|\d+(?:\.\d+)?(?=%)/g
+const SLOT = '\u0000'
 
 function round (v: number): string {
   return String(Math.round(v * 10) / 10)
@@ -30,12 +33,16 @@ export function atlasTotals (model: AtlasTreeModel, taken: Iterable<number>, pic
     if (!n || n.kind === 'mastery') continue
     const mechanic = model.mechanicOf.get(id) ?? GENERAL
     const choices = model.variants.get(id)
-    const pick = choices?.find(c => c.effect === picks[id]) ?? choices?.[0]
-    for (const raw of n.stats) {
-      // A notable that asks for a type reads as its stat with the type picked.
-      const line = (pick ? `${raw}: ${pick.text}` : raw).replace(/\s*\n\s*/g, ' ')
-      const values = (line.match(NUMBER) ?? []).map(Number)
-      const template = line.replace(NUMBER, '#')
+    const pick = choices?.find(c => c.effect === picks[id])
+    // A notable that asks for a type reads as its stat with the type picked;
+    // one whose stat is all in the type reads as the type's own lines.
+    const lines = choices && !n.stats.length
+      ? (pick ? pick.text.split(' / ') : ['No type picked'])
+      : n.stats.map(raw => choices ? `${raw}: ${pick ? pick.text : 'no type picked'}` : raw)
+    for (const raw of lines) {
+      const line = raw.replace(/\s*\n\s*/g, ' ')
+      const values = (line.match(AMOUNT) ?? []).map(Number)
+      const template = line.replace(AMOUNT, SLOT)
       const key = `${mechanic}|${template}`
       const sum = sums.get(key)
       if (sum) {
@@ -49,7 +56,7 @@ export function atlasTotals (model: AtlasTreeModel, taken: Iterable<number>, pic
   const groups = new Map<string, AtlasTotal[]>()
   for (const s of sums.values()) {
     let i = 0
-    const text = s.template.replace(/#/g, () => round(s.values[i++] ?? 0))
+    const text = s.template.replace(new RegExp(SLOT, 'g'), () => round(s.values[i++] ?? 0))
     const list = groups.get(s.mechanic)
     if (list) list.push({ text, ids: s.ids })
     else groups.set(s.mechanic, [{ text, ids: s.ids }])
