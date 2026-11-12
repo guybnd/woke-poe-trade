@@ -119,6 +119,8 @@ export class StashReader {
   // The app's Account name setting, used when the site doesn't say.
   fallbackAccount: string | null = null
   account: string | null = null
+  // Quiet reads count from the last try, so a failing one isn't retried at every hideout.
+  private lastQuietTry = 0
 
   constructor (private deps: ReaderDeps) {
     this.limiter = deps.limiter ?? new RateLimiter()
@@ -190,8 +192,10 @@ export class StashReader {
     if (!this.league || this.running) return null
     if (this.status.error?.kind === 'signed-out') return null
     const now = this.deps.now()
-    if (this.status.lastReadAt != null && now - this.status.lastReadAt < AUTO_EVERY_MS) return null
+    const last = Math.max(this.status.lastReadAt ?? 0, this.lastQuietTry)
+    if (now - last < AUTO_EVERY_MS) return null
     if (this.status.error?.retryAt != null && this.status.error.retryAt > now) return null
+    this.lastQuietTry = now
     return this.read('auto')
   }
 

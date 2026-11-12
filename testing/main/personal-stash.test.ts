@@ -220,3 +220,25 @@ describe('StashReader', () => {
     expect(AUTO_TABS).toBeGreaterThan(2)
   })
 })
+
+describe('StashReader quiet reads after a failure', () => {
+  it('does not retry at every hideout', async () => {
+    let clock = 5_000_000
+    let calls = 0
+    const reader = new StashReader({
+      fetch: async () => { calls++; return { status: 500, headers: {}, body: '' } },
+      now: () => clock,
+      sleep: async (ms) => { clock += ms },
+      onStatus: () => {}
+    })
+    reader.account = 'Guy#1234'
+    await reader.setLeague('Mercenaries')
+    await reader.readIfDue()
+    expect(calls).toBe(1)
+    clock += 60_000
+    expect(reader.readIfDue()).toBeNull()
+    clock += 10 * 60_000
+    await reader.readIfDue()
+    expect(calls).toBe(2)
+  })
+})

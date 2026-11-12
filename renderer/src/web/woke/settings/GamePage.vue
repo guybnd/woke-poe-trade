@@ -56,16 +56,21 @@
         <w-field v-model="config.accountName" placeholder="Account name" />
       </w-setting-row>
     </w-setting-section>
+    <StashSignIn v-if="personalOn" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue'
+import { computed, defineAsyncComponent, shallowRef } from 'vue'
 import type { Config } from '@/web/Config'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
 import { WButton, WField, WPathField, WSelect, WSettingRow, WSettingSection, WToggle, agoPhrase } from '../ui'
 import { hostRequest } from '../shared/host'
+import { personalOn } from '../personal'
+
+// Personal only (personal.flag): never loaded otherwise.
+const StashSignIn = defineAsyncComponent(() => import('../net-worth/StashSignIn.vue'))
 
 const props = defineProps<{ config: Config }>()
 

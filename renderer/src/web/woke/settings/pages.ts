@@ -396,6 +396,14 @@ export const PAGES: SettingsPage[] = [
 
 export const PAGE_BY_ID = new Map(PAGES.map(p => [p.id, p]))
 
+// Personal-only pages join at startup (personal.ts), after `after`.
+export function addPage (page: SettingsPage, after?: string) {
+  if (PAGE_BY_ID.has(page.id)) return
+  const at = after ? PAGES.findIndex(p => p.id === after) : -1
+  PAGES.splice(at >= 0 ? at + 1 : PAGES.length, 0, page)
+  PAGE_BY_ID.set(page.id, page)
+}
+
 export function pageForWidgetType (wmType: string): SettingsPage | undefined {
   return PAGES.find(p => p.widgets?.includes(wmType))
 }

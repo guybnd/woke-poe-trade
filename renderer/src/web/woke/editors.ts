@@ -76,6 +76,11 @@ const editors: Record<string, Component> = {
   [WEALTHY_EXILE_TYPE]: WealthyExileEditor
 }
 
+// Personal-only widgets add theirs at startup (personal.ts).
+export function addEditor (wmType: string, editor: Component) {
+  editors[wmType] = editor
+}
+
 export function wokeSettingsFor (wmType: string | undefined): Component | undefined {
   return wmType ? editors[wmType] : undefined
 }

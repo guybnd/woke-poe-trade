@@ -129,6 +129,15 @@ interface ConfigLike {
 const moduleByWidget = new Map<string, ModuleDef>()
 for (const m of MODULES) for (const t of m.widgetTypes) moduleByWidget.set(t, m)
 
+// Personal-only modules (personal.ts) join the list at startup, before the
+// overlay mounts, and only when main says personal.flag is there.
+export function addModule (def: ModuleDef, after?: string) {
+  if (MODULES.some(m => m.id === def.id)) return
+  const at = after ? MODULES.findIndex(m => m.id === after) : -1
+  MODULES.splice(at >= 0 ? at + 1 : MODULES.length, 0, def)
+  for (const t of def.widgetTypes) moduleByWidget.set(t, def)
+}
+
 export function isModuleOn (config: ConfigLike, id: string): boolean {
   return !config.woke?.off.includes(id)
 }
