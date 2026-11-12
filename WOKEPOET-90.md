@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-90
 title: 'Campaign tracker: keep route, gems and run per character'
-status: Grooming
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -15,6 +15,22 @@ history:
     user: Agent
     date: '2026-11-05T10:54:34.535Z'
     comment: Created ticket.
+    id: a-2026-11-05t10-54-34-535z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #367 (b3dccf03): one route per character, switching by itself
+      (Guy's A). It switches after two level-ups of another character while the
+      followed one has been quiet for 20 minutes. Known limits are in the PR.
+    date: '2026-11-12T07:48:44.086Z'
+    completionComment: true
+    id: c-2026-11-12t07-48-44-086z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T07:48:44.086Z'
+needsAction: null
 ---
 Step 8 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Mock first.
 
