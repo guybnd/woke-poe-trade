@@ -23,15 +23,37 @@ describe('minimizeAnchor / restoreAnchor', () => {
       .toEqual({ pos: 'tr', x: 1800 / W * 100, y: 10 })
   })
 
-  it('keeps the edge nearer its side of the screen, however wide the panel is', () => {
-    // Stretched across most of the screen from the left: its middle is past the screen's.
-    const wide = { left: 100, top: 108, right: 1500, bottom: 1000 }
+  it('a panel on one half keeps that side, whatever its anchor', () => {
     for (const pos of ['tl', 'tr', 'cc', 'br']) {
-      expect(minimizeAnchor({ pos, x: 50, y: 50 }, wide, W, H).pinned)
+      expect(minimizeAnchor({ pos, x: 50, y: 50 }, { left: 100, top: 108, right: 900, bottom: 1000 }, W, H).pinned)
         .toEqual({ pos: 'tl', x: 100 / W * 100, y: 10 })
+      expect(minimizeAnchor({ pos, x: 50, y: 50 }, { left: 1000, top: 108, right: 1820, bottom: 1000 }, W, H).pinned)
+        .toEqual({ pos: 'tr', x: 1820 / W * 100, y: 10 })
     }
-    expect(minimizeAnchor(start, { left: 420, top: 108, right: 1820, bottom: 1000 }, W, H).pinned)
-      .toEqual({ pos: 'tr', x: 1820 / W * 100, y: 10 })
+  })
+
+  it('a panel opened on the left and stretched to the right edge stays left', () => {
+    // Atlas strategies with its tree and plan open on a 2560 screen, measured
+    // in the overlay: from 183 px to the screen's right edge.
+    const atlas = { left: 182.9, top: 156.4, right: 2560, bottom: 1200 }
+    expect(minimizeAnchor({ pos: 'tl', x: 10, y: 12 }, atlas, 2560, 1440).pinned)
+      .toEqual({ pos: 'tl', x: 182.9 / 2560 * 100, y: 156.4 / 1440 * 100 })
+    // Stretched across most of the screen from the left: its middle is past the screen's.
+    expect(minimizeAnchor({ pos: 'bl', x: 5, y: 90 }, { left: 100, top: 108, right: 1500, bottom: 1000 }, W, H).pinned)
+      .toEqual({ pos: 'tl', x: 100 / W * 100, y: 10 })
+  })
+
+  it('a panel across the middle keeps the edge it is anchored by', () => {
+    const across = { left: 300, top: 108, right: 1900, bottom: 1000 }
+    expect(minimizeAnchor({ pos: 'tr', x: 99, y: 10 }, across, W, H).pinned)
+      .toEqual({ pos: 'tr', x: 1900 / W * 100, y: 10 })
+    expect(minimizeAnchor({ pos: 'br', x: 99, y: 90 }, across, W, H).pinned)
+      .toEqual({ pos: 'tr', x: 1900 / W * 100, y: 10 })
+    // Centre-anchored: the edge nearer its side of the screen.
+    expect(minimizeAnchor(start, across, W, H).pinned)
+      .toEqual({ pos: 'tr', x: 1900 / W * 100, y: 10 })
+    expect(minimizeAnchor({ pos: 'tc', x: 50, y: 10 }, { left: 20, top: 108, right: 1500, bottom: 1000 }, W, H).pinned)
+      .toEqual({ pos: 'tl', x: 20 / W * 100, y: 10 })
   })
 
   it('remembers a copy of the old anchor', () => {
