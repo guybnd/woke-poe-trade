@@ -150,17 +150,26 @@ const MAX_WAIT_MS = 5_000
 
 export const SIGNED_OUT = 'Signed out of pathofexile.com.'
 
-// The character you last played, from get-characters. null: the reply
-// didn't say.
-export function lastActive (body: string): string | null {
+// Which character to read, from a get-characters reply: the one the site
+// marks as last played; else the game log's name if it is yours; else your
+// highest level one in the league the app is set to, else in any league.
+// null: the reply isn't a character list.
+export function pickCharacter (body: string, hint: string, league: string | null): string | null {
+  let json: unknown
   try {
-    const list = JSON.parse(body) as unknown
-    if (!Array.isArray(list)) return null
-    const hit = (list as Raw[]).find(c => c?.lastActive === true)
-    return hit && typeof hit.name === 'string' ? hit.name : null
+    json = JSON.parse(body)
   } catch {
     return null
   }
+  const raw = Array.isArray(json) ? json : (json as Raw | null)?.characters
+  if (!Array.isArray(raw)) return null
+  const list = (raw as Raw[]).filter(c => c && typeof c.name === 'string')
+  const active = list.find(c => c.lastActive === true)
+  if (active) return active.name as string
+  if (hint && list.some(c => c.name === hint)) return hint
+  const level = (c: Raw) => typeof c.level === 'number' ? c.level : 0
+  const best = (cs: Raw[]) => cs.slice().sort((x, y) => level(y) - level(x))[0]?.name as string | undefined
+  return best(list.filter(c => league != null && c.league === league)) ?? best(list) ?? null
 }
 
 interface Deps {
@@ -168,6 +177,9 @@ interface Deps {
   now: () => number
   sleep?: (ms: number) => Promise<void>
   account: () => string | null
+  // The league the app is set to, to pick a character when the site doesn't say.
+  league?: () => string | null
+  log?: (line: string) => void
   // A redirect, 401 or 403: the login has expired.
   signedOut: () => void
 }
@@ -177,7 +189,7 @@ class Refused extends Error {}
 export class WornReader {
   private limiter = new RateLimiter()
   private gear: (WornGear & { account: string }) | null = null
-  private chars: { account: string, at: number, name: string | null } | null = null
+  private chars: { account: string, hint: string, at: number, name: string | null } | null = null
   private failed: { key: string, at: number, error: string } | null = null
   private running: Promise<WornReply> | null = null
 
@@ -199,14 +211,16 @@ export class WornReader {
     if (this.failed?.key === key && now - this.failed.at < RETRY_MS) return { error: this.failed.error }
     try {
       let chars = this.chars
-      if (!chars || chars.account !== account || now - chars.at > CHARS_MS) {
+      if (!chars || chars.account !== account || chars.hint !== hint || now - chars.at > CHARS_MS) {
         const q = new URLSearchParams({ accountName: account, realm: 'pc' })
         const r = await this.get(`${POE_SITE}/character-window/get-characters?${q.toString()}`)
-        chars = { account, at: this.deps.now(), name: lastActive(r.body) }
+        const name = pickCharacter(r.body, hint, this.deps.league?.() ?? null)
+        if (!name) this.deps.log?.(`warn [worn-items] no character in the get-characters reply: ${r.body.slice(0, 200)}`)
+        chars = { account, hint, at: this.deps.now(), name }
         this.chars = chars
       }
       const character = chars.name ?? hint
-      if (!character) return { error: 'No character yet.' }
+      if (!character) throw new Refused("pathofexile.com didn't list your characters.")
       const g = this.gear
       if (g && g.account === account && g.character === character && this.deps.now() - g.readAt < CACHE_MS) {
         return { character: g.character, readAt: g.readAt, slots: g.slots }

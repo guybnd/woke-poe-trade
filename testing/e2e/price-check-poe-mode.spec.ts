@@ -229,7 +229,7 @@ for (const style of ['poe', 'standard']) {
   })
 }
 
-// Mod details, on by default, lists the mods behind each total once; a one-mod line has none.
+// Mod details, off by default, lists the mods behind each total once; a one-mod line has none.
 // Its toggle sits above the list, so it turns off however long the list grows.
 test('PoE mode: Mod details shows the mods behind totals, once, and turns off', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
@@ -239,6 +239,9 @@ test('PoE mode: Mod details shows the mods behind totals, once, and turns off', 
   await expect(win).toContainText('Energy Shield')
   const toggle = win.locator('[data-mods-toggle]')
   const sources = win.locator('.w-pc-sources')
+  await expect(toggle).toBeVisible()
+  await expect(sources).toHaveCount(0)
+  await toggle.click()
   await expect(sources.first()).toBeVisible()
   // Seraphim's (a hybrid: ES and stun recovery) is behind three lines, listed once.
   await expect(sources.filter({ hasText: 'Seraphim' })).toHaveCount(1)

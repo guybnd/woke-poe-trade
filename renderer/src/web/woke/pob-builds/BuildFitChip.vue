@@ -127,7 +127,7 @@ const swap = computed<Swap | null>(() => {
   // What PoB saved only describes this gear if it's the set it saved on.
   const sets = realSets(d.itemSets ?? [])
   const stats = (sets.length < 2 || set.isActive) ? d.stats ?? null : null
-  const setName = set.title ? `the "${set.title}" set` : 'its gear'
+  const setName = set.title ? `"${set.title}" set` : 'gear'
   return compare(s, set.slots, stats, `Yours: your PoB build's ${setName}, not what you wear in game.${why}`, 'Your PoB set has nothing there.')
 })
 
