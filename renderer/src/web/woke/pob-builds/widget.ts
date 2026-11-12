@@ -91,6 +91,8 @@ export interface PobTreeSpec {
   // Older app versions don't send these.
   nodes?: number[]
   jewels?: PobItem[]
+  // The same jewels with the socket node each sits in.
+  sockets?: Array<{ node: number, item: PobItem }>
   // Mastery node id -> the effect picked on it.
   masteries?: Record<number, number>
 }
@@ -109,6 +111,8 @@ export interface PobItem {
   name: string
   base: string
   sockets: string
+  // A jewel's radius as PoB writes it ("Large", "Variable").
+  radius?: string
   implicits: string[]
   mods: string[]
   // Older app versions don't send the rest.

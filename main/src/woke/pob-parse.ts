@@ -46,6 +46,8 @@ export interface PobTreeSpec {
   nodes: number[]
   // Jewels socketed in this tree.
   jewels: PobItem[]
+  // The same jewels with the socket node each sits in.
+  sockets?: Array<{ node: number, item: PobItem }>
   // Mastery node id -> the effect picked on it.
   masteries?: Record<number, number>
 }
@@ -67,6 +69,8 @@ export interface PobItem {
   base: string
   // As PoB writes it, e.g. "R-G-B B".
   sockets: string
+  // A jewel's radius as PoB writes it ("Large", "Variable"), if it has one.
+  radius?: string
   implicits: string[]
   mods: string[]
   // Same length as mods when any mod is crafted or fractured.
@@ -218,14 +222,19 @@ function parseTrees (xml: string, items: Map<string, PobItem>): PobTreeSpec[] {
     const nodes = (a.nodes ?? '').split(',').filter(Boolean).map(Number).filter(Number.isFinite)
     const empty = nodes.length <= 2
     const jewels: PobItem[] = []
+    const sockets: Array<{ node: number, item: PobItem }> = []
     for (const j of (m[2] ?? '').matchAll(/<Socket\b([^>]*?)\/?>/g)) {
-      const item = items.get(attrs(j[1]).itemId ?? '')
-      if (item) jewels.push(item)
+      const sa = attrs(j[1])
+      const item = items.get(sa.itemId ?? '')
+      if (!item) continue
+      jewels.push(item)
+      const node = num(sa.nodeId)
+      if (node != null) sockets.push({ node, item })
     }
     // masteryEffects="{node,effect},{node,effect}"
     const masteries: Record<number, number> = {}
     for (const p of (a.masteryEffects ?? '').matchAll(/\{(\d+),(\d+)\}/g)) masteries[Number(p[1])] = Number(p[2])
-    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, jewels, masteries, ...(empty ? { divider: true } : {}) })
+    out.push({ title: plainTitle(a.title) || `Tree ${i}`, url, isActive: active === i, nodes, jewels, sockets, masteries, ...(empty ? { divider: true } : {}) })
   }
   // No (or a stale) activeSpec: PoB opens the first tree.
   if (out.length && !out.some(t => t.isActive)) out[0].isActive = true
@@ -286,6 +295,8 @@ export function parseItemText (text: string, ranges?: Map<number, number>): PobI
     const line = lines[i]
     const sel = /^Selected (?:Alt )?Variant(?: \w+)?:\s*(\d+)/.exec(line)
     if (sel) { variants.push(Number(sel[1])); continue }
+    const rad = /^Radius:\s*(.+)$/.exec(line)
+    if (rad) { item.radius = rad[1].trim(); continue }
     const sock = /^Sockets:\s*(.*)$/.exec(line)
     if (sock) { item.sockets = sock[1].trim(); continue }
     const imp = /^Implicits:\s*(\d+)/.exec(line)

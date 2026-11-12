@@ -58,7 +58,7 @@
             </div>
           </template>
           <div v-if="!groups.length" class="w-dim pt-2">Nothing in this tree says that.</div>
-          <div class="w-faint text-xs pt-2">From this tree and its masteries only: no gear, jewels or ascendancy.</div>
+          <div class="w-faint text-xs pt-2">From this tree, its masteries and its jewels: no gear or ascendancy. Timeless and cluster jewels aren't counted yet.</div>
         </div>
       </div>
     </div>
@@ -77,6 +77,7 @@ import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, pass
 import type { TreeNode, View } from './passive-tree'
 import { filterTotals, groupTotals, matchingNodes, treeTotals } from './tree-totals'
 import { drawTree, loadSheets } from './tree-draw'
+import { changedBy, isTimeless, jewelStats, nodesInRadius, socketedJewels } from './tree-jewels'
 import type { Sheets } from './tree-draw'
 import type { PobTreeSpec } from './widget'
 import PinButton from '../pins/PinButton.vue'
@@ -153,8 +154,21 @@ const query = shallowRef('')
 // The nodes behind the total under the mouse.
 const rowIds = shallowRef<number[] | null>(null)
 
-// Picked masteries read as their effect, in totals and tooltips.
-const nodeOf = computed(() => tree.value ? withMasteries(tree.value, shown.value?.masteries) : () => undefined)
+// Jewels in this tree, by socket.
+const jewels = computed(() => socketedJewels(shown.value?.sockets))
+const jewelAt = computed(() => new Map(jewels.value.map(j => [j.node, j])))
+
+// Picked masteries read as their effect, and a socket as its jewel's mods,
+// in totals and tooltips.
+const nodeOf = computed(() => {
+  if (!tree.value) return () => undefined
+  const base = withMasteries(tree.value, shown.value?.masteries)
+  return (id: number) => {
+    const n = base(id)
+    const j = jewelAt.value.get(id)
+    return n && j ? { ...n, stats: jewelStats(j.item) } : n
+  }
+})
 const totals = computed(() => tree.value ? treeTotals(tree.value, toIds.value, nodeOf.value) : [])
 const groups = computed(() => groupTotals(filterTotals(totals.value, query.value)))
 const searching = computed(() => sideOpen.value && query.value.trim().length >= 2)
@@ -213,6 +227,51 @@ function draw () {
     to: toSet.value,
     colours: { keep: colour('--w-accent'), add: colour('--w-up'), remove: colour('--w-down'), off: colour('--w-line-strong'), bg: colour('--w-panel-solid-base') }
   })
+  drawJewels(ctx, t, colour)
+}
+
+// Each jewel in its socket, its ring, and the passives it changes.
+const RARITY_COLOUR: Record<string, string> = { UNIQUE: '#af6025', RELIC: '#82ad6a', RARE: '#e8e070', MAGIC: '#8888ff' }
+function drawJewels (ctx: CanvasRenderingContext2D, t: Map<number, TreeNode>, colour: (name: string) => string) {
+  const v = view.value
+  const px = pxRatio()
+  const X = (x: number) => x * v.zoom + v.ox
+  const Y = (y: number) => y * v.zoom + v.oy
+  for (const j of jewels.value) {
+    const n = t.get(j.node)
+    if (!n) continue
+    if (j.radius != null) {
+      ctx.beginPath()
+      ctx.arc(X(n.x), Y(n.y), j.radius * v.zoom, 0, 2 * Math.PI)
+      ctx.setLineDash([6 * px, 5 * px])
+      ctx.strokeStyle = colour('--w-accent')
+      ctx.globalAlpha = 0.7
+      ctx.lineWidth = 1.5 * px
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+    }
+    if (j.changes) {
+      for (const c of nodesInRadius(t, j)) {
+        if (!toSet.value.has(c.id)) continue
+        ctx.beginPath()
+        ctx.arc(X(c.x), Y(c.y), (NODE_RADIUS[c.kind] ?? 40) * v.zoom + 2 * px, 0, 2 * Math.PI)
+        ctx.strokeStyle = RARITY_COLOUR.UNIQUE
+        ctx.lineWidth = 2 * px
+        ctx.stroke()
+      }
+    }
+    // The jewel itself: a gem shape in its rarity's colour.
+    const r = Math.max(5 * px, (NODE_RADIUS.jewel ?? 54) * 0.55 * v.zoom)
+    ctx.beginPath()
+    ctx.moveTo(X(n.x), Y(n.y) - r)
+    ctx.lineTo(X(n.x) + r, Y(n.y))
+    ctx.lineTo(X(n.x), Y(n.y) + r)
+    ctx.lineTo(X(n.x) - r, Y(n.y))
+    ctx.closePath()
+    ctx.fillStyle = RARITY_COLOUR[j.item.rarity] ?? colour('--w-fg')
+    ctx.fill()
+  }
 }
 
 // The hover ring has its own layer, so hovering never redraws the tree.
@@ -284,7 +343,7 @@ watch(box, (el) => {
 
 // Not when the switch flips: you may be looking at a part of the tree.
 watch([() => shown.value?.title, tree], () => { nextTick(fit) })
-watch([fromSet, toSet, sheets], schedule)
+watch([fromSet, toSet, sheets, jewels], schedule)
 watch(lit, drawRing)
 
 // The overlay can close with no mouse event: leaving the game's focus ends a
@@ -373,12 +432,24 @@ function setHovered (n: TreeNode | null) {
   const was = before?.stats.length && picked !== before && before.stats.join() !== picked?.stats.join()
     ? `Was: ${before.stats.join('; ')}`
     : undefined
+  // A socket with a jewel shows the jewel.
+  const jewel = jewelAt.value.get(n.id)
+  if (jewel) {
+    showTipAt(ring.value, { kind: 'item', item: jewel.item })
+    return
+  }
+  const by = tree.value ? changedBy(tree.value, jewels.value, n) : null
+  const changedNote = by
+    ? isTimeless(by.item)
+      ? `In the ring of ${by.item.name}, which changes this passive. Its new stats aren't shown yet.`
+      : `In the ring of ${by.item.name}, which can change this passive.`
+    : undefined
   showTipAt(ring.value, {
     kind: 'passive',
     name: n.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
     stats: picked?.stats.length ? picked.stats : n.stats,
     frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' ? 'rare' : 'normal',
-    note: [nodeNote(nodeState(n.id, fromSet.value, toSet.value)), was].filter(Boolean).join(' · ') || undefined
+    note: [nodeNote(nodeState(n.id, fromSet.value, toSet.value)), was, changedNote].filter(Boolean).join(' · ') || undefined
   })
 }
 

@@ -453,6 +453,19 @@ Implicits: 0
     </PathOfBuilding>`)
     expect(d.trees[0].jewels.map(j => j.name)).toEqual(["Watcher's Eye"])
   })
+
+  it('knows the socket each jewel sits in, and the radius of a jewel', () => {
+    const d = parseBuild(`<PathOfBuilding><Build level="95"></Build>
+      <Tree activeSpec="1"><Spec title="A" nodes="1,2,3"><Sockets><Socket nodeId="26725" itemId="7"/></Sockets></Spec></Tree>
+      <Items><Item id="7">Rarity: UNIQUE
+Glorious Vanity
+Timeless Jewel
+Radius: Large
+Implicits: 0
+Bathed in the blood of 1234 sacrificed in the name of Doryani</Item></Items>
+    </PathOfBuilding>`)
+    expect(d.trees[0].sockets).toEqual([{ node: 26725, item: expect.objectContaining({ name: 'Glorious Vanity', radius: 'Large' }) }])
+  })
 })
 
 describe('where a gem comes from, for a gem tooltip', () => {
