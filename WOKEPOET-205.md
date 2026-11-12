@@ -17,7 +17,25 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-11T07:30:12.184Z'
+    comment: Created ticket.
+    id: a-2026-11-11t07-30-12-184z
+  - type: activity
+    user: Agent
+    date: '2026-11-11T07:30:12.184Z'
     comment: Created as subtask of WOKEPOET-194.
+    id: a-2026-11-11t07-30-12-184z
+  - type: comment
+    user: Agent
+    comment: >-
+      Mocks up, 2026-11-12: https://claude.ai/artifact/LjV41JaacDXq9eFeQtrtTH.
+      Three questions: (1) a socketed jewel (A: art + tooltip, recommended; B:
+      plus a jewel list), (2) radius and Timeless jewels (A: ring + changed
+      nodes marked, recommended; B: ring only), (3) cluster jewels (A: draw the
+      subtree; B: list the notables). Picks save in the page's db, at
+      picks/current.
+    date: '2026-11-12T06:41:39.427Z'
+    selfAttested: true
+    id: c-2026-11-12t06-41-39-427z
 ---
 > TL;DR: Guy (2026-11-11): support and render every kind of jewel in the passive tree view, with their effects. Bigger work, later; mocks first.
 
