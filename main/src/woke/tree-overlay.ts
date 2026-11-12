@@ -7,6 +7,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { fitTree, litProbes, MIN_SCORE, readScreen } from './tree-fit'
 import type { TreeFit, TreePoints } from './tree-fit'
 import { perfRecord } from './perf'
+import { TreeDrag } from './tree-drag'
 
 export type TreeOverlayEvent =
   | { kind: 'move', dx: number, dy: number }
@@ -34,6 +35,7 @@ export class TreeOverlay {
   private settleTimer: ReturnType<typeof setTimeout> | undefined
   private lastMove = 0
   private pending = { dx: 0, dy: 0 }
+  private readonly drag = new TreeDrag()
 
   constructor (
     private readonly poeWindow: GameWindow,
@@ -66,6 +68,7 @@ export class TreeOverlay {
       return { ok: false as const, reason: 'no-tree', ms: Math.round(t2 - t0) }
     }
     this.last = fit
+    this.drag.fitted(fit, width, height)
     const lit = litProbes(shot, width, height, fit, args.probes.map(p => Float32Array.from(p)))
     this.startWatching()
     return {
@@ -112,6 +115,7 @@ export class TreeOverlay {
     this.down = { x: e.x, y: e.y }
     this.moved = false
     this.pending = { dx: 0, dy: 0 }
+    this.drag.start()
   }
 
   private readonly onMove = (e: UiohookMouseEvent) => {
@@ -120,8 +124,10 @@ export class TreeOverlay {
     const dy = e.y - this.down.y
     if (!this.moved && Math.abs(dx) + Math.abs(dy) < 3) return
     this.moved = true
-    this.pending.dx += dx
-    this.pending.dy += dy
+    // Stops at the tree's edges, where the game's tree stops too.
+    const step = this.drag.move(dx, dy)
+    this.pending.dx += step.dx
+    this.pending.dy += step.dy
     this.down = { x: e.x, y: e.y }
     // About one message per frame is plenty.
     const now = Date.now()
