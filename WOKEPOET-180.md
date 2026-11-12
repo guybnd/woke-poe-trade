@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-180
 title: 'Housekeeping from the review: branches, npm updates, nosniff, lint warnings'
-status: Grooming
+status: Done
 priority: Low
 effort: S
 assignee: unassigned
@@ -33,6 +33,22 @@ history:
     date: '2026-11-12T05:42:07.558Z'
     selfAttested: true
     id: c-2026-11-12t05-42-07-558z
+  - type: comment
+    user: Agent
+    comment: >-
+      Done: Guy approved and ran the merged-branch deletes from his PC, and
+      auto-delete on merge is on. Merged in #357: npm Dependabot, nosniff on
+      uploads, and the lint warnings. Aligning the TypeScript versions and
+      logging the silent catches are small leftovers, not tracked separately.
+    date: '2026-11-12T07:54:26.827Z'
+    completionComment: true
+    id: c-2026-11-12t07-54-26-827z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T07:54:26.827Z'
+needsAction: null
 ---
 Review finding C4.
 - 149 branches on GitHub; delete the merged ones (needs Guy's OK, deletion can't be undone easily). 60+ `woke-*` clone folders in `E:\Git`: list which are safe to remove, Guy deletes.
