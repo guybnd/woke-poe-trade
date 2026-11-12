@@ -3,7 +3,7 @@
        WOKEPOET-105): search it on trade by name where the text allows, and
        copy what the game copied. -->
   <div class="flex gap-2 flex-wrap" style="margin: 0 1rem;">
-    <WButton v-if="query && league" size="sm" variant="primary" icon="fas fa-external-link-alt" @click="search">Search on trade</WButton>
+    <WButton v-if="query && league && !unsupported" size="sm" variant="primary" icon="fas fa-external-link-alt" @click="search">Search on trade</WButton>
     <WButton size="sm" :icon="copied ? 'fas fa-check' : 'far fa-copy'" @click="copy(rawText)">{{ copied ? 'Copied' : 'Copy text' }}</WButton>
   </div>
 </template>
@@ -17,6 +17,8 @@ import { newItemQuery, newItemTradeUrl } from './query'
 const props = defineProps<{
   rawText: string
   league: string | null
+  // A known item price check doesn't price (sentinels): no search either.
+  unsupported?: boolean
 }>()
 
 // Read from English text only; other languages name the lines differently.

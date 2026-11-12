@@ -47,7 +47,7 @@
             <p>{{ t(item.error.message) }}</p>
           </ui-error-box>
           <!-- woke: a way on from an item that can't be read -->
-          <unreadable-item :raw-text="item.error.rawText" :league="leagues.selectedId.value ?? null" />
+          <unreadable-item :raw-text="item.error.rawText" :league="leagues.selectedId.value ?? null" :unsupported="!!item.error.unsupported" />
           <pre class="bg-gray-900 rounded m-4 overflow-x-hidden p-2">{{ item.error.rawText }}</pre>
         </template>
         <template v-else-if="item?.isOk()">
