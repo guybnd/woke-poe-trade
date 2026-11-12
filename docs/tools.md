@@ -6,9 +6,9 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 
 ### Finding a tool
 
-- Press `Shift + Space` in game to open the overlay. The rail on the left edge holds every tool that's on.
+- Press `Shift + Space` in game to open the overlay. The rail on the left edge holds your pinned tools and search; the launcher on it lists every tool. You can drag the rail to another edge.
 - Many tools also sit as an icon in the icon row while you play. Rest the mouse on an icon to see its card, and click it to open the full window.
-- Settings is on the rail too. Its pages follow the list below, and **All modules** switches tools on and off.
+- Settings is on the rail too. Each tool's settings are on a page with its name (some pages cover a few related tools), and **All modules** switches tools on and off.
 - A tool that's off doesn't load, doesn't register hotkeys and doesn't poll anything.
 
 ### Every tool
@@ -48,7 +48,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 
 ### What tools need
 
-- **Client.txt:** tools that follow your zones (campaign, run timer, farming, death recap, drop counter) read the game's log file. The setup window finds it; change it under Settings, **Game & league**.
+- **Client.txt:** tools that follow your zones or chat read the game's log file: campaign, run timer, farming, drop counter, stacked decks, boss runs, death recap, essence scan, loot filter editor, league mechanics and trades. The setup window finds it; change it under Settings, **Game & league**.
 - **Screen reading:** map scan, essence scan and death recap read the game screen. The installer ships everything they need.
-- **Hotkeys:** each tool's keys are on its own Settings page. Most have none until you set one, so nothing clashes with your game keys.
+- **Hotkeys:** each tool's keys are on its Settings page. A few tools start with an Alt key (map mods, map scan, essence scan, loot filter) and search uses `Ctrl + Space`; most others have none until you set one.
 - **Prices** come from poe.ninja and the official trade site for the league picked under **Game & league**.

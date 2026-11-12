@@ -4,7 +4,7 @@ title: FAQ
 
 - **Where can I change settings, league?**
 
-  Press `Shift + Space` in game to open the overlay, then open Settings from the rail on the left edge. The league is under **Game & league**. Every tool has its own page, and **All modules** switches tools on and off. See [Tools](/tools).
+  Press `Shift + Space` in game to open the overlay, then open Settings from the rail on the left edge. The league is under **Game & league**. Each tool's settings are on a page with its name, and **All modules** switches tools on and off. See [Tools](/tools).
 
 - **Where can I find the logs?**
 
@@ -28,7 +28,7 @@ title: FAQ
 
 - **Will my language be supported?**
 
-  The game can be in English, Russian, Korean or Traditional Chinese for price check. The price check and settings follow your game's language; the newer tools are in English only for now.
+  Price check works with the game in English, Russian, Korean or Traditional Chinese, and follows your game's language. Settings and the newer tools are in English only for now.
 
 - **I downloaded a zip with a bunch of files, but no .exe inside?**
 
