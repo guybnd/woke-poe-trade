@@ -75,8 +75,10 @@ export interface Valuation {
   unpricedLines: ValuedLine[]
   // Items you ignore: left out of every sum, listed to un-ignore.
   ignoredLines: ValuedLine[]
-  // Everything you ignore, held now or not.
+  // Everything you ignore, held now or not, and your prices: an item gone
+  // since the last read is still worth what you said.
   ignoredKeys?: string[]
+  ownPrices?: Record<string, number>
 }
 
 // Your prices and ignored items for one league, by itemKey.
@@ -119,10 +121,11 @@ export function gemVariant (item: StashItemLike): string {
 }
 
 export function itemKey (item: StashItemLike): string {
-  // Uniques and rares by name and base (each rare is its own thing).
+  // Uniques and rares by name and base (each rare is its own thing). Magic and
+  // rare items are marked, so an unidentified rare map is never a normal one.
   const named = (item.frame === 3 || item.frame === 2) && item.name
   const name = named ? `${item.name} ${item.typeLine}` : item.typeLine
-  const parts = [name]
+  const parts = [item.frame === 1 ? `M:${name}` : item.frame === 2 ? `R:${name}` : name]
   if (item.frame === 4) parts.push(`L${item.gemLevel ?? 1}`, `Q${item.quality ?? 0}`, item.corrupted ? 'C' : '')
   if (item.mapTier) parts.push(`T${item.mapTier}`)
   if (item.frame === 3 && (item.links ?? 0) >= 5) parts.push(`${item.links}L`)
@@ -188,18 +191,22 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
     chaos += line.chaos
   }
   const sorted = (m: Map<string, ValuedLine>) => [...m.values()].sort((a, b) => b.chaos - a.chaos || a.name.localeCompare(b.name))
-  return { chaos, byCategory, lines: sorted(lines), unpriced, unpricedLines: sorted(unpricedLines), ignoredLines: sorted(ignoredLines), ignoredKeys: [...ignored] }
+  return { chaos, byCategory, lines: sorted(lines), unpriced, unpricedLines: sorted(unpricedLines), ignoredLines: sorted(ignoredLines), ignoredKeys: [...ignored], ownPrices: { ...prefs.prices } }
 }
 
 // What a read held, small enough to keep: count and unit price per thing.
 export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number }>
 
-// Unpriced and ignored items too (worth 0 here), so giving one a price or
-// un-ignoring it later isn't booked as new.
+// Marks a baseline that holds unpriced and ignored items too (see diffStash).
+export const BASELINE_V2 = '\u0000v2'
+
+// Unpriced and ignored items too, so giving one a price or un-ignoring it later
+// isn't booked as new.
 export function baselineOf (v: Valuation): Baseline {
-  const out: Baseline = {}
+  const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 } }
   for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
-    out[l.key] = { name: l.name, icon: l.icon, count: l.count, unitChaos: l.state ? 0 : l.unitChaos }
+    const had = out[l.key]
+    out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos) }
   }
   return out
 }
@@ -221,15 +228,19 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
   const removed: DiffLine[] = []
   const ignored = new Set([...(after.ignoredKeys ?? []), ...(after.ignoredLines ?? []).map(l => l.key)])
   const now = new Map([...(after.unpricedLines ?? []), ...after.lines].map(l => [l.key, l]))
+  // A baseline from before your prices lacks unpriced items: one you priced
+  // since isn't new.
+  const old = !before[BASELINE_V2]
   for (const l of after.lines) {
+    if (old && l.mine && before[l.key] == null) continue
     const had = before[l.key]?.count ?? 0
     if (l.count > had && l.unitChaos > 0) added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
   }
   for (const [key, b] of Object.entries(before)) {
-    if (ignored.has(key)) continue
+    if (key === BASELINE_V2 || ignored.has(key)) continue
     const left = now.get(key)
     const has = left?.count ?? 0
-    const unit = left ? left.unitChaos : b.unitChaos
+    const unit = left ? left.unitChaos : after.ownPrices?.[key] ?? b.unitChaos
     if (has < b.count && unit > 0) removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
   }
   const sum = (xs: DiffLine[]) => xs.reduce((s, x) => s + x.chaos, 0)

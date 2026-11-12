@@ -4,6 +4,7 @@
 import { computed, shallowRef, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
+import { toast } from '../ui/layer'
 import { ninjaPriceOf } from './prices'
 import {
   addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, perHourToday, recordRead, sinceYesterday, tabSetOf, valueStash
@@ -148,13 +149,32 @@ function cleanPrefs (p: PricePrefs | null): PricePrefs {
 
 export const pricePrefs = computed(() => prefs.value)
 
+// A failed read is tried again (before the next save or read).
+async function retryPrefs (id: string) {
+  if (prefsFor === id || loadedFor !== id) return
+  const own = await hostRequest<PricePrefs | null>('doc-get', { collection: COLLECTION, key: prefsKey(id) }).catch(() => undefined)
+  if (own === undefined || loadedFor !== id) return
+  prefs.value = cleanPrefs(own)
+  prefsFor = id
+}
+
 // false: not loaded (yet), nothing changed.
 function savePrefs (next: PricePrefs): boolean {
   const id = prefsFor
-  if (!id || id !== loadedFor) return false
+  if (!id || id !== loadedFor) {
+    if (loadedFor) { const l = loadedFor; queue(() => retryPrefs(l)) }
+    return false
+  }
+  const before = prefs.value
   prefs.value = next
   queue(async () => {
-    await hostRequest('doc-put', { collection: COLLECTION, key: prefsKey(id), value: next })
+    try {
+      await hostRequest('doc-put', { collection: COLLECTION, key: prefsKey(id), value: next })
+    } catch {
+      // Not saved: put it back, unless something else changed it since.
+      if (prefs.value === next && prefsFor === id) prefs.value = before
+      toast("Couldn't save that. Try again")
+    }
   })
   return true
 }
@@ -185,6 +205,7 @@ export function onStatus (s: ReaderStatus) {
   const readAt = s.lastReadAt
   queue(async () => {
     await loadLeague(id)
+    await retryPrefs(id)
     if (!pricesReady.value) ninja.queuePricesFetch()
     await countRead(id, readAt)
   })

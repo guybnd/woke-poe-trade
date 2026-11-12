@@ -23,9 +23,9 @@
         <td v-if="editing === l.key" :class="$style.editCell">
           <span :class="$style.edit">
             <input :ref="focusEdit" v-model="draft" type="number" min="0" step="any" :class="$style.editInput" :aria-label="`Your price for one ${l.name}`"
-              @keydown.enter.prevent="save(l)" @keydown.esc.prevent="editing = null" @blur="editing = null">
+              @keydown.enter.prevent="save(l)" @keydown.esc.prevent="editing = null" @blur="onBlur">
             <button v-if="divine" type="button" :class="$style.unitBtn" :title="`In ${draftUnit === 'c' ? 'chaos' : 'divines'}. Click for ${draftUnit === 'c' ? 'divines' : 'chaos'}`"
-              @mousedown.prevent @click="flipDraft"><Coin :chaos="draftUnit === 'c'" /></button>
+              @mousedown.prevent @click="flipDraft" @blur="onBlur"><Coin :chaos="draftUnit === 'c'" /></button>
           </span>
         </td>
         <td v-else class="w-num" :class="l.mine ? '' : 'w-dim'" :title="unitTitle(l)">
@@ -138,8 +138,13 @@ const sorted = computed(() => {
     return (x < y ? -1 : x > y ? 1 : 0) * dir
   })
 })
-const shown = computed(() => sorted.value.slice(0, limit.value))
-const more = computed(() => Math.max(0, props.lines.length - limit.value))
+// Unpriced and ignored rows (asked for in the footer) always show, under the rest.
+const shown = computed(() => {
+  const all = sorted.value
+  const priced = all.filter(l => !l.state)
+  return [...priced.slice(0, limit.value), ...all.filter(l => l.state)]
+})
+const more = computed(() => Math.max(0, props.lines.filter(l => !l.state).length - limit.value))
 const top = computed(() => Math.max(1, ...props.lines.filter(l => !l.state).map(l => l.chaos)))
 
 const div = (chaos: number) => {
@@ -154,6 +159,8 @@ const tone = (c: number | null | undefined) => c == null || Math.abs(c) < 0.0005
 
 function colourOf (l: ValuedLine) {
   switch (l.frame) {
+    case 1: return 'var(--w-r-magic)'
+    case 2: return 'var(--w-r-rare)'
     case 3: return 'var(--w-r-unique)'
     case 4: return 'var(--w-r-gem)'
     case 5: return 'var(--w-r-currency)'
@@ -170,23 +177,44 @@ function tipOf (l: ValuedLine): ItemTipRef {
 const editing = shallowRef<string | null>(null)
 const draft = shallowRef<string | number>('')
 const draftUnit = shallowRef<'d' | 'c'>('d')
-const asText = (n: number) => String(Math.round(n * 100) / 100)
+// What the input opened with: Enter on it unchanged keeps the price as it is.
+let opened = ''
+let openedChaos = 0
+// Enough digits that a small price survives the trip (3c is 0.015 div at 200).
+const asText = (n: number, unit: 'd' | 'c') => String(Number(n.toPrecision(unit === 'd' ? 4 : 6)))
 
 function startEdit (l: ValuedLine) {
-  draftUnit.value = props.divine ? 'd' : 'c'
+  // In the Each column's unit.
+  draftUnit.value = inChaos('unit') ? 'c' : 'd'
   const now = l.state === 'unpriced' ? 0 : l.unitChaos
-  draft.value = now > 0 ? asText(draftUnit.value === 'd' && props.divine ? now / props.divine : now) : ''
+  openedChaos = now
+  draft.value = opened = now > 0 ? asText(draftUnit.value === 'd' && props.divine ? now / props.divine : now, draftUnit.value) : ''
+  focusPending = true
   editing.value = l.key
 }
-// The input gets focus and its text selected as it appears.
+// The input gets focus and its text selected once, as it appears (a function
+// ref runs on every render).
+let focusPending = false
 function focusEdit (el: unknown) {
-  if (el instanceof HTMLInputElement) nextTick(() => { el.focus(); el.select() })
+  if (!(el instanceof HTMLInputElement) || !focusPending) return
+  focusPending = false
+  nextTick(() => { el.focus(); el.select() })
+}
+// Leaving the editor cancels it; moving between its input and unit button doesn't.
+function onBlur (e: FocusEvent) {
+  const to = e.relatedTarget as Node | null
+  const box = (e.currentTarget as HTMLElement).closest('td')
+  if (to && box?.contains(to)) return
+  editing.value = null
 }
 function flipDraft () {
   const n = Number(draft.value)
   const d = props.divine
   const next = draftUnit.value === 'd' ? 'c' : 'd'
-  if (d && String(draft.value).trim() !== '' && Number.isFinite(n)) draft.value = asText(next === 'c' ? n * d : n / d)
+  // Untouched: from the price itself, so 14c doesn't come back as 14.0033.
+  const untouched = String(draft.value).trim() === opened && openedChaos > 0
+  if (d && untouched) draft.value = opened = asText(next === 'c' ? openedChaos : openedChaos / d, next)
+  else if (d && String(draft.value).trim() !== '' && Number.isFinite(n)) draft.value = asText(next === 'c' ? n * d : n / d, next)
   draftUnit.value = next
 }
 function save (l: ValuedLine) {
@@ -194,6 +222,7 @@ function save (l: ValuedLine) {
   const n = Number(text)
   editing.value = null
   if (text === '' || !Number.isFinite(n) || n < 0) return
+  if (text === opened && !l.state) return
   emit('price', l.key, draftUnit.value === 'd' && props.divine ? n * props.divine : n)
 }
 // The hover on Each: whose price it is.

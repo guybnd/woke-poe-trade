@@ -81,7 +81,7 @@ describe('your prices and ignored items', () => {
   it('gives an unpriced rare a price, by its own name', () => {
     const before = valueStash(tabs, priceOf)
     expect(before.unpriced).toBe(1)
-    expect(before.unpricedLines.map(l => [l.key, l.name, l.state, l.chaos])).toEqual([['Doom Crown Hubris Circlet', 'Doom Crown, Hubris Circlet', 'unpriced', 0]])
+    expect(before.unpricedLines.map(l => [l.key, l.name, l.state, l.chaos])).toEqual([['R:Doom Crown Hubris Circlet', 'Doom Crown, Hubris Circlet', 'unpriced', 0]])
     const v = valueStash(tabs, priceOf, { prices: { [itemKey(rare)]: 300 }, ignored: [] })
     expect(v.unpriced).toBe(0)
     expect(v.unpricedLines).toEqual([])
@@ -100,7 +100,7 @@ describe('your prices and ignored items', () => {
     expect(v.chaos).toBe(20)
     expect(v.lines.map(l => l.key)).toEqual(['Sacrifice at Dawn'])
     expect(v.unpriced).toBe(0)
-    expect(v.ignoredLines.map(l => [l.key, l.count, l.state])).toEqual([['Divine Orb', 3, 'ignored'], ['Doom Crown Hubris Circlet', 1, 'ignored']])
+    expect(v.ignoredLines.map(l => [l.key, l.count, l.state])).toEqual([['Divine Orb', 3, 'ignored'], ['R:Doom Crown Hubris Circlet', 1, 'ignored']])
     expect(valueByTab(tabs, priceOf, prefs).map(t => t.chaos)).toEqual([20, 0])
     expect(valueByTab(tabs, priceOf, { prices: { 'Divine Orb': 100 }, ignored: [] }).map(t => t.chaos)).toEqual([220, 100])
   })
@@ -119,6 +119,34 @@ describe('your prices and ignored items', () => {
     const before = baselineOf(valueStash(tabs, priceOf))
     const d = diffStash(before, valueStash([{ id: 't1', name: 'A', items: [item('Sacrifice at Dawn', 10)] }], priceOf, { prices: {}, ignored: ['Divine Orb'] }), 1)
     expect(d.removed.map(l => l.key)).toEqual([])
+  })
+
+  it('an unidentified rare map is not a normal one: no gain every read', () => {
+    const map = (frame: number, n: number) => item('Strand Map', n, { frame, mapTier: 16 })
+    const priceMap: PriceOf = (i) => i.typeLine === 'Strand Map' && i.frame === 0 ? { chaos: 5, category: 'other' } : null
+    const read = valueStash([{ name: 'M', items: [map(0, 20), map(2, 5)] }], priceMap)
+    expect(read.lines.map(l => [l.key, l.count])).toEqual([['Strand Map|T16', 20]])
+    expect(read.unpricedLines.map(l => [l.key, l.count])).toEqual([['R:Strand Map|T16', 5]])
+    const d = diffStash(baselineOf(read), read, 1)
+    expect([d.added, d.removed]).toEqual([[], []])
+  })
+
+  it('a baseline from before your prices: pricing a rare is no gain', () => {
+    const old = { 'Divine Orb': { name: 'Divine Orb', icon: '', count: 3, unitChaos: 200 }, 'Sacrifice at Dawn': { name: 'Sacrifice at Dawn', icon: '', count: 10, unitChaos: 2 } }
+    const d = diffStash(old, valueStash(tabs, priceOf, { prices: { [itemKey(rare)]: 300 }, ignored: [] }), 1)
+    expect([d.added, d.removed]).toEqual([[], []])
+  })
+
+  it('spending what was ignored at the last read is still a loss', () => {
+    const base = baselineOf(valueStash(tabs, priceOf, { prices: {}, ignored: ['Divine Orb'] }))
+    const d = diffStash(base, valueStash([{ id: 't1', name: 'A', items: [item('Sacrifice at Dawn', 10), rare] }], priceOf), 1)
+    expect(d.removed.map(l => [l.key, l.count, l.chaos])).toEqual([['Divine Orb', 3, 600]])
+  })
+
+  it('selling a rare you priced since the last read is a loss at your price', () => {
+    const base = baselineOf(valueStash(tabs, priceOf))
+    const d = diffStash(base, valueStash([{ id: 't1', name: 'A', items: [item('Divine Orb', 3), item('Sacrifice at Dawn', 10)] }], priceOf, { prices: { [itemKey(rare)]: 300 }, ignored: [] }), 1)
+    expect(d.removed.map(l => [l.key, l.chaos])).toEqual([[itemKey(rare), 300]])
   })
 
   it('an unpriced item that comes or goes is worth nothing', () => {
