@@ -51,24 +51,9 @@ function cellClass (c: HeaderCell) {
   return { [$style.hit]: Boolean(c.filter), [$style.sel]: c.filter != null && !c.filter.disabled }
 }
 
-const NAMES: Record<string, string> = {
-  dps: 'Total DPS',
-  phys: 'Physical DPS',
-  ele: 'Elemental DPS',
-  chaos: 'the chaos damage mod',
-  aps: 'Attacks per Second',
-  crit: 'Critical Strike Chance',
-  armour: 'Armour',
-  evasion: 'Evasion Rating',
-  es: 'Energy Shield',
-  ward: 'Ward',
-  block: 'Block',
-  base: 'Base Percentile'
-}
-
 function cellTitle (c: HeaderCell) {
-  const name = NAMES[c.key] ?? c.label
-  if (!c.filter) return name
+  const name = c.name ?? c.label
+  if (!c.filter) return `${name}: nothing on this item can change it`
   const bar = (c.fill == null) ? ' Grey bar: nothing on this item can roll it.' : ' Bar: how close its rolls came to their max.'
   return (c.filter.disabled
     ? `Click to search ${name}. Searches only when you press Search.`

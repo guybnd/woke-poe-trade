@@ -175,6 +175,7 @@ export default defineComponent({
       ? poeKit.value.buildStatHeader(props.item, props.stats)
       : null)
     const headerOwned = computed(() => poeKit.value?.headerFilters(statHeader.value) ?? new Set<StatFilter>())
+    const headerPicks = computed(() => poeKit.value?.headerCellFilters(statHeader.value) ?? new Set<StatFilter>())
     const headerPickOrder = (s: FilterOrGroup) => (!s.group && headerOwned.value.has(s)) ? poeKit.value!.pickOrder(s) : 0
 
     // A filter the price check keeps out of the way. The box that ticks every row skips these.
@@ -185,7 +186,7 @@ export default defineComponent({
     }
     // The header shows every DPS part, so a part's row is never hidden once picked there.
     function isHiddenRow (s: FilterOrGroup): boolean {
-      if (!s.group && headerOwned.value.has(s)) return false
+      if (!s.group && (headerOwned.value.has(s) || (!s.disabled && headerPicks.value.has(s)))) return false
       return isHiddenFilter(s)
     }
     const hiddenCount = computed(() => props.stats.filter(isHiddenRow).length)
@@ -209,7 +210,8 @@ export default defineComponent({
         return { filter, i, section }
       })
       if (!poeMode.value) return rows
-      // The header draws its unpicked numbers itself; picked ones follow it in the order they were clicked.
+      // The header draws its unpicked numbers itself; picked ones follow it, those picked
+      // by default first, then the clicked ones in the order they were clicked.
       return rows
         .filter(r => r.filter.group || !(r.filter.disabled && headerOwned.value.has(r.filter)))
         .sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section] ||

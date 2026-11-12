@@ -117,6 +117,8 @@ describe('buildStatHeader', () => {
     const m = buildStatHeader(item, stats)!
     expect(prop('item.total_dps')).toBeUndefined()
     expect(m.bigs[0].filter).toBe(prop('item.physical_dps'))
+    // Its hover names what it really searches.
+    expect(m.bigs[0].name).toBe('Physical DPS')
     expect(m.legend!.map(c => c.key)).toEqual(['phys'])
     expect(m.legend![0].fill).not.toBeNull()
   })

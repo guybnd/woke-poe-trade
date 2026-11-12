@@ -18,6 +18,8 @@ export const HEADER_IDS = new Set([
 export interface HeaderCell {
   key: string
   label: string
+  /** What clicking searches, for the hover text (set by finish). */
+  name?: string
   text: string
   /** 0..1 roll bar fill; null draws a grey full bar (nothing can roll it). */
   fill: number | null
@@ -114,7 +116,7 @@ export function buildStatHeader (item: ParsedItem, stats: readonly FilterOrGroup
     const split = (['phys', 'fire', 'cold', 'lightning', 'ele', 'chaos'] as const)
       .map(key => ({ key, share: s[key], color: COLORS[key] }))
       .filter(x => x.share > 0)
-    return { kind: 'weapon', bigs, chips, split, legend }
+    return finish({ kind: 'weapon', bigs, chips, split, legend })
   }
 
   if (ARMOUR.has(cat)) {
@@ -137,21 +139,54 @@ export function buildStatHeader (item: ParsedItem, stats: readonly FilterOrGroup
     // Base percentile is itself a 0-100 roll.
     if (base?.roll) chips.push({ key: 'base', label: 'base', text: `${fixed(base.roll.value, 0)}%`, fill: rollFill({ value: base.roll.value, min: 0, max: 100 }), color: COLORS.plain, filter: base })
     if (!bigs.length && !chips.length) return null
-    return { kind: 'armour', bigs, chips }
+    return finish({ kind: 'armour', bigs, chips })
   }
 
   return null
 }
 
-/** The filters the header draws, so FiltersBlock can leave their unpicked lines out. */
-export function headerFilters (model: HeaderModel | null): Set<StatFilter> {
+const FILTER_NAMES: Record<string, string> = {
+  'item.total_dps': 'Total DPS',
+  'item.physical_dps': 'Physical DPS',
+  'item.elemental_dps': 'Elemental DPS',
+  'item.aps': 'Attacks per Second',
+  'item.crit': 'Critical Strike Chance',
+  'item.armour': 'Armour',
+  'item.evasion_rating': 'Evasion Rating',
+  'item.energy_shield': 'Energy Shield',
+  'item.ward': 'Ward',
+  'item.block': 'Block',
+  'item.base_percentile': 'Base Percentile'
+}
+
+/**
+ * Names each cell by the filter it really picks (the big DPS number of a one-type
+ * weapon picks that type's filter), and makes a roll that can't vary on this item
+ * (a unique's fixed line, no min to search) not clickable.
+ */
+function finish (model: HeaderModel): HeaderModel {
+  for (const c of [...model.bigs, ...model.chips, ...(model.legend ?? [])]) {
+    const f = c.filter
+    c.name = f ? (FILTER_NAMES[f.tradeId[0]] ?? 'the chaos damage mod') : (c.key === 'dps' ? 'Total DPS' : c.label)
+    if (f?.hidden === 'filters.hide_const_roll') c.filter = undefined
+  }
+  return model
+}
+
+/** Every filter a header number picks, the chaos mod line too. */
+export function headerCellFilters (model: HeaderModel | null): Set<StatFilter> {
   const out = new Set<StatFilter>()
   if (!model) return out
   for (const c of [...model.bigs, ...model.chips, ...(model.legend ?? [])]) {
-    // The chaos legend entry is a mod line, which stays in the mod list.
-    if (c.filter && isHeaderFilter(c.filter)) out.add(c.filter)
+    if (c.filter) out.add(c.filter)
   }
   return out
+}
+
+/** The property filters the header draws, so FiltersBlock can leave their unpicked lines out.
+ *  The chaos legend entry is a mod line, which stays in the mod list. */
+export function headerFilters (model: HeaderModel | null): Set<StatFilter> {
+  return new Set([...headerCellFilters(model)].filter(isHeaderFilter))
 }
 
 // The order the header's numbers were picked in, so their rows open under it in that order.
