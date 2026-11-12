@@ -5,6 +5,7 @@ import type { LookupContext } from '@/web/woke/search/lookups/types'
 
 const ctx: LookupContext = {
   price: n => ({ 'Chromatic Orb': 0.2, 'Orb of Fusing': 0.5 } as Record<string, number>)[n] ?? null,
+  items: [],
   tools: new Set(),
   divine: 200,
   now: 0,

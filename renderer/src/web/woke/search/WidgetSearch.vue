@@ -148,6 +148,12 @@ import { bossLookup, dropLookup } from './lookups/bosses'
 import { cardLookup } from './lookups/cards'
 import { recipeLookup } from './lookups/recipes'
 import { gemLookup, transfiguredBase } from './lookups/gems'
+import { passiveList, treeLookup } from './lookups/tree'
+import type { Passive } from './lookups/tree'
+import { betrayalLookup } from './lookups/betrayal'
+import { MECHANICS_TYPE } from '../mechanics/widget'
+import type { MechanicsWidget } from '../mechanics/widget'
+import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
 import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipItems } from '../ui/tooltip/item-tip'
@@ -318,6 +324,7 @@ const lookupContext = computed<LookupContext>(() => {
       ? 1
       : variant != null ? variants.get(`${name}\u0000${variant}`) ?? null : prices.get(name)?.chaos ?? null,
     tools: new Set<string>(),
+    items: snapshot.value?.items ?? [],
     divine: divine.value,
     now: Date.now(),
     league: league ? { name: league, startedAt: leagues.startedAt.value } : null
@@ -357,11 +364,25 @@ function loadGems () {
     gemTable.value = table
   }).catch(() => {})
 }
+// Keystones and notables with what they do, from the PoB tool's tree.
+const passives = shallowRef<Passive[] | null>(null)
+function loadTree () {
+  if (passives.value) return
+  loadPassiveTree().then(nodes => { passives.value = passiveList(nodes.values(), passiveTreeClusters()?.named ?? null) }).catch(() => {})
+}
+// Betrayal slots you edited in League mechanics.
+function betrayalOverrides (): Record<string, string> {
+  const w = wm.widgets.value.find(w => w.wmType === MECHANICS_TYPE) as MechanicsWidget | undefined
+  return w?.betrayalOverrides ?? {}
+}
 // New tooltip files after a data update: read them on the next open.
-const stopDataWatch = onSharedDataChange(() => { tipItems.value = null })
+const stopDataWatch = onSharedDataChange(() => {
+  tipItems.value = null
+  passives.value = null
+})
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, gemLookup(gemTable.value, gemNames.value), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value), betrayalLookup(betrayalOverrides), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -603,6 +624,7 @@ function start (text: string) {
   whenIdle(gameItems)
   whenIdle(loadCards)
   whenIdle(loadGems)
+  whenIdle(loadTree)
 }
 function close () {
   wm.hide(props.config.wmId)

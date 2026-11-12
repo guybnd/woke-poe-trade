@@ -257,3 +257,22 @@ test('a gem says where to get it in the campaign', async ({ overlay }) => {
   await expect(panel.getByText('Quest reward (free)')).toBeVisible()
   await overlay.snap('search-gem')
 })
+
+test('a keystone says what it does, and a Betrayal member lists their rewards', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('resolute tech')
+  const key = panel.getByText('Resolute Technique', { exact: true }).first()
+  await expect(key).toBeVisible()
+  await key.click()
+  await expect(panel.getByText('Never deal Critical Strikes')).toBeVisible()
+  await overlay.snap('search-keystone')
+
+  await box.fill('aisling')
+  await expect(panel.getByText('Research: Crafting bench: veiled chaos', { exact: true })).toBeVisible()
+  await overlay.snap('search-betrayal')
+})
