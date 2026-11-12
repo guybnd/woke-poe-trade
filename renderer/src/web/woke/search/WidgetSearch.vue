@@ -146,6 +146,7 @@ import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
 import { bossLookup, dropLookup } from './lookups/bosses'
 import { cardLookup } from './lookups/cards'
+import { recipeLookup } from './lookups/recipes'
 import type { CardInfo } from './lookups/cards'
 import { loadTipItems } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
@@ -340,7 +341,7 @@ const cards = computed(() => {
 const stopDataWatch = onSharedDataChange(() => { tipItems.value = null })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
