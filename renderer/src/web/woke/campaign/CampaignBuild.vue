@@ -1,8 +1,14 @@
 <template>
   <div v-if="details && (tree || links.length || buys.length || rewards.length || nextGem)" :class="$style.build">
-    <a v-if="showTree && tree && safeUrl(tree.url)" :href="safeUrl(tree.url)" target="_blank" class="block w-trunc w-accent hover:underline">
-      <i class="fas fa-external-link-alt text-xs" /> Tree: {{ tree.title }}
-    </a>
+    <div v-if="showTree && tree" class="flex items-center gap-2 min-w-0">
+      <a v-if="safeUrl(tree.url)" :href="safeUrl(tree.url)" target="_blank" class="block w-trunc w-accent hover:underline">
+        <i class="fas fa-external-link-alt text-xs" /> Tree: {{ tree.title }}
+      </a>
+      <span v-else class="w-trunc">Tree: {{ tree.title }}</span>
+      <button type="button" class="w-btn ml-auto shrink-0" :class="$style.draw" :title="treeKey ? `Open the passive tree in game, then click (or press ${treeKey})` : 'Open the passive tree in game, then click'" @click="toggleBuildTree()">
+        <i class="fas fa-diagram-project" /> {{ treeOn ? 'Hide on tree' : 'Draw on tree' }}
+      </button>
+    </div>
     <template v-if="buys.length">
       <div :class="$style.k">In town · buy from {{ buyNpcs }}</div>
       <div v-for="b in buys" :key="b.name" :class="$style.row">
@@ -44,6 +50,8 @@
 // The active PoB build in the campaign card: gems to buy in this town (or
 // the next gem), quest rewards this act, and your links for this level.
 import { computed } from 'vue'
+import { toggleBuildTree, treeOn } from '../pob-builds/tree-toggle'
+import { treeHotkeyOf } from '../pob-builds/widget'
 import { saveConfig } from '@/web/Config'
 import { useActiveBuild } from '../pob-builds/active'
 import { actRewards, linkColours, linkGroups, loadoutOf, orderedGems, relevantGems, skillSetsOf, townBuys } from '../pob-builds/build-model'
@@ -67,6 +75,7 @@ const props = withDefaults(defineProps<{
 }>(), { tickable: false, showTree: true, maxLinks: 2 })
 
 const build = useActiveBuild()
+const treeKey = computed(() => build.pobWidget.value ? treeHotkeyOf(build.pobWidget.value) : null)
 const s = computed(() => props.config.state)
 const level = computed(() => s.value.level)
 const details = computed(() => props.config.showBuild ? build.details.value : null)
@@ -113,6 +122,7 @@ function safeUrl (url: string) {
 </script>
 
 <style module>
+.draw { padding: 0 6px; font-size: var(--w-fs-xs); }
 .build {
   margin-top: 4px;
   border-top: 1px solid var(--w-line);

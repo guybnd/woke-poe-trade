@@ -54,7 +54,8 @@ export class TreeOverlay {
     if (!this.pts) return { ok: false as const, reason: 'no-points' }
     const { width, height } = this.poeWindow.bounds
     if (!width || !height) return { ok: false as const, reason: 'no-game' }
-    if (!this.poeWindow.hasFocus) return { ok: false as const, reason: 'no-focus' }
+    // No focus check: a click on a dock card gives the overlay focus, and the
+    // game still shows underneath.
     const t0 = performance.now()
     const shot = this.poeWindow.screenshot()
     const t1 = performance.now()

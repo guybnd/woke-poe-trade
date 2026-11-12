@@ -38,6 +38,13 @@
       </div>
     </template>
 
+    <template #banner>
+      <div v-if="!treeOverlaySeen && treeKey" :class="$style.tip">
+        <i class="fas fa-diagram-project" />
+        <span class="flex-1">New: in game, open your passive tree and press <WKbd :keys="treeKey" /> to draw the active build's missing points right on it.</span>
+        <button type="button" class="w-icon-btn" title="Got it" @click="markTreeOverlaySeen"><i class="fas fa-times" /></button>
+      </div>
+    </template>
     <WEmpty v-if="error" icon="fas fa-exclamation-triangle">{{ error }}</WEmpty>
     <WEmpty v-else-if="!tree" icon="fas fa-spinner fa-spin">Loading…</WEmpty>
     <div v-else :class="$style.wrap">
@@ -70,7 +77,10 @@
 // what a tree adds over the one before it. Saves opening a browser over the game.
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { WButton, WChip, WEmpty, WField, WPanel, WSelect } from '../ui'
+import { WButton, WChip, WEmpty, WField, WKbd, WPanel, WSelect } from '../ui'
+import { markTreeOverlaySeen, treeOverlaySeen } from './tree-toggle'
+import { treeHotkeyOf } from './widget'
+import { useActiveBuild } from './active'
 import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { realSets } from './build-model'
 import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, treeDiff, withMasteries } from './passive-tree'
@@ -82,6 +92,9 @@ import type { Sheets } from './tree-draw'
 import type { PobTreeSpec } from './widget'
 import PinButton from '../pins/PinButton.vue'
 import type { Pin } from '../pins/pins'
+
+const activeBuild = useActiveBuild()
+const treeKey = computed(() => activeBuild.pobWidget.value ? treeHotkeyOf(activeBuild.pobWidget.value) : null)
 
 // A new `start` object means go to that tree, even if it's the same title again.
 // `bare`: only the tree, for a pin. `from`: the tree to show changes from.
@@ -481,6 +494,14 @@ function openWeb () {
 </script>
 
 <style module>
+.tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px var(--w-pad);
+  font-size: var(--w-fs-sm);
+  color: var(--w-accent);
+}
 .wrap {
   display: flex;
   min-height: 0;

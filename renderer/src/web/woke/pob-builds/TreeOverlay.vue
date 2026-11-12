@@ -19,7 +19,7 @@ import { loadoutOf } from './build-model'
 import { loadPassiveTree, passiveTreeArt, NODE_RADIUS } from './passive-tree'
 import type { TreeNode } from './passive-tree'
 import { buildPath, fitPoints, probesOf, takenNodes } from './tree-overlay'
-import { registerTreeDrawer, treeOn } from './tree-toggle'
+import { markTreeOverlaySeen, registerTreeDrawer, treeOn } from './tree-toggle'
 import type { BuildPath } from './tree-overlay'
 import { isTreeHotkeyTarget } from './widget'
 
@@ -70,6 +70,7 @@ async function start (quiet = false): Promise<boolean> {
   probes = probesOf(path, all)
   on.value = true
   const ok = await refit(true)
+  if (ok) markTreeOverlaySeen()
   if (!ok) {
     on.value = false
     if (!quiet) note('Open the passive tree first (no tree found on screen).')

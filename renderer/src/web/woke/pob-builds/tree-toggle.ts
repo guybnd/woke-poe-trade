@@ -14,6 +14,19 @@ let drawer: TreeDrawer | null = null
 // Whether the build is drawn on the tree now, for the card and menu.
 export const treeOn = shallowRef(false)
 
+// Until it is first used (or the tip closed), the card marks the button New
+// and the tree panel shows a one-time tip. Per PC; nothing else depends on it.
+const SEEN_KEY = 'woke-tree-overlay-seen'
+export const treeOverlaySeen = shallowRef(readSeen())
+function readSeen (): boolean {
+  try { return localStorage.getItem(SEEN_KEY) === '1' } catch { return true }
+}
+export function markTreeOverlaySeen () {
+  if (treeOverlaySeen.value) return
+  treeOverlaySeen.value = true
+  try { localStorage.setItem(SEEN_KEY, '1') } catch {}
+}
+
 export function registerTreeDrawer (d: TreeDrawer): () => void {
   drawer = d
   return () => { if (drawer === d) drawer = null }
@@ -26,5 +39,9 @@ export async function toggleBuildTree (quiet = false): Promise<boolean> {
   if (drawer.isOn()) { drawer.stop(); return true }
   // A dock card or menu over the tree would be in the screenshot.
   dockCardOwner.value = -1
-  return await drawer.start(quiet)
+  // Let it close (and fade) before the screen is read.
+  await new Promise(resolve => setTimeout(resolve, 200))
+  const drew = await drawer.start(quiet)
+  if (drew) markTreeOverlaySeen()
+  return drew
 }
