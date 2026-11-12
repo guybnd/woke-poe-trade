@@ -176,7 +176,7 @@ const pinMenu = computed<DockMenuAction[]>(() => {
 const dockMenu = computed<DockMenuAction[]>(() => {
   const key = treeHotkeyOf(props.config)
   const draw: DockMenuAction = {
-    label: `Build on passive tree${key ? ` (${key})` : ''}`,
+    label: `Draw on the game's tree${key ? ` (${key})` : ''}`,
     icon: 'fas fa-diagram-project',
     checked: treeOn.value,
     disabled: !active.details.value,
