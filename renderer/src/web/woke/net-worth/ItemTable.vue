@@ -5,7 +5,9 @@
         <th v-for="c in COLS" :key="c.id" :class="[c.id === 'name' ? $style.left : '', sort === c.id ? $style.on : '']"
           :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" tabindex="0"
           @click="sortBy(c.id)" @keydown.enter.prevent="sortBy(c.id)" @keydown.space.prevent="sortBy(c.id)">
-          {{ c.label }}<Coin v-if="c.id === 'unit' || c.id === 'chaos'" :chaos="!divine" /><template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
+          {{ c.label }}<button v-if="(c.id === 'unit' || c.id === 'chaos') && divine" type="button" :class="$style.unitBtn"
+            :title="`In ${inChaos(c.id) ? 'chaos' : 'divines'}. Click for ${inChaos(c.id) ? 'divines' : 'chaos'}`"
+            @click.stop="swap(c.id)" @keydown.enter.stop @keydown.space.stop><Coin :chaos="inChaos(c.id)" /></button><Coin v-else-if="c.id === 'unit' || c.id === 'chaos'" chaos /><template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
         </th>
       </tr>
     </thead>
@@ -18,8 +20,8 @@
           </span>
         </td>
         <td class="w-num">{{ qty(l.count) }}</td>
-        <td class="w-num w-dim" :title="`${qty(Math.round(l.unitChaos * 10) / 10)} chaos`">{{ div(l.unitChaos) }}</td>
-        <td class="w-num" :title="`${qty(Math.round(l.chaos))} chaos`">{{ div(l.chaos) }}</td>
+        <td class="w-num w-dim" :title="other('unit', l.unitChaos)">{{ show('unit', l.unitChaos) }}</td>
+        <td class="w-num" :title="other('chaos', l.chaos)">{{ show('chaos', l.chaos) }}</td>
         <td><span :class="$style.share"><i :style="{ width: Math.max(2, l.chaos / top * 100) + '%' }" /></span></td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
@@ -54,8 +56,23 @@ const props = defineProps<{
   tabNames: Map<string, string>
   // A filter is on: the empty row offers to clear it.
   filtered?: boolean
+  // Each and Total in divines or chaos: a click on the header's icon swaps.
+  units?: { each?: 'd' | 'c', total?: 'd' | 'c' }
 }>()
-const emit = defineEmits<{ (e: 'clear'): void }>()
+const emit = defineEmits<{ (e: 'clear'): void, (e: 'units', v: { each: 'd' | 'c', total: 'd' | 'c' }): void }>()
+
+const unitOf = (col: Col) => (col === 'unit' ? props.units?.each : props.units?.total) ?? 'd'
+const inChaos = (col: Col) => !props.divine || unitOf(col) === 'c'
+function swap (col: Col) {
+  const next = { each: unitOf('unit'), total: unitOf('chaos') }
+  if (col === 'unit') next.each = next.each === 'c' ? 'd' : 'c'
+  else next.total = next.total === 'c' ? 'd' : 'c'
+  emit('units', next)
+}
+const chaosText = (chaos: number) => chaos >= 100 ? formatAmount(Math.round(chaos)) : chaos >= 1 ? chaos.toFixed(1) : chaos.toFixed(2)
+const show = (col: Col, chaos: number) => inChaos(col) ? chaosText(chaos) : div(chaos)
+// The hover gives the other unit.
+const other = (col: Col, chaos: number) => !props.divine ? undefined : inChaos(col) ? `${div(chaos)} div` : `${chaosText(chaos)} chaos`
 
 type Col = 'name' | 'count' | 'unit' | 'chaos' | 'share' | 'change' | 'tab'
 const COLS: Array<{ id: Col, label: string }> = [
@@ -149,5 +166,8 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .share { display: inline-block; width: 44px; height: 5px; background: var(--w-panel-3); vertical-align: middle; }
 .share i { display: block; height: 100%; background: color-mix(in srgb, var(--w-gold) 70%, transparent); }
+.unitBtn { cursor: pointer; padding: 0; border-radius: var(--w-r-sm); }
+.unitBtn:hover { box-shadow: 0 0 0 1px var(--w-gold); }
+.unitBtn:focus-visible { outline: 1px solid var(--w-accent); }
 .tab { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 </style>

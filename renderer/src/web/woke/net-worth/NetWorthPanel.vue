@@ -92,7 +92,7 @@
         <WChip v-for="c in CATEGORIES" :key="c.id" clickable :active="cat === c.id" @click="pickCat(c.id)">{{ c.label }}</WChip>
         <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }}<Coin /></WChip>
       </section>
-      <ItemTable :lines="tableLines" :filtered="cat !== 'all' || tab !== 'all' || !!query.trim() || hideSmall" @clear="clearFilters" :divine="divine" :changes="changes" :tab-names="tabNames" />
+      <ItemTable :lines="tableLines" :units="config.tableUnits" @units="config.tableUnits = $event" :filtered="cat !== 'all' || tab !== 'all' || !!query.trim() || hideSmall" @clear="clearFilters" :divine="divine" :changes="changes" :tab-names="tabNames" />
 
       <div class="w-dim text-xs" :class="$style.foot">
         <span>
