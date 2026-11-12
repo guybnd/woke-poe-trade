@@ -6,13 +6,21 @@
         @pointerdown="startDrag">
         <i :class="pin.icon" class="w-accent" />
         <span class="w-head-font w-accent w-trunc" :class="$style.title">{{ pin.title }}</span>
-        <button type="button" :class="$style.btn" class="w-focusable" data-pin-fade
-          :title="`See-through: ${pin.opacity}%. Scroll to change`" :aria-label="`See-through ${pin.opacity}%`"
-          @pointerdown.stop @wheel.prevent="fade" @keydown.up.prevent="nudge(5)" @keydown.down.prevent="nudge(-5)">
+        <button type="button" :class="[$style.btn, { [$style.btnOn]: sliderOpen }]" class="w-focusable" data-pin-fade
+          :title="`See-through: ${pin.opacity}%. Click for a slider, or scroll`" :aria-label="`See-through ${pin.opacity}%`"
+          :aria-expanded="sliderOpen" @pointerdown.stop @click="sliderOpen = !sliderOpen"
+          @mouseenter="overFade = true" @mouseleave="overFade = false"
+          @wheel.prevent="fade" @keydown.up.prevent="nudge(5)" @keydown.down.prevent="nudge(-5)">
           <i class="fas fa-adjust" /> <span class="w-num">{{ pin.opacity }}%</span>
         </button>
         <button type="button" :class="$style.btn" class="w-focusable" data-pin-close title="Unpin" aria-label="Unpin"
           @pointerdown.stop @click="removePin(pin.id)"><i class="fas fa-thumbtack" /></button>
+      </div>
+      <div v-if="sliderOpen" :class="$style.fadeRow" @pointerdown.stop @mouseenter="overFade = true" @mouseleave="overFade = false">
+        <span class="w-dim">See-through</span>
+        <input type="range" :min="MIN_PIN_OPACITY" :max="MAX_PIN_OPACITY" step="5" :value="pin.opacity" data-pin-fade-range
+          aria-label="How solid this pin is" @input="set(Number(($event.target as HTMLInputElement).value))">
+        <span class="w-num">{{ pin.opacity }}%</span>
       </div>
       <div :class="$style.body" class="w-scroll"><slot /></div>
     </div>
@@ -26,7 +34,7 @@
 import { computed, inject, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { hoverZonesMoved, useHoverZone } from '../shared/hover'
-import { movePin, pinScale, place, removePin, setPinOpacity, spotOf } from './pins'
+import { MAX_PIN_OPACITY, MIN_PIN_OPACITY, movePin, pinScale, place, removePin, setPinOpacity, spotOf } from './pins'
 import type { Pin } from './pins'
 
 const props = defineProps<{ pin: Pin, index: number }>()
@@ -49,12 +57,26 @@ watch(hovered, (on) => {
   if (!on) { rested.value = false; return }
   restTimer = setTimeout(() => { rested.value = true }, REST_MS)
 })
-const solid = computed(() => hovered.value || dragging.value)
+// Solid under the mouse, except while you're setting how see-through it is:
+// then it shows the level you're picking.
+const sliderOpen = shallowRef(false)
+const overFade = shallowRef(false)
+const justSet = shallowRef(false)
+let setTimer: ReturnType<typeof setTimeout> | null = null
+const previewing = computed(() => sliderOpen.value || overFade.value || justSet.value)
+const solid = computed(() => (hovered.value || dragging.value) && !previewing.value)
+watch(hovered, (on) => { if (!on) { sliderOpen.value = false; overFade.value = false } })
 
 const spot = computed(() => live.value ?? spotOf(props.pin, place.value, props.index))
 
+function set (v: number) {
+  setPinOpacity(props.pin.id, v)
+  justSet.value = true
+  if (setTimer) clearTimeout(setTimer)
+  setTimer = setTimeout(() => { justSet.value = false }, 1500)
+}
 function nudge (by: number) {
-  setPinOpacity(props.pin.id, props.pin.opacity + by)
+  set(props.pin.opacity + by)
 }
 function fade (e: WheelEvent) {
   nudge(e.deltaY > 0 ? -5 : 5)
@@ -106,6 +128,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   if (restTimer) clearTimeout(restTimer)
+  if (setTimer) clearTimeout(setTimer)
   if (zoneFrame) cancelAnimationFrame(zoneFrame)
   endDrag()
   observer?.disconnect()
@@ -153,6 +176,16 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .btn:hover { color: var(--w-fg); background: var(--w-hover, rgba(255, 255, 255, .06)); }
+.btnOn { color: var(--w-fg); background: var(--w-accent-soft); }
+.fadeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px var(--w-pad);
+  border-bottom: 1px solid var(--w-line);
+  font-size: var(--w-fs-xs);
+}
+.fadeRow input { flex: 1; min-width: 6rem; accent-color: var(--w-accent); }
 .body { min-height: 0; overflow: auto; }
 @media (prefers-reduced-motion: reduce) { .pin { transition: none; } }
 </style>

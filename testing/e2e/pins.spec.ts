@@ -54,6 +54,24 @@ test('a dock card pins off the dock, drags, fades, and keeps a spot per place', 
   await fade.hover()
   await page.mouse.wheel(0, 100)
   await expect(fade).toContainText('80%')
+  // While you set it, it shows that level, not solid.
+  await expect.poll(() => pin.evaluate(el => getComputedStyle(el).opacity)).toBe('0.8')
+  // A click opens a slider too.
+  await fade.click()
+  await pin.locator('[data-pin-fade-range]').fill('40')
+  await expect(fade).toContainText('40%')
+  await expect.poll(() => pin.evaluate(el => getComputedStyle(el).opacity)).toBe('0.4')
+  await fade.click()
+  await pin.locator('[data-pin-fade-range]').waitFor({ state: 'detached' })
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await page.mouse.wheel(0, -100)
+  await expect(fade).toContainText('80%')
   await overlay.snap('pinned dock card')
 
   // Drag it in the hideout...
