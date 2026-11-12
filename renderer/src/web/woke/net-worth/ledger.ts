@@ -263,6 +263,31 @@ export function toggleTab (tabs: string[], id: string): string[] {
   return tabs.includes(id) ? tabs.filter(t => t !== id) : [...tabs, id]
 }
 
+// ---------- the dock card (C1) ----------
+
+export interface CardChange { key: string, name: string, icon: string, count: number, chaos: number }
+
+// The last read's biggest changes either way (losses negative), ignored items
+// left out.
+export function topCardChanges (diff: StashDiff | null | undefined, ignored: string[], n = 3): CardChange[] {
+  if (!diff) return []
+  const off = new Set(ignored)
+  const all = [
+    ...diff.added.map(l => ({ key: l.key, name: l.name, icon: l.icon, count: l.count, chaos: l.chaos })),
+    ...diff.removed.map(l => ({ key: l.key, name: l.name, icon: l.icon, count: -l.count, chaos: -l.chaos }))
+  ].filter(l => !off.has(l.key) && l.chaos !== 0)
+  return all.sort((a, b) => Math.abs(b.chaos) - Math.abs(a.chaos)).slice(0, n)
+}
+
+// Refresh from the card waits 10 minutes after a read (and longer if
+// pathofexile.com asked us to slow down). 0: now.
+export const CARD_REFRESH_GAP_MS = 10 * 60_000
+export function refreshWaitMs (s: { lastReadAt: number | null, error: { retryAt?: number } | null } | null, now: number): number {
+  if (!s) return 0
+  const until = Math.max(s.lastReadAt != null ? s.lastReadAt + CARD_REFRESH_GAP_MS : 0, s.error?.retryAt ?? 0)
+  return Math.max(0, until - now)
+}
+
 // Picked tabs first, then the rest (each in tab order).
 export function selectedFirst<T extends { id: string }> (list: T[], picked: string[]): T[] {
   return [...list.filter(t => picked.includes(t.id)), ...list.filter(t => !picked.includes(t.id))]

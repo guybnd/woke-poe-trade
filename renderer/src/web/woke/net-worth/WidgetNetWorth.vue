@@ -1,9 +1,11 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <DockItem id="net-worth" title="Net worth" :show="config.dockIcon !== false" :wm-id="config.wmId"
-      :badge="badge" card-width="14rem" :menu="dockMenu">
+      :badge="badge" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
-        <div class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
+        <!-- Its data loads the first time the card opens, never at startup. -->
+        <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')" />
+        <div v-else class="w-dim text-xs" style="padding: 6px var(--w-pad);">{{ cardText }}</div>
       </template>
     </DockItem>
     <NetWorthPanel v-if="started" :config="config" :status="status" />
@@ -33,7 +35,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
-import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
+import { hideWhilePlaying, openSettingsPage, showWithOverlay } from '../dock/dock'
 import { popupAnchor } from '../ui/window-anchor'
 import { agoPhrase } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -41,6 +43,10 @@ import { parseHotkeyTarget } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
+const NetWorthCard = defineAsyncComponent(() => import('./NetWorthCard.vue'))
+const cardOpen = shallowRef(false)
+// The card's data needs the reader (main) to answer; outside Electron, the text.
+const personalReady = computed(() => Host.isElectron || status.value != null)
 
 const props = defineProps<{
   config: NetWorthWidget
