@@ -211,3 +211,19 @@ test('a boss card shows its entry and drops, and an item says where it drops', a
   await panel.getByText(/Progenesis drops from/).click()
   await overlay.snap('search-where-it-drops')
 })
+
+test('a div card compares its full set with the reward', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('the doctor')
+  const set = panel.getByText(/^The Doctor: /)
+  await expect(set).toBeVisible()
+  await set.click()
+  await expect(panel.getByText('Full set: 8 cards')).toBeVisible()
+  await expect(panel.getByText('Reward: Headhunter')).toBeVisible()
+  await overlay.snap('search-card-set')
+})

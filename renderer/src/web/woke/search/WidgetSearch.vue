@@ -145,6 +145,10 @@ import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
 import { bossLookup, dropLookup } from './lookups/bosses'
+import { cardLookup } from './lookups/cards'
+import type { CardInfo } from './lookups/cards'
+import { loadTipItems } from '../ui/tooltip/item-tip'
+import type { TipItem } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import type { SearchWidget } from './widget'
 
@@ -316,7 +320,22 @@ const lookupContext = computed<LookupContext>(() => {
   }
 })
 const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).filter(i => i.type === 'Currency').map(i => i.name))])
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, webLookup])
+// Card rewards and stack sizes load with the tooltips, once the palette opens.
+const tipItems = shallowRef<Record<string, TipItem> | null>(null)
+function loadCards () {
+  if (!tipItems.value) loadTipItems().then(items => { if (items) tipItems.value = items })
+}
+const cards = computed(() => {
+  const out = new Map<string, CardInfo>()
+  const items = tipItems.value
+  if (!items) return out
+  for (const i of snapshot.value?.items ?? []) {
+    const tip = i.type === 'DivinationCard' ? items[i.name] : undefined
+    if (tip?.n && tip.d && !out.has(i.name)) out.set(i.name, { stack: tip.n, lines: tip.d.split('\n') })
+  }
+  return out
+})
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -556,6 +575,7 @@ function start (text: string) {
   wm.show(props.config.wmId)
   focusInput(true)
   whenIdle(gameItems)
+  whenIdle(loadCards)
 }
 function close () {
   wm.hide(props.config.wmId)
