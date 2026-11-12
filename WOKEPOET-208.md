@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-208
 title: 'Stash reader opt-in: hidden experimental Net worth toggle'
-status: In Progress
+status: Ready
 priority: Medium
 effort: None
 assignee: unassigned
@@ -32,6 +32,27 @@ history:
     date: '2026-11-12T02:22:25.550Z'
     comment: Updated implementation link.
     id: a-2026-11-12t02-22-25-550z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #339 is ready to merge. It passed an adversarial review, and I fixed
+      the 3 bugs the review found: a placed widget came back after a restart
+      with the reader off, a read that was running when it was turned off still
+      wrote its cache, and a failed chunk load at startup left main reading.
+      Local checks pass: typecheck, test typecheck, lint, renderer tests (2963),
+      main tests, and the renderer and main builds. Startup JS is 2214.9 KB
+      (budget 2215). The PC can't merge, so the cloud merge thread has to merge
+      it.
+    date: '2026-11-12T02:26:52.600Z'
+    completionComment: true
+    id: c-2026-11-12t02-26-52-600z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-12T02:26:52.600Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/339'
+needsAction: null
+reviewState: approved
 ---
 Follow-up to #336. Hidden unlock (5 clicks on Economy heading in Settings > Modules), Net worth EXP row, confirm W2, warning box, runtime on/off (R1) in main + renderer, personal.flag stays as override, no code/listeners when off. Tests + SECURITY/README notes. Mockups: https://claude.ai/artifact/FW77Z6LYq4QH7hpoDDeJXi. Branch feat/stash-reader-optin in E:\Git\woke-stash-optin.
