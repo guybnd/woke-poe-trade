@@ -25,12 +25,12 @@
         </span>
         <span v-if="perHourDiv != null" class="w-num" :class="tone(perHourDiv)" :title="inChaos(sum?.perHourChaos ?? 0) + ' per hour, today'">{{ signed(perHourDiv) }}<Coin :chaos="!divine" />/h</span>
         <WSpark v-if="spark.length > 1" :values="spark" :width="90" :height="18" :class="$style.spark" />
-        <button type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
+        <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
           Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
         </button>
       </section>
 
-      <template v-if="detailsOpen">
+      <template v-if="detailsOpen && anyDetails">
         <section v-if="shown.chart" :class="$style.chartBlock">
           <div :class="$style.chartHead">
             <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
@@ -230,6 +230,10 @@ function openSections (e: MouseEvent) {
     action: () => { setSection(props.config, x.id, !shown.value[x.id]) }
   })))
 }
+// Details with every section in it off: no toggle, nothing to open.
+const anyDetails = computed(() => shown.value.chart || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
+// Tab labels switched off: a tab pick nothing shows any more is dropped.
+watch(() => shown.value.tabs, (on) => { if (!on) tabs.value = [] })
 // "Since last refresh" only when it has something.
 const showChanges = computed(() => shown.value.changes && (groups.value.length > 0 || !!session.value))
 
