@@ -27,6 +27,10 @@
     <div class="flex gap-2 min-h-0 items-start">
       <WPanel ref="panel" :title="config.wmTitle || 'Atlas strategies'" icon="map" width="22rem" max-height="80vh"
         :updated="prices.snapshot.value?.ts ?? null" :fresh-min="60" :stale-min="360">
+        <!-- Remove when WOKEPOET-156 rewrites the strategies for 3.30. -->
+        <template #banner>
+          <WBanner tone="warn">Scarabs and the old atlas tree leave in 3.30. Strategies made for 3.29 are being updated.</WBanner>
+        </template>
         <template #actions>
           <button class="w-icon-btn" title="New strategy" @click="addStrategy(newIn)"><i class="fas fa-plus" /></button>
           <button class="w-icon-btn" title="New folder" @click="startFolder(newIn)"><i class="fas fa-folder-plus" /></button>

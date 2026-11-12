@@ -194,3 +194,18 @@ describe('table filters', () => {
     expect(filterLines(lines, { ...none, tab: 'cur2' }).map(l => l.key)).toEqual(['c'])
   })
 })
+
+describe('units as icons', () => {
+  it('shows the divine icon, or chaos when asked, with a short text fallback', async () => {
+    const { createSSRApp, h } = await import('vue')
+    const { renderToString } = await import('vue/server-renderer')
+    const Coin = (await import('@/web/woke/net-worth/Coin.vue')).default
+    const div = await renderToString(createSSRApp({ render: () => h(Coin) }))
+    expect(div).toContain('/images/divine.png')
+    expect(div).toContain('alt="d"')
+    const chaos = await renderToString(createSSRApp({ render: () => h(Coin, { chaos: true, title: '120 chaos' }) }))
+    expect(chaos).toContain('/images/chaos.png')
+    expect(chaos).toContain('alt="c"')
+    expect(chaos).toContain('title="120 chaos"')
+  })
+})

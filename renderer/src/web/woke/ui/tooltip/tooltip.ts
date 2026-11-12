@@ -31,6 +31,8 @@ export interface TipMarket {
   // Over the 7 days of the graph, as a ratio: 0.12 is +12%.
   change: number | null
   graph: number[]
+  // How many the caller holds (a stack, a stash line): the strip adds their value.
+  count?: number
   // A name with several prices: shown instead of the one price and its graph.
   range?: { low: number, high: number, count: number }
 }
@@ -90,4 +92,21 @@ export function onTipHide (fn: () => void) {
 export function hideTip () {
   cancelPending?.()
   tip.value = null
+}
+
+// A poe.ninja row as the price strip shows it: one's price, the change over
+// its 7-day line (the last point is the % change over the whole line), and
+// how many the caller holds.
+export function marketFromRow (
+  info: { chaos: number, variant?: string, graph?: Array<number | null> },
+  ref: { variant?: string, count?: number }
+): TipMarket {
+  const graph = (info.graph ?? []).filter((v): v is number => v != null)
+  return {
+    chaos: info.chaos,
+    variant: ref.variant ? undefined : info.variant,
+    change: graph.length ? graph[graph.length - 1] / 100 : null,
+    graph,
+    count: ref.count && ref.count > 1 ? ref.count : undefined
+  }
 }

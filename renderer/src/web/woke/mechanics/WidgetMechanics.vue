@@ -29,6 +29,8 @@
 
           <div class="w-scroll" :class="$style.col">
             <WBanner v-if="!hasPrices" tone="info">Waiting for poe.ninja prices.</WBanner>
+            <!-- Remove when WOKEPOET-156 rewrites the guide for 3.30. -->
+            <WBanner tone="warn">Written for 3.29. Many mechanics change in 3.30; this guide is being updated.</WBanner>
             <template v-if="mech.id === 'betrayal'">
               <div :class="$style.toolbar">
                 <WSegmented v-model="division" :options="DIVISIONS.map((d, i) => ({ value: String(i), label: d.slice(0, 5) }))" />

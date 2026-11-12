@@ -77,7 +77,7 @@ test('hovering a market row shows the item at the cursor, with its price', async
   // The first hover asked for prices; once in, every tooltip has its strip.
   await expect(async () => {
     await panel.locator('.w-row', { hasText: 'Pact of Lycia' }).hover()
-    await expect(tip).toContainText('7 days', { timeout: 500 })
+    await expect(tip).toContainText('7d', { timeout: 500 })
   }).toPass()
   await expect(tip).toContainText('+3838%')
   await overlay.snap('with price strip')

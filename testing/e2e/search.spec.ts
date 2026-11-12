@@ -162,7 +162,7 @@ test('hovering a result shows the item, with its price or its range', async ({ o
   await panel.getByRole('button', { name: /Enlighten Support/ }).first().hover()
   await expect(tip).toContainText(/\d+ prices/)
   await expect(tip).toContainText(' to ')
-  await expect(tip).not.toContainText('7 days')
+  await expect(tip).not.toContainText(' 7d')
 
   // An item with no price is still an item.
   await box.fill('undying flesh talisman')

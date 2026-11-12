@@ -12,6 +12,8 @@ export interface NetWorthWidget extends Widget {
   hideBelowDiv?: number
   // A target on the chart, with an ETA at the current rate (D6).
   goal?: { name: string, div: number } | null
+  // The item table's Each and Total columns: divines (d) or chaos (c).
+  tableUnits?: { each: 'd' | 'c', total: 'd' | 'c' }
 }
 
 export const hideBelowOf = (w: NetWorthWidget) => typeof w.hideBelowDiv === 'number' && w.hideBelowDiv >= 0 ? w.hideBelowDiv : 1
