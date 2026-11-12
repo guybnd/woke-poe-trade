@@ -282,17 +282,17 @@ describe('StashReader', () => {
     return { status: 200, headers: RATE, body: tab === 0 ? fixture('tab-list.json') : fixture('tab-dump.json') }
   }
 
-  it('reads every tab and caches them', async () => {
+  it('reads every tab (remove-only ones aside) and caches them', async () => {
     const { reader, calls } = makeReader(normal)
     await reader.setLeague('Mercenaries')
     const s = await reader.read('manual')
     expect(s.error).toBeNull()
     const stash = calls.filter(u => u.pathname.endsWith('get-stash-items'))
-    expect(stash.map(u => u.searchParams.get('tabIndex'))).toEqual(['0', '1', '2'])
+    expect(stash.map(u => u.searchParams.get('tabIndex'))).toEqual(['0', '1'])
     expect(stash[0].searchParams.get('accountName')).toBe('Guy#1234')
     expect(stash[0].searchParams.get('tabs')).toBe('1')
     const cache = await readCache('Mercenaries')
-    expect(cache!.tabs.map(t => t.items.length)).toEqual([2, 5, 5])
+    expect(cache!.tabs.map(t => t.items.length)).toEqual([2, 5])
   })
 
   it('in Standard, leaves remove-only tabs out of the read and the cache', async () => {
@@ -328,10 +328,10 @@ describe('StashReader', () => {
     expect(cache!.tabs.map(t => [t.name, t.items.length])).toEqual([['Dump', 5]])
   })
 
-  it('other leagues keep remove-only tabs', async () => {
+  it('every league leaves remove-only tabs out', async () => {
     const { reader } = makeReader(normal)
     await reader.setLeague('Mercenaries')
-    expect((await reader.read('manual')).skipped).toBe(0)
+    expect((await reader.read('manual')).skipped).toBe(1)
   })
 
   it('stops when signed out', async () => {
@@ -347,7 +347,7 @@ describe('StashReader', () => {
 
   it('stops on 429 and keeps what it read', async () => {
     const { reader } = makeReader((u) => {
-      if (u.searchParams.get('tabIndex') === '2') return { status: 429, headers: { ...RATE, 'retry-after': '300' }, body: '' }
+      if (u.searchParams.get('tabIndex') === '1') return { status: 429, headers: { ...RATE, 'retry-after': '300' }, body: '' }
       return normal(u)
     })
     await reader.setLeague('Mercenaries')
@@ -356,7 +356,7 @@ describe('StashReader', () => {
     expect(s.error?.retryAt).toBeGreaterThan(0)
     expect(s.waiting).toBe(1)
     const cache = await readCache('Mercenaries')
-    expect(cache!.tabs.map(t => t.readAt != null)).toEqual([true, true, false])
+    expect(cache!.tabs.map(t => t.readAt != null)).toEqual([true, false])
   })
 
   it('quiet reads skip remove-only tabs already read, and wait 10 minutes', async () => {

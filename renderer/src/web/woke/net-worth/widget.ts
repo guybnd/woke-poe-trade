@@ -34,9 +34,12 @@ export interface ReaderStatus {
   account: string | null
   lastReadAt: number | null
   waiting: number
-  // Remove-only tabs left out (Standard).
+  // Remove-only tabs, always left out.
   skipped?: number
-  error: { kind: 'signed-out' | 'rate-limited' | 'failed', message: string, retryAt?: number } | null
+  // Tabs listed (remove-only aside) and how many are chosen (tab picker).
+  listed?: number
+  chosen?: number
+  error: { kind: 'signed-out' | 'rate-limited' | 'failed' | 'pick-tabs', message: string, retryAt?: number } | null
 }
 
 export interface AuthStatus {

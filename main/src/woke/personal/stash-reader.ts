@@ -10,6 +10,8 @@ import { dataDir, leagueName, readJson, writeAtomic, writeQueue } from '../data-
 import { RateLimiter } from './rate-limit'
 import { StashApiError, isRemoveOnly, parseStashReply } from './stash-parse'
 import type { StashItem, StashTabInfo } from './stash-parse'
+import { chosenTabs } from './tab-choice'
+import type { TabChoice } from './tab-choice'
 
 export const POE_SITE = 'https://www.pathofexile.com'
 
@@ -32,13 +34,17 @@ export interface StashCache {
   league: string
   account: string
   listedAt: number
+  // The chosen tabs only (tab-choice.ts).
   tabs: CachedTab[]
-  // Remove-only tabs left out (Standard only, see skipsRemoveOnly).
+  // Remove-only tabs left out.
   skipped?: number
+  // Tabs listed, remove-only ones aside; the cache holds the chosen ones.
+  listed?: number
 }
 
 export interface ReaderError {
-  kind: 'signed-out' | 'rate-limited' | 'failed'
+  // pick-tabs: no tabs chosen for this league yet; nothing is read until then.
+  kind: 'signed-out' | 'rate-limited' | 'failed' | 'pick-tabs'
   message: string
   retryAt?: number
 }
@@ -51,15 +57,12 @@ export interface ReaderStatus {
   lastReadAt: number | null
   // Tabs not read in the last read (it stopped early, or a quiet read's budget).
   waiting: number
-  // Remove-only tabs left out of reads and totals (Standard).
+  // Remove-only tabs, always left out of reads and totals.
   skipped: number
+  // Tabs listed (remove-only aside) and how many of them are chosen.
+  listed: number
+  chosen: number
   error: ReaderError | null
-}
-
-// Standard collects every old league's tabs as "(Remove-only)": leave them out
-// of reads, totals and changes there.
-export function skipsRemoveOnly (league: string): boolean {
-  return league === 'Standard'
 }
 
 export interface ReaderDeps {
@@ -68,6 +71,8 @@ export interface ReaderDeps {
   sleep: (ms: number) => Promise<void>
   onStatus: (s: ReaderStatus) => void
   limiter?: RateLimiter
+  // Which tabs to read in a league; null: not chosen yet. Unset: every tab.
+  choice?: (league: string) => Promise<TabChoice | null>
 }
 
 // A quiet read reads this many tabs at most (the first call included).
@@ -78,6 +83,7 @@ export const AUTO_EVERY_MS = 10 * 60 * 1000
 export const MAX_WAIT_MS = 90 * 1000
 
 const STOPPED: ReaderError = { kind: 'failed', message: 'The stash reader is off.' }
+const PICK_TABS: ReaderError = { kind: 'pick-tabs', message: 'Choose which tabs to read first.' }
 const SIGNED_OUT: ReaderError = { kind: 'signed-out', message: 'Signed out of pathofexile.com. Sign in again in Settings › Game & league.' }
 
 const cacheFile = (league: string) => path.join(dataDir('woke-personal'), 'stash', `${leagueName(league)}.json`)
@@ -140,7 +146,7 @@ export async function fetchAccountName (fetch: Fetcher, limiter?: RateLimiter, n
 export class StashReader {
   private limiter: RateLimiter
   private running: Promise<ReaderStatus> | null = null
-  private status: ReaderStatus = { running: false, progress: null, league: null, account: null, lastReadAt: null, waiting: 0, skipped: 0, error: null }
+  private status: ReaderStatus = { running: false, progress: null, league: null, account: null, lastReadAt: null, waiting: 0, skipped: 0, listed: 0, chosen: 0, error: null }
   league: string | null = null
   // The app's Account name setting, used when the site doesn't say.
   fallbackAccount: string | null = null
@@ -169,7 +175,7 @@ export class StashReader {
     this.league = league
     const cache = league ? await readCache(league) : null
     const last = cache?.tabs.reduce<number | null>((m, t) => t.readAt != null && (m == null || t.readAt > m) ? t.readAt : m, null) ?? null
-    this.set({ league, lastReadAt: last, waiting: 0, skipped: cache?.skipped ?? 0, error: null })
+    this.set({ league, lastReadAt: last, waiting: 0, skipped: cache?.skipped ?? 0, listed: cache?.listed ?? 0, chosen: cache?.tabs.length ?? 0, error: null })
   }
 
   // Used before the first status, from the saved account.
@@ -226,6 +232,31 @@ export class StashReader {
     }
   }
 
+  // The league's tab list, remove-only tabs aside: one call, through the same
+  // rate limit as reads. Null when signed out or no league is set.
+  async listTabs (): Promise<StashTabInfo[] | null> {
+    const league = this.league
+    if (!league || this.stopped) return null
+    let account = this.account
+    if (!account) {
+      account = await fetchAccountName(this.deps.fetch, this.limiter, this.deps.now) ?? null
+      if (account) this.signedIn(account)
+    }
+    account ??= this.fallbackAccount
+    if (!account) return null
+    try {
+      const first = this.parse((await this.get(stashUrl(league, account, 0, true))).body)
+      return (first.tabs ?? []).filter(t => !isRemoveOnly(t))
+    } catch (e) {
+      if (e instanceof Stop) {
+        if (e.error.kind === 'signed-out') this.signedOut()
+        else this.set({ error: e.error })
+        return null
+      }
+      throw e
+    }
+  }
+
   read (mode: ReadMode): Promise<ReaderStatus> {
     if (this.stopped) return Promise.resolve(this.current)
     if (this.running) return this.running
@@ -271,6 +302,9 @@ export class StashReader {
       account ??= this.fallbackAccount
       if (!account) throw new Stop(SIGNED_OUT)
 
+      const choice = this.deps.choice ? await this.deps.choice(league) : { template: 'league' as const, ids: [] }
+      if (!choice) throw new Stop(PICK_TABS)
+
       const old = await readCache(league)
       const kept = old && old.account === account ? old : null
       const now = this.deps.now()
@@ -278,15 +312,16 @@ export class StashReader {
       const first = this.parse((await this.get(stashUrl(league, account, 0, true))).body)
       // No tab list in the reply: keep the one we had.
       const all = first.tabs ?? kept?.tabs.map(({ readAt: _r, items: _i, ...t }) => t) ?? []
-      const listed = skipsRemoveOnly(league) ? all.filter(t => !isRemoveOnly(t)) : all
-      const skipped = (all.length - listed.length) + (first.tabs ? 0 : kept?.skipped ?? 0)
+      const listedTabs = all.filter(t => !isRemoveOnly(t))
+      const skipped = (all.length - listedTabs.length) + (first.tabs ? 0 : kept?.skipped ?? 0)
+      const listed = first.tabs ? listedTabs.length : kept?.listed ?? listedTabs.length
       const byId = new Map((kept?.tabs ?? []).map(t => [t.id, t]))
-      const tabs: CachedTab[] = listed.map(t => ({ ...t, readAt: byId.get(t.id)?.readAt ?? null, items: byId.get(t.id)?.items ?? [] }))
-      cache = { version: 1, league, account, listedAt: now, tabs, skipped }
+      const tabs: CachedTab[] = chosenTabs(choice, listedTabs).map(t => ({ ...t, readAt: byId.get(t.id)?.readAt ?? null, items: byId.get(t.id)?.items ?? [] }))
+      cache = { version: 1, league, account, listedAt: now, tabs, skipped, listed }
       changed = true
-      if (!stale()) this.set({ skipped })
-      // The first call also brings tab 0's items; a skipped tab 0 keeps none.
-      const zero = first.tabs ? tabs.find(t => t.index === 0) : tabs[0]
+      if (!stale()) this.set({ skipped, listed, chosen: tabs.length })
+      // The first call also brings tab 0's items; kept only if tab 0 is chosen.
+      const zero = tabs.find(t => t.index === 0)
       if (zero) {
         zero.items = first.items
         zero.readAt = this.deps.now()

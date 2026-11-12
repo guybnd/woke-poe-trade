@@ -3,13 +3,15 @@
     :hotkey="config.hotkey" :busy="status?.running === true" :stale="!!status?.error && !!v">
     <template #actions>
       <span class="w-dim text-xs mr-2">{{ readLine }}</span>
-      <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running" @click="refresh">Refresh</WButton>
+      <WButton size="sm" variant="ghost" icon="fas fa-cog" title="Choose which tabs to read" :disabled="!status?.account" @click="picking = true">Tabs</WButton>
+      <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" @click="refresh">Refresh</WButton>
     </template>
-    <template v-if="status?.error" #banner>
+    <template v-if="status?.error && !showPicker" #banner>
       <WBanner :tone="status.error.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
     </template>
 
-    <WEmpty v-if="!v && !status?.lastReadAt" icon="fas fa-box-open">
+    <TabPicker v-if="showPicker" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" @done="onPicked" />
+    <WEmpty v-else-if="!v && !status?.lastReadAt" icon="fas fa-box-open">
       {{ status?.account ? 'Not read yet. Press Refresh.' : 'Sign in under Settings › Game & league, then press Refresh.' }}
     </WEmpty>
     <WEmpty v-else-if="!v" icon="fas fa-hourglass-half">Waiting for poe.ninja prices…</WEmpty>
@@ -53,7 +55,7 @@
         </li>
       </ul>
       <div class="w-dim text-xs" :class="$style.foot">
-        <span>{{ sum?.tabs }} tabs · values in divines</span>
+        <span>{{ status?.listed ? `${status.chosen} of ${status.listed}` : sum?.tabs }} tabs · values in divines</span>
         <span v-if="status?.skipped">{{ status.skipped }} remove-only tabs skipped</span>
         <span v-if="v.unpriced">{{ v.unpriced }} items without a price (rares aren't searched)</span>
       </div>
@@ -62,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, shallowRef } from 'vue'
+import { computed, defineAsyncComponent, onMounted, shallowRef } from 'vue'
 import { WBanner, WButton, WEmpty, WPanel, WPrice } from '../ui'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -71,12 +73,29 @@ import type { Category } from './valuation'
 import { divine, lastDiff, summary, valuation, wantPrices } from './store'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 
+const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
+
 const props = defineProps<{
   config: NetWorthWidget
   status: ReaderStatus | null
 }>()
 
 onMounted(wantPrices)
+
+// The tab picker: before a league's first read (main says pick-tabs, or
+// nothing was ever chosen or read), and from the Tabs button.
+const picking = shallowRef(false)
+const picked = shallowRef(false)
+const needsPick = computed(() => {
+  const s = props.status
+  if (!s?.account || s.running || picked.value) return false
+  return s.error?.kind === 'pick-tabs' || (!s.lastReadAt && !s.chosen && !s.error)
+})
+const showPicker = computed(() => picking.value || needsPick.value)
+function onPicked () {
+  picking.value = false
+  picked.value = true
+}
 
 const v = valuation
 const sum = summary

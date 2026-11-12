@@ -13,6 +13,8 @@ import { appPrefs, setAppPrefs } from '../app-prefs'
 import { entersHideout } from './stash-parse'
 import { POE_SITE, StashReader, fetchAccountName, readCache, readSavedAccount, saveAccount } from './stash-reader'
 import type { Fetcher, HttpReply, ReaderStatus } from './stash-reader'
+import { TEMPLATES, deleteSet, fitsTemplate, readLeagueTabs, saveSet, setChoice } from './tab-choice'
+import type { TabChoice } from './tab-choice'
 
 export const PERSONAL_FLAG = 'personal.flag'
 
@@ -59,8 +61,11 @@ export interface PersonalControl {
 // turning the reader off removes them.
 export const READER_OPS = [
   'stash-auth-status', 'stash-sign-in', 'stash-sign-out', 'stash-reader-config',
-  'stash-reader-status', 'stash-reader-read', 'stash-cache'
+  'stash-reader-status', 'stash-reader-read', 'stash-cache',
+  'stash-tab-list', 'stash-tab-choice', 'stash-tab-set-save', 'stash-tab-set-delete'
 ] as const
+
+const ids = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
 
 const TIMEOUT_MS = 30_000
 
@@ -178,7 +183,8 @@ function startReader (ctx: PersonalContext): () => void {
     now: () => Date.now(),
     sleep: async (ms) => { await new Promise(resolve => setTimeout(resolve, ms)) },
     // A read that was under way when it was turned off says nothing more.
-    onStatus: (s) => { if (live) ctx.broadcast('stash-reader', s) }
+    onStatus: (s) => { if (live) ctx.broadcast('stash-reader', s) },
+    choice: async (league) => (await readLeagueTabs(league)).choice
   })
   readSavedAccount().then(a => { if (a && live) reader.restoreAccount(a) }).catch(() => {})
 
@@ -226,6 +232,32 @@ function startReader (ctx: PersonalContext): () => void {
     'stash-cache': async (args) => {
       const league = typeof args?.league === 'string' ? args.league : reader.league
       return league ? await readCache(league) : null
+    },
+    // The tab picker: the league's tabs (one call), what each template picks,
+    // what is chosen now and the saved sets.
+    'stash-tab-list': async () => {
+      const league = reader.league
+      if (!league) return null
+      const tabs = await reader.listTabs()
+      if (!tabs || !live) return null
+      const fits = Object.fromEntries(TEMPLATES.map(t => [t, tabs.filter(tab => fitsTemplate(t, tab)).map(tab => tab.id)]))
+      return { league, tabs, fits, ...await readLeagueTabs(league) }
+    },
+    'stash-tab-choice': async (args) => {
+      const league = reader.league
+      const template = args?.template as TabChoice['template']
+      if (!league || !(TEMPLATES.includes(template as never) || template === 'custom')) return null
+      return await setChoice(league, { template, ids: ids(args?.ids), ...(typeof args?.set === 'string' ? { set: args.set } : {}) })
+    },
+    'stash-tab-set-save': async (args) => {
+      const league = reader.league
+      if (!league || typeof args?.name !== 'string') return null
+      return await saveSet(league, args.name, ids(args?.ids))
+    },
+    'stash-tab-set-delete': async (args) => {
+      const league = reader.league
+      if (!league || typeof args?.name !== 'string') return null
+      return await deleteSet(league, args.name)
     }
   }
   for (const op of READER_OPS) ctx.register(op, ops[op])
