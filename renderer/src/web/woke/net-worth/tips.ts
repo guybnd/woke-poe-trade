@@ -4,6 +4,7 @@
 // name. Pure: no Vue.
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
+import { isUniqueFrame } from './valuation'
 
 type TipLine = Pick<ValuedLine, 'key' | 'name' | 'tipName' | 'variant' | 'frame'>
 
@@ -25,11 +26,11 @@ export function lineTip (l: Pick<ValuedLine, 'tipName' | 'variant' | 'frame'>, c
     name: l.tipName,
     // poe.ninja's kind, so a unique isn't read as a namesake (Hinekora's Lock
     // the ring, not the currency).
-    type: l.frame === 3 ? 'Unique' : l.frame === 4 ? 'SkillGem' : l.frame === 6 ? 'DivinationCard' : undefined,
+    type: isUniqueFrame(l.frame) ? 'Unique' : l.frame === 4 ? 'SkillGem' : l.frame === 6 ? 'DivinationCard' : undefined,
     variant: l.variant,
     count,
     note,
-    menu: { name: l.tipName, variant: l.variant, rarity: l.frame === 3 ? 'unique' : undefined }
+    menu: { name: l.tipName, variant: l.variant, rarity: isUniqueFrame(l.frame) ? 'unique' : undefined }
   }
 }
 

@@ -300,7 +300,7 @@ const clock = setInterval(() => { now.value = Date.now() }, 30_000)
 onUnmounted(() => { clearInterval(clock) })
 // The session's total from every refresh in it (gains.ts keeps them all).
 const sessionChaos = shallowRef(0)
-watch([farming, () => ledger.value.points.length, leagueNow], async () => {
+watch([farming, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow], async () => {
   const s = farming.value
   const id = leagueNow.value
   sessionChaos.value = s && id ? (await stashGainsBetween(id, s.startedAt, Date.now())).chaos : 0

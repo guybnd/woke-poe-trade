@@ -124,6 +124,10 @@ async function countRead (id: string, readAt: number) {
     // Every refresh's net change, for session profit elsewhere (gains.ts).
     const gains = addGain(await stashGains(id), gainOf(diff, since, divine.value))
     await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).catch(() => {})
+  } else if (beforeTabs != null && beforeTabs !== tabs) {
+    // Other tabs now: today's rate starts again from this read, so the
+    // tabs added or dropped don't read as profit or loss per hour.
+    next = { ...next, today: { day: next.today.day, points: next.today.points.slice(-1) } }
   }
   history.value = next
   // The chart's point, the change view, and per-tab values.

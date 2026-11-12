@@ -59,6 +59,7 @@ import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
 import Coin from './Coin.vue'
 import { lineTip } from './tips'
+import { isUniqueFrame } from './valuation'
 
 const props = defineProps<{
   lines: ValuedLine[]
@@ -245,7 +246,7 @@ function rowMenu (e: MouseEvent, l: ValuedLine) {
 
 function menuOf (l: ValuedLine): ItemMenuRef {
   // Gems, cards and currency: no rarity, so the menu looks them up by name.
-  return { name: l.tipName, variant: l.variant, rarity: l.frame === 3 ? 'unique' : undefined }
+  return { name: l.tipName, variant: l.variant, rarity: isUniqueFrame(l.frame) ? 'unique' : undefined }
 }
 </script>
 

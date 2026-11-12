@@ -294,6 +294,15 @@ export class StashReader {
     let cache: StashCache | null = null
     let changed = false
     let waiting = 0
+    // Written before the done status goes out: the overlay reads the cache
+    // as soon as it hears a read finished.
+    let saved = false
+    const save = async () => {
+      if (saved || !cache || !changed || this.stopped) return
+      saved = true
+      const toSave = cache
+      await queued(async () => { await writeAtomic(cacheFile(league), JSON.stringify(toSave)) })
+    }
     try {
       // No tabs chosen yet: no call at all.
       const choice = this.deps.choice ? await this.deps.choice(league) : { template: 'league' as const, ids: [] }
@@ -350,19 +359,19 @@ export class StashReader {
         }
         if (!stale()) this.set({ progress: { done: i + 2, total } })
       }
-      report({ running: false, progress: null, lastReadAt: this.deps.now(), waiting, error: null })
+      const doneAt = this.deps.now()
+      await save()
+      report({ running: false, progress: null, lastReadAt: doneAt, waiting, error: null })
     } catch (e) {
       const error: ReaderError = e instanceof Stop ? e.error : { kind: 'failed', message: e instanceof Error ? e.message : String(e) }
       if (error.kind === 'signed-out') this.account = null
       // Tabs read before the stop still count.
       const anyRead = cache?.tabs.some(t => t.readAt != null && t.readAt >= (cache?.listedAt ?? 0))
+      try { await save() } catch {}
       report({ running: false, progress: null, waiting, error, account: this.account, lastReadAt: anyRead ? this.deps.now() : this.status.lastReadAt })
     } finally {
       // Turned off meanwhile: write nothing more.
-      if (cache && changed && !this.stopped) {
-        const toSave = cache
-        await queued(async () => { await writeAtomic(cacheFile(league), JSON.stringify(toSave)) })
-      }
+      await save()
     }
     return this.current
   }

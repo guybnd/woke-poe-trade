@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { MODULES } from '@/web/woke/modules'
 import { personalOn, loadPersonal } from '@/web/woke/personal'
 import {
-  baselineOf, diffStash, emptyHistory, itemKey, perHourToday, recordRead, sinceYesterday, valueStash
+  baselineOf, diffStash, emptyHistory, gemVariant, isUniqueFrame, itemKey, itemLabel, perHourToday, recordRead, sinceYesterday, valueStash
 } from '@/web/woke/net-worth/valuation'
 import { valueByTab } from '@/web/woke/net-worth/ledger'
 import type { PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
@@ -206,5 +206,22 @@ describe('gem variants', () => {
     expect(gemVariant(gem(21, 20, true))).toBe('21/20c')
     expect(gemVariant(gem(5, 18))).toBe('1/20')
     expect(gemVariant(gem(20, 23, true))).toBe('20/23c')
+  })
+})
+
+describe('bug hunt round 2', () => {
+  const gem = (gemLevel: number, quality = 0) => ({ name: '', typeLine: 'Awakened Added Fire Damage Support', baseType: '', frame: 4, stack: 1, icon: '', gemLevel, quality })
+  it('names a gem by its own level when asked, for gems that top out under 20', () => {
+    expect(gemVariant(gem(5, 20), true)).toBe('5/20')
+    expect(gemVariant(gem(5, 20))).toBe('1/20')
+    expect(gemVariant(gem(21, 20), true)).toBe('21/20')
+  })
+  it('values relics and foils as their unique, by name', () => {
+    const relic = { name: 'Kingmaker', typeLine: 'Despot Axe', baseType: 'Despot Axe', frame: 9, stack: 1, icon: '' }
+    expect(isUniqueFrame(9) && isUniqueFrame(10) && isUniqueFrame(3)).toBe(true)
+    expect(itemLabel(relic)).toBe('Kingmaker')
+    expect(itemKey(relic)).not.toBe(itemKey({ ...relic, name: '', frame: 0 }))
+    const v = valueStash([{ name: 'A', items: [relic] }], () => ({ chaos: 91, category: 'gear' }))
+    expect(v.lines[0].tipName).toBe('Kingmaker')
   })
 })

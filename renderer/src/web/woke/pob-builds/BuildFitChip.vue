@@ -22,7 +22,7 @@ import { buildFacts, loadoutOf, realSets, slotLabel } from './build-model'
 import { pobItemText } from './item-text'
 import { slotsFor, swapCheck } from './swap-check'
 import type { SwapResult } from './swap-check'
-import { hideTip, showTip } from '../ui/tooltip/tooltip'
+import { hideTip, showTipAt } from '../ui/tooltip/tooltip'
 import type { PobItem, PobStats } from './widget'
 import { askWornGear, worn, WORN_STALE_MS } from './worn-gear'
 import { personalOn } from '../personal'
@@ -132,12 +132,13 @@ const swap = computed<Swap | null>(() => {
 })
 
 // An open tooltip follows the answer (the gear read lands while you hover).
-let hovered: Event | null = null
+// Kept as the element: an event's currentTarget is gone once it has fired.
+let hovered: HTMLElement | null = null
 watch(swap, () => { if (hovered) showSwap(hovered) })
 
 function enter (e: Event) {
-  hovered = e
-  showSwap(e)
+  hovered = e.currentTarget as HTMLElement
+  showSwap(hovered)
 }
 
 function leave () {
@@ -145,8 +146,8 @@ function leave () {
   hideTip()
 }
 
-function showSwap (e: Event) {
-  if (swap.value) showTip(e, { kind: 'swap', title: swap.value.title, source: swap.value.source, result: swap.value.result })
+function showSwap (el: HTMLElement) {
+  if (swap.value) showTipAt(el, { kind: 'swap', title: swap.value.title, source: swap.value.source, result: swap.value.result })
 }
 
 onBeforeUnmount(hideTip)

@@ -39,6 +39,8 @@ export interface Priced {
   category: Category
   // poe.ninja's 7-day line (% change since its first day), when it has one.
   graph?: Array<number | null>
+  // The poe.ninja variant priced (gems), for the tooltip.
+  variant?: string
 }
 export type PriceOf = (item: StashItemLike) => Priced | null
 
@@ -90,13 +92,19 @@ export interface PricePrefs {
 export const emptyPrefs = (): PricePrefs => ({ prices: {}, ignored: [] })
 
 // Where an item with your price but no poe.ninja one belongs.
+// Uniques, relics (9) and supporter foils (10): priced and named as the unique.
+export function isUniqueFrame (frame: number): boolean {
+  return frame === 3 || frame === 9 || frame === 10
+}
+
 function categoryOfFrame (frame: number): Category {
+  if (isUniqueFrame(frame)) return 'gear'
   if (frame === 6) return 'cards'
   if (frame === 5) return 'currency'
   return frame >= 1 && frame <= 4 ? 'gear' : 'other'
 }
 
-export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean }
+export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean, variant?: string }
 
 // One item's price with your prices on top. null: no price.
 export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePrefs, key = itemKey(item)): ItemPrice | null {
@@ -104,16 +112,18 @@ export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePr
   const ninjaChaos = ninja && ninja.chaos > 0 ? ninja.chaos : null
   const own = prefs.prices[key]
   if (typeof own === 'number' && Number.isFinite(own) && own >= 0) {
-    return { chaos: own, category: ninja?.category ?? categoryOfFrame(item.frame), graph: ninja?.graph, ninja: ninjaChaos, mine: true }
+    return { chaos: own, category: ninja?.category ?? categoryOfFrame(item.frame), graph: ninja?.graph, ninja: ninjaChaos, mine: true, variant: ninja?.variant }
   }
-  return ninja && ninjaChaos != null ? { chaos: ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false } : null
+  return ninja && ninjaChaos != null ? { chaos: ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false, variant: ninja.variant } : null
 }
 
 // Gems by poe.ninja's variant ("1", "20", "21/20c", "1/20"), as price check
 // names them (price-check/trends/getDetailsId.ts).
-export function gemVariant (item: StashItemLike): string {
+// `exactLevel`: the gem's own level, for gems that top out below 20 (Awakened
+// at 5, Enlighten at 3...), which poe.ninja lists by that level.
+export function gemVariant (item: StashItemLike, exactLevel = false): string {
   const level = item.gemLevel ?? 1
-  let v = level >= 20 ? String(level) : '1'
+  let v = exactLevel || level >= 20 ? String(level) : '1'
   const q = item.quality ?? 0
   if (q) v += `/${q >= 16 && q <= 20 ? 20 : q}`
   if (item.corrupted) v += 'c'
@@ -123,21 +133,21 @@ export function gemVariant (item: StashItemLike): string {
 export function itemKey (item: StashItemLike): string {
   // Uniques and rares by name and base (each rare is its own thing). Magic and
   // rare items are marked, so an unidentified rare map is never a normal one.
-  const named = (item.frame === 3 || item.frame === 2) && item.name
+  const named = (isUniqueFrame(item.frame) || item.frame === 2) && item.name
   const name = named ? `${item.name} ${item.typeLine}` : item.typeLine
   const parts = [item.frame === 1 ? `M:${name}` : item.frame === 2 ? `R:${name}` : name]
   if (item.frame === 4) parts.push(`L${item.gemLevel ?? 1}`, `Q${item.quality ?? 0}`, item.corrupted ? 'C' : '')
   if (item.mapTier) parts.push(`T${item.mapTier}`)
-  if (item.frame === 3 && (item.links ?? 0) >= 5) parts.push(`${item.links}L`)
+  if (isUniqueFrame(item.frame) && (item.links ?? 0) >= 5) parts.push(`${item.links}L`)
   return parts.filter(Boolean).join('|')
 }
 
 export function itemLabel (item: StashItemLike): string {
-  const base = item.frame === 3 && item.name ? item.name : item.typeLine
+  const base = isUniqueFrame(item.frame) && item.name ? item.name : item.typeLine
   if (item.frame === 2 && item.name) return `${item.name}, ${item.typeLine}`
   if (item.frame === 4) return `${base} ${item.gemLevel ?? 1}/${item.quality ?? 0}${item.corrupted ? ' corrupted' : ''}`
-  if (item.mapTier && item.frame !== 3) return `${base} (T${item.mapTier})`
-  if (item.frame === 3 && (item.links ?? 0) >= 5) return `${base} ${item.links}L`
+  if (item.mapTier && !isUniqueFrame(item.frame)) return `${base} (T${item.mapTier})`
+  if (isUniqueFrame(item.frame) && (item.links ?? 0) >= 5) return `${base} ${item.links}L`
   return base
 }
 
@@ -169,8 +179,8 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
           tabs: [],
           tabIds: [],
           frame: item.frame,
-          tipName: item.frame === 3 && item.name ? item.name : item.typeLine,
-          variant: item.frame === 4 ? gemVariant(item) : undefined,
+          tipName: isUniqueFrame(item.frame) && item.name ? item.name : item.typeLine,
+          variant: item.frame === 4 ? (price?.variant ?? gemVariant(item)) : undefined,
           graph: price?.graph,
           mine: price?.mine || undefined,
           ninjaChaos: price?.ninja ?? null,
