@@ -242,3 +242,18 @@ test('a vendor recipe shows what to sell and what you get', async ({ overlay }) 
   await expect(panel.getByText('An item with 6 linked sockets', { exact: true })).toBeVisible()
   await overlay.snap('search-recipe')
 })
+
+test('a gem says where to get it in the campaign', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('leap slam')
+  const card = panel.getByText('Where to get Leap Slam', { exact: true })
+  await expect(card).toBeVisible()
+  await card.click()
+  await expect(panel.getByText('Quest reward (free)')).toBeVisible()
+  await overlay.snap('search-gem')
+})
