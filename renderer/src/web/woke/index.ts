@@ -14,6 +14,7 @@ import WokeOverlayRoot from './WokeOverlay.vue'
 import { defineAsyncComponent } from 'vue'
 import type { Component } from 'vue'
 import * as specs from './widget-specs'
+import { pushHostConfig } from '@/web/Config'
 import type { WidgetSpec } from '@/web/overlay/interfaces'
 
 type WidgetComponent = Component & { widget: WidgetSpec }
@@ -22,7 +23,20 @@ type WidgetComponent = Component & { widget: WidgetSpec }
 // overlay mounts only widgets of switched-on modules, so a tool that's off
 // never loads. The spec stays at hand for the registry and config defaults.
 function lazy (spec: WidgetSpec, load: () => Promise<{ default: Component }>): WidgetComponent {
-  return Object.assign(defineAsyncComponent(load), { widget: spec })
+  return Object.assign(defineAsyncComponent(() => load().then(m => { hostConfigAfterMount(); return m })), { widget: spec })
+}
+
+// A widget fills in config defaults (its hotkeys among them) when it mounts.
+// The overlay sends main its hotkeys once at start, before a lazy widget is
+// in; so send them again just after one mounts. Several at once send once.
+let hostConfigQueued = false
+function hostConfigAfterMount () {
+  if (hostConfigQueued) return
+  hostConfigQueued = true
+  setTimeout(() => {
+    hostConfigQueued = false
+    pushHostConfig()
+  }, 50)
 }
 
 export const wokeWidgets: WidgetComponent[] = [

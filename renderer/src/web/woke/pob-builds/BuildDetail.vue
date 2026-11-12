@@ -382,7 +382,8 @@ const gems = computed(() => props.details
   : [])
 
 const campaign = computed(() => AppConfig<CampaignWidget>(CAMPAIGN_TYPE))
-const got = computed(() => campaign.value?.state.gemsGot ?? [])
+// The campaign widget may not have made its state yet (it fills it in when it mounts).
+const got = computed(() => campaign.value?.state?.gemsGot ?? [])
 const canTick = computed(() => Boolean(campaign.value))
 
 function gemNote (g: NextGem): string {
