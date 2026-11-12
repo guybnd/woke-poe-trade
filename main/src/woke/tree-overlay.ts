@@ -72,7 +72,7 @@ export class TreeOverlay {
     }
     this.last = fit
     this.drag.fitted(fit, width, height)
-    const lit = litProbes(shot, width, height, fit, args.probes.map(p => Float32Array.from(p)))
+    const lit = litProbes(shot, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)))
     this.startWatching()
     return {
       ok: true as const,

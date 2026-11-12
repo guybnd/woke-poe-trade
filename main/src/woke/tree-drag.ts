@@ -21,7 +21,8 @@ export class TreeDrag {
 
   // A fresh fit: where the tree really is.
   fitted (fit: { zoom: number, ox: number, oy: number }, width: number, height: number) {
-    const key = `${fit.zoom.toFixed(4)}@${width}x${height}`
+    // Fits of one zoom step differ in the 4th digit; steps are 0.05+ apart.
+    const key = `${fit.zoom.toFixed(2)}@${width}x${height}`
     if (this.from && key === this.key) this.learn(fit.ox, fit.oy)
     this.key = key
     this.ox = fit.ox
