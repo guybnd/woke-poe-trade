@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-82
 title: Low-confidence price tag and filter across price panels
-status: Grooming
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -33,7 +33,26 @@ history:
       Which tag, filter and rule? Mocks:
       https://claude.ai/artifact/Gghx9jLJVkozMHRYqmrggX Recommended: 1B (the
       word thin), 2A (Skip thin per panel), 3A (Lab gems rule, low trade later).
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #363 (14e17971): ! tag and Skip thin chip in League mechanics
+      (on by default), Market tracker and Boss runs (off by default; thin drops
+      count as 0). Built to Guy's picks 1A/2A/3A.
+    date: '2026-11-12T06:49:59.855Z'
+    completionComment: true
+    id: c-2026-11-12t06-49-59-855z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T06:49:59.855Z'
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T06:49:59.855Z'
+swimlane: null
 needsAction: null
 ---
 Guy, 2026-11-05: low-confidence prices should have a filter and a tag, like the Lab gems toggle. Same thin rule as Lab gems (no poe.ninja price on 3 or more of the last 7 days). Mocks first, then Guy's pick.
