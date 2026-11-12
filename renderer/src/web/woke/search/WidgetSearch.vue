@@ -144,6 +144,7 @@ import LookupDetail from './LookupDetail.vue'
 import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
+import { bossLookup, dropLookup } from './lookups/bosses'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import type { SearchWidget } from './widget'
 
@@ -292,22 +293,31 @@ function settingEntries (): ActionEntry[] {
 
 // ---- lookups: answers, facts and the web ----
 const lookupContext = computed<LookupContext>(() => {
-  const prices = new Map<string, number>()
+  // A name's plain row, else its cheapest variant; and each exact variant.
+  const prices = new Map<string, { chaos: number, plain: boolean }>()
+  const variants = new Map<string, number>()
   for (const i of snapshot.value?.items ?? []) {
-    // A currency wins its name over a same-named row of another type.
-    if (i.variant || (prices.has(i.name) && i.type !== 'Currency')) continue
-    prices.set(i.name, i.chaos)
+    variants.set(`${i.name}\u0000${i.variant}`, i.chaos)
+    const had = prices.get(i.name)
+    // The plain row wins, a currency's over another type's; else the cheapest variant.
+    if (!i.variant) {
+      if (!had?.plain || i.type === 'Currency') prices.set(i.name, { chaos: i.chaos, plain: true })
+    } else if (!had || (!had.plain && i.chaos < had.chaos)) prices.set(i.name, { chaos: i.chaos, plain: false })
   }
   const league = leagues.selectedId.value
+  const tools = new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType))
   return {
-    price: (name) => name === 'Chaos Orb' ? 1 : prices.get(name) ?? null,
+    price: (name, variant) => name === 'Chaos Orb'
+      ? 1
+      : variant != null ? variants.get(`${name}\u0000${variant}`) ?? null : prices.get(name)?.chaos ?? null,
+    tools,
     divine: divine.value,
     now: Date.now(),
     league: league ? { name: league, startedAt: leagues.startedAt.value } : null
   }
 })
 const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).filter(i => i.type === 'Currency').map(i => i.name))])
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, webLookup])
 
 function lookupCards (q: string): LookupCard[] {
   // Re-read every 30 s, so countdowns tick while the palette is open.
@@ -328,7 +338,10 @@ function cardSections (cards: LookupCard[], only: string[] | null, skip: string[
 }
 function act (action: LookupAction) {
   if ('url' in action) window.open(action.url)
-  else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
+  else if ('tool' in action) {
+    const w = wm.widgets.value.find(w => w.wmType === action.tool)
+    if (w) wm.show(w.wmId)
+  } else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
   else {
     query.value = action.search
     focusInput()

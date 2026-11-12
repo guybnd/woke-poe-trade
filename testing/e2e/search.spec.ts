@@ -193,3 +193,21 @@ test('currency maths and countdowns answer first, and the web is always offered'
   await expect(first).toContainText(/Lab layout resets in/)
   await overlay.snap('search-lab-reset')
 })
+
+test('a boss card shows its entry and drops, and an item says where it drops', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('uber maven')
+  await expect(panel.locator('[data-selected]')).toContainText('Uber Maven')
+  await expect(panel.getByText(/4 × Reality Fragment/)).toBeVisible()
+  await overlay.snap('search-boss')
+
+  await box.fill('progenesis')
+  await expect(panel.getByText(/Progenesis drops from/)).toBeVisible()
+  await panel.getByText(/Progenesis drops from/).click()
+  await overlay.snap('search-where-it-drops')
+})

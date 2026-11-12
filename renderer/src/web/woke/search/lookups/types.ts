@@ -22,7 +22,9 @@ export interface LookupSection {
 export type LookupAction =
   { label: string, url: string } |
   { label: string, copy: string } |
-  { label: string, search: string }
+  { label: string, search: string } |
+  // Opens a tool by its widget type, when it's switched on.
+  { label: string, tool: string }
 
 export interface LookupCard {
   // Unique within the palette's results.
@@ -42,8 +44,11 @@ export interface LookupCard {
 }
 
 export interface LookupContext {
-  // Price in chaos of a priced name, or null. Chaos Orb is always 1.
-  price: (name: string) => number | null
+  // Price in chaos of a priced name, or null. Chaos Orb is always 1. Without
+  // a variant: the plain row, else the cheapest variant.
+  price: (name: string, variant?: string) => number | null
+  // Tools that are switched on, by widget type.
+  tools: ReadonlySet<string>
   divine: number | null
   now: number
   // The league you picked, when the trade site gave its start.
