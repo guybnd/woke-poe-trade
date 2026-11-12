@@ -52,6 +52,48 @@ export interface CampaignWidget extends Widget {
   hotkeyCard: string | null
   hotkeyNext: string | null
   hotkeyPrev: string | null
+  // Every character's own route step and state, by name, while another is
+  // followed (the one followed lives in `step` and `state`).
+  chars?: Record<string, CharProfile>
+}
+
+export interface CharProfile {
+  step: number
+  state: CampaignState
+}
+
+// A character this high is past the campaign: following it keeps the route asleep.
+export const PAST_CAMPAIGN_LEVEL = 70
+
+// Should a level-up by `name` switch the tracker to that character? The log
+// names a character only when it levels, and logs party members' level-ups
+// too. So: a character past the campaign switches at once (an alt in maps),
+// and a levelling one after two level-ups in a row with none from the one
+// followed (you're playing it, not partying with it).
+export function shouldSwitch (followed: string, name: string, level: number, streak: number): boolean {
+  if (!followed || name === followed) return false
+  return level >= PAST_CAMPAIGN_LEVEL || streak >= 2
+}
+
+// Puts the followed character away and takes out `name`'s own route and
+// state, or a fresh one at `freshStep` for a character not seen before.
+export function switchCharacter (w: CampaignWidget, c: { charName: string, className: string, level: number }, freshStep: number) {
+  const saved = w.chars?.[c.charName]
+  const chars = Object.fromEntries(Object.entries(w.chars ?? {}).filter(([name]) => name !== c.charName))
+  if (w.state.charName) chars[w.state.charName] = { step: w.step, state: { ...w.state } }
+  w.chars = chars
+  const where = { zone: w.state.zone, areaId: w.state.areaId, areaLevel: w.state.areaLevel, act: w.state.act, updatedAt: w.state.updatedAt }
+  if (saved) {
+    w.step = saved.step
+    w.state = { ...saved.state, ...where }
+  } else {
+    w.step = freshStep
+    w.state = { ...emptyState(), ...where }
+  }
+  w.state.charName = c.charName
+  w.state.className = c.className
+  w.state.level = c.level
+  if (c.level >= PAST_CAMPAIGN_LEVEL) w.state.asleep = true
 }
 
 export function emptyState (): CampaignState {
