@@ -108,7 +108,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 2. The setup wizard finds your game folder and asks how you play.
 3. In game, `Ctrl + D` prices the item under the cursor and `Shift + Space` opens the overlay. The rail on the left edge holds every tool.
 
-Run Path of Exile in Windowed or Windowed Fullscreen. The [help pages](https://guybnd.github.io/woke-poe-trade/issues) cover the common problems.
+Run Path of Exile in Windowed or Windowed Fullscreen, with the game in English. The app itself is in English only for now. The [help pages](https://guybnd.github.io/woke-poe-trade/issues) cover the common problems.
 
 ## Privacy and safety
 

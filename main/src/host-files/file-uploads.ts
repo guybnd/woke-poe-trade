@@ -12,6 +12,9 @@ export function addFileUploadRoutes (routes: EventEmitter) {
   routes.addListener('request', (req: IncomingMessage, res: ServerResponse) => {
     if (req.method !== 'GET' || !req.url?.startsWith('/uploads/')) return
 
+    // Uploads are served with no content type: the browser mustn't guess one
+    // (a dropped .html or .svg could otherwise run as a page).
+    res.setHeader('X-Content-Type-Options', 'nosniff')
     sendFile(uploadsPath, req.url.slice('/uploads'.length), res)
   })
 
