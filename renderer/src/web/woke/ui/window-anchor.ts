@@ -8,8 +8,14 @@ interface Box { left: number, top: number, right: number, bottom: number }
 const isLeft = (r: Box, w: number) => (r.left + r.right) / 2 <= w / 2
 const isTop = (r: Box, h: number) => (r.top + r.bottom) / 2 <= h / 2
 
+// The bar keeps the panel edge nearer its side of the screen. Going by the
+// panel's middle sent a panel stretched wide from the left to its far right
+// edge. The anchor corner can't decide it either: a bar restored on the right
+// half leaves the panel anchored right after it's dragged back to the left.
+const pinsLeft = (rect: Box, w: number) => rect.left <= w - rect.right
+
 export function minimizeAnchor (anchor: WidgetAnchor, rect: Box, w: number, h: number): MinimizedState {
-  const left = isLeft(rect, w)
+  const left = pinsLeft(rect, w)
   return {
     anchor: { ...anchor },
     pinned: { pos: left ? 'tl' : 'tr', x: (left ? rect.left : rect.right) / w * 100, y: rect.top / h * 100 }

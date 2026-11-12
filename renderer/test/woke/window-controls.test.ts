@@ -23,6 +23,17 @@ describe('minimizeAnchor / restoreAnchor', () => {
       .toEqual({ pos: 'tr', x: 1800 / W * 100, y: 10 })
   })
 
+  it('keeps the edge nearer its side of the screen, however wide the panel is', () => {
+    // Stretched across most of the screen from the left: its middle is past the screen's.
+    const wide = { left: 100, top: 108, right: 1500, bottom: 1000 }
+    for (const pos of ['tl', 'tr', 'cc', 'br']) {
+      expect(minimizeAnchor({ pos, x: 50, y: 50 }, wide, W, H).pinned)
+        .toEqual({ pos: 'tl', x: 100 / W * 100, y: 10 })
+    }
+    expect(minimizeAnchor(start, { left: 420, top: 108, right: 1820, bottom: 1000 }, W, H).pinned)
+      .toEqual({ pos: 'tr', x: 1820 / W * 100, y: 10 })
+  })
+
   it('remembers a copy of the old anchor', () => {
     const anchor = { ...start }
     const state = minimizeAnchor(anchor, rect, W, H)
