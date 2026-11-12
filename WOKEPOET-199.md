@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-199
 title: 'PoB E: own notes in the Notes tab'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -36,7 +36,23 @@ history:
     comment: >-
       Mock E at https://claude.ai/artifact/HNY4e82bdeByYoJB8AAj6r: app-kept
       notes above PoB's, optional Add to PoB notes. OK to build?
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Merged in #340.'
+    date: '2026-11-12T02:51:53.935Z'
+    completionComment: true
+    id: c-2026-11-12t02-51-53-935z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T02:51:53.935Z'
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T02:51:53.935Z'
+swimlane: null
 needsAction: null
 ---
 > TL;DR: Guy's #6. Editable personal notes per build, stored in the app (PoB's own save would overwrite text written into an open build). Optional append-to-PoB later.
