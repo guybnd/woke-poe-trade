@@ -287,11 +287,11 @@ test('the ? button lists things to try, and picking one searches it', async ({ o
   await box.fill('')
   await panel.getByRole('button', { name: 'What can I search for?' }).click()
   await expect(box).toHaveValue('?')
-  await expect(panel.getByText('Vendor money', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Things to try', { exact: true })).toBeVisible()
   await overlay.snap('search-help')
-  await panel.getByText('chaos recipe', { exact: true }).dblclick()
-  await expect(box).toHaveValue('chaos recipe')
-  await expect(panel.locator('[data-selected]')).toContainText('Chaos Orb')
+  await panel.getByText('rustic sash', { exact: true }).dblclick()
+  await expect(box).toHaveValue('rustic sash')
+  await expect(panel.locator('[data-selected]')).toContainText('physical damage')
 })
 
 test('an empty search box shows things to try', async ({ overlay }) => {
@@ -302,7 +302,8 @@ test('an empty search box shows things to try', async ({ overlay }) => {
   const { panel, box } = await waitForPrices(overlay)
 
   await box.fill('')
-  await expect(panel.getByText('Vendor money', { exact: true })).toBeVisible()
-  await expect(panel.getByText('chaos recipe', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Things to try', { exact: true })).toBeVisible()
+  await expect(panel.getByText('the doctor', { exact: true })).toBeVisible()
+  await expect(panel.getByText(/^1 Mirror of Kalandra = /)).toBeVisible()
   await overlay.snap('search-empty')
 })

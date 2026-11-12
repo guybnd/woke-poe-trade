@@ -67,6 +67,12 @@ function loadFile (file: keyof TipPack): Promise<void> {
   return job
 }
 
+// Unique mods, by name: the tooltip's unique file.
+export async function loadTipUniques (): Promise<TipPack['uniques'] | null> {
+  await loadFile('uniques')
+  return pack.uniques ?? null
+}
+
 // Card rewards and stack sizes, currency texts: the tooltip's item file.
 export async function loadTipItems (): Promise<TipPack['items'] | null> {
   await loadFile('items')

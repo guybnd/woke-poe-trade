@@ -150,7 +150,7 @@ import { bossLookup, dropLookup } from './lookups/bosses'
 import { cardLookup } from './lookups/cards'
 import { recipeLookup } from './lookups/recipes'
 import { gemLookup, transfiguredBase } from './lookups/gems'
-import { passiveList, treeLookup } from './lookups/tree'
+import { keystoneUniques, passiveList, treeLookup } from './lookups/tree'
 import type { Passive } from './lookups/tree'
 import { betrayalLookup } from './lookups/betrayal'
 import { HELP_QUERY, exampleCards } from './lookups/examples'
@@ -159,7 +159,7 @@ import type { MechanicsWidget } from '../mechanics/widget'
 import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
 import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
-import { loadTipItems } from '../ui/tooltip/item-tip'
+import { loadTipItems, loadTipUniques } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
 import type { TipItem } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -369,13 +369,17 @@ function loadGems () {
 }
 // Keystones and notables with what they do, from the PoB tool's tree.
 const passives = shallowRef<Passive[] | null>(null)
+const keystoneGrants = shallowRef<ReadonlyMap<string, string[]>>(new Map())
 let treeLoads = 0
 function loadTree () {
   if (passives.value) return
   // A read started before a data update is dropped.
   const mine = ++treeLoads
-  loadPassiveTree().then(nodes => {
-    if (mine === treeLoads) passives.value = passiveList(nodes.values(), passiveTreeClusters()?.named ?? null)
+  Promise.all([loadPassiveTree(), loadTipUniques().catch(() => null)]).then(([nodes, uniques]) => {
+    if (mine !== treeLoads) return
+    const list = passiveList(nodes.values(), passiveTreeClusters()?.named ?? null)
+    keystoneGrants.value = uniques ? keystoneUniques(uniques, list.filter(p => p.kind === 'Keystone').map(p => p.name)) : new Map()
+    passives.value = list
   }).catch(() => {})
 }
 // Betrayal slots you edited in League mechanics.
@@ -391,7 +395,7 @@ const stopDataWatch = onSharedDataChange(() => {
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value), betrayalLookup(betrayalOverrides), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -419,6 +423,7 @@ function act (action: LookupAction) {
     if (w) wm.show(w.wmId)
   } else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
   else {
+    showAnswer = true
     query.value = action.search
     focusInput()
   }
@@ -431,15 +436,20 @@ function toggleHelp () {
   focusInput()
 }
 
+// An example's real answer: "1 mirror in div" shows today's divines.
+function liveAnswer (q: string): string | null {
+  return lookupCards(q).find(c => c.group === 'Answer')?.name ?? null
+}
+
 // ---- results ----
 const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
   if (!open.value) return []
-  if (helpOpen.value) return cardSections(exampleCards(), null)
+  if (helpOpen.value) return cardSections(exampleCards(liveAnswer), null)
   const items = snapshot.value?.items ?? []
   // Nothing typed yet: your recent lookups, then things to try.
   if (!queryOk.value) {
     const recent = recentGroups(items)
-    return [...(recent.length ? [{ label: 'Recent', entries: recent.map(priceEntry) as Entry[] }] : []), ...cardSections(exampleCards(), null)]
+    return [...(recent.length ? [{ label: 'Recent', entries: recent.map(priceEntry) as Entry[] }] : []), ...cardSections(exampleCards(liveAnswer), null)]
   }
   const q = query.value
   const groups = searchPrices(items, q, { corrupted: corrupted.value })
@@ -463,9 +473,13 @@ const entries = computed(() => sections.value.flatMap(s => s.entries))
 
 const selected = shallowRef<Entry | null>(null)
 // The same result stays selected as you keep typing, while it still matches.
+// After picking an example, its answer card is what it was picked for.
+let showAnswer = false
 watch(entries, (list) => {
   const id = selected.value?.id
-  selected.value = list.find(e => e.id === id) ?? list[0] ?? null
+  const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
+  showAnswer = false
+  selected.value = answer ?? list.find(e => e.id === id) ?? list[0] ?? null
 })
 
 function move (dir: 1 | -1) {

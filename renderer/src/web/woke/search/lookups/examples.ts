@@ -1,76 +1,43 @@
-// "?" in the search box: things to try, one per kind of lookup. Picking one
-// searches it.
+// Things to try, shown in the empty search box and on "?". Guy's picks,
+// in his order. Picking one searches it.
 import type { LookupCard } from './types'
 
-interface Example { query: string, shows: string }
+export interface Example {
+  query: string
+  shows: string
+  icon: string
+  // Show the live answer instead of `shows` once prices are in.
+  live?: boolean
+  // A hint, not a search: picking it only puts the cursor in the box.
+  hint?: boolean
+}
 
-// The surprising ones first: what each kind of lookup knows that you'd
-// otherwise alt-tab to a wiki for.
-export const EXAMPLES: Array<{ group: string, icon: string, about: string, items: Example[] }> = [
-  {
-    group: 'Is it worth it?',
-    icon: 'fas fa-scale-balanced',
-    about: 'Prices put side by side, so you know before you farm, craft or turn in.',
-    items: [
-      { query: 'headhunter', shows: 'The div card set that makes one, and if the set is cheaper' },
-      { query: 'uber maven', shows: 'Entry cost against loot per kill' },
-      { query: 'awakened enlighten', shows: 'Which boss drops it, and how often' },
-      { query: '1 mirror in div', shows: "Any currency in any other, at today's price" }
-    ]
-  },
-  {
-    group: 'Leveling',
-    icon: 'fas fa-person-running',
-    about: 'Vendor tricks and gem sources for the campaign.',
-    items: [
-      { query: 'rustic sash', shows: 'Sell it with a weapon: up to 84% physical damage' },
-      { query: 'movement speed', shows: 'Boots + Quicksilver Flask = faster boots' },
-      { query: 'herald of ash', shows: 'Which quest gives it free, for your class' },
-      { query: 'ice nova of frostbolts', shows: 'Where transfigured gems come from' }
-    ]
-  },
-  {
-    group: 'Endgame',
-    icon: 'fas fa-dungeon',
-    about: 'The things you look up every league.',
-    items: [
-      { query: 'veiled', shows: 'Which Betrayal member gives veiled crafts' },
-      { query: 'reality frag', shows: 'The boss a fragment opens, and what it drops' },
-      { query: 'vaal fireball', shows: 'How to get a Vaal gem' },
-      { query: 'lab reset', shows: 'When the lab layout changes' }
-    ]
-  },
-  {
-    group: 'Build questions',
-    icon: 'fas fa-dharmachakra',
-    about: 'What a passive does, without opening the tree.',
-    items: [
-      { query: 'sanctuary', shows: 'Same name, tree notable and Guardian node' },
-      { query: 'lord of drought', shows: 'A cluster jewel notable' }
-    ]
-  },
-  {
-    group: 'Vendor money',
-    icon: 'fas fa-store',
-    about: 'Recipes by what you get, what you sell, or a nickname.',
-    items: [
-      { query: '6l', shows: 'A 6-link sells for 20 Fusing' },
-      { query: 'chaos recipe', shows: 'Full rare sets, and how to get 3x' }
-    ]
-  }
+export const EXAMPLES: Example[] = [
+  { query: 'mageblood', shows: 'Price per flask count; 24h and 7d change', icon: 'fas fa-coins' },
+  { query: 'the doctor', shows: '8-card set price vs Headhunter', icon: 'fas fa-layer-group' },
+  { query: '1 mirror in div', shows: 'Value in divines', icon: 'fas fa-calculator', live: true },
+  { query: 'awakened enlighten', shows: 'Where it drops, drop chance', icon: 'fas fa-gift' },
+  { query: 'rustic sash', shows: 'Weapon + sash + whetstone → 40-84% inc. phys', icon: 'fas fa-store' },
+  { query: 'herald of ash', shows: 'Quest reward and vendors, by class', icon: 'fas fa-gem' },
+  { query: 'resolute technique', shows: 'Keystone stats; uniques that grant it', icon: 'fas fa-dharmachakra' },
+  { query: 'lord of drought', shows: 'Cluster jewel notable stats', icon: 'fas fa-circle-nodes' },
+  { query: 'lab reset', shows: 'Time to the lab layout reset', icon: 'fas fa-hourglass-half' },
+  { query: 'market', shows: 'Opens Market', icon: 'fas fa-chart-line' },
+  { query: 'any words', shows: 'poewiki and poedb search', icon: 'fas fa-book', hint: true }
 ]
 
 export const HELP_QUERY = '?'
 
-export function exampleCards (): LookupCard[] {
-  return EXAMPLES.flatMap(g => g.items.map(e => ({
+// `answer`: the live answer for a query, when the example asks for one.
+export function exampleCards (answer: (query: string) => string | null = () => null): LookupCard[] {
+  return EXAMPLES.map(e => ({
     id: `example:${e.query}`,
-    group: g.group,
+    group: 'Things to try',
     name: e.query,
-    sub: e.shows,
-    icon: g.icon,
-    title: `Try "${e.query}"`,
-    sections: [{ label: g.group, text: [g.about] }],
-    actions: [{ label: `Search "${e.query}"`, search: e.query }]
-  })))
+    sub: (e.live ? answer(e.query) : null) ?? e.shows,
+    icon: e.icon,
+    title: e.hint ? 'Search the web' : `Try "${e.query}"`,
+    sections: [{ text: [e.shows] }],
+    actions: [{ label: e.hint ? 'Type anything' : `Search "${e.query}"`, search: e.hint ? '' : e.query }]
+  }))
 }
