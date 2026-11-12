@@ -51,3 +51,8 @@ export function strList (value: unknown): string[] {
 
 // PoE's in-game search box accepts at most 250 characters (50 before 3.21).
 export const MAX_SEARCH_LENGTH = 250
+
+// The game patch now. Saved search strings are stamped with it, so one
+// written for an older patch (when mods were worded differently) shows it.
+// Raise it each league.
+export const GAME_PATCH = '3.30'

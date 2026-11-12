@@ -45,6 +45,7 @@
           <span class="w-trunc">{{ entry.name || effectiveText(entry) }}</span>
           <WChip v-if="entry.negate && canNegate(entry.text)" title="Highlights items WITHOUT this">not</WChip>
           <WChip v-for="tag in entry.tags.slice(0, 2)" :key="tag">{{ tag }}</WChip>
+          <span v-if="entry.patch && entry.patch !== GAME_PATCH" class="text-xs shrink-0" style="color: var(--w-warn);" :title="`Saved in ${entry.patch}: mods may be worded differently in ${GAME_PATCH}`">{{ entry.patch }}</span>
           <span v-if="effectiveText(entry).length > MAX_SEARCH_LENGTH" class="w-down text-xs shrink-0" title="Too long: the game cuts the search off at 250 characters">{{ effectiveText(entry).length }}/{{ MAX_SEARCH_LENGTH }}</span>
           <WKbd v-if="entry.hotkey && config.enableHotkeys" :keys="entry.hotkey" class="ml-auto" />
           <template v-if="entry.name" #sub><span class="w-mono">{{ effectiveText(entry) }}</span></template>
@@ -104,7 +105,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast } from '../ui'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
-import { MAX_SEARCH_LENGTH, canNegate, categoryLabel, categoryView, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
+import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, categoryLabel, categoryView, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
 import type { RegexEntry } from './widget'
 import DockItem from '../dock/DockItem.vue'
 import { saveDock } from '../dock/dock'

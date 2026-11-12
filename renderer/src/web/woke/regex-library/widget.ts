@@ -5,7 +5,7 @@ export { groupByCategory } from '../shared/library'
 
 export const REGEX_LIBRARY_TYPE = 'woke-regex-library'
 
-export { MAX_SEARCH_LENGTH } from '../shared/library'
+export { MAX_SEARCH_LENGTH, GAME_PATCH } from '../shared/library'
 
 export interface RegexEntry {
   id: number
@@ -17,6 +17,8 @@ export interface RegexEntry {
   hotkey: string | null
   // Search for items WITHOUT this text (wraps it as "!…").
   negate?: boolean
+  // The game patch the text was last saved in (GAME_PATCH); unset before stamps.
+  patch?: string
 }
 
 export interface RegexLibraryWidget extends Widget {

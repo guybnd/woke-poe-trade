@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import { computed, reactive, shallowRef } from 'vue'
 import { WField, WButton, WHotkeyCell } from '../ui'
-import { MAX_SEARCH_LENGTH, canNegate, effectiveText, regexLint } from './widget'
+import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, effectiveText, regexLint } from './widget'
 import type { RegexEntry } from './widget'
 import { parseTags } from '../shared/library'
 
@@ -64,7 +64,9 @@ function save () {
     category: draft.category.trim(),
     notes: draft.notes.trim(),
     tags: parseTags(tags.value),
-    negate: canNegate(draft.text) ? draft.negate : undefined
+    negate: canNegate(draft.text) ? draft.negate : undefined,
+    // A changed text is today's; an unchanged one keeps its old stamp.
+    patch: draft.text !== props.entry.text || !props.entry.patch ? GAME_PATCH : props.entry.patch
   })
 }
 </script>
