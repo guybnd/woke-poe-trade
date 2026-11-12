@@ -15,6 +15,11 @@ export interface AtlasTreeModel {
   art: TreeArt
   // Notables where you pick a type (3.30): node id -> its choices.
   variants: Map<number, AtlasVariant[]>
+  // Each passive's mechanic: the mastery of the wheel it sits in ("Breach",
+  // "Threads"). Passives on the paths between wheels have none.
+  mechanicOf: Map<number, string>
+  // Every mechanic, by name.
+  mechanics: string[]
   // The node every path starts from. Always allocated, never a point.
   start: number
   points: number
@@ -98,6 +103,12 @@ export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel 
   const groups: TreeArt['groups'] = []
   const nodes = new Map<number, TreeNode>()
   const variants = new Map<number, AtlasVariant[]>()
+  // A wheel's mastery names its mechanic.
+  const groupMechanic = new Map<string, string>()
+  for (const [key, n] of Object.entries(raw)) {
+    if (key !== 'root' && n.isMastery && n.group != null && n.name) groupMechanic.set(String(n.group), plainText(n.name))
+  }
+  const mechanicOf = new Map<number, string>()
   const usedIcons = new Set<string>()
   for (const [key, n] of Object.entries(raw)) {
     if (key === 'root' || n.group == null) continue
@@ -132,6 +143,8 @@ export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel 
       .filter(e => typeof e.effect === 'number')
       .map(e => ({ effect: e.effect!, text: (e.stats ?? []).filter((s): s is string => typeof s === 'string').map(plainText).join(' / ') }))
     if (choices.length) variants.set(id, choices)
+    const mechanic = groupMechanic.get(String(n.group))
+    if (mechanic && kind !== 'mastery' && kind !== 'start') mechanicOf.set(id, mechanic)
   }
 
   // Masteries in the atlas tree are labels: nothing links to them.
@@ -167,6 +180,8 @@ export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel 
     nodes,
     art: { groups, sprites },
     variants,
+    mechanicOf,
+    mechanics: [...new Set(mechanicOf.values())].sort((a, b) => a.localeCompare(b)),
     start,
     points: data.points?.totalPoints ?? DEFAULT_POINTS,
     links

@@ -49,6 +49,10 @@ export interface AtlasWidget extends Widget {
   closedFolders?: string[]
   // The tree panel between the list and the loadout.
   treeHidden?: boolean
+  // Mechanics lit on the tree, in the order picked (that order sets colours).
+  lit?: string[]
+  // The mechanic list on the tree folded away.
+  mechanicsHidden?: boolean
 }
 
 export function emptyStrategy (list: AtlasStrategy[]): AtlasStrategy {
