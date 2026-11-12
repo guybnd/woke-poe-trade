@@ -9,6 +9,7 @@
       <WField v-model="tags" placeholder="Tags, comma separated" :clear-on-esc="false" data-qa="regex-tags" />
     </div>
     <WField v-if="showNotes" v-model="draft.notes" placeholder="Notes" :clear-on-esc="false" class="w-full" data-qa="regex-notes" />
+    <div v-for="w in lint" :key="w" class="text-xs" style="color: var(--w-warn);" data-qa="regex-lint"><i class="fas fa-exclamation-triangle" /> {{ w }}</div>
     <div :class="$style.meta">
       <span :class="tooLong ? 'w-down' : 'w-faint'" data-qa="regex-length"
         :title="tooLong ? 'Too long: the game cuts the search off at 250 characters' : undefined">{{ length }}/{{ MAX_SEARCH_LENGTH }}</span>
@@ -28,7 +29,7 @@
 <script setup lang="ts">
 import { computed, reactive, shallowRef } from 'vue'
 import { WField, WButton, WHotkeyCell } from '../ui'
-import { MAX_SEARCH_LENGTH, canNegate, effectiveText } from './widget'
+import { MAX_SEARCH_LENGTH, canNegate, effectiveText, regexLint } from './widget'
 import type { RegexEntry } from './widget'
 import { parseTags } from '../shared/library'
 
@@ -45,6 +46,7 @@ const showNotes = shallowRef(!!props.entry.notes)
 
 const length = computed(() => effectiveText(draft).length)
 const tooLong = computed(() => length.value > MAX_SEARCH_LENGTH)
+const lint = computed(() => regexLint(draft.text))
 
 // Enter in a text box saves; the hotkey box and buttons keep their own Enter.
 function onEnter (e: KeyboardEvent) {

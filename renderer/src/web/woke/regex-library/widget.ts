@@ -62,6 +62,15 @@ export function canNegate (text: string): boolean {
   return !/[\s"]/.test(t)
 }
 
+// Typos the game reads differently from what was meant (WOKEPOET-91).
+export function regexLint (text: string): string[] {
+  const out: string[] = []
+  if ((text.match(/"/g) ?? []).length % 2) out.push('Unbalanced quote: the game reads everything after it as one term.')
+  if (text.trim() && text !== text.trim()) out.push('Starts or ends with a space, which the game keeps as part of the search.')
+  if (/\S {2,}\S/.test(text)) out.push('Two spaces in a row: one is enough between terms.')
+  return out
+}
+
 // What actually goes into the stash search box.
 export function effectiveText (entry: { text: string, negate?: boolean }): string {
   const t = entry.text.trim()
