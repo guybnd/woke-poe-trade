@@ -1,7 +1,7 @@
 // The price check's Q tag: rows a catalyst raised, and the item's catalyst quality filter.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { loadGameData, fixture, parseItem } from '../helpers/game-data'
-import { createExactStatFilters } from '@/web/price-check/filters/create-stat-filters'
+import { createExactStatFilters, initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { catalystQualityFilter, raisedBy, tagQuality, toggleCatalyst } from '@/web/woke/price-insight/catalyst-filter'
 import { ninjaFitsSearch } from '@/web/woke/price-insight/search-scope'
@@ -68,5 +68,32 @@ describe('catalyst tag edges', () => {
     expect(ninjaFitsSearch(unique, stats)).toBe(true)
     toggleCatalyst(stats)
     expect(ninjaFitsSearch(unique, stats)).toBe(false)
+  })
+})
+
+describe('catalysed roll range', () => {
+  beforeAll(loadGameData)
+
+  function auxium () {
+    const item = parseItem(fixture('items/unique-belt-catalysed.txt'))
+    return initUiModFilters(item, { searchStatRange: 10 }).filter((f): f is StatFilter => !('group' in f && f.group))
+  }
+
+  it('runs from the uncatalysed minimum to the catalysed maximum', () => {
+    const ele = auxium().find(f => f.text.includes('Elemental Damage with Attack Skills'))!
+    expect(ele.roll?.value).toBe(30)
+    expect(ele.roll?.bounds).toEqual({ min: 20, max: 30 })
+  })
+
+  it('leaves rows no catalyst raised alone', () => {
+    const mana = auxium().find(f => f.text.includes('maximum Mana'))!
+    expect(mana.roll?.bounds).toEqual({ min: 45, max: 55 })
+  })
+
+  it('widens a rare\'s catalysed row the same way', () => {
+    // +30(25-35) Strength at 20% shows 36, from a 30 to 42 tier: the slider starts at 25.
+    const str = beltStats().find(f => f.text.includes('Strength'))!
+    expect(str.roll?.value).toBe(36)
+    expect(str.roll?.bounds).toEqual({ min: 25, max: 42 })
   })
 })

@@ -1,0 +1,25 @@
+Item Class: Belts
+Rarity: Unique
+Auxium
+Crystal Belt
+--------
+Quality (Attack Modifiers): +20% (augmented)
+--------
+Requirements:
+Level: 79
+--------
+Item Level: 84
+--------
+{ Implicit Modifier — Defences, Energy Shield }
++75(60-80) to maximum Energy Shield
+--------
+{ Unique Modifier — Defences, Energy Shield }
++61(60-70) to maximum Energy Shield
+{ Unique Modifier — Resource, Mana }
++49(45-55) to maximum Mana
+{ Unique Modifier }
+Chill Effect and Freeze Duration on you are based on 100% of Energy Shield
+{ Unique Modifier — Damage, Elemental, Attack — 20% Increased }
+25(20-25)% increased Elemental Damage with Attack Skills per Power Charge
+--------
+As long as the soul is unfettered, so is the body.

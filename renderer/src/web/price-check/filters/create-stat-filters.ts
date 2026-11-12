@@ -1,7 +1,8 @@
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
-import { ModifierMechanic, ModifierType, StatCalculated, statSourcesTotal, translateStatWithRoll } from '@/parser/modifiers'
+import { ModifierMechanic, ModifierType, StatCalculated, StatRoll, StatSource, statSourcesTotal, translateStatWithRoll } from '@/parser/modifiers'
 import { JEWELLERY } from '@/parser/meta'
 import { getPropQuality, QUALITY_CHANGING_ENCHANT } from '@/parser/calc-q20'
+import { applyIncr } from '@/parser/advanced-mod-desc'
 import { percentRoll, percentRollDelta, roundRoll } from './util'
 import { FilterTag, ItemHasEmptyModifier, StatFilter, FilterGroup, FilterOrGroup } from './interfaces'
 import { filterPseudo } from './pseudo'
@@ -338,9 +339,13 @@ export function calculatedStatToFilter (
     calc.stat.dp ||
     calc.sources.some(s => s.stat.stat.ref === calc.stat.ref && s.stat.roll?.dp)
 
+    // woke: a catalyst scales the tier, but the slider spans what the trade site holds,
+    // so it runs from the uncatalysed roll to this item's catalysed one: a Q20 belt with
+    // a (20-25) mod shows 20 to 30, not 24 to 30.
+    const reach = rollWithoutCatalyst(calc.sources, (item.info.refName === 'Mirrored Tablet') ? 'max' : 'sum')
     const filterBounds = {
-      min: percentRoll(roll.min, -0, Math.floor, dp),
-      max: percentRoll(roll.max, +0, Math.ceil, dp)
+      min: percentRoll(Math.min(roll.min, reach?.min ?? roll.min), -0, Math.floor, dp),
+      max: percentRoll(Math.max(roll.max, reach?.max ?? roll.max), +0, Math.ceil, dp)
     }
 
     const filterDefault = (calc.stat.better === StatBetter.NotComparable)
@@ -383,6 +388,29 @@ export function calculatedStatToFilter (
   }
 
   return filter
+}
+
+/**
+ * woke: the stat's roll with no catalyst quality, or undefined if no catalyst raised it.
+ * Sums like statSourcesTotal, from each source's own tier instead of the scaled one.
+ */
+export function rollWithoutCatalyst (
+  sources: StatSource[],
+  mode: 'sum' | 'max' = 'sum'
+): StatRoll | undefined {
+  if (!sources.some(s => s.contributes && s.modifier.info.rollIncr && s.stat.roll && !s.stat.roll.unscalable)) {
+    return undefined
+  }
+  return statSourcesTotal(sources.map(s => {
+    const raw = s.stat.roll
+    const scaled = applyIncr(s.modifier.info, s.stat)?.roll
+    if (!s.contributes || !raw || !scaled) return s
+    // Pseudo totals multiply a source (all resistances count three times): keep that.
+    const multi = (scaled.max !== 0)
+      ? s.contributes.max / scaled.max
+      : (scaled.min !== 0) ? s.contributes.min / scaled.min : 1
+    return { ...s, contributes: { value: raw.value * multi, min: raw.min * multi, max: raw.max * multi } }
+  }), mode)
 }
 
 const ABYSS_SOCKETS = 'Has # Abyssal Sockets'
