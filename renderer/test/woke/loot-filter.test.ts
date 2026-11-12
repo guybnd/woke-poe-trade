@@ -139,3 +139,18 @@ describe('edits', () => {
     expect(list[0]).toMatchObject({ id: 4, patch: { fontSize: 35, text: [1, 2, 3, 255] } })
   })
 })
+
+describe('a keyword newer than the editor (3.30 launch)', () => {
+  const NEW = ['Show # $type->threads $tier->t1', '\tThreadTier >= 2', '\tRarity Rare', '\tSetFontSize 40', ''].join('\n')
+
+  it('loads and writes back unchanged', () => {
+    expect(serializeFilter(parseFilter(NEW))).toBe(NEW)
+  })
+
+  it("doesn't block saving a restyle of that rule", async () => {
+    const { validateFilter } = await import('@/web/woke/loot-filter/validate')
+    const doc = parseFilter(NEW)
+    for (const b of doc.blocks) b.dirty = true
+    expect(validateFilter(doc)).toEqual([])
+  })
+})
