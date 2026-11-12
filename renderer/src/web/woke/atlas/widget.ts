@@ -20,11 +20,11 @@ let loadingUrl: string | null = null
 
 // A tree that can't be drawn still leaves the notable list working. Its code
 // loads with the data, off the startup path.
-async function readTree (json: unknown): Promise<AtlasTreeModel | null> {
+async function readTree (json: unknown, url: string): Promise<AtlasTreeModel | null> {
   try {
     const { readAtlasTree } = await import('./atlas-tree')
     atlasTreeError.value = ''
-    return readAtlasTree(json)
+    return readAtlasTree(json, url)
   } catch (err) {
     atlasTreeError.value = `The atlas tree can't be drawn: ${(err as Error).message}`
     return null
@@ -64,7 +64,7 @@ async function load (url: string) {
       const { url: cachedUrl, json, at } = JSON.parse(cached) as { url: string, json: unknown, at?: number }
       if (cachedUrl === url && loadingUrl === url) {
         atlasData.value = parseAtlasData(json)
-        const tree = await readTree(json)
+        const tree = await readTree(json, url)
         if (loadingUrl !== url) return
         atlasTree.value = tree
         if (at && Date.now() - at < CACHE_MAX_AGE_MS) return
@@ -78,7 +78,7 @@ async function load (url: string) {
   const parsed = parseAtlasData(json)
   // The data URL changed while this one downloaded: keep the newer data.
   if (loadingUrl !== url) return
-  const tree = await readTree(json)
+  const tree = await readTree(json, url)
   if (loadingUrl !== url) return
   atlasData.value = parsed
   atlasTree.value = tree

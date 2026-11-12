@@ -62,7 +62,18 @@ interface RawNode {
 
 interface RawSheet { filename?: string, coords?: Record<string, { x: number, y: number, w: number, h: number }> }
 
-export function readAtlasTree (json: unknown): AtlasTreeModel {
+// GGG's export repository ships its sprite sheets in assets/, and they're
+// there before the league's art reaches web.poecdn.com (3.30's sheets 404
+// there until launch). Read beside data.json, the art is the same version
+// as the tree.
+export function assetUrl (filename: string, dataUrl?: string): string {
+  if (!dataUrl || !/\/data\.json(\?.*)?$/i.test(dataUrl)) return filename
+  const name = filename.split('?')[0].split('/').pop()
+  if (!name) return filename
+  return dataUrl.replace(/data\.json(\?.*)?$/i, `assets/${name}`)
+}
+
+export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel {
   const data = (json && typeof json === 'object' ? json : {}) as {
     nodes?: Record<string, RawNode>
     groups?: Record<string, { x: number, y: number, background?: { image?: string, isHalfImage?: boolean } }>
@@ -149,7 +160,7 @@ export function readAtlasTree (json: unknown): AtlasTreeModel {
     for (const [key, c] of Object.entries(sheet.coords)) {
       if (kind === 'frame' || kind === 'groupBackground' || kind === 'background' || usedIcons.has(key)) coords[key] = [c.x, c.y, c.w, c.h]
     }
-    sprites[name] = { url: sheet.filename, coords }
+    sprites[name] = { url: assetUrl(sheet.filename, dataUrl), coords }
   }
 
   return {

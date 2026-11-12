@@ -2,7 +2,7 @@
 // share links, folders, strategy codes, Threads from guide text, and regex
 // folders in the Regex library.
 import { describe, it, expect } from 'vitest'
-import { encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
+import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
 import { allFolders, claimRegexFolders, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
 import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
@@ -75,6 +75,14 @@ describe('atlas tree model', () => {
     const back = decodeTree(url)
     expect(back.nodes).toEqual([1, 2, 3])
     expect(back.masteries).toEqual([{ node: 3, effect: 36845 }])
+  })
+
+  it('reads the art from the export repository beside data.json', () => {
+    const data = 'https://raw.githubusercontent.com/grindinggear/atlastree-export/master/data.json'
+    expect(assetUrl('https://web.poecdn.com/image/passive-skill/atlas-skills-3.webp?b8c5c9bc', data))
+      .toBe('https://raw.githubusercontent.com/grindinggear/atlastree-export/master/assets/atlas-skills-3.webp')
+    expect(assetUrl('https://web.poecdn.com/x.webp', 'https://example.com/tree')).toBe('https://web.poecdn.com/x.webp')
+    expect(readAtlasTree(atlas, data).art.sprites.frame.url).toBe('https://raw.githubusercontent.com/grindinggear/atlastree-export/master/assets/frame.webp')
   })
 
   it('warns when the Threads break the tree', () => {
