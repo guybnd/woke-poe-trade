@@ -25,6 +25,8 @@ export interface LabWidget extends Widget {
   autoOpen?: boolean
   // Show poelab's whole page instead of just the layout image.
   fullPage?: boolean
+  // The last lab you ran (read from its first room): the plaza's guess.
+  lastDifficulty?: LabDifficulty
 }
 
 // The lab's entrance. The game spells it "Aspirants' Plaza" (its boss rooms

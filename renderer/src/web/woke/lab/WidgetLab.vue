@@ -5,8 +5,12 @@
       :wm-id="config.wmId" card-width="45rem" @open-change="cardShown = $event">
       <template #card>
         <div class="flex justify-between w-dim text-xs" style="padding: 4px var(--w-pad);">
-          <span>{{ cardDiff ? labLabel(cardDiff) + ' Labyrinth' : 'Labyrinth' }}<template v-if="cardDiff && !labDiff && !openDiff"> · your usual, until the first room</template></span>
+          <span>{{ cardDiff ? labLabel(cardDiff) + ' Labyrinth' : 'Labyrinth' }}<template v-if="cardDiff && !labDiff && !openDiff"> · your last lab, until the first room</template></span>
           <span title="Labs reset at midnight UTC"><i class="far fa-clock" /> resets in {{ resetIn }}</span>
+        </div>
+        <!-- In the plaza only: which lab you're about to run, starting on your last. -->
+        <div v-if="inPlaza && !openDiff" class="flex gap-1 flex-wrap" style="padding: 0 var(--w-pad) 4px;">
+          <WChip v-for="d in DIFFICULTIES" :key="d" clickable :active="cardDiff === d" @click="pickPlaza(d)">{{ labLabel(d) }}</WChip>
         </div>
         <img v-if="cardImg" :src="cardImg" :class="$style.cardImg" alt="Today's layout">
         <WBanner v-else-if="peekError">Couldn't load the layout ({{ peekError }}). Click the icon for poelab's page.</WBanner>
@@ -65,8 +69,9 @@ import { useVisibleClock } from '../shared/visible-clock'
 import { Host, MainProcess } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
+import { saveConfig } from '@/web/Config'
 import { formatDuration } from '../ui/format'
-import { WPanel, WKbd, WListItem, WBanner } from '../ui'
+import { WPanel, WKbd, WListItem, WBanner, WChip } from '../ui'
 import { DEFAULT_LAB_URLS, DIFFICULTIES, FIND_LAYOUT_JS, isPlazaArea, labDifficultyOf, labLabel, msUntilLabReset, parseHotkeyTarget, staleLayoutDate } from './lab'
 import { useZone } from '../shared/zone'
 import { hostRequest } from '../shared/host'
@@ -118,6 +123,17 @@ watch(webviewEl, (el, old) => {
 const zone = useZone()
 const inLab = computed(() => zone.kind === 'lab')
 const labDiff = computed<LabDifficulty | null>(() => inLab.value ? labDifficultyOf(zone.areaId, zone.areaLevel) : null)
+const inPlaza = computed(() => inLab.value && isPlazaArea(zone.areaId))
+// The plaza can't tell which lab you're in: guess the one you ran last.
+const plazaGuess = computed(() => props.config.lastDifficulty ?? props.config.defaultDifficulty)
+watch(labDiff, (d) => {
+  if (d && props.config.lastDifficulty !== d) { props.config.lastDifficulty = d; saveConfig() }
+})
+function pickPlaza (d: LabDifficulty) {
+  props.config.lastDifficulty = d
+  saveConfig()
+  loadPeek(d, false)
+}
 const peekDiff = shallowRef<LabDifficulty | null>(null)
 const peekImg = shallowRef<string | null>(null)
 const peekError = shallowRef<string | null>(null)
@@ -155,9 +171,9 @@ function clearPeek () {
 }
 watch(() => [zone.areaId, zone.enteredAt, labDiff.value] as const, ([areaId, _at, room]) => {
   // A layout you picked yourself comes first. Otherwise the plaza can't tell
-  // the difficulty, so it starts with your usual one and the first room corrects it.
+  // the difficulty, so it starts with the lab you ran last and the first room corrects it.
   const plaza = isPlazaArea(areaId)
-  const d = openDiff.value ?? (plaza ? props.config.defaultDifficulty : room)
+  const d = openDiff.value ?? (plaza ? plazaGuess.value : room)
   if (!inLab.value || !d || props.config.autoOpen === false) return
   // The layout you're running stays put from room to room, whatever the clock
   // says; a failed load is retried at the next plaza.

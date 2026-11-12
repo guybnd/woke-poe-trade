@@ -129,3 +129,24 @@ test('Lab layout: with the icon switched off, the hotkey still opens and closes 
   await overlay.pressHotkey(overlayKey)
   await expect(overlay.widget('woke-lab')).toBeHidden()
 })
+
+test('Lab layout: the plaza guesses the lab you ran last, and its card lets you pick another', async ({ overlay }) => {
+  await boot(overlay, false)
+  overlay.app.focusGame(true)
+  await overlay.log([area('Labyrinth_Airlock', 33)])
+  await overlay.log([area('EndGame_Labyrinth_estate_passage', 75)])
+  await expect(overlay.dockIcon('lab')).toContainText('U')
+  await overlay.log([area('HideoutFelled', 60)])
+  await expect(overlay.dockIcon('lab')).toHaveCount(0)
+
+  // Back in a plaza: Uber, the last lab run, not the default Normal.
+  await overlay.log([area('Labyrinth_Airlock', 33)])
+  await expect(overlay.dockIcon('lab')).toContainText('U', SLOW)
+  await expect(async () => {
+    await overlay.hoverDockIcon('lab')
+    await expect(overlay.page.locator('[data-dock="lab"]').getByText('your last lab')).toBeVisible({ timeout: 2000 })
+  }).toPass(SLOW)
+  await overlay.page.locator('[data-dock="lab"]').getByText('Merciless', { exact: true }).click()
+  await expect(overlay.dockIcon('lab')).toContainText('M')
+  await expect.poll(() => overlay.savedWidget('woke-lab')?.lastDifficulty).toBe('merciless')
+})
