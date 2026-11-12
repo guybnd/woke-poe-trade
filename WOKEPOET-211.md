@@ -40,7 +40,24 @@ history:
       control, folders, and the hideout card on
       https://claude.ai/artifact/EVKCgRCYMZoaMdWmhyBdZC and press Save.
       Recommended: A, three slots, nested folders, loadout on the hideout card.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy picked A, three Thread slots, nested folders, loadout on the hideout
+      card, regex folders synced for strategies and PoB builds (picks/current,
+      2026-11-12 04:28 UTC). Import box added per his comment.
+    date: '2026-11-12T04:28:39.585Z'
+    id: c-2026-11-12t04-28-39-585z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T04:28:39.585Z'
+    comment: >-
+      Guy picked A, three Thread slots, nested folders, loadout on the hideout
+      card, regex folders synced for strategies and PoB builds (picks/current,
+      2026-11-12 04:28 UTC). Import box added per his comment.
+swimlane: null
 needsAction: null
 ---
 > **TL;DR** Turn the Atlas strategies tool into a PoB-builds-style tool: atlas tree viewer and editor (3.30 tree from GGG's export, pick-a-type notables), strategies in folders, and per-strategy settings for Threads (count per type) and currency per map. Mocks first; waiting on Guy's pick.
