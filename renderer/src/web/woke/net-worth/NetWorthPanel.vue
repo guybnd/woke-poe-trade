@@ -390,10 +390,16 @@ function measureTabs () {
 let tabsResize: ResizeObserver | null = null
 watch(strip, (el, _, onCleanup) => {
   if (!el || typeof ResizeObserver === 'undefined') return
-  tabsResize = new ResizeObserver(measureTabs)
+  // Measured on the next frame: a state change inside the observer's callback
+  // resizes the row in the same frame ("ResizeObserver loop" warnings).
+  let frame = 0
+  tabsResize = new ResizeObserver(() => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(measureTabs)
+  })
   tabsResize.observe(el)
   measureTabs()
-  onCleanup(() => { tabsResize?.disconnect(); tabsResize = null })
+  onCleanup(() => { cancelAnimationFrame(frame); tabsResize?.disconnect(); tabsResize = null })
 }, { flush: 'post' })
 watch(tabLabels, () => { nextTick(measureTabs) }, { flush: 'post' })
 // The game font arriving later widens the labels without resizing the row.

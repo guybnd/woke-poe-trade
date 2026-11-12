@@ -31,10 +31,12 @@ function set (n: number) {
   emit('value', n)
   emit('on', true)
 }
+// An emptied or bad number puts the old one back and changes nothing.
 function typed (e: Event) {
-  const n = Number((e.target as HTMLInputElement).value)
-  if (Number.isFinite(n) && n >= 0) set(n)
-  else (e.target as HTMLInputElement).value = text.value
+  const el = e.target as HTMLInputElement
+  const n = Number(el.value)
+  if (el.value.trim() !== '' && Number.isFinite(n) && n >= 0) set(n)
+  else el.value = text.value
 }
 function onWheel (e: WheelEvent) {
   if (e.deltaY === 0) return
