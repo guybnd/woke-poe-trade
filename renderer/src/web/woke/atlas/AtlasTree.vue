@@ -28,10 +28,10 @@
       </WBanner>
     </template>
     <template #toolbar>
-      <span class="w-num text-xs whitespace-nowrap" :class="over ? 'w-down' : 'w-dim'" :title="over ? 'More points than the atlas has' : undefined">
+      <span class="w-num text-xs whitespace-nowrap" :class="[over ? 'w-down' : 'w-dim', $style.count0]" :title="over ? 'More points than the atlas has' : undefined">
         <template v-if="stepping">{{ at }} of </template>{{ used }} / {{ model.points }} points
       </span>
-      <template v-if="order.length > 1">
+      <template v-if="order.length > 1 || stepping">
         <input type="range" :class="$style.slider" min="0" :max="order.length" :value="at" aria-label="Points taken, in the plan's order"
           title="Step back through the plan: the tree as it is after this many points" @input="slide(Number(($event.target as HTMLInputElement).value))">
         <span class="text-xs w-trunc" :class="$style.reach" :title="stepping && nextNamed ? `Next notable: ${nextNamed.name} at point ${nextNamed.at}` : undefined">
@@ -220,6 +220,7 @@ watch(() => props.treeUrl, (url) => {
   if (url === lastWritten) return
   lastWritten = url
   alloc.value = readLink(url)
+  if (props.pointsAt != null) emit('update:pointsAt', null)
   undoStack.value = []
   redoStack.value = []
   nextTick(fit)
@@ -254,13 +255,14 @@ const undoStack = shallowRef<Alloc[]>([])
 const redoStack = shallowRef<Alloc[]>([])
 
 function commit (next: Alloc) {
-  if (props.pointsAt != null) emit('update:pointsAt', null)
   undoStack.value = [...undoStack.value.slice(-49), alloc.value]
   redoStack.value = []
   apply(next)
 }
 
 function apply (next: Alloc) {
+  // Any change to the plan shows the whole of it.
+  if (props.pointsAt != null) emit('update:pointsAt', null)
   alloc.value = next
   const url = pointsUsed(props.model, next.nodes) ? encodeAtlasTree([...next.nodes].filter(id => id !== props.model.start), next.variants) : ''
   lastWritten = url
@@ -353,7 +355,7 @@ const MIN_ZOOM = 0.02
 const MAX_ZOOM = 0.7
 
 // The path the hovered passive would take, drawn as new.
-const pending = computed(() => hovered.value ? pathTo(props.model, alloc.value.nodes, hovered.value.id) : [])
+const pending = computed(() => hovered.value && !stepping.value ? pathTo(props.model, alloc.value.nodes, hovered.value.id) : [])
 const toSet = computed(() => pending.value.length ? new Set([...shown.value, ...pending.value]) : shown.value)
 
 function pxRatio () {
@@ -566,6 +568,12 @@ function click (e: MouseEvent, button: number) {
   const choices = props.model.variants.get(n.id)
   const taken = alloc.value.nodes.has(n.id)
   if (button !== 0) return
+  // Stepped back with the slider, the tree is a view of the plan: a click
+  // first shows the whole plan again, then edits as usual.
+  if (stepping.value) {
+    emit('update:pointsAt', null)
+    return
+  }
   // A notable with types (Guy's pick T1): its types open at it, to take it
   // with one, change it, or refund it.
   if (choices) {
@@ -609,9 +617,12 @@ function setHovered (n: TreeNode | null) {
   const picked = choices?.find(c => c.effect === alloc.value.variants[n.id])
   const stats = choices && picked ? [...n.stats.map(s => `${s}: ${picked.text}`)] : n.stats
   const cost = pending.value.length
-  const note = taken
-    ? (choices ? `Type: ${picked?.text ?? 'none picked'}. Click to change or refund` : 'Taken. Click to refund')
-    : cost ? (choices ? `Click to pick a type: ${cost} ${cost === 1 ? 'point' : 'points'}` : `Click to take: ${cost} ${cost === 1 ? 'point' : 'points'}`) : 'Out of reach'
+  const place = order.value.indexOf(n.id) + 1
+  const note = stepping.value
+    ? (place ? `Point ${place} of the plan${place > at.value ? ', still to take' : ''}. Click to show the whole plan` : 'Click to show the whole plan')
+    : taken
+      ? (choices ? `Type: ${picked?.text ?? 'none picked'}. Click to change or refund` : 'Taken. Click to refund')
+      : cost ? (choices ? `Click to pick a type: ${cost} ${cost === 1 ? 'point' : 'points'}` : `Click to take: ${cost} ${cost === 1 ? 'point' : 'points'}`) : 'Out of reach'
   showTipAt(ring.value, {
     kind: 'passive',
     name: n.name || 'Atlas passive',
@@ -655,6 +666,7 @@ function openWeb () {
   flex: none;
 }
 .find { width: 11rem; }
+.count0 { min-width: 21ch; font-variant-numeric: tabular-nums; }
 .slider { width: 9rem; flex: none; accent-color: var(--w-accent); }
 .reach { flex: 1 1 0; min-width: 0; color: var(--w-fg); }
 .unsaved { display: inline-flex; align-items: center; gap: 4px; font-size: var(--w-fs-sm); white-space: nowrap; margin-right: 2px; }

@@ -91,11 +91,10 @@ export function migrateAtlasWidget (w: AtlasWidget) {
   }
   if (!Array.isArray(w.folders)) w.folders = []
   if (!Array.isArray(w.closedFolders)) w.closedFolders = []
-  // A draft whose strategy is gone would land on the next one given its id.
-  if (w.drafts) {
-    const ids = new Set(w.strategies.map(s => String(s.id)))
-    w.drafts = Object.fromEntries(Object.entries(w.drafts).filter(([id]) => ids.has(id)))
-  }
+  // A draft or slider whose strategy is gone would land on the next one given its id.
+  const ids = new Set(w.strategies.map(s => String(s.id)))
+  if (w.drafts) w.drafts = Object.fromEntries(Object.entries(w.drafts).filter(([id]) => ids.has(id)))
+  if (w.pointsAt) w.pointsAt = Object.fromEntries(Object.entries(w.pointsAt).filter(([id]) => ids.has(id)))
 }
 
 export function strategyMatches (s: AtlasStrategy, query: string): boolean {
@@ -225,13 +224,14 @@ export function isDirty (w: Pick<AtlasWidget, 'drafts'>, s: Pick<AtlasStrategy, 
   return d != null && d !== s.treeUrl
 }
 
-// Two links to the same tree: same passives and picked types, in any order.
+// Two links to the same tree: same passives in the same order, same picked types.
 export function sameTree (a: string, b: string): boolean {
   if (a === b) return true
   try {
     const x = decodeTree(a)
     const y = decodeTree(b)
-    const key = (t: typeof x) => [[...t.nodes].sort((m, n) => m - n).join(','), t.masteries.map(m => `${m.node}:${m.effect}`).sort().join(',')].join('|')
+    // The order counts (it's the plan's order); picked types don't depend on it.
+    const key = (t: typeof x) => [t.nodes.join(','), t.masteries.map(m => `${m.node}:${m.effect}`).sort().join(',')].join('|')
     return key(x) === key(y)
   } catch {
     return false
@@ -273,4 +273,16 @@ export function saveDraft (w: AtlasWidget, s: AtlasStrategy) {
 export function setPointsAt (w: AtlasWidget, s: Pick<AtlasStrategy, 'id'>, at: number | null) {
   const rest = Object.fromEntries(Object.entries(w.pointsAt ?? {}).filter(([id]) => id !== String(s.id)))
   w.pointsAt = at == null ? rest : { ...rest, [s.id]: at }
+}
+
+// Removing strategies takes their slider positions too; Undo puts them back.
+export function takePointsAt (w: AtlasWidget, ids: Iterable<number>): Record<string, number> {
+  const want = new Set([...ids].map(String))
+  const taken = Object.fromEntries(Object.entries(w.pointsAt ?? {}).filter(([id]) => want.has(id)))
+  if (Object.keys(taken).length) w.pointsAt = Object.fromEntries(Object.entries(w.pointsAt ?? {}).filter(([id]) => !want.has(id)))
+  return taken
+}
+
+export function restorePointsAt (w: AtlasWidget, taken: Record<string, number>) {
+  if (Object.keys(taken).length) w.pointsAt = { ...taken, ...(w.pointsAt ?? {}) }
 }

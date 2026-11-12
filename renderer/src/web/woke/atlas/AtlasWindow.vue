@@ -97,7 +97,7 @@ import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMen
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, setPointsAt, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, restorePointsAt, setPointsAt, takePointsAt, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
 import type { FolderNode } from './widget'
@@ -311,6 +311,7 @@ function remove (s: AtlasStrategy) {
   props.config.strategies = props.config.strategies.filter(o => o.id !== s.id)
   if (wasSelected) props.config.selectedId = null
   const drafts = takeDrafts(props.config, [s.id])
+  const sliders = takePointsAt(props.config, [s.id])
   // Undo puts back this strategy only, so anything made since stays.
   toast(`Removed "${s.name || 'Untitled'}"`, {
     anchor: panel.value?.el,
@@ -320,6 +321,7 @@ function remove (s: AtlasStrategy) {
       list.splice(Math.min(at, list.length), 0, s)
       props.config.strategies = list
       restoreDrafts(props.config, drafts)
+      restorePointsAt(props.config, sliders)
       if (wasSelected) props.config.selectedId = s.id
     }
   })
@@ -387,6 +389,7 @@ function removeFolder (path: string) {
   props.config.folders = (props.config.folders ?? []).filter(f => !goneFolders.includes(f))
   if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = null
   const drafts = takeDrafts(props.config, gone)
+  const sliders = takePointsAt(props.config, gone)
   toast(gone.size ? `Removed "${path}" and ${gone.size} ${gone.size === 1 ? 'strategy' : 'strategies'}` : `Removed "${path}"`, {
     anchor: panel.value?.el,
     undo: () => {
@@ -394,6 +397,7 @@ function removeFolder (path: string) {
       const back = removed.filter(s => !have.has(s.id))
       props.config.strategies = [...props.config.strategies, ...back]
       restoreDrafts(props.config, Object.fromEntries(Object.entries(drafts).filter(([id]) => back.some(s => String(s.id) === id))))
+      restorePointsAt(props.config, Object.fromEntries(Object.entries(sliders).filter(([id]) => back.some(s => String(s.id) === id))))
       props.config.folders = [...new Set([...(props.config.folders ?? []), ...goneFolders])]
       if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = selectedBefore
     }

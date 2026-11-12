@@ -234,10 +234,10 @@ describe('unsaved tree edits', () => {
 })
 
 describe('drafts and removed strategies', () => {
-  it('counts a re-encoded link of the same tree as saved', () => {
+  it('counts a re-encoded link of the same plan as saved, but a new order as a change', () => {
     const a = encodeAtlasTree([1, 2, 3], { 3: 36845 })
-    const b = encodeAtlasTree([3, 2, 1], { 3: 36845 })
-    expect(sameTree(a, b)).toBe(true)
+    expect(sameTree(a, encodeAtlasTree([1, 2, 3], { 3: 36845 }))).toBe(true)
+    expect(sameTree(a, encodeAtlasTree([3, 2, 1], { 3: 36845 }))).toBe(false)
     expect(sameTree(a, encodeAtlasTree([1, 2], {}))).toBe(false)
   })
 
