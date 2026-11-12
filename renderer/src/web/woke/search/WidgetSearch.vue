@@ -24,6 +24,7 @@
                 :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
                 <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? undefined" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
+                <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
                 <i v-else :class="e.icon" :style="{ width: 'var(--w-icon-md)', textAlign: 'center' }" />
                 <span :class="$style.resName">
                   <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : undefined">{{ e.name }}</span>
@@ -33,10 +34,7 @@
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
               </button>
             </template>
-            <div v-if="!entries.length" :class="$style.none">
-              <template v-if="queryOk">Nothing matches "{{ query.trim() }}".</template>
-              <template v-else>Type an item, a tool or a setting. Items you look up show here next time.</template>
-            </div>
+            <div v-if="!entries.length" :class="$style.none">Type an item, a tool or a setting. Items you look up show here next time.</div>
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
@@ -81,6 +79,7 @@
                 <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
               </div>
             </template>
+            <LookupDetail v-else-if="selected?.kind === 'lookup'" :card="selected.card" :divine="divine" @act="act" />
             <template v-else-if="selected">
               <div :class="$style.title"><i :class="selected.icon" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ selected.about }}</p>
@@ -120,7 +119,7 @@ import { ITEM_BY_REF, ITEMS_ITERATOR } from '@/assets/data'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
 import { MODULES, isWidgetTypeOn } from '../modules'
@@ -142,6 +141,17 @@ import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../es
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel } from './search'
 import type { PriceGroup } from './search'
+import LookupDetail from './LookupDetail.vue'
+import { isImageIcon } from './lookups/types'
+import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
+import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
+import { bossLookup, dropLookup } from './lookups/bosses'
+import { cardLookup } from './lookups/cards'
+import { recipeLookup } from './lookups/recipes'
+import type { CardInfo } from './lookups/cards'
+import { loadTipItems } from '../ui/tooltip/item-tip'
+import { onSharedDataChange } from '../app/live-data'
+import type { TipItem } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import type { SearchWidget } from './widget'
 
@@ -155,7 +165,8 @@ interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
 interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, action: () => void }
-type Entry = PriceEntry | ItemEntry | ActionEntry
+interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
+type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
 const query = shallowRef('')
 const corrupted = shallowRef<CorruptedFilter>('any')
@@ -196,6 +207,7 @@ function gameItems (): BaseType[] {
 function tipOf (entry: Entry) {
   if (entry.kind === 'price') return groupTip(entry.group)
   if (entry.kind === 'item') return { name: entry.info.refName }
+  if (entry.kind === 'lookup') return entry.card.tip ?? null
   return null
 }
 
@@ -286,6 +298,83 @@ function settingEntries (): ActionEntry[] {
   }))
 }
 
+// ---- lookups: answers, facts and the web ----
+const lookupContext = computed<LookupContext>(() => {
+  // A name's plain row, else its cheapest variant; and each exact variant.
+  const prices = new Map<string, { chaos: number, plain: boolean }>()
+  const variants = new Map<string, number>()
+  for (const i of snapshot.value?.items ?? []) {
+    variants.set(`${i.name}\u0000${i.variant}`, i.chaos)
+    const had = prices.get(i.name)
+    // The plain row wins, a currency's over another type's; else the cheapest variant.
+    if (!i.variant) {
+      if (!had?.plain || i.type === 'Currency') prices.set(i.name, { chaos: i.chaos, plain: true })
+    } else if (!had || (!had.plain && i.chaos < had.chaos)) prices.set(i.name, { chaos: i.chaos, plain: false })
+  }
+  const league = leagues.selectedId.value
+  return {
+    price: (name, variant) => name === 'Chaos Orb'
+      ? 1
+      : variant != null ? variants.get(`${name}\u0000${variant}`) ?? null : prices.get(name)?.chaos ?? null,
+    tools: new Set<string>(),
+    divine: divine.value,
+    now: Date.now(),
+    league: league ? { name: league, startedAt: leagues.startedAt.value } : null
+  }
+})
+const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).filter(i => i.type === 'Currency').map(i => i.name))])
+// Card rewards and stack sizes load with the tooltips, once the palette opens.
+const tipItems = shallowRef<Record<string, TipItem> | null>(null)
+function loadCards () {
+  if (!tipItems.value) loadTipItems().then(items => { if (items) tipItems.value = items })
+}
+const cards = computed(() => {
+  const out = new Map<string, CardInfo>()
+  const items = tipItems.value
+  if (!items) return out
+  for (const i of snapshot.value?.items ?? []) {
+    const tip = i.type === 'DivinationCard' ? items[i.name] : undefined
+    if (tip?.n && tip.d && !out.has(i.name)) out.set(i.name, { stack: tip.n, lines: tip.d.split('\n') })
+  }
+  return out
+})
+// New tooltip files after a data update: read them on the next open.
+const stopDataWatch = onSharedDataChange(() => { tipItems.value = null })
+onBeforeUnmount(stopDataWatch)
+const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, webLookup])
+
+// Kept apart from the prices, so switching a tool doesn't rebuild them.
+const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
+function lookupCards (q: string): LookupCard[] {
+  // Re-read every 30 s, so countdowns tick while the palette is open.
+  const ctx = { ...lookupContext.value, tools: lookupTools.value, now: nowMinute.value }
+  return lookups.value.flatMap(l => l(q, ctx))
+}
+// One section per card group, in the order they came; `only` keeps those
+// groups, `skip` leaves them out.
+function cardSections (cards: LookupCard[], only: string[] | null, skip: string[] = []) {
+  const byGroup = new Map<string, Entry[]>()
+  for (const card of cards) {
+    if (only ? !only.includes(card.group) : skip.includes(card.group)) continue
+    const list = byGroup.get(card.group) ?? []
+    list.push({ kind: 'lookup', id: `l:${card.id}`, name: card.name, sub: card.sub, icon: card.icon, card })
+    byGroup.set(card.group, list)
+  }
+  return [...byGroup].map(([label, entries]) => ({ label, entries }))
+}
+function act (action: LookupAction) {
+  if ('url' in action) window.open(action.url)
+  else if ('tool' in action) {
+    const w = wm.widgets.value.find(w => w.wmType === action.tool)
+    if (w) wm.show(w.wmId)
+  } else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
+  else {
+    query.value = action.search
+    focusInput()
+  }
+}
+
 // ---- results ----
 const sections = computed<Array<{ label: string, entries: Entry[], capped?: boolean }>>(() => {
   if (!open.value) return []
@@ -299,12 +388,16 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
   const priced = pricedNames.value
   const other = searchNamed(gameItems().filter(i => !priced.has(i.refName)), q, i => i.name, 8)
     .map((info): ItemEntry => ({ kind: 'item', id: `i:${info.namespace}:${info.name}`, name: info.name, sub: snapshot.value ? 'No poe.ninja price' : 'No price', info }))
+  const cards = lookupCards(q)
   const out = [
+    ...cardSections(cards, ['Answer']),
     { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
     { label: 'Other items', entries: other as Entry[] },
+    ...cardSections(cards, null, ['Answer', 'Search the web']),
     { label: 'Tools', entries: searchNamed(toolEntries(), q, e => e.name) as Entry[] },
     { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
-    { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] }
+    { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] },
+    ...cardSections(cards, ['Search the web'])
   ]
   return out.filter(s => s.entries.length)
 })
@@ -350,6 +443,8 @@ function run (entry: Entry) {
     else openTrade(entry)
   } else if (entry.kind === 'item') {
     openLookup(entry, 'wiki')
+  } else if (entry.kind === 'lookup') {
+    if (entry.card.actions[0]) act(entry.card.actions[0])
   } else {
     entry.action()
   }
@@ -488,6 +583,7 @@ function start (text: string) {
   wm.show(props.config.wmId)
   focusInput(true)
   whenIdle(gameItems)
+  whenIdle(loadCards)
 }
 function close () {
   wm.hide(props.config.wmId)

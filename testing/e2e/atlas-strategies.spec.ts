@@ -244,3 +244,22 @@ test('a notable with types opens its types to take it with one, and to change or
   // The notable goes; the path to it stays, as with any refund.
   await expect(points).toContainText(`${before + cost - 1} / `)
 })
+
+test('the points slider steps back through the plan in the order it was taken', async ({ overlay, fakeApp }) => {
+  test.setTimeout(90_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  const points = atlas.getByText(/\d+ \/ \d+ points/)
+  await expect(points).toBeVisible({ timeout: 30_000 })
+  const slider = atlas.getByRole('slider', { name: /Points taken/ })
+  await slider.evaluate((el: HTMLInputElement) => { el.value = '2'; el.dispatchEvent(new Event('input', { bubbles: true })) })
+  await expect(points).toContainText('2 of ')
+  await overlay.page.waitForTimeout(800)
+  await overlay.snap('the tree after 2 points, the rest faint')
+  fakeApp.clearReceived()
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  expect(saved.pointsAt).toEqual({ 1: 2 })
+  // All the way up is the whole plan again.
+  await slider.evaluate((el: HTMLInputElement) => { el.value = el.max; el.dispatchEvent(new Event('input', { bubbles: true })) })
+  await expect(points).not.toContainText(' of ')
+})

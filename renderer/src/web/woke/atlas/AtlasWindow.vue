@@ -73,6 +73,7 @@
         <AtlasTree v-if="!config.treeHidden && atlasTree" :key="selected.id" :model="atlasTree" :tree-url="workingTree(config, selected)" :threads="selected.threads"
           :lit="config.lit ?? []" :list-open="!config.mechanicsHidden" :pin="() => atlasTreePin(config, selected!)"
           :dirty="isDirty(config, selected)" :name="selected.name"
+          :points-at="config.pointsAt?.[selected.id] ?? null" @update:points-at="setPointsAt(config, selected!, $event)"
           @update:tree-url="setDraft(config, selected!, $event)" @update:lit="config.lit = $event" @update:list-open="config.mechanicsHidden = !$event"
           @save="saveDraft(config, selected!)" @discard="dropDraft(config, selected!)" @save-as="saveTreeAs"
           @close="config.treeHidden = true" />
@@ -96,7 +97,7 @@ import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMen
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
 import type { FolderNode } from './widget'
@@ -330,12 +331,13 @@ function remove (s: AtlasStrategy) {
   if (wasSelected) props.config.selectedId = null
   const drafts = takeDrafts(props.config, [s.id])
   const pinned = pinsOf([s])
+  const sliders = takePointsAt(props.config, [s.id])
   // Undo puts back this strategy only, so anything made since stays.
   toast(`Removed "${s.name || 'Untitled'}"`, {
     anchor: panel.value?.el,
     // One made since may hold its old id: it comes back under a new one.
     undo: () => {
-      const back = strategyBack(props.config, s, drafts)
+      const back = strategyBack(props.config, s, drafts, sliders)
       const list = [...props.config.strategies]
       list.splice(Math.min(at, list.length), 0, back)
       props.config.strategies = list
@@ -408,13 +410,14 @@ function removeFolder (path: string) {
   if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = null
   const drafts = takeDrafts(props.config, gone)
   const pinned = pinsOf(removed)
+  const sliders = takePointsAt(props.config, gone)
   toast(gone.size ? `Removed "${path}" and ${gone.size} ${gone.size === 1 ? 'strategy' : 'strategies'}` : `Removed "${path}"`, {
     anchor: panel.value?.el,
     undo: () => {
       let selectedBack: number | null = null
       const moves: Array<{ old: AtlasStrategy, back: AtlasStrategy }> = []
       for (const s of removed) {
-        const back = strategyBack(props.config, s, drafts)
+        const back = strategyBack(props.config, s, drafts, sliders)
         props.config.strategies = [...props.config.strategies, back]
         moves.push({ old: s, back })
         if (s.id === selectedBefore) selectedBack = back.id

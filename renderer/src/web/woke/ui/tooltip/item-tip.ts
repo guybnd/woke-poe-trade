@@ -67,6 +67,12 @@ function loadFile (file: keyof TipPack): Promise<void> {
   return job
 }
 
+// Card rewards and stack sizes, currency texts: the tooltip's item file.
+export async function loadTipItems (): Promise<TipPack['items'] | null> {
+  await loadFile('items')
+  return pack.items ?? null
+}
+
 const NINJA_NS: Record<TipKind, string> = { unique: 'UNIQUE', gem: 'GEM', card: 'DIVINATION_CARD', item: 'ITEM' }
 
 export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {

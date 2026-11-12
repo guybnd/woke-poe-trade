@@ -28,9 +28,16 @@
       </WBanner>
     </template>
     <template #toolbar>
-      <span class="w-num text-xs whitespace-nowrap" :class="over ? 'w-down' : 'w-dim'" :title="over ? 'More points than the atlas has' : undefined">
-        {{ used }} / {{ model.points }} points
+      <span class="w-num text-xs whitespace-nowrap" :class="[over ? 'w-down' : 'w-dim', $style.count0]" :title="over ? 'More points than the atlas has' : undefined">
+        <template v-if="stepping">{{ at }} of </template>{{ used }} / {{ model.points }} points
       </span>
+      <template v-if="order.length > 1 || stepping">
+        <input type="range" :class="$style.slider" min="0" :max="order.length" :value="at" aria-label="Points taken, in the plan's order"
+          title="Step back through the plan: the tree as it is after this many points" @input="slide(Number(($event.target as HTMLInputElement).value))">
+        <span class="text-xs w-trunc" :class="$style.reach" :title="stepping && nextNamed ? `Next notable: ${nextNamed.name} at point ${nextNamed.at}` : undefined">
+          <template v-if="stepping && lastNamed">Last: {{ lastNamed }}</template><template v-if="stepping && lastNamed && nextNamed"> · </template><template v-if="stepping && nextNamed">next: {{ nextNamed.name }} at {{ nextNamed.at }}</template>
+        </span>
+      </template>
       <span v-for="w in warnings" :key="w" class="text-xs w-warn whitespace-nowrap" :class="$style.warn"><i class="fas fa-exclamation-triangle" /> {{ w }}</span>
       <!-- Save as takes this row's place, so the tree never moves. -->
       <div v-if="savingAs" :class="$style.tools">
@@ -107,11 +114,15 @@ const props = defineProps<{
   dirty?: boolean
   // The name Save as suggests.
   name?: string
+  // How many of the plan's points to show (the slider), in the order taken;
+  // null for all of them.
+  pointsAt?: number | null
 }>()
 const emit = defineEmits<{
   (e: 'update:treeUrl' | 'save-as', text: string): void
   (e: 'update:lit', lit: string[]): void
   (e: 'update:listOpen', open: boolean): void
+  (e: 'update:pointsAt', at: number | null): void
   (e: 'close' | 'save' | 'discard'): void
 }>()
 
@@ -209,6 +220,7 @@ watch(() => props.treeUrl, (url) => {
   if (url === lastWritten) return
   lastWritten = url
   alloc.value = readLink(url)
+  if (props.pointsAt != null) emit('update:pointsAt', null)
   undoStack.value = []
   redoStack.value = []
   nextTick(fit)
@@ -217,6 +229,25 @@ watch(() => props.treeUrl, (url) => {
 const link = computed(() => unreadable.value ? (/^https:\/\/(www\.)?pathofexile\.com\//i.test(props.treeUrl) ? props.treeUrl : '') : pointsUsed(props.model, alloc.value.nodes) ? lastWrittenLink.value : '')
 const lastWrittenLink = computed(() => encodeAtlasTree([...alloc.value.nodes].filter(id => id !== props.model.start), alloc.value.variants))
 const used = computed(() => pointsUsed(props.model, alloc.value.nodes))
+
+// ---- the plan's order and the points slider ----
+
+// The plan's points in the order taken (a link lists them that way).
+const order = computed(() => [...alloc.value.nodes].filter(id => id !== props.model.start))
+const at = computed(() => props.pointsAt == null ? order.value.length : Math.max(0, Math.min(order.value.length, props.pointsAt)))
+const stepping = computed(() => at.value < order.value.length)
+// What's taken by the slider's point, and what comes later.
+const shown = computed(() => stepping.value ? new Set([props.model.start, ...order.value.slice(0, at.value)]) : alloc.value.nodes)
+const later = computed(() => stepping.value ? order.value.slice(at.value) : [])
+const isNamed = (id: number) => { const k = props.model.nodes.get(id)?.kind; return k === 'notable' || k === 'key' }
+const lastNamed = computed(() => { for (let i = at.value - 1; i >= 0; i--) if (isNamed(order.value[i])) return props.model.nodes.get(order.value[i])!.name; return '' })
+const nextNamed = computed(() => {
+  for (let i = at.value; i < order.value.length; i++) if (isNamed(order.value[i])) return { name: props.model.nodes.get(order.value[i])!.name, at: i + 1 }
+  return null
+})
+function slide (v: number) {
+  emit('update:pointsAt', v >= order.value.length ? null : v)
+}
 const over = computed(() => used.value > props.model.points)
 const warnings = computed(() => treeWarnings(props.model, alloc.value.nodes, props.threads))
 
@@ -230,6 +261,8 @@ function commit (next: Alloc) {
 }
 
 function apply (next: Alloc) {
+  // Any change to the plan shows the whole of it.
+  if (props.pointsAt != null) emit('update:pointsAt', null)
   alloc.value = next
   const url = pointsUsed(props.model, next.nodes) ? encodeAtlasTree([...next.nodes].filter(id => id !== props.model.start), next.variants) : ''
   lastWritten = url
@@ -265,7 +298,8 @@ function take (id: number, effect?: number) {
   const path = pathTo(props.model, alloc.value.nodes, id)
   if (!path.length) return
   const nodes = new Set(alloc.value.nodes)
-  for (const p of path) nodes.add(p)
+  // The path comes target first; the plan's order takes it from the near end.
+  for (const p of [...path].reverse()) nodes.add(p)
   const variants = { ...alloc.value.variants }
   for (const p of path) {
     const choices = props.model.variants.get(p)
@@ -321,8 +355,8 @@ const MIN_ZOOM = 0.02
 const MAX_ZOOM = 0.7
 
 // The path the hovered passive would take, drawn as new.
-const pending = computed(() => hovered.value ? pathTo(props.model, alloc.value.nodes, hovered.value.id) : [])
-const toSet = computed(() => pending.value.length ? new Set([...alloc.value.nodes, ...pending.value]) : alloc.value.nodes)
+const pending = computed(() => hovered.value && !stepping.value ? pathTo(props.model, alloc.value.nodes, hovered.value.id) : [])
+const toSet = computed(() => pending.value.length ? new Set([...shown.value, ...pending.value]) : shown.value)
 
 function pxRatio () {
   const el = box.value
@@ -355,7 +389,7 @@ function draw () {
     nodes: props.model.nodes,
     art: props.model.art,
     sheets: sheets.value,
-    from: alloc.value.nodes,
+    from: shown.value,
     to: toSet.value,
     colours: { keep: colour('--w-accent'), add: colour('--w-info'), remove: colour('--w-down'), off: colour('--w-line-strong'), bg: colour('--w-panel-solid-base') }
   })
@@ -389,6 +423,18 @@ function drawRing () {
     }
   }
   const found = css.getPropertyValue('--w-info').trim()
+  // The plan's points after the slider: faint, so you see what's to come.
+  if (later.value.length) {
+    ctx.save()
+    ctx.globalAlpha = 0.55
+    ctx.setLineDash([3 * px, 3 * px])
+    const accent = css.getPropertyValue('--w-accent').trim()
+    for (const id of later.value) {
+      const n = props.model.nodes.get(id)
+      if (n) circle(n, accent, 1, 1.5)
+    }
+    ctx.restore()
+  }
   for (const n of hits.value) circle(n, found, 3, 2.5)
   // A pinned tree doesn't follow the window's hover.
   for (const id of (props.bare ? null : totalsHover.value) ?? []) {
@@ -442,7 +488,7 @@ watch(box, (el) => {
 })
 
 watch([toSet, sheets, () => alloc.value], schedule)
-watch([hits, preview, liveLit, totalsHover], drawRing)
+watch([hits, preview, liveLit, totalsHover, later], drawRing)
 
 const wm = inject<WidgetManager>('wm')
 watch(() => wm?.active.value, (active) => { if (!active) endPan() })
@@ -522,6 +568,12 @@ function click (e: MouseEvent, button: number) {
   const choices = props.model.variants.get(n.id)
   const taken = alloc.value.nodes.has(n.id)
   if (button !== 0) return
+  // Stepped back with the slider, the tree is a view of the plan: a click
+  // first shows the whole plan again, then edits as usual.
+  if (stepping.value) {
+    emit('update:pointsAt', null)
+    return
+  }
   // A notable with types (Guy's pick T1): its types open at it, to take it
   // with one, change it, or refund it.
   if (choices) {
@@ -565,9 +617,12 @@ function setHovered (n: TreeNode | null) {
   const picked = choices?.find(c => c.effect === alloc.value.variants[n.id])
   const stats = choices && picked ? [...n.stats.map(s => `${s}: ${picked.text}`)] : n.stats
   const cost = pending.value.length
-  const note = taken
-    ? (choices ? `Type: ${picked?.text ?? 'none picked'}. Click to change or refund` : 'Taken. Click to refund')
-    : cost ? (choices ? `Click to pick a type: ${cost} ${cost === 1 ? 'point' : 'points'}` : `Click to take: ${cost} ${cost === 1 ? 'point' : 'points'}`) : 'Out of reach'
+  const place = order.value.indexOf(n.id) + 1
+  const note = stepping.value
+    ? (place ? `Point ${place} of the plan${place > at.value ? ', still to take' : ''}. Click to show the whole plan` : 'Click to show the whole plan')
+    : taken
+      ? (choices ? `Type: ${picked?.text ?? 'none picked'}. Click to change or refund` : 'Taken. Click to refund')
+      : cost ? (choices ? `Click to pick a type: ${cost} ${cost === 1 ? 'point' : 'points'}` : `Click to take: ${cost} ${cost === 1 ? 'point' : 'points'}`) : 'Out of reach'
   showTipAt(ring.value, {
     kind: 'passive',
     name: n.name || 'Atlas passive',
@@ -611,6 +666,9 @@ function openWeb () {
   flex: none;
 }
 .find { width: 11rem; }
+.count0 { min-width: 21ch; font-variant-numeric: tabular-nums; }
+.slider { width: 9rem; flex: none; accent-color: var(--w-accent); }
+.reach { flex: 1 1 0; min-width: 0; color: var(--w-fg); }
 .unsaved { display: inline-flex; align-items: center; gap: 4px; font-size: var(--w-fs-sm); white-space: nowrap; margin-right: 2px; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; vertical-align: middle; }
 .name { width: 11rem; }

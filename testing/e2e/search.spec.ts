@@ -57,7 +57,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   const { panel, box } = await waitForPrices(overlay)
 
   await expect(panel.getByText('Trade site')).toBeVisible()
-  await expect(panel.getByText('Wiki')).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
   await expect(panel.getByText('Live listings')).toBeVisible()
   await overlay.snap('search-unique')
 
@@ -173,4 +173,72 @@ test('hovering a result shows the item, with its price or its range', async ({ o
   await box.fill('market')
   await panel.getByRole('button', { name: /Market/ }).first().hover()
   await expect(tip).toHaveCount(0)
+})
+
+test('currency maths and countdowns answer first, and the web is always offered', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('3 div')
+  const first = panel.locator('[data-selected]')
+  await expect(first).toContainText(/3 Divine Orb = [\d,.]+ c/)
+  await expect(panel.getByRole('button', { name: /^Copy / })).toBeVisible()
+  await expect(panel.getByText(/Search poewiki for "3 div"/)).toBeVisible()
+  await overlay.snap('search-currency-maths')
+
+  await box.fill('lab reset')
+  await expect(first).toContainText(/Lab layout resets in/)
+  await overlay.snap('search-lab-reset')
+})
+
+test('a boss card shows its entry and drops, and an item says where it drops', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('uber maven')
+  await expect(panel.locator('[data-selected]')).toContainText('Uber Maven')
+  await expect(panel.getByText(/4 × Reality Fragment/)).toBeVisible()
+  await overlay.snap('search-boss')
+
+  await box.fill('progenesis')
+  await expect(panel.getByText(/Progenesis drops from/)).toBeVisible()
+  await panel.getByText(/Progenesis drops from/).click()
+  await overlay.snap('search-where-it-drops')
+})
+
+test('a div card compares its full set with the reward', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('the doctor')
+  const set = panel.getByText(/^The Doctor: /)
+  await expect(set).toBeVisible()
+  await set.click()
+  await expect(panel.getByText('Full set: 8 cards')).toBeVisible()
+  await expect(panel.getByText('Reward: Headhunter')).toBeVisible()
+  await overlay.snap('search-card-set')
+})
+
+test('a vendor recipe shows what to sell and what you get', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('6 link')
+  const recipe = panel.getByText('20 × Orb of Fusing').first()
+  await expect(recipe).toBeVisible()
+  await recipe.click()
+  await expect(panel.getByText('An item with 6 linked sockets', { exact: true })).toBeVisible()
+  await overlay.snap('search-recipe')
 })
