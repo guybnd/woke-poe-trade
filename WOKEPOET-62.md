@@ -36,6 +36,12 @@ history:
     date: '2026-11-05T11:08:34.427Z'
     selfAttested: true
     id: c-2026-11-05t11-08-34-427z
+  - type: comment
+    user: Agent
+    comment: 'Guy, 2026-11-12: Later. He thinks a held hotkey shouldn''t repeat.'
+    date: '2026-11-12T05:23:58.885Z'
+    selfAttested: true
+    id: c-2026-11-12t05-23-58-885z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/150'
 ---
 > **TL;DR** C17. The hotkey callback has no repeat guard (Shortcuts.ts register), and GGG's rules allow one action per press. Whether Windows repeats these hotkeys needs a test. A guard keyed on the uIOhook keyup is cheap either way: ignore a hotkey until its key has been released.

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-121
 title: Release build splits files across two draft releases
-status: Grooming
+status: Done
 priority: Medium
 effort: S
 assignee: unassigned
@@ -14,6 +14,24 @@ history:
     user: Agent
     date: '2026-11-06T02:01:17.856Z'
     comment: Created ticket.
+    id: a-2026-11-06t02-01-17-856z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T05:24:38.824Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Already fixed by #322 (the release workflow now drafts first and checks
+      for exactly one draft); v0.4.1 and v0.4.2 each made a single release. The
+      three old stray drafts (436003962 for v0.1.0, 436180413 for v0.2.0,
+      436388427 for v0.3.0) are still on GitHub and only collaborators can see
+      them. Guy can delete them; auto mode won't let me.
+    date: '2026-11-12T05:24:40.011Z'
+    selfAttested: true
+    id: c-2026-11-12t05-24-40-011z
+needsAction: null
 ---
 > **TL;DR:** The release build for v0.1.0 made two drafts for one tag, so one file landed in the wrong draft. Fix this before the next release, because a misplaced `latest.yml` or installer would break updates.
 

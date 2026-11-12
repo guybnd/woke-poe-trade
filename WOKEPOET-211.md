@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-211
 title: 'Atlas strategies like PoB builds: tree editor, folders, Threads loadout'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -65,6 +65,17 @@ history:
       fixed, and sent for merge. Dev build switch waits on the Net worth preview
       (#354).
     id: a-2026-11-12t05-14-51-795z
+  - type: comment
+    user: Agent
+    comment: 'Merged as #355 (4cf5d0ff) and live on the dev build (master).'
+    date: '2026-11-12T05:24:06.322Z'
+    completionComment: true
+    id: c-2026-11-12t05-24-06-322z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T05:24:06.322Z'
 swimlane: null
 needsAction: null
 ---

@@ -24,6 +24,14 @@ history:
     date: '2026-11-05T12:02:38.415Z'
     selfAttested: true
     id: c-2026-11-05t12-02-38-415z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy, 2026-11-12: Next. The "of Trarthus" gems aren't in the lab, in his
+      view, so skip them. Add the 6 missing gems.
+    date: '2026-11-12T05:23:57.197Z'
+    selfAttested: true
+    id: c-2026-11-12t05-23-57-197z
 ---
 Step 6 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Thin prices in EV are already covered by WOKEPOET-79 / PR #152.
 

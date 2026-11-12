@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-39
 title: 'Hardcore safe mode for the loot filter: pick a mock'
-status: Grooming
+status: Archived
 priority: Medium
 effort: M
 assignee: unassigned
@@ -45,7 +45,22 @@ history:
       rares, a net line of 5% of a divine, and auto strictness that stops at
       Strict and asks first. If B: softcore never sees it unless you turn it on.
       Mocks: https://claude.ai/artifact/XUJRLXxZ8N1mDpB32kkrHC
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Guy, 2026-11-12 picker: Drop.'
+    date: '2026-11-12T05:23:55.288Z'
+    id: c-2026-11-12t05-23-55-288z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T05:23:55.288Z'
+  - type: status_change
+    from: Grooming
+    to: Archived
+    user: Agent
+    date: '2026-11-12T05:23:55.289Z'
+swimlane: null
 needsAction: null
 ---
 > **TL;DR** — A **safe mode for Hardcore**: a gear floor for rares, a **net line that follows the league**, and a ladder that asks first. Guy picks how it turns on, then it gets built.
