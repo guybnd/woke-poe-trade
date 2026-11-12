@@ -68,7 +68,10 @@ export interface Prices {
   price: (name: string, variant?: string) => number | null
   // The row price() reads, when it's a thin market.
   thin: (name: string, variant?: string) => PriceItem | null
-  variants: (name: string) => VariantStats | null
+  // skipThin: leave thin-market rows out of the spread.
+  variants: (name: string, skipThin?: boolean) => VariantStats | null
+  // Every poe.ninja row for this name is a thin market.
+  allThin: (name: string) => boolean
   trade: (name: string) => TradeQuote | null
 }
 
@@ -128,8 +131,8 @@ export function priceResolver (items: PriceItem[], trade: (name: string) => Trad
     if (list) list.push(item)
     else byName.set(item.name, [item])
   }
-  const variants = (name: string): VariantStats | null => {
-    const list = byName.get(name)
+  const variants = (name: string, skipThin = false): VariantStats | null => {
+    const list = byName.get(name)?.filter(i => !skipThin || !isThin(i))
     if (!list?.length) return null
     const values = list.map(i => i.chaos).sort((a, b) => a - b)
     const mid = Math.floor(values.length / 2)
@@ -152,7 +155,11 @@ export function priceResolver (items: PriceItem[], trade: (name: string) => Trad
     const r = row(name, variant)
     return r && isThin(r) ? r : null
   }
-  return { price, variants, trade, thin }
+  const allThin = (name: string): boolean => {
+    const list = byName.get(name)
+    return !!list?.length && list.every(isThin)
+  }
+  return { price, variants, trade, thin, allThin }
 }
 
 export interface DropPrice {
@@ -178,10 +185,12 @@ export function dropPrice (d: BossDrop, prices: Prices, prefs: BossPrefs): DropP
     if (quote) return { price: quote.chaos, spread: null, mode, source: 'trade', listings: quote.listings }
     return { price: null, spread: null, mode, source: null, listings: null }
   }
-  const spread = prices.variants(d.name)
+  const spread = prices.variants(d.name, prefs.skipThin)
   if (mode === 'custom' && custom != null) return { price: custom, spread, mode, source: 'custom', listings: null }
   if (mode === 'unid' && quote) return { price: quote.chaos, spread, mode, source: 'trade', listings: quote.listings }
   const ninja = spread ? (mode === 'min' ? spread.min : spread.median) : null
+  // Every variant thin, with Skip thin on: counts as 0 like any thin row.
+  if (ninja == null && prefs.skipThin && prices.allThin(d.name)) return { price: 0, spread: null, mode, source: 'thin', listings: null }
   return { price: ninja, spread, mode, source: ninja == null ? null : 'ninja', listings: null }
 }
 

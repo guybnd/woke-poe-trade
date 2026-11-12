@@ -44,9 +44,9 @@ const props = withDefaults(defineProps<{
 // Thin is judged on the row priceGroup picked for a name (plain before 5L/6L),
 // so a thin plain row drops the name rather than promoting a linked one.
 const groups = computed(() => props.mech.groups.map(g => {
-  const all = priceGroup(g, props.items)
-  const rows = props.skipThin ? all.filter(r => !isThin(r.item)) : all
-  return { label: g.unit ? `${g.label} (per ${g.unit})` : g.label, rows, max: rows[0]?.chaos ?? 0, unranked: g.unranked, thinOnly: all.length > 0 && !rows.length }
+  const rows = priceGroup(g, props.items, props.skipThin ? isThin : undefined)
+  const thinOnly = props.skipThin && !rows.length && priceGroup(g, props.items).length > 0
+  return { label: g.unit ? `${g.label} (per ${g.unit})` : g.label, rows, max: rows[0]?.chaos ?? 0, unranked: g.unranked, thinOnly }
 }))
 const shownGroups = computed(() => props.top == null
   ? groups.value

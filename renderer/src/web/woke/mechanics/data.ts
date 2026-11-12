@@ -310,7 +310,9 @@ export interface PricedRow {
   tag?: string
 }
 
-export function priceGroup (group: PriceGroup, items: PriceItem[]): PricedRow[] {
+// leaveOut: drops a name whose chosen row it matches (a thin market, say)
+// before the group's limit, so cheaper rows move up to fill it.
+export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (item: PriceItem) => boolean): PricedRow[] {
   const unit = group.unit ?? 1
   // One row per name. Variants: prefer the plain one, and never a 5- or
   // 6-link unique (poe.ninja lists those separately at many times the
@@ -325,7 +327,7 @@ export function priceGroup (group: PriceGroup, items: PriceItem[]): PricedRow[] 
     const prev = best.get(item.name)
     if (!prev || better(item, prev)) best.set(item.name, item)
   }
-  const rows: PricedRow[] = [...best.values()].map(item => ({ item, chaos: item.chaos * unit, unit, tag: group.tag?.(item) }))
+  const rows: PricedRow[] = [...best.values()].filter(item => !leaveOut?.(item)).map(item => ({ item, chaos: item.chaos * unit, unit, tag: group.tag?.(item) }))
   rows.sort((a, b) => b.chaos - a.chaos)
   return rows.slice(0, group.limit ?? 20)
 }

@@ -323,8 +323,12 @@ const px = computed(() => {
   return priceResolver(prices.snapshot.value?.items ?? [], name => tradePrices.get(league, name))
 })
 // The thin poe.ninja row a drop is priced from, if that's where its price came from.
-function dropThin (d: { name: string, variant?: string, priceSource: string | null }) {
-  return d.priceSource === 'ninja' || d.priceSource === 'thin' ? px.value.thin(d.name, d.variant) : null
+// A drop priced from the spread of its variants is thin only when every
+// variant is (Skip thin leaves thin ones out of that spread).
+function dropThin (d: { name: string, variant?: string, priceSource: string | null, priceMode: string | null }) {
+  if (d.priceSource !== 'ninja' && d.priceSource !== 'thin') return null
+  if (d.priceMode == null) return px.value.thin(d.name, d.variant)
+  return px.value.allThin(d.name) ? px.value.thin(d.name) : null
 }
 
 // Trade lookups only while this panel is on screen.

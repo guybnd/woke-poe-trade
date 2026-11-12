@@ -71,4 +71,19 @@ describe('boss runs card', () => {
     expect(killDropPrice({ name: 'Sacrificial Heart' }, prices, on)).toBe(0)
     expect(killDropPrice({ name: 'Sacrificial Heart' }, prices, prefs())).toBe(40)
   })
+
+  it('Skip thin never prices a thin variant from its sibling, and leaves thin variants out of a spread', () => {
+    const prices = priceResolver([
+      { name: 'Empower Support', variant: '4', chaos: 3000, gaps: 5 },
+      { name: 'Empower Support', variant: '3', chaos: 400, gaps: 0 },
+      { name: 'Forbidden Flame', variant: 'a', chaos: 100, gaps: 0 },
+      { name: 'Forbidden Flame', variant: 'b', chaos: 300, gaps: 6 },
+      { name: 'Forbidden Flame', variant: 'c', chaos: 900, gaps: 0 }
+    ] as Parameters<typeof priceResolver>[0])
+    const on = prefs({ skipThin: true })
+    expect(killDropPrice({ name: 'Empower Support', variant: '4' }, prices, on)).toBe(0)
+    expect(killDropPrice({ name: 'Empower Support', variant: '4' }, prices, prefs())).toBe(3000)
+    // Median of 100 and 900, without the thin 300.
+    expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs({ skipThin: true, priceModes: { 'Forbidden Flame': 'median' } }))).toBe(500)
+  })
 })
