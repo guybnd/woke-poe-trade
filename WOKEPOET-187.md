@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-187
 title: 'Regex library: edit, create, delete in window; poe.re in app browser'
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -62,6 +62,19 @@ history:
       typecheck, lint, unit, perf and e2e pass. The one tab-rail failure also
       fails on master. The PR is handed to the merge thread.
     id: a-2026-11-10t13-21-48-333z
+  - type: comment
+    user: Agent
+    comment: >-
+      Already merged as #321 (Regex library: edit, add and delete in the window;
+      poe.re in the app).
+    date: '2026-11-12T06:21:33.948Z'
+    completionComment: true
+    id: c-2026-11-12t06-21-33-948z
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-12T06:21:33.948Z'
 swimlane: null
 needsAction: null
 ---

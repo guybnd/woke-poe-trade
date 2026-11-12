@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-72
 title: 'League mechanics settings: explain per mechanic what the overlay does'
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -58,6 +58,19 @@ history:
       E:\Git\woke-mechanics-settings. Review fixes applied, checks pass. Merge
       requested through the coordinator.
     id: a-2026-11-05t11-16-25-462z
+  - type: comment
+    user: Agent
+    comment: >-
+      Layout A was merged as #162 (Explain each league mechanic on its settings
+      page), with follow-ups in #265 and #297.
+    date: '2026-11-12T06:21:34.890Z'
+    completionComment: true
+    id: c-2026-11-12t06-21-34-890z
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-12T06:21:34.891Z'
 swimlane: null
 needsAction: null
 ---
