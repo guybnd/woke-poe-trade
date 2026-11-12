@@ -3,6 +3,12 @@
     <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
       <span>Hotkey: show or hide net worth</span>
       <w-hotkey-cell v-model="hotkey" />
+      <span>"Hide small" hides items under</span>
+      <w-field v-model="hideBelow" type="number" suffix="div" />
+      <span>Goal name</span>
+      <w-field v-model="goalName" placeholder="e.g. Mirror" />
+      <span>Goal</span>
+      <w-field v-model="goalDiv" type="number" suffix="div" />
     </div>
     <w-toggle v-model="dockIcon">Show an icon in the dock</w-toggle>
   </div>
@@ -10,21 +16,37 @@
 
 <script lang="ts">
 import { computed, defineComponent } from 'vue'
+import WField from '../ui/WField.vue'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
+import { hideBelowOf } from './widget'
 import type { NetWorthWidget } from './widget'
 
 export default defineComponent({
   name: 'NetWorth',
-  components: { WHotkeyCell, WToggle },
+  components: { WField, WHotkeyCell, WToggle },
   props: configProp<NetWorthWidget>(),
   setup (props) {
+    const w = () => props.configWidget
     return {
       hotkey: configModelValue(() => props.configWidget, 'hotkey'),
       dockIcon: computed({
-        get: () => props.configWidget.dockIcon !== false,
-        set: (v: boolean) => { props.configWidget.dockIcon = v }
+        get: () => w().dockIcon !== false,
+        set: (v: boolean) => { w().dockIcon = v }
+      }),
+      hideBelow: computed({
+        get: () => hideBelowOf(w()),
+        set: (v: string | number) => { const n = Number(v); w().hideBelowDiv = Number.isFinite(n) && n >= 0 ? n : 1 }
+      }),
+      // No goal: an empty or zero target.
+      goalName: computed({
+        get: () => w().goal?.name ?? '',
+        set: (v: string | number) => { w().goal = { name: String(v), div: w().goal?.div ?? 0 } }
+      }),
+      goalDiv: computed({
+        get: () => w().goal?.div ?? 0,
+        set: (v: string | number) => { const n = Number(v); w().goal = { name: w().goal?.name ?? '', div: Number.isFinite(n) && n > 0 ? n : 0 } }
       })
     }
   }

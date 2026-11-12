@@ -8,7 +8,13 @@ export interface NetWorthWidget extends Widget {
   anchor: Anchor
   hotkey: string | null
   dockIcon: boolean
+  // "Hide < N div" in the item table (D2). Default 1.
+  hideBelowDiv?: number
+  // A target on the chart, with an ETA at the current rate (D6).
+  goal?: { name: string, div: number } | null
 }
+
+export const hideBelowOf = (w: NetWorthWidget) => typeof w.hideBelowDiv === 'number' && w.hideBelowDiv >= 0 ? w.hideBelowDiv : 1
 
 export function hotkeyTarget (wmId: number): string {
   return `${NET_WORTH_TYPE}:${wmId}`

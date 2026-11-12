@@ -23,6 +23,16 @@ export function isMapCostItem (item: { type: string }): boolean {
 // Pause the session after this long without a zone change.
 export const AUTO_PAUSE_MS = 5 * 60 * 1000
 
+// Another window (Net worth) asking the Farming window to end its session.
+const endRequests = new Set<() => void>()
+export function onEndSessionRequest (fn: () => void): () => void {
+  endRequests.add(fn)
+  return () => { endRequests.delete(fn) }
+}
+export function requestEndSession () {
+  for (const fn of endRequests) fn()
+}
+
 export interface PricedRef {
   type: string
   name: string

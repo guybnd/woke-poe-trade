@@ -1,0 +1,148 @@
+// The Net worth window's numbers (A1 Ledger): per-tab value, liquid, chart
+// points and big gains, the goal's ETA, price moves and the change view.
+import { describe, it, expect } from 'vitest'
+import {
+  addPoint, bigGains, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
+} from '@/web/woke/net-worth/ledger'
+import type { LedgerPoint, SeriesPoint } from '@/web/woke/net-worth/ledger'
+import { valueStash } from '@/web/woke/net-worth/valuation'
+import type { Category, PriceOf, StashDiff, StashItemLike } from '@/web/woke/net-worth/valuation'
+
+const item = (typeLine: string, stack = 1, frame = 5): StashItemLike => ({ name: '', typeLine, baseType: typeLine, frame, stack, icon: '' })
+const PRICES: Record<string, { chaos: number, category: Category, graph?: number[] }> = {
+  'Chaos Orb': { chaos: 1, category: 'currency' },
+  'Divine Orb': { chaos: 200, category: 'currency' },
+  'The Apothecary': { chaos: 1000, category: 'cards', graph: [0, 1, 2, 4, 5, 3, 7.7] },
+  'Maven\'s Writ': { chaos: 600, category: 'fragments' }
+}
+const priceOf: PriceOf = (i) => PRICES[i.typeLine] ?? null
+const cats = (c: Partial<Record<Category, number>>): Record<Category, number> => ({ currency: 0, fragments: 0, cards: 0, gear: 0, other: 0, ...c })
+const H = 3_600_000
+const DAY = 24 * H
+
+describe('per tab and liquid', () => {
+  const tabs = [
+    { id: 'a', name: 'Currency', colour: '#7c5436', items: [item('Divine Orb', 3), item('Chaos Orb', 50)] },
+    { id: 'b', name: 'Divs', colour: null, items: [item('The Apothecary', 1, 6), item('Rare thing', 1, 2)] }
+  ]
+
+  it('values each tab, skipping what has no price', () => {
+    expect(valueByTab(tabs, priceOf)).toEqual([
+      { id: 'a', name: 'Currency', colour: '#7c5436', chaos: 650 },
+      { id: 'b', name: 'Divs', colour: null, chaos: 1000 }
+    ])
+  })
+
+  it('lines know their tabs, and liquid is currency and fragments', () => {
+    const v = valueStash([...tabs, { id: 'c', name: 'Frags', colour: null, items: [item('Maven\'s Writ', 2), item('Divine Orb', 1)] }], priceOf)
+    expect(v.lines.find(l => l.name === 'Divine Orb')!.tabIds).toEqual(['a', 'c'])
+    expect(v.lines.find(l => l.name === 'The Apothecary')!.graph).toEqual(PRICES['The Apothecary'].graph)
+    expect(liquidChaos(v)).toBe(650 + 1200 + 200)
+  })
+})
+
+describe('chart points', () => {
+  const diff: StashDiff = {
+    at: 5,
+    added: [{ key: 'd', name: 'Divine Orb', icon: '', count: 12, chaos: 2400 }, { key: 'c', name: 'Chaos Orb', icon: '', count: 240, chaos: 240 }],
+    removed: [{ key: 'w', name: 'Maven\'s Writ', icon: '', count: 4, chaos: 2400 }],
+    netChaos: 240
+  }
+
+  it('names the biggest changes, both ways', () => {
+    expect(topChanges(diff, 2)).toEqual(['12 × Divine Orb', '−4 × Maven\'s Writ'])
+    expect(topChanges(null)).toEqual([])
+  })
+
+  it('keeps one point per read, in time order', () => {
+    const p = (at: number): LedgerPoint => ({ at, chaos: at, divine: 200, byCategory: cats({}), netChaos: null, top: [] })
+    expect(addPoint([p(1), p(3)], p(2)).map(x => x.at)).toEqual([1, 2, 3])
+    expect(addPoint([p(1)], { ...p(1), chaos: 9 })).toHaveLength(1)
+  })
+
+  it('fills days before the first refresh point from the daily snapshots, in each day\'s rate', () => {
+    const now = 10 * DAY
+    const days = {
+      d1: { at: now - 5 * DAY, chaos: 2000, divine: 100, byCategory: cats({ currency: 2000 }) },
+      d2: { at: now - 30 * DAY, chaos: 1000, divine: 100, byCategory: cats({ currency: 1000 }) },
+      d3: { at: now - 1 * H, chaos: 9999, divine: 100, byCategory: cats({}) }
+    }
+    const points: LedgerPoint[] = [{ at: now - 2 * H, chaos: 4000, divine: 200, byCategory: cats({ currency: 4000 }), netChaos: 400, top: ['x'] }]
+    const s = seriesFor(points, days, '7d', now, 200)
+    expect(s.map(p => [p.div, p.daily])).toEqual([[20, true], [20, false]])
+    expect(s[1].netDiv).toBe(2)
+    expect(seriesFor(points, days, 'league', now, 200)).toHaveLength(3)
+    expect(seriesFor(points, days, '24h', now, 200)).toHaveLength(1)
+  })
+
+  it('marks refreshes that added a lot', () => {
+    const s = [1, 2, 1.5, 40, 2, -30].map((n, i): SeriesPoint => ({ at: i, div: 0, byCategory: cats({}), netDiv: n, top: [], daily: false }))
+    expect([...bigGains(s)]).toEqual([3])
+  })
+})
+
+describe('goal ETA', () => {
+  const pt = (at: number, div: number): SeriesPoint => ({ at, div, byCategory: cats({}), netDiv: null, top: [], daily: false })
+
+  it('days to go at the rate over the range', () => {
+    expect(goalEta([pt(0, 100), pt(2 * DAY, 120)], 220)).toEqual({ reached: false, days: 10 })
+  })
+
+  it('reached, falling, or too little to go on', () => {
+    expect(goalEta([pt(0, 100), pt(2 * DAY, 300)], 220).reached).toBe(true)
+    expect(goalEta([pt(0, 100), pt(2 * DAY, 90)], 220).days).toBeNull()
+    expect(goalEta([pt(0, 100), pt(H, 120)], 220).days).toBeNull()
+    expect(goalEta([], 220).days).toBeNull()
+  })
+})
+
+describe('price moves on what you hold', () => {
+  it('reads the last day from poe.ninja\'s 7-day line', () => {
+    expect(change24h([0, 10, 21])).toBeCloseTo(0.1)
+    expect(change24h([5])).toBeNull()
+    expect(change24h([null, 0, null, 10])).toBeCloseTo(0.1)
+  })
+
+  it('the 3 that moved your value most, either way', () => {
+    const lines = [
+      { key: 'a', name: 'A', chaos: 1100 },
+      { key: 'b', name: 'B', chaos: 50 },
+      { key: 'c', name: 'C', chaos: 900 },
+      { key: 'd', name: 'D', chaos: 10 }
+    ]
+    const ch: Record<string, number | null> = { a: 0.1, b: 0.5, c: -0.1, d: null }
+    const m = priceMoves(lines, k => ch[k])
+    expect(m.map(x => x.key)).toEqual(['a', 'c', 'b'])
+    expect(m[0].valueChaos).toBeCloseTo(100)
+    expect(m[1].valueChaos).toBeCloseTo(-100)
+  })
+})
+
+describe('what changed', () => {
+  const d = (at: number, net: number, name = 'Divine Orb', count = 1): StashDiff => ({
+    at,
+    added: net > 0 ? [{ key: name, name, icon: '', count, chaos: net }] : [],
+    removed: net < 0 ? [{ key: name, name, icon: '', count, chaos: -net }] : [],
+    netChaos: net
+  })
+
+  it('keeps recent changes small', () => {
+    const big: StashDiff = { at: 1, added: Array.from({ length: 30 }, (_, i) => ({ key: `${i}`, name: `${i}`, icon: '', count: 1, chaos: 1 })), removed: [], netChaos: 30 }
+    expect(keepDiff([], big)[0].added).toHaveLength(12)
+  })
+
+  it('groups a session\'s refreshes per map run before them', () => {
+    const runs = [{ name: 'Strand', enteredAt: 1000, mapMs: 200_000 }, { name: 'Crimson Temple', enteredAt: 5000, mapMs: 252_000 }]
+    const groups = groupByRuns([d(500, 99), d(2000, 200), d(3000, 100, 'Chaos Orb', 50), d(6000, -50)], runs, 600)
+    expect(groups.map(g => [g.title, g.netChaos])).toEqual([
+      ['Map 2 · Crimson Temple · 4:12', -50],
+      ['Map 1 · Strand · 3:20', 300]
+    ])
+    expect(groups[1].lines.map(l => [l.name, l.count, l.dir])).toEqual([['Divine Orb', 1, 'add'], ['Chaos Orb', 50, 'add']])
+  })
+
+  it('without a session, one group per refresh, newest first', () => {
+    const g = groupByRefresh([d(1, 5), d(2, -3), d(3, 7), d(4, 1)])
+    expect(g.map(x => x.netChaos)).toEqual([1, 7, -3])
+  })
+})

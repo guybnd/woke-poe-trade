@@ -18,6 +18,7 @@ export interface StashItemLike {
 }
 
 export interface StashTabLike {
+  id?: string
   name: string
   items: StashItemLike[]
 }
@@ -33,7 +34,12 @@ export const CATEGORIES: Array<{ id: Category, label: string }> = [
 ]
 
 // A price for one of an item, and where it belongs. null: no price.
-export interface Priced { chaos: number, category: Category }
+export interface Priced {
+  chaos: number
+  category: Category
+  // poe.ninja's 7-day line (% change since its first day), when it has one.
+  graph?: Array<number | null>
+}
 export type PriceOf = (item: StashItemLike) => Priced | null
 
 // The same thing in any tab, counted together.
@@ -46,6 +52,12 @@ export interface ValuedLine {
   unitChaos: number
   chaos: number
   tabs: string[]
+  tabIds: string[]
+  // For the item tooltip and menu: the name the game uses, a gem's variant.
+  frame: number
+  tipName: string
+  variant?: string
+  graph?: Array<number | null>
 }
 
 export interface Valuation {
@@ -99,9 +111,24 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf): Valuation {
       const key = itemKey(item)
       let line = lines.get(key)
       if (!line) {
-        line = { key, name: itemLabel(item), icon: item.icon, category: price.category, count: 0, unitChaos: price.chaos, chaos: 0, tabs: [] }
+        line = {
+          key,
+          name: itemLabel(item),
+          icon: item.icon,
+          category: price.category,
+          count: 0,
+          unitChaos: price.chaos,
+          chaos: 0,
+          tabs: [],
+          tabIds: [],
+          frame: item.frame,
+          tipName: item.frame === 3 && item.name ? item.name : item.typeLine,
+          variant: item.frame === 4 ? gemVariant(item) : undefined,
+          graph: price.graph
+        }
         lines.set(key, line)
       }
+      if (tab.id && !line.tabIds.includes(tab.id)) line.tabIds.push(tab.id)
       line.count += item.stack
       line.chaos += price.chaos * item.stack
       if (!line.tabs.includes(tab.name)) line.tabs.push(tab.name)

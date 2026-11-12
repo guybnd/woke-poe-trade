@@ -7,7 +7,7 @@ import type { Category, Priced, PriceOf, StashItemLike } from './valuation'
 
 const FRAGMENT_SLUGS = new Set(['fragments', 'scarabs', 'invitations', 'artifacts'])
 
-interface Row { chaos: number, variant?: string }
+interface Row { chaos: number, variant?: string, graph?: Array<number | null> }
 
 // Gems by poe.ninja's variant (gemVariant), else the cheapest.
 function gemRow (rows: Row[], item: StashItemLike): Row | undefined {
@@ -29,7 +29,7 @@ export function ninjaPriceOf (): PriceOf {
     if (item.typeLine === 'Divine Orb' && divine) return { chaos: divine, category: 'currency' }
     if (item.frame === 6) {
       const row = ninja.findPriceByQuery({ ns: 'DIVINATION_CARD', name: item.typeLine, variant: undefined })
-      return row ? { chaos: row.chaos, category: 'cards' } : null
+      return row ? { chaos: row.chaos, category: 'cards', graph: row.graph } : null
     }
     if (item.frame === 3) {
       const name = item.name || item.typeLine
@@ -38,12 +38,12 @@ export function ninjaPriceOf (): PriceOf {
       const links = item.links ?? 0
       const linked = links >= 5 ? rows.find(r => r.variant === `${links}L`) : undefined
       const row = linked ?? exact ?? cheapest(rows.filter(r => !/^\dL$/.test(r.variant ?? '')))
-      return row ? { chaos: row.chaos, category: 'gear' } : null
+      return row ? { chaos: row.chaos, category: 'gear', graph: row.graph } : null
     }
     if (item.frame === 4) {
       const row = gemRow(ninja.findPricesByName('GEM', item.typeLine) as Row[], item) ??
         ninja.findPriceByQuery({ ns: 'GEM', name: item.typeLine, variant: undefined }) ?? undefined
-      return row ? { chaos: row.chaos, category: 'gear' } : null
+      return row ? { chaos: row.chaos, category: 'gear', graph: row.graph } : null
     }
     // Currency, fragments, scarabs, essences, maps...: listed by name.
     const exact = ninja.findPriceByQuery({ ns: 'ITEM', name: item.typeLine, variant: undefined })
@@ -51,10 +51,10 @@ export function ninjaPriceOf (): PriceOf {
       // url: https://poe.ninja/poe1/economy/<league>/<category>/<item>
       const slug = exact.url.split('/')[6] ?? ''
       const category: Category = slug === 'currency' ? 'currency' : FRAGMENT_SLUGS.has(slug) ? 'fragments' : 'other'
-      return { chaos: exact.chaos, category }
+      return { chaos: exact.chaos, category, graph: exact.graph }
     }
     const any = cheapest(ninja.findPricesByName('ITEM', item.typeLine) as Row[])
-    return any ? { chaos: any.chaos, category: 'other' } : null
+    return any ? { chaos: any.chaos, category: 'other', graph: any.graph } : null
   }
 
   return (item) => {

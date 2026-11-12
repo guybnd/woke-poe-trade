@@ -2,7 +2,8 @@
   <div :class="[$style.tabs, 'w-tabs']" role="tablist">
     <button v-for="opt in options" :key="opt.value" type="button" role="tab"
       :aria-selected="opt.value === modelValue"
-      :class="[$style.tab, { [$style.active]: opt.value === modelValue }]"
+      :class="[$style.tab, { [$style.active]: opt.value === modelValue, [$style.tinted]: !!opt.colour }]"
+      :style="opt.colour ? { '--tab-colour': opt.colour } : undefined" :title="opt.title"
       @click="emit('update:modelValue', opt.value)">
       {{ opt.label }}<span v-if="opt.count != null" :class="$style.count">{{ opt.count }}</span>
     </button>
@@ -12,7 +13,8 @@
 <script setup lang="ts">
 defineProps<{
   modelValue: string
-  options: Array<{ value: string, label: string, count?: number | string }>
+  // colour: a stash tab's own colour, as a strip along its top. title: a hover note.
+  options: Array<{ value: string, label: string, count?: number | string, colour?: string, title?: string }>
 }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 </script>
@@ -52,6 +54,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
   border-bottom-color: var(--w-panel-solid);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--w-accent) 55%, transparent), 0 -2px 8px var(--w-accent-soft);
 }
+.tinted { border-top: 3px solid var(--tab-colour); padding-top: 3px; }
 .count { margin-left: 5px; font-size: var(--w-fs-xs); color: var(--w-faint); }
 .active .count { color: color-mix(in srgb, var(--w-accent) 80%, var(--w-fg)); }
 :global([data-woke-theme="native"]) .tab { font-family: var(--w-head); letter-spacing: 0.05em; }

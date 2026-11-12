@@ -198,7 +198,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { useSessionStore } from '../analytics/store'
 import { ANALYTICS_TYPE } from '../analytics/types'
 import type { AtlasWidget } from '../atlas/widget'
-import { FARMING_LOOT_TARGET, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isMapArea, isMapCostItem, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
+import { FARMING_LOOT_TARGET, onEndSessionRequest, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isMapArea, isMapCostItem, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
 import type { CostLine, LiveRun, LootLine, PricedRef } from './farming'
 
 const props = defineProps<{
@@ -419,6 +419,10 @@ function end () {
   props.config.session = null
   tab.value = 'history'
 }
+
+// Net worth's End session button ends this window's session.
+const stopEndRequests = onEndSessionRequest(end)
+onUnmounted(stopEndRequests)
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 function art (x: { type: string, name: string }) { return ninjaIcon(x.type, x.name) ?? undefined }

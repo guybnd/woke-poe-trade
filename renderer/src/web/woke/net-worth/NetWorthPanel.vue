@@ -1,10 +1,10 @@
 <template>
-  <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="26rem" max-height="80vh"
+  <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
     :hotkey="config.hotkey" :busy="status?.running === true" :stale="!!status?.error && !!v">
     <template #actions>
       <span class="w-dim text-xs mr-2">{{ readLine }}</span>
-      <WButton size="sm" variant="ghost" icon="fas fa-cog" title="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true">Tabs</WButton>
       <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" @click="refresh">Refresh</WButton>
+      <WButton size="sm" variant="ghost" icon="fas fa-cog" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
     </template>
     <template v-if="status?.error && !showPicker" #banner>
       <WBanner :tone="status.error.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
@@ -16,62 +16,116 @@
     </WEmpty>
     <WEmpty v-else-if="!v" icon="fas fa-hourglass-half">Waiting for poe.ninja prices…</WEmpty>
     <div v-else :class="$style.body">
-      <section v-if="diff && (diff.added.length || diff.removed.length)" :class="$style.diff">
-        <div :class="$style.head">
-          <span :class="$style.caps">Since last refresh</span>
-          <span class="w-num" :class="diff.netChaos >= 0 ? $style.up : $style.down">{{ sign(diff.netChaos) }}<WPrice :chaos="Math.abs(diff.netChaos)" :divine="divine" /></span>
+      <!-- Hero: the total, and its line -->
+      <section :class="$style.hero">
+        <div>
+          <div :class="$style.caps">Total</div>
+          <div :class="$style.big" class="w-num">{{ div(v.chaos) }}<small>div</small></div>
+          <div class="w-dim text-xs">≈ {{ fmt(v.chaos) }} chaos · liquid {{ div(liquid) }} div</div>
+          <div v-if="goal" class="text-xs" :class="$style.goalLine">
+            {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }} div ·
+            <template v-if="eta.reached">reached</template>
+            <template v-else-if="eta.days != null">about {{ etaText(eta.days) }} at this rate</template>
+            <template v-else>no ETA yet</template>
+          </div>
         </div>
-        <ul :class="$style.list">
-          <li v-for="l in diffRows" :key="l.dir + l.key" :class="$style.row">
-            <img v-if="l.icon" :src="l.icon" :class="$style.icon" alt="">
-            <span class="w-trunc">{{ l.count > 1 ? `${l.count} × ` : '' }}{{ l.name }}</span>
-            <span class="w-num" :class="l.dir === 'add' ? $style.up : $style.down">{{ l.dir === 'add' ? '+' : '−' }}<WPrice :chaos="l.chaos" :divine="divine" /></span>
-          </li>
-        </ul>
-        <WButton v-if="diffMore > 0" size="sm" variant="ghost" @click="diffAll = true">{{ diffMore }} more</WButton>
+        <div :class="$style.chartBox">
+          <div :class="$style.chartHead">
+            <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
+            <WSegmented v-model="range" :options="RANGE_OPTIONS" />
+          </div>
+          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" />
+          <div v-if="chartMode === 'category'" :class="$style.legend">
+            <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+          </div>
+        </div>
       </section>
 
-      <div :class="$style.totals">
-        <div><small :class="$style.caps">Total</small><b class="w-num">{{ divText(v.chaos) }}</b></div>
-        <div><small :class="$style.caps">Since yesterday</small><b class="w-num" :class="$style[tone(sum?.sinceYesterdayDiv)]">{{ sum?.sinceYesterdayDiv == null ? '—' : `${sign(sum.sinceYesterdayDiv)}${fmt(Math.abs(sum.sinceYesterdayDiv))}` }}</b></div>
-        <div><small :class="$style.caps">Per hour today</small><b class="w-num" :class="$style[tone(sum?.perHourChaos)]">{{ sum?.perHourChaos == null ? '—' : `${sign(sum.perHourChaos)}${divText(Math.abs(sum.perHourChaos), false)}` }}</b></div>
-      </div>
+      <!-- KPIs -->
+      <section :class="$style.kpis">
+        <div><span :class="$style.caps">Since yesterday</span><b class="w-num" :class="tone(sum?.sinceYesterdayDiv)">{{ signedOrDash(sum?.sinceYesterdayDiv) }}</b></div>
+        <div><span :class="$style.caps">Per hour today</span><b class="w-num" :class="tone(perHourDiv)">{{ signedOrDash(perHourDiv) }}</b></div>
+        <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)">{{ session ? `${signed(session.div)} · ${duration(session.ms)}` : '—' }}</b></div>
+        <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc">{{ best.name }} {{ div(best.chaos) }}</b></div>
+      </section>
+      <section v-if="moves.length" :class="$style.moves" class="text-xs">
+        <span :class="$style.caps">Price moves today</span>
+        <span v-for="m in moves" :key="m.key">{{ m.name }} <span :class="tone(m.change)">{{ signedPct(m.change) }} ({{ signed(m.valueChaos / (divine ?? 1)) }} div)</span></span>
+      </section>
 
-      <ul :class="$style.bars">
-        <li v-for="c in cats" :key="c.id">
-          <button type="button" :class="[$style.bar, { [$style.open]: openCat === c.id }]" @click="openCat = openCat === c.id ? null : c.id">
-            <span>{{ c.label }}</span>
-            <i :style="{ width: `${c.share * 100}%` }" />
-            <b class="w-num">{{ fmt(c.div) }}</b>
+      <!-- What changed | Where it is -->
+      <section :class="$style.cols">
+        <div>
+          <div :class="$style.colHead">
+            <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
+            <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }} div<template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}/h</template></b>
+          </div>
+          <div v-if="!groups.length" class="w-dim text-xs">Changes show after two full reads.</div>
+          <div v-for="g in groups" :key="g.key" :class="$style.group">
+            <div :class="$style.groupHead"><span class="w-trunc">{{ g.title }}</span><b class="w-num" :class="tone(g.netChaos)">{{ signed(g.netChaos / (divine ?? 1)) }}</b></div>
+            <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
+              <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon">
+              <span class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
+              <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}</span>
+            </div>
+            <div v-if="g.lines.length > 5" class="w-dim text-xs">+{{ g.lines.length - 5 }} more</div>
+          </div>
+          <div v-if="session" :class="$style.sessionFoot">
+            <span class="w-dim text-xs">Gains are read when you enter your hideout</span>
+            <WButton size="sm" @click="endSession">End session</WButton>
+          </div>
+        </div>
+        <div>
+          <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
+          <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
+            :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
+            <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num">{{ div(c.chaos) }}</b>
           </button>
-          <ul v-if="openCat === c.id" :class="$style.list">
-            <li v-for="l in linesOf(c.id)" :key="l.key" :class="$style.row" :title="l.tabs.join(', ')">
-              <img v-if="l.icon" :src="l.icon" :class="$style.icon" alt="">
-              <span class="w-trunc">{{ l.count > 1 ? `${l.count} × ` : '' }}{{ l.name }}</span>
-              <WPrice class="w-num" :chaos="l.chaos" :divine="divine" />
-            </li>
-            <li v-if="!linesOf(c.id).length" class="w-dim text-xs">Nothing here.</li>
-          </ul>
-        </li>
-      </ul>
+        </div>
+      </section>
+
+      <!-- Tabs, filters, items -->
+      <WTabs v-model="tab" :options="tabOptions" :class="$style.tabs" />
+      <section :class="$style.chips">
+        <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
+        <WChip clickable :active="cat === 'all'" @click="cat = 'all'">All</WChip>
+        <WChip v-for="c in CATEGORIES" :key="c.id" clickable :active="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">{{ c.label }}</WChip>
+        <WChip clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }} div</WChip>
+      </section>
+      <ItemTable :lines="tableLines" :divine="divine" :changes="changes" :tab-names="tabNames" />
+
       <div class="w-dim text-xs" :class="$style.foot">
-        <span>{{ status?.listed ? `${status.chosen} of ${status.listed}` : sum?.tabs }} tabs · values in divines</span>
-        <span v-if="status?.skipped">{{ status.skipped }} remove-only tabs skipped</span>
-        <span v-if="v.unpriced">{{ v.unpriced }} items without a price (rares aren't searched)</span>
+        <span>
+          {{ status?.listed ? `${status.chosen} of ${status.listed}` : sum?.tabs }} tabs
+          <template v-if="status?.skipped"> · {{ status.skipped }} remove-only skipped</template>
+          <template v-if="v.unpriced"> · {{ v.unpriced }} items unpriced (rares aren't searched)</template>
+        </span>
+        <span>poe.ninja · {{ ninjaAge }}</span>
       </div>
     </div>
   </WPanel>
 </template>
 
 <script setup lang="ts">
+// Net worth, pick A1 "Ledger": the answer first (total, its line, KPIs),
+// then what changed and where it is, then your tabs and every item.
 import { computed, defineAsyncComponent, onMounted, shallowRef, watch } from 'vue'
-import { WBanner, WButton, WEmpty, WPanel, WPrice } from '../ui'
+import { AppConfig } from '@/web/Config'
+import { usePoeninja } from '@/web/background/Prices'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WTabs } from '../ui'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
+import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
+import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { divine, lastDiff, summary, valuation, wantPrices } from './store'
+import { bigGains, change24h, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import type { ChartRange } from './ledger'
+import { divine, historyNow, ledger, summary, tabValues, valuation, wantPrices } from './store'
+import { hideBelowOf } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
+import LedgerChart from './LedgerChart.vue'
+import ItemTable from './ItemTable.vue'
 
 const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
 
@@ -82,8 +136,21 @@ const props = defineProps<{
 
 onMounted(wantPrices)
 
-// The tab picker: before a league's first read (main says pick-tabs, or
-// nothing was ever chosen or read), and from the Tabs button.
+const v = valuation
+const sum = summary
+const ninja = usePoeninja()
+
+const CAT_COLOUR: Record<Category, string> = {
+  currency: 'var(--w-r-currency)',
+  fragments: 'var(--w-r-normal)',
+  cards: 'var(--w-r-divination)',
+  gear: 'var(--w-r-unique)',
+  other: 'var(--w-faint)'
+}
+const MODE_OPTIONS = [{ value: 'total', label: 'Total' }, { value: 'category', label: 'By category' }]
+const RANGE_OPTIONS = [{ value: '24h', label: '24h' }, { value: '7d', label: '7d' }, { value: 'league', label: 'League' }]
+
+// ---------- the tab picker (WOKEPOET-209) ----------
 const picking = shallowRef(false)
 const picked = shallowRef(false)
 const needsPick = computed(() => {
@@ -96,58 +163,114 @@ function onPicked () {
   picking.value = false
   picked.value = true
 }
-// Another league asks again.
 watch(() => props.status?.league, () => { picked.value = false; picking.value = false })
 
-const v = valuation
-const sum = summary
-const diff = lastDiff
-const openCat = shallowRef<Category | null>(null)
-const diffAll = shallowRef(false)
-
+// ---------- numbers ----------
 const fmt = (n: number) => formatAmount(n)
-const sign = (n: number) => n > 0 ? '+' : n < 0 ? '−' : ''
-const tone = (n: number | null | undefined) => n == null || n === 0 ? 'flat' : n > 0 ? 'up' : 'down'
-function divText (chaos: number, unit = true) {
-  if (!divine.value) return `${fmt(chaos)} c`
-  return `${fmt(chaos / divine.value)}${unit ? ' div' : ''}`
+const toDiv = (chaos: number) => divine.value ? chaos / divine.value : chaos
+const div = (chaos: number) => {
+  const d = toDiv(chaos)
+  return d >= 100 ? formatAmount(d) : d >= 1 ? d.toFixed(1) : d.toFixed(2)
 }
+const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n) >= 100 ? formatAmount(Math.abs(n)) : Math.abs(n).toFixed(1)}`
+const signedOrDash = (n: number | null | undefined) => n == null ? '—' : signed(n)
+const signedPct = (c: number) => `${c > 0 ? '+' : '−'}${Math.abs(c * 100).toFixed(1)}%`
+const tone = (n: number | null | undefined) => n == null || n === 0 ? '' : n > 0 ? 'w-up' : 'w-down'
+const duration = (ms: number) => {
+  const m = Math.round(ms / 60_000)
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
+}
+const etaText = (days: number) => days < 1 ? `${Math.max(1, Math.round(days * 24))} h` : days < 60 ? `${Math.round(days)} days` : `${Math.round(days / 30)} months`
+
+const liquid = computed(() => v.value ? liquidChaos(v.value) : 0)
+const perHourDiv = computed(() => sum.value?.perHourChaos == null ? null : toDiv(sum.value.perHourChaos))
+const best = computed(() => v.value?.lines[0] ?? null)
+
+// ---------- chart ----------
+const chartMode = shallowRef('total')
+const range = shallowRef<string>('7d')
+const series = computed(() => seriesFor(ledger.value.points, historyNow.value.days, range.value as ChartRange, Date.now(), divine.value))
+const big = computed(() => bigGains(series.value))
+const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? props.config.goal : null)
+const eta = computed(() => goal.value ? goalEta(seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value), goal.value.div) : { reached: false, days: null })
+
+// ---------- price moves (D3) ----------
+const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, change24h(l.graph)])))
+const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))
+
+// ---------- what changed (C2, C1) ----------
+// The Farming window's running session, if any: its maps come from Client.txt.
+const farming = computed(() => {
+  const w = AppConfig().widgets.find(x => x.wmType === FARMING_TYPE && (x as FarmingWidget).session) as FarmingWidget | undefined
+  return w?.session ?? null
+})
+const session = computed(() => {
+  const s = farming.value
+  if (!s) return null
+  const ms = elapsed(s, Date.now())
+  const chaos = ledger.value.diffs.filter(d => d.at >= s.startedAt).reduce((t, d) => t + d.netChaos, 0)
+  const divVal = toDiv(chaos)
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null }
+})
+const groups = computed(() => {
+  const s = farming.value
+  return s ? groupByRuns(ledger.value.diffs, s.runs ?? [], s.startedAt) : groupByRefresh(ledger.value.diffs)
+})
+function endSession () {
+  requestEndSession()
+}
+
+// ---------- categories, tabs, filters ----------
+const cat = shallowRef<Category | 'all'>('all')
+const tab = shallowRef('all')
+const query = shallowRef('')
+const hideSmall = shallowRef(false)
+const hideBelow = computed(() => hideBelowOf(props.config))
 
 const cats = computed(() => {
   const val = v.value
   if (!val) return []
   const max = Math.max(1, ...Object.values(val.byCategory))
-  return CATEGORIES.map(c => ({
-    ...c,
-    div: divine.value ? val.byCategory[c.id] / divine.value : val.byCategory[c.id],
-    share: val.byCategory[c.id] / max
-  }))
+  return CATEGORIES.map(c => ({ ...c, chaos: val.byCategory[c.id], share: val.byCategory[c.id] / max }))
 })
 
-function linesOf (cat: Category) {
-  return (v.value?.lines ?? []).filter(l => l.category === cat).slice(0, 200)
-}
-
-const DIFF_ROWS = 8
-const diffRows = computed(() => {
-  const d = diff.value
-  if (!d) return []
-  const rows = [
-    ...d.added.map(l => ({ ...l, dir: 'add' as const })),
-    ...d.removed.map(l => ({ ...l, dir: 'remove' as const }))
-  ].sort((a, b) => b.chaos - a.chaos)
-  return diffAll.value ? rows : rows.slice(0, DIFF_ROWS)
+const tabNames = computed(() => new Map(tabValues.value.map(t => [t.id, t.name])))
+const tabOptions = computed(() => {
+  const prev = ledger.value.tabChaos.prev
+  return [
+    { value: 'all', label: 'All', count: v.value ? div(v.value.chaos) : undefined },
+    ...tabValues.value.map(t => {
+      const change = prev[t.id] != null ? toDiv(t.chaos - prev[t.id]) : null
+      return {
+        value: t.id,
+        label: t.name,
+        count: div(t.chaos),
+        colour: t.colour ?? undefined,
+        title: `${t.name}: ${div(t.chaos)} div${change != null && Math.abs(change) >= 0.05 ? ` · ${signed(change)} div since the read before` : ''}`
+      }
+    })
+  ]
 })
-const diffMore = computed(() => {
-  const d = diff.value
-  return d && !diffAll.value ? Math.max(0, d.added.length + d.removed.length - DIFF_ROWS) : 0
+// A tab that's gone (tabs chosen again) shows them all.
+watch(tabOptions, (opts) => { if (!opts.some(o => o.value === tab.value)) tab.value = 'all' })
+
+const tableLines = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  const min = hideSmall.value && divine.value ? hideBelow.value * divine.value : 0
+  return (v.value?.lines ?? []).filter(l =>
+    (cat.value === 'all' || l.category === cat.value) &&
+    (tab.value === 'all' || l.tabIds.includes(tab.value)) &&
+    (!q || l.name.toLowerCase().includes(q)) &&
+    l.chaos >= min)
 })
 
+// ---------- header and footer ----------
 const readLine = computed(() => {
   const s = props.status
   if (s?.running) return s.progress ? `reading ${s.progress.done}/${s.progress.total}` : 'reading…'
   return s?.lastReadAt ? `read ${agoPhrase(s.lastReadAt)}` : ''
 })
+const ninjaAge = computed(() => ninja.updatedAt.value ? agoPhrase(ninja.updatedAt.value) : 'loading')
 
 const errorLine = computed(() => {
   const e = props.status?.error
@@ -160,32 +283,42 @@ const errorLine = computed(() => {
 })
 
 function refresh () {
-  diffAll.value = false
   hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
 }
 </script>
 
 <style module>
-.body { display: flex; flex-direction: column; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
+.body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
-.diff { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--w-s2); border-bottom: 1px solid var(--w-line); }
-.head { display: flex; justify-content: space-between; align-items: center; }
-.totals { display: flex; gap: var(--w-s4); flex-wrap: wrap; }
-.totals div { display: flex; flex-direction: column; }
-.totals b { font-size: var(--w-fs-lg); font-weight: 500; }
-.bars { display: flex; flex-direction: column; gap: 2px; }
-.bar {
-  display: grid; grid-template-columns: 7rem minmax(0, 1fr) 3.5rem; gap: var(--w-s2); align-items: center;
-  width: 100%; padding: 3px 4px; border-radius: var(--w-r-sm); font-size: var(--w-fs-sm); text-align: left;
-}
-.bar:hover, .open { background: var(--w-accent-soft); }
-.bar i { display: block; height: 7px; border-radius: 2px; background: var(--w-accent); min-width: 1px; }
-.bar b { text-align: right; font-weight: 500; }
-.list { display: flex; flex-direction: column; gap: 1px; padding: 2px 4px 6px; }
-.row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: var(--w-s2); align-items: center; font-size: var(--w-fs-sm); }
-.icon { width: 18px; height: 18px; object-fit: contain; }
-.up { color: var(--w-up); }
-.down { color: var(--w-down); }
-.flat { color: var(--w-fg); }
-.foot { display: flex; justify-content: space-between; gap: var(--w-s2); flex-wrap: wrap; }
+.hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--w-s3); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: end; }
+.big { font-size: calc(28px * var(--w-text-scale, 1)); line-height: 1.1; color: var(--w-fg); }
+.big small { font-size: var(--w-fs-sm); color: var(--w-dim); margin-left: 4px; }
+.goalLine { color: var(--w-up); margin-top: 2px; }
+.chartBox { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.chartHead { display: flex; justify-content: space-between; gap: var(--w-s2); flex-wrap: wrap; }
+.legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
+.legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
+.kpis { display: flex; gap: var(--w-s4); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; }
+.kpis > div { display: flex; flex-direction: column; min-width: 0; max-width: 40%; }
+.kpis b { font-size: var(--w-fs-md); font-weight: 500; }
+.moves { display: flex; gap: var(--w-s3); padding: 4px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; align-items: baseline; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--w-line); }
+.cols > div { padding: var(--w-s2) var(--w-pad); min-width: 0; }
+.cols > div + div { border-left: 1px solid var(--w-line); }
+.colHead { display: flex; justify-content: space-between; gap: var(--w-s2); margin-bottom: 2px; }
+.colHead b { font-weight: 500; font-size: var(--w-fs-sm); }
+.group { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
+.groupHead { display: flex; justify-content: space-between; gap: var(--w-s2); font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px dashed var(--w-line); }
+.feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
+.icon { width: 16px; height: 16px; object-fit: contain; }
+.sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
+.catRow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 56px; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
+.catRow:hover { background: var(--w-panel-2); }
+.catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }
+.catRow b { text-align: right; font-weight: 500; }
+.catOn { background: var(--w-panel-3); box-shadow: inset 2px 0 var(--w-gold); }
+.tabs { padding: 6px var(--w-pad) 0; }
+.chips { display: flex; gap: var(--w-s1); padding: 6px var(--w-pad); flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--w-line); }
+.search { min-width: 150px; flex: 0 1 200px; }
+.foot { display: flex; justify-content: space-between; gap: var(--w-s2); padding: 5px var(--w-pad); flex-wrap: wrap; }
 </style>
