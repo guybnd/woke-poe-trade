@@ -69,7 +69,9 @@ async function start (quiet = false): Promise<boolean> {
   path = buildPath(all, tree.nodes, art)
   probes = probesOf(path, all)
   on.value = true
-  const ok = await refit(true)
+  // A quiet start (the dock icon while playing) mostly finds no tree: it
+  // reads the screen as it is rather than blinking the whole overlay.
+  const ok = await refit(true, !quiet)
   if (ok) markTreeOverlaySeen()
   if (!ok) {
     on.value = false
@@ -88,14 +90,14 @@ function stop () {
 }
 
 // Off the screen first, so the capture only sees the game.
-async function refit (fresh = false): Promise<boolean> {
+async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
   if (!path) return true
   if (busy) { again = true; return true }
   busy = true
   again = false
   // A first read hides the whole overlay for a moment: a pinned card, a pin
   // or a toast over the tree would hide it from the capture.
-  const hideAll = fresh
+  const hideAll = fresh && hideOverlay
   try {
     shown.value = false
     if (hideAll) document.body.style.visibility = 'hidden'

@@ -120,7 +120,10 @@ export const sessionHandlers: Record<string, (args: Args) => Promise<unknown>> =
     const list = (rows as Array<Record<string, unknown>>) ?? []
     const cols = list.length ? Object.keys(list[0]) : []
     const text = UTF8_BOM + [cols.join(','), ...list.map(r => cols.map(c => csvCell(r[c])).join(','))].join('\r\n')
-    const file = path.join(sessions.root(), `maps-${new Date().toISOString().slice(0, 10)}.csv`)
+    // Today's date where the player is, not in UTC.
+    const d = new Date()
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const file = path.join(sessions.root(), `maps-${day}.csv`)
     await writeAtomic(file, text)
     shell.showItemInFolder(file)
     return file

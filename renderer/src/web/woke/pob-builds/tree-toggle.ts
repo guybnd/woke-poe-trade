@@ -37,10 +37,12 @@ export function registerTreeDrawer (d: TreeDrawer): () => void {
 export async function toggleBuildTree (quiet = false): Promise<boolean> {
   if (!drawer) return false
   if (drawer.isOn()) { drawer.stop(); return true }
-  // A dock card or menu over the tree would be in the screenshot.
-  dockCardOwner.value = -1
-  // Let it close (and fade) before the screen is read.
-  await new Promise(resolve => setTimeout(resolve, 200))
+  // A dock card or menu over the tree would be in the screenshot: close it,
+  // and let it fade before the screen is read.
+  if (dockCardOwner.value != null && dockCardOwner.value !== -1) {
+    dockCardOwner.value = -1
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
   const drew = await drawer.start(quiet)
   if (drew) markTreeOverlaySeen()
   return drew
