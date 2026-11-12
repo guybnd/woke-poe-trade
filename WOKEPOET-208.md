@@ -27,5 +27,11 @@ history:
       the OCR stash read Flips uses (now stash-reader-read). Running full
       checks.
     id: a-2026-11-12t02-16-53-321z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T02:22:25.550Z'
+    comment: Updated implementation link.
+    id: a-2026-11-12t02-22-25-550z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/339'
 ---
 Follow-up to #336. Hidden unlock (5 clicks on Economy heading in Settings > Modules), Net worth EXP row, confirm W2, warning box, runtime on/off (R1) in main + renderer, personal.flag stays as override, no code/listeners when off. Tests + SECURITY/README notes. Mockups: https://claude.ai/artifact/FW77Z6LYq4QH7hpoDDeJXi. Branch feat/stash-reader-optin in E:\Git\woke-stash-optin.
