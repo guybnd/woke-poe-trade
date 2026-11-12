@@ -167,8 +167,12 @@
 
       <!-- Notes -->
       <template v-else-if="details">
+        <div :class="$style.heading" class="flex"><span>Your notes</span><span class="ml-auto normal-case tracking-normal">kept by this app, not in the build file</span></div>
+        <textarea :value="myNotes" :class="['w-field', $style.myNotes]" spellcheck="false" rows="4"
+          placeholder="What to buy next, what to swap at which act…" @input="editNotes" @blur="saveNotes" />
+        <div v-if="details.notes" :class="$style.heading">From the build</div>
         <div v-if="details.notes" class="whitespace-pre-wrap w-dim"><span v-for="(r, i) in noteRuns(details.notesRaw || details.notes)" :key="i" :style="r.colour ? { color: r.colour } : undefined">{{ r.text }}</span></div>
-        <WEmpty v-else icon="fas fa-sticky-note">No notes in this build.</WEmpty>
+        <div v-else class="w-faint text-xs pt-2">No notes in the build file.</div>
       </template>
     </div>
   </WPanel>
@@ -340,6 +344,26 @@ function chooseItemSet (title: string) {
   setPick(pick.value?.itemSet === title ? withoutKind('itemSet') : { ...pick.value, itemSet: title })
 }
 
+// ---- your notes ----
+// Kept in the app's settings by build file: PoB rewrites the whole file when
+// it saves, so text written into an open build would be lost.
+
+const myNotes = computed(() => props.config.myNotes?.[props.entry.relPath] ?? '')
+let notesTimer: ReturnType<typeof setTimeout> | undefined
+function editNotes (e: Event) {
+  const text = (e.target as HTMLTextAreaElement).value
+  const rest = Object.fromEntries(Object.entries(props.config.myNotes ?? {}).filter(([rel]) => rel !== props.entry.relPath))
+  props.config.myNotes = text.trim() ? { ...rest, [props.entry.relPath]: text } : rest
+  clearTimeout(notesTimer)
+  notesTimer = setTimeout(saveNotes, 600)
+}
+function saveNotes () {
+  clearTimeout(notesTimer)
+  notesTimer = undefined
+  saveConfig()
+}
+onBeforeUnmount(() => { if (notesTimer) saveNotes() })
+
 // ---- leveling ----
 
 const skillSets = computed(() => props.details ? skillSetsOf(props.details) : [])
@@ -501,6 +525,14 @@ function run (p: Promise<unknown>) {
   display: flex;
   flex-direction: column;
   white-space: nowrap;
+}
+.myNotes {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 6px 8px;
+  resize: vertical;
+  line-height: 1.4;
+  font-size: var(--w-fs-md);
 }
 .heading {
   padding: 8px 0 2px;

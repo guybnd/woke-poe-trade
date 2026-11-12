@@ -31,11 +31,10 @@
 <script setup lang="ts">
 // A pinned piece of a PoB build. It follows the build file and your level, so
 // the gear set and next stage move on as you do, like the panel does.
-import { computed, onUnmounted, provide, shallowRef, watch } from 'vue'
+import { computed, onUnmounted, provide, shallowRef, watch, defineAsyncComponent } from 'vue'
 import { Host } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import { WEmpty } from '../ui'
-import BuildTree from '../pob-builds/BuildTree.vue'
 import GearRowHead from '../pob-builds/GearRowHead.vue'
 import GemChain from '../pob-builds/GemChain.vue'
 import NextSection from '../pob-builds/NextSection.vue'
@@ -49,6 +48,9 @@ import type { TreeNode } from '../pob-builds/passive-tree'
 import { POB_BUILDS_TYPE, pobApi } from '../pob-builds/widget'
 import type { PobBuildsWidget, PobDetails } from '../pob-builds/widget'
 import type { Pin } from './pins'
+
+// The tree loads on first open: it's big and most sessions never open it.
+const BuildTree = defineAsyncComponent(() => import('../pob-builds/BuildTree.vue'))
 
 const props = defineProps<{ pin: Pin }>()
 

@@ -25,6 +25,8 @@ export interface PobBuildsWidget extends Widget {
   unlinkedSets?: string[]
   // Build file -> its Trade searches folder, for the build panel's Trades tab.
   tradeFolders?: Record<string, string>
+  // Build file -> your own notes on it, shown in the Notes tab.
+  myNotes?: Record<string, string>
 }
 
 // Set titles, not positions: PoB can reorder sets. Sets sharing a title form
@@ -202,11 +204,16 @@ export function moveBuildRefs (w: PobBuildsWidget, from: string, to: string | nu
   // The set link and the Trades folder: keyed by the file, so they follow it too.
   const wasUnlinked = (w.unlinkedSets ?? []).includes(from)
   const folder = w.tradeFolders?.[from]
+  const notes = w.myNotes?.[from]
   const moveExtras = (a: string, b: string | null) => {
     if (wasUnlinked) w.unlinkedSets = [...(w.unlinkedSets ?? []).filter(r => r !== a), ...(b ? [b] : [])]
     if (folder != null) {
       const rest = Object.fromEntries(Object.entries(w.tradeFolders ?? {}).filter(([rel]) => rel !== a))
       w.tradeFolders = b ? { ...rest, [b]: folder } : rest
+    }
+    if (notes != null) {
+      const rest = Object.fromEntries(Object.entries(w.myNotes ?? {}).filter(([rel]) => rel !== a))
+      w.myNotes = b ? { ...rest, [b]: notes } : rest
     }
   }
   moveExtras(from, to)

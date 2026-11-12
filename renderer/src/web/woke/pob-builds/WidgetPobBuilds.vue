@@ -100,7 +100,7 @@ export default {
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { inject, computed, nextTick, shallowRef, watch } from 'vue'
+import { inject, computed, nextTick, shallowRef, watch, defineAsyncComponent } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast } from '../ui'
@@ -109,12 +109,14 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
-import BuildTree from './BuildTree.vue'
 import { treePin } from './build-pins'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
 import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi } from './widget'
 import type { BuildGroup, PobBuildEntry, PobDetails } from './widget'
+
+// The tree loads on first open: it's big and most sessions never open it.
+const BuildTree = defineAsyncComponent(() => import('./BuildTree.vue'))
 
 const props = defineProps<{
   config: PobBuildsWidget

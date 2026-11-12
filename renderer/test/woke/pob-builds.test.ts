@@ -528,3 +528,13 @@ describe('picked masteries', () => {
     expect(d.trees[0].masteries).toEqual({ 48660: 17942, 10204: 50922 })
   })
 })
+
+describe('your notes follow the build file', () => {
+  it('move with a rename and come back with undo', () => {
+    const w = { pinned: [], activeBuild: null, followChars: {}, loadouts: {}, myNotes: { 'a.xml': 'buy a 6-link' } } as unknown as PobBuildsWidget
+    const undo = moveBuildRefs(w, 'a.xml', 'b.xml')
+    expect(w.myNotes).toEqual({ 'b.xml': 'buy a 6-link' })
+    undo()
+    expect(w.myNotes).toEqual({ 'a.xml': 'buy a 6-link' })
+  })
+})
