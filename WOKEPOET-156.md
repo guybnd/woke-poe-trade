@@ -36,6 +36,18 @@ history:
       poe.ninja's 3.30 category name. The Vials group empties by itself once
       nobody trades vials.
     id: a-2026-11-11t05-10-14-925z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T07:42:28.069Z'
+    comment: >-
+      Scope added 2026-11-12, handed over from WOKEPOET-91: the "Abyss and
+      Allflame mechanics" gap in the mechanics guide, with no Abyss entry and a
+      thin Allflame one. Write both for 3.30, not 3.29. Abyss now comes from
+      Abyss Threads, and Merrick's Ducat works directly on Abyssal Jewels.
+      Allflame Embers are now currency applied to maps (three new ones:
+      Cloister, Divine, Multitude), and Catarina always drops Propagation,
+      Kulemak or Ethereal.
+    id: a-2026-11-12t07-42-28-069z
 ---
 > TL;DR: rewrite the atlas strategies and mechanics guide text for 3.30. The tree data loads by itself, but our text and presets don't.
 
