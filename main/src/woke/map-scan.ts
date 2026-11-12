@@ -19,8 +19,9 @@ import { ocrDir, USER_OCR_DIR } from './ocr-dir'
 const LOCK_LEAVE = 0.024
 // Stop after this long without the game focused, so it can't run forever.
 const IDLE_STOP_MS = 30 * 60 * 1000
-// A scan started by entering a map stops sooner once the game is left.
-const AUTO_AWAY_STOP_MS = 3 * 60 * 1000
+// A scan started by entering a map stops sooner once the game is left
+// (closed, or tabbed out for long), so the OCR worker can shut down.
+const AUTO_AWAY_STOP_MS = 10 * 60 * 1000
 // Files the OCR worker loads.
 // The worker swallows load errors, so they're checked up front instead.
 const OCR_FILES = ['tesseract-core-simd.js', 'opencv.js', 'eng.traineddata']
@@ -257,6 +258,10 @@ export class ScreenScanner {
   private lockAt: { x: number, y: number } | null = null
   // Started by entering a map (autoStart), not by hand: town stops it again.
   private auto = false
+  // start() waits for the worker before it runs. A stop or a newer start in
+  // that wait wins: these let the waiting start tell.
+  private stopCount = 0
+  private startSeq = 0
 
   constructor (
     private readonly server: ServerEvents,
@@ -277,10 +282,7 @@ export class ScreenScanner {
     if (this.running || (ocrOwner && ocrOwner !== this) || !this.poeWindow.isActive) {
       return { running: this.running, auto: this.auto }
     }
-    await this.start()
-    this.auto = true
-    this.emitState()
-    return { running: true, auto: true }
+    return { running: (await this.start(true)).running, auto: this.auto }
   }
 
   // Town or hideout: stops only a scan that autoStart began.
@@ -340,11 +342,11 @@ export class ScreenScanner {
     this.lockAt = null
   }
 
-  async start (): Promise<{ running: boolean }> {
-    // Started by hand (or again by autoStart, which sets it back after).
-    this.auto = false
+  async start (auto = false): Promise<{ running: boolean }> {
     const check = checkOcr()
     if (!check.ok) throw new Error(check.message!)
+    const seq = ++this.startSeq
+    const stops = this.stopCount
     try {
       // Every start: the shared worker may have been shut down while idle.
       this.worker = await getWorker()
@@ -352,6 +354,11 @@ export class ScreenScanner {
       sharedWorker = null
       throw err
     }
+    // Stopped while waiting (portal out before the worker was up): stay off.
+    if (this.stopCount !== stops) return { running: this.running }
+    // A newer start (hotkey during an auto start) decides, auto flag and all.
+    if (seq !== this.startSeq) return { running: this.running }
+    this.auto = auto
     if (this.kind.pooledLines) warmLinePool()
     if (!this.running) {
       this.running = true
@@ -374,6 +381,7 @@ export class ScreenScanner {
 
   stop (reason?: string): { running: boolean } {
     this.auto = false
+    this.stopCount++
     if (this.running) {
       this.running = false
       this.paused = false

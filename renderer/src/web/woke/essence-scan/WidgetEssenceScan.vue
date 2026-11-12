@@ -291,9 +291,10 @@ async function toggle () {
       running.value = false
       current.value = null
     } else {
-      await hostRequest('essence-scan-start', null)
-      running.value = true
-      wm.show(props.config.wmId)
+      // Stopped again while it was starting: main says it's off.
+      const res = await hostRequest<{ running: boolean }>('essence-scan-start', null)
+      running.value = res.running
+      if (res.running) wm.show(props.config.wmId)
     }
   } catch (err) {
     message.value = err instanceof Error ? err.message : String(err)
