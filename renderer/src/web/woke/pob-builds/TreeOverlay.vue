@@ -18,7 +18,7 @@ import { useActiveBuild } from './active'
 import { loadoutOf } from './build-model'
 import { loadPassiveTree, passiveTreeArt, NODE_RADIUS } from './passive-tree'
 import type { TreeNode } from './passive-tree'
-import { buildPath, fitPoints, probesOf, registerTreeDrawer, takenNodes } from './tree-overlay'
+import { buildPath, fitPoints, probesOf, registerTreeDrawer, takenNodes, treeOn } from './tree-overlay'
 import type { BuildPath } from './tree-overlay'
 import { isTreeHotkeyTarget } from './widget'
 
@@ -28,7 +28,8 @@ type FitReply =
   | { ok: false, reason: string }
 
 const canvas = shallowRef<HTMLCanvasElement>()
-const on = shallowRef(false)
+// Shared, so the dock card and menu show whether it's drawn.
+const on = treeOn
 const shown = shallowRef(false)
 const left = shallowRef<number | null>(null)
 

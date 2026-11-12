@@ -1,7 +1,9 @@
 // What the build tree overlay draws: the active build's nodes and lines, in
 // tree coordinates, with sample points along each line so the main process
 // can tell which are already lit (allocated) in game.
+import { shallowRef } from 'vue'
 import type { TreeArt, TreeNode } from './passive-tree'
+import { dockCardOwner } from '../dock/dock'
 import { NODE_RADIUS } from './passive-tree'
 
 // Drawn in game and read by the fit (main/src/woke/tree-fit.ts).
@@ -96,13 +98,12 @@ interface TreeDrawer {
 }
 let drawer: TreeDrawer | null = null
 
+// Whether the build is drawn on the tree now, for the card and menu.
+export const treeOn = shallowRef(false)
+
 export function registerTreeDrawer (d: TreeDrawer): () => void {
   drawer = d
   return () => { if (drawer === d) drawer = null }
-}
-
-export function treeDrawn (): boolean {
-  return drawer?.isOn() ?? false
 }
 
 // Draws the build over the game's tree, or hides it when it shows.
@@ -110,5 +111,7 @@ export function treeDrawn (): boolean {
 export async function toggleBuildTree (quiet = false): Promise<boolean> {
   if (!drawer) return false
   if (drawer.isOn()) { drawer.stop(); return true }
+  // A dock card or menu over the tree would be in the screenshot.
+  dockCardOwner.value = -1
   return await drawer.start(quiet)
 }

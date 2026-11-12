@@ -46,7 +46,7 @@ import SocketDots from './SocketDots.vue'
 import { useActiveBuild } from './active'
 import { linkColours, linkGroups, loadoutOf, nextSet, orderedGems, realSets, shortNumber, statLine } from './build-model'
 import { loadPassiveTree, treeDiff } from './passive-tree'
-import { toggleBuildTree, treeDrawn } from './tree-overlay'
+import { toggleBuildTree, treeOn } from './tree-overlay'
 import { treeHotkeyOf } from './widget'
 import { WKbd } from '../ui'
 import type { TreeNode } from './passive-tree'
@@ -54,7 +54,7 @@ import type { TreeNode } from './passive-tree'
 const build = useActiveBuild()
 
 // Open the tree in game first; the card stays clear of the tree's middle.
-const drawn = shallowRef(treeDrawn())
+const drawn = treeOn
 const hotkey = computed(() => build.pobWidget.value ? treeHotkeyOf(build.pobWidget.value) : null)
 // Marked new until first used. Per PC; nothing else depends on it.
 const NEW_KEY = 'woke-tree-overlay-seen'
@@ -63,7 +63,6 @@ function readSeen () { try { return localStorage.getItem(NEW_KEY) } catch { retu
 async function drawTree () {
   if (isNew.value) { isNew.value = false; try { localStorage.setItem(NEW_KEY, '1') } catch {} }
   await toggleBuildTree()
-  drawn.value = treeDrawn()
 }
 const details = build.details
 const level = build.level

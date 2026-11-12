@@ -107,10 +107,10 @@ import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned, togglePin as togglePinned } from '../pins/pins'
 import type { DockMenuAction } from '../dock/dock'
 import { showWithOverlay } from '../dock/dock'
-import { toggleBuildTree } from './tree-overlay'
+import { toggleBuildTree, treeOn } from './tree-overlay'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
-import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi } from './widget'
+import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi, treeHotkeyOf } from './widget'
 import type { BuildGroup, PobBuildEntry, PobDetails } from './widget'
 
 // The tree loads on first open: it's big and most sessions never open it.
@@ -174,9 +174,11 @@ const pinMenu = computed<DockMenuAction[]>(() => {
 })
 // The right-click menu: draw on the tree, then the pins.
 const dockMenu = computed<DockMenuAction[]>(() => {
+  const key = treeHotkeyOf(props.config)
   const draw: DockMenuAction = {
-    label: 'Draw build on passive tree',
+    label: `Build on passive tree${key ? ` (${key})` : ''}`,
     icon: 'fas fa-diagram-project',
+    checked: treeOn.value,
     disabled: !active.details.value,
     action: () => { toggleBuildTree().catch(() => {}) }
   }
