@@ -295,6 +295,45 @@ describe('StashReader', () => {
     expect(cache!.tabs.map(t => t.items.length)).toEqual([2, 5, 5])
   })
 
+  it('in Standard, leaves remove-only tabs out of the read and the cache', async () => {
+    const { reader, calls } = makeReader(normal)
+    await reader.setLeague('Standard')
+    const s = await reader.read('manual')
+    expect(s.error).toBeNull()
+    expect(s.skipped).toBe(1)
+    const stash = calls.filter(u => u.pathname.endsWith('get-stash-items'))
+    expect(stash.map(u => u.searchParams.get('tabIndex'))).toEqual(['0', '1'])
+    const cache = await readCache('Standard')
+    expect(cache!.tabs.map(t => t.name)).toEqual(['Currency', 'Dump'])
+    expect(cache!.skipped).toBe(1)
+    // Known again after a restart.
+    const again = makeReader(normal).reader
+    await again.setLeague('Standard')
+    expect(again.current.skipped).toBe(1)
+  })
+
+  it('in Standard, a remove-only tab 0 brings no items', async () => {
+    const list = JSON.parse(fixture('tab-list.json')) as { tabs: Array<{ n: string, i: number }> }
+    list.tabs[0].n = '~b/o 2 chaos (Remove-only)'
+    const { reader, calls } = makeReader((u) => {
+      if (u.pathname.endsWith('/my-account')) return { status: 200, headers: {}, body: PROFILE }
+      const tab = Number(u.searchParams.get('tabIndex'))
+      return { status: 200, headers: RATE, body: tab === 0 ? JSON.stringify(list) : fixture('tab-dump.json') }
+    })
+    await reader.setLeague('Standard')
+    const s = await reader.read('manual')
+    expect(s.skipped).toBe(2)
+    expect(calls.filter(u => u.pathname.endsWith('get-stash-items')).map(u => u.searchParams.get('tabIndex'))).toEqual(['0', '1'])
+    const cache = await readCache('Standard')
+    expect(cache!.tabs.map(t => [t.name, t.items.length])).toEqual([['Dump', 5]])
+  })
+
+  it('other leagues keep remove-only tabs', async () => {
+    const { reader } = makeReader(normal)
+    await reader.setLeague('Mercenaries')
+    expect((await reader.read('manual')).skipped).toBe(0)
+  })
+
   it('stops when signed out', async () => {
     const { reader, calls } = makeReader((u) => u.pathname.endsWith('/my-account')
       ? { status: 200, headers: {}, body: PROFILE }

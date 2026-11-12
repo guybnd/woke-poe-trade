@@ -33,6 +33,8 @@ export interface StashCache {
   account: string
   listedAt: number
   tabs: CachedTab[]
+  // Remove-only tabs left out (Standard only, see skipsRemoveOnly).
+  skipped?: number
 }
 
 export interface ReaderError {
@@ -49,7 +51,15 @@ export interface ReaderStatus {
   lastReadAt: number | null
   // Tabs not read in the last read (it stopped early, or a quiet read's budget).
   waiting: number
+  // Remove-only tabs left out of reads and totals (Standard).
+  skipped: number
   error: ReaderError | null
+}
+
+// Standard collects every old league's tabs as "(Remove-only)": leave them out
+// of reads, totals and changes there.
+export function skipsRemoveOnly (league: string): boolean {
+  return league === 'Standard'
 }
 
 export interface ReaderDeps {
@@ -130,7 +140,7 @@ export async function fetchAccountName (fetch: Fetcher, limiter?: RateLimiter, n
 export class StashReader {
   private limiter: RateLimiter
   private running: Promise<ReaderStatus> | null = null
-  private status: ReaderStatus = { running: false, progress: null, league: null, account: null, lastReadAt: null, waiting: 0, error: null }
+  private status: ReaderStatus = { running: false, progress: null, league: null, account: null, lastReadAt: null, waiting: 0, skipped: 0, error: null }
   league: string | null = null
   // The app's Account name setting, used when the site doesn't say.
   fallbackAccount: string | null = null
@@ -159,7 +169,7 @@ export class StashReader {
     this.league = league
     const cache = league ? await readCache(league) : null
     const last = cache?.tabs.reduce<number | null>((m, t) => t.readAt != null && (m == null || t.readAt > m) ? t.readAt : m, null) ?? null
-    this.set({ league, lastReadAt: last, waiting: 0, error: null })
+    this.set({ league, lastReadAt: last, waiting: 0, skipped: cache?.skipped ?? 0, error: null })
   }
 
   // Used before the first status, from the saved account.
@@ -267,17 +277,22 @@ export class StashReader {
 
       const first = this.parse((await this.get(stashUrl(league, account, 0, true))).body)
       // No tab list in the reply: keep the one we had.
-      const listed = first.tabs ?? kept?.tabs.map(({ readAt: _r, items: _i, ...t }) => t) ?? []
+      const all = first.tabs ?? kept?.tabs.map(({ readAt: _r, items: _i, ...t }) => t) ?? []
+      const listed = skipsRemoveOnly(league) ? all.filter(t => !isRemoveOnly(t)) : all
+      const skipped = (all.length - listed.length) + (first.tabs ? 0 : kept?.skipped ?? 0)
       const byId = new Map((kept?.tabs ?? []).map(t => [t.id, t]))
       const tabs: CachedTab[] = listed.map(t => ({ ...t, readAt: byId.get(t.id)?.readAt ?? null, items: byId.get(t.id)?.items ?? [] }))
-      cache = { version: 1, league, account, listedAt: now, tabs }
+      cache = { version: 1, league, account, listedAt: now, tabs, skipped }
       changed = true
-      if (tabs.length) {
-        tabs[0].items = first.items
-        tabs[0].readAt = this.deps.now()
+      if (!stale()) this.set({ skipped })
+      // The first call also brings tab 0's items; a skipped tab 0 keeps none.
+      const zero = first.tabs ? tabs.find(t => t.index === 0) : tabs[0]
+      if (zero) {
+        zero.items = first.items
+        zero.readAt = this.deps.now()
       }
 
-      let todo = tabs.slice(1)
+      let todo = tabs.filter(t => t !== zero)
       if (mode === 'auto') {
         todo = todo
           .filter(t => t.readAt == null || !isRemoveOnly(t))

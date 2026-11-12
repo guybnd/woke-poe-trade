@@ -54,6 +54,7 @@
       </ul>
       <div class="w-dim text-xs" :class="$style.foot">
         <span>{{ sum?.tabs }} tabs · values in divines</span>
+        <span v-if="status?.skipped">{{ status.skipped }} remove-only tabs skipped</span>
         <span v-if="v.unpriced">{{ v.unpriced }} items without a price (rares aren't searched)</span>
       </div>
     </div>

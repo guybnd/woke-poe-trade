@@ -34,6 +34,8 @@ export interface ReaderStatus {
   account: string | null
   lastReadAt: number | null
   waiting: number
+  // Remove-only tabs left out (Standard).
+  skipped?: number
   error: { kind: 'signed-out' | 'rate-limited' | 'failed', message: string, retryAt?: number } | null
 }
 
