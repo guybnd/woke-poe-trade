@@ -4,8 +4,9 @@ import { describe, it, expect } from 'vitest'
 import { MODULES } from '@/web/woke/modules'
 import { personalOn, loadPersonal } from '@/web/woke/personal'
 import {
-  baselineOf, diffStash, emptyHistory, perHourToday, recordRead, sinceYesterday, valueStash
+  baselineOf, diffStash, emptyHistory, itemKey, perHourToday, recordRead, sinceYesterday, valueStash
 } from '@/web/woke/net-worth/valuation'
+import { valueByTab } from '@/web/woke/net-worth/ledger'
 import type { PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
 
 const item = (typeLine: string, stack = 1, extra: Partial<StashItemLike> = {}): StashItemLike =>
@@ -62,9 +63,75 @@ describe('since last refresh', () => {
   })
 })
 
+describe('your prices and ignored items', () => {
+  const rare = item('Hubris Circlet', 1, { frame: 2, name: 'Doom Crown' })
+  const tabs = [
+    { id: 't1', name: 'A', items: [item('Divine Orb', 2), item('Sacrifice at Dawn', 10), rare] },
+    { id: 't2', name: 'B', items: [item('Divine Orb', 1)] }
+  ]
+
+  it('your price wins over poe.ninja and keeps its price for the hover', () => {
+    const v = valueStash(tabs, priceOf, { prices: { 'Divine Orb': 150 }, ignored: [] })
+    const div = v.lines.find(l => l.key === 'Divine Orb')!
+    expect([div.unitChaos, div.chaos, div.mine, div.ninjaChaos]).toEqual([150, 450, true, 200])
+    expect(v.chaos).toBe(450 + 20)
+    expect(v.byCategory.currency).toBe(450)
+  })
+
+  it('gives an unpriced rare a price, by its own name', () => {
+    const before = valueStash(tabs, priceOf)
+    expect(before.unpriced).toBe(1)
+    expect(before.unpricedLines.map(l => [l.key, l.name, l.state, l.chaos])).toEqual([['Doom Crown Hubris Circlet', 'Doom Crown, Hubris Circlet', 'unpriced', 0]])
+    const v = valueStash(tabs, priceOf, { prices: { [itemKey(rare)]: 300 }, ignored: [] })
+    expect(v.unpriced).toBe(0)
+    expect(v.unpricedLines).toEqual([])
+    const line = v.lines.find(l => l.key === itemKey(rare))!
+    expect([line.chaos, line.category, line.mine, line.ninjaChaos]).toEqual([300, 'gear', true, null])
+    expect(v.chaos).toBe(600 + 20 + 300)
+  })
+
+  it('two rares on one base are two things', () => {
+    expect(itemKey(rare)).not.toBe(itemKey({ ...rare, name: 'Grim Halo' }))
+  })
+
+  it('ignored items leave the totals and tab values but stay listed', () => {
+    const prefs = { prices: {}, ignored: ['Divine Orb', itemKey(rare)] }
+    const v = valueStash(tabs, priceOf, prefs)
+    expect(v.chaos).toBe(20)
+    expect(v.lines.map(l => l.key)).toEqual(['Sacrifice at Dawn'])
+    expect(v.unpriced).toBe(0)
+    expect(v.ignoredLines.map(l => [l.key, l.count, l.state])).toEqual([['Divine Orb', 3, 'ignored'], ['Doom Crown Hubris Circlet', 1, 'ignored']])
+    expect(valueByTab(tabs, priceOf, prefs).map(t => t.chaos)).toEqual([20, 0])
+    expect(valueByTab(tabs, priceOf, { prices: { 'Divine Orb': 100 }, ignored: [] }).map(t => t.chaos)).toEqual([220, 100])
+  })
+
+  it('ignoring, un-ignoring or pricing an item is never a gain or a loss', () => {
+    const plain = valueStash(tabs, priceOf)
+    const ignored = valueStash(tabs, priceOf, { prices: {}, ignored: ['Divine Orb'] })
+    const priced = valueStash(tabs, priceOf, { prices: { [itemKey(rare)]: 300 }, ignored: [] })
+    for (const [a, b] of [[plain, ignored], [ignored, plain], [plain, priced]]) {
+      const d = diffStash(baselineOf(a), b, 1)
+      expect([d.added, d.removed, d.netChaos]).toEqual([[], [], 0])
+    }
+  })
+
+  it('an ignored item that leaves is no loss', () => {
+    const before = baselineOf(valueStash(tabs, priceOf))
+    const d = diffStash(before, valueStash([{ id: 't1', name: 'A', items: [item('Sacrifice at Dawn', 10)] }], priceOf, { prices: {}, ignored: ['Divine Orb'] }), 1)
+    expect(d.removed.map(l => l.key)).toEqual([])
+  })
+
+  it('an unpriced item that comes or goes is worth nothing', () => {
+    const before = baselineOf(valueStash([{ name: 'A', items: [rare] }], priceOf))
+    expect(diffStash(before, valueStash([{ name: 'A', items: [] }], priceOf), 1).removed).toEqual([])
+    const fresh = diffStash(baselineOf(valueStash([{ name: 'A', items: [] }], priceOf)), valueStash([{ name: 'A', items: [rare] }], priceOf), 1)
+    expect(fresh.added).toEqual([])
+  })
+})
+
 describe('history', () => {
   const day = (d: number, h = 12) => new Date(2026, 10, d, h).getTime()
-  const v = (chaos: number) => ({ chaos, byCategory: { currency: chaos, fragments: 0, cards: 0, gear: 0, other: 0 }, lines: [], unpriced: 0 })
+  const v = (chaos: number) => ({ chaos, byCategory: { currency: chaos, fragments: 0, cards: 0, gear: 0, other: 0 }, lines: [], unpriced: 0, unpricedLines: [], ignoredLines: [] })
 
   it('keeps the last read of each day and today\'s points', () => {
     let h = emptyHistory()

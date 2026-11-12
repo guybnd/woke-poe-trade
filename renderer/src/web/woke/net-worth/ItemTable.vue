@@ -12,7 +12,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="l in shown" :key="l.key" @contextmenu.prevent="openItemMenu($event, menuOf(l))">
+      <tr v-for="l in shown" :key="(l.state ?? '') + l.key" :class="{ [$style.dim]: !!l.state }" @contextmenu="rowMenu($event, l)">
         <td :class="$style.left">
           <span :class="$style.name" v-item-tip="tipOf(l)">
             <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon">
@@ -20,9 +20,19 @@
           </span>
         </td>
         <td class="w-num">{{ qty(l.count) }}</td>
-        <td class="w-num w-dim" :title="other('unit', l.unitChaos)">{{ show('unit', l.unitChaos) }}</td>
-        <td class="w-num" :title="other('chaos', l.chaos)">{{ show('chaos', l.chaos) }}</td>
-        <td><span :class="$style.share"><i :style="{ width: Math.max(2, l.chaos / top * 100) + '%' }" /></span></td>
+        <td v-if="editing === l.key" :class="$style.editCell">
+          <span :class="$style.edit">
+            <input :ref="focusEdit" v-model="draft" type="number" min="0" step="any" :class="$style.editInput" :aria-label="`Your price for one ${l.name}`"
+              @keydown.enter.prevent="save(l)" @keydown.esc.prevent="editing = null" @blur="editing = null">
+            <button v-if="divine" type="button" :class="$style.unitBtn" :title="`In ${draftUnit === 'c' ? 'chaos' : 'divines'}. Click for ${draftUnit === 'c' ? 'divines' : 'chaos'}`"
+              @mousedown.prevent @click="flipDraft"><Coin :chaos="draftUnit === 'c'" /></button>
+          </span>
+        </td>
+        <td v-else class="w-num" :class="l.mine ? '' : 'w-dim'" :title="unitTitle(l)">
+          <i v-if="l.mine" class="fas fa-thumbtack" :class="$style.pin" />{{ l.state === 'unpriced' ? '—' : show('unit', l.unitChaos) }}
+        </td>
+        <td class="w-num" :title="l.state === 'unpriced' ? undefined : other('chaos', l.chaos)">{{ l.state === 'unpriced' ? '—' : show('chaos', l.chaos) }}</td>
+        <td><span v-if="!l.state" :class="$style.share"><i :style="{ width: Math.max(2, l.chaos / top * 100) + '%' }" /></span></td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
       </tr>
@@ -39,10 +49,11 @@
 <script setup lang="ts">
 // The item table (A1): sortable, the game tooltip on hover (with the tabs that
 // hold it, and poe.ninja's 7-day line), the item menu on right-click.
-import { computed, shallowRef } from 'vue'
-import { WButton, vItemTip } from '../ui'
+import { computed, nextTick, shallowRef } from 'vue'
+import { WButton, openMenu, vItemTip } from '../ui'
+import type { MenuEntry } from '../ui/layer'
 import { formatAmount } from '../ui/format'
-import { openItemMenu } from '../ui/tooltip/item-menu'
+import { itemMenuHead } from '../ui/tooltip/item-menu'
 import type { ItemMenuRef } from '../ui/tooltip/item-menu'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
@@ -59,7 +70,13 @@ const props = defineProps<{
   // Each and Total in divines or chaos: a click on the header's icon swaps.
   units?: { each?: 'd' | 'c', total?: 'd' | 'c' }
 }>()
-const emit = defineEmits<{ (e: 'clear'): void, (e: 'units', v: { each: 'd' | 'c', total: 'd' | 'c' }): void }>()
+const emit = defineEmits<{
+  (e: 'clear'): void
+  (e: 'units', v: { each: 'd' | 'c', total: 'd' | 'c' }): void
+  // Your price for one, in chaos; null: poe.ninja's again.
+  (e: 'price', key: string, chaos: number | null): void
+  (e: 'ignore', key: string, name: string, on: boolean): void
+}>()
 
 const unitOf = (col: Col) => (col === 'unit' ? props.units?.each : props.units?.total) ?? 'd'
 const inChaos = (col: Col) => !props.divine || unitOf(col) === 'c'
@@ -110,9 +127,11 @@ const sorted = computed(() => {
     }
   }
   const dir = desc.value ? -1 : 1
+  // Unpriced and ignored rows stay under the rest.
   // No 24h change ("—") sorts last either way.
   const missing = (x: number | string) => typeof x === 'number' && Number.isNaN(x)
   return [...props.lines].sort((a, b) => {
+    if (!a.state !== !b.state) return a.state ? 1 : -1
     const x = key(a)
     const y = key(b)
     if (missing(x) || missing(y)) return missing(x) === missing(y) ? 0 : missing(x) ? 1 : -1
@@ -121,7 +140,7 @@ const sorted = computed(() => {
 })
 const shown = computed(() => sorted.value.slice(0, limit.value))
 const more = computed(() => Math.max(0, props.lines.length - limit.value))
-const top = computed(() => Math.max(1, ...props.lines.map(l => l.chaos)))
+const top = computed(() => Math.max(1, ...props.lines.filter(l => !l.state).map(l => l.chaos)))
 
 const div = (chaos: number) => {
   // The unit is in the column header.
@@ -147,6 +166,53 @@ function tipOf (l: ValuedLine): ItemTipRef {
   const tabs = l.tabIds.map(nameOfTab)
   return { name: l.tipName, variant: l.variant, count: l.count, note: tabs.length ? `In ${tabs.join(', ')}` : undefined, menu: menuOf(l) }
 }
+// ---------- your price, ignore (the row menu) ----------
+const editing = shallowRef<string | null>(null)
+const draft = shallowRef<string | number>('')
+const draftUnit = shallowRef<'d' | 'c'>('d')
+const asText = (n: number) => String(Math.round(n * 100) / 100)
+
+function startEdit (l: ValuedLine) {
+  draftUnit.value = props.divine ? 'd' : 'c'
+  const now = l.state === 'unpriced' ? 0 : l.unitChaos
+  draft.value = now > 0 ? asText(draftUnit.value === 'd' && props.divine ? now / props.divine : now) : ''
+  editing.value = l.key
+}
+// The input gets focus and its text selected as it appears.
+function focusEdit (el: unknown) {
+  if (el instanceof HTMLInputElement) nextTick(() => { el.focus(); el.select() })
+}
+function flipDraft () {
+  const n = Number(draft.value)
+  const d = props.divine
+  const next = draftUnit.value === 'd' ? 'c' : 'd'
+  if (d && String(draft.value).trim() !== '' && Number.isFinite(n)) draft.value = asText(next === 'c' ? n * d : n / d)
+  draftUnit.value = next
+}
+function save (l: ValuedLine) {
+  const text = String(draft.value).trim()
+  const n = Number(text)
+  editing.value = null
+  if (text === '' || !Number.isFinite(n) || n < 0) return
+  emit('price', l.key, draftUnit.value === 'd' && props.divine ? n * props.divine : n)
+}
+// The hover on Each: whose price it is.
+function unitTitle (l: ValuedLine) {
+  if (l.mine) return `Your price (poe.ninja: ${l.ninjaChaos != null ? `${show('unit', l.ninjaChaos)} ${inChaos('unit') ? 'c' : 'd'}` : 'none'})`
+  if (l.state === 'unpriced') return 'No poe.ninja price. Right-click to set yours'
+  return other('unit', l.unitChaos)
+}
+
+function rowMenu (e: MouseEvent, l: ValuedLine) {
+  const entries: MenuEntry[] = []
+  if (l.state !== 'ignored') entries.push({ label: l.mine ? 'Change my price…' : 'Set my price…', icon: 'fas fa-thumbtack', action: () => { startEdit(l) } })
+  if (l.mine) entries.push({ label: 'Reset to poe.ninja price', icon: 'fas fa-undo', action: () => { emit('price', l.key, null) } })
+  entries.push(l.state === 'ignored'
+    ? { label: 'Stop ignoring', icon: 'fas fa-eye', action: () => { emit('ignore', l.key, l.name, false) } }
+    : { label: 'Ignore item', icon: 'fas fa-eye-slash', action: () => { emit('ignore', l.key, l.name, true) } })
+  openMenu(e, entries, itemMenuHead(menuOf(l), e) ?? undefined)
+}
+
 function menuOf (l: ValuedLine): ItemMenuRef {
   // Gems, cards and currency: no rarity, so the menu looks them up by name.
   return { name: l.tipName, variant: l.variant, rarity: l.frame === 3 ? 'unique' : undefined }
@@ -170,5 +236,10 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .unitBtn { cursor: pointer; padding: 0; border-radius: var(--w-r-sm); }
 .unitBtn:hover { box-shadow: 0 0 0 1px var(--w-gold); }
 .unitBtn:focus-visible { outline: 1px solid var(--w-accent); }
+.dim td { opacity: .55; }
+.pin { font-size: calc(9px * var(--w-text-scale, 1)); color: var(--w-gold); margin-right: 4px; }
+.editCell { padding: 0 2px !important; }
+.edit { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; width: 100%; }
+.editInput { width: 100%; min-width: 0; max-width: 64px; font: inherit; font-family: var(--w-num); text-align: right; color: var(--w-fg); background: var(--w-panel-3); border: 1px solid var(--w-gold); border-radius: var(--w-r-sm); padding: 0 3px; }
 .tab { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 </style>

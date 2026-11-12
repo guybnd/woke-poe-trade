@@ -58,6 +58,11 @@ export interface ValuedLine {
   tipName: string
   variant?: string
   graph?: Array<number | null>
+  // Your own price (Set my price), and poe.ninja's for the hover (null: none).
+  mine?: boolean
+  ninjaChaos?: number | null
+  // Shown dimmed, outside the totals: no price at all, or ignored.
+  state?: 'unpriced' | 'ignored'
 }
 
 export interface Valuation {
@@ -66,6 +71,40 @@ export interface Valuation {
   lines: ValuedLine[]
   // Items with no price (rares, unknown): never searched on the trade site.
   unpriced: number
+  // The same as lines (each worth 0), so they can be shown and given a price.
+  unpricedLines: ValuedLine[]
+  // Items you ignore: left out of every sum, listed to un-ignore.
+  ignoredLines: ValuedLine[]
+  // Everything you ignore, held now or not.
+  ignoredKeys?: string[]
+}
+
+// Your prices and ignored items for one league, by itemKey.
+export interface PricePrefs {
+  // Chaos for one.
+  prices: Record<string, number>
+  ignored: string[]
+}
+export const emptyPrefs = (): PricePrefs => ({ prices: {}, ignored: [] })
+
+// Where an item with your price but no poe.ninja one belongs.
+function categoryOfFrame (frame: number): Category {
+  if (frame === 6) return 'cards'
+  if (frame === 5) return 'currency'
+  return frame >= 1 && frame <= 4 ? 'gear' : 'other'
+}
+
+export interface ItemPrice { chaos: number, category: Category, graph?: Array<number | null>, ninja: number | null, mine: boolean }
+
+// One item's price with your prices on top. null: no price.
+export function priceItem (item: StashItemLike, priceOf: PriceOf, prefs: PricePrefs, key = itemKey(item)): ItemPrice | null {
+  const ninja = priceOf(item)
+  const ninjaChaos = ninja && ninja.chaos > 0 ? ninja.chaos : null
+  const own = prefs.prices[key]
+  if (typeof own === 'number' && Number.isFinite(own) && own >= 0) {
+    return { chaos: own, category: ninja?.category ?? categoryOfFrame(item.frame), graph: ninja?.graph, ninja: ninjaChaos, mine: true }
+  }
+  return ninja && ninjaChaos != null ? { chaos: ninjaChaos, category: ninja.category, graph: ninja.graph, ninja: ninjaChaos, mine: false } : null
 }
 
 // Gems by poe.ninja's variant ("1", "20", "21/20c", "1/20"), as price check
@@ -80,7 +119,9 @@ export function gemVariant (item: StashItemLike): string {
 }
 
 export function itemKey (item: StashItemLike): string {
-  const name = item.frame === 3 && item.name ? `${item.name} ${item.typeLine}` : item.typeLine
+  // Uniques and rares by name and base (each rare is its own thing).
+  const named = (item.frame === 3 || item.frame === 2) && item.name
+  const name = named ? `${item.name} ${item.typeLine}` : item.typeLine
   const parts = [name]
   if (item.frame === 4) parts.push(`L${item.gemLevel ?? 1}`, `Q${item.quality ?? 0}`, item.corrupted ? 'C' : '')
   if (item.mapTier) parts.push(`T${item.mapTier}`)
@@ -90,6 +131,7 @@ export function itemKey (item: StashItemLike): string {
 
 export function itemLabel (item: StashItemLike): string {
   const base = item.frame === 3 && item.name ? item.name : item.typeLine
+  if (item.frame === 2 && item.name) return `${item.name}, ${item.typeLine}`
   if (item.frame === 4) return `${base} ${item.gemLevel ?? 1}/${item.quality ?? 0}${item.corrupted ? ' corrupted' : ''}`
   if (item.mapTier && item.frame !== 3) return `${base} (T${item.mapTier})`
   if (item.frame === 3 && (item.links ?? 0) >= 5) return `${base} ${item.links}L`
@@ -98,39 +140,44 @@ export function itemLabel (item: StashItemLike): string {
 
 const emptyCats = (): Record<Category, number> => ({ currency: 0, fragments: 0, cards: 0, gear: 0, other: 0 })
 
-export function valueStash (tabs: StashTabLike[], priceOf: PriceOf): Valuation {
+export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs()): Valuation {
   const lines = new Map<string, ValuedLine>()
+  const unpricedLines = new Map<string, ValuedLine>()
+  const ignoredLines = new Map<string, ValuedLine>()
+  const ignored = new Set(prefs.ignored)
   let unpriced = 0
   for (const tab of tabs) {
     for (const item of tab.items) {
-      const price = priceOf(item)
-      if (!price || !(price.chaos > 0)) {
-        unpriced++
-        continue
-      }
       const key = itemKey(item)
-      let line = lines.get(key)
+      const price = priceItem(item, priceOf, prefs, key)
+      const off = ignored.has(key)
+      if (!price && !off) unpriced++
+      const into = off ? ignoredLines : price ? lines : unpricedLines
+      let line = into.get(key)
       if (!line) {
         line = {
           key,
           name: itemLabel(item),
           icon: item.icon,
-          category: price.category,
+          category: price?.category ?? categoryOfFrame(item.frame),
           count: 0,
-          unitChaos: price.chaos,
+          unitChaos: price?.chaos ?? 0,
           chaos: 0,
           tabs: [],
           tabIds: [],
           frame: item.frame,
           tipName: item.frame === 3 && item.name ? item.name : item.typeLine,
           variant: item.frame === 4 ? gemVariant(item) : undefined,
-          graph: price.graph
+          graph: price?.graph,
+          mine: price?.mine || undefined,
+          ninjaChaos: price?.ninja ?? null,
+          state: off ? 'ignored' : price ? undefined : 'unpriced'
         }
-        lines.set(key, line)
+        into.set(key, line)
       }
       if (tab.id && !line.tabIds.includes(tab.id)) line.tabIds.push(tab.id)
       line.count += item.stack
-      line.chaos += price.chaos * item.stack
+      line.chaos += (price?.chaos ?? 0) * item.stack
       if (!line.tabs.includes(tab.name)) line.tabs.push(tab.name)
     }
   }
@@ -140,15 +187,20 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf): Valuation {
     byCategory[line.category] += line.chaos
     chaos += line.chaos
   }
-  return { chaos, byCategory, lines: [...lines.values()].sort((a, b) => b.chaos - a.chaos), unpriced }
+  const sorted = (m: Map<string, ValuedLine>) => [...m.values()].sort((a, b) => b.chaos - a.chaos || a.name.localeCompare(b.name))
+  return { chaos, byCategory, lines: sorted(lines), unpriced, unpricedLines: sorted(unpricedLines), ignoredLines: sorted(ignoredLines), ignoredKeys: [...ignored] }
 }
 
 // What a read held, small enough to keep: count and unit price per thing.
 export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number }>
 
+// Unpriced and ignored items too (worth 0 here), so giving one a price or
+// un-ignoring it later isn't booked as new.
 export function baselineOf (v: Valuation): Baseline {
   const out: Baseline = {}
-  for (const l of v.lines) out[l.key] = { name: l.name, icon: l.icon, count: l.count, unitChaos: l.unitChaos }
+  for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
+    out[l.key] = { name: l.name, icon: l.icon, count: l.count, unitChaos: l.state ? 0 : l.unitChaos }
+  }
   return out
 }
 
@@ -163,21 +215,22 @@ export interface StashDiff {
 }
 
 // Items that came or went between two reads (moving between tabs isn't a change).
+// Ignored items never count, and items with no price are worth nothing.
 export function diffStash (before: Baseline, after: Valuation, at: number): StashDiff {
   const added: DiffLine[] = []
   const removed: DiffLine[] = []
-  const now = new Map(after.lines.map(l => [l.key, l]))
+  const ignored = new Set([...(after.ignoredKeys ?? []), ...(after.ignoredLines ?? []).map(l => l.key)])
+  const now = new Map([...(after.unpricedLines ?? []), ...after.lines].map(l => [l.key, l]))
   for (const l of after.lines) {
     const had = before[l.key]?.count ?? 0
-    if (l.count > had) added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
+    if (l.count > had && l.unitChaos > 0) added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
   }
   for (const [key, b] of Object.entries(before)) {
+    if (ignored.has(key)) continue
     const left = now.get(key)
     const has = left?.count ?? 0
-    if (has < b.count) {
-      const unit = left?.unitChaos ?? b.unitChaos
-      removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
-    }
+    const unit = left ? left.unitChaos : b.unitChaos
+    if (has < b.count && unit > 0) removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
   }
   const sum = (xs: DiffLine[]) => xs.reduce((s, x) => s + x.chaos, 0)
   added.sort((a, b) => b.chaos - a.chaos)

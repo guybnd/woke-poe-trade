@@ -116,13 +116,16 @@
         <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }}<Coin /></WChip>
       </section>
       <ItemTable :lines="tableLines" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || hideSmall" :divine="divine" :changes="changes" :tab-names="tabNames"
-        @units="config.tableUnits = $event" @clear="clearFilters" />
+        @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
 
       <div class="w-dim text-xs" :class="$style.foot">
         <span>
           {{ status?.listed ? `${status.chosen} of ${status.listed}` : sum?.tabs }} tabs
           <template v-if="status?.skipped"> · {{ status.skipped }} remove-only skipped</template>
-          <template v-if="v.unpriced"> · {{ v.unpriced }} {{ v.unpriced === 1 ? 'item' : 'items' }} unpriced (rares aren't searched)</template>
+          <template v-if="v.unpriced"> · {{ v.unpriced }} {{ v.unpriced === 1 ? 'item' : 'items' }} unpriced (rares aren't searched)
+            <button type="button" :class="$style.clear" :aria-pressed="showUnpriced" title="List them, to set your own price" @click="showUnpriced = !showUnpriced">{{ showUnpriced ? 'hide' : 'show' }}</button></template>
+          <template v-if="ignoredCount"> · {{ ignoredCount }} ignored
+            <button type="button" :class="$style.clear" :aria-pressed="showIgnored" title="List them, to stop ignoring one" @click="showIgnored = !showIgnored">{{ showIgnored ? 'hide' : 'show' }}</button></template>
         </span>
         <span>poe.ninja · {{ ninjaAge }}</span>
       </div>
@@ -137,7 +140,7 @@
 import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, openMenu } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, openMenu, toast } from '../ui'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
@@ -148,7 +151,7 @@ import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { bigGains, change24h, filterLines, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
-import { divine, historyNow, leagueNow, ledger, summary, tabValues, valuation, wantPrices } from './store'
+import { divine, historyNow, leagueNow, ledger, setIgnored, setMyPrice, summary, tabValues, valuation, wantPrices } from './store'
 import { SECTIONS, hideBelowOf, sectionOn, setSection } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
@@ -248,7 +251,8 @@ const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? pro
 const eta = computed(() => goal.value ? goalEta(seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value), goal.value.div) : { reached: false, days: null })
 
 // ---------- price moves (D3) ----------
-const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, change24h(l.graph)])))
+// Your own prices don't move with poe.ninja.
+const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l.mine ? null : change24h(l.graph)])))
 const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))
 
 // ---------- what changed (C2, C1) ----------
@@ -331,12 +335,28 @@ watch(tabValues, (list) => {
   if (tabs.value.some(t => !ids.has(t))) tabs.value = tabs.value.filter(t => ids.has(t))
 })
 
-const tableLines = computed(() => filterLines(v.value?.lines ?? [], {
-  cat: cat.value,
-  tabs: tabs.value,
-  query: query.value,
-  minChaos: hideSmall.value && divine.value ? hideBelow.value * divine.value : 0
-}))
+// Unpriced and ignored items, shown dimmed under the rest from the footer.
+const showUnpriced = shallowRef(false)
+const showIgnored = shallowRef(false)
+const tableLines = computed(() => {
+  const val = v.value
+  if (!val) return []
+  const f = { cat: cat.value, tabs: tabs.value, query: query.value, minChaos: hideSmall.value && divine.value ? hideBelow.value * divine.value : 0 }
+  const extra = [...(showUnpriced.value ? val.unpricedLines : []), ...(showIgnored.value ? val.ignoredLines : [])]
+  return [...filterLines(val.lines, f), ...filterLines(extra, { ...f, minChaos: 0 })]
+})
+const ignoredCount = computed(() => v.value?.ignoredLines.length ?? 0)
+watch(ignoredCount, (n) => { if (!n) showIgnored.value = false })
+
+// ---------- your prices and ignored items (row menu) ----------
+const NOT_READY = 'Not loaded yet. Try again in a moment'
+function onPrice (key: string, chaos: number | null) {
+  if (!setMyPrice(key, chaos)) toast(NOT_READY)
+}
+function onIgnore (key: string, name: string, on: boolean) {
+  if (!setIgnored(key, on)) { toast(NOT_READY); return }
+  toast(on ? `Ignoring ${name}` : `${name} counts again`, { undo: () => { setIgnored(key, !on) } })
+}
 
 // ---------- header and footer ----------
 const readLine = computed(() => {

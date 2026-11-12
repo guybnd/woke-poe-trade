@@ -1,19 +1,23 @@
 // The Net worth window's numbers (pick A1 "Ledger"): per-tab values, the
 // chart's points, big refreshes, liquid vs locked, price moves on what you
 // hold, the goal's ETA and gains grouped per map. Pure: no Vue, no requests.
-import { dayOf } from './valuation'
-import type { Category, DaySnapshot, DiffLine, PriceOf, StashDiff, StashItemLike, Valuation, ValuedLine } from './valuation'
+import { dayOf, emptyPrefs, itemKey, priceItem } from './valuation'
+import type { Category, DaySnapshot, DiffLine, PriceOf, PricePrefs, StashDiff, StashItemLike, Valuation, ValuedLine } from './valuation'
 
 // ---------- per tab (D5) ----------
 
 export interface TabLike { id: string, name: string, type?: string, colour?: string | null, items: StashItemLike[] }
 export interface TabValue { id: string, name: string, type: string, colour: string | null, chaos: number }
 
-export function valueByTab (tabs: TabLike[], priceOf: PriceOf): TabValue[] {
+// Your prices count; ignored items don't.
+export function valueByTab (tabs: TabLike[], priceOf: PriceOf, prefs: PricePrefs = emptyPrefs()): TabValue[] {
+  const ignored = new Set(prefs.ignored)
   return tabs.map(t => {
     let chaos = 0
     for (const item of t.items) {
-      const p = priceOf(item)
+      const key = itemKey(item)
+      if (ignored.has(key)) continue
+      const p = priceItem(item, priceOf, prefs, key)
       if (p && p.chaos > 0) chaos += p.chaos * item.stack
     }
     return { id: t.id, name: t.name, type: t.type ?? '', colour: t.colour ?? null, chaos }

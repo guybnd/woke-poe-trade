@@ -6,12 +6,12 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { ninjaPriceOf } from './prices'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, gainOf, perHourToday, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, perHourToday, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import type { LedgerPoint, TabValue } from './ledger'
-import type { Baseline, NetWorthHistory, StashDiff, StashTabLike, Valuation } from './valuation'
+import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
 
 interface CachedStash { league: string, account: string, skipped?: number, tabs: Array<StashTabLike & { id: string, colour: string | null, readAt: number | null }> }
@@ -28,11 +28,16 @@ const emptyLedger = (): Ledger => ({ points: [], diffs: [], tabChaos: { prev: {}
 
 const COLLECTION = 'net-worth'
 const ledgerKey = (league: string) => `${league}-ledger`
+// Your prices and ignored items (Set my price, Ignore item), per league.
+const prefsKey = (league: string) => `${league}-prices`
 
 const status = shallowRef<ReaderStatus | null>(null)
 const stash = shallowRef<CachedStash | null>(null)
 const history = shallowRef<NetWorthHistory>(emptyHistory())
 const ledgerRef = shallowRef<Ledger>(emptyLedger())
+const prefs = shallowRef<PricePrefs>(emptyPrefs())
+// The league those prefs are for: none while another league loads.
+let prefsFor: string | null = null
 const league = shallowRef<string | null>(null)
 let loadedFor: string | null = null
 let busy: Promise<void> = Promise.resolve()
@@ -42,7 +47,7 @@ const ninja = usePoeninja()
 export const valuation = computed<Valuation | null>(() => {
   // Read so a new price download values again.
   if (ninja.updatedAt.value == null || !stash.value) return null
-  return valueStash(stash.value.tabs, ninjaPriceOf())
+  return valueStash(stash.value.tabs, ninjaPriceOf(), prefs.value)
 })
 
 export const divine = computed(() => ninja.xchgRate.value ?? null)
@@ -68,7 +73,7 @@ export const leagueNow = computed(() => league.value)
 // Each tab's value now (live prices), in tab order.
 export const tabValues = computed<TabValue[]>(() => {
   if (ninja.updatedAt.value == null || !stash.value) return []
-  return valueByTab(stash.value.tabs, ninjaPriceOf())
+  return valueByTab(stash.value.tabs, ninjaPriceOf(), prefs.value)
 })
 export const readerStatus = computed(() => status.value)
 export const pricesReady = computed(() => ninja.updatedAt.value != null)
@@ -76,14 +81,19 @@ export const pricesReady = computed(() => ninja.updatedAt.value != null)
 async function loadLeague (id: string) {
   if (loadedFor === id) return
   loadedFor = id
-  const [saved, cache, led] = await Promise.all([
+  prefsFor = null
+  const [saved, cache, led, own] = await Promise.all([
     hostRequest<NetWorthHistory | null>('doc-get', { collection: COLLECTION, key: id }).catch(() => null),
     hostRequest<CachedStash | null>('stash-cache', { league: id }).catch(() => null),
-    hostRequest<Ledger | null>('doc-get', { collection: COLLECTION, key: ledgerKey(id) }).catch(() => null)
+    hostRequest<Ledger | null>('doc-get', { collection: COLLECTION, key: ledgerKey(id) }).catch(() => null),
+    hostRequest<PricePrefs | null>('doc-get', { collection: COLLECTION, key: prefsKey(id) }).catch(() => undefined)
   ])
   if (loadedFor !== id) return
   history.value = { ...emptyHistory(), ...(saved ?? {}) }
   ledgerRef.value = { ...emptyLedger(), ...(led ?? {}) }
+  prefs.value = cleanPrefs(own ?? null)
+  // A failed read never gets saved over.
+  prefsFor = own === undefined ? null : id
   stash.value = cache
 }
 
@@ -128,6 +138,37 @@ async function countRead (id: string, readAt: number) {
   await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: baselineOf(v) }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
+}
+
+function cleanPrefs (p: PricePrefs | null): PricePrefs {
+  const prices: Record<string, number> = {}
+  for (const [k, c] of Object.entries(p?.prices ?? {})) if (typeof c === 'number' && Number.isFinite(c) && c >= 0) prices[k] = c
+  return { prices, ignored: Array.isArray(p?.ignored) ? p.ignored.filter(k => typeof k === 'string') : [] }
+}
+
+export const pricePrefs = computed(() => prefs.value)
+
+// false: not loaded (yet), nothing changed.
+function savePrefs (next: PricePrefs): boolean {
+  const id = prefsFor
+  if (!id || id !== loadedFor) return false
+  prefs.value = next
+  queue(async () => {
+    await hostRequest('doc-put', { collection: COLLECTION, key: prefsKey(id), value: next })
+  })
+  return true
+}
+
+// Your price for one (chaos), or null for poe.ninja's again.
+export function setMyPrice (key: string, chaos: number | null): boolean {
+  const prices = Object.fromEntries(Object.entries(prefs.value.prices).filter(([k]) => k !== key))
+  if (chaos != null && Number.isFinite(chaos) && chaos >= 0) prices[key] = chaos
+  return savePrefs({ ...prefs.value, prices })
+}
+
+export function setIgnored (key: string, on: boolean): boolean {
+  const rest = prefs.value.ignored.filter(k => k !== key)
+  return savePrefs({ ...prefs.value, ignored: on ? [...rest, key] : rest })
 }
 
 function queue (fn: () => Promise<void>) {
