@@ -43,7 +43,14 @@ describe('minimizeAnchor / restoreAnchor', () => {
       .toEqual({ pos: 'tl', x: 100 / W * 100, y: 10 })
   })
 
-  it('a panel across the middle keeps the edge it is anchored by', () => {
+  it('a panel anchored right but dragged back to the left keeps its left edge', () => {
+    // Restored from a bar on the right half (anchored tr), then dragged left
+    // across the middle: a drag doesn't change the anchor's side.
+    expect(minimizeAnchor({ pos: 'tr', x: 1200 / W * 100, y: 10 }, { left: 100, top: 108, right: 1200, bottom: 1000 }, W, H).pinned)
+      .toEqual({ pos: 'tl', x: 100 / W * 100, y: 10 })
+  })
+
+  it('a panel across the middle with its right edge nearer keeps the edge it is anchored by', () => {
     const across = { left: 300, top: 108, right: 1900, bottom: 1000 }
     expect(minimizeAnchor({ pos: 'tr', x: 99, y: 10 }, across, W, H).pinned)
       .toEqual({ pos: 'tr', x: 1900 / W * 100, y: 10 })
