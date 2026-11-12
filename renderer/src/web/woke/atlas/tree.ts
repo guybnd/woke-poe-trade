@@ -80,6 +80,11 @@ export interface AtlasNode {
   kind: 'notable' | 'keystone' | 'mastery' | 'small'
 }
 
+// GGG's text links keywords since 3.30: "[Thread|Threads]" or "[Ignite]".
+export function plainText (text: string): string {
+  return text.replace(/\[([^\]|]+)\|([^\]]+)\]/g, '$2').replace(/\[([^\]|]+)\]/g, '$1')
+}
+
 // Reads the node list from GGG's tree export (`nodes` keyed by id).
 export function parseAtlasData (json: unknown): Map<number, AtlasNode> {
   const out = new Map<number, AtlasNode>()
@@ -92,8 +97,8 @@ export function parseAtlasData (json: unknown): Map<number, AtlasNode> {
     if (!Number.isFinite(id)) continue
     out.set(id, {
       id,
-      name: typeof n.name === 'string' ? n.name : '',
-      stats: Array.isArray(n.stats) ? n.stats.filter((s): s is string => typeof s === 'string') : [],
+      name: typeof n.name === 'string' ? plainText(n.name) : '',
+      stats: Array.isArray(n.stats) ? n.stats.filter((s): s is string => typeof s === 'string').map(plainText) : [],
       kind: n.isKeystone ? 'keystone' : n.isNotable ? 'notable' : n.isMastery ? 'mastery' : 'small'
     })
   }
@@ -107,7 +112,8 @@ const MECHANICS = [
   'Abyss', 'Strongbox', 'Beyond', 'Shrine', 'Harbinger', 'Incursion', 'Delve', 'Sulphite', 'Betrayal',
   'Metamorph', 'Torment', 'Bestiary', 'Beast', 'Ultimatum', 'Heist', 'Sanctum', 'Eldritch',
   'Maven', 'Searing Exarch', 'Eater of Worlds', 'Rogue Exile', 'Kirac', 'Einhar', 'Alva',
-  'Niko', 'Jun', 'Synthesis', 'Scarab', 'Boss', 'Unique', 'Map', 'Divination', 'Currency',
+  'Niko', 'Jun', 'Synthesis', 'Mirage', 'Wildwood', 'Sentinel', 'Mercenar', 'Ore Deposit',
+  'Anomal', 'Scarab', 'Thread', 'Shaped Region', 'Gold', 'Boss', 'Unique', 'Map', 'Divination', 'Currency',
   'Gem', 'Fragment', 'Influence', 'Conqueror', 'Elder', 'Shaper', 'Tempest', 'Domination'
 ]
 
@@ -120,7 +126,12 @@ const SAME_AS: Record<string, string> = {
   'Alva': 'Incursion',
   'Jun': 'Betrayal',
   'Searing Exarch': 'Eldritch',
-  'Eater of Worlds': 'Eldritch'
+  'Eater of Worlds': 'Eldritch',
+  // 3.30
+  'Mercenar': 'Mercenaries',
+  'Ore Deposit': 'Ore Deposits',
+  'Anomal': 'Atlas Anomalies',
+  'Shaped Region': 'Thread'
 }
 
 export function mechanicOf (node: AtlasNode): string {

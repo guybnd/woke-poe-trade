@@ -103,3 +103,20 @@ describe('map cost picker', () => {
     expect(isMapCostItem({ type: 'UniqueSomething' })).toBe(false)
   })
 })
+
+describe('3.30 atlas export text', () => {
+  it('drops keyword links and files new mechanics under their own name', async () => {
+    const { parseAtlasData, mechanicOf, plainText } = await import('@/web/woke/atlas/tree')
+    expect(plainText('4% increased [Thread|Threads] found in your Maps')).toBe('4% increased Threads found in your Maps')
+    expect(plainText('Chance to [Ignite]')).toBe('Chance to Ignite')
+    const nodes = parseAtlasData({
+      nodes: {
+        1: { skill: 1, name: 'Spool', isNotable: true, stats: ['4% increased [Thread|Threads] found in your Maps'] },
+        2: { skill: 2, name: 'Hired Blades', isNotable: true, stats: ['Mercenaries in your Maps have 10% more Life'] },
+        3: { skill: 3, name: 'Abyssal Weave', isNotable: true, stats: ['Abyss Threads found in your Maps are duplicated'] }
+      }
+    })
+    expect(nodes.get(1)!.stats).toEqual(['4% increased Threads found in your Maps'])
+    expect([1, 2, 3].map(id => mechanicOf(nodes.get(id)!))).toEqual(['Thread', 'Mercenaries', 'Abyss'])
+  })
+})

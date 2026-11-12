@@ -1,7 +1,9 @@
 // Builds the passive tree in public/data/tree from Path of Building's own tree
-// data. Run it after a league's tree lands in PoB:
+// data, or from GGG's own export when it comes out first. Run it after a
+// league's tree lands in either:
 //
 //   npm run tree-data -- "%APPDATA%/Path of Building Community/TreeData/3_29/tree.lua"
+//   npm run tree-data -- <checkout or download of grindinggear/skilltree-export>/data.json
 //
 // PoB is MIT licensed, and the tree is GGG's. Each node is one row:
 // [id, x, y, kind, name, stats, linked ids, icon, group, orbit radius, angle].
@@ -9,7 +11,7 @@
 // only ever listed by name. They and class starts are in here because builds
 // list them among their points. The art is GGG's, read from the addresses in
 // PoB's sprites.lua, and cached by the app like item art.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -18,7 +20,10 @@ const OUT = join(RENDERER, 'public/data/tree/passive-tree.json')
 const SOURCE = process.argv[2]
 const SPRITE_KINDS = ['normalActive', 'notableActive', 'keystoneActive', 'normalInactive', 'notableInactive', 'keystoneInactive', 'masteryInactive', 'frame', 'groupBackground', 'background']
 const FRAMES = ['PSSkillFrame', 'PSSkillFrameActive', 'NotableFrameUnallocated', 'NotableFrameAllocated', 'KeystoneFrameUnallocated', 'KeystoneFrameAllocated', 'JewelFrameUnallocated', 'JewelFrameAllocated']
-if (!SOURCE) throw new Error('Usage: npm run tree-data -- <path to PoB TreeData/<version>/tree.lua>')
+if (!SOURCE) throw new Error('Usage: npm run tree-data -- <PoB TreeData/<version>/tree.lua or GGG skilltree-export data.json>')
+const FROM_GGG = SOURCE.endsWith('.json')
+// GGG's export has each sprite sheet at several zooms; PoB keeps this one.
+const SPRITE_ZOOM = '0.3835'
 
 function parseLua (src) {
   let i = src.indexOf('{')
@@ -75,7 +80,18 @@ function parseLua (src) {
   return val()
 }
 
-const tree = parseLua(readFileSync(SOURCE, 'utf8'))
+// GGG's text carries keyword links, "[BoneFeeders|Summon Bone Feeders]" or
+// "[Ignite]"; PoB's shows just the words, which is what builds and totals read.
+const plain = text => typeof text === 'string' ? text.replace(/\[([^\]|]+)\|([^\]]+)\]/g, '$2').replace(/\[([^\]|]+)\]/g, '$1') : text
+function unlink (t) {
+  for (const n of Object.values(t.nodes)) {
+    if (n.stats) n.stats = n.stats.map(plain)
+    if (n.name) n.name = plain(n.name)
+    for (const e of n.masteryEffects ?? []) if (e.stats) e.stats = e.stats.map(plain)
+  }
+  return t
+}
+const tree = FROM_GGG ? unlink(JSON.parse(readFileSync(SOURCE, 'utf8'))) : parseLua(readFileSync(SOURCE, 'utf8'))
 const radii = tree.constants.orbitRadii
 const perOrbit = tree.constants.skillsPerOrbit
 const ANGLES_16 = [0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330]
@@ -131,7 +147,9 @@ for (const [id, n] of Object.entries(tree.nodes)) {
 }
 
 // Every group gets its background, including those with no node drawn yet.
-const sheets = parseLua(readFileSync(join(dirname(SOURCE), 'sprites.lua'), 'utf8')).sprites
+const sheets = FROM_GGG
+  ? Object.fromEntries(Object.entries(tree.sprites).map(([kind, zooms]) => [kind, zooms[SPRITE_ZOOM] ?? Object.values(zooms).at(-1)]))
+  : parseLua(readFileSync(join(dirname(SOURCE), 'sprites.lua'), 'utf8')).sprites
 const sprites = {}
 for (const kind of SPRITE_KINDS) {
   const sheet = sheets[kind]
@@ -141,6 +159,15 @@ for (const kind of SPRITE_KINDS) {
     if (wanted) coords[key] = [c.x, c.y, c.w, c.h]
   }
   sprites[kind] = { url: sheet.filename, coords }
+}
+
+// PoB also lists ascendancy notables GGG's export no longer has (retired ones
+// old builds still name). Coming from GGG, keep the ones the last build had.
+if (FROM_GGG && existsSync(OUT)) {
+  const have = new Set(rows.map(r => r[0]))
+  for (const r of JSON.parse(readFileSync(OUT, 'utf8')).nodes) {
+    if (r[3] === 'asc' && !have.has(r[0])) rows.push(r)
+  }
 }
 
 mkdirSync(dirname(OUT), { recursive: true })

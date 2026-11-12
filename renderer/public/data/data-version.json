@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "version": 3,
+  "version": 4,
   "files": {
     "en": {
       "items": "af8391e58698dacbd393361eea12e304d1abed83f50453dac4e5804de8775c6f",
@@ -24,6 +24,6 @@
     "tips/gems.json": "39a60641cd26441c790dd04bad1cd0daf8f6d7739ee88590b7ffdd1e5503ec9c",
     "tips/items.json": "9e645258577bb753c05a8f04984b8d8f1af1cd7d6ace6addc649f540272439ad",
     "tips/uniques.json": "5c4d2848f4dcf7ff47704d2db0624f502d94563666a395936fe7bd526a588c0f",
-    "tree/passive-tree.json": "2df23e7303dfc6510a5c36b9f5781d7d6b1fca9762e1af2443dd541be854ec5d"
+    "tree/passive-tree.json": "1213a8c09dfb2ad0df70290e29af2934829eb67bab24555c3c954af6398bc6d4"
   }
 }
