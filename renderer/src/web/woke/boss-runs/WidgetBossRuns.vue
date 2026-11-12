@@ -251,17 +251,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { BOSS_RUNS_TYPE } from './widget'
+import { widgetBossRunsSpec } from '../widget-specs'
 import type { BossRunsWidget } from './widget'
 
-export default {
-  widget: {
-    type: BOSS_RUNS_TYPE,
-    instances: 'multi',
-    trNameKey: 'Boss runs'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetBossRunsSpec }
 </script>
 
 <script setup lang="ts">

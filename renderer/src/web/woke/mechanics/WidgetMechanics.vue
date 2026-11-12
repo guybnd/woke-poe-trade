@@ -121,17 +121,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { MECHANICS_TYPE } from './widget'
+import { widgetMechanicsSpec } from '../widget-specs'
 import type { MechanicsWidget } from './widget'
 
-export default {
-  widget: {
-    type: MECHANICS_TYPE,
-    instances: 'multi',
-    trNameKey: 'League mechanics'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetMechanicsSpec }
 </script>
 
 <script setup lang="ts">

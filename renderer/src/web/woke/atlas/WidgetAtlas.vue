@@ -10,17 +10,10 @@
 </template>
 
 <script lang="ts">
-import { ATLAS_TYPE } from './widget'
-import type { WidgetSpec } from '@/web/overlay/interfaces'
+import { widgetAtlasSpec } from '../widget-specs'
 import type { AtlasWidget } from './widget'
 
-export default {
-  widget: {
-    type: ATLAS_TYPE,
-    instances: 'multi',
-    trNameKey: 'Atlas strategies'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetAtlasSpec }
 </script>
 
 <script setup lang="ts">

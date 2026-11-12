@@ -55,16 +55,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { CAMPAIGN_TYPE } from './widget'
+import { widgetCampaignSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: CAMPAIGN_TYPE,
-    instances: 'multi',
-    trNameKey: 'Campaign'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetCampaignSpec }
 </script>
 
 <script setup lang="ts">

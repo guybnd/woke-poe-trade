@@ -5,17 +5,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { MAP_MODS_TYPE } from './widget'
+import { widgetMapModsSpec } from '../widget-specs'
 import type { MapModsWidget } from './widget'
 
-export default {
-  widget: {
-    type: MAP_MODS_TYPE,
-    instances: 'multi',
-    trNameKey: 'Map mods'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetMapModsSpec }
 </script>
 
 <script setup lang="ts">

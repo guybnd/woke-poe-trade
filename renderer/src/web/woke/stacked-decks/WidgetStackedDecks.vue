@@ -56,17 +56,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './deck'
+import { widgetStackedDecksSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: STACKED_DECKS_TYPE,
-    instances: 'single',
-    trNameKey: 'Stacked decks',
-    initInstance: () => initStackedDecksWidget(0)
-  } satisfies WidgetSpec
-}
+export default { widget: widgetStackedDecksSpec }
 </script>
 
 <script setup lang="ts">

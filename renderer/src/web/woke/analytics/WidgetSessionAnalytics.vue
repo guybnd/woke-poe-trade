@@ -210,16 +210,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { ANALYTICS_TYPE } from './types'
+import { widgetSessionAnalyticsSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: ANALYTICS_TYPE,
-    instances: 'multi',
-    trNameKey: 'Session analytics'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetSessionAnalyticsSpec }
 </script>
 
 <script setup lang="ts">

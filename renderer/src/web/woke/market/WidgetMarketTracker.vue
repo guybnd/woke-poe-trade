@@ -132,17 +132,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { MARKET_TRACKER_TYPE } from './widget'
+import { widgetMarketTrackerSpec } from '../widget-specs'
 import type { MarketTrackerWidget } from './widget'
 
-export default {
-  widget: {
-    type: MARKET_TRACKER_TYPE,
-    instances: 'multi',
-    trNameKey: 'Market'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetMarketTrackerSpec }
 </script>
 
 <script setup lang="ts">

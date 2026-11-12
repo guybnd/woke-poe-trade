@@ -88,28 +88,11 @@
 
 <script lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { REGEX_LIBRARY_TYPE, starterEntries } from './widget'
+import { widgetRegexLibrarySpec } from '../widget-specs'
+import { starterEntries } from './widget'
 import type { RegexLibraryWidget } from './widget'
 
-export default {
-  widget: {
-    type: REGEX_LIBRARY_TYPE,
-    instances: 'multi',
-    trNameKey: 'Regex library',
-    defaultInstances: (): RegexLibraryWidget[] => [{
-      wmId: 0,
-      wmType: REGEX_LIBRARY_TYPE,
-      wmTitle: 'Regex library',
-      wmWants: 'hide',
-      wmZorder: null,
-      wmFlags: ['invisible-on-blur'],
-      anchor: popupAnchor(),
-      enableHotkeys: true,
-      entries: starterEntries()
-    }]
-  } satisfies WidgetSpec
-}
+export default { widget: widgetRegexLibrarySpec }
 </script>
 
 <script setup lang="ts">

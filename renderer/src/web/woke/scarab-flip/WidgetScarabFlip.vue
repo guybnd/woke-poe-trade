@@ -116,16 +116,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { SCARAB_FLIP_TYPE } from './widget'
+import { widgetScarabFlipSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: SCARAB_FLIP_TYPE,
-    instances: 'multi',
-    trNameKey: 'Flips'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetScarabFlipSpec }
 </script>
 
 <script setup lang="ts">

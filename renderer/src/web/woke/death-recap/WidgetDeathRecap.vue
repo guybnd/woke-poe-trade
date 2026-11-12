@@ -87,17 +87,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './widget'
+import { widgetDeathRecapSpec } from '../widget-specs'
+import { initDeathRecapWidget } from './widget'
 
-export default {
-  widget: {
-    type: DEATH_RECAP_TYPE,
-    instances: 'single',
-    trNameKey: 'Death recap',
-    initInstance: () => initDeathRecapWidget(0)
-  } satisfies WidgetSpec
-}
+export default { widget: widgetDeathRecapSpec }
 </script>
 
 <script setup lang="ts">

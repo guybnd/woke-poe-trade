@@ -89,17 +89,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { ESSENCE_SCAN_TYPE } from './widget'
+import { widgetEssenceScanSpec } from '../widget-specs'
 import type { EssenceScanWidget } from './widget'
 
-export default {
-  widget: {
-    type: ESSENCE_SCAN_TYPE,
-    instances: 'multi',
-    trNameKey: 'Essence scan'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetEssenceScanSpec }
 </script>
 
 <script setup lang="ts">

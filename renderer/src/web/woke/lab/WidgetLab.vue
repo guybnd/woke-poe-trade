@@ -52,17 +52,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { LAB_TYPE } from './lab'
+import { widgetLabSpec } from '../widget-specs'
 import type { LabWidget } from './lab'
 
-export default {
-  widget: {
-    type: LAB_TYPE,
-    instances: 'multi',
-    trNameKey: 'Labyrinth'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetLabSpec }
 </script>
 
 <script setup lang="ts">

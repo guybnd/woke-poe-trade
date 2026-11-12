@@ -85,17 +85,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { POB_BUILDS_TYPE } from './widget'
+import { widgetPobBuildsSpec } from '../widget-specs'
 import type { PobBuildsWidget } from './widget'
 
-export default {
-  widget: {
-    type: POB_BUILDS_TYPE,
-    instances: 'multi',
-    trNameKey: 'PoB builds'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetPobBuildsSpec }
 </script>
 
 <script setup lang="ts">

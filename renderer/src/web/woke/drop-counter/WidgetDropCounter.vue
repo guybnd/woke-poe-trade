@@ -85,16 +85,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { DROP_COUNTER_TYPE } from './drop-counter'
+import { widgetDropCounterSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: DROP_COUNTER_TYPE,
-    instances: 'multi',
-    trNameKey: 'Drop counter'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetDropCounterSpec }
 </script>
 
 <script setup lang="ts">

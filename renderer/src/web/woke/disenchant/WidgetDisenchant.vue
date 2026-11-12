@@ -3,16 +3,9 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { DISENCHANT_TYPE } from './widget'
+import { widgetDisenchantSpec } from '../widget-specs'
 
-export default {
-  widget: {
-    type: DISENCHANT_TYPE,
-    instances: 'multi',
-    trNameKey: 'Disenchant'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetDisenchantSpec }
 </script>
 
 <script setup lang="ts">

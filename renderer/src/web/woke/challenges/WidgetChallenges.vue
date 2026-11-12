@@ -57,17 +57,10 @@
 </template>
 
 <script lang="ts">
-import type { WidgetSpec } from '@/web/overlay/interfaces'
-import { CHALLENGES_TYPE } from './widget'
+import { widgetChallengesSpec } from '../widget-specs'
 import type { ChallengesWidget } from './widget'
 
-export default {
-  widget: {
-    type: CHALLENGES_TYPE,
-    instances: 'multi',
-    trNameKey: 'Challenges'
-  } satisfies WidgetSpec
-}
+export default { widget: widgetChallengesSpec }
 </script>
 
 <script setup lang="ts">
