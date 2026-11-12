@@ -10,13 +10,13 @@ const ctx: LookupContext = {
   now: 0,
   league: null
 }
-const names = (q: string) => recipeLookup(q, ctx).map(c => c.name)
+const names = (q: string) => recipeLookup(q, ctx).map(c => c.title)
 
 describe('recipeLookup', () => {
   it('finds a recipe by what you get, with its price', () => {
     expect(names('chromatic')[0]).toBe('Chromatic Orb')
     const fuse = recipeLookup('6 link', ctx)[0]
-    expect(fuse.name).toBe('20 × Orb of Fusing')
+    expect(fuse.name).toBe('20 × Orb of Fusing from an item with 6 linked sockets')
     expect(fuse.sections[1].rows![0].chaos).toBe(10)
   })
   it('finds a recipe by its nickname', () => {
@@ -28,6 +28,15 @@ describe('recipeLookup', () => {
     expect(names('rustic sash')).toContain('Weapon with 40% to 84% physical damage')
     expect(names('orb')).not.toContain('Kingmaker')
     expect(names('ab')).toEqual([])
+  })
+  it('takes short nicknames, puts the named recipe first, and finds every use of an input', () => {
+    expect(names('6l')).toEqual(['20 × Orb of Fusing'])
+    expect(names('ms')).toEqual(['Boots with 5% more movement speed'])
+    expect(names('5 to 1')[0]).toBe('One unidentified item of that base')
+    expect(names('regret')).toEqual(expect.arrayContaining(['Orb of Regret', 'Orb of Alchemy', 'Skill gem back to level 1']))
+  })
+  it("doesn't price what's only a base of that name", () => {
+    expect(recipeLookup('ruby ring', { ...ctx, price: () => 99 })[0].sections[1].rows![0].chaos).toBeUndefined()
   })
   it('chains every oil to the one below it', () => {
     const golden = RECIPES.find(r => r.get === 'Golden Oil')!
