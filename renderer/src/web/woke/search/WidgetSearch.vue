@@ -147,6 +147,8 @@ import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
 import { bossLookup, dropLookup } from './lookups/bosses'
 import { cardLookup } from './lookups/cards'
 import { recipeLookup } from './lookups/recipes'
+import { gemLookup, transfiguredBase } from './lookups/gems'
+import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipItems } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
@@ -337,11 +339,25 @@ const cards = computed(() => {
   }
   return out
 })
+// Campaign gem sources, from the PoB tool's data, loaded on first open.
+const gemTable = shallowRef<GemTable | null>(null)
+const gemNames = shallowRef<string[]>([])
+function loadGems () {
+  if (gemTable.value) return
+  import('../pob-builds/gem-sources.json').then(m => {
+    const table = m.default as unknown as GemTable
+    // The item list isn't loaded yet: try again on the next open.
+    if (!gameItems().length) return
+    const transfigured = gameItems().filter(i => i.namespace === 'GEM' && transfiguredBase(i.name, table)).map(i => i.name)
+    gemNames.value = [...Object.keys(table), ...transfigured]
+    gemTable.value = table
+  }).catch(() => {})
+}
 // New tooltip files after a data update: read them on the next open.
 const stopDataWatch = onSharedDataChange(() => { tipItems.value = null })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, gemLookup(gemTable.value, gemNames.value), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -582,6 +598,7 @@ function start (text: string) {
   focusInput(true)
   whenIdle(gameItems)
   whenIdle(loadCards)
+  whenIdle(loadGems)
 }
 function close () {
   wm.hide(props.config.wmId)
