@@ -1,3 +1,5 @@
+import type { PriceItem } from '../../market/types'
+
 // Answers the search palette shows as cards: currency maths, countdowns, boss
 // and recipe facts and the like. Each lookup is a plain function from the
 // query to cards, so they can be tested without the palette.
@@ -47,6 +49,8 @@ export interface LookupContext {
   // Price in chaos of a priced name, or null. Chaos Orb is always 1. Without
   // a variant: the plain row, else the cheapest variant.
   price: (name: string, variant?: string) => number | null
+  // Every saved poe.ninja row, for lookups that price a kind of item.
+  items: readonly PriceItem[]
   // Tools that are switched on, by widget type.
   tools: ReadonlySet<string>
   divine: number | null

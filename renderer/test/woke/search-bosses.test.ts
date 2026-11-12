@@ -8,6 +8,7 @@ import type { LookupContext } from '@/web/woke/search/lookups/types'
 const PRICES: Record<string, number> = { 'Reality Fragment': 100, 'Progenesis': 2000, "Viridi's Veil": 10, 'Impossible Escape': 50 }
 const ctx = (over: Partial<LookupContext> = {}): LookupContext => ({
   price: (n, v) => v === '1' && n === 'Awakened Enlighten Support' ? 30000 : PRICES[n] ?? null,
+  items: [],
   tools: new Set([BOSS_RUNS_TYPE]),
   divine: 200,
   now: 0,

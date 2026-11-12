@@ -13,6 +13,7 @@ const CARDS = new Map<string, CardInfo>([
 const PRICES: Record<string, number> = { 'The Doctor': 1000, 'Headhunter': 9000, 'Abandoned Wealth': 20, 'Exalted Orb': 30, 'A Chilling Wind': 5, "A Mother's Parting Gift": 1 }
 const ctx: LookupContext = {
   price: (n, v) => v === '21/20c' && n === 'Vaal Cold Snap' ? 50 : v ? null : PRICES[n] ?? null,
+  items: [],
   tools: new Set(),
   divine: 200,
   now: 0,
