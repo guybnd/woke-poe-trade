@@ -38,7 +38,14 @@ export function gemCard (name: string, table: GemTable): LookupCard | null {
     const vendors = entry.s.filter(s => s[3] === 'v').sort((a, b) => a[0] - b[0])
     if (rewards.length) sections.push({ label: 'Quest reward (free)', rows: rewards.map(s => ({ label: `Act ${s[0]} · ${s[1]}`, value: classList(s[4]) })) })
     if (vendors.length) sections.push({ label: 'Sold by', rows: vendors.map(s => ({ label: `Act ${s[0]} · ${s[2]}, after ${s[1]}`, value: classList(s[4]) })) })
-    if (!rewards.length && !vendors.length) sections.push({ text: ['No quest or vendor gives it in the campaign: it drops, or comes from a league mechanic. Buy one.'] })
+    const vaalOf = name.startsWith('Vaal ') && table[name.slice(5)] ? name.slice(5) : null
+    if (!rewards.length && !vendors.length) {
+      sections.push({
+        text: [vaalOf
+          ? `No quest or vendor gives it: corrupt a ${vaalOf} with a Vaal Orb (it may turn into this), find one, or buy one.`
+          : 'No quest or vendor gives it in the campaign: it drops, or comes from a league mechanic. Buy one.']
+      })
+    }
     const first = rewards[0] ?? vendors[0]
     sub = first ? `${first[3] === 'q' ? 'Reward' : `Sold by ${first[2]}`}, Act ${first[0]}` : 'Not in the campaign'
   }
@@ -58,9 +65,11 @@ export function gemCard (name: string, table: GemTable): LookupCard | null {
 // `names`: every gem name to search, transfigured ones included.
 export function gemLookup (table: GemTable | null, names: readonly string[]): Lookup {
   return (query) => {
-    if (!table || query.trim().length < 4) return []
+    const q = query.trim()
+    if (!table || q.length < 3) return []
+    // Three letters only for a whole name: "arc".
     return names
-      .map(name => ({ name, rank: matchRank(name, query) }))
+      .map(name => ({ name, rank: q.length < 4 && name.toLowerCase() !== q.toLowerCase() ? -1 : matchRank(name, query) }))
       .filter(h => h.rank >= 0 && h.rank < 2)
       .sort((a, b) => a.rank - b.rank || a.name.length - b.name.length)
       .slice(0, 3)
