@@ -76,7 +76,7 @@ import { pinnedReadouts, pinsTick } from './pins'
 import { actFromAreaId, actLabel } from './log-parse'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
-import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, shouldSwitch, stepTook, switchCharacter, PAST_CAMPAIGN_LEVEL } from './widget'
+import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
 import { actProgress, advanceOnEnter, behind, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
@@ -301,18 +301,20 @@ function apply (ev: LogEvent, at: number): boolean {
     // A new character: back to the start of the route, and follow whoever
     // levels next (unless a name is set in the settings).
     // Twilight Strand: whatever came before was another character's steps.
+    if (ev.areaId === '1_1_1' && props.config.step > 3) {
+      // The character before keeps its route, step times and gems for when it's back.
+      saveCharacter(props.config)
+      streak = 0
+    }
     if (ev.areaId === '1_1_1') state.stepStarts = {}
     if (ev.areaId === '1_1_1' && props.config.step > 3) {
-      // The character before keeps its route and gems for when it's back.
-      if (state.charName) (props.config.chars ??= {})[state.charName] = { step: props.config.step, state: { ...state } }
       props.config.step = 0
       state.charName = ''
       state.className = ''
       state.level = null
       state.gemsGot = []
     }
-    // A character past the campaign walking a campaign zone doesn't wake the route.
-    state.asleep = (state.level ?? 0) >= PAST_CAMPAIGN_LEVEL || routeAsleepAfter(state.asleep ?? false, ev.areaId)
+    state.asleep = routeAsleepAfter(state.asleep ?? false, ev.areaId)
     // A character past the campaign doesn't walk the route by using towns.
     if (!state.asleep) {
       const step = advanceOnEnter(route.value, props.config.step, ev.areaId, routeData)
@@ -331,16 +333,20 @@ function apply (ev: LogEvent, at: number): boolean {
       streak = streakName === ev.charName ? streak + 1 : 1
       streakName = ev.charName
       // Each character keeps its own route: switch to the one you're playing.
-      if (!pinned && shouldSwitch(state.charName, ev.charName, ev.level, streak)) {
-        others.delete(ev.charName)
-        switchCharacter(props.config, ev, resyncTo(route.value, state.areaId))
-        lastOther.value = others.size ? [...others.keys()].pop()! : ''
-        streak = 0
+      if (!pinned && shouldSwitch(state.charName, ev.charName, streak, followedLevelAt, at)) {
+        takeOver(ev, at)
         return true
       }
       return false
     }
     streak = 0
+    followedLevelAt = at
+    // The followed name changed (a pin moved in Settings, or the first level-up
+    // after a new character's Strand): take that character's own route out.
+    if (ev.charName !== state.charName && (state.charName || props.config.chars?.[ev.charName])) {
+      takeOver(ev, at)
+      return true
+    }
     others.delete(ev.charName)
     state.charName = ev.charName
     state.className = ev.className
@@ -349,9 +355,21 @@ function apply (ev: LogEvent, at: number): boolean {
   return true
 }
 
-// Level-ups in a row by one other character (see shouldSwitch).
+// Level-ups in a row by one other character, and when the followed one last
+// levelled (log time; see shouldSwitch).
 let streak = 0
 let streakName = ''
+let followedLevelAt = 0
+
+function takeOver (c: SeenChar, at: number) {
+  const before = props.config.state
+  if (before.charName) others.set(before.charName, { charName: before.charName, className: before.className, level: before.level ?? 0 })
+  others.delete(c.charName)
+  switchCharacter(props.config, c, resyncTo(route.value, before.areaId))
+  lastOther.value = others.size ? [...others.keys()].pop()! : ''
+  streak = 0
+  followedLevelAt = at
+}
 
 // Other characters seen levelling (party members), for the one-click switch.
 interface SeenChar { charName: string, className: string, level: number }
@@ -364,10 +382,9 @@ function follow (c: SeenChar) {
   if (state.charName) {
     others.set(state.charName, { charName: state.charName, className: state.className, level: state.level ?? 0 })
   }
-  others.delete(c.charName)
   // A name set in the settings is a pin; move the pin to the new character.
   if (props.config.charName.trim()) props.config.charName = c.charName
-  switchCharacter(props.config, c, resyncTo(route.value, state.areaId))
+  takeOver(c, Date.now())
   lastOther.value = others.size ? [...others.keys()].pop()! : ''
   saveConfig()
 }

@@ -62,26 +62,30 @@ export interface CharProfile {
   state: CampaignState
 }
 
-// A character this high is past the campaign: following it keeps the route asleep.
-export const PAST_CAMPAIGN_LEVEL = 70
+// How long the followed character must go without levelling before another
+// character's level-ups can take over.
+export const SWITCH_QUIET_MS = 20 * 60 * 1000
+// Characters kept besides the one followed; the longest unseen goes first.
+export const MAX_SAVED_CHARS = 10
 
 // Should a level-up by `name` switch the tracker to that character? The log
 // names a character only when it levels, and logs party members' level-ups
-// too. So: a character past the campaign switches at once (an alt in maps),
-// and a levelling one after two level-ups in a row with none from the one
-// followed (you're playing it, not partying with it).
-export function shouldSwitch (followed: string, name: string, level: number, streak: number): boolean {
+// too, so a switch needs two level-ups of `name` in a row while the followed
+// character hasn't levelled for SWITCH_QUIET_MS. In a party you both level,
+// so it never fires; on an alt, the followed character has gone quiet.
+export function shouldSwitch (followed: string, name: string, streak: number, followedLevelAt: number, now: number): boolean {
   if (!followed || name === followed) return false
-  return level >= PAST_CAMPAIGN_LEVEL || streak >= 2
+  return streak >= 2 && now - followedLevelAt >= SWITCH_QUIET_MS
 }
 
-// Puts the followed character away and takes out `name`'s own route and
-// state, or a fresh one at `freshStep` for a character not seen before.
+// Puts the followed character away (if any) and takes out `name`'s own route
+// and state, or a fresh one at `freshStep` for a character not seen before.
 export function switchCharacter (w: CampaignWidget, c: { charName: string, className: string, level: number }, freshStep: number) {
   const saved = w.chars?.[c.charName]
-  const chars = Object.fromEntries(Object.entries(w.chars ?? {}).filter(([name]) => name !== c.charName))
-  if (w.state.charName) chars[w.state.charName] = { step: w.step, state: { ...w.state } }
-  w.chars = chars
+  const kept = Object.entries(w.chars ?? {}).filter(([name]) => name !== c.charName)
+  if (w.state.charName) kept.push([w.state.charName, { step: w.step, state: { ...w.state } }])
+  kept.sort((a, b) => b[1].state.updatedAt - a[1].state.updatedAt)
+  w.chars = Object.fromEntries(kept.slice(0, MAX_SAVED_CHARS))
   const where = { zone: w.state.zone, areaId: w.state.areaId, areaLevel: w.state.areaLevel, act: w.state.act, updatedAt: w.state.updatedAt }
   if (saved) {
     w.step = saved.step
@@ -93,7 +97,16 @@ export function switchCharacter (w: CampaignWidget, c: { charName: string, class
   w.state.charName = c.charName
   w.state.className = c.className
   w.state.level = c.level
-  if (c.level >= PAST_CAMPAIGN_LEVEL) w.state.asleep = true
+}
+
+// Keeps `state` as the followed character's own: saves the one before under
+// its name (the Twilight Strand starts a new character).
+export function saveCharacter (w: CampaignWidget) {
+  if (!w.state.charName) return
+  const kept = Object.entries(w.chars ?? {}).filter(([name]) => name !== w.state.charName)
+  kept.push([w.state.charName, { step: w.step, state: { ...w.state, stepStarts: { ...(w.state.stepStarts ?? {}) }, gemsGot: [...(w.state.gemsGot ?? [])] } }])
+  kept.sort((a, b) => b[1].state.updatedAt - a[1].state.updatedAt)
+  w.chars = Object.fromEntries(kept.slice(0, MAX_SAVED_CHARS))
 }
 
 export function emptyState (): CampaignState {
