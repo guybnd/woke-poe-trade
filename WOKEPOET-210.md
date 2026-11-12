@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-210
 title: 'Net worth window redesign: A1 Ledger'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -31,6 +31,36 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-12T03:46:40.175Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged as #347 (a87fbf42). The dev build runs master.'
+    completionComment: true
+    date: '2026-11-12T03:55:36.068Z'
+    id: c-2026-11-12t03-55-36-068z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T03:55:36.462Z'
 needsAction: null
+baselineCommit: 50719a51f325feab55eeed3277ba5c8eeb3cd515
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/347'
+swimlane: null
+diffSummary:
+  - file: renderer/public/data/data-version.json
+    additions: 2
+    deletions: 2
+  - file: renderer/public/data/tree/passive-tree.json
+    additions: 1
+    deletions: 1
+  - file: renderer/scripts/build-tree-data.mjs
+    additions: 32
+    deletions: 5
+  - file: renderer/src/web/woke/atlas/tree.ts
+    additions: 15
+    deletions: 4
+  - file: renderer/test/woke/farming-atlas.test.ts
+    additions: 17
+    deletions: 0
 ---
 Guy's picks from https://claude.ai/artifact/E5ZMem9viTeQbAFbvQj2Cj (A1 window): header; hero with total, ≈chaos and liquid, and a chart; KPI strip; Since last refresh + Where it is; stash tab labels (the #245 tab component) with value and change; chips (search, categories, Hide < 1 div); sortable item table with tooltip, right-click menu and a hover card (tabs + 7d price line); B1 chart with hover, big gains, 24h/7d/League and a Total|By category toggle; C2 session grouping per map from Client.txt, with a fallback per refresh; D1 liquid vs locked, D2 threshold, D3 movers, D5 per-tab change, D6 goal line with ETA. No trade searches; rares stay unpriced; lazy chunk; budgets.
