@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-206
 title: Personal stash reader (POESESSID)
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -37,8 +37,33 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-12T00:56:29.353Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Squash-merged to master as a8c94ef2 (#336), all checks green. Dev build
+      not switched yet (coordinator checking with Guy; it shows another thread's
+      essence-scan preview). To use: empty
+      %APPDATA%\woke-poe-trade\personal.flag, restart, sign in under Settings ›
+      Game & league › Stash reader, add Net worth from the launcher.
+    completionComment: true
+    date: '2026-11-12T01:06:34.923Z'
+    id: c-2026-11-12t01-06-34-923z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T01:06:35.245Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/336'
 needsAction: null
+baselineCommit: 07f0d76c04dce956b612747a57af8fe2004e7ee1
+swimlane: null
+diffSummary:
+  - file: renderer/test/woke/trade-data-patch.test.ts
+    additions: 7
+    deletions: 0
+  - file: scripts/trade-data-patch.mjs
+    additions: 14
+    deletions: 2
 ---
 Personal-only stash reader via legacy character-window/get-stash-items with Guy's own POESESSID. Gated by personal.flag in userData. Mockups: https://claude.ai/artifact/FYYuDFZxMptKQJCA38ykAC — picks A1 B1 C1 D2.
 
