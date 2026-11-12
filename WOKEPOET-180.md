@@ -15,7 +15,24 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-10T02:56:04.512Z'
+    comment: Created ticket.
+    id: a-2026-11-10t02-56-04-512z
+  - type: activity
+    user: Agent
+    date: '2026-11-10T02:56:04.512Z'
     comment: Created as subtask of WOKEPOET-168.
+    id: a-2026-11-10t02-56-04-512z
+  - type: comment
+    user: Agent
+    comment: >-
+      Part merged in #357 (4d470c33): Dependabot now watches npm in main,
+      renderer and testing; uploads are served with nosniff; and the 4 lint
+      warnings are gone. Still open: deleting merged branches (needs Guy's OK),
+      listing old clone folders, aligning the TypeScript versions, and logging
+      the silent catches.
+    date: '2026-11-12T05:42:07.558Z'
+    selfAttested: true
+    id: c-2026-11-12t05-42-07-558z
 ---
 Review finding C4.
 - 149 branches on GitHub; delete the merged ones (needs Guy's OK, deletion can't be undone easily). 60+ `woke-*` clone folders in `E:\Git`: list which are safe to remove, Guy deletes.
