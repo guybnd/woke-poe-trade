@@ -56,3 +56,14 @@ describe('campaign tracker per character', () => {
     expect(Object.keys(w.chars ?? {}).length).toBe(MAX_SAVED_CHARS)
   })
 })
+
+describe('campaign tracker per character, edge cases', () => {
+  it('a new character with an old one\'s name starts fresh', () => {
+    const w = widget()
+    switchCharacter(w, { charName: 'Kaelor', className: 'Marauder', level: 60 }, 0)
+    // A new Mirelle at level 2: the saved level-30 Mirelle is someone else.
+    switchCharacter(w, { charName: 'Mirelle', className: 'Witch', level: 2 }, 3)
+    expect(w.step).toBe(3)
+    expect(w.state.gemsGot).toEqual([])
+  })
+})

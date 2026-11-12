@@ -118,6 +118,12 @@ const s = computed(() => props.config.state)
 const route = computed(() => bundledRoute(props.config.route))
 // Options changed: the step list is different, so find our place again.
 watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${props.config.route.bandit}`, () => {
+  // Saved characters' steps are numbered for the old route too.
+  for (const c of Object.values(props.config.chars ?? {})) {
+    c.state.stepStarts = {}
+    const step = c.state.areaId ? resyncTo(route.value, c.state.areaId) : 0
+    if (step > 0) c.step = step
+  }
   // Asleep, or somewhere the route never goes (a map, a hideout): keep the place.
   if (props.config.state.asleep || !props.config.state.areaId) return
   // Step numbers mean other steps now, so their times are gone.
@@ -359,7 +365,8 @@ function apply (ev: LogEvent, at: number): boolean {
 // levelled (log time; see shouldSwitch).
 let streak = 0
 let streakName = ''
-let followedLevelAt = 0
+// From the last saved line: a restart mid-session isn't taken for a quiet spell.
+let followedLevelAt = props.config.state.updatedAt || 0
 
 function takeOver (c: SeenChar, at: number) {
   const before = props.config.state

@@ -83,11 +83,14 @@ export function shouldSwitch (followed: string, name: string, streak: number, fo
 export function switchCharacter (w: CampaignWidget, c: { charName: string, className: string, level: number }, freshStep: number) {
   const saved = w.chars?.[c.charName]
   const kept = Object.entries(w.chars ?? {}).filter(([name]) => name !== c.charName)
-  if (w.state.charName) kept.push([w.state.charName, { step: w.step, state: { ...w.state } }])
+  // The one stored now goes first, so it wins ties (a replay stamps many alike).
+  if (w.state.charName) kept.unshift([w.state.charName, { step: w.step, state: { ...w.state } }])
   kept.sort((a, b) => b[1].state.updatedAt - a[1].state.updatedAt)
   w.chars = Object.fromEntries(kept.slice(0, MAX_SAVED_CHARS))
   const where = { zone: w.state.zone, areaId: w.state.areaId, areaLevel: w.state.areaLevel, act: w.state.act, updatedAt: w.state.updatedAt }
-  if (saved) {
+  // A saved character higher than this one is an old character of the same
+  // name (deleted and made again): start fresh instead.
+  if (saved && (saved.state.level == null || saved.state.level <= c.level)) {
     w.step = saved.step
     w.state = { ...saved.state, ...where }
   } else {
@@ -104,7 +107,7 @@ export function switchCharacter (w: CampaignWidget, c: { charName: string, class
 export function saveCharacter (w: CampaignWidget) {
   if (!w.state.charName) return
   const kept = Object.entries(w.chars ?? {}).filter(([name]) => name !== w.state.charName)
-  kept.push([w.state.charName, { step: w.step, state: { ...w.state, stepStarts: { ...(w.state.stepStarts ?? {}) }, gemsGot: [...(w.state.gemsGot ?? [])] } }])
+  kept.unshift([w.state.charName, { step: w.step, state: { ...w.state, stepStarts: { ...(w.state.stepStarts ?? {}) }, gemsGot: [...(w.state.gemsGot ?? [])] } }])
   kept.sort((a, b) => b[1].state.updatedAt - a[1].state.updatedAt)
   w.chars = Object.fromEntries(kept.slice(0, MAX_SAVED_CHARS))
 }
