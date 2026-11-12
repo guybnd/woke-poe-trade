@@ -23,9 +23,9 @@
 // One pinned thing: drag it by its head, scroll over the half-moon to make it
 // more or less see-through, click the pin to let it go. Solid while the mouse
 // is on it, so its details stay readable.
-import { computed, inject, onMounted, onUnmounted, shallowRef } from 'vue'
+import { computed, inject, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { useHoverZone } from '../shared/hover'
+import { hoverZonesMoved, useHoverZone } from '../shared/hover'
 import { movePin, pinScale, place, removePin, setPinOpacity, spotOf } from './pins'
 import type { Pin } from './pins'
 
@@ -37,8 +37,18 @@ const wm = inject<WidgetManager | null>('wm', null)
 const el = shallowRef<HTMLElement | null>(null)
 // Takes the mouse while it's over the pin, even with the game in focus, so
 // the head drags and the body scrolls instead of walking your character there.
-const hovered = useHoverZone(el, { enabled: () => true, activate: () => true })
+// Only after the mouse rests on it, so sweeping past a see-through pin still
+// walks your character there.
+const rested = shallowRef(false)
 const dragging = shallowRef(false)
+const hovered = useHoverZone(el, { enabled: () => true, activate: () => rested.value || dragging.value })
+const REST_MS = 250
+let restTimer: ReturnType<typeof setTimeout> | null = null
+watch(hovered, (on) => {
+  if (restTimer) { clearTimeout(restTimer); restTimer = null }
+  if (!on) { rested.value = false; return }
+  restTimer = setTimeout(() => { rested.value = true }, REST_MS)
+})
 const solid = computed(() => hovered.value || dragging.value)
 
 const spot = computed(() => live.value ?? spotOf(props.pin, place.value, props.index))
@@ -70,7 +80,11 @@ function onMove (e: PointerEvent) {
     x: Math.min(98, Math.max(0, (e.clientX - grab.dx) / window.innerWidth * 100)),
     y: Math.min(98, Math.max(0, (e.clientY - grab.dy) / window.innerHeight * 100))
   }
+  // The mouse zone moves along, or main gives the game back the mouse
+  // as soon as the cursor leaves where the pin started.
+  if (!zoneFrame) zoneFrame = requestAnimationFrame(() => { zoneFrame = 0; hoverZonesMoved() })
 }
+let zoneFrame = 0
 function endDrag () {
   window.removeEventListener('pointermove', onMove)
   window.removeEventListener('pointerup', endDrag)
@@ -78,6 +92,7 @@ function endDrag () {
   live.value = null
   grab = null
   dragging.value = false
+  hoverZonesMoved()
 }
 // Kept whole on screen: a spot near the edge, or a smaller window, pulls it in.
 const size = shallowRef({ w: 0, h: 0 })
@@ -90,6 +105,8 @@ onMounted(() => {
   if (el.value) observer.observe(el.value)
 })
 onUnmounted(() => {
+  if (restTimer) clearTimeout(restTimer)
+  if (zoneFrame) cancelAnimationFrame(zoneFrame)
   endDrag()
   observer?.disconnect()
 })

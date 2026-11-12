@@ -3,6 +3,7 @@
 // <DockItem> inside their widget; the dock (mounted once in the overlay)
 // draws them in one row and opens each one's card after the mouse rests on it.
 import { computed, markRaw, shallowReactive, shallowRef, watch } from 'vue'
+import { isPinned } from '../pins/pins'
 import type { Slots } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import { ensureWokeConfig } from '../modules'
@@ -201,8 +202,6 @@ export function registerDockEntry (props: DockItemProps, slots: Slots, onOpen: (
   return entry
 }
 
-// Whether a module's icon has its place in the row now, even if dismissed for a
-// while (the run timer stays out of the row while the campaign icon is away).
 // The pin that holds an icon's card off the dock.
 export function dockPinId (id: string): string {
   return `dock:${id}`
@@ -219,6 +218,8 @@ export function holdOpen (entry: DockEntry, open: boolean) {
   else if (n > 0 && next === 0) entry.onOpen(false)
 }
 
+// Whether a module's icon has its place in the row now, even if dismissed for a
+// while (the run timer stays out of the row while the campaign icon is away).
 export function dockIconShowing (id: string): boolean {
   return !dockConfig().hidden.includes(id) && dockEntries.value.some(e => e.props.id === id && e.props.show)
 }
@@ -246,7 +247,7 @@ export const dockGroups = computed<DockGroup[]>(() => {
   const hosts = shown.filter(e => !e.props.into || !shown.some(h => h.props.id === e.props.into && !h.props.into))
   const groups = hosts
     .sort((a, b) => orderOf(a.props.id) - orderOf(b.props.id) || a.key - b.key)
-    .map(host => ({ host, extras: shown.filter(e => e !== host && e.props.into === host.props.id && hosts.every(h => h !== e)) }))
+    .map(host => ({ host, extras: shown.filter(e => e !== host && e.props.into === host.props.id && hosts.every(h => h !== e) && !isPinned(dockPinId(e.props.id))) }))
   return groups
 })
 

@@ -31,7 +31,8 @@
 <script setup lang="ts">
 // A pinned piece of a PoB build. It follows the build file and your level, so
 // the gear set and next stage move on as you do, like the panel does.
-import { computed, provide, shallowRef, watch } from 'vue'
+import { computed, onUnmounted, provide, shallowRef, watch } from 'vue'
+import { Host } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import { WEmpty } from '../ui'
 import BuildTree from '../pob-builds/BuildTree.vue'
@@ -78,7 +79,10 @@ async function readOwn () {
     ownError.value = (err as Error).message
   }
 }
-watch([relPath, isActive, () => pobWidget.value?.wmId, () => build.details.value], readOwn, { immediate: true })
+watch([relPath, isActive, () => pobWidget.value?.wmId], readOwn, { immediate: true })
+// PoB may have saved it since: read again when the overlay opens.
+const focus = Host.onEvent('MAIN->OVERLAY::focus-change', (state) => { if (state.overlay) readOwn() })
+onUnmounted(() => { focus.abort() })
 
 const details = computed(() => isActive.value ? build.details.value : ownDetails.value)
 const problem = computed(() => {
@@ -108,7 +112,10 @@ const group = computed(() => skillSet.value ? findGroup(skillSet.value.groups, p
 // ---- tree: the next stage, lit against the tree you're on ----
 const trees = computed(() => realSets(details.value?.trees ?? []))
 const nextTree = computed(() => nextSet(trees.value, loadout.value?.tree))
-const treeStart = computed(() => ({ title: (nextTree.value ?? loadout.value?.tree ?? trees.value[0])?.title ?? '' }))
+// A new start object resets the tree's pan and zoom: only when the stage changes.
+const startTitle = computed(() => (nextTree.value ?? loadout.value?.tree ?? trees.value[0])?.title ?? '')
+const treeStart = shallowRef({ title: startTitle.value })
+watch(startTitle, (title) => { treeStart.value = { title } })
 
 // ---- next stage ----
 const treeData = shallowRef<Map<number, TreeNode> | null>(null)

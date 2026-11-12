@@ -36,7 +36,10 @@ test('a dock card pins off the dock, drags, fades, and keeps a spot per place', 
   await expect(pin).toContainText('Divine Orb')
   // The hover card makes way: the pin shows it now.
   await overlay.moveMouse(5, 5)
-  await expect(icon.getByRole('button', { name: 'Pin this card' })).toHaveCount(0)
+  await overlay.hoverDockIcon('drop-counter')
+  await page.waitForTimeout(500)
+  await expect(icon.locator('[data-dock-pin]')).toHaveCount(0)
+  await overlay.moveMouse(5, 5)
 
   // Faded while the mouse is away, solid on it.
   await page.waitForTimeout(400)

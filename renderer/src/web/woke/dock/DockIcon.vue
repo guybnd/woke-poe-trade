@@ -109,6 +109,8 @@ const CLOSE_AFTER_MS = 250
 let timer: ReturnType<typeof setTimeout> | null = null
 watch(hovering, (on) => {
   if (timer) { clearTimeout(timer); timer = null }
+  // Its card is up as a pin: nothing to open here.
+  if (offDock.value) { showCard.value = false; return }
   if (menuOpen.value) return
   if (on === showCard.value) return
   if (on && dockConfig().hoverOpens === false) return
@@ -223,6 +225,7 @@ function pressedInGame (taken: boolean) {
   if (wm.active.value) { openCard(); return }
   const does = clickWhilePlaying(props.host.props, dockConfig().hoverOpens)
   if (does === 'card') {
+    if (offDock.value) return
     toggleCard()
     return
   }

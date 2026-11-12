@@ -9,12 +9,12 @@
 
 <script setup lang="ts">
 // Everything you pinned, on screen whether the overlay is open or not.
-import { computed, inject, watch } from 'vue'
+import { computed, inject, nextTick, onUnmounted, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { dockConfig, dockEntries, isDismissed } from '../dock/dock'
 import type { DockEntry } from '../dock/dock'
 import { hoverZonesMoved } from '../shared/hover'
-import { pins } from './pins'
+import { pins, place } from './pins'
 import type { Pin } from './pins'
 import PinFrame from './PinFrame.vue'
 import DockPin from './DockPin.vue'
@@ -47,5 +47,8 @@ const shown = computed(() => pins.value.flatMap((pin, index): Shown[] => {
   }
   return [{ pin, index, dock: null }]
 }))
-watch(() => shown.value.length, hoverZonesMoved)
+// Pins move without changing size: tell main where their mouse zones went.
+watch([() => shown.value.length, place], () => { nextTick(hoverZonesMoved).catch(() => {}) })
+window.addEventListener('resize', hoverZonesMoved)
+onUnmounted(() => { window.removeEventListener('resize', hoverZonesMoved) })
 </script>
