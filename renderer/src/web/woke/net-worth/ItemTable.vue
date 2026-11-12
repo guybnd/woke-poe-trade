@@ -58,6 +58,7 @@ import type { ItemMenuRef } from '../ui/tooltip/item-menu'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 import type { ValuedLine } from './valuation'
 import Coin from './Coin.vue'
+import { lineTip } from './tips'
 
 const props = defineProps<{
   lines: ValuedLine[]
@@ -171,7 +172,7 @@ function colourOf (l: ValuedLine) {
 
 function tipOf (l: ValuedLine): ItemTipRef {
   const tabs = l.tabIds.map(nameOfTab)
-  return { name: l.tipName, variant: l.variant, count: l.count, note: tabs.length ? `In ${tabs.join(', ')}` : undefined, menu: menuOf(l) }
+  return lineTip(l, l.count, tabs.length ? `In ${tabs.join(', ')}` : undefined)
 }
 // ---------- your price, ignore (the row menu) ----------
 const editing = shallowRef<string | null>(null)

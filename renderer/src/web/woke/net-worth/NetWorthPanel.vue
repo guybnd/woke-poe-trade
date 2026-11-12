@@ -42,7 +42,7 @@
             </span>
             <WSegmented v-model="range" :options="RANGE_OPTIONS" />
           </div>
-          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" />
+          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
           <div v-if="chartMode === 'category'" :class="$style.legend">
             <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
           </div>
@@ -57,7 +57,7 @@
 
         <section v-if="shown.moves && moves.length" :class="$style.moves" class="text-xs">
           <span :class="$style.caps">Price moves today</span>
-          <span v-for="m in moves.slice(0, 2)" :key="m.key" class="w-trunc">{{ m.name }} <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
+          <span v-for="m in moves.slice(0, 2)" :key="m.key" class="w-trunc"><span v-item-tip="tipFor(tips, m.key, m.name)">{{ m.name }}</span> <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
           <span v-if="moves.length > 2" class="w-dim" :title="moves.slice(2).map(moveText).join('\n')">+{{ moves.length - 2 }} more</span>
         </section>
 
@@ -80,7 +80,7 @@
                   <template v-if="groupOpen(g.key, i)">
                     <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
                       <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
-                      <span class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
+                      <span v-item-tip="tipFor(tips, l.key, l.name, l.count)" class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
                       <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
                     </div>
                     <div v-if="g.lines.length > 5" class="w-dim text-xs">+{{ g.lines.length - 5 }} more</div>
@@ -168,7 +168,8 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, openMenu, toast } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, openMenu, toast, vItemTip } from '../ui'
+import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
@@ -280,6 +281,9 @@ const goal = computed(() => props.config.goal && props.config.goal.div > 0 ? pro
 const eta = computed(() => goal.value ? goalEta(seriesFor(ledger.value.points, historyNow.value.days, '7d', Date.now(), divine.value), goal.value.div) : { reached: false, days: null })
 
 // ---------- price moves (D3) ----------
+// The item tooltip for any item named here: held ones by their table line.
+const tips = computed(() => tipIndex(v.value ? [...v.value.lines, ...v.value.unpricedLines, ...v.value.ignoredLines] : []))
+
 // Your own prices don't move with poe.ninja.
 const changes = computed(() => new Map((v.value?.lines ?? []).map(l => [l.key, l.mine ? null : change24h(l.graph)])))
 const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value.get(k) ?? null).filter(m => Math.abs(toDiv(m.valueChaos)) >= 0.1))

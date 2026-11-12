@@ -19,7 +19,7 @@
           <div v-if="diff" :class="$style.caps">Since last read · <span class="w-num" :class="tone(diff.netChaos)">{{ signed(toDiv(diff.netChaos)) }}<Coin :chaos="!divineRate" /></span></div>
           <div v-for="c in changes" :key="c.key + c.count" :class="$style.row">
             <img v-if="c.icon" :src="c.icon" alt="" :class="$style.art"><span v-else :class="$style.art" />
-            <span class="w-trunc">{{ c.count < 0 ? `−${fmt(-c.count)} × ` : c.count > 1 ? `${fmt(c.count)} × ` : '' }}{{ c.name }}</span>
+            <span v-item-tip="tipFor(tips, c.key, c.name, Math.abs(c.count))" class="w-trunc">{{ c.count < 0 ? `−${fmt(-c.count)} × ` : c.count > 1 ? `${fmt(c.count)} × ` : '' }}{{ c.name }}</span>
             <span class="w-num" :class="tone(c.chaos)" :title="inChaos(c.chaos)">{{ signed(toDiv(c.chaos)) }}</span>
           </div>
           <div v-if="!changes.length" class="w-dim text-xs">No changes since last read</div>
@@ -41,7 +41,8 @@
 <script setup lang="ts">
 // Loaded the first time the card opens, with the window's data (store.ts).
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
-import { WSpark } from '../ui'
+import { WSpark, vItemTip } from '../ui'
+import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
 import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
@@ -80,6 +81,7 @@ const diff = computed(() => {
   return sameLeague.value && d && d.at === historyNow.value.countedReadAt ? d : null
 })
 const changes = computed(() => topCardChanges(diff.value, pricePrefs.value.ignored))
+const tips = computed(() => tipIndex(v.value ? [...v.value.lines, ...v.value.unpricedLines, ...v.value.ignoredLines] : []))
 const waitMs = computed(() => refreshWaitMs(props.status, now.value))
 const canRefresh = computed(() => !!props.status?.account && !props.status.running && waitMs.value === 0)
 // Reads "now" so it moves with the clock.
