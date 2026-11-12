@@ -80,6 +80,10 @@ export interface ScannerKind {
   canRoll?: boolean
   // The worker returns line images, OCR'd here across the worker pool.
   pooledLines?: boolean
+  // Start the extra pool workers with the scan. Each is a full tesseract
+  // instance (hundreds of MB): worth it for a map's long mod list, not for an
+  // essence label's few lines, which the scan's own worker reads.
+  warmPool?: boolean
   read: (worker: OcrWorker, image: { width: number, height: number, data: Uint8Array }, opts: ScanOptions) => Promise<ScanResult>
 }
 
@@ -91,6 +95,7 @@ export const MAP_SCAN: ScannerKind = {
   cropHalfWidth: 0.6,
   canRoll: true,
   pooledLines: true,
+  warmPool: true,
   read: async (worker, image, opts) => await worker.scanMapTooltip(image, opts)
 }
 
@@ -359,7 +364,7 @@ export class ScreenScanner {
     // A newer start (hotkey during an auto start) decides, auto flag and all.
     if (seq !== this.startSeq) return { running: this.running }
     this.auto = auto
-    if (this.kind.pooledLines) warmLinePool()
+    if (this.kind.warmPool) warmLinePool()
     if (!this.running) {
       this.running = true
       this.paused = false
