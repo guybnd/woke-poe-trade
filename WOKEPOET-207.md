@@ -48,6 +48,17 @@ history:
     user: Agent
     date: '2026-11-12T00:53:13.777Z'
     comment: Guy picked; building.
+  - type: activity
+    user: Agent
+    date: '2026-11-12T01:13:05.221Z'
+    comment: >-
+      Built on woke/pins (clone E:\Git\woke-pins): PR
+      https://github.com/guybnd/woke-poe-trade/pull/338. Reviewed adversarially,
+      with fixes in d926ea0f. Local checks pass. Merge requested through the
+      cloud route. Dev build waits on the essence thread, then goes to master.
+      Known limit: cards that mark alerts seen on open (market, essence) only do
+      it once while pinned.
+    id: a-2026-11-12t01-13-05-221z
 swimlane: null
 needsAction: null
 ---
