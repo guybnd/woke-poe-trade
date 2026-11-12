@@ -116,7 +116,7 @@
           <div class="w-dim flex items-center gap-2"><span>What one map costs to run<template v-if="config.strategy.trim()"> · <span style="color: var(--w-fg);">{{ config.strategy.trim() }}</span></template></span> <WInfo text="Map, scarabs, compasses and so on. Saved per atlas strategy, so switching strategy switches costs." /></div>
           <div v-if="filledFromAtlas" class="text-xs w-faint"><i class="fas fa-globe" /> Scarabs filled from the atlas strategy "{{ filledFromAtlas }}".</div>
           <div class="relative">
-            <WField v-model="costQuery" icon="fas fa-plus" placeholder="Add an input…" class="w-full" />
+            <WField v-model="costQuery" icon="fas fa-plus" placeholder="Add an input… (currency, scarabs, maps)" class="w-full" />
             <div v-if="costResults.length" class="w-surface absolute left-0 right-0 z-10 mt-1 py-1">
               <button v-for="item in costResults" :key="key(item)" v-item-tip="item" @click="addCost(item)" class="w-row w-full text-left" style="grid-template-columns: minmax(0,1fr) auto;">
                 <span class="w-trunc flex items-center gap-1"><WIcon :src="art(item)" fallback="fas fa-coins" />{{ item.name }}<span v-if="item.variant" class="w-dim ml-1">{{ item.variant }}</span></span>
@@ -198,7 +198,7 @@ import { useLeagues } from '@/web/background/Leagues'
 import { useSessionStore } from '../analytics/store'
 import { ANALYTICS_TYPE } from '../analytics/types'
 import type { AtlasWidget } from '../atlas/widget'
-import { FARMING_LOOT_TARGET, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isMapArea, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
+import { FARMING_LOOT_TARGET, addLoot as addLootTo, costsForStrategy, countNewMap, currentRun, elapsed, historyToRecords, initFarmingData, isMapArea, isMapCostItem, isMapSideArea, lineValue, maybeAutoPause, nameRun, pauseSession, newSession, onZoneChange, rememberCosts, removeLoot, sellPrice, sellRules, startRun, strategyStats, toSessionRecord, totals, withScarabCosts } from './farming'
 import type { CostLine, LiveRun, LootLine, PricedRef } from './farming'
 
 const props = defineProps<{
@@ -273,7 +273,7 @@ const strategyNames = computed(() => AppConfig().widgets
 const lootQuery = shallowRef('')
 const costQuery = shallowRef('')
 const lootResults = computed(() => prices.search(lootQuery.value))
-const costResults = computed(() => prices.search(costQuery.value))
+const costResults = computed(() => prices.search(costQuery.value, 8, isMapCostItem))
 
 function key (r: PricedRef) { return itemKey(r) }
 
