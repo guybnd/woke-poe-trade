@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-88
 title: 'Lab gems: complete the pool, default to random version, count every craft'
-status: Grooming
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -32,6 +32,20 @@ history:
     date: '2026-11-12T05:23:57.197Z'
     selfAttested: true
     id: c-2026-11-12t05-23-57-197z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #362 (86006b20): the six missing transfigured gems are in the
+      pool. The Trarthus gems stay out, per Guy.
+    date: '2026-11-12T06:32:55.619Z'
+    completionComment: true
+    id: c-2026-11-12t06-32-55-619z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T06:32:55.619Z'
+needsAction: null
 ---
 Step 6 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Thin prices in EV are already covered by WOKEPOET-79 / PR #152.
 
