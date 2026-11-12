@@ -7,7 +7,6 @@ import type { SavedLoot, SessionRecord } from '../analytics/types'
 export const FARMING_TYPE = 'woke-farming'
 // copy-item target for the "add hovered item to loot" hotkey.
 export const FARMING_LOOT_TARGET = 'woke-farming-loot'
-// Pause the session after this long without a zone change.
 // What the Map cost tab's "Add an input" box offers: things you put in the
 // map device or spend on a map, never uniques, gems or cards. A category
 // poe.ninja adds for a new league counts too (its new currency), unless it
@@ -21,6 +20,7 @@ export function isMapCostItem (item: { type: string }): boolean {
   return !isListedType(item.type) && !item.type.startsWith('Unique')
 }
 
+// Pause the session after this long without a zone change.
 export const AUTO_PAUSE_MS = 5 * 60 * 1000
 
 export interface PricedRef {
