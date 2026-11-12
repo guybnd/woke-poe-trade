@@ -1,5 +1,6 @@
 import { calculatedStatToFilter, FiltersCreationContext } from '../create-stat-filters'
 import { calcPropBounds, propAt20Quality, QUALITY_STATS } from '@/parser/calc-q20'
+import { weaponDps } from '@/web/woke/price-insight/weapon-dps'
 import { stat, StatBetter, Stat } from '@/assets/data'
 import { ARMOUR, WEAPON, ItemCategory } from '@/parser/meta'
 import { ParsedItem } from '@/parser'
@@ -145,41 +146,31 @@ export const WEAPON_STATS = new Set<string>([
 function weaponProps (ctx: FiltersCreationContext) {
   const { item } = ctx
 
-  const attackSpeed = calcPropBounds(item.weaponAS ?? 0, { incr: ['#% increased Attack Speed'], flat: [] }, item)
-  const physQ20 = propAt20Quality(item.weaponPHYSICAL ?? 0, QUALITY_STATS.PHYSICAL_DAMAGE, undefined, item)
-  const pdpsQ20: StatRoll = {
-    value: physQ20.roll.value * attackSpeed.roll.value,
-    min: physQ20.roll.min * attackSpeed.roll.min,
-    max: physQ20.roll.max * attackSpeed.roll.max
-  }
-
-  const eleDmg = calcPropBounds(item.weaponELEMENTAL ?? 0, {
-    flat: ['Adds # to # Lightning Damage', 'Adds # to # Cold Damage', 'Adds # to # Fire Damage'],
-    incr: []
-  }, item)
-
-  const edps: StatRoll = {
-    value: eleDmg.roll.value * attackSpeed.roll.value,
-    min: eleDmg.roll.min * attackSpeed.roll.min,
-    max: eleDmg.roll.max * attackSpeed.roll.max
-  }
+  // woke: the parts come from weapon-dps.ts; Total DPS counts local chaos, as the trade site's does.
+  const parts = weaponDps(item)
+  const attackSpeed = { roll: parts.aps, sources: parts.apsSources }
+  const pdpsQ20 = parts.phys
+  const edps = parts.ele
+  // The phys/ele shares that pick and hide rows stay as before, without chaos.
   const dps: StatRoll = {
     value: pdpsQ20.value + edps.value,
     min: pdpsQ20.min + edps.min,
     max: pdpsQ20.max + edps.max
   }
 
-  if (item.weaponELEMENTAL) {
-    if (item.weaponPHYSICAL) {
-      ctx.filters.push(propToFilter({
-        ref: 'Total DPS: #',
-        tradeId: 'item.total_dps',
-        roll: dps,
-        sources: [],
-        disabled: false
-      }, ctx))
-    }
+  const partCount = [item.weaponPHYSICAL, item.weaponELEMENTAL, parts.chaos.value].filter(Boolean).length
+  if (partCount >= 2) {
+    ctx.filters.push(propToFilter({
+      ref: 'Total DPS: #',
+      tradeId: 'item.total_dps',
+      roll: parts.total,
+      sources: [],
+      // Picked as before (phys and ele); a phys or ele weapon with chaos gets it unpicked.
+      disabled: !(item.weaponELEMENTAL && item.weaponPHYSICAL)
+    }, ctx))
+  }
 
+  if (item.weaponELEMENTAL) {
     ctx.filters.push(propToFilter({
       ref: 'Elemental DPS: #',
       tradeId: 'item.elemental_dps',

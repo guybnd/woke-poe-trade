@@ -3,3 +3,5 @@
 export { poeLook, poeSection, poeTier, isTopTier, fracturedIds } from './poe-kind'
 export { useDragNumber } from './drag-number'
 export { default as FilterLinePoe } from '@/web/price-check/filters/FilterLinePoe.vue'
+export { default as StatHeader } from './StatHeader.vue'
+export { buildStatHeader, headerFilters, headerCellFilters, pickOrder } from './stat-header'

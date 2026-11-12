@@ -28,6 +28,8 @@
     <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
       <!-- woke: one right-click listener for every row (price-insight/stat-actions.ts). -->
       <form @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu" :class="{ 'w-poe-well': poeMode }">
+        <!-- woke: weapon/armour numbers (stat-header.ts); its picked numbers are the rows under it. -->
+        <component :is="poeKit!.StatHeader" v-if="statHeader" :model="statHeader" />
         <template v-for="{ filter, i } of shownStats">
           <!-- woke: PoE mode's gold lines between properties, enchants, implicits and the rest. -->
           <div v-if="poeMode && sepBefore.has(i)" :key="`sep_${i}`" class="w-poe-sep" />
@@ -140,14 +142,14 @@ export default defineComponent({
         const saved = clearedPicks.get(list)
         const back = saved
           ? saved.filter(s => props.stats.includes(s))
-          : props.stats.filter(s => !isHiddenRow(s) && !(!s.group && s.inTotal))
+          : props.stats.filter(s => !isHiddenFilter(s) && !(!s.group && s.inTotal))
         back.filter(s => !isSplitTotal(s)).forEach(s => { setTicked(s, true) })
         clearedPicks.delete(list)
       }
     }
     // Judged on the rows on show: a hidden constant roll doesn't make it "some".
     const allState = computed(() => {
-      const shown = props.stats.filter(s => !isHiddenRow(s) && !isSplitTotal(s))
+      const shown = props.stats.filter(s => !isHiddenFilter(s) && !isSplitTotal(s))
       const on = props.stats.filter(isTicked).length
       if (!on) return 'none'
       return shown.every(isTicked) ? 'all' : 'mixed'
@@ -168,10 +170,24 @@ export default defineComponent({
     const { t } = useI18n()
     const actions = useStatActions()
 
-    function isHiddenRow (s: FilterOrGroup): boolean {
+    // PoE mode's weapon/armour header (stat-header.ts) and the property filters it draws.
+    const statHeader = computed(() => (poeMode.value && poeKit.value)
+      ? poeKit.value.buildStatHeader(props.item, props.stats)
+      : null)
+    const headerOwned = computed(() => poeKit.value?.headerFilters(statHeader.value) ?? new Set<StatFilter>())
+    const headerPicks = computed(() => poeKit.value?.headerCellFilters(statHeader.value) ?? new Set<StatFilter>())
+    const headerPickOrder = (s: FilterOrGroup) => (!s.group && headerOwned.value.has(s)) ? poeKit.value!.pickOrder(s) : 0
+
+    // A filter the price check keeps out of the way. The box that ticks every row skips these.
+    function isHiddenFilter (s: FilterOrGroup): boolean {
       if (s.group) return Boolean(s.meta.hidden)
       // A local mod already in a property total is a hidden row in Standard only.
       return Boolean(s.hidden || (s.inTotal && !poeMode.value))
+    }
+    // The header shows every DPS part, so a part's row is never hidden once picked there.
+    function isHiddenRow (s: FilterOrGroup): boolean {
+      if (!s.group && (headerOwned.value.has(s) || (!s.disabled && headerPicks.value.has(s)))) return false
+      return isHiddenFilter(s)
     }
     const hiddenCount = computed(() => props.stats.filter(isHiddenRow).length)
     // "Hidden filters" shows the hidden rows faded in their place among the rest.
@@ -194,7 +210,12 @@ export default defineComponent({
         return { filter, i, section }
       })
       if (!poeMode.value) return rows
-      return rows.sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section] || a.i - b.i)
+      // The header draws its unpicked numbers itself; picked ones follow it, those picked
+      // by default first, then the clicked ones in the order they were clicked.
+      return rows
+        .filter(r => r.filter.group || !(r.filter.disabled && headerOwned.value.has(r.filter)))
+        .sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section] ||
+          headerPickOrder(a.filter) - headerPickOrder(b.filter) || a.i - b.i)
     })
     // "Mod details": each mod once, under the first line it feeds, so a hybrid
     // or a mod in a total isn't listed again under every line it adds to.
@@ -226,6 +247,7 @@ export default defineComponent({
       t,
       poeMode,
       poeKit,
+      statHeader,
       shownStats,
       sepBefore,
       openRowMenu (e: MouseEvent) {
