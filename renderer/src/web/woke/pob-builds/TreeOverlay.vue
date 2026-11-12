@@ -93,11 +93,16 @@ async function refit (fresh = false): Promise<boolean> {
   if (busy) { again = true; return true }
   busy = true
   again = false
+  // A first read hides the whole overlay for a moment: a pinned card, a pin
+  // or a toast over the tree would hide it from the capture.
+  const hideAll = fresh
   try {
     shown.value = false
+    if (hideAll) document.body.style.visibility = 'hidden'
     await nextTick()
     await frames(2)
     const res = await hostRequest<FitReply>('tree-overlay-fit', { probes, fresh })
+    if (hideAll) document.body.style.visibility = ''
     if (!on.value) return true
     if (!res.ok) {
       // The tree closed (or something covers it): nothing to draw any more.
@@ -115,6 +120,7 @@ async function refit (fresh = false): Promise<boolean> {
     stop()
     return false
   } finally {
+    if (hideAll) document.body.style.visibility = ''
     busy = false
     if (again && on.value) refit().catch(() => {})
   }
