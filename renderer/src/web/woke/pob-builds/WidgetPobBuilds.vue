@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- While you play: an icon for the build in use; resting on it shows the card. -->
-    <DockItem id="pob-builds" :menu="pinMenu" :title="activeName" :show="Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId" :wm-id="config.wmId" card-width="24rem">
+    <DockItem id="pob-builds" :menu="dockMenu" :game-click="config.treeOnIconClick === false ? undefined : iconClick" :title="activeName" :show="Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId" :wm-id="config.wmId" card-width="24rem">
       <template #card><BuildHoverCard /></template>
     </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
@@ -106,6 +106,8 @@ import { buildPinChoices, treePin } from './build-pins'
 import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned, togglePin as togglePinned } from '../pins/pins'
 import type { DockMenuAction } from '../dock/dock'
+import { showWithOverlay } from '../dock/dock'
+import { toggleBuildTree } from './tree-overlay'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
 import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi } from './widget'
@@ -170,6 +172,24 @@ const pinMenu = computed<DockMenuAction[]>(() => {
   return buildPinChoices(rel, activeName.value, d, active.level.value, active.act.value, active.loadout.value)
     .map(c => ({ label: c.label, icon: c.pin.icon, checked: isPinned(c.pin.id), action: () => togglePinned(c.pin) }))
 })
+// The right-click menu: draw on the tree, then the pins.
+const dockMenu = computed<DockMenuAction[]>(() => {
+  const draw: DockMenuAction = {
+    label: 'Draw build on passive tree',
+    icon: 'fas fa-diagram-project',
+    disabled: !active.details.value,
+    action: () => { toggleBuildTree().catch(() => {}) }
+  }
+  return [draw, ...pinMenu.value]
+})
+
+// A click on the dock icon while playing: with the passive tree open, draws
+// the build over it; otherwise opens the window, as a click always did.
+async function iconClick () {
+  if (await toggleBuildTree(true)) return
+  showWithOverlay(wm, props.config.wmId)
+}
+
 const activeName = computed(() => (active.relPath.value ?? '').split('/').pop()?.replace(/\.xml$/i, '') || 'PoB builds')
 
 // Follow the character Client.txt shows levelling: a build linked to that

@@ -18,7 +18,7 @@ import { useActiveBuild } from './active'
 import { loadoutOf } from './build-model'
 import { loadPassiveTree, passiveTreeArt, NODE_RADIUS } from './passive-tree'
 import type { TreeNode } from './passive-tree'
-import { buildPath, fitPoints, probesOf, takenNodes } from './tree-overlay'
+import { buildPath, fitPoints, probesOf, registerTreeDrawer, takenNodes } from './tree-overlay'
 import type { BuildPath } from './tree-overlay'
 import { isTreeHotkeyTarget } from './widget'
 
@@ -45,19 +45,21 @@ let again = false
 
 const active = useActiveBuild()
 
-async function start () {
+// quiet: no note when the tree isn't open (the dock icon then opens the
+// window instead). Whether it drew.
+async function start (quiet = false): Promise<boolean> {
   const d = active.details.value
-  if (!d) { note('Pick an active build in PoB builds first.'); return }
+  if (!d) { note('Pick an active build in PoB builds first.'); return false }
   const tree = loadoutOf(d, active.level.value, active.act.value, active.loadout.value).tree
-  if (!tree?.nodes?.length) { note('The active build has no passive tree.'); return }
+  if (!tree?.nodes?.length) { if (!quiet) note('The active build has no passive tree.'); return false }
   try {
     all = await loadPassiveTree()
   } catch (err) {
-    note((err as Error).message)
-    return
+    if (!quiet) note((err as Error).message)
+    return false
   }
   const art = passiveTreeArt()
-  if (!art) return
+  if (!art) return false
   if (sentPoints !== all) {
     await hostRequest('tree-overlay-points', fitPoints(all))
     sentPoints = all
@@ -68,8 +70,9 @@ async function start () {
   const ok = await refit(true)
   if (!ok) {
     on.value = false
-    note('Open the passive tree first (no tree found on screen).')
+    if (!quiet) note('Open the passive tree first (no tree found on screen).')
   }
+  return ok
 }
 
 function stop () {
@@ -173,6 +176,11 @@ const hotkey = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   else start().catch(() => {})
 })
 
+const unregister = registerTreeDrawer({
+  isOn: () => on.value,
+  start,
+  stop
+})
 const events = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
   if (topic !== 'tree-overlay' || !on.value) return
   const e = data as { kind: 'move', dx: number, dy: number } | { kind: 'settle' } | { kind: 'hide' }
@@ -199,6 +207,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   hotkey.abort()
+  unregister()
   events.abort()
   if (onResize) window.removeEventListener('resize', onResize)
   stop()

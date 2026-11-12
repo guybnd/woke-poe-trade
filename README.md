@@ -26,7 +26,7 @@ Alt+F on an item goes to its rule. Edit any tier in the game and it reloads.
 </p>
 
 ### Path of Building
-Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change and what each stage's uniques cost, open the passive tree in the overlay, price check a build's item, compare a checked item to what you wear, and compare two builds.
+Your gear, gem links and gems by level, from your PoB folder. See what your next tree, gems and gear change and what each stage's uniques cost, open the passive tree in the overlay, draw your build's missing points over the game's own passive tree (Alt+T, or click the build's dock icon with the tree open), price check a build's item, compare a checked item to what you wear, and compare two builds.
 
 <p>
   <img src="docs/public/shots/hl-pob-gear.webp" width="49%" alt="A build's gear tab with an item tooltip">
@@ -115,7 +115,7 @@ Run Path of Exile in Windowed or Windowed Fullscreen. The game can be in English
 - **Nothing is sent to the developer.** No accounts, no analytics, no tracking. Crash reports stay on your PC; Report opens a GitHub issue you read and send yourself.
 - **Sites it uses, only when a tool needs them:** pathofexile.com (trade, your public profile for the challenge guide), poe.ninja and poeprices.info (prices), poelab, Wealthy Exile, the wiki, poedb, Craft of Exile, poe.how, pobb.in and pastebin (build imports), GitHub (updates, new item data, NeverSink filters and GGG's atlas tree). Switched-off tools make no requests.
 - **Keyboard and clipboard.** A keyboard hook listens for the hotkeys you set. A price check presses Ctrl+C once to copy the item; stash searches and chat commands are pasted when you press a key or click. One press, one action, as in Awakened PoE Trade. It never moves or clicks the mouse.
-- **Game files.** It never touches the game's install. It follows `Client.txt` for zones, trades and deaths, reads the PoB builds and loot filters in folders you pick, and writes only what you ask for: a loot filter you edit, a build you import. Screen reading (map and essence scans) works on screenshots that never leave your PC.
+- **Game files.** It never touches the game's install. It follows `Client.txt` for zones, trades and deaths, reads the PoB builds and loot filters in folders you pick, and writes only what you ask for: a loot filter you edit, a build you import. Screen reading (map and essence scans, the passive tree overlay) works on screenshots that never leave your PC.
 - **Local only.** The overlay talks to the app through a server on 127.0.0.1 that refuses other web pages.
 - **Your stash, only if you opt in.** An experimental stash reader is hidden and off by default. If you turn it on, you sign in to pathofexile.com inside the app and it reads your own stash tabs for the Net worth window. It uses a pathofexile.com page GGG doesn't support for tools, so it's at your own risk. Your login stays in the app and is never shared; turning it off signs you out.
 - **Builds.** Installers are built by [GitHub Actions](.github/workflows/release.yml) from the tagged commit, with a `SHA256SUMS.txt` and [build provenance](https://github.com/guybnd/woke-poe-trade/attestations) (`gh attestation verify <file> -R guybnd/woke-poe-trade`). The app is not code-signed yet, so Windows shows a SmartScreen warning.

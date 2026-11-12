@@ -30,6 +30,9 @@ export interface PobBuildsWidget extends Widget {
   // Draws the active build over the game's passive tree. Missing = the
   // default key; null = off.
   treeHotkey?: string | null
+  // Clicking the dock icon with the passive tree open draws the build on it
+  // (else the window opens). Missing = on.
+  treeOnIconClick?: boolean
 }
 
 export const TREE_HOTKEY_DEFAULT = 'Alt + T'

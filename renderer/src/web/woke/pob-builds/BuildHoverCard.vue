@@ -13,6 +13,12 @@
       </div>
     </template>
 
+    <button type="button" class="w-btn" :class="$style.draw" @click="drawTree">
+      <i class="fas fa-diagram-project" /> {{ drawn ? 'Hide build on passive tree' : 'Draw build on passive tree' }}
+      <span v-if="isNew" :class="$style.new">New</span>
+      <WKbd v-if="hotkey" :keys="hotkey" class="ml-auto" />
+    </button>
+
     <template v-if="nextTree">
       <div :class="$style.k">Next</div>
       <div class="flex">
@@ -40,9 +46,25 @@ import SocketDots from './SocketDots.vue'
 import { useActiveBuild } from './active'
 import { linkColours, linkGroups, loadoutOf, nextSet, orderedGems, realSets, shortNumber, statLine } from './build-model'
 import { loadPassiveTree, treeDiff } from './passive-tree'
+import { toggleBuildTree, treeDrawn } from './tree-overlay'
+import { treeHotkeyOf } from './widget'
+import { WKbd } from '../ui'
 import type { TreeNode } from './passive-tree'
 
 const build = useActiveBuild()
+
+// Open the tree in game first; the card stays clear of the tree's middle.
+const drawn = shallowRef(treeDrawn())
+const hotkey = computed(() => build.pobWidget.value ? treeHotkeyOf(build.pobWidget.value) : null)
+// Marked new until first used. Per PC; nothing else depends on it.
+const NEW_KEY = 'woke-tree-overlay-seen'
+const isNew = shallowRef(readSeen() !== '1')
+function readSeen () { try { return localStorage.getItem(NEW_KEY) } catch { return '1' } }
+async function drawTree () {
+  if (isNew.value) { isNew.value = false; try { localStorage.setItem(NEW_KEY, '1') } catch {} }
+  await toggleBuildTree()
+  drawn.value = treeDrawn()
+}
 const details = build.details
 const level = build.level
 
@@ -87,6 +109,20 @@ const saved = computed(() => {
   letter-spacing: 0.08em;
   color: var(--w-faint);
   font-family: var(--w-caps-face);
+}
+.draw {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+}
+.new {
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--w-accent);
+  color: var(--w-bg, #000);
+  font-size: var(--w-fs-xs);
 }
 .link {
   display: flex;

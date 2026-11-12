@@ -85,3 +85,30 @@ export function takenNodes (path: BuildPath, lit: boolean[]): Set<number> {
   for (const n of path.nodes) if (n.kind === 'start') taken.add(n.id)
   return taken
 }
+
+// The overlay layer (TreeOverlay.vue) registers here, so the dock icon, its
+// card and its menu can draw the tree as the hotkey does.
+interface TreeDrawer {
+  isOn: () => boolean
+  // quiet: no note when the tree isn't open. Whether it drew.
+  start: (quiet?: boolean) => Promise<boolean>
+  stop: () => void
+}
+let drawer: TreeDrawer | null = null
+
+export function registerTreeDrawer (d: TreeDrawer): () => void {
+  drawer = d
+  return () => { if (drawer === d) drawer = null }
+}
+
+export function treeDrawn (): boolean {
+  return drawer?.isOn() ?? false
+}
+
+// Draws the build over the game's tree, or hides it when it shows.
+// Whether the tree is drawn now (or was just hidden).
+export async function toggleBuildTree (quiet = false): Promise<boolean> {
+  if (!drawer) return false
+  if (drawer.isOn()) { drawer.stop(); return true }
+  return await drawer.start(quiet)
+}
