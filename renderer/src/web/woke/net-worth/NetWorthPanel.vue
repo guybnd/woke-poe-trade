@@ -90,7 +90,7 @@
         <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
         <WChip clickable :active="cat === 'all'" @click="cat = 'all'">All</WChip>
         <WChip v-for="c in CATEGORIES" :key="c.id" clickable :active="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">{{ c.label }}</WChip>
-        <WChip clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }} div</WChip>
+        <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }} div</WChip>
       </section>
       <ItemTable :lines="tableLines" :divine="divine" :changes="changes" :tab-names="tabNames" />
 
@@ -109,19 +109,21 @@
 <script setup lang="ts">
 // Net worth, pick A1 "Ledger": the answer first (total, its line, KPIs),
 // then what changed and where it is, then your tabs and every item.
-import { computed, defineAsyncComponent, onMounted, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WTabs } from '../ui'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
+import { isWidgetTypeOn } from '../modules'
+import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { bigGains, change24h, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange } from './ledger'
-import { divine, historyNow, ledger, summary, tabValues, valuation, wantPrices } from './store'
+import { divine, historyNow, leagueNow, ledger, summary, tabValues, valuation, wantPrices } from './store'
 import { hideBelowOf } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import LedgerChart from './LedgerChart.vue'
@@ -200,16 +202,26 @@ const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value
 
 // ---------- what changed (C2, C1) ----------
 // The Farming window's running session, if any: its maps come from Client.txt.
-const farming = computed(() => {
-  const w = AppConfig().widgets.find(x => x.wmType === FARMING_TYPE && (x as FarmingWidget).session) as FarmingWidget | undefined
-  return w?.session ?? null
-})
+// Its module must be on: off, the window isn't there to end it.
+const farmingWidget = computed(() => AppConfig().widgets.find(x =>
+  x.wmType === FARMING_TYPE && (x as FarmingWidget).session && isWidgetTypeOn(AppConfig(), x.wmType)) as FarmingWidget | undefined)
+const farming = computed(() => farmingWidget.value?.session ?? null)
+// The session's clock moves while you sit in the hideout.
+const now = shallowRef(Date.now())
+const clock = setInterval(() => { now.value = Date.now() }, 30_000)
+onUnmounted(() => { clearInterval(clock) })
+// The session's total from every refresh in it (gains.ts keeps them all).
+const sessionChaos = shallowRef(0)
+watch([farming, () => ledger.value.points.length, leagueNow], async () => {
+  const s = farming.value
+  const id = leagueNow.value
+  sessionChaos.value = s && id ? (await stashGainsBetween(id, s.startedAt, Date.now())).chaos : 0
+}, { immediate: true })
 const session = computed(() => {
   const s = farming.value
   if (!s) return null
-  const ms = elapsed(s, Date.now())
-  const chaos = ledger.value.diffs.filter(d => d.at >= s.startedAt).reduce((t, d) => t + d.netChaos, 0)
-  const divVal = toDiv(chaos)
+  const ms = elapsed(s, now.value)
+  const divVal = toDiv(sessionChaos.value)
   return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null }
 })
 const groups = computed(() => {
@@ -217,7 +229,8 @@ const groups = computed(() => {
   return s ? groupByRuns(ledger.value.diffs, s.runs ?? [], s.startedAt) : groupByRefresh(ledger.value.diffs)
 })
 function endSession () {
-  requestEndSession()
+  const w = farmingWidget.value
+  if (w) requestEndSession(w.wmId)
 }
 
 // ---------- categories, tabs, filters ----------

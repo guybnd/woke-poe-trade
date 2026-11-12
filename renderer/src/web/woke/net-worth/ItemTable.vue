@@ -3,7 +3,8 @@
     <thead>
       <tr>
         <th v-for="c in COLS" :key="c.id" :class="[c.id === 'name' ? $style.left : '', sort === c.id ? $style.on : '']"
-          :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" @click="sortBy(c.id)">
+          :aria-sort="sort === c.id ? (desc ? 'descending' : 'ascending') : undefined" tabindex="0"
+          @click="sortBy(c.id)" @keydown.enter.prevent="sortBy(c.id)" @keydown.space.prevent="sortBy(c.id)">
           {{ c.label }}<template v-if="sort === c.id">{{ desc ? ' ▾' : ' ▴' }}</template>
         </th>
       </tr>
@@ -77,15 +78,18 @@ const sorted = computed(() => {
       case 'name': return l.name.toLowerCase()
       case 'count': return l.count
       case 'unit': return l.unitChaos
-      case 'change': return props.changes.get(l.key) ?? -Infinity
+      case 'change': return props.changes.get(l.key) ?? NaN
       case 'tab': return tabText(l).toLowerCase()
       default: return l.chaos
     }
   }
   const dir = desc.value ? -1 : 1
+  // No 24h change ("—") sorts last either way.
+  const missing = (x: number | string) => typeof x === 'number' && Number.isNaN(x)
   return [...props.lines].sort((a, b) => {
     const x = key(a)
     const y = key(b)
+    if (missing(x) || missing(y)) return missing(x) === missing(y) ? 0 : missing(x) ? 1 : -1
     return (x < y ? -1 : x > y ? 1 : 0) * dir
   })
 })
@@ -117,7 +121,8 @@ function tipOf (l: ValuedLine): ItemTipRef {
   return { name: l.tipName, variant: l.variant, note: tabs.length ? `In ${tabs.join(', ')}` : undefined, menu: menuOf(l) }
 }
 function menuOf (l: ValuedLine): ItemMenuRef {
-  return { name: l.tipName, variant: l.variant, rarity: l.frame === 3 ? 'unique' : 'normal' }
+  // Gems, cards and currency: no rarity, so the menu looks them up by name.
+  return { name: l.tipName, variant: l.variant, rarity: l.frame === 3 ? 'unique' : undefined }
 }
 </script>
 

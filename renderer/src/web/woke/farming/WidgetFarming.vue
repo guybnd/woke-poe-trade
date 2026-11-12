@@ -421,7 +421,7 @@ function end () {
 }
 
 // Net worth's End session button ends this window's session.
-const stopEndRequests = onEndSessionRequest(end)
+const stopEndRequests = onEndSessionRequest(props.config.wmId, end)
 onUnmounted(stopEndRequests)
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)

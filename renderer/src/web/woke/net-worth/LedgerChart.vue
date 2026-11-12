@@ -70,12 +70,12 @@ const span = computed(() => {
 const xOf = (at: number) => (at - span.value.t0) / (span.value.t1 - span.value.t0) * W
 const yOf = (v: number) => H - PAD - (v - span.value.lo) / (span.value.hi - span.value.lo) * (H - 2 * PAD)
 
-const line = computed(() => props.series.length ? 'M' + props.series.map(p => `${xOf(p.at).toFixed(1)},${yOf(p.div).toFixed(1)}`).join(' L') : '')
+const line = computed(() => props.series.length >= 2 ? 'M' + props.series.map(p => `${xOf(p.at).toFixed(1)},${yOf(p.div).toFixed(1)}`).join(' L') : '')
 const area = computed(() => line.value ? `${line.value} L${W},${H} L0,${H} Z` : '')
 
 const bands = computed(() => {
   const s = props.series
-  if (!s.length) return []
+  if (s.length < 2) return []
   const base = s.map(() => 0)
   return CAT_ORDER.map(c => {
     const top = s.map((p, i) => base[i] + p.byCategory[c])

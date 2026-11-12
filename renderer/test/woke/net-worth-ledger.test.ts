@@ -60,6 +60,14 @@ describe('chart points', () => {
     expect(addPoint([p(1)], { ...p(1), chaos: 9 })).toHaveLength(1)
   })
 
+  it('keeps points small: chaos to 0.1, and old points lose their "what changed"', () => {
+    const p = (at: number): LedgerPoint => ({ at, chaos: 1.234, divine: 200, byCategory: cats({ currency: 1.26 }), netChaos: 0.04, top: ['x'] })
+    const out = addPoint([p(0)], p(8 * DAY))
+    expect(out[1]).toMatchObject({ chaos: 1.2, netChaos: 0, top: ['x'] })
+    expect(out[1].byCategory.currency).toBe(1.3)
+    expect(out[0].top).toEqual([])
+  })
+
   it('fills days before the first refresh point from the daily snapshots, in each day\'s rate', () => {
     const now = 10 * DAY
     const days = {
@@ -128,7 +136,7 @@ describe('what changed', () => {
 
   it('keeps recent changes small', () => {
     const big: StashDiff = { at: 1, added: Array.from({ length: 30 }, (_, i) => ({ key: `${i}`, name: `${i}`, icon: '', count: 1, chaos: 1 })), removed: [], netChaos: 30 }
-    expect(keepDiff([], big)[0].added).toHaveLength(12)
+    expect(keepDiff([], big)[0].added).toHaveLength(8)
   })
 
   it('groups a session\'s refreshes per map run before them', () => {
@@ -144,5 +152,18 @@ describe('what changed', () => {
   it('without a session, one group per refresh, newest first', () => {
     const g = groupByRefresh([d(1, 5), d(2, -3), d(3, 7), d(4, 1)])
     expect(g.map(x => x.netChaos)).toEqual([1, 7, -3])
+  })
+})
+
+describe('End session from Net worth', () => {
+  it('ends only the Farming window it shows, and says when none is there', async () => {
+    const { onEndSessionRequest, requestEndSession } = await import('@/web/woke/farming/farming')
+    const ended: number[] = []
+    const stop1 = onEndSessionRequest(1, () => ended.push(1))
+    const stop2 = onEndSessionRequest(2, () => ended.push(2))
+    expect(requestEndSession(2)).toBe(true)
+    expect(ended).toEqual([2])
+    stop1(); stop2()
+    expect(requestEndSession(1)).toBe(false)
   })
 })

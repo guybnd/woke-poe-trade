@@ -43,6 +43,9 @@ export interface LedgerPoint {
 }
 
 const MAX_POINTS = 3000
+// Older than this, a point keeps its value but not its "what changed".
+const TOP_KEPT_MS = 7 * 86_400_000
+const round1 = (n: number) => Math.round(n * 10) / 10
 
 export function topChanges (diff: StashDiff | null, n = 3): string[] {
   if (!diff) return []
@@ -53,8 +56,18 @@ export function topChanges (diff: StashDiff | null, n = 3): string[] {
   return rows.map(({ l, sign }) => `${sign}${l.count > 1 ? `${l.count} × ` : ''}${l.name}`)
 }
 
+// Kept small: one point per read, chaos to 0.1, old points without "top".
 export function addPoint (points: LedgerPoint[], p: LedgerPoint): LedgerPoint[] {
-  return [...points.filter(x => x.at !== p.at), p].sort((a, b) => a.at - b.at).slice(-MAX_POINTS)
+  const small: LedgerPoint = {
+    ...p,
+    chaos: round1(p.chaos),
+    netChaos: p.netChaos == null ? null : round1(p.netChaos),
+    byCategory: Object.fromEntries(Object.entries(p.byCategory).map(([k, v]) => [k, round1(v)])) as Record<Category, number>
+  }
+  return [...points.filter(x => x.at !== p.at), small]
+    .sort((a, b) => a.at - b.at)
+    .slice(-MAX_POINTS)
+    .map(x => x.top.length && p.at - x.at > TOP_KEPT_MS ? { ...x, top: [] } : x)
 }
 
 export type ChartRange = '24h' | '7d' | 'league'
@@ -160,8 +173,8 @@ export function priceMoves (lines: Array<Pick<ValuedLine, 'key' | 'name' | 'chao
 // ---------- what changed (C1, C2) ----------
 
 // Recent refreshes' changes, kept small for the change view.
-export const MAX_DIFFS = 60
-export const DIFF_ROWS_KEPT = 12
+export const MAX_DIFFS = 200
+export const DIFF_ROWS_KEPT = 8
 
 export function keepDiff (diffs: StashDiff[], d: StashDiff): StashDiff[] {
   const small = { ...d, added: d.added.slice(0, DIFF_ROWS_KEPT), removed: d.removed.slice(0, DIFF_ROWS_KEPT) }

@@ -24,13 +24,16 @@ export function isMapCostItem (item: { type: string }): boolean {
 export const AUTO_PAUSE_MS = 5 * 60 * 1000
 
 // Another window (Net worth) asking the Farming window to end its session.
-const endRequests = new Set<() => void>()
-export function onEndSessionRequest (fn: () => void): () => void {
-  endRequests.add(fn)
-  return () => { endRequests.delete(fn) }
+const endRequests = new Map<number, () => void>()
+export function onEndSessionRequest (wmId: number, fn: () => void): () => void {
+  endRequests.set(wmId, fn)
+  return () => { if (endRequests.get(wmId) === fn) endRequests.delete(wmId) }
 }
-export function requestEndSession () {
-  for (const fn of endRequests) fn()
+// False when that window isn't mounted (its module is off).
+export function requestEndSession (wmId: number): boolean {
+  const fn = endRequests.get(wmId)
+  fn?.()
+  return !!fn
 }
 
 export interface PricedRef {
