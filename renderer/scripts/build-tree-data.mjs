@@ -207,6 +207,8 @@ function clusterData () {
       if (n.icon) used.add(n.icon)
     }
   }
+  // A small passive that grants nothing.
+  used.add('Art/2DArt/SkillIcons/passives/MasteryBlank.png')
   const jewels = {}
   for (const [base, j] of Object.entries(cj.jewels)) {
     const skills = {}

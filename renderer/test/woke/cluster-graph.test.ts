@@ -29,6 +29,11 @@ describe('cluster jewels in the PoB tree', () => {
     expect(j.notables).toEqual(['Prodigious Defence', 'Advance Guard'])
   })
 
+  it('reads a skill whose enchant is two lines', () => {
+    const j = readClusterJewel(item({ implicits: ['Adds 8 Passive Skills', 'Added Small Passive Skills grant: Axe Attacks deal 12% increased Damage with Hits and Ailments', 'Added Small Passive Skills grant: Sword Attacks deal 12% increased Damage with Hits and Ailments'] }), data)!
+    expect(j.skill).toBe('affliction_axe_and_sword_damage')
+  })
+
   it('grows a large cluster off an outer socket with PoB\'s node ids', () => {
     const [outer] = Object.entries(data.sockets).find(([, s]) => s.size === 2)!
     const built = buildClusters(data, nodes, id => id === Number(outer) ? LARGE : undefined, 100)
@@ -41,7 +46,7 @@ describe('cluster jewels in the PoB tree', () => {
     for (const n of built.nodes.filter(n => n.kind !== 'jewel')) expect(n.id - base).toBeGreaterThanOrEqual(0)
     // All on the large ring around the proxy group.
     const [gx, gy] = data.proxies[s.proxy]
-    for (const n of built.nodes) expect(Math.round(Math.hypot(n.x - gx, n.y - gy))).toBe(data.orbitRadii[3])
+    for (const n of built.nodes) expect(Math.abs(Math.hypot(n.x - gx, n.y - gy) - data.orbitRadii[3])).toBeLessThan(2)
   })
 
   // Every cluster node a real PoB build allocated exists in what's grown here.

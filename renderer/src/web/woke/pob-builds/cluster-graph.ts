@@ -54,8 +54,8 @@ export function readClusterJewel (item: PobItem, data: ClusterData): ClusterJewe
   let skill: string | null = item.clusterSkill ?? null
   if (!skill) {
     for (const [tag, s] of Object.entries(template.skills)) {
-      const enchant = s.enchant.join(' ').toLowerCase()
-      if (enchant && lower.includes(enchant)) { skill = tag; break }
+      // A skill's enchant can be two lines (trap and mine, axe and sword...).
+      if (s.enchant.length && s.enchant.every(e => lower.includes(e.toLowerCase()))) { skill = tag; break }
     }
   }
   // Small and Medium curse clusters read alike; each size has its own skill.
@@ -90,6 +90,9 @@ export function readClusterJewel (item: PobItem, data: ClusterData): ClusterJewe
   if (!keystone && !skill && !nothingness && !notables.length) return null
   return { template, skill, nodeCount, socketCount: socketOverride ?? socketCount, nothingness, notables, keystone, addedMods }
 }
+
+// What a small passive that grants nothing looks like, as in PoB.
+export const NOTHINGNESS_ICON = 'Art/2DArt/SkillIcons/passives/MasteryBlank.png'
 
 // Cluster template index space <-> the tree's orbit index space.
 function translate (oidx: number, from: number, to: number): number {
@@ -252,7 +255,7 @@ function subgraph (
     const at = smallIdx[i]
     if (at == null) break
     const stats = skill ? [...skill.stats, ...jewel.addedMods] : [...jewel.addedMods]
-    indicies.set(at, make(nodeId + at, 'small', skill?.name ?? 'Nothingness', stats, skill?.icon ?? ''))
+    indicies.set(at, make(nodeId + at, 'small', skill?.name ?? 'Nothingness', stats, skill?.icon ?? NOTHINGNESS_ICON))
   }
 
   const entrance = indicies.get(0)

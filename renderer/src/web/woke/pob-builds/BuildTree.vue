@@ -139,7 +139,19 @@ const clusterBuild = computed(() => {
   const art = passiveTreeArt()
   if (!t || !data || !art) return null
   const at = new Map((shown.value?.sockets ?? []).map(s => [s.node, s.item]))
-  return buildClusters(data, t, node => at.get(node), art.groups.length)
+  const built = buildClusters(data, t, node => at.get(node), art.groups.length)
+  // Comparing: the other tree's clusters too, so points it has that this one
+  // doesn't are drawn. Where both have a cluster in one socket, the shown
+  // tree's jewel names the nodes (ids follow the socket, not the jewel).
+  const other = previous.value
+  if (other) {
+    const was = new Map((other.sockets ?? []).map(s => [s.node, s.item]))
+    const have = new Set(built.nodes.map(n => n.id))
+    const more = buildClusters(data, t, node => was.get(node), art.groups.length + built.groups.length)
+    built.nodes.push(...more.nodes.filter(n => !have.has(n.id)))
+    built.groups.push(...more.groups)
+  }
+  return built
 })
 const tree = computed(() => {
   const t = baseTree.value
@@ -364,7 +376,8 @@ watch(box, (el) => {
 })
 
 // Not when the switch flips: you may be looking at a part of the tree.
-watch([() => shown.value?.title, tree], () => { nextTick(fit) })
+// The base tree only: a build's clusters rebuilding (PoB saved it) keeps the view.
+watch([() => shown.value?.title, baseTree], () => { nextTick(fit) })
 watch([fromSet, toSet, sheets, jewels], schedule)
 watch(lit, drawRing)
 
