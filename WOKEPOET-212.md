@@ -25,6 +25,12 @@ history:
       + 140.39 + 44.8). Unit 3077/3077, e2e stat-header + poe-mode 16/16,
       tsc/lint/build clean. Adversarial review and perf budgets running.
     id: a-2026-11-12t09-12-15-280z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T09:19:44.386Z'
+    comment: Updated implementation link.
+    id: a-2026-11-12t09-19-44-386z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/385'
 ---
 Build Guy's picked design F1 (Round 3) from https://claude.ai/artifact/JQEW387nXKJaisCjz94Xvu for the weapon/armour property block at the top of the price check.
 
