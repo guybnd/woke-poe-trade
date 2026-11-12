@@ -2,7 +2,7 @@
   <div :class="[$style.spot, { [$style.under]: wm?.active.value }]" :style="{ left: `min(${spot.x}%, calc(100% - ${size.w}px))`, top: `min(${spot.y}%, calc(100% - ${size.h}px))` }">
     <div ref="el" :class="[$style.pin, { [$style.dragging]: dragging }]" data-w-panel :data-pin="pin.id"
       :style="{ opacity: solid ? 1 : pin.opacity / 100, zoom: pinScale / 100 }">
-      <div :class="$style.head" title="Drag to move. It keeps one spot in towns and hideouts and another everywhere else."
+      <div ref="head" :class="$style.head" title="Drag to move. It keeps one spot in towns and hideouts and another everywhere else."
         @pointerdown="startDrag">
         <i :class="pin.icon" class="w-accent" />
         <span class="w-head-font w-accent w-trunc" :class="$style.title">{{ pin.title }}</span>
@@ -22,7 +22,7 @@
           aria-label="How solid this pin is" @input="set(Number(($event.target as HTMLInputElement).value))">
         <span class="w-num">{{ pin.opacity }}%</span>
       </div>
-      <div :class="$style.body" class="w-scroll"><slot /></div>
+      <div :class="[$style.body, { [$style.through]: clickThrough && !wm?.active.value }]" class="w-scroll"><slot /></div>
     </div>
   </div>
 </template>
@@ -37,19 +37,26 @@ import { hoverZonesMoved, useHoverZone } from '../shared/hover'
 import { MAX_PIN_OPACITY, MIN_PIN_OPACITY, movePin, pinScale, place, removePin, setPinOpacity, spotOf } from './pins'
 import type { Pin } from './pins'
 
-const props = defineProps<{ pin: Pin, index: number }>()
+// `clickThrough`: only the head takes the mouse, so clicks on the body reach
+// the game under it (a pinned atlas tree over the game's own atlas).
+const props = defineProps<{ pin: Pin, index: number, clickThrough?: boolean }>()
 
 // With the overlay open, the windows you're using go over the pins.
 const wm = inject<WidgetManager | null>('wm', null)
 
 const el = shallowRef<HTMLElement | null>(null)
+const head = shallowRef<HTMLElement | null>(null)
 // Takes the mouse while it's over the pin, even with the game in focus, so
 // the head drags and the body scrolls instead of walking your character there.
 // Only after the mouse rests on it, so sweeping past a see-through pin still
 // walks your character there.
 const rested = shallowRef(false)
 const dragging = shallowRef(false)
-const hovered = useHoverZone(el, { enabled: () => true, activate: () => rested.value || dragging.value })
+const sliderOpen = shallowRef(false)
+// A click-through pin takes the mouse only on its head, but on all of it
+// while you drag it or use its slider, so neither drops halfway.
+const hovered = useHoverZone(computed(() => props.clickThrough && !dragging.value && !sliderOpen.value ? head.value : el.value),
+  { enabled: () => true, activate: () => rested.value || dragging.value })
 const REST_MS = 250
 let restTimer: ReturnType<typeof setTimeout> | null = null
 watch(hovered, (on) => {
@@ -59,7 +66,6 @@ watch(hovered, (on) => {
 })
 // Solid under the mouse, except while you're setting how see-through it is:
 // then it shows the level you're picking.
-const sliderOpen = shallowRef(false)
 const overFade = shallowRef(false)
 const justSet = shallowRef(false)
 let setTimer: ReturnType<typeof setTimeout> | null = null
@@ -175,6 +181,7 @@ onUnmounted(() => {
   font-size: var(--w-fs-xs);
   cursor: pointer;
 }
+.through { pointer-events: none; }
 .btn:hover { color: var(--w-fg); background: var(--w-hover, rgba(255, 255, 255, .06)); }
 .btnOn { color: var(--w-fg); background: var(--w-accent-soft); }
 .fadeRow {

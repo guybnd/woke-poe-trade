@@ -7,7 +7,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { zone } from '../shared/zone'
 import type { ZoneKind } from '../shared/zone'
 
-export type PinKind = 'dock' | 'pob-tree' | 'pob-slot' | 'pob-gems' | 'pob-next'
+export type PinKind = 'dock' | 'pob-tree' | 'pob-slot' | 'pob-gems' | 'pob-next' | 'atlas-tree'
 
 // Where a pin sits, in percent of the window, so a resolution change keeps it on screen.
 export interface PinSpot { x: number, y: number }

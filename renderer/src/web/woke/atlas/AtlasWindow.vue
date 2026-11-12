@@ -70,7 +70,9 @@
 
       <template v-if="selected">
         <AtlasTree v-if="!config.treeHidden && atlasTree" :key="selected.id" :model="atlasTree" :tree-url="selected.treeUrl" :threads="selected.threads"
-          @update:tree-url="selected.treeUrl = $event" @close="config.treeHidden = true" />
+          :lit="config.lit ?? []" :list-open="!config.mechanicsHidden" :pin="() => atlasTreePin(config, selected!)"
+          @update:tree-url="selected.treeUrl = $event" @update:lit="config.lit = $event" @update:list-open="config.mechanicsHidden = !$event"
+          @close="config.treeHidden = true" />
         <WPanel v-else-if="!config.treeHidden && !atlasDataError" title="Atlas tree" size-key="tree" width="44rem" :busy="!atlasTreeError">
           <WEmpty v-if="atlasTreeError" icon="fas fa-exclamation-triangle">{{ atlasTreeError }}</WEmpty>
           <WSkeleton v-else :rows="6" :value="false" />
@@ -104,6 +106,7 @@ import type { FarmingWidget } from '../farming/farming'
 import { extractTreeCode } from './tree'
 import { addRegex, joinFolder, libraryOn, regexesIn } from '../regex-library/folders'
 import { claimNewRegexFolder, copyRegexes, refileRegexes } from './strategy-ops'
+import { atlasTreePin } from './atlas-pin'
 
 // The tree editor's code loads the first time a strategy is opened.
 const AtlasTree = defineAsyncComponent(() => import('./AtlasTree.vue'))
