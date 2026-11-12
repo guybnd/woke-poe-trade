@@ -88,7 +88,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
-| Mapping | Atlas strategies | Tree, scarabs and regex per strategy |
+| Mapping | Atlas strategies | Atlas tree, Threads and regex per strategy |
 | Mapping | League mechanics | Prices and picks for each league mechanic |
 | Campaign & lab | Campaign | Next steps for the act you are in |
 | Campaign & lab | Run timer | Act splits and personal bests |
