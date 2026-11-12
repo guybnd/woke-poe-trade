@@ -178,32 +178,7 @@ describe('boss sub-splits', () => {
   })
 })
 
-describe('run timer: idle pause and town time', () => {
-  it('a long gap in the log pauses the run as of the last activity, and the next zone resumes it', async () => {
-    const { idleCheck, runElapsed, IDLE_MS } = await import('@/web/woke/campaign/run-timer')
-    const w = widget()
-    enter(w, '1_1_1', 0)
-    enter(w, '1_1_2', 5 * MIN)
-    // The game sits closed for an hour.
-    expect(idleCheck(w.run!, 65 * MIN)).toBe(true)
-    expect(runElapsed(w.run!, 65 * MIN)).toBe(5 * MIN)
-    expect(w.run!.idlePaused).toBe(true)
-    enter(w, '1_1_3', 70 * MIN)
-    expect(w.run!.idlePaused).toBe(false)
-    expect(runElapsed(w.run!, 72 * MIN)).toBe(7 * MIN)
-    // A short gap doesn't pause.
-    expect(idleCheck(w.run!, 70 * MIN + IDLE_MS - 1)).toBe(false)
-  })
-
-  it('a gap the app slept through is dropped when the next line comes', async () => {
-    const { runElapsed } = await import('@/web/woke/campaign/run-timer')
-    const w = widget()
-    enter(w, '1_1_1', 0)
-    enter(w, '1_1_2', 5 * MIN)
-    enter(w, '1_1_3', 6 * 60 * MIN)
-    expect(runElapsed(w.run!, 6 * 60 * MIN + MIN)).toBe(6 * MIN)
-  })
-
+describe('run timer: town time', () => {
   it('counts time in towns and hideouts apart', async () => {
     const { townElapsed, runElapsed } = await import('@/web/woke/campaign/run-timer')
     const w = widget()
@@ -213,29 +188,5 @@ describe('run timer: idle pause and town time', () => {
     enter(w, 'HideoutFelled', 8 * MIN)
     expect(townElapsed(w.run!, 9 * MIN)).toBe(3 * MIN)
     expect(runElapsed(w.run!, 9 * MIN)).toBe(9 * MIN)
-  })
-})
-
-describe('run timer: pauses by hand and by idling stay apart', () => {
-  it('resuming by hand counts as activity, and a pause by hand is never resumed by the log', async () => {
-    const { idleCheck, pauseRun, resumeRun, noteActivity, runElapsed, IDLE_MS } = await import('@/web/woke/campaign/run-timer')
-    const w = widget()
-    enter(w, '1_1_1', 0)
-    expect(idleCheck(w.run!, IDLE_MS + MIN)).toBe(true)
-    resumeRun(w.run!, 90 * MIN)
-    expect(idleCheck(w.run!, 91 * MIN)).toBe(false)
-    expect(runElapsed(w.run!, 91 * MIN)).toBe(MIN)
-    pauseRun(w.run!, 92 * MIN)
-    noteActivity(w.run!, 93 * MIN)
-    enter(w, '1_1_2', 94 * MIN)
-    expect(w.run!.runningSince).toBeNull()
-  })
-
-  it('any log line keeps a long zone from idling', async () => {
-    const { idleCheck, noteActivity } = await import('@/web/woke/campaign/run-timer')
-    const w = widget()
-    enter(w, '1_1_1', 0)
-    noteActivity(w.run!, 15 * MIN)
-    expect(idleCheck(w.run!, 30 * MIN)).toBe(false)
   })
 })

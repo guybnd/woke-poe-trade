@@ -17,7 +17,7 @@
           <div class="flex justify-between w-num"><span class="w-dim">Zone</span><span>{{ formatClock(total - run.zoneSinceMs) }}</span></div>
           <div v-if="delta != null" class="flex justify-between w-num"><span class="w-dim">vs {{ cmpLabel }}</span>
             <span :class="delta <= 0 ? 'w-up' : 'w-down'">{{ formatDelta(delta) }}</span></div>
-          <div v-if="run.runningSince == null" class="w-num" style="color: var(--w-warn);">{{ run.idlePaused ? 'paused: no game activity, resumes on the next zone' : 'paused' }}</div>
+          <div v-if="run.runningSince == null" class="w-num" style="color: var(--w-warn);">paused</div>
         </div>
       </template>
     </DockItem>
@@ -40,7 +40,7 @@
             <span :class="$style.sep" />
             <span class="w-dim">Zone <span class="w-num" style="color: var(--w-fg);">{{ formatClock(total - run.zoneSinceMs) }}</span></span>
           </template>
-          <span v-if="!run.finished && run.runningSince == null" class="w-num" style="color: var(--w-warn);" :title="run.idlePaused ? 'No game activity for 20 minutes: the time since then does not count. It resumes on the next zone.' : undefined">{{ run.idlePaused ? 'paused (idle)' : 'paused' }}</span>
+          <span v-if="!run.finished && run.runningSince == null" class="w-num" style="color: var(--w-warn);">paused</span>
         </template>
         <span v-else class="w-dim">Campaign timer · starts on the Twilight Strand</span>
 
@@ -178,7 +178,7 @@ import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
 import { actLabel } from './log-parse'
 import {
   applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
-  migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed, idleCheck, noteActivity
+  migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed
 } from './run-timer'
 import { CAMPAIGN_TYPE } from './widget'
 import type { CampaignWidget } from './widget'
@@ -232,13 +232,6 @@ onUnmounted(tickWhile(() => cardShown.value, () => { now.value = Date.now() }, 1
 const run = computed(() => props.config.run)
 const total = computed(() => run.value ? runElapsed(run.value, now.value) : 0)
 const town = computed(() => run.value ? townElapsed(run.value, now.value) : 0)
-// No game activity for a while (closed, or left alone): the run pauses as of
-// its last activity, and the next log line resumes it.
-const idleTimer = setInterval(() => {
-  const r = props.config.run
-  if (r && idleCheck(r, Date.now())) { now.value = Date.now(); saveConfig() }
-}, 60 * 1000)
-onUnmounted(() => clearInterval(idleTimer))
 const cmp = computed(() => comparisonRun(props.config))
 const pb = computed(() => personalBest(props.config.history))
 const pbTotal = computed(() => pb.value ? runTotal(pb.value) : null)
@@ -287,13 +280,6 @@ function formatDate (ts: number) {
 function applyLines (lines: LogLine[]) {
   let changed = false
   for (const { ev, at, line } of lines) {
-    // Any line from the game is activity: chat, boss lines, trades.
-    const r = props.config.run
-    if (r) {
-      const idle = r.idlePaused
-      noteActivity(r, at)
-      if (idle && !r.idlePaused) changed = true
-    }
     if (ev ? applyRunEvent(props.config, ev, at) : applyBossSpeech(props.config, line, at)) changed = true
   }
   if (lines.length) props.config.lastLogAt = lines[lines.length - 1].at
