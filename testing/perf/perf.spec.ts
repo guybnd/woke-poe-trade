@@ -20,6 +20,8 @@ import { installProbe, resetProbe, readProbe, total } from './probe'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const RESULTS = path.resolve(here, '../perf-results')
 const BUDGETS = path.join(here, 'budgets.json')
+// All JS (lazy chunks too): a fixed 5 MB target. Startup JS is the strict one.
+const ALL_JS_TARGET_KB = 5120
 const RENDERER_DIST = path.resolve(here, '../../renderer/dist')
 
 const WINDOW_MS = 10_000
@@ -218,6 +220,8 @@ function report () {
       if (key.endsWith('.frames')) next[key] = Math.max(next[key], 30)
       // No headroom: any OCR worker loaded before a scan is a regression.
       if (key === 'memory.ocrWorkers') next[key] = m.value
+      // A fixed target, not raised per feature (README.md).
+      if (key === 'bundle.allJs') next[key] = Math.max(ALL_JS_TARGET_KB, next[key])
     }
     fs.writeFileSync(BUDGETS, JSON.stringify(next, null, 2) + '\n')
     return
