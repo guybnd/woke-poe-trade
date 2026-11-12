@@ -218,7 +218,7 @@ describe('presets, second batch', () => {
     expect(finalTier(doc, gem({ areaLevel: 83 }))).toBe('qt2')
     expect(finalTier(doc, gem({ quality: 23 }))).toBe('qt1')
     expect(finalTier(doc, gem({ baseType: 'Awakened Empower Support', itemClass: 'Support Gems' }))).toBe('t1')
-    expect(finalTier(doc, { itemClass: 'Life Flasks', baseType: 'Divine Life Flask', rarity: 'Magic', quality: 20, areaLevel: 70 })).toBe('vendorflasks')
+    expect(finalTier(doc, { itemClass: 'Life Flasks', baseType: 'Divine Life Flask', rarity: 'Magic', quality: 20, itemLevel: 70, areaLevel: 70 })).toBe('vendorflasks')
     expect(finalTier(parseFilter(NS), gem({}))).toBe('qt2')
   })
 

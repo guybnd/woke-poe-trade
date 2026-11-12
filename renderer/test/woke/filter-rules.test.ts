@@ -156,6 +156,16 @@ describe('presets', () => {
     // 20% quality gem while levelling.
     const gem = ring({ itemClass: 'Skill Gems', baseType: 'Fireball', rarity: 'Normal', quality: 20, gemLevel: 1, areaLevel: 40, itemLevel: 40 })
     expect(matchItem(out, gem).final?.block.tier).toBe('vendorgems')
+    // What NeverSink ranks higher keeps its rule.
+    const same = (f: ItemFacts) => expect(matchItem(out, f).visibility).toBe(matchItem(plain, f).visibility)
+    same(ring({ itemClass: 'Rings', baseType: 'Vermillion Ring', rarity: 'Normal', itemLevel: 84, areaLevel: 84 }))
+    same(ring({ itemClass: 'Rings', baseType: 'Amethyst Ring', rarity: 'Normal', itemLevel: 84, areaLevel: 84 }))
+    same({ ...map, influences: ['Shaper'] })
+    same(ring({ itemClass: 'Utility Flasks', baseType: 'Quicksilver Flask', rarity: 'Magic', quality: 20, itemLevel: 84, areaLevel: 75 }))
+    for (const g of [{ gemLevel: 21, quality: 20, corrupted: true }, { gemLevel: 1, quality: 23 }]) {
+      const f = ring({ itemClass: 'Skill Gems', baseType: 'Fireball', rarity: 'Normal', areaLevel: 70, itemLevel: 70, ...g })
+      expect(matchItem(out, f).final?.block.tier).toBe(matchItem(plain, f).final?.block.tier)
+    }
     // Every sound is at 60% or less.
     for (const b of out.blocks) {
       if (b.disabled) continue

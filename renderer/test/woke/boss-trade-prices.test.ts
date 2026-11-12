@@ -33,7 +33,7 @@ describe('boss drop pricing', () => {
   })
 
   it('fills a drop poe.ninja doesn\'t list from trade, and never overrides a row it has', () => {
-    const px = priceResolver([item('Voidforge', 100)], quotes({ 'Decaying Reliquary Key': { chaos: 800, listings: 12 }, Voidforge: { chaos: 999, listings: 1 } }))
+    const px = priceResolver([item('Voidforge', 100)], quotes({ 'Decaying Reliquary Key': { chaos: 800, listings: 12 }, 'Voidforge': { chaos: 999, listings: 1 } }))
     expect(dropPrice({ name: 'Decaying Reliquary Key', chance: null }, px, prefs())).toMatchObject({ price: 800, source: 'trade', mode: null })
     expect(dropPrice({ name: 'Voidforge', chance: null }, px, prefs())).toMatchObject({ price: 100, source: 'ninja' })
   })

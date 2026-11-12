@@ -332,6 +332,8 @@ export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | 
     out.push(look(addedBlock(PRESET_TYPE, 'vendorflasks', '20% quality flasks for the vendor', [
       cond('AreaLevel', '<=', [EARLY_MAPS_TO]),
       cond('Quality', '>=', [20]),
+      // NeverSink's own endgame flask tiers start at item level 82.
+      cond('ItemLevel', '<', [82]),
       cond('Rarity', '', ['Normal', 'Magic']),
       cond('Class', '==', FLASK_CLASSES)
     ], 'Show', 'Presets'), [120, 220, 255], 38))
@@ -462,8 +464,13 @@ const minAreaLevel = (b: FilterBlock) => Math.max(0, ...b.conditions
   .map(c => Number(c.values[0]) + (c.op === '>' ? 1 : 0)))
 const isRgbTier = (b: FilterBlock) => /^rgb/.test(b.tier ?? '') && /^(socketslinks|endgamergb|leveling->normalmagic->rgb)$/.test(b.type ?? '')
 // NeverSink's white and blue rules in maps that the gear preset narrows to rares.
+// Of the crafting bases, only NeverSink's lowest tier below item level 86,
+// and never jewellery.
+const JEWELLERY = / (Ring|Amulet|Belt|Talisman|Sash|Vise)$/
 const isEarlyMapGear = (b: FilterBlock) => b.type === 'normalcraft->extra' ||
-  (b.type === 'crafting->generalgear' && b.conditions.some(c => c.key === 'ItemLevel' && c.op === '>=' && Number(c.values[0]) < 86))
+  (b.type === 'crafting->generalgear' && /^t3_/.test(b.tier ?? '') &&
+    b.conditions.some(c => c.key === 'ItemLevel' && c.op === '>=' && Number(c.values[0]) < 86) &&
+    !b.conditions.some(c => c.key === 'BaseType' && c.values.some(v => JEWELLERY.test(v))))
 
 // Drops Normal and Magic from a block's Rarity. False when nothing is left.
 function onlyRares (b: FilterBlock): boolean | null {
@@ -502,8 +509,6 @@ const BEAM_KEYS = ['PlayEffect', 'MinimapIcon']
 // Adjusts NeverSink's rules in place. Returns how many rules changed.
 export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
   let changed = 0
-  let qualityGems: FilterBlock | null = null
-  let firstGems: FilterBlock | null = null
   for (const b of doc.blocks) {
     // NeverSink ships its dust tiers commented out.
     let touched = false
@@ -562,13 +567,10 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
         // A map above the zone you're in is progress (NeverSink's map-up
         // rule marks it): that one falls through and still shows.
         hideBlock(b)
-        b.conditions = [...b.conditions, cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])]
+        b.conditions = [...b.conditions, cond('HasInfluence', '', ['None']), cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])]
         touched = true
       }
     }
-    if (p.vendorQuality.on && !qualityGems && isQualityGemTier(b)) qualityGems = b
-    // Stricter files switch that tier off: then above NeverSink's first plain gem rule.
-    if (p.vendorQuality.on && !firstGems && b.type === 'gems->generic' && !b.continue) firstGems = b
     if (p.bigger.on && b.visibility !== 'Hide') {
       const at = b.actions.findIndex(a => a.key === 'SetFontSize')
       const size = at >= 0 ? Number(b.actions[at].args[0]) : 32
@@ -581,7 +583,8 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     if (p.colourBlind.on && colourBlindActions(b)) touched = true
     if (touched) { b.dirty = true; changed++ }
   }
-  const gemAnchor = qualityGems ?? firstGems
+  // Stricter files ship that tier switched off; it still marks the place.
+  const gemAnchor = p.vendorQuality.on ? doc.blocks.find(isQualityGemTier) : undefined
   if (gemAnchor) {
     const b = look(addedBlock(PRESET_TYPE, 'vendorgems', '20% quality gems for the vendor', [
       cond('AreaLevel', '<=', [EARLY_MAPS_TO]),
