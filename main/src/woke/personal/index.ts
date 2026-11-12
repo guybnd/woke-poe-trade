@@ -204,6 +204,9 @@ function startReader (ctx: PersonalContext): () => void {
     return { signedIn: !!reader.account, account: reader.account }
   }
 
+  const sameLeague = (args: { league?: unknown } | null | undefined) =>
+    typeof args?.league === 'string' && args.league === reader.league ? args.league : null
+
   const ops: Record<typeof READER_OPS[number], Handler> = {
     'stash-auth-status': async (args) => await authStatus(args?.verify === true),
     'stash-sign-in': async () => {
@@ -236,26 +239,29 @@ function startReader (ctx: PersonalContext): () => void {
     // The tab picker: the league's tabs (one call), what each template picks,
     // what is chosen now and the saved sets.
     'stash-tab-list': async () => {
-      const league = reader.league
-      if (!league) return null
-      const tabs = await reader.listTabs()
-      if (!tabs || !live) return null
+      const r = await reader.listTabs()
+      if (!live) return { error: 'The stash reader is off.' }
+      if ('error' in r) return r
+      // Switched league meanwhile: that list isn't this league's.
+      if (r.league !== reader.league) return { error: 'The league changed. Open it again.' }
+      const { league, tabs } = r
       const fits = Object.fromEntries(TEMPLATES.map(t => [t, tabs.filter(tab => fitsTemplate(t, tab)).map(tab => tab.id)]))
       return { league, tabs, fits, ...await readLeagueTabs(league) }
     },
+    // Writes name the league the picker was showing, and only that one.
     'stash-tab-choice': async (args) => {
-      const league = reader.league
+      const league = sameLeague(args)
       const template = args?.template as TabChoice['template']
       if (!league || !(TEMPLATES.includes(template as never) || template === 'custom')) return null
       return await setChoice(league, { template, ids: ids(args?.ids), ...(typeof args?.set === 'string' ? { set: args.set } : {}) })
     },
     'stash-tab-set-save': async (args) => {
-      const league = reader.league
+      const league = sameLeague(args)
       if (!league || typeof args?.name !== 'string') return null
       return await saveSet(league, args.name, ids(args?.ids))
     },
     'stash-tab-set-delete': async (args) => {
-      const league = reader.league
+      const league = sameLeague(args)
       if (!league || typeof args?.name !== 'string') return null
       return await deleteSet(league, args.name)
     }

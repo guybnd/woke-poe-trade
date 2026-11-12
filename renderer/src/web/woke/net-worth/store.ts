@@ -6,13 +6,13 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { ninjaPriceOf } from './prices'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, gainOf, perHourToday, recordRead, sinceYesterday, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, gainOf, perHourToday, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import type { Baseline, NetWorthHistory, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
 
-interface CachedStash { league: string, account: string, tabs: Array<StashTabLike & { readAt: number | null }> }
+interface CachedStash { league: string, account: string, tabs: Array<StashTabLike & { id: string, readAt: number | null }> }
 
 const COLLECTION = 'net-worth'
 
@@ -71,10 +71,16 @@ async function countRead (id: string, readAt: number) {
   // later read would book its contents as new. Nothing is counted till then.
   if (!stash.value?.tabs.length || stash.value.tabs.some(t => t.readAt == null)) return
   const baseKey = `${id}-baseline`
-  const before = await hostRequest<Baseline | null>('doc-get', { collection: COLLECTION, key: baseKey }).catch(() => null)
+  const tabsKey = `${id}-baseline-tabs`
+  // The tabs read: a different choice (tab picker) isn't a gain or a loss.
+  const tabs = tabSetOf(stash.value.tabs)
+  const [before, beforeTabs] = await Promise.all([
+    hostRequest<Baseline | null>('doc-get', { collection: COLLECTION, key: baseKey }).catch(() => null),
+    hostRequest<string | null>('doc-get', { collection: COLLECTION, key: tabsKey }).catch(() => null)
+  ])
   const since = history.value.countedReadAt
   let next = recordRead(history.value, v, divine.value, readAt)
-  if (before) {
+  if (before && beforeTabs === tabs) {
     const diff = diffStash(before, v, readAt)
     next = { ...next, lastDiff: diff }
     // Every refresh's net change, for session profit elsewhere (gains.ts).
@@ -84,6 +90,7 @@ async function countRead (id: string, readAt: number) {
   history.value = next
   await hostRequest('doc-put', { collection: COLLECTION, key: id, value: next }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: baselineOf(v) }).catch(() => {})
+  await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
 }
 
 function queue (fn: () => Promise<void>) {

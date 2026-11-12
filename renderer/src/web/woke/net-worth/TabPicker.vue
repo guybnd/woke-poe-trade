@@ -35,14 +35,14 @@
         <li v-if="!shown.length" class="w-dim text-xs" :class="$style.none">No tabs match.</li>
       </ul>
       <div :class="$style.save">
-        <WField v-model="setName" placeholder="Name these ticks to save them" />
+        <WField v-model="setName" placeholder="Name these ticks to save them (saves and picks them)" />
         <WButton size="sm" :disabled="!setName.trim() || !ticked.size || busy" @click="saveAsSet">Save set</WButton>
       </div>
       <div :class="$style.foot">
         <span class="w-dim text-xs">{{ ticked.size }} of {{ list.tabs.length }} tabs<template v-if="removeOnly"> · {{ removeOnly }} remove-only left out</template></span>
         <span :class="$style.btns">
           <WButton v-if="canCancel" size="sm" variant="ghost" :disabled="busy" @click="emit('done')">Cancel</WButton>
-          <WButton size="sm" variant="primary" :disabled="!ticked.size || busy" @click="readThese">Read these tabs</WButton>
+          <WButton size="sm" variant="primary" :disabled="!ticked.size || busy || running" :title="running ? 'Wait for the read under way to finish' : undefined" @click="readThese">Read these tabs</WButton>
         </span>
       </div>
       <WBanner v-if="error" tone="error">{{ error }}</WBanner>
@@ -62,7 +62,7 @@ import {
 } from './tab-picker'
 import type { Picked, SavedSet, TabChoice, TabKind, TabList, TabTemplate } from './tab-picker'
 
-const props = defineProps<{ canCancel: boolean, removeOnly: number }>()
+const props = defineProps<{ canCancel: boolean, removeOnly: number, running: boolean }>()
 const emit = defineEmits<{ (e: 'done'): void }>()
 
 const TEMPLATES: TabTemplate[] = ['reasonable', 'currency', 'league']
@@ -85,8 +85,9 @@ async function load () {
   loading.value = true
   failed.value = ''
   try {
-    const l = await hostRequest<TabList | null>('stash-tab-list', null, 5 * 60_000)
-    if (!l) failed.value = "Couldn't get your tab list. Check you're signed in (Settings › Game & league), or wait if pathofexile.com asked to slow down."
+    const r = await hostRequest<TabList | { error: string } | null>('stash-tab-list', null, 5 * 60_000)
+    const l = r && !('error' in r) ? r : null
+    if (!l) failed.value = r && 'error' in r ? r.error : "Couldn't get your tab list."
     list.value = l
     if (l) ({ picked: picked.value, ticked: ticked.value } = startingPick(l))
   } catch {
@@ -125,14 +126,16 @@ async function run (fn: () => Promise<void>) {
 }
 
 function takeSets (r: { sets: SavedSet[], choice: TabChoice | null } | null) {
-  if (r && list.value) list.value = { ...list.value, sets: r.sets, choice: r.choice }
+  if (!r) throw new Error('league changed')
+  if (list.value) list.value = { ...list.value, sets: r.sets, choice: r.choice }
 }
 
 function saveAsSet () {
-  const name = setName.value.trim()
+  const name = setName.value.trim().slice(0, 40)
   const ids = [...ticked.value]
+  const league = list.value?.league
   run(async () => {
-    takeSets(await hostRequest('stash-tab-set-save', { name, ids }))
+    takeSets(await hostRequest('stash-tab-set-save', { league, name, ids }))
     picked.value = { kind: 'set', name }
     setName.value = ''
   }).catch(() => {})
@@ -140,7 +143,7 @@ function saveAsSet () {
 
 function removeSet (name: string) {
   run(async () => {
-    takeSets(await hostRequest('stash-tab-set-delete', { name }))
+    takeSets(await hostRequest('stash-tab-set-delete', { league: list.value?.league, name }))
     if (picked.value.kind === 'set' && picked.value.name === name) picked.value = { kind: 'custom' }
   }).catch(() => {})
 }
@@ -149,7 +152,8 @@ function readThese () {
   const l = list.value
   if (!l) return
   run(async () => {
-    await hostRequest('stash-tab-choice', choiceOf(picked.value, ticked.value, l.tabs))
+    const saved = await hostRequest('stash-tab-choice', { league: l.league, ...choiceOf(picked.value, ticked.value, l.tabs) })
+    if (!saved) throw new Error('league changed')
     hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
     emit('done')
   }).catch(() => {})

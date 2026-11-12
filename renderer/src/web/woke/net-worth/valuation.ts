@@ -251,3 +251,8 @@ export function gainsBetween (gains: StashGain[], from: number, to: number) {
   const divine = inside.every(g => g.netDivine != null) ? inside.reduce((s, g) => s + g.netDivine!, 0) : null
   return { chaos, divine, reads: inside.length, first: inside[0]?.at ?? null, last: inside[inside.length - 1]?.at ?? null }
 }
+
+// Which tabs a read covered: a baseline only compares with a read of the same tabs.
+export function tabSetOf (tabs: Array<{ id: string }>): string {
+  return tabs.map(t => t.id).sort().join(',')
+}

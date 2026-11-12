@@ -95,7 +95,7 @@ describe('reading the chosen tabs', () => {
     const reader = new StashReader({
       fetch: async (url) => {
         const u = new URL(url)
-        if (u.pathname.endsWith('/my-account')) return { status: 200, headers: {}, body: profile }
+        if (u.pathname.endsWith('/my-account')) { asked.push('account'); return { status: 200, headers: {}, body: profile } }
         asked.push(u.searchParams.get('tabIndex')!)
         return { status: 200, headers: {}, body: u.searchParams.get('tabs') === '1' ? list : '{"items":[]}' }
       },
@@ -107,7 +107,7 @@ describe('reading the chosen tabs', () => {
     return { reader, asked }
   }
 
-  it('reads nothing until tabs are chosen, and says so', async () => {
+  it('reads nothing until tabs are chosen, not even the account name, and says so', async () => {
     const { reader, asked } = makeReader(null)
     await reader.setLeague('Standard')
     const s = await reader.read('manual')
@@ -121,7 +121,7 @@ describe('reading the chosen tabs', () => {
     const s = await reader.read('manual')
     expect(s.error).toBeNull()
     // The first call lists the tabs (and brings tab 0, not chosen, left out).
-    expect(asked).toEqual(['0', '3', '8'])
+    expect(asked).toEqual(['account', '0', '3', '8'])
     expect(s.chosen).toBe(2)
     expect(s.listed).toBe(9)
     expect(s.skipped).toBe(2)
@@ -131,9 +131,27 @@ describe('reading the chosen tabs', () => {
   it('the tab list is one call, remove-only tabs aside', async () => {
     const { reader, asked } = makeReader(null)
     await reader.setLeague('Standard')
-    const tabs = await reader.listTabs()
+    reader.restoreAccount('Guy#1234')
+    const r = await reader.listTabs()
     expect(asked).toEqual(['0'])
-    expect(tabs!.map(t => t.name)).not.toContain('Old maps (Remove-only)')
-    expect(tabs).toHaveLength(9)
+    if ('error' in r) throw new Error(r.error)
+    expect(r.league).toBe('Standard')
+    expect(r.tabs.map(t => t.name)).not.toContain('Old maps (Remove-only)')
+    expect(r.tabs).toHaveLength(9)
+  })
+
+  it('a tab list that fails says why and leaves the window status alone', async () => {
+    const reader = new StashReader({
+      fetch: async () => ({ status: 429, headers: { 'retry-after': '120' }, body: '' }),
+      now: () => 1_000_000,
+      sleep: async () => {},
+      onStatus: () => {},
+      choice: async () => null
+    })
+    await reader.setLeague('Standard')
+    reader.restoreAccount('Guy#1234')
+    const r = await reader.listTabs()
+    expect('error' in r && r.error).toMatch(/slow down.*min/)
+    expect(reader.current.error).toBeNull()
   })
 })

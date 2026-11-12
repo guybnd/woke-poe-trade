@@ -3,14 +3,14 @@
     :hotkey="config.hotkey" :busy="status?.running === true" :stale="!!status?.error && !!v">
     <template #actions>
       <span class="w-dim text-xs mr-2">{{ readLine }}</span>
-      <WButton size="sm" variant="ghost" icon="fas fa-cog" title="Choose which tabs to read" :disabled="!status?.account" @click="picking = true">Tabs</WButton>
+      <WButton size="sm" variant="ghost" icon="fas fa-cog" title="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true">Tabs</WButton>
       <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" @click="refresh">Refresh</WButton>
     </template>
     <template v-if="status?.error && !showPicker" #banner>
       <WBanner :tone="status.error.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
     </template>
 
-    <TabPicker v-if="showPicker" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" @done="onPicked" />
+    <TabPicker v-if="showPicker" :key="status?.league ?? ''" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" :running="status?.running === true" @done="onPicked" />
     <WEmpty v-else-if="!v && !status?.lastReadAt" icon="fas fa-box-open">
       {{ status?.account ? 'Not read yet. Press Refresh.' : 'Sign in under Settings › Game & league, then press Refresh.' }}
     </WEmpty>
@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, shallowRef } from 'vue'
+import { computed, defineAsyncComponent, onMounted, shallowRef, watch } from 'vue'
 import { WBanner, WButton, WEmpty, WPanel, WPrice } from '../ui'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -96,6 +96,8 @@ function onPicked () {
   picking.value = false
   picked.value = true
 }
+// Another league asks again.
+watch(() => props.status?.league, () => { picked.value = false; picking.value = false })
 
 const v = valuation
 const sum = summary

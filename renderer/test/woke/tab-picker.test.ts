@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { choiceOf, shownTabs, startingPick, ticksFor, typeLabel } from '@/web/woke/net-worth/tab-picker'
 import type { TabList } from '@/web/woke/net-worth/tab-picker'
+import { tabSetOf } from '@/web/woke/net-worth/valuation'
 
 const tab = (i: number, name: string, type: string) => ({ id: `t${i}`, index: i, name, type, colour: null })
 const LIST: TabList = {
@@ -50,5 +51,10 @@ describe('tab picker', () => {
   it('names tab types plainly', () => {
     expect(typeLabel('DivinationCardStash')).toBe('Divination Card')
     expect(typeLabel('QuadStash')).toBe('Quad')
+  })
+
+  it('a different set of tabs is not the same baseline, whatever the order', () => {
+    expect(tabSetOf([{ id: 'b' }, { id: 'a' }])).toBe(tabSetOf([{ id: 'a' }, { id: 'b' }]))
+    expect(tabSetOf([{ id: 'a' }])).not.toBe(tabSetOf([{ id: 'a' }, { id: 'b' }]))
   })
 })

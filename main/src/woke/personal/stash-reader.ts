@@ -233,27 +233,28 @@ export class StashReader {
   }
 
   // The league's tab list, remove-only tabs aside: one call, through the same
-  // rate limit as reads. Null when signed out or no league is set.
-  async listTabs (): Promise<StashTabInfo[] | null> {
+  // rate limit as reads. Leaves the status alone; says why when it can't.
+  async listTabs (): Promise<{ league: string, tabs: StashTabInfo[] } | { error: string }> {
     const league = this.league
-    if (!league || this.stopped) return null
+    if (!league) return { error: 'No league set.' }
+    if (this.stopped) return { error: STOPPED.message }
     let account = this.account
     if (!account) {
       account = await fetchAccountName(this.deps.fetch, this.limiter, this.deps.now) ?? null
       if (account) this.signedIn(account)
     }
     account ??= this.fallbackAccount
-    if (!account) return null
+    if (!account) return { error: SIGNED_OUT.message }
     try {
       const first = this.parse((await this.get(stashUrl(league, account, 0, true))).body)
-      return (first.tabs ?? []).filter(t => !isRemoveOnly(t))
+      return { league, tabs: (first.tabs ?? []).filter(t => !isRemoveOnly(t)) }
     } catch (e) {
-      if (e instanceof Stop) {
-        if (e.error.kind === 'signed-out') this.signedOut()
-        else this.set({ error: e.error })
-        return null
+      if (!(e instanceof Stop)) throw e
+      if (e.error.kind === 'signed-out') this.signedOut()
+      if (e.error.kind === 'rate-limited' && e.error.retryAt) {
+        return { error: `pathofexile.com asked us to slow down. Try again in ${Math.max(1, Math.ceil((e.error.retryAt - this.deps.now()) / 60_000))} min.` }
       }
-      throw e
+      return { error: e.error.message }
     }
   }
 
@@ -294,6 +295,9 @@ export class StashReader {
     let changed = false
     let waiting = 0
     try {
+      // No tabs chosen yet: no call at all.
+      const choice = this.deps.choice ? await this.deps.choice(league) : { template: 'league' as const, ids: [] }
+      if (!choice) throw new Stop(PICK_TABS)
       let account = this.account
       if (!account) {
         account = await fetchAccountName(this.deps.fetch, this.limiter, this.deps.now) ?? null
@@ -301,9 +305,6 @@ export class StashReader {
       }
       account ??= this.fallbackAccount
       if (!account) throw new Stop(SIGNED_OUT)
-
-      const choice = this.deps.choice ? await this.deps.choice(league) : { template: 'league' as const, ids: [] }
-      if (!choice) throw new Stop(PICK_TABS)
 
       const old = await readCache(league)
       const kept = old && old.account === account ? old : null
