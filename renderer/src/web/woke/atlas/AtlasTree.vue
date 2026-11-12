@@ -20,9 +20,8 @@
         <template #actions><WButton size="sm" @click="startOver">Start over</WButton></template>
       </WBanner>
     </template>
-    <template #meta>
-      <span v-if="!dirty && !savingAs" class="w-faint">Click a passive to take the path to it, click a taken one to refund it. Right-click a taken one that needs a type to pick it.</span>
-      <div v-else :class="$style.unsaved">
+    <template v-if="dirty || savingAs" #meta>
+      <div :class="$style.unsaved">
         <template v-if="savingAs">
           <span class="w-dim whitespace-nowrap">Save as</span>
           <input ref="nameField" v-model="newName" class="w-field" :class="$style.name" spellcheck="false" placeholder="New strategy name"
@@ -93,6 +92,7 @@ import { encodeAtlasTree, pathTo, pointsUsed, refundSet } from './atlas-tree'
 import type { AtlasTreeModel } from './atlas-tree'
 import { treeWarnings } from './loadout'
 import { litColour } from './mechanic-colours'
+import { totalsHover } from './totals-hover'
 import PinButton from '../pins/PinButton.vue'
 import type { Pin } from '../pins/pins'
 import type { ThreadSlot } from './widget'
@@ -391,6 +391,11 @@ function drawRing () {
   }
   const found = css.getPropertyValue('--w-info').trim()
   for (const n of hits.value) circle(n, found, 3, 2.5)
+  // A pinned tree doesn't follow the window's hover.
+  for (const id of (props.bare ? null : totalsHover.value) ?? []) {
+    const n = props.model.nodes.get(id)
+    if (n) circle(n, css.getPropertyValue('--w-fg').trim(), 4, 2.5)
+  }
   // A dot on each taken passive that needs a type, so a missing pick shows.
   for (const id of props.model.variants.keys()) {
     const n = props.model.nodes.get(id)
@@ -438,7 +443,7 @@ watch(box, (el) => {
 })
 
 watch([toSet, sheets, () => alloc.value], schedule)
-watch([hits, preview, liveLit], drawRing)
+watch([hits, preview, liveLit, totalsHover], drawRing)
 
 const wm = inject<WidgetManager>('wm')
 watch(() => wm?.active.value, (active) => { if (!active) endPan() })
