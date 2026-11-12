@@ -19,7 +19,7 @@ function gemRow (rows: Row[], item: StashItemLike): Row | undefined {
 
 // poe.ninja's base type rows ("86", "Shaper 85"): a price for a crafting
 // base at that item level, never for a plain white item.
-const BASE_TYPE_VARIANT = /^(\d+|(Shaper|Elder|Crusader|Hunter|Redeemer|Warlord|Searing Exarch|Eater of Worlds).*)$/
+const BASE_TYPE_VARIANT = /^(\d+|(Shaper|Elder|Crusader|Hunter|Redeemer|Warlord|Searing Exarch|Eater of Worlds)\b.*)$/
 
 function cheapest (rows: Row[]): Row | undefined {
   return rows.reduce<Row | undefined>((m, r) => !m || r.chaos < m.chaos ? r : m, undefined)
