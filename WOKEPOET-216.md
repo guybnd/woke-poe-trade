@@ -14,6 +14,16 @@ history:
     user: Agent
     date: '2026-11-12T10:17:03.789Z'
     comment: Created ticket.
+    id: a-2026-11-12t10-17-03-789z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T10:20:31.330Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/393. Pins the panel edge
+      nearer its screen side. Self-reviewed (fitShift, full-width, unmoved
+      restore, saved states); vitest 3119 pass, lint clean, build passes. Sent
+      to coordinator for cloud merge.
+    id: a-2026-11-12t10-20-31-330z
 ---
 Guy put Atlas strategies on the left, made it big, then minimized it: the bar landed on the far right.
 
