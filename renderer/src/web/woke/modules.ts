@@ -109,6 +109,8 @@ export interface WokeModulesConfig {
   hideAllHotkey?: string | null
   // The loot filter editor has been put on the overlay once (Config.ts).
   lootFilterSeeded?: boolean
+  // The essence scan widget has been put on the overlay once (Config.ts).
+  essenceScanSeeded?: boolean
   // Icon dock position and switches (dock/dock.ts).
   dock?: DockConfig
   // Price check: dust per chaos and a "disenchant it" verdict for uniques,

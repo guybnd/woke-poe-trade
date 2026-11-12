@@ -1,5 +1,6 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { MEDS } from './essences'
+import { sortKeys } from '../loot-filter/hotkey-match'
 
 export const ESSENCE_SCAN_TYPE = 'woke-essence-scan'
 
@@ -38,6 +39,17 @@ export function initEssenceScanWidget (w: EssenceScanWidget) {
   w.onceHotkey = null
   w.flagTypes = [...MEDS]
   w.valueAlertChaos = 50
+}
+
+// Scan mode only starts from the widget's hotkey or its Start button, so a
+// module switched on with no widget did nothing at all. Seeded hidden with
+// its hotkey, unless that key is already used (`taken`).
+export function seedEssenceScanWidget (wmId: number, taken: string[] = []): EssenceScanWidget {
+  const w = { wmId, wmType: ESSENCE_SCAN_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as EssenceScanWidget
+  initEssenceScanWidget(w)
+  const used = new Set(taken.map(sortKeys))
+  if (w.hotkey && used.has(sortKeys(w.hotkey))) w.hotkey = null
+  return w
 }
 
 export function normalizeEssenceScanWidget (w: EssenceScanWidget) {
