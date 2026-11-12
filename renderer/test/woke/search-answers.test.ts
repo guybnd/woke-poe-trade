@@ -6,6 +6,7 @@ import type { LookupContext } from '@/web/woke/search/lookups/types'
 const PRICES: Record<string, number> = { 'Chaos Orb': 1, 'Divine Orb': 240, 'Mirror of Kalandra': 120000, 'Orb of Annulment': 4, 'Orb of Alchemy': 0.25 }
 const ctx = (over: Partial<LookupContext> = {}): LookupContext => ({
   price: n => PRICES[n] ?? null,
+  tools: new Set(),
   divine: 240,
   now: Date.UTC(2026, 10, 12, 10),
   league: null,
