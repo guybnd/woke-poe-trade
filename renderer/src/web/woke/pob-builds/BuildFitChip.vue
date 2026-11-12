@@ -1,34 +1,36 @@
 <template>
   <span v-for="f in fits" :key="f.label" :class="$style.chip" :title="f.title">
     <i class="fas fa-user-check" :class="$style.icon" />
-    <SocketDots v-if="f.colours" :colours="f.colours" />
     {{ f.label }}
   </span>
-  <span v-if="swap" :class="$style.chip" tabindex="0" data-swap-chip
+  <!-- A small icon, top right of the price check header (poe-mode.css). -->
+  <span v-if="swap" :class="$style.swap" class="w-swap-icon" role="button" tabindex="0" data-swap-chip
+    :aria-label="`Compare to your ${swap.label}`"
     @mouseenter="showSwap" @mouseleave="hideTip" @focus="showSwap" @blur="hideTip">
-    <i class="fas fa-balance-scale" :class="$style.icon" />
-    Compare to your {{ swap.label }}
+    <i class="fas fa-balance-scale" />
   </span>
 </template>
 
 <script setup lang="ts">
-// Price check chip: does the checked item fit the active PoB build?
-import { computed, onBeforeUnmount } from 'vue'
+// Price check chips: does the checked item fit the active PoB build, and how
+// does it compare to what you wear there?
+import { computed, onBeforeUnmount, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import { ItemCategory, ItemRarity, parseClipboard } from '@/parser'
-import SocketDots from './SocketDots.vue'
 import { useActiveBuild } from './active'
-import { bestFit, buildFacts, linkColours, loadoutOf, mainGroupOf, realSets, slotLabel } from './build-model'
+import { buildFacts, loadoutOf, realSets, slotLabel } from './build-model'
 import { pobItemText } from './item-text'
 import { slotsFor, swapCheck } from './swap-check'
 import type { SwapResult } from './swap-check'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
-import type { GemColour } from './gems'
+import type { PobItem, PobStats } from './widget'
+import { askWornGear, wornFailed, wornGear } from './worn-gear'
+import { personalOn } from '../personal'
 
 const props = defineProps<{ item: ParsedItem }>()
 const build = useActiveBuild()
 
-interface Fit { label: string, title: string, colours?: GemColour[] }
+interface Fit { label: string, title: string }
 
 const fits = computed<Fit[]>(() => {
   const d = build.details.value
@@ -50,56 +52,79 @@ const fits = computed<Fit[]>(() => {
   } else {
     const b = facts.bases.find(x => x.base === name)
     if (b) out.push({ label: `Your base · ${b.slot}`, title: `Your build wears a rare ${name}` })
-    const sockets = /^Sockets: (.+)$/m.exec(item.rawText)?.[1]
-    const set = loadoutOf(d, level, act, pick).skillSet?.item
-    const main = set ? mainGroupOf(set.groups) : null
-    if (sockets && main) {
-      const colours = linkColours(main)
-      const n = bestFit(sockets, colours)
-      if (n >= 3) out.push({ label: 'Your colours', colours: colours.slice(0, n), title: `Has a ${n}-link that fits your main link's first ${n} gems` })
-    }
   }
   return out
 })
 
-// Rings go against whichever one you'd lose least by replacing.
 const ORDER: Record<SwapResult['verdict'], number> = { better: 0, mixed: 1, same: 2, worse: 3 }
 
 function cost (r: SwapResult) {
   return ORDER[r.verdict] * 100 + r.rows.filter(x => x.tone === 'down').length
 }
 
-const swap = computed<{ label: string, title: string, result: SwapResult } | null>(() => {
-  const d = build.details.value
-  if (!d || props.item.isUnidentified) return null
-  const slots = slotsFor(props.item.category)
-  if (!slots.length) return null
-  const worn = loadoutOf(d, build.level.value, build.act.value, build.loadout.value).itemSet?.item
-  if (!worn) return null
-  // What PoB saved only describes this gear if it's the set it saved on.
-  const sets = realSets(d.itemSets ?? [])
-  const stats = (sets.length < 2 || worn.isActive) ? d.stats ?? null : null
-  let best: { label: string, title: string, result: SwapResult } | null = null
+type Swap = { label: string, title: string, source: string, result: SwapResult }
+
+const READING: SwapResult = { verdict: 'same', summary: 'Reading what you wear…', rows: [] }
+
+function slotName (slot: string) {
+  const label = slot === 'Body Armour' ? 'body armour' : slotLabel(slot).toLowerCase().replace(/ \d$/, '')
+  const number = /^Ring (\d)$/.exec(slot)?.[1]
+  return { label, number }
+}
+
+// Your gear in the item's slots, against the checked item. Rings go against
+// whichever one you'd lose least by replacing; an empty slot wins outright.
+function compare (slots: string[], worn: Array<{ slot: string, item: PobItem }>, stats: PobStats | null, source: string, emptyText: string): Swap | null {
+  let best: Swap | null = null
   for (const slot of slots) {
-    const label = slot === 'Body Armour' ? 'body armour' : slotLabel(slot).toLowerCase().replace(/ \d$/, '')
-    const number = /^Ring (\d)$/.exec(slot)?.[1]
+    const { label, number } = slotName(slot)
     const title = `Against your ${label}${number ? ` ${number}` : ''}`
-    const item = worn.slots.find(x => x.slot === slot)?.item
+    const item = worn.find(x => x.slot === slot)?.item
     if (!item) {
       // A third ring slot only exists with a Kalandra's Touch.
       if (slot === 'Ring 3') continue
-      return { label, title: `Your ${label}${number ? ` ${number}` : ''} slot`, result: { verdict: 'better', summary: 'You wear nothing there in this set.', rows: [] } }
+      return { label, title: `Your ${label}${number ? ` ${number}` : ''} slot`, source, result: { verdict: 'better', summary: emptyText, rows: [] } }
     }
     const yours = parseClipboard(pobItemText(item))
     if (yours.isErr()) continue
     const result = swapCheck(yours.value, props.item, stats)
-    if (!best || cost(result) < cost(best.result)) best = { label, title, result }
+    if (!best || cost(result) < cost(best.result)) best = { label, title, source, result }
   }
   return best
+}
+
+const character = computed(() => build.charName.value)
+const slots = computed(() => props.item.isUnidentified ? [] : slotsFor(props.item.category))
+
+// The game's own answer when the stash reader is on; PoB's set otherwise.
+watch([slots, character], ([s, c]) => { if (s.length && c) askWornGear(c) }, { immediate: true })
+
+const swap = computed<Swap | null>(() => {
+  const s = slots.value
+  if (!s.length) return null
+  const c = character.value
+  const gear = wornGear.value
+  if (personalOn.value && c) {
+    if (gear?.character === c) return compare(s, gear.slots, null, `Yours: what ${c} wears now.`, 'You wear nothing there.')
+    if (wornFailed.value !== c) {
+      const { label } = slotName(s[0])
+      return { label, title: `Against your ${label}`, source: '', result: READING }
+    }
+  }
+  const d = build.details.value
+  if (!d) return null
+  const picked = loadoutOf(d, build.level.value, build.act.value, build.loadout.value).itemSet
+  const worn = picked?.item
+  if (!worn) return null
+  // What PoB saved only describes this gear if it's the set it saved on.
+  const sets = realSets(d.itemSets ?? [])
+  const stats = (sets.length < 2 || worn.isActive) ? d.stats ?? null : null
+  const setName = worn.title ? `the "${worn.title}" set` : 'its gear'
+  return compare(s, worn.slots, stats, `Yours: your PoB build's ${setName}, not what you wear in game.`, 'Your PoB set has nothing there.')
 })
 
 function showSwap (e: Event) {
-  if (swap.value) showTip(e, { kind: 'swap', title: swap.value.title, result: swap.value.result })
+  if (swap.value) showTip(e, { kind: 'swap', title: swap.value.title, source: swap.value.source, result: swap.value.result })
 }
 
 onBeforeUnmount(hideTip)
@@ -121,4 +146,22 @@ onBeforeUnmount(hideTip)
   border: 1px solid var(--w-line-strong);
 }
 .icon { font-size: var(--w-fs-xs); }
+.swap {
+  display: inline-grid;
+  place-items: center;
+  width: calc(24px * var(--w-text-scale, 1));
+  height: calc(24px * var(--w-text-scale, 1));
+  margin-left: 0.25rem;
+  border-radius: var(--w-r-sm);
+  font-size: var(--w-fs-sm);
+  color: var(--w-dim);
+  border: 1px solid transparent;
+  cursor: default;
+}
+.swap:hover, .swap:focus-visible {
+  color: var(--w-accent);
+  background: var(--w-accent-soft);
+  border-color: var(--w-line-strong);
+  outline: none;
+}
 </style>

@@ -11,6 +11,7 @@
       </div>
       <div v-if="r.note" :class="$style.note">{{ r.note }}</div>
     </template>
+    <div v-if="swap.source" :class="$style.foot">{{ swap.source }}</div>
     <div :class="$style.foot">Numbers on the two items, not a full recalculation.</div>
   </section>
 </template>
@@ -18,7 +19,7 @@
 <script setup lang="ts">
 import type { SwapResult } from './swap-check'
 
-defineProps<{ swap: { result: SwapResult } }>()
+defineProps<{ swap: { source?: string, result: SwapResult } }>()
 
 const VERDICT_COLOUR = { better: 'var(--w-up)', worse: 'var(--w-down)', mixed: 'var(--w-warn)', same: 'var(--w-fg)' }
 const TONE_COLOUR = { up: 'var(--w-up)', down: 'var(--w-down)', dim: 'var(--w-dim)' }

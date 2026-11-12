@@ -58,6 +58,8 @@ export interface LookupTip {
 export interface SwapTip {
   kind: 'swap'
   title: string
+  // Where "Yours" came from: the game, or a PoB set.
+  source?: string
   result: SwapResult
 }
 

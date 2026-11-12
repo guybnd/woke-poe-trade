@@ -122,7 +122,11 @@
   border-bottom: 1px solid var(--w-chip-line);
 }
 #price-window.w-poe .w-poe-head .filter-name-main { display: contents; }
-#price-window.w-poe .w-poe-head .filter-name-title { order: 1; margin-right: 6px; }
+/* The name has the first row to itself, with room on the right for the compare icon;
+   chips, numbers and the poe.ninja chip share the second. */
+#price-window.w-poe .w-poe-head { position: relative; }
+#price-window.w-poe .w-poe-head .filter-name-title { order: 1; flex-basis: 100%; padding-right: 32px; box-sizing: border-box; }
+#price-window.w-poe .w-poe-head .w-swap-icon { position: absolute; top: 0; right: 12px; margin: 0; }
 #price-window.w-poe .w-poe-head .filter-name-label { font-family: var(--w-label); font-size: calc(19px * var(--w-text-scale, 1)); letter-spacing: .03em; }
 #price-window.w-poe .w-poe-head .filter-name-chips { order: 2; flex: initial; }
 #price-window.w-poe .w-poe-head .filter-name-tiles { order: 3; max-width: none; align-items: center; justify-content: flex-start; }

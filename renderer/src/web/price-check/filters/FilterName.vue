@@ -13,14 +13,14 @@
       <div class="filter-name-chips">
         <button v-if="filters.corrupted" type="button" data-corrupted-chip
           class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
-          title="Corrupted filter. Click to change: Any, Corrupted, Uncorrupted."
+          title="Corrupted filter. Click to change: Any, Corr (corrupted only), Not (uncorrupted only)."
           @click="cycleCorrupted">
           <!-- The Vaal Orb says what the chip is about. Every label stays in the grid cell,
                so the chip keeps its width and stays under the mouse. -->
           <w-icon item="Vaal Orb" size="sm" title="" />
           <span class="filter-name-corrupted-labels">
             <span v-for="state of corruptedStates" :key="state.search"
-              :class="{ shown: state.search === filters.corrupted.search }">{{ t(state.label) }}</span>
+              :class="{ shown: state.search === filters.corrupted.search }">{{ state.label }}</span>
           </span>
         </button>
         <filter-btn-logical v-if="searchSub"
@@ -138,10 +138,11 @@ export default defineComponent({
       }
     }
 
+    // Short labels keep the chip small; its title says what they mean.
     const corruptedStates: Array<{ search: CorruptedSearch, label: string }> = [
-      { search: 'any', label: 'item.corrupted_any' },
-      { search: 'corrupted', label: 'item.corrupted' },
-      { search: 'not-corrupted', label: 'item.not_corrupted' }
+      { search: 'any', label: 'Any' },
+      { search: 'corrupted', label: 'Corr' },
+      { search: 'not-corrupted', label: 'Not' }
     ]
     function cycleCorrupted () {
       const filter = props.filters.corrupted!

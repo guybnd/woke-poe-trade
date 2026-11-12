@@ -15,6 +15,7 @@ import { POE_SITE, StashReader, fetchAccountName, readCache, readSavedAccount, s
 import type { Fetcher, HttpReply, ReaderStatus } from './stash-reader'
 import { TEMPLATES, deleteSet, fitsTemplate, readLeagueTabs, saveSet, setChoice } from './tab-choice'
 import type { TabChoice } from './tab-choice'
+import { WornReader } from './worn-items'
 
 export const PERSONAL_FLAG = 'personal.flag'
 
@@ -62,7 +63,8 @@ export interface PersonalControl {
 export const READER_OPS = [
   'stash-auth-status', 'stash-sign-in', 'stash-sign-out', 'stash-reader-config',
   'stash-reader-status', 'stash-reader-read', 'stash-cache',
-  'stash-tab-list', 'stash-tab-choice', 'stash-tab-set-save', 'stash-tab-set-delete'
+  'stash-tab-list', 'stash-tab-choice', 'stash-tab-set-save', 'stash-tab-set-delete',
+  'worn-items'
 ] as const
 
 const ids = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
@@ -187,6 +189,7 @@ function startReader (ctx: PersonalContext): () => void {
     choice: async (league) => (await readLeagueTabs(league)).choice
   })
   readSavedAccount().then(a => { if (a && live) reader.restoreAccount(a) }).catch(() => {})
+  const worn = new WornReader({ fetch: sessionFetch, now: () => Date.now(), account: () => reader.account ?? reader.fallbackAccount })
 
   const authStatus = async (verify: boolean) => {
     if (verify) {
@@ -264,6 +267,12 @@ function startReader (ctx: PersonalContext): () => void {
       const league = sameLeague(args)
       if (!league || typeof args?.name !== 'string') return null
       return await deleteSet(league, args.name)
+    },
+    // The gear the character wears now, for the price check's compare.
+    'worn-items': async (args) => {
+      const character = typeof args?.character === 'string' ? args.character.trim() : ''
+      if (!character) return { error: 'No character yet.' }
+      return await worn.read(character, args?.fresh === true).catch((e: Error) => ({ error: e.message }))
     }
   }
   for (const op of READER_OPS) ctx.register(op, ops[op])

@@ -331,11 +331,13 @@ test('the price check compares an item to the one your build wears', async ({ ov
   await overlay.boot({ widgets: showcaseSeed() })
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const chip = overlay.widget('price-check').locator('[data-swap-chip]')
-  await expect(chip).toContainText('Compare to your body armour')
+  await expect(chip).toHaveAttribute('aria-label', 'Compare to your body armour')
   await chip.hover()
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText('Against your body armour')
   await expect(tip).toContainText('Yours')
+  // Without the stash reader it can only be PoB's gear, and it says so.
+  await expect(tip).toContainText('not what you wear in game')
   await overlay.snap('swap check')
 })
 

@@ -154,7 +154,7 @@ test('rare: clicking the title switches Generic / Base, and the search follows',
   await expect(title).toHaveText('Ring')
 })
 
-test('unique: the Corrupted chip cycles Any, Corrupted, Uncorrupted at one width', async ({ overlay, fakeApp }) => {
+test('unique: the Corrupted chip cycles Any, Corr, Not at one width', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/unique-kaoms-heart-corrupted.txt')
   const panel = overlay.widget('price-check')
@@ -170,7 +170,7 @@ test('unique: the Corrupted chip cycles Any, Corrupted, Uncorrupted at one width
   }
   await expect.poll(lastOption).toBe('none')
 
-  for (const [label, option] of [['Corrupted', 'true'], ['Uncorrupted', 'false']]) {
+  for (const [label, option] of [['Corr', 'true'], ['Not', 'false']]) {
     await chip.click()
     await expect(shown).toHaveText(label)
     expect((await chip.boundingBox())!.width).toBe(width)
