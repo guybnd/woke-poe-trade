@@ -436,9 +436,10 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
   if (!open.value) return []
   if (helpOpen.value) return cardSections(exampleCards(), null)
   const items = snapshot.value?.items ?? []
+  // Nothing typed yet: your recent lookups, then things to try.
   if (!queryOk.value) {
     const recent = recentGroups(items)
-    return recent.length ? [{ label: 'Recent', entries: recent.map(priceEntry) }] : []
+    return [...(recent.length ? [{ label: 'Recent', entries: recent.map(priceEntry) as Entry[] }] : []), ...cardSections(exampleCards(), null)]
   }
   const q = query.value
   const groups = searchPrices(items, q, { corrupted: corrupted.value })

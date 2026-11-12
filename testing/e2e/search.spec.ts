@@ -293,3 +293,16 @@ test('the ? button lists things to try, and picking one searches it', async ({ o
   await expect(box).toHaveValue('chaos recipe')
   await expect(panel.locator('[data-selected]')).toContainText('Chaos Orb')
 })
+
+test('an empty search box shows things to try', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('')
+  await expect(panel.getByText('Vendor recipes', { exact: true })).toBeVisible()
+  await expect(panel.getByText('chaos recipe', { exact: true })).toBeVisible()
+  await overlay.snap('search-empty')
+})
