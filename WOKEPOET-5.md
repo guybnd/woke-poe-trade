@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-5
 title: Decide on Tauri after in-game test
-status: Grooming
+status: Archived
 priority: None
 effort: None
 assignee: unassigned
@@ -38,7 +38,22 @@ history:
       tray menu has Show test numbers for memory. The decision to move off
       Electron depends on this:
       https://claude.ai/artifact/PsvGcVErmMx1HPePhViXyt
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Guy, 2026-11-12 picker: Drop Tauri.'
+    date: '2026-11-12T04:31:36.354Z'
+    id: c-2026-11-12t04-31-36-354z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T04:31:36.354Z'
+  - type: status_change
+    from: Grooming
+    to: Archived
+    user: Agent
+    date: '2026-11-12T04:31:36.354Z'
+swimlane: null
 needsAction: null
 ---
 > **TL;DR** — Guy runs the **woke-tauri-test build over PoE** and reports **memory and behaviour**. Done looks like a **go or no-go on moving off Electron**.
