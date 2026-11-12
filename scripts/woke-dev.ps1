@@ -54,10 +54,10 @@ function Find-Electrons {
 # logs), still running even when their pid file points elsewhere: an Electron
 # that exited can leave its launcher and `node build\script.mjs` behind, which
 # keep main.log open and make the next start fail.
-function Find-Launchers {
-  $logs = @((Join-Path $State 'main.log'), (Join-Path $State 'vite.log'))
+function Find-Launchers ([string[]]$Logs = @('main.log', 'vite.log')) {
+  $paths = $Logs | ForEach-Object { Join-Path $State $_ }
   Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
-    Where-Object { $cmd = $_.CommandLine; $cmd -and ($logs | Where-Object { $cmd.Contains($_) }) }
+    Where-Object { $cmd = $_.CommandLine; $cmd -and ($paths | Where-Object { $cmd.IndexOf($_, [StringComparison]::OrdinalIgnoreCase) -ge 0 }) }
 }
 
 function Kill-Tree ($procId) {
@@ -251,9 +251,8 @@ function Start-Dev {
   while (-not (Listener $HostPort)) {
     if ((Get-Date) -gt $deadline) {
       Get-Content "$State\main.log" -Tail 20 -ErrorAction SilentlyContinue | Write-Host
-      $held = $false
-      try { [IO.File]::Open("$State\main.log", 'Open', 'ReadWrite', 'None').Close() } catch { $held = $true }
-      if ($held -and @(Find-Launchers).Count -gt 1) { Fail "the app did not start: an older dev launcher still holds $State\main.log. Run woke-dev stop, then try again." }
+      $current = [int](Get-Content (Join-Path $State 'main.pid'))
+      if (@(Find-Launchers 'main.log' | Where-Object { $_.ProcessId -ne $current }).Count) { Fail "the app did not start: an older dev launcher still writes to $State\main.log. Run woke-dev stop, then try again." }
       Fail "the app did not start, see $State\main.log. Another copy may hold the single-instance lock."
     }
     Start-Sleep -Milliseconds 300
