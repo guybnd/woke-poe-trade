@@ -30,6 +30,21 @@ describe('parseReward', () => {
     expect(parseReward(CARDS.get("A Mother's Parting Gift")!.lines)!.priceable).toBe(false)
     expect(parseReward(['<rareitem>{Item}', '<default>{Item Level:} <normal>{100}'])!.priceable).toBe(false)
   })
+  it('names gems as poe.ninja does', () => {
+    expect(parseReward(['<gemitem>{Level 21 Vaal Summon Skeletons}', '<corrupted>{Corrupted}'])!.variant).toBe('21c')
+    expect(parseReward(['<gemitem>{Level 4 Awakened Empower Support}', '<corrupted>{Corrupted}'])!.variant).toBe('4c')
+  })
+  it('only prices real items, not stand-ins or rolled uniques', () => {
+    const known = (ns: string, name: string) => !['Jewel', 'Currency'].includes(name)
+    expect(parseReward(['<uniqueitem>{Jewel}'], known)!.priceable).toBe(false)
+    expect(parseReward(['<currencyitem>{Currency}'], known)!.priceable).toBe(false)
+    expect(parseReward(["<uniqueitem>{Watcher's Eye}"], known)!.priceable).toBe(false)
+  })
+  it('reads big stacks and size wrappers', () => {
+    expect(parseReward(['<currencyitem>{1,500x Vivid Crystallised Lifeforce}'])).toMatchObject({ name: 'Vivid Crystallised Lifeforce', qty: 1500 })
+    expect(parseReward(['<size:26>{<uniqueitem>{Mageblood}}'])).toMatchObject({ name: 'Mageblood', priceable: true })
+    expect(plainLine('<brequelmutated> {Foulborn}')).toBe('Foulborn')
+  })
   it('drops tags and links from text', () => {
     expect(plainLine('<default>{Quality:} <augmented>{+20%}')).toBe('Quality: +20%')
     expect(plainLine('Area contains an [ContainsAbyss|Abyss]')).toBe('Area contains an Abyss')
@@ -45,6 +60,7 @@ describe('cardLookup', () => {
   })
   it('finds the cards that turn into an item', () => {
     expect(lookup('headhunter', ctx).map(c => c.title)).toEqual(['The Doctor'])
+    expect(lookup('ex', ctx)).toEqual([])
   })
   it('says when the reward has no fixed price', () => {
     const [card] = lookup('mothers parting', ctx)

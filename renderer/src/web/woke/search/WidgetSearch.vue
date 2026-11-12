@@ -148,6 +148,7 @@ import { bossLookup, dropLookup } from './lookups/bosses'
 import { cardLookup } from './lookups/cards'
 import type { CardInfo } from './lookups/cards'
 import { loadTipItems } from '../ui/tooltip/item-tip'
+import { onSharedDataChange } from '../app/live-data'
 import type { TipItem } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import type { SearchWidget } from './widget'
@@ -335,7 +336,11 @@ const cards = computed(() => {
   }
   return out
 })
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value), webLookup])
+// New tooltip files after a data update: read them on the next open.
+const stopDataWatch = onSharedDataChange(() => { tipItems.value = null })
+onBeforeUnmount(stopDataWatch)
+const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
