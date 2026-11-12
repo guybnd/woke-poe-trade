@@ -14,6 +14,17 @@ history:
     user: Agent
     date: '2026-11-12T09:00:46.045Z'
     comment: Created ticket.
+    id: a-2026-11-12t09-00-46-045z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T09:12:15.280Z'
+    comment: >-
+      Built on woke/weapon-stats-header (2540121f): StatHeader.vue +
+      stat-header.ts + weapon-dps.ts, FiltersBlock wiring, Total DPS counts
+      chaos (trade site's dps includes chaos: Rebuke of the Vaal 352.07 = 166.85
+      + 140.39 + 44.8). Unit 3077/3077, e2e stat-header + poe-mode 16/16,
+      tsc/lint/build clean. Adversarial review and perf budgets running.
+    id: a-2026-11-12t09-12-15-280z
 ---
 Build Guy's picked design F1 (Round 3) from https://claude.ai/artifact/JQEW387nXKJaisCjz94Xvu for the weapon/armour property block at the top of the price check.
 
