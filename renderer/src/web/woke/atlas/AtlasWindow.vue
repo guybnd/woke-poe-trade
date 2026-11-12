@@ -304,12 +304,22 @@ function moveFolder (from: string, to: string) {
 
 // ---- menus ----
 
-// Put back under a new id: its tree pin, if pinned, follows it.
-function movePinTo (old: AtlasStrategy, back: AtlasStrategy) {
-  if (old.id === back.id) return
-  const from = atlasTreePin(props.config, old).id
-  if (!pins.value.some(p => p.id === from)) return
-  pins.value = pins.value.map(p => p.id === from ? { ...p, ...atlasTreePin(props.config, back) } : p)
+// The tree pins of strategies being removed, as they were then: a strategy
+// made since may take one's id and pin it, and that pin isn't theirs.
+function pinsOf (list: AtlasStrategy[]) {
+  const ids = new Set(list.map(s => atlasTreePin(props.config, s).id))
+  return new Set(pins.value.filter(p => ids.has(p.id)))
+}
+
+// Put back under new ids: their tree pins follow, all in one pass so one
+// strategy's new id can't catch another's pin.
+function movePins (moves: Array<{ old: AtlasStrategy, back: AtlasStrategy }>, before: Set<unknown>) {
+  const to = new Map(moves.filter(m => m.old.id !== m.back.id).map(m => [atlasTreePin(props.config, m.old).id, m.back]))
+  if (!to.size) return
+  pins.value = pins.value.map(p => {
+    const back = before.has(p) ? to.get(p.id) : undefined
+    return back ? { ...p, ...atlasTreePin(props.config, back) } : p
+  })
 }
 
 // No "are you sure": remove now, offer Undo. Its regexes stay in the library.
@@ -319,6 +329,7 @@ function remove (s: AtlasStrategy) {
   props.config.strategies = props.config.strategies.filter(o => o.id !== s.id)
   if (wasSelected) props.config.selectedId = null
   const drafts = takeDrafts(props.config, [s.id])
+  const pinned = pinsOf([s])
   // Undo puts back this strategy only, so anything made since stays.
   toast(`Removed "${s.name || 'Untitled'}"`, {
     anchor: panel.value?.el,
@@ -328,7 +339,7 @@ function remove (s: AtlasStrategy) {
       const list = [...props.config.strategies]
       list.splice(Math.min(at, list.length), 0, back)
       props.config.strategies = list
-      movePinTo(s, back)
+      movePins([{ old: s, back }], pinned)
       if (wasSelected) props.config.selectedId = back.id
     }
   })
@@ -396,16 +407,19 @@ function removeFolder (path: string) {
   props.config.folders = (props.config.folders ?? []).filter(f => !goneFolders.includes(f))
   if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = null
   const drafts = takeDrafts(props.config, gone)
+  const pinned = pinsOf(removed)
   toast(gone.size ? `Removed "${path}" and ${gone.size} ${gone.size === 1 ? 'strategy' : 'strategies'}` : `Removed "${path}"`, {
     anchor: panel.value?.el,
     undo: () => {
       let selectedBack: number | null = null
+      const moves: Array<{ old: AtlasStrategy, back: AtlasStrategy }> = []
       for (const s of removed) {
         const back = strategyBack(props.config, s, drafts)
         props.config.strategies = [...props.config.strategies, back]
-        movePinTo(s, back)
+        moves.push({ old: s, back })
         if (s.id === selectedBefore) selectedBack = back.id
       }
+      movePins(moves, pinned)
       props.config.folders = [...new Set([...(props.config.folders ?? []), ...goneFolders])]
       if (selectedBack != null) props.config.selectedId = selectedBack
     }

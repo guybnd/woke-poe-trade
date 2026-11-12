@@ -168,8 +168,9 @@ describe('presets, second batch', () => {
       breakdown,
       build: { uniqueBases: ['Arcanist Slippers'], weaponClasses: [] }
     })
-    const unique = (baseType: string, f: Partial<ItemFacts> = {}) => ({ itemClass: 'Claws', baseType, rarity: 'Unique' as const, itemLevel: 83, ...f })
+    const unique = (baseType: string, f: Partial<ItemFacts> = {}) => ({ itemClass: 'Claws', baseType, rarity: 'Unique' as const, itemLevel: 83, quality: 0, vestigial: false, crucibleTree: false, influences: [], ...f })
     expect(shown(doc, unique('Ambusher'))).toBe(false)
+    expect(shown(doc, unique('Ambusher', { vestigial: true }))).toBe(true)
     expect(shown(doc, unique('Ambusher', { areaLevel: 50 }))).toBe(true)
     expect(shown(doc, unique('Ambusher', { socketGroups: ['RGBRG'] }))).toBe(true)
     expect(shown(doc, unique('Ambusher', { corrupted: true }))).toBe(true)

@@ -396,7 +396,9 @@ export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | 
     const bases = cheapUniqueBases(doc, ctx.breakdown, p.cheapUniques.chaos, keep)
     if (bases.length) {
       // Only plain copies: NeverSink's rules for 5-links, 6-sockets,
-      // corrupted, synthesised, replica and foulborn uniques still decide those.
+      // corrupted, synthesised, replica, foulborn, vestigial, Crucible,
+      // influenced and over-quality uniques still decide those, wherever the
+      // copies land (a base tiered above those rules).
       out.push(addedBlock(PRESET_TYPE, 'cheapuniques', `uniques under ${p.cheapUniques.chaos}c once in maps`, [
         inMaps,
         cond('Rarity', '', ['Unique']),
@@ -404,6 +406,10 @@ export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | 
         cond('Foulborn', '', ['False']),
         cond('Corrupted', '', ['False']),
         cond('SynthesisedItem', '', ['False']),
+        cond('Vestigial', '', ['False']),
+        cond('HasCruciblePassiveTree', '', ['False']),
+        cond('HasInfluence', '', ['None']),
+        cond('Quality', '<=', [20]),
         cond('LinkedSockets', '<', [5]),
         cond('Sockets', '<', [6]),
         cond('BaseType', '==', bases)
