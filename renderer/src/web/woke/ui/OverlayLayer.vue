@@ -142,8 +142,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   font-family: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
 }
 .backdrop { position: fixed; inset: 0; z-index: 1000; }
-.wide { max-width: 440px; }
 .wrap { white-space: normal; line-height: 1.3; }
+.menu.wide { max-width: 440px; }
 .menu {
   position: fixed; z-index: 1001; min-width: 200px; max-width: 320px; padding: var(--w-s1);
   background: var(--w-panel); backdrop-filter: var(--w-blur);

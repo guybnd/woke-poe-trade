@@ -521,17 +521,22 @@ function click (e: MouseEvent, button: number) {
   if (!n || n.kind === 'mastery' || n.kind === 'start') return
   const choices = props.model.variants.get(n.id)
   const taken = alloc.value.nodes.has(n.id)
+  if (button !== 0) return
   // A notable with types (Guy's pick T1): its types open at it, to take it
   // with one, change it, or refund it.
   if (choices) {
     if (taken || pathTo(props.model, alloc.value.nodes, n.id).length) variantMenu(e, n, choices, taken)
     return
   }
-  if (button !== 0) return
   if (taken) refund(n.id)
   else take(n.id)
   setHovered(null)
   hover(e)
+}
+
+// The menu took focus; the tree's keys (Ctrl + Z, Y, S) need it back.
+function refocus () {
+  box.value?.focus({ preventScroll: true })
 }
 
 function variantMenu (e: MouseEvent, n: TreeNode, choices: Array<{ effect: number, text: string }>, taken: boolean) {
@@ -544,9 +549,9 @@ function variantMenu (e: MouseEvent, n: TreeNode, choices: Array<{ effect: numbe
       label: c.text,
       wrap: true,
       icon: c.effect === picked ? 'fas fa-check-circle' : 'far fa-circle',
-      action: () => taken ? pickVariant(n.id, c.effect) : take(n.id, c.effect)
+      action: () => { refocus(); if (taken) pickVariant(n.id, c.effect); else take(n.id, c.effect) }
     })),
-    ...(taken ? [{ separator: true as const }, { label: 'Refund', icon: 'fas fa-undo', danger: true, action: () => refund(n.id) }] : [])
+    ...(taken ? [{ separator: true as const }, { label: 'Refund', icon: 'fas fa-undo', danger: true, action: () => { refocus(); refund(n.id) } }] : [])
   ])
 }
 
