@@ -105,6 +105,15 @@ history:
       PR #325 merged as 99b64c0; the dev build is on it. What's left is the
       launch-day run: check, then apply, then bump-data-version, then PR.
     id: a-2026-11-11t05-39-55-866z
+  - type: activity
+    user: Agent
+    date: '2026-11-12T05:34:45.682Z'
+    comment: >-
+      #356 merged (2c3aa867). When upstream ships new English data, the hourly
+      upstream copy now runs trade-data-patch.mjs apply on top and lists what it
+      added back in the PR. CI-only, so no dev switch is needed. The launch-day
+      run itself is still to do.
+    id: a-2026-11-12t05-34-45-682z
 swimlane: null
 needsAction: null
 ---
