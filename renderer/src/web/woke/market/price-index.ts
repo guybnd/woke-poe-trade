@@ -33,12 +33,15 @@ const usePriceIndexState = createGlobalState(() => {
     return byKey.value.get(itemKey(item))?.chaos ?? null
   }
 
-  function search (query: string, limit = 8): PriceItem[] {
+  // `only` limits the results to some items, such as the currency-type
+  // items a map can cost.
+  function search (query: string, limit = 8, only?: (item: PriceItem) => boolean): PriceItem[] {
     const q = query.trim().toLowerCase()
     if (q.length < 2 || !snapshot.value) return []
     const starts: PriceItem[] = []
     const contains: PriceItem[] = []
     for (const item of snapshot.value.items) {
+      if (only && !only(item)) continue
       const name = item.name.toLowerCase()
       if (name.startsWith(q)) starts.push(item)
       else if (name.includes(q)) contains.push(item)

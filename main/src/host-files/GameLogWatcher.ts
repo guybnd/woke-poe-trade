@@ -51,6 +51,9 @@ export class GameLogWatcher {
   private _wantedPath: string | null = null
   // woke: the running game's log, once gameStarted has chosen it.
   private _runningLog: string | null = null
+  // woke: main-side listener for new lines (the personal stash reader's
+  // hideout check). Unset unless that feature is on.
+  onLines: ((lines: string[]) => void) | null = null
   get actualPath () { return this._state?.path ?? null }
   private _state: {
     offset: number
@@ -258,6 +261,7 @@ export class GameLogWatcher {
         name: 'MAIN->CLIENT::game-log',
         payload: { lines }
       })
+      try { this.onLines?.(lines) } catch {}
       state.offset += used
       this.readToEOF()
     } else {

@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest'
 import { strategyScarabCosts } from '@/web/woke/atlas/guide'
 import type { AtlasStrategy } from '@/web/woke/atlas/widget'
-import { initFarmingData, withScarabCosts } from '@/web/woke/farming/farming'
+import { initFarmingData, isMapCostItem, withScarabCosts } from '@/web/woke/farming/farming'
 import type { FarmingWidget } from '@/web/woke/farming/farming'
 import { exportRows, sessionTotals, strategyRows } from '@/web/woke/analytics/stats'
 import type { MapRun, SessionRecord } from '@/web/woke/analytics/types'
@@ -87,5 +87,19 @@ describe('session analytics', () => {
 
   it('adds no extra row when everything is tied to a map', () => {
     expect(exportRows([session()])).toHaveLength(2)
+  })
+})
+
+describe('map cost picker', () => {
+  it('offers currency-type items, never uniques, gems or cards', () => {
+    for (const type of ['Currency', 'Fragment', 'Scarab', 'Map', 'DeliriumOrb', 'Invitation']) {
+      expect(isMapCostItem({ type })).toBe(true)
+    }
+    for (const type of ['UniqueWeapon', 'UniqueArmour', 'UniqueMap', 'SkillGem', 'DivinationCard', 'Beast', 'Tattoo']) {
+      expect(isMapCostItem({ type })).toBe(false)
+    }
+    // A category poe.ninja adds for a new league: its currency is a fair input.
+    expect(isMapCostItem({ type: 'Wombgift' })).toBe(true)
+    expect(isMapCostItem({ type: 'UniqueSomething' })).toBe(false)
   })
 })

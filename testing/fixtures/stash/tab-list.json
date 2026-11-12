@@ -1,0 +1,8 @@
+{"numTabs":3,"tabs":[
+ {"n":"Currency","i":0,"id":"aa01","type":"CurrencyStash","selected":true,"colour":{"r":124,"g":84,"b":54}},
+ {"n":"Dump","i":1,"id":"bb02","type":"QuadStash","colour":{"r":0,"g":0,"b":0}},
+ {"n":"Old (Remove-only)","i":2,"id":"cc03","type":"PremiumStash","colour":{"r":255,"g":255,"b":255}}
+],"items":[
+ {"verified":false,"w":1,"h":1,"icon":"https://web.poecdn.com/divine.png","stackSize":12,"maxStackSize":20,"league":"Mercenaries","id":"x1","name":"","typeLine":"Divine Orb","baseType":"Divine Orb","identified":true,"ilvl":0,"frameType":5,"x":0,"y":0,"inventoryId":"Stash1"},
+ {"w":1,"h":1,"icon":"https://web.poecdn.com/chaos.png","stackSize":340,"maxStackSize":5000,"id":"x2","name":"","typeLine":"Chaos Orb","baseType":"Chaos Orb","identified":true,"frameType":5,"x":1,"y":0}
+]}

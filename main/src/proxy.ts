@@ -44,6 +44,9 @@ export class HttpProxy {
         const resHeaders = { ...proxyRes.headers }
         // `net.request` returns an already decoded body
         delete resHeaders['content-encoding']
+        // woke: cookies stay in Electron's store (net.request keeps them); the
+        // overlay page never sees one, such as a pathofexile.com login.
+        delete resHeaders['set-cookie']
         // Another site's page opened through this address must not run as the
         // app's own page. The app only ever fetches through here.
         resHeaders['content-security-policy'] = 'sandbox'

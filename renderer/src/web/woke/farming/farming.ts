@@ -1,12 +1,25 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { BULK_TYPES } from '../league-invest/invest'
-import { itemKey } from '../market/types'
+import { isListedType, itemKey } from '../market/types'
 import { isBossArea } from '../shared/boss-areas'
 import type { SavedLoot, SessionRecord } from '../analytics/types'
 
 export const FARMING_TYPE = 'woke-farming'
 // copy-item target for the "add hovered item to loot" hotkey.
 export const FARMING_LOOT_TARGET = 'woke-farming-loot'
+// What the Map cost tab's "Add an input" box offers: things you put in the
+// map device or spend on a map, never uniques, gems or cards. A category
+// poe.ninja adds for a new league counts too (its new currency), unless it
+// is a unique category.
+export const MAP_COST_TYPES = new Set([
+  'Currency', 'Fragment', 'Scarab', 'DeliriumOrb', 'Map', 'BlightedMap', 'BlightRavagedMap',
+  'Invitation', 'Oil', 'Astrolabe', 'AllflameEmber', 'Incubator'
+])
+export function isMapCostItem (item: { type: string }): boolean {
+  if (MAP_COST_TYPES.has(item.type)) return true
+  return !isListedType(item.type) && !item.type.startsWith('Unique')
+}
+
 // Pause the session after this long without a zone change.
 export const AUTO_PAUSE_MS = 5 * 60 * 1000
 

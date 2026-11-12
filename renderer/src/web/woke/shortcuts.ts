@@ -55,6 +55,12 @@ export function wokeGlobalShortcuts (config: { woke?: { setupDone: boolean, off:
   return out
 }
 
+// Personal-only widgets add their hotkeys at startup (personal.ts).
+const extraShortcuts = new Map<string, (widget: Widget) => ShortcutAction[]>()
+export function addWidgetShortcuts (wmType: string, fn: (widget: Widget) => ShortcutAction[]) {
+  extraShortcuts.set(wmType, fn)
+}
+
 export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: boolean, off: string[], hideAllHotkey?: string | null }, widgets: Widget[] }): ShortcutAction[] {
   // Modules that are switched off register no hotkeys.
   if (!isWidgetTypeOn(config, widget.wmType)) return []
@@ -108,6 +114,8 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     }
     return actions
   }
+  const extra = extraShortcuts.get(widget.wmType)
+  if (extra) return extra(widget)
   if (widget.wmType === CHALLENGES_TYPE) return challengesShortcuts(widget as ChallengesWidget)
   if (widget.wmType === WEALTHY_EXILE_TYPE) return wealthyExileShortcuts(widget as WealthyExileWidget)
   if (widget.wmType === MAP_MODS_TYPE) {
