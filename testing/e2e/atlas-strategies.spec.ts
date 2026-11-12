@@ -190,3 +190,18 @@ test('mechanics light up on the tree, and the tree pins over the game', async ({
   await expect(pin.locator('canvas').first()).toBeVisible({ timeout: 15_000 })
   await overlay.snap('the tree pinned')
 })
+
+test('Totals add up the taken passives, by mechanic', async ({ overlay }) => {
+  test.setTimeout(90_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  await expect(atlas.getByText(/\d+ \/ \d+ points/)).toBeVisible({ timeout: 30_000 })
+  await atlas.getByTitle(/^Totals: what the taken passives add up to/).click()
+  const find = atlas.getByPlaceholder('Find a stat')
+  await expect(find).toBeVisible()
+  // Something is taken, so there's at least one total.
+  await expect(atlas.getByText('Take passives to see what they add up to.')).toHaveCount(0)
+  await overlay.page.waitForTimeout(1200)
+  await overlay.snap('totals beside the tree')
+  await find.fill('zzzz-nothing')
+  await expect(atlas.getByText('No taken passive says that.')).toBeVisible()
+})

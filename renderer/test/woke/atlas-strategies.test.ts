@@ -3,6 +3,7 @@
 // folders in the Regex library.
 import { describe, it, expect } from 'vitest'
 import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
+import { atlasTotals, filterTotals } from '@/web/woke/atlas/totals'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
 import { allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, sameTree, saveDraft, setDraft, takeDrafts, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
@@ -246,5 +247,19 @@ describe('drafts and removed strategies', () => {
     expect(w.drafts).toEqual({ 6: 'y' })
     restoreDrafts(w, taken)
     expect(w.drafts).toEqual({ 5: 'x', 6: 'y' })
+  })
+})
+
+describe('atlas totals', () => {
+  it('sums stat lines across taken passives, by mechanic, with picked types', () => {
+    const model = readAtlasTree(atlas)
+    const groups = atlasTotals(model, new Set([100, 1, 2, 3]), { 3: 36845 })
+    expect(groups.map(g => g.mechanic)).toEqual(['Threads'])
+    const rows = groups[0].rows.map(r => r.text)
+    expect(rows).toContain('2% more')
+    expect(rows).toContain('200% increased chance for Threads in your Maps to be of type: Ritual')
+    expect(groups[0].rows.find(r => r.text === '2% more')?.ids).toEqual([1, 2])
+    expect(filterTotals(groups, 'ritual')[0].rows).toHaveLength(1)
+    expect(filterTotals(groups, 'nothing')).toEqual([])
   })
 })
