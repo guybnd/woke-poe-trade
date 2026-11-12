@@ -20,6 +20,8 @@ export interface ChallengesWidget extends Widget {
   dockIcon: boolean
   // What the last open saw, for the dock card: the guide itself loads on open.
   summary: ChallengeSummary | null
+  // The league that summary is from: a new league's challenges start over.
+  summaryLeague?: string | null
   lastSynced: number | null
 }
 

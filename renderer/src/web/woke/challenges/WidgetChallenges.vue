@@ -1,9 +1,10 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <DockItem :menu="dockMenu" id="challenges" title="Challenges" :show="config.dockIcon === true"
-      :badge="config.summary ? `${config.summary.done}/${config.summary.total}` : null" :wm-id="config.wmId" card-width="20rem">
+      :badge="summaryFresh ? `${config.summary!.done}/${config.summary!.total}` : null" :wm-id="config.wmId" card-width="20rem">
       <template #card>
-        <div v-if="config.summary" style="padding: 6px var(--w-pad);">
+        <div v-if="config.summary && !summaryFresh" class="text-xs" style="padding: 6px var(--w-pad); color: var(--w-warn);">A new league started. Open the guide to see its challenges.</div>
+        <div v-else-if="config.summary" style="padding: 6px var(--w-pad);">
           <div class="flex justify-between w-dim text-xs mb-1">
             <span>Next up</span><span>from when you last opened it</span>
           </div>
@@ -68,6 +69,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
+import { useLeagues } from '@/web/background/Leagues'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WBanner, WButton, WField, WPanel } from '../ui'
@@ -170,7 +172,13 @@ function applyTicks () {
 
 watch(summary, (s) => {
   if (guide.value.length && JSON.stringify(s) !== JSON.stringify(props.config.summary)) props.config.summary = s
+  if (guide.value.length) props.config.summaryLeague = leagues.selectedId.value ?? null
 })
+
+// The dock count belongs to the league it was read in.
+const leagues = useLeagues()
+const summaryFresh = computed(() => !!props.config.summary &&
+  (!props.config.summaryLeague || !leagues.selectedId.value || props.config.summaryLeague === leagues.selectedId.value))
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
