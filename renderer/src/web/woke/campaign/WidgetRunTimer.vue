@@ -8,12 +8,16 @@
         <div v-if="run" class="flex flex-col gap-1" style="padding: 6px var(--w-pad) 8px;">
           <div class="w-head-font w-accent w-trunc">{{ actLabel(run.act) }}<template v-if="run.zone"> · {{ run.zone }}</template></div>
           <div class="flex justify-between w-num"><span class="w-dim">Run</span><span>{{ formatClock(total) }}</span></div>
+          <template v-if="town > 0">
+            <div class="flex justify-between w-num"><span class="w-dim">Out of town</span><span>{{ formatClock(total - town) }}</span></div>
+            <div class="flex justify-between w-num"><span class="w-dim">Town &amp; hideout</span><span>{{ formatClock(town) }}</span></div>
+          </template>
           <div v-if="current" class="flex justify-between w-num"><span class="w-dim">Act</span>
             <span>{{ formatClock(current.segmentMs ?? 0) }}<span v-if="current.cmpSegmentMs != null" class="w-faint"> / {{ formatClock(current.cmpSegmentMs) }}</span></span></div>
           <div class="flex justify-between w-num"><span class="w-dim">Zone</span><span>{{ formatClock(total - run.zoneSinceMs) }}</span></div>
           <div v-if="delta != null" class="flex justify-between w-num"><span class="w-dim">vs {{ cmpLabel }}</span>
             <span :class="delta <= 0 ? 'w-up' : 'w-down'">{{ formatDelta(delta) }}</span></div>
-          <div v-if="run.runningSince == null" class="w-num" style="color: var(--w-warn);">paused</div>
+          <div v-if="run.runningSince == null" class="w-num" style="color: var(--w-warn);">{{ run.idlePaused ? 'paused: no game activity, resumes on the next zone' : 'paused' }}</div>
         </div>
       </template>
     </DockItem>
@@ -26,6 +30,7 @@
           </span>
           <span :class="$style.sep" />
           <span><span :class="$style.k">Run</span> <span :class="$style.time" class="w-num">{{ formatClock(total) }}</span></span>
+          <span v-if="town > 0" title="Run time in towns and hideouts; the rest is out of town"><span :class="$style.k">Town</span> <span class="w-num">{{ formatClock(town) }}</span></span>
           <span v-if="current">
             <span :class="$style.k">Act</span> <span class="w-num">{{ formatClock(current.segmentMs ?? 0) }}</span>
             <span v-if="current.cmpSegmentMs != null" class="w-num w-faint"> / {{ formatClock(current.cmpSegmentMs) }}</span>
@@ -35,7 +40,7 @@
             <span :class="$style.sep" />
             <span class="w-dim">Zone <span class="w-num" style="color: var(--w-fg);">{{ formatClock(total - run.zoneSinceMs) }}</span></span>
           </template>
-          <span v-if="!run.finished && run.runningSince == null" class="w-num" style="color: var(--w-warn);">paused</span>
+          <span v-if="!run.finished && run.runningSince == null" class="w-num" style="color: var(--w-warn);" :title="run.idlePaused ? 'No game activity for 20 minutes: the time since then does not count. It resumes on the next zone.' : undefined">{{ run.idlePaused ? 'paused (idle)' : 'paused' }}</span>
         </template>
         <span v-else class="w-dim">Campaign timer · starts on the Twilight Strand</span>
 
@@ -173,7 +178,7 @@ import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
 import { actLabel } from './log-parse'
 import {
   applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
-  migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest
+  migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed, idleCheck
 } from './run-timer'
 import { CAMPAIGN_TYPE } from './widget'
 import type { CampaignWidget } from './widget'
@@ -226,6 +231,14 @@ onUnmounted(tickWhile(() => cardShown.value, () => { now.value = Date.now() }, 1
 
 const run = computed(() => props.config.run)
 const total = computed(() => run.value ? runElapsed(run.value, now.value) : 0)
+const town = computed(() => run.value ? townElapsed(run.value, now.value) : 0)
+// No game activity for a while (closed, or left alone): the run pauses as of
+// its last activity, and the next log line resumes it.
+const idleTimer = setInterval(() => {
+  const r = props.config.run
+  if (r && idleCheck(r, Date.now())) { now.value = Date.now(); saveConfig() }
+}, 60 * 1000)
+onUnmounted(() => clearInterval(idleTimer))
 const cmp = computed(() => comparisonRun(props.config))
 const pb = computed(() => personalBest(props.config.history))
 const pbTotal = computed(() => pb.value ? runTotal(pb.value) : null)
