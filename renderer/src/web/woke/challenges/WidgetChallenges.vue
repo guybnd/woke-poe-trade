@@ -153,6 +153,8 @@ async function readGuide () {
   try {
     const read = await el.executeJavaScript(READ_GUIDE_JS) as GuideRow[]
     if (JSON.stringify(read) !== JSON.stringify(guide.value)) guide.value = read
+    // Read in this league now: its count is this league's.
+    if (read.length && props.config.summaryLeague !== leagues.selectedId.value) props.config.summaryLeague = leagues.selectedId.value ?? null
   } catch { /* Not ready yet. */ }
   applyTicks()
 }
@@ -172,13 +174,22 @@ function applyTicks () {
 
 watch(summary, (s) => {
   if (guide.value.length && JSON.stringify(s) !== JSON.stringify(props.config.summary)) props.config.summary = s
-  if (guide.value.length) props.config.summaryLeague = leagues.selectedId.value ?? null
 })
 
-// The dock count belongs to the league it was read in.
+// The dock count belongs to the challenge league it was read in. Hardcore,
+// SSF and Ruthless share their league's challenges; Standard and private
+// leagues say nothing about which league it is.
 const leagues = useLeagues()
-const summaryFresh = computed(() => !!props.config.summary &&
-  (!props.config.summaryLeague || !leagues.selectedId.value || props.config.summaryLeague === leagues.selectedId.value))
+function challengeLeague (id: string | undefined | null): string | null {
+  if (!id || /^Standard$|\(PL\d+\)/i.test(id) || /^(Hardcore|SSF Standard|SSF Hardcore|Ruthless)$/i.test(id)) return null
+  return id.replace(/^(Hardcore |HC |SSF |Ruthless )+/i, '').trim() || null
+}
+const summaryFresh = computed(() => {
+  if (!props.config.summary) return false
+  const was = challengeLeague(props.config.summaryLeague)
+  const now = challengeLeague(leagues.selectedId.value)
+  return !was || !now || was === now
+})
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 

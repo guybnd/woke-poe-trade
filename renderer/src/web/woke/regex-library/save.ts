@@ -2,7 +2,7 @@
 // colours, atlas strategies): every string you keep lives in the Regex library.
 import { AppConfig, saveConfig, pushHostConfig } from '@/web/Config'
 import { isModuleOn } from '../modules'
-import { REGEX_LIBRARY_TYPE, starterEntries } from './widget'
+import { REGEX_LIBRARY_TYPE, starterEntries, GAME_PATCH } from './widget'
 import type { RegexEntry, RegexLibraryWidget } from './widget'
 import { popupAnchor } from '../ui/window-anchor'
 
@@ -38,7 +38,8 @@ export function saveToRegexLibrary (entry: { name: string, text: string, categor
     category: entry.category,
     tags: [],
     notes: '',
-    hotkey: null
+    hotkey: null,
+    patch: GAME_PATCH
   }
   lib.entries = [...lib.entries, next]
   saveConfig()

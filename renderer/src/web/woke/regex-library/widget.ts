@@ -68,7 +68,7 @@ export function canNegate (text: string): boolean {
 export function regexLint (text: string): string[] {
   const out: string[] = []
   if ((text.match(/"/g) ?? []).length % 2) out.push('Unbalanced quote: the game reads everything after it as one term.')
-  if (text.trim() && text !== text.trim()) out.push('Starts or ends with a space, which the game keeps as part of the search.')
+  if ([...text.matchAll(/"([^"]*)"/g)].some(m => m[1] !== m[1].trim())) out.push('A quoted term starts or ends with a space, which the game searches for too.')
   if (/\S {2,}\S/.test(text)) out.push('Two spaces in a row: one is enough between terms.')
   return out
 }
@@ -119,13 +119,14 @@ function parseJsonImport (json: string, existing: RegexEntry[]): RegexEntry[] {
       tags: strList(r.tags),
       notes: str(r.notes),
       hotkey: null,
-      negate: r.negate === true
+      negate: r.negate === true,
+      ...(typeof r.patch === 'string' && r.patch ? { patch: r.patch } : {})
     }))
 }
 
 export function exportEntries (entries: RegexEntry[]): string {
   return JSON.stringify(
-    entries.map(({ name, text, category, tags, notes, negate }) => ({ name, text, category, tags, notes, ...(negate ? { negate } : {}) })),
+    entries.map(({ name, text, category, tags, notes, negate, patch }) => ({ name, text, category, tags, notes, ...(negate ? { negate } : {}), ...(patch ? { patch } : {}) })),
     null, 2)
 }
 

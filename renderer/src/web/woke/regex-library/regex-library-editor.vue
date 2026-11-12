@@ -11,7 +11,8 @@
           <button class="leading-none cursor-move w-btn-soft rounded-l w-6 h-6" data-qa="drag-handle">
             <i class="fas fa-grip-vertical w-dim" />
           </button>
-          <input v-model="entry.text" placeholder="search string or regex"
+          <input :value="entry.text" placeholder="search string or regex"
+            @input="entry.text = ($event.target as HTMLInputElement).value; entry.patch = GAME_PATCH"
             class="px-1 col-span-2 leading-6"
             :class="(effectiveText(entry).length > MAX_SEARCH_LENGTH) ? 'w-input w-input-bad' : 'w-input'">
           <button class="leading-none rounded-r w-btn-soft w-6 h-6" @click="removeEntry(entry.id)">
@@ -63,7 +64,7 @@ import DndContainer from 'vuedraggable'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WToggle from '../ui/WToggle.vue'
 import { configProp, configModelValue } from '@/web/settings/utils'
-import { MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, exportEntries, parseImport } from './widget'
+import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, exportEntries, parseImport } from './widget'
 import type { RegexEntry, RegexLibraryWidget } from './widget'
 import { parseTags } from '../shared/library'
 
@@ -78,6 +79,7 @@ export default defineComponent({
 
     return {
       MAX_SEARCH_LENGTH,
+      GAME_PATCH,
       enableHotkeys: configModelValue(() => props.configWidget, 'enableHotkeys'),
       canNegate,
       effectiveText,

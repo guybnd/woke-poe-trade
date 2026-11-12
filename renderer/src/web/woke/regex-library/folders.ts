@@ -3,7 +3,7 @@
 // entries live in the library, so an edit in either place is the same edit.
 import { AppConfig, pushHostConfig, saveConfig } from '@/web/Config'
 import { isModuleOn } from '../modules'
-import { REGEX_LIBRARY_TYPE, emptyEntry } from './widget'
+import { GAME_PATCH, REGEX_LIBRARY_TYPE, emptyEntry } from './widget'
 import type { RegexEntry, RegexLibraryWidget } from './widget'
 import { saveToRegexLibrary } from './save'
 import type { SaveResult } from './save'
@@ -38,7 +38,7 @@ export function addRegex (folder: string, name: string, text: string): SaveResul
   if (!lib || !libraryOn()) return saveToRegexLibrary({ name, text: clean, category })
   if (regexesIn(category).some(e => e.text.trim() === clean)) return 'exists'
   if (!Array.isArray(lib.entries)) lib.entries = []
-  lib.entries = [...lib.entries, { ...emptyEntry(lib.entries), name, text: clean, category }]
+  lib.entries = [...lib.entries, { ...emptyEntry(lib.entries), name, text: clean, category, patch: GAME_PATCH }]
   saveConfig()
   pushHostConfig()
   return 'saved'
