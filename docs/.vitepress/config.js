@@ -57,6 +57,9 @@ export default defineConfig({
         }, {
           text: 'Quick Start',
           link: '/quick-start'
+        }, {
+          text: 'Tools',
+          link: '/tools'
         }]
       },
       {

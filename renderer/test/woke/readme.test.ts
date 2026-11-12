@@ -23,3 +23,12 @@ describe('README', () => {
     expect(table).toBe(expectedTable())
   })
 })
+
+describe('the Tools help page', () => {
+  it('lists every module', () => {
+    const text = fs.readFileSync(path.join(__dirname, '../../../docs/tools.md'), 'utf8').replace(/\r\n/g, '\n')
+    const table = /<!-- modules:start[^>]*-->\n([\s\S]*?)\n<!-- modules:end -->/.exec(text)?.[1]
+    expect(table, 'docs/tools.md lost its <!-- modules:start --> / <!-- modules:end --> markers').toBeDefined()
+    expect(table).toBe(expectedTable())
+  })
+})

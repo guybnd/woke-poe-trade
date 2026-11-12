@@ -4,13 +4,11 @@ title: FAQ
 
 - **Where can I change settings, league?**
 
-  Open Path of Exile and press overlay key `Shift + Space`. Click on the button with cog icon there.
-  ![](https://i.imgur.com/81L9Cp0.png)
+  Press `Shift + Space` in game to open the overlay, then open Settings from the rail on the left edge. The league is under **Game & league**. Every tool has its own page, and **All modules** switches tools on and off. See [Tools](/tools).
 
 - **Where can I find the logs?**
 
-  In the settings under the "Debug" tab.
-  ![](https://i.imgur.com/0VPm9Cz.png)
+  In Settings, under **Troubleshooting**.
 
 - **Is this app approved by GGG? Can I get banned for using it?**
 
@@ -30,15 +28,7 @@ title: FAQ
 
 - **Will my language be supported?**
 
-  No plans to support other languages. Why is there Russian language?
-  Because:
-    1 - this is the native language of developer;
-    2 - helps to create cleaner abstractions in code and test it;
-    3 - has the most active community, at least according to the numbers I can measure.
-
-  09/21/2020
-
-  ![](https://imgur.com/HujBLLR.png)
+  The game can be in English, Russian, Korean or Traditional Chinese for price check. The price check and settings follow your game's language; the newer tools are in English only for now.
 
 - **I downloaded a zip with a bunch of files, but no .exe inside?**
 
