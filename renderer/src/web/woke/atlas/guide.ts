@@ -3,7 +3,7 @@
 // map regex and the rest as notes. Also prices scarab lines.
 import type { PriceItem } from '../market/types'
 import type { AtlasStrategy, ThreadSlot } from './strategies'
-import { MAX_THREAD_SLOTS, THREAD_TYPES } from './strategies'
+import { MAX_THREAD_SLOTS, MAX_THREADS, THREAD_TYPES } from './strategies'
 import { parseCostLines, priceLines } from './loadout'
 
 const TREE_URL = /https?:\/\/(?:www\.)?(?:pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/[^\s)"']+|poeplanner\.com\/[^\s)"']+)/i
@@ -48,7 +48,7 @@ export function parseGuideText (text: string): Omit<AtlasStrategy, 'id'> {
     const thread = THREAD_LINE.exec(clean)
     if (thread) {
       const type = THREAD_TYPES.find(t => t.toLowerCase() === thread[2].toLowerCase())!
-      if (threads.length < MAX_THREAD_SLOTS && !threads.some(t => t.type === type)) threads.push({ type, count: Number(thread[1] ?? thread[3] ?? 1) })
+      if (threads.length < MAX_THREAD_SLOTS && !threads.some(t => t.type === type)) threads.push({ type, count: Math.max(1, Math.min(MAX_THREADS + 2, Number(thread[1] ?? thread[3] ?? 1))) })
       continue
     }
     // "2x Chaos Orb", "1 Vaal Orb": something each map takes.

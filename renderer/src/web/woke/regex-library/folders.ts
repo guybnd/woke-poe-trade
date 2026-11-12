@@ -28,8 +28,42 @@ export function regexesIn (folder: string): RegexEntry[] {
   return libraries().flatMap(l => (l.entries ?? []).filter(e => norm(e.category) === want))
 }
 
+// Files a regex in this folder. The same text elsewhere in the library doesn't
+// count: only a copy already in this folder makes it 'exists'.
 export function addRegex (folder: string, name: string, text: string): SaveResult {
-  return saveToRegexLibrary({ name, text, category: norm(folder) })
+  const category = norm(folder)
+  const clean = text.trim()
+  const lib = libraries()[0]
+  // No library window yet: the plain save makes one.
+  if (!lib || !libraryOn()) return saveToRegexLibrary({ name, text: clean, category })
+  if (regexesIn(category).some(e => e.text.trim() === clean)) return 'exists'
+  if (!Array.isArray(lib.entries)) lib.entries = []
+  lib.entries = [...lib.entries, { ...emptyEntry(lib.entries), name, text: clean, category }]
+  saveConfig()
+  pushHostConfig()
+  return 'saved'
+}
+
+// One folder's entries to another, exactly that folder (not what's under it:
+// a strategy's folder can share its path with a folder of strategies).
+export function moveRegexCategory (from: string, to: string): number {
+  const a = norm(from)
+  const b = norm(to)
+  if (!a || a === b) return 0
+  let moved = 0
+  for (const l of libraries()) {
+    if (!(l.entries ?? []).some(e => norm(e.category) === a)) continue
+    l.entries = l.entries.map(e => {
+      if (norm(e.category) !== a) return e
+      moved++
+      return { ...e, category: b }
+    })
+  }
+  if (moved) {
+    saveConfig()
+    pushHostConfig()
+  }
+  return moved
 }
 
 // Rewrites one entry in place, in whichever library holds it.

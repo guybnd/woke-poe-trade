@@ -162,13 +162,15 @@ import { usePriceIndex } from '../market/price-index'
 import { FARMING_TYPE, strategyStats, withScarabCosts } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
 import { SAVE_MESSAGE } from '../regex-library/save'
-import { addRegex, libraryOn as isLibraryOn, regexesIn, removeRegex, strategyRegexFolder, moveRegexFolder } from '../regex-library/folders'
+import { addRegex, libraryOn as isLibraryOn, regexesIn, removeRegex } from '../regex-library/folders'
+import { refileRegexes } from './strategy-ops'
 import type { RegexEntry } from '../regex-library/widget'
 import { decodeTree, diffTrees, overview } from './tree'
 import type { AtlasNode, DecodedTree } from './tree'
 import type { AtlasTreeModel } from './atlas-tree'
 import { hasOneTypeKeystone, parseCostLines, priceLines, priceThreads, threadCap, treeWarnings } from './loadout'
-import { MAX_THREAD_SLOTS, THREAD_TYPES, strategyCode } from './widget'
+import { MAX_THREAD_SLOTS, THREAD_TYPES, regexFolderOf } from './widget'
+import { strategyCode } from './strategy-code'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 
 const props = defineProps<{
@@ -282,7 +284,7 @@ const earn = computed(() => {
 // ---- regexes ----
 
 const libraryOn = computed(() => isLibraryOn())
-const folder = computed(() => strategyRegexFolder(props.strategy))
+const folder = computed(() => regexFolderOf(props.strategy))
 const folderLabel = computed(() => folder.value.split('/').join(' › '))
 // Read through the config, so an edit in the library shows here at once.
 const regexes = computed<RegexEntry[]>(() => regexesIn(folder.value))
@@ -322,9 +324,8 @@ function regexMenu (e: MouseEvent, r: RegexEntry) {
 function rename (name: string) {
   const next = name.trim()
   if (next === props.strategy.name) return
-  const before = strategyRegexFolder(props.strategy)
   props.strategy.name = next
-  moveRegexFolder(before, strategyRegexFolder(props.strategy))
+  refileRegexes(props.strategy, props.config.strategies)
 }
 
 function copyCode () {

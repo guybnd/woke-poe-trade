@@ -4,7 +4,8 @@
 import { describe, it, expect } from 'vitest'
 import { encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
-import { allFolders, folderTree, movedFolder, readStrategyCode, strategyCode, emptyStrategy } from '@/web/woke/atlas/strategies'
+import { allFolders, claimRegexFolders, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
+import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
 import type { AtlasStrategy } from '@/web/woke/atlas/strategies'
 import { parseGuideText } from '@/web/woke/atlas/guide'
 import { parseCostLines, priceLines, treeWarnings } from '@/web/woke/atlas/loadout'
@@ -159,5 +160,27 @@ describe('regex library folders', () => {
   it('names the folders after the strategy and the build file', () => {
     expect(strategyRegexFolder({ folder: 'Juicing/Deep', name: 'Breach / Ritual' })).toBe('Atlas strategies/Juicing/Deep/Breach - Ritual')
     expect(buildRegexFolder('3.30/RF Jugg.xml')).toBe('PoB builds/3.30/RF Jugg')
+  })
+})
+
+describe('each strategy keeps its own regex folder', () => {
+  it('gives same-named strategies their own folders, the first keeping the old one', () => {
+    const list = [
+      { ...emptyStrategy([]), id: 1, name: 'Breach', folder: 'Juicing' },
+      { ...emptyStrategy([]), id: 2, name: 'Breach', folder: 'Juicing' }
+    ]
+    claimRegexFolders(list)
+    expect(list.map(s => s.regexFolder)).toEqual(['Atlas strategies/Juicing/Breach', 'Atlas strategies/Juicing/Breach (2)'])
+  })
+
+  it('skips a folder something else is filed in', () => {
+    const list = [{ ...emptyStrategy([]), id: 1, name: 'Breach', folder: '' }]
+    expect(freeRegexFolder(list[0], list, f => f === 'Atlas strategies/Breach')).toBe('Atlas strategies/Breach (2)')
+    expect(regexFolderOf({ name: 'X', folder: 'A' })).toBe('Atlas strategies/A/X')
+  })
+
+  it('leaves its folder out of a strategy code', () => {
+    const code = strategyCode([{ ...emptyStrategy([]), id: 1, name: 'A', regexFolder: 'Atlas strategies/A' }])
+    expect(atob(code.slice('woke-atlas:'.length))).not.toContain('regexFolder')
   })
 })

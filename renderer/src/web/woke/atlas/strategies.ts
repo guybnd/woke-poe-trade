@@ -2,6 +2,7 @@
 // No browser state here, so tests and other modules can read it.
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
+import { strategyRegexFolder } from '../regex-library/folder-names'
 
 export const ATLAS_TYPE = 'woke-atlas-strategies'
 
@@ -32,6 +33,9 @@ export interface AtlasStrategy {
   // Map mod regex, from before the Regex library kept a strategy's regexes.
   regex: string
   notes: string
+  // Where its regexes sit in the Regex library, claimed once and kept unique,
+  // so two strategies of one name never share a list.
+  regexFolder?: string
 }
 
 export interface AtlasWidget extends Widget {
@@ -135,74 +139,11 @@ export function movedFolder (folder: string, from: string, to: string): string {
   return f
 }
 
-// ---- strategy codes: what Export copies and Import reads ----
-
-const CODE_PREFIX = 'woke-atlas:'
-
-export interface SharedRegex { name: string, text: string }
-export interface SharedStrategy extends Omit<AtlasStrategy, 'id'> { regexes: SharedRegex[] }
-
-function toBase64 (text: string): string {
-  let bin = ''
-  for (const b of new TextEncoder().encode(text)) bin += String.fromCharCode(b)
-  return btoa(bin)
-}
-
-function fromBase64 (b64: string): string {
-  const bin = atob(b64.replace(/\s+/g, ''))
-  const bytes = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-  return new TextDecoder().decode(bytes)
-}
-
-// One strategy or a whole folder; folders inside it are kept relative to `base`.
-export function strategyCode (list: Array<AtlasStrategy & { regexes?: SharedRegex[] }>, base = ''): string {
-  const strip = (folder: string) => {
-    const f = cleanFolder(folder)
-    if (!base) return ''
-    return f === base ? '' : f.startsWith(base + '/') ? f.slice(base.length + 1) : ''
-  }
-  const rows = list.map(s => ({ ...Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'id')), folder: strip(s.folder) }))
-  return CODE_PREFIX + toBase64(JSON.stringify({ v: 1, strategies: rows }))
-}
+// Strategy codes (Import and Export) are in strategy-code.ts, loaded when used.
+export const CODE_PREFIX = 'woke-atlas:'
 
 export function isStrategyCode (text: string): boolean {
   return text.trim().startsWith(CODE_PREFIX)
-}
-
-export function readStrategyCode (text: string): SharedStrategy[] {
-  let data: unknown
-  try {
-    data = JSON.parse(fromBase64(text.trim().slice(CODE_PREFIX.length)))
-  } catch {
-    throw new Error("That strategy code can't be read. Copy it again.")
-  }
-  const rows = (data && typeof data === 'object' && Array.isArray((data as { strategies?: unknown }).strategies))
-    ? (data as { strategies: unknown[] }).strategies
-    : []
-  const out: SharedStrategy[] = []
-  for (const r of rows) {
-    if (!r || typeof r !== 'object') continue
-    const o = r as Record<string, unknown>
-    out.push({
-      name: str(o.name) || 'Imported strategy',
-      folder: cleanFolder(str(o.folder)),
-      league: str(o.league),
-      tags: strList(o.tags),
-      treeUrl: str(o.treeUrl),
-      threads: threadList(o.threads),
-      scarabs: str(o.scarabs),
-      device: str(o.device),
-      regex: str(o.regex),
-      notes: str(o.notes),
-      regexes: Array.isArray(o.regexes)
-        ? o.regexes.filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === 'object')
-            .map(x => ({ name: str(x.name), text: str(x.text) })).filter(x => x.text)
-        : []
-    })
-  }
-  if (!out.length) throw new Error('That strategy code has no strategies in it.')
-  return out
 }
 
 export function parseStrategiesImport (json: string, existing: AtlasStrategy[]): AtlasStrategy[] {
@@ -227,4 +168,29 @@ export function parseStrategiesImport (json: string, existing: AtlasStrategy[]):
 export function exportStrategies (list: AtlasStrategy[]): string {
   return JSON.stringify(list.map(({ name, folder, league, tags, treeUrl, threads, scarabs, device, regex, notes }) =>
     ({ name, folder, league, tags, treeUrl, threads, scarabs, device, regex, notes })), null, 2)
+}
+
+// ---- each strategy's own folder in the Regex library ----
+
+export function regexFolderOf (s: Pick<AtlasStrategy, 'regexFolder' | 'folder' | 'name'>): string {
+  return s.regexFolder || strategyRegexFolder(s)
+}
+
+// The folder this strategy's name and place call for, or "<name> (2)" and on
+// when another strategy holds it or `taken` says it's in use.
+export function freeRegexFolder (s: AtlasStrategy, strategies: AtlasStrategy[], taken: (folder: string) => boolean = () => false): string {
+  const base = strategyRegexFolder(s)
+  const owned = new Set(strategies.filter(o => o.id !== s.id && o.regexFolder).map(o => o.regexFolder!))
+  for (let i = 1; ; i++) {
+    const f = i === 1 ? base : `${base} (${i})`
+    if (!owned.has(f) && !taken(f)) return f
+  }
+}
+
+// Strategies saved before regex folders: each claims one, in list order, so
+// the first of two same-named strategies keeps the regexes already there.
+export function claimRegexFolders (strategies: AtlasStrategy[]) {
+  for (const s of strategies) {
+    if (!s.regexFolder) s.regexFolder = freeRegexFolder(s, strategies)
+  }
 }

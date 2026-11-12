@@ -6,6 +6,11 @@
       <button class="w-icon-btn" title="Fit the allocated part (or double-click the tree)" @click="fit"><i class="fas fa-compress-arrows-alt" /></button>
       <button class="w-icon-btn" title="Hide the tree" @click="emit('close')"><i class="fas fa-times" /></button>
     </template>
+    <template v-if="unreadable" #banner>
+      <WBanner tone="warn">This tree can't be edited here: {{ unreadable }}. It stays as it is until you start over.
+        <template #actions><WButton size="sm" @click="startOver">Start over</WButton></template>
+      </WBanner>
+    </template>
     <template #toolbar>
       <span class="w-num text-xs whitespace-nowrap" :class="over ? 'w-down' : 'w-dim'" :title="over ? 'More points than the atlas has' : undefined">
         {{ used }} / {{ model.points }} points
@@ -35,7 +40,7 @@
 // whatever hangs off it. Every edit writes the strategy's tree link.
 import { computed, inject, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { WButton, WField, WPanel, openMenu, useCopy } from '../ui'
+import { WBanner, WButton, WField, WPanel, openMenu, useCopy } from '../ui'
 import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { fitBox, nodeAt, NODE_RADIUS } from '../pob-builds/passive-tree'
 import type { TreeNode, View } from '../pob-builds/passive-tree'
@@ -56,19 +61,37 @@ const { copied, copy } = useCopy()
 
 interface Alloc { nodes: Set<number>, variants: Record<number, number> }
 
+// Why the link can't be edited here, if it can't: another site's link, or
+// passives this atlas no longer has. Editing it would throw it away.
+const unreadable = shallowRef('')
+
 function readLink (url: string): Alloc {
   const nodes = new Set<number>([props.model.start])
   const variants: Record<number, number> = {}
+  unreadable.value = ''
   if (!url.trim()) return { nodes, variants }
   try {
     const t = decodeTree(url)
-    for (const id of t.nodes) if (props.model.nodes.has(id)) nodes.add(id)
+    let lost = 0
+    for (const id of t.nodes) {
+      if (props.model.nodes.has(id)) nodes.add(id)
+      else lost++
+    }
     for (const m of t.masteries) if (props.model.variants.get(m.node)?.some(v => v.effect === m.effect)) variants[m.node] = m.effect
-  } catch {}
+    if (lost) unreadable.value = `${lost} of its passives aren't in this atlas (a link from an older league)`
+  } catch {
+    unreadable.value = 'it isn\'t a pathofexile.com atlas tree link'
+  }
   return { nodes, variants }
 }
 
 const alloc = shallowRef<Alloc>(readLink(props.treeUrl))
+
+// Throws the old link away for an empty tree, on purpose.
+function startOver () {
+  unreadable.value = ''
+  commit({ nodes: new Set([props.model.start]), variants: {} })
+}
 // Our own writes come back as the prop: no need to read them again.
 let lastWritten = props.treeUrl
 watch(() => props.treeUrl, (url) => {
@@ -80,7 +103,7 @@ watch(() => props.treeUrl, (url) => {
   nextTick(fit)
 })
 
-const link = computed(() => pointsUsed(props.model, alloc.value.nodes) ? lastWrittenLink.value : '')
+const link = computed(() => unreadable.value ? (/^https:\/\/(www\.)?pathofexile\.com\//i.test(props.treeUrl) ? props.treeUrl : '') : pointsUsed(props.model, alloc.value.nodes) ? lastWrittenLink.value : '')
 const lastWrittenLink = computed(() => encodeAtlasTree([...alloc.value.nodes].filter(id => id !== props.model.start), alloc.value.variants))
 const used = computed(() => pointsUsed(props.model, alloc.value.nodes))
 const over = computed(() => used.value > props.model.points)
@@ -103,6 +126,7 @@ function apply (next: Alloc) {
 }
 
 function undo () {
+  if (unreadable.value) return
   const prev = undoStack.value.at(-1)
   if (!prev) return
   undoStack.value = undoStack.value.slice(0, -1)
@@ -111,6 +135,7 @@ function undo () {
 }
 
 function redo () {
+  if (unreadable.value) return
   const next = redoStack.value.at(-1)
   if (!next) return
   redoStack.value = redoStack.value.slice(0, -1)
@@ -362,6 +387,7 @@ function endPan (e?: MouseEvent) {
 }
 
 function click (e: MouseEvent, button: number) {
+  if (unreadable.value) return
   const p = canvasPoint(e)
   const n = nodeAt(props.model.nodes.values(), p.x, p.y, view.value, 14 * pxRatio())
   if (!n || n.kind === 'mastery' || n.kind === 'start') return

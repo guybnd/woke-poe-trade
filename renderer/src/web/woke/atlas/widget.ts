@@ -14,6 +14,8 @@ const atlasData = shallowRef<Map<number, AtlasNode> | null>(null)
 const atlasDataError = shallowRef('')
 // The same data as a tree to draw and edit.
 const atlasTree = shallowRef<AtlasTreeModel | null>(null)
+// The data loaded but can't be drawn (its format changed): the editor says so.
+const atlasTreeError = shallowRef('')
 let loadingUrl: string | null = null
 
 // A tree that can't be drawn still leaves the notable list working. Its code
@@ -21,8 +23,10 @@ let loadingUrl: string | null = null
 async function readTree (json: unknown): Promise<AtlasTreeModel | null> {
   try {
     const { readAtlasTree } = await import('./atlas-tree')
+    atlasTreeError.value = ''
     return readAtlasTree(json)
-  } catch {
+  } catch (err) {
+    atlasTreeError.value = `The atlas tree can't be drawn: ${(err as Error).message}`
     return null
   }
 }
@@ -39,12 +43,12 @@ export function useAtlasData (url: string) {
       })
     })
   }
-  return { atlasData, atlasDataError, atlasTree }
+  return { atlasData, atlasDataError, atlasTree, atlasTreeError }
 }
 
 // The loaded data, without starting a load.
 export function atlasDataState () {
-  return { atlasData, atlasDataError, atlasTree }
+  return { atlasData, atlasDataError, atlasTree, atlasTreeError }
 }
 
 // After a failed download: try the same URL again.
@@ -60,7 +64,9 @@ async function load (url: string) {
       const { url: cachedUrl, json, at } = JSON.parse(cached) as { url: string, json: unknown, at?: number }
       if (cachedUrl === url && loadingUrl === url) {
         atlasData.value = parseAtlasData(json)
-        atlasTree.value = await readTree(json)
+        const tree = await readTree(json)
+        if (loadingUrl !== url) return
+        atlasTree.value = tree
         if (at && Date.now() - at < CACHE_MAX_AGE_MS) return
       }
     }
@@ -72,8 +78,10 @@ async function load (url: string) {
   const parsed = parseAtlasData(json)
   // The data URL changed while this one downloaded: keep the newer data.
   if (loadingUrl !== url) return
+  const tree = await readTree(json)
+  if (loadingUrl !== url) return
   atlasData.value = parsed
-  atlasTree.value = await readTree(json)
+  atlasTree.value = tree
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({ url, json, at: Date.now() }))
   } catch {}
