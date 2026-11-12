@@ -13,6 +13,11 @@
       <w-setting-row label="Game language" show-hint hint="Must match the game, or item text won't be read.">
         <w-select :model-value="config.language" :options="LANGUAGES" @update:model-value="setLanguage($event as Config['language'])" />
       </w-setting-row>
+      <!-- woke: the log-reading tools only know the English game text (WOKEPOET-91). -->
+      <p v-if="config.language !== 'en'" class="text-xs" style="color: var(--w-warn); margin: 0;" data-qa="log-language-warning">
+        <i class="fas fa-exclamation-triangle" /> Tools that read the game's log (campaign, run timer, trades, death recap, farming) know English game text only.
+        With the game in another language they still follow zone changes, but miss level-ups, whispers and deaths.
+      </p>
       <w-setting-row v-if="config.language === 'cmn-Hant'" label="Realm">
         <w-select :model-value="config.realm" :options="REALMS" @update:model-value="setRealm($event as Config['realm'])" />
       </w-setting-row>
