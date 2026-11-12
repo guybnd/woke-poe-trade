@@ -50,6 +50,10 @@ export function enableNetWorth (place: boolean) {
   if (place && placeWidget(AppConfig())) saveConfig()
 }
 
+export function saveNow () {
+  saveConfig()
+}
+
 // Main's hotkeys and Client.txt reading follow the overlay's modules.
 export function syncHost () {
   pushHostConfig()
@@ -65,9 +69,20 @@ export function disableNetWorth () {
   removeModule(NET_WORTH_MODULE)
 }
 
+// There is only ever one Net worth window: extras (say, one added from
+// Settings while the reader was being turned on) go, the oldest stays.
+// True when config changed.
+export function dedupeWidgets (config: ConfigLike): boolean {
+  const mine = config.widgets.filter(w => w.wmType === NET_WORTH_TYPE)
+  if (mine.length < 2) return false
+  const keep = mine.reduce((a, b) => (a.wmId < b.wmId ? a : b))
+  config.widgets = config.widgets.filter(w => w.wmType !== NET_WORTH_TYPE || w === keep)
+  return true
+}
+
 // True when config changed.
 export function placeWidget (config: ConfigLike): boolean {
-  if (config.widgets.some(w => w.wmType === NET_WORTH_TYPE)) return false
+  if (config.widgets.some(w => w.wmType === NET_WORTH_TYPE)) return dedupeWidgets(config)
   const w: NetWorthWidget = {
     wmId: Math.max(0, ...config.widgets.map(w => w.wmId)) + 1,
     wmType: NET_WORTH_TYPE,

@@ -76,6 +76,7 @@ import { Host } from '@/web/background/IPC'
 import { WIcon, WKbd, WToggle, provideHotkeyContext, toast } from '../ui'
 import { ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
+import { allowsCopies } from '../tab-bar/tools'
 import { hotkeyFields, hotkeyUses } from './hotkey-fields'
 import { PAGES, PAGE_BY_ID, pageByName, pageForWidgetType } from './pages'
 import type { SettingsPage } from './pages'
@@ -283,6 +284,12 @@ watch(() => props.widget.wmFlags, (flags) => {
 // ---------- adding a module's widget from its page ----------
 function addWidget (wmType: string) {
   if (!clone.value) return
+  // A woke window has one copy: one placed meanwhile (the stash reader turned
+  // on) joins this window's copy instead of a second one being added.
+  if (!allowsCopies(wmType) && AppConfig().widgets.some(w => w.wmType === wmType)) {
+    adoptNewWidgets()
+    return
+  }
   const page = pageForWidgetType(wmType)
   for (const id of page?.modules ?? []) setModuleOn(ensureWokeConfig(clone.value), id, true)
   apply(true)

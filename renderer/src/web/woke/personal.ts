@@ -20,6 +20,13 @@ export const personalOn = shallowRef(false)
 export const personalForced = shallowRef(false)
 export const experimentalUnlocked = shallowRef(false)
 
+let chunk: typeof import('./net-worth/enable') | null = null
+
+// Once config has loaded (main.ts): one Net worth window at most.
+export function tidyPersonal (config: Parameters<typeof import('./net-worth/enable').dedupeWidgets>[0]) {
+  if (personalOn.value && chunk?.dedupeWidgets(config)) chunk.saveNow()
+}
+
 export function takePersonal (s: Partial<PersonalState> | null | undefined) {
   personalOn.value = s?.on === true
   personalForced.value = s?.forced === true
@@ -37,8 +44,8 @@ export async function loadPersonal (): Promise<void> {
   takePersonal(s)
   if (!personalOn.value) return
   try {
-    const { enableNetWorth } = await import('./net-worth/enable')
-    enableNetWorth(false)
+    chunk = await import('./net-worth/enable')
+    chunk.enableNetWorth(false)
   } catch (e) {
     console.warn('[personal] could not load', e)
     personalOn.value = false

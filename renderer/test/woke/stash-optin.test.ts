@@ -229,6 +229,23 @@ describe('stash reader on and off at runtime', () => {
     expect(isWidgetTypeOn(cfg, 'woke-net-worth')).toBe(true)
   })
 
+  it('only ever one Net worth window: turning on keeps the oldest and drops extras', async () => {
+    const before = cfg.widgets.filter(w => w.wmType === 'woke-net-worth')[0]
+    cfg.widgets.push({ wmId: 999, wmType: 'woke-net-worth' })
+    await personal.setStashReaderOn(false)
+    await personal.setStashReaderOn(true)
+    const left = cfg.widgets.filter(w => w.wmType === 'woke-net-worth')
+    expect(left).toHaveLength(1)
+    expect(left[0].wmId).toBe(before.wmId)
+  })
+
+  it('extras already in config go once it has loaded', async () => {
+    await personal.loadPersonal()
+    cfg.widgets.push({ wmId: 1000, wmType: 'woke-net-worth' }, { wmId: 1001, wmType: 'woke-net-worth' })
+    personal.tidyPersonal(cfg as never)
+    expect(cfg.widgets.filter(w => w.wmType === 'woke-net-worth').map(w => w.wmId)).toHaveLength(1)
+  })
+
   it('hiding experimental settings turns it off and hides the row', async () => {
     await personal.setExperimentalUnlocked(false)
     expect(personal.personalOn.value).toBe(false)
