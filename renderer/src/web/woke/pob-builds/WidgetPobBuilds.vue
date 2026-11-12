@@ -110,6 +110,7 @@ import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
 import { buildPinChoices, treePin } from './build-pins'
+import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned, togglePin as togglePinned } from '../pins/pins'
 import type { DockMenuAction } from '../dock/dock'
 import { useActiveBuild } from './active'
@@ -417,6 +418,8 @@ async function finishEdit () {
 
 function followFile (from: string, to: string) {
   moveBuildRefs(props.config, from, to)
+  // Its regexes in the Regex library follow the file too.
+  moveRegexFolder(buildRegexFolder(from), buildRegexFolder(to))
   if (selected.value === from) selected.value = to
   saveConfig()
 }

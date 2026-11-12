@@ -1,5 +1,5 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
-import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
+import { groupByCategory, importList, matchesQuery, nextId, str, strList } from '../shared/library'
 
 export { groupByCategory } from '../shared/library'
 
@@ -116,4 +116,49 @@ export function exportEntries (entries: RegexEntry[]): string {
   return JSON.stringify(
     entries.map(({ name, text, category, tags, notes, negate }) => ({ name, text, category, tags, notes, ...(negate ? { negate } : {}) })),
     null, 2)
+}
+
+// ---- folders: a category with "/" in it nests, as "Atlas strategies/Juicing/Breach" ----
+
+export interface CategoryFolder { path: string, name: string, count: number }
+export interface CategoryGroup { category: string, label: string, entries: RegexEntry[] }
+
+export function categoryLabel (category: string): string {
+  return category.split('/').map(p => p.trim()).filter(Boolean).join(' › ')
+}
+
+// What the list shows inside folder `at` ('' = the top): the folders one level
+// down, with how many entries each holds in all, and the entries right here.
+// At the top, categories with no "/" are groups as before.
+export function categoryView (entries: RegexEntry[], at: string): { folders: CategoryFolder[], groups: CategoryGroup[] } {
+  const folders = new Map<string, CategoryFolder>()
+  const here: RegexEntry[] = []
+  const prefix = at ? at + '/' : ''
+  for (const e of entries) {
+    const cat = e.category.split('/').map(p => p.trim()).filter(Boolean).join('/')
+    if (at && cat !== at && !cat.startsWith(prefix)) continue
+    const rest = at ? (cat === at ? '' : cat.slice(prefix.length)) : cat
+    if (rest.includes('/')) {
+      const name = rest.split('/')[0]
+      const path = prefix + name
+      const f = folders.get(path) ?? { path, name, count: 0 }
+      f.count++
+      folders.set(path, f)
+    } else {
+      here.push(e)
+    }
+  }
+  const groups: CategoryGroup[] = at
+    ? (() => {
+        // Inside a folder: its own entries first, then entries one level down
+        // whose category is a leaf, under that leaf's name.
+        const out = new Map<string, RegexEntry[]>()
+        for (const e of here) {
+          const cat = e.category.split('/').map(p => p.trim()).filter(Boolean).join('/')
+          out.set(cat, [...(out.get(cat) ?? []), e])
+        }
+        return [...out].map(([category, list]) => ({ category, label: category === at ? '' : category.slice(prefix.length), entries: list }))
+      })()
+    : groupByCategory(here).map(g => ({ ...g, label: g.category }))
+  return { folders: [...folders.values()].sort((a, b) => a.name.localeCompare(b.name)), groups }
 }

@@ -170,6 +170,8 @@
         <div :class="$style.heading" class="flex"><span>Your notes</span><span class="ml-auto normal-case tracking-normal">kept by this app, not in the build file</span></div>
         <textarea :value="myNotes" :class="['w-field', $style.myNotes]" spellcheck="false" rows="4"
           placeholder="What to buy next, what to swap at which act…" @input="editNotes" @blur="saveNotes" />
+        <div :class="$style.heading">Regex</div>
+        <RegexFolderList :folder="buildRegexFolder(entry.relPath)" />
         <div v-if="details.notes" :class="$style.heading">From the build</div>
         <div v-if="details.notes" class="whitespace-pre-wrap w-dim"><span v-for="(r, i) in noteRuns(details.notesRaw || details.notes)" :key="i" :style="r.colour ? { color: r.colour } : undefined">{{ r.text }}</span></div>
         <div v-else class="w-faint text-xs pt-2">No notes in the build file.</div>
@@ -179,8 +181,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, provide, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, provide, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd, openMenu } from '../ui'
+import { buildRegexFolder } from '../regex-library/folder-names'
+// Loads with the Notes tab.
+const RegexFolderList = defineAsyncComponent(() => import('../regex-library/RegexFolderList.vue'))
 import { AppConfig, saveConfig } from '@/web/Config'
 import { CAMPAIGN_TYPE } from '../campaign/widget'
 import type { CampaignWidget } from '../campaign/widget'

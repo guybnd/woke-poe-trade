@@ -2,7 +2,7 @@
 // between two of a build's trees. Data: scripts/build-tree-data.mjs.
 import { dataFileUrl, onSharedDataChange } from '../app/live-data'
 
-export type NodeKind = 'small' | 'notable' | 'key' | 'jewel' | 'mastery' | 'asc' | 'ascstart' | 'start'
+export type NodeKind = 'small' | 'notable' | 'key' | 'jewel' | 'mastery' | 'asc' | 'ascstart' | 'start' | 'wormhole'
 
 export interface TreeNode {
   id: number
@@ -158,7 +158,7 @@ export function fitBox (nodes: TreeNode[], pad = 900): Box | null {
 export interface View { zoom: number, ox: number, oy: number }
 
 // Drawn size in tree units, at the size the game gives them.
-export const NODE_RADIUS: Partial<Record<NodeKind, number>> = { small: 34, notable: 54, key: 82, jewel: 54, mastery: 70, start: 40 }
+export const NODE_RADIUS: Partial<Record<NodeKind, number>> = { small: 34, notable: 54, key: 82, jewel: 54, mastery: 70, start: 40, wormhole: 54 }
 
 // The node nearest a point on the canvas, within reach: never less than `reach`
 // pixels, since small passives are tiny when zoomed out.

@@ -1,63 +1,10 @@
 import { shallowRef } from 'vue'
-import type { Widget, Anchor } from '@/web/overlay/widgets'
-import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
 import { DEFAULT_ATLAS_DATA_URL, parseAtlasData } from './tree'
 import type { AtlasNode } from './tree'
+import type { AtlasTreeModel } from './atlas-tree'
 import { perfTimeAsync, whenIdle } from '../shared/perf'
 
-export const ATLAS_TYPE = 'woke-atlas-strategies'
-
-export interface AtlasStrategy {
-  id: number
-  name: string
-  league: string
-  tags: string[]
-  treeUrl: string
-  // Scarabs, one per line ("4x Ambush Scarab of Potency").
-  scarabs: string
-  // Map device, map crafting, sextants, etc.
-  device: string
-  // Map mod regex for this strategy.
-  regex: string
-  notes: string
-}
-
-export interface AtlasWidget extends Widget {
-  anchor: Anchor
-  dataUrl: string
-  selectedId: number | null
-  strategies: AtlasStrategy[]
-}
-
-export function emptyStrategy (list: AtlasStrategy[]): AtlasStrategy {
-  return { id: nextId(list), name: '', league: '', tags: [], treeUrl: '', scarabs: '', device: '', regex: '', notes: '' }
-}
-
-export function strategyMatches (s: AtlasStrategy, query: string): boolean {
-  return matchesQuery([s.name, s.league, s.notes, s.scarabs, s.device, ...s.tags], query)
-}
-
-export function parseStrategiesImport (json: string, existing: AtlasStrategy[]): AtlasStrategy[] {
-  let id = nextId(existing)
-  return importList(json)
-    .filter(r => typeof r.name === 'string' || typeof r.treeUrl === 'string')
-    .map(r => ({
-      id: id++,
-      name: str(r.name) || 'Imported strategy',
-      league: str(r.league),
-      tags: strList(r.tags),
-      treeUrl: str(r.treeUrl),
-      scarabs: str(r.scarabs),
-      device: str(r.device),
-      regex: str(r.regex),
-      notes: str(r.notes)
-    }))
-}
-
-export function exportStrategies (list: AtlasStrategy[]): string {
-  return JSON.stringify(list.map(({ name, league, tags, treeUrl, scarabs, device, regex, notes }) =>
-    ({ name, league, tags, treeUrl, scarabs, device, regex, notes })), null, 2)
-}
+export * from './strategies'
 
 // Atlas tree data (about 1.4 MB), cached in localStorage and downloaded again
 // only when the cache is a week old, so startup doesn't refetch it every time.
@@ -65,7 +12,20 @@ const CACHE_KEY = 'woke-atlas-data'
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 const atlasData = shallowRef<Map<number, AtlasNode> | null>(null)
 const atlasDataError = shallowRef('')
+// The same data as a tree to draw and edit.
+const atlasTree = shallowRef<AtlasTreeModel | null>(null)
 let loadingUrl: string | null = null
+
+// A tree that can't be drawn still leaves the notable list working. Its code
+// loads with the data, off the startup path.
+async function readTree (json: unknown): Promise<AtlasTreeModel | null> {
+  try {
+    const { readAtlasTree } = await import('./atlas-tree')
+    return readAtlasTree(json)
+  } catch {
+    return null
+  }
+}
 
 export function useAtlasData (url: string) {
   const target = url || DEFAULT_ATLAS_DATA_URL
@@ -79,12 +39,12 @@ export function useAtlasData (url: string) {
       })
     })
   }
-  return { atlasData, atlasDataError }
+  return { atlasData, atlasDataError, atlasTree }
 }
 
 // The loaded data, without starting a load.
 export function atlasDataState () {
-  return { atlasData, atlasDataError }
+  return { atlasData, atlasDataError, atlasTree }
 }
 
 // After a failed download: try the same URL again.
@@ -100,6 +60,7 @@ async function load (url: string) {
       const { url: cachedUrl, json, at } = JSON.parse(cached) as { url: string, json: unknown, at?: number }
       if (cachedUrl === url && loadingUrl === url) {
         atlasData.value = parseAtlasData(json)
+        atlasTree.value = await readTree(json)
         if (at && Date.now() - at < CACHE_MAX_AGE_MS) return
       }
     }
@@ -112,6 +73,7 @@ async function load (url: string) {
   // The data URL changed while this one downloaded: keep the newer data.
   if (loadingUrl !== url) return
   atlasData.value = parsed
+  atlasTree.value = await readTree(json)
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({ url, json, at: Date.now() }))
   } catch {}

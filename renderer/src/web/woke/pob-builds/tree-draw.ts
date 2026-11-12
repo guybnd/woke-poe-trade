@@ -173,6 +173,9 @@ function drawNodeArt (sprite: (kind: string, key: string, x: number, y: number) 
     case 'notable':
       return sprite(on ? 'notableActive' : 'notableInactive', n.icon, n.x, n.y) &&
         sprite('frame', on ? 'NotableFrameAllocated' : 'NotableFrameUnallocated', n.x, n.y)
+    case 'wormhole':
+      return sprite(on ? 'wormholeActive' : 'wormholeInactive', n.icon, n.x, n.y) &&
+        sprite('frame', on ? 'WormholeFrameAllocated' : 'WormholeFrameUnallocated', n.x, n.y)
     case 'small':
       return sprite(on ? 'normalActive' : 'normalInactive', n.icon, n.x, n.y) &&
         sprite('frame', on ? 'PSSkillFrameActive' : 'PSSkillFrame', n.x, n.y)

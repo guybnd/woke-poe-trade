@@ -2,10 +2,14 @@
 // into a strategy: the atlas tree link, scarab lines, map device notes, a
 // map regex and the rest as notes. Also prices scarab lines.
 import type { PriceItem } from '../market/types'
-import type { AtlasStrategy } from './widget'
+import type { AtlasStrategy, ThreadSlot } from './strategies'
+import { MAX_THREAD_SLOTS, THREAD_TYPES } from './strategies'
+import { parseCostLines, priceLines } from './loadout'
 
 const TREE_URL = /https?:\/\/(?:www\.)?(?:pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/[^\s)"']+|poeplanner\.com\/[^\s)"']+)/i
 const DEVICE_WORDS = /\b(map device|kirac|atlas memor|memory|sextant|omen|altar|eldritch|maven'?s invitation|delirium orb|map craft|alch|chisel|scour|vaal orb|8.?mod)/i
+// "8x Breach Thread", "Breach Threads x6", "6 Ritual Threads"
+const THREAD_LINE = new RegExp(String.raw`^(?:(\d+)\s*[x×]?\s+)?(` + THREAD_TYPES.join('|') + String.raw`)\s+Threads?(?:\s*[x×]\s*(\d+))?$`, 'i')
 const REGEX_LINE = /^"[^"]*!?[^"]*"(\s+"[^"]*")*$/
 
 export interface ScarabLine { qty: number, name: string }
@@ -31,6 +35,7 @@ export function parseGuideText (text: string): Omit<AtlasStrategy, 'id'> {
   const lines = text.split(/\r?\n/).map(l => l.trim())
   const treeUrl = TREE_URL.exec(text)?.[0] ?? ''
   const scarabs: string[] = []
+  const threads: ThreadSlot[] = []
   const device: string[] = []
   const notes: string[] = []
   let regex = ''
@@ -40,16 +45,25 @@ export function parseGuideText (text: string): Omit<AtlasStrategy, 'id'> {
     const clean = line.replace(/^[\s\-*•·]+/, '')
     if (TREE_URL.test(line) && clean.replace(TREE_URL, '').replace(/[^\w]/g, '').length < 15) continue
     if (!regex && REGEX_LINE.test(clean)) { regex = clean; continue }
-    if (/scarab/i.test(clean)) { scarabs.push(clean); continue }
+    const thread = THREAD_LINE.exec(clean)
+    if (thread) {
+      const type = THREAD_TYPES.find(t => t.toLowerCase() === thread[2].toLowerCase())!
+      if (threads.length < MAX_THREAD_SLOTS && !threads.some(t => t.type === type)) threads.push({ type, count: Number(thread[1] ?? thread[3] ?? 1) })
+      continue
+    }
+    // "2x Chaos Orb", "1 Vaal Orb": something each map takes.
+    if (/scarab/i.test(clean) || /^\d+\s*[x×]?\s+[A-Z][\w' -]{2,40}$/.test(clean)) { scarabs.push(clean); continue }
     if (DEVICE_WORDS.test(clean)) { device.push(clean); continue }
     if (!name && clean.length <= 60 && !/https?:\/\//.test(clean)) { name = clean.replace(/[:#]+$/, ''); continue }
     notes.push(clean)
   }
   return {
     name: name || 'Imported strategy',
+    folder: '',
     league: '',
     tags: [],
     treeUrl,
+    threads,
     scarabs: scarabs.join('\n'),
     device: device.join('\n'),
     regex,
@@ -80,7 +94,7 @@ export function strategyScarabCosts (lists: Array<AtlasStrategy[] | undefined>, 
   for (const list of lists) {
     const st = (list ?? []).find(x => x.name.trim() === name)
     if (!st?.scarabs) continue
-    const lines = priceScarabs(parseScarabs(st.scarabs), items).filter(p => p.item)
+    const lines = priceLines(parseCostLines(st.scarabs), items).filter(p => p.item)
     if (!lines.length) continue
     return lines.map(p => ({ type: p.item!.type, name: p.item!.name, variant: p.item!.variant, qty: p.qty }))
   }

@@ -429,7 +429,9 @@ export function costsForStrategy (w: FarmingWidget, strategy: string): CostLine[
 // Map costs with the scarabs swapped for these. A Farming widget that never
 // mounted has no costs yet.
 export function withScarabCosts (costs: CostLine[] | undefined, scarabs: CostLine[]): CostLine[] {
-  return [...(costs ?? []).filter(c => c.type !== 'Scarab'), ...scarabs]
+  // A strategy's own lines replace the same items, so using it twice doesn't double them.
+  const names = new Set(scarabs.map(s => s.name))
+  return [...(costs ?? []).filter(c => c.type !== 'Scarab' && !names.has(c.name)), ...scarabs]
 }
 
 export function rememberCosts (w: FarmingWidget): void {

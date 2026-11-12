@@ -22,8 +22,22 @@
 
       <RegexEntryForm v-if="editing === 'new'" :key="'new'" :entry="newDraft" @save="saveEntry" @cancel="editing = null" />
 
+      <div v-if="folderAt && !searching" :class="$style.crumbs">
+        <button type="button" class="w-focusable" title="Back up a folder" @click="folderAt = folderAt.split('/').slice(0, -1).join('/')"><i class="fas fa-chevron-left" /></button>
+        <button type="button" class="w-focusable" @click="folderAt = ''">All</button>
+        <template v-for="(part, i) in folderAt.split('/')" :key="i">
+          <span class="w-faint">›</span>
+          <button type="button" class="w-focusable w-trunc" @click="folderAt = folderAt.split('/').slice(0, i + 1).join('/')">{{ part }}</button>
+        </template>
+      </div>
+      <WListItem v-for="f in folders" :key="f.path" @select="folderAt = f.path" :class="$style.folder">
+        <i class="fas fa-folder w-accent" />
+        <span class="w-trunc">{{ f.name }}</span>
+        <span class="ml-auto w-num w-faint text-xs">{{ f.count }}</span>
+        <i class="fas fa-chevron-right w-faint text-xs" />
+      </WListItem>
       <template v-for="group in groups" :key="group.category">
-        <div class="w-group-label">{{ group.category }}</div>
+        <div v-if="group.label" class="w-group-label">{{ group.label }}</div>
         <template v-for="entry in group.entries" :key="entry.id">
         <RegexEntryForm v-if="editing === entry.id" :entry="entry" @save="saveEntry" @cancel="editing = null" />
         <WListItem v-else :class="$style.row" :title="tooltip(entry)" @select="stashSearch(effectiveText(entry))"
@@ -48,11 +62,15 @@
         </WListItem>
         </template>
       </template>
-      <WEmpty v-if="!groups.length && config.entries.length" icon="fas fa-filter">
+      <WEmpty v-if="!groups.length && !folders.length && config.entries.length && searching" icon="fas fa-filter">
         Nothing matches "{{ filter }}".
         <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
       </WEmpty>
-      <WEmpty v-else-if="!groups.length && editing !== 'new'" :art="{ mechanic: 'stash' }">
+      <WEmpty v-else-if="!groups.length && !folders.length && folderAt" icon="fas fa-folder-open">
+        Nothing in this folder yet.
+        <template #actions><WButton size="sm" @click="folderAt = ''">Back to all</WButton></template>
+      </WEmpty>
+      <WEmpty v-else-if="!groups.length && !folders.length && editing !== 'new'" :art="{ mechanic: 'stash' }">
         No saved searches yet. Add one, or build one on poe.re and save it from there.
         <template #actions>
           <WButton size="sm" icon="fas fa-plus" data-act="new">New</WButton>
@@ -103,7 +121,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast } from '../ui'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
-import { MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
+import { MAX_SEARCH_LENGTH, canNegate, categoryLabel, categoryView, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
 import type { RegexEntry } from './widget'
 import DockItem from '../dock/DockItem.vue'
 import { saveDock } from '../dock/dock'
@@ -134,9 +152,20 @@ const editing = shallowRef<number | 'new' | null>(null)
 const newDraft = shallowRef<RegexEntry>(emptyEntry([]))
 const { copied, copy: copyText } = useCopy(1200)
 
+// The folder you're in: categories with "/" nest (Atlas strategies and PoB
+// builds keep theirs there). A search looks through every folder.
+const folderAt = shallowRef('')
+const searching = computed(() => filter.value.trim().length > 0)
 // The entry open in the form stays listed while you filter, so its edits aren't lost.
-const groups = computed(() => groupByCategory(
-  props.config.entries.filter(e => e.id === editing.value || matchesFilter(e, filter.value))))
+const view = computed(() => {
+  if (searching.value) {
+    const hits = props.config.entries.filter(e => e.id === editing.value || matchesFilter(e, filter.value))
+    return { folders: [], groups: groupByCategory(hits).map(g => ({ ...g, label: categoryLabel(g.category) })) }
+  }
+  return categoryView(props.config.entries, folderAt.value)
+})
+const folders = computed(() => view.value.folders)
+const groups = computed(() => view.value.groups)
 
 const zone = useZone()
 const dockShow = computed(() => props.config.entries.length > 0 && (zone.kind === 'town' || zone.kind === 'hideout'))
@@ -167,6 +196,7 @@ function startNew () {
   const cats = new Set(props.config.entries.map(e => e.category).filter(Boolean))
   const draft = emptyEntry(props.config.entries)
   if (cats.has(filter.value.trim())) draft.category = filter.value.trim()
+  else if (folderAt.value && !searching.value) draft.category = folderAt.value
   newDraft.value = draft
   editing.value = 'new'
 }
@@ -267,4 +297,15 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 /* Mock A: pencil and bin show on the row under the mouse (or with focus). */
 .hoverOnly { visibility: hidden; }
 .row:hover .hoverOnly, .row:focus-within .hoverOnly { visibility: visible; }
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px var(--w-pad);
+  font-size: var(--w-fs-sm);
+  color: var(--w-dim);
+}
+.crumbs button:hover { color: var(--w-fg); }
+.folder i { flex: none; }
 </style>
