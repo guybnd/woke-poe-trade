@@ -18,14 +18,14 @@ const ACT_START_LEVEL = [0, 1, 13, 23, 33, 40, 45, 50, 55, 61, 64]
 export function stageOf (rawTitle: string): Stage | null {
   // "{3}" is the guide's item variant note, not a level.
   const title = rawTitle.replace(/\{[^}]*\}/g, ' ')
-  const act = /\b(?:act|a)\s*(\d{1,2})\b/i.exec(title)
-  if (act) {
-    const n = Number(act[1])
-    if (n >= 1 && n <= 10) return { kind: 'act', at: n }
-  }
   const inRange = (n: number) => n >= 1 && n <= 100
-  const named = /\b(?:level|lvl|lv)\.?\s*(\d{1,3})/i.exec(title)
-  if (named && inRange(Number(named[1]))) return { kind: 'level', at: Number(named[1]) }
+  const actHit = /\b(?:act|a)\s*(\d{1,2})\b/i.exec(title)
+  const act = actHit && Number(actHit[1]) >= 1 && Number(actHit[1]) <= 10 ? actHit : null
+  const levelHit = /\b(?:level|lvl|lv)\.?\s*(\d{1,3})/i.exec(title)
+  const named = levelHit && inRange(Number(levelHit[1])) ? levelHit : null
+  // With both, the one named first is the stage: "level 49 - nodes mid act 7".
+  if (act && (!named || act.index < named.index)) return { kind: 'act', at: Number(act[1]) }
+  if (named) return { kind: 'level', at: Number(named[1]) }
   if (/\bend\s*game|\bfinal(?![a-z])|\blate(?:game|maps?)?(?![a-z])/i.test(title)) return { kind: 'end', at: 70 }
   if (/\bmaps?(?![a-z])|\bmapping/i.test(title)) return { kind: 'level', at: 70 }
   // A title that is a level or starts a range: "68", "31+", "13-Pre-Cyclone".
@@ -373,8 +373,11 @@ export function gearLayout (slots: PobItemSet['slots'], groups: PobSkillGroup[])
 
 // For normal and magic items PoB only keeps the full name; the caller can
 // resolve a base from it (APT's item data).
+// Guides write some rare bases with a note PoB keeps: "Two-Stone Ring
+// (Fire/Cold)". The filter and the trade site know only the base.
 export function itemBase (item: PobItem): string {
-  return item.base || (item.rarity === 'NORMAL' ? item.name : '')
+  const base = item.base || (item.rarity === 'NORMAL' ? item.name : '')
+  return base.replace(/\s+\([^()]*\)\s*$/, '')
 }
 
 export interface BuildFacts {
@@ -466,9 +469,10 @@ export function gearChange (from: PobItemSet, to: PobItemSet): GearChange[] {
 
 // 5604073 -> "5.6M", 63487 -> "63k", 4145 -> "4,145".
 export function shortNumber (n: number): string {
+  // The unit goes by the rounded value: 999,600 is "1.0M", not "1000k".
   const abs = Math.abs(n)
-  if (abs >= 1e9) return `${(n / 1e9).toFixed(1)}B`
-  if (abs >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+  if (Number((abs / 1e6).toFixed(1)) >= 1000) return `${(n / 1e9).toFixed(1)}B`
+  if (Math.round(abs / 1e3) >= 1000) return `${(n / 1e6).toFixed(1)}M`
   if (abs >= 1e4) return `${Math.round(n / 1e3)}k`
   return Math.round(n).toLocaleString('en-US')
 }

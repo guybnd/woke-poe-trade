@@ -173,7 +173,7 @@ function parseGroups (body: string, mainSocketGroup: number | null): PobSkillGro
       })
     }
     groups.push({
-      label: a.label ?? '',
+      label: plainTitle(a.label),
       slot: a.slot ?? '',
       enabled: a.enabled !== 'false',
       isMain: mainSocketGroup != null && groups.length + 1 === mainSocketGroup,
@@ -248,7 +248,12 @@ function parseTrees (xml: string, items: Map<string, PobItem>): PobTreeSpec[] {
 // PoB item text: "Rarity: X", name line(s), then "Key: value" lines, then
 // "Implicits: N" followed by N implicit lines and the explicit mods.
 // Mod lines may start with {tags}; {variant:1,2} limits a line to variants.
-const ITEM_META = /^(Unique ID|Item Level|Quality|Sockets|LevelReq|Requires|Selected Variant|Selected Alt Variant|Variant|Has Alt Variant|League|Source|Upgrade|Radius|Limited to|Crafted|Prefix|Suffix|Catalyst|CatalystQuality|Cluster Jewel Skill|Cluster Jewel Node Count|Armour|Evasion|Energy Shield|Ward|Talisman Tier|Item Class|Shaper Item|Elder Item|Crusader Item|Hunter Item|Redeemer Item|Warlord Item|Searing Exarch Item|Eater of Worlds Item|Synthesised Item|Fractured Item|Corrupted|Mirrored|Split|Unreleased|Foulborn|Note)\b/
+// A meta line is "Key: value" or a flag on its own: a base can start with a
+// flag's word ("Mirrored Spiked Shield").
+const ITEM_META = /^(?:(?:Unique ID|Item Level|Quality(?: \([^)]*\))?|Sockets|LevelReq|Selected Variant|Selected Alt Variant|Variant|Has Alt Variant|League|Source|Upgrade|Radius|Limited to|Crafted|Prefix|Suffix|Catalyst|CatalystQuality|Cluster Jewel Skill|Cluster Jewel Node Count|Armour|Evasion(?: Rating)?|Energy Shield|Ward|Talisman Tier|Item Class|Note)\s*:|(?:Shaper|Elder|Crusader|Hunter|Redeemer|Warlord|Searing Exarch|Eater of Worlds|Synthesised|Fractured) Item$|(?:Corrupted|Mirrored|Split|Unreleased|Foulborn)$|Foil Unique\b|Requires\b)/
+
+// Lines after the implicits that are the item's numbers or looks, not mods.
+const NOT_A_MOD = /^(?:(?:Quality(?: \([^)]*\))?|Armour|Evasion(?: Rating)?|Energy Shield|Ward)\s*:|Foil Unique\b)/
 
 const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShield' | 'ward' | 'itemLevel' | 'levelReq']> = [
   [/^Quality:\s*\+?(\d+)/, 'quality'],
@@ -321,6 +326,13 @@ export function parseItemText (text: string, ranges?: Map<number, number>): PobI
     }
     // Flags PoB writes after the mods aren't mods.
     if (/^(Split|Unreleased|Foulborn|Fractured Item|Synthesised Item)$/.test(line)) continue
+    if (implicitsLeft === 0 && NOT_A_MOD.test(line)) {
+      for (const [re, key] of ITEM_NUMBERS) {
+        const n = re.exec(line)
+        if (n && Number(n[1]) > 0) item[key] ??= Number(n[1])
+      }
+      continue
+    }
     let mod = line
     let allowed = true
     let kind: PobModKind = ''
@@ -434,7 +446,9 @@ function configChoice (xml: string, name: string, legacy: string | undefined): s
 }
 
 function mainSkillName (skills: PobSkillGroup[]): string {
-  const main = skills.find(s => s.isMain) ?? skills.find(s => s.enabled && s.gems.length)
+  // A group without gems is a heading in PoB's list, not a skill.
+  const hasGems = (s: PobSkillGroup) => s.gems.some(g => g.name)
+  const main = skills.find(s => s.isMain && hasGems(s)) ?? skills.find(s => s.enabled && hasGems(s))
   if (!main) return ''
   const gem = main.gems.find(g => g.enabled && !g.support && !/support/i.test(g.name)) ?? main.gems[0]
   return gem?.name || main.label

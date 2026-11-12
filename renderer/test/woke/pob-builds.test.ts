@@ -1,10 +1,12 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
+import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
+import { moveBuildPins, treePin } from '@/web/woke/pob-builds/build-pins'
+import type { Pin } from '@/web/woke/pins/pins'
 import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
 import { PINNED_GROUP, groupBuilds, moveBuildRefs } from '@/web/woke/pob-builds/widget'
-import type { PobBuildEntry, PobBuildsWidget, PobDetails, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
+import type { PobBuildEntry, PobBuildsWidget, PobDetails, PobItem, PobItemSet, PobSkillSet } from '@/web/woke/pob-builds/widget'
 
 describe('mod ranges', () => {
   it('uses the roll PoB saved, inline or by line number, else the middle', () => {
@@ -549,5 +551,84 @@ describe('your notes follow the build file', () => {
     expect(w.myNotes).toEqual({ 'b.xml': 'buy a 6-link' })
     undo()
     expect(w.myNotes).toEqual({ 'a.xml': 'buy a 6-link' })
+  })
+})
+
+describe('bug hunt 3: PoB builds', () => {
+  it('pinned pieces follow a renamed build, and go with a deleted one', () => {
+    const pin = (id: string, kind: Pin['kind'], data: Record<string, string>): Pin => ({ id, kind, title: '', icon: '', opacity: 85, spots: {}, data })
+    const list = [
+      pin('pob-tree:a.xml', 'pob-tree', { relPath: 'a.xml' }),
+      pin('pob-slot:a.xml:Helmet', 'pob-slot', { relPath: 'a.xml', slot: 'Helmet' }),
+      pin('pob-gems:a.xml:Body Armour|x|0', 'pob-gems', { relPath: 'a.xml', group: 'Body Armour|x|0' }),
+      pin('pob-next:b.xml', 'pob-next', { relPath: 'b.xml' }),
+      pin('dock:a.xml', 'dock', { relPath: 'a.xml' })
+    ]
+    const moved = moveBuildPins(list, 'a.xml', 'x/a2.xml').list
+    expect(moved.map(p => p.id)).toEqual(['pob-tree:x/a2.xml', 'pob-slot:x/a2.xml:Helmet', 'pob-gems:x/a2.xml:Body Armour|x|0', 'pob-next:b.xml', 'dock:a.xml'])
+    expect(moved.slice(0, 3).every(p => p.data.relPath === 'x/a2.xml')).toBe(true)
+    expect(moved[1].data.slot).toBe('Helmet')
+    expect(treePin('x/a2.xml', 'A').id).toBe(moved[0].id)
+    const gone = moveBuildPins(list, 'a.xml', null)
+    expect(gone.list.map(p => p.id)).toEqual(['pob-next:b.xml', 'dock:a.xml'])
+    expect(gone.dropped).toHaveLength(3)
+  })
+
+  it('drops the note PoB keeps on a rare base', () => {
+    const item = { rarity: 'RARE', name: 'Day 1', base: 'Two-Stone Ring (Fire/Cold)', sockets: '', implicits: [], mods: [] } as unknown as PobItem
+    expect(itemBase(item)).toBe('Two-Stone Ring')
+    expect(itemBase({ ...item, base: 'Vaal Regalia' })).toBe('Vaal Regalia')
+  })
+
+  it('a unique on a Mirrored base keeps its base', () => {
+    const item = parseItemText(`
+      Rarity: UNIQUE
+      Some Shield
+      Mirrored Spiked Shield
+      Implicits: 0
+      +10 to Strength
+      Mirrored
+    `)
+    expect(item.base).toBe('Mirrored Spiked Shield')
+    expect(item.mirrored).toBe(true)
+  })
+
+  it('numbers and looks after the implicits are not mods', () => {
+    const item = parseItemText(`
+      Rarity: UNIQUE
+      Some Armour
+      Vaal Regalia
+      Implicits: 0
+      Quality (Attack Modifiers): +20%
+      Quality: +20%
+      Armour: 323
+      Evasion Rating: 323
+      Energy Shield: 400
+      Ward: 50
+      Foil Unique (Rainbow)
+      +10 to Strength
+    `)
+    expect(item.mods).toEqual(['+10 to Strength'])
+    expect(item.base).toBe('Vaal Regalia')
+  })
+
+  it('a title with a level and an act is staged by the one named first', () => {
+    expect(stageOf('level 49 - damage nodes mid act 7')).toEqual({ kind: 'level', at: 49 })
+    expect(stageOf('Act 3 - level 30 tree')).toEqual({ kind: 'act', at: 3 })
+  })
+
+  it('group labels lose colour codes, and the main skill skips heading groups', () => {
+    const d = parseBuild(`<PathOfBuilding><Build level="95" mainSocketGroup="1"></Build>
+      <Skills><SkillSet id="1" title="Main"><Skill label="^2Heading ^x8DD8FFhere"></Skill><Skill label="Mine"><Gem nameSpec="Spark"/></Skill></SkillSet></Skills>
+      </PathOfBuilding>`)
+    expect(d.skillSets[0].groups[0].label).toBe('Heading here')
+    expect(d.mainSkill).toBe('Spark')
+  })
+
+  it('picks the unit by the rounded value', () => {
+    expect(shortNumber(999600)).toBe('1.0M')
+    expect(shortNumber(999960000)).toBe('1.0B')
+    expect(shortNumber(999400)).toBe('999k')
+    expect(shortNumber(5604073)).toBe('5.6M')
   })
 })

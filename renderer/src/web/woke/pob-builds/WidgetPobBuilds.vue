@@ -102,9 +102,9 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
-import { buildPinChoices, treePin } from './build-pins'
+import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
 import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
-import { isPinned, togglePin as togglePinned } from '../pins/pins'
+import { isPinned as isPiecePinned, pins, togglePin as togglePinned } from '../pins/pins'
 import type { DockMenuAction } from '../dock/dock'
 import { showWithOverlay } from '../dock/dock'
 import { toggleBuildTree, treeOn } from './tree-toggle'
@@ -170,7 +170,7 @@ const pinMenu = computed<DockMenuAction[]>(() => {
   const rel = active.relPath.value
   if (!d || !rel) return []
   return buildPinChoices(rel, activeName.value, d, active.level.value, active.act.value, active.loadout.value)
-    .map(c => ({ label: c.label, icon: c.pin.icon, checked: isPinned(c.pin.id), action: () => togglePinned(c.pin) }))
+    .map(c => ({ label: c.label, icon: c.pin.icon, checked: isPiecePinned(c.pin.id), action: () => togglePinned(c.pin) }))
 })
 // The right-click menu: draw on the tree, then the pins.
 const dockMenu = computed<DockMenuAction[]>(() => {
@@ -435,6 +435,8 @@ function followFile (from: string, to: string) {
   moveBuildRefs(props.config, from, to)
   // Its regexes in the Regex library follow the file too.
   moveRegexFolder(buildRegexFolder(from), buildRegexFolder(to))
+  // So do its pinned pieces (tree, gear slot, gems, next step).
+  pins.value = moveBuildPins(pins.value, from, to).list
   if (selected.value === from) selected.value = to
   saveConfig()
 }
@@ -454,12 +456,16 @@ async function removeBuild (b: PobBuildEntry) {
   try {
     const { xml } = await pobApi.delete(props.config, b.relPath)
     const putBack = moveBuildRefs(props.config, b.relPath, null)
+    // Its pinned pieces go with it, and come back on Undo.
+    const { list, dropped } = moveBuildPins(pins.value, b.relPath, null)
+    pins.value = list
     if (selected.value === b.relPath) selected.value = null
     saveConfig()
     await refresh()
     note(`Moved ${b.name} to the Recycle Bin`, () => {
       pobApi.restore(props.config, b.relPath, xml).then(() => {
         putBack()
+        pins.value = [...pins.value.filter(p => !dropped.some(d => d.id === p.id)), ...dropped]
         saveConfig()
         return refresh()
       }, (err: Error) => note(err.message))

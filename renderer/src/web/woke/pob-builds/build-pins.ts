@@ -40,6 +40,23 @@ export function gemsPin (relPath: string, groups: PobSkillGroup[], g: PobSkillGr
   return { id: `pob-gems:${relPath}:${key}`, kind: 'pob-gems', title: groupTitle(g), icon: 'fas fa-gem', data: { relPath, group: key } }
 }
 
+// A build file renamed or moved (to) or deleted (null): its pinned pieces
+// follow the file, or go with it. Returns the new list and the pins dropped,
+// so Undo can put them back.
+export function moveBuildPins (list: Pin[], from: string, to: string | null): { list: Pin[], dropped: Pin[] } {
+  const ofBuild = (p: Pin) => p.kind.startsWith('pob-') && p.data.relPath === from
+  if (!to) return { list: list.filter(p => !ofBuild(p)), dropped: list.filter(ofBuild) }
+  const moved = list.map(p => {
+    if (!ofBuild(p)) return p
+    const head = `${p.kind}:${from}`
+    const id = p.id.startsWith(head) ? `${p.kind}:${to}${p.id.slice(head.length)}` : p.id
+    return { ...p, id, data: { ...p.data, relPath: to } }
+  })
+  // A pin of the same piece already there wins; ids stay unique.
+  const seen = new Set<string>()
+  return { list: moved.filter(p => !seen.has(p.id) && seen.add(p.id)), dropped: [] }
+}
+
 // Everything of a build you can pin, for the icon's right-click menu: the
 // tree, the next step, the main skill, then each item in the gear set in use.
 export function buildPinChoices (relPath: string, build: string, d: PobDetails, level: number | null, act: number | null, pick?: LoadoutPick): Array<{ label: string, pin: NewPin }> {

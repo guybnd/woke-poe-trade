@@ -341,7 +341,13 @@ function withoutKind (kind: keyof LoadoutPick): LoadoutPick | null {
 function chooseSkillSet (title: string) {
   // Linked, a set pick is the whole loadout: unpicking goes back to Auto.
   if (linked.value && canUnlink.value) setPick(pick.value?.skillSet === title && !pick.value.itemSet ? null : { skillSet: title })
-  else setPick(pick.value?.skillSet === title ? withoutKind('skillSet') : { skillSet: title })
+  else if (pick.value?.skillSet === title) setPick(withoutKind('skillSet'))
+  else {
+    // Apart, the gear stays where it is: keep its pick, and with none, hold
+    // the gear showing now, as a gem set pick would take its namesake along.
+    const itemSet = pick.value?.itemSet ?? (canUnlink.value ? shownItemSet.value?.title : undefined)
+    setPick({ ...pick.value, skillSet: title, itemSet })
+  }
 }
 
 // Item sets can differ from the skill set, so the skill set stays as it was.
