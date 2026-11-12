@@ -6,6 +6,7 @@ import { inject, InjectionKey, provide, ref, Ref, toRaw, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
+import { FilterTag } from '@/web/price-check/filters/interfaces'
 import { exclude, include, isHybrid, pickAtTier, soleMod, splitByMod, splitFilters, tierBound } from './pseudo-split'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import { poeOn } from './window-style'
@@ -193,7 +194,8 @@ export function provideStatActions (
       }
     }
     for (const row of stats.value) {
-      if (isFilter(row) && soleMod(row) === mod) pickAtTier(row)
+      // A property row (Energy Shield: 1210) is the item's own number, not the mod's line.
+      if (isFilter(row) && row.tag !== FilterTag.Property && soleMod(row) === mod) pickAtTier(row)
     }
   }
 

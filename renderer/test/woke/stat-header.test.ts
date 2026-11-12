@@ -133,6 +133,15 @@ describe('buildStatHeader', () => {
     if (prop('item.base_percentile')) expect(m.chips.map(c => c.key)).toContain('base')
   })
 
+  it("a unique's Armour only base percentile moves isn't clickable", () => {
+    const { item, stats, prop } = load('unique-kaoms-heart.txt')
+    expect(prop('item.armour')?.hidden).toBe('hide_variable_by_base_percentile_only')
+    const m = buildStatHeader(item, stats)!
+    const armour = m.bigs.find(c => c.key === 'armour')!
+    expect(armour.filter).toBeUndefined()
+    expect(m.chips.find(c => c.key === 'base')?.filter).toBe(prop('item.base_percentile'))
+  })
+
   it('no header for an item without property filters', () => {
     const { item, stats } = load('rare-ring.txt')
     expect(buildStatHeader(item, stats)).toBeNull()

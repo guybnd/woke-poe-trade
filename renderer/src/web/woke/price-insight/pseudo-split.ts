@@ -7,6 +7,7 @@ import { applyIncr } from '@/parser/advanced-mod-desc'
 import { ModifierType, StatSource } from '@/parser/modifiers'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
+import { FilterTag } from '@/web/price-check/filters/interfaces'
 import { calculatedStatToFilter } from '@/web/price-check/filters/create-stat-filters'
 
 const isFilter = (s: FilterOrGroup): s is StatFilter => !('group' in s && s.group)
@@ -15,10 +16,14 @@ const isFilter = (s: FilterOrGroup): s is StatFilter => !('group' in s && s.grou
  *  the same kind and stat (two prefixes both adding Fire Resistance) share one
  *  filter, summed as the price check sums them. */
 export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: ParsedItem, percent: number): StatFilter[] {
-  const shown = new Set(stats.filter(isFilter).map(s => `${s.tag}|${s.statRef}`))
+  // A hidden row (the unticked Fractured twin of a fractured mod) doesn't list the mod.
+  const shown = new Set(stats.filter(isFilter).filter(s => !s.hidden).map(s => `${s.tag}|${s.statRef}`))
   const groups = new Map<string, StatSource[]>()
   for (const source of pseudo.sources) {
-    const key = `${source.modifier.info.type}|${source.stat.stat.ref}`
+    // A fractured mod searches any copy, as the total did (and as splitByMod does).
+    let type = source.modifier.info.type
+    if (type === ModifierType.Fractured && source.stat.stat.trade.ids[ModifierType.Explicit]) type = ModifierType.Explicit
+    const key = `${type}|${source.stat.stat.ref}`
     if (shown.has(key)) continue
     const roll = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
     const own: StatSource = {
@@ -32,7 +37,9 @@ export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: 
   for (const sources of groups.values()) {
     const filter = calculatedStatToFilter({
       stat: sources[0].stat.stat,
-      type: sources[0].modifier.info.type,
+      type: (sources[0].modifier.info.type === ModifierType.Fractured && sources[0].stat.stat.trade.ids[ModifierType.Explicit])
+        ? ModifierType.Explicit
+        : sources[0].modifier.info.type,
       sources
     }, percent, item)
     filter.disabled = false
@@ -85,15 +92,27 @@ export function pickAtTier (f: StatFilter) {
   if (roll.better === -1) { roll.max = bound; roll.min = '' } else { roll.min = bound; roll.max = '' }
 }
 
-/** The tier's worst roll, in the filter's own terms, for a filter from one tiered mod; else null. */
+/** The tier's worst roll, in the filter's own terms, for a filter from one tiered mod; else null.
+ *  Uncatalysed, so copies without catalyst quality clear it too. */
 export function tierBound (f: StatFilter): number | null {
   const roll = f.roll
-  if (!roll || f.sources.length !== 1 || roll.isNegated || roll.better === 0 || roll.better == null) return null
+  // A property row (Attacks per Second, Energy Shield) is the item's number, not its mod's.
+  if (!roll || f.tag === FilterTag.Property || f.sources.length !== 1 || roll.isNegated || roll.better === 0 || roll.better == null) return null
   const source = f.sources[0]
   if (source.modifier.info.tier == null) return null
-  const tier = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
+  const tier = source.stat.roll
   if (!tier) return null
-  return roll.better === -1 ? tier.max : tier.min
+  // A pseudo total counts its mod more than once (all resistances count three
+  // times): scale by its share of the total, as rollWithoutCatalyst does.
+  const scaled = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
+  const share = source.contributes
+  const multi = (!share || !scaled)
+    ? 1
+    : (scaled.max !== 0) ? share.max / scaled.max : (scaled.min !== 0) ? share.min / scaled.min : 1
+  const bound = Math.round((roll.better === -1 ? tier.max : tier.min) * multi * 1e6) / 1e6
+  if (roll.dp) return bound
+  // Rounded the way that still clears every copy at the tier.
+  return roll.better === -1 ? Math.ceil(bound) : Math.floor(bound)
 }
 
 // What a row was before Exclude it, put back by Include it again.

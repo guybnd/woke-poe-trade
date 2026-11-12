@@ -12,8 +12,8 @@ import { rollPair } from '@/web/woke/price-insight/roll-pair'
 vi.mock('@/web/woke/ui', () => ({ openMenu: vi.fn(), copyText: vi.fn(), toast: vi.fn() }))
 vi.mock('@/web/woke/price-insight/window-style', () => ({ poeOn: { value: true } }))
 
-function setup (name: string) {
-  const item = parseItem(fixture(`items/${name}`))
+function setup (name: string, edit = (text: string) => text) {
+  const item = parseItem(edit(fixture(`items/${name}`)))
   const stats = ref<FilterOrGroup[]>(initUiModFilters(item, { searchStatRange: 10 }))
   // provide() outside a component only warns.
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -106,6 +106,17 @@ describe('a local line two mods add up to', () => {
       ['+# to Armour', 81],
       ['+# to Evasion Rating', 73]
     ])
+  })
+
+  it('leaves the Energy Shield property row alone when the hybrid is its only mod', () => {
+    const { actions, rows, row } = setup('rare-body-armour-es.txt', text => text.replace(
+      '{ Prefix Modifier "Unassailable" (Tier: 1) — Defences, Energy Shield }\n120(110-120)% increased Energy Shield\n', ''))
+    const es = rows().find(f => f.tradeId[0] === 'item.energy_shield')!
+    expect(es.sources.length).toBe(1)
+    const was = { min: es.roll?.min, disabled: es.disabled }
+    actions.searchMod(row('Stun and Block Recovery'))
+    expect({ min: es.roll?.min, disabled: es.disabled }).toEqual(was)
+    expect(row('increased Energy Shield').roll?.min).toBe(39)
   })
 })
 

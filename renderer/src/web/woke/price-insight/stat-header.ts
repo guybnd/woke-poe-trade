@@ -162,13 +162,14 @@ const FILTER_NAMES: Record<string, string> = {
 /**
  * Names each cell by the filter it really picks (the big DPS number of a one-type
  * weapon picks that type's filter), and makes a roll that can't vary on this item
- * (a unique's fixed line, no min to search) not clickable.
+ * (a unique's fixed line, or one only base percentile moves: no min to search) not clickable.
  */
 function finish (model: HeaderModel): HeaderModel {
   for (const c of [...model.bigs, ...model.chips, ...(model.legend ?? [])]) {
     const f = c.filter
     c.name = f ? (FILTER_NAMES[f.tradeId[0]] ?? 'the chaos damage mod') : (c.key === 'dps' ? 'Total DPS' : c.label)
-    if (f?.hidden === 'filters.hide_const_roll') c.filter = undefined
+    // Fixed but for base percentile (a unique's Armour): no min or max to search either.
+    if (f?.hidden === 'filters.hide_const_roll' || f?.hidden === 'hide_variable_by_base_percentile_only') c.filter = undefined
   }
   return model
 }
