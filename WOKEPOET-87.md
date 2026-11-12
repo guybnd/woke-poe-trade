@@ -24,6 +24,15 @@ history:
     date: '2026-11-05T12:02:38.262Z'
     selfAttested: true
     id: c-2026-11-05t12-02-38-262z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy's pick C merged as #365 (61a9f8ac): the plaza guesses the lab you ran
+      last, and its card has the four lab buttons. Still open: poelab's 403 and
+      bot check, which can only be tested inside the real app.
+    date: '2026-11-12T07:17:06.484Z'
+    selfAttested: true
+    id: c-2026-11-12t07-17-06-484z
 ---
 Step 5 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Mock first.
 
