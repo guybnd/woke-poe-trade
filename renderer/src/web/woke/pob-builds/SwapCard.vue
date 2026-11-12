@@ -1,16 +1,19 @@
 <template>
   <section :class="$style.card">
     <div :class="$style.verdict" :style="{ color: VERDICT_COLOUR[swap.result.verdict] }">{{ swap.result.summary }}</div>
-    <div v-if="swap.result.rows.length" :class="[$style.row, $style.head]"><span /><span>Yours</span><span>This</span><span /></div>
-    <template v-for="(r, i) in swap.result.rows.slice(0, 12)" :key="i">
-      <div :class="$style.row">
-        <span class="w-trunc" :title="r.label">{{ r.label }}</span>
-        <span class="w-num">{{ r.yours }}</span>
-        <span class="w-num">{{ r.theirs }}</span>
-        <span class="w-num" :style="{ color: TONE_COLOUR[r.tone] }">{{ r.delta }}</span>
-      </div>
-      <div v-if="r.note" :class="$style.note">{{ r.note }}</div>
-    </template>
+    <!-- One grid, so the numbers sit right beside the longest label; the change leads each row. -->
+    <div v-if="swap.result.rows.length" :class="$style.table">
+      <div :class="[$style.row, $style.head]"><span /><span /><span>Yours</span><span>This</span></div>
+      <template v-for="(r, i) in swap.result.rows.slice(0, 12)" :key="i">
+        <div :class="$style.row">
+          <span class="w-num" :class="$style.delta" :style="{ color: TONE_COLOUR[r.tone] }">{{ r.delta }}</span>
+          <span class="w-trunc" :title="r.label">{{ r.label }}</span>
+          <span class="w-num">{{ r.yours }}</span>
+          <span class="w-num">{{ r.theirs }}</span>
+        </div>
+        <div v-if="r.note" :class="$style.note">{{ r.note }}</div>
+      </template>
+    </div>
     <div v-if="swap.source" :class="$style.foot">{{ swap.source }}</div>
     <div :class="$style.foot">Numbers on the two items, not a full recalculation.</div>
   </section>
@@ -37,18 +40,23 @@ const TONE_COLOUR = { up: 'var(--w-up)', down: 'var(--w-down)', dim: 'var(--w-di
   padding-bottom: 6px;
   font-weight: 500;
 }
-.row {
+.table {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 3.6rem 3.6rem 3.4rem;
-  gap: 6px;
+  grid-template-columns: auto minmax(0, max-content) auto auto;
+  column-gap: 14px;
+}
+.row { display: contents; }
+.row > span {
   padding: 2px 0;
   border-bottom: 1px solid var(--w-line-soft);
 }
-.head {
+.delta { text-align: right; }
+.head > span {
   color: var(--w-dim);
   font-size: var(--w-fs-xs);
 }
 .note {
+  grid-column: 2 / -1;
   padding: 1px 0 3px;
   color: var(--w-dim);
   font-size: var(--w-fs-xs);

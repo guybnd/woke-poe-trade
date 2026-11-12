@@ -193,6 +193,8 @@ function startReader (ctx: PersonalContext): () => void {
     fetch: sessionFetch,
     now: () => Date.now(),
     account: () => reader.account ?? reader.fallbackAccount,
+    league: () => reader.league,
+    log: (line) => ctx.logger.write(line),
     signedOut: () => {
       if (!live || !reader.account) return
       reader.signedOut()

@@ -5,7 +5,7 @@ import { pobItemText } from '@/web/woke/pob-builds/item-text'
 import { swapCheck } from '@/web/woke/pob-builds/swap-check'
 import fs from 'fs'
 import path from 'path'
-import { cleanMod, lastActive, parseWornItems, WornReader } from '../../../main/src/woke/personal/worn-items'
+import { cleanMod, parseWornItems, pickCharacter, WornReader } from '../../../main/src/woke/personal/worn-items'
 import { loadGameData } from '../helpers/game-data'
 
 beforeAll(loadGameData)
@@ -182,8 +182,12 @@ describe('worn reader', () => {
     expect(t.calls.length).toBe(1)
   })
 
-  it('falls back to the log name when the site names no character', () => {
-    expect(lastActive('[{"name":"A"}]')).toBeNull()
-    expect(lastActive('nope')).toBeNull()
+  it('picks the last played character, else the log name, else your highest in the league', () => {
+    const list = [{ name: 'Std', league: 'Standard', level: 98 }, { name: 'Low', league: 'Keepers', level: 40 }, { name: 'Main', league: 'Keepers', level: 92 }]
+    expect(pickCharacter(JSON.stringify([...list, { name: 'Now', league: 'Keepers', level: 1, lastActive: true }]), '', 'Keepers')).toBe('Now')
+    expect(pickCharacter(JSON.stringify({ characters: list }), 'Low', 'Keepers')).toBe('Low')
+    expect(pickCharacter(JSON.stringify(list), 'Stranger', 'Keepers')).toBe('Main')
+    expect(pickCharacter(JSON.stringify(list), '', null)).toBe('Std')
+    expect(pickCharacter('nope', 'X', null)).toBeNull()
   })
 })
