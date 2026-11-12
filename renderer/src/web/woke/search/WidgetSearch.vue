@@ -305,12 +305,11 @@ const lookupContext = computed<LookupContext>(() => {
     } else if (!had || (!had.plain && i.chaos < had.chaos)) prices.set(i.name, { chaos: i.chaos, plain: false })
   }
   const league = leagues.selectedId.value
-  const tools = new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType))
   return {
     price: (name, variant) => name === 'Chaos Orb'
       ? 1
       : variant != null ? variants.get(`${name}\u0000${variant}`) ?? null : prices.get(name)?.chaos ?? null,
-    tools,
+    tools: new Set<string>(),
     divine: divine.value,
     now: Date.now(),
     league: league ? { name: league, startedAt: leagues.startedAt.value } : null
@@ -319,9 +318,11 @@ const lookupContext = computed<LookupContext>(() => {
 const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).filter(i => i.type === 'Currency').map(i => i.name))])
 const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, webLookup])
 
+// Kept apart from the prices, so switching a tool doesn't rebuild them.
+const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
 function lookupCards (q: string): LookupCard[] {
   // Re-read every 30 s, so countdowns tick while the palette is open.
-  const ctx = { ...lookupContext.value, now: nowMinute.value }
+  const ctx = { ...lookupContext.value, tools: lookupTools.value, now: nowMinute.value }
   return lookups.value.flatMap(l => l(q, ctx))
 }
 // One section per card group, in the order they came; `only` keeps those

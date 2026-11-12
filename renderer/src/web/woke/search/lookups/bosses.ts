@@ -7,6 +7,13 @@ import { matchRank } from '../search'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
 
 const DROP_ROWS = 12
+// "th" or "the" would list half the bosses.
+const MIN_QUERY = 4
+
+// Like Boss runs: the drop's variant, else the plain row, else the cheapest.
+function dropPrice (ctx: LookupContext, name: string, variant?: string): number | null {
+  return (variant != null ? ctx.price(name, variant) : null) ?? ctx.price(name)
+}
 
 function percent (chance: number): string {
   const p = chance * 100
@@ -30,7 +37,7 @@ export function lootPerKill (boss: Boss, ctx: LookupContext): number | null {
   let any = false
   for (const d of boss.drops) {
     if (d.chance == null || d.variable) continue
-    const price = ctx.price(d.name, d.variant)
+    const price = dropPrice(ctx, d.name, d.variant)
     if (price == null) continue
     sum += d.chance * price * (d.qty ?? 1)
     any = true
@@ -56,12 +63,13 @@ export function bossCard (boss: Boss, ctx: LookupContext): LookupCard {
   if (boss.entry.length > 1 || (boss.entry[0]?.qty ?? 0) > 1) entry.push({ label: 'Entry total', chaos: cost })
   if (!boss.entry.length) entry.push({ label: 'No entry item: found in the world', dim: true })
   const drops = [...boss.drops]
-    .map(d => ({ d, price: ctx.price(d.name, d.variant) }))
+    // Rolled drops have no one price: they go last.
+    .map(d => ({ d, price: d.variable ? -1 : dropPrice(ctx, d.name, d.variant) }))
     .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
     .slice(0, DROP_ROWS)
     .map(({ d, price }): LookupRow => ({
       label: d.chance != null ? `${d.name} · ${percent(d.chance)}` : d.name,
-      chaos: d.variable ? undefined : price,
+      chaos: d.variable ? undefined : price ?? null,
       value: d.variable ? 'Depends on the roll' : undefined,
       item: { name: d.name }
     }))
@@ -89,6 +97,7 @@ export function bossCard (boss: Boss, ctx: LookupContext): LookupCard {
 
 // Bosses by name, and the boss an entry fragment opens.
 export const bossLookup: Lookup = (query, ctx) => {
+  if (query.trim().length < MIN_QUERY) return []
   const hits = BOSSES
     .map(boss => ({
       boss,
@@ -104,11 +113,11 @@ export const bossLookup: Lookup = (query, ctx) => {
 }
 
 // Every boss that drops each item.
-const DROPPED_BY = new Map<string, Array<{ boss: Boss, chance: number | null }>>()
+const DROPPED_BY = new Map<string, Array<{ boss: Boss, chance: number | null, variant?: string, variable?: boolean }>>()
 for (const boss of BOSSES) {
   for (const d of boss.drops) {
     const list = DROPPED_BY.get(d.name) ?? []
-    if (!list.some(x => x.boss.id === boss.id)) list.push({ boss, chance: d.chance })
+    if (!list.some(x => x.boss.id === boss.id)) list.push({ boss, chance: d.chance, variant: d.variant, variable: d.variable })
     DROPPED_BY.set(d.name, list)
   }
 }
@@ -118,9 +127,13 @@ export function droppedBy (name: string) {
 }
 
 export const dropLookup: Lookup = (query, ctx) => {
+  if (query.trim().length < MIN_QUERY) return []
   const out: LookupCard[] = []
-  for (const [name, bosses] of DROPPED_BY) {
-    if (matchRank(name, query) !== 0) continue
+  // The closest names first: "awakened enl" before every other Awakened gem.
+  const names = [...DROPPED_BY.keys()].filter(n => matchRank(n, query) === 0).sort((a, b) => a.length - b.length)
+  for (const name of names) {
+    const bosses = DROPPED_BY.get(name)!
+    const { variant, variable } = bosses[0]
     const rows: LookupRow[] = bosses.map(({ boss, chance }) => {
       const cost = entryCost(boss, ctx)
       return {
@@ -136,7 +149,7 @@ export const dropLookup: Lookup = (query, ctx) => {
       icon: 'fas fa-gift',
       tip: { name },
       sections: [
-        { rows: [{ label: name, chaos: ctx.price(name), item: { name } }] },
+        { rows: [variable ? { label: name, value: 'Depends on the roll', item: { name } } : { label: name, chaos: dropPrice(ctx, name, variant), item: { name } }] },
         { label: 'Dropped by', rows }
       ],
       actions: [

@@ -52,7 +52,15 @@ describe('dropLookup', () => {
     expect(card.name).toMatch(/^Progenesis drops from /)
     expect(card.sections[1].rows!.some(r => r.label.startsWith('Uber Maven · 1.7%'))).toBe(true)
   })
-  it('needs the start of the name', () => {
+  it('needs the start of the name, and more than a word like "the"', () => {
     expect(dropLookup('genesis', ctx())).toEqual([])
+    expect(dropLookup('the', ctx())).toEqual([])
+    expect(bossLookup('the', ctx())).toEqual([])
+  })
+  it('prices the drop as the boss drops it', () => {
+    const [card] = dropLookup('awakened enlighten', ctx())
+    expect(card.sections[0].rows![0].chaos).toBe(30000)
+    const [jewel] = dropLookup('impossible escape', ctx())
+    expect(jewel.sections[0].rows![0].value).toBe('Depends on the roll')
   })
 })
