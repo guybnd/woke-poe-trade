@@ -4,28 +4,25 @@
 import type { TreeNode } from './passive-tree'
 import type { PobItem } from './widget'
 
-// Path of Building's jewel radii (tree units, 3.16 and later).
+// Path of Building's jewel radii (tree units, Modules/Data.lua, 3.16 and later).
 export const JEWEL_RADIUS: Record<string, number> = {
   'Small': 960,
-  'Medium': 1200,
-  'Large': 1500,
-  'Very Large': 1800,
+  'Medium': 1440,
+  'Large': 1800,
+  'Very Large': 2400,
   'Massive': 2880
 }
 
 // Uniques that rewrite the passives in their ring, besides Timeless jewels.
+// Jewels that only count what's allocated in their ring aren't here. Thread
+// of Hope (a variable ring) and Impossible Escape (a ring around a keystone,
+// not its socket) aren't drawn yet.
 const RADIUS_CHANGERS = new Set([
-  'Impossible Escape', 'Thread of Hope', 'Unnatural Instinct', "Lioneye's Fall", 'Might of the Meek',
-  'Intuitive Leap', 'Inspired Learning', 'Brute Force Solution', 'Careful Planning', 'Efficient Training',
-  'Fertile Mind', 'Fluid Motion', 'Fragile Bloom', 'Inertia', 'Energised Armour', 'Healthy Mind', 'Split Personality',
-  'Anatomical Knowledge', 'Apparitions', 'Cold Steel', 'Collateral Damage', 'Combat Focus', 'Dead Reckoning',
-  'Fight for Survival', 'First Snow', 'Fireborn', 'Frozen Trail', 'Growing Agony', 'Hidden Potential',
-  'Hungry Abyss', 'Inevitability', 'Pugilist', 'Quickening Covenant', 'Rain of Splinters', 'Ring of Blades',
-  'Spire of Stone', 'Spreading Rot', 'Static Electricity', 'Steel Spirit', 'Tempered Flesh', 'Tempered Mind',
-  'Tempered Spirit', 'The Blue Dream', 'The Blue Nightmare', 'The Golden Rule', 'The Green Dream',
-  'The Green Nightmare', 'The Red Dream', 'The Red Nightmare', 'Transcendent Flesh', 'Transcendent Mind',
-  'Transcendent Spirit', 'Weight of Sin', 'Wildfire', 'Winter Burial', 'Calamitous Visions', 'Kitava\'s Teachings',
-  'Light of Meaning', 'Pure Talent', 'Sacrificial Harvest', 'Survival Instincts', 'Survival Secrets', 'Survival Skills'
+  "Lioneye's Fall", 'Might of the Meek', 'Unnatural Instinct', 'Energised Armour', 'Healthy Mind',
+  'Brute Force Solution', 'Careful Planning', 'Efficient Training', 'Fertile Mind', 'Fluid Motion', 'Inertia',
+  'Cold Steel', 'Fireborn', 'Tempered Flesh', 'Tempered Mind', 'Tempered Spirit',
+  'Transcendent Flesh', 'Transcendent Mind', 'Transcendent Spirit',
+  'The Red Dream', 'The Red Nightmare', 'The Green Dream', 'The Green Nightmare', 'The Blue Dream', 'The Blue Nightmare'
 ])
 
 export interface SocketedJewel {
@@ -42,7 +39,8 @@ export function isTimeless (item: PobItem): boolean {
 }
 
 export function isCluster (item: PobItem): boolean {
-  return /Cluster Jewel$/.test(item.base || item.name)
+  // A magic cluster's one line carries its affixes: "Large Cluster Jewel of Fire".
+  return /Cluster Jewel\b/.test(item.base || item.name)
 }
 
 export function socketedJewels (sockets: Array<{ node: number, item: PobItem }> | undefined): SocketedJewel[] {
@@ -68,7 +66,7 @@ export function nodesInRadius (nodes: Map<number, TreeNode>, jewel: SocketedJewe
   return out
 }
 
-// The jewel whose ring changes this passive, if any (the nearest wins).
+// The first jewel (in socket order) whose ring changes this passive, if any.
 export function changedBy (nodes: Map<number, TreeNode>, jewels: SocketedJewel[], node: TreeNode): SocketedJewel | null {
   for (const j of jewels) {
     if (j.changes && nodesInRadius(nodes, j).some(n => n.id === node.id)) return j

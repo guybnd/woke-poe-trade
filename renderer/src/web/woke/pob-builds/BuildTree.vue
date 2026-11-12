@@ -58,7 +58,7 @@
             </div>
           </template>
           <div v-if="!groups.length" class="w-dim pt-2">Nothing in this tree says that.</div>
-          <div class="w-faint text-xs pt-2">From this tree, its masteries and its jewels: no gear or ascendancy. Timeless and cluster jewels aren't counted yet.</div>
+          <div class="w-faint text-xs pt-2">From this tree, its masteries and the jewels in its sockets: no gear or ascendancy. Timeless and cluster jewels, and jewels inside cluster sockets, aren't counted yet.</div>
         </div>
       </div>
     </div>
@@ -155,7 +155,8 @@ const query = shallowRef('')
 const rowIds = shallowRef<number[] | null>(null)
 
 // Jewels in this tree, by socket.
-const jewels = computed(() => socketedJewels(shown.value?.sockets))
+// Only jewels in allocated sockets do anything.
+const jewels = computed(() => socketedJewels(shown.value?.sockets).filter(j => toSet.value.has(j.node)))
 const jewelAt = computed(() => new Map(jewels.value.map(j => [j.node, j])))
 
 // Picked masteries read as their effect, and a socket as its jewel's mods,

@@ -11,7 +11,7 @@ const item = (over: Partial<PobItem>): PobItem => ({ rarity: 'UNIQUE', name: '',
 const nodes = new Map<number, TreeNode>([
   [1, node(1, 0, 0, 'jewel')],
   [2, node(2, 1000, 0)],
-  [3, node(3, 1700, 0, 'notable')],
+  [3, node(3, 2000, 0, 'notable')],
   [4, node(4, 3000, 0)],
   [5, node(5, 100, 0, 'mastery')]
 ])
@@ -19,7 +19,7 @@ const nodes = new Map<number, TreeNode>([
 describe('PoB tree jewels', () => {
   it('reads a jewel\'s ring and which passives it changes', () => {
     const [vanity] = socketedJewels([{ node: 1, item: item({ name: 'Glorious Vanity', base: 'Timeless Jewel', radius: 'Large' }) }])
-    expect(vanity.radius).toBe(1500)
+    expect(vanity.radius).toBe(1800)
     expect(vanity.changes).toBe(true)
     expect(nodesInRadius(nodes, vanity).map(n => n.id)).toEqual([2])
     expect(changedBy(nodes, [vanity], nodes.get(2)!)?.item.name).toBe('Glorious Vanity')
@@ -30,6 +30,8 @@ describe('PoB tree jewels', () => {
     expect(jewelStats(item({ rarity: 'RARE', base: 'Cobalt Jewel', mods: ['+12% to Cold Resistance'] }))).toEqual(['+12% to Cold Resistance'])
     expect(jewelStats(item({ base: 'Timeless Jewel', mods: ['Bathed in the blood of 1234'] }))).toEqual([])
     expect(jewelStats(item({ rarity: 'RARE', base: 'Large Cluster Jewel', mods: ['Adds 8 Passive Skills'] }))).toEqual([])
+    // A magic one is one line, affixes and all.
+    expect(jewelStats(item({ rarity: 'MAGIC', name: 'Large Cluster Jewel of Fire', mods: ['Adds 8 Passive Skills'] }))).toEqual([])
   })
 
   it('a jewel with no radius draws no ring', () => {
