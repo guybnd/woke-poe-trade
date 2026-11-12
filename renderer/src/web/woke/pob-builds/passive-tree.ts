@@ -1,6 +1,7 @@
 // The passive tree, loaded the first time it is opened, and what changes
 // between two of a build's trees. Data: scripts/build-tree-data.mjs.
 import { dataFileUrl, onSharedDataChange } from '../app/live-data'
+import type { ClusterData } from './cluster-graph'
 
 export type NodeKind = 'small' | 'notable' | 'key' | 'jewel' | 'mastery' | 'asc' | 'ascstart' | 'start' | 'wormhole'
 
@@ -35,11 +36,18 @@ export interface TreeArt {
 
 let job: Promise<Map<number, TreeNode>> | null = null
 let art: TreeArt | null = null
+let clusters: ClusterData | null = null
 // Mastery effect id -> its stat lines.
 let masteryEffects: Record<string, string[]> = {}
 // A newer tree downloaded: read it the next time the tree opens.
 let generation = 0
 onSharedDataChange(() => { generation++; job = null })
+
+// How cluster jewels lay out, once loadPassiveTree has finished; null when the
+// data is older than cluster layouts.
+export function passiveTreeClusters (): ClusterData | null {
+  return clusters
+}
 
 // The groups and sprites, once loadPassiveTree has finished.
 export function passiveTreeArt (): TreeArt | null {
@@ -73,13 +81,14 @@ export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
     job = fetch(dataFileUrl('tree/passive-tree.json'))
       .then(res => {
         if (!res.ok) throw new Error(`The passive tree didn't load (${res.status})`)
-        return res.json() as Promise<TreeArt & { nodes: Row[], masteryEffects?: Record<string, string[]> }>
+        return res.json() as Promise<TreeArt & { nodes: Row[], masteryEffects?: Record<string, string[]>, clusters?: ClusterData }>
       })
       .then(data => {
         // A tree read from before a newer one arrived doesn't replace its art.
         if (mine === generation) {
           art = { groups: data.groups, sprites: data.sprites }
           masteryEffects = data.masteryEffects ?? {}
+          clusters = data.clusters ?? null
         }
         return readNodes(data.nodes)
       })

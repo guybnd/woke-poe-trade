@@ -113,6 +113,9 @@ export interface PobItem {
   sockets: string
   // A jewel's radius as PoB writes it ("Large", "Variable").
   radius?: string
+  // A cluster jewel's small-passive skill id and node count, as PoB writes them.
+  clusterSkill?: string
+  clusterNodeCount?: number
   implicits: string[]
   mods: string[]
   // Older app versions don't send the rest.
