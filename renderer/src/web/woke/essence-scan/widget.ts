@@ -22,6 +22,11 @@ export interface EssenceScanWidget extends Widget {
   iconWhenOff: boolean
 }
 
+// Shared by every essence scan panel (there can be more than one).
+// stoppedSeed: the map instance you stopped the scan in by hand.
+// failedSeed: the map instance where starting it failed.
+export const autoScan: { stoppedSeed: string | null, failedSeed: string | null } = { stoppedSeed: null, failedSeed: null }
+
 export function essenceHotkeyTarget (wmId: number): string {
   return `woke-essence-scan:${wmId}`
 }

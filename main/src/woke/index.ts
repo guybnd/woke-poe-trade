@@ -81,7 +81,9 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     handlers[`${kind.topic}-start`] = async () => await scanner.start()
     handlers[`${kind.topic}-stop`] = async () => scanner.stop()
     handlers[`${kind.topic}-reread`] = async () => scanner.reread()
-    handlers[`${kind.topic}-status`] = async () => ({ running: scanner.isRunning, paused: scanner.isPaused, rolling: scanner.isRolling })
+    handlers[`${kind.topic}-status`] = async () => ({ running: scanner.isRunning, paused: scanner.isPaused, rolling: scanner.isRolling, auto: scanner.isAuto })
+    handlers[`${kind.topic}-auto-start`] = async () => await scanner.autoStart()
+    handlers[`${kind.topic}-auto-stop`] = async () => scanner.autoStop()
     if (kind.canRoll) handlers[`${kind.topic}-roll`] = async () => await scanner.roll()
   }
   handlers['essence-scan-once'] = async () => await readAllEssenceLabels(poeWindow)

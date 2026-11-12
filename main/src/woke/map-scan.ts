@@ -19,6 +19,8 @@ import { ocrDir, USER_OCR_DIR } from './ocr-dir'
 const LOCK_LEAVE = 0.024
 // Stop after this long without the game focused, so it can't run forever.
 const IDLE_STOP_MS = 30 * 60 * 1000
+// A scan started by entering a map stops sooner once the game is left.
+const AUTO_AWAY_STOP_MS = 3 * 60 * 1000
 // Files the OCR worker loads.
 // The worker swallows load errors, so they're checked up front instead.
 const OCR_FILES = ['tesseract-core-simd.js', 'opencv.js', 'eng.traineddata']
@@ -253,6 +255,8 @@ export class ScreenScanner {
   private paused = false
   private lock: Rect | null = null
   private lockAt: { x: number, y: number } | null = null
+  // Started by entering a map (autoStart), not by hand: town stops it again.
+  private auto = false
 
   constructor (
     private readonly server: ServerEvents,
@@ -264,6 +268,26 @@ export class ScreenScanner {
   get isRunning () { return this.running }
   get isRolling () { return this.rolling }
   get isPaused () { return this.paused }
+  get isAuto () { return this.auto }
+
+  // Entering a map. Leaves a running scan as it is, never takes the screen
+  // from another scan mode, and does nothing with the game in the background
+  // (a log replayed at start-up still says you're in the last map).
+  async autoStart (): Promise<{ running: boolean, auto: boolean }> {
+    if (this.running || (ocrOwner && ocrOwner !== this) || !this.poeWindow.isActive) {
+      return { running: this.running, auto: this.auto }
+    }
+    await this.start()
+    this.auto = true
+    this.emitState()
+    return { running: true, auto: true }
+  }
+
+  // Town or hideout: stops only a scan that autoStart began.
+  autoStop (): { running: boolean } {
+    if (this.running && this.auto) this.stop()
+    return { running: this.running }
+  }
   get name () { return this.kind.name }
 
   pause (by: string) {
@@ -317,6 +341,8 @@ export class ScreenScanner {
   }
 
   async start (): Promise<{ running: boolean }> {
+    // Started by hand (or again by autoStart, which sets it back after).
+    this.auto = false
     const check = checkOcr()
     if (!check.ok) throw new Error(check.message!)
     try {
@@ -347,6 +373,7 @@ export class ScreenScanner {
   }
 
   stop (reason?: string): { running: boolean } {
+    this.auto = false
     if (this.running) {
       this.running = false
       this.paused = false
@@ -378,7 +405,8 @@ export class ScreenScanner {
     if (!this.poeWindow.isActive) {
       // Time away isn't time with nothing to read: coming back must not stop it.
       this.lastReadingAt = Date.now()
-      if (Date.now() - this.lastActive > IDLE_STOP_MS) this.stop('Stopped after 30 minutes away from the game.')
+      if (this.auto && Date.now() - this.lastActive > AUTO_AWAY_STOP_MS) this.stop()
+      else if (Date.now() - this.lastActive > IDLE_STOP_MS) this.stop('Stopped after 30 minutes away from the game.')
       return
     }
     this.lastActive = Date.now()
@@ -505,7 +533,7 @@ export class ScreenScanner {
   }
 
   private emitState (message?: string) {
-    this.send({ type: 'state', running: this.running, paused: this.paused, rolling: this.rolling, locked: this.lock != null, message })
+    this.send({ type: 'state', running: this.running, paused: this.paused, rolling: this.rolling, locked: this.lock != null, auto: this.auto, message })
   }
 
   private send (data: unknown) {

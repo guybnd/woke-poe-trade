@@ -117,7 +117,7 @@ import { usePriceIndex } from '../market/price-index'
 import { useZone } from '../shared/zone'
 import { parseMonolith, rateMonolith, shortEssenceName } from './essences'
 import type { EssenceVerdict, PricedMonolith } from './essences'
-import { initEssenceScanWidget, normalizeEssenceScanWidget, parseEssenceHotkeyTarget } from './widget'
+import { autoScan, initEssenceScanWidget, normalizeEssenceScanWidget, parseEssenceHotkeyTarget } from './widget'
 
 const props = defineProps<{ config: EssenceScanWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -277,17 +277,13 @@ const events = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data })
   }
 })
 
-// Started by entering a map: stops again in town or hideout. Stopped by hand
-// in a map: stays off until the next one.
-let autoStarted = false
-let userStoppedSeed: string | null = null
 const zone = useZone()
 
 async function toggle () {
   message.value = null
   const stopping = running.value && !paused.value
-  autoStarted = false
-  userStoppedSeed = stopping && zone.kind === 'map' ? zone.seed : null
+  // Stopped by hand in a map: stays off in that map, even back through a portal.
+  autoScan.stoppedSeed = stopping && zone.kind === 'map' ? zone.seed : null
   try {
     // Paused for the other scan mode: the hotkey takes the screen back.
     if (stopping) {
@@ -309,30 +305,25 @@ function startFromIcon () {
   if (!running.value) toggle().catch(() => {})
 }
 
-// Quiet on purpose: a failed auto start shows on the icon, never a panel over
-// the game, and isn't tried again until the setting or the app restarts.
-let autoFailed = false
+// Start in maps. Main decides: it never takes the screen from map scan, and
+// does nothing with the game in the background or stops a scan you started.
+// Quiet on purpose: a failed start shows on the icon, never a panel over the
+// game, and is tried again in the next map.
 watch(() => [zone.kind, zone.seed, props.config.autoInMaps] as const, async ([kind, seed, auto]) => {
   if (kind === 'map') {
-    if (!auto || autoFailed || running.value || seed === userStoppedSeed) return
+    if (!auto || seed === autoScan.stoppedSeed || seed === autoScan.failedSeed) return
     try {
-      await hostRequest('essence-scan-start', null)
-      running.value = true
-      autoStarted = true
+      const res = await hostRequest<{ running: boolean }>('essence-scan-auto-start', null)
+      if (res.running) running.value = true
     } catch (err) {
-      autoFailed = true
+      autoScan.failedSeed = seed
       message.value = err instanceof Error ? err.message : String(err)
     }
   } else if (kind === 'town' || kind === 'hideout') {
-    userStoppedSeed = null
-    if (!autoStarted || !running.value) return
-    autoStarted = false
-    await hostRequest('essence-scan-stop', null).catch(() => {})
-    running.value = false
-    current.value = null
+    const res = await hostRequest<{ running: boolean }>('essence-scan-auto-stop', null).catch(() => null)
+    if (res && !res.running) { running.value = false; current.value = null }
   }
 }, { immediate: true })
-watch(() => props.config.autoInMaps, () => { autoFailed = false })
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 function clear (from?: Event | 'icon') {
