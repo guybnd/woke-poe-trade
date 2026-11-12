@@ -44,9 +44,9 @@
         </div>
         <div :class="$style.mechsRows" class="w-scroll">
           <button v-for="m in mechanicRows" :key="m.name" type="button" :class="$style.mech" class="w-focusable"
-            :aria-pressed="lit.includes(m.name)" :title="`${m.name}: ${m.taken} of ${m.total} passives taken`"
-            @click="toggleLit(m.name)" @mouseenter="preview = m.name" @mouseleave="preview = ''" @focus="preview = m.name" @blur="preview = ''">
-            <span :class="$style.swatch" :style="lit.includes(m.name) ? { background: litColour(lit, m.name) } : undefined" />
+            :aria-pressed="liveLit.includes(m.name)" :title="`${m.name}: ${m.taken} of ${m.total} passives taken`"
+            @click="toggleLit(m.name)" @mouseenter="preview = m.name" @mouseleave="preview = ''">
+            <span :class="$style.swatch" :style="liveLit.includes(m.name) ? { background: litColour(liveLit, m.name) } : undefined" />
             <span class="w-trunc">{{ m.name.replace(/^The /, '') }}</span>
             <span :class="$style.count" class="w-num"><span :class="m.taken ? 'w-accent' : ''">{{ m.taken }}</span>/{{ m.total }}</span>
           </button>
@@ -114,8 +114,14 @@ const mechanicRows = computed(() => {
   return [...rows.values()].sort((a, b) => b.taken - a.taken || b.total - a.total || a.name.localeCompare(b.name))
 })
 
+// Lit mechanics this atlas has: an older league's names keep no colour slot.
+const liveLit = computed(() => props.lit.filter(m => props.model.mechanics.includes(m)))
+
 function toggleLit (name: string) {
-  emit('update:lit', props.lit.includes(name) ? props.lit.filter(m => m !== name) : [...props.lit, name])
+  const off = liveLit.value.includes(name)
+  // Turning one off shows at once, not when the mouse leaves its row.
+  if (off) preview.value = ''
+  emit('update:lit', off ? liveLit.value.filter(m => m !== name) : [...liveLit.value, name])
 }
 
 const { copied, copy } = useCopy()
@@ -329,7 +335,7 @@ function drawRing () {
   }
   const css = getComputedStyle(canvas)
   // Lit mechanics: a ring in the mechanic's colour round each of its passives.
-  const showing = preview.value && !props.lit.includes(preview.value) ? [...props.lit, preview.value] : props.lit
+  const showing = preview.value && !liveLit.value.includes(preview.value) ? [...liveLit.value, preview.value] : liveLit.value
   if (showing.length) {
     for (const [id, name] of props.model.mechanicOf) {
       if (!showing.includes(name)) continue
@@ -386,7 +392,7 @@ watch(box, (el) => {
 })
 
 watch([toSet, sheets, () => alloc.value], schedule)
-watch([hits, preview, () => props.lit], drawRing)
+watch([hits, preview, liveLit], drawRing)
 
 const wm = inject<WidgetManager>('wm')
 watch(() => wm?.active.value, (active) => { if (!active) endPan() })

@@ -52,7 +52,11 @@ const head = shallowRef<HTMLElement | null>(null)
 // walks your character there.
 const rested = shallowRef(false)
 const dragging = shallowRef(false)
-const hovered = useHoverZone(computed(() => props.clickThrough ? head.value : el.value), { enabled: () => true, activate: () => rested.value || dragging.value })
+const sliderOpen = shallowRef(false)
+// A click-through pin takes the mouse only on its head, but on all of it
+// while you drag it or use its slider, so neither drops halfway.
+const hovered = useHoverZone(computed(() => props.clickThrough && !dragging.value && !sliderOpen.value ? head.value : el.value),
+  { enabled: () => true, activate: () => rested.value || dragging.value })
 const REST_MS = 250
 let restTimer: ReturnType<typeof setTimeout> | null = null
 watch(hovered, (on) => {
@@ -62,7 +66,6 @@ watch(hovered, (on) => {
 })
 // Solid under the mouse, except while you're setting how see-through it is:
 // then it shows the level you're picking.
-const sliderOpen = shallowRef(false)
 const overFade = shallowRef(false)
 const justSet = shallowRef(false)
 let setTimer: ReturnType<typeof setTimeout> | null = null
