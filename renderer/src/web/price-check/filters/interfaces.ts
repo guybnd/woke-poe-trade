@@ -130,6 +130,8 @@ export interface StatFilter {
     max: number | '' | undefined // NOTE: mutable in UI
     default: { min: number, max: number }
     bounds?: { min: number, max: number }
+    /** woke: on a catalysed row, the range an item without catalyst quality reaches. */
+    plain?: { min: number, max: number }
     tradeInvert?: boolean
     dp: boolean
     isNegated: boolean

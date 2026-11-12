@@ -1,6 +1,6 @@
 <template>
   <WPanel ref="panel" size-key="detail" :title="strategy.name || 'Untitled'" icon="map" width="23rem" max-height="80vh"
-    :busy="!!strategy.treeUrl && !atlasData && !atlasDataError">
+    :busy="!!treeUrl && !atlasData && !atlasDataError">
     <template #actions>
       <button class="w-icon-btn" :class="{ 'w-icon-btn--on': editing }" title="Edit the name, currency, map device and notes" @click="editing = !editing"><i class="fas fa-pen" /></button>
       <button class="w-icon-btn" :class="{ 'w-icon-btn--on': treeOpen }" :title="treeOpen ? 'Hide the tree' : 'Show the tree'" @click="emit('toggle-tree')"><i class="fas fa-project-diagram" /></button>
@@ -116,11 +116,11 @@
         <span>Tree</span>
         <span v-if="view" class="ml-auto normal-case tracking-normal w-dim w-num">{{ view.total }} points · {{ notableCount }} notables</span>
       </div>
-      <div v-if="!strategy.treeUrl" class="w-faint">
+      <div v-if="!treeUrl" class="w-faint">
         Nothing taken yet. <button type="button" class="w-accent hover:underline" @click="emit('show-tree')">Open the tree</button> and click passives, or paste a link:
       </div>
-      <input v-if="editing || !strategy.treeUrl" :value="strategy.treeUrl" class="w-field" spellcheck="false" placeholder="pathofexile.com atlas tree link"
-        @change="strategy.treeUrl = ($event.target as HTMLInputElement).value.trim()">
+      <input v-if="editing || !treeUrl" :value="strategy.treeUrl" class="w-field" spellcheck="false" placeholder="pathofexile.com atlas tree link"
+        @change="pasteLink(($event.target as HTMLInputElement).value)">
       <WSkeleton v-else-if="!atlasData && !decodeError && !atlasDataError" :rows="3" :value="false" />
       <template v-else-if="view">
         <div v-for="g in view.groups" :key="g.mechanic" :class="$style.group">
@@ -169,7 +169,7 @@ import { decodeTree, diffTrees, overview } from './tree'
 import type { AtlasNode, DecodedTree } from './tree'
 import type { AtlasTreeModel } from './atlas-tree'
 import { hasOneTypeKeystone, parseCostLines, priceLines, priceThreads, threadCap, treeWarnings } from './loadout'
-import { MAX_THREAD_SLOTS, THREAD_TYPES, regexFolderOf } from './widget'
+import { MAX_THREAD_SLOTS, THREAD_TYPES, dropDraft, regexFolderOf } from './widget'
 import { strategyCode } from './strategy-code'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 
@@ -180,6 +180,8 @@ const props = defineProps<{
   atlasTree: AtlasTreeModel | null
   atlasDataError: string
   treeOpen: boolean
+  // The tree being worked on, saved or not.
+  treeUrl: string
 }>()
 const emit = defineEmits<{
   (e: 'toggle-tree' | 'show-tree' | 'retry'): void
@@ -203,7 +205,7 @@ function tryDecode (url: string): { tree: DecodedTree | null, error: string } {
     return { tree: null, error: (err as Error).message }
   }
 }
-const decoded = computed(() => props.strategy.treeUrl ? tryDecode(props.strategy.treeUrl) : null)
+const decoded = computed(() => props.treeUrl ? tryDecode(props.treeUrl) : null)
 const decodeError = computed(() => decoded.value?.error ?? '')
 const taken = computed(() => new Set(decoded.value?.tree?.nodes ?? []))
 const view = computed(() => {
@@ -321,6 +323,12 @@ function regexMenu (e: MouseEvent, r: RegexEntry) {
 }
 
 // A rename takes the strategy's regex folder with it.
+// A link pasted here replaces the tree, and any unsaved edit of it.
+function pasteLink (text: string) {
+  props.strategy.treeUrl = text.trim()
+  dropDraft(props.config, props.strategy)
+}
+
 function rename (name: string) {
   const next = name.trim()
   if (next === props.strategy.name) return
@@ -330,7 +338,8 @@ function rename (name: string) {
 
 function copyCode () {
   const regexesOut = regexes.value.map(r => ({ name: r.name, text: r.text }))
-  copy(strategyCode([{ ...props.strategy, regexes: regexesOut }]), 'code').catch(() => {})
+  // The tree on screen, saved or not.
+  copy(strategyCode([{ ...props.strategy, treeUrl: props.treeUrl, regexes: regexesOut }]), 'code').catch(() => {})
 }
 
 // ---- compare ----

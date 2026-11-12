@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { nudgeHide, valueFloor } from '@/web/woke/net-worth/widget'
 import type { NetWorthWidget } from '@/web/woke/net-worth/widget'
 import {
-  addPoint, bigGains, filterLines, selectedFirst, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
+  addPoint, bigGains, filterLines, refreshWaitMs, selectedFirst, topCardChanges, tipPlacement, toggleTab, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
 } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint, SeriesPoint } from '@/web/woke/net-worth/ledger'
 import { valueStash } from '@/web/woke/net-worth/valuation'
@@ -260,5 +260,27 @@ describe('value chips', () => {
   it('scrolls in small steps low and bigger ones higher', () => {
     expect([nudgeHide(10, 1, true), nudgeHide(20, 1, true), nudgeHide(20, -1, true), nudgeHide(100, 1, true), nudgeHide(100, -1, true), nudgeHide(0, -1, true)]).toEqual([11, 25, 19, 125, 95, 0])
     expect([nudgeHide(1, 1, false), nudgeHide(2, 1, false), nudgeHide(2, -1, false), nudgeHide(0.5, -1, false), nudgeHide(1.3, 1, false)]).toEqual([1.5, 3, 1.5, 0, 2])
+  })
+})
+
+describe('dock card', () => {
+  const d = {
+    at: 1,
+    added: [{ key: 'Divine Orb', name: 'Divine Orb', icon: '', count: 12, chaos: 2400 }, { key: 'Chaos Orb', name: 'Chaos Orb', icon: '', count: 30, chaos: 30 }, { key: 'X', name: 'X', icon: '', count: 1, chaos: 5000 }],
+    removed: [{ key: "Maven's Writ", name: "Maven's Writ", icon: '', count: 2, chaos: 3200 }],
+    netChaos: 0
+  }
+  it('the biggest changes either way, losses negative, ignored left out', () => {
+    expect(topCardChanges(d, []).map(c => [c.key, c.count, c.chaos])).toEqual([['X', 1, 5000], ["Maven's Writ", -2, -3200], ['Divine Orb', 12, 2400]])
+    expect(topCardChanges(d, ['X']).map(c => c.key)).toEqual(["Maven's Writ", 'Divine Orb', 'Chaos Orb'])
+    expect(topCardChanges(null, [])).toEqual([])
+  })
+  it('refresh waits 10 minutes after a read, or longer when asked to slow down', () => {
+    const at = 1_000_000
+    expect(refreshWaitMs(null, at)).toBe(0)
+    expect(refreshWaitMs({ lastReadAt: null, error: null }, at)).toBe(0)
+    expect(refreshWaitMs({ lastReadAt: at - 4 * 60_000, error: null }, at)).toBe(6 * 60_000)
+    expect(refreshWaitMs({ lastReadAt: at - 11 * 60_000, error: null }, at)).toBe(0)
+    expect(refreshWaitMs({ lastReadAt: at - 11 * 60_000, error: { retryAt: at + 90_000 } }, at)).toBe(90_000)
   })
 })

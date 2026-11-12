@@ -4,8 +4,10 @@
     @contextmenu.prevent>
     <span :class="[$style.bound, { [$style.inclusive]: state.minInclusive }]">{{ bounds.min }}</span>
     <div :class="$style.track" ref="rootEl" @mousedown="handleMousedown">
+      <div v-for="(band, i) of bands" :key="i" :class="$style.catBand" data-catalyst-band
+        :style="{ left: `${band.left}%`, right: `${band.right}%` }" />
       <div v-if="state.mode !== 'none'"
-        :class="[$style.fill]"
+        :class="[$style.fill, { [$style.catOnly]: catOnly }]"
         :style="{ '--left': `${state.percentLeft}%`, '--right': `${state.percentRight}%` }"
       />
       <div :class="$style.tick" :style="{ left: `${percentRoll}%` }" />
@@ -21,6 +23,7 @@
 <script lang="ts">
 import { defineComponent, computed, PropType, shallowRef } from 'vue'
 import { SliderEnd, editRange, sliderEnd, sliderValueAt } from './stat-roll-slider'
+import { catalystBands, onlyCatalysed } from './catalyst-zone'
 
 export default defineComponent({
   props: {
@@ -33,6 +36,11 @@ export default defineComponent({
     bounds: {
       type: Object as PropType<{ min: number, max: number }>,
       required: true
+    },
+    // woke: on a catalysed row, what an item without catalyst quality reaches.
+    plain: {
+      type: Object as PropType<{ min: number, max: number }>,
+      default: undefined
     }
   },
   setup (props, ctx) {
@@ -98,6 +106,11 @@ export default defineComponent({
 
     return {
       rootEl,
+      bands: computed(() => catalystBands(props.bounds, props.plain)),
+      catOnly: computed(() => {
+        const [min, max] = dirty.value ?? props.modelValue
+        return onlyCatalysed(min, max, props.plain, props.bounds) != null
+      }),
       percentRoll: computed(() => {
         const { bounds } = props
         // Corrupted and catalysed rolls can sit outside the range.
@@ -183,6 +196,20 @@ export default defineComponent({
     border-left: 2px solid var(--w-accent);
     border-right: 2px solid var(--w-accent);
   }
+}
+/* woke: only catalysed items reach this part, striped in quality blue. */
+.catBand {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--w-r-magic) 30%, transparent) 0 3px,
+    color-mix(in srgb, var(--w-r-magic) 10%, transparent) 3px 6px);
+}
+.fill.catOnly {
+  background: color-mix(in srgb, var(--w-r-magic) 34%, transparent);
+  border-color: var(--w-r-magic);
 }
 .bound {
   flex: none;

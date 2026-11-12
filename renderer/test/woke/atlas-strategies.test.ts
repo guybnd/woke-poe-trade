@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
-import { allFolders, claimRegexFolders, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
+import { allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, sameTree, saveDraft, setDraft, takeDrafts, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
 import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
 import type { AtlasStrategy } from '@/web/woke/atlas/strategies'
 import { parseGuideText } from '@/web/woke/atlas/guide'
@@ -202,10 +202,49 @@ describe('mechanics on the atlas tree', () => {
     // The start and the mastery itself are not lit.
     expect(model.mechanicOf.has(100)).toBe(false)
     expect(model.mechanicOf.has(9)).toBe(false)
+    // No art for its icon in this small sheet: no icon, not a broken one.
+    expect(model.mechanicArt.has('Threads')).toBe(false)
   })
 
   it('colours mechanics by the order they were picked', () => {
     expect(litColour(['Breach', 'Ritual'], 'Ritual')).toBe(LIT_COLOURS[1])
     expect(litColour(['Breach'], 'Breach')).toBe(LIT_COLOURS[0])
+  })
+})
+
+describe('unsaved tree edits', () => {
+  it('keeps an edit as a draft until saved, and drops one back at the saved tree', () => {
+    const s = { ...emptyStrategy([]), id: 4, treeUrl: 'saved' }
+    const w = { drafts: {} } as unknown as Parameters<typeof setDraft>[0]
+    setDraft(w, s, 'edited')
+    expect(isDirty(w, s)).toBe(true)
+    expect(workingTree(w, s)).toBe('edited')
+    setDraft(w, s, 'saved')
+    expect(isDirty(w, s)).toBe(false)
+    expect(w.drafts).toEqual({})
+    setDraft(w, s, 'edited')
+    saveDraft(w, s)
+    expect(s.treeUrl).toBe('edited')
+    expect(w.drafts).toEqual({})
+    setDraft(w, s, 'again')
+    dropDraft(w, s)
+    expect(workingTree(w, s)).toBe('edited')
+  })
+})
+
+describe('drafts and removed strategies', () => {
+  it('counts a re-encoded link of the same tree as saved', () => {
+    const a = encodeAtlasTree([1, 2, 3], { 3: 36845 })
+    const b = encodeAtlasTree([3, 2, 1], { 3: 36845 })
+    expect(sameTree(a, b)).toBe(true)
+    expect(sameTree(a, encodeAtlasTree([1, 2], {}))).toBe(false)
+  })
+
+  it('takes a removed strategy\'s draft away and puts it back on Undo', () => {
+    const w = { strategies: [], drafts: { 5: 'x', 6: 'y' } } as unknown as Parameters<typeof takeDrafts>[0]
+    const taken = takeDrafts(w, [5])
+    expect(w.drafts).toEqual({ 6: 'y' })
+    restoreDrafts(w, taken)
+    expect(w.drafts).toEqual({ 5: 'x', 6: 'y' })
   })
 })

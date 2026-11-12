@@ -20,6 +20,8 @@ export interface AtlasTreeModel {
   mechanicOf: Map<number, string>
   // Every mechanic, by name.
   mechanics: string[]
+  // Each mechanic's mastery art: its sprite sheet and where in it.
+  mechanicArt: Map<string, { url: string, x: number, y: number, w: number, h: number }>
   // The node every path starts from. Always allocated, never a point.
   start: number
   points: number
@@ -105,8 +107,14 @@ export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel 
   const variants = new Map<number, AtlasVariant[]>()
   // A wheel's mastery names its mechanic.
   const groupMechanic = new Map<string, string>()
+  // A mechanic's mastery icon, the first one seen.
+  const mechanicIcon = new Map<string, string>()
   for (const [key, n] of Object.entries(raw)) {
-    if (key !== 'root' && n.isMastery && n.group != null && n.name) groupMechanic.set(String(n.group), plainText(n.name))
+    if (key !== 'root' && n.isMastery && n.group != null && n.name) {
+      const name = plainText(n.name)
+      groupMechanic.set(String(n.group), name)
+      if (n.icon && !mechanicIcon.has(name)) mechanicIcon.set(name, n.icon)
+    }
   }
   const mechanicOf = new Map<number, string>()
   const usedIcons = new Set<string>()
@@ -176,7 +184,15 @@ export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel 
     sprites[name] = { url: assetUrl(sheet.filename, dataUrl), coords }
   }
 
+  const mechanicArt: AtlasTreeModel['mechanicArt'] = new Map()
+  const masterySheet = sprites.masteryInactive
+  for (const [name, icon] of mechanicIcon) {
+    const c = masterySheet?.coords[icon]
+    if (c) mechanicArt.set(name, { url: masterySheet.url, x: c[0], y: c[1], w: c[2], h: c[3] })
+  }
+
   return {
+    mechanicArt,
     nodes,
     art: { groups, sprites },
     variants,

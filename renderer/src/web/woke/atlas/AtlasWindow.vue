@@ -48,6 +48,7 @@
           <div v-else-if="row.kind === 'new-folder'" />
           <WListItem v-else :active="config.selectedId === row.s.id" :style="{ paddingLeft: indent(row.depth) }" @select="config.selectedId = row.s.id"
             @contextmenu="rowMenu($event, row.s)" @keydown.delete.prevent="remove(row.s)" @keydown.f2.prevent="startEdit('strategy', String(row.s.id), 'rename')">
+            <span v-if="isDirty(config, row.s)" :class="$style.dirty" title="Tree changes not saved" />
             <span class="w-trunc">{{ row.s.name || 'Untitled' }}</span>
             <span v-if="earnings.get(row.s.name)" class="ml-auto w-num text-xs" :class="earnings.get(row.s.name)!.perHour >= 0 ? 'w-up' : 'w-down'"
               :title="`${earnings.get(row.s.name)!.hours.toFixed(1)} h farmed`">{{ fmt(earnings.get(row.s.name)!.perHour) }}/h</span>
@@ -69,16 +70,18 @@
       </WPanel>
 
       <template v-if="selected">
-        <AtlasTree v-if="!config.treeHidden && atlasTree" :key="selected.id" :model="atlasTree" :tree-url="selected.treeUrl" :threads="selected.threads"
+        <AtlasTree v-if="!config.treeHidden && atlasTree" :key="selected.id" :model="atlasTree" :tree-url="workingTree(config, selected)" :threads="selected.threads"
           :lit="config.lit ?? []" :list-open="!config.mechanicsHidden" :pin="() => atlasTreePin(config, selected!)"
-          @update:tree-url="selected.treeUrl = $event" @update:lit="config.lit = $event" @update:list-open="config.mechanicsHidden = !$event"
+          :dirty="isDirty(config, selected)" :name="selected.name"
+          @update:tree-url="setDraft(config, selected!, $event)" @update:lit="config.lit = $event" @update:list-open="config.mechanicsHidden = !$event"
+          @save="saveDraft(config, selected!)" @discard="dropDraft(config, selected!)" @save-as="saveTreeAs"
           @close="config.treeHidden = true" />
         <WPanel v-else-if="!config.treeHidden && !atlasDataError" title="Atlas tree" size-key="tree" width="44rem" :busy="!atlasTreeError">
           <WEmpty v-if="atlasTreeError" icon="fas fa-exclamation-triangle">{{ atlasTreeError }}</WEmpty>
           <WSkeleton v-else :rows="6" :value="false" />
         </WPanel>
         <AtlasLoadout :config="config" :strategy="selected" :atlas-data="atlasData" :atlas-tree="atlasTree" :atlas-data-error="atlasDataError"
-          :tree-open="!config.treeHidden" @toggle-tree="config.treeHidden = !config.treeHidden" @show-tree="config.treeHidden = false"
+          :tree-url="workingTree(config, selected)" :tree-open="!config.treeHidden" @toggle-tree="config.treeHidden = !config.treeHidden" @show-tree="config.treeHidden = false"
           @retry="retryAtlasData(config.dataUrl)" @search="pasteSearch" />
       </template>
     </div>
@@ -93,7 +96,7 @@ import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMen
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
 import type { FolderNode } from './widget'
@@ -157,7 +160,7 @@ const hasScarabs = computed(() => props.config.strategies.some(s => /scarab/i.te
 
 function describe (s: AtlasStrategy): string {
   const threads = s.threads.map(t => `${t.count} ${t.type}`).join(', ')
-  return [threads || (s.treeUrl ? 'No Threads' : 'Empty'), ...s.tags].filter(Boolean).join(' · ')
+  return [threads || (workingTree(props.config, s) ? 'No Threads' : 'Empty'), ...s.tags].filter(Boolean).join(' · ')
 }
 
 // ---- the list: nested folders ----
@@ -306,6 +309,7 @@ function remove (s: AtlasStrategy) {
   const wasSelected = props.config.selectedId === s.id
   props.config.strategies = props.config.strategies.filter(o => o.id !== s.id)
   if (wasSelected) props.config.selectedId = null
+  const drafts = takeDrafts(props.config, [s.id])
   // Undo puts back this strategy only, so anything made since stays.
   toast(`Removed "${s.name || 'Untitled'}"`, {
     anchor: panel.value?.el,
@@ -314,9 +318,23 @@ function remove (s: AtlasStrategy) {
       const list = [...props.config.strategies]
       list.splice(Math.min(at, list.length), 0, s)
       props.config.strategies = list
+      restoreDrafts(props.config, drafts)
       if (wasSelected) props.config.selectedId = s.id
     }
   })
+}
+
+// Save as: a new strategy beside this one with the edited tree and the same
+// loadout and regexes; this one goes back to its saved tree.
+function saveTreeAs (name: string) {
+  const s = selected.value
+  if (!s) return
+  const copyOf: AtlasStrategy = { ...JSON.parse(JSON.stringify(s)) as AtlasStrategy, id: emptyStrategy(props.config.strategies).id, name, treeUrl: workingTree(props.config, s), regexFolder: undefined }
+  copyRegexes(s, copyOf, props.config.strategies)
+  dropDraft(props.config, s)
+  props.config.strategies.push(copyOf)
+  props.config.selectedId = copyOf.id
+  toast(`Saved as "${name}". "${s.name || 'Untitled'}" keeps its saved tree.`, { anchor: panel.value?.el })
 }
 
 function duplicate (s: AtlasStrategy) {
@@ -367,12 +385,14 @@ function removeFolder (path: string) {
   props.config.strategies = props.config.strategies.filter(s => !gone.has(s.id))
   props.config.folders = (props.config.folders ?? []).filter(f => !goneFolders.includes(f))
   if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = null
-  // Undo puts back what this removed, keeping anything made since.
+  const drafts = takeDrafts(props.config, gone)
   toast(gone.size ? `Removed "${path}" and ${gone.size} ${gone.size === 1 ? 'strategy' : 'strategies'}` : `Removed "${path}"`, {
     anchor: panel.value?.el,
     undo: () => {
       const have = new Set(props.config.strategies.map(s => s.id))
-      props.config.strategies = [...props.config.strategies, ...removed.filter(s => !have.has(s.id))]
+      const back = removed.filter(s => !have.has(s.id))
+      props.config.strategies = [...props.config.strategies, ...back]
+      restoreDrafts(props.config, Object.fromEntries(Object.entries(drafts).filter(([id]) => back.some(s => String(s.id) === id))))
       props.config.folders = [...new Set([...(props.config.folders ?? []), ...goneFolders])]
       if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = selectedBefore
     }
@@ -493,4 +513,5 @@ function pasteSearch (text: string) {
   padding-right: var(--w-pad);
 }
 .edit { flex: 1; min-width: 0; }
+.dirty { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--w-accent); }
 </style>

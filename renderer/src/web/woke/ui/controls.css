@@ -210,6 +210,8 @@ button.w-chip:hover { color: var(--w-fg); }
   box-shadow: var(--w-well-shadow), 0 0 0 1px rgba(227, 183, 95, 0.3);
 }
 :root[data-woke-look="game"] #price-window .w-roll-input { color: var(--w-gold-hi); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* A min or max only catalysed items reach: quality blue. */
+:root[data-woke-look="game"] #price-window .w-roll-input.w-roll-cat:not(:focus) { color: var(--w-r-magic); border-color: color-mix(in srgb, var(--w-r-magic) 55%, transparent); }
 :root[data-woke-look="game"] .w-select option { background: var(--w-well); }
 
 /* Monospace fields (regex, paths, import text) keep their face. */

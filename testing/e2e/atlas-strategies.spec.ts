@@ -83,13 +83,62 @@ test('the tree edits the strategy: hover shows the path, a click takes it', asyn
   await overlay.page.mouse.down()
   await overlay.page.mouse.up()
   await expect(points).toContainText(`${before + cost} / `)
+  // The edit waits as unsaved until Save.
+  await expect(atlas.getByText('Unsaved changes')).toBeVisible()
+  await overlay.snap('unsaved tree changes')
   await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
-  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
-  expect(saved.strategies[0].treeUrl).toMatch(/fullscreen-atlas-skill-tree\//)
+  const draft = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  const savedBefore = draft.strategies[0].treeUrl
+  expect(draft.drafts['1']).toMatch(/fullscreen-atlas-skill-tree\//)
+  expect(draft.drafts['1']).not.toBe(savedBefore)
 
-  // Undo puts it back.
+  // Undo goes back to the saved tree, and that's not unsaved any more.
   await atlas.getByTitle('Undo (Ctrl + Z)').click()
   await expect(points).toContainText(`${before} / `)
+  await expect(atlas.getByText('Unsaved changes')).toHaveCount(0)
+
+  // Redo, then Save.
+  await atlas.getByTitle('Redo (Ctrl + Y)').click()
+  fakeApp.clearReceived()
+  await atlas.getByTitle(/^Save the tree to this strategy/).click()
+  await expect(atlas.getByText('Unsaved changes')).toHaveCount(0)
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  expect(saved.strategies[0].treeUrl).toBe(draft.drafts['1'])
+  expect(saved.drafts ?? {}).toEqual({})
+})
+
+test('Save as makes a new strategy and leaves the first as it was', async ({ overlay, fakeApp }) => {
+  test.setTimeout(90_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  const points = atlas.getByText(/\d+ \/ \d+ points/)
+  await expect(points).toBeVisible({ timeout: 30_000 })
+  const canvas = atlas.locator('canvas').last()
+  const box = (await canvas.boundingBox())!
+  const tip = overlay.page.getByText(/^Click to take: \d+ points?/)
+  let found = false
+  for (let y = 0.2; y <= 0.8 && !found; y += 0.04) {
+    for (let x = 0.3; x <= 0.8 && !found; x += 0.03) {
+      await overlay.page.mouse.move(box.x + box.width * x, box.y + box.height * y)
+      found = await tip.isVisible()
+    }
+  }
+  expect(found).toBe(true)
+  await overlay.page.mouse.down()
+  await overlay.page.mouse.up()
+  await atlas.getByTitle(/^Save as a new strategy/).click()
+  await atlas.getByPlaceholder('New strategy name').fill('Breach threads v2')
+  fakeApp.clearReceived()
+  await atlas.getByPlaceholder('New strategy name').press('Enter')
+  await expect(atlas.getByText('Breach threads v2').first()).toBeVisible()
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  const first = saved.strategies.find((s: { id: number }) => s.id === 1)
+  const copy = saved.strategies.find((s: { name: string }) => s.name === 'Breach threads v2')
+  expect(copy.treeUrl).not.toBe(first.treeUrl)
+  expect(copy.folder).toBe('Juicing')
+  expect(saved.selectedId).toBe(copy.id)
+  expect(saved.drafts ?? {}).toEqual({})
 })
 
 test('Threads, regexes in the library, and importing a guide', async ({ overlay, fakeApp }) => {

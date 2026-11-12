@@ -3,7 +3,7 @@
   <WEmpty v-else-if="atlasDataError && !atlasTree" icon="fas fa-exclamation-triangle">{{ atlasDataError }}</WEmpty>
   <WEmpty v-else-if="atlasTreeError" icon="fas fa-exclamation-triangle">{{ atlasTreeError }}</WEmpty>
   <WEmpty v-else-if="!atlasTree" icon="fas fa-spinner fa-spin">Loading…</WEmpty>
-  <AtlasTree v-else bare :model="atlasTree" :tree-url="strategy.treeUrl" :threads="strategy.threads" :lit="widget?.lit ?? []" />
+  <AtlasTree v-else bare :model="atlasTree" :tree-url="widget ? workingTree(widget, strategy) : strategy.treeUrl" :threads="strategy.threads" :lit="widget?.lit ?? []" />
 </template>
 
 <script setup lang="ts">
@@ -13,7 +13,7 @@
 import { computed, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { WEmpty } from '../ui'
-import { ATLAS_TYPE, atlasDataState, useAtlasData } from './widget'
+import { ATLAS_TYPE, atlasDataState, useAtlasData, workingTree } from './widget'
 import type { AtlasWidget } from './widget'
 import type { Pin } from '../pins/pins'
 import AtlasTree from './AtlasTree.vue'
