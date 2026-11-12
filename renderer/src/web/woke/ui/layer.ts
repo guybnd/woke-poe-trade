@@ -12,6 +12,7 @@ export type MenuEntry =
     danger?: boolean
     disabled?: boolean
     labelStyle?: Record<string, string> // draws the label as what it stands for
+    wrap?: boolean // a long label wraps instead of being cut (a passive's effect)
   }
   | { separator: true }
 

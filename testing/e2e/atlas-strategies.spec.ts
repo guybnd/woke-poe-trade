@@ -84,7 +84,7 @@ test('the tree edits the strategy: hover shows the path, a click takes it', asyn
   await overlay.page.mouse.up()
   await expect(points).toContainText(`${before + cost} / `)
   // The edit waits as unsaved until Save.
-  await expect(atlas.getByText('Unsaved changes')).toBeVisible()
+  await expect(atlas.getByTitle("The tree has changes you haven't saved")).toBeVisible()
   await overlay.snap('unsaved tree changes')
   await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
   const draft = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
@@ -95,13 +95,13 @@ test('the tree edits the strategy: hover shows the path, a click takes it', asyn
   // Undo goes back to the saved tree, and that's not unsaved any more.
   await atlas.getByTitle('Undo (Ctrl + Z)').click()
   await expect(points).toContainText(`${before} / `)
-  await expect(atlas.getByText('Unsaved changes')).toHaveCount(0)
+  await expect(atlas.getByTitle("The tree has changes you haven't saved")).toHaveCount(0)
 
   // Redo, then Save.
   await atlas.getByTitle('Redo (Ctrl + Y)').click()
   fakeApp.clearReceived()
   await atlas.getByTitle(/^Save the tree to this strategy/).click()
-  await expect(atlas.getByText('Unsaved changes')).toHaveCount(0)
+  await expect(atlas.getByTitle("The tree has changes you haven't saved")).toHaveCount(0)
   await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
   const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
   expect(saved.strategies[0].treeUrl).toBe(draft.drafts['1'])
@@ -203,4 +203,44 @@ test('Tree totals in the loadout add up the taken passives, and fold', async ({ 
   await overlay.snap('tree totals in the loadout')
   await fold.click()
   await expect(fold).toHaveAttribute('aria-expanded', 'false')
+})
+
+test('a notable with types opens its types to take it with one, and to change or refund it', async ({ overlay }) => {
+  test.setTimeout(120_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  const points = atlas.getByText(/\d+ \/ \d+ points/)
+  await expect(points).toBeVisible({ timeout: 30_000 })
+  const before = Number((await points.textContent())!.trim().split(' ')[0])
+  // Zoom out to the whole atlas, then find a notable with types by resting on the tree.
+  const canvas = atlas.locator('canvas').last()
+  const box = (await canvas.boundingBox())!
+  await overlay.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  for (let i = 0; i < 14; i++) { await overlay.page.mouse.wheel(0, 300); await overlay.page.waitForTimeout(30) }
+  const tip = overlay.page.getByText(/Click to pick a type: \d+ points?/)
+  let found: { x: number, y: number } | null = null
+  for (let y = 0.05; y <= 0.95 && !found; y += 0.02) {
+    for (let x = 0.3; x <= 0.95 && !found; x += 0.015) {
+      const at = { x: box.x + box.width * x, y: box.y + box.height * y }
+      await overlay.page.mouse.move(at.x, at.y)
+      if (await tip.isVisible()) found = at
+    }
+  }
+  expect(found).not.toBeNull()
+  const cost = Number((await tip.textContent())!.match(/(\d+) points?/)![1])
+  await overlay.page.mouse.down()
+  await overlay.page.mouse.up()
+  const head = overlay.page.getByText(/: pick a type \(\d+ points?\)$/)
+  await expect(head).toBeVisible()
+  await overlay.snap('the types of a notable, to take it with one')
+  await head.locator('xpath=following::button[2]').click()
+  await expect(points).toContainText(`${before + cost} / `)
+  // Clicking it again offers Refund.
+  await overlay.page.mouse.move(found!.x + 1, found!.y)
+  await overlay.page.mouse.move(found!.x, found!.y)
+  await expect(overlay.page.getByText(/Type: .+\. Click to change or refund/)).toBeVisible()
+  await overlay.page.mouse.down()
+  await overlay.page.mouse.up()
+  await overlay.page.getByRole('menuitem', { name: 'Refund' }).click()
+  // The notable goes; the path to it stays, as with any refund.
+  await expect(points).toContainText(`${before + cost - 1} / `)
 })

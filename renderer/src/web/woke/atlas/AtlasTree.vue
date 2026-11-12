@@ -8,6 +8,13 @@
   </div>
   <WPanel v-else title="Atlas tree" size-key="tree" width="44rem" height="36rem" max-height="85vh">
     <template #actions>
+      <!-- Unsaved edits: in the head, so the tree never moves when they appear. -->
+      <template v-if="dirty">
+        <span :class="$style.unsaved" class="w-accent" title="The tree has changes you haven't saved"><span :class="$style.dot" /> Unsaved</span>
+        <button class="w-icon-btn w-accent" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')"><i class="fas fa-save" /></button>
+        <button class="w-icon-btn" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs"><i class="far fa-clone" /></button>
+        <button class="w-icon-btn" title="Discard: go back to the saved tree" @click="emit('discard')"><i class="fas fa-times-circle" /></button>
+      </template>
       <button class="w-icon-btn" :class="{ 'w-icon-btn--on': listOpen }" title="Mechanics: light a mechanic's passives" @click="emit('update:listOpen', !listOpen)"><i class="fas fa-list" /></button>
       <PinButton v-if="pin" :make="pin" title="Pin the tree over the game: clicks go through to the game's atlas" />
       <button class="w-icon-btn" title="Undo (Ctrl + Z)" :disabled="!undoStack.length" @click="undo"><i class="fas fa-undo" /></button>
@@ -20,29 +27,19 @@
         <template #actions><WButton size="sm" @click="startOver">Start over</WButton></template>
       </WBanner>
     </template>
-    <template v-if="dirty || savingAs" #meta>
-      <div :class="$style.unsaved">
-        <template v-if="savingAs">
-          <span class="w-dim whitespace-nowrap">Save as</span>
-          <input ref="nameField" v-model="newName" class="w-field" :class="$style.name" spellcheck="false" placeholder="New strategy name"
-            @keydown.enter.prevent="saveAs" @keydown.esc.prevent="savingAs = false">
-          <WButton size="sm" variant="primary" :disabled="!newName.trim()" @click="saveAs">Save</WButton>
-          <WButton size="sm" variant="ghost" @click="savingAs = false">Cancel</WButton>
-        </template>
-        <template v-else>
-          <span class="w-accent whitespace-nowrap" title="The tree has changes you haven't saved"><span :class="$style.dot" /> Unsaved changes</span>
-          <WButton size="sm" variant="primary" icon="fas fa-save" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')">Save</WButton>
-          <WButton size="sm" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs">Save as…</WButton>
-          <WButton size="sm" variant="ghost" title="Go back to the saved tree" @click="emit('discard')">Discard</WButton>
-        </template>
-      </div>
-    </template>
     <template #toolbar>
       <span class="w-num text-xs whitespace-nowrap" :class="over ? 'w-down' : 'w-dim'" :title="over ? 'More points than the atlas has' : undefined">
         {{ used }} / {{ model.points }} points
       </span>
       <span v-for="w in warnings" :key="w" class="text-xs w-warn whitespace-nowrap" :class="$style.warn"><i class="fas fa-exclamation-triangle" /> {{ w }}</span>
-      <div :class="$style.tools">
+      <!-- Save as takes this row's place, so the tree never moves. -->
+      <div v-if="savingAs" :class="$style.tools">
+        <input ref="nameField" v-model="newName" class="w-field" :class="$style.name" spellcheck="false" placeholder="New strategy name"
+          @keydown.enter.prevent="saveAs" @keydown.esc.prevent="savingAs = false">
+        <WButton size="sm" variant="primary" :disabled="!newName.trim()" @click="saveAs">Save as</WButton>
+        <WButton size="sm" variant="ghost" @click="savingAs = false">Cancel</WButton>
+      </div>
+      <div v-else :class="$style.tools">
         <WField v-model="query" icon="fas fa-search" placeholder="Find a passive" :class="$style.find" />
         <WButton size="sm" :icon="copied === link ? 'fas fa-check' : 'far fa-copy'" :disabled="!link" @click="link && copy(link)">Copy link</WButton>
         <WButton v-if="link" size="sm" icon="fas fa-external-link-alt" title="Open on pathofexile.com" @click="openWeb">Website</WButton>
@@ -263,7 +260,8 @@ function keys (e: KeyboardEvent) {
   if (e.key === 'z') { e.preventDefault(); undo() } else if (e.key === 'y') { e.preventDefault(); redo() }
 }
 
-function take (id: number) {
+// `effect`: the type to give `id` when it asks for one.
+function take (id: number, effect?: number) {
   const path = pathTo(props.model, alloc.value.nodes, id)
   if (!path.length) return
   const nodes = new Set(alloc.value.nodes)
@@ -273,6 +271,7 @@ function take (id: number) {
     const choices = props.model.variants.get(p)
     if (choices && variants[p] == null) variants[p] = choices[0].effect
   }
+  if (effect != null) variants[id] = effect
   commit({ nodes, variants })
 }
 
@@ -522,8 +521,10 @@ function click (e: MouseEvent, button: number) {
   if (!n || n.kind === 'mastery' || n.kind === 'start') return
   const choices = props.model.variants.get(n.id)
   const taken = alloc.value.nodes.has(n.id)
-  if (taken && choices && button === 2) {
-    variantMenu(e, n, choices)
+  // A notable with types (Guy's pick T1): its types open at it, to take it
+  // with one, change it, or refund it.
+  if (choices) {
+    if (taken || pathTo(props.model, alloc.value.nodes, n.id).length) variantMenu(e, n, choices, taken)
     return
   }
   if (button !== 0) return
@@ -533,17 +534,19 @@ function click (e: MouseEvent, button: number) {
   hover(e)
 }
 
-function variantMenu (e: MouseEvent, n: TreeNode, choices: Array<{ effect: number, text: string }>) {
+function variantMenu (e: MouseEvent, n: TreeNode, choices: Array<{ effect: number, text: string }>, taken: boolean) {
   hideTip()
-  const picked = alloc.value.variants[n.id]
+  const picked = taken ? alloc.value.variants[n.id] : undefined
+  const cost = taken ? 0 : pathTo(props.model, alloc.value.nodes, n.id).length
   openMenu(e, [
+    { label: taken ? `${n.name}: change the type` : `${n.name}: pick a type (${cost} ${cost === 1 ? 'point' : 'points'})`, icon: 'fas fa-project-diagram', disabled: true, action: () => {} },
     ...choices.map(c => ({
       label: c.text,
-      icon: c.effect === picked ? 'fas fa-check' : 'far fa-circle',
-      action: () => pickVariant(n.id, c.effect)
+      wrap: true,
+      icon: c.effect === picked ? 'fas fa-check-circle' : 'far fa-circle',
+      action: () => taken ? pickVariant(n.id, c.effect) : take(n.id, c.effect)
     })),
-    { separator: true as const },
-    { label: 'Refund', icon: 'fas fa-undo', danger: true, action: () => refund(n.id) }
+    ...(taken ? [{ separator: true as const }, { label: 'Refund', icon: 'fas fa-undo', danger: true, action: () => refund(n.id) }] : [])
   ])
 }
 
@@ -558,8 +561,8 @@ function setHovered (n: TreeNode | null) {
   const stats = choices && picked ? [...n.stats.map(s => `${s}: ${picked.text}`)] : n.stats
   const cost = pending.value.length
   const note = taken
-    ? (choices ? `Type: ${picked?.text ?? choices[0].text}. Right-click to change, click to refund` : 'Taken. Click to refund')
-    : cost ? `Click to take: ${cost} ${cost === 1 ? 'point' : 'points'}` + (choices ? `. Types: ${choices.map(c => c.text).join(', ')}` : '') : 'Out of reach'
+    ? (choices ? `Type: ${picked?.text ?? 'none picked'}. Click to change or refund` : 'Taken. Click to refund')
+    : cost ? (choices ? `Click to pick a type: ${cost} ${cost === 1 ? 'point' : 'points'}` : `Click to take: ${cost} ${cost === 1 ? 'point' : 'points'}`) : 'Out of reach'
   showTipAt(ring.value, {
     kind: 'passive',
     name: n.name || 'Atlas passive',
@@ -603,9 +606,9 @@ function openWeb () {
   flex: none;
 }
 .find { width: 11rem; }
-.unsaved { display: flex; align-items: center; gap: 6px; width: 100%; flex-wrap: wrap; }
+.unsaved { display: inline-flex; align-items: center; gap: 4px; font-size: var(--w-fs-sm); white-space: nowrap; margin-right: 2px; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; vertical-align: middle; }
-.name { flex: 1; min-width: 8rem; }
+.name { width: 11rem; }
 .bare { display: flex; width: 30rem; height: 26rem; }
 .bare .map { height: 100%; }
 .mechs {

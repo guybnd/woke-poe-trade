@@ -1,6 +1,6 @@
 <template>
   <div v-if="menu" :class="$style.backdrop" @mousedown="closeMenu" @contextmenu.prevent="closeMenu" />
-  <div v-if="menu" ref="menuEl" :class="[$style.menu, 'w-enter', { [$style.withItem]: menu.item }]" :style="menuPos" role="menu" tabindex="-1"
+  <div v-if="menu" ref="menuEl" :class="[$style.menu, 'w-enter', { [$style.withItem]: menu.item, [$style.wide]: menu.items.some(m => 'wrap' in m && m.wrap) }]" :style="menuPos" role="menu" tabindex="-1"
     @keydown="onMenuKey" @contextmenu.prevent>
     <template v-if="menu.item">
       <div :class="$style.head">
@@ -20,11 +20,11 @@
     <template v-for="(item, i) in menu.items" :key="i">
       <div v-if="'separator' in item" :class="$style.sep" role="separator" />
       <button v-else type="button" role="menuitem" :disabled="item.disabled"
-        :class="[$style.item, { [$style.danger]: item.danger, [$style.hl]: i === hl }]"
+        :class="[$style.item, { [$style.danger]: item.danger, [$style.hl]: i === hl, [$style.tall]: item.wrap }]"
         @mouseenter="hl = i" @click="pick(item)">
         <img v-if="item.gameIcon" :src="item.gameIcon" class="w-game-icon" :class="$style.ic" alt="">
         <i v-else :class="[item.icon, $style.ic]" />
-        <span class="w-trunc" :class="$style.label"><span :class="{ [$style.drawn]: item.labelStyle }" :style="item.labelStyle">{{ item.label }}</span></span>
+        <span :class="[$style.label, item.wrap ? $style.wrap : 'w-trunc']"><span :class="{ [$style.drawn]: item.labelStyle }" :style="item.labelStyle">{{ item.label }}</span></span>
         <WKbd v-if="item.keys" :keys="item.keys" :class="$style.keys" />
       </button>
     </template>
@@ -142,6 +142,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   font-family: FontinSmallCaps, FrizQuadrataC, Georgia, serif;
 }
 .backdrop { position: fixed; inset: 0; z-index: 1000; }
+.wide { max-width: 440px; }
+.wrap { white-space: normal; line-height: 1.3; }
 .menu {
   position: fixed; z-index: 1001; min-width: 200px; max-width: 320px; padding: var(--w-s1);
   background: var(--w-panel); backdrop-filter: var(--w-blur);
@@ -155,6 +157,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   padding: 0 var(--w-s2); border-radius: var(--w-r-sm); text-align: left; color: var(--w-fg);
 }
 .item:disabled { opacity: 0.45; }
+.tall { height: auto; min-height: var(--w-row-h); padding-top: 4px; padding-bottom: 4px; }
 .hl { background: var(--w-accent-soft); }
 .ic { width: var(--w-icon-sm); height: var(--w-icon-sm); flex: none; display: inline-grid; place-items: center; font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-dim); }
 .label { flex: 1; }
