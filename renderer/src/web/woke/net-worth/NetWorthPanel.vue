@@ -58,7 +58,7 @@
         <section v-if="shown.moves && moves.length" :class="$style.moves" class="text-xs">
           <span :class="$style.caps">Price moves today</span>
           <span v-for="m in moves.slice(0, 2)" :key="m.key" class="w-trunc">{{ m.name }} <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
-          <span v-if="moves.length > 2" class="w-dim" :title="moves.slice(2).map(moveText).join('\n')">+{{ moves.length - 2 }}</span>
+          <span v-if="moves.length > 2" class="w-dim" :title="moves.slice(2).map(moveText).join('\n')">+{{ moves.length - 2 }} more</span>
         </section>
 
         <section v-if="showChanges || shown.where" :class="[$style.cols, { [$style.one]: !(showChanges && shown.where) }]">
@@ -70,7 +70,7 @@
             <div v-for="g in groups" :key="g.key" :class="$style.group">
               <div :class="$style.groupHead"><span class="w-trunc">{{ g.title }}</span><b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b></div>
               <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
-                <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon">
+                <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
                 <span class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
                 <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
               </div>
@@ -122,7 +122,7 @@
         <span>
           {{ status?.listed ? `${status.chosen} of ${status.listed}` : sum?.tabs }} tabs
           <template v-if="status?.skipped"> · {{ status.skipped }} remove-only skipped</template>
-          <template v-if="v.unpriced"> · {{ v.unpriced }} items unpriced (rares aren't searched)</template>
+          <template v-if="v.unpriced"> · {{ v.unpriced }} {{ v.unpriced === 1 ? 'item' : 'items' }} unpriced (rares aren't searched)</template>
         </span>
         <span>poe.ninja · {{ ninjaAge }}</span>
       </div>

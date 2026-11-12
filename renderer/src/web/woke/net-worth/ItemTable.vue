@@ -69,7 +69,8 @@ function swap (col: Col) {
   else next.total = next.total === 'c' ? 'd' : 'c'
   emit('units', next)
 }
-const chaosText = (chaos: number) => chaos >= 100 ? formatAmount(Math.round(chaos)) : chaos >= 1 ? chaos.toFixed(1) : chaos.toFixed(2)
+// Big chaos figures shortened ("360k"); the hover gives the exact one in divines.
+const chaosText = (chaos: number) => chaos >= 100_000 ? `${Math.round(chaos / 1000)}k` : chaos >= 10_000 ? `${(chaos / 1000).toFixed(1)}k` : chaos >= 100 ? formatAmount(Math.round(chaos)) : chaos >= 1 ? chaos.toFixed(1) : chaos.toFixed(2)
 const show = (col: Col, chaos: number) => inChaos(col) ? chaosText(chaos) : div(chaos)
 // The hover gives the other unit.
 const other = (col: Col, chaos: number) => !props.divine ? undefined : inChaos(col) ? `${div(chaos)} div` : `${chaosText(chaos)} chaos`

@@ -128,14 +128,14 @@ function when (at: number) {
 .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--w-fg); box-shadow: 0 0 0 2px var(--w-panel-solid), 0 0 0 3px var(--w-gold); transform: translate(-50%, -50%); pointer-events: none; }
 .tip {
   position: absolute; z-index: 5; pointer-events: none;
-  display: flex; flex-direction: column; gap: 1px; max-width: 260px; white-space: normal;
+  display: flex; flex-direction: column; gap: 1px; width: max-content; max-width: 300px; white-space: normal;
   background: var(--w-panel-solid); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
   padding: 4px 7px; font-size: var(--w-fs-xs); color: var(--w-fg); box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
 }
 .above { --ty: calc(-100% - 10px); }
 .below { --ty: 12px; }
 .center { transform: translate(-50%, var(--ty)); }
-.left { transform: translate(-10px, var(--ty)); }
-.right { transform: translate(calc(-100% + 10px), var(--ty)); }
+.left { transform: translate(-4px, var(--ty)); }
+.right { transform: translate(calc(-100% + 4px), var(--ty)); }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; }
 </style>
