@@ -3,7 +3,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ITEM_BY_REF } from '@/assets/data'
 import { parseClipboard, ItemCategory, ItemRarity } from '@/parser'
-import { priceCheckInput, tradeQuery } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { priceCheckInput, tradeQuery, uniqueBaseOf } from '@/web/woke/ui/tooltip/item-menu-logic'
 import { closeMenu, menuState, offerMenuItem, openMenu } from '@/web/woke/ui/layer'
 import { loadGameData } from '../helpers/game-data'
 
@@ -64,6 +64,16 @@ describe('tradeQuery', () => {
     expect(tradeQuery({ name: 'Foulborn Headhunter' }, 'unique', hh)).toEqual({ name: 'Headhunter', type: 'Leather Belt' })
     expect(tradeQuery({ name: 'Dread Shell', base: 'Two-Stone Ring' }, 'item', undefined)).toEqual({ type: 'Two-Stone Ring' })
     expect(tradeQuery({ name: 'Cleave' }, 'gem', undefined)).toEqual({ type: 'Cleave' })
+  })
+
+  it('searches a unique on several bases by name alone', () => {
+    for (const name of ['Grand Spectrum', "Precursor's Emblem"]) {
+      const all = ITEM_BY_REF('UNIQUE', name)!
+      expect(new Set(all.map(u => u.unique?.base)).size, name).toBeGreaterThan(1)
+      expect(uniqueBaseOf(name)).toBeUndefined()
+      for (const info of all) expect(tradeQuery({ name }, 'unique', info)).toEqual({ name: info.name })
+    }
+    expect(uniqueBaseOf('Headhunter')).toBe('Leather Belt')
   })
 
   it('searches a transfigured gem as its plain gem and which one', () => {

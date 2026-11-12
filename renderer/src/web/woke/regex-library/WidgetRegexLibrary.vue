@@ -232,11 +232,12 @@ function remove (entry: RegexEntry) {
   pushHostConfig()
   toast(`Removed "${entry.name || effectiveText(entry)}"`, {
     anchor: panel.value?.el,
-    // Puts back just this entry: edits and saves made since stay.
+    // Puts back just this entry: edits and saves made since stay. An entry
+    // added since may have taken its id: then it comes back under a new one.
     undo: () => {
       const list = props.config.entries
-      if (list.some(e => e.id === removed.id)) return
-      props.config.entries = [...list.slice(0, at), removed, ...list.slice(at)]
+      const id = list.some(e => e.id === removed.id) ? emptyEntry(list).id : removed.id
+      props.config.entries = [...list.slice(0, at), { ...removed, id }, ...list.slice(at)]
       pushHostConfig()
     }
   })

@@ -14,7 +14,7 @@
           <button class="leading-none rounded w-btn-soft w-6 h-6" @click="remove(s.id)">
             <i class="fas fa-times w-dim" />
           </button>
-          <input v-model="s.treeUrl" placeholder="Atlas tree link (pathofexile.com/fullscreen-atlas-skill-tree/…)"
+          <input :value="s.treeUrl" @input="setTree(s, $event)" placeholder="Atlas tree link (pathofexile.com/fullscreen-atlas-skill-tree/…)"
             class="rounded px-1 leading-6 col-start-2 col-span-2"
             :class="(s.treeUrl && !treeOk(s.treeUrl)) ? 'w-input w-input-bad' : 'w-input'">
           <input :value="s.tags.join(', ')" @change="setTags(s, $event)" placeholder="tags, comma separated"
@@ -56,9 +56,10 @@ import { defineComponent, shallowRef } from 'vue'
 import DndContainer from 'vuedraggable'
 import { configProp, configModelValue } from '@/web/settings/utils'
 import { parseTags } from '../shared/library'
-import { emptyStrategy, exportStrategies, parseStrategiesImport } from './widget'
+import { dropDraft, emptyStrategy, exportStrategies, parseStrategiesImport, takeDrafts } from './widget'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { DEFAULT_ATLAS_DATA_URL, decodeTree } from './tree'
+import { claimNewRegexFolder } from './strategy-ops'
 
 export default defineComponent({
   name: 'Atlas strategies',
@@ -82,12 +83,21 @@ export default defineComponent({
       },
       add () {
         const s = emptyStrategy(props.configWidget.strategies)
+        // Its own regex folder, so it never shares or inherits regexes.
+        claimNewRegexFolder(s, props.configWidget.strategies)
         props.configWidget.strategies.push(s)
         props.configWidget.selectedId ??= s.id
       },
       remove (id: number) {
         props.configWidget.strategies = props.configWidget.strategies.filter(s => s.id !== id)
         if (props.configWidget.selectedId === id) props.configWidget.selectedId = null
+        // Its unsaved tree goes too: a strategy added next gets the same id.
+        takeDrafts(props.configWidget, [id])
+      },
+      // A link typed here replaces any unsaved tree edit, which would hide it.
+      setTree (s: AtlasStrategy, e: Event) {
+        s.treeUrl = (e.target as HTMLInputElement).value
+        dropDraft(props.configWidget, s)
       },
       setTags (s: AtlasStrategy, e: Event) {
         s.tags = parseTags((e.target as HTMLInputElement).value)
@@ -105,7 +115,10 @@ export default defineComponent({
       doImport () {
         try {
           const added = parseStrategiesImport(ioText.value, props.configWidget.strategies)
-          props.configWidget.strategies.push(...added)
+          for (const s of added) {
+            claimNewRegexFolder(s, props.configWidget.strategies)
+            props.configWidget.strategies.push(s)
+          }
           ioError.value = `Added ${added.length} strategies`
           ioText.value = ''
         } catch (err) {

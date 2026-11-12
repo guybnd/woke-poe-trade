@@ -255,6 +255,16 @@ export function restoreDrafts (w: AtlasWidget, taken: Record<string, string>) {
   w.drafts = { ...taken, ...(w.drafts ?? {}) }
 }
 
+// Undo of a remove: the strategy as it goes back, under a new id when one made
+// since took its old one, with its unsaved tree moved along. The caller puts
+// it in the list.
+export function strategyBack (w: AtlasWidget, s: AtlasStrategy, taken: Record<string, string>): AtlasStrategy {
+  const back = w.strategies.some(o => o.id === s.id) ? { ...s, id: nextId(w.strategies) } : s
+  const d = taken[s.id]
+  if (d != null) restoreDrafts(w, { [back.id]: d })
+  return back
+}
+
 export function dropDraft (w: AtlasWidget, s: Pick<AtlasStrategy, 'id'>) {
   if (w.drafts?.[s.id] == null) return
   w.drafts = Object.fromEntries(Object.entries(w.drafts).filter(([id]) => id !== String(s.id)))

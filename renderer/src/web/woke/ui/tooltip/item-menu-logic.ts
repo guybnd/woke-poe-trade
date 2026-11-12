@@ -106,11 +106,19 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
 
 export type TradeType = string | { option: string, discriminator: string }
 
+// A unique's one base. Some uniques (Grand Spectrum, Precursor's Emblem) come
+// on several bases: searching the first would hide the others, so none.
+export function uniqueBaseOf (name: string): string | undefined {
+  const bases = new Set((ITEM_BY_REF('UNIQUE', name) ?? []).map(u => u.unique?.base))
+  if (bases.size !== 1) return undefined
+  return [...bases][0]
+}
+
 export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): { name?: string, type?: TradeType } {
   if (kind === 'unique') {
     const name = info?.name ?? plainName(ref.name)
     // Other languages' trade sites take the name alone.
-    const base = english ? info?.unique?.base : undefined
+    const base = english ? uniqueBaseOf(info?.namespace === 'UNIQUE' ? info.refName : plainName(ref.name)) : undefined
     return base ? { name, type: base } : { name }
   }
   if (ref.base) return { type: info?.name ?? ref.base }

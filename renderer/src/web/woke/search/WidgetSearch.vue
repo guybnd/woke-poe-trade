@@ -134,6 +134,7 @@ import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
 import type { CorruptedFilter, PriceItem } from '../market/types'
 import { lookupRequest } from '../item-lookup/lookup'
+import { tradeQuery } from '../ui/tooltip/item-menu-logic'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
 import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
@@ -435,10 +436,11 @@ function openTrade (entry: PriceEntry | ItemEntry) {
   }
   const info = infoFor(entry)
   const name = entry.kind === 'price' ? entry.group.name : entry.name
-  const url = info?.namespace === 'UNIQUE'
-    ? tradeUrl(league, { name: info.name, ...(AppConfig().language === 'en' ? { type: info.unique?.base } : {}) }, getTradeEndpoint())
-    : tradeUrl(league, { type: info?.name ?? name }, getTradeEndpoint())
-  window.open(url)
+  // The item menu's query: a transfigured gem as its plain gem plus which one,
+  // and a unique on several bases by name alone.
+  const ns = info?.namespace ?? (entry.kind === 'price' ? nsOf(entry.group.type) : 'ITEM')
+  const kind = ns === 'UNIQUE' ? 'unique' : ns === 'GEM' ? 'gem' : ns === 'DIVINATION_CARD' ? 'card' : 'item'
+  window.open(tradeUrl(league, tradeQuery({ name }, kind, info, AppConfig().language === 'en'), getTradeEndpoint()))
 }
 function findInStash (name: string) {
   Host.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'stash-search', text: JSON.stringify(name) } })

@@ -6,7 +6,7 @@ import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
 import { atlasTotals, filterTotals } from '@/web/woke/atlas/totals'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
 import { decodeTree } from '@/web/woke/atlas/tree'
-import { allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, sameTree, saveDraft, setDraft, takeDrafts, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
+import { allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, sameTree, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
 import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
 import type { AtlasStrategy } from '@/web/woke/atlas/strategies'
 import { parseGuideText } from '@/web/woke/atlas/guide'
@@ -247,6 +247,28 @@ describe('drafts and removed strategies', () => {
     expect(w.drafts).toEqual({ 6: 'y' })
     restoreDrafts(w, taken)
     expect(w.drafts).toEqual({ 5: 'x', 6: 'y' })
+  })
+
+  it('puts a removed strategy back under a new id when one added since took its id, its draft moved along', () => {
+    const gone = { ...emptyStrategy([]), id: 2, name: 'Gone' }
+    const w = { strategies: [{ ...emptyStrategy([]), id: 1 }, gone], drafts: { 2: 'draft' } } as unknown as Parameters<typeof takeDrafts>[0]
+    w.strategies = w.strategies.filter(s => s.id !== 2)
+    const taken = takeDrafts(w, [2])
+    const added = emptyStrategy(w.strategies)
+    expect(added.id).toBe(2)
+    w.strategies.push(added)
+    const back = strategyBack(w, gone, taken)
+    expect(back.id).toBe(3)
+    expect(back.name).toBe('Gone')
+    expect(w.drafts).toEqual({ 3: 'draft' })
+    expect(workingTree(w, added)).toBe('')
+  })
+
+  it('puts a removed strategy back under its own id when it is still free', () => {
+    const gone = { ...emptyStrategy([]), id: 2 }
+    const w = { strategies: [{ ...emptyStrategy([]), id: 1 }], drafts: {} } as unknown as Parameters<typeof takeDrafts>[0]
+    expect(strategyBack(w, gone, { 2: 'd' })).toBe(gone)
+    expect(w.drafts).toEqual({ 2: 'd' })
   })
 })
 

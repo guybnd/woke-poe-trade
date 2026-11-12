@@ -96,7 +96,7 @@ import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMen
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, saveDraft, setDraft, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
 import type { FolderNode } from './widget'
@@ -110,6 +110,7 @@ import { extractTreeCode } from './tree'
 import { addRegex, joinFolder, libraryOn, regexesIn } from '../regex-library/folders'
 import { claimNewRegexFolder, copyRegexes, refileRegexes } from './strategy-ops'
 import { atlasTreePin } from './atlas-pin'
+import { pins } from '../pins/pins'
 
 // The tree editor's code loads the first time a strategy is opened.
 const AtlasTree = defineAsyncComponent(() => import('./AtlasTree.vue'))
@@ -303,6 +304,14 @@ function moveFolder (from: string, to: string) {
 
 // ---- menus ----
 
+// Put back under a new id: its tree pin, if pinned, follows it.
+function movePinTo (old: AtlasStrategy, back: AtlasStrategy) {
+  if (old.id === back.id) return
+  const from = atlasTreePin(props.config, old).id
+  if (!pins.value.some(p => p.id === from)) return
+  pins.value = pins.value.map(p => p.id === from ? { ...p, ...atlasTreePin(props.config, back) } : p)
+}
+
 // No "are you sure": remove now, offer Undo. Its regexes stay in the library.
 function remove (s: AtlasStrategy) {
   const at = props.config.strategies.findIndex(o => o.id === s.id)
@@ -313,13 +322,14 @@ function remove (s: AtlasStrategy) {
   // Undo puts back this strategy only, so anything made since stays.
   toast(`Removed "${s.name || 'Untitled'}"`, {
     anchor: panel.value?.el,
+    // One made since may hold its old id: it comes back under a new one.
     undo: () => {
-      if (props.config.strategies.some(o => o.id === s.id)) return
+      const back = strategyBack(props.config, s, drafts)
       const list = [...props.config.strategies]
-      list.splice(Math.min(at, list.length), 0, s)
+      list.splice(Math.min(at, list.length), 0, back)
       props.config.strategies = list
-      restoreDrafts(props.config, drafts)
-      if (wasSelected) props.config.selectedId = s.id
+      movePinTo(s, back)
+      if (wasSelected) props.config.selectedId = back.id
     }
   })
 }
@@ -389,12 +399,15 @@ function removeFolder (path: string) {
   toast(gone.size ? `Removed "${path}" and ${gone.size} ${gone.size === 1 ? 'strategy' : 'strategies'}` : `Removed "${path}"`, {
     anchor: panel.value?.el,
     undo: () => {
-      const have = new Set(props.config.strategies.map(s => s.id))
-      const back = removed.filter(s => !have.has(s.id))
-      props.config.strategies = [...props.config.strategies, ...back]
-      restoreDrafts(props.config, Object.fromEntries(Object.entries(drafts).filter(([id]) => back.some(s => String(s.id) === id))))
+      let selectedBack: number | null = null
+      for (const s of removed) {
+        const back = strategyBack(props.config, s, drafts)
+        props.config.strategies = [...props.config.strategies, back]
+        movePinTo(s, back)
+        if (s.id === selectedBefore) selectedBack = back.id
+      }
       props.config.folders = [...new Set([...(props.config.folders ?? []), ...goneFolders])]
-      if (selectedBefore != null && gone.has(selectedBefore)) props.config.selectedId = selectedBefore
+      if (selectedBack != null) props.config.selectedId = selectedBack
     }
   })
 }
