@@ -19,6 +19,9 @@ export interface CampaignState {
   gemsGot?: string[]
   // Past the campaign: no icon, and the route stays where it is.
   asleep?: boolean
+  // When each route step became the current one (ms, keyed by step index),
+  // so the card can show how long the steps behind you took.
+  stepStarts?: Record<string, number>
 }
 
 export interface ZoneNote {
@@ -44,13 +47,15 @@ export interface CampaignWidget extends Widget {
   pins: PinId[]
   // How many route steps the card lists (current one included).
   cardSteps: number
+  // How many finished steps the card lists above the current one (0 = none).
+  cardBehind: number
   hotkeyCard: string | null
   hotkeyNext: string | null
   hotkeyPrev: string | null
 }
 
 export function emptyState (): CampaignState {
-  return { zone: '', areaId: '', areaLevel: null, act: null, charName: '', className: '', level: null, updatedAt: 0, gemsGot: [] }
+  return { zone: '', areaId: '', areaLevel: null, act: null, charName: '', className: '', level: null, updatedAt: 0, gemsGot: [], stepStarts: {} }
 }
 
 // Fills settings added after the widget was first placed.
@@ -58,11 +63,39 @@ export function migrateCampaign (w: CampaignWidget) {
   if (!w.route) w.route = { ...DEFAULT_ROUTE_OPTIONS }
   if (typeof w.step !== 'number') w.step = 0
   if (w.cardSteps === undefined) w.cardSteps = 3
+  if (w.cardBehind === undefined) w.cardBehind = 1
   if (!Array.isArray(w.pins)) w.pins = []
   if (w.hotkeyCard === undefined) w.hotkeyCard = null
   if (w.hotkeyNext === undefined) w.hotkeyNext = null
   if (w.hotkeyPrev === undefined) w.hotkeyPrev = null
   if (w.state && !Array.isArray(w.state.gemsGot)) w.state.gemsGot = []
+  if (w.state && (w.state.stepStarts == null || typeof w.state.stepStarts !== 'object')) w.state.stepStarts = {}
+}
+
+// Step `step` became current at `at`. Starts for later steps go: after a
+// step back they no longer say anything true.
+export function markStepStart (starts: Record<string, number>, step: number, at: number): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(starts)) {
+    if (Number(k) < step) out[k] = v
+  }
+  out[String(step)] = at
+  return out
+}
+
+// Longer than this, a step's time is mostly a break or the game being shut,
+// so it isn't shown.
+export const STEP_TIME_CAP_MS = 60 * 60_000
+
+// How long step `step` took: from it becoming current to the next one doing
+// so. Null when either moment is unknown (skipped steps, an old save), or the
+// time can't be a real step (zero, or over the cap).
+export function stepTook (starts: Record<string, number>, step: number): number | null {
+  const a = starts[String(step)]
+  const b = starts[String(step + 1)]
+  if (a == null || b == null) return null
+  const ms = b - a
+  return ms > 0 && ms <= STEP_TIME_CAP_MS ? ms : null
 }
 
 // The log doesn't say which character is playing, so where you go decides:

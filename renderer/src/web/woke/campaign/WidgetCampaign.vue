@@ -14,6 +14,11 @@
           <template v-if="current">
             <div :class="$style.actHead"><span>{{ actLabel(current.act) }}</span><span v-if="actStep" class="w-num">{{ actStep.done }} of {{ actStep.total }}</span></div>
             <div v-if="actStep" :class="$style.prog"><i :style="{ width: `${actStep.done / actStep.total * 100}%` }" /></div>
+            <div v-for="d in done" :key="d.step.index" class="flex gap-1.5" :class="$style.done">
+              <span>✓</span>
+              <span class="min-w-0 w-trunc" :class="$style.doneText"><RouteParts :parts="d.step.parts" /></span>
+              <span v-if="d.took != null" class="ml-auto w-num whitespace-nowrap" title="How long this step took">{{ formatClock(d.took) }}</span>
+            </div>
             <div v-for="(st, i) in shown" :key="st.index" :class="i === 0 ? $style.now : $style.next">
               <div class="flex gap-1.5">
                 <span :class="i === 0 ? 'w-accent' : 'w-faint'">{{ i === 0 ? '›' : '·' }}</span>
@@ -78,9 +83,9 @@ import { pinnedReadouts, pinsTick } from './pins'
 import { actFromAreaId, actLabel } from './log-parse'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
-import { emptyState, migrateCampaign, parseHotkeyTarget, routeAsleepAfter } from './widget'
+import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, stepTook } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, behind, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -122,6 +127,8 @@ const route = computed(() => bundledRoute(props.config.route))
 watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${props.config.route.bandit}`, () => {
   // Asleep, or somewhere the route never goes (a map, a hideout): keep the place.
   if (props.config.state.asleep || !props.config.state.areaId) return
+  // Step numbers mean other steps now, so their times are gone.
+  props.config.state.stepStarts = {}
   const step = resyncTo(route.value, props.config.state.areaId)
   if (step > 0) props.config.step = step
 })
@@ -129,19 +136,30 @@ watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${p
 const current = computed<RouteStep | undefined>(() => route.value.steps[props.config.step])
 const shown = computed(() => upcoming(route.value, props.config.step, Math.max(1, props.config.cardSteps)))
 const actStep = computed(() => actProgress(route.value, props.config.step))
+// Finished steps above the current one, with how long each took.
+const done = computed(() => {
+  const starts = s.value.stepStarts ?? {}
+  return behind(route.value, props.config.step, Math.min(5, Math.max(0, Math.floor(props.config.cardBehind || 0))))
+    .map(step => ({ step, took: stepTook(starts, step.index) }))
+})
+
+function setStep (step: number, at: number) {
+  props.config.step = step
+  props.config.state.stepStarts = markStepStart(props.config.state.stepStarts ?? {}, step, at)
+}
 
 function move (by: number) {
   const step = Math.min(route.value.steps.length, Math.max(0, props.config.step + by))
   if (step !== props.config.step) {
-    props.config.step = step
+    setStep(step, Date.now())
     setTimeout(peekStep, 0)
   }
   saveConfig()
 }
 
 // A step changed: the icon grows into the next step for a moment.
-function stepChanged (step: number) {
-  props.config.step = step
+function stepChanged (step: number, at: number) {
+  setStep(step, at)
   if (caughtUp) setTimeout(peekStep, 0)
 }
 
@@ -280,7 +298,7 @@ function peekStep () {
 
 // ---- Client.txt ----
 
-function apply (ev: LogEvent): boolean {
+function apply (ev: LogEvent, at: number): boolean {
   const state = props.config.state
   if (ev.kind === 'area') {
     state.areaId = ev.areaId
@@ -289,6 +307,8 @@ function apply (ev: LogEvent): boolean {
     if (act != null) state.act = act
     // A new character: back to the start of the route, and follow whoever
     // levels next (unless a name is set in the settings).
+    // Twilight Strand: whatever came before was another character's steps.
+    if (ev.areaId === '1_1_1') state.stepStarts = {}
     if (ev.areaId === '1_1_1' && props.config.step > 3) {
       props.config.step = 0
       state.charName = ''
@@ -300,7 +320,7 @@ function apply (ev: LogEvent): boolean {
     // A character past the campaign doesn't walk the route by using towns.
     if (!state.asleep) {
       const step = advanceOnEnter(route.value, props.config.step, ev.areaId, routeData)
-      if (step !== props.config.step) stepChanged(step)
+      if (step !== props.config.step) stepChanged(step, at)
     }
   } else if (ev.kind === 'zone') {
     state.zone = ev.name
@@ -349,7 +369,7 @@ function applyLines (lines: LogLine[]) {
   let changed = false
   let at = 0
   for (const { ev, at: lineAt } of lines) {
-    if (ev && apply(ev)) { changed = true; at = lineAt }
+    if (ev && apply(ev, lineAt)) { changed = true; at = lineAt }
   }
   if (changed) {
     now.value = Date.now()
@@ -444,6 +464,8 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   box-shadow: inset 2px 0 0 var(--w-accent);
 }
 .next { color: var(--w-dim); }
+.done { color: var(--w-faint); font-size: var(--w-fs-sm); }
+.doneText { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-faint) 55%, transparent); }
 .sub { padding-left: 14px; font-size: var(--w-fs-sm); }
 .callout {
   margin-top: 4px;

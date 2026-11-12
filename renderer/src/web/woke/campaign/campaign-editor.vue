@@ -29,6 +29,11 @@
           <span>Steps on the card</span>
           <input v-model.number="cardSteps" type="number" min="1" max="8" class="w-input rounded px-1 leading-6 w-16">
         </label>
+        <label class="flex items-center gap-2">
+          <span>Finished steps on the card</span>
+          <input v-model.number="cardBehind" type="number" min="0" max="5" class="w-input rounded px-1 leading-6 w-16">
+          <w-info text="Shown faded above the current step, with how long each took. 0 hides them." />
+        </label>
         <w-toggle v-model="showBuild">Show the active PoB build's tree and main gems on the card</w-toggle>
       </div>
     </div>
@@ -128,6 +133,7 @@ export default defineComponent({
       charName: configModelValue(() => props.configWidget, 'charName'),
       showBuild: configModelValue(() => props.configWidget, 'showBuild'),
       cardSteps: configModelValue(() => props.configWidget, 'cardSteps'),
+      cardBehind: configModelValue(() => props.configWidget, 'cardBehind'),
       hotkeyCard: configModelValue(() => props.configWidget, 'hotkeyCard'),
       hotkeyNext: configModelValue(() => props.configWidget, 'hotkeyNext'),
       hotkeyPrev: configModelValue(() => props.configWidget, 'hotkeyPrev'),

@@ -245,6 +245,12 @@ export function upcoming (route: Route, current: number, count: number): RouteSt
   return route.steps.slice(current, current + count)
 }
 
+// The last `count` finished steps, oldest first.
+export function behind (route: Route, current: number, count: number): RouteStep[] {
+  if (count <= 0) return []
+  return route.steps.slice(Math.max(0, current - count), Math.min(current, route.steps.length))
+}
+
 // How far into the current step's act you are: steps done of the act's total.
 export function actProgress (route: Route, current: number): { done: number, total: number } | null {
   const step = route.steps[current]
