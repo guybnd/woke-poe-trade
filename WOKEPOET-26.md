@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-26
 title: Map scan badge off the map; rolling stuck in quad tab
-status: Ready
+status: Done
 priority: Medium
 effort: S
 assignee: unassigned
@@ -64,8 +64,14 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T05:08:16.110Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:16:51.685Z'
 swimlane: null
 needsAction: null
+reviewState: null
 ---
 > **TL;DR:** The map roller badge could sit away from the map, and rolling didn't follow to another map or tab. Fixed in PR #96.
 

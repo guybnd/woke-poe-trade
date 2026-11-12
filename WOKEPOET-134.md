@@ -3,7 +3,7 @@ id: WOKEPOET-134
 title: >-
   Bug hunt 2026-11-06: tile max scroll, white socket blank search, Pages deploy
   race
-status: In Progress
+status: Done
 priority: Low
 effort: S
 assignee: unassigned
@@ -70,6 +70,11 @@ history:
     comment: >-
       Guy accepted the recommendations (Mark B, Override B, bundled updates). PR
       #232 up, waiting on CI and merge.
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:32.188Z'
 swimlane: null
 needsAction: null
 ---

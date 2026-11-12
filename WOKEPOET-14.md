@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-14
 title: Add a Credits page to settings
-status: Ready
+status: Done
 priority: Low
 effort: None
 assignee: Agent
@@ -30,7 +30,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T03:21:12.278Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:16:49.439Z'
 needsAction: null
+reviewState: null
 ---
 > **TL;DR** A Credits page in the settings sidebar lists every outside project we fork, use data from or took ideas from, with link, use and license. Built as option A (grouped list) in PR #85.
 

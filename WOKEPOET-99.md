@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-99
 title: Fix dock-menu e2e test failing since the Trades bubble stays
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -33,8 +33,14 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T12:28:53.964Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:11.218Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/177'
 needsAction: null
+reviewState: null
 ---
 e2e/dock-menu.spec.ts:113 "a click on a menu row leaves no card behind" fails every run on master.
 

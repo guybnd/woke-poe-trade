@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-1
 title: Enable GitHub Actions so packaging can ship
-status: Grooming
+status: Archived
 priority: None
 effort: None
 assignee: unassigned
@@ -56,7 +56,22 @@ history:
 
 
       Default if you have no preference: unsigned first, add signing later.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: Actions already enabled; the signing question lives on WOKEPOET-53.
+    date: '2026-11-12T00:17:36.490Z'
+    id: c-2026-11-12t00-17-36-490z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T00:17:36.490Z'
+  - type: status_change
+    from: Grooming
+    to: Archived
+    user: Agent
+    date: '2026-11-12T00:17:36.490Z'
+swimlane: null
 needsAction: null
 ---
 > **TL;DR** — Player **packaging** (installer, auto-update, crash reports, setup wizard) needs a working **release pipeline** on guybnd/woke-poe-trade. Done looks like a **first installer built by CI** and sitting on a GitHub release.

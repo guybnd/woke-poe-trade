@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-24
 title: 'Loot filter rule card works on ground items, including hidden ones'
-status: In Progress
+status: Done
 priority: Medium
 effort: S
 assignee: unassigned
@@ -27,6 +27,11 @@ history:
       opened for loading when the editor was left open. Waiting on Guy's in-game
       test of the map edit and ground items.
     id: a-2026-11-05t05-06-50-742z
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:33.337Z'
 needsAction: null
 ---
 > **TL;DR:** Alt + F already opens the matching filter rule for a hovered item with quick edits. On the ground it releases Alt before copying, so an item your filter hides (only visible while Alt is held) loses its label and nothing is copied. Keep Alt held through the copy.

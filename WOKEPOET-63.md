@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-63
 title: 'Price check: honour rate limit penalties'
-status: Ready
+status: Done
 priority: Critical
 effort: S
 assignee: unassigned
@@ -42,7 +42,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T08:25:31.672Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:16:54.485Z'
 needsAction: null
+reviewState: null
 ---
 > TL;DR: After a 429 the client lets a search through after 12 s while the server restricts for 60 s. Read the penalty and Retry-After, block requests until it ends, show a countdown, let Measure wait it out.
 

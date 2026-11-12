@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-168
 title: 'Whole-project review: prioritised findings report'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -83,6 +83,11 @@ history:
       170-180. Existing tickets got notes: 149 (3.30), 53 (signing); 121 covers
       the duplicate drafts. Rooftap format question unanswered, report stays as
       is.
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:35.039Z'
 swimlane: null
 needsAction: null
 subtasks:

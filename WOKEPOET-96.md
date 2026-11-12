@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-96
 title: 'Icon row: drag to reorder, quick flip, resize'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -33,7 +33,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T12:45:49.381Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:10.666Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/176'
 needsAction: null
+reviewState: null
 ---
 Guy asked: drag to reorder, swap horizontal and back, scale size easily. Flip exists (double-click grip, Settings > Icon row); reorder and size don't (DOCK_ORDER fixed, icons 30 px fixed). Mockups first.

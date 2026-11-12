@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-33
 title: Replace the overlay tab bar with a left-edge rail and launcher
-status: Ready
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -37,7 +37,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T10:00:38.504Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:16:53.937Z'
 needsAction: null
+reviewState: null
 ---
 Guy picked B + C from the mocks: https://claude.ai/artifact/KbQejf7usezNPEXfrcc35S
 

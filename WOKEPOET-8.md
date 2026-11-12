@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-8
 title: Show the challenge guide in the overlay on a hotkey
-status: Ready
+status: Done
 priority: None
 effort: S
 assignee: unassigned
@@ -110,9 +110,15 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T03:39:16.653Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:16:41.723Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/88'
+reviewState: null
 ---
 > **TL;DR** A hotkey shows CraniumCarnage's challenge guide (https://craniumviolence.github.io/) in an overlay panel. It embeds fine in a webview; waiting on Guy's pick from the mockups before building.
 

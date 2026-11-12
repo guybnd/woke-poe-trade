@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-7
 title: Fix issues from local build testing
-status: Grooming
+status: Archived
 priority: None
 effort: None
 assignee: unassigned
@@ -23,6 +23,17 @@ history:
     date: '2026-11-05T02:08:14.802Z'
     selfAttested: true
     id: c-2026-11-05t02-08-14-802z
+  - type: comment
+    user: Agent
+    comment: 'Stale: no issues were ever listed, and three releases have shipped since.'
+    date: '2026-11-12T00:17:38.281Z'
+    id: c-2026-11-12t00-17-38-281z
+  - type: status_change
+    from: Grooming
+    to: Archived
+    user: Agent
+    date: '2026-11-12T00:17:38.281Z'
+needsAction: null
 ---
 > **TL;DR** — Fix what Guy found while **testing the local build**. Done looks like each issue collected, then fixed or split into its own ticket.
 

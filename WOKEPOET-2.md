@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-2
 title: Answer the campaign tracker question
-status: Grooming
+status: Archived
 priority: None
 effort: None
 assignee: unassigned
@@ -30,7 +30,24 @@ history:
     comment: >-
       Pending question from the earlier campaign tracker thread; Guy to restate
       or answer here.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Stale: the question was never restated, and the campaign tracker has been
+      reworked since (WOKEPOET-32, 90).
+    date: '2026-11-12T00:17:37.537Z'
+    id: c-2026-11-12t00-17-37-537z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-12T00:17:37.537Z'
+  - type: status_change
+    from: Grooming
+    to: Archived
+    user: Agent
+    date: '2026-11-12T00:17:37.537Z'
+swimlane: null
 needsAction: null
 ---
 > **TL;DR** — The **campaign tracker UX rework** has an **open question for Guy** left over from an earlier thread. Done looks like the question answered here and any follow-up work ticketed.

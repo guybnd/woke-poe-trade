@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-117
 title: 'Flips table: Supply column, sortable headers, sort by Profit each'
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -36,8 +36,14 @@ history:
     date: '2026-11-05T15:21:08.605Z'
     comment: Updated implementation link.
     id: a-2026-11-05t15-21-08-605z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:15.166Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/203'
+reviewState: null
 ---
 Replace "Market / day" and "Max profit / day" with one "Supply" column (High, Medium, Low) from poe.ninja daily volume. Guy's call: poe.ninja doesn't have the trade house data, so raw numbers don't mean much. Mock: option 3 under "Column names" in https://claude.ai/artifact/HZ3QdC95eYt4ZZY6CPyygs
 

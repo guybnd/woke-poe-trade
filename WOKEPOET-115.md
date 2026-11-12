@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-115
 title: 'Left rail: XL by default, add XXL'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -31,7 +31,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T15:33:28.297Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:14.617Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/199'
 needsAction: null
+reviewState: null
 ---
 Guy: default size should be XL, and offer a size bigger than that. A size already chosen stays.

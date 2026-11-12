@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-18
 title: Make the chosen PoB loadout shared across every window
-status: Ready
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -41,8 +41,14 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-05T03:49:43.598Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:16:50.537Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/92'
+reviewState: null
 ---
 > **TL;DR:** Picking a skill or item set chip in the PoB panel only changed that one panel's view. Make the pick one saved choice per build that the panel tabs, campaign card, price chip and filter rules all read. The level-based pick stays the default until a set is picked by hand.
 

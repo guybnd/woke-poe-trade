@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-36
 title: 'Overlay core critique: pick which fixes to start'
-status: In Progress
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -90,6 +90,11 @@ history:
       Guy picked A plus a key hint; merged in #168. Still open: 51 (item data
       updates), 53 (rollback, signing, prompt when the game is closed), 57
       (config swap), 62 (repeat test in game).
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:33.888Z'
 swimlane: null
 needsAction: null
 subtasks:

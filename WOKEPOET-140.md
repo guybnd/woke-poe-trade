@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-140
 title: History rows show wrong item tooltip (base instead of unique)
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -47,8 +47,14 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-06T09:12:50.863Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:17.415Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/235'
 needsAction: null
+reviewState: null
 ---
 Hovering a row in the trade card's History (Windscream, Le Heup of All, Praxis) showed a base item's tooltip, such as Reinforced Greaves, instead of the unique.
 

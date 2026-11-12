@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-125
 title: Three-way Corrupted chip in price check
-status: Ready
+status: Done
 priority: Medium
 effort: S
 assignee: unassigned
@@ -41,8 +41,14 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-06T03:41:05.336Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:16.267Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/214'
 needsAction: null
+reviewState: null
 ---
 Guy asked which chip setting searches both corrupted and not corrupted, then approved a three-way chip, with "make sure the chip stays not too big".
 

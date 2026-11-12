@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-141
 title: 'History rows: Reopen on hover and a dismiss that removes the row'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -58,9 +58,15 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-06T10:00:42.018Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:17.975Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/239'
+reviewState: null
 ---
 Guy: show Reopen only on row hover, and add a dismiss that removes the row completely. Mocks first; waiting on his pick of A, B or C.
 

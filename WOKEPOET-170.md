@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-170
 title: 'Installer can''t be built: app-builder-lib patch is stale since #271'
-status: Ready
+status: Done
 priority: Critical
 effort: S
 assignee: unassigned
@@ -49,7 +49,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-10T03:35:07.096Z'
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T00:17:20.766Z'
 needsAction: null
+reviewState: null
 ---
 Review finding A1. #271 moved `app-builder-lib` to 26.18.0; `main/build/app-builder-lib+26.8.1.patch` is for 26.8.1 and no longer applies. patch-package only warns locally but exits 1 when `CI=true`, so `npm ci` in `main/` fails on GitHub runners (seen in the Build workflow's Linux job; reproduced the patch failure on GUY-PC). Master is 0.4.0, newest release is 0.3.0; tagging v0.4.0 would very likely fail at install.
 
