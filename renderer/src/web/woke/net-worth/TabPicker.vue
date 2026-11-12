@@ -26,10 +26,10 @@
       <ul :class="$style.list">
         <li v-for="t in shown" :key="t.id">
           <label :class="$style.row">
-            <input type="checkbox" :checked="ticked.has(t.id)" @change="tick(t.id, ($event.target as HTMLInputElement).checked)">
+            <input type="checkbox" :checked="ticked.has(t.id) && !UNREADABLE.has(t.type)" :disabled="UNREADABLE.has(t.type)" @change="tick(t.id, ($event.target as HTMLInputElement).checked)">
             <span :class="$style.swatch" :style="{ background: t.colour ?? 'transparent' }" />
             <span class="w-trunc">{{ t.name || `Tab ${t.index + 1}` }}</span>
-            <span class="w-dim text-xs">{{ typeLabel(t.type) }}</span>
+            <span class="w-dim text-xs" :title="UNREADABLE.has(t.type) ? `pathofexile.com doesn't send what's in ${typeLabel(t.type).toLowerCase()} tabs` : undefined">{{ typeLabel(t.type) }}{{ UNREADABLE.has(t.type) ? ' · can’t be read' : '' }}</span>
           </label>
         </li>
         <li v-if="!shown.length" class="w-dim text-xs" :class="$style.none">No tabs match.</li>
@@ -58,7 +58,7 @@ import { computed, onMounted, shallowRef } from 'vue'
 import { WBanner, WButton, WChip, WEmpty, WField, WSelect, WSkeleton } from '../ui'
 import { hostRequest } from '../shared/host'
 import {
-  KIND_OPTIONS, TEMPLATE_HINT, TEMPLATE_LABEL, choiceOf, shownTabs, startingPick, ticksFor, typeLabel
+  KIND_OPTIONS, TEMPLATE_HINT, TEMPLATE_LABEL, UNREADABLE, choiceOf, shownTabs, startingPick, ticksFor, typeLabel
 } from './tab-picker'
 import type { Picked, SavedSet, TabChoice, TabKind, TabList, TabTemplate } from './tab-picker'
 

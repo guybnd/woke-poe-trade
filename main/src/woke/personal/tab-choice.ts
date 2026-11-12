@@ -29,12 +29,17 @@ const PLAIN = new Set(['NormalStash', 'PremiumStash', 'QuadStash'])
 // Priced tabs: "$ ...", "~price 1 chaos", "~b/o 1 div".
 const PRICED = /^\s*(\$|~price\b|~b\/o\b)/i
 
+// The stash page lists these tabs but sends none of their items (map and
+// unique tabs keep them in sub-tabs it doesn't give): reading them costs a
+// call for nothing.
+export const UNREADABLE = new Set(['MapStash', 'UniqueStash'])
+
 export function isSpecialTab (tab: StashTabInfo): boolean {
   return !PLAIN.has(tab.type) && tab.type !== 'Folder'
 }
 
 export function fitsTemplate (template: TabTemplate, tab: StashTabInfo): boolean {
-  if (isRemoveOnly(tab)) return false
+  if (isRemoveOnly(tab) || UNREADABLE.has(tab.type)) return false
   if (template === 'league') return tab.type !== 'Folder'
   if (template === 'currency') return tab.type === 'CurrencyStash'
   return isSpecialTab(tab) || (PLAIN.has(tab.type) && PRICED.test(tab.name))
@@ -45,7 +50,7 @@ export function chosenTabs<T extends StashTabInfo> (choice: TabChoice | null, ta
   if (!choice) return []
   if (choice.template === 'custom') {
     const ids = new Set(choice.ids)
-    return tabs.filter(t => ids.has(t.id) && !isRemoveOnly(t))
+    return tabs.filter(t => ids.has(t.id) && !isRemoveOnly(t) && !UNREADABLE.has(t.type))
   }
   const template = choice.template
   return tabs.filter(t => fitsTemplate(template, t))

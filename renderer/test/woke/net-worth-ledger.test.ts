@@ -2,7 +2,7 @@
 // points and big gains, the goal's ETA, price moves and the change view.
 import { describe, it, expect } from 'vitest'
 import {
-  addPoint, bigGains, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
+  addPoint, bigGains, filterLines, pickFilter, change24h, goalEta, groupByRefresh, groupByRuns, keepDiff, liquidChaos, priceMoves, seriesFor, topChanges, valueByTab
 } from '@/web/woke/net-worth/ledger'
 import type { LedgerPoint, SeriesPoint } from '@/web/woke/net-worth/ledger'
 import { valueStash } from '@/web/woke/net-worth/valuation'
@@ -28,8 +28,8 @@ describe('per tab and liquid', () => {
 
   it('values each tab, skipping what has no price', () => {
     expect(valueByTab(tabs, priceOf)).toEqual([
-      { id: 'a', name: 'Currency', colour: '#7c5436', chaos: 650 },
-      { id: 'b', name: 'Divs', colour: null, chaos: 1000 }
+      { id: 'a', name: 'Currency', type: '', colour: '#7c5436', chaos: 650 },
+      { id: 'b', name: 'Divs', type: '', colour: null, chaos: 1000 }
     ])
   })
 
@@ -165,5 +165,32 @@ describe('End session from Net worth', () => {
     expect(ended).toEqual([2])
     stop1(); stop2()
     expect(requestEndSession(1)).toBe(false)
+  })
+})
+
+describe('table filters', () => {
+  // Guy's case: the Fragment tab picked, then the Currency chip: currency
+  // inside the Fragment tab, an empty table, though Currency is 7515 div.
+  const lines = [
+    { key: 'd', name: 'Divine Orb', category: 'currency' as const, tabIds: ['cur1'], chaos: 7000 },
+    { key: 'c', name: 'Chaos Orb', category: 'currency' as const, tabIds: ['cur2'], chaos: 2 },
+    { key: 'w', name: 'Simulacrum', category: 'fragments' as const, tabIds: ['frag'], chaos: 300 }
+  ]
+  const none = { cat: 'all' as const, tab: 'all', query: '', minChaos: 0 }
+
+  it('picking a category after a tab shows that category everywhere', () => {
+    const inFrag = pickFilter(none, { tab: 'frag' })
+    const currency = pickFilter(inFrag, { cat: 'currency' })
+    expect(currency).toMatchObject({ cat: 'currency', tab: 'all' })
+    expect(filterLines(lines, currency).map(l => l.key)).toEqual(['d', 'c'])
+  })
+
+  it('picking a tab clears the category; the same category again clears it', () => {
+    expect(pickFilter({ ...none, cat: 'currency' }, { tab: 'frag' })).toMatchObject({ cat: 'all', tab: 'frag' })
+    expect(pickFilter({ ...none, cat: 'currency' }, { cat: 'currency' })).toMatchObject({ cat: 'all' })
+  })
+
+  it('two tabs of the same name stay apart: tabs filter by id', () => {
+    expect(filterLines(lines, { ...none, tab: 'cur2' }).map(l => l.key)).toEqual(['c'])
   })
 })

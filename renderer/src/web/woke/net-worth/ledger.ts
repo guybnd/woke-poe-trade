@@ -6,8 +6,8 @@ import type { Category, DaySnapshot, DiffLine, PriceOf, StashDiff, StashItemLike
 
 // ---------- per tab (D5) ----------
 
-export interface TabLike { id: string, name: string, colour?: string | null, items: StashItemLike[] }
-export interface TabValue { id: string, name: string, colour: string | null, chaos: number }
+export interface TabLike { id: string, name: string, type?: string, colour?: string | null, items: StashItemLike[] }
+export interface TabValue { id: string, name: string, type: string, colour: string | null, chaos: number }
 
 export function valueByTab (tabs: TabLike[], priceOf: PriceOf): TabValue[] {
   return tabs.map(t => {
@@ -16,7 +16,7 @@ export function valueByTab (tabs: TabLike[], priceOf: PriceOf): TabValue[] {
       const p = priceOf(item)
       if (p && p.chaos > 0) chaos += p.chaos * item.stack
     }
-    return { id: t.id, name: t.name, colour: t.colour ?? null, chaos }
+    return { id: t.id, name: t.name, type: t.type ?? '', colour: t.colour ?? null, chaos }
   })
 }
 
@@ -245,4 +245,24 @@ export function groupByRefresh (diffs: StashDiff[], n = 3): ChangeGroup[] {
     netChaos: d.netChaos,
     lines: rowsOf([d])
   }))
+}
+
+// ---------- table filters ----------
+
+export interface TableFilter { cat: Category | 'all', tab: string, query: string, minChaos: number }
+
+// One of category or tab at a time: picking one clears the other. Both at
+// once made "Currency" inside the Fragment tab, an empty table.
+export function pickFilter (f: TableFilter, pick: { cat: Category | 'all' } | { tab: string }): TableFilter {
+  if ('cat' in pick) return { ...f, cat: f.cat === pick.cat ? 'all' : pick.cat, tab: 'all' }
+  return { ...f, tab: pick.tab, cat: 'all' }
+}
+
+export function filterLines<L extends { category: Category, tabIds: string[], name: string, chaos: number }> (lines: L[], f: TableFilter): L[] {
+  const q = f.query.trim().toLowerCase()
+  return lines.filter(l =>
+    (f.cat === 'all' || l.category === f.cat) &&
+    (f.tab === 'all' || l.tabIds.includes(f.tab)) &&
+    (!q || l.name.toLowerCase().includes(q)) &&
+    l.chaos >= f.minChaos)
 }

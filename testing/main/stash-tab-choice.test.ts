@@ -44,6 +44,14 @@ describe('templates', () => {
     expect(names(chosenTabs({ template: 'league', ids: [] }, TABS))).toEqual(['Currency', 'Frags', 'Cards', '$ sell', '~price 1 chaos', '~b/o 1 divine', 'Dump', 'Gear'])
   })
 
+  it('map and unique tabs never fit: the site sends none of their items', () => {
+    for (const t of ['reasonable', 'currency', 'league'] as const) {
+      expect(fitsTemplate(t, tab(20, 'Maps', 'MapStash'))).toBe(false)
+      expect(fitsTemplate(t, tab(21, 'Uniques', 'UniqueStash'))).toBe(false)
+    }
+    expect(chosenTabs({ template: 'custom', ids: ['t20'] }, [tab(20, 'Maps', 'MapStash')])).toEqual([])
+  })
+
   it('remove-only tabs never fit, whatever their type', () => {
     for (const t of ['reasonable', 'currency', 'league'] as const) {
       expect(fitsTemplate(t, tab(0, 'Currency (Remove-only)', 'CurrencyStash'))).toBe(false)

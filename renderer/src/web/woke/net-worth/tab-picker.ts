@@ -51,11 +51,13 @@ export function ticksFor (list: TabList, picked: Picked, current: Set<string>): 
 // What to save: a template follows the tab list; ticks stay exactly those tabs.
 export function choiceOf (picked: Picked, ticked: Set<string>, tabs: PickerTab[]): TabChoice {
   if (picked.kind === 'template') return { template: picked.template, ids: [] }
-  const ids = tabs.filter(t => ticked.has(t.id)).map(t => t.id)
+  const ids = tabs.filter(t => ticked.has(t.id) && !UNREADABLE.has(t.type)).map(t => t.id)
   return picked.kind === 'set' ? { template: 'custom', ids, set: picked.name } : { template: 'custom', ids }
 }
 
 const PLAIN = new Set(['NormalStash', 'PremiumStash', 'QuadStash'])
+// Listed by the site, but it sends none of their items (tab-choice.ts in main).
+export const UNREADABLE = new Set(['MapStash', 'UniqueStash'])
 
 export type TabKind = 'all' | 'special' | 'plain' | 'ticked'
 export const KIND_OPTIONS: Array<{ value: TabKind, label: string }> = [

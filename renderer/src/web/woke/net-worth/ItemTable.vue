@@ -24,7 +24,11 @@
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
       </tr>
-      <tr v-if="!lines.length"><td colspan="7" class="w-dim" :class="$style.left">Nothing matches.</td></tr>
+      <tr v-if="!lines.length">
+        <td colspan="7" class="w-dim" :class="$style.left">
+          Nothing matches.<WButton v-if="filtered" size="sm" variant="ghost" @click="emit('clear')">Show all</WButton>
+        </td>
+      </tr>
       <tr v-if="more > 0"><td colspan="7" :class="$style.left"><WButton size="sm" variant="ghost" @click="limit += 200">{{ more }} more</WButton></td></tr>
     </tbody>
   </table>
@@ -47,7 +51,10 @@ const props = defineProps<{
   // 24h change by line key (D3), from poe.ninja.
   changes: Map<string, number | null>
   tabNames: Map<string, string>
+  // A filter is on: the empty row offers to clear it.
+  filtered?: boolean
 }>()
+const emit = defineEmits<{ (e: 'clear'): void }>()
 
 type Col = 'name' | 'count' | 'unit' | 'chaos' | 'share' | 'change' | 'tab'
 const COLS: Array<{ id: Col, label: string }> = [

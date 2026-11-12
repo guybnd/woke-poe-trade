@@ -4,7 +4,7 @@
     <template #actions>
       <span class="w-dim text-xs mr-2">{{ readLine }}</span>
       <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" @click="refresh">Refresh</WButton>
-      <WButton size="sm" variant="ghost" icon="fas fa-cog" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
+      <WButton size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
     </template>
     <template v-if="status?.error && !showPicker" #banner>
       <WBanner :tone="status.error.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
@@ -21,7 +21,7 @@
         <div>
           <div :class="$style.caps">Total</div>
           <div :class="$style.big" class="w-num">{{ div(v.chaos) }}<small>div</small></div>
-          <div class="w-dim text-xs">≈ {{ fmt(v.chaos) }} chaos · liquid {{ div(liquid) }} div</div>
+          <div class="w-dim text-xs">≈ {{ compact(v.chaos) }} chaos · liquid {{ div(liquid) }} div</div>
           <div v-if="goal" class="text-xs" :class="$style.goalLine">
             {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }} div ·
             <template v-if="eta.reached">reached</template>
@@ -78,21 +78,21 @@
         <div>
           <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
           <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
-            :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
+            :aria-pressed="cat === c.id" @click="pickCat(c.id)">
             <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num">{{ div(c.chaos) }}</b>
           </button>
         </div>
       </section>
 
       <!-- Tabs, filters, items -->
-      <WTabs v-model="tab" :options="tabOptions" :class="$style.tabs" />
+      <WTabs :model-value="tab" :options="tabOptions" :class="$style.tabs" @update:model-value="pickTab" />
       <section :class="$style.chips">
         <WField v-model="query" type="search" icon="fas fa-search" placeholder="Search items" :class="$style.search" />
-        <WChip clickable :active="cat === 'all'" @click="cat = 'all'">All</WChip>
-        <WChip v-for="c in CATEGORIES" :key="c.id" clickable :active="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">{{ c.label }}</WChip>
+        <WChip clickable :active="cat === 'all'" @click="pickCat('all')">All</WChip>
+        <WChip v-for="c in CATEGORIES" :key="c.id" clickable :active="cat === c.id" @click="pickCat(c.id)">{{ c.label }}</WChip>
         <WChip v-if="divine" clickable :active="hideSmall" @click="hideSmall = !hideSmall">Hide &lt; {{ fmt(hideBelow) }} div</WChip>
       </section>
-      <ItemTable :lines="tableLines" :divine="divine" :changes="changes" :tab-names="tabNames" />
+      <ItemTable :lines="tableLines" :filtered="cat !== 'all' || tab !== 'all' || !!query.trim() || hideSmall" @clear="clearFilters" :divine="divine" :changes="changes" :tab-names="tabNames" />
 
       <div class="w-dim text-xs" :class="$style.foot">
         <span>
@@ -121,11 +121,12 @@ import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
-import { bigGains, change24h, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
-import type { ChartRange } from './ledger'
+import { bigGains, change24h, filterLines, pickFilter, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
+import type { ChartRange, TableFilter } from './ledger'
 import { divine, historyNow, leagueNow, ledger, summary, tabValues, valuation, wantPrices } from './store'
 import { hideBelowOf } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
+import { UNREADABLE } from './tab-picker'
 import LedgerChart from './LedgerChart.vue'
 import ItemTable from './ItemTable.vue'
 
@@ -169,6 +170,7 @@ watch(() => props.status?.league, () => { picked.value = false; picking.value = 
 
 // ---------- numbers ----------
 const fmt = (n: number) => formatAmount(n)
+const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatAmount(n)
 const toDiv = (chaos: number) => divine.value ? chaos / divine.value : chaos
 const div = (chaos: number) => {
   const d = toDiv(chaos)
@@ -236,6 +238,25 @@ function endSession () {
 // ---------- categories, tabs, filters ----------
 const cat = shallowRef<Category | 'all'>('all')
 const tab = shallowRef('all')
+// One filter at a time: a category or a tab, not both (both made "Currency"
+// inside the Fragment tab, which is empty).
+function apply (f: TableFilter) {
+  cat.value = f.cat
+  tab.value = f.tab
+}
+const filterNow = (): TableFilter => ({ cat: cat.value, tab: tab.value, query: query.value, minChaos: 0 })
+function pickCat (id: Category | 'all') {
+  apply(id === 'all' ? { ...filterNow(), cat: 'all', tab: 'all' } : pickFilter(filterNow(), { cat: id }))
+}
+function pickTab (id: string) {
+  apply(pickFilter(filterNow(), { tab: id }))
+}
+function clearFilters () {
+  cat.value = 'all'
+  tab.value = 'all'
+  query.value = ''
+  hideSmall.value = false
+}
 const query = shallowRef('')
 const hideSmall = shallowRef(false)
 const hideBelow = computed(() => hideBelowOf(props.config))
@@ -254,6 +275,9 @@ const tabOptions = computed(() => {
     { value: 'all', label: 'All', count: v.value ? div(v.value.chaos) : undefined },
     ...tabValues.value.map(t => {
       const change = prev[t.id] != null ? toDiv(t.chaos - prev[t.id]) : null
+      if (UNREADABLE.has(t.type)) {
+        return { value: t.id, label: t.name, count: 'not readable', colour: t.colour ?? undefined, title: "pathofexile.com sends none of this tab's items" }
+      }
       return {
         value: t.id,
         label: t.name,
@@ -267,15 +291,10 @@ const tabOptions = computed(() => {
 // A tab that's gone (tabs chosen again) shows them all.
 watch(tabOptions, (opts) => { if (!opts.some(o => o.value === tab.value)) tab.value = 'all' })
 
-const tableLines = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  const min = hideSmall.value && divine.value ? hideBelow.value * divine.value : 0
-  return (v.value?.lines ?? []).filter(l =>
-    (cat.value === 'all' || l.category === cat.value) &&
-    (tab.value === 'all' || l.tabIds.includes(tab.value)) &&
-    (!q || l.name.toLowerCase().includes(q)) &&
-    l.chaos >= min)
-})
+const tableLines = computed(() => filterLines(v.value?.lines ?? [], {
+  ...filterNow(),
+  minChaos: hideSmall.value && divine.value ? hideBelow.value * divine.value : 0
+}))
 
 // ---------- header and footer ----------
 const readLine = computed(() => {
