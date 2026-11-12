@@ -6,6 +6,14 @@
       <span>Hotkey: read every essence on screen once</span>
       <w-hotkey-cell v-model="onceHotkey" />
     </div>
+    <label class="flex items-center gap-2">
+      <input v-model="autoInMaps" type="checkbox">
+      <span>Start in maps: scan by itself in every map, stop in town and hideout</span>
+    </label>
+    <label class="flex items-center gap-2">
+      <input v-model="iconWhenOff" type="checkbox">
+      <span>Show the dock icon while the scan is off (click it to start)</span>
+    </label>
     <div>
       <div class="mb-1">Corrupt when the monolith holds any of these</div>
       <div class="flex flex-wrap gap-1">
@@ -23,7 +31,7 @@
     </label>
     <div class="flex items-center gap-2 text-sm" style="color: var(--w-dim);">
       How it decides
-      <w-info :text="'Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition, prices its essences from poe.ninja and says whether to corrupt it.\n\nIt compares what the monolith is worth now with an estimate of its worth after corrupting (minus a Vaal Orb), and says CORRUPT only when the estimate is higher. The odds of each corrupt outcome aren\'t published, so the estimate treats them as equally likely.\n\nWithout prices it falls back to the essences ticked here: Misery, Envy, Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting.\n\nIt only reads the screen; you still use the Remnant of Corruption yourself. It needs Windows and the OCR files.'" />
+      <w-info :text="'Essence scan reads the label of the essence monolith under your mouse with on-screen text recognition, prices its essences from poe.ninja and says whether to corrupt it.\n\nIt compares what the monolith is worth now with an estimate of its worth after corrupting (minus a Vaal Orb), and says CORRUPT only when the estimate is higher. The odds of each corrupt outcome aren\'t published, so the estimate treats them as equally likely.\n\nWithout prices it falls back to the essences ticked here: Misery, Envy, Dread or Scorn can turn into Horror, Hysteria, Insanity or Delirium, which only come from corrupting.\n\nScan mode reads the screen while your cursor rests, and only runs OCR when a label is there. With Start in maps on it runs in maps only.\n\nIt only reads the screen; you still use the Remnant of Corruption yourself. It needs Windows and the OCR files.'" />
     </div>
   </div>
 </template>
@@ -48,6 +56,8 @@ export default defineComponent({
       hotkey: configModelValue(() => props.configWidget, 'hotkey'),
       onceHotkey: configModelValue(() => props.configWidget, 'onceHotkey'),
       valueAlertChaos: configModelValue(() => props.configWidget, 'valueAlertChaos'),
+      autoInMaps: configModelValue(() => props.configWidget, 'autoInMaps'),
+      iconWhenOff: configModelValue(() => props.configWidget, 'iconWhenOff'),
       isFlagged: (t: string) => flagTypes.value.includes(t),
       toggleType: (t: string) => {
         flagTypes.value = flagTypes.value.includes(t)

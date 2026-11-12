@@ -1,18 +1,23 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <DockItem :menu="dockMenu" :wake="unseenCorrupt" id="essence-scan" title="Essence scan" :show="running || paused || !!message"
+    <DockItem :menu="dockMenu" :wake="unseenCorrupt" id="essence-scan" title="Essence scan" :show="running || paused || !!message || config.iconWhenOff"
+      :game-click="running ? undefined : startFromIcon"
       :led="message ? 'error' : paused ? 'warn' : running ? 'on' : null" :badge="unseenCorrupt || null"
       :wm-id="config.wmId" card-width="18rem" @open-change="onCard">
       <template #card>
         <div v-if="message" class="w-warn text-xs px-3 pt-2">{{ message }}</div>
         <div v-else-if="paused" class="w-dim text-xs px-3 pt-2">Paused while the map scan runs. It resumes when that stops.</div>
+        <div v-else-if="!running" class="w-dim text-xs px-3 pt-2">
+          Off. <template v-if="config.autoInMaps">Starts by itself in your next map, or</template><template v-else>Start it with</template>
+          <template v-if="config.hotkey"> <WKbd :keys="config.hotkey" /> or</template> a click on the icon.
+        </div>
         <div v-for="e in recent.slice(0, 5)" :key="e.id" :class="[$style.entry, $style[e.rated.verdict]]">
           <span :class="$style.tag">{{ VERDICT_LABEL[e.rated.verdict] }}</span>
           <span class="flex-1 w-trunc">{{ entryLabel(e) }}</span>
           <WPrice :chaos="e.rated.totalChaos || null" :divine="divine" />
         </div>
-        <div v-if="!entries.length" class="w-dim text-xs px-3 py-2">Hover an essence monolith.</div>
-        <div v-if="config.hotkey" class="w-faint text-xs px-3 py-1"><WKbd :keys="config.hotkey" /> to stop</div>
+        <div v-if="running && !entries.length" class="w-dim text-xs px-3 py-2">Hover an essence monolith.</div>
+        <div v-if="running && config.hotkey" class="w-faint text-xs px-3 py-1"><WKbd :keys="config.hotkey" /> to stop</div>
       </template>
     </DockItem>
     <WPanel ref="panel" :title="config.wmTitle || 'Essence scan'" icon="essence" width="19rem">
@@ -31,6 +36,7 @@
       </div>
       <WEmpty v-if="!entries.length" :art="{ mechanic: 'essence' }">
         <template v-if="running">Hover a monolith to price it. CORRUPT marks one with {{ flagText }}.</template>
+        <template v-else-if="config.autoInMaps">Starts by itself when you enter a map<template v-if="config.hotkey">, or press <WKbd :keys="config.hotkey" /></template>.</template>
         <template v-else-if="config.hotkey">Press <WKbd :keys="config.hotkey" /> in game to start scanning.</template>
         <template v-else>Start scanning, then hover essence monoliths.</template>
       </WEmpty>
@@ -97,7 +103,7 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, shallowRef } from 'vue'
+import { computed, inject, onUnmounted, shallowRef, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -108,6 +114,7 @@ import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { dockIconEl, hideWhilePlaying } from '../dock/dock'
 import { usePriceIndex } from '../market/price-index'
+import { useZone } from '../shared/zone'
 import { parseMonolith, rateMonolith, shortEssenceName } from './essences'
 import type { EssenceVerdict, PricedMonolith } from './essences'
 import { initEssenceScanWidget, normalizeEssenceScanWidget, parseEssenceHotkeyTarget } from './widget'
@@ -270,11 +277,20 @@ const events = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data })
   }
 })
 
+// Started by entering a map: stops again in town or hideout. Stopped by hand
+// in a map: stays off until the next one.
+let autoStarted = false
+let userStoppedSeed: string | null = null
+const zone = useZone()
+
 async function toggle () {
   message.value = null
+  const stopping = running.value && !paused.value
+  autoStarted = false
+  userStoppedSeed = stopping && zone.kind === 'map' ? zone.seed : null
   try {
     // Paused for the other scan mode: the hotkey takes the screen back.
-    if (running.value && !paused.value) {
+    if (stopping) {
       await hostRequest('essence-scan-stop', null)
       running.value = false
       current.value = null
@@ -288,6 +304,35 @@ async function toggle () {
     wm.show(props.config.wmId)
   }
 }
+
+function startFromIcon () {
+  if (!running.value) toggle().catch(() => {})
+}
+
+// Quiet on purpose: a failed auto start shows on the icon, never a panel over
+// the game, and isn't tried again until the setting or the app restarts.
+let autoFailed = false
+watch(() => [zone.kind, zone.seed, props.config.autoInMaps] as const, async ([kind, seed, auto]) => {
+  if (kind === 'map') {
+    if (!auto || autoFailed || running.value || seed === userStoppedSeed) return
+    try {
+      await hostRequest('essence-scan-start', null)
+      running.value = true
+      autoStarted = true
+    } catch (err) {
+      autoFailed = true
+      message.value = err instanceof Error ? err.message : String(err)
+    }
+  } else if (kind === 'town' || kind === 'hideout') {
+    userStoppedSeed = null
+    if (!autoStarted || !running.value) return
+    autoStarted = false
+    await hostRequest('essence-scan-stop', null).catch(() => {})
+    running.value = false
+    current.value = null
+  }
+}, { immediate: true })
+watch(() => props.config.autoInMaps, () => { autoFailed = false })
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 function clear (from?: Event | 'icon') {
