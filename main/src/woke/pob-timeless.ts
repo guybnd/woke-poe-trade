@@ -107,6 +107,8 @@ export interface TimelessData {
   additionCount: number
   // Where the seed tables are.
   dir: string
+  // NodeIndexMapping.lua's mtime: cached seeds are only good for this load.
+  version: number
 }
 
 // Reads a Lua table literal as PoB writes its data files: tables, strings,
@@ -241,7 +243,7 @@ export function pobDirs (pobExe?: string): string[] {
 
 const dataCache = new Map<string, { mtime: number, data: Promise<TimelessData | null> }>()
 
-async function loadData (dir: string): Promise<TimelessData | null> {
+async function loadData (dir: string, version: number): Promise<TimelessData | null> {
   const tables = path.join(dir, 'Data', 'TimelessJewelData')
   const [mapping, legion] = await Promise.all([
     fs.readFile(path.join(tables, 'NodeIndexMapping.lua'), 'utf8'),
@@ -259,7 +261,7 @@ async function loadData (dir: string): Promise<TimelessData | null> {
     if (c) additionCount = Number(c[1])
   } catch {}
   if (!m.size || !nodes.length || !additions.length) return null
-  return { ...m, nodes, additions, additionCount, dir: tables }
+  return { ...m, nodes, additions, additionCount, dir: tables, version }
 }
 
 export async function findTimelessData (pobExe?: string): Promise<TimelessData | null> {
@@ -270,7 +272,7 @@ export async function findTimelessData (pobExe?: string): Promise<TimelessData |
     } catch { continue }
     let cached = dataCache.get(dir)
     if (!cached || cached.mtime !== mtime) {
-      cached = { mtime, data: loadData(dir).catch(() => null) }
+      cached = { mtime, data: loadData(dir, mtime).catch(() => null) }
       dataCache.set(dir, cached)
     }
     const data = await cached.data
@@ -279,8 +281,21 @@ export async function findTimelessData (pobExe?: string): Promise<TimelessData |
   return null
 }
 
+// Unpacks in flight, so asks that overlap share one copy of a table.
+const unpacking = new Map<string, Promise<Buffer | null>>()
+
+function readTable (dir: string, file: string): Promise<Buffer | null> {
+  const key = path.join(dir, file)
+  let p = unpacking.get(key)
+  if (!p) {
+    p = unpackTable(dir, file).finally(() => unpacking.delete(key))
+    unpacking.set(key, p)
+  }
+  return p
+}
+
 // A seed table, unpacked: one .zip, or .zip.part0, .part1 and so on.
-async function readTable (dir: string, file: string): Promise<Buffer | null> {
+async function unpackTable (dir: string, file: string): Promise<Buffer | null> {
   let packed: Buffer
   try {
     packed = await fs.readFile(path.join(dir, `${file}.zip`))
@@ -464,7 +479,6 @@ export async function timelessRewrites (ask: TimelessAsk): Promise<TimelessAnswe
   const jewels = Array.isArray(ask?.jewels) ? ask.jewels : []
   const data = await findTimelessData(typeof ask?.pobExe === 'string' ? ask.pobExe : undefined)
   if (!data) return { found: false, jewels: jewels.map(() => null) }
-  const tables = new Map<ConquerorType, Promise<Buffer | null>>()
   const out: TimelessAnswer['jewels'] = []
   for (const jewel of jewels) {
     const conquest = readConquest(Array.isArray(jewel?.mods) ? jewel.mods : [])
@@ -475,21 +489,28 @@ export async function timelessRewrites (ask: TimelessAsk): Promise<TimelessAnswe
     const nodes = (Array.isArray(jewel.nodes) ? jewel.nodes : []).filter(n => Number.isInteger(n?.id))
     // Glorious Vanity reads its table for every passive; the others only for notables.
     const needs = nodes.filter(n => n.kind === 'notable' || (n.kind === 'small' && conquest.type === 'vaal'))
-    const key = (id: number) => `${data.dir}|${conquest.type}|${conquest.seed}|${id}`
-    const missing = needs.filter(n => !seedCache.has(key(n.id)))
+    const key = (id: number) => `${data.dir}|${data.version}|${conquest.type}|${conquest.seed}|${id}`
+    // This jewel's seeds, kept here so filling the cache can't drop them.
+    const seeds = new Map<number, number[]>()
+    const missing: TimelessNode[] = []
+    for (const n of needs) {
+      const hit = seedCache.get(key(n.id))
+      if (hit) seeds.set(n.id, hit)
+      else missing.push(n)
+    }
     if (missing.length) {
-      let table = tables.get(conquest.type)
-      if (!table) tables.set(conquest.type, table = readTable(data.dir, t.file))
-      const buf = await table
+      const buf = await readTable(data.dir, t.file)
       if (!buf) { out.push(null); continue }
       for (const n of missing) {
+        const d = readSeed(data, buf, conquest.type, conquest.seed, n.id)
+        seeds.set(n.id, d)
         if (seedCache.size >= SEED_CACHE_MAX) seedCache.delete(seedCache.keys().next().value!)
-        seedCache.set(key(n.id), readSeed(data, buf, conquest.type, conquest.seed, n.id))
+        seedCache.set(key(n.id), d)
       }
     }
     const result: Record<number, Rewrite> = {}
     for (const n of nodes) {
-      const r = rewriteNode(data, conquest, n, id => seedCache.get(key(id)) ?? [])
+      const r = rewriteNode(data, conquest, n, id => seeds.get(id) ?? [])
       if (r) result[n.id] = r
     }
     out.push(result)
