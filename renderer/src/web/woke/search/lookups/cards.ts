@@ -21,20 +21,30 @@ export interface Reward {
   text: string
 }
 
-const PRICED_TAGS = new Set(['uniqueitem', 'currencyitem', 'divination', 'gemitem'])
+const TAG_NS: Record<string, string> = { uniqueitem: 'UNIQUE', currencyitem: 'ITEM', divination: 'DIVINATION_CARD', gemitem: 'GEM' }
+// Uniques whose worth is in the roll: poe.ninja's row doesn't stand for them.
+const ROLLED = new Set(["Watcher's Eye", 'Forbidden Shako', 'Elegant Hubris', 'Glorious Vanity', 'Lethal Pride', 'Brutal Restraint', 'Militant Faith', 'Impossible Escape', 'Thread of Hope', 'Forbidden Flesh', 'Forbidden Flame', 'Sublime Vision', "Precursor's Emblem", 'Skin of the Lords', 'Grand Spectrum', 'Megalomaniac', 'Voices', 'Split Personality'])
+
+// Is this a real item of that kind, or a stand-in like "Jewel" or "Currency"?
+export type KnownItem = (ns: string, name: string) => boolean
 
 // "<uniqueitem>{Headhunter}" -> "Headhunter"; drops the tags.
 export function plainLine (line: string): string {
-  return line.replace(/<\w+>\{([^}]*)\}/g, '$1').replace(/\[[^\]|]*\|([^\]]*)\]/g, '$1').trim()
+  return unwrapSize(line).replace(/<[\w:]+>\s*\{([^}]*)\}/g, '$1').replace(/\[[^\]|]*\|([^\]]*)\]/g, '$1').trim()
 }
 
-export function parseReward (lines: string[]): Reward | null {
-  const first = /^<(\w+)>\{([^}]*)\}$/.exec(lines[0]?.trim() ?? '')
+// "<size:26>{<uniqueitem>{X}}" -> "<uniqueitem>{X}"
+function unwrapSize (line: string): string {
+  return line.trim().replace(/^<size:\d+>\{(.*)\}$/, '$1')
+}
+
+export function parseReward (lines: string[], known: KnownItem = () => true): Reward | null {
+  const first = /^<(\w+)>\s*\{([^}]*)\}$/.exec(unwrapSize(lines[0] ?? ''))
   if (!first) return null
   const [, tag, inner] = first
   const text = lines.map(plainLine).filter(Boolean).join(', ')
-  const qtyMatch = /^(\d+)x (.+)$/.exec(inner)
-  const qty = qtyMatch ? Number(qtyMatch[1]) : 1
+  const qtyMatch = /^([\d,]+)x (.+)$/.exec(inner)
+  const qty = qtyMatch ? Number(qtyMatch[1].replace(/,/g, '')) : 1
   let name = qtyMatch ? qtyMatch[2] : inner
   const rest = lines.slice(1).map(plainLine)
   if (tag === 'gemitem') {
@@ -43,16 +53,20 @@ export function parseReward (lines: string[]): Reward | null {
     name = gem[2]
     const quality = rest.map(l => /^Quality: \+(\d+)%$/.exec(l)?.[1]).find(Boolean) ?? '0'
     const corrupted = rest.includes('Corrupted')
-    const known = rest.every(l => /^Quality: /.test(l) || l === 'Corrupted')
-    return { name, qty, variant: `${gem[1]}/${quality}${corrupted ? 'c' : ''}`, priceable: known, text }
+    const plain = rest.every(l => /^Quality: /.test(l) || l === 'Corrupted')
+    // poe.ninja's gem names: "21/20c", "21c", "4", quality 16-20 counted as 20.
+    const q = Number(quality)
+    const variant = `${gem[1]}${q ? `/${q >= 16 && q <= 20 ? 20 : q}` : ''}${corrupted ? 'c' : ''}`
+    return { name, qty, variant, priceable: plain && known('GEM', name), text }
   }
-  return { name, qty, priceable: PRICED_TAGS.has(tag) && rest.length === 0, text }
+  const ns = TAG_NS[tag]
+  return { name, qty, priceable: !!ns && rest.length === 0 && !ROLLED.has(name) && known(ns, name), text }
 }
 
-export function cardCard (name: string, info: CardInfo, ctx: LookupContext): LookupCard {
+export function cardCard (name: string, info: CardInfo, ctx: LookupContext, known?: KnownItem): LookupCard {
   const each = ctx.price(name)
   const set = each == null ? null : each * info.stack
-  const reward = parseReward(info.lines)
+  const reward = parseReward(info.lines, known)
   const rewardEach = reward?.priceable ? ctx.price(reward.name, reward.variant) : null
   const rewardValue = rewardEach == null ? null : rewardEach * reward!.qty
   const rows: LookupRow[] = [
@@ -60,7 +74,8 @@ export function cardCard (name: string, info: CardInfo, ctx: LookupContext): Loo
     { label: `Full set: ${info.stack} cards`, chaos: set }
   ]
   if (reward) {
-    rows.push({ label: `Reward: ${reward.text}`, ...(rewardValue != null ? { chaos: rewardValue } : { value: 'No fixed price', dim: true }), item: reward.priceable ? { name: reward.name } : undefined })
+    const why = reward.priceable ? 'No poe.ninja price' : 'No fixed price'
+    rows.push({ label: `Reward: ${reward.text}`, ...(rewardValue != null ? { chaos: rewardValue } : { value: why, dim: true }), item: reward.priceable ? { name: reward.name } : undefined })
   }
   let verdict = 'No price to compare'
   if (set != null && rewardValue != null) {
@@ -90,10 +105,10 @@ export function cardCard (name: string, info: CardInfo, ctx: LookupContext): Loo
 }
 
 // Cards by name, and the cards that turn into an item you typed.
-export function cardLookup (cards: ReadonlyMap<string, CardInfo>): Lookup {
+export function cardLookup (cards: ReadonlyMap<string, CardInfo>, known?: KnownItem): Lookup {
   const byReward = new Map<string, string[]>()
   for (const [name, info] of cards) {
-    const r = parseReward(info.lines)
+    const r = parseReward(info.lines, known)
     if (!r?.priceable) continue
     const list = byReward.get(r.name) ?? []
     list.push(name)
@@ -106,13 +121,14 @@ export function cardLookup (cards: ReadonlyMap<string, CardInfo>): Lookup {
       if (rank >= 0 && rank < 2) hits.set(name, rank)
     }
     for (const [reward, names] of byReward) {
-      if (matchRank(reward, query) !== 0) continue
+      // Most of the name, so "ex" or "div" don't list every currency card.
+      if (matchRank(reward, query) !== 0 || query.trim().length < reward.length * 0.6) continue
       for (const n of names) if (!hits.has(n)) hits.set(n, 2)
     }
     return [...hits]
       .filter(([name]) => ctx.price(name) != null)
       .sort((a, b) => a[1] - b[1])
       .slice(0, 4)
-      .map(([name]) => cardCard(name, cards.get(name)!, ctx))
+      .map(([name]) => cardCard(name, cards.get(name)!, ctx, known))
   }
 }
