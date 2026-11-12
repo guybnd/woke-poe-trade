@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-208
 title: 'Stash reader opt-in: hidden experimental Net worth toggle'
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -51,8 +51,27 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-12T02:26:52.600Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Shipped in #339 (hidden experimental opt-in with a warning). Follow-ups
+      #341 and #342 are merged too.
+    completionComment: true
+    date: '2026-11-12T10:15:10.641Z'
+    id: c-2026-11-12t10-15-10-641z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-12T10:15:11.270Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/339'
 needsAction: null
 reviewState: approved
+baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
+swimlane: null
+diffSummary:
+  - file: scripts/upstream-data.mjs
+    additions: 21
+    deletions: 1
 ---
 Follow-up to #336. Hidden unlock (5 clicks on Economy heading in Settings > Modules), Net worth EXP row, confirm W2, warning box, runtime on/off (R1) in main + renderer, personal.flag stays as override, no code/listeners when off. Tests + SECURITY/README notes. Mockups: https://claude.ai/artifact/FW77Z6LYq4QH7hpoDDeJXi. Branch feat/stash-reader-optin in E:\Git\woke-stash-optin.
