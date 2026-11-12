@@ -90,11 +90,25 @@ it never mixes with a normal Awakened PoE Trade install. On first run it copies
 data from `%APPDATA%\awakened-poe-trade` when that folder belongs to an earlier
 build of this app (or just the settings when it's plain APT).
 
-1. Bump `version` in `main/package.json`.
-2. Push a tag `v<version>` (for example `v0.1.0`).
+1. Bump `version` in `main/package.json` (see **Version numbers** below).
+2. Push a tag `v<version>` (for example `v1.330.0`).
 3. `.github/workflows/release.yml` builds the Windows installer and uploads it
    to a **draft** release. Players and the auto-updater only see it once the
    draft is published on GitHub.
+
+### Version numbers
+
+From 3.30 on, versions are `major.LEAGUE.patch`, with the game's league patch
+written as a number: 3.30 is `330`, so its releases are `1.330.0`, `1.330.1`
+and so on, and a 4.0 league starts at `1.400.0`. The first release of a new
+league sets the middle number and resets the patch to 0; every release after
+it within the league raises the patch. The major number only changes for a
+break in the app itself. The releases before this scheme are 0.1.0 to 0.4.3;
+1.330.0 sorts after them, so installs update as usual.
+
+The release workflow refuses a version that doesn't follow this, and the
+game patch for saved search stamps (`GAME_PATCH` in
+`renderer/src/web/woke/shared/library.ts`) moves with the middle number.
 
 `npm run package` in `main/` downloads the OCR data into `main/build/cv-ocr`
 first (`build/fetch-ocr.mjs`), so map scan, essence scan and death recap work
@@ -128,3 +142,4 @@ By hand, once the league is out (one Event Horizon ticket each):
 - [ ] Mechanics cheat sheets and the Betrayal board (`woke/mechanics/`), boss areas (`woke/shared/boss-areas.ts`) and essences (`woke/essence-scan/essences.ts`) when the league changes them.
 - [ ] The last league's poe.ninja history file into the investment tool, once poe.ninja posts it.
 - [ ] Code that only a release ships (the four items above, client_strings.js): tag a patch release.
+- [ ] The league's first release: `<major>.<league>.0` (see **Version numbers**), and `GAME_PATCH` to the league's patch.

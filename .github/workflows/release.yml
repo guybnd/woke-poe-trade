@@ -46,6 +46,11 @@ jobs:
           echo "Tag $GITHUB_REF_NAME does not match main/package.json version $version"
           exit 1
         fi
+        # major.LEAGUE.patch: 3.30 is 1.330.x, a 4.0 league 1.400.x (DEVELOPING.md).
+        if [[ ! "$version" =~ ^[1-9][0-9]*\.[1-9][0-9]{2}\.(0|[1-9][0-9]*)$ ]]; then
+          echo "Version $version is not major.LEAGUE.patch (e.g. 1.330.0). See 'Version numbers' in DEVELOPING.md."
+          exit 1
+        fi
         echo "RELEASE_TAG=v$version" >> "$GITHUB_ENV"
     # One draft, made before packaging. electron-builder uploads the installer,
     # the portable exe and the blockmap at once, and with no release there yet
