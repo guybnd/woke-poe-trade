@@ -492,7 +492,12 @@ const gearStep = computed(() => {
 
 // ---- filter ----
 
-const filterWidget = computed(() => AppConfig().widgets.find(w => w.wmType === LOOT_FILTER_TYPE) as LootFilterWidget | undefined)
+// Until the Loot filter window has mounted once (it fills buildRules in), it
+// counts as not added.
+const filterWidget = computed(() => {
+  const w = AppConfig().widgets.find(w => w.wmType === LOOT_FILTER_TYPE) as LootFilterWidget | undefined
+  return w?.buildRules ? w : undefined
+})
 const FILTER_ROWS: Array<{ key: keyof BuildRuleSwitches, label: string }> = [
   { key: 'gems', label: 'Show my gems while levelling' },
   { key: 'links', label: 'Linked items in my colours while levelling' },
