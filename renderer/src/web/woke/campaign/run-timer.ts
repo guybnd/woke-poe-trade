@@ -176,30 +176,33 @@ export function idleCheck (run: CampaignRun, now: number): boolean {
   return true
 }
 
-// Game activity: wakes an idle-paused run, and drops a gap the app slept
-// through (closed overnight, say) the same way idleCheck would have.
-function activity (run: CampaignRun, now: number) {
+// Game activity (any Client.txt line): wakes an idle-paused run, never one
+// paused by hand, and drops a gap the app slept through (closed overnight,
+// say) the same way idleCheck would have.
+export function noteActivity (run: CampaignRun, now: number) {
   if (run.finished) return
-  if (idleCheck(run, now) || run.idlePaused) {
-    resumeRun(run, now)
-    run.idlePaused = false
-  }
-  run.lastActiveAt = now
+  if (idleCheck(run, now) || run.idlePaused) resumeRun(run, now)
+  if (run.runningSince != null) run.lastActiveAt = now
 }
 
 export function isRunning (run: CampaignRun | null): boolean {
   return run != null && !run.finished && run.runningSince != null
 }
 
+// A pause by hand (idleCheck marks its own pauses after this).
 export function pauseRun (run: CampaignRun, now: number) {
   if (run.runningSince == null) return
   run.elapsedMs = runElapsed(run, now)
   run.runningSince = null
+  run.idlePaused = false
 }
 
 export function resumeRun (run: CampaignRun, now: number) {
   if (run.runningSince != null || run.finished) return
   run.runningSince = now
+  // Resuming counts as activity, so the idle check doesn't pause it again.
+  run.lastActiveAt = now
+  run.idlePaused = false
 }
 
 export function finishRun (run: CampaignRun, now: number) {
@@ -273,7 +276,7 @@ export function applyRunEvent (
     }
     const run = w.run
     if (!run || run.finished) return false
-    activity(run, now)
+    noteActivity(run, now)
     // Town and hideout time: close the segment you're leaving, open the next.
     if (run.townSinceMs != null) {
       run.townMs = (run.townMs ?? 0) + Math.max(0, runElapsed(run, now) - run.townSinceMs)
@@ -305,8 +308,8 @@ export function applyRunEvent (
   const run = w.run
   if (!run || run.finished) return false
 
-  activity(run, now)
   if (ev.kind === 'zone') {
+    noteActivity(run, now)
     run.zone = ev.name
     run.zoneSinceMs = runElapsed(run, now)
     return true

@@ -178,7 +178,7 @@ import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
 import { actLabel } from './log-parse'
 import {
   applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
-  migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed, idleCheck
+  migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed, idleCheck, noteActivity
 } from './run-timer'
 import { CAMPAIGN_TYPE } from './widget'
 import type { CampaignWidget } from './widget'
@@ -287,6 +287,13 @@ function formatDate (ts: number) {
 function applyLines (lines: LogLine[]) {
   let changed = false
   for (const { ev, at, line } of lines) {
+    // Any line from the game is activity: chat, boss lines, trades.
+    const r = props.config.run
+    if (r) {
+      const idle = r.idlePaused
+      noteActivity(r, at)
+      if (idle && !r.idlePaused) changed = true
+    }
     if (ev ? applyRunEvent(props.config, ev, at) : applyBossSpeech(props.config, line, at)) changed = true
   }
   if (lines.length) props.config.lastLogAt = lines[lines.length - 1].at

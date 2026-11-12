@@ -215,3 +215,27 @@ describe('run timer: idle pause and town time', () => {
     expect(runElapsed(w.run!, 9 * MIN)).toBe(9 * MIN)
   })
 })
+
+describe('run timer: pauses by hand and by idling stay apart', () => {
+  it('resuming by hand counts as activity, and a pause by hand is never resumed by the log', async () => {
+    const { idleCheck, pauseRun, resumeRun, noteActivity, runElapsed, IDLE_MS } = await import('@/web/woke/campaign/run-timer')
+    const w = widget()
+    enter(w, '1_1_1', 0)
+    expect(idleCheck(w.run!, IDLE_MS + MIN)).toBe(true)
+    resumeRun(w.run!, 90 * MIN)
+    expect(idleCheck(w.run!, 91 * MIN)).toBe(false)
+    expect(runElapsed(w.run!, 91 * MIN)).toBe(MIN)
+    pauseRun(w.run!, 92 * MIN)
+    noteActivity(w.run!, 93 * MIN)
+    enter(w, '1_1_2', 94 * MIN)
+    expect(w.run!.runningSince).toBeNull()
+  })
+
+  it('any log line keeps a long zone from idling', async () => {
+    const { idleCheck, noteActivity } = await import('@/web/woke/campaign/run-timer')
+    const w = widget()
+    enter(w, '1_1_1', 0)
+    noteActivity(w.run!, 15 * MIN)
+    expect(idleCheck(w.run!, 30 * MIN)).toBe(false)
+  })
+})
