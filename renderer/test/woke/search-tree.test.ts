@@ -22,6 +22,10 @@ describe('treeLookup', () => {
     expect(lookup('bringer of ruin', ctx)[0].sub).toBe('Ascendancy notable')
     expect(lookup('lord of drought', ctx)[0].sub).toBe('Cluster jewel notable')
   })
+  it('keeps same-named nodes of each kind, and stat-less ascendancy notables', () => {
+    expect(lookup('sanctuary', ctx).map(c => c.sub)).toEqual(expect.arrayContaining(['Notable', 'Ascendancy notable']))
+    expect(lookup('coated blade', ctx)[0].name).toBe('Coated Blade')
+  })
   it('needs four letters, and lists no small passives', () => {
     expect(lookup('res', ctx)).toEqual([])
     expect(passives.some(p => p.name === 'Strength')).toBe(false)

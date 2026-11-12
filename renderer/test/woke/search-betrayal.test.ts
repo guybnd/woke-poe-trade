@@ -35,5 +35,7 @@ describe('betrayalLookup', () => {
   it('stays out of short or unrelated searches', () => {
     expect(betrayalLookup()('ai', ctx)).toEqual([])
     expect(betrayalLookup()('mageblood', ctx)).toEqual([])
+    expect(betrayalLookup()('scarab', ctx)).toEqual([])
+    expect(betrayalLookup()('crafting bench', ctx)).toEqual([])
   })
 })
