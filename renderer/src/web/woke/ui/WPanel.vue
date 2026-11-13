@@ -53,7 +53,6 @@ import { anchorShare, heightCap, resizeAxis, unzoom } from './panel-fit'
 import type { Box, ResizeSide } from './panel-fit'
 import WIcon from './WIcon.vue'
 import WKbd from './WKbd.vue'
-import { uiArt, wokeTheme } from './theme'
 import { fitTitle } from './title-fit'
 import { ago, freshness } from './format'
 
@@ -180,6 +179,7 @@ onBeforeUnmount(() => stopWatchingSize?.())
 // ---- Title bar in the game art: the crest never runs into the bar's buttons ----
 const head = ref<HTMLElement | null>(null)
 let headObserver: ResizeObserver | undefined
+let lookObserver: MutationObserver | undefined
 function refitTitle () { if (head.value) fitTitle(head.value) }
 onMounted(() => {
   if (!head.value) return
@@ -187,9 +187,14 @@ onMounted(() => {
   headObserver.observe(head.value)
   // The buttons can change width without the bar changing size.
   for (const el of head.value.children) headObserver.observe(el)
+  // A look switch (theme.ts sets these on the root). Watched on the page, not by
+  // importing theme.ts, which touches the document when it loads (and so breaks
+  // rendering a panel outside a browser, as the tests do).
+  lookObserver = new MutationObserver(() => nextTick(refitTitle))
+  lookObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-woke-art', 'data-woke-theme'] })
 })
-watch([uiArt, wokeTheme, () => props.title], () => nextTick(refitTitle))
-onBeforeUnmount(() => headObserver?.disconnect())
+watch(() => props.title, () => nextTick(refitTitle))
+onBeforeUnmount(() => { headObserver?.disconnect(); lookObserver?.disconnect() })
 
 function uiScale () {
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1

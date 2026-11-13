@@ -291,6 +291,19 @@ export default defineComponent({
       }
     }, { deep: true })
 
+    // woke: results on screen are stale whenever the query they came from differs
+    // from the one the filters make now. The watcher above misses a change made in
+    // the same tick as a search (a split while results load), which left old
+    // results showing as current with no Search button.
+    const searchedQuery = computed(() => searched.value && tradeAPI.value === 'trade'
+      ? JSON.stringify(createTradeRequest(searched.value.filters, searched.value.stats))
+      : null)
+    watch(() => searchedQuery.value != null ? JSON.stringify(createTradeRequest(itemFilters.value, itemStats.value)) : null, (now) => {
+      if (now != null && doSearch.value && searchedQuery.value != null && now !== searchedQuery.value) {
+        doSearch.value = false
+      }
+    })
+
     watch(() => [props.item, JSON.stringify(itemFilters.value.trade)], (curr, prev) => {
       const cItem = curr[0]; const pItem = prev[0]
       const cTrade = curr[1]; const pTrade = prev[1]

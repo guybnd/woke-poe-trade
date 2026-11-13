@@ -12,6 +12,8 @@ import { calculatedStatToFilter } from '@/web/price-check/filters/create-stat-fi
 
 const isFilter = (s: FilterOrGroup): s is StatFilter => !('group' in s && s.group)
 
+const anyCopy = (type: ModifierType) => type === ModifierType.Fractured || type === ModifierType.Crafted
+
 /** One filter per mod behind a pseudo total, with the mod's own roll. Mods of
  *  the same kind and stat (two prefixes both adding Fire Resistance) share one
  *  filter, summed as the price check sums them. */
@@ -21,8 +23,10 @@ export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: 
   const groups = new Map<string, StatSource[]>()
   for (const source of pseudo.sources) {
     // A fractured mod searches any copy, as the total did (and as splitByMod does).
+    // A crafted one too: the total counted it, and a crafted-only search misses
+    // every item with the same mod rolled.
     let type = source.modifier.info.type
-    if (type === ModifierType.Fractured && source.stat.stat.trade.ids[ModifierType.Explicit]) type = ModifierType.Explicit
+    if (anyCopy(type) && source.stat.stat.trade.ids[ModifierType.Explicit]) type = ModifierType.Explicit
     const key = `${type}|${source.stat.stat.ref}`
     if (shown.has(key)) continue
     const roll = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
@@ -37,7 +41,7 @@ export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: 
   for (const sources of groups.values()) {
     const filter = calculatedStatToFilter({
       stat: sources[0].stat.stat,
-      type: (sources[0].modifier.info.type === ModifierType.Fractured && sources[0].stat.stat.trade.ids[ModifierType.Explicit])
+      type: (anyCopy(sources[0].modifier.info.type) && sources[0].stat.stat.trade.ids[ModifierType.Explicit])
         ? ModifierType.Explicit
         : sources[0].modifier.info.type,
       sources
