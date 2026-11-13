@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import { LIT_COLOURS, litColour } from '@/web/woke/atlas/mechanic-colours'
 import { atlasTotals, filterTotals } from '@/web/woke/atlas/totals'
 import { assetUrl, encodeAtlasTree, pathTo, pointsUsed, readAtlasTree, refundSet } from '@/web/woke/atlas/atlas-tree'
-import { decodeTree } from '@/web/woke/atlas/tree'
+import { decodeTree, expandShortTreeLinks } from '@/web/woke/atlas/tree'
 import { allFolders, claimRegexFolders, dropDraft, isDirty, restoreDrafts, sameTree, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, folderTree, freeRegexFolder, movedFolder, regexFolderOf, emptyStrategy } from '@/web/woke/atlas/strategies'
 import { readStrategyCode, strategyCode } from '@/web/woke/atlas/strategy-code'
 import type { AtlasStrategy } from '@/web/woke/atlas/strategies'
@@ -92,6 +92,18 @@ describe('atlas tree model', () => {
     expect(() => decodeTree('https://poeplanner.com/atlas-tree/' + btoa('\xff\xff\x00\x00\x00\x01\x00'))).toThrow()
     expect(() => decodeTree('BQAeAAD_AF17')).toThrow()
     expect(() => decodeTree(url.replace('/atlas-tree/', '/'))).toThrow()
+  })
+
+  it('opens poeplanner short links through its API', async () => {
+    const asked: string[] = []
+    const fetchText = async (url: string) => { asked.push(url); return 'BQAeAAABAF17\n' }
+    const out = await expandShortTreeLinks('Tree: https://poeplanner.com/a/6ROH and again poeplanner.com/x', fetchText)
+    expect(asked).toEqual(['api.poeplanner.com/api/b/6ROH'])
+    expect(out).toBe('Tree: https://poeplanner.com/atlas-tree/BQAeAAABAF17 and again poeplanner.com/x')
+    expect(decodeTree(out.split(' ')[1]).nodes).toEqual([31581])
+    expect(await expandShortTreeLinks('no links', fetchText)).toBe('no links')
+    await expect(expandShortTreeLinks('https://poeplanner.com/a/NOPE', async () => '<html>not found</html>')).rejects.toThrow(/NOPE/)
+    await expect(expandShortTreeLinks('https://poeplanner.com/a/DOWN', async () => { throw new Error('503') })).rejects.toThrow(/DOWN/)
   })
 
   it('reads the art from the export repository beside data.json', () => {

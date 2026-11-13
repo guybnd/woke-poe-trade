@@ -10,6 +10,7 @@ const PROXY_HOSTS = [
   { host: 'poe.kakaogames.com', official: true },
   { host: 'poe.ninja', official: false },
   { host: 'www.poeprices.info', official: false },
+  { host: 'api.poeplanner.com', official: false },
 ]
 
 export class HttpProxy {

@@ -24,7 +24,7 @@
                 <option value="">The top</option>
                 <option v-for="f in folders" :key="f" :value="f">{{ f.split('/').join(' › ') }}</option>
               </select>
-              <WButton size="sm" variant="primary" :disabled="!importText.trim()" @click="doImport">Import</WButton>
+              <WButton size="sm" variant="primary" :disabled="!importText.trim() || importing" @click="doImport">Import</WButton>
             </div>
             <div v-if="importError" class="w-down text-xs">{{ importError }}</div>
           </div>
@@ -107,7 +107,7 @@ import { usePriceIndex } from '../market/price-index'
 import { formatChaos } from '../ui/format'
 import { FARMING_TYPE, strategyStats } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
-import { extractTreeCode } from './tree'
+import { expandShortTreeLinks, extractTreeCode } from './tree'
 import { addRegex, joinFolder, libraryOn, regexesIn } from '../regex-library/folders'
 import { claimNewRegexFolder, copyRegexes, refileRegexes } from './strategy-ops'
 import { atlasTreePin } from './atlas-pin'
@@ -453,7 +453,16 @@ function fileImported (s: AtlasStrategy, regexes: Array<{ name: string, text: st
   }
 }
 
+// A short poeplanner link is opened while importing; no double import meanwhile.
+const importing = shallowRef(false)
+async function fetchProxied (url: string): Promise<string> {
+  const res = await MainProcess.proxy(url)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return await res.text()
+}
+
 async function doImport () {
+  if (importing.value) return
   importError.value = ''
   const text = importText.value.trim()
   if (!text) return
@@ -470,8 +479,10 @@ async function doImport () {
         added.push(s)
       }
     } else {
-      const lone = !/\s/.test(text) && extractTreeCode(text)
-      const parsed = lone ? { name: 'Imported tree', treeUrl: text } : parseGuideText(text)
+      importing.value = true
+      const full = await expandShortTreeLinks(text, fetchProxied).finally(() => { importing.value = false })
+      const lone = !/\s/.test(full) && extractTreeCode(full)
+      const parsed = lone ? { name: 'Imported tree', treeUrl: full } : parseGuideText(full)
       const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), ...parsed, folder: into }
       fileImported(s, [])
       props.config.strategies.push(s)

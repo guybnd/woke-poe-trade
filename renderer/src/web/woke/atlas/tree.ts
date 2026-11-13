@@ -80,6 +80,25 @@ export function decodeTree (input: string): DecodedTree {
   return { version, nodes, masteries }
 }
 
+// poeplanner's short atlas links (poeplanner.com/a/6ROH) only resolve
+// through its API, which answers with the full code as plain text.
+const SHORT_POEPLANNER = /https?:\/\/(?:www\.)?poeplanner\.com\/a\/([A-Za-z0-9]{1,32})\b/gi
+
+export async function expandShortTreeLinks (
+  text: string,
+  fetchText: (url: string) => Promise<string>
+): Promise<string> {
+  const short = [...new Set(Array.from(text.matchAll(SHORT_POEPLANNER), m => m[1]))]
+  const full = new Map<string, string>()
+  for (const id of short) {
+    let code = ''
+    try { code = (await fetchText(`api.poeplanner.com/api/b/${id}`)).trim() } catch {}
+    if (!/^[A-Za-z0-9_\-+/=]{8,8192}$/.test(code)) throw new Error(`Couldn't open the poeplanner link …/a/${id}`)
+    full.set(id, `https://poeplanner.com/atlas-tree/${code}`)
+  }
+  return text.replace(SHORT_POEPLANNER, (link, id: string) => full.get(id) ?? link)
+}
+
 // poeplanner.com/atlas-tree links, little-endian:
 //   u16 format version, u16 tree version, u8 (unused here),
 //   u16 count + u16 node ids, then a length-prefixed gzip blob
