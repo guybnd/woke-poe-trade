@@ -102,14 +102,15 @@ test('ticked stats get columns, coloured against the checked item', async ({ ove
   const fits = () => scroller.evaluate(el => el.scrollWidth <= el.clientWidth)
   expect(await fits()).toBe(true)
 
-  // A fifth ticked stat goes behind the header's +1, and the table still fits.
+  // A fifth ticked stat goes behind the header's +N, and the table still fits.
+  // (The Sockets column on six-socket bases leaves room for three stat columns here.)
+  await expect(panel.locator('thead th.w-pc-stat-head')).toHaveText(['ES', 'Res', 'Chaos', '+1'])
   await panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first().click()
   // Moving from a filter onto Search runs the search and removes the button,
   // so Playwright's click or hover would wait for it forever.
   const search = (await panel.getByRole('button', { name: 'Search' }).boundingBox())!
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
-  await expect(panel.locator('thead')).toContainText('+1')
-  await expect(panel.locator('thead th.w-pc-stat-head')).toHaveCount(5)
+  await expect(panel.locator('thead th.w-pc-stat-head')).toHaveText(['ES', 'Res', 'Chaos', '+2'])
   await overlay.snap('stat columns over the cap')
   expect(await fits()).toBe(true)
 })

@@ -11,7 +11,8 @@ test('the rail layout popup switches the theme', async ({ overlay }) => {
   await rail.hover()
   await overlay.widget('menu').getByRole('button', { name: 'Rail layout and size', exact: true }).click()
   const row = page.locator('[data-rail-theme]')
-  await expect(row.getByRole('button')).toHaveText(['Hybrid', 'Native', 'Modern', 'Classic'])
+  // One shared list: the game look with PoE 1's or PoE 2's art first, then the themes.
+  await expect(row.getByRole('button')).toHaveText(['PoE 1', 'PoE 2', 'Hybrid', 'Native', 'Modern', 'Classic'])
   expect(await theme(page)).toBe('hybrid')
   await row.getByRole('button', { name: 'Modern', exact: true }).click()
   expect(await theme(page)).toBe('modern')
@@ -42,7 +43,8 @@ test('the price check palette switches the look and the filter layout', async ({
 
   await palette.click()
   await expect(pop).toBeVisible()
-  await expect(pop.getByRole('button', { name: 'Hybrid' })).toHaveAttribute('aria-pressed', 'true')
+  // PoE 1's art is the default look.
+  await expect(pop.getByRole('button', { name: 'PoE 1' })).toHaveAttribute('aria-pressed', 'true')
   await expect(pop.getByRole('button', { name: 'Tooltip lines' })).toHaveAttribute('aria-pressed', 'true')
   await overlay.snap('price check style menu')
 
