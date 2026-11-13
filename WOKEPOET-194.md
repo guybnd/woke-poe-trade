@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-194
 title: 'Epic: PoB panel improvements (Guy''s 2026-11-11 list)'
-status: Grooming
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -16,6 +16,17 @@ history:
     date: '2026-11-11T06:41:06.027Z'
     comment: Created ticket.
     id: a-2026-11-11t06-41-06-027z
+  - type: comment
+    user: Agent
+    comment: All 11 subtasks (195-205) are Done. Board cleanup 2026-11-13.
+    date: '2026-11-13T01:45:07.503Z'
+    completionComment: true
+    id: c-2026-11-13t01-45-07-503z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:45:07.503Z'
 subtasks:
   - WOKEPOET-195
   - WOKEPOET-196
@@ -28,6 +39,7 @@ subtasks:
   - WOKEPOET-203
   - WOKEPOET-204
   - WOKEPOET-205
+needsAction: null
 ---
 > TL;DR: Guy's eight improvement ideas for the PoB build panel (thread 2026-11-11). Layout changes get mocks first; the hover and dropdown changes are built directly.
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-209
 title: 'Stash reader: pick which tabs to read, with templates'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -40,7 +40,25 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-12T03:27:16.149Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged as #345 (tab picker L1, T1-T4, F1, N1). Board cleanup 2026-11-13.'
+    completionComment: true
+    date: '2026-11-13T01:45:03.254Z'
+    id: c-2026-11-13t01-45-03-254z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:45:03.488Z'
 needsAction: null
+baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/345'
+swimlane: null
+diffSummary:
+  - file: scripts/upstream-data.mjs
+    additions: 21
+    deletions: 1
 ---
 Guy (2026-11-12): pick first which tabs to sync, with a couple of templates, one a "reasonable read". Follows #339/#341/#342. Mocks first (woke rule).
 

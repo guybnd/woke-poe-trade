@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-207
 title: 'Pins for PoB build and dock cards, smaller text, see-through pins'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -75,8 +75,25 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-12T01:36:49.137Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged as #338 (73b41410), live on master. Board cleanup 2026-11-13.'
+    completionComment: true
+    date: '2026-11-13T01:45:00.778Z'
+    id: c-2026-11-13t01-45-00-778z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:45:01.081Z'
 swimlane: null
 needsAction: null
+baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/338'
+diffSummary:
+  - file: scripts/upstream-data.mjs
+    additions: 21
+    deletions: 1
 ---
 Player feedback (Jacket, Discord): pin PoB build while buying/allocating, pin dock cards in maps, smaller text, see-through pinned tree, "hideout repo".
 
