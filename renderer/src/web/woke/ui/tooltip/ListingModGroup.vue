@@ -9,8 +9,8 @@
         <span :class="[$style.line, kindClass(line)]">
           <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else>{{ p.text }}</span></template>
           <template v-if="line.quality != null">
-            <i :class="$style.track"><i :style="{ width: `${line.quality}%`, background: rollColour(line.quality) }" /></i>
-            <span class="w-num" :class="$style.quality" :style="{ color: rollColour(line.quality) }">{{ line.quality }}%</span>
+            <i :class="$style.track" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }"><i :style="{ width: `${line.quality}%` }" /></i>
+            <span class="w-num" :class="$style.quality" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }">{{ line.quality }}%</span>
           </template>
         </span>
       </div>
@@ -90,7 +90,31 @@ function rollColour (quality: number) {
 .raw { color: #8888ff; font-family: var(--w-num); font-size: var(--w-fs-xs); vertical-align: super; line-height: 0; margin-left: 1px; }
 .range { color: var(--tip-range); font-family: var(--w-num); font-size: var(--w-fs-md); }
 .track { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.12); border-radius: 1px; }
-.track > i { display: block; height: 100%; }
+.track > i { display: block; height: 100%; background: var(--roll); }
 /* Hangs off the line's end, so the % doesn't push the text off centre. */
-.quality { position: absolute; left: 100%; bottom: 1px; margin-left: 5px; font-family: var(--w-num); font-size: var(--w-fs-xs); font-weight: 600; line-height: 1; white-space: nowrap; }
+.quality { position: absolute; left: 100%; bottom: 1px; margin-left: 5px; font-family: var(--w-num); font-size: var(--w-fs-xs); font-weight: 600; line-height: 1; white-space: nowrap; color: var(--roll); }
+
+/* PoE 1 / PoE 2 art: the same red to green in the game's dyes (blood, amber,
+ * jade) on a sunken track. A glow grows from about half a roll up, so a high
+ * roll stands out at a glance. */
+:global(:root[data-woke-art]) .line:has(> .track) { padding-bottom: 4px; }
+:global(:root[data-woke-art]) .track {
+  --dye: hsl(calc(4deg + var(--q) * 1.05deg) 52% 42%);
+  --glow: max(0, (var(--q) - 45) / 55);
+  bottom: -1px;
+  height: 4px;
+  overflow: visible;
+  background: #120d08;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px #000, 0 0 0 1px #3a2c18;
+}
+:global(:root[data-woke-art]) .track > i {
+  border-radius: 2px;
+  background: linear-gradient(rgba(255, 255, 255, 0.28), transparent 60%), var(--dye);
+  box-shadow: 0 0 calc(var(--glow) * 7px) calc(var(--glow) * 1px) hsl(calc(4deg + var(--q) * 1.05deg) 70% 55% / calc(var(--glow) * 0.85));
+}
+:global(:root[data-woke-art]) .quality {
+  color: hsl(calc(4deg + var(--q) * 1.05deg) 55% calc(52% + var(--glow) * 10%));
+  text-shadow: 0 0 calc(var(--glow) * 6px) hsl(calc(4deg + var(--q) * 1.05deg) 70% 55% / calc(var(--glow) * 0.7));
+}
 </style>
