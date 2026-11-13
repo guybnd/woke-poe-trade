@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-178
 title: Type the woke-request channel between overlay and main
-status: Todo
+status: Done
 priority: Low
 effort: M
 assignee: unassigned
@@ -42,7 +42,56 @@ history:
     to: Todo
     user: Agent
     date: '2026-11-13T03:03:03.802Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged in #408 (af34d082): woke-request channel typed from
+      ipc/woke-ops.ts.
+    date: '2026-11-13T03:29:12.635Z'
+    completionComment: true
+    id: c-2026-11-13t03-29-12-635z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-13T03:29:12.635Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      ipc/woke-ops.ts types hostRequest and main's handler table; wrong op or
+      args fail typecheck. No behaviour change. Merged in #408 (af34d082).
+    completionComment: true
+    date: '2026-11-13T03:29:19.924Z'
+    id: c-2026-11-13t03-29-19-924z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-13T03:29:20.313Z'
 needsAction: null
+reviewState: approved
+baselineCommit: 9747783386088b67140c621fed5865bf72798b69
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/408'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/mechanics/covens.ts
+    additions: 79
+    deletions: 0
+  - file: renderer/src/web/woke/mechanics/data.ts
+    additions: 17
+    deletions: 0
+  - file: renderer/src/web/woke/mechanics/guide.ts
+    additions: 6
+    deletions: 0
+  - file: renderer/src/web/woke/ui/game-icons.ts
+    additions: 2
+    deletions: 0
+  - file: renderer/test/woke/economy.test.ts
+    additions: 3
+    deletions: 0
+  - file: renderer/test/woke/mechanics-guide.test.ts
+    additions: 15
+    deletions: 0
 ---
 > **TL;DR** Type the `woke-request` IPC channel: one op map in `ipc/types.ts` drives both `hostRequest` and the main handler table, so a typo or wrong argument fails typecheck instead of at run time. No behaviour change.
 
