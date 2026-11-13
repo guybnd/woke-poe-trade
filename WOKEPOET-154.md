@@ -140,6 +140,17 @@ history:
       trophy). In `renderer/src/web/woke/mechanics/covens.ts`, move the "Other"
       trophies to their real slot from copies.
     id: a-2026-11-13t03-06-40-925z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T19:51:45.377Z'
+    comment: >-
+      Launch run on 2026-11-13, PR #423 (data version 7): 80 new stats, 2 new
+      ids, 221 reworded, 29 new items. Patch fixes found on the real data:
+      rolled numbers lose their sign in matchers ("+#%" becomes "#%"), the
+      exchange list is read before the item list, and map mods skip atlas "in
+      your Maps" wording (map-mods regex test). Not in the trade lists yet:
+      Viscera and the 11 new uniques. Rerun `check` in a day or two.
+    id: a-2026-11-13t19-51-45-377z
 swimlane: null
 needsAction: null
 ---

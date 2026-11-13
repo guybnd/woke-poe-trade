@@ -38,6 +38,17 @@ history:
       Head, Torso, Upper Limb and Lower Limb slots, per poedb's Covens page.
       Threads stack to 100.
     id: a-2026-11-13t02-43-46-045z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T19:51:47.827Z'
+    comment: >-
+      NeverSink 8.21.0a (3.30) is out. PR #424 adds the new `Fated` condition to
+      the validator. The real filter round-trips and validates clean, and uses
+      `UnidentifiedItemTier >= 4/5`. Viscera have their own `$type->viscera`
+      section with tiers t2/t3/t4; Threads sit in `$type->fragments`. Still to
+      do: a Viscera economy group once poe.ninja has a category for them (no
+      Covens data on poe.ninja yet at 19:45 UTC). The scarab group is now empty.
+    id: a-2026-11-13t19-51-47-827z
 ---
 > TL;DR: what our filter groups, drop table and safety net need for 3.30 items. Most of it lands through NeverSink's 3.30 filter; this ticket covers our own lists.
 
