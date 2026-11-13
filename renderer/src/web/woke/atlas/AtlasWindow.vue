@@ -176,7 +176,7 @@ const earnings = computed(() => {
 })
 
 function contentOf (s: AtlasStrategy): string {
-  return JSON.stringify({ ...s, folder: undefined, changedAt: undefined })
+  return JSON.stringify({ ...s, folder: undefined, regexFolder: undefined, changedAt: undefined })
 }
 watch(() => props.config.strategies.map(s => [s.id, contentOf(s)] as const), (now, before) => {
   const was = new Map(before)
@@ -184,8 +184,13 @@ watch(() => props.config.strategies.map(s => [s.id, contentOf(s)] as const), (no
   for (const [id, key] of now) {
     if (was.get(id) === key) continue
     const s = props.config.strategies.find(o => o.id === id)
-    if (s) s.changedAt = t
+    // New ones get a time; ones back from Undo keep theirs.
+    if (s && (was.has(id) || s.changedAt == null)) s.changedAt = t
   }
+  // Picked ids that went away, or were given to a new strategy, drop out.
+  const prev = new Set(was.keys())
+  const cur = new Set(now.map(([id]) => id))
+  if (picked.value.some(id => !prev.has(id) || !cur.has(id))) picked.value = picked.value.filter(id => prev.has(id) && cur.has(id))
 })
 
 const selected = computed(() => props.config.strategies.find(s => s.id === props.config.selectedId) ?? null)
@@ -235,10 +240,16 @@ const rows = computed<Row[]>(() => {
   walkAll(tree)
   if (editing.value?.target === 'folder' && editing.value.key.startsWith('n:')) {
     // A folder being made: where it will sit.
+    // At the end of its parent's contents, where folders go.
     const parent = editing.value.key.slice(2)
-    const at = parent ? out.findIndex(r => r.kind === 'folder' && r.node.path === parent) : -1
     const depth = parent ? parent.split('/').length : 0
-    out.splice(at + 1, 0, { kind: 'new-folder', key: editing.value.key, depth })
+    const head = parent ? out.findIndex(r => r.kind === 'folder' && r.node.path === parent) : -1
+    let at = out.length
+    if (head >= 0) {
+      at = head + 1
+      while (at < out.length && out[at].depth >= depth) at++
+    }
+    out.splice(at, 0, { kind: 'new-folder', key: editing.value.key, depth })
   }
   return out
 })
@@ -262,12 +273,16 @@ function isPicked (id: number) { return picked.value.length > 1 && picked.value.
 function groupOf (s: AtlasStrategy): AtlasStrategy[] {
   if (!isPicked(s.id)) return [s]
   const ids = new Set(picked.value)
-  return props.config.strategies.filter(o => ids.has(o.id))
+  const shown = new Set(rows.value.flatMap(r => r.kind === 'strategy' ? [r.s.id] : []))
+  return props.config.strategies.filter(o => ids.has(o.id) && shown.has(o.id))
 }
+watch(filter, () => { picked.value = [] })
 
 function rowClick (e: MouseEvent, s: AtlasStrategy) {
   if (e.ctrlKey || e.metaKey) {
-    const now = picked.value.length ? picked.value : (props.config.selectedId != null ? [props.config.selectedId] : [])
+    const sel = props.config.selectedId
+    const selShown = sel != null && rows.value.some(r => r.kind === 'strategy' && r.s.id === sel)
+    const now = picked.value.length ? picked.value : (selShown ? [sel] : [])
     picked.value = now.includes(s.id) ? now.filter(id => id !== s.id) : [...now, s.id]
     if (picked.value.includes(s.id)) props.config.selectedId = s.id
     return
@@ -301,6 +316,16 @@ function toManual () {
   toast('Sorted by My order', { anchor: panel.value?.el })
 }
 
+// For Alt + arrows: the rows as My order shows them, without switching yet.
+function manualRows (): Row[] {
+  const by = props.config.sortBy
+  if (sortBy.value === 'manual') return rows.value
+  props.config.sortBy = 'manual'
+  const out = rows.value
+  props.config.sortBy = by
+  return out
+}
+
 function moveTo (ids: number[], at: DropAt): boolean {
   const res = moveStrategies(props.config.strategies, ids, at)
   if (!res) return false
@@ -323,8 +348,10 @@ function moveFolderTo (from: string, at: DropAt) {
     return
   }
   // A moved folder is kept, so moving its last strategy out later doesn't remove it.
-  if (!(props.config.folders ?? []).includes(from)) props.config.folders = [...(props.config.folders ?? []), from]
-  if (res.to !== from) moveFolder(from, res.to)
+  if (res.to !== from) {
+    if (!(props.config.folders ?? []).includes(from)) props.config.folders = [...(props.config.folders ?? []), from]
+    moveFolder(from, res.to)
+  }
   props.config.folderOrder = placeFolder(fullFolderOrder(), res.to, res.before)
 }
 
@@ -373,13 +400,13 @@ function dropFor (e: DragEvent): DropAt | null {
   if (key.startsWith('f:')) {
     const path = key.slice(2)
     if (d.kind === 'folder' && isUnder(path, d.path)) return null
-    return { kind: 'folder', path, where: y < 0.3 ? 'before' : 'into' }
+    // A strategy goes into it: one dropped "before" would land above all the
+    // parent's folders, not where the line showed.
+    return { kind: 'folder', path, where: d.kind === 'folder' && y < 0.3 ? 'before' : 'into' }
   }
   const id = Number(key.slice(2))
-  if (d.kind === 'folder') {
-    const s = props.config.strategies.find(o => o.id === id)
-    if (!s || isUnder(cleanFolder(s.folder), d.path)) return null
-  }
+  // Folders sit after a folder's strategies, never between them.
+  if (d.kind === 'folder') return null
   return { kind: 'strategy', id, where: y < 0.5 ? 'before' : 'after' }
 }
 
@@ -417,6 +444,7 @@ function dropHere (e: DragEvent) {
     toManual()
     moveTo(d.ids, at)
   } else {
+    if (sortBy.value === 'name') toManual()
     moveFolderTo(d.path, at)
   }
 }
@@ -443,8 +471,7 @@ function rowKeys (e: KeyboardEvent, s: AtlasStrategy) {
   // Not the panel's arrow keys, which would move the focus off it.
   e.preventDefault()
   e.stopPropagation()
-  toManual()
-  const list = rows.value.filter(r => r.kind !== 'new-folder')
+  const list = manualRows().filter(r => r.kind !== 'new-folder')
   const i = list.findIndex(r => r.kind === 'strategy' && r.s.id === s.id)
   if (i < 0) return
   const folder = cleanFolder(s.folder)
@@ -460,7 +487,9 @@ function rowKeys (e: KeyboardEvent, s: AtlasStrategy) {
     if (next?.kind === 'strategy' && cleanFolder(next.s.folder) === folder) at = { kind: 'strategy', id: next.s.id, where: 'after' }
     else if (next?.kind === 'folder' && parentOf(next.node.path) === folder) at = { kind: 'folder', path: next.node.path, where: 'start' }
   }
-  if (at && moveTo([s.id], at)) focusRow('s:' + s.id)
+  if (!at) return
+  toManual()
+  if (moveTo([s.id], at)) focusRow('s:' + s.id)
 }
 
 function folderKeys (e: KeyboardEvent, path: string) {
@@ -575,7 +604,7 @@ function moveFolder (from: string, to: string) {
   }
   props.config.folders = (props.config.folders ?? []).map(f => movedFolder(f, from, to))
   props.config.closedFolders = (props.config.closedFolders ?? []).map(f => movedFolder(f, from, to))
-  if (props.config.folderOrder) props.config.folderOrder = props.config.folderOrder.map(f => movedFolder(f, from, to))
+  if (props.config.folderOrder) props.config.folderOrder = [...new Set(props.config.folderOrder.map(f => movedFolder(f, from, to)))]
   openFolder(to)
 }
 
