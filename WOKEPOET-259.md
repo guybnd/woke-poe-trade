@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-259
 title: 'N. Covens league mechanic: Wickerman trophies and Fates'
-status: Ready
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -70,8 +70,45 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-13T02:58:20.747Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 17991ca and live in the dev build (overlay renders over CDP).
+      The Covens card prices Wickerman trophies by slot. The launch-day
+      follow-ups move to WOKEPOET-154: file the 47 "Other" trophies by real
+      slot, switch the icon to trophy art, and drop the economy-test skip once
+      the data patch adds the trophies.
+    completionComment: true
+    date: '2026-11-13T03:06:39.078Z'
+    id: c-2026-11-13t03-06-39-078z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-13T03:06:39.309Z'
 swimlane: null
 needsAction: null
+baselineCommit: 9747783386088b67140c621fed5865bf72798b69
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/407'
+diffSummary:
+  - file: renderer/src/web/woke/mechanics/covens.ts
+    additions: 79
+    deletions: 0
+  - file: renderer/src/web/woke/mechanics/data.ts
+    additions: 17
+    deletions: 0
+  - file: renderer/src/web/woke/mechanics/guide.ts
+    additions: 6
+    deletions: 0
+  - file: renderer/src/web/woke/ui/game-icons.ts
+    additions: 2
+    deletions: 0
+  - file: renderer/test/woke/economy.test.ts
+    additions: 3
+    deletions: 0
+  - file: renderer/test/woke/mechanics-guide.test.ts
+    additions: 15
+    deletions: 0
 ---
 > TL;DR: a League mechanics card for Covens, the 3.30 league mechanic. The card's content waits on Guy's pick; trophy prices wait on poe.ninja.
 

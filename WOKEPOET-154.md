@@ -130,6 +130,16 @@ history:
       #406 merged (9747783). The ticket stays open: the launch-day run (check,
       then apply, then bump, then PR) is the remaining work.
     id: a-2026-11-13t02-53-21-041z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T03:06:40.925Z'
+    comment: >-
+      After the launch-day apply, also: in `renderer/test/woke/economy.test.ts`,
+      drop the Covens skip once Sirus' Head is in the data. In
+      `renderer/src/web/woke/ui/game-icons.ts`, give covens an item icon (a
+      trophy). In `renderer/src/web/woke/mechanics/covens.ts`, move the "Other"
+      trophies to their real slot from copies.
+    id: a-2026-11-13t03-06-40-925z
 swimlane: null
 needsAction: null
 ---
