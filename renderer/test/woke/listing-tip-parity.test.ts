@@ -60,6 +60,11 @@ describe('listing tooltip parity', () => {
     expect(eldritchMark(find(one, 'Flasks applied').eldritch!, null)).toEqual({ source: 'exarch', rank: 0, label: 'Searing Exarch implicit' })
   })
 
+  it('still names the altar of a roll the data lacks, by its stat', () => {
+    const odd = { ...ELDRITCH, implicitMods: [mod('10% of Physical Damage from Hits taken as Chaos Damage', 'implicit', '4129825612', undefined, undefined, '10', '10')] }
+    expect(eldritchMark(find(odd, 'taken as Chaos').eldritch!, TABLE)).toEqual({ source: 'eater', rank: 0, label: 'Eater of Worlds implicit' })
+  })
+
   it('draws enchants as enchants, apart from implicits', () => {
     expect(find(ELDRITCH, 'Explicit Defence').kind).toBe('enchant')
     expect(find(ELDRITCH, 'Flasks applied').kind).toBe('')

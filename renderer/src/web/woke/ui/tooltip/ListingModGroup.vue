@@ -6,7 +6,7 @@
       <template v-else-if="!chunk.heading"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></template>
     </span>
     <div :class="$style.middle">
-      <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}<img v-if="sourceOf(chunk)" :src="sourceOf(chunk)!.icon" :title="sourceOf(chunk)!.label" alt="" :class="$style.headIcon"><span :class="$style.headTags"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, $style.tagSm, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></span></div>
+      <div v-if="chunk.heading" :class="$style.heading"><img v-if="sourceOf(chunk)" :src="sourceOf(chunk)!.icon" :title="sourceOf(chunk)!.label" alt="" :class="$style.headIcon">{{ chunk.heading }}<span :class="$style.headTags"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, $style.tagSm, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></span></div>
       <div v-for="(line, l) in chunk.lines" :key="l">
         <span :class="[$style.line, kindClass(line)]" :title="line.label">
           <span v-if="corrupt(line)" :class="$style.corrupt" title="Corruption implicit" />
@@ -106,7 +106,7 @@ function rollColour (quality: number) {
 .middle { min-width: 0; }
 .heading { color: var(--w-dim); font-size: var(--w-fs-md); }
 .tags { display: inline-flex; gap: 2px; }
-.headIcon { display: inline-block; width: 15px; height: 15px; margin-left: 5px; vertical-align: -3px; }
+.headIcon { display: inline-block; width: 15px; height: 15px; margin-right: 5px; vertical-align: -3px; }
 .headTags { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: 1px; }
 .tag.tagSm { min-width: 0; padding: 0 3px; font-size: var(--w-fs-xs); line-height: 1.25; }
 .tag {

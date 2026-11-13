@@ -78,12 +78,13 @@ export function eldritchMark (key: EldritchKey, table: ImplicitTable | null): El
     const tier = only[3] === only[4] ? TIERS[only[3] - 1] : `${TIERS[only[3] - 1]} or ${TIERS[only[4] - 1]}`
     return { source, rank: only[3], label: `${tier} ${ALTAR[source]} implicit` }
   }
-  // Not in the data (or the table hasn't loaded): an item from one altar still says which.
-  if (key.altars.length === 1) {
-    const source = key.altars[0]
-    return { source, rank: 0, label: `${ALTAR[source]} implicit` }
-  }
-  return null
+  // A roll the data doesn't have (or the table hasn't loaded): the altar still
+  // shows when the item has one, or when the stat only ever comes from one.
+  const altars = new Set((table?.eldritch[key.stat] ?? []).map(r => r[2] ? 'eater' as const : 'exarch' as const))
+  const source = key.altars.length === 1
+    ? key.altars[0]
+    : altars.size === 1 ? [...altars][0] : null
+  return source && key.altars.includes(source) ? { source, rank: 0, label: `${ALTAR[source]} implicit` } : null
 }
 
 export interface ModSource {
