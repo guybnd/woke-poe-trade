@@ -13,7 +13,7 @@ export const useSessionStore = createGlobalState(() => {
 
   function load (force = false): Promise<void> {
     if (loading && !force) return loading
-    loading = hostRequest<SessionRecord[]>('sessions-list', {})
+    loading = (hostRequest('sessions-list', {}) as Promise<SessionRecord[]>)
       .then(list => {
         sessions.value = list.sort((a, b) => b.endedAt - a.endedAt)
         loaded.value = true

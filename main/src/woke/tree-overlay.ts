@@ -7,7 +7,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { fitTree, litProbes, MIN_SCORE, readScreen } from './tree-fit'
 import type { TreeFit, TreePoints } from './tree-fit'
 import { perfRecord } from './perf'
-import { TreeDrag } from './tree-drag'
+import { insideGame, TreeDrag } from './tree-drag'
 
 export type TreeOverlayEvent =
   | { kind: 'move', dx: number, dy: number }
@@ -131,6 +131,8 @@ export class TreeOverlay {
   private readonly onDown = (e: UiohookMouseEvent) => {
     // Left button drags the tree; anything else just gets checked after.
     if (e.button !== 1) return
+    // A drag on another monitor or window isn't on the tree.
+    if (!insideGame(this.poeWindow.bounds, e.x, e.y)) return
     clearTimeout(this.settleTimer)
     this.down = { x: e.x, y: e.y }
     this.moved = false

@@ -87,7 +87,7 @@ export const useDeathRecap = createGlobalState(() => {
   function load () {
     if (loaded || loading) return
     loading = true
-    hostRequest<{ deaths: DeathRecord[], runs: RunRecord[] }>('death-recap-read', {})
+    ;(hostRequest('death-recap-read', {}) as Promise<{ deaths: DeathRecord[], runs: RunRecord[] }>)
       .then(saved => {
         // Anything the log gave while this was loading is added in.
         const known = new Set(saved.deaths.map(d => d.id))

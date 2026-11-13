@@ -28,10 +28,11 @@ import { docHandlers } from './data-files'
 import { browsePath, pathStat } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
 import { initPersonal } from './personal'
+import type { WokeHandler, WokeHandlers, WokeOp } from '../../../ipc/woke-ops'
 
-type Handler = (args: any) => Promise<unknown> // eslint-disable-line @typescript-eslint/no-explicit-any
-
-const handlers: Record<string, Handler> = {
+// Typed by ipc/woke-ops.ts. Partial: some are added later (setup window,
+// screen readers, the stash reader while it's on).
+const handlers: Partial<WokeHandlers> = {
   'pob-list': listBuilds,
   'pob-read': readBuild,
   'pob-open': openBuild,
@@ -71,31 +72,32 @@ const handlers: Record<string, Handler> = {
 }
 
 // For main-process parts set up outside initWoke (setup window, crash reports).
-export function registerWokeHandler (op: string, handler: Handler): void {
-  handlers[op] = handler
+export function registerWokeHandler<K extends WokeOp> (op: K, handler: WokeHandler<K>): void {
+  (handlers as Record<K, WokeHandler<K>>)[op] = handler
 }
 
 export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameWindow, gameLog: GameLogWatcher): void {
-  handlers['game-log-tail'] = async (args) => await readGameLogTail(gameLog, args)
+  registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
   // Follow the running game's Client.txt (another drive, another Steam
   // library) instead of a stale copy in a default folder.
   poeWindow.onAttach(() => { gameLog.gameStarted().catch(() => {}) })
   for (const kind of [MAP_SCAN, ESSENCE_SCAN]) {
     const scanner = new ScreenScanner(server, logger, poeWindow, kind)
-    handlers[`${kind.topic}-start`] = async () => await scanner.start()
-    handlers[`${kind.topic}-stop`] = async () => scanner.stop()
-    handlers[`${kind.topic}-reread`] = async () => scanner.reread()
-    handlers[`${kind.topic}-status`] = async () => ({ running: scanner.isRunning, paused: scanner.isPaused, rolling: scanner.isRolling, auto: scanner.isAuto })
-    handlers[`${kind.topic}-auto-start`] = async () => await scanner.autoStart()
-    handlers[`${kind.topic}-auto-stop`] = async () => scanner.autoStop()
-    if (kind.canRoll) handlers[`${kind.topic}-roll`] = async () => await scanner.roll()
+    const topic = kind.topic
+    registerWokeHandler(`${topic}-start`, async () => await scanner.start())
+    registerWokeHandler(`${topic}-stop`, async () => scanner.stop())
+    registerWokeHandler(`${topic}-reread`, async () => scanner.reread())
+    registerWokeHandler(`${topic}-status`, async () => ({ running: scanner.isRunning, paused: scanner.isPaused, rolling: scanner.isRolling, auto: scanner.isAuto }))
+    registerWokeHandler(`${topic}-auto-start`, async () => await scanner.autoStart())
+    registerWokeHandler(`${topic}-auto-stop`, async () => scanner.autoStop())
+    if (kind.canRoll && topic === 'map-scan') registerWokeHandler('map-scan-roll', async () => await scanner.roll())
   }
-  handlers['essence-scan-once'] = async () => await readAllEssenceLabels(poeWindow)
-  handlers['area-mods-read'] = async (args) => await readAreaMods(poeWindow, Number(args?.delayMs) || 0)
+  registerWokeHandler('essence-scan-once', async () => await readAllEssenceLabels(poeWindow))
+  registerWokeHandler('area-mods-read', async (args) => await readAreaMods(poeWindow, Number(args?.delayMs) || 0))
   const stashWatch = new StashWatch(() => {
     server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'stash-clear', data: null } })
   })
-  handlers['stash-read'] = async () => {
+  registerWokeHandler('stash-read', async () => {
     const { width, height } = poeWindow.bounds
     if (!width || !height) return { found: false }
     const t0 = performance.now()
@@ -103,20 +105,20 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     perfRecord('Stash outlines: read', performance.now() - t0)
     if (res.found) stashWatch.start()
     return res
-  }
-  handlers['stash-watch-stop'] = async () => { stashWatch.stop(); return null }
+  })
+  registerWokeHandler('stash-watch-stop', async () => { stashWatch.stop(); return null })
 
   const treeOverlay = new TreeOverlay(poeWindow, (data) => {
     server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'tree-overlay', data } })
   })
-  handlers['tree-overlay-points'] = async (args) => { treeOverlay.setPoints(args); return null }
-  handlers['tree-overlay-fit'] = async (args) => treeOverlay.hasPoints ? treeOverlay.fit(args) : { ok: false, reason: 'no-points' }
-  handlers['tree-overlay-stop'] = async () => { treeOverlay.stop(); return null }
-  handlers['tree-overlay-tip'] = async (on) => { treeOverlay.watchTreeKey(on === true); return null }
+  registerWokeHandler('tree-overlay-points', async (args) => { treeOverlay.setPoints(args); return null })
+  registerWokeHandler('tree-overlay-fit', async (args) => treeOverlay.hasPoints ? treeOverlay.fit(args) : { ok: false, reason: 'no-points' })
+  registerWokeHandler('tree-overlay-stop', async () => { treeOverlay.stop(); return null })
+  registerWokeHandler('tree-overlay-tip', async (on) => { treeOverlay.watchTreeKey(on === true); return null })
 
   // The stash reader: off unless the player turned it on (or personal.flag).
   // Off, nothing is registered but these three answers.
-  const personalOps = new Set<string>()
+  const personalOps = new Set<WokeOp>()
   const personal = initPersonal({
     register: (op, handler) => {
       // Never over an always-on handler: turning it off would remove that one.
@@ -124,7 +126,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
         logger.write(`error [personal] ${op} is taken`)
         return
       }
-      handlers[op] = handler
+      registerWokeHandler(op, handler)
       personalOps.add(op)
     },
     unregister: (op) => {
@@ -134,13 +136,17 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     logger,
     gameLog
   })
-  handlers['personal-flag'] = async () => personal.state()
-  handlers['personal-set'] = async (args) => await personal.setOn(args?.on === true)
-  handlers['experimental-set'] = async (args) => await personal.setUnlocked(args?.unlocked === true)
+  registerWokeHandler('personal-flag', async () => personal.state())
+  registerWokeHandler('personal-set', async (args) => await personal.setOn(args?.on === true))
+  registerWokeHandler('experimental-set', async (args) => await personal.setUnlocked(args?.unlocked === true))
 
   server.onEventAnyClient('CLIENT->MAIN::woke-request', ({ id, op, args }) => {
     // Own keys only: an op like "constructor" must not reach Object.prototype.
-    const handler = Object.prototype.hasOwnProperty.call(handlers, op) ? handlers[op] : undefined
+    // The op and args come over a socket: the types in woke-ops.ts are what
+    // the overlay sends, and handlers still check what they rely on.
+    const handler = Object.prototype.hasOwnProperty.call(handlers, op)
+      ? handlers[op] as ((args: unknown) => Promise<unknown>) | undefined
+      : undefined
     const reply = (payload: { ok: boolean, data?: unknown, error?: string }) => {
       server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-response', payload: { id, ...payload } })
     }

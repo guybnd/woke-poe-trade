@@ -16,6 +16,7 @@ import type { Fetcher, HttpReply, ReaderStatus } from './stash-reader'
 import { TEMPLATES, deleteSet, fitsTemplate, readLeagueTabs, saveSet, setChoice } from './tab-choice'
 import type { TabChoice } from './tab-choice'
 import { WornReader } from './worn-items'
+import type { WokeHandler } from '../../../../ipc/woke-ops'
 
 export const PERSONAL_FLAG = 'personal.flag'
 
@@ -27,7 +28,6 @@ export function personalFlagOn (dir = app.getPath('userData')): boolean {
   }
 }
 
-type Handler = (args: any) => Promise<unknown> // eslint-disable-line @typescript-eslint/no-explicit-any
 
 export interface PersonalPrefs {
   experimental: boolean
@@ -35,8 +35,8 @@ export interface PersonalPrefs {
 }
 
 export interface PersonalContext {
-  register: (op: string, handler: Handler) => void
-  unregister: (op: string) => void
+  register: <K extends ReaderOp>(op: K, handler: WokeHandler<K>) => void
+  unregister: (op: ReaderOp) => void
   broadcast: (topic: string, data: unknown) => void
   logger: Logger
   gameLog: Pick<GameLogWatcher, 'onLines'>
@@ -66,6 +66,7 @@ export const READER_OPS = [
   'stash-tab-list', 'stash-tab-choice', 'stash-tab-set-save', 'stash-tab-set-delete',
   'worn-items'
 ] as const
+export type ReaderOp = typeof READER_OPS[number]
 
 const ids = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
 
@@ -221,7 +222,7 @@ function startReader (ctx: PersonalContext): () => void {
   const sameLeague = (args: { league?: unknown } | null | undefined) =>
     typeof args?.league === 'string' && args.league === reader.league ? args.league : null
 
-  const ops: Record<typeof READER_OPS[number], Handler> = {
+  const ops: { [K in ReaderOp]: WokeHandler<K> } = {
     'stash-auth-status': async (args) => await authStatus(args?.verify === true),
     'stash-sign-in': async () => {
       const account = await openSignIn((name) => {
@@ -285,7 +286,7 @@ function startReader (ctx: PersonalContext): () => void {
       return await worn.read(hint).catch((e: Error) => ({ error: e.message }))
     }
   }
-  for (const op of READER_OPS) ctx.register(op, ops[op])
+  for (const op of READER_OPS) ctx.register(op, ops[op] as WokeHandler<typeof op>)
 
   // Quiet read on entering the hideout, from the log watcher that already runs.
   const onLines = (lines: string[]) => {

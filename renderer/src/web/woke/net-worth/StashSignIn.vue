@@ -28,7 +28,7 @@ const opening = shallowRef(false)
 
 onMounted(async () => {
   try {
-    auth.value = await hostRequest<AuthStatus>('stash-auth-status', { verify: true })
+    auth.value = await hostRequest('stash-auth-status', { verify: true })
   } catch {} finally {
     checking.value = false
   }
@@ -38,14 +38,14 @@ async function signIn () {
   opening.value = true
   try {
     // Waits until the sign-in window closes.
-    auth.value = await hostRequest<AuthStatus>('stash-sign-in', null, 30 * 60_000)
+    auth.value = await hostRequest('stash-sign-in', null, 30 * 60_000)
   } catch {} finally {
     opening.value = false
   }
 }
 
 async function signOut () {
-  try { auth.value = await hostRequest<AuthStatus>('stash-sign-out', null) } catch {}
+  try { auth.value = await hostRequest('stash-sign-out', null) } catch {}
 }
 </script>
 

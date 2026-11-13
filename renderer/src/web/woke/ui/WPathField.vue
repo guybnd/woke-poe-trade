@@ -32,7 +32,7 @@ watch(() => props.modelValue, async (p) => {
   stat.value = null
   if (!p) return
   try {
-    const s = await hostRequest<Stat>('path-stat', { path: p }, 5000)
+    const s = await hostRequest('path-stat', { path: p }, 5000)
     if (my === seq) stat.value = s
   } catch {}
 }, { immediate: true })
@@ -49,7 +49,7 @@ const status = computed(() => {
 
 async function browse () {
   try {
-    const p = await hostRequest<string | null>('browse-path', {
+    const p = await hostRequest('browse-path', {
       kind: props.kind, defaultPath: props.modelValue || undefined, extensions: props.extensions
     }, 10 * 60_000)
     if (p) emit('update:modelValue', p)

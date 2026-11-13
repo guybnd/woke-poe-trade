@@ -143,7 +143,7 @@ async function findLog () {
   finding.value = true
   foundNone.value = false
   try {
-    const list = await hostRequest<FoundLog[]>('setup-game-logs', null, 60_000)
+    const list = await hostRequest('setup-game-logs', null, 60_000)
     found.value = list.slice(0, 4)
     foundNone.value = !list.length
   } catch {

@@ -85,7 +85,7 @@ async function load () {
   loading.value = true
   failed.value = ''
   try {
-    const r = await hostRequest<TabList | { error: string } | null>('stash-tab-list', null, 5 * 60_000)
+    const r = await (hostRequest('stash-tab-list', null, 5 * 60_000) as Promise<TabList | { error: string } | null>)
     const l = r && !('error' in r) ? r : null
     if (!l) failed.value = r && 'error' in r ? r.error : "Couldn't get your tab list."
     list.value = l
@@ -125,7 +125,8 @@ async function run (fn: () => Promise<void>) {
   try { await fn() } catch { error.value = "Couldn't save that. Try again." } finally { busy.value = false }
 }
 
-function takeSets (r: { sets: SavedSet[], choice: TabChoice | null } | null) {
+type SetsReply = { sets: SavedSet[], choice: TabChoice | null } | null
+function takeSets (r: SetsReply) {
   if (!r) throw new Error('league changed')
   if (list.value) list.value = { ...list.value, sets: r.sets, choice: r.choice }
 }
@@ -135,7 +136,7 @@ function saveAsSet () {
   const ids = [...ticked.value]
   const league = list.value?.league
   run(async () => {
-    takeSets(await hostRequest('stash-tab-set-save', { league, name, ids }))
+    takeSets(await hostRequest('stash-tab-set-save', { league, name, ids }) as SetsReply)
     picked.value = { kind: 'set', name }
     setName.value = ''
   }).catch(() => {})
@@ -143,7 +144,7 @@ function saveAsSet () {
 
 function removeSet (name: string) {
   run(async () => {
-    takeSets(await hostRequest('stash-tab-set-delete', { league: list.value?.league, name }))
+    takeSets(await hostRequest('stash-tab-set-delete', { league: list.value?.league, name }) as SetsReply)
     if (picked.value.kind === 'set' && picked.value.name === name) picked.value = { kind: 'custom' }
   }).catch(() => {})
 }

@@ -103,7 +103,7 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     if (hideAll) document.body.style.visibility = 'hidden'
     await nextTick()
     await frames(2)
-    const res = await hostRequest<FitReply>('tree-overlay-fit', { probes, fresh })
+    const res = await (hostRequest('tree-overlay-fit', { probes, fresh }) as Promise<FitReply>)
     if (hideAll) document.body.style.visibility = ''
     if (!on.value) return true
     if (!res.ok) {

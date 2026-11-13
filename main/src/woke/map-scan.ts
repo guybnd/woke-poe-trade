@@ -66,8 +66,8 @@ export interface MapScanReading {
 interface Rect { x: number, y: number, width: number, height: number }
 
 export interface ScannerKind {
-  // Event topic for the overlay, e.g. 'map-scan'.
-  topic: string
+  // Event topic for the overlay, and the start of its op names.
+  topic: 'map-scan' | 'essence-scan'
   // Shown in errors, e.g. 'Map scan mode'.
   name: string
   frameMs: number

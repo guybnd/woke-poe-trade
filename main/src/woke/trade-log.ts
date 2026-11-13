@@ -5,6 +5,7 @@
 // Layout: <userData>/woke-trades/<league>.json  (an array of trades)
 import path from 'path'
 import { dataDir, leagueName, listDir, readJsonStrict, writeAtomic, writeQueue } from './data-files'
+import type { WokeHandlers } from '../../../ipc/woke-ops'
 
 // Same as the renderer's TradeRecord (woke/trade/book.ts); kept loose here.
 interface TradeRecord { id: string, league: string, at: number, [k: string]: unknown }
@@ -32,9 +33,7 @@ async function readHistory (): Promise<OfferRecord[]> {
   return Array.isArray(list) ? list.filter((o): o is OfferRecord => o && typeof o.id === 'string') : []
 }
 
-type Args = Record<string, unknown>
-
-export const tradeLogHandlers: Record<string, (args: Args) => Promise<unknown>> = {
+export const tradeLogHandlers: Partial<WokeHandlers> = {
   'offer-history-list': async () => await readHistory(),
   'offer-history-add': async ({ offer }) => {
     const o = offer as OfferRecord

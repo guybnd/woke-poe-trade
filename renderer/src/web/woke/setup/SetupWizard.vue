@@ -235,7 +235,7 @@ const logChoice = shallowRef<string>(AppConfig().clientLog ?? '')
 async function findLogs () {
   searching.value = true
   try {
-    logs.value = await hostRequest<FoundLog[]>('setup-game-logs', {}, 60_000)
+    logs.value = await hostRequest('setup-game-logs', {}, 60_000)
   } catch {
     logs.value = []
   } finally {
@@ -246,7 +246,7 @@ findLogs()
 
 async function browse () {
   try {
-    const picked = await hostRequest<string | null>('setup-browse-log', {}, 10 * 60_000)
+    const picked = await hostRequest('setup-browse-log', {}, 10 * 60_000)
     if (picked) logChoice.value = picked
   } catch {}
 }
@@ -270,12 +270,12 @@ function setLanguage (id: Config['language']) {
 
 // ── Updates ────────────────────────────────────────────
 const prefs = shallowRef<Prefs | null>(null)
-hostRequest<Prefs>('setup-prefs', {}).then(p => { prefs.value = p }).catch(() => {})
+;(hostRequest('setup-prefs', {}) as Promise<Prefs>).then(p => { prefs.value = p }).catch(() => {})
 
 async function setPref (patch: Partial<Prefs>) {
   if (prefs.value) prefs.value = { ...prefs.value, ...patch }
   try {
-    prefs.value = await hostRequest<Prefs>('setup-prefs-set', patch)
+    prefs.value = await (hostRequest('setup-prefs-set', patch) as Promise<Prefs>)
   } catch {}
 }
 

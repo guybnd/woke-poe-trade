@@ -17,7 +17,7 @@ export const useDeckStore = createGlobalState(() => {
 
   function load (force = false): Promise<void> {
     if (loading && !force) return loading
-    loading = hostRequest<DeckRecord[]>('deck-sessions-list', {})
+    loading = (hostRequest('deck-sessions-list', {}) as Promise<DeckRecord[]>)
       .then(list => {
         // A save made while reading is kept.
         const known = new Set(list.map(r => r.id))

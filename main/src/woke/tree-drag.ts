@@ -4,6 +4,13 @@
 // front: each fit after a drag shows where the tree really stopped, and that
 // edge is kept (per zoom and window size) so later drags stop there too.
 
+// A press only drags the tree when it lands on the game. uiohook reports
+// physical pixels on Windows, the same space as the game window's bounds
+// (map-scan.ts and Shortcuts.ts compare them directly), so no DPI conversion.
+export function insideGame (b: { x: number, y: number, width: number, height: number }, x: number, y: number): boolean {
+  return b.width > 0 && b.height > 0 && x >= b.x && y >= b.y && x < b.x + b.width && y < b.y + b.height
+}
+
 // The tree fell this far (game px) short of the mouse: it hit an edge.
 const STOPPED_PX = 12
 

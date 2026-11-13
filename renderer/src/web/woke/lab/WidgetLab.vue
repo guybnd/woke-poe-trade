@@ -154,7 +154,7 @@ async function loadPeek (d: LabDifficulty, announce: boolean) {
   peekError.value = null
   peekDiff.value = d
   try {
-    const img = await hostRequest<string | null>('lab-layout-image', { url: urlFor(d) }, 20_000)
+    const img = await hostRequest('lab-layout-image', { url: urlFor(d) }, 20_000)
     if (peekDiff.value !== d) return
     if (img) {
       peekImg.value = img

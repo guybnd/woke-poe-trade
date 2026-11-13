@@ -84,10 +84,10 @@ async function loadLeague (id: string) {
   loadedFor = id
   prefsFor = null
   const [saved, cache, led, own] = await Promise.all([
-    hostRequest<NetWorthHistory | null>('doc-get', { collection: COLLECTION, key: id }).catch(() => null),
-    hostRequest<CachedStash | null>('stash-cache', { league: id }).catch(() => null),
-    hostRequest<Ledger | null>('doc-get', { collection: COLLECTION, key: ledgerKey(id) }).catch(() => null),
-    hostRequest<PricePrefs | null>('doc-get', { collection: COLLECTION, key: prefsKey(id) }).catch(() => undefined)
+    (hostRequest('doc-get', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => null),
+    (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
+    (hostRequest('doc-get', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => null),
+    (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined)
   ])
   if (loadedFor !== id) return
   history.value = { ...emptyHistory(), ...(saved ?? {}) }
@@ -101,7 +101,7 @@ async function loadLeague (id: string) {
 // After a read: value it, count it once, and diff it against the read before.
 async function countRead (id: string, readAt: number) {
   if (history.value.countedReadAt != null && history.value.countedReadAt >= readAt) return
-  stash.value = await hostRequest<CachedStash | null>('stash-cache', { league: id }).catch(() => stash.value)
+  stash.value = await (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => stash.value)
   const v = valuation.value
   if (!v || loadedFor !== id) return
   // A tab never read counts as empty: until every tab has been read once, a
@@ -112,8 +112,8 @@ async function countRead (id: string, readAt: number) {
   // The tabs read: a different choice (tab picker) isn't a gain or a loss.
   const tabs = tabSetOf(stash.value.tabs)
   const [before, beforeTabs] = await Promise.all([
-    hostRequest<Baseline | null>('doc-get', { collection: COLLECTION, key: baseKey }).catch(() => null),
-    hostRequest<string | null>('doc-get', { collection: COLLECTION, key: tabsKey }).catch(() => null)
+    (hostRequest('doc-get', { collection: COLLECTION, key: baseKey }) as Promise<Baseline | null>).catch(() => null),
+    (hostRequest('doc-get', { collection: COLLECTION, key: tabsKey }) as Promise<string | null>).catch(() => null)
   ])
   const since = history.value.countedReadAt
   let next = recordRead(history.value, v, divine.value, readAt)
@@ -156,7 +156,7 @@ export const pricePrefs = computed(() => prefs.value)
 // A failed read is tried again (before the next save or read).
 async function retryPrefs (id: string) {
   if (prefsFor === id || loadedFor !== id) return
-  const own = await hostRequest<PricePrefs | null>('doc-get', { collection: COLLECTION, key: prefsKey(id) }).catch(() => undefined)
+  const own = await (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined)
   if (own === undefined || loadedFor !== id) return
   prefs.value = cleanPrefs(own)
   prefsFor = id

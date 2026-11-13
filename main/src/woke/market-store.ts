@@ -8,6 +8,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { dataDir, readJson, safeName, writeAtomic } from './data-files'
+import type { WokeHandlers } from '../../../ipc/woke-ops'
 
 // Same as the renderer's types (market/types.ts); kept loose here.
 interface Snapshot { league: string, ts: number, items: unknown[], divine: number | null }
@@ -102,9 +103,7 @@ async function readSnapshot (league: string, ts: number): Promise<Snapshot | nul
   return await readJson<Snapshot>(path.join(leagueDir(league), 'snapshots', `${ts}.json`))
 }
 
-type Args = Record<string, unknown>
-
-export const marketHandlers: Record<string, (args: Args) => Promise<unknown>> = {
+export const marketHandlers: Partial<WokeHandlers> = {
   'market-save': async ({ snapshot, daily }) => {
     const snap = snapshot as Snapshot
     return await queued(snap.league, async () => {

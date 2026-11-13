@@ -62,7 +62,7 @@ const configNotice = computed(() => {
 })
 
 const crash = shallowRef<PendingCrash | null>(null)
-hostRequest<PendingCrash | null>('crash-pending', {}).then(c => { crash.value = c }).catch(() => {})
+hostRequest('crash-pending', {}).then(c => { crash.value = c }).catch(() => {})
 
 async function report () {
   const c = crash.value

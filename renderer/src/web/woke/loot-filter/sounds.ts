@@ -58,7 +58,7 @@ async function urlOf (id: string, dir: string): Promise<string | null> {
   const cached = dataUrls.get(key)
   if (cached) return cached
   try {
-    const got = await hostRequest<{ data: string, mime: string }>('filter-sound-read', { dir, name: id })
+    const got = await hostRequest('filter-sound-read', { dir, name: id })
     const url = `data:${got.mime};base64,${got.data}`
     dataUrls.set(key, url)
     return url
@@ -103,7 +103,7 @@ export async function installPackSounds (ids: Iterable<string>, dir: string): Pr
     if (!pack) continue
     const res = await fetch(packUrl(pack.file))
     if (!res.ok) continue
-    const got = await hostRequest<{ written: boolean }>('filter-sound-install', { dir, name: pack.file, data: toBase64(await res.arrayBuffer()) })
+    const got = await hostRequest('filter-sound-install', { dir, name: pack.file, data: toBase64(await res.arrayBuffer()) })
     if (got.written) written++
   }
   return written
@@ -122,7 +122,7 @@ export function customSoundsIn (doc: FilterDoc): string[] {
 
 export async function listFolderSounds (dir: string): Promise<string[]> {
   try {
-    return (await hostRequest<{ files: Array<{ name: string }> }>('filter-sounds', { dir })).files.map(f => f.name)
+    return (await hostRequest('filter-sounds', { dir })).files.map(f => f.name)
   } catch {
     return []
   }

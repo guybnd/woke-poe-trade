@@ -179,7 +179,7 @@ function estimateTitle (r: PricedMonolith) {
 }
 
 const setupProblem = shallowRef<string | null>(null)
-hostRequest<{ ok: boolean, message: string | null }>('ocr-check', null)
+hostRequest('ocr-check', null)
   .then(c => { setupProblem.value = c.ok ? null : c.message })
   .catch(() => {})
 
@@ -191,7 +191,7 @@ let onceTimer: ReturnType<typeof setTimeout> | undefined
 async function readOnce () {
   onceStatus.value = 'Reading the screen…'
   try {
-    const res = await hostRequest<{ labels: Array<{ lines: string[], at: { x: number, y: number } }> }>('essence-scan-once', null)
+    const res = await hostRequest('essence-scan-once', null)
     const found = res.labels
       .map(l => ({ at: l.at, rated: rate(l.lines) }))
       .filter((l): l is { at: { x: number, y: number }, rated: PricedMonolith } => l.rated != null)
@@ -285,7 +285,7 @@ async function toggle () {
       current.value = null
     } else {
       // Stopped again while it was starting: main says it's off.
-      const res = await hostRequest<{ running: boolean }>('essence-scan-start', null)
+      const res = await hostRequest('essence-scan-start', null)
       running.value = res.running
       if (res.running) wm.show(props.config.wmId)
     }
@@ -309,14 +309,14 @@ watch(() => [zone.kind, zone.seed, props.config.autoInMaps] as const, async ([ki
   if (kind === 'map') {
     if (!auto || !zone.live || seed === autoScan.stoppedSeed || seed === autoScan.failedSeed) return
     try {
-      const res = await hostRequest<{ running: boolean }>('essence-scan-auto-start', null)
+      const res = await hostRequest('essence-scan-auto-start', null)
       if (res.running) running.value = true
     } catch (err) {
       autoScan.failedSeed = seed
       message.value = err instanceof Error ? err.message : String(err)
     }
   } else if (kind === 'town' || kind === 'hideout') {
-    const res = await hostRequest<{ running: boolean }>('essence-scan-auto-stop', null).catch(() => null)
+    const res = await hostRequest('essence-scan-auto-stop', null).catch(() => null)
     if (res && !res.running) { running.value = false; current.value = null }
   }
 }, { immediate: true })
@@ -338,7 +338,7 @@ const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   else toggle()
 })
 
-hostRequest<{ running: boolean, paused?: boolean }>('essence-scan-status', null)
+hostRequest('essence-scan-status', null)
   .then(s => { running.value = s.running; paused.value = Boolean(s.paused) })
   .catch(() => {})
 

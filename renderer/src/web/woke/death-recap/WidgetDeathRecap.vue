@@ -152,7 +152,7 @@ function readModList (map: MapEntry) {
   const attempt = async (i: number) => {
     let lines: string[] | null = null
     try {
-      const read = await hostRequest<{ lines: string[] | null, ocrMissing?: boolean }>('area-mods-read', { delayMs: READ_WAITS_MS[i] }, 20_000)
+      const read = await hostRequest('area-mods-read', { delayMs: READ_WAITS_MS[i] }, 20_000)
       // No OCR files: the checks still work. Other failures get the next try.
       if (read.ocrMissing) ocrMissing = true
       lines = read.lines

@@ -18,7 +18,7 @@ known to the developer, and downloading from them may be unsafe.
 
 Latest version is <span class="bg-gray-100 border rounded px-1">{{ theme.appVersion }}</span>. If the links above don't work yet, take the files from the <a :href="`${theme.github.releasesUrl}/latest`">latest release</a>.
 
-*The app is unsigned, which means you'll have to bypass the security warning on Windows to open it.{:.text-sm}
+The app isn't code-signed, so Windows SmartScreen may warn on first run: click **More info > Run anyway**.
 
 ---
 

@@ -27,10 +27,10 @@ function listen () {
     if (topic === 'hotkeys') failed.value = (data as { failed: string[] }).failed
     if (topic === 'game-binds') setPoeBinds(data as GameBind[])
   })
-  hostRequest<{ failed: string[] }>('hotkey-failures', null)
+  hostRequest('hotkey-failures', null)
     .then(r => { failed.value = r.failed })
     .catch(() => {})
-  hostRequest<GameBind[]>('game-binds', null)
+  ;(hostRequest('game-binds', null) as Promise<GameBind[]>)
     .then(binds => { if (binds.length) setPoeBinds(binds) })
     .catch(() => {})
 }

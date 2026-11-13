@@ -430,7 +430,7 @@ async function toggleOutlines () {
   readingStash = true
   let read: StashRead
   try {
-    read = await hostRequest<StashRead>('stash-read', null)
+    read = await (hostRequest('stash-read', null) as Promise<StashRead>)
   } finally {
     readingStash = false
   }

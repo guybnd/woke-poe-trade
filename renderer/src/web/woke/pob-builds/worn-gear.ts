@@ -35,7 +35,7 @@ export function askWornGear (hint: string) {
   if (!personalOn.value) return
   const mine = ++seq
   worn.value = { ...worn.value, pending: true }
-  hostRequest<Reply>('worn-items', { character: hint }, 20_000)
+  ;(hostRequest('worn-items', { character: hint }, 20_000) as Promise<Reply>)
     .then((r) => {
       if (mine !== seq) return
       if ('error' in r) {

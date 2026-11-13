@@ -216,7 +216,7 @@ watch(() => JSON.stringify(timelessQuestion.value?.ask ?? null), () => {
   timeless.value = null
   const q = timelessQuestion.value
   if (!q?.asked.length) return
-  hostRequest<TimelessAnswer>('pob-timeless', q.ask, 60_000)
+  (hostRequest('pob-timeless', q.ask, 60_000) as Promise<TimelessAnswer>)
     .then(answer => {
       if (id !== timelessAskId) return
       timeless.value = { found: answer.found, missed: answer.jewels.some(j => !j), by: timelessByNode(q.asked, answer) }

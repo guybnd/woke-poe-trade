@@ -94,7 +94,7 @@ const events = MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data })
 const leagueId = computed(() => AppConfig().leagueId ?? null)
 watch([leagueId, () => AppConfig().accountName], ([league, accountName]) => {
   if (!Host.isElectron) return
-  hostRequest<ReaderStatus>('stash-reader-config', { league, accountName })
+  (hostRequest('stash-reader-config', { league, accountName }) as Promise<ReaderStatus>)
     .then((s) => { status.value = s; return feed(s) })
     .catch(() => {})
 }, { immediate: true })
