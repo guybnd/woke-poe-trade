@@ -1,10 +1,11 @@
 <template>
   <div v-for="(chunk, c) in chunks" :key="c" :class="[$style.chunk, { [$style.named]: chunk.heading }]">
+    <!-- A named mod's tier sits by its name; lines with no name keep it in the margin. -->
     <span :class="$style.tags">
-      <span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span>
+      <template v-if="!chunk.heading"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></template>
     </span>
     <div :class="$style.middle">
-      <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}</div>
+      <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}<span :class="$style.headTags"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, $style.tagSm, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></span></div>
       <div v-for="(line, l) in chunk.lines" :key="l">
         <span :class="[$style.line, kindClass(line)]">
           <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else><template v-for="(w, j) in elementParts(p.text)" :key="j"><span v-if="w.ele" class="w-ele" :data-ele="w.ele">{{ w.text }}</span><template v-else>{{ w.text }}</template></template></span></template>
@@ -72,6 +73,8 @@ function rollColour (quality: number) {
 .middle { min-width: 0; }
 .heading { color: var(--w-dim); font-size: var(--w-fs-md); }
 .tags { display: inline-flex; gap: 2px; }
+.headTags { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: 1px; }
+.tag.tagSm { min-width: 0; padding: 0 3px; font-size: var(--w-fs-xs); line-height: 1.25; }
 .tag {
   min-width: 1.5rem;
   padding: 0 3px;
