@@ -17,6 +17,8 @@ export function fitTitle (bar: HTMLElement) {
     return
   }
   const box = bar.getBoundingClientRect()
+  // A hidden panel has no size; its observer measures again once it shows.
+  if (!box.width) return
   let left = CORNER.left
   let right = CORNER.right
   let beforeTitle = true
