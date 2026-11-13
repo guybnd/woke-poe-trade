@@ -406,5 +406,5 @@
  * "ticked rows stay centred"): the text fills the room between the checkbox
  * and the min/max boxes and centres in it. */
 #price-window.w-poe .w-poe-row > div > div:first-child > div:first-child { flex: 1 1 auto; }
-#price-window.w-poe .w-poe-row button:has(> .w-poe-row-text) { flex: 1 1 auto; min-width: 0; text-align: center; }
+#price-window.w-poe .w-poe-row button:has(> .w-poe-row-text) { flex: 1 1 auto; min-width: 0; justify-content: center; text-align: center; }
 #price-window.w-poe .w-poe-row .w-poe-row-text { text-align: center; }
