@@ -71,6 +71,10 @@ function onClick (e: MouseEvent) {
 function pick () {
   // A line of a hybrid's box searches the whole mod.
   if (hybrid.value) actions!.searchMod(props.filter)
-  else props.filter.disabled = false
+  else {
+    // A total that's open shows its mods instead; picking it folds them back first.
+    if (isSplit.value) actions!.toggleSplit(props.filter)
+    props.filter.disabled = false
+  }
 }
 </script>
