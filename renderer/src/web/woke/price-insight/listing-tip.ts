@@ -10,6 +10,8 @@ import type { PobItem, PobRarity } from '../pob-builds/widget'
 export type ListingMod = string | {
   description?: string
   domain?: string
+  // The trade stat, "stat.implicit.stat_1880071428".
+  hash?: string
   flags?: { fractured?: boolean, crafted?: boolean }
   // The mods behind this line: usually one, two when they share a stat. Uniques
   // and implicits have no name or tier. Tier is P1, S3, or R2 for a crafted mod.
@@ -38,6 +40,10 @@ export interface ListingItem {
   sockets?: Array<{ group: number, sColour: string }>
   fractured?: boolean
   synthesised?: boolean
+  // Eldritch implicits: from the Searing Exarch's altar, the Eater of Worlds', or both.
+  searing?: boolean
+  tangled?: boolean
+  scourgeMods?: ListingMod[]
   // In a value, the number says how the game colours it: 1 boosted, 4 fire,
   // 5 cold, 6 lightning, 7 chaos.
   properties?: Array<{ name?: string, type?: number, displayMode?: number, values: Array<[string, number]> }>

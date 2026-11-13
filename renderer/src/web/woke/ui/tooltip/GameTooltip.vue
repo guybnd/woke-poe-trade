@@ -32,8 +32,12 @@
         <section v-if="item.itemLevel" :class="$style.block">
           <div><span :class="$style.label">Item Level: </span><span :class="$style.value">{{ item.itemLevel }}</span></div>
         </section>
-        <section v-if="listing.implicits.length" :class="$style.block">
-          <ListingModGroup :group="{ heading: '', lines: listing.implicits }" />
+        <!-- Enchants above implicits, each in its own block, as in the game. -->
+        <section v-if="enchantLines.length" :class="$style.block">
+          <ListingModGroup :group="{ heading: '', lines: enchantLines }" />
+        </section>
+        <section v-if="implicitLines.length" :class="$style.block">
+          <ListingModGroup :group="{ heading: '', lines: implicitLines }" />
         </section>
         <section v-if="listing.groups.length" :class="$style.block">
           <template v-for="(group, g) in listing.groups" :key="g">
@@ -156,6 +160,8 @@ const placed = shallowRef<{ left: number, top: number } | null>(null)
 
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
+const enchantLines = computed(() => listing.value?.implicits.filter(l => l.kind === 'enchant') ?? [])
+const implicitLines = computed(() => listing.value?.implicits.filter(l => l.kind !== 'enchant') ?? [])
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
 const swap = computed<SwapTip | null>(() => tip.value?.content.kind === 'swap' ? tip.value.content : null)
 const passive = computed<PassiveTip | null>(() => tip.value?.content.kind === 'passive' ? tip.value.content : null)

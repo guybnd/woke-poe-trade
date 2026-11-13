@@ -2,12 +2,15 @@
   <div v-for="(chunk, c) in chunks" :key="c" :class="[$style.chunk, { [$style.named]: chunk.heading }]">
     <!-- A named mod's tier sits by its name; lines with no name keep it in the margin. -->
     <span :class="$style.tags">
-      <template v-if="!chunk.heading"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></template>
+      <EldritchMark v-if="!chunk.heading && markOf(chunk)" v-bind="markOf(chunk)!" />
+      <template v-else-if="!chunk.heading"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></template>
     </span>
     <div :class="$style.middle">
       <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}<span :class="$style.headTags"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, $style.tagSm, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></span></div>
       <div v-for="(line, l) in chunk.lines" :key="l">
-        <span :class="[$style.line, kindClass(line)]">
+        <span :class="[$style.line, kindClass(line)]" :title="line.label">
+          <span v-if="corrupt(line)" :class="$style.corrupt" title="Corruption implicit" />
+          <img v-if="line.source" :src="line.source.icon" alt="" :class="$style.icon">
           <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else><template v-for="(w, j) in elementParts(p.text)" :key="j"><span v-if="w.ele" class="w-ele" :data-ele="w.ele">{{ w.text }}</span><template v-else>{{ w.text }}</template></template></span></template>
           <template v-if="line.quality != null">
             <i :class="$style.track" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }"><i :style="{ width: `${line.quality}%` }" /></i>
@@ -27,6 +30,9 @@
 import { computed, useCssModule } from 'vue'
 import type { ModGroup, ModLine } from '../../price-insight/listing-tip-detail'
 import { elementParts } from '../element-words'
+import EldritchMark from '../../price-insight/EldritchMark.vue'
+import { eldritchMark, implicitTable, isCorruption, loadImplicitTable } from '../../price-insight/eldritch-listing'
+import type { ModLine as Line } from '../../price-insight/listing-tip-detail'
 
 const props = defineProps<{ group: ModGroup }>()
 const $style = useCssModule()
@@ -36,13 +42,35 @@ const chunks = computed<ModGroup[]>(() => props.group.heading
   ? [props.group]
   : props.group.lines.map(line => ({ heading: '', lines: [line] })))
 
+// An eldritch implicit's altar and tier, in place of tier tags. The table loads
+// the first time an item with eldritch implicits is shown.
+function markOf (chunk: ModGroup) {
+  const key = chunk.lines[0].eldritch
+  if (!key) return null
+  loadImplicitTable()
+  return eldritchMark(key, implicitTable.value)
+}
+
+// The red diamond of a corruption implicit, as in the price check.
+function corrupt (line: Line) {
+  if (!line.corruption) return false
+  loadImplicitTable()
+  return isCorruption(line.corruption, implicitTable.value)
+}
+
 // Two mods can share a name, so a group can hold more than one tier.
 function tagsOf (chunk: ModGroup) {
   return Array.from(new Set(chunk.lines.flatMap(line => line.tags)))
 }
 
 function kindClass (line: ModLine) {
-  return line.kind === 'crafted' ? $style.crafted : line.kind === 'fractured' ? $style.fractured : $style.mod
+  return line.kind === 'crafted'
+    ? $style.crafted
+    : line.kind === 'fractured'
+      ? $style.fractured
+      : line.kind === 'enchant'
+        ? $style.enchant
+        : line.kind === 'scourge' ? $style.scourge : $style.mod
 }
 
 function tierOf (tag: string) {
@@ -93,6 +121,10 @@ function rollColour (quality: number) {
 .mod { color: var(--w-r-magic); }
 .crafted { color: var(--w-mod-crafted); }
 .fractured { color: var(--w-mod-fractured); }
+.enchant { color: var(--w-mod-enchant); }
+.scourge { color: var(--w-mod-scourge); }
+.corrupt { display: inline-block; width: 7px; height: 7px; margin-right: 6px; transform: rotate(45deg); background: var(--w-mod-corrupted); vertical-align: 1px; }
+.icon { width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; }
 .number { color: #fff; font-family: var(--w-num); font-size: var(--w-fs-md); font-weight: 600; }
 /* The roll before catalyst quality, small and in the quality's blue. */
 .raw { color: #8888ff; font-family: var(--w-num); font-size: var(--w-fs-xs); vertical-align: super; line-height: 0; margin-left: 1px; }

@@ -5,6 +5,7 @@ import { ModifierType } from '@/parser/modifiers'
 import { incrRoll } from '@/parser/advanced-mod-desc'
 import { linesToStatStrings, tryParseTranslation } from '@/parser/stat-translations'
 import { modDomain, modText, stripLinks, ListingItem, ListingMod } from './listing-tip'
+import { corruptionKey, eldritchKey, modSource, EldritchKey, ModSource } from './eldritch-listing'
 
 export type PartTone = 'label' | 'value' | 'aug' | 'fire' | 'cold' | 'lightning' | 'chaos'
 
@@ -26,7 +27,15 @@ export interface ModPart {
 export interface ModLine {
   parts: ModPart[]
   tags: string[]
-  kind: '' | 'crafted' | 'fractured'
+  kind: '' | 'crafted' | 'fractured' | 'enchant' | 'scourge'
+  // An eldritch implicit's trade stat and roll range, to look up its altar and tier.
+  eldritch?: EldritchKey
+  // A corrupted item's implicit, checked against the corruption implicits.
+  corruption?: EldritchKey
+  // Shown on hover, as the price check's "Synthesised implicit".
+  label?: string
+  // A league mechanic's or influence's icon before the line, as in the price check.
+  source?: ModSource
   // Where the roll sits in its range, 0 to 100. Null when the line can't roll.
   quality: number | null
 }
@@ -345,13 +354,16 @@ function buildGroups (item: ListingItem, catalyst: Catalyst | null): ModGroup[] 
     ...(item.fracturedMods ?? []).map(mod => ({ mod, kind: 'fractured' as const })),
     ...(item.utilityMods ?? []).map(mod => ({ mod, kind: '' as const })),
     ...listed.map(mod => ({ mod, kind: modKind(mod, '') })),
-    ...(item.craftedMods ?? []).map(mod => ({ mod, kind: 'crafted' as const }))
+    ...(item.craftedMods ?? []).map(mod => ({ mod, kind: 'crafted' as const })),
+    ...(item.scourgeMods ?? []).map(mod => ({ mod, kind: 'scourge' as const }))
   ].filter(e => modText(e.mod))
 
   const groups: Array<ModGroup & { order: number }> = []
   for (const { mod, kind } of entries) {
     const heading = headingOf(mod, kind)
     const line = buildLine(mod, kind, catalyst)
+    const source = modSource(mod)
+    if (source) { line.source = source; line.label = source.label }
     const firstTier = typeof mod === 'string' ? undefined : mod.mods?.[0]?.tier
     const known = groups.find(g => g.heading === heading)
     if (known) known.lines.push(line)
@@ -389,13 +401,21 @@ function qualityOf (item: ListingItem): number {
   return raw ? Number(raw.replace(/[^\d.]/g, '')) || 0 : 0
 }
 
+function implicitLine (item: ListingItem, mod: ListingMod, catalyst: Catalyst | null): ModLine {
+  const line = buildLine(mod, '', catalyst, true)
+  const key = eldritchKey(item, mod)
+  const corruption = corruptionKey(item, mod)
+  if (key) line.eldritch = key
+  else if (corruption) line.corruption = corruption
+  else if (item.synthesised) line.label = 'Synthesised implicit'
+  return line
+}
+
 export function listingDetail (item: ListingItem): ListingDetail {
   const listed = item.explicitMods ?? []
   const ofDomain = (domain: string) => listed.filter(m => modDomain(m) === domain)
-  const implicitMods = [
-    ...(item.enchantMods ?? []), ...ofDomain('enchant'),
-    ...(item.implicitMods ?? []), ...ofDomain('implicit')
-  ]
+  const enchants = [...(item.enchantMods ?? []), ...ofDomain('enchant')]
+  const implicitMods = [...(item.implicitMods ?? []), ...ofDomain('implicit')]
   const tail: ListingDetail['tail'] = []
   if (item.fractured) tail.push({ text: 'Fractured Item', kind: 'fractured' })
   if (item.synthesised) tail.push({ text: 'Synthesised Item', kind: 'dim' })
@@ -404,7 +424,10 @@ export function listingDetail (item: ListingItem): ListingDetail {
   return {
     props: (item.properties ?? []).map(propLine),
     requires: requiresLine(item),
-    implicits: implicitMods.filter(modText).map(m => buildLine(m, '', catalyst, true)),
+    implicits: [
+      ...enchants.filter(modText).map(m => buildLine(m, 'enchant', catalyst, true)),
+      ...implicitMods.filter(modText).map(m => implicitLine(item, m, catalyst))
+    ],
     groups: buildGroups(item, catalyst),
     tail,
     foot,
