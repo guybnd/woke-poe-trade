@@ -25,7 +25,7 @@
         <section v-if="sockets.length" :class="$style.block">
           <div :class="$style.sockets">
             <span :class="$style.label">Sockets:</span>
-            <SocketDots v-for="(g, i) in sockets" :key="i" :colours="g" />
+            <SocketDots v-for="(g, i) in sockets" :key="i" :colours="g" ring />
           </div>
         </section>
         <section v-if="item.itemLevel" :class="$style.block">
@@ -61,7 +61,7 @@
         <section v-if="sockets.length" :class="$style.block">
           <div :class="$style.sockets">
             <span :class="$style.label">Sockets:</span>
-            <SocketDots v-for="(g, i) in sockets" :key="i" :colours="g" />
+            <SocketDots v-for="(g, i) in sockets" :key="i" :colours="g" ring />
           </div>
         </section>
         <section v-if="item.itemLevel" :class="$style.block">
