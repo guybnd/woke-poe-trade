@@ -63,6 +63,7 @@ export function fitTitle (bar: HTMLElement) {
 const bars = new Set<HTMLElement>()
 let sizes: ResizeObserver | undefined
 let look: MutationObserver | undefined
+let texts: MutationObserver | undefined
 
 function barOf (el: Element): HTMLElement | null {
   return bars.has(el as HTMLElement) ? el as HTMLElement : el.parentElement && bars.has(el.parentElement) ? el.parentElement : null
@@ -80,7 +81,19 @@ export function watchTitle (bar: HTMLElement) {
   // rendering a panel outside a browser, as the tests do).
   look ??= new MutationObserver(() => requestAnimationFrame(() => bars.forEach(fitTitle)))
   if (bars.size === 0) look.observe(document.documentElement, { attributes: true, attributeFilter: ['data-woke-art', 'data-woke-theme'] })
+  // A new title text can need the other layout even when no size changes (a
+  // truncated title keeps its width). One observer for every bar's title.
+  texts ??= new MutationObserver(records => {
+    const touched = new Set<HTMLElement>()
+    for (const r of records) {
+      const b = (r.target.nodeType === 1 ? r.target as Element : r.target.parentElement)?.closest('[data-widget-drag]')
+      if (b && bars.has(b as HTMLElement)) touched.add(b as HTMLElement)
+    }
+    touched.forEach(fitTitle)
+  })
   bars.add(bar)
+  const title = bar.querySelector(':scope > .w-trunc')
+  if (title) texts.observe(title, { characterData: true, childList: true, subtree: true })
   sizes.observe(bar)
   // The buttons can change width without the bar changing size.
   for (const el of bar.children) sizes.observe(el)
@@ -90,5 +103,5 @@ export function unwatchTitle (bar: HTMLElement) {
   if (!bars.delete(bar)) return
   sizes?.unobserve(bar)
   for (const el of bar.children) sizes?.unobserve(el)
-  if (bars.size === 0) look?.disconnect()
+  if (bars.size === 0) { look?.disconnect(); texts?.disconnect() }
 }

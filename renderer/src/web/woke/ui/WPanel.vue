@@ -6,7 +6,7 @@
       <WIcon v-if="icon" v-bind="iconProps" size="md" :class="$style.icon" />
       <span :class="$style.title" class="w-trunc">
         <!-- A plain image, not a second WIcon: one per panel adds up (perf budget). -->
-        <img v-if="crest?.src" :src="crest.src" class="w-crest-icon w-game-icon" alt="" aria-hidden="true" draggable="false">
+        <img v-if="crest?.src" :key="crest.src" :src="crest.src" class="w-crest-icon w-game-icon" alt="" aria-hidden="true" draggable="false">
         <i v-else-if="crest" :class="[crest.fa, 'w-crest-icon']" aria-hidden="true" />
         <slot name="title">{{ title }}</slot>
       </span>
