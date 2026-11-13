@@ -295,11 +295,13 @@ export default defineComponent({
     // from the one the filters make now. The watcher above misses a change made in
     // the same tick as a search (a split while results load), which left old
     // results showing as current with no Search button.
-    const searchedQuery = computed(() => searched.value && tradeAPI.value === 'trade'
-      ? JSON.stringify(createTradeRequest(searched.value.filters, searched.value.stats))
-      : null)
-    watch(() => searchedQuery.value != null ? JSON.stringify(createTradeRequest(itemFilters.value, itemStats.value)) : null, (now) => {
-      if (now != null && doSearch.value && searchedQuery.value != null && now !== searchedQuery.value) {
+    const liveQuery = () => JSON.stringify(createTradeRequest(itemFilters.value, itemStats.value))
+    // Taken from the live rows when the search starts: the snapshot's copies lose
+    // what the request reads off the rows themselves, so they never compare equal.
+    let searchedQuery: string | null = null
+    watch(() => searched.value, (snap) => { searchedQuery = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
+    watch(() => searched.value && tradeAPI.value === 'trade' ? liveQuery() : null, (now) => {
+      if (now != null && doSearch.value && searchedQuery != null && now !== searchedQuery) {
         doSearch.value = false
       }
     })
