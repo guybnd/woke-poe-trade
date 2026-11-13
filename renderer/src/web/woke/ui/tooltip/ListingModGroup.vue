@@ -95,15 +95,12 @@ function rollColour (quality: number) {
 .quality { position: absolute; left: 100%; bottom: 1px; margin-left: 5px; font-family: var(--w-num); font-size: var(--w-fs-xs); font-weight: 600; line-height: 1; white-space: nowrap; color: var(--roll); }
 
 /* PoE 1 / PoE 2 art: the same red to green in the game's dyes (blood, amber,
- * jade) on a sunken track. A glow grows from about half a roll up, so a high
- * roll stands out at a glance. */
+ * jade) on a sunken track. */
 :global(:root[data-woke-art]) .line:has(> .track) { padding-bottom: 4px; }
 :global(:root[data-woke-art]) .track {
   --dye: hsl(calc(4deg + var(--q) * 1.05deg) 52% 42%);
-  --glow: max(0, (var(--q) - 45) / 55);
   bottom: -1px;
   height: 4px;
-  overflow: visible;
   background: #120d08;
   border-radius: 2px;
   box-shadow: inset 0 1px 2px #000, 0 0 0 1px #3a2c18;
@@ -111,10 +108,6 @@ function rollColour (quality: number) {
 :global(:root[data-woke-art]) .track > i {
   border-radius: 2px;
   background: linear-gradient(rgba(255, 255, 255, 0.28), transparent 60%), var(--dye);
-  box-shadow: 0 0 calc(var(--glow) * 7px) calc(var(--glow) * 1px) hsl(calc(4deg + var(--q) * 1.05deg) 70% 55% / calc(var(--glow) * 0.85));
 }
-:global(:root[data-woke-art]) .quality {
-  color: hsl(calc(4deg + var(--q) * 1.05deg) 55% calc(52% + var(--glow) * 10%));
-  text-shadow: 0 0 calc(var(--glow) * 6px) hsl(calc(4deg + var(--q) * 1.05deg) 70% 55% / calc(var(--glow) * 0.7));
-}
+:global(:root[data-woke-art]) .quality { color: hsl(calc(4deg + var(--q) * 1.05deg) 55% 55%); }
 </style>

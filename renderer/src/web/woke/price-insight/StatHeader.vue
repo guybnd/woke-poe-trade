@@ -136,6 +136,20 @@ function onClick (e: MouseEvent) {
 }
 .big .track { height: 4px; }
 .track.off > b { background: var(--w-faint) !important; opacity: .45; }
+/* PoE 1 / PoE 2 art: a sunken track and the stat's colour dyed down, with a lit
+ * top edge, like the tooltip's roll bars. */
+:global(:root[data-woke-art]) .track {
+  height: 4px;
+  background: #120d08;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px #000, 0 0 0 1px #3a2c18;
+}
+:global(:root[data-woke-art]) .big .track { height: 5px; }
+:global(:root[data-woke-art]) .track > b {
+  border-radius: 2px;
+  filter: saturate(0.7) brightness(0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
 .split { display: flex; gap: 1px; height: 8px; margin-top: 9px; }
 .split > span { display: block; height: 100%; flex-basis: 0; min-width: 2px; }
 .legend {
