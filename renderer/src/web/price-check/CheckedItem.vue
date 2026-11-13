@@ -297,7 +297,11 @@ export default defineComponent({
     // from the one the filters make now. The watcher above misses a change made in
     // the same tick as a search (a split while results load), which left old
     // results showing as current with no Search button.
-    const liveQuery = () => JSON.stringify(createTradeRequest(itemFilters.value, itemStats.value))
+    // Never throws: this runs on every filter change, and an error here (e.g. an
+    // unknown category) would break starting a search, not just the stale check.
+    const liveQuery = (): string | null => {
+      try { return JSON.stringify(createTradeRequest(itemFilters.value, itemStats.value)) } catch { return null }
+    }
     // Taken from the live rows when the search starts: the snapshot's copies lose
     // what the request reads off the rows themselves, so they never compare equal.
     let searchedQuery: string | null = null
