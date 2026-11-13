@@ -16,7 +16,7 @@
         <button v-if="floating" data-testid="price-window-dock" title="Back to the side of the screen" @click="dock">
           <i class="fas fa-columns" />
         </button>
-        <ui-popover v-if="stableOrbCost" trigger="click" boundary="#price-window">
+        <ui-popover v-if="stableOrbCost" trigger="click" boundary="#price-window" placement="bottom">
           <template #target>
             <button><i class="fas fa-exchange-alt" /> {{ stableOrbCost }}</button>
           </template>

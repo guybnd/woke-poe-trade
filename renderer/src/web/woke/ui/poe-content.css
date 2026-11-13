@@ -221,3 +221,15 @@
 :root[data-woke-art] [data-w-settings] .w-search kbd { opacity: 0.75; }
 /* Stone tabs stand on the floor: no baseline running through the gaps between them. */
 :root[data-woke-art] .w-tabs { border-bottom: 0; }
+
+/* PoE 1 / PoE 2 art: click popovers (the divine splitter, menus) as dark game
+ * panels instead of tippy's white bubble. */
+:root[data-woke-art] .tippy-box[data-theme~='light'] {
+  background: #0d0a07;
+  color: #c8c0b0;
+  box-shadow: 0 0 0 1px #4a381c, 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+:root[data-woke-art] .tippy-box[data-theme~='light'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #4a381c; }
+:root[data-woke-art] .tippy-box[data-theme~='light'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #4a381c; }
+:root[data-woke-art] .tippy-box[data-theme~='light'][data-placement^='left'] > .tippy-arrow::before { border-left-color: #4a381c; }
+:root[data-woke-art] .tippy-box[data-theme~='light'][data-placement^='right'] > .tippy-arrow::before { border-right-color: #4a381c; }
