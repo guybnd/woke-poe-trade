@@ -210,19 +210,19 @@ export const MECHANICS: Mechanic[] = [
     ]
   },
   {
-    // 3.30 league: Wickerman trophies, priced by the slot they fill.
+    // 3.30 league: Wickerman Viscera (the game's word for the trophies), priced by slot.
     id: 'covens',
     label: 'Covens',
     short: 'COV',
     icon: 'fas fa-skull',
     groups: TROPHY_SLOTS.map(slot => ({
-      label: slot === 'Other' ? 'Other trophies' : `${slot} trophies`,
+      label: slot === 'Other' ? 'Other Viscera' : `${slot} Viscera`,
       match: slotMatcher(slot),
       limit: 10
     })),
     tips: [
-      'Each Wickerman slot holds one trophy; the best of each slot is at the top.',
-      'Trophies come in 3 tiers; the top tier only drops in the endgame.'
+      'Each Wickerman slot holds one Viscera, dropped by a boss you empowered with Fates; the best of each slot is at the top.',
+      'Viscera come in 3 tiers; the top tier only drops in the endgame. Pinnacle Viscera need a Grim Fate.'
     ]
   },
   {

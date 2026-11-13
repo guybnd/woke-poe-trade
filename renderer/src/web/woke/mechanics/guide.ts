@@ -76,7 +76,7 @@ export const GUIDE: Record<string, MechanicGuide> = {
   },
   covens: {
     kind: 'none',
-    gets: 'Wickerman trophies by price, grouped by the slot they fill: head, torso, upper limb, lower limb.',
+    gets: 'Wickerman Viscera by price, grouped by the slot they fill: head, torso, upper limb, lower limb.',
     when: ['Only when you open it'],
     gap: NOT_DETECTED
   },
