@@ -50,7 +50,10 @@ export function fitTitle (bar: HTMLElement) {
   // A little slack before the crest comes back, so a bar right at the edge doesn't flicker.
   const slack = wasTight ? HYSTERESIS : 0
   const tight = half > box.width / 2 - clear - slack
-  if (tight) bar.dataset.titleTight = ''
-  else delete bar.dataset.titleTight
+  // Only on a change, so observers watching the bar don't hear needless writes.
+  if (tight !== wasTight) {
+    if (tight) bar.dataset.titleTight = ''
+    else delete bar.dataset.titleTight
+  }
   bar.style.setProperty('--w-title-clear', `${clear}px`)
 }
