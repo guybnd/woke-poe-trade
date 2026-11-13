@@ -31,6 +31,14 @@ history:
     date: '2026-11-11T04:22:18.241Z'
     comment: Updated description. Changed priority to High.
     id: a-2026-11-11t04-22-18-241z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T02:43:47.197Z'
+    comment: >-
+      Day-one copy checks also need a Wickerman trophy (for example Sirus'
+      Head): its item class, tier line and mod line, and whether that mod
+      matches a trade stat. Plus a Thread copy.
+    id: a-2026-11-13t02-43-47-197z
 ---
 > TL;DR: on launch day, copy real 3.30 items to check how the game writes them. Then read the tier into price check as Guy's pick A, a T2-T5 chip by the name (mock https://claude.ai/artifact/XR9H8kNY9NnKJiE6hFmR5F).
 

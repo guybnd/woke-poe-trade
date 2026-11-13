@@ -114,6 +114,15 @@ history:
       added back in the PR. CI-only, so no dev switch is needed. The launch-day
       run itself is still to do.
     id: a-2026-11-12t05-34-45-682z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T02:43:44.701Z'
+    comment: >-
+      PR #406 is up (2026-11-13). Unknown item groups are now added by name
+      instead of skipped: about 170 Wickerman trophies, per poedb's Covens page.
+      The trade "monster" group becomes CAPTURED_BEAST. A live check today found
+      Shield Crab, already new on the trade site.
+    id: a-2026-11-13t02-43-44-701z
 swimlane: null
 needsAction: null
 ---

@@ -30,6 +30,14 @@ history:
       sections, and the Thread section names and item classes aren't known yet.
       Pick this up when NeverSink pushes 3.30.
     id: a-2026-11-11t05-10-12-930z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T02:43:46.045Z'
+    comment: >-
+      Also needs a Wickerman trophy group: about 170 boss body-part items in
+      Head, Torso, Upper Limb and Lower Limb slots, per poedb's Covens page.
+      Threads stack to 100.
+    id: a-2026-11-13t02-43-46-045z
 ---
 > TL;DR: what our filter groups, drop table and safety net need for 3.30 items. Most of it lands through NeverSink's 3.30 filter; this ticket covers our own lists.
 
