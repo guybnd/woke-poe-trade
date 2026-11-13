@@ -506,6 +506,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 /* Phones and tablets can't install it: say so beside the Download buttons. */
 @media (hover: none) and (pointer: coarse) {
   .phone-note { display: block; color: var(--text); font-size: 16px; text-shadow: 0 1px 8px #000; }
+  .unsigned-note { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .stage picture, .thumb { transition: none; }
