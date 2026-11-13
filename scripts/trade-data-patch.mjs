@@ -124,6 +124,7 @@ export function diff (before, after, statLines, itemLines) {
     } else {
       const cat = category(e.group, e.type)
       if (cat) report.newItems.push({ name, refName: name, namespace: 'ITEM', craftable: { category: cat }, icon: '' })
+      else if (e.group === 'monster') report.newItems.push({ name, refName: name, namespace: 'CAPTURED_BEAST', icon: '' })
       // Armour and weapons need their category for mod search: added by hand.
       else if (GEAR_GROUPS.has(e.group)) report.skipped.push(`${e.group}: ${name} (no category)`)
       // A league's new kind of item (3.30's Wickerman trophies): known by name,
