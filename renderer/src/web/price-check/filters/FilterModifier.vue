@@ -6,6 +6,7 @@
           <button v-if="poe && canSplit" type="button" class="w-poe-tier w-poe-tier-open" :class="{ 'w-poe-t1': poeTierTop }"
             :title="isSplit ? 'Fold its mods back into the total' : 'Show the mods behind this line'"
             @click="actions!.toggleSplit(filter)">{{ poeTierText || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
+          <span v-else-if="poe && poeEldritch" class="w-poe-tier"><component :is="poeEldritchMark" v-bind="poeEldritch" /></span>
           <span v-else-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierTop }">{{ poeTierText }}</span>
           <button :class="[$style.checkbox, { [$style.checked]: !isDisabled, [$style.uncheckedHint]: isDisabled && groupExpanded }, 'w-pc-check']"
             @click="toggleFilter" type="submit">
@@ -343,6 +344,8 @@ export default defineComponent({
       minDrag,
       poeKind: computed(() => kit?.poeLook(props.filter)),
       poeTierText: computed(() => kit?.poeTier(props.filter) ?? ''),
+      poeEldritch: computed(() => kit?.eldritchMark(props.filter) ?? null),
+      poeEldritchMark: kit?.EldritchMark,
       poeTierTop: computed(() => kit?.isTopTier(kit.poeTier(props.filter)) ?? false),
       actions,
       canSplit,

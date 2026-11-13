@@ -20,6 +20,8 @@ export interface ModifierInfo {
   rank?: number
   tags: string[]
   rollIncr?: number
+  // woke: which altar an eldritch implicit came from.
+  eldritch?: 'exarch' | 'eater'
 }
 
 export function parseModInfoLine (line: string): ModifierInfo {
@@ -34,9 +36,12 @@ export function parseModInfoLine (line: string): ModifierInfo {
   let name: ModifierInfo['name']
   let tier: ModifierInfo['tier']
   let rank: ModifierInfo['rank']
+  let eldritch: ModifierInfo['eldritch']
 
   if (_$.EATER_IMPLICIT.test(modText) || _$.EXARCH_IMPLICIT.test(modText)) {
-    const match = modText.match(_$.EATER_IMPLICIT) ?? modText.match(_$.EXARCH_IMPLICIT)!
+    const eater = modText.match(_$.EATER_IMPLICIT)
+    const match = eater ?? modText.match(_$.EXARCH_IMPLICIT)!
+    eldritch = eater ? 'eater' : 'exarch'
 
     type = ModifierType.Implicit
     mechanic = ModifierMechanic.Eldritch
@@ -111,7 +116,7 @@ export function parseModInfoLine (line: string): ModifierInfo {
     rollIncr = incrText ? Number(_$.MODIFIER_INCREASED.exec(incrText)![1]) : undefined
   }
 
-  return { type, generation, mechanic, name, tier, rank, tags, rollIncr }
+  return { type, generation, mechanic, name, tier, rank, tags, rollIncr, eldritch }
 }
 
 export function isModInfoLine (line: string): boolean {

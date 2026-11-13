@@ -8,6 +8,7 @@
     <button v-if="canSplit" type="button" class="w-poe-tier w-poe-tier-open" :class="{ 'w-poe-t1': isTopTier(tier) }"
       :title="isSplit ? 'Fold its mods back into the total' : 'Show the mods behind this line'"
       @click="actions!.toggleSplit(filter)">{{ tier || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
+    <span v-else-if="eldritch" class="w-poe-tier"><EldritchMark v-bind="eldritch" /></span>
     <span v-else class="w-poe-tier" :class="{ 'w-poe-t1': isTopTier(tier) }">{{ tier }}</span>
     <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
@@ -31,7 +32,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ItemModifierText from '@/web/ui/ItemModifierText.vue'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
-import { poeLook, poeTier, isTopTier } from '@/web/woke/price-insight/poe-kind'
+import { poeLook, poeTier, isTopTier, eldritchMark } from '@/web/woke/price-insight/poe-kind'
+import EldritchMark from '@/web/woke/price-insight/EldritchMark.vue'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { rollPair } from '@/web/woke/price-insight/roll-pair'
 import { INTERNAL_TRADE_IDS, StatFilter } from './interfaces'
@@ -45,6 +47,7 @@ const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, ca
 const qOn = computed(() => catalyst?.filter.value?.disabled === false)
 const look = computed(() => poeLook(props.filter))
 const tier = computed(() => poeTier(props.filter))
+const eldritch = computed(() => eldritchMark(props.filter))
 const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
 const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
 const isChild = computed(() => actions?.isChild(props.filter) ?? false)

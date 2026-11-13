@@ -112,3 +112,14 @@ export function fracturedIds (filter: StatFilter): string[] | undefined {
   const src = filter.sources.find(s => s.modifier.info.type === ModifierType.Fractured)
   return src?.stat.stat.trade.ids[ModifierType.Fractured]
 }
+
+const ELDRITCH_TIERS = ['Lesser', 'Greater', 'Grand', 'Exceptional', 'Exquisite', 'Perfect']
+
+/** An eldritch implicit's altar and tier (1 Lesser … 6 Perfect), when the row is one. */
+export function eldritchMark (filter: StatFilter): { source: 'exarch' | 'eater', rank: number, label: string } | null {
+  if (filter.sources.length !== 1) return null
+  const { eldritch, rank } = filter.sources[0].modifier.info
+  if (!eldritch || rank == null) return null
+  const altar = eldritch === 'exarch' ? 'Searing Exarch' : 'Eater of Worlds'
+  return { source: eldritch, rank, label: `${ELDRITCH_TIERS[rank - 1] ?? `Rank ${rank}`} ${altar} implicit` }
+}
