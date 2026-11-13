@@ -24,7 +24,7 @@ export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: 
   for (const source of pseudo.sources) {
     // A fractured mod searches any copy, as the total did (and as splitByMod does).
     // A crafted one too: the total counted it, and a crafted-only search misses
-    // every item with the same mod rolled.
+    // every item with the same mod rolled (it also searches the crafted id, below).
     let type = source.modifier.info.type
     if (anyCopy(type) && source.stat.stat.trade.ids[ModifierType.Explicit]) type = ModifierType.Explicit
     const key = `${type}|${source.stat.stat.ref}`
@@ -46,6 +46,12 @@ export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: 
         : sources[0].modifier.info.type,
       sources
     }, percent, item)
+    // A crafted mod searched as the explicit stat would miss items that have it
+    // crafted too: search either (two ids make an "any of" group).
+    const crafted = sources[0].stat.stat.trade.ids[ModifierType.Crafted]
+    if (crafted && filter.tag !== ModifierType.Crafted && sources.some(src => src.modifier.info.type === ModifierType.Crafted)) {
+      filter.tradeId = [...filter.tradeId, ...crafted.filter(id => !filter.tradeId.includes(id))]
+    }
     filter.disabled = false
     out.push(filter)
   }
