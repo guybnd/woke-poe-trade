@@ -38,6 +38,20 @@ history:
     date: '2026-11-13T01:55:50.418Z'
     comment: Updated title.
     id: a-2026-11-13t01-55-50-418z
+  - type: comment
+    user: Agent
+    comment: >-
+      Test on 3.30 launch day when new labs are up. Moved under epic
+      WOKEPOET-149 (launch-day group).
+    date: '2026-11-13T03:02:30.178Z'
+    selfAttested: true
+    id: c-2026-11-13t03-02-30-178z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T03:02:30.782Z'
+    comment: Linked under WOKEPOET-149.
+    id: a-2026-11-13t03-02-30-782z
+parentId: WOKEPOET-149
 ---
 Step 5 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Mock first.
 

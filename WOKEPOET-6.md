@@ -32,6 +32,12 @@ history:
       **Can you provide more past-league softcore poe.ninja CSVs?** The finder
       needs them to rank day-on-day rises over days 1-14. Attach them or say
       where you've saved them, and name the leagues they cover.
+  - type: comment
+    user: Agent
+    comment: 'Guy 2026-11-13: keep, Guy will provide past-league poe.ninja CSVs.'
+    date: '2026-11-13T03:02:29.226Z'
+    selfAttested: true
+    id: c-2026-11-13t03-02-29-226z
 swimlane: require-input
 needsAction: null
 ---

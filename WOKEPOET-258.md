@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-258
 title: 'Flips: outline Catalysts and Runegrafts in stash tabs'
-status: Backlog
+status: Todo
 priority: Low
 effort: S
 assignee: unassigned
@@ -20,7 +20,19 @@ history:
     date: '2026-11-13T01:55:58.107Z'
     comment: Linked under WOKEPOET-110.
     id: a-2026-11-13t01-55-58-107z
+  - type: comment
+    user: Agent
+    comment: 'Guy 2026-11-13: build now.'
+    date: '2026-11-13T03:02:40.048Z'
+    selfAttested: true
+    id: c-2026-11-13t03-02-40-048z
+  - type: status_change
+    from: Backlog
+    to: Todo
+    user: Agent
+    date: '2026-11-13T03:02:41.834Z'
 parentId: WOKEPOET-110
+needsAction: null
 ---
 Follow-up from WOKEPOET-110 (closed 2026-11-13). Flips stash outlines already read Scarab, Delirium, Delve, Essence and Blight tabs, with stack totals (#198, #204, #205, #207, #215). Catalysts and Runegrafts are not mapped yet.
 
