@@ -79,6 +79,14 @@ export function stackText (name: string, rarity: 'Currency' | 'Divination Card',
 
 export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 
+// A unique as the price check gets it from game text: with its base and the
+// base's category. Without the base the trade search sends the unique's name
+// as the base type, and the trade site answers "Unknown item base type".
+export function virtualUnique (info: BaseType): ParsedItem {
+  const uniqueBase = info.unique ? ITEM_BY_REF('ITEM', info.unique.base)?.[0] : undefined
+  return createVirtualItem({ rarity: ItemRarity.Unique, info, uniqueBase, category: uniqueBase?.craftable?.category })
+}
+
 // `english`: the game text below is English, which the parser reads only with
 // the English item data.
 export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): PriceCheckInput | null {
@@ -87,7 +95,7 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
   // The item data has no Foulborn uniques: it would price the plain one.
   if (ref.name.startsWith('Foulborn ')) return null
   if (kind === 'unique') {
-    const item = createVirtualItem({ rarity: ItemRarity.Unique, info })
+    const item = virtualUnique(info)
     return { clipboard: item.rawText, item }
   }
   if (kind === 'gem') {

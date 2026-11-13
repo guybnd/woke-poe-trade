@@ -134,7 +134,7 @@ import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
 import type { CorruptedFilter, PriceItem } from '../market/types'
 import { lookupRequest } from '../item-lookup/lookup'
-import { tradeQuery } from '../ui/tooltip/item-menu-logic'
+import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
 import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
@@ -582,13 +582,13 @@ function openLookup (entry: PriceEntry | ItemEntry, tab: LookupTab) {
   remember(entry)
   const info = infoFor(entry)
   if (!info) return
-  lookupRequest.value = { item: createVirtualItem({ rarity: info.namespace === 'UNIQUE' ? ItemRarity.Unique : ItemRarity.Normal, info }), tab }
+  lookupRequest.value = { item: info.namespace === 'UNIQUE' ? virtualUnique(info) : createVirtualItem({ rarity: ItemRarity.Normal, info }), tab }
 }
 function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
   remember(entry)
   const info = infoFor(entry)
   if (!info) return
-  const item = createVirtualItem({ rarity: ItemRarity.Unique, info })
+  const item = virtualUnique(info)
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',
     payload: { clipboard: item.rawText, item, position: { x: e.screenX, y: e.screenY }, focusOverlay: true, target: 'price-check' }
