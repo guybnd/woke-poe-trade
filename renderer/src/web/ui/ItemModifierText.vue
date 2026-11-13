@@ -5,12 +5,14 @@
         'text-white font-exo2 font-semibold': part.placeholder,
         'text-gray-200': !part.placeholder
       }"
-      >{{ part.text }}</span>
+      ><template v-if="part.placeholder">{{ part.text }}</template><template v-else><template v-for="(w, i) of elementParts(part.text)" :key="i"><span v-if="w.ele" class="w-ele" :data-ele="w.ele">{{ w.text }}</span><template v-else>{{ w.text }}</template></template></template></span>
   </span>
 </template>
 
 <script setup lang="ts">
 import { computed, defineProps } from 'vue'
+// woke: element words get a CSS hook (coloured only in PoE mode).
+import { elementParts } from '@/web/woke/ui/element-words'
 
 const props = defineProps<{
   text: string

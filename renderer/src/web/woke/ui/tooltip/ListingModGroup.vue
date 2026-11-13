@@ -7,7 +7,7 @@
       <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}</div>
       <div v-for="(line, l) in chunk.lines" :key="l">
         <span :class="[$style.line, kindClass(line)]">
-          <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else>{{ p.text }}</span></template>
+          <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else><template v-for="(w, j) in elementParts(p.text)" :key="j"><span v-if="w.ele" class="w-ele" :data-ele="w.ele">{{ w.text }}</span><template v-else>{{ w.text }}</template></template></span></template>
           <template v-if="line.quality != null">
             <i :class="$style.track" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }"><i :style="{ width: `${line.quality}%` }" /></i>
             <span class="w-num" :class="$style.quality" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }">{{ line.quality }}%</span>
@@ -25,6 +25,7 @@
 // stays on the tooltip's middle.
 import { computed, useCssModule } from 'vue'
 import type { ModGroup, ModLine } from '../../price-insight/listing-tip-detail'
+import { elementParts } from '../element-words'
 
 const props = defineProps<{ group: ModGroup }>()
 const $style = useCssModule()
@@ -135,4 +136,6 @@ function rollColour (quality: number) {
 :global(:root[data-woke-art]) .tag:is([data-tier="4"], [data-tier="5"]) { color: #8f897e; }
 :global(:root[data-woke-art]) .tag:is([data-tier="6"], [data-tier="7"]) { color: #6e695f; }
 :global(:root[data-woke-art]) .tag[data-tier="crafted"] { color: var(--w-mod-crafted); box-shadow: inset 0 0 0 1px var(--w-mod-crafted); }
+/* Element words, as in the price check's stat lines (colours in poe-mode.css). */
+:global(:root[data-woke-art]) .line :global(.w-ele) { color: color-mix(in srgb, var(--w-ele) 55%, currentColor); }
 </style>

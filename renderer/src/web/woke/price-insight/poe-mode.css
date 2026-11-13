@@ -392,3 +392,19 @@
 /* Pseudo / Base item: clicking the item's name already switches between the
  * category and this base type, so PoE mode doesn't show the extra buttons. */
 #price-window.w-poe [data-trade-presets] { display: none; }
+
+/* Element words in stat lines (Guy's pick "soft shift"): each word moves part
+ * of the way from the line's colour toward its element's. */
+#price-window.w-poe .w-ele { color: color-mix(in srgb, var(--w-ele) 55%, currentColor); }
+.w-ele[data-ele="fire"] { --w-ele: #e05a3a; }
+.w-ele[data-ele="cold"] { --w-ele: #5aa8e8; }
+.w-ele[data-ele="lightning"] { --w-ele: #e8c84a; }
+.w-ele[data-ele="chaos"] { --w-ele: #c060c8; }
+.w-ele[data-ele="physical"] { --w-ele: #c8c0b0; }
+
+/* A ticked line keeps its text centred, as it was before the tick (Guy's pick
+ * "ticked rows stay centred"): the text fills the room between the checkbox
+ * and the min/max boxes and centres in it. */
+#price-window.w-poe .w-poe-row > div > div:first-child > div:first-child { flex: 1 1 auto; }
+#price-window.w-poe .w-poe-row button:has(> .w-poe-row-text) { flex: 1 1 auto; min-width: 0; text-align: center; }
+#price-window.w-poe .w-poe-row .w-poe-row-text { text-align: center; }
