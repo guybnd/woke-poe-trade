@@ -20,7 +20,7 @@
         </component>
       </span>
     </div>
-    <div v-if="model.split?.length" :class="$style.split" aria-hidden="true">
+    <div v-if="(model.split?.length ?? 0) > 1" :class="$style.split" aria-hidden="true">
       <span v-for="s of model.split" :key="s.key" :style="{ flexGrow: s.share, background: s.color }" />
     </div>
     <div v-if="model.legend?.length" :class="$style.legend">
