@@ -45,7 +45,16 @@ export function poeLook (filter: StatFilter): PoeLook {
   if (icon) return { kind: 'explicit', label: `${icon[1]} modifier`, icon: icon[0] }
   switch (tag) {
     case FilterTag.Property: return { kind: 'local', label: 'Property' }
-    case FilterTag.Pseudo: return { kind: 'pseudo', label: 'Pseudo total' }
+    // Only a total several mods add up to gets the total's colour (Guy's call);
+    // one mod's total looks like that mod.
+    case FilterTag.Pseudo: {
+      if (filter.sources.length > 1) return { kind: 'pseudo', label: 'Pseudo total' }
+      const type = filter.sources[0]?.modifier.info.type
+      if (type === ModifierType.Fractured) return { kind: 'fractured', label: 'Total, from a fractured modifier' }
+      if (type === ModifierType.Crafted) return { kind: 'crafted', label: 'Total, from a crafted modifier' }
+      if (type === ModifierType.Implicit) return { kind: 'implicit', label: 'Total, from an implicit' }
+      return { kind: 'explicit', label: 'Total, from one modifier' }
+    }
     case FilterTag.Enchant: return { kind: 'enchant', label: 'Enchant' }
     case FilterTag.Crafted: return { kind: 'crafted', label: 'Crafted modifier' }
     case FilterTag.Fractured: return { kind: 'fractured', label: 'Fractured modifier' }

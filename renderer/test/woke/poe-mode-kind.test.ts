@@ -62,7 +62,10 @@ describe('PoE mode stat rows', () => {
       expect(poeSection(implicit)).toBe('implicit')
     }
     const pseudo = stats.find(s => s.tag === 'pseudo')!
-    expect(poeLook(pseudo).kind).toBe('pseudo')
+    // Only a total of several mods gets the total's colour; one mod's total looks like that mod.
+    for (const total of stats.filter(s => s.tag === 'pseudo')) {
+      expect(poeLook(total).kind === 'pseudo').toBe(total.sources.length > 1)
+    }
     // A total shows each of its mods' tiers, when every one has a tier.
     const tiers = pseudo.sources.map(s => s.modifier.info.tier)
     if (tiers.every(t => t != null)) expect(poeTier(pseudo)).toBe(`T${tiers.join('/')}`)
