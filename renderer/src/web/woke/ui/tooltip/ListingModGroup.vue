@@ -94,20 +94,20 @@ function rollColour (quality: number) {
 /* Hangs off the line's end, so the % doesn't push the text off centre. */
 .quality { position: absolute; left: 100%; bottom: 1px; margin-left: 5px; font-family: var(--w-num); font-size: var(--w-fs-xs); font-weight: 600; line-height: 1; white-space: nowrap; color: var(--roll); }
 
-/* PoE 1 / PoE 2 art: the same red to green in the game's dyes (blood, amber,
- * jade) on a sunken track. */
+/* PoE 1 / PoE 2 art: a bronze track that fills with gold, brighter for a
+ * better roll, with a faint glow from about 70% up. The % keeps the red to
+ * green colour, so the number still reads at a glance. */
 :global(:root[data-woke-art]) .line:has(> .track) { padding-bottom: 4px; }
 :global(:root[data-woke-art]) .track {
-  --dye: hsl(calc(4deg + var(--q) * 1.05deg) 52% 42%);
+  --glow: max(0, (var(--q) - 70) / 30);
   bottom: -1px;
-  height: 4px;
-  background: #120d08;
-  border-radius: 2px;
-  box-shadow: inset 0 1px 2px #000, 0 0 0 1px #3a2c18;
+  height: 3px;
+  overflow: visible;
+  background: #1a130a;
+  box-shadow: 0 0 0 1px #4a381c;
 }
 :global(:root[data-woke-art]) .track > i {
-  border-radius: 2px;
-  background: linear-gradient(rgba(255, 255, 255, 0.28), transparent 60%), var(--dye);
+  background: linear-gradient(90deg, #6b4f22, hsl(40deg 60% calc(32% + var(--q) * 0.3%)));
+  box-shadow: 0 0 calc(var(--glow) * 3px) hsl(42deg 80% 60% / calc(var(--glow) * 0.45));
 }
-:global(:root[data-woke-art]) .quality { color: hsl(calc(4deg + var(--q) * 1.05deg) 55% 55%); }
 </style>
