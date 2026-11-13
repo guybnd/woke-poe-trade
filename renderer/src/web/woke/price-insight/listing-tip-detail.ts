@@ -348,6 +348,13 @@ function headingOf (mod: ListingMod, kind: ModLine['kind']): string {
 
 const AFFIX_ORDER: Record<Affix, number> = { 'Prefix': 0, 'Suffix': 1, 'Crafted': 2, '': 3 }
 
+/** An unrevealed veiled mod as the game shows it: "Veiled Prefix". */
+function veiledText (mod: ListingMod): ListingMod {
+  if (typeof mod === 'string') return mod
+  const affix = mod.mods?.[0]?.tier?.startsWith('S') ? 'Suffix' : 'Prefix'
+  return { ...mod, description: `Veiled ${affix}`, mods: [{ name: 'Veiled' }] }
+}
+
 function buildGroups (item: ListingItem, catalyst: Catalyst | null): ModGroup[] {
   const listed = (item.explicitMods ?? []).filter(m => !['enchant', 'implicit'].includes(modDomain(m)))
   const entries: Array<{ mod: ListingMod, kind: ModLine['kind'] }> = [
@@ -355,7 +362,8 @@ function buildGroups (item: ListingItem, catalyst: Catalyst | null): ModGroup[] 
     ...(item.utilityMods ?? []).map(mod => ({ mod, kind: '' as const })),
     ...listed.map(mod => ({ mod, kind: modKind(mod, '') })),
     ...(item.craftedMods ?? []).map(mod => ({ mod, kind: 'crafted' as const })),
-    ...(item.scourgeMods ?? []).map(mod => ({ mod, kind: 'scourge' as const }))
+    ...(item.scourgeMods ?? []).map(mod => ({ mod, kind: 'scourge' as const })),
+    ...(item.veiledMods ?? []).map(mod => ({ mod: veiledText(mod), kind: '' as const }))
   ].filter(e => modText(e.mod))
 
   const groups: Array<ModGroup & { order: number }> = []

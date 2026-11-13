@@ -107,6 +107,7 @@ export function modSource (mod: ListingMod): ModSource | undefined {
   if (typeof mod === 'string') return undefined
   const name = mod.mods?.[0]?.name
   if (!name) return undefined
+  if (name === 'Veiled') return { icon: '/images/veiled.png', label: 'Veiled modifier' }
   if (/^Subterranean$|^of the Underground$/.test(name)) return { icon: '/images/delve.png', label: 'Delve modifier' }
   if (/^of the Essence$|^Essences$/.test(name)) return { icon: '/images/essence.png', label: 'Essence modifier' }
   if (INCURSION.test(name)) return { icon: '/images/incursion.png', label: 'Incursion modifier' }

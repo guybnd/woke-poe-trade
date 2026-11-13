@@ -26,6 +26,8 @@ export interface HeaderCell {
   /** Swatch / bar colour (CSS). */
   color: string
   filter?: StatFilter
+  /** The same on every copy of this unique unless something raised it (set by finish). */
+  fixed?: boolean
 }
 
 export interface HeaderModel {
@@ -159,6 +161,17 @@ const FILTER_NAMES: Record<string, string> = {
   'item.base_percentile': 'Base Percentile'
 }
 
+function isFixed (f: StatFilter) {
+  return f.hidden === 'filters.hide_const_roll' || f.hidden === 'hide_variable_by_base_percentile_only'
+}
+
+/** Picking a fixed number: shows its row and searches at least this item's value. */
+export function pickFixed (f: StatFilter) {
+  if (!isFixed(f)) return
+  f.hidden = undefined
+  if (f.roll && f.roll.min == null) f.roll.min = f.roll.value
+}
+
 /**
  * Names each cell by the filter it really picks (the big DPS number of a one-type
  * weapon picks that type's filter), and makes a roll that can't vary on this item
@@ -168,8 +181,9 @@ function finish (model: HeaderModel): HeaderModel {
   for (const c of [...model.bigs, ...model.chips, ...(model.legend ?? [])]) {
     const f = c.filter
     c.name = f ? (FILTER_NAMES[f.tradeId[0]] ?? 'the chaos damage mod') : (c.key === 'dps' ? 'Total DPS' : c.label)
-    // Fixed but for base percentile (a unique's Armour): no min or max to search either.
-    if (f?.hidden === 'filters.hide_const_roll' || f?.hidden === 'hide_variable_by_base_percentile_only') c.filter = undefined
+    // A unique's fixed number stays clickable (Guy): a corruption, enchant or
+    // quality can still raise it, so "at least yours" finds those copies.
+    if (f && isFixed(f)) c.fixed = true
   }
   return model
 }

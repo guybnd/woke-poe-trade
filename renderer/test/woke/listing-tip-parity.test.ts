@@ -82,6 +82,13 @@ describe('listing tooltip parity', () => {
     expect(listingDetail({ ...ring, corrupted: false }).implicits[0].corruption).toBeUndefined()
   })
 
+  it('shows an unrevealed veiled mod as the game does', () => {
+    const amulet: ListingItem = { veiled: true, veiledMods: [{ description: 'Prefix02', domain: 'veiled', hash: 'stat.veiled.mod_65000', mods: [{ name: 'Veiled', tier: 'P14' }] }] } as ListingItem
+    const line = find(amulet, 'Veiled')
+    expect(text(line)).toBe('Veiled Prefix')
+    expect(line.source?.label).toBe('Veiled modifier')
+  })
+
   it('draws scourge mods in their colour', () => {
     expect(find(HELMET, 'maximum Life').kind).toBe('scourge')
   })

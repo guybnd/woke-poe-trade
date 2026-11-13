@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import { computed, useCssModule } from 'vue'
 import type { HeaderCell, HeaderModel } from './stat-header'
-import { notePick } from './stat-header'
+import { notePick, pickFixed } from './stat-header'
 
 const props = defineProps<{ model: HeaderModel }>()
 const $style = useCssModule()
@@ -48,12 +48,13 @@ const cells = computed(() => {
 })
 
 function cellClass (c: HeaderCell) {
-  return { [$style.hit]: Boolean(c.filter), [$style.sel]: c.filter != null && !c.filter.disabled, [$style.ro]: !c.filter }
+  return { [$style.hit]: Boolean(c.filter), [$style.sel]: c.filter != null && !c.filter.disabled, [$style.ro]: !c.filter, [$style.fixed]: c.fixed }
 }
 
 function cellTitle (c: HeaderCell) {
   const name = c.name ?? c.label
   if (!c.filter) return `${name}: nothing on this item can change it`
+  if (c.fixed && c.filter.disabled) return `${name} is the same on every copy unless a corruption, enchant or quality raised it. Click to search at least yours.`
   const bar = (c.fill == null) ? ' Grey bar: nothing on this item can roll it.' : ' Bar: how close its rolls came to their max.'
   return (c.filter.disabled
     ? `Click to search ${name}. Searches only when you press Search.`
@@ -70,7 +71,10 @@ function onClick (e: MouseEvent) {
   const c = el && cells.value.get(el.dataset.cell!)
   if (!c?.filter) return
   const f = c.filter
-  if (f.disabled) notePick(f)
+  if (f.disabled) {
+    notePick(f)
+    pickFixed(f)
+  }
   f.disabled = !f.disabled
 }
 </script>
@@ -126,7 +130,7 @@ function onClick (e: MouseEvent) {
 }
 .chip.ro { border-color: transparent; opacity: .7; cursor: default; }
 /* Nothing can roll it, so no roll bar either. */
-.chip.ro .track { visibility: hidden; }
+.ro .track, .fixed .track { visibility: hidden; }
 .track {
   position: relative;
   display: block;

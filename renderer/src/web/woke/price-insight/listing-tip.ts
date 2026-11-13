@@ -44,6 +44,8 @@ export interface ListingItem {
   searing?: boolean
   tangled?: boolean
   scourgeMods?: ListingMod[]
+  // Unrevealed: description "Prefix02", one mod named "Veiled" with tier P… or S….
+  veiledMods?: ListingMod[]
   // In a value, the number says how the game colours it: 1 boosted, 4 fire,
   // 5 cold, 6 lightning, 7 chaos.
   properties?: Array<{ name?: string, type?: number, displayMode?: number, values: Array<[string, number]> }>

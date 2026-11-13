@@ -5,7 +5,7 @@ import { loadGameData, fixture, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { rollFill, weaponDps } from '@/web/woke/price-insight/weapon-dps'
-import { buildStatHeader, headerFilters, notePick, pickOrder } from '@/web/woke/price-insight/stat-header'
+import { pickFixed, buildStatHeader, headerFilters, notePick, pickOrder } from '@/web/woke/price-insight/stat-header'
 
 function load (name: string) {
   const item = parseItem(fixture(`items/${name}`))
@@ -133,12 +133,17 @@ describe('buildStatHeader', () => {
     if (prop('item.base_percentile')) expect(m.chips.map(c => c.key)).toContain('base')
   })
 
-  it("a unique's Armour only base percentile moves isn't clickable", () => {
+  it("a unique's fixed Armour stays clickable and searches at least its value", () => {
     const { item, stats, prop } = load('unique-kaoms-heart.txt')
     expect(prop('item.armour')?.hidden).toBe('hide_variable_by_base_percentile_only')
     const m = buildStatHeader(item, stats)!
     const armour = m.bigs.find(c => c.key === 'armour')!
-    expect(armour.filter).toBeUndefined()
+    // A corruption or enchant can still raise it (Guy's call).
+    expect(armour.filter).toBe(prop('item.armour'))
+    expect(armour.fixed).toBe(true)
+    pickFixed(armour.filter!)
+    expect(armour.filter!.hidden).toBeUndefined()
+    expect(armour.filter!.roll?.min).not.toBeUndefined()
     expect(m.chips.find(c => c.key === 'base')?.filter).toBe(prop('item.base_percentile'))
   })
 
