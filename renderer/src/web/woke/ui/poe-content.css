@@ -104,11 +104,11 @@
 }
 
 /* ---------- Scrollbars ---------- */
-:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window]) ::-webkit-scrollbar { width: 14px; height: 14px; }
-:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window]) ::-webkit-scrollbar-track {
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], #price-window) ::-webkit-scrollbar { width: 14px; height: 14px; }
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], #price-window) ::-webkit-scrollbar-track {
   background: var(--art-scroll-track) center top / 14px auto repeat-y;
 }
-:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window]) ::-webkit-scrollbar-thumb {
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], #price-window) ::-webkit-scrollbar-thumb {
   /* Backgrounds, not border-image: Chromium draws only backgrounds on scrollbar parts. */
   min-height: 24px;
   border: 0;
@@ -120,13 +120,13 @@
     var(--art-thumb-mid) center / 100% auto repeat-y;
 }
 /* The thumb lights up under the mouse and while held, as the game's does. */
-:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window]) ::-webkit-scrollbar-thumb:is(:hover, :active) {
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], #price-window) ::-webkit-scrollbar-thumb:is(:hover, :active) {
   background:
     var(--art-thumb-top-lit) center top / 100% auto no-repeat,
     var(--art-thumb-bot-lit) center bottom / 100% auto no-repeat,
     var(--art-thumb-mid-lit) center / 100% auto repeat-y;
 }
-:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window]) ::-webkit-scrollbar-corner { background: transparent; }
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], #price-window) ::-webkit-scrollbar-corner { background: transparent; }
 
 /* ---------- Panels' own parts ---------- */
 /* Group heads inside a tool panel become category bars. */
