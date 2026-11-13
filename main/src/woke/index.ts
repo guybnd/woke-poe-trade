@@ -8,7 +8,7 @@ import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, openBu
 import { timelessRewrites } from './pob-timeless'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
-import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, checkOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
+import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, ensureOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
 import { WokeHoverTracker } from './hover'
 import { readStashTab } from './stash-read'
 import { StashWatch } from './stash-watch'
@@ -57,7 +57,7 @@ const handlers: Partial<WokeHandlers> = {
   'ns-cached': async () => await cachedNeverSink(),
   'ns-prune': pruneNeverSink,
   'perf-stats': async () => perfSnapshot(),
-  'ocr-check': async () => checkOcr(),
+  'ocr-check': async () => await ensureOcr(),
   'hotkey-failures': async () => hotkeyFailures(),
   'lab-layout-image': labLayoutImage,
   'path-stat': pathStat,
