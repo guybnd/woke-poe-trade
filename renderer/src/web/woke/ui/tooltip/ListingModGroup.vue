@@ -6,11 +6,11 @@
       <template v-else-if="!chunk.heading"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></template>
     </span>
     <div :class="$style.middle">
-      <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}<span :class="$style.headTags"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, $style.tagSm, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></span></div>
+      <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}<img v-if="sourceOf(chunk)" :src="sourceOf(chunk)!.icon" :title="sourceOf(chunk)!.label" alt="" :class="$style.headIcon"><span :class="$style.headTags"><span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, $style.tagSm, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span></span></div>
       <div v-for="(line, l) in chunk.lines" :key="l">
         <span :class="[$style.line, kindClass(line)]" :title="line.label">
           <span v-if="corrupt(line)" :class="$style.corrupt" title="Corruption implicit" />
-          <img v-if="line.source" :src="line.source.icon" alt="" :class="$style.icon">
+          <img v-if="line.source && !chunk.heading" :src="line.source.icon" alt="" :class="$style.icon">
           <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else><template v-for="(w, j) in elementParts(p.text)" :key="j"><span v-if="w.ele" class="w-ele" :data-ele="w.ele">{{ w.text }}</span><template v-else>{{ w.text }}</template></template></span></template>
           <template v-if="line.quality != null">
             <i :class="$style.track" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }"><i :style="{ width: `${line.quality}%` }" /></i>
@@ -58,6 +58,11 @@ function corrupt (line: Line) {
   return isCorruption(line.corruption, implicitTable.value)
 }
 
+// A league mechanic's or influence's icon sits by the mod's name, when it has one.
+function sourceOf (chunk: ModGroup) {
+  return chunk.lines.find(l => l.source)?.source
+}
+
 // Two mods can share a name, so a group can hold more than one tier.
 function tagsOf (chunk: ModGroup) {
   return Array.from(new Set(chunk.lines.flatMap(line => line.tags)))
@@ -101,6 +106,7 @@ function rollColour (quality: number) {
 .middle { min-width: 0; }
 .heading { color: var(--w-dim); font-size: var(--w-fs-md); }
 .tags { display: inline-flex; gap: 2px; }
+.headIcon { display: inline-block; width: 15px; height: 15px; margin-left: 5px; vertical-align: -3px; }
 .headTags { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: 1px; }
 .tag.tagSm { min-width: 0; padding: 0 3px; font-size: var(--w-fs-xs); line-height: 1.25; }
 .tag {
