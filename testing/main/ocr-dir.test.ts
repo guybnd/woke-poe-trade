@@ -1,13 +1,13 @@
 // Where the OCR files are read from, and the download when no folder has
 // them all (main/src/woke/ocr-dir.ts).
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { execFileSync } from 'child_process'
 import { net } from 'electron'
 import { OCR_FILES, USER_OCR_DIR, ocrDir, missingOcrFiles, ensureOcrFiles, lastOcrDownloadError } from '../../main/src/woke/ocr-dir'
-import { checkOcr } from '../../main/src/woke/map-scan'
+import { checkOcr, ensureOcr } from '../../main/src/woke/map-scan'
 
 const fakeNet = net as unknown as { fetch?: (url: string) => Promise<Response> }
 
@@ -74,7 +74,19 @@ describe.runIf(process.platform === 'win32')('ocr download', () => {
     expect(calls).toBe(1)
   })
 
+  it('a slow download says so instead of holding the request', async () => {
+    let finish!: (r: Response) => void
+    fakeNet.fetch = async () => await new Promise<Response>(resolve => { finish = resolve })
+    const check = await ensureOcr(50)
+    expect(check.ok).toBe(false)
+    expect(check.message).toContain('Downloading the OCR files')
+    finish(new Response('nope', { status: 500 }))
+    await ensureOcr(5_000)
+  })
+
   it('a failed download is reported and not retried right away', async () => {
+    // The slow test above failed one download: wait out its retry pause.
+    vi.setSystemTime(Date.now() + 10 * 60 * 1000)
     let calls = 0
     fakeNet.fetch = async () => { calls++; return new Response('nope', { status: 404 }) }
     await ensureOcrFiles()
@@ -82,5 +94,6 @@ describe.runIf(process.platform === 'win32')('ocr download', () => {
     expect(checkOcr().message).toContain('Downloading them failed')
     await ensureOcrFiles()
     expect(calls).toBe(1)
+    vi.useRealTimers()
   })
 })

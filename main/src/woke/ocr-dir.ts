@@ -45,9 +45,14 @@ export function lastOcrDownloadError (): string | null {
   return lastFailure?.error ?? null
 }
 
+export function ocrDownloading (): boolean {
+  return fetching != null
+}
+
 // Makes sure some folder has every OCR file, downloading them into the config
 // folder when none does. Resolves either way; read ocrDir() afterwards.
-export async function ensureOcrFiles (): Promise<void> {
+// With waitMs, gives up waiting after that long (the download goes on).
+export async function ensureOcrFiles (waitMs?: number): Promise<void> {
   if (!missingOcrFiles(ocrDir()).length) return
   if (process.platform !== 'win32') return
   if (lastFailure && Date.now() - lastFailure.at < RETRY_MS) return
@@ -59,7 +64,13 @@ export async function ensureOcrFiles (): Promise<void> {
       })
       .finally(() => { fetching = null })
   }
-  await fetching
+  if (waitMs == null) {
+    await fetching
+    return
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined
+  await Promise.race([fetching, new Promise<void>(resolve => { timer = setTimeout(resolve, waitMs) })])
+  clearTimeout(timer)
 }
 
 async function downloadOcrFiles (dest: string): Promise<void> {
