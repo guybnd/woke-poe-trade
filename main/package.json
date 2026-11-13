@@ -1,7 +1,7 @@
 {
   "name": "woke-poe-trade",
   "productName": "Woke PoE Trade",
-  "version": "1.330.1",
+  "version": "1.330.2",
   "description": "Path of Exile overlay toolkit built on Awakened PoE Trade",
   "private": true,
   "scripts": {
