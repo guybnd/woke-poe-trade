@@ -1,5 +1,5 @@
 <template>
-  <span :class="[$style.dots, { [$style.ring]: ring }]" :title="title">
+  <span :class="[$style.dots, { [$style.ring]: ring, [$style.linked]: colours.length > 1 }]" :title="title">
     <template v-for="(c, i) in colours" :key="i">
       <span v-if="i" :class="$style.link" />
       <span :class="[$style.dot, $style[c]]" />
@@ -33,6 +33,13 @@ const title = computed(() => props.colours.map(c => COLOUR_NAME[c]).join(' - '))
   background:
     radial-gradient(circle closest-side, #050403 0 40%, #1a140e 48%, color-mix(in srgb, var(--c) 55%, #000) 54%, var(--c) 64%, color-mix(in srgb, var(--c) 70%, #fff) 72%, var(--c) 80%, color-mix(in srgb, var(--c) 40%, #000) 94%, #000 100%);
   box-shadow: 0 0 0 1px #000;
+}
+/* A linked group sits on one bronze plate, so an unlinked socket stands apart. */
+:global(:root[data-woke-art]) .ring.linked {
+  padding: 3px 4px;
+  border-radius: 12px;
+  background: linear-gradient(#3a2a12, #1a1208);
+  box-shadow: inset 0 0 0 1px #6b4f22;
 }
 :global(:root[data-woke-art]) .ring .link {
   position: relative;

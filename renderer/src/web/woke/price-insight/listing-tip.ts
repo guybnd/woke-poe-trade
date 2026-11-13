@@ -77,6 +77,19 @@ export function modDomain (mod: ListingMod): string {
   return mod.domain ?? ''
 }
 
+/** A listing's sockets as traders say them, for the listings' Sockets column:
+ *  6L (gold), 6S (blue: six sockets, not all linked), 5L, else the socket count. */
+export function socketSummary (sockets: ListingItem['sockets']): { text: string, tone: 'l6' | 's6' | '' } {
+  const groups = new Map<number, number>()
+  for (const s of sockets ?? []) groups.set(s.group, (groups.get(s.group) ?? 0) + 1)
+  const total = sockets?.length ?? 0
+  const link = Math.max(0, ...groups.values())
+  if (link >= 6) return { text: '6L', tone: 'l6' }
+  if (total >= 6) return { text: '6S', tone: 's6' }
+  if (link === 5) return { text: '5L', tone: '' }
+  return { text: total ? `${total}S` : '', tone: '' }
+}
+
 function socketsText (sockets: ListingItem['sockets']): string {
   const groups = new Map<number, string[]>()
   for (const s of sockets ?? []) {

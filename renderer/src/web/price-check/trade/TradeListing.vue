@@ -61,6 +61,9 @@
             <th v-if="showQuality" :class="$style.tableHeading">
               <div class="px-2">{{ t(':quality') }}</div>
             </th>
+            <th v-if="showSockets" :class="$style.tableHeading" title="Sockets. Gold: all six linked. Blue: six sockets, not all linked.">
+              <div class="px-2">Sockets</div>
+            </th>
             <th v-for="col in shownColumns" :key="col.key" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="col.title">
               <div>{{ col.label }}</div>
             </th>
@@ -83,6 +86,7 @@
             <td v-if="showItemLevel" class="px-2 text-right">{{ item.itemLevel }}</td>
             <td v-if="item.category === 'Gem'" />
             <td v-if="showQuality" />
+            <td v-if="showSockets" class="px-2 w-pc-sockets" :class="item.sockets?.linked === 6 ? 'l6' : ''">{{ item.sockets?.linked ? `${item.sockets.linked}L` : '' }}</td>
             <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat">{{ col.yours }}</td>
             <td v-if="hiddenColumns.length" />
             <td v-if="showSeller" />
@@ -128,6 +132,7 @@
               <td v-if="showItemLevel" class="px-2 whitespace-nowrap text-right">{{ row.lead.itemLevel }}</td>
               <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ row.lead.level }}</td>
               <td v-if="showQuality" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
+              <td v-if="showSockets" class="px-2 whitespace-nowrap w-pc-sockets" :class="socketSummary(row.lead.listedItem?.sockets).tone">{{ socketSummary(row.lead.listedItem?.sockets).text }}</td>
               <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)" :style="toneStyle(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}</td>
               <td v-if="hiddenColumns.length" />
               <td v-if="showSeller" class="px-2 whitespace-nowrap">
@@ -178,6 +183,8 @@ import { AppConfig } from '@/web/Config'
 import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { ItemFilters, FilterOrGroup } from '../filters/interfaces'
 import { ParsedItem } from '@/parser'
+import { ItemCategory } from '@/parser/meta'
+import { socketSummary } from '@/web/woke/price-insight/listing-tip'
 import { artificialSlowdown } from './artificial-slowdown'
 import { useRetryCountdown } from './retry-countdown'
 import OnlineFilter from './OnlineFilter.vue'
@@ -195,6 +202,8 @@ import { textScale } from '@/web/woke/ui/text-scale'
 import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods } from '@/web/woke/price-insight/search-scope'
+
+const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
 
 const slowdown = artificialSlowdown(900)
 
@@ -389,6 +398,8 @@ export default defineComponent({
     // most gear now has a Quality box, and an unused one mustn't take a stat column's room.
     const showQuality = computed(() => props.item.category === 'Gem' || Boolean(
       props.filters.quality && !props.filters.quality.disabled))
+    // woke: items that can have six sockets list them in their own column (Guy's pick "6L / 6S column").
+    const showSockets = computed(() => props.item.category != null && SIX_SOCKETS.has(props.item.category))
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
@@ -400,6 +411,7 @@ export default defineComponent({
       if (showItemLevel.value) width += WIDTH_NUMBER_COLUMN
       if (props.item.category === 'Gem') width += WIDTH_NUMBER_COLUMN
       if (showQuality.value) width += WIDTH_NUMBER_COLUMN
+      if (showSockets.value) width += WIDTH_NUMBER_COLUMN
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
       if (listings.some(r => !r.hasFee)) width += WIDTH_STASH_ICON
@@ -465,6 +477,8 @@ export default defineComponent({
 
     return {
       t,
+      showSockets,
+      socketSummary,
       list: searchResult,
       improved,
       blankSearch,

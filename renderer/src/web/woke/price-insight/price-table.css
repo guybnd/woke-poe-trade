@@ -222,3 +222,8 @@
   font-family: var(--w-body);
   font-size: var(--w-fs-sm);
 }
+
+/* The listings' Sockets column (Guy's pick "6L / 6S column"): gold 6L, blue 6S. */
+.w-pc-sockets { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--w-dim); text-align: left; }
+.w-pc-sockets.l6 { color: var(--w-gold-hi, #e8c470); }
+.w-pc-sockets.s6 { color: #7fa8f0; }
