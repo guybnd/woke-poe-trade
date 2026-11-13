@@ -57,3 +57,38 @@ export function fitTitle (bar: HTMLElement) {
   }
   bar.style.setProperty('--w-title-clear', `${clear}px`)
 }
+
+// ---- Watching: every panel's bar on one ResizeObserver and one look watcher ----
+
+const bars = new Set<HTMLElement>()
+let sizes: ResizeObserver | undefined
+let look: MutationObserver | undefined
+
+function barOf (el: Element): HTMLElement | null {
+  return bars.has(el as HTMLElement) ? el as HTMLElement : el.parentElement && bars.has(el.parentElement) ? el.parentElement : null
+}
+
+/** Fits the bar now and again whenever it or its buttons change size, or the look changes. */
+export function watchTitle (bar: HTMLElement) {
+  sizes ??= new ResizeObserver(entries => {
+    const touched = new Set<HTMLElement>()
+    for (const e of entries) { const b = barOf(e.target); if (b) touched.add(b) }
+    touched.forEach(fitTitle)
+  })
+  // A look switch (theme.ts sets these on the root). Watched on the page, not by
+  // importing theme.ts, which touches the document when it loads (and so breaks
+  // rendering a panel outside a browser, as the tests do).
+  look ??= new MutationObserver(() => requestAnimationFrame(() => bars.forEach(fitTitle)))
+  if (bars.size === 0) look.observe(document.documentElement, { attributes: true, attributeFilter: ['data-woke-art', 'data-woke-theme'] })
+  bars.add(bar)
+  sizes.observe(bar)
+  // The buttons can change width without the bar changing size.
+  for (const el of bar.children) sizes.observe(el)
+}
+
+export function unwatchTitle (bar: HTMLElement) {
+  if (!bars.delete(bar)) return
+  sizes?.unobserve(bar)
+  for (const el of bar.children) sizes?.unobserve(el)
+  if (bars.size === 0) look?.disconnect()
+}

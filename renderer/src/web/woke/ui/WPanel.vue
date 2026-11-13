@@ -5,7 +5,9 @@
       :title="headTip" @dblclick="onHeadDblClick">
       <WIcon v-if="icon" v-bind="iconProps" size="md" :class="$style.icon" />
       <span :class="$style.title" class="w-trunc">
-        <WIcon v-if="icon" v-bind="iconProps" size="sm" class="w-crest-icon" aria-hidden="true" />
+        <!-- A plain image, not a second WIcon: one per panel adds up (perf budget). -->
+        <img v-if="crest?.src" :src="crest.src" class="w-crest-icon w-game-icon" alt="" aria-hidden="true" draggable="false">
+        <i v-else-if="crest" :class="[crest.fa, 'w-crest-icon']" aria-hidden="true" />
         <slot name="title">{{ title }}</slot>
       </span>
       <span v-if="!minimized && (updated != null || hotkey || $slots.actions)" :class="$style.actions">
@@ -47,13 +49,14 @@
 // the hotkey that opens it, then optional banner/tabs/toolbar/meta, a
 // scrolling body and a footer. Keyboard (P8): arrow keys move between rows,
 // "/" jumps to the first search field, Esc leaves a field.
-import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
 import { snapEdge, clearGuides, releaseWebviewsForDrag } from './snap'
 import { anchorShare, heightCap, resizeAxis, unzoom } from './panel-fit'
 import type { Box, ResizeSide } from './panel-fit'
 import WIcon from './WIcon.vue'
+import { CURRENCY_ICONS, mechanicIcon } from './game-icons'
 import WKbd from './WKbd.vue'
-import { fitTitle } from './title-fit'
+import { unwatchTitle, watchTitle } from './title-fit'
 import { ago, freshness } from './format'
 
 const props = withDefaults(defineProps<{
@@ -178,23 +181,10 @@ onBeforeUnmount(() => stopWatchingSize?.())
 
 // ---- Title bar in the game art: the crest never runs into the bar's buttons ----
 const head = ref<HTMLElement | null>(null)
-let headObserver: ResizeObserver | undefined
-let lookObserver: MutationObserver | undefined
-function refitTitle () { if (head.value) fitTitle(head.value) }
-onMounted(() => {
-  if (!head.value) return
-  headObserver = new ResizeObserver(refitTitle)
-  headObserver.observe(head.value)
-  // The buttons can change width without the bar changing size.
-  for (const el of head.value.children) headObserver.observe(el)
-  // A look switch (theme.ts sets these on the root). Watched on the page, not by
-  // importing theme.ts, which touches the document when it loads (and so breaks
-  // rendering a panel outside a browser, as the tests do).
-  lookObserver = new MutationObserver(() => nextTick(refitTitle))
-  lookObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-woke-art', 'data-woke-theme'] })
-})
-watch(() => props.title, () => nextTick(refitTitle))
-onBeforeUnmount(() => { headObserver?.disconnect(); lookObserver?.disconnect() })
+// One shared ResizeObserver and one look watcher for every panel (title-fit.ts),
+// not a pair per panel.
+onMounted(() => { if (head.value) watchTitle(head.value) })
+onBeforeUnmount(() => { if (head.value) unwatchTitle(head.value) })
 
 function uiScale () {
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
@@ -307,6 +297,15 @@ const iconProps = computed(() => {
   if (i.startsWith('/') || i.startsWith('http')) return { src: i }
   if (i === 'chaos' || i === 'divine' || i === 'exalted' || i === 'wisdom' || i === 'dust') return { currency: i }
   return { mechanic: i }
+})
+
+// The crest's copy of the icon, drawn only by the game art (poe-frame.css).
+const crest = computed(() => {
+  const p = props.icon ? iconProps.value : null
+  if (!p) return null
+  if ('src' in p) return { src: p.src, fa: 'fas fa-circle' }
+  if ('currency' in p) return { src: CURRENCY_ICONS[p.currency!] ?? null, fa: 'fas fa-coins' }
+  return mechanicIcon(p.mechanic!)
 })
 
 const fresh = computed(() => freshness(props.updated, props.freshMin, props.staleMin))

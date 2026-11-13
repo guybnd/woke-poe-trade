@@ -138,7 +138,7 @@
 // Item and gem tooltips in the game's style, beside what's hovered. Sits on
 // the page rather than in the panel, so the panel's edges don't clip it.
 // Mounted once in the overlay.
-import { computed, inject, nextTick, onMounted, onUnmounted, ref, shallowRef, useCssModule, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, nextTick, onMounted, onUnmounted, ref, shallowRef, useCssModule, watch } from 'vue'
 import { usePoeninja } from '@/web/background/Prices'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import SocketDots from '../../pob-builds/SocketDots.vue'
@@ -147,7 +147,8 @@ import { gemData } from '../../pob-builds/gems'
 import type { GemColour } from '../../pob-builds/gems'
 import type { PobItem } from '../../pob-builds/widget'
 import SwapCard from '../../pob-builds/SwapCard.vue'
-import ListingModGroup from './ListingModGroup.vue'
+// Only a trade listing's tooltip draws mod groups: loaded on first use.
+const ListingModGroup = defineAsyncComponent(() => import('./ListingModGroup.vue'))
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import WSpark from '../WSpark.vue'

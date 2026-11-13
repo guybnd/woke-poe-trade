@@ -173,13 +173,15 @@
 }
 /* The window's icon in the crest's dome. */
 :root[data-woke-art] [data-w-panel]:not([data-pin]) > [data-widget-drag] > .w-trunc > .w-crest-icon {
-  display: block !important;
   position: absolute;
   left: 50%;
   top: calc(50% + var(--w-crest-icon-y));
   transform: translate(-50%, -50%);
   width: 22px;
   height: 22px;
+  display: grid !important;
+  place-items: center;
+  color: var(--w-gold-hi, #e0c27a);
   filter: drop-shadow(0 0 2px #000);
 }
 :root[data-woke-art] [data-w-settings] > header > :first-child {
