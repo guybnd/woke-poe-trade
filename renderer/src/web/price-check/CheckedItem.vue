@@ -89,7 +89,7 @@
 </template>
 
 <script lang="ts">
-import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, toRaw, onUnmounted, ComponentPublicInstance } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
@@ -115,6 +115,7 @@ import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
 import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
+import { rawClone } from '@/web/woke/raw-clone'
 import { AppConfig } from '@/web/Config'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
@@ -269,8 +270,9 @@ export default defineComponent({
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
       searched.value = {
-        filters: { ...structuredClone(toRaw(itemFilters.value)), trade: itemFilters.value.trade },
-        stats: structuredClone(toRaw(itemStats.value))
+        // woke: rawClone, as split rows hold reactive parts structuredClone throws on.
+        filters: { ...rawClone(itemFilters.value), trade: itemFilters.value.trade },
+        stats: rawClone(itemStats.value)
       }
 
       // NOTE: child `trade-xxx` component renders/receives props on nextTick

@@ -133,8 +133,9 @@ export function provideStatActions (
     }
     const byMod = f.inTotal === true
     const made = byMod
-      ? splitByMod(f, item.value, percent())
-      : splitFilters(f, list, item.value, percent())
+      // The plain row, so the new rows don't hold reactive copies of its parts.
+      ? splitByMod(raw, item.value, percent())
+      : splitFilters(raw, list, item.value, percent())
     if (!made.length) {
       toast('Its mods are already listed on their own.')
       return
