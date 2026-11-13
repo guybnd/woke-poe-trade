@@ -86,6 +86,13 @@ history:
     to: Done
     user: Agent
     date: '2026-11-13T03:06:39.309Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-13T13:45:55.845Z'
+    comment: >-
+      Follow-up #417 merged (f88b4651): the card says "Viscera", the game's word
+      for the trophies, per poedb's Covens league page. The dev build is on it.
+    id: a-2026-11-13t13-45-55-845z
 swimlane: null
 needsAction: null
 baselineCommit: 9747783386088b67140c621fed5865bf72798b69
