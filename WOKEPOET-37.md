@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-37
 title: 'Price check: fixes from the veteran critique'
-status: Grooming
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -42,6 +42,17 @@ history:
     user: Agent
     date: '2026-11-05T08:10:26.404Z'
     comment: 'Guy: ticket everything and start.'
+  - type: comment
+    user: Agent
+    comment: 'Closed on Guy''s "Apply all" (2026-11-13): all subtasks 63-69 are Done.'
+    date: '2026-11-13T01:56:04.438Z'
+    completionComment: true
+    id: c-2026-11-13t01-56-04-438z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:56:04.438Z'
 swimlane: null
 needsAction: null
 subtasks:

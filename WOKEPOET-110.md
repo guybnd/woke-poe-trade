@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-110
 title: 'Flips: outline flippable items in open stash tabs by flip-worthiness'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -224,9 +224,36 @@ history:
       Reviewed and fixed, waiting on merge. Catalysts and Runegrafts still
       unmapped.
     id: a-2026-11-06t03-48-00-956z
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Guy 2026-11-13: close; Catalysts and Runegrafts move to a new ticket.'
+    date: '2026-11-13T01:55:34.129Z'
+    id: c-2026-11-13t01-55-34-129z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-13T01:55:34.129Z'
+    comment: 'Guy 2026-11-13: close; Catalysts and Runegrafts move to a new ticket.'
+  - type: comment
+    user: Agent
+    comment: >-
+      Closed on Guy's "Apply all" (2026-11-13). Shipped in #198-#215 (Scarab,
+      Delirium, Delve, Essence, Blight tabs, stack totals). Catalysts and
+      Runegrafts moved to WOKEPOET-258.
+    date: '2026-11-13T01:56:03.632Z'
+    completionComment: true
+    id: c-2026-11-13t01-56-03-632z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:56:03.632Z'
+swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/198'
+subtasks:
+  - WOKEPOET-258
 ---
 > **TL;DR:** When Flips is enabled and a stash tab is open, draw a coloured outline on each flippable item showing how worth flipping it is. Ticketed for later: mockups first, no build yet.
 

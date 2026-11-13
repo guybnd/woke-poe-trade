@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-4
 title: Pick lab and live-search icons
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -34,7 +34,31 @@ history:
       module review #2: https://claude.ai/artifact/WYPD7MU9PA86okKVa6TSht.
       Please also say whether anything else from the icon-everything audit
       should get an icon.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Guy 2026-11-13: close, mostly shipped.'
+    date: '2026-11-13T01:55:33.375Z'
+    id: c-2026-11-13t01-55-33-375z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-13T01:55:33.375Z'
+    comment: 'Guy 2026-11-13: close, mostly shipped.'
+  - type: comment
+    user: Agent
+    comment: >-
+      Closed on Guy's "Apply all" (2026-11-13): icons shipped as dock icons (lab
+      dock icon #165), game-art icons (#304) and folder icons (#303).
+    date: '2026-11-13T01:56:01.042Z'
+    completionComment: true
+    id: c-2026-11-13t01-56-01-042z
+  - type: status_change
+    from: Grooming
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:56:01.042Z'
+swimlane: null
 needsAction: null
 ---
 > **TL;DR** — Guy **picks icons for lab and live search**, plus anything else the **icon-everything audit** flags. Done looks like recorded picks, ready to build.

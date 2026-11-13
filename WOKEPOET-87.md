@@ -1,6 +1,6 @@
 ---
 id: WOKEPOET-87
-title: 'Lab: right layout for the difficulty, and a way past poelab''s 403'
+title: 'Lab: handle poelab 403 / bot check'
 status: Grooming
 priority: High
 effort: None
@@ -33,6 +33,11 @@ history:
     date: '2026-11-12T07:17:06.484Z'
     selfAttested: true
     id: c-2026-11-12t07-17-06-484z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T01:55:50.418Z'
+    comment: Updated title.
+    id: a-2026-11-13t01-55-50-418z
 ---
 Step 5 of the [gameplay helpers critique](https://claude.ai/artifact/NjdEZhrQZBmKwRB56yTsoj). Mock first.
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-69
 title: 'Price check: show more, mocks first'
-status: In Progress
+status: Done
 priority: Medium
 effort: L
 assignee: unassigned
@@ -77,7 +77,40 @@ history:
       **Do you want weighted search and real sales built too?** Hover card
       (#160), data age (#161) and bulk verdict (#164) are merged. Proposed
       default: leave those two out until you've tried the rest in game.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy (2026-11-13, "Apply all"): close this. Parked as ideas, not built:
+      weighted search, and real sales from the trade log. Hover card (#160),
+      data age (#161) and bulk verdict (#164) shipped.
+    date: '2026-11-13T01:55:30.782Z'
+    selfAttested: true
+    id: c-2026-11-13t01-55-30-782z
+  - type: comment
+    user: Agent
+    comment: 'Answered: park weighted search and real sales as ideas; close.'
+    date: '2026-11-13T01:55:31.676Z'
+    id: c-2026-11-13t01-55-31-676z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-13T01:55:31.676Z'
+    comment: 'Answered: park weighted search and real sales as ideas; close.'
+  - type: comment
+    user: Agent
+    comment: >-
+      Closed on Guy's "Apply all" (2026-11-13). Shipped: #160, #161, #164.
+      Weighted search and real sales parked as ideas.
+    date: '2026-11-13T01:55:58.836Z'
+    completionComment: true
+    id: c-2026-11-13t01-55-58-836z
+  - type: status_change
+    from: In Progress
+    to: Done
+    user: Agent
+    date: '2026-11-13T01:55:58.836Z'
+swimlane: null
 needsAction: null
 ---
 > TL;DR: Listing mods on hover, a corrupted column, a verdict for bulk items, price data age, weighted searches and real sales from the trade log. New UI, so mocks and Guy's pick come first.
