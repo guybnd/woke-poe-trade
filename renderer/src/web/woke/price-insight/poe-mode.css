@@ -354,3 +354,37 @@
 /* Labels in the rest of the window */
 #price-window.w-poe .w-pc-verdict-wait,
 #price-window.w-poe [data-roll-presets] { font-family: var(--w-label); }
+
+/* ---- PoE 1 / PoE 2 art: the header (Guy's pick "one chip style, joined presets") ----
+ * Every item chip is the same dark well; one whose filter is on gets a gold
+ * edge and gold text. Low / Approx / High are one pressed-in strip with the
+ * picked one lit. */
+:root[data-woke-art] #price-window.w-poe :is(.w-poe-chip, .w-poe-nchip) {
+  border-color: #3a2c18;
+  background: #0f0b07;
+  box-shadow: inset 0 1px 2px #000;
+  color: #8f897e;
+}
+:root[data-woke-art] #price-window.w-poe :is(.w-poe-chip, .w-poe-nchip).on {
+  border-color: #c8a25a;
+  background: #0f0b07;
+  color: var(--w-gold-hi);
+}
+:root[data-woke-art] #price-window [data-roll-presets] .w-seg {
+  gap: 0;
+  background: #0f0b07;
+  box-shadow: inset 0 1px 2px #000, 0 0 0 1px #3a2c18;
+}
+:root[data-woke-art] #price-window [data-roll-presets] .w-seg > button {
+  min-height: calc(24px * var(--w-text-scale, 1));
+  padding: 0 12px;
+  border: 0;
+  border-image: none;
+  color: #8f897e;
+}
+:root[data-woke-art] #price-window [data-roll-presets] .w-seg > button + button { border-left: 1px solid #2a2014; }
+:root[data-woke-art] #price-window [data-roll-presets] .w-seg > button:hover { color: #e8dcc0; }
+:root[data-woke-art] #price-window [data-roll-presets] .w-seg > button[aria-pressed="true"] {
+  background: linear-gradient(#e8c470, #a8792a);
+  color: #1a1209;
+}
