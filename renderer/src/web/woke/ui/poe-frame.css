@@ -239,15 +239,15 @@
   background: var(--art-options-crest) center / contain no-repeat;
 }
 
-/* A title bar that also carries controls (Map mods' highlight buttons, Essence scan's
-   Start): no banner, the title at the left end, shortened with "…" when the bar is
-   narrow, so the controls never run into the title or the close coin's socket. */
-:root[data-woke-art] [data-w-panel] > [data-widget-drag]:has(> span :is(.w-btn, select, .w-seg, .w-plates, input)) {
+/* A title bar whose buttons leave the crest no room (WPanel measures it, title-fit.ts):
+   no banner, the title at the left end, shortened with "…" when the bar is narrow, so
+   the controls never run into the title or the close coin's socket. */
+:root[data-woke-art] [data-w-panel] > [data-widget-drag][data-title-tight] {
   padding-left: 52px;
   padding-right: 62px;
   gap: 4px;
 }
-:root[data-woke-art] [data-w-panel] > [data-widget-drag]:has(> span :is(.w-btn, select, .w-seg, .w-plates, input)) > .w-trunc {
+:root[data-woke-art] [data-w-panel] > [data-widget-drag][data-title-tight] > .w-trunc {
   position: static;
   transform: none;
   flex: 0 1 auto;
@@ -259,8 +259,8 @@
   text-overflow: ellipsis;
   text-align: left;
 }
-:root[data-woke-art] [data-w-panel] > [data-widget-drag]:has(> span :is(.w-btn, select, .w-seg, .w-plates, input)) > .w-trunc::before,
-:root[data-woke-art] [data-w-panel] > [data-widget-drag]:has(> span :is(.w-btn, select, .w-seg, .w-plates, input)) > .w-trunc > .w-crest-icon {
+:root[data-woke-art] [data-w-panel] > [data-widget-drag][data-title-tight] > .w-trunc::before,
+:root[data-woke-art] [data-w-panel] > [data-widget-drag][data-title-tight] > .w-trunc > .w-crest-icon {
   display: none !important;
 }
 /* Buttons in a title bar: the compact plate, so the bar's controls fit beside the title and short of the close socket. */

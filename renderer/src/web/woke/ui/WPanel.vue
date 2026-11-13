@@ -1,7 +1,7 @@
 <template>
   <div ref="root" class="w-surface w-enter" :class="$style.panel" :style="boxStyle" data-w-panel
     @keydown="onKey">
-    <div v-if="title || $slots.title || $slots.actions || icon" :class="$style.head" data-widget-drag
+    <div v-if="title || $slots.title || $slots.actions || icon" ref="head" :class="$style.head" data-widget-drag
       :title="headTip" @dblclick="onHeadDblClick">
       <WIcon v-if="icon" v-bind="iconProps" size="md" :class="$style.icon" />
       <span :class="$style.title" class="w-trunc">
@@ -47,12 +47,14 @@
 // the hotkey that opens it, then optional banner/tabs/toolbar/meta, a
 // scrolling body and a footer. Keyboard (P8): arrow keys move between rows,
 // "/" jumps to the first search field, Esc leaves a field.
-import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue'
 import { snapEdge, clearGuides, releaseWebviewsForDrag } from './snap'
 import { anchorShare, heightCap, resizeAxis, unzoom } from './panel-fit'
 import type { Box, ResizeSide } from './panel-fit'
 import WIcon from './WIcon.vue'
 import WKbd from './WKbd.vue'
+import { uiArt, wokeTheme } from './theme'
+import { fitTitle } from './title-fit'
 import { ago, freshness } from './format'
 
 const props = withDefaults(defineProps<{
@@ -174,6 +176,20 @@ const boxStyle = computed(() => {
 let stopWatchingSize: (() => void) | undefined
 onMounted(() => { if (root.value) stopWatchingSize = cfg?.watchSize?.(root.value) })
 onBeforeUnmount(() => stopWatchingSize?.())
+
+// ---- Title bar in the game art: the crest never runs into the bar's buttons ----
+const head = ref<HTMLElement | null>(null)
+let headObserver: ResizeObserver | undefined
+function refitTitle () { if (head.value) fitTitle(head.value) }
+onMounted(() => {
+  if (!head.value) return
+  headObserver = new ResizeObserver(refitTitle)
+  headObserver.observe(head.value)
+  // The buttons can change width without the bar changing size.
+  for (const el of head.value.children) headObserver.observe(el)
+})
+watch([uiArt, wokeTheme, () => props.title], () => nextTick(refitTitle))
+onBeforeUnmount(() => headObserver?.disconnect())
 
 function uiScale () {
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
