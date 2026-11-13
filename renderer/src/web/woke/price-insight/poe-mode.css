@@ -388,3 +388,7 @@
   background: linear-gradient(#e8c470, #a8792a);
   color: #1a1209;
 }
+
+/* Pseudo / Base item: clicking the item's name already switches between the
+ * category and this base type, so PoE mode doesn't show the extra buttons. */
+#price-window.w-poe [data-trade-presets] { display: none; }

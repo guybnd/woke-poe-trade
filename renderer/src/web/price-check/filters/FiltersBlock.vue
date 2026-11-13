@@ -2,7 +2,7 @@
   <div>
     <!-- The roll presets stay mounted without stats: they ask poeprices for the item. -->
     <div :class="hasStats ? [$style.statHead, { [$style.open]: !statsVisibility.disabled }] : 'hidden'">
-      <w-segmented v-if="presets.length > 1"
+      <w-segmented v-if="presets.length > 1" data-trade-presets
         :model-value="activePreset" :options="presetOptions"
         @update:model-value="selectPreset" />
       <!-- woke: one box for every row. Unticks all; again brings back the picks it cleared. Never searches. -->
