@@ -1,5 +1,5 @@
 Copies of NeverSink's filter (MIT, see LICENSE.txt) from
-https://github.com/NeverSinkDev/NeverSink-Filter, version 8.20.2, gzipped.
+https://github.com/NeverSinkDev/NeverSink-Filter, version 8.21.0a, gzipped.
 Tests read them through `renderer/test/helpers/neversink.ts`.
 
 To test every style or a newer version without committing it, point

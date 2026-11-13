@@ -146,15 +146,20 @@ describe('who gets the net', () => {
       'Hide # $type->currency $tier->t9',
       '\tBaseType == "Chaotic Astrolabe"',
       '',
-      'Hide # $type->vials $tier->t2',
-      '\tBaseType == "Vial of the Ghost"',
+      'Hide # $type->corpses $tier->t2',
+      '\tBaseType == "Perfect Fiery Disciple"',
+      '',
+      // NeverSink 8.21 moved Allflames out of the fragments into a list of their own.
+      'Hide # $type->mapenchantments $tier->t4',
+      '\tBaseType == "Allflame Ember of Toads"',
       ''
     ].join('\n'))
     const items: PriceItem[] = [
       { type: 'Astrolabe', name: 'Chaotic Astrolabe', variant: '', chaos: 150, gaps: 0 },
-      { type: 'Vial', name: 'Vial of the Ghost', variant: '', chaos: 2000, gaps: 0 }
+      { type: 'Corpse', name: 'Perfect Fiery Disciple', variant: '', chaos: 2000, gaps: 0 },
+      { type: 'AllflameEmber', name: 'Allflame Ember of Toads', variant: '', chaos: 300, gaps: 0 }
     ]
-    expect(safetyBases(doc, safetyLookup(items, () => []), 20).plain).toEqual(['Chaotic Astrolabe', 'Vial of the Ghost'])
+    expect(safetyBases(doc, safetyLookup(items, () => []), 20).plain).toEqual(['Allflame Ember of Toads', 'Chaotic Astrolabe', 'Perfect Fiery Disciple'])
   })
 })
 

@@ -447,8 +447,13 @@ export function colourBlindActions (b: FilterBlock): boolean {
 }
 const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
 
-function tierNumber (tier: string | null): number | null {
-  const m = /^t(\d+)/.exec(tier ?? '')
+// How high NeverSink ranks a block, 1 the top. NeverSink 8.21's tiered gear
+// (t5r1: item tier 5, rank 1) is a matrix where a higher item tier is better:
+// t5r1 is the top, then t4r1 and t5r2, and so on.
+export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier'>): number | null {
+  const tiered = b.type === 'gear->tiered' ? /^t(\d)r(\d)$/.exec(b.tier ?? '') : null
+  if (tiered) return 5 - Number(tiered[1]) + Number(tiered[2])
+  const m = /^t(\d+)/.exec(b.tier ?? '')
   return m ? Number(m[1]) : null
 }
 
@@ -606,14 +611,14 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
       continue
     }
     if (p.quiet.on) {
-      const n = tierNumber(b.tier)
+      const n = tierNumber(b)
       if (n != null && n > p.quiet.keepTiers && b.actions.some(a => SOUND_KEYS.includes(a.key))) {
         b.actions = b.actions.filter(a => !SOUND_KEYS.includes(a.key))
         touched = true
       }
     }
     if (p.beams.on) {
-      const n = tierNumber(b.tier)
+      const n = tierNumber(b)
       if (n != null && n > p.beams.keepTiers && b.actions.some(a => BEAM_KEYS.includes(a.key))) {
         b.actions = b.actions.filter(a => !BEAM_KEYS.includes(a.key))
         touched = true

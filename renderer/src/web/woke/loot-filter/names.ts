@@ -39,6 +39,7 @@ const PARTS: Record<string, string> = {
   'leveling': 'Levelling',
   'levelingstacked': 'Levelling stacks',
   'magicid': 'Identified magic items',
+  'mapenchantments': 'Allflames and map enchantments',
   'maphiders': 'Maps to hide',
   'melee1h': 'One-handed melee',
   'melee2h': 'Two-handed melee',
@@ -61,6 +62,7 @@ const PARTS: Record<string, string> = {
   'runesgrafts': 'Runes and grafts',
   'sanctifiedrelics': 'Sanctified relics',
   'socketslinks': 'Sockets and links',
+  'specialmods': 'Special mods',
   'stackedsix': 'Stacks of 6 or more',
   'stackedsplintershigh': 'Stacked splinters, high',
   'stackedsplinterslow': 'Stacked splinters, low',
@@ -69,6 +71,7 @@ const PARTS: Record<string, string> = {
   'stackedsuppliesportal': 'Stacked portal scrolls',
   'stackedsupplieswisdom': 'Stacked wisdom scrolls',
   'stackedthree': 'Stacks of 3 or more',
+  'tiered': 'Item tiers',
   'vaaltemple': 'Vaal temple',
   'wandprogression': 'Wand progression',
   'weaponprogression': 'Weapon progression'

@@ -150,3 +150,29 @@ describe('tier conditions in words (L6)', () => {
     expect(describeCondition({ key: 'UnidentifiedItemTier', op: '', count: null, values: ['3'] })).toBe('Item tier = 3')
   })
 })
+
+describe('NeverSink 8.21 tiered gear', () => {
+  // t5r1 is item tier 5, rank 1: the best of the matrix, not a fifth tier.
+  const tiered = (p: Presets) => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyPresetChanges(doc, p)
+    return (tier: string) => doc.blocks.find(b => b.type === 'gear->tiered' && b.tier === tier)!
+  }
+
+  it('quiet mode keeps the sound on the top of the matrix', () => {
+    const p = defaultPresets()
+    p.quiet = { on: true, keepTiers: 1 }
+    const block = tiered(p)
+    expect(block('t5r1').actions.some(a => a.key === 'PlayAlertSound')).toBe(true)
+    expect(block('t4r1').actions.some(a => a.key === 'PlayAlertSound')).toBe(false)
+  })
+
+  it('fewer beams keeps the beam on the top of the matrix', () => {
+    const p = defaultPresets()
+    p.beams = { on: true, keepTiers: 2 }
+    const block = tiered(p)
+    expect(block('t5r1').actions.some(a => a.key === 'PlayEffect')).toBe(true)
+    expect(block('t4r1').actions.some(a => a.key === 'PlayEffect')).toBe(true)
+    expect(block('t5r2').actions.some(a => a.key === 'PlayEffect')).toBe(true)
+  })
+})
