@@ -36,6 +36,11 @@ const PROPERTIES: Record<string, { label: string, read: Reader }> = {
 }
 
 const LABELS: Array<[RegExp, string]> = [
+  // "Gain #% of Physical Damage as Extra Fire Damage": the element is the word that differs.
+  [/as Extra Fire Damage/i, '→Fire'],
+  [/as Extra Cold Damage/i, '→Cold'],
+  [/as Extra Lightning Damage/i, '→Light'],
+  [/as Extra Chaos Damage/i, '→Chaos'],
   [/total Elemental Resistance/i, 'Res'],
   [/total Resistance/i, 'Res'],
   [/Fire Resistance/i, 'Fire'],

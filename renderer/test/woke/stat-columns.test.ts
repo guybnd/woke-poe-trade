@@ -230,6 +230,7 @@ describe('showing them', () => {
 
   it('uses short labels, with a fallback from the stat\'s own words', () => {
     expect(statColumnLabel('+#% total Elemental Resistance')).toBe('Res')
+    expect(statColumnLabel('Gain #% of Physical Damage as Extra Fire Damage')).toBe('→Fire')
     expect(statColumnLabel('Regenerate # Energy Shield per second')).toBe('Regen')
     expect(statColumnLabel('#% increased effect of Non-Curse Auras from your Skills')).toBe('Aura')
     expect(statColumnLabel('#% increased Stun and Block Recovery')).toBe('Stun')

@@ -77,6 +77,7 @@ function onClick (e: MouseEvent) {
 
 <style module>
 .head {
+  user-select: none;
   margin: 0 6px 4px;
   padding: 2px 6px 8px;
   border-bottom: 1px solid var(--w-gold-fade, var(--w-line));
@@ -123,7 +124,9 @@ function onClick (e: MouseEvent) {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.chip.ro { border-color: transparent; opacity: .7; }
+.chip.ro { border-color: transparent; opacity: .7; cursor: default; }
+/* Nothing can roll it, so no roll bar either. */
+.chip.ro .track { visibility: hidden; }
 .track {
   position: relative;
   display: block;
