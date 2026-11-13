@@ -218,8 +218,8 @@ const LANGUAGES: Array<{ id: Config['language'], label: string }> = [
   { id: 'ko', label: '한국어' }
 ]
 
-// Always read through AppConfig(): every save comes back as config-changed,
-// which swaps in a fresh config object.
+// Always read through AppConfig(): another window's save comes back as
+// config-changed, which swaps in a fresh config object.
 const config = computed(() => AppConfig())
 const wokeConfig = computed(() => ensureWokeConfig(AppConfig()))
 const version = Host.version

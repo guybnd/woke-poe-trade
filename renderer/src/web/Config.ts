@@ -98,6 +98,9 @@ export async function initConfig () {
       applyFontSize()
       return
     }
+    // Another page's save replaces what we hold, our own sent changes too.
+    // Our echoes after it bring them back, so apply those as before.
+    _ownSavesInFlight.length = 0
     _lastSavedConfig = JSON.parse(e.contents) // should be a deep copy
     updateConfig(JSON.parse(e.contents))
   })
