@@ -1,7 +1,7 @@
 <template>
   <div v-for="(chunk, c) in chunks" :key="c" :class="[$style.chunk, { [$style.named]: chunk.heading }]">
     <span :class="$style.tags">
-      <span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]">{{ t }}</span>
+      <span v-for="t in tagsOf(chunk)" :key="t" class="w-num" :class="[$style.tag, gradeClass(t, chunk.lines[0])]" :data-tier="chunk.lines[0].kind === 'crafted' ? 'crafted' : tierOf(t)">{{ t }}</span>
     </span>
     <div :class="$style.middle">
       <div v-if="chunk.heading" :class="$style.heading">{{ chunk.heading }}</div>
@@ -43,9 +43,13 @@ function kindClass (line: ModLine) {
   return line.kind === 'crafted' ? $style.crafted : line.kind === 'fractured' ? $style.fractured : $style.mod
 }
 
+function tierOf (tag: string) {
+  return Number(tag.replace(/\D/g, ''))
+}
+
 function gradeClass (tag: string, line: ModLine) {
   if (line.kind === 'crafted') return $style.craftedTag
-  const n = Number(tag.replace(/\D/g, ''))
+  const n = tierOf(tag)
   return n === 1 ? $style.t1 : n <= 3 ? $style.t2 : n <= 6 ? $style.t3 : $style.t4
 }
 
@@ -110,4 +114,25 @@ function rollColour (quality: number) {
   background: linear-gradient(90deg, #6b4f22, hsl(40deg 60% calc(32% + var(--q) * 0.3%)));
   box-shadow: 0 0 calc(var(--glow) * 3px) hsl(42deg 80% 60% / calc(var(--glow) * 0.45));
 }
+/* PoE 1 / PoE 2 art: bevelled badges. T1 gold, T2 bronze, T3 a dark well;
+ * lower tiers drop the badge and fade. */
+:global(:root[data-woke-art]) .tag { background: none; box-shadow: none; color: #504b43; }
+:global(:root[data-woke-art]) .tag[data-tier="1"] {
+  background: linear-gradient(#f3cf7a, #a8792a 55%, #7a5518);
+  color: #1a1209;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px #3a2a10;
+}
+:global(:root[data-woke-art]) .tag[data-tier="2"] {
+  background: linear-gradient(#8a6a3c, #4a3518);
+  color: #f0dcb0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 0 1px #2a1d0c;
+}
+:global(:root[data-woke-art]) .tag[data-tier="3"] {
+  background: #16110b;
+  color: #b39b74;
+  box-shadow: inset 0 1px 2px #000, 0 0 0 1px #3a2c18;
+}
+:global(:root[data-woke-art]) .tag:is([data-tier="4"], [data-tier="5"]) { color: #8f897e; }
+:global(:root[data-woke-art]) .tag:is([data-tier="6"], [data-tier="7"]) { color: #6e695f; }
+:global(:root[data-woke-art]) .tag[data-tier="crafted"] { color: var(--w-mod-crafted); box-shadow: inset 0 0 0 1px var(--w-mod-crafted); }
 </style>
