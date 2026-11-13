@@ -35,12 +35,12 @@ describe('trade data patch', () => {
       { stats: [], items: [{ group: 'jewel', name: null, type: 'Cobalt Jewel' }], static: [] },
       {
         stats: [stat('explicit.stat_9', '#% increased Thread Effect (Local)'), stat('fractured.stat_9', '#% increased Thread Effect', 'fractured'), stat('pseudo.x', 'Pseudo thing', 'pseudo')],
-        items: [{ group: 'jewel', name: null, type: 'Cobalt Jewel' }, { group: 'jewel', name: null, type: 'Mycelium Core' }, { group: 'accessory', name: 'New Ring', type: 'Gold Ring' }, { group: 'armour', name: null, type: 'Odd Plate' }],
+        items: [{ group: 'jewel', name: null, type: 'Cobalt Jewel' }, { group: 'jewel', name: null, type: 'Mycelium Core' }, { group: 'accessory', name: 'New Ring', type: 'Gold Ring' }, { group: 'armour', name: null, type: 'Odd Plate' }, { group: 'trophy', name: null, type: "Sirus' Head" }],
         static: [{ group: 'Currency', id: 'abyss-thread', text: 'Abyss Thread', image: '/gen/x.png' }]
       },
       [], [{ refName: 'Cobalt Jewel' }])
     expect(r.newStats).toEqual([{ ref: '#% increased Thread Effect', better: 1, matchers: [{ string: '#% increased Thread Effect' }], trade: { ids: { explicit: ['explicit.stat_9'], fractured: ['fractured.stat_9'] } } }])
-    expect(r.newItems.map((i: { name: string }) => i.name)).toEqual(['Mycelium Core', 'New Ring', 'Abyss Thread'])
+    expect(r.newItems.map((i: { name: string }) => i.name)).toEqual(['Mycelium Core', 'New Ring', "Sirus' Head", 'Abyss Thread'])
     expect(r.skipped).toEqual(['armour: Odd Plate (no category)'])
     expect(matcherText('Adds # to # Physical Damage (Local)')).toBe('Adds # to # Physical Damage')
   })
