@@ -123,6 +123,13 @@ history:
       The trade "monster" group becomes CAPTURED_BEAST. A live check today found
       Shield Crab, already new on the trade site.
     id: a-2026-11-13t02-43-44-701z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T02:53:21.041Z'
+    comment: >-
+      #406 merged (9747783). The ticket stays open: the launch-day run (check,
+      then apply, then bump, then PR) is the remaining work.
+    id: a-2026-11-13t02-53-21-041z
 swimlane: null
 needsAction: null
 ---
