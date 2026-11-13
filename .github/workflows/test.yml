@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides what a pull request needs. The checks below are required on master,
-  # so they can't use a path filter: a check that never reports blocks the merge
+  # Decides what a pull request needs. If a master ruleset requires the checks
+  # below, they can't use a path filter: a check that never reports blocks the merge
   # forever, while a job skipped by its `if` reports as passed. Pushes to master
   # always run everything. If this job fails, its outputs are empty and all
   # jobs still run (they test `!= 'false'`). So a landing spec that no longer
