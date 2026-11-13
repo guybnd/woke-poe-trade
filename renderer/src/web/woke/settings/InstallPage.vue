@@ -44,11 +44,11 @@ interface Prefs {
 }
 const prefs = shallowRef<Prefs | null>(null)
 const error = shallowRef<string | null>(null)
-hostRequest<Prefs>('setup-prefs', null).then(p => { prefs.value = p }).catch(e => { error.value = String(e) })
+;(hostRequest('setup-prefs', null) as Promise<Prefs>).then(p => { prefs.value = p }).catch(e => { error.value = String(e) })
 
 async function set (patch: Partial<Prefs>) {
   try {
-    prefs.value = await hostRequest<Prefs>('setup-prefs-set', patch)
+    prefs.value = await (hostRequest('setup-prefs-set', patch) as Promise<Prefs>)
   } catch (e) {
     error.value = String(e)
   }

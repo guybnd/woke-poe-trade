@@ -39,7 +39,7 @@ let loaded = false
 let pendingWrite = false
 
 async function load () {
-  let list = valid(await hostRequest<unknown>('doc-get', DOC).catch(() => null))
+  let list = valid(await (hostRequest('doc-get', DOC) as Promise<unknown>).catch(() => null))
   try {
     const old = localStorage.getItem(OLD_STORAGE_KEY)
     if (old != null) {

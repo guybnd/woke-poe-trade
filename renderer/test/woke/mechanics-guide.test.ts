@@ -62,3 +62,18 @@ describe('league mechanics guide', () => {
     expect(mechanicForSpeaker(`2026/11/05 10:00:00 1 2 [INFO Client 3] ${speaker}: Hello.`)).toBe(id)
   })
 })
+
+describe('Covens trophies', () => {
+  it('sorts every trophy into one slot, with poedb slots first', async () => {
+    const { TROPHIES, TROPHY_SLOTS, trophySlot, slotMatcher } = await import('@/web/woke/mechanics/covens')
+    expect(new Set(TROPHIES).size).toBe(TROPHIES.length)
+    expect(trophySlot("Sirus' Head")).toBe('Head')
+    expect(trophySlot("Incarnation of Neglect's Cube")).toBe('Upper Limb')
+    expect(trophySlot("Warden's Arm")).toBe('Upper Limb')
+    expect(trophySlot('Skeletal Tail')).toBe('Lower Limb')
+    expect(trophySlot('Golden Ankh')).toBe('Other')
+    for (const name of TROPHIES) {
+      expect(TROPHY_SLOTS.filter(s => slotMatcher(s).test(name)), name).toEqual([trophySlot(name)])
+    }
+  })
+})

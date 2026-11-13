@@ -9,7 +9,7 @@ export const GAINS_COLLECTION = 'net-worth'
 export const gainsKey = (league: string) => `${league}-gains`
 
 export async function stashGains (league: string): Promise<StashGain[]> {
-  const saved = await hostRequest<StashGain[] | null>('doc-get', { collection: GAINS_COLLECTION, key: gainsKey(league) }).catch(() => null)
+  const saved = await (hostRequest('doc-get', { collection: GAINS_COLLECTION, key: gainsKey(league) }) as Promise<StashGain[] | null>).catch(() => null)
   return Array.isArray(saved) ? saved : []
 }
 

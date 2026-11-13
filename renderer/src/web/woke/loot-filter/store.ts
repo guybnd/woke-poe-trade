@@ -500,7 +500,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   async function listFiles () {
     try {
-      const res = await hostRequest<{ dir: string, files: FilterFile[] }>('filter-list', { dir: cfg().folder })
+      const res = await (hostRequest('filter-list', { dir: cfg().folder }) as Promise<{ dir: string, files: FilterFile[] }>)
       folder.value = res.dir
       files.value = res.files
     } catch (e) {
@@ -521,12 +521,12 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const ns = cfg().neversink
     if (version) {
       try {
-        return { text: (await hostRequest<{ text: string }>('ns-read', { version, style: ns.style, level })).text, version }
+        return { text: (await hostRequest('ns-read', { version, style: ns.style, level })).text, version }
       } catch {}
     }
     // Not cached (first use, a new style, or a cleared cache): download.
-    const got = await hostRequest<{ version: string }>('ns-download', { style: ns.style })
-    return { text: (await hostRequest<{ text: string }>('ns-read', { version: got.version, style: ns.style, level })).text, version: got.version }
+    const got = await hostRequest('ns-download', { style: ns.style })
+    return { text: (await hostRequest('ns-read', { version: got.version, style: ns.style, level })).text, version: got.version }
   }
 
   // Parses a text with everything applied, the way rebuild() does, to see how
@@ -553,7 +553,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       // seven files again while an update was waiting.
       let latest = ns.latest
       if (!fresh || !latest) {
-        const got = await hostRequest<{ version: string, changes: string }>('ns-latest', {})
+        const got = await hostRequest('ns-latest', {})
         latest = got.version
         ns.latest = got.version
         ns.latestChanges = got.changes
@@ -564,11 +564,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       let version = latest
       let text: string
       try {
-        text = (await hostRequest<{ text: string }>('ns-read', { version, style: ns.style, level: ns.level })).text
+        text = (await hostRequest('ns-read', { version, style: ns.style, level: ns.level })).text
       } catch {
-        version = (await hostRequest<{ version: string }>('ns-download', { style: ns.style })).version
+        version = (await hostRequest('ns-download', { style: ns.style })).version
         if (!isNewer(version, ns.version)) { updateReady.value = null; return }
-        text = (await hostRequest<{ text: string }>('ns-read', { version, style: ns.style, level: ns.level })).text
+        text = (await hostRequest('ns-read', { version, style: ns.style, level: ns.level })).text
       }
       updateReady.value = { version, ...fitOf(text) }
     } catch (e) {
@@ -745,7 +745,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   async function readGameFilter () {
     try {
-      gameFilter.value = await hostRequest<{ name: string | null, loaded: boolean | null }>('game-filter', {})
+      gameFilter.value = await hostRequest('game-filter', {})
     } catch {}
   }
   // The game's config file is only rewritten now and then, so after we've
@@ -814,7 +814,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     prices.wantPrices()
     try {
       const source = cfg().sourceName
-      let { text } = await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: source, online: cfg().sourceOnline })
+      let { text } = await hostRequest('filter-read', { dir: cfg().folder, name: source, online: cfg().sourceOnline })
       if (seq !== loadSeq) return
       baseNeedsBackup.value = false
       if (cfg().sourceOnline) {
@@ -823,11 +823,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
         // Our own output. Overwrite mode keeps the original in the .bak; a
         // copy-mode output names its source in the header instead.
         try {
-          text = (await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: source + '.bak' })).text
+          text = (await hostRequest('filter-read', { dir: cfg().folder, name: source + '.bak' })).text
         } catch (e) {
           const from = /^# Made from "([^"]+\.filter)"/m.exec(text)?.[1]
           if (from && from !== source) {
-            text = (await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: from })).text
+            text = (await hostRequest('filter-read', { dir: cfg().folder, name: from })).text
             if (seq !== loadSeq) return
             cfg().sourceName = from
           } else {
@@ -837,7 +837,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
             if (seq !== loadSeq) return
             const online = files.value.find(f => f.online && f.title === title)
             if (title && online) {
-              text = (await hostRequest<{ text: string }>('filter-read', { dir: cfg().folder, name: online.name, online: true })).text
+              text = (await hostRequest('filter-read', { dir: cfg().folder, name: online.name, online: true })).text
               if (seq !== loadSeq) return
               cfg().sourceName = online.name
               cfg().sourceOnline = true

@@ -13,7 +13,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { OcrWorker } from '../vision/link-main'
 import type { ScanOptions, ScanResult, LineImage } from './map-scan-vision'
 import { perfRecord } from './perf'
-import { ocrDir, USER_OCR_DIR } from './ocr-dir'
+import { ocrDir, USER_OCR_DIR, OCR_GUIDE_URL, missingOcrFiles, ensureOcrFiles, lastOcrDownloadError, ocrDownloading } from './ocr-dir'
 
 // About one quad-tab cell, as a fraction of the game window height.
 const LOCK_LEAVE = 0.024
@@ -22,10 +22,6 @@ const IDLE_STOP_MS = 30 * 60 * 1000
 // A scan started by entering a map stops sooner once the game is left
 // (closed, or tabbed out for long), so the OCR worker can shut down.
 const AUTO_AWAY_STOP_MS = 10 * 60 * 1000
-// Files the OCR worker loads.
-// The worker swallows load errors, so they're checked up front instead.
-const OCR_FILES = ['tesseract-core-simd.js', 'opencv.js', 'eng.traineddata']
-
 export interface OcrCheck {
   ok: boolean
   windows: boolean
@@ -34,23 +30,33 @@ export interface OcrCheck {
   message: string | null
 }
 
+// The worker swallows load errors, so the files are checked up front instead.
 export function checkOcr (): OcrCheck {
   const windows = process.platform === 'win32'
   const dir = ocrDir()
-  let missing: string[] = []
-  try {
-    const have = new Set(fs.readdirSync(dir))
-    missing = OCR_FILES.filter(f => !have.has(f))
-  } catch {
-    missing = [...OCR_FILES]
-  }
+  const missing = missingOcrFiles(dir)
   let message: string | null = null
   if (!windows) {
     message = 'Scanning needs Windows (it uses the game screenshot API).'
   } else if (missing.length) {
-    message = `OCR files missing: ${missing.join(', ')}. Reinstall the app, or download cv-ocr from the Awakened PoE Trade releases page and unzip it into ${USER_OCR_DIR()}`
+    const failed = lastOcrDownloadError()
+    message = ocrDownloading()
+      ? 'Downloading the OCR files (about 6 MB). Try again in a moment.'
+      : `OCR files missing: ${missing.join(', ')}. ` +
+      (failed ? `Downloading them failed (${failed}). ` : '') +
+      `Set them up by hand with the guide at ${OCR_GUIDE_URL} (unzip into ${USER_OCR_DIR()}), then restart the app.`
   }
   return { ok: !message, windows, dir, missing, message }
+}
+
+// checkOcr, after fetching the files if no folder has them all. Waits at most
+// waitMs (default under the overlay's 30 s request timeout); a slower download
+// carries on and the check says so.
+export async function ensureOcr (waitMs = 20_000): Promise<OcrCheck> {
+  const check = checkOcr()
+  if (check.ok || !check.windows) return check
+  await ensureOcrFiles(waitMs)
+  return checkOcr()
 }
 
 export interface MapScanReading {
@@ -66,8 +72,8 @@ export interface MapScanReading {
 interface Rect { x: number, y: number, width: number, height: number }
 
 export interface ScannerKind {
-  // Event topic for the overlay, e.g. 'map-scan'.
-  topic: string
+  // Event topic for the overlay, and the start of its op names.
+  topic: 'map-scan' | 'essence-scan'
   // Shown in errors, e.g. 'Map scan mode'.
   name: string
   frameMs: number
@@ -348,10 +354,13 @@ export class ScreenScanner {
   }
 
   async start (auto = false): Promise<{ running: boolean }> {
-    const check = checkOcr()
-    if (!check.ok) throw new Error(check.message!)
     const seq = ++this.startSeq
     const stops = this.stopCount
+    // May download the OCR files first (a few seconds, once).
+    const check = await ensureOcr()
+    // Stopped or superseded while downloading: no worker, no error.
+    if (this.stopCount !== stops || seq !== this.startSeq) return { running: this.running }
+    if (!check.ok) throw new Error(check.message!)
     try {
       // Every start: the shared worker may have been shut down while idle.
       this.worker = await getWorker()
@@ -561,7 +570,7 @@ export class ScreenScanner {
 // fractions of the game window.
 export async function readAllEssenceLabels (poeWindow: GameWindow):
 Promise<{ labels: Array<{ lines: string[], at: { x: number, y: number } }> }> {
-  const check = checkOcr()
+  const check = await ensureOcr()
   if (!check.ok) throw new Error(check.message!)
   const bounds = poeWindow.bounds
   if (!bounds.width || !bounds.height) throw new Error('Game window not found.')
@@ -593,7 +602,9 @@ Promise<{ labels: Array<{ lines: string[], at: { x: number, y: number } }> }> {
 const AREA_LIST_WIDTH = 0.7
 const AREA_LIST_HEIGHT = 0.75
 export async function readAreaMods (poeWindow: GameWindow, delayMs = 0): Promise<{ lines: string[] | null, ocrMissing?: boolean }> {
-  if (!checkOcr().ok) return { lines: null, ocrMissing: true }
+  // Doesn't wait on a download: the mod list is only up for a moment.
+  const check = await ensureOcr(0)
+  if (!check.ok) return ocrDownloading() ? { lines: null } : { lines: null, ocrMissing: true }
   if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, Math.min(delayMs, 10_000)))
   // The capture copies the desktop, so anything in front of the game would be read.
   const bounds = poeWindow.bounds

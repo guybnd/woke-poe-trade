@@ -14,7 +14,7 @@ export const useTradeLog = createGlobalState(() => {
 
   function load (force = false): Promise<void> {
     if (loading && !force) return loading
-    loading = hostRequest<TradeRecord[]>('trades-list', {})
+    loading = (hostRequest('trades-list', {}) as Promise<TradeRecord[]>)
       .then(list => {
         trades.value = list.sort((a, b) => b.at - a.at)
         loaded.value = true
@@ -50,7 +50,7 @@ export const useOfferHistory = createGlobalState(() => {
   const deleted = new Set<string>()
 
   async function load (): Promise<void> {
-    const list = await hostRequest<Offer[]>('offer-history-list', {})
+    const list = await (hostRequest('offer-history-list', {}) as Promise<Offer[]>)
     // Anything added while this was on its way wins.
     const mine = new Set(offers.value.map(o => o.id))
     offers.value = [...offers.value, ...list.filter(o => !mine.has(o.id) && !deleted.has(o.id))].sort(byClosed)

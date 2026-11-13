@@ -104,7 +104,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 
 ## Quick start
 
-1. Download `Woke-PoE-Trade-Setup-<version>.exe` from the [latest release](https://github.com/guybnd/woke-poe-trade/releases/latest) and run it. It updates itself after that.
+1. Download `Woke-PoE-Trade-Setup-<version>.exe` from the [latest release](https://github.com/guybnd/woke-poe-trade/releases/latest) and run it. It updates itself after that. Windows SmartScreen may warn on first run because the app isn't code-signed: click **More info > Run anyway**.
 2. The setup wizard finds your game folder and asks how you play.
 3. In game, `Ctrl + D` prices the item under the cursor and `Shift + Space` opens the overlay. The rail on the left edge holds every tool.
 
@@ -118,7 +118,7 @@ Run Path of Exile in Windowed or Windowed Fullscreen. The game can be in English
 - **Game files.** It never touches the game's install. It follows `Client.txt` for zones, trades and deaths, reads the PoB builds and loot filters in folders you pick, and writes only what you ask for: a loot filter you edit, a build you import. Screen reading (map and essence scans, the passive tree overlay) works on screenshots that never leave your PC.
 - **Local only.** The overlay talks to the app through a server on 127.0.0.1 that refuses other web pages.
 - **Your stash, only if you opt in.** An experimental stash reader is hidden and off by default. If you turn it on, you sign in to pathofexile.com inside the app and it reads your own stash tabs for the Net worth window. It uses a pathofexile.com page GGG doesn't support for tools, so it's at your own risk. Your login stays in the app and is never shared; turning it off signs you out.
-- **Builds.** Installers are built by [GitHub Actions](.github/workflows/release.yml) from the tagged commit, with a `SHA256SUMS.txt` and [build provenance](https://github.com/guybnd/woke-poe-trade/attestations) (`gh attestation verify <file> -R guybnd/woke-poe-trade`). The app is not code-signed yet, so Windows shows a SmartScreen warning.
+- **Builds.** Installers are built by [GitHub Actions](.github/workflows/release.yml) from the tagged commit, with a `SHA256SUMS.txt` and [build provenance](https://github.com/guybnd/woke-poe-trade/attestations) (`gh attestation verify <file> -R guybnd/woke-poe-trade`). The app is not code-signed, so Windows shows a SmartScreen warning: click **More info > Run anyway**.
 
 To report a security problem, see [SECURITY.md](SECURITY.md).
 

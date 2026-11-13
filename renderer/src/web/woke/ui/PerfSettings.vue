@@ -122,7 +122,7 @@ const { copied, copy } = useCopy(1500)
 async function refresh () {
   renderer.value = rendererPerf()
   try {
-    main.value = await hostRequest<MainPerf>('perf-stats', null, 5000)
+    main.value = await (hostRequest('perf-stats', null, 5000) as Promise<MainPerf>)
     error.value = ''
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)

@@ -62,15 +62,19 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NOTES: ${{ inputs.notes }}
       run: |
+        # The installer isn't code-signed: every release says how past SmartScreen.
+        FOOTER='Windows SmartScreen may warn on first run because the app is not code-signed: click **More info > Run anyway**.'
+        BODY="$FOOTER"
+        if [ -n "$NOTES" ]; then BODY="$(printf '%s\n\n%s' "$NOTES" "$FOOTER")"; fi
         found=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq "[.[] | select(.tag_name == \"$RELEASE_TAG\")] | map(if .draft then \"draft\" else \"published\" end) | join(\" \")")
         if [[ "$found" == *published* ]]; then
           echo "$RELEASE_TAG is already published. Bump main/package.json first."
           exit 1
         fi
         if [ -z "$found" ]; then
-          gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" --title "Woke PoE Trade ${RELEASE_TAG#v}" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
+          gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" --title "Woke PoE Trade ${RELEASE_TAG#v}" --notes "$BODY" -R "$GITHUB_REPOSITORY"
         elif [ -n "$NOTES" ]; then
-          gh release edit "$RELEASE_TAG" --notes "$NOTES" -R "$GITHUB_REPOSITORY"
+          gh release edit "$RELEASE_TAG" --notes "$BODY" -R "$GITHUB_REPOSITORY"
         fi
     - run: npm ci
       working-directory: ./renderer

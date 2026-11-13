@@ -181,7 +181,7 @@ const mapMods = computed(() => findMapModsConfig())
 const exactKey = computed(() => mapMods.value?.hotkey ?? null)
 
 const setupProblem = shallowRef<string | null>(null)
-hostRequest<{ ok: boolean, message: string | null }>('ocr-check', null)
+hostRequest('ocr-check', null)
   .then(c => { setupProblem.value = c.ok ? null : c.message })
   .catch(() => {})
 const profileName = computed(() => mapMods.value ? activeProfile(mapMods.value).name : 'default')
@@ -298,7 +298,7 @@ async function toggle () {
 async function roll () {
   message.value = null
   try {
-    const s = await hostRequest<{ running: boolean, rolling: boolean }>('map-scan-roll', null)
+    const s = await hostRequest('map-scan-roll', null)
     running.value = s.running
     if (s.rolling) wm.show(props.config.wmId)
   } catch (err) {
@@ -324,7 +324,7 @@ const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   else toggle()
 })
 
-hostRequest<{ running: boolean, paused?: boolean, rolling?: boolean }>('map-scan-status', null)
+hostRequest('map-scan-status', null)
   .then(s => { running.value = s.running; paused.value = Boolean(s.paused); rolling.value = Boolean(s.rolling) })
   .catch(() => {})
 

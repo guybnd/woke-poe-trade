@@ -23,10 +23,10 @@ async function apply (s: PersonalState | null) {
 
 // The switch in Settings > Modules. Takes effect right away.
 export async function setStashReaderOn (on: boolean): Promise<void> {
-  await apply(await hostRequest<PersonalState>('personal-set', { on }, 15_000))
+  await apply(await hostRequest('personal-set', { on }, 15_000))
 }
 
 // Show or hide the experimental rows. Hiding turns the reader off too.
 export async function setExperimentalUnlocked (unlocked: boolean): Promise<void> {
-  await apply(await hostRequest<PersonalState>('experimental-set', { unlocked }, 15_000))
+  await apply(await hostRequest('experimental-set', { unlocked }, 15_000))
 }

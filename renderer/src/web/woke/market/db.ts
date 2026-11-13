@@ -39,30 +39,30 @@ export async function latestSnapshots (league: string, count: number): Promise<S
 
 async function readLatest (league: string, count: number): Promise<Snapshot[]> {
   await importOldHistory()
-  const snapshots = await hostRequest<Snapshot[]>('market-latest', { league, count }, SLOW_MS)
+  const snapshots = await (hostRequest('market-latest', { league, count }, SLOW_MS) as Promise<Snapshot[]>)
   return snapshots.map(snap => ({ ...snap, items: uniqueItems(snap.items) }))
 }
 
 // The newest snapshot taken at or before `ts`.
 export async function snapshotAtOrBefore (league: string, ts: number): Promise<Snapshot | null> {
   await importOldHistory()
-  return await hostRequest<Snapshot | null>('market-at', { league, ts }, SLOW_MS)
+  return await (hostRequest('market-at', { league, ts }, SLOW_MS) as Promise<Snapshot | null>)
 }
 
 export async function dailyRowsForDate (league: string, date: string): Promise<DailyRow[]> {
   await importOldHistory()
-  return await hostRequest<DailyRow[]>('market-daily-date', { league, date }, SLOW_MS)
+  return await (hostRequest('market-daily-date', { league, date }, SLOW_MS) as Promise<DailyRow[]>)
 }
 
 export async function dailyHistory (league: string, item: { type: string, name: string, variant: string }): Promise<DailyRow[]> {
   await importOldHistory()
-  return await hostRequest<DailyRow[]>('market-daily-item', { league, type: item.type, name: item.name, variant: item.variant }, SLOW_MS)
+  return await (hostRequest('market-daily-item', { league, type: item.type, name: item.name, variant: item.variant }, SLOW_MS) as Promise<DailyRow[]>)
 }
 
 // For other modules and for export: every daily row of a league.
 export async function allDailyRows (league: string): Promise<DailyRow[]> {
   await importOldHistory()
-  return await hostRequest<DailyRow[]>('market-daily-all', { league }, SLOW_MS)
+  return await (hostRequest('market-daily-all', { league }, SLOW_MS) as Promise<DailyRow[]>)
 }
 
 // ---- one-time move from IndexedDB ----
@@ -73,7 +73,7 @@ let importing: Promise<void> | null = null
 
 export function importOldHistory (): Promise<void> {
   importing ??= (async () => {
-    const status = await hostRequest<{ imported: boolean }>('market-import-status', null)
+    const status = await hostRequest('market-import-status', null)
     if (status.imported) return
     const db = await openOldDb()
     // Nothing here: maybe the history sits under the overlay's other port.

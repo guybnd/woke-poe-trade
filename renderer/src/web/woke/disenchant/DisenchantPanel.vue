@@ -165,17 +165,20 @@ function countListings () {
   if (league.value) loadListingCounts(league.value).catch(() => {})
 }
 
-const boughtSet = computed(() => new Set(league.value ? props.config.bought[league.value] ?? [] : []))
+// A config from main replaces props.config with an object the setup line above
+// never saw, so `bought` can be missing here even after it.
+const bought = () => props.config.bought ?? {}
+const boughtSet = computed(() => new Set(league.value ? bought()[league.value] ?? [] : []))
 function toggleBought (name: string) {
   const id = league.value
   if (!id) return
-  const list = props.config.bought[id] ?? []
-  props.config.bought = { ...props.config.bought, [id]: list.includes(name) ? list.filter(n => n !== name) : [...list, name] }
+  const list = bought()[id] ?? []
+  props.config.bought = { ...bought(), [id]: list.includes(name) ? list.filter(n => n !== name) : [...list, name] }
 }
 function clearBought () {
   const id = league.value
   if (!id) return
-  props.config.bought = Object.fromEntries(Object.entries(props.config.bought).filter(([k]) => k !== id))
+  props.config.bought = Object.fromEntries(Object.entries(bought()).filter(([k]) => k !== id))
 }
 
 function openTrade (r: DustRow) {

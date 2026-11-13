@@ -184,25 +184,25 @@ function dirArg (cfg: PobBuildsWidget) {
 
 export const pobApi = {
   list: (cfg: PobBuildsWidget) =>
-    hostRequest<{ dir: string, builds: PobBuildEntry[] }>('pob-list', { dir: dirArg(cfg) }),
+    (hostRequest('pob-list', { dir: dirArg(cfg) }) as Promise<{ dir: string, builds: PobBuildEntry[] }>),
   read: (cfg: PobBuildsWidget, relPath: string) =>
-    hostRequest<PobDetails>('pob-read', { dir: dirArg(cfg), relPath }),
+    (hostRequest('pob-read', { dir: dirArg(cfg), relPath }) as Promise<PobDetails>),
   open: (cfg: PobBuildsWidget, relPath: string) =>
-    hostRequest<void>('pob-open', { dir: dirArg(cfg), relPath, pobExe: cfg.pobExe || undefined }),
+    hostRequest('pob-open', { dir: dirArg(cfg), relPath, pobExe: cfg.pobExe || undefined }),
   show: (cfg: PobBuildsWidget, relPath: string) =>
-    hostRequest<void>('pob-show', { dir: dirArg(cfg), relPath }),
+    hostRequest('pob-show', { dir: dirArg(cfg), relPath }),
   import: async (cfg: PobBuildsWidget, input: string) =>
-    hostRequest<{ relPath: string }>('pob-import', { dir: dirArg(cfg), input }),
+    hostRequest('pob-import', { dir: dirArg(cfg), input }),
   rename: (cfg: PobBuildsWidget, relPath: string, name: string) =>
-    hostRequest<{ relPath: string }>('pob-rename', { dir: dirArg(cfg), relPath, name }),
+    hostRequest('pob-rename', { dir: dirArg(cfg), relPath, name }),
   move: (cfg: PobBuildsWidget, relPath: string, folder: string) =>
-    hostRequest<{ relPath: string }>('pob-move', { dir: dirArg(cfg), relPath, folder }),
+    hostRequest('pob-move', { dir: dirArg(cfg), relPath, folder }),
   duplicate: (cfg: PobBuildsWidget, relPath: string) =>
-    hostRequest<{ relPath: string }>('pob-duplicate', { dir: dirArg(cfg), relPath }),
+    hostRequest('pob-duplicate', { dir: dirArg(cfg), relPath }),
   delete: (cfg: PobBuildsWidget, relPath: string) =>
-    hostRequest<{ xml: string }>('pob-delete', { dir: dirArg(cfg), relPath }),
+    hostRequest('pob-delete', { dir: dirArg(cfg), relPath }),
   restore: (cfg: PobBuildsWidget, relPath: string, xml: string) =>
-    hostRequest<void>('pob-restore', { dir: dirArg(cfg), relPath, xml })
+    hostRequest('pob-restore', { dir: dirArg(cfg), relPath, xml })
 }
 
 // After a build file moves: every setting that names it follows it. `to` null

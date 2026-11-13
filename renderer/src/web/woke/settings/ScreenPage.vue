@@ -39,7 +39,7 @@ const keys = computed(() => hotkeyFields(props.config).filter(f =>
   SCAN_TYPES.some(t => props.config.widgets.some(w => w.wmType === t && f.id.startsWith(`${w.wmId}-`)))))
 
 const ocr = shallowRef<{ ok: boolean, message: string | null } | null>(null)
-hostRequest<{ ok: boolean, message: string | null }>('ocr-check', null)
+hostRequest('ocr-check', null)
   .then(r => { ocr.value = r })
   .catch(e => { ocr.value = { ok: false, message: String(e) } })
 </script>

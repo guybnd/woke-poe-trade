@@ -40,6 +40,8 @@ export const MECHANIC_ICONS: Record<string, { src?: string, item?: string, fa: s
   maven: { src: '/images/maven-witness.png', fa: 'fas fa-eye' },
   ritual: { item: 'Ritual Splinter', fa: 'fas fa-circle-notch' },
   allflame: { item: 'Allflame Ember of Flesh', fa: 'fas fa-fire' },
+  // 3.30: a trophy's art once the launch-day data has the items.
+  covens: { fa: 'fas fa-skull' },
   expedition: { item: 'Exotic Coinage', fa: 'fas fa-compass' },
   delirium: { item: 'Simulacrum Splinter', fa: 'fas fa-cloud' },
   blight: { item: 'Clear Oil', fa: 'fas fa-tint' },

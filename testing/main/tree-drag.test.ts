@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TreeDrag } from '../../main/src/woke/tree-drag'
+import { insideGame, TreeDrag } from '../../main/src/woke/tree-drag'
 
 const fit = (ox: number, oy: number, zoom = 0.2) => ({ zoom, ox, oy })
 
@@ -57,5 +57,21 @@ describe('TreeDrag', () => {
     d.fitted(fit(400, 100), 2560, 1440)
     d.start()
     expect(d.move(100, 0)).toEqual({ dx: 100, dy: 0 })
+  })
+})
+
+describe('insideGame', () => {
+  const game = { x: 2560, y: 0, width: 2560, height: 1440 }
+  it('takes a press on the game window', () => {
+    expect(insideGame(game, 2560, 0)).toBe(true)
+    expect(insideGame(game, 5119, 1439)).toBe(true)
+  })
+  it('ignores a press on another monitor or past the edge', () => {
+    expect(insideGame(game, 1200, 700)).toBe(false)
+    expect(insideGame(game, 5120, 700)).toBe(false)
+    expect(insideGame(game, 3000, 1440)).toBe(false)
+  })
+  it('ignores everything when the game window is gone', () => {
+    expect(insideGame({ x: 0, y: 0, width: 0, height: 0 }, 0, 0)).toBe(false)
   })
 })

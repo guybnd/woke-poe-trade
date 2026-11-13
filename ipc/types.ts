@@ -1,3 +1,5 @@
+import type { WokeOp } from './woke-ops'
+
 export interface HostConfig {
   shortcuts: ShortcutAction[]
   restoreClipboard: boolean
@@ -217,11 +219,12 @@ interface Event<TName extends string, TPayload = undefined> {
 }
 
 // Generic request/response channel for woke modules, so new modules don't
-// need new event types. `op` names the handler in main/src/woke.
+// need new event types. `op` names the handler in main/src/woke; each op's
+// args and result are in woke-ops.ts.
 type IpcWokeRequest =
   Event<'CLIENT->MAIN::woke-request', {
     id: number
-    op: string
+    op: WokeOp
     args: unknown
   }>
 

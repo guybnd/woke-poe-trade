@@ -54,6 +54,8 @@ const eolOf = file => fs.readFileSync(file, 'utf8').includes('\r\n') ? '\r\n' : 
 const LOCAL_TAG = / \((Local|Shields|Staves|Maps|Legacy|Jewel|Flasks?|Abyss Jewels?|Tincture|Implicit)\)$/
 export const matcherText = text => text.replace(LOCAL_TAG, '').trim()
 
+const GEAR_GROUPS = new Set(['armour', 'weapon'])
+
 function category (group, base) {
   if (group === 'jewel') return / Eye Jewel$/.test(base) ? 'Abyss Jewel' : / Cluster Jewel$/.test(base) ? 'Cluster Jewel' : 'Jewel'
   if (group === 'accessory') return / Ring$/.test(base) ? 'Ring' : / Amulet$|^Talisman/.test(base) ? 'Amulet' : / (Belt|Sash|Vise|Obi)$/.test(base) ? 'Belt' : null
@@ -67,7 +69,7 @@ export function diff (before, after, statLines, itemLines) {
   for (const s of stats) for (const ids of Object.values(s.trade.ids)) for (const id of ids) byId.set(id, s)
   const byText = new Map()
   for (const s of stats) for (const m of s.matchers) if (!byText.has(m.string.trim())) byText.set(m.string.trim(), s)
-  const report = { newStats: [], newIds: [], reworded: [], newItems: [], skipped: [] }
+  const report = { newStats: [], newIds: [], reworded: [], newItems: [], byName: [], skipped: [] }
 
   // One id can carry several texts (an atlas "in your Maps" line and the map's
   // own "in Area" line), so an id is reworded only when its text is new to it.
@@ -122,7 +124,15 @@ export function diff (before, after, statLines, itemLines) {
     } else {
       const cat = category(e.group, e.type)
       if (cat) report.newItems.push({ name, refName: name, namespace: 'ITEM', craftable: { category: cat }, icon: '' })
-      else report.skipped.push(`${e.group}: ${name} (no category)`)
+      else if (e.group === 'monster') report.newItems.push({ name, refName: name, namespace: 'CAPTURED_BEAST', icon: '' })
+      // Armour and weapons need their category for mod search: added by hand.
+      else if (GEAR_GROUPS.has(e.group)) report.skipped.push(`${e.group}: ${name} (no category)`)
+      // A league's new kind of item (3.30's Wickerman trophies): known by name,
+      // so price check and lookups at least recognise it.
+      else {
+        report.newItems.push({ name, refName: name, namespace: 'ITEM', icon: '' })
+        report.byName.push(`${e.group}: ${name}`)
+      }
     }
     names.add(name)
   }
@@ -168,6 +178,7 @@ async function main () {
   for (const r of report.reworded) console.log(`  ~ ${r.from}  ->  ${r.to}`)
   console.log(`New items: ${report.newItems.length}`)
   for (const i of report.newItems) console.log(`  + ${i.namespace} ${i.name}`)
+  if (report.byName.length) console.log(`Added by name only (no item class known): ${report.byName.length}\n  ${report.byName.slice(0, 40).join('\n  ')}`)
   if (report.skipped.length) console.log(`Left out (add by hand if needed):\n  ${report.skipped.join('\n  ')}`)
   if (mode === 'check') return
 

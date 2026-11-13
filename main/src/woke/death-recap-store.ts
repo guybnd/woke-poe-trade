@@ -3,13 +3,12 @@
 // <userData>/woke-death-recap/deaths.json
 import path from 'path'
 import { dataDir, readJsonStrict, writeAtomic, writeQueue } from './data-files'
+import type { WokeHandlers } from '../../../ipc/woke-ops'
 
 const file = () => path.join(dataDir('woke-death-recap'), 'deaths.json')
 const queued = writeQueue()
 
-type Args = Record<string, unknown>
-
-export const deathRecapHandlers: Record<string, (args: Args) => Promise<unknown>> = {
+export const deathRecapHandlers: Partial<WokeHandlers> = {
   // A locked or damaged file throws (see readJsonStrict), so the overlay never
   // takes it for an empty history and saves over it.
   'death-recap-read': async () => {

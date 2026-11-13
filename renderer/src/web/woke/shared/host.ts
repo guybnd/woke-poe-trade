@@ -1,5 +1,6 @@
 // Request/response calls to woke handlers in the main process (main/src/woke).
 import { MainProcess } from '@/web/background/IPC'
+import type { WokeArgs, WokeOp, WokeResult } from '@ipc/woke-ops'
 
 // Random start: responses are broadcast, so ids must not clash between clients.
 let nextId = Math.floor(Math.random() * 1e9)
@@ -18,16 +19,17 @@ function listen () {
   })
 }
 
-export function hostRequest<T> (op: string, args: unknown, timeoutMs = 30_000): Promise<T> {
+// The op's args and result come from ipc/woke-ops.ts.
+export function hostRequest<K extends WokeOp> (op: K, args: WokeArgs<K>, timeoutMs = 30_000): Promise<WokeResult<K>> {
   listen()
   const id = nextId++
-  return new Promise<T>((resolve, reject) => {
+  return new Promise<WokeResult<K>>((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id)
       reject(new Error('The app did not respond'))
     }, timeoutMs)
     pending.set(id, {
-      resolve: (v) => { clearTimeout(timer); resolve(v as T) },
+      resolve: (v) => { clearTimeout(timer); resolve(v as WokeResult<K>) },
       reject: (e) => { clearTimeout(timer); reject(e) }
     })
     MainProcess.sendEvent({ name: 'CLIENT->MAIN::woke-request', payload: { id, op, args } })

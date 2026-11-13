@@ -524,7 +524,7 @@ function moveHere (target: number) {
 const exported = shallowRef('')
 async function exportCsv () {
   try {
-    const file = await hostRequest<string>('sessions-export', { rows: exportRows(sessionList.value.map(x => x.s)) })
+    const file = await hostRequest('sessions-export', { rows: exportRows(sessionList.value.map(x => x.s)) })
     exported.value = file.split(/[\\/]/).pop() ?? file
   } catch (err) {
     exported.value = `failed: ${(err as Error).message}`

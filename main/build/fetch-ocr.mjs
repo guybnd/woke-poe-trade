@@ -10,7 +10,8 @@ import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
 
 const URL = 'https://github.com/SnosMe/awakened-poe-trade/releases/download/v3.20.10007/cv-ocr.zip'
-const NEEDED = ['tesseract-core-simd.js', 'opencv.js', 'eng.traineddata']
+// Keep in step with OCR_FILES in src/woke/ocr-dir.ts.
+const NEEDED = ['opencv.js', 'opencv_js.wasm', 'tesseract-core-simd.js', 'tesseract-core-simd.wasm', 'eng.traineddata']
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const outDir = path.join(here, 'cv-ocr')

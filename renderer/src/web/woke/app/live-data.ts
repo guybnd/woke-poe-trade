@@ -92,7 +92,7 @@ export async function useDownloadedData (language: string) {
   latestRequest++
   try {
     // Short: the overlay waits for this at startup.
-    const version = await hostRequest<number | null>('live-data-cached', { language, bundled: await bundledVersion() }, 3000)
+    const version = await hostRequest('live-data-cached', { language, bundled: await bundledVersion() }, 3000)
     if (version != null) await apply(language, version)
   } catch (e) {
     console.warn('[live data] Staying on the bundled data', e)
@@ -103,7 +103,7 @@ async function check (getLanguage: () => string) {
   const language = getLanguage()
   try {
     const bundled = await bundledManifest()
-    const version = await hostRequest<number | null>('live-data-check', { language, bundled: bundled.version, bundledShared: bundled.shared ?? {} }, 120_000)
+    const version = await hostRequest('live-data-check', { language, bundled: bundled.version, bundledShared: bundled.shared ?? {} }, 120_000)
     if (version == null || language !== getLanguage()) return
     if (inUse?.language === language && inUse.version === version) return
     await apply(language, version)

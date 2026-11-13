@@ -3,6 +3,7 @@
 // Kept data-only so the widget layout can change without touching it.
 
 import type { PriceItem } from '../market/types'
+import { TROPHY_SLOTS, slotMatcher } from './covens'
 
 export interface PriceGroup {
   label: string
@@ -206,6 +207,22 @@ export const MECHANICS: Mechanic[] = [
     ],
     tips: [
       'Prices are for one ember.'
+    ]
+  },
+  {
+    // 3.30 league: Wickerman trophies, priced by the slot they fill.
+    id: 'covens',
+    label: 'Covens',
+    short: 'COV',
+    icon: 'fas fa-skull',
+    groups: TROPHY_SLOTS.map(slot => ({
+      label: slot === 'Other' ? 'Other trophies' : `${slot} trophies`,
+      match: slotMatcher(slot),
+      limit: 10
+    })),
+    tips: [
+      'Each Wickerman slot holds one trophy; the best of each slot is at the top.',
+      'Trophies come in 3 tiers; the top tier only drops in the endgame.'
     ]
   },
   {

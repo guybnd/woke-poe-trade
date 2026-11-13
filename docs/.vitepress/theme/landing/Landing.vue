@@ -152,6 +152,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
           <a class="btn" :href="DOWNLOAD">Download on GitHub</a>
           <a class="btn btn-quiet" :href="REPO">Open source on GitHub</a>
         </p>
+        <p class="unsigned-note">Windows SmartScreen may warn on first run: click More info &gt; Run anyway.</p>
         <p class="phone-note">On a phone? Open this page on your PC to install.</p>
       </div>
     </header>
@@ -332,6 +333,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .hero h1 { font: 92px/1 var(--caps); color: var(--title); text-shadow: 0 2px 18px #000; }
 .lead { font-size: 26px; font-style: italic; color: var(--text); text-shadow: 0 1px 8px #000; }
 .facts { color: var(--text); text-shadow: 0 1px 8px #000; margin-bottom: 8px; }
+.unsigned-note { color: var(--dim); font-size: 14px; text-shadow: 0 1px 8px #000; margin-top: 10px; }
 
 /* ---------- a highlight: an item tooltip, frame art from the game ---------- */
 .highlight { padding: 20px 16px; }
@@ -504,6 +506,7 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 /* Phones and tablets can't install it: say so beside the Download buttons. */
 @media (hover: none) and (pointer: coarse) {
   .phone-note { display: block; color: var(--text); font-size: 16px; text-shadow: 0 1px 8px #000; }
+  .unsigned-note { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .stage picture, .thumb { transition: none; }

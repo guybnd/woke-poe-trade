@@ -8,6 +8,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { shell } from 'electron'
 import { dataDir, leagueName, listDir, safeName, writeAtomic, writeQueue } from './data-files'
+import type { WokeHandlers } from '../../../ipc/woke-ops'
 
 // Same as the renderer's SessionRecord (woke/analytics/types.ts); kept loose here.
 interface SessionRecord { id: string, league: string, [k: string]: unknown }
@@ -100,9 +101,7 @@ function csvCell (v: unknown): string {
 // which garbles names like "Doppelgänger Guise" or "Maelström of Chaos".
 const UTF8_BOM = '\uFEFF'
 
-type Args = Record<string, unknown>
-
-export const sessionHandlers: Record<string, (args: Args) => Promise<unknown>> = {
+export const sessionHandlers: Partial<WokeHandlers> = {
   'sessions-list': async () => {
     return [...(await sessions.loadAll()).values()]
   },

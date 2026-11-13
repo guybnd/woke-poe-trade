@@ -16,7 +16,7 @@ async function load (): Promise<LogTail> {
   // a moment after widgets mount: retry a few times before giving up.
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const tail = await hostRequest<LogTail>('game-log-tail', {}, 10_000)
+      const tail = await hostRequest('game-log-tail', {}, 10_000)
       if (tail.path) return tail
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 2500))

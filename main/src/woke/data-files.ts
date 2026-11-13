@@ -4,6 +4,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { app } from 'electron'
+import type { WokeHandlers } from '../../../ipc/woke-ops'
 
 export const dataDir = (name: string) => path.join(app.getPath('userData'), name)
 
@@ -82,9 +83,7 @@ const docFile = (collection: unknown, key: unknown) => {
 }
 const queued = writeQueue()
 
-type Args = Record<string, unknown>
-
-export const docHandlers: Record<string, (args: Args) => Promise<unknown>> = {
+export const docHandlers: Partial<WokeHandlers> = {
   'doc-get': async ({ collection, key }) => await readJson(docFile(collection, key)),
   'doc-list': async ({ collection }) => {
     if (typeof collection !== 'string' || !collection) throw new Error('No collection given.')

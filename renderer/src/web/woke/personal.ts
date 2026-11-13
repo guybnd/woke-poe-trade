@@ -39,7 +39,7 @@ export async function loadPersonal (): Promise<void> {
   if (!Host.isElectron) return
   let s: PersonalState | null = null
   try {
-    s = await hostRequest<PersonalState>('personal-flag', null, 5000)
+    s = await hostRequest('personal-flag', null, 5000)
   } catch {}
   takePersonal(s)
   if (!personalOn.value) return

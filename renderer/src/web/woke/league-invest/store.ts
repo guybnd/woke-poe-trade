@@ -24,7 +24,7 @@ export async function loadLeagues (): Promise<LeagueHistory[]> {
     imported.catch(() => { imported = null })
   }
   await imported
-  const all = await hostRequest<LeagueHistory[]>('doc-list', { collection: COLLECTION })
+  const all = await (hostRequest('doc-list', { collection: COLLECTION }) as Promise<LeagueHistory[]>)
   return all.filter(h => h && typeof h.league === 'string').sort((a, b) => a.start.localeCompare(b.start))
 }
 
