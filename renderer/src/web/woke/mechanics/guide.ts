@@ -74,6 +74,12 @@ export const GUIDE: Record<string, MechanicGuide> = {
     when: ['Only when you open it'],
     gap: NOT_DETECTED
   },
+  covens: {
+    kind: 'none',
+    gets: 'Wickerman trophies by price, grouped by the slot they fill: head, torso, upper limb, lower limb.',
+    when: ['Only when you open it'],
+    gap: NOT_DETECTED
+  },
   ultimatum: {
     kind: 'npc',
     gets: 'Catalysts by price, since they are what you are usually playing for. Ultimatum scarabs in the full panel.',
