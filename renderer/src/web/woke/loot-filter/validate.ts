@@ -19,7 +19,9 @@ const CONDITION_KEYS = new Set([
   'HasSearingExarchImplicit', 'HasEaterOfWorldsImplicit', 'ArchnemesisMod', 'BaseArmour', 'BaseEnergyShield',
   'BaseEvasion', 'BaseWard', 'BaseDefencePercentile', 'ZanaMemory', 'Continue', 'HasVaalUniqueMod', 'IsVaalUnique',
   'TwiceCorrupted', 'UnidentifiedItemTier', 'WaystoneTier', 'HasImplicitMods', 'Sanctified', 'Unmodifiable',
-  'AlwaysShow', 'Exceptional', 'MirageMap'
+  'AlwaysShow', 'Exceptional', 'MirageMap',
+  // 3.30 (NeverSink 8.21): gear from a boss empowered by a Fate.
+  'Fated'
 ])
 
 const COLOURS = new Set(['Red', 'Green', 'Blue', 'Brown', 'White', 'Yellow', 'Cyan', 'Grey', 'Orange', 'Pink', 'Purple'])
