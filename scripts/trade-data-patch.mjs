@@ -52,7 +52,10 @@ const eolOf = file => fs.readFileSync(file, 'utf8').includes('\r\n') ? '\r\n' : 
 
 // Trade texts mark the item kind a stat is local to; our matchers don't.
 const LOCAL_TAG = / \((Local|Shields|Staves|Maps|Legacy|Jewel|Flasks?|Abyss Jewels?|Tincture|Implicit)\)$/
-export const matcherText = text => text.replace(LOCAL_TAG, '').trim()
+const refText = text => text.replace(LOCAL_TAG, '').trim()
+// Our matchers carry no sign on a rolled number: the parser reads "+15%" as
+// "#%", so "+#% to Item Rarity" is matched as "#% to Item Rarity".
+export const matcherText = text => refText(text).replace(/\+#/g, '#')
 
 const GEAR_GROUPS = new Set(['armour', 'weapon'])
 
@@ -97,7 +100,7 @@ export function diff (before, after, statLines, itemLines) {
       }
       let stat = added.get(text)
       if (!stat) {
-        stat = { ref: text, better: 1, matchers: [{ string: text }], trade: { ids: {} } }
+        stat = { ref: refText(e.text), better: 1, matchers: [{ string: text }], trade: { ids: {} } }
         added.set(text, stat)
         report.newStats.push(stat)
       }
@@ -105,6 +108,9 @@ export function diff (before, after, statLines, itemLines) {
     } else if (!prev.has(text)) {
       const ours = byId.get(e.id)
       if (!ours) continue
+      // A map mod's id is shared with its atlas passive ("... in your Maps").
+      // The atlas wording would only crowd the map mod checker's list.
+      if (ours.fromAreaMods && /\byour Maps\b/.test(text)) continue
       if (!ours.matchers.some(m => m.string.trim() === text)) {
         ours.matchers.push({ string: text })
         report.reworded.push({ id: e.id, from: [...prev].join(' / '), to: e.text })
@@ -113,6 +119,14 @@ export function diff (before, after, statLines, itemLines) {
   }
 
   const names = new Set(itemLines.map(i => i.refName))
+  // Exchange items first: the same currency also shows in the item list, and
+  // only the exchange list gives its trade tag and art.
+  const oldStatic = new Set(before.static.map(e => e.id))
+  for (const e of after.static) {
+    if (oldStatic.has(e.id) || names.has(e.text)) continue
+    report.newItems.push({ name: e.text, refName: e.text, namespace: 'ITEM', tradeTag: e.id, exchangeable: true, icon: e.image ? `https://web.poecdn.com${e.image}` : '' })
+    names.add(e.text)
+  }
   const key = e => `${e.group}|${e.name}|${e.type}`
   const oldItems = new Set(before.items.map(key))
   for (const e of after.items) {
@@ -135,12 +149,6 @@ export function diff (before, after, statLines, itemLines) {
       }
     }
     names.add(name)
-  }
-  const oldStatic = new Set(before.static.map(e => e.id))
-  for (const e of after.static) {
-    if (oldStatic.has(e.id) || names.has(e.text)) continue
-    report.newItems.push({ name: e.text, refName: e.text, namespace: 'ITEM', tradeTag: e.id, exchangeable: true, icon: e.image ? `https://web.poecdn.com${e.image}` : '' })
-    names.add(e.text)
   }
   return report
 }

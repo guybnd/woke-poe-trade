@@ -24,7 +24,7 @@ describe('trade data patch', () => {
   })
 
   it('gives a new id with a known text to that stat instead of a second stat', () => {
-    const ours = [{ ref: '+# to maximum Life', better: 1, matchers: [{ string: '+# to maximum Life' }], trade: { ids: { explicit: ['explicit.stat_3'] } as Record<string, string[]> } }]
+    const ours = [{ ref: '+# to maximum Life', better: 1, matchers: [{ string: '# to maximum Life' }], trade: { ids: { explicit: ['explicit.stat_3'] } as Record<string, string[]> } }]
     const r = diff({ stats: [], items: [], static: [] }, { stats: [stat('scourge.stat_3', '+# to maximum Life', 'scourge')], items: [], static: [] }, ours, [])
     expect(r.newStats).toEqual([])
     expect(ours[0].trade.ids.scourge).toEqual(['scourge.stat_3'])
@@ -40,8 +40,9 @@ describe('trade data patch', () => {
       },
       [], [{ refName: 'Cobalt Jewel' }])
     expect(r.newStats).toEqual([{ ref: '#% increased Thread Effect', better: 1, matchers: [{ string: '#% increased Thread Effect' }], trade: { ids: { explicit: ['explicit.stat_9'], fractured: ['fractured.stat_9'] } } }])
-    expect(r.newItems.map((i: { name: string }) => i.name)).toEqual(['Mycelium Core', 'New Ring', "Sirus' Head", 'Abyss Thread'])
+    expect(r.newItems.map((i: { name: string }) => i.name)).toEqual(['Abyss Thread', 'Mycelium Core', 'New Ring', "Sirus' Head"])
     expect(r.skipped).toEqual(['armour: Odd Plate (no category)'])
     expect(matcherText('Adds # to # Physical Damage (Local)')).toBe('Adds # to # Physical Damage')
+    expect(matcherText('+#% to Item Rarity')).toBe('#% to Item Rarity')
   })
 })
