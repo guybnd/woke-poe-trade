@@ -4,7 +4,11 @@
   <div class="w-poe-line" :class="{ 'w-poe-child': isChild, 'w-poe-dimmed': isSplit, 'w-poe-hybrid': hybrid, 'w-poe-hybrid-first': hybrid?.first, 'w-poe-hybrid-last': hybrid?.last }"
     :title="hybrid ? 'One hybrid mod. Click to search it: each of its lines at the bottom of its tier.' : look.label"
     @click="onClick">
-    <span class="w-poe-tier" :class="{ 'w-poe-t1': isTopTier(tier) }">{{ tier }}</span>
+    <!-- A total opens from its tier (Guy's pick "tier opens it"), so no tag squeezes the text. -->
+    <button v-if="canSplit" type="button" class="w-poe-tier w-poe-tier-open" :class="{ 'w-poe-t1': isTopTier(tier) }"
+      :title="isSplit ? 'Fold its mods back into the total' : 'Show the mods behind this line'"
+      @click="actions!.toggleSplit(filter)">{{ tier || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
+    <span v-else class="w-poe-tier" :class="{ 'w-poe-t1': isTopTier(tier) }">{{ tier }}</span>
     <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
       <img v-else-if="look.icon" class="w-poe-icon" :src="look.icon" alt="">
@@ -19,9 +23,6 @@
       class="w-poe-qtag" :class="{ on: qOn }"
       :title="qOn ? 'Only items with this catalyst quality or more. Click to search any quality.' : 'A catalyst raised this line. Click to only find items with the same catalyst quality.'"
       @click="catalyst!.toggle()">Q{{ qTag }}</button>
-    <button v-if="canSplit" type="button" class="w-poe-ptag"
-      :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-      @click="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
   </div>
 </template>
 

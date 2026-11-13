@@ -402,9 +402,31 @@
 .w-ele[data-ele="chaos"] { --w-ele: #c060c8; }
 .w-ele[data-ele="physical"] { --w-ele: #c8c0b0; }
 
-/* A ticked line keeps its text centred, as it was before the tick (Guy's pick
- * "ticked rows stay centred"): the text fills the room between the checkbox
- * and the min/max boxes and centres in it. */
-#price-window.w-poe .w-poe-row > div > div:first-child > div:first-child { flex: 1 1 auto; }
-#price-window.w-poe .w-poe-row button:has(> .w-poe-row-text) { flex: 1 1 auto; min-width: 0; justify-content: center; text-align: center; }
+/* A ticked line keeps its text centred on the row, like the unticked lines
+ * (Guy's pick "ticked rows stay centred"). The row is three columns: tier,
+ * text, min/max. The side columns share the spare room equally, so the text
+ * sits on the same centre unless it's long enough to need that room.
+ * No checkbox (Guy, 2026-11-13): the frame and boxes show it's ticked, and
+ * clicking the text unticks it. */
+#price-window.w-poe .w-poe-row > div > div:first-child {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+  align-items: start;
+}
+#price-window.w-poe .w-poe-row > div > div:first-child > div:first-child { display: contents; }
+#price-window.w-poe .w-poe-row > div > div:first-child > div:first-child > .w-poe-tier { grid-column: 1; justify-self: start; }
+#price-window.w-poe .w-poe-row .w-pc-check { display: none; }
+#price-window.w-poe .w-poe-row button:has(> .w-poe-row-text) { grid-column: 2; min-width: 0; justify-content: center; text-align: center; }
 #price-window.w-poe .w-poe-row .w-poe-row-text { text-align: center; }
+#price-window.w-poe .w-poe-row > div > div:first-child > div:last-child { grid-column: 3; justify-self: end; }
+
+/* A line with mods behind it opens from its tier (Guy's pick "tier opens it"). */
+#price-window.w-poe .w-poe-tier-open {
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed currentColor;
+  color: var(--w-dim);
+}
+#price-window.w-poe .w-poe-tier-open:hover { color: var(--w-gold-hi); }

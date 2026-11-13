@@ -3,7 +3,10 @@
     <div class="flex flex-col min-w-0 flex-1">
       <div class="flex items-baseline">
         <div class="flex items-baseline min-w-0 mr-2">
-          <span v-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierTop }">{{ poeTierText }}</span>
+          <button v-if="poe && canSplit" type="button" class="w-poe-tier w-poe-tier-open" :class="{ 'w-poe-t1': poeTierTop }"
+            :title="isSplit ? 'Fold its mods back into the total' : 'Show the mods behind this line'"
+            @click="actions!.toggleSplit(filter)">{{ poeTierText || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
+          <span v-else-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierTop }">{{ poeTierText }}</span>
           <button :class="[$style.checkbox, { [$style.checked]: !isDisabled, [$style.uncheckedHint]: isDisabled && groupExpanded }, 'w-pc-check']"
             @click="toggleFilter" type="submit">
             <i :class="isDisabled ? 'far fa-square' : 'fas fa-check-square'" />
@@ -81,10 +84,7 @@
           <button v-if="poe && fracIds" type="button" class="w-poe-chip" :class="{ on: fracOnly }"
             title="Search only items where this mod is fractured"
             @click="toggleFractured">Fractured only</button>
-          <button v-if="poe && canSplit" type="button" class="w-poe-ptag"
-            :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
-            @click="actions!.toggleSplit(filter)">{{ filter.inTotal ? `${filter.sources.length} mods` : `${t('filters.tag_pseudo')} ×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
-          <template v-else-if="poe" />
+          <template v-if="poe" />
           <button v-else-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
             :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
