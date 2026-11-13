@@ -123,8 +123,9 @@ function rollColour (quality: number) {
 .fractured { color: var(--w-mod-fractured); }
 .enchant { color: var(--w-mod-enchant); }
 .scourge { color: var(--w-mod-scourge); }
-.corrupt { display: inline-block; width: 7px; height: 7px; margin-right: 6px; transform: rotate(45deg); background: var(--w-mod-corrupted); vertical-align: 1px; }
-.icon { width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; }
+/* Before the line, outside it, so the text stays centred. */
+.corrupt { position: absolute; right: 100%; top: .45em; width: 7px; height: 7px; margin-right: 7px; transform: rotate(45deg); background: var(--w-mod-corrupted); }
+.icon { position: absolute; right: 100%; top: 50%; display: block; width: 16px; height: 16px; margin: -9px 5px 0 0; }
 .number { color: #fff; font-family: var(--w-num); font-size: var(--w-fs-md); font-weight: 600; }
 /* The roll before catalyst quality, small and in the quality's blue. */
 .raw { color: #8888ff; font-family: var(--w-num); font-size: var(--w-fs-xs); vertical-align: super; line-height: 0; margin-left: 1px; }
