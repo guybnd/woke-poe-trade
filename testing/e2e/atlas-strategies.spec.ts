@@ -263,3 +263,67 @@ test('the points slider steps back through the plan in the order it was taken', 
   await slider.evaluate((el: HTMLInputElement) => { el.value = el.max; el.dispatchEvent(new Event('input', { bubbles: true })) })
   await expect(points).not.toContainText(' of ')
 })
+
+// Guy's list: an empty "3.30" folder with three loose strategies under it,
+// which looked like its contents. Pick A: loose ones first, drag and drop,
+// folders in your order, Alt + arrows, several at once, a sort menu.
+test('the list: loose strategies first, drag and drop, Alt + arrows, several at once', async ({ overlay, fakeApp }) => {
+  await overlay.boot({
+    overlayActive: true,
+    widgets: [{
+      wmType: 'woke-atlas-strategies',
+      wmTitle: 'Atlas strategies',
+      wmWants: 'show',
+      wmFlags: ['invisible-on-blur'],
+      anchor: { pos: 'tl', x: 2, y: 8 },
+      dataUrl: '',
+      selectedId: null,
+      treeHidden: true,
+      folders: ['3.30', 'Juicing'],
+      strategies: ['Start Shell', 'New strategy', 'Starter'].map((name, i) =>
+        ({ id: i + 1, name, folder: '', league: '', tags: [], treeUrl: '', threads: [], scarabs: '', device: '', regex: '', notes: '' }))
+    } as never]
+  })
+  const atlas = overlay.widget('woke-atlas-strategies')
+  const rows = atlas.locator('[data-row]')
+  const order = async () => (await rows.evaluateAll(els => els.map(e => (e as HTMLElement).dataset.row)))
+  await expect(rows.first()).toBeVisible()
+  expect(await order()).toEqual(['s:1', 's:2', 's:3', 'f:3.30', 'f:Juicing'])
+
+  // Drag Start Shell into 3.30: it counts 1.
+  const folder = atlas.locator('[data-row="f:3.30"]')
+  await atlas.locator('[data-row="s:1"]').dragTo(folder, { targetPosition: { x: 40, y: 18 } })
+  await expect(folder).toContainText('1')
+  expect(await order()).toEqual(['s:2', 's:3', 'f:3.30', 's:1', 'f:Juicing'])
+  if (process.env.WOKE_SNAP_DIR) await overlay.page.screenshot({ path: `${process.env.WOKE_SNAP_DIR}/atlas-dnd-after-drop.png`, clip: { x: 0, y: 0, width: 520, height: 420 } })
+
+  // Juicing above 3.30: dropped on the top part of the 3.30 row.
+  await atlas.locator('[data-row="f:Juicing"]').dragTo(folder, { targetPosition: { x: 40, y: 2 } })
+  expect(await order()).toEqual(['s:2', 's:3', 'f:Juicing', 'f:3.30', 's:1'])
+
+  // Alt + Up takes Start Shell out of its folder (it lands above the folders).
+  await atlas.locator('[data-row="s:1"] button').first().focus()
+  await overlay.page.keyboard.press('Alt+ArrowUp')
+  expect(await order()).toEqual(['s:2', 's:3', 's:1', 'f:Juicing', 'f:3.30'])
+  await overlay.page.keyboard.press('Alt+ArrowUp')
+  expect(await order()).toEqual(['s:2', 's:1', 's:3', 'f:Juicing', 'f:3.30'])
+
+  // Ctrl + click two, drag both into Juicing.
+  await atlas.locator('[data-row="s:2"] button').first().click()
+  await atlas.locator('[data-row="s:3"] button').first().click({ modifiers: ['Control'] })
+  await atlas.locator('[data-row="s:3"]').dragTo(atlas.locator('[data-row="f:Juicing"]'), { targetPosition: { x: 40, y: 18 } })
+  expect(await order()).toEqual(['s:1', 'f:Juicing', 's:2', 's:3', 'f:3.30'])
+
+  // The sort menu: Name puts folders and strategies A to Z.
+  await atlas.getByTitle('Sort: My order').click()
+  await overlay.page.getByRole('menuitem', { name: 'Name' }).click()
+  expect(await order()).toEqual(['s:1', 'f:3.30', 'f:Juicing', 's:2', 's:3'])
+
+  fakeApp.clearReceived()
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  expect(saved.strategies.map((s: { name: string, folder: string }) => `${s.folder}:${s.name}`))
+    .toEqual([':Start Shell', 'Juicing:New strategy', 'Juicing:Starter'])
+  expect(saved.folderOrder).toEqual(['Juicing', '3.30'])
+  expect(saved.sortBy).toBe('name')
+})

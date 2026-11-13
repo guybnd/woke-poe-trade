@@ -29,7 +29,7 @@ export function strategyCode (list: Array<AtlasStrategy & { regexes?: SharedRege
     if (!base) return ''
     return f === base ? '' : f.startsWith(base + '/') ? f.slice(base.length + 1) : ''
   }
-  const rows = list.map(s => ({ ...Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'id' && k !== 'regexFolder')), folder: strip(s.folder) }))
+  const rows = list.map(s => ({ ...Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'id' && k !== 'regexFolder' && k !== 'changedAt')), folder: strip(s.folder) }))
   return CODE_PREFIX + toBase64(JSON.stringify({ v: 1, strategies: rows }))
 }
 

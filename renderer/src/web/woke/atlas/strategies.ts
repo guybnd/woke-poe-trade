@@ -37,6 +37,8 @@ export interface AtlasStrategy {
   // Where its regexes sit in the Regex library, claimed once and kept unique,
   // so two strategies of one name never share a list.
   regexFolder?: string
+  // When it last changed (ms), for the Last changed sort.
+  changedAt?: number
 }
 
 export interface AtlasWidget extends Widget {
@@ -46,6 +48,11 @@ export interface AtlasWidget extends Widget {
   strategies: AtlasStrategy[]
   // Folders you made, kept while empty.
   folders?: string[]
+  // The order folders show in, as full paths. Folders not in it go after
+  // their listed siblings, A to Z.
+  folderOrder?: string[]
+  // How the list is sorted. Missing: 'manual' (the order you drag them into).
+  sortBy?: 'manual' | 'name' | 'earnings' | 'changed'
   // Folders folded shut in the list.
   closedFolders?: string[]
   // The tree panel between the list and the loadout.
@@ -91,6 +98,7 @@ export function migrateAtlasWidget (w: AtlasWidget) {
   }
   if (!Array.isArray(w.folders)) w.folders = []
   if (!Array.isArray(w.closedFolders)) w.closedFolders = []
+  if (w.folderOrder != null && !Array.isArray(w.folderOrder)) w.folderOrder = undefined
   // A draft or slider whose strategy is gone would land on the next one given its id.
   const ids = new Set(w.strategies.map(s => String(s.id)))
   if (w.drafts) w.drafts = Object.fromEntries(Object.entries(w.drafts).filter(([id]) => ids.has(id)))
@@ -111,8 +119,9 @@ export interface FolderNode {
   children: FolderNode[]
 }
 
-// The list as nested folders: folders first (by name), then strategies in list order.
-export function folderTree (strategies: AtlasStrategy[], extra: string[] = []): FolderNode {
+// The list as nested folders: strategies in list order, and folders in `order`
+// (ones it doesn't list after, A to Z).
+export function folderTree (strategies: AtlasStrategy[], extra: string[] = [], order: string[] = []): FolderNode {
   const root: FolderNode = { path: '', name: '', depth: -1, strategies: [], total: 0, children: [] }
   const at = (path: string): FolderNode => {
     let node = root
@@ -131,7 +140,8 @@ export function folderTree (strategies: AtlasStrategy[], extra: string[] = []): 
   for (const f of extra) at(cleanFolder(f))
   for (const s of strategies) at(cleanFolder(s.folder ?? '')).strategies.push(s)
   const finish = (n: FolderNode): number => {
-    n.children.sort((a, b) => a.name.localeCompare(b.name))
+    const rank = (p: string) => { const i = order.indexOf(p); return i < 0 ? Infinity : i }
+    n.children.sort((a, b) => (rank(a.path) - rank(b.path)) || a.name.localeCompare(b.name))
     n.total = n.strategies.length + n.children.reduce((sum, c) => sum + finish(c), 0)
     return n.total
   }
