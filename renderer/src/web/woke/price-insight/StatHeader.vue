@@ -48,7 +48,7 @@ const cells = computed(() => {
 })
 
 function cellClass (c: HeaderCell) {
-  return { [$style.hit]: Boolean(c.filter), [$style.sel]: c.filter != null && !c.filter.disabled }
+  return { [$style.hit]: Boolean(c.filter), [$style.sel]: c.filter != null && !c.filter.disabled, [$style.ro]: !c.filter }
 }
 
 function cellTitle (c: HeaderCell) {
@@ -123,6 +123,7 @@ function onClick (e: MouseEvent) {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.chip.ro { border-color: transparent; opacity: .7; }
 .track {
   position: relative;
   display: block;
