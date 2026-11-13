@@ -42,9 +42,16 @@ export function extractTreeCode (input: string): string | null {
 export function decodeTree (input: string): DecodedTree {
   const code = extractTreeCode(input)
   if (!code) throw new Error('Not a tree link')
+  // poeplanner's character trees share the format but not the node ids.
+  if (/poeplanner\.com\//i.test(input) && !/poeplanner\.com\/atlas-tree\//i.test(input)) throw new Error('Not an atlas tree link')
   const bytes = base64UrlToBytes(code)
   const view = new DataView(bytes.buffer)
   if (bytes.length < 7) throw new Error('Tree link is too short')
+  // GGG's u32 version always starts with a zero byte; poeplanner's doesn't.
+  if (bytes[0] !== 0) {
+    if (bytes[0] > 15 || bytes[1] !== 0) throw new Error('Not a tree link')
+    return decodePoePlanner(view)
+  }
   const version = view.getUint32(0)
   let pos = 6
   const nodes: number[] = []
@@ -71,6 +78,20 @@ export function decodeTree (input: string): DecodedTree {
     }
   }
   return { version, nodes, masteries }
+}
+
+// poeplanner.com/atlas-tree links, little-endian:
+//   u16 format version, u16 tree version, u8 (unused here),
+//   u16 count + u16 node ids, then a length-prefixed gzip blob
+//   (empty in the links seen so far; not read).
+// Node ids are GGG's, so they map straight onto our tree data.
+function decodePoePlanner (view: DataView): DecodedTree {
+  const version = view.getUint16(0, true)
+  const count = view.getUint16(5, true)
+  if (7 + count * 2 > view.byteLength) throw new Error('Not a tree link')
+  const nodes: number[] = []
+  for (let i = 0; i < count; i++) nodes.push(view.getUint16(7 + i * 2, true))
+  return { version, nodes, masteries: [] }
 }
 
 export interface AtlasNode {

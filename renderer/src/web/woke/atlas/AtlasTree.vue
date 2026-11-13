@@ -202,7 +202,7 @@ function readLink (url: string): Alloc {
     for (const m of t.masteries) if (props.model.variants.get(m.node)?.some(v => v.effect === m.effect)) variants[m.node] = m.effect
     if (lost) unreadable.value = `${lost} of its passives aren't in this atlas (a link from an older league)`
   } catch {
-    unreadable.value = 'it isn\'t a pathofexile.com atlas tree link'
+    unreadable.value = 'it isn\'t a pathofexile.com or poeplanner atlas tree link'
   }
   return { nodes, variants }
 }

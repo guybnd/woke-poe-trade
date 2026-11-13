@@ -79,6 +79,21 @@ describe('atlas tree model', () => {
     expect(back.masteries).toEqual([{ node: 3, effect: 36845 }])
   })
 
+  it('reads poeplanner atlas links (little-endian, GGG node ids)', () => {
+    const url = 'https://poeplanner.com/atlas-tree/BQAeAABrAF17YR-ZSEz1AEhiA7L6uy7B7njjwCohYPONNyBV6pRpKOfGhoxB3_K1Zky6fVoiiEyET_cdfXQdt12L4X2RCnsndQ5KWcze_rbyntiiymdge2BPL3-rtdi9x9U_KY1FdsFsWYZw43435fFaeQXx4WU34wD5ghndg-EQ0w4ZCszk-7GHt321gojrX1x1xIXiDl7fThtzPiFMxSEkMqt2F1ATfa7v6AoZlJNhyXAYiwtxfW1Zb4gHZofa-gk2QZYvctlcqUNmH9RsuWLe-p196z3ZxofUI98UAB-LCAAAAAAAAAMDAAAAAAAAAAAA'
+    const t = decodeTree(url)
+    expect(t.version).toBe(5)
+    expect(t.nodes).toHaveLength(107)
+    expect(t.nodes.slice(0, 3)).toEqual([31581, 8033, 18585])
+    expect(t.nodes).toContain(28029)
+    expect(t.masteries).toEqual([])
+    // Our own links still go the GGG way, and junk with a non-zero first byte is refused.
+    expect(decodeTree(encodeAtlasTree([3, 1, 2], {})).nodes).toEqual([3, 1, 2])
+    expect(() => decodeTree('https://poeplanner.com/atlas-tree/' + btoa('\xff\xff\x00\x00\x00\x01\x00'))).toThrow()
+    expect(() => decodeTree('BQAeAAD_AF17')).toThrow()
+    expect(() => decodeTree(url.replace('/atlas-tree/', '/'))).toThrow()
+  })
+
   it('reads the art from the export repository beside data.json', () => {
     const data = 'https://raw.githubusercontent.com/grindinggear/atlastree-export/master/data.json'
     expect(assetUrl('https://web.poecdn.com/image/passive-skill/atlas-skills-3.webp?b8c5c9bc', data))
