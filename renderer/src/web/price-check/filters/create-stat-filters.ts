@@ -657,8 +657,12 @@ const MAX_TICKED_ON_RARE = 4
 
 const CLUSTER_NOTABLE = '1 Added Passive Skill is '
 
+// Rolls no buyer searches for, whatever their tier: a T1 reflect is still filler.
+const FILLER_STAT = /^Reflects .+ to Melee Attackers$|^#% increased Light Radius$|^#% increased Stun Duration on Enemies$|^#% increased Attribute Requirements$|^#% increased Stun and Block Recovery$/
+
 function isTopTierSource (filter: StatFilter, source: StatFilter['sources'][number]) {
   const { type, tier } = source.modifier.info
+  if (FILLER_STAT.test(source.stat.stat.ref)) return false
   if (!(type === ModifierType.Explicit || type === ModifierType.Fractured) || tier == null || tier > 2) return false
   // A hybrid's tier is about its main stat, not the one along for the ride.
   const { stats } = source.modifier

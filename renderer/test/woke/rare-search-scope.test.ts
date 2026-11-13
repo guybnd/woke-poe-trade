@@ -57,6 +57,11 @@ describe('rare searches', () => {
     expect(body.query.stats[0].filters.filter(f => !f.disabled)).toHaveLength(2)
   })
 
+  it('leave filler off even at T1, like reflect', () => {
+    const reflect = '{ Suffix Modifier "of Thorns" (Tier: 1) }\nReflects 6(5-10) Physical Damage to Melee Attackers'
+    expect(ticked(active(parseItem(amulet(`${reflect}\n${T1_CRIT}`))).stats)).toEqual(['+#% Global Critical Strike Multiplier'])
+  })
+
   it('leave lower tier mods off', () => {
     expect(ticked(active(parseItem(amulet(T5_SPELL))).stats)).toEqual([])
   })
