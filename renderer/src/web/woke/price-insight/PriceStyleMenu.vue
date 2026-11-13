@@ -7,8 +7,8 @@
       <div :class="$style.pop" role="dialog" aria-label="Look and filter layout" @mousedown.stop>
         <div :class="$style.head">Look</div>
         <div :class="$style.looks">
-          <button v-for="t in WOKE_THEMES" :key="t.id" :class="[$style.look, { [$style.on]: wokeTheme === t.id }]"
-            :title="t.hint" :aria-pressed="wokeTheme === t.id" @click="wokeTheme = t.id">
+          <button v-for="t in WOKE_LOOKS" :key="t.id" :class="[$style.look, { [$style.on]: isLookPicked(t) }]"
+            :title="t.hint" :aria-pressed="isLookPicked(t)" @click="pickLook(t)">
             <span :class="$style.swatch" :data-theme="t.id" />{{ t.label }}
           </button>
         </div>
@@ -29,7 +29,7 @@
 import { computed, shallowRef, watch } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
-import { wokeTheme, WOKE_THEMES } from '../ui'
+import { WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
 
 type Layout = 'poe' | 'standard'
 const LAYOUTS: Array<{ id: Layout, label: string }> = [
@@ -83,6 +83,8 @@ function setLayout (id: Layout) {
 .look.on .swatch { border-color: var(--w-accent); }
 .note { font-size: var(--w-fs-xs); color: var(--w-faint); }
 .swatch { width: 24px; height: 16px; flex: none; border-radius: 3px; border: 1px solid var(--w-line-strong); }
+.swatch[data-theme="poe1"] { background: linear-gradient(135deg, #1a130a 55%, #c8a25a 55%); }
+.swatch[data-theme="poe2"] { background: linear-gradient(135deg, #15110d 55%, #b8b0a0 55%); }
 .swatch[data-theme="hybrid"] { background: linear-gradient(135deg, #13110f 55%, #d4a64a 55%); }
 .swatch[data-theme="native"] { background: linear-gradient(135deg, #0e0b08 55%, #8a6a3a 55%); }
 .swatch[data-theme="modern"] { background: linear-gradient(135deg, #111216 55%, #9aa8ff 55%); }

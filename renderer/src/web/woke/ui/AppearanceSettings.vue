@@ -62,8 +62,7 @@ export default {
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { uiArt, wokeTheme, WOKE_THEMES } from './theme'
-import type { UiArt, WokeTheme } from './theme'
+import { WOKE_LOOKS, isLookPicked, pickLook } from './theme'
 import { MAX_SCALE, MIN_SCALE, uiScale } from './scale'
 import { MAX_TEXT_SCALE, MIN_TEXT_SCALE, textScale } from './text-scale'
 import { MAX_PIN_SCALE, MIN_PIN_SCALE, pinScale } from '../pins/pins'
@@ -76,21 +75,9 @@ import type { Density } from './density'
 import { appColors, APP_COLOR_PRESETS, DEFAULT_APP_COLORS, sameColors } from './app-colors'
 import type { AppColors } from './app-colors'
 
-// One picker for the look: the game look with PoE 1's or PoE 2's own window art
-// first, then the themes. Hybrid and PoE-native are the game look without art.
-interface Look { id: string, label: string, hint: string, theme: WokeTheme, art?: UiArt }
-const LOOKS: Look[] = [
-  { id: 'poe1', label: 'PoE 1', hint: 'The default UI theme of Path of Exile 1', theme: 'hybrid', art: 'poe1' },
-  { id: 'poe2', label: 'PoE 2', hint: 'The default UI theme of Path of Exile 2', theme: 'hybrid', art: 'poe2' },
-  ...WOKE_THEMES.map(t => ({ id: t.id, label: t.label, hint: t.hint, theme: t.id, art: t.id === 'hybrid' || t.id === 'native' ? 'simple' as UiArt : undefined }))
-]
-function isPicked (t: Look) {
-  return wokeTheme.value === t.theme && (t.art === undefined || uiArt.value === t.art)
-}
-function pick (t: Look) {
-  wokeTheme.value = t.theme
-  if (t.art) uiArt.value = t.art
-}
+const LOOKS = WOKE_LOOKS
+const isPicked = isLookPicked
+const pick = pickLook
 
 const DENSITIES = [{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]
 

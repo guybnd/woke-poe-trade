@@ -68,6 +68,23 @@ function readArt (): UiArt {
 
 export const uiArt = shallowRef<UiArt>(readArt())
 
+/** Every look the pickers offer, in one list: the game look with PoE 1's or
+ * PoE 2's window art first, then the themes. Hybrid and PoE-native are the game
+ * look without art. Settings, the price check's palette and the rail all use it. */
+export interface WokeLook { id: string, label: string, short: string, hint: string, theme: WokeTheme, art?: UiArt }
+export const WOKE_LOOKS: WokeLook[] = [
+  { id: 'poe1', label: 'PoE 1', short: 'PoE 1', hint: 'The default UI theme of Path of Exile 1', theme: 'hybrid', art: 'poe1' },
+  { id: 'poe2', label: 'PoE 2', short: 'PoE 2', hint: 'The default UI theme of Path of Exile 2', theme: 'hybrid', art: 'poe2' },
+  ...WOKE_THEMES.map(t => ({ ...t, theme: t.id, art: t.id === 'hybrid' || t.id === 'native' ? 'simple' as UiArt : undefined }))
+]
+export function isLookPicked (l: WokeLook): boolean {
+  return wokeTheme.value === l.theme && (l.art === undefined || uiArt.value === l.art)
+}
+export function pickLook (l: WokeLook): void {
+  wokeTheme.value = l.theme
+  if (l.art) uiArt.value = l.art
+}
+
 /** Whether windows wear the game's art: the game look with PoE 1's or PoE 2's art picked. */
 export function artShown (): boolean {
   return lookOf(wokeTheme.value) === 'game' && uiArt.value !== 'simple'

@@ -116,7 +116,7 @@
         <div v-if="popup?.kind === 'layout'" ref="popupEl" data-w-popup :class="[$style.menu, $style.layoutMenu]" :style="popupStyle" data-rail-layout @contextmenu.prevent>
           <div :class="$style.chipHead">Theme</div>
           <div :class="$style.chips" data-rail-theme>
-            <button v-for="t in WOKE_THEMES" :key="t.id" :class="[$style.chip, { [$style.chipOn]: wokeTheme === t.id }]" :title="`${t.label}: ${t.hint}`" @click="wokeTheme = t.id">{{ t.short }}</button>
+            <button v-for="t in WOKE_LOOKS" :key="t.id" :class="[$style.chip, { [$style.chipOn]: isLookPicked(t) }]" :title="`${t.label}: ${t.hint}`" @click="pickLook(t)">{{ t.short }}</button>
           </div>
           <div :class="$style.chipHead">Layout</div>
           <div :class="$style.chips">
@@ -188,7 +188,7 @@ import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
 import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, looksLikeItem, migrateToRail, parseWidgetTitle } from './tools'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, wokeTheme, WOKE_THEMES } from '../ui'
+import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
