@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-259
 title: 'N. Covens league mechanic: Wickerman trophies and Fates'
-status: Grooming
+status: Ready
 priority: High
 effort: None
 assignee: unassigned
@@ -42,7 +42,35 @@ history:
       cards share reward icons). C: A plus "trophies worth keeping for your
       build" from your PoB. My pick is A first, then B, once Fates are seen in
       game.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: 'Guy picked A (2026-11-13): trophy prices by slot. Built in PR #407.'
+    date: '2026-11-13T02:58:18.454Z'
+    id: c-2026-11-13t02-58-18-454z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-13T02:58:18.454Z'
+    comment: 'Guy picked A (2026-11-13): trophy prices by slot. Built in PR #407.'
+  - type: comment
+    user: Agent
+    comment: >-
+      **Covens card with Wickerman trophy prices by slot is built.** PR
+      https://github.com/guybnd/woke-poe-trade/pull/407. 164 trophies: 10
+      slotted from poedb, 107 by the body part in the name, 47 under Other.
+      Launch day: move Other trophies to their real slot from item copies,
+      switch the icon to trophy art, and drop the economy-test skip once the
+      data patch adds the trophies.
+    date: '2026-11-13T02:58:20.747Z'
+    completionComment: true
+    id: c-2026-11-13t02-58-20-747z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-13T02:58:20.747Z'
+swimlane: null
 needsAction: null
 ---
 > TL;DR: a League mechanics card for Covens, the 3.30 league mechanic. The card's content waits on Guy's pick; trophy prices wait on poe.ninja.
