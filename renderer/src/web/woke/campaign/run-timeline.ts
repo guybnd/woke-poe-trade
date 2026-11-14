@@ -338,8 +338,8 @@ function sumByAct (run: CampaignRun, visits: ZoneVisit[]): Map<number, Map<strin
 
 // Time per zone, grouped by act, in the order first entered, with the other
 // run's time in the same zone and act.
-export function zonesByAct (run: CampaignRun, tl: RunTimeline, cmp: CampaignRun | null, cmpTl: RunTimeline | null): ActSum[] {
-  const mine = sumByAct(run, zoneVisits(tl, runEndSec(run)))
+export function zonesByAct (run: CampaignRun, tl: RunTimeline, cmp: CampaignRun | null, cmpTl: RunTimeline | null, endSec = runEndSec(run)): ActSum[] {
+  const mine = sumByAct(run, zoneVisits(tl, endSec))
   const theirs = cmp && cmpTl ? sumByAct(cmp, zoneVisits(cmpTl, runEndSec(cmp))) : null
   const out: ActSum[] = []
   for (const [act, zones] of [...mine.entries()].sort((a, b) => a[0] - b[0])) {

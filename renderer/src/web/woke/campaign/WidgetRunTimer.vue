@@ -77,7 +77,7 @@
           <button class="w-icon-btn" title="Close" @click="config.expanded = false"><i class="fas fa-times text-xs" /></button>
         </template>
         <template #tabs>
-          <WTabs v-model="tab" :options="[{ value: 'splits', label: 'Splits' }, { value: 'history', label: 'Past runs', count: config.history.length }]" />
+          <WTabs v-model="tab" :options="tabOptions" />
         </template>
 
         <template v-if="tab === 'splits'">
@@ -121,6 +121,11 @@
               </span>
             </div>
           </template>
+        </template>
+
+        <template v-else-if="tab === 'timeline' && run">
+          <RunReview :run="run" :cmp="cmp" :cmp-label="cmpLabel" :live="recorder.current(run.id)"
+            :now-ms="run.finished ? null : total" :live-rev="recorder.rev.value" :now-area-id="run.finished ? null : run.areaId" />
         </template>
 
         <template v-else-if="reviewRun">
@@ -237,7 +242,13 @@ const docked = computed(() => {
   return campaign.state?.asleep === true || dockIconShowing('campaign')
 })
 
-const tab = shallowRef<'splits' | 'history'>('splits')
+const tab = shallowRef<'splits' | 'timeline' | 'history'>('splits')
+// Timeline: the run you're on, zone by zone, as it goes.
+const tabOptions = computed(() => [
+  { value: 'splits', label: 'Splits' },
+  ...(props.config.run ? [{ value: 'timeline', label: 'Timeline' }] : []),
+  { value: 'history', label: 'Past runs', count: props.config.history.length }
+])
 // The past run whose timeline is open (Past runs tab).
 const reviewId = shallowRef<number | null>(null)
 const reviewRun = computed(() => tab.value === 'history' && reviewId.value != null
