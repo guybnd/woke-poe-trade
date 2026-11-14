@@ -1,6 +1,6 @@
 <template>
   <span ref="rootEl" :class="$style.root" :data-dock="host.props.id">
-    <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.twoLine]: !peekText && below.length, [$style.glow]: host.props.glow }]"
+    <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.twoLine]: !peekText && twoLine, [$style.glow]: host.props.glow }]"
       :title="wm.active.value ? `${host.props.title}${host.props.wmId != null ? ' · click to open' : ''}` : undefined"
       @click="click" @contextmenu.prevent="openIconMenu">
       <svg v-if="host.props.progress != null" :class="$style.ring" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
@@ -12,7 +12,7 @@
         <i v-else :class="dockIcon(host.props)" />
       </span>
       <span v-if="peekText" :class="$style.peekText">{{ peekText }}</span>
-      <span v-else-if="below.length" :class="$style.reads">
+      <span v-else-if="twoLine" :class="$style.reads">
         <span :class="$style.readRow">
           <span v-for="r in inline" :key="r.id" class="w-num" :class="[$style.read, r.tone && $style['read-' + r.tone]]">{{ r.text }}</span>
         </span>
@@ -78,6 +78,8 @@ const badge = computed(() => props.host.props.badge)
 const readouts = computed(() => props.host.props.readouts ?? [])
 const inline = computed(() => readouts.value.filter(r => !r.below))
 const below = computed(() => readouts.value.filter(r => r.below))
+// A line below needs one above it: on their own, below readouts sit inline.
+const twoLine = computed(() => inline.value.length > 0 && below.value.length > 0)
 
 // Game art, with the Font Awesome icon as fallback if it doesn't load.
 const artFailed = shallowRef(false)
