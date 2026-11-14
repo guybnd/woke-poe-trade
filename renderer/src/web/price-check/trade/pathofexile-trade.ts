@@ -1,4 +1,5 @@
 import { ItemInfluence, ItemCategory } from '@/parser'
+import type { VisceraSlot } from '@/parser/ParsedItem'
 import { ItemFilters, StatFilter, FilterOrGroup, INTERNAL_TRADE_IDS, InternalTradeId, FilterTag } from '../filters/interfaces'
 import { setProperty as propSet } from 'dot-prop'
 import { DateTime } from 'luxon'
@@ -54,8 +55,17 @@ export const CATEGORY_TO_TRADE_ID = new Map([
   [ItemCategory.Charm, 'azmeri.charm'],
   [ItemCategory.Idol, 'idol'],
   [ItemCategory.Graft, 'graft'],
-  [ItemCategory.Chart, 'chart']
+  [ItemCategory.Chart, 'chart'],
+  [ItemCategory.Viscera, 'viscera']
 ])
+
+// The trade site splits Viscera by the Wickerman slot the item text names.
+export const VISCERA_SLOT_TRADE_ID: Record<VisceraSlot, string> = {
+  'Head': 'viscera.head',
+  'Torso': 'viscera.body',
+  'Upper Limb': 'viscera.arm',
+  'Lower Limb': 'viscera.leg'
+}
 
 const TOTAL_MODS_TEXT = {
   CRAFTED_MODIFIERS: [
@@ -323,7 +333,7 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
   }
 
   if (activeSearch.category) {
-    const id = CATEGORY_TO_TRADE_ID.get(activeSearch.category)
+    const id = activeSearch.categoryTrade ?? CATEGORY_TO_TRADE_ID.get(activeSearch.category)
     if (id) {
       propSet(query.filters, 'type_filters.filters.category.option', id)
     } else {

@@ -16,6 +16,8 @@ interface SearchFilter {
   baseTypeTrade?: string
   discriminatorTrade?: string
   category?: ItemCategory
+  // A narrower trade category than the item category's own (a Viscera's slot).
+  categoryTrade?: string
 }
 
 interface SearchFilterSub extends SearchFilter {

@@ -158,7 +158,12 @@
     "azmeri_charm": "Charm",
     "idol": "Idol",
     "graft": "Graft",
-    "chart": "Chart"
+    "chart": "Chart",
+    "viscera": "Viscera",
+    "viscera_head": "Head Viscera",
+    "viscera_body": "Body Viscera",
+    "viscera_arm": "Arm Viscera",
+    "viscera_leg": "Leg Viscera"
   },
   "filters": {
     "selected_some": "Stats {0} of {1}",

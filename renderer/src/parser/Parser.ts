@@ -10,7 +10,7 @@ import {
 import { ModifierType, ModifierMechanic, sumStatsByModType } from './modifiers'
 import { linesToStatStrings, tryParseTranslation, getRollOrMinmaxAvg, ParsedStat } from './stat-translations'
 import { ItemCategory, JEWELLERY } from './meta'
-import { IncursionRoom, ParsedItem, ItemInfluence, ItemRarity } from './ParsedItem'
+import { IncursionRoom, ParsedItem, ItemInfluence, ItemRarity, VISCERA_SLOTS, VisceraSlot } from './ParsedItem'
 import { magicBasetype } from './magic-name'
 import { isModInfoLine, groupLinesByMod, parseModInfoLine, parseModType, ModifierInfo, ParsedModifier, ENCHANT_LINE, SCOURGE_LINE, IMPLICIT_LINE } from './advanced-mod-desc'
 import { calcPropPercentile, QUALITY_STATS } from './calc-q20'
@@ -42,6 +42,8 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
   // -----------
   parseItemLevel,
   parseTalismanTier,
+  parseViscera,
+  parseVisceraHelp,
   parseGem,
   parseVaalGem,
   parseArmour,
@@ -155,6 +157,12 @@ function itemTextToSections (text: string) {
 }
 
 function normalizeName (item: ParserState) {
+  // A Viscera's slot line, should a copy ever put it under the name.
+  if (item.baseType && VISCERA_SLOTS.includes(item.baseType as VisceraSlot)) {
+    item.visceraSlot = item.baseType as VisceraSlot
+    item.baseType = undefined
+  }
+
   if (item.rarity === ItemRarity.Magic) {
     const baseType = magicBasetype(item.name)
     if (baseType) {
@@ -483,6 +491,25 @@ function parseItemLevel (section: string[], item: ParsedItem) {
     }
   }
   return 'SECTION_SKIPPED'
+}
+
+// 3.30 Wickerman trophies. Only English item data has them, so the slot names
+// and the help line are matched in English.
+const VISCERA_HELP = 'Take this to the Wickerman'
+
+function parseViscera (section: string[], item: ParsedItem) {
+  if (item.category !== ItemCategory.Viscera) return 'PARSER_SKIPPED'
+
+  if (section.length === 1 && VISCERA_SLOTS.includes(section[0] as VisceraSlot)) {
+    item.visceraSlot = section[0] as VisceraSlot
+    return 'SECTION_PARSED'
+  }
+  return 'SECTION_SKIPPED'
+}
+
+function parseVisceraHelp (section: string[], item: ParsedItem) {
+  if (item.category !== ItemCategory.Viscera) return 'PARSER_SKIPPED'
+  return section[0].startsWith(VISCERA_HELP) ? 'SECTION_PARSED' : 'SECTION_SKIPPED'
 }
 
 function parseTalismanTier (section: string[], item: ParsedItem) {

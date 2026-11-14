@@ -15,6 +15,9 @@
 //   node scripts/trade-data-patch.mjs snapshot   before the patch: save the lists
 //   node scripts/trade-data-patch.mjs apply      after it: patch the data files
 //   node scripts/trade-data-patch.mjs check      after it: report, change nothing
+//   node scripts/trade-data-patch.mjs apply --group viscera
+//                                                only one trade item group and the
+//                                                implicit stats its items carry
 //
 // After `apply`, run `node renderer/src/assets/bump-data-version.mjs` and
 // commit: players get the files without a release. Other languages keep the
@@ -63,6 +66,8 @@ function category (group, base) {
   if (group === 'jewel') return / Eye Jewel$/.test(base) ? 'Abyss Jewel' : / Cluster Jewel$/.test(base) ? 'Cluster Jewel' : 'Jewel'
   if (group === 'accessory') return / Ring$/.test(base) ? 'Ring' : / Amulet$|^Talisman/.test(base) ? 'Amulet' : / (Belt|Sash|Vise|Obi)$/.test(base) ? 'Belt' : null
   if (group === 'flask') return 'Flask'
+  // 3.30 Wickerman trophies: one implicit each, slot read from the item text.
+  if (group === 'viscera') return 'Viscera'
   return null
 }
 
@@ -153,8 +158,28 @@ export function diff (before, after, statLines, itemLines) {
   return report
 }
 
+// The trade group a scoped run patches, and the stat kind its items carry.
+// Skill grants and socketed supports are left out: in 3.30 the trade site
+// moved them to new ids ("effect_") with new wording, which a scoped run must
+// not decide.
+const GROUP_STAT_TYPES = { viscera: 'implicit' }
+const SKILL_GRANT = /^(Grants |Socketed Gems are Supported by Level #)/
+const isSkillGrant = e => e.id.includes('.effect_') || SKILL_GRANT.test(e.text)
+
+export function scope (after, group) {
+  const type = GROUP_STAT_TYPES[group]
+  if (!type) throw new Error(`No scoped run for trade group "${group}". Known: ${Object.keys(GROUP_STAT_TYPES).join(', ')}`)
+  return {
+    stats: after.stats.filter(e => e.type === type && !isSkillGrant(e)),
+    items: after.items.filter(e => e.group === group),
+    static: []
+  }
+}
+
 async function main () {
   const mode = process.argv[2]
+  const groupAt = process.argv.indexOf('--group')
+  const group = groupAt > 0 ? process.argv[groupAt + 1] : null
   if (mode === 'snapshot') {
     fs.mkdirSync(BASELINE, { recursive: true })
     for (const kind of KINDS) {
@@ -176,7 +201,7 @@ async function main () {
   const itemsFile = path.join(DATA, 'items.ndjson')
   const statLines = readNdjson(statsFile)
   const itemLines = readNdjson(itemsFile)
-  const report = diff(before, after, statLines, itemLines)
+  const report = diff(before, group ? scope(after, group) : after, statLines, itemLines)
 
   console.log(`New stats: ${report.newStats.length}`)
   for (const s of report.newStats) console.log(`  + ${s.ref}`)

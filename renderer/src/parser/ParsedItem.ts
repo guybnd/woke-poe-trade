@@ -4,6 +4,9 @@ import type { ParsedStat } from './stat-translations'
 import type { BaseType } from '@/assets/data'
 import { ItemCategory } from './meta'
 
+export type VisceraSlot = 'Head' | 'Torso' | 'Upper Limb' | 'Lower Limb'
+export const VISCERA_SLOTS: readonly VisceraSlot[] = ['Head', 'Torso', 'Upper Limb', 'Lower Limb']
+
 export enum ItemRarity {
   Normal = 'Normal',
   Magic = 'Magic',
@@ -65,6 +68,8 @@ export interface ParsedItem {
   mercenaryBuild?: BaseType
   mercenarySkills?: ParsedStat[][]
   talismanTier?: number
+  // 3.30 Wickerman trophies: the Wickerman slot the item text names.
+  visceraSlot?: VisceraSlot
   memoryStrands?: number
   quality?: number
   sockets?: {
