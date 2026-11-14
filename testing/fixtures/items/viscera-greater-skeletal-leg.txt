@@ -1,0 +1,14 @@
+Item Class: Viscera
+Greater Skeletal Warrior's Leg
+--------
+Lower Limb
+--------
+Requirements:
+Level: 54
+--------
+Item Level: 78
+--------
+{ Implicit Modifier }
+You and Allies within 5 metres deal 50 to 75 additional Cold Damage
+--------
+Take this to the Wickerman in a town or hideout to attach it.

@@ -84,6 +84,17 @@ describe('Viscera', () => {
     }
   })
 
+  // Guy's copy from his price check screenshot (damage type cut off on screen;
+  // Cold, as on the Lesser tier).
+  it("reads Guy's Greater Skeletal Warrior's Leg", () => {
+    const item = parseItem(fixture('items/viscera-greater-skeletal-leg.txt'))
+    expect(item.info.refName).toBe("Skeletal Warrior's Leg")
+    expect(item.visceraSlot).toBe('Lower Limb')
+    expect(item.itemLevel).toBe(78)
+    expect(item.unknownModifiers).toEqual([])
+    expect(item.statsByType.some(s => s.type === ModifierType.Implicit)).toBe(true)
+  })
+
   it('still finds nothing for an unknown name', () => {
     expect(() => parseItem(LEG().replace("Lesser Skeletal Warrior's Leg", 'Lesser Nonexistent Thing'))).toThrow()
   })
