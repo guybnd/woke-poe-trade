@@ -39,7 +39,12 @@ describe('3.30 Atlas Drops', () => {
     renameQuantityStarter(widgets)
     renameQuantityStarter(widgets)
     expect(old).toMatchObject({ name: 'Atlas Drops 80%+', text: '"ops: \\+([89]\\d|\\d{3})%"' })
-    expect(edited.text).toBe('"tity: \\+([5-9]\\d|\\d{3})%"')
+    expect(edited.text).toBe('"ops: \\+([5-9]\\d|\\d{3})%"')
+    const built: RegexEntry = { ...old, text: '"!eflec" "tity: .([89]\\d|\\d{3})%"' }
+    const gear: RegexEntry = { ...old, category: 'Gear', text: '"tity: \\+"' }
+    renameQuantityStarter([{ wmType: 'woke-regex-library', entries: [built, gear] }])
+    expect(built.text).toBe('"!eflec" "ops: .([89]\\d|\\d{3})%"')
+    expect(gear.text).toBe('"tity: \\+"')
     expect(new RegExp(old.text.slice(1, -1), 'i').test(fixture('items/map-rare-t16-330.txt'))).toBe(false)
     expect(new RegExp(old.text.slice(1, -1), 'i').test('Atlas Drops: +85% (augmented)')).toBe(true)
   })

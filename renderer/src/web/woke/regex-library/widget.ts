@@ -39,16 +39,16 @@ export function emptyEntry (entries: RegexEntry[]): RegexEntry {
   }
 }
 
-// 3.30 renamed the map Item Quantity line to Atlas Drops, so the old starter
-// string matches nothing. Swaps it only while it is still the untouched
-// starter text, so rerunning is safe.
-const OLD_QUANTITY_TEXT = '"tity: \\+([89]\\d|\\d{3})%"'
+// 3.30 renamed the map Item Quantity line to Atlas Drops, so a map search on
+// "tity: +" (the starter, an edited copy, one brought over from APT) matches
+// nothing. Points Maps entries at the new line; a rerun finds nothing to change.
+const OLD_QUANTITY = /tity: (\\\+|\.)/g
 export function renameQuantityStarter (widgets: Array<{ wmType: string, entries?: RegexEntry[] }>): void {
   for (const w of widgets) {
     if (w.wmType !== REGEX_LIBRARY_TYPE) continue
     for (const e of w.entries ?? []) {
-      if (e.text !== OLD_QUANTITY_TEXT) continue
-      e.text = '"ops: \\+([89]\\d|\\d{3})%"'
+      if (e.category !== 'Maps' || !e.text.includes('tity: ')) continue
+      e.text = e.text.replace(OLD_QUANTITY, 'ops: $1')
       if (e.name === 'Quantity 80%+') e.name = 'Atlas Drops 80%+'
       if (e.notes === 'Item Quantity of 80% or more.') e.notes = 'Atlas Drops (Item Quantity before 3.30) of 80% or more.'
     }
