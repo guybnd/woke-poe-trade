@@ -57,8 +57,9 @@ export interface Presets {
   // the rares. 'auto' takes the weapon classes of the PoB build; 'custom'
   // keeps exactly `classes` (picked by hand, starting from a build type).
   weapons: { on: boolean, archetype: Archetype, classes: string[] }
-  // TODO(3.30 launch): tiered magic/rare drops, once the filter keyword for
-  // the new drop tiers is known.
+  // 3.30's drop tiers: white, blue and rare gear below item tier `tier`
+  // once you're in maps (UnidentifiedItemTier).
+  lowTiers: { on: boolean, tier: number }
 }
 
 export type Archetype = 'auto' | 'caster' | 'melee' | 'bow' | 'minion' | 'custom'
@@ -83,7 +84,8 @@ export function defaultPresets (): Presets {
     vendorQuality: { on: false },
     volume: { on: false, percent: 60 },
     beams: { on: false, keepTiers: 2 },
-    weapons: { on: false, archetype: 'auto', classes: [] }
+    weapons: { on: false, archetype: 'auto', classes: [] },
+    lowTiers: { on: false, tier: 3 }
   }
 }
 
@@ -129,7 +131,8 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     vendorQuality: { on: on(p?.vendorQuality) },
     volume: { on: on(p?.volume), percent: Math.round(num(p?.volume?.percent, 5, 100, d.volume.percent)) },
     beams: { on: on(p?.beams), keepTiers: Math.round(num(p?.beams?.keepTiers, 1, 5, d.beams.keepTiers)) },
-    weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons)
+    weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons),
+    lowTiers: { on: on(p?.lowTiers), tier: Math.round(num(p?.lowTiers?.tier, ITEM_TIER_MIN, ITEM_TIER_MAX, d.lowTiers.tier)) }
   }
 }
 
@@ -152,6 +155,10 @@ export const RECIPE_SLOTS = [
   // Small one-handers fit the stash; two of them make the weapon slot.
   { key: 'weapon', label: 'Small weapons', classes: ['Daggers', 'Rune Daggers', 'Wands', 'Sceptres', 'Claws', 'One Hand Maces'], colour: [230, 230, 230] }
 ] as const
+
+// 3.30's item tiers run 2 to 5.
+export const ITEM_TIER_MIN = 2
+export const ITEM_TIER_MAX = 5
 
 // Below this, you're still in the campaign.
 const MAPS_FROM = 68
@@ -638,6 +645,62 @@ function placeSixSockets (doc: FilterDoc): void {
   insertBefore(doc, anchor, top)
 }
 
+// NeverSink's plain tiered and rare gear rules: only these keys, so anything
+// it marks out (fractured, veiled, fated, identified, influenced, memory
+// strands) keeps its own rule. Its special classes (jewels, Heist gear,
+// flasks) aren't gear.
+const PLAIN_GEAR_KEYS = new Set(['UnidentifiedItemTier', 'ItemLevel', 'Rarity', 'Class', 'BaseType', 'DropLevel', 'Width', 'Height'])
+const isItemTierCond = (c: { key: string, op: string }) => c.key === 'UnidentifiedItemTier' && (c.op === '>=' || c.op === '>')
+const isPlainGearTier = (b: FilterBlock) => !b.disabled && !b.continue && b.visibility === 'Show' &&
+  ((b.type === 'gear->tiered' && b.tier !== 'specialclasses') || b.type === 'rr' || b.type?.startsWith('rr->') === true) &&
+  b.conditions.every(c => PLAIN_GEAR_KEYS.has(c.key)) &&
+  // Its gear-only bases, never a unique: the Rarity is all three or fewer.
+  b.conditions.some(c => c.key === 'Rarity' && c.values.length > 0 && c.values.every(v => v === 'Normal' || v === 'Magic' || v === 'Rare'))
+// The lowest item tier a block catches, 0 without a tier condition.
+const itemTierFloor = (b: FilterBlock) => Math.max(0, ...b.conditions.filter(isItemTierCond)
+  .map(c => Number(c.values[0]) + (c.op === '>' ? 1 : 0)).filter(Number.isFinite))
+// NeverSink's catch-alls for white, blue and rare gear: shipped hidden, but a
+// player may show them.
+const isGearCatchAll = (b: FilterBlock) => !b.disabled && !b.continue && b.type === 'hidelayer' &&
+  (b.tier === 'normalmagicendgame' || b.tier === 'raresendgame')
+
+// The lowest item level a block catches, 0 without one.
+const minItemLevel = (b: FilterBlock) => Math.max(0, ...b.conditions
+  .filter(c => c.key === 'ItemLevel' && (c.op === '>=' || c.op === '>'))
+  .map(c => Number(c.values[0]) + (c.op === '>' ? 1 : 0)).filter(Number.isFinite))
+
+// Gear below item tier `tier` in maps. NeverSink's plain tiered and rare gear
+// rules ask for the tier (`UnidentifiedItemTier >= tier`), so lower drops fall
+// through to what it ranks higher further down (item level 86 and crafting
+// bases, fractured, synthesised, 5-links) and then to its hidden catch-all.
+// Only rules for item level 68 and up: those drop in maps alone, so the
+// campaign stays as it was. Whether a drop with no tier reports none or a low
+// one, it lands the same.
+function hideLowItemTiers (doc: FilterDoc, tier: number): number {
+  const hides: Array<[FilterBlock, FilterBlock]> = []
+  let changed = 0
+  for (const b of doc.blocks) {
+    if (b.type?.startsWith('woke->')) continue
+    if (isPlainGearTier(b) && minItemLevel(b) >= MAPS_FROM && itemTierFloor(b) < tier) {
+      const at = b.conditions.findIndex(isItemTierCond)
+      const want = cond('UnidentifiedItemTier', '>=', [tier])
+      if (at >= 0) b.conditions[at] = want
+      else b.conditions = [...b.conditions, want]
+      b.dirty = true
+      changed++
+    } else if (isGearCatchAll(b) && b.visibility !== 'Hide') {
+      // Shown by the player: a hidden copy above it takes the low tiers.
+      hides.push([b, addedBlock(PRESET_TYPE, 'lowtiers', `gear below item tier ${tier} once in maps`, [
+        ...b.conditions.filter(c => c.key !== 'AreaLevel'),
+        cond('UnidentifiedItemTier', '<', [tier]),
+        cond('AreaLevel', '>=', [MAPS_FROM])
+      ], 'Hide', 'Presets')])
+    }
+  }
+  for (const [anchor, b] of hides) { insertBefore(doc, anchor, b); changed++ }
+  return changed
+}
+
 // Adjusts NeverSink's rules in place. Returns how many rules changed.
 export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
   let changed = 0
@@ -728,6 +791,7 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     if (touched) { b.dirty = true; changed++ }
   }
   for (const [anchor, b] of mapCopies) { insertBefore(doc, anchor, b); changed++ }
+  if (p.lowTiers.on) changed += hideLowItemTiers(doc, p.lowTiers.tier)
   placeCheapUniques(doc)
   placeSixSockets(doc)
   // Stricter files ship that tier switched off; it still marks the place.

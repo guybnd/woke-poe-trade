@@ -93,6 +93,16 @@
 
     <div :class="$style.card">
       <div class="flex items-center gap-2">
+        <WToggle v-model="p.lowTiers.on">Hide magic and rare gear below tier</WToggle>
+        <WSelect :model-value="String(p.lowTiers.tier)" :options="itemTiers" style="width: 4.5rem;"
+          aria-label="Lowest item tier shown" @update:model-value="v => p.lowTiers.tier = Number(v)" />
+        <span class="w-dim text-sm">once you're in maps</span>
+        <WInfo text="Uses 3.30's item tiers (2 to 5). Item level 86 and crafting bases, exotic, influenced, fractured, synthesised and veiled gear, 5-links and 6-sockets, the chaos recipe and your build's rules still show." />
+      </div>
+    </div>
+
+    <div :class="$style.card">
+      <div class="flex items-center gap-2">
         <WToggle v-model="p.cheapCards.on">Hide divination cards worth under</WToggle>
         <WField v-model.number="cardsChaos" type="number" suffix="c" style="width: 5rem;" aria-label="Cheap card line in chaos" />
         <WInfo text="A stack worth the line still shows. Cards with a thin price are kept." />
@@ -201,7 +211,7 @@ import { WChip, WField, WInfo, WSegmented, WSelect, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { ARCHETYPES, DUST_ILVL, RECIPE_SLOTS, archetypeClasses, toggleWeaponClass, cheapCards, cheapCurrencyBases, cheapSplinters, cheapUniqueBases, isNeverSinkDustTier, neverSinkDustBases } from './presets'
+import { ARCHETYPES, DUST_ILVL, ITEM_TIER_MAX, ITEM_TIER_MIN, RECIPE_SLOTS, archetypeClasses, toggleWeaponClass, cheapCards, cheapCurrencyBases, cheapSplinters, cheapUniqueBases, isNeverSinkDustTier, neverSinkDustBases } from './presets'
 import { WEAPON_CLASSES } from './build-rules'
 import { dustBases } from '../disenchant/calc'
 import { basesWithoutDust, dustUniques } from '../disenchant/data'
@@ -237,6 +247,7 @@ const dustLine = computed({
   set: (v: number) => { if (Number.isFinite(v) && v >= 100 && v <= 1_000_000) p.value.dust.line = Math.round(v) }
 })
 
+const itemTiers = Array.from({ length: ITEM_TIER_MAX - ITEM_TIER_MIN + 1 }, (_, i) => ({ value: String(i + ITEM_TIER_MIN), label: String(i + ITEM_TIER_MIN) }))
 const mapTiers = Array.from({ length: 16 }, (_, i) => ({ value: String(i + 2), label: String(i + 2) }))
 // Custom has no button: it lights none, and clicking a chip is how it starts.
 const SHORT: Record<string, string> = { auto: 'Auto', melee: 'Melee' }

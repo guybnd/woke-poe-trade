@@ -228,7 +228,8 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   vendorQuality: { on: true },
   volume: { on: true, percent: 5 },
   beams: { on: true, keepTiers: 1 },
-  weapons: { on: true, archetype: 'custom', classes: [] }
+  weapons: { on: true, archetype: 'custom', classes: [] },
+  lowTiers: { on: true, tier: 5 }
 }
 
 export const PRESET_KEYS = Object.keys(HARSHEST) as Key[]
@@ -246,7 +247,8 @@ const HARSH_WORDS: Partial<Record<Key, string>> = {
   cheapSplinters: 'under 50c',
   volume: '5%',
   beams: 'tier 1 only',
-  weapons: 'no weapon types kept'
+  weapons: 'no weapon types kept',
+  lowTiers: 'below tier 5'
 }
 
 // "Quiet mode (keeps tier 1 only)": the preset as the editor names it.

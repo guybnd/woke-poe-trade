@@ -206,5 +206,6 @@ export const PRESET_NAMES: Record<keyof Presets, string> = {
   vendorQuality: 'quality gems and flasks',
   volume: 'drop sound volume',
   beams: 'fewer beams',
-  weapons: 'weapons for your build'
+  weapons: 'weapons for your build',
+  lowTiers: 'hide low item tiers'
 }
