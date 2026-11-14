@@ -438,6 +438,19 @@ export function nextSet<T extends { title: string, divider?: boolean }> (items: 
   return real[i + 1] ?? null
 }
 
+// The tree to work toward once this one is all taken: the next stage, past
+// trees that add nothing to it (an empty placeholder spec, say). `passed`
+// holds trees already handed over from, so a run of them never loops.
+export function treeAfter (trees: PobTreeSpec[], current: PobTreeSpec, passed: Set<PobTreeSpec> = new Set()): PobTreeSpec | null {
+  const have = new Set(current.nodes ?? [])
+  const seen = new Set([current, ...passed])
+  for (let t = nextSet(trees, current); t && !seen.has(t); t = nextSet(trees, t)) {
+    if ((t.nodes ?? []).some(id => !have.has(id))) return t
+    seen.add(t)
+  }
+  return null
+}
+
 export interface GemChange { add: string[], drop: string[] }
 
 export function gemChange (from: PobSkillSet, to: PobSkillSet): GemChange {
