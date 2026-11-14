@@ -451,8 +451,30 @@ export function createFilters (
     }
   }
 
+  // woke: caps on how many prefixes and suffixes a listing has, off until set.
+  if (
+    item.rarity === ItemRarity.Rare &&
+    item.info.craftable &&
+    !item.isUnmodifiable &&
+    !CONSUMABLE_CRAFTABLE_ITEM.has(item.category!) &&
+    !MAGIC_ONLY_OR_UNIQUE_ITEM.has(item.category!)
+  ) {
+    filters.affixCaps = {
+      prefix: null,
+      suffix: null,
+      most: TWO_AFFIX_ITEM.has(item.category!) ? 2 : 3
+    }
+  }
+
   return filters
 }
+
+// Rare jewels take two prefixes and two suffixes, not three.
+const TWO_AFFIX_ITEM = new Set([
+  ItemCategory.Jewel,
+  ItemCategory.AbyssJewel,
+  ItemCategory.ClusterJewel
+])
 
 function createGemFilters (
   item: ParsedItem,

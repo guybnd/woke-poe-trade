@@ -769,6 +769,22 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     }
   }
 
+  // woke: a cap of N prefixes leaves out listings with N+1 or more. A "not" group
+  // keeps listings that have no prefix at all, which a count stat may not carry.
+  if (filters.affixCaps) {
+    const caps = [
+      [filters.affixCaps.prefix, TOTAL_MODS_TEXT.TOTAL_MODIFIERS[1]],
+      [filters.affixCaps.suffix, TOTAL_MODS_TEXT.TOTAL_MODIFIERS[2]]
+    ] as const
+    for (const [cap, ref] of caps) {
+      if (cap == null || cap >= filters.affixCaps.most) continue
+      qNot.filters.push({
+        id: pseudoStatByRef(ref)!.trade.ids[ModifierType.Pseudo][0],
+        value: { min: cap + 1 }
+      })
+    }
+  }
+
   if (qNot.filters.length) {
     query.stats.push(qNot)
   }

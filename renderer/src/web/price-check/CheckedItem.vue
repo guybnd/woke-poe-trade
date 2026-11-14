@@ -46,7 +46,8 @@
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
       <div class="flex w-40" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
-        <button class="btn w-pc-primary" @click="doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+        <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
+        <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
       <trade-links v-if="tradeAPI === 'trade'"
         :get-link="makeTradeLink" :suggest-name="() => proposeSearchName(item, itemStats)" />

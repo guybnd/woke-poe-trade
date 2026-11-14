@@ -24,6 +24,8 @@
       <ui-toggle v-if="!statsVisibility.disabled && hasAnySources" data-mods-toggle title="Under each total, show the mods it adds up: prefix or suffix, name, tier and what each adds. Doesn't change the search."
         v-model="showFilterSources" :class="$style.headToggle">{{ t('filters.mods_toggle') }}</ui-toggle>
       <slot name="rolls" />
+      <!-- woke: with the mods folded away the caps sit up here, else beside Collapse. -->
+      <filter-affix-caps v-if="filters.affixCaps && statsVisibility.disabled" class="ml-auto" :caps="filters.affixCaps" />
     </div>
     <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
       <!-- woke: one right-click listener for every row (price-insight/stat-actions.ts). -->
@@ -67,6 +69,10 @@
           >{{ t('filters.collapse') }} <i class="fas fa-chevron-up pl-1 text-xs text-gray-600"></i></button>
         <ui-toggle v-if="hiddenCount > 0" title="Show the filters the price check keeps out of the way, such as rolls that can't vary, faded in among the others. Doesn't change the search."
           v-model="showHidden" class="text-gray-400 pt-2 whitespace-nowrap">{{ t('filters.hidden_toggle') }}</ui-toggle>
+        <!-- woke: a line of their own, right above the results, so they never jump between rows. -->
+        <div v-if="filters.affixCaps" class="w-full flex justify-end">
+          <filter-affix-caps :caps="filters.affixCaps" />
+        </div>
       </div>
     </div>
   </div>
@@ -82,6 +88,7 @@ import FilterSources, { hasSourceInfo } from './FilterSources.vue'
 import { poeOn as poeMode, poeKit } from '@/web/woke/price-insight/window-style'
 import type { PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
+import FilterAffixCaps from './FilterAffixCaps.vue'
 import { WSegmented } from '@/web/woke/ui'
 import { ItemFilters, FilterOrGroup, StatFilter } from './interfaces'
 import { ParsedItem, ItemRarity, ItemCategory } from '@/parser'
@@ -95,6 +102,7 @@ export default defineComponent({
     FilterGroup,
     FilterSources,
     UnknownModifier,
+    FilterAffixCaps,
     WSegmented,
     UiToggle
   },
