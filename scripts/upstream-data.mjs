@@ -68,16 +68,18 @@ const say = (line) => { if (out) fs.appendFileSync(out, line + '\n'); else conso
 
 // Upstream's English files replace ours whole, so whatever our launch-day
 // patch (scripts/trade-data-patch.mjs) added and upstream still lacks is run
-// again on top. It only adds; a failed run (the trade site down or refusing
-// the runner) leaves upstream's files as they are and says so in the PR.
+// again on top. It first moves stat ids the trade site moved (and drops ones
+// it dropped), so they don't come back as duplicate stats. A failed run (the
+// trade site down or refusing the runner) leaves upstream's files as they are
+// and says so in the PR.
 function reapplyPatch () {
-  if (!changed.some(f => f.startsWith(`${DATA}/en/`))) return null
+  if (!changed.some(f => f.endsWith('stats.ndjson') || f.startsWith(`${DATA}/en/`))) return null
   if (!fs.existsSync(path.join(ROOT, 'scripts/trade-baseline/stats.json'))) return null
   try {
     const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts/trade-data-patch.mjs'), 'apply'], { encoding: 'utf8', timeout: 180_000 })
     const lines = out.split('\n').filter(Boolean)
-    const counts = lines.filter(l => /^(New|Reworded|Left out)/.test(l))
-    const shown = lines.filter(l => /^\s+[+~]/.test(l)).slice(0, 40)
+    const counts = lines.filter(l => /^(Moved|Folded|Dropped|New|Reworded|Left out)/.test(l))
+    const shown = lines.filter(l => /^\s+[+~>=-] /.test(l)).slice(0, 40)
     return ['```', ...counts, ...shown, '```'].join('\n')
   } catch (e) {
     return `Could not run it: ${String(e.message ?? e).split('\n')[0]}. Run \`node scripts/trade-data-patch.mjs apply\` on this branch by hand.`
