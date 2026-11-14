@@ -209,7 +209,7 @@ import { GEM_CLASS, gemWhere, nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
   gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
-  buildDps, gearChange, gemChange, nextSet, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel
+  buildDps, gearChange, gemChange, nextSet, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel, treeStep
 } from './build-model'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { loadPassiveTree, treeDiff } from './passive-tree'
@@ -490,12 +490,13 @@ const trees = computed(() => realSets(props.details?.trees ?? []))
 // ---- next step ----
 
 const treeData = shallowRef<Map<number, TreeNode> | null>(null)
-const nextTree = computed(() => nextSet(trees.value, loadout.value?.tree))
+const step = computed(() => treeStep(trees.value, loadout.value))
+const nextTree = computed(() => step.value.to)
 // The names only come once the tree has loaded, which the count doesn't need.
 watch(nextTree, (t) => {
   if (t) loadPassiveTree().then(data => { treeData.value = data }, () => {})
 }, { immediate: true })
-const nextTreeDiff = computed(() => treeDiff(treeData.value, loadout.value?.tree?.nodes ?? [], nextTree.value?.nodes ?? []))
+const nextTreeDiff = computed(() => treeDiff(treeData.value, step.value.from?.nodes ?? [], nextTree.value?.nodes ?? []))
 
 const nextGems_ = computed(() => {
   const from = shownSet.value
