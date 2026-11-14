@@ -61,6 +61,11 @@ describe('atlas tree model', () => {
     expect(model.links.has(9)).toBe(false)
   })
 
+  it('falls back to 150 points (3.30) when the export has no count', () => {
+    expect(readAtlasTree({ ...atlas, points: undefined }).points).toBe(150)
+    expect(readAtlasTree({ ...atlas, points: { totalPoints: 0 } }).points).toBe(150)
+  })
+
   it('takes the shortest path and refunds what hangs off a node', () => {
     const taken = new Set([100])
     expect(pathTo(model, taken, 3).sort()).toEqual([1, 2, 3])
