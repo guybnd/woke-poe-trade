@@ -156,13 +156,36 @@ export function everyStatLine (): string[] {
   return out
 }
 
+// 3.30's new map suffixes (rare maps only). The stat data has them, from the
+// trade site, but not tagged as map mods. Mirage and Mirror of Delirium were
+// map mods already, under an older wording.
+const NEW_IN_330 = new Set([
+  'Area contains the Viridian Wildwood',
+  'Area contains a buried Apex Sentinel',
+  'Area contains a buried Stalker Sentinel',
+  'Area contains a buried Pandemonium Sentinel',
+  'Area contains an Evocator of Ghorr',
+  'Area contains an Evocator of Beidat',
+  "Area contains an Evocator of K'Tash"
+])
+// 3.30 took Vaal side areas out of maps, with the corruption implicit that
+// added one.
+const GONE_IN_330 = new Set([
+  '+#% Chance to contain a Vaal Side Area',
+  'Map has a Vaal Side Area'
+])
+
 // Every map mod line (all wordings), from APT's stat data.
 export function allAreaMods (): string[] {
   if (areaMods) return areaMods
   const out = new Set<string>()
   for (const stat of STATS_ITERATOR('AreaMods')) {
     if (!stat.fromAreaMods || stat.fromAreaMods === 'heist_exclusive') continue
+    if (GONE_IN_330.has(stat.ref)) continue
     for (const m of stat.matchers) out.add(m.string)
+  }
+  for (const stat of STATS_ITERATOR('Area contains')) {
+    if (NEW_IN_330.has(stat.ref)) for (const m of stat.matchers) out.add(m.string)
   }
   areaMods = [...out].sort((a, b) => a.localeCompare(b))
   return areaMods
