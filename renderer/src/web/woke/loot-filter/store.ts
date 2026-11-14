@@ -134,10 +134,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const priceAgeHours = computed(() => prices.updatedAt?.value != null ? (now.value - prices.updatedAt.value) / 3600000 : null)
   const pricesStale = computed(() => (priceAgeHours.value ?? 0) >= STALE_HOURS)
   const pricesTooOld = computed(() => (priceAgeHours.value ?? 0) >= TOO_OLD_HOURS)
-  // Moves made in another league: kept for Undo, but not in the file.
-  const otherMoves = computed(() => cfg().priceTiers.on ? cfg().priceTiers.moves.filter(m => !inLeague(m)) : [])
-  const movesFromOtherLeague = computed(() => otherMoves.value.length)
-  const otherMovesLeague = computed(() => otherMoves.value[0]?.league ?? null)
+  // Moves made in another league (Standard before launch) stay in the config
+  // but out of the file and out of sight; the first Apply in this league
+  // replaces them. Nothing to tell you about.
   // Problems found by the last save attempt.
   const problems = shallowRef<FilterProblem[]>([])
   const safetyCount = ref(0)
@@ -1062,8 +1061,6 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     pricesStale,
     pricesTooOld,
     priceAgeHours,
-    movesFromOtherLeague,
-    otherMovesLeague,
     problems,
     applyPrices,
     lockItem,

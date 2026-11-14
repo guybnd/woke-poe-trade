@@ -36,7 +36,7 @@
           <template v-else>Level unknown: Campaign reads it from Client.txt.</template>
         </div>
         <div v-for="row in setChips" :key="row.label" class="flex flex-wrap items-center gap-1 pt-1">
-          <WChip v-if="canUnlink && row.first" clickable :active="linked" :title="linked ? 'Gems, gear and tree move together. Click to pick them apart' : 'Gems and gear are picked apart. Click to move them together'" @click="toggleLinked">
+          <WChip v-if="canUnlink && row.first" clickable :active="linked" :title="linked ? 'Gems and gear move together. Click to pick them apart' : 'Gems and gear are picked apart. Click to move them together'" @click="toggleLinked">
             <i class="fas text-xs" :class="linked ? 'fa-link' : 'fa-unlink'" /><template v-if="!linked"> {{ row.label }}</template>
           </WChip>
           <span v-else-if="row.label" class="w-faint text-xs">{{ row.label }}</span>
@@ -84,7 +84,7 @@
       <!-- Gear -->
       <template v-else-if="details && tab === 'gear'">
         <div v-for="row in setChips" :key="row.label" class="flex flex-wrap items-center gap-1 pt-1">
-          <WChip v-if="canUnlink && row.first" clickable :active="linked" :title="linked ? 'Gems, gear and tree move together. Click to pick them apart' : 'Gems and gear are picked apart. Click to move them together'" @click="toggleLinked">
+          <WChip v-if="canUnlink && row.first" clickable :active="linked" :title="linked ? 'Gems and gear move together. Click to pick them apart' : 'Gems and gear are picked apart. Click to move them together'" @click="toggleLinked">
             <i class="fas text-xs" :class="linked ? 'fa-link' : 'fa-unlink'" /><template v-if="!linked"> {{ row.label }}</template>
           </WChip>
           <span v-else-if="row.label" class="w-faint text-xs">{{ row.label }}</span>
@@ -478,10 +478,27 @@ const setChips = computed(() => {
     hint: pickHint(set === shownItemSet.value, pick.value?.itemSet === set.title, loadout.value?.itemSet?.byStage),
     choose: () => chooseItemSet(set.title)
   }))
-  if (together) return skills.length > 1 || items.length > 1 ? [{ label: '', first: true, chips: skills.length > 1 ? skillChips : itemChips }] : []
   const rows: Array<{ label: string, first: boolean, chips: typeof skillChips }> = []
-  if (skills.length > 1) rows.push({ label: 'Gems', first: true, chips: skillChips })
-  if (items.length > 1) rows.push({ label: 'Gear', first: !rows.length, chips: itemChips })
+  if (together) {
+    if (skills.length > 1 || items.length > 1) rows.push({ label: '', first: true, chips: skills.length > 1 ? skillChips : itemChips })
+  } else {
+    if (skills.length > 1) rows.push({ label: 'Gems', first: true, chips: skillChips })
+    if (items.length > 1) rows.push({ label: 'Gear', first: !rows.length, chips: itemChips })
+  }
+  // A tree named unlike the gem set in use (a build with its own tree
+  // titles, or a set picked apart): its own row says which, and opens it.
+  if (trees.value.length > 1 && loadout.value?.tree?.title !== shownSet.value?.title) {
+    rows.push({
+      label: 'Tree',
+      first: !rows.length,
+      chips: trees.value.map(t => ({
+        title: t.title,
+        active: t === loadout.value?.tree,
+        hint: t === loadout.value?.tree ? 'The tree your passive points are on. Click to open it' : 'Open this tree',
+        choose: () => emit('tree', t.title)
+      }))
+    })
+  }
   return rows
 })
 

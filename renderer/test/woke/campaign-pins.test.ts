@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { nextBoss, pinnedReadouts, pinsTick } from '@/web/woke/campaign/pins'
 import type { PinInputs } from '@/web/woke/campaign/pins'
 import type { CampaignRun } from '@/web/woke/campaign/run-timer'
+import { migrateCampaign } from '@/web/woke/campaign/widget'
+import { areaHint, DEFAULT_ROUTE_OPTIONS } from '@/web/woke/campaign/route-parse'
+import { bundledRoute } from '@/web/woke/campaign/route-data'
+import type { CampaignWidget } from '@/web/woke/campaign/widget'
 
 const NOW = 1_000_000_000
 
@@ -17,6 +21,24 @@ function inputs (over: Partial<PinInputs>): PinInputs {
 }
 
 describe('campaign pinned readouts', () => {
+  it('shows the area hint on a line below, dimmed, only when the step has one', () => {
+    const out = pinnedReadouts(inputs({ pins: ['hint', 'step'], step: 'Complete Trial of Ascendancy', hint: 'Usually ↗' }))
+    expect(out.map(r => [r.id, r.text, r.tone, r.below ?? false])).toEqual([['step', 'Complete Trial of Ascendancy', null, false], ['hint', 'Usually ↗', 'dim', true]])
+    expect(pinnedReadouts(inputs({ pins: ['step', 'hint'], step: 'x', hint: null })).map(r => r.id)).toEqual(['step'])
+  })
+
+  it('pins the hint once for those who pin the step', () => {
+    const w = { pins: ['level', 'step'] } as unknown as CampaignWidget
+    migrateCampaign(w)
+    expect(w.pins).toEqual(['level', 'step', 'hint'])
+    w.pins = ['level', 'step']
+    migrateCampaign(w)
+    expect(w.pins).toEqual(['level', 'step'])
+    const other = { pins: ['run'] } as unknown as CampaignWidget
+    migrateCampaign(other)
+    expect(other.pins).toEqual(['run'])
+  })
+
   it('shows nothing unless pinned', () => {
     expect(pinnedReadouts(inputs({ delta: -5000, level: 34, step: 'x' }))).toEqual([])
   })
@@ -68,5 +90,18 @@ describe('campaign next boss', () => {
 
   it('has none once the act has no bosses left', () => {
     expect(nextBoss(run({ act: 8, marks: [{ id: 'doedre8', totalMs: 1 }] }), null, NOW)).toBeNull()
+  })
+})
+
+describe('area hint for the pill', () => {
+  const route = bundledRoute(DEFAULT_ROUTE_OPTIONS)
+  const hints = route.steps.map(areaHint)
+
+  it('takes the where-to-go line', () => {
+    expect(hints).toContain('Usually ↗')
+  })
+
+  it('never shows shopping, chat commands or level notes', () => {
+    for (const h of hints) if (h) expect(h).not.toMatch(/^(Vendor|Buy|Put|Type|Farm Level|High chance)/)
   })
 })

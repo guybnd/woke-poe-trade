@@ -1,6 +1,6 @@
 <template>
   <span ref="rootEl" :class="$style.root" :data-dock="host.props.id">
-    <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.glow]: host.props.glow }]"
+    <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.twoLine]: !peekText && twoLine, [$style.glow]: host.props.glow }]"
       :title="wm.active.value ? `${host.props.title}${host.props.wmId != null ? ' · click to open' : ''}` : undefined"
       @click="click" @contextmenu.prevent="openIconMenu" @wheel="onWheel">
       <svg v-if="host.props.progress != null" :class="$style.ring" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
@@ -12,6 +12,12 @@
         <i v-else :class="dockIcon(host.props)" />
       </span>
       <span v-if="peekText" :class="$style.peekText">{{ peekText }}</span>
+      <span v-else-if="twoLine" :class="$style.reads">
+        <span :class="$style.readRow">
+          <span v-for="r in inline" :key="r.id" class="w-num" :class="[$style.read, r.tone && $style['read-' + r.tone]]">{{ r.text }}</span>
+        </span>
+        <span v-for="r in below" :key="r.id" :class="[$style.read, $style.readBelow, r.tone && $style['read-' + r.tone]]">{{ r.text }}</span>
+      </span>
       <template v-else>
         <span v-for="r in readouts" :key="r.id" class="w-num" :class="[$style.read, r.tone && $style['read-' + r.tone]]">{{ r.text }}</span>
       </template>
@@ -71,6 +77,10 @@ const menuEl = shallowRef<HTMLElement | null>(null)
 
 const badge = computed(() => props.host.props.badge)
 const readouts = computed(() => props.host.props.readouts ?? [])
+const inline = computed(() => readouts.value.filter(r => !r.below))
+const below = computed(() => readouts.value.filter(r => r.below))
+// A line below needs one above it: on their own, below readouts sit inline.
+const twoLine = computed(() => inline.value.length > 0 && below.value.length > 0)
 
 // Game art, with the Font Awesome icon as fallback if it doesn't load.
 const artFailed = shallowRef(false)
@@ -312,6 +322,12 @@ const styles = useCssModule()
 .icon.withRead:hover, .icon.withRead.hot, .icon.withRead.peek { opacity: 1; }
 .withRead { gap: 8px; padding-right: 12px; background: var(--w-panel); }
 .read { font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-fg); white-space: nowrap; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; }
+/* A second, smaller line under the readouts: the pill grows down, the icon stays put. */
+.twoLine { height: auto; min-height: 30px; align-items: flex-start; padding-bottom: 4px; }
+.twoLine .glyph { height: 28px; }
+.reads { display: flex; flex-direction: column; min-width: 0; }
+.readRow { display: flex; gap: 8px; align-items: center; height: 28px; }
+.readBelow { font-size: calc(11.5px * var(--w-text-scale, 1)); line-height: 1.25; max-width: 30rem; }
 .read-up { color: var(--w-up); }
 .read-down { color: var(--w-down); }
 .read-dim { color: var(--w-dim); }

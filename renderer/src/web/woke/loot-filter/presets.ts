@@ -54,13 +54,14 @@ export interface Presets {
   // Beams and minimap icons only for the top tiers (t1..tN).
   beams: { on: boolean, keepTiers: number }
   // While levelling, hide white and blue weapons other builds use and dim
-  // the rares. 'auto' takes the weapon classes of the PoB build.
-  weapons: { on: boolean, archetype: Archetype }
+  // the rares. 'auto' takes the weapon classes of the PoB build; 'custom'
+  // keeps exactly `classes` (picked by hand, starting from a build type).
+  weapons: { on: boolean, archetype: Archetype, classes: string[] }
   // TODO(3.30 launch): tiered magic/rare drops, once the filter keyword for
   // the new drop tiers is known.
 }
 
-export type Archetype = 'auto' | 'caster' | 'melee' | 'bow' | 'minion'
+export type Archetype = 'auto' | 'caster' | 'melee' | 'bow' | 'minion' | 'custom'
 
 export function defaultPresets (): Presets {
   return {
@@ -82,7 +83,7 @@ export function defaultPresets (): Presets {
     vendorQuality: { on: false },
     volume: { on: false, percent: 60 },
     beams: { on: false, keepTiers: 2 },
-    weapons: { on: false, archetype: 'auto' }
+    weapons: { on: false, archetype: 'auto', classes: [] }
   }
 }
 
@@ -92,7 +93,8 @@ export const ARCHETYPES: Array<{ key: Archetype, label: string, classes: string[
   { key: 'caster', label: 'Caster', classes: ['Wands', 'Sceptres', 'Rune Daggers', 'Daggers', 'Staves'] },
   { key: 'melee', label: 'Melee attack', classes: ['Claws', 'Daggers', 'One Hand Axes', 'One Hand Maces', 'One Hand Swords', 'Thrusting One Hand Swords', 'Sceptres', 'Staves', 'Warstaves', 'Two Hand Axes', 'Two Hand Maces', 'Two Hand Swords'] },
   { key: 'bow', label: 'Bow', classes: ['Bows'] },
-  { key: 'minion', label: 'Minion', classes: ['Wands', 'Sceptres', 'Rune Daggers', 'Staves'] }
+  { key: 'minion', label: 'Minion', classes: ['Wands', 'Sceptres', 'Rune Daggers', 'Staves'] },
+  { key: 'custom', label: 'Custom', classes: [] }
 ]
 
 const DUST_LINE = 5000
@@ -127,8 +129,16 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     vendorQuality: { on: on(p?.vendorQuality) },
     volume: { on: on(p?.volume), percent: Math.round(num(p?.volume?.percent, 5, 100, d.volume.percent)) },
     beams: { on: on(p?.beams), keepTiers: Math.round(num(p?.beams?.keepTiers, 1, 5, d.beams.keepTiers)) },
-    weapons: { on: on(p?.weapons), archetype: ARCHETYPES.some(a => a.key === p?.weapons?.archetype) ? p!.weapons!.archetype : d.weapons.archetype }
+    weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons)
   }
+}
+
+function normalizeWeapons (w: Partial<Presets['weapons']> | undefined, isOn: boolean, d: Presets['weapons']): Presets['weapons'] {
+  const archetype = ARCHETYPES.some(a => a.key === w?.archetype) ? w!.archetype! : d.archetype
+  // Known classes only, once each, in the game's order.
+  const picked = Array.isArray(w?.classes) ? w!.classes : []
+  const classes = archetype === 'custom' ? WEAPON_CLASSES.filter(c => picked.includes(c)) : []
+  return { on: isOn, archetype, classes }
 }
 
 export const RECIPE_SLOTS = [
@@ -235,7 +245,26 @@ export function neverSinkDustBases (doc: FilterDoc): string[] {
 
 export function archetypeClasses (p: Presets, buildWeapons: string[] | null): string[] | null {
   if (p.weapons.archetype === 'auto') return buildWeapons?.length ? buildWeapons : null
+  if (p.weapons.archetype === 'custom') return p.weapons.classes
   return ARCHETYPES.find(a => a.key === p.weapons.archetype)!.classes
+}
+
+// A chip clicked: the kept list with `cls` flipped. A list that matches a
+// build type exactly goes back to that type; anything else is Custom.
+// Auto with no PoB build hides nothing, so it starts from every type; the
+// build's own list goes back to Auto, so it follows later build changes.
+export function toggleWeaponClass (p: Presets, buildWeapons: string[] | null, cls: string): Presets['weapons'] {
+  const start = archetypeClasses(p, buildWeapons) ?? WEAPON_CLASSES
+  const next = start.includes(cls) ? start.filter(c => c !== cls) : [...start, cls]
+  const classes = WEAPON_CLASSES.filter(c => next.includes(c))
+  const sameAs = (list: string[]) => list.length === classes.length && list.every(c => classes.includes(c))
+  if (buildWeapons?.length && sameAs(WEAPON_CLASSES.filter(c => buildWeapons.includes(c)))) {
+    return { on: p.weapons.on, archetype: 'auto', classes: [] }
+  }
+  const same = ARCHETYPES.find(a => a.key !== 'auto' && a.key !== 'custom' && sameAs(a.classes))
+  return same
+    ? { on: p.weapons.on, archetype: same.key, classes: [] }
+    : { on: p.weapons.on, archetype: 'custom', classes }
 }
 
 const FLASK_CLASSES = ['Life Flasks', 'Mana Flasks', 'Hybrid Flasks', 'Utility Flasks']

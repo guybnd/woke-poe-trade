@@ -84,6 +84,8 @@ onUnmounted(() => { window.removeEventListener('pointermove', onMove) })
   font-family: var(--w-body);
 }
 .vertical { flex-direction: column; }
+/* A two-line pill grows down; the other icons stay on the top line. */
+.dock:not(.vertical) { align-items: flex-start; }
 .grip {
   width: 16px;
   height: 30px;

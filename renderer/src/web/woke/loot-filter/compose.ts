@@ -17,6 +17,9 @@ import type { EconomyGroup, PriceLookup, PriceMove } from './economy'
 import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
 import type { BaseVerdict, NetList, SafetyNet } from './safety'
 
+// The safety net's rule names (safetyBlocks): items, uniques, stacks20...
+const NET_TIER = /^(items|uniques|stacks\d+)$/
+
 export interface ComposeInput {
   presets: Presets
   rules: OwnRule[]
@@ -121,6 +124,12 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     netCount = bases.plain.length + bases.unique.length + Object.values(bases.stacks ?? {}).reduce((n, l) => n + l.length, 0)
     if (lookup || netCount) netList = JSON.stringify(bases)
   }
-  for (const r of applyEdits(next, cfg.edits.filter(isNetEdit))) results.set(r.edit.id, r)
+  // A net rule shows up only while the net lists something for it (none on a
+  // new league's first day): a change to it waits for the rule, it isn't broken.
+  for (const r of applyEdits(next, cfg.edits.filter(isNetEdit))) {
+    const tier = 'tier' in r.edit ? r.edit.tier : undefined
+    const waiting = !r.ok && cfg.safetyNet.on && typeof tier === 'string' && NET_TIER.test(tier) && !next.blocks.some(b => b.type === SAFETY_RULE_TYPE && b.tier === tier)
+    results.set(r.edit.id, waiting ? { ...r, ok: true, blocks: 0, message: 'Waits until the safety net lists something for this rule.' } : r)
+  }
   return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
 }

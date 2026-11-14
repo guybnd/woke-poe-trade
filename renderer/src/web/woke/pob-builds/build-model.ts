@@ -121,9 +121,6 @@ export interface Loadout {
   skillSet: Picked<PobSkillSet> | null
   itemSet: Picked<PobItemSet> | null
   tree: PobTreeSpec | null
-  // The tree its title gives: the tree's step starts here when points moved
-  // it on, so its Next shows what's left to take.
-  stageTree: PobTreeSpec | null
 }
 
 // The sets in use: the same answer for every window that asks.
@@ -133,13 +130,15 @@ export function loadoutOf (d: PobDetails, level: number | null, act: number | nu
   const skillTitle = pick?.skillSet
   const staged = pickStage(d.trees, level, act, skillTitle)
   const byHand = skillTitle != null && staged?.item.title === skillTitle.replace(/\^x[0-9a-fA-F]{6}|\^\d/g, '').trim()
+  // Following your level, the stage goes by passive points, not just titles:
+  // a guide's "Level 33" tree is all spent well before level 54. Gems and gear
+  // move with it to their sets of the tree's name, so all three stay in step.
+  const tree = staged && staged.byStage && !byHand ? treeAhead(d.trees, staged.item, level, act) : staged?.item ?? null
+  const ahead = tree && tree !== staged?.item ? tree.title : undefined
   return {
-    skillSet: pickStage(skillSetsOf(d), level, act, skillTitle),
-    itemSet: pickStage(itemSetsOf(d), level, act, pick?.itemSet ?? pick?.skillSet),
-    // Following your level, the tree goes by points, not just its title: a
-    // guide's "Level 33" tree is all spent well before level 54.
-    tree: staged && staged.byStage && !byHand ? treeAhead(d.trees, staged.item, level, act) : staged?.item ?? null,
-    stageTree: staged?.item ?? null
+    skillSet: pickStage(skillSetsOf(d), level, act, skillTitle ?? ahead),
+    itemSet: pickStage(itemSetsOf(d), level, act, pick?.itemSet ?? pick?.skillSet ?? ahead),
+    tree
   }
 }
 
@@ -454,12 +453,11 @@ export function buildFacts (d: PobDetails, level: number | null, act: number | n
 
 // ---- the next step ----
 
-// The tree's next step: when points moved the tree past its title's, from
-// that one to the tree in use; else from the tree in use to the next one.
+// The tree's next step: from the tree in use to the next one that adds
+// points (past an empty placeholder spec).
 export function treeStep (trees: PobTreeSpec[], l: Loadout | null): { from: PobTreeSpec | null, to: PobTreeSpec | null } {
   const now = l?.tree ?? null
-  if (now && l?.stageTree && now !== l.stageTree) return { from: l.stageTree, to: now }
-  return { from: now, to: nextSet(trees, now) }
+  return { from: now, to: now ? treeAfter(trees, now) : null }
 }
 
 // The next stage after this set, leaving out side sets such as "PS Swap"
