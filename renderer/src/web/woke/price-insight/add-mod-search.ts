@@ -4,7 +4,7 @@ import type { Stat } from '@/assets/data'
 import type { AddedMod, AddedModKind } from '@/web/price-check/filters/interfaces'
 
 export const ADD_KINDS: ReadonlyArray<{ kind: AddedModKind, label: string, title: string }> = [
-  { kind: 'pseudo', label: 'Total', title: 'The trade site\'s total: counts the mod wherever it is on the item' },
+  { kind: 'pseudo', label: 'Pseudo', title: 'The trade site\'s pseudo total: counts the mod wherever it is on the item' },
   { kind: 'explicit', label: 'Explicit', title: 'Prefix or suffix' },
   { kind: 'implicit', label: 'Implicit', title: 'Implicit modifier' },
   { kind: 'crafted', label: 'Crafted', title: 'Bench craft' },
@@ -87,7 +87,10 @@ export function searchAddIndex (index: readonly AddEntry[], query: string, filte
   // A mod the trade site lists under several kinds before one with a single kind
   // and the same words, like a map's "Quality (Rarity): #%".
   const reach = (e: AddEntry) => Math.min(2, Object.keys(e.ids).length)
-  hits.sort((a, b) => a.score - b.score || reach(b.e) - reach(a.e) ||
+  // With every kind, mods with a pseudo total come first: otherwise a total-only
+  // mod (one kind) sinks under every multi-kind one and never shows.
+  const lead = (e: AddEntry) => (filter === 'all' && e.ids.pseudo) ? 0 : 1
+  hits.sort((a, b) => a.score - b.score || lead(a.e) - lead(b.e) || reach(b.e) - reach(a.e) ||
     a.e.ref.length - b.e.ref.length || a.e.ref.localeCompare(b.e.ref))
   const out: AddHit[] = []
   for (const { e } of hits) {
