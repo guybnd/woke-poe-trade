@@ -149,3 +149,70 @@ describe('act of a zone', () => {
     expect(acts.map(a => [a.act, a.zones.map(z => z.areaId)])).toEqual([[1, ['1_1_3']], [2, ['1_2_1', '1_2_2']]])
   })
 })
+
+describe('campaign card steps', () => {
+  it('keeps one time per step and drops steps undone by stepping back', async () => {
+    const { recordRouteStep, dropRouteStepsFrom, stepRows } = await import('@/web/woke/campaign/run-timeline')
+    const tl = newTimeline(1)
+    recordRouteStep(tl, 0, 'Enter The Twilight Strand', 10 * S)
+    recordRouteStep(tl, 1, 'Kill Hillock', 70 * S)
+    recordRouteStep(tl, 3, 'Take the waypoint', 200 * S)
+    expect(recordRouteStep(tl, 1, 'Kill Hillock', 70 * S)).toBe(false)
+    const rows = stepRows(run(1, [1000]), tl, null, null)
+    // Step 3 came after a skipped step 2: no time of its own.
+    expect(rows.map(r => [r.index, r.took])).toEqual([[0, null], [1, 60], [3, null]])
+    expect(dropRouteStepsFrom(tl, 1)).toBe(true)
+    expect(tl.steps!.map(s => s[1])).toEqual([0])
+    recordRouteStep(tl, 1, 'Kill Hillock', 90 * S)
+    expect(tl.steps).toEqual([[10, 0, 'Enter The Twilight Strand'], [90, 1, 'Kill Hillock']])
+  })
+
+  it('compares a step with the same step in the other run', async () => {
+    const { recordRouteStep, stepRows } = await import('@/web/woke/campaign/run-timeline')
+    const mine = newTimeline(1)
+    recordRouteStep(mine, 0, 'A', 10 * S)
+    recordRouteStep(mine, 1, 'B', 50 * S)
+    const other = newTimeline(2)
+    recordRouteStep(other, 4, 'A', 5 * S)
+    recordRouteStep(other, 5, 'B', 35 * S)
+    const rows = stepRows(run(1, [1000]), mine, run(2, [1000]), other)
+    expect(rows[1]).toMatchObject({ took: 40, cmpTook: 30 })
+  })
+})
+
+describe('rebuilding a run from Client.txt', () => {
+  it('times zones between the act splits and keeps only its own character', async () => {
+    const { rebuildTimeline } = await import('@/web/woke/campaign/run-timeline')
+    const { lineTime } = await import('@/web/woke/campaign/log-tail')
+    const t0 = new Date(2026, 10, 4, 18, 0, 0).getTime()
+    const at = (sec: number) => {
+      const d = new Date(t0 + sec * 1000)
+      const p = (n: number) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} 1 abc`
+    }
+    const raw = [
+      `${at(0)} [DEBUG Client 1] Generating level 1 area "1_1_1" with seed 1`,
+      `${at(1)} [INFO Client 1] : You have entered The Twilight Strand.`,
+      `${at(60)} [INFO Client 1] : Tester (Witch) is now level 2`,
+      `${at(61)} [INFO Client 1] : Someone (Duelist) is now level 40`,
+      `${at(100)} [INFO Client 1] : Tester has been slain.`,
+      `${at(101)} [INFO Client 1] : Someone has been slain.`,
+      `${at(200)} [DEBUG Client 1] Generating level 13 area "1_2_1" with seed 1`,
+      // A break of an hour: the run timer was paused, the log clock wasn't.
+      `${at(4000)} [DEBUG Client 1] Generating level 14 area "1_2_2" with seed 1`,
+      `${at(4100)} [DEBUG Client 1] Generating level 15 area "1_3_1" with seed 1`,
+      `${at(9000)} [DEBUG Client 1] Generating level 1 area "1_1_1" with seed 2`
+    ].map(line => ({ line, at: lineTime(line)! }))
+    const r = run(t0, [180, 600])
+    r.startedAt = t0 + 400 // a live start lands a moment after its line
+    r.endedAt = t0 + 4100 * S
+    r.charName = 'Tester'
+    const tl = rebuildTimeline(r, raw)
+    expect(tl.rebuilt).toBe(true)
+    expect(tl.zones.map(z => z[0])).toEqual(['1_1_1', '1_2_1', '1_2_2', '1_3_1'])
+    expect(levelSteps(tl)).toEqual([[54, 2]])
+    expect(deathCount(tl)).toBe(1)
+    // Exact at the splits: act 2 entered at 180 s, act 3 at 600 s.
+    expect(tl.ev.filter(e => e[1] === 'z').map(e => e[0])).toEqual([0, 180, 589, 600])
+  })
+})

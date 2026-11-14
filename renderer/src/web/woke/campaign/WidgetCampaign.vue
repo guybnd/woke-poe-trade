@@ -79,6 +79,8 @@ import { actFromAreaId, actLabel, isTown, isTrialFinished } from './log-parse'
 import { bossKilled } from './boss-lines'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
+import { emitStepChange } from './step-bus'
+import type { StepChange } from './step-bus'
 import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
 import { actProgress, advanceOnEnter, advanceOnKill, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
@@ -146,6 +148,16 @@ const done = computed(() => {
 })
 
 function setStep (step: number, at: number) {
+  const prev = props.config.step
+  if (step !== prev) {
+    // Steps passed going forward are done now (a jump passes several at once).
+    const steps = route.value.steps
+    const done: StepChange['done'] = []
+    for (let i = prev; i < step && i - prev < 50; i++) {
+      if (steps[i]) done.push({ index: i, text: steps[i].parts.map(p => p.text).join('').replace(/\s+/g, ' ').trim() })
+    }
+    emitStepChange({ step, prev, at, charName: props.config.state.charName, done })
+  }
   props.config.step = step
   props.config.state.stepStarts = markStepStart(props.config.state.stepStarts ?? {}, step, at)
 }

@@ -175,7 +175,7 @@ export default { widget: widgetRunTimerSpec }
 </script>
 
 <script setup lang="ts">
-import { inject, computed, shallowRef, onUnmounted, watch } from 'vue'
+import { inject, computed, shallowRef, onUnmounted } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -189,6 +189,8 @@ import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
 import { actLabel, slainName } from './log-parse'
 import type { LogEvent } from './log-parse'
 import RunReview from './RunReview.vue'
+import { onStepChange } from './step-bus'
+import type { StepChange } from './step-bus'
 import { deleteTimelines, timelineRecorder } from './run-timeline-store'
 import {
   applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
@@ -265,34 +267,35 @@ if (trash.length) {
   })
 }
 
-// Campaign card steps: a step becoming current means the one before it is
-// done, at that moment (the card keeps when each step became current).
-const campaignWidget = computed(() => AppConfig().widgets.find(w => w.wmType === CAMPAIGN_TYPE) as CampaignWidget | undefined)
-watch(() => campaignWidget.value?.state?.stepStarts, (starts, before) => {
+// Campaign card steps. The card and this timer read the same log lines one
+// after the other, so a step can arrive before the line that started its
+// run: changes wait until this timer has applied the lines it was given.
+const stepChanges: StepChange[] = []
+let stepFlush = false
+function applyStepChanges () {
+  stepFlush = false
   const r = props.config.run
-  const c = campaignWidget.value
-  if (!starts || !before || !r || r.finished || !c) return
-  // The card follows whoever levels; only this run's character counts.
-  if (r.charName && c.state.charName && r.charName !== c.state.charName) return
-  const keys = Object.keys(starts).map(Number)
-  if (!keys.length) return
-  const top = Math.max(...keys)
-  const oldTop = Math.max(-1, ...Object.keys(before).map(Number))
-  if (top < oldTop) recorder.routeBack(r.id, top)
-  const done = keys.filter(k => k > 0 && starts[k] !== before[k] && starts[k] >= r.startedAt - 1000)
-  if (!done.length) return
-  const runId = r.id
-  const opts = c.route
-  import('./route-data').then(({ bundledRoute }) => {
-    const steps = bundledRoute(opts).steps
-    for (const k of done) {
-      const step = steps[k - 1]
-      if (!step) continue
-      const text = step.parts.map(p => p.text).join('').replace(/\s+/g, ' ')
-      recorder.routeStep(runId, k - 1, text, runElapsed(r, starts[k]))
-    }
-  }).catch(() => {})
-})
+  // No run yet: the line that starts it may still be on its way (each
+  // widget catches up on the log by itself after a start).
+  if (!r) {
+    if (stepChanges.length > 2000) stepChanges.splice(0, stepChanges.length - 2000)
+    return
+  }
+  for (const e of stepChanges.splice(0)) {
+    if (r.finished || e.at < r.startedAt - 1000) continue
+    // The card follows whoever levels; only this run's character counts.
+    if (r.charName && e.charName && r.charName !== e.charName) continue
+    if (e.step < e.prev) recorder.routeBack(r.id, e.step)
+    for (const d of e.done) recorder.routeStep(r.id, d.index, d.text, runElapsed(r, e.at))
+  }
+}
+onUnmounted(onStepChange((e) => {
+  stepChanges.push(e)
+  if (!stepFlush) {
+    stepFlush = true
+    setTimeout(applyStepChanges, 0)
+  }
+}))
 
 const now = shallowRef(Date.now())
 // Ticks only while the widget is on screen.
@@ -371,6 +374,7 @@ function recordLine (ev: LogEvent | null, line: string, at: number, prevLevel: n
 }
 
 function applyLines (lines: LogLine[]) {
+  setTimeout(applyStepChanges, 0)
   let changed = false
   for (const { ev, at, line } of lines) {
     const before = props.config.run

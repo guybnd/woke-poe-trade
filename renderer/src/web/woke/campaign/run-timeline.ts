@@ -281,8 +281,9 @@ function stepTimes (run: CampaignRun, tl: RunTimeline): StepRow[] {
   const out: StepRow[] = []
   let prev: [number, number, string] | null = null
   for (const s of tl.steps ?? []) {
-    // Only right after the step before it: a skipped step has no time.
-    const took: number | null = prev && prev[1] === s[1] - 1 ? Math.max(0, s[0] - prev[0]) : null
+    // Only right after the step before it: a skipped step has no time, and
+    // nor do steps passed together in one jump (the same moment).
+    const took: number | null = prev && prev[1] === s[1] - 1 && s[0] > prev[0] ? s[0] - prev[0] : null
     out.push({ index: s[1], text: s[2], act: actAt(run, s[0]), t: s[0], took, cmpTook: null })
     prev = s
   }
