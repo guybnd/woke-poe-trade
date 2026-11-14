@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-267
 title: 'Loot filter safety tests: presets never mute NeverSink''s top drops'
-status: Ready
+status: Done
 priority: High
 effort: M
 assignee: unassigned
@@ -40,7 +40,30 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-14T00:38:17.568Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 1baff5a4. Guard suite (compose.ts pipeline, every strictness +
+      Vaal, 26 setups, 171 pairs, 200 random mixes, report
+      docs/loot-filter-guard.md) plus fixes for the 6-socket preset muting
+      6-links and the weapons preset hiding levelling 6-links. Open with Guy:
+      quiet/beams minimum 2 tiers; price guard for red-beam drops.
+    completionComment: true
+    date: '2026-11-14T00:46:38.478Z'
+    id: c-2026-11-14t00-46-38-478z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-14T00:46:38.957Z'
 needsAction: null
+baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/427'
+swimlane: null
+diffSummary:
+  - file: testing/e2e/loot-filter.spec.ts
+    additions: 1
+    deletions: 1
 ---
 > **TL;DR** A robust test suite proving our presets and edits never hide, mute or un-beam NeverSink's most valuable drops, on every strictness and style. Prompted by PR #426's bug (quiet/beams read t5r1 as "tier 5").
 
