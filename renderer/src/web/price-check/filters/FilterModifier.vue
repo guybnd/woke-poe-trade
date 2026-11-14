@@ -374,7 +374,10 @@ export default defineComponent({
         get () { return props.filter.roll!.max },
         set (value: '' | number | undefined) { props.filter.roll!.max = value }
       }),
-      tag: computed(() => props.filter.tag),
+      // A fractured item's fractured row searches the fractured copy under its explicit tag.
+      tag: computed(() => (props.filter.tradeId[0]?.startsWith('fractured.') && String(props.filter.tag).startsWith('explicit'))
+        ? FilterTag.Fractured
+        : props.filter.tag),
       miniFilter: computed(() => !props.filter.hidden && (
         props.filter.tag === FilterTag.MercenarySupport ||
         (props.filter.tag === FilterTag.Property && props.item.info.refName === 'Mercenary Warrant') ||

@@ -129,22 +129,22 @@ test('PoE mode: a pseudo total splits into its mods and folds back', async ({ ov
   expect(await win.locator('.w-poe-line, .w-poe-row').count()).toBe(lines)
 })
 
-test('PoE mode: a fractured mod gets "Fractured only" once picked', async ({ overlay, fakeApp }) => {
+test('PoE mode: a fractured item\'s fractured mod leads with "Fractured only" on', async ({ overlay, fakeApp }) => {
   await overlay.boot({ patch: poe })
   await overlay.copyItem('items/rare-ring-fractured.txt')
   const win = overlay.page.locator('#price-window')
   const frac = win.locator('.w-poe-line .w-poe-k-fractured, .w-poe-row .w-poe-k-fractured').first()
   await expect(frac).toBeVisible()
-  if (await win.locator('.w-poe-line .w-poe-k-fractured').count()) {
-    await win.locator('.w-poe-line .w-poe-k-fractured').first().click()
-  }
+  // Its row leads, ticked, searching the fractured copy.
   const chip = win.locator('.w-poe-chip', { hasText: 'Fractured only' }).first()
   await expect(chip).toBeVisible()
-  await chip.click()
   await expect(chip).toHaveClass(/\bon\b/)
   await win.locator('.btn.w-pc-primary').click()
   await expect.poll(() => fakeApp.requests.some(r => r.url.includes('/api/trade/search') && r.body.includes('fractured.stat_'))).toBe(true)
   await overlay.snap('poe mode fractured only')
+  // A click switches it back to any copy.
+  await chip.click()
+  await expect(chip).not.toHaveClass(/\bon\b/)
 })
 
 test('PoE mode: the catalyst Q tag shows on picked rows and unpicked lines, and searches only on a click', async ({ overlay, fakeApp }) => {
