@@ -448,11 +448,14 @@ export function colourBlindActions (b: FilterBlock): boolean {
 const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
 
 // How high NeverSink ranks a block, 1 the top. NeverSink 8.21's tiered gear
-// (t5r1: item tier 5, rank 1) is a matrix where a higher item tier is better:
-// t5r1 is the top, then t4r1 and t5r2, and so on.
-export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier'>): number | null {
-  const tiered = b.type === 'gear->tiered' ? /^t(\d)r(\d)$/.exec(b.tier ?? '') : null
-  if (tiered) return 5 - Number(tiered[1]) + Number(tiered[2])
+// names its rules by item tier and base rank (t5r1, any4, strandedveiled), so
+// a "t5" there is the best, not the fifth tier. Its look marker says how
+// high it ranks each one: `!exotics_t1` to `!exotics_t4`.
+export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier' | 'comment'>): number | null {
+  if (b.type === 'gear->tiered') {
+    const look = /!exotics_t(\d+)\b/.exec(b.comment ?? '')
+    return look ? Number(look[1]) : null
+  }
   const m = /^t(\d+)/.exec(b.tier ?? '')
   return m ? Number(m[1]) : null
 }

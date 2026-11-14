@@ -102,6 +102,12 @@ export function tierLabel (tier: string): string {
   if (m) return `Tier ${m[1]}, item level ${m[2]}`
   m = /^n(\d+)_i(\d+)_t(\d+)$/.exec(tier)
   if (m) return `${m[1]} nodes, item level ${m[2]}, tier ${m[3]}`
+  // NeverSink 8.21's tiered gear: item tier and base rank (t5r1), and its
+  // any-base rules, where any5 catches item tier 4 and up.
+  m = /^t(\d)r(\d)$/.exec(tier)
+  if (m) return `Item tier ${m[1]}, rank ${m[2]}`
+  m = /^any(\d)$/.exec(tier)
+  if (m) return `Any base, item tier ${Number(m[1]) - 1}+`
   m = /^any(\d+)$/.exec(tier)
   if (m) return `Any, item level ${m[1]}`
   m = /^stack(\d+)$/.exec(tier)
