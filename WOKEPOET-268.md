@@ -15,6 +15,15 @@ history:
     user: Agent
     date: '2026-11-14T01:34:04.141Z'
     comment: Created ticket.
+    id: a-2026-11-14t01-34-04-141z
+  - type: activity
+    user: Agent
+    date: '2026-11-14T01:38:58.311Z'
+    comment: >-
+      PR #428 up (option A), review + local checks pass; handed to coordinator
+      for merge. Layout pick asked in thread:
+      https://claude.ai/artifact/BLnnmPq4FTgn6P9Zb26Hyu
+    id: a-2026-11-14t01-38-58-311z
 ---
 Build panel "Gems by level" list sorted by gem level; Guy wants it ordered by when the campaign gives each gem (act, then quest order, then level), e.g. Fortify (A Fixture of Fate, Act 3) after Act 2 gems.
 
