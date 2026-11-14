@@ -39,7 +39,7 @@ import GearRowHead from '../pob-builds/GearRowHead.vue'
 import GemChain from '../pob-builds/GemChain.vue'
 import NextSection from '../pob-builds/NextSection.vue'
 import { useActiveBuild } from '../pob-builds/active'
-import { gearChange, gearLayout, gemChange, itemSetsOf, loadoutOf, nextSet, realSets, skillSetsOf } from '../pob-builds/build-model'
+import { gearChange, gearLayout, gemChange, itemSetsOf, loadoutOf, nextSet, realSets, skillSetsOf, treeStep } from '../pob-builds/build-model'
 import type { GearRow } from '../pob-builds/build-model'
 import { findGroup } from '../pob-builds/build-pins'
 import { GEM_CLASS } from '../pob-builds/gems'
@@ -113,7 +113,8 @@ const group = computed(() => skillSet.value ? findGroup(skillSet.value.groups, p
 
 // ---- tree: the next stage, lit against the tree you're on ----
 const trees = computed(() => realSets(details.value?.trees ?? []))
-const nextTree = computed(() => nextSet(trees.value, loadout.value?.tree))
+const step = computed(() => treeStep(trees.value, loadout.value))
+const nextTree = computed(() => step.value.to)
 // A new start object resets the tree's pan and zoom: only when the stage changes.
 const startTitle = computed(() => (nextTree.value ?? loadout.value?.tree ?? trees.value[0])?.title ?? '')
 const treeStart = shallowRef({ title: startTitle.value })
@@ -124,7 +125,7 @@ const treeData = shallowRef<Map<number, TreeNode> | null>(null)
 watch(nextTree, (t) => {
   if (t && piece.value === 'next') loadPassiveTree().then(data => { treeData.value = data }, () => {})
 }, { immediate: true })
-const nextTreeDiff = computed(() => treeDiff(treeData.value, loadout.value?.tree?.nodes ?? [], nextTree.value?.nodes ?? []))
+const nextTreeDiff = computed(() => treeDiff(treeData.value, step.value.from?.nodes ?? [], nextTree.value?.nodes ?? []))
 const nextGems = computed(() => {
   const from = skillSet.value
   const to = details.value ? nextSet(skillSetsOf(details.value), from) : null

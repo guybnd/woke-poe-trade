@@ -1,29 +1,7 @@
 // Settings editor for each woke widget type (shown on its module's settings page).
+// Each loads when its page first opens, to keep them out of the startup JS.
+import { defineAsyncComponent } from 'vue'
 import type { Component } from 'vue'
-import RegexLibraryEditor from './regex-library/regex-library-editor.vue'
-import TradeSearchesEditor from './trade-searches/trade-searches-editor.vue'
-import PobBuildsEditor from './pob-builds/pob-builds-editor.vue'
-import CampaignEditor from './campaign/campaign-editor.vue'
-import RunTimerEditor from './campaign/run-timer-editor.vue'
-import AtlasEditor from './atlas/atlas-editor.vue'
-import LabEditor from './lab/lab-editor.vue'
-import ChallengesEditor from './challenges/challenges-editor.vue'
-import FarmingEditor from './farming/farming-editor.vue'
-import DropCounterEditor from './drop-counter/drop-counter-editor.vue'
-import StackedDecksEditor from './stacked-decks/stacked-decks-editor.vue'
-import MechanicsEditor from './mechanics/mechanics-editor.vue'
-import MapModsEditor from './map-mods/map-mods-editor.vue'
-import MapScanEditor from './map-mods/map-scan-editor.vue'
-import EssenceScanEditor from './essence-scan/essence-scan-editor.vue'
-import LootFilterEditor from './loot-filter/loot-filter-editor.vue'
-import TradeEditor from './trade/trade-editor.vue'
-import FlipsEditor from './scarab-flip/flips-editor.vue'
-import LabGemsEditor from './lab-gems/lab-gems-editor.vue'
-import BossRunsEditor from './boss-runs/boss-runs-editor.vue'
-import MarketEditor from './market/market-editor.vue'
-import LeagueInvestEditor from './league-invest/league-invest-editor.vue'
-import DisenchantEditor from './disenchant/disenchant-editor.vue'
-import WealthyExileEditor from './wealthy-exile/wealthy-exile-editor.vue'
 import { REGEX_LIBRARY_TYPE } from './regex-library/widget'
 import { TRADE_SEARCHES_TYPE } from './trade-searches/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
@@ -48,6 +26,30 @@ import { MARKET_TRACKER_TYPE } from './market/widget'
 import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 import { DISENCHANT_TYPE } from './disenchant/widget'
 import { WEALTHY_EXILE_TYPE } from './wealthy-exile/widget'
+const RegexLibraryEditor = defineAsyncComponent(() => import('./regex-library/regex-library-editor.vue'))
+const TradeSearchesEditor = defineAsyncComponent(() => import('./trade-searches/trade-searches-editor.vue'))
+const PobBuildsEditor = defineAsyncComponent(() => import('./pob-builds/pob-builds-editor.vue'))
+const CampaignEditor = defineAsyncComponent(() => import('./campaign/campaign-editor.vue'))
+const RunTimerEditor = defineAsyncComponent(() => import('./campaign/run-timer-editor.vue'))
+const AtlasEditor = defineAsyncComponent(() => import('./atlas/atlas-editor.vue'))
+const LabEditor = defineAsyncComponent(() => import('./lab/lab-editor.vue'))
+const ChallengesEditor = defineAsyncComponent(() => import('./challenges/challenges-editor.vue'))
+const FarmingEditor = defineAsyncComponent(() => import('./farming/farming-editor.vue'))
+const DropCounterEditor = defineAsyncComponent(() => import('./drop-counter/drop-counter-editor.vue'))
+const StackedDecksEditor = defineAsyncComponent(() => import('./stacked-decks/stacked-decks-editor.vue'))
+const MechanicsEditor = defineAsyncComponent(() => import('./mechanics/mechanics-editor.vue'))
+const MapModsEditor = defineAsyncComponent(() => import('./map-mods/map-mods-editor.vue'))
+const MapScanEditor = defineAsyncComponent(() => import('./map-mods/map-scan-editor.vue'))
+const EssenceScanEditor = defineAsyncComponent(() => import('./essence-scan/essence-scan-editor.vue'))
+const LootFilterEditor = defineAsyncComponent(() => import('./loot-filter/loot-filter-editor.vue'))
+const TradeEditor = defineAsyncComponent(() => import('./trade/trade-editor.vue'))
+const FlipsEditor = defineAsyncComponent(() => import('./scarab-flip/flips-editor.vue'))
+const LabGemsEditor = defineAsyncComponent(() => import('./lab-gems/lab-gems-editor.vue'))
+const BossRunsEditor = defineAsyncComponent(() => import('./boss-runs/boss-runs-editor.vue'))
+const MarketEditor = defineAsyncComponent(() => import('./market/market-editor.vue'))
+const LeagueInvestEditor = defineAsyncComponent(() => import('./league-invest/league-invest-editor.vue'))
+const DisenchantEditor = defineAsyncComponent(() => import('./disenchant/disenchant-editor.vue'))
+const WealthyExileEditor = defineAsyncComponent(() => import('./wealthy-exile/wealthy-exile-editor.vue'))
 
 const editors: Record<string, Component> = {
   [REGEX_LIBRARY_TYPE]: RegexLibraryEditor,

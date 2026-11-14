@@ -1,7 +1,7 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter } from '@/web/woke/pob-builds/build-model'
+import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter, treeAhead, treeStep, pointsBy } from '@/web/woke/pob-builds/build-model'
 import { moveBuildPins, treePin } from '@/web/woke/pob-builds/build-pins'
 import type { Pin } from '@/web/woke/pins/pins'
 import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
@@ -461,6 +461,29 @@ describe('next step', () => {
     // Past the last stage, file order never leads back to an earlier stage.
     const late = [t('Endgame', [1, 2, 3]), t('Level 33', [1, 4])]
     expect(treeAfter(late, late[0])).toBeNull()
+  })
+
+  it('moves the tree on once your passive points cover it', () => {
+    // Guy's guide: Level 24 = 28 points, Level 33 = 39, Level 54 = 67 (+ class
+    // and ascendancy starts, and asc nodes).
+    const n = (k: number) => Array.from({ length: k }, (_, i) => i)
+    const t = (title: string, k: number) => ({ title, url: '', isActive: false, nodes: n(k) })
+    const list = [t('Level 12', 15), t('Level 24', 30), t('Level 33', 43), t('Level 64', 1), t('Level 54', 73), t('Level 68', 99)]
+    expect(pointsBy(29, 3)).toBe(31)
+    expect(treeAhead(list, list[1], 25, 2).title).toBe('Level 24')
+    expect(treeAhead(list, list[1], 29, 3).title).toBe('Level 33')
+    expect(treeAhead(list, list[2], 39, 5).title).toBe('Level 54')
+    expect(treeAhead(list, list[2], null, null).title).toBe('Level 33')
+    const d = { skills: [], skillSets: [], trees: list } as never
+    expect(loadoutOf(d, 39, 5).tree?.title).toBe('Level 54')
+    // Picked by hand: stays put.
+    expect(loadoutOf(d, 39, 5, { skillSet: 'Level 33' }).tree?.title).toBe('Level 33')
+    // A pick no tree is named after doesn't stop it.
+    expect(loadoutOf(d, 39, 5, { skillSet: 'Gone' }).tree?.title).toBe('Level 54')
+    // Next starts from the title's tree, so it shows what's left to take.
+    const step = treeStep(list, loadoutOf(d, 39, 5))
+    expect([step.from?.title, step.to?.title]).toEqual(['Level 33', 'Level 54'])
+    expect(treeStep(list, loadoutOf(d, 33, 4)).to?.title).toBe('Level 54')
   })
 
   it('says which gems come and go', () => {
