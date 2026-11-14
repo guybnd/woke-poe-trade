@@ -38,6 +38,14 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-14T04:44:30.912Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-14T05:54:17.680Z'
+    comment: >-
+      Guy chose to remove the 4 Nov edit hiding the safety net's items rule.
+      Checked the live overlay over CDP: it's already gone (6 edits, none on
+      woke->safety), saved, not dirty; net on, empty until 3.30 prices.
+    id: a-2026-11-14t05-54-17-680z
 needsAction: null
 ---
 > **TL;DR** Guy's dock card showed two notices that didn't need him. Old-league price moves now drop silently, and a safety-net edit waiting for its rule no longer counts as broken. PR https://github.com/guybnd/woke-poe-trade/pull/439.
