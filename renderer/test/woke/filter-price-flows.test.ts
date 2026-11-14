@@ -201,14 +201,14 @@ describe('moves belong to a league', () => {
     const { store } = await opened(moved('Allflame'))
     await store.save()
     expect(inTier('t1')).toContain('Mid One')
-    expect(store.movesFromOtherLeague.value).toBe(0)
   })
 
-  it('leaves them out of the file in another league, and counts them', async () => {
-    const { store } = await opened(moved('Mirage'))
+  it('leaves another league\'s moves out of the file, kept in case you go back', async () => {
+    const { store, config } = await opened(moved('Mirage'))
     await store.save()
     expect(inTier('t2')).toContain('Mid One')
-    expect(store.movesFromOtherLeague.value).toBe(1)
+    expect(config.priceTiers.moves).toHaveLength(1)
+    expect(store.dirty.value).toBe(false)
   })
 
   it('new moves start over instead of building on the old league', async () => {
@@ -230,15 +230,15 @@ describe('moves belong to a league', () => {
 
   it('switching league takes them out of the file by itself, and nothing reads as unsaved', async () => {
     P.safety.value = VALUABLE
-    const { store } = await opened(moved('Allflame'))
+    const { store, config } = await opened(moved('Allflame'))
     await store.save()
     expect(inTier('t1')).toContain('Mid One')
     P.currentLeague.value = 'Mirage'
     await settled()
     expect(inTier('t2')).toContain('Mid One')
     expect(store.dirty.value).toBe(false)
-    expect(store.movesFromOtherLeague.value).toBe(1)
-    expect(store.otherMovesLeague.value).toBe('Allflame')
+    // Switching back brings them back: only the file left them out.
+    expect(config.priceTiers.moves).toHaveLength(1)
   })
 
   it('applies moves from before leagues, and marks them at the next Apply', async () => {
@@ -253,9 +253,9 @@ describe('moves belong to a league', () => {
 
   it('with no league known, a move isn\'t foreign and stays in the file', async () => {
     P.currentLeague.value = null
-    const { store } = await opened(moved('Allflame'))
+    const { store, config } = await opened(moved('Allflame'))
     await store.save()
-    expect(store.movesFromOtherLeague.value).toBe(0)
+    expect(config.priceTiers.moves).toHaveLength(1)
     expect(inTier('t1')).toContain('Mid One')
   })
 })
