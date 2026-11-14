@@ -7,6 +7,8 @@
 // - a stat id whose text changed (3.30: "nearby" became metres): the new text
 //   as another matcher of our stat with that id
 // - a unique, base type or exchange item the snapshot didn't have: a new item
+// - a stat id of ours the trade site dropped: moved to the stat's new id when
+//   one is clear (3.30's granted skills and socketed supports), else dropped
 //
 // Only the difference between the two trade lists is used. Comparing the trade
 // lists with our data directly would add thousands of lines upstream leaves
@@ -15,6 +17,7 @@
 //   node scripts/trade-data-patch.mjs snapshot   before the patch: save the lists
 //   node scripts/trade-data-patch.mjs apply      after it: patch the data files
 //   node scripts/trade-data-patch.mjs check      after it: report, change nothing
+//   node scripts/trade-data-patch.mjs remap      only move or drop dead stat ids
 //   node scripts/trade-data-patch.mjs apply --group viscera
 //                                                only one trade item group and the
 //                                                implicit stats its items carry
@@ -31,6 +34,7 @@ const BASELINE = path.join(ROOT, 'scripts/trade-baseline')
 const DATA = path.join(ROOT, 'renderer/public/data/en')
 const API = 'https://www.pathofexile.com/api/trade/data'
 const KINDS = ['stats', 'items', 'static']
+const OTHER_LANGUAGES = ['ru', 'cmn-Hant', 'ko']
 const UA = 'woke-poe-trade data patch (github.com/guybnd/woke-poe-trade)'
 // Stat kinds an item's own text can carry. Others (pseudo, Crucible trees,
 // Sanctum, Ultimatum) aren't read from an item copy.
@@ -69,6 +73,161 @@ function category (group, base) {
   // 3.30 Wickerman trophies: one implicit each, slot read from the item text.
   if (group === 'viscera') return 'Viscera'
   return null
+}
+
+// How a moved stat's old and new trade texts are compared. 3.30 gave granted
+// skills and socketed supports new ids ("explicit.effect_<n>") and new words:
+// "Grants Level 20 Anger Skill" became "Grants Level 20 Anger", and "...by
+// Level 16 Added Fire Damage" became "...Added Fire Damage Support". A fixed
+// level ("Level 20") reads as "Level #", and some lost the level altogether
+// ("Grants Embrace Madness"); that looser key is tried only when the first
+// finds nothing.
+// Two supports were renamed outright.
+const RENAMED = [[/ cluster trap$/, ' cluster traps'], [/ power charge on critical strike$/, ' power charge on critical']]
+const moveKey = text => RENAMED.reduce((t, [from, to]) => t.replace(from, to),
+  matcherText(text).toLowerCase().replace(/\blevel \d+\b/g, 'level #').replace(/ (skill|support)$/, '').trim())
+const looseKey = text => moveKey(text).replace(/^grants level # /, 'grants ')
+
+// Our stat ids the trade site no longer has. Each one's new id is the new
+// trade entry of the same kind (explicit, implicit...) whose text is the same
+// stat's, as moveKey reads it. Only an id the pre-patch snapshot didn't have
+// can be a new id, so an older stat with a similar text (Heist's "Grants
+// Level # Anger Skill", Forbidden Shako's random supports) is never taken. A
+// stat our earlier patch run added for the new id, as if it were a new stat,
+// is folded into ours: its ids and its text join our stat, and its line goes.
+// A dead id with no new id is dropped: the trade site refuses a search with an
+// unknown stat id. The stat and its words stay, but a mod of a kind the stat
+// has no id for reads as unknown (3.30 has no fractured granted skills or
+// supports at all).
+export function remap (before, after, statLines) {
+  const report = { moved: [], dropped: [], folded: [], renumbered: [] }
+  const touched = new Set()
+  const liveIds = new Set(after.stats.map(e => e.id))
+  const oldIds = new Set(before.stats.map(e => e.id))
+  const standalone = new Set(statLines.filter(l => !l.stats))
+  const stats = statLines.flatMap(s => s.stats ?? [s])
+  const owner = new Map()
+  for (const s of stats) for (const ids of Object.values(s.trade.ids)) for (const id of ids) if (!owner.has(id)) owner.set(id, s)
+  const matched = new Set()
+  for (const s of stats) for (const m of s.matchers) matched.add(m.string.trim())
+
+  // An option id the trade site gave to another stat: 3.30 renumbered the
+  // Foulborn "Skills Socketed in your Helmet are Supported by level # X" list,
+  // so "|1|150" went from Fresh Meat to Greater Multiple Projectiles. Our
+  // stat loses it (and the other stat's words an earlier run added to it as
+  // a rewording), and the id can be the new id of the stat that now owns it.
+  const oldText = new Map(before.stats.map(e => [e.id, e.text]))
+  const reassigned = new Set()
+  for (const e of after.stats) {
+    if (!e.id.includes('|') || !ITEM_STAT_TYPES.has(e.type) || !oldText.has(e.id)) continue
+    const was = moveKey(oldText.get(e.id))
+    const now = moveKey(e.text)
+    if (was === now) continue
+    const s = owner.get(e.id)
+    if (!s || moveKey(s.ref) !== was) continue
+    // Only when another stat of ours is named by the new text.
+    if (!stats.some(o => o !== s && moveKey(o.ref) === now)) continue
+    const list = s.trade.ids[e.type] ?? []
+    if (list.includes(e.id)) list.splice(list.indexOf(e.id), 1)
+    if (!list.length) delete s.trade.ids[e.type]
+    s.matchers = s.matchers.filter(m => moveKey(m.string) !== now)
+    owner.delete(e.id)
+    reassigned.add(e.id)
+    touched.add(s)
+    report.renumbered.push({ id: e.id, from: s.ref, to: e.text })
+  }
+  matched.clear()
+  for (const s of stats) for (const m of s.matchers) matched.add(m.string.trim())
+
+  const byKey = new Map()
+  const byLoose = new Map()
+  for (const e of after.stats) {
+    if (!ITEM_STAT_TYPES.has(e.type) || e.text.includes('\n') || (oldIds.has(e.id) && !reassigned.has(e.id))) continue
+    for (const [map, key] of [[byKey, moveKey(e.text)], [byLoose, looseKey(e.text)]]) {
+      const k = `${e.type}|${key}`
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push(e)
+    }
+  }
+
+  const gone = new Set()
+  for (const s of stats) {
+    if (gone.has(s)) continue
+    for (const type of Object.keys(s.trade.ids)) {
+      if (!ITEM_STAT_TYPES.has(type)) continue
+      for (const id of [...s.trade.ids[type]]) {
+        if (liveIds.has(id)) continue
+        const texts = [s.ref, ...s.matchers.map(m => m.string)]
+        const find = (map, key) => [...new Map(texts.flatMap(t => map.get(`${type}|${key(t)}`) ?? []).map(e => [e.id, e])).values()]
+        let found = find(byKey, moveKey)
+        if (!found.length) found = find(byLoose, looseKey)
+        // Not one clear new id: drop the dead one and say so.
+        const next = found.length === 1 ? found[0] : null
+        const list = s.trade.ids[type]
+        list.splice(list.indexOf(id), 1)
+        touched.add(s)
+        if (!next) {
+          report.dropped.push({ id, ref: s.ref, candidates: found.map(e => e.id) })
+          continue
+        }
+        const holder = owner.get(next.id)
+        if (holder && holder !== s && !touched.has(holder) && standalone.has(holder) &&
+            !Object.values(holder.trade.ids).flat().some(i => oldIds.has(i))) {
+          // Our earlier patch's stand-in for this stat: fold it into ours.
+          for (const [t, ids] of Object.entries(holder.trade.ids)) {
+            const into = (s.trade.ids[t] ??= [])
+            for (const i of ids) if (!into.includes(i)) { into.push(i); owner.set(i, s) }
+          }
+          for (const m of holder.matchers) {
+            if (!s.matchers.some(o => o.string.trim() === m.string.trim())) s.matchers.push({ ...m })
+          }
+          gone.add(holder)
+          report.folded.push({ ref: s.ref, from: holder.ref })
+        }
+        if (!list.includes(next.id)) list.push(next.id)
+        if (!owner.has(next.id)) owner.set(next.id, s)
+        const text = matcherText(next.text)
+        // The new words, unless another stat already reads them (two stats
+        // that moved to one id: the first keeps the text).
+        if (!matched.has(text)) {
+          s.matchers.push({ string: text })
+          matched.add(text)
+        }
+        report.moved.push({ from: id, to: next.id, ref: s.ref })
+      }
+      if (!s.trade.ids[type].length) delete s.trade.ids[type]
+    }
+  }
+  if (gone.size) {
+    for (let i = statLines.length - 1; i >= 0; i--) if (gone.has(statLines[i])) statLines.splice(i, 1)
+  }
+  // A group member we emptied that only repeats a sibling (the Fresh Meat
+  // copy that held Greater Multiple Projectiles' id) goes.
+  for (const line of statLines) {
+    if (!line.stats) continue
+    line.stats = line.stats.filter(s => !touched.has(s) || Object.keys(s.trade.ids).length ||
+      !line.stats.some(o => o !== s && o.ref === s.ref && Object.keys(o.trade.ids).length))
+  }
+  return report
+}
+
+// Other languages: their texts are upstream's, but their ids are the same as
+// ours. A dead id becomes the id English moved it to, or goes.
+export function remapIds (statLines, liveIds, moved) {
+  let n = 0
+  for (const s of statLines.flatMap(l => l.stats ?? [l])) {
+    let changed = false
+    for (const type of Object.keys(s.trade.ids)) {
+      if (!ITEM_STAT_TYPES.has(type)) continue
+      const ids = s.trade.ids[type]
+      const next = [...new Set(ids.flatMap(id => liveIds.has(id) ? [id] : moved.has(id) ? [moved.get(id)] : []))]
+      if (next.length !== ids.length || next.some((id, i) => id !== ids[i])) changed = true
+      if (next.length) s.trade.ids[type] = next
+      else delete s.trade.ids[type]
+    }
+    if (changed) n++
+  }
+  return n
 }
 
 export function diff (before, after, statLines, itemLines) {
@@ -189,7 +348,7 @@ async function main () {
     }
     return
   }
-  if (mode !== 'apply' && mode !== 'check') throw new Error('Usage: node scripts/trade-data-patch.mjs snapshot|apply|check')
+  if (!['apply', 'check', 'remap'].includes(mode)) throw new Error('Usage: node scripts/trade-data-patch.mjs snapshot|apply|check|remap')
 
   const before = {}
   const after = {}
@@ -201,8 +360,32 @@ async function main () {
   const itemsFile = path.join(DATA, 'items.ndjson')
   const statLines = readNdjson(statsFile)
   const itemLines = readNdjson(itemsFile)
-  const report = diff(before, group ? scope(after, group) : after, statLines, itemLines)
+  // A short or broken stat list would read as thousands of dead ids.
+  // Each kind on its own: a missing fractured group is a tenth of the list.
+  const countBy = list => list.reduce((m, e) => m.set(e.type, (m.get(e.type) ?? 0) + 1), new Map())
+  const had = countBy(before.stats)
+  const has = countBy(after.stats)
+  for (const [type, n] of had) {
+    if (ITEM_STAT_TYPES.has(type) && (has.get(type) ?? 0) < n * 0.9) throw new Error(`The trade site's stat list has ${has.get(type) ?? 0} ${type} entries, the snapshot ${n}: not trusting it`)
+  }
+  // Moved ids first, so diff below doesn't take their new ids for new stats.
+  // A scoped run leaves ids alone, like it leaves skill grants alone.
+  const moves = group ? { moved: [], dropped: [], folded: [], renumbered: [] } : remap(before, after, statLines)
+  // 3.30 dropped about 120. Far more is a broken list, not a patch.
+  if (moves.dropped.length > 500) throw new Error(`${moves.dropped.length} of our stat ids are gone from the trade site: not trusting the list`)
+  // remap: moved and dropped ids only, no new stats, texts or items.
+  const report = mode === 'remap'
+    ? { newStats: [], newIds: [], reworded: [], newItems: [], byName: [], skipped: [] }
+    : diff(before, group ? scope(after, group) : after, statLines, itemLines)
 
+  console.log(`Moved stat ids: ${moves.moved.length}`)
+  for (const m of moves.moved) console.log(`  > ${m.from} -> ${m.to}  ${m.ref}`)
+  console.log(`Renumbered option ids: ${moves.renumbered.length}`)
+  for (const r of moves.renumbered) console.log(`  ~ ${r.id}  ${r.from}  ->  ${r.to}`)
+  console.log(`Folded stand-in stats: ${moves.folded.length}`)
+  for (const f of moves.folded) console.log(`  = ${f.from}  into  ${f.ref}`)
+  console.log(`Dropped stat ids (gone from the trade site): ${moves.dropped.length}`)
+  for (const d of moves.dropped) console.log(`  - ${d.id}  ${d.ref}${d.candidates.length ? `  (unclear: ${d.candidates.join(', ')})` : ''}`)
   console.log(`New stats: ${report.newStats.length}`)
   for (const s of report.newStats) console.log(`  + ${s.ref}`)
   console.log(`New ids on known stats: ${report.newIds.length}`)
@@ -221,6 +404,16 @@ async function main () {
   }
   write(statsFile, [...statLines, ...report.newStats])
   write(itemsFile, [...itemLines, ...report.newItems])
+  const liveIds = new Set(after.stats.map(e => e.id))
+  const moved = new Map(moves.moved.map(m => [m.from, m.to]))
+  for (const lang of group ? [] : OTHER_LANGUAGES) {
+    const file = path.join(DATA, '..', lang, 'stats.ndjson')
+    if (!fs.existsSync(file)) continue
+    const lines = readNdjson(file)
+    const n = remapIds(lines, liveIds, moved)
+    if (n) write(file, lines)
+    console.log(`${lang}: ${n} stats with moved or dropped ids`)
+  }
   console.log('Patched. Next: node renderer/src/assets/bump-data-version.mjs')
 }
 
