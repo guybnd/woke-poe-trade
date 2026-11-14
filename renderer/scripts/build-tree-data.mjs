@@ -7,9 +7,10 @@
 //
 // PoB is MIT licensed, and the tree is GGG's. Each node is one row:
 // [id, x, y, kind, name, stats, linked ids, icon, group, orbit radius, angle].
-// Ascendancy nodes have no place on the drawn tree, so they sit at 0, 0 and are
-// only ever listed by name. They and class starts are in here because builds
-// list them among their points. The art is GGG's, read from the addresses in
+// Ascendancy nodes sit where GGG places them, off the main tree, with a 12th
+// field naming their ascendancy: the Ascendancy panel draws each one apart.
+// They and class starts are in here because builds list them among their
+// points. The art is GGG's, read from the addresses in
 // PoB's sprites.lua, and cached by the app like item art.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -110,7 +111,10 @@ const rows = []
 // Mastery effect id -> its stat lines: builds save which effect each picked
 // mastery has, by id.
 const masteryEffects = {}
-for (const [id, n] of Object.entries(tree.nodes)) {
+// Ascendancy nodes last, so their groups come after the main tree's and
+// those keep their place.
+const isAscNode = n => Boolean(n.isAscendancyStart || n.ascendancyName)
+for (const [id, n] of Object.entries(tree.nodes).sort(([, a], [, b]) => Number(isAscNode(a)) - Number(isAscNode(b)))) {
   // Each line is one mod, wrapped in the data: joined, so totals read it whole.
   for (const e of n.masteryEffects ?? []) masteryEffects[e.effect] = (e.stats ?? []).map(l => l.replace(/\s*\n\s*/g, ' '))
   if (id === 'root' || n.group == null || n.isProxy) continue
@@ -118,14 +122,33 @@ for (const [id, n] of Object.entries(tree.nodes)) {
   if (!group || group.isProxy) continue
   const kind = n.isAscendancyStart ? 'ascstart' : n.ascendancyName ? 'asc' : n.classStartIndex != null ? 'start' : n.isKeystone ? 'key' : n.isNotable ? 'notable' : n.isMastery ? 'mastery' : n.isJewelSocket ? 'jewel' : 'small'
   const stats = kind === 'mastery' || kind === 'start' || kind === 'ascstart' ? [] : n.stats ?? []
-  if (kind === 'ascstart' || kind === 'asc') {
-    const named = kind === 'asc' && n.isNotable
-    rows.push([Number(id), 0, 0, kind, named ? n.name : '', named ? stats : [], []])
-    continue
-  }
+  const isAsc = kind === 'ascstart' || kind === 'asc'
   if (!groupIndex.has(n.group)) {
     groupIndex.set(n.group, groups.length)
-    groups.push([Math.round(group.x), Math.round(group.y), group.background?.image ?? '', group.background?.isHalfImage ? 1 : 0])
+    // Ascendancy groups sit far off the main tree: no background drawn there.
+    groups.push([Math.round(group.x), Math.round(group.y), isAsc ? '' : group.background?.image ?? '', !isAsc && group.background?.isHalfImage ? 1 : 0])
+  }
+  if (isAsc) {
+    // Where it sits in its own ascendancy, as the game's Ascendancy panel
+    // lays it out, with its links there and which ascendancy it is.
+    const named = kind === 'asc' && n.isNotable
+    const a = angle(n.orbit, n.orbitIndex)
+    const r = radii[n.orbit]
+    rows.push([
+      Number(id),
+      Math.round(group.x + r * Math.sin(a)),
+      Math.round(group.y - r * Math.cos(a)),
+      kind,
+      named ? n.name : '',
+      named ? stats : [],
+      (n.out ?? []).map(Number).filter(o => tree.nodes[o]?.ascendancyName === n.ascendancyName),
+      '',
+      groupIndex.get(n.group),
+      r,
+      Math.round(a * 1000) / 1000,
+      n.ascendancyName
+    ])
+    continue
   }
   const icon = kind === 'mastery' ? n.inactiveIcon : n.icon
   if (icon) used.add(icon)

@@ -1,6 +1,6 @@
 // Draws the passive tree on a canvas with the game's own art. Thousands of
 // sprites, so it only runs when the view or the trees change, never on hover.
-import { linkState, nodeState, NODE_RADIUS } from './passive-tree'
+import { drawnRadius, linkState, nodeState, NODE_RADIUS } from './passive-tree'
 import type { NodeState, SpriteSheet, TreeArt, TreeNode, View } from './passive-tree'
 
 // The art is cut at this fraction of tree size.
@@ -35,6 +35,8 @@ export interface DrawInput {
   from: Set<number>
   to: Set<number>
   colours: Record<'keep' | 'add' | 'remove' | 'off' | 'bg', string>
+  // Round backdrops drawn under the lines: the ascendancy bubbles.
+  bubbles?: Array<{ x: number, y: number, r: number }>
 }
 
 export function drawTree (d: DrawInput) {
@@ -95,6 +97,16 @@ export function drawTree (d: DrawInput) {
     }
   }
 
+  for (const b of d.bubbles ?? []) {
+    ctx.beginPath()
+    ctx.arc(X(b.x), Y(b.y), b.r * view.zoom, 0, 2 * Math.PI)
+    ctx.fillStyle = colours.bg
+    ctx.fill()
+    ctx.strokeStyle = colours.off
+    ctx.lineWidth = 2 * px
+    ctx.stroke()
+  }
+
   // Lines, dim first so lit ones sit on top. Nodes on one orbit of one group
   // join along the orbit, as in the game.
   const line = (lit: NodeState, colour: string, width: number) => {
@@ -102,10 +114,10 @@ export function drawTree (d: DrawInput) {
     ctx.lineWidth = width * px
     ctx.beginPath()
     for (const n of nodes.values()) {
-      if (!NODE_RADIUS[n.kind] || n.kind === 'mastery') continue
+      if (!drawnRadius(n) || n.kind === 'mastery') continue
       for (const id of n.out) {
         const m = nodes.get(id)
-        if (!m || !NODE_RADIUS[m.kind] || m.kind === 'mastery') continue
+        if (!m || !drawnRadius(m) || m.kind === 'mastery') continue
         if (linkState(state(n.id), state(m.id)) !== lit) continue
         ctx.moveTo(X(n.x), Y(n.y))
         const centre = n.group === m.group && n.radius === m.radius && n.radius > 0 ? art.groups[n.group] : null
@@ -141,7 +153,7 @@ export function drawTree (d: DrawInput) {
   }
 
   for (const n of nodes.values()) {
-    const r = NODE_RADIUS[n.kind]
+    const r = drawnRadius(n)
     if (!r || n.kind === 'mastery' || !onScreen(n.x, n.y)) continue
     const s = state(n.id)
     const on = s === 'keep' || s === 'add'

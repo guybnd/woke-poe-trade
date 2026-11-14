@@ -138,7 +138,9 @@ export interface WokeOps {
   'stash-read': Op<NoArgs, Json>
   'stash-watch-stop': Op<NoArgs, null>
   'tree-overlay-points': Op<{ x: number[], y: number[], r: number[] }, null>
-  'tree-overlay-fit': Op<{ probes: number[][], fresh?: boolean }, Json>
+  // The build's ascendancy nodes, to find the game's Ascendancy panel by; null when it has none.
+  'tree-overlay-asc-points': Op<{ x: number[], y: number[], r: number[] } | null, null>
+  'tree-overlay-fit': Op<{ probes: number[][], ascProbes?: number[][], fresh?: boolean }, Json>
   'tree-overlay-stop': Op<NoArgs, null>
   'tree-overlay-tip': Op<boolean, null>
 

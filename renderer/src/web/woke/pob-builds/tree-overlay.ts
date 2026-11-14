@@ -78,10 +78,72 @@ export function probesOf (path: BuildPath, all: Map<number, TreeNode>): number[]
   })
 }
 
-// A node is taken when a lit line touches it; a class start always is.
+// A node is taken when a lit line touches it; a class or ascendancy start
+// always is.
 export function takenNodes (path: BuildPath, lit: boolean[]): Set<number> {
   const taken = new Set<number>()
   path.lines.forEach((l, i) => { if (lit[i]) { taken.add(l.a); taken.add(l.b) } })
-  for (const n of path.nodes) if (n.kind === 'start') taken.add(n.id)
+  for (const n of path.nodes) if (n.kind === 'start' || n.kind === 'ascstart') taken.add(n.id)
   return taken
+}
+
+// ---- the ascendancy panel ----
+
+const ASC_RADIUS: Record<string, number> = { asc: 40, ascstart: 40 }
+const ASC_NOTABLE_RADIUS = 60
+
+// The build's ascendancy: the one most of its ascendancy points are in, so a
+// bloodline's one or two points don't win over the class's own. Null when it
+// has none, or the data is older than ascendancy positions.
+export function buildAscendancy (all: Map<number, TreeNode>, ids: number[]): string | null {
+  const count = new Map<string, number>()
+  for (const id of ids) {
+    const n = all.get(id)
+    if (n?.kind === 'asc' && n.asc) count.set(n.asc, (count.get(n.asc) ?? 0) + 1)
+  }
+  let best: string | null = null
+  for (const [asc, n] of count) if (best == null || n > count.get(best)!) best = asc
+  return best
+}
+
+// Every node of one ascendancy, as the game's Ascendancy panel draws it, for
+// the fit to find the panel by.
+export function ascFitPoints (all: Map<number, TreeNode>, asc: string): { x: number[], y: number[], r: number[] } {
+  const out = { x: [] as number[], y: [] as number[], r: [] as number[] }
+  for (const n of all.values()) {
+    if (n.asc !== asc) continue
+    out.x.push(n.x)
+    out.y.push(n.y)
+    out.r.push(ascRadius(n))
+  }
+  return out
+}
+
+export function ascRadius (n: TreeNode): number {
+  return n.name ? ASC_NOTABLE_RADIUS : ASC_RADIUS[n.kind] ?? 40
+}
+
+// The build's path through its ascendancy, its start included.
+export function ascPath (all: Map<number, TreeNode>, ids: number[], art: TreeArt, asc: string): BuildPath {
+  const inBuild = new Set(ids)
+  const nodes: TreeNode[] = []
+  for (const n of all.values()) {
+    // The start is never in a build's list, yet every path leaves from it.
+    if (n.asc === asc && (inBuild.has(n.id) || n.kind === 'ascstart')) nodes.push(n)
+  }
+  const here = new Set(nodes.map(n => n.id))
+  const lines: BuildLine[] = []
+  const seen = new Set<string>()
+  for (const n of nodes) {
+    for (const id of n.out) {
+      const m = all.get(id)
+      if (!m || !here.has(id)) continue
+      const key = n.id < m.id ? `${n.id}-${m.id}` : `${m.id}-${n.id}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      lines.push({ a: n.id, b: m.id, arc: arcOf(n, m, art) })
+    }
+  }
+  // Its start isn't a point to take, and only shows where a line leaves it.
+  return { nodes: nodes.filter(n => n.kind !== 'ascstart' || lines.some(l => l.a === n.id || l.b === n.id)), lines }
 }

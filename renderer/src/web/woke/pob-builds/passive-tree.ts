@@ -19,9 +19,17 @@ export interface TreeNode {
   radius: number
   // Clockwise from up, in radians.
   angle: number
+  // Ascendancy and ascendancy start nodes: which ascendancy. Their x, y are
+  // GGG's, off the main tree, and mean something only next to each other.
+  // Missing in data older than that, where they all sit at 0, 0, and on
+  // every other node.
+  asc?: string
+  // A moved copy of an ascendancy node, where the build window draws it
+  // (asc-layout.ts). Only those are drawn: the rest sit off the tree.
+  placed?: true
 }
 
-type Row = [number, number, number, NodeKind, string, string[], number[], string, number, number, number]
+type Row = [number, number, number, NodeKind, string, string[], number[], string, number, number, number, string?]
 
 export interface SpriteSheet {
   url: string
@@ -71,8 +79,8 @@ export function withMasteries (nodes: Map<number, TreeNode>, masteries: Record<n
 }
 
 export function readNodes (rows: Row[]): Map<number, TreeNode> {
-  return new Map(rows.map(([id, x, y, kind, name, stats, out, icon, group, radius, angle]) =>
-    [id, { id, x, y, kind, name, stats, out, icon: icon ?? '', group: group ?? 0, radius: radius ?? 0, angle: angle ?? 0 }]))
+  return new Map(rows.map(([id, x, y, kind, name, stats, out, icon, group, radius, angle, asc]) =>
+    [id, { id, x, y, kind, name, stats, out, icon: icon ?? '', group: group ?? 0, radius: radius ?? 0, angle: angle ?? 0, ...(asc ? { asc } : {}) }]))
 }
 
 export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
@@ -153,7 +161,8 @@ export interface Box { x: number, y: number, w: number, h: number }
 
 // The drawn part of the tree around these nodes.
 export function fitBox (nodes: TreeNode[], pad = 900): Box | null {
-  const drawn = nodes.filter(n => n.kind !== 'asc' && n.kind !== 'ascstart' && n.kind !== 'mastery')
+  // Ascendancy nodes count only where they're drawn (placed).
+  const drawn = nodes.filter(n => n.kind !== 'mastery' && ((n.kind !== 'asc' && n.kind !== 'ascstart') || n.placed))
   if (!drawn.length) return null
   const xs = drawn.map(n => n.x)
   const ys = drawn.map(n => n.y)
@@ -167,7 +176,13 @@ export function fitBox (nodes: TreeNode[], pad = 900): Box | null {
 export interface View { zoom: number, ox: number, oy: number }
 
 // Drawn size in tree units, at the size the game gives them.
-export const NODE_RADIUS: Partial<Record<NodeKind, number>> = { small: 34, notable: 54, key: 82, jewel: 54, mastery: 70, start: 40, wormhole: 54 }
+export const NODE_RADIUS: Partial<Record<NodeKind, number>> = { small: 34, notable: 54, key: 82, jewel: 54, mastery: 70, start: 40, wormhole: 54, asc: 40, ascstart: 40 }
+
+// The size a node is drawn at; 0 when it isn't drawn on the tree.
+export function drawnRadius (n: TreeNode): number {
+  if ((n.kind === 'asc' || n.kind === 'ascstart') && !n.placed) return 0
+  return n.kind === 'asc' && n.name ? 60 : NODE_RADIUS[n.kind] ?? 0
+}
 
 // The node nearest a point on the canvas, within reach: never less than `reach`
 // pixels, since small passives are tiny when zoomed out.
@@ -175,7 +190,7 @@ export function nodeAt (nodes: Iterable<TreeNode>, x: number, y: number, view: V
   let best: TreeNode | null = null
   let bestDist = Infinity
   for (const n of nodes) {
-    const r = NODE_RADIUS[n.kind]
+    const r = drawnRadius(n)
     if (!r) continue
     const limit = Math.max(reach, r * view.zoom)
     const dx = n.x * view.zoom + view.ox - x

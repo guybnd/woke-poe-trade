@@ -1,12 +1,16 @@
 <template>
   <canvas v-show="shown" ref="canvas" :class="$style.layer" data-tree-overlay aria-hidden="true" />
-  <div v-if="shown && left != null" :class="$style.count">{{ left ? `${left} to take` : 'Tree done' }}<template v-if="treeTitle"> · {{ treeTitle }}</template></div>
+  <div v-if="shown && left != null" :class="$style.count">
+    {{ countText }}<template v-if="treeTitle"> · {{ treeTitle }}</template>
+    <div v-if="panel === 'tree' && ascNames" :class="$style.asc">Ascendancy: {{ ascNames }}</div>
+  </div>
 </template>
 
 <script setup lang="ts">
 // The active PoB build drawn over the game's own passive tree, from a hotkey.
 // Drawn over the game, so it never takes a click. Only what's still to take
-// shows; lit (allocated) lines in game are left alone.
+// shows; lit (allocated) lines in game are left alone. With the game's
+// Ascendancy panel open, the build's ascendancy path is drawn on that instead.
 import { computed, inject, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
@@ -25,7 +29,7 @@ import type { PobTreeSpec } from './widget'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
-  | { ok: true, fit: Fit, lit: boolean[], width: number, height: number }
+  | { ok: true, panel?: 'tree' | 'asc', fit: Fit, lit: boolean[], width: number, height: number }
   | { ok: false, reason: string }
 
 const canvas = shallowRef<HTMLCanvasElement>()
@@ -33,6 +37,11 @@ const canvas = shallowRef<HTMLCanvasElement>()
 const on = treeOn
 const shown = shallowRef(false)
 const left = shallowRef<number | null>(null)
+// Which the last fit found: the main tree or the Ascendancy panel.
+const panel = shallowRef<'tree' | 'asc'>('tree')
+const countText = computed(() => panel.value === 'asc'
+  ? (left.value ? `${left.value} ascendancy to take` : 'Ascendancy done')
+  : (left.value ? `${left.value} to take` : 'Tree done'))
 // The drawn tree's title, when the build has more than one.
 const treeTitle = shallowRef('')
 
@@ -40,6 +49,16 @@ let all: Map<number, TreeNode> | null = null
 let sentPoints: Map<number, TreeNode> | null = null
 let path: BuildPath | null = null
 let probes: number[][] = []
+// The same for the build's ascendancy; null when it has none.
+let ascPath: BuildPath | null = null
+let ascProbes: number[][] = []
+// The ascendancy drawn, and the one the main process looks for: a handover
+// to another tree can change it.
+let ascName: string | null = null
+let sentAsc: string | null | undefined
+// The tree's ascendancy notables in the build's order, shown under the count
+// on the main tree, so they show even when the panel isn't open.
+const ascNames = shallowRef('')
 let taken = new Set<number>()
 // Following your level (no set picked by hand), a tree you've taken all of
 // hands over to the next one: a guide's "Level 24" tree is done well before
@@ -80,6 +99,7 @@ async function start (quiet = false): Promise<boolean> {
   if (sentPoints !== all) {
     await hostRequest('tree-overlay-points', lib.fitPoints(all))
     sentPoints = all
+    sentAsc = undefined
   }
   treeArt = art
   trees = realSets(d.trees)
@@ -102,7 +122,16 @@ function usePath (tree: PobTreeSpec) {
   drawn = tree
   path = lib!.buildPath(all!, tree.nodes ?? [], treeArt!)
   probes = lib!.probesOf(path, all!)
+  ascName = lib!.buildAscendancy(all!, tree.nodes ?? [])
+  ascPath = ascName ? lib!.ascPath(all!, tree.nodes ?? [], treeArt!, ascName) : null
+  ascProbes = ascPath ? lib!.probesOf(ascPath, all!) : []
+  ascNames.value = (tree.nodes ?? []).map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name).map(n => n!.name).join(' · ')
   treeTitle.value = trees.length > 1 ? tree.title : ''
+}
+
+// The path on screen now: the ascendancy's while its panel is open.
+function shownPath (): BuildPath | null {
+  return panel.value === 'asc' && ascPath ? ascPath : path
 }
 
 function stop () {
@@ -129,7 +158,12 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     await nextTick()
     await frames(2)
     const asked = path
-    const res = await (hostRequest('tree-overlay-fit', { probes, fresh }) as Promise<FitReply>)
+    if (ascName !== sentAsc) {
+      const name = ascName
+      await hostRequest('tree-overlay-asc-points', name ? lib!.ascFitPoints(all!, name) : null)
+      sentAsc = name
+    }
+    const res = await (hostRequest('tree-overlay-fit', { probes, ascProbes, fresh }) as Promise<FitReply>)
     if (hideAll) document.body.style.visibility = ''
     // A new start chose another tree meanwhile: this read was of the old one.
     if (!on.value || path !== asked) return true
@@ -139,9 +173,13 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
       return false
     }
     view = { ...res.fit, width: res.width, height: res.height }
-    taken = lib!.takenNodes(path, res.lit)
-    left.value = path.nodes.filter(n => !taken.has(n.id)).length
-    const next = !left.value && follow && drawn ? treeAfter(trees, drawn, passed) : null
+    panel.value = res.panel === 'asc' && ascPath ? 'asc' : 'tree'
+    const cur = shownPath()!
+    taken = lib!.takenNodes(cur, res.lit)
+    left.value = cur.nodes.filter(n => !taken.has(n.id)).length
+    // Only the main tree hands over: the next tree's ascendancy may well be
+    // the same as this one's.
+    const next = !left.value && follow && drawn && panel.value === 'tree' ? treeAfter(trees, drawn, passed) : null
     if (next) {
       // Read the screen again for the next tree's lines (the finally does).
       passed.add(drawn!)
@@ -168,7 +206,8 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
 
 function draw () {
   const el = canvas.value
-  if (!el || !view || !path || !all) return
+  const cur = shownPath()
+  if (!el || !view || !cur || !all) return
   const W = Math.round(window.innerWidth * devicePixelRatio)
   const H = Math.round(window.innerHeight * devicePixelRatio)
   if (el.width !== W || el.height !== H) { el.width = W; el.height = H }
@@ -187,7 +226,7 @@ function draw () {
   ctx.shadowBlur = 4
   ctx.lineWidth = width
   ctx.beginPath()
-  for (const l of path.lines) {
+  for (const l of cur.lines) {
     if (taken.has(l.a) && taken.has(l.b)) continue
     const a = all.get(l.a)!
     const b = all.get(l.b)!
@@ -198,10 +237,12 @@ function draw () {
   ctx.stroke()
 
   ctx.lineWidth = Math.max(2, 8 * z)
-  for (const n of path.nodes) {
+  for (const n of cur.nodes) {
     if (taken.has(n.id)) continue
-    const r = (NODE_RADIUS[n.kind] ?? 40) * 1.2 * z + 3
-    ctx.strokeStyle = n.kind === 'notable' || n.kind === 'key' || n.kind === 'jewel' ? 'rgba(255, 220, 90, 0.95)' : 'rgba(70, 215, 255, 0.95)'
+    const asc = n.kind === 'asc'
+    const r = (asc ? lib!.ascRadius(n) : NODE_RADIUS[n.kind] ?? 40) * 1.2 * z + 3
+    const big = n.kind === 'notable' || n.kind === 'key' || n.kind === 'jewel' || (asc && n.name !== '')
+    ctx.strokeStyle = big ? 'rgba(255, 220, 90, 0.95)' : 'rgba(70, 215, 255, 0.95)'
     ctx.beginPath()
     ctx.arc(X(n.x), Y(n.y), r, 0, 2 * Math.PI)
     ctx.stroke()
@@ -288,6 +329,7 @@ onUnmounted(() => {
 
 <style module>
 .layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 40; }
+.asc { font-weight: 400; text-align: center; color: rgb(255, 220, 90); }
 .count {
   position: fixed;
   left: 50%;

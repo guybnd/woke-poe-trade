@@ -4,7 +4,7 @@ import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { readNodes } from '@/web/woke/pob-builds/passive-tree'
 import type { TreeArt } from '@/web/woke/pob-builds/passive-tree'
-import { buildPath, fitPoints, probesOf, takenNodes } from '@/web/woke/pob-builds/tree-overlay'
+import { ascFitPoints, ascPath, buildAscendancy, buildPath, fitPoints, probesOf, takenNodes } from '@/web/woke/pob-builds/tree-overlay'
 
 const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/tree/passive-tree.json'), 'utf-8')) as TreeArt & { nodes: Parameters<typeof readNodes>[0] }
 const tree = readNodes(data.nodes)
@@ -57,5 +57,41 @@ describe('build tree overlay', () => {
     expect(taken.has(p.lines[0].a)).toBe(true)
     expect(taken.has(p.lines[0].b)).toBe(true)
     expect(taken.has(ids[ids.length - 1])).toBe(false)
+  })
+})
+
+describe('ascendancy panel', () => {
+  // An Inquisitor taking Righteous Providence then Inevitable Judgement, with
+  // a main tree walk that must not count.
+  const ids = [...walk(3), 662, 53884, 37486, 48214]
+
+  it('finds the ascendancy from the build points', () => {
+    expect(buildAscendancy(tree, ids)).toBe('Inquisitor')
+    expect(buildAscendancy(tree, walk(3))).toBeNull()
+  })
+
+  it('picks the class ascendancy over a bloodline point listed first', () => {
+    const aul = [...tree.values()].find(n => n.asc === 'Aul' && n.kind === 'asc')!
+    expect(buildAscendancy(tree, [aul.id, ...ids])).toBe('Inquisitor')
+  })
+
+  it('fits on every node of that ascendancy only', () => {
+    const pts = ascFitPoints(tree, 'Inquisitor')
+    expect(pts.x.length).toBe(17)
+    // Laid out together, about a panel's width across.
+    expect(Math.max(...pts.x) - Math.min(...pts.x)).toBeLessThan(2000)
+  })
+
+  it('draws the path out from the ascendancy start', () => {
+    const p = ascPath(tree, ids, data, 'Inquisitor')
+    expect(p.nodes.map(n => n.id).sort((a, b) => a - b)).toEqual([662, 37486, 48214, 53884, 61871])
+    expect(p.lines).toHaveLength(4)
+    // The start is taken without a lit line; nothing else is.
+    expect([...takenNodes(p, p.lines.map(() => false))]).toEqual([61871])
+    expect(probesOf(p, tree).every(pr => pr.every(Number.isFinite))).toBe(true)
+  })
+
+  it('keeps ascendancy off the main tree path', () => {
+    expect(buildPath(tree, ids, data).nodes.some(n => n.kind === 'asc' || n.kind === 'ascstart')).toBe(false)
   })
 })
