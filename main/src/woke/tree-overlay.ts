@@ -4,8 +4,8 @@
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import type { UiohookKeyboardEvent, UiohookMouseEvent } from 'uiohook-napi'
 import type { GameWindow } from '../windowing/GameWindow'
-import { fitTree, litLines, litProbes, MIN_SCORE, readScreen } from './tree-fit'
-import type { TreeFit, TreePoints } from './tree-fit'
+import { fitTree, litLines, litProbes, MIN_SCORE, PASSIVE_FIT, readScreen } from './tree-fit'
+import type { FitKind, LitTone, TreeFit, TreePoints } from './tree-fit'
 import { perfRecord } from './perf'
 import { insideGame, TreeDrag } from './tree-drag'
 
@@ -39,9 +39,13 @@ export class TreeOverlay {
   private pending = { dx: 0, dy: 0 }
   private readonly drag = new TreeDrag()
 
+  // kind and tone: the passive tree's by default; the atlas tree's for the
+  // atlas strategy drawing (a second instance).
   constructor (
     private readonly poeWindow: GameWindow,
-    private readonly emit: (e: TreeOverlayEvent) => void
+    private readonly emit: (e: TreeOverlayEvent) => void,
+    private readonly kind: FitKind = PASSIVE_FIT,
+    private readonly tone: LitTone = 'gold'
   ) {}
 
   setPoints (args: { x: number[], y: number[], r: number[] }) {
@@ -66,7 +70,7 @@ export class TreeOverlay {
     const shot = this.poeWindow.screenshot()
     const t1 = performance.now()
     const scr = readScreen(shot, width, height)
-    const fit = fitTree(scr, this.pts, args.fresh ? null : this.last)
+    const fit = fitTree(scr, this.pts, args.fresh ? null : this.last, this.kind)
     const t2 = performance.now()
     perfRecord('Tree overlay: fit', t2 - t0)
     if (!fit || fit.score < MIN_SCORE) {
@@ -76,8 +80,8 @@ export class TreeOverlay {
     }
     this.last = fit
     this.drag.fitted(fit, width, height)
-    const lit = litProbes(shot, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)))
-    const extraLit = this.extra.length ? litLines(shot, width, height, fit, this.extra, this.pts) : []
+    const lit = litProbes(shot, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)), this.tone)
+    const extraLit = this.extra.length ? litLines(shot, width, height, fit, this.extra, this.pts, this.tone) : []
     this.startWatching()
     return {
       ok: true as const,

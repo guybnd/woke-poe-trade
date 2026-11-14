@@ -141,6 +141,9 @@ export interface WokeOps {
   'tree-overlay-fit': Op<{ probes: number[][], extra?: number[][], fresh?: boolean }, Json>
   'tree-overlay-stop': Op<NoArgs, null>
   'tree-overlay-tip': Op<boolean, null>
+  'atlas-overlay-points': Op<{ x: number[], y: number[], r: number[] }, null>
+  'atlas-overlay-fit': Op<{ probes: number[][], extra?: number[][], fresh?: boolean }, Json>
+  'atlas-overlay-stop': Op<NoArgs, null>
 
   // Stores of overlay records
   'doc-get': Op<DocKey, Json>
