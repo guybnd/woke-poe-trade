@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { attributeNeeds, buildTip, gearStats, kindOfNinjaType, parseGemVariant, parseMarkup } from '@/web/woke/ui/tooltip/tip-content'
+import { attributeNeeds, buildTip, dropLines, gearStats, kindOfNinjaType, parseGemVariant, parseMarkup } from '@/web/woke/ui/tooltip/tip-content'
 import type { TipLine, TipModel, TipPack } from '@/web/woke/ui/tooltip/tip-content'
 
 const read = (file: string) => JSON.parse(readFileSync(join(__dirname, '../../public/data/tips', `${file}.json`), 'utf8'))
-const pack: TipPack = { uniques: read('uniques'), gems: read('gems'), items: read('items'), bases: read('bases') }
+const pack: TipPack = { uniques: read('uniques'), gems: read('gems'), items: read('items'), bases: read('bases'), drops: read('drops') }
 
 const text = (line: TipLine) => line.map(p => p.text).join('')
 const all = (model: TipModel | null) => (model?.sections ?? []).flat().map(text)
@@ -90,7 +90,9 @@ describe('uniques with a pool of mods', () => {
     const lines = unique("Watcher's Eye")
     expect(lines).toContain('(4-6)% increased maximum Life')
     expect(lines).toContain('and 84 more mods')
-    expect(lines.length).toBeLessThan(12)
+    // Its drop note (Elder only) comes on top of the cut list.
+    const drop = dropLines(pack.drops!["Watcher's Eye"]).map(text)
+    expect(lines.filter(l => !drop.includes(l)).length).toBeLessThan(12)
   })
   it('lists every mod of a unique that really has this many', () => {
     const lines = unique('The Dancing Duo')
@@ -242,5 +244,23 @@ describe('parseGemVariant and kinds', () => {
     expect(kindOfNinjaType('SkillGem')).toBe('gem')
     expect(kindOfNinjaType('DivinationCard')).toBe('card')
     expect(kindOfNinjaType('Tattoo')).toBe('item')
+  })
+})
+
+describe('where a unique drops', () => {
+  it('says a boss-only unique is a restricted drop, and where it comes from', () => {
+    const lines = all(buildTip(pack, { name: 'Hand of Thought and Motion', kind: 'unique' }))
+    expect(lines).toContain('Restricted drop: not a random drop on its base')
+    expect(lines.some(l => /Esh|Tul|Genesis Tree/.test(l))).toBe(true)
+  })
+
+  it('says nothing for a unique that drops anywhere', () => {
+    const lines = all(buildTip(pack, { name: 'Headhunter', kind: 'unique' }))
+    expect(lines.some(l => /Restricted drop|No longer drops/.test(l))).toBe(false)
+  })
+
+  it('keeps a long source short', () => {
+    const tip = buildTip({ ...pack, drops: { Headhunter: { r: 1, t: 'x'.repeat(400) } } }, { name: 'Headhunter', kind: 'unique' })
+    expect(all(tip).every(l => l.length <= 180)).toBe(true)
   })
 })

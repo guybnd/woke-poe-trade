@@ -12,7 +12,7 @@ const LANGUAGES = ['en', 'ru', 'cmn-Hant', 'ko']
 const FILES = ['items', 'stats'] as const
 // Data every language shares: item tooltips and the passive tree. Only these
 // names are ever fetched, and only when they differ from the app's own copy.
-export const SHARED_FILES = ['tips/bases.json', 'tips/gems.json', 'tips/items.json', 'tips/uniques.json', 'tree/passive-tree.json']
+export const SHARED_FILES = ['tips/bases.json', 'tips/drops.json', 'tips/gems.json', 'tips/items.json', 'tips/uniques.json', 'tree/passive-tree.json']
 const MAX_FILE_BYTES = 32 * 1024 * 1024
 // A stalled download must not hold up every later check.
 const DOWNLOAD_TIMEOUT_MS = 90_000
