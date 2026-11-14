@@ -5,7 +5,7 @@
 // Pure functions here; WidgetRunTimer records and RunReview shows.
 
 import type { CampaignRun } from './run-timer'
-import { actFromAreaId, isTownLike } from './log-parse'
+import { actFromAreaId, isTownLike, parseLogLine, slainName } from './log-parse'
 
 export const TIMELINE_COLLECTION = 'run-timeline'
 // A campaign is about 400 steps (10-12 KB). A run left open into maps keeps
@@ -29,6 +29,12 @@ export interface RunTimeline {
   // Log time (ms) of the last line recorded, so a replay after a restart
   // doesn't record a line twice.
   lastAt: number
+  // Campaign card steps finished, in step order: [run time s, step index,
+  // step text]. A step finished again after stepping back keeps the new time.
+  steps?: Array<[number, number, string]>
+  // Rebuilt from Client.txt after the run: run times are estimated between
+  // the act splits, and there are no step times.
+  rebuilt?: boolean
 }
 
 export function newTimeline (runId: number): RunTimeline {
@@ -87,6 +93,97 @@ export function recordStep (tl: RunTimeline, input: TimelineInput, runMs: number
   tl.ev.push(e)
   tl.lastAt = at
   return true
+}
+
+const MAX_ROUTE_STEPS = 1000
+
+// Campaign card step `index` was finished at run time `runMs`.
+export function recordRouteStep (tl: RunTimeline, index: number, text: string, runMs: number): boolean {
+  const t = Math.max(0, Math.round(runMs / 1000))
+  const label = text.trim().slice(0, 80)
+  const steps = tl.steps ?? (tl.steps = [])
+  const i = steps.findIndex(x => x[1] === index)
+  if (i >= 0) {
+    if (steps[i][0] === t) return false
+    steps.splice(i, 1)
+  } else if (steps.length >= MAX_ROUTE_STEPS) return false
+  steps.push([t, index, label])
+  steps.sort((a, b) => a[1] - b[1])
+  return true
+}
+
+// Stepped back to `index`: it and the steps after it aren't finished any more.
+export function dropRouteStepsFrom (tl: RunTimeline, index: number): boolean {
+  if (!tl.steps?.some(x => x[1] >= index)) return false
+  tl.steps = tl.steps.filter(x => x[1] < index)
+  return true
+}
+
+// ---- rebuilding a past run from Client.txt ----
+
+// Run time (ms) of each log time: exact at the run's start and at each act
+// split (the first entry into the next act), straight lines in between, so
+// pauses and breaks spread over the act they were in.
+function wallToRun (run: CampaignRun, lines: Array<{ at: number, actEntered: number | null }>): (at: number) => number {
+  const anchors: Array<[number, number]> = [[run.startedAt, 0]]
+  // Acts missed while the app was closed get splits that all share the
+  // time of the level-up that filled them in: they mark no act's entry.
+  const shared = new Set(run.splits.filter(s => run.splits.filter(o => o.totalMs === s.totalMs).length > 1).map(s => s.act))
+  let i = 0
+  for (const s of run.splits) {
+    if (shared.has(s.act)) continue
+    while (i < lines.length && lines[i].actEntered !== s.act + 1) i++
+    if (i >= lines.length) break
+    const wall = lines[i].at
+    if (wall > anchors[anchors.length - 1][0] && s.totalMs >= anchors[anchors.length - 1][1]) anchors.push([wall, s.totalMs])
+  }
+  const end = runEndSec(run)
+  if (run.endedAt != null && end != null && run.endedAt > anchors[anchors.length - 1][0] && end * 1000 >= anchors[anchors.length - 1][1]) {
+    anchors.push([run.endedAt, end * 1000])
+  }
+  return (at: number) => {
+    let k = 0
+    while (k + 1 < anchors.length && anchors[k + 1][0] <= at) k++
+    const [w0, r0] = anchors[k]
+    const next = anchors[k + 1]
+    if (!next) return r0 + Math.max(0, at - w0)
+    return r0 + (at - w0) / (next[0] - w0) * (next[1] - r0)
+  }
+}
+
+// A past run's timeline from the Client.txt lines written during it.
+export function rebuildTimeline (run: CampaignRun, raw: Array<{ line: string, at: number }>): RunTimeline {
+  const tl = newTimeline(run.id)
+  tl.rebuilt = true
+  const until = run.endedAt ?? Infinity
+  const lines = raw
+    // Log times are whole seconds; a run started live begins a moment after
+    // its Twilight Strand line.
+    .filter(l => l.at >= run.startedAt - 1000 && l.at <= until)
+    .map(l => {
+      const ev = parseLogLine(l.line)
+      return { ...l, ev, actEntered: ev?.kind === 'area' ? actFromAreaId(ev.areaId) : null }
+    })
+  const runMs = wallToRun(run, lines)
+  let level: number | null = null
+  let pastAct1 = false
+  for (const { line, at, ev } of lines) {
+    if (ev?.kind === 'area') {
+      // The Twilight Strand after act 1 is a new character (walking back to
+      // it in act 1 isn't), the same rule as the live timer.
+      if (ev.areaId === '1_1_1' && pastAct1) break
+      if ((actFromAreaId(ev.areaId) ?? 0) >= 2) pastAct1 = true
+      recordStep(tl, { kind: 'area', areaId: ev.areaId }, runMs(at), at)
+      if (actFromAreaId(ev.areaId) === 11) break // the Epilogue ends the run
+    } else if (ev?.kind === 'zone') recordStep(tl, { kind: 'zone', name: ev.name }, runMs(at), at)
+    else if (ev?.kind === 'level') {
+      if (run.charName && ev.charName === run.charName && ev.level !== level) {
+        level = ev.level
+        recordStep(tl, { kind: 'level', level: ev.level }, runMs(at), at)
+      }
+    } else if (run.charName && slainName(line) === run.charName) recordStep(tl, { kind: 'death' }, runMs(at), at)
+  }
+  return tl
 }
 
 // ---- review ----
@@ -161,7 +258,66 @@ function actAt (run: CampaignRun, t: number): number {
   // Whole seconds on both sides: the area line that starts an act is stored
   // rounded, and must not fall back into the act before.
   for (const s of run.splits) if (t < Math.round(s.totalMs / 1000)) return s.act
-  return run.splits.length ? Math.min(run.splits[run.splits.length - 1].act + 1, 10) : 1
+  return run.splits.length ? Math.min(run.splits[run.splits.length - 1].act + 1, 10) : Math.min(run.act, 10)
+}
+
+// Zone visits of each act, in order (the Epilogue left out).
+export function visitsByAct (run: CampaignRun, visits: ZoneVisit[]): Map<number, ZoneVisit[]> {
+  const out = new Map<number, ZoneVisit[]>()
+  for (const v of visits) {
+    if (v.act === 11) continue
+    const act = actAt(run, v.t)
+    const list = out.get(act)
+    if (list) list.push(v)
+    else out.set(act, [v])
+  }
+  return out
+}
+
+export interface StepRow {
+  index: number
+  text: string
+  act: number
+  // Run time (s) it was finished, and how long it took since the step before.
+  t: number
+  took: number | null
+  // The same step's time in the other run (matched by its text).
+  cmpTook: number | null
+}
+
+function stepTimes (run: CampaignRun, tl: RunTimeline): StepRow[] {
+  const out: StepRow[] = []
+  let prev: [number, number, string] | null = null
+  for (const s of tl.steps ?? []) {
+    // Only right after the step before it: a skipped step has no time, and
+    // nor do steps passed together in one jump (the same moment).
+    const took: number | null = prev && prev[1] === s[1] - 1 && s[0] > prev[0] ? s[0] - prev[0] : null
+    out.push({ index: s[1], text: s[2], act: actAt(run, s[0]), t: s[0], took, cmpTook: null })
+    prev = s
+  }
+  return out
+}
+
+// Campaign card steps finished, with how long each took against the other run.
+export function stepRows (run: CampaignRun, tl: RunTimeline, cmp: CampaignRun | null, cmpTl: RunTimeline | null): StepRow[] {
+  const mine = stepTimes(run, tl)
+  if (!cmp || !cmpTl?.steps?.length) return mine
+  // Many steps share a text ("Logout", "Get waypoint"): match the nth one
+  // with the nth one.
+  const key = (rows: StepRow[]) => {
+    const seen = new Map<string, number>()
+    return rows.map(r => {
+      const n = (seen.get(r.text) ?? 0) + 1
+      seen.set(r.text, n)
+      return `${n}|${r.text}`
+    })
+  }
+  const theirRows = stepTimes(cmp, cmpTl)
+  const theirKeys = key(theirRows)
+  const theirs = new Map<string, number | null>()
+  theirRows.forEach((r, i) => theirs.set(theirKeys[i], r.took))
+  const myKeys = key(mine)
+  return mine.map((r, i) => ({ ...r, cmpTook: theirs.get(myKeys[i]) ?? null }))
 }
 
 function sumByAct (run: CampaignRun, visits: ZoneVisit[]): Map<number, Map<string, ZoneSum>> {

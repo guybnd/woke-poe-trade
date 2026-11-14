@@ -149,3 +149,117 @@ describe('act of a zone', () => {
     expect(acts.map(a => [a.act, a.zones.map(z => z.areaId)])).toEqual([[1, ['1_1_3']], [2, ['1_2_1', '1_2_2']]])
   })
 })
+
+describe('campaign card steps', () => {
+  it('keeps one time per step and drops steps undone by stepping back', async () => {
+    const { recordRouteStep, dropRouteStepsFrom, stepRows } = await import('@/web/woke/campaign/run-timeline')
+    const tl = newTimeline(1)
+    recordRouteStep(tl, 0, 'Enter The Twilight Strand', 10 * S)
+    recordRouteStep(tl, 1, 'Kill Hillock', 70 * S)
+    recordRouteStep(tl, 3, 'Take the waypoint', 200 * S)
+    expect(recordRouteStep(tl, 1, 'Kill Hillock', 70 * S)).toBe(false)
+    const rows = stepRows(run(1, [1000]), tl, null, null)
+    // Step 3 came after a skipped step 2: no time of its own.
+    expect(rows.map(r => [r.index, r.took])).toEqual([[0, null], [1, 60], [3, null]])
+    expect(dropRouteStepsFrom(tl, 1)).toBe(true)
+    expect(tl.steps!.map(s => s[1])).toEqual([0])
+    recordRouteStep(tl, 1, 'Kill Hillock', 90 * S)
+    expect(tl.steps).toEqual([[10, 0, 'Enter The Twilight Strand'], [90, 1, 'Kill Hillock']])
+  })
+
+  it('compares a step with the same step in the other run', async () => {
+    const { recordRouteStep, stepRows } = await import('@/web/woke/campaign/run-timeline')
+    const mine = newTimeline(1)
+    recordRouteStep(mine, 0, 'A', 10 * S)
+    recordRouteStep(mine, 1, 'B', 50 * S)
+    const other = newTimeline(2)
+    recordRouteStep(other, 4, 'A', 5 * S)
+    recordRouteStep(other, 5, 'B', 35 * S)
+    const rows = stepRows(run(1, [1000]), mine, run(2, [1000]), other)
+    expect(rows[1]).toMatchObject({ took: 40, cmpTook: 30 })
+  })
+})
+
+describe('rebuilding a run from Client.txt', () => {
+  it('times zones between the act splits and keeps only its own character', async () => {
+    const { rebuildTimeline } = await import('@/web/woke/campaign/run-timeline')
+    const { lineTime } = await import('@/web/woke/campaign/log-tail')
+    const t0 = new Date(2026, 10, 4, 18, 0, 0).getTime()
+    const at = (sec: number) => {
+      const d = new Date(t0 + sec * 1000)
+      const p = (n: number) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} 1 abc`
+    }
+    const raw = [
+      `${at(0)} [DEBUG Client 1] Generating level 1 area "1_1_1" with seed 1`,
+      `${at(1)} [INFO Client 1] : You have entered The Twilight Strand.`,
+      `${at(60)} [INFO Client 1] : Tester (Witch) is now level 2`,
+      `${at(61)} [INFO Client 1] : Someone (Duelist) is now level 40`,
+      `${at(100)} [INFO Client 1] : Tester has been slain.`,
+      `${at(101)} [INFO Client 1] : Someone has been slain.`,
+      `${at(200)} [DEBUG Client 1] Generating level 13 area "1_2_1" with seed 1`,
+      // A break of an hour: the run timer was paused, the log clock wasn't.
+      `${at(4000)} [DEBUG Client 1] Generating level 14 area "1_2_2" with seed 1`,
+      `${at(4100)} [DEBUG Client 1] Generating level 15 area "1_3_1" with seed 1`,
+      `${at(9000)} [DEBUG Client 1] Generating level 1 area "1_1_1" with seed 2`
+    ].map(line => ({ line, at: lineTime(line)! }))
+    const r = run(t0, [180, 600])
+    r.startedAt = t0 + 400 // a live start lands a moment after its line
+    r.endedAt = t0 + 4100 * S
+    r.charName = 'Tester'
+    const tl = rebuildTimeline(r, raw)
+    expect(tl.rebuilt).toBe(true)
+    expect(tl.zones.map(z => z[0])).toEqual(['1_1_1', '1_2_1', '1_2_2', '1_3_1'])
+    expect(levelSteps(tl)).toEqual([[54, 2]])
+    expect(deathCount(tl)).toBe(1)
+    // Exact at the splits: act 2 entered at 180 s, act 3 at 600 s.
+    expect(tl.ev.filter(e => e[1] === 'z').map(e => e[0])).toEqual([0, 180, 589, 600])
+  })
+})
+
+describe('review fixes', () => {
+  it('compares repeated step texts one by one', async () => {
+    const { recordRouteStep, stepRows } = await import('@/web/woke/campaign/run-timeline')
+    const mine = newTimeline(1)
+    const other = newTimeline(2)
+    ;[[0, 'Logout', 10], [1, 'Kill', 20], [2, 'Logout', 60]].forEach(([i, t, s]) => recordRouteStep(mine, i as number, t as string, (s as number) * S))
+    ;[[0, 'Logout', 10], [1, 'Kill', 15], [2, 'Logout', 20]].forEach(([i, t, s]) => recordRouteStep(other, i as number, t as string, (s as number) * S))
+    const rows = stepRows(run(1, [1000]), mine, run(2, [1000]), other)
+    expect(rows.map(r => [r.took, r.cmpTook])).toEqual([[null, null], [10, 5], [40, 5]])
+  })
+
+  it('keeps rebuilding after a walk back to the Twilight Strand in act 1', async () => {
+    const { rebuildTimeline } = await import('@/web/woke/campaign/run-timeline')
+    const t0 = new Date(2026, 10, 4, 18, 0, 0).getTime()
+    const l = (sec: number, text: string) => ({ line: `x [DEBUG Client 1] ${text}`, at: t0 + sec * S })
+    const r = run(t0, [300])
+    r.charName = 'Tester'
+    r.endedAt = t0 + 400 * S
+    const tl = rebuildTimeline(r, [
+      l(0, 'Generating level 1 area "1_1_1" with seed 1'),
+      { line: 'x [INFO Client 1] : Tester (Witch) is now level 2', at: t0 + 50 * S },
+      l(80, 'Generating level 13 area "1_1_town" with seed 1'),
+      l(100, 'Generating level 1 area "1_1_1" with seed 1'),
+      l(150, 'Generating level 2 area "1_1_2" with seed 1'),
+      l(300, 'Generating level 13 area "1_2_1" with seed 1')
+    ])
+    expect(tl.zones.map(z => z[0])).toEqual(['1_1_1', '1_1_town', '1_1_2', '1_2_1'])
+  })
+
+  it('skips splits filled in together by a later level-up', async () => {
+    const { rebuildTimeline } = await import('@/web/woke/campaign/run-timeline')
+    const t0 = new Date(2026, 10, 4, 18, 0, 0).getTime()
+    const l = (sec: number, id: string) => ({ line: `x [DEBUG Client 1] Generating level 1 area "${id}" with seed 1`, at: t0 + sec * S })
+    // Acts 2 and 3 were done with the app closed; a level-up in act 4 at
+    // run time 900 s filled in both splits.
+    const r = run(t0, [100, 900, 900])
+    r.endedAt = t0 + 1000 * S
+    const tl = rebuildTimeline(r, [l(0, '1_1_1'), l(100, '1_2_1'), l(400, '1_3_1'), l(700, '1_4_1')])
+    const times = tl.ev.filter(e => e[1] === 'z').map(e => e[0])
+    expect(times[0]).toBe(0)
+    expect(times[1]).toBe(100)
+    // Spread between the act 2 entry and the run's end, not stacked on 900.
+    expect(times[2]).toBeGreaterThan(100)
+    expect(times[2]).toBeLessThan(times[3])
+  })
+})

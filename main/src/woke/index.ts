@@ -17,6 +17,7 @@ import { perfRecord } from './perf'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 import type { GameLogWatcher } from '../host-files/GameLogWatcher'
 import { readGameLogTail } from './game-log-tail'
+import { readLogRange } from './game-log-range'
 import { perfSnapshot, startProcessSampler } from './perf'
 import { hotkeyFailures } from './hotkey-failures'
 import { marketHandlers } from './market-store'
@@ -78,6 +79,7 @@ export function registerWokeHandler<K extends WokeOp> (op: K, handler: WokeHandl
 
 export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameWindow, gameLog: GameLogWatcher): void {
   registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
+  registerWokeHandler('game-log-range', async (args) => await readLogRange(gameLog.actualPath, Number(args?.from), Number(args?.to)))
   // Follow the running game's Client.txt (another drive, another Steam
   // library) instead of a stale copy in a default folder.
   poeWindow.onAttach(() => { gameLog.gameStarted().catch(() => {}) })

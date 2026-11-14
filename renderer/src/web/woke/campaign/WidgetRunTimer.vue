@@ -189,6 +189,8 @@ import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
 import { actLabel, slainName } from './log-parse'
 import type { LogEvent } from './log-parse'
 import RunReview from './RunReview.vue'
+import { onStepChange } from './step-bus'
+import type { StepChange } from './step-bus'
 import { deleteTimelines, timelineRecorder } from './run-timeline-store'
 import {
   applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
@@ -264,6 +266,38 @@ if (trash.length) {
     props.config.timelineTrash = (props.config.timelineTrash ?? []).filter(id => !trash.includes(id))
   })
 }
+
+// Campaign card steps. The card and this timer read the same log lines one
+// after the other, so a step can arrive before the line that started its
+// run: changes wait until this timer has applied the lines it was given.
+const stepChanges: StepChange[] = []
+let stepFlush = false
+// Each widget catches up on the log by itself after a start, so until this
+// timer has, its run may still be the one from before the app was closed.
+let timerCaughtUp = false
+function applyStepChanges () {
+  stepFlush = false
+  const r = props.config.run
+  // No run yet: the line that starts it may still be on its way.
+  if (!r || !timerCaughtUp) {
+    if (stepChanges.length > 2000) stepChanges.splice(0, stepChanges.length - 2000)
+    return
+  }
+  for (const e of stepChanges.splice(0)) {
+    if (r.finished || e.at < r.startedAt - 1000) continue
+    // The card follows whoever levels; only this run's character counts.
+    if (r.charName && e.charName && r.charName !== e.charName) continue
+    if (e.step < e.prev) recorder.routeBack(r.id, e.step)
+    for (const d of e.done) recorder.routeStep(r.id, d.index, d.text, runElapsed(r, e.at))
+  }
+}
+onUnmounted(onStepChange((e) => {
+  stepChanges.push(e)
+  if (!stepFlush) {
+    stepFlush = true
+    setTimeout(applyStepChanges, 0)
+  }
+}))
 
 const now = shallowRef(Date.now())
 // Ticks only while the widget is on screen.
@@ -342,6 +376,7 @@ function recordLine (ev: LogEvent | null, line: string, at: number, prevLevel: n
 }
 
 function applyLines (lines: LogLine[]) {
+  setTimeout(applyStepChanges, 0)
   let changed = false
   for (const { ev, at, line } of lines) {
     const before = props.config.run
@@ -364,7 +399,14 @@ function applyLines (lines: LogLine[]) {
 // Splits reached while the app was closed, timed by the log's own clock.
 followGameLog({
   since: () => props.config.lastLogAt,
-  onLines: (lines) => applyLines(lines)
+  onLines: (lines, live) => {
+    applyLines(lines)
+    if (live && !timerCaughtUp) { timerCaughtUp = true; applyStepChanges() }
+  },
+  // The replay and the lines held during it come right after the read.
+  onTail: () => {
+    setTimeout(() => { timerCaughtUp = true; applyStepChanges() }, 0)
+  }
 })
 
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {

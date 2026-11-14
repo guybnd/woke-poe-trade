@@ -100,6 +100,8 @@ export interface WokeOps {
   'live-data-cached': Op<{ language: unknown, bundled: number }, number | null>
   'live-data-check': Op<{ language: unknown, bundled: number, bundledShared?: unknown }, number | null>
   'game-log-tail': Op<{ bytes?: number } | NoArgs, { path: string | null, lines: string[] }>
+  // Zone, level-up and death lines written between two times (ms).
+  'game-log-range': Op<{ from: number, to: number }, { path: string | null, lines: string[] }>
   'personal-flag': Op<NoArgs, WokePersonalState>
   'personal-set': Op<{ on: boolean }, WokePersonalState>
   'experimental-set': Op<{ unlocked: boolean }, WokePersonalState>
@@ -145,6 +147,9 @@ export interface WokeOps {
   'doc-list': Op<{ collection: string }, Json[]>
   'doc-put': Op<DocKey & { value: Json }, Ok>
   'doc-delete': Op<DocKey, Ok>
+  // True when the document's file is there, false when it isn't; throws when
+  // that can't be told (a locked folder), so a caller never takes it as missing.
+  'doc-exists': Op<DocKey, boolean>
   'death-recap-read': Op<NoArgs, { deaths: Json[], runs: Json[] }>
   'death-recap-write': Op<{ deaths: Json[], runs: Json[] }, Ok>
   'market-save': Op<{ snapshot: Json, daily: Json[] }, Ok>
