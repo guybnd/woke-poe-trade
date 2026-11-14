@@ -83,7 +83,8 @@ import { treeHotkeyOf } from './widget'
 import { useActiveBuild } from './active'
 import { hideTip, showTipAt, tip } from '../ui/tooltip/tooltip'
 import { realSets } from './build-model'
-import { fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, passiveTreeClusters, treeDiff, withMasteries } from './passive-tree'
+import { drawnRadius, fitBox, loadPassiveTree, nodeAt, nodeNote, nodeState, NODE_RADIUS, passiveTreeArt, passiveTreeClusters, treeDiff, withMasteries } from './passive-tree'
+import { placeAscendancies } from './asc-layout'
 import { buildClusters } from './cluster-graph'
 import type { TreeNode, View } from './passive-tree'
 import { filterTotals, groupTotals, matchingNodes, treeTotals } from './tree-totals'
@@ -168,10 +169,16 @@ const clusterBuild = computed(() => {
   }
   return built
 })
+// The trees' ascendancies, each in its bubble outside the main tree.
+const ascBuild = computed(() => {
+  const t = baseTree.value
+  if (!t) return null
+  return placeAscendancies(t, new Set([...(shown.value?.nodes ?? []), ...(previous.value?.nodes ?? [])]))
+})
 const tree = computed(() => {
   const t = baseTree.value
-  const added = clusterBuild.value?.nodes
-  if (!t || !added?.length) return t
+  const added = [...(clusterBuild.value?.nodes ?? []), ...(ascBuild.value?.nodes ?? [])]
+  if (!t || !added.length) return t
   const all = new Map(t)
   for (const n of added) all.set(n.id, n)
   return all
@@ -302,6 +309,7 @@ function draw () {
     sheets: sheets.value,
     from: fromSet.value,
     to: toSet.value,
+    bubbles: ascBuild.value?.bubbles,
     colours: { keep: colour('--w-accent'), add: colour('--w-up'), remove: colour('--w-down'), off: colour('--w-line-strong'), bg: colour('--w-panel-solid-base') }
   })
   drawJewels(ctx, t, colour)
@@ -359,7 +367,7 @@ function drawRing () {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   const px = pxRatio()
   const circle = (n: TreeNode, colour: string, grow: number, width: number) => {
-    const r = NODE_RADIUS[n.kind]
+    const r = drawnRadius(n)
     if (!r) return
     ctx.beginPath()
     ctx.arc(n.x * view.value.zoom + view.value.ox, n.y * view.value.zoom + view.value.oy, r * view.value.zoom + grow * px, 0, 2 * Math.PI)
@@ -532,9 +540,9 @@ function setHovered (n: TreeNode | null) {
       : undefined
   showTipAt(ring.value, {
     kind: 'passive',
-    name: shownNode.name || (n.kind === 'start' ? 'Class start' : 'Passive'),
+    name: shownNode.name || (n.kind === 'start' ? 'Class start' : n.kind === 'ascstart' ? 'Ascendancy start' : n.kind === 'asc' ? 'Ascendancy passive' : 'Passive'),
     stats: picked?.stats.length ? picked.stats : shownNode.stats,
-    frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' ? 'rare' : 'normal',
+    frame: n.kind === 'key' ? 'unique' : n.kind === 'notable' || n.kind === 'jewel' || (n.kind === 'asc' && n.name) ? 'rare' : 'normal',
     note: [nodeNote(nodeState(n.id, fromSet.value, toSet.value)), was, changedNote].filter(Boolean).join(' · ') || undefined
   })
 }

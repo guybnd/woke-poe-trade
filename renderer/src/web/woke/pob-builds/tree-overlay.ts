@@ -92,14 +92,18 @@ export function takenNodes (path: BuildPath, lit: boolean[]): Set<number> {
 const ASC_RADIUS: Record<string, number> = { asc: 40, ascstart: 40 }
 const ASC_NOTABLE_RADIUS = 60
 
-// The build's ascendancy: the one its ascendancy points are in. Null when it
+// The build's ascendancy: the one most of its ascendancy points are in, so a
+// bloodline's one or two points don't win over the class's own. Null when it
 // has none, or the data is older than ascendancy positions.
 export function buildAscendancy (all: Map<number, TreeNode>, ids: number[]): string | null {
+  const count = new Map<string, number>()
   for (const id of ids) {
     const n = all.get(id)
-    if (n?.kind === 'asc' && n.asc) return n.asc
+    if (n?.kind === 'asc' && n.asc) count.set(n.asc, (count.get(n.asc) ?? 0) + 1)
   }
-  return null
+  let best: string | null = null
+  for (const [asc, n] of count) if (best == null || n > count.get(best)!) best = asc
+  return best
 }
 
 // Every node of one ascendancy, as the game's Ascendancy panel draws it, for

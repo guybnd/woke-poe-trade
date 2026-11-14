@@ -52,6 +52,9 @@ let probes: number[][] = []
 // The same for the build's ascendancy; null when it has none.
 let ascPath: BuildPath | null = null
 let ascProbes: number[][] = []
+// The ascendancy drawn, and the one the main process looks for: a handover
+// to another tree can change it.
+let ascName: string | null = null
 let sentAsc: string | null | undefined
 // The tree's ascendancy notables in the build's order, shown under the count
 // on the main tree, so they show even when the panel isn't open.
@@ -98,11 +101,6 @@ async function start (quiet = false): Promise<boolean> {
     sentPoints = all
     sentAsc = undefined
   }
-  const asc = lib.buildAscendancy(all, tree.nodes)
-  if (asc !== sentAsc) {
-    await hostRequest('tree-overlay-asc-points', asc ? lib.ascFitPoints(all, asc) : null)
-    sentAsc = asc
-  }
   treeArt = art
   trees = realSets(d.trees)
   follow = !active.loadout.value?.skillSet
@@ -124,8 +122,8 @@ function usePath (tree: PobTreeSpec) {
   drawn = tree
   path = lib!.buildPath(all!, tree.nodes ?? [], treeArt!)
   probes = lib!.probesOf(path, all!)
-  const asc = lib!.buildAscendancy(all!, tree.nodes ?? [])
-  ascPath = asc ? lib!.ascPath(all!, tree.nodes ?? [], treeArt!, asc) : null
+  ascName = lib!.buildAscendancy(all!, tree.nodes ?? [])
+  ascPath = ascName ? lib!.ascPath(all!, tree.nodes ?? [], treeArt!, ascName) : null
   ascProbes = ascPath ? lib!.probesOf(ascPath, all!) : []
   ascNames.value = (tree.nodes ?? []).map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name).map(n => n!.name).join(' · ')
   treeTitle.value = trees.length > 1 ? tree.title : ''
@@ -160,6 +158,11 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     await nextTick()
     await frames(2)
     const asked = path
+    if (ascName !== sentAsc) {
+      const name = ascName
+      await hostRequest('tree-overlay-asc-points', name ? lib!.ascFitPoints(all!, name) : null)
+      sentAsc = name
+    }
     const res = await (hostRequest('tree-overlay-fit', { probes, ascProbes, fresh }) as Promise<FitReply>)
     if (hideAll) document.body.style.visibility = ''
     // A new start chose another tree meanwhile: this read was of the old one.

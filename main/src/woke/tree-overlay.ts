@@ -4,7 +4,7 @@
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import type { UiohookKeyboardEvent, UiohookMouseEvent } from 'uiohook-napi'
 import type { GameWindow } from '../windowing/GameWindow'
-import { fitTree, litProbes, MIN_SCORE, readScreen } from './tree-fit'
+import { fitScreen, litProbes, readScreen } from './tree-fit'
 import type { TreeFit, TreePoints } from './tree-fit'
 import { perfRecord } from './perf'
 import { insideGame, TreeDrag } from './tree-drag'
@@ -27,10 +27,6 @@ const MODIFIERS = new Set<number>([
 
 // After the last scroll or key, wait this long for the game to redraw.
 const SETTLE_MS = 160
-
-// The Ascendancy panel's nodes all sit lit-or-framed on a dark disc: a real
-// fit puts nearly every one on something bright.
-const ASC_MIN_HITS = 0.85
 
 export class TreeOverlay {
   private pts: TreePoints | null = null
@@ -76,19 +72,18 @@ export class TreeOverlay {
     const shot = this.poeWindow.screenshot()
     const t1 = performance.now()
     const scr = readScreen(shot, width, height)
-    // The Ascendancy panel opens over the tree: look for it first.
-    const ascFit = this.ascPts ? fitTree(scr, this.ascPts, !args.fresh && this.panel === 'asc' ? this.last : null) : null
-    const onAsc = ascFit != null && ascFit.hits >= ASC_MIN_HITS
-    const fit = onAsc ? ascFit : fitTree(scr, this.pts, args.fresh || this.panel !== 'tree' ? null : this.last)
+    const found = fitScreen(scr, this.pts, this.ascPts, args.fresh || !this.last ? null : { panel: this.panel, fit: this.last })
     const t2 = performance.now()
     perfRecord('Tree overlay: fit', t2 - t0)
-    if (!fit || fit.score < MIN_SCORE) {
+    if (!found) {
       this.last = null
       this.stopWatching()
       return { ok: false as const, reason: 'no-tree', ms: Math.round(t2 - t0) }
     }
+    const { fit } = found
+    const onAsc = found.panel === 'asc'
     this.last = fit
-    this.panel = onAsc ? 'asc' : 'tree'
+    this.panel = found.panel
     this.drag.fitted(fit, width, height)
     const probes = (onAsc ? args.ascProbes : args.probes) ?? []
     const lit = litProbes(shot, width, height, fit, probes.map(p => Float32Array.from(p)))

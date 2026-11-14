@@ -70,6 +70,11 @@ describe('ascendancy panel', () => {
     expect(buildAscendancy(tree, walk(3))).toBeNull()
   })
 
+  it('picks the class ascendancy over a bloodline point listed first', () => {
+    const aul = [...tree.values()].find(n => n.asc === 'Aul' && n.kind === 'asc')!
+    expect(buildAscendancy(tree, [aul.id, ...ids])).toBe('Inquisitor')
+  })
+
   it('fits on every node of that ascendancy only', () => {
     const pts = ascFitPoints(tree, 'Inquisitor')
     expect(pts.x.length).toBe(17)
