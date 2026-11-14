@@ -288,6 +288,17 @@ export function nextFightZone (route: Route, current: number, data: RouteData): 
   return null
 }
 
+// The step's line about where to go, for the always-on pill: the first sub
+// line that isn't shopping, chat commands or level notes.
+const NOT_A_HINT = /^(Vendor|Buy|Put|Type|Farm Level|High chance)\b/i
+export function areaHint (step: RouteStep): string | null {
+  for (const sub of step.subs) {
+    const text = sub.map(p => p.text).join('').replace(/\s+/g, ' ').trim()
+    if (text && !NOT_A_HINT.test(text)) return text
+  }
+  return null
+}
+
 // Best guess of where you are on a freshly built route (options changed).
 export function resyncTo (route: Route, areaId: string): number {
   const i = route.steps.findIndex(s => entersArea(s, areaId))

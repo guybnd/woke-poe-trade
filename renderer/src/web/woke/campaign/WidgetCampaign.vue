@@ -78,7 +78,7 @@ import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
 import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, advanceOnTrial, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { areaName, bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -291,7 +291,7 @@ const readouts = computed(() => {
     level: s.value.level,
     xp: xp.value,
     step: current.value ? current.value.parts.map(p => p.text).join('') : null,
-    hint: current.value?.subs[0]?.map(p => p.text).join('').trim() || null
+    hint: current.value ? areaHint(current.value) : null
   })
 })
 
