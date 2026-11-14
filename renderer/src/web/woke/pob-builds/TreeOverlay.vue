@@ -131,7 +131,9 @@ function usePath (tree: PobTreeSpec) {
   // One read of the screen checks both: the passives' lines, then the
   // ascendancy's.
   probes = [...lib!.probesOf(path, placed!), ...(ascPath ? lib!.probesOf(ascPath, placed!) : [])]
-  ascNames.value = (tree.nodes ?? []).map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name).map(n => n!.name).join(' · ')
+  // Named for the class's own ascendancy, drawn or not (bloodlines aside).
+  const main = asc ?? lib!.buildAscendancy(all!, ids)
+  ascNames.value = ids.map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name && n.asc === main).map(n => n!.name).join(' · ')
   treeTitle.value = trees.length > 1 ? tree.title : ''
 }
 
@@ -146,6 +148,7 @@ function stop () {
   on.value = false
   shown.value = false
   left.value = null
+  ascLeft.value = 0
   view = null
   hostRequest('tree-overlay-stop', null).catch(() => {})
 }

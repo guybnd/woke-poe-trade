@@ -43,6 +43,26 @@ describe('ascendancy bubble', () => {
     expect(Math.hypot(bubble.x - duelist.x, bubble.y - duelist.y)).toBeCloseTo(BUBBLE_FROM_START, 5)
   })
 
+  it('places an ascendancy over the game only where measured, never over passives', () => {
+    const main = nodes.filter(n => ['small', 'notable', 'key', 'jewel', 'mastery'].includes(n.kind))
+    for (const name of new Set(nodes.filter(n => n.kind === 'ascstart' && n.asc).map(n => n.asc!))) {
+      const point = nodes.find(n => n.asc === name && n.kind === 'asc')
+      if (!point) continue
+      const lay = placeAscendancies(tree, new Set([point.id]), data, base, true)
+      for (const b of lay.bubbles) {
+        // Its art may cover the class start's frame, never a passive.
+        for (const n of main) expect(Math.hypot(n.x - b.x, n.y - b.y), `${name} over ${n.id}`).toBeGreaterThan(b.r * 0.9)
+      }
+      if (name !== 'Slayer' && name !== 'Gladiator' && name !== 'Champion') expect(lay.nodes, name).toHaveLength(0)
+    }
+  })
+
+  it('draws an unmeasured class where GGG places it in the window', () => {
+    const inq = nodes.find(n => n.asc === 'Inquisitor' && n.kind === 'asc')!
+    const lay = placeAscendancies(tree, new Set([inq.id]), data, base)
+    expect(lay.nodes.find(n => n.id === inq.id)).toMatchObject({ x: inq.x, y: inq.y, placed: true })
+  })
+
   it('draws a bloodline in place in the window, never over the game', () => {
     const aul = nodes.find(n => n.asc === 'Aul' && n.kind === 'asc')!
     expect(placeAscendancies(tree, new Set([slayerPoint.id, aul.id]), data, base).bubbles).toHaveLength(2)
