@@ -62,6 +62,13 @@ describe('advanceOnKill', () => {
     }
   })
 
+  it('a line said again later in the visit moves nothing', () => {
+    for (const b of BOSS_DONE_LINES) {
+      const i = killStep(route, b.area, b.kill)
+      for (let at = i + 1; at < i + 15; at++) expect(advanceOnKill(route, at, b.area, b.kill), b.kill).toBe(at)
+    }
+  })
+
   it('needs the zone to match the step', () => {
     const i = killStep(route, '2_6_8', 'Abberath')
     expect(advanceOnKill(route, i, '2_6_9', 'Abberath')).toBe(i)
