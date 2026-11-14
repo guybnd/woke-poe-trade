@@ -2,7 +2,7 @@
   <span ref="rootEl" :class="$style.root" :data-dock="host.props.id">
     <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.glow]: host.props.glow }]"
       :title="wm.active.value ? `${host.props.title}${host.props.wmId != null ? ' · click to open' : ''}` : undefined"
-      @click="click" @contextmenu.prevent="openIconMenu">
+      @click="click" @contextmenu.prevent="openIconMenu" @wheel="onWheel">
       <svg v-if="host.props.progress != null" :class="$style.ring" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
         <circle cx="18" cy="18" r="16" :class="$style.ringTrack" />
         <circle cx="18" cy="18" r="16" :class="$style.ringFill" pathLength="100" :stroke-dasharray="`${Math.min(1, Math.max(0, host.props.progress)) * 100} 100`" transform="rotate(-90 18 18)" />
@@ -51,6 +51,7 @@ import { Host } from '@/web/background/IPC'
 import { useHoverZone } from '../shared/hover'
 import type { DockEntry } from './dock'
 import { DOCK_NAMES, dockArt, dockCardOwner, dockConfig, dockIcon, dockPinId, holdOpen, openOverlay } from './dock'
+import { wheelStep } from './wheel'
 import { addPin, isPinned } from '../pins/pins'
 import { clickWhilePlaying } from './click'
 import DockMenu from './DockMenu.vue'
@@ -248,6 +249,14 @@ function toggleCard () {
   if (timer) { clearTimeout(timer); timer = null }
   showCard.value = false
   props.host.pinned = null
+}
+
+function onWheel (e: WheelEvent) {
+  const wheel = props.host.props.wheel
+  if (!wheel) return
+  e.preventDefault()
+  const dir = wheelStep(e)
+  if (dir) wheel(dir)
 }
 
 function click () {

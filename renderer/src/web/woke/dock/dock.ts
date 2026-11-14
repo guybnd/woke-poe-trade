@@ -49,6 +49,8 @@ export interface DockItemProps {
   pinnable?: boolean
   // This icon's own rows in its right-click menu.
   menu?: DockMenuAction[]
+  // The mouse wheel over the icon: 1 for down (forward), -1 for up.
+  wheel?: (dir: 1 | -1) => void
   // A count of new things (offers, hits). When it goes up, a dismissed icon
   // comes back, unless it was dismissed for good.
   wake?: number
