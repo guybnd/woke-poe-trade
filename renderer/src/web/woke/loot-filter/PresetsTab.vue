@@ -35,7 +35,7 @@
     <div :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.quiet.on">Quiet mode: sounds only for tiers 1 to</WToggle>
-        <WSelect :model-value="String(p.quiet.keepTiers)" :options="[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
+        <WSelect :model-value="String(p.quiet.keepTiers)" :options="[2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
           aria-label="Loudest tiers kept" @update:model-value="v => p.quiet.keepTiers = Number(v)" />
         <WInfo text="Lower tiers keep their look and beam, just no alert sound." />
       </div>
@@ -167,7 +167,7 @@
     <div :class="$style.card">
       <div class="flex items-center gap-2">
         <WToggle v-model="p.beams.on">Beams and map icons only for tiers 1 to</WToggle>
-        <WSelect :model-value="String(p.beams.keepTiers)" :options="[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
+        <WSelect :model-value="String(p.beams.keepTiers)" :options="[2, 3, 4, 5].map(n => ({ value: String(n), label: String(n) }))" style="width: 4rem;"
           aria-label="Tiers that keep beams" @update:model-value="v => p.beams.keepTiers = Number(v)" />
         <WInfo text="Lower tiers keep their label colours and sound." />
       </div>
@@ -215,10 +215,13 @@ const props = defineProps<{
 const p = computed(() => props.config.presets)
 const SWAPS: Record<string, string> = { Green: 'Blue', Brown: 'Yellow', Red: 'Orange', Pink: 'Purple' }
 
+// What the price presets keep, read from NeverSink's file as it came.
+const guard = () => props.store.sourceGuard.value ?? undefined
+
 const cheap = computed(() => {
   const doc = props.store.doc.value
   const lookup = props.store.prices.lookup.value
-  return doc && lookup ? cheapCurrencyBases(doc, lookup, p.value.cheapCurrency.chaos) : []
+  return doc && lookup ? cheapCurrencyBases(doc, lookup, p.value.cheapCurrency.chaos, guard()) : []
 })
 
 const cheapChaos = computed({
@@ -268,12 +271,12 @@ const volumePercent = inRange(() => p.value.volume.percent, v => { p.value.volum
 const cards = computed(() => {
   const doc = props.store.doc.value
   const lookup = props.store.prices.lookup.value
-  return doc && lookup && p.value.cheapCards.on ? [...cheapCards(doc, lookup, p.value.cheapCards.chaos).values()].flat() : null
+  return doc && lookup && p.value.cheapCards.on ? [...cheapCards(doc, lookup, p.value.cheapCards.chaos, guard()).values()].flat() : null
 })
 const splinters = computed(() => {
   const doc = props.store.doc.value
   const lookup = props.store.prices.lookup.value
-  return doc && lookup && p.value.cheapSplinters.on ? [...cheapSplinters(doc, lookup, p.value.cheapSplinters.chaos).values()].flat() : null
+  return doc && lookup && p.value.cheapSplinters.on ? [...cheapSplinters(doc, lookup, p.value.cheapSplinters.chaos, guard()).values()].flat() : null
 })
 function priceNote (list: string[] | null): string {
   if (!props.store.prices.lookup.value) return 'Waiting for poe.ninja prices.'
@@ -287,7 +290,7 @@ const uniqueNote = computed(() => {
   if (!props.store.prices.items.value.length || !doc || !p.value.cheapUniques.on) return 'Waiting for poe.ninja prices.'
   const d = p.value.dust
   const keep = [...(d.on ? neverSinkDustBases(doc) : []), ...(d.on && d.fromPrices ? dustList.value : []), ...(build.value?.uniqueBases ?? [])]
-  return priceNote(cheapUniqueBases(doc, props.store.prices.breakdown.value, p.value.cheapUniques.chaos, keep))
+  return priceNote(cheapUniqueBases(doc, props.store.prices.breakdown.value, p.value.cheapUniques.chaos, keep, guard()))
 })
 // Auto with no build hides nothing, so every chip shows as kept.
 const keptWeapons = computed(() => archetypeClasses(p.value, build.value?.weaponClasses ?? null) ?? WEAPON_CLASSES)

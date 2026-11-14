@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   FILTERS, PRECIOUS, SETUPS, blockLook, compose, dropLook, isNeverSinkBlock, isRedBeam,
-  harshName, pairSetups, presets, source, hostilePrices
+  pairSetups, presets, source, hostilePrices
 } from '../helpers/filter-guard'
 import type { Look } from '../helpers/filter-guard'
 
@@ -92,13 +92,13 @@ function report (): string {
   L.push('- NeverSink\'s rules are never removed or reordered; the presets only add rules and change actions.')
   L.push('- With no prices, or only thin (unreliable) prices, the cheap currency, card, unique and splinter presets hide nothing.')
   L.push('- If you hide NeverSink\'s top currency tier yourself, Divines go (your call), and the safety net brings them back with a sound and beam, even with every preset at its harshest.')
+  const crash = compose(FILTERS[1].text, { name: 'crash', netOn: true, presets: presets({ cheapCurrency: { on: true, chaos: 1 } }) }, hostilePrices({ 'Divine Orb': 0.5 })).doc
+  L.push(`- **A wrong price can't make the cheap presets hide a top drop.** The cheap currency, card, unique and splinter presets never hide what NeverSink gives a red beam in its plain tiers, in the stack it lights it up from (a single Divine, a 6-stack of Ancient Orbs, 80 Maraketh splinters), nor a base a top unique shares with cheap ones (Headhunter, Mageblood). With Divine Orb listed at 0.5c and "hide currency under 1c" on, Divines are ${dropLook(crash, PRECIOUS[1].facts).shown ? 'still shown' : 'HIDDEN'}. With every price at 0.01c, no red-beam currency, splinter or card stack hides on any file, and the presets still hide the rest.`)
+  L.push(`- **Quiet mode and fewer beams keep at least tiers 1 and 2** (both wear NeverSink's red beam); a setting saved at 1 reads as 2. Taken away on Regular when saved at 1: ${changesFor('Quiet mode and fewer beams saved at 1 tier')}.`)
   L.push('')
   L.push('## Open (not settled)')
   L.push('')
-  const sacred = changesFor(harshName('quiet'))
-  L.push(`- **Quiet mode and beams at 1 tier** take NeverSink's second tier too, which wears a red beam. On Regular: ${sacred}. The default (2 tiers) keeps them. Should the lowest setting be 2?`)
-  const crash = compose(FILTERS[1].text, { name: 'crash', netOn: true, presets: presets({ cheapCurrency: { on: true, chaos: 1 } }) }, hostilePrices({ 'Divine Orb': 0.5 })).doc
-  L.push(`- **A wrong price can hide a top drop.** The price presets trust poe.ninja: if Divine Orb were listed at 0.5c, "hide currency under 1c" would hide it (${dropLook(crash, PRECIOUS[1].facts).shown ? 'shown' : 'hidden'} in this check, safety net on too, since the net reads the same prices). The same goes for cards and uniques. A guard could skip anything NeverSink gives a red beam. Pinned as a known gap in \`filter-guard.test.ts\`.`)
+  L.push('- **Price tiers moving items on a wrong price.** The price tiers feature (not the presets) can still move a top-tier item down on a wrong poe.ninja price that isn\'t marked thin or jumpy. Not covered by the guard yet.')
   L.push('- **Item tier from a real drop.** The tiered gear check gives the drop its item tier by hand: the copied item text doesn\'t show it yet (WOKEPOET-153), so the in-game preview can\'t judge those rules.')
   L.push('')
   return L.join('\n')

@@ -57,7 +57,7 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | No presets | nothing |
 | Hide cheap currency (under 50c) | nothing |
 | Chaos recipe (every slot) | nothing |
-| Quiet mode (keeps tier 1 only) | Sacred Orb: sound off; 21 red-beam rules silenced |
+| Quiet mode (keeps tiers 1-2, the least it allows) | nothing |
 | Bigger labels (size 45) | nothing |
 | Colour-blind colours | nothing |
 | 6-socket items | nothing |
@@ -72,14 +72,13 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Hide R-G-B items | nothing |
 | Quality gems and flasks | nothing |
 | Drop sound volume (5%) | nothing |
-| Fewer beams (tier 1 only) | Sacred Orb: beam and map icon off; 21 red-beam rules lose their beam |
+| Fewer beams (tiers 1-2, the least it allows) | nothing |
 | Weapons for your build (no weapon types kept) | nothing |
 | Label look (smallest text, no background, grey) | nothing |
-| Quiet mode (default, keeps tiers 1-2) | nothing |
-| Fewer beams (default, tiers 1-2) | nothing |
+| Quiet mode and fewer beams saved at 1 tier | nothing |
 | Every preset, default settings | nothing |
-| Every preset, harshest settings | Sacred Orb: sound and beam and map icon off; 21 red-beam rules silenced; 21 red-beam rules lose their beam |
-| Every preset, harshest, safety net on | Sacred Orb: sound and beam and map icon off; 21 red-beam rules silenced; 21 red-beam rules lose their beam |
+| Every preset, harshest settings | nothing |
+| Every preset, harshest, safety net on | nothing |
 
 Also: all 190 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests).
 
@@ -90,9 +89,10 @@ Also: all 190 pairs of presets at their harshest (on Regular and Uber+), and 200
 - NeverSink's rules are never removed or reordered; the presets only add rules and change actions.
 - With no prices, or only thin (unreliable) prices, the cheap currency, card, unique and splinter presets hide nothing.
 - If you hide NeverSink's top currency tier yourself, Divines go (your call), and the safety net brings them back with a sound and beam, even with every preset at its harshest.
+- **A wrong price can't make the cheap presets hide a top drop.** The cheap currency, card, unique and splinter presets never hide what NeverSink gives a red beam in its plain tiers, in the stack it lights it up from (a single Divine, a 6-stack of Ancient Orbs, 80 Maraketh splinters), nor a base a top unique shares with cheap ones (Headhunter, Mageblood). With Divine Orb listed at 0.5c and "hide currency under 1c" on, Divines are still shown. With every price at 0.01c, no red-beam currency, splinter or card stack hides on any file, and the presets still hide the rest.
+- **Quiet mode and fewer beams keep at least tiers 1 and 2** (both wear NeverSink's red beam); a setting saved at 1 reads as 2. Taken away on Regular when saved at 1: nothing.
 
 ## Open (not settled)
 
-- **Quiet mode and beams at 1 tier** take NeverSink's second tier too, which wears a red beam. On Regular: Sacred Orb: sound off; 21 red-beam rules silenced. The default (2 tiers) keeps them. Should the lowest setting be 2?
-- **A wrong price can hide a top drop.** The price presets trust poe.ninja: if Divine Orb were listed at 0.5c, "hide currency under 1c" would hide it (hidden in this check, safety net on too, since the net reads the same prices). The same goes for cards and uniques. A guard could skip anything NeverSink gives a red beam. Pinned as a known gap in `filter-guard.test.ts`.
+- **Price tiers moving items on a wrong price.** The price tiers feature (not the presets) can still move a top-tier item down on a wrong poe.ninja price that isn't marked thin or jumpy. Not covered by the guard yet.
 - **Item tier from a real drop.** The tiered gear check gives the drop its item tier by hand: the copied item text doesn't show it yet (WOKEPOET-153), so the in-game preview can't judge those rules.
