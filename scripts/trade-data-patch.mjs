@@ -49,7 +49,7 @@ async function fetchList (kind) {
 // Just what the diff reads, so the snapshot stays small.
 function compact (kind, groups) {
   if (kind === 'stats') return groups.flatMap(g => g.entries.map(e => ({ id: e.id, text: e.text, type: e.type })))
-  if (kind === 'items') return groups.flatMap(g => g.entries.map(e => ({ group: g.id, name: e.name ?? null, type: e.type })))
+  if (kind === 'items') return groups.flatMap(g => g.entries.map(e => ({ group: g.id, name: e.name ?? null, type: e.type, ...(e.disc ? { disc: e.disc } : {}) })))
   return groups.flatMap(g => g.entries.filter(e => e.text).map(e => ({ group: g.id, id: e.id, text: e.text, image: e.image ?? '' })))
 }
 
@@ -295,7 +295,12 @@ export function diff (before, after, statLines, itemLines) {
   const oldItems = new Set(before.items.map(key))
   for (const e of after.items) {
     if (oldItems.has(key(e))) continue
+    // A map, Scrying Orb or Mercenary Warrant variant: its "type" is an
+    // internal key ("43432", "AbyssalTemplar"), not a name. (A unique's
+    // variants carry its name and are caught by it below.)
+    if (e.disc && !e.name) continue
     const name = e.name ?? e.type
+    if (!/[a-z]/i.test(name)) continue
     if (names.has(name)) continue
     if (e.name) {
       report.newItems.push({ name, refName: name, namespace: 'UNIQUE', unique: { base: e.type }, icon: '' })
@@ -305,6 +310,8 @@ export function diff (before, after, statLines, itemLines) {
       else if (e.group === 'monster') report.newItems.push({ name, refName: name, namespace: 'CAPTURED_BEAST', icon: '' })
       // Armour and weapons need their category for mod search: added by hand.
       else if (GEAR_GROUPS.has(e.group)) report.skipped.push(`${e.group}: ${name} (no category)`)
+      // A gem needs its gem data (levels, Transfigured names): added by hand.
+      else if (e.group === 'gem') report.skipped.push(`gem: ${name} (no gem data)`)
       // A league's new kind of item (3.30's Wickerman trophies): known by name,
       // so price check and lookups at least recognise it.
       else {

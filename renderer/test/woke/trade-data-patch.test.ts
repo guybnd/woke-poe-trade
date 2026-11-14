@@ -8,6 +8,24 @@ type Line = { ref: string, better: number, matchers: Array<{ string: string }>, 
 const line = (ref: string, ids: Record<string, string[]>, matchers = [ref]): Line =>
   ({ ref, better: 1, matchers: matchers.map(string => ({ string })), trade: { ids } })
 
+describe('items the hourly run must not add', () => {
+  it('skips variant keys, nameless types and gems', () => {
+    const r = diff({ stats: [], items: [], static: [] }, {
+      stats: [],
+      items: [
+        { group: 'map', name: null, type: '43432', disc: 'blighted' },
+        { group: 'sentinel', name: null, type: 'AbyssalTemplar', disc: 'warrant' },
+        { group: 'currency', name: null, type: '12345' },
+        { group: 'gem', name: null, type: 'Arcane Link' },
+        { group: 'jewel', name: null, type: 'Mycelium Core' }
+      ],
+      static: []
+    }, [], [])
+    expect(r.newItems.map((i: { name: string }) => i.name)).toEqual(['Mycelium Core'])
+    expect(r.skipped).toEqual(['gem: Arcane Link (no gem data)'])
+  })
+})
+
 describe('moved trade stat ids', () => {
   it('moves a granted skill to its new id and new words, folding the stand-in stat', () => {
     const anger = line('Grants Level # Anger Skill', { explicit: ['explicit.stat_1'], implicit: ['implicit.stat_1'], fractured: ['fractured.stat_1'] })
