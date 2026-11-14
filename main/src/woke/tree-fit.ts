@@ -118,27 +118,6 @@ export function readScreen (bgra: Uint8Array, width: number, height: number): Sc
   return { width, height, dark, thr, map, mw, mh, mean, peaks: Float32Array.from(peaks), hudTop, headX0, headX1, headY }
 }
 
-// The Ascendancy panel's nodes all sit framed on a dark disc: a real fit puts
-// nearly every one on something bright.
-const ASC_MIN_HITS = 0.85
-
-// Which the screen shows: the main tree, or (only when that isn't found) the
-// build's ascendancy on the game's Ascendancy panel. A handful of ascendancy
-// points matches somewhere on almost any tree screen, so it never wins over
-// a main tree fit.
-export function fitScreen (
-  scr: Screen,
-  pts: TreePoints,
-  ascPts: TreePoints | null,
-  hint: { panel: 'tree' | 'asc', fit: TreeFit } | null
-): { panel: 'tree' | 'asc', fit: TreeFit } | null {
-  const tree = fitTree(scr, pts, hint?.panel === 'tree' ? hint.fit : null)
-  if (tree) return { panel: 'tree', fit: tree }
-  if (!ascPts) return null
-  const asc = fitTree(scr, ascPts, hint?.panel === 'asc' ? hint.fit : null)
-  return asc && asc.hits >= ASC_MIN_HITS ? { panel: 'asc', fit: asc } : null
-}
-
 // The zoom steps for this window height.
 export function zoomSteps (height: number): number[] {
   return STEPS_1440.map(z => z * height / REF_H)
@@ -181,15 +160,12 @@ export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } |
 function hough (scr: Screen, pts: TreePoints, z: number): Array<[number, number]> {
   // Keep in step with refine().
   const bin = Math.max(8, 30 * z)
-  // Offsets that leave some of the points on screen: from the points' own
-  // extent, since an ascendancy sits far out where the main tree doesn't.
-  const [px0, px1] = extent(pts.x)
-  const [py0, py1] = extent(pts.y)
-  const pad = 250 * z
-  const x0 = -px1 * z - pad
-  const y0 = -py1 * z - pad
-  const nx = Math.ceil((scr.width - px0 * z + pad - x0) / bin)
-  const ny = Math.ceil((scr.height - py0 * z + pad - y0) / bin)
+  // Offsets that leave some of the tree on screen.
+  const span = 9200 * z
+  const x0 = -span
+  const y0 = -span
+  const nx = Math.ceil((2 * span + scr.width) / bin)
+  const ny = Math.ceil((2 * span + scr.height) / bin)
   const acc = new Uint16Array(nx * ny)
   const { peaks } = scr
   const n = pts.x.length
@@ -215,13 +191,6 @@ function hough (scr: Screen, pts: TreePoints, z: number): Array<[number, number]
     }
   }
   return top.map(([j]) => [x0 + ((j % nx) + 0.5) * bin, y0 + (Math.floor(j / nx) + 0.5) * bin])
-}
-
-function extent (v: Float32Array): [number, number] {
-  let lo = Infinity
-  let hi = -Infinity
-  for (const a of v) { if (a < lo) lo = a; if (a > hi) hi = a }
-  return lo <= hi ? [lo, hi] : [0, 0]
 }
 
 // Share of the nodes on screen that sit on something node-bright.

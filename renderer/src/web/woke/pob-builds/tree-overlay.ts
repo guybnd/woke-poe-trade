@@ -87,7 +87,9 @@ export function takenNodes (path: BuildPath, lit: boolean[]): Set<number> {
   return taken
 }
 
-// ---- the ascendancy panel ----
+// ---- the ascendancy, in its bubble on the tree ----
+
+export { placeAscendancies } from './asc-layout'
 
 const ASC_RADIUS: Record<string, number> = { asc: 40, ascstart: 40 }
 const ASC_NOTABLE_RADIUS = 60
@@ -104,19 +106,6 @@ export function buildAscendancy (all: Map<number, TreeNode>, ids: number[]): str
   let best: string | null = null
   for (const [asc, n] of count) if (best == null || n > count.get(best)!) best = asc
   return best
-}
-
-// Every node of one ascendancy, as the game's Ascendancy panel draws it, for
-// the fit to find the panel by.
-export function ascFitPoints (all: Map<number, TreeNode>, asc: string): { x: number[], y: number[], r: number[] } {
-  const out = { x: [] as number[], y: [] as number[], r: [] as number[] }
-  for (const n of all.values()) {
-    if (n.asc !== asc) continue
-    out.x.push(n.x)
-    out.y.push(n.y)
-    out.r.push(ascRadius(n))
-  }
-  return out
 }
 
 export function ascRadius (n: TreeNode): number {
