@@ -309,13 +309,12 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 function removeRun (id: number) {
   const before = props.config.history
   const compareBefore = props.config.compareTo
-  const trashBefore = props.config.timelineTrash ?? []
   props.config.history = before.filter(r => r.id !== id)
-  props.config.timelineTrash = [...trashBefore, id]
+  props.config.timelineTrash = [...(props.config.timelineTrash ?? []), id]
   if (props.config.compareTo === id) props.config.compareTo = null
   toast('Run deleted', {
     anchor: panel.value?.el,
-    undo: () => { props.config.history = before; props.config.compareTo = compareBefore; props.config.timelineTrash = trashBefore }
+    undo: () => { props.config.history = before; props.config.compareTo = compareBefore; props.config.timelineTrash = (props.config.timelineTrash ?? []).filter(x => x !== id) }
   })
 }
 function lastSplit (r: CampaignRun) {

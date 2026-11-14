@@ -158,7 +158,9 @@ export interface ActSum {
 // The act a visit counts toward: the act you were in by the run's splits, so
 // a trip back to an earlier town counts toward the act you were doing.
 function actAt (run: CampaignRun, t: number): number {
-  for (const s of run.splits) if (t * 1000 < s.totalMs) return s.act
+  // Whole seconds on both sides: the area line that starts an act is stored
+  // rounded, and must not fall back into the act before.
+  for (const s of run.splits) if (t < Math.round(s.totalMs / 1000)) return s.act
   return run.splits.length ? Math.min(run.splits[run.splits.length - 1].act + 1, 10) : 1
 }
 

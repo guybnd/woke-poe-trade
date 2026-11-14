@@ -1,7 +1,7 @@
 <template>
   <div>
     <div :class="$style.sum">
-      <span class="w-trunc">{{ run.className || 'Unknown' }}<template v-if="run.level != null"> {{ run.level }}</template> · {{ date }}</span>
+      <span class="w-trunc">{{ who }} · {{ date }}</span>
       <span v-if="deaths != null">Deaths <span class="w-num">{{ deaths }}</span></span>
       <span v-if="town != null">Town <span class="w-num">{{ formatClock(town * 1000) }}</span></span>
       <span>Run <span class="w-num">{{ total != null ? formatClock(total) : '—' }}</span></span>
@@ -98,6 +98,7 @@ watch(() => [props.run.id, props.cmp?.id], async () => {
   state.value = mine && mine.ev.length ? 'ready' : 'none'
 }, { immediate: true })
 
+const who = computed(() => [props.run.className || 'Unknown', props.run.level].filter(x => x != null).join(' '))
 const date = computed(() => new Date(props.run.startedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }))
 const total = computed(() => runTotal(props.run) ?? (props.run.splits.length ? props.run.splits[props.run.splits.length - 1].totalMs : props.run.elapsedMs))
 const visits = computed(() => tl.value ? zoneVisits(tl.value, runEndSec(props.run)) : null)
@@ -164,7 +165,7 @@ const chart = computed(() => {
 .chart { display: block; width: 100%; height: auto; padding: 6px var(--w-pad) 0; box-sizing: border-box; }
 .gridLine { stroke: var(--w-line); stroke-width: 0.6; }
 .actLine { stroke: var(--w-line-strong); stroke-width: 0.6; stroke-dasharray: 2 3; }
-.axis { fill: var(--w-faint); font-size: 8px; font-family: var(--w-num); }
+.axis { fill: var(--w-faint); font-size: var(--w-fs-xs); font-family: var(--w-num); }
 .minePath { fill: none; stroke: var(--w-accent); stroke-width: 1.5; }
 .cmpPath { fill: none; stroke: var(--w-info); stroke-width: 1.2; }
 .legend { display: flex; gap: 12px; padding: 0 var(--w-pad) 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px solid var(--w-line); }

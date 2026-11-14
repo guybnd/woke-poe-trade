@@ -137,3 +137,15 @@ describe('timeline files of dropped runs', () => {
     expect(w.timelineTrash).toEqual([5000])
   })
 })
+
+describe('act of a zone', () => {
+  it('puts the zone that starts an act in that act, whatever the split rounds to', () => {
+    const tl = newTimeline(1)
+    // The split and the area line share one run time, 1234.4 s.
+    recordStep(tl, area('1_1_3'), 1000 * S, 1)
+    recordStep(tl, area('1_2_1'), 1_234_400, 2)
+    recordStep(tl, area('1_2_2'), 1300 * S, 3)
+    const acts = zonesByAct(run(1, [1234.4, 1400]), tl, null, null)
+    expect(acts.map(a => [a.act, a.zones.map(z => z.areaId)])).toEqual([[1, ['1_1_3']], [2, ['1_2_1', '1_2_2']]])
+  })
+})
