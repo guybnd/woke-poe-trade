@@ -458,6 +458,9 @@ describe('next step', () => {
     // Already handed over from: never back round.
     const loop = [t('A', [1]), t('B', [2])]
     expect(treeAfter(loop, loop[1], new Set([loop[0]]))).toBeNull()
+    // Past the last stage, file order never leads back to an earlier stage.
+    const late = [t('Endgame', [1, 2, 3]), t('Level 33', [1, 4])]
+    expect(treeAfter(late, late[0])).toBeNull()
   })
 
   it('says which gems come and go', () => {

@@ -444,8 +444,11 @@ export function nextSet<T extends { title: string, divider?: boolean }> (items: 
 export function treeAfter (trees: PobTreeSpec[], current: PobTreeSpec, passed: Set<PobTreeSpec> = new Set()): PobTreeSpec | null {
   const have = new Set(current.nodes ?? [])
   const seen = new Set([current, ...passed])
+  // File order past the last stage can lead back to an earlier one.
+  const at = stageOf(current.title)
+  const lvl = (s: Stage | null) => s ? (s.kind === 'end' ? Infinity : stageLevel(s)) : -1
   for (let t = nextSet(trees, current); t && !seen.has(t); t = nextSet(trees, t)) {
-    if ((t.nodes ?? []).some(id => !have.has(id))) return t
+    if (lvl(stageOf(t.title)) >= lvl(at) && (t.nodes ?? []).some(id => !have.has(id))) return t
     seen.add(t)
   }
   return null
