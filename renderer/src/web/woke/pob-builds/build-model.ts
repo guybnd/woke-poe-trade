@@ -203,6 +203,20 @@ export function linkGroups (groups: PobSkillGroup[], max = 3): PobSkillGroup[] {
   return [...(main ? [main] : []), ...rest].slice(0, max)
 }
 
+// Every gem group the build uses, for the full Links list: the main one
+// first, then the rest by item in inventory order (swap weapons after the
+// worn gear, groups tied to no item last), PoB's order within an item.
+// Single gems count: an aura or a movement skill is a socket you fill too.
+// Skills the tree or a mechanic grants are left out, as on the Gear tab:
+// nothing for you to socket.
+export function allLinkGroups (groups: PobSkillGroup[]): PobSkillGroup[] {
+  const main = mainGroupOf(groups)
+  const rank = (g: PobSkillGroup) => g.slot ? gearOrder(g.slot) : GEAR_ORDER.length + 1
+  const rest = groups.filter(g => g !== main && g.enabled && activeGems(g).length && !(g.source && !g.slot))
+    .sort((a, b) => rank(a) - rank(b))
+  return [...(main ? [main] : []), ...rest]
+}
+
 // Active skill(s) first, then supports, in PoB order.
 export function orderedGems (group: PobSkillGroup): PobGem[] {
   const gems = activeGems(group)

@@ -8,7 +8,7 @@ import type { ObjectDirective } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
-import { buildTip, kindOfNinjaType, packFiles } from './tip-content'
+import { buildTip, dropOf, kindOfNinjaType, packFiles } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { offerItem, openItemMenu } from './item-menu'
@@ -100,9 +100,19 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   return marketFromRow(info, ref)
 }
 
+// Marks the uniques on a base that won't turn up as a random drop on it.
+function withDrops (uniques: TipBaseUnique[], drops: TipPack['drops']): TipBaseUnique[] {
+  return uniques.map(u => {
+    const d = dropOf(drops, u.name)
+    return d?.d || d?.r ? { ...u, drop: 'restricted' as const } : u
+  })
+}
+
 async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, market: TipMarket | null, uniques?: TipBaseUnique[] }> {
-  const uniques = ref.uniques?.()
-  if (uniques?.length) {
+  const listed = ref.uniques?.()
+  if (listed?.length) {
+    await loadFile('drops')
+    const uniques = withDrops(listed, pack.drops)
     usePoeninja().queuePricesFetch()
     // The list comes most valuable first: that one in full, then all of them.
     // With no prices yet there's no telling which is best, so just the list.

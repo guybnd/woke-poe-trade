@@ -9,7 +9,7 @@
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
       <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule. Works on your inventory, stash and labels on the ground. Hold Alt to reach items your filter hides.` : undefined" @paste.capture="onSearchPaste">
-        <WField v-model="search" type="search" icon="fas fa-search" placeholder="Find an item, or paste one to see its rule" style="width: 19rem;" />
+        <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
     </template>
     <template v-if="store.error.value || banner" #banner>
@@ -52,21 +52,9 @@
           @select="selectGroup" @group-menu="groupMenu" />
       </div>
 
-      <!-- tiers or search results -->
+      <!-- tiers -->
       <div :class="$style.mid" class="w-scroll">
-        <template v-if="search.trim().length >= 2">
-          <div class="w-group-label">Search results</div>
-          <WEmpty v-if="!results.length" icon="fas fa-search">No rule lists an item matching "{{ search }}".</WEmpty>
-          <WListItem v-for="r in results" :key="`${r.base}|${r.type}|${r.tier}`" @select="jumpTo(r.type, r.tier, r.base)">
-            <span class="flex items-center gap-2 w-full min-w-0">
-              <LabelPreview :text="r.base" :actions="r.block.actions" :visibility="r.block.visibility" :extras="false" />
-              <span class="grow" />
-              <span class="w-dim text-xs w-trunc">{{ ruleLabel(r.type, r.tier) }}</span>
-            </span>
-          </WListItem>
-        </template>
-
-        <template v-else-if="selType === RULE_TYPE">
+        <template v-if="selType === RULE_TYPE">
           <div class="flex items-center gap-2" :class="$style.groupHead">
             <span :class="$style.groupTitle">Rules you made</span>
             <span class="w-faint text-xs">top of the filter, first one wins</span>
@@ -270,7 +258,8 @@
     </div>
 
     <KeepAlive>
-      <PreviewTab v-if="store.doc.value && tab === 'preview'" :store="store" :config="config" :anchor="panel?.el" @open-rule="openRule" />
+      <PreviewTab v-if="store.doc.value && tab === 'preview'" :store="store" :config="config" :anchor="panel?.el" :picks="previewPicks" @open-rule="openRule"
+        @drop-pick="key => previewPicks = previewPicks.filter(p => p.key !== key)" />
     </KeepAlive>
 
     <template #footer>
@@ -293,11 +282,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
+import ItemSearchField from './ItemSearchField.vue'
+import type { SearchItem } from './item-search'
+import type { FilterRarity } from './item-facts'
 import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
@@ -330,7 +322,7 @@ import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, labelCss } from './label-style'
 import type { AddResult } from './groups'
-import { buildTree, byPrice, findBase, groupName, pickBases } from './groups'
+import { buildTree, byPrice, groupName, pickBases } from './groups'
 import type { GroupNode, TierNode } from './groups'
 import { hostRequest } from '../shared/host'
 import { BUILD_RULE_TYPE, LEVELLING_BELOW, WEAPON_CLASSES } from './build-rules'
@@ -397,7 +389,14 @@ watch(tierItems, (list) => {
   if (picked.value.some(b => !list.includes(b))) picked.value = picked.value.filter(b => list.includes(b))
 })
 const isOwnGroup = computed(() => selType.value === OWN_RULE_TYPE)
-const results = computed(() => props.store.doc.value ? findBase(props.store.doc.value, search.value) : [])
+// The search box shows items as they drop where you are now.
+const searchAreaLevel = computed(() => props.store.areaLevel.value ?? props.config.fallbackAreaLevel)
+// Items searched on the Preview tab lie on its ground, newest first, a few at most.
+const previewPicks = shallowRef<Array<{ key: string, item: SearchItem, rarity: FilterRarity }>>([])
+function dropPick (p: { item: SearchItem, rarity: FilterRarity }) {
+  const key = `${p.item.kind}|${p.item.name}|${p.item.gear ? p.rarity : ''}`
+  previewPicks.value = [{ key, ...p }, ...previewPicks.value.filter(x => x.key !== key)].slice(0, 6)
+}
 const targets = computed(() => props.store.doc.value && selType.value ? moveTargets(props.store.doc.value, selType.value) : [])
 const outName = computed(() => props.config.sourceName ? outputName(props.config) : '—')
 
@@ -552,8 +551,8 @@ function onMouseBack (e: MouseEvent) {
 onMounted(() => window.addEventListener('mouseup', onMouseBack))
 onUnmounted(() => window.removeEventListener('mouseup', onMouseBack))
 
-function openRule (rule: { type: string, tier: string | null }) {
-  if (rule.tier) jumpTo(rule.type, rule.tier)
+function openRule (rule: { type: string, tier: string | null, base?: string }) {
+  if (rule.tier) jumpTo(rule.type, rule.tier, rule.base)
   else { rememberPlace(); search.value = ''; tab.value = 'rules'; selectGroup(rule.type) }
 }
 

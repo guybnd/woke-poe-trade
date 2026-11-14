@@ -45,6 +45,8 @@ export interface TipBaseUnique {
   // Says what the price means: "worth it", "trash".
   label: string
   thin: boolean
+  // Not a random drop on this base: only from somewhere in particular.
+  drop?: 'restricted'
 }
 
 export interface LookupTip {

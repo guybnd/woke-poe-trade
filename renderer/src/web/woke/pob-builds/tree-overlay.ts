@@ -61,10 +61,10 @@ function arcOf (n: TreeNode, m: TreeNode, art: TreeArt): BuildLine['arc'] {
 }
 
 // Points along the middle of each line (clear of the node frames), flat x, y.
-export function probesOf (path: BuildPath, all: Map<number, TreeNode>): number[][] {
+export function probesOf (path: BuildPath, all: Map<number, TreeNode>, at = [0.35, 0.42, 0.5, 0.58, 0.65]): number[][] {
   return path.lines.map(l => {
     const out: number[] = []
-    for (const t of [0.35, 0.42, 0.5, 0.58, 0.65]) {
+    for (const t of at) {
       if (l.arc) {
         const a = l.arc.from + (l.arc.to - l.arc.from) * t
         out.push(l.arc.cx + Math.cos(a) * l.arc.r, l.arc.cy + Math.sin(a) * l.arc.r)
@@ -76,6 +76,47 @@ export function probesOf (path: BuildPath, all: Map<number, TreeNode>): number[]
     }
     return out
   })
+}
+
+// ---- nodes taken in game that the build doesn't have ----
+
+// Every line the game draws between two passives, outside the build: when
+// one is lit, a point was spent there.
+export function offBuildLines (all: Map<number, TreeNode>, ids: number[], art: TreeArt): BuildLine[] {
+  const inBuild = new Set(ids)
+  const every = buildPath(all, [...all.keys()], art).lines
+  return every.filter(l => !(inBuild.has(l.a) && inBuild.has(l.b)))
+}
+
+// Points along most of each line, flat x, y. The main process skips any that
+// land on a node's frame, so these may run close to the ends.
+export function lineProbes (lines: BuildLine[], all: Map<number, TreeNode>): number[][] {
+  return probesOf({ nodes: [], lines }, all, [0.12, 0.22, 0.32, 0.42, 0.5, 0.58, 0.68, 0.78, 0.88])
+}
+
+// The nodes to refund: off the build, joined by lit lines to something known
+// to be taken (taken: the build's lit nodes and its class start). A lit line
+// with no such link is left out: likely gold art read as a line, or a branch
+// leaving the screen we can't follow. keep: nodes you'd take later anyway
+// (a later tree of a levelling guide), never told to refund.
+export function refundNodes (lines: BuildLine[], lit: boolean[], taken: Set<number>, keep: Set<number>): Set<number> {
+  const next = new Map<number, number[]>()
+  const link = (a: number, b: number) => { const l = next.get(a); if (l) l.push(b); else next.set(a, [b]) }
+  lines.forEach((l, i) => { if (lit[i]) { link(l.a, l.b); link(l.b, l.a) } })
+  const reached = new Set<number>()
+  const queue = [...taken].filter(id => next.has(id))
+  for (const id of queue) reached.add(id)
+  while (queue.length) {
+    const id = queue.pop()!
+    for (const m of next.get(id) ?? []) {
+      if (reached.has(m)) continue
+      reached.add(m)
+      queue.push(m)
+    }
+  }
+  const out = new Set<number>()
+  for (const id of reached) if (!taken.has(id) && !keep.has(id)) out.add(id)
+  return out
 }
 
 // A node is taken when a lit line touches it; a class or ascendancy start

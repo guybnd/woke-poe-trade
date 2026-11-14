@@ -49,7 +49,7 @@
         <NextSection v-if="nextTree || nextGems_ || gearStep" :config="config" :tree="nextTree ?? null" :diff="treeData ? nextTreeDiff : null"
           :gems="nextGems_" :gear="gearStep" :pin="() => nextPin(entry.relPath, entry.name)" @tree="emit('tree', $event)" />
         <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
-        <div v-for="(g, i) in shownLinks" :key="i" :class="$style.linkGroup">
+        <div v-for="g in shownLinks" :key="groupKey(shownSet!.groups, g)" :class="$style.linkGroup">
           <div :class="$style.link">
             <SocketDots :colours="linkColours(g)" />
             <span v-if="linkItem(g)" :class="$style.linkItem" class="ml-auto text-xs whitespace-nowrap"
@@ -204,11 +204,11 @@ import GemName from './GemName.vue'
 import NextSection from './NextSection.vue'
 import SocketDots from './SocketDots.vue'
 import PinButton from '../pins/PinButton.vue'
-import { gemsPin, nextPin, slotPin } from './build-pins'
+import { gemsPin, groupKey, nextPin, slotPin } from './build-pins'
 import { GEM_CLASS, gemWhere, nextGems } from './gems'
 import type { NextGem } from './gems'
 import {
-  gearLayout, itemSetsOf, linkColours, linkGroups, loadoutOf, mainGroupOf, noteRuns, orderedGems,
+  allLinkGroups, gearLayout, itemSetsOf, linkColours, loadoutOf, mainGroupOf, noteRuns, orderedGems,
   buildDps, gearChange, gemChange, nextSet, realSets, relevantGems, shortNumber, skillSetsOf, slotLabel, treeStep
 } from './build-model'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
@@ -383,7 +383,7 @@ onBeforeUnmount(() => { if (notesTimer) saveNotes() })
 
 const skillSets = computed(() => props.details ? skillSetsOf(props.details) : [])
 const shownSet = computed(() => loadout.value?.skillSet?.item ?? null)
-const shownLinks = computed(() => shownSet.value ? linkGroups(shownSet.value.groups, 4) : [])
+const shownLinks = computed(() => shownSet.value ? allLinkGroups(shownSet.value.groups) : [])
 
 const className = computed(() => build.className.value || props.details?.ascendClassName || props.details?.className || '')
 provide(GEM_CLASS, className)

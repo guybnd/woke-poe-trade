@@ -9,6 +9,7 @@
     "test": "vitest run",
     "typecheck:test": "vue-tsc -p test/tsconfig.json",
     "tip-data": "node scripts/build-tip-data.mjs",
+    "drop-data": "node scripts/build-drop-data.mjs",
     "tree-data": "node scripts/build-tree-data.mjs"
   },
   "dependencies": {

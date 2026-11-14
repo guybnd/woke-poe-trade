@@ -19,6 +19,10 @@
       hint="With the tree open in game, a click on the build's dock icon draws the build over it (a second click hides it). Anywhere else the click opens this window as before. Its right-click menu and hover card have the same option.">
       <WToggle v-model="treeOnIconClick" />
     </WSettingRow>
+    <WSettingRow label="Mark nodes to refund on the passive tree"
+      hint="The build drawing also marks, in red, nodes you've taken in game that this tree doesn't have. Only what's on screen and joined to your taken nodes is checked; masteries and the ascendancy aren't.">
+      <WToggle v-model="treeRefunds" />
+    </WSettingRow>
   </div>
 </template>
 
@@ -43,6 +47,10 @@ export default defineComponent({
       treeHotkey: computed({
         get: () => treeHotkeyOf(props.configWidget),
         set: (key: string | null) => { props.configWidget.treeHotkey = key }
+      }),
+      treeRefunds: computed({
+        get: () => props.configWidget.treeRefunds !== false,
+        set: (on: boolean) => { props.configWidget.treeRefunds = on }
       }),
       treeOnIconClick: computed({
         get: () => props.configWidget.treeOnIconClick !== false,
