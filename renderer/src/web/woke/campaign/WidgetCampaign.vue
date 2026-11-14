@@ -163,10 +163,19 @@ function move (by: number) {
 function wheelMove (dir: 1 | -1) {
   if (!props.config.state.asleep) move(dir)
 }
+// A card taller than its frame scrolls instead, so its lower part stays reachable.
 function cardWheel (e: WheelEvent) {
+  if (props.config.state.asleep || canScroll(e.currentTarget as HTMLElement)) return
   e.preventDefault()
   const dir = wheelStep(e)
   if (dir) wheelMove(dir)
+}
+function canScroll (el: HTMLElement | null): boolean {
+  for (let p = el?.parentElement; p; p = p.parentElement) {
+    const y = getComputedStyle(p).overflowY
+    if ((y === 'auto' || y === 'scroll') && p.scrollHeight > p.clientHeight + 1) return true
+  }
+  return false
 }
 
 // A step changed: the icon grows into the next step for a moment.

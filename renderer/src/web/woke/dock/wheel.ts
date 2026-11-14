@@ -1,6 +1,7 @@
 // One notch of a mouse wheel per step. A touchpad sends many small deltas,
 // so they add up to a notch first; one step at most every WHEEL_GAP_MS.
-const WHEEL_NOTCH = 50
+// 25 px: Chrome gives about 33 px a notch with Windows set to scroll 1 line.
+const WHEEL_NOTCH = 25
 const WHEEL_GAP_MS = 120
 let wheelSum = 0
 let wheelAt = 0
