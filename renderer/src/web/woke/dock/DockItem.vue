@@ -28,8 +28,9 @@ const props = withDefaults(defineProps<{
   progress?: number | null
   glow?: boolean
   pinnable?: boolean
-  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>
+  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null, below?: boolean }>
   menu?: DockMenuAction[]
+  wheel?: (dir: 1 | -1) => void
   wake?: number
 }>(), {
   icon: undefined,
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<{
   pinnable: false,
   readouts: undefined,
   menu: undefined,
+  wheel: undefined,
   wake: undefined
 })
 

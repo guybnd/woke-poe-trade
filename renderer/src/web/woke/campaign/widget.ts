@@ -45,6 +45,8 @@ export interface CampaignWidget extends Widget {
   step: number
   // Values kept on screen in the icon (none by default).
   pins: PinId[]
+  // The area hint pin was added for those who pin the current step.
+  hintPinAdded?: boolean
   // How many route steps the card lists (current one included).
   cardSteps: number
   // How many finished steps the card lists above the current one (0 = none).
@@ -123,6 +125,11 @@ export function migrateCampaign (w: CampaignWidget) {
   if (w.cardSteps === undefined) w.cardSteps = 3
   if (w.cardBehind === undefined) w.cardBehind = 1
   if (!Array.isArray(w.pins)) w.pins = []
+  // The step alone says what, the hint says where: give step pinners both.
+  if (!w.hintPinAdded) {
+    if (w.pins.includes('step') && !w.pins.includes('hint')) w.pins.splice(w.pins.indexOf('step') + 1, 0, 'hint')
+    w.hintPinAdded = true
+  }
   if (w.hotkeyCard === undefined) w.hotkeyCard = null
   if (w.hotkeyNext === undefined) w.hotkeyNext = null
   if (w.hotkeyPrev === undefined) w.hotkeyPrev = null

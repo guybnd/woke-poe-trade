@@ -19,12 +19,11 @@ export function noticeAction (n: Notice): string {
   switch (n.id) {
     case 'update': return 'Review update'
     case 'prices': return `Review ${n.value} move${n.value === 1 ? '' : 's'}`
-    case 'moves-league': return 'Review moves'
     case 'safety':
     case 'net-prices': return 'See safety net'
     case 'prices-old': return 'See prices'
     case 'load': return 'See changes'
-    case 'failed': return 'Fix changes'
+    case 'failed': return n.value === 1 ? 'Fix it' : 'Fix them'
     default: return 'Open editor'
   }
 }

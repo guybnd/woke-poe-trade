@@ -3,7 +3,7 @@
     <!-- The tracker is only this icon and its card, with the overlay open too. -->
     <DockItem :menu="dockMenu" ref="dockRef" id="campaign" title="Campaign" :show="dockShow"
       :badge="dockBadge" :tone="dockTone" :progress="actStep ? actStep.done / actStep.total : null" :readouts="readouts"
-      pinnable card-width="24rem" @open-change="cardShown = $event">
+      pinnable card-width="24rem" :wheel="wheelMove" @open-change="cardShown = $event">
       <template #card>
         <div :class="$style.body">
           <div class="flex items-baseline gap-2">
@@ -11,7 +11,8 @@
             <span v-if="s.level != null" class="ml-auto w-num whitespace-nowrap" :title="xpTitle">Lv {{ s.level }}
               <span v-if="xp" :class="[$style.pill, $style['pill--' + xp.band]]">{{ xpLabel }}</span></span>
           </div>
-          <template v-if="current">
+          <!-- The wheel over the steps moves them, the same as over the icon. -->
+          <div v-if="current" :class="$style.steps" @wheel="cardWheel">
             <div :class="$style.actHead"><span>{{ actLabel(current.act) }}</span><span v-if="actStep" class="w-num">{{ actStep.done }} of {{ actStep.total }}</span></div>
             <div v-if="actStep" :class="$style.prog"><i :style="{ width: `${actStep.done / actStep.total * 100}%` }" /></div>
             <div v-for="d in done" :key="d.step.index" class="flex gap-1.5" :class="$style.done">
@@ -27,7 +28,7 @@
               </div>
               <div v-for="(sub, j) in (i === 0 ? st.subs : [])" :key="j" :class="$style.sub" class="w-dim"><RouteParts :parts="sub" /></div>
             </div>
-          </template>
+          </div>
           <div v-else class="w-dim">Route finished.</div>
           <div v-if="note" :class="$style.callout" class="whitespace-pre-wrap">{{ note }}</div>
           <div v-if="timer" class="flex gap-2 w-num" :class="$style.build">
@@ -71,6 +72,7 @@ import RouteParts from './RouteParts.vue'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay, tickWhile } from '../dock/dock'
+import { wheelStep } from '../dock/wheel'
 import { reportProblem } from '../dock/health'
 import { pinnedReadouts, pinsTick } from './pins'
 import { actFromAreaId, actLabel, isTown, isTrialFinished } from './log-parse'
@@ -78,7 +80,7 @@ import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
 import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, advanceOnTrial, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { areaName, bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -154,6 +156,26 @@ function move (by: number) {
     setTimeout(peekStep, 0)
   }
   saveConfig()
+}
+
+// Mouse wheel over the icon or the card's steps: down is done, up is back.
+// Asleep (past the campaign) the route stays put, like the step hotkeys.
+function wheelMove (dir: 1 | -1) {
+  if (!props.config.state.asleep) move(dir)
+}
+// A card taller than its frame scrolls instead, so its lower part stays reachable.
+function cardWheel (e: WheelEvent) {
+  if (props.config.state.asleep || canScroll(e.currentTarget as HTMLElement)) return
+  e.preventDefault()
+  const dir = wheelStep(e)
+  if (dir) wheelMove(dir)
+}
+function canScroll (el: HTMLElement | null): boolean {
+  for (let p = el?.parentElement; p; p = p.parentElement) {
+    const y = getComputedStyle(p).overflowY
+    if ((y === 'auto' || y === 'scroll') && p.scrollHeight > p.clientHeight + 1) return true
+  }
+  return false
 }
 
 // A step changed: the icon grows into the next step for a moment.
@@ -290,7 +312,8 @@ const readouts = computed(() => {
     actMs: timer.value?.act ?? null,
     level: s.value.level,
     xp: xp.value,
-    step: current.value ? current.value.parts.map(p => p.text).join('') : null
+    step: current.value ? current.value.parts.map(p => p.text).join('') : null,
+    hint: current.value ? areaHint(current.value) : null
   })
 })
 
@@ -522,6 +545,11 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   flex-direction: column;
   gap: 3px;
   padding: 6px var(--w-pad) 8px;
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .now {
   margin: 0 calc(-1 * var(--w-pad));

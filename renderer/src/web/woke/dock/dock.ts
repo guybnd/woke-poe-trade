@@ -39,8 +39,8 @@ export interface DockItemProps {
   // hover cards are off, since a click is then the only way to open the card.
   gameClick?: () => void
   cardWidth?: string
-  // Values kept on screen beside the icon.
-  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>
+  // Values kept on screen beside the icon; `below` ones on a second, smaller line.
+  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null, below?: boolean }>
   // A ring around the icon, 0 to 1.
   progress?: number | null
   // A soft pulse around the icon while something is happening.
@@ -49,6 +49,8 @@ export interface DockItemProps {
   pinnable?: boolean
   // This icon's own rows in its right-click menu.
   menu?: DockMenuAction[]
+  // The mouse wheel over the icon: 1 for down (forward), -1 for up.
+  wheel?: (dir: 1 | -1) => void
   // A count of new things (offers, hits). When it goes up, a dismissed icon
   // comes back, unless it was dismissed for good.
   wake?: number
