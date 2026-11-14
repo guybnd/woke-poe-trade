@@ -5,12 +5,14 @@
 #   woke-check local      lint, type checks, unit tests on this PC (low priority)
 #   woke-check local -E2e also builds the overlay and runs the fake-game tests
 #   woke-check cloud      push the branch and wait for the Tests workflow on GitHub
+#   woke-check -Rerun     reruns the failed jobs when this commit already failed
 #
 # WOKE_CHECKS=local or WOKE_CHECKS=cloud overrides the automatic choice.
 # Run it from anywhere inside a clone or worktree of the repo.
 param(
   [string]$Mode = '',
   [switch]$E2e,
+  [switch]$Rerun,
   [int]$TimeoutMinutes = 60
 )
 
@@ -112,6 +114,9 @@ function Invoke-Cloud {
   $sha = (& git -C $Root rev-parse HEAD).Trim()
 
   # Push, retrying network errors. A rejected push (the remote moved) is not retried.
+  # No sign-in prompts: nobody sees them while the game is up, so fail instead.
+  $env:GIT_TERMINAL_PROMPT = '0'
+  $env:GCM_INTERACTIVE = 'never'
   $pushed = $false
   foreach ($try in 1..4) {
     $out = & git -C $Root push -u origin $branch 2>&1
@@ -124,27 +129,51 @@ function Invoke-Cloud {
   Say "pushed $branch at $($sha.Substring(0, 8))"
 
   # Pull requests run the workflow on every push. Without one, start it by hand.
+  # A failed lookup is not "no PR": that would start a second full run.
   $pr = Invoke-Gh pr list --head $branch --state open --json 'number,url'
+  if ($pr.Code -ne 0) { Start-Sleep -Seconds 5; $pr = Invoke-Gh pr list --head $branch --state open --json 'number,url' }
+  if ($pr.Code -ne 0) { Fail "couldn't list PRs:`n$($pr.Out)" }
+  # The extra parentheses unroll the array: PS 5.1's ConvertFrom-Json returns it whole.
   $prs = @()
-  if ($pr.Code -eq 0 -and $pr.Out) { $prs = @($pr.Out | ConvertFrom-Json) }
+  if ($pr.Out) { $prs = @(($pr.Out | ConvertFrom-Json)) }
   if ($prs.Count) { Say "PR: $($prs[0].url)" }
 
   $run = $null
+  if ($Rerun) {
+    $last = Find-Runs $branch $sha | Select-Object -First 1
+    if ($last -and $last.status -eq 'completed' -and $last.conclusion -ne 'success') {
+      $r = Invoke-Gh run rerun $last.databaseId --failed
+      if ($r.Code -ne 0) { Fail "couldn't rerun $($last.url):`n$($r.Out)" }
+      Say "rerunning the failed jobs of $($last.url)"
+      # Wait for the run to leave "completed", or the old result would be read back.
+      foreach ($i in 1..12) {
+        Start-Sleep -Seconds 10
+        $v = Invoke-Gh run view $last.databaseId --json 'status'
+        if ($v.Code -eq 0 -and $v.Out -and ($v.Out | ConvertFrom-Json).status -ne 'completed') { break }
+      }
+      $run = $last
+    }
+  }
+
+  # A PR with merge conflicts gets no pull_request run, and a push that changed
+  # nothing starts none: after a while, start one by hand there too.
   $dispatched = $false
-  $deadline = (Get-Date).AddMinutes(4)
+  $start = Get-Date
+  $deadline = $start.AddMinutes(4)
   while (-not $run) {
     $runs = Find-Runs $branch $sha
     $run = $runs | Where-Object { $_.status -ne 'completed' -or $_.conclusion -ne 'cancelled' } | Select-Object -First 1
     if ($run) { break }
-    if (-not $prs.Count -and -not $dispatched) {
+    if (-not $dispatched -and (-not $prs.Count -or (Get-Date) -gt $start.AddSeconds(75))) {
       $d = Invoke-Gh workflow run $Workflow --ref $branch
       if ($d.Code -ne 0) { Fail "couldn't start the $Workflow workflow:`n$($d.Out)" }
       $dispatched = $true
-      Say 'no open PR, so the workflow was started by hand (this also builds the Windows package)'
+      Say 'no PR run for this commit, so the workflow was started by hand (this also builds the Windows package)'
     }
     if ((Get-Date) -gt $deadline) { Fail "no $Workflow run showed up for $($sha.Substring(0, 8)) in 4 minutes" }
     Start-Sleep -Seconds 15
   }
+  if ($run.status -eq 'completed' -and -not $Rerun) { Say "this commit was already checked at $($run.createdAt) (-Rerun retries a failure)" }
   Say "run: $($run.url)"
 
   # Poll gently and print only what changed.
