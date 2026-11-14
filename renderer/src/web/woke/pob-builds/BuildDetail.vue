@@ -67,15 +67,15 @@
           <span>Gems by campaign order</span>
           <span class="ml-auto normal-case tracking-normal">{{ canTick ? 'click a gem once you have it' : '' }}</span>
         </div>
-        <template v-for="grp in gemGroups" :key="grp.label">
-        <div :class="$style.actRule">{{ grp.label }}</div>
+        <template v-for="grp in gemGroups" :key="grp.key">
+        <div :class="$style.quest"><span v-if="grp.act" :class="$style.questAct">Act {{ grp.act }}</span>{{ grp.label }}</div>
         <button v-for="g in grp.gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
           :disabled="!canTick" @click="toggleGot(g.name)">
           <span class="w-num w-faint text-xs" :class="$style.lvl">{{ g.requiredLevel }}</span>
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
           <GemName :class="$style.gemName" :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
-          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source?.replace(/ \(Act \d+\)$/, '') ?? 'trade / drop' }}</span>
+          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.npc ? `${g.reward ? 'Reward' : 'Buy'} · ${g.npc}` : '' }}</span>
         </button>
         </template>
       </template>
@@ -389,13 +389,13 @@ provide(GEM_CLASS, className)
 const gems = computed(() => props.details
   ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value), 'campaign')
   : [])
-// Campaign order, split where the act changes; gems the campaign never hands
-// out close the list.
+// Campaign order, one heading per quest; each row then only says reward or
+// buy, and from whom. Gems the campaign never hands out close the list.
 const gemGroups = computed(() => {
-  const out: Array<{ label: string, gems: NextGem[] }> = []
+  const out: Array<{ key: string, act: number | null, label: string, gems: NextGem[] }> = []
   for (const g of gems.value) {
-    const label = g.act != null ? `Act ${g.act}` : 'Trade or drop'
-    if (out[out.length - 1]?.label !== label) out.push({ label, gems: [] })
+    const key = g.quest != null ? `${g.act}|${g.quest}` : '-'
+    if (out[out.length - 1]?.key !== key) out.push({ key, act: g.act, label: g.quest ?? 'Trade or drop', gems: [] })
     out[out.length - 1].gems.push(g)
   }
   return out
@@ -617,16 +617,20 @@ function run (p: Promise<unknown>) {
 .gemRow:not(:disabled):hover { background: var(--w-line-soft); }
 .later { opacity: 0.62; }
 .lvl { width: 1.6rem; text-align: right; flex: none; }
-.actRule {
+.quest {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
-  padding: 4px 0 1px;
+  padding: 6px 0 1px;
+  font-size: var(--w-fs-xs);
+  color: var(--w-accent);
+}
+.questAct {
   font-size: var(--w-fs-caps);
   font-family: var(--w-caps-face);
   color: var(--w-faint);
 }
-.actRule::after { content: ''; flex: 1; border-top: 1px solid var(--w-line-soft); }
+.quest::after { content: ''; flex: 1; border-top: 1px solid var(--w-line-soft); align-self: center; }
 .gemName { flex: none; max-width: 62%; }
 .src { min-width: 0; }
 button.next:hover { border-color: var(--w-line-strong); }

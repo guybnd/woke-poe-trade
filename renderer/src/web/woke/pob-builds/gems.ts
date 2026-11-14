@@ -78,6 +78,10 @@ export interface NextGem {
   // The act of the first quest that gives or unlocks it for the class; null
   // when the campaign never does (trade, drop, transfigured).
   act: number | null
+  // That quest, and how: a reward from the quest giver, or bought from `npc`.
+  quest: string | null
+  npc: string | null
+  reward: boolean
   // Where that quest falls in the campaign, for ordering (QUEST_ORDER).
   step: number
 }
@@ -169,6 +173,9 @@ export function nextGems (details: PobDetails, charLevel: number | null, classNa
       source: sourceLabel(first),
       when: req <= level ? 'now' : req <= level + 6 ? 'soon' : 'later',
       act: first ? first[0] : null,
+      quest: first ? first[1] : null,
+      npc: first ? first[2] : null,
+      reward: first?.[3] === 'q',
       step: first ? questStep(first) : Infinity
     })
   }

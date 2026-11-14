@@ -285,6 +285,7 @@ describe('gems in campaign order', () => {
       ['Kinetic Blast of Clustering', null]
     ])
     expect(list.find(g => g.name === 'Fortify')?.source).toBe('Reward: A Fixture of Fate (Act 3)')
+    expect(list.find(g => g.name === 'Fortify')).toMatchObject({ quest: 'A Fixture of Fate', npc: 'Siosa', reward: true })
   })
 
   it('keeps level order by default', () => {
