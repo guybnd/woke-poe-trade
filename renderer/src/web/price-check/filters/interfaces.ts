@@ -92,6 +92,8 @@ export interface ItemFilters {
     suffix: number | null
     most: number
   }
+  // woke: mods the item doesn't have, added from the search line under the stats.
+  addedMods?: AddedMod[]
   trade: {
     offline: boolean
     onlineInLeague: boolean
@@ -102,6 +104,20 @@ export interface ItemFilters {
     collapseListings: 'api' | 'app'
     collapseMerchant: boolean
   }
+}
+
+// The trade site's kinds an added mod can be searched as. `pseudo` is the total.
+export type AddedModKind = 'pseudo' | 'explicit' | 'implicit' | 'crafted' | 'fractured' | 'enchant'
+
+export interface AddedMod {
+  statRef: string
+  kind: AddedModKind
+  tradeId: string[]
+  // The trade site stores this stat the other way round (stats.ndjson `inverted`).
+  tradeInvert?: boolean
+  min: number | '' // NOTE: mutable in UI
+  max: number | '' // NOTE: mutable in UI
+  disabled: boolean // NOTE: mutable in UI
 }
 
 export interface FilterNumeric {

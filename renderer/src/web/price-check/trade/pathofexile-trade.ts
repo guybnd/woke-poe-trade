@@ -1,6 +1,6 @@
 import { ItemInfluence, ItemCategory } from '@/parser'
 import type { VisceraSlot } from '@/parser/ParsedItem'
-import { ItemFilters, StatFilter, FilterOrGroup, INTERNAL_TRADE_IDS, InternalTradeId, FilterTag } from '../filters/interfaces'
+import { ItemFilters, StatFilter, FilterOrGroup, INTERNAL_TRADE_IDS, InternalTradeId, FilterTag, AddedMod } from '../filters/interfaces'
 import { setProperty as propSet } from 'dot-prop'
 import { DateTime } from 'luxon'
 import { Host } from '@/web/background/IPC'
@@ -769,6 +769,11 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     }
   }
 
+  // woke: mods the item doesn't have, added from the search line under the stats.
+  for (const mod of filters.addedMods ?? []) {
+    appendAndFilter(addedModToFilter(mod), qAnd, query.stats)
+  }
+
   // woke: a cap of N prefixes leaves out listings with N+1 or more. A "not" group
   // keeps listings that have no prefix at all, which a count stat may not carry.
   if (filters.affixCaps) {
@@ -935,6 +940,23 @@ function weightedGroupToQuery (group: WeightedGroup): Pick<TradeStatGroup, 'valu
 }
 
 type BareStatFilter = Pick<StatFilter, 'roll' | 'option' | 'disabled' | 'tradeId'>
+
+// woke: an added mod as a stat filter: its min and max are in the stat's own sense.
+function addedModToFilter (mod: AddedMod): BareStatFilter {
+  return {
+    tradeId: mod.tradeId,
+    disabled: mod.disabled,
+    roll: {
+      value: 0,
+      min: mod.min,
+      max: mod.max,
+      default: { min: 0, max: 0 },
+      tradeInvert: mod.tradeInvert,
+      dp: false,
+      isNegated: false
+    }
+  }
+}
 
 function appendAndFilter (
   stat: BareStatFilter,
