@@ -3,28 +3,27 @@ import { computed, onUnmounted, shallowRef, ref, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
-import { ruleBlocks } from './rules'
-import { DUST_ILVL, applyPresetChanges, colourBlindActions, normalizePresets, presetBlocks, presetsOn, scaleVolume } from './presets'
+import { DUST_ILVL, applyPresetChanges, normalizePresets, presetsOn } from './presets'
 import { dustBases } from '../disenchant/calc'
 import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { clearUndoToasts } from '../ui/layer'
 import { isTownLike } from '../campaign/log-parse'
 import { onGameLog } from '../shared/game-log'
 import { parseFilter, serializeFilter } from './parse'
+import { composeFilter } from './compose'
 import type { FilterDoc } from './parse'
-import { addEdit, applyEdits, blocksOf, nextEditId, readStyle } from './edits'
+import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
 import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
 import { describeStep, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
-import { buildRuleBlocks, insertBuildBlocks } from './build-rules'
 import { useBuildRuleInput } from './build-input'
-import { NET_GROUPS, applyPriceMoves, livePriceMoves, lockKey, lockedByEdits, mergeMoves, movesOutOfPlace, planRetier, tierRank } from './economy'
+import { livePriceMoves, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
 import type { EconomyGroup, PriceMove, RetierPlan } from './economy'
-import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
+import { auditBases } from './safety'
 import { isDismissed } from './health'
-import type { BaseVerdict, NetList } from './safety'
+import type { BaseVerdict } from './safety'
 import { describeProblem, validateFilter } from './validate'
 import type { FilterProblem } from './validate'
 import { useFilterPrices } from './prices'
@@ -237,75 +236,26 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // edits and the safety net. The editor's own doc, and the preview's
   // other strictness levels, are made this way.
   function compose (text: string) {
-    const next = parseFilter(text)
-    // Build rules go in first, so edits to them (restyles) apply on top.
-    const input = buildInput.value
-    let buildCount = 0
-    if (input) {
-      const blocks = buildRuleBlocks(input, cfg().buildRules)
-      insertBuildBlocks(next, blocks)
-      buildCount = blocks.length
-    }
-    // Presets' rules, then your own rules above them: yours win.
-    const presetTop = presetBlocks(next, cfg().presets, prices.lookup.value, dustList.value, {
-      breakdown: cfg().presets.cheapUniques.on ? prices.breakdown.value : null,
-      build: input ? { uniqueBases: input.uniqueBases, weaponClasses: input.weaponClasses } : null
+    return composeFilter(text, {
+      presets: cfg().presets,
+      rules: cfg().rules,
+      edits: cfg().edits,
+      buildRules: cfg().buildRules,
+      build: buildInput.value,
+      moves: activeMoves(),
+      safetyNet: cfg().safetyNet,
+      // Read only when used: each is a computed over the whole price snapshot,
+      // and reading one makes the rebuild follow it.
+      prices: {
+        lookup: prices.lookup.value,
+        safety: cfg().safetyNet.on ? prices.safety.value : null,
+        breakdown: cfg().presets.cheapUniques.on ? prices.breakdown.value : null,
+        pricedTypes: cfg().safetyNet.on ? prices.pricedTypes?.value : null
+      },
+      dustList: dustList.value,
+      heldBack,
+      stackHeld: (group, base) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base)
     })
-    insertBuildBlocks(next, presetTop)
-    insertBuildBlocks(next, ruleBlocks(cfg().rules))
-    // Price moves next: your own moves (edits) are applied after them and win.
-    let movesFit = 0
-    let outOfPlace: PriceMove[] = []
-    if (activeMoves().length) {
-      outOfPlace = movesOutOfPlace(next, activeMoves())
-      movesFit = applyPriceMoves(next, activeMoves())
-    }
-    const isNetEdit = (e: FilterEdit) => e.type === SAFETY_RULE_TYPE
-    const results = new Map(applyEdits(next, cfg().edits.filter(e => !isNetEdit(e))).map(r => [r.edit.id, r]))
-    // Quiet mode, bigger labels, colour-blind colours: over NeverSink's rules
-    // as you left them.
-    const presetChanges = applyPresetChanges(next, cfg().presets)
-    // The safety net goes on top, listing only what the rest still hides.
-    // Restyles of the net apply after it exists.
-    let netCount = 0
-    let netList = ''
-    let netFresh: NetList | null = null
-    if (cfg().safetyNet.on) {
-      // woke: no prices (a new league, a fresh install) must not take the net
-      // out of the file: the last list stays until there are prices again.
-      const lookup = prices.safety.value
-      const line = cfg().safetyNet.minChaos
-      const types = prices.pricedTypes?.value
-      const known = lookup
-        ? (types ? withLast(lookup, cfg().safetyNet.last, line, t => types.has(t)) : lookup)
-        : lastLookup(cfg().safetyNet.last, line)
-      const verdicts = auditBases(next, known, line)
-      const bases = netFromAudit(verdicts, v => heldBack(v))
-      const stackHeld = (group: EconomyGroup, base: string) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base)
-      const last = cfg().safetyNet.last
-      if (lookup) {
-        const stacks = stackNet(next, lookup, line, stackHeld)
-        if (Object.keys(stacks).length) bases.stacks = stacks
-      } else if (last?.stacks && !(last.line != null && line > last.line)) {
-        // Only names this filter lists, as with the rest of the list, and not
-        // what you held back since. A line raised since can't rely on them.
-        const listed = new Set(next.blocks.flatMap(b => b.conditions.flatMap(c => c.key === 'BaseType' ? c.values : [])))
-        const held = (base: string) => NET_GROUPS.some(g => !g.unique && stackHeld(g, base))
-        const kept = Object.entries(last.stacks).map(([size, list]) => [size, list.filter(b => listed.has(b) && !held(b))] as const).filter(([, list]) => list.length)
-        if (kept.length) bases.stacks = Object.fromEntries(kept)
-      }
-      const netBlocks = safetyBlocks(bases)
-      if (cfg().presets.colourBlind.on) netBlocks.forEach(colourBlindActions)
-      // The drop sound volume preset reaches the net's sound too.
-      const volume = cfg().presets.volume
-      if (volume.on && volume.percent < 100) netBlocks.forEach(b => scaleVolume(b, volume.percent))
-      insertBuildBlocks(next, netBlocks)
-      if (lookup) netFresh = { ...valuableFromAudit(verdicts), line, ...(bases.stacks ? { stacks: bases.stacks } : {}) }
-      netCount = bases.plain.length + bases.unique.length + Object.values(bases.stacks ?? {}).reduce((n, l) => n + l.length, 0)
-      if (lookup || netCount) netList = JSON.stringify(bases)
-    }
-    for (const r of applyEdits(next, cfg().edits.filter(isNetEdit))) results.set(r.edit.id, r)
-    return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
   }
 
   // Own rules and presets as last built, to rebuild when the UI edits them.

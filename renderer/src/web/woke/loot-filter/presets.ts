@@ -342,15 +342,20 @@ export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | 
     const keep = archetypeClasses(p, ctx.build?.weaponClasses ?? null)
     const others = keep ? WEAPON_CLASSES.filter(c => !keep.includes(c)) : []
     if (others.length) {
+      // 5- and 6-links and 6-socket items keep NeverSink's look (and the
+      // 6-socket preset's): they're worth picking up whoever uses the weapon.
+      const plain = [cond('LinkedSockets', '<', [5]), cond('Sockets', '<', [6])]
       out.push(addedBlock(PRESET_TYPE, 'otherweapons', 'white and blue weapons for other builds while levelling', [
         levelling,
         cond('Rarity', '', ['Normal', 'Magic']),
-        cond('Class', '==', others)
+        cond('Class', '==', others),
+        ...plain
       ], 'Hide', 'Presets'))
       const dim = addedBlock(PRESET_TYPE, 'otherweaponsrare', 'rare weapons for other builds, dimmed, while levelling', [
         levelling,
         cond('Rarity', '', ['Rare']),
-        cond('Class', '==', others)
+        cond('Class', '==', others),
+        ...plain
       ], 'Show', 'Presets')
       dim.actions = [
         { key: 'SetFontSize', args: ['26'] },
@@ -590,6 +595,20 @@ function placeCheapUniques (doc: FilterDoc): void {
   for (const [anchor, b] of placed) insertBefore(doc, anchor, b)
 }
 
+// The 6-socket rule, at the top of the file, would catch every 6-socket item
+// before NeverSink sees it: 6-links, influenced and top crafting bases, tiered
+// gear all lost their look, sound and beam to a plain vendor label. It goes
+// right above NeverSink's own 6-socket tier instead, so only what reaches that
+// tier gets it. Stricter files ship the tier switched off; it still marks the
+// place. Not a NeverSink filter: the rule stays at the top.
+function placeSixSockets (doc: FilterDoc): void {
+  const top = doc.blocks.find(b => b.type === PRESET_TYPE && b.tier === 'sixsockets')
+  const anchor = doc.blocks.find(b => b.type === 'socketslinks' && /^6sockets/.test(b.tier ?? ''))
+  if (!top || !anchor) return
+  removeBlock(doc, top)
+  insertBefore(doc, anchor, top)
+}
+
 // Adjusts NeverSink's rules in place. Returns how many rules changed.
 export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
   let changed = 0
@@ -681,6 +700,7 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
   }
   for (const [anchor, b] of mapCopies) { insertBefore(doc, anchor, b); changed++ }
   placeCheapUniques(doc)
+  placeSixSockets(doc)
   // Stricter files ship that tier switched off; it still marks the place.
   const gemAnchor = p.vendorQuality.on ? doc.blocks.find(isQualityGemTier) : undefined
   if (gemAnchor) {
