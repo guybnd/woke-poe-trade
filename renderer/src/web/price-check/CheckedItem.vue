@@ -245,6 +245,8 @@ export default defineComponent({
           (item.category === ItemCategory.SanctumRelic) ||
           (item.category === ItemCategory.Charm) ||
           (item.category === ItemCategory.Idol) ||
+          // A Viscera's price is its base and implicit roll, which the first search has.
+          (item.category === ItemCategory.Viscera) ||
           (!CATEGORY_TO_TRADE_ID.has(item.category!) &&
             item.info.refName !== 'Mercenary Warrant') ||
           (item.isUnidentified) ||
