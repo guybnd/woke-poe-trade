@@ -15,6 +15,8 @@ import { POE_RE_TYPE, initPoeReWidget } from './woke/regex-library/poe-re-widget
 import { SEARCH_TYPE, initSearchWidget, moveSearchKey } from './woke/search/widget'
 import type { SearchWidget } from './woke/search/widget'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
+import { renameQuantityStarter } from './woke/regex-library/widget'
+import type { RegexEntry } from './woke/regex-library/widget'
 import { carryRewordedRatings } from './woke/map-mods/rules'
 import type { ModRating } from './woke/map-mods/rules'
 import { movePopupsToNewSpot } from './woke/ui/window-anchor'
@@ -552,6 +554,8 @@ function upgradeConfig (_config: Config): Config {
   }
   // woke: Stash search strings move into the Regex library.
   moveStashSearchToLibrary(config.widgets as Array<Record<string, any> & { wmId: number, wmType: string }>)
+  // woke: the map quantity starter string reads 3.30's Atlas Drops line.
+  renameQuantityStarter(config.widgets as Array<{ wmType: string, entries?: RegexEntry[] }>)
   // woke: each tool has one name now.
   renameOldDefaultTitles(config.widgets as Array<{ wmType: string, wmTitle?: string }>)
   // woke: panels still on their old default spot open in the new one.

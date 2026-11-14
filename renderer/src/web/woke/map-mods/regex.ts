@@ -20,10 +20,11 @@ export interface MapRegexInput {
 
 export type MinStat = 'quantity' | 'rarity' | 'packSize' | 'quality' | 'currency' | 'scarabs' | 'maps' | 'divCards'
 
-// The tail of each map property line ("Item Quantity: +112%"), picked so it
-// matches only that line. `.` stands in for the `+`.
+// The tail of each map property line ("Atlas Drops: +112%"), picked so it
+// matches only that line. `.` stands in for the `+`. 'quantity' is the 3.30
+// Atlas Drops line, which replaced Item Quantity on every map, old ones too.
 const MIN_PREFIX: Record<MinStat, string> = {
-  quantity: 'tity: .',
+  quantity: 'ops: .',
   rarity: 'rity: .',
   packSize: 'ze: .',
   quality: 'lity: .',
@@ -34,7 +35,7 @@ const MIN_PREFIX: Record<MinStat, string> = {
 }
 
 export const MIN_LABELS: Record<MinStat, string> = {
-  quantity: 'Item quantity',
+  quantity: 'Atlas drops',
   rarity: 'Item rarity',
   packSize: 'Pack size',
   quality: 'Quality',
@@ -51,6 +52,7 @@ export const TOOLTIP_LINES = [
   'rarity: magic',
   'rarity: normal',
   'map tier: 16',
+  'atlas drops: +100%',
   'item quantity: +100%',
   'item rarity: +100%',
   'monster pack size: +100%',

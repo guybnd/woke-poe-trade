@@ -195,6 +195,7 @@ describe('the game mod list', () => {
       'Area contains many Totems',
       'Players are Cursed with Elemental Weakness',
       '179% increased Quantity of Items found in this Area',
+      '61% increased Atlas Drops in this Area',
       '82% increased Rarity of Items found in this Area',
       '54% increased Pack size',
       'Area is corrupted'

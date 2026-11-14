@@ -4,7 +4,8 @@
 import type { TooltipMatcher } from '../map-mods/tooltip-parse'
 import type { ModLine } from './death-log'
 
-const TOTAL_LINE = /(quantity|rarity) of items found|pack size|more .* found in this area|area is corrupted/i
+// 3.30 shows the quantity total as "61% increased Atlas Drops in this Area".
+const TOTAL_LINE = /(quantity|rarity) of items found|atlas drops|pack size|more .* found in this area|area is corrupted/i
 
 export function parseAreaModLines (lines: string[], matcher: TooltipMatcher): { mods: ModLine[], weak: string[] } {
   const parsed = matcher.parse(lines.filter(l => l && !TOTAL_LINE.test(l)))

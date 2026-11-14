@@ -41,6 +41,8 @@ export interface ParsedItem {
   mapArea?: BaseType
   areaLevel?: number
   areaItemQuantity?: number
+  // 3.30 maps: "Atlas Drops: +55%", the old Item Quantity line renamed.
+  areaAtlasDrops?: number
   areaItemRarity?: number
   areaPackSize?: number
   mapCompletionReward?: BaseType

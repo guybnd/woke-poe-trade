@@ -133,6 +133,8 @@ export interface TranslationDict {
   RARITY_QUEST: string
   MAP_TIER: RegExp
   MAP_ITEM_QUANTITY: string
+  // 3.30 maps show "Atlas Drops" where they showed Item Quantity. English only.
+  MAP_ATLAS_DROPS?: string
   MAP_ITEM_RARITY: string
   MAP_MONSTER_PACK_SIZE: string
   MAP_MORE_MAPS: string

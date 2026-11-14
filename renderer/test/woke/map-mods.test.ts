@@ -34,7 +34,7 @@ function mapTooltip (mods: string[], props: { quantity?: number, rarity?: number
     'Strand Map',
     '--------',
     'Map Tier: 16',
-    `Item Quantity: +${props.quantity ?? 70}%`,
+    `Atlas Drops: +${props.quantity ?? 70}%`,
     `Item Rarity: +${props.rarity ?? 40}%`,
     `Monster Pack Size: +${props.packSize ?? 25}%`,
     '--------',

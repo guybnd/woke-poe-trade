@@ -67,7 +67,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   const verdict = rateMods(stats, { ...profile, ratings })
 
   const juice = isHeistItem(item) ? null : juiceScore({
-    quantity: item.areaItemQuantity,
+    quantity: item.areaAtlasDrops ?? item.areaItemQuantity,
     rarity: item.areaItemRarity,
     packSize: item.areaPackSize,
     currency: item.mapMoreCurrency,
@@ -79,6 +79,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
 
   const props: MapCheckResult['props'] = []
   const add = (label: string, value?: number) => { if (value) props.push({ label, value }) }
+  add('Drops', item.areaAtlasDrops)
   add('Quant', item.areaItemQuantity)
   add('Rarity', item.areaItemRarity)
   add('Pack', item.areaPackSize)

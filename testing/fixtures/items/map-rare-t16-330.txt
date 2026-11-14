@@ -1,0 +1,27 @@
+Item Class: Maps
+Rarity: Rare
+Damnation Trek
+Map (Tier 16)
+--------
+Atlas Drops: +72% (augmented)
+Item Rarity: +43% (augmented)
+Monster Pack Size: +28% (augmented)
+--------
+Item Level: 83
+--------
+Monster Level: 83
+--------
+Area contains 25 additional Strongboxes (enchant)
+Area's inhabitants are lying in ambush (enchant)
+--------
+Area has patches of Shocked Ground which increase Damage taken by 50%
+Rare Monsters have Physical Thorns reflecting 800 Physical Damage
+Monsters Poison on Hit
+Monsters have 50% increased Accuracy Rating
+Monsters have a 50% chance to avoid Poison, Impale, and Bleeding
+Players gain 50% reduced Flask Charges
+Players have -20% to amount of Suppressed Spell Damage Prevented
+--------
+Travel to a Map of this tier or lower by using this in a personal Map Device. Maps can only be used once. 
+--------
+Corrupted

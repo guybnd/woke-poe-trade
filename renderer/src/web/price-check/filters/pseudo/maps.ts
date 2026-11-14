@@ -32,6 +32,18 @@ function areaProps (
       disabled: disabled.itemQuantity
     }, ctx))
   }
+  if (item.areaAtlasDrops) {
+    // Off by default: on 2026-11-15 the trade site's Atlas Drops filter
+    // (map_bonus) matched no listing at all, even at +1%, while Rarity and
+    // Pack size work. Ticking it today would empty the results.
+    ctx.filters.push(propToFilter({
+      ref: 'Atlas Drops: +#%',
+      tradeId: 'item.map_atlas_drops',
+      roll: { min: 0, max: Number.MAX_SAFE_INTEGER, value: item.areaAtlasDrops },
+      sources: [],
+      disabled: true
+    }, ctx))
+  }
   if (item.areaItemRarity) {
     ctx.filters.push(propToFilter({
       ref: 'Item Rarity: +#%',

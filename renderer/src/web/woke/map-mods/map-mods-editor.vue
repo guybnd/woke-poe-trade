@@ -57,7 +57,7 @@ import type { MapModsWidget } from './widget'
 
 const WEIGHT_KEYS: Array<keyof JuiceWeights> = ['quantity', 'rarity', 'packSize', 'currency', 'scarabs', 'maps', 'divCards']
 const WEIGHT_LABELS: Record<keyof JuiceWeights, string> = {
-  quantity: 'Item quantity',
+  quantity: 'Atlas drops',
   rarity: 'Item rarity',
   packSize: 'Pack size',
   currency: 'More currency',

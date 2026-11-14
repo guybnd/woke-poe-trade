@@ -20,11 +20,12 @@ export interface ScannedMap {
   weak: string[]
 }
 
-// Property lines ("Item Quantity: +87%") by their label. OCR often misreads
+// Property lines ("Atlas Drops: +87%") by their label. OCR often misreads
 // a letter or two of the game font (Q as O, M as NM), so labels are matched
 // by similarity, not exactly.
 const PROP_LABELS: Array<[keyof ScannedMap['props'] | 'tier', string]> = [
   ['tier', 'map tier'],
+  ['quantity', 'atlas drops'],
   ['quantity', 'item quantity'],
   ['rarity', 'item rarity'],
   ['packSize', 'monster pack size'],
