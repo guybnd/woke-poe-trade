@@ -212,13 +212,24 @@ function entersArea (step: RouteStep, areaId: string): boolean {
   return step.areaAfter === areaId && step.areaBefore !== areaId
 }
 
+function entersFightZone (step: RouteStep, data: RouteData): boolean {
+  if (step.areaAfter === step.areaBefore) return false
+  const row = data.areas[step.areaAfter]
+  return row != null && !row[3]
+}
+
 // Returns the new current step after entering an area, or `current` when
 // the area isn't the next stop on the route.
 export function advanceOnEnter (route: Route, current: number, areaId: string, data: RouteData): number {
   const steps = route.steps
   const end = Math.min(steps.length, current + LOOKAHEAD)
+  // Towns come up again and again: a town visit never moves the route past a
+  // zone you haven't been to (a portal home mid-zone, or zones done in another
+  // order, used to jump to a later town step and skip whole zones).
+  const toTown = data.areas[areaId]?.[3] === true
   for (let i = current; i < end; i++) {
     if (entersArea(steps[i], areaId)) return i + 1
+    if (toTown && entersFightZone(steps[i], data)) return current
   }
   // Far ahead (skipped part of the route, or progress was lost): only trust
   // non-town areas, which the route enters once or twice at most.
