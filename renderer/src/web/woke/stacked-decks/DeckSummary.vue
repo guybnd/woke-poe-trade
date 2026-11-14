@@ -11,6 +11,11 @@
         <span class="w-num" data-stat="without-top" :class="tone(t.withoutTop)">{{ t.withoutTop != null ? signed(t.withoutTop) : '—' }}</span>
       </template>
     </div>
+    <!-- C: count the cheap cards or not, right on the window. -->
+    <div v-if="switchable && filter && filter.under > 0" :class="$style.switch" data-deck="cheap-switch">
+      <span class="w-dim">Under {{ cutOff }}</span>
+      <WSegmented :model-value="filter.count ? 'in' : 'out'" :options="COUNT_OPTIONS" @update:model-value="v => emit('count', v === 'in')" />
+    </div>
     <div v-if="deckChaos == null" class="text-xs" style="color: var(--w-warn);">No Stacked Deck price yet: Spent and Result wait for poe.ninja.</div>
 
     <ResultChart v-if="chart.length >= 2" :values="chart" :width="chartWidth" :label="`Running result after ${t.decks} decks`" />
@@ -61,7 +66,7 @@
 // card, the running result, luck against the community weights (C3), and
 // the cards by total value.
 import { computed, shallowRef } from 'vue'
-import { WIcon, WInfo, vItemTip } from '../ui'
+import { WIcon, WInfo, WSegmented, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
 import ResultChart from './ResultChart.vue'
@@ -81,7 +86,11 @@ const props = withDefaults(defineProps<{
   chartWidth?: number
   // Cheap cards fold into one line (and maybe leave the totals). null: all listed.
   filter?: CardFilter | null
-}>(), { luck: null, limit: 0, chartWidth: 280, filter: null })
+  // Shows the counted / not counted switch (emits `count`).
+  switchable?: boolean
+}>(), { luck: null, limit: 0, chartWidth: 280, filter: null, switchable: false })
+const emit = defineEmits<{ (e: 'count', v: boolean): void }>()
+const COUNT_OPTIONS = [{ value: 'in', label: 'Hidden, counted' }, { value: 'out', label: 'Not counted' }]
 
 const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter))
 const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter))
@@ -130,4 +139,5 @@ const luckInfo = computed(() => {
 .fold:hover { color: var(--w-fg); background: var(--w-line-soft); }
 .fold > i { justify-self: center; }
 .cheap { color: var(--w-faint); }
+.switch { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--w-fs-sm); }
 </style>

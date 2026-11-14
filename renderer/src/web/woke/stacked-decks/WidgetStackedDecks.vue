@@ -22,7 +22,7 @@
             <span class="w-dim text-xs grow">since {{ clock(session.startedAt) }}</span>
             <WButton size="sm" variant="ghost" icon="fas fa-redo" @click="newSession(false)">New session</WButton>
           </div>
-          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :luck="luck" />
+          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" switchable :luck="luck" @count="setCountCheap" />
         </template>
         <template v-else>
           <WEmpty :art="{ item: STACKED_DECK }">Open a Stacked Deck in game to start a session. It ends after 15 minutes without a card.</WEmpty>
@@ -31,7 +31,7 @@
               <span class="w-accent font-medium">Last session</span>
               <span class="w-dim text-xs">{{ clock(lastRecord.startedAt) }}</span>
             </div>
-            <DeckSummary :draws="lastRecord.draws" :price="recordPrice(lastRecord)" :deck-chaos="lastRecord.deckChaos" :divine="lastRecord.divine" :filter="filter" :limit="12" />
+            <DeckSummary :draws="lastRecord.draws" :price="recordPrice(lastRecord)" :deck-chaos="lastRecord.deckChaos" :divine="lastRecord.divine" :filter="filter" switchable :limit="12" @count="setCountCheap" />
           </template>
         </template>
         <OwnAverageLine :records="store.records.value" :price="price" :deck-chaos="deckChaos" :divine="divine" />
@@ -138,6 +138,12 @@ watch([deckChaos, divine, session], () => {
   if (s.divine == null && divine.value != null) { s.divine = divine.value; changed = true }
   if (changed) saveSoon()
 })
+
+// The window's switch (C): the same setting as in Settings.
+function setCountCheap (v: boolean) {
+  props.config.countCheap = v
+  saveConfig()
+}
 
 const money = (chaos: number) => formatChaos(chaos, sessionDivine.value)
 const signed = (chaos: number) => `${chaos > 0 ? '+' : ''}${money(chaos)}`
