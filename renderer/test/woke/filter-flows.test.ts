@@ -902,3 +902,21 @@ describe('regressions', () => {
 
 // Imported late so the mocks above are in place for the store's own imports.
 import { addEdit as addTo, applyEdits as applyAll } from '@/web/woke/loot-filter/edits'
+
+describe('a change to the safety net with nothing on it', () => {
+  // A new league's first day: no prices, so the net has no rules yet.
+  it('waits for the rule instead of reading as broken', async () => {
+    const { store, config } = await opened(neverSink('1-REGULAR'), {
+      edits: [{ kind: 'visibility', type: 'woke->safety', tier: 'items', visibility: 'Hide', id: 1 }]
+    })
+    expect(config.safetyNet.on).toBe(true)
+    expect(store.failed.value).toEqual([])
+  })
+
+  it('a net rule that never exists still reads as broken', async () => {
+    const { store } = await opened(neverSink('1-REGULAR'), {
+      edits: [{ kind: 'visibility', type: 'woke->safety', tier: 'nothing', visibility: 'Hide', id: 1 }]
+    })
+    expect(store.failed.value).toHaveLength(1)
+  })
+})

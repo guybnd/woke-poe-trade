@@ -35,7 +35,8 @@ describe('the loot filter card button', () => {
   it('says where each notice goes', () => {
     expect(noticeAction(notice('update'))).toBe('Review update')
     expect(noticeAction(notice('safety'))).toBe('See safety net')
-    expect(noticeAction(notice('failed'))).toBe('Fix changes')
+    expect(noticeAction(notice('failed'))).toBe('Fix it')
+    expect(noticeAction(notice('failed', 3))).toBe('Fix them')
     expect(noticeAction(notice('wrong'))).toBe('Open editor')
   })
 })
