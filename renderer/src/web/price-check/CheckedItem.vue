@@ -209,6 +209,8 @@ export default defineComponent({
 
     // TradeListing.vue OR TradeBulk.vue
     const tradeService = ref<{ execSearch(): void } | null>(null)
+    // woke: a search started before the trade listing was there to run it (see below).
+    let searchWaiting = false
     // FiltersBlock.vue
     const filtersComponent = ref<ComponentPublicInstance>(null!)
     // FilterName.vue, which holds the tiles and chips
@@ -268,6 +270,8 @@ export default defineComponent({
       () => props.item.rarity === ItemRarity.Normal ? 100 : widget.value.searchStatRange, swap)
 
     watch(() => [props.item, doSearch.value], () => {
+      // A new item or a cancelled search drops one still waiting for the listing.
+      searchWaiting = false
       if (doSearch.value === false) return
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
@@ -280,10 +284,23 @@ export default defineComponent({
       // NOTE: child `trade-xxx` component renders/receives props on nextTick
       nextTick(() => {
         if (tradeService.value) {
+          searchWaiting = false
           tradeService.value.execSearch()
+        } else {
+          searchWaiting = true
         }
       })
     }, { deep: false, immediate: true })
+
+    // woke: the window's body (and so the trade listing) can mount after the search
+    // started: PoE mode holds it back until its code loads. The first check after
+    // the overlay starts then searched into nothing and sat at "Matched: ..." for good.
+    watch(tradeService, (service) => {
+      if (!service) return
+      if (!searchWaiting || !doSearch.value) return
+      searchWaiting = false
+      service.execSearch()
+    })
 
     watch(() => [props.item, doSearch.value, itemStats.value, itemFilters.value], (curr, prev) => {
       const cItem = curr[0]; const pItem = prev[0]
