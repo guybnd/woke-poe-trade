@@ -20,8 +20,8 @@ const OPTS = { league: 'Mirage', merchantOnly: true, currency: null, collapseLis
 
 describe('Add a mod', () => {
   let index: AddEntry[]
-  beforeAll(() => {
-    loadGameData()
+  beforeAll(async () => {
+    await loadGameData()
     index = buildAddIndex(STATS_ITERATOR(''))
   })
 

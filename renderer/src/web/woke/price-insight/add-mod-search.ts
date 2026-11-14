@@ -28,7 +28,8 @@ export function buildAddIndex (stats: Iterable<Stat>): AddEntry[] {
       const list = stat.trade.ids[kind]
       if (list?.length) ids[kind] = list
     }
-    if (!Object.keys(ids).length) continue
+    // A stat searched by an option (a passive, a temple room) needs a picker this has not got.
+    if (!Object.keys(ids).length || stat.trade.option) continue
     // A ref can be listed twice (stat groups): one entry, the first id per kind.
     const had = byRef.get(stat.ref)
     if (had) {
@@ -46,6 +47,13 @@ export function buildAddIndex (stats: Iterable<Stat>): AddEntry[] {
     })
   }
   return Array.from(byRef.values())
+}
+
+let shared: { src: unknown, index: AddEntry[] } | null = null
+// One index per stats data: the source is a new function after a data reload.
+export function sharedAddIndex (src: (includes: string) => Iterable<Stat>): AddEntry[] {
+  if (shared?.src !== src) shared = { src, index: buildAddIndex(src('')) }
+  return shared.index
 }
 
 function words (query: string): string[] {
@@ -67,7 +75,11 @@ export function searchAddIndex (index: readonly AddEntry[], query: string, kind:
     for (const re of starts) if (!re.test(e.hay)) score += 1
     hits.push({ e, score })
   }
-  hits.sort((a, b) => a.score - b.score || a.e.ref.length - b.e.ref.length || a.e.ref.localeCompare(b.e.ref))
+  // A mod the trade site lists under several kinds before one with a single kind
+  // and the same words, like a map's "Quality (Rarity): #%".
+  const reach = (e: AddEntry) => Math.min(2, Object.keys(e.ids).length)
+  hits.sort((a, b) => a.score - b.score || reach(b.e) - reach(a.e) ||
+    a.e.ref.length - b.e.ref.length || a.e.ref.localeCompare(b.e.ref))
   return hits.slice(0, limit).map(h => h.e)
 }
 

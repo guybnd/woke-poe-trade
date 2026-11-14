@@ -48,17 +48,14 @@
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { STATS_ITERATOR } from '@/assets/data'
 import type { AddedMod, AddedModKind, ItemFilters } from './interfaces'
-import { ADD_KINDS, AddEntry, addedModFrom, buildAddIndex, kindCounts, searchAddIndex } from '@/web/woke/price-insight/add-mod-search'
+import { ADD_KINDS, AddEntry, addedModFrom, kindCounts, searchAddIndex, sharedAddIndex } from '@/web/woke/price-insight/add-mod-search'
 
 const props = defineProps<{ filters: ItemFilters }>()
 
 const mods = computed(() => props.filters.addedMods ?? [])
 
-let index: AddEntry[] | null = null
-function getIndex () {
-  if (!index) index = buildAddIndex(STATS_ITERATOR(''))
-  return index
-}
+// Built on the first keystroke, shared by every window, rebuilt when the data reloads.
+const getIndex = () => sharedAddIndex(STATS_ITERATOR)
 
 const query = ref('')
 const focused = ref(false)
@@ -106,7 +103,7 @@ function onKey (e: KeyboardEvent) {
     stepKind(e.shiftKey ? -1 : 1)
   } else if (e.key === 'ArrowDown') {
     e.preventDefault()
-    sel.value = Math.min(sel.value + 1, results.value.length - 1)
+    sel.value = Math.max(0, Math.min(sel.value + 1, results.value.length - 1))
   } else if (e.key === 'ArrowUp') {
     e.preventDefault()
     sel.value = Math.max(sel.value - 1, 0)
