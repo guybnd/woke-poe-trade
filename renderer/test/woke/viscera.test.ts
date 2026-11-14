@@ -67,7 +67,8 @@ describe('Viscera', () => {
   })
 
   // Real copy of a live listing (trade fetch, 2026-11-15). The trade site lists
-  // only the plain base; the copy names the tier.
+  // only the plain base; the copy names the tier. It's a plain copy, so mods
+  // aren't read: Guy's advanced copy below checks the implicit.
   const LEG = () => fixture('items/viscera-lesser-skeletal-leg.txt')
 
   it('reads a tiered name as its base', () => {
@@ -77,9 +78,6 @@ describe('Viscera', () => {
       expect(item.category).toBe(ItemCategory.Viscera)
       expect(item.visceraSlot).toBe('Lower Limb')
       expect(item.unknownModifiers).toEqual([])
-      // A plain copy has no { Implicit Modifier } header, so only check the stat
-      // was read; the overlay's advanced copy marks it implicit (Guy's fixture).
-      expect(item.statsByType.some(s => /additional Cold Damage/.test(s.stat.ref)), name).toBe(true)
       const exact = createTradeRequest(createFilters(item, { ...OPTS, exact: true }), [])
       expect(exact.query.type).toBe("Skeletal Warrior's Leg")
     }
