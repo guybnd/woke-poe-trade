@@ -6,8 +6,10 @@
 // the item copy hotkeys before it was opened, so they're matched to the map by
 // name and level, and a match says how sure it is.
 import { isMapArea, isMapSideArea } from '../farming/farming'
-import { parseLogLine, speakerOf } from '../campaign/log-parse'
+import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
+
+export { slainName }
 
 export interface ModLine {
   matcher: string
@@ -73,14 +75,9 @@ const CHECK_MAX_AGE_MS = 12 * 60 * 60 * 1000
 const EXACT_MAX_AGE_MS = 30 * 60 * 1000
 const VOICE_WINDOW_MS = 60 * 1000
 
-const DEATH_RE = /\] : (\S+) has been slain\.\s*$/
 // Speakers are capitalised names on INFO lines. DEBUG and CRIT lines hold plenty
 // of "Word: value" too ("ALTERNATE TREE JEWEL: ...", "[...] Bone: ...").
 const VOICE_LINE_RE = /\[INFO Client \d+\] (?!Successfully )[A-Z][\w ,'-]{1,40}: /
-
-export function slainName (line: string): string | null {
-  return DEATH_RE.exec(line)?.[1] ?? null
-}
 
 // "Blighted Beach Map" and "Beach" name the same area.
 export function areaName (name: string): string {
