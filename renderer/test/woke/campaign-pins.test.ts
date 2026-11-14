@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { nextBoss, pinnedReadouts, pinsTick } from '@/web/woke/campaign/pins'
 import type { PinInputs } from '@/web/woke/campaign/pins'
 import type { CampaignRun } from '@/web/woke/campaign/run-timer'
+import { migrateCampaign } from '@/web/woke/campaign/widget'
+import type { CampaignWidget } from '@/web/woke/campaign/widget'
 
 const NOW = 1_000_000_000
 
@@ -17,6 +19,24 @@ function inputs (over: Partial<PinInputs>): PinInputs {
 }
 
 describe('campaign pinned readouts', () => {
+  it('shows the area hint after the step, dimmed, only when the step has one', () => {
+    const out = pinnedReadouts(inputs({ pins: ['hint', 'step'], step: 'Complete Trial of Ascendancy', hint: 'Usually ↗' }))
+    expect(out.map(r => [r.id, r.text, r.tone])).toEqual([['step', 'Complete Trial of Ascendancy', null], ['hint', 'Usually ↗', 'dim']])
+    expect(pinnedReadouts(inputs({ pins: ['step', 'hint'], step: 'x', hint: null })).map(r => r.id)).toEqual(['step'])
+  })
+
+  it('pins the hint once for those who pin the step', () => {
+    const w = { pins: ['level', 'step'] } as unknown as CampaignWidget
+    migrateCampaign(w)
+    expect(w.pins).toEqual(['level', 'step', 'hint'])
+    w.pins = ['level', 'step']
+    migrateCampaign(w)
+    expect(w.pins).toEqual(['level', 'step'])
+    const other = { pins: ['run'] } as unknown as CampaignWidget
+    migrateCampaign(other)
+    expect(other.pins).toEqual(['run'])
+  })
+
   it('shows nothing unless pinned', () => {
     expect(pinnedReadouts(inputs({ delta: -5000, level: 34, step: 'x' }))).toEqual([])
   })

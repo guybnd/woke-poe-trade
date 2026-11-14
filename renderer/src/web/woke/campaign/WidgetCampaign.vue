@@ -290,7 +290,8 @@ const readouts = computed(() => {
     actMs: timer.value?.act ?? null,
     level: s.value.level,
     xp: xp.value,
-    step: current.value ? current.value.parts.map(p => p.text).join('') : null
+    step: current.value ? current.value.parts.map(p => p.text).join('') : null,
+    hint: current.value?.subs[0]?.map(p => p.text).join('').trim() || null
   })
 })
 

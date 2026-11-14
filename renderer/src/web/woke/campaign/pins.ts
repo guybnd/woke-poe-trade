@@ -4,7 +4,7 @@ import { formatClock } from '../ui/format'
 import { SUB_SPLITS, formatDelta, runElapsed } from './run-timer'
 import type { CampaignRun } from './run-timer'
 
-export type PinId = 'run' | 'act' | 'delta' | 'boss' | 'zone' | 'level' | 'step'
+export type PinId = 'run' | 'act' | 'delta' | 'boss' | 'zone' | 'level' | 'step' | 'hint'
 
 export const PIN_OPTIONS: Array<{ id: PinId, label: string, needsTimer: boolean, ticks: boolean }> = [
   { id: 'run', label: 'Run time', needsTimer: true, ticks: true },
@@ -13,7 +13,8 @@ export const PIN_OPTIONS: Array<{ id: PinId, label: string, needsTimer: boolean,
   { id: 'boss', label: 'Time to next boss, against your best', needsTimer: true, ticks: true },
   { id: 'zone', label: 'Time in this zone', needsTimer: true, ticks: true },
   { id: 'level', label: 'Level and XP penalty', needsTimer: false, ticks: false },
-  { id: 'step', label: 'Current step', needsTimer: false, ticks: false }
+  { id: 'step', label: 'Current step', needsTimer: false, ticks: false },
+  { id: 'hint', label: 'Area hint for the current step ("Go ↗")', needsTimer: false, ticks: false }
 ]
 
 export type ReadoutTone = 'up' | 'down' | 'dim' | null
@@ -38,6 +39,8 @@ export interface PinInputs {
   level: number | null
   xp: { diff: number, band: string } | null
   step: string | null
+  // The current step's first hint line ("Usually ↗"), if it has one.
+  hint?: string | null
 }
 
 // The next boss of the current act, and how long your best run still had
@@ -77,6 +80,7 @@ export function pinnedReadouts (input: PinInputs): Readout[] {
         add(id, `Lv ${input.level}${gap}`, x?.band === 'penalty' ? 'down' : null)
       }
     } else if (id === 'step' && input.step) add(id, input.step)
+    else if (id === 'hint' && input.hint) add(id, input.hint, 'dim')
   }
   return out
 }
