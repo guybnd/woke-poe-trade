@@ -118,3 +118,9 @@ test('a burst of settings saves leaves the newest settings on disk', async ({ ov
   await overlay.page.waitForTimeout(500)
   expect(fakeApp.readConfigText()).toBe(fakeApp.lastSavedContents())
 })
+
+test('the run timer comes with the campaign tracker, once', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [CAMPAIGN] })
+  await expect.poll(() => overlay.savedWidget('woke-run-timer')?.wmWants).toBe('show')
+  expect(overlay.savedWidget('woke-campaign').timerPlaced).toBe(true)
+})
