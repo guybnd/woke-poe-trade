@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-271
 title: 'Run timer: per-run zone and level timeline with review view'
-status: Ready
+status: Done
 priority: None
 effort: M
 assignee: unassigned
@@ -32,7 +32,29 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-14T03:11:38.024Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as eaaa17a0. Each run saves its zones, level-ups and deaths, and
+      you review them under Past runs (option C). Still open: Guy's layout pick
+      on the mocks page, a live overlay check, campaign step times, and
+      rebuilding old runs.
+    completionComment: true
+    date: '2026-11-14T03:31:20.905Z'
+    id: c-2026-11-14t03-31-20-905z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-14T03:31:21.404Z'
 needsAction: null
+baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/432'
+swimlane: null
+diffSummary:
+  - file: testing/e2e/loot-filter.spec.ts
+    additions: 1
+    deletions: 1
 ---
 Guy wants each campaign run to save a full timeline he can review afterwards.
 
