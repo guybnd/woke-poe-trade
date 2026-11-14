@@ -81,6 +81,8 @@ test('a new item drops the added mods', async ({ overlay }) => {
   await box.press('Enter')
   await expect(panel.locator('[data-added-mod]')).toHaveCount(1)
   await overlay.copyItem('items/rare-body-armour-es.txt')
-  await expect(panel.getByText('Twilight Regalia').first()).toBeVisible()
+  // The window shows the item class, not its name: wait for the ring's mods to go.
+  await expect(panel.getByText(/Physical Damage to Attacks/)).toHaveCount(0)
+  await expect(panel.getByRole('combobox', { name: 'Add a mod to search for' })).toBeVisible()
   await expect(panel.locator('[data-added-mod]')).toHaveCount(0)
 })
