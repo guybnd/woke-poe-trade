@@ -16,6 +16,15 @@ history:
     user: Agent
     date: '2026-11-14T03:07:23.120Z'
     comment: Created ticket.
+    id: a-2026-11-14t03-07-23-120z
+  - type: activity
+    user: Agent
+    date: '2026-11-14T03:28:09.654Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/434: 251 moved, 4
+      renumbered Foulborn ids, 66 folded, 114 dropped, data v9. Review + local
+      checks + live trade checks pass; handed to coordinator for merge.
+    id: a-2026-11-14t03-28-09-654z
 ---
 The trade site moved granted skills and socketed supports to new ids (`explicit.effect_<n>`) with new words ("Grants Level 22 Anger", "...Added Fire Damage Support"), and dropped other ids. 365 ids in en/stats.ndjson were dead: price checks on those items failed ("Unknown stat provided") or left the mod unread.
 
