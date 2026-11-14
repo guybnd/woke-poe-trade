@@ -1,6 +1,9 @@
 <template>
   <canvas v-show="shown" ref="canvas" :class="$style.layer" data-tree-overlay aria-hidden="true" />
-  <div v-if="shown && left != null" :class="$style.count">{{ countText }}<template v-if="treeTitle"> · {{ treeTitle }}</template></div>
+  <div v-if="shown && left != null" :class="$style.count">
+    {{ countText }}<template v-if="treeTitle"> · {{ treeTitle }}</template>
+    <div v-if="panel === 'tree' && ascNames" :class="$style.asc">Ascendancy: {{ ascNames }}</div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -50,6 +53,9 @@ let probes: number[][] = []
 let ascPath: BuildPath | null = null
 let ascProbes: number[][] = []
 let sentAsc: string | null | undefined
+// The tree's ascendancy notables in the build's order, shown under the count
+// on the main tree, so they show even when the panel isn't open.
+const ascNames = shallowRef('')
 let taken = new Set<number>()
 // Following your level (no set picked by hand), a tree you've taken all of
 // hands over to the next one: a guide's "Level 24" tree is done well before
@@ -121,6 +127,7 @@ function usePath (tree: PobTreeSpec) {
   const asc = lib!.buildAscendancy(all!, tree.nodes ?? [])
   ascPath = asc ? lib!.ascPath(all!, tree.nodes ?? [], treeArt!, asc) : null
   ascProbes = ascPath ? lib!.probesOf(ascPath, all!) : []
+  ascNames.value = (tree.nodes ?? []).map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name).map(n => n!.name).join(' · ')
   treeTitle.value = trees.length > 1 ? tree.title : ''
 }
 
@@ -319,6 +326,7 @@ onUnmounted(() => {
 
 <style module>
 .layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 40; }
+.asc { font-weight: 400; text-align: center; color: rgb(255, 220, 90); }
 .count {
   position: fixed;
   left: 50%;
