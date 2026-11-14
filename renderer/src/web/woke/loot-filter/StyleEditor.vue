@@ -232,7 +232,6 @@ function commitDraft () {
   if (!d) return
   // The parent redraws with the saved colour in the same frame.
   draft.value = null
-  if (props.look[d.key] != null && hex(props.look[d.key]!) === d.value.toLowerCase()) return
   emit('patch', { [d.key]: toColour(d.key, d.value) })
 }
 
@@ -245,6 +244,8 @@ function listenForLeave (on: boolean) {
   const f = on ? document.addEventListener : document.removeEventListener
   f.call(document, 'pointerdown', commitDraft, true)
   f.call(document, 'keydown', commitDraft, true)
+  // The overlay losing focus (a new sample from the game) saves it too.
+  ;(on ? window.addEventListener : window.removeEventListener).call(window, 'blur', commitDraft)
 }
 onBeforeUnmount(commitDraft)
 
