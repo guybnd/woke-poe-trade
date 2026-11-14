@@ -12,8 +12,8 @@ import { buildTip, kindOfNinjaType, packFiles } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { offerItem, openItemMenu } from './item-menu'
-import { kindOfName } from './item-menu-logic'
-import type { ItemMenuRef } from './item-menu-logic'
+import { kindOfName, uniqueModLines } from './item-menu-logic'
+import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
 import type { TipBaseUnique, TipContent, TipMarket } from './tooltip'
 
@@ -71,6 +71,13 @@ function loadFile (file: keyof TipPack): Promise<void> {
 export async function loadTipUniques (): Promise<TipPack['uniques'] | null> {
   await loadFile('uniques')
   return pack.uniques ?? null
+}
+
+// A unique's mods for the price check (item-menu-logic's virtualUnique), or
+// null when the data can't load: the check then goes on without them.
+export async function loadUniqueMods (name: string, variant?: string): Promise<UniqueModLines | null> {
+  const uniques = await loadTipUniques().catch(() => null)
+  return uniqueModLines(uniques?.[name], variant)
 }
 
 // Card rewards and stack sizes, currency texts: the tooltip's item file.

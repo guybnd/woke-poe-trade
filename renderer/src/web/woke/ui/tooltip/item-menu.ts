@@ -24,7 +24,7 @@ import { gameIcon } from '../game-icons'
 import { offerMenuItem, openMenu, toast } from '../layer'
 import type { MenuItemAction, MenuItemHead } from '../layer'
 import { hideTip } from './tooltip'
-import { marketFor } from './item-tip'
+import { loadUniqueMods, marketFor } from './item-tip'
 import { NS, infoOf, kindOf, nameClass, plainName, priceCheckInput, tradeQuery } from './item-menu-logic'
 import type { ItemMenuRef } from './item-menu-logic'
 
@@ -61,12 +61,18 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
       title: 'Price check',
       icon: 'fas fa-balance-scale',
       disabled: !check,
-      action: () => {
+      action: async () => {
         if (!check) return
         hideTip()
+        // A unique priced by name gets its mods as stat rows, when the data loads.
+        const english = AppConfig().language === 'en'
+        const withMods = (check.item && kind === 'unique' && english && info)
+          ? priceCheckInput(ref, kind, info, english, await loadUniqueMods(info.refName, ref.variant))
+          : null
+        const input = withMods ?? check
         Host.selfDispatch({
           name: 'MAIN->CLIENT::item-text',
-          payload: { clipboard: check.clipboard, item: check.item, position: pos, focusOverlay: true, target: 'price-check' }
+          payload: { clipboard: input.clipboard, item: input.item, position: pos, focusOverlay: true, target: 'price-check' }
         })
       }
     },

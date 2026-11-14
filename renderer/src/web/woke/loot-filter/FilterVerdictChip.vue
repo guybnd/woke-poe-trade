@@ -45,7 +45,7 @@ interface Verdict {
 const verdict = computed<Verdict | null>(() => {
   const store = active.value
   const doc = store?.doc.value
-  if (!store || !doc || props.item.rawText === 'VIRTUAL_ITEM') return null
+  if (!store || !doc || props.item.rawText === 'VIRTUAL_ITEM' || props.item.rollsFromData) return null
   const facts = itemFacts(props.item.rawText, props.item)
   const m = matchItem(doc, { ...facts, areaLevel: store.areaLevel.value ?? store.config.fallbackAreaLevel })
   const b = m.final?.block
