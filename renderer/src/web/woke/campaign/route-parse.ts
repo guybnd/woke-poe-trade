@@ -251,6 +251,18 @@ function isTrialPart (p: Part): boolean {
   return p.kind === 'trial' && p.text === TRIAL_TEXT
 }
 
+// The next zone with monsters the route takes you to from `current`, for the
+// XP band while in town (a town's logged area level is far above its act's
+// zones: Highgate logs 40 at the start of act 4).
+export function nextFightZone (route: Route, current: number, data: RouteData): { areaId: string, level: number } | null {
+  for (let i = current; i < route.steps.length; i++) {
+    const id = route.steps[i].areaAfter
+    const row = data.areas[id]
+    if (row && !row[3] && row[2] > 0) return { areaId: id, level: row[2] }
+  }
+  return null
+}
+
 // Best guess of where you are on a freshly built route (options changed).
 export function resyncTo (route: Route, areaId: string): number {
   const i = route.steps.findIndex(s => entersArea(s, areaId))

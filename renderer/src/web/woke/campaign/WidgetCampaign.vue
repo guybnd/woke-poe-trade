@@ -73,14 +73,14 @@ import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay, tickWhile } from '../dock/dock'
 import { reportProblem } from '../dock/health'
 import { pinnedReadouts, pinsTick } from './pins'
-import { actFromAreaId, actLabel, isTrialFinished } from './log-parse'
+import { actFromAreaId, actLabel, isTown, isTrialFinished } from './log-parse'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
 import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, advanceOnTrial, behind, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnTrial, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
-import { bundledRoute, routeData } from './route-data'
+import { areaName, bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
 import type { LogLine } from '../shared/game-log'
 import {
@@ -197,8 +197,11 @@ const dockBadge = computed(() => {
 
 // ---- XP band ----
 
-const xp = computed(() => (s.value.level != null && s.value.areaLevel != null && actFromAreaId(s.value.areaId) != null)
-  ? xpState(s.value.level, s.value.areaLevel)
+// In town there's nothing to kill: measure against the next zone on the route.
+const townNext = computed(() => isTown(s.value.areaId) ? nextFightZone(route.value, props.config.step, routeData) : null)
+const xpAreaLevel = computed(() => isTown(s.value.areaId) ? (townNext.value?.level ?? null) : s.value.areaLevel)
+const xp = computed(() => (s.value.level != null && xpAreaLevel.value != null && actFromAreaId(s.value.areaId) != null)
+  ? xpState(s.value.level, xpAreaLevel.value)
   : null)
 const xpLabel = computed(() => {
   const x = xp.value
@@ -213,8 +216,9 @@ const xpTitle = computed(() => {
   const x = xp.value
   if (!x) return ''
   const where = x.diff > 0 ? 'over-levelled for' : x.diff < 0 ? 'under-levelled for' : 'level with'
-  return `You are ${where} this area (area level ${s.value.areaLevel}). No XP penalty within ±${x.safeRange} levels.` +
-    (x.band === 'penalty' ? ` You get ${Math.round(x.multiplier * 100)}% XP here.` : '')
+  const area = townNext.value ? `the next zone, ${areaName(townNext.value.areaId)}` : 'this area'
+  return `You are ${where} ${area} (area level ${xpAreaLevel.value}). No XP penalty within ±${x.safeRange} levels.` +
+    (x.band === 'penalty' ? ` You get ${Math.round(x.multiplier * 100)}% XP ${townNext.value ? 'there' : 'here'}.` : '')
 })
 
 // ---- personal notes (optional) ----
