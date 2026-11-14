@@ -387,7 +387,8 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
     '\tBaseType == "Headhunter Belt"',
     ''
   ].join('\r\n'))
-  await overlay.boot({ widgets: [lootFilter(folder)] })
+  // Reload wherever you are, so a save that typed /itemfilter would show in chat.
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
   await page.getByRole('tab', { name: /^Prices/ }).click()
@@ -411,6 +412,23 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
     const out = path.join(folder, 'NeverSink (woke).filter')
     return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
   }).toMatch(/Show # \$type->woke->own [^\n]*\n(\t[^\n]*\n)*\tBaseType == "Despot Axe"/)
+
+  // It acts in place: the row stays, done, with Undo, and nothing is typed in
+  // chat (that would hand focus to the game and close the window).
+  const out = () => fs.readFileSync(path.join(folder, 'NeverSink (woke).filter'), 'utf8')
+  await expect(page.getByText('shows now')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^Prices/ })).toHaveAttribute('aria-selected', 'true')
+  expect(fakeApp.game.chat).toEqual([])
+  await overlay.snap('prices tab, Show it done in place')
+  await page.getByRole('button', { name: 'Undo for Despot Axe' }).click()
+  await expect.poll(out).not.toMatch(/Show # \$type->woke->own [^\n]*\n(\t[^\n]*\n)*\tBaseType == "Despot Axe"/)
+
+  // Undo opens it again; Not for me also stays in place.
+  await page.getByRole('button', { name: 'Not for me' }).click()
+  await expect(page.getByText('stays hidden till its price doubles')).toBeVisible()
+  await page.getByRole('button', { name: 'Undo for Despot Axe' }).click()
+  await expect(page.getByRole('button', { name: 'Not for me' })).toBeVisible()
+  expect(fakeApp.game.chat).toEqual([])
 })
 
 // A notice to find on the dock card, whatever the prices say: a change whose
