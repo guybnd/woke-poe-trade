@@ -108,6 +108,15 @@ export interface RunTimerWidget extends Widget {
   lastLogAt: number
   run: CampaignRun | null
   history: CampaignRun[]
+  // Runs whose timeline file is to be deleted (removed from history). Kept
+  // until the next start, so Undo on a deleted run still finds its timeline.
+  timelineTrash?: number[]
+}
+
+type HistoryHolder = Pick<RunTimerWidget, 'run' | 'history'> & { timelineTrash?: number[] }
+
+function trashTimelines (w: { timelineTrash?: number[] }, ids: number[]) {
+  if (ids.length) w.timelineTrash = [...(w.timelineTrash ?? []), ...ids]
 }
 
 export function newRun (now: number): CampaignRun {
@@ -136,6 +145,7 @@ export function migrateRunTimer (w: RunTimerWidget) {
   if (w.subSplits === undefined) w.subSplits = true
   if (w.hotkeyPause === undefined) w.hotkeyPause = null
   if (w.hotkeySplits === undefined) w.hotkeySplits = null
+  if (w.timelineTrash === undefined) w.timelineTrash = []
 }
 
 export function hotkeyTarget (wmId: number, action: 'pause' | 'splits'): string {
@@ -189,17 +199,18 @@ export function isComplete (run: CampaignRun): boolean {
 }
 
 // The oldest runs drop off, but never the personal best.
-function saveToHistory (w: Pick<RunTimerWidget, 'history'>, run: CampaignRun) {
+function saveToHistory (w: Pick<RunTimerWidget, 'history'> & { timelineTrash?: number[] }, run: CampaignRun) {
   const all = [run, ...w.history.filter(r => r.id !== run.id)]
   const kept = all.slice(0, HISTORY_LIMIT)
   const pb = personalBest(all)
   if (pb && !kept.includes(pb)) kept[kept.length - 1] = pb
+  trashTimelines(w, all.filter(r => !kept.includes(r)).map(r => r.id))
   w.history = kept
 }
 
 // Ends the current run by hand. In act 10 this counts as finishing the
 // campaign (for when the Epilogue isn't seen in the log).
-export function endRun (w: Pick<RunTimerWidget, 'run' | 'history'>, now: number) {
+export function endRun (w: HistoryHolder, now: number) {
   const run = w.run
   if (!run || run.finished) return
   if (run.act === LAST_ACT && !splitAt(run, LAST_ACT)) {
@@ -208,6 +219,7 @@ export function endRun (w: Pick<RunTimerWidget, 'run' | 'history'>, now: number)
   finishRun(run, now)
   if (run.splits.length === 0 && run.elapsedMs < 60_000) {
     // A run that never left act 1 in its first minute is noise.
+    trashTimelines(w, [run.id])
     w.run = null
     return
   }
@@ -215,19 +227,19 @@ export function endRun (w: Pick<RunTimerWidget, 'run' | 'history'>, now: number)
 }
 
 // Ends the current run (if any) and clears it.
-export function archiveRun (w: Pick<RunTimerWidget, 'run' | 'history'>, now: number) {
+export function archiveRun (w: HistoryHolder, now: number) {
   endRun(w, now)
   w.run = null
 }
 
-export function startRun (w: Pick<RunTimerWidget, 'run' | 'history'>, now: number) {
+export function startRun (w: HistoryHolder, now: number) {
   archiveRun(w, now)
   w.run = newRun(now)
 }
 
 // Applies one Client.txt event. Returns true when anything changed.
 export function applyRunEvent (
-  w: Pick<RunTimerWidget, 'run' | 'history' | 'autoStart' | 'charName'> & { subSplits?: boolean },
+  w: HistoryHolder & Pick<RunTimerWidget, 'autoStart' | 'charName'> & { subSplits?: boolean },
   ev: LogEvent,
   now: number
 ): boolean {

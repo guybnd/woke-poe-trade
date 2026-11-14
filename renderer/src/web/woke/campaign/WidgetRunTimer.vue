@@ -62,7 +62,8 @@
       <!-- Splits panel -->
       <WPanel v-if="config.expanded" ref="panel" width="21rem" max-height="60vh">
         <template #title>
-          <template v-if="run">Run<template v-if="run.charName"> · {{ run.charName }}<span class="w-dim"> ({{ run.className }})</span></template></template>
+          <template v-if="reviewRun">{{ reviewRun.charName || 'Unknown' }}</template>
+          <template v-else-if="run">Run<template v-if="run.charName"> · {{ run.charName }}<span class="w-dim"> ({{ run.className }})</span></template></template>
           <template v-else>Campaign runs</template>
         </template>
         <template v-if="docked" #actions>
@@ -122,6 +123,10 @@
           </template>
         </template>
 
+        <template v-else-if="reviewRun">
+          <RunReview :run="reviewRun" :cmp="reviewCmp" :cmp-label="reviewCmpLabel" :live="recorder.current(reviewRun.id)" />
+        </template>
+
         <template v-else>
           <WEmpty v-if="!config.history.length" icon="fas fa-stopwatch">Finished and abandoned runs show here.</WEmpty>
           <template v-else>
@@ -129,7 +134,7 @@
               <span>Character</span><span class="text-right">Time</span><span class="text-right">Date</span><span />
             </div>
             <div v-for="r in config.history" :key="r.id" class="w-row cursor-pointer" :class="[$style.histGrid, cmp?.id === r.id && $style.now]"
-              :title="isComplete(r) ? 'Race against this run' : 'Unfinished runs can\'t be raced'" @click="pickCompare(r)">
+              title="Open this run's timeline" @click="reviewId = r.id">
               <span class="w-trunc">
                 <template v-if="isComplete(r)">{{ r.charName || 'Unknown' }}</template>
                 <span v-else class="w-faint">{{ r.charName || 'Unknown' }} · quit in {{ actLabel(r.act) }}</span>
@@ -144,7 +149,13 @@
           </template>
         </template>
 
-        <template #footer>
+        <template v-if="reviewRun" #footer>
+          <button class="w-accent hover:underline" @click="reviewId = null"><i class="fas fa-chevron-left text-xs" /> Runs</button>
+          <span v-if="pb?.id === reviewRun.id" class="ml-auto" :class="$style.pbChip">PB</span>
+          <span v-else-if="cmp?.id === reviewRun.id" class="ml-auto w-dim">Racing this run</span>
+          <button v-else-if="isComplete(reviewRun)" class="ml-auto w-accent hover:underline" @click="pickCompare(reviewRun)">Race this run</button>
+        </template>
+        <template v-else #footer>
           <span v-if="pbTotal != null">PB <span class="w-num">{{ formatClock(pbTotal) }}</span></span>
           <span v-if="sob != null">Sum of best <span class="w-num">{{ formatClock(sob) }}</span></span>
           <span v-if="config.compareTo != null && cmp && cmp.id !== pb?.id" class="ml-auto">
@@ -175,7 +186,10 @@ import { WPanel, WTabs, WChip, WEmpty, toast } from '../ui'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
-import { actLabel } from './log-parse'
+import { actLabel, slainName } from './log-parse'
+import type { LogEvent } from './log-parse'
+import RunReview from './RunReview.vue'
+import { deleteTimelines, timelineRecorder } from './run-timeline-store'
 import {
   applyBossSpeech, applyRunEvent, comparisonRun, endRun, formatDelta, headlineDelta, isComplete,
   migrateRunTimer, parseHotkeyTarget, pauseRun, personalBest, resumeRun, runElapsed, runTotal, splitRows, startRun, sumOfBest, townElapsed
@@ -222,6 +236,34 @@ const docked = computed(() => {
 })
 
 const tab = shallowRef<'splits' | 'history'>('splits')
+// The past run whose timeline is open (Past runs tab).
+const reviewId = shallowRef<number | null>(null)
+const reviewRun = computed(() => tab.value === 'history' && reviewId.value != null
+  ? props.config.history.find(r => r.id === reviewId.value) ?? null
+  : null)
+// The run it's compared with: the one you race, else the best other run.
+const reviewCmp = computed(() => {
+  const r = reviewRun.value
+  if (!r) return null
+  const others = props.config.history.filter(x => x.id !== r.id)
+  const picked = props.config.compareTo != null ? others.find(x => x.id === props.config.compareTo) : undefined
+  return picked ?? personalBest(others)
+})
+const reviewCmpLabel = computed(() => {
+  const c = reviewCmp.value
+  if (!c) return ''
+  return c.id === pb.value?.id ? 'PB' : (c.charName || formatDate(c.startedAt))
+})
+
+// Each run's zones, levels and deaths, saved in a file of its own.
+const recorder = timelineRecorder()
+// Timelines of runs deleted from Past runs (Undo had its chance last session).
+const trash = (props.config.timelineTrash ?? []).filter(id => id !== props.config.run?.id && !props.config.history.some(r => r.id === id))
+if (trash.length) {
+  deleteTimelines(trash).then(() => {
+    props.config.timelineTrash = (props.config.timelineTrash ?? []).filter(id => !trash.includes(id))
+  })
+}
 
 const now = shallowRef(Date.now())
 // Ticks only while the widget is on screen.
@@ -254,6 +296,7 @@ function togglePause () {
   saveConfig()
 }
 function end () {
+  recorder.flush()
   endRun(props.config, Date.now())
   saveConfig()
 }
@@ -266,9 +309,14 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 function removeRun (id: number) {
   const before = props.config.history
   const compareBefore = props.config.compareTo
+  const trashBefore = props.config.timelineTrash ?? []
   props.config.history = before.filter(r => r.id !== id)
+  props.config.timelineTrash = [...trashBefore, id]
   if (props.config.compareTo === id) props.config.compareTo = null
-  toast('Run deleted', { anchor: panel.value?.el, undo: () => { props.config.history = before; props.config.compareTo = compareBefore } })
+  toast('Run deleted', {
+    anchor: panel.value?.el,
+    undo: () => { props.config.history = before; props.config.compareTo = compareBefore; props.config.timelineTrash = trashBefore }
+  })
 }
 function lastSplit (r: CampaignRun) {
   return r.splits.length ? r.splits[r.splits.length - 1].totalMs : r.elapsedMs
@@ -277,10 +325,34 @@ function formatDate (ts: number) {
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+// Adds a line to the run's timeline, after the run timer applied it.
+function recordLine (ev: LogEvent | null, line: string, at: number, prevLevel: number | null) {
+  const r = props.config.run
+  if (!r || r.finished) return
+  const runMs = runElapsed(r, at)
+  if (ev?.kind === 'area') recorder.record(r.id, { kind: 'area', areaId: ev.areaId }, runMs, at)
+  else if (ev?.kind === 'zone') recorder.record(r.id, { kind: 'zone', name: ev.name }, runMs, at)
+  else if (ev?.kind === 'level') {
+    // Only the run's own character, and only once per level.
+    if (r.charName === ev.charName && r.level === ev.level && prevLevel !== ev.level) {
+      recorder.record(r.id, { kind: 'level', level: ev.level }, runMs, at)
+    }
+  } else if (!ev && r.charName && slainName(line) === r.charName) {
+    recorder.record(r.id, { kind: 'death' }, runMs, at)
+  }
+}
+
 function applyLines (lines: LogLine[]) {
   let changed = false
   for (const { ev, at, line } of lines) {
+    const before = props.config.run
+    const prevId = before?.id
+    const prevLevel = before?.level ?? null
+    const wasOpen = before != null && !before.finished
     if (ev ? applyRunEvent(props.config, ev, at) : applyBossSpeech(props.config, line, at)) changed = true
+    // A run that just ended (Epilogue, or a new run replacing it) is written now.
+    if (wasOpen && (props.config.run?.id !== prevId || props.config.run?.finished)) recorder.flush()
+    recordLine(ev, line, at, props.config.run?.id === prevId ? prevLevel : null)
   }
   if (lines.length) props.config.lastLogAt = lines[lines.length - 1].at
   if (changed) {
@@ -304,6 +376,7 @@ const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 
 onUnmounted(() => {
+  recorder.flush()
   hotkeys.abort()
 })
 

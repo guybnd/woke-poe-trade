@@ -30,6 +30,13 @@ export function speakerOf (line: string): string | null {
   return SPEAKER_RE.exec(line)?.[1] ?? null
 }
 
+// "<name> has been slain." is all the game logs about a death.
+const DEATH_RE = /\] : (\S+) has been slain\.\s*$/
+
+export function slainName (line: string): string | null {
+  return DEATH_RE.exec(line)?.[1] ?? null
+}
+
 // Izaro says one line when a Trial of Ascendancy is finished: one line per
 // trial, the same each time, and the same for the act 6-10 and endgame lab
 // copies of that trial. In a campaign zone he says nothing else, and nothing
