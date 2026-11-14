@@ -129,10 +129,10 @@ function parseUniqueMods (info: BaseType, uniqueBase: BaseType, mods: UniqueModL
   const kept = keep.every(Boolean)
     ? first
     : read({
-      ...lines,
-      implicits: lines.implicits.filter((_, i) => keep[i]),
-      explicits: lines.explicits.filter((_, i) => keep[lines.implicits.length + i])
-    })
+        ...lines,
+        implicits: lines.implicits.filter((_, i) => keep[i]),
+        explicits: lines.explicits.filter((_, i) => keep[lines.implicits.length + i])
+      })
   if (!kept) return null
   // A line the parser can't read stays out: on a real copy it would be the
   // game's wording, here it is only the data's.
