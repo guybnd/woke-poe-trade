@@ -189,6 +189,12 @@ export function initUiModFilters (
   }
 
   finalFilterTweaks(ctx)
+  // woke: rolls from data aren't this copy's, and a lowest roll can read as a
+  // best one: nothing is ticked, whatever the tweaks above picked.
+  if (item.rollsFromData) {
+    ctx.filters.forEach(filter => { filter.disabled = true })
+    ctx.groups.forEach(group => { group.meta.disabled = true })
+  }
   addInTotalMods(ctx)
 
   return [...ctx.filters, ...ctx.groups]

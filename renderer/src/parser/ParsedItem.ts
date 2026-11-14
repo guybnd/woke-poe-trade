@@ -87,6 +87,8 @@ export interface ParsedItem {
   isSynthesised?: boolean
   isFractured?: boolean
   isVeiled?: boolean
+  // woke: no copy: the mods come from data at the lowest roll (a unique priced by name).
+  rollsFromData?: boolean
   isFoil?: boolean
   isFoulborn?: boolean
   isVestigial?: boolean

@@ -159,7 +159,7 @@ import type { MechanicsWidget } from '../mechanics/widget'
 import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
 import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
-import { loadTipItems, loadTipUniques } from '../ui/tooltip/item-tip'
+import { loadTipItems, loadTipUniques, loadUniqueMods } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
 import type { TipItem } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -584,14 +584,18 @@ function openLookup (entry: PriceEntry | ItemEntry, tab: LookupTab) {
   if (!info) return
   lookupRequest.value = { item: info.namespace === 'UNIQUE' ? virtualUnique(info) : createVirtualItem({ rarity: ItemRarity.Normal, info }), tab }
 }
-function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
+async function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
   remember(entry)
   const info = infoFor(entry)
   if (!info) return
-  const item = virtualUnique(info)
+  const position = { x: e.screenX, y: e.screenY }
+  // Its mods as stat rows (English data only); one price row says which variant.
+  const variant = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant || undefined : undefined
+  const mods = AppConfig().language === 'en' ? await loadUniqueMods(info.refName, variant) : null
+  const item = virtualUnique(info, mods)
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',
-    payload: { clipboard: item.rawText, item, position: { x: e.screenX, y: e.screenY }, focusOverlay: true, target: 'price-check' }
+    payload: { clipboard: item.rawText, item, position, focusOverlay: true, target: 'price-check' }
   })
 }
 function openTrade (entry: PriceEntry | ItemEntry) {
