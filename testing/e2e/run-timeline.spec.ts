@@ -87,18 +87,21 @@ test('finished campaign card steps are saved with the run', async ({ overlay, fa
   const panel = overlay.widget('woke-run-timer')
   await panel.getByTitle(/^End run/).first().click()
   await expect.poll(() => timer()?.history?.length).toBe(1)
-  // Away from the campaign icon, whose card would sit over the panel.
+  // Away from the campaign icon: its card (which also pops up for a moment
+  // after each step) would sit over the panel.
   await overlay.page.mouse.move(900, 900)
-  await overlay.page.waitForTimeout(500)
+  await expect(overlay.page.locator('[data-dock-row] [class*="_cardHead_"]')).toHaveCount(0, { timeout: 15_000 })
   // A notice about the test machine's port can sit over the tabs.
   const dismiss = overlay.page.getByRole('button', { name: 'Dismiss' })
   if (await dismiss.isVisible()) await dismiss.click()
 
-  await panel.getByText('Past runs').click()
+  await panel.getByRole('tab', { name: /Past runs/ }).click()
   await panel.locator('.w-row', { hasText: 'WokeTester' }).first().click()
   await panel.getByRole('button', { name: 'Steps' }).click()
   await expect(panel.locator('.w-row--head')).toContainText('Step')
-  await expect(panel).toContainText('The Coast')
+  // Some of act 1's steps, whichever the route ticked live (which ones
+  // depends on how the lines were batched).
+  await expect.poll(() => panel.locator('.w-row:not(.w-row--head)').count()).toBeGreaterThan(3)
   await overlay.snap('run timeline steps')
 })
 
