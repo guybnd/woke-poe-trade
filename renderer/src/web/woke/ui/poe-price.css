@@ -83,7 +83,7 @@
   height: 60px;
   margin: 0;
   transform: translateY(var(--w-crest-y));
-  padding: 0 calc(var(--w-crest-cap) - 4px);
+  padding: 0 calc(var(--w-crest-cap) - 1px);
   box-sizing: border-box;
   background:
     var(--art-crest-left) left top / auto 100% no-repeat,

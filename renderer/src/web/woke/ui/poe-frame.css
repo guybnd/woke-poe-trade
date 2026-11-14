@@ -214,8 +214,8 @@
     var(--art-crest-centre) center top / auto 100% no-repeat,
     var(--art-crest-fill-l) left top / 50% 100% no-repeat,
     var(--art-crest-fill-r) right top / 50% 100% no-repeat;
-  /* The fill runs between the two ends and a little under each, so no seam shows where they meet. */
-  padding: 0 calc(var(--w-crest-cap) - 4px);
+  /* The fill runs between the two ends and a pixel under each, so no seam shows where they meet. */
+  padding: 0 calc(var(--w-crest-cap) - 1px);
   box-sizing: border-box;
   background-origin: border-box, border-box, border-box, content-box, content-box;
   background-clip: border-box, border-box, border-box, content-box, content-box;
