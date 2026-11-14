@@ -570,6 +570,7 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
     applyAnointmentRules(ctx.filters, ctx.item)
   }
 
+  const standIns: StatFilter[] = []
   for (const filter of ctx.filters) {
     hideNotVariableStat(filter, item)
 
@@ -579,7 +580,20 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
       }
     } else if (filter.tag === FilterTag.Fractured) {
       const mod = ctx.item.statsByType.find(mod => mod.stat.ref === filter.statRef)!
-      if (mod.stat.trade.ids[ModifierType.Explicit]) {
+      const explicitIds = mod.stat.trade.ids[ModifierType.Explicit]
+      // woke: its explicit copy can be folded into a pseudo total (a fractured
+      // "+18% to Cold and Chaos Resistances" goes into the res totals) and leave
+      // no row of its own. This copy then stands in as the explicit row,
+      // unticked, so the mod is listed and PoE mode offers "Fractured only".
+      const mine = filter.sources[0]?.modifier
+      const twinLeft = ctx.filters.some(f =>
+        f !== filter && f.tag === FilterTag.Explicit && f.sources.length === 1 && f.sources[0].modifier === mine)
+      if (explicitIds && mine && !twinLeft) {
+        filter.tag = FilterTag.Explicit
+        filter.tradeId = explicitIds
+        filter.disabled = true
+        standIns.push(filter)
+      } else if (explicitIds) {
         // hide only if fractured mod has corresponding explicit variant
         filter.hidden = 'filters.hide_for_crafting'
       }
@@ -599,6 +613,7 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
       filter.disabled = false
     }
   }
+  placeByItemOrder(ctx.filters, standIns, item)
 
   tickTopTierMods(ctx.filters, item)
 
@@ -688,11 +703,41 @@ function bestTier (filter: StatFilter): number {
   return Math.min(9, ...filter.sources.filter(source => isTopTierSource(filter, source)).map(s => s.modifier.info.tier!))
 }
 
+// woke: moves rows to where their mod sits on the item, before the first mod
+// row whose mod comes later, so a list reads in the game tooltip's order.
+function placeByItemOrder (filters: StatFilter[], rows: StatFilter[], item: ParsedItem) {
+  if (!rows.length) return
+  const modAt = new Map(item.newMods.map((mod, i) => [mod, i]))
+  const placeOf = (f: StatFilter) => Math.min(Infinity, ...f.sources.map(s => modAt.get(s.modifier) ?? Infinity))
+  for (const row of rows) {
+    filters.splice(filters.indexOf(row), 1)
+    const mine = placeOf(row)
+    const next = filters.findIndex(f => f.tag !== FilterTag.Property && f.tag !== FilterTag.Pseudo && placeOf(f) > mine && placeOf(f) !== Infinity)
+    if (next < 0) filters.push(row)
+    else filters.splice(next, 0, row)
+  }
+}
+
 function tickTopTierMods (filters: StatFilter[], item: ParsedItem) {
   if (item.rarity !== ItemRarity.Rare || item.isVeiled) return
 
+  // A mod a total already counts (a fractured res line listed beside the res
+  // totals) isn't ticked a second time on its own row.
+  // Keyed by mod and stat: a hybrid's other stat keeps its own row and tick.
+  const counted = new Map<unknown, Set<string>>()
+  for (const f of filters) {
+    if (f.tag !== FilterTag.Pseudo) continue
+    for (const s of f.sources) {
+      const refs = counted.get(s.modifier) ?? new Set<string>()
+      refs.add(s.stat.stat.ref)
+      counted.set(s.modifier, refs)
+    }
+  }
+  const alreadyCounted = (f: StatFilter) => f.tag !== FilterTag.Pseudo &&
+    f.sources.every(s => counted.get(s.modifier)?.has(s.stat.stat.ref))
   filters
     .filter(f => !f.hidden && isTopTierFilter(f, item))
+    .filter(f => !alreadyCounted(f))
     .sort((a, b) => (bestTier(a) - bestTier(b)) || ((b.roll?.goodness ?? 1) - (a.roll?.goodness ?? 1)))
     .slice(0, MAX_TICKED_ON_RARE)
     .forEach(f => { f.disabled = false })

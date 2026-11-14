@@ -1,0 +1,29 @@
+Item Class: Shields
+Rarity: Rare
+Test Sanctuary
+Steel Kite Shield
+--------
+Chance to Block: 26%
+Armour: 304 (augmented)
+Energy Shield: 91 (augmented)
+--------
+Requirements:
+Level: 48
+Str: 60
+Int: 60
+--------
+Sockets: W W W 
+--------
+Item Level: 73
+--------
+{ Prefix Modifier "Consecrated" (Tier: 2) — Defences, Armour, Energy Shield }
++155(146-220) to Armour
++60(49-60) to maximum Energy Shield
+{ Fractured Suffix Modifier "of the Order" (Tier: 1) — Elemental, Cold, Chaos, Resistance }
++18(16-20)% to Cold and Chaos Resistances
+{ Suffix Modifier "of Steel Skin" (Tier: 3) }
+21(20-22)% increased Stun and Block Recovery
+{ Suffix Modifier "of the Crystal" (Tier: 6) — Elemental, Resistance }
++5(3-5)% to all Elemental Resistances
+--------
+Fractured Item
