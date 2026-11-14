@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-273
 title: Price check 3.30 Viscera (Wickerman trophies)
-status: In Progress
+status: Ready
 priority: High
 effort: None
 assignee: unassigned
@@ -14,7 +14,35 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-14T03:03:56.234Z'
+    comment: Created ticket.
+    id: a-2026-11-14t03-03-56-234z
+  - type: activity
+    user: Agent
+    date: '2026-11-14T03:03:56.234Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-14t03-03-56-234z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/433. Adversarial review
+      clean (slot categories confirmed on the live trade site); 3676 tests,
+      typecheck, lint, build pass. Real copy has no Rarity line: read as Normal.
+      Waiting on merge via the cloud merge thread.
+    date: '2026-11-14T03:13:13.276Z'
+    completionComment: true
+    id: c-2026-11-14t03-13-13-276z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-14T03:13:13.276Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-14T03:13:13.928Z'
+    comment: Updated implementation link.
+    id: a-2026-11-14t03-13-13-928z
+needsAction: null
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/433'
 ---
 Guy price-checked a Ghostly Claw (Item Class: Viscera, Upper Limb, ilvl 56, implicit "9(8-12)% chance to gain Elusive on Kill") and got Unknown Item.
 
