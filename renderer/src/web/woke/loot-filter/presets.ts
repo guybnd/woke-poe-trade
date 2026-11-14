@@ -113,6 +113,10 @@ export function isNeverSinkDustTier (b: Pick<FilterBlock, 'type' | 'tier'>): boo
   return b.type === 'uniques' && NEVERSINK_DUST_TIERS.test(b.tier ?? '')
 }
 
+// Quiet mode and fewer beams keep at least NeverSink's top two tiers: both
+// wear its red beam (Guy's call, 2026-11-14). A saved 1 reads as 2.
+export const MIN_KEEP_TIERS = 2
+
 export function normalizePresets (p: Partial<Presets> | undefined): Presets {
   const d = defaultPresets()
   const num = (v: unknown, lo: number, hi: number, dflt: number) => typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt
@@ -120,7 +124,7 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
   return {
     cheapCurrency: { on: on(p?.cheapCurrency), chaos: num(p?.cheapCurrency?.chaos, 0.1, 50, d.cheapCurrency.chaos) },
     chaosRecipe: { on: on(p?.chaosRecipe), slots: Array.isArray(p?.chaosRecipe?.slots) ? p!.chaosRecipe!.slots.filter(s => RECIPE_SLOTS.some(r => r.key === s)) : d.chaosRecipe.slots },
-    quiet: { on: on(p?.quiet), keepTiers: Math.round(num(p?.quiet?.keepTiers, 1, 5, d.quiet.keepTiers)) },
+    quiet: { on: on(p?.quiet), keepTiers: Math.round(num(p?.quiet?.keepTiers, MIN_KEEP_TIERS, 5, d.quiet.keepTiers)) },
     bigger: { on: on(p?.bigger), size: Math.round(num(p?.bigger?.size, 25, 45, d.bigger.size)) },
     colourBlind: { on: on(p?.colourBlind) },
     sixSockets: { on: on(p?.sixSockets) },
@@ -135,7 +139,7 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     hideRgb: { on: on(p?.hideRgb) },
     vendorQuality: { on: on(p?.vendorQuality) },
     volume: { on: on(p?.volume), percent: Math.round(num(p?.volume?.percent, 5, 100, d.volume.percent)) },
-    beams: { on: on(p?.beams), keepTiers: Math.round(num(p?.beams?.keepTiers, 1, 5, d.beams.keepTiers)) },
+    beams: { on: on(p?.beams), keepTiers: Math.round(num(p?.beams?.keepTiers, MIN_KEEP_TIERS, 5, d.beams.keepTiers)) },
     weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons),
     look: normalizeLook(p?.look),
     lowTiers: { on: on(p?.lowTiers), tier: Math.round(num(p?.lowTiers?.tier, ITEM_TIER_MIN, ITEM_TIER_MAX, d.lowTiers.tier)) }
@@ -171,19 +175,82 @@ const MAPS_FROM = 68
 // A tier N map is area level 67 + N.
 const MAP_LEVEL_BASE = 67
 
-// Currency bases cheaper than the line, from the filter's own currency rules.
-export function cheapCurrencyBases (doc: FilterDoc, lookup: PriceLookup, chaos: number): string[] {
+// The smallest stack of each base that NeverSink gives its top looks (a red
+// beam: the apex tier and the one below), from its rules of a kind that test
+// nothing but class, rarity, base and a minimum stack size. An exception rule
+// (unsocketed Kaom's Heart) doesn't make every copy valuable. A single item
+// counts as a stack of 1; `alsoTiers` count whatever their beam. The price
+// presets never hide that much of these, so one wrong price on poe.ninja (a
+// Divine at 0.5c) can't hide a top drop.
+export type TopStacks = Map<string, number>
+const PLAIN_KEYS = ['Class', 'Rarity', 'BaseType']
+export function topStacks (doc: FilterDoc, kind: (type: string) => boolean, alsoTiers: string[] = []): TopStacks {
+  const out: TopStacks = new Map()
+  for (const b of doc.blocks) {
+    if (b.disabled || !b.type || b.type.startsWith('woke->') || !kind(b.type)) continue
+    if (!alsoTiers.includes(b.tier ?? '') && !b.actions.some(a => a.key === 'PlayEffect' && a.args[0] === 'Red')) continue
+    let min = 1
+    let plain = true
+    for (const c of b.conditions) {
+      if (c.key === 'StackSize' && (c.op === '>=' || c.op === '>') && Number.isFinite(Number(c.values[0]))) {
+        min = Math.max(min, Number(c.values[0]) + (c.op === '>' ? 1 : 0))
+      } else if (!PLAIN_KEYS.includes(c.key)) plain = false
+    }
+    if (!plain) continue
+    for (const c of b.conditions) {
+      if (c.key !== 'BaseType' || c.op !== '==') continue
+      for (const base of c.values) out.set(base, Math.min(out.get(base) ?? Infinity, min))
+    }
+  }
+  return out
+}
+
+// What the price presets keep, per preset, read from NeverSink's rules as
+// they came (before colour-blind colours or your restyles change a beam).
+export interface PriceGuard {
+  currency: TopStacks
+  cards: TopStacks
+  splinters: TopStacks
+  uniques: TopStacks
+}
+export function priceGuard (doc: FilterDoc): PriceGuard {
+  return {
+    currency: topStacks(doc, t => t === 'currency' || t.startsWith('currency->')),
+    cards: topStacks(doc, t => t === 'divination'),
+    splinters: topStacks(doc, () => true),
+    // Bases a top unique shares with cheap ones (Headhunter, Mageblood) wear
+    // a blue beam.
+    uniques: topStacks(doc, t => t === 'uniques' || t.startsWith('uniques->'), ['multispecialhigh'])
+  }
+}
+
+// Currency cheaper than the line, from the filter's own currency rules, by
+// the stack size from which it shows (Infinity: never). A base NeverSink
+// lights up from a stack of N hides only below N; one it lights up alone
+// never hides.
+export function cheapCurrencyStacks (doc: FilterDoc, lookup: PriceLookup, chaos: number, guard = priceGuard(doc)): Map<number, string[]> {
   const group = ECONOMY_GROUPS.find(g => g.type === 'currency')!
-  const out = new Set<string>()
+  const out = new Map<number, string[]>()
+  const seen = new Set<string>()
   for (const b of doc.blocks) {
     if (b.disabled || b.type !== 'currency') continue
     const list = b.conditions.find(c => c.key === 'BaseType' && c.op === '==')
     for (const base of list?.values ?? []) {
+      if (seen.has(base)) continue
+      seen.add(base)
+      const top = guard.currency.get(base) ?? Infinity
+      if (top <= 1) continue
       const p = lookup(group, base)
-      if (p && !p.thin && p.chaos < chaos) out.add(base)
+      if (p && !p.thin && p.chaos < chaos) out.set(top, [...(out.get(top) ?? []), base])
     }
   }
-  return [...out].sort((a, z) => a.localeCompare(z))
+  for (const list of out.values()) list.sort((a, z) => a.localeCompare(z))
+  return new Map([...out].sort(([a], [z]) => a - z))
+}
+
+// Currency bases cheaper than the line (some only in small stacks).
+export function cheapCurrencyBases (doc: FilterDoc, lookup: PriceLookup, chaos: number, guard = priceGuard(doc)): string[] {
+  return [...cheapCurrencyStacks(doc, lookup, chaos, guard).values()].flat().sort((a, z) => a.localeCompare(z))
 }
 
 // Stack sizes a price rule is cut into. Each base goes to the largest size at
@@ -192,14 +259,17 @@ export function cheapCurrencyBases (doc: FilterDoc, lookup: PriceLookup, chaos: 
 const STACK_STEPS = [2, 3, 4, 5, 10, 20, 50, 100, 200, 500, 1000]
 
 // Bases cheaper than `chaos` a piece, by the stack size from which they show.
-export function cheapStacks (bases: Iterable<string>, price: (base: string) => { chaos: number, thin: boolean } | null, chaos: number): Map<number, string[]> {
+// `top` caps that at the stack NeverSink lights up (see topStacks).
+export function cheapStacks (bases: Iterable<string>, price: (base: string) => { chaos: number, thin: boolean } | null, chaos: number, top: TopStacks = new Map()): Map<number, string[]> {
   const out = new Map<number, string[]>()
   for (const base of new Set(bases)) {
     const p = price(base)
     if (!p || p.thin || !(p.chaos < chaos)) continue
     const need = p.chaos > 0 ? Math.ceil(chaos / p.chaos) : Infinity
-    const step = STACK_STEPS.filter(s => s <= need).pop()
-    if (step == null) continue
+    const fit = STACK_STEPS.filter(s => s <= need).pop()
+    if (fit == null) continue
+    const step = Math.min(fit, top.get(base) ?? Infinity)
+    if (step <= 1) continue
     out.set(step, [...(out.get(step) ?? []), base])
   }
   for (const list of out.values()) list.sort((a, z) => a.localeCompare(z))
@@ -220,14 +290,14 @@ function listedBases (doc: FilterDoc, keep: (b: FilterBlock) => boolean, name: (
 const groupOf = (type: string) => ECONOMY_GROUPS.find(g => g.type === type)!
 
 // Divination cards cheaper than the line, from the filter's own card rules.
-export function cheapCards (doc: FilterDoc, lookup: PriceLookup, chaos: number): Map<number, string[]> {
+export function cheapCards (doc: FilterDoc, lookup: PriceLookup, chaos: number, guard = priceGuard(doc)): Map<number, string[]> {
   const group = groupOf('divination')
-  return cheapStacks(listedBases(doc, b => b.type === 'divination'), base => lookup(group, base), chaos)
+  return cheapStacks(listedBases(doc, b => b.type === 'divination'), base => lookup(group, base), chaos, guard.cards)
 }
 
 const SPLINTER = /\b(Splinter|Shard)\b/
 // Splinters and shards cheaper than the line, priced as currency or fragments.
-export function cheapSplinters (doc: FilterDoc, lookup: PriceLookup, chaos: number): Map<number, string[]> {
+export function cheapSplinters (doc: FilterDoc, lookup: PriceLookup, chaos: number, guard = priceGuard(doc)): Map<number, string[]> {
   const groups = [groupOf('currency'), groupOf('fragments')]
   return cheapStacks(listedBases(doc, () => true, base => SPLINTER.test(base)), base => {
     for (const g of groups) {
@@ -235,15 +305,15 @@ export function cheapSplinters (doc: FilterDoc, lookup: PriceLookup, chaos: numb
       if (p) return p
     }
     return null
-  }, chaos)
+  }, chaos, guard.splinters)
 }
 
 export type UniqueBreakdown = (group: EconomyGroup, base: string) => Array<{ name: string, chaos: number | null, thin: boolean }>
 
 // Unique bases where every unique (priced, not thin) is under the line.
-export function cheapUniqueBases (doc: FilterDoc, breakdown: UniqueBreakdown, chaos: number, keep: Iterable<string> = []): string[] {
+export function cheapUniqueBases (doc: FilterDoc, breakdown: UniqueBreakdown, chaos: number, keep: Iterable<string> = [], guard = priceGuard(doc)): string[] {
   const group = groupOf('uniques')
-  const kept = new Set(keep)
+  const kept = new Set([...keep, ...guard.uniques.keys()])
   return listedBases(doc, b => b.type === 'uniques').filter(base => {
     if (kept.has(base)) return false
     const rows = breakdown(group, base)
@@ -409,11 +479,14 @@ export function presetBlocks (doc: FilterDoc, p: Presets, lookup: PriceLookup | 
     }
   }
   if (p.cheapCurrency.on && lookup) {
-    const bases = cheapCurrencyBases(doc, lookup, p.cheapCurrency.chaos)
-    if (bases.length) {
-      out.push(addedBlock(PRESET_TYPE, 'cheapcurrency', `currency under ${p.cheapCurrency.chaos}c once in maps`, [
+    for (const [top, bases] of cheapCurrencyStacks(doc, lookup, p.cheapCurrency.chaos)) {
+      // Currency NeverSink lights up from a stack (a 6-stack of Ancient Orbs)
+      // hides only in smaller stacks.
+      const few = Number.isFinite(top)
+      out.push(addedBlock(PRESET_TYPE, few ? `cheapcurrency${top}` : 'cheapcurrency', `currency under ${p.cheapCurrency.chaos}c once in maps${few ? `, in stacks under ${top}` : ''}`, [
         inMaps,
         { key: 'Class', op: '==', count: null, values: ['Stackable Currency'] },
+        ...(few ? [cond('StackSize', '<', [top])] : []),
         { key: 'BaseType', op: '==', count: null, values: bases }
       ], 'Hide', 'Presets'))
     }

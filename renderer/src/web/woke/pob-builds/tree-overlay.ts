@@ -4,8 +4,9 @@
 import type { TreeArt, TreeNode } from './passive-tree'
 import { NODE_RADIUS } from './passive-tree'
 
-// Drawn in game and read by the fit (main/src/woke/tree-fit.ts).
-const FIT_KINDS = new Set(['small', 'notable', 'key', 'jewel', 'mastery', 'start'])
+// Drawn in game and read by the fit (main/src/woke/tree-fit.ts). Wormholes
+// are the atlas tree's own (points you spend); the passive tree has none.
+const FIT_KINDS = new Set(['small', 'notable', 'key', 'jewel', 'mastery', 'start', 'wormhole'])
 
 export function fitPoints (nodes: Map<number, TreeNode>): { x: number[], y: number[], r: number[] } {
   const out = { x: [] as number[], y: [] as number[], r: [] as number[] }

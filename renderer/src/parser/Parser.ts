@@ -93,7 +93,13 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
 
 const VALUE_AUGMENTED = ' (augmented)'
 
+// woke: 3.30 item text marks skill and keyword links ("Trigger Level 10
+// [VoidGaze|Void Gaze] when...") with a zero-width space in the copy, which
+// no stat matcher has.
+const ZERO_WIDTH_SPACE = /\u200B/g
+
 export function parseClipboard (clipboard: string): Result<ParsedItem, string> {
+  clipboard = clipboard.replace(ZERO_WIDTH_SPACE, '')
   try {
     let sections = itemTextToSections(clipboard)
 

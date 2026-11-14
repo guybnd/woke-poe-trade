@@ -27,9 +27,10 @@ export function isOwnAccount (listed: string, configured: string): boolean {
   return mine !== '' && (listed === mine || listed.split('#')[0] === mine)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function apiToSatisfySearch (item: ParsedItem, stats: FilterOrGroup[], filters: ItemFilters): 'trade' | 'bulk' {
-  if (stats.some(s => s.group ? !s.meta.disabled : !s.disabled)) {
+  if (stats.some(s => s.group ? !s.meta.disabled : !s.disabled) ||
+    // woke: an added mod can only be searched for on the trade site.
+    filters.addedMods?.some(m => !m.disabled)) {
     return 'trade'
   }
 

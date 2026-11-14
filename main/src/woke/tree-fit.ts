@@ -119,13 +119,34 @@ export function readScreen (bgra: Uint8Array, width: number, height: number): Sc
 }
 
 // The zoom steps for this window height.
-export function zoomSteps (height: number): number[] {
-  return STEPS_1440.map(z => z * height / REF_H)
+export function zoomSteps (height: number, steps = STEPS_1440): number[] {
+  return steps.map(z => z * height / REF_H)
 }
 
+// What differs between the trees: the atlas has its own zoom steps and art
+// behind the nodes, so less of its screen is dark.
+export interface FitKind {
+  // Zoom steps at 2560x1440, tried first.
+  steps: number[]
+  // The smallest share of near-black screen a tree screen has.
+  minDark: number
+  // The zoom range searched when no step fits, at 1440 high.
+  sweep: [number, number]
+}
+
+export const PASSIVE_FIT: FitKind = { steps: STEPS_1440, minDark: MIN_DARK, sweep: [0.1, 0.9] }
+
+// The atlas tree's zoom steps, measured at 2560x1440 (3.30). Its backdrop art
+// fills much of the screen zoomed in (0.75 dark), so the dark check is loose;
+// the score and hit share still keep play screens out.
+export const ATLAS_FIT: FitKind = { steps: [0.0810, 0.1710, 0.3515], minDark: 0.3, sweep: [0.05, 0.9] }
+
+// Allocated lines: pale gold on the passive tree, pale blue on the atlas.
+export type LitTone = 'gold' | 'blue'
+
 // hint: the last fit, when only the offset may have changed (a drag).
-export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } | null): TreeFit | null {
-  if (scr.dark < MIN_DARK) return null
+export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } | null, kind: FitKind = PASSIVE_FIT): TreeFit | null {
+  if (scr.dark < kind.minDark) return null
   const tryZooms = (zooms: number[]) => {
     let best: TreeFit | null = null
     for (const z of zooms) {
@@ -139,14 +160,15 @@ export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } |
   let best: TreeFit | null = null
   if (hint) best = tryZooms([hint.zoom])
   if (!best || best.score < MIN_SCORE) {
-    const other = tryZooms(zoomSteps(scr.height))
+    const other = tryZooms(zoomSteps(scr.height, kind.steps))
     if (other && (!best || other.score > best.score)) best = other
   }
   if (!best || best.score < MIN_SCORE) {
     // Not one of the steps we know: look everywhere in between.
     const k = scr.height / REF_H
     const zooms: number[] = []
-    for (let i = 0; i < 60; i++) zooms.push(k * 0.1 * Math.pow(9, i / 59))
+    const [lo, hi] = kind.sweep
+    for (let i = 0; i < 60; i++) zooms.push(k * lo * Math.pow(hi / lo, i / 59))
     const other = tryZooms(zooms)
     if (other && (!best || other.score > best.score)) best = other
   }
@@ -291,7 +313,7 @@ function checkSmooth (scr: Screen, pts: TreePoints, z: number, ox: number, oy: n
 
 // Whether lines are lit (allocated): each probe is a run of tree points
 // along one line. Lit lines are pale gold and much brighter than the rest.
-export function litProbes (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[]): boolean[] {
+export function litProbes (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[], tone: LitTone = 'gold'): boolean[] {
   return probes.map(probe => {
     let lit = 0
     let seen = 0
@@ -300,32 +322,38 @@ export function litProbes (bgra: Uint8Array, width: number, height: number, fit:
       const y = Math.round(probe[i + 1] * fit.zoom + fit.oy)
       if (x < 2 || y < 2 || x >= width - 2 || y >= height - 2) continue
       seen++
-      if (litAt(bgra, width, x, y)) lit++
+      if (litAt(bgra, width, x, y, tone)) lit++
     }
     return seen > 0 && lit / seen >= 0.6
   })
 }
 
-// Pale gold under (x, y): the brightest pixel across a line's width.
-function litAt (bgra: Uint8Array, width: number, x: number, y: number): boolean {
+// The lit colour under (x, y): the brightest pixel across a line's width.
+// Gold: red well over blue. Blue: the atlas's lit lines are a thin pale-blue
+// core (187, 211, 244 zoomed in; 132, 163, 213 zoomed out) in a wide dark-blue
+// glow, so the core is looked for further either side (a fit can be 3 px
+// off). Its red stays high, which the glow (5, 65, 164) and the start's blue
+// art (50, 130, 195) don't have; unlit atlas lines are brown or grey.
+function litAt (bgra: Uint8Array, width: number, x: number, y: number, tone: LitTone = 'gold'): boolean {
   let best = 0
-  for (let d = -2; d <= 2; d++) {
+  const reach = tone === 'gold' ? 2 : 4
+  for (let d = -reach; d <= reach; d++) {
     for (const [px, py] of [[x + d, y], [x, y + d]]) {
       const j = (py * width + px) * 4
       const b = bgra[j]
       const g = bgra[j + 1]
       const r = bgra[j + 2]
-      if (r > b + 40) best = Math.max(best, (r + g) / 2)
+      if (tone === 'gold') { if (r > b + 40) best = Math.max(best, (r + g) / 2) } else if (b > r + 35 && r > 90) best = Math.max(best, b)
     }
   }
-  return best > 165
+  return best > (tone === 'gold' ? 165 : 180)
 }
 
 // litProbes for lines outside the build, where a wrong "lit" would tell you
 // to refund a point. Stricter: points on a node's frame or icon, or under the
 // HUD, the Skills header and the life and mana orbs, aren't read (gold art
 // there reads as lit), and a line needs two clear points to count.
-export function litLines (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[], pts: TreePoints): boolean[] {
+export function litLines (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[], pts: TreePoints, tone: LitTone = 'gold'): boolean[] {
   const k = height / REF_H
   const hudTop = 1210 * k
   const headX0 = width / 2 - 460 * k
@@ -374,7 +402,7 @@ export function litLines (bgra: Uint8Array, width: number, height: number, fit: 
       if (y > orbY && (x < orbW || x > width - orbW)) continue
       if (onNode(x, y)) continue
       seen++
-      if (litAt(bgra, width, x, y)) lit++
+      if (litAt(bgra, width, x, y, tone)) lit++
     }
     return seen >= 2 && lit / seen >= 0.6
   })

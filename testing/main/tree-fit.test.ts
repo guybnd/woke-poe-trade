@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
 import { PNG } from 'pngjs'
-import { check, fitTree, hitShare, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
+import { ATLAS_FIT, check, fitTree, hitShare, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
 import { readNodes } from '../../renderer/src/web/woke/pob-builds/passive-tree'
 import { fitPoints, lineProbes, offBuildLines, refundNodes } from '../../renderer/src/web/woke/pob-builds/tree-overlay'
 import { placeAscendancies } from '../../renderer/src/web/woke/pob-builds/asc-layout'
@@ -134,5 +134,64 @@ describe('nodes to refund, on real shots', () => {
     const off = offBuildLines(all, ids, tree)
     const offLit = off.map(l => litKeys.has(key(l)))
     expect([...refundNodes(off, offLit, new Set(ids), new Set())]).toEqual([leaf])
+  })
+})
+
+// The atlas tree (3.30), for the atlas strategy drawing: its own zoom steps
+// and lit lines in pale blue. Real shots, 13 points spent down from the start.
+describe('atlas tree', () => {
+  const atlas = JSON.parse(fs.readFileSync(path.join(__dirname, '../fixtures/atlas-tree-points.json'), 'utf8'))
+  const apts = { x: Float32Array.from(atlas.x), y: Float32Array.from(atlas.y), r: Float32Array.from(atlas.r) }
+  const lines: Array<{ a: number, b: number }> = atlas.lines.map(([a, b]: number[]) => ({ a, b }))
+  const probes = (atlas.probes as number[][]).map(p => Float32Array.from(p))
+
+  it.each(['zoomed-in', 'zoomed-out'])('lines up with the real atlas tree, %s', (name) => {
+    const want = JSON.parse(fs.readFileSync(path.join(SCREENS, `atlas-tree-real-${name}.json`), 'utf8'))
+    const { px, width, height } = bgra(`atlas-tree-real-${name}.png`)
+    const fit = fitTree(readScreen(px, width, height), apts, null, ATLAS_FIT)
+    expect(fit).not.toBeNull()
+    expect(Math.abs(fit!.zoom / want.zoom - 1)).toBeLessThan(0.004)
+    expect(Math.abs(fit!.ox - want.ox)).toBeLessThan(3)
+    expect(Math.abs(fit!.oy - want.oy)).toBeLessThan(3)
+  })
+
+  it('finds no atlas tree on the passive tree or play screens', () => {
+    for (const file of ['passive-tree-real-zoomed-in.png', 'passive-tree-real-zoomed-out.png', 'area-mods-real-1.png', 'map-real-01.png', 'map-real-05.png', 'essence-real-17.png', 'essence-real-22.png', 'stash-general-real.png']) {
+      const { px, width, height } = bgra(file)
+      expect(fitTree(readScreen(px, width, height), apts, null, ATLAS_FIT), file).toBeNull()
+    }
+  })
+
+  it('finds no passive tree on the atlas tree', () => {
+    for (const name of ['zoomed-in', 'zoomed-out']) {
+      const { px, width, height } = bgra(`atlas-tree-real-${name}.png`)
+      expect(fitTree(readScreen(px, width, height), pts), name).toBeNull()
+    }
+  })
+
+  it('reads the spent points as blue lines joined into one tree', () => {
+    const { px, width, height } = bgra('atlas-tree-real-zoomed-out.png')
+    const fit = fitTree(readScreen(px, width, height), apts, null, ATLAS_FIT)!
+    const lit = litLines(px, width, height, fit, probes, apts, 'blue')
+    // 13 points: 12 joined by lit lines, the 13th by the start's line, which
+    // runs under the start's own blue art and isn't read.
+    expect(lit.filter(Boolean)).toHaveLength(11)
+    const first = lines[lit.indexOf(true)].a
+    expect(refundNodes(lines.map(l => ({ ...l, arc: null })), lit, new Set([first]), new Set()).size).toBe(11)
+    // Read as the passive tree's gold, none are lit.
+    expect(litLines(px, width, height, fit, probes, apts, 'gold').filter(Boolean)).toHaveLength(0)
+  })
+
+  it('tells a lit line from the dark-blue glow round it', () => {
+    const px = new Uint8Array(W * H * 4).fill(12)
+    const paint = (y0: number, rgb: number[]) => {
+      for (let x = 100; x <= 300; x++) for (let y = y0 - 1; y <= y0 + 1; y++) { const j = (y * W + x) * 4; px[j] = rgb[2]; px[j + 1] = rgb[1]; px[j + 2] = rgb[0] }
+    }
+    paint(100, [187, 211, 244])
+    paint(200, [5, 65, 164])
+    paint(300, [50, 130, 195])
+    const fit = { zoom: 1, ox: 0, oy: 0, score: 9, hits: 1 }
+    const along = (y: number) => Float32Array.from([150, y, 200, y, 250, y])
+    expect(litProbes(px, W, H, fit, [along(100), along(200), along(300)], 'blue')).toEqual([true, false, false])
   })
 })

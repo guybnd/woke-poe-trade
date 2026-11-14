@@ -25,6 +25,7 @@ import type { TreeArt, TreeNode } from './passive-tree'
 import { markTreeOverlaySeen, registerTreeDrawer, treeOn, treeOverlaySeen } from './tree-toggle'
 import type { BuildLine, BuildPath } from './tree-overlay'
 import { isTreeHotkeyTarget, treeHotkeyOf } from './widget'
+import { atlasDrawer } from '../atlas/atlas-overlay-toggle'
 import type { PobTreeSpec } from './widget'
 
 interface Fit { zoom: number, ox: number, oy: number }
@@ -93,10 +94,11 @@ let againFresh = false
 const active = useActiveBuild()
 
 // quiet: no note when the tree isn't open (the dock icon then opens the
-// window instead). Whether it drew.
-async function start (quiet = false): Promise<boolean> {
+// window instead). hide: hide the overlay while the screen is read (a quiet
+// start from the dock icon doesn't). Whether it drew.
+async function start (quiet = false, hide = !quiet): Promise<boolean> {
   const d = active.details.value
-  if (!d) { note('Pick an active build in PoB builds first.'); return false }
+  if (!d) { if (!quiet) note('Pick an active build in PoB builds first.'); return false }
   const tree = loadoutOf(d, active.level.value, active.act.value, active.loadout.value).tree
   if (!tree?.nodes?.length) { if (!quiet) note('The active build has no passive tree.'); return false }
   try {
@@ -120,7 +122,7 @@ async function start (quiet = false): Promise<boolean> {
   on.value = true
   // A quiet start (the dock icon while playing) mostly finds no tree: it
   // reads the screen as it is rather than blinking the whole overlay.
-  const ok = await refit(true, !quiet)
+  const ok = await refit(true, hide)
   if (ok) markTreeOverlaySeen()
   if (!ok) {
     on.value = false
@@ -363,9 +365,35 @@ function note (text: string) {
 
 const hotkey = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   if (!isTreeHotkeyTarget(e.target)) return
-  if (on.value) stop()
-  else start().catch(() => {})
+  onHotkey().catch(() => {})
 })
+
+// The one key draws on whichever tree is open: the active build on the
+// passive tree, or the selected atlas strategy on the atlas tree. The tree
+// last drawn on is tried first, as that's most likely the one open again.
+let atlasFirst = false
+// A press while the last one is still reading the screen is dropped: two
+// reads at once would capture each other's hidden overlay coming back.
+let pressing = false
+async function onHotkey () {
+  if (pressing) return
+  pressing = true
+  try { await press() } finally { pressing = false }
+}
+async function press () {
+  if (on.value) { stop(); return }
+  const atlas = atlasDrawer()
+  if (atlas?.isOn()) { atlas.stop(); return }
+  if (!atlas?.ready()) { await start(); return }
+  const build = Boolean(active.details.value)
+  if (!build) { await atlas.start(); return }
+  const tryAtlas = () => atlas.start(true)
+  const tryPassive = async () => { const ok = await start(true, true); if (ok) markTreeOverlaySeen(); return ok }
+  for (const isAtlas of atlasFirst ? [true, false] : [false, true]) {
+    if (await (isAtlas ? tryAtlas() : tryPassive())) { atlasFirst = isAtlas; return }
+  }
+  note('Open the passive tree or the atlas tree first (neither found on screen).')
+}
 
 const unregister = registerTreeDrawer({
   isOn: () => on.value,

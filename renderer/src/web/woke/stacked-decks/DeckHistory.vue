@@ -35,7 +35,7 @@
         </span>
         <WButton size="sm" variant="ghost" icon="fas fa-trash" title="You can undo" @click="remove(open)">Delete</WButton>
       </div>
-      <DeckSummary :draws="open.draws" :price="recordPrice(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :luck="openLuck" />
+      <DeckSummary :draws="open.draws" :price="recordPrice(open)" :deck-chaos="open.deckChaos" :divine="open.divine" :filter="filter" :luck="openLuck" />
       <div class="text-xs w-faint">At the prices when the session ended.</div>
     </template>
   </div>
@@ -50,8 +50,9 @@ import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange, AnalyticsUnit } from '../analytics/types'
 import DeckSummary from './DeckSummary.vue'
 import OwnAverageLine from './OwnAverageLine.vue'
-import { STACKED_DECK, recordPrice, totals } from './deck'
-import type { DeckRecord } from './deck'
+import { AppConfig } from '@/web/Config'
+import { STACKED_DECK, STACKED_DECKS_TYPE, cardFilterOf, recordPrice, totals } from './deck'
+import type { DeckRecord, StackedDecksWidget } from './deck'
 import { luckFor, useDeckPrices } from './prices'
 import { useDeckStore } from './store'
 
@@ -69,7 +70,9 @@ fetch()
 
 const list = computed(() => store.records.value.filter(r =>
   (props.range === 'all' || r.league === props.league) && inRange(r.endedAt, props.range, props.now)))
-const rows = computed(() => list.value.map(r => ({ r, t: totals(r.draws, recordPrice(r), r.deckChaos) })))
+// The tracker's cheap-card setting, so results match its window.
+const filter = computed(() => cardFilterOf(AppConfig().widgets.find(w => w.wmType === STACKED_DECKS_TYPE) as StackedDecksWidget | undefined))
+const rows = computed(() => list.value.map(r => ({ r, t: totals(r.draws, recordPrice(r), r.deckChaos, filter.value) })))
 const allDecks = computed(() => list.value.reduce((n, r) => n + r.decks, 0))
 // Each session in divines at its own rate.
 const allResult = computed(() => {

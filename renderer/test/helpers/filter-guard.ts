@@ -213,7 +213,7 @@ type Key = keyof Presets
 export const HARSHEST: { [K in Key]: Presets[K] } = {
   cheapCurrency: { on: true, chaos: 50 },
   chaosRecipe: { on: true, slots: RECIPE_SLOTS.map(s => s.key) },
-  quiet: { on: true, keepTiers: 1 },
+  quiet: { on: true, keepTiers: 2 },
   bigger: { on: true, size: 45 },
   colourBlind: { on: true },
   sixSockets: { on: true },
@@ -228,7 +228,7 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   hideRgb: { on: true },
   vendorQuality: { on: true },
   volume: { on: true, percent: 5 },
-  beams: { on: true, keepTiers: 1 },
+  beams: { on: true, keepTiers: 2 },
   weapons: { on: true, archetype: 'custom', classes: [] },
   look: { on: true, size: LOOK_LIMITS.size.min, background: LOOK_LIMITS.background.min, colour: LOOK_LIMITS.colour.min },
   lowTiers: { on: true, tier: 5 }
@@ -240,7 +240,7 @@ export const PRESET_KEYS = Object.keys(HARSHEST) as Key[]
 const HARSH_WORDS: Partial<Record<Key, string>> = {
   cheapCurrency: 'under 50c',
   chaosRecipe: 'every slot',
-  quiet: 'keeps tier 1 only',
+  quiet: 'keeps tiers 1-2, the least it allows',
   bigger: 'size 45',
   dust: 'from prices',
   cheapCards: 'under 50c',
@@ -248,7 +248,7 @@ const HARSH_WORDS: Partial<Record<Key, string>> = {
   cheapUniques: 'under 50c',
   cheapSplinters: 'under 50c',
   volume: '5%',
-  beams: 'tier 1 only',
+  beams: 'tiers 1-2, the least it allows',
   weapons: 'no weapon types kept',
   look: 'smallest text, no background, grey',
   lowTiers: 'below tier 5'
@@ -274,8 +274,8 @@ const allOn = (): Presets => {
 export const SETUPS: Setup[] = [
   { name: 'No presets', presets: defaultPresets() },
   ...PRESET_KEYS.map(k => ({ name: harshName(k), presets: presets({ [k]: HARSHEST[k] }) })),
-  { name: 'Quiet mode (default, keeps tiers 1-2)', presets: presets({ quiet: { on: true, keepTiers: 2 } }) },
-  { name: 'Fewer beams (default, tiers 1-2)', presets: presets({ beams: { on: true, keepTiers: 2 } }) },
+  // A config saved before the minimum of 2 still holds a 1.
+  { name: 'Quiet mode and fewer beams saved at 1 tier', presets: presets({ quiet: { on: true, keepTiers: 1 }, beams: { on: true, keepTiers: 1 } }) },
   { name: 'Every preset, default settings', presets: allOn() },
   { name: 'Every preset, harshest settings', presets: presets(HARSHEST) },
   { name: 'Every preset, harshest, safety net on', presets: presets(HARSHEST), netOn: true }

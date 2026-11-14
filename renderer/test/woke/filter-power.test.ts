@@ -114,8 +114,8 @@ describe('presets', () => {
     const doc = parseFilter(SOURCE)
     insertBuildBlocks(doc, ruleBlocks([{ ...rareRings, patch: { fontSize: 20, effect: { color: 'Red', temp: false } } }]))
     const p = normalizePresets({ quiet: { on: true, keepTiers: 0 }, bigger: { on: true, size: 42 }, colourBlind: { on: true } })
-    // keepTiers is at least 1.
-    expect(p.quiet.keepTiers).toBe(1)
+    // keepTiers is at least 2: tiers 1 and 2 both wear the red beam.
+    expect(p.quiet.keepTiers).toBe(2)
     const changed = applyPresetChanges(doc, p)
     expect(changed).toBeGreaterThan(0)
     const t1 = doc.blocks.find(b => b.tier === 't1exalted')!

@@ -52,9 +52,35 @@ export interface StackedDecksWidget extends Widget {
   hitDiv: number
   hitPopup: boolean
   hitSound: boolean
+  // Cards worth less than this (chaos) fold into one line under the list.
+  // Missing: DEFAULT_CHEAP_UNDER. 0: every card listed.
+  cheapUnder?: number
+  // Whether those cards still count in Got, Result and the chart. Missing: true.
+  countCheap?: boolean
 }
 
-export function initStackedDecks (w: Pick<StackedDecksWidget, 'session' | 'seenUntil' | 'seenLines' | 'ended' | 'hitDiv' | 'hitPopup' | 'hitSound'>) {
+export const DEFAULT_CHEAP_UNDER = 2
+
+// Which cards are cheap, and whether they count.
+export interface CardFilter {
+  under: number
+  count: boolean
+}
+
+export function cardFilterOf (w: Pick<StackedDecksWidget, 'cheapUnder' | 'countCheap'> | null | undefined): CardFilter {
+  const under = w?.cheapUnder
+  return {
+    under: typeof under === 'number' && Number.isFinite(under) && under >= 0 ? under : DEFAULT_CHEAP_UNDER,
+    count: w?.countCheap ?? true
+  }
+}
+
+// Unpriced cards are never cheap: they stay listed with no price.
+export function isCheap (each: number | null, filter: CardFilter | null | undefined): boolean {
+  return filter != null && each != null && each < filter.under
+}
+
+export function initStackedDecks (w: Pick<StackedDecksWidget, 'session' | 'seenUntil' | 'seenLines' | 'ended' | 'hitDiv' | 'hitPopup' | 'hitSound' | 'cheapUnder' | 'countCheap'>) {
   w.session = null
   // Cards already in Client.txt from before are not counted.
   w.seenUntil = Date.now()
@@ -63,6 +89,8 @@ export function initStackedDecks (w: Pick<StackedDecksWidget, 'session' | 'seenU
   w.hitDiv = 1
   w.hitPopup = true
   w.hitSound = false
+  w.cheapUnder = DEFAULT_CHEAP_UNDER
+  w.countCheap = true
 }
 
 // One for every config (Config.ts): the tracker needs nothing placed by hand.
@@ -191,40 +219,59 @@ export interface DeckTotals {
   withoutTop: number | null
   top: CardRow | null
   rows: CardRow[]
+  // Cards under the filter's price, folded out of `rows` (same order).
+  cheap: CardRow[]
+  cheapQty: number
+  cheapChaos: number
   // Cards without a price (counted as 0).
   unpriced: number
 }
 
-export function totals (draws: string[], price: PriceOf, deckChaos: number | null): DeckTotals {
-  const rows: CardRow[] = []
+// With a filter, cards under its price move from `rows` to `cheap`, and
+// leave Got and Result too unless the filter counts them.
+export function totals (draws: string[], price: PriceOf, deckChaos: number | null, filter: CardFilter | null = null): DeckTotals {
+  const all: CardRow[] = []
   let got = 0
   let unpriced = 0
+  let cheapQty = 0
+  let cheapChaos = 0
   for (const [name, qty] of cardCounts(draws)) {
     const each = price(name)
     if (each == null) unpriced += qty
     const total = (each ?? 0) * qty
-    got += total
-    rows.push({ name, qty, each, total })
+    const cheap = isCheap(each, filter)
+    if (cheap) {
+      cheapQty += qty
+      cheapChaos += total
+    }
+    if (!cheap || filter!.count) got += total
+    all.push({ name, qty, each, total })
   }
   // Most value first; same value: more copies, then name.
-  rows.sort((a, b) => b.total - a.total || b.qty - a.qty || a.name.localeCompare(b.name))
+  all.sort((a, b) => b.total - a.total || b.qty - a.qty || a.name.localeCompare(b.name))
+  const rows = all.filter(r => !isCheap(r.each, filter))
+  const cheap = all.filter(r => isCheap(r.each, filter))
+  // The top card is one that counts.
   let top: CardRow | null = null
-  for (const r of rows) if (r.each != null && (!top || r.each > top.each!)) top = r
+  for (const r of (filter && !filter.count ? rows : all)) if (r.each != null && (!top || r.each > top.each!)) top = r
   const spent = deckChaos != null ? deckChaos * draws.length : null
   const result = spent != null ? got - spent : null
   const withoutTop = result != null && top ? result - top.each! : result
-  return { decks: draws.length, spent, got, result, withoutTop, top, rows, unpriced }
+  return { decks: draws.length, spent, got, result, withoutTop, top, rows, cheap, cheapQty, cheapChaos, unpriced }
 }
 
 // Running result after each deck (chaos), for the line chart. Long sessions
 // are thinned to about `points` points, always keeping the last.
-export function runningResult (draws: string[], price: PriceOf, deckChaos: number | null, points = 120): number[] {
+// A filter that doesn't count cheap cards leaves them out (as 0).
+export function runningResult (draws: string[], price: PriceOf, deckChaos: number | null, points = 120, filter: CardFilter | null = null): number[] {
   const cost = deckChaos ?? 0
+  const skip = filter != null && !filter.count
   const out: number[] = []
   const step = Math.max(1, Math.ceil(draws.length / points))
   let sum = 0
   for (let i = 0; i < draws.length; i++) {
-    sum += (price(draws[i]) ?? 0) - cost
+    const each = price(draws[i])
+    sum += (skip && isCheap(each, filter) ? 0 : (each ?? 0)) - cost
     if ((i + 1) % step === 0 || i === draws.length - 1) out.push(sum)
   }
   return out

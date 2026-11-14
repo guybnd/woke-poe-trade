@@ -1,0 +1,30 @@
+Item Class: Helmets
+Rarity: Unique
+Eber's Unification
+Hubris Circlet
+--------
+Energy Shield: 235 (augmented)
+--------
+Requirements:
+Level: 69
+Int: 154
+--------
+Sockets: W-W-W 
+--------
+Item Level: 82
+--------
+{ Unique Modifier }
+Trigger Level 10 ​Void Gaze when you use a Skill
+{ Unique Modifier — Defences, Energy Shield }
+158(150-180)% increased Energy Shield
+{ Unique Modifier — Mana }
++76(50-80) to maximum Mana
+{ Unique Modifier }
+50% increased Stun and Block Recovery
+{ Unique Modifier — Damage, Elemental, Chaos }
+Gain 5(5-8)% of Elemental Damage as Extra Chaos Damage
+--------
+The impediments of flesh are weak.
+The air we breathe knows no such boundaries.
+I exhale, and you inhale,
+and inexorably we inch towards oneness.

@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { defaultPresets } from '@/web/woke/loot-filter/presets'
+import { defaultPresets, priceGuard } from '@/web/woke/loot-filter/presets'
 import {
   FILTERS, PRECIOUS, SETUPS, allowedLoss, blockLook, breaches, compose, dropLook, facts, hostilePrices,
   isNeverSinkBlock, presets, source
@@ -52,13 +52,10 @@ describe('what a preset may take away, it takes away as it says', () => {
   const sacred = PRECIOUS.find(p => p.name === 'Sacred Orb')!
   const quiet = (keepTiers: number): Setup => ({ name: `quiet ${keepTiers}`, presets: presets({ quiet: { on: true, keepTiers } }) })
 
-  it('quiet mode at 1 tier silences NeverSink\'s second currency tier, and leaves its beam', () => {
-    expect(allowedLoss(quiet(1), 2).sound).toBe(true)
-    expect(dropLook(compose(regular, quiet(1)).doc, sacred.facts)).toMatchObject({ shown: true, sound: false, beam: true })
-  })
-
-  it('quiet mode at 2 tiers keeps it', () => {
-    expect(dropLook(compose(regular, quiet(2)).doc, sacred.facts)).toMatchObject({ shown: true, sound: true, beam: true })
+  it('quiet mode keeps NeverSink\'s second tier (it wears a red beam), even if saved at 1', () => {
+    expect(presets({ quiet: { on: true, keepTiers: 1 } }).quiet.keepTiers).toBe(2)
+    expect(allowedLoss(quiet(1), 2).sound).toBe(false)
+    expect(dropLook(compose(regular, quiet(1)).doc, sacred.facts)).toMatchObject({ shown: true, sound: true, beam: true })
   })
 
   it('quiet mode does quiet something: rules ranked 3 and lower', () => {
@@ -96,14 +93,14 @@ describe('hostile and missing prices', () => {
     expect(doc.blocks.filter(b => b.type === 'woke->preset')).toEqual([])
   })
 
-  // Open: the price presets trust poe.ninja, and the safety net reads the same
-  // prices, so a Divine listed at 0.5c would be hidden by a 1c currency line.
-  // Pinned as it is today, so a fix shows up here (see docs/loot-filter-guard.md,
-  // Open): turn this round once a guard keeps red-beam drops out of the price presets.
-  it('known gap: a wrong price still hides a red-beam drop', () => {
-    const s: Setup = { name: 'crashed price', netOn: true, presets: presets({ cheapCurrency: { on: true, chaos: 1 } }) }
-    const doc = compose(regular, s, hostilePrices({ 'Divine Orb': 0.5 })).doc
-    expect(dropLook(doc, PRECIOUS.find(p => p.name === 'Divine Orb')!.facts)).toMatchObject({ shown: false, rule: 'woke->preset/cheapcurrency' })
+  // The price presets never hide a base NeverSink gives a red beam, so a wrong
+  // price on poe.ninja can't hide a top drop (the safety net reads the same
+  // prices, so it couldn't catch it).
+  it.each(FILTERS)('$name: with every drop priced at 0.01c, no red-beam drop hides', ({ name, text }) => {
+    const junk = Object.fromEntries(PRECIOUS.map(p => [p.facts.baseType!, 0.01]))
+    const s: Setup = { name: 'every price wrong', netOn: true, presets: presets({ cheapCurrency: { on: true, chaos: 50 }, cheapCards: { on: true, chaos: 50 }, cheapUniques: { on: true, chaos: 50 }, cheapSplinters: { on: true, chaos: 50 } }) }
+    const doc = compose(text, s, hostilePrices(junk)).doc
+    expect(PRECIOUS.filter(p => !p.hiddenIn?.includes(name) && !dropLook(doc, p.facts).shown).map(p => p.name)).toEqual([])
   })
 
   it('with thin (unreliable) prices, nothing is hidden for being cheap', () => {
@@ -113,6 +110,46 @@ describe('hostile and missing prices', () => {
     thin.breakdown = () => [{ name: 'x', chaos: 0.01, thin: true }]
     const doc = compose(regular, harsh, thin).doc
     expect(doc.blocks.filter(b => b.type === 'woke->preset' && b.visibility === 'Hide')).toEqual([])
+  })
+})
+
+describe('every price wrong at once (everything at 0.01c)', () => {
+  const junk = { lookup: () => ({ chaos: 0.01, thin: false }), safety: () => ({ chaos: 0.01, thin: false }), breakdown: () => [{ name: 'x', chaos: 0.01, thin: false }], pricedTypes: null }
+  const all: Setup = { name: 'all price presets', netOn: true, presets: presets({ cheapCurrency: { on: true, chaos: 50 }, cheapCards: { on: true, chaos: 50 }, cheapUniques: { on: true, chaos: 50 }, cheapSplinters: { on: true, chaos: 50 } }) }
+
+  describe.each(FILTERS)('$name', ({ name, text }) => {
+    const guard = priceGuard(source(name))
+    const doc = compose(text, all, junk).doc
+    // Every currency, splinter and card NeverSink lights up, in the stack it
+    // lights it up from (a 6-stack of Ancient Orbs, 80 Maraketh splinters).
+    const drops = [
+      ...[...guard.currency, ...guard.splinters].map(([baseType, stackSize]) => ({ itemClass: 'Stackable Currency', baseType, stackSize })),
+      ...[...guard.cards].map(([baseType, stackSize]) => ({ itemClass: 'Divination Cards', baseType, stackSize }))
+    ]
+
+    it('no red-beam currency, splinter or card stack hides', () => {
+      const lost = drops.filter(d => dropLook(source(name), d).shown && !dropLook(doc, d).shown).map(d => `${d.stackSize}x ${d.baseType} (by ${dropLook(doc, d).rule})`)
+      expect(drops.length).toBeGreaterThan(100)
+      expect(lost).toEqual([])
+    })
+
+    it('the presets still hide the rest', () => {
+      const hides = (tier: string) => doc.blocks.filter(b => b.type === 'woke->preset' && b.tier?.startsWith(tier))
+        .reduce((k, b) => k + (b.conditions.find(c => c.key === 'BaseType')?.values.length ?? 0), 0)
+      expect(hides('cheapcurrency')).toBeGreaterThan(60)
+      expect(hides('cheapcards')).toBeGreaterThan(300)
+      expect(hides('cheapuniques')).toBeGreaterThan(300)
+      expect(hides('cheapsplinters')).toBeGreaterThan(10)
+    })
+
+    it('only plain rules protect a base: an exception like unsocketed Kaom\'s Heart doesn\'t', () => {
+      const plainTop = new Set(source(name).blocks.filter(b => b.type === 'uniques' && /^t[12]$|^multispecialhigh$/.test(b.tier ?? ''))
+        .flatMap(b => b.conditions.filter(c => c.key === 'BaseType').flatMap(c => c.values)))
+      const kaomOnly = source(name).blocks.filter(b => b.type === 'uniques' && b.tier === 'exkaom')
+        .flatMap(b => b.conditions.filter(c => c.key === 'BaseType').flatMap(c => c.values)).filter(v => !plainTop.has(v))
+      expect(kaomOnly.length).toBeGreaterThan(0)
+      expect(kaomOnly.filter(v => guard.uniques.has(v))).toEqual([])
+    })
   })
 })
 

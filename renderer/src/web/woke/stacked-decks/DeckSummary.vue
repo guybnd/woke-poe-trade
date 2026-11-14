@@ -11,6 +11,11 @@
         <span class="w-num" data-stat="without-top" :class="tone(t.withoutTop)">{{ t.withoutTop != null ? signed(t.withoutTop) : '—' }}</span>
       </template>
     </div>
+    <!-- C: count the cheap cards or not, right on the window. -->
+    <div v-if="switchable && filter && filter.under > 0" :class="$style.switch" data-deck="cheap-switch">
+      <span class="w-dim">Under {{ cutOff }}</span>
+      <WSegmented :model-value="filter.count ? 'in' : 'out'" :options="COUNT_OPTIONS" @update:model-value="v => emit('count', v === 'in')" />
+    </div>
     <div v-if="deckChaos == null" class="text-xs" style="color: var(--w-warn);">No Stacked Deck price yet: Spent and Result wait for poe.ninja.</div>
 
     <ResultChart v-if="chart.length >= 2" :values="chart" :width="chartWidth" :label="`Running result after ${t.decks} decks`" />
@@ -26,7 +31,7 @@
 
     <div v-if="t.unpriced" class="text-xs w-faint">{{ t.unpriced }} {{ t.unpriced === 1 ? 'card has' : 'cards have' }} no poe.ninja price and count as 0.</div>
 
-    <div v-if="shown.length" :class="$style.table">
+    <div v-if="shown.length || t.cheapQty" :class="$style.table">
       <div v-for="r in shown" :key="r.name" :class="$style.row" data-deck="card">
         <WIcon :src="art(r.name)" fallback="fas fa-clone" />
         <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
@@ -34,6 +39,24 @@
         <span class="w-num text-right">{{ r.each != null ? money(r.total) : '—' }}</span>
       </div>
       <div v-if="t.rows.length > shown.length" class="text-xs w-faint" :class="$style.more">and {{ t.rows.length - shown.length }} more cards</div>
+      <!-- Cards under the cut-off, folded into one line (A). -->
+      <template v-if="t.cheapQty">
+        <button type="button" :class="[$style.row, $style.fold]" data-deck="cheap" :aria-expanded="cheapOpen"
+          :title="cheapTitle" @click="cheapOpen = !cheapOpen">
+          <i class="fas text-xs" :class="cheapOpen ? 'fa-caret-down' : 'fa-caret-right'" />
+          <span class="w-trunc">{{ t.cheapQty.toLocaleString('en-US') }} {{ t.cheapQty === 1 ? 'card' : 'cards' }} under {{ cutOff }}{{ filter && !filter.count ? ' · not counted' : '' }}</span>
+          <span />
+          <span class="w-num text-right">{{ money(t.cheapChaos) }}</span>
+        </button>
+        <template v-if="cheapOpen">
+          <div v-for="r in t.cheap" :key="r.name" :class="[$style.row, $style.cheap]" data-deck="cheap-card">
+            <WIcon :src="art(r.name)" fallback="fas fa-clone" />
+            <span class="w-trunc" v-item-tip="{ type: 'DivinationCard', name: r.name }">{{ r.name }}</span>
+            <span class="w-num">×{{ r.qty }}</span>
+            <span class="w-num text-right">{{ money(r.total) }}</span>
+          </div>
+        </template>
+      </template>
     </div>
   </div>
 </template>
@@ -42,13 +65,13 @@
 // One session's numbers (B1): Opened, Spent, Got, Result and without the top
 // card, the running result, luck against the community weights (C3), and
 // the cards by total value.
-import { computed } from 'vue'
-import { WIcon, WInfo, vItemTip } from '../ui'
+import { computed, shallowRef } from 'vue'
+import { WIcon, WInfo, WSegmented, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
 import ResultChart from './ResultChart.vue'
 import { MIN_CALIBRATION_DECKS, luckText, runningResult, totals } from './deck'
-import type { PriceOf } from './deck'
+import type { CardFilter, PriceOf } from './deck'
 import { WEIGHTS_CREDIT } from './weights'
 import type { Luck } from './prices'
 
@@ -61,10 +84,21 @@ const props = withDefaults(defineProps<{
   // Cards listed (the rest are summed up in one line). 0: all.
   limit?: number
   chartWidth?: number
-}>(), { luck: null, limit: 0, chartWidth: 280 })
+  // Cheap cards fold into one line (and maybe leave the totals). null: all listed.
+  filter?: CardFilter | null
+  // Shows the counted / not counted switch (emits `count`).
+  switchable?: boolean
+}>(), { luck: null, limit: 0, chartWidth: 280, filter: null, switchable: false })
+const emit = defineEmits<{ (e: 'count', v: boolean): void }>()
+const COUNT_OPTIONS = [{ value: 'in', label: 'Hidden, counted' }, { value: 'out', label: 'Not counted' }]
 
-const t = computed(() => totals(props.draws, props.price, props.deckChaos))
-const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos))
+const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter))
+const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter))
+const cheapOpen = shallowRef(false)
+const cutOff = computed(() => formatChaos(props.filter?.under ?? 0, null, 'chaos'))
+const cheapTitle = computed(() => props.filter?.count === false
+  ? 'Left out of Got, Result and the chart. Change it in the Stacked decks settings.'
+  : 'Still counted in Got and Result. Change it in the Stacked decks settings.')
 const shown = computed(() => props.limit > 0 ? t.value.rows.slice(0, props.limit) : t.value.rows)
 
 const money = (chaos: number) => formatChaos(chaos, props.divine)
@@ -90,4 +124,20 @@ const luckInfo = computed(() => {
 .table { display: flex; flex-direction: column; }
 .row { display: grid; grid-template-columns: var(--w-icon, 16px) minmax(0, 1fr) auto 4.5rem; gap: 6px; align-items: center; min-height: 22px; }
 .more { padding-top: 2px; }
+.fold {
+  width: 100%;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  border-top: 1px dashed var(--w-line);
+  background: none;
+  color: var(--w-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fold:hover { color: var(--w-fg); background: var(--w-line-soft); }
+.fold > i { justify-self: center; }
+.cheap { color: var(--w-faint); }
+.switch { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--w-fs-sm); }
 </style>

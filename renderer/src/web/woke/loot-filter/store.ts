@@ -3,7 +3,7 @@ import { computed, onUnmounted, shallowRef, ref, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
-import { DUST_ILVL, applyPresetChanges, normalizePresets, presetsOn } from './presets'
+import { DUST_ILVL, applyPresetChanges, normalizePresets, presetsOn, priceGuard } from './presets'
 import { dustBases } from '../disenchant/calc'
 import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { clearUndoToasts } from '../ui/layer'
@@ -58,6 +58,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const folder = ref('')
   // The untouched NeverSink text the edits apply to.
   const baseText = shallowRef<string | null>(null)
+  // What the price presets keep, from NeverSink's file as it came: the built
+  // file's beams follow colour-blind colours and your restyles.
+  const sourceGuard = computed(() => baseText.value == null ? null : priceGuard(parseFilter(baseText.value)))
   // True when baseText came from a fresh source file that needs a .bak
   // (overwrite mode).
   const baseNeedsBackup = ref(false)
@@ -1059,6 +1062,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const api = {
     get config () { return cfg() },
     prices,
+    sourceGuard,
     plan,
     health,
     safetyCount,

@@ -445,7 +445,10 @@ export default defineComponent({
       presets: computed(() => presets.value.presets.map(preset =>
         ({ id: preset.id, active: (preset.id === presets.value.active) }))),
       selectPreset (id: string) {
+        // woke: each preset has its own filters; the added mods go along.
+        const added = itemFilters.value.addedMods
         presets.value.active = id
+        if (added) itemFilters.value.addedMods = added
       },
       makeTradeLink () {
         return `https://${getTradeEndpoint()}/trade/search/${itemFilters.value.trade.league}?q=${JSON.stringify(createTradeRequest(itemFilters.value, itemStats.value))}`

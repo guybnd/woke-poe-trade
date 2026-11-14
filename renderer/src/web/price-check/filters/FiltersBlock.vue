@@ -59,6 +59,8 @@
           <unknown-modifier v-for="stat of item.unknownModifiers" :key="stat.type + '/' + stat.text"
             :stat="stat" />
         </template>
+        <!-- woke: mods the item doesn't have, to search for on top of its own. -->
+        <filter-add-mod v-if="canAddMods" :filters="filters" />
         <input type="submit" class="hidden" />
       </form>
       <!-- woke: the toggles keep their label on one line; with no room one moves to a second line. -->
@@ -79,6 +81,7 @@ import UiToggle from '@/web/ui/UiToggle.vue'
 import FilterModifier from './FilterModifier.vue'
 import FilterGroup from './FilterGroup.vue'
 import FilterSources, { hasSourceInfo } from './FilterSources.vue'
+import FilterAddMod from './FilterAddMod.vue'
 import { poeOn as poeMode, poeKit } from '@/web/woke/price-insight/window-style'
 import type { PoeSection } from '@/web/woke/price-insight/poe-kind'
 import UnknownModifier from './UnknownModifier.vue'
@@ -94,6 +97,7 @@ export default defineComponent({
     FilterModifier,
     FilterGroup,
     FilterSources,
+    FilterAddMod,
     UnknownModifier,
     WSegmented,
     UiToggle
@@ -166,6 +170,12 @@ export default defineComponent({
       props.item.category !== ItemCategory.Sentinel &&
       props.item.category !== ItemCategory.Map
     )
+
+    // woke: gear, jewels, flasks, maps: anything with rarity has mods the trade site
+    // can search for. Gems, currency, cards and the like don't.
+    const canAddMods = computed(() =>
+      (Object.values(ItemRarity) as string[]).includes(props.item.rarity as string) &&
+      !props.presets.some(p => p.active && p.id === 'filters.preset_bulk'))
 
     const { t } = useI18n()
     const actions = useStatActions()
@@ -281,8 +291,10 @@ export default defineComponent({
       activePreset: computed(() => props.presets.find(preset => preset.active)?.id ?? ''),
       presetOptions: computed(() => props.presets.map(preset => ({ value: preset.id, label: t(preset.id) }))),
       showUnknownMods,
+      canAddMods,
       hasStats: computed(() =>
         props.stats.length ||
+        canAddMods.value ||
         (showUnknownMods.value && props.item.rarity === ItemRarity.Unique) ||
         props.presets.length > 1),
       handleStatsSubmit () {
