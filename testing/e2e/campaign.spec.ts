@@ -124,3 +124,10 @@ test('the run timer comes with the campaign tracker, once', async ({ overlay, fa
   await expect.poll(() => overlay.savedWidget('woke-run-timer')?.wmWants).toBe('show')
   expect(overlay.savedWidget('woke-campaign').timerPlaced).toBe(true)
 })
+
+test('the run timer draws no empty box while the campaign card holds it', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [CAMPAIGN, RUN_TIMER], overlayActive: true })
+  await overlay.replayLog('client-logs/campaign-act1.txt')
+  await expect(overlay.dockIcon('campaign')).toBeVisible()
+  await expect(overlay.widget('woke-run-timer').locator('[data-w-panel]')).toHaveCount(0)
+})
