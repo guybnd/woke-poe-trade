@@ -5156,3 +5156,22 @@
 {"name":"Minotaur's Head","refName":"Minotaur's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Phoenix's Head","refName":"Phoenix's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Purifier's Head","refName":"Purifier's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Veil of Flesh","refName":"Veil of Flesh","namespace":"UNIQUE","unique":{"base":"Callous Mask"},"icon":""}
+{"name":"Bane of the Apostate","refName":"Bane of the Apostate","namespace":"UNIQUE","unique":{"base":"Judgement Staff"},"icon":""}
+{"name":"The Covetous Dark","refName":"The Covetous Dark","namespace":"UNIQUE","unique":{"base":"Eye Gouger"},"icon":""}
+{"name":"Al-Hezmin's Head","refName":"Al-Hezmin's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Coven Queen's Crown","refName":"Coven Queen's Crown","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Drox's Head","refName":"Drox's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Eater of Worlds' Head","refName":"Eater of Worlds' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Elder's Head","refName":"Elder's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Incarnation of Dread's Head","refName":"Incarnation of Dread's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Incarnation of Neglect's Cube","refName":"Incarnation of Neglect's Cube","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Maven's Orrery","refName":"Maven's Orrery","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Wings of Catarina","refName":"Nightmarish Wings of Catarina","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Book of Depravity","refName":"Nightmarish Book of Depravity","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Wings of Lycia","refName":"Nightmarish Wings of Lycia","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Core of the Unbreakable","refName":"Nightmarish Core of the Unbreakable","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Shaper's Head","refName":"Shaper's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Sirus' Head","refName":"Sirus' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Venarius' Scripture","refName":"Venarius' Scripture","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Veritania's Head","refName":"Veritania's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}

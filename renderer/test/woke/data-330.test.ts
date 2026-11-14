@@ -27,6 +27,14 @@ describe('3.30 data', () => {
     expect(refs('+15% to Item Rarity')).toMatchObject({ refs: ['#% increased Rarity of Items found'], unknown: [] })
   })
 
+  it('reads mods of uniques added after launch', () => {
+    expect(refs('Gain Bitterblood equal to Life spent')).toMatchObject({ refs: ['Gain Bitterblood equal to Life spent'], unknown: [] })
+    expect(refs('Grants Level 20 Witchhunter's Pyre')).toMatchObject({ refs: ['Grants Level # Witchhunter's Pyre'], unknown: [] })
+    for (const name of ['Veil of Flesh', 'Bane of the Apostate', 'The Covetous Dark']) {
+      expect(ITEM_BY_REF('UNIQUE', name)?.[0]?.name, name).toBe(name)
+    }
+  })
+
   it('knows the new league items', () => {
     for (const name of ['Abyss Thread', 'Frayed Thread', 'Royal Visage', 'Essence of Trickery', 'Cryptic Astrolabe']) {
       expect(ITEM_BY_REF('ITEM', name)?.[0]?.name, name).toBe(name)

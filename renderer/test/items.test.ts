@@ -25,6 +25,15 @@ describe('item fixtures', () => {
     expect(item.statsByType.map(s => s.stat.ref)).toContain('Players are Cursed with Temporal Chains')
   })
 
+  it('reads a 3.30 linked skill name behind a zero-width space', () => {
+    const text = fixture('items/unique-ebers-unification-zwsp.txt')
+    expect(text).toContain('​')
+    const item = parseItem(text)
+    expect(item.unknownModifiers).toEqual([])
+    expect(item.statsByType.map(s => s.stat.ref)).toContain('Trigger Level # Void Gaze when you use a Skill')
+    expect(item.rawText).not.toContain('​')
+  })
+
   it('reads stack size, gem level and rolls', () => {
     expect(parseItem(fixture('items/currency-divine.txt')).stackSize?.value).toBe(7)
     const gem = parseItem(fixture('items/gem-enlighten.txt'))
