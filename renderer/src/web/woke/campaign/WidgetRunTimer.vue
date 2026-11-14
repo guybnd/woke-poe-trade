@@ -180,7 +180,7 @@ export default { widget: widgetRunTimerSpec }
 </script>
 
 <script setup lang="ts">
-import { inject, computed, shallowRef, onUnmounted } from 'vue'
+import { inject, computed, shallowRef, onUnmounted, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -249,6 +249,10 @@ const tabOptions = computed(() => [
   ...(props.config.run ? [{ value: 'timeline', label: 'Timeline' }] : []),
   { value: 'history', label: 'Past runs', count: props.config.history.length }
 ])
+// A run cleared while its Timeline was open (ended in its first minute).
+watch(() => props.config.run, (r) => {
+  if (!r && tab.value === 'timeline') tab.value = 'splits'
+})
 // The past run whose timeline is open (Past runs tab).
 const reviewId = shallowRef<number | null>(null)
 const reviewRun = computed(() => tab.value === 'history' && reviewId.value != null
