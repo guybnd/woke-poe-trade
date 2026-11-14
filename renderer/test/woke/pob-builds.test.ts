@@ -1,7 +1,7 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter, treeAhead, pointsBy } from '@/web/woke/pob-builds/build-model'
+import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter, treeAhead, treeStep, pointsBy } from '@/web/woke/pob-builds/build-model'
 import { moveBuildPins, treePin } from '@/web/woke/pob-builds/build-pins'
 import type { Pin } from '@/web/woke/pins/pins'
 import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
@@ -478,6 +478,12 @@ describe('next step', () => {
     expect(loadoutOf(d, 39, 5).tree?.title).toBe('Level 54')
     // Picked by hand: stays put.
     expect(loadoutOf(d, 39, 5, { skillSet: 'Level 33' }).tree?.title).toBe('Level 33')
+    // A pick no tree is named after doesn't stop it.
+    expect(loadoutOf(d, 39, 5, { skillSet: 'Gone' }).tree?.title).toBe('Level 54')
+    // Next starts from the title's tree, so it shows what's left to take.
+    const step = treeStep(list, loadoutOf(d, 39, 5))
+    expect([step.from?.title, step.to?.title]).toEqual(['Level 33', 'Level 54'])
+    expect(treeStep(list, loadoutOf(d, 33, 4)).to?.title).toBe('Level 54')
   })
 
   it('says which gems come and go', () => {

@@ -44,7 +44,7 @@
 import { computed, shallowRef, watch } from 'vue'
 import SocketDots from './SocketDots.vue'
 import { useActiveBuild } from './active'
-import { linkColours, linkGroups, loadoutOf, nextSet, orderedGems, realSets, shortNumber, statLine } from './build-model'
+import { linkColours, linkGroups, loadoutOf, orderedGems, realSets, shortNumber, statLine, treeStep } from './build-model'
 import { loadPassiveTree, treeDiff } from './passive-tree'
 import { toggleBuildTree, treeOn, treeOverlaySeen } from './tree-toggle'
 import { treeHotkeyOf } from './widget'
@@ -68,11 +68,12 @@ const set = computed(() => loadout.value?.skillSet?.item ?? null)
 const links = computed(() => set.value ? linkGroups(set.value.groups, 3) : [])
 
 const treeData = shallowRef<Map<number, TreeNode> | null>(null)
-const nextTree = computed(() => nextSet(realSets(details.value?.trees ?? []), loadout.value?.tree))
+const step = computed(() => treeStep(realSets(details.value?.trees ?? []), loadout.value))
+const nextTree = computed(() => step.value.to)
 watch(nextTree, (t) => {
   if (t) loadPassiveTree().then(data => { treeData.value = data }, () => {})
 }, { immediate: true })
-const nextDiff = computed(() => treeDiff(treeData.value, loadout.value?.tree?.nodes ?? [], nextTree.value?.nodes ?? []))
+const nextDiff = computed(() => treeDiff(treeData.value, step.value.from?.nodes ?? [], nextTree.value?.nodes ?? []))
 
 // PoB's ids run the words together: "TheBrineKing".
 function godName (id: string) {
