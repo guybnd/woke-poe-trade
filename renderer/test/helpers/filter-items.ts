@@ -146,8 +146,9 @@ export const CLASS_ITEMS: CorpusItem[] = [
     ['Item Class: Corpses', 'Rarity: Normal', 'Perfect Rhoa'], ['Item Level: 80'], ['Right click to place at the graveyard.']),
   // 3.30 Wickerman trophy, as in testing/fixtures/items/viscera-ghostly-claw.txt.
   item('viscera', { itemClass: 'Viscera', baseType: 'Ghostly Claw', rarity: 'Normal', itemLevel: 56 },
-    ['Item Class: Viscera', 'Rarity: Normal', 'Ghostly Claw'], ['Upper Limb'], ['Item Level: 56'],
-    ['{ Implicit Modifier }', '9(8-12)% chance to gain Elusive on Kill'], ['Take this to the Wickerman in a town or hideout to attach it.']),
+    ['Item Class: Viscera', 'Ghostly Claw'], ['Upper Limb'], ['Item Level: 56'],
+    ['{ Implicit Modifier }', '9(8-12)% chance to gain Elusive on Kill', '(Elusive initially grants 15% chance to Avoid All Damage from Hits and 30% increased Movement Speed, both of which decay over time)'],
+    ['Take this to the Wickerman in a town or hideout to attach it.']),
   item('incursion item', { itemClass: 'Incursion Items', baseType: 'Stone of Passage' },
     ['Item Class: Incursion Items', 'Rarity: Normal', 'Stone of Passage'], ['Opens a door in the Temple of Atzoatl.']),
   item('labyrinth item', { itemClass: 'Labyrinth Items', baseType: 'Offering to the Goddess' },

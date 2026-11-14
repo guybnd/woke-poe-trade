@@ -224,6 +224,10 @@ function findInDatabase (item: ParserState) {
         item.info.unique.base)![0].craftable!.category
     }
   }
+  // A Viscera's copy has no Rarity line; the game treats it as a Normal item.
+  if (item.category === ItemCategory.Viscera && !item.rarity) {
+    item.rarity = ItemRarity.Normal
+  }
 }
 
 export function makeIdentifiedUnique (uniqueInfo: BaseType, unidentified: ParsedItem): ParsedItem {

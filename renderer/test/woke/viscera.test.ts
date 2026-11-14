@@ -19,7 +19,8 @@ import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 
 const OPTS = { league: 'Covens', merchantOnly: true, currency: null, collapseListings: 'api' as const, activateStockFilter: false, searchStatRange: 10, useEn: false }
 
-// Rebuilt from Guy's price check screenshot of a copied Ghostly Claw.
+// Guy's copied Ghostly Claw, from his price check screenshot (the reminder
+// line was cut off on screen). A Viscera copy has no Rarity line.
 const CLAW = () => fixture('items/viscera-ghostly-claw.txt')
 
 describe('Viscera', () => {
@@ -31,6 +32,7 @@ describe('Viscera', () => {
     expect(item.category).toBe(ItemCategory.Viscera)
     expect(item.visceraSlot).toBe('Upper Limb')
     expect(item.itemLevel).toBe(56)
+    expect(item.rarity).toBe('Normal')
     expect(item.unknownModifiers).toEqual([])
     const implicit = item.statsByType.find(s => s.type === ModifierType.Implicit)
     expect(implicit?.stat.ref).toBe('#% chance to gain Elusive on Kill')
