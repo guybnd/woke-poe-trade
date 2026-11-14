@@ -324,3 +324,18 @@ describe('final import from the old list', () => {
     expect(after.heistRatings).toEqual({})
   })
 })
+
+describe('3.30 suffix wordings', () => {
+  // 3.30 maps say "Area contains a Mirage"; the stat's first wording is the
+  // older Empowered Mirage line. A rating on the new wording still counts.
+  it('rates a mod by the wording the Map mods row has', () => {
+    const text = fixture('items/map-rare-t16.txt')
+      .replace('Players have 60% less Recovery Rate of Life and Energy Shield', 'Players have 60% less Recovery Rate of Life and Energy Shield\nArea contains a Mirage\nArea contains a Mirror of Delirium')
+    const item = parseItem(text)
+    const res = checkMap(item, widget(profile({ 'Area contains a Mirage': 'deadly' })))
+    expect(res.unknown).toEqual([])
+    expect(res.verdict.verdict).toBe('skip')
+    const ok = checkMap(item, widget(profile({ 'Area contains a Mirror of Delirium': 'deadly' })))
+    expect(ok.verdict.verdict).toBe('skip')
+  })
+})

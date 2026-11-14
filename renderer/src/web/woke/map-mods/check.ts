@@ -52,11 +52,19 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   const profile = activeProfile(config)
   const isChart = item.category === ItemCategory.Chart
   const rated = (type: ModifierType) => type === ModifierType.Explicit || (isChart && type === ModifierType.Implicit)
-  const stats = item.statsByType
+  const calcs = item.statsByType
     .filter(calc => rated(calc.type) && calc.stat.ref !== VOYAGE_UNREVEALED)
-    .map(calc => prepareMapStat(calc))
+  const stats = calcs.map(calc => prepareMapStat(calc))
   const mode = modeOfItem(item)
   const ratings = { ...modRatings(profile, mode) }
+  // A mod with no number shows as its stat's first wording, which may not be
+  // the one the map has ("Area contains a Mirage" reads as the older Empowered
+  // Mirage line). A rating on any wording of the stat counts.
+  stats.forEach(({ matcher }, i) => {
+    if (ratings[matcher]) return
+    const other = calcs[i].stat.matchers.find(m => ratings[m.string])
+    if (other) ratings[matcher] = ratings[other.string]
+  })
   if (mode === 'heist') {
     // A row rates both wordings of its mod.
     for (const { matcher } of stats) {
