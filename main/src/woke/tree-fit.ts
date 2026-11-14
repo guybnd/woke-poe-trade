@@ -300,20 +300,83 @@ export function litProbes (bgra: Uint8Array, width: number, height: number, fit:
       const y = Math.round(probe[i + 1] * fit.zoom + fit.oy)
       if (x < 2 || y < 2 || x >= width - 2 || y >= height - 2) continue
       seen++
-      // The brightest pixel across the line's width.
-      let best = 0
-      for (let d = -2; d <= 2; d++) {
-        for (const [px, py] of [[x + d, y], [x, y + d]]) {
-          const j = (py * width + px) * 4
-          const b = bgra[j]
-          const g = bgra[j + 1]
-          const r = bgra[j + 2]
-          if (r > b + 40) best = Math.max(best, (r + g) / 2)
-        }
-      }
-      if (best > 165) lit++
+      if (litAt(bgra, width, x, y)) lit++
     }
     return seen > 0 && lit / seen >= 0.6
+  })
+}
+
+// Pale gold under (x, y): the brightest pixel across a line's width.
+function litAt (bgra: Uint8Array, width: number, x: number, y: number): boolean {
+  let best = 0
+  for (let d = -2; d <= 2; d++) {
+    for (const [px, py] of [[x + d, y], [x, y + d]]) {
+      const j = (py * width + px) * 4
+      const b = bgra[j]
+      const g = bgra[j + 1]
+      const r = bgra[j + 2]
+      if (r > b + 40) best = Math.max(best, (r + g) / 2)
+    }
+  }
+  return best > 165
+}
+
+// litProbes for lines outside the build, where a wrong "lit" would tell you
+// to refund a point. Stricter: points on a node's frame or icon, or under the
+// HUD, the Skills header and the life and mana orbs, aren't read (gold art
+// there reads as lit), and a line needs two clear points to count.
+export function litLines (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[], pts: TreePoints): boolean[] {
+  const k = height / REF_H
+  const hudTop = 1210 * k
+  const headX0 = width / 2 - 460 * k
+  const headX1 = width / 2 + 460 * k
+  const headY = 240 * k
+  const orbW = 330 * k
+  const orbY = 1080 * k
+  // Node frames on screen, in 64 px cells.
+  const CELL = 64
+  const cols = Math.ceil(width / CELL) + 1
+  const rows = Math.ceil(height / CELL) + 1
+  const cells: number[][] = Array.from({ length: cols * rows }, () => [])
+  let maxR = 0
+  for (let i = 0; i < pts.x.length; i++) {
+    const x = pts.x[i] * fit.zoom + fit.ox
+    const y = pts.y[i] * fit.zoom + fit.oy
+    if (x < -CELL || y < -CELL || x > width + CELL || y > height + CELL) continue
+    // Notable and keystone frames reach well past their radius, allocated
+    // ones most (spiked).
+    const r = pts.r[i] * fit.zoom * (pts.r[i] >= 50 ? 1.5 : 1.1) + 3
+    maxR = Math.max(maxR, r)
+    const cx = Math.min(cols - 1, Math.max(0, Math.floor(x / CELL)))
+    const cy = Math.min(rows - 1, Math.max(0, Math.floor(y / CELL)))
+    cells[cy * cols + cx].push(x, y, r)
+  }
+  const reach = Math.ceil(maxR / CELL)
+  const onNode = (x: number, y: number) => {
+    const cx = Math.floor(x / CELL)
+    const cy = Math.floor(y / CELL)
+    for (let gy = Math.max(0, cy - reach); gy <= Math.min(rows - 1, cy + reach); gy++) {
+      for (let gx = Math.max(0, cx - reach); gx <= Math.min(cols - 1, cx + reach); gx++) {
+        const c = cells[gy * cols + gx]
+        for (let j = 0; j < c.length; j += 3) if (Math.hypot(x - c[j], y - c[j + 1]) < c[j + 2]) return true
+      }
+    }
+    return false
+  }
+  return probes.map(probe => {
+    let lit = 0
+    let seen = 0
+    for (let i = 0; i < probe.length; i += 2) {
+      const x = Math.round(probe[i] * fit.zoom + fit.ox)
+      const y = Math.round(probe[i + 1] * fit.zoom + fit.oy)
+      if (x < 2 || y < 2 || x >= width - 2 || y >= height - 2) continue
+      if (y >= hudTop || (y < headY && x > headX0 && x < headX1)) continue
+      if (y > orbY && (x < orbW || x > width - orbW)) continue
+      if (onNode(x, y)) continue
+      seen++
+      if (litAt(bgra, width, x, y)) lit++
+    }
+    return seen >= 2 && lit / seen >= 0.6
   })
 }
 

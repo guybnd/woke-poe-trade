@@ -4,7 +4,7 @@
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import type { UiohookKeyboardEvent, UiohookMouseEvent } from 'uiohook-napi'
 import type { GameWindow } from '../windowing/GameWindow'
-import { fitTree, litProbes, MIN_SCORE, readScreen } from './tree-fit'
+import { fitTree, litLines, litProbes, MIN_SCORE, readScreen } from './tree-fit'
 import type { TreeFit, TreePoints } from './tree-fit'
 import { perfRecord } from './perf'
 import { insideGame, TreeDrag } from './tree-drag'
@@ -52,7 +52,11 @@ export class TreeOverlay {
   get hasPoints () { return this.pts != null }
 
   // fresh: ignore the last fit (a new press of the hotkey).
-  fit (args: { probes: number[][], fresh?: boolean }) {
+  // extra: lines outside the build, read the stricter way (litLines). Sent
+  // only when they change (a few thousand lines), so kept here.
+  private extra: Float32Array[] = []
+  fit (args: { probes: number[][], extra?: number[][], fresh?: boolean }) {
+    if (args.extra) this.extra = args.extra.map(p => Float32Array.from(p))
     if (!this.pts) return { ok: false as const, reason: 'no-points' }
     const { width, height } = this.poeWindow.bounds
     if (!width || !height) return { ok: false as const, reason: 'no-game' }
@@ -73,11 +77,13 @@ export class TreeOverlay {
     this.last = fit
     this.drag.fitted(fit, width, height)
     const lit = litProbes(shot, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)))
+    const extraLit = this.extra.length ? litLines(shot, width, height, fit, this.extra, this.pts) : []
     this.startWatching()
     return {
       ok: true as const,
       fit,
       lit,
+      extraLit,
       width,
       height,
       ms: { capture: Math.round(t1 - t0), fit: Math.round(t2 - t1) }
