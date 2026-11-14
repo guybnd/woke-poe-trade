@@ -207,6 +207,7 @@ function findInDatabase (item: ParserState) {
     info = ITEM_BY_TRANSLATED('UNIQUE', item.name)
   } else {
     info = ITEM_BY_TRANSLATED('ITEM', item.baseType ?? item.name)
+    if (!info?.length && !item.baseType) info = visceraByTier(item.name)
   }
   if (!info?.length) {
     return err('item.unknown')
@@ -234,6 +235,19 @@ function findInDatabase (item: ParserState) {
   if (item.category === ItemCategory.Viscera && !item.rarity) {
     item.rarity = ItemRarity.Normal
   }
+}
+
+// 3.30 Viscera come in tiers the trade site doesn't list: the copy says
+// "Greater Skeletal Warrior's Leg", the trade base is "Skeletal Warrior's Leg"
+// (and searching it finds every tier). Drop leading words until a Viscera
+// base matches; any other item that isn't found stays unknown.
+function visceraByTier (name: string): BaseType[] | undefined {
+  const words = name.split(' ')
+  for (let i = 1; i < words.length; i++) {
+    const info = ITEM_BY_TRANSLATED('ITEM', words.slice(i).join(' '))
+    if (info?.length && info[0].craftable?.category === ItemCategory.Viscera) return info
+  }
+  return undefined
 }
 
 export function makeIdentifiedUnique (uniqueInfo: BaseType, unidentified: ParsedItem): ParsedItem {

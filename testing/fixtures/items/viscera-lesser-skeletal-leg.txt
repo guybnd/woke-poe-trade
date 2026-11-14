@@ -1,0 +1,10 @@
+Item Class: Viscera
+Lesser Skeletal Warrior's Leg
+--------
+Lower Limb
+--------
+Item Level: 8
+--------
+You and Allies within 5 metres deal 8 to 12 additional Cold Damage
+--------
+Take this to the Wickerman in a town or hideout to attach it.

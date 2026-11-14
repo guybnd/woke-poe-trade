@@ -66,6 +66,28 @@ describe('Viscera', () => {
     }
   })
 
+  // Real copy of a live listing (trade fetch, 2026-11-15). The trade site lists
+  // only the plain base; the copy names the tier.
+  const LEG = () => fixture('items/viscera-lesser-skeletal-leg.txt')
+
+  it('reads a tiered name as its base', () => {
+    for (const name of ["Lesser Skeletal Warrior's Leg", "Greater Skeletal Warrior's Leg"]) {
+      const item = parseItem(LEG().replace("Lesser Skeletal Warrior's Leg", name))
+      expect(item.info.refName, name).toBe("Skeletal Warrior's Leg")
+      expect(item.category).toBe(ItemCategory.Viscera)
+      expect(item.visceraSlot).toBe('Lower Limb')
+      expect(item.unknownModifiers).toEqual([])
+      const implicit = item.statsByType.find(s => s.type === ModifierType.Implicit)
+      expect(implicit?.stat.ref).toMatch(/additional Cold Damage/)
+      const exact = createTradeRequest(createFilters(item, { ...OPTS, exact: true }), [])
+      expect(exact.query.type).toBe("Skeletal Warrior's Leg")
+    }
+  })
+
+  it('still finds nothing for an unknown name', () => {
+    expect(() => parseItem(LEG().replace("Lesser Skeletal Warrior's Leg", 'Lesser Nonexistent Thing'))).toThrow()
+  })
+
   it('offers the implicit as a stat filter', () => {
     const item = parseItem(CLAW())
     const { presets } = createPresets(item, OPTS)

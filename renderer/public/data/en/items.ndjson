@@ -5175,3 +5175,5 @@
 {"name":"Sirus' Head","refName":"Sirus' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Venarius' Scripture","refName":"Venarius' Scripture","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Veritania's Head","refName":"Veritania's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Incarnation of Fear's Head","refName":"Incarnation of Fear's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Searing Exarch's Descry","refName":"Searing Exarch's Descry","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
