@@ -40,12 +40,21 @@ export interface RouteStep {
   areaAfter: string
   // "Recommended Level: 16" pulled out of the sub-steps.
   recommendedLevel: number | null
+  // Crafting recipes to pick up after this step, in the zone it leaves you
+  // in. The route files give them their own "Get crafting recipe" step; they
+  // ride along here instead, as an icon.
+  crafts?: string[]
+  // The zone those recipes are in (a lab's own for the lab's).
+  craftsAt?: string
 }
 
 export interface Route {
   steps: RouteStep[]
   // First step index of each act.
   actStarts: Map<number, number>
+  // Where the crafting steps folded into the step before were, in the old
+  // numbering (one step per line), to move saved progress over.
+  folded: number[]
 }
 
 const TRIAL_TEXT = 'Trial of Ascendancy'
@@ -78,6 +87,13 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
   const state: ParseState = { area: '1_1_1', lastTown: '1_1_town', portalArea: null }
   const steps: RouteStep[] = []
   const actStarts = new Map<number, number>()
+  const folded: number[] = []
+  let oldIndex = 0
+  let lastRecipes: string[] = []
+  let lastCraftArea = ''
+  // Sub-lines under a folded crafting line: they say how to get through the
+  // zone, so they go to the next step, the one current while you're there.
+  let heldSubs: Part[][] | null = null
   let act = 1
 
   const areaName = (id: string) => data.areas[id]?.[0] ?? id
@@ -101,7 +117,7 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
       case 'logout':
         enterArea(state.lastTown)
         state.portalArea = null
-        return { kind: 'logout', text: 'Logout' }
+        return { kind: 'logout', text: 'Portal scroll / logout' }
       case 'waypoint':
         if (args[0]) {
           enterArea(args[0])
@@ -136,6 +152,8 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
         return { kind: 'trial', text: `${args[0][0].toUpperCase()}${args[0].slice(1)} Labyrinth` }
       case 'crafting': {
         const recipes = data.areas[args[0] ?? state.area]?.[6] ?? []
+        lastRecipes = recipes
+        lastCraftArea = args[0] ?? state.area
         return { kind: 'craft', text: recipes.length ? `crafting recipe (${recipes.join(', ')})` : 'crafting recipe' }
       }
       case 'dir': {
@@ -195,17 +213,59 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
         const text = parts.map(p => p.text).join('')
         const lvl = /Recommended Level:\s*(\d+)/i.exec(text)
         if (lvl) prev.recommendedLevel = Number(lvl[1])
-        else if (parts.length) prev.subs.push(parts)
+        else if (parts.length) (heldSubs ?? prev.subs).push(parts)
         continue
       }
       if (line.startsWith('#')) continue
       const areaBefore = state.area
       const parts = parseLine(line)
       if (!parts.length) continue
-      steps.push({ index: steps.length, act, parts, subs: [], areaBefore, areaAfter: state.area, recommendedLevel: null })
+      const prev = steps[steps.length - 1]
+      if (prev && isCraftOnly(parts)) {
+        prev.crafts = [...(prev.crafts ?? []), ...(lastRecipes.length ? lastRecipes : [CRAFT_TEXT])]
+        prev.craftsAt = lastCraftArea
+        heldSubs = heldSubs ?? []
+        folded.push(oldIndex++)
+        continue
+      }
+      oldIndex++
+      steps.push({ index: steps.length, act, parts, subs: heldSubs ?? [], areaBefore, areaAfter: state.area, recommendedLevel: null })
+      heldSubs = null
     }
   }
-  return { steps, actStarts }
+  return { steps, actStarts, folded }
+}
+
+const CRAFT_TEXT = 'Crafting recipe'
+
+// "Get {crafting}" and nothing else.
+function isCraftOnly (parts: Part[]): boolean {
+  const craft = parts.filter(p => p.kind === 'craft')
+  return craft.length === 1 && parts.every(p => p.kind === 'craft' || (p.kind === 'text' && /^\s*get\s*$/i.test(p.text)))
+}
+
+// A step index saved before crafting steps were folded, in today's numbering.
+// A saved crafting step lands on the step after it.
+export function stepFromOld (route: Route, old: number): number {
+  let n = 0
+  for (const f of route.folded) if (f < old) n++
+  return old - n
+}
+
+// The crafting recipes of the zone `step` is done in: those picked up after
+// earlier steps that are still in this zone, plus the step's own when it
+// doesn't leave the zone.
+export function zoneCrafts (route: Route, step: number): string[] {
+  const st = route.steps[step]
+  if (!st) return []
+  const out: string[] = []
+  for (let i = step - 1; i >= 0; i--) {
+    const prev = route.steps[i]
+    if (prev.crafts && prev.craftsAt === st.areaBefore) out.unshift(...prev.crafts)
+    if (prev.areaBefore !== st.areaBefore) break
+  }
+  if (st.crafts && st.craftsAt === st.areaBefore) out.push(...st.crafts)
+  return [...new Set(out)]
 }
 
 // ---- progress ----
