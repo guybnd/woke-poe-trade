@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-274
 title: Move 3.30's moved trade stat ids onto our stats
-status: In Progress
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -25,6 +25,44 @@ history:
       renumbered Foulborn ids, 66 folded, 114 dropped, data v9. Review + local
       checks + live trade checks pass; handed to coordinator for merge.
     id: a-2026-11-14t03-28-09-654z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 434 (stat id remap, data v9) and PR 435 (hourly job junk-item guard)
+      are merged.
+    date: '2026-11-14T03:48:27.210Z'
+    completionComment: true
+    id: c-2026-11-14t03-48-27-210z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-14T03:48:27.210Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged: https://github.com/guybnd/woke-poe-trade/pull/434 (9f6785fa) moves
+      3.30's moved stat ids onto our stats: 251 moved, 4 renumbered Foulborn
+      ids, 66 duplicates folded, 114 dropped, data v9 live.
+      https://github.com/guybnd/woke-poe-trade/pull/435 (180ce798) stops the
+      hourly job adding junk item names. Open: fractured granted skills/supports
+      have no trade id in 3.30, so they read as unknown.
+    completionComment: true
+    date: '2026-11-14T03:48:29.163Z'
+    id: c-2026-11-14t03-48-29-163z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-14T03:48:29.595Z'
+needsAction: null
+baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/434'
+swimlane: null
+diffSummary:
+  - file: testing/e2e/loot-filter.spec.ts
+    additions: 1
+    deletions: 1
 ---
 The trade site moved granted skills and socketed supports to new ids (`explicit.effect_<n>`) with new words ("Grants Level 22 Anger", "...Added Fire Damage Support"), and dropped other ids. 365 ids in en/stats.ndjson were dead: price checks on those items failed ("Unknown stat provided") or left the mod unread.
 
