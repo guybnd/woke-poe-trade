@@ -171,8 +171,9 @@ test('a picked loadout reaches the other windows, is saved, and Auto undoes it',
 
   // The panel opens on the build in use.
   const detail = overlay.page.locator('[data-w-panel]').filter({ hasText: 'Open in PoB' })
-  // The set chips, not the buttons for the same set in Next and the stage costs.
-  const chip = (name: string) => detail.locator('button:not([class*="next"]):not([class*="stage"])').filter({ hasText: name })
+  // The set chips, not the buttons for the same set in Next and the stage
+  // costs, nor the Tree row's chip of the same name (after the sets).
+  const chip = (name: string) => detail.locator('button:not([class*="next"]):not([class*="stage"])').filter({ hasText: name }).first()
   // The campaign card stays open over part of the panel (the test reads it
   // after each pick), so chips are clicked without aiming the mouse.
   const pickChip = (name: string) => chip(name).dispatchEvent('click')

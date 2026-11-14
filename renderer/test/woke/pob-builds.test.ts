@@ -480,10 +480,16 @@ describe('next step', () => {
     expect(loadoutOf(d, 39, 5, { skillSet: 'Level 33' }).tree?.title).toBe('Level 33')
     // A pick no tree is named after doesn't stop it.
     expect(loadoutOf(d, 39, 5, { skillSet: 'Gone' }).tree?.title).toBe('Level 54')
-    // Next starts from the title's tree, so it shows what's left to take.
     const step = treeStep(list, loadoutOf(d, 39, 5))
-    expect([step.from?.title, step.to?.title]).toEqual(['Level 33', 'Level 54'])
-    expect(treeStep(list, loadoutOf(d, 33, 4)).to?.title).toBe('Level 54')
+    expect([step.from?.title, step.to?.title]).toEqual(['Level 54', 'Level 68'])
+    // Gems and gear move with the tree to their sets of its name.
+    const named = (title: string) => ({ title, isActive: false, groups: [], slots: [] })
+    const sets = ['Level 24', 'Level 33', 'Level 54', 'Level 68'].map(named)
+    const both = { skills: [], skillSets: sets, itemSets: sets, trees: list } as never
+    const at39 = loadoutOf(both, 39, 5)
+    expect([at39.skillSet?.item.title, at39.itemSet?.item.title, at39.tree?.title]).toEqual(['Level 54', 'Level 54', 'Level 54'])
+    expect(loadoutOf(both, 34, 4).skillSet?.item.title).toBe('Level 33')
+    expect(loadoutOf(both, 39, 5, { itemSet: 'Level 24' }).itemSet?.item.title).toBe('Level 24')
   })
 
   it('says which gems come and go', () => {
