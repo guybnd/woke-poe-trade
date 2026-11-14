@@ -28,9 +28,18 @@ const MODIFIERS = new Set<number>([
 // After the last scroll or key, wait this long for the game to redraw.
 const SETTLE_MS = 160
 
+// The Ascendancy panel's nodes all sit lit-or-framed on a dark disc: a real
+// fit puts nearly every one on something bright.
+const ASC_MIN_HITS = 0.85
+
 export class TreeOverlay {
   private pts: TreePoints | null = null
+  // The build's ascendancy, to find its panel by. Null: no ascendancy.
+  private ascPts: TreePoints | null = null
   private last: TreeFit | null = null
+  // What the last fit found: the main tree, or the Ascendancy panel, which
+  // stays put while you drag.
+  private panel: 'tree' | 'asc' = 'tree'
   private watching = false
   private down: { x: number, y: number } | null = null
   private moved = false
@@ -49,10 +58,15 @@ export class TreeOverlay {
     this.last = null
   }
 
+  setAscPoints (args: { x: number[], y: number[], r: number[] } | null) {
+    this.ascPts = args?.x.length ? { x: Float32Array.from(args.x), y: Float32Array.from(args.y), r: Float32Array.from(args.r) } : null
+    if (this.panel === 'asc') this.last = null
+  }
+
   get hasPoints () { return this.pts != null }
 
   // fresh: ignore the last fit (a new press of the hotkey).
-  fit (args: { probes: number[][], fresh?: boolean }) {
+  fit (args: { probes: number[][], ascProbes?: number[][], fresh?: boolean }) {
     if (!this.pts) return { ok: false as const, reason: 'no-points' }
     const { width, height } = this.poeWindow.bounds
     if (!width || !height) return { ok: false as const, reason: 'no-game' }
@@ -62,7 +76,10 @@ export class TreeOverlay {
     const shot = this.poeWindow.screenshot()
     const t1 = performance.now()
     const scr = readScreen(shot, width, height)
-    const fit = fitTree(scr, this.pts, args.fresh ? null : this.last)
+    // The Ascendancy panel opens over the tree: look for it first.
+    const ascFit = this.ascPts ? fitTree(scr, this.ascPts, !args.fresh && this.panel === 'asc' ? this.last : null) : null
+    const onAsc = ascFit != null && ascFit.hits >= ASC_MIN_HITS
+    const fit = onAsc ? ascFit : fitTree(scr, this.pts, args.fresh || this.panel !== 'tree' ? null : this.last)
     const t2 = performance.now()
     perfRecord('Tree overlay: fit', t2 - t0)
     if (!fit || fit.score < MIN_SCORE) {
@@ -71,11 +88,14 @@ export class TreeOverlay {
       return { ok: false as const, reason: 'no-tree', ms: Math.round(t2 - t0) }
     }
     this.last = fit
+    this.panel = onAsc ? 'asc' : 'tree'
     this.drag.fitted(fit, width, height)
-    const lit = litProbes(shot, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)))
+    const probes = (onAsc ? args.ascProbes : args.probes) ?? []
+    const lit = litProbes(shot, width, height, fit, probes.map(p => Float32Array.from(p)))
     this.startWatching()
     return {
       ok: true as const,
+      panel: this.panel,
       fit,
       lit,
       width,
@@ -142,6 +162,8 @@ export class TreeOverlay {
 
   private readonly onMove = (e: UiohookMouseEvent) => {
     if (!this.down) return
+    // The Ascendancy panel doesn't move: a drag there is only a click.
+    if (this.panel === 'asc') return
     const dx = e.x - this.down.x
     const dy = e.y - this.down.y
     if (!this.moved && Math.abs(dx) + Math.abs(dy) < 3) return

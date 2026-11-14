@@ -19,9 +19,14 @@ export interface TreeNode {
   radius: number
   // Clockwise from up, in radians.
   angle: number
+  // Ascendancy and ascendancy start nodes: which ascendancy. Their x, y are
+  // GGG's, off the main tree, and mean something only next to each other.
+  // Missing in data older than that, where they all sit at 0, 0, and on
+  // every other node.
+  asc?: string
 }
 
-type Row = [number, number, number, NodeKind, string, string[], number[], string, number, number, number]
+type Row = [number, number, number, NodeKind, string, string[], number[], string, number, number, number, string?]
 
 export interface SpriteSheet {
   url: string
@@ -71,8 +76,8 @@ export function withMasteries (nodes: Map<number, TreeNode>, masteries: Record<n
 }
 
 export function readNodes (rows: Row[]): Map<number, TreeNode> {
-  return new Map(rows.map(([id, x, y, kind, name, stats, out, icon, group, radius, angle]) =>
-    [id, { id, x, y, kind, name, stats, out, icon: icon ?? '', group: group ?? 0, radius: radius ?? 0, angle: angle ?? 0 }]))
+  return new Map(rows.map(([id, x, y, kind, name, stats, out, icon, group, radius, angle, asc]) =>
+    [id, { id, x, y, kind, name, stats, out, icon: icon ?? '', group: group ?? 0, radius: radius ?? 0, angle: angle ?? 0, ...(asc ? { asc } : {}) }]))
 }
 
 export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
