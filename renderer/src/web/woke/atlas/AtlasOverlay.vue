@@ -69,9 +69,10 @@ function atlasWidget (): AtlasWidget | undefined {
 // The strategy picked in Atlas strategies, with its link (unsaved edits too).
 function selected (): { w: AtlasWidget, s: AtlasStrategy, url: string } | null {
   const w = atlasWidget()
-  const s = w?.strategies.find(s => s.id === w.selectedId)
+  // A widget the Atlas window hasn't opened yet has no list (normalize fills it).
+  const s = w?.strategies?.find(s => s.id === w.selectedId)
   if (!w || !s) return null
-  const url = workingTree(w, s).trim()
+  const url = (workingTree(w, s) ?? '').trim()
   return url ? { w, s, url } : null
 }
 
