@@ -74,6 +74,7 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Drop sound volume (5%) | nothing |
 | Fewer beams (tier 1 only) | Sacred Orb: beam and map icon off; 21 red-beam rules lose their beam |
 | Weapons for your build (no weapon types kept) | nothing |
+| Label look (smallest text, no background, grey) | nothing |
 | Hide low item tiers (below tier 5) | nothing |
 | Quiet mode (default, keeps tiers 1-2) | nothing |
 | Fewer beams (default, tiers 1-2) | nothing |
@@ -81,7 +82,7 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Every preset, harshest settings | Sacred Orb: sound and beam and map icon off; 21 red-beam rules silenced; 21 red-beam rules lose their beam |
 | Every preset, harshest, safety net on | Sacred Orb: sound and beam and map icon off; 21 red-beam rules silenced; 21 red-beam rules lose their beam |
 
-Also: all 190 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests).
+Also: all 210 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests).
 
 ## Also checked
 

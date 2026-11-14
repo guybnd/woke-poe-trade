@@ -48,8 +48,9 @@ const SHEETS: Record<string, string> = {
   groupBackground: 'groupBackground',
   background: 'background'
 }
-// Nothing else in the atlas tree holds this many points; the export says.
-const DEFAULT_POINTS = 138
+// The export says how many points the tree holds (points.totalPoints); this
+// is only for an export without it. 3.30's tree holds 150.
+const DEFAULT_POINTS = 150
 
 interface RawNode {
   skill?: number
@@ -199,7 +200,7 @@ export function readAtlasTree (json: unknown, dataUrl?: string): AtlasTreeModel 
     mechanicOf,
     mechanics: [...new Set(mechanicOf.values())].sort((a, b) => a.localeCompare(b)),
     start,
-    points: data.points?.totalPoints ?? DEFAULT_POINTS,
+    points: typeof data.points?.totalPoints === 'number' && data.points.totalPoints > 0 ? data.points.totalPoints : DEFAULT_POINTS,
     links
   }
 }

@@ -85,6 +85,13 @@ export interface ItemFilters {
   }
   areaLevel?: FilterNumeric
   sentinelCharge?: FilterNumeric
+  // woke: most prefixes / suffixes a listing may have, to find items with open
+  // affixes to craft on. null is no cap. `most` is the item's own affix ceiling.
+  affixCaps?: {
+    prefix: number | null
+    suffix: number | null
+    most: number
+  }
   trade: {
     offline: boolean
     onlineInLeague: boolean

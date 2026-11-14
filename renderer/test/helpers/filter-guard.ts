@@ -14,6 +14,7 @@ import { DEFAULT_BUILD_RULES, WEAPON_CLASSES } from '@/web/woke/loot-filter/buil
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import type { FilterEdit } from '@/web/woke/loot-filter/edits'
 import { PRESET_NAMES } from '@/web/woke/loot-filter/timeline'
+import { LOOK_LIMITS, scaledFont } from '@/web/woke/loot-filter/look'
 import { LEVELS, neverSink, neverSinkStyled } from './neversink'
 
 export const FILTERS = [
@@ -229,6 +230,7 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   volume: { on: true, percent: 5 },
   beams: { on: true, keepTiers: 1 },
   weapons: { on: true, archetype: 'custom', classes: [] },
+  look: { on: true, size: LOOK_LIMITS.size.min, background: LOOK_LIMITS.background.min, colour: LOOK_LIMITS.colour.min },
   lowTiers: { on: true, tier: 5 }
 }
 
@@ -248,6 +250,7 @@ const HARSH_WORDS: Partial<Record<Key, string>> = {
   volume: '5%',
   beams: 'tier 1 only',
   weapons: 'no weapon types kept',
+  look: 'smallest text, no background, grey',
   lowTiers: 'below tier 5'
 }
 
@@ -314,6 +317,7 @@ export function randomSetup (seed: number): Setup {
   p.bigger.size = int(25, 45)
   p.volume.percent = int(5, 100)
   p.lowMaps.tier = int(2, 17)
+  p.look = { on: p.look.on, size: int(50, 150), background: int(0, 100), colour: int(0, 150) }
   p.dust.fromPrices = r() < 0.5
   p.dust.line = pick([100, 5000, 1_000_000])
   p.weapons.archetype = pick(ARCHETYPES).key
@@ -341,7 +345,10 @@ export function losses (before: Look, after: Look, s: Setup): string[] {
   if (before.sound && !after.sound && !may.sound) out.push(`silenced (by ${after.rule})`)
   if (before.beam && !after.beam && !may.beam) out.push(`lost its beam (by ${after.rule})`)
   if (before.icon && !after.icon && !may.beam) out.push(`lost its map icon (by ${after.rule})`)
-  if (after.shown && after.font < before.font) out.push(`label shrank ${before.font} -> ${after.font}`)
+  // The look strip may shrink labels, by its own share and no further.
+  const look = s.presets.look
+  const smallest = look.on && look.size < 100 ? scaledFont(before.font, look.size) : before.font
+  if (after.shown && after.font < smallest) out.push(`label shrank ${before.font} -> ${after.font}`)
   return out
 }
 

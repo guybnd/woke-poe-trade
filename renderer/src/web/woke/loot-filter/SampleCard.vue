@@ -118,6 +118,7 @@ import { tierLabel } from './names'
 import type { FilterCondition, Visibility } from './parse'
 import { OWN_RULE_TYPE, blocksOf, conditionSignature, moveTargets, readStyle } from './edits'
 import type { StylePatch } from './edits'
+import { ownActions } from './look'
 import { findBase, groupName } from './groups'
 
 const props = defineProps<{
@@ -164,7 +165,7 @@ function tierInfo (tier: string) {
   const blocks = live.length ? live : all
   const first = blocks[0]
   const count = blocks.reduce((n, b) => n + (b.conditions.find(c => c.key === 'BaseType' && c.op === '==')?.values.length ?? 0), 0)
-  return { tier, actions: first?.actions ?? [], visibility: first?.visibility ?? 'Show', count, look: readStyle(first?.actions ?? []), off: !live.length }
+  return { tier, actions: first?.actions ?? [], visibility: first?.visibility ?? 'Show', count, look: readStyle(first ? ownActions(first) : []), off: !live.length }
 }
 
 const moveTiers = computed(() => {
@@ -204,7 +205,8 @@ const scopeOptions = computed(() => {
   ]
 })
 
-const editLook = computed<StylePatch>(() => readStyle(props.match.final!.block.actions))
+// The rule's own style, before the look strip, so edits never compound.
+const editLook = computed<StylePatch>(() => readStyle(ownActions(props.match.final!.block)))
 const editVisibility = computed<Visibility>(() => final.value.visibility)
 
 function onPatch (patch: StylePatch) {

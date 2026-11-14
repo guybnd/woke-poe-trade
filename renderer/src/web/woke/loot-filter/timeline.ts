@@ -207,5 +207,6 @@ export const PRESET_NAMES: Record<keyof Presets, string> = {
   volume: 'drop sound volume',
   beams: 'fewer beams',
   weapons: 'weapons for your build',
+  look: 'label look',
   lowTiers: 'hide low item tiers'
 }

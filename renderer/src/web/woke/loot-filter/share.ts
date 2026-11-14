@@ -95,7 +95,7 @@ export function describeShared (c: SharedChanges): string {
   const parts: string[] = []
   if (c.edits.length) parts.push(`${c.edits.length} change${c.edits.length === 1 ? '' : 's'}`)
   if (c.rules.length) parts.push(`${c.rules.length} own rule${c.rules.length === 1 ? '' : 's'}`)
-  const presets = Object.values(c.presets).filter(p => p.on).length
+  const presets = Object.entries(c.presets).filter(([k, p]) => k !== 'look' && p.on).length
   if (presets) parts.push(`${presets} preset${presets === 1 ? '' : 's'}`)
   if (c.locks.length) parts.push(`${c.locks.length} locked price tier${c.locks.length === 1 ? '' : 's'}`)
   return parts.join(', ') || 'nothing'

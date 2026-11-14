@@ -6,8 +6,8 @@ import { breaches, pairSetups } from '../helpers/filter-guard'
 
 describe('every pair of presets at their harshest', () => {
   const pairs = pairSetups()
-  it.each(['1-REGULAR', '6-UBER-PLUS-STRICT'])('%s: all 190 pairs', name => {
-    expect(pairs).toHaveLength(190)
+  it.each(['1-REGULAR', '6-UBER-PLUS-STRICT'])('%s: all 210 pairs', name => {
+    expect(pairs).toHaveLength(210)
     expect(pairs.flatMap(s => breaches(name, s).map(x => `${s.name}: ${x}`))).toEqual([])
   })
 })

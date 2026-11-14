@@ -67,6 +67,21 @@ real app runs against a fake Path of Exile (hotkeys, clipboard, Client.txt,
 screenshots and OCR). See [testing/README.md](testing/README.md) for how to
 run them and add scenarios.
 
+## Checks while playing
+
+`scripts\woke-check.cmd` runs a branch's checks without loading the PC while
+Path of Exile is open. Run it from anywhere inside a clone or worktree.
+
+- With the game closed it runs lint, both type checks and the unit tests here,
+  at below-normal priority. Add `-E2e` for the overlay build and the fake-game
+  tests.
+- With the game open (any `PathOfExile*` process) it pushes the branch and
+  waits for the Tests workflow on GitHub instead, printing each job as it
+  finishes and the failed logs at the end. A branch without an open PR gets the
+  workflow started by hand, which also builds the Windows package.
+- `woke-check local` or `woke-check cloud` forces one, as does
+  `WOKE_CHECKS=local|cloud`. The cloud run needs the work committed.
+
 # How to build
 
 ```shell

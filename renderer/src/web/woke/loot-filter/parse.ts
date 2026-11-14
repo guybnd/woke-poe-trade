@@ -64,6 +64,10 @@ export interface FilterBlock {
   inherited?: boolean
   // The edit that added this block.
   editId?: number
+  // Its actions before the look strip (look.ts) rewrote them.
+  unlooked?: FilterAction[]
+  // Only the look strip changed it, so the save check leaves it alone.
+  lookOnly?: boolean
 }
 
 export interface FilterRaw {
