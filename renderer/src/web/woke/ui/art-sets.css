@@ -65,7 +65,8 @@
   --art-crest-fill-r: url("/images/poe-ui/crest-fill-r.png");
   --w-crest-cap: 33px;      /* each end's width at the banner's 60px */
   --w-crest-min: 52px;      /* the centre ornament's width */
-  --w-crest-y: -70%;          /* lifts the banner so its plaque sits behind the title */
+  /* The plaque face's middle, 38px down the banner's 60px: set on the title's cap middle. */
+  --w-crest-y: -63.75%;
 }
 :root[data-woke-art="poe2"] {
   --art-crest-left: url("/images/poe2-ui/crest-left.png");
@@ -75,18 +76,19 @@
   --art-crest-fill-r: url("/images/poe2-ui/crest-fill-r.png");
   --w-crest-cap: 85px;      /* each end's width at the banner's 60px */
   --w-crest-min: 73px;      /* the centre ornament's width */
-  --w-crest-y: -77%;          /* lifts the banner so its plaque sits behind the title */
+  /* The plaque face's middle, 45px down the banner's 60px: set on the title's cap middle. */
+  --w-crest-y: -75%;
 }
 :root[data-woke-art="poe1"] { --art-scroll-thumb-lit: url("/images/poe-ui/scroll-thumb-lit.png"); }
 :root[data-woke-art="poe2"] { --art-scroll-thumb-lit: url("/images/poe2-ui/scroll-thumb-lit.png"); }
 /* Settings' crest: the game's Options header (PoE 1: wings, the dome with its cog; PoE 2: the hooded figure). */
-:root[data-woke-art="poe1"] { --art-options-crest: url("/images/poe-ui/options-crest.png"); --w-opt-crest-h: 96px; --w-opt-crest-ratio: 1040 / 180; --w-opt-crest-y: -75%; }
-:root[data-woke-art="poe2"] { --art-options-crest: url("/images/poe2-ui/options-crest.png"); --w-opt-crest-h: 98px; --w-opt-crest-ratio: 555 / 172; --w-opt-crest-y: -79.9%; }
+:root[data-woke-art="poe1"] { --art-options-crest: url("/images/poe-ui/options-crest.png"); --w-opt-crest-h: 96px; --w-opt-crest-ratio: 1040 / 180; --w-opt-crest-y: -73%; }
+:root[data-woke-art="poe2"] { --art-options-crest: url("/images/poe2-ui/options-crest.png"); --w-opt-crest-h: 98px; --w-opt-crest-ratio: 555 / 172; --w-opt-crest-y: -77.9%; }
 /* Menu buttons: the hover and pressed states, how much of each end is the end, its drawn width, the lettering. */
 :root[data-woke-art="poe1"] { --art-button-hover: url("/images/poe-ui/button-hover.png"); --art-button-pressed: url("/images/poe-ui/button-pressed.png"); --w-btn-slice: 21; --w-btn-end: 16px; --w-btn-fg: #f1c48c; }
 :root[data-woke-art="poe2"] { --art-button-hover: url("/images/poe2-ui/button-hover.png"); --art-button-pressed: url("/images/poe2-ui/button-pressed.png"); --w-btn-slice: 30; --w-btn-end: 20px; --w-btn-fg: #e3cf9e; }
 :root[data-woke-art="poe1"] { --art-thumb-top: url("/images/poe-ui/scroll-thumb-top.png"); --art-thumb-mid: url("/images/poe-ui/scroll-thumb-mid.png"); --art-thumb-bot: url("/images/poe-ui/scroll-thumb-bot.png"); --art-thumb-top-lit: url("/images/poe-ui/scroll-thumb-top-lit.png"); --art-thumb-mid-lit: url("/images/poe-ui/scroll-thumb-mid-lit.png"); --art-thumb-bot-lit: url("/images/poe-ui/scroll-thumb-bot-lit.png"); }
 :root[data-woke-art="poe2"] { --art-thumb-top: url("/images/poe2-ui/scroll-thumb-top.png"); --art-thumb-mid: url("/images/poe2-ui/scroll-thumb-mid.png"); --art-thumb-bot: url("/images/poe2-ui/scroll-thumb-bot.png"); --art-thumb-top-lit: url("/images/poe2-ui/scroll-thumb-top-lit.png"); --art-thumb-mid-lit: url("/images/poe2-ui/scroll-thumb-mid-lit.png"); --art-thumb-bot-lit: url("/images/poe2-ui/scroll-thumb-bot-lit.png"); }
-/* Where a panel's icon sits in the crest's dome, from the title's middle. */
-:root[data-woke-art="poe1"] { --w-crest-icon-y: -24px; }
-:root[data-woke-art="poe2"] { --w-crest-icon-y: -26px; }
+/* Where a panel's icon sits in the crest's dome, from the plaque's middle (the title's cap middle). */
+:root[data-woke-art="poe1"] { --w-crest-icon-y: -20px; }
+:root[data-woke-art="poe2"] { --w-crest-icon-y: -25px; }
