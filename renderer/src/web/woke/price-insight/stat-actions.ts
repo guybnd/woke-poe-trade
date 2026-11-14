@@ -90,7 +90,9 @@ export function provideStatActions (
     (f.inTotal === true && f.sources.length >= 2 && !isChild(f)) ||
     (f.tag === ModifierType.Pseudo && f.option == null && !isChild(f) &&
     // A cluster jewel's resistance row folds its one line away too.
-    (f.sources.length >= 2 || (f.sources.length === 1 && clusterResColumnStats(f) != null)))
+    (f.sources.length >= 2 || (f.sources.length === 1 && (clusterResColumnStats(f) != null ||
+      // A fractured mod in a one-mod total: the split is where "Fractured only" lives.
+      f.sources[0].modifier.info.type === ModifierType.Fractured))))
   const hybridPart = (f: StatFilter) => version.value >= 0 ? hybrids.get(toRaw(f)) : undefined
 
   // A row of the list by its plain object.

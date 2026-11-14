@@ -88,7 +88,7 @@
           <template v-if="poe" />
           <button v-else-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
-            :title="isSplit ? 'Fold its mods back into the total' : `Split into the mods behind this total, each with its own min and ⇄${fracInside ? FRAC_INSIDE : ''}`"
+            :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
             @click="actions!.toggleSplit(filter)">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ filter.sources.length > 1 ? ` x ${filter.sources.length}` : '' }} <i :class="isSplit ? 'fas fa-caret-up' : 'fas fa-caret-down'" /></button>
           <span v-else-if="showTag"
             :class="[$style['tag'], $style[`tag-${tag}`]]">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ (filter.sources.length > 1) ? ` x ${filter.sources.length}` : null }}</span>
@@ -183,7 +183,7 @@ export default defineComponent({
     const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
     // woke: a fractured mod folded into a total has no row of its own (one line
     // per mod); the split lists it, with PoE mode's "Fractured only".
-    const fracInside = computed(() => canSplit.value && props.filter.tag === FilterTag.Pseudo &&
+    const fracInside = computed(() => props.poe && canSplit.value && props.filter.tag === FilterTag.Pseudo &&
       props.filter.sources.some(s => s.modifier.info.type === ModifierType.Fractured))
     const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
     const splitChild = computed(() => actions?.isChild(props.filter) ?? false)
@@ -354,7 +354,7 @@ export default defineComponent({
       actions,
       canSplit,
       fracInside,
-      FRAC_INSIDE: '. One of them is fractured: open this to search it as fractured only.',
+      FRAC_INSIDE: '. One of them is fractured: its row has Fractured only.',
       isSplit,
       splitChild,
       hybridPart,

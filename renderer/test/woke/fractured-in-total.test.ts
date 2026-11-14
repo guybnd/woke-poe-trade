@@ -32,4 +32,27 @@ describe('fractured mod inside a total', () => {
     expect(frac[0].tradeId).toEqual(['explicit.stat_3393628375'])
     expect(fracturedIds(frac[0])).toEqual(['fractured.stat_3393628375'])
   })
+
+  it('keeps a fractured mod apart from a same-stat mod when splitting', () => {
+    const text = fixture('items/rare-shield-fractured-res.txt').replace(
+      [
+        '{ Prefix Modifier "Consecrated" (Tier: 2) — Defences, Armour, Energy Shield }',
+        '+155(146-220) to Armour',
+        '+60(49-60) to maximum Energy Shield'
+      ].join('\n'),
+      [
+        '{ Fractured Prefix Modifier "Rotund" (Tier: 3) — Life }',
+        '+80(80-89) to maximum Life',
+        '{ Prefix Modifier "Rhino\'s" (Tier: 4) — Life, Defences, Armour }',
+        '+30(25-34) to Armour',
+        '+20(19-23) to maximum Life'
+      ].join('\n'))
+    const item = parseItem(text)
+    const stats = initUiModFilters(item, { searchStatRange: 10 })
+    const life = stats.find((f): f is StatFilter => !f.group && f.statRef === '+# total maximum Life')!
+    expect(life.sources.length).toBeGreaterThanOrEqual(2)
+    const rows = splitFilters(life, stats, item, 10).filter(f => f.statRef === '+# to maximum Life')
+    expect(rows).toHaveLength(2)
+    expect(rows.filter(f => fracturedIds(f)).map(f => f.roll?.value)).toEqual([80])
+  })
 })
