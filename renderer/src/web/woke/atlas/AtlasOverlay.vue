@@ -2,6 +2,9 @@
   <canvas v-show="shown" ref="canvas" :class="$style.layer" data-atlas-overlay aria-hidden="true" />
   <div v-if="shown && left != null" :class="$style.count" data-atlas-overlay-count>
     {{ left ? `${left} to take` : 'Strategy done' }}<span v-if="refundLeft" :class="$style.refund"> · {{ refundLeft }} to refund</span> · {{ title }}
+    <div v-if="legend.length" :class="$style.legend">
+      <span v-for="m in legend" :key="m.name" :style="{ color: m.colour }">{{ m.name }}</span>
+    </div>
   </div>
 </template>
 
@@ -26,6 +29,7 @@ import { decodeTree } from './tree'
 import { ATLAS_TYPE, retryAtlasData, useAtlasData, workingTree } from './widget'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { atlasOn, registerAtlasDrawer } from './atlas-overlay-toggle'
+import { NO_MECHANIC, planColours } from './mechanic-colours'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
@@ -38,6 +42,9 @@ const shown = shallowRef(false)
 const left = shallowRef<number | null>(null)
 const refundLeft = shallowRef(0)
 const title = shallowRef('')
+// Guy's pick C: the plan in its mechanics' colours, named under the count.
+const legend = shallowRef<Array<{ name: string, colour: string }>>([])
+let colourOf = new Map<string, string>()
 
 let lib: typeof import('../pob-builds/tree-overlay') | null = null
 let model: AtlasTreeModel | null = null
@@ -115,6 +122,8 @@ async function start (quiet = false): Promise<boolean> {
   offSent = false
   keep = new Set(withStart)
   title.value = sel.s.name || 'Untitled'
+  colourOf = planColours(ids.map(id => model!.mechanicOf.get(id) ?? ''))
+  legend.value = [...colourOf].map(([name, colour]) => ({ name, colour }))
   on.value = true
   const ok = await refit(true)
   if (!ok) {
@@ -224,21 +233,34 @@ function draw () {
     else ctx.lineTo(X(b.x), Y(b.y))
   }
   const radius = (n: TreeNode) => (NODE_RADIUS[n.kind] ?? 40) * 1.2 * z + 3
+  const colour = (id: number) => colourOf.get(model!.mechanicOf.get(id) ?? '') ?? NO_MECHANIC
 
   ctx.lineCap = 'round'
-  ctx.strokeStyle = 'rgba(70, 215, 255, 0.9)'
   ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
   ctx.shadowBlur = 4
   ctx.lineWidth = width
-  ctx.beginPath()
-  for (const l of path.lines) if (!(taken.has(l.a) && taken.has(l.b))) trace(l)
-  ctx.stroke()
+  // A line takes the mechanic of the node it leads into, else the other end's.
+  const byColour = new Map<string, BuildLine[]>()
+  for (const l of path.lines) {
+    if (taken.has(l.a) && taken.has(l.b)) continue
+    const c = model.mechanicOf.has(l.b) ? colour(l.b) : colour(l.a)
+    const list = byColour.get(c)
+    if (list) list.push(l)
+    else byColour.set(c, [l])
+  }
+  for (const [c, lines] of byColour) {
+    ctx.strokeStyle = c
+    ctx.beginPath()
+    for (const l of lines) trace(l)
+    ctx.stroke()
+  }
 
-  ctx.lineWidth = Math.max(2, 8 * z)
   for (const n of path.nodes) {
     if (taken.has(n.id)) continue
+    // Notables and keystones a little bolder.
     const big = n.kind === 'notable' || n.kind === 'key'
-    ctx.strokeStyle = big ? 'rgba(255, 220, 90, 0.95)' : 'rgba(70, 215, 255, 0.95)'
+    ctx.lineWidth = Math.max(2, 8 * z) * (big ? 1.5 : 1)
+    ctx.strokeStyle = colour(n.id)
     ctx.beginPath()
     ctx.arc(X(n.x), Y(n.y), radius(n), 0, 2 * Math.PI)
     ctx.stroke()
@@ -326,6 +348,7 @@ onUnmounted(() => {
 <style module>
 .layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 40; }
 .refund { color: rgb(235, 64, 52); }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 8px; max-width: 60vw; font-weight: 600; }
 .count {
   position: fixed;
   left: 50%;
