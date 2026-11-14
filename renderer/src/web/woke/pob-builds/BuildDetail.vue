@@ -485,9 +485,9 @@ const setChips = computed(() => {
     if (skills.length > 1) rows.push({ label: 'Gems', first: true, chips: skillChips })
     if (items.length > 1) rows.push({ label: 'Gear', first: !rows.length, chips: itemChips })
   }
-  // The tree goes by your passive points, so it can be a stage ahead of the
-  // gems: its own row says which one, and a click opens it.
-  if (trees.value.length > 1) {
+  // A tree named unlike the gem set in use (a build with its own tree
+  // titles, or a set picked apart): its own row says which, and opens it.
+  if (trees.value.length > 1 && loadout.value?.tree?.title !== shownSet.value?.title) {
     rows.push({
       label: 'Tree',
       first: !rows.length,
