@@ -68,7 +68,8 @@
           <span class="ml-auto normal-case tracking-normal">{{ canTick ? 'click a gem once you have it' : '' }}</span>
         </div>
         <template v-for="grp in gemGroups" :key="grp.key">
-        <div :class="$style.quest"><span v-if="grp.act" :class="$style.questAct">Act {{ grp.act }}</span>{{ grp.label }}</div>
+        <div v-if="grp.newAct" :class="$style.actRule">{{ grp.act != null ? `Act ${grp.act}` : 'Trade or drop' }}</div>
+        <div v-if="grp.quest" :class="$style.quest">{{ grp.quest }}</div>
         <button v-for="g in grp.gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
           :disabled="!canTick" @click="toggleGot(g.name)">
           <span class="w-num w-faint text-xs" :class="$style.lvl">{{ g.requiredLevel }}</span>
@@ -389,13 +390,15 @@ provide(GEM_CLASS, className)
 const gems = computed(() => props.details
   ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value), 'campaign')
   : [])
-// Campaign order, one heading per quest; each row then only says reward or
-// buy, and from whom. Gems the campaign never hands out close the list.
+// Campaign order: a divider per act, a heading per quest under it, so each
+// row only says reward or buy, and from whom. Gems the campaign never hands
+// out close the list.
 const gemGroups = computed(() => {
-  const out: Array<{ key: string, act: number | null, label: string, gems: NextGem[] }> = []
+  const out: Array<{ key: string, act: number | null, quest: string | null, newAct: boolean, gems: NextGem[] }> = []
   for (const g of gems.value) {
     const key = g.quest != null ? `${g.act}|${g.quest}` : '-'
-    if (out[out.length - 1]?.key !== key) out.push({ key, act: g.act, label: g.quest ?? 'Trade or drop', gems: [] })
+    const last = out[out.length - 1]
+    if (last?.key !== key) out.push({ key, act: g.act, quest: g.quest, newAct: !last || last.act !== g.act, gems: [] })
     out[out.length - 1].gems.push(g)
   }
   return out
@@ -617,20 +620,21 @@ function run (p: Promise<unknown>) {
 .gemRow:not(:disabled):hover { background: var(--w-line-soft); }
 .later { opacity: 0.62; }
 .lvl { width: 1.6rem; text-align: right; flex: none; }
-.quest {
+.actRule {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
-  padding: 6px 0 1px;
-  font-size: var(--w-fs-xs);
-  color: var(--w-accent);
-}
-.questAct {
+  padding: 6px 0 0;
   font-size: var(--w-fs-caps);
   font-family: var(--w-caps-face);
   color: var(--w-faint);
 }
-.quest::after { content: ''; flex: 1; border-top: 1px solid var(--w-line-soft); align-self: center; }
+.actRule::after { content: ''; flex: 1; border-top: 1px solid var(--w-line-soft); }
+.quest {
+  padding: 2px 0 0;
+  font-size: var(--w-fs-xs);
+  color: var(--w-accent);
+}
 .gemName { flex: none; max-width: 62%; }
 .src { min-width: 0; }
 button.next:hover { border-color: var(--w-line-strong); }
