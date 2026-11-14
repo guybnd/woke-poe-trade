@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.editor">
     <div :class="$style.preview">
-      <LabelPreview :text="previewText" :style-override="look" :visibility="visibility" :scale="1.3" />
+      <LabelPreview :text="previewText" :style-override="shown" :visibility="visibility" :scale="1.3" />
     </div>
     <WSegmented :model-value="visibility" :options="visibilityOptions" @update:model-value="emit('visibility', $event as Visibility)" />
 
@@ -16,8 +16,8 @@
       <span class="w-dim">Colours</span>
       <span class="flex items-center flex-wrap" :class="$style.colours">
         <span v-for="c in colourRows" :key="c.key" class="flex items-center gap-1" :title="c.value ? c.value.slice(0, 3).join(' ') : 'none'">
-          <input type="color" :value="hex(c.value)" :class="$style.swatch" :aria-label="c.label"
-            @change="setColour(c.key, ($event.target as HTMLInputElement).value)">
+          <input type="color" :value="draft?.key === c.key ? draft.value : hex(c.value)" :class="$style.swatch" :aria-label="c.label"
+            @input="drag(c.key, ($event.target as HTMLInputElement).value)" @change="drag(c.key, ($event.target as HTMLInputElement).value)" @blur="commitDraft">
           <span class="w-dim text-xs">{{ c.short }}</span>
           <button v-if="changed(c.key)" type="button" :class="$style.mark" :title="`Back to ${colourText(c.key)}`" :aria-label="`Reset ${c.label}`" @click="reset(c.key)" />
           <button v-if="c.key === 'border' && c.value" class="w-icon-btn" title="No border" @click="emit('patch', { border: null })"><i class="fas fa-times" /></button>
@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { WSegmented, toast } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { Visibility } from './parse'
@@ -195,11 +195,58 @@ function hex (c: Colour | null): string {
   return '#' + c.slice(0, 3).map(n => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('')
 }
 
-function setColour (key: 'text' | 'border' | 'background', value: string) {
+function toColour (key: ColourKey, value: string): Colour {
   const prev = props.look[key] ?? (key === 'background' ? DEFAULT_BG : DEFAULT_TEXT)
   const rgb = [1, 3, 5].map(i => parseInt(value.slice(i, i + 2), 16))
-  emit('patch', { [key]: [rgb[0], rgb[1], rgb[2], prev?.[3] ?? 255] as Colour })
+  return [rgb[0], rgb[1], rgb[2], prev?.[3] ?? 255]
 }
+
+// The colour picker fires on every step of a drag. Saving each step rebuilt
+// the whole filter, so the preview trailed the picker, and each late redraw
+// pushed an old colour back into the open picker. A drag now lives here: the
+// preview and swatch follow it at once, and it's saved once the drag rests,
+// or before anything else is clicked or typed.
+type ColourKey = 'text' | 'border' | 'background'
+const draft = ref<{ key: ColourKey, value: string } | null>(null)
+let restTimer: ReturnType<typeof setTimeout> | undefined
+const REST_MS = 300
+
+const shown = computed<StylePatch>(() => draft.value
+  ? { ...props.look, [draft.value.key]: toColour(draft.value.key, draft.value.value) }
+  : props.look)
+
+function drag (key: ColourKey, value: string) {
+  if (!/^#[0-9a-f]{6}$/i.test(value)) return
+  // Another slot's drag still waiting is saved first.
+  if (draft.value && draft.value.key !== key) commitDraft()
+  draft.value = { key, value }
+  clearTimeout(restTimer)
+  restTimer = setTimeout(commitDraft, REST_MS)
+  listenForLeave(true)
+}
+
+function commitDraft () {
+  clearTimeout(restTimer)
+  listenForLeave(false)
+  const d = draft.value
+  if (!d) return
+  // The parent redraws with the saved colour in the same frame.
+  draft.value = null
+  if (props.look[d.key] != null && hex(props.look[d.key]!) === d.value.toLowerCase()) return
+  emit('patch', { [d.key]: toColour(d.key, d.value) })
+}
+
+// A click or key anywhere saves a waiting drag before it can switch the
+// editor to another tier (the save goes to whichever tier is open).
+let listening = false
+function listenForLeave (on: boolean) {
+  if (on === listening) return
+  listening = on
+  const f = on ? document.addEventListener : document.removeEventListener
+  f.call(document, 'pointerdown', commitDraft, true)
+  f.call(document, 'keydown', commitDraft, true)
+}
+onBeforeUnmount(commitDraft)
 
 const dir = computed(() => active.value?.config.folder ?? '')
 const uses = computed(() => soundUses(active.value?.doc.value ?? null))
