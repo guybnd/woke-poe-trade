@@ -5,7 +5,7 @@ import { getPropQuality } from '@/parser/calc-q20'
 import { tradeTag } from '../trade/common'
 import { ModifierType } from '@/parser/modifiers'
 import { BaseType, ITEM_BY_REF } from '@/assets/data'
-import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
+import { CATEGORY_TO_TRADE_ID, VISCERA_SLOT_TRADE_ID } from '../trade/pathofexile-trade'
 import { PERMANENT_SC } from '../../background/Leagues'
 
 export const SPECIAL_SUPPORT_GEM = ['Empower Support', 'Enlighten Support', 'Enhance Support']
@@ -242,6 +242,9 @@ export function createFilters (
       filters.searchRelaxed = {
         category: item.category,
         disabled: disabled
+      }
+      if (item.category === ItemCategory.Viscera && item.visceraSlot) {
+        filters.searchRelaxed.categoryTrade = VISCERA_SLOT_TRADE_ID[item.visceraSlot]
       }
     }
   }

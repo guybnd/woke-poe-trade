@@ -35,8 +35,7 @@ describe('the corpus', () => {
     }
     const have = new Set(ALL.map(i => i.facts.itemClass))
     // Substring conditions without a real class of that name.
-    // Viscera (3.30 Wickerman trophies) wait for a real copy (WOKEPOET-153).
-    const loose = new Set(['Chart', 'Cursed Ducat', 'Idols', 'Viscera'])
+    const loose = new Set(['Chart', 'Cursed Ducat', 'Idols'])
     expect([...classes].filter(c => !have.has(c) && !loose.has(c))).toEqual([])
   })
 })

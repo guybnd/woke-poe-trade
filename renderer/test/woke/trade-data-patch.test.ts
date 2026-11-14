@@ -1,7 +1,7 @@
 // The launch-day data patch (scripts/trade-data-patch.mjs): only what changed
 // between two trade-site snapshots reaches our data.
 import { describe, it, expect } from 'vitest'
-import { diff, matcherText } from '../../../scripts/trade-data-patch.mjs'
+import { diff, matcherText, scope } from '../../../scripts/trade-data-patch.mjs'
 
 const stat = (id: string, text: string, type = 'explicit') => ({ id, text, type })
 
@@ -44,5 +44,18 @@ describe('trade data patch', () => {
     expect(r.skipped).toEqual(['armour: Odd Plate (no category)'])
     expect(matcherText('Adds # to # Physical Damage (Local)')).toBe('Adds # to # Physical Damage')
     expect(matcherText('+#% to Item Rarity')).toBe('#% to Item Rarity')
+  })
+
+  it('scopes a run to one item group and the implicits it carries, leaving skill grants alone', () => {
+    const after = {
+      stats: [stat('implicit.stat_1', '#% chance to gain Elusive on Kill', 'implicit'), stat('explicit.stat_2', 'Some explicit'),
+        stat('implicit.effect_3', 'Grants Level # Vitality', 'implicit'), stat('implicit.stat_4', 'Socketed Gems are Supported by Level # Pierce', 'implicit')],
+      items: [{ group: 'viscera', name: null, type: 'Ghostly Claw' }, { group: 'jewel', name: null, type: 'Mycelium Core' }],
+      static: [{ group: 'Currency', id: 'x', text: 'X', image: '' }]
+    }
+    const r = diff({ stats: [], items: [], static: [] }, scope(after, 'viscera'), [], [])
+    expect(r.newStats.map((s: { ref: string }) => s.ref)).toEqual(['#% chance to gain Elusive on Kill'])
+    expect(r.newItems).toEqual([{ name: 'Ghostly Claw', refName: 'Ghostly Claw', namespace: 'ITEM', craftable: { category: 'Viscera' }, icon: '' }])
+    expect(() => scope(after, 'jewel')).toThrow(/No scoped run/)
   })
 })
