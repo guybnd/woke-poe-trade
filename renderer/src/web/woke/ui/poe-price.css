@@ -61,6 +61,10 @@
   min-width: var(--w-crest-min);
   padding: 0 6px;
   overflow: visible;
+  /* As a window's title (poe-frame.css): the box hugs the capitals, the plaque is set from its middle,
+     a pixel above the bar's, where the stone runs. */
+  text-box: trim-both cap alphabetic;
+  top: -1px;
   color: #f3e2bd !important;
   user-select: none;
   text-shadow: 0 1px 2px #000, 0 0 4px #000, 0 0 8px rgba(0, 0, 0, 0.7);
@@ -79,7 +83,7 @@
   height: 60px;
   margin: 0;
   transform: translateY(var(--w-crest-y));
-  padding: 0 var(--w-crest-cap);
+  padding: 0 calc(var(--w-crest-cap) - 4px);
   box-sizing: border-box;
   background:
     var(--art-crest-left) left top / auto 100% no-repeat,

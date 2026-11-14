@@ -155,8 +155,12 @@
   /* Centred on the whole bar, kept clear of the buttons at both ends. */
   position: absolute;
   left: 50%;
-  top: calc(50% - 3px);
+  /* The bar's stone runs a pixel above its middle. */
+  top: calc(50% - 1px);
   transform: translate(-50%, -50%);
+  /* The box hugs the capitals, so its middle is the lettering's middle at any text size:
+     the banner's plaque and the icon's dome are set from it. */
+  text-box: trim-both cap alphabetic;
   width: max-content;
   max-width: calc(100% - 2 * var(--w-title-clear, 130px));
   flex: none;
@@ -210,8 +214,8 @@
     var(--art-crest-centre) center top / auto 100% no-repeat,
     var(--art-crest-fill-l) left top / 50% 100% no-repeat,
     var(--art-crest-fill-r) right top / 50% 100% no-repeat;
-  /* The fill runs only between the two ends. */
-  padding: 0 var(--w-crest-cap);
+  /* The fill runs between the two ends and a little under each, so no seam shows where they meet. */
+  padding: 0 calc(var(--w-crest-cap) - 4px);
   box-sizing: border-box;
   background-origin: border-box, border-box, border-box, content-box, content-box;
   background-clip: border-box, border-box, border-box, content-box, content-box;
@@ -260,6 +264,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
+  /* Full line height: a box trimmed to the capitals would clip the lettering here. */
+  text-box: normal;
 }
 :root[data-woke-art] [data-w-panel] > [data-widget-drag][data-title-tight] > .w-trunc::before,
 :root[data-woke-art] [data-w-panel] > [data-widget-drag][data-title-tight] > .w-trunc > .w-crest-icon {
