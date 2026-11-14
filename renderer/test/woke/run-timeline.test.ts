@@ -216,3 +216,50 @@ describe('rebuilding a run from Client.txt', () => {
     expect(tl.ev.filter(e => e[1] === 'z').map(e => e[0])).toEqual([0, 180, 589, 600])
   })
 })
+
+describe('review fixes', () => {
+  it('compares repeated step texts one by one', async () => {
+    const { recordRouteStep, stepRows } = await import('@/web/woke/campaign/run-timeline')
+    const mine = newTimeline(1)
+    const other = newTimeline(2)
+    ;[[0, 'Logout', 10], [1, 'Kill', 20], [2, 'Logout', 60]].forEach(([i, t, s]) => recordRouteStep(mine, i as number, t as string, (s as number) * S))
+    ;[[0, 'Logout', 10], [1, 'Kill', 15], [2, 'Logout', 20]].forEach(([i, t, s]) => recordRouteStep(other, i as number, t as string, (s as number) * S))
+    const rows = stepRows(run(1, [1000]), mine, run(2, [1000]), other)
+    expect(rows.map(r => [r.took, r.cmpTook])).toEqual([[null, null], [10, 5], [40, 5]])
+  })
+
+  it('keeps rebuilding after a walk back to the Twilight Strand in act 1', async () => {
+    const { rebuildTimeline } = await import('@/web/woke/campaign/run-timeline')
+    const t0 = new Date(2026, 10, 4, 18, 0, 0).getTime()
+    const l = (sec: number, text: string) => ({ line: `x [DEBUG Client 1] ${text}`, at: t0 + sec * S })
+    const r = run(t0, [300])
+    r.charName = 'Tester'
+    r.endedAt = t0 + 400 * S
+    const tl = rebuildTimeline(r, [
+      l(0, 'Generating level 1 area "1_1_1" with seed 1'),
+      { line: 'x [INFO Client 1] : Tester (Witch) is now level 2', at: t0 + 50 * S },
+      l(80, 'Generating level 13 area "1_1_town" with seed 1'),
+      l(100, 'Generating level 1 area "1_1_1" with seed 1'),
+      l(150, 'Generating level 2 area "1_1_2" with seed 1'),
+      l(300, 'Generating level 13 area "1_2_1" with seed 1')
+    ])
+    expect(tl.zones.map(z => z[0])).toEqual(['1_1_1', '1_1_town', '1_1_2', '1_2_1'])
+  })
+
+  it('skips splits filled in together by a later level-up', async () => {
+    const { rebuildTimeline } = await import('@/web/woke/campaign/run-timeline')
+    const t0 = new Date(2026, 10, 4, 18, 0, 0).getTime()
+    const l = (sec: number, id: string) => ({ line: `x [DEBUG Client 1] Generating level 1 area "${id}" with seed 1`, at: t0 + sec * S })
+    // Acts 2 and 3 were done with the app closed; a level-up in act 4 at
+    // run time 900 s filled in both splits.
+    const r = run(t0, [100, 900, 900])
+    r.endedAt = t0 + 1000 * S
+    const tl = rebuildTimeline(r, [l(0, '1_1_1'), l(100, '1_2_1'), l(400, '1_3_1'), l(700, '1_4_1')])
+    const times = tl.ev.filter(e => e[1] === 'z').map(e => e[0])
+    expect(times[0]).toBe(0)
+    expect(times[1]).toBe(100)
+    // Spread between the act 2 entry and the run's end, not stacked on 900.
+    expect(times[2]).toBeGreaterThan(100)
+    expect(times[2]).toBeLessThan(times[3])
+  })
+})

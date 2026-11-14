@@ -147,6 +147,9 @@ export interface WokeOps {
   'doc-list': Op<{ collection: string }, Json[]>
   'doc-put': Op<DocKey & { value: Json }, Ok>
   'doc-delete': Op<DocKey, Ok>
+  // True when the document's file is there, false when it isn't; throws when
+  // that can't be told (a locked folder), so a caller never takes it as missing.
+  'doc-exists': Op<DocKey, boolean>
   'death-recap-read': Op<NoArgs, { deaths: Json[], runs: Json[] }>
   'death-recap-write': Op<{ deaths: Json[], runs: Json[] }, Ok>
   'market-save': Op<{ snapshot: Json, daily: Json[] }, Ok>

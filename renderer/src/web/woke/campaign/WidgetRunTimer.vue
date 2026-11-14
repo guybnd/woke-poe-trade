@@ -272,12 +272,14 @@ if (trash.length) {
 // run: changes wait until this timer has applied the lines it was given.
 const stepChanges: StepChange[] = []
 let stepFlush = false
+// Each widget catches up on the log by itself after a start, so until this
+// timer has, its run may still be the one from before the app was closed.
+let timerCaughtUp = false
 function applyStepChanges () {
   stepFlush = false
   const r = props.config.run
-  // No run yet: the line that starts it may still be on its way (each
-  // widget catches up on the log by itself after a start).
-  if (!r) {
+  // No run yet: the line that starts it may still be on its way.
+  if (!r || !timerCaughtUp) {
     if (stepChanges.length > 2000) stepChanges.splice(0, stepChanges.length - 2000)
     return
   }
@@ -397,7 +399,14 @@ function applyLines (lines: LogLine[]) {
 // Splits reached while the app was closed, timed by the log's own clock.
 followGameLog({
   since: () => props.config.lastLogAt,
-  onLines: (lines) => applyLines(lines)
+  onLines: (lines, live) => {
+    applyLines(lines)
+    if (live && !timerCaughtUp) { timerCaughtUp = true; applyStepChanges() }
+  },
+  // The replay and the lines held during it come right after the read.
+  onTail: () => {
+    setTimeout(() => { timerCaughtUp = true; applyStepChanges() }, 0)
+  }
 })
 
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {

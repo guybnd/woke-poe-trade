@@ -112,7 +112,7 @@ import { formatDelta, runTotal, segmentMs } from './run-timer'
 import type { CampaignRun } from './run-timer'
 import { deathCount, levelSteps, runEndSec, stepRows, townSec, visitsByAct, zoneVisits, zonesByAct } from './run-timeline'
 import type { RunTimeline, StepRow, ZoneSum, ZoneVisit } from './run-timeline'
-import { loadTimeline, rebuildFromLog } from './run-timeline-store'
+import { loadTimeline, rebuildFromLog, timelineMissing } from './run-timeline-store'
 
 const props = defineProps<{
   run: CampaignRun
@@ -132,33 +132,29 @@ const hover = shallowRef<ZoneVisit | null>(null)
 
 // A saved timeline, or one rebuilt from Client.txt for a run saved before
 // timelines existed (or while the app was closed for all of it).
-async function timelineOf (run: CampaignRun): Promise<RunTimeline | null> {
+async function timelineOf (run: CampaignRun, onRebuild?: () => void): Promise<RunTimeline | null> {
   const saved = await loadTimeline(run.id)
-  if (saved) return saved
-  if (!run.finished) return null
+  if (saved || !run.finished || !await timelineMissing(run.id)) return saved
+  onRebuild?.()
   return await rebuildFromLog(run)
 }
 
+let request = 0
 watch(() => [props.run.id, props.cmp?.id], async () => {
+  const mineReq = ++request
   state.value = 'loading'
   hover.value = null
-  const runId = props.run.id
+  const run = props.run
   const cmp = props.cmp
-  let mine = props.live ?? await loadTimeline(runId)
-  if (props.run.id !== runId) return
-  if (!mine && props.run.finished) {
-    state.value = 'rebuilding'
-    mine = await rebuildFromLog(props.run)
-    if (props.run.id !== runId) return
-  }
+  const mine = props.live ?? await timelineOf(run, () => { if (mineReq === request) state.value = 'rebuilding' })
   const theirs = cmp ? await timelineOf(cmp) : null
-  if (props.run.id !== runId) return
+  if (mineReq !== request) return
   tl.value = mine
   cmpTl.value = theirs
   if (mine && mine.ev.length) {
     state.value = 'ready'
   } else {
-    noneText.value = mine ? 'Client.txt no longer has this run. Act splits only.' : 'Client.txt not found. Act splits only.'
+    noneText.value = mine ? 'Client.txt no longer has this run. Act splits only.' : 'No timeline for this run. Act splits only.'
     state.value = 'none'
   }
 }, { immediate: true })

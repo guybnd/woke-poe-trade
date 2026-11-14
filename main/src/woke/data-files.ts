@@ -100,6 +100,15 @@ export const docHandlers: Partial<WokeHandlers> = {
     const file = docFile(collection, key)
     return await queued(async () => { await writeAtomic(file, JSON.stringify(value)); return true })
   },
+  'doc-exists': async ({ collection, key }) => {
+    try {
+      await fs.stat(docFile(collection, key))
+      return true
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return false
+      throw e
+    }
+  },
   'doc-delete': async ({ collection, key }) => {
     const file = docFile(collection, key)
     return await queued(async () => { await fs.rm(file, { force: true }); return true })

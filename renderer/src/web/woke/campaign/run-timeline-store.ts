@@ -26,6 +26,17 @@ export function deleteTimelines (runIds: number[]): Promise<unknown> {
     hostRequest('doc-delete', { collection: TIMELINE_COLLECTION, key: String(id) }).catch(() => false)))
 }
 
+// True only when the run has no timeline file at all. A file that is there
+// but can't be read now (locked, or the app didn't answer) is not missing,
+// so it is never rebuilt over.
+export async function timelineMissing (runId: number): Promise<boolean> {
+  try {
+    return !(await hostRequest('doc-exists', { collection: TIMELINE_COLLECTION, key: String(runId) }))
+  } catch {
+    return false
+  }
+}
+
 // A run saved before timelines existed, rebuilt from Client.txt and saved.
 // An empty result is saved too, so a run the log no longer has isn't read
 // for again. Null when Client.txt can't be read right now.

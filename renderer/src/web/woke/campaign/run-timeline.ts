@@ -126,8 +126,12 @@ export function dropRouteStepsFrom (tl: RunTimeline, index: number): boolean {
 // pauses and breaks spread over the act they were in.
 function wallToRun (run: CampaignRun, lines: Array<{ at: number, actEntered: number | null }>): (at: number) => number {
   const anchors: Array<[number, number]> = [[run.startedAt, 0]]
+  // Acts missed while the app was closed get splits that all share the
+  // time of the level-up that filled them in: they mark no act's entry.
+  const shared = new Set(run.splits.filter(s => run.splits.filter(o => o.totalMs === s.totalMs).length > 1).map(s => s.act))
   let i = 0
   for (const s of run.splits) {
+    if (shared.has(s.act)) continue
     while (i < lines.length && lines[i].actEntered !== s.act + 1) i++
     if (i >= lines.length) break
     const wall = lines[i].at
@@ -162,9 +166,13 @@ export function rebuildTimeline (run: CampaignRun, raw: Array<{ line: string, at
     })
   const runMs = wallToRun(run, lines)
   let level: number | null = null
+  let pastAct1 = false
   for (const { line, at, ev } of lines) {
     if (ev?.kind === 'area') {
-      if (ev.areaId === '1_1_1' && tl.ev.length && level != null) break // a new character
+      // The Twilight Strand after act 1 is a new character (walking back to
+      // it in act 1 isn't), the same rule as the live timer.
+      if (ev.areaId === '1_1_1' && pastAct1) break
+      if ((actFromAreaId(ev.areaId) ?? 0) >= 2) pastAct1 = true
       recordStep(tl, { kind: 'area', areaId: ev.areaId }, runMs(at), at)
       if (actFromAreaId(ev.areaId) === 11) break // the Epilogue ends the run
     } else if (ev?.kind === 'zone') recordStep(tl, { kind: 'zone', name: ev.name }, runMs(at), at)
@@ -250,7 +258,7 @@ function actAt (run: CampaignRun, t: number): number {
   // Whole seconds on both sides: the area line that starts an act is stored
   // rounded, and must not fall back into the act before.
   for (const s of run.splits) if (t < Math.round(s.totalMs / 1000)) return s.act
-  return run.splits.length ? Math.min(run.splits[run.splits.length - 1].act + 1, 10) : 1
+  return run.splits.length ? Math.min(run.splits[run.splits.length - 1].act + 1, 10) : Math.min(run.act, 10)
 }
 
 // Zone visits of each act, in order (the Epilogue left out).
@@ -294,9 +302,22 @@ function stepTimes (run: CampaignRun, tl: RunTimeline): StepRow[] {
 export function stepRows (run: CampaignRun, tl: RunTimeline, cmp: CampaignRun | null, cmpTl: RunTimeline | null): StepRow[] {
   const mine = stepTimes(run, tl)
   if (!cmp || !cmpTl?.steps?.length) return mine
+  // Many steps share a text ("Logout", "Get waypoint"): match the nth one
+  // with the nth one.
+  const key = (rows: StepRow[]) => {
+    const seen = new Map<string, number>()
+    return rows.map(r => {
+      const n = (seen.get(r.text) ?? 0) + 1
+      seen.set(r.text, n)
+      return `${n}|${r.text}`
+    })
+  }
+  const theirRows = stepTimes(cmp, cmpTl)
+  const theirKeys = key(theirRows)
   const theirs = new Map<string, number | null>()
-  for (const r of stepTimes(cmp, cmpTl)) if (!theirs.has(r.text)) theirs.set(r.text, r.took)
-  return mine.map(r => ({ ...r, cmpTook: theirs.get(r.text) ?? null }))
+  theirRows.forEach((r, i) => theirs.set(theirKeys[i], r.took))
+  const myKeys = key(mine)
+  return mine.map((r, i) => ({ ...r, cmpTook: theirs.get(myKeys[i]) ?? null }))
 }
 
 function sumByAct (run: CampaignRun, visits: ZoneVisit[]): Map<number, Map<string, ZoneSum>> {
