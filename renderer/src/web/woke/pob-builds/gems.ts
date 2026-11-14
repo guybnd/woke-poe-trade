@@ -114,7 +114,8 @@ function firstSource (name: string, cls: string): Source | null {
   if (!entry) return null
   const idx = CLASSES.indexOf(cls)
   const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')
-  return [...fits].sort((a, b) => questStep(a) - questStep(b) || (a[3] === 'q' ? -1 : b[3] === 'q' ? 1 : 0))[0] ?? null
+  const rank = (s: Source) => questStep(s) * 2 + (s[3] === 'q' ? 0 : 1)
+  return [...fits].sort((a, b) => rank(a) - rank(b))[0] ?? null
 }
 
 function sourceLabel (pick: Source | null): string | null {
@@ -129,8 +130,9 @@ export function gemWhere (name: string, className: string): string {
   if (!entry) return gemData(name) ? 'Not in the campaign: buy or drop' : ''
   const idx = CLASSES.indexOf(baseClass(className))
   const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')
-  const reward = fits.find(s => s[3] === 'q')
-  const vendor = fits.filter(s => s[3] === 'v').sort((a, b) => a[0] - b[0])[0]
+  const byQuest = [...fits].sort((a, b) => questStep(a) - questStep(b))
+  const reward = byQuest.find(s => s[3] === 'q')
+  const vendor = byQuest.find(s => s[3] === 'v')
   const lines: string[] = []
   if (reward) lines.push(`Reward: ${reward[1]} (Act ${reward[0]})`)
   if (vendor) lines.push(`Buy from ${vendor[2]}: ${vendor[1]} (Act ${vendor[0]})`)

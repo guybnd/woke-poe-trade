@@ -75,7 +75,7 @@
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
           <GemName :class="$style.gemName" :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
-          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source ?? 'trade / drop' }}</span>
+          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source?.replace(/ \(Act \d+\)$/, '') ?? 'trade / drop' }}</span>
         </button>
         </template>
       </template>
