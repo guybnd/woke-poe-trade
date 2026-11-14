@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-266
 title: Loot filter presets and groups for NeverSink 8.21
-status: Grooming
+status: Ready
 priority: High
 effort: S
 assignee: unassigned
@@ -15,7 +15,34 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-13T23:45:39.800Z'
+    comment: Created ticket.
+    id: a-2026-11-13t23-45-39-800z
+  - type: activity
+    user: Agent
+    date: '2026-11-13T23:45:39.800Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-13t23-45-39-800z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/426 (branch
+      woke/filter-presets-821): Scarabs group dropped, Allflames/map
+      enchantments price-tiered and netted, rule list categories renamed,
+      quiet/beams presets rank Tiered Gear by NeverSink's !exotics_tN marker
+      (they stripped the best t5r1 drops before), fixtures now 8.21.0a.
+      Adversarial review done and fixed; vitest 3260/3260, lint, vue-tsc, build
+      pass. Waiting on merge via the cloud merge thread. New-preset mocks for
+      Guy: https://claude.ai/artifact/2Usr8eqAQNLbvRHhW2495j (item tiers,
+      Allflames, Viscera/warrants).
+    date: '2026-11-14T00:02:19.160Z'
+    completionComment: true
+    id: c-2026-11-14t00-02-19-160z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-14T00:02:19.160Z'
+needsAction: null
 ---
 > **TL;DR** NeverSink 8.21 dropped Scarabs and Vials and added Allflames/Map Enchantments, Viscera, Tiered Gear (UnidentifiedItemTier) and special map mods. Fix what our editor aims at the old sections; mock presets for the new ones before building.
 
