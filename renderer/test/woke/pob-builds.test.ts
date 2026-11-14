@@ -1,7 +1,7 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine } from '@/web/woke/pob-builds/build-model'
+import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter } from '@/web/woke/pob-builds/build-model'
 import { moveBuildPins, treePin } from '@/web/woke/pob-builds/build-pins'
 import type { Pin } from '@/web/woke/pins/pins'
 import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
@@ -446,6 +446,21 @@ describe('next step', () => {
     expect(nextSet(list, list[2])?.title).toBe('Endgame')
     expect(nextSet(list, list[1])?.title).toBe('32 - 40')
     expect(nextSet(list, list[3])?.title).toBe('Mageblood')
+  })
+
+  it('hands a finished tree over to the next one that adds points', () => {
+    // Guy's Elemental Hit guide: an empty "Level 64" spec sits before "Level 54".
+    const t = (title: string, nodes: number[]) => ({ title, url: '', isActive: false, nodes })
+    const list = [t('Level 24', [1, 2]), t('Level 33', [1, 2, 3]), t('Level 64', [1]), t('Level 54', [1, 2, 3, 4]), t('Level 68', [1, 2, 3, 4, 5])]
+    expect(treeAfter(list, list[0])?.title).toBe('Level 33')
+    expect(treeAfter(list, list[3])?.title).toBe('Level 68')
+    expect(treeAfter(list, list[4])).toBeNull()
+    // Already handed over from: never back round.
+    const loop = [t('A', [1]), t('B', [2])]
+    expect(treeAfter(loop, loop[1], new Set([loop[0]]))).toBeNull()
+    // Past the last stage, file order never leads back to an earlier stage.
+    const late = [t('Endgame', [1, 2, 3]), t('Level 33', [1, 4])]
+    expect(treeAfter(late, late[0])).toBeNull()
   })
 
   it('says which gems come and go', () => {

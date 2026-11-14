@@ -1,6 +1,6 @@
 <template>
   <canvas v-show="shown" ref="canvas" :class="$style.layer" data-tree-overlay aria-hidden="true" />
-  <div v-if="shown && left != null" :class="$style.count">{{ left ? `${left} to take` : 'Tree done' }}</div>
+  <div v-if="shown && left != null" :class="$style.count">{{ left ? `${left} to take` : 'Tree done' }}<template v-if="treeTitle"> · {{ treeTitle }}</template></div>
 </template>
 
 <script setup lang="ts">
@@ -15,13 +15,13 @@ import { useZone } from '../shared/zone'
 import { panelsHidden } from '../shared/hide-all'
 import { toast } from '../ui'
 import { useActiveBuild } from './active'
-import { loadoutOf } from './build-model'
+import { loadoutOf, realSets, treeAfter } from './build-model'
 import { loadPassiveTree, passiveTreeArt, NODE_RADIUS } from './passive-tree'
-import type { TreeNode } from './passive-tree'
-import { buildPath, fitPoints, probesOf, takenNodes } from './tree-overlay'
+import type { TreeArt, TreeNode } from './passive-tree'
 import { markTreeOverlaySeen, registerTreeDrawer, treeOn, treeOverlaySeen } from './tree-toggle'
 import type { BuildPath } from './tree-overlay'
 import { isTreeHotkeyTarget, treeHotkeyOf } from './widget'
+import type { PobTreeSpec } from './widget'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
@@ -33,17 +33,31 @@ const canvas = shallowRef<HTMLCanvasElement>()
 const on = treeOn
 const shown = shallowRef(false)
 const left = shallowRef<number | null>(null)
+// The drawn tree's title, when the build has more than one.
+const treeTitle = shallowRef('')
 
 let all: Map<number, TreeNode> | null = null
 let sentPoints: Map<number, TreeNode> | null = null
 let path: BuildPath | null = null
 let probes: number[][] = []
 let taken = new Set<number>()
+// Following your level (no set picked by hand), a tree you've taken all of
+// hands over to the next one: a guide's "Level 24" tree is done well before
+// level 33, and drawing nothing then is no help.
+let follow = false
+let trees: PobTreeSpec[] = []
+let drawn: PobTreeSpec | null = null
+let passed = new Set<PobTreeSpec>()
+let treeArt: TreeArt | null = null
+// Loaded on the first draw, to keep it out of the startup JS.
+let lib: typeof import('./tree-overlay') | null = null
 // Screen pixels of the game window, as the fit gives them.
 let view: Fit & { width: number, height: number } | null = null
 let busy = false
 // Something changed while a fit was running: fit once more after it.
 let again = false
+// The rerun after a handover reads the screen as a first read would.
+let againFresh = false
 
 const active = useActiveBuild()
 
@@ -55,6 +69,7 @@ async function start (quiet = false): Promise<boolean> {
   const tree = loadoutOf(d, active.level.value, active.act.value, active.loadout.value).tree
   if (!tree?.nodes?.length) { if (!quiet) note('The active build has no passive tree.'); return false }
   try {
+    lib ??= await import('./tree-overlay')
     all = await loadPassiveTree()
   } catch (err) {
     if (!quiet) note((err as Error).message)
@@ -63,11 +78,14 @@ async function start (quiet = false): Promise<boolean> {
   const art = passiveTreeArt()
   if (!art) return false
   if (sentPoints !== all) {
-    await hostRequest('tree-overlay-points', fitPoints(all))
+    await hostRequest('tree-overlay-points', lib.fitPoints(all))
     sentPoints = all
   }
-  path = buildPath(all, tree.nodes, art)
-  probes = probesOf(path, all)
+  treeArt = art
+  trees = realSets(d.trees)
+  follow = !active.loadout.value?.skillSet
+  passed = new Set()
+  usePath(tree)
   on.value = true
   // A quiet start (the dock icon while playing) mostly finds no tree: it
   // reads the screen as it is rather than blinking the whole overlay.
@@ -78,6 +96,13 @@ async function start (quiet = false): Promise<boolean> {
     if (!quiet) note('Open the passive tree first (no tree found on screen).')
   }
   return ok
+}
+
+function usePath (tree: PobTreeSpec) {
+  drawn = tree
+  path = lib!.buildPath(all!, tree.nodes ?? [], treeArt!)
+  probes = lib!.probesOf(path, all!)
+  treeTitle.value = trees.length > 1 ? tree.title : ''
 }
 
 function stop () {
@@ -103,17 +128,28 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     if (hideAll) document.body.style.visibility = 'hidden'
     await nextTick()
     await frames(2)
+    const asked = path
     const res = await (hostRequest('tree-overlay-fit', { probes, fresh }) as Promise<FitReply>)
     if (hideAll) document.body.style.visibility = ''
-    if (!on.value) return true
+    // A new start chose another tree meanwhile: this read was of the old one.
+    if (!on.value || path !== asked) return true
     if (!res.ok) {
       // The tree closed (or something covers it): nothing to draw any more.
       if (!fresh) stop()
       return false
     }
     view = { ...res.fit, width: res.width, height: res.height }
-    taken = takenNodes(path, res.lit)
+    taken = lib!.takenNodes(path, res.lit)
     left.value = path.nodes.filter(n => !taken.has(n.id)).length
+    const next = !left.value && follow && drawn ? treeAfter(trees, drawn, passed) : null
+    if (next) {
+      // Read the screen again for the next tree's lines (the finally does).
+      passed.add(drawn!)
+      usePath(next)
+      again = true
+      againFresh = hideAll
+      return true
+    }
     shown.value = true
     draw()
     return true
@@ -124,7 +160,9 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
   } finally {
     if (hideAll) document.body.style.visibility = ''
     busy = false
-    if (again && on.value) refit().catch(() => {})
+    const redo = againFresh
+    againFresh = false
+    if (again && on.value) refit(redo).catch(() => {})
   }
 }
 
