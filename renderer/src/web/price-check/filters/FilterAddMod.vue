@@ -96,20 +96,20 @@ function onKey (e: KeyboardEvent) {
     e.preventDefault()
     const hit = results.value[sel.value]
     if (open.value && hit) add(hit)
-  } else if (!open.value) {
-    return
-  } else if (e.key === 'Tab') {
-    e.preventDefault()
-    stepKind(e.shiftKey ? -1 : 1)
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    sel.value = Math.max(0, Math.min(sel.value + 1, results.value.length - 1))
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    sel.value = Math.max(sel.value - 1, 0)
-  } else if (e.key === 'Escape') {
-    e.preventDefault()
-    query.value = ''
+  } else if (open.value) {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      stepKind(e.shiftKey ? -1 : 1)
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      sel.value = Math.max(0, Math.min(sel.value + 1, results.value.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      sel.value = Math.max(sel.value - 1, 0)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      query.value = ''
+    }
   }
 }
 
