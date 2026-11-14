@@ -4,7 +4,7 @@
       <div class="flex items-baseline">
         <div class="flex items-baseline min-w-0 mr-2">
           <button v-if="poe && canSplit" type="button" class="w-poe-tier w-poe-tier-open" :class="{ 'w-poe-t1': poeTierTop }"
-            :title="isSplit ? 'Fold its mods back into the total' : 'Show the mods behind this line'"
+            :title="isSplit ? 'Fold its mods back into the total' : `Show the mods behind this line${fracInside ? FRAC_INSIDE : ''}`"
             @click="actions!.toggleSplit(filter)">{{ poeTierText || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
           <span v-else-if="poe && poeEldritch" class="w-poe-tier"><component :is="poeEldritchMark" v-bind="poeEldritch" /></span>
           <span v-else-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierTop }">{{ poeTierText }}</span>
@@ -88,7 +88,7 @@
           <template v-if="poe" />
           <button v-else-if="showTag && canSplit" type="button"
             :class="[$style['tag'], $style[`tag-${tag}`], $style.splitTag]"
-            :title="isSplit ? 'Fold its mods back into the total' : 'Split into the mods behind this total, each with its own min and ⇄'"
+            :title="isSplit ? 'Fold its mods back into the total' : `Split into the mods behind this total, each with its own min and ⇄${fracInside ? FRAC_INSIDE : ''}`"
             @click="actions!.toggleSplit(filter)">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ filter.sources.length > 1 ? ` x ${filter.sources.length}` : '' }} <i :class="isSplit ? 'fas fa-caret-up' : 'fas fa-caret-down'" /></button>
           <span v-else-if="showTag"
             :class="[$style['tag'], $style[`tag-${tag}`]]">{{ t(`filters.tag_${tag.replace('-', '_')}`) }}{{ (filter.sources.length > 1) ? ` x ${filter.sources.length}` : null }}</span>
@@ -181,6 +181,10 @@ export default defineComponent({
       ? onlyCatalysed(props.filter.roll.min, props.filter.roll.max, props.filter.roll.plain, props.filter.roll.bounds)
       : undefined)
     const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
+    // woke: a fractured mod folded into a total has no row of its own (one line
+    // per mod); the split lists it, with PoE mode's "Fractured only".
+    const fracInside = computed(() => canSplit.value && props.filter.tag === FilterTag.Pseudo &&
+      props.filter.sources.some(s => s.modifier.info.type === ModifierType.Fractured))
     const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
     const splitChild = computed(() => actions?.isChild(props.filter) ?? false)
     // A hybrid's other line, moved under its split row: indented with it.
@@ -349,6 +353,8 @@ export default defineComponent({
       poeTierTop: computed(() => kit?.isTopTier(kit.poeTier(props.filter)) ?? false),
       actions,
       canSplit,
+      fracInside,
+      FRAC_INSIDE: '. One of them is fractured: open this to search it as fractured only.',
       isSplit,
       splitChild,
       hybridPart,
