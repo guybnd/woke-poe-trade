@@ -13,6 +13,7 @@ import { parseFilter, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import type { FilterDoc } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
+import { lookChanges } from './look'
 import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
 import { describeStep, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
@@ -98,18 +99,24 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // so the plan reads both from one rebuild.
   let priceMoved: PriceMove[] = []
   const moveKey = (m: PriceMove) => [m.type, m.base, m.from, m.to]
+  // The look strip counts only while it changes something, so saves from
+  // before it existed don't read as changed.
+  const presetsSig = () => {
+    const { look, ...rest } = cfg().presets
+    return lookChanges(look) ? cfg().presets : rest
+  }
   const extraSig = () => {
     const parts: unknown[] = [activeMoves().map(moveKey), cfg().safetyNet.on ? safetyList.value : '']
     // Only when used, so turning these features on doesn't flag old saves.
     if (cfg().rules.length) parts.push(cfg().rules)
-    if (presetsOn(cfg().presets)) parts.push(cfg().presets, presetList.value)
+    if (presetsOn(cfg().presets)) parts.push(presetsSig(), presetList.value)
     const src = sourceSig()
     if (src.length) parts.push(src)
     return hash(JSON.stringify(parts))
   }
   const signature = () => JSON.stringify([cfg().edits, hash(buildSig.value), extraSig()])
   // Everything you changed, leaving out what follows prices by itself.
-  const userSig = () => hash(JSON.stringify([cfg().edits, buildSig.value, cfg().priceTiers.on, cfg().priceTiers.moves.map(moveKey), cfg().rules, cfg().sourceName, cfg().sourceOnline, cfg().saveMode, presetsOn(cfg().presets) ? cfg().presets : null, sourceSig()]))
+  const userSig = () => hash(JSON.stringify([cfg().edits, buildSig.value, cfg().priceTiers.on, cfg().priceTiers.moves.map(moveKey), cfg().rules, cfg().sourceName, cfg().sourceOnline, cfg().saveMode, presetsOn(cfg().presets) ? presetsSig() : null, sourceSig()]))
   // The build part is only known once the build file is read, so start from
   // what the last save used.
   const savedEdits = ref(JSON.stringify([cfg().edits, cfg().savedBuildSig ?? hash(buildSig.value), cfg().savedExtraSig ?? extraSig()]))

@@ -19,6 +19,7 @@ import { useActiveFilter } from './active-filter'
 import { itemFacts } from './item-facts'
 import { matchItem } from './match'
 import { conditionSignature, readStyle } from './edits'
+import { ownMatchActions } from './look'
 import type { StylePatch } from './edits'
 import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
 import { ruleLabel } from './parse'
@@ -73,7 +74,8 @@ const verdict = computed<Verdict | null>(() => {
       fix: canOwn ? { label: 'Show it', run: own('Show', valuable ? SAFETY_LOOK : {}, `${base} now shows`) } : undefined
     }
   }
-  const look = readStyle(m.actions)
+  // The rules' own size: the look strip scales it for everything alike.
+  const look = readStyle(ownMatchActions(m))
   if (price != null && price >= 10 && (look.fontSize ?? 32) < 30 && !look.sound) {
     return {
       tone: 'warn',

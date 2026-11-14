@@ -32,7 +32,9 @@
       <template #actions><WButton size="sm" icon="fas fa-folder-open" @click="openFolder">Open filter folder</WButton></template>
     </WEmpty>
 
-    <div v-else-if="tab === 'rules'" :class="$style.layout">
+    <div v-else-if="tab === 'rules'" :class="$style.rulesPage">
+      <LookStrip v-if="store.doc.value" :store="store" :config="config" />
+    <div :class="$style.layout">
       <!-- groups -->
       <div :class="$style.tree">
         <div class="flex items-center gap-2" :class="$style.rulesHead">
@@ -129,7 +131,7 @@
             <span class="grow">Changes here go to the {{ picked.length }} item{{ picked.length === 1 ? '' : 's' }} you picked, not the tier.</span>
             <WButton size="sm" variant="ghost" @click="bulkLook = false">Whole tier</WButton>
           </div>
-          <StyleEditor :source="bulkLook || isOwnGroup || !selType ? null : store.sourceLook(selType, tier.tier)" :look="readStyle(firstLive(tier).actions)" :visibility="firstLive(tier).visibility"
+          <StyleEditor :source="bulkLook || isOwnGroup || !selType ? null : store.sourceLook(selType, tier.tier)" :look="readStyle(ownActions(firstLive(tier)))" :visibility="firstLive(tier).visibility"
             :preview-text="(bulkLook ? picked[0] : tier.bases[0]) ?? previewName(tier)" :copy-from="copyFrom"
             @patch="patchTier" @visibility="setTierVisibility" />
 
@@ -165,6 +167,7 @@
         </template>
         <WEmpty v-else icon="fas fa-layer-group">Pick a tier to restyle it or move its items.</WEmpty>
       </div>
+    </div>
     </div>
 
     <!-- Rendered below, kept alive so Back returns to the same pile. -->
@@ -298,6 +301,8 @@ import LabelPreview from './LabelPreview.vue'
 import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
+import LookStrip from './LookStrip.vue'
+import { ownActions } from './look'
 import RuleBuilder from './RuleBuilder.vue'
 import { RULE_TYPE, newRule, ruleProblem, ruleSummary } from './rules'
 import type { OwnRule } from './rules'
@@ -402,7 +407,8 @@ const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMo
 const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
   { value: 'preview', label: 'Preview' },
-  { value: 'presets', label: 'Presets', count: Object.values(props.config.presets).filter(x => x.on).length || undefined },
+  // The look strip lives on Rules, so it isn't counted here.
+  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
@@ -509,7 +515,7 @@ function conditionSummary (t: TierNode): string {
 }
 
 const copyFrom = computed(() => group.value
-  ? group.value.tiers.filter(t => t.tier !== selTier.value && !t.tier.startsWith('#')).map(t => ({ tier: t.tier, look: readStyle(firstLive(t).actions) as StylePatch }))
+  ? group.value.tiers.filter(t => t.tier !== selTier.value && !t.tier.startsWith('#')).map(t => ({ tier: t.tier, look: readStyle(ownActions(firstLive(t))) as StylePatch }))
   : [])
 
 function selectGroup (type: string) {
@@ -730,7 +736,7 @@ function stackTierName (tier: string): string {
 function stackColour (tier: string): string {
   const t = group.value?.tiers.find(x => x.tier === tier)
   if (!t) return 'var(--w-panel-2)'
-  const look = readStyle(firstLive(t).actions)
+  const look = readStyle(ownActions(firstLive(t)))
   // Gold's piles are all on black: their text is what tells them apart.
   const c = look.background && look.background[0] + look.background[1] + look.background[2] > 120 ? look.background : look.text
   return c ? `rgb(${c[0]}, ${c[1]}, ${c[2]})` : 'var(--w-panel-2)'
@@ -1054,11 +1060,20 @@ function openFolder () {
 </script>
 
 <style module>
+.rulesPage {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
+  min-height: 0;
+}
 .layout {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr) 19rem;
   flex: 1 1 min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   min-height: 0;
+}
+.rulesPage > .layout {
+  flex: 1 1 0;
 }
 .tree {
   border-right: 1px solid var(--w-line);

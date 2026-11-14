@@ -88,6 +88,7 @@ import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
 import type { FilterCondition } from './parse'
 import { readStyle } from './edits'
+import { ownActions } from './look'
 import type { StylePatch } from './edits'
 import { CONDITION_KINDS, INFLUENCES, ITEM_TIERS, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, newCondition, ruleProblem, ruleTier, tierLit } from './rules'
 import type { OwnRule } from './rules'
@@ -166,7 +167,7 @@ const copyFrom = computed(() => {
     const label = b.tier.startsWith('#') ? `${groupName(b.type)}, line ${b.line}` : ruleLabel(b.type, b.tier)
     if (seen.has(label)) continue
     seen.add(label)
-    out.push({ tier: label, look: readStyle(b.actions) })
+    out.push({ tier: label, look: readStyle(ownActions(b)) })
   }
   return out
 })

@@ -8,6 +8,8 @@ import { ECONOMY_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { RULE_TYPE, addedBlock } from './rules'
 import { BUILD_RULE_TYPE, WEAPON_CLASSES } from './build-rules'
+import { defaultLook, lookChanges, normalizeLook } from './look'
+import type { Look } from './look'
 
 export const PRESET_TYPE = 'woke->preset'
 
@@ -57,6 +59,8 @@ export interface Presets {
   // the rares. 'auto' takes the weapon classes of the PoB build; 'custom'
   // keeps exactly `classes` (picked by hand, starting from a build type).
   weapons: { on: boolean, archetype: Archetype, classes: string[] }
+  // Text size, background and colour strength for every rule (look.ts).
+  look: Look
   // TODO(3.30 launch): tiered magic/rare drops, once the filter keyword for
   // the new drop tiers is known.
 }
@@ -83,7 +87,8 @@ export function defaultPresets (): Presets {
     vendorQuality: { on: false },
     volume: { on: false, percent: 60 },
     beams: { on: false, keepTiers: 2 },
-    weapons: { on: false, archetype: 'auto', classes: [] }
+    weapons: { on: false, archetype: 'auto', classes: [] },
+    look: defaultLook()
   }
 }
 
@@ -129,7 +134,8 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     vendorQuality: { on: on(p?.vendorQuality) },
     volume: { on: on(p?.volume), percent: Math.round(num(p?.volume?.percent, 5, 100, d.volume.percent)) },
     beams: { on: on(p?.beams), keepTiers: Math.round(num(p?.beams?.keepTiers, 1, 5, d.beams.keepTiers)) },
-    weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons)
+    weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons),
+    look: normalizeLook(p?.look)
   }
 }
 
@@ -747,5 +753,6 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
 }
 
 export function presetsOn (p: Presets): boolean {
-  return Object.values(p).some(v => v.on)
+  // The look strip counts only while it changes something.
+  return Object.entries(p).some(([k, v]) => k === 'look' ? lookChanges(p.look) : v.on)
 }

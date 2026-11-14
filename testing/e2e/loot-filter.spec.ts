@@ -115,6 +115,33 @@ test('rule builder, drag and drop between tiers, and presets end up in the saved
   expect(text).toMatch(/\$tier->t2divine[^\n]*\n(\t[^\n]*\n)*\tBaseType == [^\n]*"Chaos Orb"/)
 })
 
+test('look strip: text size and background reach every rule in the saved filter, and the preview follows', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+
+  const size = page.getByRole('slider', { name: 'Text size' })
+  await expect(size).toBeVisible()
+  const divine = page.getByLabel('Preview').getByText('Divine Orb', { exact: true })
+  const before = await divine.evaluate(e => parseFloat(getComputedStyle(e).fontSize))
+  await size.fill('80')
+  await page.getByRole('slider', { name: 'Background' }).fill('50')
+  await expect.poll(() => divine.evaluate(e => parseFloat(getComputedStyle(e).fontSize))).toBeLessThan(before)
+  await overlay.snap('look strip at 80% size, 50% background')
+  // The filter is rebuilt once the slider settles.
+  await expect(page.getByText(/unsaved changes/)).toBeVisible()
+
+  await page.getByRole('button', { name: /^Save/ }).click()
+  const out = path.join(folder, 'NeverSink (woke).filter')
+  await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toContain('$tier->t1exalted')
+  const text = fs.readFileSync(out, 'utf8')
+  // Divine's tier: 45 -> 36, white background at half alpha, sound and beam kept.
+  expect(text).toMatch(/\$tier->t1exalted[^\n]*\n(\t[^\n]*\n)*\tSetFontSize 36\b/)
+  expect(text).toMatch(/\$tier->t1exalted[^\n]*\n(\t[^\n]*\n)*\tSetBackgroundColor 255 255 255 128\b/)
+  expect(text).toMatch(/\$tier->t1exalted[^\n]*\n(\t[^\n]*\n)*\tPlayEffect Red/)
+})
+
 test('presets: levelling weapons start from a build type, and a chip keeps or hides one type', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })
@@ -183,7 +210,8 @@ test('history: a change shows before and after, a dot resets it, Ctrl + Z and th
   await page.getByRole('tab', { name: 'Rules' }).click()
   await page.getByRole('button', { name: /Tier 1/ }).first().click()
 
-  const slider = page.locator('input[type="range"]').first()
+  // The rule's size slider (the look strip's sliders come first).
+  const slider = page.locator('input[type="range"][min="18"]').first()
   const start = await slider.inputValue()
   await slider.fill('20')
   await slider.dispatchEvent('change')
@@ -237,7 +265,8 @@ test('rules: pick several chips, move them together, hide them together, and see
   await page.getByText('Chaos Orb', { exact: true }).last().click()
   await page.getByRole('toolbar', { name: 'Picked items' }).getByRole('button', { name: 'Own look' }).click()
   await expect(page.getByText(/Changes here go to the 1 item/)).toBeVisible()
-  const slider = page.locator('input[type="range"]').first()
+  // The rule's size slider (the look strip's sliders come first).
+  const slider = page.locator('input[type="range"][min="18"]').first()
   await slider.fill('30')
   await slider.dispatchEvent('change')
 

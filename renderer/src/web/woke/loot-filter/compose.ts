@@ -16,6 +16,7 @@ import { NET_GROUPS, applyPriceMoves, movesOutOfPlace } from './economy'
 import type { EconomyGroup, PriceLookup, PriceMove } from './economy'
 import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
 import type { BaseVerdict, NetList, SafetyNet } from './safety'
+import { applyLook } from './look'
 
 // The safety net's rule names (safetyBlocks): items, uniques, stacks20...
 const NET_TIER = /^(items|uniques|stacks\d+)$/
@@ -131,5 +132,9 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     const waiting = !r.ok && cfg.safetyNet.on && typeof tier === 'string' && NET_TIER.test(tier) && !next.blocks.some(b => b.type === SAFETY_RULE_TYPE && b.tier === tier)
     results.set(r.edit.id, waiting ? { ...r, ok: true, blocks: 0, message: 'Waits until the safety net lists something for this rule.' } : r)
   }
+  // The look strip last, over every rule the net included. Bigger labels
+  // stays the floor for NeverSink's shown rules, as it was set.
+  const bigger = cfg.presets.bigger
+  applyLook(next, cfg.presets.look, b => bigger.on && b.visibility !== 'Hide' && !b.type?.startsWith('woke->') ? bigger.size : null)
   return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
 }

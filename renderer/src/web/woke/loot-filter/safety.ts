@@ -7,6 +7,7 @@
 import type { FilterAction, FilterBlock, FilterDoc } from './parse'
 import type { StylePatch } from './edits'
 import { readStyle } from './edits'
+import { ownMatchActions } from './look'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { NET_GROUPS } from './economy'
 import { matchItem } from './match'
@@ -135,7 +136,8 @@ function verdictOf (doc: FilterDoc, drop: ItemFacts): { block: FilterBlock | nul
   const block = unsure?.block ?? m.final?.block ?? null
   return {
     block,
-    state: unsure ? 'hidden' : stateOf(m.visibility, m.actions),
+    // Judged on the rules' own sizes: the look strip is your call, not the filter's.
+    state: unsure ? 'hidden' : stateOf(m.visibility, ownMatchActions(m)),
     // Your own rules, presets and build rules: you chose this. A rule of yours
     // with no Rarity, made for a rare of this base, says nothing about a unique.
     mine: Boolean(block?.type?.startsWith('woke->')) && (drop.rarity !== 'Unique' || block!.conditions.some(c => c.key === 'Rarity'))
