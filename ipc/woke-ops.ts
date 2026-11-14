@@ -138,7 +138,7 @@ export interface WokeOps {
   'stash-read': Op<NoArgs, Json>
   'stash-watch-stop': Op<NoArgs, null>
   'tree-overlay-points': Op<{ x: number[], y: number[], r: number[] }, null>
-  'tree-overlay-fit': Op<{ probes: number[][], fresh?: boolean }, Json>
+  'tree-overlay-fit': Op<{ probes: number[][], extra?: number[][], fresh?: boolean }, Json>
   'tree-overlay-stop': Op<NoArgs, null>
   'tree-overlay-tip': Op<boolean, null>
 

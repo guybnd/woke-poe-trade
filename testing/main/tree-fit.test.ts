@@ -2,7 +2,9 @@ import fs from 'fs'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
 import { PNG } from 'pngjs'
-import { check, fitTree, hitShare, litProbes, readScreen } from '../../main/src/woke/tree-fit'
+import { check, fitTree, hitShare, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
+import { readNodes } from '../../renderer/src/web/woke/pob-builds/passive-tree'
+import { fitPoints, lineProbes, offBuildLines, refundNodes } from '../../renderer/src/web/woke/pob-builds/tree-overlay'
 import { placeAscendancies } from '../../renderer/src/web/woke/pob-builds/asc-layout'
 import type { TreeNode } from '../../renderer/src/web/woke/pob-builds/passive-tree'
 
@@ -94,5 +96,43 @@ describe('ascendancy bubble', () => {
     // Moved 25 px off, it isn't (zoomed out the bubble's art is bright all
     // over, so only zoomed in tells).
     if (name === 'ascendancy') expect(check(scr, asc, fit.zoom, fit.ox + 25, fit.oy + 25)).toBeLessThan(here * 0.7)
+  })
+})
+
+// Lines off the build, read on real shots: a wrong "lit" would say refund.
+describe('nodes to refund, on real shots', () => {
+  const all = readNodes(tree.nodes)
+  const fp = fitPoints(all)
+  const drawn = { x: Float32Array.from(fp.x), y: Float32Array.from(fp.y), r: Float32Array.from(fp.r) }
+  const lines = offBuildLines(all, [], tree)
+  const probes = lineProbes(lines, all).map(p => Float32Array.from(p))
+  function read (name: string) {
+    const { px, width, height } = bgra(`passive-tree-real-${name}.png`)
+    const fit = fitTree(readScreen(px, width, height), drawn)!
+    expect(fit).not.toBeNull()
+    return litLines(px, width, height, fit, probes, drawn)
+  }
+
+  it('reads nothing lit on a tree with no points spent near (gold frames, HUD)', () => {
+    expect(read('zoomed-in').filter(Boolean)).toHaveLength(0)
+  })
+
+  it('reads the spent points as one joined tree', () => {
+    const lit = read('ascendancy-far')
+    const n = lit.filter(Boolean).length
+    expect(n).toBeGreaterThan(25)
+    // Built as if a build had one taken node: the lit lines join up from it.
+    // (The class start's own lines run under the ascendancy art, unread.)
+    const start = all.get(lines[lit.indexOf(true)].a)!
+    const out = refundNodes(lines, lit, new Set([start.id]), new Set())
+    expect(out.size).toBeGreaterThan(25)
+    // A build with all but one end of a branch: that one is the refund.
+    const key = (l: { a: number, b: number }) => l.a < l.b ? `${l.a}-${l.b}` : `${l.b}-${l.a}`
+    const litKeys = new Set(lines.filter((_, i) => lit[i]).map(key))
+    const leaf = [...out].find(id => lines.filter((l, i) => lit[i] && (l.a === id || l.b === id)).length === 1)!
+    const ids = [start.id, ...[...out].filter(id => id !== leaf)]
+    const off = offBuildLines(all, ids, tree)
+    const offLit = off.map(l => litKeys.has(key(l)))
+    expect([...refundNodes(off, offLit, new Set(ids), new Set())]).toEqual([leaf])
   })
 })

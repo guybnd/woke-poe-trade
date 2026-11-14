@@ -4,7 +4,7 @@ import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { readNodes } from '@/web/woke/pob-builds/passive-tree'
 import type { TreeArt } from '@/web/woke/pob-builds/passive-tree'
-import { ascPath, buildAscendancy, buildPath, fitPoints, probesOf, takenNodes } from '@/web/woke/pob-builds/tree-overlay'
+import { ascPath, buildAscendancy, buildPath, fitPoints, lineProbes, offBuildLines, probesOf, refundNodes, takenNodes } from '@/web/woke/pob-builds/tree-overlay'
 
 const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/tree/passive-tree.json'), 'utf-8')) as TreeArt & { nodes: Parameters<typeof readNodes>[0] }
 const tree = readNodes(data.nodes)
@@ -86,5 +86,43 @@ describe('ascendancy path', () => {
 
   it('keeps ascendancy off the main tree path', () => {
     expect(buildPath(tree, ids, data).nodes.some(n => n.kind === 'asc' || n.kind === 'ascstart')).toBe(false)
+  })
+})
+
+describe('nodes to refund', () => {
+  const ids = walk(4)
+  const lines = offBuildLines(tree, ids, data)
+  const start = ids[0]
+  const end = ids[ids.length - 1]
+  // A node off the build next to its last node, and one more past it.
+  const off = tree.get(end)!.out.map(id => tree.get(id)!).concat([...tree.values()].filter(n => n.out.includes(end)))
+    .find(n => n && n.kind === 'small' && !ids.includes(n.id))!
+  const past = [...new Set([...off.out, ...[...tree.values()].filter(n => n.out.includes(off.id)).map(n => n.id)])]
+    .map(id => tree.get(id)!).find(n => n.kind === 'small' && n.id !== end && !ids.includes(n.id))!
+  const at = (a: number, b: number) => lines.findIndex(l => (l.a === a && l.b === b) || (l.a === b && l.b === a))
+  const taken = new Set([start, ...ids])
+
+  it('leaves out lines inside the build', () => {
+    expect(lines.length).toBeGreaterThan(2000)
+    expect(lines.some(l => ids.includes(l.a) && ids.includes(l.b))).toBe(false)
+    expect(at(end, off.id)).toBeGreaterThanOrEqual(0)
+    expect(lineProbes(lines.slice(0, 50), tree).every(p => p.length === 18 && p.every(Number.isFinite))).toBe(true)
+  })
+
+  it('marks lit nodes joined to the build, and only those', () => {
+    const lit = lines.map(() => false)
+    lit[at(end, off.id)] = true
+    lit[at(off.id, past.id)] = true
+    expect([...refundNodes(lines, lit, taken, new Set())].sort()).toEqual([off.id, past.id].sort())
+    // Lit on its own, out of reach of anything taken: not trusted.
+    const alone = lines.map(() => false)
+    alone[at(off.id, past.id)] = true
+    expect(refundNodes(lines, alone, taken, new Set()).size).toBe(0)
+  })
+
+  it('never marks a node a later tree takes', () => {
+    const lit = lines.map(() => false)
+    lit[at(end, off.id)] = true
+    expect(refundNodes(lines, lit, taken, new Set([off.id])).size).toBe(0)
   })
 })

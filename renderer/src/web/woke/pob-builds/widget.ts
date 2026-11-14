@@ -33,6 +33,9 @@ export interface PobBuildsWidget extends Widget {
   // Clicking the dock icon with the passive tree open draws the build on it
   // (else the window opens). Missing = on.
   treeOnIconClick?: boolean
+  // The tree drawing also marks nodes taken in game that the build doesn't
+  // have, to refund. Missing = on.
+  treeRefunds?: boolean
 }
 
 export const TREE_HOTKEY_DEFAULT = 'Alt + T'

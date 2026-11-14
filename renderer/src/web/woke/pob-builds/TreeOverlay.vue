@@ -1,7 +1,7 @@
 <template>
   <canvas v-show="shown" ref="canvas" :class="$style.layer" data-tree-overlay aria-hidden="true" />
   <div v-if="shown && left != null" :class="$style.count">
-    {{ countText }}<template v-if="treeTitle"> · {{ treeTitle }}</template>
+    {{ countText }}<span v-if="refundLeft" :class="$style.refund"> · {{ refundLeft }} to refund</span><template v-if="treeTitle"> · {{ treeTitle }}</template>
     <div v-if="ascNames" :class="$style.asc">Ascendancy: {{ ascNames }}</div>
   </div>
 </template>
@@ -23,13 +23,13 @@ import { loadoutOf, realSets, treeAfter } from './build-model'
 import { loadPassiveTree, passiveTreeArt, NODE_RADIUS } from './passive-tree'
 import type { TreeArt, TreeNode } from './passive-tree'
 import { markTreeOverlaySeen, registerTreeDrawer, treeOn, treeOverlaySeen } from './tree-toggle'
-import type { BuildPath } from './tree-overlay'
+import type { BuildLine, BuildPath } from './tree-overlay'
 import { isTreeHotkeyTarget, treeHotkeyOf } from './widget'
 import type { PobTreeSpec } from './widget'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
-  | { ok: true, fit: Fit, lit: boolean[], width: number, height: number }
+  | { ok: true, fit: Fit, lit: boolean[], extraLit?: boolean[], width: number, height: number }
   | { ok: false, reason: string }
 
 const canvas = shallowRef<HTMLCanvasElement>()
@@ -39,6 +39,8 @@ const shown = shallowRef(false)
 const left = shallowRef<number | null>(null)
 // Ascendancy points still to take, apart from the passives.
 const ascLeft = shallowRef(0)
+// Points taken in game off the build, when marking them is on.
+const refundLeft = shallowRef(0)
 const countText = computed(() => (left.value ? `${left.value} to take` : 'Tree done') +
   (ascLeft.value ? ` · ${ascLeft.value} ascendancy` : ''))
 // The drawn tree's title, when the build has more than one.
@@ -56,6 +58,17 @@ let placed: Map<number, TreeNode> | null = null
 // The tree's ascendancy notables in the build's order, shown under the count.
 const ascNames = shallowRef('')
 let taken = new Set<number>()
+// Lines outside the build, their probes, and the nodes they show taken that
+// the build doesn't have (refund). Empty when marking them is off.
+let offLines: BuildLine[] = []
+let offProbes: number[][] = []
+// Whether main has these probes (they're sent only when they change).
+let offSent = false
+let refund = new Set<number>()
+let refundLit: BuildLine[] = []
+// Nodes a later tree of the build takes: taking them early isn't a refund.
+let later = new Set<number>()
+let starts = new Set<number>()
 // Following your level (no set picked by hand), a tree you've taken all of
 // hands over to the next one: a guide's "Level 24" tree is done well before
 // level 33, and drawing nothing then is no help.
@@ -131,6 +144,24 @@ function usePath (tree: PobTreeSpec) {
   // One read of the screen checks both: the passives' lines, then the
   // ascendancy's.
   probes = [...lib!.probesOf(path, placed!), ...(ascPath ? lib!.probesOf(ascPath, placed!) : [])]
+  if (markRefunds()) {
+    offLines = lib!.offBuildLines(all!, ids, treeArt!)
+    offProbes = lib!.lineProbes(offLines, all!)
+    offSent = false
+    later = new Set()
+    starts = new Set([...all!.values()].filter(n => n.kind === 'start').map(n => n.id))
+    if (follow) {
+      const seen = new Set<PobTreeSpec>([...passed])
+      for (let t = treeAfter(trees, tree, seen); t; t = treeAfter(trees, t, seen)) {
+        seen.add(t)
+        for (const id of t.nodes ?? []) later.add(id)
+      }
+    }
+  } else {
+    if (offLines.length) offSent = false
+    offLines = []
+    offProbes = []
+  }
   // Named for the class's own ascendancy, drawn or not (bloodlines aside).
   const main = asc ?? lib!.buildAscendancy(all!, ids)
   ascNames.value = ids.map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name && n.asc === main).map(n => n!.name).join(' · ')
@@ -138,6 +169,11 @@ function usePath (tree: PobTreeSpec) {
 }
 
 // Everything drawn: the passives' path and the ascendancy's.
+// Off by the build tool's setting only; on by default.
+function markRefunds (): boolean {
+  return active.pobWidget.value?.treeRefunds !== false
+}
+
 function shownPath (): BuildPath | null {
   if (!path || !ascPath) return path
   return { nodes: [...path.nodes, ...ascPath.nodes], lines: [...path.lines, ...ascPath.lines] }
@@ -149,6 +185,9 @@ function stop () {
   shown.value = false
   left.value = null
   ascLeft.value = 0
+  refundLeft.value = 0
+  refund = new Set()
+  refundLit = []
   view = null
   hostRequest('tree-overlay-stop', null).catch(() => {})
 }
@@ -168,7 +207,8 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     await nextTick()
     await frames(2)
     const asked = path
-    const res = await (hostRequest('tree-overlay-fit', { probes, fresh }) as Promise<FitReply>)
+    const extra = offSent ? undefined : offProbes
+    const res = await (hostRequest('tree-overlay-fit', { probes, extra, fresh }) as Promise<FitReply>)
     if (hideAll) document.body.style.visibility = ''
     // A new start chose another tree meanwhile: this read was of the old one.
     if (!on.value || path !== asked) return true
@@ -181,6 +221,13 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     taken = lib!.takenNodes(shownPath()!, res.lit)
     left.value = path.nodes.filter(n => !taken.has(n.id)).length
     ascLeft.value = ascPath ? ascPath.nodes.filter(n => !taken.has(n.id)).length : 0
+    offSent = true
+    let extraLit = res.extraLit ?? []
+    // Read against other lines (main restarted, or a lost send): send again.
+    if (extraLit.length !== offLines.length) { offSent = false; extraLit = [] }
+    refund = offLines.length ? lib!.refundNodes(offLines, extraLit, new Set([...taken, ...starts]), later) : new Set()
+    refundLit = offLines.filter((l, i) => extraLit[i] && (refund.has(l.a) || refund.has(l.b)))
+    refundLeft.value = refund.size
     // Only the passives hand over: ascendancy points come from the labyrinth,
     // not from levels.
     const next = !left.value && follow && drawn ? treeAfter(trees, drawn, passed) : null
@@ -252,7 +299,40 @@ function draw () {
     ctx.arc(X(n.x), Y(n.y), r, 0, 2 * Math.PI)
     ctx.stroke()
   }
+
+  // Taken in game, not in the build: red over the lit line and a ring with a
+  // cross, the game's own refund colour.
+  if (!refund.size) return
+  ctx.strokeStyle = REFUND
+  ctx.lineWidth = width
+  ctx.beginPath()
+  for (const l of refundLit) {
+    const a = nodes.get(l.a)!
+    const b = nodes.get(l.b)!
+    ctx.moveTo(X(a.x), Y(a.y))
+    if (l.arc) ctx.arc(X(l.arc.cx), Y(l.arc.cy), l.arc.r * z, l.arc.from, l.arc.to, l.arc.ccw)
+    else ctx.lineTo(X(b.x), Y(b.y))
+  }
+  ctx.stroke()
+  ctx.lineWidth = Math.max(2, 8 * z)
+  for (const id of refund) {
+    const n = nodes.get(id)
+    if (!n) continue
+    const r = (NODE_RADIUS[n.kind] ?? 40) * 1.2 * z + 3
+    const x = X(n.x)
+    const y = Y(n.y)
+    const d = r * 0.5
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, 2 * Math.PI)
+    ctx.moveTo(x - d, y - d)
+    ctx.lineTo(x + d, y + d)
+    ctx.moveTo(x + d, y - d)
+    ctx.lineTo(x - d, y + d)
+    ctx.stroke()
+  }
 }
+
+const REFUND = 'rgba(235, 64, 52, 0.95)'
 
 function frames (n: number) {
   return new Promise<void>(resolve => {
@@ -334,6 +414,7 @@ onUnmounted(() => {
 
 <style module>
 .layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 40; }
+.refund { color: rgb(235, 64, 52); }
 .asc { font-weight: 400; text-align: center; color: rgb(255, 220, 90); }
 .count {
   position: fixed;
