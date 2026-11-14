@@ -64,10 +64,12 @@
         <WEmpty v-if="!shownLinks.length" icon="fas fa-gem">No gem groups in this skill set.</WEmpty>
 
         <div :class="$style.heading" class="flex">
-          <span>Gems by level</span>
+          <span>Gems by campaign order</span>
           <span class="ml-auto normal-case tracking-normal">{{ canTick ? 'click a gem once you have it' : '' }}</span>
         </div>
-        <button v-for="g in gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
+        <template v-for="grp in gemGroups" :key="grp.label">
+        <div :class="$style.actRule">{{ grp.label }}</div>
+        <button v-for="g in grp.gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
           :disabled="!canTick" @click="toggleGot(g.name)">
           <span class="w-num w-faint text-xs" :class="$style.lvl">{{ g.requiredLevel }}</span>
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
@@ -75,6 +77,7 @@
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
           <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source ?? 'trade / drop' }}</span>
         </button>
+        </template>
       </template>
 
       <!-- Gear -->
@@ -384,8 +387,19 @@ const shownLinks = computed(() => shownSet.value ? linkGroups(shownSet.value.gro
 const className = computed(() => build.className.value || props.details?.ascendClassName || props.details?.className || '')
 provide(GEM_CLASS, className)
 const gems = computed(() => props.details
-  ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value))
+  ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value), 'campaign')
   : [])
+// Campaign order, split where the act changes; gems the campaign never hands
+// out close the list.
+const gemGroups = computed(() => {
+  const out: Array<{ label: string, gems: NextGem[] }> = []
+  for (const g of gems.value) {
+    const label = g.act != null ? `Act ${g.act}` : 'Trade or drop'
+    if (out[out.length - 1]?.label !== label) out.push({ label, gems: [] })
+    out[out.length - 1].gems.push(g)
+  }
+  return out
+})
 
 const campaign = computed(() => AppConfig<CampaignWidget>(CAMPAIGN_TYPE))
 // The campaign widget may not have made its state yet (it fills it in when it mounts).
@@ -603,6 +617,16 @@ function run (p: Promise<unknown>) {
 .gemRow:not(:disabled):hover { background: var(--w-line-soft); }
 .later { opacity: 0.62; }
 .lvl { width: 1.6rem; text-align: right; flex: none; }
+.actRule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 1px;
+  font-size: var(--w-fs-caps);
+  font-family: var(--w-caps-face);
+  color: var(--w-faint);
+}
+.actRule::after { content: ''; flex: 1; border-top: 1px solid var(--w-line-soft); }
 .gemName { flex: none; max-width: 62%; }
 .src { min-width: 0; }
 button.next:hover { border-color: var(--w-line-strong); }

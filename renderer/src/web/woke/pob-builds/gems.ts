@@ -75,14 +75,49 @@ export interface NextGem {
   source: string | null
   // Usable now (required level reached), soon (within 6 levels) or later.
   when: 'now' | 'soon' | 'later'
+  // The act of the first quest that gives or unlocks it for the class; null
+  // when the campaign never does (trade, drop, transfigured).
+  act: number | null
+  // Where that quest falls in the campaign, for ordering (QUEST_ORDER).
+  step: number
 }
 
-function sourceFor (name: string, cls: string): string | null {
+// Every quest that rewards or unlocks gems, in the order the campaign
+// reaches them. Vendors start selling a gem when its quest is done, and Lilly
+// Roth sells everything from Act 6. A quest missing here sorts last in its act.
+const QUEST_ORDER = [
+  'Enemy at the Gate',
+  'Mercy Mission',
+  'Breaking Some Eggs',
+  'The Caged Brute',
+  "The Siren's Cadence",
+  'Intruders in Black',
+  'Sharp and Cruel',
+  'The Root of the Problem',
+  'Lost in Love',
+  'Sever the Right Hand',
+  'A Fixture of Fate',
+  'Breaking the Seal',
+  'The Eternal Nightmare',
+  'Fallen from Grace'
+]
+
+function questStep (s: Source): number {
+  const i = QUEST_ORDER.indexOf(s[1])
+  return s[0] * 100 + (i < 0 ? 99 : i)
+}
+
+// The first source the class can use: earliest quest, the reward before a
+// vendor at the same quest.
+function firstSource (name: string, cls: string): Source | null {
   const entry = DATA[name] ?? DATA[`${name} Support`]
   if (!entry) return null
   const idx = CLASSES.indexOf(cls)
   const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')
-  const pick = fits.find(s => s[3] === 'q') ?? fits.sort((a, b) => a[0] - b[0])[0]
+  return [...fits].sort((a, b) => questStep(a) - questStep(b) || (a[3] === 'q' ? -1 : b[3] === 'q' ? 1 : 0))[0] ?? null
+}
+
+function sourceLabel (pick: Source | null): string | null {
   if (!pick) return null
   return `${pick[3] === 'q' ? 'Reward' : 'Buy from ' + pick[2]}: ${pick[1]} (Act ${pick[0]})`
 }
@@ -109,9 +144,10 @@ export function requiredLevel (name: string): number | null {
   return gemData(name)?.requiredLevel ?? null
 }
 
-// Every enabled gem in the build (or just `names`), ordered by when you can
-// use it.
-export function nextGems (details: PobDetails, charLevel: number | null, className: string, names?: string[]): NextGem[] {
+// Every enabled gem in the build (or just `names`), ordered by the level you
+// can use it, or with order 'campaign' by when the campaign hands it out (act,
+// then quest, then level); gems it never gives come last, by level.
+export function nextGems (details: PobDetails, charLevel: number | null, className: string, names?: string[], order: 'level' | 'campaign' = 'level'): NextGem[] {
   const cls = baseClass(className || details.className)
   const level = charLevel ?? 1
   const list = names ?? details.skills
@@ -124,12 +160,16 @@ export function nextGems (details: PobDetails, charLevel: number | null, classNa
     seen.add(name)
     const req = requiredLevel(name)
     if (req == null) continue
+    const first = firstSource(name, cls)
     out.push({
       name,
       requiredLevel: req,
-      source: sourceFor(name, cls),
-      when: req <= level ? 'now' : req <= level + 6 ? 'soon' : 'later'
+      source: sourceLabel(first),
+      when: req <= level ? 'now' : req <= level + 6 ? 'soon' : 'later',
+      act: first ? first[0] : null,
+      step: first ? questStep(first) : Infinity
     })
   }
-  return out.sort((a, b) => a.requiredLevel - b.requiredLevel || a.name.localeCompare(b.name))
+  const byLevel = (a: NextGem, b: NextGem) => a.requiredLevel - b.requiredLevel || a.name.localeCompare(b.name)
+  return out.sort(order === 'campaign' ? (a, b) => (a.step - b.step) || byLevel(a, b) : byLevel)
 }
