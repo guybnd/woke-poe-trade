@@ -66,8 +66,11 @@ let offProbes: number[][] = []
 let offSent = false
 let refund = new Set<number>()
 let refundLit: BuildLine[] = []
-// Nodes a later tree of the build takes: taking them early isn't a refund.
-let later = new Set<number>()
+// Nodes never to refund: the build's own, and those a later tree of the
+// build takes (taking them early isn't a refund).
+let keep = new Set<number>()
+// The build's class start: its first lines are off the build, as PoB leaves
+// the start out of a tree's nodes.
 let starts = new Set<number>()
 // Following your level (no set picked by hand), a tree you've taken all of
 // hands over to the next one: a guide's "Level 24" tree is done well before
@@ -148,13 +151,18 @@ function usePath (tree: PobTreeSpec) {
     offLines = lib!.offBuildLines(all!, ids, treeArt!)
     offProbes = lib!.lineProbes(offLines, all!)
     offSent = false
-    later = new Set()
-    starts = new Set([...all!.values()].filter(n => n.kind === 'start').map(n => n.id))
+    const inBuild = new Set(ids)
+    keep = new Set(ids)
+    starts = new Set()
+    for (const l of offLines) {
+      if (all!.get(l.a)?.kind === 'start' && inBuild.has(l.b)) starts.add(l.a)
+      if (all!.get(l.b)?.kind === 'start' && inBuild.has(l.a)) starts.add(l.b)
+    }
     if (follow) {
       const seen = new Set<PobTreeSpec>([...passed])
       for (let t = treeAfter(trees, tree, seen); t; t = treeAfter(trees, t, seen)) {
         seen.add(t)
-        for (const id of t.nodes ?? []) later.add(id)
+        for (const id of t.nodes ?? []) keep.add(id)
       }
     }
   } else {
@@ -219,13 +227,21 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     }
     view = { ...res.fit, width: res.width, height: res.height }
     taken = lib!.takenNodes(shownPath()!, res.lit)
-    left.value = path.nodes.filter(n => !taken.has(n.id)).length
-    ascLeft.value = ascPath ? ascPath.nodes.filter(n => !taken.has(n.id)).length : 0
     offSent = true
     let extraLit = res.extraLit ?? []
     // Read against other lines (main restarted, or a lost send): send again.
     if (extraLit.length !== offLines.length) { offSent = false; extraLit = [] }
-    refund = offLines.length ? lib!.refundNodes(offLines, extraLit, new Set([...taken, ...starts]), later) : new Set()
+    // A build node reached off the build's own lines (another way there, or
+    // just its first node from the class start) is taken all the same.
+    const inPath = new Set(path.nodes.map(n => n.id))
+    offLines.forEach((l, i) => {
+      if (!extraLit[i]) return
+      if (inPath.has(l.a)) taken.add(l.a)
+      if (inPath.has(l.b)) taken.add(l.b)
+    })
+    left.value = path.nodes.filter(n => !taken.has(n.id)).length
+    ascLeft.value = ascPath ? ascPath.nodes.filter(n => !taken.has(n.id)).length : 0
+    refund = offLines.length ? lib!.refundNodes(offLines, extraLit, new Set([...taken, ...starts]), keep) : new Set()
     refundLit = offLines.filter((l, i) => extraLit[i] && (refund.has(l.a) || refund.has(l.b)))
     refundLeft.value = refund.size
     // Only the passives hand over: ascendancy points come from the labyrinth,
@@ -397,6 +413,12 @@ watch(() => zone.name, stop)
 const wm = inject<WidgetManager>('wm')!
 watch(() => wm.active.value, (a) => { if (a) stop() })
 watch(panelsHidden, (h) => { if (h) stop() })
+// The refund setting, changed with the tree drawn: redraw with it now.
+watch(() => active.pobWidget.value?.treeRefunds, () => {
+  if (!on.value || !drawn || !lib) return
+  usePath(drawn)
+  refit().catch(() => {})
+})
 
 let onResize: (() => void) | undefined
 onMounted(() => {

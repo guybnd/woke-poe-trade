@@ -120,6 +120,15 @@ describe('nodes to refund', () => {
     expect(refundNodes(lines, alone, taken, new Set()).size).toBe(0)
   })
 
+  it('never marks a build node reached another way', () => {
+    // Reached from a taken node off the build: the node on the way is a
+    // refund, the build node at the end of it isn't.
+    const lit = lines.map(() => false)
+    lit[at(end, off.id)] = true
+    lit[at(off.id, past.id)] = true
+    expect([...refundNodes(lines, lit, new Set([past.id]), new Set(ids))]).toEqual([off.id])
+  })
+
   it('never marks a node a later tree takes', () => {
     const lit = lines.map(() => false)
     lit[at(end, off.id)] = true
