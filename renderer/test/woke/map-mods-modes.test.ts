@@ -134,7 +134,7 @@ describe('map search', () => {
 
   it('minimums only go in the map search', () => {
     const p = profile({}, { mins: { quantity: 80 }, chartRatings: {} })
-    expect(profileRegex(p, 'maps').text).toContain('tity')
+    expect(profileRegex(p, 'maps').text).toContain('ops: ')
     expect(profileRegex(p, 'charts').text).toBe('')
     expect(profileRegex(p, 'heist').text).toBe('')
   })
