@@ -39,13 +39,20 @@ async function top (locator: Locator) {
   return Math.round((await locator.boundingBox())!.y)
 }
 
-test('affix caps search only on Search and leave out fuller listings', async ({ overlay }) => {
+// Tooltip lines (PoE mode) is the default layout; Rows the old one.
+const LAYOUTS = {
+  rows: undefined,
+  poe: (config: any) => { config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle = 'poe' }
+}
+
+for (const [layout, patch] of Object.entries(LAYOUTS)) {
+test(`${layout}: affix caps search only on Search and leave out fuller listings`, async ({ overlay }) => {
   await fakeTrade(overlay.page)
   const searches: any[] = []
   overlay.page.on('request', (req) => {
     if (req.url().includes('/api/trade/search/')) searches.push(req.postDataJSON())
   })
-  await overlay.boot()
+  await overlay.boot(patch ? { patch } : {})
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   await overlay.snap('caps empty')
@@ -54,11 +61,20 @@ test('affix caps search only on Search and leave out fuller listings', async ({ 
   expect(searches).toHaveLength(1)
   expect(JSON.stringify(searches[0].query.stats)).not.toContain('pseudo_number_of_prefix_mods')
 
-  const prefix = panel.locator('[data-affix-cap="prefix"]')
+  // The caps sit on the results bar, or on the Search row while results wait: one is shown.
+  const prefix = panel.locator('[data-affix-cap="prefix"]:visible')
+  const suffix = panel.locator('[data-affix-cap="suffix"]:visible')
+  await overlay.snap('caps on the results bar')
+  const onBar = (await prefix.boundingBox())!
   await prefix.locator('input').fill('2')
   await prefix.locator('input').press('Tab')
-  await panel.locator('[data-affix-cap="suffix"]').getByRole('button', { name: /Suffix/ }).click()
-  await expect(panel.locator('[data-affix-cap="suffix"] input')).toHaveValue('2')
+  // The bar gives way to the Search row; the caps stay where they were.
+  await expect(panel.getByRole('button', { name: 'Search' })).toBeVisible()
+  const onRow = (await prefix.boundingBox())!
+  expect(Math.abs(onRow.x - onBar.x)).toBeLessThan(2)
+  expect(Math.abs(onRow.y - onBar.y)).toBeLessThan(6)
+  await suffix.getByRole('button', { name: /Suf/ }).click()
+  await expect(suffix.locator('input')).toHaveValue('2')
   await overlay.page.waitForTimeout(500)
   // No search of its own: the results go stale and wait for the button.
   expect(searches).toHaveLength(1)
@@ -81,13 +97,15 @@ test('affix caps search only on Search and leave out fuller listings', async ({ 
   expect(stats).toContain('pseudo_number_of_suffix_mods')
 })
 
-test('folded mods keep the caps on the header row', async ({ overlay }) => {
+}
+
+test('folded mods keep the caps by Search', async ({ overlay }) => {
   await fakeTrade(overlay.page)
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   await panel.getByRole('button', { name: /Collapse/ }).click()
-  await expect(panel.locator('[data-affix-caps]')).toHaveCount(1)
+  await expect(panel.locator('[data-affix-caps]:visible')).toHaveCount(1)
   await overlay.snap('mods folded')
 })
 
@@ -97,4 +115,21 @@ test('no caps on uniques', async ({ overlay }) => {
   await overlay.copyItem('items/unique-kaoms-heart.txt')
   await expect(overlay.widget('price-check').getByText(/Kaom/).first()).toBeVisible()
   await expect(overlay.widget('price-check').locator('[data-affix-caps]')).toHaveCount(0)
+})
+
+test('poe: Enter in a cap box searches with the number just typed', async ({ overlay }) => {
+  await fakeTrade(overlay.page)
+  const searches: any[] = []
+  overlay.page.on('request', (req) => {
+    if (req.url().includes('/api/trade/search/')) searches.push(req.postDataJSON())
+  })
+  await overlay.boot({ patch: LAYOUTS.poe })
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  const input = panel.locator('[data-affix-cap="suffix"]:visible input')
+  await input.fill('1')
+  await input.press('Enter')
+  await expect.poll(() => searches.length).toBe(1)
+  expect(searches[0].query.stats.find((g: any) => g.type === 'not')?.filters)
+    .toEqual([{ id: 'pseudo.pseudo_number_of_suffix_mods', value: { min: 2 } }])
 })

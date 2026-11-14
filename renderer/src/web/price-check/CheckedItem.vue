@@ -49,6 +49,12 @@
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
         <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
+      <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
+           at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
+      <template v-if="itemFilters.affixCaps && tradeAPI === 'trade'">
+        <filter-affix-caps class="ml-auto" style="margin-right: 5px;" :caps="itemFilters.affixCaps" />
+        <span class="w-icon-btn invisible" style="margin-right: 5px;" aria-hidden="true"><i class="fas fa-sync-alt text-xs" /></span>
+      </template>
       <trade-links v-if="tradeAPI === 'trade'"
         :get-link="makeTradeLink" :suggest-name="() => proposeSearchName(item, itemStats)" />
     </div>
@@ -67,7 +73,11 @@
       :stats="searched.stats"
       :item="item"
       :stale="resultsStale"
-      @reset="resetTradeResults" />
+      @reset="resetTradeResults">
+      <template v-if="itemFilters.affixCaps" #toolbar>
+        <filter-affix-caps class="w-pc-caps" :caps="itemFilters.affixCaps" />
+      </template>
+    </trade-listing>
     <trade-bulk
       v-if="tradeAPI === 'bulk' && doSearch"
       ref="tradeService"
@@ -100,6 +110,7 @@ import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import { apiToSatisfySearch, getTradeEndpoint } from './trade/common'
 import PriceTrend from './trends/PriceTrend.vue'
 import FiltersBlock from './filters/FiltersBlock.vue'
+import FilterAffixCaps from './filters/FilterAffixCaps.vue'
 import { createPresets } from './filters/create-presets'
 import PricePrediction from './price-prediction/PricePrediction.vue'
 import StackValue from './expected-value/StackValue.vue'
@@ -147,6 +158,7 @@ export default defineComponent({
     TradeLinks,
     PriceTrend,
     FiltersBlock,
+    FilterAffixCaps,
     FilterName,
     StackValue
   },

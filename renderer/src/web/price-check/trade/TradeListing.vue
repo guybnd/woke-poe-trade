@@ -11,6 +11,8 @@
       </div>
       <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
       <div class="w-pc-grow flex-1"></div>
+      <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
+      <slot name="toolbar" />
       <button type="button" class="w-icon-btn mr-1" :class="{ invisible: !list }" title="Search again: results are otherwise kept for 5 minutes"
         :disabled="fetching" @click="refresh"><i class="fas fa-sync-alt text-xs" /><span v-if="refreshNote" class="text-xs ml-1">{{ refreshNote }}</span></button>
       <trade-links :class="{ invisible: !list }"
