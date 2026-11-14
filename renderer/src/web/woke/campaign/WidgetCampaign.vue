@@ -198,7 +198,8 @@ const dockBadge = computed(() => {
 // ---- XP band ----
 
 // In town there's nothing to kill: measure against the next zone on the route.
-const townNext = computed(() => isTown(s.value.areaId) ? nextFightZone(route.value, props.config.step, routeData) : null)
+// Past the campaign (asleep), the route says nothing about where you're headed.
+const townNext = computed(() => isTown(s.value.areaId) && !s.value.asleep ? nextFightZone(route.value, props.config.step, routeData) : null)
 const xpAreaLevel = computed(() => isTown(s.value.areaId) ? (townNext.value?.level ?? null) : s.value.areaLevel)
 const xp = computed(() => (s.value.level != null && xpAreaLevel.value != null && actFromAreaId(s.value.areaId) != null)
   ? xpState(s.value.level, xpAreaLevel.value)
