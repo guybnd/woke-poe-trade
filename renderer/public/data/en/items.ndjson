@@ -5138,3 +5138,21 @@
 {"name":"Smuggler's Hand","refName":"Smuggler's Hand","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Arachnid Leg","refName":"Arachnid Leg","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Terrifying Maw","refName":"Terrifying Maw","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Unwilling Embrace","refName":"Unwilling Embrace","namespace":"UNIQUE","unique":{"base":"Bone Ring"},"icon":""}
+{"name":"Hide of the Vendigo","refName":"Hide of the Vendigo","namespace":"UNIQUE","unique":{"base":"Exquisite Leather"},"icon":""}
+{"name":"Mantle of Dreams","refName":"Mantle of Dreams","namespace":"UNIQUE","unique":{"base":"Twilight Regalia"},"icon":""}
+{"name":"Ordered Fate","refName":"Ordered Fate","namespace":"UNIQUE","unique":{"base":"Walnut Spirit Shield"},"icon":""}
+{"name":"Dreadmaidens' Sacrament","refName":"Dreadmaidens' Sacrament","namespace":"UNIQUE","unique":{"base":"Basalt Flask"},"icon":""}
+{"name":"Mycelium Core","refName":"Mycelium Core","namespace":"ITEM","craftable":{"category":"Jewel"},"icon":""}
+{"name":"Putrid Seed","refName":"Putrid Seed","namespace":"UNIQUE","unique":{"base":"Mycelium Core"},"icon":""}
+{"name":"Corpse Rose","refName":"Corpse Rose","namespace":"UNIQUE","unique":{"base":"Imbued Wand"},"icon":""}
+{"name":"The Sword of Ages","refName":"The Sword of Ages","namespace":"UNIQUE","unique":{"base":"Exquisite Blade"},"icon":""}
+{"name":"Baran's Head","refName":"Baran's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Chimera's Head","refName":"Chimera's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Constrictor's Head","refName":"Constrictor's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Enslaver's Head","refName":"Enslaver's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Eradicator's Head","refName":"Eradicator's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Hydra's Head","refName":"Hydra's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Minotaur's Head","refName":"Minotaur's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Phoenix's Head","refName":"Phoenix's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Purifier's Head","refName":"Purifier's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
