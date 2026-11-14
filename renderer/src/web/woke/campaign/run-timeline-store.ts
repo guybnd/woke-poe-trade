@@ -1,6 +1,7 @@
 // Keeps the current run's timeline and saves it to its own file. Only the
 // run being recorded stays in memory; past runs' timelines are read on demand.
 
+import { shallowRef } from 'vue'
 import { hostRequest } from '../shared/host'
 import { lineTime } from './log-tail'
 import { TIMELINE_COLLECTION, asTimeline, dropRouteStepsFrom, newTimeline, rebuildTimeline, recordRouteStep, recordStep } from './run-timeline'
@@ -87,6 +88,8 @@ function saveSoon (slot: Slot) {
 
 export function timelineRecorder () {
   let cur: Slot | null = null
+  // Moves on every change to the live timeline, so a view of it can redraw.
+  const rev = shallowRef(0)
 
   function open (id: number): Slot {
     if (cur) save(cur)
@@ -98,6 +101,7 @@ export function timelineRecorder () {
       slot.queued = null
       let changed = false
       for (const change of changes) if (change(tl)) changed = true
+      rev.value++
       if (!changed) return
       // A run that's no longer recorded is written now.
       if (slot === cur) saveSoon(slot)
@@ -109,10 +113,14 @@ export function timelineRecorder () {
   function apply (id: number, change: Change) {
     const slot = cur?.id === id ? cur : open(id)
     if (slot.queued) { slot.queued.push(change); return }
-    if (slot.tl && change(slot.tl)) saveSoon(slot)
+    if (slot.tl && change(slot.tl)) {
+      rev.value++
+      saveSoon(slot)
+    }
   }
 
   return {
+    rev,
     // Records one step of run `id` at run time `runMs`, from a line written at `at`.
     record (id: number, input: TimelineInput, runMs: number, at: number) {
       apply(id, tl => recordStep(tl, input, runMs, at))

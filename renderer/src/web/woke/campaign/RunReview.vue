@@ -83,8 +83,8 @@
             <span class="text-right w-num">{{ fmt(actSec(run, a.act)) }}</span>
             <span class="text-right w-num" :class="toneOf(actDelta(a.act))">{{ fmtDelta(actDelta(a.act)) }}</span>
           </div>
-          <div v-for="z in a.zones" :key="z.areaId" class="w-row" :class="[$style.grid, z.town && 'w-faint']" :title="z.town ? 'Town or hideout' : undefined">
-            <span class="w-trunc">{{ z.name }}<span v-if="z.deaths" :class="$style.dead" :title="z.deaths === 1 ? 'Died here' : `Died here ${z.deaths} times`"> ☠{{ z.deaths > 1 ? z.deaths : '' }}</span></span>
+          <div v-for="z in a.zones" :key="z.areaId" class="w-row" :class="[$style.grid, z.town && 'w-faint', isNow(a.act, z.areaId) && $style.now]" :title="z.town ? 'Town or hideout' : undefined">
+            <span class="w-trunc">{{ z.name }}<span v-if="isNow(a.act, z.areaId)" class="w-faint"> · now</span><span v-if="z.deaths" :class="$style.dead" :title="z.deaths === 1 ? 'Died here' : `Died here ${z.deaths} times`"> ☠{{ z.deaths > 1 ? z.deaths : '' }}</span></span>
             <span class="text-right w-num w-faint">{{ z.visits > 1 ? z.visits : '' }}</span>
             <span class="text-right w-num">{{ formatClock(z.sec * 1000) }}</span>
             <span class="text-right w-num" :class="toneOf(zoneDelta(z))">{{ fmtDelta(zoneDelta(z)) }}</span>
@@ -120,7 +120,17 @@ const props = defineProps<{
   cmpLabel: string
   // The live timeline, when this run is the one being recorded.
   live: RunTimeline | null
+  // A run still going: its run time now (ms), and a counter that moves when
+  // its live timeline changes.
+  nowMs?: number | null
+  liveRev?: number
+  // The area you're in now, marked in the list.
+  nowAreaId?: string | null
 }>()
+
+// Read in every view of the timeline, so a live run's view redraws.
+function liveTick (): number { return props.liveRev ?? 0 }
+const runEnd = computed(() => props.nowMs != null ? Math.floor(props.nowMs / 1000) : runEndSec(props.run))
 
 // Read only while this view is open, and dropped with it.
 const tl = shallowRef<RunTimeline | null>(null)
@@ -140,7 +150,7 @@ async function timelineOf (run: CampaignRun, onRebuild?: () => void): Promise<Ru
 }
 
 let request = 0
-watch(() => [props.run.id, props.cmp?.id], async () => {
+watch(() => [props.run.id, props.cmp?.id, props.live != null], async () => {
   const mineReq = ++request
   state.value = 'loading'
   hover.value = null
@@ -154,22 +164,30 @@ watch(() => [props.run.id, props.cmp?.id], async () => {
   if (mine && mine.ev.length) {
     state.value = 'ready'
   } else {
-    noneText.value = mine ? 'Client.txt no longer has this run. Act splits only.' : 'No timeline for this run. Act splits only.'
+    noneText.value = !run.finished ? 'Nothing recorded yet. Zones show here as you enter them.' : mine ? 'Client.txt no longer has this run. Act splits only.' : 'No timeline for this run. Act splits only.'
     state.value = 'none'
   }
 }, { immediate: true })
 
+// The live run's first zone arrives after the view opened on nothing.
+watch(() => props.liveRev, () => {
+  if (props.live && state.value === 'none' && props.live.ev.length) {
+    tl.value = props.live
+    state.value = 'ready'
+  }
+})
+
 const who = computed(() => [props.run.className || 'Unknown', props.run.level].filter(x => x != null).join(' '))
 const date = computed(() => new Date(props.run.startedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }))
-const total = computed(() => runTotal(props.run) ?? (props.run.splits.length ? props.run.splits[props.run.splits.length - 1].totalMs : props.run.elapsedMs))
-const visits = computed(() => tl.value ? zoneVisits(tl.value, runEndSec(props.run)) : null)
+const total = computed(() => props.nowMs ?? runTotal(props.run) ?? (props.run.splits.length ? props.run.splits[props.run.splits.length - 1].totalMs : props.run.elapsedMs))
+const visits = computed(() => liveTick() >= 0 && tl.value ? zoneVisits(tl.value, runEnd.value) : null)
 const town = computed(() => visits.value ? townSec(visits.value) : null)
-const deaths = computed(() => tl.value ? deathCount(tl.value) : null)
-const acts = computed(() => state.value === 'ready' && tl.value ? zonesByAct(props.run, tl.value, props.cmp, cmpTl.value) : null)
+const deaths = computed(() => liveTick() >= 0 && tl.value ? deathCount(tl.value) : null)
+const acts = computed(() => liveTick() >= 0 && state.value === 'ready' && tl.value ? zonesByAct(props.run, tl.value, props.cmp, cmpTl.value, runEnd.value) : null)
 const strips = computed(() => visits.value
   ? [...visitsByAct(props.run, visits.value).entries()].sort((a, b) => a[0] - b[0]).map(([act, list]) => ({ act, visits: list }))
   : [])
-const steps = computed(() => tl.value ? stepRows(props.run, tl.value, props.cmp, cmpTl.value) : [])
+const steps = computed(() => liveTick() >= 0 && tl.value ? stepRows(props.run, tl.value, props.cmp, cmpTl.value) : [])
 const stepActs = computed(() => {
   const out: Array<{ act: number, rows: StepRow[] }> = []
   for (const r of steps.value) {
@@ -190,6 +208,9 @@ function actDelta (act: number): number | null {
 }
 function zoneDelta (z: ZoneSum): number | null { return z.cmpSec == null ? null : (z.sec - z.cmpSec) * 1000 }
 function stepDelta (r: StepRow): number | null { return r.took == null || r.cmpTook == null ? null : (r.took - r.cmpTook) * 1000 }
+function isNow (act: number, areaId: string): boolean {
+  return !!props.nowAreaId && areaId === props.nowAreaId && act === acts.value?.[acts.value.length - 1]?.act
+}
 function fmt (ms: number | null) { return ms == null ? '—' : formatClock(ms) }
 // ms.
 function fmtDelta (v: number | null) { return v == null ? '—' : formatDelta(v) }
@@ -197,11 +218,11 @@ function toneOf (v: number | null) { return v == null ? 'w-faint' : v <= 0 ? 'w-
 
 // Level over run time, this run and the one it's compared with.
 const chart = computed(() => {
-  if (!tl.value) return null
+  if (liveTick() < 0 || !tl.value) return null
   const mine = levelSteps(tl.value)
   if (!mine.length) return null
   const theirs = cmpTl.value ? levelSteps(cmpTl.value) : null
-  const ends = [runEndSec(props.run) ?? mine[mine.length - 1][0], theirs?.length ? (runEndSec(props.cmp!) ?? theirs[theirs.length - 1][0]) : 0]
+  const ends = [runEnd.value ?? mine[mine.length - 1][0], theirs?.length ? (runEndSec(props.cmp!) ?? theirs[theirs.length - 1][0]) : 0]
   const endSec = Math.max(1, ...ends)
   const top = Math.max(10, ...mine.map(s => s[1]), ...(theirs ?? []).map(s => s[1]))
   const maxLv = Math.ceil(top / 10) * 10
@@ -259,5 +280,6 @@ const chart = computed(() => {
 .viewSwitch { display: flex; justify-content: center; padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); }
 .grid { grid-template-columns: minmax(0, 1fr) 1.4rem 3.6rem 3.6rem; }
 .act { color: var(--w-accent); }
+.now { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
 .dead { color: var(--w-down); font-size: var(--w-fs-xs); }
 </style>

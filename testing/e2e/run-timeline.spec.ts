@@ -87,14 +87,42 @@ test('finished campaign card steps are saved with the run', async ({ overlay, fa
   const panel = overlay.widget('woke-run-timer')
   await panel.getByTitle(/^End run/).first().click()
   await expect.poll(() => timer()?.history?.length).toBe(1)
-  // Away from the campaign icon, whose card would sit over the panel.
+  // Away from the campaign icon: its card (which also pops up for a moment
+  // after each step) would sit over the panel.
   await overlay.page.mouse.move(900, 900)
-  await overlay.page.waitForTimeout(500)
+  await expect(overlay.page.locator('[data-dock-row] [class*="_cardHead_"]')).toHaveCount(0, { timeout: 15_000 })
+  // A notice about the test machine's port can sit over the tabs.
+  const dismiss = overlay.page.getByRole('button', { name: 'Dismiss' })
+  if (await dismiss.isVisible()) await dismiss.click()
 
-  await panel.getByText('Past runs').click()
+  await panel.getByRole('tab', { name: /Past runs/ }).click()
   await panel.locator('.w-row', { hasText: 'WokeTester' }).first().click()
   await panel.getByRole('button', { name: 'Steps' }).click()
   await expect(panel.locator('.w-row--head')).toContainText('Step')
-  await expect(panel).toContainText('The Coast')
+  // Some of act 1's steps, whichever the route ticked live (which ones
+  // depends on how the lines were batched).
+  await expect.poll(() => panel.locator('.w-row:not(.w-row--head)').count()).toBeGreaterThan(3)
   await overlay.snap('run timeline steps')
+})
+
+test('the run you are on has its own live Timeline tab', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ widgets: [RUN_TIMER], overlayActive: true })
+  const lines = logFixture('client-logs/campaign-act1.txt').filter(l => /Generating level|You have entered|is now level/.test(l))
+  for (const l of lines) {
+    fakeApp.appendClientLog([l])
+    await overlay.page.waitForTimeout(40)
+  }
+  const timer = () => overlay.savedWidget('woke-run-timer')
+  await expect.poll(() => timer()?.run?.splits?.length, { timeout: 15_000 }).toBe(1)
+  const panel = overlay.widget('woke-run-timer')
+  await panel.getByRole('tab', { name: 'Timeline' }).click()
+  await expect(panel).toContainText('The Coast')
+  await expect(panel).toContainText('The Southern Forest')
+  // A zone entered while it's open shows up.
+  fakeApp.appendClientLog([
+    '2026/11/04 18:40:00 1 abc [DEBUG Client 1] Generating level 14 area "1_2_2" with seed 5',
+    '2026/11/04 18:40:01 1 abc [INFO Client 1] : You have entered The Old Fields.'
+  ])
+  await expect(panel).toContainText('The Old Fields')
+  await overlay.snap('current run timeline')
 })
