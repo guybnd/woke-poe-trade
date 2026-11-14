@@ -3,7 +3,7 @@
 // 6-sockets); the others adjust NeverSink's own rules after your edits
 // (quiet mode, bigger labels, colour-blind beams and icons). Your own rules are
 // never touched; the safety net only takes the colour-blind colours.
-import type { FilterBlock, FilterDoc } from './parse'
+import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { ECONOMY_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { RULE_TYPE, addedBlock } from './rules'
@@ -674,30 +674,39 @@ const minItemLevel = (b: FilterBlock) => Math.max(0, ...b.conditions
 // through to what it ranks higher further down (item level 86 and crafting
 // bases, fractured, synthesised, 5-links) and then to its hidden catch-all.
 // Only rules for item level 68 and up: those drop in maps alone, so the
-// campaign stays as it was. Whether a drop with no tier reports none or a low
-// one, it lands the same.
+// campaign stays as it was. A drop with no tier fails `>=` whether the game
+// reads it as none or as a low one, so it lands the same either way.
+// The item copy doesn't show the tier yet (WOKEPOET-153): the app's own
+// verdicts count it as met, and keep NeverSink's answer.
 function hideLowItemTiers (doc: FilterDoc, tier: number): number {
-  const hides: Array<[FilterBlock, FilterBlock]> = []
+  const want = (): FilterCondition => ({ ...cond('UnidentifiedItemTier', '>=', [tier]), assumeMet: true })
+  const added: Array<[FilterBlock, FilterBlock[]]> = []
   let changed = 0
   for (const b of doc.blocks) {
     if (b.type?.startsWith('woke->')) continue
     if (isPlainGearTier(b) && minItemLevel(b) >= MAPS_FROM && itemTierFloor(b) < tier) {
+      // NeverSink's own tier line just moves up; it stays unknown to the app,
+      // as before. Only a line the preset adds counts as met.
       const at = b.conditions.findIndex(isItemTierCond)
-      const want = cond('UnidentifiedItemTier', '>=', [tier])
-      if (at >= 0) b.conditions[at] = want
-      else b.conditions = [...b.conditions, want]
+      if (at >= 0) b.conditions[at] = cond('UnidentifiedItemTier', '>=', [tier])
+      else b.conditions = [...b.conditions, want()]
       b.dirty = true
       changed++
     } else if (isGearCatchAll(b) && b.visibility !== 'Hide') {
-      // Shown by the player: a hidden copy above it takes the low tiers.
-      hides.push([b, addedBlock(PRESET_TYPE, 'lowtiers', `gear below item tier ${tier} once in maps`, [
+      // Shown by the player: above it, the tiers that stay keep its look and
+      // the rest hide in maps, the same split as the rules above.
+      const keep = addedBlock(PRESET_TYPE, 'lowtierskeep', `gear at item tier ${tier} or more`, [...b.conditions, want()], 'Show', 'Presets')
+      keep.actions = b.actions.map(a => ({ key: a.key, args: [...a.args] }))
+      const hide = addedBlock(PRESET_TYPE, 'lowtiers', `gear below item tier ${tier} once in maps`, [
         ...b.conditions.filter(c => c.key !== 'AreaLevel'),
-        cond('UnidentifiedItemTier', '<', [tier]),
         cond('AreaLevel', '>=', [MAPS_FROM])
-      ], 'Hide', 'Presets')])
+      ], 'Hide', 'Presets')
+      added.push([b, [keep, hide]])
     }
   }
-  for (const [anchor, b] of hides) { insertBefore(doc, anchor, b); changed++ }
+  for (const [anchor, blocks] of added) {
+    for (const b of blocks) { insertBefore(doc, anchor, b); changed++ }
+  }
   return changed
 }
 

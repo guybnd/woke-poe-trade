@@ -182,8 +182,14 @@ export function evalCondition (c: FilterCondition, item: ItemFacts): Tri {
   }
 }
 
+// A preset's condition on something the copy can't show counts as met.
+function evalMet (c: FilterCondition, item: ItemFacts): Tri {
+  const r = evalCondition(c, item)
+  return r === null && c.assumeMet === true ? true : r
+}
+
 export function evalBlock (block: FilterBlock, item: ItemFacts): BlockMatch {
-  const conditions = block.conditions.map(condition => ({ condition, result: evalCondition(condition, item) }))
+  const conditions = block.conditions.map(condition => ({ condition, result: evalMet(condition, item) }))
   let result: Tri = true
   for (const c of conditions) {
     if (c.result === false) { result = false; break }
@@ -203,7 +209,7 @@ function mergeActions (base: FilterAction[], top: FilterAction[]): FilterAction[
 function evalBlockBrief (block: FilterBlock, item: ItemFacts): BlockMatch {
   let result: Tri = true
   for (const condition of block.conditions) {
-    const r = evalCondition(condition, item)
+    const r = evalMet(condition, item)
     if (r === false) return { block, result: false, conditions: [] }
     if (r === null) result = null
   }

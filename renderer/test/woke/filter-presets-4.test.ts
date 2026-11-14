@@ -10,7 +10,7 @@ import { insertBuildBlocks } from '@/web/woke/loot-filter/build-rules'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { applyPresetChanges, defaultPresets, normalizePresets, presetBlocks, PRESET_TYPE } from '@/web/woke/loot-filter/presets'
 import type { Presets } from '@/web/woke/loot-filter/presets'
-import { LEVELS, neverSink } from '../helpers/neversink'
+import { LEVELS, neverSink, neverSinkStyled } from '../helpers/neversink'
 
 function item (f: Partial<ItemFacts>): ItemFacts {
   return {
@@ -117,8 +117,10 @@ const SPECIAL: Array<[string, Partial<ItemFacts>]> = [
   ['enchanted', { itemClass: 'Amulets', baseType: 'Coral Amulet', width: 1, height: 1, anyEnchantment: true, enchantmentPassiveNum: 1 }]
 ]
 
-describe.each(LEVELS)('item tiers preset on %s', level => {
-  const text = neverSink(level)
+const FILES = [...LEVELS, 'VAAL-3-STRICT (style)'] as const
+
+describe.each(FILES)('item tiers preset on %s', level => {
+  const text = level === 'VAAL-3-STRICT (style)' ? neverSinkStyled() : neverSink(level)
   const base = parseFilter(text)
   const docs = new Map([2, 3, 4, 5].map(n => [n, withPresets(text, { lowTiers: { on: true, tier: n } })]))
 
@@ -151,6 +153,32 @@ describe.each(LEVELS)('item tiers preset on %s', level => {
       }
     }
     expect(hidden).toBeGreaterThan(0)
+  })
+
+  it('keeps NeverSink\'s verdict in the app while the item copy shows no tier', () => {
+    // WOKEPOET-153: the copy doesn't carry the tier yet, so the overlay chip
+    // and Preview must not call every map rare hidden.
+    for (const doc of docs.values()) {
+      for (const [, f] of [...PLAIN.map(x => ['', x] as const), ...SPECIAL]) {
+        for (const rarity of RARITIES) {
+          const facts = { ...f, rarity }
+          expect(outcome(doc, facts), `${f.baseType} ${rarity}`).toBe(outcome(base, facts))
+          const brief = (d: FilterDoc) => matchItem(d, item(facts), { brief: true }).visibility
+          expect(brief(doc)).toBe(brief(base))
+        }
+      }
+    }
+  })
+
+  it('writes a file the game reads the same way: no tier means hidden below the line', () => {
+    const doc = parseFilter(serializeFilter(docs.get(3)!))
+    expect(doc.blocks.some(b => b.conditions.some(c => c.assumeMet))).toBe(false)
+    for (const f of PLAIN) {
+      for (const rarity of RARITIES) {
+        const facts = { ...f, rarity, unidentifiedItemTier: 0 }
+        expect(matchItem(doc, item(facts)).visibility, `${f.baseType} ${rarity}`).toBe(shownAnyway(base, facts) ? 'Show' : 'Hide')
+      }
+    }
   })
 
   it('leaves the campaign alone', () => {
@@ -256,6 +284,12 @@ describe('item tiers preset', () => {
     expect(matchItem(doc, item({ ...odd, rarity: 'Magic', unidentifiedItemTier: 1 })).visibility).toBe('Hide')
     expect(matchItem(doc, item({ ...odd, rarity: 'Rare', unidentifiedItemTier: 2 })).visibility).toBe('Hide')
     expect(matchItem(doc, item({ ...odd, rarity: 'Rare', unidentifiedItemTier: 3 })).visibility).toBe('Show')
+    expect(matchItem(doc, item({ ...odd, rarity: 'Rare', unidentifiedItemTier: 3 })).actions).toEqual(matchItem(base, item({ ...odd, rarity: 'Rare', unidentifiedItemTier: 3 })).actions)
+    // No tier in the copy: the app keeps the player's shown catch-all.
+    expect(matchItem(doc, item({ ...odd, rarity: 'Magic' })).visibility).toBe('Show')
+    // In the file the game reads, a drop with no tier fails the kept line too.
+    const file = parseFilter(serializeFilter(doc))
+    expect(matchItem(file, item({ ...odd, rarity: 'Magic', unidentifiedItemTier: 0 })).visibility).toBe('Hide')
     const campaign = item({ ...odd, rarity: 'Magic', unidentifiedItemTier: 1, areaLevel: 60, itemLevel: 60 })
     expect(outcome(doc, campaign)).toBe(outcome(base, campaign))
     expect(validateFilter(doc).map(x => x.message)).toEqual([])

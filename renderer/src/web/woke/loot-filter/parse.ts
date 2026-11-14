@@ -24,6 +24,10 @@ export interface FilterCondition {
   // Read from the file without quotes. A keyword newer than this editor may
   // not take them, so a rewrite keeps the line as it was.
   bare?: boolean
+  // Added by a preset on something the item copy can't show yet (the 3.30
+  // item tier): the app's own verdicts count an unknown as met, so they keep
+  // NeverSink's answer. Never written to the file.
+  assumeMet?: boolean
 }
 
 export interface FilterAction {

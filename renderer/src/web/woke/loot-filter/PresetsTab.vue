@@ -97,7 +97,7 @@
         <WSelect :model-value="String(p.lowTiers.tier)" :options="itemTiers" style="width: 4.5rem;"
           aria-label="Lowest item tier shown" @update:model-value="v => p.lowTiers.tier = Number(v)" />
         <span class="w-dim text-sm">once you're in maps</span>
-        <WInfo text="Uses 3.30's item tiers (2 to 5). Item level 86 and crafting bases, exotic, influenced, fractured, synthesised and veiled gear, 5-links and 6-sockets, the chaos recipe and your build's rules still show." />
+        <WInfo text="Uses 3.30's item tiers (2 to 5), white gear included. Item level 86 and crafting bases, exotic bases, influenced and synthesised rares, fractured and veiled gear, 5-links and 6-sockets, the chaos recipe and your build's rules still show." />
       </div>
     </div>
 
