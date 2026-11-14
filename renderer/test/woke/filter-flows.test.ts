@@ -920,3 +920,14 @@ describe('a change to the safety net with nothing on it', () => {
     expect(store.failed.value).toHaveLength(1)
   })
 })
+
+describe('a change to the safety net while the net is off', () => {
+  it('still reads as broken: the rule will never come', async () => {
+    const { store, config } = await opened(neverSink('1-REGULAR'), {
+      edits: [{ kind: 'visibility', type: 'woke->safety', tier: 'items', visibility: 'Hide', id: 1 }]
+    })
+    config.safetyNet.on = false
+    await store.load()
+    expect(store.failed.value).toHaveLength(1)
+  })
+})

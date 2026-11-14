@@ -128,7 +128,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // new league's first day): a change to it waits for the rule, it isn't broken.
   for (const r of applyEdits(next, cfg.edits.filter(isNetEdit))) {
     const tier = 'tier' in r.edit ? r.edit.tier : undefined
-    const waiting = !r.ok && typeof tier === 'string' && NET_TIER.test(tier) && !next.blocks.some(b => b.type === SAFETY_RULE_TYPE && b.tier === tier)
+    const waiting = !r.ok && cfg.safetyNet.on && typeof tier === 'string' && NET_TIER.test(tier) && !next.blocks.some(b => b.type === SAFETY_RULE_TYPE && b.tier === tier)
     results.set(r.edit.id, waiting ? { ...r, ok: true, blocks: 0, message: 'Waits until the safety net lists something for this rule.' } : r)
   }
   return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }

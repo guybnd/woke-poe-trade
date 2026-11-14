@@ -203,11 +203,11 @@ describe('moves belong to a league', () => {
     expect(inTier('t1')).toContain('Mid One')
   })
 
-  it('drops another league\'s moves without asking, and nothing reads as unsaved', async () => {
+  it('leaves another league\'s moves out of the file, kept in case you go back', async () => {
     const { store, config } = await opened(moved('Mirage'))
     await store.save()
     expect(inTier('t2')).toContain('Mid One')
-    expect(config.priceTiers.moves).toEqual([])
+    expect(config.priceTiers.moves).toHaveLength(1)
     expect(store.dirty.value).toBe(false)
   })
 
@@ -219,12 +219,12 @@ describe('moves belong to a league', () => {
     expect(config.priceTiers.moves[0].league).toBe('Allflame')
   })
 
-  it('undo of the first Apply in a league leaves no old moves behind', async () => {
+  it('undo brings back the old league\'s moves still marked as theirs', async () => {
     const { store, config } = await opened(moved('Mirage'))
     const undo = store.applyPrices([{ ...MOVE, base: 'Mid Two' }])
     undo()
     await store.save()
-    expect(config.priceTiers.moves).toEqual([])
+    expect(config.priceTiers.moves[0].league).toBe('Mirage')
     expect(inTier('t2')).toContain('Mid One')
   })
 
@@ -237,7 +237,8 @@ describe('moves belong to a league', () => {
     await settled()
     expect(inTier('t2')).toContain('Mid One')
     expect(store.dirty.value).toBe(false)
-    expect(config.priceTiers.moves).toEqual([])
+    // Switching back brings them back: only the file left them out.
+    expect(config.priceTiers.moves).toHaveLength(1)
   })
 
   it('applies moves from before leagues, and marks them at the next Apply', async () => {

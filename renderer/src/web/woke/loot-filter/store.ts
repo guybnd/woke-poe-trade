@@ -134,6 +134,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const priceAgeHours = computed(() => prices.updatedAt?.value != null ? (now.value - prices.updatedAt.value) / 3600000 : null)
   const pricesStale = computed(() => (priceAgeHours.value ?? 0) >= STALE_HOURS)
   const pricesTooOld = computed(() => (priceAgeHours.value ?? 0) >= TOO_OLD_HOURS)
+  // Moves made in another league (Standard before launch) stay in the config
+  // but out of the file and out of sight; the first Apply in this league
+  // replaces them. Nothing to tell you about.
   // Problems found by the last save attempt.
   const problems = shallowRef<FilterProblem[]>([])
   const safetyCount = ref(0)
@@ -438,20 +441,6 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     rebuild()
     return () => { cfg().priceTiers.moves = before; rebuild() }
   }
-
-  // Price moves made in another league (Standard before launch) say nothing
-  // about this one's prices: they go, without asking, and new ones come from
-  // this league's prices. Dropping them is not a change of yours to save.
-  function dropOtherLeagueMoves (): void {
-    const league = prices.currentLeague.value
-    if (!league) return
-    const moves = cfg().priceTiers.moves
-    if (!moves.some(m => m.league && m.league !== league)) return
-    const clean = !userDirty()
-    cfg().priceTiers.moves = moves.filter(m => !m.league || m.league === league)
-    if (clean && cfg().savedUserSig != null) cfg().savedUserSig = userSig()
-  }
-  watch(() => prices.currentLeague.value, dropOtherLeagueMoves, { immediate: true })
 
   // Price index updates, or settings that change the net: refresh.
   watch(() => [prices.lookup.value, prices.safety.value, cfg().safetyNet.on, cfg().safetyNet.minChaos, cfg().priceTiers.on, cfg().netDismissed, prices.currentLeague.value], () => {
