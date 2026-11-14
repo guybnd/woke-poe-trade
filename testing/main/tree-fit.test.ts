@@ -155,8 +155,8 @@ describe('atlas tree', () => {
     expect(Math.abs(fit!.oy - want.oy)).toBeLessThan(3)
   })
 
-  it('finds no atlas tree on the passive tree or a play screen', () => {
-    for (const file of ['passive-tree-real-zoomed-in.png', 'passive-tree-real-zoomed-out.png', 'area-mods-real-1.png']) {
+  it('finds no atlas tree on the passive tree or play screens', () => {
+    for (const file of ['passive-tree-real-zoomed-in.png', 'passive-tree-real-zoomed-out.png', 'area-mods-real-1.png', 'map-real-01.png', 'map-real-05.png', 'essence-real-17.png', 'essence-real-22.png', 'stash-general-real.png']) {
       const { px, width, height } = bgra(file)
       expect(fitTree(readScreen(px, width, height), apts, null, ATLAS_FIT), file).toBeNull()
     }

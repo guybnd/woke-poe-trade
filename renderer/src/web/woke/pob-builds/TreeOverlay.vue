@@ -372,7 +372,15 @@ const hotkey = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 // passive tree, or the selected atlas strategy on the atlas tree. The tree
 // last drawn on is tried first, as that's most likely the one open again.
 let atlasFirst = false
+// A press while the last one is still reading the screen is dropped: two
+// reads at once would capture each other's hidden overlay coming back.
+let pressing = false
 async function onHotkey () {
+  if (pressing) return
+  pressing = true
+  try { await press() } finally { pressing = false }
+}
+async function press () {
   if (on.value) { stop(); return }
   const atlas = atlasDrawer()
   if (atlas?.isOn()) { atlas.stop(); return }

@@ -23,7 +23,7 @@ import type { TreeNode } from '../pob-builds/passive-tree'
 import type { BuildLine, BuildPath } from '../pob-builds/tree-overlay'
 import type { AtlasTreeModel } from './atlas-tree'
 import { decodeTree } from './tree'
-import { ATLAS_TYPE, useAtlasData, workingTree } from './widget'
+import { ATLAS_TYPE, retryAtlasData, useAtlasData, workingTree } from './widget'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { atlasOn, registerAtlasDrawer } from './atlas-overlay-toggle'
 
@@ -68,12 +68,15 @@ function selected (): { w: AtlasWidget, s: AtlasStrategy, url: string } | null {
   return url ? { w, s, url } : null
 }
 
-// The atlas tree data, loaded the way the Atlas window loads it.
+// The atlas tree data, loaded the way the Atlas window loads it. A failed
+// download is tried again on the next press.
 async function loadModel (dataUrl: string): Promise<AtlasTreeModel> {
-  const { atlasTree, atlasTreeError, atlasDataError } = useAtlasData(dataUrl)
+  let state = useAtlasData(dataUrl)
+  if (state.atlasDataError.value && !state.atlasTree.value) state = retryAtlasData(dataUrl)
+  const { atlasTree, atlasTreeError, atlasDataError } = state
   if (atlasTree.value) return atlasTree.value
   return await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { stopWatch(); reject(new Error('The atlas tree data is still loading. Try again in a moment.')) }, 20_000)
+    const timer = setTimeout(() => { stopWatch(); reject(new Error('The atlas tree data is still loading. Press again in a moment.')) }, 8_000)
     const stopWatch = watch([atlasTree, atlasTreeError, atlasDataError], ([tree, treeErr, dataErr]) => {
       if (!tree && !treeErr && !dataErr) return
       clearTimeout(timer)
@@ -84,6 +87,8 @@ async function loadModel (dataUrl: string): Promise<AtlasTreeModel> {
   })
 }
 
+// quiet: no note when the atlas tree isn't on screen (the tree hotkey tries
+// the passive tree too). Anything else wrong is always said. Whether it drew.
 async function start (quiet = false): Promise<boolean> {
   const sel = selected()
   if (!sel) { if (!quiet) note('Pick a strategy with an atlas tree in Atlas strategies first.'); return false }
@@ -93,10 +98,10 @@ async function start (quiet = false): Promise<boolean> {
     model = await loadModel(sel.w.dataUrl ?? '')
     ids = decodeTree(sel.url).nodes.filter(id => model!.nodes.has(id) && id !== model!.start)
   } catch (err) {
-    if (!quiet) note((err as Error).message)
+    note((err as Error).message)
     return false
   }
-  if (!ids.length) { if (!quiet) note('The selected strategy has no atlas passives.'); return false }
+  if (!ids.length) { note('The selected strategy has no atlas passives.'); return false }
   if (sentPoints !== model) {
     await hostRequest('atlas-overlay-points', lib.fitPoints(model.nodes))
     sentPoints = model
@@ -157,6 +162,19 @@ async function refit (fresh = false): Promise<boolean> {
     offSent = true
     let extraLit = res.extraLit ?? []
     if (extraLit.length !== offLines.length) { offSent = false; extraLit = [] }
+    // The start's own lines run under its blue art and never read lit. A node
+    // next to the start with another lit line is taken all the same (every
+    // atlas point joins the start), so a branch off the plan from the start
+    // is still found to refund.
+    const litAt = new Set<number>()
+    path.lines.forEach((l, i) => { if (res.lit[i]) { litAt.add(l.a); litAt.add(l.b) } })
+    offLines.forEach((l, i) => { if (extraLit[i]) { litAt.add(l.a); litAt.add(l.b) } })
+    const offStart: number[] = []
+    for (const id of model.links.get(model.start) ?? []) {
+      if (!litAt.has(id)) continue
+      if (keep.has(id)) taken.add(id)
+      else offStart.push(id)
+    }
     // A plan node reached by another lit line is taken all the same.
     offLines.forEach((l, i) => {
       if (!extraLit[i]) return
@@ -164,7 +182,8 @@ async function refit (fresh = false): Promise<boolean> {
       if (keep.has(l.b)) taken.add(l.b)
     })
     left.value = path.nodes.filter(n => !taken.has(n.id)).length
-    refund = offLines.length ? lib.refundNodes(offLines, extraLit, taken, keep) : new Set()
+    refund = offLines.length ? lib.refundNodes(offLines, extraLit, new Set([...taken, ...offStart]), keep) : new Set()
+    for (const id of offStart) refund.add(id)
     refundLit = offLines.filter((l, i) => extraLit[i] && (refund.has(l.a) || refund.has(l.b)))
     refundLeft.value = refund.size
     shown.value = true
