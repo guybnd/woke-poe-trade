@@ -76,13 +76,21 @@
     </div>
 
     <div class="w-group-label" :class="$style.label">Valuable items your filter hides or shows small</div>
-    <WEmpty v-if="!rows.length" icon="fas fa-check">Nothing worth {{ Math.min(config.safetyNet.minChaos, 10) }}c or more is hidden or shown small.</WEmpty>
-    <div v-if="rows.length" class="w-dim text-xs" :class="$style.summary">
+    <WEmpty v-if="!shown.length" icon="fas fa-check">Nothing worth {{ Math.min(config.safetyNet.minChaos, 10) }}c or more is hidden or shown small.</WEmpty>
+    <div v-if="shown.length" class="w-dim text-xs" :class="$style.summary">
       {{ hiddenCount }} hidden<template v-if="caughtCount">; your {{ config.safetyNet.minChaos }}c safety net still shows {{ caughtCount }}</template>
       <WInfo text="Click one to see what you'd get." />
     </div>
-    <template v-for="r in rows" :key="r.key">
-      <button v-item-tip="baseTip(r.v.group.type, r.v.base)" type="button" class="w-focusable" :class="[$style.row, $style.healthRow, { [$style.open]: openRow === r.key }]" :aria-expanded="openRow === r.key" @click="openRow = openRow === r.key ? null : r.key">
+    <template v-for="r in shown" :key="r.key">
+      <div v-if="done.has(r.key)" :class="[$style.row, $style.doneRow]">
+        <img v-if="r.icon" :src="r.icon" :class="$style.art" alt="">
+        <span class="w-trunc text-sm">{{ r.v.base }}</span>
+        <i class="fas fa-check w-faint text-xs" />
+        <span class="w-dim text-xs w-trunc">{{ done.get(r.key)?.text }}</span>
+        <span class="grow" />
+        <WButton size="sm" variant="ghost" icon="fas fa-undo" :aria-label="`Undo for ${r.v.base}`" @click="undoDone(r.key)">Undo</WButton>
+      </div>
+      <button v-else v-item-tip="baseTip(r.v.group.type, r.v.base)" type="button" class="w-focusable" :class="[$style.row, $style.healthRow, { [$style.open]: openRow === r.key }]" :aria-expanded="openRow === r.key" @click="openRow = openRow === r.key ? null : r.key">
         <img v-if="r.icon" :src="r.icon" :class="$style.art" alt="">
         <LabelPreview :text="r.v.base" :actions="r.v.block?.actions ?? []" :visibility="r.v.state === 'hidden' ? 'Hide' : 'Show'" :extras="false" />
         <span class="w-trunc text-xs" :class="$style.who">
@@ -96,7 +104,7 @@
         <WPrice :chaos="r.v.chaos" :divine="divine" />
         <i :class="openRow === r.key ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="w-faint text-xs" />
       </button>
-      <div v-if="openRow === r.key" :class="$style.detail">
+      <div v-if="openRow === r.key && !done.has(r.key)" :class="$style.detail">
         <div class="min-w-0">
           <div class="text-sm" :class="$style.detailHead">{{ r.items.length > 1 ? `What you'd get: ${r.items.length} uniques on this base` : 'What you\'d get' }}</div>
           <div v-for="i in r.items" :key="i.name" :class="$style.priceRow">
@@ -113,8 +121,8 @@
           <div class="text-sm" :class="$style.detailHead">"Show it" will</div>
           <div v-for="(line, n) in r.effect" :key="n" class="w-dim text-xs">{{ line }}</div>
           <div class="flex flex-wrap items-center gap-1" style="margin-top: 6px;">
-            <WButton size="sm" variant="primary" @click="showIt(r.v)">Show it</WButton>
-            <WButton size="sm" variant="ghost" :title="r.v.state === 'hidden' ? 'Stays hidden, and off this list, until its price doubles' : 'Off this list until its price doubles'" @click="dismiss(r.v)">Not for me</WButton>
+            <WButton size="sm" variant="primary" @click="showIt(r)">Show it</WButton>
+            <WButton size="sm" variant="ghost" :title="r.v.state === 'hidden' ? 'Stays hidden, and off this list, until its price doubles' : 'Off this list until its price doubles'" @click="dismiss(r)">Not for me</WButton>
             <WButton v-if="r.v.block?.type && r.v.block.tier" size="sm" variant="ghost" icon="fas fa-external-link-alt" @click="emit('open-rule', { type: r.v.block!.type!, tier: r.v.block!.tier!, base: r.v.base })">Open the rule</WButton>
           </div>
         </div>
@@ -198,22 +206,88 @@ function itemIcon (v: { group: { unique?: boolean, ninja: string[] } }, name: st
   return v.group.unique ? gameIcon(name, 'UNIQUE') : ninjaIcon(v.group.ninja[0], name)
 }
 
-function dismiss (v: BaseVerdict) {
+// Show it and Not for me act in place: the row stays as a done line with Undo,
+// and the next one opens. Their saves hold the game's reload (Reload now in the
+// footer): typing /itemfilter hands focus to the game, which closes this window.
+type HealthRow = (typeof rows.value)[number]
+interface Done { row: HealthRow, at: number, text: string, undo: () => void, live: () => boolean }
+const done = reactive(new Map<string, Done>())
+// A done line whose step something else took back (history, Reset, an edit)
+// goes, and the live row shows again.
+const doneNow = computed(() => [...done.entries()].filter(([, d]) => d.live()))
+watch(doneNow, (list) => {
+  if (list.length === done.size) return
+  const keep = new Set(list.map(([k]) => k))
+  for (const k of [...done.keys()]) if (!keep.has(k)) done.delete(k)
+})
+const shown = computed(() => {
+  const keys = new Set(doneNow.value.map(([k]) => k))
+  const list: HealthRow[] = rows.value.filter(r => !keys.has(r.key))
+  for (const [, d] of doneNow.value.slice().sort(([, a], [, b]) => a.at - b.at)) list.splice(Math.min(d.at, list.length), 0, d.row)
+  return list
+})
+
+function quietSave () {
+  props.store.save({ auto: true }).catch(() => {})
+}
+
+// Where the row sits and which one opens next, read before the step changes
+// the list.
+function placeOf (r: HealthRow): { at: number, next: string | null } {
+  const list = shown.value
+  const at = list.findIndex(x => x.key === r.key)
+  const open = (x: HealthRow) => x.key !== r.key && !done.has(x.key)
+  const next = (at < 0 ? undefined : list.slice(at + 1).find(open)) ?? list.find(open)
+  return { at: at < 0 ? list.length : at, next: next?.key ?? null }
+}
+
+function markDone (r: HealthRow, place: { at: number, next: string | null }, d: Omit<Done, 'row' | 'at'>) {
+  done.set(r.key, { row: r, at: place.at, ...d })
+  openRow.value = place.next
+}
+
+function undoDone (key: string) {
+  const d = done.get(key)
+  if (!d) return
+  done.delete(key)
+  d.undo()
+  openRow.value = key
+}
+
+// Puts back only this one key, so undoing one row keeps later rows' steps.
+function restoreKey (map: Record<string, number>, key: string, had: boolean, was: number | undefined): Record<string, number> {
+  const next = Object.fromEntries(Object.entries(map).filter(([k]) => k !== key))
+  if (had && was != null) next[key] = was
+  return next
+}
+
+function dismiss (r: HealthRow) {
+  const v = r.v
   const key = healthKey(v)
-  const before = props.config.healthDismissed
-  const netBefore = props.config.netDismissed
-  props.config.healthDismissed = { ...before, [key]: v.chaos }
-  const undo = () => {
-    props.config.healthDismissed = before
-    props.config.netDismissed = netBefore
-  }
+  const place = placeOf(r)
+  const had = key in props.config.healthDismissed
+  const was = props.config.healthDismissed[key]
+  const netHad = key in props.config.netDismissed
+  const netWas = props.config.netDismissed[key]
+  props.config.healthDismissed = { ...props.config.healthDismissed, [key]: v.chaos }
   // Only a hidden item has a net rule to take back, and that's in the file.
-  if (v.state === 'hidden') {
-    props.config.netDismissed = { ...netBefore, [key]: v.chaos }
-    moved(`${v.base} stays hidden until its price doubles`, undo)
-  } else {
-    toast(`${v.base} is off this list until its price doubles`, { anchor: props.anchor, undo })
+  const inFile = v.state === 'hidden'
+  if (inFile) {
+    props.config.netDismissed = { ...props.config.netDismissed, [key]: v.chaos }
+    quietSave()
   }
+  markDone(r, place, {
+    text: inFile ? 'stays hidden till its price doubles' : 'off the list till its price doubles',
+    // Read props.config when it runs: Settings can swap the whole object.
+    live: () => key in props.config.healthDismissed,
+    undo: () => {
+      props.config.healthDismissed = restoreKey(props.config.healthDismissed, key, had, was)
+      if (inFile) {
+        props.config.netDismissed = restoreKey(props.config.netDismissed, key, netHad, netWas)
+        quietSave()
+      }
+    }
+  })
 }
 
 const dockNotice = computed(() => !TURN_OFF_IDS.every(id => props.config.noticesOff.includes(id)))
@@ -324,10 +398,44 @@ function moveMenu (e: MouseEvent, m: PriceMove) {
 }
 
 // Own rule for the base: shown, in the safety net's look.
-function showIt (v: BaseVerdict) {
+function showIt (r: HealthRow) {
+  const v = r.v
   const b = v.block
   if (!b?.type || !b.tier) return
-  moved(`${v.base} now shows`, props.store.editWithUndo({ kind: 'item', type: b.type, tier: b.tier, base: v.base, visibility: 'Show', patch: v.state === 'hidden' ? SAFETY_LOOK : { fontSize: 40 }, anchor: conditionSignature(b), pin: true }))
+  const place = placeOf(r)
+  const before = props.config.edits
+  props.store.editWithUndo({ kind: 'item', type: b.type, tier: b.tier, base: v.base, visibility: 'Show', patch: v.state === 'hidden' ? SAFETY_LOOK : { fontSize: 40 }, anchor: conditionSignature(b), pin: true })
+  const step = editStep(before, props.config.edits)
+  quietSave()
+  markDone(r, place, {
+    text: 'shows now',
+    live: () => props.config.edits.some(e => step.ids.has(e.id)),
+    undo: () => {
+      props.store.changeWithUndo(c => { c.edits = undoEditStep(c.edits, step) })
+      quietSave()
+    }
+  })
+}
+
+// What one step did to the edit list, by id: edits it added or changed (with
+// what they were), and edits it dropped.
+interface EditStep<T> { ids: Set<number>, was: Map<number, T>, dropped: Array<{ at: number, e: T }> }
+function editStep<T extends { id: number }> (before: T[], after: T[]): EditStep<T> {
+  const old = new Map(before.map(e => [e.id, e]))
+  const afterIds = new Set(after.map(e => e.id))
+  const changed = after.filter(e => old.get(e.id) !== e)
+  return {
+    ids: new Set(changed.map(e => e.id)),
+    was: new Map(changed.filter(e => old.has(e.id)).map(e => [e.id, old.get(e.id)!])),
+    dropped: before.flatMap((e, at) => afterIds.has(e.id) ? [] : [{ at, e }])
+  }
+}
+
+// Takes back only that step: anything changed after it stays as it is.
+function undoEditStep<T extends { id: number }> (now: T[], step: EditStep<T>): T[] {
+  const out = now.flatMap(e => !step.ids.has(e.id) ? [e] : step.was.has(e.id) ? [step.was.get(e.id)!] : [])
+  for (const { at, e } of step.dropped) if (!out.some(x => x.id === e.id)) out.splice(Math.min(at, out.length), 0, e)
+  return out
 }
 </script>
 
@@ -404,6 +512,7 @@ function showIt (v: BaseVerdict) {
 .healthRow:hover { background: var(--w-panel-2); }
 .open { background: var(--w-accent-soft); }
 .who { min-width: 0; }
+.doneRow { opacity: 0.75; }
 .trash { color: var(--w-down); white-space: nowrap; }
 .detail {
   display: grid;
