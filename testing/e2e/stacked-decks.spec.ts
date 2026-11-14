@@ -46,6 +46,9 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   await expect(stats.locator('[data-stat="spent"]')).toHaveText('6 c', { timeout: 15_000 })
   await expect(stats.locator('[data-stat="got"]')).toHaveText('1.5 c')
   await expect(stats.locator('[data-stat="result"]')).toHaveText('-4.5 c')
+  // Both are under 2c: folded into one line, still counted.
+  await expect(icon.locator('[data-deck="card"]')).toHaveCount(0)
+  await expect(icon.locator('[data-deck="cheap"]')).toContainText('2 cards under 2 c')
 
   await overlay.log([card('The Doctor')])
   const hit = page.locator('[data-deck="big-hit"]')
@@ -75,6 +78,25 @@ test('cards from the log add up on the dock card, and a big hit pops up', async 
   await expect(icon).toBeVisible()
   await overlay.hoverDockIcon('stacked-decks')
   await expect(stats.locator('[data-stat="opened"]')).toHaveText('1')
+})
+
+test('cheap cards can be left out of Got and Result', async ({ overlay, page }) => {
+  await routePrices(page)
+  await overlay.boot({ patch: tracker({ countCheap: false }) })
+  await overlay.log([card('Rain of Chaos'), card('The Lover')])
+  const icon = overlay.dockIcon('stacked-decks')
+  await expect(icon).toBeVisible()
+  await overlay.hoverDockIcon('stacked-decks')
+  const stats = icon.locator('[data-deck="stats"]')
+  await expect(stats.locator('[data-stat="spent"]')).toHaveText('6 c', { timeout: 15_000 })
+  await expect(stats.locator('[data-stat="got"]')).toHaveText('0 c')
+  await expect(stats.locator('[data-stat="result"]')).toHaveText('-6 c')
+  const fold = icon.locator('[data-deck="cheap"]')
+  await expect(fold).toContainText('not counted')
+  const box = await fold.boundingBox()
+  await overlay.moveMouse(Math.round(box!.x + box!.width / 2), Math.round(box!.y + box!.height / 2))
+  await fold.click()
+  await expect(icon.locator('[data-deck="cheap-card"]')).toHaveCount(2)
 })
 
 test('a quiet session is saved and shows in Session analytics', async ({ overlay, page }) => {

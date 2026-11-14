@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  IDLE_END_MS, MAX_SIMULATED_DECKS, REPLAY_MAX_MS, calibration, markSeen, replaySince, expectedValue, isBigHit, isOver, luckPercentile, openOrSell, ownAverage,
+  DEFAULT_CHEAP_UNDER, IDLE_END_MS, MAX_SIMULATED_DECKS, cardFilterOf, REPLAY_MAX_MS, calibration, markSeen, replaySince, expectedValue, isBigHit, isOver, luckPercentile, openOrSell, ownAverage,
   parseCardLine, recordPrice, runningResult, startSession, toRecord, totals
 } from '@/web/woke/stacked-decks/deck'
 import type { PriceOf } from '@/web/woke/stacked-decks/deck'
@@ -46,6 +46,54 @@ describe('totals', () => {
     expect(t.spent).toBeNull()
     expect(t.result).toBeNull()
     expect(t.withoutTop).toBeNull()
+  })
+})
+
+describe('cheap cards', () => {
+  const draws = ['Rain of Chaos', 'Rain of Chaos', 'The Doctor', 'Her Mask', 'Unknown Card']
+
+  it('defaults to under 2c, counted, for old configs too', () => {
+    expect(cardFilterOf({})).toEqual({ under: DEFAULT_CHEAP_UNDER, count: true })
+    expect(cardFilterOf(undefined)).toEqual({ under: 2, count: true })
+    expect(cardFilterOf({ cheapUnder: 0, countCheap: false })).toEqual({ under: 0, count: false })
+    expect(cardFilterOf({ cheapUnder: NaN })).toEqual({ under: 2, count: true })
+  })
+
+  it('folds cards under the cut-off out of the list but keeps them in the totals', () => {
+    const t = totals(draws, price, 3, { under: 2, count: true })
+    expect(t.rows.map(r => r.name)).toEqual(['The Doctor', 'Her Mask', 'Unknown Card'])
+    expect(t.cheap.map(r => r.name)).toEqual(['Rain of Chaos'])
+    expect(t.cheapQty).toBe(2)
+    expect(t.cheapChaos).toBe(1)
+    expect(t.got).toBe(903)
+    expect(t.result).toBe(888)
+  })
+
+  it('leaves them out of Got and Result when not counted', () => {
+    const t = totals(draws, price, 3, { under: 2, count: false })
+    expect(t.got).toBe(902)
+    expect(t.result).toBe(887)
+    expect(t.withoutTop).toBe(887 - 900)
+    expect(t.unpriced).toBe(1)
+  })
+
+  it('never takes a top card that is left out', () => {
+    const t = totals(['Rain of Chaos', 'The Lover'], price, 1, { under: 2, count: false })
+    expect(t.top).toBeNull()
+    expect(t.result).toBe(-2)
+    expect(t.withoutTop).toBe(-2)
+  })
+
+  it('lists every card at 0', () => {
+    const t = totals(draws, price, 3, { under: 0, count: false })
+    expect(t.cheapQty).toBe(0)
+    expect(t.got).toBe(903)
+  })
+
+  it('leaves them out of the chart only when not counted', () => {
+    const d = ['Rain of Chaos', 'The Doctor', 'Her Mask']
+    expect(runningResult(d, price, 3, 120, { under: 2, count: true })).toEqual([-2.5, 894.5, 893.5])
+    expect(runningResult(d, price, 3, 120, { under: 2, count: false })).toEqual([-3, 894, 893])
   })
 })
 

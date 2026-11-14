@@ -5,7 +5,7 @@
       :glow="opening" :wm-id="config.wmId" :menu="dockMenu" card-width="22rem">
       <template #card>
         <div v-if="session" :class="$style.card">
-          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :limit="8" :chart-width="320" />
+          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :limit="8" :chart-width="320" />
           <!-- The dock adds "Open Stacked decks" (the window) under this. -->
           <div :class="$style.actions">
             <button type="button" :class="$style.action" @click="newSession(true)"><i class="fas fa-redo text-xs" /> New session</button>
@@ -22,7 +22,7 @@
             <span class="w-dim text-xs grow">since {{ clock(session.startedAt) }}</span>
             <WButton size="sm" variant="ghost" icon="fas fa-redo" @click="newSession(false)">New session</WButton>
           </div>
-          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :luck="luck" />
+          <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" :luck="luck" />
         </template>
         <template v-else>
           <WEmpty :art="{ item: STACKED_DECK }">Open a Stacked Deck in game to start a session. It ends after 15 minutes without a card.</WEmpty>
@@ -31,7 +31,7 @@
               <span class="w-accent font-medium">Last session</span>
               <span class="w-dim text-xs">{{ clock(lastRecord.startedAt) }}</span>
             </div>
-            <DeckSummary :draws="lastRecord.draws" :price="recordPrice(lastRecord)" :deck-chaos="lastRecord.deckChaos" :divine="lastRecord.divine" :limit="12" />
+            <DeckSummary :draws="lastRecord.draws" :price="recordPrice(lastRecord)" :deck-chaos="lastRecord.deckChaos" :divine="lastRecord.divine" :filter="filter" :limit="12" />
           </template>
         </template>
         <OwnAverageLine :records="store.records.value" :price="price" :deck-chaos="deckChaos" :divine="divine" />
@@ -78,7 +78,7 @@ import { followGameLog } from '../shared/game-log'
 import { lineTime } from '../campaign/log-tail'
 import DeckSummary from './DeckSummary.vue'
 import OwnAverageLine from './OwnAverageLine.vue'
-import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, recordPrice, replaySince, startSession, toRecord, totals } from './deck'
+import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, cardFilterOf, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, recordPrice, replaySince, startSession, toRecord, totals } from './deck'
 import type { StackedDecksWidget } from './deck'
 import { useDeckPrices, useLuck } from './prices'
 import { useDeckStore } from './store'
@@ -110,6 +110,8 @@ const session = computed(() => props.config.session)
 const sessionDeck = computed(() => session.value?.deckChaos ?? deckChaos.value)
 const sessionDivine = computed(() => session.value?.divine ?? divine.value)
 const lastRecord = computed(() => store.records.value[0] ?? null)
+// Cards under the cut-off fold into one line, and may leave the totals.
+const filter = computed(() => cardFilterOf(props.config))
 
 // --- Saving: cards can come several a second, so the config is saved a
 // moment after the last one (and on quit), not on every card. ---
@@ -266,7 +268,7 @@ followGameLog({
     fetchPrices()
     saveSoon()
     if (best && props.config.session) {
-      best.result = totals(props.config.session.draws, price.value, sessionDeck.value).result
+      best.result = totals(props.config.session.draws, price.value, sessionDeck.value, filter.value).result
       showHit(best)
     }
   }
