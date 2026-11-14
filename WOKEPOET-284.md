@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-284
 title: 'Price check: a unique priced by name gets its mods as stat rows'
-status: In Progress
+status: Ready
 priority: Medium
 effort: None
 assignee: unassigned
@@ -14,6 +14,24 @@ history:
     user: Agent
     date: '2026-11-14T05:25:15.873Z'
     comment: Created ticket.
+    id: a-2026-11-14t05-25-15-873z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/445: unique mods from the
+      tooltip data become stat rows, all unticked. Adversarial review found 6
+      issues (auto-ticks, another base's mods, choice lines, seeds, negative
+      ranges, filter chip), all fixed and tested. Local checks, e2e and JS
+      budgets pass.
+    date: '2026-11-14T05:41:17.745Z'
+    completionComment: true
+    id: c-2026-11-14t05-41-17-745z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-14T05:41:17.745Z'
+needsAction: null
 ---
 Guy: "why cant i get any of the stats to filter when i price check from a searched item". A unique priced from Ctrl+Space search or the item menu had no game text, so it had no stat rows to filter on.
 
