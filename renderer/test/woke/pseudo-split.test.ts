@@ -145,16 +145,13 @@ Item Level: 84
     expect(tierBound(dex)).toBe(30)
   })
 
-  it('splits a fractured mod out of a total though its hidden Fractured twin is listed', () => {
+  it('totals on a fractured item leave its fractured mod out', () => {
     const item = parseItem(fixture('items/rare-ring-fractured.txt').replace(
       '{ Suffix Modifier "of the Volcano" (Tier: 3)',
       '{ Fractured Suffix Modifier "of the Volcano" (Tier: 3)'))
     const stats: FilterOrGroup[] = initUiModFilters(item, { searchStatRange: 10 })
-    const twin = stats.find((s): s is StatFilter => !s.group && s.tag === 'fractured' && s.statRef === '+#% to Fire Resistance')
-    expect(twin?.hidden).toBeTruthy()
     const total = stats.find((s): s is StatFilter => !s.group && s.statRef === '+#% total Elemental Resistance')!
-    const fire = splitFilters(total, stats, item, 10).find(p => p.statRef === '+#% to Fire Resistance')
-    expect(fire?.tag).toBe('explicit')
-    expect(fire?.roll?.value).toBe(38)
+    expect(total.sources.some(s => s.modifier.info.type === 'fractured')).toBe(false)
+    expect(splitFilters(total, stats, item, 10).some(p => p.statRef === '+#% to Fire Resistance' && p.roll?.value === 38)).toBe(false)
   })
 })

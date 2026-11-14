@@ -164,14 +164,20 @@ export function initUiModFilters (
     filterBasePercentile(ctx)
   }
   filterMemoryStrands(ctx, 'hide_memory_strands')
+  // woke: a fractured item's fractured mod is what it's worth: no total takes it
+  // in (the totals are made of the other mods), and it gets its own row,
+  // searched as fractured (promoteFractured).
+  const fracCalcs = item.isFractured ? ctx.statsByType.filter(isFracturedCalc) : []
+  ctx.statsByType = ctx.statsByType.filter(c => !fracCalcs.includes(c))
   if (item.info.refName !== 'Split Personality') {
     filterPseudo(ctx)
   }
+  ctx.statsByType.push(...fracCalcs)
   if (item.uniqueBase?.refName === 'Timeless Jewel') {
     filterTimelessJewelKeystones(ctx)
   }
 
-  if (!item.isCorrupted && !item.isMirrored) {
+  if (!item.isFractured && !item.isCorrupted && !item.isMirrored) {
     ctx.statsByType = ctx.statsByType.filter(mod => mod.type !== ModifierType.Fractured)
     ctx.statsByType.push(...item.statsByType.filter(mod => mod.type === ModifierType.Fractured))
   }
@@ -196,8 +202,35 @@ export function initUiModFilters (
     ctx.groups.forEach(group => { group.meta.disabled = true })
   }
   addInTotalMods(ctx)
+  promoteFractured(ctx)
 
   return [...ctx.filters, ...ctx.groups]
+}
+
+const allFractured = (sources: StatSource[]) =>
+  sources.length > 0 && sources.every(s => s.modifier.info.type === ModifierType.Fractured)
+const isFracturedCalc = (calc: StatCalculated) => allFractured(calc.sources)
+
+// woke: Guy's pick (2026-11-14): on a fractured item the fractured mod leads.
+// Its rows (one per stat line, a local one too) move to the top under the
+// properties, ticked, searching the fractured copy; PoE mode's "Fractured only"
+// switches a row back to any copy.
+function promoteFractured (ctx: FiltersCreationContext) {
+  const { item } = ctx
+  if (!item.isFractured) return
+  const rows = ctx.filters.filter(f =>
+    f.tag !== FilterTag.Property && f.tag !== FilterTag.Pseudo && !f.not && allFractured(f.sources))
+  if (!rows.length) return
+  for (const f of rows) {
+    const ids = f.sources[0].stat.stat.trade.ids[ModifierType.Fractured]
+    if (ids?.length) f.tradeId = ids
+    f.hidden = undefined
+    f.inTotal = undefined
+    if (!item.rollsFromData) f.disabled = false
+  }
+  const rest = ctx.filters.filter(f => !rows.includes(f))
+  const props = rest.filter(f => f.tag === FilterTag.Property)
+  ctx.filters = [...props, ...rows, ...rest.filter(f => f.tag !== FilterTag.Property)]
 }
 
 // woke: the local mods a property total is made of (+57 to maximum Energy Shield,

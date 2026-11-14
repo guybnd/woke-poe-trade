@@ -44,12 +44,13 @@ describe('local mods in a property total', () => {
 describe('local mods in a property total, other uses', () => {
   beforeAll(loadGameData)
 
-  it('a fractured local mod is listed once', () => {
+  it('a fractured local mod is listed once, as the leading fractured row', () => {
     const list = rows('rare-fractured.txt')
-    const local = list.filter(f => f.inTotal)
-    expect(local.length).toBeGreaterThan(0)
-    for (const f of local) {
+    const frac = list.filter(f => f.tradeId[0]?.startsWith('fractured.'))
+    expect(frac.length).toBeGreaterThan(0)
+    for (const f of frac) {
       expect(list.filter(o => o.sources === f.sources)).toHaveLength(1)
+      expect(f.inTotal).toBeFalsy()
     }
   })
 
