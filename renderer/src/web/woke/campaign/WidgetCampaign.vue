@@ -76,11 +76,12 @@ import { wheelStep } from '../dock/wheel'
 import { reportProblem } from '../dock/health'
 import { pinnedReadouts, pinsTick } from './pins'
 import { actFromAreaId, actLabel, isTown, isTrialFinished } from './log-parse'
+import { bossKilled } from './boss-lines'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
 import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnKill, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { areaName, bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -407,6 +408,19 @@ function applyTrialDone (at: number): boolean {
   return true
 }
 
+// A boss's dead line (Sin naming the god, say) ticks off that kill step,
+// in campaign zones only.
+function applyBossDone (line: string, at: number): boolean {
+  const state = props.config.state
+  if (state.asleep || actFromAreaId(state.areaId) == null) return false
+  const kill = bossKilled(line, state.areaId)
+  if (kill == null) return false
+  const step = advanceOnKill(route.value, props.config.step, state.areaId, kill)
+  if (step === props.config.step) return false
+  stepChanged(step, at)
+  return true
+}
+
 // Level-ups in a row by one other character, and when the followed one last
 // levelled (log time; see shouldSwitch).
 let streak = 0
@@ -458,7 +472,7 @@ function applyLines (lines: LogLine[]) {
   let changed = false
   let at = 0
   for (const { line, ev, at: lineAt } of lines) {
-    if (ev ? apply(ev, lineAt) : (isTrialFinished(line) && applyTrialDone(lineAt))) { changed = true; at = lineAt }
+    if (ev ? apply(ev, lineAt) : (isTrialFinished(line) ? applyTrialDone(lineAt) : applyBossDone(line, lineAt))) { changed = true; at = lineAt }
   }
   if (changed) {
     now.value = Date.now()

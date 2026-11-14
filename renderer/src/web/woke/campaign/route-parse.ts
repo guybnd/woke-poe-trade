@@ -60,6 +60,12 @@ function defines (opts: RouteOptions): Set<string> {
   return set
 }
 
+// "Ryslatha, the Puppet Mistress" reads as "Ryslatha" on the card: the
+// title after the comma only makes the step too long for the pill.
+export function shortBossName (name: string): string {
+  return name.split(',')[0].replace(/^High Templar /, '').trim()
+}
+
 interface ParseState {
   area: string
   lastTown: string
@@ -91,7 +97,7 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
       }
       case 'area': return { kind: 'area', text: areaName(args[0]) }
       case 'arena': return { kind: 'area', text: args[0] }
-      case 'kill': return { kind: 'kill', text: args[0] }
+      case 'kill': return { kind: 'kill', text: shortBossName(args[0]) }
       case 'logout':
         enterArea(state.lastTown)
         state.portalArea = null
@@ -267,6 +273,23 @@ export function advanceOnTrial (route: Route, current: number, areaId: string): 
     const step = route.steps[i]
     if (step.areaBefore !== areaId) break
     if (step.parts.some(isTrialPart)) return i + 1
+  }
+  return current
+}
+
+// A boss-dead line for `kill` while in `areaId`: the step past that kill
+// coming up in the area, or `current` when there is none. Steps without a
+// kill in between are passed over (a crafting stop); another boss's kill
+// step is never skipped, so a boss done out of order (the Harvest's three)
+// leaves the route where it is.
+export function advanceOnKill (route: Route, current: number, areaId: string, kill: string): number {
+  const end = Math.min(route.steps.length, current + LOOKAHEAD)
+  for (let i = current; i < end; i++) {
+    const step = route.steps[i]
+    if (step.areaBefore !== areaId) break
+    const kills = step.parts.filter(p => p.kind === 'kill')
+    if (kills.some(p => p.text === kill)) return i + 1
+    if (kills.length) break
   }
   return current
 }

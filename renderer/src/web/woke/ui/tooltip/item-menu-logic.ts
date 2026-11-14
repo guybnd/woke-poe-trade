@@ -1,11 +1,13 @@
 // What the right-click item menu does with an item, apart from the overlay:
 // what the price check reads and what the trade site searches.
 import { ITEM_BY_REF } from '@/assets/data'
+import { StatBetter } from '@/assets/data/interfaces'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
 import type { ParsedItem } from '@/parser/ParsedItem'
 import { ItemCategory } from '@/parser/meta'
-import type { TipKind } from './tip-content'
+import { parseClipboard } from '@/parser/Parser'
+import type { TipKind, TipUnique } from './tip-content'
 
 export function kindOfName (name: string): TipKind {
   if (name.startsWith('Foulborn ') || ITEM_BY_REF('UNIQUE', name)?.length) return 'unique'
@@ -82,20 +84,119 @@ export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 // A unique as the price check gets it from game text: with its base and the
 // base's category. Without the base the trade search sends the unique's name
 // as the base type, and the trade site answers "Unknown item base type".
-export function virtualUnique (info: BaseType): ParsedItem {
+//
+// With the tooltip data's mods (`mods`, English only), the unique also gets
+// them as stat rows, at the bottom of each roll range: the price check can
+// then filter by them though no rolls were copied. Every row starts unticked
+// (`rollsFromData`), as a low roll could look like a best one.
+export function virtualUnique (info: BaseType, mods?: UniqueModLines | null): ParsedItem {
   const uniqueBase = info.unique ? ITEM_BY_REF('ITEM', info.unique.base)?.[0] : undefined
+  // The data has one base's mods for a unique on several (Grand Spectrum).
+  if (mods && uniqueBase && mods.base === uniqueBase.refName) {
+    const item = parseUniqueMods(info, uniqueBase, mods)
+    if (item) return item
+  }
   return createVirtualItem({ rarity: ItemRarity.Unique, info, uniqueBase, category: uniqueBase?.craftable?.category })
+}
+
+function parseUniqueMods (info: BaseType, uniqueBase: BaseType, mods: UniqueModLines): ParsedItem | null {
+  const read = (lines: UniqueModLines) => {
+    const parsed = parseClipboard(uniqueItemText(info.refName, uniqueBase.refName, uniqueBase.craftable?.category, lines))
+    return (parsed.isOk() && parsed.value.info.refName === info.refName) ? parsed.value : null
+  }
+  const lines = {
+    ...mods,
+    implicits: mods.implicits.filter(plainRange),
+    explicits: mods.explicits.filter(plainRange)
+  }
+  const first = read(lines)
+  // One mod per line, in order, as the text was written.
+  const all = [...lines.implicits, ...lines.explicits]
+  if (!first || first.newMods.length !== all.length) return null
+  // A stat on more than one line is a choice the data lists in full (1 or 2
+  // abyssal sockets, increased or reduced): the item has one of them, so the
+  // sum would be wrong. A stat that isn't a roll (a jewel's seed) has no
+  // meaningful lowest value. Both stay out.
+  // Counted per section: an implicit and an explicit of one stat (Headhunter's
+  // life) are both on the item.
+  const keyOf = (i: number, ref: string) => `${i < lines.implicits.length ? 'i' : 'e'}:${ref}`
+  const lineCount = new Map<string, number>()
+  first.newMods.forEach((mod, i) => {
+    for (const ref of new Set(mod.stats.map(s => s.stat.ref))) lineCount.set(keyOf(i, ref), (lineCount.get(keyOf(i, ref)) ?? 0) + 1)
+  })
+  const keep = first.newMods.map((mod, i) => mod.stats.every(s =>
+    lineCount.get(keyOf(i, s.stat.ref)) === 1 && s.stat.better !== StatBetter.NotComparable))
+  const kept = keep.every(Boolean)
+    ? first
+    : read({
+        ...lines,
+        implicits: lines.implicits.filter((_, i) => keep[i]),
+        explicits: lines.explicits.filter((_, i) => keep[lines.implicits.length + i])
+      })
+  if (!kept) return null
+  // A line the parser can't read stays out: on a real copy it would be the
+  // game's wording, here it is only the data's.
+  return { ...kept, unknownModifiers: [], rollsFromData: true }
+}
+
+// A negative range ("-(30-20)%", "+(-13-13)%") has no lowest roll the parser
+// reads the same way, so the line stays out.
+function plainRange (line: string) {
+  return !/-\(|\(-/.test(line)
+}
+
+// `base`: the base whose mods these are.
+export interface UniqueModLines { base: string, implicits: string[], explicits: string[] }
+const MOST_IMPLICITS = 4
+const MOST_EXPLICITS = 12
+
+// A unique's mods from the tooltip data. Without a known variant, only the
+// mods every variant has, so none is claimed that the item may not have.
+export function uniqueModLines (tip: TipUnique | undefined, variant?: string): UniqueModLines | null {
+  if (!tip?.v.length) return null
+  const rows = (variant && tip.v.find(r => r.n === variant)) ? [tip.v.find(r => r.n === variant)!] : tip.v
+  const common = (pick: (r: TipUnique['v'][number]) => string[] | undefined) =>
+    (pick(rows[0]) ?? []).filter(line => rows.every(r => pick(r)?.includes(line)))
+  // Past these the data lists a pool to pick from (jewels, Watcher's Eye), not
+  // what one item has (as tip-content.ts's tooltip cut).
+  const implicits = common(r => r.i).length > MOST_IMPLICITS ? [] : common(r => r.i)
+  const explicits = common(r => r.e).length > MOST_EXPLICITS ? [] : common(r => r.e)
+  return implicits.length || explicits.length ? { base: tip.b, implicits, explicits } : null
+}
+
+// "[Keyword|Shown]" and "[Keyword]" are links in the data, plain text in game.
+function unlink (line: string) {
+  return line.replace(/\[([^\]|]*)\|([^\]]*)\]/g, '$2').replace(/\[([^\]]*)\]/g, '$1')
+}
+
+// A range "(75-100)" as the game's advanced copy writes a roll: "75(75-100)".
+function lowestRoll (line: string) {
+  return line.replace(/\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g, (range, low: string) => `${low}${range}`)
+}
+
+// Game text as Ctrl+Alt+C gives it, which the item parser reads.
+export function uniqueItemText (name: string, base: string, category: string | undefined, mods: UniqueModLines): string {
+  const section = (header: string, lines: string[]) =>
+    lines.length ? ['--------', ...lines.flatMap(l => [header, ...unlink(lowestRoll(l)).split('\n')])] : []
+  return [
+    `Item Class: ${category ?? 'Unique'}`,
+    'Rarity: Unique',
+    name,
+    base,
+    ...section('{ Implicit Modifier }', mods.implicits),
+    ...section('{ Unique Modifier }', mods.explicits)
+  ].join('\n')
 }
 
 // `english`: the game text below is English, which the parser reads only with
 // the English item data.
-export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): PriceCheckInput | null {
+export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true, mods?: UniqueModLines | null): PriceCheckInput | null {
   if (ref.text) return { clipboard: ref.text }
   if (!info) return null
   // The item data has no Foulborn uniques: it would price the plain one.
   if (ref.name.startsWith('Foulborn ')) return null
   if (kind === 'unique') {
-    const item = virtualUnique(info)
+    const item = virtualUnique(info, english ? mods : null)
     return { clipboard: item.rawText, item }
   }
   if (kind === 'gem') {
