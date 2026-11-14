@@ -29,7 +29,7 @@ describe('3.30 data', () => {
 
   it('reads mods of uniques added after launch', () => {
     expect(refs('Gain Bitterblood equal to Life spent')).toMatchObject({ refs: ['Gain Bitterblood equal to Life spent'], unknown: [] })
-    expect(refs('Grants Level 20 Witchhunter's Pyre')).toMatchObject({ refs: ['Grants Level # Witchhunter's Pyre'], unknown: [] })
+    expect(refs("Grants Level 20 Witchhunter's Pyre")).toMatchObject({ refs: ["Grants Level # Witchhunter's Pyre"], unknown: [] })
     for (const name of ['Veil of Flesh', 'Bane of the Apostate', 'The Covetous Dark']) {
       expect(ITEM_BY_REF('UNIQUE', name)?.[0]?.name, name).toBe(name)
     }
