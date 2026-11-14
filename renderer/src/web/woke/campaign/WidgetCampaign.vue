@@ -73,12 +73,12 @@ import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay, tickWhile } from '../dock/dock'
 import { reportProblem } from '../dock/health'
 import { pinnedReadouts, pinsTick } from './pins'
-import { actFromAreaId, actLabel } from './log-parse'
+import { actFromAreaId, actLabel, isTrialFinished } from './log-parse'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
 import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, behind, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnTrial, behind, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -368,6 +368,17 @@ function apply (ev: LogEvent, at: number): boolean {
   return true
 }
 
+// Izaro's trial-finished line ticks off the trial step, in campaign zones
+// only (the lab's own trials say the same lines).
+function applyTrialDone (at: number): boolean {
+  const state = props.config.state
+  if (state.asleep || actFromAreaId(state.areaId) == null) return false
+  const step = advanceOnTrial(route.value, props.config.step, state.areaId)
+  if (step === props.config.step) return false
+  stepChanged(step, at)
+  return true
+}
+
 // Level-ups in a row by one other character, and when the followed one last
 // levelled (log time; see shouldSwitch).
 let streak = 0
@@ -418,8 +429,8 @@ let caughtUp = false
 function applyLines (lines: LogLine[]) {
   let changed = false
   let at = 0
-  for (const { ev, at: lineAt } of lines) {
-    if (ev && apply(ev, lineAt)) { changed = true; at = lineAt }
+  for (const { line, ev, at: lineAt } of lines) {
+    if (ev ? apply(ev, lineAt) : (isTrialFinished(line) && applyTrialDone(lineAt))) { changed = true; at = lineAt }
   }
   if (changed) {
     now.value = Date.now()
