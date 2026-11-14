@@ -28,10 +28,11 @@ export function textSig (text: string): string {
 }
 
 // Whether the cache still counts as current: saved or last checked within
-// the max age. A clock that went backwards counts as stale.
+// the max age. A stamp from the future (the clock was ahead) doesn't count,
+// so the next check stamps a real time instead of downloading every start.
 export function cacheFresh (savedAt: number | undefined, checkedAt: number | undefined, now: number): boolean {
-  const at = Math.max(savedAt ?? 0, checkedAt ?? 0)
-  return at > 0 && at <= now && now - at < CACHE_MAX_AGE_MS
+  const at = Math.max(...[savedAt ?? 0, checkedAt ?? 0].filter(t => t <= now))
+  return at > 0 && now - at < CACHE_MAX_AGE_MS
 }
 
 function checkedAt (url: string): number | undefined {
@@ -129,10 +130,24 @@ async function load (url: string) {
     } catch {}
     return
   }
-  const json: unknown = JSON.parse(text)
-  const parsed = parseAtlasData(json)
-  const tree = await readTree(json, url)
+  let json: unknown
+  let parsed: Map<number, AtlasNode>
+  let tree: AtlasTreeModel | null
+  try {
+    json = JSON.parse(text)
+    parsed = parseAtlasData(json)
+    tree = await readTree(json, url)
+  } catch (err) {
+    if (shown && loadingUrl === url) return
+    throw err
+  }
   if (loadingUrl !== url) return
+  // A download that can't be drawn (a changed format, a cut-off file) never
+  // replaces a cached tree that can; it isn't saved either.
+  if (shown && !tree && atlasTree.value) {
+    atlasTreeError.value = ''
+    return
+  }
   atlasData.value = parsed
   atlasTree.value = tree
   try {

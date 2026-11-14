@@ -27,7 +27,7 @@ function respond (body: string) {
 }
 
 async function settle (check: () => boolean) {
-  for (let i = 0; i < 100 && !check(); i++) await new Promise(r => setTimeout(r, 10))
+  for (let i = 0; i < 100 && !check(); i++) await new Promise(resolve => setTimeout(resolve, 10))
 }
 
 describe('atlas data cache', () => {
@@ -53,7 +53,7 @@ describe('atlas data cache', () => {
     const w = await loadWidget()
     const { atlasTree } = w.useAtlasData(URL_A)
     await settle(() => atlasTree.value != null)
-    await new Promise(r => setTimeout(r, 100))
+    await new Promise(resolve => setTimeout(resolve, 100))
     expect(atlasTree.value?.points).toBe(150)
     expect(calls).toEqual([])
   })
@@ -80,7 +80,7 @@ describe('atlas data cache', () => {
     const w = await loadWidget()
     const { atlasTree, atlasDataError } = w.useAtlasData(URL_A)
     await settle(() => atlasTree.value != null)
-    await new Promise(r => setTimeout(r, 100))
+    await new Promise(resolve => setTimeout(resolve, 100))
     expect(atlasTree.value?.points).toBe(138)
     expect(atlasDataError.value).toBe('')
   })
@@ -93,5 +93,27 @@ describe('atlas data cache', () => {
     expect(cacheFresh(now - 7 * 24 * HOUR, now - HOUR, now)).toBe(true)
     expect(cacheFresh(undefined, undefined, now)).toBe(false)
     expect(cacheFresh(now + HOUR, undefined, now)).toBe(false)
+    expect(cacheFresh(now + HOUR, now - HOUR, now)).toBe(true)
   })
+
+  for (const [name, reply] of [
+    ['an error status', () => new Response('', { status: 503 })],
+    ["a page that isn't JSON", () => new Response('<html>sign in</html>', { status: 200 })],
+    ["an export in a format it can't read", () => new Response(JSON.stringify({ nodes: {} }), { status: 200 })]
+  ] as Array<[string, () => Response]>) {
+    it(`keeps the cached tree and its cache over ${name}`, async () => {
+      const at = Date.now() - 2 * 24 * HOUR
+      localStorage.setItem('woke-atlas-data', JSON.stringify({ url: URL_A, json: atlas(138), at }))
+      let calls = 0
+      vi.stubGlobal('fetch', async () => { calls++; return reply() })
+      const w = await loadWidget()
+      const { atlasTree, atlasDataError, atlasTreeError } = w.useAtlasData(URL_A)
+      await settle(() => calls > 0)
+      await new Promise(resolve => setTimeout(resolve, 100))
+      expect(atlasTree.value?.points).toBe(138)
+      expect(atlasDataError.value).toBe('')
+      expect(atlasTreeError.value).toBe('')
+      expect((JSON.parse(localStorage.getItem('woke-atlas-data')!) as { at: number }).at).toBe(at)
+    })
+  }
 })
