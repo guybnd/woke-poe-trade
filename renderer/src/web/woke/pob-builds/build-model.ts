@@ -128,11 +128,42 @@ export function loadoutOf (d: PobDetails, level: number | null, act: number | nu
   // A skill set pick takes its same-named item set and tree along. An item
   // set pick changes only the gear.
   const skillTitle = pick?.skillSet
+  const staged = pickStage(d.trees, level, act, skillTitle)
   return {
     skillSet: pickStage(skillSetsOf(d), level, act, skillTitle),
     itemSet: pickStage(itemSetsOf(d), level, act, pick?.itemSet ?? pick?.skillSet),
-    tree: pickStage(d.trees, level, act, skillTitle)?.item ?? null
+    // Following your level, the tree goes by points, not just its title: a
+    // guide's "Level 33" tree is all spent well before level 54.
+    tree: staged && staged.byStage && !skillTitle ? treeAhead(d.trees, staged.item, level, act) : staged?.item ?? null
   }
+}
+
+// Passive points from quests done before each act starts (index = act),
+// leaving out the Bandits' 2: a build may help one of them.
+const QUEST_POINTS = [0, 0, 2, 3, 5, 6, 8, 11, 14, 17, 19, 22]
+
+// Passive points you have by now, ascendancy included (a lab per three acts
+// or so), as a guess: null when the level isn't known.
+export function pointsBy (level: number | null, act: number | null): number | null {
+  if (level == null) return null
+  const a = Math.min(act ?? 1, 11)
+  const asc = a > 10 ? 6 : a >= 7 ? 4 : a >= 4 ? 2 : 0
+  return Math.max(0, level - 1) + QUEST_POINTS[a] + asc
+}
+
+// The tree you're working toward: past each tree your points already cover.
+export function treeAhead (trees: PobTreeSpec[], tree: PobTreeSpec, level: number | null, act: number | null): PobTreeSpec {
+  const have = pointsBy(level, act)
+  if (have == null) return tree
+  const passed = new Set<PobTreeSpec>()
+  // Its nodes less the class and ascendancy starts, which cost nothing.
+  while (tree.nodes?.length && tree.nodes.length - 2 <= have) {
+    const next = treeAfter(trees, tree, passed)
+    if (!next) break
+    passed.add(tree)
+    tree = next
+  }
+  return tree
 }
 
 // ---- gems and links ----
