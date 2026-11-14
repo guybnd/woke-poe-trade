@@ -187,7 +187,7 @@ export function describeStep (before: Settings, after: Settings, lookOf: (type: 
   return parts.join('; ') || 'Changed settings'
 }
 
-const PRESET_NAMES: Record<keyof Presets, string> = {
+export const PRESET_NAMES: Record<keyof Presets, string> = {
   cheapCurrency: 'hide cheap currency',
   chaosRecipe: 'chaos recipe',
   quiet: 'quiet mode',

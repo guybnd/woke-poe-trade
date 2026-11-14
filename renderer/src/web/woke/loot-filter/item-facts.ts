@@ -46,6 +46,9 @@ export interface ItemFacts {
   // Tier (1-6) of the Searing Exarch / Eater of Worlds implicit, 0 for none.
   exarchTier?: number
   eaterTier?: number
+  // 3.30's drop tier of unidentified magic and rare gear (UnidentifiedItemTier).
+  // The copy doesn't show it yet (WOKEPOET-153), so it stays unknown there.
+  unidentifiedItemTier?: number
   corruptedMods?: number
   enchantmentPassiveNum?: number
   enchantPassiveNodes?: string[]

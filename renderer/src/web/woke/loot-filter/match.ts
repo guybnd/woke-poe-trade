@@ -172,6 +172,7 @@ export function evalCondition (c: FilterCondition, item: ItemFacts): Tri {
     case 'HasImplicitMod': return bool(c, item.hasImplicitMod)
     case 'HasSearingExarchImplicit': return numeric(c, item.exarchTier)
     case 'HasEaterOfWorldsImplicit': return numeric(c, item.eaterTier)
+    case 'UnidentifiedItemTier': return numeric(c, item.unidentifiedItemTier)
     case 'HasInfluence': return influence(c, item.influences)
     // An unidentified item shows no mods, so counts see none: "=0" passes.
     case 'HasExplicitMod': return strings(c, item.identified === false ? [] : item.explicitModNames)
