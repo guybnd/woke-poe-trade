@@ -87,14 +87,14 @@ function Invoke-Local {
 
 # ---------------------------------------------------------------- cloud
 
-function Gh {
+function Invoke-Gh {
   # gh with the fork named every time: in clones of a fork, gh defaults to upstream.
-  $out = & gh @args --repo $Slug
+  $out = & gh.exe @args --repo $Slug
   return @{ Code = $LASTEXITCODE; Out = ($out -join "`n") }
 }
 
 function Find-Runs ($branch, $sha) {
-  $r = Gh run list --workflow $Workflow --branch $branch --limit 30 --json 'databaseId,event,status,conclusion,headSha,createdAt,url'
+  $r = Invoke-Gh run list --workflow $Workflow --branch $branch --limit 30 --json 'databaseId,event,status,conclusion,headSha,createdAt,url'
   if ($r.Code -ne 0 -or -not $r.Out) { return @() }
   return @(($r.Out | ConvertFrom-Json) | Where-Object { $_.headSha -eq $sha } | Sort-Object createdAt -Descending)
 }
@@ -124,7 +124,7 @@ function Invoke-Cloud {
   Say "pushed $branch at $($sha.Substring(0, 8))"
 
   # Pull requests run the workflow on every push. Without one, start it by hand.
-  $pr = Gh pr list --head $branch --state open --json 'number,url'
+  $pr = Invoke-Gh pr list --head $branch --state open --json 'number,url'
   $prs = @()
   if ($pr.Code -eq 0 -and $pr.Out) { $prs = @($pr.Out | ConvertFrom-Json) }
   if ($prs.Count) { Say "PR: $($prs[0].url)" }
@@ -137,7 +137,7 @@ function Invoke-Cloud {
     $run = $runs | Where-Object { $_.status -ne 'completed' -or $_.conclusion -ne 'cancelled' } | Select-Object -First 1
     if ($run) { break }
     if (-not $prs.Count -and -not $dispatched) {
-      $d = Gh workflow run $Workflow --ref $branch
+      $d = Invoke-Gh workflow run $Workflow --ref $branch
       if ($d.Code -ne 0) { Fail "couldn't start the $Workflow workflow:`n$($d.Out)" }
       $dispatched = $true
       Say 'no open PR, so the workflow was started by hand (this also builds the Windows package)'
@@ -151,7 +151,7 @@ function Invoke-Cloud {
   $seen = @{}
   $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
   while ($true) {
-    $v = Gh run view $run.databaseId --json 'status,conclusion,jobs'
+    $v = Invoke-Gh run view $run.databaseId --json 'status,conclusion,jobs'
     if ($v.Code -eq 0 -and $v.Out) {
       $info = $v.Out | ConvertFrom-Json
       foreach ($j in $info.jobs) {
@@ -169,7 +169,7 @@ function Invoke-Cloud {
     'cancelled' { Say "the run was cancelled, usually by a newer push to the branch: $($run.url)"; exit 2 }
     default {
       Say "checks failed ($($info.conclusion)): $($run.url)"
-      $log = & gh run view $run.databaseId --repo $Slug --log-failed
+      $log = & gh.exe run view $run.databaseId --repo $Slug --log-failed
       if ($log) { $log | Select-Object -Last 150 | ForEach-Object { Write-Host $_ } }
       exit 1
     }
