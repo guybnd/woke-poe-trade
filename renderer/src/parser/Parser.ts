@@ -1163,6 +1163,21 @@ function parseAreaLevel (section: string[], item: ParsedItem) {
   return 'SECTION_PARSED'
 }
 
+// 3.30 renamed three Temple rooms; the trade site still lists them under
+// their old names. English only, like the rest of the 3.30 fixes.
+const RENAMED_ROOMS: ReadonlyArray<[string, string]> = [
+  ['Cradle of Creation (', 'Throne of Atziri ('],
+  ['Royal Forge (', 'Omnitect Forge ('],
+  ['Grand Reactor (', 'Omnitect Reactor Plant (']
+]
+
+function oldRoomName (line: string): string {
+  for (const [now, before] of RENAMED_ROOMS) {
+    if (line.startsWith(now)) return before + line.slice(now.length)
+  }
+  return line
+}
+
 function parseAtzoatlRooms (section: string[], item: ParsedItem) {
   if (item.info.refName !== 'Chronicle of Atzoatl') return 'PARSER_SKIPPED'
   if (section[0] !== _$.INCURSION_OPEN) return 'SECTION_SKIPPED'
@@ -1174,16 +1189,19 @@ function parseAtzoatlRooms (section: string[], item: ParsedItem) {
       continue
     }
 
-    const found = STAT_BY_MATCH_STR(line)
+    const exact = STAT_BY_MATCH_STR(line)
+    const found = exact ?? STAT_BY_MATCH_STR(oldRoomName(line))
     if (found) {
+      // A renamed room shows the name the copy has.
+      const shown = exact ? found.matcher.string : line
       item.newMods.push({
         info: { tags: [], type: ModifierType.Pseudo },
         stats: [{
           stat: found.stat,
           translation: {
             string: (state === IncursionRoom.Open)
-              ? found.matcher.string
-              : `${_$.INCURSION_OBSTRUCTED} ${found.matcher.string}`
+              ? shown
+              : `${_$.INCURSION_OBSTRUCTED} ${shown}`
           },
           roll: { value: state, min: state, max: state, dp: false, unscalable: true }
         }]
