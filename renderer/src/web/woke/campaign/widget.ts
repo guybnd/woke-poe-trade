@@ -147,9 +147,13 @@ export function migrateFoldedCrafts (w: CampaignWidget, toNew: (old: number) => 
     const out: Record<string, number> = {}
     for (const [k, v] of Object.entries(starts ?? {})) {
       const old = Number(k)
-      // A start of a folded step says when its zone step ended, not when a
-      // step began: drop it.
-      if (toNew(old) === toNew(old + 1)) continue
+      // A folded step's start is when its zone step ended. It stands in for
+      // the next step's start only when that one hasn't started (you were
+      // on the crafting step).
+      if (toNew(old) === toNew(old + 1)) {
+        if (starts?.[String(old + 1)] == null && out[String(toNew(old))] == null) out[String(toNew(old))] = v
+        continue
+      }
       out[String(toNew(old))] = v
     }
     return out

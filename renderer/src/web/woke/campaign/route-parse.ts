@@ -44,6 +44,8 @@ export interface RouteStep {
   // in. The route files give them their own "Get crafting recipe" step; they
   // ride along here instead, as an icon.
   crafts?: string[]
+  // The zone those recipes are in (a lab's own for the lab's).
+  craftsAt?: string
 }
 
 export interface Route {
@@ -88,6 +90,10 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
   const folded: number[] = []
   let oldIndex = 0
   let lastRecipes: string[] = []
+  let lastCraftArea = ''
+  // Sub-lines under a folded crafting line: they say how to get through the
+  // zone, so they go to the next step, the one current while you're there.
+  let heldSubs: Part[][] | null = null
   let act = 1
 
   const areaName = (id: string) => data.areas[id]?.[0] ?? id
@@ -147,6 +153,7 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
       case 'crafting': {
         const recipes = data.areas[args[0] ?? state.area]?.[6] ?? []
         lastRecipes = recipes
+        lastCraftArea = args[0] ?? state.area
         return { kind: 'craft', text: recipes.length ? `crafting recipe (${recipes.join(', ')})` : 'crafting recipe' }
       }
       case 'dir': {
@@ -206,7 +213,7 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
         const text = parts.map(p => p.text).join('')
         const lvl = /Recommended Level:\s*(\d+)/i.exec(text)
         if (lvl) prev.recommendedLevel = Number(lvl[1])
-        else if (parts.length) prev.subs.push(parts)
+        else if (parts.length) (heldSubs ?? prev.subs).push(parts)
         continue
       }
       if (line.startsWith('#')) continue
@@ -216,11 +223,14 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
       const prev = steps[steps.length - 1]
       if (prev && isCraftOnly(parts)) {
         prev.crafts = [...(prev.crafts ?? []), ...(lastRecipes.length ? lastRecipes : [CRAFT_TEXT])]
+        prev.craftsAt = lastCraftArea
+        heldSubs = heldSubs ?? []
         folded.push(oldIndex++)
         continue
       }
       oldIndex++
-      steps.push({ index: steps.length, act, parts, subs: [], areaBefore, areaAfter: state.area, recommendedLevel: null })
+      steps.push({ index: steps.length, act, parts, subs: heldSubs ?? [], areaBefore, areaAfter: state.area, recommendedLevel: null })
+      heldSubs = null
     }
   }
   return { steps, actStarts, folded }
@@ -251,10 +261,10 @@ export function zoneCrafts (route: Route, step: number): string[] {
   const out: string[] = []
   for (let i = step - 1; i >= 0; i--) {
     const prev = route.steps[i]
-    if (prev.crafts) out.unshift(...prev.crafts)
+    if (prev.crafts && prev.craftsAt === st.areaBefore) out.unshift(...prev.crafts)
     if (prev.areaBefore !== st.areaBefore) break
   }
-  if (st.crafts && st.areaAfter === st.areaBefore) out.push(...st.crafts)
+  if (st.crafts && st.craftsAt === st.areaBefore) out.push(...st.crafts)
   return [...new Set(out)]
 }
 

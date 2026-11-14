@@ -37,7 +37,10 @@ describe('crafting steps fold into the step before', () => {
       '➞ The Coast', '➞ The Mud Flats', 'Find and kill Hillock', '➞ The Tidal Island', 'Portal scroll / logout'
     ])
     expect(route.steps[1].crafts).toEqual(['Life - Rank 1'])
-    expect(route.steps[1].subs.map(s => s.map(p => p.text).join(''))).toEqual(['Follow the river'])
+    // A sub under the crafting line is for the zone: it goes to the step
+    // that is current there.
+    expect(route.steps[1].subs).toEqual([])
+    expect(route.steps[2].subs.map(s => s.map(p => p.text).join(''))).toEqual(['Follow the river'])
     expect(route.steps[2].crafts).toEqual(['Life - Rank 1'])
     expect(route.folded).toEqual([2, 4])
   })
@@ -70,6 +73,13 @@ describe('crafting steps fold into the step before', () => {
     migrateFoldedCrafts(w, toNew)
     expect(w.step).toBe(3)
   })
+
+  it('keeps the start time when you were on a crafting step', () => {
+    const w = { step: 2, state: { stepStarts: { 1: 100, 2: 200 } } } as unknown as CampaignWidget
+    migrateFoldedCrafts(w, o => stepFromOld(route, o))
+    expect(w.step).toBe(2)
+    expect(w.state.stepStarts).toEqual({ 1: 100, 2: 200 })
+  })
 })
 
 describe('bundled route', () => {
@@ -79,6 +89,26 @@ describe('bundled route', () => {
     expect(craftOnly).toEqual([])
     expect(route.folded.length).toBeGreaterThan(30)
     expect(route.steps.filter(s => s.crafts).length).toBeGreaterThan(30)
+  })
+
+  it('never shows a lab recipe back in town', () => {
+    for (const opts of [DEFAULT_ROUTE_OPTIONS, { ...DEFAULT_ROUTE_OPTIONS, leagueStart: false, library: false, bandit: 'alira' as const }]) {
+      const route = bundledRoute(opts)
+      const lab = route.steps.filter(s => s.craftsAt?.includes('Labyrinth'))
+      if (opts.leagueStart) expect(lab.length).toBe(3)
+      route.steps.forEach((_, i) => {
+        for (const st of lab) for (const c of st.crafts!) expect(zoneCrafts(route, i)).not.toContain(c)
+      })
+    }
+  })
+
+  it('every recipe chip shows on some current step in its zone', () => {
+    const route = bundledRoute(DEFAULT_ROUTE_OPTIONS)
+    const seen = new Set(route.steps.flatMap((_, i) => zoneCrafts(route, i)))
+    for (const st of route.steps) {
+      if (!st.crafts || st.craftsAt?.includes('Labyrinth')) continue
+      for (const c of st.crafts) expect(seen.has(c), c).toBe(true)
+    }
   })
 })
 
