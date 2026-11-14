@@ -14,6 +14,13 @@ history:
     user: Agent
     date: '2026-11-14T02:29:38.530Z'
     comment: Created ticket.
+    id: a-2026-11-14t02-29-38-530z
+  - type: activity
+    user: Agent
+    date: '2026-11-14T02:33:59.310Z'
+    comment: Updated implementation link.
+    id: a-2026-11-14t02-33-59-310z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/430'
 ---
 Guy (2026-11-14): auto mode doesn't move to the next tree as he levels. Level 29, Act 3, Elemental Hit Slayer guide.
 
