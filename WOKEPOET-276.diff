@@ -1,0 +1,86 @@
+diff --git a/renderer/src/web/woke/campaign/route-parse.ts b/renderer/src/web/woke/campaign/route-parse.ts
+index e60f97d8..cb05ee74 100644
+--- a/renderer/src/web/woke/campaign/route-parse.ts
++++ b/renderer/src/web/woke/campaign/route-parse.ts
+@@ -212,13 +212,38 @@ function entersArea (step: RouteStep, areaId: string): boolean {
+   return step.areaAfter === areaId && step.areaBefore !== areaId
+ }
+ 
++function entersFightZone (step: RouteStep, data: RouteData): boolean {
++  if (step.areaAfter === step.areaBefore) return false
++  const row = data.areas[step.areaAfter]
++  return row != null && !row[3]
++}
++
++const lastFight = new WeakMap<Route, number>()
++function lastFightEntry (route: Route, data: RouteData): number {
++  let i = lastFight.get(route)
++  if (i == null) {
++    i = route.steps.length - 1
++    while (i >= 0 && !entersFightZone(route.steps[i], data)) i--
++    lastFight.set(route, i)
++  }
++  return i
++}
++
+ // Returns the new current step after entering an area, or `current` when
+ // the area isn't the next stop on the route.
+ export function advanceOnEnter (route: Route, current: number, areaId: string, data: RouteData): number {
+   const steps = route.steps
+   const end = Math.min(steps.length, current + LOOKAHEAD)
++  // Towns come up again and again: a town visit never moves the route past a
++  // zone you haven't been to (a portal home mid-zone, or zones done in another
++  // order, used to jump to a later town step and skip whole zones).
++  // Past the last such zone (the epilogue's town steps) nothing later could
++  // catch up, so there the town step is taken anyway.
++  const toTown = data.areas[areaId]?.[3] === true
++  let skipsZone = false
+   for (let i = current; i < end; i++) {
+-    if (entersArea(steps[i], areaId)) return i + 1
++    if (entersArea(steps[i], areaId)) return skipsZone && i < lastFightEntry(route, data) ? current : i + 1
++    if (toTown && entersFightZone(steps[i], data)) skipsZone = true
+   }
+   // Far ahead (skipped part of the route, or progress was lost): only trust
+   // non-town areas, which the route enters once or twice at most.
+diff --git a/renderer/test/woke/campaign-town-jump.test.ts b/renderer/test/woke/campaign-town-jump.test.ts
+new file mode 100644
+index 00000000..6270861d
+--- /dev/null
++++ b/renderer/test/woke/campaign-town-jump.test.ts
+@@ -0,0 +1,36 @@
++import { describe, it, expect } from 'vitest'
++import { advanceOnEnter, DEFAULT_ROUTE_OPTIONS } from '@/web/woke/campaign/route-parse'
++import { bundledRoute, routeData } from '@/web/woke/campaign/route-data'
++
++const route = bundledRoute(DEFAULT_ROUTE_OPTIONS)
++const text = (i: number) => route.steps[i].parts.map(p => p.text).join('')
++const walk = (from: number, areas: string[]) => areas.reduce((step, a) => advanceOnEnter(route, step, a, routeData), from)
++const after = (areaId: string) => route.steps.findIndex(s => s.areaAfter === areaId && s.areaBefore !== areaId) + 1
++
++describe('town visits never skip zones', () => {
++  it('follows act 4 played in another order (Guy\'s log, 2026-11-14)', () => {
++    // Daresso before Kaom, home in between; the route used to jump from
++    // Highgate to "Hand in The Eternal Nightmare" and stay there in the Belly.
++    const start = after('1_4_3_3')
++    const step = walk(start, ['1_4_5_1', '1_4_5_2', '1_4_town', '1_4_3_3', '1_4_4_1', '1_4_4_3', '1_4_town', '1_4_3_3', '1_4_6_1'])
++    expect(text(step)).toBe('➞ The Belly of the Beast Level 2')
++  })
++
++  it('stays put on a portal home from the middle of a zone', () => {
++    const inMines1 = after('1_4_3_1')
++    expect(advanceOnEnter(route, inMines1, '1_4_town', routeData)).toBe(inMines1)
++  })
++
++  it('still moves along when the town is the next stop', () => {
++    // Dried Lake done, logout to Highgate: on to "Break Deshret's Seal".
++    const inLake = after('1_4_2')
++    expect(text(advanceOnEnter(route, inLake, '1_4_town', routeData))).toBe('Break Deshret\'s Seal')
++  })
++
++  it('still finishes the epilogue when a zone line was missed', () => {
++    // Only towns come after the Feeding Trough: nothing later could catch up.
++    const inTrough = after('2_10_6')
++    const docks = advanceOnEnter(route, inTrough - 1, '2_10_town', routeData)
++    expect(docks).toBeGreaterThan(inTrough)
++  })
++})
