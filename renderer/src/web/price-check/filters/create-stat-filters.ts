@@ -168,9 +168,12 @@ export function initUiModFilters (
   // in (the totals are made of the other mods), and it gets its own row,
   // searched as fractured (promoteFractured).
   const fracCalcs = item.isFractured ? ctx.statsByType.filter(isFracturedCalc) : []
+  const allStats = ctx.statsByType
   ctx.statsByType = ctx.statsByType.filter(c => !fracCalcs.includes(c))
   if (item.info.refName !== 'Split Personality') {
+    const pseudoFrom = ctx.filters.length
     filterPseudo(ctx)
+    if (fracCalcs.length) addFracShares(ctx, ctx.filters.slice(pseudoFrom), allStats)
   }
   ctx.statsByType.push(...fracCalcs)
   if (item.uniqueBase?.refName === 'Timeless Jewel') {
@@ -202,9 +205,22 @@ export function initUiModFilters (
     ctx.groups.forEach(group => { group.meta.disabled = true })
   }
   addInTotalMods(ctx)
-  promoteFractured(ctx)
 
   return [...ctx.filters, ...ctx.groups]
+}
+
+// woke: the trade site's pseudo totals add up every mod, the fractured one too,
+// while a fractured item's totals here leave it out. Each total keeps the
+// fractured mod's share, which the search adds back (pathofexile-trade.ts).
+function addFracShares (ctx: FiltersCreationContext, totals: StatFilter[], allStats: StatCalculated[]) {
+  const full: FiltersCreationContext = { ...ctx, filters: [], groups: [], statsByType: allStats }
+  filterPseudo(full)
+  for (const f of totals) {
+    if (f.tag !== FilterTag.Pseudo || !f.roll) continue
+    const twin = full.filters.find(g => g.statRef === f.statRef && g.roll)
+    const share = twin ? twin.roll!.value - f.roll.value : 0
+    if (share) f.fracShare = share
+  }
 }
 
 const allFractured = (sources: StatSource[]) =>
@@ -218,6 +234,13 @@ const isFracturedCalc = (calc: StatCalculated) => allFractured(calc.sources)
 function promoteFractured (ctx: FiltersCreationContext) {
   const { item } = ctx
   if (!item.isFractured) return
+  // A local fractured mod was kept aside for the property totals' in-total rows:
+  // it leads as a row of its own instead.
+  const local = (ctx.inTotal ?? []).filter(isFracturedCalc)
+  if (local.length) {
+    ctx.inTotal = ctx.inTotal!.filter(c => !local.includes(c))
+    ctx.filters.push(...local.map(c => calculatedStatToFilter(c, ctx.searchInRange, item)))
+  }
   const rows = ctx.filters.filter(f =>
     f.tag !== FilterTag.Property && f.tag !== FilterTag.Pseudo && !f.not && allFractured(f.sources))
   if (!rows.length) return
@@ -226,7 +249,8 @@ function promoteFractured (ctx: FiltersCreationContext) {
     if (ids?.length) f.tradeId = ids
     f.hidden = undefined
     f.inTotal = undefined
-    if (!item.rollsFromData) f.disabled = false
+    f.fracLead = true
+    f.disabled = false
   }
   const rest = ctx.filters.filter(f => !rows.includes(f))
   const props = rest.filter(f => f.tag === FilterTag.Property)
@@ -259,7 +283,8 @@ function addInTotalMods (ctx: FiltersCreationContext) {
     filter.inTotal = true
     const mine = placeOf(calc.sources)
     const next = ctx.filters.findIndex(f => {
-      if (f.tag === FilterTag.Property) return false
+      // Properties, and a fractured item's leading fractured rows, keep their place.
+      if (f.tag === FilterTag.Property || f.fracLead) return false
       const at = placeOf(f.sources)
       return at !== Infinity && at > mine
     })
@@ -633,6 +658,7 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
     }
   }
 
+  promoteFractured(ctx)
   tickTopTierMods(ctx.filters, item)
 
   const basePercentile = ctx.filters.find(fitler => fitler.tradeId[0] === 'item.base_percentile')
@@ -724,16 +750,27 @@ function bestTier (filter: StatFilter): number {
 function tickTopTierMods (filters: StatFilter[], item: ParsedItem) {
   if (item.rarity !== ItemRarity.Rare || item.isVeiled) return
 
+  // A fractured item's leading fractured rows are ticked already and count.
+  const lead = filters.filter(f => f.fracLead && !f.disabled).length
   filters
-    .filter(f => !f.hidden && isTopTierFilter(f, item))
+    .filter(f => !f.hidden && !f.fracLead && isTopTierFilter(f, item))
     .sort((a, b) => (bestTier(a) - bestTier(b)) || ((b.roll?.goodness ?? 1) - (a.roll?.goodness ?? 1)))
-    .slice(0, MAX_TICKED_ON_RARE)
+    .slice(0, Math.max(MAX_TICKED_ON_RARE - lead, 0))
     .forEach(f => { f.disabled = false })
 
   // Default totals give way to top mods. Properties like DPS don't count.
   const ticked = filters.filter(f => !f.disabled && !f.hidden && f.tag !== FilterTag.Property)
   const extra = ticked.filter(f => f.tag === FilterTag.Pseudo && !isTopTierFilter(f, item))
   extra.slice(0, Math.max(ticked.length - MAX_TICKED_ON_RARE, 0)).forEach(f => { f.disabled = true })
+
+  // A fractured item's leading rows take their place in the cap: the weakest
+  // other ticks give way to them.
+  if (lead) {
+    const others = filters
+      .filter(f => !f.disabled && !f.hidden && !f.fracLead && f.tag !== FilterTag.Property)
+      .sort((a, b) => (bestTier(b) - bestTier(a)) || ((a.roll?.goodness ?? 1) - (b.roll?.goodness ?? 1)))
+    others.slice(0, Math.max(lead + others.length - MAX_TICKED_ON_RARE, 0)).forEach(f => { f.disabled = true })
+  }
 }
 
 function applyClusterJewelRules (filters: StatFilter[], exact: boolean) {

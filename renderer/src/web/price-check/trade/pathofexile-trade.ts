@@ -581,7 +581,7 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     return stat
   })
 
-  type NoUiStatFilter = Pick<StatFilter, 'not' | keyof BareStatFilter>
+  type NoUiStatFilter = Pick<StatFilter, 'not' | 'fracShare' | keyof BareStatFilter>
   const realStats: NoUiStatFilter[] = stats.filter((stat): stat is StatFilter =>
     !stat.group &&
     !INTERNAL_TRADE_IDS.includes(stat.tradeId[0]))
@@ -754,7 +754,14 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     }
   }
 
-  for (const stat of realStats) {
+  for (let stat of realStats) {
+    // A fractured item's total leaves the fractured mod out of its number; the
+    // trade site's total counts it, so its share goes back on.
+    if (stat.fracShare && stat.roll) {
+      const share = stat.fracShare
+      const add = (v: number | '' | undefined) => typeof v === 'number' ? v + share : v
+      stat = { ...stat, roll: { ...stat.roll, min: add(stat.roll.min), max: add(stat.roll.max) } }
+    }
     if (stat.not) {
       qNot.filters.push(...everyTradeIdToQuery(stat))
     } else {

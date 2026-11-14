@@ -1,11 +1,21 @@
 // Guy's pick (2026-11-14): on a fractured item the fractured mod leads. No total
 // takes it in, and its own row sits at the top, ticked, searching fractured.
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { loadGameData, fixture, parseItem } from '../helpers/game-data'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
+import { createPresets } from '@/web/price-check/filters/create-presets'
+import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { fracturedIds } from '@/web/woke/price-insight/poe-kind'
 
+// vi.mock is hoisted above the imports.
+vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
+vi.mock('@/web/Config', () => ({
+  AppConfig: () => ({ apiLatencySeconds: 2, accountName: '' }),
+  poeWebApi: () => 'www.pathofexile.com'
+}))
+
+const OPTS = { league: 'Mirage', merchantOnly: true, currency: null, collapseListings: 'api' as const, activateStockFilter: false, searchStatRange: 10, useEn: false }
 const REF = '+#% to Cold and Chaos Resistances'
 const SHIELD = 'items/rare-shield-fractured-res.txt'
 
@@ -71,5 +81,42 @@ describe('fractured mod first', () => {
     const list = rows(fixture(SHIELD).replace('Fractured Suffix Modifier', 'Suffix Modifier').replace('\n--------\nFractured Item', ''))
     expect(list.some(f => f.tradeId[0]?.startsWith('fractured.'))).toBe(false)
     expect(list.find(f => f.statRef === '+#% total to Chaos Resistance')?.roll?.value).toBe(18)
+  })
+
+  it('the search adds the fractured share back onto a total', () => {
+    const item = parseItem(fixture(SHIELD))
+    const presets = createPresets(item, OPTS)
+    const preset = presets.presets.find(p => p.id === presets.active)!
+    const total = preset.stats.find((f): f is StatFilter => !f.group && f.statRef === '+#% total Elemental Resistance')!
+    expect(total.fracShare).toBe(18)
+    total.disabled = false
+    total.roll!.min = 15
+    total.roll!.max = ''
+    const body = createTradeRequest(preset.filters, preset.stats)
+    const q = body.query.stats.flatMap(g => g.filters).find(f => f.id === 'pseudo.pseudo_total_elemental_resistance')
+    // The site's total counts the fractured +18% too.
+    expect(q?.value?.min).toBe(33)
+    expect(q?.value?.max).toBeUndefined()
+  })
+
+  it('counts the fractured rows against the rare tick cap of 4', () => {
+    const text = fixture(SHIELD)
+      .replace(`{ Suffix Modifier "of Steel Skin" (Tier: 3) }
+21(20-22)% increased Stun and Block Recovery`, `{ Suffix Modifier "of the Tempest" (Tier: 1) — Elemental, Lightning, Resistance }
++46(46-48)% to Lightning Resistance`)
+      .replace(`{ Suffix Modifier "of the Crystal" (Tier: 6) — Elemental, Resistance }
++5(3-5)% to all Elemental Resistances`, `{ Suffix Modifier "of the Gorilla" (Tier: 1) — Attribute }
++50(46-50) to Strength`)
+      .replace(`{ Prefix Modifier "Consecrated" (Tier: 2) — Defences, Armour, Energy Shield }
++155(146-220) to Armour
++60(49-60) to maximum Energy Shield`, `{ Prefix Modifier "Prime" (Tier: 1) — Life }
++120(120-129) to maximum Life
+{ Prefix Modifier "Dictator's" (Tier: 1) — Defences }
++120(120-139)% increased Armour and Energy Shield
+{ Prefix Modifier "Thaumaturgist's" (Tier: 1) — Mana }
++79(77-79) to maximum Mana`)
+    const ticked = rows(text).filter(f => !f.disabled && !f.hidden && f.tag !== 'property')
+    expect(ticked.length).toBeLessThanOrEqual(4)
+    expect(ticked.some(f => f.statRef === REF)).toBe(true)
   })
 })

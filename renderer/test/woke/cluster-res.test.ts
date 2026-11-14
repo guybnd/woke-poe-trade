@@ -76,10 +76,14 @@ describe('cluster jewel resistance', () => {
     expect(byId['explicit.stat_2669029667']).toBeCloseTo(2 / 3) // all elemental
   })
 
-  it('counts an uncorrupted fractured line once', () => {
+  it('a fractured line leads on its own, searched fractured, in no total', () => {
     const fractured = cluster(LIGHTNING.replace('{ Suffix', '{ Fractured Suffix')) + '\n--------\nFractured Item'
     const { stats } = setup(fractured)
-    expect(stats.some(s => s.statRef === '+#% total Elemental Resistance' && !s.disabled)).toBe(true)
+    expect(stats.some(s => s.statRef === '+#% total Elemental Resistance')).toBe(false)
+    const lead = stats.filter(s => s.fracLead)
+    expect(lead).toHaveLength(1)
+    expect(lead[0].disabled).toBe(false)
+    expect(lead[0].tradeId[0]).toMatch(/^fractured\./)
   })
 
   it('leaves the base-item preset alone, where a fractured line is what makes the base', () => {

@@ -147,6 +147,11 @@ export interface StatFilter {
   hidden?: string
   /** woke: a local mod already counted in a property total; PoE mode lists it, Standard hides it. */
   inTotal?: true
+  // woke: a fractured item's fractured mod row, leading the list.
+  fracLead?: true
+  // woke: on a fractured item's total, the fractured mod's part, left out of the
+  // shown number; the search adds it back, since the trade site counts it.
+  fracShare?: number
   disabled: boolean // NOTE: mutable in UI
 }
 

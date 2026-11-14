@@ -52,7 +52,9 @@ export function clusterResColumnStats (filter: StatFilter): Array<{ ref: string,
 // logged out, so the element line becomes "any one element" and both are
 // ticked, which asks for the same two lines in any element.
 export function addClusterResPseudo (filters: StatFilter[], item: ParsedItem, percent: number): void {
-  const lines = filters.filter(f => CHANGEABLE.has(f.tag) && LINES.some(l => l.ref === f.statRef))
+  const lines = filters.filter(f => CHANGEABLE.has(f.tag) && LINES.some(l => l.ref === f.statRef) &&
+    // A fractured item's fractured line leads on its own, in no total.
+    !(item.isFractured && f.sources.length > 0 && f.sources.every(s => s.modifier.info.type === ModifierType.Fractured)))
   // An uncorrupted fractured mod is listed twice, as explicit and (hidden) as
   // fractured: count each line once, preferring the explicit copy.
   const byRef = new Map<string, StatFilter>()
