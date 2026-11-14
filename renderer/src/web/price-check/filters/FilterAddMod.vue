@@ -30,15 +30,16 @@
     </div>
     <div v-if="open" class="w-add-drop" role="listbox" @mousedown.prevent>
       <div class="w-add-chips">
-        <button v-for="k in ADD_KINDS" :key="k.kind" type="button" tabindex="-1"
+        <button v-for="k in CHIPS" :key="k.kind" type="button" tabindex="-1"
           :class="{ on: k.kind === kind, none: !counts[k.kind] }" :title="k.title"
           :data-add-kind="k.kind"
           @click="pickKind(k.kind)">{{ k.label }}</button>
       </div>
-      <div v-for="(e, i) in results" :key="e.ref" role="option" :aria-selected="i === sel"
-        class="w-add-opt" :class="[`w-poe-k-${kind}`, { sel: i === sel }]"
-        @mouseenter="sel = i" @click="add(e)">{{ e.ref }}</div>
-      <div v-if="!results.length" class="w-add-none">No {{ kindOf(kind).label.toLowerCase() }} mod matches</div>
+      <div v-for="(h, i) in results" :key="h.kind + '|' + h.entry.ref" role="option" :aria-selected="i === sel"
+        class="w-add-opt" :class="[`w-poe-k-${h.kind}`, { sel: i === sel }]"
+        @mouseenter="sel = i" @click="add(h)"><span class="w-add-opt-text">{{ h.entry.ref }}</span><span
+          class="w-add-opt-kind">{{ kindOf(h.kind).label.toLowerCase() }}</span></div>
+      <div v-if="!results.length" class="w-add-none">No {{ kind === 'all' ? '' : kindOf(kind).label.toLowerCase() + ' ' }}mod matches</div>
       <div class="w-add-foot"><span>Tab kind</span><span>↑↓ pick</span><span>Enter add</span></div>
     </div>
   </div>
@@ -47,8 +48,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { STATS_ITERATOR } from '@/assets/data'
-import type { AddedMod, AddedModKind, ItemFilters } from './interfaces'
-import { ADD_KINDS, AddEntry, addedModFrom, kindCounts, searchAddIndex, sharedAddIndex } from '@/web/woke/price-insight/add-mod-search'
+import type { AddedMod, ItemFilters } from './interfaces'
+import { ADD_KINDS, AddFilter, AddHit, addedModFrom, kindCounts, searchAddIndex, sharedAddIndex } from '@/web/woke/price-insight/add-mod-search'
+
+// All first and by default (Guy's call): every match, its kind on the line.
+const CHIPS: ReadonlyArray<{ kind: AddFilter, label: string, title: string }> = [
+  { kind: 'all', label: 'All', title: 'Every kind, each on its own line' },
+  ...ADD_KINDS
+]
 
 const props = defineProps<{ filters: ItemFilters }>()
 
@@ -59,31 +66,28 @@ const getIndex = () => sharedAddIndex(STATS_ITERATOR)
 
 const query = ref('')
 const focused = ref(false)
-// The kind picked with a chip; when it has no match, the first kind that has one is shown.
-const wanted = ref<AddedModKind>('pseudo')
+// The chip picked; when its kind has no match, All is shown.
+const wanted = ref<AddFilter>('all')
 const sel = ref(0)
 const box = shallowRef<HTMLInputElement>()
 
 const open = computed(() => focused.value && query.value.trim() !== '')
 const counts = computed(() => kindCounts(open.value ? getIndex() : [], query.value))
-const kind = computed<AddedModKind>(() => {
-  if (counts.value[wanted.value]) return wanted.value
-  return ADD_KINDS.find(k => counts.value[k.kind])?.kind ?? wanted.value
-})
+const kind = computed<AddFilter>(() => counts.value[wanted.value] ? wanted.value : 'all')
 const results = computed(() => open.value ? searchAddIndex(getIndex(), query.value, kind.value) : [])
 watch([query, kind], () => { sel.value = 0 })
 
-function kindOf (k: AddedModKind) {
-  return ADD_KINDS.find(x => x.kind === k)!
+function kindOf (k: AddFilter) {
+  return CHIPS.find(x => x.kind === k)!
 }
 
-function pickKind (k: AddedModKind) {
+function pickKind (k: AddFilter) {
   wanted.value = k
 }
 
 // Tab steps through the kinds that have a match.
 function stepKind (by: 1 | -1) {
-  const live = ADD_KINDS.filter(k => counts.value[k.kind]).map(k => k.kind)
+  const live = CHIPS.filter(k => counts.value[k.kind]).map(k => k.kind)
   if (!live.length) return
   const at = live.indexOf(kind.value)
   wanted.value = live[(at + by + live.length) % live.length]
@@ -113,8 +117,7 @@ function onKey (e: KeyboardEvent) {
   }
 }
 
-function add (e: AddEntry) {
-  const k = kind.value
+function add ({ entry: e, kind: k }: AddHit) {
   if (!props.filters.addedMods) props.filters.addedMods = []
   const list = props.filters.addedMods
   // Adding one already there just ticks it again.
@@ -203,7 +206,9 @@ function setNum (mod: AddedMod, side: 'min' | 'max', e: Event) {
 }
 .w-add-chips button.on { border-color: var(--w-gold); color: var(--w-gold-hi, var(--w-fg)); }
 .w-add-chips button.none { opacity: .4; }
-.w-add-opt { padding: 3px 8px; cursor: pointer; }
+.w-add-opt { display: flex; align-items: baseline; gap: 8px; padding: 3px 8px; cursor: pointer; }
+.w-add-opt-text { flex: 1; min-width: 0; }
+.w-add-opt-kind { flex: none; font-size: .7em; color: var(--w-dim); }
 .w-add-opt.sel { background: linear-gradient(90deg, rgba(175, 140, 80, .28), rgba(175, 140, 80, .06)); }
 .w-add-none { padding: 3px 8px; color: var(--w-dim); font-style: italic; }
 .w-add-foot {

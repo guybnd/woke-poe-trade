@@ -1,4 +1,4 @@
-// "Add a mod" search: finds any trade stat by its text, one kind at a time.
+// "Add a mod" search: finds any trade stat by its text, every kind or one at a time.
 // Pure functions over a list of stats, so tests can pass their own.
 import type { Stat } from '@/assets/data'
 import type { AddedMod, AddedModKind } from '@/web/price-check/filters/interfaces'
@@ -11,6 +11,14 @@ export const ADD_KINDS: ReadonlyArray<{ kind: AddedModKind, label: string, title
   { kind: 'fractured', label: 'Fractured', title: 'Fractured modifier' },
   { kind: 'enchant', label: 'Enchant', title: 'Enchantment' }
 ]
+
+// The chips: every kind (the default), or one.
+export type AddFilter = AddedModKind | 'all'
+
+export interface AddHit {
+  entry: AddEntry
+  kind: AddedModKind
+}
 
 export interface AddEntry {
   ref: string
@@ -61,15 +69,16 @@ function words (query: string): string[] {
 }
 
 // Every typed word must appear. Words matched at a word start rank first,
-// then the shorter text (the plain mod before its rarer variants).
-export function searchAddIndex (index: readonly AddEntry[], query: string, kind: AddedModKind, limit = 8): AddEntry[] {
+// then the shorter text (the plain mod before its rarer variants). With every
+// kind, each matching mod lists its kinds in chip order, pseudo first.
+export function searchAddIndex (index: readonly AddEntry[], query: string, filter: AddFilter, limit = 12): AddHit[] {
   const ws = words(query)
   if (!ws.length) return []
   const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const starts = ws.map(w => new RegExp(`(^|[^a-z0-9])${esc(w)}`))
   const hits: Array<{ e: AddEntry, score: number }> = []
   for (const e of index) {
-    if (!e.ids[kind]) continue
+    if (filter !== 'all' && !e.ids[filter]) continue
     if (!ws.every(w => e.hay.includes(w))) continue
     let score = 0
     for (const re of starts) if (!re.test(e.hay)) score += 1
@@ -80,17 +89,25 @@ export function searchAddIndex (index: readonly AddEntry[], query: string, kind:
   const reach = (e: AddEntry) => Math.min(2, Object.keys(e.ids).length)
   hits.sort((a, b) => a.score - b.score || reach(b.e) - reach(a.e) ||
     a.e.ref.length - b.e.ref.length || a.e.ref.localeCompare(b.e.ref))
-  return hits.slice(0, limit).map(h => h.e)
+  const out: AddHit[] = []
+  for (const { e } of hits) {
+    const kinds = filter === 'all' ? ADD_KINDS.map(k => k.kind).filter(k => e.ids[k]) : [filter]
+    for (const kind of kinds) {
+      if (out.length >= limit) return out
+      out.push({ entry: e, kind })
+    }
+  }
+  return out
 }
 
 // How many matches each kind has, for the chips.
-export function kindCounts (index: readonly AddEntry[], query: string): Record<AddedModKind, number> {
-  const out = { pseudo: 0, explicit: 0, implicit: 0, crafted: 0, fractured: 0, enchant: 0 }
+export function kindCounts (index: readonly AddEntry[], query: string): Record<AddFilter, number> {
+  const out = { all: 0, pseudo: 0, explicit: 0, implicit: 0, crafted: 0, fractured: 0, enchant: 0 }
   const ws = words(query)
   if (!ws.length) return out
   for (const e of index) {
     if (!ws.every(w => e.hay.includes(w))) continue
-    for (const k of Object.keys(e.ids) as AddedModKind[]) out[k]++
+    for (const k of Object.keys(e.ids) as AddedModKind[]) { out[k]++; out.all++ }
   }
   return out
 }

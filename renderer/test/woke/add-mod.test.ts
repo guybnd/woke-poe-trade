@@ -26,16 +26,24 @@ describe('Add a mod', () => {
   })
 
   it('finds the plain mod first, each kind on its own', () => {
-    expect(searchAddIndex(index, 'rarity', 'pseudo')[0].ref).toBe('#% increased Rarity of Items found')
-    expect(searchAddIndex(index, 'rarity', 'pseudo')[0].ids.pseudo).toEqual(['pseudo.pseudo_increased_rarity'])
-    expect(searchAddIndex(index, 'maximum life', 'explicit')[0].ref).toBe('+# to maximum Life')
-    expect(searchAddIndex(index, 'max life', 'pseudo')[0].ref).toBe('+# total maximum Life')
+    expect(searchAddIndex(index, 'rarity', 'pseudo')[0].entry.ref).toBe('#% increased Rarity of Items found')
+    expect(searchAddIndex(index, 'rarity', 'pseudo')[0].entry.ids.pseudo).toEqual(['pseudo.pseudo_increased_rarity'])
+    expect(searchAddIndex(index, 'maximum life', 'explicit')[0].entry.ref).toBe('+# to maximum Life')
+    expect(searchAddIndex(index, 'max life', 'pseudo')[0].entry.ref).toBe('+# total maximum Life')
+  })
+
+  it('lists every kind of each match with All, pseudo first', () => {
+    const hits = searchAddIndex(index, 'rarity of items found', 'all', 50)
+    const rarity = hits.filter(h => h.entry.ref === '#% increased Rarity of Items found').map(h => h.kind)
+    expect(rarity[0]).toBe('pseudo')
+    expect(rarity).toEqual(expect.arrayContaining(['pseudo', 'explicit', 'implicit', 'crafted']))
+    expect(searchAddIndex(index, 'rarity', 'all', 3)).toHaveLength(3)
   })
 
   it('needs every typed word, in any order', () => {
     const hits = searchAddIndex(index, 'resistance cold', 'explicit', 50)
     expect(hits.length).toBeGreaterThan(0)
-    expect(hits.every(e => /cold/i.test(e.ref) && /resistance/i.test(e.ref))).toBe(true)
+    expect(hits.every(h => /cold/i.test(h.entry.ref) && /resistance/i.test(h.entry.ref))).toBe(true)
     expect(searchAddIndex(index, 'zzqq nothing', 'explicit')).toEqual([])
     expect(searchAddIndex(index, '   ', 'explicit')).toEqual([])
   })
@@ -44,12 +52,13 @@ describe('Add a mod', () => {
     const counts = kindCounts(index, 'rarity of items found')
     expect(counts.pseudo).toBeGreaterThan(0)
     expect(counts.explicit).toBeGreaterThan(0)
-    expect(kindCounts(index, '')).toEqual({ pseudo: 0, explicit: 0, implicit: 0, crafted: 0, fractured: 0, enchant: 0 })
+    expect(counts.all).toBeGreaterThan(counts.pseudo)
+    expect(kindCounts(index, '')).toEqual({ all: 0, pseudo: 0, explicit: 0, implicit: 0, crafted: 0, fractured: 0, enchant: 0 })
   })
 
   it('searches for an added mod with the item, and only when ticked', () => {
     const filters = createFilters(parseItem(fixture('items/rare-ring.txt')), OPTS)
-    const life = searchAddIndex(index, 'maximum life', 'explicit')[0]
+    const life = searchAddIndex(index, 'maximum life', 'explicit')[0].entry
     const mod = addedModFrom(life, 'explicit')
     mod.min = 40
     filters.addedMods = [mod]
