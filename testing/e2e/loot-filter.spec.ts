@@ -355,6 +355,47 @@ test('pasting a copied item into the search box opens its rule card', async ({ o
   await expect(page.getByText('Filter rule for this item')).toBeVisible()
 })
 
+test('search: any item, drawn by the filter; on Preview it lands on the ground, elsewhere it opens its rule', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: 'Preview' }).click()
+  const box = page.getByPlaceholder('Find any item, or paste one')
+  const options = page.getByRole('listbox').getByRole('option')
+  // A unique no rule names: it still comes up, under its own name.
+  await box.fill('headhunt')
+  await expect(options.filter({ hasText: /^Leather BeltHeadhunter ·/ })).toBeVisible()
+  // Gear gets a rarity switch.
+  await box.fill('vaal regalia')
+  await expect(options.first()).toContainText('Rare ·')
+  await page.getByRole('listbox').getByText('Normal', { exact: true }).click()
+  await expect(options.first()).toContainText('Normal ·')
+
+  // On Preview, a pick drops on the ground with the pile, marked, and stays through a reroll.
+  await box.fill('divine orb')
+  await expect(options.first()).toContainText(/currency/i)
+  await box.press('Enter')
+  await expect(box).toHaveValue('')
+  const chip = page.getByTitle('Take Divine Orb off the ground')
+  await expect(chip).toBeVisible()
+  await expect(page.getByText(/\d+ of 41 shown/).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Reroll' }).click()
+  await expect(page.getByText(/\d+ of 41 shown/).first()).toBeVisible()
+  await page.waitForTimeout(800)
+  await overlay.snap('item search on the preview ground')
+  await chip.click()
+  await expect(page.getByText(/\d+ of 40 shown/).first()).toBeVisible()
+
+  // Elsewhere, a pick opens its rule.
+  await page.getByRole('tab', { name: 'Presets' }).click()
+  await box.fill('divine orb')
+  await box.press('Enter')
+  await expect(page.getByRole('tab', { name: 'Rules' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByText('Back', { exact: true })).toBeVisible()
+  await expect(box).toHaveValue('')
+})
+
 test('Alt + F: a card alone for the hovered item, a key hides it', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })

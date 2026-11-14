@@ -10,6 +10,13 @@
 
     <WBanner v-if="compareError" tone="warn">{{ compareError }}</WBanner>
 
+    <div v-if="picks.length" :class="$style.picks">
+      <span class="w-dim text-xs">Searched</span>
+      <WChip v-for="p in picks" :key="p.key" clickable :title="`Take ${p.item.name} off the ground`" @click="emit('drop-pick', p.key)">
+        {{ p.item.name }}<template v-if="p.item.gear"> · {{ p.rarity }}</template> <i class="fas fa-times" />
+      </WChip>
+    </div>
+
     <div v-for="side in sides" :key="side.key" :class="$style.side">
       <div :class="$style.title">
         <b>{{ side.title }}</b>
@@ -23,7 +30,7 @@
           <span v-if="d.shown.visibility !== 'Hide' && d.shown.look.effect" :class="[$style.beam, { [$style.temp]: d.shown.look.effect.temp }]"
             :style="{ left: `${d.rect.x + d.rect.w / 2 - 1}px`, height: `${d.rect.y + 2}px`, background: `linear-gradient(to bottom, transparent, ${poeColour(d.shown.look.effect.color)})`, animationDelay: `${i * 14}ms` }" />
         </template>
-        <span v-for="(d, i) in side.placed" :key="d.shown.drop.id" :class="[$style.drop, { [$style.ghost]: d.shown.visibility === 'Hide', [$style.differs]: d.differs }]"
+        <span v-for="(d, i) in side.placed" :key="d.shown.drop.id" :class="[$style.drop, { [$style.ghost]: d.shown.visibility === 'Hide', [$style.differs]: d.differs, [$style.picked]: d.shown.drop.id >= PICK_ID }]"
           :style="{ left: `${d.rect.x}px`, top: `${d.rect.y}px`, animationDelay: `${i * 14}ms` }"
           :title="describe(d.shown)" @click="clickDrop(d.shown)" @contextmenu="dropMenu($event, d.shown)">
           <LabelPreview :text="d.shown.drop.label" :actions="[]" :style-override="d.shown.look" :visibility="d.shown.visibility" :extras="false"
@@ -53,12 +60,16 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
-import { WBanner, WButton, WInfo, WSegmented, WSelect, WSkeleton, WToggle, openMenu, toast } from '../ui'
+import { WBanner, WButton, WChip, WInfo, WSegmented, WSelect, WSkeleton, WToggle, openMenu, toast } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { FilterDoc } from './parse'
 import { defaultTextColour, rollDrops } from './drops'
+import type { Drop } from './drops'
+import { filterClasses, searchFacts } from './item-search'
+import type { SearchItem } from './item-search'
+import type { FilterRarity } from './item-facts'
 import { labelBox, layoutLabels, runDrops, soundsOf, summarize } from './shower'
 import type { ShownDrop } from './shower'
 import { poeColour, shapeGlyph } from './colours'
@@ -70,11 +81,17 @@ const props = defineProps<{
   store: LootFilterStore
   config: LootFilterWidget
   anchor?: Element | null
+  // Items picked in the search box, dropped on the ground with the pile.
+  picks?: Array<{ key: string, item: SearchItem, rarity: FilterRarity }>
 }>()
 
 const emit = defineEmits<{
   (e: 'open-rule', rule: { type: string, tier: string | null }): void
+  (e: 'drop-pick', key: string): void
 }>()
+
+// Searched items' ids start here, clear of the pile's.
+const PICK_ID = 100000
 
 const SCALE = 1.15
 const DROPS = 40
@@ -135,7 +152,17 @@ watch([compare, () => props.store.doc.value], async ([c]) => {
   }
 }, { immediate: true })
 
-const drops = computed(() => rollDrops(area.value, seed.value, DROPS))
+const picks = computed(() => props.picks ?? [])
+const pickDrops = computed<Drop[]>(() => {
+  const doc = props.store.doc.value
+  const classes = doc ? filterClasses(doc) : undefined
+  return picks.value.map((p, i) => {
+    const facts = searchFacts(p.item, { areaLevel: area.value, rarity: p.rarity, classes })
+    return { id: PICK_ID + i, label: facts.baseType ?? p.item.name, facts }
+  })
+})
+// Searched items first, so they find room on the ground before the pile.
+const drops = computed(() => [...pickDrops.value, ...rollDrops(area.value, seed.value, DROPS)])
 
 // Ground widths, measured so labels lay out to the real space.
 const widths = reactive<Record<string, number>>({})
@@ -220,8 +247,9 @@ function ruleName (d: ShownDrop): string {
 }
 
 function describe (d: ShownDrop): string {
-  const bits = [`${d.visibility === 'Hide' ? 'Hidden' : 'Shown'} by ${ruleName(d)}`]
   const f = d.drop.facts
+  const bits = [`${f.name !== d.drop.label ? `${f.name}
+` : ''}${d.visibility === 'Hide' ? 'Hidden' : 'Shown'} by ${ruleName(d)}`]
   bits.push(`${f.rarity ?? ''} ${f.itemClass ?? ''}${f.mapTier ? `, tier ${f.mapTier}` : ''}${f.socketGroups ? `, sockets ${f.socketGroups.join('-')}` : ''}`.trim())
   if (d.look.sound) bits.push(soundLabel(d.look.sound.id))
   if (d.look.effect) bits.push(`${d.look.effect.color} beam${d.look.effect.temp ? ' on drop' : ''}`)
@@ -296,6 +324,8 @@ function dropMenu (e: MouseEvent, d: ShownDrop) {
 .drop:hover { filter: brightness(1.25); z-index: 2; }
 .ghost { filter: grayscale(0.6); }
 .differs { outline: 1px dashed var(--w-accent); outline-offset: 1px; }
+.picked { outline: 2px solid var(--w-accent); outline-offset: 2px; z-index: 1; }
+.picks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .beam {
   position: absolute;
   top: 0;
