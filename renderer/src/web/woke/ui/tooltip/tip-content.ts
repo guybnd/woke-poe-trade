@@ -32,6 +32,9 @@ export interface TipGem {
   q?: Array<{ t: string, v: number[] }>
   lv: Record<string, { r?: number, a?: { s?: number, d?: number, i?: number }, c?: string, x?: string[] }>
 }
+// From the wiki (scripts/build-drop-data.mjs): d, never drops; r, only from
+// somewhere in particular (a boss, a league mechanic, a recipe); t, where from.
+export interface TipDrop { d?: 1, r?: 1, t?: string }
 export interface TipItem { d?: string, u?: string, n?: number }
 export interface TipBase {
   ar?: Range
@@ -51,6 +54,7 @@ export interface TipPack {
   gems?: Record<string, TipGem>
   items?: Record<string, TipItem>
   bases?: Record<string, TipBase>
+  drops?: Record<string, TipDrop>
 }
 
 export type TipKind = 'unique' | 'gem' | 'card' | 'item'
@@ -273,7 +277,20 @@ const MOST_EXPLICITS = 12
 // The data doesn't say which are fixed, so this is only the start of the list.
 const EXPLICITS_SHOWN = 6
 
-export function uniqueTip (name: string, unique: TipUnique, base: TipBase | undefined, variant?: string): TipModel {
+// Where a unique comes from, when that isn't a random drop.
+const DROP_TEXT_MAX = 180
+export function dropLines (drop: TipDrop | undefined): TipLine[] {
+  if (!drop?.d && !drop?.r) return []
+  const where = drop.t && drop.t.length > DROP_TEXT_MAX ? `${drop.t.slice(0, DROP_TEXT_MAX - 1).trimEnd()}…` : drop.t
+  return [
+    // The wiki's "drop disabled" covers uniques you still get from a vendor,
+    // a card or a boss, so both read the same: just not at random.
+    plain('Restricted drop: not a random drop on its base', 'corrupted'),
+    ...(where ? [plain(where, 'dim')] : [])
+  ]
+}
+
+export function uniqueTip (name: string, unique: TipUnique, base: TipBase | undefined, variant?: string, drop?: TipDrop): TipModel {
   const row = unique.v.find(r => r.n === variant) ?? unique.v[0]
   const allImplicits = row?.i ?? []
   const allExplicits = row?.e ?? []
@@ -300,7 +317,8 @@ export function uniqueTip (name: string, unique: TipUnique, base: TipBase | unde
         ...explicits.map(m => plain(unwrap(m), 'mod')),
         ...(moreExplicits ? [plain(`and ${moreExplicits} more mods`, 'dim')] : [])
       ],
-      unique.f ? unique.f.split('\n').map(l => plain(l, 'flavour')) : []
+      unique.f ? unique.f.split('\n').map(l => plain(l, 'flavour')) : [],
+      dropLines(drop)
     ])
   }
 }
@@ -368,7 +386,7 @@ export function baseTip (name: string, base: TipBase): TipModel {
 
 // What a kind of item needs from the pack.
 export function packFiles (kind: TipKind): Array<keyof TipPack> {
-  if (kind === 'unique') return ['uniques', 'bases']
+  if (kind === 'unique') return ['uniques', 'bases', 'drops']
   if (kind === 'gem') return ['gems']
   return ['items', 'bases']
 }
@@ -380,9 +398,10 @@ export function buildTip (pack: TipPack, ref: { name: string, kind: TipKind, var
   if (kind === 'unique') {
     const unique = pack.uniques?.[name]
     // Known by name but with no text: its base at least.
-    if (!unique) return ref.base ? { name, base: ref.base, frame: 'unique', sections: [] } : null
+    const drop = pack.drops?.[name]
+    if (!unique) return ref.base ? { name, base: ref.base, frame: 'unique', sections: present([dropLines(drop)]) } : null
     const on = ref.atBase ?? unique.b
-    return uniqueTip(name, { ...unique, b: on }, pack.bases?.[on], variant)
+    return uniqueTip(name, { ...unique, b: on }, pack.bases?.[on], variant, drop)
   }
   if (kind === 'gem') {
     const gem = pack.gems?.[name]

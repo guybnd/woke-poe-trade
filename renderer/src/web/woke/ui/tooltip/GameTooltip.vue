@@ -109,7 +109,10 @@
         </section>
         <footer v-if="lookup.uniques" :class="$style.uniques">
           <div v-for="u in shownUniques" :key="u.name" :class="$style.uniqueRow">
-            <span :class="[$style.uniqueName, 'w-trunc']">{{ u.name }}</span>
+            <span :class="$style.uniqueCell">
+              <span :class="[$style.uniqueName, 'w-trunc']">{{ u.name }}</span>
+              <span v-if="u.drop" :class="$style.noDrop" title="Not a random drop on this base: it comes from a boss, a league mechanic, a vendor or a card">restricted</span>
+            </span>
             <WPrice v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
             <span v-else class="w-faint">no price</span>
             <span :class="$style[`g-${u.grade}`]">{{ u.label }}{{ u.thin ? ', thin market' : '' }}</span>
@@ -457,6 +460,8 @@ onUnmounted(() => {
   min-height: 20px;
 }
 .uniqueName { color: var(--w-r-unique); }
+.uniqueCell { display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
+.noDrop { flex: none; color: var(--w-down); font-size: 0.85em; }
 .g-high { color: var(--w-accent); }
 .g-mid { color: var(--w-dim); }
 .g-trash { color: var(--w-down); }
