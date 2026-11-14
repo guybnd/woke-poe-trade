@@ -104,7 +104,7 @@ export const MECHANICS: Mechanic[] = [
     ],
     scarabs: /Harvest/,
     tips: [
-      'Each pair of plots lets you open one; pick the colour that ranks higher here.',
+      'Sacred Flora each hold one lifeforce colour; open the colours that rank higher here.',
       'Colours are priced per 100; Sacred lifeforce per unit.',
       'Kill the tier 4 monsters first: they drop the most lifeforce.'
     ],
@@ -286,11 +286,12 @@ export const MECHANICS: Mechanic[] = [
     short: 'INC',
     icon: 'fas fa-archway',
     groups: [
-      { label: 'Vials', types: ['Vial'], limit: 10 }
+      // Vials no longer drop in 3.30; level 81+ Temples' Atziri drops this.
+      { label: 'Temple drops', types: ['Fragment'], match: /^Royal Visage$/ }
     ],
     scarabs: /Incursion/,
     tips: [
-      'Upgrade the Locus of Corruption and Apex rooms when vials at the top of this list are worth it.'
+      'Atziri now lives in the Temple of Atzoatl; in level 81+ Temples she can drop a Royal Visage.'
     ],
     zone: /Incursion|Temple of Atzoatl/i
   },
@@ -349,8 +350,11 @@ export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (i
   return rows.slice(0, group.limit ?? 20)
 }
 
+// 3.30 replaced scarabs with one Thread per mechanic ("Legion Thread"), which
+// poe.ninja lists under Fragment. Older leagues still list scarabs.
 export function priceScarabs (family: RegExp, items: PriceItem[], limit = 8): PricedRow[] {
-  return priceGroup({ label: 'Scarabs', types: ['Scarab'], match: family, limit }, items)
+  return priceGroup({ label: 'Threads', types: ['Scarab', 'Fragment'], match: family, limit }, items,
+    item => item.type === 'Fragment' && !/^\S+ Thread$/.test(item.name))
 }
 
 export function expeditionRows (items: PriceItem[]): PricedRow[] {

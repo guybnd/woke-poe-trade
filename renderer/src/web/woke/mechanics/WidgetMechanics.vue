@@ -83,7 +83,7 @@
               </template>
             </template>
             <template v-if="scarabs.length">
-              <div class="w-group-label">Scarabs</div>
+              <div class="w-group-label">{{ scarabs.some(s => s.item.type === 'Scarab') ? 'Scarabs' : 'Thread' }}</div>
               <div v-for="s in scarabs" :key="s.item.name" class="w-row" :class="$style.scarabGrid">
                 <span v-item-tip="s.item" class="w-trunc">{{ shortScarab(s.item.name) }}</span>
                 <WPrice :chaos="s.chaos" :divine="divine" class="justify-end" />
