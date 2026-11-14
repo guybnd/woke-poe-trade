@@ -218,6 +218,17 @@ function entersFightZone (step: RouteStep, data: RouteData): boolean {
   return row != null && !row[3]
 }
 
+const lastFight = new WeakMap<Route, number>()
+function lastFightEntry (route: Route, data: RouteData): number {
+  let i = lastFight.get(route)
+  if (i == null) {
+    i = route.steps.length - 1
+    while (i >= 0 && !entersFightZone(route.steps[i], data)) i--
+    lastFight.set(route, i)
+  }
+  return i
+}
+
 // Returns the new current step after entering an area, or `current` when
 // the area isn't the next stop on the route.
 export function advanceOnEnter (route: Route, current: number, areaId: string, data: RouteData): number {
@@ -226,10 +237,13 @@ export function advanceOnEnter (route: Route, current: number, areaId: string, d
   // Towns come up again and again: a town visit never moves the route past a
   // zone you haven't been to (a portal home mid-zone, or zones done in another
   // order, used to jump to a later town step and skip whole zones).
+  // Past the last such zone (the epilogue's town steps) nothing later could
+  // catch up, so there the town step is taken anyway.
   const toTown = data.areas[areaId]?.[3] === true
+  let skipsZone = false
   for (let i = current; i < end; i++) {
-    if (entersArea(steps[i], areaId)) return i + 1
-    if (toTown && entersFightZone(steps[i], data)) return current
+    if (entersArea(steps[i], areaId)) return skipsZone && i < lastFightEntry(route, data) ? current : i + 1
+    if (toTown && entersFightZone(steps[i], data)) skipsZone = true
   }
   // Far ahead (skipped part of the route, or progress was lost): only trust
   // non-town areas, which the route enters once or twice at most.

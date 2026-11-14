@@ -26,4 +26,11 @@ describe('town visits never skip zones', () => {
     const inLake = after('1_4_2')
     expect(text(advanceOnEnter(route, inLake, '1_4_town', routeData))).toBe('Break Deshret\'s Seal')
   })
+
+  it('still finishes the epilogue when a zone line was missed', () => {
+    // Only towns come after the Feeding Trough: nothing later could catch up.
+    const inTrough = after('2_10_6')
+    const docks = advanceOnEnter(route, inTrough - 1, '2_10_town', routeData)
+    expect(docks).toBeGreaterThan(inTrough)
+  })
 })
