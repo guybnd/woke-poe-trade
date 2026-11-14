@@ -55,7 +55,8 @@ describe.each(FILTERS)('$name', ({ text }) => {
     expect(doc.isNeverSink).toBe(true)
     expect(doc.version).toMatch(/^\d+\.\d+/)
     expect(doc.strictness).toMatch(/^\d-/)
-    expect(doc.eol).toBe('\r\n')
+    // 8.21 ships its default look with CRLF and its styles with LF: the file's own.
+    expect(doc.eol).toBe(text.includes('\r\n') ? '\r\n' : '\n')
   })
 
   it('writes an untouched filter back byte for byte', () => {

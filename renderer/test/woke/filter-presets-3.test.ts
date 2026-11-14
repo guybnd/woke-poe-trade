@@ -150,3 +150,34 @@ describe('tier conditions in words (L6)', () => {
     expect(describeCondition({ key: 'UnidentifiedItemTier', op: '', count: null, values: ['3'] })).toBe('Item tier = 3')
   })
 })
+
+describe('NeverSink 8.21 tiered gear', () => {
+  // Named by item tier and base rank (t5r1, any5): NeverSink's look marker
+  // (!exotics_t1 to t4) says how high each one ranks, not the "t5" in the name.
+  const tiered = (p: Presets) => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyPresetChanges(doc, p)
+    return (tier: string) => doc.blocks.find(b => b.type === 'gear->tiered' && b.tier === tier)!
+  }
+  const has = (b: { actions: Array<{ key: string }> }, key: string) => b.actions.some(a => a.key === key)
+
+  it('quiet mode keeps the sound on the top of the matrix', () => {
+    const p = defaultPresets()
+    p.quiet = { on: true, keepTiers: 1 }
+    const block = tiered(p)
+    for (const t of ['t5r1', 't4r1', 't5r2', 'strandedfractured']) expect(has(block(t), 'PlayAlertSound'), t).toBe(true)
+    for (const t of ['t3r1', 'any5', 'any4', 't2r3']) expect(has(block(t), 'PlayAlertSound'), t).toBe(false)
+  })
+
+  it('a catch-all never stays louder than a better rule', () => {
+    const p = defaultPresets()
+    p.quiet = { on: true, keepTiers: 2 }
+    p.beams = { on: true, keepTiers: 2 }
+    const block = tiered(p)
+    expect(has(block('any5'), 'PlayAlertSound')).toBe(true)
+    expect(has(block('any4'), 'PlayAlertSound')).toBe(false)
+    expect(has(block('t3r3'), 'PlayEffect')).toBe(false)
+    expect(has(block('any3'), 'PlayEffect')).toBe(false)
+    expect(has(block('any2'), 'PlayEffect')).toBe(false)
+  })
+})

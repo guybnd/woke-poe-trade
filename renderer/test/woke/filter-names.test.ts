@@ -11,7 +11,7 @@ import { LEVELS, neverSink } from '../helpers/neversink'
 describe('tier names', () => {
   it.each([
     ['t1exalted', 'Tier 1'], ['t3annul', 'Tier 3'], ['t2', 'Tier 2'], ['t1top', 'Tier 1 top'], ['t3stackedex', 'Tier 3 stackedex'],
-    ['t1_86', 'Tier 1, item level 86'], ['n12_i84_t1', '12 nodes, item level 84, tier 1'], ['any86', 'Any, item level 86'],
+    ['t1_86', 'Tier 1, item level 86'], ['n12_i84_t1', '12 nodes, item level 84, tier 1'], ['any86', 'Any, item level 86'], ['t5r1', 'Item tier 5, rank 1'], ['any5', 'Any base, item tier 4+'],
     ['stack3', 'Stack tier 3'], ['restex', 'The rest'], ['any', 'Any'], ['hideable', 'Can be hidden'],
     ['#abc12', 'Rule'], ['weapon_phys', 'Weapon phys']
   ])('%s reads %s', (tag, name) => {

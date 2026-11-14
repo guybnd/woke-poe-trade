@@ -19,7 +19,7 @@ export interface NavCategoryDef {
 export const NAV_CATEGORIES: NavCategoryDef[] = [
   { id: 'yours', label: 'Yours', icon: null, fa: 'fas fa-star' },
   { id: 'currency', label: 'Currency', icon: { name: 'Chaos Orb', ns: 'ITEM' } },
-  { id: 'fragments', label: 'Scarabs and fragments', icon: { name: 'Ambush Scarab', ns: 'ITEM' } },
+  { id: 'fragments', label: 'Fragments and map items', icon: { name: 'Fragment of the Phoenix', ns: 'ITEM' } },
   { id: 'cards', label: 'Divination cards', icon: { name: 'The Doctor', ns: 'DIVINATION_CARD' } },
   { id: 'uniques', label: 'Uniques', icon: { name: 'Headhunter', ns: 'UNIQUE' } },
   { id: 'maps', label: 'Maps', icon: { name: 'Map', ns: 'ITEM' } },
@@ -41,9 +41,9 @@ export function categoryOf (type: string, section: string): string {
   if (type.startsWith('woke->')) return 'yours'
   if (type.startsWith(UNTAGGED_PREFIX)) return 'other'
   if (has(type, 'leveling->flasks', 'leveling->tincture', 'endgameflasks', 'endgametinctures')) return 'flasks'
-  if (has(type, 'currency->leveling', 'currency->levelingstacked', 'currency', 'gold', 'vials', 'runesgrafts')) return 'currency'
+  if (has(type, 'currency->leveling', 'currency->levelingstacked', 'currency', 'gold', 'vials', 'runesgrafts', 'mapenchantments')) return 'currency'
   if (has(type, 'leveling', 'decorators->leveling') || s.includes('leveling')) return 'levelling'
-  if (has(type, 'fragments', 'miscmapitems', 'miscmapitemsextra')) return 'fragments'
+  if (has(type, 'fragments', 'miscmapitems', 'miscmapitemsextra', 'viscera')) return 'fragments'
   if (has(type, 'divination')) return 'cards'
   if (has(type, 'uniques')) return 'uniques'
   if (has(type, 'maps', 'maphiders', 'expedition', 'charts', 'exoticmap')) return 'maps'

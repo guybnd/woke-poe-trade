@@ -294,7 +294,7 @@ test('rule list: the keys move one row and keep working after each level', async
   const first = page.getByRole('button', { name: /^Currency/ }).first()
   await first.focus()
   await page.keyboard.press('ArrowDown')
-  expect(await focused()).toMatch(/^Scarabs and fragments/)
+  expect(await focused()).toMatch(/^Fragments and map items/)
   await page.keyboard.press('ArrowUp')
   expect(await focused()).toMatch(/^Currency/)
 

@@ -447,8 +447,16 @@ export function colourBlindActions (b: FilterBlock): boolean {
 }
 const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
 
-function tierNumber (tier: string | null): number | null {
-  const m = /^t(\d+)/.exec(tier ?? '')
+// How high NeverSink ranks a block, 1 the top. NeverSink 8.21's tiered gear
+// names its rules by item tier and base rank (t5r1, any4, strandedveiled), so
+// a "t5" there is the best, not the fifth tier. Its look marker says how
+// high it ranks each one: `!exotics_t1` to `!exotics_t4`.
+export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier' | 'comment'>): number | null {
+  if (b.type === 'gear->tiered') {
+    const look = /!exotics_t(\d+)\b/.exec(b.comment ?? '')
+    return look ? Number(look[1]) : null
+  }
+  const m = /^t(\d+)/.exec(b.tier ?? '')
   return m ? Number(m[1]) : null
 }
 
@@ -606,14 +614,14 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
       continue
     }
     if (p.quiet.on) {
-      const n = tierNumber(b.tier)
+      const n = tierNumber(b)
       if (n != null && n > p.quiet.keepTiers && b.actions.some(a => SOUND_KEYS.includes(a.key))) {
         b.actions = b.actions.filter(a => !SOUND_KEYS.includes(a.key))
         touched = true
       }
     }
     if (p.beams.on) {
-      const n = tierNumber(b.tier)
+      const n = tierNumber(b)
       if (n != null && n > p.beams.keepTiers && b.actions.some(a => BEAM_KEYS.includes(a.key))) {
         b.actions = b.actions.filter(a => !BEAM_KEYS.includes(a.key))
         touched = true
