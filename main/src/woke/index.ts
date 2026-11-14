@@ -13,6 +13,7 @@ import { WokeHoverTracker } from './hover'
 import { readStashTab } from './stash-read'
 import { StashWatch } from './stash-watch'
 import { TreeOverlay } from './tree-overlay'
+import { ATLAS_FIT } from './tree-fit'
 import { perfRecord } from './perf'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 import type { GameLogWatcher } from '../host-files/GameLogWatcher'
@@ -117,6 +118,14 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   registerWokeHandler('tree-overlay-fit', async (args) => treeOverlay.hasPoints ? treeOverlay.fit(args) : { ok: false, reason: 'no-points' })
   registerWokeHandler('tree-overlay-stop', async () => { treeOverlay.stop(); return null })
   registerWokeHandler('tree-overlay-tip', async (on) => { treeOverlay.watchTreeKey(on === true); return null })
+  // The selected atlas strategy over the game's atlas tree: the same reading,
+  // with the atlas's zoom steps and blue lit lines.
+  const atlasOverlay = new TreeOverlay(poeWindow, (data) => {
+    server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'atlas-overlay', data } })
+  }, ATLAS_FIT, 'blue')
+  registerWokeHandler('atlas-overlay-points', async (args) => { atlasOverlay.setPoints(args); return null })
+  registerWokeHandler('atlas-overlay-fit', async (args) => atlasOverlay.hasPoints ? atlasOverlay.fit(args) : { ok: false, reason: 'no-points' })
+  registerWokeHandler('atlas-overlay-stop', async () => { atlasOverlay.stop(); return null })
 
   // The stash reader: off unless the player turned it on (or personal.flag).
   // Off, nothing is registered but these three answers.
