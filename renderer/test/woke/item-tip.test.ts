@@ -254,6 +254,17 @@ describe('where a unique drops', () => {
     expect(lines.some(l => /Esh|Tul|Genesis Tree/.test(l))).toBe(true)
   })
 
+  it('says it for a Foulborn one too', () => {
+    const lines = all(buildTip(pack, { name: 'Foulborn Starforge', kind: 'unique', base: 'Infernal Sword' }))
+    expect(lines).toContain('Restricted drop: not a random drop on its base')
+  })
+
+  it('cleans the wiki markup out of where it comes from', () => {
+    const lines = all(buildTip(pack, { name: "Angler's Plait", kind: 'unique', base: 'Leather Belt' }))
+    expect(lines.some(l => /Slitherpinch equipped/.test(l))).toBe(true)
+    expect(lines.some(l => /[<>]|&\w+;|\[\[/.test(l))).toBe(false)
+  })
+
   it('says nothing for a unique that drops anywhere', () => {
     const lines = all(buildTip(pack, { name: 'Headhunter', kind: 'unique' }))
     expect(lines.some(l => /Restricted drop|No longer drops/.test(l))).toBe(false)

@@ -277,11 +277,16 @@ const MOST_EXPLICITS = 12
 // The data doesn't say which are fixed, so this is only the start of the list.
 const EXPLICITS_SHOWN = 6
 
+// The wiki has no Foulborn names: a Foulborn unique drops where its plain one does.
+export function dropOf (drops: TipPack['drops'], name: string): TipDrop | undefined {
+  return drops?.[name] ?? drops?.[name.replace(/^Foulborn /, '')]
+}
+
 // Where a unique comes from, when that isn't a random drop.
 const DROP_TEXT_MAX = 180
 export function dropLines (drop: TipDrop | undefined): TipLine[] {
   if (!drop?.d && !drop?.r) return []
-  const where = drop.t && drop.t.length > DROP_TEXT_MAX ? `${drop.t.slice(0, DROP_TEXT_MAX - 1).trimEnd()}…` : drop.t
+  const where = drop.t && drop.t.length > DROP_TEXT_MAX ? `${drop.t.slice(0, DROP_TEXT_MAX - 1).trimEnd()}\u2026` : drop.t
   return [
     // The wiki's "drop disabled" covers uniques you still get from a vendor,
     // a card or a boss, so both read the same: just not at random.
@@ -398,7 +403,7 @@ export function buildTip (pack: TipPack, ref: { name: string, kind: TipKind, var
   if (kind === 'unique') {
     const unique = pack.uniques?.[name]
     // Known by name but with no text: its base at least.
-    const drop = pack.drops?.[name]
+    const drop = dropOf(pack.drops, name)
     if (!unique) return ref.base ? { name, base: ref.base, frame: 'unique', sections: present([dropLines(drop)]) } : null
     const on = ref.atBase ?? unique.b
     return uniqueTip(name, { ...unique, b: on }, pack.bases?.[on], variant, drop)

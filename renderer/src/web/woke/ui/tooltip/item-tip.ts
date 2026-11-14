@@ -8,7 +8,7 @@ import type { ObjectDirective } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
-import { buildTip, kindOfNinjaType, packFiles } from './tip-content'
+import { buildTip, dropOf, kindOfNinjaType, packFiles } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { offerItem, openItemMenu } from './item-menu'
@@ -103,7 +103,7 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
 // Marks the uniques on a base that won't turn up as a random drop on it.
 function withDrops (uniques: TipBaseUnique[], drops: TipPack['drops']): TipBaseUnique[] {
   return uniques.map(u => {
-    const d = drops?.[u.name]
+    const d = dropOf(drops, u.name)
     return d?.d || d?.r ? { ...u, drop: 'restricted' as const } : u
   })
 }
