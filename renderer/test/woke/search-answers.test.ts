@@ -24,8 +24,12 @@ describe('parseCurrencyQuery', () => {
     expect(parseCurrencyQuery('1,200 c in div', names)).toEqual({ amount: 1200, from: 'Chaos Orb', to: 'Divine Orb' })
     expect(parseCurrencyQuery('1,5 div', names)).toEqual({ amount: 1.5, from: 'Divine Orb', to: null })
   })
+  it('reads a bare name as one', () => {
+    expect(parseCurrencyQuery('div', names)).toEqual({ amount: 1, from: 'Divine Orb', to: null })
+    expect(parseCurrencyQuery(' chaos in div ', names)).toEqual({ amount: 1, from: 'Chaos Orb', to: 'Divine Orb' })
+  })
   it('ignores what is not currency maths', () => {
-    expect(parseCurrencyQuery('div', names)).toBeNull()
+    expect(parseCurrencyQuery('c', names)).toBeNull()
     expect(parseCurrencyQuery('3 headhunter', names)).toBeNull()
     expect(parseCurrencyQuery('0 div', names)).toBeNull()
     expect(parseCurrencyQuery('3 div in nothing', names)).toBeNull()
@@ -50,6 +54,19 @@ describe('currencyLookup', () => {
   it('keeps decimals under a thousand', () => {
     expect(currency('12.5 div', ctx())[0].name).toBe('12.5 Divine Orb = 3,000 c')
     expect(currency('3000c', ctx())[0].name).toBe('3,000 Chaos Orb = 12.5 div')
+  })
+  it('answers a bare name or alias as one of it', () => {
+    expect(currency('div', ctx())[0].name).toBe('1 Divine Orb = 240 c')
+    expect(currency('Divine Orb', ctx())[0].name).toBe('1 Divine Orb = 240 c')
+    expect(currency('mirror in div', ctx())[0].name).toBe('1 Mirror of Kalandra = 500 Divine Orb')
+    expect(currency('chaos', ctx())[0].name).toBe('1 Chaos Orb = 0.004 div')
+  })
+  it('leaves half-typed and one-letter bare names to item search', () => {
+    expect(currency('c', ctx())).toEqual([])
+    expect(currency('d', ctx())).toEqual([])
+    expect(currency('mirr', ctx())).toEqual([])
+    expect(currency('orb of annul', ctx())).toEqual([])
+    expect(currency('divination card', ctx())).toEqual([])
   })
   it('leaves a name that fits several currencies alone', () => {
     expect(currency('10 orb', ctx())).toEqual([])

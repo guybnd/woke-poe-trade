@@ -35,16 +35,23 @@ const ALIASES = new Map(ALIAS_LIST.flatMap(([name, words]) => words.split(' ').m
 
 export interface CurrencyQuery { amount: number, from: string, to: string | null }
 
-// "3.5 div", "450c", "2k chaos", "12 div in chaos", "1 mirror to div".
-export function parseCurrencyQuery (query: string, names: (text: string) => string | null): CurrencyQuery | null {
-  const m = /^\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?|\.\d+)\s*(k)?\s*([a-z'][a-z' ]*?)\s*(?:\s(?:in|to|as)\s+([a-z'][a-z' ]*?))?\s*$/i.exec(query)
+// "3.5 div", "450c", "2k chaos", "12 div in chaos", "1 mirror to div"; a bare "div" is 1.
+export function parseCurrencyQuery (query: string, names: (text: string, exact?: boolean) => string | null): CurrencyQuery | null {
+  const m = /^\s*(?:(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?|\.\d+)\s*(k)?\s*)?([a-z'][a-z' ]*?)\s*(?:\s(?:in|to|as)\s+([a-z'][a-z' ]*?))?\s*$/i.exec(query)
   if (!m) return null
-  // "1,200" groups thousands; "1,5" is a decimal comma.
-  const digits = /,\d{3}(?:\D|$)/.test(m[1]) ? m[1].replace(/,/g, '') : m[1].replace(',', '.')
-  let amount = Number(digits)
-  if (m[2]) amount *= 1000
-  if (!Number.isFinite(amount) || amount <= 0) return null
-  const from = names(m[3])
+  let amount = 1
+  if (m[1]) {
+    // "1,200" groups thousands; "1,5" is a decimal comma.
+    const digits = /,\d{3}(?:\D|$)/.test(m[1]) ? m[1].replace(/,/g, '') : m[1].replace(',', '.')
+    amount = Number(digits)
+    if (m[2]) amount *= 1000
+    if (!Number.isFinite(amount) || amount <= 0) return null
+  } else if (m[3].trim().length < 3) {
+    // A bare name is one of 1: "div" or "chaos orb", never "c" or "d" as you start typing.
+    return null
+  }
+  // A bare word must be a whole name or alias, not the start of one: "harb" stays an item search.
+  const from = names(m[3], !m[1])
   if (!from) return null
   const to = m[4] ? names(m[4]) : null
   if (m[4] && !to) return null
@@ -57,11 +64,12 @@ function bigNumber (n: number): string {
 }
 
 export function currencyLookup (currencyNames: readonly string[]): Lookup {
-  const names = (text: string): string | null => {
+  const names = (text: string, exact = false): string | null => {
     const t = text.trim().toLowerCase().replace(/’/g, "'")
     const alias = ALIASES.get(t)
     if (alias) return alias
     if (t.length < 3) return null
+    if (exact) return currencyNames.find(n => n.toLowerCase() === t) ?? null
     // Only a name it can't be confused with: "10 orb" could be any orb.
     const hits = currencyNames.filter(n => matchRank(n, t) === 0)
     return hits.length === 1 ? hits[0] : hits.find(n => n.toLowerCase() === t) ?? null
