@@ -47,6 +47,8 @@ export interface CampaignWidget extends Widget {
   pins: PinId[]
   // The area hint pin was added for those who pin the current step.
   hintPinAdded?: boolean
+  // Saved steps moved to the numbering without crafting steps.
+  craftsFolded?: boolean
   // How many route steps the card lists (current one included).
   cardSteps: number
   // How many finished steps the card lists above the current one (0 = none).
@@ -135,6 +137,30 @@ export function migrateCampaign (w: CampaignWidget) {
   if (w.hotkeyPrev === undefined) w.hotkeyPrev = null
   if (w.state && !Array.isArray(w.state.gemsGot)) w.state.gemsGot = []
   if (w.state && (w.state.stepStarts == null || typeof w.state.stepStarts !== 'object')) w.state.stepStarts = {}
+}
+
+// Crafting steps were folded into the step before them: move the saved
+// steps (and their start times) to the shorter numbering, once.
+export function migrateFoldedCrafts (w: CampaignWidget, toNew: (old: number) => number) {
+  if (w.craftsFolded) return
+  const keep = (starts?: Record<string, number>) => {
+    const out: Record<string, number> = {}
+    for (const [k, v] of Object.entries(starts ?? {})) {
+      const old = Number(k)
+      // A start of a folded step says when its zone step ended, not when a
+      // step began: drop it.
+      if (toNew(old) === toNew(old + 1)) continue
+      out[String(toNew(old))] = v
+    }
+    return out
+  }
+  w.step = toNew(w.step)
+  if (w.state) w.state.stepStarts = keep(w.state.stepStarts)
+  for (const c of Object.values(w.chars ?? {})) {
+    c.step = toNew(c.step)
+    if (c.state) c.state.stepStarts = keep(c.state.stepStarts)
+  }
+  w.craftsFolded = true
 }
 
 // Step `step` became current at `at`. Starts for later steps go: after a

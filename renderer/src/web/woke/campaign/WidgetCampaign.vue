@@ -79,9 +79,9 @@ import { actFromAreaId, actLabel, isTown, isTrialFinished } from './log-parse'
 import { bossKilled } from './boss-lines'
 import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
-import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
+import { emptyState, markStepStart, migrateCampaign, migrateFoldedCrafts, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, advanceOnKill, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnKill, advanceOnTrial, areaHint, behind, stepFromOld, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { areaName, bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -119,6 +119,7 @@ const s = computed(() => props.config.state)
 // ---- route ----
 
 const route = computed(() => bundledRoute(props.config.route))
+migrateFoldedCrafts(props.config, old => stepFromOld(route.value, old))
 // Options changed: the step list is different, so find our place again.
 watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${props.config.route.bandit}`, () => {
   // Saved characters' step times are numbered for the old route too. Their
