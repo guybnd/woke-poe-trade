@@ -14,6 +14,15 @@ history:
     user: Agent
     date: '2026-11-14T04:47:33.611Z'
     comment: Created ticket.
+    id: a-2026-11-14t04-47-33-611z
+  - type: activity
+    user: Agent
+    date: '2026-11-14T04:49:48.344Z'
+    comment: >-
+      Mockups A/B/C awaiting Guy's pick:
+      https://claude.ai/artifact/3Z3qBZ27RhmaMRwgwhzVcm (pick lands in its db at
+      picks/current). Recommended B.
+    id: a-2026-11-14t04-49-48-344z
 ---
 Guy wants the passive tree view (Alt+T over the game's tree, auto mode following level) to show ascendancy points/nodes too, not just the main tree.
 
