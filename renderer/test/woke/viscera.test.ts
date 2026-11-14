@@ -77,8 +77,9 @@ describe('Viscera', () => {
       expect(item.category).toBe(ItemCategory.Viscera)
       expect(item.visceraSlot).toBe('Lower Limb')
       expect(item.unknownModifiers).toEqual([])
-      const implicit = item.statsByType.find(s => s.type === ModifierType.Implicit)
-      expect(implicit?.stat.ref).toMatch(/additional Cold Damage/)
+      // A plain copy has no { Implicit Modifier } header, so only check the stat
+      // was read; the overlay's advanced copy marks it implicit (Guy's fixture).
+      expect(item.statsByType.some(s => /additional Cold Damage/.test(s.stat.ref)), name).toBe(true)
       const exact = createTradeRequest(createFilters(item, { ...OPTS, exact: true }), [])
       expect(exact.query.type).toBe("Skeletal Warrior's Leg")
     }
@@ -92,7 +93,8 @@ describe('Viscera', () => {
     expect(item.visceraSlot).toBe('Lower Limb')
     expect(item.itemLevel).toBe(78)
     expect(item.unknownModifiers).toEqual([])
-    expect(item.statsByType.some(s => s.type === ModifierType.Implicit)).toBe(true)
+    const implicit = item.statsByType.find(s => s.type === ModifierType.Implicit)
+    expect(implicit?.stat.ref).toMatch(/additional Cold Damage/)
   })
 
   it('still finds nothing for an unknown name', () => {
