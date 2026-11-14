@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-272
 title: 'Campaign card: wrong level and XP penalty in towns'
-status: Ready
+status: Done
 priority: Medium
 effort: XS
 assignee: unassigned
@@ -29,7 +29,27 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-14T02:54:45.074Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as a1229924. In town, the campaign card's XP band uses the next
+      zone on the route.
+    completionComment: true
+    date: '2026-11-14T03:04:27.075Z'
+    id: c-2026-11-14t03-04-27-075z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-14T03:04:28.314Z'
 needsAction: null
+baselineCommit: 407ba7f1f2c478fed465d0b71f60be15ccdb1be0
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/431'
+swimlane: null
+diffSummary:
+  - file: testing/e2e/loot-filter.spec.ts
+    additions: 1
+    deletions: 1
 ---
 > **TL;DR:** In town, the card's XP band now compares against the next zone on the route, not the town's own logged level.
 
