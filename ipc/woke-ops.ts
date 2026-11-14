@@ -100,6 +100,8 @@ export interface WokeOps {
   'live-data-cached': Op<{ language: unknown, bundled: number }, number | null>
   'live-data-check': Op<{ language: unknown, bundled: number, bundledShared?: unknown }, number | null>
   'game-log-tail': Op<{ bytes?: number } | NoArgs, { path: string | null, lines: string[] }>
+  // Zone, level-up and death lines written between two times (ms).
+  'game-log-range': Op<{ from: number, to: number }, { path: string | null, lines: string[] }>
   'personal-flag': Op<NoArgs, WokePersonalState>
   'personal-set': Op<{ on: boolean }, WokePersonalState>
   'experimental-set': Op<{ unlocked: boolean }, WokePersonalState>

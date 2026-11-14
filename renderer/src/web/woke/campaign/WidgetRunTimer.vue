@@ -175,7 +175,7 @@ export default { widget: widgetRunTimerSpec }
 </script>
 
 <script setup lang="ts">
-import { inject, computed, shallowRef, onUnmounted } from 'vue'
+import { inject, computed, shallowRef, onUnmounted, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -264,6 +264,35 @@ if (trash.length) {
     props.config.timelineTrash = (props.config.timelineTrash ?? []).filter(id => !trash.includes(id))
   })
 }
+
+// Campaign card steps: a step becoming current means the one before it is
+// done, at that moment (the card keeps when each step became current).
+const campaignWidget = computed(() => AppConfig().widgets.find(w => w.wmType === CAMPAIGN_TYPE) as CampaignWidget | undefined)
+watch(() => campaignWidget.value?.state?.stepStarts, (starts, before) => {
+  const r = props.config.run
+  const c = campaignWidget.value
+  if (!starts || !before || !r || r.finished || !c) return
+  // The card follows whoever levels; only this run's character counts.
+  if (r.charName && c.state.charName && r.charName !== c.state.charName) return
+  const keys = Object.keys(starts).map(Number)
+  if (!keys.length) return
+  const top = Math.max(...keys)
+  const oldTop = Math.max(-1, ...Object.keys(before).map(Number))
+  if (top < oldTop) recorder.routeBack(r.id, top)
+  const done = keys.filter(k => k > 0 && starts[k] !== before[k] && starts[k] >= r.startedAt - 1000)
+  if (!done.length) return
+  const runId = r.id
+  const opts = c.route
+  import('./route-data').then(({ bundledRoute }) => {
+    const steps = bundledRoute(opts).steps
+    for (const k of done) {
+      const step = steps[k - 1]
+      if (!step) continue
+      const text = step.parts.map(p => p.text).join('').replace(/\s+/g, ' ')
+      recorder.routeStep(runId, k - 1, text, runElapsed(r, starts[k]))
+    }
+  }).catch(() => {})
+})
 
 const now = shallowRef(Date.now())
 // Ticks only while the widget is on screen.
