@@ -1,0 +1,110 @@
+diff --git a/renderer/src/web/woke/loot-filter/compose.ts b/renderer/src/web/woke/loot-filter/compose.ts
+index 511824fe..5f1c849a 100644
+--- a/renderer/src/web/woke/loot-filter/compose.ts
++++ b/renderer/src/web/woke/loot-filter/compose.ts
+@@ -128,7 +128,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
+   // new league's first day): a change to it waits for the rule, it isn't broken.
+   for (const r of applyEdits(next, cfg.edits.filter(isNetEdit))) {
+     const tier = 'tier' in r.edit ? r.edit.tier : undefined
+-    const waiting = !r.ok && typeof tier === 'string' && NET_TIER.test(tier) && !next.blocks.some(b => b.type === SAFETY_RULE_TYPE && b.tier === tier)
++    const waiting = !r.ok && cfg.safetyNet.on && typeof tier === 'string' && NET_TIER.test(tier) && !next.blocks.some(b => b.type === SAFETY_RULE_TYPE && b.tier === tier)
+     results.set(r.edit.id, waiting ? { ...r, ok: true, blocks: 0, message: 'Waits until the safety net lists something for this rule.' } : r)
+   }
+   return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
+diff --git a/renderer/src/web/woke/loot-filter/store.ts b/renderer/src/web/woke/loot-filter/store.ts
+index ba96b0ea..4e6387f6 100644
+--- a/renderer/src/web/woke/loot-filter/store.ts
++++ b/renderer/src/web/woke/loot-filter/store.ts
+@@ -134,6 +134,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
+   const priceAgeHours = computed(() => prices.updatedAt?.value != null ? (now.value - prices.updatedAt.value) / 3600000 : null)
+   const pricesStale = computed(() => (priceAgeHours.value ?? 0) >= STALE_HOURS)
+   const pricesTooOld = computed(() => (priceAgeHours.value ?? 0) >= TOO_OLD_HOURS)
++  // Moves made in another league (Standard before launch) stay in the config
++  // but out of the file and out of sight; the first Apply in this league
++  // replaces them. Nothing to tell you about.
+   // Problems found by the last save attempt.
+   const problems = shallowRef<FilterProblem[]>([])
+   const safetyCount = ref(0)
+@@ -439,20 +442,6 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
+     return () => { cfg().priceTiers.moves = before; rebuild() }
+   }
+ 
+-  // Price moves made in another league (Standard before launch) say nothing
+-  // about this one's prices: they go, without asking, and new ones come from
+-  // this league's prices. Dropping them is not a change of yours to save.
+-  function dropOtherLeagueMoves (): void {
+-    const league = prices.currentLeague.value
+-    if (!league) return
+-    const moves = cfg().priceTiers.moves
+-    if (!moves.some(m => m.league && m.league !== league)) return
+-    const clean = !userDirty()
+-    cfg().priceTiers.moves = moves.filter(m => !m.league || m.league === league)
+-    if (clean && cfg().savedUserSig != null) cfg().savedUserSig = userSig()
+-  }
+-  watch(() => prices.currentLeague.value, dropOtherLeagueMoves, { immediate: true })
+-
+   // Price index updates, or settings that change the net: refresh.
+   watch(() => [prices.lookup.value, prices.safety.value, cfg().safetyNet.on, cfg().safetyNet.minChaos, cfg().priceTiers.on, cfg().netDismissed, prices.currentLeague.value], () => {
+     if (baseText.value != null) rebuild()
+diff --git a/renderer/test/woke/filter-flows.test.ts b/renderer/test/woke/filter-flows.test.ts
+index 810c8ec0..a7718571 100644
+--- a/renderer/test/woke/filter-flows.test.ts
++++ b/renderer/test/woke/filter-flows.test.ts
+@@ -920,3 +920,14 @@ describe('a change to the safety net with nothing on it', () => {
+     expect(store.failed.value).toHaveLength(1)
+   })
+ })
++
++describe('a change to the safety net while the net is off', () => {
++  it('still reads as broken: the rule will never come', async () => {
++    const { store, config } = await opened(neverSink('1-REGULAR'), {
++      edits: [{ kind: 'visibility', type: 'woke->safety', tier: 'items', visibility: 'Hide', id: 1 }]
++    })
++    config.safetyNet.on = false
++    await store.load()
++    expect(store.failed.value).toHaveLength(1)
++  })
++})
+diff --git a/renderer/test/woke/filter-price-flows.test.ts b/renderer/test/woke/filter-price-flows.test.ts
+index dc836386..51077176 100644
+--- a/renderer/test/woke/filter-price-flows.test.ts
++++ b/renderer/test/woke/filter-price-flows.test.ts
+@@ -203,11 +203,11 @@ describe('moves belong to a league', () => {
+     expect(inTier('t1')).toContain('Mid One')
+   })
+ 
+-  it('drops another league\'s moves without asking, and nothing reads as unsaved', async () => {
++  it('leaves another league\'s moves out of the file, kept in case you go back', async () => {
+     const { store, config } = await opened(moved('Mirage'))
+     await store.save()
+     expect(inTier('t2')).toContain('Mid One')
+-    expect(config.priceTiers.moves).toEqual([])
++    expect(config.priceTiers.moves).toHaveLength(1)
+     expect(store.dirty.value).toBe(false)
+   })
+ 
+@@ -219,12 +219,12 @@ describe('moves belong to a league', () => {
+     expect(config.priceTiers.moves[0].league).toBe('Allflame')
+   })
+ 
+-  it('undo of the first Apply in a league leaves no old moves behind', async () => {
++  it('undo brings back the old league\'s moves still marked as theirs', async () => {
+     const { store, config } = await opened(moved('Mirage'))
+     const undo = store.applyPrices([{ ...MOVE, base: 'Mid Two' }])
+     undo()
+     await store.save()
+-    expect(config.priceTiers.moves).toEqual([])
++    expect(config.priceTiers.moves[0].league).toBe('Mirage')
+     expect(inTier('t2')).toContain('Mid One')
+   })
+ 
+@@ -237,7 +237,8 @@ describe('moves belong to a league', () => {
+     await settled()
+     expect(inTier('t2')).toContain('Mid One')
+     expect(store.dirty.value).toBe(false)
+-    expect(config.priceTiers.moves).toEqual([])
++    // Switching back brings them back: only the file left them out.
++    expect(config.priceTiers.moves).toHaveLength(1)
+   })
+ 
+   it('applies moves from before leagues, and marks them at the next Apply', async () => {
