@@ -73,7 +73,7 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Quality gems and flasks | nothing |
 | Drop sound volume (5%) | nothing |
 | Fewer beams (tier 1 only) | Sacred Orb: beam and map icon off; 21 red-beam rules lose their beam |
-| Weapons for your build (bow build) | nothing |
+| Weapons for your build (no weapon types kept) | nothing |
 | Quiet mode (default, keeps tiers 1-2) | nothing |
 | Fewer beams (default, tiers 1-2) | nothing |
 | Every preset, default settings | nothing |

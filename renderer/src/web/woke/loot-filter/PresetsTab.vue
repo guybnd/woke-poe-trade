@@ -174,11 +174,21 @@
     </div>
 
     <div :class="$style.card">
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <WToggle v-model="p.weapons.on">While levelling, only weapons for</WToggle>
-        <WSelect :model-value="p.weapons.archetype" :options="archetypeOptions" style="width: 10rem;"
-          aria-label="Build type" @update:model-value="setArchetype" />
-        <WInfo text="Other white and blue weapons are hidden and their rares dimmed. Auto uses the weapons of your PoB build." />
+        <WSegmented :model-value="p.weapons.archetype" :options="archetypeOptions" aria-label="Build type"
+          @update:model-value="setArchetype" />
+        <WInfo text="Other white and blue weapons are hidden and their rares dimmed. Auto uses the weapons of your PoB build. Click a weapon type to keep or hide it." />
+      </div>
+      <div v-if="p.weapons.on" :class="$style.weaponGroups">
+        <template v-for="g in WEAPON_GROUPS" :key="g.label">
+          <span class="w-dim text-xs">{{ g.label }}</span>
+          <div class="flex flex-wrap gap-1">
+            <WChip v-for="c in g.classes" :key="c" clickable :active="keptWeapons.includes(c)" :aria-pressed="keptWeapons.includes(c)"
+              :title="keptWeapons.includes(c) ? `Hide ${c.toLowerCase()} while levelling` : `Keep ${c.toLowerCase()}`"
+              @click="toggleWeapon(c)">{{ c }}</WChip>
+          </div>
+        </template>
       </div>
       <div v-if="p.weapons.on" class="w-faint text-xs">{{ weaponNote }}</div>
     </div>
@@ -187,11 +197,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { WChip, WField, WInfo, WSelect, WToggle } from '../ui'
+import { WChip, WField, WInfo, WSegmented, WSelect, WToggle } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { ARCHETYPES, DUST_ILVL, RECIPE_SLOTS, archetypeClasses, cheapCards, cheapCurrencyBases, cheapSplinters, cheapUniqueBases, isNeverSinkDustTier, neverSinkDustBases } from './presets'
+import { ARCHETYPES, DUST_ILVL, RECIPE_SLOTS, archetypeClasses, toggleWeaponClass, cheapCards, cheapCurrencyBases, cheapSplinters, cheapUniqueBases, isNeverSinkDustTier, neverSinkDustBases } from './presets'
 import { WEAPON_CLASSES } from './build-rules'
 import { dustBases } from '../disenchant/calc'
 import { basesWithoutDust, dustUniques } from '../disenchant/data'
@@ -228,10 +238,19 @@ const dustLine = computed({
 })
 
 const mapTiers = Array.from({ length: 16 }, (_, i) => ({ value: String(i + 2), label: String(i + 2) }))
-const archetypeOptions = ARCHETYPES.map(a => ({ value: a.key, label: a.label }))
+// Custom has no button: it lights none, and clicking a chip is how it starts.
+const SHORT: Record<string, string> = { auto: 'Auto', melee: 'Melee' }
+const archetypeOptions = ARCHETYPES
+  .filter(a => a.key !== 'custom')
+  .map(a => ({ value: a.key, label: SHORT[a.key] ?? a.label }))
+const ONE_HANDED = ['Claws', 'Daggers', 'Rune Daggers', 'One Hand Axes', 'One Hand Maces', 'One Hand Swords', 'Thrusting One Hand Swords', 'Sceptres', 'Wands']
+const WEAPON_GROUPS = [
+  { label: 'One-handed', classes: WEAPON_CLASSES.filter(c => ONE_HANDED.includes(c)) },
+  { label: 'Two-handed', classes: WEAPON_CLASSES.filter(c => !ONE_HANDED.includes(c)) }
+]
 function setArchetype (v: string) {
   const a = ARCHETYPES.find(x => x.key === v)
-  if (a) p.value.weapons.archetype = a.key
+  if (a && a.key !== 'custom') p.value.weapons = { on: p.value.weapons.on, archetype: a.key, classes: [] }
 }
 
 // A number field that only takes values in range.
@@ -270,10 +289,18 @@ const uniqueNote = computed(() => {
   const keep = [...(d.on ? neverSinkDustBases(doc) : []), ...(d.on && d.fromPrices ? dustList.value : []), ...(build.value?.uniqueBases ?? [])]
   return priceNote(cheapUniqueBases(doc, props.store.prices.breakdown.value, p.value.cheapUniques.chaos, keep))
 })
+// Auto with no build hides nothing, so every chip shows as kept.
+const keptWeapons = computed(() => archetypeClasses(p.value, build.value?.weaponClasses ?? null) ?? WEAPON_CLASSES)
+function toggleWeapon (c: string) {
+  p.value.weapons = toggleWeaponClass(p.value, build.value?.weaponClasses ?? null, c)
+}
 const weaponNote = computed(() => {
   const keep = archetypeClasses(p.value, build.value?.weaponClasses ?? null)
-  if (!keep) return 'No weapons in your PoB build yet: pick a type instead.'
-  return WEAPON_CLASSES.some(c => !keep.includes(c)) ? `Keeps ${keep.join(', ')}.` : 'Your build uses every weapon type.'
+  if (!keep) return 'No weapons in your PoB build yet, so nothing is hidden. Pick a build type or click a weapon type to hide it.'
+  if (!keep.length) return 'Nothing kept: every white and blue weapon is hidden.'
+  const custom = p.value.weapons.archetype === 'custom' ? 'Custom. ' : ''
+  const hidden = WEAPON_CLASSES.length - keep.length
+  return custom + (hidden ? `Keeps ${keep.length} of ${WEAPON_CLASSES.length} weapon types.` : 'Keeps every weapon type, so nothing is hidden.')
 })
 
 const biggerSize = computed({
@@ -288,6 +315,12 @@ function toggleSlot (key: string) {
 </script>
 
 <style module>
+.weaponGroups {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  align-items: baseline;
+}
 .wrap {
   max-height: min(36rem, calc(70vh / var(--w-ui-scale, 1)));
   padding: 8px var(--w-pad) 12px;

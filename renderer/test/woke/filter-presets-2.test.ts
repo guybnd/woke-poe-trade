@@ -13,7 +13,7 @@ import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { RULE_TYPE, ruleBlocks } from '@/web/woke/loot-filter/rules'
 import {
   applyPresetChanges, cheapCards, cheapSplinters, cheapStacks, cheapUniqueBases, defaultPresets, mapTierCap,
-  normalizePresets, presetBlocks, presetsOn
+  normalizePresets, presetBlocks, presetsOn, toggleWeaponClass
 } from '@/web/woke/loot-filter/presets'
 import type { Presets, UniqueBreakdown } from '@/web/woke/loot-filter/presets'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
@@ -66,8 +66,8 @@ describe('presets, second batch', () => {
     expect(old.cheapCards).toEqual({ on: false, chaos: 2 })
     expect(old.lowMaps).toEqual({ on: false, tier: 14 })
     expect(old.volume).toEqual({ on: false, percent: 60 })
-    expect(old.weapons).toEqual({ on: false, archetype: 'auto' })
-    expect(normalizePresets({ weapons: { on: true, archetype: 'wizard' as 'auto' }, volume: { on: true, percent: 900 } }).weapons.archetype).toBe('auto')
+    expect(old.weapons).toEqual({ on: false, archetype: 'auto', classes: [] })
+    expect(normalizePresets({ weapons: { on: true, archetype: 'wizard' as 'auto', classes: [] }, volume: { on: true, percent: 900 } }).weapons.archetype).toBe('auto')
     expect(normalizePresets({ volume: { on: true, percent: 900 } }).volume.percent).toBe(100)
   })
 
@@ -252,7 +252,7 @@ describe('presets, second batch', () => {
   })
 
   it('hides weapons other builds use while levelling, and dims their rares', () => {
-    const doc = withPresets({ weapons: { on: true, archetype: 'bow' } })
+    const doc = withPresets({ weapons: { on: true, archetype: 'bow', classes: [] } })
     const weapon = (itemClass: string, rarity: 'Normal' | 'Rare', areaLevel = 30) => ({ itemClass, baseType: 'x', rarity, areaLevel, itemLevel: areaLevel })
     expect(shown(doc, weapon('Wands', 'Normal'))).toBe(false)
     expect(finalTier(doc, weapon('Wands', 'Rare'))).toBe('otherweaponsrare')
@@ -261,10 +261,46 @@ describe('presets, second batch', () => {
     // In maps it's NeverSink's call again.
     expect(finalTier(doc, weapon('Wands', 'Rare', 75))).not.toBe('otherweaponsrare')
     // Auto takes the PoB build's weapons; with no build it adds nothing.
-    const auto = withPresets({ weapons: { on: true, archetype: 'auto' } }, { build: { uniqueBases: [], weaponClasses: ['Wands'] } })
+    const auto = withPresets({ weapons: { on: true, archetype: 'auto', classes: [] } }, { build: { uniqueBases: [], weaponClasses: ['Wands'] } })
     expect(finalTier(auto, weapon('Bows', 'Rare'))).toBe('otherweaponsrare')
     expect(finalTier(auto, weapon('Wands', 'Rare'))).not.toBe('otherweaponsrare')
-    const none = withPresets({ weapons: { on: true, archetype: 'auto' } })
+    const none = withPresets({ weapons: { on: true, archetype: 'auto', classes: [] } })
     expect(none.blocks.some(b => b.tier === 'otherweapons')).toBe(false)
+    // Custom keeps exactly the picked types.
+    const custom = withPresets({ weapons: { on: true, archetype: 'custom', classes: ['Wands', 'Claws'] } })
+    expect(shown(custom, weapon('Claws', 'Normal'))).toBe(true)
+    expect(shown(custom, weapon('Bows', 'Normal'))).toBe(false)
+    expect(finalTier(custom, weapon('Wands', 'Rare'))).not.toBe('otherweaponsrare')
+    // Nothing picked hides every white and blue weapon, but 5-links still show.
+    const empty = withPresets({ weapons: { on: true, archetype: 'custom', classes: [] } })
+    expect(shown(empty, weapon('Wands', 'Normal'))).toBe(false)
+    expect(shown(empty, { ...weapon('Wands', 'Normal'), socketGroups: ['RGBRG'] })).toBe(true)
+  })
+
+  it('reads a custom weapon list safely', () => {
+    const w = (v: unknown) => normalizePresets({ weapons: v } as Partial<Presets>).weapons
+    expect(w({ on: true, archetype: 'custom', classes: ['Wands', 'Wands', 'Spoons', 'Bows'] })).toEqual({ on: true, archetype: 'custom', classes: ['Bows', 'Wands'] })
+    expect(w({ on: true, archetype: 'custom', classes: 'Wands' })).toEqual({ on: true, archetype: 'custom', classes: [] })
+    // A list left over from Custom is dropped once a build type is chosen.
+    expect(w({ on: true, archetype: 'bow', classes: ['Wands'] })).toEqual({ on: true, archetype: 'bow', classes: [] })
+  })
+
+  it('clicking a weapon type starts Custom, and a list that matches a build type goes back to it', () => {
+    const at = (weapons: Presets['weapons']) => ({ ...defaultPresets(), weapons })
+    const bowPlusWands = toggleWeaponClass(at({ on: true, archetype: 'bow', classes: [] }), null, 'Wands')
+    expect(bowPlusWands).toEqual({ on: true, archetype: 'custom', classes: ['Bows', 'Wands'] })
+    expect(toggleWeaponClass(at(bowPlusWands), null, 'Wands')).toEqual({ on: true, archetype: 'bow', classes: [] })
+    // From Auto the build's weapons are the start.
+    expect(toggleWeaponClass(at({ on: true, archetype: 'auto', classes: [] }), ['Wands', 'Sceptres'], 'Daggers'))
+      .toEqual({ on: true, archetype: 'custom', classes: ['Daggers', 'Sceptres', 'Wands'] })
+    // Auto with no build hides nothing, so a click hides just that type.
+    const noClaws = toggleWeaponClass(at({ on: true, archetype: 'auto', classes: [] }), null, 'Claws')
+    expect(noClaws.archetype).toBe('custom')
+    expect(noClaws.classes).toHaveLength(14)
+    expect(noClaws.classes).not.toContain('Claws')
+    // Back to the build's own list is Auto again, so it follows the build.
+    const build = ['Bows']
+    const plus = toggleWeaponClass(at({ on: true, archetype: 'auto', classes: [] }), build, 'Wands')
+    expect(toggleWeaponClass(at(plus), build, 'Wands')).toEqual({ on: true, archetype: 'auto', classes: [] })
   })
 })

@@ -115,6 +115,31 @@ test('rule builder, drag and drop between tiers, and presets end up in the saved
   expect(text).toMatch(/\$tier->t2divine[^\n]*\n(\t[^\n]*\n)*\tBaseType == [^\n]*"Chaos Orb"/)
 })
 
+test('presets: levelling weapons start from a build type, and a chip keeps or hides one type', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /Presets/ }).click()
+  await page.getByRole('switch', { name: 'While levelling, only weapons for' }).click()
+  await page.getByRole('button', { name: 'Bow', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Bows', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Wands', exact: true })).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('button', { name: 'Wands', exact: true }).click()
+  await expect(page.getByText('Custom. Keeps 2 of 15 weapon types.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Bow', exact: true })).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('button', { name: 'Wands', exact: true }).scrollIntoViewIfNeeded()
+  await overlay.snap('levelling weapons, custom')
+
+  await page.getByRole('button', { name: /^Save/ }).click()
+  const out = path.join(folder, 'NeverSink (woke).filter')
+  await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toContain('$tier->otherweapons')
+  const block = fs.readFileSync(out, 'utf8').split(/\r?\n(?=\S)/).find(b => b.includes('$tier->otherweapons '))!
+  expect(block).toContain('"Claws"')
+  expect(block).not.toContain('"Wands"')
+  expect(block).not.toContain('"Bows"')
+})
+
 test('rules: add an item by search, move one from its menu, take one off, and the file agrees', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })

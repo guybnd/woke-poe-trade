@@ -10,7 +10,7 @@ import type { FilterBlock, FilterDoc } from '@/web/woke/loot-filter/parse'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { ARCHETYPES, defaultPresets, normalizePresets, RECIPE_SLOTS, tierNumber } from '@/web/woke/loot-filter/presets'
 import type { Presets, UniqueBreakdown } from '@/web/woke/loot-filter/presets'
-import { DEFAULT_BUILD_RULES } from '@/web/woke/loot-filter/build-rules'
+import { DEFAULT_BUILD_RULES, WEAPON_CLASSES } from '@/web/woke/loot-filter/build-rules'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import type { FilterEdit } from '@/web/woke/loot-filter/edits'
 import { PRESET_NAMES } from '@/web/woke/loot-filter/timeline'
@@ -228,7 +228,7 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   vendorQuality: { on: true },
   volume: { on: true, percent: 5 },
   beams: { on: true, keepTiers: 1 },
-  weapons: { on: true, archetype: 'bow' }
+  weapons: { on: true, archetype: 'custom', classes: [] }
 }
 
 export const PRESET_KEYS = Object.keys(HARSHEST) as Key[]
@@ -246,7 +246,7 @@ const HARSH_WORDS: Partial<Record<Key, string>> = {
   cheapSplinters: 'under 50c',
   volume: '5%',
   beams: 'tier 1 only',
-  weapons: 'bow build'
+  weapons: 'no weapon types kept'
 }
 
 // "Quiet mode (keeps tier 1 only)": the preset as the editor names it.
@@ -315,6 +315,7 @@ export function randomSetup (seed: number): Setup {
   p.dust.fromPrices = r() < 0.5
   p.dust.line = pick([100, 5000, 1_000_000])
   p.weapons.archetype = pick(ARCHETYPES).key
+  p.weapons.classes = p.weapons.archetype === 'custom' ? WEAPON_CLASSES.filter(() => r() < 0.4) : []
   p.chaosRecipe.slots = RECIPE_SLOTS.map(s => s.key).filter(() => r() < 0.7)
   return { name: `random #${seed}`, presets: normalizePresets(p), netOn: r() < 0.5 }
 }

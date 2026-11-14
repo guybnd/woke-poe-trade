@@ -77,7 +77,7 @@ describe('what a preset may take away, it takes away as it says', () => {
   // Uber+ ships NeverSink's own 6-socket tier switched off; it still marks the place.
   it.each(['1-REGULAR', '6-UBER-PLUS-STRICT'])('%s: a plain 6-socket weapon of another build still shows while levelling', name => {
     const text = FILTERS.find(f => f.name === name)!.text
-    const s: Setup = { name: '6s + weapons', presets: presets({ sixSockets: { on: true }, weapons: { on: true, archetype: 'bow' } }) }
+    const s: Setup = { name: '6s + weapons', presets: presets({ sixSockets: { on: true }, weapons: { on: true, archetype: 'bow', classes: [] } }) }
     const doc = compose(text, s).doc
     for (const rarity of ['Normal', 'Magic', 'Rare'] as const) {
       for (const areaLevel of [20, 50, 83]) {
