@@ -58,6 +58,15 @@
                   <button v-if="tracker" class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }" :title="isWatched(v) ? 'Stop watching' : 'Watch price'" :aria-label="isWatched(v) ? 'Stop watching' : 'Watch price'" @click="toggleWatch(v)"><i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" /></button>
                 </span>
               </div>
+              <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
+                <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
+                <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
+                  <span class="w-num">{{ convNumber(r.amount) }}</span>
+                  <span v-if="r.chaos != null" class="w-num text-right">{{ convNumber(r.chaos) }} c</span>
+                  <span v-if="r.div != null" class="w-num text-right">{{ convNumber(r.div) }} div</span>
+                </div>
+                <div v-if="conv.perDivine" class="w-dim" :class="$style.small">1 Divine Orb buys {{ convNumber(conv.perDivine) }}</div>
+              </div>
               <div :class="$style.acts">
                 <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
@@ -123,6 +132,7 @@ import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
 import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
+import { convNumber, currencyConversions } from './conversions'
 import { MODULES, isWidgetTypeOn } from '../modules'
 import { pressedKeys, sortKeys } from '../loot-filter/hotkey-match'
 import { whenIdle } from '../shared/perf'
@@ -472,6 +482,14 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
 const entries = computed(() => sections.value.flatMap(s => s.entries))
 
 const selected = shallowRef<Entry | null>(null)
+// A currency's round amounts in chaos and divines, under its prices.
+const conv = computed(() => {
+  const e = selected.value
+  if (e?.kind !== 'price' || e.group.type !== 'Currency') return null
+  const each = e.group.variants[0]?.chaos
+  return each == null ? null : currencyConversions(e.group.name, each, divine.value)
+})
+const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
 // The same result stays selected as you keep typing, while it still matches.
 // After picking an example, its answer card is what it was picked for.
 let showAnswer = false
@@ -750,5 +768,7 @@ const dataNote = computed(() => {
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowBtns { display: flex; justify-content: flex-end; gap: 2px; }
 .acts { display: flex; flex-wrap: wrap; gap: var(--w-s1); margin-top: var(--w-s3); }
+.convBox { margin-top: var(--w-s3); max-width: 320px; }
+.conv { display: grid; grid-template-columns: minmax(0, 1fr) repeat(var(--conv-cols, 1), 90px); column-gap: 6px; align-items: center; }
 .foot { flex: none; display: flex; align-items: center; gap: var(--w-s3); padding: 7px var(--w-pad); border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
 </style>
