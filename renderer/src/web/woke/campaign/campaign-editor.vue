@@ -102,9 +102,10 @@ import { nextId } from '../shared/library'
 import { actLabel } from './log-parse'
 import { PIN_OPTIONS } from './pins'
 import type { PinId } from './pins'
-import { migrateCampaign } from './widget'
+import { migrateCampaign, migrateFoldedCrafts } from './widget'
 import type { CampaignWidget } from './widget'
 import { bundledRoute } from './route-data'
+import { stepFromOld } from './route-parse'
 import type { RouteOptions } from './route-parse'
 
 export default defineComponent({
@@ -113,6 +114,7 @@ export default defineComponent({
   props: configProp<CampaignWidget>(),
   setup (props) {
     migrateCampaign(props.configWidget)
+    migrateFoldedCrafts(props.configWidget, old => stepFromOld(bundledRoute(props.configWidget.route), old))
     function routeOpt<K extends keyof RouteOptions> (key: K) {
       return computed({
         get: () => props.configWidget.route[key],

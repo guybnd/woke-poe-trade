@@ -23,7 +23,7 @@
             <div v-for="(st, i) in shown" :key="st.index" :class="i === 0 ? $style.now : $style.next">
               <div class="flex gap-1.5">
                 <span :class="i === 0 ? 'w-accent' : 'w-faint'">{{ i === 0 ? '›' : '·' }}</span>
-                <span class="min-w-0"><RouteParts :parts="st.parts" />
+                <span class="min-w-0"><RouteParts :parts="st.parts" :crafts="i === 0 ? nowCrafts : st.crafts" />
                   <span v-if="st.recommendedLevel != null" class="w-num" :class="lowFor(st) ? 'w-down' : 'w-faint'"> · lv {{ st.recommendedLevel }}</span></span>
               </div>
               <div v-for="(sub, j) in (i === 0 ? st.subs : [])" :key="j" :class="$style.sub" class="w-dim"><RouteParts :parts="sub" /></div>
@@ -69,6 +69,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatClock } from '../ui/format'
 import RouteParts from './RouteParts.vue'
+import { craftChip } from './recipes'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay, tickWhile } from '../dock/dock'
@@ -81,9 +82,9 @@ import CampaignBuild from './CampaignBuild.vue'
 import type { LogEvent } from './log-parse'
 import { emitStepChange } from './step-bus'
 import type { StepChange } from './step-bus'
-import { emptyState, markStepStart, migrateCampaign, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
+import { emptyState, markStepStart, migrateCampaign, migrateFoldedCrafts, parseHotkeyTarget, routeAsleepAfter, saveCharacter, shouldSwitch, stepTook, switchCharacter } from './widget'
 import type { CampaignWidget } from './widget'
-import { actProgress, advanceOnEnter, advanceOnKill, advanceOnTrial, areaHint, behind, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
+import { actProgress, advanceOnEnter, advanceOnKill, advanceOnTrial, areaHint, behind, stepFromOld, zoneCrafts, nextFightZone, resyncTo, upcoming, xpState } from './route-parse'
 import type { RouteStep } from './route-parse'
 import { areaName, bundledRoute, routeData } from './route-data'
 import { followGameLog } from '../shared/game-log'
@@ -121,6 +122,7 @@ const s = computed(() => props.config.state)
 // ---- route ----
 
 const route = computed(() => bundledRoute(props.config.route))
+migrateFoldedCrafts(props.config, old => stepFromOld(route.value, old))
 // Options changed: the step list is different, so find our place again.
 watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${props.config.route.bandit}`, () => {
   // Saved characters' step times are numbered for the old route too. Their
@@ -139,6 +141,12 @@ watch(() => `${props.config.route.leagueStart}|${props.config.route.library}|${p
 
 const current = computed<RouteStep | undefined>(() => route.value.steps[props.config.step])
 const shown = computed(() => upcoming(route.value, props.config.step, Math.max(1, props.config.cardSteps)))
+// The current step's chip: recipes of the zone you're in, and its own.
+const nowCrafts = computed(() => {
+  const own = current.value?.crafts ?? []
+  return [...new Set([...zoneCrafts(route.value, props.config.step), ...own])]
+})
+const craftTail = computed(() => (nowCrafts.value.length ? ` ${craftChip(nowCrafts.value)}` : ''))
 const actStep = computed(() => actProgress(route.value, props.config.step))
 // Finished steps above the current one, with how long each took.
 const done = computed(() => {
@@ -325,7 +333,7 @@ const readouts = computed(() => {
     actMs: timer.value?.act ?? null,
     level: s.value.level,
     xp: xp.value,
-    step: current.value ? current.value.parts.map(p => p.text).join('') : null,
+    step: current.value ? current.value.parts.map(p => p.text).join('') + craftTail.value : null,
     hint: current.value ? areaHint(current.value) : null
   })
 })
