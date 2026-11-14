@@ -48,6 +48,8 @@ export interface Route {
   actStarts: Map<number, number>
 }
 
+const TRIAL_TEXT = 'Trial of Ascendancy'
+
 const DIRS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
 
 function defines (opts: RouteOptions): Set<string> {
@@ -122,7 +124,7 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
       case 'quest': return { kind: 'quest', text: data.quests[args[0]] ?? args[0] }
       case 'quest_text': return { kind: 'item', text: args[0] }
       case 'generic': return { kind: 'generic', text: args[0] }
-      case 'trial': return { kind: 'trial', text: 'Trial of Ascendancy' }
+      case 'trial': return { kind: 'trial', text: TRIAL_TEXT }
       case 'ascend':
         enterArea(state.lastTown)
         return { kind: 'trial', text: `${args[0][0].toUpperCase()}${args[0].slice(1)} Labyrinth` }
@@ -228,6 +230,25 @@ export function advanceOnEnter (route: Route, current: number, areaId: string, d
     if (entersArea(steps[i], areaId)) return i + 1
   }
   return current
+}
+
+// Izaro's trial-finished line while in `areaId`: the step past the
+// "Complete Trial of Ascendancy" coming up in that area, or `current` when
+// there is none (already ticked, trials left out of the route, or the trial
+// was done early, before steps elsewhere such as a town hand-in, which stay).
+export function advanceOnTrial (route: Route, current: number, areaId: string): number {
+  const end = Math.min(route.steps.length, current + LOOKAHEAD)
+  for (let i = current; i < end; i++) {
+    const step = route.steps[i]
+    if (step.areaBefore !== areaId) break
+    if (step.parts.some(isTrialPart)) return i + 1
+  }
+  return current
+}
+
+// The lab steps ("Normal Labyrinth") are trial parts too; only trials count.
+function isTrialPart (p: Part): boolean {
+  return p.kind === 'trial' && p.text === TRIAL_TEXT
 }
 
 // Best guess of where you are on a freshly built route (options changed).
