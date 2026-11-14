@@ -29,13 +29,16 @@ export function splitFilters (pseudo: StatFilter, stats: FilterOrGroup[], item: 
     if (anyCopy(type) && source.stat.stat.trade.ids[ModifierType.Explicit]) type = ModifierType.Explicit
     const key = `${type}|${source.stat.stat.ref}`
     if (shown.has(key)) continue
+    // A fractured mod keeps a row of its own (not summed with a same-stat mod),
+    // so PoE mode can offer "Fractured only" on it.
+    const group = source.modifier.info.type === ModifierType.Fractured ? `${key}|fractured` : key
     const roll = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
     const own: StatSource = {
       modifier: source.modifier,
       stat: source.stat,
       contributes: roll && { value: roll.value, min: roll.min, max: roll.max }
     }
-    groups.set(key, [...(groups.get(key) ?? []), own])
+    groups.set(group, [...(groups.get(group) ?? []), own])
   }
   const out: StatFilter[] = []
   for (const sources of groups.values()) {

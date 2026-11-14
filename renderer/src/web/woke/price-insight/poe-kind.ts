@@ -117,7 +117,10 @@ export function isTopTier (tier: string): boolean {
 /** The trade ids that search only fractured copies of this mod, when the row
  *  searches any copy of it. "Fractured only" swaps the row to them. */
 export function fracturedIds (filter: StatFilter): string[] | undefined {
-  if (filter.tag !== FilterTag.Explicit || filter.not || filter.sources.length !== 1) return undefined
+  // A mechanic's explicit tag (explicit-veiled for "of the Order", influence,
+  // Delve...) is still an explicit row searching any copy.
+  const explicit = filter.tag === FilterTag.Explicit || String(filter.tag).startsWith('explicit-')
+  if (!explicit || filter.not || filter.sources.length !== 1) return undefined
   const src = filter.sources.find(s => s.modifier.info.type === ModifierType.Fractured)
   return src?.stat.stat.trade.ids[ModifierType.Fractured]
 }
