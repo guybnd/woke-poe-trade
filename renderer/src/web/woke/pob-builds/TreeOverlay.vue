@@ -2,15 +2,15 @@
   <canvas v-show="shown" ref="canvas" :class="$style.layer" data-tree-overlay aria-hidden="true" />
   <div v-if="shown && left != null" :class="$style.count">
     {{ countText }}<template v-if="treeTitle"> · {{ treeTitle }}</template>
-    <div v-if="panel === 'tree' && ascNames" :class="$style.asc">Ascendancy: {{ ascNames }}</div>
+    <div v-if="ascNames" :class="$style.asc">Ascendancy: {{ ascNames }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
 // The active PoB build drawn over the game's own passive tree, from a hotkey.
 // Drawn over the game, so it never takes a click. Only what's still to take
-// shows; lit (allocated) lines in game are left alone. With the game's
-// Ascendancy panel open, the build's ascendancy path is drawn on that instead.
+// shows; lit (allocated) lines in game are left alone. The build's
+// ascendancy is drawn too, in its bubble beside the class start (asc-layout.ts).
 import { computed, inject, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
@@ -29,7 +29,7 @@ import type { PobTreeSpec } from './widget'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
-  | { ok: true, panel?: 'tree' | 'asc', fit: Fit, lit: boolean[], width: number, height: number }
+  | { ok: true, fit: Fit, lit: boolean[], width: number, height: number }
   | { ok: false, reason: string }
 
 const canvas = shallowRef<HTMLCanvasElement>()
@@ -37,11 +37,10 @@ const canvas = shallowRef<HTMLCanvasElement>()
 const on = treeOn
 const shown = shallowRef(false)
 const left = shallowRef<number | null>(null)
-// Which the last fit found: the main tree or the Ascendancy panel.
-const panel = shallowRef<'tree' | 'asc'>('tree')
-const countText = computed(() => panel.value === 'asc'
-  ? (left.value ? `${left.value} ascendancy to take` : 'Ascendancy done')
-  : (left.value ? `${left.value} to take` : 'Tree done'))
+// Ascendancy points still to take, apart from the passives.
+const ascLeft = shallowRef(0)
+const countText = computed(() => (left.value ? `${left.value} to take` : 'Tree done') +
+  (ascLeft.value ? ` · ${ascLeft.value} ascendancy` : ''))
 // The drawn tree's title, when the build has more than one.
 const treeTitle = shallowRef('')
 
@@ -49,15 +48,12 @@ let all: Map<number, TreeNode> | null = null
 let sentPoints: Map<number, TreeNode> | null = null
 let path: BuildPath | null = null
 let probes: number[][] = []
-// The same for the build's ascendancy; null when it has none.
+// The same for the build's ascendancy, moved into its bubble; null when it
+// has none. Its nodes and lines are in `placed`, the tree with the moved
+// copies, which drawing reads from.
 let ascPath: BuildPath | null = null
-let ascProbes: number[][] = []
-// The ascendancy drawn, and the one the main process looks for: a handover
-// to another tree can change it.
-let ascName: string | null = null
-let sentAsc: string | null | undefined
-// The tree's ascendancy notables in the build's order, shown under the count
-// on the main tree, so they show even when the panel isn't open.
+let placed: Map<number, TreeNode> | null = null
+// The tree's ascendancy notables in the build's order, shown under the count.
 const ascNames = shallowRef('')
 let taken = new Set<number>()
 // Following your level (no set picked by hand), a tree you've taken all of
@@ -99,7 +95,6 @@ async function start (quiet = false): Promise<boolean> {
   if (sentPoints !== all) {
     await hostRequest('tree-overlay-points', lib.fitPoints(all))
     sentPoints = all
-    sentAsc = undefined
   }
   treeArt = art
   trees = realSets(d.trees)
@@ -121,17 +116,29 @@ async function start (quiet = false): Promise<boolean> {
 function usePath (tree: PobTreeSpec) {
   drawn = tree
   path = lib!.buildPath(all!, tree.nodes ?? [], treeArt!)
-  probes = lib!.probesOf(path, all!)
-  ascName = lib!.buildAscendancy(all!, tree.nodes ?? [])
-  ascPath = ascName ? lib!.ascPath(all!, tree.nodes ?? [], treeArt!, ascName) : null
-  ascProbes = ascPath ? lib!.probesOf(ascPath, all!) : []
+  const ids = tree.nodes ?? []
+  // Only the class's own ascendancy has a place in the game's tree.
+  const lay = lib!.placeAscendancies(all!, new Set(ids), treeArt!, treeArt!.groups.length, true)
+  const asc = lay.nodes[0]?.asc
+  if (asc) {
+    placed = new Map(all!)
+    for (const n of lay.nodes) placed.set(n.id, n)
+    ascPath = lib!.ascPath(placed, ids, { ...treeArt!, groups: [...treeArt!.groups, ...lay.groups] }, asc)
+  } else {
+    placed = all
+    ascPath = null
+  }
+  // One read of the screen checks both: the passives' lines, then the
+  // ascendancy's.
+  probes = [...lib!.probesOf(path, placed!), ...(ascPath ? lib!.probesOf(ascPath, placed!) : [])]
   ascNames.value = (tree.nodes ?? []).map(id => all!.get(id)).filter(n => n?.kind === 'asc' && n.name).map(n => n!.name).join(' · ')
   treeTitle.value = trees.length > 1 ? tree.title : ''
 }
 
-// The path on screen now: the ascendancy's while its panel is open.
+// Everything drawn: the passives' path and the ascendancy's.
 function shownPath (): BuildPath | null {
-  return panel.value === 'asc' && ascPath ? ascPath : path
+  if (!path || !ascPath) return path
+  return { nodes: [...path.nodes, ...ascPath.nodes], lines: [...path.lines, ...ascPath.lines] }
 }
 
 function stop () {
@@ -158,12 +165,7 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
     await nextTick()
     await frames(2)
     const asked = path
-    if (ascName !== sentAsc) {
-      const name = ascName
-      await hostRequest('tree-overlay-asc-points', name ? lib!.ascFitPoints(all!, name) : null)
-      sentAsc = name
-    }
-    const res = await (hostRequest('tree-overlay-fit', { probes, ascProbes, fresh }) as Promise<FitReply>)
+    const res = await (hostRequest('tree-overlay-fit', { probes, fresh }) as Promise<FitReply>)
     if (hideAll) document.body.style.visibility = ''
     // A new start chose another tree meanwhile: this read was of the old one.
     if (!on.value || path !== asked) return true
@@ -173,13 +175,12 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
       return false
     }
     view = { ...res.fit, width: res.width, height: res.height }
-    panel.value = res.panel === 'asc' && ascPath ? 'asc' : 'tree'
-    const cur = shownPath()!
-    taken = lib!.takenNodes(cur, res.lit)
-    left.value = cur.nodes.filter(n => !taken.has(n.id)).length
-    // Only the main tree hands over: the next tree's ascendancy may well be
-    // the same as this one's.
-    const next = !left.value && follow && drawn && panel.value === 'tree' ? treeAfter(trees, drawn, passed) : null
+    taken = lib!.takenNodes(shownPath()!, res.lit)
+    left.value = path.nodes.filter(n => !taken.has(n.id)).length
+    ascLeft.value = ascPath ? ascPath.nodes.filter(n => !taken.has(n.id)).length : 0
+    // Only the passives hand over: ascendancy points come from the labyrinth,
+    // not from levels.
+    const next = !left.value && follow && drawn ? treeAfter(trees, drawn, passed) : null
     if (next) {
       // Read the screen again for the next tree's lines (the finally does).
       passed.add(drawn!)
@@ -207,7 +208,8 @@ async function refit (fresh = false, hideOverlay = fresh): Promise<boolean> {
 function draw () {
   const el = canvas.value
   const cur = shownPath()
-  if (!el || !view || !cur || !all) return
+  const nodes = placed ?? all
+  if (!el || !view || !cur || !nodes) return
   const W = Math.round(window.innerWidth * devicePixelRatio)
   const H = Math.round(window.innerHeight * devicePixelRatio)
   if (el.width !== W || el.height !== H) { el.width = W; el.height = H }
@@ -228,8 +230,8 @@ function draw () {
   ctx.beginPath()
   for (const l of cur.lines) {
     if (taken.has(l.a) && taken.has(l.b)) continue
-    const a = all.get(l.a)!
-    const b = all.get(l.b)!
+    const a = nodes.get(l.a)!
+    const b = nodes.get(l.b)!
     ctx.moveTo(X(a.x), Y(a.y))
     if (l.arc) ctx.arc(X(l.arc.cx), Y(l.arc.cy), l.arc.r * z, l.arc.from, l.arc.to, l.arc.ccw)
     else ctx.lineTo(X(b.x), Y(b.y))

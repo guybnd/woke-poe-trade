@@ -169,11 +169,15 @@ const clusterBuild = computed(() => {
   }
   return built
 })
-// The trees' ascendancies, each in its bubble outside the main tree.
+// The trees' ascendancies, each in its bubble beside the class start as the
+// game draws it; their orbit centres join the art's groups after the
+// cluster rings'.
 const ascBuild = computed(() => {
   const t = baseTree.value
-  if (!t) return null
-  return placeAscendancies(t, new Set([...(shown.value?.nodes ?? []), ...(previous.value?.nodes ?? [])]))
+  const art = passiveTreeArt()
+  if (!t || !art) return null
+  const ids = new Set([...(shown.value?.nodes ?? []), ...(previous.value?.nodes ?? [])])
+  return placeAscendancies(t, ids, art, art.groups.length + (clusterBuild.value?.groups.length ?? 0))
 })
 const tree = computed(() => {
   const t = baseTree.value
@@ -293,7 +297,7 @@ function draw () {
   const t = tree.value
   const baseArt = passiveTreeArt()
   // The cluster rings' centres join the art's groups, for their orbit arcs.
-  const art = baseArt && { ...baseArt, groups: [...baseArt.groups, ...(clusterBuild.value?.groups ?? [])] }
+  const art = baseArt && { ...baseArt, groups: [...baseArt.groups, ...(clusterBuild.value?.groups ?? []), ...(ascBuild.value?.groups ?? [])] }
   const ctx = canvas?.getContext('2d')
   if (!canvas || !ctx || !t || !art) return
   const css = getComputedStyle(canvas)

@@ -4,7 +4,7 @@ import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { readNodes } from '@/web/woke/pob-builds/passive-tree'
 import type { TreeArt } from '@/web/woke/pob-builds/passive-tree'
-import { ascFitPoints, ascPath, buildAscendancy, buildPath, fitPoints, probesOf, takenNodes } from '@/web/woke/pob-builds/tree-overlay'
+import { ascPath, buildAscendancy, buildPath, fitPoints, probesOf, takenNodes } from '@/web/woke/pob-builds/tree-overlay'
 
 const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/tree/passive-tree.json'), 'utf-8')) as TreeArt & { nodes: Parameters<typeof readNodes>[0] }
 const tree = readNodes(data.nodes)
@@ -60,7 +60,7 @@ describe('build tree overlay', () => {
   })
 })
 
-describe('ascendancy panel', () => {
+describe('ascendancy path', () => {
   // An Inquisitor taking Righteous Providence then Inevitable Judgement, with
   // a main tree walk that must not count.
   const ids = [...walk(3), 662, 53884, 37486, 48214]
@@ -73,13 +73,6 @@ describe('ascendancy panel', () => {
   it('picks the class ascendancy over a bloodline point listed first', () => {
     const aul = [...tree.values()].find(n => n.asc === 'Aul' && n.kind === 'asc')!
     expect(buildAscendancy(tree, [aul.id, ...ids])).toBe('Inquisitor')
-  })
-
-  it('fits on every node of that ascendancy only', () => {
-    const pts = ascFitPoints(tree, 'Inquisitor')
-    expect(pts.x.length).toBe(17)
-    // Laid out together, about a panel's width across.
-    expect(Math.max(...pts.x) - Math.min(...pts.x)).toBeLessThan(2000)
   })
 
   it('draws the path out from the ascendancy start', () => {

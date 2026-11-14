@@ -114,7 +114,6 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
     server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic: 'tree-overlay', data } })
   })
   registerWokeHandler('tree-overlay-points', async (args) => { treeOverlay.setPoints(args); return null })
-  registerWokeHandler('tree-overlay-asc-points', async (args) => { treeOverlay.setAscPoints(args); return null })
   registerWokeHandler('tree-overlay-fit', async (args) => treeOverlay.hasPoints ? treeOverlay.fit(args) : { ok: false, reason: 'no-points' })
   registerWokeHandler('tree-overlay-stop', async () => { treeOverlay.stop(); return null })
   registerWokeHandler('tree-overlay-tip', async (on) => { treeOverlay.watchTreeKey(on === true); return null })
