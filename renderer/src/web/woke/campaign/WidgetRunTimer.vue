@@ -21,7 +21,8 @@
         </div>
       </template>
     </DockItem>
-    <div class="flex flex-col items-start gap-1" data-w-panel>
+    <!-- Docked with the panel shut there is nothing to show: no empty framed box. -->
+    <div v-if="!docked || config.expanded" class="flex flex-col items-start gap-1" data-w-panel>
       <!-- HUD strip: with the campaign tracker placed, its card has the run time. -->
       <div v-if="!docked" data-widget-drag :class="$style.strip">
         <template v-if="run">

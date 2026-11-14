@@ -32,6 +32,8 @@ export interface ZoneNote {
 
 export interface CampaignWidget extends Widget {
   anchor: Anchor
+  // The run timer was put on screen with this card once (see placeRunTimer).
+  timerPlaced?: boolean
   // Only track level-ups for this character ('' = any character seen).
   charName: string
   // Optional personal notes per act ("1".."10", "11" = epilogue).

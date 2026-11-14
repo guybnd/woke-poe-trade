@@ -114,6 +114,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 }
 migrateCampaign(props.config)
 hideWhilePlaying(props.config)
+placeRunTimer()
 // Nothing to open from the tab bar: the icon is the whole tracker.
 if (!props.config.wmFlags.includes('menu::skip')) props.config.wmFlags = [...props.config.wmFlags, 'menu::skip']
 
@@ -286,6 +287,25 @@ const note = computed(() => {
 
 const now = shallowRef(Date.now())
 const cardShown = shallowRef(false)
+
+// The run timer lives in this card (its time, and Splits): put it in place
+// the first time the campaign tracker runs. Only once, so a timer taken off
+// the screen stays off.
+function placeRunTimer () {
+  if (props.config.timerPlaced) return
+  props.config.timerPlaced = true
+  const cfg = AppConfig()
+  if (!isWidgetTypeOn(cfg, RUN_TIMER_TYPE) || cfg.widgets.some(w => w.wmType === RUN_TIMER_TYPE)) return
+  cfg.widgets.push({
+    wmId: Math.max(0, ...cfg.widgets.map(w => w.wmId)) + 1,
+    wmType: RUN_TIMER_TYPE,
+    wmTitle: '',
+    wmWants: 'show',
+    wmZorder: null,
+    wmFlags: ['uninitialized']
+  })
+  saveConfig()
+}
 
 const timerWidget = computed(() => {
   const cfg = AppConfig()
