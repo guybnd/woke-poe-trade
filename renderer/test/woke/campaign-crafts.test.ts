@@ -3,6 +3,7 @@ import { parseRoute, stepFromOld, zoneCrafts, DEFAULT_ROUTE_OPTIONS } from '@/we
 import type { RouteData } from '@/web/woke/campaign/route-parse'
 import { bundledRoute } from '@/web/woke/campaign/route-data'
 import { migrateFoldedCrafts } from '@/web/woke/campaign/widget'
+import { craftChip, craftTitle, shortRecipe } from '@/web/woke/campaign/recipes'
 import type { CampaignWidget } from '@/web/woke/campaign/widget'
 
 const data: RouteData = {
@@ -78,5 +79,29 @@ describe('bundled route', () => {
     expect(craftOnly).toEqual([])
     expect(route.folded.length).toBeGreaterThan(30)
     expect(route.steps.filter(s => s.crafts).length).toBeGreaterThan(30)
+  })
+})
+
+describe('recipe chip', () => {
+  it('shortens recipe names', () => {
+    expect(shortRecipe('Damage over Time - Rank 1')).toBe('DoT 1')
+    expect(shortRecipe('Fire Damage - Rank 2')).toBe('Fire 2')
+    expect(shortRecipe('Movement Speed and Flask Enchantments - Rank 3')).toBe('MS 3')
+    expect(shortRecipe('Socket Links - 2 to 4 Linked Sockets')).toBe('Links')
+    expect(shortRecipe('Something New - Rank 4')).toBe('Something New 4')
+  })
+
+  it('every bundled recipe gets a short name of a few letters', () => {
+    const route = bundledRoute(DEFAULT_ROUTE_OPTIONS)
+    for (const r of route.steps.flatMap(s => s.crafts ?? [])) {
+      if (r === 'Crafting recipe') continue
+      expect(shortRecipe(r).length, r).toBeLessThanOrEqual(12)
+    }
+  })
+
+  it('builds the chip and its hover text', () => {
+    expect(craftChip([])).toBe('')
+    expect(craftChip(['Damage over Time - Rank 1', 'Cold Damage - Rank 1'])).toBe('⚒ DoT 1 · Cold 1')
+    expect(craftTitle(['Cold Damage - Rank 1'])).toBe('Crafting recipe: Cold Damage - Rank 1')
   })
 })
