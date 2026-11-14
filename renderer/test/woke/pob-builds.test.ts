@@ -1,7 +1,7 @@
 // Reading items and notes from a PoB build for the build detail panel.
 import { describe, it, expect } from 'vitest'
 import { parseBuild, parseItemText } from '../../../main/src/woke/pob-parse'
-import { buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter, treeAhead, treeStep, pointsBy } from '@/web/woke/pob-builds/build-model'
+import { allLinkGroups, buildDps, buildFacts, chainGems, gearChange, gearLayout, gemChange, itemBase, nextSet, loadoutOf, noteRuns, pickStage, relevantGems, shortNumber, stageOf, statLine, treeAfter, treeAhead, treeStep, pointsBy } from '@/web/woke/pob-builds/build-model'
 import { moveBuildPins, treePin } from '@/web/woke/pob-builds/build-pins'
 import type { Pin } from '@/web/woke/pins/pins'
 import { gemWhere, nextGems } from '@/web/woke/pob-builds/gems'
@@ -705,5 +705,43 @@ describe('bug hunt 3: PoB builds', () => {
     expect(shortNumber(999960000)).toBe('1.0B')
     expect(shortNumber(999400)).toBe('999k')
     expect(shortNumber(5604073)).toBe('5.6M')
+  })
+})
+
+describe('allLinkGroups', () => {
+  const xml = (skills: string) => `<PathOfBuilding><Build level="71" className="Duelist" mainSocketGroup="3"/>
+    <Skills activeSkillSet="1"><SkillSet id="1">${skills}</SkillSet></Skills></PathOfBuilding>`
+  const gem = (name: string, enabled = true) => `<Gem nameSpec="${name}" enabled="${enabled}" level="1" quality="0"/>`
+  const group = (slot: string, gems: string[], enabled = true) => `<Skill enabled="${enabled}" slot="${slot}">${gems.join('')}</Skill>`
+
+  it('lists every group the build uses: main first, then by item, single gems too', () => {
+    const b = parseBuild(xml([
+      group('Gloves', [gem('Blood and Sand'), gem('Elemental Weakness')]),
+      group('Gloves', [gem('Purity of Elements')]),
+      group('Helmet', [gem('Elemental Hit'), gem('Trinity Support'), gem('Fortify Support'), gem('Elemental Damage with Attacks Support')]),
+      group('Body Armour', [gem('Mark On Hit Support'), gem("Assassin's Mark"), gem('Lifetap Support')]),
+      group('Weapon 1 Swap', [gem('Grace')]),
+      group('', [gem('Herald of Ash')]),
+      group('Boots', [gem('Steelskin', false), gem('Cast when Damage Taken Support')]),
+      group('Boots', [gem('Frostblink')]),
+      group('Boots', [gem('Blood Rage')], false),
+      group('Weapon 2', [gem('Whirling Blades'), gem('Faster Attacks Support')]),
+      group('Weapon 1', [gem('Flesh and Stone'), gem('Faster Attacks Support')]),
+      `<Skill enabled="true" source="Tree:12345">${gem("Arcane Surge")}</Skill>`
+    ].join('')))
+    const sets = b.skillSets
+    const shown = allLinkGroups(sets[0].groups).map(g => `${g.slot}: ${g.gems.filter(x => x.enabled).map(x => x.name).join(', ')}`)
+    expect(shown).toEqual([
+      'Helmet: Elemental Hit, Trinity Support, Fortify Support, Elemental Damage with Attacks Support',
+      'Weapon 1: Flesh and Stone, Faster Attacks Support',
+      'Weapon 2: Whirling Blades, Faster Attacks Support',
+      'Body Armour: Mark On Hit Support, Assassin\'s Mark, Lifetap Support',
+      'Gloves: Blood and Sand, Elemental Weakness',
+      'Gloves: Purity of Elements',
+      'Boots: Cast when Damage Taken Support',
+      'Boots: Frostblink',
+      'Weapon 1 Swap: Grace',
+      ': Herald of Ash'
+    ])
   })
 })
