@@ -119,7 +119,7 @@ describe('presets', () => {
     vendorQuality: { on: true },
     volume: { on: true, percent: 60 },
     beams: { on: true, keepTiers: 2 },
-    weapons: { on: true, archetype: 'auto' }
+    weapons: { on: true, archetype: 'auto', classes: [] }
   }
   const lookup = () => ({ chaos: 1, thin: false }) as never
   const breakdown = () => [{ name: 'x', chaos: 1, thin: false }]
