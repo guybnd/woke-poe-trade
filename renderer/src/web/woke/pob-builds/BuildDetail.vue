@@ -64,17 +64,21 @@
         <WEmpty v-if="!shownLinks.length" icon="fas fa-gem">No gem groups in this skill set.</WEmpty>
 
         <div :class="$style.heading" class="flex">
-          <span>Gems by level</span>
+          <span>Gems by campaign order</span>
           <span class="ml-auto normal-case tracking-normal">{{ canTick ? 'click a gem once you have it' : '' }}</span>
         </div>
-        <button v-for="g in gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
+        <template v-for="grp in gemGroups" :key="grp.key">
+        <div v-if="grp.newAct" :class="$style.actRule">{{ grp.act != null ? `Act ${grp.act}` : 'Trade or drop' }}</div>
+        <div v-if="grp.quest" :class="$style.quest">{{ grp.quest }}</div>
+        <button v-for="g in grp.gems" :key="g.name" :class="[$style.gemRow, { [$style.later]: g.when === 'later' || got.includes(g.name) }]"
           :disabled="!canTick" @click="toggleGot(g.name)">
           <span class="w-num w-faint text-xs" :class="$style.lvl">{{ g.requiredLevel }}</span>
           <i v-if="got.includes(g.name)" class="fas fa-check text-xs w-up" />
           <GemName :class="$style.gemName" :name="g.name" :struck="got.includes(g.name)" :note="gemNote(g)" />
           <span v-if="g.when === 'soon' && !got.includes(g.name)" class="w-accent text-xs whitespace-nowrap">soon</span>
-          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.source ?? 'trade / drop' }}</span>
+          <span class="ml-auto w-dim text-xs w-trunc" :class="$style.src" :title="g.source ?? 'Not sold in the campaign: buy or drop'">{{ g.npc ? `${g.reward ? 'Reward' : 'Buy'} · ${g.npc}` : '' }}</span>
         </button>
+        </template>
       </template>
 
       <!-- Gear -->
@@ -384,8 +388,21 @@ const shownLinks = computed(() => shownSet.value ? linkGroups(shownSet.value.gro
 const className = computed(() => build.className.value || props.details?.ascendClassName || props.details?.className || '')
 provide(GEM_CLASS, className)
 const gems = computed(() => props.details
-  ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value))
+  ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value), 'campaign')
   : [])
+// Campaign order: a divider per act, a heading per quest under it, so each
+// row only says reward or buy, and from whom. Gems the campaign never hands
+// out close the list.
+const gemGroups = computed(() => {
+  const out: Array<{ key: string, act: number | null, quest: string | null, newAct: boolean, gems: NextGem[] }> = []
+  for (const g of gems.value) {
+    const key = g.quest != null ? `${g.act}|${g.quest}` : '-'
+    const last = out[out.length - 1]
+    if (last?.key !== key) out.push({ key, act: g.act, quest: g.quest, newAct: !last || last.act !== g.act, gems: [] })
+    out[out.length - 1].gems.push(g)
+  }
+  return out
+})
 
 const campaign = computed(() => AppConfig<CampaignWidget>(CAMPAIGN_TYPE))
 // The campaign widget may not have made its state yet (it fills it in when it mounts).
@@ -603,6 +620,21 @@ function run (p: Promise<unknown>) {
 .gemRow:not(:disabled):hover { background: var(--w-line-soft); }
 .later { opacity: 0.62; }
 .lvl { width: 1.6rem; text-align: right; flex: none; }
+.actRule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 0;
+  font-size: var(--w-fs-caps);
+  font-family: var(--w-caps-face);
+  color: var(--w-faint);
+}
+.actRule::after { content: ''; flex: 1; border-top: 1px solid var(--w-line-soft); }
+.quest {
+  padding: 2px 0 0;
+  font-size: var(--w-fs-xs);
+  color: var(--w-accent);
+}
 .gemName { flex: none; max-width: 62%; }
 .src { min-width: 0; }
 button.next:hover { border-color: var(--w-line-strong); }

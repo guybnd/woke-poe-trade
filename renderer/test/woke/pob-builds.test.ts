@@ -270,6 +270,37 @@ describe('bug hunt: build details', () => {
   })
 })
 
+describe('gems in campaign order', () => {
+  const d = { className: 'Marauder', skills: [] } as unknown as PobDetails
+  const names = ['Fortify', 'Herald of Ash', 'Leap Slam', 'Cleave', 'Kinetic Blast of Clustering', 'Added Fire Damage']
+
+  it('orders by act, then quest, then level; gems the campaign never gives come last', () => {
+    const list = nextGems(d, 1, 'Juggernaut', names, 'campaign')
+    expect(list.map(g => [g.name, g.act])).toEqual([
+      ['Cleave', 1], // Enemy at the Gate
+      ['Leap Slam', 1], // The Caged Brute, level 4
+      ['Added Fire Damage', 1], // The Caged Brute, level 8
+      ['Herald of Ash', 2],
+      ['Fortify', 3],
+      ['Kinetic Blast of Clustering', null]
+    ])
+    expect(list.find(g => g.name === 'Fortify')?.source).toBe('Reward: A Fixture of Fate (Act 3)')
+    expect(list.find(g => g.name === 'Fortify')).toMatchObject({ quest: 'A Fixture of Fate', npc: 'Siosa', reward: true })
+  })
+
+  it('keeps level order by default', () => {
+    const list = nextGems(d, 1, 'Marauder', names)
+    expect(list.map(g => g.requiredLevel)).toEqual([...list.map(g => g.requiredLevel)].sort((a, b) => a - b))
+  })
+
+  it('uses the class own first source: a vendor when the class gets no reward', () => {
+    // Smite: Templar reward in Act 1, Nessa sells it to some classes; Duelist waits for Siosa.
+    const [smite] = nextGems(d, 1, 'Duelist', ['Smite'], 'campaign')
+    expect(smite.act).toBe(3)
+    expect(smite.source).toBe('Buy from Siosa: A Fixture of Fate (Act 3)')
+  })
+})
+
 describe('gear layout', () => {
   const gem = (name: string, enabled = true) => ({ name, level: 20, quality: 0, enabled, support: false })
   const group = (slot: string, names: string[], extra = {}) => ({ label: '', slot, enabled: true, isMain: false, gems: names.map(n => gem(n)), ...extra })
