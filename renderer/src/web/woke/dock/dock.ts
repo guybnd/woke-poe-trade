@@ -39,8 +39,8 @@ export interface DockItemProps {
   // hover cards are off, since a click is then the only way to open the card.
   gameClick?: () => void
   cardWidth?: string
-  // Values kept on screen beside the icon.
-  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>
+  // Values kept on screen beside the icon; `below` ones on a second, smaller line.
+  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null, below?: boolean }>
   // A ring around the icon, 0 to 1.
   progress?: number | null
   // A soft pulse around the icon while something is happening.

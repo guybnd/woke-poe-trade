@@ -23,6 +23,8 @@ export interface Readout {
   id: PinId
   text: string
   tone: ReadoutTone
+  // On a second line under the others (the area hint).
+  below?: boolean
 }
 
 export interface PinInputs {
@@ -80,7 +82,7 @@ export function pinnedReadouts (input: PinInputs): Readout[] {
         add(id, `Lv ${input.level}${gap}`, x?.band === 'penalty' ? 'down' : null)
       }
     } else if (id === 'step' && input.step) add(id, input.step)
-    else if (id === 'hint' && input.hint) add(id, input.hint, 'dim')
+    else if (id === 'hint' && input.hint) out.push({ id, text: input.hint, tone: 'dim', below: true })
   }
   return out
 }

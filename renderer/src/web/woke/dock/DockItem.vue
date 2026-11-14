@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{
   progress?: number | null
   glow?: boolean
   pinnable?: boolean
-  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null }>
+  readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null, below?: boolean }>
   menu?: DockMenuAction[]
   wake?: number
 }>(), {

@@ -21,9 +21,9 @@ function inputs (over: Partial<PinInputs>): PinInputs {
 }
 
 describe('campaign pinned readouts', () => {
-  it('shows the area hint after the step, dimmed, only when the step has one', () => {
+  it('shows the area hint on a line below, dimmed, only when the step has one', () => {
     const out = pinnedReadouts(inputs({ pins: ['hint', 'step'], step: 'Complete Trial of Ascendancy', hint: 'Usually ↗' }))
-    expect(out.map(r => [r.id, r.text, r.tone])).toEqual([['step', 'Complete Trial of Ascendancy', null], ['hint', 'Usually ↗', 'dim']])
+    expect(out.map(r => [r.id, r.text, r.tone, r.below ?? false])).toEqual([['step', 'Complete Trial of Ascendancy', null, false], ['hint', 'Usually ↗', 'dim', true]])
     expect(pinnedReadouts(inputs({ pins: ['step', 'hint'], step: 'x', hint: null })).map(r => r.id)).toEqual(['step'])
   })
 
