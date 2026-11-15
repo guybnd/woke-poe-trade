@@ -1,7 +1,7 @@
 // The search boxes: ranking, grouping, duplicates, the corrupted filter and
 // the trade links.
 import { describe, it, expect } from 'vitest'
-import { baseUniqueName, changeSince, matchRank, passesCorrupted, searchNamed, searchPrices, tradeUrl } from '@/web/woke/search/search'
+import { baseUniqueName, changeSince, matchRank, passesCorrupted, searchNamed, searchPrices, tradeUrl, uniquePrices } from '@/web/woke/search/search'
 import { computeMovers } from '@/web/woke/market/analysis'
 import { SEARCH_DEFAULT_KEY, initSearchWidget, moveSearchKey } from '@/web/woke/search/widget'
 import { isCorrupted } from '@/web/woke/market/types'
@@ -76,6 +76,28 @@ describe('searchPrices', () => {
   it('sets the range from the variants the filter keeps', () => {
     const gems = [item('Empower Support', 900, '4c', 'SkillGem'), item('Empower Support', 700, '4', 'SkillGem')]
     expect(searchPrices(gems, 'empower', { corrupted: 'hide' })[0].high).toBe(700)
+  })
+})
+
+describe('uniquePrices', () => {
+  const boots = 'UniqueArmour'
+  const items = [
+    item('Three-step Assault', 3, '', boots),
+    item('Temptation Step', 40, '', boots),
+    item('Foulborn Temptation Step', 90, '', boots),
+    item('Kaom\'s Roots', 5, '', boots),
+    item('Three-step Assault', 1, '', 'Currency')
+  ]
+  const shagreen = new Set(['Three-step Assault', 'Temptation Step'])
+
+  it('lists the uniques on a base, Foulborn ones too, dearest first', () => {
+    expect(uniquePrices(items, shagreen).map(g => g.name)).toEqual(['Foulborn Temptation Step', 'Temptation Step', 'Three-step Assault'])
+  })
+  it('takes unique rows only', () => {
+    expect(uniquePrices(items, shagreen).every(g => g.type === boots)).toBe(true)
+  })
+  it('lists nothing for no names', () => {
+    expect(uniquePrices(items, new Set())).toEqual([])
   })
 })
 
