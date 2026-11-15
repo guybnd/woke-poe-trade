@@ -140,3 +140,20 @@ describe('one Market window with tabs', () => {
     expect(widgets).toEqual([menu([1])])
   })
 })
+
+describe('League mechanics: Covens Viscera', () => {
+  it('fills each slot from poe.ninja Viscera, every tier, at its cheapest effect', async () => {
+    const { MECHANICS, priceGroup } = await import('@/web/woke/mechanics/data')
+    const covens = MECHANICS.find(m => m.id === 'covens')!
+    const head = covens.groups.find(g => g.label === 'Head Viscera')!
+    const v = (name: string, variant: string, chaos: number) => ({ type: 'Viscera', name, variant, chaos })
+    const rows = priceGroup(head, [
+      v("Greater Sirus' Head", 'Enemies you Kill have a #% chance to Explode', 3000),
+      v("Sirus' Head", 'Transfiguration of Soul', 916),
+      v("Sirus' Head", 'Transfiguration of Body', 218),
+      v("Warden's Arm", 'Something', 50),
+      { type: 'Currency', name: "Sirus' Head", variant: '', chaos: 1 }
+    ])
+    expect(rows.map(r => [r.item.name, r.chaos])).toEqual([["Greater Sirus' Head", 3000], ["Sirus' Head", 218]])
+  })
+})

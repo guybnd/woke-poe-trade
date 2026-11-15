@@ -16,6 +16,8 @@ export interface PriceGroup {
   tag?: (item: PriceItem) => string | undefined
   // Prices here can't rank the items against each other, so no "best" call.
   unranked?: boolean
+  // A name with many priced variants (a Viscera's effects) shows its cheapest.
+  cheapest?: boolean
   limit?: number
 }
 
@@ -217,10 +219,13 @@ export const MECHANICS: Mechanic[] = [
     icon: 'fas fa-skull',
     groups: TROPHY_SLOTS.map(slot => ({
       label: slot === 'Other' ? 'Other Viscera' : `${slot} Viscera`,
+      types: ['Viscera'],
       match: slotMatcher(slot),
+      cheapest: true,
       limit: 10
     })),
     tips: [
+      "Each price is the Viscera's cheapest effect; Market › Prices lists every effect.",
       'Each Wickerman slot holds one Viscera, dropped by a boss you empowered with Fates; the best of each slot is at the top.',
       'Viscera come in 3 tiers; the top tier only drops in the endgame. Pinnacle Viscera need a Grim Fate.'
     ]
@@ -337,7 +342,8 @@ export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (i
   // price of the one that drops) unless that is all there is.
   const linked = (i: PriceItem) => /\b[56]L\b/.test(i.variant)
   const better = (a: PriceItem, b: PriceItem) =>
-    linked(a) !== linked(b) ? !linked(a) : (!a.variant && Boolean(b.variant))
+    group.cheapest ? a.chaos < b.chaos
+      : linked(a) !== linked(b) ? !linked(a) : (!a.variant && Boolean(b.variant))
   const best = new Map<string, PriceItem>()
   for (const item of items) {
     if (group.types && !group.types.includes(item.type)) continue

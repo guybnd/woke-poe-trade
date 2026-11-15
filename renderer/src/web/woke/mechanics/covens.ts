@@ -72,8 +72,8 @@ export const TROPHIES: readonly string[] = [
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-/** Matches the trophies of one slot by exact name, whatever poe.ninja files them under. */
+/** Matches the trophies of one slot by name, in any tier ("Greater Sirus' Head"). */
 export function slotMatcher (slot: TrophySlot): RegExp {
   const names = TROPHIES.filter(n => trophySlot(n) === slot)
-  return new RegExp(`^(${names.map(escape).join('|')})$`)
+  return new RegExp(`^(?:(?:Lesser|Greater) )?(${names.map(escape).join('|')})$`)
 }
