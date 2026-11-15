@@ -202,9 +202,14 @@ startCharacterSync(() => active.charName.value, () => props.config.characterAuto
 
 // Each new read is saved as a PoB build of your character (live-pob.ts), once
 // the tree data can place its jewels. Never the build you picked.
+// The tree data loads only once there is a read to save (it costs ~1 MB of heap).
 let liveSaved = 0
-watch([() => characterStatus.value.snapshot, () => characterTreeNodes()], ([s, nodes]) => {
-  if (!s || !nodes || !personalOn.value || props.config.characterLiveBuild === false || s.readAt === liveSaved) return
+watch(() => {
+  const s = characterStatus.value.snapshot
+  if (!s || !personalOn.value || props.config.characterLiveBuild === false) return null
+  return characterTreeNodes() ? s : null
+}, (s) => {
+  if (!s || s.readAt === liveSaved) return
   liveSaved = s.readAt
   pobApi.saveLive(props.config, s.character.name, liveBuildXml(s, passiveTreeJewelSlots()))
     .then(() => refresh(), (e: Error) => { console.warn('[pob-builds] live build not saved', e) })
