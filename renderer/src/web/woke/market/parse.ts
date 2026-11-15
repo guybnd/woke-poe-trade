@@ -14,9 +14,12 @@ const ENTRY_START = '{"name":'
 export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
   const out: PriceItem[] = []
   const graphs: unknown[] = []
+  // Where each category's rows start, for categoryDays.
+  const starts: number[] = []
   for (const chunk of chunks) {
     const type = typeForSlug(chunk.url)
     if (!type || SKIPPED_TYPES.has(type)) continue
+    starts.push(out.length)
 
     let pos = chunk.lines.indexOf(ENTRY_START)
     while (pos !== -1) {
@@ -46,8 +49,20 @@ export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
   // Gaps only count inside the days the league has prices for, or every
   // item reads as thin in a league's first week.
   const days = leagueDays(graphs)
-  for (let i = 0; i < out.length; i++) out[i].gaps = graphGaps(graphs[i], days)
+  starts.push(out.length)
+  for (let c = 0; c + 1 < starts.length; c++) {
+    const from = starts[c]
+    const to = starts[c + 1]
+    const own = categoryDays(graphs.slice(from, to), days)
+    for (let i = from; i < to; i++) out[i].gaps = graphGaps(graphs[i], own)
+  }
   return out
+}
+
+// A category poe.ninja only just started tracking (3.30's Viscera) has an
+// empty graph on every row: no history yet, which isn't a thin market.
+export function categoryDays (graphs: unknown[], days: number): number {
+  return leagueDays(graphs) === 0 ? 0 : days
 }
 
 // poe.ninja's graph is 7 daily values: % change since a week ago, today last.

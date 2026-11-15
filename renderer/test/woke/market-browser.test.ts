@@ -157,3 +157,20 @@ describe('League mechanics: Covens Viscera', () => {
     expect(rows.map(r => [r.item.name, r.chaos])).toEqual([["Greater Sirus' Head", 3000], ["Sirus' Head", 218]])
   })
 })
+
+describe('a category poe.ninja just started tracking', () => {
+  it("isn't thin: every row has an empty graph", async () => {
+    const { parseDenseChunks } = await import('@/web/woke/market/parse')
+    const items = parseDenseChunks([
+      chunk('currency', [
+        { name: 'Divine Orb', chaos: 112, graph: [0, 1, 2, 3, 4, 5, 6] },
+        { name: 'Rare Orb', chaos: 5, graph: [] }
+      ]),
+      chunk('viscera', [{ name: "Sirus' Head", variant: 'Transfiguration of Soul', chaos: 900, graph: [] }])
+    ])
+    const gaps = Object.fromEntries(items.map(i => [i.name, i.gaps]))
+    expect(gaps['Rare Orb']).toBe(7)
+    expect(gaps["Sirus' Head"]).toBe(0)
+    expect(parseCategory('Viscera', chunk('viscera', [{ name: "Sirus' Head", variant: 'x', chaos: 900, graph: [] }]), 7)[0].gaps).toBe(0)
+  })
+})
