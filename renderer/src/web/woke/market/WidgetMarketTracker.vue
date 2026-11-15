@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <!-- Town and hideout, while a watched item is past one of your alerts. -->
-    <DockItem :menu="dockMenu" :wake="unseenAlerts" id="market" title="Market" :show="dockShow" :badge="unseenAlerts || null"
+    <DockItem :menu="dockMenu" :wake="unseenAlerts" id="market" title="Movers" :show="dockShow" :badge="unseenAlerts || null"
       tone="down" :wm-id="config.wmId" card-width="20rem" @open-change="onCard">
       <template #card>
         <div style="padding: 4px var(--w-pad) 6px;" class="flex flex-col gap-0.5">
@@ -15,7 +15,7 @@
         </div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
+    <WPanel ref="panel" :title="config.wmTitle || 'Movers'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
       <template v-if="collector.lastError.value" #banner>
         <WBanner>Could not save the latest prices ({{ collector.lastError.value }}). This shows the last saved prices and tries again at the next refresh.</WBanner>
       </template>
@@ -170,7 +170,7 @@ const wm = inject<WidgetManager>('wm')!
 
 if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
-  props.config.wmTitle = 'Market'
+  props.config.wmTitle = 'Movers'
   props.config.anchor = popupAnchor()
   props.config.view = 'movers'
   props.config.period = '24h'

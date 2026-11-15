@@ -16,7 +16,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 <!-- modules:start (checked against renderer/src/web/woke/modules.ts by renderer/test/woke/readme.test.ts) -->
 | Area | Module | What it does |
 | --- | --- | --- |
-| Economy | Market | Movers and watchlist from poe.ninja |
+| Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
 | Economy | Investments | League-start buys ranked from past leagues |
 | Economy | Lab gems | Divine Font gem values by colour |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |

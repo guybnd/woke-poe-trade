@@ -21,7 +21,7 @@ const widgets = [
   { wmId: 6, wmType: 'item-search', wmTitle: '{icon=fa-search}' },
   { wmId: 103, wmType: 'image-strip', wmTitle: 'Cheat sheets' },
   { wmId: 106, wmType: 'woke-boss-runs', wmTitle: 'Boss runs' },
-  { wmId: 108, wmType: 'woke-market-tracker', wmTitle: 'Market' },
+  { wmId: 108, wmType: 'woke-market', wmTitle: 'Market' },
   { wmId: 110, wmType: 'woke-map-scan', wmTitle: 'Map scan' },
   { wmId: 118, wmType: 'woke-loot-filter', wmTitle: 'Loot filter' },
   { wmId: 119, wmType: 'woke-challenges', wmTitle: 'Challenges' }

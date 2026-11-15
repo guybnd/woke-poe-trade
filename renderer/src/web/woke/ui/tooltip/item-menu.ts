@@ -132,7 +132,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
     const watched = (tracker.watchlist ?? []).some(w => itemKey(w) === itemKey(entry))
     actions.push({
       label: watched ? 'Unwatch' : 'Watch',
-      title: watched ? 'Stop watching its price in Market' : 'Watch its price in Market',
+      title: watched ? 'Stop watching its price in Movers' : 'Watch its price in Movers',
       icon: watched ? 'fas fa-star' : 'far fa-star',
       action: () => {
         const before = tracker.watchlist ?? []
@@ -140,7 +140,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
           ? before.filter(w => itemKey(w) !== itemKey(entry))
           : [...before, entry]
         // Undo puts back its price alerts too.
-        toast(watched ? `Stopped watching ${ref.name}` : `Watching ${ref.name} in Market`, { undo: () => { tracker.watchlist = before } })
+        toast(watched ? `Stopped watching ${ref.name}` : `Watching ${ref.name} in Movers`, { undo: () => { tracker.watchlist = before } })
       }
     })
   }
