@@ -32,3 +32,18 @@ describe('wornCompare', () => {
     expect(wornCompare('Belt', belt('Eagle Locket', 90))).toBeNull()
   })
 })
+
+describe('wornCompare across rings and flasks', () => {
+  it('says you already wear a ring worn in the other ring slot', () => {
+    personalOn.value = true
+    const ring = (name: string): PobItem => ({ rarity: 'UNIQUE', name, base: 'Opal Ring', sockets: '', implicits: [], mods: [] })
+    characterStatus.value = {
+      snapshot: { version: 1, account: 'a', readAt: 0, character: { name: 'whekq', league: 'Covens', class: 'Gladiator', level: 81 }, gear: [{ slot: 'Ring 1', item: ring('B') }, { slot: 'Ring 2', item: ring('A') }], gems: [], tree: { nodes: [], clusterNodes: [], masteries: {}, jewels: [] } },
+      error: null,
+      pending: false,
+      auto: false,
+      nextAutoAt: 0
+    }
+    expect(wornCompare('Ring 1', ring('A'))?.result.summary).toBe('Already on your character.')
+  })
+})
