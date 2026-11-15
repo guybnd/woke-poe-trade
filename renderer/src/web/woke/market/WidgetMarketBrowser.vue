@@ -1,6 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <WPanel ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="loadedAt" :fresh-min="40" :stale-min="180"
+    <!-- Nothing is drawn while closed. -->
+    <WPanel v-if="isOpen" ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="loadedAt" :fresh-min="40" :stale-min="180"
       width="46rem" max-height="80vh" :scroll="false" fill>
       <template #actions>
         <WButton size="sm" icon="fas fa-chart-line" title="Price moves and your watchlist, in their own window" @click="openMovers">Movers</WButton>
@@ -105,7 +106,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.unit = 'chaos'
   props.config.hideThin = false
   props.config.corrupted = 'any'
-  wm.show(props.config.wmId)
+  // Whoever places it (the launcher) opens it; placed hidden, it costs nothing.
 }
 
 // Only while the window is open: nothing is read or parsed while it's closed.
