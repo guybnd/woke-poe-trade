@@ -172,3 +172,9 @@ const HIDEOUT_LINE = /Generating level \d+ area "Hideout[^"]*"/
 export function entersHideout (lines: string[]): boolean {
   return lines.some(l => HIDEOUT_LINE.test(l))
 }
+
+const AREA_LINE = /Generating level \d+ area "[^"]+"/
+
+export function entersArea (lines: string[]): boolean {
+  return lines.some(l => AREA_LINE.test(l))
+}

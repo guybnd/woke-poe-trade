@@ -23,6 +23,12 @@
       hint="The build drawing also marks, in red, nodes you've taken in game that this tree doesn't have. Only what's on screen and joined to your taken nodes is checked; masteries and the ascendancy aren't.">
       <WToggle v-model="treeRefunds" />
     </WSettingRow>
+    <template v-if="personalOn">
+      <WSettingRow label="Read your character on area changes"
+        hint="For the build window's Character tab, which compares the character you play with a build. At most every 5 minutes. Off, it's read only when you press Read now. Reading never changes the build.">
+        <WToggle v-model="characterAutoRead" />
+      </WSettingRow>
+    </template>
   </div>
 </template>
 
@@ -32,6 +38,7 @@ import { configProp, configModelValue } from '@/web/settings/utils'
 import type { PobBuildsWidget } from './widget'
 import { treeHotkeyOf } from './widget'
 import { WSettingRow, WToggle } from '../ui'
+import { personalOn } from '../personal'
 import WHotkeyCell from '../ui/WHotkeyCell.vue'
 import WInfo from '../ui/WInfo.vue'
 
@@ -51,6 +58,11 @@ export default defineComponent({
       treeRefunds: computed({
         get: () => props.configWidget.treeRefunds !== false,
         set: (on: boolean) => { props.configWidget.treeRefunds = on }
+      }),
+      personalOn,
+      characterAutoRead: computed({
+        get: () => props.configWidget.characterAutoRead === true,
+        set: (on: boolean) => { props.configWidget.characterAutoRead = on }
       }),
       treeOnIconClick: computed({
         get: () => props.configWidget.treeOnIconClick !== false,

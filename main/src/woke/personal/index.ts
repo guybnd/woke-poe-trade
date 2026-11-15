@@ -10,12 +10,13 @@ import type { Logger } from '../../RemoteLogger'
 import type { GameLogWatcher } from '../../host-files/GameLogWatcher'
 import { allowSignInWindow, isWebUrl } from '../web-guard'
 import { appPrefs, setAppPrefs } from '../app-prefs'
-import { entersHideout } from './stash-parse'
+import { entersArea, entersHideout } from './stash-parse'
 import { POE_SITE, StashReader, fetchAccountName, readCache, readSavedAccount, saveAccount } from './stash-reader'
 import type { Fetcher, HttpReply, ReaderStatus } from './stash-reader'
 import { TEMPLATES, deleteSet, fitsTemplate, readLeagueTabs, saveSet, setChoice } from './tab-choice'
 import type { TabChoice } from './tab-choice'
 import { WornReader } from './worn-items'
+import { CharacterSync, fileStore } from './character-sync'
 import type { WokeHandler } from '../../../../ipc/woke-ops'
 
 export const PERSONAL_FLAG = 'personal.flag'
@@ -64,7 +65,7 @@ export const READER_OPS = [
   'stash-auth-status', 'stash-sign-in', 'stash-sign-out', 'stash-reader-config',
   'stash-reader-status', 'stash-reader-read', 'stash-cache',
   'stash-tab-list', 'stash-tab-choice', 'stash-tab-set-save', 'stash-tab-set-delete',
-  'worn-items'
+  'worn-items', 'character-sync'
 ] as const
 export type ReaderOp = typeof READER_OPS[number]
 
@@ -203,6 +204,22 @@ function startReader (ctx: PersonalContext): () => void {
     }
   })
 
+  // Your character, kept apart from any PoB build (character-sync.ts).
+  const character = new CharacterSync({
+    fetch: sessionFetch,
+    now: () => Date.now(),
+    account: () => reader.account ?? reader.fallbackAccount,
+    league: () => reader.league,
+    store: fileStore(path.join(app.getPath('userData'), 'woke-character')),
+    onStatus: (s) => { if (live) ctx.broadcast('character-sync', s) },
+    log: (line) => ctx.logger.write(line),
+    signedOut: () => {
+      if (!live || !reader.account) return
+      reader.signedOut()
+      saveAccount(null).catch(() => {})
+    }
+  })
+
   const authStatus = async (verify: boolean) => {
     if (verify) {
       const name = await fetchAccountName(sessionFetch).catch(() => undefined)
@@ -284,12 +301,21 @@ function startReader (ctx: PersonalContext): () => void {
     'worn-items': async (args) => {
       const hint = typeof args?.character === 'string' ? args.character.trim() : ''
       return await worn.read(hint).catch((e: Error) => ({ error: e.message }))
+    },
+    // The synced character. read: 'now' reads (at most every 30 s); auto turns
+    // the read on entering an area on or off; character names the one in play.
+    'character-sync': async (args) => {
+      if (typeof args?.character === 'string' && args.character.trim()) character.hint = args.character.trim()
+      if (typeof args?.auto === 'boolean') character.auto = args.auto
+      const status = args?.read === 'now' ? await character.read('manual') : await character.current()
+      return status
     }
   }
   for (const op of READER_OPS) ctx.register(op, ops[op] as WokeHandler<typeof op>)
 
   // Quiet read on entering the hideout, from the log watcher that already runs.
   const onLines = (lines: string[]) => {
+    if (entersArea(lines)) character.read('area').catch(() => {})
     if (!entersHideout(lines)) return
     const run = reader.readIfDue()
     run?.then((s: ReaderStatus) => {
@@ -303,6 +329,7 @@ function startReader (ctx: PersonalContext): () => void {
     for (const op of READER_OPS) ctx.unregister(op)
     if (ctx.gameLog.onLines === onLines) ctx.gameLog.onLines = null
     reader.stop()
+    character.stop()
   }
 }
 

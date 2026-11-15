@@ -72,10 +72,10 @@
         </WEmpty>
       </WPanel>
 
-      <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" @compare="comparing = { a: $event, b: '' }" />
+      <BuildDetail v-if="selectedBuild" :config="config" :entry="selectedBuild" :details="details" @close="selected = null" @tree="treeAt = { title: $event }" @tree-character="treeAt = { title: $event, from: CHARACTER_TREE }" @compare="comparing = { a: $event, b: '' }" />
       <BuildCompare v-if="comparing" :config="config" :builds="comparePicks" :a="compareA" :b="compareB"
         @pick="(a, b) => { comparing = { a, b } }" @close="comparing = null" />
-      <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="details.trees" :start="treeAt"
+      <BuildTree v-if="selectedBuild && details && treeAt != null" :specs="treeSpecs" :start="treeAt" :from="treeAt.from"
         :pin="() => treePin(selectedBuild!.relPath, selectedBuild!.name)" @close="treeAt = null" />
       <WPanel v-if="selectedBuild && detailsError" size-key="detail" title="Couldn't read the build" width="20rem">
         <div class="w-down" style="padding: var(--w-pad);">{{ detailsError }}</div>
@@ -102,6 +102,7 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
+import { CHARACTER_TREE, characterStatus, characterTreeSpec, startCharacterSync } from './character'
 import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
 import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned as isPiecePinned, pins, togglePin as togglePinned } from '../pins/pins'
@@ -148,7 +149,7 @@ const errorText = computed(() => error.value.includes('ENOENT')
 const filter = shallowRef('')
 const selected = shallowRef<string | null>(null)
 // The tree panel, on this tree's title.
-const treeAt = shallowRef<{ title: string } | null>(null)
+const treeAt = shallowRef<{ title: string, from?: string } | null>(null)
 // Two builds side by side, by file.
 const comparing = shallowRef<{ a: string, b: string } | null>(null)
 const compareA = computed(() => builds.value.find(b => b.relPath === comparing.value?.a))
@@ -192,6 +193,15 @@ async function iconClick () {
   showWithOverlay(wm, props.config.wmId)
 }
 
+// Your character (character.ts): read by main while the stash reader is on,
+// on Read now (or on area changes, if turned on), kept apart from every build.
+startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead === true)
+// The tree window: the build's trees, plus your character's when comparing with it.
+const treeSpecs = computed(() => {
+  const trees = details.value?.trees ?? []
+  const s = characterStatus.value.snapshot
+  return treeAt.value?.from === CHARACTER_TREE && s ? [...trees, characterTreeSpec(s)] : trees
+})
 const activeName = computed(() => (active.relPath.value ?? '').split('/').pop()?.replace(/\.xml$/i, '') || 'PoB builds')
 
 // Follow the character Client.txt shows levelling: a build linked to that

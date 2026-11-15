@@ -36,6 +36,9 @@ export interface PobBuildsWidget extends Widget {
   // The tree drawing also marks nodes taken in game that the build doesn't
   // have, to refund. Missing = on.
   treeRefunds?: boolean
+  // Main also reads your character (Character tab) on entering an area, at
+  // most every 5 minutes. Off: only Read now. Missing = off (Guy's pick).
+  characterAutoRead?: boolean
 }
 
 export const TREE_HOTKEY_DEFAULT = 'Alt + T'
