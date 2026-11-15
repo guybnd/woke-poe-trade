@@ -130,7 +130,7 @@ test('look strip: text size and background reach every rule in the saved filter,
   await expect.poll(() => divine.evaluate(e => parseFloat(getComputedStyle(e).fontSize))).toBeLessThan(before)
   await overlay.snap('look strip at 80% size, 50% background')
   // The filter is rebuilt once the slider settles.
-  await expect(page.getByText(/unsaved changes/)).toBeVisible()
+  await expect(page.getByText('Unsaved', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: /^Save/ }).click()
   const out = path.join(folder, 'NeverSink (woke).filter')
@@ -194,7 +194,11 @@ test('rules: add an item by search, move one from its menu, take one off, and th
   await page.getByRole('button', { name: 'Take Mirror of Kalandra off this tier' }).click()
   await expect(page.getByText('Took Mirror of Kalandra off Tier 1')).toBeVisible()
 
-  await page.getByRole('button', { name: /^Save/ }).click()
+  // Unsaved is loud, and Ctrl + S saves it.
+  await expect(page.getByText('Unsaved', { exact: true })).toBeVisible()
+  await overlay.snap('unsaved footer')
+  await page.keyboard.press('Control+s')
+  await expect(page.getByText('Unsaved', { exact: true })).toBeHidden()
   const out = path.join(folder, 'NeverSink (woke).filter')
   await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toMatch(/\$tier->t1exalted[^\n]*\n(\t[^\n]*\n)*\tBaseType == "Chaos Orb"\r?\n/)
   const text = fs.readFileSync(out, 'utf8')
