@@ -15,7 +15,7 @@
             <WButton size="sm" variant="ghost" :disabled="busy === s.id" @click="onDismiss(s)">Dismiss</WButton>
           </div>
         </div>
-        <div class="w-faint text-xs">From Claude. Nothing changes until you apply it.</div>
+        <div class="w-faint text-xs">From your AI app. Nothing changes until you apply it.</div>
       </div>
     </template>
   </DockItem>
