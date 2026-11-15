@@ -159,18 +159,23 @@ describe('League mechanics: Covens Viscera', () => {
 })
 
 describe('a category poe.ninja just started tracking', () => {
-  it("isn't thin: every row has an empty graph", async () => {
+  it("doesn't call a row thin just because it has no history yet", async () => {
     const { parseDenseChunks } = await import('@/web/woke/market/parse')
     const items = parseDenseChunks([
       chunk('currency', [
         { name: 'Divine Orb', chaos: 112, graph: [0, 1, 2, 3, 4, 5, 6] },
         { name: 'Rare Orb', chaos: 5, graph: [] }
       ]),
-      chunk('viscera', [{ name: "Sirus' Head", variant: 'Transfiguration of Soul', chaos: 900, graph: [] }])
+      chunk('viscera', [
+        { name: "Sirus' Head", variant: 'Transfiguration of Soul', chaos: 900, graph: [] },
+        // Some history: counted as usual against the league's days.
+        { name: "Shaper's Head", variant: 'x', chaos: 90, graph: [null, null, null, null, null, 0, 5] }
+      ])
     ])
     const gaps = Object.fromEntries(items.map(i => [i.name, i.gaps]))
     expect(gaps['Rare Orb']).toBe(7)
     expect(gaps["Sirus' Head"]).toBe(0)
+    expect(gaps["Shaper's Head"]).toBe(5)
     expect(parseCategory('Viscera', chunk('viscera', [{ name: "Sirus' Head", variant: 'x', chaos: 900, graph: [] }]), 7)[0].gaps).toBe(0)
   })
 })

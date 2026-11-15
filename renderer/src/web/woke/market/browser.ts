@@ -1,7 +1,7 @@
 // The Market window: every poe.ninja category, like poe.ninja's economy pages.
 // It reads the dense overview APT already keeps in memory (hook.ts), and
 // parses only the category on screen, so it holds no copy of the prices.
-import { categoryDays, graphGaps } from './parse'
+import { categoryGaps } from './parse'
 import type { DenseChunk } from './parse'
 import { SKIPPED_TYPES, typeForSlug } from './types'
 
@@ -200,8 +200,8 @@ function readRows (type: string, chunk: DenseChunk, days: number): MarketRow[] {
     pos = lines.indexOf(ENTRY_START, end)
   }
   // Days before the league started aren't gaps, nor a new category's (parse.ts).
-  const own = categoryDays(graphs, days)
-  for (let i = 0; i < out.length; i++) out[i].gaps = graphGaps(graphs[i], own)
+  const gapsOf = categoryGaps(graphs, days)
+  for (let i = 0; i < out.length; i++) out[i].gaps = gapsOf(graphs[i])
   return out
 }
 
