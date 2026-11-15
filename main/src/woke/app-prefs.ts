@@ -16,9 +16,11 @@ export interface AppPrefs {
   experimental: boolean
   // The player turned the stash reader on (personal/index.ts). Off by default.
   stashReader: boolean
+  // The Claude link (claude-link/index.ts) listens on 127.0.0.1. Off by default.
+  claudeLink: boolean
 }
 
-const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false }
+const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false }
 
 const file = () => path.join(app.getPath('userData'), 'apt-data', 'woke-app.json')
 

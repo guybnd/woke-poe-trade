@@ -59,6 +59,48 @@ export function searchPrices (
   opts: { limit?: number, corrupted?: CorruptedFilter } = {}
 ): PriceGroup[] {
   if (normalize(query).length < MIN_QUERY) return []
+  return groupPrices(items, item => matchRank(item.name, query), opts)
+}
+
+// The uniques on some bases, by name: "Shagreen Boots" brings Three-step
+// Assault and its Foulborn one. Unique rows only, dearest first.
+export function uniquePrices (
+  items: readonly PriceItem[],
+  names: ReadonlySet<string>,
+  opts: { limit?: number, corrupted?: CorruptedFilter } = {}
+): PriceGroup[] {
+  if (!names.size) return []
+  return groupPrices(items, item => /^Unique/.test(item.type) && names.has(baseUniqueName(item.name)) ? 0 : -1, opts)
+}
+
+// Each base's uniques and each unique's bases, by English name. Some uniques
+// come on several bases (Precursor's Emblem on five rings), one entry each.
+export interface UniqueBaseIndex {
+  byBase: Map<string, string[]>
+  basesOf: Map<string, string[]>
+}
+export function uniqueBaseIndex (uniques: Iterable<{ refName: string, unique?: { base: string } }>): UniqueBaseIndex {
+  const byBase = new Map<string, string[]>()
+  const basesOf = new Map<string, string[]>()
+  const add = (map: Map<string, string[]>, k: string, v: string) => {
+    const list = map.get(k)
+    if (!list) map.set(k, [v])
+    else if (!list.includes(v)) list.push(v)
+  }
+  for (const u of uniques) {
+    if (!u.unique?.base) continue
+    add(byBase, u.unique.base, u.refName)
+    add(basesOf, u.refName, u.unique.base)
+  }
+  return { byBase, basesOf }
+}
+
+// One group per type and name, ranked (-1 leaves an item out), then dearest first.
+function groupPrices (
+  items: readonly PriceItem[],
+  rankOf: (item: PriceItem) => number,
+  opts: { limit?: number, corrupted?: CorruptedFilter }
+): PriceGroup[] {
   const corrupted = opts.corrupted ?? 'any'
   const groups = new Map<string, PriceGroup & { rank: number }>()
   // poe.ninja sends Currency and Fragment in two feeds, so a snapshot can hold
@@ -66,7 +108,7 @@ export function searchPrices (
   const seen = new Set<string>()
   for (const item of items) {
     if (!passesCorrupted(item, corrupted)) continue
-    const rank = matchRank(item.name, query)
+    const rank = rankOf(item)
     if (rank < 0) continue
     const k = itemKey(item)
     if (seen.has(k)) continue

@@ -84,6 +84,8 @@ import type { Notice } from './notices'
 import SampleCard from './SampleCard.vue'
 import FilterEditor from './FilterEditor.vue'
 import { useLootFilter } from './store'
+import { isValidEdit } from './edits'
+import { cleanEdit, setFilterApplier } from '../claude-link/suggestions'
 import { pressedKeys, sortKeys } from './hotkey-match'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
@@ -162,6 +164,32 @@ function ensureLoaded () {
 // Never set up: read nothing until it's first used, so an overlay you haven't
 // touched stays quiet.
 if (props.config.sourceName || props.config.neversink.on || props.config.wmWants === 'show') ensureLoaded()
+
+// A change Claude suggested, applied from the Suggestions card: added like an
+// edit made here, kept only when the filter takes it, then saved.
+onUnmounted(setFilterApplier(async (raw) => {
+  const edit = { ...cleanEdit(raw), id: 0 }
+  if (!isValidEdit(edit)) throw new Error('The suggested change is not one the editor knows')
+  await ensureLoaded()
+  // Loading started elsewhere (store.loading) isn't ours to await: wait it out.
+  for (let i = 0; i < 100 && store.loading.value; i++) await new Promise(resolve => setTimeout(resolve, 100))
+  if (!store.doc.value) throw new Error('Set up the loot filter editor first')
+  // Saving writes every edit: never save half-done work of yours with it.
+  if (store.dirty.value) throw new Error('Save or undo your own loot filter changes first')
+  const failedBefore = new Set(store.failed.value.map(f => f.edit))
+  const undo = store.editWithUndo(edit)
+  const broke = store.failed.value.find(f => !failedBefore.has(f.edit))
+  if (broke) {
+    undo()
+    throw new Error(`Not applied: ${broke.message ?? 'it matches nothing in this filter'}`)
+  }
+  if (!await store.save()) {
+    const why = store.error.value
+    undo()
+    throw new Error(why || 'The filter did not save')
+  }
+  return { undo: () => { undo(); store.save().catch(() => {}) } }
+}))
 
 async function retry () {
   await store.listFiles()
