@@ -4,6 +4,7 @@ import { buildLadder, findAxis, markName, markWhen, rangeOf, rangeText, showFrom
 import { buildTree } from '@/web/woke/loot-filter/groups'
 import type { GroupNode } from '@/web/woke/loot-filter/groups'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
+import { addEdit } from '@/web/woke/loot-filter/edits'
 import { LEVELS, neverSink } from '../helpers/neversink'
 
 const groupOf = (level: typeof LEVELS[number], type: string): GroupNode =>
@@ -125,5 +126,13 @@ describe('the top tier stands alone', () => {
   it.each(LEVELS)('%s maps: the best tier is its own row', (level) => {
     const l = buildLadder(groupOf(level, 'maps').tiers)
     expect(l.rows[0].tiers).toHaveLength(1)
+  })
+})
+
+describe('turning a NeverSink rule on', () => {
+  it('a later Show or Hide keeps it on', () => {
+    const on = { id: 1, kind: 'visibility' as const, type: 'maphiders', tier: 'corruptedmaphider', visibility: 'Hide' as const, on: true }
+    const list = addEdit(addEdit([], on), { id: 2, kind: 'visibility', type: 'maphiders', tier: 'corruptedmaphider', visibility: 'Show' })
+    expect(list).toEqual([{ id: 2, kind: 'visibility', type: 'maphiders', tier: 'corruptedmaphider', visibility: 'Show', on: true }])
   })
 })

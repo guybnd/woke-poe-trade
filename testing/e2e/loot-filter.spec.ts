@@ -814,6 +814,10 @@ test('ladder: show from a tier in one pick, and Maps to hide are plain switches'
   const pick = page.getByLabel('Lowest tier to show')
   await pick.selectOption({ label: 'T16+' })
   await expect(pick).toHaveValue('0')
+  // Hiding every tier keeps the ladder (it doesn't turn into switches).
+  await pick.selectOption({ label: 'Nothing (hide all)' })
+  await expect(pick).toHaveValue('-1')
+  await pick.selectOption({ label: 'T16+' })
   await expect(page.getByText('Hidden below this line')).toBeVisible()
   await overlay.snap('maps show from T16')
 

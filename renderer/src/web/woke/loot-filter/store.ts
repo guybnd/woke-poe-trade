@@ -11,7 +11,7 @@ import { isTownLike } from '../campaign/log-parse'
 import { onGameLog } from '../shared/game-log'
 import { parseFilter, serializeFilter } from './parse'
 import { composeFilter } from './compose'
-import type { FilterDoc } from './parse'
+import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
 import { lookChanges } from './look'
 import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
@@ -391,6 +391,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const blocks = blocksOf(doc, type, tier)
     const b = blocks.find(x => !x.disabled) ?? blocks[0]
     return b ? readStyle(b.actions) : {}
+  }
+
+  // Show or Hide as NeverSink has the tier, before your edits; null if absent.
+  function sourceVisibility (type: string, tier: string): Visibility | null {
+    const doc = sourceParsed()
+    if (!doc) return null
+    const blocks = blocksOf(doc, type, tier)
+    return (blocks.find(x => !x.disabled) ?? blocks[0])?.visibility ?? null
   }
 
   // The tier's stack size as NeverSink has it: going back to it isn't a change.
@@ -1159,6 +1167,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     undoStep,
     redoStep,
     sourceLook,
+    sourceVisibility,
     sourceStack,
     resetPrices,
     editWithUndo,

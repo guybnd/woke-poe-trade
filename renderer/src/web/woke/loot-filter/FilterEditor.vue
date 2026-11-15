@@ -655,7 +655,8 @@ function markSwatch (look: StylePatch) {
 // A NeverSink group of hide-only rules (Maps to hide): on/off switches, not
 // a ladder with looks nobody sees.
 const isSwitchGroup = computed(() => Boolean(group.value) && !isOwnGroup.value && !group.value!.type.startsWith('woke->') &&
-  group.value!.tiers.every(t => firstLive(t).visibility === 'Hide'))
+  // As NeverSink ships it: hiding every tier yourself mustn't turn a ladder into switches.
+  group.value!.tiers.every(t => props.store.sourceVisibility(group.value!.type, t.tier) === 'Hide'))
 
 function setRuleOn (t: TierNode, on: boolean) {
   const type = selType.value

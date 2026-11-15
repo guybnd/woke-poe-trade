@@ -403,6 +403,9 @@ export function addEdit (list: FilterEdit[], edit: FilterEdit, opts: { separateM
   let merged: FilterEdit | null = edit
   if (edit.kind === 'style' && prev.kind === 'style') {
     merged = { ...edit, id: prev.id, patch: { ...prev.patch, ...edit.patch } }
+  } else if (edit.kind === 'visibility' && prev.kind === 'visibility' && edit.on === undefined && prev.on !== undefined) {
+    // Show or Hide on a rule you turned on keeps it on.
+    merged = { ...edit, on: prev.on }
   } else if (edit.kind === 'move' && prev.kind === 'move') {
     // Moving back to where it started undoes the move.
     merged = prev.from === edit.to ? null : { ...edit, id: prev.id, from: prev.from }
