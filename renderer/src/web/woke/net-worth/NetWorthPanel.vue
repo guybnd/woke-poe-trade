@@ -2,8 +2,8 @@
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
     :hotkey="config.hotkey" :busy="status?.running === true" :stale="!!status?.error && !!v">
     <template #actions>
-      <span class="w-dim text-xs mr-2">{{ readLine }}</span>
-      <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" @click="refresh">Refresh</WButton>
+      <!-- The read's age is in the footer: beside the title it ran into the game look's plaque. -->
+      <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" :title="readLine ? `Stash ${readLine}` : undefined" @click="refresh">Refresh</WButton>
       <WButton size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
       <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" title="Sections to show" aria-label="Sections to show" @click="openSections" />
     </template>
@@ -13,7 +13,7 @@
 
     <TabPicker v-if="showPicker" :key="status?.league ?? ''" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" :running="status?.running === true" @done="onPicked" />
     <WEmpty v-else-if="!v && !status?.lastReadAt" icon="fas fa-box-open">
-      {{ status?.account ? 'Not read yet. Press Refresh.' : 'Sign in under Settings › Game & league, then press Refresh.' }}
+      {{ status?.running ? `Stash ${readLine}` : status?.account ? 'Not read yet. Press Refresh.' : 'Sign in under Settings › Game & league, then press Refresh.' }}
     </WEmpty>
     <WEmpty v-else-if="!v" icon="fas fa-hourglass-half">Waiting for poe.ninja prices…</WEmpty>
     <div v-else :class="$style.body">
@@ -155,7 +155,7 @@
           <template v-if="ignoredCount"> · {{ ignoredCount }} ignored
             <button type="button" :class="$style.clear" :aria-pressed="showIgnored" title="List them, to stop ignoring one" @click="showIgnored = !showIgnored">{{ showIgnored ? 'hide' : 'show' }}</button></template>
         </span>
-        <span>poe.ninja · {{ ninjaAge }}</span>
+        <span><template v-if="readLine">Stash {{ readLine }} · </template>poe.ninja · {{ ninjaAge }}</span>
       </div>
     </div>
   </WPanel>
