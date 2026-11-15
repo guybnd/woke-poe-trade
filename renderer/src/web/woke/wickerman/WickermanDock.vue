@@ -12,9 +12,10 @@
             <span class="ml-auto w-dim whitespace-nowrap w-trunc" :class="h.unsure && $style.unsure"
               :title="h.unsure ? 'Not confirmed' : undefined">{{ h.boss }}</span>
           </div>
-          <div v-for="t in h.v.tiers" :key="t.label" :class="$style.tier">
+          <div v-for="(t, i) in h.v.tiers" :key="t.label" :class="$style.tier">
             <span :class="$style.label">{{ t.label }}</span>
             <span :class="$style.text">{{ t.text }}</span>
+            <WPrice v-if="price(h.v, i) != null" class="ml-auto whitespace-nowrap" :chaos="price(h.v, i)" :divine="divine" />
           </div>
         </div>
       </div>
@@ -24,10 +25,12 @@
 
 <script setup lang="ts">
 import DockItem from '../dock/DockItem.vue'
-import { useVisceraHere } from './here'
+import { WPrice } from '../ui'
+import { useVisceraHere, useVisceraPrices } from './here'
 
 // Mounted by WokeOverlay only while the module is on.
 const { here, zoneName } = useVisceraHere()
+const { price, divine } = useVisceraPrices()
 </script>
 
 <style module>

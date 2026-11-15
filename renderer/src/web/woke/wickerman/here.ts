@@ -5,8 +5,9 @@ import type { ComputedRef, ShallowRef } from 'vue'
 import { useZone } from '../shared/zone'
 import { actFromAreaId } from '../campaign/log-parse'
 import { onSharedDataChange } from '../app/live-data'
-import { loadViscera, visceraHere } from './viscera'
-import type { VisceraHere, VisceraTable } from './viscera'
+import { usePoeninja } from '@/web/background/Prices'
+import { loadViscera, pickPriceRow, tierItemName, visceraHere } from './viscera'
+import type { Viscera, VisceraHere, VisceraTable } from './viscera'
 
 const table = shallowRef<VisceraTable | null>(null)
 let loading = false
@@ -29,6 +30,21 @@ export function useVisceraTable (): ShallowRef<VisceraTable | null> {
   // A data update dropped the table: read it again while someone shows it.
   onBeforeUnmount(onSharedDataChange(() => { setTimeout(load, 0) }))
   return table
+}
+
+// A version's price from the poe.ninja prices the app already reads; null
+// when poe.ninja has none.
+export function useVisceraPrices () {
+  const ninja = usePoeninja()
+  return {
+    divine: computed(() => ninja.xchgRate.value ?? null),
+    price (v: Viscera, tier: number): number | null {
+      // Read so a template showing this follows price updates.
+      if (ninja.updatedAt.value === -1) return null
+      const rows = ninja.findPricesByName('ITEM', tierItemName(v, tier))
+      return pickPriceRow(rows, v.tiers[tier]?.text ?? '')?.chaos ?? null
+    }
+  }
 }
 
 export function useVisceraHere (): { here: ComputedRef<VisceraHere[]>, zoneName: ComputedRef<string> } {

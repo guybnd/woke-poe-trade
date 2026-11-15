@@ -8,7 +8,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 vi.mock('@/web/woke/app/live-data', () => ({ dataFileUrl: (f: string) => f, onSharedDataChange: () => () => {} }))
 
 /* eslint-disable import-x/first */
-import { heldTier, searchViscera, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
+import { heldTier, pickPriceRow, searchViscera, tierItemName, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
 import type { Viscera, VisceraTable } from '@/web/woke/wickerman/viscera'
 import { visceraLookup } from '@/web/woke/search/lookups/viscera'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -119,6 +119,25 @@ describe('campaign zone', () => {
     expect(visceraInZone(TABLE, 'The Lower Prison', 6).map(v => v.name)).not.toContain("Skeletal Warrior's Leg")
     expect(visceraInZone(TABLE, 'The Riverways', 6).length).toBe(3)
     expect(visceraInZone(TABLE, 'The Lower Prison', null)).toEqual([])
+  })
+})
+
+describe('version prices', () => {
+  it('names versions the way poe.ninja lists them', () => {
+    const leg = get("Skeletal Warrior's Leg")
+    expect([0, 1, 2].map(i => tierItemName(leg, i))).toEqual(["Lesser Skeletal Warrior's Leg", "Skeletal Warrior's Leg", "Greater Skeletal Warrior's Leg"])
+    expect(tierItemName(get("Maven's Orrery"), 1)).toBe("Maven's Orrery")
+  })
+
+  it("picks the row whose effect reads like the version's", () => {
+    const rows = [
+      { variant: '#% chance to gain an Endurance Charge on Hit', chaos: 1 },
+      { variant: '#% chance to gain a Power Charge on Hit', chaos: 9 }
+    ]
+    expect(pickPriceRow(rows, '(2-3)% chance to gain a Power Charge on Hit')?.chaos).toBe(9)
+    expect(pickPriceRow(rows, 'Something else')).toBeNull()
+    expect(pickPriceRow([{ chaos: 4 }], 'anything')?.chaos).toBe(4)
+    expect(pickPriceRow([], 'anything')).toBeNull()
   })
 })
 

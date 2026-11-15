@@ -20,9 +20,10 @@
             <span class="min-w-0 w-dim w-trunc text-xs">{{ sources(v) }}</span>
           </button>
           <div v-if="open === v.name" :class="$style.detail">
-            <div v-for="t in v.tiers" :key="t.label" :class="$style.tier">
+            <div v-for="(t, i) in v.tiers" :key="t.label" :class="$style.tier">
               <span :class="$style.label">{{ t.label }}</span>
               <span :class="$style.text">{{ t.text }}</span>
+              <WPrice v-if="price(v, i) != null" class="ml-auto whitespace-nowrap" :chaos="price(v, i)" :divine="divine" />
             </div>
             <div v-if="v.act" :class="$style.tier">
               <span :class="$style.label">Act {{ v.act.n }}</span>
@@ -50,11 +51,11 @@ export default { widget: widgetWickermanSpec }
 import { computed, inject, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WEmpty, WField, WPanel, WSegmented } from '../ui'
+import { WEmpty, WField, WPanel, WPrice, WSegmented } from '../ui'
 import { popupAnchor } from '../ui/window-anchor'
 import { actLine, searchViscera } from './viscera'
 import type { Viscera } from './viscera'
-import { useVisceraHere, useVisceraTable } from './here'
+import { useVisceraHere, useVisceraPrices, useVisceraTable } from './here'
 import type { WickermanWidget } from './widget'
 
 const props = defineProps<{ config: WickermanWidget }>()
@@ -79,6 +80,7 @@ const SLOTS = [
 
 const table = useVisceraTable()
 const { here } = useVisceraHere()
+const { price, divine } = useVisceraPrices()
 const hereNames = computed(() => new Set(here.value.map(h => h.v.name)))
 const query = shallowRef('')
 const open = shallowRef<string | null>(null)

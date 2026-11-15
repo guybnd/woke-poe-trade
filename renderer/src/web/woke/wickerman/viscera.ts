@@ -184,6 +184,25 @@ export function visceraHere (table: VisceraTable, zone: string, act: number | nu
   return out
 }
 
+// ---- prices ----
+
+// The name poe.ninja lists a version under: "Lesser X" (Low), "X" (Med),
+// "Greater X" (High). Named versions (Queen, Uber, Variant 2) go by the plain name.
+export function tierItemName (v: Viscera, tier: number): string {
+  const label = v.tiers[tier]?.label
+  return label === 'Low' ? `Lesser ${v.name}` : label === 'High' ? `Greater ${v.name}` : v.name
+}
+
+// poe.ninja has one row per effect per name, its variant the effect with #
+// for numbers. The row whose variant reads like this version's text, else
+// the only row.
+export function pickPriceRow<T extends { variant?: string }> (rows: readonly T[], tierText: string): T | null {
+  if (rows.length <= 1) return rows[0] ?? null
+  const shape = (s: string) => norm(s.replace(/\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)|-?\d+(?:\.\d+)?/g, '#'))
+  const want = shape(tierText.split('\n')[0])
+  return rows.find(r => r.variant != null && shape(r.variant.split('\n')[0]) === want) ?? null
+}
+
 // "Act 1 · Fire Fury, The Coast"
 export function actLine (v: Viscera): string | null {
   if (!v.act) return null
