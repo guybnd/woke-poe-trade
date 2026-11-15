@@ -23,6 +23,8 @@
         :filters="itemFilters" />
     </filter-name>
     <woke-map-strip :item="item" class="mb-2" />
+    <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
+    <woke-viscera-strip v-if="isViscera" :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
     <template v-if="!wokeVerdictShown">
       <price-prediction v-if="showPredictedPrice" class="mb-4"
@@ -145,6 +147,7 @@ export default defineComponent({
     WokeMapStrip,
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
+    WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WTabs,
     WokeDustChip,
     WokeDustVerdictChip,
@@ -422,6 +425,7 @@ export default defineComponent({
       showFlipTab,
       verdictSlot,
       wokeVerdictShown,
+      isViscera: computed(() => props.item.category === ItemCategory.Viscera),
       ninjaCardOpen,
       showTrendCard: computed(() => !wokeVerdictShown.value && !showPredictedPrice.value),
       verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),
