@@ -153,8 +153,30 @@ export function pointsBy (level: number | null, act: number | null): number | nu
   return Math.max(0, level - 1) + QUEST_POINTS[Math.min(act ?? 1, 11)]
 }
 
+// Set by character.ts: the passive points your character really has, from its
+// last read, when that read is of the character in play; else null.
+// character.ts sets it as it loads; what it reads is reactive, so a loadout
+// worked out with it follows a new read.
+let livePoints: () => number | null = () => null
+export function useLivePoints (fn: () => number | null) { livePoints = fn }
+
+// Cluster jewel passives (PoB's ids from 65536 up) aren't on the read's count.
+const mainTreePoints = (t: PobTreeSpec) => (t.nodes ?? []).filter(id => id < 0x10000).length
+
 // The tree you're working toward: past each tree your points already cover.
 export function treeAhead (trees: PobTreeSpec[], tree: PobTreeSpec, level: number | null, act: number | null): PobTreeSpec {
+  const real = livePoints()
+  if (real != null) {
+    // Your real points: a tree is passed once you have as many as it takes.
+    const passed = new Set<PobTreeSpec>()
+    while (tree.nodes?.length && mainTreePoints(tree) <= real) {
+      const next = treeAfter(trees, tree, passed)
+      if (!next) break
+      passed.add(tree)
+      tree = next
+    }
+    return tree
+  }
   const have = pointsBy(level, act)
   if (have == null) return tree
   const passed = new Set<PobTreeSpec>()

@@ -264,3 +264,20 @@ describe('characterDiff', () => {
     expect(d.treeTitle).toBe('Level 68')
   })
 })
+
+describe('treeAhead with your real points', () => {
+  const trees = [
+    { title: 'Level 30', url: '', isActive: false, nodes: [1, 2, 3] },
+    { title: 'Level 60', url: '', isActive: false, nodes: [1, 2, 3, 4, 5, 6] },
+    { title: 'Level 90', url: '', isActive: true, nodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 65600] }
+  ]
+  it('moves past every tree the spent points cover, cluster passives aside', async () => {
+    const { treeAhead, useLivePoints } = await import('@/web/woke/pob-builds/build-model')
+    useLivePoints(() => 6)
+    expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 90')
+    useLivePoints(() => 5)
+    expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 60')
+    useLivePoints(() => null)
+    expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 30')
+  })
+})

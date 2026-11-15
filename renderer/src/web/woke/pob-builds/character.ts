@@ -3,11 +3,11 @@
 // with one. Main reads in the background; this only shows the result. Off
 // unless the stash reader is on.
 import { computed, effectScope, shallowRef, watch } from 'vue'
-import type { Ref } from 'vue'
+import type { InjectionKey, Ref } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { personalOn } from '../personal'
 import { hostRequest } from '../shared/host'
-import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems } from './build-model'
+import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems, useLivePoints } from './build-model'
 import { loadPassiveTree, treeDiff } from './passive-tree'
 import type { TreeDiff, TreeNode } from './passive-tree'
 import type { LoadoutPick, PobDetails, PobItem, PobSkillGroup, PobTreeSpec } from './widget'
@@ -49,9 +49,10 @@ let started = false
 
 // Once, from the PoB builds widget. hint: the character Client.txt names;
 // auto: also read on entering an area (at most every 5 minutes).
-export function startCharacterSync (hint: () => string, auto: () => boolean) {
+export function startCharacterSync (hint: () => string, auto: () => boolean, level: () => number | null = () => null) {
   if (started) return
   started = true
+  playing.value = { name: hint, level }
   MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
     if (topic === 'character-sync') take(data)
   })
@@ -70,6 +71,55 @@ export function readCharacterNow (hint: string) {
   hostRequest('character-sync', { character: hint, read: 'now' }, 60_000).then(take)
     .catch((e: Error) => { characterStatus.value = { ...characterStatus.value, pending: false, error: e.message } })
 }
+
+// The best level and quality of each gem your character sockets, by gemKey.
+export const characterGems = computed(() => {
+  const out = new Map<string, { level: number | null, quality: number | null }>()
+  for (const g of character.value?.gems ?? []) {
+    for (const x of g.gems) {
+      const k = gemKey(x.name)
+      const was = out.get(k)
+      if (!was || (x.level ?? 0) > (was.level ?? 0) || ((x.level ?? 0) === (was.level ?? 0) && (x.quality ?? 0) > (was.quality ?? 0))) {
+        out.set(k, { level: x.level, quality: x.quality })
+      }
+    }
+  }
+  return out
+})
+
+// Provided by a build window while your character is read: gem names there
+// mark what you socket, and at what level.
+export const CHARACTER_GEMS_ON = Symbol('character gems on') as InjectionKey<Ref<boolean>>
+
+export interface GemHave {
+  have: boolean
+  // Behind the build: "18 → 20", "q5 → 20".
+  behind: string
+}
+
+// level, quality: what the build asks for (null: not set, as on the leveling list).
+export function gemHave (name: string, level: number | null | undefined, quality: number | null | undefined): GemHave {
+  const h = characterGems.value.get(gemKey(name))
+  if (!h) return { have: false, behind: '' }
+  const parts: string[] = []
+  if (level != null && h.level != null && h.level < level) parts.push(`${h.level} → ${level}`)
+  if (quality != null && quality > 0 && (h.quality ?? 0) < quality) parts.push(`q${h.quality ?? 0} → ${quality}`)
+  return { have: true, behind: parts.join(' · ') }
+}
+
+// The passive points you really spent, for the leveling guide's stage: only
+// when the read is of the character Client.txt says you play (or it names
+// none), and not from before your last level up.
+const CLUSTER_ID_START = 0x10000
+const playing = shallowRef<{ name: () => string, level: () => number | null } | null>(null)
+export function livePointsFor (name: string, level: number | null): number | null {
+  const s = personalOn.value ? character.value : null
+  if (!s) return null
+  if (name && name !== s.character.name) return null
+  if (level != null && s.character.level != null && level > s.character.level) return null
+  return s.tree.nodes.filter(id => id < CLUSTER_ID_START).length
+}
+useLivePoints(() => playing.value ? livePointsFor(playing.value.name(), playing.value.level()) : null)
 
 export const CHARACTER_TREE = 'Your character'
 const CLUSTER_IDS = 0x10000
@@ -128,7 +178,7 @@ export interface GemGroupDiff {
   extra: string[]
 }
 
-const gemKey = (name: string) => name.replace(/ Support$/i, '').trim().toLowerCase()
+export const gemKey = (name: string) => name.replace(/ Support$/i, '').trim().toLowerCase()
 
 // Each enabled build group against the character's group in the same slot
 // that shares most gems with it (any slot when none shares).

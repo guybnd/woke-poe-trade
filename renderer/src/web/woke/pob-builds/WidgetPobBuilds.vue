@@ -195,7 +195,7 @@ async function iconClick () {
 
 // Your character (character.ts): read by main while the stash reader is on,
 // on Read now (or on area changes, if turned on), kept apart from every build.
-startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead === true)
+startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead === true, () => active.level.value)
 // The tree window: the build's trees, plus your character's when comparing with it.
 const treeSpecs = computed(() => {
   const trees = details.value?.trees ?? []
