@@ -51,6 +51,8 @@ test('the Prices tab lists every category and filters and sorts one', async ({ o
   await expect(panel.getByRole('textbox')).toHaveAttribute('placeholder', 'Filter Divination Cards')
   const rowsBefore = await panel.locator('.w-row:not(.w-row--head)').count()
   expect(rowsBefore).toBeGreaterThan(1)
+  // Under 1c a price reads per divine, as poe.ninja shows it ("1 div / 224").
+  if (!process.env.MARKET_DENSE) await expect(panel.locator('.w-row', { hasText: 'Rain of Chaos' })).toContainText('/')
   await panel.getByRole('textbox').fill('doctor')
   await expect(panel.locator('.w-row:not(.w-row--head)').first()).toContainText(/doctor/i)
   await panel.getByRole('textbox').fill('zzzz no such card')

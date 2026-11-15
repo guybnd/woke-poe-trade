@@ -36,7 +36,7 @@
               <span class="w-trunc">{{ r.name }}<span v-if="r.variant" class="w-dim ml-1">{{ r.variant }}</span></span>
             </span>
             <span :class="$style.value">
-              <WPrice :chaos="r.chaos" :divine="divine" :unit="mainUnit(r)" />
+              <WPrice :chaos="r.chaos" :divine="divine" :unit="mainUnit(r)" bulk />
               <WPrice v-if="subUnit(r)" :chaos="r.chaos" :divine="divine" :unit="subUnit(r)!" class="w-faint" :class="$style.sub" />
             </span>
             <span :class="$style.trend">
@@ -159,7 +159,9 @@ function sortBy (sort: MarketSort) {
 const sortIcon = computed(() => ['fas ml-1 text-xs', props.config.priceDesc ? 'fa-caret-down' : 'fa-caret-up'])
 
 // The main value in the chosen unit; the other one under it once it's worth a divine.
-function mainUnit (r: MarketRow): 'chaos' | 'div' {
+// Under 1c it is 'auto', so WPrice's bulk shows "1 div / N" as poe.ninja does.
+function mainUnit (r: MarketRow): 'chaos' | 'div' | 'auto' {
+  if (r.chaos < 1 && divine.value) return 'auto'
   return unit.value === 'div' && divine.value && r.name !== 'Divine Orb' ? 'div' : 'chaos'
 }
 function subUnit (r: MarketRow): 'chaos' | 'div' | null {
