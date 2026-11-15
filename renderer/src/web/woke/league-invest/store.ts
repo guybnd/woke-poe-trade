@@ -60,16 +60,32 @@ async function readOldDb (): Promise<LeagueHistory[]> {
   }
 }
 
-// Past leagues shipped with the app (built by scripts/build-invest-bundle.ts,
-// marked imported = 0). Loaded on demand so they stay out of startup.
+// Past leagues shipped with the app (public/data/league-invest/leagues.json,
+// built by scripts/build-invest-bundle.ts, marked imported = 0). Fetched as
+// JSON rather than bundled as JS, so the overlay doesn't also keep a 2 MB
+// script's source in memory. Items leave out empty variant/links.
 let bundled: Promise<LeagueHistory[]> | null = null
 export function loadBundledLeagues (): Promise<LeagueHistory[]> {
   if (!bundled) {
-    bundled = import('./bundled/leagues.json')
-      // Items leave out empty variant/links (scripts/build-invest-bundle.ts);
-      // they stay as they are, so the data isn't held twice.
-      .then(m => (m.default as unknown as LeagueHistory[]).map(h => ({ ...h, imported: 0 })))
-      .catch(() => [])
+    bundled = fetch(`${import.meta.env.BASE_URL}data/league-invest/leagues.json`)
+      .then(async res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return await res.json() as LeagueHistory[]
+      })
+      .then(list => list.map(h => {
+        // Typed arrays take a third of the memory of JSON's number lists
+        // (1.5 MB here). A missing price is NaN; priceOn reads it as none.
+        for (const i of h.items) {
+          i.div = Float64Array.from(i.div, v => v ?? NaN) as unknown as Array<number | null>
+          i.conf = Int8Array.from(i.conf) as unknown as number[]
+        }
+        return { ...h, imported: 0 }
+      }))
+      .catch(() => {
+        // Try again next time rather than keep an empty list.
+        bundled = null
+        return []
+      })
   }
   return bundled
 }

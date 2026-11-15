@@ -1,4 +1,4 @@
-// Builds src/web/woke/league-invest/bundled/leagues.json from poe.ninja
+// Builds public/data/league-invest/leagues.json from poe.ninja
 // league dump CSVs (https://poe.ninja/poe1/data), so the investments widget
 // has past leagues without the player importing anything.
 //
@@ -38,7 +38,7 @@ for (const league of importer.leagues()) {
   console.log(`${league}: ${items.length} items, ${h.days} days from ${h.start}`)
 }
 
-const target = path.join(__dirname, '../src/web/woke/league-invest/bundled')
+const target = path.join(__dirname, '../public/data/league-invest')
 mkdirSync(target, { recursive: true })
 // Empty variant/links and imported are left out (store.ts fills them in): 16 KB less JS.
 const slim = out.map(({ imported: _, ...h }) => ({
