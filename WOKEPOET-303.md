@@ -64,6 +64,17 @@ history:
     date: '2026-11-15T07:34:19.666Z'
     selfAttested: true
     id: c-2026-11-15t07-34-19-666z
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: #520 (17d48327). Viscera is a Prices category with
+      poe.ninja art (league/ninja-icons.json). League Mechanics Covens sections
+      are filled, a Viscera tooltip lists every effect with its price, and a
+      category poe.ninja started tracking after the league began counts its own
+      days for thin-market gaps.
+    date: '2026-11-15T11:00:56.675Z'
+    selfAttested: true
+    id: c-2026-11-15t11-00-56-675z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/498'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
