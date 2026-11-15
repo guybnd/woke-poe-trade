@@ -22,6 +22,14 @@ history:
       Mocks A-D with picks: https://claude.ai/artifact/PMvnyzjUvoHDi7oXGVzDa5
       (db picks/A..D). Building A+B meanwhile on woke/wickerman-ledger.
     id: a-2026-11-15t06-31-54-582z
+  - type: activity
+    user: Agent
+    date: '2026-11-15T06:41:24.864Z'
+    comment: >-
+      Guy's picks: C yes ("should be able to see what the mods are"), D later
+      ("maybe on pob section"); A/B blank, kept as built. C built: campaign card
+      shows zone boss's Viscera with every version.
+    id: a-2026-11-15t06-41-24-864z
 ---
 Bring wickermanledger.site's info into the app as a self-contained, switchable league module (woke/ module registry), removable at league end.
 
