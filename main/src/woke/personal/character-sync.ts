@@ -18,7 +18,9 @@ import { POE_SITE, isSignedOut } from './stash-reader'
 import type { Fetcher, HttpReply } from './stash-reader'
 import { SIGNED_OUT, characterEntry, cleanMod, socketColour, wornItem } from './worn-items'
 
-export const SNAPSHOT_VERSION = 1
+// 2: mods read from 3.30's { description } objects. A version 1 read lost
+// every mod: it is read again from the saved replies, or dropped.
+export const SNAPSHOT_VERSION = 2
 export const AUTO_MS = 5 * 60_000
 export const MANUAL_MS = 30_000
 const MAX_WAIT_MS = 10_000
@@ -249,12 +251,32 @@ export function fileStore (dir: string): CharacterStore {
       await fs.rename(tmp, file).catch(async (e: Error) => { await fs.rm(tmp, { force: true }).catch(() => {}); throw e })
     }
   }
-  return {
+  const store: CharacterStore = {
     load: async () => {
       try {
         const s = JSON.parse(await fs.readFile(path.join(dir, 'current.json'), 'utf8')) as CharacterSnapshot
-        return s && s.version === SNAPSHOT_VERSION && typeof s.account === 'string' && s.character && typeof s.character.name === 'string' &&
-          Array.isArray(s.gear) && Array.isArray(s.gems) && s.tree && Array.isArray(s.tree.nodes) ? s : null
+        const ok = s && typeof s.account === 'string' && s.character && typeof s.character.name === 'string' &&
+          Array.isArray(s.gear) && Array.isArray(s.gems) && s.tree && Array.isArray(s.tree.nodes)
+        if (!ok) return null
+        if (s.version === SNAPSHOT_VERSION) return s
+        if (s.version !== 1) return null
+        // The replies saved beside it, only if they are that read's: a later
+        // read that failed partway leaves newer ones (written before readAt is
+        // taken), or another character's.
+        const itemsFile = path.join(dir, 'last-items-reply.json')
+        const passivesFile = path.join(dir, 'last-passives-reply.json')
+        const [itemsAt, passivesAt] = await Promise.all([fs.stat(itemsFile), fs.stat(passivesFile)])
+        if (itemsAt.mtimeMs > s.readAt + 1000 || passivesAt.mtimeMs > s.readAt + 1000) return null
+        const itemsBody = await fs.readFile(itemsFile, 'utf8')
+        const named = (JSON.parse(itemsBody) as { character?: { name?: unknown } }).character?.name
+        if (typeof named === 'string' && named !== s.character.name) return null
+        const items = parseCharacterItems(itemsBody)
+        const tree = parsePassives(await fs.readFile(passivesFile, 'utf8'))
+        if (!items || !tree) return null
+        const rebuilt: CharacterSnapshot = { ...s, version: SNAPSHOT_VERSION, ...items, tree }
+        // Written back, so the next start (and other readers of the file) have it.
+        await store.save(rebuilt).catch(() => {})
+        return rebuilt
       } catch {
         return null
       }
@@ -266,6 +288,7 @@ export function fileStore (dir: string): CharacterStore {
       await write(path.join(dir, 'current.json'), data)
     }
   }
+  return store
 }
 
 interface Deps {
