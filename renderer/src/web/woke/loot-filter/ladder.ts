@@ -198,7 +198,9 @@ export function buildLadder (tiers: TierNode[]): Ladder {
   for (const t of onLadder) {
     const range = axis ? rangeOf(live(t), axis) : null
     const prev = rows[rows.length - 1]
-    if (axis && prev && lookKey(prev.tiers[0]) === lookKey(t) && !live(t).added) {
+    // The top tier keeps its own row (T16 apart from T14-15): it's the one
+    // people tune on its own, and folding it hid that it could be.
+    if (axis && prev && rows.length > 1 && lookKey(prev.tiers[0]) === lookKey(t) && !live(t).added) {
       prev.tiers.push(t)
       prev.range = union(prev.range, range)
       continue
@@ -293,4 +295,32 @@ export function markWhen (axis: string | null, m: MarkGroup): string {
   const extras = m.extras.length > 2 ? `depends on ${[...new Set(m.extras.map(x => x.split(' ')[0]))].join(', ')}` : m.extras.join(' or ')
   if (m.off) return 'off in your filter'
   return [range, extras ? (range && !extras.startsWith('depends') ? `when ${extras}` : extras) : ''].filter(Boolean).join(', ') || 'every item here'
+}
+
+export interface ShowFrom {
+  // Every tier on the ladder, best first, with its own span.
+  tiers: Array<{ tier: TierNode, label: string }>
+  // Index of the lowest shown tier when the shown ones are exactly the top
+  // of the ladder; -1 when nothing shows; null when it's mixed.
+  at: number | null
+}
+
+// "Show from T16": the ladder as one cut-off, for the picker above it.
+// Commented-out tiers aren't on it: a visibility edit can't bring them back.
+export function showFrom (ladder: Ladder): ShowFrom {
+  const tiers = ladder.rows.flatMap(r => r.tiers).filter(t => !t.disabled)
+    .map(tier => ({ tier, label: rangeText(ladder.axis, ladder.axis ? rangeOf(live(tier), ladder.axis) : null) || tier.tier }))
+  const shown = tiers.map(x => shownTier(x.tier))
+  const last = shown.lastIndexOf(true)
+  const prefix = shown.every((s, i) => s === (i <= last))
+  return { tiers, at: prefix ? last : null }
+}
+
+// The visibility each tier needs so tiers 0..at show and the rest hide;
+// only the ones that change.
+export function showFromChanges (sf: ShowFrom, at: number): Array<{ tier: string, visibility: 'Show' | 'Hide' }> {
+  return sf.tiers.flatMap((x, i) => {
+    const want = i <= at
+    return want === shownTier(x.tier) ? [] : [{ tier: x.tier.tier, visibility: want ? 'Show' as const : 'Hide' as const }]
+  })
 }

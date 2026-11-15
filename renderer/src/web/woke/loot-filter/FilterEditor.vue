@@ -79,6 +79,17 @@
           </div>
           <StackScale v-if="ladder" :ladder="ladder" :colour-of="stackColour" :name-of="stackTierName" @preview="previewStack" @commit="setStack" />
           <div v-if="stuckTiers.length" class="text-xs" style="color: var(--w-warn);">{{ stuckTiers.join(', ') }} can't catch anything: a tier above takes those stacks first.</div>
+          <template v-if="isSwitchGroup">
+            <div class="text-xs w-dim">Each rule here only hides things. Turn one on and what it catches stops showing.</div>
+            <div v-for="t in group.tiers" :key="t.tier" :class="[$style.switchRow, { [$style.active]: t.tier === selTier }]" @click="pickRow([t])">
+              <WToggle :model-value="!t.disabled" :aria-label="tierName(firstLive(t))" @click.stop @update:model-value="setRuleOn(t, $event)" />
+              <span class="flex flex-col" style="min-width: 0;">
+                <span>{{ tierName(firstLive(t)) }}<span v-if="tierChanged(t.tier)" :class="$style.dot" title="You changed this" /></span>
+                <span class="w-faint text-xs w-trunc" :title="rowTitle(t)">{{ rowConditions(t) || rowTitle(t).split('\n').join(' · ') }}</span>
+              </span>
+            </div>
+          </template>
+          <template v-else>
           <div v-if="lad.marks.length" :class="$style.marks">
             <div class="text-xs"><span style="font-weight: 600;">Marks</span> <span class="w-dim">paint on top of a tier's look. They never show or hide anything.</span></div>
             <div class="flex flex-wrap gap-1">
@@ -91,6 +102,11 @@
                 </span>
               </button>
             </div>
+          </div>
+          <div v-if="lad.axis && !isOwnGroup && showFromList.tiers.length > 1" class="flex items-center gap-2" :class="$style.showFrom">
+            <span>Show from</span>
+            <WSelect :model-value="String(showFromList.at ?? 'mixed')" :options="showFromOptions" aria-label="Lowest tier to show" style="max-width: 11rem;" @update:model-value="setShowFrom" />
+            <span class="w-faint text-xs">{{ showFromList.at == null ? 'some tiers in between are hidden' : 'every tier below hides' }}</span>
           </div>
           <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.ladderStack]: hasStacks }]">
             <span>{{ lad.axis ? axisName(lad.axis) : 'Tier' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
@@ -141,6 +157,7 @@
               </button>
             </div>
           </template>
+          </template>
         </template>
       </div>
 
@@ -149,6 +166,13 @@
         <template v-if="selType === RULE_TYPE">
           <RuleBuilder v-if="editingRule" :key="editingRule.id" :store="store" :rule="editingRule" @delete="deleteRule(editingRule)" />
           <WEmpty v-else icon="fas fa-sliders-h">Pick a rule to change it, or make a new one.</WEmpty>
+        </template>
+        <template v-else-if="tier && isSwitchGroup">
+          <span :class="$style.groupTitle">{{ tierName(firstLive(tier)) }}</span>
+          <WToggle :model-value="!tier.disabled" @update:model-value="setRuleOn(tier, $event)">{{ tier.disabled ? 'Off' : 'On: these stop showing' }}</WToggle>
+          <div class="text-xs w-dim">Catches</div>
+          <div v-for="(c, i) in firstLive(tier).conditions" :key="i" class="text-xs">{{ conditionText(c) }}</div>
+          <div class="text-xs w-faint">{{ tier.disabled ? 'Off: these items go on to the rules below.' : 'On: these items are hidden here, before any rule below sees them.' }}</div>
         </template>
         <template v-else-if="tier">
           <div class="flex items-center gap-2">
@@ -331,7 +355,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { WPanel, WButton, WSelect, WField, WTabs, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
@@ -369,7 +393,7 @@ import RuleNav from './RuleNav.vue'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour, labelCss } from './label-style'
-import { axisName, buildLadder, conditionText, distinctConditions, markName, markWhen, rangeText, sharedConditions } from './ladder'
+import { axisName, buildLadder, conditionText, distinctConditions, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
 import { buildTree, byPrice, groupName, pickBases } from './groups'
@@ -626,6 +650,39 @@ function markSwatch (look: StylePatch) {
     borderColor: look.border ? cssColour(look.border) : 'transparent',
     color: look.text ? cssColour(look.text) : undefined
   }
+}
+
+// A NeverSink group of hide-only rules (Maps to hide): on/off switches, not
+// a ladder with looks nobody sees.
+const isSwitchGroup = computed(() => Boolean(group.value) && !isOwnGroup.value && !group.value!.type.startsWith('woke->') &&
+  group.value!.tiers.every(t => firstLive(t).visibility === 'Hide'))
+
+function setRuleOn (t: TierNode, on: boolean) {
+  const type = selType.value
+  if (!type || on === !t.disabled) return
+  // Back to how NeverSink has it is no change at all.
+  const prev = props.config.edits.find(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on !== undefined)
+  if (prev) props.store.removeEdit(prev.id)
+  else props.store.edit({ kind: 'visibility', type, tier: t.tier, visibility: firstLive(t).visibility, on })
+}
+
+// "Show from T16": one pick sets every tier, folded or not, so nobody has to
+// split a band in the side panel to hide part of it.
+const showFromList = computed(() => showFrom(lad.value))
+const showFromOptions = computed(() => [
+  ...(showFromList.value.at == null ? [{ value: 'mixed', label: 'Mixed' }] : []),
+  ...showFromList.value.tiers.map((x, i) => ({ value: String(i), label: i === showFromList.value.tiers.length - 1 ? `${x.label} (all)` : x.label })),
+  { value: '-1', label: 'Nothing (hide all)' }
+])
+
+function setShowFrom (v: string) {
+  const type = selType.value
+  if (!type || v === 'mixed') return
+  const changes = showFromChanges(showFromList.value, Number(v))
+  if (!changes.length) return
+  const undo = props.store.editsWithUndo(changes.map(c => ({ kind: 'visibility' as const, type, tier: c.tier, visibility: c.visibility })))
+  const pick = showFromList.value.tiers[Number(v)]
+  toast(pick ? `Showing ${groupName(type)} from ${pick.label}` : `Hiding all ${groupName(type)}`, { anchor: panel.value?.el, undo })
 }
 
 function setRowShown (tiers: TierNode[], show: boolean) {
@@ -1278,6 +1335,20 @@ function openFolder () {
 .hiddenRow { opacity: 0.62; }
 .rowHead { display: block; color: var(--w-fg); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .ladderRow .tierName { display: flex; flex-direction: column; min-width: 0; }
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: var(--w-panel-2);
+  border: 1px solid transparent;
+  border-radius: var(--w-r-sm);
+  cursor: pointer;
+}
+.showFrom {
+  font-size: var(--w-fs-sm);
+  padding: 2px 0;
+}
 .cut {
   display: flex;
   align-items: center;

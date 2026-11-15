@@ -1,6 +1,6 @@
 // The ladder view's layout of a rule group, on NeverSink's real filter.
 import { describe, it, expect } from 'vitest'
-import { buildLadder, findAxis, markName, markWhen, rangeOf, rangeText } from '@/web/woke/loot-filter/ladder'
+import { buildLadder, findAxis, markName, markWhen, rangeOf, rangeText, showFrom, showFromChanges } from '@/web/woke/loot-filter/ladder'
 import { buildTree } from '@/web/woke/loot-filter/groups'
 import type { GroupNode } from '@/web/woke/loot-filter/groups'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
@@ -93,5 +93,37 @@ describe('marks, from review', () => {
     const red = ['MapTier >= 1', 'SetBorderColor 255 0 0 255', 'Continue']
     const l = ladderOf(rule('a', red) + rule('b', ['MapTier >= 1', 'SetBorderColor 0 0 255 255', 'Continue']) + rule('c', [...red.slice(0, 1), 'Rarity Rare', ...red.slice(1)]) + rule('d', red) + tiers)
     expect(l.rows[0].markLook.border).toEqual([255, 0, 0, 255])
+  })
+})
+
+describe('show from', () => {
+  const ladder = buildLadder(groupOf(LEVELS[LEVELS.length - 1], 'maps').tiers)
+  const sf = showFrom(ladder)
+
+  it('lists every tier on its own, folded or not, best first', () => {
+    expect(sf.tiers.map(x => x.label).slice(0, 4)).toEqual(['T16+', 'T15', 'T14', 'T13'])
+    expect(sf.at).toBe(0)
+  })
+
+  it('hides everything below the pick and shows everything above it', () => {
+    expect(showFromChanges(sf, 0)).toEqual([])
+    const down = showFromChanges(sf, 2)
+    expect(down).toEqual([{ tier: 'maps_a_t15', visibility: 'Show' }, { tier: 'maps_a_t14', visibility: 'Show' }])
+    expect(showFromChanges(sf, -1)).toEqual([{ tier: 'maps_a_t16', visibility: 'Hide' }])
+  })
+
+  it('reads a gap as mixed', () => {
+    const t15 = sf.tiers[1].tier
+    const mixed = showFrom({ ...ladder, rows: ladder.rows.map(r => ({ ...r, tiers: r.tiers.map(t => t === t15 ? { ...t, visibility: 'Show' as const, blocks: t.blocks.map(b => ({ ...b, visibility: 'Show' as const })) } : t) })) })
+    expect(mixed.at).toBe(1)
+    const gap = showFrom({ ...ladder, rows: ladder.rows.map(r => ({ ...r, tiers: r.tiers.map(t => t === sf.tiers[2].tier ? { ...t, visibility: 'Show' as const, blocks: t.blocks.map(b => ({ ...b, visibility: 'Show' as const })) } : t) })) })
+    expect(gap.at).toBeNull()
+  })
+})
+
+describe('the top tier stands alone', () => {
+  it.each(LEVELS)('%s maps: the best tier is its own row', (level) => {
+    const l = buildLadder(groupOf(level, 'maps').tiers)
+    expect(l.rows[0].tiers).toHaveLength(1)
   })
 })

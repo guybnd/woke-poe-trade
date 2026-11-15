@@ -29,7 +29,9 @@ interface EditBase {
 export type FilterEdit =
   | EditBase & { kind: 'move', base: string, from: string, to: string }
   | EditBase & { kind: 'style', tier: string, patch: StylePatch }
-  | EditBase & { kind: 'visibility', tier: string, visibility: Visibility }
+  // `on` turns a rule NeverSink ships commented out on (true) or one it ships
+  // on, off (false). Missing: the rule stays as NeverSink has it.
+  | EditBase & { kind: 'visibility', tier: string, visibility: Visibility, on?: boolean }
   | EditBase & { kind: 'group', hidden: boolean }
   | EditBase & { kind: 'stack', tier: string, size: number }
   | EditBase & {
@@ -86,7 +88,7 @@ export function isValidEdit (e: unknown): e is FilterEdit {
   switch (x.kind) {
     case 'move': return str('base', 'from', 'to') && Boolean(x.from || x.to)
     case 'style': return str('tier') && isPatch(x.patch)
-    case 'visibility': return str('tier') && VISIBILITIES.includes(x.visibility as string)
+    case 'visibility': return str('tier') && VISIBILITIES.includes(x.visibility as string) && (x.on === undefined || typeof x.on === 'boolean')
     case 'group': return typeof x.hidden === 'boolean'
     case 'stack': return str('tier') && typeof x.size === 'number' && Number.isInteger(x.size) && x.size > 0 && x.size <= STACK_MAX
     case 'item': return str('tier', 'base') && VISIBILITIES.includes(x.visibility as string) && isPatch(x.patch)
@@ -231,7 +233,13 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
     case 'visibility': {
       const blocks = blocksOf(doc, edit.type, edit.tier)
       if (!blocks.length) return { edit, ok: false, blocks: 0, message: 'Tier not found in this filter' }
-      for (const b of blocks) setVisibility(b, edit.visibility)
+      for (const b of blocks) {
+        if (edit.on !== undefined && b.disabled === edit.on) {
+          b.disabled = !edit.on
+          b.dirty = true
+        }
+        setVisibility(b, edit.visibility)
+      }
       return { edit, ok: true, blocks: blocks.length }
     }
     case 'style': {
@@ -422,7 +430,9 @@ export function describeEdit (e: FilterEdit): string {
       if (e.from === '') return `${e.base}: added to ${ruleLabel(e.type, e.to)}`
       return `${e.base}: ${group}, ${tierLabel(e.from)} → ${tierLabel(e.to)}`
     case 'style': return `Restyled ${ruleLabel(e.type, e.tier)}`
-    case 'visibility': return `${e.visibility} ${ruleLabel(e.type, e.tier)}`
+    case 'visibility':
+      if (e.on !== undefined) return `Turned ${e.on ? 'on' : 'off'} ${ruleLabel(e.type, e.tier)}`
+      return `${e.visibility} ${ruleLabel(e.type, e.tier)}`
     case 'group': return `Hid the whole ${group} group`
     case 'stack': return `${ruleLabel(e.type, e.tier)}: stacks of ${e.size} or more`
     case 'item': return `Own rule for ${e.base} (${e.visibility === 'Hide' ? 'hidden' : 'restyled'})`

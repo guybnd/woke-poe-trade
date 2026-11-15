@@ -92,7 +92,10 @@ const WHOLE_TIERS: Record<string, string> = {
   anyother: 'Any other',
   exhide: 'Hidden extras',
   hideable: 'Can be hidden',
-  restex: 'The rest'
+  restex: 'The rest',
+  // NeverSink's Maps to hide, shipped off.
+  corruptedmaphider: 'Hide corrupted maps',
+  mirroredmaphider: 'Hide mirrored maps'
 }
 
 export function tierLabel (tier: string): string {
