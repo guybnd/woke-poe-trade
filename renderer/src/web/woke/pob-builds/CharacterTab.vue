@@ -34,6 +34,34 @@
       </template>
       <div v-else class="w-dim text-xs">The build has no passive tree to compare.</div>
 
+      <!-- Resists and attributes -->
+      <template v-if="defences">
+        <div :class="$style.heading">Resists and attributes</div>
+        <div :class="$style.defGrid">
+          <span />
+          <span class="w-faint text-xs">You</span>
+          <span v-if="defences.withBuild" class="w-faint text-xs">With the build's gear</span>
+          <template v-for="r in RESISTS" :key="r">
+            <span :class="$style[`res${r}`]">{{ r }}</span>
+            <span class="w-num" :class="resTone(r, defences.now)" :title="`Maximum ${defences.now.max[r]}%`">{{ resText(r, defences.now) }}</span>
+            <span v-if="defences.withBuild" class="w-num" :class="resTone(r, defences.withBuild)">{{ resText(r, defences.withBuild) }}</span>
+          </template>
+          <template v-for="a in ATTRIBUTES" :key="a">
+            <span class="w-dim">{{ a }}</span>
+            <span class="w-num">{{ defences.now.attr[a] }}</span>
+            <span v-if="defences.withBuild" class="w-num">{{ defences.withBuild.attr[a] }}</span>
+          </template>
+        </div>
+        <div class="w-faint text-xs pt-1">From your gear, tree, jewels and auras, after the acts' penalty. Pantheon, flasks, charges, abyss jewels in gear and other buffs aren't counted.</div>
+        <template v-if="defences.needs.length">
+          <div :class="$style.heading">Can't use yet</div>
+          <div v-for="n in defences.needs" :key="n.key" :class="$style.need">
+            <span class="w-trunc" :class="n.kind === 'gem' ? 'w-rarity-gem' : ''">{{ n.what }}</span>
+            <span class="w-down text-xs">needs {{ n.short.join(', ') }}</span>
+          </div>
+        </template>
+      </template>
+
       <!-- Next to buy -->
       <template v-if="upgrades.rows.length">
         <div :class="$style.heading" class="flex">
@@ -94,6 +122,9 @@ import { WButton, WPrice } from '../ui'
 import { openPriceCheck } from './open-price-check'
 import { wornCompare } from './worn-compare'
 import { useUniquePrice } from './unique-price'
+import { ATTRIBUTES, RESISTS } from './char-defences'
+import type { Defences, Resist } from './char-defences'
+import { useCharacterDefences } from './char-defences-view'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { useActiveBuild } from './active'
 import { slotLabel } from './build-model'
@@ -109,6 +140,17 @@ const build = useActiveBuild()
 const status = characterStatus
 const snapshot = computed(() => status.value.snapshot)
 const diff = useCharacterDiff(toRef(props, 'details'), build.level, build.act, toRef(props, 'pick'))
+
+// Resists, attributes and requirements against the build.
+const defences = useCharacterDefences(toRef(props, 'details'), build.level, build.act, toRef(props, 'pick'))
+function resText (r: Resist, d: Defences) {
+  const v = d.res[r]
+  return v > d.max[r] ? `${d.max[r]}% (${v})` : `${v}%`
+}
+function resTone (r: Resist, d: Defences) {
+  if (d.res[r] >= d.max[r]) return 'w-up'
+  return r === 'Chaos' && d.res[r] >= 0 ? 'w-dim' : 'w-down'
+}
 
 // Next to buy: what differs, cheapest unique first.
 const prices = useUniquePrice()
@@ -175,6 +217,25 @@ function readNow () {
 .state {
   font-size: var(--w-fs-xs);
   white-space: nowrap;
+}
+.defGrid {
+  display: grid;
+  grid-template-columns: 6rem auto auto;
+  justify-content: start;
+  column-gap: 16px;
+  row-gap: 1px;
+  align-items: baseline;
+}
+.resFire { color: #d9543f; }
+.resCold { color: #6a9fd8; }
+.resLightning { color: #ffd700; }
+.resChaos { color: #d02090; }
+.need {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  min-width: 0;
 }
 .buy {
   display: flex;
