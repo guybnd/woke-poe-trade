@@ -110,7 +110,7 @@
       <span class="w-dim">Copy look from</span>
       <select :class="$style.select" value="" aria-label="Copy style from tier" @change="copy(($event.target as HTMLSelectElement).value)">
         <option value="" disabled>tier…</option>
-        <option v-for="t in copyFrom" :key="t.tier" :value="t.tier">{{ tierLabel(t.tier) }}</option>
+        <option v-for="t in copyFrom" :key="t.tier" :value="t.tier">{{ t.label ?? tierLabel(t.tier) }}</option>
       </select>
     </div>
   </div>
@@ -135,7 +135,7 @@ const props = withDefaults(defineProps<{
   visibility: Visibility
   previewText: string
   // Other tiers whose look can be copied.
-  copyFrom?: Array<{ tier: string, look: StylePatch }>
+  copyFrom?: Array<{ tier: string, look: StylePatch, label?: string }>
   // The look in the filter as it came: settings that differ get a reset dot.
   source?: StylePatch | null
 }>(), { copyFrom: () => [], source: null })
