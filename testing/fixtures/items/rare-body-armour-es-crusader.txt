@@ -1,0 +1,28 @@
+Item Class: Body Armours
+Rarity: Rare
+Doom Shell
+Twilight Regalia
+--------
+Quality: +20% (augmented)
+Energy Shield: 1210 (augmented)
+--------
+Requirements:
+Level: 86
+Int: 293
+--------
+Sockets: B-B-B-B-B-B
+--------
+Item Level: 86
+--------
+{ Prefix Modifier "Unassailable" (Tier: 1) — Defences, Energy Shield }
+120(110-120)% increased Energy Shield
+{ Prefix Modifier "Fecund" (Tier: 1) — Life }
++120(110-129) to maximum Life
+{ Suffix Modifier "of the Crusade" (Tier: 2) — Defences, Energy Shield }
+9(8-9)% increased Energy Shield Recovery rate
+{ Suffix Modifier "of the Magma" (Tier: 1) — Elemental, Fire, Resistance }
++34(31-35)% to Fire Resistance
+--------
+Crusader Item
+--------
+Corrupted
