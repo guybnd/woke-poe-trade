@@ -16,7 +16,7 @@ import type { PobItem } from '../pob-parse'
 import { RateLimiter } from './rate-limit'
 import { POE_SITE, isSignedOut } from './stash-reader'
 import type { Fetcher, HttpReply } from './stash-reader'
-import { SIGNED_OUT, characterEntry, cleanMod, wornItem } from './worn-items'
+import { SIGNED_OUT, characterEntry, cleanMod, socketColour, wornItem } from './worn-items'
 
 export const SNAPSHOT_VERSION = 1
 export const AUTO_MS = 5 * 60_000
@@ -132,14 +132,14 @@ export function gemGroups (slot: string, raw: Raw): CharacterGemGroup[] {
     const at = num(g.socket)
     const socket = at != null ? sockets[at] : undefined
     const group = num(socket?.group) ?? 0
-    const colour = str(socket?.sColour) || 'W'
+    const colour = socketColour(socket)
     const list = byGroup.get(group) ?? []
     list.push({
       name: gemName(g),
       level: firstNumber(g, 'Level'),
       quality: firstNumber(g, 'Quality'),
       support: g.support === true,
-      colour: colour === 'DV' ? 'A' : colour
+      colour
     })
     byGroup.set(group, list)
   }
@@ -225,6 +225,8 @@ export const fileSafe = (name: string) => name.replace(/[^\w-]/g, '_').slice(0, 
 export interface CharacterStore {
   load: () => Promise<CharacterSnapshot | null>
   save: (s: CharacterSnapshot) => Promise<void>
+  // The site's last replies as they came, to check the parsing against.
+  saveRaw?: (name: 'items' | 'passives', body: string) => Promise<void>
 }
 
 // <dir>/current.json plus <dir>/characters/<name>.json, each written whole
@@ -252,6 +254,7 @@ export function fileStore (dir: string): CharacterStore {
         return null
       }
     },
+    saveRaw: async (name, body) => { await write(path.join(dir, `last-${name}-reply.json`), body) },
     save: async (s) => {
       const data = JSON.stringify(s, null, 1)
       await write(path.join(dir, 'characters', `${fileSafe(s.character.name)}.json`), data)
@@ -345,9 +348,13 @@ export class CharacterSync {
       if (!entry) throw new Refused("pathofexile.com didn't list your characters.")
       const info = characterInfo(entry)
       const q = new URLSearchParams({ accountName: account, character: info.name, realm: 'pc' }).toString()
-      const items = parseCharacterItems((await this.get(`${POE_SITE}/character-window/get-items?${q}`)).body)
+      const itemsBody = (await this.get(`${POE_SITE}/character-window/get-items?${q}`)).body
+      await this.deps.store.saveRaw?.('items', itemsBody).catch(() => {})
+      const items = parseCharacterItems(itemsBody)
       if (!items) throw new Refused(`Couldn't read ${info.name}'s gear.`)
-      const tree = parsePassives((await this.get(`${POE_SITE}/character-window/get-passive-skills?${q}`)).body)
+      const passivesBody = (await this.get(`${POE_SITE}/character-window/get-passive-skills?${q}`)).body
+      await this.deps.store.saveRaw?.('passives', passivesBody).catch(() => {})
+      const tree = parsePassives(passivesBody)
       if (!tree) throw new Refused(`Couldn't read ${info.name}'s passive tree.`)
       if (this.stopped) return this.status
       const snapshot: CharacterSnapshot = { version: SNAPSHOT_VERSION, account, readAt: this.deps.now(), character: info, ...items, tree }
