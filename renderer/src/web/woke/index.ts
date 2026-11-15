@@ -42,6 +42,7 @@ function hostConfigAfterMount () {
 export const wokeWidgets: WidgetComponent[] = [
   lazy(specs.widgetRegexLibrarySpec, () => import('./regex-library/WidgetRegexLibrary.vue')),
   lazy(specs.widgetTradeSearchesSpec, () => import('./trade-searches/WidgetTradeSearches.vue')),
+  lazy(specs.widgetMarketBrowserSpec, () => import('./market/WidgetMarketBrowser.vue')),
   lazy(specs.widgetMarketTrackerSpec, () => import('./market/WidgetMarketTracker.vue')),
   lazy(specs.widgetPobBuildsSpec, () => import('./pob-builds/WidgetPobBuilds.vue')),
   lazy(specs.widgetCampaignSpec, () => import('./campaign/WidgetCampaign.vue')),

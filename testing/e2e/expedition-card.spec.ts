@@ -58,7 +58,8 @@ test('Expedition card: prices, vendor here on top, no scarab chips or arrows', a
   await expect(overlay.page.getByText('Tujen is here')).toBeVisible(SLOW)
   await expect(overlay.page.getByText('Tujen is here').locator('..')).toContainText('Exotic Coinage')
   await expect(overlay.page.getByText('Others, each · week')).toBeVisible()
-  await expect(body).toContainText('0.07')
+  // Astragali at 0.07c reads as how many a divine buys.
+  await expect(body).toContainText('1/2,500')
   await overlay.snap('expedition card, Tujen here')
 
   // Through a portal to the hideout and back: still them.

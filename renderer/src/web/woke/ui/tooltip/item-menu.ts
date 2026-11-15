@@ -19,7 +19,7 @@ import { isWidgetTypeOn } from '../../modules'
 import { itemKey } from '../../market/types'
 import { tradeUrl } from '../../search/search'
 import { copyText } from '../copy'
-import { formatChaos } from '../format'
+import { formatUnitPrice } from '../format'
 import { gameIcon } from '../game-icons'
 import { offerMenuItem, openMenu, toast } from '../layer'
 import type { MenuItemAction, MenuItemHead } from '../layer'
@@ -52,7 +52,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
 
   const market = ref.noPrice || ref.text ? null : marketFor({ name: ref.name, type: ref.type, variant: ref.variant }, kind)
   const divine = usePoeninja().xchgRate.value
-  const price = market ? formatChaos(market.chaos, divine) : undefined
+  const price = market ? formatUnitPrice(market.chaos, divine) : undefined
 
   const check = priceCheckInput(ref, kind, info, AppConfig().language === 'en')
   const actions: MenuItemAction[] = [
@@ -132,7 +132,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
     const watched = (tracker.watchlist ?? []).some(w => itemKey(w) === itemKey(entry))
     actions.push({
       label: watched ? 'Unwatch' : 'Watch',
-      title: watched ? 'Stop watching its price in Market' : 'Watch its price in Market',
+      title: watched ? 'Stop watching its price in Movers' : 'Watch its price in Movers',
       icon: watched ? 'fas fa-star' : 'far fa-star',
       action: () => {
         const before = tracker.watchlist ?? []
@@ -140,7 +140,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
           ? before.filter(w => itemKey(w) !== itemKey(entry))
           : [...before, entry]
         // Undo puts back its price alerts too.
-        toast(watched ? `Stopped watching ${ref.name}` : `Watching ${ref.name} in Market`, { undo: () => { tracker.watchlist = before } })
+        toast(watched ? `Stopped watching ${ref.name}` : `Watching ${ref.name} in Movers`, { undo: () => { tracker.watchlist = before } })
       }
     })
   }

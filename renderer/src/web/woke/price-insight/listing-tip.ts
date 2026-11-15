@@ -27,6 +27,9 @@ export interface ListingItem {
   typeLine?: string
   baseType?: string
   frameType?: number
+  // "Normal", "Magic", "Rare", "Unique": also sent for frame types that are
+  // not rarities, such as 3.30 Viscera (frame type 15, "Normal").
+  rarity?: string
   ilvl?: number
   corrupted?: boolean
   mirrored?: boolean
@@ -64,6 +67,10 @@ export interface ListingItem {
 }
 
 const RARITY: Record<number, PobRarity> = { 0: 'NORMAL', 1: 'MAGIC', 2: 'RARE', 3: 'UNIQUE', 9: 'RELIC' }
+const RARITY_NAME: Record<string, PobRarity> = { Normal: 'NORMAL', Magic: 'MAGIC', Rare: 'RARE', Unique: 'UNIQUE' }
+// Frame types that draw no item tooltip: gems, currency, cards, quest items
+// and the like keep returning null even though the site sends a rarity.
+const NO_TIP_FRAMES = new Set([4, 5, 6, 7, 8])
 
 // Quality goes by type: its name varies, as in "Quality (Attack Modifiers)".
 const QUALITY_TYPE = 6
@@ -119,7 +126,8 @@ function capitalize (s: string): string {
 
 /** Null for what has no mods to show: gems, currency and the like. */
 export function listingTipItem (item: ListingItem): PobItem | null {
-  const rarity = RARITY[item.frameType ?? -1]
+  const frame = item.frameType ?? -1
+  const rarity = RARITY[frame] ?? (NO_TIP_FRAMES.has(frame) ? undefined : RARITY_NAME[item.rarity ?? ''])
   if (!rarity) return null
 
   const listed = item.explicitMods ?? []

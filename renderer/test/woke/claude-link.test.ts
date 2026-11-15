@@ -125,6 +125,13 @@ describe('claude link tools', () => {
     expect(r.historyOfFirst).toEqual([{ date: '2026-11-14', chaos: 199 }])
   })
 
+  it('names a character jewel by its slot, not its index', async () => {
+    const nodes = new Map([[26725, { kind: 'jewel', name: 'Jewel Socket A', stats: [] }]])
+    const character = async () => ({ version: 1, character: { name: 'C' }, tree: { nodes: [26725], jewels: [{ x: 0, item: { rarity: 'RARE', name: 'J', base: 'Cobalt Jewel', sockets: '', implicits: [], mods: [] } }, { x: 9, item: { rarity: 'RARE', name: 'K', base: 'Cobalt Jewel', sockets: '', implicits: [], mods: [] } }] } })
+    const tree = (await run(deps({ character, passiveTree: async () => ({ nodes, masteryEffects: {}, jewelSlots: [26725] }) }), 'current_character', { part: 'tree' })).tree
+    expect(tree.jewels.map((j: any) => j.socket)).toEqual(['Jewel Socket A', 'jewel slot 9'])
+  })
+
   it('says when there is no character', async () => {
     expect((await run(deps(), 'current_character')).note).toMatch(/No character/)
   })

@@ -38,7 +38,7 @@ import type { Config } from '@/web/Config'
 import type { Widget } from '@/web/overlay/widgets'
 import SettingsStopwatch from '@/web/stopwatch/settings-stopwatch.vue'
 import { WButton, WEmpty, WSettingRow, WSettingSection, WToggle } from '../ui'
-import { MODULES, ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
+import { MODULES, WIDGET_NAMES, ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
 import type { ModuleNeed } from '../modules'
 import { wokeSettingsFor } from '../editors'
 import type { SettingsPage } from './pages'
@@ -62,7 +62,7 @@ const modules = computed(() => (props.page.modules ?? []).map(id => MODULES.find
 const switchable = computed(() => modules.value.filter(m => !m.optIn))
 function setOn (id: string, on: boolean) { setModuleOn(ensureWokeConfig(props.config), id, on) }
 
-const titleFor = (type: string) => MODULES.find(m => m.widgetTypes.includes(type))?.name ?? 'Settings'
+const titleFor = (type: string) => WIDGET_NAMES[type] ?? MODULES.find(m => m.widgetTypes.includes(type))?.name ?? 'Settings'
 
 const blocks = computed(() => {
   const widgets = props.config.widgets as Widget[]

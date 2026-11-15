@@ -71,7 +71,8 @@ export function bossCard (boss: Boss, ctx: LookupContext): LookupCard {
       label: d.chance != null ? `${d.name} · ${percent(d.chance)}` : d.name,
       chaos: d.variable ? undefined : price ?? null,
       value: d.variable ? 'Depends on the roll' : undefined,
-      item: { name: d.name }
+      item: { name: d.name },
+      bulk: true
     }))
   const summary: LookupRow[] = []
   if (loot != null) summary.push({ label: 'Loot per kill (known rates)', chaos: loot })
@@ -149,7 +150,7 @@ export const dropLookup: Lookup = (query, ctx) => {
       icon: 'fas fa-gift',
       tip: { name },
       sections: [
-        { rows: [variable ? { label: name, value: 'Depends on the roll', item: { name } } : { label: name, chaos: dropPrice(ctx, name, variant), item: { name } }] },
+        { rows: [variable ? { label: name, value: 'Depends on the roll', item: { name } } : { label: name, chaos: dropPrice(ctx, name, variant), item: { name }, bulk: true }] },
         { label: 'Dropped by', rows }
       ],
       actions: [
