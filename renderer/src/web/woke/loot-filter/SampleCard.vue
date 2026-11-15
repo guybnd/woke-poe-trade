@@ -157,7 +157,6 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { WPanel, WBanner, WButton, WSegmented, WChip, toast } from '../ui'
 import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
 import { hasSpecialLabel, hideFromLabel, isPlainTier, levelStates, ladderLabel, levelOf, priceLadder, specialLabel, tierNeeds, verdictOf } from './item-panel'
-import { tierRank } from './economy'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
@@ -375,14 +374,10 @@ function afterFix (text: string, undo: () => void) {
 
 // Lower/Raise walk the price tiers in rank order (t1, t2...) when the group
 // has them, otherwise the tiers in file order.
+// The keys walk the Value tier rows as shown when the item is on them.
 const ladder = computed(() => {
-  const names = moveTiers.value.map(t => t.tier)
-  const ranked = moveTiers.value
-    .map(t => ({ t, r: tierRank(t.tier, names) }))
-    .filter(x => x.r != null)
-    .sort((a, b) => a.r! - b.r!)
-    .map(x => x.t)
-  return ranked.some(t => t.tier === final.value.tier) ? ranked : moveTiers.value
+  const rows = split.value.ladder
+  return rows.some(t => t.current) ? rows : moveTiers.value
 })
 const tierIndex = computed(() => ladder.value.findIndex(t => t.tier === final.value.tier))
 const shownNow = computed(() => props.match.visibility !== 'Hide')

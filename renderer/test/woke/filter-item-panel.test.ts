@@ -23,7 +23,8 @@ describe('filter item panel', () => {
     expect(v.shown).toBe(true)
     expect(v.source).toBe('neversink')
     expect(m.final?.block.tier).toBe('hideable')
-    expect(v.hideFrom).toBe('Strict')
+    // %H3: shown through Strict, hidden from Very strict.
+    expect(v.hideFrom).toBe('Very strict')
   })
 
   it('splits unique tiers into a price ladder and special rules', () => {
@@ -42,18 +43,20 @@ describe('filter item panel', () => {
 
   it('drops a hide level already reached', () => {
     const b = soft.blocks.find(b => /%H3/.test(b.comment))!
-    expect(hideFromLabel(b, 0)).toBe('Strict')
-    expect(hideFromLabel(b, 3)).toBeNull()
+    expect(hideFromLabel(b, 0)).toBe('Very strict')
+    expect(hideFromLabel(b, 3)).toBe('Very strict')
+    expect(hideFromLabel(b, 4)).toBeNull()
   })
 
   it('works out each strictness level from the tags', () => {
-    const strict = parseFilter(neverSink('3-STRICT'))
     const at = (doc: typeof soft, tier: string) => doc.blocks.find(b => b.type === 'uniques' && b.tier === tier)!
-    const fromSoft = levelStates(at(soft, 'hideable'), 0)
-    expect(fromSoft).toEqual(['shows', 'shows', 'shows', 'hidden', 'hidden', 'hidden', 'hidden'])
-    expect(levelStates(at(strict, 'hideable'), 3)).toEqual(fromSoft)
-    expect(levelStates(at(strict, '6s'), 3)).toEqual(levelStates(at(soft, '6s'), 0))
-    expect(levelStates(at(soft, '6s'), 0).slice(3)).toEqual(['off', 'off', 'off', 'off'])
+    // Every file must agree with what the files themselves do at each level.
+    const files = (['0-SOFT', '1-REGULAR', '2-SEMI-STRICT', '3-STRICT', '4-VERY-STRICT', '5-UBER-STRICT', '6-UBER-PLUS-STRICT'] as const).map(l => parseFilter(neverSink(l)))
+    for (const tier of ['hideable', 't3', '6s', 't3boss', 'overqual']) {
+      const truth = files.map(d => { const b = at(d, tier); return b.disabled ? 'off' : b.visibility === 'Hide' ? 'hidden' : 'shows' })
+      files.forEach((d, l) => expect(levelStates(at(d, tier), l), `${tier} from level ${l}`).toEqual(truth))
+    }
+    expect(levelStates(at(soft, 'hideable'), 0)).toEqual(['shows', 'shows', 'shows', 'shows', 'hidden', 'hidden', 'hidden'])
   })
 
   it('long ladders count tiers', () => {

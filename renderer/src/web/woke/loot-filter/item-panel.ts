@@ -23,33 +23,36 @@ export function levelOf (doc: FilterDoc | null): number | null {
   return m ? Number(m[1]) : null
 }
 
-// FilterBlade's %H5 tag: the rule hides from strictness 5 up; %D5 turns it off.
-export function hideLevel (block: FilterBlock): number | null {
-  const m = /%[HD](\d)/.exec(block.comment)
-  return m ? Number(m[1]) : null
+// FilterBlade's tags: %H3 hides the rule above strictness 3 (from Very
+// strict up); %D3 comments it out there. The loaded file already has it
+// applied at its own level. Returns the first level the tag changes.
+function tagOf (block: FilterBlock): { kind: 'H' | 'D', from: number } | null {
+  const m = /%([HD])(\d)/.exec(block.comment)
+  return m ? { kind: m[1] as 'H' | 'D', from: Number(m[2]) + 1 } : null
 }
 
 export function hideFromLabel (block: FilterBlock, level: number | null): string | null {
-  const n = hideLevel(block)
-  if (n == null || n >= LEVEL_NAMES.length) return null
-  if (level != null && n <= level) return null
-  return LEVEL_NAMES[n]
+  const tag = tagOf(block)
+  if (!tag || tag.from >= LEVEL_NAMES.length) return null
+  if (level != null && tag.from <= level) return null
+  return LEVEL_NAMES[tag.from]
 }
 
 export type LevelState = 'shows' | 'hidden' | 'off'
 
 // What a rule does at each of the seven strictness levels, worked out from
-// the loaded file and FilterBlade's tags: %H hides from that level up, %D
-// drops the rule (its items fall through to later rules).
+// the loaded file and its tag (an %H rule hides, a %D rule is commented out
+// and its items fall through to later rules).
 export function levelStates (block: FilterBlock, level: number | null): LevelState[] {
-  const m = /%([HD])(\d)/.exec(block.comment)
-  const n = m ? Number(m[2]) : null
-  // Hidden in the loaded file because of its tag, so shown below the tag.
-  const hiddenByTag = n != null && m![1] === 'H' && level != null && n <= level
+  const tag = tagOf(block)
+  const tagHere = tag != null && level != null && tag.from <= level
+  // Off in the loaded file for a reason other than its tag: off everywhere.
+  const offAnyway = block.disabled && !(tag?.kind === 'D' && tagHere)
+  const hiddenAnyway = block.visibility === 'Hide' && !(tag?.kind === 'H' && tagHere)
   return LEVEL_NAMES.map((_, l) => {
-    if (block.disabled && !(m?.[1] === 'D' && level != null && n! <= level)) return 'off'
-    if (n != null && l >= n) return m![1] === 'D' ? 'off' : 'hidden'
-    if (block.visibility === 'Hide' && !hiddenByTag) return 'hidden'
+    if (offAnyway) return 'off'
+    if (tag && l >= tag.from) return tag.kind === 'D' ? 'off' : 'hidden'
+    if (hiddenAnyway) return 'hidden'
     return 'shows'
   })
 }

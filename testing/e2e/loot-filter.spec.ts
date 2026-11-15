@@ -451,8 +451,8 @@ test('Alt + F on a unique: a verdict line, plain value tiers, special rules fold
   await overlay.copyItem('items/unique-three-step-assault.txt', 'Alt + F')
   const page = overlay.page
   await expect(page.getByText('Filter rule for this item')).toBeVisible()
-  await expect(page.getByText(/^(✓ Shows|✗ Hidden)$/)).toBeVisible()
-  await expect(page.getByText(/^NeverSink: All uniques › Low/)).toBeVisible()
+  await expect(page.getByText('✓ Shows', { exact: true })).toBeVisible()
+  await expect(page.getByText('NeverSink: All uniques › Low, hidden from Very strict up.')).toBeVisible()
   await expect(page.getByText('Value tier')).toBeVisible()
   for (const word of ['Top', 'High', 'Mid', 'Low']) await expect(page.getByRole('button', { name: new RegExp(`^${word}`) })).toBeVisible()
   // NeverSink's own tier names stay out of sight until asked for.
