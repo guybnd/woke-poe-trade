@@ -14,7 +14,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import type { GameConfig } from '../host-files/GameConfig'
 import type { ServerEvents } from '../server'
 import { perfRecord } from '../woke/perf'
-import { markSyntheticKeys } from './synthetic-keys'
+import { liftAltForCopy } from './synthetic-keys'
 
 type UiohookKeyT = keyof typeof UiohookKey
 const FOCUS_SETTLE_MS = 120
@@ -277,9 +277,8 @@ function pressKeysToCopyItemText (pressedModKeys: string[] = [], showModsKey: st
   keys = keys.filter(key => key !== 'C')
   // woke: 3.30 copies nothing on Ctrl+Alt+C, so a held Alt (an "Alt + D"
   // price check, the loot filter's Alt+F) made every copy time out. Let go of
-  // held keys that aren't part of Ctrl+C for the copy, then press them again,
-  // since the player is still holding them (hold-to-show price check needs it).
-  let lifted: string[] = []
+  // Alt for the copy (synthetic-keys.ts keeps the player's real Alt state).
+  let liftAlt = false
   if (process.platform !== 'darwin') {
     // On non-Mac platforms, don't toggle keys that are already being pressed.
     //
@@ -288,12 +287,10 @@ function pressKeysToCopyItemText (pressedModKeys: string[] = [], showModsKey: st
     // to "Alt + any letter". They'll work with this line, but not if it's
     // commented out.
     keys = keys.filter(key => !pressedModKeys.includes(key))
-    lifted = pressedModKeys.filter(key => key !== 'Ctrl')
+    liftAlt = pressedModKeys.includes('Alt')
   }
 
-  for (const key of lifted) {
-    uIOhook.keyToggle(UiohookKey[key as UiohookKeyT], 'up')
-  }
+  if (liftAlt) liftAltForCopy()
   for (const key of keys) {
     uIOhook.keyToggle(UiohookKey[key as UiohookKeyT], 'down')
   }
@@ -304,10 +301,6 @@ function pressKeysToCopyItemText (pressedModKeys: string[] = [], showModsKey: st
   keys.reverse()
   for (const key of keys) {
     uIOhook.keyToggle(UiohookKey[key as UiohookKeyT], 'up')
-  }
-  if (lifted.length) markSyntheticKeys()
-  for (const key of lifted) {
-    uIOhook.keyToggle(UiohookKey[key as UiohookKeyT], 'down')
   }
 }
 
