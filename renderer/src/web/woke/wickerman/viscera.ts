@@ -184,6 +184,31 @@ export function visceraHere (table: VisceraTable, zone: string, act: number | nu
   return out
 }
 
+// ---- the version for your level ----
+
+// Which version drops where isn't published; a guess from how 3.30 tiers its
+// drops: Lesser (Low) in the acts, plain (Med) in maps up to area level 77,
+// Greater (High) from 78. Named versions (Queen, Variant 2) aren't picked.
+export function levelTierLabel (areaLevel: number | null): 'Low' | 'Med' | 'High' {
+  if (areaLevel == null) return 'Med'
+  return areaLevel < 68 ? 'Low' : areaLevel < 78 ? 'Med' : 'High'
+}
+
+const NEAREST: Record<'Low' | 'Med' | 'High', string[]> = {
+  Low: ['Low', 'Med', 'High'],
+  Med: ['Med', 'High', 'Low'],
+  High: ['High', 'Med', 'Low']
+}
+
+// The index of the version for that level, or the closest one this Viscera has.
+export function levelTier (v: Viscera, areaLevel: number | null): number {
+  for (const label of NEAREST[levelTierLabel(areaLevel)]) {
+    const i = v.tiers.findIndex(t => t.label === label)
+    if (i !== -1) return i
+  }
+  return 0
+}
+
 // ---- prices ----
 
 // The name poe.ninja lists a version under: "Lesser X" (Low), "X" (Med),
