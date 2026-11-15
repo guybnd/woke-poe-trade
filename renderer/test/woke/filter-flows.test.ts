@@ -390,11 +390,25 @@ describe('sources', () => {
   })
 
   it('a copy with no way back says what to do', async () => {
-    host.files.set('Lost.filter', `${WOKE_MARK}\n# Made from NeverSink 8.20.2, downloaded from GitHub\nShow\n`)
+    host.files.set('Lost.filter', `${WOKE_MARK}\n# Made from something no longer here\nShow\n`)
     const config = widget({ sourceName: 'Lost.filter' })
     const store = useLootFilter(() => config)
     await store.load()
     expect(store.error.value).toMatch(/Pick the filter it was made from/)
+  })
+
+  // Picking our copy of GitHub's NeverSink from the file list: an old .bak
+  // beside it (8.20.2, from a past overwrite save) once passed for the source.
+  it('a copy of NeverSink from GitHub goes back to GitHub, never to a .bak beside it', async () => {
+    host.files.set('NeverSink (woke).filter', `${WOKE_MARK}\n# Made from NeverSink 8.21.0a Very strict, downloaded from GitHub, with 15 changes.\nShow\n`)
+    host.files.set('NeverSink (woke).filter.bak', neverSink('1-REGULAR'))
+    const config = widget({ sourceName: 'NeverSink (woke).filter' })
+    const store = useLootFilter(() => config)
+    await store.load()
+    expect(config.neversink.on).toBe(true)
+    // The test host has no GitHub: nothing loads, and the .bak isn't used.
+    expect(store.doc.value).toBeNull()
+    expect(store.error.value).toMatch(/GitHub/)
   })
 
   it('a copy whose original is gone (the game empties OnlineFilters) recovers from itself', async () => {

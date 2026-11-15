@@ -835,6 +835,13 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       baseNeedsBackup.value = false
       if (cfg().sourceOnline) {
         // Read only; saves go to a local copy.
+      } else if (text.startsWith(WOKE_MARK) && /^# Made from NeverSink \S+ .*downloaded from GitHub/m.test(text.slice(0, 2048))) {
+        // woke: our copy of NeverSink from GitHub, picked from the file list.
+        // Its source is GitHub, not a .bak beside it: an old one from a past
+        // overwrite-mode save held 8.20.2 and passed for an older update.
+        cfg().neversink.on = true
+        await load()
+        return
       } else if (text.startsWith(WOKE_MARK)) {
         // Our own output. Overwrite mode keeps the original in the .bak; a
         // copy-mode output names its source in the header instead.
