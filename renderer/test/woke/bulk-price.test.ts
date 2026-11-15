@@ -29,3 +29,9 @@ describe('formatUnitPrice', () => {
     expect(formatUnitPrice(300, 150)).toBe('2 div')
   })
 })
+
+describe('bulkPerDivine with a broken divine rate', () => {
+  it('never reads 1 div / 0', () => {
+    expect(bulkPerDivine(0.9, 0.3)).toBeNull()
+  })
+})

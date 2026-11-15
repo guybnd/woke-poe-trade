@@ -83,7 +83,7 @@
               <WIcon :src="ninjaIcon(g.type, g.name) ?? undefined" size="md" />
               <span :class="[$style.rowName, rarityClass(g.type)]">{{ g.name }}</span>
               <span :class="$style.priceSub">{{ g.variants.length > 1 ? `${g.variants.length} prices` : g.variants[0].variant }}</span>
-              <span :class="$style.priceNow"><template v-if="g.low !== g.high"><WPrice bulk :chaos="g.low" :divine="divine" /> to </template><WPrice bulk :chaos="g.high" :divine="divine" /></span>
+              <span :class="$style.priceNow"><template v-if="g.low !== g.high"><WPrice :bulk="g.high < 1" :chaos="g.low" :divine="divine" /> to </template><WPrice :bulk="g.high < 1" :chaos="g.high" :divine="divine" /></span>
             </button>
           </div>
           <div :class="$style.cols">

@@ -31,7 +31,7 @@
                   <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : undefined">{{ e.name }}</span>
                   <span class="w-dim w-trunc" :class="$style.small">{{ e.sub }}</span>
                 </span>
-                <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice bulk :chaos="e.group.low" :divine="divine" /> to </template><WPrice bulk :chaos="e.group.high" :divine="divine" /></span>
+                <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :bulk="e.group.high < 1" :chaos="e.group.low" :divine="divine" /> to </template><WPrice :bulk="e.group.high < 1" :chaos="e.group.high" :divine="divine" /></span>
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
               </button>
             </template>
@@ -858,7 +858,7 @@ const dataNote = computed(() => {
 .none { padding: var(--w-s3) var(--w-pad); color: var(--w-dim); }
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }
 .title { display: flex; align-items: center; gap: var(--w-s2); margin-bottom: var(--w-s2); font-size: var(--w-fs-lg); }
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 76px 52px 52px 50px; column-gap: 6px; align-items: center; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 88px 88px 88px 52px 52px 50px; column-gap: 6px; align-items: center; }
 .gridHead { min-height: calc(24px * var(--w-text-scale, 1)); font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); border-bottom: 1px solid var(--w-line); font-family: var(--w-caps-face); }
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowBtns { display: flex; justify-content: flex-end; gap: 2px; }

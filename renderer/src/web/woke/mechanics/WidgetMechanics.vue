@@ -363,7 +363,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 :global([data-woke-art]) .tips li::marker { color: #ab774c; }
 .toolbar { display: flex; align-items: center; gap: 8px; padding: 8px var(--w-pad) 4px; }
 .btrGrid { grid-template-columns: 22px 70px minmax(0, 1fr) 60px; }
-.scarabGrid { grid-template-columns: minmax(0, 1fr) 64px; }
+.scarabGrid { grid-template-columns: minmax(0, 1fr) minmax(64px, max-content); }
 .tips {
   margin: 2px var(--w-pad) 10px;
   padding: 6px 10px 6px 24px;

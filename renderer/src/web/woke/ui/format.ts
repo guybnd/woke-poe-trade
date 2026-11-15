@@ -55,7 +55,7 @@ export function formatChaos (chaos: number, divine: number | null | undefined, u
 export function bulkPerDivine (chaos: number | null | undefined, divine: number | null | undefined): number | null {
   if (chaos == null || !divine || !(chaos > 0) || chaos >= 1 || !(divine > 0)) return null
   const n = divine / chaos
-  if (!Number.isFinite(n)) return null
+  if (!Number.isFinite(n) || n < 1) return null
   if (n < 100) return Math.round(n)
   const step = 10 ** (Math.floor(Math.log10(n)) - 1)
   return Math.round(n / step) * step

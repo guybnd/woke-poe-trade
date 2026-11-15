@@ -120,13 +120,14 @@
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
         </footer>
         <footer v-if="lookup.market?.range" :class="$style.strip">
-          <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice bulk :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice bulk :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
+          <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
           <span class="w-dim" :class="$style.span">{{ lookup.market.range.count }} prices</span>
         </footer>
         <footer v-else-if="lookup.market" :class="$style.strip">
           <!-- One's price from poe.ninja; with a count, what they're worth together. -->
           <WPrice bulk :chaos="lookup.market.chaos" :divine="xchgRate ?? null" />
-          <template v-if="bulkPerDivine(lookup.market.chaos, xchgRate) == null">
+          <span v-if="bulkPerDivine(lookup.market.chaos, xchgRate) != null" class="w-dim">({{ formatAmount(lookup.market.chaos) }}c each)</span>
+          <template v-else>
             <span class="w-dim">each</span>
             <span v-if="lookup.market.chaos > 0 && lookup.market.chaos < 1" class="w-dim">({{ perChaos(lookup.market.chaos) }} per c)</span>
           </template>
@@ -157,7 +158,7 @@ import SwapCard from '../../pob-builds/SwapCard.vue'
 const ListingModGroup = defineAsyncComponent(() => import('./ListingModGroup.vue'))
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
-import { bulkPerDivine } from '../format'
+import { bulkPerDivine, formatAmount } from '../format'
 import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
 import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
@@ -458,7 +459,7 @@ onUnmounted(() => {
 }
 .uniqueRow {
   display: grid;
-  grid-template-columns: minmax(8rem, 1fr) 4.5rem 6.5rem;
+  grid-template-columns: minmax(8rem, 1fr) minmax(4.5rem, max-content) 6.5rem;
   gap: var(--w-s2);
   align-items: center;
   min-height: 20px;

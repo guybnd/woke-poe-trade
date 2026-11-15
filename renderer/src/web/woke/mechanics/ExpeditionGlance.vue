@@ -67,6 +67,6 @@ const others = computed(() => rows.value.filter(r => r !== here.value))
 .hereRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 3px; }
 .herePrice { flex: none; font-size: var(--w-fs-lg); font-weight: 600; }
 .delta { font-size: var(--w-fs-sm); font-weight: 400; }
-.grid { grid-template-columns: minmax(0, 1fr) 48px 52px; }
+.grid { grid-template-columns: minmax(0, 1fr) minmax(48px, max-content) 52px; }
 .none { padding: 2px var(--w-pad) 6px; }
 </style>
