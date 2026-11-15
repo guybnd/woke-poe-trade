@@ -102,7 +102,7 @@ function countEntries (lines: string): number {
 // A price load is counted once, however often the window opens.
 const groupCache = new WeakMap<DenseChunk[], CategoryGroup[]>()
 // Rows of the last category read only: skill gems alone are thousands of rows.
-let rowCache: { chunk: DenseChunk, rows: MarketRow[] } | null = null
+let rowCache: { chunk: DenseChunk, days: number, rows: MarketRow[] } | null = null
 
 // Categories with at least one price, grouped like poe.ninja's side list.
 export function categoryGroups (chunks: DenseChunk[]): CategoryGroup[] {
@@ -155,13 +155,16 @@ export interface MarketRow {
 
 // One category's rows. poe.ninja's graph is 7 daily values, % change against
 // the price today; null on days with no price.
-export function parseCategory (type: string, chunk: DenseChunk): MarketRow[] {
-  if (rowCache?.chunk !== chunk) rowCache = { chunk, rows: readRows(type, chunk) }
+// `days`: how many days the league has prices for (feedDays), so gaps match
+// the rest of the app.
+export function parseCategory (type: string, chunk: DenseChunk, days = 7): MarketRow[] {
+  if (rowCache?.chunk !== chunk || rowCache.days !== days) rowCache = { chunk, days, rows: readRows(type, chunk, days) }
   return rowCache.rows
 }
 
-function readRows (type: string, chunk: DenseChunk): MarketRow[] {
+function readRows (type: string, chunk: DenseChunk, days: number): MarketRow[] {
   const out: MarketRow[] = []
+  const graphs: unknown[] = []
   const seen = new Set<string>()
   const lines = chunk.lines
   let pos = lines.indexOf(ENTRY_START)
@@ -187,13 +190,16 @@ function readRows (type: string, chunk: DenseChunk): MarketRow[] {
             trend,
             change: weekChange(info.graph),
             dayChange: dayChange(info.graph),
-            gaps: graphGaps(info.graph)
+            gaps: 0
           })
+          graphs.push(info.graph)
         }
       }
     } catch {}
     pos = lines.indexOf(ENTRY_START, end)
   }
+  // Days before the league started aren't gaps (see parse.ts).
+  for (let i = 0; i < out.length; i++) out[i].gaps = graphGaps(graphs[i], days)
   return out
 }
 

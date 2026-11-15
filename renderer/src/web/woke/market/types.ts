@@ -101,7 +101,7 @@ export function isThin (item: { gaps?: number }): boolean {
 }
 
 export function thinTitle (item: { gaps?: number }): string {
-  return `Thin market: poe.ninja recorded no price on ${item.gaps ?? 0} of the last 7 days, so this price is easy to fake.`
+  return `Thin market: poe.ninja recorded no price on about ${item.gaps ?? 0} of every 7 days, so this price is easy to fake.`
 }
 
 // poe.ninja only prices corrupted items for gems: a variant like "21/20c".

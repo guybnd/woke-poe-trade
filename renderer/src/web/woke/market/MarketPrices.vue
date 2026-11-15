@@ -69,6 +69,7 @@ import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { rarityClass } from '../search/search'
 import { lastWokePrices, onWokePricesLoaded } from './hook'
+import { feedDays } from './parse'
 import type { DenseChunk } from './parse'
 import { ICON_ITEMS, categoryGroups, filterRows, parseCategory, sortRows } from './browser'
 import type { Category, MarketRow, MarketSort } from './browser'
@@ -118,7 +119,8 @@ const category = computed(() => {
   const all = groups.value.flatMap(g => g.categories)
   return all.find(c => c.type === props.config.priceCategory) ?? all[0] ?? null
 })
-const rows = computed<MarketRow[]>(() => category.value ? parseCategory(category.value.type, category.value.chunk) : [])
+const leagueDays = computed(() => chunks.value ? feedDays(chunks.value) : 7)
+const rows = computed<MarketRow[]>(() => category.value ? parseCategory(category.value.type, category.value.chunk, leagueDays.value) : [])
 const divine = computed(() => chunks.value ? poeninja.xchgRate.value || null : null)
 
 const query = shallowRef('')
@@ -188,7 +190,7 @@ function rowMenu (e: MouseEvent, r: MarketRow) {
   const items: MenuEntry[] = [
     { label: `1 day: ${r.dayChange == null ? 'not enough data' : pct(r.dayChange)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
     { label: `7 days: ${r.change == null ? 'not enough data' : pct(r.change)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
-    { label: `Priced on ${7 - r.gaps} of the last 7 days`, icon: 'far fa-calendar', disabled: true, action: () => {} },
+    { label: r.gaps ? `No price on about ${r.gaps} of every 7 days` : 'Priced every day', icon: 'far fa-calendar', disabled: true, action: () => {} },
     { separator: true },
     { label: 'Open on poe.ninja', icon: 'fas fa-external-link-alt', disabled: !page, action: () => { if (page) window.open(page) } }
   ]
