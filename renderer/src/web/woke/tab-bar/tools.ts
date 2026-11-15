@@ -58,7 +58,7 @@ export function railDropEdge (x: number, y: number, w: number, h: number): 'top'
 }
 
 // Pinned on the rail until the user picks their own in the launcher.
-const DEFAULT_PIN_TYPES = ['woke-market-tracker', 'woke-boss-runs', 'woke-map-scan', 'woke-loot-filter']
+const DEFAULT_PIN_TYPES = ['woke-market', 'woke-boss-runs', 'woke-map-scan', 'woke-loot-filter']
 
 // A window title that is only an icon ("{icon=fa-cog}"): settings and search.
 export function parseWidgetTitle (wmTitle: string): { icon?: string, title: string } {

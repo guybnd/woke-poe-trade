@@ -111,8 +111,36 @@ describe('listingTipItem', () => {
     expect(item.implicits[0]).toContain('Added Small Passive')
   })
 
+  // Trimmed from a real Covens listing, 2026-11-15: frame type 15 is "Viscera".
+  it('draws a 3.30 Viscera, which has its own frame type', () => {
+    const item = listingTipItem({
+      name: '',
+      typeLine: 'Lesser Ancestor\'s Club',
+      baseType: 'Lesser Ancestor\'s Club',
+      rarity: 'Normal',
+      frameType: 15,
+      ilvl: 46,
+      properties: [{ name: 'Upper Limb', values: [], displayMode: 0 }],
+      implicitMods: [{
+        description: 'Strike Skills which target additional Enemies can do so from 15% further away',
+        domain: 'implicit',
+        hash: 'stat.implicit.stat_2783093471',
+        mods: [{ magnitudes: [{ min: '10', max: '15' }] }]
+      }]
+    })
+    expect(item).toMatchObject({
+      rarity: 'NORMAL',
+      base: 'Lesser Ancestor\'s Club',
+      implicits: ['Strike Skills which target additional Enemies can do so from 15% further away'],
+      mods: [],
+      itemLevel: 46
+    })
+  })
+
   it('shows nothing for what has no mods', () => {
-    expect(listingTipItem({ frameType: 4, typeLine: 'Enlighten Support', explicitMods: ['x'] })).toBeNull()
+    expect(listingTipItem({ frameType: 4, rarity: 'Normal', typeLine: 'Enlighten Support', explicitMods: ['x'] })).toBeNull()
+    expect(listingTipItem({ frameType: 5, rarity: 'Normal', typeLine: 'Chaos Orb', explicitMods: ['x'] })).toBeNull()
+    expect(listingTipItem({ frameType: 15, typeLine: 'Ghostly Claw' })).toBeNull()
     expect(listingTipItem({ frameType: 5, typeLine: 'Chaos Orb' })).toBeNull()
     expect(listingTipItem({ frameType: 0, typeLine: 'Iron Ring' })).toBeNull()
     expect(listingTipItem({})).toBeNull()
