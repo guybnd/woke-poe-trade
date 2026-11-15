@@ -75,6 +75,8 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'essence-scan', name: 'Essence scan', description: 'Reads essence monoliths and flags MEDS', group: 'mapping', widgetTypes: ['woke-essence-scan'], icon: { fa: 'fas fa-flask', mechanic: 'essence' }, needs: ['ocr', 'hotkeys', 'prices', 'log'] },
   { id: 'loot-filter', name: 'Loot filter editor', description: 'Edit the NeverSink rule for a sampled item', group: 'mapping', widgetTypes: ['woke-loot-filter'], icon: { fa: 'fas fa-filter', item: 'Orb of Scouring' }, needs: ['log', 'hotkeys'] },
   { id: 'atlas', name: 'Atlas strategies', description: 'Atlas tree, Threads and regex per strategy', group: 'mapping', widgetTypes: ['woke-atlas-strategies'], icon: { fa: 'fas fa-globe', src: '/images/art/atlas-maps-wheel.png' }, needs: ['network', 'prices'] },
+  // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
+  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources on price check and Ctrl+Space', group: 'mapping', widgetTypes: [], icon: { fa: 'fas fa-bone' }, needs: [] },
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
   { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', src: '/images/art/admiral-darnaws-papers.png' }, needs: ['log'] },
@@ -101,8 +103,8 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'trade-searches', 'trade', 'regex-library'] },
-  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library'] },
+  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman'] },
   { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
@@ -191,9 +193,10 @@ export function widgetCount (config: ConfigLike, m: ModuleDef): number {
 }
 
 // A module "runs" when it is on and at least one of its widgets is placed.
+// One with no widgets (APT features, additions to other tools) runs while on.
 export function isModuleRunning (config: ConfigLike, m: ModuleDef): boolean {
   if (!isModuleOn(config, m.id)) return false
-  return m.group === 'apt' || widgetCount(config, m) > 0
+  return m.group === 'apt' || m.widgetTypes.length === 0 || widgetCount(config, m) > 0
 }
 
 export function modulesNeeding (config: ConfigLike, need: ModuleNeed): ModuleDef[] {
