@@ -157,6 +157,29 @@ export function visceraInZone (table: VisceraTable, zone: string, act: number | 
   return table.viscera.filter(v => v.act?.n === act && v.act.zone?.toLowerCase() === z)
 }
 
+export interface VisceraHere {
+  v: Viscera
+  boss: string
+  unsure: boolean
+}
+
+// The Viscera bosses drop in the zone you stand in: a campaign zone (by act
+// and name), or a map, pinnacle or guardian arena by the name the log gives
+// ("You have entered Graveyard.").
+export function visceraHere (table: VisceraTable, zone: string, act: number | null): VisceraHere[] {
+  const z = zone.trim().toLowerCase()
+  if (!z) return []
+  const out: VisceraHere[] = visceraInZone(table, zone, act).map(v => ({ v, boss: v.act!.boss, unsure: !!v.act!.unsure }))
+  if (act == null) {
+    for (const v of table.viscera) {
+      for (const m of v.maps) {
+        if (m.map.toLowerCase() === z && !out.some(o => o.v === v)) out.push({ v, boss: m.boss, unsure: !!m.unsure })
+      }
+    }
+  }
+  return out
+}
+
 // "Act 1 · Fire Fury, The Coast"
 export function actLine (v: Viscera): string | null {
   if (!v.act) return null

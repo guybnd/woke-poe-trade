@@ -76,7 +76,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'loot-filter', name: 'Loot filter editor', description: 'Edit the NeverSink rule for a sampled item', group: 'mapping', widgetTypes: ['woke-loot-filter'], icon: { fa: 'fas fa-filter', item: 'Orb of Scouring' }, needs: ['log', 'hotkeys'] },
   { id: 'atlas', name: 'Atlas strategies', description: 'Atlas tree, Threads and regex per strategy', group: 'mapping', widgetTypes: ['woke-atlas-strategies'], icon: { fa: 'fas fa-globe', src: '/images/art/atlas-maps-wheel.png' }, needs: ['network', 'prices'] },
   // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
-  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources on price check and Ctrl+Space', group: 'mapping', widgetTypes: [], icon: { fa: 'fas fa-bone' }, needs: [] },
+  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'mapping', widgetTypes: [], icon: { fa: 'fas fa-bone' }, needs: ['log'] },
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
   { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', src: '/images/art/admiral-darnaws-papers.png' }, needs: ['log'] },

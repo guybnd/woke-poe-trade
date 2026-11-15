@@ -8,7 +8,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 vi.mock('@/web/woke/app/live-data', () => ({ dataFileUrl: (f: string) => f, onSharedDataChange: () => () => {} }))
 
 /* eslint-disable import-x/first */
-import { heldTier, searchViscera, visceraInZone } from '@/web/woke/wickerman/viscera'
+import { heldTier, searchViscera, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
 import type { Viscera, VisceraTable } from '@/web/woke/wickerman/viscera'
 import { visceraLookup } from '@/web/woke/search/lookups/viscera'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -119,6 +119,28 @@ describe('campaign zone', () => {
     expect(visceraInZone(TABLE, 'The Lower Prison', 6).map(v => v.name)).not.toContain("Skeletal Warrior's Leg")
     expect(visceraInZone(TABLE, 'The Riverways', 6).length).toBe(3)
     expect(visceraInZone(TABLE, 'The Lower Prison', null)).toEqual([])
+  })
+})
+
+describe('zone you stand in', () => {
+  it('finds a map boss by the map name the log gives', () => {
+    const here = visceraHere(TABLE, 'Graveyard', null)
+    expect(here.map(h => h.v.name)).toContain("Skeletal Warrior's Leg")
+    expect(here.find(h => h.v.name === "Skeletal Warrior's Leg")?.boss).toBe('Champion of Frost')
+  })
+
+  it('finds a campaign boss by act and zone, not a map of that name', () => {
+    expect(visceraHere(TABLE, 'The Lower Prison', 1).map(h => h.boss)).toContain('Chatters')
+    expect(visceraHere(TABLE, 'Graveyard', 1)).toEqual([])
+  })
+
+  it('finds pinnacle arenas', () => {
+    expect(visceraHere(TABLE, "The Maven's Crucible", null).map(h => h.v.name)).toContain("Maven's Orrery")
+  })
+
+  it('finds nothing in a zone without a Viscera boss', () => {
+    expect(visceraHere(TABLE, 'Tower', null)).toEqual([])
+    expect(visceraHere(TABLE, '', null)).toEqual([])
   })
 })
 

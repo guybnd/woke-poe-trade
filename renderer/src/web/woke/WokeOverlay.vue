@@ -11,6 +11,8 @@
   <GameTooltip />
   <HelpCard />
   <AppNotices />
+  <!-- 3.30 Wickerman module (remove with the league). -->
+  <WickermanDock v-if="wickermanOn" />
 </template>
 
 <script setup lang="ts">
@@ -28,9 +30,13 @@ import HelpCard from './ui/HelpCard.vue'
 import AppNotices from './app/AppNotices.vue'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
-import { onUnmounted } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted } from 'vue'
+import { isModuleOn } from './modules'
 import { toast } from './ui'
 import { LOOT_FILTER_SAMPLE_TARGET } from './loot-filter/widget'
+
+const WickermanDock = defineAsyncComponent(() => import('./wickerman/WickermanDock.vue'))
+const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 
 // A hotkey that copies an item found nothing to copy. The loot filter's sample
 // key has its own message.
