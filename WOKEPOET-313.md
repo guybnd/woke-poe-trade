@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-313
 title: 'Price check: listing tooltip missing on Viscera results'
-status: In Progress
+status: Ready
 priority: Medium
 effort: XS
 assignee: unassigned
@@ -22,6 +22,22 @@ history:
       Fix + unit test committed locally on woke/viscera-listing-tip; local
       checks (lint, typecheck, unit, build, listing e2e, perf) running.
     id: a-2026-11-15t05-52-38-731z
+  - type: comment
+    user: Agent
+    comment: >-
+      Fixed on woke/viscera-listing-tip (8f3c5bbc): listing tooltip falls back
+      to the listing's rarity for non-rarity frame types like Viscera (15).
+      Local checks pass (lint, typecheck, 4032 unit, build, 80 e2e, perf).
+      Handed to the coordinator for the cloud merge.
+    date: '2026-11-15T06:01:16.268Z'
+    completionComment: true
+    id: c-2026-11-15t06-01-16-268z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-15T06:01:16.268Z'
+needsAction: null
 ---
 Hovering trade result rows for a 3.30 Viscera (e.g. Ancestor's Club, Upper Limb) showed no listing tooltip.
 
