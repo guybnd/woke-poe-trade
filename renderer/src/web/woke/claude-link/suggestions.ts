@@ -137,7 +137,7 @@ let lastSearchAt = 0
 
 async function tradeSearch (args: { query?: unknown, league?: unknown, count?: unknown }) {
   const wait = lastSearchAt + CLAUDE_SEARCH_GAP_MS - Date.now()
-  if (wait > 0) throw new Error(`Wait ${Math.ceil(wait / 1000)} s: Claude gets one trade search every 10 s`)
+  if (wait > 0) throw new Error(`Wait ${Math.ceil(wait / 1000)} s: AI apps get one trade search every 10 s`)
   const body = args?.query as { query?: Record<string, unknown>, sort?: unknown } | undefined
   if (!body || typeof body.query !== 'object' || body.query === null) throw new Error('query needs the trade site query object')
   const league = (typeof args.league === 'string' && args.league) || AppConfig().leagueId

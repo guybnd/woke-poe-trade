@@ -397,7 +397,7 @@ export function buildTools (deps: LinkDeps): ToolDef[] {
     },
     {
       name: 'settings',
-      description: 'App settings Claude may suggest changing, as key: current value. Keys are "<window type>.<field>" or "app.<field>".',
+      description: 'App settings you may suggest changing, as key: current value. Keys are "<window type>.<field>" or "app.<field>".',
       inputSchema: { type: 'object', properties: { search: { type: 'string', description: 'Only keys containing this' } } },
       readOnly: true,
       run: async (a) => {

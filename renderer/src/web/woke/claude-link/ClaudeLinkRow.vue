@@ -1,10 +1,10 @@
 <template>
   <div data-claude-link>
     <div :class="$style.row">
-      <w-toggle :model-value="state?.on ?? false" :disabled="busy" aria-label="Claude link" @update:model-value="setOn" />
+      <w-toggle :model-value="state?.on ?? false" :disabled="busy" aria-label="AI link" @update:model-value="setOn" />
       <div class="min-w-0">
-        <div :class="$style.name">Claude link <span :class="$style.exp">EXP</span></div>
-        <div :class="$style.desc">Lets Claude on this PC read app data and send suggestions.</div>
+        <div :class="$style.name">AI link <span :class="$style.exp">EXP</span></div>
+        <div :class="$style.desc">Lets AI apps on this PC read app data and send suggestions, over MCP.</div>
       </div>
     </div>
     <div v-if="state?.on" :class="$style.more">
@@ -15,7 +15,7 @@
         <w-button size="sm" :disabled="!state.url" @click="copy(desktopJson, 'Claude Desktop config')">Copy for Claude Desktop</w-button>
         <w-button size="sm" variant="ghost" :disabled="busy" @click="newKey">New key</w-button>
       </div>
-      <div :class="$style.desc">Claude Code: paste the command in a terminal. Claude Desktop: the copy is a whole claude_desktop_config.json; if yours has other servers, add this one inside its mcpServers (needs Node.js). A new key cuts off every Claude using the old one.</div>
+      <div :class="$style.desc">Claude Code: paste the command in a terminal. Claude Desktop: the copy is a whole claude_desktop_config.json; if yours has other servers, add this one inside its mcpServers (needs Node.js). A new key cuts off every app using the old one.</div>
       <div v-if="state.calls.length" :class="$style.calls">
         <span :class="$style.label">Last calls</span>
         <span v-for="c in state.calls.slice(0, 8)" :key="c.at + c.tool" :class="!c.ok && $style.bad">{{ time(c.at) }} {{ c.tool }}</span>
