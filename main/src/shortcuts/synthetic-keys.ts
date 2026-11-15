@@ -12,59 +12,68 @@ import { uIOhook, UiohookKey } from 'uiohook-napi'
 // release came first and the app lets go of Alt again.
 
 type Kind = 'up' | 'down'
-const EXPIRE_MS = 1000
+// Checked when the handler runs, so long enough to outlast a busy main thread.
+const EXPIRE_MS = 5000
 
 let altHeld = false
-let pending: Array<{ kind: Kind, at: number }> = []
+// The Alt the player last pressed: left, or right on layouts without AltGr.
+let altKey: number = UiohookKey.Alt
+let pending: Array<{ kind: Kind, key: number, at: number }> = []
 let lastWasOurs = false
 
 function isAlt (keycode: number) {
   return keycode === UiohookKey.Alt || keycode === UiohookKey.AltRight
 }
 
-function takeOurs (kind: Kind): boolean {
+function takeOurs (kind: Kind, key: number): boolean {
   const now = Date.now()
   pending = pending.filter(p => now - p.at < EXPIRE_MS)
-  if (pending[0]?.kind !== kind) return false
+  if (pending[0]?.kind !== kind || pending[0].key !== key) return false
   pending.shift()
   return true
 }
 
-function inject (kind: Kind) {
-  pending.push({ kind, at: Date.now() })
-  uIOhook.keyToggle(UiohookKey.Alt, kind)
+function inject (kind: Kind, key: number) {
+  pending.push({ kind, key, at: Date.now() })
+  uIOhook.keyToggle(key, kind)
 }
 
 uIOhook.on('keydown', (e) => {
   lastWasOurs = false
   if (!isAlt(e.keycode)) return
-  if (e.keycode === UiohookKey.Alt && takeOurs('down')) {
+  if (takeOurs('down', e.keycode)) {
     lastWasOurs = true
     // The player let go before this press of ours landed: undo it.
-    if (!altHeld) inject('up')
+    if (!altHeld) inject('up', e.keycode)
     return
   }
   altHeld = true
+  altKey = e.keycode
 })
 
 uIOhook.on('keyup', (e) => {
   lastWasOurs = false
   if (!isAlt(e.keycode)) return
-  if (e.keycode === UiohookKey.Alt && takeOurs('up')) {
+  if (takeOurs('up', e.keycode)) {
     lastWasOurs = true
     return
   }
   altHeld = false
 })
 
+// The Alt pressed again is the one lifted, even if the player pressed the
+// other since: the correction above and the player's own release match it.
+let liftedKey: number = UiohookKey.Alt
+
 export function liftAltForCopy (): void {
-  // The hotkey only fires with Alt down.
-  altHeld = true
-  inject('up')
+  // altHeld is left as the hook last saw it: a release already seen must
+  // count, or the re-press below would never be undone.
+  liftedKey = altKey
+  inject('up', liftedKey)
 }
 
 export function restoreAltAfterCopy (): void {
-  inject('down')
+  inject('down', liftedKey)
 }
 
 // For other key listeners: the event being handled is the app's own Alt.
