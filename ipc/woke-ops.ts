@@ -12,6 +12,8 @@ export type Json = unknown
 // An op that takes nothing. Callers pass null or {}.
 export type NoArgs = null | undefined | Record<string, never>
 
+import type { ClaudeLinkState, ClaudeSuggestion } from './claude-link'
+
 interface Op<A, R> { args: A, result: R }
 
 type Ok = boolean
@@ -192,6 +194,15 @@ export interface WokeOps {
   'stash-tab-set-save': Op<{ league: string | undefined, name: string, ids: string[] }, Json>
   'stash-tab-set-delete': Op<{ league: string | undefined, name: string }, Json>
   'worn-items': Op<{ character?: string }, Json>
+
+  // Claude link (Settings › Experimental) and its Suggestions card
+  'claude-link-state': Op<NoArgs, ClaudeLinkState>
+  'claude-link-set': Op<{ on: boolean }, ClaudeLinkState>
+  'claude-link-new-key': Op<NoArgs, ClaudeLinkState>
+  // The overlay's answer to a claude-ask event.
+  'claude-answer': Op<{ id: string, ok: boolean, data?: Json, error?: string }, Ok>
+  'suggestions-list': Op<NoArgs, ClaudeSuggestion[]>
+  'suggestion-resolve': Op<{ id: string, status: 'applied' | 'dismissed' }, Ok>
 }
 
 export type WokeOp = keyof WokeOps

@@ -30,6 +30,7 @@ import { docHandlers } from './data-files'
 import { browsePath, pathStat } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
 import { initPersonal } from './personal'
+import { initClaudeLink } from './claude-link'
 import type { WokeHandler, WokeHandlers, WokeOp } from '../../../ipc/woke-ops'
 
 // Typed by ipc/woke-ops.ts. Partial: some are added later (setup window,
@@ -150,6 +151,20 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   registerWokeHandler('personal-flag', async () => personal.state())
   registerWokeHandler('personal-set', async (args) => await personal.setOn(args?.on === true))
   registerWokeHandler('experimental-set', async (args) => await personal.setUnlocked(args?.unlocked === true))
+
+  // The Claude link: read-only calls into the same handlers the overlay uses.
+  initClaudeLink({
+    server,
+    logger,
+    register: registerWokeHandler,
+    op: async (op, args) => {
+      const handler = Object.prototype.hasOwnProperty.call(handlers, op)
+        ? handlers[op as WokeOp] as ((args: unknown) => Promise<unknown>) | undefined
+        : undefined
+      if (!handler) throw new Error(`Not available now: ${op}`)
+      return await handler(args)
+    }
+  })
 
   server.onEventAnyClient('CLIENT->MAIN::woke-request', ({ id, op, args }) => {
     // Own keys only: an op like "constructor" must not reach Object.prototype.

@@ -86,6 +86,18 @@ export function atlasDataState () {
   return { atlasData, atlasDataError, atlasTree, atlasTreeError }
 }
 
+// The atlas nodes for the Claude link: loaded ones, else the saved copy, read
+// once without keeping it (the window may never open). Null: never downloaded.
+export function cachedAtlasData (): Map<number, AtlasNode> | null {
+  if (atlasData.value) return atlasData.value
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    return cached ? parseAtlasData((JSON.parse(cached) as { json: unknown }).json) : null
+  } catch {
+    return null
+  }
+}
+
 // After a failed download: try the same URL again.
 export function retryAtlasData (url: string) {
   loadingUrl = null

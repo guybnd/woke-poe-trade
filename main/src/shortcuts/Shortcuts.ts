@@ -14,6 +14,7 @@ import type { GameWindow } from '../windowing/GameWindow'
 import type { GameConfig } from '../host-files/GameConfig'
 import type { ServerEvents } from '../server'
 import { perfRecord } from '../woke/perf'
+import { noteItemText } from '../woke/claude-link/last-item'
 
 type UiohookKeyT = keyof typeof UiohookKey
 const FOCUS_SETTLE_MS = 120
@@ -231,6 +232,7 @@ export class Shortcuts {
           this.clipboard.readItemText()
             .then(clipboard => {
               perfRecord('Item hotkey → item text copied', performance.now() - pressTime)
+              noteItemText(clipboard)
               this.areaTracker.removeListeners()
               this.server.sendEventTo('last-active', {
                 name: 'MAIN->CLIENT::item-text',
