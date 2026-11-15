@@ -23,7 +23,7 @@
               <div :class="$style.head">{{ section.label }}<template v-if="section.capped"> · first {{ PRICE_GROUP_LIMIT }}, keep typing</template></div>
               <button v-for="e in section.entries" :key="e.id" v-item-tip="tipOf(e)" tabindex="-1" :class="[$style.res, { [$style.sel]: e === selected }]"
                 :data-selected="e === selected || undefined" @click="selected = e" @dblclick="run(e)">
-                <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? undefined" size="md" />
+                <WIcon v-if="e.kind === 'price'" :src="ninjaIcon(e.group.type, e.group.name) ?? ninjaArt(e.group.type, e.group.name)" size="md" />
                 <WIcon v-else-if="e.kind === 'item'" :src="e.info.icon" size="md" />
                 <WIcon v-else-if="e.kind === 'lookup' && isImageIcon(e.icon)" :src="e.icon" size="md" />
                 <i v-else :class="e.icon" :style="{ width: 'var(--w-icon-md)', textAlign: 'center' }" />
@@ -40,7 +40,7 @@
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
               <div :class="$style.title">
-                <WIcon :src="ninjaIcon(selected.group.type, selected.group.name) ?? undefined" size="lg" />
+                <WIcon :src="ninjaIcon(selected.group.type, selected.group.name) ?? ninjaArt(selected.group.type, selected.group.name)" size="lg" />
                 <span :class="rarityClass(selected.group.type)">{{ selected.group.name }}</span>
                 <span class="w-dim" :class="$style.small">{{ typeLabel(selected.group.type) }}</span>
               </div>
@@ -132,6 +132,7 @@ import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
 import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
+import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
 import { convNumber, currencyConversions } from './conversions'
