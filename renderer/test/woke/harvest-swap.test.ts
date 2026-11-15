@@ -156,6 +156,18 @@ describe('buildSwapRequest', () => {
     expect(cold[0]).not.toBe(own[0])
   })
 
+  it('searches from the row\'s own ids after the row was picked to another element', () => {
+    const { item, filters, stats } = setup(jewel([FIRE_DMG, LIFE].join('\n')))
+    const cand = detectSwaps(item, stats).find(c => c.filter.statRef === '#% increased Fire Damage')!
+    const own = [...cand.filter.tradeId]
+    const cold = pickTradeIds(cand, 'cold', own)
+    cand.filter.swapPick = { mode: 'cold', own: 'Fire', keys: [], tradeId: own }
+    cand.filter.tradeId = cold
+    const ids = buildSwapRequest(filters, stats, cand, 'any').query.stats.flatMap(g => g.filters.map(f => f.id))
+    expect(ids).toContain(own[0])
+    expect(pickTradeIds(cand, 'lightning', own)).toEqual(pickTradeIds({ ...cand, filter: { ...cand.filter, tradeId: own, swapPick: undefined } }, 'lightning', own))
+  })
+
   it('searches one element when one is picked', () => {
     const { item, filters, stats } = setup(jewel([FIRE_DMG, LIFE].join('\n')))
     const cand = detectSwaps(item, stats).find(c => c.filter.statRef === '#% increased Fire Damage')!

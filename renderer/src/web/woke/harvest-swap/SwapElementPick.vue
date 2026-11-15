@@ -1,5 +1,5 @@
 <template>
-  <ui-popover v-if="cand" ref="pop" trigger="click" placement="bottom-end" boundary="#price-window">
+  <ui-popover v-if="cand && filter.tag !== 'pseudo'" ref="pop" trigger="click" placement="bottom-end" boundary="#price-window">
     <template #target>
       <button type="button" data-swap-element :class="[$style.pick, { [$style.on]: mode != null }]"
         title="Which element this row searches for">{{ label }} ▾</button>

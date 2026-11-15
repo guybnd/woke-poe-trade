@@ -162,8 +162,11 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     return cand.filter.swapPick?.mode ?? null
   }
 
+  // Two quick picks: only the last one counts, even if the code was still loading.
+  let pickSeq = 0
   async function pick (cand: SwapCandidate, mode: SwapMode | 'this') {
     const f = cand.filter
+    const seq = ++pickSeq
     if (mode === 'this') {
       const was = f.swapPick
       if (!was) return
@@ -175,6 +178,7 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     }
     if (f.swapPick?.mode === mode) return
     const { pickTradeIds, keyRefs, swapKeys } = await loadSearch()
+    if (seq !== pickSeq) return
     const own = f.swapPick?.tradeId ?? f.tradeId
     const ownRoll = f.swapPick ? f.swapPick.roll : (f.roll ? { min: f.roll.min, max: f.roll.max } : undefined)
     const refs = keyRefs(cand)
@@ -197,17 +201,21 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
 
   function resultsChanged (listings: readonly PricingResult[], searched: readonly FilterOrGroup[]) {
     const code = searchCode.value
-    if (!code || !listings.length) return
+    if (!code) return
     for (const cand of candidates.value) {
       const mode = pickOf(cand)
       if (mode == null) continue
-      // Only listings searched with this same pick price it.
-      const row = searched.find((s): s is StatFilter => !('group' in s && s.group) && (s as StatFilter).statRef === cand.filter.statRef) as StatFilter | undefined
-      if (row?.swapPick?.mode !== mode) continue
+      // Only listings searched with this same pick price it. The snapshot keeps
+      // the rows' order; an implicit row can share the stat.
+      const at = stats.value.indexOf(cand.filter)
+      const row = searched[at] as StatFilter | undefined
+      if (!row || ('group' in row && row.group) || row.statRef !== cand.filter.statRef || row.swapPick?.mode !== mode) continue
+      // The Flip tab's own search or a one-key search is under way: leave it be.
+      const prev = runs.get(cand.filter)
+      if (prev && (prev.state === 'loading' || prev.refining) && !prev.result?.fromResults) continue
       const min = typeof row.roll?.min === 'number' ? row.roll.min : null
       const keys = code.swapKeys(cand, mode)
       const prices = code.priceByKey([...listings], cand, keys, { ...options.value }, item.value.category, min)
-      const prev = runs.get(cand.filter)
       runs.set(cand.filter, {
         id: prev?.state === 'done' && prev.result?.fromResults ? prev.id : ++runId,
         mode,

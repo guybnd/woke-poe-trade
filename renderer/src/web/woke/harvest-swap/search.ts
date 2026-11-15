@@ -53,9 +53,15 @@ export function searchedMin (cand: SwapCandidate): number | undefined {
   return typeof min === 'number' ? min : undefined
 }
 
+/** The row as the item has it: a pick (useSwap) keeps the row's own ids aside. */
+function ownFilter (filter: StatFilter): StatFilter {
+  return filter.swapPick ? { ...filter, tradeId: filter.swapPick.tradeId } : filter
+}
+
 export function buildSwapRequest (filters: ItemFilters, stats: FilterOrGroup[], cand: SwapCandidate, mode: SwapMode): TradeRequest {
   const refs = keyRefs(cand)
-  const tradeId = swapKeys(cand, mode).flatMap(k => k === cand.from ? cand.filter.tradeId : targetTradeIds(cand.filter, refs[k]))
+  const own = ownFilter(cand.filter)
+  const tradeId = swapKeys(cand, mode).flatMap(k => k === cand.from ? own.tradeId : targetTradeIds(own, refs[k]))
   const min = searchedMin(cand)
   const roll = cand.filter.roll && {
     ...cand.filter.roll,
@@ -116,7 +122,8 @@ export interface SwapSearchResult {
 /** The trade ids a pick searches the row as: its own for its key, the matching ones for the others. */
 export function pickTradeIds (cand: SwapCandidate, mode: SwapMode, own: string[]): string[] {
   const refs = keyRefs(cand)
-  return swapKeys(cand, mode).flatMap(k => k === cand.from ? own : targetTradeIds(cand.filter, refs[k]))
+  const row = { ...cand.filter, tradeId: own }
+  return swapKeys(cand, mode).flatMap(k => k === cand.from ? own : targetTradeIds(row, refs[k]))
 }
 
 export async function runSwapSearch (

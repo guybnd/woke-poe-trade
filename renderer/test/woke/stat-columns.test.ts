@@ -131,6 +131,16 @@ describe('listing values', () => {
     expect(listingStatValue(listing, column, HELMET)).toBe(38)
     expect(listingStatLabel(listing, column, HELMET)).toBe('Cold')
     expect(column.label).toBe('Any')
+    // Two picked elements on one listing: the higher one, not their sum.
+    const both = item(['+30% to Fire Resistance', '+35% to Cold Resistance'])
+    expect(listingStatValue(both, column, HELMET)).toBe(35)
+    expect(listingStatLabel(both, column, HELMET)).toBe('Cold')
+    const light = onlyColumn(filter({
+      tradeId: ['explicit.stat_3'],
+      statRef: '+#% to Fire Resistance',
+      swapPick: { mode: 'lightning', own: 'Fire', keys: [{ label: 'Lightning', ref: '+#% to Lightning Resistance' }], tradeId: ['explicit.stat_1'] }
+    }))
+    expect(light.label).not.toBe('Fire')
     expect(listingStatLabel(listing, onlyColumn(filter({ statRef: '+#% to Cold Resistance' })), HELMET)).toBe(null)
   })
 
