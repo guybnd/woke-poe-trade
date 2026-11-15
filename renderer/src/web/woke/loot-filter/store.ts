@@ -713,34 +713,58 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // Our copy exists, so /itemfilter has something to load.
   const outputSaved = computed(() => lastSaved.value != null || files.value.some(f => !f.online && f.name === outputName(cfg())))
 
-  // woke: the file in the game folder. Until a save writes your edits and new
-  // prices into it, the game judges drops by that file, not by `doc`. Read
-  // only when asked and only while the two differ; a save forgets it.
-  const writtenDoc = shallowRef<FilterDoc | null>(null)
-  let writtenRead: 'idle' | 'reading' | 'failed' = 'idle'
+  // woke: the filter the game judges drops by. That's the file in the game
+  // folder as of the last reload, not `doc`: your unsaved edits and new prices
+  // aren't in it, and a save the game hasn't reloaded yet isn't either. Kept
+  // only while it differs from `doc`, read only when asked.
+  const gameDoc = shallowRef<FilterDoc | null>(null)
+  // The game's version, taken from the file before a save it won't reload
+  // overwrote it. Parsed on demand into gameDoc.
+  let gameText: string | null = null
+  let gameRead: 'idle' | 'reading' | 'failed' = 'idle'
+  let gameReadFailedAt = 0
   // A read that a save or load overtook must not land.
-  let writtenSeq = 0
-  const gameFileStale = computed(() => outputSaved.value && (dirty.value || sourceChanged.value))
+  let gameSeq = 0
+  // Saved, but the game hasn't reloaded it yet.
+  const gameBehind = computed(() => netWaitsForReload.value || pendingReload.value)
+  // The file itself is older than `doc`: only a save brings it up to date.
+  const gameFileOld = computed(() => dirty.value || sourceChanged.value)
+  const gameFileStale = computed(() => outputSaved.value && (gameFileOld.value || gameBehind.value))
   function gameFileDoc (): FilterDoc | null {
     if (!gameFileStale.value) return null
-    if (!writtenDoc.value && writtenRead === 'idle') {
-      writtenRead = 'reading'
-      const seq = writtenSeq
+    if (gameDoc.value) return gameDoc.value
+    if (gameText != null) {
+      gameDoc.value = parseFilter(gameText)
+      gameText = null
+      return gameDoc.value
+    }
+    if (gameRead === 'failed' && Date.now() - gameReadFailedAt > 60_000) gameRead = 'idle'
+    if (gameRead === 'idle') {
+      gameRead = 'reading'
+      const seq = gameSeq
       hostRequest('filter-read', { dir: cfg().folder, name: outputName(cfg()) })
         .then(({ text }) => {
-          if (seq !== writtenSeq) return
-          writtenDoc.value = parseFilter(text)
-          writtenRead = 'idle'
+          if (seq !== gameSeq) return
+          gameDoc.value = parseFilter(text)
+          gameRead = 'idle'
         })
-        .catch(() => { if (seq === writtenSeq) writtenRead = 'failed' })
+        .catch(() => {
+          if (seq !== gameSeq) return
+          gameRead = 'failed'
+          gameReadFailedAt = Date.now()
+        })
     }
-    return writtenDoc.value
+    return null
   }
   function forgetGameFile () {
-    writtenSeq++
-    writtenDoc.value = null
-    writtenRead = 'idle'
+    gameSeq++
+    gameDoc.value = null
+    gameText = null
+    gameRead = 'idle'
   }
+  // Nothing to tell apart any more, or another file: let the copy go.
+  watch(gameFileStale, (stale) => { if (!stale) forgetGameFile() })
+  watch(() => outputName(cfg()), () => { forgetGameFile() })
   // The game's selected filter isn't the one we save to.
   const wrongFilterInGame = computed(() => {
     const name = gameFilter.value.name
@@ -1014,8 +1038,19 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
         moves: cfg().priceTiers.moves,
         version: doc.value.version
       }
+      // A save the game won't reload now overwrites the version it still
+      // uses: keep that version first, unless it's already kept.
+      // As reloadInGame decides: held outside town unless forced.
+      const reloadsNow = !opts.noReload && !opts.auto && cfg().reloadViaChat &&
+        (opts.reloadNow === true || !cfg().reloadWhenSafe || inSafeZone.value === true)
+      const behind = !reloadsNow && outputSaved.value
+      if (behind && !gameDoc.value && gameText == null) {
+        const seq = gameSeq
+        const old = await hostRequest('filter-read', { dir: cfg().folder, name }).then(r => r.text, () => null)
+        if (seq === gameSeq && old != null) gameText = old
+      }
       await hostRequest('filter-write', { dir: cfg().folder, name, text: serializeFilter(doc.value, header()) })
-      forgetGameFile()
+      if (!behind) forgetGameFile()
       savedEdits.value = written.sig
       cfg().savedBuildSig = written.build
       cfg().savedExtraSig = written.extra
@@ -1059,6 +1094,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   function sendReload () {
     netWaitsForReload.value = false
+    // The game moves to the file as it is now.
+    forgetGameFile()
     sentOver.value = gameFilter.value.name
     MainProcess.sendEvent({
       name: 'CLIENT->MAIN::user-action',
@@ -1151,6 +1188,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     pendingReload,
     outputSaved,
     gameFileDoc,
+    gameFileOld,
     listFiles,
     load,
     edit,

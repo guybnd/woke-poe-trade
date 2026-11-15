@@ -10,8 +10,11 @@
       </WBanner>
     </template>
     <template v-else-if="gameMatch" #banner>
-      <WBanner tone="warn">The filter file in your game folder is older than this. There, this item {{ gameVerdict }}. Save to bring it up to date.
-        <template #actions><WButton size="sm" variant="primary" :disabled="store.saving.value" @click="store.save()">Save</WButton></template>
+      <WBanner tone="warn">Your game is still on an older version of this filter. There, this item {{ gameVerdict }}. {{ store.gameFileOld.value ? 'Save to bring it up to date.' : 'Reload it to use this one.' }}
+        <template #actions>
+          <WButton v-if="store.gameFileOld.value" size="sm" variant="primary" :disabled="store.saving.value" @click="store.save({ reloadNow: true })">Save</WButton>
+          <WButton v-else-if="config.reloadViaChat" size="sm" variant="primary" @click="store.reloadInGame(true)">Reload</WButton>
+        </template>
       </WBanner>
     </template>
 
@@ -117,6 +120,7 @@ import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
+import { sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
 import { formatCondition, ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
@@ -137,9 +141,14 @@ const props = defineProps<{
 }>()
 
 const gameVerdict = computed(() => {
-  const b = props.gameMatch?.final?.block
-  const how = props.gameMatch?.visibility === 'Hide' ? 'is hidden' : 'shows'
-  return `${how}: ${b ? placeOf(b) : 'no rule, the game default'}`
+  const g = props.gameMatch
+  if (!g) return ''
+  const b = g.final?.block
+  const rule = b ? placeOf(b) : 'no rule, the game default'
+  if (g.visibility === 'Hide') return `is hidden: ${rule}`
+  // Shown either way, so it's the look or sound that differs.
+  if (props.match.visibility !== 'Hide' && sameRule(g, props.match)) return `shows with that version's look or sound: ${rule}`
+  return `shows: ${rule}`
 })
 
 const emit = defineEmits<{
