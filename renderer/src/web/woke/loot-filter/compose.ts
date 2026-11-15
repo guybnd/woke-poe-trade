@@ -92,6 +92,9 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Quiet mode, bigger labels, colour-blind colours: over NeverSink's rules
   // as you left them.
   const presetChanges = applyPresetChanges(next, cfg.presets)
+  // Before the net reads what the rules hide: as the game will read them.
+  const renameBase = cfg.renameBase ?? gemBaseName
+  renameBases(next, renameBase)
   // The safety net goes on top, listing only what the rest still hides.
   // Restyles of the net apply after it exists.
   let netCount = 0
@@ -141,8 +144,8 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // stays the floor for NeverSink's shown rules, as it was set.
   const bigger = cfg.presets.bigger
   applyLook(next, cfg.presets.look, b => bigger.on && b.visibility !== 'Hide' && !b.type?.startsWith('woke->') ? bigger.size : null)
-  // Over every rule: one transfigured gem name in a BaseType list and the
-  // game refuses to load the whole filter.
-  renameBases(next, cfg.renameBase ?? gemBaseName)
+  // Again over the net's and restyled rules: one transfigured gem name in a
+  // BaseType list and the game refuses to load the whole filter.
+  renameBases(next, renameBase)
   return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
 }
