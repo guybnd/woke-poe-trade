@@ -51,13 +51,16 @@ function modLines (v: unknown, kind: PobModKind = ''): ModLine[] {
   if (!Array.isArray(v)) return []
   const out: ModLine[] = []
   for (const x of v) {
-    // One mod can span lines (a flask's two immunities): one line each.
+    // A mod spanning two lines (a flask's two immunities) stays one entry:
+    // the game's stat for it has the line break in it too.
     if (typeof x === 'string') {
-      for (const text of x.split('\n').map(cleanMod).filter(Boolean)) out.push({ text, kind })
+      const text = cleanMod(x.replace(/\r\n/g, '\n'))
+      if (text) out.push({ text, kind })
     } else if (x && typeof x === 'object' && typeof (x as Raw).description === 'string') {
       const flags = ((x as Raw).flags ?? {}) as Raw
       const k: PobModKind = flags.fractured === true ? 'fractured' : flags.crafted === true ? 'crafted' : kind
-      for (const text of ((x as Raw).description as string).split('\n').map(cleanMod).filter(Boolean)) out.push({ text, kind: k })
+      const text = cleanMod(((x as Raw).description as string).replace(/\r\n/g, '\n'))
+      if (text) out.push({ text, kind: k })
     }
   }
   return out

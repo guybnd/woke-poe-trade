@@ -110,7 +110,7 @@ export function parseItem (raw: unknown): StashItem | null {
       if (Array.isArray(list)) {
         for (const m of list) {
           const text = typeof m === 'string' ? m : m && typeof m === 'object' && typeof (m as Raw).description === 'string' ? (m as Raw).description as string : null
-          if (text) mods.push(...text.split('\n').filter(Boolean))
+          if (text) mods.push(text)
         }
       }
     }
