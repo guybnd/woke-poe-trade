@@ -32,6 +32,7 @@ subtasks:
   - WOKEPOET-312
   - WOKEPOET-314
   - WOKEPOET-316
+  - WOKEPOET-318
 ---
 Guy picked ideas 1, 2, 4, 5, 9, 13, 14, 15 from https://claude.ai/artifact/CBff6gMLPNJ637Pfbb7RiD (2026-11-15). Base: Character tab #484, hover #495, raw replies #497 (thread "Sync live character with PoB build").
 

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-308
 title: 'Character: jewels and clusters against the build (idea 15)'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -30,5 +30,43 @@ history:
     date: '2026-11-15T06:03:21.599Z'
     selfAttested: true
     id: c-2026-11-15t06-03-21-599z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged #502 (7018f3e0): Jewels section on the Character tab, the build's
+      jewel against yours per socket.
+    date: '2026-11-15T06:47:06.952Z'
+    completionComment: true
+    id: c-2026-11-15t06-47-06-952z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-15T06:47:06.952Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged #502 (7018f3e0).'
+    completionComment: true
+    date: '2026-11-15T06:47:15.266Z'
+    id: c-2026-11-15t06-47-15-266z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-15T06:47:15.824Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/502'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Socketed jewels vs build's: empty sockets, missing cluster notables, timeless mismatch. Needs tree.json jewelSlots (GGG x index → node) added to tree data. Cluster passives are excluded from the tree compare today (GGG hashes_ex ids ≠ PoB 65536+ ids).
