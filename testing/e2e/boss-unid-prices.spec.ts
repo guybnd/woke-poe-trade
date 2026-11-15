@@ -1,5 +1,6 @@
-// Boss runs: jewels at their unidentified trade price, estimated chances marked
-// as estimates, and a drop poe.ninja doesn't list filled in from trade.
+// Boss runs: jewels at their unidentified trade price once you click Search
+// trade, estimated chances marked as estimates, and a drop poe.ninja doesn't
+// list filled in from trade.
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { test, expect } from './harness'
@@ -80,7 +81,11 @@ test('Boss runs: unidentified jewel prices and estimated chances', async ({ over
   await expect(row).toContainText('~1.50%', SLOW)
   await expect(panel).toContainText('is an estimated chance')
 
-  // The opened boss's jewels are searched first, unidentified at instant buyout.
+  // Nothing searches trade until you ask: poe.ninja's price stands.
+  await expect(row.getByText('ninja', { exact: true })).toBeVisible(SLOW)
+  expect(searches).toEqual([])
+  // Search trade looks up the opened boss's jewels, unidentified at instant buyout.
+  await panel.getByText('Search trade').click()
   await expect(row.getByText('unid', { exact: true })).toBeVisible(SLOW)
   const vision = searches.find(s => s.query.name === 'Sublime Vision')!.query
   expect(vision.status.option).toBe('securable')

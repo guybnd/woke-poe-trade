@@ -34,6 +34,8 @@
         <WSegmented v-model="config.sort" :options="sortOptions" />
         <WChip clickable :active="!!config.skipThin" title="Count drops priced from a thin poe.ninja market as 0, so loot and profit are a floor. Entry costs stay as they are."
           @click="config.skipThin = !config.skipThin"><i class="fas fa-exclamation-circle" /> Skip low confidence</WChip>
+        <WChip clickable :active="tradeBusy" title="Look up this boss's jewels as unidentified, and drops poe.ninja doesn't list, on trade. One search every 10 seconds, kept for an hour."
+          @click="searchTrade"><i :class="tradeBusy ? 'fas fa-spinner fa-spin' : 'fas fa-search'" /> Search trade</WChip>
       </template>
       <template v-if="!prices.snapshot.value" #banner>
         <WBanner tone="info">Waiting for poe.ninja prices.</WBanner>
@@ -193,7 +195,7 @@
                     {{ sel.estimated }} {{ sel.estimated === 1 ? 'drop uses' : 'drops use' }} estimated chances, not measured kills: {{ ESTIMATE_SOURCE_LABEL }}.
                     <a v-if="estimateUrl(sel.boss.id)" :href="estimateUrl(sel.boss.id)!" target="_blank" class="w-accent">Open source ↗</a>
                   </div>
-                  <div><WInfo text="Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; jewels use unidentified trade listings." /></div>
+                  <div><WInfo text="Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; Search trade prices jewels from unidentified trade listings." /></div>
                 </div>
                 <div class="w-row w-row--head" :class="$style.rateGrid"><span>Drop</span><span>Source</span><span class="text-right">Chance %</span><span /></div>
                 <div v-for="d in sel.drops" :key="d.name" class="w-row" :class="$style.rateGrid">
@@ -338,18 +340,22 @@ const arenaBosses = computed(() => {
   return bossesAtLevel(BOSSES.filter(b => ids.includes(b.id)), zone.areaLevel).map(b => evaluateBoss(b, props.config, px.value))
 })
 
-// Trade lookups only while this panel is on screen. The icon's card uses
-// what's already looked up, else poe.ninja.
+// Trade lookups only on a click (Search trade): the opened boss's rolled
+// jewels and drops poe.ninja lacks. Until then, and on the icon's card,
+// poe.ninja's price stands, or a trade price looked up earlier.
 const onScreen = computed(() => props.config.wmWants === 'show' && wm.active.value)
-const wantedKey = computed(() => tradeWanted(BOSSES, props.config.selected, props.config, px.value).join('\n'))
-watch([onScreen, () => prices.snapshot.value?.league, divine, wantedKey], ([show, league, rate, key]) => {
+const tradeNames = computed(() => sel.value ? tradeWanted([sel.value.boss], sel.value.boss.id, props.config, px.value) : [])
+const tradeBusy = computed(() => tradeNames.value.some(n => tradePrices.pending(n)))
+function searchTrade () {
+  const league = prices.snapshot.value?.league
+  const rate = divine.value
   // The queries use English names, which the regional trade sites won't match.
-  if (!show || !league || !rate || poeWebApi() !== 'www.pathofexile.com') {
-    tradePrices.stop()
-    return
-  }
-  tradePrices.request(league, rate, key ? key.split('\n') : [])
-}, { immediate: true })
+  if (poeWebApi() !== 'www.pathofexile.com') { toast('Needs the international trade site'); return }
+  if (!league || !rate) return
+  if (!tradeNames.value.length) { toast('Nothing to look up for this boss'); return }
+  tradePrices.request(league, rate, tradeNames.value)
+}
+watch(onScreen, (show) => { if (!show) tradePrices.stop() })
 
 const results = computed(() => BOSSES
   .filter(b => props.config.tier === 'all' || b.tier === props.config.tier)
@@ -456,7 +462,7 @@ function cardPriceTitle (d: DropRow) {
 function spreadTitle (d: DropRow) {
   const ask = 'Click to choose how to price it.'
   if (d.priceMode === 'unid' && d.listings != null) return `Middle of the cheapest 10 of ${d.listings} unidentified instant buyouts on trade. ${ask}`
-  if (d.priceMode === 'unid') return tradePrices.pending(d.name) ? `Looking up unidentified listings on trade. Showing poe.ninja until then. ${ask}` : `No unidentified trade price right now, so this is poe.ninja. ${ask}`
+  if (d.priceMode === 'unid') return tradePrices.pending(d.name) ? `Looking up unidentified listings on trade. Showing poe.ninja until then. ${ask}` : `poe.ninja. Search trade looks up unidentified listings. ${ask}`
   if (!d.spread) return `No poe.ninja price. ${ask}`
   return `${d.spread.count} poe.ninja ${d.spread.count === 1 ? 'row' : 'rows'}, ${Math.round(d.spread.min)}c to ${Math.round(d.spread.max)}c. ${ask}`
 }
