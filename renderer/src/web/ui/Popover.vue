@@ -86,7 +86,9 @@ export default defineComponent({
 
     return {
       target,
-      content
+      content,
+      // woke: a menu inside closes itself after a pick.
+      hide: () => { instance?.hide() }
     }
   }
 })

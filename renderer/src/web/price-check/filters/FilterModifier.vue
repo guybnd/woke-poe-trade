@@ -41,6 +41,7 @@
             class="flex items-baseline gap-x-1 shrink-0 ml-auto">
             <div v-if="showQ20Notice"
               :class="$style.qualityLabel">{{ t('item.prop_quality', [calcQuality]) }}</div>
+            <woke-swap-element v-if="hasSwap" :filter="filter" />
             <woke-swap-marker v-if="hasSwap" :filter="filter" />
             <woke-mod-worth-tag v-if="!filter.group" :stat-ref="filter.statRef" :item="item" />
             <button v-if="qTag != null" type="button" data-catalyst-tag
@@ -143,7 +144,7 @@ import { ModifierType } from '@/parser/modifiers'
 import { poeKit } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
-  components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
+  components: { WokeModWorthTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeSwapElement: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapElementPick.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
   emits: ['update:groupExpanded'],
   props: {
     filter: {
@@ -407,6 +408,13 @@ export default defineComponent({
       isDisabled: computed(() => props.filter.disabled),
       text: computed(() => {
         if (!INTERNAL_TRADE_IDS.includes(props.filter.tradeId[0])) {
+          // woke: a swap pick searches other elements: the row says which.
+          const pick = props.filter.swapPick
+          if (pick) {
+            const words = pick.keys.map(k => k.label)
+            const said = words.length > 1 ? `${words.slice(0, -1).join(', ')} or ${words[words.length - 1]}` : words[0]
+            return props.filter.text.replace(pick.own, said)
+          }
           return props.filter.text
         } else {
           return t(props.filter.tradeId[0], ['#', '#'])

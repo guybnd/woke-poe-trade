@@ -135,7 +135,7 @@
               <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ row.lead.level }}</td>
               <td v-if="showQuality" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
               <td v-if="showSockets" class="px-2 whitespace-nowrap w-pc-sockets" :class="socketSummary(row.lead.listedItem?.sockets).tone">{{ socketSummary(row.lead.listedItem?.sockets).text }}</td>
-              <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)" :style="toneStyle(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}</td>
+              <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)" :style="toneStyle(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}<span v-if="statLabel(row.lead, col)" class="w-pc-stat-key">{{ statLabel(row.lead, col) }}</span></td>
               <td v-if="hiddenColumns.length" />
               <td v-if="showSeller" class="px-2 whitespace-nowrap">
                 <span v-if="row.lead.isMine" class="w-pc-you">{{ t('You') }}</span>
@@ -198,7 +198,8 @@ import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG } from '@/web/woke/price-insight/insight'
 import { groupListings, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
-import { pickStatColumns, listingStatValue, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
+import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
+import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
 import '@/web/woke/price-insight/price-table.css'
@@ -373,6 +374,10 @@ export default defineComponent({
     onUnmounted(hideTip)
     watch(searchResult, () => { hideTip() })
 
+    // woke: a swap pick's search prices the Flip tab from these same listings.
+    const swap = useSwap()
+    if (swap) watch(groupedResults, (list) => { swap.resultsChanged(list, props.stats) })
+
     // woke: improved view reads the same listings, nothing extra is requested
     const { insight, divine, options: insightOptions } = useInsight(groupedResults, computed(() => props.filters.trade.league))
 
@@ -516,6 +521,7 @@ export default defineComponent({
       hiddenColumns,
       statValue,
       formatStatValue,
+      statLabel: (listing: PricingResult, col: StatColumn) => listingStatLabel(listing.listedItem, col, props.item.category),
       toneClass (listing: PricingResult, col: StatColumn) {
         const tone = statTone(statValue(listing, col), col)
         return tone ? `w-pc-stat-${tone.dir}` : undefined

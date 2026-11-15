@@ -118,3 +118,49 @@ test('a max res jewel gets a ⇄ and a Flip tab that searches only on a click', 
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before + 2)
 })
+
+test('the element picker makes the row search any element, and Search shows which each listing has', async ({ overlay }) => {
+  const searches = await fakeMarket(overlay.page)
+  await overlay.boot()
+  await overlay.copyItem(JEWEL)
+  const panel = overlay.widget('price-check')
+  const picker = panel.locator('[data-swap-element]')
+  await expect(picker).toHaveText(/Cold/)
+  await overlay.page.waitForTimeout(300)
+  const before = searches.length
+
+  // Picking only changes the row, like any edit: nothing searches until Search.
+  await picker.click()
+  await overlay.page.getByRole('menuitemradio', { name: 'Any element' }).click()
+  await expect(picker).toHaveText(/Any/)
+  await expect(panel).toContainText('maximum Fire, Cold or Lightning Resistance')
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBe(before)
+
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(before + 1)
+  const body = JSON.parse(searches[searches.length - 1])
+  expect(body.query.stats.some((g: { type: string, filters: unknown[] }) => g.type === 'count' && g.filters.length === 3)).toBe(true)
+  // Each listing says which element it has.
+  await expect(panel.locator('.w-pc-stat-key', { hasText: 'Lightning' }).first()).toBeVisible()
+  await expect(panel.locator('.w-pc-stat-key', { hasText: 'Cold' }).first()).toBeVisible()
+  await overlay.snap('harvest-swap-pick-results')
+
+  // The Flip tab is priced from those listings: no search of its own.
+  await panel.getByRole('tab', { name: /Flip/ }).click()
+  await expect(panel).toContainText('Keep Cold')
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBe(before + 1)
+
+  // Back to the item's own element: the row reads as before.
+  await panel.getByRole('tab', { name: 'Results' }).click()
+  await picker.click()
+  await overlay.page.getByRole('menuitemradio', { name: 'Cold (this item)' }).click()
+  await expect(picker).toHaveText(/Cold/)
+  await expect(panel).not.toContainText('Fire, Cold or Lightning')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(before + 2)
+  const back = JSON.parse(searches[searches.length - 1])
+  expect(back.query.stats.some((g: { type: string, filters: unknown[] }) => g.type === 'count' && g.filters.length === 3)).toBe(false)
+  await expect(panel.locator('.w-pc-stat-key')).toHaveCount(0)
+})

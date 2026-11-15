@@ -97,7 +97,7 @@ export interface StatColumn {
 type ColumnSource =
   | { kind: 'property', read: Reader }
   | { kind: 'total', stats: Array<{ ref: string, multiplier?: number }>, negated: boolean }
-  | { kind: 'mod', ref: string, domains: string[], negated: boolean }
+  | { kind: 'mod', refs: string[], domains: string[], negated: boolean, labels?: Record<string, string> }
 
 function columnSource (filter: StatFilter): ColumnSource | null {
   const id = filter.tradeId[0]
@@ -113,12 +113,22 @@ function columnSource (filter: StatFilter): ColumnSource | null {
     const stats = pseudoRuleStats(filter.statRef)
     return stats ? { kind: 'total', stats, negated: filter.roll?.isNegated ?? false } : null
   }
+  // A swap pick searches the mod as other elements too: read whichever the listing has.
+  const pick = filter.swapPick
   return {
     kind: 'mod',
-    ref: filter.statRef,
+    refs: pick ? pick.keys.map(k => k.ref) : [filter.statRef],
     domains: filter.tradeId.map(tradeId => tradeId.split('.')[0]),
-    negated: filter.roll?.isNegated ?? false
+    negated: filter.roll?.isNegated ?? false,
+    ...(pick ? { labels: Object.fromEntries(pick.keys.map(k => [k.ref, k.label])) } : {})
   }
+}
+
+// A swap-picked row's header: "Any" or the picked element in place of the item's own.
+function pickedLabel (filter: StatFilter): string | null {
+  const pick = filter.swapPick
+  if (!pick) return null
+  return pick.keys.length > 1 ? 'Any' : statColumnLabel(pick.keys[0].ref)
 }
 
 /** Every ticked number filter that a listing can answer, in the filter list's order. */
@@ -135,7 +145,7 @@ export function pickStatColumns (stats: readonly FilterOrGroup[]): StatColumn[] 
     columns.push({
       // The index: a corrupted item can have two filters on one stat.
       key: `${index}|${filter.tradeId.join('|')}|${filter.statRef}`,
-      label: PROPERTIES[id]?.label ?? statColumnLabel(filter.statRef),
+      label: PROPERTIES[id]?.label ?? pickedLabel(filter) ?? statColumnLabel(filter.statRef),
       title: filter.text,
       yours: filter.roll.value,
       better: filter.roll.better ?? 0,
@@ -225,16 +235,39 @@ export function listingStatValue (item: ListingItem | undefined, column: StatCol
   const { source } = column
   if (source.kind === 'property') return source.read(item) ?? null
   const stats = listingStats(item, category)
+  // A swap pick: the search wants any one element at the roll, so show the best one, not a sum.
+  if (source.kind === 'mod' && source.labels) {
+    const best = bestPicked(stats, source)
+    return best && (source.negated ? -best.value : best.value)
+  }
   const total = source.kind === 'total'
     ? sum(stats.flatMap(stat => {
         const info = source.stats.find(s => s.ref === stat.ref)
         return info ? [stat.value * (info.multiplier ?? 1)] : []
       }))
     : sum(stats
-        .filter(stat => stat.ref === source.ref && domainMatches(source.domains, stat.domain))
+        .filter(stat => source.refs.includes(stat.ref) && domainMatches(source.domains, stat.domain))
         .map(stat => stat.value))
   // A "reduced" filter shows its number as positive, so the listing's must match.
   return (total != null && source.negated) ? -total : total
+}
+
+// Each picked element's total on the listing (explicit and fractured add up), and the highest.
+function bestPicked (stats: ListingStat[], source: Extract<ColumnSource, { kind: 'mod' }>): { ref: string, value: number } | null {
+  let best: { ref: string, value: number } | null = null
+  for (const ref of source.refs) {
+    const value = sum(stats.filter(stat => stat.ref === ref && domainMatches(source.domains, stat.domain)).map(stat => stat.value))
+    if (value != null && (best == null || value > best.value)) best = { ref, value }
+  }
+  return best
+}
+
+/** Which of a swap-picked row's keys the listing's number is for ("Cold"), or null. */
+export function listingStatLabel (item: ListingItem | undefined, column: StatColumn, category: ItemCategory | undefined): string | null {
+  const { source } = column
+  if (!item || source.kind !== 'mod' || !source.labels) return null
+  const best = bestPicked(listingStats(item, category), source)
+  return best ? source.labels[best.ref] : null
 }
 
 export function formatStatValue (value: number | null, column: StatColumn): string {
