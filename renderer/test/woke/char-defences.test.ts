@@ -26,3 +26,18 @@ describe('sumDefences', () => {
     expect(d.max).toEqual({ Fire: 78, Cold: 78, Lightning: 78, Chaos: 77 })
   })
 })
+
+describe('sumDefences wordings', () => {
+  it('reads single-element purities, chaos pairs and the act penalty', async () => {
+    const { resPenalty } = await import('@/web/woke/pob-builds/char-defences')
+    const d = sumDefences('Witch', [
+      'You and nearby allies gain 41% additional Fire Resistance',
+      'You and nearby allies gain 4% additional maximum Fire Resistance',
+      '+20% to Cold and Chaos Resistances'
+    ], resPenalty(6, 40))
+    expect(d.res).toEqual({ Fire: 11, Cold: -10, Lightning: -30, Chaos: -10 })
+    expect(d.max.Fire).toBe(79)
+    expect(resPenalty(1, 81)).toBe(-60)
+    expect(resPenalty(3, 20)).toBe(0)
+  })
+})

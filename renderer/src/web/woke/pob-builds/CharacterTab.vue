@@ -52,10 +52,10 @@
             <span v-if="defences.withBuild" class="w-num">{{ defences.withBuild.attr[a] }}</span>
           </template>
         </div>
-        <div class="w-faint text-xs pt-1">From your gear, tree, jewels and auras, after the acts' −60%. Pantheon, flasks, charges and other buffs aren't counted.</div>
+        <div class="w-faint text-xs pt-1">From your gear, tree, jewels and auras, after the acts' penalty. Pantheon, flasks, charges, abyss jewels in gear and other buffs aren't counted.</div>
         <template v-if="defences.needs.length">
           <div :class="$style.heading">Can't use yet</div>
-          <div v-for="n in defences.needs" :key="n.kind + n.what" :class="$style.need">
+          <div v-for="n in defences.needs" :key="n.key" :class="$style.need">
             <span class="w-trunc" :class="n.kind === 'gem' ? 'w-rarity-gem' : ''">{{ n.what }}</span>
             <span class="w-down text-xs">needs {{ n.short.join(', ') }}</span>
           </div>

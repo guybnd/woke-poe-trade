@@ -27,13 +27,20 @@ const CLASS_ATTR: Record<string, [number, number, number]> = {
   Scion: [20, 20, 20]
 }
 
-// Kitava's two penalties (acts 5 and 10), on every resistance.
-export const RES_PENALTY = -60
+// Kitava's two penalties (acts 5 and 10), on every resistance. Endgame
+// characters (level 70 on) have both, whatever act Client.txt last named.
 export const RES_CAP = 75
+export function resPenalty (act: number | null, level: number | null): number {
+  if ((level ?? 0) >= 70 || act == null) return -60
+  return act >= 10 ? -60 : act >= 5 ? -30 : 0
+}
 
 const N = '([+-]?\\d+(?:\\.\\d+)?)'
-const RE_RES = new RegExp(`^(?:You and nearby allies gain )?${N}% to (all Elemental|all|Fire|Cold|Lightning|Chaos|Fire and Cold|Fire and Lightning|Cold and Lightning) Resistances?$`)
-const RE_MAX = new RegExp(`^${N}% to (?:all )?maximum (all Elemental|Fire|Cold|Lightning|Chaos|Fire and Cold|Fire and Lightning|Cold and Lightning) Resistances?$`)
+const PAIRS = 'Fire and Cold|Fire and Lightning|Cold and Lightning|Fire and Chaos|Cold and Chaos|Lightning and Chaos'
+const RE_RES = new RegExp(`^(?:You and nearby allies gain )?${N}% to (all Elemental|all|Fire|Cold|Lightning|Chaos|${PAIRS}) Resistances?$`)
+// Purity of Fire, Ice and Lightning: "41% additional Fire Resistance".
+const RE_AURA = new RegExp(`^You and nearby allies gain ${N}% additional (maximum )?(Fire|Cold|Lightning|Chaos) Resistance$`)
+const RE_MAX = new RegExp(`^${N}% to (?:all )?maximum (all Elemental|Fire|Cold|Lightning|Chaos|${PAIRS}) Resistances?$`)
 const RE_MAX_ALL = new RegExp(`^${N}% to all maximum (Elemental )?Resistances$`)
 const RE_ATTR = new RegExp(`^${N} to (all Attributes|Strength|Dexterity|Intelligence|Strength and Dexterity|Strength and Intelligence|Dexterity and Intelligence)$`)
 const RE_ATTR_INC = new RegExp(`^${N}% increased (Attributes|Strength|Dexterity|Intelligence)$`)
@@ -51,8 +58,8 @@ function attrsIn (what: string): Attribute[] {
 
 // className: the class or ascendancy. lines: every line that may give a
 // resistance or attribute, from all sources.
-export function sumDefences (className: string, lines: string[]): Defences {
-  const res: Record<Resist, number> = { Fire: RES_PENALTY, Cold: RES_PENALTY, Lightning: RES_PENALTY, Chaos: RES_PENALTY }
+export function sumDefences (className: string, lines: string[], penalty = -60): Defences {
+  const res: Record<Resist, number> = { Fire: penalty, Cold: penalty, Lightning: penalty, Chaos: penalty }
   const max: Record<Resist, number> = { Fire: RES_CAP, Cold: RES_CAP, Lightning: RES_CAP, Chaos: RES_CAP }
   const start = CLASS_ATTR[baseClass(className)] ?? [0, 0, 0]
   const flat: Record<Attribute, number> = { Strength: start[0], Dexterity: start[1], Intelligence: start[2] }
@@ -64,6 +71,8 @@ export function sumDefences (className: string, lines: string[]): Defences {
       if (m) { for (const r of m[2] ? ['Fire', 'Cold', 'Lightning'] as Resist[] : RESISTS) max[r] += Number(m[1]); continue }
       m = RE_MAX.exec(text)
       if (m) { for (const r of resistsIn(m[2])) max[r] += Number(m[1]); continue }
+      m = RE_AURA.exec(text)
+      if (m) { const r = m[3] as Resist; if (m[2]) max[r] += Number(m[1]); else res[r] += Number(m[1]); continue }
       m = RE_RES.exec(text)
       if (m) { for (const r of resistsIn(m[2])) res[r] += Number(m[1]); continue }
       m = RE_ATTR.exec(text)
