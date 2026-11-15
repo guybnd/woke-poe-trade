@@ -80,6 +80,12 @@ export async function loadUniqueMods (name: string, variant?: string): Promise<U
   return uniqueModLines(uniques?.[name], variant)
 }
 
+// Base items' defences, weapon damage and requirements: the tooltip's base file.
+export async function loadTipBases (): Promise<TipPack['bases'] | null> {
+  await loadFile('bases')
+  return pack.bases ?? null
+}
+
 // Card rewards and stack sizes, currency texts: the tooltip's item file.
 export async function loadTipItems (): Promise<TipPack['items'] | null> {
   await loadFile('items')

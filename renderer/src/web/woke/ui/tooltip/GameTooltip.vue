@@ -57,7 +57,15 @@
       </template>
 
       <template v-else-if="item">
-        <section v-if="itemProps.length" :class="$style.block">
+        <section v-if="weapon" :class="$style.block">
+          <div v-if="item.quality"><span :class="$style['p-label']">Quality: </span><span :class="$style['p-aug']">+{{ item.quality }}%</span></div>
+          <div v-if="weapon.damage.physical"><span :class="$style['p-label']">Physical Damage: </span><span :class="weapon.aug.physical ? $style['p-aug'] : $style['p-value']">{{ hit(weapon.damage.physical) }}</span></div>
+          <div v-if="elemental.length"><span :class="$style['p-label']">Elemental Damage: </span><template v-for="(e, i) in elemental" :key="e.type"><span v-if="i" :class="$style['p-label']">, </span><span :class="$style[`p-${e.type}`]">{{ hit(e.hit) }}</span></template></div>
+          <div v-if="weapon.damage.chaos"><span :class="$style['p-label']">Chaos Damage: </span><span :class="$style['p-chaos']">{{ hit(weapon.damage.chaos) }}</span></div>
+          <div><span :class="$style['p-label']">Critical Strike Chance: </span><span :class="weapon.aug.crit ? $style['p-aug'] : $style['p-value']">{{ weapon.crit.toFixed(2) }}%</span></div>
+          <div><span :class="$style['p-label']">Attacks per Second: </span><span :class="weapon.aug.aps ? $style['p-aug'] : $style['p-value']">{{ weapon.aps.toFixed(2) }}</span></div>
+        </section>
+        <section v-else-if="itemProps.length" :class="$style.block">
           <div v-for="p in itemProps" :key="p.label"><span :class="$style.label">{{ p.label }}: </span><span :class="$style.value">{{ p.value }}</span></div>
         </section>
         <section v-if="item.levelReq" :class="$style.block">
@@ -83,6 +91,12 @@
           <div v-if="item.mirrored" :class="$style.mod">Mirrored</div>
           <div v-if="item.corrupted" :class="$style.corrupted">Corrupted</div>
         </section>
+        <footer v-if="weapon" :class="$style.strip" class="w-num">
+          <span><span :class="$style.label">DPS </span><span :class="$style.value">{{ weapon.dps.toFixed(1) }}</span></span>
+          <span v-if="weapon.pdps"><span :class="$style.label">Phys </span><span :class="$style.value">{{ weapon.pdps.toFixed(1) }}</span></span>
+          <span v-if="weapon.edps"><span :class="$style.label">Ele </span><span :class="$style.value">{{ weapon.edps.toFixed(1) }}</span></span>
+          <span v-if="weapon.cdps"><span :class="$style.label">Chaos </span><span :class="$style.value">{{ weapon.cdps.toFixed(1) }}</span></span>
+        </footer>
         <template v-if="itemCompare">
           <div :class="$style.compareHead">{{ itemCompare.title }}</div>
           <SwapCard :swap="itemCompare" />
@@ -160,6 +174,9 @@ import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
 import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
+import { loadTipBases } from './item-tip'
+import type { TipPack } from './tip-content'
+import { weaponStats } from './weapon-stats'
 import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
 
 const $style = useCssModule()
@@ -169,6 +186,20 @@ const placed = shallowRef<{ left: number, top: number } | null>(null)
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
 const itemCompare = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.compare ?? null : null)
+
+// A weapon's damage block, worked out from its base (the tooltip's base file)
+// for items with no game numbers: a build's items, your character's.
+const tipBases = shallowRef<TipPack['bases'] | null>(null)
+watch(item, (i) => { if (i && !tipBases.value) loadTipBases().then((b) => { tipBases.value = b }, () => {}) })
+const weapon = computed(() => {
+  const i = item.value
+  if (!i || listing.value) return null
+  const baseName = (i.base || i.name).replace(/\s+\([^()]*\)\s*$/, '')
+  return weaponStats(tipBases.value?.[baseName], [...i.implicits, ...i.mods], i.quality ?? 0)
+})
+const elemental = computed(() => (['fire', 'cold', 'lightning'] as const)
+  .filter(t => weapon.value?.damage[t]).map(t => ({ type: t, hit: weapon.value!.damage[t]! })))
+const hit = (h: [number, number]) => `${h[0]}-${h[1]}`
 const enchantLines = computed(() => listing.value?.implicits.filter(l => l.kind === 'enchant') ?? [])
 const implicitLines = computed(() => listing.value?.implicits.filter(l => l.kind !== 'enchant') ?? [])
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
