@@ -69,7 +69,7 @@ import { defaultTextColour, rollDrops } from './drops'
 import type { Drop } from './drops'
 import { filterClasses, searchFacts } from './item-search'
 import type { SearchItem } from './item-search'
-import type { FilterRarity } from './item-facts'
+import type { FilterRarity, ItemFacts } from './item-facts'
 import { labelBox, layoutLabels, runDrops, soundsOf, summarize } from './shower'
 import type { ShownDrop } from './shower'
 import { poeColour, shapeGlyph } from './colours'
@@ -82,7 +82,7 @@ const props = defineProps<{
   config: LootFilterWidget
   anchor?: Element | null
   // Items picked in the search box, dropped on the ground with the pile.
-  picks?: Array<{ key: string, item: SearchItem, rarity: FilterRarity }>
+  picks?: Array<{ key: string, item: SearchItem, rarity: FilterRarity, facts?: ItemFacts }>
 }>()
 
 const emit = defineEmits<{
@@ -157,7 +157,8 @@ const pickDrops = computed<Drop[]>(() => {
   const doc = props.store.doc.value
   const classes = doc ? filterClasses(doc) : undefined
   return picks.value.map((p, i) => {
-    const facts = searchFacts(p.item, { areaLevel: area.value, rarity: p.rarity, classes })
+    // A pasted copy keeps its own item level and mods; only the area moves.
+    const facts = p.facts ? { ...p.facts, areaLevel: area.value } : searchFacts(p.item, { areaLevel: area.value, rarity: p.rarity, classes })
     return { id: PICK_ID + i, label: facts.baseType ?? p.item.name, facts }
   })
 })
