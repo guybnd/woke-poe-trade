@@ -102,6 +102,7 @@ async function answer (ask: { id: string, kind: string, args: unknown }): Promis
   try {
     let data: unknown
     if (ask.kind === 'atlas-nodes') data = await atlasNodes(String((ask.args as { treeUrl?: unknown })?.treeUrl ?? ''))
+    else if (ask.kind === 'trade-search') data = await tradeSearch(ask.args as { query?: unknown, league?: unknown, count?: unknown })
     else throw new Error(`Unknown question: ${ask.kind}`)
     await hostRequest('claude-answer', { id: ask.id, ok: true, data: data as never })
   } catch (e) {
@@ -122,5 +123,50 @@ async function atlasNodes (treeUrl: string) {
     smallOrMastery: tree.small,
     unknown: tree.unknown || undefined,
     byMechanic: tree.groups.map(g => ({ mechanic: g.mechanic, nodes: g.nodes.map(n => n.kind === 'keystone' ? `${n.name} (keystone): ${n.stats.join(' / ')}` : n.name) }))
+  }
+}
+
+// A trade search for Claude (Guy picked T2): through the price check's own
+// rate limiter and cache, and refused rather than queued when the limit is
+// close, so it never slows his own checks. Prices only: no names, no whispers.
+// One every 10 seconds at most, on top of the limiter, so a chatty Claude
+// leaves room for the player's own checks.
+export const CLAUDE_SEARCH_GAP_MS = 10_000
+let lastSearchAt = 0
+
+async function tradeSearch (args: { query?: unknown, league?: unknown, count?: unknown }) {
+  const wait = lastSearchAt + CLAUDE_SEARCH_GAP_MS - Date.now()
+  if (wait > 0) throw new Error(`Wait ${Math.ceil(wait / 1000)} s: Claude gets one trade search every 10 s`)
+  const body = args?.query as { query?: Record<string, unknown>, sort?: unknown } | undefined
+  if (!body || typeof body.query !== 'object' || body.query === null) throw new Error('query needs the trade site query object')
+  const league = (typeof args.league === 'string' && args.league) || AppConfig().leagueId
+  if (!league) throw new Error('No league is picked in the app settings')
+  const count = Math.min(10, Math.max(1, Math.floor(Number(args.count) || 10)))
+  const request = {
+    query: { status: { option: 'securable' }, stats: [], ...body.query },
+    sort: body.sort ?? { price: 'asc' }
+  }
+  const { requestTradeResultList, requestResults } = await import('@/web/price-check/trade/pathofexile-trade')
+  lastSearchAt = Date.now()
+  const found = await requestTradeResultList(request as never, league)
+  const listings = found.result.length
+    ? await requestResults(found.id, found.result.slice(0, count), { accountName: AppConfig().accountName })
+    : []
+  return {
+    league,
+    total: found.total,
+    url: `https://${getTradeEndpoint()}/trade/search/${encodeURIComponent(league)}/${found.id}`,
+    listings: listings.map(l => ({
+      price: l.priceAmount,
+      currency: l.priceCurrency,
+      stack: l.stackSize,
+      itemLevel: l.itemLevel,
+      quality: l.quality,
+      gemLevel: l.level,
+      corrupted: l.corrupted || undefined,
+      listed: l.relativeDate,
+      mine: l.isMine || undefined,
+      mods: l.tipItem ? [...l.tipItem.implicits, ...l.tipItem.mods] : undefined
+    }))
   }
 }

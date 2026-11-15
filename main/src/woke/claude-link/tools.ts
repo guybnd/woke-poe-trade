@@ -1,7 +1,8 @@
 // What Claude can ask the app for. Read tools return the app's own records,
 // trimmed to what helps; suggest tools only add a row to the Suggestions card,
-// which does nothing until Guy presses Apply. Nothing here calls the trade
-// site, whispers, or buys. Pure: everything outside comes through LinkDeps.
+// which does nothing until Guy presses Apply. trade_search goes through the
+// overlay's own trade rate limiter. Nothing here whispers or buys.
+// Pure: everything outside comes through LinkDeps.
 import type { ClaudeSuggestion, SuggestionKind } from '../../../../ipc/claude-link'
 import { listSettings, settingAllowed } from '../../../../ipc/claude-link'
 import { outcome } from './suggestions'
@@ -19,7 +20,7 @@ export interface LinkDeps {
   // Passive tree nodes by id, read from the app's tree data on demand.
   passiveTree: () => Promise<{ nodes: Map<number, TreeNodeInfo>, masteryEffects: Record<string, string[]> } | null>
   // Asks the overlay page for something only it has (atlas tree names).
-  askOverlay: (kind: string, args: unknown) => Promise<unknown>
+  askOverlay: (kind: string, args: unknown, timeoutMs?: number) => Promise<unknown>
   stashCache: (league: string) => Promise<StashCacheLike | null>
   // The live character the character sync last read (woke-character/current.json); null when none.
   character: () => Promise<CharacterLike | null>
@@ -66,7 +67,7 @@ const FRAMES = ['normal', 'magic', 'rare', 'unique', 'gem', 'currency', 'card', 
 export const INSTRUCTIONS = [
   'Woke PoE Trade is a Path of Exile 1 overlay. These tools read its records on this PC: the last item copied in game, price checks, poe.ninja prices it saved, the stash it read, net worth, saved trade searches, the character played now, Path of Building builds (skills, items, passive trees) and atlas strategies.',
   'Prices are in chaos orbs unless a field says divine.',
-  'You cannot whisper, buy, or call the trade site. To help with a trade, build the trade site query and send it with suggest_trade_search; the player opens it.',
+  'You cannot whisper or buy. trade_search shows what is listed (prices only, rate limited, use it sparingly); suggest_trade_search hands the player a search to open.',
   'suggest_* tools only add a row to the app\'s Suggestions card. Nothing changes until the player presses Apply. Keep titles short and say why in one line.',
   'Read settings before suggest_setting: only the keys it lists can be suggested, with a value of the same type.'
 ].join(' ')
@@ -394,6 +395,21 @@ export function buildTools (deps: LinkDeps): ToolDef[] {
         const search = str(a.search)
         return Object.fromEntries(Object.entries(all).filter(([k]) => !search || has(k, search)))
       }
+    },
+    {
+      name: 'trade_search',
+      description: 'Runs a search on the trade site through the app\'s rate limiter and returns the cheapest listings\' prices (no seller names). Refused when the limit is close or the last search was under 10 s ago, so it never slows the player\'s own price checks; wait and try again. query is the same body as suggest_trade_search.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'object', description: 'Trade site search body with "query" and optional "sort"' },
+          league: { type: 'string', description: 'Default: the app\'s league' },
+          count: { type: 'number', description: 'Listings to fetch, 1 to 10, default 10' }
+        },
+        required: ['query']
+      },
+      readOnly: true,
+      run: async (a) => await deps.askOverlay('trade-search', { query: a.query, league: a.league, count: a.count }, 90_000)
     },
     {
       name: 'suggest_trade_search',

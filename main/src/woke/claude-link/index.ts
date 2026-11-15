@@ -110,12 +110,12 @@ export function initClaudeLink ({ server, logger, op, register }: Deps): void {
     stashCache: async (league) => await readCache(league),
     // Written by the character sync (personal/character-sync.ts) once it's merged.
     character: async () => await readJson<CharacterLike>(path.join(dataDir('woke-character'), 'current.json')),
-    askOverlay: async (kind, args) => await new Promise((resolve, reject) => {
+    askOverlay: async (kind, args, timeoutMs = ASK_TIMEOUT_MS) => await new Promise((resolve, reject) => {
       const id = `${Date.now()}-${++askSeq}`
       const timer = setTimeout(() => {
         asks.delete(id)
         reject(new Error('The overlay did not answer. Is the app\'s overlay running?'))
-      }, ASK_TIMEOUT_MS)
+      }, timeoutMs)
       asks.set(id, { resolve, reject, timer })
       broadcast('claude-ask', { id, kind, args })
     }),
