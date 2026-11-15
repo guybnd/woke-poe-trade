@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.wrap" @focusin="open = true" @focusout="onFocusOut">
     <WField :model-value="modelValue" type="search" icon="fas fa-search" placeholder="Find any item, or paste one" style="width: 19rem;"
-      @update:model-value="onType"
+      @update:model-value="onType" @paste="onPaste"
       @keydown.enter.prevent="pick(rows[hl])" @keydown.down.prevent="step(1)" @keydown.up.prevent="step(-1)" />
     <div v-if="open && doc && modelValue.trim().length >= 2" :class="$style.list" role="listbox" @mousedown.prevent>
       <div v-if="rows.some(r => r.item.gear)" :class="$style.chips">
@@ -17,7 +17,7 @@
           <span class="w-dim text-xs w-trunc">{{ r.line }}</span>
         </span>
       </button>
-      <div v-if="!rows.length" class="w-faint text-xs" :class="$style.none">No item matches "{{ modelValue.trim() }}".</div>
+      <div v-if="!rows.length" class="w-faint text-xs" :class="$style.none">No item matches "{{ modelValue.trim() }}". A rare's name is random: search its base, or copy it in game (Ctrl+C) and paste it here.</div>
     </div>
   </div>
 </template>
@@ -30,7 +30,9 @@ import LabelPreview from './LabelPreview.vue'
 import { baseIcon } from './label-style'
 import { matchItem } from './match'
 import type { MatchResult } from './match'
-import type { FilterRarity } from './item-facts'
+import { itemFacts } from './item-facts'
+import type { FilterRarity, ItemFacts } from './item-facts'
+import { parseClipboard } from '@/parser'
 import { filterClasses, itemCatalog, searchFacts, searchItems } from './item-search'
 import type { SearchItem } from './item-search'
 import { ruleLabel } from './parse'
@@ -41,7 +43,7 @@ const props = defineProps<{ modelValue: string, doc: FilterDoc | null, areaLevel
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
   (e: 'open-rule', rule: { type: string, tier: string | null, base: string }): void
-  (e: 'drop-item', pick: { item: SearchItem, rarity: FilterRarity }): void
+  (e: 'drop-item', pick: { item: SearchItem, rarity: FilterRarity, facts?: ItemFacts }): void
 }>()
 
 const RARITIES = ['Normal', 'Magic', 'Rare'] as const
@@ -50,7 +52,11 @@ const hl = ref(0)
 // Gear shows as a rare unless you say otherwise: what most people check.
 const rarity = ref<FilterRarity>('Rare')
 
-interface Row { item: SearchItem, text: string, line: string, title: string, icon: string | null, match: MatchResult }
+// `facts`: a pasted copy, matched as it is, mods and all.
+interface Row { item: SearchItem, text: string, line: string, title: string, icon: string | null, match: MatchResult, facts?: ItemFacts }
+
+// The last item pasted, while the box still shows its title.
+const pasted = ref<{ query: string, item: SearchItem, facts: ItemFacts } | null>(null)
 
 const dataTick = ref(0)
 const classes = computed(() => props.doc ? filterClasses(props.doc) : new Map<string, string>())
@@ -62,7 +68,8 @@ const rows = computed<Row[]>(() => {
   const list = dataTick.value >= 0 ? itemCatalog() : []
   // Game data still loading: look again shortly, or the list stays empty.
   if (!list.length) setTimeout(() => { dataTick.value++ }, 500)
-  return searchItems(list, q).map(item => {
+  const copy = pasted.value?.query === q ? pasted.value : null
+  const found = searchItems(list, q).filter(item => !copy || item !== copy.item).map(item => {
     const facts = searchFacts(item, { areaLevel: props.areaLevel, rarity: rarity.value, classes: classes.value })
     const match = matchItem(doc, facts, { brief: true })
     const block = match.final?.block
@@ -79,7 +86,51 @@ const rows = computed<Row[]>(() => {
       match
     }
   })
+  return copy ? [pastedRow(doc, copy), ...found] : found
 })
+
+function pastedRow (doc: FilterDoc, copy: { item: SearchItem, facts: ItemFacts }): Row {
+  const facts = { ...copy.facts, areaLevel: copy.facts.areaLevel ?? props.areaLevel }
+  const match = matchItem(doc, facts, { brief: true })
+  const block = match.final?.block
+  const rule = block ? ruleLabel(block.type, block.tier) : 'no rule, the game default'
+  const hidden = match.visibility === 'Hide' ? 'Hidden · ' : ''
+  const ilvl = facts.itemLevel != null ? ` · item level ${facts.itemLevel}` : ''
+  return {
+    item: copy.item,
+    text: facts.baseType ?? copy.item.name,
+    line: `Pasted ${facts.rarity ?? 'item'}${ilvl} · ${hidden}${rule}`,
+    title: `${facts.name || copy.item.name}, as you copied it, with its mods`,
+    icon: baseIcon(copy.item.baseType),
+    match,
+    facts
+  }
+}
+
+// A copied item (Ctrl+C in game) keeps its lines here; the box itself
+// would run them together. Matched with its real mods and item level.
+function onPaste (e: ClipboardEvent) {
+  const text = e.clipboardData?.getData('text/plain') ?? ''
+  if (!/^Item Class:/m.test(text) || !/^Rarity:/m.test(text)) return
+  e.preventDefault()
+  const facts = itemFacts(text, parseClipboard(text).unwrapOr(null))
+  if (!facts.baseType) return
+  const base = itemCatalog().find(i => i.name === facts.baseType && i.kind !== 'Unique')
+  const item: SearchItem = base ?? {
+    name: facts.baseType,
+    kind: 'Item',
+    baseType: facts.baseType,
+    itemClass: facts.itemClass,
+    gear: false,
+    w: facts.width ?? 1,
+    h: facts.height ?? 1
+  }
+  // The copy's name lines run together: "Doom Nails Spike-Point Arrow Quiver".
+  const own = facts.name.endsWith(facts.baseType) ? facts.name.slice(0, -facts.baseType.length).trim() : ''
+  const name = own ? `${own}, ${facts.baseType}` : facts.baseType
+  pasted.value = { query: name, item, facts }
+  onType(name)
+}
 watch(() => props.modelValue, () => { hl.value = 0 })
 
 function onType (v: string | number) {
@@ -96,7 +147,7 @@ function pick (r: Row | undefined) {
   if (!r) return
   open.value = false
   if (props.drop) {
-    emit('drop-item', { item: r.item, rarity: rarity.value })
+    emit('drop-item', { item: r.item, rarity: r.facts?.rarity === 'Normal' || r.facts?.rarity === 'Magic' || r.facts?.rarity === 'Rare' ? r.facts.rarity : rarity.value, facts: r.facts })
     // Ready for the next one.
     emit('update:modelValue', '')
     return

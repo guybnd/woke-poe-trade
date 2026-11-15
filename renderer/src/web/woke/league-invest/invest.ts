@@ -61,8 +61,8 @@ export function median (values: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
-export function opportunityKey (o: { type: string, name: string, variant: string, links: string }): string {
-  return `${o.type}\u0000${o.name}\u0000${o.variant}\u0000${o.links}`
+export function opportunityKey (o: { type: string, name: string, variant?: string, links?: string }): string {
+  return `${o.type}\u0000${o.name}\u0000${o.variant ?? ''}\u0000${o.links ?? ''}`
 }
 
 export function rankOpportunities (histories: LeagueHistory[], opts: RankOptions): Opportunity[] {
@@ -126,8 +126,8 @@ export function rankOpportunities (histories: LeagueHistory[], opts: RankOptions
     out.push({
       type: a.item.type,
       name: a.item.name,
-      variant: a.item.variant,
-      links: a.item.links,
+      variant: a.item.variant ?? '',
+      links: a.item.links ?? '',
       leagues: a.leagues,
       multiples: a.multiples,
       median: med,

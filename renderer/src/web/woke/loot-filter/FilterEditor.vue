@@ -289,7 +289,7 @@ import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
-import type { FilterRarity } from './item-facts'
+import type { FilterRarity, ItemFacts } from './item-facts'
 import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
@@ -392,9 +392,10 @@ const isOwnGroup = computed(() => selType.value === OWN_RULE_TYPE)
 // The search box shows items as they drop where you are now.
 const searchAreaLevel = computed(() => props.store.areaLevel.value ?? props.config.fallbackAreaLevel)
 // Items searched on the Preview tab lie on its ground, newest first, a few at most.
-const previewPicks = shallowRef<Array<{ key: string, item: SearchItem, rarity: FilterRarity }>>([])
-function dropPick (p: { item: SearchItem, rarity: FilterRarity }) {
-  const key = `${p.item.kind}|${p.item.name}|${p.item.gear ? p.rarity : ''}`
+const previewPicks = shallowRef<Array<{ key: string, item: SearchItem, rarity: FilterRarity, facts?: ItemFacts }>>([])
+function dropPick (p: { item: SearchItem, rarity: FilterRarity, facts?: ItemFacts }) {
+  // A pasted copy is its own drop, apart from the plain base.
+  const key = p.facts ? `pasted|${Date.now()}` : `${p.item.kind}|${p.item.name}|${p.item.gear ? p.rarity : ''}`
   previewPicks.value = [{ key, ...p }, ...previewPicks.value.filter(x => x.key !== key)].slice(0, 6)
 }
 const targets = computed(() => props.store.doc.value && selType.value ? moveTargets(props.store.doc.value, selType.value) : [])
