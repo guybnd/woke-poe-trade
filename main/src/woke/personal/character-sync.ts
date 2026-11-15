@@ -234,13 +234,20 @@ export function fileStore (dir: string): CharacterStore {
     await fs.mkdir(path.dirname(file), { recursive: true })
     const tmp = `${file}.${process.pid}.tmp`
     await fs.writeFile(tmp, data, 'utf8')
-    await fs.rename(tmp, file)
+    try {
+      await fs.rename(tmp, file)
+    } catch {
+      // Windows refuses while another program has the file open: once more, then give up.
+      await new Promise(resolve => setTimeout(resolve, 150))
+      await fs.rename(tmp, file).catch(async (e: Error) => { await fs.rm(tmp, { force: true }).catch(() => {}); throw e })
+    }
   }
   return {
     load: async () => {
       try {
         const s = JSON.parse(await fs.readFile(path.join(dir, 'current.json'), 'utf8')) as CharacterSnapshot
-        return s && s.version === SNAPSHOT_VERSION && s.character && Array.isArray(s.gear) ? s : null
+        return s && s.version === SNAPSHOT_VERSION && typeof s.account === 'string' && s.character && typeof s.character.name === 'string' &&
+          Array.isArray(s.gear) && Array.isArray(s.gems) && s.tree && Array.isArray(s.tree.nodes) ? s : null
       } catch {
         return null
       }
@@ -311,7 +318,11 @@ export class CharacterSync {
   read (reason: 'area' | 'manual'): Promise<CharacterSyncStatus> {
     if (this.running) return this.running
     const gap = reason === 'area' ? AUTO_MS : MANUAL_MS
-    if ((reason === 'area' && !this.auto) || !this.deps.account() || (this.lastTry && this.deps.now() - this.lastTry < gap)) {
+    if ((reason === 'area' && !this.auto) || !this.deps.account()) return this.current()
+    const wait = this.lastTry ? this.lastTry + gap - this.deps.now() : 0
+    if (wait > 0) {
+      // Read now too soon: say so, without keeping it as the read's error.
+      if (reason === 'manual') return this.current().then(s => ({ ...s, error: `Read just now; again in ${Math.ceil(wait / 1000)} s.` }))
       return this.current()
     }
     this.lastTry = this.deps.now()

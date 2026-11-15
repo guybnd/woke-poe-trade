@@ -2,7 +2,7 @@
 // character-sync.ts), kept apart from every PoB build, and how it compares
 // with one. Main reads in the background; this only shows the result. Off
 // unless the stash reader is on.
-import { computed, shallowRef, watch } from 'vue'
+import { computed, effectScope, shallowRef, watch } from 'vue'
 import type { Ref } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { personalOn } from '../personal'
@@ -36,7 +36,8 @@ export const characterStatus = shallowRef<CharacterStatus>(EMPTY)
 export const character = computed(() => characterStatus.value.snapshot)
 
 function take (s: unknown) {
-  if (!s || typeof s !== 'object') return
+  // A reply landing after the stash reader was turned off.
+  if (!personalOn.value || !s || typeof s !== 'object') return
   const next = { ...EMPTY, ...(s as Partial<CharacterStatus>) }
   // Same read as before: keep the object, so nothing recalculates.
   const prev = characterStatus.value.snapshot
@@ -54,10 +55,13 @@ export function startCharacterSync (hint: () => string, auto: () => boolean) {
   MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
     if (topic === 'character-sync') take(data)
   })
-  watch([personalOn, hint, auto], ([on, character, a]) => {
-    if (!on) { characterStatus.value = EMPTY; return }
-    hostRequest('character-sync', { character, auto: a }, 10_000).then(take).catch(() => {})
-  }, { immediate: true })
+  // Not the widget's scope: it outlives the widget that started it.
+  effectScope(true).run(() => {
+    watch([personalOn, hint, auto], ([on, character, a]) => {
+      if (!on) { characterStatus.value = EMPTY; return }
+      hostRequest('character-sync', { character, auto: a }, 10_000).then(take).catch(() => {})
+    }, { immediate: true })
+  })
 }
 
 export function readCharacterNow (hint: string) {
@@ -68,6 +72,7 @@ export function readCharacterNow (hint: string) {
 }
 
 export const CHARACTER_TREE = 'Your character'
+const CLUSTER_IDS = 0x10000
 
 // The character's tree as a PoB tree, for the tree window's compare.
 export function characterTreeSpec (s: CharacterSnapshot): PobTreeSpec {
@@ -75,7 +80,8 @@ export function characterTreeSpec (s: CharacterSnapshot): PobTreeSpec {
     title: CHARACTER_TREE,
     url: '',
     isActive: false,
-    nodes: [...s.tree.nodes, ...s.tree.clusterNodes],
+    // Cluster passives aren't drawn: see characterDiff.
+    nodes: s.tree.nodes.filter(id => id < CLUSTER_IDS),
     masteries: s.tree.masteries
   }
 }
@@ -162,13 +168,16 @@ export function characterDiff (s: CharacterSnapshot, d: PobDetails, nodes: Map<n
   const gear = gearDiff(l.itemSet?.item.slots ?? [], s.gear)
   const gems = gemDiff(l.skillSet?.item.groups ?? d.skills, s.gems)
   const treeSpec = l.tree ?? d.trees.find(t => t.isActive) ?? null
-  const mine = [...s.tree.nodes, ...s.tree.clusterNodes]
+  // Cluster jewel passives are left out: the site and PoB number them
+  // differently (PoB makes its own ids from 65536 up).
+  const mine = s.tree.nodes.filter(id => id < CLUSTER_IDS)
+  const theirs = treeSpec?.nodes?.filter(id => id < CLUSTER_IDS)
   return {
     gear,
     gearOff: gear.filter(r => r.state === 'differs' || r.state === 'missing').length,
     gems,
     gemsMissing: gems.reduce((n, g) => n + g.gems.filter(x => !x.have).length, 0),
-    tree: treeSpec?.nodes ? treeDiff(nodes, mine, treeSpec.nodes) : null,
+    tree: theirs ? treeDiff(nodes, mine, theirs) : null,
     treeTitle: treeSpec?.title ?? null
   }
 }

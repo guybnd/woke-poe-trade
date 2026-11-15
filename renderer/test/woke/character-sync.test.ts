@@ -136,6 +136,15 @@ describe('CharacterSync', () => {
     expect(t.urls).toHaveLength(6)
   })
 
+  it('says when Read now comes too soon', async () => {
+    const t = setup()
+    await t.sync.read('manual')
+    t.advance(10_000)
+    const s = await t.sync.read('manual')
+    expect(s.error).toBe('Read just now; again in 20 s.')
+    expect(s.snapshot).not.toBeNull()
+  })
+
   it('makes no area reads with auto off, the default', async () => {
     const t = setup()
     await t.sync.read('area')
