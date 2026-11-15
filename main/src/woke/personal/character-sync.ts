@@ -18,7 +18,9 @@ import { POE_SITE, isSignedOut } from './stash-reader'
 import type { Fetcher, HttpReply } from './stash-reader'
 import { SIGNED_OUT, characterEntry, cleanMod, socketColour, wornItem } from './worn-items'
 
-export const SNAPSHOT_VERSION = 1
+// 2: mods read from 3.30's { description } objects. A version 1 read lost
+// every mod: it is read again from the saved replies, or dropped.
+export const SNAPSHOT_VERSION = 2
 export const AUTO_MS = 5 * 60_000
 export const MANUAL_MS = 30_000
 const MAX_WAIT_MS = 10_000
@@ -248,8 +250,15 @@ export function fileStore (dir: string): CharacterStore {
     load: async () => {
       try {
         const s = JSON.parse(await fs.readFile(path.join(dir, 'current.json'), 'utf8')) as CharacterSnapshot
-        return s && s.version === SNAPSHOT_VERSION && typeof s.account === 'string' && s.character && typeof s.character.name === 'string' &&
-          Array.isArray(s.gear) && Array.isArray(s.gems) && s.tree && Array.isArray(s.tree.nodes) ? s : null
+        const ok = s && typeof s.account === 'string' && s.character && typeof s.character.name === 'string' &&
+          Array.isArray(s.gear) && Array.isArray(s.gems) && s.tree && Array.isArray(s.tree.nodes)
+        if (!ok) return null
+        if (s.version === SNAPSHOT_VERSION) return s
+        if (s.version !== 1) return null
+        // The replies saved beside it are that same read's (both are written each read).
+        const items = parseCharacterItems(await fs.readFile(path.join(dir, 'last-items-reply.json'), 'utf8'))
+        const tree = parsePassives(await fs.readFile(path.join(dir, 'last-passives-reply.json'), 'utf8'))
+        return items && tree ? { ...s, version: SNAPSHOT_VERSION, ...items, tree } : null
       } catch {
         return null
       }

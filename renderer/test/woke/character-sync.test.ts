@@ -394,3 +394,21 @@ describe('socket colours', () => {
     expect(parseCharacterItems(JSON.stringify({ items: [{ inventoryId: 'Helm', frameType: 0, typeLine: 'Iron Hat', baseType: 'Iron Hat', ...raw }] }))!.gear[0].item.sockets).toBe('R-G W')
   })
 })
+
+describe('fileStore with an older read', () => {
+  it('reads a version 1 snapshot again from the replies saved beside it, or drops it', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-char-v1-'))
+    const store = fileStore(dir)
+    const old = { version: 1, account: 'guy', readAt: 5, character: { name: 'whekq', league: 'Covens', class: 'Gladiator', level: 81 }, gear: [], gems: [], tree: { nodes: [], clusterNodes: [], masteries: {}, jewels: [] } }
+    fs.writeFileSync(path.join(dir, 'current.json'), JSON.stringify(old))
+    expect(await store.load()).toBeNull()
+    fs.writeFileSync(path.join(dir, 'last-items-reply.json'), ITEMS)
+    fs.writeFileSync(path.join(dir, 'last-passives-reply.json'), JSON.stringify({ hashes: [1, 2] }))
+    const s = (await store.load())!
+    expect(s.version).toBe(2)
+    expect(s.readAt).toBe(5)
+    expect(s.gear[0].item.mods).toEqual(['+45 to maximum Life'])
+    expect(s.tree.nodes).toEqual([1, 2])
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+})
