@@ -97,6 +97,19 @@ describe('one Market window with tabs', () => {
     expect(widgets[0].pinned).toEqual([5, 3, 7])
   })
 
+  it('folds every copy, and keeps the rail name and panel size', () => {
+    const widgets: W[] = [
+      { wmId: 1, wmType: 'menu', pinned: [8, 9], labels: { 8: 'Prices' } },
+      { wmId: 3, wmType: MARKET_TRACKER_TYPE, wmTitle: 'Movers', wokeSizes: { main: { w: 400 } } },
+      { wmId: 8, wmType: MARKET_BROWSER_TYPE, corrupted: 'only', wokeSizes: { main: { w: 700 } } },
+      { wmId: 9, wmType: MARKET_BROWSER_TYPE }
+    ]
+    foldMarketWindow(widgets)
+    expect(widgets.map(w => w.wmType)).toEqual(['menu', MARKET_TRACKER_TYPE])
+    expect(widgets[0]).toMatchObject({ pinned: [3], labels: { 3: 'Prices' } })
+    expect(widgets[1]).toMatchObject({ priceCorrupted: 'only', wokeSizes: { main: { w: 400 }, prices: { w: 700 } } })
+  })
+
   it('moves the rail pin over when only the price list was pinned', () => {
     const widgets: W[] = [menu([8]), { wmId: 3, wmType: MARKET_TRACKER_TYPE, wmTitle: 'Movers' }, { wmId: 8, wmType: MARKET_BROWSER_TYPE }]
     foldMarketWindow(widgets)

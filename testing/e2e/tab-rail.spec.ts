@@ -17,7 +17,6 @@ async function boot (overlay: Overlay, patchMenu?: (menu: any) => void) { // esl
   await overlay.boot({
     overlayActive: true,
     widgets: [
-      // An old config: its Market window becomes Movers, and the new Market joins the rail closed.
       seed('woke-market-tracker', 'Market'),
       seed('woke-boss-runs', 'Boss runs'),
       seed('woke-map-scan', 'Map scan'),
@@ -39,7 +38,7 @@ async function boot (overlay: Overlay, patchMenu?: (menu: any) => void) { // esl
   const rail = overlay.widget('menu').locator('.w-surface').first()
   await expect(rail).toBeVisible()
   if (!patchMenu) {
-    for (const name of ['Movers', 'Map scan', 'Loot filter', 'Challenges']) {
+    for (const name of ['Market', 'Map scan', 'Loot filter', 'Challenges']) {
       await expect(icon(overlay, name)).toHaveClass(/open/)
       await icon(overlay, name).click()
     }

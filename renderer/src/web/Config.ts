@@ -558,7 +558,7 @@ function upgradeConfig (_config: Config): Config {
   // woke: the map quantity starter string reads 3.30's Atlas Drops line.
   renameQuantityStarter(config.widgets as Array<{ wmType: string, entries?: RegexEntry[] }>)
   // woke: Market is one window with Prices, Movers and Watchlist tabs, opening on Prices.
-  if (modules.woke && (modules.woke.version ?? 0) < 3) {
+  if ((modules.woke?.version ?? 0) < 3) {
     foldMarketWindow(config.widgets as unknown as Array<Record<string, unknown> & { wmId: number, wmType: string }>)
   }
   // woke: each tool has one name now.

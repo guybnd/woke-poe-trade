@@ -16,7 +16,7 @@
       </template>
     </DockItem>
     <WPanel ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180"
-      :width="prices ? '46rem' : '30rem'" :max-height="prices ? '80vh' : undefined" :scroll="!prices" :fill="prices">
+      :width="prices ? '46rem' : '30rem'" :size-key="prices ? 'prices' : 'main'" :max-height="prices ? '80vh' : undefined" :scroll="!prices" :fill="prices">
       <template v-if="collector.lastError.value" #banner>
         <WBanner>Could not save the latest prices ({{ collector.lastError.value }}). This shows the last saved prices and tries again at the next refresh.</WBanner>
       </template>

@@ -57,6 +57,7 @@ export interface MarketTrackerWidget extends Widget {
   priceSort?: MarketSort
   priceDesc?: boolean
   priceSkipThin?: boolean
+  priceCorrupted?: CorruptedFilter
 }
 
 // Opens the tracker on a search, from the search palette.
@@ -68,31 +69,44 @@ type WidgetRecord = Record<string, unknown> & { wmId: number, wmType: string }
 // Movers and Watchlist tabs. A separate Market window from a dev build folds
 // into it, keeping its settings and its rail spot.
 export function foldMarketWindow (widgets: WidgetRecord[]): void {
-  const browserAt = widgets.findIndex(w => w.wmType === MARKET_BROWSER_TYPE)
-  const browser = browserAt === -1 ? undefined : widgets[browserAt]
+  const browsers = widgets.filter(w => w.wmType === MARKET_BROWSER_TYPE)
+  const browser = browsers[0] as WidgetRecord | undefined
   let tracker = widgets.find(w => w.wmType === MARKET_TRACKER_TYPE)
   if (browser && !tracker) {
     // Only the price list was kept: it becomes the window.
     tracker = browser
     Object.assign(tracker, { wmType: MARKET_TRACKER_TYPE, view: 'prices', period: '24h', minChaos: 5, typeFilter: '', watchlist: [] })
-  } else if (browser && tracker) {
-    widgets.splice(browserAt, 1)
-    const menu = widgets.find(w => w.wmType === 'menu') as { pinned?: number[] } | undefined
-    if (menu?.pinned) {
-      const pins = menu.pinned
-      const at = pins.indexOf(browser.wmId)
-      if (at !== -1) {
-        if (pins.includes(tracker.wmId)) pins.splice(at, 1)
-        else pins.splice(at, 1, tracker.wmId)
-      }
+    const sizes = tracker.wokeSizes as Record<string, unknown> | undefined
+    if (sizes?.main) tracker.wokeSizes = { prices: sizes.main }
+  }
+  // Every other copy goes, its rail spot and name passing to the Market window.
+  const menu = widgets.find(w => w.wmType === 'menu') as { pinned?: number[], labels?: Record<number, string> } | undefined
+  for (const old of browsers) {
+    if (old === tracker || !tracker) continue
+    widgets.splice(widgets.indexOf(old), 1)
+    const pins = menu?.pinned
+    const at = pins?.indexOf(old.wmId) ?? -1
+    if (pins && at !== -1) {
+      if (pins.includes(tracker.wmId)) pins.splice(at, 1)
+      else pins.splice(at, 1, tracker.wmId)
+    }
+    if (menu?.labels?.[old.wmId] != null) {
+      menu.labels[tracker.wmId] ??= menu.labels[old.wmId]
+      menu.labels = Object.fromEntries(Object.entries(menu.labels).filter(([id]) => Number(id) !== old.wmId))
     }
   }
   if (!tracker) return
+  if (browser && browser !== tracker) {
+    // Its size was the price list's.
+    const sizes = (browser.wokeSizes ?? {}) as Record<string, unknown>
+    if (sizes.main) tracker.wokeSizes = { ...(tracker.wokeSizes as Record<string, unknown> | undefined), prices: sizes.main }
+  }
   if (browser) {
     tracker.priceCategory = browser.category ?? browser.priceCategory
     tracker.priceSort = browser.sort ?? browser.priceSort
     tracker.priceDesc = browser.desc ?? browser.priceDesc
     tracker.priceSkipThin = browser.hideThin ?? browser.priceSkipThin
+    tracker.priceCorrupted = browser.corrupted ?? browser.priceCorrupted
     delete tracker.category
     delete tracker.sort
     delete tracker.desc

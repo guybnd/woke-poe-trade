@@ -127,8 +127,8 @@ const unit = computed({
   set: (v: string) => { props.config.unit = v === 'div' ? 'div' : 'chaos' }
 })
 const corrupted = computed({
-  get: () => props.config.corrupted ?? 'any',
-  set: (v: CorruptedFilter) => { props.config.corrupted = v }
+  get: () => props.config.priceCorrupted ?? 'any',
+  set: (v: CorruptedFilter) => { props.config.priceCorrupted = v }
 })
 
 const ROW_LIMIT = 200
