@@ -290,7 +290,7 @@ function pressKeysToCopyItemText (pressedModKeys: string[] = [], showModsKey: st
     liftAlt = pressedModKeys.includes('Alt')
   }
 
-  if (liftAlt) liftAltForCopy()
+  if (liftAlt) liftAlt = liftAltForCopy()
   for (const key of keys) {
     uIOhook.keyToggle(UiohookKey[key as UiohookKeyT], 'down')
   }

@@ -65,11 +65,16 @@ uIOhook.on('keyup', (e) => {
 // other since: the correction above and the player's own release match it.
 let liftedKey: number = UiohookKey.Alt
 
-export function liftAltForCopy (): void {
+// Only left Alt is lifted. Whether an injected right Alt comes back through
+// the hook as right Alt is untested, and a miss there would leave left Alt
+// stuck down; a right Alt copy just fails as before.
+export function liftAltForCopy (): boolean {
+  if (altKey !== UiohookKey.Alt) return false
   // altHeld is left as the hook last saw it: a release already seen must
   // count, or the re-press below would never be undone.
   liftedKey = altKey
   inject('up', liftedKey)
+  return true
 }
 
 export function restoreAltAfterCopy (): void {
