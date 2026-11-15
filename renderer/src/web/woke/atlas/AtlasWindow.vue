@@ -1,5 +1,5 @@
 <template>
-    <div class="flex gap-2 min-h-0 items-start" :class="$style.root">
+    <div class="flex gap-2 min-h-0 items-start">
       <WPanel ref="panel" :title="config.wmTitle || 'Atlas strategies'" icon="map" width="22rem" max-height="80vh"
         :updated="prices.snapshot.value?.ts ?? null" :fresh-min="60" :stale-min="360">
         <!-- Only while a strategy still lists 3.29 scarabs. -->
@@ -93,24 +93,27 @@
       </template>
 
       <!-- Closing with unsaved trees (pick W1): ask first. Closing without
-           saving keeps the edits as drafts, like before. -->
-      <div v-if="asking && askList.length" :class="$style.scrim" @mousedown.self="keepEditing">
-        <div :class="$style.ask" class="w-surface" role="alertdialog" aria-modal="true" aria-labelledby="atlas-unsaved-title" @keydown="askKeys">
-          <div id="atlas-unsaved-title" :class="$style.askHead">{{ askList.length > 1 ? 'Unsaved trees' : 'Unsaved tree' }}</div>
-          <div :class="$style.askBody">
-            <template v-if="askList.length === 1"><b>{{ askList[0].name || 'Untitled' }}</b> has tree changes you haven't saved.</template>
-            <template v-else>
-              These strategies have tree changes you haven't saved:
-              <ul :class="$style.askList"><li v-for="s in askList" :key="s.id" class="w-trunc">{{ s.name || 'Untitled' }}</li></ul>
-            </template>
-          </div>
-          <div :class="$style.askFoot">
-            <WButton size="sm" variant="ghost" @click="keepEditing">Keep editing</WButton>
-            <WButton size="sm" title="Your changes stay as unsaved edits for next time" @click="finishClose(false)">{{ asking === 'tree' ? 'Hide without saving' : 'Close without saving' }}</WButton>
-            <span ref="saveBtn"><WButton size="sm" variant="primary" icon="fas fa-save" @click="finishClose(true)">{{ askList.length > 1 ? 'Save all and ' : 'Save and ' }}{{ asking === 'tree' ? 'hide' : 'close' }}</WButton></span>
+           saving keeps the edits as drafts, like before. On the overlay's
+           layer, so it's on screen whatever the window's size or place. -->
+      <Teleport to="body">
+        <div v-if="asking && askList.length" :class="$style.scrim" @mousedown.self.stop="keepEditing">
+          <div ref="askBox" :class="$style.ask" class="w-surface" role="alertdialog" aria-modal="true" aria-labelledby="atlas-unsaved-title" @keydown="askKeys">
+            <div id="atlas-unsaved-title" :class="$style.askHead">{{ askList.length > 1 ? 'Unsaved trees' : 'Unsaved tree' }}</div>
+            <div :class="$style.askBody">
+              <template v-if="askList.length === 1"><b>{{ askList[0].name || 'Untitled' }}</b> has tree changes you haven't saved.</template>
+              <template v-else>
+                These strategies have tree changes you haven't saved:
+                <ul :class="$style.askList"><li v-for="s in askList" :key="s.id" class="w-trunc">{{ s.name || 'Untitled' }}</li></ul>
+              </template>
+            </div>
+            <div :class="$style.askFoot">
+              <WButton size="sm" variant="ghost" @click="keepEditing">Keep editing</WButton>
+              <WButton size="sm" title="Your changes stay as unsaved edits for next time" @click="finishClose(false)">{{ asking === 'tree' ? 'Hide without saving' : 'Close without saving' }}</WButton>
+              <WButton size="sm" variant="primary" icon="fas fa-save" data-ask-save @click="finishClose(true)">{{ askList.length > 1 ? 'Save all and ' : 'Save and ' }}{{ asking === 'tree' ? 'hide' : 'close' }}</WButton>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
     </div>
 </template>
 
@@ -218,43 +221,75 @@ const selected = computed(() => props.config.strategies.find(s => s.id === props
 
 // ---- closing with unsaved trees ----
 
-// Closing the window (its close button, hotkey or tab) or hiding the tree asks
-// first while a tree has unsaved edits. Going back to the game only hides the
+// Closing the window (its close button or tab) or hiding the tree asks first
+// while a tree has unsaved edits. Going back to the game only hides the
 // overlay, so it never asks.
 const wm = inject<WidgetManager>('wm')!
 const asking = shallowRef<null | 'window' | 'tree'>(null)
-const saveBtn = shallowRef<HTMLElement | null>(null)
-const unsavedTrees = computed(() => props.config.strategies.filter(s => isDirty(props.config, s)))
+// The strategy the tree question is about, fixed when it's asked.
+const askTreeId = shallowRef<number | null>(null)
+const askBox = shallowRef<HTMLElement | null>(null)
+// Drafts already answered with "without saving": not asked about again
+// until they change (they stay unsaved, and the list still marks them).
+const declined = new Map<string, string>()
+function unanswered (s: AtlasStrategy): boolean {
+  return isDirty(props.config, s) && declined.get(String(s.id)) !== props.config.drafts?.[s.id]
+}
+const unsavedTrees = computed(() => props.config.strategies.filter(unanswered))
 const askList = computed<AtlasStrategy[]>(() => {
-  if (asking.value === 'tree') return selected.value && isDirty(props.config, selected.value) ? [selected.value] : []
+  if (asking.value === 'tree') return props.config.strategies.filter(s => s.id === askTreeId.value && isDirty(props.config, s))
   return asking.value ? unsavedTrees.value : []
 })
+let focusBack: HTMLElement | null = null
 function ask (kind: 'window' | 'tree') {
+  if (!asking.value) focusBack = document.activeElement instanceof HTMLElement ? document.activeElement : null
   asking.value = kind
-  nextTick(() => saveBtn.value?.querySelector('button')?.focus())
+  nextTick(() => askBox.value?.querySelector<HTMLElement>('[data-ask-save]')?.focus())
+}
+function endAsk () {
+  asking.value = null
+  const el = focusBack
+  focusBack = null
+  if (el?.isConnected) nextTick(() => el.focus({ preventScroll: true }))
 }
 // Set while this window closes itself after the question.
 let closing = false
-watch(() => props.config.wmWants, (now, was) => {
-  if (closing || now !== 'hide' || was !== 'show') return
+// The config the guard watches: a whole new config (another window saved
+// settings) isn't the user closing this one.
+let watched: AtlasWidget | null = null
+watch(() => [props.config, props.config.wmWants] as const, ([config, now], [, was]) => {
+  const same = watched === config
+  watched = config
+  if (!same || closing || now !== 'hide' || was !== 'show') return
   if (!wm.active.value || !unsavedTrees.value.length) return
-  props.config.wmWants = 'show'
+  config.wmWants = 'show'
   ask('window')
-}, { flush: 'sync' })
+}, { flush: 'sync', immediate: false })
+watched = props.config
 // Saved or undone elsewhere meanwhile: nothing left to ask about.
-watch(() => askList.value.length, (n) => { if (!n) asking.value = null })
+watch(() => askList.value.length, (n) => { if (!n && asking.value) endAsk() })
+// Back to the game (Esc goes there too): the question goes away.
+watch(() => wm.active.value, (a) => { if (!a && asking.value) endAsk() })
 
 function closeTree () {
-  if (selected.value && isDirty(props.config, selected.value)) ask('tree')
-  else props.config.treeHidden = true
+  const s = selected.value
+  if (s && unanswered(s)) {
+    askTreeId.value = s.id
+    ask('tree')
+  } else {
+    props.config.treeHidden = true
+  }
 }
 function keepEditing () {
-  asking.value = null
+  endAsk()
 }
 function finishClose (save: boolean) {
   const kind = asking.value
-  if (save) for (const s of askList.value) saveDraft(props.config, s)
-  asking.value = null
+  for (const s of askList.value) {
+    if (save) saveDraft(props.config, s)
+    else declined.set(String(s.id), props.config.drafts?.[s.id] ?? '')
+  }
+  endAsk()
   if (kind === 'tree') {
     props.config.treeHidden = true
   } else if (kind === 'window') {
@@ -267,7 +302,16 @@ function askKeys (e: KeyboardEvent) {
     e.preventDefault(); e.stopPropagation(); keepEditing()
   } else if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
     e.preventDefault(); e.stopPropagation(); finishClose(true)
+  } else if (e.key === 'Tab') {
+    // Keep the keyboard in the question.
+    const buttons = [...(askBox.value?.querySelectorAll<HTMLElement>('button') ?? [])]
+    if (!buttons.length) return
+    const at = buttons.indexOf(document.activeElement as HTMLElement)
+    const next = (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length
+    e.preventDefault()
+    buttons[at < 0 ? 0 : next].focus()
   }
+  e.stopPropagation()
 }
 const hasScarabs = computed(() => props.config.strategies.some(s => /scarab/i.test(s.scarabs)))
 
@@ -984,16 +1028,16 @@ function pasteSearch (text: string) {
   color: var(--w-panel-solid-base);
   background: var(--w-accent);
 }
-.root { position: relative; }
 .scrim {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 1000;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 6rem;
+  padding: 16px;
   background: rgb(0 0 0 / 0.55);
+  pointer-events: auto;
 }
 .ask {
   width: 34rem;

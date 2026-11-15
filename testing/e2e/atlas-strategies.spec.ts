@@ -158,29 +158,23 @@ async function takeAPassive (overlay: Overlay, atlas: ReturnType<Overlay['widget
   expect(found).toBe(true)
   await overlay.page.mouse.down()
   await overlay.page.mouse.up()
-  await expect(atlas.getByText('Unsaved changes')).toBeVisible()
+  await expect(atlas.getByTitle("The tree has changes you haven't saved")).toBeVisible()
 }
 
-test('unsaved changes: a bar under the tree, and closing asks first', async ({ overlay, fakeApp }) => {
+test('unsaved changes: a gold frame and label on the tree, and closing asks first', async ({ overlay, fakeApp }) => {
   test.setTimeout(90_000)
   const atlas = await bootAtlas(overlay, await smallTreeLink())
   await takeAPassive(overlay, atlas)
-  await expect(atlas.getByText('Unsaved', { exact: true })).toBeVisible()
-  await overlay.snap('unsaved bar under the tree')
+  await expect(atlas.getByTitle('Tree changes not saved')).toBeVisible()
+  await overlay.snap('unsaved tree: gold frame and a label with Save')
 
-  // Hiding the tree asks; Hide without saving keeps the edit as a draft.
+  // Hiding the tree asks; Keep editing leaves it as it was.
   await atlas.getByTitle('Hide the tree').first().click()
   const dialog = overlay.page.getByRole('alertdialog')
   await expect(dialog).toContainText("Breach threads has tree changes you haven't saved")
   await dialog.getByRole('button', { name: 'Keep editing' }).click()
   await expect(dialog).toHaveCount(0)
-  // The loadout's tree button asks too; Hide without saving keeps the draft.
-  await atlas.getByTitle('Hide the tree').last().click()
-  await dialog.getByRole('button', { name: 'Hide without saving' }).click()
-  await expect(atlas.getByText(/\d+ \/ \d+ points/)).toHaveCount(0)
-  await expect(atlas.getByText('Unsaved', { exact: true })).toBeVisible()
-  await atlas.getByTitle(/Show the tree/).first().click()
-  await expect(atlas.getByText('Unsaved changes')).toBeVisible()
+  await expect(atlas.getByTitle("The tree has changes you haven't saved")).toBeVisible()
 
   // Closing the window asks too, and stays open meanwhile.
   const close = atlas.locator('[data-w-panel]').first().locator('button:has(i.fa-times)')
@@ -188,9 +182,16 @@ test('unsaved changes: a bar under the tree, and closing asks first', async ({ o
   await expect(dialog).toBeVisible()
   await overlay.snap('closing with an unsaved tree asks first')
   await expect(atlas.getByText('Juicing', { exact: true })).toBeVisible()
-  // Esc is Keep editing.
-  await overlay.page.keyboard.press('Escape')
+  // The keyboard stays in the question: Tab wraps round its buttons.
+  await expect(dialog.getByRole('button', { name: 'Save and close' })).toBeFocused()
+  await overlay.page.keyboard.press('Tab')
+  await expect(dialog.getByRole('button', { name: 'Keep editing' })).toBeFocused()
+  // Going back to the game puts the question away.
+  // (In the app Esc goes back to the game, so that's how Esc ends it.)
+  fakeApp.focusGame(true)
   await expect(dialog).toHaveCount(0)
+  await overlay.pressHotkey(overlay.config.overlayKey)
+  await expect(atlas.getByText('Juicing', { exact: true })).toBeVisible()
 
   await close.click()
   fakeApp.clearReceived()
@@ -200,6 +201,23 @@ test('unsaved changes: a bar under the tree, and closing asks first', async ({ o
   const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
   expect(saved.wmWants).toBe('hide')
   expect(saved.drafts ?? {}).toEqual({})
+})
+
+test('the tree button in the loadout asks too, and an answered draft isn\'t asked about again', async ({ overlay }) => {
+  test.setTimeout(90_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  await takeAPassive(overlay, atlas)
+  const dialog = overlay.page.getByRole('alertdialog')
+  await atlas.getByTitle('Hide the tree').last().click()
+  await dialog.getByRole('button', { name: 'Hide without saving' }).click()
+  await expect(atlas.getByText(/\d+ \/ \d+ points/)).toHaveCount(0)
+  await expect(atlas.getByTitle('Tree changes not saved')).toBeVisible()
+  await atlas.getByTitle(/Show the tree/).first().click()
+  await expect(atlas.getByTitle("The tree has changes you haven't saved")).toBeVisible()
+  // Same draft, already answered: hides without asking.
+  await atlas.getByTitle('Hide the tree').first().click()
+  await expect(atlas.getByText(/\d+ \/ \d+ points/)).toHaveCount(0)
+  await expect(dialog).toHaveCount(0)
 })
 
 test('closing without saving keeps the tree edit for next time', async ({ overlay, fakeApp }) => {
