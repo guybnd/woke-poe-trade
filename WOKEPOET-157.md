@@ -14,6 +14,11 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-08T09:53:54.966Z'
+    comment: Created ticket.
+  - type: activity
+    user: Agent
+    date: '2026-11-08T09:53:54.966Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-08t09-53-54-966z
 ---
 Once a Thread market forms on poe.ninja, consider Thread EV / pricing in the flips or farming views, replacing scarab-based EV.

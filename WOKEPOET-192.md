@@ -14,7 +14,12 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-11T04:22:47.365Z'
+    comment: Created ticket.
+  - type: activity
+    user: Agent
+    date: '2026-11-11T04:22:47.365Z'
     comment: Created as subtask of WOKEPOET-149.
+    id: a-2026-11-11t04-22-47-365z
 ---
 > TL;DR: the Uber Atziri entry in boss runs assumes the old Alluring Abyss and fragments. Both are gone in 3.30.
 
