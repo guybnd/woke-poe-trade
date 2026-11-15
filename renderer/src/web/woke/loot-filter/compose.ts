@@ -17,6 +17,8 @@ import type { EconomyGroup, PriceLookup, PriceMove } from './economy'
 import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, stackNet, valuableFromAudit, withLast } from './safety'
 import type { BaseVerdict, NetList, SafetyNet } from './safety'
 import { applyLook } from './look'
+import { gemBaseName, renameBases } from './gem-bases'
+import type { BaseRename } from './gem-bases'
 
 // The safety net's rule names (safetyBlocks): items, uniques, stacks20...
 const NET_TIER = /^(items|uniques|stacks\d+)$/
@@ -43,6 +45,9 @@ export interface ComposeInput {
   // What you held back from the net: "Not for me", or moved down yourself.
   heldBack: (v: BaseVerdict) => boolean
   stackHeld: (group: EconomyGroup, base: string) => boolean
+  // Names the game's filter can't take and what to write instead; the game
+  // data's transfigured gems unless given (tests).
+  renameBase?: BaseRename
 }
 
 export interface Composed {
@@ -136,5 +141,8 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // stays the floor for NeverSink's shown rules, as it was set.
   const bigger = cfg.presets.bigger
   applyLook(next, cfg.presets.look, b => bigger.on && b.visibility !== 'Hide' && !b.type?.startsWith('woke->') ? bigger.size : null)
+  // Over every rule: one transfigured gem name in a BaseType list and the
+  // game refuses to load the whole filter.
+  renameBases(next, cfg.renameBase ?? gemBaseName)
   return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
 }
