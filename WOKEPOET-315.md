@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-315
 title: Wickerman Ledger league module (3.30 Viscera drops + Wickerman planner)
-status: Grooming
+status: Ready
 priority: None
 effort: None
 assignee: unassigned
@@ -30,6 +30,28 @@ history:
       ("maybe on pob section"); A/B blank, kept as built. C built: campaign card
       shows zone boss's Viscera with every version.
     id: a-2026-11-15t06-41-24-864z
+  - type: activity
+    user: Agent
+    date: '2026-11-15T06:52:56.842Z'
+    comment: Updated implementation link.
+    id: a-2026-11-15t06-52-56-842z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #509: Wickerman (3.30) module, with A price check strip, B Ctrl+Space
+      cards and C campaign card line. Data v16 (league/viscera.json is live
+      data). Review fixes are in, and all local checks are green. Sent to the
+      coordinator to merge. D (planner) comes later, in PoB.
+    date: '2026-11-15T06:53:02.621Z'
+    completionComment: true
+    id: c-2026-11-15t06-53-02-621z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-15T06:53:02.622Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/509'
+needsAction: null
 ---
 Bring wickermanledger.site's info into the app as a self-contained, switchable league module (woke/ module registry), removable at league end.
 
