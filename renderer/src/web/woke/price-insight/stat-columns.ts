@@ -97,7 +97,7 @@ export interface StatColumn {
 type ColumnSource =
   | { kind: 'property', read: Reader }
   | { kind: 'total', stats: Array<{ ref: string, multiplier?: number }>, negated: boolean }
-  | { kind: 'mod', ref: string, domains: string[], negated: boolean }
+  | { kind: 'mod', refs: string[], domains: string[], negated: boolean, labels?: Record<string, string> }
 
 function columnSource (filter: StatFilter): ColumnSource | null {
   const id = filter.tradeId[0]
@@ -113,11 +113,14 @@ function columnSource (filter: StatFilter): ColumnSource | null {
     const stats = pseudoRuleStats(filter.statRef)
     return stats ? { kind: 'total', stats, negated: filter.roll?.isNegated ?? false } : null
   }
+  // A swap pick searches the mod as other elements too: read whichever the listing has.
+  const pick = filter.swapPick
   return {
     kind: 'mod',
-    ref: filter.statRef,
+    refs: pick ? pick.keys.map(k => k.ref) : [filter.statRef],
     domains: filter.tradeId.map(tradeId => tradeId.split('.')[0]),
-    negated: filter.roll?.isNegated ?? false
+    negated: filter.roll?.isNegated ?? false,
+    ...(pick ? { labels: Object.fromEntries(pick.keys.map(k => [k.ref, k.label])) } : {})
   }
 }
 
@@ -231,10 +234,20 @@ export function listingStatValue (item: ListingItem | undefined, column: StatCol
         return info ? [stat.value * (info.multiplier ?? 1)] : []
       }))
     : sum(stats
-        .filter(stat => stat.ref === source.ref && domainMatches(source.domains, stat.domain))
+        .filter(stat => source.refs.includes(stat.ref) && domainMatches(source.domains, stat.domain))
         .map(stat => stat.value))
   // A "reduced" filter shows its number as positive, so the listing's must match.
   return (total != null && source.negated) ? -total : total
+}
+
+/** Which of a swap-picked row's keys the listing has ("Cold"), or null. Several: joined. */
+export function listingStatLabel (item: ListingItem | undefined, column: StatColumn, category: ItemCategory | undefined): string | null {
+  const { source } = column
+  if (!item || source.kind !== 'mod' || !source.labels) return null
+  const found = new Set(listingStats(item, category)
+    .filter(stat => source.labels![stat.ref] && domainMatches(source.domains, stat.domain))
+    .map(stat => source.labels![stat.ref]))
+  return found.size ? [...found].join('/') : null
 }
 
 export function formatStatValue (value: number | null, column: StatColumn): string {

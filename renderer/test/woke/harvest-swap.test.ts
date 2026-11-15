@@ -8,7 +8,7 @@ import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import type { PricingResult } from '@/web/price-check/trade/pathofexile-trade'
 import { detectSwaps } from '@/web/woke/harvest-swap/detect'
-import { buildSwapRequest, priceByKey } from '@/web/woke/harvest-swap/search'
+import { buildSwapRequest, pickTradeIds, priceByKey } from '@/web/woke/harvest-swap/search'
 import type { ParsedItem } from '@/parser'
 
 // vi.mock is hoisted above the imports.
@@ -142,6 +142,18 @@ describe('buildSwapRequest', () => {
     // The UI's filters weren't changed by the search.
     expect(refsOf(stats)).toEqual(before)
     expect(cand.filter.tradeId.length).toBe(1)
+  })
+
+  it('gives a pick the trade ids of every element it searches', () => {
+    const { item, stats } = setup(jewel([FIRE_DMG, LIFE].join('\n')))
+    const cand = detectSwaps(item, stats).find(c => c.filter.statRef === '#% increased Fire Damage')!
+    const own = cand.filter.tradeId
+    const any = pickTradeIds(cand, 'any', own)
+    expect(any).toHaveLength(3)
+    expect(any[0]).toBe(own[0])
+    const cold = pickTradeIds(cand, 'cold', own)
+    expect(cold).toHaveLength(1)
+    expect(cold[0]).not.toBe(own[0])
   })
 
   it('searches one element when one is picked', () => {

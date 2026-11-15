@@ -175,6 +175,14 @@ export interface StatFilter {
   // woke: on a fractured item's total, the fractured mod's part, left out of the
   // shown number; the search adds it back, since the trade site counts it.
   fracShare?: number
+  // woke: a Harvest swap pick (harvest-swap/useSwap.ts): the row searches the mod
+  // as these keys' mods too. `tradeId` and `roll` are the row's own, to put back.
+  swapPick?: {
+    mode: string
+    keys: Array<{ label: string, ref: string }>
+    tradeId: string[]
+    roll?: { min: number | '' | undefined, max: number | '' | undefined }
+  }
   disabled: boolean // NOTE: mutable in UI
 }
 

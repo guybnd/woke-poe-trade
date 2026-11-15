@@ -118,3 +118,44 @@ test('a max res jewel gets a ⇄ and a Flip tab that searches only on a click', 
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before + 2)
 })
+
+test('picking Any searches the price check for any element, and the same listings price the Flip', async ({ overlay }) => {
+  const searches = await fakeMarket(overlay.page)
+  await overlay.boot()
+  await overlay.copyItem(JEWEL)
+  const panel = overlay.widget('price-check')
+  const marker = panel.getByRole('button', { name: '⇄' })
+  await expect(marker).toHaveCount(1)
+  await overlay.page.waitForTimeout(300)
+  const before = searches.length
+
+  await marker.click()
+  await overlay.page.getByRole('button', { name: 'Any', exact: true }).click()
+  // One search: the price check's own, with the mod as any of the three elements.
+  await expect.poll(() => searches.length).toBe(before + 1)
+  const body = JSON.parse(searches[searches.length - 1])
+  expect(body.query.stats.some((g: { type: string, filters: unknown[] }) => g.type === 'count' && g.filters.length === 3)).toBe(true)
+  // Each listing says which element it has.
+  await expect(panel.locator('.w-pc-stat-key', { hasText: 'Lightning' }).first()).toBeVisible()
+  await expect(panel.locator('.w-pc-stat-key', { hasText: 'Cold' }).first()).toBeVisible()
+  await expect(marker).toContainText('Any')
+  await overlay.snap('harvest-swap-pick-results')
+  // Close the popover.
+  await marker.click()
+
+  // The Flip tab is priced from those listings: no search of its own.
+  await panel.getByRole('tab', { name: /Flip/ }).click()
+  await expect(panel).toContainText('Keep Cold')
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBe(before + 1)
+  await overlay.snap('harvest-swap-pick-flip')
+
+  // This only puts the row back, with one search.
+  await panel.getByRole('tab', { name: 'Results' }).click()
+  await marker.click()
+  await overlay.page.getByRole('button', { name: 'This only', exact: true }).click()
+  await expect.poll(() => searches.length).toBe(before + 2)
+  const back = JSON.parse(searches[searches.length - 1])
+  expect(back.query.stats.some((g: { type: string, filters: unknown[] }) => g.type === 'count' && g.filters.length === 3)).toBe(false)
+  await expect(panel.locator('.w-pc-stat-key')).toHaveCount(0)
+})

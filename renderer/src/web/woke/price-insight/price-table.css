@@ -174,6 +174,8 @@
 .w-pc-table .w-pc-stat-head > div { padding: 0 4px; }
 .w-pc-stat-more { color: var(--w-accent); text-transform: none; letter-spacing: 0; }
 .w-pc-table td.w-pc-stat { padding: 0 4px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* A swap-picked row: which element the listing has ("Cold"). */
+.w-pc-stat-key { margin-left: 4px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .w-pc-table td.w-pc-stat-higher { --w-pc-stat-hue: var(--w-higher); }
 .w-pc-table td.w-pc-stat-lower { --w-pc-stat-hue: var(--w-lower); }
 .w-pc-table td:is(.w-pc-stat-higher, .w-pc-stat-lower) {
