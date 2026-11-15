@@ -66,7 +66,12 @@ let bundled: Promise<LeagueHistory[]> | null = null
 export function loadBundledLeagues (): Promise<LeagueHistory[]> {
   if (!bundled) {
     bundled = import('./bundled/leagues.json')
-      .then(m => (m.default as unknown as LeagueHistory[]).map(h => ({ ...h, imported: 0 })))
+      // The file leaves out empty variant/links (scripts/build-invest-bundle.ts).
+      .then(m => (m.default as unknown as LeagueHistory[]).map(h => ({
+        ...h,
+        imported: 0,
+        items: h.items.map(i => ({ ...i, variant: i.variant ?? '', links: i.links ?? '' }))
+      })))
       .catch(() => [])
   }
   return bundled
