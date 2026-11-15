@@ -11,8 +11,8 @@
       <div v-else-if="g.thinOnly" class="w-faint text-xs" style="padding: 2px var(--w-pad) 6px;">Only thin-market prices here, and Skip low confidence hides them.</div>
       <div v-else-if="!g.rows.length" class="w-faint text-xs" style="padding: 2px var(--w-pad) 6px;">poe.ninja has no prices for these.</div>
       <div v-for="(row, i) in g.rows" :key="row.item.name" class="w-row" :class="$style.priceGrid">
-        <span v-item-tip="row.item" class="w-trunc flex items-center gap-1">
-          <WIcon :src="ninjaIcon(row.item.type, row.item.name) ?? undefined" fallback="fas fa-coins" /><i v-if="isThin(row.item)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(row.item)" />{{ row.item.name }}<span v-if="row.tag" class="w-faint ml-1 text-xs">{{ row.tag }}</span>
+        <span v-item-tip="row.item" class="flex items-center gap-1" :class="$style.name">
+          <WIcon :src="ninjaIcon(row.item.type, row.item.name) ?? ninjaArt(row.item.type, row.item.name)" fallback="fas fa-coins" /><i v-if="isThin(row.item)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(row.item)" /><span :class="$style.label">{{ row.item.name }}</span><span v-if="row.tag" class="w-faint ml-1 text-xs">{{ row.tag }}</span>
           <span v-if="i === 0 && !g.unranked" class="w-up ml-1" :class="$style.best">best</span>
         </span>
         <span :class="$style.bar"><i :style="{ width: barWidth(row.chaos, g.max) }" /></span>
@@ -26,6 +26,7 @@
 import { computed } from 'vue'
 import { WPrice, WIcon, WSkeleton, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
+import { ninjaArt } from '../market/ninja-icons'
 import { priceGroup, verdict } from './data'
 import type { Mechanic } from './data'
 import { isThin, thinTitle } from '../market/types'
@@ -73,6 +74,9 @@ function barWidth (chaos: number, max: number) {
 }
 .verdict b { color: var(--w-accent); font-weight: 600; }
 .priceGrid { grid-template-columns: minmax(0, 1fr) 72px minmax(68px, max-content); }
+/* Long names ("Greater Incarnation of Dread's Head") wrap to a second line instead of being cut. */
+.name { min-width: 0; }
+.label { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
 .best { font-size: var(--w-fs-caps); letter-spacing: 0.06em; text-transform: var(--w-caps-case); font-family: var(--w-caps-face); }
 .bar { height: 5px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }

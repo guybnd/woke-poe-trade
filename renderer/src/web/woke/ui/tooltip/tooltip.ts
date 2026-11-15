@@ -56,6 +56,15 @@ export interface LookupTip {
   model: TipModel
   market: TipMarket | null
   uniques?: TipBaseUnique[]
+  // A Viscera's effects, one price each, most valuable first.
+  effects?: TipEffect[]
+}
+
+export interface TipEffect {
+  text: string
+  chaos: number
+  // The effect of the row that was hovered.
+  hovered?: boolean
 }
 
 // A checked item against the one your build wears there.

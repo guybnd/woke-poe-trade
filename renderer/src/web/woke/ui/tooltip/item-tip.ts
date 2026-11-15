@@ -15,7 +15,7 @@ import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
-import type { TipBaseUnique, TipContent, TipMarket } from './tooltip'
+import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
 
 export interface ItemTipRef {
   name: string
@@ -120,7 +120,21 @@ function withDrops (uniques: TipBaseUnique[], drops: TipPack['drops']): TipBaseU
   })
 }
 
-async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, market: TipMarket | null, uniques?: TipBaseUnique[] }> {
+// A Viscera (3.30): poe.ninja prices each of its effects, so the tooltip lists
+// them all; one price for the name would only be one effect's.
+function visceraTip (ref: ItemTipRef): { model: TipModel, market: null, effects: TipEffect[] } {
+  const ninja = usePoeninja()
+  ninja.queuePricesFetch()
+  const effects = ninja.findPricesByName('ITEM', ref.name)
+    .filter(info => info.variant)
+    .map(info => ({ text: info.variant!, chaos: info.chaos, hovered: info.variant === ref.variant }))
+    .sort((a, b) => b.chaos - a.chaos)
+  const base = effects.length === 1 ? 'Viscera · 1 effect' : `Viscera · ${effects.length} effects`
+  return { model: { name: ref.name, base, frame: 'normal', sections: [] }, market: null, effects }
+}
+
+async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, market: TipMarket | null, uniques?: TipBaseUnique[], effects?: TipEffect[] }> {
+  if (ref.type === 'Viscera') return visceraTip(ref)
   const listed = ref.uniques?.()
   if (listed?.length) {
     await loadFile('drops')
@@ -182,10 +196,10 @@ function enter (e: Event) {
   cancel()
   const mine = seq
   timer = setTimeout(() => {
-    tipFor(ref).then(({ model, market, uniques }) => {
+    tipFor(ref).then(({ model, market, uniques, effects }) => {
       if (mine !== seq || !el.isConnected) return
       if (model && ref.note) model = { ...model, sections: [...model.sections, ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] }
-      if (model) showTipAt(el, { kind: 'lookup', model, market, uniques })
+      if (model) showTipAt(el, { kind: 'lookup', model, market, uniques, effects })
       else if (ref.fallback) showTipAt(el, ref.fallback)
       // No text for it, but a price is still worth showing.
       else if (market) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: [] }, market })

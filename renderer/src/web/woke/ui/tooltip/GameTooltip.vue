@@ -140,6 +140,13 @@
           </div>
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
         </footer>
+        <footer v-if="lookup.effects?.length" :class="$style.uniques">
+          <div v-for="(e, i) in shownEffects" :key="i" :class="[$style.effectRow, { [$style.effectOn]: e.hovered }]">
+            <span>{{ e.text }}</span>
+            <WPrice bulk :chaos="e.chaos" :divine="xchgRate ?? null" />
+          </div>
+          <div v-if="moreEffects" class="w-faint">and {{ moreEffects }} more</div>
+        </footer>
         <footer v-if="lookup.market?.range" :class="$style.strip">
           <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
           <span class="w-dim" :class="$style.span">{{ lookup.market.range.count }} prices</span>
@@ -275,6 +282,8 @@ const { xchgRate } = usePoeninja()
 const MAX_UNIQUES = 12
 const shownUniques = computed(() => lookup.value?.uniques?.slice(0, MAX_UNIQUES) ?? [])
 const moreUniques = computed(() => Math.max(0, (lookup.value?.uniques?.length ?? 0) - MAX_UNIQUES))
+const shownEffects = computed(() => lookup.value?.effects?.slice(0, MAX_UNIQUES) ?? [])
+const moreEffects = computed(() => Math.max(0, (lookup.value?.effects?.length ?? 0) - MAX_UNIQUES))
 const data = computed(() => gem.value ? gemData(gem.value.name) : null)
 
 const FRAMES: Record<string, string> = { UNIQUE: 'unique', RELIC: 'unique', RARE: 'rare', MAGIC: 'magic' }
@@ -565,6 +574,16 @@ onUnmounted(() => {
   min-height: 20px;
 }
 .uniqueName { color: var(--w-r-unique); }
+/* A Viscera's effects: magic-mod blue, as the game shows them; the hovered one lit. */
+.effectRow {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) max-content;
+  gap: var(--w-s3);
+  align-items: baseline;
+  padding: 1px 0;
+  color: var(--w-r-magic);
+}
+.effectOn { color: var(--w-accent); }
 .uniqueCell { display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
 .noDrop { flex: none; color: var(--w-down); font-size: 0.85em; }
 .g-high { color: var(--w-accent); }
