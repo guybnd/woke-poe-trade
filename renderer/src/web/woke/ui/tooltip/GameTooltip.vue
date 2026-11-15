@@ -176,7 +176,7 @@ import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
 import { loadTipBases } from './item-tip'
 import type { TipPack } from './tip-content'
-import { weaponStats } from './weapon-stats'
+import { weaponBaseIn, weaponStats } from './weapon-stats'
 import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
 
 const $style = useCssModule()
@@ -195,7 +195,9 @@ const weapon = computed(() => {
   const i = item.value
   if (!i || listing.value) return null
   const baseName = (i.base || i.name).replace(/\s+\([^()]*\)\s*$/, '')
-  return weaponStats(tipBases.value?.[baseName], [...i.implicits, ...i.mods], i.quality ?? 0)
+  // Magic and "Superior" items carry the base inside their name.
+  const key = tipBases.value?.[baseName] ? baseName : weaponBaseIn(i.name, tipBases.value)
+  return key ? weaponStats(tipBases.value?.[key], [...i.implicits, ...i.mods], i.quality ?? 0) : null
 })
 const elemental = computed(() => (['fire', 'cold', 'lightning'] as const)
   .filter(t => weapon.value?.damage[t]).map(t => ({ type: t, hit: weapon.value!.damage[t]! })))

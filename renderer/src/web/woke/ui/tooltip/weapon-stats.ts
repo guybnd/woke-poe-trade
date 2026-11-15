@@ -25,6 +25,18 @@ const RE_ADDS = new RegExp(`^Adds ${NUM} to ${NUM} (Physical|Fire|Cold|Lightning
 const RE_INC = new RegExp(`^${NUM}% (increased|reduced) (Physical Damage|Attack Speed|Critical Strike Chance)$`)
 const RE_CRIT_FLAT = new RegExp(`^\\+${NUM}% to Critical Strike Chance$`)
 
+// The weapon base inside a magic or "Superior" item's name ("Heavy Rusted
+// Sword of Needling"): the longest weapon base name it contains.
+export function weaponBaseIn (name: string, bases: Record<string, TipBase> | null | undefined): string | null {
+  if (!bases) return null
+  if (bases[name]?.ph) return name
+  let best: string | null = null
+  for (const [key, b] of Object.entries(bases)) {
+    if (b.ph && name.includes(key) && (!best || key.length > best.length)) best = key
+  }
+  return best
+}
+
 // null for anything that isn't a weapon base.
 export function weaponStats (base: TipBase | undefined, mods: string[], quality = 0): WeaponStats | null {
   if (!base?.ph || !base.at) return null
@@ -70,7 +82,10 @@ export function weaponStats (base: TipBase | undefined, mods: string[], quality 
     if (hit) damage[type] = hit
   }
 
-  const aps = Math.round(1000 / base.at * (1 + incSpeed / 100) * 100) / 100
+  // The base rate to 2 decimals first, as PoB and the game hold it (bases.json
+  // keeps attack time in whole milliseconds: 1.45 is 690).
+  const baseRate = Math.round(100000 / base.at) / 100
+  const aps = Math.round(baseRate * (1 + incSpeed / 100) * 100) / 100
   const crit = Math.round(((base.cr ?? 0) / 100 + flatCrit) * (1 + incCrit / 100) * 100) / 100
   const avg = (h: Hit | undefined) => h ? (h[0] + h[1]) / 2 : 0
   const pdps = avg(damage.physical) * aps

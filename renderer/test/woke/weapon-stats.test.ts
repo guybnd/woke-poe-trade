@@ -25,3 +25,16 @@ describe('weaponStats', () => {
     expect(weaponStats(undefined, [])).toBeNull()
   })
 })
+
+describe('weaponBaseIn', () => {
+  it('finds the weapon base inside a magic item name, the longest match first', async () => {
+    const { weaponBaseIn } = await import('@/web/woke/ui/tooltip/weapon-stats')
+    const bases = { 'Rusted Sword': { ph: [4, 9] as [number, number], at: 690 }, 'Sword': { ph: [1, 2] as [number, number], at: 700 }, 'Iron Hat': { ar: [5, 9] as [number, number] } }
+    expect(weaponBaseIn('Heavy Rusted Sword of Needling', bases)).toBe('Rusted Sword')
+    expect(weaponBaseIn('Iron Hat', bases)).toBeNull()
+  })
+
+  it('rounds the base rate before scaling, as PoB does', () => {
+    expect(weaponStats({ ph: [4, 9], at: 690 }, ['10% increased Attack Speed'])!.aps).toBe(1.6)
+  })
+})
