@@ -22,7 +22,7 @@ const HIDE = filter(
   'Show # $type->uniques $tier->t1',
   '  Rarity Unique'
 )
-const boots: ItemFacts = { name: 'Shagreen Boots', itemClass: 'Boots', baseType: 'Shagreen Boots', rarity: 'Unique', itemLevel: 71, identified: false, areaLevel: 69 }
+const boots: ItemFacts = { name: 'Shagreen Boots', itemClass: 'Boots', baseType: 'Shagreen Boots', rarity: 'Unique', itemLevel: 71, identified: false, areaLevel: 69, influences: [], explicitModNames: [] }
 
 describe('the game file against the app', () => {
   it('sees the old safety net show what the new filter hides', () => {
