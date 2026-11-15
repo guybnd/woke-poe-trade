@@ -8,6 +8,9 @@ import type { PobItem } from './widget'
 
 const RARITY: Record<string, string> = { 'NORMAL': 'NORMAL', 'MAGIC': 'MAGIC', 'RARE': 'RARE', 'UNIQUE': 'UNIQUE', 'RELIC': 'RELIC', '': 'NORMAL' }
 
+// PoB's class numbers, the same as the game's; the read normally has them.
+const CLASS_ID: Record<string, number> = { Scion: 0, Marauder: 1, Ranger: 2, Witch: 3, Duelist: 4, Templar: 5, Shadow: 6 }
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 // PoB's own item text, as it keeps items in a build file.
@@ -23,10 +26,9 @@ export function pobNativeText (item: PobItem): string {
   if (item.itemLevel) lines.push(`Item Level: ${item.itemLevel}`)
   if (item.levelReq) lines.push(`LevelReq: ${item.levelReq}`)
   for (const inf of item.influences ?? []) lines.push(`${inf} Item`)
-  lines.push(`Implicits: ${item.implicits.length}`)
-  item.implicits.forEach((line, i) => {
-    for (const part of line.split('\n')) lines.push(`${item.implicitKinds?.[i] === 'crafted' ? '{crafted}' : ''}${part}`)
-  })
+  // PoB counts lines, and one implicit can span two.
+  const implicitLines = item.implicits.flatMap((line, i) => line.split('\n').map(part => `${item.implicitKinds?.[i] === 'crafted' ? '{crafted}' : ''}${part}`))
+  lines.push(`Implicits: ${implicitLines.length}`, ...implicitLines)
   item.mods.forEach((line, i) => {
     const kind = item.modKinds?.[i]
     for (const part of line.split('\n')) lines.push(`${kind === 'crafted' ? '{crafted}' : kind === 'fractured' ? '{fractured}' : ''}${part}`)
@@ -60,8 +62,9 @@ export function liveBuildXml (s: CharacterSnapshot, jewelSlots: number[], now = 
   })
 
   const masteries = Object.entries(s.tree.masteries).map(([node, effect]) => `{${node},${effect}}`).join(',')
-  // Cluster jewel passives use the site's ids, not PoB's: PoB grows them from the jewels.
-  const nodes = s.tree.nodes.join(',')
+  // Cluster jewel passives in the site's ids: PoB reads them as such with
+  // clusterHashFormatVersion 2, as its own importer writes.
+  const nodes = [...s.tree.nodes, ...s.tree.clusterNodes].join(',')
   const ascendancy = s.character.class
   const className = baseClass(ascendancy) || ascendancy
   const ascendClassName = className === ascendancy ? 'None' : ascendancy
@@ -72,7 +75,7 @@ export function liveBuildXml (s: CharacterSnapshot, jewelSlots: number[], now = 
     '<PathOfBuilding>',
     `<Build level="${s.character.level ?? 1}" targetVersion="3_0" className="${esc(className)}" ascendClassName="${esc(ascendClassName)}" mainSocketGroup="1" viewMode="ITEMS" characterLevelAutoMode="false"/>`,
     '<Tree activeSpec="1">',
-    `<Spec title="${esc(s.character.name)}" treeVersion="latest"${s.tree.classId != null ? ` classId="${s.tree.classId}"` : ''}${s.tree.ascendClassId != null ? ` ascendClassId="${s.tree.ascendClassId}"` : ''} masteryEffects="${masteries}" nodes="${nodes}">`,
+    `<Spec title="${esc(s.character.name)}" treeVersion="latest" classId="${s.tree.classId ?? CLASS_ID[className] ?? 0}" ascendClassId="${s.tree.ascendClassId ?? 0}" clusterHashFormatVersion="2" masteryEffects="${masteries}" nodes="${nodes}">`,
     `<Sockets>${sockets.join('')}</Sockets>`,
     '</Spec>',
     '</Tree>',

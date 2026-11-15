@@ -226,7 +226,8 @@ function followedBuild (name: string): string | null {
   if (linked) return builds.value.some(b => b.relPath === linked) ? linked : null
   if (name.length < 4 || props.config.followOff.includes(name)) return null
   const lower = name.toLowerCase()
-  return builds.value.find(b => b.name.toLowerCase().includes(lower))?.relPath ?? null
+  // Never the Live folder: that's your character as read, not a build to follow.
+  return builds.value.find(b => b.folder.split('/')[0] !== 'Live' && b.name.toLowerCase().includes(lower))?.relPath ?? null
 }
 
 function followCharacter (name: string) {

@@ -256,16 +256,24 @@ export async function saveLiveBuild (args: { dir?: string, name: string, xml: st
   const name = (typeof args?.name === 'string' ? args.name : '').replace(/[^\w -]/g, '_').trim().slice(0, 60) || 'character'
   const relPath = `${LIVE_FOLDER}/${name}.xml`
   const full = resolveBuild(args.dir, relPath)
+  // A file of yours by that name is left alone: only one this wrote is replaced.
+  const was = await fs.readFile(full, 'utf8').catch(() => null)
+  if (was != null && !was.includes(LIVE_MARK)) throw new Error(`${relPath} isn't a file this app wrote, so it was left as it is.`)
   const xml = args.xml.replace(/treeVersion="latest"/g, `treeVersion="${await latestTreeVersion()}"`)
   await fs.mkdir(path.dirname(full), { recursive: true })
-  await fs.writeFile(full, xml, 'utf8')
+  // Whole or not at all, for PoB reading it meanwhile.
+  const tmp = `${full}.${process.pid}.tmp`
+  await fs.writeFile(tmp, xml, 'utf8')
+  await fs.rename(tmp, full).catch(async (e: Error) => { await fs.rm(tmp, { force: true }).catch(() => {}); throw e })
   summaryCache.delete(full)
   return { relPath }
 }
 
-let treeVersion: string | null = null
+// In the live file's notes (live-pob.ts), so it's known as this app's.
+const LIVE_MARK = 'Woke PoE Trade writes this file again on each read'
+
+// Read each time: PoB may have updated since (a new league's tree).
 async function latestTreeVersion (): Promise<string> {
-  if (treeVersion) return treeVersion
   const exe = await findPobExe().catch(() => null)
   const dirs = [exe ? path.dirname(exe) : null, process.env.APPDATA ? path.join(process.env.APPDATA, 'Path of Building Community') : null].filter((d): d is string => !!d)
   for (const dir of dirs) {
@@ -273,7 +281,7 @@ async function latestTreeVersion (): Promise<string> {
       const lua = await fs.readFile(path.join(dir, 'GameVersions.lua'), 'utf8')
       const list = /treeVersionList\s*=\s*\{([^}]*)\}/.exec(lua)?.[1]
       const versions = list ? [...list.matchAll(/"(\d+_\d+)"/g)].map(m => m[1]) : []
-      if (versions.length) { treeVersion = versions[versions.length - 1]; return treeVersion }
+      if (versions.length) return versions[versions.length - 1]
     } catch {}
   }
   return '3_29'

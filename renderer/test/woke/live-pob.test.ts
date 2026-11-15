@@ -25,7 +25,7 @@ describe('live PoB build', () => {
   it('reads back with class, tree, gear and gems', () => {
     const d = parseBuild(liveBuildXml(SNAP, []).replace('treeVersion="latest"', 'treeVersion="3_29"'))
     expect([d.className, d.ascendClassName, d.level]).toEqual(['Duelist', 'Gladiator', 81])
-    expect(d.trees[0].nodes).toEqual([758, 1325])
+    expect(d.trees[0].nodes).toEqual([758, 1325, 65600])
     expect(d.trees[0].masteries).toEqual({ 4707: 29652 })
     expect(d.itemSets?.[0].slots.map(s => s.item.name)).toEqual(['Horror Shackle', 'Seething Divine Life Flask of Warding'])
     expect(d.itemSets?.[0].slots[0].item.modKinds).toEqual(['', 'crafted'])
