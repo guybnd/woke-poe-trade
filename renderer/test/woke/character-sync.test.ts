@@ -307,3 +307,18 @@ describe('upgradeList', () => {
     expect(r.atLeast).toBe(true)
   })
 })
+
+describe('gearDiff across ring and flask slots', () => {
+  it('treats rings and flasks worn in another order as the same gear', () => {
+    const rows = gearDiff([
+      { slot: 'Ring 1', item: item('UNIQUE', 'Ventor\'s Gamble', 'Gold Ring') },
+      { slot: 'Ring 2', item: item('UNIQUE', 'The Taming', 'Prismatic Ring') },
+      { slot: 'Flask 1', item: item('MAGIC', 'Quicksilver Flask of Adrenaline', 'Quicksilver Flask') }
+    ], [
+      { slot: 'Ring 1', item: item('UNIQUE', 'The Taming', 'Prismatic Ring') },
+      { slot: 'Ring 2', item: item('UNIQUE', 'Ventor\'s Gamble', 'Gold Ring') },
+      { slot: 'Flask 3', item: item('MAGIC', 'Quicksilver Flask of the Cheetah', 'Quicksilver Flask') }
+    ])
+    expect(Object.fromEntries(rows.map(r => [r.slot, r.state]))).toEqual({ 'Ring 1': 'match', 'Ring 2': 'match', 'Flask 1': 'base' })
+  })
+})

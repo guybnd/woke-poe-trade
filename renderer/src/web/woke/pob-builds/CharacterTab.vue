@@ -36,11 +36,11 @@
           :title="`Price check ${u.item.name}${u.unique ? '' : ' with its stats'}`" @click="openPriceCheck(u.item, $event)"
           @mouseenter="showTip($event, { kind: 'item', item: u.item })" @mouseleave="hideTip">
           <span class="w-faint w-num">{{ i + 1 }}.</span>
-          <span class="w-trunc" :class="rarityClass(u.item)">{{ u.unique ? u.item.name : `Rare ${u.item.base || u.item.name}` }}</span>
+          <span class="w-trunc" :class="rarityClass(u.item)">{{ upgradeName(u.item) }}</span>
           <span class="w-faint text-xs">{{ slotLabel(u.slot) }}</span>
           <span class="ml-auto whitespace-nowrap">
             <template v-if="u.price"><WPrice :chaos="u.price.chaos" :divine="divine" /><template v-if="u.price.high != null"><span class="w-dim text-xs"> to </span><WPrice :chaos="u.price.high" :divine="divine" /></template></template>
-            <span v-else class="w-dim text-xs">{{ u.unique ? 'no price' : 'price check' }}</span>
+            <span v-else class="w-dim text-xs">{{ u.unique ? (divine == null ? 'pricing…' : 'no price') : 'price check' }}</span>
           </span>
         </button>
       </template>
@@ -94,9 +94,15 @@ const diff = useCharacterDiff(toRef(props, 'details'), build.level, build.act, t
 const prices = useUniquePrice()
 const divine = prices.divine
 onMounted(prices.fetch)
-const upgrades = computed(() => diff.value && divine.value != null
-  ? upgradeList(diff.value.gear, item => prices.priceOf(item))
+// Rows show at once; prices and the total once poe.ninja's rates are in.
+const upgrades = computed(() => diff.value
+  ? upgradeList(diff.value.gear, item => divine.value != null ? prices.priceOf(item) : null)
   : { rows: [], chaos: 0, atLeast: false })
+function upgradeName (item: PobItem) {
+  if (item.rarity === 'UNIQUE' || item.rarity === 'RELIC') return item.name
+  const base = item.base || item.name
+  return item.rarity === 'RARE' ? `Rare ${base}` : item.rarity === 'MAGIC' ? `Magic ${base}` : base
+}
 
 const now = shallowRef(Date.now())
 const tick = setInterval(() => { now.value = Date.now() }, 30_000)
