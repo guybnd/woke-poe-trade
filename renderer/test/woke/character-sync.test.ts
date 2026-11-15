@@ -375,3 +375,11 @@ describe('3.30 mod lines', () => {
     expect(r.gear[1].item.mods).toEqual(['40% increased Movement Speed'])
   })
 })
+
+describe('stash reader mod lines', () => {
+  it('reads 3.30 { description } mod objects as well as plain lines', async () => {
+    const { parseItem } = await import('../../../main/src/woke/personal/stash-parse')
+    const it2 = parseItem({ frameType: 2, name: 'Foe Pelt', typeLine: 'Majestic Plate', implicitMods: ['+1 to Level'], explicitMods: [{ description: '+150 to maximum Life' }, { description: 'Hits can\'t be Evaded', flags: { crafted: true } }] })
+    expect(it2?.mods).toEqual(['+1 to Level', '+150 to maximum Life', 'Hits can\'t be Evaded'])
+  })
+})
