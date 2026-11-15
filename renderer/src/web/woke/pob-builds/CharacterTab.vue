@@ -17,12 +17,20 @@
       <div :class="$style.heading">Passive tree<template v-if="diff.treeTitle"> · {{ diff.treeTitle }}</template></div>
       <template v-if="diff.tree">
         <div class="flex items-center gap-2 flex-wrap">
-          <span :class="$style.take">{{ diff.tree.added }} to take</span>
-          <span class="w-down">{{ diff.tree.removed }} to refund</span>
+          <button v-if="diff.tree.addedNames.length || diff.tree.removedNames.length" type="button" class="w-focusable flex items-center gap-2"
+            :aria-expanded="namesOpen" :title="namesOpen ? 'Hide the notables' : 'Show which notables'" @click="namesOpen = !namesOpen">
+            <i class="fas text-xs w-faint" :class="namesOpen ? 'fa-chevron-down' : 'fa-chevron-right'" />
+            <span :class="$style.take">{{ diff.tree.added }} to take</span>
+            <span class="w-down">{{ diff.tree.removed }} to refund</span>
+          </button>
+          <template v-else>
+            <span :class="$style.take">{{ diff.tree.added }} to take</span>
+            <span class="w-down">{{ diff.tree.removed }} to refund</span>
+          </template>
           <WButton v-if="diff.treeTitle" size="sm" class="ml-auto" icon="fas fa-project-diagram" @click="emit('tree', diff.treeTitle)">Show on tree</WButton>
         </div>
-        <div v-if="diff.tree.addedNames.length" class="text-xs pt-1"><span class="w-faint">Take: </span><span :class="$style.take">{{ names(diff.tree.addedNames) }}</span></div>
-        <div v-if="diff.tree.removedNames.length" class="text-xs pt-1"><span class="w-faint">Refund: </span><span class="w-down">{{ names(diff.tree.removedNames) }}</span></div>
+        <div v-if="namesOpen && diff.tree.addedNames.length" class="text-xs pt-1"><span class="w-faint">Take: </span><span :class="$style.take">{{ names(diff.tree.addedNames) }}</span></div>
+        <div v-if="namesOpen && diff.tree.removedNames.length" class="text-xs pt-1"><span class="w-faint">Refund: </span><span class="w-down">{{ names(diff.tree.removedNames) }}</span></div>
       </template>
       <div v-else class="w-dim text-xs">The build has no passive tree to compare.</div>
 
@@ -54,6 +62,17 @@
         <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
         <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
       </div>
+
+      <!-- Jewels -->
+      <template v-if="diff.jewels.length">
+        <div :class="$style.heading">Jewels</div>
+        <div v-for="r in diff.jewels" :key="r.node" :class="$style.gear">
+          <span class="w-faint w-trunc" :title="r.socket || 'A socket on a cluster jewel'">{{ shortSocket(r.socket) }}</span>
+          <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
+          <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
+          <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
+        </div>
+      </template>
 
       <!-- Gems -->
       <div :class="$style.heading">Gems</div>
@@ -104,6 +123,9 @@ function upgradeName (item: PobItem) {
   return item.rarity === 'RARE' ? `Rare ${base}` : item.rarity === 'MAGIC' ? `Magic ${base}` : base
 }
 
+// The notables to take and refund fold under their counts.
+const namesOpen = shallowRef(false)
+
 const now = shallowRef(Date.now())
 const tick = setInterval(() => { now.value = Date.now() }, 30_000)
 onBeforeUnmount(() => { clearInterval(tick); hideTip() })
@@ -116,6 +138,10 @@ function stateTone (s: GearState) {
 function rarityClass (item: PobItem | null) {
   if (!item) return 'w-faint'
   return `w-rarity-${item.rarity === 'RELIC' ? 'unique' : item.rarity.toLowerCase()}`
+}
+// "Large Jewel Socket" -> "Large"; a socket on a cluster jewel has no name.
+function shortSocket (name: string) {
+  return name ? name.replace(/\s*Jewel Socket$/i, '') || 'Socket' : 'Cluster'
 }
 function names (nodes: TreeNode[]) {
   const shown = nodes.slice(0, 8).map(n => n.name)

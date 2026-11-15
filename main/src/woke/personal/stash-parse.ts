@@ -106,7 +106,13 @@ export function parseItem (raw: unknown): StashItem | null {
     const mods: string[] = []
     for (const key of ['enchantMods', 'implicitMods', 'fracturedMods', 'explicitMods', 'craftedMods']) {
       const list = item[key]
-      if (Array.isArray(list)) for (const m of list) if (typeof m === 'string') mods.push(m)
+      // Plain lines, or 3.30's { description, flags } objects.
+      if (Array.isArray(list)) {
+        for (const m of list) {
+          const text = typeof m === 'string' ? m : m && typeof m === 'object' && typeof (m as Raw).description === 'string' ? (m as Raw).description as string : null
+          if (text) mods.push(text)
+        }
+      }
     }
     if (mods.length) out.mods = mods
   }

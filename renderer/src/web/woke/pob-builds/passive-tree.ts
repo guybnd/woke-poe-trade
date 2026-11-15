@@ -45,6 +45,7 @@ export interface TreeArt {
 let job: Promise<Map<number, TreeNode>> | null = null
 let art: TreeArt | null = null
 let clusters: ClusterData | null = null
+let jewelSlots: number[] = []
 // Mastery effect id -> its stat lines.
 let masteryEffects: Record<string, string[]> = {}
 // A newer tree downloaded: read it the next time the tree opens.
@@ -55,6 +56,12 @@ onSharedDataChange(() => { generation++; job = null })
 // data is older than cluster layouts.
 export function passiveTreeClusters (): ClusterData | null {
   return clusters
+}
+
+// The game's jewel socket node ids in its own order (a read's jewel x is an
+// index into it), once loadPassiveTree has finished; [] for older data.
+export function passiveTreeJewelSlots (): number[] {
+  return jewelSlots
 }
 
 // The groups and sprites, once loadPassiveTree has finished.
@@ -89,7 +96,7 @@ export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
     job = fetch(dataFileUrl('tree/passive-tree.json'))
       .then(res => {
         if (!res.ok) throw new Error(`The passive tree didn't load (${res.status})`)
-        return res.json() as Promise<TreeArt & { nodes: Row[], masteryEffects?: Record<string, string[]>, clusters?: ClusterData }>
+        return res.json() as Promise<TreeArt & { nodes: Row[], masteryEffects?: Record<string, string[]>, clusters?: ClusterData, jewelSlots?: number[] }>
       })
       .then(data => {
         // A tree read from before a newer one arrived doesn't replace its art.
@@ -97,6 +104,7 @@ export function loadPassiveTree (): Promise<Map<number, TreeNode>> {
           art = { groups: data.groups, sprites: data.sprites }
           masteryEffects = data.masteryEffects ?? {}
           clusters = data.clusters ?? null
+          jewelSlots = Array.isArray(data.jewelSlots) ? data.jewelSlots : []
         }
         return readNodes(data.nodes)
       })

@@ -323,6 +323,67 @@ describe('gearDiff across ring and flask slots', () => {
   })
 })
 
+describe('jewelDiff', () => {
+  it('places read jewels by the game slot order and compares socket by socket', async () => {
+    const { jewelDiff } = await import('@/web/woke/pob-builds/character')
+    const rows = jewelDiff(
+      [{ node: 100, item: item('UNIQUE', 'Watcher\'s Eye', 'Prismatic Jewel') }, { node: 200, item: item('RARE', 'Grim Spark', 'Cobalt Jewel') }],
+      [{ x: 1, item: item('RARE', 'Rune Eye', 'Cobalt Jewel') }, { x: 2, item: item('MAGIC', 'Lucky Jewel', 'Crimson Jewel') }],
+      [100, 200, 300],
+      null
+    )
+    expect(Object.fromEntries(rows.map(r => [r.node, r.state]))).toEqual({ 100: 'missing', 200: 'base', 300: 'extra' })
+  })
+})
+
+describe('jewelDiff edge cases', () => {
+  it('shows nothing without the slot order, and skips jewels in sockets the build tree no longer takes', async () => {
+    const { jewelDiff } = await import('@/web/woke/pob-builds/character')
+    const build = [{ node: 100, item: item('RARE', 'Grim Spark', 'Cobalt Jewel') }, { node: 200, item: item('RARE', 'Old One', 'Cobalt Jewel') }]
+    expect(jewelDiff(build, [], [], null)).toEqual([])
+    expect(jewelDiff(build, [], [100, 200], null, [100]).map(r => r.node)).toEqual([100])
+  })
+})
+
+describe('3.30 mod lines', () => {
+  it('reads mods given as { description, flags } objects, crafted and fractured kept', () => {
+    const r = parseCharacterItems(JSON.stringify({
+      items: [{
+        inventoryId: 'Belt',
+        frameType: 2,
+        name: 'Horror Shackle',
+        typeLine: 'Heavy Belt',
+        baseType: 'Heavy Belt',
+        implicitMods: [{ description: '+25 to Strength' }],
+        explicitMods: [
+          { description: '16% increased Elemental Damage with Attack Skills', flags: { crafted: true } },
+          { description: '+80 to maximum [Life|Life]' },
+          { description: '+30% to Fire Resistance', flags: { fractured: true } }
+        ]
+      }, {
+        inventoryId: 'Flask',
+        x: 0,
+        frameType: 1,
+        typeLine: 'Quicksilver Flask of Adrenaline',
+        baseType: 'Quicksilver Flask',
+        utilityMods: ['40% increased Movement Speed']
+      }]
+    }))!
+    expect(r.gear[0].item.implicits).toEqual(['+25 to Strength'])
+    expect(r.gear[0].item.mods).toEqual(['+30% to Fire Resistance', '+80 to maximum Life', '16% increased Elemental Damage with Attack Skills'])
+    expect(r.gear[0].item.modKinds).toEqual(['fractured', '', 'crafted'])
+    expect(r.gear[1].item.mods).toEqual(['40% increased Movement Speed'])
+  })
+})
+
+describe('stash reader mod lines', () => {
+  it('reads 3.30 { description } mod objects as well as plain lines', async () => {
+    const { parseItem } = await import('../../../main/src/woke/personal/stash-parse')
+    const it2 = parseItem({ frameType: 2, name: 'Foe Pelt', typeLine: 'Majestic Plate', implicitMods: ['+1 to Level'], explicitMods: [{ description: '+150 to maximum Life' }, { description: 'Hits can\'t be Evaded', flags: { crafted: true } }] })
+    expect(it2?.mods).toEqual(['+1 to Level', '+150 to maximum Life', 'Hits can\'t be Evaded'])
+  })
+})
+
 describe('socket colours', () => {
   it('reads newer replies that give only the attribute', () => {
     const raw = {

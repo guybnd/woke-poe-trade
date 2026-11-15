@@ -8,6 +8,10 @@ import { listSettings, settingAllowed } from '../../../../ipc/claude-link'
 import { outcome } from './suggestions'
 import type { ToolDef } from './rpc'
 
+// jewelSlots: the tree's jewel socket node ids, in the order the account API's
+// jewel `x` counts them (since #502's tree data).
+export interface PassiveTreeInfo { nodes: Map<number, TreeNodeInfo>, masteryEffects: Record<string, string[]>, jewelSlots?: number[] }
+
 export interface TreeNodeInfo { kind: string, name: string, stats: string[], asc?: string }
 
 export interface LinkDeps {
@@ -18,7 +22,7 @@ export interface LinkDeps {
   op: (name: string, args: unknown) => Promise<unknown>
   lastItem: () => { text: string, at: number } | null
   // Passive tree nodes by id, read from the app's tree data on demand.
-  passiveTree: () => Promise<{ nodes: Map<number, TreeNodeInfo>, masteryEffects: Record<string, string[]> } | null>
+  passiveTree: () => Promise<PassiveTreeInfo | null>
   // Asks the overlay page for something only it has (atlas tree names).
   askOverlay: (kind: string, args: unknown, timeoutMs?: number) => Promise<unknown>
   stashCache: (league: string) => Promise<StashCacheLike | null>
@@ -348,15 +352,17 @@ export function buildTools (deps: LinkDeps): ToolDef[] {
         }
         if (part === 'tree' || part === 'all') {
           const t = c.tree ?? {}
+          const tree = await deps.passiveTree()
           const named = treeOut({
             title: 'Live character',
             url: '',
             isActive: true,
             nodes: t.nodes ?? [],
             jewels: [],
-            sockets: (t.jewels ?? []).map(j => ({ node: j.x, item: j.item })),
+            // x is the jewel slot's place in jewelSlots, not a node id.
+            sockets: (t.jewels ?? []).map(j => ({ node: tree?.jewelSlots?.[j.x] ?? NaN, label: `jewel slot ${j.x}`, item: j.item })),
             masteries: Object.fromEntries(Object.entries(t.masteries ?? {}).map(([k, v]) => [Number(k), v]))
-          }, await deps.passiveTree())
+          }, tree)
           delete named.url
           delete named.title
           delete named.active
@@ -498,7 +504,7 @@ interface PobDetailsLike {
   pantheonMajor: string, pantheonMinor: string, notes: string
   skillSets: Array<{ title: string, isActive: boolean, divider?: boolean, groups: Array<{ label: string, slot: string, enabled: boolean, isMain: boolean, gems: Array<{ name: string, level: number | null, quality: number | null, enabled: boolean }> }> }>
   itemSets: Array<{ title: string, isActive: boolean, divider?: boolean, slots: Array<{ slot: string, item: PobItemLike }> }>
-  trees: Array<{ title: string, url: string, isActive: boolean, divider?: boolean, nodes: number[], jewels: PobItemLike[], sockets?: Array<{ node: number, item: PobItemLike }>, masteries?: Record<number, number> }>
+  trees: Array<{ title: string, url: string, isActive: boolean, divider?: boolean, nodes: number[], jewels: PobItemLike[], sockets?: Array<{ node: number, label?: string, item: PobItemLike }>, masteries?: Record<number, number> }>
 }
 
 function itemOut (i: PobItemLike) {
@@ -519,7 +525,7 @@ function itemOut (i: PobItemLike) {
 
 export function treeOut (
   t: PobDetailsLike['trees'][number],
-  tree: { nodes: Map<number, TreeNodeInfo>, masteryEffects: Record<string, string[]> } | null
+  tree: PassiveTreeInfo | null
 ) {
   const out: Record<string, unknown> = { title: t.title, active: t.isActive, url: t.url, points: t.nodes.length }
   if (!tree) {
@@ -555,6 +561,6 @@ export function treeOut (
     ascendancy,
     masteries,
     smallPassives: small,
-    jewels: (t.sockets ?? []).map(s => ({ socket: tree.nodes.get(s.node)?.name || s.node, ...itemOut(s.item) }))
+    jewels: (t.sockets ?? []).map(s => ({ socket: tree.nodes.get(s.node)?.name || s.label || s.node, ...itemOut(s.item) }))
   }
 }

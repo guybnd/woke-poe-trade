@@ -265,6 +265,9 @@ function clusterData () {
   }
 }
 mkdirSync(dirname(OUT), { recursive: true })
-const out = JSON.stringify({ nodes: rows, groups, sprites, masteryEffects, ...(clusters ? { clusters } : {}) })
+// The game's jewel socket order: a character's socketed jewels (the site's
+// get-passive-skills) name their socket by index into it.
+const jewelSlots = Array.isArray(tree.jewelSlots) ? tree.jewelSlots.map(Number) : null
+const out = JSON.stringify({ nodes: rows, groups, sprites, masteryEffects, ...(clusters ? { clusters } : {}), ...(jewelSlots ? { jewelSlots } : {}) })
 writeFileSync(OUT, out)
 console.log(`${rows.length} nodes, ${out.length} bytes -> ${OUT}`)
