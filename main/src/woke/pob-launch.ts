@@ -37,11 +37,13 @@ export function exeFromCommand (regOutput: string): string | null {
 }
 
 async function exists (file: string): Promise<boolean> {
-  try { await fs.access(file); return true } catch { return false }
+  try { return (await fs.stat(file)).isFile() } catch { return false }
 }
 
 // The user's own pick wins, then what PoB registered, then its usual folders.
 export async function findPobExe (configured?: string): Promise<string | null> {
+  // Explorer's "Copy as path" wraps the path in quotes.
+  if (configured) configured = configured.replace(/^"(.*)"$/, '$1')
   if (configured) return (await exists(configured)) ? configured : null
   const candidates = [
     await exeFromRegistry(),
