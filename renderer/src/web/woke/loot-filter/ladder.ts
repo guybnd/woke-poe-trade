@@ -61,7 +61,6 @@ export function rangeOf (b: Pick<FilterBlock, 'conditions'>, key: string): Range
   let seen = false
   for (const c of b.conditions) {
     if (c.key !== key || !isNumeric(c)) continue
-    seen = true
     const nums = c.values.map(Number)
     const v = nums[0]
     switch (c.op) {
@@ -73,8 +72,10 @@ export function rangeOf (b: Pick<FilterBlock, 'conditions'>, key: string): Range
         lo = Math.max(lo, Math.min(...nums))
         hi = Math.min(hi, Math.max(...nums))
         break
-      default: return null
+      // != and ! aren't a span: skipped here, kept as a condition of its own.
+      default: continue
     }
+    seen = true
   }
   return seen ? { lo, hi } : null
 }
@@ -151,7 +152,15 @@ export function sharedConditions (tiers: TierNode[]): Set<string> {
 // What makes this tier different: its conditions minus the shared ones and
 // the order's own (which the row's label already shows).
 export function distinctConditions (t: TierNode, shared: Set<string>, axis: string | null): string[] {
-  return live(t).conditions.filter(c => c.key !== axis && !shared.has(conditionText(c))).map(c => conditionText(c).replace(/ True$/, ''))
+  return live(t).conditions.filter(c => !(c.key === axis && isSpan(c)) && !shared.has(conditionText(c))).map(c => conditionText(c).replace(/ True$/, ''))
+}
+
+// An order condition a span says exactly: not `!= 16`, not `== 1 16`.
+function isSpan (c: FilterCondition): boolean {
+  if (!isNumeric(c) || c.op === '!=' || c.op === '!') return false
+  if (c.values.length < 2) return true
+  const nums = [...new Set(c.values.map(Number))].sort((a, b) => a - b)
+  return nums[nums.length - 1] - nums[0] === nums.length - 1
 }
 
 export function buildLadder (tiers: TierNode[]): Ladder {
@@ -201,15 +210,18 @@ export function buildLadder (tiers: TierNode[]): Ladder {
     const own = readStyle(live(row.tiers[0]).actions)
     const index = live(row.tiers[0]).index
     const look: StylePatch = {}
+    // Later matching Continue rules paint over earlier ones, so apply in file order.
+    const paints: Array<{ index: number, look: StylePatch }> = []
     for (const m of marks) {
       // A mark only reaches rules below it in the file.
       const members = m.tiers.filter(t => !t.disabled && live(t).index < index)
       const plain = members.filter(t => distinctConditions(t, shared, axis).length === 0)
       // Each tier of a band can be covered by a different member (T1-5, T6-10).
       const always = plain.length > 0 && row.tiers.every(rt => plain.some(t => covers(axis ? rangeOf(live(t), axis) : null, axis ? rangeOf(live(rt), axis) : null)))
-      if (always) Object.assign(look, m.look)
+      if (always) paints.push({ index: Math.max(...plain.map(t => live(t).index)), look: m.look })
       else if (members.some(t => overlaps(axis ? rangeOf(live(t), axis) : null, row.range))) row.maybeMarks.push(m)
     }
+    for (const p of paints.sort((a, b) => a.index - b.index)) Object.assign(look, p.look)
     row.markLook = Object.fromEntries(Object.entries(look).filter(([k]) => !(k in own))) as StylePatch
   }
 

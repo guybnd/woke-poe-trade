@@ -113,22 +113,24 @@
               </span>
               <LabelPreview :text="r.tiers[0].bases[0] ?? previewName(r.tiers[0])" :actions="firstLive(r.tiers[0]).actions" :style-override="r.markLook" :visibility="r.tiers[0].disabled ? 'Hide' : r.tiers[0].visibility" style="max-width: 100%; overflow: hidden;" />
               <span :class="$style.icons" :title="rowTitle(r.tiers[0])">
-                <template v-if="r.tiers[0].bases.length">
-                  <template v-for="b in r.tiers[0].bases.slice(0, 6)" :key="b"><img v-if="baseIcon(b)" v-item-tip="baseTip(b)" :src="baseIcon(b)!" :class="$style.rowArt" alt=""></template>
-                  <span class="w-dim text-xs w-trunc">{{ basesText(r.tiers[0]) }}</span>
+                <template v-if="rowBases(r.tiers).length">
+                  <template v-for="b in rowBases(r.tiers).slice(0, 6)" :key="b"><img v-if="baseIcon(b)" v-item-tip="baseTip(b)" :src="baseIcon(b)!" :class="$style.rowArt" alt=""></template>
+                  <span class="w-dim text-xs w-trunc">{{ basesText(rowBases(r.tiers)) }}</span>
                 </template>
                 <span v-else class="w-dim text-xs w-trunc">{{ rowConditions(r.tiers[0]) }}</span>
                 <span v-if="r.maybeMarks.length" :class="$style.maybe" :title="r.maybeMarks.map(m => `${markName(m.look)}: ${markWhen(lad.axis, m)}`).join(' · ')">
                   <span v-for="m in r.maybeMarks" :key="m.key" :class="$style.markSwatch" :style="markSwatch(m.look)" />sometimes
                 </span>
               </span>
-              <button type="button" class="w-focusable" :class="$style.shownBtn" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
+              <span v-if="r.tiers.every(t => t.disabled)" :class="$style.shownBtn" title="Commented out in the filter">Off</span>
+              <button v-else type="button" class="w-focusable" :class="$style.shownBtn" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
             </div>
           </template>
           <template v-if="lad.specials.length || subGroups.length">
             <div class="text-xs" :class="$style.specialHead"><span style="font-weight: 600;">Special rules</span> <span class="w-dim">{{ lad.axis ? `win over the ${axisName(lad.axis)} order` : 'that sit with this group' }}</span></div>
             <div :class="$style.specials">
-              <button v-for="t in lad.specials" :key="t.tier" type="button" class="w-focusable" :class="[$style.special, { [$style.active]: t.tier === selTier, [$style.hiddenRow]: t.disabled || t.visibility === 'Hide' }]" :title="rowTitle(t)" @click="pickRow([t])" @contextmenu="tierMenu($event, t)">
+              <button v-for="t in lad.specials" :key="t.tier" type="button" class="w-focusable" :class="[$style.special, { [$style.active]: t.tier === selTier, [$style.hiddenRow]: t.disabled || t.visibility === 'Hide', [$style.dropOk]: dragOver === t.tier }]" :title="rowTitle(t)" @click="pickRow([t])" @contextmenu="tierMenu($event, t)"
+                @dragover="onDragOver(t, $event)" @dragleave="dragOver = dragOver === t.tier ? null : dragOver" @drop="onDrop(t, $event)">
                 <LabelPreview :text="t.bases[0] ?? previewName(t)" :actions="firstLive(t).actions" :visibility="t.disabled ? 'Hide' : t.visibility" :extras="false" style="max-width: 9rem; overflow: hidden; flex: none;" />
                 <span class="w-trunc">{{ tierName(firstLive(t)) }}</span>
               </button>
@@ -156,8 +158,10 @@
           </div>
           <div class="text-xs w-faint">{{ tier.blocks.length > 1 ? `${tier.blocks.length} rules` : `line ${tier.blocks[0].line}` }}<span v-if="tier.disabled"> · commented out in the filter</span></div>
           <div v-if="band && !bulkLook" :class="$style.bulkNote" class="text-xs">
-            <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}.</span>
-            <WButton size="sm" variant="ghost" @click="bandSolo = true">Just this tier</WButton>
+            <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}. Pick one to change it alone:</span>
+            <span class="flex flex-wrap gap-1">
+              <WChip v-for="t in band" :key="t.tier" clickable @click="pickSolo(t)">{{ tierName(firstLive(t)) }}</WChip>
+            </span>
           </div>
           <div v-if="bulkLook" :class="$style.bulkNote" class="text-xs">
             <span class="grow">Changes here go to the {{ picked.length }} item{{ picked.length === 1 ? '' : 's' }} you picked, not the tier.</span>
@@ -575,19 +579,19 @@ const sharedConds = computed(() => group.value ? sharedConditions(group.value.ti
 // NeverSink's sub-groups (maps->influenced under maps), linked under specials.
 const subGroups = computed(() => group.value ? allGroups.value.filter(g => g.type.startsWith(`${group.value!.type}->`)) : [])
 // Clicking a band or mark edits all its tiers, unless asked for just one.
-const bandSolo = ref(false)
+// The tier picked out of its band to change alone; any other pick ends it.
+const soloTier = ref<string | null>(null)
 const band = computed<TierNode[] | null>(() => {
-  if (bandSolo.value || !selTier.value || isOwnGroup.value) return null
+  if (!selTier.value || soloTier.value === selTier.value || isOwnGroup.value) return null
   const has = (ts: TierNode[]) => ts.length > 1 && ts.some(t => t.tier === selTier.value)
   return lad.value.rows.find(r => has(r.tiers))?.tiers ?? lad.value.marks.find(m => has(m.tiers))?.tiers ?? null
 })
-watch([selType, selTier], () => { bandSolo.value = false })
 const bandIsMark = computed(() => Boolean(band.value && lad.value.marks.some(m => m.tiers === band.value)))
 
 function pickRow (tiers: TierNode[]) {
   selTier.value = tiers[0].tier
   picked.value = []
-  bandSolo.value = false
+  soloTier.value = null
 }
 
 function rowConditions (t: TierNode): string {
@@ -600,10 +604,20 @@ function rowTitle (t: TierNode): string {
   return lines.join('\n')
 }
 
-function basesText (t: TierNode): string {
-  const named = t.bases.filter(b => !baseIcon(b))
-  if (t.bases.length <= 2) return named.join(', ')
-  return `${t.bases.length} items`
+function rowBases (tiers: TierNode[]): string[] {
+  return tiers.length === 1 ? tiers[0].bases : [...new Set(tiers.flatMap(t => t.bases))]
+}
+
+function basesText (bases: string[]): string {
+  if (bases.length <= 2) return bases.filter(b => !baseIcon(b)).join(', ')
+  return `${bases.length} items`
+}
+
+// One tier of a band, edited alone.
+function pickSolo (t: TierNode) {
+  selTier.value = t.tier
+  picked.value = []
+  soloTier.value = t.tier
 }
 
 function markSwatch (look: StylePatch) {

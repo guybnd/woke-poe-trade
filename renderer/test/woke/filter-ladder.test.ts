@@ -71,3 +71,27 @@ describe('ranges', () => {
     expect(rangeText('MapTier', { lo: 1, hi: 5 })).toBe('T1–5')
   })
 })
+
+describe('marks, from review', () => {
+  const ladderOf = (text: string) => buildLadder(buildTree(parseFilter(text)).flatMap(s => s.groups).find(g => g.type === 'x')!.tiers)
+  const rule = (tier: string, lines: string[]) => [`Show # $type->x $tier->${tier}`, ...lines.map(l => `\t${l}`), ''].join('\n')
+  const tiers = rule('t16', ['MapTier 16', 'SetFontSize 45']) + rule('t15', ['MapTier 15', 'SetFontSize 40'])
+
+  it('a != on the order is a sometimes, not an always', () => {
+    const l = ladderOf(rule('m', ['MapTier != 16', 'SetBorderColor 255 0 0 255', 'Continue']) + tiers)
+    expect(l.rows[0].markLook.border).toBeUndefined()
+    expect(l.rows[0].maybeMarks).toHaveLength(1)
+    expect(markWhen(l.axis, l.marks[0])).toBe('MapTier != 16')
+  })
+
+  it('a gap in == values is a sometimes too', () => {
+    const l = ladderOf(rule('m', ['MapTier == 1 16', 'SetBorderColor 255 0 0 255', 'Continue']) + rule('t5', ['MapTier 5']) + rule('t4', ['MapTier 4', 'SetFontSize 30']))
+    expect(l.rows[0].markLook.border).toBeUndefined()
+  })
+
+  it('the later matching mark paints last, whatever group it is in', () => {
+    const red = ['MapTier >= 1', 'SetBorderColor 255 0 0 255', 'Continue']
+    const l = ladderOf(rule('a', red) + rule('b', ['MapTier >= 1', 'SetBorderColor 0 0 255 255', 'Continue']) + rule('c', [...red.slice(0, 1), 'Rarity Rare', ...red.slice(1)]) + rule('d', red) + tiers)
+    expect(l.rows[0].markLook.border).toEqual([255, 0, 0, 255])
+  })
+})
