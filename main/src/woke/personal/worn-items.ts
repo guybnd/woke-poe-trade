@@ -84,15 +84,23 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[0]) : undefined
 }
 
+// R, G, B, W or A (abyss). Older replies name the colour (sColour); newer
+// ones may only give the attribute (attr: S, D, I, G for white, A, DV).
+const ATTR_COLOUR: Record<string, string> = { S: 'R', D: 'G', I: 'B', G: 'W', A: 'A', DV: 'A' }
+export function socketColour (s: Raw | undefined): string {
+  const c = str(s?.sColour)
+  if (c) return c === 'DV' ? 'A' : c
+  return ATTR_COLOUR[str(s?.attr)] ?? 'W'
+}
+
 // "R-G-B G": sockets in one group are linked.
 function socketText (item: Raw): string {
   const sockets = Array.isArray(item.sockets) ? item.sockets as Raw[] : []
   let out = ''
   let group: unknown = null
   for (const s of sockets) {
-    const colour = str(s?.sColour) || 'W'
     if (out) out += s?.group === group ? '-' : ' '
-    out += colour === 'DV' ? 'A' : colour
+    out += socketColour(s)
     group = s?.group
   }
   return out

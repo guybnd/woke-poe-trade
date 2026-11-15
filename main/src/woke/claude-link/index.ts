@@ -10,7 +10,7 @@ import path from 'path'
 import { appPrefs, setAppPrefs } from '../app-prefs'
 import { dataDir, readJson, readJsonStrict, safeName, writeAtomic, writeQueue } from '../data-files'
 import { admit, handleBody, type ServerInfo, type ToolDef } from './rpc'
-import { buildTools, INSTRUCTIONS, type AppConfigLike, type CharacterLike, type LinkDeps, type TreeNodeInfo } from './tools'
+import { buildTools, INSTRUCTIONS, type AppConfigLike, type CharacterLike, type LinkDeps, type PassiveTreeInfo, type TreeNodeInfo } from './tools'
 import { makeSuggestion, trimList, MAX_OPEN } from './suggestions'
 import { readCache } from '../personal/stash-reader'
 import { lastItemText } from './last-item'
@@ -277,17 +277,18 @@ async function readConfig (): Promise<AppConfigLike | null> {
 type TreeRow = [number, number, number, string, string, string[], ...unknown[]]
 
 // Read on demand and not kept: the file is ~0.8 MB and calls are rare.
-async function readPassiveTree (): Promise<{ nodes: Map<number, TreeNodeInfo>, masteryEffects: Record<string, string[]> } | null> {
+async function readPassiveTree (): Promise<PassiveTreeInfo | null> {
   const candidates = [
     path.join(__dirname, 'data/tree/passive-tree.json'),
     path.join(__dirname, '../../renderer/public/data/tree/passive-tree.json')
   ]
   for (const file of candidates) {
     try {
-      const data = JSON.parse(await fsp.readFile(file, 'utf8')) as { nodes: TreeRow[], masteryEffects?: Record<string, string[]> }
+      const data = JSON.parse(await fsp.readFile(file, 'utf8')) as { nodes: TreeRow[], masteryEffects?: Record<string, string[]>, jewelSlots?: unknown }
       const nodes = new Map<number, TreeNodeInfo>()
       for (const r of data.nodes) nodes.set(r[0], { kind: r[3], name: r[4], stats: r[5] ?? [], asc: typeof r[11] === 'string' ? r[11] : undefined })
-      return { nodes, masteryEffects: data.masteryEffects ?? {} }
+      const jewelSlots = Array.isArray(data.jewelSlots) ? data.jewelSlots.filter((n): n is number => typeof n === 'number') : undefined
+      return { nodes, masteryEffects: data.masteryEffects ?? {}, jewelSlots }
     } catch {}
   }
   return null
