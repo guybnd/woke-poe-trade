@@ -45,11 +45,14 @@ export interface Opportunity {
   histBuyDiv: number
 }
 
+// A price, or null: built-in leagues mark a missing one NaN (store.ts).
+const price = (v: number | null | undefined) => v == null || Number.isNaN(v) ? null : v
+
 export function priceOn (item: ItemHistory, d: number): number | null {
   if (d < 0 || d > MAX_DAY) return null
-  const v = item.div[d]
+  const v = price(item.div[d])
   if (v != null) return v
-  const a = item.div[d - 1]; const b = item.div[d + 1]
+  const a = price(item.div[d - 1]); const b = price(item.div[d + 1])
   if (a != null && b != null) return (a + b) / 2
   return null
 }

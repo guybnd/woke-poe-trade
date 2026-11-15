@@ -3,6 +3,7 @@
   <Dock />
   <PinLayer />
   <ToolkitHealth />
+  <ClaudeSuggestions />
   <StashOutlines />
   <TreeOverlay />
   <AtlasOverlay />
@@ -17,6 +18,7 @@ import HiddenNote from './switchboard/HiddenNote.vue'
 import Dock from './dock/Dock.vue'
 import PinLayer from './pins/PinLayer.vue'
 import ToolkitHealth from './dock/ToolkitHealth.vue'
+import ClaudeSuggestions from './claude-link/ClaudeSuggestions.vue'
 import OverlayLayer from './ui/OverlayLayer.vue'
 import StashOutlines from './scarab-flip/StashOutlines.vue'
 import TreeOverlay from './pob-builds/TreeOverlay.vue'

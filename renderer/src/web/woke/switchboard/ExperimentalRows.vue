@@ -21,6 +21,7 @@
       <div :class="$style.signIn"><stash-sign-in /></div>
     </template>
     <w-banner v-if="error" tone="error">{{ error }}</w-banner>
+    <claude-link-row />
   </div>
 </template>
 
@@ -35,6 +36,7 @@ import { COPY, stashSwitch } from './stash-switch'
 
 // Loads with the reader's other code, never before it's on.
 const StashSignIn = defineAsyncComponent(() => import('../net-worth/StashSignIn.vue'))
+const ClaudeLinkRow = defineAsyncComponent(() => import('../claude-link/ClaudeLinkRow.vue'))
 
 const { asking, busy, error, run, flip, cancel, confirm } = stashSwitch(setStashReaderOn)
 
