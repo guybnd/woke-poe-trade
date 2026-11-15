@@ -30,6 +30,7 @@ describe('market browser', () => {
     expect(groups.map(g => g.label)).toEqual(['General', 'Equipment & gems'])
     expect(groups[0].categories.map(c => [c.type, c.count])).toEqual([['Currency', 4], ['Wombgift', 1]])
     expect(groups[1].categories[0].label).toBe('Unique Armours')
+    expect(groups[1].categories[0].sample).toEqual(["Kaom's Heart"])
   })
 
   it('names categories', () => {
@@ -45,6 +46,8 @@ describe('market browser', () => {
     expect(shard.trend).toHaveLength(2)
     expect(shard.trend[1]).toBeCloseTo(1763)
     expect(shard.change).toBeCloseTo(74.66, 1)
+    expect(shard.dayChange).toBeCloseTo(74.66, 1)
+    expect(rows[2].dayChange).toBeNull()
     // One priced day: no line, but poe.ninja's change still shows.
     expect(rows[2].trend).toHaveLength(1)
     expect(rows[2].change).toBeCloseTo(18.24)

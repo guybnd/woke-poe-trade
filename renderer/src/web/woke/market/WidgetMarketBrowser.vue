@@ -13,7 +13,7 @@
             <div class="w-group-label" :class="$style.sec">{{ g.label }}</div>
             <button v-for="c in g.categories" :key="c.type" type="button" :class="[$style.cat, { [$style.on]: c.type === category?.type }]"
               :aria-current="c.type === category?.type ? 'true' : undefined" @click="pick(c.type)">
-              <span class="w-trunc">{{ c.label }}</span><span :class="$style.n">{{ c.count }}</span>
+              <WIcon :src="categoryIcon(c)" size="md" /><span class="w-trunc">{{ c.label }}</span><span :class="$style.n">{{ c.count }}</span>
             </button>
           </template>
           <WSkeleton v-if="!groups.length && waiting" :rows="10" />
@@ -38,7 +38,7 @@
                 <button type="button" :class="[$style.sortBtn, $style.right]" title="poe.ninja's price line and change over the last 7 days" @click="sortBy('change')">Last 7 days<i v-if="config.sort === 'change'" :class="sortIcon" /></button>
               </div>
               <WEmpty v-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} match<template v-if="query.trim()"> "{{ query.trim() }}"</template>.</WEmpty>
-              <div v-for="r in shown" :key="r.key" v-item-tip="r" class="w-row" :class="$style.grid">
+              <div v-for="r in shown" :key="r.key" v-item-tip="r" class="w-row" :class="$style.grid" @contextmenu="rowMenu($event, r)">
                 <span class="w-trunc inline-flex items-center gap-2" :class="rarityClass(r.type)">
                   <WIcon :src="ninjaIcon(r.type, r.name) ?? undefined" size="md" />
                   <span class="w-trunc">{{ r.name }}<span v-if="r.variant" class="w-dim ml-1">{{ r.variant }}</span></span>
@@ -82,15 +82,16 @@ import Widget from '@/web/overlay/Widget.vue'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
 import { popupAnchor } from '../ui/window-anchor'
-import { WButton, WChip, WDelta, WEmpty, WField, WIcon, WPanel, WPrice, WSegmented, WSkeleton, WSpark, ninjaIcon, vItemTip } from '../ui'
+import { WButton, WChip, WDelta, WEmpty, WField, WIcon, WPanel, WPrice, WSegmented, WSkeleton, WSpark, ninjaIcon, openMenu, vItemTip } from '../ui'
+import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { rarityClass } from '../search/search'
 import { lastWokePrices, onWokePricesLoaded } from './hook'
 import type { DenseChunk } from './parse'
-import { categoryGroups, filterRows, parseCategory, sortRows } from './browser'
-import type { MarketBrowserWidget, MarketRow, MarketSort } from './browser'
+import { ICON_ITEMS, categoryGroups, filterRows, parseCategory, sortRows } from './browser'
+import type { Category, MarketBrowserWidget, MarketRow, MarketSort } from './browser'
 import { MARKET_TRACKER_TYPE } from './widget'
-import { isCorrupted, isThin } from './types'
+import { isCorrupted, isThin, namespaceForType } from './types'
 import type { CorruptedFilter } from './types'
 
 const props = defineProps<{ config: MarketBrowserWidget }>()
@@ -197,6 +198,32 @@ function mainUnit (r: MarketRow): 'chaos' | 'div' {
 function subUnit (r: MarketRow): 'chaos' | 'div' | null {
   if (!divine.value || r.name === 'Divine Orb' || r.chaos < divine.value) return null
   return mainUnit(r) === 'div' ? 'chaos' : 'div'
+}
+
+// poe.ninja's art for the category: its chosen item, or its first with art.
+function categoryIcon (c: Category): string | undefined {
+  for (const name of [ICON_ITEMS[c.type], ...c.sample]) {
+    if (!name) continue
+    const src = ninjaIcon(c.type, name)
+    if (src) return src
+  }
+  return undefined
+}
+
+const pct = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v) >= 10 ? Math.round(Math.abs(v)) : Math.abs(v).toFixed(1)}%`
+
+// Right-click: the item strip (watch, trade, wiki…) from v-item-tip, then
+// what poe.ninja says about the row.
+function rowMenu (e: MouseEvent, r: MarketRow) {
+  const page = poeninja.findPriceByQuery({ ns: namespaceForType(r.type), name: r.name, variant: r.variant || undefined })?.url
+  const items: MenuEntry[] = [
+    { label: `1 day: ${r.dayChange == null ? 'not enough data' : pct(r.dayChange)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
+    { label: `7 days: ${r.change == null ? 'not enough data' : pct(r.change)}`, icon: 'fas fa-chart-line', disabled: true, action: () => {} },
+    { label: `Priced on ${7 - r.gaps} of the last 7 days`, icon: 'far fa-calendar', disabled: true, action: () => {} },
+    { separator: true },
+    { label: 'Open on poe.ninja', icon: 'fas fa-external-link-alt', disabled: !page, action: () => { if (page) window.open(page) } }
+  ]
+  openMenu(e, items)
 }
 
 function openMovers () {

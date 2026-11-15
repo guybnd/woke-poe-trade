@@ -59,6 +59,42 @@ export interface Category {
   label: string
   count: number
   chunk: DenseChunk
+  // The first few item names, for an icon when ICON_ITEMS has none.
+  sample: string[]
+}
+
+// The item whose art stands for a category in the side list, like poe.ninja's.
+// A category without one (or whose item has no art) takes its first item's.
+export const ICON_ITEMS: Record<string, string> = {
+  Currency: 'Exalted Orb',
+  Fragment: 'Sacrifice at Midnight',
+  Wombgift: 'Mysterious Wombgift',
+  Omen: 'Omen of Fortune',
+  DivinationCard: 'The Doctor',
+  Artifact: 'Exotic Coinage',
+  Oil: 'Golden Oil',
+  UniqueWeapon: 'Starforge',
+  UniqueArmour: "Kaom's Heart",
+  UniqueAccessory: 'Headhunter',
+  UniqueFlask: 'Dying Sun',
+  UniqueJewel: "Watcher's Eye",
+  SkillGem: 'Empower Support',
+  DeliriumOrb: 'Delirium Orb',
+  Essence: 'Deafening Essence of Greed',
+  Fossil: 'Pristine Fossil',
+  Resonator: 'Prime Chaotic Resonator',
+  Vial: 'Vial of Fate'
+}
+
+const NAME_AT = /\{"name":"((?:[^"\\]|\\.)*)"/g
+
+function sampleNames (lines: string, count = 8): string[] {
+  const out: string[] = []
+  NAME_AT.lastIndex = 0
+  for (let m = NAME_AT.exec(lines); m && out.length < count; m = NAME_AT.exec(lines)) {
+    try { out.push(JSON.parse(`"${m[1]}"`) as string) } catch {}
+  }
+  return out
 }
 
 export interface CategoryGroup {
@@ -99,7 +135,7 @@ function readGroups (chunks: DenseChunk[]): CategoryGroup[] {
     const type = typeForSlug(chunk.url)
     if (!type || SKIPPED_TYPES.has(type) || byType.has(type)) continue
     const count = countEntries(chunk.lines)
-    if (count) byType.set(type, { type, label: categoryLabel(type), count, chunk })
+    if (count) byType.set(type, { type, label: categoryLabel(type), count, chunk, sample: sampleNames(chunk.lines) })
   }
   const placed = new Set<string>()
   const groups = CATEGORY_GROUPS.map(g => ({
@@ -127,6 +163,8 @@ export interface MarketRow {
   // poe.ninja's own 7-day change in % (its graph's last value). Null when it
   // has none, or only zeros (poe.ninja shows "Not enough data").
   change: number | null
+  // Change since the day before, in %. Null without both days.
+  dayChange: number | null
   gaps: number
 }
 
@@ -163,6 +201,7 @@ function readRows (type: string, chunk: DenseChunk): MarketRow[] {
             chaos: info.chaos,
             trend,
             change: weekChange(info.graph),
+            dayChange: dayChange(info.graph),
             gaps: graphGaps(info.graph)
           })
         }
@@ -178,6 +217,14 @@ export function weekChange (graph: unknown): number | null {
   const last = graph[graph.length - 1]
   if (typeof last !== 'number' || !Number.isFinite(last)) return null
   return graph.some(v => typeof v === 'number' && v !== 0) ? last : null
+}
+
+export function dayChange (graph: unknown): number | null {
+  if (!Array.isArray(graph) || graph.length < 2) return null
+  const today = graph[graph.length - 1]
+  const before = graph[graph.length - 2]
+  if (typeof today !== 'number' || typeof before !== 'number' || 1 + before / 100 <= 0) return null
+  return ((1 + today / 100) / (1 + before / 100) - 1) * 100
 }
 
 export function trendLine (chaos: number, graph: unknown): number[] {

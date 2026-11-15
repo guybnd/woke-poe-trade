@@ -26,7 +26,20 @@ test('the Market window lists every category and filters and sorts one', async (
   await expect(side).toContainText('Unique Armours')
   await expect(side).not.toContainText('Base Types')
   await expect(panel.locator('.w-row', { hasText: 'Divine Orb' }).first()).toBeVisible()
+  // Each category wears its art, like poe.ninja.
+  await expect(side.getByRole('button', { name: /^Currency/ }).locator('img')).toHaveCount(1)
   await overlay.snap('currency')
+
+  // Right-click: the item strip, then poe.ninja's 1-day and 7-day change.
+  await panel.locator('.w-row', { hasText: 'Divine Orb' }).first().click({ button: 'right' })
+  const menu = overlay.page.getByRole('menu')
+  await expect(menu).toContainText('1 day')
+  await expect(menu).toContainText('7 days')
+  await expect(menu.getByRole('menuitem', { name: 'Open on poe.ninja' })).toBeVisible()
+  await overlay.snap('row menu')
+  // A click outside closes it (Esc would close the whole overlay).
+  await overlay.page.mouse.click(1800, 1000)
+  await expect(menu).toHaveCount(0)
 
   // Value, highest first: the first row is worth at least the second.
   const values = async () => panel.locator('.w-row:not(.w-row--head)').evaluateAll(rows =>
