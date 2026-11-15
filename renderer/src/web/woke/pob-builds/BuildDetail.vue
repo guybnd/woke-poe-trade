@@ -202,6 +202,7 @@ import type { BuildRuleSwitches } from '../loot-filter/build-rules'
 import BuildCosts from './BuildCosts.vue'
 import BuildTrades from './BuildTrades.vue'
 import CharacterTab from './CharacterTab.vue'
+import { CHARACTER_GEMS_ON, character } from './character'
 import { personalOn } from '../personal'
 import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
@@ -396,6 +397,8 @@ const shownLinks = computed(() => shownSet.value ? allLinkGroups(shownSet.value.
 
 const className = computed(() => build.className.value || props.details?.ascendClassName || props.details?.className || '')
 provide(GEM_CLASS, className)
+// Your character's gems on every gem name here (character-sync).
+provide(CHARACTER_GEMS_ON, computed(() => personalOn.value && character.value != null))
 const gems = computed(() => props.details
   ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value), 'campaign')
   : [])

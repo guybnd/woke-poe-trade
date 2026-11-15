@@ -153,8 +153,31 @@ export function pointsBy (level: number | null, act: number | null): number | nu
   return Math.max(0, level - 1) + QUEST_POINTS[Math.min(act ?? 1, 11)]
 }
 
+// The passive points your character really spent, from its last read, and
+// how to count a tree's points the same way (no class or ascendancy start,
+// no ascendancy, no cluster passives). Set by active.ts (character.ts does the
+// work); null when there is no fresh read of the character in play. What it
+// reads is reactive, so a loadout worked out with it follows a new read.
+export interface LivePoints { have: number, points: (nodes: number[]) => number }
+let livePoints: () => LivePoints | null = () => null
+export function useLivePoints (fn: () => LivePoints | null) { livePoints = fn }
+
 // The tree you're working toward: past each tree your points already cover.
 export function treeAhead (trees: PobTreeSpec[], tree: PobTreeSpec, level: number | null, act: number | null): PobTreeSpec {
+  const live = livePoints()
+  if (live) {
+    // Your real points (never fewer than the guess by level): a tree is
+    // passed once you have as many as it takes.
+    const have = Math.max(live.have, pointsBy(level, act) ?? 0)
+    const passed = new Set<PobTreeSpec>()
+    while (tree.nodes?.length && live.points(tree.nodes) <= have) {
+      const next = treeAfter(trees, tree, passed)
+      if (!next) break
+      passed.add(tree)
+      tree = next
+    }
+    return tree
+  }
   const have = pointsBy(level, act)
   if (have == null) return tree
   const passed = new Set<PobTreeSpec>()

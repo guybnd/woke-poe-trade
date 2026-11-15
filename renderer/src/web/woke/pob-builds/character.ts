@@ -3,11 +3,12 @@
 // with one. Main reads in the background; this only shows the result. Off
 // unless the stash reader is on.
 import { computed, effectScope, shallowRef, watch } from 'vue'
-import type { Ref } from 'vue'
+import type { InjectionKey, Ref } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { personalOn } from '../personal'
 import { hostRequest } from '../shared/host'
 import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems } from './build-model'
+import type { LivePoints } from './build-model'
 import { loadPassiveTree, treeDiff } from './passive-tree'
 import type { TreeDiff, TreeNode } from './passive-tree'
 import type { LoadoutPick, PobDetails, PobItem, PobSkillGroup, PobTreeSpec } from './widget'
@@ -71,6 +72,57 @@ export function readCharacterNow (hint: string) {
     .catch((e: Error) => { characterStatus.value = { ...characterStatus.value, pending: false, error: e.message } })
 }
 
+// The best level and quality of each gem your character sockets, by gemKey.
+export const characterGems = computed(() => {
+  const out = new Map<string, { level: number | null, quality: number | null }>()
+  for (const g of character.value?.gems ?? []) {
+    for (const x of g.gems) {
+      const k = gemKey(x.name)
+      const was = out.get(k)
+      if (!was || (x.level ?? 0) > (was.level ?? 0) || ((x.level ?? 0) === (was.level ?? 0) && (x.quality ?? 0) > (was.quality ?? 0))) {
+        out.set(k, { level: x.level, quality: x.quality })
+      }
+    }
+  }
+  return out
+})
+
+// Provided by a build window while your character is read: gem names there
+// mark what you socket, and at what level.
+export const CHARACTER_GEMS_ON = Symbol('character gems on') as InjectionKey<Ref<boolean>>
+
+export interface GemHave {
+  have: boolean
+  // Behind the build: "18 → 20", "q5 → 20".
+  behind: string
+}
+
+// level, quality: what the build asks for (null: not set, as on the leveling list).
+export function gemHave (name: string, level: number | null | undefined, quality: number | null | undefined): GemHave {
+  const h = characterGems.value.get(gemKey(name))
+  if (!h) return { have: false, behind: '' }
+  const parts: string[] = []
+  if (level != null && h.level != null && h.level < level) parts.push(`${h.level} → ${level}`)
+  if (quality != null && quality > 0 && (h.quality ?? 0) < quality) parts.push(`q${h.quality ?? 0} → ${quality}`)
+  return { have: true, behind: parts.join(' · ') }
+}
+
+// The passive points you really spent, for the leveling guide's stage: only
+// when the read is of the character Client.txt says you play, at the level it
+// says, and once the tree data has loaded to tell points from start and
+// ascendancy nodes. Otherwise null: the guide guesses by level.
+const CLUSTER_ID_START = 0x10000
+const NOT_POINTS = ['asc', 'ascstart', 'start']
+export function livePointsFor (name: string, level: number | null): LivePoints | null {
+  const s = personalOn.value ? character.value : null
+  if (!s || !name || name !== s.character.name) return null
+  if (level == null || s.character.level == null || s.character.level < level) return null
+  const nodes = treeNodes.value
+  if (!nodes) { loadTreeNodes(); return null }
+  const points = (ids: number[]) => ids.filter(id => id < CLUSTER_ID_START && !NOT_POINTS.includes(nodes.get(id)?.kind ?? '')).length
+  return { have: points(s.tree.nodes), points }
+}
+
 export const CHARACTER_TREE = 'Your character'
 const CLUSTER_IDS = 0x10000
 
@@ -98,6 +150,8 @@ function sameName (a: PobItem, b: PobItem) {
 // match: the same unique, or the same item named the same. base: a rare or
 // magic item on the build's base (its mods aren't weighed). Flasks and swap
 // weapons only when the build has one there.
+const slotGroup = (slot: string) => /^Ring/.test(slot) ? 'ring' : /^Flask/.test(slot) ? 'flask' : null
+
 export function gearDiff (build: Array<{ slot: string, item: PobItem }>, worn: Array<{ slot: string, item: PobItem }>): GearRowDiff[] {
   const b = new Map(build.filter(s => isGearSlot(s.slot) || /^Flask/.test(s.slot)).map(s => [s.slot, s.item]))
   const w = new Map(worn.map(s => [s.slot, s.item]))
@@ -114,6 +168,14 @@ export function gearDiff (build: Array<{ slot: string, item: PobItem }>, worn: A
       const hb = itemBase(have).toLowerCase()
       state = wb && wb === hb ? (sameName(want, have) ? 'match' : 'base') : 'differs'
     }
+    // Rings and flasks in another order are still the same gear.
+    if (want && state !== 'match') {
+      const group = slotGroup(slot)
+      const elsewhere = group ? worn.filter(x => x.slot !== slot && slotGroup(x.slot) === group).map(x => x.item) : []
+      const named = want.rarity === 'UNIQUE' || want.rarity === 'RELIC' || want.rarity === 'RARE'
+      if (elsewhere.some(x => sameName(want, x) && (named || itemBase(x).toLowerCase() === itemBase(want).toLowerCase()))) state = 'match'
+      else if (!named && state !== 'base' && elsewhere.some(x => itemBase(x) && itemBase(x).toLowerCase() === itemBase(want).toLowerCase())) state = 'base'
+    }
     return { slot, build: want, worn: have, state }
   })
   return rows.sort((x, y) => gearOrder(x.slot) - gearOrder(y.slot))
@@ -128,7 +190,7 @@ export interface GemGroupDiff {
   extra: string[]
 }
 
-const gemKey = (name: string) => name.replace(/ Support$/i, '').trim().toLowerCase()
+export const gemKey = (name: string) => name.replace(/ Support$/i, '').trim().toLowerCase()
 
 // Each enabled build group against the character's group in the same slot
 // that shares most gems with it (any slot when none shares).
@@ -192,12 +254,43 @@ export function readAgo (readAt: number, now = Date.now()): string {
 
 // Loaded once something compares; shared by the card and the tab.
 const treeNodes = shallowRef<Map<number, TreeNode> | null>(null)
+let treeLoading = false
+function loadTreeNodes () {
+  if (treeNodes.value || treeLoading) return
+  treeLoading = true
+  loadPassiveTree().then((n) => { treeNodes.value = n }, () => {}).finally(() => { treeLoading = false })
+}
 
 export function useCharacterDiff (details: Ref<PobDetails | null>, level: Ref<number | null>, act: Ref<number | null>, pick: Ref<LoadoutPick | undefined>) {
-  watch(character, (s) => {
-    if (s && !treeNodes.value) loadPassiveTree().then((n) => { treeNodes.value = n }, () => {})
-  }, { immediate: true })
+  watch(character, (s) => { if (s) loadTreeNodes() }, { immediate: true })
   return computed(() => character.value && details.value
     ? characterDiff(character.value, details.value, treeNodes.value, level.value, act.value, pick.value)
     : null)
+}
+
+export interface UpgradeRow {
+  slot: string
+  item: PobItem
+  // Uniques only: poe.ninja's price (null: none known).
+  price: { chaos: number, high?: number } | null
+  unique: boolean
+}
+
+// Slots that differ or are empty, as a shopping list: priced uniques cheapest
+// first, then uniques with no price, then rares (their price is in their mods).
+export function upgradeList (rows: GearRowDiff[], priceOf: (item: PobItem) => UpgradeRow['price']): { rows: UpgradeRow[], chaos: number, atLeast: boolean } {
+  const out: UpgradeRow[] = []
+  for (const r of rows) {
+    if (!r.build || (r.state !== 'differs' && r.state !== 'missing')) continue
+    const unique = r.build.rarity === 'UNIQUE' || r.build.rarity === 'RELIC'
+    out.push({ slot: r.slot, item: r.build, price: unique ? priceOf(r.build) : null, unique })
+  }
+  const rank = (x: UpgradeRow) => x.unique ? (x.price ? 0 : 1) : 2
+  out.sort((a, b) => rank(a) - rank(b) || (a.price?.chaos ?? 0) - (b.price?.chaos ?? 0))
+  const priced = out.filter(x => x.price)
+  return {
+    rows: out,
+    chaos: priced.reduce((n, x) => n + x.price!.chaos, 0),
+    atLeast: out.length > priced.length || priced.some(x => x.price!.high != null)
+  }
 }

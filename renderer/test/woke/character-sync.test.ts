@@ -265,6 +265,64 @@ describe('characterDiff', () => {
   })
 })
 
+describe('treeAhead with your real points', () => {
+  const trees = [
+    { title: 'Level 30', url: '', isActive: false, nodes: [1, 2, 3] },
+    { title: 'Level 60', url: '', isActive: false, nodes: [1, 2, 3, 4, 5, 6] },
+    { title: 'Level 90', url: '', isActive: true, nodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 65600] }
+  ]
+  it('moves past every tree the spent points cover, counted alike on both sides', async () => {
+    const { treeAhead, useLivePoints } = await import('@/web/woke/pob-builds/build-model')
+    // As character.ts counts: start nodes (here 1) and cluster passives aren't points.
+    const points = (ids: number[]) => ids.filter(id => id !== 1 && id < 0x10000).length
+    useLivePoints(() => ({ have: 5, points }))
+    expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 90')
+    useLivePoints(() => ({ have: 4, points }))
+    expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 60')
+    // Never behind the guess by level.
+    useLivePoints(() => ({ have: 0, points }))
+    expect(treeAhead(trees, trees[0], 90, 10).title).toBe('Level 90')
+    useLivePoints(() => null)
+    expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 30')
+  })
+})
+
+describe('upgradeList', () => {
+  it('lists slots that differ, priced uniques cheapest first, then unpriced, then rares', async () => {
+    const { upgradeList } = await import('@/web/woke/pob-builds/character')
+    const rows = gearDiff([
+      { slot: 'Body Armour', item: item('UNIQUE', "Utula's Hunger", 'Zodiac Leather') },
+      { slot: 'Helmet', item: item('UNIQUE', "Devoto's Devotion", 'Nightmare Bascinet') },
+      { slot: 'Gloves', item: item('RARE', 'Hate Grasp', 'Ringmail Gloves') },
+      { slot: 'Amulet', item: item('UNIQUE', 'Odd Amulet', 'Onyx Amulet') },
+      { slot: 'Boots', item: item('UNIQUE', 'Legacy of Fury', 'Wyrmscale Boots') }
+    ], [
+      { slot: 'Boots', item: item('UNIQUE', 'Legacy of Fury', 'Wyrmscale Boots') },
+      { slot: 'Gloves', item: item('RARE', 'Hypnotic Mitts', 'Ringmail Gloves') }
+    ])
+    const prices: Record<string, number> = { "Utula's Hunger": 120, "Devoto's Devotion": 4 }
+    const r = upgradeList(rows, it => prices[it.name] != null ? { chaos: prices[it.name] } : null)
+    expect(r.rows.map(x => x.item.name)).toEqual(["Devoto's Devotion", "Utula's Hunger", 'Odd Amulet'])
+    expect(r.chaos).toBe(124)
+    expect(r.atLeast).toBe(true)
+  })
+})
+
+describe('gearDiff across ring and flask slots', () => {
+  it('treats rings and flasks worn in another order as the same gear', () => {
+    const rows = gearDiff([
+      { slot: 'Ring 1', item: item('UNIQUE', 'Ventor\'s Gamble', 'Gold Ring') },
+      { slot: 'Ring 2', item: item('UNIQUE', 'The Taming', 'Prismatic Ring') },
+      { slot: 'Flask 1', item: item('MAGIC', 'Quicksilver Flask of Adrenaline', 'Quicksilver Flask') }
+    ], [
+      { slot: 'Ring 1', item: item('UNIQUE', 'The Taming', 'Prismatic Ring') },
+      { slot: 'Ring 2', item: item('UNIQUE', 'Ventor\'s Gamble', 'Gold Ring') },
+      { slot: 'Flask 3', item: item('MAGIC', 'Quicksilver Flask of the Cheetah', 'Quicksilver Flask') }
+    ])
+    expect(Object.fromEntries(rows.map(r => [r.slot, r.state]))).toEqual({ 'Ring 1': 'match', 'Ring 2': 'match', 'Flask 1': 'base' })
+  })
+})
+
 describe('socket colours', () => {
   it('reads newer replies that give only the attribute', () => {
     const raw = {

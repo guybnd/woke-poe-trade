@@ -1,6 +1,8 @@
 <template>
   <span v-item-tip="tipRef" :class="[$style.gem, `w-gem-${colour}`, { [$style.off]: off }]">
-    <WIcon v-if="art" :src="art" :size="size" title="" /><span :class="[$style.name, { 'line-through': struck }]">{{ name }}</span><slot />
+    <WIcon v-if="art" :src="art" :size="size" title="" /><span :class="[$style.name, { 'line-through': struck, [$style.missing]: mine && !mine.have }]">{{ name }}</span><slot />
+    <span v-if="mine?.have && !mine.behind" class="w-up text-xs" :title="`Socketed on ${charName}`"><i class="fas fa-check" /></span>
+    <span v-else-if="mine?.have" :class="$style.behind" class="text-xs w-num whitespace-nowrap" :title="`${charName} has it lower`">{{ mine.behind }}</span>
   </span>
 </template>
 
@@ -10,6 +12,7 @@ import { computed, inject } from 'vue'
 import WIcon from '../ui/WIcon.vue'
 import { GEM_CLASS, gemData, gemWhere } from './gems'
 import { gemArt } from './item-art'
+import { CHARACTER_GEMS_ON, character, gemHave } from './character'
 import { vItemTip } from '../ui/tooltip/item-tip'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
 
@@ -28,6 +31,11 @@ const art = computed(() => gemArt(props.name))
 // Inside a build panel: where that build's class gets the gem.
 const cls = inject(GEM_CLASS, null)
 const where = computed(() => cls ? gemWhere(props.name, cls.value) || undefined : undefined)
+
+// In a build window, with your character read: socketed, behind, or missing.
+const compareOn = inject(CHARACTER_GEMS_ON, null)
+const mine = computed(() => compareOn?.value && !props.off && !props.struck ? gemHave(props.name, props.level, props.quality) : null)
+const charName = computed(() => character.value?.character.name ?? 'your character')
 
 // The game's full gem tooltip at this gem's level and quality, as other
 // screens show it, with where to get it under; the short one if the data
@@ -53,4 +61,6 @@ const tipRef = computed<ItemTipRef>(() => {
 .gem { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .off { opacity: 0.5; }
+.missing { text-decoration: underline dashed var(--w-accent); text-underline-offset: 3px; }
+.behind { color: var(--w-accent); }
 </style>
