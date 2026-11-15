@@ -286,3 +286,14 @@ describe('treeAhead with your real points', () => {
     expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 30')
   })
 })
+
+describe('socket colours', () => {
+  it('reads newer replies that give only the attribute', () => {
+    const raw = {
+      sockets: [{ group: 0, attr: 'S' }, { group: 0, attr: 'D' }, { group: 1, attr: 'G' }],
+      socketedItems: [{ frameType: 4, typeLine: 'Leap Slam', baseType: 'Leap Slam', socket: 0 }]
+    }
+    expect(gemGroups('Helmet', raw)[0].gems[0].colour).toBe('R')
+    expect(parseCharacterItems(JSON.stringify({ items: [{ inventoryId: 'Helm', frameType: 0, typeLine: 'Iron Hat', baseType: 'Iron Hat', ...raw }] }))!.gear[0].item.sockets).toBe('R-G W')
+  })
+})
