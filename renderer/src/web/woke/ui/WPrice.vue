@@ -1,6 +1,9 @@
 <template>
-  <span :class="$style.price" class="w-num">
+  <span :class="$style.price" class="w-num" :title="bulkN != null ? bulkTitle : undefined">
     <template v-if="chaos == null"><span class="w-faint">—</span></template>
+    <template v-else-if="bulkN != null">
+      1<img src="/images/divine.png" :class="$style.coin" alt="div"><span :class="$style.per">/</span>{{ bulkText }}
+    </template>
     <template v-else>
       {{ text }}<img :src="useDivine ? '/images/divine.png' : '/images/chaos.png'" :class="$style.coin" :alt="useDivine ? 'div' : 'c'">
     </template>
@@ -9,15 +12,19 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatAmount } from './format'
+import { bulkPerDivine, formatAmount } from './format'
 
 // Shows a chaos value, switching to divines when it is worth at least one.
 // Pass unit to force one, e.g. so "then" and "now" in a row use the same unit.
+// Pass bulk on a one-item price: under 1c it reads "1 div / 12,000" (how many
+// a divine buys), with the chaos price on hover. Leave it off for totals and
+// profits, where "1 div / N" would read as nonsense.
 const props = withDefaults(defineProps<{
   chaos: number | null | undefined
   divine?: number | null
   unit?: 'auto' | 'chaos' | 'div'
-}>(), { divine: null, unit: 'auto' })
+  bulk?: boolean
+}>(), { divine: null, unit: 'auto', bulk: false })
 
 const useDivine = computed(() => {
   if (!props.divine || props.chaos == null || props.unit === 'chaos') return false
@@ -27,9 +34,13 @@ const text = computed(() => {
   if (props.chaos == null) return ''
   return formatAmount(useDivine.value ? props.chaos / props.divine! : props.chaos)
 })
+const bulkN = computed(() => props.bulk && props.unit === 'auto' ? bulkPerDivine(props.chaos, props.divine) : null)
+const bulkText = computed(() => bulkN.value?.toLocaleString('en-US') ?? '')
+const bulkTitle = computed(() => `${formatAmount(props.chaos ?? 0)}c each`)
 </script>
 
 <style module>
 .price { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; }
 .coin { width: 16px; height: 16px; object-fit: contain; flex: none; }
+.per { opacity: 0.6; }
 </style>

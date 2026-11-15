@@ -113,20 +113,23 @@
               <span :class="[$style.uniqueName, 'w-trunc']">{{ u.name }}</span>
               <span v-if="u.drop" :class="$style.noDrop" title="Not a random drop on this base: it comes from a boss, a league mechanic, a vendor or a card">restricted</span>
             </span>
-            <WPrice v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
+            <WPrice bulk v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
             <span v-else class="w-faint">no price</span>
             <span :class="$style[`g-${u.grade}`]">{{ u.label }}{{ u.thin ? ', thin market' : '' }}</span>
           </div>
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
         </footer>
         <footer v-if="lookup.market?.range" :class="$style.strip">
-          <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
+          <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice bulk :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice bulk :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
           <span class="w-dim" :class="$style.span">{{ lookup.market.range.count }} prices</span>
         </footer>
         <footer v-else-if="lookup.market" :class="$style.strip">
           <!-- One's price from poe.ninja; with a count, what they're worth together. -->
-          <WPrice :chaos="lookup.market.chaos" :divine="xchgRate ?? null" /><span class="w-dim">each</span>
-          <span v-if="lookup.market.chaos > 0 && lookup.market.chaos < 1" class="w-dim">({{ perChaos(lookup.market.chaos) }} per c)</span>
+          <WPrice bulk :chaos="lookup.market.chaos" :divine="xchgRate ?? null" />
+          <template v-if="bulkPerDivine(lookup.market.chaos, xchgRate) == null">
+            <span class="w-dim">each</span>
+            <span v-if="lookup.market.chaos > 0 && lookup.market.chaos < 1" class="w-dim">({{ perChaos(lookup.market.chaos) }} per c)</span>
+          </template>
           <template v-if="lookup.market.count"><span class="w-faint">·</span><WPrice :chaos="lookup.market.chaos * lookup.market.count" :divine="xchgRate ?? null" /><span class="w-dim">for {{ lookup.market.count }}</span></template>
           <span v-if="lookup.market.variant" class="w-dim">{{ lookup.market.variant }}</span>
           <span :class="$style.span" title="poe.ninja's price over the last 7 days"><WDelta :value="lookup.market.change" title="Change over 7 days" /> <span class="w-dim">7d</span></span>
@@ -154,6 +157,7 @@ import SwapCard from '../../pob-builds/SwapCard.vue'
 const ListingModGroup = defineAsyncComponent(() => import('./ListingModGroup.vue'))
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
+import { bulkPerDivine } from '../format'
 import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
 import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'

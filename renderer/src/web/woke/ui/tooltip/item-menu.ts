@@ -19,7 +19,7 @@ import { isWidgetTypeOn } from '../../modules'
 import { itemKey } from '../../market/types'
 import { tradeUrl } from '../../search/search'
 import { copyText } from '../copy'
-import { formatChaos } from '../format'
+import { formatUnitPrice } from '../format'
 import { gameIcon } from '../game-icons'
 import { offerMenuItem, openMenu, toast } from '../layer'
 import type { MenuItemAction, MenuItemHead } from '../layer'
@@ -52,7 +52,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
 
   const market = ref.noPrice || ref.text ? null : marketFor({ name: ref.name, type: ref.type, variant: ref.variant }, kind)
   const divine = usePoeninja().xchgRate.value
-  const price = market ? formatChaos(market.chaos, divine) : undefined
+  const price = market ? formatUnitPrice(market.chaos, divine) : undefined
 
   const check = priceCheckInput(ref, kind, info, AppConfig().language === 'en')
   const actions: MenuItemAction[] = [

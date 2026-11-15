@@ -7,7 +7,7 @@
           <WIcon :src="ninjaIcon(here.item.type, here.item.name) ?? undefined" fallback="fas fa-coins" />{{ here.item.name }}
         </span>
         <span class="flex items-center gap-2" :class="$style.herePrice">
-          <WPrice :chaos="here.chaos" :divine="divine" />
+          <WPrice bulk :chaos="here.chaos" :divine="divine" />
           <WDelta v-if="weekChange(here) != null" :value="weekChange(here)" title="Change over the last 7 days" :class="$style.delta" />
         </span>
       </div>
@@ -21,7 +21,7 @@
         <span class="w-trunc">{{ row.item.name }}</span>
         <span class="w-dim text-xs">{{ row.tag }}</span>
       </span>
-      <WPrice :chaos="row.chaos" :divine="divine" class="justify-end" />
+      <WPrice bulk :chaos="row.chaos" :divine="divine" class="justify-end" />
       <WDelta v-if="weekChange(row) != null" :value="weekChange(row)" title="Change over the last 7 days" :class="$style.delta" class="text-right" />
       <span v-else />
     </div>
