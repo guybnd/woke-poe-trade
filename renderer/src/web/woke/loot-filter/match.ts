@@ -216,6 +216,13 @@ function evalBlockBrief (block: FilterBlock, item: ItemFacts): BlockMatch {
   return { block, result, conditions: [] }
 }
 
+// Same verdict: shown or hidden by the same rule.
+export function sameOutcome (a: MatchResult, b: MatchResult): boolean {
+  const x = a.final?.block
+  const y = b.final?.block
+  return a.visibility === b.visibility && (x?.type ?? null) === (y?.type ?? null) && (x?.tier ?? null) === (y?.tier ?? null)
+}
+
 export function matchItem (doc: FilterDoc, item: ItemFacts, opts: { brief?: boolean } = {}): MatchResult {
   const layers: BlockMatch[] = []
   const uncertain: BlockMatch[] = []

@@ -9,6 +9,11 @@
         <template v-if="config.reloadViaChat" #actions><WButton size="sm" variant="primary" @click="store.reloadInGame(true)">Use mine in game</WButton></template>
       </WBanner>
     </template>
+    <template v-else-if="gameMatch" #banner>
+      <WBanner tone="warn">The filter file in your game folder is older than this. There, this item {{ gameVerdict }}. Save to bring it up to date.
+        <template #actions><WButton size="sm" variant="primary" :disabled="store.saving.value" @click="store.save()">Save</WButton></template>
+      </WBanner>
+    </template>
 
     <div :class="$style.body">
       <div class="flex items-center gap-2">
@@ -126,8 +131,16 @@ const props = defineProps<{
   config: LootFilterWidget
   facts: ItemFacts
   match: MatchResult
+  // Set when the game's file is older and does otherwise with this item.
+  gameMatch?: MatchResult | null
   areaLevel: number
 }>()
+
+const gameVerdict = computed(() => {
+  const b = props.gameMatch?.final?.block
+  const how = props.gameMatch?.visibility === 'Hide' ? 'is hidden' : 'shows'
+  return `${how}: ${b ? placeOf(b) : 'no rule, the game default'}`
+})
 
 const emit = defineEmits<{
   (e: 'close'): void

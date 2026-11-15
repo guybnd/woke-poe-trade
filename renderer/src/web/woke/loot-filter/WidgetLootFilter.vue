@@ -45,7 +45,7 @@
       </template>
     </DockItem>
     <template v-if="mode === 'card'">
-      <SampleCard v-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :area-level="effectiveAreaLevel"
+      <SampleCard v-if="sample && match" :store="store" :config="config" :facts="sample" :match="match" :game-match="gameMatch" :area-level="effectiveAreaLevel"
         @close="close" @open-editor="openEditorFromCard" @area-level="areaOverride = $event" />
       <WPanel v-else title="Filter rule for this item" icon="wisdom" width="24rem" :resizable="false">
         <template v-if="store.error.value" #banner>
@@ -87,7 +87,7 @@ import { useLootFilter } from './store'
 import { pressedKeys, sortKeys } from './hotkey-match'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
-import { matchItem } from './match'
+import { matchItem, sameOutcome } from './match'
 import { LOOT_FILTER_SAMPLE_TARGET, initLootFilterWidget, normalizeLootFilterWidget, parseEditorHotkeyTarget, parseReloadHotkeyTarget, parseStrictnessTarget } from './widget'
 import type { LootFilterWidget } from './widget'
 
@@ -135,6 +135,14 @@ const match = computed(() => {
   const doc = store.doc.value
   if (!doc || !sample.value) return null
   return matchItem(doc, { ...sample.value, areaLevel: effectiveAreaLevel.value })
+})
+
+// What the game does with it now, when its file is older and says otherwise.
+const gameMatch = computed(() => {
+  const written = store.gameFileDoc()
+  if (!written || !sample.value || !match.value) return null
+  const m = matchItem(written, { ...sample.value, areaLevel: effectiveAreaLevel.value })
+  return sameOutcome(m, match.value) ? null : m
 })
 
 // One load at a time: store.loading only turns on after listFiles resolves.

@@ -712,6 +712,35 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const sentOver = ref<string | null>(null)
   // Our copy exists, so /itemfilter has something to load.
   const outputSaved = computed(() => lastSaved.value != null || files.value.some(f => !f.online && f.name === outputName(cfg())))
+
+  // woke: the file in the game folder. Until a save writes your edits and new
+  // prices into it, the game judges drops by that file, not by `doc`. Read
+  // only when asked and only while the two differ; a save forgets it.
+  const writtenDoc = shallowRef<FilterDoc | null>(null)
+  let writtenRead: 'idle' | 'reading' | 'failed' = 'idle'
+  // A read that a save or load overtook must not land.
+  let writtenSeq = 0
+  const gameFileStale = computed(() => outputSaved.value && (dirty.value || sourceChanged.value))
+  function gameFileDoc (): FilterDoc | null {
+    if (!gameFileStale.value) return null
+    if (!writtenDoc.value && writtenRead === 'idle') {
+      writtenRead = 'reading'
+      const seq = writtenSeq
+      hostRequest('filter-read', { dir: cfg().folder, name: outputName(cfg()) })
+        .then(({ text }) => {
+          if (seq !== writtenSeq) return
+          writtenDoc.value = parseFilter(text)
+          writtenRead = 'idle'
+        })
+        .catch(() => { if (seq === writtenSeq) writtenRead = 'failed' })
+    }
+    return writtenDoc.value
+  }
+  function forgetGameFile () {
+    writtenSeq++
+    writtenDoc.value = null
+    writtenRead = 'idle'
+  }
   // The game's selected filter isn't the one we save to.
   const wrongFilterInGame = computed(() => {
     const name = gameFilter.value.name
@@ -727,6 +756,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   async function load () {
     const seq = ++loadSeq
+    forgetGameFile()
     if (cfg().neversink.on) {
       loading.value = true
       error.value = null
@@ -985,6 +1015,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
         version: doc.value.version
       }
       await hostRequest('filter-write', { dir: cfg().folder, name, text: serializeFilter(doc.value, header()) })
+      forgetGameFile()
       savedEdits.value = written.sig
       cfg().savedBuildSig = written.build
       cfg().savedExtraSig = written.extra
@@ -1119,6 +1150,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     inSafeZone,
     pendingReload,
     outputSaved,
+    gameFileDoc,
     listFiles,
     load,
     edit,
