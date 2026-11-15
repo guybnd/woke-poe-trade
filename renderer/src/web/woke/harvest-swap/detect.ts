@@ -58,7 +58,8 @@ export function detectSwaps (item: ParsedItem, stats: FilterOrGroup[], config?: 
     if (!found || !familyOn(found.family, config)) continue
     const { family, key } = found
     if (stat.tag !== ModifierType.Explicit && stat.tag !== ModifierType.Pseudo) continue
-    if (family.onlyTicked && stat.disabled) continue
+    // A picked row keeps its picker while unticked, so the pick can be undone.
+    if (family.onlyTicked && stat.disabled && !stat.swapPick) continue
 
     // The filter's number must come from one plain mod, the one the craft changes.
     if (stat.sources.length !== 1) continue

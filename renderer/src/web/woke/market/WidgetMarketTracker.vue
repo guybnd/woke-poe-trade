@@ -15,18 +15,20 @@
         </div>
       </template>
     </DockItem>
-    <WPanel ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180" width="30rem">
+    <WPanel ref="panel" :title="config.wmTitle || 'Market'" icon="divine" :updated="latest?.ts ?? null" :fresh-min="40" :stale-min="180"
+      :width="prices ? '46rem' : '30rem'" :size-key="prices ? 'prices' : 'main'" :max-height="prices ? '80vh' : undefined" :scroll="!prices" :fill="prices">
       <template v-if="collector.lastError.value" #banner>
         <WBanner>Could not save the latest prices ({{ collector.lastError.value }}). This shows the last saved prices and tries again at the next refresh.</WBanner>
       </template>
       <template #tabs>
         <WTabs v-model="config.view" :options="[
+          { value: 'prices', label: 'Prices' },
           { value: 'movers', label: 'Movers' },
           { value: 'watchlist', label: 'Watchlist', count: config.watchlist.length }
         ]" />
       </template>
 
-      <template #toolbar>
+      <template v-if="!prices" #toolbar>
         <div :class="$style.searchRow"><WField v-model="query" icon="fas fa-search" placeholder="Search every price" class="w-full" /></div>
         <template v-if="config.view === 'movers' || searching">
           <WSegmented v-model="config.period" :options="[
@@ -42,7 +44,7 @@
         </template>
       </template>
 
-      <template v-if="(searching && latest) || !latest || (config.view === 'movers' && !searching && divMove != null)" #meta>
+      <template v-if="!prices && ((searching && latest) || !latest || (config.view === 'movers' && !searching && divMove != null))" #meta>
         <template v-if="searching && latest">
           <span>{{ searchCount }} {{ searchCount === 1 ? 'price' : 'prices' }} for "{{ query.trim() }}"<template v-if="searchGroups.length >= PRICE_GROUP_LIMIT">, first {{ PRICE_GROUP_LIMIT }} items only</template></span>
           <WInfo text="Category and the Settings filters don't apply to a search." />
@@ -55,7 +57,8 @@
         </template>
       </template>
 
-      <template v-if="searching">
+      <MarketPrices v-if="prices" :config="config" :open="config.wmWants === 'show'" />
+      <template v-else-if="searching">
         <WSkeleton v-if="!latest && league" :rows="8" />
         <WEmpty v-else-if="!searchGroups.length" icon="fas fa-search">Nothing on poe.ninja matches "{{ query.trim() }}"<template v-if="corrupted !== 'any'"> with the corrupted filter on</template>. Rares, bases, flasks and cluster jewels have no saved price.</WEmpty>
         <template v-else>
@@ -159,6 +162,7 @@ import type { CorruptedFilter, PriceItem, Snapshot } from './types'
 import { PERIOD_MS, checkAlert, marketSearchRequest } from './widget'
 import type { WatchedItem } from './widget'
 import DockItem from '../dock/DockItem.vue'
+import MarketPrices from './MarketPrices.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 
@@ -172,7 +176,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   props.config.wmFlags = ['invisible-on-blur']
   props.config.wmTitle = 'Market'
   props.config.anchor = popupAnchor()
-  props.config.view = 'movers'
+  props.config.view = 'prices'
   props.config.period = '24h'
   props.config.minChaos = 5
   props.config.typeFilter = ''
@@ -181,6 +185,8 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 }
 
 const collector = useMarketCollector({ poll: true })
+// The Prices tab: poe.ninja's categories. Its rows come from MarketPrices.
+const prices = computed(() => props.config.view === 'prices')
 const leagues = useLeagues()
 const league = computed(() => leagues.selectedId.value)
 
@@ -222,6 +228,7 @@ function searchChange (item: PriceItem) {
 }
 watch(marketSearchRequest, (text) => {
   if (text == null) return
+  if (props.config.view === 'prices') props.config.view = 'movers'
   query.value = text
   // You asked for this item: an old filter mustn't hide it.
   props.config.corrupted = 'any'

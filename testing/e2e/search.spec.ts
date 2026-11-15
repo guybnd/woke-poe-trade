@@ -121,6 +121,8 @@ test('Market searches every price, whatever the filters', async ({ overlay }) =>
     widgets: [{ wmType: 'woke-market-tracker', wmTitle: 'Market', wmWants: 'show', anchor: { pos: 'tl', x: 40, y: 30 } }]
   })
   const panel = overlay.widget('woke-market-tracker')
+  // The search over every price is on Movers; the window opens on Prices.
+  await panel.getByRole('tab', { name: 'Movers' }).click()
   const box = panel.getByPlaceholder('Search every price')
   await expect(box).toBeVisible()
   await expect(async () => {

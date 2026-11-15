@@ -48,6 +48,25 @@ export function formatChaos (chaos: number, divine: number | null | undefined, u
   return useDiv ? `${formatAmount(chaos / divine!)} div` : `${formatAmount(chaos)} c`
 }
 
+// Bulk items worth under 1c (lifeforce, low currency) read better as how many
+// a divine buys than as "0.009c". Returns that count, rounded so it reads at a
+// glance (whole under 100, two significant figures above: 12,345 -> 12,000),
+// or null when the price isn't under 1c or there's no divine rate.
+export function bulkPerDivine (chaos: number | null | undefined, divine: number | null | undefined): number | null {
+  if (chaos == null || !divine || !(chaos > 0) || chaos >= 1 || !(divine > 0)) return null
+  const n = divine / chaos
+  if (!Number.isFinite(n) || n < 1) return null
+  if (n < 100) return Math.round(n)
+  const step = 10 ** (Math.floor(Math.log10(n)) - 1)
+  return Math.round(n / step) * step
+}
+
+// "1 div / 12,000" for a bulk price (see bulkPerDivine), else formatChaos.
+export function formatUnitPrice (chaos: number, divine: number | null | undefined): string {
+  const n = bulkPerDivine(chaos, divine)
+  return n != null ? `1 div / ${n.toLocaleString('en-US')}` : formatChaos(chaos, divine)
+}
+
 // ---- time ----
 
 // "4:05", or "1:04:05" past an hour (always with hours when `hours` is set).

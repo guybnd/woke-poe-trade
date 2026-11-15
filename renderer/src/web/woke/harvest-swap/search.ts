@@ -53,9 +53,15 @@ export function searchedMin (cand: SwapCandidate): number | undefined {
   return typeof min === 'number' ? min : undefined
 }
 
+/** The row as the item has it: a pick (useSwap) keeps the row's own ids aside. */
+function ownFilter (filter: StatFilter): StatFilter {
+  return filter.swapPick ? { ...filter, tradeId: filter.swapPick.tradeId } : filter
+}
+
 export function buildSwapRequest (filters: ItemFilters, stats: FilterOrGroup[], cand: SwapCandidate, mode: SwapMode): TradeRequest {
   const refs = keyRefs(cand)
-  const tradeId = swapKeys(cand, mode).flatMap(k => k === cand.from ? cand.filter.tradeId : targetTradeIds(cand.filter, refs[k]))
+  const own = ownFilter(cand.filter)
+  const tradeId = swapKeys(cand, mode).flatMap(k => k === cand.from ? own.tradeId : targetTradeIds(own, refs[k]))
   const min = searchedMin(cand)
   const roll = cand.filter.roll && {
     ...cand.filter.roll,
@@ -80,10 +86,12 @@ export function priceByKey (
   cand: SwapCandidate,
   keys: string[],
   opts: InsightOptions,
-  category: ItemCategory | undefined
+  category: ItemCategory | undefined,
+  // A pick's listings came from the price check's own search, at the row's own min.
+  minOverride?: number | null
 ): KeyPrice[] {
   const groups = new Map<string, PricingResult[]>(keys.map(k => [k, []]))
-  const min = searchedMin(cand)
+  const min = minOverride !== undefined ? (minOverride ?? undefined) : searchedMin(cand)
   for (const listing of listings) {
     const listed = listingExplicitStats(listing.listedItem, category)
     // A key counts when the listing has its plain mod at the searched roll or
@@ -107,6 +115,15 @@ export interface SwapSearchResult {
   total: number
   /** The search as sent (requestKey), to spot a result made with older filters. */
   request: string
+  /** Priced from the price check's own listings after a pick, not a search of its own. */
+  fromResults?: true
+}
+
+/** The trade ids a pick searches the row as: its own for its key, the matching ones for the others. */
+export function pickTradeIds (cand: SwapCandidate, mode: SwapMode, own: string[]): string[] {
+  const refs = keyRefs(cand)
+  const row = { ...cand.filter, tradeId: own }
+  return swapKeys(cand, mode).flatMap(k => k === cand.from ? own : targetTradeIds(row, refs[k]))
 }
 
 export async function runSwapSearch (

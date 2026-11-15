@@ -57,7 +57,7 @@ export const MODULE_GROUPS: Array<{ id: ModuleGroup, label: string }> = [
 
 // Reactive: the stash reader's module joins and leaves at runtime.
 export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
-  { id: 'market', name: 'Market', description: 'Movers and watchlist from poe.ninja', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
+  { id: 'market', name: 'Market', description: 'Every poe.ninja price by category, plus movers and a watchlist', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem', item: "Gemcutter's Prism" }, needs: ['poll'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
@@ -75,6 +75,8 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'essence-scan', name: 'Essence scan', description: 'Reads essence monoliths and flags MEDS', group: 'mapping', widgetTypes: ['woke-essence-scan'], icon: { fa: 'fas fa-flask', mechanic: 'essence' }, needs: ['ocr', 'hotkeys', 'prices', 'log'] },
   { id: 'loot-filter', name: 'Loot filter editor', description: 'Edit the NeverSink rule for a sampled item', group: 'mapping', widgetTypes: ['woke-loot-filter'], icon: { fa: 'fas fa-filter', item: 'Orb of Scouring' }, needs: ['log', 'hotkeys'] },
   { id: 'atlas', name: 'Atlas strategies', description: 'Atlas tree, Threads and regex per strategy', group: 'mapping', widgetTypes: ['woke-atlas-strategies'], icon: { fa: 'fas fa-globe', src: '/images/art/atlas-maps-wheel.png' }, needs: ['network', 'prices'] },
+  // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
+  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources on price check and Ctrl+Space', group: 'mapping', widgetTypes: [], icon: { fa: 'fas fa-bone' }, needs: [] },
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
   { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', src: '/images/art/admiral-darnaws-papers.png' }, needs: ['log'] },
@@ -101,8 +103,8 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'trade-searches', 'trade', 'regex-library'] },
-  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library'] },
+  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman'] },
   { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
@@ -111,7 +113,7 @@ export const PRESETS: Preset[] = [
 // Woke's own config version, kept apart from APT's configVersion (that one
 // stays upstream's numbering). Raise it with a fix-up in Config.ts that
 // mustn't run twice.
-export const WOKE_CONFIG_VERSION = 1
+export const WOKE_CONFIG_VERSION = 3
 
 export interface WokeModulesConfig {
   setupDone: boolean
@@ -147,7 +149,8 @@ for (const m of MODULES) for (const t of m.widgetTypes) moduleByWidget.set(t, m)
 // config but count as off (not mounted, no hotkeys).
 // Opt-in widget types start out removed, so a widget placed while the stash
 // reader was on stays off after a restart with it off (addModule clears it).
-const removedTypes = reactive(new Set<string>(['woke-net-worth']))
+// woke-market: a dev build's separate Market window, folded into Market's tabs.
+const removedTypes = reactive(new Set<string>(['woke-net-worth', 'woke-market']))
 const optInIds = reactive(new Set<string>())
 
 // Opt-in modules (the stash reader, personal.ts) join the list when turned on,
@@ -191,9 +194,10 @@ export function widgetCount (config: ConfigLike, m: ModuleDef): number {
 }
 
 // A module "runs" when it is on and at least one of its widgets is placed.
+// One with no widgets (APT features, additions to other tools) runs while on.
 export function isModuleRunning (config: ConfigLike, m: ModuleDef): boolean {
   if (!isModuleOn(config, m.id)) return false
-  return m.group === 'apt' || widgetCount(config, m) > 0
+  return m.group === 'apt' || m.widgetTypes.length === 0 || widgetCount(config, m) > 0
 }
 
 export function modulesNeeding (config: ConfigLike, need: ModuleNeed): ModuleDef[] {

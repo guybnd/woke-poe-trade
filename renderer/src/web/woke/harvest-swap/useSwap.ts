@@ -4,6 +4,8 @@
 import { computed, inject, InjectionKey, provide, reactive, ref, Ref, ComputedRef, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
+import type { PricingResult } from '@/web/price-check/trade/pathofexile-trade'
+import { KEY_LABEL } from './families'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
@@ -38,6 +40,12 @@ export interface SwapController {
   runAll: () => Promise<void>
   /** The mod's result was made with filters that have changed since. */
   stale: (cand: SwapCandidate) => boolean
+  /** What the row searches as: a key, 'any', or null for the item's own. */
+  pickOf: (cand: SwapCandidate) => SwapMode | null
+  /** Makes the row search as `mode`; 'this' puts it back. Like any row edit, it waits for Search. */
+  pick: (cand: SwapCandidate, mode: SwapMode | 'this') => Promise<void>
+  /** The price check's listings and the rows they were searched with. */
+  resultsChanged: (listings: readonly PricingResult[], searched: readonly FilterOrGroup[]) => void
 }
 
 const KEY: InjectionKey<SwapController> = Symbol('woke-harvest-swap')
@@ -92,6 +100,8 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
   function stale (cand: SwapCandidate): boolean {
     const r = runs.get(cand.filter)
     if (r?.state !== 'done') return false
+    // Priced from the price check's listings: its own Search button says when they're old.
+    if (r.result!.fromResults) return false
     const key = currentKey(cand, r.mode)
     return key != null && r.result!.request !== key
   }
@@ -148,6 +158,73 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     }
   }
 
+  function pickOf (cand: SwapCandidate): SwapMode | null {
+    return cand.filter.swapPick?.mode ?? null
+  }
+
+  // Two quick picks: only the last one counts, even if the code was still loading.
+  let pickSeq = 0
+  async function pick (cand: SwapCandidate, mode: SwapMode | 'this') {
+    const f = cand.filter
+    const seq = ++pickSeq
+    if (mode === 'this') {
+      const was = f.swapPick
+      if (!was) return
+      f.tradeId = was.tradeId
+      if (was.roll && f.roll) { f.roll.min = was.roll.min; f.roll.max = was.roll.max }
+      delete f.swapPick
+      runs.delete(f)
+      return
+    }
+    if (f.swapPick?.mode === mode) return
+    const { pickTradeIds, keyRefs, swapKeys } = await loadSearch()
+    if (seq !== pickSeq) return
+    const own = f.swapPick?.tradeId ?? f.tradeId
+    const ownRoll = f.swapPick ? f.swapPick.roll : (f.roll ? { min: f.roll.min, max: f.roll.max } : undefined)
+    const refs = keyRefs(cand)
+    // Put the row's own roll back first: a pick from another pick starts from the item.
+    if (ownRoll && f.roll) { f.roll.min = ownRoll.min; f.roll.max = ownRoll.max }
+    // Tiers differ between elements for added damage: any roll, like the Flip search.
+    if (cand.family.anyRoll && f.roll) { f.roll.min = ''; f.roll.max = '' }
+    f.swapPick = {
+      mode,
+      own: KEY_LABEL[cand.from],
+      // In the family's order, so the row reads "Fire, Cold or Lightning".
+      keys: [...swapKeys(cand, mode)].sort((a, b) => cand.family.keys.indexOf(a) - cand.family.keys.indexOf(b)).map(k => ({ label: KEY_LABEL[k], ref: refs[k] })),
+      tradeId: own,
+      roll: ownRoll
+    }
+    f.tradeId = pickTradeIds(cand, mode, own)
+    f.disabled = false
+    runs.delete(f)
+  }
+
+  function resultsChanged (listings: readonly PricingResult[], searched: readonly FilterOrGroup[]) {
+    const code = searchCode.value
+    if (!code) return
+    for (const cand of candidates.value) {
+      const mode = pickOf(cand)
+      if (mode == null) continue
+      // Only listings searched with this same pick price it. The snapshot keeps
+      // the rows' order; an implicit row can share the stat.
+      const at = stats.value.indexOf(cand.filter)
+      const row = searched[at] as StatFilter | undefined
+      if (!row || ('group' in row && row.group) || row.statRef !== cand.filter.statRef || row.swapPick?.mode !== mode) continue
+      // The Flip tab's own search or a one-key search is under way: leave it be.
+      const prev = runs.get(cand.filter)
+      if (prev && (prev.state === 'loading' || prev.refining) && !prev.result?.fromResults) continue
+      const min = typeof row.roll?.min === 'number' ? row.roll.min : null
+      const keys = code.swapKeys(cand, mode)
+      const prices = code.priceByKey([...listings], cand, keys, { ...options.value }, item.value.category, min)
+      runs.set(cand.filter, {
+        id: prev?.state === 'done' && prev.result?.fromResults ? prev.id : ++runId,
+        mode,
+        state: 'done',
+        result: { prices, total: listings.length, request: '', fromResults: true }
+      })
+    }
+  }
+
   const controller: SwapController = {
     candidates,
     candidateFor: (filter) => candidates.value.find(c => c.filter === filter),
@@ -158,7 +235,10 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     run,
     refine,
     runAll,
-    stale
+    stale,
+    pickOf,
+    pick,
+    resultsChanged
   }
   provide(KEY, controller)
   return controller

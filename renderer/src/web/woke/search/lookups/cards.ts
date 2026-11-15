@@ -70,7 +70,7 @@ export function cardCard (name: string, info: CardInfo, ctx: LookupContext, know
   const rewardEach = reward?.priceable ? ctx.price(reward.name, reward.variant) : null
   const rewardValue = rewardEach == null ? null : rewardEach * reward!.qty
   const rows: LookupRow[] = [
-    { label: `1 card (set of ${info.stack})`, chaos: each, item: { name, type: 'DivinationCard' } },
+    { label: `1 card (set of ${info.stack})`, chaos: each, item: { name, type: 'DivinationCard' }, bulk: true },
     { label: `Full set: ${info.stack} cards`, chaos: set }
   ]
   if (reward) {

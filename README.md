@@ -72,7 +72,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 <!-- modules:start (checked against renderer/src/web/woke/modules.ts by renderer/test/woke/readme.test.ts) -->
 | Area | Module | What it does |
 | --- | --- | --- |
-| Economy | Market | Movers and watchlist from poe.ninja |
+| Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
 | Economy | Investments | League-start buys ranked from past leagues |
 | Economy | Lab gems | Divine Font gem values by colour |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
@@ -89,6 +89,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
 | Mapping | Atlas strategies | Atlas tree, Threads and regex per strategy |
+| Mapping | Wickerman (3.30) | Viscera versions and drop sources on price check and Ctrl+Space |
 | Mapping | League mechanics | Prices and picks for each league mechanic |
 | Campaign & lab | Campaign | Next steps for the act you are in |
 | Campaign & lab | Run timer | Act splits and personal bests |

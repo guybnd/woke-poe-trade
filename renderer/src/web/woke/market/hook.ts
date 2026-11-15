@@ -19,6 +19,11 @@ export function replayWokePrices (): void {
   if (last) notify(last.leagueId, last.chunks, last.at)
 }
 
+// The latest load, still held by APT (not a copy), for the Market window.
+export function lastWokePrices (): { leagueId: string, chunks: DenseChunk[], at: number } | null {
+  return last
+}
+
 export function emitWokePricesLoaded (leagueId: string, chunks: DenseChunk[]): void {
   last = { leagueId, chunks, at: Date.now() }
   notify(leagueId, chunks, last.at)

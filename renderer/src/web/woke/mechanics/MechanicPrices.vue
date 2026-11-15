@@ -2,7 +2,7 @@
   <div>
     <div v-if="pick" class="w-verdict" :class="$style.verdict">
       Best: <b v-item-tip="pick.best.item">{{ pick.best.item.name }}</b>
-      <span class="w-dim">(<WPrice :chaos="pick.best.chaos" :divine="divine" />{{ pick.best.unit > 1 ? ` per ${pick.best.unit}` : '' }})</span>
+      <span class="w-dim">(<WPrice :bulk="pick.best.unit <= 1" :chaos="pick.best.chaos" :divine="divine" />{{ pick.best.unit > 1 ? ` per ${pick.best.unit}` : '' }})</span>
       <template v-if="pick.next">, then <span v-item-tip="pick.next.item">{{ pick.next.item.name }}</span></template>
     </div>
     <template v-for="g in shownGroups" :key="g.label">
@@ -16,7 +16,7 @@
           <span v-if="i === 0 && !g.unranked" class="w-up ml-1" :class="$style.best">best</span>
         </span>
         <span :class="$style.bar"><i :style="{ width: barWidth(row.chaos, g.max) }" /></span>
-        <WPrice :chaos="row.chaos" :divine="divine" class="justify-end" />
+        <WPrice :bulk="!g.unit" :chaos="row.chaos" :divine="divine" class="justify-end" />
       </div>
     </template>
   </div>
@@ -46,7 +46,7 @@ const props = withDefaults(defineProps<{
 const groups = computed(() => props.mech.groups.map(g => {
   const rows = priceGroup(g, props.items, props.skipThin ? isThin : undefined)
   const thinOnly = props.skipThin && !rows.length && priceGroup(g, props.items).length > 0
-  return { label: g.unit ? `${g.label} (per ${g.unit})` : g.label, rows, max: rows[0]?.chaos ?? 0, unranked: g.unranked, thinOnly }
+  return { label: g.unit ? `${g.label} (per ${g.unit})` : g.label, unit: g.unit, rows, max: rows[0]?.chaos ?? 0, unranked: g.unranked, thinOnly }
 }))
 const shownGroups = computed(() => props.top == null
   ? groups.value
@@ -72,7 +72,7 @@ function barWidth (chaos: number, max: number) {
   background: var(--w-accent-soft);
 }
 .verdict b { color: var(--w-accent); font-weight: 600; }
-.priceGrid { grid-template-columns: minmax(0, 1fr) 72px 68px; }
+.priceGrid { grid-template-columns: minmax(0, 1fr) 72px minmax(68px, max-content); }
 .best { font-size: var(--w-fs-caps); letter-spacing: 0.06em; text-transform: var(--w-caps-case); font-family: var(--w-caps-face); }
 .bar { height: 5px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }

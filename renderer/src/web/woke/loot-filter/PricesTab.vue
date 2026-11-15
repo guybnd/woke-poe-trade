@@ -46,7 +46,7 @@
         <WChip v-if="m.hides" :class="$style.bad" title="This tier is hidden at your strictness. Left unticked so a price alone doesn't hide it.">would hide it</WChip>
         <span class="grow" />
         <span class="w-num text-xs w-dim w-trunc" :title="m.note">{{ m.note ? `${m.note} · ` : '' }}</span>
-        <WPrice :chaos="m.chaos" :divine="divine" />
+        <WPrice bulk :chaos="m.chaos" :divine="divine" />
         <WButton size="sm" variant="ghost" icon="fas fa-times" :title="`Keep ${m.base} in ${tierLabel(m.from)}. It stops being suggested, and you can unlock it under Not moved.`" :aria-label="`Keep ${m.base} where it is`" @click="keepOne(m)">Keep</WButton>
       </div>
       <template v-if="skipped.length">
@@ -60,7 +60,7 @@
           <span class="w-faint text-xs">price says {{ tierLabel(s.wanted) }}</span>
           <WButton v-if="s.reason !== 'locked'" size="sm" variant="ghost" title="Move it, though this price may not be real" @click="moveAnyway(s)">Move anyway</WButton>
           <WButton v-else size="sm" variant="ghost" title="Let prices move it again" @click="unlock(s)">Unlock</WButton>
-          <WPrice :chaos="s.chaos" :divine="divine" />
+          <WPrice bulk :chaos="s.chaos" :divine="divine" />
         </div>
       </template>
     </template>
@@ -101,7 +101,7 @@
         <span v-if="r.trash" :class="$style.trash" class="text-xs">{{ r.trash }} trash</span>
         <span class="grow" />
         <WChip :class="r.v.state === 'hidden' && !caught(r.v) ? $style.bad : ''">{{ r.v.state === 'hidden' ? (caught(r.v) ? 'safety net shows it' : 'hidden') : 'small label' }}</WChip>
-        <WPrice :chaos="r.v.chaos" :divine="divine" />
+        <WPrice bulk :chaos="r.v.chaos" :divine="divine" />
         <i :class="openRow === r.key ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="w-faint text-xs" />
       </button>
       <div v-if="openRow === r.key && !done.has(r.key)" :class="$style.detail">

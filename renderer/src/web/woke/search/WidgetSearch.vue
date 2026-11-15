@@ -6,7 +6,7 @@
           <button v-for="(p, i) in pins" :key="key(p)" v-item-tip="p" :class="[$style.pin, { [$style.pinTop]: i === 0 && pins.length > 1 }]"
             title="Remove from the comparison" @click="togglePin(p)">
             <span class="w-trunc" :class="rarityClass(p.type)">{{ p.name }}<span v-if="p.variant" class="w-dim ml-1">{{ p.variant }}</span></span>
-            <WPrice :chaos="p.chaos" :divine="divine" />
+            <WPrice bulk :chaos="p.chaos" :divine="divine" />
           </button>
         </div>
         <label :class="$style.find">
@@ -31,7 +31,7 @@
                   <span class="w-trunc" :class="e.kind === 'price' ? rarityClass(e.group.type) : undefined">{{ e.name }}</span>
                   <span class="w-dim w-trunc" :class="$style.small">{{ e.sub }}</span>
                 </span>
-                <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :chaos="e.group.low" :divine="divine" /> to </template><WPrice :chaos="e.group.high" :divine="divine" /></span>
+                <span v-if="e.kind === 'price'" :class="$style.range"><template v-if="e.group.low !== e.group.high"><WPrice :bulk="e.group.high < 1" :chaos="e.group.low" :divine="divine" /> to </template><WPrice :bulk="e.group.high < 1" :chaos="e.group.high" :divine="divine" /></span>
                 <WKbd v-else-if="e.kind === 'command' && e.keys" :keys="e.keys" />
               </button>
             </template>
@@ -48,9 +48,9 @@
               <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
                   <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" /></span>
-                <WPrice :chaos="v.chaos" :divine="divine" class="text-right" />
-                <WPrice :chaos="v.d1" :divine="divine" class="text-right w-dim" />
-                <WPrice :chaos="v.d7" :divine="divine" class="text-right w-dim" />
+                <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
+                <WPrice bulk :chaos="v.d1" :divine="divine" class="text-right w-dim" />
+                <WPrice bulk :chaos="v.d7" :divine="divine" class="text-right w-dim" />
                 <WDelta :value="changeSince(v.chaos, v.d1)" class="text-right" />
                 <WDelta :value="changeSince(v.chaos, v.d7)" class="text-right" />
                 <span :class="$style.rowBtns">
@@ -135,7 +135,7 @@ import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toa
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
 import { convNumber, currencyConversions } from './conversions'
-import { MODULES, isWidgetTypeOn } from '../modules'
+import { MODULES, isModuleOn, isWidgetTypeOn } from '../modules'
 import { pressedKeys, sortKeys } from '../loot-filter/hotkey-match'
 import { whenIdle } from '../shared/perf'
 import { PAGES } from '../settings/pages'
@@ -168,6 +168,9 @@ import { gemLookup, transfiguredBase } from './lookups/gems'
 import { keystoneUniques, passiveList, treeLookup } from './lookups/tree'
 import type { Passive } from './lookups/tree'
 import { betrayalLookup } from './lookups/betrayal'
+import { visceraLookup } from './lookups/viscera'
+import { loadViscera } from '../wickerman/viscera'
+import type { VisceraTable } from '../wickerman/viscera'
 import { HELP_QUERY, exampleCards } from './lookups/examples'
 import { MECHANICS_TYPE } from '../mechanics/widget'
 import type { MechanicsWidget } from '../mechanics/widget'
@@ -440,6 +443,12 @@ function loadCrafts () {
     .catch(() => {})
     .finally(() => { craftLoading = false })
 }
+// 3.30 Wickerman module: Viscera facts, a data file read on open while it's on.
+const visceraTable = shallowRef<VisceraTable | null>(null)
+function loadVisceraTable () {
+  if (visceraTable.value || !isModuleOn(AppConfig(), 'wickerman')) return
+  loadViscera().then(t => { visceraTable.value = t }).catch(() => {})
+}
 // Keystones and notables with what they do, from the PoB tool's tree.
 const passives = shallowRef<Passive[] | null>(null)
 const keystoneGrants = shallowRef<ReadonlyMap<string, string[]>>(new Map())
@@ -464,11 +473,12 @@ function betrayalOverrides (): Record<string, string> {
 const stopDataWatch = onSharedDataChange(() => {
   tipItems.value = null
   passives.value = null
+  visceraTable.value = null
   treeLoads++
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -775,6 +785,7 @@ function start (text: string) {
   whenIdle(loadGems)
   whenIdle(loadCrafts)
   whenIdle(loadTree)
+  whenIdle(loadVisceraTable)
 }
 function close () {
   wm.hide(props.config.wmId)
@@ -858,7 +869,7 @@ const dataNote = computed(() => {
 .none { padding: var(--w-s3) var(--w-pad); color: var(--w-dim); }
 .detail { padding: var(--w-s3) var(--w-s4); min-width: 0; }
 .title { display: flex; align-items: center; gap: var(--w-s2); margin-bottom: var(--w-s2); font-size: var(--w-fs-lg); }
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) 76px 76px 76px 52px 52px 50px; column-gap: 6px; align-items: center; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 88px 88px 88px 52px 52px 50px; column-gap: 6px; align-items: center; }
 .gridHead { min-height: calc(24px * var(--w-text-scale, 1)); font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); border-bottom: 1px solid var(--w-line); font-family: var(--w-caps-face); }
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowBtns { display: flex; justify-content: flex-end; gap: 2px; }
