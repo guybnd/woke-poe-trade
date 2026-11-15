@@ -16,16 +16,20 @@
       </DockItem>
 
       <!-- Expanded: rail of mechanics, prices, then scarabs and tips. -->
-      <WPanel v-if="config.expanded" :icon="mech.id" :title="config.wmTitle || 'League mechanics'" :updated="prices.snapshot.value?.ts ?? null" :fresh-min="40" :stale-min="180" width="40rem" max-height="70vh" :scroll="false">
+      <WPanel v-if="config.expanded" :icon="mech.id" :title="config.wmTitle || 'League mechanics'" :updated="prices.snapshot.value?.ts ?? null" :fresh-min="40" :stale-min="180" :width="config.railNames ? '45rem' : '40rem'" max-height="70vh" :scroll="false">
         <template #actions>
           <button class="w-icon-btn" title="Collapse to icon" @click="collapse"><i class="fas fa-compress-alt" /></button>
         </template>
         <div :class="$style.split">
-          <div :class="$style.rail" class="w-scroll w-rule-r" role="tablist">
+          <div :class="[$style.rail, { [$style.railWide]: config.railNames }]" class="w-scroll w-rule-r" role="tablist">
             <button v-for="m in visible" :key="m.id" type="button" role="tab" :aria-selected="m.id === mech.id"
               :class="[$style.railBtn, { [$style.railOn]: m.id === mech.id }]" :title="m.label" @click="config.tab = m.id">
-              <WIcon :mechanic="m.id" :fallback="m.icon" size="md" /><span>{{ m.short }}</span>
+              <WIcon :mechanic="m.id" :fallback="m.icon" size="md" /><span>{{ config.railNames ? m.label : m.short }}</span>
               <i v-if="m.id === zoneMech" :class="$style.dot" title="Your current zone" />
+            </button>
+            <button type="button" :class="$style.railToggle" :title="config.railNames ? 'Short names' : 'Show full names'" :aria-label="config.railNames ? 'Short names' : 'Show full names'"
+              :aria-pressed="!!config.railNames" @click="config.railNames = !config.railNames">
+              <i :class="config.railNames ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right'" />
             </button>
           </div>
 
@@ -356,6 +360,29 @@ const dockMenu = computed<DockMenuAction[]>(() => [
   letter-spacing: 0.04em;
 }
 .railBtn > i:first-child { font-size: var(--w-fs-lg); }
+/* Full names: icon and name on one row. */
+.railWide .railBtn {
+  width: auto;
+  min-width: 42px;
+  grid-auto-flow: column;
+  grid-template-columns: 20px max-content;
+  justify-content: start;
+  gap: 6px;
+  padding: 3px 14px 3px 8px;
+  letter-spacing: 0;
+}
+/* Sits at the rail's foot while the list scrolls. */
+.railToggle {
+  position: sticky;
+  bottom: -6px;
+  margin-top: auto;
+  flex: none;
+  min-height: 24px;
+  color: var(--w-dim);
+  background: var(--w-panel);
+  border-top: 1px solid var(--w-line);
+}
+.railToggle:hover { color: var(--w-fg); }
 .railBtn:hover { color: var(--w-fg); background: var(--w-panel-3); }
 .railOn { color: var(--w-accent); background: var(--w-accent-soft); }
 .dot { position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); }

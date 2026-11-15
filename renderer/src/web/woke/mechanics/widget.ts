@@ -20,6 +20,8 @@ export interface MechanicsWidget extends Widget {
   betrayalAt?: Record<string, number>
   // Leave thin-market prices out of the lists and the Best pick (unset: on).
   skipThin?: boolean
+  // The rail shows full mechanic names instead of short tags (unset: off).
+  railNames?: boolean
   // The icon's position was checked against the stash area once.
   posChecked?: boolean
 }
