@@ -21,7 +21,7 @@ import { LOOT_FILTER_TYPE } from './loot-filter/widget'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './map-mods/map-check'
 import { MAP_SCAN_TYPE } from './map-mods/scan'
 import { MAP_MODS_TYPE } from './map-mods/widget'
-import { MARKET_BROWSER_TYPE, MARKET_TRACKER_TYPE } from './market/widget'
+import { MARKET_TRACKER_TYPE } from './market/widget'
 import { MECHANICS_TYPE } from './mechanics/widget'
 import { POB_BUILDS_TYPE } from './pob-builds/widget'
 import { POE_RE_TYPE, initPoeReWidget } from './regex-library/poe-re-widget'
@@ -59,12 +59,6 @@ export const widgetTradeSearchesSpec = {
 
 export const widgetMarketTrackerSpec = {
   type: MARKET_TRACKER_TYPE,
-  instances: 'multi',
-  trNameKey: 'Movers'
-} satisfies WidgetSpec
-
-export const widgetMarketBrowserSpec = {
-  type: MARKET_BROWSER_TYPE,
   instances: 'multi',
   trNameKey: 'Market'
 } satisfies WidgetSpec

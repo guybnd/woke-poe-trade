@@ -45,7 +45,7 @@ test('right-clicking an item gives its strip: price check, stash search, watch',
 
   // Unwatch takes it off the watchlist.
   await row('The Doctor').click({ button: 'right' })
-  await menu.getByRole('menuitem', { name: 'Stop watching its price in Movers' }).click()
+  await menu.getByRole('menuitem', { name: 'Stop watching its price in Market' }).click()
   await expect(row('The Doctor')).toHaveCount(0)
 
   // A currency's price check reads it like Ctrl+C in game would.

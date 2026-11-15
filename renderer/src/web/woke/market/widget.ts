@@ -1,9 +1,11 @@
 import { shallowRef } from 'vue'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { CorruptedFilter } from './types'
+import type { MarketSort } from './browser'
 
 export const MARKET_TRACKER_TYPE = 'woke-market-tracker'
-// The poe.ninja-style Market window (browser.ts); the tracker above is Movers.
+// A separate Market window existed briefly (2026-11-15) before the Prices tab;
+// foldMarketWindow merges it back.
 export const MARKET_BROWSER_TYPE = 'woke-market'
 
 export type MoverPeriod = '6h' | '24h' | '7d'
@@ -38,7 +40,8 @@ export function checkAlert (w: WatchedItem, price: number | null): { state: 'abo
 
 export interface MarketTrackerWidget extends Widget {
   anchor: Anchor
-  view: 'movers' | 'watchlist'
+  // Prices: every poe.ninja category (MarketPrices.vue). Unset on old configs: Movers.
+  view: 'prices' | 'movers' | 'watchlist'
   period: MoverPeriod
   minChaos: number
   typeFilter: string
@@ -49,39 +52,68 @@ export interface MarketTrackerWidget extends Widget {
   showThin?: boolean
   // Corrupted gems: all of them, only them, or none of them.
   corrupted?: CorruptedFilter
+  // The Prices tab: poe.ninja category, sort, and leaving thin markets out.
+  priceCategory?: string
+  priceSort?: MarketSort
+  priceDesc?: boolean
+  priceSkipThin?: boolean
+  priceCorrupted?: CorruptedFilter
 }
 
 // Opens the tracker on a search, from the search palette.
 export const marketSearchRequest = shallowRef<string | null>(null)
 
-// Once per config (WOKE_CONFIG_VERSION 2): the old Market window kept its
-// movers and watchlist and became Movers; the new Market window takes its
-// place on the rail, just before it.
-export function splitMarketWindow (
-  widgets: Array<Record<string, unknown> & { wmId: number, wmType: string }>,
-  anchor: () => Anchor
-): void {
-  const tracker = widgets.find(w => w.wmType === MARKET_TRACKER_TYPE)
-  if (!tracker || widgets.some(w => w.wmType === MARKET_BROWSER_TYPE)) return
+type WidgetRecord = Record<string, unknown> & { wmId: number, wmType: string }
+
+// Once per config (WOKE_CONFIG_VERSION 3): Market is one window with Prices,
+// Movers and Watchlist tabs. A separate Market window from a dev build folds
+// into it, keeping its settings and its rail spot.
+export function foldMarketWindow (widgets: WidgetRecord[]): void {
+  const browsers = widgets.filter(w => w.wmType === MARKET_BROWSER_TYPE)
+  const browser = browsers[0] as WidgetRecord | undefined
+  let tracker = widgets.find(w => w.wmType === MARKET_TRACKER_TYPE)
+  if (browser && !tracker) {
+    // Only the price list was kept: it becomes the window.
+    tracker = browser
+    Object.assign(tracker, { wmType: MARKET_TRACKER_TYPE, view: 'prices', period: '24h', minChaos: 5, typeFilter: '', watchlist: [] })
+    const sizes = tracker.wokeSizes as Record<string, unknown> | undefined
+    if (sizes?.main) tracker.wokeSizes = { prices: sizes.main }
+  }
+  // Every other copy goes, its rail spot and name passing to the Market window.
+  const menu = widgets.find(w => w.wmType === 'menu') as { pinned?: number[], labels?: Record<number, string> } | undefined
+  for (const old of browsers) {
+    if (old === tracker || !tracker) continue
+    widgets.splice(widgets.indexOf(old), 1)
+    const pins = menu?.pinned
+    const at = pins?.indexOf(old.wmId) ?? -1
+    if (pins && at !== -1) {
+      if (pins.includes(tracker.wmId)) pins.splice(at, 1)
+      else pins.splice(at, 1, tracker.wmId)
+    }
+    if (menu?.labels?.[old.wmId] != null) {
+      menu.labels[tracker.wmId] ??= menu.labels[old.wmId]
+      menu.labels = Object.fromEntries(Object.entries(menu.labels).filter(([id]) => Number(id) !== old.wmId))
+    }
+  }
+  if (!tracker) return
+  if (browser && browser !== tracker) {
+    // Its size was the price list's.
+    const sizes = (browser.wokeSizes ?? {}) as Record<string, unknown>
+    if (sizes.main) tracker.wokeSizes = { ...(tracker.wokeSizes as Record<string, unknown> | undefined), prices: sizes.main }
+  }
+  if (browser) {
+    tracker.priceCategory = browser.category ?? browser.priceCategory
+    tracker.priceSort = browser.sort ?? browser.priceSort
+    tracker.priceDesc = browser.desc ?? browser.priceDesc
+    tracker.priceSkipThin = browser.hideThin ?? browser.priceSkipThin
+    tracker.priceCorrupted = browser.corrupted ?? browser.priceCorrupted
+    delete tracker.category
+    delete tracker.sort
+    delete tracker.desc
+    delete tracker.hideThin
+  }
+  // Opens on Prices after the fold; an old tracker stays on its tab.
+  if (browser || tracker.wmTitle === 'Movers') tracker.view = 'prices'
   // A name you gave it stays.
-  if (!tracker.wmTitle || tracker.wmTitle === 'Market') tracker.wmTitle = 'Movers'
-  const wmId = Math.max(0, ...widgets.map(w => w.wmId)) + 1
-  widgets.push({
-    wmId,
-    wmType: MARKET_BROWSER_TYPE,
-    wmTitle: 'Market',
-    wmWants: 'hide',
-    wmZorder: null,
-    wmFlags: ['invisible-on-blur'],
-    anchor: anchor(),
-    category: 'Currency',
-    sort: 'value',
-    desc: true,
-    unit: tracker.unit === 'div' ? 'div' : 'chaos',
-    hideThin: false,
-    corrupted: 'any'
-  })
-  const menu = widgets.find(w => w.wmType === 'menu') as { pinned?: number[] } | undefined
-  const at = menu?.pinned?.indexOf(tracker.wmId) ?? -1
-  if (menu?.pinned && at !== -1) menu.pinned.splice(at, 0, wmId)
+  if (!tracker.wmTitle || tracker.wmTitle === 'Movers') tracker.wmTitle = 'Market'
 }

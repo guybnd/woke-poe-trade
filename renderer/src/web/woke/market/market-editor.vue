@@ -16,7 +16,7 @@ import { configProp } from '@/web/settings/utils'
 import type { MarketTrackerWidget } from './widget'
 
 export default defineComponent({
-  name: 'Movers',
+  name: 'Market',
   components: { WField, WSettingRow, WToggle },
   props: configProp<MarketTrackerWidget>(),
   setup (props) {

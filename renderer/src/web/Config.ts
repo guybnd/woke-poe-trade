@@ -19,8 +19,8 @@ import { renameQuantityStarter } from './woke/regex-library/widget'
 import type { RegexEntry } from './woke/regex-library/widget'
 import { carryRewordedRatings } from './woke/map-mods/rules'
 import type { ModRating } from './woke/map-mods/rules'
-import { movePopupsToNewSpot, popupAnchor } from './woke/ui/window-anchor'
-import { splitMarketWindow } from './woke/market/widget'
+import { movePopupsToNewSpot } from './woke/ui/window-anchor'
+import { foldMarketWindow } from './woke/market/widget'
 import type { WokeModulesConfig } from './woke/modules'
 import type { ItemCheckWidget } from './item-check/widget'
 import { BOOKMARKS_TARGET } from './woke/item-lookup/lookup'
@@ -557,9 +557,9 @@ function upgradeConfig (_config: Config): Config {
   moveStashSearchToLibrary(config.widgets as Array<Record<string, any> & { wmId: number, wmType: string }>)
   // woke: the map quantity starter string reads 3.30's Atlas Drops line.
   renameQuantityStarter(config.widgets as Array<{ wmType: string, entries?: RegexEntry[] }>)
-  // woke: the Market window became a price list; movers and watchlist moved to Movers.
-  if (modules.woke && (modules.woke.version ?? 0) < 2) {
-    splitMarketWindow(config.widgets as unknown as Array<Record<string, unknown> & { wmId: number, wmType: string }>, popupAnchor)
+  // woke: Market is one window with Prices, Movers and Watchlist tabs, opening on Prices.
+  if ((modules.woke?.version ?? 0) < 3) {
+    foldMarketWindow(config.widgets as unknown as Array<Record<string, unknown> & { wmId: number, wmType: string }>)
   }
   // woke: each tool has one name now.
   renameOldDefaultTitles(config.widgets as Array<{ wmType: string, wmTitle?: string }>)
