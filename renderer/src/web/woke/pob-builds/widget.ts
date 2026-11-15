@@ -39,6 +39,9 @@ export interface PobBuildsWidget extends Widget {
   // Main also reads your character (Character tab) on entering an area, at
   // most every 5 minutes. Off: only Read now. Missing = off (Guy's pick).
   characterAutoRead?: boolean
+  // Gem names in the build window marked against your character (a dot each;
+  // the numbers in the gem's tooltip). Missing = off.
+  characterGemMarks?: boolean
 }
 
 export const TREE_HOTKEY_DEFAULT = 'Alt + T'

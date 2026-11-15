@@ -48,7 +48,12 @@
         <div v-if="!isActive" class="pt-1 text-xs" style="color: var(--w-warn);">Other windows use your active build. Press Use build to use this loadout there.</div>
         <NextSection v-if="nextTree || nextGems_ || gearStep" :config="config" :tree="nextTree ?? null" :diff="treeData ? nextTreeDiff : null"
           :gems="nextGems_" :gear="gearStep" :pin="() => nextPin(entry.relPath, entry.name)" @tree="emit('tree', $event)" />
-        <div :class="$style.heading">Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></div>
+        <div :class="$style.heading" class="flex items-center">
+          <span>Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></span>
+          <button v-if="personalOn && character" type="button" class="ml-auto normal-case tracking-normal w-focusable" :class="[$style.mineToggle, { [$style.mineOn]: config.characterGemMarks === true }]"
+            :aria-pressed="config.characterGemMarks === true" :title="config.characterGemMarks === true ? 'Hide the marks for your character\'s gems' : 'Mark each gem: green you have it, amber lower, hollow missing'"
+            @click="toggleGemMarks">● Mine</button>
+        </div>
         <div v-for="g in shownLinks" :key="groupKey(shownSet!.groups, g)" :class="$style.linkGroup">
           <div :class="$style.link">
             <SocketDots :colours="linkColours(g)" />
@@ -397,8 +402,13 @@ const shownLinks = computed(() => shownSet.value ? allLinkGroups(shownSet.value.
 
 const className = computed(() => build.className.value || props.details?.ascendClassName || props.details?.className || '')
 provide(GEM_CLASS, className)
-// Your character's gems on every gem name here (character-sync).
-provide(CHARACTER_GEMS_ON, computed(() => personalOn.value && character.value != null))
+// Your character's gems on every gem name here (character-sync), when the
+// Links heading's toggle is on (off to start).
+provide(CHARACTER_GEMS_ON, computed(() => personalOn.value && character.value != null && props.config.characterGemMarks === true))
+function toggleGemMarks () {
+  props.config.characterGemMarks = props.config.characterGemMarks !== true
+  saveConfig()
+}
 const gems = computed(() => props.details
   ? nextGems(props.details, level.value, className.value, relevantGems(props.details, level.value, act.value, pick.value), 'campaign')
   : [])
@@ -597,6 +607,17 @@ function run (p: Promise<unknown>) {
   resize: vertical;
   line-height: 1.4;
   font-size: var(--w-fs-md);
+}
+.mineToggle {
+  font-size: var(--w-fs-xs);
+  padding: 0 6px;
+  border: 1px solid var(--w-border, #3b2f1f);
+  border-radius: 2px;
+  color: var(--w-faint);
+}
+.mineOn {
+  color: var(--w-accent);
+  border-color: var(--w-accent);
 }
 .heading {
   padding: 8px 0 2px;
