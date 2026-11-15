@@ -14,6 +14,14 @@ history:
     user: Agent
     date: '2026-11-15T06:27:38.402Z'
     comment: Created ticket.
+    id: a-2026-11-15t06-27-38-402z
+  - type: activity
+    user: Agent
+    date: '2026-11-15T06:31:54.582Z'
+    comment: >-
+      Mocks A-D with picks: https://claude.ai/artifact/PMvnyzjUvoHDi7oXGVzDa5
+      (db picks/A..D). Building A+B meanwhile on woke/wickerman-ledger.
+    id: a-2026-11-15t06-31-54-582z
 ---
 Bring wickermanledger.site's info into the app as a self-contained, switchable league module (woke/ module registry), removable at league end.
 
