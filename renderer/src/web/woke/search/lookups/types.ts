@@ -68,6 +68,8 @@ export interface LookupContext {
   now: number
   // The league you picked, when the trade site gave its start.
   league: { name: string, startedAt: number | null } | null
+  // Unidentified trade price of a rolled unique (a jewel), when looked up.
+  unid?: (name: string) => number | null
 }
 
 export type Lookup = (query: string, ctx: LookupContext) => LookupCard[]

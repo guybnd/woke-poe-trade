@@ -1,3 +1,5 @@
+import { VARIABLE_ITEMS } from '../shared/unid-prices'
+
 // Pinnacle boss entry costs and drop tables.
 //
 // GGG does not publish drop rates. A `chance` here is the share of community
@@ -31,21 +33,7 @@ export interface BossDrop {
 
 // Uniques that drop unidentified and whose value depends on what they roll.
 // Priced from unidentified trade listings; poe.ninja only has one low row.
-export const VARIABLE_ITEMS = new Set([
-  'Impossible Escape',
-  'Thread of Hope',
-  "Watcher's Eye",
-  'Forbidden Flesh',
-  'Forbidden Flame',
-  'Sublime Vision',
-  "Atziri's Splendour",
-  "Doryani's Invitation",
-  'The Light of Meaning',
-  'Rational Doctrine',
-  'Beauty',
-  'Melding of the Flesh',
-  'Dissolution of the Flesh'
-])
+export { VARIABLE_ITEMS }
 
 export interface BossEntry {
   name: string

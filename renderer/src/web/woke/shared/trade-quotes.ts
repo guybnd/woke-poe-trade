@@ -1,11 +1,15 @@
-// Prices from official trade for boss drops poe.ninja can't price: jewels whose
-// value is unknown until identified, and drops with no poe.ninja row at all.
+// Prices from official trade for items poe.ninja can't price: uniques whose
+// value is unknown until identified, and boss drops with no poe.ninja row.
 //
 // Every lookup spends the same rate limit as price checks, so they run one at a
-// time, well spaced, only while the Boss runs panel is on screen, and the
-// results are kept for a while.
+// time, well spaced, only for what's on screen (the Boss runs panel, a boss
+// arena's card, the item picked in Search), and the results are kept a while.
 import { shallowRef } from 'vue'
-import type { TradeQuote } from './calc'
+
+export interface TradeQuote {
+  chaos: number
+  listings: number
+}
 
 // Refetched when older than this; still shown (over poe.ninja) until a day old.
 const FRESH_MS = 60 * 60 * 1000
@@ -54,6 +58,9 @@ export function createTradePrices (deps: TradePriceDeps) {
   const inFlight = shallowRef<ReadonlySet<string>>(new Set())
   const failedAt = new Map<string, number>()
   let queue: string[] = []
+  // Asked for one at a time (an item picked in Search): kept when a panel
+  // replaces or stops its own list, until looked up.
+  let asked: string[] = []
   let league = ''
   let divine = 0
   let busy = false
@@ -121,7 +128,10 @@ export function createTradePrices (deps: TradePriceDeps) {
     busy = false
     // A new request can have replaced the queue during the lookup. If it's for
     // another league, the same name there still needs its own lookup.
-    if (league === forLeague) queue = queue.filter(n => n !== name)
+    if (league === forLeague) {
+      queue = queue.filter(n => n !== name)
+      asked = asked.filter(n => n !== name)
+    }
     setPending()
     await step()
   }
@@ -130,14 +140,31 @@ export function createTradePrices (deps: TradePriceDeps) {
   function request (forLeague: string, forDivine: number, names: string[]) {
     league = forLeague
     divine = forDivine
-    queue = names.filter(name => due(forLeague, name))
+    if (forLeague !== league) asked = []
+    league = forLeague
+    divine = forDivine
+    queue = [...new Set([...asked, ...names])].filter(name => due(forLeague, name))
     setPending()
     step().catch(() => {})
   }
 
-  function stop () {
-    queue = []
+  // One name, first in line, without dropping what's already queued.
+  function ask (forLeague: string, forDivine: number, name: string) {
+    if (forLeague !== league) { queue = []; asked = [] }
+    league = forLeague
+    divine = forDivine
+    if (!due(forLeague, name)) return
+    asked = [name, ...asked.filter(n => n !== name)]
+    queue = [name, ...queue.filter(n => n !== name)]
     setPending()
+    step().catch(() => {})
+  }
+
+  // Drops the panel's list; names asked for one at a time still get looked up.
+  function stop () {
+    queue = queue.filter(n => asked.includes(n))
+    setPending()
+    if (queue.length) return
     if (timer != null) clearTimeout(timer)
     timer = null
   }
@@ -146,5 +173,5 @@ export function createTradePrices (deps: TradePriceDeps) {
     return inFlight.value.has(name)
   }
 
-  return { get, pending, request, stop }
+  return { get, pending, request, ask, stop }
 }

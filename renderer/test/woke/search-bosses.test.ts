@@ -64,4 +64,14 @@ describe('dropLookup', () => {
     const [jewel] = dropLookup('impossible escape', ctx())
     expect(jewel.sections[0].rows![0].value).toBe('Depends on the roll')
   })
+
+  it('prices a rolled jewel at its unidentified trade price once looked up', () => {
+    const unid = (n: string) => n === 'Impossible Escape' ? 120 : null
+    const [jewel] = dropLookup('impossible escape', ctx({ unid }))
+    expect(jewel.sections[0].rows![0]).toMatchObject({ label: 'Impossible Escape · unidentified', chaos: 120 })
+    const exarch = bossLookup('the searing exarch', ctx({ unid: n => n === 'Forbidden Flame' ? 300 : null }))[0]
+    const drops = exarch.sections.find(s => s.label?.includes('rops'))!.rows!
+    expect(drops.find(r => r.label.startsWith('Forbidden Flame'))).toMatchObject({ chaos: 300 })
+    expect(drops.find(r => r.label.startsWith('Dissolution of the Flesh'))!.value).toBe('Depends on the roll')
+  })
 })

@@ -164,6 +164,10 @@
           <span :class="$style.span" title="poe.ninja's price over the last 7 days"><WDelta :value="lookup.market.change" title="Change over 7 days" /> <span class="w-dim">7d</span></span>
           <WSpark :values="lookup.market.graph" :width="72" :height="20" />
         </footer>
+        <footer v-if="lookup.market?.unid" :class="$style.strip" :title="`Middle of the cheapest 10 of ${lookup.market.unid.listings} unidentified instant buyouts on trade.`">
+          <WPrice :chaos="lookup.market.unid.chaos" :divine="xchgRate ?? null" />
+          <span class="w-dim">unidentified</span>
+        </footer>
       </template>
     </div>
   </Teleport>

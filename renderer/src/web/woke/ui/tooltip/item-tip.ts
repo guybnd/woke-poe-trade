@@ -15,6 +15,8 @@ import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
+import { useLeagues } from '@/web/background/Leagues'
+import { VARIABLE_ITEMS, useTradePrices } from '../../shared/unid-prices'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
 
 export interface ItemTipRef {
@@ -109,7 +111,12 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   const info = ninja.findPriceByQuery({ ns, name: ref.name, variant: ref.variant || undefined }) ??
     (ref.variant ? null : ninja.findPriceByName(ns, ref.name))
   if (!info) return null
-  return marketFromRow(info, ref)
+  const market = marketFromRow(info, ref)
+  if (kind !== 'unique' || !VARIABLE_ITEMS.has(ref.name)) return market
+  // Only a quote already on hand: hovering never spends a trade search.
+  const league = useLeagues().selectedId.value
+  const unid = league ? useTradePrices().get(league, ref.name) : null
+  return unid ? { ...market, unid } : market
 }
 
 // Marks the uniques on a base that won't turn up as a random drop on it.

@@ -37,6 +37,9 @@ export interface TipMarket {
   count?: number
   // A name with several prices: shown instead of the one price and its graph.
   range?: { low: number, high: number, count: number }
+  // A rolled unique (a jewel) drops unidentified: what those sell for on
+  // trade, when Boss runs or Search has looked it up.
+  unid?: { chaos: number, listings: number }
 }
 
 // One unique a base can drop as, for a base in a filter's unique tiers.

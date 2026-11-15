@@ -3,7 +3,7 @@ import { BOSSES, VARIABLE_ITEMS } from '@/web/woke/boss-runs/bosses'
 import { dropPrice, evaluateBoss, killDropPrice, needsTrade, priceResolver, tradeQuery, tradeWanted, unidentifiedTradeUrl } from '@/web/woke/boss-runs/calc'
 import type { BossPrefs, TradeQuote } from '@/web/woke/boss-runs/calc'
 import { ESTIMATED_RATES, estimateUrl } from '@/web/woke/boss-runs/estimates'
-import { createTradePrices, quoteFromListings } from '@/web/woke/boss-runs/trade-prices'
+import { createTradePrices, quoteFromListings } from '@/web/woke/shared/trade-quotes'
 import type { PriceItem } from '@/web/woke/market/types'
 
 const prefs = (over: Partial<BossPrefs> = {}) => ({
@@ -243,6 +243,35 @@ describe('trade price store', () => {
   it('stops showing a price after a day', () => {
     const { prices } = store(undefined, () => ({ Allflame: { A: { chaos: 50, listings: 5, ts: Date.now() - 25 * 60 * 60 * 1000 } } }))
     expect(prices.get('Allflame', 'A')).toBeNull()
+  })
+
+  it('looks up a name asked for one at a time first, and keeps it when the panel stops', async () => {
+    const { prices, lookup } = store()
+    prices.request('Allflame', 400, ['A', 'B'])
+    await vi.advanceTimersByTimeAsync(0)
+    prices.ask('Allflame', 400, 'C')
+    expect(prices.pending('C')).toBe(true)
+    prices.stop()
+    expect(prices.pending('B')).toBe(false)
+    expect(prices.pending('C')).toBe(true)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(lookup.mock.calls.map(c => c[1])).toEqual(['A', 'C'])
+    // A panel's new list doesn't drop it either.
+    prices.ask('Allflame', 400, 'D')
+    prices.request('Allflame', 400, ['E'])
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(lookup.mock.calls.map(c => c[1])).toEqual(['A', 'C', 'D'])
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(lookup.mock.calls.map(c => c[1])).toEqual(['A', 'C', 'D', 'E'])
+  })
+
+  it('doesn\'t ask again for a fresh quote', async () => {
+    const { prices, lookup } = store()
+    prices.ask('Allflame', 400, 'A')
+    await vi.advanceTimersByTimeAsync(0)
+    prices.ask('Allflame', 400, 'A')
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(lookup).toHaveBeenCalledTimes(1)
   })
 })
 

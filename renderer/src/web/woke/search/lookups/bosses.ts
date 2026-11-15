@@ -15,6 +15,15 @@ function dropPrice (ctx: LookupContext, name: string, variant?: string): number 
   return (variant != null ? ctx.price(name, variant) : null) ?? ctx.price(name)
 }
 
+// A rolled drop (a jewel) has no one price: its unidentified trade price once
+// looked up, else a note.
+function unidRow (ctx: LookupContext, name: string, label: string): LookupRow {
+  const unid = ctx.unid?.(name) ?? null
+  return unid != null
+    ? { label: `${label} · unidentified`, chaos: unid, item: { name }, bulk: true }
+    : { label, value: 'Depends on the roll', item: { name } }
+}
+
 function percent (chance: number): string {
   const p = chance * 100
   return p >= 10 ? `${Math.round(p)}%` : `${+p.toPrecision(2)}%`
@@ -63,17 +72,15 @@ export function bossCard (boss: Boss, ctx: LookupContext): LookupCard {
   if (boss.entry.length > 1 || (boss.entry[0]?.qty ?? 0) > 1) entry.push({ label: 'Entry total', chaos: cost })
   if (!boss.entry.length) entry.push({ label: 'No entry item: found in the world', dim: true })
   const drops = [...boss.drops]
-    // Rolled drops have no one price: they go last.
-    .map(d => ({ d, price: d.variable ? -1 : dropPrice(ctx, d.name, d.variant) }))
+    // Rolled drops go by their unidentified price; with none yet, last.
+    .map(d => ({ d, price: d.variable ? ctx.unid?.(d.name) ?? -1 : dropPrice(ctx, d.name, d.variant) }))
     .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
     .slice(0, DROP_ROWS)
-    .map(({ d, price }): LookupRow => ({
-      label: d.chance != null ? `${d.name} · ${percent(d.chance)}` : d.name,
-      chaos: d.variable ? undefined : price ?? null,
-      value: d.variable ? 'Depends on the roll' : undefined,
-      item: { name: d.name },
-      bulk: true
-    }))
+    .map(({ d, price }): LookupRow => {
+      const label = d.chance != null ? `${d.name} · ${percent(d.chance)}` : d.name
+      if (!d.variable) return { label, chaos: price ?? null, item: { name: d.name }, bulk: true }
+      return unidRow(ctx, d.name, label)
+    })
   const summary: LookupRow[] = []
   if (loot != null) summary.push({ label: 'Loot per kill (known rates)', chaos: loot })
   if (loot != null && cost != null && boss.entry.length) summary.push({ label: 'After entry cost', chaos: loot - cost })
@@ -150,7 +157,7 @@ export const dropLookup: Lookup = (query, ctx) => {
       icon: 'fas fa-gift',
       tip: { name },
       sections: [
-        { rows: [variable ? { label: name, value: 'Depends on the roll', item: { name } } : { label: name, chaos: dropPrice(ctx, name, variant), item: { name }, bulk: true }] },
+        { rows: [variable ? unidRow(ctx, name, name) : { label: name, chaos: dropPrice(ctx, name, variant), item: { name }, bulk: true }] },
         { label: 'Dropped by', rows }
       ],
       actions: [

@@ -58,6 +58,12 @@
                   <button v-if="tracker" class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }" :title="isWatched(v) ? 'Stop watching' : 'Watch price'" :aria-label="isWatched(v) ? 'Stop watching' : 'Watch price'" @click="toggleWatch(v)"><i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" /></button>
                 </span>
               </div>
+              <!-- Rolled uniques drop unidentified; poe.ninja's row isn't what one sells for. -->
+              <div v-if="unidName" :class="[$style.grid, $style.row]" :title="unidTitle">
+                <span class="w-trunc">Unidentified</span>
+                <WPrice v-if="unidQuote" bulk :chaos="unidQuote.chaos" :divine="divine" class="text-right" />
+                <span v-else class="text-right w-faint">{{ tradePrices.pending(unidName) ? '…' : '?' }}</span>
+              </div>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
@@ -182,12 +188,15 @@ import { loadTipItems, loadTipUniques, loadUniqueMods } from '../ui/tooltip/item
 import { onSharedDataChange } from '../app/live-data'
 import type { TipItem } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
+import { VARIABLE_ITEMS, useTradePrices } from '../shared/unid-prices'
+import { poeWebApi } from '@/web/Config'
 import type { SearchWidget } from './widget'
 
 const props = defineProps<{ config: SearchWidget }>()
 const wm = inject<WidgetManager>('wm')!
 const { t } = useI18n()
 const leagues = useLeagues()
+const tradePrices = useTradePrices()
 const snapshot = useSearchSnapshot()
 
 interface Base { id: string, name: string, sub: string }
@@ -394,7 +403,8 @@ const lookupContext = computed<LookupContext>(() => {
     items: snapshot.value?.items ?? [],
     divine: divine.value,
     now: Date.now(),
-    league: league ? { name: league, startedAt: leagues.startedAt.value } : null
+    league: league ? { name: league, startedAt: leagues.startedAt.value } : null,
+    unid: (name: string) => league ? tradePrices.get(league, name)?.chaos ?? null : null
   }
 })
 const currencyNames = computed(() => [...new Set((snapshot.value?.items ?? []).filter(i => i.type === 'Currency').map(i => i.name))])
@@ -563,6 +573,32 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
 const entries = computed(() => sections.value.flatMap(s => s.entries))
 
 const selected = shallowRef<Entry | null>(null)
+
+// Rolled uniques (jewels and the like) drop unidentified: the picked one also
+// gets the middle of its cheapest unidentified listings on trade. One search,
+// only once the pick settles, kept for an hour (shared with Boss runs).
+const UNID_SETTLE_MS = 800
+const unidName = computed(() => {
+  const e = selected.value
+  const name = e?.kind === 'price' ? e.group.name : e?.kind === 'lookup' && e.card.id.startsWith('drop:') ? e.card.id.slice(5) : null
+  return name && VARIABLE_ITEMS.has(name) ? name : null
+})
+const unidQuote = computed(() => {
+  const league = leagues.selectedId.value
+  return unidName.value && league ? tradePrices.get(league, unidName.value) : null
+})
+const unidTitle = computed(() => unidQuote.value
+  ? `Middle of the cheapest 10 of ${unidQuote.value.listings} unidentified instant buyouts on trade.`
+  : 'Unidentified copies on trade: not looked up yet, or too few listed.')
+let unidTimer: ReturnType<typeof setTimeout> | undefined
+watch([unidName, open, divine], ([name, shown, rate]) => {
+  clearTimeout(unidTimer)
+  const league = leagues.selectedId.value
+  // The queries use English names, which the regional trade sites won't match.
+  if (!name || !shown || !league || !rate || poeWebApi() !== 'www.pathofexile.com') return
+  unidTimer = setTimeout(() => { tradePrices.ask(league, rate, name) }, UNID_SETTLE_MS)
+})
+onBeforeUnmount(() => { clearTimeout(unidTimer) })
 // A currency's round amounts in chaos and divines, under its prices.
 const conv = computed(() => {
   const e = selected.value

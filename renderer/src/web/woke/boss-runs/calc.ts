@@ -1,5 +1,5 @@
-import { ITEM_BY_REF } from '@/assets/data'
-import { VARIABLE_ITEMS } from './bosses'
+import { VARIABLE_ITEMS } from '../shared/unid-prices'
+import type { TradeQuote } from '../shared/trade-quotes'
 import { ESTIMATED_RATES } from './estimates'
 import { formatClock } from '../ui/format'
 import type { Boss, BossDrop } from './bosses'
@@ -52,10 +52,8 @@ export type PriceMode = 'unid' | 'min' | 'median' | 'custom'
 export type PriceSource = 'trade' | 'ninja' | 'custom' | 'thin'
 
 // Price found on official trade, for drops poe.ninja can't price properly.
-export interface TradeQuote {
-  chaos: number
-  listings: number
-}
+export type { TradeQuote }
+export { tradeQuery, unidentifiedTradeUrl } from '../shared/unid-prices'
 
 export interface VariantStats {
   min: number
@@ -400,45 +398,4 @@ export function parseRunTime (text: string): number | null {
   if (m) return Number(m[1])
   const n = Number(t)
   return Number.isFinite(n) && n > 0 ? Math.round(n * 60) : null
-}
-
-// Base types for the unidentified uniques, which the trade search needs.
-const UNIQUE_BASES: Record<string, string> = {
-  'Impossible Escape': 'Viridian Jewel',
-  'Thread of Hope': 'Crimson Jewel',
-  "Watcher's Eye": 'Prismatic Jewel',
-  'Forbidden Flesh': 'Cobalt Jewel',
-  'Forbidden Flame': 'Crimson Jewel',
-  'Sublime Vision': 'Prismatic Jewel',
-  "Atziri's Splendour": 'Sacrificial Garb',
-  "Doryani's Invitation": 'Heavy Belt',
-  'The Light of Meaning': 'Prismatic Jewel',
-  'Rational Doctrine': 'Cobalt Jewel',
-  'Beauty': 'Vaal Aspect',
-  'Melding of the Flesh': 'Cobalt Jewel',
-  'Dissolution of the Flesh': 'Crimson Jewel',
-  'The Broken Elegy': 'Foul Staff'
-}
-
-// Instant buyout is the live market now: plain 'online' finds next to nothing
-// and 'any' is full of offline bait.
-export function tradeQuery (name: string, unidentified: boolean) {
-  const uniqueBase = UNIQUE_BASES[name] ?? ITEM_BY_REF('UNIQUE', name)?.[0]?.unique?.base
-  return {
-    query: {
-      status: { option: 'securable' as const },
-      // Divination cards, keys and other named bases have only a type.
-      ...(uniqueBase ? { name, type: uniqueBase } : { type: name }),
-      stats: [],
-      filters: unidentified
-        ? { misc_filters: { filters: { identified: { option: 'false' as const } } } }
-        : {}
-    },
-    sort: { price: 'asc' as const }
-  }
-}
-
-// Official trade search for unidentified copies of a unique, cheapest first.
-export function unidentifiedTradeUrl (league: string, name: string): string {
-  return `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(tradeQuery(name, true)))}`
 }
