@@ -2,7 +2,6 @@ import { Rectangle, Point, screen } from 'electron'
 import { uIOhook, UiohookMouseEvent } from 'uiohook-napi'
 import type { OverlayWindow } from './OverlayWindow'
 import type { ServerEvents } from '../server'
-import { isAltHeld } from '../shortcuts/synthetic-keys'
 
 export class WidgetAreaTracker {
   private holdKey!: string
@@ -44,9 +43,7 @@ export class WidgetAreaTracker {
   }
 
   private readonly handleMouseMove = (e: UiohookMouseEvent) => {
-    // woke: an item copy lets go of Alt for the game (synthetic-keys.ts), so
-    // e.altKey reads false while the player still holds it.
-    const modifier = e.ctrlKey ? 'Ctrl' : ((e.altKey || isAltHeld()) ? 'Alt' : undefined)
+    const modifier = e.ctrlKey ? 'Ctrl' : (e.altKey ? 'Alt' : undefined)
     if (!this.overlay.isInteractable && modifier !== this.holdKey) {
       const distance = Math.hypot(e.x - this.from.x, e.y - this.from.y)
       if (distance > this.closeThreshold) {

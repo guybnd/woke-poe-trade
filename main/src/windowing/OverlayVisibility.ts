@@ -2,6 +2,7 @@ import { uIOhook, UiohookKey } from 'uiohook-napi'
 import type { ServerEvents } from '../server'
 import type { GameConfig } from '../host-files/GameConfig'
 import type { OverlayWindow } from './OverlayWindow'
+import { isOwnAltEvent } from '../shortcuts/synthetic-keys'
 
 export class OverlayVisibility {
   private timerId: NodeJS.Timeout | undefined
@@ -13,6 +14,9 @@ export class OverlayVisibility {
     private gameConfig: GameConfig
   ) {
     uIOhook.on('keydown', (e) => {
+      // woke: the Alt an item copy presses again is one the player already
+      // held, not a fresh "hide the overlay" press.
+      if (isOwnAltEvent()) return
       if (e.altKey && !e.shiftKey && !e.ctrlKey && e.keycode === UiohookKey.Alt) {
         this.makeInvisible()
       } else {
