@@ -136,7 +136,8 @@ describe('version prices', () => {
     ]
     expect(pickPriceRow(rows, '(2-3)% chance to gain a Power Charge on Hit')?.chaos).toBe(9)
     expect(pickPriceRow(rows, 'Something else')).toBeNull()
-    expect(pickPriceRow([{ chaos: 4 }], 'anything')?.chaos).toBe(4)
+    const one: Array<{ variant?: string, chaos: number }> = [{ chaos: 4 }]
+    expect(pickPriceRow(one, 'anything')?.chaos).toBe(4)
     expect(pickPriceRow([], 'anything')).toBeNull()
   })
 })
