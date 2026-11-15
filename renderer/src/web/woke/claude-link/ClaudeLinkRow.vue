@@ -15,7 +15,7 @@
         <w-button size="sm" :disabled="!state.url" @click="copy(desktopJson, 'Claude Desktop config')">Copy for Claude Desktop</w-button>
         <w-button size="sm" variant="ghost" :disabled="busy" @click="newKey">New key</w-button>
       </div>
-      <div :class="$style.desc">Claude Code: paste the command in a terminal. Claude Desktop: paste into claude_desktop_config.json under mcpServers (needs Node.js). A new key cuts off every Claude using the old one.</div>
+      <div :class="$style.desc">Claude Code: paste the command in a terminal. Claude Desktop: the copy is a whole claude_desktop_config.json; if yours has other servers, add this one inside its mcpServers (needs Node.js). A new key cuts off every Claude using the old one.</div>
       <div v-if="state.calls.length" :class="$style.calls">
         <span :class="$style.label">Last calls</span>
         <span v-for="c in state.calls.slice(0, 8)" :key="c.at + c.tool" :class="!c.ok && $style.bad">{{ time(c.at) }} {{ c.tool }}</span>

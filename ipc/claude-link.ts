@@ -36,25 +36,32 @@ export interface ClaudeLinkState {
   calls: Array<{ at: number, tool: string, ok: boolean }>
 }
 
-// Settings Claude may suggest: plain values only (on/off, numbers, words),
-// never hotkeys, folders, files, accounts, links or chat commands.
-const NEVER = /hotkey|key$|keys$|dir$|folder|path|file|exe|account|url|link|command|log|realm|language|token|secret|cookie|sessid/i
+// Settings Claude may suggest: on/off switches (never hotkeys, folders,
+// files, accounts, links or chat commands), plus the few numbers listed here
+// with a safe range. No text settings: a path or URL hides too easily in one.
+const NEVER = /hotkey|key$|keys$|dir$|folder|path|file|exe|account|url|link|command|log|realm|language|token|secret|cookie|sessid|config/i
 
 // Fields every widget has that are the window manager's, not settings.
 export const WIDGET_OWN_FIELDS = new Set(['wmId', 'wmType', 'wmTitle', 'wmWants', 'wmZorder', 'wmFlags'])
 // App fields that would break the overlay or its link to the game.
 const OFF_LIMITS = new Set(['configVersion', 'windowTitle', 'uninitialized'])
 
+export const NUMBER_RANGES: Record<string, [number, number]> = {
+  'app.fontSize': [12, 24],
+  'price-check.searchStatRange': [0, 50],
+  'price-check.apiLatencySeconds': [0, 10]
+}
+
 export function settingAllowed (key: string, current: unknown, value: unknown): boolean {
   const m = /^([\w-]+)\.(\w+)$/.exec(key)
   if (!m) return false
   if (NEVER.test(m[2]) || WIDGET_OWN_FIELDS.has(m[2]) || OFF_LIMITS.has(m[2])) return false
-  const t = typeof current
-  if (t !== 'boolean' && t !== 'number' && t !== 'string') return false
-  if (typeof value !== t) return false
-  if (t === 'number' && !Number.isFinite(value as number)) return false
-  if (t === 'string' && (value as string).length > 200) return false
-  return true
+  if (typeof current === 'boolean') return typeof value === 'boolean'
+  const range = NUMBER_RANGES[key]
+  if (range && typeof current === 'number') {
+    return typeof value === 'number' && Number.isFinite(value) && value >= range[0] && value <= range[1]
+  }
+  return false
 }
 
 // The scalar settings of a config: "app.<field>" for the top level and

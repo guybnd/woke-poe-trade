@@ -76,6 +76,10 @@ describe('claude link settings', () => {
   it('allows plain values of the same type, never hotkeys, folders or ids', () => {
     expect(settingAllowed('app.fontSize', 16, 18)).toBe(true)
     expect(settingAllowed('app.fontSize', 16, '18')).toBe(false)
+    expect(settingAllowed('app.fontSize', 16, 5000)).toBe(false)
+    expect(settingAllowed('app.gameConfig', 'C:/a.ini', 'D:/b.ini')).toBe(false)
+    expect(settingAllowed('app.overlayBackground', 'rgba(0,0,0,0)', 'url(x)')).toBe(false)
+    expect(settingAllowed('price-check.showSeller', false, true)).toBe(true)
     expect(settingAllowed('app.overlayKey', 'Shift + Space', 'X')).toBe(false)
     expect(settingAllowed('woke-pob-builds.buildsDir', '', 'C:/')).toBe(false)
     expect(settingAllowed('price-check.wmId', 1, 2)).toBe(false)
@@ -86,6 +90,7 @@ describe('claude link settings', () => {
   it('lists the first widget of each type', () => {
     const all = listSettings({ fontSize: 16, accountName: 'me', widgets: [{ wmId: 1, wmType: 'price-check', showSeller: true, hotkey: 'D' }, { wmId: 2, wmType: 'price-check', showSeller: false }] })
     expect(all).toEqual({ 'app.fontSize': 16, 'price-check.showSeller': true })
+    expect(listSettings({ gameConfig: 'C:/x.ini', widgets: [] })).toEqual({})
   })
 })
 
@@ -94,6 +99,7 @@ describe('claude link tools', () => {
     appVersion: '1',
     config: async () => ({ leagueId: 'Keepers', widgets: [{ wmType: 'woke-trade-searches', entries: [{ name: 'Hubris', url: 'u', category: 'Gear', tags: ['es'], notes: '' }] }] }),
     op: async () => null,
+    dailyHistory: async () => [{ date: '2026-11-14', chaos: 199 }],
     lastItem: () => ({ text: 'Rarity: Unique\nMageblood', at: 1 }),
     passiveTree: async () => null,
     askOverlay: async () => null,
@@ -113,9 +119,7 @@ describe('claude link tools', () => {
   })
 
   it('finds prices by name, exact name first', async () => {
-    const op = async (name: string) => name === 'market-latest'
-      ? [{ ts: 1, divine: 200, items: [{ type: 'Currency', name: 'Divine Orb', variant: '', chaos: 200 }, { type: 'Currency', name: 'Divine Vessel', variant: '', chaos: 2 }] }]
-      : [{ date: '2026-11-14', chaos: 199 }]
+    const op = async () => [{ ts: 1, divine: 200, items: [{ type: 'Currency', name: 'Divine Orb', variant: '', chaos: 200 }, { type: 'Currency', name: 'Divine Vessel', variant: '', chaos: 2 }] }]
     const r = await run(deps({ op }), 'prices', { name: 'divine orb' })
     expect(r.matches[0]).toMatchObject({ name: 'Divine Orb', chaos: 200, divine: 1 })
     expect(r.historyOfFirst).toEqual([{ date: '2026-11-14', chaos: 199 }])
@@ -132,11 +136,19 @@ describe('claude link tools', () => {
   })
 })
 
+describe('claude link filter edits', () => {
+  it('keeps only the fields of the kind', async () => {
+    const { cleanEdit } = await import('@/web/woke/claude-link/clean-edit')
+    expect(cleanEdit({ kind: 'visibility', type: 'currency', tier: 't5', visibility: 'Hide', junk: 'x' })).toEqual({ kind: 'visibility', type: 'currency', tier: 't5', visibility: 'Hide' })
+  })
+})
+
 describe('claude link setup text', () => {
   it('puts the key in the Claude Code header and the Desktop env', () => {
     expect(claudeCodeCommand('http://127.0.0.1:8586/mcp', 'K')).toContain('--header "Authorization: Bearer K"')
+    expect(claudeCodeCommand('http://127.0.0.1:8586/mcp', 'K')).toContain('--scope user')
     const desktop = JSON.parse(claudeDesktopJson('http://127.0.0.1:8586/mcp', 'K'))
-    expect(desktop['woke-poe-trade'].env.WOKE_AUTH).toBe('Bearer K')
-    expect(desktop['woke-poe-trade'].args).toContain('Authorization:${WOKE_AUTH}')
+    expect(desktop.mcpServers['woke-poe-trade'].env.WOKE_AUTH).toBe('Bearer K')
+    expect(desktop.mcpServers['woke-poe-trade'].args).toContain('Authorization:${WOKE_AUTH}')
   })
 })

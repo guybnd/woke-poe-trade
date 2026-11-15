@@ -150,10 +150,14 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   })
   registerWokeHandler('personal-flag', async () => personal.state())
   registerWokeHandler('personal-set', async (args) => await personal.setOn(args?.on === true))
-  registerWokeHandler('experimental-set', async (args) => await personal.setUnlocked(args?.unlocked === true))
+  registerWokeHandler('experimental-set', async (args) => {
+    const unlocked = args?.unlocked === true
+    if (!unlocked) await claudeLink.turnOff()
+    return await personal.setUnlocked(unlocked)
+  })
 
   // The Claude link: read-only calls into the same handlers the overlay uses.
-  initClaudeLink({
+  const claudeLink = initClaudeLink({
     server,
     logger,
     register: registerWokeHandler,

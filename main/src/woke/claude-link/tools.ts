@@ -22,6 +22,9 @@ export interface LinkDeps {
   // Asks the overlay page for something only it has (atlas tree names).
   askOverlay: (kind: string, args: unknown, timeoutMs?: number) => Promise<unknown>
   stashCache: (league: string) => Promise<StashCacheLike | null>
+  // One item's daily prices from the newest `days` daily files, read without
+  // the market store's whole-league cache.
+  dailyHistory: (league: string, item: { type: string, name: string, variant: string }, days: number) => Promise<Array<{ date: string, chaos: number }>>
   // The live character the character sync last read (woke-character/current.json); null when none.
   character: () => Promise<CharacterLike | null>
   suggestions: {
@@ -160,8 +163,8 @@ export function buildTools (deps: LinkDeps): ToolDef[] {
         let history: unknown = null
         const best = rows[0]
         if (best) {
-          const daily = await deps.op('market-daily-item', { league, type: best.type, name: best.name, variant: best.variant }) as Array<{ date: string, chaos: number, divine: number | null }>
-          history = (daily ?? []).slice(-num(a.days, 7, 1, 60)).map(d => ({ date: d.date, chaos: round(d.chaos) }))
+          const daily = await deps.dailyHistory(league, best, num(a.days, 7, 1, 60))
+          history = daily.map(d => ({ date: d.date, chaos: round(d.chaos) }))
         }
         return {
           league,

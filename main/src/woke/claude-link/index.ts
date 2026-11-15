@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto'
 import fs, { promises as fsp } from 'fs'
 import path from 'path'
 import { appPrefs, setAppPrefs } from '../app-prefs'
-import { dataDir, readJson, readJsonStrict, writeAtomic, writeQueue } from '../data-files'
+import { dataDir, readJson, readJsonStrict, safeName, writeAtomic, writeQueue } from '../data-files'
 import { admit, handleBody, type ServerInfo, type ToolDef } from './rpc'
 import { buildTools, INSTRUCTIONS, type AppConfigLike, type CharacterLike, type LinkDeps, type TreeNodeInfo } from './tools'
 import { makeSuggestion, trimList, MAX_OPEN } from './suggestions'
@@ -19,8 +19,7 @@ import type { Logger } from '../../RemoteLogger'
 import type { ClaudeLinkState, ClaudeSuggestion, SuggestionKind } from '../../../../ipc/claude-link'
 import type { WokeHandler, WokeOp } from '../../../../ipc/woke-ops'
 
-export const FIRST_PORT = 8586
-const PORT_TRIES = 10
+export const PORT = 8586
 const MAX_BODY = 512 * 1024
 const ASK_TIMEOUT_MS = 8000
 
@@ -64,7 +63,7 @@ interface Deps {
   register: <K extends WokeOp>(op: K, handler: WokeHandler<K>) => void
 }
 
-export function initClaudeLink ({ server, logger, op, register }: Deps): void {
+export function initClaudeLink ({ server, logger, op, register }: Deps): { turnOff: () => Promise<void> } {
   let token = ''
   let http: Server | null = null
   let port: number | null = null
@@ -76,6 +75,8 @@ export function initClaudeLink ({ server, logger, op, register }: Deps): void {
   const broadcast = (topic: string, data: unknown) => {
     server.sendEventTo('broadcast', { name: 'MAIN->CLIENT::woke-event', payload: { topic, data } })
   }
+
+  const changed = () => { broadcast('claude-link', state()) }
 
   const state = (): ClaudeLinkState => ({
     on: appPrefs().claudeLink,
@@ -108,6 +109,7 @@ export function initClaudeLink ({ server, logger, op, register }: Deps): void {
     lastItem: lastItemText,
     passiveTree: readPassiveTree,
     stashCache: async (league) => await readCache(league),
+    dailyHistory: readDailyHistory,
     // Written by the character sync (personal/character-sync.ts) once it's merged.
     character: async () => await readJson<CharacterLike>(path.join(dataDir('woke-character'), 'current.json')),
     askOverlay: async (kind, args, timeoutMs = ASK_TIMEOUT_MS) => await new Promise((resolve, reject) => {
@@ -127,17 +129,27 @@ export function initClaudeLink ({ server, logger, op, register }: Deps): void {
   const noteCall = (tool: string, ok: boolean) => {
     calls.unshift({ at: Date.now(), tool, ok })
     calls.length = Math.min(calls.length, 20)
+    changed()
   }
 
+  // One start at a time; stop() waits for it, and a start that finds the
+  // setting turned off meanwhile closes again.
+  let starting: Promise<void> | null = null
   const start = async (): Promise<void> => {
     if (http) return
+    if (starting) return await starting
+    starting = open().finally(() => { starting = null })
+    return await starting
+  }
+
+  const open = async (): Promise<void> => {
     token = token || readKey()
     tools = tools ?? buildTools(linkDeps)
     error = null
     const srv = createServer((req, res) => {
       const url = (req.url ?? '').split('?')[0]
       if (url !== '/mcp') { res.statusCode = 404; res.end(); return }
-      const ok = admit(req.headers, token, port ?? 0)
+      const ok = admit(req.headers, token, PORT)
       if (!ok.ok) {
         res.statusCode = ok.status
         res.setHeader('content-type', 'application/json')
@@ -169,32 +181,36 @@ export function initClaudeLink ({ server, logger, op, register }: Deps): void {
           })
       })
     })
-    for (let p = FIRST_PORT; p < FIRST_PORT + PORT_TRIES; p++) {
-      const opened = await new Promise<boolean>(resolve => {
-        const onError = () => { srv.removeListener('listening', onListening); resolve(false) }
-        const onListening = () => { srv.removeListener('error', onError); resolve(true) }
-        srv.once('error', onError)
-        srv.once('listening', onListening)
-        srv.listen(p, '127.0.0.1')
-      })
-      if (opened) {
-        http = srv
-        port = p
-        logger.write(`info [claude-link] listening on 127.0.0.1:${p}`)
-        return
-      }
+    // One fixed port: saved Claude setups point at it, so moving to another
+    // would send the key to whatever holds this one.
+    const opened = await new Promise<boolean>(resolve => {
+      const onError = () => { srv.removeListener('listening', onListening); resolve(false) }
+      const onListening = () => { srv.removeListener('error', onError); resolve(true) }
+      srv.once('error', onError)
+      srv.once('listening', onListening)
+      srv.listen(PORT, '127.0.0.1')
+    })
+    if (!opened) {
+      error = `Port ${PORT} is taken by another program. Close it and turn the link off and on.`
+      return
     }
-    error = `Ports ${FIRST_PORT} to ${FIRST_PORT + PORT_TRIES - 1} are all taken.`
+    srv.on('error', (e) => { logger.write(`error [claude-link] ${String(e)}`) })
+    if (!appPrefs().claudeLink) {
+      srv.close()
+      return
+    }
+    http = srv
+    port = PORT
+    logger.write(`info [claude-link] listening on 127.0.0.1:${PORT}`)
   }
 
   const stop = async (): Promise<void> => {
+    if (starting) await starting.catch(() => {})
     const srv = http
     http = null
     port = null
     if (srv) await new Promise<void>(resolve => { srv.close(() => resolve()); srv.closeAllConnections() })
   }
-
-  const changed = () => { broadcast('claude-link', state()) }
 
   register('claude-link-state', async () => state())
   register('claude-link-set', async (args) => {
@@ -240,6 +256,16 @@ export function initClaudeLink ({ server, logger, op, register }: Deps): void {
     start().then(changed).catch(e => { error = String(e); logger.write(`error [claude-link] ${String(e)}`) })
   }
   app.on('before-quit', () => { stop().catch(() => {}) })
+
+  // Locking Experimental hides the switch, so the link goes off with it.
+  return {
+    turnOff: async () => {
+      if (!appPrefs().claudeLink && !http) return
+      setAppPrefs({ claudeLink: false })
+      await stop()
+      changed()
+    }
+  }
 }
 
 // ---- data the tools read ----
@@ -265,4 +291,22 @@ async function readPassiveTree (): Promise<{ nodes: Map<number, TreeNodeInfo>, m
     } catch {}
   }
   return null
+}
+
+// Same layout as market-store.ts: <userData>/woke-market/<league>/daily/<date>.json.
+async function readDailyHistory (league: string, item: { type: string, name: string, variant: string }, days: number): Promise<Array<{ date: string, chaos: number }>> {
+  const dir = path.join(dataDir('woke-market'), safeName(league), 'daily')
+  let names: string[]
+  try {
+    names = (await fsp.readdir(dir)).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(-days)
+  } catch {
+    return []
+  }
+  const out: Array<{ date: string, chaos: number }> = []
+  for (const f of names) {
+    const rows = await readJson<Array<{ type: string, name: string, variant: string, chaos: number }>>(path.join(dir, f))
+    const r = Array.isArray(rows) ? rows.find(x => x.type === item.type && x.name === item.name && (x.variant ?? '') === (item.variant ?? '')) : undefined
+    if (r && typeof r.chaos === 'number') out.push({ date: f.slice(0, 10), chaos: r.chaos })
+  }
+  return out
 }

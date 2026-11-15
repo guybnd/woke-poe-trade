@@ -8,6 +8,7 @@ import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import { settingAllowed } from '@ipc/claude-link'
 import type { ClaudeLinkState, ClaudeSuggestion } from '@ipc/claude-link'
 import { hostRequest } from '../shared/host'
+export { cleanEdit } from './clean-edit'
 
 export const suggestions = shallowRef<ClaudeSuggestion[]>([])
 export const linkState = shallowRef<ClaudeLinkState | null>(null)

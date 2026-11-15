@@ -29,7 +29,8 @@ import { toast } from '../ui'
 import { describeEdit, isValidEdit } from '../loot-filter/edits'
 import type { DockMenuAction } from '../dock/dock'
 import type { ClaudeSuggestion, SuggestionKind } from '@ipc/claude-link'
-import { apply, resolve, startClaudeLink, suggestions } from './suggestions'
+import { apply, cleanEdit, resolve, startClaudeLink, suggestions } from './suggestions'
+import type { Applied } from './suggestions'
 
 const KIND_LABEL: Record<SuggestionKind, string> = {
   'trade-search': 'Trade search',
@@ -45,7 +46,7 @@ const busy = shallowRef<string | null>(null)
 function detail (s: ClaudeSuggestion): string {
   if (s.kind === 'setting' && s.setting) return `${s.setting.key} → ${JSON.stringify(s.setting.value)}`
   if (s.kind === 'filter-change' && s.edit) {
-    const e = { ...s.edit, id: 0 }
+    const e = { ...cleanEdit(s.edit), id: 0 }
     return isValidEdit(e) ? describeEdit(e) : 'This change is not in a form the editor knows.'
   }
   return ''
@@ -53,15 +54,20 @@ function detail (s: ClaudeSuggestion): string {
 
 async function onApply (s: ClaudeSuggestion) {
   busy.value = s.id
+  let done: Applied
   try {
-    const done = await apply(s)
-    await resolve(s, 'applied')
-    toast(done.message, { undo: done.undo, dock: true })
+    done = await apply(s)
   } catch (e) {
     toast(e instanceof Error ? e.message : String(e), { dock: true })
-  } finally {
     busy.value = null
+    return
   }
+  // Applied: mark it, once more if the first write fails, and keep the Undo
+  // either way so it can't be applied twice unseen.
+  let marked = await resolve(s, 'applied').then(() => true, () => false)
+  if (!marked) marked = await resolve(s, 'applied').then(() => true, () => false)
+  toast(marked ? done.message : `${done.message}. Couldn't mark it done; dismiss it by hand`, { undo: done.undo, dock: true })
+  busy.value = null
 }
 
 async function onDismiss (s: ClaudeSuggestion) {
