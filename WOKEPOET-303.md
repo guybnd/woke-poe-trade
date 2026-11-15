@@ -53,6 +53,17 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:47:15.033Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged: #511 (9b2a9088)
+      https://github.com/guybnd/woke-poe-trade/pull/511. Market is one window
+      with Prices, Movers and Watchlist tabs (Guy asked to fold Movers in as a
+      tab); config v3 folds the #498 separate window back in; cheap items read 1
+      div / N.
+    date: '2026-11-15T07:34:19.666Z'
+    selfAttested: true
+    id: c-2026-11-15t07-34-19-666z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/498'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
