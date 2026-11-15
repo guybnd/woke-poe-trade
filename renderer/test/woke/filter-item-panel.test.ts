@@ -5,6 +5,7 @@ import { matchItem } from '@/web/woke/loot-filter/match'
 import { moveTargets } from '@/web/woke/loot-filter/edits'
 import { levelStates, hideFromLabel, isPlainTier, ladderLabel, levelOf, priceLadder, specialLabel, tierNeeds, verdictOf } from '@/web/woke/loot-filter/item-panel'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
+import { safetyBlocks } from '@/web/woke/loot-filter/safety'
 import { neverSink } from '../helpers/neversink'
 
 describe('filter item panel', () => {
@@ -57,6 +58,13 @@ describe('filter item panel', () => {
       files.forEach((d, l) => expect(levelStates(at(d, tier), l), `${tier} from level ${l}`).toEqual(truth))
     }
     expect(levelStates(at(soft, 'hideable'), 0)).toEqual(['shows', 'shows', 'shows', 'shows', 'hidden', 'hidden', 'hidden'])
+  })
+
+  it('names the safety net when it is what shows the item', () => {
+    const strict = parseFilter(neverSink('4-VERY-STRICT'))
+    expect(verdictOf(matchItem(strict, facts), 4)).toMatchObject({ shown: false, source: 'neversink' })
+    const net = { ...strict, blocks: [...safetyBlocks({ plain: [], unique: ['Shagreen Boots'] }), ...strict.blocks] }
+    expect(verdictOf(matchItem(net, facts), 4)).toMatchObject({ shown: true, source: 'safety', hideFrom: null })
   })
 
   it('long ladders count tiers', () => {

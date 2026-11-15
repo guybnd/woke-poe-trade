@@ -108,7 +108,7 @@
           </button>
           <template v-if="open.rule">
             <div :class="$style.conds">
-              <div v-for="(c, i) in match.final.conditions" :key="i" class="w-trunc">
+              <div v-for="(c, i) in ruleMatch.final!.conditions" :key="i" class="w-trunc">
                 <span :class="tri(c.result).cls">{{ tri(c.result).icon }}</span>
                 {{ conditionText(c.condition) }}
               </div>
@@ -162,7 +162,7 @@ import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { sameRule } from './match'
+import { matchItem, sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
 import { formatCondition, ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
@@ -211,7 +211,15 @@ const areaLevelModel = computed({
 
 const placeOf = (r: { type: string | null, tier: string | null }) => ruleLabel(r.type, r.tier)
 
-const final = computed(() => props.match.final!.block)
+// When the safety net is what shows the item, the panel still works on the
+// NeverSink rule behind it: that's where tiers, moves and the look live.
+const behind = computed<MatchResult | null>(() => {
+  const doc = props.store.doc.value
+  if (!doc || props.match.final?.block.type !== SAFETY_RULE_TYPE) return null
+  return matchItem({ ...doc, blocks: doc.blocks.filter(b => b.type !== SAFETY_RULE_TYPE) }, { ...props.facts, areaLevel: props.areaLevel })
+})
+const ruleMatch = computed(() => behind.value?.final ? behind.value : props.match)
+const final = computed(() => ruleMatch.value.final!.block)
 const isOwn = computed(() => final.value.type === OWN_RULE_TYPE)
 const base = computed(() => props.facts.baseType ?? '')
 
@@ -318,7 +326,13 @@ const gridRows = computed(() => {
 const whyLine = computed(() => {
   const v = verdict.value
   if (v.source === 'none') return 'No rule matches, so it drops with the game\'s default look.'
-  if (v.source === 'safety') return `Your price safety net shows it: worth ${props.config.safetyNet.minChaos}c or more.`
+  if (v.source === 'safety') {
+    const net = `Your price safety net shows it: worth ${props.config.safetyNet.minChaos}c or more.`
+    const b = behind.value?.final?.block
+    if (!b || b.type === SAFETY_RULE_TYPE) return net
+    const here = [...ladderRows.value, ...specialRows.value].find(r => r.current)
+    return `${net} Without it: ${b.type?.startsWith('woke->') ? placeOf(b) : `NeverSink ${groupName(b.type)} › ${here?.label ?? tierName(b)}`}, ${behind.value!.visibility === 'Hide' ? 'hidden' : 'shown'}.`
+  }
   if (v.source === 'own') return v.shown ? 'Your own rule for this item.' : 'Your own rule hides it.'
   if (v.source === 'woke') return `Woke rule: ${placeOf(final.value)}.`
   const here = [...ladderRows.value, ...specialRows.value].find(r => r.current)
@@ -341,7 +355,7 @@ const scopeOptions = computed(() => {
 })
 
 // The rule's own style, before the look strip, so edits never compound.
-const editLook = computed<StylePatch>(() => readStyle(ownActions(props.match.final!.block)))
+const editLook = computed<StylePatch>(() => readStyle(ownActions(final.value)))
 const editVisibility = computed<Visibility>(() => final.value.visibility)
 
 function onPatch (patch: StylePatch) {
