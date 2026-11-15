@@ -59,7 +59,7 @@ Host.onEvent('MAIN->OVERLAY::overlay-attached', () => {
 .title {
   display: block;
   font-family: var(--w-head); letter-spacing: var(--w-head-track);
-  font-size: 19px; line-height: 22px; color: var(--w-fg);
+  font-size: calc(19px * var(--w-text-scale, 1)); line-height: 1.15; color: var(--w-fg);
 }
 
 /* With PoE 1 or PoE 2 art: the windows' title plaque, the name on its face. */
@@ -88,15 +88,15 @@ Host.onEvent('MAIN->OVERLAY::overlay-attached', () => {
 }
 :root[data-woke-art="poe2"] .plaque { --face: 45px; }
 /* PoE 2's plaque face is shorter than PoE 1's. */
-:root[data-woke-art="poe2"] .title { font-size: 16px; }
+:root[data-woke-art="poe2"] .title { font-size: calc(16px * var(--w-text-scale, 1)); }
 :root[data-woke-art] .title {
-  margin-top: calc(var(--face) - 11px);
+  margin-top: calc(var(--face) - 0.575em); /* half the line: the name's middle on the face */
   color: #e7d3a8;
   text-shadow: 0 1px 2px #000, 0 0 6px #000;
 }
 
 .line {
-  font-family: var(--w-body); font-size: 15px; color: #c8b89a;
+  font-family: var(--w-body); font-size: calc(15px * var(--w-text-scale, 1)); color: #c8b89a;
   text-shadow: 0 1px 2px #000, 0 0 6px #000;
 }
 .key { color: var(--w-gold-hi, var(--w-accent)); }
