@@ -88,7 +88,13 @@ export function withBuildMode (settingsXml: string | null, buildFile: string, bu
 export async function pointPobAtBuild (exe: string, buildFile: string): Promise<void> {
   const settings = await pobSettingsPath(exe)
   let xml: string | null = null
-  try { xml = await fs.readFile(settings, 'utf8') } catch {}
+  try {
+    xml = await fs.readFile(settings, 'utf8')
+  } catch (e) {
+    // Only a missing file starts fresh: a locked or unreadable one would lose PoB's settings.
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw new Error(`Couldn't read PoB's Settings.xml: ${(e as Error).message}`)
+  }
+  if (xml != null && xml.trim() && !/<PathOfBuilding\b/.test(xml)) throw new Error(`PoB's Settings.xml at ${settings} doesn't look like PoB's; left as it is.`)
   const name = path.basename(buildFile).replace(/\.xml$/i, '')
   await fs.mkdir(path.dirname(settings), { recursive: true })
   await fs.writeFile(settings, withBuildMode(xml, buildFile, name), 'utf8')
