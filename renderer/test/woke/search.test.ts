@@ -1,7 +1,7 @@
 // The search boxes: ranking, grouping, duplicates, the corrupted filter and
 // the trade links.
 import { describe, it, expect } from 'vitest'
-import { baseUniqueName, changeSince, matchRank, passesCorrupted, searchNamed, searchPrices, tradeUrl, uniquePrices } from '@/web/woke/search/search'
+import { baseUniqueName, changeSince, matchRank, passesCorrupted, searchNamed, searchPrices, tradeUrl, uniqueBaseIndex, uniquePrices } from '@/web/woke/search/search'
 import { computeMovers } from '@/web/woke/market/analysis'
 import { SEARCH_DEFAULT_KEY, initSearchWidget, moveSearchKey } from '@/web/woke/search/widget'
 import { isCorrupted } from '@/web/woke/market/types'
@@ -98,6 +98,32 @@ describe('uniquePrices', () => {
   })
   it('lists nothing for no names', () => {
     expect(uniquePrices(items, new Set())).toEqual([])
+  })
+  it('keeps a Foulborn price apart from the plain one', () => {
+    const groups = uniquePrices([item('Foulborn Temptation Step', 90, '', boots)], shagreen)
+    expect(groups.map(g => g.name)).toEqual(['Foulborn Temptation Step'])
+  })
+})
+
+describe('uniqueBaseIndex', () => {
+  it('lists a unique under every base it comes on', () => {
+    const { byBase, basesOf } = uniqueBaseIndex([
+      { refName: "Precursor's Emblem", unique: { base: 'Ruby Ring' } },
+      { refName: "Precursor's Emblem", unique: { base: 'Topaz Ring' } },
+      { refName: 'Le Heup of All', unique: { base: 'Iron Ring' } },
+      { refName: 'Not a unique' }
+    ])
+    expect(byBase.get('Ruby Ring')).toEqual(["Precursor's Emblem"])
+    expect(byBase.get('Topaz Ring')).toEqual(["Precursor's Emblem"])
+    expect(basesOf.get("Precursor's Emblem")).toEqual(['Ruby Ring', 'Topaz Ring'])
+    expect(byBase.size).toBe(3)
+  })
+  it('lists a repeated entry once', () => {
+    const { byBase } = uniqueBaseIndex([
+      { refName: 'Temptation Step', unique: { base: 'Shagreen Boots' } },
+      { refName: 'Temptation Step', unique: { base: 'Shagreen Boots' } }
+    ])
+    expect(byBase.get('Shagreen Boots')).toEqual(['Temptation Step'])
   })
 })
 

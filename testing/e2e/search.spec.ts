@@ -332,4 +332,11 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   await overlay.snap('search-base-pane')
   await panel.getByRole('button', { name: /Temptation Step.*40/ }).last().click()
   await expect(panel.getByText('Unique Armour')).toBeVisible()
+
+  // Uniques with no price still show, named in the game's language.
+  await box.fill('spine bow')
+  await panel.getByRole('button', { name: /^Spine Bow/ }).first().click()
+  await expect(panel.getByText('Uniques on this base')).toBeVisible()
+  await expect(panel.getByText('Voltaxic Rift')).toBeVisible()
+  await overlay.snap('search-priced-base')
 })

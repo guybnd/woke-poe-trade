@@ -58,6 +58,7 @@
                   <button v-if="tracker" class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }" :title="isWatched(v) ? 'Stop watching' : 'Watch price'" :aria-label="isWatched(v) ? 'Stop watching' : 'Watch price'" @click="toggleWatch(v)"><i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" /></button>
                 </span>
               </div>
+              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
@@ -80,17 +81,7 @@
             <template v-else-if="selected?.kind === 'item'">
               <div :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
-              <template v-if="baseUniques">
-                <div :class="[$style.uniques, $style.gridHead]"><span>Uniques on this base</span><span class="text-right">Price</span></div>
-                <button v-for="u in baseUniques.priced" :key="u.id" v-item-tip="groupTip(u.group)" tabindex="-1" :class="[$style.uniques, $style.row, $style.uniqueBtn]" @click="pickUnique(u)">
-                  <span :class="$style.uniqueName"><WIcon :src="ninjaIcon(u.group.type, u.group.name) ?? undefined" size="sm" /><span class="w-trunc w-rarity-unique">{{ u.name }}</span></span>
-                  <span :class="$style.range"><template v-if="u.group.low !== u.group.high"><WPrice :chaos="u.group.low" :divine="divine" /> to </template><WPrice :chaos="u.group.high" :divine="divine" /></span>
-                </button>
-                <div v-for="u in baseUniques.unpriced" :key="u.name" v-item-tip="{ name: u.name }" :class="[$style.uniques, $style.row]">
-                  <span :class="$style.uniqueName"><WIcon :src="u.icon" size="sm" /><span class="w-trunc w-rarity-unique">{{ u.name }}</span></span>
-                  <span class="w-dim text-right">{{ snapshot ? 'No poe.ninja price' : 'No price' }}</span>
-                </div>
-              </template>
+              <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
               <div :class="$style.acts">
                 <WButton size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
@@ -161,9 +152,10 @@ import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '..
 import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
-import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniqueBaseIndex, uniquePrices } from './search'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
+import BaseUniques from './BaseUniques.vue'
 import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
@@ -221,27 +213,25 @@ const key = itemKey
 // ---- every item in the game, for the ones without a price ----
 const NAMESPACES = new Set<BaseType['namespace']>(['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD'])
 let allItems: BaseType[] | null = null
-// Each base's uniques (English names), and each unique's base.
-const uniquesByBase = new Map<string, string[]>()
-const baseOfUnique = new Map<string, string>()
+// Each base's uniques and each unique's bases (English names).
+let uniquesByBase = new Map<string, string[]>()
+let basesOfUnique = new Map<string, string[]>()
 let uniqueBases: BaseType[] = []
 function gameItems (): BaseType[] {
   if (!allItems) {
     const byName = new Map<string, BaseType>()
+    // Every unique entry, before names are made unique: one per base.
+    const uniques: BaseType[] = []
     for (const item of ITEMS_ITERATOR('"namespace":"')) {
+      if (item.namespace === 'UNIQUE') uniques.push(item)
       if (NAMESPACES.has(item.namespace) && !byName.has(item.name)) byName.set(item.name, item)
     }
     // The data isn't loaded yet: try again on the next search.
     if (!byName.size) return []
     allItems = [...byName.values()]
-    for (const item of allItems) {
-      const base = item.namespace === 'UNIQUE' ? item.unique?.base : undefined
-      if (!base || baseOfUnique.has(item.refName)) continue
-      baseOfUnique.set(item.refName, base)
-      const list = uniquesByBase.get(base) ?? []
-      list.push(item.refName)
-      uniquesByBase.set(base, list)
-    }
+    const index = uniqueBaseIndex(uniques)
+    uniquesByBase = index.byBase
+    basesOfUnique = index.basesOf
     uniqueBases = allItems.filter(i => i.namespace === 'ITEM' && uniquesByBase.has(i.refName))
   }
   return allItems
@@ -264,11 +254,16 @@ function priceEntry (group: PriceGroup): PriceEntry {
     group
   }
 }
-// A unique found through its base says which base.
-function onBaseEntry (group: PriceGroup): PriceEntry {
+// A unique found through its base says which base: one of `shown` if it's on
+// several, in the game's language.
+function onBaseEntry (group: PriceGroup, shown?: ReadonlySet<string>): PriceEntry {
   const entry = priceEntry(group)
-  const base = baseOfUnique.get(baseUniqueName(group.name))
-  if (base) entry.sub = group.variants.length > 1 ? `${base} · ${group.variants.length} prices` : base
+  const bases = basesOfUnique.get(baseUniqueName(group.name)) ?? []
+  const ref = bases.find(b => shown?.has(b)) ?? bases[0]
+  if (ref) {
+    const base = ITEM_BY_REF('ITEM', ref)?.[0]?.name ?? ref
+    entry.sub = group.variants.length > 1 ? `${base} · ${group.variants.length} prices` : base
+  }
   return entry
 }
 
@@ -280,10 +275,19 @@ function basesWithUniques (q: string): BaseType[] {
   const bases = searchNamed(uniqueBases, q, i => i.name, BASE_MATCH_MAX + 1)
   return bases.length > BASE_MATCH_MAX ? [] : bases
 }
-function pickUnique (entry: PriceEntry) {
-  selected.value = entry
+// A unique picked in a base's pane: its own row if the list has one, and it
+// stays picked while the list refreshes, until the query changes.
+let pickedId: string | null = null
+function pickUnique (entry: { id: string }) {
+  const own = entries.value.find(e => e.id === entry.id)
+  if (own) selected.value = own
+  else if ((entry as Entry).kind === 'price') {
+    pickedId = entry.id
+    selected.value = entry as PriceEntry
+  }
   focusInput()
 }
+watch(query, () => { pickedId = null })
 
 // ---- tools, commands, settings ----
 function toolEntries (): ActionEntry[] {
@@ -515,11 +519,12 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
   const listed = new Set(groups.map(groupKey))
   const onBase = uniquePrices(items, new Set(bases.flatMap(b => uniquesByBase.get(b.refName) ?? [])), { corrupted: corrupted.value })
     .filter(g => !listed.has(groupKey(g)))
+  const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
   const out = [
     ...cardSections(cards, ['Answer']),
     { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
-    { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(onBaseEntry) as Entry[] },
+    { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(g => onBaseEntry(g, shownBases)) as Entry[] },
     { label: 'Other items', entries: other as Entry[] },
     ...cardSections(cards, null, ['Answer', 'Search the web']),
     { label: 'Tools', entries: searchNamed(toolEntries(), q, e => e.name) as Entry[] },
@@ -540,15 +545,25 @@ const conv = computed(() => {
   return each == null ? null : currencyConversions(e.group.name, each, divine.value)
 })
 // Every unique on a selected base, priced ones dearest first, then the rest by name.
+// A base with no price, or one poe.ninja prices as a base type (Spine Bow).
 const baseUniques = computed(() => {
   const e = selected.value
-  if (e?.kind !== 'item' || e.info.namespace !== 'ITEM') return null
-  const names = uniquesByBase.get(e.info.refName)
+  const base = e?.kind === 'item' && e.info.namespace === 'ITEM'
+    ? e.info.refName
+    : e?.kind === 'price' && e.group.type === 'BaseType' ? e.group.name : null
+  const names = base ? uniquesByBase.get(base) : undefined
   if (!names?.length) return null
-  const priced = uniquePrices(snapshot.value?.items ?? [], new Set(names), { limit: 100 }).map(onBaseEntry)
-  const has = new Set(priced.map(p => baseUniqueName(p.group.name)))
-  const unpriced = names.filter(n => !has.has(n)).sort((a, b) => a.localeCompare(b))
-    .map(n => ({ name: n, icon: ITEM_BY_REF('UNIQUE', n)?.[0]?.icon }))
+  const items = snapshot.value?.items ?? []
+  const shown = new Set([base!])
+  const priced = uniquePrices(items, new Set(names), { limit: 100, corrupted: corrupted.value }).map(g => onBaseEntry(g, shown))
+  // Only names with no price at all, Foulborn rows aside, say so.
+  const has = new Set(uniquePrices(items, new Set(names), { limit: 1000 }).map(g => g.name))
+  const unpriced = names.filter(n => !has.has(n))
+    .map(n => {
+      const info = ITEM_BY_REF('UNIQUE', n)?.[0]
+      return { name: info?.name ?? n, refName: n, icon: info?.icon }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
   return { priced, unpriced }
 })
 const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
@@ -559,14 +574,16 @@ watch(entries, (list) => {
   const id = selected.value?.id
   const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
   showAnswer = false
-  selected.value = answer ?? list.find(e => e.id === id) ?? list[0] ?? null
+  const picked = id != null && id === pickedId ? selected.value : null
+  selected.value = answer ?? list.find(e => e.id === id) ?? picked ?? list[0] ?? null
 })
 
 function move (dir: 1 | -1) {
   const list = entries.value
   if (!list.length) return
   const at = selected.value ? list.indexOf(selected.value) : -1
-  selected.value = list[(at + dir + list.length) % list.length]
+  // From a pick outside the list: its first or last row.
+  selected.value = at < 0 ? list[dir > 0 ? 0 : list.length - 1] : list[(at + dir + list.length) % list.length]
   nextTick(() => listEl.value?.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' }))
 }
 
@@ -830,11 +847,6 @@ const dataNote = computed(() => {
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .rowBtns { display: flex; justify-content: flex-end; gap: 2px; }
 .acts { display: flex; flex-wrap: wrap; gap: var(--w-s1); margin-top: var(--w-s3); }
-.uniques { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; align-items: center; width: 100%; }
-.gridHead.uniques { margin-top: var(--w-s3); }
-.uniqueBtn { text-align: left; }
-.uniqueBtn:hover { background: var(--w-panel-2); }
-.uniqueName { display: flex; align-items: center; gap: var(--w-s2); min-width: 0; }
 .convBox { margin-top: var(--w-s3); max-width: 320px; }
 .conv { display: grid; grid-template-columns: minmax(0, 1fr) repeat(var(--conv-cols, 1), 90px); column-gap: 6px; align-items: center; }
 .foot { flex: none; display: flex; align-items: center; gap: var(--w-s3); padding: 7px var(--w-pad); border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-dim); }
