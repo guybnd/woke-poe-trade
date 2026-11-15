@@ -295,6 +295,11 @@ export function readAgo (readAt: number, now = Date.now()): string {
 
 // Loaded once something compares; shared by the card and the tab.
 const treeNodes = shallowRef<Map<number, TreeNode> | null>(null)
+// The passive tree's nodes once loaded (for other compares), loading them if need be.
+export function characterTreeNodes (): Map<number, TreeNode> | null {
+  if (!treeNodes.value) loadTreeNodes()
+  return treeNodes.value
+}
 let treeLoading = false
 function loadTreeNodes () {
   if (treeNodes.value || treeLoading) return

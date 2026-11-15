@@ -80,6 +80,12 @@ export async function loadUniqueMods (name: string, variant?: string): Promise<U
   return uniqueModLines(uniques?.[name], variant)
 }
 
+// Gems by level (stats, requirements): the tooltip's gem file.
+export async function loadTipGems (): Promise<TipPack['gems'] | null> {
+  await loadFile('gems')
+  return pack.gems ?? null
+}
+
 // Base items' defences, weapon damage and requirements: the tooltip's base file.
 export async function loadTipBases (): Promise<TipPack['bases'] | null> {
   await loadFile('bases')
