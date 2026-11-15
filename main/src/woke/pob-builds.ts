@@ -5,6 +5,7 @@ import zlib from 'zlib'
 import { spawn } from 'child_process'
 import { app, shell } from 'electron'
 import { parseBuild, summarize } from './pob-parse'
+import { findPobExe, pointPobAtBuild } from './pob-launch'
 import type { PobDetails, PobSummary } from './pob-parse'
 
 const MAX_BUILDS = 1000
@@ -94,19 +95,22 @@ export async function showBuild (args: { dir?: string, relPath: string }): Promi
   shell.showItemInFolder(resolveBuild(args?.dir, args?.relPath))
 }
 
-// Starts Path of Building with the build file as its argument.
+// Starts Path of Building on the build (see pob-launch.ts for how).
 export async function openBuild (args: { dir?: string, relPath: string, pobExe?: string }): Promise<void> {
   const full = resolveBuild(args?.dir, args?.relPath)
-  // With --listen other machines can call this: never start a program for them.
+  // With --listen other machines can call this: never start a program they name.
   const isListening = process.argv.some(arg => arg.startsWith('--listen'))
-  const exe = typeof args?.pobExe === 'string' && !isListening ? args.pobExe.trim() : ''
+  const configured = typeof args?.pobExe === 'string' && !isListening ? args.pobExe.trim() : ''
+  const exe = await findPobExe(configured || undefined)
   if (!exe) {
-    const err = await shell.openPath(full)
-    if (err) throw new Error(err)
-    return
+    // Handing the .xml to Windows only brings up its "choose an app" picker.
+    shell.showItemInFolder(full)
+    throw new Error(configured
+      ? `Path of Building isn't at ${configured}. Fix the path in this window's settings.`
+      : 'Path of Building isn\'t installed, so the build file is shown in its folder. If PoB is somewhere unusual, set its path in this window\'s settings.')
   }
-  await fs.access(exe)
-  const child = spawn(exe, [full], { detached: true, stdio: 'ignore', cwd: path.dirname(exe) })
+  await pointPobAtBuild(exe, full)
+  const child = spawn(exe, [], { detached: true, stdio: 'ignore', cwd: path.dirname(exe) })
   child.on('error', () => {})
   child.unref()
 }
