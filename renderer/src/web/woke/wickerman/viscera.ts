@@ -157,6 +157,10 @@ export function visceraInZone (table: VisceraTable, zone: string, act: number | 
   return table.viscera.filter(v => v.act?.n === act && v.act.zone?.toLowerCase() === z)
 }
 
+// The name the log gives a map: the table writes unique maps as
+// "Mao Kun (unique Shore)".
+const mapName = (map: string) => map.replace(/\s*\(unique [^)]*\)\s*$/i, '').trim().toLowerCase()
+
 export interface VisceraHere {
   v: Viscera
   boss: string
@@ -173,7 +177,7 @@ export function visceraHere (table: VisceraTable, zone: string, act: number | nu
   if (act == null) {
     for (const v of table.viscera) {
       for (const m of v.maps) {
-        if (m.map.toLowerCase() === z && !out.some(o => o.v === v)) out.push({ v, boss: m.boss, unsure: !!m.unsure })
+        if (mapName(m.map) === z && !out.some(o => o.v === v)) out.push({ v, boss: m.boss, unsure: !!m.unsure })
       }
     }
   }

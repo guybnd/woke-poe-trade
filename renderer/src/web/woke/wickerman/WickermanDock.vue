@@ -4,7 +4,7 @@
     pinnable card-width="26rem">
     <template #card>
       <div :class="$style.body" data-woke-wickerman-card>
-        <div class="w-head-font w-accent w-trunc">{{ zone.name }}</div>
+        <div class="w-head-font w-accent w-trunc">{{ zoneName }}</div>
         <div v-for="h in here" :key="h.v.name" :class="$style.one">
           <div :class="$style.head">
             <span class="min-w-0 w-trunc">{{ h.v.name }}</span>
@@ -23,25 +23,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, shallowRef } from 'vue'
 import DockItem from '../dock/DockItem.vue'
-import { useZone } from '../shared/zone'
-import { actFromAreaId } from '../campaign/log-parse'
-import { onSharedDataChange } from '../app/live-data'
-import { loadViscera, visceraHere } from './viscera'
-import type { VisceraTable } from './viscera'
+import { useVisceraHere } from './here'
 
 // Mounted by WokeOverlay only while the module is on.
-const zone = useZone()
-const table = shallowRef<VisceraTable | null>(null)
-function load () { loadViscera().then(t => { table.value = t }).catch(() => {}) }
-load()
-onBeforeUnmount(onSharedDataChange(() => { table.value = null; load() }))
-
-const here = computed(() => {
-  if (!table.value || !zone.name || zone.kind === 'town' || zone.kind === 'hideout') return []
-  return visceraHere(table.value, zone.name, actFromAreaId(zone.areaId))
-})
+const { here, zoneName } = useVisceraHere()
 </script>
 
 <style module>

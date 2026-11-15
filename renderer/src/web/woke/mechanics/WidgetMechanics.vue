@@ -10,6 +10,8 @@
             <button class="w-icon-btn" title="Expand" @click="openFull"><i class="fas fa-expand-alt" /></button>
           </div>
           <MechanicGlance :mech="dockMech" :config="config" :items="items" :divine="divine" :vendor="zoneVendor" />
+          <!-- 3.30 Wickerman module (remove with the league). -->
+          <WickermanLine v-if="wickermanOn" />
         </template>
       </DockItem>
 
@@ -134,12 +136,14 @@ export default { widget: widgetMechanicsSpec }
 </script>
 
 <script setup lang="ts">
-import { inject, computed, shallowRef, watch } from 'vue'
+import { inject, computed, defineAsyncComponent, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { toast, WInfo, WPanel, WSegmented, WButton, WPrice, WField, WSelect, WBanner, WIcon, WChip, vItemTip } from '../ui'
 import { usePriceIndex } from '../market/price-index'
 import DockItem from '../dock/DockItem.vue'
+import { isModuleOn } from '../modules'
+import { AppConfig } from '@/web/Config'
 import type { DockMenuAction } from '../dock/dock'
 import { mechanicIcon } from '../ui/game-icons'
 import { dockIconEl, hideWhilePlaying, saveDock } from '../dock/dock'
@@ -211,6 +215,8 @@ useMechanicZone((id) => {
 // The icon is contextual: it shows only in a zone with a mechanic.
 const dockShow = computed(() => zoneMech.value != null && !props.config.hidden.includes(zoneMech.value))
 // So it always stands for the zone, whatever the full window was last left on.
+const WickermanLine = defineAsyncComponent(() => import('../wickerman/MechanicsLine.vue'))
+const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 const dockMech = computed(() => (zoneMech.value && mechanicById(zoneMech.value)) || mech.value)
 
 function openFull () {

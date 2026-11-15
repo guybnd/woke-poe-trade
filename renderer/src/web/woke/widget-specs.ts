@@ -11,6 +11,7 @@ import { CAMPAIGN_TYPE } from './campaign/widget'
 import { CHALLENGES_TYPE } from './challenges/widget'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './death-recap/widget'
 import { DISENCHANT_TYPE } from './disenchant/widget'
+import { WICKERMAN_TYPE } from './wickerman/widget'
 import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
 import { ESSENCE_SCAN_TYPE } from './essence-scan/widget'
 import { FARMING_TYPE } from './farming/farming'
@@ -201,6 +202,13 @@ export const widgetDisenchantSpec = {
   type: DISENCHANT_TYPE,
   instances: 'multi',
   trNameKey: 'Disenchant'
+} satisfies WidgetSpec
+
+// 3.30 league module: remove with the league.
+export const widgetWickermanSpec = {
+  type: WICKERMAN_TYPE,
+  instances: 'multi',
+  trNameKey: 'Wickerman'
 } satisfies WidgetSpec
 
 export const widgetSearchSpec = {

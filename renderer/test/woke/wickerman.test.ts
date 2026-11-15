@@ -134,6 +134,11 @@ describe('zone you stand in', () => {
     expect(visceraHere(TABLE, 'Graveyard', 1)).toEqual([])
   })
 
+  it('finds unique maps by the name the log gives', () => {
+    expect(visceraHere(TABLE, 'Mao Kun', null).length).toBeGreaterThan(0)
+    expect(visceraHere(TABLE, 'Hallowed Ground', null).length).toBeGreaterThan(0)
+  })
+
   it('finds pinnacle arenas', () => {
     expect(visceraHere(TABLE, "The Maven's Crucible", null).map(h => h.v.name)).toContain("Maven's Orrery")
   })
