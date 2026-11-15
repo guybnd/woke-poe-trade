@@ -11,7 +11,7 @@
       <WEmpty v-if="!table" icon="fas fa-bone">Reading the Viscera list.</WEmpty>
       <WEmpty v-else-if="!rows.length" icon="fas fa-bone">No Viscera match.</WEmpty>
       <div v-else :class="$style.list">
-        <template v-for="v in rows" :key="v.name">
+        <template v-for="v in (onScreen ? rows : [])" :key="v.name">
           <button type="button" :class="[$style.row, open === v.name && $style.on, hereNames.has(v.name) && $style.here]"
             :title="hereNames.has(v.name) ? 'Dropped in this zone' : undefined" data-woke-wickerman-row
             @click="open = open === v.name ? null : v.name">
@@ -84,6 +84,9 @@ const { price, divine } = useVisceraPrices()
 const hereNames = computed(() => new Set(here.value.map(h => h.v.name)))
 const query = shallowRef('')
 const open = shallowRef<string | null>(null)
+// The rows are built only while the window is on screen: hundreds of them
+// would otherwise sit in the page while it is hidden.
+const onScreen = computed(() => props.config.wmWants === 'show' && wm.active.value)
 
 const rows = computed(() => {
   const t = table.value
