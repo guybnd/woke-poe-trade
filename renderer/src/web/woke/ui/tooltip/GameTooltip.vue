@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap }]" :style="pos" role="tooltip">
+    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap || itemCompare }]" :style="pos" role="tooltip">
       <header :class="[$style.head, { [$style.double]: lines.length > 1, [$style.art]: headArt }]" :style="headArt">
         <img v-for="(src, i) in influenceArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
         <div v-for="(l, i) in lines" :key="i">{{ l }}</div>
@@ -83,6 +83,10 @@
           <div v-if="item.mirrored" :class="$style.mod">Mirrored</div>
           <div v-if="item.corrupted" :class="$style.corrupted">Corrupted</div>
         </section>
+        <template v-if="itemCompare">
+          <div :class="$style.compareHead">{{ itemCompare.title }}</div>
+          <SwapCard :swap="itemCompare" />
+        </template>
       </template>
 
       <template v-else-if="gem">
@@ -164,6 +168,7 @@ const placed = shallowRef<{ left: number, top: number } | null>(null)
 
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
+const itemCompare = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.compare ?? null : null)
 const enchantLines = computed(() => listing.value?.implicits.filter(l => l.kind === 'enchant') ?? [])
 const implicitLines = computed(() => listing.value?.implicits.filter(l => l.kind !== 'enchant') ?? [])
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
@@ -418,6 +423,13 @@ onUnmounted(() => {
 .links6 { color: #1a1209; background: linear-gradient(#e8c470, #a8792a); border-color: #7a5518; }
 
 /* A listing's headings and tags need the room. */
+.compareHead {
+  padding: 6px 10px 0;
+  border-top: 1px solid var(--tip-sep, rgba(200, 164, 106, 0.35));
+  color: var(--w-accent);
+  font-family: var(--w-caps-face);
+  text-align: center;
+}
 .wide { max-width: 46rem; --tip-range: #d9c48f; }
 .modGap { height: 8px; }
 .p-label { color: var(--w-faint); }
