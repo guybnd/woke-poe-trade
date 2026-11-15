@@ -1,0 +1,19 @@
+---
+id: WOKEPOET-312
+title: 'Character: build items and gems you can''t wear yet (idea 14)'
+status: Grooming
+priority: None
+effort: None
+assignee: unassigned
+tags:
+  - pob
+createdBy: Agent
+updatedBy: Agent
+parentId: WOKEPOET-304
+history:
+  - type: activity
+    user: Agent
+    date: '2026-11-15T05:38:24.485Z'
+    comment: Created as subtask of WOKEPOET-304.
+---
+Level and attribute requirements of build items/gems against the character, what's short and the nearest node that fixes it. Needs attributes (blocked on item mods, #497).
