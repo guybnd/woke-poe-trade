@@ -168,14 +168,16 @@ describe('a category poe.ninja just started tracking', () => {
       ]),
       chunk('viscera', [
         { name: "Sirus' Head", variant: 'Transfiguration of Soul', chaos: 900, graph: [] },
-        // Some history: counted as usual against the league's days.
-        { name: "Shaper's Head", variant: 'x', chaos: 90, graph: [null, null, null, null, null, 0, 5] }
+        // Tracked for two days: priced on both is full, priced on one is thin.
+        { name: "Shaper's Head", variant: 'x', chaos: 90, graph: [null, null, null, null, null, 0, 5] },
+        { name: "Elder's Head", variant: 'x', chaos: 80, graph: [null, null, null, null, null, null, 5] }
       ])
     ])
     const gaps = Object.fromEntries(items.map(i => [i.name, i.gaps]))
     expect(gaps['Rare Orb']).toBe(7)
     expect(gaps["Sirus' Head"]).toBe(0)
-    expect(gaps["Shaper's Head"]).toBe(5)
+    expect(gaps["Shaper's Head"]).toBe(0)
+    expect(gaps["Elder's Head"]).toBe(4)
     expect(parseCategory('Viscera', chunk('viscera', [{ name: "Sirus' Head", variant: 'x', chaos: 900, graph: [] }]), 7)[0].gaps).toBe(0)
   })
 })

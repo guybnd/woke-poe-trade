@@ -60,7 +60,8 @@ describe('thin-market gaps', () => {
   it('the Market window counts gaps the same way, with the feed days', () => {
     const cat = chunk('delirium-orbs', [entry('Fine Delirium Orb', DAY2), entry('Rare Orb', [null, null, null, null, null, null, 4])])
     expect(parseCategory('DeliriumOrb', cat, 2).map(r => r.gaps)).toEqual([0, 4])
-    // A mature league: a category whose items are all new still reads thin.
-    expect(parseCategory('DeliriumOrb', cat, 7).map(r => r.gaps)).toEqual([5, 6])
+    // A mature league: a category poe.ninja only tracks for 2 days counts those
+    // 2 days (3.30's Viscera), so only the item missing one of them is thin.
+    expect(parseCategory('DeliriumOrb', cat, 7).map(r => r.gaps)).toEqual([0, 4])
   })
 })

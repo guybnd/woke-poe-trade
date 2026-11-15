@@ -59,13 +59,14 @@ export function parseDenseChunks (chunks: DenseChunk[]): PriceItem[] {
   return out
 }
 
-// Gaps for one category's rows. In a category poe.ninja started tracking after
-// the league did (3.30's Viscera, a day in), a row with no history at all yet
-// isn't counted thin: poe.ninja hasn't drawn its line. Rows with some history
-// count as usual, so a mature league's all-new items still read thin.
+// Gaps for one category's rows. A category poe.ninja started tracking after
+// the league did (3.30's Viscera, two days in) counts only the days it has been
+// tracked, so a row priced on each of them isn't thin; a row with no history
+// at all yet isn't either.
 export function categoryGaps (graphs: unknown[], days: number): (graph: unknown) => number {
-  if (leagueDays(graphs) >= days) return graph => graphGaps(graph, days)
-  return graph => Array.isArray(graph) && graph.every(v => v == null) ? 0 : graphGaps(graph, days)
+  const own = Math.min(days, leagueDays(graphs))
+  if (own >= days) return graph => graphGaps(graph, days)
+  return graph => Array.isArray(graph) && graph.every(v => v == null) ? 0 : graphGaps(graph, own)
 }
 
 // poe.ninja's graph is 7 daily values: % change since a week ago, today last.
