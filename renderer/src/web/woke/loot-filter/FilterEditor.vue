@@ -395,7 +395,7 @@ const searchAreaLevel = computed(() => props.store.areaLevel.value ?? props.conf
 const previewPicks = shallowRef<Array<{ key: string, item: SearchItem, rarity: FilterRarity, facts?: ItemFacts }>>([])
 function dropPick (p: { item: SearchItem, rarity: FilterRarity, facts?: ItemFacts }) {
   // A pasted copy is its own drop, apart from the plain base.
-  const key = p.facts ? `pasted|${p.facts.name}` : `${p.item.kind}|${p.item.name}|${p.item.gear ? p.rarity : ''}`
+  const key = p.facts ? `pasted|${Date.now()}` : `${p.item.kind}|${p.item.name}|${p.item.gear ? p.rarity : ''}`
   previewPicks.value = [{ key, ...p }, ...previewPicks.value.filter(x => x.key !== key)].slice(0, 6)
 }
 const targets = computed(() => props.store.doc.value && selType.value ? moveTargets(props.store.doc.value, selType.value) : [])

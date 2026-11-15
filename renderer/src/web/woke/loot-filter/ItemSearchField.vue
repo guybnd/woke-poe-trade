@@ -129,7 +129,6 @@ function onPaste (e: ClipboardEvent) {
   const own = facts.name.endsWith(facts.baseType) ? facts.name.slice(0, -facts.baseType.length).trim() : ''
   const name = own ? `${own}, ${facts.baseType}` : facts.baseType
   pasted.value = { query: name, item, facts }
-  if (facts.rarity === 'Normal' || facts.rarity === 'Magic' || facts.rarity === 'Rare') rarity.value = facts.rarity
   onType(name)
 }
 watch(() => props.modelValue, () => { hl.value = 0 })

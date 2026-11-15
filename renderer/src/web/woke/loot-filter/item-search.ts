@@ -184,8 +184,9 @@ export function searchItems (list: SearchItem[], query: string, limit = 12): Sea
     a.item.name.length - b.item.name.length ||
     a.item.name.localeCompare(b.item.name))
   // A rare's title, "Doom Nails, Spike-Point Arrow Quiver": its random name
-  // is in no data, but the base inside it is. Those go first.
-  const inside = namesInside(list, q)
+  // is in no data, but the base inside it is. Those go first, unless a name
+  // is or starts with the query ("vaal grace" stays Vaal Grace, not Grace).
+  const inside = ranked.some(r => r.rank <= 1) ? [] : namesInside(list, q)
   const seen = new Set(inside)
   return [...inside, ...ranked.map(r => r.item).filter(i => !seen.has(i))].slice(0, limit)
 }
