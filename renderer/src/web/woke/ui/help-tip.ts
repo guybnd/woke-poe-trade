@@ -2,10 +2,13 @@
 // in the overlay), so a panel's edge can't cut it off.
 import { shallowRef } from 'vue'
 
-export const helpTip = shallowRef<{ owner: object, text: string, anchor: DOMRect } | null>(null)
+// A key row: boxed keys, then what they do.
+export interface HelpKey { keys: string, label: string }
 
-export function showHelp (owner: object, target: HTMLElement, text: string) {
-  helpTip.value = { owner, text, anchor: target.getBoundingClientRect() }
+export const helpTip = shallowRef<{ owner: object, text: string, keys?: HelpKey[], anchor: DOMRect } | null>(null)
+
+export function showHelp (owner: object, target: HTMLElement, text: string, keys?: HelpKey[]) {
+  helpTip.value = { owner, text, keys, anchor: target.getBoundingClientRect() }
 }
 
 export function hideHelp (owner?: object) {

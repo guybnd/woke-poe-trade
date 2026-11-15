@@ -11,7 +11,7 @@
               <span class="whitespace-nowrap">{{ LEVEL_NAMES[shownLevel] }}</span>
               <span class="w-faint text-xs whitespace-nowrap">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
               <button v-if="config.strictAuto.on && config.strictAuto.paused" type="button" :class="$style.link" @click="backToAuto">Back to auto</button>
-              <WInfo v-if="keysHelp" :text="keysHelp" />
+              <WInfo v-if="keysHelp.length" :keys="keysHelp" />
               <span class="grow" />
               <span v-if="!config.strictAuto.paused" class="w-faint text-xs w-num whitespace-nowrap">NeverSink {{ config.neversink.version }}</span>
             </div>
@@ -73,7 +73,6 @@ import { parseClipboard } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, WInfo, gameIcon, toast } from '../ui'
-import { hotkeyText } from '../ui/key-label'
 import DockItem from '../dock/DockItem.vue'
 import { showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
@@ -280,14 +279,11 @@ const wantedLevel = computed(() => props.config.strictAuto.on && props.config.st
 // Hotkeys behind the "?" on the strictness row.
 const keysHelp = computed(() => {
   const c = props.config
-  const steps = [
-    c.looserHotkey ? `${hotkeyText(c.looserHotkey)} looser` : '',
-    c.stricterHotkey ? `${hotkeyText(c.stricterHotkey)} stricter` : ''
-  ].filter(Boolean)
   return [
-    steps.length ? steps.join(', ') + '.' : '',
-    c.editorHotkey ? `${hotkeyText(c.editorHotkey)} opens the editor.` : ''
-  ].filter(Boolean).join('\n\n')
+    { keys: c.looserHotkey, label: 'Looser' },
+    { keys: c.stricterHotkey, label: 'Stricter' },
+    { keys: c.editorHotkey, label: 'Editor' }
+  ].filter((k): k is { keys: string, label: string } => !!k.keys)
 })
 
 function pickNow (level: number) {

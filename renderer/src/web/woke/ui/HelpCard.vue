@@ -1,7 +1,10 @@
 <template>
   <Teleport to="body">
-    <div v-if="tip" ref="el" data-w-popup :class="$style.card" :style="pos" role="tooltip">
+    <div v-if="tip" ref="el" data-w-popup :class="[$style.card, { [$style.keysOnly]: !paragraphs.length }]" :style="pos" role="tooltip">
       <p v-for="(p, i) in paragraphs" :key="i" :class="{ [$style.more]: i > 0 }">{{ p }}</p>
+      <div v-if="tip.keys?.length" :class="[$style.keys, { [$style.more]: paragraphs.length }]">
+        <template v-for="(k, i) in tip.keys" :key="i"><WKbd :keys="k.keys" /><span>{{ k.label }}</span></template>
+      </div>
     </div>
   </Teleport>
 </template>
@@ -11,6 +14,7 @@
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { helpParagraphs, helpTip as tip, hideHelp, placeHelp } from './help-tip'
+import WKbd from './WKbd.vue'
 
 const el = ref<HTMLElement | null>(null)
 const placed = ref<{ left: number, top: number } | null>(null)
@@ -61,5 +65,7 @@ onUnmounted(() => {
   font-size: var(--w-fs-sm); font-weight: 400; line-height: 1.45; white-space: normal; text-align: left;
 }
 .card p { margin: 0; }
+.keysOnly { width: max-content; max-width: 300px; }
+.keys { display: grid; grid-template-columns: auto auto; gap: 4px 8px; align-items: center; }
 .more { margin-top: 6px !important; color: var(--w-dim); }
 </style>

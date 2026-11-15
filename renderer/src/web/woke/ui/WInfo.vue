@@ -1,5 +1,5 @@
 <template>
-  <span class="w-info" :class="[$style.q, { [$style.on]: open }]" role="img" :aria-label="text" tabindex="0"
+  <span class="w-info" :class="[$style.q, { [$style.on]: open }]" role="img" :aria-label="label" tabindex="0"
     @mouseenter="show" @mouseleave="hide" @focus="onFocus" @blur="hide" title="" @click.stop.prevent @mousedown.stop @dblclick.stop>?</span>
 </template>
 
@@ -7,13 +7,16 @@
 // A long explanation, kept out of the panel until someone asks for it. A blank
 // line in `text` starts a new paragraph.
 import { computed, onBeforeUnmount } from 'vue'
-import { helpTip, hideHelp, showHelp } from './help-tip'
+import { helpTip, hideHelp, showHelp, type HelpKey } from './help-tip'
+import { hotkeyText } from './key-label'
 
-const props = defineProps<{ text: string }>()
+// `keys` shows boxed key rows, the way hotkeys look everywhere else.
+const props = defineProps<{ text?: string, keys?: HelpKey[] }>()
+const label = computed(() => [props.text ?? '', ...(props.keys ?? []).map(k => `${hotkeyText(k.keys)} ${k.label}`)].filter(Boolean).join('. '))
 
 const owner = {}
 const open = computed(() => helpTip.value?.owner === owner)
-function show (e: Event) { showHelp(owner, e.currentTarget as HTMLElement, props.text) }
+function show (e: Event) { showHelp(owner, e.currentTarget as HTMLElement, props.text ?? '', props.keys) }
 function hide () { hideHelp(owner) }
 // Keyboard only: a clicked "?" keeps focus, and would reopen its card when the
 // window gets focus back, with the mouse somewhere else.

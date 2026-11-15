@@ -41,6 +41,12 @@ describe('showHelp and hideHelp', () => {
     hideHelp(b)
     expect(helpTip.value).toBeNull()
   })
+  it('carries key rows with or without text', () => {
+    showHelp({}, target, '', [{ keys: 'Alt + BracketLeft', label: 'Looser' }])
+    expect(helpTip.value?.keys).toEqual([{ keys: 'Alt + BracketLeft', label: 'Looser' }])
+    expect(helpParagraphs(helpTip.value!.text)).toEqual([])
+    hideHelp()
+  })
   it('closes whichever card is open with no owner', () => {
     showHelp({}, target, 'a')
     hideHelp()
