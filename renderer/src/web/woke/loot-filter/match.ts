@@ -216,6 +216,19 @@ function evalBlockBrief (block: FilterBlock, item: ItemFacts): BlockMatch {
   return { block, result, conditions: [] }
 }
 
+// Same rule, by its tags: untagged rules can't be told apart this way.
+export function sameRule (a: MatchResult, b: MatchResult): boolean {
+  const x = a.final?.block
+  const y = b.final?.block
+  return (x?.type ?? null) === (y?.type ?? null) && (x?.tier ?? null) === (y?.tier ?? null)
+}
+
+// What you'd see on the ground: shown or hidden, and the look and sound.
+const actionsKey = (m: MatchResult) => JSON.stringify(m.actions.map(x => [x.key, x.args]).sort((p, q) => p[0] < q[0] ? -1 : p[0] > q[0] ? 1 : 0))
+export function sameOutcome (a: MatchResult, b: MatchResult): boolean {
+  return a.visibility === b.visibility && sameRule(a, b) && actionsKey(a) === actionsKey(b)
+}
+
 export function matchItem (doc: FilterDoc, item: ItemFacts, opts: { brief?: boolean } = {}): MatchResult {
   const layers: BlockMatch[] = []
   const uncertain: BlockMatch[] = []

@@ -40,5 +40,10 @@ for (const league of importer.leagues()) {
 
 const target = path.join(__dirname, '../src/web/woke/league-invest/bundled')
 mkdirSync(target, { recursive: true })
-writeFileSync(path.join(target, 'leagues.json'), JSON.stringify(out))
+// Empty variant/links and imported are left out (store.ts fills them in): 16 KB less JS.
+const slim = out.map(({ imported: _, ...h }) => ({
+  ...h,
+  items: h.items.map(({ variant, links, ...i }) => ({ ...i, ...(variant ? { variant } : {}), ...(links ? { links } : {}) }))
+}))
+writeFileSync(path.join(target, 'leagues.json'), JSON.stringify(slim))
 console.log(`Wrote ${out.length} league(s)`)

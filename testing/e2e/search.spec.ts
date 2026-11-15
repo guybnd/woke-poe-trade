@@ -307,3 +307,36 @@ test('an empty search box shows things to try', async ({ overlay }) => {
   await expect(panel.getByText(/^1 Mirror of Kalandra = /)).toBeVisible()
   await overlay.snap('search-empty')
 })
+
+test('a base lists its uniques with their prices', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  // "shagreen" names three bases: their uniques come with the bases.
+  await box.fill('shagreen')
+  await expect(panel.getByText('Uniques on these bases')).toBeVisible()
+  const list = panel.locator('button').filter({ hasText: 'Temptation Step' }).first()
+  await expect(list).toContainText('Shagreen Boots')
+  await expect(panel.getByRole('button', { name: /Three-step Assault/ }).first()).toBeVisible()
+  await overlay.snap('search-base-uniques')
+
+  // The base's own pane lists them too, and a click opens one.
+  await box.fill('shagreen boots')
+  await expect(panel.getByText('Uniques on Shagreen Boots')).toBeVisible()
+  await panel.getByRole('button', { name: /^Shagreen Boots/ }).first().click()
+  await expect(panel.getByText('Uniques on this base')).toBeVisible()
+  await expect(panel.getByText('Replica Three-step Assault')).toBeVisible()
+  await overlay.snap('search-base-pane')
+  await panel.getByRole('button', { name: /Temptation Step.*40/ }).last().click()
+  await expect(panel.getByText('Unique Armour')).toBeVisible()
+
+  // Uniques with no price still show, named in the game's language.
+  await box.fill('spine bow')
+  await panel.getByRole('button', { name: /^Spine Bow/ }).first().click()
+  await expect(panel.getByText('Uniques on this base')).toBeVisible()
+  await expect(panel.getByText('Voltaxic Rift')).toBeVisible()
+  await overlay.snap('search-priced-base')
+})
