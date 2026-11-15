@@ -40,8 +40,6 @@ export interface VisceraTable {
   byName: Map<string, Viscera>
 }
 
-export const LEDGER_URL = 'https://wickermanledger.site/'
-
 let job: Promise<VisceraTable | null> | null = null
 onSharedDataChange(() => { job = null })
 

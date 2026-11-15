@@ -1,7 +1,7 @@
 // 3.30 Wickerman module: Viscera by name, by the boss, zone or map that drops
 // them, or by an effect word ("ignite", "minion damage"). The table loads when
 // the palette opens, only while the module is on.
-import { LEDGER_URL, actLine, searchViscera } from '../../wickerman/viscera'
+import { actLine, searchViscera } from '../../wickerman/viscera'
 import type { Viscera, VisceraTable } from '../../wickerman/viscera'
 import type { Lookup, LookupCard, LookupContext, LookupRow } from './types'
 
@@ -22,12 +22,10 @@ function visceraCard (v: Viscera, why: string | undefined, ctx: LookupContext): 
     sections: [
       { rows: [{ label: 'Slot', value: v.slot, ...(price != null ? { chaos: price } : {}) }] },
       { label: 'Versions', rows: v.tiers.map(t => ({ label: t.label, value: t.text.replace(/\n/g, ' · ') })) },
-      ...(drops.length ? [{ label: 'Dropped by', rows: drops }] : []),
-      { text: ['From the Wickerman Ledger.'] }
+      ...(drops.length ? [{ label: 'Dropped by', rows: drops }] : [])
     ],
     actions: [
-      { label: 'Copy name', copy: v.name },
-      { label: 'Wickerman Ledger', url: LEDGER_URL }
+      { label: 'Copy name', copy: v.name }
     ]
   }
 }
