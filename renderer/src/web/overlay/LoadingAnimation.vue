@@ -1,5 +1,5 @@
 <template>
-  <transition :enter-from-class="$style.from" :leave-to-class="$style.gone">
+  <transition :enter-active-class="$style.entering" :enter-from-class="$style.from" :leave-to-class="$style.gone">
     <div v-if="show" :class="$style.toast" role="status" data-woke-launch-toast>
       <div :class="$style.inner">
         <div :class="$style.plaque"><span :class="$style.title">Woke PoE Trade</span></div>
@@ -39,7 +39,8 @@ Host.onEvent('MAIN->OVERLAY::overlay-attached', () => {
   pointer-events: none;
   transition: opacity 400ms ease, transform 400ms ease;
 }
-.from { opacity: 0; transform: scale(0.97); transition-duration: 250ms; }
+.entering { transition-duration: 250ms; }
+.from { opacity: 0; transform: scale(0.97); }
 .gone { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .from { transform: none; } }
 
