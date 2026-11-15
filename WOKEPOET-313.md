@@ -37,6 +37,13 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-15T06:01:16.268Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-15T06:03:09.223Z'
+    comment: >-
+      Going to merge through the cloud merge thread; finish_ticket once the
+      coordinator confirms the merge and PR number.
+    id: a-2026-11-15t06-03-09-223z
 needsAction: null
 ---
 Hovering trade result rows for a 3.30 Viscera (e.g. Ancestor's Club, Upper Limb) showed no listing tooltip.
