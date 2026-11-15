@@ -97,17 +97,19 @@ export interface GemHave {
   behind: string
   // What you socket, for the gem's tooltip: "level 19, quality 5%".
   yours: string
+  // Yours as the level/quality column reads: "19/5".
+  lq: string
 }
 
 // level, quality: what the build asks for (null: not set, as on the leveling list).
 export function gemHave (name: string, level: number | null | undefined, quality: number | null | undefined): GemHave {
   const h = characterGems.value.get(gemKey(name))
-  if (!h) return { have: false, behind: '', yours: '' }
+  if (!h) return { have: false, behind: '', yours: '', lq: '' }
   const parts: string[] = []
   if (level != null && h.level != null && h.level < level) parts.push(`${h.level} → ${level}`)
   if (quality != null && quality > 0 && (h.quality ?? 0) < quality) parts.push(`q${h.quality ?? 0} → ${quality}`)
   const yours = [h.level != null ? `level ${h.level}` : '', h.quality ? `quality ${h.quality}%` : ''].filter(Boolean).join(', ')
-  return { have: true, behind: parts.join(' · '), yours }
+  return { have: true, behind: parts.join(' · '), yours, lq: `${h.level ?? '?'}/${h.quality ?? 0}` }
 }
 
 // The passive points you really spent, for the leveling guide's stage: only

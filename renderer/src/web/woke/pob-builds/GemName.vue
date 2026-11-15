@@ -1,8 +1,8 @@
 <template>
   <span v-item-tip="tipRef" :class="[$style.gem, `w-gem-${colour}`, { [$style.off]: off }]">
     <WIcon v-if="art" :src="art" :size="size" title="" /><span :class="[$style.name, { 'line-through': struck }]">{{ name }}</span><slot />
-    <!-- Against your character (toggle on the Links heading): one dot; the numbers are in the tooltip. -->
-    <span v-if="mine" :class="[$style.mark, !mine.have ? $style.markMiss : mine.behind ? $style.markLow : $style.markOk]" aria-hidden="true" />
+    <!-- Against your character (toggle on the Links heading): yours, only where lower or missing. Rows with a level column show it there instead. -->
+    <span v-if="mine && !column && (mine.behind || !mine.have)" class="text-xs w-num whitespace-nowrap" :class="mine.have ? $style.low : $style.none">{{ mine.have ? mine.lq : 'none' }}</span>
   </span>
 </template>
 
@@ -24,7 +24,9 @@ const props = withDefaults(defineProps<{
   size?: 'sm' | 'md'
   off?: boolean
   struck?: boolean
-}>(), { level: undefined, quality: undefined, note: undefined, size: 'md', off: false, struck: false })
+  // The row has its own level/quality column, which shows yours.
+  column?: boolean
+}>(), { level: undefined, quality: undefined, note: undefined, size: 'md', off: false, struck: false, column: false })
 
 const colour = computed(() => gemData(props.name)?.colour ?? 'w')
 const art = computed(() => gemArt(props.name))
@@ -48,7 +50,8 @@ const yoursNote = computed(() => {
 // screens show it, with where to get it under; the short one if the data
 // lacks the gem.
 const tipRef = computed<ItemTipRef>(() => {
-  const note = [props.note ?? where.value, yoursNote.value].filter(Boolean).join(' · ') || undefined
+  // Its own line in the tooltip, under where to get it.
+  const note = [props.note ?? where.value, yoursNote.value].filter(Boolean).join('\n') || undefined
   const level = props.level ?? 1
   return {
     name: gemData(props.name)?.name ?? props.name,
@@ -68,8 +71,6 @@ const tipRef = computed<ItemTipRef>(() => {
 .gem { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .off { opacity: 0.5; }
-.mark { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-.markOk { background: var(--w-up); }
-.markLow { background: var(--w-warn, #e2b34a); }
-.markMiss { border: 1.5px solid var(--w-accent); }
+.low { color: var(--w-warn, #e2b34a); }
+.none { color: var(--w-accent); }
 </style>

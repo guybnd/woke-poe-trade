@@ -407,7 +407,7 @@ describe('gemHave', () => {
       auto: false,
       nextAutoAt: 0
     }
-    expect(gemHave('Elemental Hit', 20, 20)).toEqual({ have: true, behind: '19 → 20 · q5 → 20', yours: 'level 19, quality 5%' })
+    expect(gemHave('Elemental Hit', 20, 20)).toEqual({ have: true, behind: '19 → 20 · q5 → 20', yours: 'level 19, quality 5%', lq: '19/5' })
     expect(gemHave('Trinity', 20, 0).have).toBe(false)
   })
 })

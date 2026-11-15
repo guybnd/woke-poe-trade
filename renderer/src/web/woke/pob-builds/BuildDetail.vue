@@ -51,7 +51,7 @@
         <div :class="$style.heading" class="flex items-center">
           <span>Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></span>
           <button v-if="personalOn && character" type="button" class="ml-auto normal-case tracking-normal w-focusable" :class="[$style.mineToggle, { [$style.mineOn]: config.characterGemMarks === true }]"
-            :aria-pressed="config.characterGemMarks === true" :title="config.characterGemMarks === true ? 'Hide the marks for your character\'s gems' : 'Mark each gem: green you have it, amber lower, hollow missing'"
+            :aria-pressed="config.characterGemMarks === true" :title="config.characterGemMarks === true ? 'Hide the marks for your character\'s gems' : 'Show your level beside gems where yours is lower or missing'"
             @click="toggleGemMarks">● Mine</button>
         </div>
         <div v-for="g in shownLinks" :key="groupKey(shownSet!.groups, g)" :class="$style.linkGroup">

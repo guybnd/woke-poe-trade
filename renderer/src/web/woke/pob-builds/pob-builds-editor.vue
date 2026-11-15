@@ -25,7 +25,7 @@
     </WSettingRow>
     <template v-if="personalOn">
       <WSettingRow label="Mark gems against your character"
-        hint="In the build window, a dot after each gem: green you socket it at the build's level, amber lower, hollow missing. Hover a gem for your level and quality. Also on the Links heading.">
+        hint="In the build window, your level/quality in amber beside a gem where yours is lower, 'none' where you don't socket it. Hover a gem for your numbers. Also on the Links heading.">
         <WToggle v-model="characterGemMarks" />
       </WSettingRow>
       <WSettingRow label="Read your character on area changes"
