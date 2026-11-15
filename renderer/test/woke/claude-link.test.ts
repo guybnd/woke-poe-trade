@@ -130,6 +130,8 @@ describe('claude link tools', () => {
     const character = async () => ({ version: 1, character: { name: 'C' }, tree: { nodes: [26725], jewels: [{ x: 0, item: { rarity: 'RARE', name: 'J', base: 'Cobalt Jewel', sockets: '', implicits: [], mods: [] } }, { x: 9, item: { rarity: 'RARE', name: 'K', base: 'Cobalt Jewel', sockets: '', implicits: [], mods: [] } }] } })
     const tree = (await run(deps({ character, passiveTree: async () => ({ nodes, masteryEffects: {}, jewelSlots: [26725] }) }), 'current_character', { part: 'tree' })).tree
     expect(tree.jewels.map((j: any) => j.socket)).toEqual(['Jewel Socket A', 'jewel slot 9'])
+    const named = treeOut({ title: 'T', url: '', isActive: true, nodes: [], jewels: [], sockets: [{ node: 22994, item: { rarity: 'RARE', name: 'J', base: 'Crimson Jewel', sockets: '', implicits: [], mods: [] } }] }, { nodes, masteryEffects: {} }) as any
+    expect(named.jewels[0]).toMatchObject({ socket: 'Jewel socket', socketNode: 22994 })
   })
 
   it('says when there is no character', async () => {

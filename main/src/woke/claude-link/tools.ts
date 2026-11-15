@@ -562,6 +562,8 @@ export function treeOut (
     ascendancy,
     masteries,
     smallPassives: small,
-    jewels: (t.sockets ?? []).map(s => ({ socket: tree.nodes.get(s.node)?.name || s.label || s.node, ...itemOut(s.item) }))
+    // Some socket nodes (outer sockets, cluster ones) aren't in the tree data
+    // or have no name: say what they are rather than a bare id.
+    jewels: (t.sockets ?? []).map(s => ({ socket: tree.nodes.get(s.node)?.name || s.label || 'Jewel socket', socketNode: Number.isFinite(s.node) ? s.node : undefined, ...itemOut(s.item) }))
   }
 }
