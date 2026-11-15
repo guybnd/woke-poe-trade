@@ -44,7 +44,25 @@ export type WornReply = WornGear | { error: string }
 type Raw = Record<string, unknown>
 
 const str = (v: unknown) => typeof v === 'string' ? v : ''
-const lines = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').map(cleanMod).filter(Boolean) : []
+// Mod lines come as plain strings, or (3.30's replies) as { description,
+// flags: { crafted, fractured } } objects.
+interface ModLine { text: string, kind: PobModKind }
+function modLines (v: unknown, kind: PobModKind = ''): ModLine[] {
+  if (!Array.isArray(v)) return []
+  const out: ModLine[] = []
+  for (const x of v) {
+    // One mod can span lines (a flask's two immunities): one line each.
+    if (typeof x === 'string') {
+      for (const text of x.split('\n').map(cleanMod).filter(Boolean)) out.push({ text, kind })
+    } else if (x && typeof x === 'object' && typeof (x as Raw).description === 'string') {
+      const flags = ((x as Raw).flags ?? {}) as Raw
+      const k: PobModKind = flags.fractured === true ? 'fractured' : flags.crafted === true ? 'crafted' : kind
+      for (const text of ((x as Raw).description as string).split('\n').map(cleanMod).filter(Boolean)) out.push({ text, kind: k })
+    }
+  }
+  return out
+}
+const lines = (v: unknown): string[] => modLines(v).map(m => m.text)
 
 // Newer replies mark terms up: "[ElementalDamage|Elemental Damage]" -> "Elemental Damage".
 export function cleanMod (line: string): string {
@@ -86,12 +104,20 @@ export function wornItem (raw: Raw): PobItem {
 
   const enchants = lines(raw.enchantMods)
   const implicits = lines(raw.implicitMods)
-  const fractured = lines(raw.fracturedMods)
-  // Foulborn uniques' mutated mods count like any other.
-  const explicit = [...lines(raw.explicitMods), ...lines(raw.mutatedMods)]
-  const crafted = lines(raw.craftedMods)
-  const mods = [...fractured, ...explicit, ...crafted]
-  const modKinds: PobModKind[] = [...fractured.map(() => 'fractured' as const), ...explicit.map(() => '' as const), ...crafted.map(() => 'crafted' as const)]
+  // Older replies list fractured and crafted mods apart; newer ones flag them
+  // among the explicit ones. Fractured first, crafted last, as PoB orders them.
+  // Foulborn uniques' mutated mods, and a flask's utility mods, count like any other.
+  const all = [
+    ...modLines(raw.fracturedMods, 'fractured'),
+    ...modLines(raw.utilityMods),
+    ...modLines(raw.explicitMods),
+    ...modLines(raw.mutatedMods),
+    ...modLines(raw.craftedMods, 'crafted')
+  ]
+  const order: Record<string, number> = { fractured: 0, '': 1, crafted: 2 }
+  const sorted = all.map((m, i) => ({ m, i })).sort((a, b) => order[a.m.kind] - order[b.m.kind] || a.i - b.i).map(x => x.m)
+  const mods = sorted.map(m => m.text)
+  const modKinds: PobModKind[] = sorted.map(m => m.kind)
 
   const influences = raw.influences && typeof raw.influences === 'object'
     ? Object.keys(raw.influences).filter(k => (raw.influences as Raw)[k] === true && INFLUENCE[k]).map(k => INFLUENCE[k])

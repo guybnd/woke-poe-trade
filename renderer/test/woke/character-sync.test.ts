@@ -344,3 +344,34 @@ describe('jewelDiff edge cases', () => {
     expect(jewelDiff(build, [], [100, 200], null, [100]).map(r => r.node)).toEqual([100])
   })
 })
+
+describe('3.30 mod lines', () => {
+  it('reads mods given as { description, flags } objects, crafted and fractured kept', () => {
+    const r = parseCharacterItems(JSON.stringify({
+      items: [{
+        inventoryId: 'Belt',
+        frameType: 2,
+        name: 'Horror Shackle',
+        typeLine: 'Heavy Belt',
+        baseType: 'Heavy Belt',
+        implicitMods: [{ description: '+25 to Strength' }],
+        explicitMods: [
+          { description: '16% increased Elemental Damage with Attack Skills', flags: { crafted: true } },
+          { description: '+80 to maximum [Life|Life]' },
+          { description: '+30% to Fire Resistance', flags: { fractured: true } }
+        ]
+      }, {
+        inventoryId: 'Flask',
+        x: 0,
+        frameType: 1,
+        typeLine: 'Quicksilver Flask of Adrenaline',
+        baseType: 'Quicksilver Flask',
+        utilityMods: ['40% increased Movement Speed']
+      }]
+    }))!
+    expect(r.gear[0].item.implicits).toEqual(['+25 to Strength'])
+    expect(r.gear[0].item.mods).toEqual(['+30% to Fire Resistance', '+80 to maximum Life', '16% increased Elemental Damage with Attack Skills'])
+    expect(r.gear[0].item.modKinds).toEqual(['fractured', '', 'crafted'])
+    expect(r.gear[1].item.mods).toEqual(['40% increased Movement Speed'])
+  })
+})

@@ -17,12 +17,20 @@
       <div :class="$style.heading">Passive tree<template v-if="diff.treeTitle"> · {{ diff.treeTitle }}</template></div>
       <template v-if="diff.tree">
         <div class="flex items-center gap-2 flex-wrap">
-          <span :class="$style.take">{{ diff.tree.added }} to take</span>
-          <span class="w-down">{{ diff.tree.removed }} to refund</span>
+          <button v-if="diff.tree.addedNames.length || diff.tree.removedNames.length" type="button" class="w-focusable flex items-center gap-2"
+            :aria-expanded="namesOpen" :title="namesOpen ? 'Hide the notables' : 'Show which notables'" @click="namesOpen = !namesOpen">
+            <i class="fas text-xs w-faint" :class="namesOpen ? 'fa-chevron-down' : 'fa-chevron-right'" />
+            <span :class="$style.take">{{ diff.tree.added }} to take</span>
+            <span class="w-down">{{ diff.tree.removed }} to refund</span>
+          </button>
+          <template v-else>
+            <span :class="$style.take">{{ diff.tree.added }} to take</span>
+            <span class="w-down">{{ diff.tree.removed }} to refund</span>
+          </template>
           <WButton v-if="diff.treeTitle" size="sm" class="ml-auto" icon="fas fa-project-diagram" @click="emit('tree', diff.treeTitle)">Show on tree</WButton>
         </div>
-        <div v-if="diff.tree.addedNames.length" class="text-xs pt-1"><span class="w-faint">Take: </span><span :class="$style.take">{{ names(diff.tree.addedNames) }}</span></div>
-        <div v-if="diff.tree.removedNames.length" class="text-xs pt-1"><span class="w-faint">Refund: </span><span class="w-down">{{ names(diff.tree.removedNames) }}</span></div>
+        <div v-if="namesOpen && diff.tree.addedNames.length" class="text-xs pt-1"><span class="w-faint">Take: </span><span :class="$style.take">{{ names(diff.tree.addedNames) }}</span></div>
+        <div v-if="namesOpen && diff.tree.removedNames.length" class="text-xs pt-1"><span class="w-faint">Refund: </span><span class="w-down">{{ names(diff.tree.removedNames) }}</span></div>
       </template>
       <div v-else class="w-dim text-xs">The build has no passive tree to compare.</div>
 
@@ -114,6 +122,9 @@ function upgradeName (item: PobItem) {
   const base = item.base || item.name
   return item.rarity === 'RARE' ? `Rare ${base}` : item.rarity === 'MAGIC' ? `Magic ${base}` : base
 }
+
+// The notables to take and refund fold under their counts.
+const namesOpen = shallowRef(false)
 
 const now = shallowRef(Date.now())
 const tick = setInterval(() => { now.value = Date.now() }, 30_000)
