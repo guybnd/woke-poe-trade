@@ -31,8 +31,8 @@
       <div v-if="!diff.gear.length" class="w-dim text-xs">No gear in the build's item set.</div>
       <div v-for="r in diff.gear" :key="r.slot" :class="$style.gear">
         <span class="w-faint">{{ slotLabel(r.slot) }}</span>
-        <span class="w-trunc" :class="rarityClass(r.build)" :title="r.build ? itemTitle(r.build) : ''">{{ r.build ? r.build.name : '—' }}</span>
-        <span class="w-trunc" :class="rarityClass(r.worn)" :title="r.worn ? itemTitle(r.worn) : ''">{{ r.worn ? r.worn.name : 'empty' }}</span>
+        <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
+        <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
         <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
       </div>
 
@@ -53,6 +53,7 @@
 // The Character tab: this build against your character, slot by slot.
 import { computed, onBeforeUnmount, shallowRef, toRef } from 'vue'
 import { WButton } from '../ui'
+import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { useActiveBuild } from './active'
 import { slotLabel } from './build-model'
 import { characterStatus, readAgo, readCharacterNow, useCharacterDiff } from './character'
@@ -70,7 +71,7 @@ const diff = useCharacterDiff(toRef(props, 'details'), build.level, build.act, t
 
 const now = shallowRef(Date.now())
 const tick = setInterval(() => { now.value = Date.now() }, 30_000)
-onBeforeUnmount(() => clearInterval(tick))
+onBeforeUnmount(() => { clearInterval(tick); hideTip() })
 const ago = computed(() => snapshot.value ? readAgo(snapshot.value.readAt, now.value) : '')
 
 const STATE: Record<GearState, string> = { match: 'match', base: 'same base', differs: 'differs', missing: 'missing', extra: 'not in build' }
@@ -80,9 +81,6 @@ function stateTone (s: GearState) {
 function rarityClass (item: PobItem | null) {
   if (!item) return 'w-faint'
   return `w-rarity-${item.rarity === 'RELIC' ? 'unique' : item.rarity.toLowerCase()}`
-}
-function itemTitle (item: PobItem) {
-  return [item.name, item.base].filter(Boolean).join('\n')
 }
 function names (nodes: TreeNode[]) {
   const shown = nodes.slice(0, 8).map(n => n.name)

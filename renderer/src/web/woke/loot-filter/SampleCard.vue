@@ -27,6 +27,17 @@
         </label>
       </div>
 
+      <div :class="$style.verdict">
+        <div class="flex items-center gap-2">
+          <span :class="verdict.shown ? 'w-up' : 'w-down'" :style="{ fontSize: 'var(--w-fs-lg)' }">{{ verdict.shown ? '✓ Shows' : '✗ Hidden' }}</span>
+          <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
+        </div>
+        <div class="text-xs w-dim">{{ whyLine }}</div>
+        <div v-for="u in match.uncertain.slice(0, 2)" :key="u.block.index" class="text-xs" style="color: var(--w-warn);">
+          Might be caught earlier by {{ placeOf(u.block) }} (can't tell {{ unknownKeys(u).join(', ') }} from the copy).
+        </div>
+      </div>
+
       <div v-if="match.final" :class="$style.keys" role="toolbar" aria-label="Quick fixes">
         <button v-for="q in quick" :key="q.key" type="button" class="w-focusable" :class="[$style.key, { [$style.keyOff]: q.disabled }]"
           :disabled="q.disabled" :title="q.title" @click="q.run()">
@@ -36,61 +47,101 @@
       </div>
       <div v-if="match.final && !focused" class="text-xs w-faint" style="margin-top: -8px;">Move the mouse onto this card, then press 1-5.</div>
 
-      <div v-if="!match.final" class="w-dim text-sm">
-        No rule matches this item, so it drops with the game's default look.
-      </div>
-
-      <template v-else>
-        <div :class="$style.section">
-          <div class="w-group-label" :class="$style.label">{{ isOwn ? 'Your own rule' : 'Matched rule' }}</div>
-          <div class="flex items-center gap-2">
-            <span>{{ groupName(final.type) }}</span>
-            <span class="w-faint">›</span>
-            <span class="w-accent">{{ tierName(final) }}</span>
-            <span class="grow" />
-            <span class="w-num w-faint text-xs">{{ final.added ? 'added' : `line ${final.line}` }}</span>
-          </div>
-          <div :class="$style.conds">
-            <div v-for="(c, i) in match.final.conditions" :key="i" class="w-trunc">
-              <span :class="tri(c.result).cls">{{ tri(c.result).icon }}</span>
-              {{ conditionText(c.condition) }}
+      <template v-if="match.final">
+        <div v-if="ladderRows.length" :class="$style.section">
+          <div class="w-group-label" :class="$style.label">{{ hasPriceLadder ? 'Value tier' : 'Tier' }}</div>
+          <template v-if="split.outside">
+            <div :class="[$style.tierRow, $style.current]">
+              <span :class="$style.tierName">{{ split.outside.label }}<small>{{ split.outside.needs || (hasPriceLadder ? 'not a value tier' : '') }}</small></span>
+              <LabelPreview :text="facts.baseType ?? ''" :actions="split.outside.actions" :visibility="split.outside.visibility" :extras="false" />
+              <span class="grow" />
+              <span class="text-xs w-accent">Now</span>
             </div>
-          </div>
-          <div class="flex items-center gap-3" style="margin-top: 4px;">
-            <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
-          </div>
-          <div v-if="match.layers.length" class="text-xs w-dim">
-            Also styled by: {{ match.layers.map(l => placeOf(l.block)).join(', ') }}
-          </div>
-          <div v-for="u in match.uncertain.slice(0, 2)" :key="u.block.index" class="text-xs" style="color: var(--w-warn);">
-            Might be caught earlier by {{ placeOf(u.block) }} (can't tell {{ unknownKeys(u).join(', ') }} from the copy).
-          </div>
-        </div>
-
-        <div v-if="alsoIn.length" class="text-xs w-dim flex flex-wrap items-center gap-1">
-          <span>Also listed in</span>
-          <WChip v-for="a in alsoIn" :key="a.type + a.tier" clickable @click="emit('open-editor', { type: a.type, tier: a.tier })">{{ placeOf(a) }}</WChip>
-        </div>
-
-        <div v-if="moveTiers.length" :class="$style.section">
-          <div class="w-group-label" :class="$style.label">Move this item to tier</div>
-          <button v-for="t in moveTiers" :key="t.tier" :class="[$style.tierRow, { [$style.current]: t.tier === final.tier }]"
-            @click="moveTo(t.tier)">
-            <span :class="$style.tierName" :title="t.off ? 'This strictness turns this tier off, so an item moved here goes wherever that tier\'s items go' : t.tier">{{ tierLabel(t.tier) }}</span>
+            <div class="text-xs w-faint">Pick a tier below to move it there.</div>
+          </template>
+          <button v-for="t in ladderRows" :key="t.tier" type="button" :class="[$style.tierRow, { [$style.current]: t.current }]"
+            :title="t.current ? 'Where it is now' : `Move it here (${tierLabel(t.tier)})`" @click="moveTo(t.tier)">
+            <span :class="$style.tierName">{{ t.label }}<small v-if="t.note">{{ t.note }}</small></span>
             <LabelPreview :text="facts.baseType ?? ''" :actions="t.actions" :visibility="t.visibility" :extras="false" />
             <span class="grow" />
-            <span class="text-xs" :class="t.tier === final.tier ? 'w-accent' : 'w-faint'">{{ t.tier === final.tier ? 'current' : (t.off ? 'off at this strictness' : `${t.count} items`) }}</span>
+            <span class="text-xs" :class="t.statusClass">{{ t.status }}</span>
           </button>
         </div>
-        <div v-else-if="!isOwn && !final.tier?.startsWith('#')" class="text-xs w-dim">
-          This rule doesn't list items by name, so moving to another tier isn't possible. Restyle it, or give this item its own rule.
+        <div v-if="ladderRows.length" :class="$style.fold">
+          <button type="button" :class="$style.foldHead" @click="open.grid = !open.grid">
+            <span>By strictness</span><span class="w-faint">{{ open.grid ? '▾' : '›' }}</span>
+          </button>
+          <template v-if="open.grid">
+            <table :class="$style.grid">
+              <thead>
+                <tr>
+                  <th />
+                  <th v-for="(s, l) in LEVEL_SHORT" :key="s" :class="{ [$style.now]: l === level }" :title="LEVEL_NAMES[l]">{{ s }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in gridRows" :key="r.tier" :class="{ [$style.gridCur]: r.current }">
+                  <td>{{ r.label }}<span v-if="r.current" class="w-accent"> ◂</span></td>
+                  <td v-for="(st, l) in r.states" :key="l" :class="{ [$style.now]: l === level }" :title="`${LEVEL_NAMES[l]}: ${st === 'shows' ? 'shows' : st === 'hidden' ? 'hidden' : 'rule off'}`">
+                    <span :class="[$style.dot, st === 'hidden' && $style.dotHidden, st === 'off' && $style.dotOff]" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-xs w-faint">● shows · ○ hidden · – rule off at that level.{{ verdict.source === 'safety' ? ' Your safety net shows it at every level.' : '' }}</div>
+          </template>
+        </div>
+
+        <div v-if="!ladderRows.length && !isOwn && !final.tier?.startsWith('#') && final.type !== SAFETY_RULE_TYPE" class="text-xs w-dim">
+          This rule doesn't list items by name, so it can't move tiers. Change its look, or give the item its own rule.
+        </div>
+
+        <div v-if="specialRows.length" :class="$style.fold">
+          <button type="button" :class="$style.foldHead" @click="open.special = !open.special">
+            <span>Special rules ({{ specialRows.length }})</span><span class="w-faint">{{ open.special ? '▾' : '›' }}</span>
+          </button>
+          <template v-if="open.special">
+            <div class="text-xs w-faint">The item only lands here with more than its name.</div>
+            <button v-for="t in specialRows" :key="t.tier" type="button" :class="[$style.tierRow, { [$style.current]: t.current }]"
+              :title="t.current ? 'Where it is now' : 'Move it here'" @click="moveTo(t.tier)">
+              <span :class="$style.specialName">{{ t.label }}<small v-if="t.needs">{{ t.needs }}</small></span>
+              <span class="grow" />
+              <span class="text-xs" :class="t.statusClass">{{ t.status }}</span>
+            </button>
+          </template>
+        </div>
+
+        <div :class="$style.fold">
+          <button type="button" :class="$style.foldHead" @click="open.rule = !open.rule">
+            <span>Rule: {{ final.type?.startsWith('woke->') || isOwn ? placeOf(final) : `${groupName(final.type)} › ${currentLabel}` }}</span><span class="w-faint">{{ final.added ? 'added' : `line ${final.line}` }} {{ open.rule ? '▾' : '›' }}</span>
+          </button>
+          <template v-if="open.rule">
+            <div :class="$style.conds">
+              <div v-for="(c, i) in ruleMatch.final!.conditions" :key="i" class="w-trunc">
+                <span :class="tri(c.result).cls">{{ tri(c.result).icon }}</span>
+                {{ conditionText(c.condition) }}
+              </div>
+            </div>
+            <div v-if="match.layers.length" class="text-xs w-dim">
+              Also styled by: {{ match.layers.map(l => placeOf(l.block)).join(', ') }}
+            </div>
+          </template>
+        </div>
+
+        <div v-if="alsoIn.length" :class="$style.fold">
+          <button type="button" :class="$style.foldHead" @click="open.also = !open.also">
+            <span>Also listed in {{ alsoIn.length }} other {{ alsoIn.length === 1 ? 'rule' : 'rules' }}</span><span class="w-faint">{{ open.also ? '▾' : '›' }}</span>
+          </button>
+          <div v-if="open.also" class="flex flex-wrap items-center gap-1">
+            <WChip v-for="a in alsoIn" :key="a.type + a.tier" clickable @click="emit('open-editor', { type: a.type, tier: a.tier })">{{ placeOf(a) }}</WChip>
+          </div>
         </div>
 
         <div ref="lookSection" :class="$style.section">
           <div class="w-group-label" :class="$style.label">Change the look</div>
           <WSegmented v-if="!isOwn" v-model="scope" :options="scopeOptions" />
           <StyleEditor :source="origin.type && origin.tier ? store.sourceLook(origin.type, origin.tier) : null" :look="editLook" :visibility="editVisibility" :preview-text="facts.baseType ?? facts.name"
-            :copy-from="scope === 'tier' ? [] : copyFrom"
+            :copy-from="scope === 'tier' ? [] : copyRows"
             @patch="onPatch" @visibility="onVisibility" />
           <WButton v-if="isOwn" size="sm" variant="ghost" icon="fas fa-undo" @click="removeOwnRule">Remove my own rule for this item</WButton>
         </div>
@@ -111,20 +162,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { WPanel, WBanner, WButton, WSegmented, WChip, toast } from '../ui'
-import { SAFETY_LOOK } from './safety'
-import { tierRank } from './economy'
+import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
+import { hasSpecialLabel, hideFromLabel, isPlainTier, levelStates, ladderLabel, levelOf, priceLadder, specialLabel, tierNeeds, verdictOf } from './item-panel'
 import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { sameRule } from './match'
+import { matchItem, sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
 import { formatCondition, ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
 import type { FilterCondition, Visibility } from './parse'
+import { LEVEL_NAMES, LEVEL_SHORT } from './strictness'
 import { OWN_RULE_TYPE, blocksOf, conditionSignature, moveTargets, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { ownActions } from './look'
@@ -168,7 +220,15 @@ const areaLevelModel = computed({
 
 const placeOf = (r: { type: string | null, tier: string | null }) => ruleLabel(r.type, r.tier)
 
-const final = computed(() => props.match.final!.block)
+// When the safety net is what shows the item, the panel still works on the
+// NeverSink rule behind it: that's where tiers, moves and the look live.
+const behind = computed<MatchResult | null>(() => {
+  const doc = props.store.doc.value
+  if (!doc || props.match.final?.block.type !== SAFETY_RULE_TYPE) return null
+  return matchItem({ ...doc, blocks: doc.blocks.filter(b => b.type !== SAFETY_RULE_TYPE) }, { ...props.facts, areaLevel: props.areaLevel })
+})
+const ruleMatch = computed(() => behind.value?.final ? behind.value : props.match)
+const final = computed(() => ruleMatch.value.final!.block)
 const isOwn = computed(() => final.value.type === OWN_RULE_TYPE)
 const base = computed(() => props.facts.baseType ?? '')
 
@@ -213,6 +273,82 @@ const alsoIn = computed(() => {
     .slice(0, 4)
 })
 
+// ---- verdict and tier rows ----
+
+const level = computed(() => levelOf(props.store.doc.value))
+const verdict = computed(() => verdictOf(props.match, level.value))
+const open = reactive({ special: false, rule: false, also: false, grid: false })
+
+type Row = ReturnType<typeof tierInfo> & { label: string, note: string, needs: string, current: boolean, status: string, statusClass: string }
+
+function row (t: ReturnType<typeof tierInfo>, label: string): Row {
+  const doc = props.store.doc.value!
+  const first = blocksOf(doc, origin.value.type, t.tier).find(b => !b.disabled)
+  const current = t.tier === final.value.tier
+  const hidden = t.visibility === 'Hide'
+  const from = first && !hidden && !t.off ? hideFromLabel(first, level.value) : null
+  return {
+    ...t,
+    label,
+    note: from ? `hidden from ${from}` : '',
+    needs: hasSpecialLabel(t.tier) ? '' : tierNeeds(doc, origin.value.type, t.tier),
+    current,
+    status: current ? 'Now' : t.off ? 'Off here' : hidden ? 'Hidden' : 'Shows',
+    statusClass: current ? 'w-accent' : t.off || hidden ? 'w-down' : 'w-up'
+  }
+}
+
+const split = computed(() => {
+  const doc = props.store.doc.value
+  if (!doc) return { ladder: [] as Row[], special: [] as Row[], outside: null as Row | null, priced: false }
+  const plain = moveTiers.value.filter(t => isPlainTier(doc, origin.value.type, t.tier))
+  const ranked = priceLadder(origin.value.type, plain.map(t => t.tier))
+  const ladderTiers = ranked ?? plain.map(t => t.tier)
+  const ladder = ladderTiers.map((tier, i) => row(moveTiers.value.find(t => t.tier === tier)!, ranked ? ladderLabel(i, ladderTiers.length) : tierLabel(tier)))
+  // Rules off at this strictness only add noise here.
+  const others = moveTiers.value.filter(t => !ladderTiers.includes(t.tier) && (!t.off || t.tier === final.value.tier)).map(t => row(t, specialLabel(t.tier)))
+  // The item sits in a tier off the ladder (early league, boss drops...):
+  // it leads the list, so where it is now is never folded away.
+  const outside = others.find(r => r.current) ?? null
+  return { ladder, special: others.filter(r => r !== outside), outside, priced: ranked != null }
+})
+const ladderRows = computed(() => split.value.ladder)
+const specialRows = computed(() => split.value.special)
+const hasPriceLadder = computed(() => split.value.priced)
+
+// Copy-look choices under the same plain names, price tiers first.
+const copyRows = computed(() => {
+  const named = [...ladderRows.value, ...specialRows.value].map(r => ({ tier: r.tier, look: r.look, label: r.label }))
+  return named.length ? [...named, ...copyFrom.value.filter(t => !named.some(n => n.tier === t.tier))] : copyFrom.value
+})
+
+const gridRows = computed(() => {
+  const doc = props.store.doc.value
+  if (!doc) return []
+  const rows = [...ladderRows.value]
+  if (split.value.outside) rows.unshift(split.value.outside)
+  return rows.map(r => {
+    const all = blocksOf(doc, origin.value.type, r.tier)
+    const first = all.find(b => !b.disabled) ?? all[0]
+    return { ...r, states: first ? levelStates(first, level.value) : [] }
+  })
+})
+
+const whyLine = computed(() => {
+  const v = verdict.value
+  if (v.source === 'none') return 'No rule matches, so it drops with the game\'s default look.'
+  if (v.source === 'safety') {
+    const net = `Your price safety net shows it: worth ${props.config.safetyNet.minChaos}c or more.`
+    const b = behind.value?.final?.block
+    if (!b || b.type === SAFETY_RULE_TYPE) return net
+    return `${net} Without it: ${b.type?.startsWith('woke->') ? placeOf(b) : `NeverSink ${groupName(b.type)} › ${currentLabel.value}`}, ${behind.value!.visibility === 'Hide' ? 'hidden' : 'shown'}.`
+  }
+  if (v.source === 'own') return v.shown ? 'Your own rule for this item.' : 'Your own rule hides it.'
+  if (v.source === 'woke') return `Woke rule: ${placeOf(final.value)}.`
+  const tier = currentLabel.value
+  return `NeverSink: ${groupName(final.value.type)} › ${tier}${v.hideFrom ? `, hidden from ${v.hideFrom} up` : ''}.`
+})
+
 function moveTo (tier: string) {
   if (tier === final.value.tier) return
   props.store.edit({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: tier })
@@ -228,7 +364,7 @@ const scopeOptions = computed(() => {
 })
 
 // The rule's own style, before the look strip, so edits never compound.
-const editLook = computed<StylePatch>(() => readStyle(ownActions(props.match.final!.block)))
+const editLook = computed<StylePatch>(() => readStyle(ownActions(final.value)))
 const editVisibility = computed<Visibility>(() => final.value.visibility)
 
 function onPatch (patch: StylePatch) {
@@ -261,15 +397,15 @@ function afterFix (text: string, undo: () => void) {
 
 // Lower/Raise walk the price tiers in rank order (t1, t2...) when the group
 // has them, otherwise the tiers in file order.
+// The keys walk the Value tier rows as shown when the item is on them.
 const ladder = computed(() => {
-  const names = moveTiers.value.map(t => t.tier)
-  const ranked = moveTiers.value
-    .map(t => ({ t, r: tierRank(t.tier, names) }))
-    .filter(x => x.r != null)
-    .sort((a, b) => a.r! - b.r!)
-    .map(x => x.t)
-  return ranked.some(t => t.tier === final.value.tier) ? ranked : moveTiers.value
+  const rows = split.value.ladder
+  if (rows.some(t => t.current)) return rows
+  // Off the value ladder: up and down mean nothing, pick a row instead.
+  return split.value.priced ? [] : moveTiers.value
 })
+const labelOf = (t: { tier: string, label?: string }) => t.label ?? tierLabel(t.tier)
+const currentLabel = computed(() => [...ladderRows.value, ...specialRows.value, ...(split.value.outside ? [split.value.outside] : [])].find(r => r.current)?.label ?? tierName(final.value))
 const tierIndex = computed(() => ladder.value.findIndex(t => t.tier === final.value.tier))
 const shownNow = computed(() => props.match.visibility !== 'Hide')
 const name = computed(() => base.value || props.facts.name)
@@ -290,16 +426,16 @@ const quick = computed(() => {
     {
       key: '2',
       label: 'Lower',
-      title: lower ? `Move to ${tierLabel(lower.tier)}${lower.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : 'Already in the lowest tier, or this rule doesn\'t list items by name',
+      title: lower ? `Move to ${labelOf(lower)}${lower.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : (split.value.outside ? 'Not on a value tier: pick one in the list' : 'Already in the lowest tier, or this rule doesn\'t list items by name'),
       disabled: !lower,
-      run: () => lower && afterFix(`${name.value}: ${tierName(final.value)} → ${tierLabel(lower.tier)}${lower.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: lower.tier }))
+      run: () => lower && afterFix(`${name.value}: ${currentLabel.value} → ${labelOf(lower)}${lower.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: lower.tier }))
     },
     {
       key: '3',
       label: 'Raise',
-      title: higher ? `Move to ${tierLabel(higher.tier)}${higher.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : 'Already in the top tier, or this rule doesn\'t list items by name',
+      title: higher ? `Move to ${labelOf(higher)}${higher.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : (split.value.outside ? 'Not on a value tier: pick one in the list' : 'Already in the top tier, or this rule doesn\'t list items by name'),
       disabled: !higher,
-      run: () => higher && afterFix(`${name.value}: ${tierName(final.value)} → ${tierLabel(higher.tier)}${higher.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: higher.tier }))
+      run: () => higher && afterFix(`${name.value}: ${currentLabel.value} → ${labelOf(higher)}${higher.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: higher.tier }))
     },
     {
       key: '4',
@@ -412,10 +548,98 @@ function unknownKeys (m: BlockMatch): string[] {
   width: 5.5rem;
   flex-shrink: 0;
   font-size: var(--w-fs-sm);
-  color: var(--w-dim);
+  color: var(--w-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--w-panel-2);
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+}
+.fold {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid var(--w-line-soft);
+  padding-top: 6px;
+}
+.foldHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--w-dim);
+  font-size: var(--w-fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.foldHead:hover {
+  color: var(--w-fg);
+}
+.specialName {
+  font-size: var(--w-fs-sm);
+  color: var(--w-fg);
+  min-width: 0;
+}
+.specialName small, .tierName small {
+  display: block;
+  white-space: normal;
+  color: var(--w-faint);
+  font-size: var(--w-fs-xs);
+  line-height: 1.15;
+}
+.grid {
+  border-collapse: collapse;
+  font-size: var(--w-fs-xs);
+}
+.grid th {
+  font-weight: normal;
+  font-family: var(--w-mono);
+  color: var(--w-faint);
+  padding: 1px 0;
+}
+.grid td {
+  text-align: center;
+  padding: 3px 0;
+  border-top: 1px solid var(--w-line-soft);
+}
+.grid td:first-child {
+  text-align: left;
+  padding-right: 6px;
+  white-space: nowrap;
+  color: var(--w-fg);
+}
+.grid .now {
+  background: var(--w-accent-soft);
+  color: var(--w-accent);
+}
+.gridCur td {
+  background: var(--w-panel-2);
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--w-up);
+}
+.dotHidden {
+  background: transparent;
+  border: 1px solid var(--w-faint);
+}
+.dotOff {
+  width: 8px;
+  height: 1px;
+  border-radius: 0;
+  background: var(--w-faint);
 }
 .keys {
   display: grid;

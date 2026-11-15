@@ -1,0 +1,16 @@
+Item Class: Belts
+Rarity: Unique
+Prismweave
+Rustic Sash
+--------
+Requirements:
+Level: 44
+--------
+Item Level: 70
+--------
+12% increased Physical Damage (implicit)
+--------
+Adds 12 to 18 Fire Damage to Attacks
++40 to Dexterity
+--------
+Light refracted is power multiplied.

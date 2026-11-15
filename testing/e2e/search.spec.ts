@@ -243,6 +243,30 @@ test('a vendor recipe shows what to sell and what you get', async ({ overlay }) 
   await overlay.snap('search-recipe')
 })
 
+test('a bench mod lists its tiers, and a Harvest craft its lifeforce', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  await box.fill('life ring')
+  const bench = panel.getByText('+# to maximum Life', { exact: true }).first()
+  await expect(bench).toBeVisible()
+  await bench.click()
+  await expect(panel.getByRole('cell', { name: '41–55' })).toBeVisible()
+  await expect(panel.getByRole('cell', { name: '56–70' })).toHaveCount(0)
+  await overlay.snap('search-bench')
+
+  await box.fill('cold to fire')
+  const swap = panel.getByText('Cold Damage mod to Fire Damage', { exact: true }).first()
+  await expect(swap).toBeVisible()
+  await swap.click()
+  await expect(panel.getByText('1 × Crystallised Rancour')).toBeVisible()
+  await expect(panel.getByText('Total', { exact: true })).toBeVisible()
+  await overlay.snap('search-harvest')
+})
+
 test('a gem says where to get it in the campaign', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())

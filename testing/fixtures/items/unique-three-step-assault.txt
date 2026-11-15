@@ -1,0 +1,21 @@
+Item Class: Boots
+Rarity: Unique
+Three-step Assault
+Shagreen Boots
+--------
+Evasion Rating: 236
+Energy Shield: 46
+--------
+Requirements:
+Level: 55
+Dex: 42
+Int: 42
+--------
+Sockets: G-B G
+--------
+Item Level: 81
+--------
++60 to maximum Life
+30% increased Movement Speed
+--------
+"Assault, evade, dodge."

@@ -162,6 +162,8 @@ import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
 import { bossLookup, dropLookup } from './lookups/bosses'
 import { cardLookup } from './lookups/cards'
 import { recipeLookup } from './lookups/recipes'
+import { craftLookup } from './lookups/craft'
+import type { CraftData } from './lookups/craft'
 import { gemLookup, transfiguredBase } from './lookups/gems'
 import { keystoneUniques, passiveList, treeLookup } from './lookups/tree'
 import type { Passive } from './lookups/tree'
@@ -425,6 +427,19 @@ function loadGems () {
     gemTable.value = table
   }).catch(() => {})
 }
+// Crafting bench and Harvest crafts, from poedb, fetched on first open: a
+// data file, not a JS chunk.
+const craftData = shallowRef<CraftData | null>(null)
+let craftLoading = false
+function loadCrafts () {
+  if (craftData.value || craftLoading) return
+  craftLoading = true
+  fetch(`${import.meta.env.BASE_URL}data/craft-data.json`)
+    .then(r => r.json())
+    .then(d => { craftData.value = d as CraftData })
+    .catch(() => {})
+    .finally(() => { craftLoading = false })
+}
 // Keystones and notables with what they do, from the PoB tool's tree.
 const passives = shallowRef<Passive[] | null>(null)
 const keystoneGrants = shallowRef<ReadonlyMap<string, string[]>>(new Map())
@@ -453,7 +468,7 @@ const stopDataWatch = onSharedDataChange(() => {
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -758,6 +773,7 @@ function start (text: string) {
   whenIdle(gameItems)
   whenIdle(loadCards)
   whenIdle(loadGems)
+  whenIdle(loadCrafts)
   whenIdle(loadTree)
 }
 function close () {

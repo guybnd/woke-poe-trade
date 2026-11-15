@@ -14,10 +14,18 @@ export interface LookupRow {
   dim?: boolean
 }
 
+// A row of a table. A cell can carry a small second line.
+export interface LookupTableRow {
+  cells: Array<string | { text: string, sub?: string }>
+  chaos?: number | null
+}
+
 export interface LookupSection {
   label?: string
   rows?: LookupRow[]
   text?: string[]
+  // Columns of plain cells; the price, when given, goes in at `priceAt`.
+  table?: { head: string[], priceAt?: number, rows: LookupTableRow[] }
 }
 
 // What a card's button does. Enter does the first one.
