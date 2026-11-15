@@ -191,6 +191,11 @@ export default defineComponent({
     function hide () {
       wm.hide(props.config.wmId)
     }
+    function hideWithUndo () {
+      const wmId = props.config.wmId
+      hide()
+      toast('Window hidden. Open it again from its icon or the launcher.', { ms: 10000, undo: () => { wm.show(wmId) } })
+    }
     function toggleEdit () {
       isMoving.value = false
       if (props.inlineEdit) {
@@ -236,9 +241,15 @@ export default defineComponent({
         return a ? [{ label: a.label, icon: a.icon, danger: a.danger, action: a.action }] : []
       }
       const sizes = woke().wokeSizes
+      // The menu can open over a panel's own controls (a loot filter rule's
+      // Show/Hide), so its entries say they act on the whole window, and
+      // hiding offers Undo: the window would otherwise just vanish.
+      const hideEntry = get('hide')
+        ? [{ label: 'Hide window', icon: 'fas fa-times', action: hideWithUndo }]
+        : []
       const items: MenuEntry[] = [
-        ...entry('minimize'),
-        ...entry('hide'),
+        ...entry('minimize').map(e => ({ ...e, label: `${e.label} window` })),
+        ...hideEntry,
         ...entry('edit'),
         // Dragging moves a widget; these handles only change the corner it
         // stays anchored to, which sets the way it grows.
