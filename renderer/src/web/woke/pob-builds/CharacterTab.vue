@@ -8,7 +8,7 @@
       <span v-else-if="status.pending" class="w-dim">Reading your character…</span>
       <span v-else class="w-dim">Your character hasn't been read yet.</span>
       <WButton size="sm" class="ml-auto" icon="fas fa-sync-alt" :disabled="status.pending" title="Read your character from pathofexile.com" @click="readNow">Read now</WButton>
-      <WButton v-if="snapshot && config.characterLiveBuild !== false" size="sm" icon="fas fa-external-link-alt" :title="`Open ${snapshot.character.name} in Path of Building (${liveBuildPath(snapshot.character.name)})`" @click="openLive">Open in PoB</WButton>
+      <WButton v-if="snapshot && personalOn && config.characterLiveBuild !== false" size="sm" icon="fas fa-external-link-alt" :title="`Open ${snapshot.character.name} in Path of Building (${liveBuildPath(snapshot.character.name)})`" @click="openLive">Open in PoB</WButton>
     </div>
     <div v-if="status.error" class="w-down text-xs pt-1">{{ status.error }}</div>
     <div v-if="openError" class="w-down text-xs pt-1">{{ openError }}</div>
@@ -122,6 +122,7 @@
 import { computed, onBeforeUnmount, onMounted, shallowRef, toRef } from 'vue'
 import { WButton, WPrice } from '../ui'
 import { liveBuildPath } from './live-pob'
+import { personalOn } from '../personal'
 import { pobApi } from './widget'
 import { openPriceCheck } from './open-price-check'
 import { wornCompare } from './worn-compare'
@@ -201,7 +202,7 @@ function openLive () {
   if (!s) return
   openError.value = ''
   pobApi.open(props.config, liveBuildPath(s.character.name)).catch((e: Error) => {
-    openError.value = /ENOENT|no such file/i.test(e.message) ? 'Not saved yet: press Read now first.' : e.message
+    openError.value = /no .* in the builds folder yet/.test(e.message) ? 'Not saved as a PoB build yet: press Read now (with the stash reader on).' : e.message
   })
 }
 

@@ -98,6 +98,8 @@ export async function showBuild (args: { dir?: string, relPath: string }): Promi
 // Starts Path of Building on the build (see pob-launch.ts for how).
 export async function openBuild (args: { dir?: string, relPath: string, pobExe?: string }): Promise<void> {
   const full = resolveBuild(args?.dir, args?.relPath)
+  // PoB would open on nothing: say so instead.
+  await fs.access(full).catch(() => { throw new Error(`There's no ${args.relPath} in the builds folder yet.`) })
   // With --listen other machines can call this: never start a program they name.
   const isListening = process.argv.some(arg => arg.startsWith('--listen'))
   const configured = typeof args?.pobExe === 'string' && !isListening ? args.pobExe.trim() : ''
