@@ -313,15 +313,15 @@
     <template #footer>
       <!-- Unsaved (as on the Atlas tree): a gold frame, a stamp and a bigger
            Save, because changes do nothing in game until they're saved. -->
-      <div class="flex items-center gap-2 w-full" :class="{ [$style.unsavedRow]: unsaved }" :role="unsaved ? 'status' : undefined">
-        <template v-if="unsaved"><span :class="$style.unsavedDot" /><span :class="$style.unsavedStamp">Unsaved</span></template>
+      <div class="flex items-center gap-2" :class="unsaved ? $style.unsavedRow : 'w-full'">
+        <template v-if="unsaved"><span :class="$style.unsavedDot" /><span :class="$style.unsavedStamp" role="status">Unsaved</span></template>
         <span class="text-xs grow w-trunc" :style="store.error.value ? 'color: var(--w-down)' : ''" :class="store.error.value ? '' : 'w-dim'">
           <template v-if="store.error.value">{{ store.error.value }}</template>
           <template v-else>
             <template v-if="unsaved">Not in the game until you save · </template>Saves to <span class="w-num">{{ outName }}</span>
             <span v-if="config.sourceOnline" style="color: var(--w-warn);" title="Edits can't be written into an online filter, so they go into a local copy. Pick that copy in game. When the online filter updates, reopen the editor and save again."> (local copy: won't auto-update)</span>
             <template v-if="!store.dirty.value && store.lastSaved.value"> · saved</template>
-            <template v-if="store.pendingReload.value"> · press Reload now to use it</template>
+            <template v-if="store.pendingReload.value && !unsaved"> · press Reload now to use it</template>
           </template>
         </span>
         <WButton size="sm" variant="ghost" icon="fas fa-folder-open" @click="openFolder">Folder</WButton>
@@ -1106,10 +1106,16 @@ function onUndoKeys (e: KeyboardEvent) {
   // (the Undo note, whichever heard it first) or you're typing somewhere.
   if (e.defaultPrevented || props.config.wmWants !== 'show') return
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return
-  // Ctrl + S saves (and reloads) from anywhere in the window, a field too.
+  // Ctrl + S saves (and reloads) from inside this window, a field too; not
+  // from another widget, and not with nothing to save (it'd type /itemfilter).
   if (e.key.toLowerCase() === 's' && !e.shiftKey) {
+    const el = panel.value?.el as HTMLElement | undefined
+    // Focus falls to the page when the clicked thing goes away (a chip's x):
+    // then the last click being in here counts.
+    const inside = el && (el.contains(e.target as Node) || (e.target === document.body && lastClickInside))
+    if (!inside) return
     e.preventDefault()
-    if (props.store.doc.value && !props.store.saving.value) props.store.save({ reloadNow: true }).catch(() => {})
+    if (!e.repeat && unsaved.value && props.store.doc.value && !props.store.saving.value) props.store.save({ reloadNow: true }).catch(() => {})
     return
   }
   const t = e.target as HTMLElement | null
@@ -1123,6 +1129,12 @@ function onUndoKeys (e: KeyboardEvent) {
     props.store.redoStep()
   }
 }
+let lastClickInside = false
+function onAnyPointer (e: PointerEvent) {
+  lastClickInside = Boolean(panel.value?.el?.contains(e.target as Node))
+}
+onMounted(() => window.addEventListener('pointerdown', onAnyPointer, true))
+onUnmounted(() => window.removeEventListener('pointerdown', onAnyPointer, true))
 onMounted(() => window.addEventListener('keydown', onUndoKeys))
 onUnmounted(() => window.removeEventListener('keydown', onUndoKeys))
 
@@ -1221,6 +1233,9 @@ function openFolder () {
   box-shadow: 0 0 18px color-mix(in srgb, var(--w-accent) 45%, transparent), 0 10px 30px rgb(0 0 0 / 0.5);
 }
 .unsavedRow {
+  /* Wider than the footer's padding box: no w-full, it grows into the margins. */
+  flex: 1 1 auto;
+  min-width: 0;
   margin: -5px calc(-1 * var(--w-pad));
   padding: 5px var(--w-pad);
   background: color-mix(in srgb, var(--w-accent) 12%, transparent);
