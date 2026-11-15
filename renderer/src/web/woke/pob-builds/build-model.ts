@@ -153,23 +153,24 @@ export function pointsBy (level: number | null, act: number | null): number | nu
   return Math.max(0, level - 1) + QUEST_POINTS[Math.min(act ?? 1, 11)]
 }
 
-// Set by character.ts: the passive points your character really has, from its
-// last read, when that read is of the character in play; else null.
-// character.ts sets it as it loads; what it reads is reactive, so a loadout
-// worked out with it follows a new read.
-let livePoints: () => number | null = () => null
-export function useLivePoints (fn: () => number | null) { livePoints = fn }
-
-// Cluster jewel passives (PoB's ids from 65536 up) aren't on the read's count.
-const mainTreePoints = (t: PobTreeSpec) => (t.nodes ?? []).filter(id => id < 0x10000).length
+// The passive points your character really spent, from its last read, and
+// how to count a tree's points the same way (no class or ascendancy start,
+// no ascendancy, no cluster passives). Set by active.ts (character.ts does the
+// work); null when there is no fresh read of the character in play. What it
+// reads is reactive, so a loadout worked out with it follows a new read.
+export interface LivePoints { have: number, points: (nodes: number[]) => number }
+let livePoints: () => LivePoints | null = () => null
+export function useLivePoints (fn: () => LivePoints | null) { livePoints = fn }
 
 // The tree you're working toward: past each tree your points already cover.
 export function treeAhead (trees: PobTreeSpec[], tree: PobTreeSpec, level: number | null, act: number | null): PobTreeSpec {
-  const real = livePoints()
-  if (real != null) {
-    // Your real points: a tree is passed once you have as many as it takes.
+  const live = livePoints()
+  if (live) {
+    // Your real points (never fewer than the guess by level): a tree is
+    // passed once you have as many as it takes.
+    const have = Math.max(live.have, pointsBy(level, act) ?? 0)
     const passed = new Set<PobTreeSpec>()
-    while (tree.nodes?.length && mainTreePoints(tree) <= real) {
+    while (tree.nodes?.length && live.points(tree.nodes) <= have) {
       const next = treeAfter(trees, tree, passed)
       if (!next) break
       passed.add(tree)

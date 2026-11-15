@@ -10,8 +10,14 @@ import { Host } from '@/web/background/IPC'
 import { reportProblem } from '../dock/health'
 import { POB_BUILDS_TYPE, pobApi } from './widget'
 import type { PobBuildsWidget, PobDetails } from './widget'
+import { useLivePoints } from './build-model'
+import { livePointsFor } from './character'
 
 export const useActiveBuild = createGlobalState(() => {
+  // Every loadout follows your character's real passive points when there's
+  // a fresh read of it (character.ts). Set here, before any window asks.
+  useLivePoints(() => livePointsFor(charName.value, level.value))
+
   const pobWidget = computed(() => {
     const cfg = AppConfig()
     if (!isWidgetTypeOn(cfg, POB_BUILDS_TYPE)) return undefined

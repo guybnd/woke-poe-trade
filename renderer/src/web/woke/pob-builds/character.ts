@@ -7,7 +7,8 @@ import type { InjectionKey, Ref } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { personalOn } from '../personal'
 import { hostRequest } from '../shared/host'
-import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems, useLivePoints } from './build-model'
+import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems } from './build-model'
+import type { LivePoints } from './build-model'
 import { loadPassiveTree, treeDiff } from './passive-tree'
 import type { TreeDiff, TreeNode } from './passive-tree'
 import type { LoadoutPick, PobDetails, PobItem, PobSkillGroup, PobTreeSpec } from './widget'
@@ -49,10 +50,9 @@ let started = false
 
 // Once, from the PoB builds widget. hint: the character Client.txt names;
 // auto: also read on entering an area (at most every 5 minutes).
-export function startCharacterSync (hint: () => string, auto: () => boolean, level: () => number | null = () => null) {
+export function startCharacterSync (hint: () => string, auto: () => boolean) {
   if (started) return
   started = true
-  playing.value = { name: hint, level }
   MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
     if (topic === 'character-sync') take(data)
   })
@@ -108,18 +108,20 @@ export function gemHave (name: string, level: number | null | undefined, quality
 }
 
 // The passive points you really spent, for the leveling guide's stage: only
-// when the read is of the character Client.txt says you play (or it names
-// none), and not from before your last level up.
+// when the read is of the character Client.txt says you play, at the level it
+// says, and once the tree data has loaded to tell points from start and
+// ascendancy nodes. Otherwise null: the guide guesses by level.
 const CLUSTER_ID_START = 0x10000
-const playing = shallowRef<{ name: () => string, level: () => number | null } | null>(null)
-export function livePointsFor (name: string, level: number | null): number | null {
+const NOT_POINTS = ['asc', 'ascstart', 'start']
+export function livePointsFor (name: string, level: number | null): LivePoints | null {
   const s = personalOn.value ? character.value : null
-  if (!s) return null
-  if (name && name !== s.character.name) return null
-  if (level != null && s.character.level != null && level > s.character.level) return null
-  return s.tree.nodes.filter(id => id < CLUSTER_ID_START).length
+  if (!s || !name || name !== s.character.name) return null
+  if (level == null || s.character.level == null || s.character.level < level) return null
+  const nodes = treeNodes.value
+  if (!nodes) { loadTreeNodes(); return null }
+  const points = (ids: number[]) => ids.filter(id => id < CLUSTER_ID_START && !NOT_POINTS.includes(nodes.get(id)?.kind ?? '')).length
+  return { have: points(s.tree.nodes), points }
 }
-useLivePoints(() => playing.value ? livePointsFor(playing.value.name(), playing.value.level()) : null)
 
 export const CHARACTER_TREE = 'Your character'
 const CLUSTER_IDS = 0x10000
@@ -242,11 +244,15 @@ export function readAgo (readAt: number, now = Date.now()): string {
 
 // Loaded once something compares; shared by the card and the tab.
 const treeNodes = shallowRef<Map<number, TreeNode> | null>(null)
+let treeLoading = false
+function loadTreeNodes () {
+  if (treeNodes.value || treeLoading) return
+  treeLoading = true
+  loadPassiveTree().then((n) => { treeNodes.value = n }, () => {}).finally(() => { treeLoading = false })
+}
 
 export function useCharacterDiff (details: Ref<PobDetails | null>, level: Ref<number | null>, act: Ref<number | null>, pick: Ref<LoadoutPick | undefined>) {
-  watch(character, (s) => {
-    if (s && !treeNodes.value) loadPassiveTree().then((n) => { treeNodes.value = n }, () => {})
-  }, { immediate: true })
+  watch(character, (s) => { if (s) loadTreeNodes() }, { immediate: true })
   return computed(() => character.value && details.value
     ? characterDiff(character.value, details.value, treeNodes.value, level.value, act.value, pick.value)
     : null)

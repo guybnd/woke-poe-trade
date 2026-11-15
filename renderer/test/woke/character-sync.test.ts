@@ -271,12 +271,17 @@ describe('treeAhead with your real points', () => {
     { title: 'Level 60', url: '', isActive: false, nodes: [1, 2, 3, 4, 5, 6] },
     { title: 'Level 90', url: '', isActive: true, nodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 65600] }
   ]
-  it('moves past every tree the spent points cover, cluster passives aside', async () => {
+  it('moves past every tree the spent points cover, counted alike on both sides', async () => {
     const { treeAhead, useLivePoints } = await import('@/web/woke/pob-builds/build-model')
-    useLivePoints(() => 6)
+    // As character.ts counts: start nodes (here 1) and cluster passives aren't points.
+    const points = (ids: number[]) => ids.filter(id => id !== 1 && id < 0x10000).length
+    useLivePoints(() => ({ have: 5, points }))
     expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 90')
-    useLivePoints(() => 5)
+    useLivePoints(() => ({ have: 4, points }))
     expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 60')
+    // Never behind the guess by level.
+    useLivePoints(() => ({ have: 0, points }))
+    expect(treeAhead(trees, trees[0], 90, 10).title).toBe('Level 90')
     useLivePoints(() => null)
     expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 30')
   })
