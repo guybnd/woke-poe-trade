@@ -21,6 +21,14 @@ history:
     date: '2026-11-15T05:38:25.204Z'
     comment: Updated title. Updated tags.
     id: a-2026-11-15t05-38-25-204z
+  - type: comment
+    user: Agent
+    comment: >-
+      All subtasks Done (305-312, 314, 316). Left open only for #516 (cleaner
+      gem marks, Guy's B + D), then Done.
+    date: '2026-11-15T07:59:05.777Z'
+    selfAttested: true
+    id: c-2026-11-15t07-59-05-777z
 subtasks:
   - WOKEPOET-305
   - WOKEPOET-306

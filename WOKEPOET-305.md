@@ -53,6 +53,28 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:15:08.917Z'
+  - type: comment
+    user: Agent
+    comment: 'Gem marks against your character, merged in #499 (reworked by #516).'
+    date: '2026-11-15T07:58:39.374Z'
+    completionComment: true
+    id: c-2026-11-15t07-58-39-374z
+  - type: status_change
+    from: Done
+    to: Ready
+    user: Agent
+    date: '2026-11-15T07:58:39.374Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #499; cleaner B + D marks in #516.'
+    completionComment: true
+    date: '2026-11-15T07:58:40.269Z'
+    id: c-2026-11-15t07-58-40-269z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-15T07:58:40.514Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/499'

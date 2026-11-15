@@ -53,6 +53,28 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:15:09.885Z'
+  - type: comment
+    user: Agent
+    comment: 'Leveling stage by real points, merged in #499.'
+    date: '2026-11-15T07:58:45.450Z'
+    completionComment: true
+    id: c-2026-11-15t07-58-45-450z
+  - type: status_change
+    from: Done
+    to: Ready
+    user: Agent
+    date: '2026-11-15T07:58:45.450Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #499.'
+    completionComment: true
+    date: '2026-11-15T07:58:46.354Z'
+    id: c-2026-11-15t07-58-46-354z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-15T07:58:46.596Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/499'

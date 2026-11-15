@@ -51,6 +51,28 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:15:11.104Z'
+  - type: comment
+    user: Agent
+    comment: 'Next upgrades with prices, merged in #500.'
+    date: '2026-11-15T07:58:47.394Z'
+    completionComment: true
+    id: c-2026-11-15t07-58-47-394z
+  - type: status_change
+    from: Done
+    to: Ready
+    user: Agent
+    date: '2026-11-15T07:58:47.394Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #500.'
+    completionComment: true
+    date: '2026-11-15T07:58:48.294Z'
+    id: c-2026-11-15t07-58-48-294z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-15T07:58:48.558Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/500'

@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-314
 title: 'Character: PoB and character item tooltips as rich as the price search''s'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -37,5 +37,41 @@ history:
     date: '2026-11-15T06:31:14.023Z'
     selfAttested: true
     id: c-2026-11-15t06-31-14-023z
+  - type: comment
+    user: Agent
+    comment: 'Weapon block, merged in #506; tiers in #512.'
+    date: '2026-11-15T07:58:59.191Z'
+    completionComment: true
+    id: c-2026-11-15t07-58-59-191z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-15T07:58:59.191Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #506 (tiers: #512).'
+    completionComment: true
+    date: '2026-11-15T07:59:00.257Z'
+    id: c-2026-11-15t07-59-00-257z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-15T07:59:00.561Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/506'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy 2026-11-15: the item tooltip on PoB/character items shows only names + mod text, unlike the price search listing tooltip (layout J, #230/#283). Add: weapon DPS/APS/crit from base + local mods, mod tiers + roll % from mod data, crafted/fractured colours (modKinds now carried from 3.30 replies). Do with idea 1 (WOKEPOET-310, Gear compare on icon hover).

@@ -54,6 +54,28 @@ history:
     to: Done
     user: Agent
     date: '2026-11-15T06:47:15.824Z'
+  - type: comment
+    user: Agent
+    comment: 'Jewels against the build, merged in #502.'
+    date: '2026-11-15T07:58:49.296Z'
+    completionComment: true
+    id: c-2026-11-15t07-58-49-296z
+  - type: status_change
+    from: Done
+    to: Ready
+    user: Agent
+    date: '2026-11-15T07:58:49.296Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged in #502.'
+    completionComment: true
+    date: '2026-11-15T07:58:50.199Z'
+    id: c-2026-11-15t07-58-50-199z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-15T07:58:50.468Z'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/502'
