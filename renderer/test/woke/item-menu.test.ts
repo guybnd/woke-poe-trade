@@ -40,6 +40,12 @@ describe('priceCheckInput', () => {
     expect(input('Cleave', 'gem')!.item!.category).toBe(ItemCategory.Gem)
   })
 
+  it.each(["Watcher's Eye", 'Forbidden Flame', 'Impossible Escape'])('checks %s unidentified, as it drops', (name) => {
+    expect(input(name, 'unique')!.item!.isUnidentified).toBe(true)
+    // Other uniques stay identified.
+    expect(input('Headhunter', 'unique')!.item!.isUnidentified).toBe(false)
+  })
+
   it('checks a Vaal gem as corrupted', () => {
     expect(input('Vaal Grace', 'gem')!.item!.isCorrupted).toBe(true)
   })

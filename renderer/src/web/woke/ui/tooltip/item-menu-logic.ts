@@ -8,6 +8,7 @@ import type { ParsedItem } from '@/parser/ParsedItem'
 import { ItemCategory } from '@/parser/meta'
 import { parseClipboard } from '@/parser/Parser'
 import type { TipKind, TipUnique } from './tip-content'
+import { VARIABLE_ITEMS } from '../../shared/unid-prices'
 
 export function kindOfName (name: string): TipKind {
   if (name.startsWith('Foulborn ') || ITEM_BY_REF('UNIQUE', name)?.length) return 'unique'
@@ -91,6 +92,11 @@ export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 // (`rollsFromData`), as a low roll could look like a best one.
 export function virtualUnique (info: BaseType, mods?: UniqueModLines | null): ParsedItem {
   const uniqueBase = info.unique ? ITEM_BY_REF('ITEM', info.unique.base)?.[0] : undefined
+  // A rolled unique (Watcher's Eye, Forbidden Flame...) is priced as it drops:
+  // unidentified, with no mods. The price check's Unidentified chip turns it off.
+  if (VARIABLE_ITEMS.has(info.refName)) {
+    return createVirtualItem({ rarity: ItemRarity.Unique, info, uniqueBase, category: uniqueBase?.craftable?.category, isUnidentified: true })
+  }
   // The data has one base's mods for a unique on several (Grand Spectrum).
   if (mods && uniqueBase && mods.base === uniqueBase.refName) {
     const item = parseUniqueMods(info, uniqueBase, mods)
