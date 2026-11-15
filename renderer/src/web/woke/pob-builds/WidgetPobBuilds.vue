@@ -102,7 +102,10 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
-import { CHARACTER_TREE, characterStatus, characterTreeSpec, startCharacterSync } from './character'
+import { CHARACTER_TREE, characterStatus, characterTreeNodes, characterTreeSpec, startCharacterSync } from './character'
+import { liveBuildXml } from './live-pob'
+import { passiveTreeJewelSlots } from './passive-tree'
+import { personalOn } from '../personal'
 import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
 import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned as isPiecePinned, pins, togglePin as togglePinned } from '../pins/pins'
@@ -196,6 +199,16 @@ async function iconClick () {
 // Your character (character.ts): read by main while the stash reader is on,
 // on Read now (or on area changes, if turned on), kept apart from every build.
 startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead === true)
+
+// Each new read is saved as a PoB build of your character (live-pob.ts), once
+// the tree data can place its jewels. Never the build you picked.
+let liveSaved = 0
+watch([() => characterStatus.value.snapshot, () => characterTreeNodes()], ([s, nodes]) => {
+  if (!s || !nodes || !personalOn.value || props.config.characterLiveBuild === false || s.readAt === liveSaved) return
+  liveSaved = s.readAt
+  pobApi.saveLive(props.config, s.character.name, liveBuildXml(s, passiveTreeJewelSlots()))
+    .then(() => refresh(), (e: Error) => { console.warn('[pob-builds] live build not saved', e) })
+})
 // The tree window: the build's trees, plus your character's when comparing with it.
 const treeSpecs = computed(() => {
   const trees = details.value?.trees ?? []

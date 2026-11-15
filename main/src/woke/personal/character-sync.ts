@@ -55,6 +55,9 @@ export interface CharacterTree {
   masteries: Record<number, number>
   // Socketed jewels; x is GGG's jewel slot index (tree.json's jewelSlots order).
   jewels: Array<{ x: number, item: PobItem }>
+  // The game's class and ascendancy numbers (PoB's classId, ascendClassId).
+  classId?: number
+  ascendClassId?: number
 }
 
 export interface CharacterSnapshot {
@@ -206,7 +209,9 @@ export function parsePassives (body: string): CharacterTree | null {
     nodes: ids(json.hashes),
     clusterNodes: ids(json.hashes_ex),
     masteries: masteries(json.mastery_effects),
-    jewels
+    jewels,
+    ...(num(json.character) != null ? { classId: num(json.character)! } : {}),
+    ...(num(json.ascendancy) != null ? { ascendClassId: num(json.ascendancy)! } : {})
   }
 }
 

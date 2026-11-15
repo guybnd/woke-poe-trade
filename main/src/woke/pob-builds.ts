@@ -247,6 +247,38 @@ export async function deleteBuild (args: { dir?: string, relPath: string }): Pro
   return { xml }
 }
 
+// Your character as a PoB build (the Character tab's live file): always in
+// the builds folder's "Live" folder, the only place it writes over a file.
+// treeVersion="latest" becomes the newest tree the installed PoB knows.
+export const LIVE_FOLDER = 'Live'
+export async function saveLiveBuild (args: { dir?: string, name: string, xml: string }): Promise<{ relPath: string }> {
+  if (typeof args?.xml !== 'string' || !/<PathOfBuilding/.test(args.xml)) throw new Error('That is not a Path of Building build')
+  const name = (typeof args?.name === 'string' ? args.name : '').replace(/[^\w -]/g, '_').trim().slice(0, 60) || 'character'
+  const relPath = `${LIVE_FOLDER}/${name}.xml`
+  const full = resolveBuild(args.dir, relPath)
+  const xml = args.xml.replace(/treeVersion="latest"/g, `treeVersion="${await latestTreeVersion()}"`)
+  await fs.mkdir(path.dirname(full), { recursive: true })
+  await fs.writeFile(full, xml, 'utf8')
+  summaryCache.delete(full)
+  return { relPath }
+}
+
+let treeVersion: string | null = null
+async function latestTreeVersion (): Promise<string> {
+  if (treeVersion) return treeVersion
+  const exe = await findPobExe().catch(() => null)
+  const dirs = [exe ? path.dirname(exe) : null, process.env.APPDATA ? path.join(process.env.APPDATA, 'Path of Building Community') : null].filter((d): d is string => !!d)
+  for (const dir of dirs) {
+    try {
+      const lua = await fs.readFile(path.join(dir, 'GameVersions.lua'), 'utf8')
+      const list = /treeVersionList\s*=\s*\{([^}]*)\}/.exec(lua)?.[1]
+      const versions = list ? [...list.matchAll(/"(\d+_\d+)"/g)].map(m => m[1]) : []
+      if (versions.length) { treeVersion = versions[versions.length - 1]; return treeVersion }
+    } catch {}
+  }
+  return '3_29'
+}
+
 // Undo of a delete: writes the build back, never over a file that's there.
 export async function restoreBuild (args: { dir?: string, relPath: string, xml: string }): Promise<void> {
   const full = resolveBuild(args?.dir, args?.relPath)
