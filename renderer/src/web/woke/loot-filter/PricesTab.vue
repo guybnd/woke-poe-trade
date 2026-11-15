@@ -69,7 +69,7 @@
       <div class="flex items-center gap-2">
         <WToggle v-model="config.safetyNet.on">Always show anything worth</WToggle>
         <WField v-model.number="minChaos" type="number" suffix="c" style="width: 5.5rem;" aria-label="Safety net value in chaos" />
-        <span class="w-dim text-xs">{{ config.safetyNet.on ? `${store.safetyCount.value} hidden item${store.safetyCount.value === 1 ? '' : 's'} caught right now` : 'off' }}</span>
+        <span class="w-dim text-xs">{{ config.safetyNet.on ? netCaughtText : 'off' }}</span>
         <WInfo :text="'One rule at the top of your filter, white on red with a short red beam and an alert sound, for valuable items the rest of the filter would hide.\n\nThin markets count, since a junk price only costs you a click. It can\'t judge rares, gems, cluster jewels or maps, which have no one price for a base.'" />
       </div>
       <WToggle :model-value="dockNotice" @update:model-value="setDockNotice">Tell me on the dock icon</WToggle>
@@ -201,6 +201,14 @@ const rows = computed(() => {
 })
 const hiddenCount = computed(() => health.value.filter(v => v.state === 'hidden').length)
 const caughtCount = computed(() => health.value.filter(v => v.state === 'hidden' && caught(v)).length)
+// Small stacks the net shows aren't in the list below: say them apart.
+const netCaughtText = computed(() => {
+  const stacks = props.store.safetyStackCount.value
+  const items = props.store.safetyCount.value - stacks
+  const parts = [`${items} hidden item${items === 1 ? '' : 's'}`]
+  if (stacks) parts.push(`${stacks} small stack${stacks === 1 ? '' : 's'}`)
+  return `${parts.join(' and ')} caught right now`
+})
 
 function itemIcon (v: { group: { unique?: boolean, ninja: string[] } }, name: string): string | null {
   return v.group.unique ? gameIcon(name, 'UNIQUE') : ninjaIcon(v.group.ninja[0], name)

@@ -55,6 +55,8 @@ export interface Composed {
   results: Map<number, EditStatus>
   buildCount: number
   netCount: number
+  // Of netCount, the bases caught only as small stacks (Prices lists items, not these).
+  netStackCount: number
   netList: string
   netFresh: NetList | null
   movesFit: number
@@ -98,6 +100,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // The safety net goes on top, listing only what the rest still hides.
   // Restyles of the net apply after it exists.
   let netCount = 0
+  let netStackCount = 0
   let netList = ''
   let netFresh: NetList | null = null
   if (cfg.safetyNet.on) {
@@ -130,7 +133,8 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     if (volume.on && volume.percent < 100) netBlocks.forEach(b => scaleVolume(b, volume.percent))
     insertBuildBlocks(next, netBlocks)
     if (lookup) netFresh = { ...valuableFromAudit(verdicts), line, ...(bases.stacks ? { stacks: bases.stacks } : {}) }
-    netCount = bases.plain.length + bases.unique.length + Object.values(bases.stacks ?? {}).reduce((n, l) => n + l.length, 0)
+    netStackCount = Object.values(bases.stacks ?? {}).reduce((n, l) => n + l.length, 0)
+    netCount = bases.plain.length + bases.unique.length + netStackCount
     if (lookup || netCount) netList = JSON.stringify(bases)
   }
   // A net rule shows up only while the net lists something for it (none on a
@@ -147,5 +151,5 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
-  return { doc: next, results, buildCount, netCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
+  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
 }

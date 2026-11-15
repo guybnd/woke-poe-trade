@@ -150,6 +150,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // Problems found by the last save attempt.
   const problems = shallowRef<FilterProblem[]>([])
   const safetyCount = ref(0)
+  // Of those, bases caught only as small stacks: the Prices list doesn't show them.
+  const safetyStackCount = ref(0)
   // The file has a newer net list than the game has loaded.
   const netWaitsForReload = ref(false)
   // The source filter is not what the last save was made from.
@@ -277,6 +279,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     const c = compose(baseText.value)
     buildBlockCount.value = c.buildCount
     safetyCount.value = c.netCount
+    safetyStackCount.value = c.netStackCount
     safetyList.value = c.netList
     // Only a change: this runs often and the config is watched.
     if (c.netFresh && JSON.stringify(cfg().safetyNet.last) !== JSON.stringify(c.netFresh)) cfg().safetyNet.last = c.netFresh
@@ -1134,6 +1137,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     plan,
     health,
     safetyCount,
+    safetyStackCount,
     netWithoutPrices,
     netWaitsForReload,
     sourceChanged,

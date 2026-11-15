@@ -109,3 +109,27 @@ describe('transfigured gems in BaseType lists', () => {
     expect(doc.blocks[0].dirty).toBe(false)
   })
 })
+
+// The dock note opens the Prices list, which lists items, not small stacks:
+// a net of stacks only must not count as items there (Guy's "35 valuable
+// items" with nothing to see).
+describe('safety net count of small stacks', () => {
+  it('reports the stacks apart from the items', () => {
+    const text = 'Hide # $type->currency $tier->t1\n\tBaseType == "Chaos Orb"\n\tSetFontSize 30\n'
+    const c = composeFilter(text, {
+      presets: defaultPresets(),
+      rules: [],
+      edits: [],
+      buildRules: { ...DEFAULT_BUILD_RULES },
+      build: null,
+      moves: [],
+      safetyNet: { on: true, minChaos: 20, last: { plain: [], unique: [], line: 20, stacks: { 20: ['Chaos Orb'] } } },
+      prices: { lookup: null, safety: null, breakdown: null },
+      dustList: null,
+      heldBack: () => false,
+      stackHeld: () => false
+    })
+    expect(c.netCount).toBe(1)
+    expect(c.netStackCount).toBe(1)
+  })
+})

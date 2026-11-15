@@ -312,7 +312,10 @@ const allNotes = computed<Notice[]>(() => {
   if (ready) out.push({ id: 'update', value: ready.version, tab: 'neversink', text: `NeverSink ${ready.version} is ready: ${ready.ok} of ${ready.total} changes fit${ready.movesTotal > ready.movesFit ? `, and ${ready.movesTotal - ready.movesFit} price moves will go back to NeverSink's tiers` : ''}. Update in the editor.` })
   const moves = store.plan.value?.moves.length ?? 0
   if (moves) out.push({ id: 'prices', value: moves, tab: 'prices', text: `${moves} item${moves > 1 ? 's' : ''} would move to match today's prices.` })
-  if (store.safetyCount.value) out.push({ id: 'safety', value: store.safetyCount.value, tab: 'prices', text: `Safety net shows ${store.safetyCount.value} valuable item${store.safetyCount.value > 1 ? 's' : ''} the filter hides.` })
+  // Only what the Prices list shows: small stacks the net catches aren't listed
+  // there, and a note about them opened onto nothing.
+  const caught = store.safetyCount.value - store.safetyStackCount.value
+  if (caught > 0) out.push({ id: 'safety', value: caught, tab: 'prices', text: `Safety net shows ${caught} valuable item${caught > 1 ? 's' : ''} the filter hides.` })
   if (store.netWithoutPrices.value && pricesSettled.value) {
     out.push({
       id: 'net-prices',
