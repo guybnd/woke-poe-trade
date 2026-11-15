@@ -19,6 +19,7 @@ export interface ItemHistory {
   // Left out when empty (the bundled leagues do).
   variant?: string
   links?: string
+  // Built-in leagues hold these as Float64Array (NaN: no price) and Int8Array.
   div: Array<number | null>
   conf: number[]
 }
