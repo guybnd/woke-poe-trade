@@ -2,7 +2,7 @@
 // 7-day line, sorting, filtering, and moving old configs over to Movers.
 import { describe, it, expect } from 'vitest'
 import { categoryGroups, categoryLabel, filterRows, parseCategory, sortRows, trendLine } from '@/web/woke/market/browser'
-import { MARKET_BROWSER_TYPE, MARKET_TRACKER_TYPE, splitMarketWindow } from '@/web/woke/market/widget'
+import { MARKET_BROWSER_TYPE, MARKET_TRACKER_TYPE, foldMarketWindow } from '@/web/woke/market/widget'
 import type { DenseChunk } from '@/web/woke/market/parse'
 import { slugForType } from '@/web/woke/market/types'
 
@@ -79,41 +79,46 @@ describe('market browser', () => {
   })
 })
 
-describe('splitting the old Market window', () => {
-  function config () {
-    return [
-      { wmId: 1, wmType: 'menu', pinned: [5, 3, 7] },
-      { wmId: 3, wmType: MARKET_TRACKER_TYPE, wmTitle: 'Market', unit: 'div' },
-      { wmId: 7, wmType: 'woke-boss-runs' }
-    ] as Array<Record<string, unknown> & { wmId: number, wmType: string }>
-  }
-  const anchor = () => ({ pos: 'tc' as const, x: 50, y: 10 })
+describe('one Market window with tabs', () => {
+  type W = Record<string, unknown> & { wmId: number, wmType: string }
+  const menu = (pinned: number[]): W => ({ wmId: 1, wmType: 'menu', pinned })
 
-  it('adds a hidden Market window just before Movers on the rail', () => {
-    const widgets = config()
-    splitMarketWindow(widgets, anchor)
-    const browser = widgets.find(w => w.wmType === MARKET_BROWSER_TYPE)!
-    expect(browser.wmId).toBe(8)
-    expect(browser.wmWants).toBe('hide')
-    expect(browser.unit).toBe('div')
-    expect(widgets[0].pinned).toEqual([5, 8, 3, 7])
-    expect(widgets[1].wmTitle).toBe('Movers')
+  it('folds a separate Market window into the tracker, keeping its settings and rail spot', () => {
+    const widgets: W[] = [
+      menu([5, 8, 3, 7]),
+      { wmId: 3, wmType: MARKET_TRACKER_TYPE, wmTitle: 'Movers', view: 'watchlist', watchlist: [{ type: 'Currency', name: 'Divine Orb', variant: '' }] },
+      { wmId: 8, wmType: MARKET_BROWSER_TYPE, wmTitle: 'Market', category: 'Essence', sort: 'name', desc: false, hideThin: true }
+    ]
+    foldMarketWindow(widgets)
+    expect(widgets.some(w => w.wmType === MARKET_BROWSER_TYPE)).toBe(false)
+    const tracker = widgets.find(w => w.wmType === MARKET_TRACKER_TYPE)!
+    expect(tracker).toMatchObject({ wmTitle: 'Market', view: 'prices', priceCategory: 'Essence', priceSort: 'name', priceDesc: false, priceSkipThin: true })
+    expect(tracker.watchlist).toHaveLength(1)
+    expect(widgets[0].pinned).toEqual([5, 3, 7])
   })
 
-  it('keeps a name you gave the tracker', () => {
-    const widgets = config()
-    widgets[1].wmTitle = 'Div watch'
-    splitMarketWindow(widgets, anchor)
-    expect(widgets[1].wmTitle).toBe('Div watch')
+  it('moves the rail pin over when only the price list was pinned', () => {
+    const widgets: W[] = [menu([8]), { wmId: 3, wmType: MARKET_TRACKER_TYPE, wmTitle: 'Movers' }, { wmId: 8, wmType: MARKET_BROWSER_TYPE }]
+    foldMarketWindow(widgets)
+    expect(widgets[0].pinned).toEqual([3])
   })
 
-  it('does nothing twice, or without a tracker', () => {
-    const widgets = config()
-    splitMarketWindow(widgets, anchor)
-    splitMarketWindow(widgets, anchor)
-    expect(widgets.filter(w => w.wmType === MARKET_BROWSER_TYPE)).toHaveLength(1)
-    const none = config().filter(w => w.wmType !== MARKET_TRACKER_TYPE)
-    splitMarketWindow(none, anchor)
-    expect(none.some(w => w.wmType === MARKET_BROWSER_TYPE)).toBe(false)
+  it('turns a lone price list into the Market window', () => {
+    const widgets: W[] = [menu([8]), { wmId: 8, wmType: MARKET_BROWSER_TYPE, wmTitle: 'Market', category: 'Oil' }]
+    foldMarketWindow(widgets)
+    expect(widgets[1]).toMatchObject({ wmId: 8, wmType: MARKET_TRACKER_TYPE, view: 'prices', priceCategory: 'Oil', watchlist: [] })
+    expect(widgets[0].pinned).toEqual([8])
+  })
+
+  it('leaves an old tracker on its tab, and keeps a name you gave it', () => {
+    const widgets: W[] = [{ wmId: 3, wmType: MARKET_TRACKER_TYPE, wmTitle: 'Div watch', view: 'movers' }]
+    foldMarketWindow(widgets)
+    expect(widgets[0]).toMatchObject({ wmTitle: 'Div watch', view: 'movers' })
+  })
+
+  it('does nothing without a market window', () => {
+    const widgets: W[] = [menu([1])]
+    foldMarketWindow(widgets)
+    expect(widgets).toEqual([menu([1])])
   })
 })

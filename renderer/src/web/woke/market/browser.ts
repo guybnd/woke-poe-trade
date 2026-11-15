@@ -4,21 +4,6 @@
 import { graphGaps } from './parse'
 import type { DenseChunk } from './parse'
 import { SKIPPED_TYPES, typeForSlug } from './types'
-import type { CorruptedFilter } from './types'
-import type { Widget, Anchor } from '@/web/overlay/widgets'
-
-export { MARKET_BROWSER_TYPE } from './widget'
-
-export interface MarketBrowserWidget extends Widget {
-  anchor: Anchor
-  // poe.ninja type, such as 'Currency'.
-  category: string
-  sort: MarketSort
-  desc: boolean
-  unit: 'chaos' | 'div'
-  hideThin: boolean
-  corrupted: CorruptedFilter
-}
 
 // The order and grouping of poe.ninja's side list. A category poe.ninja adds
 // later (a league's new currency) lands under General.

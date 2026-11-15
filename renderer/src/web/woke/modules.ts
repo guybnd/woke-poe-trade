@@ -57,7 +57,7 @@ export const MODULE_GROUPS: Array<{ id: ModuleGroup, label: string }> = [
 
 // Reactive: the stash reader's module joins and leaves at runtime.
 export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
-  { id: 'market', name: 'Market', description: 'Every poe.ninja price by category, plus movers and a watchlist', group: 'economy', widgetTypes: ['woke-market', 'woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
+  { id: 'market', name: 'Market', description: 'Every poe.ninja price by category, plus movers and a watchlist', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
   { id: 'lab-gems', name: 'Lab gems', description: 'Divine Font gem values by colour', group: 'economy', widgetTypes: ['woke-lab-gems'], icon: { fa: 'fas fa-gem', item: "Gemcutter's Prism" }, needs: ['poll'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
@@ -111,7 +111,7 @@ export const PRESETS: Preset[] = [
 // Woke's own config version, kept apart from APT's configVersion (that one
 // stays upstream's numbering). Raise it with a fix-up in Config.ts that
 // mustn't run twice.
-export const WOKE_CONFIG_VERSION = 2
+export const WOKE_CONFIG_VERSION = 3
 
 export interface WokeModulesConfig {
   setupDone: boolean
@@ -214,13 +214,10 @@ export function setModuleOn (config: ConfigLike & { woke: WokeModulesConfig }, i
   config.woke.off = off
 }
 
-// A window's name where its module has more than one (settings headings).
-export const WIDGET_NAMES: Record<string, string> = { 'woke-market-tracker': 'Movers' }
-
 // Default titles that saved configs may still hold. A title you typed stays.
 const OLD_DEFAULT_TITLES: Record<string, string> = {
   'woke-farming|Farming profit': 'Farming',
-  'woke-market-tracker|Market tracker': 'Movers',
+  'woke-market-tracker|Market tracker': 'Market',
   'woke-map-mods|Map mod checker': 'Map mods',
   'woke-campaign|Campaign tracker': 'Campaign',
   'woke-run-timer|Campaign run timer': 'Run timer'

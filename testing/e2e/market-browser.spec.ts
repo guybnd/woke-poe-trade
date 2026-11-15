@@ -1,5 +1,5 @@
-// The Market window: poe.ninja's categories in a side list, a filter, sorting,
-// the 7-day line, and the Movers window that holds the old movers and watchlist.
+// The Market window: a Prices tab with poe.ninja's categories in a side list, a
+// filter, sorting and the 7-day line, beside the Movers and Watchlist tabs.
 import fs from 'node:fs'
 import { test, expect } from './harness'
 
@@ -12,14 +12,15 @@ async function routeDense (page: import('@playwright/test').Page) {
   await page.route('**/dense/overviews*', route => route.fulfill({ contentType: 'application/json', body }))
 }
 
-test('the Market window lists every category and filters and sorts one', async ({ overlay }) => {
+test('the Prices tab lists every category and filters and sorts one', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await routeDense(overlay.page)
   await overlay.boot({
     overlayActive: true,
-    widgets: [{ wmType: 'woke-market', wmWants: 'show', wmFlags: ['uninitialized'], anchor: { pos: 'tl', x: 20, y: 12 } }]
+    widgets: [{ wmType: 'woke-market-tracker', wmWants: 'show', wmFlags: ['uninitialized'], anchor: { pos: 'tl', x: 20, y: 12 } }]
   })
-  const panel = overlay.widget('woke-market')
+  const panel = overlay.widget('woke-market-tracker')
+  await expect(panel.getByRole('tab', { name: 'Prices' })).toHaveAttribute('aria-selected', 'true')
   const side = panel.getByRole('navigation', { name: 'Categories' })
   await expect(side.getByRole('button', { name: /^Currency\s*\d+$/ })).toBeVisible({ timeout: 20_000 })
   await expect(side).toContainText('Divination Cards')
@@ -62,39 +63,37 @@ test('the Market window lists every category and filters and sorts one', async (
   expect([...names].sort((a, b) => a.localeCompare(b))).toEqual(names)
   await overlay.snap('divination cards by name')
 
-  // The old movers and watchlist open in their own window.
-  await panel.getByRole('button', { name: 'Movers' }).click()
-  await expect(overlay.page.getByRole('tab', { name: /Watchlist/ })).toBeVisible()
+  // Movers and the watchlist are tabs of the same window.
+  await panel.getByRole('tab', { name: 'Movers' }).click()
+  await expect(panel.getByPlaceholder('Search every price')).toBeVisible()
+  await expect(side).toHaveCount(0)
+  await panel.getByRole('tab', { name: 'Prices' }).click()
+  await expect(side).toBeVisible()
   expect(overlay.errors).toEqual([])
 })
 
-test('an old Market window becomes Movers, and the new Market goes just before it on the rail', async ({ overlay, fakeApp }) => {
+test('a separate Market window from a dev build folds back into one window with tabs', async ({ overlay, fakeApp }) => {
   await overlay.boot({
     patch: (config) => {
-      config.woke.version = 1
+      config.woke.version = 2
       config.widgets = config.widgets.filter((w: { wmType: string }) => w.wmType !== 'woke-market' && w.wmType !== 'woke-market-tracker')
-      const wmId = Math.max(...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
-      config.widgets.push({
-        wmId, wmType: 'woke-market-tracker', wmTitle: 'Market', wmWants: 'hide', wmZorder: null, wmFlags: ['invisible-on-blur'],
-        anchor: { pos: 'tl', x: 20, y: 12 }, view: 'watchlist', period: '24h', minChaos: 5, typeFilter: '', watchlist: []
-      })
+      const id = Math.max(...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
+      const base = { wmWants: 'hide', wmZorder: null, wmFlags: ['invisible-on-blur'], anchor: { pos: 'tl', x: 20, y: 12 } }
+      config.widgets.push(
+        { ...base, wmId: id, wmType: 'woke-market-tracker', wmTitle: 'Movers', view: 'watchlist', period: '24h', minChaos: 5, typeFilter: '', watchlist: [] },
+        { ...base, wmId: id + 1, wmType: 'woke-market', wmTitle: 'Market', category: 'Essence', sort: 'value', desc: true, unit: 'chaos', hideThin: false, corrupted: 'any' }
+      )
       const menu = config.widgets.find((w: { wmType: string }) => w.wmType === 'menu')
-      menu.pinned = [wmId]
+      menu.pinned = [id + 1, id]
     }
   })
   fakeApp.clearReceived()
   await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
   const config = JSON.parse((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string) as
-    { widgets: Array<{ wmId: number, wmType: string, wmTitle: string, pinned?: number[] }> }
-  const market = config.widgets.find(w => w.wmType === 'woke-market')
-  const saved = {
-    market: market && { id: market.wmId, title: market.wmTitle },
-    movers: config.widgets.find(w => w.wmType === 'woke-market-tracker')?.wmTitle,
-    moversId: config.widgets.find(w => w.wmType === 'woke-market-tracker')?.wmId,
-    pinned: config.widgets.find(w => w.wmType === 'menu')?.pinned
-  }
-  expect(saved.market?.title).toBe('Market')
-  expect(saved.movers).toBe('Movers')
-  expect(saved.pinned).toEqual([saved.market?.id, saved.moversId])
+    { widgets: Array<{ wmId: number, wmType: string, wmTitle: string, view?: string, priceCategory?: string, pinned?: number[] }> }
+  expect(config.widgets.some(w => w.wmType === 'woke-market')).toBe(false)
+  const market = config.widgets.find(w => w.wmType === 'woke-market-tracker')!
+  expect(market).toMatchObject({ wmTitle: 'Market', view: 'prices', priceCategory: 'Essence' })
+  expect(config.widgets.find(w => w.wmType === 'menu')?.pinned).toEqual([market.wmId])
   expect(overlay.errors).toEqual([])
 })

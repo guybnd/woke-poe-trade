@@ -69,7 +69,7 @@
                 <div v-if="conv.perDivine" class="w-dim" :class="$style.small">1 Divine Orb buys {{ convNumber(conv.perDivine) }}</div>
               </div>
               <div :class="$style.acts">
-                <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Movers</WButton>
+                <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
                 <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Live listings</WButton>
