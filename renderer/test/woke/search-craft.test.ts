@@ -53,6 +53,13 @@ describe('craftLookup', () => {
     expect(rows.at(-1)).toEqual({ label: 'Total', chaos: 36 })
     expect(names('cold to fire')).not.toContain('Fire Resistance mod to Cold Resistance')
   })
+  it('lists every fire swap, resistance ones too, for "harvest fire"', () => {
+    const got = names('harvest fire')
+    expect(got).toContain('Cold Resistance mod to Fire Resistance')
+    expect(got).toContain('Fire Resistance mod to Lightning Resistance')
+    expect(got).toContain('Lightning Damage mod to Fire Damage')
+    expect(names('fire')).toContain('Cold Resistance mod to Fire Resistance')
+  })
   it('knows sockets, links and nicknames', () => {
     expect(names('6 link')).toContain('Socket Links')
     expect(lookup('6l', ctx)[0].sections[1].table!.rows.map(r => r.cells[0])).toContain('Six Linked Sockets')

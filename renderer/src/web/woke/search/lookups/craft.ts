@@ -280,14 +280,15 @@ export function craftLookup (data: CraftData | null): Lookup {
         hits = find([...q.words, ...q.itemWords], null)
       }
       const on = classes ? itemText(classes).toLowerCase() : null
-      hits.sort((a, b) => a.rank - b.rank).slice(0, 4).forEach(h => cards.push(benchCard(data.bench[h.i], h.tiers, data, ctx, h.i, on)))
+      hits.sort((a, b) => a.rank - b.rank).slice(0, q.only === 'bench' ? 12 : 4).forEach(h => cards.push(benchCard(data.bench[h.i], h.tiers, data, ctx, h.i, on)))
     }
     if (q.only !== 'bench' && !q.classes) {
       data.harvest
         .map((h, i) => ({ h, i }))
         .filter(x => matches(harvestHay[x.i], q.words, q.ordered))
         .sort((a, b) => a.h[0].length - b.h[0].length)
-        .slice(0, 4)
+        // Every swap for an element is 8 cards (4 damage, 4 resistance): show them all.
+        .slice(0, q.only === 'harvest' ? 16 : 10)
         .forEach(x => cards.push(harvestCard(x.h[0], x.h[1], data, ctx, x.i)))
     }
     return cards
