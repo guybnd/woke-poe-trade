@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2" data-deck="history">
+  <div ref="root" class="flex flex-col gap-2" data-deck="history">
     <WBanner v-if="store.error.value">Couldn't read your deck sessions: {{ store.error.value }}
       <template #actions><WButton size="sm" @click="store.load(true)">Retry</WButton></template>
     </WBanner>
@@ -44,7 +44,7 @@
 <script setup lang="ts">
 // Session analytics' Stacked decks tab: every saved deck session.
 import { computed, shallowRef } from 'vue'
-import { WBanner, WButton, WEmpty, WSkeleton, toast } from '../ui'
+import { WBanner, WButton, WEmpty, WSkeleton, toast, useMouseNav } from '../ui'
 import { formatChaos, formatDuration } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange, AnalyticsUnit } from '../analytics/types'
@@ -94,6 +94,8 @@ function signed (v: number, r?: DeckRecord) {
 const tone = (v: number | null) => v == null ? '' : v >= 0 ? 'w-up' : 'w-down'
 
 const openId = shallowRef<string | null>(null)
+const root = shallowRef<HTMLElement | null>(null)
+useMouseNav(() => root.value, { back: () => { openId.value = null } })
 const open = computed(() => store.records.value.find(r => r.id === openId.value) ?? null)
 const openLuck = computed(() => {
   const r = open.value

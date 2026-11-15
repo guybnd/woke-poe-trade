@@ -195,6 +195,13 @@ export function openCategory (cat: NavCategory): { cat: string, chapter: string 
   return { cat: cat.id, chapter: cat.chapters.length === 1 ? cat.chapters[0].id : null }
 }
 
+// Orders the rule list's folder steps against the editor's own jumps, so the
+// mouse's back button undoes whichever came last.
+let stamp = 0
+export function navStamp (): number {
+  return ++stamp
+}
+
 // One level back up, skipping a chapter level that was skipped on the way in.
 export function levelUp (nav: NavCategory[], at: { cat: string | null, chapter: string | null }): { cat: string | null, chapter: string | null } {
   if (at.chapter == null) return { cat: null, chapter: null }

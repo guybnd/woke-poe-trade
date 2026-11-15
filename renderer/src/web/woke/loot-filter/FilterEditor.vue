@@ -48,7 +48,7 @@
             <span class="w-faint text-xs w-num">{{ config.rules.length }}</span>
           </span>
         </WListItem>
-        <RuleNav :class="$style.ruleNav" :tree="navTree" :sel-type="selType" :config="config" :changed-in="changedIn" :name-of="shortName"
+        <RuleNav ref="ruleNav" :class="$style.ruleNav" :tree="navTree" :sel-type="selType" :config="config" :changed-in="changedIn" :name-of="shortName"
           @select="selectGroup" @group-menu="groupMenu" />
       </div>
 
@@ -355,7 +355,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, useMouseNav, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
@@ -390,6 +390,7 @@ import type { Visibility } from './parse'
 import { tierLabel } from './names'
 import AddItemField from './AddItemField.vue'
 import RuleNav from './RuleNav.vue'
+import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour, labelCss } from './label-style'
@@ -712,11 +713,11 @@ function selectGroup (type: string) {
 }
 
 // Where a jump came from, for Back and the mouse's back button.
-interface Place { tab: typeof tab.value, type: string | null, tier: string | null, search: string }
+interface Place { tab: typeof tab.value, type: string | null, tier: string | null, search: string, stamp: number }
 const trail = ref<Place[]>([])
 
 function rememberPlace () {
-  trail.value = [...trail.value.slice(-19), { tab: tab.value, type: selType.value, tier: selTier.value, search: search.value }]
+  trail.value = [...trail.value.slice(-19), { tab: tab.value, type: selType.value, tier: selTier.value, search: search.value, stamp: navStamp() }]
 }
 
 function goBack () {
@@ -730,14 +731,20 @@ function goBack () {
   picked.value = []
 }
 
-function onMouseBack (e: MouseEvent) {
-  // The editor stays mounted while hidden: only clicks on it count.
-  if (e.button !== 3 || !trail.value.length || !panel.value?.el?.contains(e.target as Node)) return
-  e.preventDefault()
-  goBack()
-}
-onMounted(() => window.addEventListener('mouseup', onMouseBack))
-onUnmounted(() => window.removeEventListener('mouseup', onMouseBack))
+// The mouse's back button undoes the newest of a jump or a folder step in the
+// rule list; forward redoes folder steps.
+const ruleNav = ref<InstanceType<typeof RuleNav> | null>(null)
+useMouseNav(() => panel.value?.el, {
+  back () {
+    const jump = trail.value[trail.value.length - 1]
+    const onRules = tab.value === 'rules' && ruleNav.value
+    if (jump && (!onRules || jump.stamp > ruleNav.value!.lastStep())) goBack()
+    else if (onRules) ruleNav.value!.back()
+  },
+  forward () {
+    if (tab.value === 'rules') ruleNav.value?.forward()
+  }
+})
 
 function openRule (rule: { type: string, tier: string | null, base?: string }) {
   if (rule.tier) jumpTo(rule.type, rule.tier, rule.base)

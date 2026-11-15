@@ -223,7 +223,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { formatDuration } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, useMouseNav, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
@@ -464,6 +464,7 @@ function rename () {
   saveOpen(s => { s.strategy = name })
 }
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
+useMouseNav(() => panel.value?.el, { back: () => { openId.value = null } })
 const busy = shallowRef(false)
 async function reload () {
   busy.value = true

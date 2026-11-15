@@ -369,6 +369,50 @@ test('rule list: the keys move one row and keep working after each level', async
   expect(await focused()).toMatch(/^Currency/)
 })
 
+test('rule list: an up row heads every folder, and the mouse back and forward buttons retrace folders', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: 'Rules' }).click()
+  const crumbs = page.getByRole('navigation', { name: /Where you are/ })
+  const up = page.locator('[data-up]')
+  const side = (button: number) => crumbs.dispatchEvent('mouseup', { button, bubbles: true })
+  const upIsFirst = () => up.evaluate(el => el.parentElement?.firstElementChild === el)
+
+  // It opens inside Currency with no steps taken: back still goes up, a folder at a time.
+  await expect(crumbs).toContainText('Currency')
+  await side(3)
+  await side(3)
+  await expect(page.getByRole('button', { name: /^Uniques/ }).first()).toBeVisible()
+  // The top has nothing above it.
+  await expect(up).toHaveCount(0)
+
+  await page.getByRole('button', { name: /^Currency/ }).first().click()
+  await expect(up).toHaveText('Back to All')
+  expect(await upIsFirst()).toBe(true)
+  await page.getByRole('button', { name: /^League/ }).click()
+  await expect(crumbs).toContainText('League')
+  await expect(up).toHaveText('Back to Currency')
+  await overlay.snap('rule list up row')
+  expect(await upIsFirst()).toBe(true)
+  await page.getByRole('button', { name: 'Back to Currency' }).click()
+  await expect(crumbs).not.toContainText('League')
+  await expect(crumbs).toContainText('Currency')
+
+  // Back retraces your steps: the up row came from League, so back returns there.
+  await side(3)
+  await expect(crumbs).toContainText('League')
+  await side(3)
+  await expect(crumbs).not.toContainText('League')
+  await side(4)
+  await expect(crumbs).toContainText('League')
+  await side(3)
+  await side(3)
+  await expect(page.getByRole('button', { name: /^Uniques/ }).first()).toBeVisible()
+})
+
 test('pasting a copied item into the search box opens its rule card', async ({ overlay, fakeApp }) => {
   const folder = filterFolder()
   await overlay.boot({ widgets: [lootFilter(folder)] })

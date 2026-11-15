@@ -9,7 +9,7 @@
     </div>
 
     <nav v-if="!flatList" :class="$style.crumbs" aria-label="Where you are in the rule list">
-      <button type="button" class="w-focusable" :class="$style.crumb" @click="at = { cat: null, chapter: null }">All</button>
+      <button type="button" class="w-focusable" :class="$style.crumb" @click="go({ cat: null, chapter: null })">All</button>
       <template v-if="here.category">
         <span class="w-faint"> › </span>
         <button type="button" class="w-focusable" :class="$style.crumb" @click="openCat(here.category!)">{{ here.category.label }}</button>
@@ -69,7 +69,13 @@
 
       <!-- A category's chapters. -->
       <template v-else-if="!here.chapter">
-        <WListItem v-for="ch in here.category.chapters" :key="ch.id" :active="ch.id === selectedSpot?.chapter.id" :data-here="ch.id === selectedSpot?.chapter.id || undefined" @select="at = { cat: here.category!.id, chapter: ch.id }">
+        <WListItem :class="$style.up" title="Up one folder (Backspace, mouse back button)" data-up @select="goUp">
+          <span class="flex items-center gap-2 w-full min-w-0">
+            <i class="fas fa-level-up-alt" :class="$style.fa" aria-hidden="true" />
+            <span class="w-trunc grow">{{ upLabel }}</span>
+          </span>
+        </WListItem>
+        <WListItem v-for="ch in here.category.chapters" :key="ch.id" :active="ch.id === selectedSpot?.chapter.id" :data-here="ch.id === selectedSpot?.chapter.id || undefined" @select="go({ cat: here.category!.id, chapter: ch.id })">
           <span class="flex items-center gap-2 w-full min-w-0">
             <span class="w-trunc grow" :title="ch.id">{{ ch.title }}</span>
             <span v-if="changedInChapter(ch)" :class="$style.changed" class="text-xs">{{ changedInChapter(ch) }}</span>
@@ -81,6 +87,12 @@
 
       <!-- A chapter's groups. -->
       <template v-else>
+        <WListItem :class="$style.up" title="Up one folder (Backspace, mouse back button)" data-up @select="goUp">
+          <span class="flex items-center gap-2 w-full min-w-0">
+            <i class="fas fa-level-up-alt" :class="$style.fa" aria-hidden="true" />
+            <span class="w-trunc grow">{{ upLabel }}</span>
+          </span>
+        </WListItem>
         <WListItem v-for="g in here.chapter.groups" :key="g.type" :active="g.type === selType" :data-here="g.type === selType || undefined" @select="emit('select', g.type)" @contextmenu="emit('group-menu', $event, g.type)">
           <span class="flex items-center gap-2 w-full min-w-0" :class="{ [$style.off]: g.hidden }">
             <span class="w-trunc grow" :title="nameOf(g)">{{ shortGroupName(nameOf(g)) }}</span>
@@ -100,7 +112,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { WButton, WChip, WEmpty, WField, WListItem, WSegmented, gameIcon } from '../ui'
 import type { GroupNode, SectionNode } from './groups'
-import { allSpots, buildNav, filterNav, findSpot, levelUp, openCategory, shortGroupName } from './nav'
+import { allSpots, buildNav, filterNav, findSpot, levelUp, navStamp, openCategory, shortGroupName } from './nav'
 import type { NavCategory, NavChapter, NavMode, NavSpot } from './nav'
 import type { LootFilterWidget } from './widget'
 
@@ -184,14 +196,32 @@ function iconOf (c: NavCategory): string | null {
 }
 
 function openCat (c: NavCategory) {
-  at.value = openCategory(c)
+  go(openCategory(c))
 }
 
 function pick (s: NavSpot) {
   query.value = ''
-  at.value = { cat: s.category.id, chapter: s.chapter.id }
+  go({ cat: s.category.id, chapter: s.chapter.id })
   emit('select', s.group.type)
 }
+
+// Folders you went through, for the mouse's back and forward buttons. Each step
+// carries a stamp so the editor can tell it apart from a jump it made itself.
+type At = { cat: string | null, chapter: string | null }
+const backSteps = ref<Array<{ at: At, stamp: number }>>([])
+const forwardSteps = ref<At[]>([])
+
+function go (next: At) {
+  if (next.cat === at.value.cat && next.chapter === at.value.chapter) return
+  backSteps.value = [...backSteps.value.slice(-29), { at: at.value, stamp: navStamp() }]
+  forwardSteps.value = []
+  at.value = next
+}
+
+const upLabel = computed(() => {
+  const up = levelUp(nav.value, at.value)
+  return up.cat ? `Back to ${here.value.category?.label ?? 'All'}` : 'Back to All'
+})
 
 // Only the first time: after that, where you are is where you went.
 let revealed = false
@@ -230,8 +260,41 @@ watch([at, () => flatList.value === null], () => {
 })
 
 function goUp () {
-  at.value = levelUp(nav.value, at.value)
+  go(levelUp(nav.value, at.value))
 }
+
+// Back retraces your steps; with none left inside a folder, it goes up one.
+function back (): boolean {
+  if (flatList.value) return false
+  const step = backSteps.value[backSteps.value.length - 1]
+  if (step) {
+    backSteps.value = backSteps.value.slice(0, -1)
+    forwardSteps.value = [...forwardSteps.value, at.value]
+    at.value = step.at
+    return true
+  }
+  if (!at.value.cat) return false
+  forwardSteps.value = [...forwardSteps.value, at.value]
+  at.value = levelUp(nav.value, at.value)
+  return true
+}
+
+function forward (): boolean {
+  if (flatList.value) return false
+  const next = forwardSteps.value[forwardSteps.value.length - 1]
+  if (!next) return false
+  forwardSteps.value = forwardSteps.value.slice(0, -1)
+  backSteps.value = [...backSteps.value, { at: at.value, stamp: navStamp() }]
+  at.value = next
+  return true
+}
+
+// The stamp of the newest step Back would undo, 0 if none.
+function lastStep (): number {
+  return flatList.value ? 0 : backSteps.value[backSteps.value.length - 1]?.stamp ?? 0
+}
+
+defineExpose({ back, forward, lastStep })
 
 // Up and Down walk the rows, Left and Backspace go up a level.
 function onKey (e: KeyboardEvent) {
@@ -307,5 +370,6 @@ function onKey (e: KeyboardEvent) {
   color: var(--w-dim);
 }
 .changed { color: var(--w-warn); white-space: nowrap; }
+.up { color: var(--w-dim); }
 .off { opacity: 0.5; }
 </style>

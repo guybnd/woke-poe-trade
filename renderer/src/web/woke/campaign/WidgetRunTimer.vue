@@ -188,7 +188,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatClock } from '../ui/format'
 import { useVisibleClock } from '../shared/visible-clock'
-import { WPanel, WTabs, WChip, WEmpty, toast } from '../ui'
+import { WPanel, WTabs, WChip, WEmpty, toast, useMouseNav } from '../ui'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
@@ -355,6 +355,7 @@ function pickCompare (r: CampaignRun) {
   props.config.compareTo = r.id === pb.value?.id ? null : r.id
 }
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
+useMouseNav(() => panel.value?.el, { back: () => { reviewId.value = null } })
 // No "are you sure": delete now, offer Undo (P9).
 function removeRun (id: number) {
   const before = props.config.history
