@@ -87,6 +87,8 @@ export interface PobItem {
   ward?: number
   itemLevel?: number
   levelReq?: number
+  // Catalyst quality (rings, amulets, belts): raises one kind of mod's values.
+  catalystQuality?: number
   corrupted?: boolean
   mirrored?: boolean
   // Shaper, Elder, Crusader, Hunter, Redeemer, Warlord
@@ -255,8 +257,9 @@ const ITEM_META = /^(?:(?:Unique ID|Item Level|Quality(?: \([^)]*\))?|Sockets|Le
 // Lines after the implicits that are the item's numbers or looks, not mods.
 const NOT_A_MOD = /^(?:(?:Quality(?: \([^)]*\))?|Armour|Evasion(?: Rating)?|Energy Shield|Ward)\s*:|Foil Unique\b)/
 
-const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShield' | 'ward' | 'itemLevel' | 'levelReq']> = [
+const ITEM_NUMBERS: Array<[RegExp, 'quality' | 'armour' | 'evasion' | 'energyShield' | 'ward' | 'itemLevel' | 'levelReq' | 'catalystQuality']> = [
   [/^Quality:\s*\+?(\d+)/, 'quality'],
+  [/^CatalystQuality:\s*(\d+)/, 'catalystQuality'],
   [/^Armour:\s*(\d+)/, 'armour'],
   [/^Evasion:\s*(\d+)/, 'evasion'],
   [/^Energy Shield:\s*(\d+)/, 'energyShield'],

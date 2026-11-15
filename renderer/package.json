@@ -10,6 +10,7 @@
     "typecheck:test": "vue-tsc -p test/tsconfig.json",
     "tip-data": "node scripts/build-tip-data.mjs",
     "craft-data": "node scripts/build-craft-data.mjs",
+    "mod-tiers": "node scripts/build-mod-tiers.mjs",
     "drop-data": "node scripts/build-drop-data.mjs",
     "tree-data": "node scripts/build-tree-data.mjs",
     "viscera-data": "node scripts/build-viscera-data.mjs"

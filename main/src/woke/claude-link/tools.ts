@@ -342,7 +342,8 @@ export function buildTools (deps: LinkDeps): ToolDef[] {
       readOnly: true,
       run: async (a) => {
         const c = await deps.character()
-        if (!c || c.version !== 1) return { note: 'No character read yet. The character sync reads it from your account.' }
+        // 1: read before 3.30's mod objects were understood (no mods); 2: since.
+        if (!c || (c.version !== 1 && c.version !== 2)) return { note: 'No character read yet. The character sync reads it from your account.' }
         const part = str(a.part) || 'summary'
         const out: Record<string, unknown> = { ...c.character, account: c.account, readAt: iso(c.readAt) }
         if (part === 'summary') out.parts = 'Ask for part gear, gems or tree for the rest.'
