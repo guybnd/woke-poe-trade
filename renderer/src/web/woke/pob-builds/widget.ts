@@ -42,6 +42,9 @@ export interface PobBuildsWidget extends Widget {
   // Gem names in the build window marked against your character (yours where
   // lower or missing, numbers in the gem's tooltip). Missing = off.
   characterGemMarks?: boolean
+  // Each read of your character is saved as a PoB build, Live/<name>.xml in
+  // the builds folder. Missing = on.
+  characterLiveBuild?: boolean
 }
 
 export const TREE_HOTKEY_DEFAULT = 'Alt + T'
@@ -211,7 +214,9 @@ export const pobApi = {
   delete: (cfg: PobBuildsWidget, relPath: string) =>
     hostRequest('pob-delete', { dir: dirArg(cfg), relPath }),
   restore: (cfg: PobBuildsWidget, relPath: string, xml: string) =>
-    hostRequest('pob-restore', { dir: dirArg(cfg), relPath, xml })
+    hostRequest('pob-restore', { dir: dirArg(cfg), relPath, xml }),
+  saveLive: (cfg: PobBuildsWidget, name: string, xml: string) =>
+    hostRequest('pob-live-save', { dir: dirArg(cfg), name, xml })
 }
 
 // After a build file moves: every setting that names it follows it. `to` null

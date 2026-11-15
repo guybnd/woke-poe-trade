@@ -32,6 +32,10 @@
         hint="For the build window's Character tab, which compares the character you play with a build. At most every 5 minutes. Off, it's read only when you press Read now. Reading never changes the build.">
         <WToggle v-model="characterAutoRead" />
       </WSettingRow>
+      <WSettingRow label="Save your character as a PoB build"
+        hint="Each read is written to Live/(character name).xml in your builds folder, so Path of Building opens your real gear, gems and tree. Written again on each read; the build you picked is never changed.">
+        <WToggle v-model="characterLiveBuild" />
+      </WSettingRow>
     </template>
   </div>
 </template>
@@ -67,6 +71,10 @@ export default defineComponent({
       characterGemMarks: computed({
         get: () => props.configWidget.characterGemMarks === true,
         set: (on: boolean) => { props.configWidget.characterGemMarks = on }
+      }),
+      characterLiveBuild: computed({
+        get: () => props.configWidget.characterLiveBuild !== false,
+        set: (on: boolean) => { props.configWidget.characterLiveBuild = on }
       }),
       characterAutoRead: computed({
         get: () => props.configWidget.characterAutoRead === true,

@@ -102,7 +102,10 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
-import { CHARACTER_TREE, characterStatus, characterTreeSpec, startCharacterSync } from './character'
+import { CHARACTER_TREE, characterStatus, characterTreeNodes, characterTreeSpec, startCharacterSync } from './character'
+import { liveBuildXml } from './live-pob'
+import { passiveTreeJewelSlots } from './passive-tree'
+import { personalOn } from '../personal'
 import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
 import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned as isPiecePinned, pins, togglePin as togglePinned } from '../pins/pins'
@@ -196,6 +199,21 @@ async function iconClick () {
 // Your character (character.ts): read by main while the stash reader is on,
 // on Read now (or on area changes, if turned on), kept apart from every build.
 startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead === true)
+
+// Each new read is saved as a PoB build of your character (live-pob.ts), once
+// the tree data can place its jewels. Never the build you picked.
+// The tree data loads only once there is a read to save (it costs ~1 MB of heap).
+let liveSaved = 0
+watch(() => {
+  const s = characterStatus.value.snapshot
+  if (!s || !personalOn.value || props.config.characterLiveBuild === false) return null
+  return characterTreeNodes() ? s : null
+}, (s) => {
+  if (!s || s.readAt === liveSaved) return
+  liveSaved = s.readAt
+  pobApi.saveLive(props.config, s.character.name, liveBuildXml(s, passiveTreeJewelSlots()))
+    .then(() => refresh(), (e: Error) => { console.warn('[pob-builds] live build not saved', e) })
+})
 // The tree window: the build's trees, plus your character's when comparing with it.
 const treeSpecs = computed(() => {
   const trees = details.value?.trees ?? []
@@ -213,7 +231,8 @@ function followedBuild (name: string): string | null {
   if (linked) return builds.value.some(b => b.relPath === linked) ? linked : null
   if (name.length < 4 || props.config.followOff.includes(name)) return null
   const lower = name.toLowerCase()
-  return builds.value.find(b => b.name.toLowerCase().includes(lower))?.relPath ?? null
+  // Never the Live folder: that's your character as read, not a build to follow.
+  return builds.value.find(b => b.folder.split('/')[0] !== 'Live' && b.name.toLowerCase().includes(lower))?.relPath ?? null
 }
 
 function followCharacter (name: string) {
