@@ -345,6 +345,9 @@
   overflow-wrap: anywhere;
   text-align: left;
 }
+/* Tailwind's base makes every img a block, which put the influence icon on a
+ * line of its own above the text; inline-block keeps it before the first word. */
+#price-window.w-poe .w-poe-row-text > .w-poe-icon { display: inline-block; }
 #price-window.w-poe .w-poe-row-text > .w-poe-icon,
 #price-window.w-poe .w-poe-row-text > .w-poe-corrupt { margin-right: 5px; vertical-align: -3px; }
 #price-window.w-poe .w-poe-row-text > .w-poe-corrupt { vertical-align: 1px; }

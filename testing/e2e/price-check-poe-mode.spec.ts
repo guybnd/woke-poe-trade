@@ -321,3 +321,26 @@ test('a foulborn mod shows in its own colour among the explicit mods', async ({ 
   await expect(foul).toHaveAttribute('title', 'Foulborn modifier')
   await overlay.snap('foulborn mod in poe mode')
 })
+
+test('PoE mode: a picked influence mod keeps its icon on the same line as the text', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot({ patch: poe })
+  await overlay.copyItem('items/rare-body-armour-es-crusader.txt')
+  const win = overlay.page.locator('#price-window')
+  await expect(win).toHaveClass(/w-poe/)
+  const line = win.locator('.w-poe-line', { hasText: 'Energy Shield Recovery rate' })
+  // Picked by default or by a click: either way it ends up a row.
+  if (await line.count()) await line.locator('.w-poe-line-text').click()
+  const text = win.locator('.w-poe-row-text', { hasText: 'Energy Shield Recovery rate' })
+  await expect(text.locator('.w-poe-icon')).toBeVisible()
+  // Tailwind's base makes img a block, which put the icon on a line of its own.
+  const { icon, first } = await text.evaluate(el => {
+    const ic = el.querySelector('.w-poe-icon')!.getBoundingClientRect()
+    const t = el.querySelector('.w-pc-modtext')!.getClientRects()[0]
+    return { icon: { top: ic.top, bottom: ic.bottom, right: ic.right }, first: { top: t.top, bottom: t.bottom, left: t.left } }
+  })
+  expect(icon.bottom).toBeGreaterThan(first.top)
+  expect(icon.top).toBeLessThan(first.bottom)
+  expect(first.left).toBeGreaterThanOrEqual(icon.right)
+  await overlay.snap('poe mode influence icon inline')
+})
