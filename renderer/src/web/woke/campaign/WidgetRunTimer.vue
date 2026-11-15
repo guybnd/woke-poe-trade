@@ -355,7 +355,7 @@ function pickCompare (r: CampaignRun) {
   props.config.compareTo = r.id === pb.value?.id ? null : r.id
 }
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-useMouseNav(() => panel.value?.el, { back: () => { reviewId.value = null } })
+useMouseNav(() => panel.value?.el, { back: () => { if (tab.value === 'history') reviewId.value = null } })
 // No "are you sure": delete now, offer Undo (P9).
 function removeRun (id: number) {
   const before = props.config.history

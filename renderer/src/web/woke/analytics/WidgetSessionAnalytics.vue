@@ -464,7 +464,7 @@ function rename () {
   saveOpen(s => { s.strategy = name })
 }
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-useMouseNav(() => panel.value?.el, { back: () => { openId.value = null } })
+useMouseNav(() => panel.value?.el, { back: () => { if (tab.value === 'sessions') openId.value = null } })
 const busy = shallowRef(false)
 async function reload () {
   busy.value = true

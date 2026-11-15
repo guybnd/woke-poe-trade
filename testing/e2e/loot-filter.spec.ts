@@ -411,6 +411,13 @@ test('rule list: an up row heads every folder, and the mouse back and forward bu
   await side(3)
   await side(3)
   await expect(page.getByRole('button', { name: /^Uniques/ }).first()).toBeVisible()
+
+  // A search on show is the page you're on: back closes it.
+  await page.getByPlaceholder('Filter groups').fill('fossil')
+  await expect(page.getByRole('button', { name: /Fossil/ }).first()).toBeVisible()
+  await page.getByRole('button', { name: /Fossil/ }).first().dispatchEvent('mouseup', { button: 3, bubbles: true })
+  await expect(page.getByPlaceholder('Filter groups')).toHaveValue('')
+  await expect(page.getByRole('button', { name: /^Uniques/ }).first()).toBeVisible()
 })
 
 test('pasting a copied item into the search box opens its rule card', async ({ overlay, fakeApp }) => {

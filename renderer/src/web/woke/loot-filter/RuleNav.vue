@@ -210,9 +210,12 @@ function pick (s: NavSpot) {
 type At = { cat: string | null, chapter: string | null }
 const backSteps = ref<Array<{ at: At, stamp: number }>>([])
 const forwardSteps = ref<At[]>([])
+function samePlace (a: At, b: At) {
+  return a.cat === b.cat && a.chapter === b.chapter
+}
 
 function go (next: At) {
-  if (next.cat === at.value.cat && next.chapter === at.value.chapter) return
+  if (samePlace(next, at.value)) return
   backSteps.value = [...backSteps.value.slice(-29), { at: at.value, stamp: navStamp() }]
   forwardSteps.value = []
   at.value = next
@@ -233,7 +236,10 @@ watch(() => props.selType, (type) => {
   if (!type || type.startsWith('woke->rule')) return
   const spot = findSpot(nav.value, type)
   if (spot) {
-    at.value = { cat: spot.category.id, chapter: spot.chapter.id }
+    const place = { cat: spot.category.id, chapter: spot.chapter.id }
+    // A jump starts a new branch: forward would lead somewhere from before it.
+    if (!samePlace(place, at.value)) forwardSteps.value = []
+    at.value = place
     revealed = true
   }
 }, { immediate: true })
@@ -263,14 +269,30 @@ function goUp () {
   go(levelUp(nav.value, at.value))
 }
 
+// A saved place as it stands in today's list: the switch or a reload can remove
+// a category or chapter, or leave a category with one chapter, which opens straight in.
+function settle (place: At): At {
+  const cat = nav.value.find(c => c.id === place.cat)
+  if (!cat) return { cat: null, chapter: null }
+  if (place.chapter ? !cat.chapters.some(c => c.id === place.chapter) : cat.chapters.length === 1) return openCategory(cat)
+  return place
+}
+
 // Back retraces your steps; with none left inside a folder, it goes up one.
+// A search or the Changed list on show is the page you're on: back closes it.
 function back (): boolean {
-  if (flatList.value) return false
-  const step = backSteps.value[backSteps.value.length - 1]
-  if (step) {
+  if (flatList.value) {
+    query.value = ''
+    changedOnly.value = false
+    return true
+  }
+  while (backSteps.value.length) {
+    const step = backSteps.value[backSteps.value.length - 1]
     backSteps.value = backSteps.value.slice(0, -1)
+    const place = settle(step.at)
+    if (samePlace(place, at.value)) continue
     forwardSteps.value = [...forwardSteps.value, at.value]
-    at.value = step.at
+    at.value = place
     return true
   }
   if (!at.value.cat) return false
@@ -281,17 +303,22 @@ function back (): boolean {
 
 function forward (): boolean {
   if (flatList.value) return false
-  const next = forwardSteps.value[forwardSteps.value.length - 1]
-  if (!next) return false
-  forwardSteps.value = forwardSteps.value.slice(0, -1)
-  backSteps.value = [...backSteps.value, { at: at.value, stamp: navStamp() }]
-  at.value = next
-  return true
+  while (forwardSteps.value.length) {
+    const place = settle(forwardSteps.value[forwardSteps.value.length - 1])
+    forwardSteps.value = forwardSteps.value.slice(0, -1)
+    if (samePlace(place, at.value)) continue
+    backSteps.value = [...backSteps.value, { at: at.value, stamp: navStamp() }]
+    at.value = place
+    return true
+  }
+  return false
 }
 
-// The stamp of the newest step Back would undo, 0 if none.
+// The stamp of the newest step Back would undo, 0 if none. A search on show
+// always counts as newest.
 function lastStep (): number {
-  return flatList.value ? 0 : backSteps.value[backSteps.value.length - 1]?.stamp ?? 0
+  if (flatList.value) return Number.MAX_SAFE_INTEGER
+  return backSteps.value[backSteps.value.length - 1]?.stamp ?? 0
 }
 
 defineExpose({ back, forward, lastStep })
