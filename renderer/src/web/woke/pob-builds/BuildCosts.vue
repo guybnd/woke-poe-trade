@@ -35,41 +35,19 @@
 <script setup lang="ts">
 // On the Gear tab: what each stage of the build costs.
 import { computed, onMounted, shallowRef } from 'vue'
-import { ItemRarity } from '@/parser'
-import type { ParsedItem } from '@/parser'
-import { usePoeninja } from '@/web/background/Prices'
-import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { WInfo, WPrice } from '../ui'
 import { stageCosts } from './build-costs'
-import type { Price } from './build-costs'
+import { useUniquePrice } from './unique-price'
 import { openPriceCheck } from './open-price-check'
-import type { PobDetails, PobItem } from './widget'
+import type { PobDetails } from './widget'
 
 const props = defineProps<{ details: PobDetails }>()
 
-const ninja = usePoeninja()
-const divine = computed(() => ninja.xchgRate.value ?? null)
+const { priceOf, divine, fetch } = useUniquePrice()
 const open = shallowRef<string | null>(null)
 
-// The same query as the price check, so links and Foulborn variants count.
-// A Foulborn item's name is what sets its price, and the query drops it.
-function priceOf (item: PobItem, parsed: ParsedItem | null): Price | null {
-  if (parsed?.rarity === ItemRarity.Unique && !item.name.startsWith('Foulborn ')) {
-    try {
-      const id = getDetailsId(parsed)
-      const exact = id ? ninja.findPriceByQuery(id) : null
-      if (exact) return { chaos: exact.chaos }
-    } catch {}
-  }
-  const all = ninja.findPricesByName('UNIQUE', item.name).map(r => r.chaos)
-  if (!all.length) return null
-  const low = Math.min(...all)
-  const high = Math.max(...all)
-  return high > low ? { chaos: low, high } : { chaos: low }
-}
-
 // Other windows may not have asked for prices yet.
-onMounted(() => { ninja.queuePricesFetch() })
+onMounted(fetch)
 
 const stages = computed(() => {
   // No prices yet: nothing to say. The divine rate comes with each load.

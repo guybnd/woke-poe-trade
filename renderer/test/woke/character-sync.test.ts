@@ -286,3 +286,24 @@ describe('treeAhead with your real points', () => {
     expect(treeAhead(trees, trees[0], 1, 1).title).toBe('Level 30')
   })
 })
+
+describe('upgradeList', () => {
+  it('lists slots that differ, priced uniques cheapest first, then unpriced, then rares', async () => {
+    const { upgradeList } = await import('@/web/woke/pob-builds/character')
+    const rows = gearDiff([
+      { slot: 'Body Armour', item: item('UNIQUE', "Utula's Hunger", 'Zodiac Leather') },
+      { slot: 'Helmet', item: item('UNIQUE', "Devoto's Devotion", 'Nightmare Bascinet') },
+      { slot: 'Gloves', item: item('RARE', 'Hate Grasp', 'Ringmail Gloves') },
+      { slot: 'Amulet', item: item('UNIQUE', 'Odd Amulet', 'Onyx Amulet') },
+      { slot: 'Boots', item: item('UNIQUE', 'Legacy of Fury', 'Wyrmscale Boots') }
+    ], [
+      { slot: 'Boots', item: item('UNIQUE', 'Legacy of Fury', 'Wyrmscale Boots') },
+      { slot: 'Gloves', item: item('RARE', 'Hypnotic Mitts', 'Ringmail Gloves') }
+    ])
+    const prices: Record<string, number> = { "Utula's Hunger": 120, "Devoto's Devotion": 4 }
+    const r = upgradeList(rows, it => prices[it.name] != null ? { chaos: prices[it.name] } : null)
+    expect(r.rows.map(x => x.item.name)).toEqual(["Devoto's Devotion", "Utula's Hunger", 'Odd Amulet'])
+    expect(r.chaos).toBe(124)
+    expect(r.atLeast).toBe(true)
+  })
+})

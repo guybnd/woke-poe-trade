@@ -257,3 +257,30 @@ export function useCharacterDiff (details: Ref<PobDetails | null>, level: Ref<nu
     ? characterDiff(character.value, details.value, treeNodes.value, level.value, act.value, pick.value)
     : null)
 }
+
+export interface UpgradeRow {
+  slot: string
+  item: PobItem
+  // Uniques only: poe.ninja's price (null: none known).
+  price: { chaos: number, high?: number } | null
+  unique: boolean
+}
+
+// Slots that differ or are empty, as a shopping list: priced uniques cheapest
+// first, then uniques with no price, then rares (their price is in their mods).
+export function upgradeList (rows: GearRowDiff[], priceOf: (item: PobItem) => UpgradeRow['price']): { rows: UpgradeRow[], chaos: number, atLeast: boolean } {
+  const out: UpgradeRow[] = []
+  for (const r of rows) {
+    if (!r.build || (r.state !== 'differs' && r.state !== 'missing')) continue
+    const unique = r.build.rarity === 'UNIQUE' || r.build.rarity === 'RELIC'
+    out.push({ slot: r.slot, item: r.build, price: unique ? priceOf(r.build) : null, unique })
+  }
+  const rank = (x: UpgradeRow) => x.unique ? (x.price ? 0 : 1) : 2
+  out.sort((a, b) => rank(a) - rank(b) || (a.price?.chaos ?? 0) - (b.price?.chaos ?? 0))
+  const priced = out.filter(x => x.price)
+  return {
+    rows: out,
+    chaos: priced.reduce((n, x) => n + x.price!.chaos, 0),
+    atLeast: out.length > priced.length || priced.some(x => x.price!.high != null)
+  }
+}

@@ -26,6 +26,25 @@
       </template>
       <div v-else class="w-dim text-xs">The build has no passive tree to compare.</div>
 
+      <!-- Next to buy -->
+      <template v-if="upgrades.rows.length">
+        <div :class="$style.heading" class="flex">
+          <span>Next to buy</span>
+          <span v-if="upgrades.chaos" class="ml-auto normal-case tracking-normal">{{ upgrades.atLeast ? 'from ' : '' }}<WPrice :chaos="upgrades.chaos" :divine="divine" /> to finish</span>
+        </div>
+        <button v-for="(u, i) in upgrades.rows" :key="u.slot" type="button" :class="$style.buy" class="w-focusable"
+          :title="`Price check ${u.item.name}${u.unique ? '' : ' with its stats'}`" @click="openPriceCheck(u.item, $event)"
+          @mouseenter="showTip($event, { kind: 'item', item: u.item })" @mouseleave="hideTip">
+          <span class="w-faint w-num">{{ i + 1 }}.</span>
+          <span class="w-trunc" :class="rarityClass(u.item)">{{ u.unique ? u.item.name : `Rare ${u.item.base || u.item.name}` }}</span>
+          <span class="w-faint text-xs">{{ slotLabel(u.slot) }}</span>
+          <span class="ml-auto whitespace-nowrap">
+            <template v-if="u.price"><WPrice :chaos="u.price.chaos" :divine="divine" /><template v-if="u.price.high != null"><span class="w-dim text-xs"> to </span><WPrice :chaos="u.price.high" :divine="divine" /></template></template>
+            <span v-else class="w-dim text-xs">{{ u.unique ? 'no price' : 'price check' }}</span>
+          </span>
+        </button>
+      </template>
+
       <!-- Gear -->
       <div :class="$style.heading">Gear</div>
       <div v-if="!diff.gear.length" class="w-dim text-xs">No gear in the build's item set.</div>
@@ -51,12 +70,14 @@
 
 <script setup lang="ts">
 // The Character tab: this build against your character, slot by slot.
-import { computed, onBeforeUnmount, shallowRef, toRef } from 'vue'
-import { WButton } from '../ui'
+import { computed, onBeforeUnmount, onMounted, shallowRef, toRef } from 'vue'
+import { WButton, WPrice } from '../ui'
+import { openPriceCheck } from './open-price-check'
+import { useUniquePrice } from './unique-price'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { useActiveBuild } from './active'
 import { slotLabel } from './build-model'
-import { characterStatus, readAgo, readCharacterNow, useCharacterDiff } from './character'
+import { characterStatus, readAgo, readCharacterNow, upgradeList, useCharacterDiff } from './character'
 import type { GearState } from './character'
 import type { TreeNode } from './passive-tree'
 import type { LoadoutPick, PobDetails, PobItem } from './widget'
@@ -68,6 +89,14 @@ const build = useActiveBuild()
 const status = characterStatus
 const snapshot = computed(() => status.value.snapshot)
 const diff = useCharacterDiff(toRef(props, 'details'), build.level, build.act, toRef(props, 'pick'))
+
+// Next to buy: what differs, cheapest unique first.
+const prices = useUniquePrice()
+const divine = prices.divine
+onMounted(prices.fetch)
+const upgrades = computed(() => diff.value && divine.value != null
+  ? upgradeList(diff.value.gear, item => prices.priceOf(item))
+  : { rows: [], chaos: 0, atLeast: false })
 
 const now = shallowRef(Date.now())
 const tick = setInterval(() => { now.value = Date.now() }, 30_000)
@@ -113,6 +142,18 @@ function readNow () {
 .state {
   font-size: var(--w-fs-xs);
   white-space: nowrap;
+}
+.buy {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 1px 0;
+  text-align: left;
+  min-width: 0;
+}
+.buy:hover {
+  background: var(--w-hover, rgba(255, 255, 255, 0.04));
 }
 .gems {
   display: flex;
