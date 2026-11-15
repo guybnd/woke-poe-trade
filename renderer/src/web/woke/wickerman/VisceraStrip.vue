@@ -19,10 +19,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, shallowRef, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, shallowRef, watchEffect } from 'vue'
 import type { ParsedItem } from '@/parser'
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '../modules'
+import { onSharedDataChange } from '../app/live-data'
 import { actLine, heldTier, loadViscera } from './viscera'
 import type { VisceraTable } from './viscera'
 
@@ -30,6 +31,8 @@ const props = defineProps<{ item: ParsedItem }>()
 
 const table = shallowRef<VisceraTable | null>(null)
 const on = computed(() => isModuleOn(AppConfig(), 'wickerman'))
+// A data update brings a new table: read it again.
+onBeforeUnmount(onSharedDataChange(() => { table.value = null }))
 
 watchEffect(() => {
   if (on.value && !table.value) loadViscera().then(t => { table.value = t }).catch(() => {})

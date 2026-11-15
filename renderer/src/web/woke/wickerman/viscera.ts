@@ -102,7 +102,8 @@ export function heldTier (v: Viscera, itemName: string, itemLines: readonly stri
   if (fits.length === 1) return fits[0]
   const byWord = /^lesser\s/i.test(itemName) ? 'Low' : /^greater\s/i.test(itemName) ? 'High' : null
   if (fits.length > 1) {
-    const named = fits.find(i => v.tiers[i].label === byWord)
+    // A plain name is the middle version.
+    const named = fits.find(i => v.tiers[i].label === (byWord ?? 'Med'))
     return named ?? fits[0]
   }
   if (!byWord) return null
@@ -148,6 +149,14 @@ export function searchViscera (table: VisceraTable, query: string, limit = 6): V
   return hits
     .sort((a, b) => a.rank - b.rank || a.v.name.localeCompare(b.v.name))
     .slice(0, limit)
+}
+
+// The Viscera a campaign zone's boss drops. Act from the area id: zone names
+// repeat in acts 6-10.
+export function visceraInZone (table: VisceraTable, zone: string, act: number | null): Viscera[] {
+  const z = zone.trim().toLowerCase()
+  if (act == null || !z) return []
+  return table.viscera.filter(v => v.act?.n === act && v.act.zone?.toLowerCase() === z)
 }
 
 // "Act 1 · Fire Fury, The Coast"

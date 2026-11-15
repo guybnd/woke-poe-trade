@@ -58,7 +58,21 @@ export function readViscera (src) {
     const q = src[p++]; let s = ''
     while (src[p] !== q) {
       if (p >= end) fail('Unclosed string')
-      if (src[p] === '\\') { const c = src[p + 1]; s += /** @type {Record<string, string>} */ ({ n: '\n', t: '\t' })[c] ?? c; p += 2; continue }
+      if (src[p] === '\\') {
+        const c = src[p + 1]
+        // é, \u{1F600}, \xe9
+        const hex = c === 'u' ? /^(?:\{([0-9a-fA-F]+)\}|([0-9a-fA-F]{4}))/.exec(src.slice(p + 2, p + 12))
+          : c === 'x' ? /^()([0-9a-fA-F]{2})/.exec(src.slice(p + 2, p + 4)) : null
+        if ((c === 'u' || c === 'x') && !hex) fail('Bad escape')
+        if (hex) {
+          s += String.fromCodePoint(parseInt(hex[1] || hex[2], 16))
+          p += 2 + hex[0].length
+          continue
+        }
+        s += /** @type {Record<string, string>} */ ({ n: '\n', t: '\t' })[c] ?? c
+        p += 2
+        continue
+      }
       if (q === '`' && src.startsWith('${', p)) fail('Template expression')
       s += src[p++]
     }

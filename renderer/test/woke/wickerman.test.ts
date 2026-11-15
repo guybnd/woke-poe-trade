@@ -7,14 +7,13 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 
 vi.mock('@/web/woke/app/live-data', () => ({ dataFileUrl: (f: string) => f, onSharedDataChange: () => () => {} }))
 
-/* eslint-disable import/first */
-import { heldTier, searchViscera } from '@/web/woke/wickerman/viscera'
+/* eslint-disable import-x/first */
+import { heldTier, searchViscera, visceraInZone } from '@/web/woke/wickerman/viscera'
 import type { Viscera, VisceraTable } from '@/web/woke/wickerman/viscera'
 import { visceraLookup } from '@/web/woke/search/lookups/viscera'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
-// @ts-expect-error a plain .mjs script
 import { readViscera } from '../../scripts/build-viscera-data.mjs'
-/* eslint-enable import/first */
+/* eslint-enable import-x/first */
 
 const FILE = path.resolve(__dirname, '../../public/data/league/viscera.json')
 const raw = JSON.parse(fs.readFileSync(FILE, 'utf8')) as Omit<VisceraTable, 'byName'>
@@ -68,6 +67,14 @@ describe('heldTier', () => {
     expect(heldTier(arm, 'Scorched Arm', ['40% chance to Ignite'])).toBeNull()
   })
 
+  it('takes the middle version for a plain name when two ranges overlap', () => {
+    // Low is (3-4)%, Med (4-5)% on both lines: 4% fits both.
+    const claw = get("King Crab's Claw")
+    const four = claw.tiers[0].text.replace(/\(\d+-\d+\)/g, '4').split('\n')
+    expect(label(claw, heldTier(claw, "King Crab's Claw", four))).toBe('Med')
+    expect(label(claw, heldTier(claw, "Lesser King Crab's Claw", four))).toBe('Low')
+  })
+
   it('falls back to the name word when no line fits', () => {
     const arm = get('Scorched Arm')
     expect(label(arm, heldTier(arm, 'Greater Scorched Arm', ['A line the table lacks']))).toBe('High')
@@ -105,6 +112,16 @@ describe('Viscera search', () => {
   })
 })
 
+describe('campaign zone', () => {
+  it("lists the zone's Viscera for its act only", () => {
+    expect(visceraInZone(TABLE, 'The Lower Prison', 1).map(v => v.name)).toContain("Skeletal Warrior's Leg")
+    expect(visceraInZone(TABLE, 'the lower prison ', 1).length).toBeGreaterThan(0)
+    expect(visceraInZone(TABLE, 'The Lower Prison', 6).map(v => v.name)).not.toContain("Skeletal Warrior's Leg")
+    expect(visceraInZone(TABLE, 'The Riverways', 6).length).toBe(3)
+    expect(visceraInZone(TABLE, 'The Lower Prison', null)).toEqual([])
+  })
+})
+
 describe('build script', () => {
   it('reads the literals without running them', () => {
     const src = 'x=1,function(){const i=(s,x,g)=>[["Low",s],["Med",x],["High",g]],k=[];function t(){}const h="Zone not confirmed",w="Nightmare";' +
@@ -127,5 +144,10 @@ describe('build script', () => {
   it('refuses code it does not know', () => {
     const src = 'function(){const i=(s,x,g)=>0,k=[];const h=alert(1);t("A","Arm","x",[],null,[]),window.VISCERA=k}()'
     expect(() => readViscera(src)).toThrow(/Unknown call alert/)
+  })
+
+  it('decodes unicode escapes', () => {
+    const src = 'function(){const i=(s,x,g)=>0,k=[];const h=1;t("Caf\\u00e9 Arm","Arm","x",[],null,[]),window.VISCERA=k}()'
+    expect(readViscera(src)[0].name).toBe('Café Arm')
   })
 })
