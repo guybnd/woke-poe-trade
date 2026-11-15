@@ -10,7 +10,7 @@
       <p v-for="(t, j) in section.text ?? []" :key="'t' + j" class="w-dim" :class="$style.text">{{ t }}</p>
       <div v-for="(row, j) in section.rows ?? []" :key="'r' + j" v-item-tip="row.item ?? null" :class="$style.row">
         <span class="w-trunc" :class="row.dim ? 'w-dim' : undefined">{{ row.label }}</span>
-        <WPrice v-if="row.chaos !== undefined" :chaos="row.chaos" :divine="divine" />
+        <WPrice v-if="row.chaos !== undefined" :bulk="!!row.bulk" :chaos="row.chaos" :divine="divine" />
         <span v-else-if="row.value" :class="[$style.value, row.dim ? 'w-dim' : undefined]">{{ row.value }}</span>
       </div>
       <table v-if="section.table" :class="$style.table">

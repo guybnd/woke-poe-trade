@@ -7,7 +7,7 @@
           <WIcon :src="ninjaIcon(here.item.type, here.item.name) ?? undefined" fallback="fas fa-coins" />{{ here.item.name }}
         </span>
         <span class="flex items-center gap-2" :class="$style.herePrice">
-          <WPrice :chaos="here.chaos" :divine="divine" />
+          <WPrice bulk :chaos="here.chaos" :divine="divine" />
           <WDelta v-if="weekChange(here) != null" :value="weekChange(here)" title="Change over the last 7 days" :class="$style.delta" />
         </span>
       </div>
@@ -21,7 +21,7 @@
         <span class="w-trunc">{{ row.item.name }}</span>
         <span class="w-dim text-xs">{{ row.tag }}</span>
       </span>
-      <WPrice :chaos="row.chaos" :divine="divine" class="justify-end" />
+      <WPrice bulk :chaos="row.chaos" :divine="divine" class="justify-end" />
       <WDelta v-if="weekChange(row) != null" :value="weekChange(row)" title="Change over the last 7 days" :class="$style.delta" class="text-right" />
       <span v-else />
     </div>
@@ -67,6 +67,6 @@ const others = computed(() => rows.value.filter(r => r !== here.value))
 .hereRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 3px; }
 .herePrice { flex: none; font-size: var(--w-fs-lg); font-weight: 600; }
 .delta { font-size: var(--w-fs-sm); font-weight: 400; }
-.grid { grid-template-columns: minmax(0, 1fr) 48px 52px; }
+.grid { grid-template-columns: minmax(0, 1fr) minmax(48px, max-content) 52px; }
 .none { padding: 2px var(--w-pad) 6px; }
 </style>

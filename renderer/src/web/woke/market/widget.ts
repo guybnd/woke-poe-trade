@@ -3,6 +3,8 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { CorruptedFilter } from './types'
 
 export const MARKET_TRACKER_TYPE = 'woke-market-tracker'
+// The poe.ninja-style Market window (browser.ts); the tracker above is Movers.
+export const MARKET_BROWSER_TYPE = 'woke-market'
 
 export type MoverPeriod = '6h' | '24h' | '7d'
 
@@ -51,3 +53,35 @@ export interface MarketTrackerWidget extends Widget {
 
 // Opens the tracker on a search, from the search palette.
 export const marketSearchRequest = shallowRef<string | null>(null)
+
+// Once per config (WOKE_CONFIG_VERSION 2): the old Market window kept its
+// movers and watchlist and became Movers; the new Market window takes its
+// place on the rail, just before it.
+export function splitMarketWindow (
+  widgets: Array<Record<string, unknown> & { wmId: number, wmType: string }>,
+  anchor: () => Anchor
+): void {
+  const tracker = widgets.find(w => w.wmType === MARKET_TRACKER_TYPE)
+  if (!tracker || widgets.some(w => w.wmType === MARKET_BROWSER_TYPE)) return
+  // A name you gave it stays.
+  if (!tracker.wmTitle || tracker.wmTitle === 'Market') tracker.wmTitle = 'Movers'
+  const wmId = Math.max(0, ...widgets.map(w => w.wmId)) + 1
+  widgets.push({
+    wmId,
+    wmType: MARKET_BROWSER_TYPE,
+    wmTitle: 'Market',
+    wmWants: 'hide',
+    wmZorder: null,
+    wmFlags: ['invisible-on-blur'],
+    anchor: anchor(),
+    category: 'Currency',
+    sort: 'value',
+    desc: true,
+    unit: tracker.unit === 'div' ? 'div' : 'chaos',
+    hideThin: false,
+    corrupted: 'any'
+  })
+  const menu = widgets.find(w => w.wmType === 'menu') as { pinned?: number[] } | undefined
+  const at = menu?.pinned?.indexOf(tracker.wmId) ?? -1
+  if (menu?.pinned && at !== -1) menu.pinned.splice(at, 0, wmId)
+}

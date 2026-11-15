@@ -2,7 +2,7 @@
   <div :class="[$style.row, $style.head]"><span>Uniques on this base</span><span class="text-right">Price</span></div>
   <button v-for="u in priced" :key="u.id" v-item-tip="groupTip(u.group)" tabindex="-1" :class="[$style.row, $style.btn]" @click="emit('pick', u)">
     <span :class="$style.name"><WIcon :src="ninjaIcon(u.group.type, u.group.name) ?? undefined" size="sm" /><span class="w-trunc w-rarity-unique">{{ u.name }}</span></span>
-    <span :class="$style.range"><template v-if="u.group.low !== u.group.high"><WPrice :chaos="u.group.low" :divine="divine" /> to </template><WPrice :chaos="u.group.high" :divine="divine" /></span>
+    <span :class="$style.range"><template v-if="u.group.low !== u.group.high"><WPrice :bulk="u.group.high < 1" :chaos="u.group.low" :divine="divine" /> to </template><WPrice :bulk="u.group.high < 1" :chaos="u.group.high" :divine="divine" /></span>
   </button>
   <div v-for="u in unpriced" :key="u.refName" v-item-tip="{ name: u.refName }" :class="$style.row">
     <span :class="$style.name"><WIcon :src="u.icon" size="sm" /><span class="w-trunc w-rarity-unique">{{ u.name }}</span></span>

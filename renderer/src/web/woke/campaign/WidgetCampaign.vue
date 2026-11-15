@@ -31,6 +31,8 @@
           </div>
           <div v-else class="w-dim">Route finished.</div>
           <div v-if="note" :class="$style.callout" class="whitespace-pre-wrap">{{ note }}</div>
+          <!-- 3.30 Wickerman module: the Viscera this zone's boss drops (remove with the league). -->
+          <CampaignViscera v-if="wickermanOn" :zone="s.zone" :act="areaAct" />
           <div v-if="timer" class="flex gap-2 w-num" :class="$style.build">
             <span class="w-dim">Run</span> {{ formatClock(timer.total) }}
             <span v-if="timer.delta != null" :class="timer.delta <= 0 ? 'w-up' : 'w-down'">{{ formatDelta(timer.delta) }}</span>
@@ -62,7 +64,7 @@ export default { widget: widgetCampaignSpec }
 </script>
 
 <script setup lang="ts">
-import { inject, computed, reactive, shallowRef, watch, onUnmounted } from 'vue'
+import { inject, computed, defineAsyncComponent, reactive, shallowRef, watch, onUnmounted } from 'vue'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -79,6 +81,7 @@ import { pinnedReadouts, pinsTick } from './pins'
 import { actFromAreaId, actLabel, isTown, isTrialFinished } from './log-parse'
 import { bossKilled } from './boss-lines'
 import CampaignBuild from './CampaignBuild.vue'
+import { isModuleOn } from '../modules'
 import type { LogEvent } from './log-parse'
 import { emitStepChange } from './step-bus'
 import type { StepChange } from './step-bus'
@@ -234,6 +237,8 @@ function actShort (act: number) {
 // The zone you stand in and the step you're on can be in different acts (the
 // route goes back to towns), so everything about progress reads the step.
 const areaAct = computed(() => actFromAreaId(s.value.areaId))
+const CampaignViscera = defineAsyncComponent(() => import('../wickerman/CampaignViscera.vue'))
+const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 const dockBadge = computed(() => {
   const act = current.value?.act ?? (areaAct.value === 11 ? 11 : null)
   return act != null ? actShort(act) : null
