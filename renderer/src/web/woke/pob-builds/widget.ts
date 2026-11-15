@@ -158,6 +158,7 @@ export interface PobItem {
   ward?: number
   itemLevel?: number
   levelReq?: number
+  catalystQuality?: number
   corrupted?: boolean
   mirrored?: boolean
   influences?: string[]

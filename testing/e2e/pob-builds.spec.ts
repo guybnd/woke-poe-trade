@@ -119,7 +119,9 @@ test('gem colours, item art and tooltips', async ({ overlay }) => {
     await expect(tip).toContainText('Vaal Regalia')
     await expect(tip).toContainText('Energy Shield: 412')
     await expect(tip).toContainText('Requires Level 68')
-    await expect(tip).toContainText('+62 to maximum Life')
+    // With its tier and the tier's range (mod-tiers.ts): "P9 +62(55-69) to maximum Life".
+    await expect(tip).toContainText(/\+62\(\d+-\d+\) to maximum Life/)
+    await expect(tip).toContainText('P9')
     await expect(tip).toContainText('Corrupted')
   }
   await page.waitForTimeout(600)

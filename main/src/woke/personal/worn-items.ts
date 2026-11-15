@@ -84,6 +84,15 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[0]) : undefined
 }
 
+// "Quality (Resistance Modifiers)": a catalyst's quality, not the item's own.
+function catalystQuality (item: Raw): number | undefined {
+  const props = Array.isArray(item.properties) ? item.properties as Raw[] : []
+  const p = props.find(x => x && typeof x.name === 'string' && /^Quality \(.+\)$/.test(x.name))
+  const first = p && Array.isArray(p.values) ? (p.values as unknown[][])[0]?.[0] : undefined
+  const m = typeof first === 'string' ? /\d+/.exec(first) : null
+  return m ? Number(m[0]) : undefined
+}
+
 // R, G, B, W or A (abyss). Older replies name the colour (sColour); newer
 // ones may only give the attribute (attr: S, D, I, G for white, A, DV).
 const ATTR_COLOUR: Record<string, string> = { S: 'R', D: 'G', I: 'B', G: 'W', A: 'A', DV: 'A' }
@@ -147,6 +156,7 @@ export function wornItem (raw: Raw): PobItem {
     modKinds,
     itemLevel: typeof raw.ilvl === 'number' ? raw.ilvl : undefined,
     quality: property(raw, 'Quality'),
+    catalystQuality: catalystQuality(raw),
     armour: property(raw, 'Armour'),
     evasion: property(raw, 'Evasion Rating'),
     energyShield: property(raw, 'Energy Shield'),
