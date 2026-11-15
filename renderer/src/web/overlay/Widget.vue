@@ -194,7 +194,17 @@ export default defineComponent({
     function hideWithUndo () {
       const wmId = props.config.wmId
       hide()
-      toast('Window hidden. Open it again from its icon or the launcher.', { ms: 10000, undo: () => { wm.show(wmId) } })
+      toast('Window hidden. Open it again from its icon or the launcher.', {
+        ms: 10000,
+        undo: () => {
+          const all = wm.widgets.value
+          // Gone (tab removed) or already back: nothing to undo. Showing it
+          // would also close an exclusive window opened since (settings).
+          if (all.find(w => w.wmId === wmId)?.wmWants !== 'hide') return
+          if (all.some(w => w.wmId !== wmId && w.wmZorder === 'exclusive' && w.wmWants === 'show')) return
+          wm.show(wmId)
+        }
+      })
     }
     function toggleEdit () {
       isMoving.value = false
