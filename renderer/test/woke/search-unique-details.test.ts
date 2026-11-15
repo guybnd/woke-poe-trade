@@ -47,6 +47,18 @@ describe('uniqueDetails', () => {
     expect(uniqueDetails("Utula's Hunger", null, null)).toBeNull()
   })
 
+  it('review cases: same-named variant, a same-shaped implicit, the vendor note, accented names', () => {
+    const mb = uniqueDetails('Mageblood', uniques, vestigial)!
+    const three = mb.foulborn.find(f => f.name === '3 Flasks')!
+    expect(three.replaces.join()).toContain('Leftmost 3 Magic Utility Flasks')
+    expect(mb.foulborn.flatMap(f => f.replaces)).not.toContain('Item sells for much more to vendors')
+    const gifts = uniqueDetails('Gifts from Above', uniques, vestigial)!.foulborn.find(f => f.name === 'Consecrated')!
+    expect(gifts.replaces).toEqual(['(30-42)% increased Global Critical Strike Chance'])
+    const lion = uniqueDetails("Lioneye's Remorse", uniques, vestigial)!.foulborn.find(f => f.name === 'Life as Armour')!
+    expect(lion.replaces).toEqual(['+(160-180) to maximum Life'])
+    expect(uniqueDetails('Doppelgänger Guise', uniques, vestigial)!.vestigial.length).toBe(1)
+  })
+
   it('modShape ignores numbers and wiki links', () => {
     expect(modShape('(25-33)% increased Cold Damage')).toBe(modShape('(25-36)% increased [Cold] Damage'))
     expect(modShape('+250 to maximum Life')).toBe(modShape('+(704-1000) to maximum Life'))

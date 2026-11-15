@@ -41,6 +41,35 @@ export function plainLine (line: string): string {
 }
 
 type Row = TipUnique['v'][number]
+// Plain uniques' vendor note, which Foulborn copies don't list: not a mod they lose.
+const NOT_A_MOD = new Set(['Item sells for much more to vendors'])
+// Path of Building writes "Doppelganger Guise" for the game's "Doppelgänger Guise".
+const foldAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+function shapeCounts (lines: string[]): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const l of lines) out.set(modShape(l), (out.get(modShape(l)) ?? 0) + 1)
+  return out
+}
+// Lines with no counterpart left in `counts`, each counterpart used once.
+function unmatched (lines: string[], counts: Map<string, number>): string[] {
+  const left = new Map(counts)
+  return lines.filter(l => {
+    const n = left.get(modShape(l)) ?? 0
+    if (n > 0) { left.set(modShape(l), n - 1); return false }
+    return true
+  })
+}
+const matched = (lines: string[], counts: Map<string, number>) => lines.length - unmatched(lines, counts).length
+function maxBy<T> (list: T[], score: (t: T) => number): T | undefined {
+  let best: T | undefined
+  let top = -1
+  for (const t of list) {
+    const n = score(t)
+    if (n > top) { top = n; best = t }
+  }
+  return best
+}
 const linesOf = (r: Row) => [...(r.i ?? []), ...(r.e ?? [])]
 
 export function uniqueDetails (
@@ -62,19 +91,16 @@ export function uniqueDetails (
   const foulborn: FoulbornKind[] = []
   for (const r of foul?.v ?? []) {
     if (!r.m?.length) continue
-    const kept = new Set(linesOf(r).map(modShape))
-    // The plain variant this copy came from: the one sharing most of its lines.
-    let from: Row | undefined
-    let best = -1
-    for (const p of tip?.v ?? []) {
-      const n = linesOf(p).filter(l => kept.has(modShape(l))).length
-      if (n > best) { best = n; from = p }
-    }
-    const replaces = from ? linesOf(from).filter(l => !kept.has(modShape(l))) : []
+    const kept = shapeCounts(linesOf(r))
+    // The plain variant this copy came from: the same name, or else the one
+    // sharing most of its lines.
+    const from = tip?.v.find(p => p.n != null && p.n === r.n) ??
+      maxBy(tip?.v ?? [], p => matched(linesOf(p), kept))
+    const replaces = from ? unmatched(linesOf(from), kept).filter(l => !NOT_A_MOD.has(l)) : []
     foulborn.push({ name: r.n, adds: r.m, replaces })
   }
 
-  const vest = vestigial?.[name] ?? []
+  const vest = vestigial?.[name] ?? vestigial?.[foldAccents(name)] ?? []
   if (!variants.length && !foulborn.length && !vest.length) return null
   return { variants, foulborn, vestigial: vest }
 }

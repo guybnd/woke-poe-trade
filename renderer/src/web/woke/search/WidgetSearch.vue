@@ -616,7 +616,8 @@ function loadDetailPack () {
   const mine = detailGen
   Promise.all([orNull(loadTipUniques()), orNull(loadTipVestigial()), orNull(loadTipBases()), orNull(loadTipDrops())])
     .then(([uniques, vestigial, bases, drops]) => {
-      if (mine !== detailGen) return
+      // Without the unique file there's nothing to show: the next pick tries again.
+      if (mine !== detailGen || !uniques) return
       detailPack.value = { uniques: uniques ?? undefined, vestigial: vestigial ?? undefined, bases: bases ?? undefined, drops: drops ?? undefined }
     })
     .finally(() => { if (mine === detailGen) detailLoading = false })
@@ -633,35 +634,39 @@ watch(detailName, (name) => {
   pickedFoul.value = null
   if (name) loadDetailPack()
 })
+const found = computed(() => {
+  const name = detailName.value
+  const pack = detailPack.value
+  return name && pack ? uniqueDetails(name, pack.uniques, pack.vestigial) : null
+})
+// The variant the details show, when the unique has several: its price row lights up.
+const shownVariant = computed(() => {
+  const list = found.value?.variants ?? []
+  if (list.length < 2) return null
+  return list.find(v => v.name === pickedVariant.value)?.name ?? list[0].name ?? null
+})
 const details = computed(() => {
   const name = detailName.value
   const pack = detailPack.value
-  if (!name || !pack) return null
-  const found = uniqueDetails(name, pack.uniques, pack.vestigial)
-  if (!found) return null
+  const d = found.value
+  if (!name || !pack || !d) return null
   const tip = pack.uniques?.[name]
-  const row = tip?.v.find(r => r.n === pickedVariant.value) ?? tip?.v[0]
+  const row = tip?.v.find(r => r.n === shownVariant.value) ?? tip?.v[0]
   const base = tip?.b ?? ITEM_BY_REF('UNIQUE', name)?.[0]?.unique?.base
-  const foulGroup = found.foulborn.length
+  const foulGroup = d.foulborn.length
     ? uniquePrices(snapshot.value?.items ?? [], new Set([name]), { limit: 10, corrupted: corrupted.value }).find(g => g.name === `Foulborn ${name}`) ?? null
     : null
+  const sel = selected.value
   return {
-    details: found,
+    details: d,
     foulGroup,
     facts: base ? uniqueFacts(base, pack.bases?.[base], row?.l, ITEM_BY_REF('UNIQUE', name)?.[0]?.unique?.disenchantValue) : [],
     drop: dropOf(pack.drops, name),
     // Only a unique poe.ninja prices by variant can be missing the shown one.
-    priced: shownVariant.value == null || selected.value?.kind !== 'price' ||
-      !selected.value.group.variants.some(v => v.variant) ||
-      selected.value.group.variants.some(v => v.variant === shownVariant.value)
+    priced: shownVariant.value == null || sel?.kind !== 'price' ||
+      !sel.group.variants.some(v => v.variant) ||
+      sel.group.variants.some(v => v.variant === shownVariant.value)
   }
-})
-// The variant the details show, when the unique has several: its price row lights up.
-const shownVariant = computed(() => {
-  const name = detailName.value
-  const tip = name ? detailPack.value?.uniques?.[name] : undefined
-  if (!tip || tip.v.length < 2) return null
-  return pickedVariant.value ?? tip.v[0].n ?? null
 })
 const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
 // The same result stays selected as you keep typing, while it still matches.
