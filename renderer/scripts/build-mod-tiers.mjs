@@ -40,9 +40,7 @@ const PAGES = {
   Two_Hand_Maces: 'Two_Hand_Maces',
   Staves: 'Staves',
   Warstaves: 'Warstaves',
-  Bows: 'Bows',
-  Jewels: 'Jewels',
-  Abyss_Jewels: 'Abyss_Jewels'
+  Bows: 'Bows'
 }
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))

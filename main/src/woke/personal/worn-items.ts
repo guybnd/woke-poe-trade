@@ -84,6 +84,15 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[0]) : undefined
 }
 
+// "Quality (Resistance Modifiers)": a catalyst's quality, not the item's own.
+function catalystQuality (item: Raw): number | undefined {
+  const props = Array.isArray(item.properties) ? item.properties as Raw[] : []
+  const p = props.find(x => x && typeof x.name === 'string' && /^Quality \(.+\)$/.test(x.name))
+  const first = p && Array.isArray(p.values) ? (p.values as unknown[][])[0]?.[0] : undefined
+  const m = typeof first === 'string' ? /\d+/.exec(first) : null
+  return m ? Number(m[0]) : undefined
+}
+
 // "R-G-B G": sockets in one group are linked.
 function socketText (item: Raw): string {
   const sockets = Array.isArray(item.sockets) ? item.sockets as Raw[] : []
@@ -139,6 +148,7 @@ export function wornItem (raw: Raw): PobItem {
     modKinds,
     itemLevel: typeof raw.ilvl === 'number' ? raw.ilvl : undefined,
     quality: property(raw, 'Quality'),
+    catalystQuality: catalystQuality(raw),
     armour: property(raw, 'Armour'),
     evasion: property(raw, 'Evasion Rating'),
     energyShield: property(raw, 'Energy Shield'),

@@ -180,7 +180,8 @@ import { hideTip, tip } from './tooltip'
 import { loadTipBases } from './item-tip'
 import type { TipPack } from './tip-content'
 import { weaponBaseIn, weaponStats } from './weapon-stats'
-import { loadModTiers, tierClassKey, tierOfLine } from './mod-tiers'
+import { loadModTiers, tierClassKey, tiersOfMods } from './mod-tiers'
+import { onSharedDataChange } from '../../app/live-data'
 import type { TierData } from './mod-tiers'
 import type { ModLine } from '../../price-insight/listing-tip-detail'
 import { ITEM_BY_REF } from '@/assets/data'
@@ -213,6 +214,7 @@ const hit = (h: [number, number]) => `${h[0]}-${h[1]}`
 // A rare or magic item's mods with their tier and roll, as a listing shows
 // them (mod-tiers.ts). Uniques' mods have no tiers.
 const tierData = shallowRef<TierData | null>(null)
+onSharedDataChange(() => { tierData.value = null })
 watch(item, (i) => { if (i && !tierData.value && i.rarity !== 'UNIQUE' && i.rarity !== 'RELIC') loadModTiers().then((d) => { tierData.value = d }, () => {}) })
 const tierKey = computed(() => {
   const i = item.value
@@ -234,9 +236,12 @@ const tieredMods = computed<ModLine[] | null>(() => {
   const data = tierData.value
   const key = tierKey.value
   if (!i || !data || !key) return null
+  // Catalyst quality raises jewellery's rolls past their tiers: none then.
+  if (i.catalystQuality) return null
+  const found = tiersOfMods(data, key, i.mods)
   const lines = i.mods.map((text, n): ModLine => {
     const kind = (i.modKinds?.[n] ?? '') as ModLine['kind']
-    const t = kind === 'crafted' ? null : tierOfLine(data, key, text)
+    const t = kind === 'crafted' ? null : found[n]
     const parts: ModLine['parts'] = []
     let last = 0
     let r = 0

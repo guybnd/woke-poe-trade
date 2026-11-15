@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import fs from 'fs'
 import path from 'path'
-import { tierClassKey, tierOfLine } from '@/web/woke/ui/tooltip/mod-tiers'
+import { tierClassKey, tierOfLine, tiersOfMods } from '@/web/woke/ui/tooltip/mod-tiers'
 import type { TierData } from '@/web/woke/ui/tooltip/mod-tiers'
 
 const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../public/data/mod-tiers.json'), 'utf8')) as TierData
@@ -28,5 +28,15 @@ describe('mod tiers', () => {
   it('gives no tier to a line no mod rolls', () => {
     expect(tierOfLine(data, 'Belts', 'Has 1 Abyssal Socket')).toBeNull()
     expect(tierOfLine(data, 'Belts', '+500 to maximum Life')).toBeNull()
+  })
+})
+
+describe('tiersOfMods', () => {
+  it('gives a hybrid\'s two lines on the item to the hybrid, not to two mods', () => {
+    const t = tiersOfMods(data, 'Boots_str_dex', ['+40 to Evasion Rating', '+24 to maximum Life', '+30% to Fire Resistance'])
+    expect(t[0]?.gen).toBe('prefix')
+    expect(t[1]?.gen).toBe('prefix')
+    expect(t[0]?.tier).toBe(t[1]?.tier)
+    expect(t[2]?.gen).toBe('suffix')
   })
 })
