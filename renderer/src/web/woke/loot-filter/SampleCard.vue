@@ -50,6 +50,15 @@
       <template v-if="match.final">
         <div v-if="ladderRows.length" :class="$style.section">
           <div class="w-group-label" :class="$style.label">{{ hasPriceLadder ? 'Value tier' : 'Tier' }}</div>
+          <template v-if="split.outside">
+            <div :class="[$style.tierRow, $style.current]">
+              <span :class="$style.tierName">{{ split.outside.label }}<small>{{ split.outside.needs || (hasPriceLadder ? 'not a value tier' : '') }}</small></span>
+              <LabelPreview :text="facts.baseType ?? ''" :actions="split.outside.actions" :visibility="split.outside.visibility" :extras="false" />
+              <span class="grow" />
+              <span class="text-xs w-accent">Now</span>
+            </div>
+            <div class="text-xs w-faint">Pick a tier below to move it there.</div>
+          </template>
           <button v-for="t in ladderRows" :key="t.tier" type="button" :class="[$style.tierRow, { [$style.current]: t.current }]"
             :title="t.current ? 'Where it is now' : `Move it here (${tierLabel(t.tier)})`" @click="moveTo(t.tier)">
             <span :class="$style.tierName">{{ t.label }}<small v-if="t.note">{{ t.note }}</small></span>
@@ -104,7 +113,7 @@
 
         <div :class="$style.fold">
           <button type="button" :class="$style.foldHead" @click="open.rule = !open.rule">
-            <span>Rule: {{ placeOf(final) }}</span><span class="w-faint">{{ final.added ? 'added' : `line ${final.line}` }} {{ open.rule ? '▾' : '›' }}</span>
+            <span>Rule: {{ final.type?.startsWith('woke->') || isOwn ? placeOf(final) : `${groupName(final.type)} › ${currentLabel}` }}</span><span class="w-faint">{{ final.added ? 'added' : `line ${final.line}` }} {{ open.rule ? '▾' : '›' }}</span>
           </button>
           <template v-if="open.rule">
             <div :class="$style.conds">
@@ -291,14 +300,17 @@ function row (t: ReturnType<typeof tierInfo>, label: string): Row {
 
 const split = computed(() => {
   const doc = props.store.doc.value
-  if (!doc) return { ladder: [] as Row[], special: [] as Row[], priced: false }
+  if (!doc) return { ladder: [] as Row[], special: [] as Row[], outside: null as Row | null, priced: false }
   const plain = moveTiers.value.filter(t => isPlainTier(doc, origin.value.type, t.tier))
   const ranked = priceLadder(origin.value.type, plain.map(t => t.tier))
   const ladderTiers = ranked ?? plain.map(t => t.tier)
   const ladder = ladderTiers.map((tier, i) => row(moveTiers.value.find(t => t.tier === tier)!, ranked ? ladderLabel(i, ladderTiers.length) : tierLabel(tier)))
   // Rules off at this strictness only add noise here.
-  const special = moveTiers.value.filter(t => !ladderTiers.includes(t.tier) && (!t.off || t.tier === final.value.tier)).map(t => row(t, specialLabel(t.tier)))
-  return { ladder, special, priced: ranked != null }
+  const others = moveTiers.value.filter(t => !ladderTiers.includes(t.tier) && (!t.off || t.tier === final.value.tier)).map(t => row(t, specialLabel(t.tier)))
+  // The item sits in a tier off the ladder (early league, boss drops...):
+  // it leads the list, so where it is now is never folded away.
+  const outside = others.find(r => r.current) ?? null
+  return { ladder, special: others.filter(r => r !== outside), outside, priced: ranked != null }
 })
 const ladderRows = computed(() => split.value.ladder)
 const specialRows = computed(() => split.value.special)
@@ -314,8 +326,7 @@ const gridRows = computed(() => {
   const doc = props.store.doc.value
   if (!doc) return []
   const rows = [...ladderRows.value]
-  const cur = specialRows.value.find(r => r.current)
-  if (cur) rows.push(cur)
+  if (split.value.outside) rows.unshift(split.value.outside)
   return rows.map(r => {
     const all = blocksOf(doc, origin.value.type, r.tier)
     const first = all.find(b => !b.disabled) ?? all[0]
@@ -330,13 +341,11 @@ const whyLine = computed(() => {
     const net = `Your price safety net shows it: worth ${props.config.safetyNet.minChaos}c or more.`
     const b = behind.value?.final?.block
     if (!b || b.type === SAFETY_RULE_TYPE) return net
-    const here = [...ladderRows.value, ...specialRows.value].find(r => r.current)
-    return `${net} Without it: ${b.type?.startsWith('woke->') ? placeOf(b) : `NeverSink ${groupName(b.type)} › ${here?.label ?? tierName(b)}`}, ${behind.value!.visibility === 'Hide' ? 'hidden' : 'shown'}.`
+    return `${net} Without it: ${b.type?.startsWith('woke->') ? placeOf(b) : `NeverSink ${groupName(b.type)} › ${currentLabel.value}`}, ${behind.value!.visibility === 'Hide' ? 'hidden' : 'shown'}.`
   }
   if (v.source === 'own') return v.shown ? 'Your own rule for this item.' : 'Your own rule hides it.'
   if (v.source === 'woke') return `Woke rule: ${placeOf(final.value)}.`
-  const here = [...ladderRows.value, ...specialRows.value].find(r => r.current)
-  const tier = here?.label ?? tierName(final.value)
+  const tier = currentLabel.value
   return `NeverSink: ${groupName(final.value.type)} › ${tier}${v.hideFrom ? `, hidden from ${v.hideFrom} up` : ''}.`
 })
 
@@ -391,8 +400,12 @@ function afterFix (text: string, undo: () => void) {
 // The keys walk the Value tier rows as shown when the item is on them.
 const ladder = computed(() => {
   const rows = split.value.ladder
-  return rows.some(t => t.current) ? rows : moveTiers.value
+  if (rows.some(t => t.current)) return rows
+  // Off the value ladder: up and down mean nothing, pick a row instead.
+  return split.value.priced ? [] : moveTiers.value
 })
+const labelOf = (t: { tier: string, label?: string }) => t.label ?? tierLabel(t.tier)
+const currentLabel = computed(() => [...ladderRows.value, ...specialRows.value, ...(split.value.outside ? [split.value.outside] : [])].find(r => r.current)?.label ?? tierName(final.value))
 const tierIndex = computed(() => ladder.value.findIndex(t => t.tier === final.value.tier))
 const shownNow = computed(() => props.match.visibility !== 'Hide')
 const name = computed(() => base.value || props.facts.name)
@@ -413,16 +426,16 @@ const quick = computed(() => {
     {
       key: '2',
       label: 'Lower',
-      title: lower ? `Move to ${tierLabel(lower.tier)}${lower.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : 'Already in the lowest tier, or this rule doesn\'t list items by name',
+      title: lower ? `Move to ${labelOf(lower)}${lower.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : (split.value.outside ? 'Not on a value tier: pick one in the list' : 'Already in the lowest tier, or this rule doesn\'t list items by name'),
       disabled: !lower,
-      run: () => lower && afterFix(`${name.value}: ${tierName(final.value)} → ${tierLabel(lower.tier)}${lower.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: lower.tier }))
+      run: () => lower && afterFix(`${name.value}: ${currentLabel.value} → ${labelOf(lower)}${lower.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: lower.tier }))
     },
     {
       key: '3',
       label: 'Raise',
-      title: higher ? `Move to ${tierLabel(higher.tier)}${higher.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : 'Already in the top tier, or this rule doesn\'t list items by name',
+      title: higher ? `Move to ${labelOf(higher)}${higher.off ? ' (off at this strictness, so it goes where that tier\'s items go, usually hidden)' : ''}` : (split.value.outside ? 'Not on a value tier: pick one in the list' : 'Already in the top tier, or this rule doesn\'t list items by name'),
       disabled: !higher,
-      run: () => higher && afterFix(`${name.value}: ${tierName(final.value)} → ${tierLabel(higher.tier)}${higher.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: higher.tier }))
+      run: () => higher && afterFix(`${name.value}: ${currentLabel.value} → ${labelOf(higher)}${higher.off ? ' (off at this strictness)' : ''}`, props.store.editWithUndo({ kind: 'move', type: origin.value.type, base: base.value, from: final.value.tier ?? '', to: higher.tier }))
     },
     {
       key: '4',

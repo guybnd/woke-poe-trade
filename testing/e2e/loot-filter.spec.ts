@@ -464,6 +464,22 @@ test('Alt + F on a unique: a verdict line, plain value tiers, special rules fold
   await overlay.snap('alt f unique card')
 })
 
+test('Alt + F on a unique off the value ladder: its own tier leads, keys 2 and 3 step aside', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), safetyNet: { on: false, minChaos: 20 } }] })
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/unique-prismweave.txt', 'Alt + F')
+  const page = overlay.page
+  await expect(page.getByText('NeverSink: All uniques › Early league, hidden from Uber plus up.')).toBeVisible()
+  await expect(page.getByText('Early leaguenot a value tier')).toBeVisible()
+  await expect(page.getByText('Pick a tier below to move it there.')).toBeVisible()
+  const keys = page.getByRole('toolbar', { name: 'Quick fixes' })
+  await expect(keys.getByRole('button', { name: /Lower/ })).toBeDisabled()
+  await expect(keys.getByRole('button', { name: /Raise/ })).toBeDisabled()
+  await overlay.snap('alt f off-ladder card')
+})
+
 test('prices: a hidden valuable unique lists what else would show, and Show it does what it says', async ({ overlay, fakeApp }) => {
   // A long walk through the editor: under full-suite load it can outlast the default.
   test.slow()
