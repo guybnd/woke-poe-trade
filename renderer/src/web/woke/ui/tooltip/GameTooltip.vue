@@ -84,7 +84,10 @@
         <section v-if="item.implicits.length" :class="$style.block">
           <div v-for="(m, i) in item.implicits" :key="i" :class="$style.mod">{{ m }}</div>
         </section>
-        <section v-if="item.mods.length" :class="$style.block">
+        <section v-if="tieredMods" :class="$style.block">
+          <ListingModGroup :group="{ heading: '', lines: tieredMods }" />
+        </section>
+        <section v-else-if="item.mods.length" :class="$style.block">
           <div v-for="(m, i) in item.mods" :key="i" :class="[$style.mod, kindClass(i)]">{{ m }}</div>
         </section>
         <section v-if="item.corrupted || item.mirrored" :class="$style.block">
@@ -177,6 +180,10 @@ import { hideTip, tip } from './tooltip'
 import { loadTipBases } from './item-tip'
 import type { TipPack } from './tip-content'
 import { weaponBaseIn, weaponStats } from './weapon-stats'
+import { loadModTiers, tierClassKey, tierOfLine } from './mod-tiers'
+import type { TierData } from './mod-tiers'
+import type { ModLine } from '../../price-insight/listing-tip-detail'
+import { ITEM_BY_REF } from '@/assets/data'
 import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
 
 const $style = useCssModule()
@@ -202,6 +209,49 @@ const weapon = computed(() => {
 const elemental = computed(() => (['fire', 'cold', 'lightning'] as const)
   .filter(t => weapon.value?.damage[t]).map(t => ({ type: t, hit: weapon.value!.damage[t]! })))
 const hit = (h: [number, number]) => `${h[0]}-${h[1]}`
+
+// A rare or magic item's mods with their tier and roll, as a listing shows
+// them (mod-tiers.ts). Uniques' mods have no tiers.
+const tierData = shallowRef<TierData | null>(null)
+watch(item, (i) => { if (i && !tierData.value && i.rarity !== 'UNIQUE' && i.rarity !== 'RELIC') loadModTiers().then((d) => { tierData.value = d }, () => {}) })
+const tierKey = computed(() => {
+  const i = item.value
+  if (!i || listing.value || i.rarity === 'UNIQUE' || i.rarity === 'RELIC' || !i.mods.length) return null
+  const bases = tipBases.value
+  let base = (i.base || '').replace(/\s+\([^()]*\)\s*$/, '')
+  if (!base || !bases?.[base]) {
+    // A magic item keeps its base inside its name.
+    let best = ''
+    for (const key of Object.keys(bases ?? {})) if (i.name.includes(key) && key.length > best.length) best = key
+    base = best || base
+  }
+  const category = ITEM_BY_REF('ITEM', base)?.[0]?.craftable?.category
+  return tierClassKey(category, bases?.[base])
+})
+const NUMBER_RE = /\d+(?:\.\d+)?/g
+const tieredMods = computed<ModLine[] | null>(() => {
+  const i = item.value
+  const data = tierData.value
+  const key = tierKey.value
+  if (!i || !data || !key) return null
+  const lines = i.mods.map((text, n): ModLine => {
+    const kind = (i.modKinds?.[n] ?? '') as ModLine['kind']
+    const t = kind === 'crafted' ? null : tierOfLine(data, key, text)
+    const parts: ModLine['parts'] = []
+    let last = 0
+    let r = 0
+    for (const m of text.matchAll(NUMBER_RE)) {
+      parts.push({ text: text.slice(last, m.index) }, { text: m[0], number: true })
+      const range = t?.ranges[r++]
+      if (range && range[0] !== range[1]) parts.push({ text: `(${range[0]}-${range[1]})`, range: true })
+      last = (m.index ?? 0) + m[0].length
+    }
+    parts.push({ text: text.slice(last) })
+    return { parts: parts.filter(p => p.text), tags: t ? [`${t.gen === 'prefix' ? 'P' : 'S'}${t.tier}`] : [], kind, quality: t?.roll ?? null }
+  })
+  // Nothing matched: the plain lines say as much.
+  return lines.some(l => l.tags.length) ? lines : null
+})
 const enchantLines = computed(() => listing.value?.implicits.filter(l => l.kind === 'enchant') ?? [])
 const implicitLines = computed(() => listing.value?.implicits.filter(l => l.kind !== 'enchant') ?? [])
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
