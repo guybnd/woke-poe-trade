@@ -175,7 +175,7 @@
       <BuildTrades v-else-if="details && tab === 'trades'" :config="config" :entry="entry" />
 
       <!-- Your character against this build -->
-      <CharacterTab v-else-if="details && tab === 'character'" :details="details" :pick="pick" @tree="emit('tree-character', $event)" />
+      <CharacterTab v-else-if="details && tab === 'character'" :config="config" :details="details" :pick="pick" @tree="emit('tree-character', $event)" />
 
       <!-- Notes -->
       <template v-else-if="details">

@@ -8,8 +8,10 @@
       <span v-else-if="status.pending" class="w-dim">Reading your character…</span>
       <span v-else class="w-dim">Your character hasn't been read yet.</span>
       <WButton size="sm" class="ml-auto" icon="fas fa-sync-alt" :disabled="status.pending" title="Read your character from pathofexile.com" @click="readNow">Read now</WButton>
+      <WButton v-if="snapshot && config.characterLiveBuild !== false" size="sm" icon="fas fa-external-link-alt" :title="`Open ${snapshot.character.name} in Path of Building (${liveBuildPath(snapshot.character.name)})`" @click="openLive">Open in PoB</WButton>
     </div>
     <div v-if="status.error" class="w-down text-xs pt-1">{{ status.error }}</div>
+    <div v-if="openError" class="w-down text-xs pt-1">{{ openError }}</div>
     <div class="w-faint text-xs pt-1">Kept apart from the build: reading your character never changes it.</div>
 
     <template v-if="diff">
@@ -119,6 +121,8 @@
 // The Character tab: this build against your character, slot by slot.
 import { computed, onBeforeUnmount, onMounted, shallowRef, toRef } from 'vue'
 import { WButton, WPrice } from '../ui'
+import { liveBuildPath } from './live-pob'
+import { pobApi } from './widget'
 import { openPriceCheck } from './open-price-check'
 import { wornCompare } from './worn-compare'
 import { useUniquePrice } from './unique-price'
@@ -131,9 +135,9 @@ import { slotLabel } from './build-model'
 import { characterStatus, readAgo, readCharacterNow, upgradeList, useCharacterDiff } from './character'
 import type { GearState } from './character'
 import type { TreeNode } from './passive-tree'
-import type { LoadoutPick, PobDetails, PobItem } from './widget'
+import type { LoadoutPick, PobBuildsWidget, PobDetails, PobItem } from './widget'
 
-const props = defineProps<{ details: PobDetails | null, pick: LoadoutPick | undefined }>()
+const props = defineProps<{ config: PobBuildsWidget, details: PobDetails | null, pick: LoadoutPick | undefined }>()
 const emit = defineEmits<{ (e: 'tree', title: string): void }>()
 
 const build = useActiveBuild()
@@ -190,6 +194,17 @@ function names (nodes: TreeNode[]) {
   const shown = nodes.slice(0, 8).map(n => n.name)
   return shown.join(', ') + (nodes.length > shown.length ? ` and ${nodes.length - shown.length} more` : '')
 }
+// Your character's own build (Live/<name>.xml, saved on each read), not the one picked.
+const openError = shallowRef('')
+function openLive () {
+  const s = snapshot.value
+  if (!s) return
+  openError.value = ''
+  pobApi.open(props.config, liveBuildPath(s.character.name)).catch((e: Error) => {
+    openError.value = /ENOENT|no such file/i.test(e.message) ? 'Not saved yet: press Read now first.' : e.message
+  })
+}
+
 function readNow () {
   readCharacterNow(build.charName.value)
 }

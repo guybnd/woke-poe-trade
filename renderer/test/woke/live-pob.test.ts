@@ -32,3 +32,11 @@ describe('live PoB build', () => {
     expect(d.skills[0].gems.map(g => [g.name, g.level, g.quality])).toEqual([['Elemental Hit', 19, 5], ['Fortify', 19, 0]])
   })
 })
+
+describe('liveBuildPath', () => {
+  it('names the file as main saves it', async () => {
+    const { liveBuildPath } = await import('@/web/woke/pob-builds/live-pob')
+    expect(liveBuildPath('whekq')).toBe('Live/whekq.xml')
+    expect(liveBuildPath('a.b/c')).toBe('Live/a_b_c.xml')
+  })
+})

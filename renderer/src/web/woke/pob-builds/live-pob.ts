@@ -8,6 +8,11 @@ import type { PobItem } from './widget'
 
 const RARITY: Record<string, string> = { 'NORMAL': 'NORMAL', 'MAGIC': 'MAGIC', 'RARE': 'RARE', 'UNIQUE': 'UNIQUE', 'RELIC': 'RELIC', '': 'NORMAL' }
 
+// The live file's path in the builds folder, as main names it (saveLiveBuild).
+export function liveBuildPath (name: string): string {
+  return `Live/${name.replace(/[^\w -]/g, '_').trim().slice(0, 60) || 'character'}.xml`
+}
+
 // PoB's class numbers, the same as the game's; the read normally has them.
 const CLASS_ID: Record<string, number> = { Scion: 0, Marauder: 1, Ranger: 2, Witch: 3, Duelist: 4, Templar: 5, Shadow: 6 }
 
