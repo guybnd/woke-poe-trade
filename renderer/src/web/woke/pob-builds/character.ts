@@ -9,7 +9,7 @@ import { personalOn } from '../personal'
 import { hostRequest } from '../shared/host'
 import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems } from './build-model'
 import type { LivePoints } from './build-model'
-import { loadPassiveTree, treeDiff } from './passive-tree'
+import { loadPassiveTree, passiveTreeJewelSlots, treeDiff } from './passive-tree'
 import type { TreeDiff, TreeNode } from './passive-tree'
 import type { LoadoutPick, PobDetails, PobItem, PobSkillGroup, PobTreeSpec } from './widget'
 
@@ -223,6 +223,40 @@ export interface CharacterDiff {
   // from: the character, to: the build. added = to take, removed = to refund.
   tree: TreeDiff | null
   treeTitle: string | null
+  jewels: JewelRowDiff[]
+}
+
+export interface JewelRowDiff {
+  node: number
+  // The socket's name from the tree data; '' for a socket on a cluster jewel.
+  socket: string
+  build: PobItem | null
+  worn: PobItem | null
+  state: GearState
+}
+
+// The build tree's socketed jewels against the read's, socket by socket. A
+// read's jewel names its socket by index into the game's jewel slots.
+// Unknown slots (older tree data) leave the read's jewels out.
+export function jewelDiff (build: Array<{ node: number, item: PobItem }>, worn: Array<{ x: number, item: PobItem }>, slots: number[], nodes: Map<number, TreeNode> | null): JewelRowDiff[] {
+  const mine = new Map<number, PobItem>()
+  for (const j of worn) {
+    const node = slots[j.x]
+    if (node != null) mine.set(node, j.item)
+  }
+  const want = new Map(build.map(s => [s.node, s.item]))
+  const ids = [...new Set([...want.keys(), ...mine.keys()])]
+  return ids.map((node) => {
+    const b = want.get(node) ?? null
+    const w = mine.get(node) ?? null
+    let state: GearState
+    if (!b) state = 'extra'
+    else if (!w) state = 'missing'
+    else if (sameName(b, w)) state = 'match'
+    else if (b.rarity !== 'UNIQUE' && w.rarity !== 'UNIQUE' && itemBase(b).toLowerCase() === itemBase(w).toLowerCase()) state = 'base'
+    else state = 'differs'
+    return { node, socket: nodes?.get(node)?.name ?? '', build: b, worn: w, state }
+  }).sort((x, y) => (x.state === 'extra' ? 1 : 0) - (y.state === 'extra' ? 1 : 0) || x.socket.localeCompare(y.socket))
 }
 
 export function characterDiff (s: CharacterSnapshot, d: PobDetails, nodes: Map<number, TreeNode> | null, level: number | null, act: number | null, pick?: LoadoutPick): CharacterDiff {
@@ -240,7 +274,8 @@ export function characterDiff (s: CharacterSnapshot, d: PobDetails, nodes: Map<n
     gems,
     gemsMissing: gems.reduce((n, g) => n + g.gems.filter(x => !x.have).length, 0),
     tree: theirs ? treeDiff(nodes, mine, theirs) : null,
-    treeTitle: treeSpec?.title ?? null
+    treeTitle: treeSpec?.title ?? null,
+    jewels: jewelDiff(treeSpec?.sockets ?? [], s.tree.jewels, passiveTreeJewelSlots(), nodes)
   }
 }
 

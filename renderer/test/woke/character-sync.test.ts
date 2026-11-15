@@ -322,3 +322,16 @@ describe('gearDiff across ring and flask slots', () => {
     expect(Object.fromEntries(rows.map(r => [r.slot, r.state]))).toEqual({ 'Ring 1': 'match', 'Ring 2': 'match', 'Flask 1': 'base' })
   })
 })
+
+describe('jewelDiff', () => {
+  it('places read jewels by the game slot order and compares socket by socket', async () => {
+    const { jewelDiff } = await import('@/web/woke/pob-builds/character')
+    const rows = jewelDiff(
+      [{ node: 100, item: item('UNIQUE', 'Watcher\'s Eye', 'Prismatic Jewel') }, { node: 200, item: item('RARE', 'Grim Spark', 'Cobalt Jewel') }],
+      [{ x: 1, item: item('RARE', 'Rune Eye', 'Cobalt Jewel') }, { x: 2, item: item('MAGIC', 'Lucky Jewel', 'Crimson Jewel') }],
+      [100, 200, 300],
+      null
+    )
+    expect(Object.fromEntries(rows.map(r => [r.node, r.state]))).toEqual({ 100: 'missing', 200: 'base', 300: 'extra' })
+  })
+})

@@ -55,6 +55,17 @@
         <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
       </div>
 
+      <!-- Jewels -->
+      <template v-if="diff.jewels.length">
+        <div :class="$style.heading">Jewels</div>
+        <div v-for="r in diff.jewels" :key="r.node" :class="$style.gear">
+          <span class="w-faint w-trunc" :title="r.socket || 'A socket on a cluster jewel'">{{ shortSocket(r.socket) }}</span>
+          <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
+          <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
+          <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
+        </div>
+      </template>
+
       <!-- Gems -->
       <div :class="$style.heading">Gems</div>
       <div v-if="!diff.gems.length" class="w-dim text-xs">No gem links in the build's skill set.</div>
@@ -116,6 +127,10 @@ function stateTone (s: GearState) {
 function rarityClass (item: PobItem | null) {
   if (!item) return 'w-faint'
   return `w-rarity-${item.rarity === 'RELIC' ? 'unique' : item.rarity.toLowerCase()}`
+}
+// "Large Jewel Socket" -> "Large"; a socket on a cluster jewel has no name.
+function shortSocket (name: string) {
+  return name ? name.replace(/\s*Jewel Socket$/i, '') || 'Socket' : 'Cluster'
 }
 function names (nodes: TreeNode[]) {
   const shown = nodes.slice(0, 8).map(n => n.name)
