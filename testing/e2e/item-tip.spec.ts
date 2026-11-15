@@ -117,7 +117,7 @@ test('a base in a unique tier lists the uniques it can drop as, with their price
   const tip = page.getByRole('tooltip')
 
   // Many uniques on one base: the best in full, then each with its price and grade.
-  await page.locator('[title="multispecialhigh"]').first().click()
+  await page.locator('[data-tiers~="multispecialhigh"]').first().click()
   const chip = page.getByText('Leather Belt', { exact: true }).first()
   await chip.hover()
   await expect(tip).toContainText('Headhunter')

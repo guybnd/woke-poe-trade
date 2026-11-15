@@ -83,7 +83,7 @@
             <div class="text-xs"><span style="font-weight: 600;">Marks</span> <span class="w-dim">paint on top of a tier's look. They never show or hide anything.</span></div>
             <div class="flex flex-wrap gap-1">
               <button v-for="m in lad.marks" :key="m.key" type="button" class="w-focusable" :class="[$style.mark, { [$style.active]: m.tiers.some(t => t.tier === selTier), [$style.hiddenRow]: m.off }]"
-                :title="m.tiers.map(t => `${tierName(firstLive(t))}${t.disabled ? ' (off)' : ''}`).join(' · ')" @click="pickRow(m.tiers)" @contextmenu="tierMenu($event, m.tiers[0])">
+                :title="m.tiers.map(t => `${tierName(firstLive(t))}${t.disabled ? ' (off)' : ''}`).join(' · ')" :data-tiers="m.tiers.map(t => t.tier).join(' ')" @click="pickRow(m.tiers)" @contextmenu="tierMenu($event, m.tiers[0])">
                 <span :class="$style.markSwatch" :style="markSwatch(m.look)" />
                 <span class="flex flex-col" style="min-width: 0; text-align: left;">
                   <span>{{ markName(m.look) }}<span v-if="m.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this mark" /></span>
@@ -98,7 +98,7 @@
           <template v-for="(r, i) in lad.rows" :key="r.tiers[0].tier">
             <div v-if="lad.cut === i" :class="$style.cut"><span />Hidden below this line<span /></div>
             <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
-              @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
+              :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
               @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
                 <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this tier" /></span>
@@ -129,7 +129,7 @@
           <template v-if="lad.specials.length || subGroups.length">
             <div class="text-xs" :class="$style.specialHead"><span style="font-weight: 600;">Special rules</span> <span class="w-dim">{{ lad.axis ? `win over the ${axisName(lad.axis)} order` : 'that sit with this group' }}</span></div>
             <div :class="$style.specials">
-              <button v-for="t in lad.specials" :key="t.tier" type="button" class="w-focusable" :class="[$style.special, { [$style.active]: t.tier === selTier, [$style.hiddenRow]: t.disabled || t.visibility === 'Hide', [$style.dropOk]: dragOver === t.tier }]" :title="rowTitle(t)" @click="pickRow([t])" @contextmenu="tierMenu($event, t)"
+              <button v-for="t in lad.specials" :key="t.tier" type="button" class="w-focusable" :class="[$style.special, { [$style.active]: t.tier === selTier, [$style.hiddenRow]: t.disabled || t.visibility === 'Hide', [$style.dropOk]: dragOver === t.tier }]" :data-tiers="t.tier" :title="rowTitle(t)" @click="pickRow([t])" @contextmenu="tierMenu($event, t)"
                 @dragover="onDragOver(t, $event)" @dragleave="dragOver = dragOver === t.tier ? null : dragOver" @drop="onDrop(t, $event)">
                 <LabelPreview :text="t.bases[0] ?? previewName(t)" :actions="firstLive(t).actions" :visibility="t.disabled ? 'Hide' : t.visibility" :extras="false" style="max-width: 9rem; overflow: hidden; flex: none;" />
                 <span class="w-trunc">{{ tierName(firstLive(t)) }}</span>
