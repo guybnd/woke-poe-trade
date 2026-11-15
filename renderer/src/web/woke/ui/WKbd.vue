@@ -6,10 +6,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { hotkeyParts } from './key-label'
 
 // Accepts APT shortcut strings such as "Alt + M" or "Ctrl + Shift + F".
 const props = defineProps<{ keys: string | null | undefined }>()
-const parts = computed(() => (props.keys ?? '').split('+').map(s => s.trim()).filter(Boolean))
+const parts = computed(() => hotkeyParts(props.keys))
 </script>
 
 <style module>

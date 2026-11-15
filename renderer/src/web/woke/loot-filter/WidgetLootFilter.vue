@@ -11,6 +11,7 @@
               <span class="whitespace-nowrap">{{ LEVEL_NAMES[shownLevel] }}</span>
               <span class="w-faint text-xs whitespace-nowrap">{{ config.strictAuto.on ? (config.strictAuto.paused ? 'auto paused' : 'auto') : 'manual' }}</span>
               <button v-if="config.strictAuto.on && config.strictAuto.paused" type="button" :class="$style.link" @click="backToAuto">Back to auto</button>
+              <WInfo v-if="keysHelp" :text="keysHelp" />
               <span class="grow" />
               <span v-if="!config.strictAuto.paused" class="w-faint text-xs w-num whitespace-nowrap">NeverSink {{ config.neversink.version }}</span>
             </div>
@@ -22,9 +23,6 @@
               <div v-for="(step, i) in sortedLadder" :key="i" :class="{ [$style.stepOn]: step.level === config.neversink.level }">
                 <b>{{ stepLabel(config.strictAuto.ladder, i) }}</b><span>{{ LEVEL_NAMES[step.level] }}</span>
               </div>
-            </div>
-            <div v-if="config.looserHotkey || config.stricterHotkey" class="flex items-center gap-1 text-xs w-dim">
-              <WKbd v-if="config.looserHotkey" :keys="config.looserHotkey" /><WKbd v-if="config.stricterHotkey" :keys="config.stricterHotkey" /> looser / stricter
             </div>
           </template>
           <div v-if="reloadWaiting" :class="$style.reload">
@@ -40,7 +38,7 @@
             <WButton size="sm" variant="ghost" @click="gotIt">Got it</WButton>
             <WButton v-if="dismissable.some(canTurnOff)" size="sm" variant="ghost" title="You can turn it back on in the Prices tab" @click="turnOff">Don't tell me about this</WButton>
           </div>
-          <div v-if="config.editorHotkey" class="w-faint text-xs">Open the editor with <WKbd :keys="config.editorHotkey" /></div>
+          <div v-if="config.editorHotkey && !config.neversink.on" class="w-faint text-xs">Open the editor with <WKbd :keys="config.editorHotkey" /></div>
         </div>
       </template>
     </DockItem>
@@ -74,7 +72,8 @@ import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, gameIcon, toast } from '../ui'
+import { WPanel, WEmpty, WButton, WBanner, WSkeleton, WKbd, WInfo, gameIcon, toast } from '../ui'
+import { hotkeyText } from '../ui/key-label'
 import DockItem from '../dock/DockItem.vue'
 import { showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
@@ -278,6 +277,18 @@ let scrollTimer: ReturnType<typeof setTimeout> | undefined
 const shownLevel = computed(() => scrolledTo.value ?? props.config.neversink.level)
 // Only worth marking once it differs from what's on.
 const wantedLevel = computed(() => props.config.strictAuto.on && props.config.strictAuto.paused && store.ladderPick.value !== shownLevel.value ? store.ladderPick.value : null)
+// Hotkeys behind the "?" on the strictness row.
+const keysHelp = computed(() => {
+  const c = props.config
+  const steps = [
+    c.looserHotkey ? `${hotkeyText(c.looserHotkey)} looser` : '',
+    c.stricterHotkey ? `${hotkeyText(c.stricterHotkey)} stricter` : ''
+  ].filter(Boolean)
+  return [
+    steps.length ? steps.join(', ') + '.' : '',
+    c.editorHotkey ? `${hotkeyText(c.editorHotkey)} opens the editor.` : ''
+  ].filter(Boolean).join('\n\n')
+})
 
 function pickNow (level: number) {
   clearTimeout(scrollTimer)
