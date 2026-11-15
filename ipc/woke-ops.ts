@@ -72,6 +72,7 @@ export interface WokeOps {
   'pob-duplicate': Op<PobArgs, { relPath: string }>
   'pob-delete': Op<PobArgs, { xml: string }>
   'pob-restore': Op<PobArgs & { xml: string }, void>
+  'pob-live-save': Op<{ dir?: string, name: string, xml: string }, { relPath: string }>
   'pob-timeless': Op<WokeTimelessAsk, Json>
 
   // Loot filter files and sounds

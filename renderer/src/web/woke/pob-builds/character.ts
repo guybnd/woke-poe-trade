@@ -22,7 +22,7 @@ export interface CharacterSnapshot {
   character: { name: string, league: string, class: string, level: number | null }
   gear: Array<{ slot: string, item: PobItem }>
   gems: CharacterGemGroup[]
-  tree: { nodes: number[], clusterNodes: number[], masteries: Record<number, number>, jewels: Array<{ x: number, item: PobItem }> }
+  tree: { nodes: number[], clusterNodes: number[], masteries: Record<number, number>, jewels: Array<{ x: number, item: PobItem }>, classId?: number, ascendClassId?: number }
 }
 export interface CharacterStatus {
   snapshot: CharacterSnapshot | null
