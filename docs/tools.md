@@ -33,7 +33,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
 | Mapping | Atlas strategies | Atlas tree, Threads and regex per strategy |
-| Mapping | Wickerman (3.30) | Viscera versions and drop sources on price check and Ctrl+Space |
+| Mapping | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Mapping | League mechanics | Prices and picks for each league mechanic |
 | Campaign & lab | Campaign | Next steps for the act you are in |
 | Campaign & lab | Run timer | Act splits and personal bests |

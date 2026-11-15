@@ -82,6 +82,7 @@ function status (m: ModuleDef): keyof typeof STATUS_LABEL {
 
 function statusLine (m: ModuleDef) {
   if (m.group === 'apt' || !m.widgetTypes.length) return m.description
+  if (m.runsWithoutWidget && !widgetCount(props.config, m)) return m.description
   const n = widgetCount(props.config, m)
   const placed = n === 0 ? 'no widget placed' : n === 1 ? '1 widget' : `${n} widgets`
   return `${m.description} · ${placed}`

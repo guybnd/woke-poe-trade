@@ -8,7 +8,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 vi.mock('@/web/woke/app/live-data', () => ({ dataFileUrl: (f: string) => f, onSharedDataChange: () => () => {} }))
 
 /* eslint-disable import-x/first */
-import { heldTier, searchViscera, visceraInZone } from '@/web/woke/wickerman/viscera'
+import { heldTier, pickPriceRow, searchViscera, tierItemName, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
 import type { Viscera, VisceraTable } from '@/web/woke/wickerman/viscera'
 import { visceraLookup } from '@/web/woke/search/lookups/viscera'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -119,6 +119,53 @@ describe('campaign zone', () => {
     expect(visceraInZone(TABLE, 'The Lower Prison', 6).map(v => v.name)).not.toContain("Skeletal Warrior's Leg")
     expect(visceraInZone(TABLE, 'The Riverways', 6).length).toBe(3)
     expect(visceraInZone(TABLE, 'The Lower Prison', null)).toEqual([])
+  })
+})
+
+describe('version prices', () => {
+  it('names versions the way poe.ninja lists them', () => {
+    const leg = get("Skeletal Warrior's Leg")
+    expect([0, 1, 2].map(i => tierItemName(leg, i))).toEqual(["Lesser Skeletal Warrior's Leg", "Skeletal Warrior's Leg", "Greater Skeletal Warrior's Leg"])
+    expect(tierItemName(get("Maven's Orrery"), 1)).toBe("Maven's Orrery")
+  })
+
+  it("picks the row whose effect reads like the version's", () => {
+    const rows = [
+      { variant: '#% chance to gain an Endurance Charge on Hit', chaos: 1 },
+      { variant: '#% chance to gain a Power Charge on Hit', chaos: 9 }
+    ]
+    expect(pickPriceRow(rows, '(2-3)% chance to gain a Power Charge on Hit')?.chaos).toBe(9)
+    expect(pickPriceRow(rows, 'Something else')).toBeNull()
+    const one: Array<{ variant?: string, chaos: number }> = [{ chaos: 4 }]
+    expect(pickPriceRow(one, 'anything')?.chaos).toBe(4)
+    expect(pickPriceRow([], 'anything')).toBeNull()
+  })
+})
+
+describe('zone you stand in', () => {
+  it('finds a map boss by the map name the log gives', () => {
+    const here = visceraHere(TABLE, 'Graveyard', null)
+    expect(here.map(h => h.v.name)).toContain("Skeletal Warrior's Leg")
+    expect(here.find(h => h.v.name === "Skeletal Warrior's Leg")?.boss).toBe('Champion of Frost')
+  })
+
+  it('finds a campaign boss by act and zone, not a map of that name', () => {
+    expect(visceraHere(TABLE, 'The Lower Prison', 1).map(h => h.boss)).toContain('Chatters')
+    expect(visceraHere(TABLE, 'Graveyard', 1)).toEqual([])
+  })
+
+  it('finds unique maps by the name the log gives', () => {
+    expect(visceraHere(TABLE, 'Mao Kun', null).length).toBeGreaterThan(0)
+    expect(visceraHere(TABLE, 'Hallowed Ground', null).length).toBeGreaterThan(0)
+  })
+
+  it('finds pinnacle arenas', () => {
+    expect(visceraHere(TABLE, "The Maven's Crucible", null).map(h => h.v.name)).toContain("Maven's Orrery")
+  })
+
+  it('finds nothing in a zone without a Viscera boss', () => {
+    expect(visceraHere(TABLE, 'Tower', null)).toEqual([])
+    expect(visceraHere(TABLE, '', null)).toEqual([])
   })
 })
 

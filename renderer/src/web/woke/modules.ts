@@ -34,6 +34,8 @@ export interface ModuleDef {
   // Settings > Modules > Economy), and always on while listed: presets and
   // module switches leave it alone.
   optIn?: boolean
+  // Works without its window placed (the window is optional): runs while on.
+  runsWithoutWidget?: boolean
 }
 
 export interface ModuleIcon {
@@ -76,7 +78,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'loot-filter', name: 'Loot filter editor', description: 'Edit the NeverSink rule for a sampled item', group: 'mapping', widgetTypes: ['woke-loot-filter'], icon: { fa: 'fas fa-filter', item: 'Orb of Scouring' }, needs: ['log', 'hotkeys'] },
   { id: 'atlas', name: 'Atlas strategies', description: 'Atlas tree, Threads and regex per strategy', group: 'mapping', widgetTypes: ['woke-atlas-strategies'], icon: { fa: 'fas fa-globe', src: '/images/art/atlas-maps-wheel.png' }, needs: ['network', 'prices'] },
   // 3.30 Covens of Umbra only: remove this entry and wickerman/ when the league ends.
-  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources on price check and Ctrl+Space', group: 'mapping', widgetTypes: [], icon: { fa: 'fas fa-bone' }, needs: [] },
+  { id: 'wickerman', name: 'Wickerman (3.30)', description: 'Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one', group: 'mapping', widgetTypes: ['woke-wickerman'], runsWithoutWidget: true, icon: { fa: 'fas fa-bone' }, needs: ['log'] },
   { id: 'mechanics', name: 'League mechanics', description: 'Prices and picks for each league mechanic', group: 'mapping', widgetTypes: ['woke-mechanics'], icon: { fa: 'fas fa-puzzle-piece', mechanic: 'incursion' }, needs: ['log', 'prices'] },
 
   { id: 'campaign', name: 'Campaign', description: 'Next steps for the act you are in', group: 'campaign', widgetTypes: ['woke-campaign'], icon: { fa: 'fas fa-route', src: '/images/art/admiral-darnaws-papers.png' }, needs: ['log'] },
@@ -197,7 +199,7 @@ export function widgetCount (config: ConfigLike, m: ModuleDef): number {
 // One with no widgets (APT features, additions to other tools) runs while on.
 export function isModuleRunning (config: ConfigLike, m: ModuleDef): boolean {
   if (!isModuleOn(config, m.id)) return false
-  return m.group === 'apt' || m.widgetTypes.length === 0 || widgetCount(config, m) > 0
+  return m.group === 'apt' || m.widgetTypes.length === 0 || !!m.runsWithoutWidget || widgetCount(config, m) > 0
 }
 
 export function modulesNeeding (config: ConfigLike, need: ModuleNeed): ModuleDef[] {
