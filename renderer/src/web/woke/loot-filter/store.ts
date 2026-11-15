@@ -1166,6 +1166,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     wrongFilterInGame,
     checkForUpdate,
     updateNeverSink,
+    switchVersion,
     useGitHub,
     setStyle,
     setLevel,

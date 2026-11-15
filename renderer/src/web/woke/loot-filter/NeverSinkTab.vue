@@ -99,7 +99,7 @@ async function pickLevel (i: number) {
 
 async function update () {
   const undo = await props.store.updateNeverSink()
-  toast(`Updated to NeverSink ${props.config.neversink.version}`, { anchor: props.anchor, undo })
+  toast(`Updated to NeverSink ${props.config.neversink.version}`, { anchor: props.anchor, undo, clickOnly: true })
 }
 </script>
 

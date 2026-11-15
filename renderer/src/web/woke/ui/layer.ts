@@ -67,6 +67,9 @@ export interface Toast {
   id: number
   text: string
   undo?: () => void
+  // Undo only by its button, never Ctrl+Z: for steps too big to take back by
+  // a stray key press (a whole NeverSink version).
+  clickOnly?: boolean
   // Where it wants to be, in screen pixels: centred on x, with its top at y. The
   // note fits itself to the window once it knows its size (see ToastRow).
   x: number
@@ -85,7 +88,7 @@ let nextId = 1
 // Shown at the bottom of `anchor` (usually the panel), else the screen; 5 s.
 // `dock`: from a dock icon's menu, while you may be playing. Sits clear of the
 // row, so nothing moves under it, and Undo can be clicked.
-export function toast (text: string, opts: { undo?: () => void, anchor?: Element | null, ms?: number, dock?: boolean } = {}) {
+export function toast (text: string, opts: { undo?: () => void, anchor?: Element | null, ms?: number, dock?: boolean, clickOnly?: boolean } = {}) {
   const box = opts.anchor?.getBoundingClientRect()
   // A hidden panel has no size: its corner would put the note off screen.
   const r = box && box.width > 0 && box.height > 0 ? box : undefined
@@ -93,6 +96,7 @@ export function toast (text: string, opts: { undo?: () => void, anchor?: Element
     id: nextId++,
     text,
     undo: opts.undo,
+    clickOnly: opts.clickOnly,
     x: r ? r.left + r.width / 2 : window.innerWidth / 2,
     y: r ? r.bottom - 10 : window.innerHeight - 80,
     beside: r && opts.dock ? { top: r.top, bottom: r.bottom } : undefined,
@@ -113,11 +117,11 @@ export function clearUndoToasts () {
 }
 
 export function hasUndoToast (): boolean {
-  return toasts.value.some(t => t.undo)
+  return toasts.value.some(t => t.undo && !t.clickOnly)
 }
 
 export function undoToast (id?: number) {
-  const t = id != null ? toasts.value.find(o => o.id === id) : [...toasts.value].reverse().find(o => o.undo)
+  const t = id != null ? toasts.value.find(o => o.id === id) : [...toasts.value].reverse().find(o => o.undo && !o.clickOnly)
   if (!t?.undo) return false
   t.undo()
   dismissToast(t.id)

@@ -461,6 +461,17 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
   const failed = s.failed.value.length
   const review = { label: 'Review changes', run: () => { tab.value = 'changes' } }
   if (s.updatedSinceSave.value) {
+    const last = props.config.lastVersion
+    const found = s.baseVersion.value
+    // An older NeverSink than you saved against is never an update: it came
+    // from an Undo of one. Say so, and offer the way back.
+    if (last && found && found.localeCompare(last, 'en', { numeric: true, sensitivity: 'base' }) < 0 && props.config.neversink.on) {
+      return {
+        tone: 'warn',
+        text: `This is NeverSink ${found}, older than the ${last} you last saved (an update was undone). Your game copy is still ${last}.`,
+        actions: [{ label: `Back to ${last}`, primary: true, run: () => { s.switchVersion(last).catch(() => {}) } }, review]
+      }
+    }
     const total = s.statuses.value.length
     return { tone: 'warn', actions: [review], text: `NeverSink ${s.baseVersion.value} found (you last saved against ${props.config.lastVersion}). ${total - failed} of ${total} changes reapplied${failed ? `, ${failed} need a new home under Changes` : ''}. Save to update the game's copy.` }
   }
@@ -489,7 +500,7 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
 
 async function updateNow () {
   const undo = await props.store.updateNeverSink()
-  toast(`Updated to NeverSink ${props.config.neversink.version}`, { anchor: panel.value?.el, undo })
+  toast(`Updated to NeverSink ${props.config.neversink.version}`, { anchor: panel.value?.el, undo, clickOnly: true })
 }
 
 function homes (edit: FilterEdit): RehomeOption[] {
