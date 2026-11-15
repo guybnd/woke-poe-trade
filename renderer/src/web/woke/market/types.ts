@@ -38,7 +38,9 @@ export const CATEGORY_TYPES: Record<string, string> = {
   'unique-maps': 'UniqueMap',
   'unique-relics': 'UniqueRelic',
   'unique-tinctures': 'UniqueTincture',
-  'skill-gems': 'SkillGem'
+  'skill-gems': 'SkillGem',
+  // 3.30's league items: 500+ rows, over the cap for unlisted categories.
+  'viscera': 'Viscera'
 }
 
 // woke: a category poe.ninja adds for a new league, such as its currency, is

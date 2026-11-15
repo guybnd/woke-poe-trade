@@ -33,6 +33,11 @@ describe('market browser', () => {
     expect(groups[1].categories[0].sample).toEqual(["Kaom's Heart"])
   })
 
+  it('lists Viscera, which is too big for an unknown category, under General', () => {
+    const groups = categoryGroups([currency, chunk('viscera', [{ name: "Greater Sirus' Head", variant: 'Area Skills have #% chance to deal Double Damage', chaos: 900, graph: [] }])])
+    expect(groups[0].categories.map(c => [c.type, c.label])).toEqual([['Currency', 'Currency'], ['Viscera', 'Viscera']])
+  })
+
   it('names categories', () => {
     expect(categoryLabel('UniqueWeapon')).toBe('Unique Weapons')
     expect(categoryLabel('DivinationCard')).toBe('Divination Cards')

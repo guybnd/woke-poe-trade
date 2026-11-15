@@ -32,7 +32,7 @@
           <WEmpty v-if="!shown.length" icon="fas fa-search">No {{ category.label.toLowerCase() }} match<template v-if="query.trim()"> "{{ query.trim() }}"</template>.</WEmpty>
           <div v-for="r in shown" :key="r.key" v-item-tip="r" class="w-row" :class="$style.grid" @contextmenu="rowMenu($event, r)">
             <span class="w-trunc inline-flex items-center gap-2" :class="rarityClass(r.type)">
-              <WIcon :src="ninjaIcon(r.type, r.name) ?? undefined" size="md" />
+              <WIcon :src="rowIcon(r)" size="md" />
               <span class="w-trunc">{{ r.name }}<span v-if="r.variant" class="w-dim ml-1">{{ r.variant }}</span></span>
             </span>
             <span :class="$style.value">
@@ -64,6 +64,7 @@ import { computed, inject, onScopeDispose, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
+import { ninjaArt } from './ninja-icons'
 import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, ninjaIcon, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
@@ -169,11 +170,16 @@ function subUnit (r: MarketRow): 'chaos' | 'div' | null {
   return mainUnit(r) === 'div' ? 'chaos' : 'div'
 }
 
+// Game art, or poe.ninja's for items the game data lacks (Viscera).
+function rowIcon (r: MarketRow): string | undefined {
+  return ninjaIcon(r.type, r.name) ?? ninjaArt(r.type, r.name)
+}
+
 // poe.ninja's art for the category: its chosen item, or its first with art.
 function categoryIcon (c: Category): string | undefined {
   for (const name of [ICON_ITEMS[c.type], ...c.sample]) {
     if (!name) continue
-    const src = ninjaIcon(c.type, name)
+    const src = ninjaIcon(c.type, name) ?? ninjaArt(c.type, name)
     if (src) return src
   }
   return undefined

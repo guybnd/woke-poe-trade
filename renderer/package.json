@@ -13,6 +13,7 @@
     "mod-tiers": "node scripts/build-mod-tiers.mjs",
     "drop-data": "node scripts/build-drop-data.mjs",
     "tree-data": "node scripts/build-tree-data.mjs",
+    "ninja-icons": "node scripts/build-ninja-icons.mjs",
     "viscera-data": "node scripts/build-viscera-data.mjs"
   },
   "dependencies": {

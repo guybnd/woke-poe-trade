@@ -8,13 +8,14 @@ import { SKIPPED_TYPES, typeForSlug } from './types'
 // The order and grouping of poe.ninja's side list. A category poe.ninja adds
 // later (a league's new currency) lands under General.
 export const CATEGORY_GROUPS: Array<{ label: string, types: string[] }> = [
-  { label: 'General', types: ['Currency', 'Fragment', 'Wombgift', 'Runegraft', 'AllflameEmber', 'Corpse', 'Tattoo', 'Omen', 'DjinnCoin', 'Ducat', 'EnshroudingCrystal', 'DivinationCard', 'Artifact', 'Oil', 'Incubator', 'Coffin', 'ScryingOrb'] },
+  { label: 'General', types: ['Currency', 'Fragment', 'Viscera', 'Wombgift', 'Runegraft', 'AllflameEmber', 'Corpse', 'Tattoo', 'Omen', 'DjinnCoin', 'Ducat', 'EnshroudingCrystal', 'DivinationCard', 'Artifact', 'Oil', 'Incubator', 'Coffin', 'ScryingOrb'] },
   { label: 'Equipment & gems', types: ['UniqueWeapon', 'UniqueArmour', 'UniqueAccessory', 'UniqueFlask', 'UniqueJewel', 'UniqueTincture', 'UniqueRelic', 'UniqueIdol', 'SkillGem', 'ImbuedGem', 'Flask'] },
   { label: 'Atlas', types: ['Map', 'UniqueMap', 'BlightedMap', 'BlightRavagedMap', 'ValdoMap', 'Invitation', 'Scarab', 'DeliriumOrb', 'Astrolabe', 'Memory', 'IncursionTemple'] },
   { label: 'Crafting', types: ['Essence', 'Fossil', 'Resonator', 'Vial', 'Beast'] }
 ]
 
 const LABELS: Record<string, string> = {
+  Viscera: 'Viscera',
   Currency: 'Currency',
   Fragment: 'Fragments',
   DivinationCard: 'Divination Cards',

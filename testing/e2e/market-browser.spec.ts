@@ -30,6 +30,13 @@ test('the Prices tab lists every category and filters and sorts one', async ({ o
   // Each category wears its art, like poe.ninja.
   await expect(side.getByRole('button', { name: /^Currency/ }).locator('img')).toHaveCount(1)
   await overlay.snap('currency')
+  // A live download (MARKET_DENSE) has 3.30's Viscera, with poe.ninja's art.
+  if (process.env.MARKET_DENSE) {
+    await side.getByRole('button', { name: /^Viscera/ }).click()
+    await expect(panel.locator('.w-row img').first()).toBeVisible()
+    await overlay.snap('viscera')
+    await side.getByRole('button', { name: /^Currency/ }).click()
+  }
 
   // Right-click: the item strip, then poe.ninja's 1-day and 7-day change.
   await panel.locator('.w-row', { hasText: 'Divine Orb' }).first().click({ button: 'right' })
