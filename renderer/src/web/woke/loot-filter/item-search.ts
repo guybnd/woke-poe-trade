@@ -19,6 +19,8 @@ export interface SearchItem {
   // Normal, magic or rare: gear and maps, which roll a rarity.
   gear: boolean
   transfigured?: boolean
+  // The base gem of a transfigured gem: its BaseType in a loot filter.
+  filterBase?: string
   w: number
   h: number
 }
@@ -111,8 +113,9 @@ export function buildCatalog (lines?: Iterable<BaseType>): SearchItem[] {
       const base = b.unique ? bases.get(b.unique.base) : undefined
       out.push({ name: b.refName, kind: 'Unique', baseType: b.unique?.base ?? b.refName, itemClass: base ? classOfBase(base) : undefined, gear: false, ...size(base) })
     } else if (b.namespace === 'GEM') {
-      const transfigured = Boolean((b as { gem?: { transfigured?: boolean } }).gem?.transfigured)
-      out.push({ name: b.refName, kind: 'Gem', baseType: b.refName, itemClass: / Support$/.test(b.refName) ? 'Support Gems' : 'Skill Gems', gear: false, transfigured, w: 1, h: 1 })
+      const transfigured = Boolean(b.gem?.transfigured)
+      const filterBase = transfigured ? b.gem?.normalVariant : undefined
+      out.push({ name: b.refName, kind: 'Gem', baseType: b.refName, itemClass: / Support$/.test(b.refName) ? 'Support Gems' : 'Skill Gems', gear: false, transfigured, ...(filterBase ? { filterBase } : {}), w: 1, h: 1 })
     } else if (b.namespace === 'DIVINATION_CARD') {
       out.push({ name: b.refName, kind: 'Card', baseType: b.refName, itemClass: 'Divination Cards', gear: false, w: 1, h: 1 })
     } else {
@@ -238,6 +241,7 @@ export function searchFacts (item: SearchItem, opts: { areaLevel: number, rarity
     foulborn: false,
     vestigial: false,
     transfigured: item.kind === 'Gem' ? !!item.transfigured : false,
+    filterBase: item.filterBase,
     zanaMemory: false,
     exceptional: false,
     imbued: false,

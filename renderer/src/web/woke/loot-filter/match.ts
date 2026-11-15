@@ -134,7 +134,10 @@ export function evalCondition (c: FilterCondition, item: ItemFacts): Tri {
   const cls = item.itemClass
   switch (c.key) {
     case 'Class': return strings(c, item.itemClass)
-    case 'BaseType': return c.op === '==' && c.count == null ? isBase(c, item.baseType) : strings(c, item.baseType)
+    case 'BaseType': {
+      const base = item.filterBase ?? item.baseType
+      return c.op === '==' && c.count == null ? isBase(c, base) : strings(c, base)
+    }
     case 'Rarity': return rarity(c, item.rarity)
     case 'ItemLevel': return numeric(c, item.itemLevel)
     case 'DropLevel': return numeric(c, item.dropLevel)

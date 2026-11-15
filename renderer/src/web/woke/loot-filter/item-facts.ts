@@ -35,6 +35,9 @@ export interface ItemFacts {
   foulborn?: boolean
   vestigial?: boolean
   transfigured?: boolean
+  // What a loot filter's BaseType calls it, when that isn't baseType: a
+  // transfigured gem goes by its base gem there.
+  filterBase?: string
   imbued?: boolean
   zanaMemory?: boolean
   exceptional?: boolean
@@ -175,6 +178,7 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
     vestigial: parsed ? !!parsed.isVestigial : all.some(l => /^Vestigial\b/.test(l)),
     // Without the parser's data only a gem can be unsure.
     transfigured: parsed ? Boolean(parsed.info.gem?.transfigured) : (isGem ? undefined : false),
+    filterBase: parsed?.info.gem?.transfigured ? parsed.info.gem.normalVariant : undefined,
     zanaMemory: all.some(l => /\bZana'?s? Memory\b/i.test(l)),
     exceptional: isGem && all.some(l => /(^|, )Exceptional(,|$)/.test(l)),
     imbued: parsed?.imbuedGem ?? all.some(l => /^Imbued\b/.test(l)),

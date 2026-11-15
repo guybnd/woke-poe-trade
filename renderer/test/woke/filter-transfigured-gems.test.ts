@@ -7,7 +7,9 @@ import { serializeFilter, parseFilter } from '@/web/woke/loot-filter/parse'
 import { gemBaseName, renameBases } from '@/web/woke/loot-filter/gem-bases'
 import { DEFAULT_BUILD_RULES } from '@/web/woke/loot-filter/build-rules'
 import { defaultPresets } from '@/web/woke/loot-filter/presets'
+import { matchItem } from '@/web/woke/loot-filter/match'
 import { loadGameData } from '../helpers/game-data'
+import { facts } from '../helpers/filter-guard'
 
 const SOURCE = [
   '#   VERSION:  8.21.0a',
@@ -69,5 +71,11 @@ describe('transfigured gems in BaseType lists', () => {
     const doc = parseFilter('Show\n\tBaseType == "Herald of Ash"\n\tSetFontSize 30\n')
     expect(renameBases(doc, gemBaseName)).toBe(0)
     expect(doc.blocks[0].dirty).toBe(false)
+  })
+
+  it('previews a transfigured gem as the game sees it: by its base gem', () => {
+    const doc = compose(['Herald of Ash', 'Dual Strike of Ambidexterity']).doc
+    const gem = facts({ itemClass: 'Skill Gems', baseType: 'Dual Strike of Ambidexterity', filterBase: 'Dual Strike', transfigured: true, areaLevel: 30 })
+    expect(matchItem(doc, gem).final?.block.tier).toBe('gems')
   })
 })
