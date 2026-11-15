@@ -319,14 +319,18 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 .whereOn { color: var(--w-accent-fg); background: var(--w-accent); border-color: var(--w-accent); }
 .split {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr);
   min-height: 0;
   height: 60vh;
   max-height: 30rem;
 }
+/* The rail always scrolls (17 mechanics), so its column sizes to the buttons
+   plus a kept scrollbar gutter: the game look's 14px bar clipped a fixed 52px. */
 .rail {
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   gap: 2px;
   padding: 6px 4px;
   border-right: 1px solid var(--w-line);

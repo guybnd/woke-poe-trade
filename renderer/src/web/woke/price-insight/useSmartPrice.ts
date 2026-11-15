@@ -2,7 +2,7 @@ import { computed, Ref, shallowRef, watch } from 'vue'
 import { ItemRarity, ParsedItem } from '@/parser'
 import { usePoeninja } from '@/web/background/Prices'
 import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
-import { graphGaps } from '../market/parse'
+import { graphGaps, graphHistory } from '../market/parse'
 import { typeForSlug } from '../market/types'
 import { dailyHistory } from '../market/db'
 import type { Insight } from './insight'
@@ -32,7 +32,11 @@ export function useSmartPrice (
       if (!id) return null
       const found = ninja.findPriceByQuery(id)
       if (!found) return null
-      return { ...found, gaps: graphGaps(found.graph) }
+      // Divine Orb trades every day, so its graph shows how many days the
+      // league has prices for; earlier days aren't gaps.
+      const divineGraph = ninja.findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })?.graph
+      const days = Math.max(graphHistory(divineGraph), graphHistory(found.graph))
+      return { ...found, gaps: graphGaps(found.graph, days) }
     } catch {
       return null
     }

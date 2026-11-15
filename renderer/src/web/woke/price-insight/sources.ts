@@ -98,9 +98,9 @@ export function buildBlend (input: BlendInput): Blend {
       note: offTarget
         ? 'Its price is for any roll, uncorrupted and without a Foulborn mod, so it can\'t speak for this search: not counted'
         : ninjaSuspect
-          ? `No price on ${input.ninja.gaps} of the last 7 days and far from the listings: may be faked, not counted`
+          ? `No price on about ${input.ninja.gaps} of every 7 days and far from the listings: may be faked, not counted`
           : thin
-            ? `No price on ${input.ninja.gaps} of the last 7 days: counted lightly`
+            ? `No price on about ${input.ninja.gaps} of every 7 days: counted lightly`
             : (unfit && fair != null)
                 ? 'Its price is for any roll, uncorrupted and without a Foulborn mod: counted lightly because listings are few'
                 : 'Average of recent listings across the league'
