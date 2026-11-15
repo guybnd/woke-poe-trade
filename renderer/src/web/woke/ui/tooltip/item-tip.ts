@@ -82,6 +82,18 @@ export async function loadUniqueMods (name: string, variant?: string): Promise<U
   return uniqueModLines(uniques?.[name], variant)
 }
 
+// The mod each unique leaves as a Vestigial implicit, for Search.
+export async function loadTipVestigial (): Promise<TipPack['vestigial'] | null> {
+  await loadFile('vestigial')
+  return pack.vestigial ?? null
+}
+
+// Where uniques come from when it isn't a random drop: the tooltip's drop file.
+export async function loadTipDrops (): Promise<TipPack['drops'] | null> {
+  await loadFile('drops')
+  return pack.drops ?? null
+}
+
 // Gems by level (stats, requirements): the tooltip's gem file.
 export async function loadTipGems (): Promise<TipPack['gems'] | null> {
   await loadFile('gems')

@@ -6,15 +6,9 @@
       <canvas ref="ring" :class="$style.layer" />
     </div>
   </div>
-  <WPanel v-else title="Atlas tree" size-key="tree" width="44rem" height="36rem" max-height="85vh">
+  <WPanel v-else title="Atlas tree" :class="{ [$style.dirtyFrame]: dirty }" size-key="tree" width="44rem" height="36rem" max-height="85vh" :scroll="false" fill>
     <template #actions>
-      <!-- Unsaved edits: in the head, so the tree never moves when they appear. -->
-      <template v-if="dirty">
-        <span :class="$style.unsaved" class="w-accent" title="The tree has changes you haven't saved"><span :class="$style.dot" /> Unsaved</span>
-        <button class="w-icon-btn w-accent" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')"><i class="fas fa-save" /></button>
-        <button class="w-icon-btn" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs"><i class="far fa-clone" /></button>
-        <button class="w-icon-btn" title="Discard: go back to the saved tree" @click="emit('discard')"><i class="fas fa-times-circle" /></button>
-      </template>
+      <button v-if="dirty" class="w-icon-btn" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs"><i class="far fa-clone" /></button>
       <button class="w-icon-btn" :class="{ 'w-icon-btn--on': listOpen }" title="Mechanics: light a mechanic's passives" @click="emit('update:listOpen', !listOpen)"><i class="fas fa-list" /></button>
       <PinButton v-if="pin" :make="pin" title="Pin the tree over the game: clicks go through to the game's atlas" />
       <button class="w-icon-btn" title="Undo (Ctrl + Z)" :disabled="!undoStack.length" @click="undo"><i class="fas fa-undo" /></button>
@@ -58,7 +52,7 @@
       <canvas ref="ring" :class="$style.layer" :style="{ cursor: panning ? 'grabbing' : hovered ? 'pointer' : 'grab' }"
         @wheel.prevent="zoom" @mousedown="startPan" @mousemove="hover" @mouseleave="setHovered(null)" @dblclick="fit" @contextmenu.prevent />
       <!-- The mechanics (pick A): click to light a mechanic's passives in its own colour. -->
-      <div v-if="listOpen" :class="$style.mechs" @wheel.stop>
+      <div v-if="listOpen" :class="[$style.mechs, { [$style.belowStamp]: dirty }]" @wheel.stop>
         <div :class="$style.mechsHead">
           <span>Mechanics</span>
           <button v-if="lit.length" type="button" class="w-focusable" @click="emit('update:lit', [])">Clear</button>
@@ -74,6 +68,14 @@
             <span :class="$style.count" class="w-num"><span :class="m.taken ? 'w-accent' : ''">{{ m.taken }}</span>/{{ m.total }}</span>
           </button>
         </div>
+      </div>
+      <!-- Unsaved edits (pick U2): the window gets a gold frame, and a label
+           with Save and Discard sits in the tree's corner; nothing moves. -->
+      <div v-if="dirty" :class="$style.unsaved" role="status" title="The tree has changes you haven't saved">
+        <span :class="$style.dot" />
+        <span :class="$style.stamp">Unsaved</span>
+        <WButton size="sm" variant="primary" icon="fas fa-save" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')">Save <span :class="$style.keys">Ctrl S</span></WButton>
+        <WButton size="sm" variant="ghost" title="Discard: go back to the saved tree" @click="emit('discard')">Discard</WButton>
       </div>
     </div>
   </WPanel>
@@ -648,7 +650,7 @@ function openWeb () {
 .map {
   position: relative;
   flex: 1;
-  height: min(560px, 68vh);
+  min-height: 0;
   overflow: hidden;
   outline: none;
 }
@@ -669,8 +671,39 @@ function openWeb () {
 .count0 { min-width: 21ch; font-variant-numeric: tabular-nums; }
 .slider { width: 9rem; flex: none; accent-color: var(--w-accent); }
 .reach { flex: 1 1 0; min-width: 0; color: var(--w-fg); }
-.unsaved { display: inline-flex; align-items: center; gap: 4px; font-size: var(--w-fs-sm); white-space: nowrap; margin-right: 2px; }
-.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; vertical-align: middle; }
+.dirtyFrame {
+  outline: 2px solid var(--w-accent);
+  outline-offset: -1px;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--w-accent) 45%, transparent), 0 10px 30px rgb(0 0 0 / 0.5);
+}
+.unsaved {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--w-accent);
+  border-radius: var(--w-r-sm);
+  background: color-mix(in srgb, var(--w-panel-solid-base) 90%, transparent);
+  white-space: nowrap;
+}
+.stamp {
+  font-family: var(--w-caps-face);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--w-accent);
+}
+.mechs.belowStamp { top: 56px; }
+.keys { font-family: var(--w-mono); font-size: 0.85em; opacity: 0.75; margin-left: 2px; }
+.dot { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--w-accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .unsaved .dot { animation: unsavedPulse 2.4s ease-in-out infinite; }
+}
+@keyframes unsavedPulse { 50% { opacity: 0.35; } }
 .name { width: 11rem; }
 .bare { display: flex; width: 30rem; height: 26rem; }
 .bare .map { height: 100%; }

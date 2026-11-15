@@ -778,3 +778,27 @@ test('back from a rule returns to the same pile, by button and by the mouse back
   await expect(labels.first()).toBeVisible()
   expect(await pile()).toBe(before)
 })
+
+test('ladder: maps read by tier, border rules are marks, a band changes all its tiers', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '6-UBER-PLUS-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByPlaceholder('Filter groups').fill('maps')
+  await page.getByRole('button', { name: 'Maps Maps › Normal', exact: true }).click()
+  await expect(page.getByText('Black border', { exact: true })).toBeVisible()
+  await expect(page.getByText('Hidden below this line')).toBeVisible()
+  await expect(page.getByText('T11–13', { exact: true })).toBeVisible()
+  await overlay.snap('maps ladder')
+
+  // A band row edits all its tiers at once; Shown flips them all.
+  await page.getByText('T11–13', { exact: true }).click()
+  await expect(page.getByText(/Changes here go to all 3 tiers/)).toBeVisible()
+  await page.getByRole('button', { name: 'Hidden', exact: true }).nth(1).click()
+  await expect(page.getByRole('tab', { name: /^Changes/ })).toContainText('3')
+  await page.getByRole('button', { name: /Save \+ reload/ }).click()
+  const out = path.join(folder, 'NeverSink (woke).filter')
+  await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toMatch(/^Show[^\n]*\$tier->maps_b_t12/m)
+  await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
+})

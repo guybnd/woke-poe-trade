@@ -9,7 +9,10 @@
       <div v-if="section.label" :class="$style.label">{{ section.label }}</div>
       <p v-for="(t, j) in section.text ?? []" :key="'t' + j" class="w-dim" :class="$style.text">{{ t }}</p>
       <div v-for="(row, j) in section.rows ?? []" :key="'r' + j" v-item-tip="row.item ?? null" :class="$style.row">
-        <span class="w-trunc" :class="row.dim ? 'w-dim' : undefined">{{ row.label }}</span>
+        <span :class="$style.name">
+          <WIcon v-if="row.item || hasItems(section)" :src="row.item ? rowIcon(row.item.name) : undefined" />
+          <span class="w-trunc" :class="row.dim ? 'w-dim' : undefined">{{ row.label }}</span>
+        </span>
         <WPrice v-if="row.chaos !== undefined" :bulk="!!row.bulk" :chaos="row.chaos" :divine="divine" />
         <span v-else-if="row.value" :class="[$style.value, row.dim ? 'w-dim' : undefined]">{{ row.value }}</span>
       </div>
@@ -34,10 +37,23 @@
 
 <script setup lang="ts">
 import { WButton, WIcon, WPrice, vItemTip } from '../ui'
+import { gameIcon } from '../ui/game-icons'
 import { isImageIcon } from './lookups/types'
-import type { LookupAction, LookupCard, LookupTableRow } from './lookups/types'
+import type { LookupAction, LookupCard, LookupSection, LookupTableRow } from './lookups/types'
 
 defineProps<{ card: LookupCard, divine: number | null }>()
+
+// An item row's art, whatever kind of item it is (rows name it, not its kind).
+const ICON_NS = ['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD'] as const
+function rowIcon (name: string): string | undefined {
+  for (const ns of ICON_NS) {
+    const icon = gameIcon(name, ns)
+    if (icon) return icon
+  }
+  return undefined
+}
+// Rows without an item keep a blank icon box so the names line up.
+const hasItems = (section: LookupSection) => !!section.rows?.some(r => r.item)
 
 // The row's cells with the price slotted in where the table wants it.
 const PRICE = Symbol('price')
@@ -58,6 +74,7 @@ defineEmits<{ (e: 'act', action: LookupAction): void }>()
 .text { margin: 4px 0; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: var(--w-s3); min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .value { text-align: right; min-width: 0; }
+.name { display: flex; align-items: center; gap: var(--w-s2); min-width: 0; }
 .table { width: 100%; border-collapse: collapse; margin-top: var(--w-s1); }
 .table th { text-align: left; font-weight: var(--w-caps-weight); font-family: var(--w-caps-face); font-size: var(--w-fs-caps); color: var(--w-dim); border-bottom: 1px solid var(--w-line); padding: 0 var(--w-s2) 2px 0; }
 .table td { border-bottom: 1px solid var(--w-line-soft); padding: 3px var(--w-s2) 3px 0; vertical-align: top; }

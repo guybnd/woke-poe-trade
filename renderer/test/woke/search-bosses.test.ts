@@ -22,10 +22,12 @@ describe('boss maths', () => {
     expect(entryCost(maven, ctx())).toBe(400)
     expect(entryCost(maven, ctx({ price: () => null }))).toBeNull()
   })
-  it('counts known rates at the drop variant, and skips rolled jewels', () => {
-    const loot = lootPerKill(maven, ctx())!
-    // Enlighten lvl 1, Progenesis, Viridi's Veil; Impossible Escape is variable.
-    expect(loot).toBeCloseTo(0.0081 * 30000 + 0.0170 * 2000 + 0.5207 * 10, 5)
+  it('counts known rates at the drop variant, rolled jewels at their unidentified price', () => {
+    const ie = maven.drops.find(d => d.name === 'Impossible Escape')!.chance!
+    const known = 0.0081 * 30000 + 0.0170 * 2000 + 0.5207 * 10
+    // Impossible Escape at poe.ninja's price, or its trade price once looked up.
+    expect(lootPerKill(maven, ctx())!).toBeCloseTo(known + ie * 50, 5)
+    expect(lootPerKill(maven, ctx({ unid: n => n === 'Impossible Escape' ? 400 : null }))!).toBeCloseTo(known + ie * 400, 5)
   })
 })
 
@@ -61,11 +63,14 @@ describe('dropLookup', () => {
   it('prices the drop as the boss drops it', () => {
     const [card] = dropLookup('awakened enlighten', ctx())
     expect(card.sections[0].rows![0].chaos).toBe(30000)
+    // A rolled jewel drops unidentified: poe.ninja's row stands for that.
     const [jewel] = dropLookup('impossible escape', ctx())
-    expect(jewel.sections[0].rows![0].value).toBe('Depends on the roll')
+    expect(jewel.sections[0].rows![0]).toMatchObject({ label: 'Impossible Escape · unidentified', chaos: 50 })
+    const [unpriced] = dropLookup('impossible escape', ctx({ price: () => null }))
+    expect(unpriced.sections[0].rows![0].value).toBe('Depends on the roll')
   })
 
-  it('prices a rolled jewel at its unidentified trade price once looked up', () => {
+  it('prefers a looked-up unidentified trade price over poe.ninja', () => {
     const unid = (n: string) => n === 'Impossible Escape' ? 120 : null
     const [jewel] = dropLookup('impossible escape', ctx({ unid }))
     expect(jewel.sections[0].rows![0]).toMatchObject({ label: 'Impossible Escape · unidentified', chaos: 120 })

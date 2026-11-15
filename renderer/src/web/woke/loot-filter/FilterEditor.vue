@@ -79,26 +79,68 @@
           </div>
           <StackScale v-if="ladder" :ladder="ladder" :colour-of="stackColour" :name-of="stackTierName" @preview="previewStack" @commit="setStack" />
           <div v-if="stuckTiers.length" class="text-xs" style="color: var(--w-warn);">{{ stuckTiers.join(', ') }} can't catch anything: a tier above takes those stacks first.</div>
-          <div v-for="t in group.tiers" :key="t.tier" class="w-focusable" role="button" tabindex="0" :class="[$style.tierRow, { [$style.tierRowStack]: hasStacks, [$style.active]: t.tier === selTier, [$style.off]: t.disabled, [$style.dropOk]: dragOver === t.tier }]"
-            @click="selTier = t.tier; picked = []" @contextmenu="tierMenu($event, t)" @keydown.enter.self="selTier = t.tier; picked = []" @keydown.space.self.prevent="selTier = t.tier; picked = []"
-            @dragover="onDragOver(t, $event)" @dragleave="dragOver = dragOver === t.tier ? null : dragOver" @drop="onDrop(t, $event)">
-            <span :class="$style.tierName" :title="t.tier">{{ tierName(firstLive(t)) }}<span v-if="tierChanged(t.tier)" :class="$style.dot" title="You changed this tier" /></span>
-            <span v-if="hasStacks" :class="$style.stack">
-              <template v-if="tierStack(t) != null && !t.disabled">
-                &ge; <input type="number" min="1" :max="STACK_MAX" :class="$style.stackInput" :value="stackSizeOf(t)" :aria-label="`Stack size for ${stackTierName(t.tier)}`"
-                  @click.stop @input="onStackInput(t, $event)" @change="onStackChange(t, $event)" @blur="dropStackDraft(t.tier)" @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc="cancelStack(t, $event)">
-              </template>
-              <span v-else-if="ladder?.floor === t.tier" class="w-faint">smaller</span>
-            </span>
-            <span :class="$style.icons" :title="t.bases.slice(0, 3).every(b => baseIcon(b)) ? undefined : t.bases.slice(0, 12).join(' · ')">
-              <template v-if="t.bases.length">
-                <template v-for="b in t.bases.slice(0, 3)" :key="b"><img v-if="baseIcon(b)" v-item-tip="baseTip(b)" :src="baseIcon(b)!" :class="$style.rowArt" alt=""></template>
-                <span v-if="t.bases.length > 3" class="w-faint text-xs w-num" :title="t.bases.slice(3, 15).join(' · ')">+{{ t.bases.length - 3 }}</span>
-              </template>
-              <span v-else class="w-faint text-xs w-trunc">{{ conditionSummary(t) }}</span>
-            </span>
-            <LabelPreview :text="t.bases[0] ?? previewName(t)" :actions="firstLive(t).actions" :visibility="t.disabled ? 'Hide' : t.visibility" style="max-width: 100%; overflow: hidden;" />
+          <div v-if="lad.marks.length" :class="$style.marks">
+            <div class="text-xs"><span style="font-weight: 600;">Marks</span> <span class="w-dim">paint on top of a tier's look. They never show or hide anything.</span></div>
+            <div class="flex flex-wrap gap-1">
+              <button v-for="m in lad.marks" :key="m.key" type="button" class="w-focusable" :class="[$style.mark, { [$style.active]: m.tiers.some(t => t.tier === selTier), [$style.hiddenRow]: m.off }]"
+                :title="m.tiers.map(t => `${tierName(firstLive(t))}${t.disabled ? ' (off)' : ''}`).join(' · ')" :data-tiers="m.tiers.map(t => t.tier).join(' ')" @click="pickRow(m.tiers)" @contextmenu="tierMenu($event, m.tiers[0])">
+                <span :class="$style.markSwatch" :style="markSwatch(m.look)" />
+                <span class="flex flex-col" style="min-width: 0; text-align: left;">
+                  <span>{{ markName(m.look) }}<span v-if="m.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this mark" /></span>
+                  <span class="w-faint text-xs">{{ markWhen(lad.axis, m) }}</span>
+                </span>
+              </button>
+            </div>
           </div>
+          <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.ladderStack]: hasStacks }]">
+            <span>{{ lad.axis ? axisName(lad.axis) : 'Tier' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
+          </div>
+          <template v-for="(r, i) in lad.rows" :key="r.tiers[0].tier">
+            <div v-if="lad.cut === i" :class="$style.cut"><span />Hidden below this line<span /></div>
+            <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
+              :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
+              @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
+              <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
+                <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this tier" /></span>
+                <span v-if="lad.axis && r.tiers.length > 1" class="w-faint text-xs w-trunc">{{ r.tiers.length }} tiers, same look</span>
+              </span>
+              <span v-if="hasStacks" :class="$style.stack">
+                <template v-if="r.tiers.length === 1 && tierStack(r.tiers[0]) != null && !r.tiers[0].disabled">
+                  &ge; <input type="number" min="1" :max="STACK_MAX" :class="$style.stackInput" :value="stackSizeOf(r.tiers[0])" :aria-label="`Stack size for ${stackTierName(r.tiers[0].tier)}`"
+                    @click.stop @input="onStackInput(r.tiers[0], $event)" @change="onStackChange(r.tiers[0], $event)" @blur="dropStackDraft(r.tiers[0].tier)" @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc="cancelStack(r.tiers[0], $event)">
+                </template>
+                <span v-else-if="ladder?.floor === r.tiers[0].tier" class="w-faint">smaller</span>
+              </span>
+              <LabelPreview :text="r.tiers[0].bases[0] ?? previewName(r.tiers[0])" :actions="firstLive(r.tiers[0]).actions" :style-override="r.markLook" :visibility="r.tiers[0].disabled ? 'Hide' : r.tiers[0].visibility" style="max-width: 100%; overflow: hidden;" />
+              <span :class="$style.icons" :title="rowTitle(r.tiers[0])">
+                <template v-if="rowBases(r.tiers).length">
+                  <template v-for="b in rowBases(r.tiers).slice(0, 6)" :key="b"><img v-if="baseIcon(b)" v-item-tip="baseTip(b)" :src="baseIcon(b)!" :class="$style.rowArt" alt=""></template>
+                  <span class="w-dim text-xs w-trunc">{{ basesText(rowBases(r.tiers)) }}</span>
+                </template>
+                <span v-else class="w-dim text-xs w-trunc">{{ rowConditions(r.tiers[0]) }}</span>
+                <span v-if="r.maybeMarks.length" :class="$style.maybe" :title="r.maybeMarks.map(m => `${markName(m.look)}: ${markWhen(lad.axis, m)}`).join(' · ')">
+                  <span v-for="m in r.maybeMarks" :key="m.key" :class="$style.markSwatch" :style="markSwatch(m.look)" />sometimes
+                </span>
+              </span>
+              <span v-if="r.tiers.every(t => t.disabled)" :class="$style.shownBtn" title="Commented out in the filter">Off</span>
+              <button v-else type="button" class="w-focusable" :class="$style.shownBtn" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
+            </div>
+          </template>
+          <template v-if="lad.specials.length || subGroups.length">
+            <div class="text-xs" :class="$style.specialHead"><span style="font-weight: 600;">Special rules</span> <span class="w-dim">{{ lad.axis ? `win over the ${axisName(lad.axis)} order` : 'that sit with this group' }}</span></div>
+            <div :class="$style.specials">
+              <button v-for="t in lad.specials" :key="t.tier" type="button" class="w-focusable" :class="[$style.special, { [$style.active]: t.tier === selTier, [$style.hiddenRow]: t.disabled || t.visibility === 'Hide', [$style.dropOk]: dragOver === t.tier }]" :data-tiers="t.tier" :title="rowTitle(t)" @click="pickRow([t])" @contextmenu="tierMenu($event, t)"
+                @dragover="onDragOver(t, $event)" @dragleave="dragOver = dragOver === t.tier ? null : dragOver" @drop="onDrop(t, $event)">
+                <LabelPreview :text="t.bases[0] ?? previewName(t)" :actions="firstLive(t).actions" :visibility="t.disabled ? 'Hide' : t.visibility" :extras="false" style="max-width: 9rem; overflow: hidden; flex: none;" />
+                <span class="w-trunc">{{ tierName(firstLive(t)) }}</span>
+              </button>
+              <button v-for="g in subGroups" :key="g.type" type="button" class="w-focusable" :class="[$style.special, { [$style.hiddenRow]: g.hidden }]" :title="`Open ${groupName(g.type)}`" @click="selectGroup(g.type)">
+                <i class="fas fa-level-down-alt w-faint" aria-hidden="true" />
+                <span class="w-trunc">{{ groupName(g.type) }}</span>
+                <span class="w-faint text-xs w-num" style="margin-left: auto;">{{ g.tiers.length }}</span>
+              </button>
+            </div>
+          </template>
         </template>
       </div>
 
@@ -115,6 +157,12 @@
             <WButton v-if="tierChanged(tier.tier) && !isOwnGroup" size="sm" variant="ghost" icon="fas fa-undo" title="Take back your changes to this tier" @click="resetTier(tier.tier)">Reset tier</WButton>
           </div>
           <div class="text-xs w-faint">{{ tier.blocks.length > 1 ? `${tier.blocks.length} rules` : `line ${tier.blocks[0].line}` }}<span v-if="tier.disabled"> · commented out in the filter</span></div>
+          <div v-if="band && !bulkLook" :class="$style.bulkNote" class="text-xs">
+            <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}. Pick one to change it alone:</span>
+            <span class="flex flex-wrap gap-1">
+              <WChip v-for="t in band" :key="t.tier" clickable @click="pickSolo(t)">{{ tierName(firstLive(t)) }}</WChip>
+            </span>
+          </div>
           <div v-if="bulkLook" :class="$style.bulkNote" class="text-xs">
             <span class="grow">Changes here go to the {{ picked.length }} item{{ picked.length === 1 ? '' : 's' }} you picked, not the tier.</span>
             <WButton size="sm" variant="ghost" @click="bulkLook = false">Whole tier</WButton>
@@ -320,7 +368,9 @@ import AddItemField from './AddItemField.vue'
 import RuleNav from './RuleNav.vue'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
-import { baseIcon, labelCss } from './label-style'
+import { baseIcon, cssColour, labelCss } from './label-style'
+import { axisName, buildLadder, conditionText, distinctConditions, markName, markWhen, rangeText, sharedConditions } from './ladder'
+import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
 import { buildTree, byPrice, groupName, pickBases } from './groups'
 import type { GroupNode, TierNode } from './groups'
@@ -521,8 +571,75 @@ function previewName (t: TierNode): string {
   return cls?.values[0] ?? 'Item'
 }
 
-function conditionSummary (t: TierNode): string {
-  return firstLive(t).conditions.slice(0, 3).map(c => `${c.key} ${c.op} ${c.values.slice(0, 2).join(' ')}${c.values.length > 2 ? '…' : ''}`).join(' · ')
+// ---- ladder view ----
+
+const EMPTY_LADDER: Ladder = { axis: null, rows: [], marks: [], specials: [], cut: null }
+const lad = computed<Ladder>(() => group.value ? buildLadder(group.value.tiers) : EMPTY_LADDER)
+const sharedConds = computed(() => group.value ? sharedConditions(group.value.tiers) : new Set<string>())
+// NeverSink's sub-groups (maps->influenced under maps), linked under specials.
+const subGroups = computed(() => group.value ? allGroups.value.filter(g => g.type.startsWith(`${group.value!.type}->`)) : [])
+// Clicking a band or mark edits all its tiers, unless asked for just one.
+// The tier picked out of its band to change alone; any other pick ends it.
+const soloTier = ref<string | null>(null)
+const band = computed<TierNode[] | null>(() => {
+  if (!selTier.value || soloTier.value === selTier.value || isOwnGroup.value) return null
+  const has = (ts: TierNode[]) => ts.length > 1 && ts.some(t => t.tier === selTier.value)
+  return lad.value.rows.find(r => has(r.tiers))?.tiers ?? lad.value.marks.find(m => has(m.tiers))?.tiers ?? null
+})
+const bandIsMark = computed(() => Boolean(band.value && lad.value.marks.some(m => m.tiers === band.value)))
+
+function pickRow (tiers: TierNode[]) {
+  selTier.value = tiers[0].tier
+  picked.value = []
+  soloTier.value = null
+}
+
+function rowConditions (t: TierNode): string {
+  return distinctConditions(t, sharedConds.value, lad.value.axis).join(' · ')
+}
+
+function rowTitle (t: TierNode): string {
+  const lines = firstLive(t).conditions.map(conditionText)
+  if (t.bases.length) lines.push(t.bases.slice(0, 15).join(' · ') + (t.bases.length > 15 ? ` +${t.bases.length - 15}` : ''))
+  return lines.join('\n')
+}
+
+function rowBases (tiers: TierNode[]): string[] {
+  return tiers.length === 1 ? tiers[0].bases : [...new Set(tiers.flatMap(t => t.bases))]
+}
+
+function basesText (bases: string[]): string {
+  if (bases.length <= 2) return bases.filter(b => !baseIcon(b)).join(', ')
+  return `${bases.length} items`
+}
+
+// One tier of a band, edited alone.
+function pickSolo (t: TierNode) {
+  selTier.value = t.tier
+  picked.value = []
+  soloTier.value = t.tier
+}
+
+function markSwatch (look: StylePatch) {
+  return {
+    background: look.background ? cssColour(look.background) : 'var(--w-panel)',
+    borderColor: look.border ? cssColour(look.border) : 'transparent',
+    color: look.text ? cssColour(look.text) : undefined
+  }
+}
+
+function setRowShown (tiers: TierNode[], show: boolean) {
+  const type = selType.value
+  if (!type) return
+  const visibility: Visibility = show ? 'Show' : 'Hide'
+  if (isOwnGroup.value) {
+    for (const t of tiers) {
+      const own = ownEditFor(t)
+      if (own) props.store.edit({ ...own, visibility, patch: {} })
+    }
+    return
+  }
+  props.store.editsWithUndo(tiers.map(t => ({ kind: 'visibility' as const, type, tier: t.tier, visibility })))
 }
 
 const copyFrom = computed(() => group.value
@@ -531,7 +648,8 @@ const copyFrom = computed(() => group.value
 
 function selectGroup (type: string) {
   selType.value = type
-  selTier.value = group.value?.tiers[0]?.tier ?? null
+  // The top of the ladder, not a mark that happens to come first in the file.
+  selTier.value = lad.value.rows[0]?.tiers[0]?.tier ?? group.value?.tiers[0]?.tier ?? null
   picked.value = []
 }
 
@@ -616,6 +734,11 @@ function patchTier (patch: StylePatch) {
     if (own) props.store.edit({ ...own, patch })
     return
   }
+  if (band.value) {
+    const type = selType.value
+    props.store.editsWithUndo(band.value.map(t => ({ kind: 'style' as const, type, tier: t.tier, patch })))
+    return
+  }
   props.store.edit({ kind: 'style', type: selType.value, tier: selTier.value, patch })
 }
 
@@ -628,6 +751,11 @@ function setTierVisibility (v: Visibility) {
   if (isOwnGroup.value) {
     const own = tier.value && ownEditFor(tier.value)
     if (own) props.store.edit({ ...own, visibility: v, patch: {} })
+    return
+  }
+  if (band.value) {
+    const type = selType.value
+    props.store.editsWithUndo(band.value.map(t => ({ kind: 'visibility' as const, type, tier: t.tier, visibility: v })))
     return
   }
   props.store.edit({ kind: 'visibility', type: selType.value, tier: selTier.value, visibility: v })
@@ -1124,9 +1252,9 @@ function openFolder () {
   font-family: var(--w-head);
   font-size: var(--w-fs-lg);
 }
-.tierRow {
+.tierRow, .ladderRow {
   display: grid;
-  grid-template-columns: 6.5rem 5.5rem minmax(0, 1fr);
+  grid-template-columns: 8rem 11rem minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   padding: 6px 8px;
@@ -1137,7 +1265,101 @@ function openFolder () {
   text-align: left;
   cursor: pointer;
 }
-.tierRowStack { grid-template-columns: 4.5rem 5rem 3.5rem minmax(0, 1fr); }
+.ladderRow, .ladderHead { grid-template-columns: 7rem 11rem minmax(0, 1fr) 4rem; }
+.ladderRow.ladderStack, .ladderHead.ladderStack { grid-template-columns: 6rem 4.5rem 11rem minmax(0, 1fr) 4rem; }
+.ladderHead {
+  display: grid;
+  gap: 10px;
+  padding: 2px 9px 0;
+  font-size: var(--w-fs-xs, 11px);
+  color: var(--w-faint);
+}
+.ladderHead > span:first-child::first-letter { text-transform: uppercase; }
+.hiddenRow { opacity: 0.62; }
+.rowHead { display: block; color: var(--w-fg); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.ladderRow .tierName { display: flex; flex-direction: column; min-width: 0; }
+.cut {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--w-fs-sm);
+  color: var(--w-warn);
+}
+.cut > span { flex: 1; border-top: 2px dashed var(--w-warn); }
+.marks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--w-panel-2);
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+}
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--w-panel);
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  color: var(--w-fg);
+  font: inherit;
+  font-size: var(--w-fs-sm);
+  cursor: pointer;
+  max-width: 100%;
+}
+.markSwatch {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 3px solid transparent;
+  border-radius: 1px;
+}
+.maybe {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  font-size: var(--w-fs-xs, 11px);
+  color: var(--w-dim);
+}
+.maybe .markSwatch { width: 11px; height: 11px; border-width: 2px; }
+.shownBtn {
+  justify-self: end;
+  padding: 1px 8px;
+  background: transparent;
+  border: 1px solid var(--w-line-strong);
+  border-radius: 10px;
+  color: var(--w-dim);
+  font: inherit;
+  font-size: var(--w-fs-xs, 11px);
+  cursor: pointer;
+}
+.ladderRow:not(.hiddenRow) .shownBtn { color: var(--w-fg); border-color: var(--w-accent); }
+.specialHead { padding-top: 8px; }
+.specials {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 4px;
+}
+.special {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px;
+  background: var(--w-panel-2);
+  border: 1px solid transparent;
+  border-radius: var(--w-r-sm);
+  color: var(--w-fg);
+  font: inherit;
+  font-size: var(--w-fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
 .stack {
   display: inline-flex;
   align-items: center;
@@ -1158,7 +1380,7 @@ function openFolder () {
   -moz-appearance: textfield;
 }
 .stackInput::-webkit-inner-spin-button { display: none; }
-.tierRow:hover {
+.tierRow:hover, .ladderRow:hover, .special:hover, .mark:hover {
   border-color: var(--w-line);
 }
 .active {

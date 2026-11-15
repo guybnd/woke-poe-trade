@@ -8,16 +8,23 @@
       <div :class="$style.bar">
         <WField v-model="query" icon="fas fa-search" placeholder="Search a Viscera, boss, map or effect" class="grow" />
       </div>
+      <div class="w-faint text-xs" :class="$style.note">
+        <template v-if="level != null">Mods of the {{ TIER_NAME[levelTierLabel(level)] }} versions, for area level {{ level }}.</template>
+        <template v-else>Mods of the plain versions, until you enter a zone.</template>
+        Hover a row for every version.
+        <WInfo text="Which version drops where isn't published. This guesses Lesser in the acts, plain in maps up to area level 77, Greater from 78." />
+      </div>
       <WEmpty v-if="!table" icon="fas fa-bone">Reading the Viscera list.</WEmpty>
       <WEmpty v-else-if="!rows.length" icon="fas fa-bone">No Viscera match.</WEmpty>
       <div v-else :class="$style.list">
         <template v-for="v in (onScreen ? rows : [])" :key="v.name">
           <button type="button" :class="[$style.row, open === v.name && $style.on, hereNames.has(v.name) && $style.here]"
-            :title="hereNames.has(v.name) ? 'Dropped in this zone' : undefined" data-woke-wickerman-row
+            :title="versionsTitle(v)" data-woke-wickerman-row
             @click="open = open === v.name ? null : v.name">
             <span class="min-w-0 w-trunc">{{ v.name }}</span>
             <span class="w-dim whitespace-nowrap">{{ v.slot }}</span>
             <span class="min-w-0 w-dim w-trunc text-xs">{{ sources(v) }}</span>
+            <span :class="$style.mod">{{ v.tiers[levelTier(v, level)]?.text }}</span>
           </button>
           <div v-if="open === v.name" :class="$style.detail">
             <div v-for="(t, i) in v.tiers" :key="t.label" :class="$style.tier">
@@ -48,12 +55,13 @@ export default { widget: widgetWickermanSpec }
 
 <script setup lang="ts">
 // 3.30 Wickerman module: every Viscera by slot, with search. Remove with the league.
-import { computed, inject, shallowRef } from 'vue'
+import { computed, inject, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WEmpty, WField, WPanel, WPrice, WSegmented } from '../ui'
+import { WEmpty, WField, WInfo, WPanel, WPrice, WSegmented } from '../ui'
 import { popupAnchor } from '../ui/window-anchor'
-import { actLine, searchViscera } from './viscera'
+import { actLine, levelTier, levelTierLabel, searchViscera } from './viscera'
+import { useZone } from '../shared/zone'
 import type { Viscera } from './viscera'
 import { useVisceraHere, useVisceraPrices, useVisceraTable } from './here'
 import type { WickermanWidget } from './widget'
@@ -100,6 +108,25 @@ const rows = computed(() => {
   return [...shown].sort((a, b) => Number(hereNames.value.has(b.name)) - Number(hereNames.value.has(a.name)))
 })
 
+// The level of the last zone you fought in: towns and hideouts don't count.
+const zone = useZone()
+const lastLevel = shallowRef<number | null>(null)
+watch(() => [zone.kind, zone.areaLevel] as const, ([kind, lvl]) => {
+  if (lvl != null && kind !== 'town' && kind !== 'hideout') lastLevel.value = lvl
+}, { immediate: true })
+const level = computed(() => lastLevel.value)
+const TIER_NAME = { Low: 'Lesser', Med: 'plain', High: 'Greater' } as const
+
+// Every version on hover, with its price where poe.ninja has one.
+function versionsTitle (v: Viscera): string {
+  const lines = v.tiers.map((t, i) => {
+    const p = price(v, i)
+    return `${t.label}: ${t.text.replace(/\n/g, ' · ')}${p != null ? ` (${p >= 10 ? Math.round(p) : p.toFixed(1)}c)` : ''}`
+  })
+  if (hereNames.value.has(v.name)) lines.unshift('Dropped in this zone')
+  return lines.join('\n')
+}
+
 function sources (v: Viscera): string {
   return [v.act?.boss, ...v.maps.map(m => `${m.boss}, ${m.map}`)].filter(Boolean).join(' · ')
 }
@@ -111,13 +138,15 @@ function sources (v: Viscera): string {
 .row {
   display: grid;
   grid-template-columns: minmax(0, 13rem) 6rem minmax(0, 1fr);
-  gap: 10px;
+  gap: 1px 10px;
   align-items: baseline;
   padding: 4px var(--w-pad);
   text-align: left;
   border-bottom: 1px solid var(--w-line-soft);
 }
 .row:hover, .on { background: var(--w-accent-soft); }
+.mod { grid-column: 1 / -1; min-width: 0; white-space: pre-line; font-size: var(--w-fs-sm); color: var(--w-r-magic); line-height: 1.25; }
+.note { display: flex; align-items: center; gap: 6px; padding: 0 var(--w-pad) 4px; }
 .here { box-shadow: inset 2px 0 0 var(--w-accent); }
 .detail { display: flex; flex-direction: column; gap: 1px; padding: 4px var(--w-pad) 6px calc(var(--w-pad) + 10px); font-size: var(--w-fs-sm); border-bottom: 1px solid var(--w-line); }
 .tier { display: flex; align-items: baseline; gap: 8px; }

@@ -15,10 +15,13 @@ function dropPrice (ctx: LookupContext, name: string, variant?: string): number 
   return (variant != null ? ctx.price(name, variant) : null) ?? ctx.price(name)
 }
 
-// A rolled drop (a jewel) has no one price: its unidentified trade price once
-// looked up, else a note.
+// A rolled drop (a jewel) drops unidentified: its trade price when one was
+// looked up, else poe.ninja's.
+function unidPrice (ctx: LookupContext, name: string): number | null {
+  return ctx.unid?.(name) ?? ctx.price(name)
+}
 function unidRow (ctx: LookupContext, name: string, label: string): LookupRow {
-  const unid = ctx.unid?.(name) ?? null
+  const unid = unidPrice(ctx, name)
   return unid != null
     ? { label: `${label} · unidentified`, chaos: unid, item: { name }, bulk: true }
     : { label, value: 'Depends on the roll', item: { name } }
@@ -39,14 +42,14 @@ export function entryCost (boss: Boss, ctx: LookupContext): number | null {
   return sum
 }
 
-// Chance x price over the drops with a known rate and a fixed price. A floor:
-// unidentified jewels and unknown rates count as nothing.
+// Chance x price over the drops with a known rate and a price; rolled jewels
+// at their unidentified price. A floor: unknown rates count as nothing.
 export function lootPerKill (boss: Boss, ctx: LookupContext): number | null {
   let sum = 0
   let any = false
   for (const d of boss.drops) {
-    if (d.chance == null || d.variable) continue
-    const price = dropPrice(ctx, d.name, d.variant)
+    if (d.chance == null) continue
+    const price = d.variable ? unidPrice(ctx, d.name) : dropPrice(ctx, d.name, d.variant)
     if (price == null) continue
     sum += d.chance * price * (d.qty ?? 1)
     any = true
@@ -72,8 +75,7 @@ export function bossCard (boss: Boss, ctx: LookupContext): LookupCard {
   if (boss.entry.length > 1 || (boss.entry[0]?.qty ?? 0) > 1) entry.push({ label: 'Entry total', chaos: cost })
   if (!boss.entry.length) entry.push({ label: 'No entry item: found in the world', dim: true })
   const drops = [...boss.drops]
-    // Rolled drops go by their unidentified price; with none yet, last.
-    .map(d => ({ d, price: d.variable ? ctx.unid?.(d.name) ?? -1 : dropPrice(ctx, d.name, d.variant) }))
+    .map(d => ({ d, price: d.variable ? unidPrice(ctx, d.name) : dropPrice(ctx, d.name, d.variant) }))
     .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
     .slice(0, DROP_ROWS)
     .map(({ d, price }): LookupRow => {
@@ -85,7 +87,7 @@ export function bossCard (boss: Boss, ctx: LookupContext): LookupCard {
   if (loot != null) summary.push({ label: 'Loot per kill (known rates)', chaos: loot })
   if (loot != null && cost != null && boss.entry.length) summary.push({ label: 'After entry cost', chaos: loot - cost })
   const source = boss.source
-    ? `Rates: ${boss.source.label}${boss.source.kills ? `, ${boss.source.kills.toLocaleString('en-US')} kills` : ''}. Unidentified jewels and unknown rates aren't counted.`
+    ? `Rates: ${boss.source.label}${boss.source.kills ? `, ${boss.source.kills.toLocaleString('en-US')} kills` : ''}. Jewels count at their unidentified price; unknown rates aren't counted.`
     : 'No public drop rates for this boss.'
   return {
     id: `boss:${boss.id}`,

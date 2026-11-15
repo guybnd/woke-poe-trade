@@ -181,3 +181,15 @@ describe('a category poe.ninja just started tracking', () => {
     expect(parseCategory('Viscera', chunk('viscera', [{ name: "Sirus' Head", variant: 'x', chaos: 900, graph: [] }]), 7)[0].gaps).toBe(0)
   })
 })
+
+describe('Wickerman: the version for your area level', () => {
+  it('picks Lesser in the acts, plain in low maps, Greater from 78, or the closest one', async () => {
+    const { levelTier, levelTierLabel } = await import('@/web/woke/wickerman/viscera')
+    const v = { tiers: [{ label: 'Low', text: 'a' }, { label: 'Med', text: 'b' }, { label: 'High', text: 'c' }] }
+    expect([45, 70, 81, null].map(l => v.tiers[levelTier(v as never, l)].label)).toEqual(['Low', 'Med', 'High', 'Med'])
+    expect(levelTierLabel(77)).toBe('Med')
+    // Bat's Wings has only Low and High.
+    const w = { tiers: [{ label: 'Low', text: 'a' }, { label: 'High', text: 'c' }] }
+    expect(w.tiers[levelTier(w as never, 70)].label).toBe('High')
+  })
+})

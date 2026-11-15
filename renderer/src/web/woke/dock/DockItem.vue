@@ -29,6 +29,7 @@ const props = withDefaults(defineProps<{
   glow?: boolean
   pinnable?: boolean
   readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null, below?: boolean }>
+  stack?: { text: string, tone: 'up' | 'down' | null } | null
   menu?: DockMenuAction[]
   wheel?: (dir: 1 | -1) => void
   wake?: number
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<{
   glow: false,
   pinnable: false,
   readouts: undefined,
+  stack: null,
   menu: undefined,
   wheel: undefined,
   wake: undefined

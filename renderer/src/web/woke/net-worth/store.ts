@@ -11,6 +11,8 @@ import {
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
+import { glanceKey, ledgerKey } from './glance'
+import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
@@ -28,7 +30,6 @@ export interface Ledger {
 const emptyLedger = (): Ledger => ({ points: [], diffs: [], tabChaos: { prev: {}, last: {} } })
 
 const COLLECTION = 'net-worth'
-const ledgerKey = (league: string) => `${league}-ledger`
 // Your prices and ignored items (Set my price, Ignore item), per league.
 const prefsKey = (league: string) => `${league}-prices`
 
@@ -70,6 +71,8 @@ export const ledger = computed(() => ledgerRef.value)
 export const historyNow = computed(() => history.value)
 export const stashNow = computed(() => stash.value)
 export const leagueNow = computed(() => league.value)
+// The dock icon's number, after each counted read (glance.ts).
+export const glance = shallowRef<Glance | null>(null)
 
 // Each tab's value now (live prices), in tab order.
 export const tabValues = computed<TabValue[]>(() => {
@@ -139,6 +142,18 @@ async function countRead (id: string, readAt: number) {
     tabChaos: { prev: led.tabChaos.last, last: tabNow }
   }
   ledgerRef.value = nextLedger
+  const todayDiv = sinceYesterday(next, v.chaos, divine.value, readAt)
+  const g: Glance = {
+    league: id,
+    at: readAt,
+    chaos: v.chaos,
+    netChaos: diff?.netChaos ?? null,
+    divine: divine.value,
+    perHourChaos: perHourToday(next, readAt),
+    todayChaos: todayDiv != null && divine.value ? todayDiv * divine.value : null
+  }
+  glance.value = g
+  await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: g }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: id, value: next }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: baselineOf(v) }).catch(() => {})
