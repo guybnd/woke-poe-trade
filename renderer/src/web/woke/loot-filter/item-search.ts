@@ -183,7 +183,33 @@ export function searchItems (list: SearchItem[], query: string, limit = 12): Sea
     KIND_ORDER.indexOf(a.item.kind) - KIND_ORDER.indexOf(b.item.kind) ||
     a.item.name.length - b.item.name.length ||
     a.item.name.localeCompare(b.item.name))
-  return ranked.slice(0, limit).map(r => r.item)
+  // A rare's title, "Doom Nails, Spike-Point Arrow Quiver": its random name
+  // is in no data, but the base inside it is. Those go first, unless a name
+  // is or starts with the query ("vaal grace" stays Vaal Grace, not Grace).
+  const inside = ranked.some(r => r.rank <= 1) ? [] : namesInside(list, q)
+  const seen = new Set(inside)
+  return [...inside, ...ranked.map(r => r.item).filter(i => !seen.has(i))].slice(0, limit)
+}
+
+// Items whose whole name sits in the query as words, longest first, leaving
+// out names that only appear inside a longer one ("Arrow Quiver" in
+// "Spike-Point Arrow Quiver").
+function namesInside (list: SearchItem[], q: string): SearchItem[] {
+  if (!/[\s,]/.test(q)) return []
+  const hits: SearchItem[] = []
+  for (const item of list) {
+    const n = item.name.toLowerCase()
+    if (n.length < 5 || n.length >= q.length) continue
+    let at = q.indexOf(n)
+    while (at >= 0) {
+      const before = at === 0 || /[\s,]/.test(q[at - 1])
+      const after = at + n.length === q.length || /[\s,]/.test(q[at + n.length])
+      if (before && after) { hits.push(item); break }
+      at = q.indexOf(n, at + 1)
+    }
+  }
+  hits.sort((a, b) => b.name.length - a.name.length || a.name.localeCompare(b.name))
+  return hits.filter(h => !hits.some(o => o.name.length > h.name.length && o.name.toLowerCase().includes(h.name.toLowerCase())))
 }
 
 // The item as it lies on the ground in an area of this level.

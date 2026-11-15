@@ -48,6 +48,18 @@ describe('searching', () => {
     expect(searchItems(list, 'mageblood').map(i => i.name)).toContain('Mageblood')
   })
 
+  it("finds a rare by the base inside its title, not by its random name", () => {
+    expect(searchItems(list, 'Doom Nails, Spike-Point Arrow Quiver')[0].name).toBe('Spike-Point Arrow Quiver')
+    expect(searchItems(list, 'doom nails spike-point arrow quiver')[0].name).toBe('Spike-Point Arrow Quiver')
+    // The base's own name still ranks it first, ahead of Soul Strike on it.
+    expect(searchItems(list, 'spike-point')[0].name).toBe('Spike-Point Arrow Quiver')
+    expect(searchItems(list, 'Doom Nails')).toEqual([])
+    // A whole name typed out still comes first, not a shorter name inside it.
+    expect(searchItems(list, 'vaal grace')[0].name).toBe('Vaal Grace')
+    expect(searchItems(list, 'tainted chaos orb')[0].name).toBe('Tainted Chaos Orb')
+    expect(searchItems(list, 'ambush b')[0].name).toBe('Ambush Boots')
+  })
+
   it('needs two letters', () => {
     expect(searchItems(list, 'd')).toEqual([])
   })

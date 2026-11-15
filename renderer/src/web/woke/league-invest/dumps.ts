@@ -16,8 +16,9 @@ const PERMANENT = new Set(['Standard', 'Hardcore'])
 export interface ItemHistory {
   type: string
   name: string
-  variant: string
-  links: string
+  // Left out when empty (the bundled leagues do).
+  variant?: string
+  links?: string
   div: Array<number | null>
   conf: number[]
 }
@@ -68,8 +69,8 @@ export async function importLeagues (
   return { imported, failed }
 }
 
-export function historyKey (item: { type: string, name: string, variant: string, links?: string }): string {
-  return `${item.type}\u0000${item.name}\u0000${item.variant}\u0000${item.links ?? ''}`
+export function historyKey (item: { type: string, name: string, variant?: string, links?: string }): string {
+  return `${item.type}\u0000${item.name}\u0000${item.variant ?? ''}\u0000${item.links ?? ''}`
 }
 
 // Collects rows from any number of dump CSV texts, grouped by league.
