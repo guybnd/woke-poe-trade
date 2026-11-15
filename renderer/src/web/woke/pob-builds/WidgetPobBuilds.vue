@@ -4,12 +4,6 @@
     <DockItem id="pob-builds" :menu="dockMenu" :game-click="config.treeOnIconClick === false ? undefined : iconClick" :title="activeName" :show="Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId" :wm-id="config.wmId" card-width="24rem">
       <template #card><BuildHoverCard /></template>
     </DockItem>
-    <!-- Your character against the build in use: only on hover, never on its own. -->
-    <DockItem id="pob-character" icon="fas fa-user-shield" :title="characterTitle" :badge="characterBadge" :wm-id="config.wmId" card-width="20rem"
-      :show="personalOn && config.characterIcon !== false && Boolean(active.details.value) && active.pobWidget.value?.wmId === config.wmId && (Boolean(characterStatus.snapshot) || characterStatus.pending)"
-      :game-click="openCharacterCompare">
-      <template #card><CharacterCard @open="openCharacterCompare" /></template>
-    </DockItem>
     <div class="flex gap-2 min-h-0 items-start">
       <WPanel ref="panel" :title="config.wmTitle || 'PoB builds'" icon="wisdom" :busy="loading && builds.length > 0" width="20rem" max-height="70vh">
         <template #actions>
@@ -108,9 +102,7 @@ import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
 import BuildDetail from './BuildDetail.vue'
 import BuildHoverCard from './BuildHoverCard.vue'
-import CharacterCard from './CharacterCard.vue'
-import { CHARACTER_TREE, characterStatus, characterTabAsk, characterTreeSpec, startCharacterSync, useCharacterDiff } from './character'
-import { personalOn } from '../personal'
+import { CHARACTER_TREE, characterStatus, characterTreeSpec, startCharacterSync } from './character'
 import { buildPinChoices, moveBuildPins, treePin } from './build-pins'
 import { buildRegexFolder, moveRegexFolder } from '../regex-library/folders'
 import { isPinned as isPiecePinned, pins, togglePin as togglePinned } from '../pins/pins'
@@ -201,36 +193,15 @@ async function iconClick () {
   showWithOverlay(wm, props.config.wmId)
 }
 
-// Your character (character.ts): read in the background by main while the
-// stash reader is on, kept apart from every build.
-startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead !== false)
-const characterDiff = useCharacterDiff(active.details, active.level, active.act, active.loadout)
-const characterTitle = computed(() => {
-  const s = characterStatus.value.snapshot
-  return s ? `${s.character.name} vs ${activeName.value}` : 'Your character'
-})
-const characterBadge = computed(() => {
-  const d = characterDiff.value
-  if (!d) return null
-  const n = d.gearOff + (d.tree ? d.tree.added + d.tree.removed : 0) + d.gemsMissing
-  return n > 0 ? n : null
-})
+// Your character (character.ts): read by main while the stash reader is on,
+// on Read now (or on area changes, if turned on), kept apart from every build.
+startCharacterSync(() => active.charName.value, () => props.config.characterAutoRead === true)
 // The tree window: the build's trees, plus your character's when comparing with it.
 const treeSpecs = computed(() => {
   const trees = details.value?.trees ?? []
   const s = characterStatus.value.snapshot
   return treeAt.value?.from === CHARACTER_TREE && s ? [...trees, characterTreeSpec(s)] : trees
 })
-// The card's Open compare (and the icon's click): the window on the build in
-// use, at the Character tab.
-function openCharacterCompare () {
-  const rel = props.config.activeBuild
-  if (!rel) return
-  characterTabAsk.value = true
-  selected.value = rel
-  showWithOverlay(wm, props.config.wmId)
-}
-
 const activeName = computed(() => (active.relPath.value ?? '').split('/').pop()?.replace(/\.xml$/i, '') || 'PoB builds')
 
 // Follow the character Client.txt shows levelling: a build linked to that

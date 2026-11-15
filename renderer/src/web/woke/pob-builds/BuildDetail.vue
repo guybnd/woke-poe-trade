@@ -202,7 +202,6 @@ import type { BuildRuleSwitches } from '../loot-filter/build-rules'
 import BuildCosts from './BuildCosts.vue'
 import BuildTrades from './BuildTrades.vue'
 import CharacterTab from './CharacterTab.vue'
-import { characterTabAsk } from './character'
 import { personalOn } from '../personal'
 import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
@@ -238,12 +237,6 @@ const charName = build.charName
 const error = shallowRef('')
 
 const tab = shallowRef<'leveling' | 'gear' | 'filter' | 'notes' | 'trades' | 'character'>('leveling')
-// The dock card's Open compare, for the build in use.
-watch([characterTabAsk, () => props.entry.relPath], ([ask]) => {
-  if (!ask || props.config.activeBuild !== props.entry.relPath) return
-  characterTabAsk.value = false
-  if (personalOn.value) tab.value = 'character'
-}, { immediate: true })
 // Signed out of the stash reader: the tab goes with it.
 watch(personalOn, (on) => { if (!on && tab.value === 'character') tab.value = 'leveling' })
 // The hovered row leaves with the tab, so no mouseleave comes.

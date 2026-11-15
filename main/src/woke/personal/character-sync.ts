@@ -3,8 +3,8 @@
 // touches a PoB build; the overlay compares the two when you ask it to.
 //
 // Three calls per read (character list, get-items, get-passive-skills), on
-// entering an area at most every AUTO_MS, or on "Read now" at most every
-// MANUAL_MS. Only the stash reader (personal) turns this on, and it reads
+// "Read now" at most every MANUAL_MS, and, only if turned on, on entering an
+// area at most every AUTO_MS. Only the stash reader (personal) turns this on, and it reads
 // with that sign-in.
 //
 // The last read is saved to <userData>/woke-character/current.json (and one
@@ -277,7 +277,8 @@ export class CharacterSync {
   private stopped = false
   // The character Client.txt or the overlay named last, for when the site doesn't mark one.
   hint = ''
-  auto = true
+  // Off until the overlay says otherwise: Read now only (Guy's pick).
+  auto = false
 
   constructor (private deps: Deps) {
     this.loaded = deps.store.load().then((s) => {

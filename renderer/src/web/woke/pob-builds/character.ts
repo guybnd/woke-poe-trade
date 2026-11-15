@@ -31,7 +31,7 @@ export interface CharacterStatus {
   nextAutoAt: number
 }
 
-const EMPTY: CharacterStatus = { snapshot: null, error: null, pending: false, auto: true, nextAutoAt: 0 }
+const EMPTY: CharacterStatus = { snapshot: null, error: null, pending: false, auto: false, nextAutoAt: 0 }
 export const characterStatus = shallowRef<CharacterStatus>(EMPTY)
 export const character = computed(() => characterStatus.value.snapshot)
 
@@ -47,7 +47,7 @@ function take (s: unknown) {
 let started = false
 
 // Once, from the PoB builds widget. hint: the character Client.txt names;
-// auto: read on entering an area (at most every 5 minutes).
+// auto: also read on entering an area (at most every 5 minutes).
 export function startCharacterSync (hint: () => string, auto: () => boolean) {
   if (started) return
   started = true
@@ -183,9 +183,6 @@ export function readAgo (readAt: number, now = Date.now()): string {
 
 // Loaded once something compares; shared by the card and the tab.
 const treeNodes = shallowRef<Map<number, TreeNode> | null>(null)
-// Set by the dock card's Open compare; the build window opening on the build
-// in use takes it and shows the Character tab.
-export const characterTabAsk = shallowRef(false)
 
 export function useCharacterDiff (details: Ref<PobDetails | null>, level: Ref<number | null>, act: Ref<number | null>, pick: Ref<LoadoutPick | undefined>) {
   watch(character, (s) => {

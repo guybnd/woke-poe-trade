@@ -67,7 +67,7 @@ describe('parsePassives', () => {
     const t = parsePassives(JSON.stringify({
       hashes: [100, 200, 200, 300],
       hashes_ex: [65600],
-      mastery_effects: { 4000: 48385, '4100': '12345' },
+      mastery_effects: { 4000: 48385, 4100: '12345' },
       items: [{ x: 2, frameType: 2, name: 'Grim Spark', typeLine: 'Cobalt Jewel', baseType: 'Cobalt Jewel' }]
     }))!
     expect(t.nodes).toEqual([100, 200, 300])
@@ -121,8 +121,9 @@ describe('CharacterSync', () => {
     expect(t.saved).toHaveLength(1)
   })
 
-  it('reads on area changes at most every 5 minutes, and Read now at most every 30 s', async () => {
+  it('reads on area changes (when on) at most every 5 minutes, and Read now at most every 30 s', async () => {
     const t = setup()
+    t.sync.auto = true
     await t.sync.read('area')
     expect(t.urls).toHaveLength(3)
     t.advance(AUTO_MS - 1)
@@ -135,9 +136,8 @@ describe('CharacterSync', () => {
     expect(t.urls).toHaveLength(6)
   })
 
-  it('makes no area reads with auto off', async () => {
+  it('makes no area reads with auto off, the default', async () => {
     const t = setup()
-    t.sync.auto = false
     await t.sync.read('area')
     expect(t.urls).toHaveLength(0)
   })
@@ -205,7 +205,7 @@ describe('gearDiff', () => {
       { slot: 'Weapon 1 Swap', item: item('NORMAL', 'Driftwood Wand') }
     ])
     expect(Object.fromEntries(rows.map(r => [r.slot, r.state]))).toEqual({
-      'Body Armour': 'match', Helmet: 'differs', Gloves: 'missing', Belt: 'base'
+      'Body Armour': 'match', 'Helmet': 'differs', 'Gloves': 'missing', 'Belt': 'base'
     })
   })
 })
@@ -213,7 +213,10 @@ describe('gearDiff', () => {
 describe('gemDiff', () => {
   it('finds the matching link and marks missing and extra gems', () => {
     const groups = [{
-      label: '', slot: 'Helmet', enabled: true, isMain: false,
+      label: '',
+      slot: 'Helmet',
+      enabled: true,
+      isMain: false,
       gems: [
         { name: 'Precision', level: 20, quality: 0, enabled: true },
         { name: 'Arcane Surge Support', level: 20, quality: 0, enabled: true, support: true },
@@ -229,13 +232,21 @@ describe('gemDiff', () => {
 describe('characterDiff', () => {
   it('counts passives to take and to refund against the build tree', () => {
     const snap: CharacterSnapshot = {
-      version: 1, account: 'guy', readAt: 0,
+      version: 1,
+      account: 'guy',
+      readAt: 0,
       character: { name: 'SlayMe', league: 'Covens', class: 'Slayer', level: 64 },
-      gear: [], gems: [],
+      gear: [],
+      gems: [],
       tree: { nodes: [1, 2, 3, 9], clusterNodes: [], masteries: {}, jewels: [] }
     }
     const details = {
-      className: 'Duelist', ascendClassName: 'Slayer', level: 68, mainSkill: '', notes: '', skills: [],
+      className: 'Duelist',
+      ascendClassName: 'Slayer',
+      level: 68,
+      mainSkill: '',
+      notes: '',
+      skills: [],
       trees: [{ title: 'Level 68', url: '', isActive: true, nodes: [1, 2, 3, 4, 5] }]
     } as PobDetails
     const d = characterDiff(snap, details, null, 64, 10)

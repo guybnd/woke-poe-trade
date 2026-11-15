@@ -24,12 +24,8 @@
       <WToggle v-model="treeRefunds" />
     </WSettingRow>
     <template v-if="personalOn">
-      <WSettingRow label="Compare your character with the build"
-        hint="A dock icon whose card shows how the character you play differs from the build in use: gear slots, passives to take or refund, missing gems. Read from pathofexile.com with the stash reader's sign-in; it never changes the build.">
-        <WToggle v-model="characterIcon" />
-      </WSettingRow>
       <WSettingRow label="Read your character on area changes"
-        hint="At most every 5 minutes. Off, it's read only when you press Read now.">
+        hint="For the build window's Character tab, which compares the character you play with a build. At most every 5 minutes. Off, it's read only when you press Read now. Reading never changes the build.">
         <WToggle v-model="characterAutoRead" />
       </WSettingRow>
     </template>
@@ -64,12 +60,8 @@ export default defineComponent({
         set: (on: boolean) => { props.configWidget.treeRefunds = on }
       }),
       personalOn,
-      characterIcon: computed({
-        get: () => props.configWidget.characterIcon !== false,
-        set: (on: boolean) => { props.configWidget.characterIcon = on }
-      }),
       characterAutoRead: computed({
-        get: () => props.configWidget.characterAutoRead !== false,
+        get: () => props.configWidget.characterAutoRead === true,
         set: (on: boolean) => { props.configWidget.characterAutoRead = on }
       }),
       treeOnIconClick: computed({
