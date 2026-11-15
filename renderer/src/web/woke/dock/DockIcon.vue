@@ -1,6 +1,6 @@
 <template>
   <span ref="rootEl" :class="$style.root" :data-dock="host.props.id">
-    <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.twoLine]: !peekText && twoLine, [$style.glow]: host.props.glow }]"
+    <span ref="iconEl" data-woke-frame :class="[$style.icon, { [$style.peek]: peekText, [$style.hot]: cardOpen, [$style.withRead]: readouts.length, [$style.twoLine]: !peekText && twoLine, [$style.glow]: host.props.glow, [$style.withStack]: stack }]"
       :title="wm.active.value ? `${host.props.title}${host.props.wmId != null ? ' · click to open' : ''}` : undefined"
       @click="click" @contextmenu.prevent="openIconMenu" @wheel="onWheel">
       <svg v-if="host.props.progress != null" :class="$style.ring" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
@@ -21,6 +21,7 @@
       <template v-else>
         <span v-for="r in readouts" :key="r.id" class="w-num" :class="[$style.read, r.tone && $style['read-' + r.tone]]">{{ r.text }}</span>
       </template>
+      <span v-if="stack" class="w-num" :class="[$style.stack, stack.tone && $style['stack-' + stack.tone]]">{{ stack.text }}</span>
       <span v-if="badge != null && badge !== ''" :class="[$style.badge, $style['tone-' + (host.props.tone ?? 'accent')]]">{{ badge }}</span>
       <span v-if="host.props.led" :class="[$style.led, $style['led-' + host.props.led]]" />
       <i v-if="offDock" class="fas fa-thumbtack" :class="$style.pinMark" title="Pinned: the card is on screen" />
@@ -76,6 +77,8 @@ const cardEl = shallowRef<HTMLElement | null>(null)
 const menuEl = shallowRef<HTMLElement | null>(null)
 
 const badge = computed(() => props.host.props.badge)
+// The badge wins: both sit on the icon.
+const stack = computed(() => badge.value != null && badge.value !== '' ? null : props.host.props.stack ?? null)
 const readouts = computed(() => props.host.props.readouts ?? [])
 const inline = computed(() => readouts.value.filter(r => !r.below))
 const below = computed(() => readouts.value.filter(r => r.below))
@@ -318,8 +321,8 @@ const styles = useCssModule()
 .ringFill { fill: none; stroke: var(--w-accent); stroke-width: 2.5; }
 .glyph { width: 28px; display: grid; place-items: center; font-size: calc(13px * var(--w-text-scale, 1)); }
 .art { width: 20px; height: 20px; object-fit: contain; }
-.icon.withRead { opacity: 0.85; }
-.icon.withRead:hover, .icon.withRead.hot, .icon.withRead.peek { opacity: 1; }
+.icon.withRead, .icon.withStack { opacity: 0.85; }
+.icon.withRead:hover, .icon.withRead.hot, .icon.withRead.peek, .icon.withStack:hover { opacity: 1; }
 .withRead { gap: 8px; padding-right: 12px; background: var(--w-panel); }
 .read { font-size: calc(12px * var(--w-text-scale, 1)); color: var(--w-fg); white-space: nowrap; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; }
 /* A second, smaller line under the readouts: the pill grows down, the icon stays put. */
@@ -347,6 +350,20 @@ const styles = useCssModule()
   background: var(--w-accent);
   pointer-events: none;
 }
+/* On the art, outlined in black like a stack size in the game. */
+.stack {
+  position: absolute;
+  left: 15px;
+  bottom: -4px;
+  transform: translateX(-50%);
+  font: 700 calc(11px * var(--w-text-scale, 1))/1 var(--w-num);
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 3px #000;
+  pointer-events: none;
+}
+.stack-up { color: #8fe39c; }
+.stack-down { color: #ff8a7d; }
 .tone-up { background: var(--w-up); color: #0d1f13; }
 .tone-down { background: var(--w-down); color: #fff; }
 .tone-warn { background: var(--w-warn); color: #1a1408; }

@@ -41,6 +41,9 @@ export interface DockItemProps {
   cardWidth?: string
   // Values kept on screen beside the icon; `below` ones on a second, smaller line.
   readouts?: Array<{ id: string, text: string, tone: 'up' | 'down' | 'dim' | null, below?: boolean }>
+  // A number drawn on the icon's art, outlined like a stack size in the game.
+  // A badge, when there is one, shows instead.
+  stack?: { text: string, tone: 'up' | 'down' | null } | null
   // A ring around the icon, 0 to 1.
   progress?: number | null
   // A soft pulse around the icon while something is happening.

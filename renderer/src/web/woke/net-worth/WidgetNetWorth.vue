@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
-    <DockItem id="net-worth" title="Net worth" :show="config.dockIcon !== false" :wm-id="config.wmId"
-      :badge="badge" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
+    <DockItem ref="dockEl" id="net-worth" title="Net worth" :show="config.dockIcon !== false" :wm-id="config.wmId"
+      :badge="badge" :stack="stack" :wheel="swapGlance" card-width="25rem" :menu="dockMenu" @open-change="cardOpen = $event">
       <template #card>
         <!-- Its data loads the first time the card opens, never at startup. -->
         <NetWorthCard v-if="cardOpen && personalReady" :status="status" :league="leagueId" @refresh="refresh" @settings="openSettingsPage(wm, 'Game & league')" />
@@ -37,9 +37,12 @@ import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, openSettingsPage, showWithOverlay } from '../dock/dock'
 import { popupAnchor } from '../ui/window-anchor'
-import { agoPhrase } from '../ui/format'
+import { agoPhrase, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { parseHotkeyTarget } from './widget'
+import { DOCS, GLANCE_LABELS, glanceFromPoints, glanceKey, glanceText, isGlance, ledgerKey, nextShows } from './glance'
+import type { Glance } from './glance'
+import type { LedgerPoint } from './ledger'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 
 const NetWorthPanel = defineAsyncComponent(() => import('./NetWorthPanel.vue'))
@@ -71,6 +74,7 @@ watch(onScreen, (yes) => { if (yes) started.value = true }, { immediate: true })
 
 // The store loads once the window opens, or once a read finishes here.
 let store: typeof import('./store') | null = null
+let stopGlance: (() => void) | null = null
 let firstReadAt: number | null | undefined
 async function feed (s: ReaderStatus) {
   if (!store) {
@@ -78,6 +82,7 @@ async function feed (s: ReaderStatus) {
     firstReadAt ??= s.lastReadAt
     if (!started.value && !readNow) return
     store = await import('./store')
+    stopGlance = watch(store.glance, (g) => { if (g) glance.value = g })
   }
   store.setLeague(leagueId.value)
   store.onStatus(s)
@@ -99,6 +104,41 @@ watch([leagueId, () => AppConfig().accountName], ([league, accountName]) => {
     .catch(() => {})
 }, { immediate: true })
 
+// The icon's number, from one small saved doc: the store isn't loaded for it.
+const glance = shallowRef<Glance | null>(null)
+let glanceFor: string | null = null
+async function loadGlance (league: string) {
+  glanceFor = league
+  let g: unknown = await hostRequest('doc-get', { collection: DOCS, key: glanceKey(league) }).catch(() => null)
+  if (!isGlance(g)) {
+    // Read before glances were saved: the chart's last point, till the next read saves one.
+    const led = await (hostRequest('doc-get', { collection: DOCS, key: ledgerKey(league) }) as Promise<{ points?: LedgerPoint[] } | null>).catch(() => null)
+    g = glanceFromPoints(league, led?.points)
+  }
+  // A read counted meanwhile (store) is newer.
+  if (glanceFor !== league || !isGlance(g) || g.league !== league) return
+  if (glance.value?.league === league && glance.value.at >= g.at) return
+  glance.value = g
+}
+watch(leagueId, (league) => {
+  glance.value = null
+  glanceFor = null
+  if (league && Host.isElectron) loadGlance(league).catch(() => {})
+}, { immediate: true })
+const stack = computed(() => {
+  const g = glance.value
+  if (!g || g.league !== leagueId.value) return null
+  return glanceText(g, props.config.glanceShows ?? 'change', nowMinute.value)
+})
+// The wheel steps through what the number shows, naming it for a moment.
+const dockEl = shallowRef<{ peek: (text: string, ms?: number) => void } | null>(null)
+function swapGlance (dir: 1 | -1) {
+  if (!glance.value) return
+  const next = nextShows(props.config.glanceShows, dir)
+  props.config.glanceShows = next
+  dockEl.value?.peek(`${GLANCE_LABELS[next]}${stack.value ? '' : ': not yet'}`, 1500)
+}
+
 const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   if (parseHotkeyTarget(e.target) !== props.config.wmId) return
   if (onScreen.value) {
@@ -112,6 +152,7 @@ const hotkeys = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 onUnmounted(() => {
   events.abort()
   hotkeys.abort()
+  stopGlance?.()
 })
 
 const badge = computed(() => status.value?.running ? '…' : status.value?.error ? '!' : null)
