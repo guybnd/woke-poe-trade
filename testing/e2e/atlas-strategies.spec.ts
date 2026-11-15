@@ -141,6 +141,81 @@ test('Save as makes a new strategy and leaves the first as it was', async ({ ove
   expect(saved.drafts ?? {}).toEqual({})
 })
 
+// Take one passive on the tree, so the strategy has unsaved changes.
+async function takeAPassive (overlay: Overlay, atlas: ReturnType<Overlay['widget']>) {
+  const points = atlas.getByText(/\d+ \/ \d+ points/)
+  await expect(points).toBeVisible({ timeout: 30_000 })
+  const canvas = atlas.locator('canvas').last()
+  const box = (await canvas.boundingBox())!
+  const tip = overlay.page.getByText(/^Click to take: \d+ points?/)
+  let found = false
+  for (let y = 0.2; y <= 0.8 && !found; y += 0.04) {
+    for (let x = 0.3; x <= 0.8 && !found; x += 0.03) {
+      await overlay.page.mouse.move(box.x + box.width * x, box.y + box.height * y)
+      found = await tip.isVisible()
+    }
+  }
+  expect(found).toBe(true)
+  await overlay.page.mouse.down()
+  await overlay.page.mouse.up()
+  await expect(atlas.getByText('Unsaved changes')).toBeVisible()
+}
+
+test('unsaved changes: a bar under the tree, and closing asks first', async ({ overlay, fakeApp }) => {
+  test.setTimeout(90_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  await takeAPassive(overlay, atlas)
+  await expect(atlas.getByText('Unsaved', { exact: true })).toBeVisible()
+  await overlay.snap('unsaved bar under the tree')
+
+  // Hiding the tree asks; Hide without saving keeps the edit as a draft.
+  await atlas.getByTitle('Hide the tree').first().click()
+  const dialog = overlay.page.getByRole('alertdialog')
+  await expect(dialog).toContainText("Breach threads has tree changes you haven't saved")
+  await dialog.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(dialog).toHaveCount(0)
+  // The loadout's tree button asks too; Hide without saving keeps the draft.
+  await atlas.getByTitle('Hide the tree').last().click()
+  await dialog.getByRole('button', { name: 'Hide without saving' }).click()
+  await expect(atlas.getByText(/\d+ \/ \d+ points/)).toHaveCount(0)
+  await expect(atlas.getByText('Unsaved', { exact: true })).toBeVisible()
+  await atlas.getByTitle(/Show the tree/).first().click()
+  await expect(atlas.getByText('Unsaved changes')).toBeVisible()
+
+  // Closing the window asks too, and stays open meanwhile.
+  const close = atlas.locator('[data-w-panel]').first().locator('button:has(i.fa-times)')
+  await close.click()
+  await expect(dialog).toBeVisible()
+  await overlay.snap('closing with an unsaved tree asks first')
+  await expect(atlas.getByText('Juicing', { exact: true })).toBeVisible()
+  // Esc is Keep editing.
+  await overlay.page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+
+  await close.click()
+  fakeApp.clearReceived()
+  await dialog.getByRole('button', { name: 'Save and close' }).click()
+  await expect(atlas.getByText('Juicing', { exact: true })).toBeHidden()
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  expect(saved.wmWants).toBe('hide')
+  expect(saved.drafts ?? {}).toEqual({})
+})
+
+test('closing without saving keeps the tree edit for next time', async ({ overlay, fakeApp }) => {
+  test.setTimeout(90_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  await takeAPassive(overlay, atlas)
+  await atlas.locator('[data-w-panel]').first().locator('button:has(i.fa-times)').click()
+  fakeApp.clearReceived()
+  await overlay.page.getByRole('alertdialog').getByRole('button', { name: 'Close without saving' }).click()
+  await expect(atlas.getByText('Juicing', { exact: true })).toBeHidden()
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  expect(saved.wmWants).toBe('hide')
+  expect(saved.drafts['1']).toMatch(/fullscreen-atlas-skill-tree\//)
+})
+
 test('Threads, regexes in the library, and importing a guide', async ({ overlay, fakeApp }) => {
   test.setTimeout(90_000)
   const atlas = await bootAtlas(overlay, '')

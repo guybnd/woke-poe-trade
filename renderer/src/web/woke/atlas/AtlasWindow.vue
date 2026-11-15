@@ -1,5 +1,5 @@
 <template>
-    <div class="flex gap-2 min-h-0 items-start">
+    <div class="flex gap-2 min-h-0 items-start" :class="$style.root">
       <WPanel ref="panel" :title="config.wmTitle || 'Atlas strategies'" icon="map" width="22rem" max-height="80vh"
         :updated="prices.snapshot.value?.ts ?? null" :fresh-min="60" :stale-min="360">
         <!-- Only while a strategy still lists 3.29 scarabs. -->
@@ -52,8 +52,8 @@
               :data-row="row.key" :draggable="true" @dragstart="dragStart($event, row)" @dragend="dragEnd"
               @click="rowClick($event, row.s)" @contextmenu="rowMenu($event, row.s)" @keydown="rowKeys($event, row.s)"
               @keydown.delete.prevent="removeKey(row.s)" @keydown.f2.prevent="startEdit('strategy', String(row.s.id), 'rename')">
-              <span v-if="isDirty(config, row.s)" :class="$style.dirty" title="Tree changes not saved" />
               <span class="w-trunc">{{ row.s.name || 'Untitled' }}</span>
+              <span v-if="isDirty(config, row.s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
               <span v-if="earnings.get(row.s.name)" class="ml-auto w-num text-xs" :class="earnings.get(row.s.name)!.perHour >= 0 ? 'w-up' : 'w-down'"
                 :title="`${earnings.get(row.s.name)!.hours.toFixed(1)} h farmed`">{{ fmt(earnings.get(row.s.name)!.perHour) }}/h</span>
               <template #sub>{{ describe(row.s) }}</template>
@@ -82,22 +82,43 @@
           :points-at="config.pointsAt?.[selected.id] ?? null" @update:points-at="setPointsAt(config, selected!, $event)"
           @update:tree-url="setDraft(config, selected!, $event)" @update:lit="config.lit = $event" @update:list-open="config.mechanicsHidden = !$event"
           @save="saveDraft(config, selected!)" @discard="dropDraft(config, selected!)" @save-as="saveTreeAs"
-          @close="config.treeHidden = true" />
+          @close="closeTree" />
         <WPanel v-else-if="!config.treeHidden && !atlasDataError" title="Atlas tree" size-key="tree" width="44rem" :busy="!atlasTreeError">
           <WEmpty v-if="atlasTreeError" icon="fas fa-exclamation-triangle">{{ atlasTreeError }}</WEmpty>
           <WSkeleton v-else :rows="6" :value="false" />
         </WPanel>
         <AtlasLoadout :config="config" :strategy="selected" :atlas-data="atlasData" :atlas-tree="atlasTree" :atlas-data-error="atlasDataError"
-          :tree-url="workingTree(config, selected)" :tree-open="!config.treeHidden" @toggle-tree="config.treeHidden = !config.treeHidden" @show-tree="config.treeHidden = false"
+          :tree-url="workingTree(config, selected)" :tree-open="!config.treeHidden" @toggle-tree="config.treeHidden ? config.treeHidden = false : closeTree()" @show-tree="config.treeHidden = false"
           @retry="retryAtlasData(config.dataUrl)" @search="pasteSearch" />
       </template>
+
+      <!-- Closing with unsaved trees (pick W1): ask first. Closing without
+           saving keeps the edits as drafts, like before. -->
+      <div v-if="asking && askList.length" :class="$style.scrim" @mousedown.self="keepEditing">
+        <div :class="$style.ask" class="w-surface" role="alertdialog" aria-modal="true" aria-labelledby="atlas-unsaved-title" @keydown="askKeys">
+          <div id="atlas-unsaved-title" :class="$style.askHead">{{ askList.length > 1 ? 'Unsaved trees' : 'Unsaved tree' }}</div>
+          <div :class="$style.askBody">
+            <template v-if="askList.length === 1"><b>{{ askList[0].name || 'Untitled' }}</b> has tree changes you haven't saved.</template>
+            <template v-else>
+              These strategies have tree changes you haven't saved:
+              <ul :class="$style.askList"><li v-for="s in askList" :key="s.id" class="w-trunc">{{ s.name || 'Untitled' }}</li></ul>
+            </template>
+          </div>
+          <div :class="$style.askFoot">
+            <WButton size="sm" variant="ghost" @click="keepEditing">Keep editing</WButton>
+            <WButton size="sm" title="Your changes stay as unsaved edits for next time" @click="finishClose(false)">{{ asking === 'tree' ? 'Hide without saving' : 'Close without saving' }}</WButton>
+            <span ref="saveBtn"><WButton size="sm" variant="primary" icon="fas fa-save" @click="finishClose(true)">{{ askList.length > 1 ? 'Save all and ' : 'Save and ' }}{{ asking === 'tree' ? 'hide' : 'close' }}</WButton></span>
+          </div>
+        </div>
+      </div>
     </div>
 </template>
 
 <script setup lang="ts">
 // The Atlas strategies window: the list with folders, the tree, the loadout.
 // Loads the first time the window opens (WidgetAtlas.vue is the shell).
-import { computed, defineAsyncComponent, nextTick, shallowRef, useCssModule, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, nextTick, shallowRef, useCssModule, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
 import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
 import type { AtlasStrategy, AtlasWidget } from './widget'
@@ -194,6 +215,60 @@ watch(() => props.config.strategies.map(s => [s.id, contentOf(s)] as const), (no
 })
 
 const selected = computed(() => props.config.strategies.find(s => s.id === props.config.selectedId) ?? null)
+
+// ---- closing with unsaved trees ----
+
+// Closing the window (its close button, hotkey or tab) or hiding the tree asks
+// first while a tree has unsaved edits. Going back to the game only hides the
+// overlay, so it never asks.
+const wm = inject<WidgetManager>('wm')!
+const asking = shallowRef<null | 'window' | 'tree'>(null)
+const saveBtn = shallowRef<HTMLElement | null>(null)
+const unsavedTrees = computed(() => props.config.strategies.filter(s => isDirty(props.config, s)))
+const askList = computed<AtlasStrategy[]>(() => {
+  if (asking.value === 'tree') return selected.value && isDirty(props.config, selected.value) ? [selected.value] : []
+  return asking.value ? unsavedTrees.value : []
+})
+function ask (kind: 'window' | 'tree') {
+  asking.value = kind
+  nextTick(() => saveBtn.value?.querySelector('button')?.focus())
+}
+// Set while this window closes itself after the question.
+let closing = false
+watch(() => props.config.wmWants, (now, was) => {
+  if (closing || now !== 'hide' || was !== 'show') return
+  if (!wm.active.value || !unsavedTrees.value.length) return
+  props.config.wmWants = 'show'
+  ask('window')
+}, { flush: 'sync' })
+// Saved or undone elsewhere meanwhile: nothing left to ask about.
+watch(() => askList.value.length, (n) => { if (!n) asking.value = null })
+
+function closeTree () {
+  if (selected.value && isDirty(props.config, selected.value)) ask('tree')
+  else props.config.treeHidden = true
+}
+function keepEditing () {
+  asking.value = null
+}
+function finishClose (save: boolean) {
+  const kind = asking.value
+  if (save) for (const s of askList.value) saveDraft(props.config, s)
+  asking.value = null
+  if (kind === 'tree') {
+    props.config.treeHidden = true
+  } else if (kind === 'window') {
+    closing = true
+    try { wm.hide(props.config.wmId) } finally { closing = false }
+  }
+}
+function askKeys (e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    e.preventDefault(); e.stopPropagation(); keepEditing()
+  } else if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
+    e.preventDefault(); e.stopPropagation(); finishClose(true)
+  }
+}
 const hasScarabs = computed(() => props.config.strategies.some(s => /scarab/i.test(s.scarabs)))
 
 function describe (s: AtlasStrategy): string {
@@ -897,7 +972,44 @@ function pasteSearch (text: string) {
   padding-right: var(--w-pad);
 }
 .edit { flex: 1; min-width: 0; }
-.dirty { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--w-accent); }
+.unsavedTag {
+  flex: none;
+  font-size: var(--w-fs-caps);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  padding: 0 5px;
+  border-radius: var(--w-r-sm);
+  color: var(--w-panel-solid-base);
+  background: var(--w-accent);
+}
+.root { position: relative; }
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6rem;
+  background: rgb(0 0 0 / 0.55);
+}
+.ask {
+  width: 34rem;
+  max-width: calc(100% - 16px);
+  border: 1px solid var(--w-accent);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.6);
+}
+.askHead {
+  padding: 6px var(--w-pad);
+  font-family: var(--w-caps-face);
+  color: var(--w-accent);
+  border-bottom: 1px solid var(--w-line);
+}
+.askBody { padding: 10px var(--w-pad); color: var(--w-fg); line-height: 1.5; }
+.askList { margin: 4px 0 0; padding-left: 1.1rem; list-style: disc; max-height: 8rem; overflow-y: auto; }
+.askFoot { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; padding: 6px var(--w-pad); border-top: 1px solid var(--w-line); }
 .rows { display: flex; flex-direction: column; }
 .row { position: relative; }
 .nested::before {

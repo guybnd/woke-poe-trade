@@ -8,13 +8,6 @@
   </div>
   <WPanel v-else title="Atlas tree" size-key="tree" width="44rem" height="36rem" max-height="85vh">
     <template #actions>
-      <!-- Unsaved edits: in the head, so the tree never moves when they appear. -->
-      <template v-if="dirty">
-        <span :class="$style.unsaved" class="w-accent" title="The tree has changes you haven't saved"><span :class="$style.dot" /> Unsaved</span>
-        <button class="w-icon-btn w-accent" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')"><i class="fas fa-save" /></button>
-        <button class="w-icon-btn" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs"><i class="far fa-clone" /></button>
-        <button class="w-icon-btn" title="Discard: go back to the saved tree" @click="emit('discard')"><i class="fas fa-times-circle" /></button>
-      </template>
       <button class="w-icon-btn" :class="{ 'w-icon-btn--on': listOpen }" title="Mechanics: light a mechanic's passives" @click="emit('update:listOpen', !listOpen)"><i class="fas fa-list" /></button>
       <PinButton v-if="pin" :make="pin" title="Pin the tree over the game: clicks go through to the game's atlas" />
       <button class="w-icon-btn" title="Undo (Ctrl + Z)" :disabled="!undoStack.length" @click="undo"><i class="fas fa-undo" /></button>
@@ -76,6 +69,17 @@
         </div>
       </div>
     </div>
+    <!-- Unsaved edits (pick U1): a bar under the tree, in view while you click passives. -->
+    <template v-if="dirty" #footer>
+      <div :class="$style.unsaved" role="status" title="The tree has changes you haven't saved">
+        <span :class="$style.dot" />
+        <span class="w-trunc"><b>Unsaved changes</b> to {{ name || 'Untitled' }}</span>
+        <span class="grow" />
+        <WButton size="sm" variant="ghost" title="Discard: go back to the saved tree" @click="emit('discard')">Discard</WButton>
+        <WButton size="sm" title="Save as a new strategy, leaving this one as it was" @click="startSaveAs">Save as new</WButton>
+        <WButton size="sm" variant="primary" icon="fas fa-save" title="Save the tree to this strategy (Ctrl + S)" @click="emit('save')">Save <span :class="$style.keys">Ctrl S</span></WButton>
+      </div>
+    </template>
   </WPanel>
 </template>
 
@@ -669,8 +673,27 @@ function openWeb () {
 .count0 { min-width: 21ch; font-variant-numeric: tabular-nums; }
 .slider { width: 9rem; flex: none; accent-color: var(--w-accent); }
 .reach { flex: 1 1 0; min-width: 0; color: var(--w-fg); }
-.unsaved { display: inline-flex; align-items: center; gap: 4px; font-size: var(--w-fs-sm); white-space: nowrap; margin-right: 2px; }
-.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; vertical-align: middle; }
+.unsaved {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: -5px calc(-1 * var(--w-pad));
+  padding: 5px var(--w-pad);
+  background: color-mix(in srgb, var(--w-accent) 26%, transparent);
+  box-shadow: inset 0 2px 0 var(--w-accent);
+  color: var(--w-fg);
+  font-size: var(--w-fs-md);
+  white-space: nowrap;
+}
+.keys { font-family: var(--w-mono, monospace); font-size: 0.85em; opacity: 0.75; margin-left: 2px; }
+.unsaved b { color: var(--w-accent); font-weight: 600; }
+.dot { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--w-accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .unsaved .dot { animation: unsavedPulse 2.4s ease-in-out infinite; }
+}
+@keyframes unsavedPulse { 50% { opacity: 0.35; } }
 .name { width: 11rem; }
 .bare { display: flex; width: 30rem; height: 26rem; }
 .bare .map { height: 100%; }
