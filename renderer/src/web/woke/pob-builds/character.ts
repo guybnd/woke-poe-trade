@@ -237,8 +237,13 @@ export interface JewelRowDiff {
 
 // The build tree's socketed jewels against the read's, socket by socket. A
 // read's jewel names its socket by index into the game's jewel slots.
-// Unknown slots (older tree data) leave the read's jewels out.
-export function jewelDiff (build: Array<{ node: number, item: PobItem }>, worn: Array<{ x: number, item: PobItem }>, slots: number[], nodes: Map<number, TreeNode> | null): JewelRowDiff[] {
+// Without the slot order (tree data not loaded, or older) there is nothing to
+// compare. PoB keeps jewels in sockets the tree no longer takes: only sockets
+// the build's tree allocates count.
+export function jewelDiff (build: Array<{ node: number, item: PobItem }>, worn: Array<{ x: number, item: PobItem }>, slots: number[], nodes: Map<number, TreeNode> | null, allocated?: number[]): JewelRowDiff[] {
+  if (!slots.length) return []
+  const taken = allocated ? new Set(allocated) : null
+  build = taken ? build.filter(s => taken.has(s.node)) : build
   const mine = new Map<number, PobItem>()
   for (const j of worn) {
     const node = slots[j.x]
@@ -255,7 +260,8 @@ export function jewelDiff (build: Array<{ node: number, item: PobItem }>, worn: 
     else if (sameName(b, w)) state = 'match'
     else if (b.rarity !== 'UNIQUE' && w.rarity !== 'UNIQUE' && itemBase(b).toLowerCase() === itemBase(w).toLowerCase()) state = 'base'
     else state = 'differs'
-    return { node, socket: nodes?.get(node)?.name ?? '', build: b, worn: w, state }
+    const n = nodes?.get(node)
+    return { node, socket: n?.name || (n?.asc ? 'Ascendancy socket' : ''), build: b, worn: w, state }
   }).sort((x, y) => (x.state === 'extra' ? 1 : 0) - (y.state === 'extra' ? 1 : 0) || x.socket.localeCompare(y.socket))
 }
 
@@ -275,7 +281,7 @@ export function characterDiff (s: CharacterSnapshot, d: PobDetails, nodes: Map<n
     gemsMissing: gems.reduce((n, g) => n + g.gems.filter(x => !x.have).length, 0),
     tree: theirs ? treeDiff(nodes, mine, theirs) : null,
     treeTitle: treeSpec?.title ?? null,
-    jewels: jewelDiff(treeSpec?.sockets ?? [], s.tree.jewels, passiveTreeJewelSlots(), nodes)
+    jewels: jewelDiff(treeSpec?.sockets ?? [], s.tree.jewels, passiveTreeJewelSlots(), nodes, treeSpec?.nodes)
   }
 }
 

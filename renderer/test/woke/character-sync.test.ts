@@ -335,3 +335,12 @@ describe('jewelDiff', () => {
     expect(Object.fromEntries(rows.map(r => [r.node, r.state]))).toEqual({ 100: 'missing', 200: 'base', 300: 'extra' })
   })
 })
+
+describe('jewelDiff edge cases', () => {
+  it('shows nothing without the slot order, and skips jewels in sockets the build tree no longer takes', async () => {
+    const { jewelDiff } = await import('@/web/woke/pob-builds/character')
+    const build = [{ node: 100, item: item('RARE', 'Grim Spark', 'Cobalt Jewel') }, { node: 200, item: item('RARE', 'Old One', 'Cobalt Jewel') }]
+    expect(jewelDiff(build, [], [], null)).toEqual([])
+    expect(jewelDiff(build, [], [100, 200], null, [100]).map(r => r.node)).toEqual([100])
+  })
+})
