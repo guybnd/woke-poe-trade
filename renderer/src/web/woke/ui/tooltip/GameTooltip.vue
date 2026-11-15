@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap }]" :style="pos" role="tooltip">
+    <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap || itemCompare }]" :style="pos" role="tooltip">
       <header :class="[$style.head, { [$style.double]: lines.length > 1, [$style.art]: headArt }]" :style="headArt">
         <img v-for="(src, i) in influenceArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
         <div v-for="(l, i) in lines" :key="i">{{ l }}</div>
@@ -83,6 +83,10 @@
           <div v-if="item.mirrored" :class="$style.mod">Mirrored</div>
           <div v-if="item.corrupted" :class="$style.corrupted">Corrupted</div>
         </section>
+        <template v-if="itemCompare">
+          <div :class="$style.compareHead">{{ itemCompare.title }}</div>
+          <SwapCard :swap="itemCompare" />
+        </template>
       </template>
 
       <template v-else-if="gem">
@@ -113,20 +117,24 @@
               <span :class="[$style.uniqueName, 'w-trunc']">{{ u.name }}</span>
               <span v-if="u.drop" :class="$style.noDrop" title="Not a random drop on this base: it comes from a boss, a league mechanic, a vendor or a card">restricted</span>
             </span>
-            <WPrice v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
+            <WPrice bulk v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
             <span v-else class="w-faint">no price</span>
             <span :class="$style[`g-${u.grade}`]">{{ u.label }}{{ u.thin ? ', thin market' : '' }}</span>
           </div>
           <div v-if="moreUniques" class="w-faint">and {{ moreUniques }} more</div>
         </footer>
         <footer v-if="lookup.market?.range" :class="$style.strip">
-          <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
+          <template v-if="lookup.market.range.low !== lookup.market.range.high"><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.low" :divine="xchgRate ?? null" /> to </template><WPrice :bulk="lookup.market.range.high < 1" :chaos="lookup.market.range.high" :divine="xchgRate ?? null" />
           <span class="w-dim" :class="$style.span">{{ lookup.market.range.count }} prices</span>
         </footer>
         <footer v-else-if="lookup.market" :class="$style.strip">
           <!-- One's price from poe.ninja; with a count, what they're worth together. -->
-          <WPrice :chaos="lookup.market.chaos" :divine="xchgRate ?? null" /><span class="w-dim">each</span>
-          <span v-if="lookup.market.chaos > 0 && lookup.market.chaos < 1" class="w-dim">({{ perChaos(lookup.market.chaos) }} per c)</span>
+          <WPrice bulk :chaos="lookup.market.chaos" :divine="xchgRate ?? null" />
+          <span v-if="bulkPerDivine(lookup.market.chaos, xchgRate) != null" class="w-dim">({{ formatAmount(lookup.market.chaos) }}c each)</span>
+          <template v-else>
+            <span class="w-dim">each</span>
+            <span v-if="lookup.market.chaos > 0 && lookup.market.chaos < 1" class="w-dim">({{ perChaos(lookup.market.chaos) }} per c)</span>
+          </template>
           <template v-if="lookup.market.count"><span class="w-faint">·</span><WPrice :chaos="lookup.market.chaos * lookup.market.count" :divine="xchgRate ?? null" /><span class="w-dim">for {{ lookup.market.count }}</span></template>
           <span v-if="lookup.market.variant" class="w-dim">{{ lookup.market.variant }}</span>
           <span :class="$style.span" title="poe.ninja's price over the last 7 days"><WDelta :value="lookup.market.change" title="Change over 7 days" /> <span class="w-dim">7d</span></span>
@@ -154,6 +162,7 @@ import SwapCard from '../../pob-builds/SwapCard.vue'
 const ListingModGroup = defineAsyncComponent(() => import('./ListingModGroup.vue'))
 import WDelta from '../WDelta.vue'
 import WPrice from '../WPrice.vue'
+import { bulkPerDivine, formatAmount } from '../format'
 import WSpark from '../WSpark.vue'
 import { hideTip, tip } from './tooltip'
 import type { GemTip, LookupTip, PassiveTip, SwapTip } from './tooltip'
@@ -164,6 +173,7 @@ const placed = shallowRef<{ left: number, top: number } | null>(null)
 
 const item = computed<PobItem | null>(() => tip.value?.content.kind === 'item' ? tip.value.content.item : null)
 const listing = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.listing ?? null : null)
+const itemCompare = computed(() => tip.value?.content.kind === 'item' ? tip.value.content.compare ?? null : null)
 const enchantLines = computed(() => listing.value?.implicits.filter(l => l.kind === 'enchant') ?? [])
 const implicitLines = computed(() => listing.value?.implicits.filter(l => l.kind !== 'enchant') ?? [])
 const gem = computed<GemTip | null>(() => tip.value?.content.kind === 'gem' ? tip.value.content : null)
@@ -418,6 +428,13 @@ onUnmounted(() => {
 .links6 { color: #1a1209; background: linear-gradient(#e8c470, #a8792a); border-color: #7a5518; }
 
 /* A listing's headings and tags need the room. */
+.compareHead {
+  padding: 6px 10px 0;
+  border-top: 1px solid var(--tip-sep, rgba(200, 164, 106, 0.35));
+  color: var(--w-accent);
+  font-family: var(--w-caps-face);
+  text-align: center;
+}
 .wide { max-width: 46rem; --tip-range: #d9c48f; }
 .modGap { height: 8px; }
 .p-label { color: var(--w-faint); }
@@ -454,7 +471,7 @@ onUnmounted(() => {
 }
 .uniqueRow {
   display: grid;
-  grid-template-columns: minmax(8rem, 1fr) 4.5rem 6.5rem;
+  grid-template-columns: minmax(8rem, 1fr) minmax(4.5rem, max-content) 6.5rem;
   gap: var(--w-s2);
   align-items: center;
   min-height: 20px;

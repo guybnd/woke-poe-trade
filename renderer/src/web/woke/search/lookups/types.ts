@@ -12,6 +12,9 @@ export interface LookupRow {
   chaos?: number | null
   item?: { name: string, type?: string }
   dim?: boolean
+  // `chaos` is one item's price: under 1c it reads "1 div / N". Leave it off
+  // for totals (qty × each, sets, costs, profits).
+  bulk?: boolean
 }
 
 // A row of a table. A cell can carry a small second line.

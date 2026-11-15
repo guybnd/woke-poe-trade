@@ -21,6 +21,8 @@ export interface ItemTip {
   item: PobItem
   // A trade listing also has its tiers, rolls and weapon stats.
   listing?: ListingDetail
+  // A build's item against the one you wear in its slot, shown under it.
+  compare?: { title: string, source?: string, result: SwapResult }
 }
 
 // The market strip at the foot of a looked-up item.

@@ -1,6 +1,6 @@
 <template>
   <div :class="small ? $style.gearRowPlain : $style.gearRow"
-    @mouseenter="row.item && showTip($event, { kind: 'item', item: row.item })" @mouseleave="hideTip"
+    @mouseenter="row.item && showTip($event, { kind: 'item', item: row.item, compare: wornCompare(row.slot, row.item) ?? undefined })" @mouseleave="hideTip"
     @contextmenu.capture="offerItem($event, menuRef)" @contextmenu="openItemMenu($event, menuRef)">
     <span :class="[$style.cell, small && $style.cellSmall, cellClass]">
       <img v-if="art" :src="art" alt="" :class="['w-game-icon', small ? $style.artSmall : $style.art]" loading="lazy" draggable="false">
@@ -32,6 +32,7 @@ import type { GearRow } from './build-model'
 import type { GemColour } from './gems'
 import { itemArt } from './item-art'
 import { openPriceCheck } from './open-price-check'
+import { wornCompare } from './worn-compare'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { offerItem, openItemMenu } from '../ui/tooltip/item-menu'
 import { pobCheckText, pobMenuRef } from './item-menu-ref'

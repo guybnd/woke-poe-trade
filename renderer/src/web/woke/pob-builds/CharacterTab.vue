@@ -58,7 +58,7 @@
       <div v-if="!diff.gear.length" class="w-dim text-xs">No gear in the build's item set.</div>
       <div v-for="r in diff.gear" :key="r.slot" :class="$style.gear">
         <span class="w-faint">{{ slotLabel(r.slot) }}</span>
-        <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
+        <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build, compare: wornCompare(r.slot, r.build) ?? undefined })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
         <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
         <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
       </div>
@@ -92,6 +92,7 @@
 import { computed, onBeforeUnmount, onMounted, shallowRef, toRef } from 'vue'
 import { WButton, WPrice } from '../ui'
 import { openPriceCheck } from './open-price-check'
+import { wornCompare } from './worn-compare'
 import { useUniquePrice } from './unique-price'
 import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import { useActiveBuild } from './active'

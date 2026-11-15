@@ -69,7 +69,7 @@ export function passiveCard (p: Passive, ctx?: LookupContext, grantedBy: readonl
     icon: p.kind.includes('Keystone') ? 'fas fa-dharmachakra' : 'fas fa-circle-nodes',
     sections: [
       { label: p.kind, text: p.stats.length ? p.stats : ['No stats in the tree data.'] },
-      ...(grantedBy.length ? [{ label: 'Uniques that grant it', rows: grantedBy.map(name => ({ label: name, chaos: ctx?.price(name) ?? null, item: { name } })) }] : [])
+      ...(grantedBy.length ? [{ label: 'Uniques that grant it', rows: grantedBy.map(name => ({ label: name, chaos: ctx?.price(name) ?? null, item: { name }, bulk: true })) }] : [])
     ],
     actions: [
       { label: 'Copy name', copy: p.name },
