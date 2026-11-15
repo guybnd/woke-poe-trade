@@ -124,6 +124,13 @@ function columnSource (filter: StatFilter): ColumnSource | null {
   }
 }
 
+// A swap-picked row's header: "Any" or the picked element in place of the item's own.
+function pickedLabel (filter: StatFilter): string | null {
+  const pick = filter.swapPick
+  if (!pick) return null
+  return statColumnLabel(filter.statRef).replace(pick.own, pick.keys.length > 1 ? 'Any' : pick.keys[0].label)
+}
+
 /** Every ticked number filter that a listing can answer, in the filter list's order. */
 export function pickStatColumns (stats: readonly FilterOrGroup[]): StatColumn[] {
   const columns: StatColumn[] = []
@@ -138,7 +145,7 @@ export function pickStatColumns (stats: readonly FilterOrGroup[]): StatColumn[] 
     columns.push({
       // The index: a corrupted item can have two filters on one stat.
       key: `${index}|${filter.tradeId.join('|')}|${filter.statRef}`,
-      label: PROPERTIES[id]?.label ?? statColumnLabel(filter.statRef),
+      label: PROPERTIES[id]?.label ?? pickedLabel(filter) ?? statColumnLabel(filter.statRef),
       title: filter.text,
       yours: filter.roll.value,
       better: filter.roll.better ?? 0,

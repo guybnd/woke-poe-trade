@@ -119,41 +119,46 @@ test('a max res jewel gets a ⇄ and a Flip tab that searches only on a click', 
   expect(searches.length).toBe(before + 2)
 })
 
-test('picking Any searches the price check for any element, and the same listings price the Flip', async ({ overlay }) => {
+test('the element picker makes the row search any element, and Search shows which each listing has', async ({ overlay }) => {
   const searches = await fakeMarket(overlay.page)
   await overlay.boot()
   await overlay.copyItem(JEWEL)
   const panel = overlay.widget('price-check')
-  const marker = panel.getByRole('button', { name: '⇄' })
-  await expect(marker).toHaveCount(1)
+  const picker = panel.locator('[data-swap-element]')
+  await expect(picker).toHaveText(/Cold/)
   await overlay.page.waitForTimeout(300)
   const before = searches.length
 
-  await marker.click()
-  await overlay.page.getByRole('button', { name: 'Any', exact: true }).click()
-  // One search: the price check's own, with the mod as any of the three elements.
+  // Picking only changes the row, like any edit: nothing searches until Search.
+  await picker.click()
+  await overlay.page.getByRole('menuitemradio', { name: 'Any element' }).click()
+  await expect(picker).toHaveText(/Any/)
+  await expect(panel).toContainText('maximum Fire, Cold or Lightning Resistance')
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBe(before)
+
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(before + 1)
   const body = JSON.parse(searches[searches.length - 1])
   expect(body.query.stats.some((g: { type: string, filters: unknown[] }) => g.type === 'count' && g.filters.length === 3)).toBe(true)
   // Each listing says which element it has.
   await expect(panel.locator('.w-pc-stat-key', { hasText: 'Lightning' }).first()).toBeVisible()
   await expect(panel.locator('.w-pc-stat-key', { hasText: 'Cold' }).first()).toBeVisible()
-  await expect(marker).toContainText('Any')
   await overlay.snap('harvest-swap-pick-results')
-  // Close the popover.
-  await marker.click()
 
   // The Flip tab is priced from those listings: no search of its own.
   await panel.getByRole('tab', { name: /Flip/ }).click()
   await expect(panel).toContainText('Keep Cold')
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before + 1)
-  await overlay.snap('harvest-swap-pick-flip')
 
-  // This only puts the row back, with one search.
+  // Back to the item's own element: the row reads as before.
   await panel.getByRole('tab', { name: 'Results' }).click()
-  await marker.click()
-  await overlay.page.getByRole('button', { name: 'This only', exact: true }).click()
+  await picker.click()
+  await overlay.page.getByRole('menuitemradio', { name: 'Cold (this item)' }).click()
+  await expect(picker).toHaveText(/Cold/)
+  await expect(panel).not.toContainText('Fire, Cold or Lightning')
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(before + 2)
   const back = JSON.parse(searches[searches.length - 1])
   expect(back.query.stats.some((g: { type: string, filters: unknown[] }) => g.type === 'count' && g.filters.length === 3)).toBe(false)

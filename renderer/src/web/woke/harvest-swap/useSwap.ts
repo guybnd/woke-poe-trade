@@ -42,7 +42,7 @@ export interface SwapController {
   stale: (cand: SwapCandidate) => boolean
   /** What the row searches as: a key, 'any', or null for the item's own. */
   pickOf: (cand: SwapCandidate) => SwapMode | null
-  /** Searches the row as `mode` in the price check itself (1 search); 'this' puts it back. */
+  /** Makes the row search as `mode`; 'this' puts it back. Like any row edit, it waits for Search. */
   pick: (cand: SwapCandidate, mode: SwapMode | 'this') => Promise<void>
   /** The price check's listings and the rows they were searched with. */
   resultsChanged: (listings: readonly PricingResult[], searched: readonly FilterOrGroup[]) => void
@@ -50,7 +50,7 @@ export interface SwapController {
 
 const KEY: InjectionKey<SwapController> = Symbol('woke-harvest-swap')
 
-export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, stats: Ref<FilterOrGroup[]>, enabled: Ref<boolean>, startSearch: () => void): SwapController {
+export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, stats: Ref<FilterOrGroup[]>, enabled: Ref<boolean>): SwapController {
   const ninja = usePoeninja()
   const league = computed(() => filters.value.trade.league)
   const { options } = useInsight(ref([]), league)
@@ -164,7 +164,6 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
 
   async function pick (cand: SwapCandidate, mode: SwapMode | 'this') {
     const f = cand.filter
-    view.value = 'results'
     if (mode === 'this') {
       const was = f.swapPick
       if (!was) return
@@ -172,7 +171,6 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
       if (was.roll && f.roll) { f.roll.min = was.roll.min; f.roll.max = was.roll.max }
       delete f.swapPick
       runs.delete(f)
-      startSearch()
       return
     }
     if (f.swapPick?.mode === mode) return
@@ -186,14 +184,15 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     if (cand.family.anyRoll && f.roll) { f.roll.min = ''; f.roll.max = '' }
     f.swapPick = {
       mode,
-      keys: swapKeys(cand, mode).map(k => ({ label: KEY_LABEL[k], ref: refs[k] })),
+      own: KEY_LABEL[cand.from],
+      // In the family's order, so the row reads "Fire, Cold or Lightning".
+      keys: [...swapKeys(cand, mode)].sort((a, b) => cand.family.keys.indexOf(a) - cand.family.keys.indexOf(b)).map(k => ({ label: KEY_LABEL[k], ref: refs[k] })),
       tradeId: own,
       roll: ownRoll
     }
     f.tradeId = pickTradeIds(cand, mode, own)
     f.disabled = false
     runs.delete(f)
-    startSearch()
   }
 
   function resultsChanged (listings: readonly PricingResult[], searched: readonly FilterOrGroup[]) {

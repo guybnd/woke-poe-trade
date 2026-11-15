@@ -124,12 +124,13 @@ describe('listing values', () => {
     const picked = filter({
       tradeId: ['explicit.stat_1', 'explicit.stat_2'],
       statRef: '+#% to Fire Resistance',
-      swapPick: { mode: 'any', keys: [{ label: 'Fire', ref: '+#% to Fire Resistance' }, { label: 'Cold', ref: '+#% to Cold Resistance' }], tradeId: ['explicit.stat_1'] }
+      swapPick: { mode: 'any', own: 'Fire', keys: [{ label: 'Fire', ref: '+#% to Fire Resistance' }, { label: 'Cold', ref: '+#% to Cold Resistance' }], tradeId: ['explicit.stat_1'] }
     })
     const column = onlyColumn(picked)
     const listing = item(['+38% to Cold Resistance', '+20 to maximum Life'])
     expect(listingStatValue(listing, column, HELMET)).toBe(38)
     expect(listingStatLabel(listing, column, HELMET)).toBe('Cold')
+    expect(column.label).toBe('Any')
     expect(listingStatLabel(listing, onlyColumn(filter({ statRef: '+#% to Cold Resistance' })), HELMET)).toBe(null)
   })
 

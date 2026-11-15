@@ -1,8 +1,8 @@
 <template>
   <ui-popover v-if="cand" trigger="click" placement="bottom-end" boundary="#price-window">
     <template #target>
-      <button type="button" :class="[$style.marker, { [$style.dim]: !swap!.cheap(cand) && !picked, [$style.on]: running || picked }]"
-        :title="`Can be swapped: ${cand.family.label}`">⇄<template v-if="picked"> {{ picked === 'any' ? 'Any' : KEY_LABEL[picked] }}</template></button>
+      <button type="button" :class="[$style.marker, { [$style.dim]: !swap!.cheap(cand), [$style.on]: running }]"
+        :title="`Can be swapped: ${cand.family.label}`">⇄</button>
     </template>
     <template #content>
       <div :class="$style.card">
@@ -17,13 +17,13 @@
         <div v-if="cand.randomTarget" :class="$style.warn">Another mod on this item is hit by the same craft. The game picks one of the two at random.</div>
         <div v-if="cand.family.anyRoll" :class="$style.note">Tiers differ between elements, so swaps are searched at any roll.</div>
         <div :class="$style.buttons">
-          <w-chip clickable :active="!active" @click="swap!.pick(cand!, 'this')">This only</w-chip>
-          <w-chip clickable :active="active === 'any'" @click="swap!.pick(cand!, 'any')">{{ cand.family.random ? 'Any (random)' : 'Any' }}</w-chip>
+          <w-chip clickable :active="!active" @click="swap!.view.value = 'results'">This only</w-chip>
+          <w-chip clickable :active="active === 'any'" @click="swap!.run(cand!, 'any')">{{ cand.family.random ? 'Any (random)' : 'Any' }}</w-chip>
           <template v-if="!cand.family.random">
-            <w-chip v-for="t of cand.targets" :key="t" clickable :active="active === t" @click="swap!.pick(cand!, t)">{{ KEY_LABEL[t] }}</w-chip>
+            <w-chip v-for="t of cand.targets" :key="t" clickable :active="active === t" @click="swap!.run(cand!, t)">{{ KEY_LABEL[t] }}</w-chip>
           </template>
         </div>
-        <div :class="$style.note">Each button searches the price check for that pick (1 search). Results show which element each listing has, and Flip prices each one from the same listings.</div>
+        <div :class="$style.note">Each button is one trade search.</div>
       </div>
     </template>
   </ui-popover>
@@ -43,9 +43,8 @@ const props = defineProps<{ filter: StatFilter }>()
 const swap = useSwap()
 const cand = computed(() => swap?.candidateFor(props.filter))
 const run = computed(() => (swap && cand.value) ? swap.runs.get(cand.value.filter) : undefined)
-const picked = computed(() => (swap && cand.value) ? swap.pickOf(cand.value) : null)
 const running = computed(() => run.value != null && swap?.view.value === 'flip')
-const active = computed(() => picked.value ?? (running.value ? run.value!.mode : null))
+const active = computed(() => running.value ? run.value!.mode : null)
 
 function costText (to: string): string {
   const c = cand.value!

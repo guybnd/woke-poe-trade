@@ -276,9 +276,7 @@ export default defineComponent({
     }, { immediate: true })
 
     // woke: swappable mods (harvest-swap/). Made after the presets exist.
-    const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'),
-      // A swap pick changes a row, then searches: the row change resets the search first.
-      () => { nextTick(() => { doSearch.value = true }) })
+    const swap = provideSwap(computed(() => props.item), itemFilters, itemStats, computed(() => tradeAPI.value === 'trade'))
     const showFlipTab = computed(() => swap.candidates.value.length > 0)
     // woke: the Q tag on rows a catalyst raised.
     provideCatalystFilter(itemStats)

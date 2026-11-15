@@ -179,6 +179,8 @@ export interface StatFilter {
   // as these keys' mods too. `tradeId` and `roll` are the row's own, to put back.
   swapPick?: {
     mode: string
+    /** The item's own key's word ("Lightning"), replaced in the row's text. */
+    own: string
     keys: Array<{ label: string, ref: string }>
     tradeId: string[]
     roll?: { min: number | '' | undefined, max: number | '' | undefined }
