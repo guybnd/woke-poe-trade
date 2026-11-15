@@ -169,6 +169,9 @@
       <!-- Trades -->
       <BuildTrades v-else-if="details && tab === 'trades'" :config="config" :entry="entry" />
 
+      <!-- Your character against this build -->
+      <CharacterTab v-else-if="details && tab === 'character'" :details="details" :pick="pick" @tree="emit('tree-character', $event)" />
+
       <!-- Notes -->
       <template v-else-if="details">
         <div :class="$style.heading" class="flex"><span>Your notes</span><span class="ml-auto normal-case tracking-normal">kept by this app, not in the build file</span></div>
@@ -198,6 +201,9 @@ import type { LootFilterWidget } from '../loot-filter/widget'
 import type { BuildRuleSwitches } from '../loot-filter/build-rules'
 import BuildCosts from './BuildCosts.vue'
 import BuildTrades from './BuildTrades.vue'
+import CharacterTab from './CharacterTab.vue'
+import { characterTabAsk } from './character'
+import { personalOn } from '../personal'
 import GearRowHead from './GearRowHead.vue'
 import GemChain from './GemChain.vue'
 import GemName from './GemName.vue'
@@ -223,7 +229,7 @@ const props = defineProps<{
   entry: PobBuildEntry
   details: PobDetails | null
 }>()
-const emit = defineEmits<{ (e: 'close'): void, (e: 'tree' | 'compare', value: string): void }>()
+const emit = defineEmits<{ (e: 'close'): void, (e: 'tree' | 'compare' | 'tree-character', value: string): void }>()
 
 const build = useActiveBuild()
 const level = build.level
@@ -231,17 +237,27 @@ const act = build.act
 const charName = build.charName
 const error = shallowRef('')
 
-const tab = shallowRef<'leveling' | 'gear' | 'filter' | 'notes' | 'trades'>('leveling')
+const tab = shallowRef<'leveling' | 'gear' | 'filter' | 'notes' | 'trades' | 'character'>('leveling')
+// The dock card's Open compare, for the build in use.
+watch([characterTabAsk, () => props.entry.relPath], ([ask]) => {
+  if (!ask || props.config.activeBuild !== props.entry.relPath) return
+  characterTabAsk.value = false
+  if (personalOn.value) tab.value = 'character'
+}, { immediate: true })
+// Signed out of the stash reader: the tab goes with it.
+watch(personalOn, (on) => { if (!on && tab.value === 'character') tab.value = 'leveling' })
 // The hovered row leaves with the tab, so no mouseleave comes.
 watch(tab, hideTip)
 onBeforeUnmount(hideTip)
-const tabOptions = [
+const tabOptions = computed(() => [
   { value: 'leveling', label: 'Leveling' },
   { value: 'gear', label: 'Gear' },
   { value: 'filter', label: 'Filter' },
   { value: 'notes', label: 'Notes' },
-  { value: 'trades', label: 'Trades' }
-]
+  { value: 'trades', label: 'Trades' },
+  // Only with the stash reader on, which reads your character.
+  ...(personalOn.value ? [{ value: 'character', label: 'Character' }] : [])
+])
 
 const isActive = computed(() => props.config.activeBuild === props.entry.relPath)
 const followers = computed(() => Object.entries(props.config.followChars)

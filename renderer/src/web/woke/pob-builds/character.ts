@@ -1,0 +1,197 @@
+// Your character as pathofexile.com last read it (main/src/woke/personal/
+// character-sync.ts), kept apart from every PoB build, and how it compares
+// with one. Main reads in the background; this only shows the result. Off
+// unless the stash reader is on.
+import { computed, shallowRef, watch } from 'vue'
+import type { Ref } from 'vue'
+import { MainProcess } from '@/web/background/IPC'
+import { personalOn } from '../personal'
+import { hostRequest } from '../shared/host'
+import { gearOrder, isGearSlot, itemBase, loadoutOf, orderedGems } from './build-model'
+import { loadPassiveTree, treeDiff } from './passive-tree'
+import type { TreeDiff, TreeNode } from './passive-tree'
+import type { LoadoutPick, PobDetails, PobItem, PobSkillGroup, PobTreeSpec } from './widget'
+
+export interface CharacterGem { name: string, level: number | null, quality: number | null, support: boolean, colour: string }
+export interface CharacterGemGroup { slot: string, gems: CharacterGem[] }
+export interface CharacterSnapshot {
+  version: number
+  account: string
+  readAt: number
+  character: { name: string, league: string, class: string, level: number | null }
+  gear: Array<{ slot: string, item: PobItem }>
+  gems: CharacterGemGroup[]
+  tree: { nodes: number[], clusterNodes: number[], masteries: Record<number, number>, jewels: Array<{ x: number, item: PobItem }> }
+}
+export interface CharacterStatus {
+  snapshot: CharacterSnapshot | null
+  error: string | null
+  pending: boolean
+  auto: boolean
+  nextAutoAt: number
+}
+
+const EMPTY: CharacterStatus = { snapshot: null, error: null, pending: false, auto: true, nextAutoAt: 0 }
+export const characterStatus = shallowRef<CharacterStatus>(EMPTY)
+export const character = computed(() => characterStatus.value.snapshot)
+
+function take (s: unknown) {
+  if (!s || typeof s !== 'object') return
+  const next = { ...EMPTY, ...(s as Partial<CharacterStatus>) }
+  // Same read as before: keep the object, so nothing recalculates.
+  const prev = characterStatus.value.snapshot
+  if (prev && next.snapshot && prev.readAt === next.snapshot.readAt && prev.character.name === next.snapshot.character.name) next.snapshot = prev
+  characterStatus.value = next
+}
+
+let started = false
+
+// Once, from the PoB builds widget. hint: the character Client.txt names;
+// auto: read on entering an area (at most every 5 minutes).
+export function startCharacterSync (hint: () => string, auto: () => boolean) {
+  if (started) return
+  started = true
+  MainProcess.onEvent('MAIN->CLIENT::woke-event', ({ topic, data }) => {
+    if (topic === 'character-sync') take(data)
+  })
+  watch([personalOn, hint, auto], ([on, character, a]) => {
+    if (!on) { characterStatus.value = EMPTY; return }
+    hostRequest('character-sync', { character, auto: a }, 10_000).then(take).catch(() => {})
+  }, { immediate: true })
+}
+
+export function readCharacterNow (hint: string) {
+  if (!personalOn.value) return
+  characterStatus.value = { ...characterStatus.value, pending: true }
+  hostRequest('character-sync', { character: hint, read: 'now' }, 60_000).then(take)
+    .catch((e: Error) => { characterStatus.value = { ...characterStatus.value, pending: false, error: e.message } })
+}
+
+export const CHARACTER_TREE = 'Your character'
+
+// The character's tree as a PoB tree, for the tree window's compare.
+export function characterTreeSpec (s: CharacterSnapshot): PobTreeSpec {
+  return {
+    title: CHARACTER_TREE,
+    url: '',
+    isActive: false,
+    nodes: [...s.tree.nodes, ...s.tree.clusterNodes],
+    masteries: s.tree.masteries
+  }
+}
+
+// ---- Compare ----
+
+export type GearState = 'match' | 'base' | 'differs' | 'missing' | 'extra'
+export interface GearRowDiff { slot: string, build: PobItem | null, worn: PobItem | null, state: GearState }
+
+function sameName (a: PobItem, b: PobItem) {
+  return a.name.trim().toLowerCase() === b.name.trim().toLowerCase()
+}
+
+// match: the same unique, or the same item named the same. base: a rare or
+// magic item on the build's base (its mods aren't weighed). Flasks and swap
+// weapons only when the build has one there.
+export function gearDiff (build: Array<{ slot: string, item: PobItem }>, worn: Array<{ slot: string, item: PobItem }>): GearRowDiff[] {
+  const b = new Map(build.filter(s => isGearSlot(s.slot) || /^Flask/.test(s.slot)).map(s => [s.slot, s.item]))
+  const w = new Map(worn.map(s => [s.slot, s.item]))
+  const slots = [...new Set([...b.keys(), ...[...w.keys()].filter(s => isGearSlot(s) && !/^Flask/.test(s))])]
+  const rows: GearRowDiff[] = slots.map((slot) => {
+    const want = b.get(slot) ?? null
+    const have = w.get(slot) ?? null
+    let state: GearState
+    if (!want) state = 'extra'
+    else if (!have) state = 'missing'
+    else if (want.rarity === 'UNIQUE' || want.rarity === 'RELIC' || have.rarity === 'UNIQUE' || have.rarity === 'RELIC') state = sameName(want, have) ? 'match' : 'differs'
+    else {
+      const wb = itemBase(want).toLowerCase()
+      const hb = itemBase(have).toLowerCase()
+      state = wb && wb === hb ? (sameName(want, have) ? 'match' : 'base') : 'differs'
+    }
+    return { slot, build: want, worn: have, state }
+  })
+  return rows.sort((x, y) => gearOrder(x.slot) - gearOrder(y.slot))
+}
+
+export interface GemGroupDiff {
+  slot: string
+  label: string
+  // In the build's link order: have = socketed on the character.
+  gems: Array<{ name: string, support: boolean, have: boolean }>
+  // Socketed with these but not in the build's group.
+  extra: string[]
+}
+
+const gemKey = (name: string) => name.replace(/ Support$/i, '').trim().toLowerCase()
+
+// Each enabled build group against the character's group in the same slot
+// that shares most gems with it (any slot when none shares).
+export function gemDiff (groups: PobSkillGroup[], worn: CharacterGemGroup[]): GemGroupDiff[] {
+  const out: GemGroupDiff[] = []
+  for (const g of groups) {
+    if (!g.enabled) continue
+    const gems = orderedGems(g).filter(x => x.name)
+    if (!gems.length) continue
+    const want = new Set(gems.map(x => gemKey(x.name)))
+    const overlap = (c: CharacterGemGroup) => c.gems.filter(x => want.has(gemKey(x.name))).length
+    const candidates = worn.filter(c => overlap(c) > 0)
+    const best = candidates.sort((a, b) => (overlap(b) + (b.slot === g.slot ? 0.5 : 0)) - (overlap(a) + (a.slot === g.slot ? 0.5 : 0)))[0]
+    const have = new Set((best?.gems ?? []).map(x => gemKey(x.name)))
+    out.push({
+      slot: g.slot,
+      label: g.label || gems.find(x => !x.support)?.name || g.slot,
+      gems: gems.map(x => ({ name: x.name, support: x.support === true, have: have.has(gemKey(x.name)) })),
+      extra: (best?.gems ?? []).filter(x => !want.has(gemKey(x.name))).map(x => x.name)
+    })
+  }
+  return out
+}
+
+export interface CharacterDiff {
+  gear: GearRowDiff[]
+  gearOff: number
+  gems: GemGroupDiff[]
+  gemsMissing: number
+  // from: the character, to: the build. added = to take, removed = to refund.
+  tree: TreeDiff | null
+  treeTitle: string | null
+}
+
+export function characterDiff (s: CharacterSnapshot, d: PobDetails, nodes: Map<number, TreeNode> | null, level: number | null, act: number | null, pick?: LoadoutPick): CharacterDiff {
+  const l = loadoutOf(d, level, act, pick)
+  const gear = gearDiff(l.itemSet?.item.slots ?? [], s.gear)
+  const gems = gemDiff(l.skillSet?.item.groups ?? d.skills, s.gems)
+  const treeSpec = l.tree ?? d.trees.find(t => t.isActive) ?? null
+  const mine = [...s.tree.nodes, ...s.tree.clusterNodes]
+  return {
+    gear,
+    gearOff: gear.filter(r => r.state === 'differs' || r.state === 'missing').length,
+    gems,
+    gemsMissing: gems.reduce((n, g) => n + g.gems.filter(x => !x.have).length, 0),
+    tree: treeSpec?.nodes ? treeDiff(nodes, mine, treeSpec.nodes) : null,
+    treeTitle: treeSpec?.title ?? null
+  }
+}
+
+export function readAgo (readAt: number, now = Date.now()): string {
+  const mins = Math.max(0, Math.round((now - readAt) / 60_000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} min ago`
+  const h = Math.round(mins / 60)
+  return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`
+}
+
+// Loaded once something compares; shared by the card and the tab.
+const treeNodes = shallowRef<Map<number, TreeNode> | null>(null)
+// Set by the dock card's Open compare; the build window opening on the build
+// in use takes it and shows the Character tab.
+export const characterTabAsk = shallowRef(false)
+
+export function useCharacterDiff (details: Ref<PobDetails | null>, level: Ref<number | null>, act: Ref<number | null>, pick: Ref<LoadoutPick | undefined>) {
+  watch(character, (s) => {
+    if (s && !treeNodes.value) loadPassiveTree().then((n) => { treeNodes.value = n }, () => {})
+  }, { immediate: true })
+  return computed(() => character.value && details.value
+    ? characterDiff(character.value, details.value, treeNodes.value, level.value, act.value, pick.value)
+    : null)
+}

@@ -36,6 +36,12 @@ export interface PobBuildsWidget extends Widget {
   // The tree drawing also marks nodes taken in game that the build doesn't
   // have, to refund. Missing = on.
   treeRefunds?: boolean
+  // Your character (read with the stash reader's sign-in) gets a dock icon
+  // comparing it with the build in use. Missing = on.
+  characterIcon?: boolean
+  // Main reads your character on entering an area, at most every 5 minutes.
+  // Off: only Read now. Missing = on.
+  characterAutoRead?: boolean
 }
 
 export const TREE_HOTKEY_DEFAULT = 'Alt + T'

@@ -192,6 +192,7 @@ export interface WokeOps {
   'stash-tab-set-save': Op<{ league: string | undefined, name: string, ids: string[] }, Json>
   'stash-tab-set-delete': Op<{ league: string | undefined, name: string }, Json>
   'worn-items': Op<{ character?: string }, Json>
+  'character-sync': Op<{ character?: string, auto?: boolean, read?: 'now' }, Json>
 }
 
 export type WokeOp = keyof WokeOps

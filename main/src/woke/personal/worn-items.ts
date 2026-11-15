@@ -155,6 +155,12 @@ export const SIGNED_OUT = 'Signed out of pathofexile.com.'
 // highest level one in the league the app is set to, else in any league.
 // null: the reply isn't a character list.
 export function pickCharacter (body: string, hint: string, league: string | null): string | null {
+  const c = characterEntry(body, hint, league)
+  return c ? c.name as string : null
+}
+
+// The same pick, as the site's whole entry (league, class, level).
+export function characterEntry (body: string, hint: string, league: string | null): Raw | null {
   let json: unknown
   try {
     json = JSON.parse(body)
@@ -165,10 +171,11 @@ export function pickCharacter (body: string, hint: string, league: string | null
   if (!Array.isArray(raw)) return null
   const list = (raw as Raw[]).filter(c => c && typeof c.name === 'string')
   const active = list.find(c => c.lastActive === true)
-  if (active) return active.name as string
-  if (hint && list.some(c => c.name === hint)) return hint
+  if (active) return active
+  const named = hint ? list.find(c => c.name === hint) : undefined
+  if (named) return named
   const level = (c: Raw) => typeof c.level === 'number' ? c.level : 0
-  const best = (cs: Raw[]) => cs.slice().sort((x, y) => level(y) - level(x))[0]?.name as string | undefined
+  const best = (cs: Raw[]) => cs.slice().sort((x, y) => level(y) - level(x))[0] as Raw | undefined
   return best(list.filter(c => league != null && c.league === league)) ?? best(list) ?? null
 }
 
