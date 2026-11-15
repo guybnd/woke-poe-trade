@@ -45,7 +45,7 @@
                 <span class="w-dim" :class="$style.small">{{ typeLabel(selected.group.type) }}</span>
               </div>
               <div :class="[$style.grid, $style.gridHead]"><span>Variant</span><span class="text-right">Now</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
-              <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row]">
+              <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant }]">
                 <span class="w-trunc">{{ v.variant || selected.group.name }}
                   <i v-if="isThin(v)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(v)" /></span>
                 <WPrice bulk :chaos="v.chaos" :divine="divine" class="text-right" />
@@ -58,6 +58,7 @@
                   <button v-if="tracker" class="w-icon-btn" :class="{ 'w-icon-btn--on': isWatched(v) }" :title="isWatched(v) ? 'Stop watching' : 'Watch price'" :aria-label="isWatched(v) ? 'Stop watching' : 'Watch price'" @click="toggleWatch(v)"><i :class="isWatched(v) ? 'fas fa-star' : 'far fa-star'" /></button>
                 </span>
               </div>
+              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
@@ -82,6 +83,7 @@
               <div :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
+              <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <div :class="$style.acts">
                 <WButton size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
@@ -157,6 +159,8 @@ import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rar
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
 import BaseUniques from './BaseUniques.vue'
+import UniqueDetails from './UniqueDetails.vue'
+import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
@@ -178,9 +182,10 @@ import type { MechanicsWidget } from '../mechanics/widget'
 import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
 import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
-import { loadTipItems, loadTipUniques, loadUniqueMods } from '../ui/tooltip/item-tip'
+import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial, loadUniqueMods } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
-import type { TipItem } from '../ui/tooltip/tip-content'
+import { dropOf } from '../ui/tooltip/tip-content'
+import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
 import type { SearchWidget } from './widget'
 
@@ -472,6 +477,10 @@ function betrayalOverrides (): Record<string, string> {
 }
 // New tooltip files after a data update: read them on the next open.
 const stopDataWatch = onSharedDataChange(() => {
+  detailPack.value = null
+  detailGen++
+  detailLoading = false
+  if (detailName.value) loadDetailPack()
   tipItems.value = null
   passives.value = null
   visceraTable.value = null
@@ -591,6 +600,68 @@ const baseUniques = computed(() => {
     })
     .sort((a, b) => a.name.localeCompare(b.name))
   return { priced, unpriced }
+})
+// A unique's mods, Foulborn kinds, Vestigial mod and base facts under its
+// prices. The tooltip files load the first time a unique is picked.
+const detailPack = shallowRef<Pick<TipPack, 'uniques' | 'vestigial' | 'bases' | 'drops'> | null>(null)
+let detailLoading = false
+let detailGen = 0
+function orNull<T> (p: Promise<T>): Promise<T | null> {
+  return p.catch(() => null)
+}
+function loadDetailPack () {
+  if (detailPack.value || detailLoading) return
+  detailLoading = true
+  // A read started before a data update is dropped.
+  const mine = detailGen
+  Promise.all([orNull(loadTipUniques()), orNull(loadTipVestigial()), orNull(loadTipBases()), orNull(loadTipDrops())])
+    .then(([uniques, vestigial, bases, drops]) => {
+      if (mine !== detailGen) return
+      detailPack.value = { uniques: uniques ?? undefined, vestigial: vestigial ?? undefined, bases: bases ?? undefined, drops: drops ?? undefined }
+    })
+    .finally(() => { if (mine === detailGen) detailLoading = false })
+}
+const pickedVariant = shallowRef<string | null>(null)
+const pickedFoul = shallowRef<string | null>(null)
+const detailName = computed(() => {
+  const e = selected.value
+  if (e?.kind === 'price') return nsOf(e.group.type) === 'UNIQUE' ? baseUniqueName(e.group.name) : null
+  return e?.kind === 'item' && e.info.namespace === 'UNIQUE' ? e.info.refName : null
+})
+watch(detailName, (name) => {
+  pickedVariant.value = null
+  pickedFoul.value = null
+  if (name) loadDetailPack()
+})
+const details = computed(() => {
+  const name = detailName.value
+  const pack = detailPack.value
+  if (!name || !pack) return null
+  const found = uniqueDetails(name, pack.uniques, pack.vestigial)
+  if (!found) return null
+  const tip = pack.uniques?.[name]
+  const row = tip?.v.find(r => r.n === pickedVariant.value) ?? tip?.v[0]
+  const base = tip?.b ?? ITEM_BY_REF('UNIQUE', name)?.[0]?.unique?.base
+  const foulGroup = found.foulborn.length
+    ? uniquePrices(snapshot.value?.items ?? [], new Set([name]), { limit: 10, corrupted: corrupted.value }).find(g => g.name === `Foulborn ${name}`) ?? null
+    : null
+  return {
+    details: found,
+    foulGroup,
+    facts: base ? uniqueFacts(base, pack.bases?.[base], row?.l, ITEM_BY_REF('UNIQUE', name)?.[0]?.unique?.disenchantValue) : [],
+    drop: dropOf(pack.drops, name),
+    // Only a unique poe.ninja prices by variant can be missing the shown one.
+    priced: shownVariant.value == null || selected.value?.kind !== 'price' ||
+      !selected.value.group.variants.some(v => v.variant) ||
+      selected.value.group.variants.some(v => v.variant === shownVariant.value)
+  }
+})
+// The variant the details show, when the unique has several: its price row lights up.
+const shownVariant = computed(() => {
+  const name = detailName.value
+  const tip = name ? detailPack.value?.uniques?.[name] : undefined
+  if (!tip || tip.v.length < 2) return null
+  return pickedVariant.value ?? tip.v[0].n ?? null
 })
 const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
 // The same result stays selected as you keep typing, while it still matches.
@@ -734,8 +805,12 @@ function openTrade (entry: PriceEntry | ItemEntry) {
   // and a unique on several bases by name alone.
   const ns = info?.namespace ?? (entry.kind === 'price' ? nsOf(entry.group.type) : 'ITEM')
   const kind = ns === 'UNIQUE' ? 'unique' : ns === 'GEM' ? 'gem' : ns === 'DIVINATION_CARD' ? 'card' : 'item'
-  window.open(tradeUrl(league, tradeQuery({ name }, kind, info, AppConfig().language === 'en'), getTradeEndpoint()))
+  const q = tradeQuery({ name }, kind, info, AppConfig().language === 'en')
+  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn copies only.
+  const foulborn = kind === 'unique' && (/^Foulborn /.test(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name)))
+  window.open(tradeUrl(league, foulborn ? { ...q, filters: FOULBORN_ONLY } : q, getTradeEndpoint()))
 }
+const FOULBORN_ONLY = { misc_filters: { filters: { foulborn_item: { option: 'true' } } } }
 function findInStash (name: string) {
   Host.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'stash-search', text: JSON.stringify(name) } })
 }
@@ -873,6 +948,7 @@ const dataNote = computed(() => {
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 88px 88px 88px 52px 52px 50px; column-gap: 6px; align-items: center; }
 .gridHead { min-height: calc(24px * var(--w-text-scale, 1)); font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); border-bottom: 1px solid var(--w-line); font-family: var(--w-caps-face); }
 .row { min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
+.rowPicked { background: var(--w-panel-2); }
 .rowBtns { display: flex; justify-content: flex-end; gap: 2px; }
 .acts { display: flex; flex-wrap: wrap; gap: var(--w-s1); margin-top: var(--w-s3); }
 .convBox { margin-top: var(--w-s3); max-width: 320px; }

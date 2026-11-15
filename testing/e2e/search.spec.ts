@@ -366,3 +366,38 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   await expect(panel.getByText('Voltaxic Rift')).toBeVisible()
   await overlay.snap('search-priced-base')
 })
+
+test("a unique's details: variants, Foulborn kinds with what they replace, and its Vestigial mod", async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+
+  // Priced, several variants and Foulborn copies.
+  await box.fill('mageblood')
+  await panel.getByRole('button', { name: /^Mageblood/ }).first().click()
+  const mods = panel.getByText('Mods', { exact: true })
+  await expect(mods).toBeVisible()
+  await expect(panel.getByRole('button', { name: '3 Flasks', exact: true })).toBeVisible()
+  await expect(panel.getByText('Foulborn', { exact: true })).toBeVisible()
+  await overlay.snap('search-unique-details-variants')
+
+  // A Foulborn kind picked: Trade site searches Foulborn copies only.
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  await panel.getByRole('button', { name: /^4 Flasks Rightmost/ }).click()
+  await panel.getByText('Trade site').click()
+  const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
+  expect(decodeURIComponent(url)).toContain('"foulborn_item":{"option":"true"}')
+
+  // Unpriced: still its mods, the Foulborn swap and the Vestigial mod.
+  await box.fill("utula's hunger")
+  await panel.getByRole('button', { name: /^Utula's Hunger/ }).first().click()
+  await expect(panel.getByText('+250 to maximum Life if there are no Life Modifiers on other Equipped Items')).toBeVisible()
+  await expect(panel.getByText('+(1200-1800) to maximum Energy Shield if there are no Defence Modifiers on other Equipped Items')).toBeVisible()
+  await expect(panel.getByText('Majestic Plate · Level 53', { exact: false })).toBeVisible()
+  await overlay.snap('search-unique-details-utula')
+})

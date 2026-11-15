@@ -55,6 +55,8 @@ export interface TipPack {
   items?: Record<string, TipItem>
   bases?: Record<string, TipBase>
   drops?: Record<string, TipDrop>
+  // A unique's Vestigial implicit, one list of lines per mod (scripts/build-vestigial-data.mjs).
+  vestigial?: Record<string, string[][]>
 }
 
 export type TipKind = 'unique' | 'gem' | 'card' | 'item'
