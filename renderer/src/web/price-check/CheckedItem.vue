@@ -23,6 +23,8 @@
         :filters="itemFilters" />
     </filter-name>
     <woke-map-strip :item="item" class="mb-2" />
+    <!-- woke: the gem's other versions with poe.ninja prices; a row searches trade only when clicked. -->
+    <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
     <woke-viscera-strip v-if="isViscera" :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
@@ -147,6 +149,7 @@ export default defineComponent({
     WokeMapStrip,
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
+    WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WTabs,
     WokeDustChip,
@@ -425,6 +428,7 @@ export default defineComponent({
       showFlipTab,
       verdictSlot,
       wokeVerdictShown,
+      isGem: computed(() => props.item.category === ItemCategory.Gem),
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
       ninjaCardOpen,
       showTrendCard: computed(() => !wokeVerdictShown.value && !showPredictedPrice.value),
