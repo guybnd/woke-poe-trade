@@ -179,7 +179,7 @@ import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
 import { matchItem, sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
-import { ruleLabel, tierName } from './parse'
+import { formatCondition, ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
 import type { FilterCondition, Visibility } from './parse'
 import { LEVEL_NAMES, LEVEL_SHORT } from './strictness'
@@ -497,7 +497,8 @@ function conditionText (c: FilterCondition): string {
     const hit = c.values.find(v => v === base.value || base.value.includes(v))
     return `Item: ${hit ? `${hit} and ` : ''}${hit ? c.values.length - 1 : c.values.length} more`
   }
-  return conditionWords(c)
+  // Every mod name, so the card shows which of the item's mods hit.
+  return c.key === 'HasExplicitMod' ? formatCondition(c) : conditionWords(c)
 }
 
 function unknownKeys (m: BlockMatch): string[] {
