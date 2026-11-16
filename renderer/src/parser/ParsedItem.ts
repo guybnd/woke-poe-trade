@@ -93,6 +93,8 @@ export interface ParsedItem {
   rollsFromData?: boolean
   isFoil?: boolean
   isFoulborn?: boolean
+  // 3.30's Fated mark: the copy puts "Fated " before the base ("Fated Lathi").
+  isFated?: boolean
   isVestigial?: boolean
   dustEquivalent?: number
   statsByType: StatCalculated[]

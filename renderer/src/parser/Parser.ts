@@ -33,6 +33,7 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
   parseUnidentified,
   { virtual: parseSuperior },
   { virtual: parseFoulborn },
+  { virtual: parseFated },
   { virtual: parseVestigial },
   parseSynthesised,
   parseCategoryByHelpText,
@@ -1012,6 +1013,21 @@ function parseFoulborn (item: ParserState) {
   if (_$.FOULBORN_NAME.test(item.name)) {
     item.name = _$.FOULBORN_NAME.exec(item.name)![1]
     item.isFoulborn = true
+  }
+}
+
+// 3.30 marks some dropped gear Fated: an unidentified one's only name line is
+// "Fated Lathi", an identified one's base line is. No base starts with "Fated".
+// (English copies only, as the game's own strings for it aren't in our data.)
+const FATED_NAME = /^Fated (.+)$/
+function parseFated (item: ParserState) {
+  if (item.rarity === ItemRarity.Unique) return
+  if (item.baseType && FATED_NAME.test(item.baseType)) {
+    item.baseType = FATED_NAME.exec(item.baseType)![1]
+    item.isFated = true
+  } else if (!item.baseType && FATED_NAME.test(item.name)) {
+    item.name = FATED_NAME.exec(item.name)![1]
+    item.isFated = true
   }
 }
 

@@ -93,6 +93,10 @@ const WHOLE_TIERS: Record<string, string> = {
   exhide: 'Hidden extras',
   hideable: 'Can be hidden',
   restex: 'The rest',
+  // NeverSink 8.21's Fated rares (3.30).
+  fatedgear: 'Fated gear',
+  fatedoverride: 'Fated, any base',
+  fatedspecial: 'Fated jewels, flasks and heist',
   // NeverSink's Maps to hide, shipped off.
   corruptedmaphider: 'Hide corrupted maps',
   mirroredmaphider: 'Hide mirrored maps'
@@ -115,6 +119,9 @@ export function tierLabel (tier: string): string {
   if (m) return `Any, item level ${m[1]}`
   m = /^stack(\d+)$/.exec(tier)
   if (m) return `Stack tier ${m[1]}`
+  // NeverSink 8.21's Fated twins of its rare tiers (t1f, t2f).
+  m = /^t(\d+)f$/.exec(tier)
+  if (m) return `Tier ${m[1]}, Fated`
   m = /^t(\d+)([a-z_]*)$/.exec(tier)
   if (m) return !m[2] || ITEM_WORDS.has(m[2]) ? `Tier ${m[1]}` : `Tier ${m[1]} ${m[2]}`
   return capital(tier.replace(/_/g, ' '))

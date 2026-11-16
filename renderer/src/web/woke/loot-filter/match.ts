@@ -161,6 +161,7 @@ export function evalCondition (c: FilterCondition, item: ItemFacts): Tri {
     case 'SynthesisedItem': return bool(c, item.synthesised)
     case 'Replica': return bool(c, item.replica)
     case 'Foulborn': return bool(c, item.foulborn)
+    case 'Fated': return bool(c, item.fated)
     case 'Vestigial': return bool(c, item.vestigial)
     case 'TransfiguredGem': return bool(c, item.transfigured)
     case 'BlightedMap': return bool(c, item.blightedMap)

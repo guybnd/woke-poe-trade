@@ -181,6 +181,13 @@
             <WButton v-if="tierChanged(tier.tier) && !isOwnGroup" size="sm" variant="ghost" icon="fas fa-undo" title="Take back your changes to this tier" @click="resetTier(tier.tier)">Reset tier</WButton>
           </div>
           <div class="text-xs w-faint">{{ tier.blocks.length > 1 ? `${tier.blocks.length} rules` : `line ${tier.blocks[0].line}` }}<span v-if="tier.disabled"> · commented out in the filter</span></div>
+          <div v-if="shownElsewhere.length" :class="$style.bulkNote" class="text-xs" role="note">
+            <span class="grow">Still showing: {{ shownElsewhere.length === 1 ? 'this rule shows' : 'these rules show' }} some of these items anyway.</span>
+          </div>
+          <div v-for="o in shownElsewhere" :key="`${o.type}|${o.tier}`" class="flex items-center gap-2 text-xs">
+            <button type="button" class="w-focusable grow w-trunc" style="text-align: left; background: none; border: 0; padding: 0; color: var(--w-accent); cursor: pointer; font: inherit;" :title="o.bases.join(' · ')" @click="jumpTo(o.type, o.tier)">{{ groupName(o.type) }} › {{ tierName(o.block) }} · {{ o.bases.length }} item{{ o.bases.length === 1 ? '' : 's' }}</button>
+          </div>
+          <WButton v-if="shownElsewhere.length" size="sm" variant="ghost" icon="fas fa-eye-slash" @click="hideElsewhere">Hide {{ shownElsewhere.length === 1 ? 'that tier' : 'those tiers' }} too</WButton>
           <div v-if="band && !bulkLook" :class="$style.bulkNote" class="text-xs">
             <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}. Pick one to change it alone:</span>
             <span class="flex flex-wrap gap-1">
@@ -400,7 +407,7 @@ import { baseIcon, cssColour, labelCss } from './label-style'
 import { axisName, buildLadder, conditionText, distinctConditions, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
-import { buildTree, byPrice, groupName, pickBases } from './groups'
+import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
 import type { GroupNode, TierNode } from './groups'
 import { hostRequest } from '../shared/host'
 import { BUILD_RULE_TYPE, LEVELLING_BELOW, WEAPON_CLASSES } from './build-rules'
@@ -808,6 +815,19 @@ function patchTier (patch: StylePatch) {
     return
   }
   props.store.edit({ kind: 'style', type: selType.value, tier: selTier.value, patch })
+}
+
+// A hidden tier whose items another rule still shows (its Fated twin, say):
+// said on the tier, so "hidden" never quietly means "still drops".
+const shownElsewhere = computed(() => props.store.doc.value && selType.value && selTier.value && !isOwnGroup.value
+  ? alsoShownBy(props.store.doc.value, selType.value, selTier.value).slice(0, 4)
+  : [])
+
+function hideElsewhere () {
+  const list = shownElsewhere.value
+  if (!list.length) return
+  const undo = props.store.editsWithUndo(list.map(o => ({ kind: 'visibility' as const, type: o.type, tier: o.tier, visibility: 'Hide' as const })))
+  toast(`Hid ${list.map(o => `${groupName(o.type)} › ${tierName(o.block)}`).join(', ')}`, { anchor: panel.value?.el, undo })
 }
 
 function setTierVisibility (v: Visibility) {
