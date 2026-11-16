@@ -8,7 +8,10 @@ import type { FilterRarity } from './item-facts'
 import { filterClasses, itemCatalog, searchFacts } from './item-search'
 import { evalCondition } from './match'
 
-const KIND_KEYS = new Set(['Class', 'BaseType', 'Rarity', 'Width', 'Height'])
+const KIND_KEYS = new Set(['Class', 'BaseType', 'Rarity', 'Width', 'Height', 'Sockets', 'LinkedSockets', 'SocketGroup'])
+// Gear that never has sockets; the rest holds as many as fit its size, up to 6.
+const NO_SOCKETS = new Set(['Rings', 'Amulets', 'Belts', 'Jewels', 'Abyss Jewels', 'Quivers', 'Life Flasks', 'Mana Flasks', 'Hybrid Flasks',
+  'Utility Flasks', 'Tinctures', 'Trinkets', 'Heist Brooches', 'Heist Cloaks', 'Heist Gear', 'Heist Tools', 'Idols'])
 const RARITIES: FilterRarity[] = ['Normal', 'Magic', 'Rare', 'Unique']
 const AREA_LEVEL = 83
 
@@ -30,6 +33,8 @@ function find (block: FilterBlock, doc: FilterDoc): string | null | undefined {
   if (!catalog.length) return undefined
   let classes = classesOf.get(doc)
   if (!classes) classesOf.set(doc, classes = filterClasses(doc))
+  // A rule that names no class or base is about gear (sockets, links, size).
+  const gearOnly = !conds.some(c => c.key === 'Class' || c.key === 'BaseType')
   const rarityCond = conds.find(c => c.key === 'Rarity')
   const rarities = rarityCond
     ? RARITIES.filter(r => evalCondition(rarityCond, { rarity: r } as Parameters<typeof evalCondition>[1]) === true)
@@ -38,7 +43,12 @@ function find (block: FilterBlock, doc: FilterDoc): string | null | undefined {
     for (const item of catalog) {
       if ((rarity === 'Unique') !== (item.kind === 'Unique')) continue
       if (rarity !== 'Unique' && rarity !== 'Normal' && !item.gear) continue
+      const wearable = item.gear || item.kind === 'Unique'
+      if (gearOnly && !wearable) continue
       const facts = searchFacts(item, { areaLevel: AREA_LEVEL, rarity, classes })
+      // The most it could roll: every socket it fits, linked, all colours.
+      const most = !wearable || NO_SOCKETS.has(facts.itemClass ?? '') ? 0 : Math.min(6, item.w * item.h)
+      facts.socketGroups = most ? ['RGBRGB'.slice(0, most)] : []
       if (conds.every(c => evalCondition(c, facts) === true)) return item.baseType
     }
   }
