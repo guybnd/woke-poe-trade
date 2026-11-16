@@ -892,3 +892,18 @@ test('ladder: show from a tier in one pick, and Maps to hide are plain switches'
   expect(text).toMatch(/^Hide[^\n]*\$type->maps \$tier->maps_a_t15/m)
   await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
 })
+
+test('Alt + F: Show this rule in the editor lands on its tier row', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/currency-divine.txt', 'Alt + F')
+  const page = overlay.page
+  await page.getByRole('button', { name: /^Rule:/ }).click()
+  await page.getByRole('button', { name: 'Show this rule in the editor' }).click()
+  await expect(page.getByRole('tab', { name: 'Rules' })).toBeVisible()
+  const row = page.locator('[data-tiers~="t1exalted"]').first()
+  await expect(row).toBeInViewport()
+  await expect(page.getByText('Items in this tier', { exact: false }).first()).toBeVisible()
+  await overlay.snap('alt f to editor tier')
+})

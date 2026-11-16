@@ -125,6 +125,8 @@
             <div v-if="match.layers.length" class="text-xs w-dim">
               Also styled by: {{ match.layers.map(l => placeOf(l.block)).join(', ') }}
             </div>
+            <WButton v-if="final.type && final.tier && !final.tier.startsWith('#')" size="sm" variant="ghost" icon="fas fa-external-link-alt" style="align-self: flex-start;"
+              @click="emit('open-editor', { type: final.type, tier: final.tier })">Show this rule in the editor</WButton>
           </template>
         </div>
 

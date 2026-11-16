@@ -371,7 +371,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, useMouseNav, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { hasUndoToast } from '../ui/layer'
@@ -779,6 +779,11 @@ function goTo (type: string, t: string, base?: string) {
   selType.value = type
   selTier.value = t
   picked.value = base ? [base] : []
+  // Alt+F, search and jumps land on the row itself, even far down a long group.
+  nextTick(() => {
+    const el = panel.value?.el as HTMLElement | undefined
+    el?.querySelector(`[data-tiers~="${CSS.escape(t)}"]`)?.scrollIntoView({ block: 'nearest' })
+  }).catch(() => {})
 }
 
 watch(() => props.focus, (f) => {
