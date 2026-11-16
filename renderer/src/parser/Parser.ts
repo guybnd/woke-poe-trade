@@ -84,10 +84,10 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
   parseModifiers, // scourge
   parseModifiers, // implicit
   parseModifiers, // explicit
+  { virtual: markCorruptedByImplicit },
   { virtual: augmentModifiers },
   { virtual: transformToLegacyModifiers },
   { virtual: parseFractured },
-  { virtual: markCorruptedByImplicit },
   { virtual: pickCorrectVariant },
   { virtual: calcDisenchantDust },
   { virtual: calcBasePercentile }

@@ -18,9 +18,9 @@ const OPTS = { league: 'Mirage', merchantOnly: true, currency: null, collapseLis
 const belt = (...tail: string[]) => [
   'Item Class: Belts', 'Rarity: Unique', 'String of Servitude', 'Heavy Belt', '--------',
   'Item Level: 84', '--------',
-  '{ Implicit Modifier — Attribute }', '+75(75-105) to Strength (implicit)', '--------',
-  '{ Corruption Implicit Modifier — Life }', '+(4-5)% to maximum Life (implicit)',
-  '{ Corruption Implicit Modifier — Elemental, Resistance }', '+(12-16)% to all Elemental Resistances (implicit)', '--------',
+  '{ Implicit Modifier — Attribute }', '+75(75-105) to Strength', '--------',
+  '{ Corruption Implicit Modifier — Life }', '5(4-5)% increased maximum Life',
+  '{ Corruption Implicit Modifier — Elemental, Resistance }', '+14(12-16)% to all Elemental Resistances', '--------',
   '{ Unique Modifier }', 'Implicit Modifier magnitudes are tripled',
   '--------',
   'Ties of fear, ties of hope.',
