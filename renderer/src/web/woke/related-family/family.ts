@@ -4,6 +4,8 @@
 import type { BaseType } from '@/assets/data'
 
 interface Rule {
+  // Members the name pattern misses.
+  extra?: string[]
   // Text that every member's data line holds, for the quick search.
   needle: (ref: string) => string
   // The family key of an English item name, or null when it isn't a member.
@@ -14,9 +16,10 @@ interface Rule {
 const ESSENCE_TIERS = ['Whispering', 'Muttering', 'Weeping', 'Wailing', 'Screaming', 'Shrieking', 'Deafening']
 const CORRUPT_ESSENCES = new Set(['Essence of Insanity', 'Essence of Horror', 'Essence of Delirium', 'Essence of Hysteria'])
 
-const endsWith = (suffix: string, label: string): Rule => ({
+const endsWith = (suffix: string, label: string, extra?: string[]): Rule => ({
+  extra,
   needle: () => `${suffix}","namespace":"ITEM"`,
-  key: ref => ref.endsWith(suffix) ? suffix : null,
+  key: ref => (ref.endsWith(suffix) || extra?.includes(ref)) ? suffix : null,
   label: () => label
 })
 const startsWith = (prefix: string, label: string): Rule => ({
@@ -36,7 +39,7 @@ const RULES: Rule[] = [
   endsWith(' Enshrouding Crystal', 'Enshrouding Crystals'),
   endsWith(' Crystallised Lifeforce', 'Lifeforce'),
   endsWith("'s Ducat", 'Ducats'),
-  endsWith("'s Exalted Orb", 'Influence orbs'),
+  endsWith("'s Exalted Orb", 'Influence orbs', ["Awakener's Orb", 'Orb of Dominance']),
   startsWith('Omen of ', 'Omens'),
   startsWith('Runegraft of ', 'Runegrafts'),
   startsWith('Allflame Ember of ', 'Allflame Embers'),
@@ -81,26 +84,42 @@ export interface Family {
   members: BaseType[]
 }
 
-// `search` is ITEMS_ITERATOR: every item data line holding the text.
-export function familyOf (info: BaseType, search: (needle: string) => Iterable<BaseType>): Family | null {
-  if (info.namespace !== 'ITEM') return null
-  const ref = info.refName
+// The first rule that takes a name decides its family, for the checked item
+// and for every member alike (Tainted Catalyst is a catalyst, not tainted currency).
+function ruleOf (ref: string): { rule: Rule, key: string } | null {
   for (const rule of RULES) {
     const key = rule.key(ref)
-    if (key == null) continue
-    const seen = new Set<string>()
-    const members: BaseType[] = []
-    for (const item of search(rule.needle(ref))) {
-      if (item.namespace !== 'ITEM' || !item.exchangeable || rule.key(item.refName) !== key) continue
-      if (seen.has(item.refName)) continue
-      seen.add(item.refName)
-      members.push(item)
-    }
-    // A family of one says nothing.
-    if (members.length < 2 || !seen.has(ref)) return null
-    return { label: rule.label(key), members }
+    if (key != null) return { rule, key }
   }
   return null
+}
+
+// `search` is ITEMS_ITERATOR (every item data line holding the text); `byRef`
+// finds a rule's extra members, which no search text covers.
+export function familyOf (
+  info: BaseType,
+  search: (needle: string) => Iterable<BaseType>,
+  byRef: (ref: string) => BaseType | undefined
+): Family | null {
+  if (info.namespace !== 'ITEM') return null
+  const ref = info.refName
+  const found = ruleOf(ref)
+  if (!found) return null
+  const { rule, key } = found
+  const seen = new Set<string>()
+  const members: BaseType[] = []
+  const add = (item: BaseType | undefined) => {
+    if (!item || item.namespace !== 'ITEM' || !item.exchangeable || seen.has(item.refName)) return
+    const own = ruleOf(item.refName)
+    if (own?.rule !== rule || own.key !== key) return
+    seen.add(item.refName)
+    members.push(item)
+  }
+  for (const item of search(rule.needle(ref))) add(item)
+  for (const name of rule.extra ?? []) add(byRef(name))
+  // A family of one says nothing.
+  if (members.length < 2 || !seen.has(ref)) return null
+  return { label: rule.label(key), members }
 }
 
 export interface FamilyRow {

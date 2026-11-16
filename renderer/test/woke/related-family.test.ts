@@ -9,7 +9,7 @@ beforeAll(loadGameData)
 function fam (name: string) {
   const info = ITEM_BY_REF('ITEM', name)?.[0]
   if (!info) throw new Error(`no item ${name}`)
-  return familyOf(info, needle => ITEMS_ITERATOR(needle))
+  return familyOf(info, needle => ITEMS_ITERATOR(needle), ref => ITEM_BY_REF('ITEM', ref)?.[0])
 }
 const names = (name: string) => fam(name)?.members.map(m => m.refName) ?? []
 
@@ -37,6 +37,19 @@ describe('related family', () => {
     expect(list.length).toBeGreaterThan(15)
     expect(list.every(n => n.startsWith('Deafening Essence of '))).toBe(true)
     expect(names('Essence of Hysteria')).toEqual(expect.arrayContaining(['Essence of Insanity', 'Essence of Horror', 'Essence of Delirium']))
+  })
+
+  it('gives each item one family, whichever member is checked', () => {
+    expect(fam('Tainted Catalyst')?.label).toBe('Catalysts')
+    expect(names('Tainted Chaos Orb')).not.toContain('Tainted Catalyst')
+    expect(names('Tainted Chaos Orb')).not.toContain('Tainted Oil')
+    expect(names('Imbued Catalyst')).toContain('Tainted Catalyst')
+  })
+
+  it('adds the influence orbs the name pattern misses', () => {
+    expect(names("Hunter's Exalted Orb")).toEqual(expect.arrayContaining(["Awakener's Orb", 'Orb of Dominance', "Elder's Exalted Orb"]))
+    expect(fam("Awakener's Orb")?.label).toBe('Influence orbs')
+    expect(names("Awakener's Orb")).toContain("Shaper's Exalted Orb")
   })
 
   it('gives plain currency no family', () => {

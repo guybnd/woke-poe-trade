@@ -3,14 +3,15 @@
     <div v-if="'error' in result" class="p-2">
       {{ result.error }}
     </div>
-    <template v-if="'related' in result && result.related.length > 1">
+    <!-- woke: the item's family, then its own drop group when that adds items.
+         A click price checks the row's item; nothing searches before that. -->
+    <template v-for="sec in sections" :key="sec.title">
       <div :class="$style.hd">
-        <span>{{ result.label ?? `Related to ${item!.info.name}` }}</span>
-        <span v-if="result.label" :class="$style.count">{{ result.related.length }} · poe.ninja</span>
+        <span>{{ sec.title }}</span>
+        <span v-if="sec.family" :class="$style.count">{{ sec.rows.length }} · poe.ninja</span>
       </div>
-      <!-- woke: a click price checks the row's item; nothing searches before that. -->
-      <div :class="$style.list">
-        <div v-for="row in result.related" :key="row.name" v-item-tip="{ name: row.name }"
+      <div :class="[$style.list, { [$style.tight]: sec.family }]">
+        <div v-for="row in sec.rows" :key="row.name" v-item-tip="{ name: row.name }"
           :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: row.check && !row.highlight }]"
           @click="!row.highlight && row.check && $emit('check', row.check)">
           <img :class="$style.art" :src="row.icon" :alt="''">
@@ -21,8 +22,8 @@
           </span>
         </div>
       </div>
-      <div v-if="result.label" :class="$style.ft">Click to price check</div>
     </template>
+    <div v-if="sections.some(sec => sec.rows.some(r => r.check && !r.highlight))" :class="$style.ft">Click to price check</div>
     <template v-if="'items' in result && result.items.length">
       <div :class="$style.hd">Drops in {{ item!.info.name }}</div>
       <div v-for="row in result.items" :key="row.name" v-item-tip="{ name: row.name }" :class="$style.row">
@@ -46,7 +47,7 @@ import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { ParsedItem } from '@/parser'
 import { AppConfig } from '@/web/Config'
 import { priceCheckInput, type PriceCheckInput } from '@/web/woke/ui/tooltip/item-menu-logic'
-import { familyOf, familyRows } from '@/web/woke/related-family/family'
+import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
 
 const { findPriceByQuery, autoCurrency, xchgRate } = usePoeninja()
 
@@ -81,8 +82,18 @@ function checkInput (info: BaseType): PriceCheckInput | null {
 
 // woke: the rest of a bulk item's family (fossils, catalysts, essences of its
 // tier...), dearest first, from the item data and poe.ninja rows already loaded.
+// Members come from a scan of the item data, so each family is read once.
+const familyCache = new Map<string, Family | null>()
+function cachedFamily (info: BaseType): Family | null {
+  const key = `${info.namespace}::${info.refName}`
+  if (!familyCache.has(key)) {
+    familyCache.set(key, familyOf(info, needle => ITEMS_ITERATOR(needle), ref => ITEM_BY_REF('ITEM', ref)?.[0]))
+  }
+  return familyCache.get(key)!
+}
+
 function getFamily (item: ParsedItem) {
-  const fam = familyOf(item.info, needle => ITEMS_ITERATOR(needle))
+  const fam = cachedFamily(item.info)
   if (!fam) return null
   const rows = familyRows(fam, item.info.refName, ref => findPriceByQuery({ ns: 'ITEM', name: ref, variant: undefined })?.chaos ?? null)
   return {
@@ -151,9 +162,8 @@ export default defineComponent({
   setup (props) {
     const { updatedAt } = usePoeninja()
     const result = computed(() => {
-      if (!props.item) return
       // Prices arrive after the panel first shows.
-      void updatedAt.value
+      if (!props.item || updatedAt.value === undefined) return
 
       const queryId = getDetailsId(props.item)
       const drops = queryId
@@ -161,14 +171,30 @@ export default defineComponent({
         : null
       const family = getFamily(props.item)
       if (!family) return drops ?? undefined
-      // The family list replaces the drop table's own short list, and keeps
-      // what the item drops (none of the families drop anything).
-      if (drops && 'items' in drops) return { ...drops, ...family }
-      return { ...family, items: [] }
+      if (!drops || 'error' in drops) return { ...family, items: [], dropRelated: [] as RelatedRow[] }
+      // The drop group stays when it adds items (an essence's other tiers), and
+      // what the item drops leaves out what the family already lists.
+      const listed = new Set(family.related.map(r => r.name))
+      return {
+        ...family,
+        dropRelated: drops.related.some(r => !listed.has(r.name)) ? drops.related : [],
+        items: drops.items.filter(r => !listed.has(r.name))
+      }
+    })
+
+    interface Section { title: string, family: boolean, rows: RelatedRow[] }
+    const sections = computed<Section[]>(() => {
+      const res = result.value
+      if (!res || !('related' in res)) return []
+      const out: Section[] = []
+      if (res.related.length > 1) out.push({ title: res.label ?? `Related to ${props.item!.info.name}`, family: res.label != null, rows: res.related })
+      if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ title: `Related to ${props.item!.info.name}`, family: false, rows: res.dropRelated })
+      return out
     })
 
     return {
       result,
+      sections,
       priceText: (price: CurrencyValue) => (price.min === price.max)
         ? displayRounding(price.min, true)
         : `${displayRounding(price.min, true)}–${displayRounding(price.max, true)}`,
@@ -209,7 +235,7 @@ export default defineComponent({
   grid-template-columns: 28px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
-  min-height: 30px;
+  min-height: 36px;
   padding: 2px 12px;
   border-bottom: 1px solid var(--w-line-soft);
 }
@@ -217,6 +243,7 @@ export default defineComponent({
 .count { font-family: var(--w-body); font-size: var(--w-fs-sm); color: var(--w-faint); white-space: nowrap; }
 /* woke: a long family scrolls inside the panel; the panel never outgrows the window. */
 .list { max-height: min(26rem, 60vh); overflow-y: auto; overscroll-behavior: contain; }
+.tight .row { min-height: 30px; }
 .click { cursor: pointer; }
 .click:hover { background: var(--w-panel-3); }
 .ft { padding: 4px 12px; border-top: 1px solid var(--w-line); font-size: var(--w-fs-sm); color: var(--w-faint); }
