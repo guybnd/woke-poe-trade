@@ -671,12 +671,25 @@ const sameRangeRows = computed(() => {
 // A rule that catches a whole class (Tinctures, Utility Flasks): its bases,
 // so each can be hidden on its own with an own rule. Not for big classes.
 const CLASS_BASES_MAX = 60
+// Game data loads a moment after start: look again until the catalog is there.
+const catalogTick = ref(0)
+let catalogTimer: ReturnType<typeof setTimeout> | undefined
+onUnmounted(() => { clearTimeout(catalogTimer) })
 const classBases = computed<string[]>(() => {
   const t = tier.value
-  if (!t || t.bases.length || isOwnGroup.value) return []
+  // Off or hidden: nothing of it shows, so there's nothing to pick from.
+  if (!t || t.bases.length || isOwnGroup.value || t.disabled || firstLive(t).visibility === 'Hide') return []
   const cls = firstLive(t).conditions.find(c => c.key === 'Class' && c.op === '==')?.values
   if (!cls?.length) return []
-  const names = [...new Set(itemCatalog().filter(i => i.kind === 'Base' && i.itemClass && cls.includes(i.itemClass)).map(i => i.baseType))].sort()
+  // Read so a later tick looks again.
+  if (catalogTick.value < 0) return []
+  const catalog = itemCatalog()
+  if (!catalog.length) {
+    clearTimeout(catalogTimer)
+    catalogTimer = setTimeout(() => { catalogTick.value++ }, 500)
+    return []
+  }
+  const names = [...new Set(catalog.filter(i => i.kind === 'Base' && i.itemClass && cls.includes(i.itemClass)).map(i => i.baseType))].sort()
   return names.length <= CLASS_BASES_MAX ? names : []
 })
 

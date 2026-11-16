@@ -910,7 +910,8 @@ test('Alt + F: Show this rule in the editor lands on its tier row', async ({ ove
 
 test('a whole-class rule (tinctures) lists its bases, and one can be hidden on its own', async ({ overlay, fakeApp }) => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
-  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '6-UBER-PLUS-STRICT.filter.gz'))))
+  // Regular: its item level 82+ tincture rule is on (Uber Plus Strict comments it out).
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
