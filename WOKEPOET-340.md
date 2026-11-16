@@ -16,6 +16,23 @@ history:
     user: Agent
     date: '2026-11-16T06:56:22.666Z'
     comment: Created ticket.
+    id: a-2026-11-16t06-56-22-666z
+  - type: activity
+    user: Agent
+    date: '2026-11-16T07:23:45.185Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/554 sent to merge. Shared
+      CSS themes native checkboxes/radios/sliders/select arrows in every toolkit
+      window (art: checkbox coin, slider handle); w-input/w-select on ad-hoc
+      fields; w-chip for rail popup, filter Shown pills, dock chips, PoB Mine.
+      Shots: E:\Git\woke\scratch\themed-controls (b/, a/, before-after.png).
+    id: a-2026-11-16t07-23-45-185z
+  - type: activity
+    user: Agent
+    date: '2026-11-16T07:23:45.797Z'
+    comment: Updated implementation link.
+    id: a-2026-11-16t07-23-45-797z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/554'
 ---
 Guy saw a web-style "On" pill in the loot filter Prices tab and asked for a scan of the whole overlay for controls that skip the PoE 1 look, then all of them switched to the themed parts (WToggle coin, w-btn plate, w-select/w-field wells, w-chip, w-seg, art slider).
 
