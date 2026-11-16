@@ -97,6 +97,7 @@ const WHOLE_TIERS: Record<string, string> = {
   fatedgear: 'Fated gear',
   fatedoverride: 'Fated, any base',
   fatedspecial: 'Fated jewels, flasks and heist',
+  identifieditemhandling: 'Identified rares, not corrupted or mirrored',
   // NeverSink's Maps to hide, shipped off.
   corruptedmaphider: 'Hide corrupted maps',
   mirroredmaphider: 'Hide mirrored maps'

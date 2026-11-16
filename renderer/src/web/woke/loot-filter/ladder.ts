@@ -324,3 +324,32 @@ export function showFromChanges (sf: ShowFrom, at: number): Array<{ tier: string
     return want === shownTier(x.tier) ? [] : [{ tier: x.tier.tier, visibility: want ? 'Show' as const : 'Hide' as const }]
   })
 }
+
+const LIST_MAX = 4
+
+// One condition in plain words: "Item level 68+", "Fated", "not mirrored",
+// "Amulets, Belts, Body Armours, Boots +20".
+export function conditionWords (c: FilterCondition): string {
+  const name = axisName(c.key)
+  const list = (vals: string[]) => vals.length > LIST_MAX ? `${vals.slice(0, LIST_MAX).join(', ')} +${vals.length - LIST_MAX}` : vals.join(', ')
+  if (c.values.length === 1 && (c.values[0] === 'True' || c.values[0] === 'False')) {
+    return c.values[0] === 'True' ? capitalFirst(name) : `Not ${name}`
+  }
+  if (c.key === 'Class' || c.key === 'BaseType') return `${c.key === 'Class' ? 'Class' : 'Item'}: ${list(c.values)}`
+  if (c.key === 'Rarity') return `Rarity: ${list(c.values)}${c.op && c.op !== '==' && c.op !== '=' ? ` (${c.op})` : ''}`
+  if (isNumeric(c) && c.values.length === 1 && c.count == null) {
+    const v = Number(c.values[0])
+    switch (c.op) {
+      case '>=': return `${capitalFirst(name)} ${v}+`
+      case '>': return `${capitalFirst(name)} ${v + 1}+`
+      case '<=': return `${capitalFirst(name)} up to ${v}`
+      case '<': return `${capitalFirst(name)} up to ${v - 1}`
+      case '': case '=': case '==': return `${capitalFirst(name)} ${v}`
+    }
+  }
+  return conditionText(c)
+}
+
+function capitalFirst (s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1) : s
+}

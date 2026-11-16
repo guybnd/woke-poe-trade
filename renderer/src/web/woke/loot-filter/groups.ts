@@ -192,9 +192,19 @@ export function alsoShownBy (doc: FilterDoc, type: string, tier: string): ShownE
   if (!off) return []
   const bases = new Set(own.flatMap(b => b.conditions.filter(c => c.key === 'BaseType' && c.op === '==').flatMap(c => c.values)))
   if (!bases.size) return []
+  // A hidden rule that's still on stops its items there: only rules above it
+  // can show them. One that's commented out lets them fall to any rule.
+  const stop = live.length ? Math.min(...live.map(b => b.index)) : Infinity
+  const rarities = (b: FilterBlock) => b.conditions.find(c => c.key === 'Rarity' && !c.op)?.values ?? null
+  const ownRarity = rarities(own.find(b => !b.disabled) ?? own[0])
   const out: ShownElsewhere[] = []
   for (const b of doc.blocks) {
-    if (b.disabled || b.continue || b.visibility === 'Hide' || !b.type || (b.type === type && b.tier === tier)) continue
+    // Twins in the same group only (t2f beside t2): other groups that list
+    // the base (crafting bases, influenced, uniques) are narrower or other items.
+    if (b.index >= stop || b.type !== type || b.tier === tier) continue
+    if (b.disabled || b.continue || b.visibility === 'Hide') continue
+    const r = rarities(b)
+    if (r && ownRarity && !r.some(x => ownRarity.includes(x))) continue
     const hit = b.conditions.filter(c => c.key === 'BaseType' && c.op === '==').flatMap(c => c.values).filter(v => bases.has(v))
     if (!hit.length) continue
     const prev = out.find(o => o.type === b.type && o.tier === b.tier)

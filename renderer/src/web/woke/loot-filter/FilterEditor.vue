@@ -230,6 +230,13 @@
             </div>
             <AddItemField v-if="store.doc.value && selType && targets.includes(tier.tier)" :tip-for="baseTip" :key="`${selType}|${tier.tier}`" :doc="store.doc.value" :type="selType" :tier="tier.tier" @add="addItem" />
           </template>
+          <!-- A rule that picks items by what they are (class, item level,
+               Fated...) has no list of names to edit: say what it catches. -->
+          <template v-else-if="!isOwnGroup">
+            <div class="w-group-label" style="padding: 8px 0 2px;">Catches</div>
+            <div v-for="(w, i) in firstLive(tier).conditions.map(conditionWords)" :key="i" class="text-xs">{{ w }}</div>
+            <div class="text-xs w-faint">This rule picks items by what they are, not by name, so there's no item list to edit. Change its look or hide it above.</div>
+          </template>
           <WButton v-if="isOwnGroup && ownEditFor(tier)" size="sm" variant="ghost" icon="fas fa-trash" @click="removeEdit(ownEditFor(tier)!)">Remove this own rule</WButton>
         </template>
         <WEmpty v-else icon="fas fa-layer-group">Pick a tier to restyle it or move its items.</WEmpty>
@@ -404,7 +411,7 @@ import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour, labelCss } from './label-style'
-import { axisName, buildLadder, conditionText, distinctConditions, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
+import { axisName, buildLadder, conditionText, conditionWords, distinctConditions, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
 import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
@@ -820,7 +827,7 @@ function patchTier (patch: StylePatch) {
 // A hidden tier whose items another rule still shows (its Fated twin, say):
 // said on the tier, so "hidden" never quietly means "still drops".
 const shownElsewhere = computed(() => props.store.doc.value && selType.value && selTier.value && !isOwnGroup.value
-  ? alsoShownBy(props.store.doc.value, selType.value, selTier.value).slice(0, 4)
+  ? alsoShownBy(props.store.doc.value, selType.value, selTier.value)
   : [])
 
 function hideElsewhere () {

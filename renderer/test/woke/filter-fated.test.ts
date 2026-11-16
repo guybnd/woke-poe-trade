@@ -7,7 +7,10 @@ import { matchItem } from '@/web/woke/loot-filter/match'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { alsoShownBy } from '@/web/woke/loot-filter/groups'
 import { tierLabel } from '@/web/woke/loot-filter/names'
+import { conditionWords } from '@/web/woke/loot-filter/ladder'
+import { applyEdits } from '@/web/woke/loot-filter/edits'
 import { loadGameData } from '../helpers/game-data'
+import { LEVELS, neverSink } from '../helpers/neversink'
 
 beforeAll(loadGameData)
 
@@ -72,8 +75,27 @@ describe('Fated items', () => {
     expect(alsoShownBy(doc, 'rr', 't2f')).toEqual([])
   })
 
+  it('on the real filter: only the twin, never crafting bases, uniques or a tier below a live hidden one', () => {
+    for (const level of LEVELS) {
+      const doc = parseFilter(neverSink(level))
+      applyEdits(doc, [{ id: 1, kind: 'visibility', type: 'rr', tier: 't2', visibility: 'Hide' }, { id: 2, kind: 'visibility', type: 'rr', tier: 't1f', visibility: 'Hide' }])
+      const t2 = alsoShownBy(doc, 'rr', 't2').map(o => `${o.type} ${o.tier}`)
+      expect(t2.every(x => x.startsWith('rr ')), level).toBe(true)
+      if (doc.blocks.some(b => b.type === 'rr' && b.tier === 't2f' && !b.disabled)) expect(t2, level).toContain('rr t2f')
+      expect(alsoShownBy(doc, 'rr', 't1f'), level).toEqual([])
+    }
+  })
+
   it('names the twins in words', () => {
     expect(tierLabel('t2f')).toBe('Tier 2, Fated')
     expect(tierLabel('fatedgear')).toBe('Fated gear')
+  })
+})
+
+describe('rules without an item list say what they catch', () => {
+  const block = parseFilter(['#Show # $type->rr $tier->identifieditemhandling', '#\tMirrored False', '#\tIdentified True', '#\tItemLevel >= 68', '#\tRarity Rare', '#\tClass == "Amulets" "Belts" "Body Armours" "Boots" "Bows" "Claws"', ''].join('\n')).blocks[0]
+  it('in words', () => {
+    expect(block.conditions.map(conditionWords)).toEqual(['Not mirrored', 'Identified', 'Item level 68+', 'Rarity: Rare', 'Class: Amulets, Belts, Body Armours, Boots +2'])
+    expect(tierLabel('identifieditemhandling')).toBe('Identified rares, not corrupted or mirrored')
   })
 })
