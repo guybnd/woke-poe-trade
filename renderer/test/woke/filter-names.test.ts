@@ -13,7 +13,7 @@ describe('tier names', () => {
     ['t1exalted', 'Tier 1'], ['t3annul', 'Tier 3'], ['t2', 'Tier 2'], ['t1top', 'Tier 1 top'], ['t3stackedex', 'Tier 3 stackedex'],
     ['t1_86', 'Tier 1, item level 86'], ['n12_i84_t1', '12 nodes, item level 84, tier 1'], ['any86', 'Any, item level 86'], ['t5r1', 'Item tier 5, rank 1'], ['any5', 'Any base, item tier 4+'],
     ['stack3', 'Stack tier 3'], ['restex', 'The rest'], ['any', 'Any'], ['hideable', 'Can be hidden'],
-    ['#abc12', 'Rule'], ['weapon_phys', 'Weapon phys']
+    ['#abc12', 'Rule'], ['weapon_phys', 'Weapons physical']
   ])('%s reads %s', (tag, name) => {
     expect(tierLabel(tag)).toBe(name)
   })
@@ -45,7 +45,7 @@ describe('group names', () => {
     expect(groupLabel('currency->deadmansulphur')).toBe('Currency › Dead man\'s sulphur')
     expect(groupLabel('leveling->normalmagic->3l')).toBe('Levelling › Normal and magic › 3l')
     expect(groupName('woke->own')).toBe('Your own rules')
-    expect(ruleLabel('rareid', 'weapon_phys')).toBe('Identified rares › Weapon phys')
+    expect(ruleLabel('rareid', 'weapon_phys')).toBe('Identified rares › Weapons physical')
     expect(ruleLabel('currency', 't1exalted')).toBe('General currency › Tier 1')
   })
 
