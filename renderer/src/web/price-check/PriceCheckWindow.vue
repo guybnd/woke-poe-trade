@@ -76,7 +76,7 @@
         'flex-row-reverse': clickPosition === 'inventory'
       }">
         <related-items v-if="item?.isOk()" class="pointer-events-auto"
-          :item="item.value" :click-position="clickPosition" />
+          :item="item.value" :click-position="clickPosition" @check="checkRelated" />
         <rate-limiter-state class="pointer-events-auto" />
       </div>
     </div>
@@ -421,6 +421,13 @@ export default defineComponent({
       onEsc,
       t,
       clickPosition,
+      // woke: a family row price checks its item where this check was.
+      checkRelated (input: { clipboard: string, item?: ParsedItem }) {
+        Host.selfDispatch({
+          name: 'MAIN->CLIENT::item-text',
+          payload: { clipboard: input.clipboard, item: input.item, position: checkPosition.value, focusOverlay: true, target: 'price-check' }
+        })
+      },
       isBrowserShown,
       iframeEl,
       floating,
