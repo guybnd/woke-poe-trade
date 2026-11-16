@@ -94,7 +94,7 @@ test('rule builder, drag and drop between tiers, and presets end up in the saved
   await overlay.snap('rule builder with a rare rings rule')
 
   // Drag Chaos Orb from its tier onto another one.
-  await page.getByRole('button', { name: /^General currency\s*4$/ }).click()
+  await page.getByRole('button', { name: /^General currency\s*4 tiers$/ }).click()
   await page.getByRole('button', { name: /Tier 3/ }).click()
   await page.getByText('Chaos Orb', { exact: true }).last().dragTo(page.getByRole('button', { name: /Tier 2/ }))
   await expect(page.getByText('Moved Chaos Orb to Tier 2')).toBeVisible()
