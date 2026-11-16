@@ -892,3 +892,40 @@ test('ladder: show from a tier in one pick, and Maps to hide are plain switches'
   expect(text).toMatch(/^Hide[^\n]*\$type->maps \$tier->maps_a_t15/m)
   await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
 })
+
+test('Alt + F: Show this rule in the editor lands on its tier row', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/currency-divine.txt', 'Alt + F')
+  const page = overlay.page
+  await page.getByRole('button', { name: /^Rule:/ }).click()
+  await page.getByRole('button', { name: 'Show this rule in the editor' }).click()
+  await expect(page.getByRole('tab', { name: 'Rules' })).toBeVisible()
+  const row = page.locator('[data-tiers~="t1exalted"]').first()
+  await expect(row).toBeInViewport()
+  await expect(page.getByText('Items in this tier', { exact: false }).first()).toBeVisible()
+  await overlay.snap('alt f to editor tier')
+})
+
+test('a whole-class rule (tinctures) lists its bases, and one can be hidden on its own', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  // Regular: its item level 82+ tincture rule is on (Uber Plus Strict comments it out).
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByPlaceholder('Filter groups').fill('tinct')
+  await page.getByRole('button', { name: /^Endgame tinctures/ }).first().click()
+  await page.locator('[data-tiers~="tinc82"]').first().click()
+  await expect(page.getByText(/Pick which ones · \d+/)).toBeVisible()
+  const chip = page.getByRole('button', { name: /Tincture$/ }).first()
+  const base = (await chip.innerText()).trim()
+  await chip.click()
+  await expect(page.getByText(`Hid ${base}`)).toBeVisible()
+  await overlay.snap('tincture picker')
+  await page.getByRole('button', { name: /Save \+ reload/ }).click()
+  const out = path.join(folder, 'NeverSink (woke).filter')
+  await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toMatch(new RegExp(`^Hide[^\n]*\n(\t[^\n]*\n)*\tBaseType == "${base}"`, 'm'))
+  await expect.poll(() => fakeApp.game.chat).toEqual(['/itemfilter NeverSink (woke)'])
+})

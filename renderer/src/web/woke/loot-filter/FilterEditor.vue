@@ -126,6 +126,7 @@
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
                 <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span></span>
                 <span v-if="lad.axis && r.tiers.length > 1" class="w-faint text-xs w-trunc">{{ r.tiers.length }} tiers, same look</span>
+                <span v-else-if="lad.axis && sameRangeRows.has(rangeText(lad.axis, r.range))" class="w-faint text-xs w-trunc">{{ tierName(firstLive(r.tiers[0])) }}</span>
               </span>
               <span v-if="hasStacks" :class="$style.stack">
                 <template v-if="r.tiers.length === 1 && tierStack(r.tiers[0]) != null && !r.tiers[0].disabled">
@@ -193,6 +194,13 @@
             <span class="grow">{{ offWhy(tier) }}. It catches nothing; its items go on to the rules below.</span>
             <WButton v-if="!emptied(tier)" size="sm" variant="primary" @click="setRowOn([tier])">Turn on</WButton>
           </div>
+          <div v-if="shownElsewhere.length" :class="$style.bulkNote" class="text-xs" role="note">
+            <span class="grow">Still showing: {{ shownElsewhere.length === 1 ? 'this rule shows' : 'these rules show' }} some of these items anyway.</span>
+          </div>
+          <div v-for="o in shownElsewhere" :key="`${o.type}|${o.tier}`" class="flex items-center gap-2 text-xs">
+            <button type="button" class="w-focusable grow w-trunc" style="text-align: left; background: none; border: 0; padding: 0; color: var(--w-accent); cursor: pointer; font: inherit;" :title="o.bases.join(' · ')" @click="jumpTo(o.type, o.tier)">{{ groupName(o.type) }} › {{ tierName(o.block) }} · {{ o.bases.length }} item{{ o.bases.length === 1 ? '' : 's' }}</button>
+          </div>
+          <WButton v-if="shownElsewhere.length" size="sm" variant="ghost" icon="fas fa-eye-slash" @click="hideElsewhere">Hide {{ shownElsewhere.length === 1 ? 'that tier' : 'those tiers' }} too</WButton>
           <div v-if="band && !bulkLook" :class="$style.bulkNote" class="text-xs">
             <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}. Pick one to change it alone:</span>
             <span class="flex flex-wrap gap-1">
@@ -234,6 +242,26 @@
               <button type="button" class="w-icon-btn" title="Clear" aria-label="Clear picked items" @click="picked = []"><i aria-hidden="true" class="fas fa-times" /></button>
             </div>
             <AddItemField v-if="store.doc.value && selType && targets.includes(tier.tier)" :tip-for="baseTip" :key="`${selType}|${tier.tier}`" :doc="store.doc.value" :type="selType" :tier="tier.tier" @add="addItem" />
+          </template>
+          <!-- A rule that picks items by what they are (class, item level,
+               Fated...) has no list of names to edit: say what it catches. -->
+          <template v-else-if="!isOwnGroup">
+            <div class="w-group-label" style="padding: 8px 0 2px;">Catches</div>
+            <div v-for="(w, i) in firstLive(tier).conditions.map(conditionWords)" :key="i" class="text-xs">{{ w }}</div>
+            <template v-if="classBases.length">
+              <div class="w-group-label" style="padding: 8px 0 2px;">Pick which ones · {{ classBases.length }}</div>
+              <div class="flex flex-wrap gap-1">
+                <WChip v-for="b in classBases" :key="b" clickable :active="ownVisibility(selType!, tier.tier, b) !== 'Hide'"
+                  :title="ownVisibility(selType!, tier.tier, b) === 'Hide' ? 'Hidden by you: click to let this rule show it again' : 'Click to hide just this one'" @click="toggleClassBase(b)">
+                  <span v-item-tip="baseTip(b)" class="flex items-center gap-1">
+                    <img v-if="baseIcon(b)" :src="baseIcon(b)!" :class="$style.chipArt" alt="">
+                    <span :style="ownVisibility(selType!, tier.tier, b) === 'Hide' ? 'text-decoration: line-through; opacity: 0.6;' : ''">{{ b }}</span>
+                  </span>
+                </WChip>
+              </div>
+              <div class="text-xs w-faint">This rule picks items by what they are, not by name. Click one to hide just that one; the rest keep the look above.</div>
+            </template>
+            <div v-else class="text-xs w-faint">This rule picks items by what they are, not by name, so there's no item list to edit. Change its look or hide it above.</div>
           </template>
           <WButton v-if="isOwnGroup && ownEditFor(tier)" size="sm" variant="ghost" icon="fas fa-trash" @click="removeEdit(ownEditFor(tier)!)">Remove this own rule</WButton>
         </template>
@@ -369,13 +397,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, useMouseNav, vItemTip } from '../ui'
 import { copyText } from '../ui/copy'
 import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
+import { itemCatalog } from './item-search'
 import type { FilterRarity, ItemFacts } from './item-facts'
 import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
@@ -410,10 +439,10 @@ import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour, labelCss } from './label-style'
-import { axisName, buildLadder, conditionText, distinctConditions, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
+import { axisName, buildLadder, conditionText, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
-import { buildTree, byPrice, groupName, pickBases } from './groups'
+import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
 import type { GroupNode, TierNode } from './groups'
 import { hostRequest } from '../shared/host'
 import { BUILD_RULE_TYPE, LEVELLING_BELOW, WEAPON_CLASSES } from './build-rules'
@@ -636,7 +665,59 @@ function pickRow (tiers: TierNode[]) {
 }
 
 function rowConditions (t: TierNode): string {
-  return distinctConditions(t, sharedConds.value, lad.value.axis).join(' · ')
+  return distinctWords(t, sharedConds.value, lad.value.axis).join(' · ')
+}
+
+// Rows whose order label is the same ("item level 82+" twice): they get
+// their rule's name under it, so they can be told apart.
+const sameRangeRows = computed(() => {
+  const seen = new Set<string>()
+  const twice = new Set<string>()
+  for (const r of lad.value.rows) {
+    const k = rangeText(lad.value.axis, r.range)
+    if (seen.has(k)) twice.add(k)
+    seen.add(k)
+  }
+  return twice
+})
+
+// A rule that catches a whole class (Tinctures, Utility Flasks): its bases,
+// so each can be hidden on its own with an own rule. Not for big classes.
+const CLASS_BASES_MAX = 60
+// Game data loads a moment after start: look again until the catalog is there.
+const catalogTick = ref(0)
+let catalogTimer: ReturnType<typeof setTimeout> | undefined
+onUnmounted(() => { clearTimeout(catalogTimer) })
+const classBases = computed<string[]>(() => {
+  const t = tier.value
+  // Off or hidden: nothing of it shows, so there's nothing to pick from.
+  if (!t || t.bases.length || isOwnGroup.value || t.disabled || firstLive(t).visibility === 'Hide') return []
+  const cls = firstLive(t).conditions.find(c => c.key === 'Class' && c.op === '==')?.values
+  if (!cls?.length) return []
+  // Read so a later tick looks again.
+  if (catalogTick.value < 0) return []
+  const catalog = itemCatalog()
+  if (!catalog.length) {
+    clearTimeout(catalogTimer)
+    catalogTimer = setTimeout(() => { catalogTick.value++ }, 500)
+    return []
+  }
+  const names = [...new Set(catalog.filter(i => i.kind === 'Base' && i.itemClass && cls.includes(i.itemClass)).map(i => i.baseType))].sort()
+  return names.length <= CLASS_BASES_MAX ? names : []
+})
+
+function toggleClassBase (base: string) {
+  const type = selType.value
+  const t = tier.value
+  if (!type || !t) return
+  const own = props.config.edits.find(e => e.kind === 'item' && e.type === type && e.tier === t.tier && e.base === base)
+  if (own) {
+    const undo = props.store.removeEdit(own.id)
+    toast(`${base} back to this rule`, { anchor: panel.value?.el, undo })
+    return
+  }
+  const undo = props.store.editWithUndo({ kind: 'item', type, tier: t.tier, base, visibility: 'Hide', patch: {}, anchor: conditionSignature(firstLive(t)) })
+  toast(`Hid ${base}`, { anchor: panel.value?.el, undo })
 }
 
 function rowTitle (t: TierNode): string {
@@ -825,6 +906,11 @@ function goTo (type: string, t: string, base?: string) {
   selType.value = type
   selTier.value = t
   picked.value = base ? [base] : []
+  // Alt+F, search and jumps land on the row itself, even far down a long group.
+  nextTick(() => {
+    const el = panel.value?.el as HTMLElement | undefined
+    el?.querySelector(`[data-tiers~="${CSS.escape(t)}"]`)?.scrollIntoView({ block: 'nearest' })
+  }).catch(() => {})
 }
 
 watch(() => props.focus, (f) => {
@@ -868,6 +954,19 @@ function patchTier (patch: StylePatch) {
     return
   }
   props.store.edit({ kind: 'style', type: selType.value, tier: selTier.value, patch })
+}
+
+// A hidden tier whose items another rule still shows (its Fated twin, say):
+// said on the tier, so "hidden" never quietly means "still drops".
+const shownElsewhere = computed(() => props.store.doc.value && selType.value && selTier.value && !isOwnGroup.value
+  ? alsoShownBy(props.store.doc.value, selType.value, selTier.value)
+  : [])
+
+function hideElsewhere () {
+  const list = shownElsewhere.value
+  if (!list.length) return
+  const undo = props.store.editsWithUndo(list.map(o => ({ kind: 'visibility' as const, type: o.type, tier: o.tier, visibility: 'Hide' as const })))
+  toast(`Hid ${list.map(o => `${groupName(o.type)} › ${tierName(o.block)}`).join(', ')}`, { anchor: panel.value?.el, undo })
 }
 
 function setTierVisibility (v: Visibility) {

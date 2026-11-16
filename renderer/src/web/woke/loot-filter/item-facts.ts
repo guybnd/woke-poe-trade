@@ -33,6 +33,8 @@ export interface ItemFacts {
   synthesised?: boolean
   replica?: boolean
   foulborn?: boolean
+  // 3.30's Fated mark (NeverSink's `Fated True` rules).
+  fated?: boolean
   vestigial?: boolean
   transfigured?: boolean
   // What a loot filter's BaseType calls it, when that isn't baseType: a
@@ -102,6 +104,9 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
       : parsed.info.refName
   }
   if (!baseType) baseType = nameLines[nameLines.length - 1]?.replace(/^Superior /, '')
+  // "Fated Lathi": the mark, then the base the filter's BaseType names.
+  const fated = parsed ? !!parsed.isFated : rarityText !== 'Unique' && /^Fated /.test(baseType ?? '')
+  if (!parsed && fated) baseType = baseType!.slice('Fated '.length)
   // The parser's unique maps are just "Map"; filters match "Map (Tier 16)".
   const tier = parsed?.mapTier ?? num(all.find(l => l.startsWith('Map Tier:')))
   // So are blighted ones, whose copy says "Blighted Map (Tier 16)". The tier in
@@ -175,6 +180,7 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
     synthesised: parsed ? !!parsed.isSynthesised : all.includes('Synthesised Item'),
     replica: rarity === 'Unique' && /^Replica /.test(nameLines[0] ?? ''),
     foulborn: parsed ? !!parsed.isFoulborn : /^Foulborn /.test(name),
+    fated,
     vestigial: parsed ? !!parsed.isVestigial : all.some(l => /^Vestigial\b/.test(l)),
     // Without the parser's data only a gem can be unsure.
     transfigured: parsed ? Boolean(parsed.info.gem?.transfigured) : (isGem ? undefined : false),

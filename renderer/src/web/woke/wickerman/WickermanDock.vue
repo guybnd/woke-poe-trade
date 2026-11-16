@@ -1,10 +1,14 @@
 <template>
-  <!-- 3.30 Wickerman module: only in zones whose boss drops a Viscera. -->
-  <DockItem id="wickerman" title="Wickerman" :show="here.length > 0" :badge="here.length > 1 ? here.length : null"
+  <!-- 3.30 Wickerman module: in every map, and in other zones whose boss drops a Viscera. -->
+  <DockItem id="wickerman" title="Wickerman" :show="here.length > 0 || inMap" :badge="here.length > 1 ? here.length : null"
     pinnable card-width="26rem">
     <template #card>
       <div :class="$style.body" data-woke-wickerman-card>
         <div class="w-head-font w-accent w-trunc">{{ zoneName }}</div>
+        <div v-if="!here.length" :class="$style.one">
+          <span>No known Viscera from this map's boss.</span>
+          <span class="w-faint text-xs">The drop list names the bosses of {{ mapsKnown }} maps.</span>
+        </div>
         <div v-for="h in here" :key="h.v.name" :class="$style.one">
           <div :class="$style.head">
             <span class="min-w-0 w-trunc">{{ h.v.name }}</span>
@@ -29,7 +33,7 @@ import { WPrice } from '../ui'
 import { useVisceraHere, useVisceraPrices } from './here'
 
 // Mounted by WokeOverlay only while the module is on.
-const { here, zoneName } = useVisceraHere()
+const { here, zoneName, inMap, mapsKnown } = useVisceraHere()
 const { price, divine } = useVisceraPrices()
 </script>
 

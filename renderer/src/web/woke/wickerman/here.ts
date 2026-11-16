@@ -47,12 +47,14 @@ export function useVisceraPrices () {
   }
 }
 
-export function useVisceraHere (): { here: ComputedRef<VisceraHere[]>, zoneName: ComputedRef<string> } {
+export function useVisceraHere (): { here: ComputedRef<VisceraHere[]>, zoneName: ComputedRef<string>, inMap: ComputedRef<boolean>, mapsKnown: ComputedRef<number> } {
   const zone = useZone()
   const t = useVisceraTable()
   const here = computed(() => {
     if (!t.value || !zone.name || zone.kind === 'town' || zone.kind === 'hideout') return []
     return visceraHere(t.value, zone.name, actFromAreaId(zone.areaId))
   })
-  return { here, zoneName: computed(() => zone.name) }
+  // Maps whose boss the drop list names, for "none known" in the others.
+  const mapsKnown = computed(() => new Set(t.value?.viscera.flatMap(v => v.maps.map(m => m.map)) ?? []).size)
+  return { here, zoneName: computed(() => zone.name), inMap: computed(() => zone.kind === 'map'), mapsKnown }
 }

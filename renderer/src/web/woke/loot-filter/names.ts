@@ -94,6 +94,31 @@ const WHOLE_TIERS: Record<string, string> = {
   exhide: 'Hidden extras',
   hideable: 'Can be hidden',
   restex: 'The rest',
+  // NeverSink 8.21's Fated rares (3.30).
+  fatedgear: 'Fated gear',
+  fatedoverride: 'Fated, any base',
+  fatedspecial: 'Fated jewels, flasks and heist',
+  identifieditemhandling: 'Identified rares, not corrupted or mirrored',
+  // NeverSink 8.21's endgame tinctures and flasks.
+  overqual1: 'Quality 26+, not corrupted or mirrored',
+  overqual2: 'Quality 21+, not corrupted or mirrored',
+  tinc85: 'Item level 85+',
+  tinc82: 'Item level 82+',
+  overqualcorrupted: 'Corrupted, quality 30+',
+  overqualutil1: 'Utility, quality 26+',
+  overqualutil2: 'Utility, quality 21+',
+  overquallife1: 'Life and mana, quality 30+',
+  overquallife2: 'Life and mana, quality 21+',
+  utility85: 'Utility, item level 85+',
+  utility84: 'Utility, item level 84+',
+  utility82: 'Utility, item level 82+',
+  lifemana82: 'Life and mana, item level 82+',
+  any20qualflask: 'Any flask, quality 20+',
+  qualityhigh: 'Quality 10+, early maps',
+  qualitylow: 'Any quality, early maps',
+  earlymappingflasks: 'Utility, early maps',
+  anyutility: 'Any utility flask',
+  earlymappinglifemana: 'Life and mana, early maps',
   // NeverSink's Maps to hide, shipped off.
   corruptedmaphider: 'Hide corrupted maps',
   mirroredmaphider: 'Hide mirrored maps'
@@ -116,6 +141,9 @@ export function tierLabel (tier: string): string {
   if (m) return `Any, item level ${m[1]}`
   m = /^stack(\d+)$/.exec(tier)
   if (m) return `Stack tier ${m[1]}`
+  // NeverSink 8.21's Fated twins of its rare tiers (t1f, t2f).
+  m = /^t(\d+)f$/.exec(tier)
+  if (m) return `Tier ${m[1]}, Fated`
   m = /^t(\d+)([a-z_]*)$/.exec(tier)
   if (m) return !m[2] || ITEM_WORDS.has(m[2]) ? `Tier ${m[1]}` : `Tier ${m[1]} ${m[2]}`
   return capital(tier.replace(/_/g, ' '))
