@@ -172,7 +172,7 @@
           <span :class="$style.groupTitle">{{ tierName(firstLive(tier)) }}</span>
           <WToggle :model-value="!tier.disabled" @update:model-value="setRuleOn(tier, $event)">{{ tier.disabled ? 'Off' : 'On: these stop showing' }}</WToggle>
           <div class="text-xs w-dim">Catches</div>
-          <div v-for="(c, i) in firstLive(tier).conditions" :key="i" class="text-xs">{{ conditionText(c) }}</div>
+          <div v-for="(c, i) in firstLive(tier).conditions" :key="i" class="text-xs">{{ conditionWords(c) }}</div>
           <div class="text-xs w-faint">{{ tier.disabled ? 'Off: these items go on to the rules below.' : 'On: these items are hidden here, before any rule below sees them.' }}</div>
         </template>
         <template v-else-if="tier">
@@ -426,7 +426,7 @@ import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour, labelCss } from './label-style'
-import { axisName, buildLadder, conditionText, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
+import { axisName, buildLadder, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
 import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
@@ -708,7 +708,7 @@ function toggleClassBase (base: string) {
 }
 
 function rowTitle (t: TierNode): string {
-  const lines = firstLive(t).conditions.map(conditionText)
+  const lines = firstLive(t).conditions.map(conditionWords)
   if (t.bases.length) lines.push(t.bases.slice(0, 15).join(' · ') + (t.bases.length > 15 ? ` +${t.bases.length - 15}` : ''))
   return lines.join('\n')
 }
