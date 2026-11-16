@@ -3,7 +3,7 @@ id: WOKEPOET-340
 title: >-
   Theme every control: no plain web toggles, buttons, checkboxes, selects,
   sliders or fields
-status: In Progress
+status: Done
 priority: Medium
 effort: None
 assignee: Agent
@@ -32,7 +32,47 @@ history:
     date: '2026-11-16T07:23:45.797Z'
     comment: Updated implementation link.
     id: a-2026-11-16t07-23-45-797z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #554 merged as 19a1475b: native checkboxes, radios, sliders and select
+      arrows themed in every toolkit window; ad-hoc fields on w-input/w-select;
+      pills on w-chip. Review done, CI green.
+    date: '2026-11-16T07:33:23.117Z'
+    completionComment: true
+    id: c-2026-11-16t07-33-23-117z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-16T07:33:23.117Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 19a1475b. Every plain control now wears the PoE look; shared CSS
+      covers future windows.
+    completionComment: true
+    date: '2026-11-16T07:33:27.086Z'
+    id: c-2026-11-16t07-33-27-086z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-16T07:33:27.383Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/554'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy saw a web-style "On" pill in the loot filter Prices tab and asked for a scan of the whole overlay for controls that skip the PoE 1 look, then all of them switched to the themed parts (WToggle coin, w-btn plate, w-select/w-field wells, w-chip, w-seg, art slider).
 
