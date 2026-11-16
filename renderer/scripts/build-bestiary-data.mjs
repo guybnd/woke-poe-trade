@@ -26,7 +26,7 @@ function decode (s) {
 }
 const strip = (s) => decode(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim()
 
-// Each recipe: { g: "Create a Unique", r: "Ring", n: [notes], b: [named beasts], a: any rare slots }
+// Each recipe: { g: "Create a Unique", r: "Ring", n: [notes], b: [named beasts], a: any rare slots, red?: red beast slots }
 async function recipes () {
   const html = await get('https://poedb.tw/us/Bestiary_Recipe')
   const at = html.search(/Bestiary Recipe \/\d+/)
@@ -46,9 +46,11 @@ async function recipes () {
     // poedb repeats a skill's name as a link under "Aspect of the Cat skill".
     const n = lines.filter(l => !r.includes(l))
     const b = [...cells[1].matchAll(/<a [^>]*href="\/us\/([^"]+)"/g)].map(m => decodeURIComponent(m[1]).replace(/_/g, ' '))
-    const a = (cells[1].match(/AspectAll\.webp/g) ?? []).length
-    if (!b.length && !a) continue
-    out.push({ g, r, ...(n.length ? { n } : {}), b, a })
+    // Flask recipes start with a slot for any red (unique) beast, drawn with the same art.
+    const red = (cells[1].match(/title="AnyRedBeast/g) ?? []).length
+    const a = (cells[1].match(/AspectAll\.webp/g) ?? []).length - red
+    if (!b.length && !a && !red) continue
+    out.push({ g, r, ...(n.length ? { n } : {}), b, a, ...(red ? { red } : {}) })
   }
   return out
 }

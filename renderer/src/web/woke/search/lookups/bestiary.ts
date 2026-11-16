@@ -14,6 +14,8 @@ export interface BeastRecipe {
   b: string[]
   // Slots any rare beast fills.
   a: number
+  // Slots only a red (unique) beast fills.
+  red?: number
 }
 export interface BestiaryData {
   recipes: BeastRecipe[]
@@ -52,8 +54,9 @@ export const shortBeast = (name: string) => name.split(',')[0]
 // "Farric Tiger Alpha + 3 any rare"
 export function recipeNeeds (rec: BeastRecipe, without?: string): string {
   const named = rec.b.filter(b => b !== without).map(shortBeast)
+  const red = rec.red ? `${rec.red} red beast` : ''
   const any = rec.a ? `${rec.a} any rare` : ''
-  return [...named, any].filter(Boolean).join(' + ')
+  return [...named, red, any].filter(Boolean).join(' + ')
 }
 
 // The named beasts' total, or null when one has no price.
@@ -118,6 +121,7 @@ function card (data: BestiaryData, rec: BeastRecipe, ctx: LookupContext): Lookup
     chaos: ctx.price(b),
     action: { label: `Search trade for ${b}`, trade: b }
   }))
+  if (rec.red) rows.push({ label: `${rec.red} red beast${rec.red > 1 ? 's' : ''} of any kind`, dim: true, value: 'any red' })
   if (rec.a) rows.push({ label: `${rec.a} any rare beast${rec.a > 1 ? 's' : ''}`, dim: true, value: 'any' })
   const total = beastsCost(rec, ctx.price)
   if (rec.b.length > 1 && total != null) rows.push({ label: 'Named beasts', chaos: total })
@@ -139,7 +143,7 @@ function card (data: BestiaryData, rec: BeastRecipe, ctx: LookupContext): Lookup
     sub: recipeNeeds(rec),
     icon: 'fas fa-paw',
     sections,
-    actions: rec.b.map(b => ({ label: `Trade: ${shortBeast(b)}`, trade: b }))
+    actions: [...rec.b.map(b => ({ label: `Trade: ${shortBeast(b)}`, trade: b })), { label: 'poedb', url: 'https://poedb.tw/us/Bestiary_Recipe' }]
   }
 }
 

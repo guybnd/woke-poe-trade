@@ -804,8 +804,12 @@ const beastBox = computed(() => {
   return { recipes, me: null, heading: 'From the Bestiary', note: `${den.boss} drops it in ${recipes[0].r.replace(/^to /, '')}, opened at the ${BLOOD_ALTAR}.` }
 })
 function jumpTo (q: string, want: (e: Entry) => boolean) {
-  wantEntry = want
-  query.value = q
+  // The same query doesn't rebuild the list: pick from it now.
+  if (query.value === q) selected.value = entries.value.find(want) ?? selected.value
+  else {
+    wantEntry = want
+    query.value = q
+  }
   focusInput()
 }
 function openRecipe (rec: BeastRecipe) {
@@ -822,7 +826,8 @@ function tradeBeast (name: string) {
     toast('Pick a league in the settings first')
     return
   }
-  const type = ITEM_BY_REF('CAPTURED_BEAST', name)?.[0]?.name ?? name
+  // The international site takes the English name, a regional one its own.
+  const type = poeWebApi() === 'www.pathofexile.com' ? name : ITEM_BY_REF('CAPTURED_BEAST', name)?.[0]?.name ?? name
   window.open(tradeUrl(league, { type }, getTradeEndpoint()))
 }
 

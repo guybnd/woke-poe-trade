@@ -6,13 +6,14 @@
       <span :class="$style.needs">
         <template v-for="b in rec.b.filter(b => b !== me)" :key="b">
           <span v-item-tip="{ name: b, type: 'Beast' }" :class="$style.beast">
-            <button tabindex="-1" :class="$style.link" @click="emit('beast', b)">{{ shortBeast(b) }}</button>
+            <button v-if="price(b) != null" tabindex="-1" :class="$style.link" @click="emit('beast', b)">{{ shortBeast(b) }}</button>
+            <span v-else>{{ shortBeast(b) }}</span>
             <WPrice bulk :chaos="price(b)" :divine="divine" class="w-dim" />
             <button class="w-icon-btn" tabindex="-1" :title="`Search trade for ${b}`" :aria-label="`Search trade for ${b}`" @click="emit('trade', b)"><i class="fas fa-search" /></button>
           </span>
           <span class="w-faint">+</span>
         </template>
-        <span class="w-dim">{{ rec.a }} any rare</span>
+        <span class="w-dim">{{ [rec.red ? `${rec.red} red beast` : '', rec.a ? `${rec.a} any rare` : ''].filter(Boolean).join(' + ') }}</span>
       </span>
       <WPrice :chaos="beastsCost(rec, price)" :divine="divine" class="text-right" />
     </div>

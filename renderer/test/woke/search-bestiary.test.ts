@@ -23,7 +23,11 @@ describe('bestiary data', () => {
     expect(data.recipes.length).toBeGreaterThan(60)
     expect(Object.keys(data.dens).sort()).toEqual(['Craiceann', 'Farrul', 'Fenumus', 'Saqawal'])
     expect(data.dens.Farrul).toContain("Farrul's Fur")
-    for (const r of data.recipes) expect(r.b.length + r.a).toBeGreaterThanOrEqual(3)
+    for (const r of data.recipes) expect(r.b.length + r.a + (r.red ?? 0)).toBe(4)
+    // Flask mods want one red beast plus any three rare ones.
+    const flask = data.recipes.filter(r => /Flask/.test(r.g))
+    expect(flask).toHaveLength(11)
+    for (const r of flask) expect([r.red, r.a, recipeNeeds(r)]).toEqual([1, 3, '1 red beast + 3 any rare'])
   })
 })
 
@@ -74,7 +78,7 @@ describe('bestiaryLookup', () => {
   it('gives each beast a trade search, and a den its drops', () => {
     const card = lookup("portal farrul's den", ctx)[0]
     expect(card.group).toBe('Blood Altar')
-    expect(card.actions).toEqual([{ label: 'Trade: Farric Tiger Alpha', trade: 'Farric Tiger Alpha' }])
+    expect(card.actions[0]).toEqual({ label: 'Trade: Farric Tiger Alpha', trade: 'Farric Tiger Alpha' })
     const beasts = card.sections[1].rows!
     expect(beasts[0]).toMatchObject({ label: 'Farric Tiger Alpha', chaos: 8, action: { trade: 'Farric Tiger Alpha' } })
     expect(beasts[1]).toMatchObject({ label: '3 any rare beasts', dim: true })
