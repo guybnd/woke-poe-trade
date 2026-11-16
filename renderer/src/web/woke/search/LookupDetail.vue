@@ -15,6 +15,7 @@
         </span>
         <WPrice v-if="row.chaos !== undefined" :bulk="!!row.bulk" :chaos="row.chaos" :divine="divine" />
         <span v-else-if="row.value" :class="[$style.value, row.dim ? 'w-dim' : undefined]">{{ row.value }}</span>
+        <button v-if="row.action" class="w-icon-btn" :class="$style.rowAct" :title="row.action.label" :aria-label="row.action.label" @click="$emit('act', row.action)"><i :class="'trade' in row.action ? 'fas fa-search' : 'fas fa-arrow-right'" /></button>
       </div>
       <table v-if="section.table" :class="$style.table">
         <thead><tr><th v-for="h in section.table.head" :key="h" :class="h === section.table.head[section.table.priceAt ?? -1] ? $style.num : undefined">{{ h }}</th></tr></thead>
@@ -74,7 +75,8 @@ defineEmits<{ (e: 'act', action: LookupAction): void }>()
 .text { margin: 4px 0; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: var(--w-s3); min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
 .value { text-align: right; min-width: 0; }
-.name { display: flex; align-items: center; gap: var(--w-s2); min-width: 0; }
+.rowAct { flex: none; }
+.name { flex: 1 1 auto; display: flex; align-items: center; gap: var(--w-s2); min-width: 0; }
 .table { width: 100%; border-collapse: collapse; margin-top: var(--w-s1); }
 .table th { text-align: left; font-weight: var(--w-caps-weight); font-family: var(--w-caps-face); font-size: var(--w-fs-caps); color: var(--w-dim); border-bottom: 1px solid var(--w-line); padding: 0 var(--w-s2) 2px 0; }
 .table td { border-bottom: 1px solid var(--w-line-soft); padding: 3px var(--w-s2) 3px 0; vertical-align: top; }

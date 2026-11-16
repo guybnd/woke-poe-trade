@@ -15,6 +15,8 @@ export interface LookupRow {
   // `chaos` is one item's price: under 1c it reads "1 div / N". Leave it off
   // for totals (qty × each, sets, costs, profits).
   bulk?: boolean
+  // A small button at the row's end.
+  action?: LookupAction
 }
 
 // A row of a table. A cell can carry a small second line.
@@ -36,6 +38,8 @@ export type LookupAction =
   { label: string, url: string } |
   { label: string, copy: string } |
   { label: string, search: string } |
+  // A trade search for a captured beast by its English name.
+  { label: string, trade: string } |
   // Opens a tool by its widget type, when it's switched on.
   { label: string, tool: string }
 

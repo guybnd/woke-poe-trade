@@ -67,6 +67,7 @@
               </div>
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" no-price="No poe.ninja price" @pick="pickUnique" />
+              <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <div v-if="conv" :class="$style.convBox" :style="{ '--conv-cols': convCols }">
                 <div :class="[$style.conv, $style.gridHead]"><span>{{ selected.group.name }}</span><span v-if="conv.rows[0].chaos != null" class="text-right">Chaos</span><span v-if="conv.rows[0].div != null" class="text-right">Divines</span></div>
                 <div v-for="r in conv.rows" :key="r.amount" :class="[$style.conv, $style.row]">
@@ -91,6 +92,7 @@
               <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
+              <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
               <div :class="$style.acts">
                 <WButton size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
@@ -166,6 +168,7 @@ import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rar
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
 import BaseUniques from './BaseUniques.vue'
+import BeastRecipes from './BeastRecipes.vue'
 import UniqueDetails from './UniqueDetails.vue'
 import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
@@ -176,6 +179,8 @@ import { cardLookup } from './lookups/cards'
 import { recipeLookup } from './lookups/recipes'
 import { craftLookup } from './lookups/craft'
 import type { CraftData } from './lookups/craft'
+import { BLOOD_ALTAR, bestiaryLookup, denOf, recipeTitle, recipesMaking, recipesWith } from './lookups/bestiary'
+import type { BeastRecipe, BestiaryData } from './lookups/bestiary'
 import { gemLookup, transfiguredBase } from './lookups/gems'
 import { keystoneUniques, passiveList, treeLookup } from './lookups/tree'
 import type { Passive } from './lookups/tree'
@@ -460,6 +465,18 @@ function loadCrafts () {
     .catch(() => {})
     .finally(() => { craftLoading = false })
 }
+// Blood Altar recipes, from poedb, fetched on first open like the crafts.
+const bestiaryData = shallowRef<BestiaryData | null>(null)
+let bestiaryLoading = false
+function loadBestiary () {
+  if (bestiaryData.value || bestiaryLoading) return
+  bestiaryLoading = true
+  fetch(`${import.meta.env.BASE_URL}data/bestiary-data.json`)
+    .then(r => r.json())
+    .then(d => { bestiaryData.value = d as BestiaryData })
+    .catch(() => {})
+    .finally(() => { bestiaryLoading = false })
+}
 // 3.30 Wickerman module: Viscera facts, a data file read on open while it's on.
 const visceraTable = shallowRef<VisceraTable | null>(null)
 function loadVisceraTable () {
@@ -499,7 +516,7 @@ const stopDataWatch = onSharedDataChange(() => {
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -525,7 +542,8 @@ function act (action: LookupAction) {
   else if ('tool' in action) {
     const w = wm.widgets.value.find(w => w.wmType === action.tool)
     if (w) wm.show(w.wmId)
-  } else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
+  } else if ('trade' in action) tradeBeast(action.trade)
+  else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
   else {
     showAnswer = true
     query.value = action.search
@@ -707,12 +725,16 @@ const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ?
 // The same result stays selected as you keep typing, while it still matches.
 // After picking an example, its answer card is what it was picked for.
 let showAnswer = false
+// A jump from a beast's recipes picks this entry once the list has it.
+let wantEntry: ((e: Entry) => boolean) | null = null
 watch(entries, (list) => {
   const id = selected.value?.id
+  const wanted = wantEntry ? list.find(wantEntry) : undefined
+  wantEntry = null
   const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
   showAnswer = false
   const picked = id != null && id === pickedId ? selected.value : null
-  selected.value = answer ?? list.find(e => e.id === id) ?? picked ?? list[0] ?? null
+  selected.value = wanted ?? answer ?? list.find(e => e.id === id) ?? picked ?? list[0] ?? null
 })
 
 function move (dir: 1 | -1) {
@@ -754,6 +776,54 @@ function run (entry: Entry) {
   } else {
     entry.action()
   }
+}
+
+// ---- Blood Altar ----
+const beastPrice = (name: string) => lookupContext.value.price(name)
+// A beast's recipes, or for a spirit boss's unique the portal to its den.
+const beastBox = computed(() => {
+  const e = selected.value
+  const data = bestiaryData.value
+  if (!data) return null
+  if (e?.kind === 'price' && e.group.type === 'Beast') {
+    const recipes = recipesWith(data, e.group.name)
+    if (!recipes.length) return null
+    return {
+      recipes,
+      me: e.group.name,
+      heading: `${BLOOD_ALTAR} · ${recipes.length} recipe${recipes.length > 1 ? 's' : ''}`,
+      note: 'Any rare beast fills the "any rare" slots, so they're left out of the cost.'
+    }
+  }
+  const unique = e?.kind === 'price' && nsOf(e.group.type) === 'UNIQUE'
+    ? baseUniqueName(e.group.name)
+    : e?.kind === 'item' && e.info.namespace === 'UNIQUE' ? e.info.refName : null
+  const recipes = unique ? recipesMaking(data, unique) : []
+  const den = recipes.length ? denOf(data, recipes[0]) : null
+  if (!den) return null
+  return { recipes, me: null, heading: 'From the Bestiary', note: `${den.boss} drops it in ${recipes[0].r.replace(/^to /, '')}, opened at the ${BLOOD_ALTAR}.` }
+})
+function jumpTo (q: string, want: (e: Entry) => boolean) {
+  wantEntry = want
+  query.value = q
+  focusInput()
+}
+function openRecipe (rec: BeastRecipe) {
+  const id = `l:beast:${bestiaryData.value?.recipes.indexOf(rec) ?? -1}`
+  jumpTo(recipeTitle(rec), e => e.id === id)
+}
+function openBeast (name: string) {
+  jumpTo(name, e => e.kind === 'price' && e.group.type === 'Beast' && e.group.name === name)
+}
+// Captured beasts list on trade by their name as the item type.
+function tradeBeast (name: string) {
+  const league = leagues.selectedId.value
+  if (!league) {
+    toast('Pick a league in the settings first')
+    return
+  }
+  const type = ITEM_BY_REF('CAPTURED_BEAST', name)?.[0]?.name ?? name
+  window.open(tradeUrl(league, { type }, getTradeEndpoint()))
 }
 
 // ---- recent lookups, saved with the window ----
@@ -900,6 +970,7 @@ function start (text: string) {
   whenIdle(loadCards)
   whenIdle(loadGems)
   whenIdle(loadCrafts)
+  whenIdle(loadBestiary)
   whenIdle(loadTree)
   whenIdle(loadVisceraTable)
 }
