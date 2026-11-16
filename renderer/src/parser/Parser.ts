@@ -87,6 +87,7 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
   { virtual: augmentModifiers },
   { virtual: transformToLegacyModifiers },
   { virtual: parseFractured },
+  { virtual: markCorruptedByImplicit },
   { virtual: pickCorrectVariant },
   { virtual: calcDisenchantDust },
   { virtual: calcBasePercentile }
@@ -337,6 +338,14 @@ function parseFractured (item: ParserState) {
   }
 }
 
+// woke: only corruption can add a corruption implicit, so an item that has
+// one is corrupted even when its "Corrupted" line was not recognised.
+function markCorruptedByImplicit (item: ParserState) {
+  if (!item.isCorrupted && item.newMods.some(mod => mod.info.mechanic === ModifierMechanic.Corruption)) {
+    item.isCorrupted = true
+  }
+}
+
 function pickCorrectVariant (item: ParserState) {
   item.info = _pickCorrectVariant(item.infoVariants, item) ?? item.infoVariants[0]
   if (item.info.unique) {
@@ -476,7 +485,15 @@ function parseInfluence (section: string[], item: ParsedItem) {
 }
 
 function parseCorrupted (section: string[], item: ParsedItem) {
-  if (section[0] === _$.CORRUPTED) {
+  // woke: a double-corrupted item prints "Twice Corrupted" in place of the
+  // plain line (seen in trade copies), so accept a one-line section of one capitalised
+  // word and it. A mod such as "... while Corrupted" stays a mod.
+  if (section[0] === _$.CORRUPTED || (
+    section.length === 1 &&
+    section[0].length > _$.CORRUPTED.length &&
+    section[0].endsWith(_$.CORRUPTED) &&
+    /^\p{Lu}\S*[\s-]$/u.test(section[0].slice(0, -_$.CORRUPTED.length))
+  )) {
     item.isCorrupted = true
     return 'SECTION_PARSED'
   } else if (section[0] === _$.UNMODIFIABLE) {

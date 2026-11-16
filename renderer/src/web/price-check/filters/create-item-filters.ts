@@ -3,7 +3,7 @@ import { ParsedItem, ItemCategory, ItemRarity } from '@/parser'
 import { MAGIC_ONLY_OR_UNIQUE_ITEM, CONSUMABLE_CRAFTABLE_ITEM, JEWELLERY, WEAPON, ARMOUR } from '@/parser/meta'
 import { getPropQuality } from '@/parser/calc-q20'
 import { tradeTag } from '../trade/common'
-import { ModifierType } from '@/parser/modifiers'
+import { ModifierType, ModifierMechanic } from '@/parser/modifiers'
 import { BaseType, ITEM_BY_REF } from '@/assets/data'
 import { CATEGORY_TO_TRADE_ID, VISCERA_SLOT_TRADE_ID } from '../trade/pathofexile-trade'
 import { PERMANENT_SC } from '../../background/Leagues'
@@ -285,8 +285,11 @@ export function createFilters (
     (item.category === ItemCategory.Jewel || item.category === ItemCategory.AbyssJewel))
 
   if (!item.isUnmodifiable && (item.info.craftable || item.rarity === ItemRarity.Unique)) {
+    // woke: a corruption implicit only comes from corrupting, so an item that
+    // has one is priced against other corrupted items.
+    const corruptImplicit = item.newMods.some(mod => mod.info.mechanic === ModifierMechanic.Corruption)
     filters.corrupted = {
-      search: !item.isCorrupted ? 'not-corrupted' : forAdornedJewel ? 'corrupted' : 'any'
+      search: !item.isCorrupted ? 'not-corrupted' : (forAdornedJewel || corruptImplicit) ? 'corrupted' : 'any'
     }
   }
 
