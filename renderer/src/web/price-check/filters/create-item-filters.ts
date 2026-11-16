@@ -224,7 +224,9 @@ export function createFilters (
       baseTypeTrade: t(opts, item.info)
     }
     if (item.category && CATEGORY_TO_TRADE_ID.has(item.category)) {
-      let disabled = opts.exact
+      // woke: a fractured item is priced as a base (Guy, 2026-11-16): the
+      // fractured mod only means something on that base, so base type starts ticked.
+      let disabled = opts.exact || item.isFractured === true
       if (
         item.category === ItemCategory.ClusterJewel ||
         item.category === ItemCategory.Idol ||

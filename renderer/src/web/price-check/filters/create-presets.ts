@@ -3,6 +3,7 @@ import { createExactStatFilters, initUiModFilters } from './create-stat-filters'
 import { createMercenaryFilters } from './pseudo/mercenary'
 import { ModifierType, sumStatsByModType } from '@/parser/modifiers'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
+import { WEAPON, ARMOUR } from '@/parser/meta'
 import type { FilterPreset } from './interfaces'
 
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V']
@@ -93,6 +94,9 @@ export function createPresets (
     filters: createFilters(item, { ...opts, exact: false }),
     stats: initUiModFilters(item, opts)
   }
+  if (isOverquality(item)) {
+    baseWithQuality(pseudoPreset)
+  }
 
   const likelyFinishedItem = (
     item.rarity === ItemRarity.Unique ||
@@ -126,5 +130,31 @@ export function createPresets (
   return {
     active: pseudoPreset.id,
     presets: [pseudoPreset, baseItemPreset]
+  }
+}
+
+// woke (Guy, 2026-11-16): quality above 20 is what an overquality item is
+// worth, so its search starts as that base with at least that quality and item
+// level, mods off. A fractured item's leading fractured mod stays ticked.
+export function isOverquality (item: ParsedItem): boolean {
+  return (item.quality ?? 0) > 20 &&
+    item.rarity !== ItemRarity.Unique &&
+    item.info.craftable != null &&
+    (WEAPON.has(item.category!) || ARMOUR.has(item.category!) ||
+      item.category === ItemCategory.Flask || item.category === ItemCategory.Tincture)
+}
+
+function baseWithQuality (preset: FilterPreset) {
+  const { filters } = preset
+  if (filters.searchRelaxed) filters.searchRelaxed.disabled = true
+  if (filters.quality) filters.quality.disabled = false
+  if (filters.itemLevel) filters.itemLevel.disabled = false
+  for (const row of preset.stats) {
+    if (row.group) {
+      row.meta.disabled = true
+      for (const stat of row.stats) stat.disabled = true
+    } else if (!row.fracLead) {
+      row.disabled = true
+    }
   }
 }
