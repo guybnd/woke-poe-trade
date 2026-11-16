@@ -301,3 +301,4 @@ button.w-chip:hover { color: var(--w-fg); }
 }
 :root [data-w-switches] .w-toggle.on .w-toggle-knob { left: auto !important; right: 2px !important; background: var(--w-accent) !important; }
 :root [data-w-switches] .w-toggle:hover .w-toggle-track { border-color: var(--w-accent) !important; }
+:root [data-w-switches] .w-toggle:focus-visible .w-toggle-track { box-shadow: 0 0 0 2px var(--w-accent-soft), 0 0 0 1px var(--w-accent) !important; }

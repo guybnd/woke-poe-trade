@@ -148,10 +148,11 @@ function describeEditStep (prev: FilterEdit | undefined, next: FilterEdit, lookO
 }
 
 // "A, B and 3 more": enough to tell steps apart, short enough for one line.
-function listOf (items: string[], show = 2): string {
-  const uniq = [...new Set(items)]
-  if (uniq.length <= show) return uniq.join(' and ')
-  return `${uniq.slice(0, show).join(', ')} and ${uniq.length - show} more`
+// Only the ones shown get described: a step can hold hundreds.
+function listOf<T> (items: T[], say: (x: T) => string, show = 2): string {
+  const named = items.slice(0, show).map(say)
+  if (items.length <= show) return named.join(' and ')
+  return `${named.join(', ')} and ${items.length - show} more`
 }
 
 // A saved step in words, worked out again from what it changed, so steps saved
@@ -175,20 +176,21 @@ export function describeStep (before: Settings, after: Settings, lookOf: (type: 
     const dropped = before.edits.filter(e => !ids.has(e.id))
     if (changed.length === 1 && !dropped.length) parts.push(describeEditStep(prev.get(changed[0].id), changed[0], lookOf))
     else if (!changed.length && dropped.length === 1) parts.push(`Took back: ${describeEdit(dropped[0])}`)
-    else if (!changed.length) parts.push(`Took back ${listOf(dropped.map(describeEdit))}`)
-    else if (!dropped.length) parts.push(listOf(changed.map(e => describeEditStep(prev.get(e.id), e, lookOf))))
-    else parts.push(`${listOf(changed.map(e => describeEditStep(prev.get(e.id), e, lookOf)))}; took back ${listOf(dropped.map(describeEdit))}`)
+    else if (!changed.length) parts.push(`Took back ${listOf(dropped, describeEdit)}`)
+    else if (!dropped.length) parts.push(listOf(changed, e => describeEditStep(prev.get(e.id), e, lookOf)))
+    else parts.push(`${listOf(changed, e => describeEditStep(prev.get(e.id), e, lookOf))}; took back ${listOf(dropped, describeEdit)}`)
   }
   if (!same(before.moves, after.moves)) {
-    const key = (m: PriceMove) => `${m.type}|${m.base}|${m.to}`
-    const had = new Set(before.moves.map(key))
+    // A move to another tier is still a move, not a put-back.
+    const key = (m: PriceMove) => `${m.type}|${m.base}`
+    const was = new Map(before.moves.map(m => [key(m), m.to]))
     const has = new Set(after.moves.map(key))
-    const added = after.moves.filter(m => !had.has(key(m)))
+    const added = after.moves.filter(m => was.get(key(m)) !== m.to)
     const gone = before.moves.filter(m => !has.has(key(m)))
     const move = (m: PriceMove) => `${m.base} ${tierLabel(m.from)} → ${tierLabel(m.to)}`
     if (!after.moves.length) parts.push('Back to NeverSink\'s tiers')
-    else if (added.length) parts.push(`Prices moved ${listOf(added.map(move))}${gone.length ? `; put back ${listOf(gone.map(m => m.base))}` : ''}`)
-    else if (gone.length) parts.push(`Prices put back ${listOf(gone.map(m => m.base))}`)
+    else if (added.length) parts.push(`Prices moved ${listOf(added, move)}${gone.length ? `; put back ${listOf(gone, m => m.base)}` : ''}`)
+    else if (gone.length) parts.push(`Prices put back ${listOf(gone, m => m.base)}`)
     else parts.push('Price moves changed')
   }
   if (!same(before.rules, after.rules)) {
@@ -213,8 +215,8 @@ export function describeStep (before: Settings, after: Settings, lookOf: (type: 
     const kept = after.locks.filter(k => !before.locks.includes(k))
     const freed = before.locks.filter(k => !after.locks.includes(k))
     parts.push(kept.length
-      ? `Kept ${listOf(kept.map(base))} where ${kept.length === 1 ? 'it is' : 'they are'}`
-      : `Let prices move ${listOf(freed.map(base))} again`)
+      ? `Kept ${listOf(kept, base)} where ${kept.length === 1 ? 'it is' : 'they are'}`
+      : `Let prices move ${listOf(freed, base)} again`)
   }
   return parts.join('; ') || 'Changed settings'
 }

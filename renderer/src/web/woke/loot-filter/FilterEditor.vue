@@ -145,7 +145,8 @@
                   <span v-for="m in r.maybeMarks" :key="m.key" :class="$style.markSwatch" :style="markSwatch(m.look)" />sometimes
                 </span>
               </span>
-              <button v-if="r.tiers.every(t => t.disabled)" type="button" class="w-focusable" :class="[$style.shownBtn, $style.turnOn]" :title="`${offWhy(r.tiers[0])}. Click to turn it on.`" @click.stop="setRowOn(r.tiers)">Turn on</button>
+              <span v-if="r.tiers.every(t => t.disabled) && r.tiers.every(emptied)" :class="$style.shownBtn" :title="offWhy(r.tiers[0])">Off</span>
+              <button v-else-if="r.tiers.every(t => t.disabled)" type="button" class="w-focusable" :class="[$style.shownBtn, $style.turnOn]" :title="`${offWhy(r.tiers[0])}. Click to turn it on.`" @click.stop="setRowOn(r.tiers)">Turn on</button>
               <button v-else type="button" class="w-focusable" :class="$style.shownBtn" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
             </div>
           </template>
@@ -189,8 +190,8 @@
           </div>
           <div class="text-xs w-faint" :title="tier.blocks.map(b => `Line ${b.line} in the file`).join('\n')">{{ placeText(tier) }}</div>
           <div v-if="tier.disabled" :class="$style.offNote" class="text-xs">
-            <span class="grow">{{ offWhy(tier) }}. Nothing reaches this rule; its items go on to the rules below.</span>
-            <WButton size="sm" variant="primary" @click="setRowOn([tier])">Turn on</WButton>
+            <span class="grow">{{ offWhy(tier) }}. It catches nothing; its items go on to the rules below.</span>
+            <WButton v-if="!emptied(tier)" size="sm" variant="primary" @click="setRowOn([tier])">Turn on</WButton>
           </div>
           <div v-if="band && !bulkLook" :class="$style.bulkNote" class="text-xs">
             <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}. Pick one to change it alone:</span>
@@ -723,6 +724,7 @@ function placeText (t: TierNode): string {
 // Why a rule is commented out, in the words a player knows.
 function offWhy (t: TierNode): string {
   const type = selType.value
+  if (emptied(t)) return 'Every item was moved out of it'
   if (type && props.config.edits.some(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on === false)) return 'You turned this off'
   if (props.config.neversink.on) return `NeverSink leaves this out at ${LEVEL_NAMES[props.config.neversink.level]}`
   return 'Off in the filter file'
@@ -732,13 +734,20 @@ function offWhy (t: TierNode): string {
 function setRowOn (tiers: TierNode[]) {
   const type = selType.value
   if (!type) return
-  const off = tiers.filter(t => t.disabled)
+  const off = tiers.filter(t => t.disabled && !emptied(t))
   if (!off.length) return
-  const mine = off.map(t => props.config.edits.find(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on === false))
-  // Taking back your own "off" is no change at all; the rest get an "on" edit.
-  for (const e of mine) if (e) props.store.removeEdit(e.id)
-  const rest = off.filter((_, i) => !mine[i])
-  if (rest.length) props.store.editsWithUndo(rest.map(t => ({ kind: 'visibility' as const, type, tier: t.tier, visibility: firstLive(t).visibility, on: true })))
+  // One "on" edit per tier, in one step: it replaces your own "off" (keeping the
+  // Show or Hide it carried), and still works if NeverSink has it off as well.
+  props.store.editsWithUndo(off.map(t => {
+    const mine = props.config.edits.find(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on === false)
+    return { kind: 'visibility' as const, type, tier: t.tier, visibility: mine?.kind === 'visibility' ? mine.visibility : firstLive(t).visibility, on: true }
+  }))
+}
+
+// Every item was moved out (by you or by prices): turning it on would leave a
+// rule with an empty item list, which the game rejects.
+function emptied (t: TierNode): boolean {
+  return t.blocks.some(b => b.conditions.some(c => c.key === 'BaseType' && !c.values.length))
 }
 
 function setRowShown (tiers: TierNode[], show: boolean) {
@@ -1216,7 +1225,13 @@ function useShared (how: 'add' | 'replace') {
 
 // Newest first, with each step's place in the list.
 // Worked out again from each step's change, so older steps name their items too.
-const shownSteps = computed(() => props.config.timeline.steps.map((step, n) => ({ step, n, label: describeSavedStep(step, props.store.sourceLook) })).reverse())
+const stepLabels = new WeakMap<object, string>()
+function stepLabel (step: Parameters<typeof describeSavedStep>[0]): string {
+  let label = stepLabels.get(step)
+  if (label == null) stepLabels.set(step, label = describeSavedStep(step, props.store.sourceLook))
+  return label
+}
+const shownSteps = computed(() => props.config.timeline.steps.map((step, n) => ({ step, n, label: stepLabel(step) })).reverse())
 
 function onUndoKeys (e: KeyboardEvent) {
   // Only with this window up, and not when something else already took the key
@@ -1522,8 +1537,8 @@ function openFolder () {
 /* An Off row fades and strikes its content, but its Turn on button stays readable. */
 .ladderRow.off, .ladderRow.off.hiddenRow { opacity: 1; text-decoration: none; }
 .ladderRow.off > :not(.turnOn) { opacity: 0.5; text-decoration: line-through; }
-.turnOn { color: var(--w-accent); border-style: dashed; white-space: nowrap; }
-.turnOn:hover { color: var(--w-fg); border-style: solid; border-color: var(--w-accent); }
+.ladderRow .shownBtn.turnOn { color: var(--w-accent); border-color: var(--w-line-strong); border-style: dashed; white-space: nowrap; }
+.ladderRow .shownBtn.turnOn:hover { color: var(--w-fg); border-style: solid; border-color: var(--w-accent); }
 .offNote {
   display: flex;
   align-items: center;

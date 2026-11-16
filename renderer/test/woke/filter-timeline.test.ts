@@ -142,7 +142,7 @@ describe('in words', () => {
   it('says what each kind of change was', () => {
     expect(describeStep(settings(), settings({ edits: [{ id: 1, kind: 'move', type: 'currency', base: 'Divine Orb', from: 't2divine', to: 't1exalted' }] }))).toContain('Divine Orb')
     expect(describeStep(settings({ edits: [hide(1)] }), settings())).toMatch(/^Took back/)
-    expect(describeStep(settings({ edits: [hide(1), hide(2)] }), settings())).toBe('Took back Hide General currency › Tier 1')
+    expect(describeStep(settings({ edits: [hide(1), hide(2)] }), settings())).toBe('Took back Hide General currency › Tier 1 and Hide General currency › Tier 1')
     const m = { type: 'c', base: 'X', from: 'a', to: 'b', chaos: 1 }
     expect(describeStep(settings(), settings({ moves: [m] }))).toBe('Prices moved X A → B')
     expect(describeStep(settings({ moves: [m] }), settings())).toBe('Back to NeverSink\'s tiers')
