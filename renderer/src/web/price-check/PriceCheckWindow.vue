@@ -239,6 +239,8 @@ export default defineComponent({
     function handleIdentification (identified: ParsedItem) {
       item.value = ok(identified)
     }
+    // woke: a panel prices a version of the item it doesn't hold (a Viscera tier).
+    provide<(other: ParsedItem) => void>('price-check-replace-item', (other) => { item.value = ok(other) })
 
     MainProcess.onEvent('MAIN->OVERLAY::hide-exclusive-widget', () => {
       wm.hide(props.config.wmId)

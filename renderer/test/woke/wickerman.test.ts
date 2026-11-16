@@ -8,8 +8,9 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 vi.mock('@/web/woke/app/live-data', () => ({ dataFileUrl: (f: string) => f, onSharedDataChange: () => () => {} }))
 
 /* eslint-disable import-x/first */
-import { heldTier, pickPriceRow, searchViscera, tierItemName, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
+import { heldTier, otherTierText, pickPriceRow, searchViscera, tierItemName, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
 import type { Viscera, VisceraTable } from '@/web/woke/wickerman/viscera'
+import { ModifierType } from '@/parser/modifiers'
 import { visceraLookup } from '@/web/woke/search/lookups/viscera'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
 import { readViscera } from '../../scripts/build-viscera-data.mjs'
@@ -196,5 +197,54 @@ describe('build script', () => {
   it('decodes unicode escapes', () => {
     const src = 'function(){const i=(s,x,g)=>0,k=[];const h=1;t("Caf\\u00e9 Arm","Arm","x",[],null,[]),window.VISCERA=k}()'
     expect(readViscera(src)[0].name).toBe('Café Arm')
+  })
+})
+
+// A click on a version in the price check prices that version: the item text
+// is rewritten to hold it, then parsed like any copy.
+describe('Viscera: price another version', () => {
+  beforeAll(loadGameData)
+
+  const CORE = () => fixture('items/viscera-molten-core.txt')
+  const implicit = (text: string) => {
+    const item = parseItem(text)
+    expect(item.info.refName).toBe('Molten Core')
+    expect(item.unknownModifiers).toEqual([])
+    return item.statsByType.find(s => s.type === ModifierType.Implicit)!
+  }
+
+  it("swaps Guy's Molten Core to the other versions", () => {
+    const v = get('Molten Core')
+    const held = heldTier(v, 'Molten Core', lines(CORE()))
+    expect(label(v, held)).toBe('Med')
+
+    const low = otherTierText(v, CORE(), held!, v.tiers.findIndex(t => t.label === 'Low'))!
+    expect(low).toContain('Lesser Molten Core')
+    expect(low).toContain('+14(14-18)% to Fire Resistance')
+    expect(implicit(low).stat.ref).toBe('+#% to Fire Resistance')
+    expect(implicit(low).sources[0].contributes?.value).toBe(14)
+    expect(label(v, heldTier(v, 'Lesser Molten Core', lines(low)))).toBe('Low')
+
+    const high = otherTierText(v, CORE(), held!, v.tiers.findIndex(t => t.label === 'High'))!
+    expect(high).toContain('Greater Molten Core')
+    expect(high).not.toContain('to Fire Resistance\n')
+    expect(implicit(high).stat.ref).toBe('+#% to maximum Fire Resistance')
+    expect(label(v, heldTier(v, 'Greater Molten Core', lines(high)))).toBe('High')
+  })
+
+  it('writes a plain copy without ranges', () => {
+    const v = get("Skeletal Warrior's Leg")
+    const text = fixture('items/viscera-lesser-skeletal-leg.txt')
+    const held = heldTier(v, "Lesser Skeletal Warrior's Leg", lines(text))!
+    const med = v.tiers.findIndex(t => t.label === 'Med')
+    const out = otherTierText(v, text, held, med)!
+    expect(out).toContain(`\n${v.name}\n`)
+    expect(out).not.toMatch(/\d\(/)
+    expect(label(v, heldTier(v, v.name, lines(out)))).toBe('Med')
+  })
+
+  it("gives up when the item's lines don't show its version", () => {
+    const v = get('Molten Core')
+    expect(otherTierText(v, CORE().replace('Fire', 'Cold'), 1, 2)).toBeNull()
   })
 })

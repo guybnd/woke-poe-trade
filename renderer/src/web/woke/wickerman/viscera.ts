@@ -109,6 +109,40 @@ export function heldTier (v: Viscera, itemName: string, itemLines: readonly stri
   return named >= 0 ? named : null
 }
 
+// ---- price another version ----
+
+// The item text as if it held another version: the held version's lines
+// become the other version's, each range at its first number (so the search
+// from it finds the whole range), and the name takes that version's Lesser /
+// Greater word. Null when the item's lines don't show its version.
+export function otherTierText (v: Viscera, rawText: string, from: number, to: number): string | null {
+  const held = v.tiers[from]
+  const want = v.tiers[to]
+  if (!held || !want) return null
+  const lines = rawText.replace(/\r\n/g, '\n').split('\n')
+  // An advanced copy keeps a roll's range, "16(14-18)%": write it the same way.
+  const advanced = lines.some(l => /^\{ Implicit Modifier/.test(l.trim()))
+  const rolled = (text: string) => text.replace(/\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g,
+    (_m, lo: string, hi: string) => advanced ? `${lo}(${lo}-${hi})` : lo)
+
+  const at: number[] = []
+  for (const tl of held.text.split('\n')) {
+    const i = lines.findIndex((il, k) => !at.includes(k) && lineMatches(tl, il.trim()))
+    if (i === -1) return null
+    at.push(i)
+  }
+  at.sort((a, b) => a - b)
+  const out = lines.map((l, k) => k === at[0] ? want.text.split('\n').map(rolled).join('\n') : l)
+    .filter((_l, k) => !at.slice(1).includes(k))
+
+  // The name: the first line after the header that names this Viscera.
+  const nameAt = out.findIndex(l => !/^(Item Class|Rarity):/.test(l) && l.trim())
+  if (nameAt !== -1 && out[nameAt].trim().toLowerCase().endsWith(v.name.toLowerCase())) {
+    out[nameAt] = tierItemName(v, to)
+  }
+  return out.join('\n')
+}
+
 // ---- search ----
 
 export interface VisceraHit {
