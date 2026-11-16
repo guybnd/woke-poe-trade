@@ -1171,6 +1171,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     sourceStack,
     resetPrices,
     editWithUndo,
+    // Something you changed is not saved yet (not counting price drift).
+    userDirty,
     editsWithUndo,
     changeWithUndo,
     presetChanges,

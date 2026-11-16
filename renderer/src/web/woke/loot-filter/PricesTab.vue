@@ -240,7 +240,7 @@ const shown = computed(() => {
 function quietSave (clean: boolean) {
   if (clean) props.store.save({ auto: true }).catch(() => {})
 }
-const isClean = () => !props.store.dirty.value
+const isClean = () => !props.store.userDirty()
 
 // Where the row sits and which one opens next, read before the step changes
 // the list.
