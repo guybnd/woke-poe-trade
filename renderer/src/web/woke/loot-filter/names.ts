@@ -7,6 +7,7 @@ const WHOLE_TYPES: Record<string, string> = {
   'divination': 'Divination cards',
   'normalcraft->extra': 'Normal crafting bases',
   'influenced->all': 'Influenced gear',
+  'maps->influenced': 'Influenced maps',
   'uniques': 'All uniques'
 }
 

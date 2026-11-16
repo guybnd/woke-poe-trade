@@ -27,7 +27,7 @@
         <WListItem v-for="s in flatList" :key="s.group.type" :active="s.group.type === selType" @select="pick(s)" @contextmenu="emit('group-menu', $event, s.group.type)">
           <span class="flex items-center gap-2 w-full min-w-0" :class="{ [$style.off]: s.group.hidden }">
             <span class="w-trunc">{{ nameOf(s.group) }}</span>
-            <span v-if="changedIn(s.group.type)" :class="$style.changed" class="text-xs">{{ changedIn(s.group.type) }}</span>
+            <span v-if="changedIn(s.group.type)" :class="$style.changed" class="text-xs">{{ changedIn(s.group.type) }} edited</span>
             <span class="grow" />
           </span>
           <template #sub>{{ s.category.label }}<template v-if="s.category.chapters.length > 1"> › {{ s.chapter.title }}</template></template>
@@ -60,8 +60,8 @@
             <img v-if="iconOf(c)" :src="iconOf(c)!" :class="$style.art" alt="">
             <i v-else :class="[c.fa, $style.fa]" aria-hidden="true" />
             <span class="w-trunc grow">{{ c.label }}</span>
-            <span v-if="changedInCat(c)" :class="$style.changed" class="text-xs" :title="`You changed ${changedInCat(c)} thing${changedInCat(c) === 1 ? '' : 's'} here`">{{ changedInCat(c) }}</span>
-            <span class="w-faint text-xs w-num">{{ c.groupCount }}</span>
+            <span v-if="changedInCat(c)" :class="$style.changed" class="text-xs" :title="`You changed ${changedInCat(c)} thing${changedInCat(c) === 1 ? '' : 's'} here`">{{ changedInCat(c) }} edited</span>
+            <span class="w-faint text-xs w-num" :title="`${c.groupCount} groups`">{{ c.groupCount }} groups</span>
             <i class="fas fa-chevron-right w-faint text-xs" aria-hidden="true" />
           </span>
         </WListItem>
@@ -78,8 +78,8 @@
         <WListItem v-for="ch in here.category.chapters" :key="ch.id" :active="ch.id === selectedSpot?.chapter.id" :data-here="ch.id === selectedSpot?.chapter.id || undefined" @select="go({ cat: here.category!.id, chapter: ch.id })">
           <span class="flex items-center gap-2 w-full min-w-0">
             <span class="w-trunc grow" :title="ch.id">{{ ch.title }}</span>
-            <span v-if="changedInChapter(ch)" :class="$style.changed" class="text-xs">{{ changedInChapter(ch) }}</span>
-            <span class="w-faint text-xs w-num">{{ ch.groups.length }}</span>
+            <span v-if="changedInChapter(ch)" :class="$style.changed" class="text-xs">{{ changedInChapter(ch) }} edited</span>
+            <span class="w-faint text-xs w-num">{{ ch.groups.length }} groups</span>
             <i class="fas fa-chevron-right w-faint text-xs" aria-hidden="true" />
           </span>
         </WListItem>
@@ -96,8 +96,8 @@
         <WListItem v-for="g in here.chapter.groups" :key="g.type" :active="g.type === selType" :data-here="g.type === selType || undefined" @select="emit('select', g.type)" @contextmenu="emit('group-menu', $event, g.type)">
           <span class="flex items-center gap-2 w-full min-w-0" :class="{ [$style.off]: g.hidden }">
             <span class="w-trunc grow" :title="nameOf(g)">{{ shortGroupName(nameOf(g)) }}</span>
-            <span v-if="changedIn(g.type)" :class="$style.changed" class="text-xs" :title="`You changed ${changedIn(g.type)} thing${changedIn(g.type) === 1 ? '' : 's'} here`">{{ changedIn(g.type) }}</span>
-            <span class="w-faint text-xs w-num">{{ g.tiers.length }}</span>
+            <span v-if="changedIn(g.type)" :class="$style.changed" class="text-xs" :title="`You changed ${changedIn(g.type)} thing${changedIn(g.type) === 1 ? '' : 's'} here`">{{ changedIn(g.type) }} edited</span>
+            <span class="w-faint text-xs w-num">{{ g.tiers.length }} tiers</span>
           </span>
           <template #actions>
             <button type="button" class="w-icon-btn" :class="{ [$style.star]: isPinned(g.type) }" :title="isPinned(g.type) ? 'Unpin' : 'Pin to the top of the list'" :aria-label="`${isPinned(g.type) ? 'Unpin' : 'Pin'} ${nameOf(g)}`" @click="togglePin(g.type)"><i :class="isPinned(g.type) ? 'fas fa-star' : 'far fa-star'" aria-hidden="true" /></button>
@@ -364,6 +364,10 @@ function onKey (e: KeyboardEvent) {
   padding: 4px 6px 6px;
   border-bottom: 1px solid var(--w-line);
 }
+/* Endgame / Campaign / Both fits the column on one line in every look. */
+.tools :global(.w-seg) { display: flex; width: 100%; }
+.tools :global(.w-seg) > :global(button) { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+:global(:root[data-woke-art]) .tools :global(.w-seg) > :global(button) { border-width: 0 6px; border-image-width: 0 6px; font-size: var(--w-fs-sm); letter-spacing: 0; }
 .crumbs {
   display: flex;
   flex-wrap: wrap;

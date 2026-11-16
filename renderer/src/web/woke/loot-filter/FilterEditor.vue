@@ -1,5 +1,5 @@
 <template>
-  <WPanel ref="panel" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
+  <WPanel ref="panel" data-w-switches :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #tabs>
       <WTabs v-model="tab" :options="tabOptions" />
@@ -84,7 +84,7 @@
             <div v-for="t in group.tiers" :key="t.tier" :class="[$style.switchRow, { [$style.active]: t.tier === selTier }]" @click="pickRow([t])">
               <WToggle :model-value="!t.disabled" :aria-label="tierName(firstLive(t))" @click.stop @update:model-value="setRuleOn(t, $event)" />
               <span class="flex flex-col" style="min-width: 0;">
-                <span>{{ tierName(firstLive(t)) }}<span v-if="tierChanged(t.tier)" :class="$style.dot" title="You changed this" /></span>
+                <span>{{ tierName(firstLive(t)) }}<span v-if="tierChanged(t.tier)" :class="$style.edited" title="You changed this">edited</span></span>
                 <span class="w-faint text-xs w-trunc" :title="rowTitle(t)">{{ rowConditions(t) || rowTitle(t).split('\n').join(' · ') }}</span>
               </span>
             </div>
@@ -97,7 +97,7 @@
                 :title="m.tiers.map(t => `${tierName(firstLive(t))}${t.disabled ? ' (off)' : ''}`).join(' · ')" :data-tiers="m.tiers.map(t => t.tier).join(' ')" @click="pickRow(m.tiers)" @contextmenu="tierMenu($event, m.tiers[0])">
                 <span :class="$style.markSwatch" :style="markSwatch(m.look)" />
                 <span class="flex flex-col" style="min-width: 0; text-align: left;">
-                  <span>{{ markName(m.look) }}<span v-if="m.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this mark" /></span>
+                  <span>{{ markName(m.look) }}<span v-if="m.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this mark">edited</span></span>
                   <span class="w-faint text-xs">{{ markWhen(lad.axis, m) }}</span>
                 </span>
               </button>
@@ -108,6 +108,13 @@
             <WSelect :model-value="String(showFromList.at ?? 'mixed')" :options="showFromOptions" aria-label="Lowest tier to show" style="max-width: 11rem;" @update:model-value="setShowFrom" />
             <span class="w-faint text-xs">{{ showFromList.at == null ? 'some tiers in between are hidden' : 'every tier below hides' }}</span>
           </div>
+          <div v-if="lad.rows.length" :class="$style.key" class="text-xs">
+            <span>After each label:</span>
+            <span><span :class="$style.keyBeam" /> beam</span>
+            <span><span :class="$style.keyIcon">&#9733;</span> map icon</span>
+            <span><i class="fas fa-volume-up" aria-hidden="true" /> 2 sound and its number</span>
+            <span><span :class="$style.edited">edited</span> you changed it</span>
+          </div>
           <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.ladderStack]: hasStacks }]">
             <span>{{ lad.axis ? axisName(lad.axis) : 'Tier' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
           </div>
@@ -117,7 +124,7 @@
               :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
               @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
-                <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this tier" /></span>
+                <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span></span>
                 <span v-if="lad.axis && r.tiers.length > 1" class="w-faint text-xs w-trunc">{{ r.tiers.length }} tiers, same look</span>
               </span>
               <span v-if="hasStacks" :class="$style.stack">
@@ -138,7 +145,7 @@
                   <span v-for="m in r.maybeMarks" :key="m.key" :class="$style.markSwatch" :style="markSwatch(m.look)" />sometimes
                 </span>
               </span>
-              <span v-if="r.tiers.every(t => t.disabled)" :class="$style.shownBtn" title="Commented out in the filter">Off</span>
+              <button v-if="r.tiers.every(t => t.disabled)" type="button" class="w-focusable" :class="[$style.shownBtn, $style.turnOn]" :title="`${offWhy(r.tiers[0])}. Click to turn it on.`" @click.stop="setRowOn(r.tiers)">Turn on</button>
               <button v-else type="button" class="w-focusable" :class="$style.shownBtn" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
             </div>
           </template>
@@ -180,7 +187,11 @@
             <span class="grow" />
             <WButton v-if="tierChanged(tier.tier) && !isOwnGroup" size="sm" variant="ghost" icon="fas fa-undo" title="Take back your changes to this tier" @click="resetTier(tier.tier)">Reset tier</WButton>
           </div>
-          <div class="text-xs w-faint">{{ tier.blocks.length > 1 ? `${tier.blocks.length} rules` : `line ${tier.blocks[0].line}` }}<span v-if="tier.disabled"> · commented out in the filter</span></div>
+          <div class="text-xs w-faint" :title="tier.blocks.map(b => `Line ${b.line} in the file`).join('\n')">{{ placeText(tier) }}</div>
+          <div v-if="tier.disabled" :class="$style.offNote" class="text-xs">
+            <span class="grow">{{ offWhy(tier) }}. Nothing reaches this rule; its items go on to the rules below.</span>
+            <WButton size="sm" variant="primary" @click="setRowOn([tier])">Turn on</WButton>
+          </div>
           <div v-if="band && !bulkLook" :class="$style.bulkNote" class="text-xs">
             <span class="grow">Changes here go to all {{ band.length }} tiers of this {{ bandIsMark ? 'mark' : 'band' }}. Pick one to change it alone:</span>
             <span class="flex flex-wrap gap-1">
@@ -277,7 +288,7 @@
           <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="config.timeline.at >= config.timeline.steps.length" title="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
         </div>
         <div v-for="s in shownSteps" :key="s.n" :class="[$style.changeRow, { [$style.undone]: s.n >= config.timeline.at }]">
-          <span class="grow min-w-0 w-trunc" :title="s.step.label">{{ s.step.label }}</span>
+          <span class="grow min-w-0 w-trunc" :title="s.label">{{ s.label }}</span>
           <span class="w-faint text-xs w-num" :title="new Date(s.step.ts).toLocaleString()">{{ agoPhrase(s.step.ts) }}</span>
           <WButton v-if="s.n + 1 !== config.timeline.at" size="sm" variant="ghost" title="Your settings go back to right after this step. You can redo." @click="store.goToStep(s.n + 1)">{{ s.n >= config.timeline.at ? 'Redo to here' : 'Back to here' }}</WButton>
           <WButton v-else size="sm" variant="ghost" @click="store.undoStep()">Undo</WButton>
@@ -377,6 +388,7 @@ import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
 import NeverSinkTab from './NeverSinkTab.vue'
 import { LEVEL_NAMES } from './strictness'
+import { describeSavedStep } from './timeline'
 import { describeProblem } from './validate'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
@@ -688,6 +700,45 @@ function setShowFrom (v: string) {
   const undo = props.store.editsWithUndo(changes.map(c => ({ kind: 'visibility' as const, type, tier: c.tier, visibility: c.visibility })))
   const pick = showFromList.value.tiers[Number(v)]
   toast(pick ? `Showing ${groupName(type)} from ${pick.label}` : `Hiding all ${groupName(type)}`, { anchor: panel.value?.el, undo })
+}
+
+// Where a rule sits: the game checks rules top to bottom and the first match
+// wins, so the useful facts are its place and how many above list its items.
+function placeText (t: TierNode): string {
+  const doc = props.store.doc.value
+  if (!doc) return ''
+  const live = doc.blocks.filter(b => !b.disabled && !b.continue)
+  const first = t.blocks[0]
+  const at = live.findIndex(b => b.index >= first.index)
+  const place = t.disabled
+    ? `Off, would sit at rule ${at < 0 ? live.length + 1 : at + 1} of ${live.length}`
+    : `Rule ${at + 1} of ${live.length}${t.blocks.length > 1 ? ` (${t.blocks.length} rules)` : ''}`
+  if (!t.bases.length) return `${place} · checked top to bottom, first match wins`
+  const mine = new Set(t.bases)
+  const above = live.filter(b => b.index < first.index && !(b.type === selType.value && b.tier === t.tier) &&
+    b.conditions.some(c => c.key === 'BaseType' && c.op === '==' && c.values.some(v => mine.has(v)))).length
+  return above ? `${place} · ${above} rule${above === 1 ? '' : 's'} above list some of these items and are checked first` : `${place} · no rule above lists these items`
+}
+
+// Why a rule is commented out, in the words a player knows.
+function offWhy (t: TierNode): string {
+  const type = selType.value
+  if (type && props.config.edits.some(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on === false)) return 'You turned this off'
+  if (props.config.neversink.on) return `NeverSink leaves this out at ${LEVEL_NAMES[props.config.neversink.level]}`
+  return 'Off in the filter file'
+}
+
+// Uncomments every tier of a row (one undo for a folded band).
+function setRowOn (tiers: TierNode[]) {
+  const type = selType.value
+  if (!type) return
+  const off = tiers.filter(t => t.disabled)
+  if (!off.length) return
+  const mine = off.map(t => props.config.edits.find(e => e.kind === 'visibility' && e.type === type && e.tier === t.tier && e.on === false))
+  // Taking back your own "off" is no change at all; the rest get an "on" edit.
+  for (const e of mine) if (e) props.store.removeEdit(e.id)
+  const rest = off.filter((_, i) => !mine[i])
+  if (rest.length) props.store.editsWithUndo(rest.map(t => ({ kind: 'visibility' as const, type, tier: t.tier, visibility: firstLive(t).visibility, on: true })))
 }
 
 function setRowShown (tiers: TierNode[], show: boolean) {
@@ -1164,7 +1215,8 @@ function useShared (how: 'add' | 'replace') {
 }
 
 // Newest first, with each step's place in the list.
-const shownSteps = computed(() => props.config.timeline.steps.map((step, n) => ({ step, n })).reverse())
+// Worked out again from each step's change, so older steps name their items too.
+const shownSteps = computed(() => props.config.timeline.steps.map((step, n) => ({ step, n, label: describeSavedStep(step, props.store.sourceLook) })).reverse())
 
 function onUndoKeys (e: KeyboardEvent) {
   // Only with this window up, and not when something else already took the key
@@ -1467,6 +1519,20 @@ function openFolder () {
   cursor: pointer;
 }
 .ladderRow:not(.hiddenRow) .shownBtn { color: var(--w-fg); border-color: var(--w-accent); }
+/* An Off row fades and strikes its content, but its Turn on button stays readable. */
+.ladderRow.off, .ladderRow.off.hiddenRow { opacity: 1; text-decoration: none; }
+.ladderRow.off > :not(.turnOn) { opacity: 0.5; text-decoration: line-through; }
+.turnOn { color: var(--w-accent); border-style: dashed; white-space: nowrap; }
+.turnOn:hover { color: var(--w-fg); border-style: solid; border-color: var(--w-accent); }
+.offNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px dashed var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  color: var(--w-dim);
+}
 .specialHead { padding-top: 8px; }
 .specials {
   display: grid;
@@ -1564,15 +1630,32 @@ function openFolder () {
   cursor: pointer;
 }
 .chipX:hover { color: var(--w-fg); }
-.dot {
+.edited {
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-left: 5px;
-  border-radius: 50%;
-  background: var(--w-warn);
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--w-warn);
+  border-radius: var(--w-r-sm);
+  color: var(--w-warn);
+  font-size: calc(9px * var(--w-text-scale, 1));
+  font-weight: 600;
+  line-height: calc(13px * var(--w-text-scale, 1));
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   vertical-align: 1px;
+  text-decoration: none;
 }
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 2px 8px 4px;
+  color: var(--w-faint);
+}
+.key .edited { margin-left: 0; }
+.keyBeam { display: inline-block; width: 3px; height: 11px; border-radius: 1px; background: var(--w-bad, #d0614d); vertical-align: -1px; }
+.keyIcon { color: var(--w-bad, #d0614d); }
 .changed { color: var(--w-warn); white-space: nowrap; }
 .off {
   opacity: 0.5;

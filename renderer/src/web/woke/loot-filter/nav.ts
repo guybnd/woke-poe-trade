@@ -151,7 +151,9 @@ export function buildNav (tree: SectionNode[], mode: NavMode = 'all'): NavCatego
       const id = categoryOf(g.type, sec.title)
       if (!cats.has(id)) cats.set(id, new Map())
       const chapters = cats.get(id)!
-      const chapter = chapterLabel(sec.title)
+      // NeverSink files influenced maps in its Influenced Items section; under Maps
+      // that chapter is about maps, not gear.
+      const chapter = id === 'maps' && /influenced/i.test(sec.title) ? 'Influenced maps' : chapterLabel(sec.title)
       if (!chapters.has(chapter)) chapters.set(chapter, [])
       chapters.get(chapter)!.push(g)
     }

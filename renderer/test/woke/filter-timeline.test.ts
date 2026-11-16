@@ -142,9 +142,9 @@ describe('in words', () => {
   it('says what each kind of change was', () => {
     expect(describeStep(settings(), settings({ edits: [{ id: 1, kind: 'move', type: 'currency', base: 'Divine Orb', from: 't2divine', to: 't1exalted' }] }))).toContain('Divine Orb')
     expect(describeStep(settings({ edits: [hide(1)] }), settings())).toMatch(/^Took back/)
-    expect(describeStep(settings({ edits: [hide(1), hide(2)] }), settings())).toBe('Took back 2 changes')
+    expect(describeStep(settings({ edits: [hide(1), hide(2)] }), settings())).toBe('Took back Hide General currency › Tier 1')
     const m = { type: 'c', base: 'X', from: 'a', to: 'b', chaos: 1 }
-    expect(describeStep(settings(), settings({ moves: [m] }))).toBe('Price moves: 1 more')
+    expect(describeStep(settings(), settings({ moves: [m] }))).toBe('Prices moved X A → B')
     expect(describeStep(settings({ moves: [m] }), settings())).toBe('Back to NeverSink\'s tiers')
     const rule = newRule(1, 1)
     expect(describeStep(settings(), settings({ rules: [rule] }))).toBe('New rule: My rule 1')
@@ -153,7 +153,7 @@ describe('in words', () => {
     const on = defaultPresets()
     on.quiet.on = true
     expect(describeStep(settings(), settings({ presets: on }))).toBe('Preset: quiet mode on')
-    expect(describeStep(settings(), settings({ locks: ['a'] }))).toBe('Kept an item where it is')
+    expect(describeStep(settings(), settings({ locks: ['currency|Divine Orb'] }))).toBe('Kept Divine Orb where it is')
   })
 
   it('a change that touches several parts names each', () => {
@@ -193,10 +193,10 @@ describe('what a step records', () => {
     expect(describeStep(settings(), settings({ edits: [e] }))).toContain('font size 32 → 45')
   })
 
-  it('counts fewer moves as fewer', () => {
+  it('names the moves put back', () => {
     const m = (b: string) => ({ type: 'c', base: b, from: 'a', to: 'b', chaos: 1 })
-    expect(describeStep(settings({ moves: [m('x'), m('y'), m('z')] }), settings({ moves: [m('x')] }))).toBe('Price moves: 2 fewer')
-    expect(describeStep(settings({ moves: [m('x')] }), settings({ moves: [m('y')] }))).toBe('Price moves changed')
+    expect(describeStep(settings({ moves: [m('x'), m('y'), m('z')] }), settings({ moves: [m('x')] }))).toBe('Prices put back y and z')
+    expect(describeStep(settings({ moves: [m('x')] }), settings({ moves: [m('y')] }))).toBe('Prices moved y A → B; put back x')
   })
 })
 
