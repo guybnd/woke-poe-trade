@@ -148,7 +148,7 @@
               </span>
               <span v-if="r.tiers.every(t => t.disabled) && r.tiers.every(emptied)" class="w-chip" :class="$style.shownBtn" :title="offWhy(r.tiers[0])">Off</span>
               <button v-else-if="r.tiers.every(t => t.disabled)" type="button" class="w-chip w-focusable" :class="[$style.shownBtn, $style.turnOn]" :title="`${offWhy(r.tiers[0])}. Click to turn it on.`" @click.stop="setRowOn(r.tiers)">Turn on</button>
-              <button v-else type="button" class="w-chip w-focusable" :class="[$style.shownBtn, { on: r.shown }]" :aria-pressed="r.shown" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
+              <button v-else type="button" class="w-chip w-focusable" :class="[$style.shownBtn, { on: r.shown }]" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
             </div>
           </template>
           <template v-if="lad.specials.length || subGroups.length">
@@ -1551,8 +1551,8 @@ function openFolder () {
   text-align: left;
   cursor: pointer;
 }
-.ladderRow, .ladderHead { grid-template-columns: 7rem 11rem minmax(0, 1fr) 4rem; }
-.ladderRow.ladderStack, .ladderHead.ladderStack { grid-template-columns: 6rem 4.5rem 11rem minmax(0, 1fr) 4rem; }
+.ladderRow, .ladderHead { grid-template-columns: 7rem 11rem minmax(0, 1fr) minmax(4rem, max-content); }
+.ladderRow.ladderStack, .ladderHead.ladderStack { grid-template-columns: 6rem 4.5rem 11rem minmax(0, 1fr) minmax(4rem, max-content); }
 .ladderHead {
   display: grid;
   gap: 10px;
@@ -1637,7 +1637,7 @@ function openFolder () {
 /* An Off row fades and strikes its content, but its Turn on button stays readable. */
 .ladderRow.off, .ladderRow.off.hiddenRow { opacity: 1; text-decoration: none; }
 .ladderRow.off > :not(.turnOn) { opacity: 0.5; text-decoration: line-through; }
-.ladderRow .shownBtn.turnOn { border-style: dashed; }
+.ladderRow .shownBtn.turnOn.turnOn { border-style: dashed; color: var(--w-accent); white-space: nowrap; }
 .ladderRow .shownBtn.turnOn:hover { border-style: solid; }
 .offNote {
   display: flex;

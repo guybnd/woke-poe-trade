@@ -14,11 +14,11 @@
     <div class="flex flex-col gap-1">
       <span>Where saves go</span>
       <label class="flex items-start gap-2">
-        <input v-model="saveMode" type="radio" value="copy" class="mt-1">
+        <input v-model="saveMode" type="radio" value="copy" style="margin-top: 2px;">
         <span class="flex items-center gap-2">A separate copy (recommended) <w-info text="Saved as &quot;&lt;filter&gt; (woke).filter&quot;. The NeverSink file stays untouched, so downloading a new version never fights your edits. Pick the (woke) filter in game once." /></span>
       </label>
       <label class="flex items-start gap-2">
-        <input v-model="saveMode" type="radio" value="overwrite" class="mt-1">
+        <input v-model="saveMode" type="radio" value="overwrite" style="margin-top: 2px;">
         <span class="flex items-center gap-2">Overwrite the NeverSink file <w-info text="Keeps your in-game filter choice. The original is kept as &quot;&lt;filter&gt;.filter.bak&quot;; after downloading a new NeverSink version, open the editor and save to put your edits back." /></span>
       </label>
     </div>

@@ -142,9 +142,9 @@ function turnOff () {
 .danger, .danger .ic { color: var(--w-down); }
 .sep { height: 1px; margin: var(--w-s1) 2px; background: var(--w-line); }
 .head { padding: 2px var(--w-s2) 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
-.chips { display: flex; gap: 4px; padding: 0 var(--w-s1) var(--w-s1); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 var(--w-s1) var(--w-s1); }
 .chip {
   /* The look is .w-chip's (ui/controls.css); this only sizes it. */
-  flex: 1 1 0; min-width: 0; height: 25px; padding: 0 2px; justify-content: center;
+  flex: 1 1 auto; height: 25px; justify-content: center;
 }
 </style>

@@ -598,7 +598,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
   gap: 6px;
 }
 .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; font-size: var(--w-fs-md); align-items: center; }
-.dropGrid { grid-template-columns: 16px minmax(0, 1fr) 62px 104px 72px 48px; }
+.dropGrid { grid-template-columns: max-content minmax(0, 1fr) 62px 104px 72px 48px; }
 .off { opacity: 0.45; }
 .cardStats { margin-top: 4px; }
 .cardDrop { display: grid; grid-template-columns: minmax(0, 1fr) 46px 58px; gap: 6px; align-items: center; }
