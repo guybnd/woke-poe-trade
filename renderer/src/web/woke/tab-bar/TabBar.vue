@@ -115,17 +115,17 @@
         <!-- the rail's own layout and size -->
         <div v-if="popup?.kind === 'layout'" ref="popupEl" data-w-popup :class="[$style.menu, $style.layoutMenu]" :style="popupStyle" data-rail-layout @contextmenu.prevent>
           <div :class="$style.chipHead">Theme</div>
-          <div :class="$style.chips" data-rail-theme>
-            <button v-for="t in WOKE_LOOKS" :key="t.id" :class="[$style.chip, { [$style.chipOn]: isLookPicked(t) }]" :title="`${t.label}: ${t.hint}`" @click="pickLook(t)">{{ t.short }}</button>
+          <div :class="[$style.chips, $style.chipsWrap]" data-rail-theme>
+            <button v-for="t in WOKE_LOOKS" :key="t.id" type="button" class="w-chip" :class="[$style.chip, { on: isLookPicked(t) }]" :aria-pressed="isLookPicked(t)" :title="`${t.label}: ${t.hint}`" @click="pickLook(t)">{{ t.short }}</button>
           </div>
           <div :class="$style.chipHead">Layout</div>
           <div :class="$style.chips">
-            <button :class="[$style.chip, { [$style.chipOn]: !flat }]" @click="setFlat(false)">Vertical</button>
-            <button :class="[$style.chip, { [$style.chipOn]: flat }]" @click="setFlat(true)">Horizontal</button>
+            <button type="button" class="w-chip" :class="[$style.chip, { on: !flat }]" :aria-pressed="!flat" @click="setFlat(false)">Vertical</button>
+            <button type="button" class="w-chip" :class="[$style.chip, { on: flat }]" :aria-pressed="flat" @click="setFlat(true)">Horizontal</button>
           </div>
           <div :class="$style.chipHead">Size</div>
           <div :class="$style.chips">
-            <button v-for="s in RAIL_SIZES" :key="s" :class="[$style.chip, { [$style.chipOn]: (config.railSize ?? RAIL_DEFAULT_SIZE) === s }]" @click="setSize(s)">{{ s.toUpperCase() }}</button>
+            <button v-for="s in RAIL_SIZES" :key="s" type="button" class="w-chip" :class="[$style.chip, { on: (config.railSize ?? RAIL_DEFAULT_SIZE) === s }]" :aria-pressed="(config.railSize ?? RAIL_DEFAULT_SIZE) === s" @click="setSize(s)">{{ s.toUpperCase() }}</button>
           </div>
           <hr :class="$style.rule">
           <button :class="$style.item" @click="resetRail(); closePopup()"><i class="fas fa-undo" />Reset position and size</button>
@@ -150,7 +150,7 @@
             <i class="fas fa-undo" />Reset window position
           </button>
           <div v-if="renaming" :class="$style.renameRow">
-            <input ref="renameInput" v-model="renameValue" :class="$style.input" placeholder="Tool name"
+            <input class="w-input" ref="renameInput" v-model="renameValue" :class="$style.input" placeholder="Tool name"
               @keydown.enter="commitRename" @keydown.esc="closePopup">
             <button :class="$style.iconBtn" title="Save" @click="commitRename"><i class="fas fa-check" /></button>
           </div>
@@ -990,13 +990,10 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .rule { border: 0; border-top: 1px solid var(--w-line); margin: 4px 2px; }
 .chipHead { padding: 5px 8px 3px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .chips { display: flex; gap: 4px; padding: 0 6px 5px; }
-.chip {
-  flex: 1 1 0; min-width: 0; height: 26px; padding: 0 2px;
-  border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
-  font-size: var(--w-fs-sm); color: var(--w-fg);
-}
-.chip:hover { background: var(--w-accent-soft); }
-.chipOn { background: var(--w-accent-soft); border-color: var(--w-accent); }
+.chipsWrap { flex-wrap: wrap; }
+.chipsWrap > .chip { flex: 1 1 calc(33% - 4px); }
+/* The look is .w-chip's (ui/controls.css); this only sizes it. */
+.chip { flex: 1 1 0; min-width: 0; height: 26px; padding: 0 2px; justify-content: center; }
 .layoutMenu { box-sizing: border-box; width: 240px; }
 .hint { padding: 3px 8px 5px; font-size: var(--w-fs-xs); color: var(--w-faint); }
 .tipFlat { transform: translate(-50%, -50%); }

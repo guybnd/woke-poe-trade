@@ -30,7 +30,7 @@
       <template #meta>
         <span v-if="!league">No league selected</span>
         <span class="inline-flex items-center gap-1">day
-          <input :value="day ?? ''" type="number" min="0" :class="$style.dayInput"
+          <input class="w-input" :value="day ?? ''" type="number" min="0" :class="$style.dayInput"
             title="League day (0 = launch day). Clear to use the start date." @change="onDayInput"></span>
         <span v-if="config.dayOverride == null && start" class="w-faint">started {{ start }}</span>
         <span v-else-if="config.dayOverride == null" style="color: var(--w-warn);">start date unknown, enter the day</span>

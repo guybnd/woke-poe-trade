@@ -15,7 +15,7 @@
           <span class="flex flex-wrap gap-1">
             <WChip v-for="v in c.values" :key="v" clickable :title="`Remove ${v}`" @click="c.values = c.values.filter(x => x !== v)">{{ v }} <i class="fas fa-times w-faint" /></WChip>
           </span>
-          <input :class="$style.input" :list="`${uid}-${c.key}`" :placeholder="c.key === 'Class' ? 'Add a class…' : 'Add a base type…'" :aria-label="`Add ${conditionKind(c.key)?.label}`"
+          <input class="w-input" :class="$style.input" :list="`${uid}-${c.key}`" :placeholder="c.key === 'Class' ? 'Add a class…' : 'Add a base type…'" :aria-label="`Add ${conditionKind(c.key)?.label}`"
             @change="addValue(c, $event)" @keydown.enter="addValue(c, $event)">
           <datalist :id="`${uid}-${c.key}`">
             <option v-for="v in suggestions(c.key)" :key="v" :value="v" />
@@ -26,21 +26,21 @@
         </template>
         <template v-else-if="kindOf(c) === 'number'">
           <span class="flex items-center gap-1">
-            <select :value="c.op || '=='" :class="$style.select" style="width: 3.4rem;" aria-label="Compare" @change="c.op = ($event.target as HTMLSelectElement).value">
+            <select class="w-select" :value="c.op || '=='" :class="$style.select" style="width: 3.4rem;" aria-label="Compare" @change="c.op = ($event.target as HTMLSelectElement).value">
               <option v-for="op in NUMBER_OPS" :key="op" :value="op">{{ op }}</option>
             </select>
-            <input type="number" :min="conditionKind(c.key)?.min" :max="conditionKind(c.key)?.max" :value="c.values[0]" :class="$style.input" style="width: 5rem;"
+            <input class="w-input" type="number" :min="conditionKind(c.key)?.min" :max="conditionKind(c.key)?.max" :value="c.values[0]" :class="$style.input" style="width: 5rem;"
               :aria-label="conditionKind(c.key)?.label" @change="c.values = [String(Math.round(Number(($event.target as HTMLInputElement).value)))]">
           </span>
         </template>
         <template v-else-if="kindOf(c) === 'rarity'">
           <span class="flex items-center gap-1">
-            <select :value="c.op || '=='" :class="$style.select" style="width: 6.5rem;" aria-label="Rarity compare" @change="c.op = ($event.target as HTMLSelectElement).value">
+            <select class="w-select" :value="c.op || '=='" :class="$style.select" style="width: 6.5rem;" aria-label="Rarity compare" @change="c.op = ($event.target as HTMLSelectElement).value">
               <option value="==">exactly</option>
               <option value="<=">up to</option>
               <option value=">=">at least</option>
             </select>
-            <select :value="c.values[0]" :class="$style.select" aria-label="Rarity" @change="c.values = [($event.target as HTMLSelectElement).value]">
+            <select class="w-select" :value="c.values[0]" :class="$style.select" aria-label="Rarity" @change="c.values = [($event.target as HTMLSelectElement).value]">
               <option v-for="r in RARITIES" :key="r" :value="r">{{ r }}</option>
             </select>
           </span>
@@ -56,7 +56,7 @@
           </span>
         </template>
         <template v-else-if="kindOf(c) === 'influence'">
-          <select :value="c.values[0]" :class="$style.select" aria-label="Influence" @change="c.values = [($event.target as HTMLSelectElement).value]">
+          <select class="w-select" :value="c.values[0]" :class="$style.select" aria-label="Influence" @change="c.values = [($event.target as HTMLSelectElement).value]">
             <option value="None">None</option>
             <option v-for="inf in INFLUENCES" :key="inf" :value="inf">{{ inf }}</option>
           </select>
@@ -64,7 +64,7 @@
       </span>
       <button class="w-icon-btn" :title="`Remove ${conditionKind(c.key)?.label ?? c.key}`" :aria-label="`Remove ${conditionKind(c.key)?.label ?? c.key}`" @click="rule.conditions.splice(i, 1)"><i class="fas fa-times" /></button>
     </div>
-    <select :class="$style.select" value="" aria-label="Add a condition" style="align-self: flex-start;" @change="addCondition($event)">
+    <select class="w-select" :class="$style.select" value="" aria-label="Add a condition" style="align-self: flex-start;" @change="addCondition($event)">
       <option value="" disabled>+ condition…</option>
       <option v-for="k in addable" :key="k.key" :value="k.key">{{ k.label }}</option>
     </select>

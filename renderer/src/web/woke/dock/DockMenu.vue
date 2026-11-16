@@ -17,7 +17,7 @@
     <div :class="$style.sep" />
     <div :class="$style.head">Dismiss this icon</div>
     <div :class="$style.chips">
-      <button v-for="c in chips" :key="c.what" type="button" role="menuitem" :class="$style.chip" @click="dismiss(c.what)">{{ c.label }}</button>
+      <button v-for="c in chips" :key="c.what" type="button" role="menuitem" class="w-chip" :class="$style.chip" @click="dismiss(c.what)">{{ c.label }}</button>
     </div>
     <template v-if="canPeek || offModule">
       <div :class="$style.sep" />
@@ -144,9 +144,7 @@ function turnOff () {
 .head { padding: 2px var(--w-s2) 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .chips { display: flex; gap: 4px; padding: 0 var(--w-s1) var(--w-s1); }
 .chip {
-  flex: 1 1 0; min-width: 0; height: 25px; padding: 0 2px;
-  border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm);
-  font-size: var(--w-fs-sm); white-space: nowrap; color: var(--w-fg);
+  /* The look is .w-chip's (ui/controls.css); this only sizes it. */
+  flex: 1 1 0; min-width: 0; height: 25px; padding: 0 2px; justify-content: center;
 }
-.chip:hover { background: var(--w-accent-soft); border-color: var(--w-accent); }
 </style>

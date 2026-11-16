@@ -130,7 +130,7 @@
               </span>
               <span v-if="hasStacks" :class="$style.stack">
                 <template v-if="r.tiers.length === 1 && tierStack(r.tiers[0]) != null && !r.tiers[0].disabled">
-                  &ge; <input type="number" min="1" :max="STACK_MAX" :class="$style.stackInput" :value="stackSizeOf(r.tiers[0])" :aria-label="`Stack size for ${stackTierName(r.tiers[0].tier)}`"
+                  &ge; <input class="w-input" type="number" min="1" :max="STACK_MAX" :class="$style.stackInput" :value="stackSizeOf(r.tiers[0])" :aria-label="`Stack size for ${stackTierName(r.tiers[0].tier)}`"
                     @click.stop @input="onStackInput(r.tiers[0], $event)" @change="onStackChange(r.tiers[0], $event)" @blur="dropStackDraft(r.tiers[0].tier)" @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc="cancelStack(r.tiers[0], $event)">
                 </template>
                 <span v-else-if="ladder?.floor === r.tiers[0].tier" class="w-faint">smaller</span>
@@ -146,9 +146,9 @@
                   <span v-for="m in r.maybeMarks" :key="m.key" :class="$style.markSwatch" :style="markSwatch(m.look)" />sometimes
                 </span>
               </span>
-              <span v-if="r.tiers.every(t => t.disabled) && r.tiers.every(emptied)" :class="$style.shownBtn" :title="offWhy(r.tiers[0])">Off</span>
-              <button v-else-if="r.tiers.every(t => t.disabled)" type="button" class="w-focusable" :class="[$style.shownBtn, $style.turnOn]" :title="`${offWhy(r.tiers[0])}. Click to turn it on.`" @click.stop="setRowOn(r.tiers)">Turn on</button>
-              <button v-else type="button" class="w-focusable" :class="$style.shownBtn" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
+              <span v-if="r.tiers.every(t => t.disabled) && r.tiers.every(emptied)" class="w-chip" :class="$style.shownBtn" :title="offWhy(r.tiers[0])">Off</span>
+              <button v-else-if="r.tiers.every(t => t.disabled)" type="button" class="w-chip w-focusable" :class="[$style.shownBtn, $style.turnOn]" :title="`${offWhy(r.tiers[0])}. Click to turn it on.`" @click.stop="setRowOn(r.tiers)">Turn on</button>
+              <button v-else type="button" class="w-chip w-focusable" :class="[$style.shownBtn, { on: r.shown }]" :aria-pressed="r.shown" :title="r.shown ? 'Hide in game' : 'Show in game'" @click.stop="setRowShown(r.tiers, !r.shown)">{{ r.shown ? 'Shown' : 'Hidden' }}</button>
             </div>
           </template>
           <template v-if="lad.specials.length || subGroups.length">
@@ -1628,22 +1628,17 @@ function openFolder () {
 }
 .maybe .markSwatch { width: 11px; height: 11px; border-width: 2px; }
 .shownBtn {
+  /* The look is .w-chip's (ui/controls.css): lit when the row shows in game. */
   justify-self: end;
-  padding: 1px 8px;
-  background: transparent;
-  border: 1px solid var(--w-line-strong);
-  border-radius: 10px;
-  color: var(--w-dim);
-  font: inherit;
-  font-size: var(--w-fs-xs, 11px);
+  justify-content: center;
+  min-width: 4.5em;
   cursor: pointer;
 }
-.ladderRow:not(.hiddenRow) .shownBtn { color: var(--w-fg); border-color: var(--w-accent); }
 /* An Off row fades and strikes its content, but its Turn on button stays readable. */
 .ladderRow.off, .ladderRow.off.hiddenRow { opacity: 1; text-decoration: none; }
 .ladderRow.off > :not(.turnOn) { opacity: 0.5; text-decoration: line-through; }
-.ladderRow .shownBtn.turnOn { color: var(--w-accent); border-color: var(--w-line-strong); border-style: dashed; white-space: nowrap; }
-.ladderRow .shownBtn.turnOn:hover { color: var(--w-fg); border-style: solid; border-color: var(--w-accent); }
+.ladderRow .shownBtn.turnOn { border-style: dashed; }
+.ladderRow .shownBtn.turnOn:hover { border-style: solid; }
 .offNote {
   display: flex;
   align-items: center;

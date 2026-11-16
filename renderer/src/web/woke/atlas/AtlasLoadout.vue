@@ -25,7 +25,7 @@
       </div>
       <div :class="$style.slots">
         <div v-for="(t, i) in strategy.threads" :key="i" :class="$style.slot">
-          <select :value="t.type" :class="$style.select" :title="`Thread type ${i + 1}`" @change="setType(i, ($event.target as HTMLSelectElement).value)">
+          <select class="w-select" :value="t.type" :class="$style.select" :title="`Thread type ${i + 1}`" @change="setType(i, ($event.target as HTMLSelectElement).value)">
             <option v-for="type in THREAD_TYPES" :key="type" :value="type" :disabled="type !== t.type && strategy.threads.some(o => o.type === type)">{{ type }}</option>
           </select>
           <div class="flex items-center gap-1">
@@ -50,7 +50,7 @@
         <span>Currency per map</span>
         <span v-if="mapCost != null" class="ml-auto normal-case tracking-normal w-accent">{{ fmt(mapCost) }} per map</span>
       </div>
-      <textarea v-if="editing" :value="strategy.scarabs" rows="4" :class="$style.textarea" placeholder="One per line: 1x Orb of Alchemy, 1x Vaal Orb…"
+      <textarea class="w-input" v-if="editing" :value="strategy.scarabs" rows="4" :class="$style.textarea" placeholder="One per line: 1x Orb of Alchemy, 1x Vaal Orb…"
         @change="strategy.scarabs = ($event.target as HTMLTextAreaElement).value" />
       <template v-else-if="pricedLines.length">
         <div v-for="(p, i) in pricedLines" :key="i" v-item-tip="p.item ?? { name: p.name }" class="flex items-center gap-2">
@@ -100,13 +100,13 @@
       <!-- Map device and notes -->
       <template v-if="editing || strategy.device.trim()">
         <div :class="$style.heading">Map device and crafting</div>
-        <textarea v-if="editing" :value="strategy.device" rows="3" :class="$style.textarea" placeholder="Scour, alch, reroll on the regex…"
+        <textarea class="w-input" v-if="editing" :value="strategy.device" rows="3" :class="$style.textarea" placeholder="Scour, alch, reroll on the regex…"
           @change="strategy.device = ($event.target as HTMLTextAreaElement).value" />
         <div v-else class="whitespace-pre-wrap">{{ strategy.device }}</div>
       </template>
       <template v-if="editing || strategy.notes.trim()">
         <div :class="$style.heading">Notes</div>
-        <textarea v-if="editing" :value="strategy.notes" rows="3" :class="$style.textarea" placeholder="Notes"
+        <textarea class="w-input" v-if="editing" :value="strategy.notes" rows="3" :class="$style.textarea" placeholder="Notes"
           @change="strategy.notes = ($event.target as HTMLTextAreaElement).value" />
         <div v-else class="whitespace-pre-wrap w-dim">{{ strategy.notes }}</div>
       </template>
@@ -147,7 +147,7 @@
 
       <template v-if="otherStrategies.length && view">
         <div :class="$style.heading">Compare with</div>
-        <select v-model="compareId" :class="$style.select">
+        <select class="w-select" v-model="compareId" :class="$style.select">
           <option :value="null">Choose a strategy…</option>
           <option v-for="s in otherStrategies" :key="s.id" :value="s.id">{{ s.name || 'Untitled' }}</option>
         </select>

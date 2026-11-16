@@ -33,7 +33,7 @@
     </button>
     <div v-if="open === 'sound'" :class="$style.foldBody">
       <span class="flex flex-col gap-1" style="min-width: 0;">
-        <select :value="look.sound?.id ?? ''" :class="$style.select" style="width: 100%; min-width: 0;" aria-label="Alert sound"
+        <select class="w-select" :value="look.sound?.id ?? ''" :class="$style.select" style="width: 100%; min-width: 0;" aria-label="Alert sound"
           @change="setSound(($event.target as HTMLSelectElement).value, look.sound?.volume ?? 300)">
           <option value="">None</option>
           <optgroup label="NeverSink's sound pack (plays here)">
@@ -108,7 +108,7 @@
     </div>
     <div v-if="copyFrom.length" class="flex items-center gap-2 text-xs">
       <span class="w-dim">Copy look from</span>
-      <select :class="$style.select" value="" aria-label="Copy style from tier" @change="copy(($event.target as HTMLSelectElement).value)">
+      <select class="w-select" :class="$style.select" value="" aria-label="Copy style from tier" @change="copy(($event.target as HTMLSelectElement).value)">
         <option value="" disabled>tier…</option>
         <option v-for="t in copyFrom" :key="t.tier" :value="t.tier">{{ t.label ?? tierLabel(t.tier) }}</option>
       </select>

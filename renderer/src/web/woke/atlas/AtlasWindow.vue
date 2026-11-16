@@ -16,11 +16,11 @@
         </template>
         <template #toolbar>
           <div v-if="importOpen" class="flex flex-col gap-1 w-full">
-            <textarea v-model="importText" rows="4" :class="$style.textarea" data-import
+            <textarea class="w-input" v-model="importText" rows="4" :class="$style.textarea" data-import
               placeholder="An atlas tree link, a guide's text (tree link, Threads, currency, regex) or a strategy code" @keydown.esc="importOpen = false" />
             <div class="flex gap-1 items-center">
               <span class="w-faint text-xs">Into</span>
-              <select v-model="importInto" :class="$style.select" class="grow" title="Folder for what you import">
+              <select v-model="importInto" :class="$style.select" class="w-select grow" title="Folder for what you import">
                 <option value="">The top</option>
                 <option v-for="f in folders" :key="f" :value="f">{{ f.split('/').join(' › ') }}</option>
               </select>

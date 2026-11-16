@@ -172,7 +172,7 @@
             </div>
 
             <div class="flex flex-wrap gap-1 items-center pt-1">
-              <input v-model="renameTo" :class="$style.input" list="woke-analytics-strategies" placeholder="Strategy" style="width: 12rem;">
+              <input class="w-input" v-model="renameTo" :class="$style.input" list="woke-analytics-strategies" placeholder="Strategy" style="width: 12rem;">
               <datalist id="woke-analytics-strategies">
                 <option v-for="name in strategyNames" :key="name" :value="name" />
               </datalist>

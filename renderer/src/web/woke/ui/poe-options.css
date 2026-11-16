@@ -71,29 +71,48 @@
 :root[data-woke-art] .w-toggle:hover .w-toggle-track { filter: brightness(1.15); }
 :root[data-woke-art] .w-toggle-knob { display: none; }
 
-/* ---------- Sliders (Settings): a black track and a copper handle ---------- */
-:root[data-woke-art] [data-w-settings] input[type="range"] {
+/* ---------- Plain checkboxes in any window: the same coin as the switch ---------- */
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="checkbox"]:not(.sr-only, [data-w-switches] *) {
+  width: calc(22px * var(--w-text-scale, 1));
+  height: calc(22px * var(--w-text-scale, 1));
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--art-checkbox-off) center / contain no-repeat;
+}
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="checkbox"]:not(.sr-only, [data-w-switches] *):checked {
+  background: var(--art-checkbox-on) center / contain no-repeat;
+}
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="checkbox"]:not(.sr-only, :disabled):hover { filter: brightness(1.15); }
+
+/* ---------- Sliders in any window: a black track and a copper handle ---------- */
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  height: 16px;
+  height: 18px;
   background: transparent;
 }
-:root[data-woke-art] [data-w-settings] input[type="range"]::-webkit-slider-runnable-track {
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]::-webkit-slider-runnable-track {
   height: 14px;
   background: #000;
   border: 1px solid #4a3522;
   border-left-width: 3px;
   border-right-width: 3px;
+  border-radius: 0;
+  box-shadow: none;
 }
-:root[data-woke-art] [data-w-settings] input[type="range"]::-webkit-slider-thumb {
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 30px;
   height: 18px;
   margin-top: -3px;
   border: 0;
+  border-radius: 0;
+  box-shadow: none;
   background: var(--art-slider-thumb) center / contain no-repeat;
 }
-:root[data-woke-art] [data-w-settings] input[type="range"]:disabled::-webkit-slider-thumb { filter: grayscale(1) brightness(0.6); }
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]:hover::-webkit-slider-thumb { filter: brightness(1.15); }
+:root[data-woke-art] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]:disabled::-webkit-slider-thumb { filter: grayscale(1) brightness(0.6); }
 
 /* ---------- Buttons: the game's menu buttons, lit on hover and dark when held ---------- */
 :root[data-woke-art] .w-btn:not(.w-btn--ghost) {

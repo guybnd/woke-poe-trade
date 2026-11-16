@@ -32,7 +32,7 @@
         <template v-if="tab === 'session'">
           <div class="flex gap-1 items-center">
             <input v-model="config.strategy" list="woke-farming-strategies" placeholder="Strategy (e.g. Breach + Legion)"
-              :class="$style.input" class="grow min-w-0">
+              :class="$style.input" class="w-input grow min-w-0">
             <datalist id="woke-farming-strategies">
               <option v-for="name in strategyNames" :key="name" :value="name" />
             </datalist>
@@ -127,7 +127,7 @@
           <div>
             <div v-for="line in config.costs" :key="key(line)" class="w-row px-0" :class="$style.costGrid">
               <span v-item-tip="line" class="w-trunc flex items-center gap-1"><WIcon :src="art(line)" fallback="fas fa-coins" />{{ line.name }}<span v-if="line.variant" class="w-dim ml-1">{{ line.variant }}</span></span>
-              <input v-model.number="line.qty" type="number" min="0" step="1" :class="$style.input" class="w-full">
+              <input v-model.number="line.qty" type="number" min="0" step="1" :class="$style.input" class="w-input w-full">
               <span class="text-right w-dim w-num">{{ linePrice(line) }}</span>
               <button class="w-icon-btn" @click="removeCost(line)" title="Remove. You can undo."><i class="fas fa-times" /></button>
             </div>

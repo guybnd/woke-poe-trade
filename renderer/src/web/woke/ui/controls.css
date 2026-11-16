@@ -256,6 +256,87 @@ button.w-chip:hover { color: var(--w-fg); }
   background: var(--w-chip-ground);
 }
 
+/* ---------- The browser's own parts inside the toolkit's windows ----------
+   Checkboxes, radios, sliders and dropdowns that a window draws as plain
+   <input>/<select> wear the game look too, so no blue browser box or slider
+   shows up next to the bronze. With the game's art on, poe-options.css swaps
+   in the art (checkbox coin, slider handle). A visually hidden input
+   (sr-only, a picker's real radio) is left alone. */
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="checkbox"]:not(.sr-only, [data-w-switches] *) {
+  appearance: none;
+  flex: none;
+  width: calc(16px * var(--w-text-scale, 1));
+  height: calc(16px * var(--w-text-scale, 1));
+  margin: 0;
+  cursor: pointer;
+  border: 1px solid var(--w-frame);
+  border-radius: 1px;
+  background: var(--w-well) center / 72% no-repeat;
+  box-shadow: inset 0 1px 3px #000, 0 0 0 1px #000;
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="checkbox"]:not(.sr-only, [data-w-switches] *):checked {
+  border-color: var(--w-frame-lit);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.6 2.6L10 3.4' fill='none' stroke='%23ffe2a0' stroke-width='2'/%3E%3C/svg%3E");
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="radio"]:not(.sr-only) {
+  appearance: none;
+  flex: none;
+  width: calc(16px * var(--w-text-scale, 1));
+  height: calc(16px * var(--w-text-scale, 1));
+  margin: 0;
+  cursor: pointer;
+  border: 1px solid var(--w-frame);
+  border-radius: 50%;
+  background: var(--w-well);
+  box-shadow: inset 0 1px 3px #000, 0 0 0 1px #000;
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="radio"]:not(.sr-only):checked {
+  border-color: var(--w-frame-lit);
+  background: radial-gradient(circle, var(--w-gold-hi) 0 30%, var(--w-frame-lit) 36%, var(--w-well) 46%);
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input:is([type="checkbox"], [type="radio"]):not(.sr-only, [data-w-switches] *, :disabled):hover { border-color: var(--w-frame-hi); }
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input:is([type="checkbox"], [type="radio"]):not(.sr-only, [data-w-switches] *):focus-visible { outline: 1px solid var(--w-frame-hi); outline-offset: 1px; }
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input:is([type="checkbox"], [type="radio"]):disabled { opacity: 0.45; cursor: default; }
+
+/* Sliders: a recessed groove and a bronze handle. */
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: var(--w-well);
+  border: 1px solid var(--w-well-line);
+  border-radius: 1px;
+  box-shadow: var(--w-well-shadow);
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 16px;
+  margin-top: -6px;
+  border: 1px solid var(--w-frame-lit);
+  border-radius: 1px;
+  background: var(--w-bevel);
+  box-shadow: var(--w-bevel-shadow);
+}
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]:hover::-webkit-slider-thumb { border-color: var(--w-gold-hi); }
+:root[data-woke-look="game"] :is([data-w-panel], [data-w-settings], [data-w-window], .w-surface) input[type="range"]:disabled { opacity: 0.5; cursor: default; }
+
+/* Dropdowns: the browser's arrow swapped for a gold one. */
+:root[data-woke-look="game"] .w-select,
+:root[data-woke-look="game"] [data-w-settings] select {
+  appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23d9c08a' stroke-width='1.6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 6px center !important;
+  background-size: 9px 6px !important;
+}
+
 /* ---------- Opt-in sliding switch (data-w-switches on a container) ----------
    The game's coin checkbox reads like the copper "i" coin beside it, and off
    and on look alike at a glance. Inside an opted-in container every switch is

@@ -80,7 +80,7 @@
             <WChip v-if="sel.boss.source?.kills" :class="sel.boss.source.kills >= 1000 ? 'w-up' : ''">{{ sel.boss.source.kills.toLocaleString() }} community kills</WChip>
             <WChip v-if="sel.kills">{{ sel.kills }} of my kills</WChip>
             <label class="flex items-center gap-1 w-dim text-sm">Run time
-              <input :value="formatRunTime(sel.runSeconds)" :class="$style.input" style="width: 4rem;" title="m:ss, or minutes"
+              <input class="w-input" :value="formatRunTime(sel.runSeconds)" :class="$style.input" style="width: 4rem;" title="m:ss, or minutes"
                 @change="setRunTime(sel.boss.id, ($event.target as HTMLInputElement).value, $event)">
             </label>
           </div>
@@ -124,7 +124,7 @@
                     <span class="flex items-center gap-1 w-dim">poe.ninja <WPrice :chaos="editingRow.spread?.median" :divine="divine" /></span>
                     <WSegmented :model-value="editingRow.priceMode === 'min' ? 'median' : editingRow.priceMode ?? 'median'" :options="modeOptions" @update:model-value="setMode(editingRow.name, $event)" />
                     <label v-if="editingRow.priceMode === 'custom'" class="flex items-center gap-1 w-dim">Price
-                      <input type="number" min="0" :class="$style.input" style="width: 5rem;" :value="config.customPrices[editingRow.name] ?? ''" placeholder="chaos"
+                      <input class="w-input" type="number" min="0" :class="$style.input" style="width: 5rem;" :value="config.customPrices[editingRow.name] ?? ''" placeholder="chaos"
                         @change="setCustomPrice(editingRow.name, ($event.target as HTMLInputElement).value)">c
                     </label>
                     <WButton size="sm" icon="fas fa-external-link-alt" @click="openUnidSearch(editingRow.name)">Unidentified on trade</WButton>
@@ -201,7 +201,7 @@
                 <div v-for="d in sel.drops" :key="d.name" class="w-row" :class="$style.rateGrid">
                   <span v-item-tip="{ name: d.name, type: typeByName.get(d.name), variant: d.variant }" class="w-trunc">{{ d.name }}</span>
                   <span class="w-dim text-xs">{{ rateTitle(d.rateSource) }}</span>
-                  <input type="number" min="0" max="100" step="0.01" :class="$style.input" class="text-right"
+                  <input type="number" min="0" max="100" step="0.01" :class="$style.input" class="w-input text-right"
                     :value="d.chance == null ? '' : +(d.chance * 100).toFixed(3)" placeholder="?"
                     @change="setRate(sel.boss.id, d.name, ($event.target as HTMLInputElement).value)">
                   <span class="flex">

@@ -17,7 +17,7 @@ test('the rail layout popup switches the theme', async ({ overlay }) => {
   await row.getByRole('button', { name: 'Modern', exact: true }).click()
   expect(await theme(page)).toBe('modern')
   expect(await page.evaluate(() => localStorage.getItem('woke.theme'))).toBe('modern')
-  await expect(row.getByRole('button', { name: 'Modern', exact: true })).toHaveClass(/chipOn/)
+  await expect(row.getByRole('button', { name: 'Modern', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('the price check palette switches the look and the filter layout', async ({ overlay }) => {
