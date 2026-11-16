@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { beastsCost, bestiaryLookup, denOf, recipeNeeds, recipeTitle, recipesMaking, recipesWith } from '@/web/woke/search/lookups/bestiary'
 import type { BestiaryData } from '@/web/woke/search/lookups/bestiary'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
+import { foldAccents } from '@/web/woke/search/search'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -84,5 +85,13 @@ describe('bestiaryLookup', () => {
     expect(beasts[1]).toMatchObject({ label: '3 any rare beasts', dim: true })
     expect(card.sections[2].label).toBe('Farrul drops')
     expect(card.sections[2].rows!.find(r => r.label === "Farrul's Fur")?.chaos).toBe(101)
+  })
+})
+
+describe('accents', () => {
+  it('finds Black Mórrigan typed without the accent', () => {
+    expect(names('black morrigan').length).toBeGreaterThan(0)
+    expect(foldAccents('Black Mórrigan')).toBe('Black Morrigan')
+    expect(foldAccents('Ёжик')).toBe('Ёжик')
   })
 })

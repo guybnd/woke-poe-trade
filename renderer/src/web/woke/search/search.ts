@@ -10,11 +10,17 @@ export const PRICE_GROUP_LIMIT = 30
 
 // "Kaom's Heart" should match "kaoms heart" too. Names repeat on every
 // keystroke, across thousands of rows, so each is worked out once.
+// Latin letters lose their accents, so "morrigan" finds Black Mórrigan. Other
+// scripts (Cyrillic, Hangul) are left whole.
+export function foldAccents (text: string): string {
+  return text.replace(/[\u00C0-\u024F]/g, c => c.normalize('NFD').replace(/[\u0300-\u036F]/g, ''))
+}
+
 const normalized = new Map<string, string>()
 function normalize (text: string): string {
   let n = normalized.get(text)
   if (n == null) {
-    n = text.toLowerCase().replace(/['’]/g, '').trim().replace(/\s+/g, ' ')
+    n = foldAccents(text.toLowerCase()).replace(/['’]/g, '').trim().replace(/\s+/g, ' ')
     if (normalized.size > 100_000) normalized.clear()
     normalized.set(text, n)
   }

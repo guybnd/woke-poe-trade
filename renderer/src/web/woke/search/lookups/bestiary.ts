@@ -3,6 +3,7 @@
 // in (BeastRecipes.vue). The table (public/data/bestiary-data.json, built by
 // scripts/build-bestiary-data.mjs from poedb) is fetched when the palette opens.
 import type { Lookup, LookupCard, LookupContext, LookupRow } from './types'
+import { foldAccents } from '../search'
 
 export interface BeastRecipe {
   // poedb's heading and result: "Create a Unique" / "Ring".
@@ -100,7 +101,7 @@ const ALIAS: Record<string, string[]> = {
 const MAX_CARDS = 8
 
 function words (text: string): string[] {
-  return text.toLowerCase().replace(/['’]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  return foldAccents(text.toLowerCase()).replace(/['’]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean)
 }
 function queryWords (raw: string): string[] {
   const text = raw.toLowerCase()
@@ -159,7 +160,10 @@ export function bestiaryLookup (data: BestiaryData | null): Lookup {
       if (matches(own, q)) titled.push(rec)
       else if (matches([...own, ...words(rec.b.join(' '))], q)) byBeast.push(rec)
     }
-    // What a recipe makes first, then recipes that only name a matching beast.
+    // What a recipe makes first, then recipes that only name a matching beast,
+    // dearest beasts first: "farr" puts Farrul's own recipes before Farric ones.
+    const worth = (rec: BeastRecipe) => rec.b.reduce((sum, b) => sum + (ctx.price(b) ?? 0), 0)
+    byBeast.sort((a, b) => worth(b) - worth(a))
     return [...titled, ...byBeast].slice(0, MAX_CARDS).map(rec => card(data, rec, ctx))
   }
 }
