@@ -1,0 +1,17 @@
+Item Class: Jewels
+Rarity: Unique
+Brutal Restraint
+Timeless Jewel
+--------
+Limited to: 1 Historic
+Radius: Large
+--------
+Item Level: 86
+--------
+{ Unique Modifier }
+Denoted service of 7993(500-8000) dekhara in the akhara of Asenath
+Passives in radius are Conquered by the Maraketh
+--------
+They believed themselves the true inheritors of the Maraketh legacy.
+--------
+Place into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket.

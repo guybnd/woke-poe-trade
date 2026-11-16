@@ -20,6 +20,8 @@ export function makeIndexFiles () {
 
     {
       const ndjson = fs.readFileSync(path.join(__dirname, `../../public/data/${lang}/stats.ndjson`), { encoding: 'utf-8' })
+      /** @type {Map<number, number | null>} */
+      const plain = new Map()
       let start = 0
       while (start !== ndjson.length) {
         const end = ndjson.indexOf('\n', start)
@@ -31,12 +33,22 @@ export function makeIndexFiles () {
           for (const matcher of stat.matchers) {
             if (matcher.advanced) {
               lineStarts.matchers.push({ start, hash: Number(fnv1a(matcher.advanced, { size: 32 })) })
+              if (matcher.advanced !== matcher.string) {
+                // same plain-text fallback as build-indexes.ts buildStatIndexes
+                const h = Number(fnv1a(matcher.string, { size: 32 }))
+                const seen = plain.get(h)
+                plain.set(h, (seen === undefined || seen === start) ? start : null)
+              }
             } else {
               lineStarts.matchers.push({ start, hash: Number(fnv1a(matcher.string, { size: 32 })) })
             }
           }
         }
         start = (end + 1)
+      }
+      const taken = new Set(lineStarts.matchers.map(m => m.hash))
+      for (const [h, start] of plain) {
+        if (start !== null && !taken.has(h)) lineStarts.matchers.push({ start, hash: h })
       }
     }
 

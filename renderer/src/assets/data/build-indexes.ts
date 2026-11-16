@@ -43,14 +43,28 @@ export function buildItemIndexes (ndjson: string) {
 export function buildStatIndexes (ndjson: string) {
   const refs: Array<{ hash: number, start: number }> = []
   const matchers: Array<{ hash: number, start: number }> = []
+  // Plain text of matchers that have an advanced form. The game's copy doesn't
+  // always carry the "(A-Z)" option range the advanced form ends in (3.30
+  // timeless jewels: "...in the akhara of Asenath" with no range), so these
+  // are found by plain text too, unless another line already owns that text.
+  const plain = new Map<number, number | null>()
   forEachLine<StatOrGroup>(ndjson, (statOrGroup, start) => {
     const stats = ('stats' in statOrGroup) ? statOrGroup.stats : [statOrGroup]
     for (const stat of stats) {
       refs.push({ hash: hash(stat.ref), start })
       for (const matcher of stat.matchers) {
         matchers.push({ hash: hash(matcher.advanced ? matcher.advanced : matcher.string), start })
+        if (matcher.advanced && matcher.advanced !== matcher.string) {
+          const h = hash(matcher.string)
+          const seen = plain.get(h)
+          plain.set(h, (seen === undefined || seen === start) ? start : null)
+        }
       }
     }
   })
+  const taken = new Set(matchers.map(m => m.hash))
+  for (const [h, start] of plain) {
+    if (start !== null && !taken.has(h)) matchers.push({ hash: h, start })
+  }
   return { refs: toIndex(refs), matchers: toIndex(matchers) }
 }
