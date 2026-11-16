@@ -498,9 +498,17 @@ function parseFoil (section: string[], item: ParsedItem) {
   return 'SECTION_SKIPPED'
 }
 
+const UNIDENTIFIED_TIER = /^(.+?) \(\D*(\d+)\)$/
 function parseUnidentified (section: string[], item: ParsedItem) {
   if (section[0] === _$.UNIDENTIFIED) {
     item.isUnidentified = true
+    return 'SECTION_PARSED'
+  }
+  // 3.30 puts the drop tier on unidentified gear: "Unidentified (Tier 2)".
+  const tiered = UNIDENTIFIED_TIER.exec(section[0] ?? '')
+  if (tiered && tiered[1] === _$.UNIDENTIFIED) {
+    item.isUnidentified = true
+    item.unidentifiedTier = Number(tiered[2])
     return 'SECTION_PARSED'
   }
   return 'SECTION_SKIPPED'

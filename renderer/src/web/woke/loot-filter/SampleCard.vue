@@ -29,7 +29,8 @@
 
       <div :class="$style.verdict">
         <div class="flex items-center gap-2">
-          <span :class="verdict.shown ? 'w-up' : 'w-down'" :style="{ fontSize: 'var(--w-fs-lg)' }">{{ verdict.shown ? '✓ Shows' : '✗ Hidden' }}</span>
+          <span v-if="maybeShown" :style="{ fontSize: 'var(--w-fs-lg)', color: 'var(--w-warn)' }" title="A rule above may show it, but the copy doesn't say enough to be sure">? Probably shows</span>
+          <span v-else :class="verdict.shown ? 'w-up' : 'w-down'" :style="{ fontSize: 'var(--w-fs-lg)' }">{{ verdict.shown ? '✓ Shows' : '✗ Hidden' }}</span>
           <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
         </div>
         <div class="text-xs w-dim">{{ whyLine }}</div>
@@ -279,6 +280,9 @@ const alsoIn = computed(() => {
 
 const level = computed(() => levelOf(props.store.doc.value))
 const verdict = computed(() => verdictOf(props.match, level.value))
+// Hidden by the rule we're sure of, but a showing rule above might catch it
+// first (its item tier isn't in the copy): never claim "Hidden" then.
+const maybeShown = computed(() => !verdict.value.shown && props.match.uncertain.some(u => u.block.visibility !== 'Hide'))
 const open = reactive({ special: false, rule: false, also: false, grid: false })
 
 type Row = ReturnType<typeof tierInfo> & { label: string, note: string, needs: string, current: boolean, status: string, statusClass: string }
