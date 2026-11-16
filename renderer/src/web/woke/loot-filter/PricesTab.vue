@@ -24,7 +24,7 @@
         <span class="grow" />
         <WButton v-if="moves.length" size="sm" variant="ghost" @click="keepAll">Keep all where they are</WButton>
         <WButton v-if="movedList.length" size="sm" variant="ghost" icon="fas fa-undo" title="Put every price group back on NeverSink's own tiers" @click="reset">Back to NeverSink's tiers</WButton>
-        <WButton v-if="moves.length" size="sm" variant="primary" :disabled="!pickedMoves.length" @click="apply">Apply {{ pickedMoves.length }} and save</WButton>
+        <WButton v-if="moves.length" size="sm" variant="primary" :disabled="!pickedMoves.length" title="Adds these moves to your unsaved changes. Save + reload (Ctrl + S) when you're done." @click="apply">Apply {{ pickedMoves.length }}</WButton>
       </div>
       <template v-if="showMoved">
         <div class="w-group-label" :class="$style.label">Moved by prices</div>
@@ -350,12 +350,10 @@ function caught (v: BaseVerdict): boolean {
   return props.config.safetyNet.on && v.chaos >= props.config.safetyNet.minChaos
 }
 
-// Moves save right away: tiers that only changed in the editor do nothing. The
-// reload follows your setting (town or hideout, if you chose that), and a save
-// the game would refuse shows its reason in the window's footer.
+// Moves join your unsaved changes (Guy works through a long list in batches),
+// and the window's Save + reload (Ctrl+S) writes them all once.
 function moved (text: string, undo: () => void) {
-  props.store.save().catch(() => {})
-  toast(text, { anchor: props.anchor, undo: () => { undo(); props.store.save().catch(() => {}) } })
+  toast(`${text} · not saved yet`, { anchor: props.anchor, undo })
 }
 
 function apply () {

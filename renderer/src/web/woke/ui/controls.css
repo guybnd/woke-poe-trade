@@ -302,3 +302,55 @@ button.w-chip:hover { color: var(--w-fg); }
 :root [data-w-switches] .w-toggle.on .w-toggle-knob { left: auto !important; right: 2px !important; background: var(--w-accent) !important; }
 :root [data-w-switches] .w-toggle:hover .w-toggle-track { border-color: var(--w-accent) !important; }
 :root [data-w-switches] .w-toggle:focus-visible .w-toggle-track { box-shadow: 0 0 0 2px var(--w-accent-soft), 0 0 0 1px var(--w-accent) !important; }
+
+/* The same switch in the game's art (PoE 1 look): a recessed well in a bronze
+   frame, On/Off in the game's small caps, and the game's own checkbox coin as
+   the knob that slides across. Still reads as a switch, never as the "i" coin. */
+:root[data-woke-art] [data-w-switches] .w-toggle .w-toggle-track {
+  width: calc(46px * var(--w-text-scale, 1)) !important;
+  height: calc(20px * var(--w-text-scale, 1)) !important;
+  border: 1px solid var(--w-frame) !important;
+  border-radius: 2px !important;
+  background: var(--w-well) !important;
+  box-shadow: inset 0 1px 4px #000, 0 0 0 1px #000 !important;
+}
+:root[data-woke-art] [data-w-switches] .w-toggle .w-toggle-track::before {
+  font: calc(10px * var(--w-text-scale, 1)) / 1 var(--w-caps-face);
+  letter-spacing: 0.06em;
+  right: 6px;
+}
+:root[data-woke-art] [data-w-switches] .w-toggle.on .w-toggle-track {
+  border-color: var(--w-frame-lit) !important;
+  background: var(--w-well) !important;
+}
+:root[data-woke-art] [data-w-switches] .w-toggle.on .w-toggle-track::before { left: 6px; right: auto; color: var(--w-gold-hi, var(--w-accent)); }
+:root[data-woke-art] [data-w-switches] .w-toggle .w-toggle-knob {
+  left: 1px !important;
+  width: calc(18px * var(--w-text-scale, 1)) !important;
+  height: calc(18px * var(--w-text-scale, 1)) !important;
+  border-radius: 0 !important;
+  background: var(--art-checkbox-off) center / contain no-repeat !important;
+}
+:root[data-woke-art] [data-w-switches] .w-toggle.on .w-toggle-knob {
+  left: auto !important;
+  right: 1px !important;
+  background: var(--art-checkbox-on) center / contain no-repeat !important;
+}
+:root[data-woke-art] [data-w-switches] .w-toggle:hover .w-toggle-track { border-color: var(--w-frame-hi) !important; }
+
+/* Plain checkboxes in the same windows (price moves, beam "temporary") get
+   the game's coin too, instead of the browser's box. */
+:root[data-woke-art] [data-w-switches] input[type="checkbox"] {
+  appearance: none;
+  width: calc(20px * var(--w-text-scale, 1)) !important;
+  height: calc(20px * var(--w-text-scale, 1));
+  margin: 0;
+  border: 0;
+  background: var(--art-checkbox-off) center / contain no-repeat;
+  cursor: pointer;
+  flex: none;
+}
+:root[data-woke-art] [data-w-switches] input[type="checkbox"]:checked { background-image: var(--art-checkbox-on); }
+:root[data-woke-art] [data-w-switches] input[type="checkbox"]:hover { filter: brightness(1.15); }
+:root[data-woke-art] [data-w-switches] input[type="checkbox"]:disabled { opacity: 0.5; cursor: default; }
+:root[data-woke-art] [data-w-switches] input[type="checkbox"]:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
