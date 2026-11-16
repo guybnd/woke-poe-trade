@@ -235,9 +235,12 @@ const shown = computed(() => {
   return list
 })
 
-function quietSave () {
-  props.store.save({ auto: true }).catch(() => {})
+// Writes this one step at once, but only when nothing else waits unsaved: price
+// moves you applied (and not saved yet) stay yours to save with Save + reload.
+function quietSave (clean: boolean) {
+  if (clean) props.store.save({ auto: true }).catch(() => {})
 }
+const isClean = () => !props.store.dirty.value
 
 // Where the row sits and which one opens next, read before the step changes
 // the list.
@@ -277,22 +280,24 @@ function dismiss (r: HealthRow) {
   const was = props.config.healthDismissed[key]
   const netHad = key in props.config.netDismissed
   const netWas = props.config.netDismissed[key]
+  const clean = isClean()
   props.config.healthDismissed = { ...props.config.healthDismissed, [key]: v.chaos }
   // Only a hidden item has a net rule to take back, and that's in the file.
   const inFile = v.state === 'hidden'
   if (inFile) {
     props.config.netDismissed = { ...props.config.netDismissed, [key]: v.chaos }
-    quietSave()
+    quietSave(clean)
   }
   markDone(r, place, {
     text: inFile ? 'stays hidden till its price doubles' : 'off the list till its price doubles',
     // Read props.config when it runs: Settings can swap the whole object.
     live: () => key in props.config.healthDismissed,
     undo: () => {
+      const cleanNow = isClean()
       props.config.healthDismissed = restoreKey(props.config.healthDismissed, key, had, was)
       if (inFile) {
         props.config.netDismissed = restoreKey(props.config.netDismissed, key, netHad, netWas)
-        quietSave()
+        quietSave(cleanNow)
       }
     }
   })
@@ -410,15 +415,17 @@ function showIt (r: HealthRow) {
   if (!b?.type || !b.tier) return
   const place = placeOf(r)
   const before = props.config.edits
+  const clean = isClean()
   props.store.editWithUndo({ kind: 'item', type: b.type, tier: b.tier, base: v.base, visibility: 'Show', patch: v.state === 'hidden' ? SAFETY_LOOK : { fontSize: 40 }, anchor: conditionSignature(b), pin: true })
   const step = editStep(before, props.config.edits)
-  quietSave()
+  quietSave(clean)
   markDone(r, place, {
     text: 'shows now',
     live: () => props.config.edits.some(e => step.ids.has(e.id)),
     undo: () => {
+      const cleanNow = isClean()
       props.store.changeWithUndo(c => { c.edits = undoEditStep(c.edits, step) })
-      quietSave()
+      quietSave(cleanNow)
     }
   })
 }
@@ -475,6 +482,8 @@ function undoEditStep<T extends { id: number }> (now: T[], step: EditStep<T>): T
   flex: none;
   accent-color: var(--w-accent);
 }
+/* The game's coin checkbox is wider: the "Not moved" rows' blank keeps step. */
+:global(:root[data-woke-art]) .check { width: calc(20px * var(--w-text-scale, 1)); }
 .art {
   width: 20px;
   height: 20px;

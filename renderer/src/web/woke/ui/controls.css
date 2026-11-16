@@ -354,3 +354,4 @@ button.w-chip:hover { color: var(--w-fg); }
 :root[data-woke-art] [data-w-switches] input[type="checkbox"]:hover { filter: brightness(1.15); }
 :root[data-woke-art] [data-w-switches] input[type="checkbox"]:disabled { opacity: 0.5; cursor: default; }
 :root[data-woke-art] [data-w-switches] input[type="checkbox"]:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
+:root[data-woke-art] [data-w-switches] .w-toggle:focus-visible .w-toggle-track { box-shadow: 0 0 0 2px var(--w-accent-soft), 0 0 0 1px var(--w-accent) !important; }
