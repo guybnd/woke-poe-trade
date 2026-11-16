@@ -406,6 +406,7 @@ import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
 import NeverSinkTab from './NeverSinkTab.vue'
 import { LEVEL_NAMES } from './strictness'
+import { exampleItem } from './example-item'
 import { describeProblem } from './validate'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
@@ -623,7 +624,12 @@ function firstLive (t: TierNode) {
   return t.blocks.find(b => !b.disabled) ?? t.blocks[0]
 }
 
+// A rule with no item list previews a real item it can catch, when the game
+// data has one that fits; else its class name.
 function previewName (t: TierNode): string {
+  const doc = props.store.doc.value
+  const example = doc ? exampleItem(firstLive(t), doc) : null
+  if (example) return example
   const cls = firstLive(t).conditions.find(c => c.key === 'Class')
   return cls?.values[0] ?? 'Item'
 }
