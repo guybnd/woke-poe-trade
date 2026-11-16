@@ -12,7 +12,7 @@ const FIXTURES = path.resolve(__dirname, '../../../testing/fixtures/filters/neve
 // (r01, maps_a_t14, idaj_caster). A new tag in a NeverSink update lands here
 // and fails the test, so it gets a name or a place on this list.
 const LEFT_RAW = new Set(`
-2020z 2023 2120 21xx 6s 6sockets4h altany armors1q1 armors1q2 ecotinkbases ecotinkbases84 exforgesword exoticstiered
+2020z 2023 2120 2123any 21xx 6s 6sockets4h altany armors1q1 armors1q2 ecotinkbases ecotinkbases84 exforgesword exoticstiered
 exrationaljewel exuberimpresence hh hideable2 idaj_attack idaj_caster idaj_minion idaj_mixer l1 l2 l3 l4 l5 l6 l7 l8
 lt1 lt2 lt3 lt4 maps_a_t14 maps_a_t15 maps_a_t16 maps_b_t11 maps_b_t12 maps_b_t13 maps_c_t10 maps_c_t6 maps_c_t7
 maps_c_t8 maps_c_t9 maps_d_t1 maps_d_t2 maps_d_t3 maps_d_t4 maps_d_t5 outdatedlevelflaska outdatedlevelflaskb

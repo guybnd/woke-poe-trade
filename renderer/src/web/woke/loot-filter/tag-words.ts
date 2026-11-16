@@ -320,8 +320,8 @@ export function tagWords (tag: string): string | null {
     if (count) out.push(`${count[1]}×`)
     out.push(...words)
   }
-  // All numbers ("2023") says nothing a player can read.
-  if (!out.some(w => /[a-z]/i.test(w))) return null
+  // All numbers ("2023"), or a code like 2123 inside one, says nothing a player can read.
+  if (!out.some(w => /[a-z]/i.test(w)) || out.some(w => /^\d{4,}$/.test(w))) return null
   const text = out.join(' ').replace(/\s+/g, ' ').replace(/non- /g, 'non-').trim()
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
