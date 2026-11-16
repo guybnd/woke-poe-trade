@@ -155,6 +155,11 @@ export function distinctConditions (t: TierNode, shared: Set<string>, axis: stri
   return live(t).conditions.filter(c => !(c.key === axis && isSpan(c)) && !shared.has(conditionText(c))).map(c => conditionText(c).replace(/ True$/, ''))
 }
 
+// The same, in words for a row: "Not mirrored · Not corrupted · Quality 26+".
+export function distinctWords (t: TierNode, shared: Set<string>, axis: string | null): string[] {
+  return live(t).conditions.filter(c => !(c.key === axis && isSpan(c)) && !shared.has(conditionText(c))).map(conditionWords)
+}
+
 // An order condition a span says exactly: not `!= 16`, not `== 1 16`.
 function isSpan (c: FilterCondition): boolean {
   if (!isNumeric(c) || c.op === '!=' || c.op === '!') return false
@@ -333,7 +338,8 @@ export function conditionWords (c: FilterCondition): string {
   const name = axisName(c.key)
   const list = (vals: string[]) => vals.length > LIST_MAX ? `${vals.slice(0, LIST_MAX).join(', ')} +${vals.length - LIST_MAX}` : vals.join(', ')
   if (c.values.length === 1 && (c.values[0] === 'True' || c.values[0] === 'False')) {
-    return c.values[0] === 'True' ? capitalFirst(name) : `Not ${name}`
+    const yes = (c.values[0] === 'True') !== (c.op === '!=' || c.op === '!')
+    return yes ? capitalFirst(name) : `Not ${name}`
   }
   if (c.key === 'Class' || c.key === 'BaseType') return `${c.key === 'Class' ? 'Class' : 'Item'}: ${list(c.values)}`
   if (c.key === 'Rarity') return `Rarity: ${list(c.values)}${c.op && c.op !== '==' && c.op !== '=' ? ` (${c.op})` : ''}`

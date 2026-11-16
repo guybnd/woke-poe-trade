@@ -119,6 +119,7 @@
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
                 <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.dot" title="You changed this tier" /></span>
                 <span v-if="lad.axis && r.tiers.length > 1" class="w-faint text-xs w-trunc">{{ r.tiers.length }} tiers, same look</span>
+                <span v-else-if="lad.axis && sameRangeRows.has(rangeText(lad.axis, r.range))" class="w-faint text-xs w-trunc">{{ tierName(firstLive(r.tiers[0])) }}</span>
               </span>
               <span v-if="hasStacks" :class="$style.stack">
                 <template v-if="r.tiers.length === 1 && tierStack(r.tiers[0]) != null && !r.tiers[0].disabled">
@@ -235,7 +236,20 @@
           <template v-else-if="!isOwnGroup">
             <div class="w-group-label" style="padding: 8px 0 2px;">Catches</div>
             <div v-for="(w, i) in firstLive(tier).conditions.map(conditionWords)" :key="i" class="text-xs">{{ w }}</div>
-            <div class="text-xs w-faint">This rule picks items by what they are, not by name, so there's no item list to edit. Change its look or hide it above.</div>
+            <template v-if="classBases.length">
+              <div class="w-group-label" style="padding: 8px 0 2px;">Pick which ones · {{ classBases.length }}</div>
+              <div class="flex flex-wrap gap-1">
+                <WChip v-for="b in classBases" :key="b" clickable :active="ownVisibility(selType!, tier.tier, b) !== 'Hide'"
+                  :title="ownVisibility(selType!, tier.tier, b) === 'Hide' ? 'Hidden by you: click to let this rule show it again' : 'Click to hide just this one'" @click="toggleClassBase(b)">
+                  <span v-item-tip="baseTip(b)" class="flex items-center gap-1">
+                    <img v-if="baseIcon(b)" :src="baseIcon(b)!" :class="$style.chipArt" alt="">
+                    <span :style="ownVisibility(selType!, tier.tier, b) === 'Hide' ? 'text-decoration: line-through; opacity: 0.6;' : ''">{{ b }}</span>
+                  </span>
+                </WChip>
+              </div>
+              <div class="text-xs w-faint">This rule picks items by what they are, not by name. Click one to hide just that one; the rest keep the look above.</div>
+            </template>
+            <div v-else class="text-xs w-faint">This rule picks items by what they are, not by name, so there's no item list to edit. Change its look or hide it above.</div>
           </template>
           <WButton v-if="isOwnGroup && ownEditFor(tier)" size="sm" variant="ghost" icon="fas fa-trash" @click="removeEdit(ownEditFor(tier)!)">Remove this own rule</WButton>
         </template>
@@ -378,6 +392,7 @@ import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
+import { itemCatalog } from './item-search'
 import type { FilterRarity, ItemFacts } from './item-facts'
 import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
@@ -411,7 +426,7 @@ import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour, labelCss } from './label-style'
-import { axisName, buildLadder, conditionText, conditionWords, distinctConditions, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
+import { axisName, buildLadder, conditionText, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
 import { alsoShownBy, buildTree, byPrice, groupName, pickBases } from './groups'
@@ -637,7 +652,46 @@ function pickRow (tiers: TierNode[]) {
 }
 
 function rowConditions (t: TierNode): string {
-  return distinctConditions(t, sharedConds.value, lad.value.axis).join(' · ')
+  return distinctWords(t, sharedConds.value, lad.value.axis).join(' · ')
+}
+
+// Rows whose order label is the same ("item level 82+" twice): they get
+// their rule's name under it, so they can be told apart.
+const sameRangeRows = computed(() => {
+  const seen = new Set<string>()
+  const twice = new Set<string>()
+  for (const r of lad.value.rows) {
+    const k = rangeText(lad.value.axis, r.range)
+    if (seen.has(k)) twice.add(k)
+    seen.add(k)
+  }
+  return twice
+})
+
+// A rule that catches a whole class (Tinctures, Utility Flasks): its bases,
+// so each can be hidden on its own with an own rule. Not for big classes.
+const CLASS_BASES_MAX = 60
+const classBases = computed<string[]>(() => {
+  const t = tier.value
+  if (!t || t.bases.length || isOwnGroup.value) return []
+  const cls = firstLive(t).conditions.find(c => c.key === 'Class' && c.op === '==')?.values
+  if (!cls?.length) return []
+  const names = [...new Set(itemCatalog().filter(i => i.kind === 'Base' && i.itemClass && cls.includes(i.itemClass)).map(i => i.baseType))].sort()
+  return names.length <= CLASS_BASES_MAX ? names : []
+})
+
+function toggleClassBase (base: string) {
+  const type = selType.value
+  const t = tier.value
+  if (!type || !t) return
+  const own = props.config.edits.find(e => e.kind === 'item' && e.type === type && e.tier === t.tier && e.base === base)
+  if (own) {
+    const undo = props.store.removeEdit(own.id)
+    toast(`${base} back to this rule`, { anchor: panel.value?.el, undo })
+    return
+  }
+  const undo = props.store.editWithUndo({ kind: 'item', type, tier: t.tier, base, visibility: 'Hide', patch: {}, anchor: conditionSignature(firstLive(t)) })
+  toast(`Hid ${base}`, { anchor: panel.value?.el, undo })
 }
 
 function rowTitle (t: TierNode): string {

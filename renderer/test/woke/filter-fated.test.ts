@@ -97,5 +97,11 @@ describe('rules without an item list say what they catch', () => {
   it('in words', () => {
     expect(block.conditions.map(conditionWords)).toEqual(['Not mirrored', 'Identified', 'Item level 68+', 'Rarity: Rare', 'Class: Amulets, Belts, Body Armours, Boots +2'])
     expect(tierLabel('identifieditemhandling')).toBe('Identified rares, not corrupted or mirrored')
+    const one = (line: string) => conditionWords(parseFilter(`Show\n\t${line}\n`).blocks[0].conditions[0])
+    expect(one('Corrupted != True')).toBe('Not corrupted')
+    expect(one('Mirrored ! False')).toBe('Mirrored')
+    expect(one('Quality > 20')).toBe('Quality 21+')
+    expect(one('AreaLevel < 78')).toBe('Area level up to 77')
+    expect(tierLabel('tinc85')).toBe('Item level 85+')
   })
 })

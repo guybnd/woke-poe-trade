@@ -195,7 +195,7 @@ export function alsoShownBy (doc: FilterDoc, type: string, tier: string): ShownE
   // A hidden rule that's still on stops its items there: only rules above it
   // can show them. One that's commented out lets them fall to any rule.
   const stop = live.length ? Math.min(...live.map(b => b.index)) : Infinity
-  const rarities = (b: FilterBlock) => b.conditions.find(c => c.key === 'Rarity' && !c.op)?.values ?? null
+  const rarities = (b: FilterBlock) => b.conditions.find(c => c.key === 'Rarity' && (!c.op || c.op === '==' || c.op === '='))?.values ?? null
   const ownRarity = rarities(own.find(b => !b.disabled) ?? own[0])
   const out: ShownElsewhere[] = []
   for (const b of doc.blocks) {
