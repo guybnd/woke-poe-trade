@@ -50,7 +50,7 @@
           :gems="nextGems_" :gear="gearStep" :pin="() => nextPin(entry.relPath, entry.name)" @tree="emit('tree', $event)" />
         <div :class="$style.heading" class="flex items-center">
           <span>Links<template v-if="shownSet && skillSets.length > 1"> · {{ shownSet.title }}</template></span>
-          <button v-if="personalOn && character" type="button" class="w-chip ml-auto normal-case tracking-normal w-focusable" :class="[$style.mineToggle, { on: config.characterGemMarks === true }]" :aria-pressed="config.characterGemMarks === true"
+          <button v-if="personalOn && character" type="button" class="w-chip ml-auto normal-case tracking-normal w-focusable" :class="[$style.mineToggle, { on: config.characterGemMarks === true }]"
             :aria-pressed="config.characterGemMarks === true" :title="config.characterGemMarks === true ? 'Hide the marks for your character\'s gems' : 'Show your level beside gems where yours is lower or missing'"
             @click="toggleGemMarks">● Mine</button>
         </div>
