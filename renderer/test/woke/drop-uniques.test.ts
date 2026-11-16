@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dropUniques, setterName } from '@/web/woke/loot-filter/drop-uniques'
+import { dropUniques, ownUnique, setterName } from '@/web/woke/loot-filter/drop-uniques'
 import type { PriceItem } from '@/web/woke/market/types'
 
 const T = ['UniqueWeapon']
@@ -50,5 +50,13 @@ describe('setterName', () => {
     expect(setterName('Hand of Thought and Motion, 1 of 3')).toBe('Hand of Thought and Motion')
     expect(setterName('Touch of Anguish')).toBe('Touch of Anguish')
     expect(setterName(undefined)).toBeNull()
+  })
+})
+
+describe('ownUnique', () => {
+  it('drops the base line and a Foulborn prefix from an identified copy', () => {
+    expect(ownUnique('Hand of Thought and Motion Imperial Claw', 'Imperial Claw')).toBe('Hand of Thought and Motion')
+    expect(ownUnique('Foulborn Touch of Anguish Imperial Claw', 'Imperial Claw')).toBe('Touch of Anguish')
+    expect(ownUnique('Touch of Anguish', 'Imperial Claw')).toBe('Touch of Anguish')
   })
 })

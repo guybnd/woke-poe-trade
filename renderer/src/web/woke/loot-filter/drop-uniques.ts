@@ -22,6 +22,14 @@ export function setterName (note: string | undefined): string | null {
   return note.replace(/, 1 of \d+$/, '')
 }
 
+// Which unique an identified copy is. Its name is the two name lines joined
+// ("Hand of Thought and Motion Imperial Claw"); a Foulborn one is listed
+// under its plain name.
+export function ownUnique (name: string, base: string): string {
+  const plain = name.endsWith(` ${base}`) ? name.slice(0, -base.length - 1) : name
+  return plain.replace(/^Foulborn /, '')
+}
+
 export function dropUniques (
   list: PricedName[],
   items: PriceItem[],
