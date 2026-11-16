@@ -44,7 +44,9 @@ export interface Ladder {
 }
 
 // StackSize has its own column and scale in the editor.
-const NOT_AN_AXIS = new Set(['StackSize'])
+// Stack size has its own column; an item's width and height say which slots it
+// fits (NeverSink's small RGB items), not an order a player ranks by.
+const NOT_AN_AXIS = new Set(['StackSize', 'Width', 'Height'])
 
 function live (t: TierNode): FilterBlock {
   return t.blocks.find(b => !b.disabled) ?? t.blocks[0]
@@ -332,6 +334,8 @@ export function showFromChanges (sf: ShowFrom, at: number): Array<{ tier: string
 
 const LIST_MAX = 4
 
+const SOCKET_COLOUR = { R: 'red', G: 'green', B: 'blue', W: 'white', A: 'abyss', D: 'delve' } as const
+
 // One condition in plain words: "Item level 68+", "Fated", "not mirrored",
 // "Amulets, Belts, Body Armours, Boots +20".
 export function conditionWords (c: FilterCondition): string {
@@ -343,6 +347,37 @@ export function conditionWords (c: FilterCondition): string {
   }
   if (c.key === 'Class' || c.key === 'BaseType') return `${c.key === 'Class' ? 'Class' : 'Item'}: ${list(c.values)}`
   if (c.key === 'Rarity') return `Rarity: ${list(c.values)}${c.op && c.op !== '==' && c.op !== '=' ? ` (${c.op})` : ''}`
+  if (c.key === 'HasExplicitMod' || c.key === 'HasImplicitMod') {
+    const what = c.key === 'HasImplicitMod' ? 'implicit' : 'mod'
+    if (c.count == null) return `${capitalFirst(what)}: ${list(c.values)}`
+    const n = c.op === '>=' ? `${c.count}+` : c.op === '>' ? `${c.count + 1}+` : c.op === '<=' ? `up to ${c.count}` : c.op === '<' ? `under ${c.count}` : `${c.count}`
+    return `${capitalFirst(n)} of these ${what}s: ${list(c.values)}`
+  }
+  if (c.key === 'EnchantmentPassiveNode') return `Cluster passive: ${list(c.values)}`
+  if (c.key === 'HasInfluence') return c.values.length === 1 && c.values[0] === 'None' ? 'No influence' : `Influence: ${list(c.values)}`
+  if (c.key === 'SocketGroup' || (c.key === 'Sockets' && c.values.every(v => /^\d*[RGBWAD]+$/.test(v)))) {
+    // "RGB" linked, "AA" two abyss sockets: letters are socket colours.
+    const say = (v: string) => {
+      const m = /^(\d*)([RGBWAD]+)$/.exec(v)!
+      const letters = [...m[2]]
+      const counts = (['R', 'G', 'B', 'W', 'A', 'D'] as const).map(l => [l, letters.filter(x => x === l).length] as const).filter(([, n]) => n)
+      const words = counts.map(([l, n]) => `${n} ${SOCKET_COLOUR[l]}`).join(', ')
+      return m[1] ? `${m[1]} sockets with ${words}` : words
+    }
+    const at = c.op === '>=' || c.op === '>' ? 'at least ' : ''
+    return `${c.key === 'SocketGroup' ? 'Linked' : 'Sockets'}: ${at}${c.values.map(say).join(' or ')}`
+  }
+  if ((c.key === 'Width' || c.key === 'Height') && c.values.length === 1 && c.count == null) {
+    const v = Number(c.values[0])
+    const word = c.key === 'Width' ? 'wide' : 'tall'
+    switch (c.op) {
+      case '>=': return `${v}+ ${word}`
+      case '>': return `${v + 1}+ ${word}`
+      case '<=': return `Up to ${v} ${word}`
+      case '<': return `Up to ${v - 1} ${word}`
+      case '': case '=': case '==': return `${v} ${word}`
+    }
+  }
   if (isNumeric(c) && c.values.length === 1 && c.count == null) {
     const v = Number(c.values[0])
     switch (c.op) {

@@ -166,6 +166,7 @@
 </template>
 
 <script setup lang="ts">
+import { conditionWords } from './ladder'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { WPanel, WBanner, WButton, WSegmented, WChip, toast } from '../ui'
 import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
@@ -178,7 +179,7 @@ import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
 import { matchItem, sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
-import { formatCondition, ruleLabel, tierName } from './parse'
+import { ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
 import type { FilterCondition, Visibility } from './parse'
 import { LEVEL_NAMES, LEVEL_SHORT } from './strictness'
@@ -494,9 +495,9 @@ function tri (r: Tri) {
 function conditionText (c: FilterCondition): string {
   if (c.key === 'BaseType' && c.values.length > 3) {
     const hit = c.values.find(v => v === base.value || base.value.includes(v))
-    return `BaseType ${c.op} … ${hit ? `"${hit}"` : ''} … (${c.values.length} items)`
+    return `Item: ${hit ? `${hit} and ` : ''}${hit ? c.values.length - 1 : c.values.length} more`
   }
-  return formatCondition(c)
+  return conditionWords(c)
 }
 
 function unknownKeys (m: BlockMatch): string[] {
