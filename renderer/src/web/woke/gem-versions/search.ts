@@ -11,9 +11,9 @@ export async function searchVersion (
   filters: ItemFilters,
   v: GemVersion,
   forms: GemForms,
-  opts: InsightOptions & { accountName: string }
+  opts: InsightOptions & { accountName: string, useEn: boolean }
 ): Promise<{ chaos: number | null, total: number }> {
-  const f = versionFilters(filters, v, forms)
+  const f = versionFilters(filters, v, forms, opts.useEn)
   const search = await requestTradeResultList(createTradeRequest(f, []), f.trade.league)
   const ids = search.result.slice(0, FETCH_IDS)
   if (!ids.length) return { chaos: null, total: search.total }

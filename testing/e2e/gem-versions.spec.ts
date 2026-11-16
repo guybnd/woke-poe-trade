@@ -80,9 +80,10 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   const before = searches.length
 
   await fold.click()
-  const row = panel.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
-  await expect(panel.getByRole('row')).toHaveCount(8)
-  await expect(panel.getByRole('row').filter({ hasText: 'yours' })).toContainText('21')
+  const table = panel.locator('[data-gem-versions]')
+  const row = table.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
+  await expect(table.getByRole('row')).toHaveCount(8)
+  await expect(table.getByRole('row').filter({ hasText: 'yours' })).toContainText('21')
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before)
 

@@ -58,17 +58,21 @@ function order (a: GemVersion, b: GemVersion): number {
 }
 
 /** Every priced version, normal form first, then the Vaal form; the copied gem's own version marked. */
+export interface OwnGem { vaal: boolean, level: number, quality: number, corrupted: boolean }
+
 export function listVersions (
   baseRows: NinjaGemRow[],
   vaalRows: NinjaGemRow[],
-  own: { vaal: boolean, variant: string | undefined }
+  own: OwnGem
 ): GemVersion[] {
   const out: GemVersion[] = []
   for (const [rows, vaal] of [[baseRows, false], [vaalRows, true]] as const) {
     for (const row of rows) {
       const v = parseVariant(row.variant)
       if (!v || !(row.chaos > 0)) continue
-      out.push({ key: row.variant!, vaal, ...v, chaos: row.chaos, own: vaal === own.vaal && row.variant === own.variant })
+      // Only the exact version is the copied gem's: a 20/17 gem can still search 20/20.
+      const isOwn = vaal === own.vaal && v.level === own.level && v.quality === own.quality && v.corrupted === own.corrupted
+      out.push({ key: row.variant!, vaal, ...v, chaos: row.chaos, own: isOwn })
     }
   }
   return out.sort(order)
@@ -78,7 +82,8 @@ export function listVersions (
  * The price check's filters, changed to search one version: at least its level
  * and quality (the cheapest listings are then that version), corrupted or not.
  */
-export function versionFilters (filters: ItemFilters, v: GemVersion, forms: GemForms): ItemFilters {
+export function versionFilters (filters: ItemFilters, v: GemVersion, forms: GemForms, useEn: boolean): ItemFilters {
+  const tradeName = (b: BaseType) => useEn ? b.refName : b.name
   const f = rawClone(filters)
   f.searchRelaxed = undefined
   const exact = f.searchExact
@@ -87,14 +92,14 @@ export function versionFilters (filters: ItemFilters, v: GemVersion, forms: GemF
     if (exact.sub) {
       exact.sub = { ...exact.sub, disabled: false }
     } else if (exact.baseType !== vaal.name) {
-      exact.sub = { baseType: vaal.name, baseTypeTrade: vaal.name, disabled: false }
+      exact.sub = { baseType: vaal.name, baseTypeTrade: tradeName(vaal), disabled: false }
     }
   } else if (!v.vaal) {
     if (exact.sub) {
       exact.sub = { ...exact.sub, disabled: true }
     } else if (vaal && exact.baseType === vaal.name) {
       // The copied gem's own name is its Vaal form: search the normal one by name.
-      f.searchExact = { baseType: forms.base.name, baseTypeTrade: forms.base.name }
+      f.searchExact = { baseType: forms.base.name, baseTypeTrade: tradeName(forms.base) }
     }
   }
   f.gemLevel = { value: v.level, disabled: v.level <= 1 }

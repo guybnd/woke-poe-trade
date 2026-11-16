@@ -1,5 +1,5 @@
 <template>
-  <div v-if="versions.length > 1" :class="$style.wrap">
+  <div v-if="versions.length > 1" :class="$style.wrap" data-gem-versions>
     <button type="button" :class="$style.fold" :aria-expanded="open" @click="open = !open">
       <span :class="$style.caret">{{ open ? '▾' : '▸' }}</span>
       <span :class="$style.count">{{ versions.length }} versions</span>
@@ -42,7 +42,6 @@ import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { usePoeninja } from '@/web/background/Prices'
-import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { AppConfig } from '@/web/Config'
 import WPrice from '@/web/woke/ui/WPrice.vue'
@@ -70,7 +69,12 @@ const versions = computed<GemVersion[]>(() => {
   return listVersions(
     ninja.findPricesByName('GEM', f.base.refName) as NinjaGemRow[],
     f.vaal ? ninja.findPricesByName('GEM', f.vaal.refName) as NinjaGemRow[] : [],
-    { vaal: ownVaal, variant: getDetailsId(props.item)?.variant })
+    {
+      vaal: ownVaal,
+      level: props.item.gemLevel ?? 1,
+      quality: props.item.quality ?? 0,
+      corrupted: !!props.item.isCorrupted
+    })
 })
 
 const low = computed(() => Math.min(...versions.value.map(v => v.chaos)))
@@ -81,8 +85,8 @@ const runs = reactive(new Map<string, Run>())
 let runId = 0
 const searchCode = shallowRef<typeof import('./search') | null>(null)
 
-// A new gem: the old rows' searches were for another gem.
-watch(() => props.item, () => { runs.clear() })
+// A new gem, or other trade settings (league, online, listed, currency): old row results no longer apply.
+watch([() => props.item, () => JSON.stringify(props.filters.trade)], () => { runs.clear() })
 
 function rowKey (v: GemVersion): string {
   return `${v.vaal ? 'V' : ''}${v.key}`
@@ -102,7 +106,8 @@ async function search (v: GemVersion) {
     if (!searchCode.value) searchCode.value = await import('./search')
     const res = await searchCode.value.searchVersion(props.filters, v, forms.value, {
       ...options.value,
-      accountName: AppConfig().accountName
+      accountName: AppConfig().accountName,
+      useEn: AppConfig().useIntlSite
     })
     if (runs.get(key)?.id === id) runs.set(key, { id, state: 'done', ...res })
   } catch (e) {
@@ -123,7 +128,7 @@ async function search (v: GemVersion) {
 .table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .table th { text-align: left; font-weight: 400; color: var(--w-dim); padding: 1px 4px; border-bottom: 1px solid var(--w-line); }
 .table td { padding: 1px 4px; border-bottom: 1px solid var(--w-line-soft); }
-.r { text-align: right; }
+.table .r { text-align: right; }
 .table td.r > * { justify-content: flex-end; }
 .corr { color: var(--w-mod-corrupted); }
 .click { cursor: pointer; }
