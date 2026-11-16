@@ -90,9 +90,9 @@ const HINTS = new Set(['beast', 'beasts', 'bestiary', 'beastcraft', 'beastcrafti
 const ALIAS: Record<string, string[]> = {
   '6l': ['six', 'linked'],
   '6s': ['six', 'socket'],
-  links: ['link'],
-  max: ['maximum'],
-  fractured: ['fracture']
+  'links': ['link'],
+  'max': ['maximum'],
+  'fractured': ['fracture']
 }
 const MAX_CARDS = 8
 

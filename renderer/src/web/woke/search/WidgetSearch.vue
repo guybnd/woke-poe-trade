@@ -792,7 +792,7 @@ const beastBox = computed(() => {
       recipes,
       me: e.group.name,
       heading: `${BLOOD_ALTAR} · ${recipes.length} recipe${recipes.length > 1 ? 's' : ''}`,
-      note: 'Any rare beast fills the "any rare" slots, so they're left out of the cost.'
+      note: 'Any rare beast fills the "any rare" slots, so they’re left out of the cost.'
     }
   }
   const unique = e?.kind === 'price' && nsOf(e.group.type) === 'UNIQUE'
