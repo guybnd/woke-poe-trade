@@ -14,6 +14,13 @@ history:
     user: Agent
     date: '2026-11-16T15:10:32.865Z'
     comment: Created ticket.
+    id: a-2026-11-16t15-10-32-865z
+  - type: activity
+    user: Agent
+    date: '2026-11-16T15:11:04.442Z'
+    comment: Updated implementation link.
+    id: a-2026-11-16t15-11-04-442z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/560'
 ---
 > **TL;DR** Every timeless jewel's seed + conqueror lines showed "Not recognized modifier" in price check. The stat index only held the advanced form ("…Asenath(Asenath-Nasima)"), which 3.30 copy text drops. Fix indexes the plain text too. Branch woke/timeless-jewel-mods.
 
