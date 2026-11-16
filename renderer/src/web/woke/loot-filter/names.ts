@@ -1,6 +1,8 @@
 // Plain names for NeverSink's $type and $tier tags ("rareid", "t1exalted").
 // Display only: edits and the saved filter keep the real tags.
 
+import { tagWords } from './tag-words'
+
 // Top-level groups and path parts, where a capital letter isn't enough.
 const WHOLE_TYPES: Record<string, string> = {
   'currency': 'General currency',
@@ -81,7 +83,7 @@ const PARTS: Record<string, string> = {
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export function groupLabel (type: string): string {
-  return WHOLE_TYPES[type] ?? type.split('->').map(part => PARTS[part] ?? capital(part)).join(' › ')
+  return WHOLE_TYPES[type] ?? type.split('->').map(part => PARTS[part] ?? tagWords(part) ?? capital(part)).join(' › ')
 }
 
 // Words NeverSink tags a tier with that only say what's in it: t1exalted is
@@ -145,8 +147,8 @@ export function tierLabel (tier: string): string {
   m = /^t(\d+)f$/.exec(tier)
   if (m) return `Tier ${m[1]}, Fated`
   m = /^t(\d+)([a-z_]*)$/.exec(tier)
-  if (m) return !m[2] || ITEM_WORDS.has(m[2]) ? `Tier ${m[1]}` : `Tier ${m[1]} ${m[2]}`
-  return capital(tier.replace(/_/g, ' '))
+  if (m) return !m[2] || ITEM_WORDS.has(m[2]) ? `Tier ${m[1]}` : tagWords(tier) ?? `Tier ${m[1]} ${m[2]}`
+  return tagWords(tier) ?? capital(tier.replace(/_/g, ' '))
 }
 
 // NeverSink's chapter titles are often in capitals.

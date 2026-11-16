@@ -1,0 +1,106 @@
+// NeverSink's squashed tier tags ("exjewelscorrupted", "rgbsmall1",
+// "topilvl84") read as words, from a vocabulary of the parts it builds them
+// from. A tag that can't be split all the way stays as it is, so a wrong guess
+// never replaces a name; filter-tag-words.test lists the ones left.
+
+const WORDS: Record<string, string> = {
+  // amounts and grades
+  any: 'any', all: 'all', other: 'other', others: 'others', rest: 'the rest', remaining: 'remaining',
+  high: 'high', veryhigh: 'very high', low: 'low', mid: 'mid', medium: 'medium', small: 'small', large: 'large', tiny: 'tiny',
+  top: 'top', max: 'max', minor: 'minor', optimal: 'optimal', general: 'general', generic: 'generic', special: 'special',
+  single: 'single', double: 'double', duo: 'two', extra: 'extra', multi: 'multiple', plusone: '+1', final: 'final',
+  selected: 'selected', handpicked: 'handpicked', valuable: 'valuable', outdated: 'outdated', early: 'early', new: 'new',
+  safe: 'safe', blocker: 'blocker', hider: 'hider', hide: 'hide', focus: 'focus', pure: 'pure', shared: 'shared',
+  under: 'under', until: 'until', exceptional: 'exceptional', bad: 'bad', custom: 'custom', asorted: 'assorted',
+  notice: 'notice', blend: 'blended', based: 'based', classes: 'classes', bases: 'bases', misc: 'misc', perf: 'perfect',
+  // item kinds
+  rare: 'rare', rares: 'rares', magic: 'magic', normal: 'normal', unique: 'unique', uniques: 'uniques', item: 'item', items: 'items',
+  gear: 'gear', jewel: 'jewel', jewels: 'jewels', jwlry: 'jewellery', jewellery: 'jewellery', abyss: 'abyss',
+  amu: 'amulets', amulets: 'amulets', ring: 'rings', rings: 'rings', belt: 'belts', belts: 'belts',
+  body: 'body armours', bodyarmours: 'body armours', armors: 'armours', armours: 'armours', boots: 'boots', gloves: 'gloves', glove: 'gloves',
+  helm: 'helmets', helmet: 'helmets', chest: 'body armours', shield: 'shields', shields: 'shields', quiv: 'quivers', quiver: 'quivers', quivers: 'quivers',
+  wand: 'wands', sceptre: 'sceptres', staves: 'staves', bow: 'bows', weapon: 'weapons', weapons: 'weapons', melee: 'melee', ranged: 'ranged',
+  flask: 'flasks', util: 'utility', utility: 'utility', tincture: 'tinctures', quicksilver: 'Quicksilver',
+  gem: 'gems', gems: 'gems', vaal: 'Vaal', idols: 'idols', trinket: 'trinkets', relic: 'relics', relics: 'relics', keys: 'keys',
+  voidstones: 'Voidstones', fishingrods: 'fishing rods', pieces: 'pieces', stranded: 'memory strands',
+  maps: 'maps', map: 'maps', invitations: 'invitations', scroll: 'scroll', fragments: 'fragments', portal: 'Portal', wisdom: 'Wisdom',
+  silvercoin: 'Silver Coin', consumable: 'consumables', stack: 'stack', stacked: 'stacked', recipe: 'recipe', dust: 'dust',
+  // mods and states
+  mod: 'mod', mods: 'mods', corrupted: 'corrupted', uncorrupted: 'uncorrupted', implicit: 'implicit',
+  fract: 'fractured', fractured: 'fractured', veil: 'veiled', veiled: 'veiled', synth: 'synthesised', imbued: 'imbued',
+  enchanted: 'enchanted', anointed: 'anointed', mirrored: 'mirrored', id: 'identified', overquality: 'over 20% quality',
+  quality: 'quality', qual: 'quality', perfection: 'perfection', crafting: 'crafting', craft: 'crafting', chancing: 'chancing',
+  sockets: 'sockets', socketed: 'socketed', link: 'link', links: 'links', linked: 'linked', rgb: 'RGB', ilvl: 'item level',
+  level: 'level', levels: 'levels', leveling: 'levelling', zone: 'zone', areas: 'areas', act: 'act', mudflats: 'Mudflats', mapup: 'map above zone',
+  // influences and leagues
+  conqueror: 'conqueror', conquerors: 'conquerors', elder: 'Elder', shaper: 'Shaper', hunter: 'Hunter', crusader: 'Crusader', redeemer: 'Redeemer',
+  warlord: 'Warlord', influenced: 'influenced', zana: 'Zana', guardian: 'guardian', nightmare: 'Nightmare',
+  incursion: 'Incursion', delve: 'Delve', bestiary: 'Bestiary', mercenary: 'Mercenary', warband: 'Warband', essence: 'Essence', essences: 'Essences',
+  necropolis: 'Necropolis', crucible: 'Crucible', burial: 'Burial', kamasan: 'Kamasan', noble: 'Noble', totemic: 'Totemic',
+  ultimatum: 'Ultimatum', itemized: 'itemised', leagues: 'leagues', heist: 'Heist', quest: 'quest', labyrinth: 'Labyrinth',
+  stygian: 'Stygian Vise', mirage: 'Mirage', vinktar: 'Vinktar\'s Square', kaom: 'Kaom\'s Heart', tabula: 'Tabula Rasa',
+  exotic: 'exotic', exotics: 'exotics', memory: 'memory', vestige: 'Vestige',
+  // builds
+  caster: 'caster', attack: 'attack', minion: 'minion', dot: 'DoT', crit: 'crit', spell: 'spell',
+  phys: 'physical', physical: 'physical', ele: 'elemental', elemental: 'elemental',
+  chaos: 'chaos', cold: 'cold', fire: 'fire', light: 'lightning', life: 'life', mana: 'mana', es: 'energy shield', defense: 'defence',
+  movement: 'movement speed', speed: 'speed', traps: 'traps', bleed: 'bleed', proj: 'projectile',
+  suppress: 'suppression', mixer: 'mixed', core: 'core', resist: 'resistance', bladeblast: 'Blade Blast', slinger: 'slinger',
+  exalter: 'Exalter\'s', random: 'random', boss: 'boss', drop: 'drop', bg: 'background', deco: 'border', decor: 'border',
+  // NeverSink's own shorthand
+  tier: 'tier', lvl: 'level', over: 'over', first: 'first', endgame: 'endgame', league: 'league', optional: 'optional',
+  three: 'three', four: 'four', corrupt: 'corrupted', non: 'non-', chromatic: 'chromatic', enshrouded: 'enshrouded', fated: 'Fated',
+  trans: 'Transmutation', aug: 'Augmentation', untiered: 'untiered', valdo: 'Valdo', inf: 'influenced', uber: 'Uber',
+  tportal: 'Portal scrolls', twisdom: 'Wisdom scrolls', tnew: 'new cards'
+}
+
+const LONGEST = Math.max(...Object.keys(WORDS).map(w => w.length))
+
+// One split of `s` into vocabulary words and numbers, with the fewest pieces.
+function split (s: string): string[] | null {
+  const best: Array<string[] | null> = new Array(s.length + 1).fill(null)
+  best[0] = []
+  for (let i = 0; i < s.length; i++) {
+    const here = best[i]
+    if (!here) continue
+    const put = (end: number, piece: string) => {
+      const next = [...here, piece]
+      if (!best[end] || best[end]!.length > next.length) best[end] = next
+    }
+    const rest = s.slice(i)
+    const num = /^\d+/.exec(rest)
+    if (num) put(i + num[0].length, num[0])
+    // "t2" inside a tag is a tier.
+    const tier = /^t(\d+)/.exec(rest)
+    if (tier) put(i + tier[0].length, `tier ${tier[1]}`)
+    for (let len = Math.min(LONGEST, s.length - i); len > 0; len--) {
+      const w = s.slice(i, i + len)
+      if (WORDS[w] != null) put(i + len, WORDS[w])
+    }
+  }
+  return best[s.length]
+}
+
+function withSpecial (words: string[] | null): string[] | null {
+  return words ? ['special', ...words] : null
+}
+
+export function tagWords (tag: string): string | null {
+  const parts = tag.toLowerCase().split('_').filter(Boolean)
+  const out: string[] = []
+  for (const p of parts) {
+    // A leading count: 2xabyss is two abyss sockets.
+    const count = /^(\d+)x(.+)$/.exec(p)
+    const body = count ? count[2] : p
+    // "ex" leads NeverSink's exception tags (exkaom, exdust1): only as a prefix,
+    // since inside a tag (t3stackedex) it means something else.
+    const words = split(body) ?? (body.startsWith('ex') ? withSpecial(split(body.slice(2))) : null)
+    if (!words) return null
+    if (count) out.push(`${count[1]}×`)
+    out.push(...words)
+  }
+  // All numbers ("2023") says nothing a player can read.
+  if (!out.some(w => /[a-z]/i.test(w))) return null
+  const text = out.join(' ').replace(/\s+/g, ' ').replace(/non- /g, 'non-').trim()
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
