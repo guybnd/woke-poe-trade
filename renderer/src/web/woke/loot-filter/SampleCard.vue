@@ -47,6 +47,8 @@
       </div>
       <div v-if="match.final && !focused" class="text-xs w-faint" style="margin-top: -8px;">Move the mouse onto this card, then press 1-5.</div>
 
+      <DropUniques :store="store" :config="config" :facts="facts" />
+
       <template v-if="match.final">
         <div v-if="ladderRows.length" :class="$style.section">
           <div class="w-group-label" :class="$style.label">{{ hasPriceLadder ? 'Value tier' : 'Tier' }}</div>
@@ -169,6 +171,7 @@ import { WPanel, WBanner, WButton, WSegmented, WChip, toast } from '../ui'
 import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
 import { hasSpecialLabel, hideFromLabel, isPlainTier, levelStates, ladderLabel, levelOf, priceLadder, specialLabel, tierNeeds, verdictOf } from './item-panel'
 import LabelPreview from './LabelPreview.vue'
+import DropUniques from './DropUniques.vue'
 import StyleEditor from './StyleEditor.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
