@@ -75,15 +75,19 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   const panel = overlay.widget('price-check')
   const fold = panel.getByRole('button', { name: /7 versions/ })
   await expect(fold).toBeVisible()
-  await overlay.snap('gem-versions-folded')
-  await overlay.page.waitForTimeout(300)
-  const before = searches.length
-
-  await fold.click()
+  // Open from the start: poe.ninja prices for every version, nothing searched.
   const table = panel.locator('[data-gem-versions]')
   const row = table.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
   await expect(table.getByRole('row')).toHaveCount(8)
   await expect(table.getByRole('row').filter({ hasText: 'yours' })).toContainText('21')
+  await overlay.page.waitForTimeout(300)
+  const before = searches.length
+
+  // Folding and opening again spends nothing.
+  await fold.click()
+  await expect(table.getByRole('row')).toHaveCount(0)
+  await fold.click()
+  await expect(table.getByRole('row')).toHaveCount(8)
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before)
 
