@@ -57,6 +57,22 @@ describe('Unidentified (Tier N)', () => {
     expect(m.uncertain).toEqual([])
   })
 
+  it("Guy's magic Mind Cage copy, word for word (3.30 writes Intelligence in full)", () => {
+    const text = 'Item Class: Helmets\nRarity: Magic\nMind Cage\n--------\nEnergy Shield: 83\n--------\nRequirements:\nIntelligence: 138 (unmet)\n--------\nSockets: W-W-W \n--------\nItem Level: 85\n--------\nUnidentified (Tier 2)\n'
+    const r = parseClipboard(text)
+    const facts = itemFacts(text, r.isOk() ? r.value : null)
+    expect([facts.rarity, facts.unidentifiedItemTier, facts.identified]).toEqual(['Magic', 2, false])
+    expect(matchItem(parseFilter(FILTER), facts).final?.block.tier).toBe('t2r2')
+  })
+
+  it('identified gear has no tier: the tier rule never catches it', () => {
+    const facts = itemFacts(copy('Unidentified (Tier 2)').replace('\nUnidentified (Tier 2)', '\n{ Prefix Modifier "Seething" (Tier: 1) }\n+50 to maximum Energy Shield'), null)
+    expect(facts.identified).toBe(true)
+    const m = matchItem(parseFilter(FILTER), facts)
+    expect(m.visibility).toBe('Hide')
+    expect(m.uncertain).toEqual([])
+  })
+
   it('no tier in the copy stays unknown', () => {
     const facts = itemFacts(copy('Unidentified'), null)
     expect(facts.unidentifiedItemTier).toBeUndefined()
