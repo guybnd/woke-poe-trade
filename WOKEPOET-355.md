@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-355
 title: One item name reader for league variants
-status: Backlog
+status: In Progress
 priority: None
 effort: S
 assignee: unassigned
@@ -14,7 +14,19 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-17T09:43:55.404Z'
+    comment: Created ticket.
+    id: a-2026-11-17t09-43-55-404z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T09:43:55.404Z'
     comment: Created as subtask of WOKEPOET-354.
+    id: a-2026-11-17t09-43-55-404z
+  - type: status_change
+    from: Backlog
+    to: In Progress
+    user: Agent
+    date: '2026-11-17T09:47:44.438Z'
+needsAction: null
 ---
 > **TL;DR:** Foulborn, transfigured and Fated names are stripped by hand in about ten files. One shared reader tells every tool the plain name and the variant.
 
