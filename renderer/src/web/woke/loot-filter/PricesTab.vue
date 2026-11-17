@@ -19,9 +19,11 @@
       <!-- Stays in view however long the lists get. -->
       <div :class="$style.applyBar">
         <span v-if="store.pricesTooOld.value"><b>Prices are too old</b> to move anything until they update</span>
-        <span v-else><b>{{ moves.length ? `${moves.length} item${moves.length > 1 ? 's' : ''}` : 'Nothing' }}</b> {{ moves.length ? 'would move' : 'to move: tiers match today\'s prices' }}</span>
+        <span v-else><b>{{ moves.length ? `${moves.length} item${moves.length > 1 ? 's' : ''}` : 'Nothing' }}</b> {{ moves.length ? 'would move' : 'to move' }}</span>
+        <button v-if="allSkipped.length" type="button" :class="$style.link" class="w-focusable text-xs" title="Prices say these belong in another tier, but they stay put" @click="toSkipped">{{ allSkipped.length }} held back</button>
         <button v-if="movedList.length" type="button" :class="$style.link" class="w-focusable text-xs" :aria-expanded="showMoved" @click="showMoved = !showMoved">{{ movedList.length }} moved so far <i :class="showMoved ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" /></button>
         <span class="grow" />
+        <WButton v-if="store.timeline.value.at > 0" size="sm" variant="ghost" icon="fas fa-undo" :title="`Undo: ${lastStep}`" @click="store.undoStep()">Undo <WKbd keys="Ctrl + Z" /></WButton>
         <WButton v-if="moves.length" size="sm" variant="ghost" @click="keepAll">Keep all where they are</WButton>
         <WButton v-if="movedList.length" size="sm" variant="ghost" icon="fas fa-undo" title="Put every price group back on NeverSink's own tiers" @click="reset">Back to NeverSink's tiers</WButton>
         <WButton v-if="moves.length" size="sm" variant="primary" :disabled="!pickedMoves.length" title="Adds these moves to your unsaved changes. Save + reload (Ctrl + S) when you're done." @click="apply">Apply {{ pickedMoves.length }}</WButton>
@@ -50,7 +52,7 @@
         </span>
       </div>
       <div v-for="(m, n) in moves" :key="m.type + m.base" v-item-tip="baseTip(m.type, m.base)" :class="$style.row" @contextmenu="moveMenu($event, m)">
-        <input :id="`pm-${m.type}-${m.base}`" :checked="picked[pickKey(m)]" type="checkbox" :class="$style.check" :aria-label="`Move ${m.base}`" @click="clickPick($event, n)">
+        <input :id="`pm-${m.type}-${m.base}`" :checked="movePicks.isPicked(m)" type="checkbox" :class="$style.check" :aria-label="`Move ${m.base}`" @click="clickPick($event, n)">
         <img v-if="icon(m)" :src="icon(m)!" :class="$style.art" alt="">
         <LabelPreview :text="m.base" :actions="lookOf(m.type, m.to)" :extras="false" />
         <button type="button" :class="$style.link" class="w-focusable text-xs w-trunc" :title="`Open ${groupLabel(m.type)} ${m.from} in Rules`" @click="emit('open-rule', { type: m.type, tier: m.from, base: m.base })">{{ groupLabel(m.type) }} <i class="fas fa-external-link-alt" /></button>
@@ -61,19 +63,39 @@
         <WPrice bulk :chaos="m.chaos" :divine="divine" />
         <WButton size="sm" variant="ghost" icon="fas fa-times" :title="`Keep ${m.base} in ${tierLabel(m.from)}. It stops being suggested, and you can unlock it under Not moved.`" :aria-label="`Keep ${m.base} where it is`" @click="keepOne(m)">Keep</WButton>
       </div>
-      <template v-if="skipped.length">
-        <div class="w-group-label" :class="$style.label">Not moved · {{ allSkipped.length }}</div>
-        <div v-for="s in skipped" :key="'s' + s.type + s.base" :class="$style.row">
-          <span :class="$style.check" />
+      <template v-if="allSkipped.length">
+        <div ref="skippedEl" class="w-group-label" :class="$style.label">Not moved · {{ allSkipped.length }}</div>
+        <div class="text-xs w-dim" :class="$style.why">
+          Prices say these belong in another tier, but they stay put.
+          <span v-for="r in reasonCounts" :key="r.reason"><b>{{ SKIP_WHY[r.reason].label }}</b>: {{ SKIP_WHY[r.reason].short }}. </span>
+          Tick some to {{ reasonCounts.some(r => r.reason === 'locked') ? 'unlock or ' : '' }}move them now, or leave them.
+        </div>
+        <div :class="$style.filters">
+          <WChip v-for="r in reasonCounts" :key="r.reason" clickable :active="skipReason === r.reason" :title="SKIP_WHY[r.reason].title" @click="skipReason = skipReason === r.reason ? null : r.reason">{{ SKIP_WHY[r.reason].label }} · {{ r.count }}</WChip>
+          <span v-if="groupCounts.length > 1" :class="$style.sep" />
+          <template v-if="groupCounts.length > 1">
+            <WChip v-for="g in groupCounts" :key="g.type" clickable :active="skipGroup === g.type" @click="skipGroup = skipGroup === g.type ? null : g.type">{{ groupLabel(g.type) }} · {{ g.count }}</WChip>
+          </template>
+        </div>
+        <div :class="$style.pickBar">
+          <input type="checkbox" :class="$style.check" :checked="skipPicks.all.value" :indeterminate="skipPicks.some.value" aria-label="Pick every item shown under Not moved" title="Pick all shown or none" @change="skipPicks.allOrNone">
+          <span class="w-group-label">{{ skipPicks.picked.value.length }} of {{ skipList.length }} picked</span>
+          <span class="grow" />
+          <WButton v-if="pickedLocked.length" size="sm" variant="ghost" icon="fas fa-unlock" title="Prices may move them again. Any move you made by hand goes too." @click="unlockMany(pickedLocked)">Unlock {{ pickedLocked.length }}</WButton>
+          <WButton v-if="pickedUnsure.length" size="sm" variant="ghost" title="Move them to the tier their price says, though the price may not be real" @click="moveAnywayMany(pickedUnsure)">Move {{ pickedUnsure.length }} anyway</WButton>
+        </div>
+        <div v-for="(s, n) in skipShown" :key="'s' + s.type + s.base" :class="$style.row">
+          <input :checked="skipPicks.isPicked(s)" type="checkbox" :class="$style.check" :aria-label="`Pick ${s.base}`" @click="skipPicks.click($event, n)">
           <LabelPreview :text="s.base" :actions="lookOf(s.type, s.tier)" :extras="false" />
           <button type="button" :class="$style.link" class="w-focusable text-xs" :title="`Open ${groupLabel(s.type)} ${s.tier} in Rules`" @click="emit('open-rule', { type: s.type, tier: s.tier, base: s.base })">{{ groupLabel(s.type) }}, {{ tierLabel(s.tier) }} <i class="fas fa-external-link-alt" /></button>
           <WChip :title="SKIP_WHY[s.reason].title">{{ SKIP_WHY[s.reason].label }}</WChip>
           <span class="grow" />
           <span class="w-faint text-xs">price says {{ tierLabel(s.wanted) }}</span>
-          <WButton v-if="s.reason !== 'locked'" size="sm" variant="ghost" title="Move it, though this price may not be real" @click="moveAnyway(s)">Move anyway</WButton>
-          <WButton v-else size="sm" variant="ghost" title="Let prices move it again" @click="unlock(s)">Unlock</WButton>
+          <WButton v-if="s.reason !== 'locked'" size="sm" variant="ghost" title="Move it, though this price may not be real" @click="moveAnywayMany([s])">Move anyway</WButton>
+          <WButton v-else size="sm" variant="ghost" title="Let prices move it again" @click="unlockMany([s])">Unlock</WButton>
           <WPrice bulk :chaos="s.chaos" :divine="divine" />
         </div>
+        <button v-if="skipList.length > skipShown.length" type="button" :class="[$style.link, $style.more]" class="w-focusable text-xs" @click="skipLimit = skipList.length">Show all {{ skipList.length }}</button>
       </template>
     </template>
 
@@ -145,7 +167,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField, WInfo, WPrice, WSegmented, WToggle, agoPhrase, gameIcon, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
+import { WButton, WChip, WEmpty, WField, WInfo, WKbd, WPrice, WSegmented, WToggle, agoPhrase, gameIcon, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
 import { TURN_OFF_IDS } from './notices'
 import { gradeItems, GRADE_LABEL, healthKey, isDismissed, priceBar, showEffect, trashCount } from './health'
 import { usePoeninja } from '@/web/background/Prices'
@@ -161,6 +183,7 @@ import type { BaseVerdict } from './safety'
 import { groupName } from './groups'
 import type { FilterAction } from './parse'
 import { tierLabel } from './names'
+import { usePicks } from './picks'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -175,15 +198,14 @@ const league = computed(() => props.store.prices.league.value)
 const plan = computed(() => props.store.plan.value)
 const moves = computed(() => plan.value?.moves ?? [])
 const allSkipped = computed(() => plan.value?.skipped ?? [])
-const skipped = computed(() => allSkipped.value.slice(0, 20))
 
 const emit = defineEmits<{ (e: 'open-rule', rule: { type: string, tier: string, base: string }): void }>()
 
 const SKIP_WHY = {
-  thin: { label: 'thin market', title: 'poe.ninja had no price on 3 or more of the last 7 days, so this price is easy to fake' },
-  volatile: { label: 'price jumped', title: 'It tripled or fell to a third this week, or doubled or halved in a day. It moves once the price settles.' },
-  locked: { label: 'your tier, locked', title: 'You placed this item yourself' }
-}
+  locked: { label: 'kept by you', short: 'you pressed Keep, or moved it by hand', title: 'You pressed Keep, or moved it yourself in Rules. Unlock lets prices move it again.' },
+  thin: { label: 'thin market', short: 'too few trades to trust the price', title: 'poe.ninja had no price on 3 or more of the last 7 days, so this price is easy to fake' },
+  volatile: { label: 'price jumped', short: 'waits for the price to settle', title: 'It tripled or fell to a third this week, or doubled or halved in a day. It moves once the price settles.' }
+} as const
 
 const openRow = ref<string | null>(null)
 const showMoved = ref(false)
@@ -329,48 +351,50 @@ const uniqueOptions = [
 
 // Ticked by default, except what a price alone would hide. Unticked rows stay
 // put this time.
-const picked = reactive<Record<string, boolean>>({})
 // Stored moves that still apply (an old move of a tier's namesake doesn't).
 const movedList = computed(() => livePriceMoves(props.config.priceTiers.moves))
 // A row that starts hiding at another strictness is a new choice.
 const pickKey = (m: PriceMove) => `${m.type}|${m.base}|${m.hides ? 'hides' : ''}`
-// The row shift + click counts from; cleared when the list changes under it.
-let lastPick: number | null = null
-watch(moves, (list) => {
-  lastPick = null
-  for (const m of list) if (picked[pickKey(m)] === undefined) picked[pickKey(m)] = !m.hides
-}, { immediate: true })
-const pickedMoves = computed(() => moves.value.filter(m => picked[pickKey(m)]))
-const allPicked = computed(() => moves.value.length > 0 && pickedMoves.value.length === moves.value.length)
-const somePicked = computed(() => pickedMoves.value.length > 0 && !allPicked.value)
+const movePicks = usePicks(() => moves.value, pickKey, m => !m.hides)
+const { picked: pickedMoves, all: allPicked, some: somePicked, where: pickWhere, allOrNone: pickAllOrNone, click: clickPick } = movePicks
 const isUp = (m: PriceMove) => rank(m.to) < rank(m.from)
 const upCount = computed(() => moves.value.filter(isUp).length)
 
-function pickWhere (want: (m: PriceMove) => boolean) {
-  for (const m of moves.value) picked[pickKey(m)] = want(m)
-  lastPick = null
-}
-// Read once: allPicked changes as the loop ticks rows.
-function pickAllOrNone (e: Event) {
-  const on = !allPicked.value
-  pickWhere(() => on)
-  ;(e.target as HTMLInputElement).checked = on
+// ---- not moved ----
+// Filtered by why and by group, in pages: a new league can hold back a few hundred.
+const SKIP_PAGE = 40
+const skipReason = ref<PriceSkip['reason'] | null>(null)
+const skipGroup = ref<string | null>(null)
+const skipLimit = ref(SKIP_PAGE)
+const reasonCounts = computed(() => (['locked', 'thin', 'volatile'] as const)
+  .map(reason => ({ reason, count: allSkipped.value.filter(s => s.reason === reason).length }))
+  .filter(r => r.count))
+const groupCounts = computed(() => {
+  const counts = new Map<string, number>()
+  for (const s of allSkipped.value) counts.set(s.type, (counts.get(s.type) ?? 0) + 1)
+  return [...counts].map(([type, count]) => ({ type, count }))
+})
+// A filter whose last item went (unlocked, moved) lets go.
+watch([reasonCounts, groupCounts], () => {
+  if (skipReason.value && !reasonCounts.value.some(r => r.reason === skipReason.value)) skipReason.value = null
+  if (skipGroup.value && !groupCounts.value.some(g => g.type === skipGroup.value)) skipGroup.value = null
+})
+watch([skipReason, skipGroup], () => { skipLimit.value = SKIP_PAGE })
+const skipList = computed(() => allSkipped.value.filter(s =>
+  (!skipReason.value || s.reason === skipReason.value) && (!skipGroup.value || s.type === skipGroup.value)))
+const skipShown = computed(() => skipList.value.slice(0, skipLimit.value))
+const skipPicks = usePicks(() => skipList.value, s => `${s.type}|${s.base}|${s.reason}`)
+const pickedLocked = computed(() => skipPicks.picked.value.filter(s => s.reason === 'locked'))
+const pickedUnsure = computed(() => skipPicks.picked.value.filter(s => s.reason !== 'locked'))
+const skippedEl = ref<HTMLElement | null>(null)
+function toSkipped () {
+  skippedEl.value?.scrollIntoView({ block: 'start', behavior: 'smooth' })
 }
 
-// Shift + click sets every row from the last box clicked to this one to this
-// box's new state, like a file list.
-function clickPick (e: MouseEvent, n: number) {
-  const box = e.target as HTMLInputElement
-  const on = box.checked
-  const list = moves.value
-  if (e.shiftKey && lastPick != null && lastPick < list.length) {
-    const [a, b] = lastPick < n ? [lastPick, n] : [n, lastPick]
-    for (let i = a; i <= b; i++) picked[pickKey(list[i])] = on
-  } else {
-    picked[pickKey(list[n])] = on
-  }
-  lastPick = n
-}
+const lastStep = computed(() => {
+  const t = props.store.timeline.value
+  return t.steps[t.at - 1]?.label ?? ''
+})
 
 const minChaos = computed({
   get: () => props.config.safetyNet.minChaos,
@@ -411,25 +435,32 @@ function apply () {
   moved(`Moved ${list.length} item${list.length > 1 ? 's' : ''} to match today's prices`, props.store.applyPrices(list))
 }
 
-function moveAnyway (s: PriceSkip) {
-  moved(`Moved ${s.base} to ${tierLabel(s.wanted)}`, props.store.applyPrices([{ type: s.type, base: s.base, from: s.tier, to: s.wanted, chaos: s.chaos }]))
+// Moves held-back items to where their price says, as one step.
+function moveAnywayMany (list: PriceSkip[]) {
+  if (!list.length) return
+  skipPicks.forget(list)
+  const undo = props.store.applyPrices(list.map(s => ({ type: s.type, base: s.base, from: s.tier, to: s.wanted, chaos: s.chaos })))
+  moved(list.length === 1 ? `Moved ${list[0].base} to ${tierLabel(list[0].wanted)}` : `Moved ${list.length} held-back items`, undo)
 }
 
 function putBack (m: PriceMove) {
   moved(`${m.base} is back in ${tierLabel(m.from)}`, props.store.unmovePrice(m.type, m.base))
 }
 
-function unlock (s: PriceSkip) {
-  const key = lockKey(s.type, s.base)
-  // Your own move is what locks it, if you made one, so that goes too. Say so.
-  const ownMove = props.config.edits.some(e => e.kind === 'move' && e.type === s.type && e.base === s.base)
+// Lets prices move these again, as one step. Your own move is what locks an
+// item, if you made one, so that goes too. Say so: that changes the file.
+function unlockMany (list: PriceSkip[]) {
+  if (!list.length) return
+  skipPicks.forget(list)
+  const keys = new Set(list.map(s => lockKey(s.type, s.base)))
+  const ownMoves = props.config.edits.filter(e => e.kind === 'move' && keys.has(lockKey(e.type, e.base))).length
   const undo = props.store.changeWithUndo(c => {
-    c.priceTiers.locks = c.priceTiers.locks.filter(k => k !== key)
-    c.edits = c.edits.filter(e => !(e.kind === 'move' && e.type === s.type && e.base === s.base))
+    c.priceTiers.locks = c.priceTiers.locks.filter(k => !keys.has(k))
+    c.edits = c.edits.filter(e => !(e.kind === 'move' && keys.has(lockKey(e.type, e.base))))
   })
-  // Only your own move changes the file.
-  if (ownMove) moved(`Dropped your move of ${s.base}, so prices can move it again`, undo)
-  else toast(`Prices can move ${s.base} again`, { anchor: props.anchor, undo })
+  const what = list.length === 1 ? list[0].base : `${list.length} items`
+  if (ownMoves) moved(`Prices can move ${what} again; dropped ${ownMoves === 1 ? 'your move' : `${ownMoves} of your moves`}`, undo)
+  else toast(`Prices can move ${what} again`, { anchor: props.anchor, undo })
 }
 
 function keepOne (m: PriceMove) {
@@ -573,6 +604,18 @@ function undoEditStep<T extends { id: number }> (now: T[], step: EditStep<T>): T
 .link:hover { text-decoration: underline; }
 .link i { font-size: 0.8em; opacity: 0.7; }
 .summary { padding: 0 var(--w-pad) 4px; }
+/* Clear of the sticky apply bar when "held back" scrolls here. */
+.label { scroll-margin-top: 3rem; }
+.why { padding: 0 var(--w-pad) 6px; line-height: 1.45; }
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--w-pad);
+}
+.sep { width: 1px; align-self: stretch; margin: 0 4px; background: var(--w-line); }
+.more { padding: 6px var(--w-pad); }
 .healthRow {
   width: 100%;
   background: none;
