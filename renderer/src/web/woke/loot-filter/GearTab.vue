@@ -43,6 +43,7 @@
             </template>
           </template>
         </div>
+        <WToggle :model-value="g.exoticAlways" @update:model-value="v => change(x => { x.exoticAlways = v })">Always show exotic bases: any drop tier or none, any rarity</WToggle>
         <div :class="$style.sentence">
           <span><b style="color: #f3e27a;">Rare</b> {{ sentence.rare }}</span>
           <span><b style="color: #a8a8ff;">Magic</b> {{ sentence.magic }}</span>

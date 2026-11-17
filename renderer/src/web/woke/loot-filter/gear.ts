@@ -38,6 +38,9 @@ export interface GearSettings {
   // Labels the table shows: the game's rarity colour for the text (NeverSink
   // paints magic and rare alike), and your own look per rarity on top.
   look: { rarityText: boolean, magic: StylePatch, rare: StylePatch }
+  // NeverSink's exotic bases at any drop tier (or none) and any rarity, not
+  // only where its exotic rules ask for a tier or item level.
+  exoticAlways: boolean
 }
 
 export function defaultGear (): GearSettings {
@@ -55,7 +58,8 @@ export function defaultGear (): GearSettings {
     quality: { on: false, min: { build: 21, r1: 24, r2: 24, r3: 28, any: 30 } },
     moves: {},
     build: { auto: true, extra: [], removed: [] },
-    look: { rarityText: true, magic: {}, rare: {} }
+    look: { rarityText: true, magic: {}, rare: {} },
+    exoticAlways: false
   }
 }
 
@@ -92,7 +96,8 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
       rarityText: typeof g?.look?.rarityText === 'boolean' ? g.look.rarityText : true,
       magic: isPatch(g?.look?.magic) ? { ...g!.look!.magic } : {},
       rare: isPatch(g?.look?.rare) ? { ...g!.look!.rare } : {}
-    }
+    },
+    exoticAlways: typeof g?.exoticAlways === 'boolean' ? g.exoticAlways : false
   }
 }
 
@@ -371,6 +376,19 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
     out.push(gearBlock(from, 'never', 'bases you never want at any drop tier', 'Hide', [
       ...template, cond('UnidentifiedItemTier', '>=', [2]), rarityCondition(['magic', 'rare']), cond('BaseType', '==', lists.never)
     ], section))
+  }
+
+  if (g.exoticAlways) {
+    const exotic = exoticBases(doc)
+    const bases = [...exotic.keys()].filter(b => !never.has(b))
+    // The look of NeverSink's exotic rule with a drop tier, else its first.
+    const from = doc.blocks.find(b => b.type === 'exoticbases' && b.tier === 'exoticstiered') ??
+      doc.blocks.find(b => b.type === 'exoticbases') ?? anchor
+    if (bases.length) {
+      out.push(gearBlock(from, 'exotic', 'exotic bases at any drop tier', 'Show', [
+        { key: 'Rarity', op: '', count: null, values: ['Normal', 'Magic', 'Rare'] }, cond('BaseType', '==', bases)
+      ], section))
+    }
   }
 
   for (const t of DROP_TIERS) {

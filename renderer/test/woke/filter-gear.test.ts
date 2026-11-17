@@ -183,4 +183,18 @@ describe('gear table', () => {
     expect(rare.actions.some(a => a.key === 'SetTextColor')).toBe(false)
     expect(rare.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).not.toEqual(['80', '80', '255'])
   })
+
+  it('shows exotic bases at any drop tier when asked', () => {
+    const d = doc()
+    const src = parseFilter(serializeFilter(d))
+    const exotic = [...(src.blocks.find(b => b.type === 'exoticbases' && b.tier === 'exoticstiered')?.conditions.find(c => c.key === 'BaseType')?.values ?? [])]
+    const magic = (b: string) => ({ baseType: b, itemClass: 'Amulets', rarity: 'Magic' as const })
+    // As if you'd hidden NeverSink's exotic rules other than the tiered one.
+    d.blocks.filter(b => b.type === 'exoticbases' && b.tier !== 'exoticstiered').forEach(b => { b.disabled = true })
+    const talismans = exotic.filter(b => b.endsWith('Talisman'))
+    const hidden = talismans.filter(b => vis(d, magic(b)) === 'Hide')
+    expect(hidden.length).toBeGreaterThan(0)
+    applyGear(d, gearOn(d, g => { g.exoticAlways = true }), [])
+    expect(hidden.filter(b => vis(d, magic(b)) !== 'Show')).toEqual([])
+  })
 })
