@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-348
 title: 'Atlas strategies: import a strategy from atlas tree screenshots'
-status: In Progress
+status: Ready
 priority: Medium
 effort: None
 assignee: unassigned
@@ -33,6 +33,21 @@ history:
     date: '2026-11-17T06:23:39.000Z'
     comment: Updated implementation link.
     id: a-2026-11-17t06-23-39-000z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #565: screenshot tray (pick B mock) + Name field. Review fixes in
+      22b25efe. Local checks green (unit, typecheck, lint, build, atlas e2e).
+      Handed to the coordinator for the dev build and merge. Mock pick still
+      open: https://claude.ai/artifact/SkDyaqDS6dbtsuEVL4QkQh
+    date: '2026-11-17T06:43:49.934Z'
+    completionComment: true
+    id: c-2026-11-17t06-43-49-934z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-17T06:43:49.934Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/565'
 ---
