@@ -1,8 +1,6 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { isPatch, isValidEdit } from './edits'
 import type { FilterEdit } from './edits'
-import { emptyTimeline, normalizeTimeline } from './timeline'
-import type { Timeline } from './timeline'
 import type { NavMode } from './nav'
 import { DEFAULT_BUILD_RULES } from './build-rules'
 import type { BuildRuleSwitches } from './build-rules'
@@ -110,8 +108,10 @@ export interface LootFilterWidget extends Widget {
   savedSourceHash?: string
   priceTiers: PriceTiers
   safetyNet: SafetyNet
-  // Changes as they were at each of the last saves, newest first.
-  history: SavePoint[]
+  // Older versions kept the save points (`history`) and undo steps
+  // (`timeline`) here; they now live in their own file (history-file.ts),
+  // and these are moved there on first start.
+  history?: unknown
   neversink: NeverSinkSource
   strictAuto: StrictnessAuto
   // Rules from the rule builder, on top of NeverSink's.
@@ -123,8 +123,7 @@ export interface LootFilterWidget extends Widget {
   netDismissed: Record<string, number>
   // The rule list: what its switch shows, and the groups you pinned.
   ruleNav: { mode: NavMode, pins: string[] }
-  // Your changes step by step, for undo and redo.
-  timeline: Timeline
+  timeline?: unknown
   // Dock icon notices you've turned off, and what each said when you pressed Got it.
   noticesOff: string[]
   noticesSeen: Record<string, string | number>
@@ -157,7 +156,6 @@ export function initLootFilterWidget (w: LootFilterWidget) {
   w.buildRules = { ...DEFAULT_BUILD_RULES }
   w.priceTiers = defaultPriceTiers()
   w.safetyNet = { ...DEFAULT_SAFETY_NET }
-  w.history = []
   w.neversink = defaultNeverSink()
   w.strictAuto = defaultStrictnessAuto()
   w.rules = []
@@ -165,7 +163,6 @@ export function initLootFilterWidget (w: LootFilterWidget) {
   w.healthDismissed = {}
   w.netDismissed = {}
   w.ruleNav = { mode: 'endgame', pins: [] }
-  w.timeline = emptyTimeline()
   w.noticesOff = []
   w.noticesSeen = {}
   w.stricterHotkey = 'Alt + BracketRight'
@@ -228,7 +225,6 @@ export function normalizeLootFilterWidget (w: LootFilterWidget) {
   if (typeof w.safetyNet.minChaos !== 'number' || !(w.safetyNet.minChaos > 0)) w.safetyNet.minChaos = DEFAULT_SAFETY_NET.minChaos
   const last = w.safetyNet.last
   if (last && (!Array.isArray(last.plain) || !Array.isArray(last.unique))) delete w.safetyNet.last
-  if (!Array.isArray(w.history)) w.history = []
   const ns = w.neversink as Partial<NeverSinkSource> | undefined
   const dn = defaultNeverSink()
   w.neversink = {
@@ -260,7 +256,6 @@ export function normalizeLootFilterWidget (w: LootFilterWidget) {
     mode: nav?.mode === 'campaign' || nav?.mode === 'all' ? nav.mode : 'endgame',
     pins: Array.isArray(nav?.pins) ? nav.pins.filter(p => typeof p === 'string') : []
   }
-  w.timeline = normalizeTimeline(w.timeline)
   if (!Array.isArray(w.noticesOff)) w.noticesOff = []
   if (!w.noticesSeen || typeof w.noticesSeen !== 'object') w.noticesSeen = {}
   if (w.stricterHotkey === undefined) w.stricterHotkey = 'Alt + BracketRight'

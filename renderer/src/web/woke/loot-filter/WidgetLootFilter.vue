@@ -68,6 +68,7 @@ export default { widget: widgetLootFilterSpec }
 
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { beforeQuitSave } from '@/web/Config'
 import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -109,6 +110,9 @@ props.config.wmFlags = props.config.wmFlags.filter(f => f !== 'hide-on-blur')
 watch(() => props.config, (c) => normalizeLootFilterWidget(c))
 
 const store = useLootFilter(() => props.config)
+// Undo steps still waiting to be written go out before the app quits.
+beforeQuitSave.add(store.flushHistory)
+onUnmounted(() => { beforeQuitSave.delete(store.flushHistory) })
 const mode = ref<'card' | 'editor'>('editor')
 const sample = shallowRef<ItemFacts | null>(null)
 const samplePosition = shallowRef({ x: 1, y: 1 })

@@ -35,8 +35,9 @@ export interface Timeline {
 }
 
 export const TIMELINE_SIZE = 50
-// It's saved with your config, and steps with many price moves are big.
-const TIMELINE_MAX_CHARS = 1_000_000
+// It's written to its own file after each change and held in memory; steps
+// with many price moves are big (two applies of 100+ moves ~ 30 KB).
+export const TIMELINE_MAX_CHARS = 500_000
 
 const KEYS: Array<keyof Settings> = ['edits', 'rules', 'presets', 'moves', 'locks']
 
