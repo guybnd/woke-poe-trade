@@ -8,6 +8,8 @@ import { ECONOMY_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { RULE_TYPE, addedBlock } from './rules'
 import { BUILD_RULE_TYPE, WEAPON_CLASSES } from './build-rules'
+import { GEAR_TYPE, defaultGear, normalizeGear } from './gear'
+import type { GearSettings } from './gear'
 import { defaultLook, lookChanges, normalizeLook } from './look'
 import type { Look } from './look'
 
@@ -64,6 +66,8 @@ export interface Presets {
   // 3.30's drop tiers: white, blue and rare gear below item tier `tier`
   // once you're in maps (UnidentifiedItemTier).
   lowTiers: { on: boolean, tier: number }
+  // The Gear page's table (gear.ts): replaces NeverSink's tiered gear rules.
+  gear: GearSettings
 }
 
 export type Archetype = 'auto' | 'caster' | 'melee' | 'bow' | 'minion' | 'custom'
@@ -90,7 +94,8 @@ export function defaultPresets (): Presets {
     beams: { on: false, keepTiers: 2 },
     weapons: { on: false, archetype: 'auto', classes: [] },
     look: defaultLook(),
-    lowTiers: { on: false, tier: 3 }
+    lowTiers: { on: false, tier: 3 },
+    gear: defaultGear()
   }
 }
 
@@ -142,7 +147,8 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     beams: { on: on(p?.beams), keepTiers: Math.round(num(p?.beams?.keepTiers, MIN_KEEP_TIERS, 5, d.beams.keepTiers)) },
     weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons),
     look: normalizeLook(p?.look),
-    lowTiers: { on: on(p?.lowTiers), tier: Math.round(num(p?.lowTiers?.tier, ITEM_TIER_MIN, ITEM_TIER_MAX, d.lowTiers.tier)) }
+    lowTiers: { on: on(p?.lowTiers), tier: Math.round(num(p?.lowTiers?.tier, ITEM_TIER_MIN, ITEM_TIER_MAX, d.lowTiers.tier)) },
+    gear: normalizeGear(p?.gear)
   }
 }
 
@@ -572,7 +578,7 @@ const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSo
 // a "t5" there is the best, not the fifth tier. Its look marker says how
 // high it ranks each one: `!exotics_t1` to `!exotics_t4`.
 export function tierNumber (b: Pick<FilterBlock, 'type' | 'tier' | 'comment'>): number | null {
-  if (b.type === 'gear->tiered') {
+  if (b.type === 'gear->tiered' || b.type === GEAR_TYPE) {
     const look = /!exotics_t(\d+)\b/.exec(b.comment ?? '')
     return look ? Number(look[1]) : null
   }
@@ -805,7 +811,7 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     // Volume follows every drop sound but your own rules': build rules and
     // the presets' own too.
     if (p.volume.on && p.volume.percent < 100 && scaleVolume(b, p.volume.percent)) touched = true
-    if (b.type?.startsWith('woke->')) {
+    if (b.type?.startsWith('woke->') && b.type !== GEAR_TYPE) {
       // Build rules and the presets' own beams and icons get the colour-blind
       // colours too; your own rules keep what you picked.
       if (p.colourBlind.on && (b.type === BUILD_RULE_TYPE || b.type === PRESET_TYPE) && colourBlindActions(b)) touched = true

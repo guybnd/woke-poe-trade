@@ -9,6 +9,7 @@ import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
 import type { Presets, UniqueBreakdown } from './presets'
 import { applyEdits } from './edits'
+import { applyGear } from './gear'
 import type { EditStatus, FilterEdit } from './edits'
 import { buildRuleBlocks, insertBuildBlocks } from './build-rules'
 import type { BuildRuleInput, BuildRuleSwitches } from './build-rules'
@@ -63,6 +64,9 @@ export interface Composed {
   outOfPlace: PriceMove[]
   presetChanges: number
   presetSig: string
+  // Rules the Gear page wrote, and NeverSink rules it replaced.
+  gearBlocks: number
+  gearReplaced: number
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
@@ -91,6 +95,9 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   }
   const isNetEdit = (e: FilterEdit) => e.type === SAFETY_RULE_TYPE
   const results = new Map(applyEdits(next, cfg.edits.filter(e => !isNetEdit(e))).map(r => [r.edit.id, r]))
+  // The Gear page's table takes over NeverSink's tiered gear rules, with
+  // their looks as you left them; the presets below then treat it as theirs.
+  const gear = applyGear(next, cfg.presets.gear, input?.rareBases ?? [])
   // Quiet mode, bigger labels, colour-blind colours: over NeverSink's rules
   // as you left them.
   const presetChanges = applyPresetChanges(next, cfg.presets)
@@ -151,5 +158,5 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
-  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)) }
+  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced }
 }
