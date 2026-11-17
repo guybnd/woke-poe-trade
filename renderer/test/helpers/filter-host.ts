@@ -12,6 +12,8 @@ export interface FakeHost {
   // Holds the next write until released, to line up two saves.
   writeGate: Promise<void> | null
   writeFails: number
+  // The app's keyed documents (doc-get / doc-put), by "collection/key".
+  docs: Map<string, unknown>
   request: (name: string, args: Record<string, unknown>) => Promise<unknown>
 }
 
@@ -25,6 +27,7 @@ export function fakeHost (): FakeHost {
     writes: [],
     writeGate: null,
     writeFails: 0,
+    docs: new Map(),
     async request (name, args) {
       switch (name) {
         case 'filter-list': {
@@ -58,6 +61,9 @@ export function fakeHost (): FakeHost {
         case 'ns-latest': return { version: host.latestVersion, changes: 'Fixes' }
         case 'ns-prune': return {}
         case 'game-filter': return host.gameFilter
+        case 'doc-get': case 'doc-get-strict': return host.docs.get(`${String(args.collection)}/${String(args.key)}`) ?? null
+        case 'doc-exists': return host.docs.has(`${String(args.collection)}/${String(args.key)}`)
+        case 'doc-put': host.docs.set(`${String(args.collection)}/${String(args.key)}`, JSON.parse(JSON.stringify(args.value))); return true
         default: return {}
       }
     }

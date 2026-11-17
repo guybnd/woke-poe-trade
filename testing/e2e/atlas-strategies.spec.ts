@@ -2,7 +2,9 @@
 // atlas tree in the middle to click passives on, the loadout on the right
 // (Threads, currency, regexes kept in the Regex library). Uses GGG's live
 // 3.30 atlas export, like the app.
-import { test, expect } from './harness'
+import fs from 'fs'
+import path from 'path'
+import { test, expect, FIXTURES } from './harness'
 import type { Overlay } from './harness'
 
 const DATA = 'https://raw.githubusercontent.com/grindinggear/atlastree-export/master/data.json'
@@ -419,4 +421,37 @@ test('the list: loose strategies first, drag and drop, Alt + arrows, several at 
     .toEqual([':Start Shell', 'Juicing:New strategy', 'Juicing:Starter'])
   expect(saved.folderOrder).toEqual(['Juicing', '3.30'])
   expect(saved.sortBy).toBe('name')
+})
+
+test('screenshots of the atlas tree import as a new strategy (pick B)', async ({ overlay, fakeApp }) => {
+  test.setTimeout(120_000)
+  const atlas = await bootAtlas(overlay, await smallTreeLink())
+  await expect(atlas.getByText(/\d+ \/ \d+ points/)).toBeVisible({ timeout: 30_000 })
+  await atlas.getByTitle('Import a tree link, guide text or strategy code').click()
+
+  // Picked: the real 13-point tree, zoomed out.
+  await atlas.locator('[data-shot-tray] input[type=file]').setInputFiles(path.join(FIXTURES, 'screens/atlas-tree-real-zoomed-out.png'))
+  await expect(atlas.locator('[data-shot]').first()).toContainText('13 passives', { timeout: 30_000 })
+
+  // Pasted: the passive tree, which isn't the atlas.
+  const png = fs.readFileSync(path.join(FIXTURES, 'screens/passive-tree-real-zoomed-in.png')).toString('base64')
+  await atlas.locator('[data-import]').evaluate((el, b64) => {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+    const dt = new DataTransfer()
+    dt.items.add(new File([bytes], 'passive.png', { type: 'image/png' }))
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  }, png)
+  await expect(atlas.locator('[data-shot]').nth(1)).toContainText('No atlas tree', { timeout: 30_000 })
+  await expect(atlas.locator('[data-import]')).toHaveValue('')
+  await overlay.snap('two screenshots in the import tray')
+
+  fakeApp.clearReceived()
+  await atlas.locator('[data-import-name] input, input[data-import-name]').first().fill('Shrine start')
+  await atlas.getByRole('button', { name: 'Import 13 passives' }).click()
+  await expect(atlas.getByText('Shrine start', { exact: true }).first()).toBeVisible()
+  await expect(atlas.getByText('13 / 150 points')).toBeVisible({ timeout: 30_000 })
+  await overlay.snap('imported from a screenshot')
+  await overlay.page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  const saved = savedAtlas((await fakeApp.waitForReceived('CLIENT->MAIN::save-config')).contents as string)
+  expect(saved.strategies.find((s: { name: string }) => s.name === 'Shrine start')?.treeUrl).toMatch(/fullscreen-atlas-skill-tree\//)
 })

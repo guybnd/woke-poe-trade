@@ -309,18 +309,18 @@
           <WButton v-if="p.block.type && p.block.tier" size="sm" variant="ghost" @click="jumpTo(p.block.type!, p.block.tier!)">Open rule</WButton>
         </div>
       </div>
-      <template v-if="config.timeline.steps.length">
+      <template v-if="store.timeline.value.steps.length">
         <div class="flex items-center gap-2" :class="$style.historyLabel">
           <span class="w-group-label" style="padding: 0;">History</span>
           <span class="w-faint text-xs">newest first</span>
           <span class="grow" />
-          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="config.timeline.at === 0" title="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
-          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="config.timeline.at >= config.timeline.steps.length" title="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
+          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="store.timeline.value.at === 0" title="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
+          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="store.timeline.value.at >= store.timeline.value.steps.length" title="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
         </div>
-        <div v-for="s in shownSteps" :key="s.n" :class="[$style.changeRow, { [$style.undone]: s.n >= config.timeline.at }]">
+        <div v-for="s in shownSteps" :key="s.n" :class="[$style.changeRow, { [$style.undone]: s.n >= store.timeline.value.at }]">
           <span class="grow min-w-0 w-trunc" :title="s.label">{{ s.label }}</span>
           <span class="w-faint text-xs w-num" :title="new Date(s.step.ts).toLocaleString()">{{ agoPhrase(s.step.ts) }}</span>
-          <WButton v-if="s.n + 1 !== config.timeline.at" size="sm" variant="ghost" title="Your settings go back to right after this step. You can redo." @click="store.goToStep(s.n + 1)">{{ s.n >= config.timeline.at ? 'Redo to here' : 'Back to here' }}</WButton>
+          <WButton v-if="s.n + 1 !== store.timeline.value.at" size="sm" variant="ghost" title="Your settings go back to right after this step. You can redo." @click="store.goToStep(s.n + 1)">{{ s.n >= store.timeline.value.at ? 'Redo to here' : 'Back to here' }}</WButton>
           <WButton v-else size="sm" variant="ghost" @click="store.undoStep()">Undo</WButton>
         </div>
       </template>
@@ -359,9 +359,9 @@
         <WButton size="sm" variant="ghost" @click="useShared('add')">Add to mine</WButton>
         <WButton size="sm" variant="primary" @click="useShared('replace')">Replace mine</WButton>
       </div>
-      <template v-if="config.history.length">
+      <template v-if="store.saves.value.length">
         <div class="w-group-label" :class="$style.historyLabel">Earlier saves</div>
-        <div v-for="h in config.history" :key="h.ts" :class="$style.changeRow">
+        <div v-for="h in store.saves.value" :key="h.ts" :class="$style.changeRow">
           <i class="fas fa-history w-dim" />
           <span class="grow min-w-0 w-trunc">{{ h.label }}</span>
           <span class="w-faint text-xs w-num" :title="new Date(h.ts).toLocaleString()">{{ agoPhrase(h.ts) }}</span>
@@ -1339,7 +1339,7 @@ function stepLabel (step: Parameters<typeof describeSavedStep>[0]): string {
   if (label == null) stepLabels.set(step, label = describeSavedStep(step, props.store.sourceLook))
   return label
 }
-const shownSteps = computed(() => props.config.timeline.steps.map((step, n) => ({ step, n, label: stepLabel(step) })).reverse())
+const shownSteps = computed(() => props.store.timeline.value.steps.map((step, n) => ({ step, n, label: stepLabel(step) })).reverse())
 
 function onUndoKeys (e: KeyboardEvent) {
   // Only with this window up, and not when something else already took the key

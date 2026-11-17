@@ -6,6 +6,7 @@ import { app, powerMonitor, session, shell } from 'electron'
 import { uIOhook } from 'uiohook-napi'
 import os from 'node:os'
 import { startServer, eventPipe, httpRoutes, configFlushed } from './server'
+import { docWritesDone } from './woke/data-files'
 import { Logger } from './RemoteLogger'
 import { GameWindow } from './windowing/GameWindow'
 import { OverlayWindow } from './windowing/OverlayWindow'
@@ -37,7 +38,8 @@ if (process.platform !== 'darwin') {
 }
 app.enableSandbox()
 
-saveBeforeQuit(eventPipe, configFlushed)
+// woke: documents written on the way out (the loot filter's history) too.
+saveBeforeQuit(eventPipe, async () => { await Promise.all([configFlushed(), docWritesDone()]) })
 
 let tray: AppTray | undefined
 

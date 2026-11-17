@@ -18,6 +18,7 @@ import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
 import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
+import { useFilterHistory } from './history-file'
 import type { LootFilterWidget } from './widget'
 import { useBuildRuleInput } from './build-input'
 import { livePriceMoves, lockKey, lockedByEdits, mergeMoves, planRetier, tierRank } from './economy'
@@ -218,6 +219,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     clearTimeout(reloadTimer)
     clearInterval(nowTimer)
     if (settleTimer) settle()
+    clearTimeout(sourceDocTimer)
+    flushHistory()
   })
 
   const dirty = computed(() => signature() !== savedEdits.value)
@@ -376,7 +379,26 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   let settled = copySettings()
   // The first change would size every saved step; do that while idle.
   const idle = typeof requestIdleCallback === 'function' ? requestIdleCallback : (f: () => void) => setTimeout(f, 2000)
-  idle(() => { const t = cfg().timeline; if (t) measureSteps(toRaw(t)) })
+  // Undo steps and save points live in their own file; older settings held them.
+  const history = useFilterHistory({
+    read: () => {
+      const c = toRaw(cfg()) as Partial<{ timeline: unknown, history: unknown }>
+      return { timeline: c.timeline, history: c.history }
+    },
+    drop: () => {
+      const c = cfg() as Partial<{ timeline: unknown, history: unknown }>
+      delete c.timeline
+      delete c.history
+    }
+  })
+  const timeline = history.timeline
+  history.ready.then(() => idle(() => measureSteps(toRaw(timeline.value)))).catch(() => {})
+  // Writes a change still waiting (quitting, or the widget going away),
+  // after recording a step that hadn't settled yet.
+  const flushHistory = () => {
+    if (settleTimer) settle()
+    if (history.pending()) history.flush().catch(() => {})
+  }
   let settleTimer: ReturnType<typeof setTimeout> | undefined
 
   function sourceParsed (): FilterDoc | null {
@@ -388,6 +410,9 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       applyPresetChanges(doc, cfg().presets)
       sourceDoc = { text: baseText.value, presets, doc }
     }
+    // Only wanted while you're making changes: let it go when idle.
+    clearTimeout(sourceDocTimer)
+    sourceDocTimer = setTimeout(() => { sourceDoc = null }, SOURCE_DOC_IDLE_MS)
     return sourceDoc.doc
   }
 
@@ -418,12 +443,19 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     return null
   }
   let sourceDoc: { text: string, presets: string, doc: FilterDoc } | null = null
+  const SOURCE_DOC_IDLE_MS = 30_000
+  let sourceDocTimer: ReturnType<typeof setTimeout> | undefined
 
   function settle () {
     clearTimeout(settleTimer)
     settleTimer = undefined
+    // The saved steps are still loading: this step goes on top of them.
+    if (!history.isLoaded()) {
+      settleTimer = setTimeout(settle, TIMELINE_WAIT_MS)
+      return
+    }
     const now = copySettings()
-    cfg().timeline = observe(toRaw(cfg().timeline), settled, now, describeStep(settled, now, sourceLook))
+    history.setTimeline(observe(toRaw(timeline.value), settled, now, describeStep(settled, now, sourceLook)))
     settled = now
   }
 
@@ -442,7 +474,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // Back or forward to `at` steps in. Keeps the file as it is until you save.
   function goToStep (at: number) {
     settle()
-    const t = cfg().timeline
+    const t = timeline.value
     if (at < 0 || at > t.steps.length || at === t.at) return
     const part = settingsAt(t, at)
     const c = cfg()
@@ -451,14 +483,14 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     if (part.presets) c.presets = normalizePresets(part.presets)
     if (part.moves) c.priceTiers.moves = part.moves
     if (part.locks) c.priceTiers.locks = part.locks
-    c.timeline = { ...t, at }
+    history.setTimeline({ ...t, at })
     settled = copySettings()
     clearUndoToasts()
     rebuild()
   }
 
-  const undoStep = () => { settle(); if (cfg().timeline.at > 0) goToStep(cfg().timeline.at - 1) }
-  const redoStep = () => { settle(); if (cfg().timeline.at < cfg().timeline.steps.length) goToStep(cfg().timeline.at + 1) }
+  const undoStep = () => { settle(); if (timeline.value.at > 0) goToStep(timeline.value.at - 1) }
+  const redoStep = () => { settle(); if (timeline.value.at < timeline.value.steps.length) goToStep(timeline.value.at + 1) }
 
   // Back to NeverSink's own tiers for every price group.
   function resetPrices () {
@@ -1000,15 +1032,20 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   }
 
   function pushHistory (edits: FilterEdit[], moves: PriceMove[]) {
-    const last = cfg().history[0]
+    // A save right at startup waits for the saved points to load.
+    if (!history.isLoaded()) {
+      history.ready.then(() => pushHistory(edits, moves)).catch(() => {})
+      return
+    }
+    const last = history.saves.value[0]
     if (last && JSON.stringify([last.edits, last.moves]) === JSON.stringify([edits, moves])) return
     const label = `${countOf(edits.length, 'change')}${moves.length ? `, ${countOf(moves.length, 'price move')}` : ''}`
-    cfg().history = [{ ts: Date.now(), label, edits, moves }, ...cfg().history].slice(0, HISTORY_SIZE)
+    history.setSaves([{ ts: Date.now(), label, edits, moves }, ...history.saves.value].slice(0, HISTORY_SIZE))
   }
 
   // Puts the changes back as they were at an earlier save.
   function restore (ts: number) {
-    const point = cfg().history.find(h => h.ts === ts)
+    const point = history.saves.value.find(h => h.ts === ts)
     if (!point) return () => {}
     const before = { edits: cfg().edits, moves: cfg().priceTiers.moves }
     cfg().edits = point.edits
@@ -1172,6 +1209,11 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     goToStep,
     undoStep,
     redoStep,
+    // Undo steps and save points (their own file, not the settings).
+    timeline,
+    saves: history.saves,
+    historyReady: history.ready,
+    flushHistory,
     sourceLook,
     sourceVisibility,
     sourceStack,

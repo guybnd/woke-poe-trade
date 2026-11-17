@@ -1,6 +1,6 @@
 // The list of changes you can step back and forward through.
 import { describe, it, expect } from 'vitest'
-import { TIMELINE_SIZE, canRedo, canUndo, changedParts, describePatch, describeStep, emptyTimeline, normalizeTimeline, observe, settingsAt } from '@/web/woke/loot-filter/timeline'
+import { TIMELINE_MAX_CHARS, TIMELINE_SIZE, canRedo, canUndo, changedParts, describePatch, describeStep, emptyTimeline, normalizeTimeline, observe, settingsAt } from '@/web/woke/loot-filter/timeline'
 import type { Settings, Timeline } from '@/web/woke/loot-filter/timeline'
 import type { FilterEdit } from '@/web/woke/loot-filter/edits'
 import { defaultPresets } from '@/web/woke/loot-filter/presets'
@@ -175,7 +175,7 @@ describe('what a step records', () => {
   })
 
   it('drops the oldest steps when they get too big to save', () => {
-    const moves = (n: number) => Array.from({ length: 4000 }, (_, i) => ({ type: 'currency', base: `Item number ${i}`, from: 't1', to: `t${n}`, chaos: 1 }))
+    const moves = (n: number) => Array.from({ length: 1500 }, (_, i) => ({ type: 'currency', base: `Item number ${i}`, from: 't1', to: `t${n}`, chaos: 1 }))
     let t = emptyTimeline()
     let prev = settings()
     for (let i = 0; i < 20; i++) {
@@ -183,7 +183,10 @@ describe('what a step records', () => {
       t = observe(t, prev, next, 's', i + 1)
       prev = next
     }
-    expect(JSON.stringify(t.steps).length).toBeLessThanOrEqual(1_000_000)
+    expect(JSON.stringify(t.steps).length).toBeLessThanOrEqual(TIMELINE_MAX_CHARS)
+    // As many of the newest as fit: one more would go over.
+    const older = JSON.stringify(observe({ steps: [], at: 0 }, settings(), settings({ moves: moves(99) }), 's', 0).steps[0]).length
+    expect(JSON.stringify(t.steps).length + older + 1).toBeGreaterThan(TIMELINE_MAX_CHARS)
     expect(t.at).toBe(t.steps.length)
     expect(t.steps.length).toBeGreaterThan(0)
   })

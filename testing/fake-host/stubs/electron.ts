@@ -3,6 +3,7 @@
 import os from 'os'
 import path from 'path'
 import { EventEmitter } from 'events'
+import { PNG } from 'pngjs'
 import { game } from '../game'
 
 const userData = () => process.env.WOKE_FAKE_USER_DATA ?? path.join(os.tmpdir(), 'woke-fake-app')
@@ -66,7 +67,18 @@ export const dialog = {
 
 export const Menu = { buildFromTemplate: () => ({}), setApplicationMenu () {} }
 export class BrowserWindow { constructor () { throw new Error('No windows in the fake app') } }
-export const nativeImage = { createFromPath: () => ({}) }
+// Pictures pasted into the overlay (PNG data: URLs), as BGRA like Electron's.
+export const nativeImage = {
+  createFromPath: () => ({}),
+  createFromDataURL (url: string) {
+    const m = /^data:image\/png;base64,(.*)$/.exec(url)
+    if (!m) return { getSize: () => ({ width: 0, height: 0 }), toBitmap: () => Buffer.alloc(0) }
+    const png = PNG.sync.read(Buffer.from(m[1], 'base64'))
+    const px = Buffer.from(png.data)
+    for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
+    return { getSize: () => ({ width: png.width, height: png.height }), toBitmap: () => px }
+  }
+}
 export class Tray {}
 export const net = { request () { throw new Error('No network in the fake app') } }
 export const session = { defaultSession: { webRequest: { onHeadersReceived () {} } } }
