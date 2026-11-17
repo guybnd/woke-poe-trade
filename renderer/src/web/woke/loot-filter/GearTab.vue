@@ -74,6 +74,26 @@
           </template>
         </div>
       </div>
+      <div :class="$style.card">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span>On the ground</span>
+          <span class="w-faint text-xs">{{ pileShown }} of {{ pile.length }} shown, through your filter as it is now</span>
+          <WButton size="sm" style="margin-left: auto;" @click="seed++">Reroll</WButton>
+        </div>
+        <div class="flex flex-wrap items-center gap-1">
+          <span class="w-dim text-xs">Add</span>
+          <WChip v-for="d in DECORATORS" :key="d.key" clickable :active="decos.includes(d.key)" @click="toggle(decos, d.key)">{{ d.label }}</WChip>
+          <WToggle v-model="showHidden" style="margin-left: 6px;">Show hidden</WToggle>
+        </div>
+        <div :class="$style.ground">
+          <template v-for="d in pile" :key="d.id">
+            <span v-if="d.visibility !== 'Hide' || showHidden" :class="[$style.drop, d.visibility === 'Hide' && $style.hiddenDrop]" :title="d.title">
+              <LabelPreview :text="d.label" :actions="d.actions" :visibility="d.visibility === 'Hide' ? 'Show' : d.visibility" :extras="false" :default-text="d.colour" />
+              <span :class="$style.dropTag">{{ d.caption }}</span>
+            </span>
+          </template>
+        </div>
+      </div>
     </template>
 
     <template v-else>
@@ -141,6 +161,12 @@ import { DROP_TIERS, GEAR_ROWS, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gea
 import type { GearRarity, GearRow, GearSettings, Lane } from './gear'
 import { DEFENCES, DEFENCE_ATTR, SLOTS, allGearBases, baseInfo } from './gear-bases'
 import type { BaseInfo, Defence, Slot } from './gear-bases'
+import { DECORATORS, rollPile } from './gear-pile'
+import type { Decorator } from './gear-pile'
+import { matchItem } from './match'
+import { defaultTextColour } from './drops'
+import { ruleLabel } from './parse'
+import LabelPreview from './LabelPreview.vue'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -260,6 +286,44 @@ const counts = computed(() => {
   }
   return out
 })
+
+// ---- On the ground: a pile of gear through the filter as built ----
+const seed = ref(1)
+const decos = ref<Decorator[]>(['influenced', 'fractured', 'corrupted'])
+const showHidden = ref(true)
+const ROW_SHORT: Record<string, string> = { build: 'Build', r1: 'R1', r2: 'R2', r3: 'R3', any: 'Any' }
+const pile = computed(() => {
+  const doc = props.store.doc.value
+  if (!doc) return []
+  const ranked = new Set([...lists.value.r1, ...lists.value.r2, ...lists.value.r3])
+  const drops = rollPile({
+    rows: [
+      { row: 'build', bases: build.value, weight: 2 },
+      { row: 'r1', bases: lists.value.r1, weight: 3 },
+      { row: 'r2', bases: lists.value.r2, weight: 3 },
+      { row: 'r3', bases: lists.value.r3, weight: 2 },
+      { row: 'any', bases: universe.value.filter(b => !ranked.has(b) && !lists.value.never.includes(b)), weight: 2 }
+    ],
+    decorators: decos.value,
+    count: 36,
+    seed: seed.value
+  })
+  return drops.map(d => {
+    const m = matchItem(doc, d.facts, { brief: true })
+    const rule = m.final?.block
+    const what = `${d.facts.rarity} ${d.facts.baseType}, ${d.tier ? `drop tier ${d.tier}` : 'no drop tier'}, ${ROW_SHORT[d.row]}${d.tags.length ? `, ${d.tags.join(', ')}` : ''}`
+    return {
+      id: d.id,
+      label: d.facts.baseType!,
+      actions: m.actions,
+      visibility: m.visibility,
+      colour: defaultTextColour(d.facts),
+      caption: [d.facts.rarity === 'Magic' ? 'M' : 'R', d.tier ? `t${d.tier}` : 'no t', ROW_SHORT[d.row], ...d.tags].join(' · '),
+      title: `${what}\n${m.visibility === 'Hide' ? 'Hidden' : 'Shown'} by ${rule ? ruleLabel(rule.type, rule.tier) : 'no rule (shows by default)'}`
+    }
+  })
+})
+const pileShown = computed(() => pile.value.filter(d => d.visibility !== 'Hide').length)
 
 // ---- Base ranks ----
 const search = ref('')
@@ -439,6 +503,25 @@ function neverOffBuild () {
   position: relative;
   padding: 0 6px;
   line-height: calc(1.5rem * var(--w-text-scale, 1));
+}
+.ground {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 10px;
+  border-radius: var(--w-r-sm);
+  background: #0c0b09;
+}
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.hiddenDrop { opacity: 0.35; }
+.dropTag {
+  font-size: var(--w-fs-xs, 10px);
+  color: var(--w-text-faint, #8f8573);
 }
 .selBar {
   display: flex;

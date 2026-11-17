@@ -2,6 +2,7 @@
 // drop level and art, from the app's item data and RePoE's base facts.
 import { ITEM_BY_REF } from '@/assets/data'
 import { BASE_FACTS } from './base-facts'
+import { CATEGORY_CLASSES } from './build-rules'
 
 export type Slot = 'Helmet' | 'Body' | 'Gloves' | 'Boots' | 'Shield' | 'Quiver' | 'Ring' | 'Amulet' | 'Belt' | '1H' | '2H' | 'Caster' | 'Bow'
 export type Defence = 'AR' | 'EV' | 'ES' | 'AR/EV' | 'AR/ES' | 'EV/ES' | 'Ward' | 'All'
@@ -37,8 +38,22 @@ const CATEGORY_SLOT: Record<string, Slot> = {
   'Bow': 'Bow'
 }
 
+const ARMOUR_CLASS: Record<string, string> = {
+  'Helmet': 'Helmets',
+  'Body Armour': 'Body Armours',
+  'Gloves': 'Gloves',
+  'Boots': 'Boots',
+  'Shield': 'Shields',
+  'Quiver': 'Quivers',
+  'Ring': 'Rings',
+  'Amulet': 'Amulets',
+  'Belt': 'Belts'
+}
+
 export interface BaseInfo {
   name: string
+  // The loot filter's Class for it ("Body Armours").
+  cls: string | null
   slot: Slot | null
   defence: Defence | null
   dropLevel: number | null
@@ -63,6 +78,7 @@ export function baseInfo (name: string): BaseInfo {
   }
   info = {
     name,
+    cls: category ? ARMOUR_CLASS[category] ?? CATEGORY_CLASSES[category]?.[0] ?? null : null,
     slot: (category && CATEGORY_SLOT[category]) ?? null,
     defence,
     dropLevel: BASE_FACTS[name]?.[0] ?? null,
