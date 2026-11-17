@@ -208,7 +208,8 @@ export function describeStep (before: Settings, after: Settings, lookOf: (type: 
     // A snapshot from before a preset existed reads it as its default.
     const was = (k: keyof Presets) => before.presets[k] ?? defaultPresets()[k]
     const key = (Object.keys(after.presets) as Array<keyof Presets>).find(k => !same(was(k), after.presets[k]))
-    parts.push(key ? `Preset: ${PRESET_NAMES[key]} ${after.presets[key].on ? (was(key).on ? 'changed' : 'on') : 'off'}` : 'Changed presets')
+    if (key === 'gear') parts.push(after.presets.gear.on ? (was('gear').on ? 'Changed the Gear table' : 'Gear table on') : 'Gear back to NeverSink')
+    else parts.push(key ? `Preset: ${PRESET_NAMES[key]} ${after.presets[key].on ? (was(key).on ? 'changed' : 'on') : 'off'}` : 'Changed presets')
   }
   if (!same(before.locks, after.locks) && !parts.length) {
     const base = (k: string) => k.slice(k.lastIndexOf('|') + 1)
@@ -242,5 +243,6 @@ export const PRESET_NAMES: Record<keyof Presets, string> = {
   beams: 'fewer beams',
   weapons: 'weapons for your build',
   look: 'label look',
-  lowTiers: 'hide low item tiers'
+  lowTiers: 'hide low item tiers',
+  gear: 'gear table'
 }

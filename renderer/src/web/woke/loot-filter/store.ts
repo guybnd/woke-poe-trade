@@ -79,6 +79,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // many of NeverSink's rules they adjusted.
   const presetList = shallowRef<string>('')
   const presetChanges = ref(0)
+  // NeverSink rules the Gear page's table replaced (0 while it's off).
+  const gearReplaced = ref(0)
   const prices = useFilterPrices(() => cfg().priceTiers.uniqueRule)
   // Bases for the dust preset's price rule, only while it's on.
   const dustList = computed(() => {
@@ -284,6 +286,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     // Only a change: this runs often and the config is watched.
     if (c.netFresh && JSON.stringify(cfg().safetyNet.last) !== JSON.stringify(c.netFresh)) cfg().safetyNet.last = c.netFresh
     presetChanges.value = c.presetChanges
+    gearReplaced.value = c.gearReplaced
     presetList.value = c.presetSig
     statuses.value = cfg().edits.map(e => c.results.get(e.id)!)
     priceMoved = c.outOfPlace
@@ -1176,6 +1179,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     editsWithUndo,
     changeWithUndo,
     presetChanges,
+    gearReplaced,
     compareDoc,
     restore,
     updateReady,

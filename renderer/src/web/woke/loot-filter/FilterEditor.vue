@@ -273,6 +273,7 @@
     <!-- Rendered below, kept alive so Back returns to the same pile. -->
     <template v-else-if="tab === 'preview'" />
     <PresetsTab v-else-if="tab === 'presets'" :store="store" :config="config" />
+    <GearTab v-else-if="tab === 'gear'" :store="store" :config="config" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" />
     <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
@@ -409,6 +410,7 @@ import type { FilterRarity, ItemFacts } from './item-facts'
 import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
+import GearTab from './GearTab.vue'
 import LookStrip from './LookStrip.vue'
 import { ownActions } from './look'
 import RuleBuilder from './RuleBuilder.vue'
@@ -469,7 +471,7 @@ function onSearchPaste (e: ClipboardEvent) {
   emit('paste-item', text)
 }
 
-const tab = ref<'rules' | 'preview' | 'presets' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -529,7 +531,8 @@ const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
-  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && x.on).length || undefined },
+  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && x.on).length || undefined },
+  { value: 'gear', label: 'Gear', count: props.config.presets.gear.on ? 1 : undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
