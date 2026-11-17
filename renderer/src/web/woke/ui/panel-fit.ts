@@ -46,6 +46,25 @@ export function anchorShare (pos: string, axis: 'x' | 'y') {
   return c === 'r' || c === 'b' ? 1 : 0
 }
 
+// Screen px a panel's edge can move outward before the widget grows: the gap
+// to the widget's edge left by a bigger neighbour beside it (the Atlas list
+// beside the tree). A neighbour past the edge (the next panel in the row) sits
+// in that gap, so there is none.
+export function edgeSlack (panel: Box, widget: Box, others: Box[], axis: 'x' | 'y', side: ResizeSide) {
+  const across = (o: Box) => axis === 'y'
+    ? o.left < panel.right - 1 && o.right > panel.left + 1
+    : o.top < panel.bottom - 1 && o.bottom > panel.top + 1
+  const beyond = (o: Box) => axis === 'y'
+    ? (side === 'end' ? o.top >= panel.bottom - 1 : o.bottom <= panel.top + 1)
+    : (side === 'end' ? o.left >= panel.right - 1 : o.right <= panel.left + 1)
+  if (others.some(o => across(o) && beyond(o))) return 0
+  const gap = axis === 'y'
+    ? (side === 'end' ? widget.bottom - panel.bottom : panel.top - widget.top)
+    : (side === 'end' ? widget.right - panel.right : panel.left - widget.left)
+  // A few px is the widget's own padding, not room a neighbour left.
+  return gap > 4 ? gap : 0
+}
+
 export interface ResizeAxis {
   side: ResizeSide
   // Mouse travel in screen px, positive toward the end of the axis.
@@ -54,6 +73,10 @@ export interface ResizeAxis {
   size: number
   // Screen px the widget can still grow toward this side.
   room: number
+  // Screen px between this panel's moving edge and the widget's edge on that
+  // side, when a taller (or wider) neighbour sets the widget's size. The panel
+  // grows into it without the widget growing.
+  slack?: number
   scale: number
   // Smallest size in panel (zoomed) px.
   min: number
@@ -62,10 +85,13 @@ export interface ResizeAxis {
 
 // One axis of a resize: the new size in panel px, and how far the anchor must
 // move (screen px) so the opposite edge stays where it is.
-export function resizeAxis ({ side, delta, size, room, scale, min, share }: ResizeAxis) {
-  const growth = Math.min(side === 'end' ? delta : -delta, Math.max(room, 0))
+export function resizeAxis ({ side, delta, size, room, scale, min, share, slack = 0 }: ResizeAxis) {
+  const gap = Math.max(slack, 0)
+  const growth = Math.min(side === 'end' ? delta : -delta, Math.max(room, 0) + gap)
   const px = Math.max(size + growth, Math.min(min * scale, size))
   const next = Math.round(px / scale)
   const grew = next * scale - size
-  return { size: next, shift: side === 'end' ? share * grew : (share - 1) * grew }
+  // Only growth past the neighbours changes the widget's size, and so its anchor.
+  const widget = gap > 0 ? Math.max(grew - gap, 0) : grew
+  return { size: next, shift: side === 'end' ? share * widget : (share - 1) * widget }
 }

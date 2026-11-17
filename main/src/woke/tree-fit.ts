@@ -164,7 +164,10 @@ export const ATLAS_PICTURE_FIT: FitKind = {
 }
 
 // Allocated lines: pale gold on the passive tree, pale blue on the atlas.
-export type LitTone = 'gold' | 'blue'
+// pale: the atlas's blue in a shrunk picture (a small snip, or a screenshot
+// scaled down), where a thin line blends into the dark around it: about
+// (80, 104, 154) to (133, 143, 203) on a 660 px wide tree.
+export type LitTone = 'gold' | 'blue' | 'pale'
 
 // hint: the last fit, when only the offset may have changed (a drag).
 export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } | null, kind: FitKind = PASSIVE_FIT): TreeFit | null {
@@ -387,10 +390,10 @@ function litAt (bgra: Uint8Array, width: number, x: number, y: number, tone: Lit
       const b = bgra[j]
       const g = bgra[j + 1]
       const r = bgra[j + 2]
-      if (tone === 'gold') { if (r > b + 40) best = Math.max(best, (r + g) / 2) } else if (b > r + 35 && r > 90) best = Math.max(best, b)
+      if (tone === 'gold') { if (r > b + 40) best = Math.max(best, (r + g) / 2) } else if (tone === 'pale') { if (b > r + 35 && r > 60) best = Math.max(best, b) } else if (b > r + 35 && r > 90) best = Math.max(best, b)
     }
   }
-  return best > (tone === 'gold' ? 165 : 180)
+  return best > (tone === 'gold' ? 165 : tone === 'pale' ? 140 : 180)
 }
 
 // litProbes for lines outside the build, where a wrong "lit" would tell you
