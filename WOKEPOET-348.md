@@ -20,6 +20,14 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-17T06:08:19.618Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-17T06:10:17.219Z'
+    comment: >-
+      Mocks A/B/C with Pick buttons:
+      https://claude.ai/artifact/SkDyaqDS6dbtsuEVL4QkQh (picks in db
+      picks/current). Building B (picture tray, merged shots) meanwhile.
+    id: a-2026-11-17t06-10-17-219z
 needsAction: null
 ---
 Guy asked (2026-11-17) whether an atlas strategy can be imported from a screenshot, pasted or picked from a file.
