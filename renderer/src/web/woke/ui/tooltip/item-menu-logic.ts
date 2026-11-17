@@ -53,6 +53,7 @@ export const plainName = dataUniqueName
 
 export function infoOf (ref: ItemMenuRef, kind: TipKind): BaseType | undefined {
   if (ref.base) return ITEM_BY_REF('ITEM', ref.base)?.[0]
+  if (ref.type === 'Beast') return ITEM_BY_REF('CAPTURED_BEAST', ref.name)?.[0]
   return ITEM_BY_REF(NS[kind], plainName(ref.name))?.[0]
 }
 
@@ -202,6 +203,11 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
   if (isFoulborn(ref.name)) return null
   if (kind === 'unique') {
     const item = virtualUnique(info, english ? mods : null)
+    return { clipboard: item.rawText, item }
+  }
+  // A captured beast: searched by its name, as the game's copy of one is.
+  if (info.namespace === 'CAPTURED_BEAST') {
+    const item = createVirtualItem({ category: ItemCategory.CapturedBeast, info })
     return { clipboard: item.rawText, item }
   }
   if (kind === 'gem') {
