@@ -36,9 +36,21 @@
           <WButton size="sm" variant="ghost" title="Back to NeverSink's tier, and prices leave it there" @click="putBack(m)">Put back</WButton>
         </div>
       </template>
-      <div v-if="moves.length" class="w-group-label" :class="$style.label">Would move</div>
-      <div v-for="m in moves" :key="m.type + m.base" v-item-tip="baseTip(m.type, m.base)" :class="$style.row" @contextmenu="moveMenu($event, m)">
-        <input :id="`pm-${m.type}-${m.base}`" v-model="picked[pickKey(m)]" type="checkbox" :class="$style.check" :aria-label="`Move ${m.base}`">
+      <div v-if="moves.length" :class="$style.pickBar">
+        <input type="checkbox" :class="$style.check" :checked="allPicked" :indeterminate="somePicked" aria-label="Pick every item that would move" title="Pick all or none" @change="pickAllOrNone">
+        <span class="w-group-label">Would move · {{ pickedMoves.length }} of {{ moves.length }} picked</span>
+        <span class="grow" />
+        <span class="text-xs w-dim" :class="$style.quick">
+          Pick
+          <button type="button" :class="$style.link" class="w-focusable" @click="pickWhere(() => true)">all</button>
+          <button type="button" :class="$style.link" class="w-focusable" @click="pickWhere(() => false)">none</button>
+          <button v-if="upCount" type="button" :class="$style.link" class="w-focusable" title="Only items moving to a better tier" @click="pickWhere(isUp)">up only · {{ upCount }}</button>
+          <button v-if="upCount < moves.length" type="button" :class="$style.link" class="w-focusable" title="Only items moving to a lower tier" @click="pickWhere(m => !isUp(m))">down only · {{ moves.length - upCount }}</button>
+          <WInfo text="Shift + click a box to tick or untick every row between it and the last one you clicked." />
+        </span>
+      </div>
+      <div v-for="(m, n) in moves" :key="m.type + m.base" v-item-tip="baseTip(m.type, m.base)" :class="$style.row" @contextmenu="moveMenu($event, m)">
+        <input :id="`pm-${m.type}-${m.base}`" :checked="picked[pickKey(m)]" type="checkbox" :class="$style.check" :aria-label="`Move ${m.base}`" @click="clickPick($event, n)">
         <img v-if="icon(m)" :src="icon(m)!" :class="$style.art" alt="">
         <LabelPreview :text="m.base" :actions="lookOf(m.type, m.to)" :extras="false" />
         <button type="button" :class="$style.link" class="w-focusable text-xs w-trunc" :title="`Open ${groupLabel(m.type)} ${m.from} in Rules`" @click="emit('open-rule', { type: m.type, tier: m.from, base: m.base })">{{ groupLabel(m.type) }} <i class="fas fa-external-link-alt" /></button>
@@ -322,10 +334,43 @@ const picked = reactive<Record<string, boolean>>({})
 const movedList = computed(() => livePriceMoves(props.config.priceTiers.moves))
 // A row that starts hiding at another strictness is a new choice.
 const pickKey = (m: PriceMove) => `${m.type}|${m.base}|${m.hides ? 'hides' : ''}`
+// The row shift + click counts from; cleared when the list changes under it.
+let lastPick: number | null = null
 watch(moves, (list) => {
+  lastPick = null
   for (const m of list) if (picked[pickKey(m)] === undefined) picked[pickKey(m)] = !m.hides
 }, { immediate: true })
 const pickedMoves = computed(() => moves.value.filter(m => picked[pickKey(m)]))
+const allPicked = computed(() => moves.value.length > 0 && pickedMoves.value.length === moves.value.length)
+const somePicked = computed(() => pickedMoves.value.length > 0 && !allPicked.value)
+const isUp = (m: PriceMove) => rank(m.to) < rank(m.from)
+const upCount = computed(() => moves.value.filter(isUp).length)
+
+function pickWhere (want: (m: PriceMove) => boolean) {
+  for (const m of moves.value) picked[pickKey(m)] = want(m)
+  lastPick = null
+}
+// Read once: allPicked changes as the loop ticks rows.
+function pickAllOrNone (e: Event) {
+  const on = !allPicked.value
+  pickWhere(() => on)
+  ;(e.target as HTMLInputElement).checked = on
+}
+
+// Shift + click sets every row from the last box clicked to this one to this
+// box's new state, like a file list.
+function clickPick (e: MouseEvent, n: number) {
+  const box = e.target as HTMLInputElement
+  const on = box.checked
+  const list = moves.value
+  if (e.shiftKey && lastPick != null && lastPick < list.length) {
+    const [a, b] = lastPick < n ? [lastPick, n] : [n, lastPick]
+    for (let i = a; i <= b; i++) picked[pickKey(list[i])] = on
+  } else {
+    picked[pickKey(list[n])] = on
+  }
+  lastPick = n
+}
 
 const minChaos = computed({
   get: () => props.config.safetyNet.minChaos,
@@ -484,6 +529,18 @@ function undoEditStep<T extends { id: number }> (now: T[], step: EditStep<T>): T
 }
 /* The game's coin checkbox is wider: the "Not moved" rows' blank keeps step. */
 :global(:root[data-woke-art]) .check { width: calc(20px * var(--w-text-scale, 1)); }
+.pickBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--w-pad) 4px;
+}
+.quick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
 .art {
   width: 20px;
   height: 20px;
