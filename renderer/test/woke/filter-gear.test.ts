@@ -206,4 +206,26 @@ describe('gear table', () => {
     expect(vis(d, f)).toBe('Show')
     expect(vis(d, { ...R3, rarity: 'Rare', unidentifiedItemTier: 2 })).toBe('Show')
   })
+
+  it('drops base names a share code could break the filter with', () => {
+    const g = normalizeGear({ moves: { 'Vaal Regalia"\nShow\n\tBaseType "Mirror of Kalandra': 'r1', 'Vaal Regalia': 'r1' }, build: { auto: true, extra: ['a"b', 'Hubris Circlet'], removed: ['x\ny'] } } as never)
+    expect(Object.keys(g.moves)).toEqual(['Vaal Regalia'])
+    expect(g.build.extra).toEqual(['Hubris Circlet'])
+    expect(g.build.removed).toEqual([])
+  })
+
+  it('keeps Never and ranked bases out of the unranked row\'s Always', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { g.moves['Twilight Regalia'] = 'never'; g.show.any.rare = 1; g.show.r3.rare = 4 }), [])
+    expect(vis(d, { ...R1, rarity: 'Rare' })).toBe('Hide')
+    expect(vis(d, { ...R3, rarity: 'Rare' })).toBe('Hide')
+    expect(vis(d, { ...ANY, rarity: 'Rare' })).toBe('Show')
+  })
+
+  it('keeps a ranked base below its line out of the unranked row', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { g.show.r3.rare = 4; g.show.any.rare = 2 }), [])
+    expect(vis(d, { ...R3, rarity: 'Rare', unidentifiedItemTier: 2 })).toBe('Hide')
+    expect(vis(d, { ...ANY, rarity: 'Rare', unidentifiedItemTier: 2 })).toBe('Show')
+  })
 })

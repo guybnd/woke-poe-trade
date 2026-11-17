@@ -50,7 +50,7 @@ export function defaultGear (): GearSettings {
     // Rare 3/4/5/4 is NeverSink 8.21 Very strict; readTiered gives the real
     // numbers for the file in use (gearDefaults).
     show: {
-      build: { magic: 0, rare: 2 },
+      build: { magic: 0, rare: 0 },
       exotic: { magic: 0, rare: 0 },
       r1: { magic: 3, rare: 3 },
       r2: { magic: 4, rare: 4 },
@@ -65,6 +65,10 @@ export function defaultGear (): GearSettings {
 }
 
 const LANES: Lane[] = ['r1', 'r2', 'r3', 'none', 'never']
+
+// A base name from a saved config or a share code ends up quoted in the
+// filter: a quote or a line break would write rules of its own.
+const safeName = (s: string) => s.length > 0 && s.length <= 200 && !/["\r\n]/.test(s)
 
 export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettings {
   const d = defaultGear()
@@ -82,9 +86,9 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
   if ((g as { exoticAlways?: unknown } | undefined)?.exoticAlways === true && !g?.show?.exotic) show.exotic = { magic: NO_TIER, rare: NO_TIER }
   const moves: Record<string, Lane> = {}
   if (g?.moves && typeof g.moves === 'object') {
-    for (const [base, lane] of Object.entries(g.moves)) if (LANES.includes(lane)) moves[base] = lane
+    for (const [base, lane] of Object.entries(g.moves)) if (LANES.includes(lane) && safeName(base)) moves[base] = lane
   }
-  const strings = (v: unknown) => Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x.length > 0))] : []
+  const strings = (v: unknown) => Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && safeName(x)))] : []
   return {
     on: typeof g?.on === 'boolean' ? g.on : false,
     show,
@@ -375,8 +379,8 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
 
   if (lists.never.length) {
     const from = src.cells.get(key('r3', 2))?.block ?? anchor
-    out.push(gearBlock(from, 'never', 'bases you never want at any drop tier', 'Hide', [
-      ...template, cond('UnidentifiedItemTier', '>=', [2]), rarityCondition(['magic', 'rare']), cond('BaseType', '==', lists.never)
+    out.push(gearBlock(from, 'never', 'bases you never want, any drop tier or none', 'Hide', [
+      ...template, rarityCondition(['magic', 'rare']), cond('BaseType', '==', lists.never)
     ], section))
   }
 
@@ -416,8 +420,10 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
       for (const { vis, rarities } of byDecision(r => {
         const v = g.show[rank][r]
         if (v && t >= v) return 'Show'
-        // Below the line: hidden, except where NeverSink leaves it to later rules.
-        return cell.live ? 'Hide' : null
+        // Below the line: hidden, except where NeverSink leaves it to later
+        // rules (and the unranked row wouldn't catch it there).
+        const a = g.show.any[r]
+        return cell.live || (a && t >= a) ? 'Hide' : null
       })) {
         out.push(gearBlock(cell.block, `${rank}-t${t}`, `rank ${rank.slice(1)} bases, drop tier ${t}`, vis, [
           ...template, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities), cond('BaseType', '==', bases)
@@ -451,7 +457,19 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   if (build.length) noTier('build', build, src.cells.get(key('r1', 2))?.block ?? anchor, template)
   for (const rank of RANKS) if (lists[rank].length) noTier(rank, lists[rank], src.cells.get(key(rank, 2))?.block ?? anchor, template)
   const lowAny = src.any[src.any.length - 1]
-  if (lowAny) noTier('any', null, lowAny.block, copyConditions(lowAny.block))
+  if (lowAny) {
+    // Ranked bases without Always don't fall into the unranked row's Always.
+    for (const rank of RANKS) {
+      if (!lists[rank].length) continue
+      const rs = (['magic', 'rare'] as GearRarity[]).filter(r => g.show.any[r] === NO_TIER && g.show[rank][r] !== NO_TIER)
+      if (rs.length) {
+        out.push(gearBlock(src.cells.get(key(rank, 2))?.block ?? anchor, `${rank}-notier-hide`, `rank ${rank.slice(1)} bases with no drop tier`, 'Hide', [
+          ...template, rarityCondition(rs), cond('BaseType', '==', lists[rank])
+        ], section))
+      }
+    }
+    noTier('any', null, lowAny.block, copyConditions(lowAny.block))
+  }
 
   // Bases moved to Never come out of NeverSink's other gear rules' lists only
   // through this table: the Never rule sits first.

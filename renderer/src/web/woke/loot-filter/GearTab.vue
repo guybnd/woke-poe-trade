@@ -293,7 +293,11 @@ function change (fn: (x: GearSettings) => void) {
   const x = g.value
   if (!x.on) {
     const doc = props.store.doc.value
-    if (doc && readTiered(doc)) x.show = gearDefaults(doc).show
+    if (doc && readTiered(doc)) {
+      const d = gearDefaults(doc)
+      x.show = d.show
+      if (!x.quality.on) x.quality.min.any = d.quality.min.any
+    }
     x.on = true
   }
   fn(x)
@@ -589,6 +593,8 @@ function moveTo (lane: Lane | 'build' | 'unbuild') {
   change(x => {
     if (lane === 'build') {
       x.build.removed = x.build.removed.filter(b => !bases.includes(b))
+      // Out of Never, or the build lane would drop it again.
+      x.moves = Object.fromEntries(Object.entries(x.moves).filter(([b, l]) => !(l === 'never' && bases.includes(b))))
       x.build.extra = [...new Set([...x.build.extra, ...bases.filter(b => !autoBases.value.includes(b))])]
       return
     }
@@ -606,6 +612,7 @@ function moveTo (lane: Lane | 'build' | 'unbuild') {
     x.moves = moves
   })
   picked.value = []
+  lastPick = null
 }
 
 // Armour your build doesn't wear (by defence) and weapons it doesn't use.
