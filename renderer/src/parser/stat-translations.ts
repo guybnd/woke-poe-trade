@@ -88,6 +88,9 @@ function * _statPlaceholderGenerator (stat: string) {
   }> = []
   const withPlaceholders = stat
     .replace(/\(\)/gm, '') // when GGG didn't provide advanced desc, like in "Passives in Radius of Wicked Ward() can be Allocated"
+    // woke: 3.30 folds a long option list to "(...)": "Maximum number of
+    // Summoned Golems(...) is Doubled". The plain text is then the stat's.
+    .replace(/\(\.\.\.\)/gm, '')
     .replace(/(?<value>(?<!\d|\))[+-]?\d+(?:\.\d+)?)(?:\((?<min>.[^)-]*)(?:-(?<max>[^)]+))?\))?/gm, (_, roll: string, min?: string, max?: string) => {
       if (min != null && max == null) {
         // example: Sextant "# uses remaining", legacy rolls
