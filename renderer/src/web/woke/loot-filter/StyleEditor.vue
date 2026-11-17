@@ -3,7 +3,7 @@
     <div :class="$style.preview">
       <LabelPreview :text="previewText" :style-override="shown" :visibility="visibility" :scale="1.3" />
     </div>
-    <WSegmented :model-value="visibility" :options="visibilityOptions" @update:model-value="emit('visibility', $event as Visibility)" />
+    <WSegmented v-if="!lookOnly" :model-value="visibility" :options="visibilityOptions" @update:model-value="emit('visibility', $event as Visibility)" />
 
     <div :class="$style.grid">
       <span class="w-dim">Size<button v-if="changed('fontSize')" type="button" :class="$style.mark" :title="`Back to ${source?.fontSize ?? DEFAULT_FONT}`" aria-label="Reset size" @click="reset('fontSize')" /></span>
@@ -138,7 +138,9 @@ const props = withDefaults(defineProps<{
   copyFrom?: Array<{ tier: string, look: StylePatch, label?: string }>
   // The look in the filter as it came: settings that differ get a reset dot.
   source?: StylePatch | null
-}>(), { copyFrom: () => [], source: null })
+  // Only the look: no Show / Hide switch (the Gear table decides that).
+  lookOnly?: boolean
+}>(), { copyFrom: () => [], source: null, lookOnly: false })
 
 const emit = defineEmits<{
   (e: 'patch', patch: StylePatch): void

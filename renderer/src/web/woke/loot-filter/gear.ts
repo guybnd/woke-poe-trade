@@ -9,6 +9,8 @@
 // is on) are commented out and rules built from the table take their place,
 // with NeverSink's own looks (your restyles included) for each rank and tier.
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc } from './parse'
+import { applyStyle, isPatch } from './edits'
+import type { StylePatch } from './edits'
 
 export const GEAR_TYPE = 'woke->gear'
 
@@ -33,6 +35,9 @@ export interface GearSettings {
   moves: Record<string, Lane>
   // Build lane: the PoB build's rare bases (auto), plus your own, minus removed.
   build: { auto: boolean, extra: string[], removed: string[] }
+  // Labels the table shows: the game's rarity colour for the text (NeverSink
+  // paints magic and rare alike), and your own look per rarity on top.
+  look: { rarityText: boolean, magic: StylePatch, rare: StylePatch }
 }
 
 export function defaultGear (): GearSettings {
@@ -49,7 +54,8 @@ export function defaultGear (): GearSettings {
     },
     quality: { on: false, min: { build: 21, r1: 24, r2: 24, r3: 28, any: 30 } },
     moves: {},
-    build: { auto: true, extra: [], removed: [] }
+    build: { auto: true, extra: [], removed: [] },
+    look: { rarityText: true, magic: {}, rare: {} }
   }
 }
 
@@ -81,6 +87,11 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
       auto: typeof g?.build?.auto === 'boolean' ? g.build.auto : true,
       extra: strings(g?.build?.extra),
       removed: strings(g?.build?.removed)
+    },
+    look: {
+      rarityText: typeof g?.look?.rarityText === 'boolean' ? g.look.rarityText : true,
+      magic: isPatch(g?.look?.magic) ? { ...g!.look!.magic } : {},
+      rare: isPatch(g?.look?.rare) ? { ...g!.look!.rare } : {}
     }
   }
 }
@@ -280,16 +291,28 @@ function rarityCondition (rs: GearRarity[]): FilterCondition {
 }
 
 // Splits two rarities into Show / Hide / leave (to later rules) groups.
+// Shown rarities with looks of their own stay apart.
+let splitShown = false
 function byDecision (decide: (r: GearRarity) => 'Show' | 'Hide' | null): Array<{ vis: 'Show' | 'Hide', rarities: GearRarity[] }> {
   const out: Array<{ vis: 'Show' | 'Hide', rarities: GearRarity[] }> = []
   for (const r of ['magic', 'rare'] as GearRarity[]) {
     const vis = decide(r)
     if (!vis) continue
-    const same = out.find(o => o.vis === vis)
+    const same = out.find(o => o.vis === vis && !(vis === 'Show' && splitShown))
     if (same) same.rarities.push(r)
     else out.push({ vis, rarities: [r] })
   }
   return out
+}
+
+// The table's look on a shown block: rarity text colour, then your patch.
+function lookUp (b: FilterBlock, g: GearSettings): void {
+  const rarity = b.conditions.find(c => c.key === 'Rarity')?.values ?? []
+  if (g.look.rarityText) b.actions = b.actions.filter(a => a.key !== 'SetTextColor')
+  const only: GearRarity | null = rarity.includes('Magic') && !rarity.includes('Rare') ? 'magic' : rarity.includes('Rare') && !rarity.includes('Magic') ? 'rare' : null
+  // Both rarities in one block only when their looks are the same.
+  const patch = only ? g.look[only] : g.look.rare
+  if (Object.keys(patch).length) applyStyle(b, patch)
 }
 
 function insertAt (doc: FilterDoc, before: FilterBlock | null, blocks: FilterBlock[]): void {
@@ -315,6 +338,7 @@ export interface GearResult {
 export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): GearResult {
   const res: GearResult = { blocks: 0, replaced: 0 }
   if (!g.on) return res
+  splitShown = JSON.stringify(g.look.magic) !== JSON.stringify(g.look.rare)
   const src = readTiered(doc)
   if (!src) return res
   const lists = rankLists(src, g)
@@ -379,6 +403,7 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
 
   // Bases moved to Never come out of NeverSink's other gear rules' lists only
   // through this table: the Never rule sits first.
+  for (const b of out) if (b.visibility === 'Show') lookUp(b, g)
   src.replaced.forEach(retire)
   insertAt(doc, src.at, out)
   res.blocks += out.length

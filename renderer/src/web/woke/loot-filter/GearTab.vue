@@ -52,6 +52,31 @@
 
       <div :class="$style.card">
         <div class="flex items-center gap-2">
+          <span>Looks</span>
+          <WInfo text="How the table's labels look. NeverSink gives magic and rare gear the same colours; here each rarity can look its own way. Each row and drop tier keeps NeverSink's size and sound." />
+          <WToggle :model-value="g.look.rarityText" style="margin-left: 8px;" @update:model-value="v => change(x => { x.look.rarityText = v })">Game's rarity colour for the text</WToggle>
+        </div>
+        <div :class="$style.looks">
+          <div v-for="r in RARITIES" :key="r" :class="$style.lookCol">
+            <div class="flex items-center gap-2">
+              <b :style="{ color: r === 'magic' ? '#a8a8ff' : '#f3e27a' }">{{ r === 'magic' ? 'Magic' : 'Rare' }}</b>
+              <WButton size="sm" @click="editing = editing === r ? null : r">{{ editing === r ? 'Done' : 'Change look' }}</WButton>
+              <WButton v-if="Object.keys(g.look[r]).length" size="sm" variant="ghost" @click="change(x => { x.look[r] = {} })">Reset</WButton>
+            </div>
+            <div class="flex flex-wrap gap-2 items-end">
+              <span v-for="t in [5, 3]" :key="t" class="flex flex-col items-start gap-1">
+                <LabelPreview :text="sampleBase(r)" :actions="sampleActions(r, t)" :extras="false" :default-text="r === 'magic' ? [136, 136, 255, 255] : [255, 255, 119, 255]" :scale="1.1" />
+                <span class="w-faint text-xs">rank 1, tier {{ t }}</span>
+              </span>
+            </div>
+            <StyleEditor v-if="editing === r" look-only :look="sampleLook(r)" visibility="Show" :preview-text="sampleBase(r)"
+              @patch="p => change(x => { x.look[r] = { ...x.look[r], ...p } })" />
+          </div>
+        </div>
+      </div>
+
+      <div :class="$style.card">
+        <div class="flex items-center gap-2">
           <WToggle :model-value="g.quality.on" @update:model-value="setQualityOn">Over-quality bases</WToggle>
           <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down." />
         </div>
@@ -184,6 +209,10 @@ import { matchItem } from './match'
 import { defaultTextColour } from './drops'
 import { ruleLabel } from './parse'
 import LabelPreview from './LabelPreview.vue'
+import StyleEditor from './StyleEditor.vue'
+import { applyStyle as applyStyleTo, readStyle } from './edits'
+import type { StylePatch } from './edits'
+import type { FilterAction } from './parse'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -341,6 +370,25 @@ function countText (c: Count): string {
   if (c.n >= universe.value.length - lists.value.never.length) return `all ${c.n} bases`
   const order = GEAR_ROWS.filter(r => c.rows.includes(r)).map(r => SHORT_ROW[r])
   return `${c.n} bases · ${order.join(', ')}`
+}
+
+// ---- Looks: samples from NeverSink's rank 1 rules with the table's look ----
+const editing = ref<GearRarity | null>(null)
+function sampleBase (r: GearRarity): string {
+  return lists.value.r1[r === 'magic' ? 1 : 0] ?? 'Twilight Regalia'
+}
+function sampleActions (r: GearRarity, t: number): FilterAction[] {
+  const block = source.value?.cells.get(`r1:${t}`)?.block
+  let acts = (block?.actions ?? []).map(a => ({ key: a.key, args: [...a.args] }))
+  if (g.value.look.rarityText) acts = acts.filter(a => a.key !== 'SetTextColor')
+  const patch: StylePatch = g.value.look[r]
+  if (!Object.keys(patch).length) return acts
+  const tmp = { actions: acts } as unknown as Parameters<typeof applyStyleTo>[0]
+  applyStyleTo(tmp, patch)
+  return tmp.actions
+}
+function sampleLook (r: GearRarity): StylePatch {
+  return readStyle(sampleActions(r, 5))
 }
 
 // ---- Test drops: a pile of gear through the filter as built ----
@@ -591,6 +639,17 @@ function neverOffBuild () {
   position: relative;
   padding: 0 6px;
   line-height: calc(1.5rem * var(--w-text-scale, 1));
+}
+.looks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.lookCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 .pileHead {
   font-size: var(--w-fs-xs, 12px);

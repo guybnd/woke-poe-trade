@@ -170,4 +170,17 @@ describe('gear table', () => {
     const g = gearDefaults(d)
     expect(g.quality.min.any).toBeLessThanOrEqual(src.quality.anyMin || 30)
   })
+
+  it('gives magic and rare their own looks', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { g.look.magic = { border: [80, 80, 255, 255] } }), [])
+    const magic = matchItem(d, item({ ...R1, rarity: 'Magic', unidentifiedItemTier: 5 }))
+    const rare = matchItem(d, item({ ...R1, rarity: 'Rare', unidentifiedItemTier: 5 }))
+    expect(magic.visibility).toBe('Show')
+    expect(magic.final!.block).not.toBe(rare.final!.block)
+    expect(magic.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).toEqual(['80', '80', '255'])
+    // The game's rarity colour for the text: NeverSink's text colour is gone.
+    expect(rare.actions.some(a => a.key === 'SetTextColor')).toBe(false)
+    expect(rare.actions.find(a => a.key === 'SetBorderColor')?.args.slice(0, 3)).not.toEqual(['80', '80', '255'])
+  })
 })
