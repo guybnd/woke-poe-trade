@@ -13,8 +13,8 @@
         </div>
       </template>
     </DockItem>
-    <!-- One click listener for the panel's own buttons and every row's pencil and bin (data-act). -->
-    <WPanel ref="panel" :keys="windowKeys.help" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
+    <!-- One click listener for the panel's own buttons (data-act). -->
+    <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
         <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
@@ -22,56 +22,39 @@
 
       <RegexEntryForm v-if="editing === 'new'" :key="'new'" :entry="newDraft" @save="saveEntry" @cancel="editing = null" />
 
-      <div v-if="folderAt && !searching" :class="$style.crumbs">
-        <button type="button" class="w-focusable" title="Back up a folder" @click="folderAt = folderAt.split('/').slice(0, -1).join('/')"><i class="fas fa-chevron-left" /></button>
-        <button type="button" class="w-focusable" @click="folderAt = ''">All</button>
-        <template v-for="(part, i) in folderAt.split('/')" :key="i">
-          <span class="w-faint">›</span>
-          <button type="button" class="w-focusable w-trunc" @click="folderAt = folderAt.split('/').slice(0, i + 1).join('/')">{{ part }}</button>
+      <!-- The list (shared/SavedTree): folders that fold, drag, Ctrl / Shift
+           picks, Alt + arrows, F2 rename. A click searches the stash. -->
+      <SavedTree :tree="tree" list-id="regex-folders" :active-id="selectedId" :editor-for="typeof editing === 'number' ? editing : null"
+        :copy="copyMany" :title-of="tooltip" :sub-for="e => !!e.name" @item-menu="rowMenu" @folder-menu="folderMenu">
+        <template #editor="{ item: entry }">
+          <RegexEntryForm :entry="entry" @save="saveEntry" @cancel="editing = null" />
         </template>
-      </div>
-      <WListItem v-for="f in folders" :key="f.path" @select="folderAt = f.path" :class="$style.folder">
-        <i class="fas fa-folder w-accent" />
-        <span class="w-trunc">{{ f.name }}</span>
-        <span class="ml-auto w-num w-faint text-xs">{{ f.count }}</span>
-        <i class="fas fa-chevron-right w-faint text-xs" />
-      </WListItem>
-      <template v-for="group in groups" :key="group.category">
-        <div v-if="group.label" class="w-group-label">{{ group.label }}</div>
-        <template v-for="entry in group.entries" :key="entry.id">
-        <RegexEntryForm v-if="editing === entry.id" :entry="entry" @save="saveEntry" @cancel="editing = null" />
-        <WListItem v-else :class="$style.row" :title="tooltip(entry)" @select="stashSearch(effectiveText(entry))"
-          @contextmenu="rowMenu($event, entry)" @keydown="rowKeys({ remove: () => remove(entry), copy: () => copy(entry), rename: () => edit(entry) })($event)">
+        <template #item="{ item: entry }">
           <span class="w-trunc">{{ entry.name || effectiveText(entry) }}</span>
           <WChip v-if="entry.negate && canNegate(entry.text)" title="Highlights items WITHOUT this">not</WChip>
           <WChip v-for="tag in entry.tags.slice(0, 2)" :key="tag">{{ tag }}</WChip>
           <span v-if="entry.patch && entry.patch !== GAME_PATCH" class="text-xs shrink-0" style="color: var(--w-warn);" :title="`Saved in ${entry.patch}: mods may be worded differently in ${GAME_PATCH}`">{{ entry.patch }}</span>
           <span v-if="effectiveText(entry).length > MAX_SEARCH_LENGTH" class="w-down text-xs shrink-0" title="Too long: the game cuts the search off at 250 characters">{{ effectiveText(entry).length }}/{{ MAX_SEARCH_LENGTH }}</span>
           <WKbd v-if="entry.hotkey && config.enableHotkeys" :keys="entry.hotkey" class="ml-auto" />
-          <template v-if="entry.name" #sub><span class="w-mono">{{ effectiveText(entry) }}</span></template>
-          <template #actions>
-            <button :class="$style.hoverOnly" class="w-icon-btn" title="Edit" data-qa="regex-edit" data-act="edit" :data-id="entry.id">
-              <i class="fas fa-pen" />
-            </button>
-            <button :class="$style.hoverOnly" class="w-icon-btn" title="Remove (Undo for a moment after)" data-qa="regex-remove" data-act="remove" :data-id="entry.id">
-              <i class="far fa-trash-alt" />
-            </button>
-            <button @click="copy(entry)" class="w-icon-btn" :class="{ 'w-up': copied === String(entry.id) }" title="Copy to clipboard">
-              <i :class="copied === String(entry.id) ? 'fas fa-check' : 'far fa-copy'" />
-            </button>
-          </template>
-        </WListItem>
         </template>
-      </template>
-      <WEmpty v-if="!groups.length && !folders.length && config.entries.length && searching" icon="fas fa-filter">
+        <template #sub="{ item: entry }"><span class="w-mono">{{ effectiveText(entry) }}</span></template>
+        <template #actions="{ item: entry }">
+          <button :class="$style.hoverOnly" class="w-icon-btn" title="Edit" data-qa="regex-edit" @click.stop="edit(entry)">
+            <i class="fas fa-pen" />
+          </button>
+          <button :class="$style.hoverOnly" class="w-icon-btn" title="Remove (Undo for a moment after)" data-qa="regex-remove" @click.stop="remove(entry)">
+            <i class="far fa-trash-alt" />
+          </button>
+          <button @click.stop="copy(entry)" class="w-icon-btn" :class="{ 'w-up': copied === String(entry.id) }" title="Copy to clipboard">
+            <i :class="copied === String(entry.id) ? 'fas fa-check' : 'far fa-copy'" />
+          </button>
+        </template>
+      </SavedTree>
+      <WEmpty v-if="!tree.rows.value.length && config.entries.length && searching" icon="fas fa-filter">
         Nothing matches "{{ filter }}".
         <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
       </WEmpty>
-      <WEmpty v-else-if="!groups.length && !folders.length && folderAt" icon="fas fa-folder-open">
-        Nothing in this folder yet.
-        <template #actions><WButton size="sm" @click="folderAt = ''">Back to all</WButton></template>
-      </WEmpty>
-      <WEmpty v-else-if="!groups.length && !folders.length && editing !== 'new'" :art="{ mechanic: 'stash' }">
+      <WEmpty v-else-if="!config.entries.length && !(config.folders ?? []).length && editing !== 'new'" :art="{ mechanic: 'stash' }">
         No saved searches yet. Add one, or build one on poe.re and save it from there.
         <template #actions>
           <WButton size="sm" icon="fas fa-plus" data-act="new">New</WButton>
@@ -102,12 +85,15 @@ import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast } from '../ui'
-import { useWindowKeys } from '../ui/window-keys'
-import { removeEntry, rowKeys } from '../shared/saved-list'
+import { WPanel, WField, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
+import { removeEntries } from '../shared/saved-list'
+import { useSavedTree } from '../shared/use-saved-tree'
+import { isUnder } from '../shared/saved-tree'
+import SavedTree from '../shared/SavedTree.vue'
+import { ATLAS_FOLDER, POB_FOLDER } from './folder-names'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
-import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, categoryLabel, categoryView, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
+import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, matchesFilter } from './widget'
 import type { RegexEntry } from './widget'
 import DockItem from '../dock/DockItem.vue'
 import { saveDock } from '../dock/dock'
@@ -138,20 +124,9 @@ const editing = shallowRef<number | 'new' | null>(null)
 const newDraft = shallowRef<RegexEntry>(emptyEntry([]))
 const { copied, copy: copyText } = useCopy(1200)
 
-// The folder you're in: categories with "/" nest (Atlas strategies and PoB
-// builds keep theirs there). A search looks through every folder.
-const folderAt = shallowRef('')
 const searching = computed(() => filter.value.trim().length > 0)
-// The entry open in the form stays listed while you filter, so its edits aren't lost.
-const view = computed(() => {
-  if (searching.value) {
-    const hits = props.config.entries.filter(e => e.id === editing.value || matchesFilter(e, filter.value))
-    return { folders: [], groups: groupByCategory(hits).map(g => ({ ...g, label: categoryLabel(g.category) })) }
-  }
-  return categoryView(props.config.entries, folderAt.value)
-})
-const folders = computed(() => view.value.folders)
-const groups = computed(() => view.value.groups)
+// The open (last clicked) string: new ones go in its folder.
+const selectedId = shallowRef<number | null>(null)
 
 const zone = useZone()
 const dockShow = computed(() => props.config.entries.length > 0 && (zone.kind === 'town' || zone.kind === 'hideout'))
@@ -176,15 +151,53 @@ async function copy (entry: RegexEntry) {
 }
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-// The mouse's back button goes up a folder, like the crumbs' arrow.
-const windowKeys = useWindowKeys(() => panel.value?.el, { back: () => { if (!searching.value) folderAt.value = folderAt.value.split('/').slice(0, -1).join('/') } })
 
-function startNew () {
+// Atlas strategies and PoB builds file their regexes in folders of their own.
+const isLocked = (path: string) => [ATLAS_FOLDER, POB_FOLDER].some(root => isUnder(path, root))
+
+// The list's folders (categories with "/" nest), picking, drag and drop,
+// Alt + arrows and inline names: shared/use-saved-tree, as Atlas strategies.
+const tree = useSavedTree<RegexEntry>({
+  root: () => panel.value?.el,
+  items: () => props.config.entries,
+  setItems: (list) => { props.config.entries = list; pushHostConfig() },
+  folderOf: e => e.category,
+  setFolder: (e, folder) => { e.category = folder },
+  nameOf: e => e.name || effectiveText(e),
+  setName: (e, name) => { e.name = name },
+  extraFolders: () => props.config.folders ?? [],
+  setExtraFolders: (list) => { props.config.folders = list },
+  folderOrder: () => props.config.folderOrder,
+  setFolderOrder: (order) => { props.config.folderOrder = order },
+  closed: () => props.config.closedFolders ?? [],
+  setClosed: (list) => { props.config.closedFolders = list },
+  query: () => filter.value,
+  // The entry open in the form stays listed while you filter, so its edits aren't lost.
+  matches: (e, q) => e.id === editing.value || matchesFilter(e, q),
+  selected: () => selectedId.value,
+  select: (id) => { selectedId.value = id },
+  open: (e) => { stashSearch(effectiveText(e)) },
+  remove: (list) => { removeMany(list) },
+  note: (text) => { toast(text, { anchor: panel.value?.el }) },
+  folderLocked: path => isLocked(path)
+    ? 'Atlas strategies and PoB builds keep their regexes in this folder: rename or move them there'
+    : null
+})
+
+function copyMany (list: RegexEntry[]) {
+  if (list.length === 1) { copy(list[0]).catch(() => {}); return }
+  copyText(list.map(effectiveText).join('\n'), 'many').catch(() => {})
+}
+function startNew (inFolder?: string) {
   // A new entry lands in the category you're filtering by, if that's one.
   const cats = new Set(props.config.entries.map(e => e.category).filter(Boolean))
   const draft = emptyEntry(props.config.entries)
   if (cats.has(filter.value.trim())) draft.category = filter.value.trim()
-  else if (folderAt.value && !searching.value) draft.category = folderAt.value
+  else if (inFolder != null) draft.category = inFolder
+  else {
+    const open = props.config.entries.find(e => e.id === selectedId.value)
+    if (open && !searching.value) draft.category = open.category
+  }
   newDraft.value = draft
   editing.value = 'new'
 }
@@ -197,11 +210,7 @@ function onAction (e: MouseEvent) {
   const btn = (e.target as Element).closest<HTMLElement>('[data-act]')
   if (!btn) return
   if (btn.dataset.act === 'new') { startNew(); return }
-  if (btn.dataset.act === 'poe-re') { openPoeRe(); return }
-  const entry = props.config.entries.find(x => String(x.id) === btn.dataset.id)
-  if (!entry) return
-  if (btn.dataset.act === 'edit') edit(entry)
-  else if (btn.dataset.act === 'remove') remove(entry)
+  if (btn.dataset.act === 'poe-re') openPoeRe()
 }
 
 function saveEntry (entry: RegexEntry) {
@@ -228,30 +237,80 @@ function openPoeRe () {
 
 // No "are you sure": remove now, offer Undo (P9), which puts back just this
 // entry where it was (shared/saved-list): edits and saves made since stay.
-function remove (entry: RegexEntry) {
-  if (editing.value === entry.id) editing.value = null
-  const out = removeEntry(props.config.entries, entry.id)
+function remove (entry: RegexEntry) { removeMany([entry]) }
+
+function removeMany (list: RegexEntry[]) {
+  if (typeof editing.value === 'number' && list.some(e => e.id === editing.value)) editing.value = null
+  const out = removeEntries(props.config.entries, list.map(e => e.id))
   if (!out) return
   props.config.entries = out.list
+  tree.forgetPicks(list.map(e => e.id))
   pushHostConfig()
-  toast(`Removed "${entry.name || effectiveText(entry)}"`, {
+  const text = list.length === 1 ? `Removed "${list[0].name || effectiveText(list[0])}"` : `Removed ${list.length} strings`
+  toast(text, {
     anchor: panel.value?.el,
     undo: () => {
-      props.config.entries = out.restore(props.config.entries, () => emptyEntry(props.config.entries).id)
+      props.config.entries = out.restore(props.config.entries, l => emptyEntry([...l]).id)
       pushHostConfig()
     }
   })
 }
 
 function rowMenu (e: MouseEvent, entry: RegexEntry) {
+  const group = tree.groupOf(entry)
+  if (group.length > 1) {
+    openMenu(e, [
+      { label: `Move ${group.length} to folder`, icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move', group.map(g => g.id)) },
+      { label: 'Copy strings', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => copyMany(group) },
+      { separator: true },
+      { label: `Remove ${group.length} strings`, icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => removeMany(group) }
+    ])
+    return
+  }
   openMenu(e, [
     { label: 'Search stash', icon: 'fas fa-search', keys: 'Enter', action: () => stashSearch(effectiveText(entry)) },
-    { label: 'Copy string', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => { copy(entry) } },
-    { label: 'Edit', icon: 'fas fa-pen', keys: 'F2', action: () => edit(entry) },
+    { label: 'Copy string', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => { copy(entry).catch(() => {}) } },
+    { label: 'Edit', icon: 'fas fa-pen', action: () => edit(entry) },
+    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
+    { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move') },
     ...(entry.tags.length ? [{ label: `Filter by "${entry.tags[0]}"`, icon: 'fas fa-filter', action: () => { filter.value = entry.tags[0] } }] : []),
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => remove(entry) }
   ])
+}
+
+function folderMenu (e: MouseEvent, path: string) {
+  const locked = isLocked(path)
+  openMenu(e, [
+    { label: 'New string here', icon: 'fas fa-plus', action: () => startNew(path) },
+    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => tree.startFolder(path) },
+    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', disabled: locked, action: () => tree.startEdit('folder', path, 'rename') },
+    { label: 'Move', icon: 'fas fa-folder-open', disabled: locked, action: () => tree.startEdit('folder', path, 'move') },
+    { separator: true },
+    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => tree.sortFolder(path) },
+    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
+    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll },
+    { separator: true },
+    { label: 'Remove folder', icon: 'fas fa-trash', danger: true, disabled: locked, action: () => removeFolder(path) }
+  ])
+}
+
+// Takes the folder and every string in it; Undo puts all of it back.
+function removeFolder (path: string) {
+  const inIt = tree.inFolder(path)
+  const goneFolders = (props.config.folders ?? []).filter(f => isUnder(f, path))
+  const out = removeEntries(props.config.entries, inIt.map(e => e.id))
+  if (out) props.config.entries = out.list
+  props.config.folders = (props.config.folders ?? []).filter(f => !goneFolders.includes(f))
+  pushHostConfig()
+  toast(inIt.length ? `Removed "${path}" and ${inIt.length} ${inIt.length === 1 ? 'string' : 'strings'}` : `Removed "${path}"`, {
+    anchor: panel.value?.el,
+    undo: () => {
+      if (out) props.config.entries = out.restore(props.config.entries, l => emptyEntry([...l]).id)
+      props.config.folders = [...new Set([...(props.config.folders ?? []), ...goneFolders])]
+      pushHostConfig()
+    }
+  })
 }
 
 function tooltip (entry: RegexEntry) {
@@ -281,16 +340,5 @@ const dockMenu = computed<DockMenuAction[]>(() => [
 <style module>
 /* Mock A: pencil and bin show on the row under the mouse (or with focus). */
 .hoverOnly { visibility: hidden; }
-.row:hover .hoverOnly, .row:focus-within .hoverOnly { visibility: visible; }
-.crumbs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 4px var(--w-pad);
-  font-size: var(--w-fs-sm);
-  color: var(--w-dim);
-}
-.crumbs button:hover { color: var(--w-fg); }
-.folder i { flex: none; }
+[data-row]:hover .hoverOnly, [data-row]:focus-within .hoverOnly { visibility: visible; }
 </style>

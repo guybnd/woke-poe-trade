@@ -34,6 +34,20 @@ const LISTS: ListUnderTest[] = [
       })
       return overlay.widget('woke-atlas-strategies')
     }
+  },
+  {
+    name: 'Regex library',
+    async open (overlay) {
+      await overlay.boot({
+        overlayActive: true,
+        patch: c => {
+          const w = c.widgets.find((x: { wmType: string }) => x.wmType === 'woke-regex-library')
+          w.wmWants = 'show'
+          w.entries = SEED.map(s => ({ id: s.id, name: s.name, text: s.name.toLowerCase(), category: s.folder, tags: [], notes: '', hotkey: null }))
+        }
+      })
+      return overlay.widget('woke-regex-library')
+    }
   }
 ]
 
@@ -76,14 +90,15 @@ for (const list of LISTS) {
     await expect(row(w, 's:3')).toBeVisible()
     expect((await order(w)).slice(0, 3)).toEqual(['s:1', 's:2', 's:3'])
 
-    // Ctrl and Shift pick several.
+    // Ctrl and Shift pick several (a plain click is each list's own: Regex
+    // library searches the stash with it).
     const picked = w.locator('[data-row][class*="picked"]')
-    await row(w, 's:1').click()
+    await row(w, 's:1').click({ modifiers: ['Control'] })
     await row(w, 's:3').click({ modifiers: ['Shift'] })
     await expect(picked).toHaveCount(3)
     await row(w, 's:2').click({ modifiers: ['Control'] })
     await expect(picked).toHaveCount(2)
-    await row(w, 's:1').click()
+    await row(w, 's:1').click({ modifiers: ['Control'] })
     await expect(picked).toHaveCount(0)
 
     // Alt + Down moves an item past its neighbour.

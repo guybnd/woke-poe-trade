@@ -444,7 +444,7 @@ function remove (entry: TradeSearchEntry) {
   pushHostConfig()
   toast(`Removed "${entry.name || 'search'}"`, {
     anchor: panel.value?.el,
-    undo: () => { props.config.entries = out.restore(props.config.entries, () => nextId(props.config.entries)); pushHostConfig() }
+    undo: () => { props.config.entries = out.restore(props.config.entries, l => nextId([...l])); pushHostConfig() }
   })
 }
 

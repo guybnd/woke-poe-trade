@@ -1,5 +1,8 @@
 <template>
-  <div :class="$style.rows" data-rows @dragover="tree.dragOver" @drop="tree.dropHere" @dragleave="tree.dragLeave">
+  <!-- One listener per kind for every row (perf: a long list adds up). -->
+  <div :class="$style.rows" data-rows @dragover="tree.dragOver" @drop="tree.dropHere" @dragleave="tree.dragLeave"
+    @dragstart="onRow($event, row => tree.dragStart($event as DragEvent, row))" @dragend="tree.dragEnd" @click="onClick" @dblclick="onDblClick"
+    @contextmenu="onMenu" @keydown="onKey">
     <template v-for="row in tree.rows.value" :key="row.key">
       <div v-if="tree.editing.value && tree.editing.value.key === row.key" :class="$style.editRow" :style="rowStyle(row.depth)">
         <span class="w-faint text-xs whitespace-nowrap">{{ tree.editing.value.kind === 'move' ? 'Folder' : 'Name' }}</span>
@@ -8,20 +11,18 @@
           @keydown.enter.prevent="tree.finishEdit" @keydown.esc.prevent="tree.cancelEdit" @blur="tree.finishEdit">
       </div>
       <button v-else-if="row.kind === 'folder'" type="button" :class="[$style.folder, $style.row, mark(row.key), { [$style.nested]: row.depth > 0 }]" class="w-focusable" :style="rowStyle(row.depth)"
-        :data-row="row.key" :aria-expanded="row.open" :draggable="true" @dragstart="tree.dragStart($event, row)" @dragend="tree.dragEnd"
-        @click="tree.toggleFolder(row.node.path)" @contextmenu="emit('folder-menu', $event, row.node.path)"
-        @keydown.f2.prevent="tree.startEdit('folder', row.node.path, 'rename')" @keydown="tree.folderAltKeys($event, row.node.path)">
+        :data-row="row.key" :aria-expanded="row.open" :draggable="true">
         <i class="fas text-xs" :class="row.open ? 'fa-chevron-down' : 'fa-chevron-right'" />
         <span class="w-trunc">{{ row.node.name }}</span>
         <span class="ml-auto w-num">{{ row.node.total }}</span>
       </button>
       <div v-else-if="row.kind === 'new-folder'" />
+      <slot v-else-if="editorFor != null && row.item.id === editorFor" name="editor" :item="row.item" />
       <WListItem v-else :active="active(row.item)" :class="[$style.row, mark(row.key), { [$style.picked]: tree.isPicked(row.item.id), [$style.nested]: row.depth > 0 }]" :style="rowStyle(row.depth)"
-        :data-row="row.key" :draggable="true" @dragstart="tree.dragStart($event, row)" @dragend="tree.dragEnd"
-        @click="tree.rowClick($event, row.item)" @dblclick="emit('open', row.item)" @contextmenu="emit('item-menu', $event, row.item)"
-        @keydown="onItemKey($event, row.item)">
+        :data-row="row.key" :draggable="true" :title="titleOf?.(row.item)">
         <slot name="item" :item="row.item" />
-        <template v-if="$slots.sub" #sub><slot name="sub" :item="row.item" /></template>
+        <template v-if="$slots.sub && (subFor?.(row.item) ?? true)" #sub><slot name="sub" :item="row.item" /></template>
+        <template v-if="$slots.actions" #actions><slot name="actions" :item="row.item" /></template>
       </WListItem>
     </template>
     <div v-if="tree.drag.value" :class="[$style.tail, { [$style.dropTop]: tree.dropAt.value?.kind === 'top' }]" data-row="top" />
@@ -36,6 +37,7 @@
 import { computed, useCssModule } from 'vue'
 import WListItem from '../ui/WListItem.vue'
 import type { SavedTree } from './use-saved-tree'
+import type { TreeRow } from './saved-tree'
 import { rowKeys } from './saved-list'
 
 const props = defineProps<{
@@ -46,6 +48,12 @@ const props = defineProps<{
   copy?: (items: T[]) => void
   // Enter / double click on an item, when a click only picks it.
   activeId?: number | null
+  // The item shown as its edit form (#editor) instead of its row.
+  editorFor?: number | null
+  // A row's tooltip.
+  titleOf?: (item: T) => string
+  // Whether an item has a second line (#sub).
+  subFor?: (item: T) => boolean
 }>()
 const emit = defineEmits<{
   'item-menu': [e: MouseEvent, item: T]
@@ -71,6 +79,38 @@ function rowStyle (depth: number) {
   return depth > 0
     ? { 'padding-left': indent(depth), '--guide': `calc(var(--w-pad) + ${(depth - 1) * 12 + 4}px)` }
     : { paddingLeft: indent(depth) }
+}
+
+// The row an event came from, by its data-row key.
+const byKey = computed(() => new Map(props.tree.rows.value.map(r => [r.key, r])))
+function rowOf (e: Event): TreeRow<T> | undefined {
+  const key = (e.target as Element | null)?.closest<HTMLElement>('[data-row]')?.dataset.row
+  return key ? byKey.value.get(key) : undefined
+}
+function onRow (e: Event, act: (row: TreeRow<T>) => void) {
+  const row = rowOf(e)
+  if (row) act(row)
+}
+function onClick (e: MouseEvent) {
+  const row = rowOf(e)
+  if (row?.kind === 'folder') props.tree.toggleFolder(row.node.path)
+  else if (row?.kind === 'item') props.tree.rowClick(e, row.item)
+}
+function onDblClick (e: MouseEvent) {
+  const row = rowOf(e)
+  if (row?.kind === 'item') emit('open', row.item)
+}
+function onMenu (e: MouseEvent) {
+  const row = rowOf(e)
+  if (row?.kind === 'folder') emit('folder-menu', e, row.node.path)
+  else if (row?.kind === 'item') emit('item-menu', e, row.item)
+}
+function onKey (e: KeyboardEvent) {
+  const row = rowOf(e)
+  if (row?.kind === 'item') onItemKey(e, row.item)
+  else if (row?.kind === 'folder') {
+    if (e.key === 'F2') { e.preventDefault(); props.tree.startEdit('folder', row.node.path, 'rename') } else props.tree.folderAltKeys(e, row.node.path)
+  }
 }
 
 function onItemKey (e: KeyboardEvent, item: T) {

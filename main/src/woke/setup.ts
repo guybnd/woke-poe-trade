@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import type { AppUpdater } from '../AppUpdater'
 import { appIconFile } from './app-icon'
-import { appPrefs, setAppPrefs } from './app-prefs'
+import { appPrefs, canRestartApp, restartApp, setAppPrefs } from './app-prefs'
 import type { AppPrefs } from './app-prefs'
 import { findGameLogs } from './game-log-finder'
 import { migration } from './user-data'
@@ -81,9 +81,14 @@ function canStartWithWindows () {
   return app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR
 }
 
+const GPU_AT_START = appPrefs().gpuDrawing
+
 function prefsView () {
   return {
     ...appPrefs(),
+    // What this run started with; gpuDrawing is what the next start uses.
+    gpuDrawingNow: GPU_AT_START,
+    canRestart: canRestartApp(),
     openAtLogin: canStartWithWindows() ? app.getLoginItemSettings().openAtLogin : false,
     canOpenAtLogin: canStartWithWindows(),
     canAutoUpdate: app.isPackaged && !process.env.PORTABLE_EXECUTABLE_DIR,
@@ -117,6 +122,7 @@ export function initSetup (appUpdater: AppUpdater) {
     return prefsView()
   })
   registerWokeHandler('setup-open', async () => { openSetupWindow(); return true })
+  registerWokeHandler('app-restart', async () => { restartApp(); return true })
   registerWokeHandler('setup-finish', async () => {
     setAppPrefs({ wizardShown: true })
     // Let the reply reach the page before it goes away.
