@@ -3,7 +3,7 @@ id: WOKEPOET-344
 title: >-
   Loot filter: redesign gear rules around rank, kind, drop tier, rarity,
   decorators
-status: Ready
+status: Done
 priority: Medium
 effort: L
 assignee: unassigned
@@ -87,7 +87,36 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-17T04:48:15.914Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Gear tab merged as 69758afa (PR #562). It has the drop tier table
+      (build/exotic/ranks/unranked × magic/rare), looks, over-quality, counts
+      with base lists, test drops linked to their rules, and Base ranks lanes.
+      Next ideas are mocked on the Gear canvas (F1 prices, F2 per-slot, F3 item
+      level), waiting on Guy's pick.
+    completionComment: true
+    date: '2026-11-17T05:06:11.684Z'
+    id: c-2026-11-17t05-06-11-684z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-17T05:06:12.362Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/562'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** One Gear view that shows what happens to every kind of gear drop (base rank × base kind × drop tier × rarity × decorators), instead of ~30 NeverSink groups where rarity is sometimes lumped. Waiting on Guy's pick of A/B/C.
 
