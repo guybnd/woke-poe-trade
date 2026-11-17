@@ -1,6 +1,5 @@
 import { reactive as deepReactive, shallowRef, toRaw } from 'vue'
 import { configForDisk } from './woke/shared/config-disk'
-import isDeepEqual from 'fast-deep-equal'
 import { Host } from '@/web/background/IPC'
 import { HostConfig, ShortcutAction } from '@ipc/types'
 import type * as widget from './overlay/widgets'
@@ -27,7 +26,9 @@ import { BOOKMARKS_TARGET } from './woke/item-lookup/lookup'
 import { registry as widgetRegistry } from './overlay/widget-registry.js'
 
 const _config = shallowRef<Config | null>(null)
-let _lastSavedConfig: Config | null = null
+// The last saved settings as JSON: comparing text is far cheaper than a deep
+// compare of the ~1 MB object.
+let _lastSavedText: string | null = null
 // woke: main echoes every save to every page, this one included. Our own echo
 // is older than what we hold (a panel mounting after the save has set itself
 // up since), so taking it would undo that.
@@ -58,9 +59,11 @@ export function saveConfig (opts?: { isTemporary: boolean }) {
     return
   }
 
-  if (!isDeepEqual(rawConfig, _lastSavedConfig)) {
-    _lastSavedConfig = JSON.parse(JSON.stringify(rawConfig))
-    const contents = JSON.stringify(AppConfig())
+  // One pass over the raw object: the config is about 1 MB with the loot
+  // filter's history, and going through the reactive proxies costs ~10x more.
+  const contents = JSON.stringify(rawConfig)
+  if (contents !== _lastSavedText) {
+    _lastSavedText = contents
     _ownSavesInFlight.push(contents)
     Host.sendEvent({
       name: 'CLIENT->MAIN::save-config',
@@ -104,7 +107,7 @@ export async function initConfig () {
     // Another page's save replaces what we hold, our own sent changes too.
     // Our echoes after it bring them back, so apply those as before.
     _ownSavesInFlight.length = 0
-    _lastSavedConfig = JSON.parse(e.contents) // should be a deep copy
+    _lastSavedText = e.contents
     updateConfig(JSON.parse(e.contents))
   })
 

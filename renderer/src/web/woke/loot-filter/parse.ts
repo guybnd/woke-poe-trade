@@ -369,6 +369,44 @@ export function formatBlock (b: FilterBlock): string[] {
   return out
 }
 
+// A copy to change freely: blocks, conditions and actions are new objects.
+// The source text lines (raw, chunk lines) are shared, as nothing changes
+// them after parsing. About 20x faster than parsing the text again.
+export function cloneDoc (doc: FilterDoc): FilterDoc {
+  const copies = new Map<FilterBlock, FilterBlock>()
+  const copy = (b: FilterBlock): FilterBlock => {
+    let c = copies.get(b)
+    if (!c) {
+      c = {
+        ...b,
+        conditions: b.conditions.map(x => ({ ...x, values: [...x.values] })),
+        actions: b.actions.map(a => ({ ...a, args: [...a.args] })),
+        ...(b.unlooked ? { unlooked: b.unlooked.map(a => ({ ...a, args: [...a.args] })) } : {})
+      }
+      copies.set(b, c)
+    }
+    return c
+  }
+  return {
+    ...doc,
+    chunks: doc.chunks.map(ch => ch.kind === 'raw' ? ch : copy(ch)),
+    blocks: doc.blocks.map(copy)
+  }
+}
+
+// The editor composes the same NeverSink text on every edit: parsed once,
+// then copied. Keeps the last two texts (your level and a compared one).
+const parsed: Array<{ text: string, doc: FilterDoc }> = []
+export function parseFilterCopy (text: string): FilterDoc {
+  let hit = parsed.find(p => p.text === text)
+  if (!hit) {
+    hit = { text, doc: parseFilter(text) }
+    parsed.unshift(hit)
+    parsed.length = Math.min(parsed.length, 2)
+  }
+  return cloneDoc(hit.doc)
+}
+
 export function serializeFilter (doc: FilterDoc, header?: string[]): string {
   const out: string[] = []
   for (const chunk of doc.chunks) {

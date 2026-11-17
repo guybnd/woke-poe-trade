@@ -1,5 +1,5 @@
 // Loads the source filter, applies the widget's edits, and saves the result.
-import { computed, onUnmounted, shallowRef, ref, watch } from 'vue'
+import { computed, onUnmounted, shallowRef, ref, toRaw, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import { hostRequest } from '../shared/host'
 import { customSoundsIn, installPackSounds } from './sounds'
@@ -9,13 +9,13 @@ import { basesWithoutDust, dustUniques } from '../disenchant/data'
 import { clearUndoToasts } from '../ui/layer'
 import { isTownLike } from '../campaign/log-parse'
 import { onGameLog } from '../shared/game-log'
-import { parseFilter, serializeFilter } from './parse'
+import { parseFilter, parseFilterCopy, serializeFilter } from './parse'
 import { composeFilter } from './compose'
 import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
 import { lookChanges } from './look'
 import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
-import { describeStep, observe, settingsAt } from './timeline'
+import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
 import type { LootFilterWidget } from './widget'
@@ -60,7 +60,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const baseText = shallowRef<string | null>(null)
   // What the price presets keep, from NeverSink's file as it came: the built
   // file's beams follow colour-blind colours and your restyles.
-  const sourceGuard = computed(() => baseText.value == null ? null : priceGuard(parseFilter(baseText.value)))
+  const sourceGuard = computed(() => baseText.value == null ? null : priceGuard(parseFilterCopy(baseText.value)))
   // True when baseText came from a fresh source file that needs a .bak
   // (overwrite mode).
   const baseNeedsBackup = ref(false)
@@ -297,7 +297,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   // The filter to compare the preview with: NeverSink as it came, or another
   // strictness level with all your changes on it.
   async function compareDoc (against: 'untouched' | number): Promise<FilterDoc | null> {
-    if (against === 'untouched') return baseText.value != null ? parseFilter(baseText.value) : null
+    if (against === 'untouched') return baseText.value != null ? parseFilterCopy(baseText.value) : null
     const ns = cfg().neversink
     if (!ns.on) return null
     const { text } = await readNeverSink(ns.version, against)
@@ -364,16 +364,19 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   // ---- the step-by-step list of changes ----
 
-  const currentSettings = (): Settings => {
-    const c = cfg()
+  const currentSettings = (c = cfg()): Settings => {
     return { edits: c.edits, rules: c.rules, presets: c.presets, moves: c.priceTiers.moves, locks: c.priceTiers.locks }
   }
   // A plain copy: rules and presets are changed in place by their editors.
-  const copySettings = (): Settings => JSON.parse(JSON.stringify(currentSettings()))
+  // Read raw: going through the config's reactive proxies costs several times more.
+  const copySettings = (): Settings => JSON.parse(JSON.stringify(currentSettings(toRaw(cfg()))))
   // What the settings were at the last recorded step. Changes are gathered for a
   // moment, so dragging a slider is one step and not fifty.
   const TIMELINE_WAIT_MS = 500
   let settled = copySettings()
+  // The first change would size every saved step; do that while idle.
+  const idle = typeof requestIdleCallback === 'function' ? requestIdleCallback : (f: () => void) => setTimeout(f, 2000)
+  idle(() => { const t = cfg().timeline; if (t) measureSteps(toRaw(t)) })
   let settleTimer: ReturnType<typeof setTimeout> | undefined
 
   function sourceParsed (): FilterDoc | null {
@@ -381,7 +384,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     // With your presets on it: bigger labels aren't a change to reset, tier by tier.
     const presets = JSON.stringify(cfg().presets)
     if (sourceDoc?.text !== baseText.value || sourceDoc.presets !== presets) {
-      const doc = parseFilter(baseText.value)
+      const doc = parseFilterCopy(baseText.value)
       applyPresetChanges(doc, cfg().presets)
       sourceDoc = { text: baseText.value, presets, doc }
     }
@@ -420,7 +423,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     clearTimeout(settleTimer)
     settleTimer = undefined
     const now = copySettings()
-    cfg().timeline = observe(cfg().timeline, settled, now, describeStep(settled, now, sourceLook))
+    cfg().timeline = observe(toRaw(cfg().timeline), settled, now, describeStep(settled, now, sourceLook))
     settled = now
   }
 
@@ -430,8 +433,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     settled = copySettings()
   }, { flush: 'sync' })
 
-  watch(() => JSON.stringify(currentSettings()), () => {
-    if (JSON.stringify(settled) === JSON.stringify(currentSettings())) return
+  watch(() => JSON.stringify(currentSettings()), (json) => {
+    if (JSON.stringify(settled) === json) return
     clearTimeout(settleTimer)
     settleTimer = setTimeout(settle, TIMELINE_WAIT_MS)
   })
@@ -915,7 +918,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     if (e.kind !== 'move' || baseText.value == null) return false
     if (listings?.text !== baseText.value) {
       const tiers = new Map<string, Set<string>>()
-      for (const b of parseFilter(baseText.value).blocks) {
+      for (const b of parseFilterCopy(baseText.value).blocks) {
         for (const c of b.conditions) {
           if (c.key !== 'BaseType' || c.op !== '==' || !b.type || !b.tier) continue
           for (const v of c.values) {

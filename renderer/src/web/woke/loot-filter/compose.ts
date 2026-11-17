@@ -2,7 +2,7 @@
 // order: build rules, the presets' own rules, your rules, price moves, your
 // edits, the presets' changes to NeverSink's rules, then the safety net.
 // Pure, so the tests run the same path the save does (store.ts compose).
-import { parseFilter } from './parse'
+import { parseFilterCopy } from './parse'
 import type { FilterDoc } from './parse'
 import { ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
@@ -70,7 +70,7 @@ export interface Composed {
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
-  const next = parseFilter(text)
+  const next = parseFilterCopy(text)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0
