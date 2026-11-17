@@ -32,4 +32,27 @@ describe('moveBuildFolder', () => {
     await moveBuildFolder({ dir, from: 'A', to: '../out' })
     expect(fs.existsSync(path.join(dir, 'out/x.xml'))).toBe(true)
   })
+
+  it('says where it went as the disk names it', async () => {
+    const dir = folder(['A/x.xml'])
+    expect(await moveBuildFolder({ dir, from: 'A', to: 'Act 1: Lev' })).toEqual({ to: 'Act 1 Lev' })
+    expect(fs.existsSync(path.join(dir, 'Act 1 Lev/x.xml'))).toBe(true)
+  })
+
+  it('changes only the letter case', async () => {
+    const dir = folder(['Box/x.xml'])
+    await moveBuildFolder({ dir, from: 'Box', to: 'box' })
+    expect(fs.readdirSync(dir)).toContain('box')
+    expect(fs.existsSync(path.join(dir, 'box/x.xml'))).toBe(true)
+  })
+
+  it('refuses to put builds deeper than the list reads', async () => {
+    const dir = folder(['A/B/x.xml'])
+    await expect(moveBuildFolder({ dir, from: 'A', to: 'X/Y/Z/A' })).rejects.toThrow(/too deep/)
+  })
+
+  it('has nothing to move for a folder that is only in the list', async () => {
+    const dir = folder(['A/x.xml'])
+    expect(await moveBuildFolder({ dir, from: 'Empty', to: 'Full' })).toEqual({ to: 'Full' })
+  })
 })

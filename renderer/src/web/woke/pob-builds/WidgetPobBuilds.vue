@@ -507,20 +507,36 @@ async function flushMoves () {
 
 // A folder renamed or moved: the folder itself moves on disk, its builds'
 // settings follow their files.
-async function moveFolderOnDisk (from: string, to: string) {
+async function moveFolderOnDisk (from: string, asked: string) {
+  // The list's own folder settings already moved to `asked`; they follow the
+  // disk's name (cleaned of characters a file name can't have), or go back.
+  const relist = (a: string, b: string) => {
+    const map = (list?: string[]) => list && [...new Set(list.map(p => movedPath(p, a, b)))]
+    props.config.folders = map(props.config.folders)
+    props.config.closedFolders = map(props.config.closedFolders)
+    props.config.folderOrder = map(props.config.folderOrder)
+  }
   const inIt = builds.value.filter(b => isUnder(b.folder, from))
+  const fileIn = (folder: string, rel: string) => folder + '/' + rel.split('/').pop()
+  let to: string
   try {
-    await pobApi.moveFolder(props.config, from, to)
+    to = (await pobApi.moveFolder(props.config, from, asked)).to
   } catch (err) {
+    relist(asked, from)
+    saveConfig()
     note((err as Error).message)
     await refresh()
     return
   }
-  for (const b of inIt) followFile(b.relPath, movedPath(b.folder, from, to) + '/' + b.relPath.split('/').pop())
+  if (to !== asked) relist(asked, to)
+  for (const b of inIt) followFile(b.relPath, fileIn(movedPath(b.folder, from, to), b.relPath))
+  saveConfig()
   await refresh()
   note(`Moved "${from}" to "${to}"`, () => {
     pobApi.moveFolder(props.config, to, from).then(() => {
-      for (const b of inIt) followFile(movedPath(b.folder, from, to) + '/' + b.relPath.split('/').pop(), b.relPath)
+      relist(to, from)
+      for (const b of inIt) followFile(fileIn(movedPath(b.folder, from, to), b.relPath), b.relPath)
+      saveConfig()
       return refresh()
     }, (err: Error) => note(err.message))
   })
@@ -562,31 +578,45 @@ async function duplicateBuild (b: PobBuildEntry) {
   }
 }
 
+// To the Recycle Bin, with one Undo for all of them.
 async function removeBuilds (list: PobBuildEntry[]) {
   tree.forgetPicks(list.map(b => idOf(b.relPath)))
-  for (const b of list) await removeBuild(b)
+  const gone: Array<() => Promise<void>> = []
+  for (const b of list) {
+    try {
+      gone.push(await takeBuild(b))
+    } catch (err) {
+      note((err as Error).message)
+    }
+  }
+  saveConfig()
+  await refresh()
+  if (!gone.length) return
+  note(gone.length === 1 ? `Moved ${list[0].name} to the Recycle Bin` : `Moved ${gone.length} builds to the Recycle Bin`, () => {
+    (async () => {
+      for (const back of gone) await back()
+      saveConfig()
+      await refresh()
+    })().catch((err: Error) => note(err.message))
+  })
 }
 
 async function removeBuild (b: PobBuildEntry) {
-  try {
-    const { xml } = await pobApi.delete(props.config, b.relPath)
-    const putBack = moveBuildRefs(props.config, b.relPath, null)
-    // Its pinned pieces go with it, and come back on Undo.
-    const { list, dropped } = moveBuildPins(pins.value, b.relPath, null)
-    pins.value = list
-    if (selected.value === b.relPath) selected.value = null
-    saveConfig()
-    await refresh()
-    note(`Moved ${b.name} to the Recycle Bin`, () => {
-      pobApi.restore(props.config, b.relPath, xml).then(() => {
-        putBack()
-        pins.value = [...pins.value.filter(p => !dropped.some(d => d.id === p.id)), ...dropped]
-        saveConfig()
-        return refresh()
-      }, (err: Error) => note(err.message))
-    })
-  } catch (err) {
-    note((err as Error).message)
+  await removeBuilds([b])
+}
+
+// One build to the Recycle Bin; returns what puts it back.
+async function takeBuild (b: PobBuildEntry): Promise<() => Promise<void>> {
+  const { xml } = await pobApi.delete(props.config, b.relPath)
+  const putBack = moveBuildRefs(props.config, b.relPath, null)
+  // Its pinned pieces go with it, and come back on Undo.
+  const { list, dropped } = moveBuildPins(pins.value, b.relPath, null)
+  pins.value = list
+  if (selected.value === b.relPath) selected.value = null
+  return async () => {
+    await pobApi.restore(props.config, b.relPath, xml)
+    putBack()
+    pins.value = [...pins.value.filter(p => !dropped.some(d => d.id === p.id)), ...dropped]
   }
 }
 
