@@ -42,7 +42,8 @@ test('loot filter: Ctrl + Z and Ctrl + Y step a change back and forth', async ({
 
   // The window's ? lists its keys.
   await page.getByRole('img', { name: /Keys in this window/ }).first().hover()
-  const card = page.getByText('Undo', { exact: true }).last()
-  await expect(card).toBeVisible()
-  await expect(page.getByText('Mouse back', { exact: false }).last()).toBeVisible()
+  const card = page.getByRole('tooltip')
+  await expect(card).toContainText('Undo')
+  await expect(card).toContainText('Redo')
+  await expect(card).toContainText('Mouse back')
 })

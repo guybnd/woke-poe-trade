@@ -85,14 +85,17 @@ export function useWindowKeys (el: () => Element | null | undefined, actions: Wi
     if (what === 'save') actions.save!(e.repeat)
     else actions[what]!()
   }
-  onMounted(() => {
-    window.addEventListener('pointerdown', onPointer, true)
-    window.addEventListener('keydown', onKey)
-  })
-  onUnmounted(() => {
-    window.removeEventListener('pointerdown', onPointer, true)
-    window.removeEventListener('keydown', onKey)
-  })
+  // Only a window with keys listens for them (perf: listeners add up).
+  if (actions.undo || actions.redo || actions.save || actions.close) {
+    onMounted(() => {
+      window.addEventListener('pointerdown', onPointer, true)
+      window.addEventListener('keydown', onKey)
+    })
+    onUnmounted(() => {
+      window.removeEventListener('pointerdown', onPointer, true)
+      window.removeEventListener('keydown', onKey)
+    })
+  }
   if (actions.back || actions.forward) useMouseNav(el, { back: () => actions.back?.(), forward: actions.forward })
   return { help: windowKeyHelp(actions) }
 }
