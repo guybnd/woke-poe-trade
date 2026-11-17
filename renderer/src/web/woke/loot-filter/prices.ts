@@ -1,28 +1,15 @@
 // Prices for the loot filter: the latest poe.ninja snapshot of the selected
 // league as a PriceLookup, plus which uniques use which base.
 import { computed } from 'vue'
-import { ITEMS_ITERATOR } from '@/assets/data'
-import type { BaseType } from '@/assets/data'
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePriceIndex } from '../market/price-index'
 import { priceBreakdown, priceLookup, safetyLookup } from './economy'
 import type { PriceLookup, UniqueRule } from './economy'
 
-let uniqueBases: Map<string, string[]> | null = null
+import { uniquesOnBase } from '../shared/uniques-on-base'
 
-export function uniquesOnBase (base: string): string[] {
-  if (!uniqueBases) {
-    uniqueBases = new Map()
-    for (const u of ITEMS_ITERATOR('"unique":{"base"') as Generator<BaseType>) {
-      if (u.namespace !== 'UNIQUE' || !u.unique) continue
-      const list = uniqueBases.get(u.unique.base) ?? []
-      list.push(u.refName)
-      uniqueBases.set(u.unique.base, list)
-    }
-  }
-  return uniqueBases.get(base) ?? []
-}
+export { uniquesOnBase }
 
 export function useFilterPrices (rule: () => UniqueRule) {
   const index = usePriceIndex()

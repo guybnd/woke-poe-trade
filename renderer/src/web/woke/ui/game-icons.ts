@@ -5,6 +5,7 @@
 import { ITEM_BY_REF } from '@/assets/data'
 import type { BaseType } from '@/assets/data/interfaces'
 import { MODULES } from '../modules'
+import { dataUniqueName, isFoulborn } from '../shared/item-identity'
 
 type Ns = BaseType['namespace']
 
@@ -70,7 +71,7 @@ export function ninjaIcon (type: string, name: string): string | null {
   if (name === 'Divine Orb') return CURRENCY_ICONS.divine
   const ns: Ns = /^Unique/.test(type) ? 'UNIQUE' : /Gem/.test(type) ? 'GEM' : type === 'DivinationCard' ? 'DIVINATION_CARD' : 'ITEM'
   // The item data has no Foulborn uniques: they look like the original.
-  return gameIcon(name, ns) ?? (ns === 'UNIQUE' && name.startsWith('Foulborn ') ? gameIcon(name.slice(9), ns) : null)
+  return gameIcon(name, ns) ?? (ns === 'UNIQUE' && isFoulborn(name) ? gameIcon(dataUniqueName(name), ns) : null)
 }
 
 // A module's icon: its game art (null when it has none or the art isn't
@@ -90,4 +91,17 @@ export function moduleIcon (moduleId: string): { art: string | null, fa: string 
 export function moduleIconForWidget (wmType: string): { art: string | null, fa: string } | null {
   const m = MODULES.find(_ => _.widgetTypes.includes(wmType))
   return m ? moduleIcon(m.id) : null
+}
+
+// An item's art from what a list knows of it: its poe.ninja row type when it
+// has one, else its name in the item data (an item, unique, gem, then a
+// card). The one lookup item rows use.
+const ART_NAMESPACES: Ns[] = ['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD']
+export function itemArt (ref: { name: string, type?: string }): string | null {
+  if (ref.type) return ninjaIcon(ref.type, ref.name)
+  for (const ns of ART_NAMESPACES) {
+    const src = gameIcon(ns === 'UNIQUE' ? dataUniqueName(ref.name) : ref.name, ns)
+    if (src) return src
+  }
+  return null
 }

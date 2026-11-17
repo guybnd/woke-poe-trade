@@ -9,9 +9,10 @@ import { ItemCategory } from '@/parser/meta'
 import { parseClipboard } from '@/parser/Parser'
 import type { TipKind, TipUnique } from './tip-content'
 import { VARIABLE_ITEMS } from '../../shared/unid-prices'
+import { dataUniqueName, isFoulborn } from '../../shared/item-identity'
 
 export function kindOfName (name: string): TipKind {
-  if (name.startsWith('Foulborn ') || ITEM_BY_REF('UNIQUE', name)?.length) return 'unique'
+  if (isFoulborn(name) || ITEM_BY_REF('UNIQUE', name)?.length) return 'unique'
   if (ITEM_BY_REF('GEM', name)?.length) return 'gem'
   if (ITEM_BY_REF('DIVINATION_CARD', name)?.length) return 'card'
   return 'item'
@@ -48,9 +49,7 @@ export function kindOf (ref: ItemMenuRef): TipKind {
 }
 
 // poe.ninja's Foulborn uniques share their unique's data.
-export function plainName (name: string) {
-  return name.replace(/^Foulborn /, '')
-}
+export const plainName = dataUniqueName
 
 export function infoOf (ref: ItemMenuRef, kind: TipKind): BaseType | undefined {
   if (ref.base) return ITEM_BY_REF('ITEM', ref.base)?.[0]
@@ -200,7 +199,7 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
   if (ref.text) return { clipboard: ref.text }
   if (!info) return null
   // The item data has no Foulborn uniques: it would price the plain one.
-  if (ref.name.startsWith('Foulborn ')) return null
+  if (isFoulborn(ref.name)) return null
   if (kind === 'unique') {
     const item = virtualUnique(info, english ? mods : null)
     return { clipboard: item.rawText, item }

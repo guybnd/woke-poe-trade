@@ -5,6 +5,7 @@
 import { ITEMS_ITERATOR, ITEM_BY_REF } from '@/assets/data'
 import type { BaseType } from '@/assets/data'
 import type { DustUnique } from './calc'
+import { isReplica } from '../shared/item-identity'
 
 // Kingsmarch won't take these, and the legacy names are priced as collector's items.
 const NOT_DISENCHANTABLE = new Set([
@@ -27,7 +28,7 @@ const JEWELLERY = new Set(['Amulet', 'Ring', 'Belt'])
 export function basesWithoutDust (): Set<string> {
   const out = new Set<string>()
   for (const u of ITEMS_ITERATOR('"unique":{"base"') as Generator<BaseType>) {
-    if (u.namespace !== 'UNIQUE' || !u.unique || /^Replica /.test(u.refName)) continue
+    if (u.namespace !== 'UNIQUE' || !u.unique || isReplica(u.refName)) continue
     const dust = u.unique.disenchantValue
     if (!(dust != null && dust > 0) || NOT_DISENCHANTABLE.has(u.refName) || PIECE_RE.test(u.refName)) out.add(u.unique.base)
   }

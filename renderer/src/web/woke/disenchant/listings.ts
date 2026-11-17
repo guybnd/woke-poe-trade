@@ -3,6 +3,7 @@
 // price download the app already makes has no counts.
 import { shallowRef } from 'vue'
 import { Host } from '@/web/background/IPC'
+import { dataUniqueName } from '../shared/item-identity'
 
 const TYPES = ['UniqueWeapon', 'UniqueArmour', 'UniqueAccessory']
 // Under this many listings, a cheap price may be one or two lucky listings.
@@ -33,7 +34,7 @@ export function readCounts (pages: Array<{ lines?: Line[] }>): Map<string, numbe
       if (typeof line.name !== 'string' || typeof line.listingCount !== 'number') continue
       const id = typeof line.detailsId === 'string' ? line.detailsId : ''
       if (/-(5l|6l|relic)$/.test(id)) continue
-      const name = line.name.replace(/^Foulborn /, '')
+      const name = dataUniqueName(line.name)
       counts.set(name, (counts.get(name) ?? 0) + line.listingCount)
     }
   }

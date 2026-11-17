@@ -8,6 +8,7 @@
 // Written from scratch on our own price and item data.
 import { isThin } from '../market/types'
 import type { PriceItem } from '../market/types'
+import { dataUniqueName, isFoulborn } from '../shared/item-identity'
 
 // A unique that can be disenchanted, from the item data.
 export interface DustUnique {
@@ -96,8 +97,8 @@ export function cheapestPrices (items: PriceItem[], foulborn = true): Map<string
   const out = new Map<string, PriceItem>()
   for (const item of items) {
     if (!PRICED_TYPES.has(item.type) || !isPlainVariant(item.variant) || !(item.chaos > 0)) continue
-    if (!foulborn && item.name.startsWith('Foulborn ')) continue
-    const name = item.name.replace(/^Foulborn /, '')
+    if (!foulborn && isFoulborn(item.name)) continue
+    const name = dataUniqueName(item.name)
     const seen = out.get(name)
     if (!seen || item.chaos < seen.chaos) out.set(name, item)
   }

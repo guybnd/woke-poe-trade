@@ -4,6 +4,7 @@
 import type { PriceItem } from '../market/types'
 import { isThin } from '../market/types'
 import type { PricedName } from './health'
+import { dataUniqueName, isFoulborn } from '../shared/item-identity'
 
 export interface DropUnique extends PricedName {
   setsTier: boolean
@@ -27,7 +28,7 @@ export function setterName (note: string | undefined): string | null {
 // under its plain name.
 export function ownUnique (name: string, base: string): string {
   const plain = name.endsWith(` ${base}`) ? name.slice(0, -base.length - 1) : name
-  return plain.replace(/^Foulborn /, '')
+  return dataUniqueName(plain)
 }
 
 export function dropUniques (
@@ -41,7 +42,7 @@ export function dropUniques (
   const typeSet = new Set(types)
   const foulborn = new Map<string, PriceItem[]>()
   for (const i of items) {
-    if (!typeSet.has(i.type) || !i.name.startsWith('Foulborn ') || NOT_A_DROP.test(i.variant)) continue
+    if (!typeSet.has(i.type) || !isFoulborn(i.name) || NOT_A_DROP.test(i.variant)) continue
     const lines = foulborn.get(i.name)
     if (lines) lines.push(i)
     else foulborn.set(i.name, [i])

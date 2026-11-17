@@ -1,6 +1,7 @@
 // Turns the item tooltip data (public/data/tips, built by
 // scripts/build-tip-data.mjs) into lines to draw. Pure: GameTooltip.vue draws
 // the result, item-tip.ts loads the data and adds the price.
+import { dataUniqueName } from '../../shared/item-identity'
 
 export type TipTone = 'label' | 'value' | 'text' | 'mod' | 'dim' | 'gem' | 'flavour' | 'corrupted' | 'mutated' | 'unique' | 'rare' | 'currency' | 'card'
 export interface TipPart { text: string, tone: TipTone }
@@ -281,7 +282,7 @@ const EXPLICITS_SHOWN = 6
 
 // The wiki has no Foulborn names: a Foulborn unique drops where its plain one does.
 export function dropOf (drops: TipPack['drops'], name: string): TipDrop | undefined {
-  return drops?.[name] ?? drops?.[name.replace(/^Foulborn /, '')]
+  return drops?.[name] ?? drops?.[dataUniqueName(name)]
 }
 
 // Where a unique comes from, when that isn't a random drop.

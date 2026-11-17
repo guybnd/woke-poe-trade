@@ -3,6 +3,7 @@
 import { itemKey, isCorrupted } from '../market/types'
 import type { PriceItem, CorruptedFilter } from '../market/types'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import { dataUniqueName } from '../shared/item-identity'
 
 export const MIN_QUERY = 2
 // More than this and the list is too long to read: keep typing.
@@ -79,27 +80,9 @@ export function uniquePrices (
   return groupPrices(items, item => /^Unique/.test(item.type) && names.has(baseUniqueName(item.name)) ? 0 : -1, opts)
 }
 
-// Each base's uniques and each unique's bases, by English name. Some uniques
-// come on several bases (Precursor's Emblem on five rings), one entry each.
-export interface UniqueBaseIndex {
-  byBase: Map<string, string[]>
-  basesOf: Map<string, string[]>
-}
-export function uniqueBaseIndex (uniques: Iterable<{ refName: string, unique?: { base: string } }>): UniqueBaseIndex {
-  const byBase = new Map<string, string[]>()
-  const basesOf = new Map<string, string[]>()
-  const add = (map: Map<string, string[]>, k: string, v: string) => {
-    const list = map.get(k)
-    if (!list) map.set(k, [v])
-    else if (!list.includes(v)) list.push(v)
-  }
-  for (const u of uniques) {
-    if (!u.unique?.base) continue
-    add(byBase, u.unique.base, u.refName)
-    add(basesOf, u.refName, u.unique.base)
-  }
-  return { byBase, basesOf }
-}
+// Each base's uniques and each unique's bases: shared/uniques-on-base.
+export { uniqueBaseIndex } from '../shared/uniques-on-base'
+export type { UniqueBaseIndex } from '../shared/uniques-on-base'
 
 // One group per type and name, ranked (-1 leaves an item out), then dearest first.
 function groupPrices (
@@ -169,9 +152,7 @@ export function typeLabel (type: string): string {
 }
 
 // Foulborn items share their unique's page and base.
-export function baseUniqueName (name: string): string {
-  return name.replace(/^Foulborn /, '')
-}
+export const baseUniqueName = dataUniqueName
 
 export function tradeUrl (league: string, item: { name?: string, type?: string | { option: string, discriminator: string }, filters?: object }, host = 'www.pathofexile.com'): string {
   const query = {

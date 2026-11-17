@@ -20,6 +20,7 @@ import { applyEdits, blockHasBase, blocksOf } from './edits'
 import type { FilterEdit } from './edits'
 import type { PriceItem } from '../market/types'
 import { isThin } from '../market/types'
+import { isReplica } from '../shared/item-identity'
 
 export interface EconomyGroup {
   // NeverSink's $type tag.
@@ -123,7 +124,7 @@ export function priceBreakdown (
 ) {
   const find = priceFinder(items, 'safety')
   return (group: EconomyGroup, base: string): Array<{ name: string, chaos: number | null, thin: boolean }> => {
-    const names = group.unique ? uniquesOnBase(base).filter(name => !/^Replica /.test(name)) : [base]
+    const names = group.unique ? uniquesOnBase(base).filter(name => !isReplica(name)) : [base]
     return names.map(name => {
       const hit = find(group.ninja, name, base)
       return { name, chaos: hit?.chaos ?? null, thin: hit ? isThin(hit) : false }
@@ -146,7 +147,7 @@ export function priceLookup (
     // Replicas have their own NeverSink blocks above the unique tiers, so
     // they never land in them and must not set the base's price.
     const priced = uniquesOnBase(base)
-      .filter(name => !/^Replica /.test(name))
+      .filter(name => !isReplica(name))
       .map(name => find(group.ninja, name, base))
       .filter((x): x is PriceItem => Boolean(x))
     if (!priced.length) return null
