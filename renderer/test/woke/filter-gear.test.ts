@@ -9,6 +9,7 @@ import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { GEAR_TYPE, applyGear, gearDefaults, magicOff, normalizeGear, readTiered, shiftAll, sourceShowFrom } from '@/web/woke/loot-filter/gear'
 import type { GearSettings } from '@/web/woke/loot-filter/gear'
+import { applyPresetChanges, defaultPresets } from '@/web/woke/loot-filter/presets'
 import { LEVELS, neverSink } from '../helpers/neversink'
 
 function item (f: Partial<ItemFacts>): ItemFacts {
@@ -69,10 +70,17 @@ describe('gear table', () => {
       const d = doc(level)
       applyGear(d, gearOn(d), [])
       for (const it of [R1, R2, R3, ANY]) {
-        for (const rarity of ['Magic', 'Rare'] as const) {
+        for (const rarity of ['Normal', 'Magic', 'Rare'] as const) {
           for (const tier of [2, 3, 4, 5]) {
-            const f = { ...it, rarity, unidentifiedItemTier: tier }
-            expect(vis(d, f), `${level} ${it.baseType} ${rarity} t${tier}`).toBe(vis(base, f))
+            for (const fractured of [false, true]) {
+              const f = { ...it, rarity, unidentifiedItemTier: tier, fractured }
+              const a = matchItem(base, item(f))
+              const b = matchItem(d, item(f))
+              const what = `${level} ${it.baseType} ${rarity} t${tier}${fractured ? ' fractured' : ''}`
+              expect(b.visibility, what).toBe(a.visibility)
+              // Special gear (stranded fractured and veiled) still comes first.
+              if (a.final?.block.tier?.startsWith('stranded')) expect(b.final?.block.tier, what).toBe(a.final.block.tier)
+            }
           }
         }
       }
@@ -134,5 +142,32 @@ describe('gear table', () => {
     const out = parseFilter(serializeFilter(d))
     expect(out.blocks.filter(b => b.type === GEAR_TYPE).length).toBeGreaterThan(10)
     expect(validateFilter(out).map(p => p.message)).toEqual([])
+  })
+
+  it('keeps hiding low item tiers when that preset is on', () => {
+    const p = defaultPresets()
+    p.lowTiers = { on: true, tier: 4 }
+    const base = doc()
+    applyPresetChanges(base, p)
+    const d = doc()
+    applyGear(d, gearOn(d), [])
+    applyPresetChanges(d, p)
+    const f = { ...R3, rarity: 'Rare' as const, unidentifiedItemTier: 3 }
+    expect(vis(d, f)).toBe(vis(base, f))
+  })
+
+  it('reads its defaults from NeverSink\'s tier names, not lines a preset moved', () => {
+    const p = defaultPresets()
+    p.lowTiers = { on: true, tier: 4 }
+    const d = doc()
+    applyPresetChanges(d, p)
+    expect(gearDefaults(d).show.any).toEqual(gearDefaults(doc()).show.any)
+  })
+
+  it('starts the any-base over-quality line where NeverSink has it', () => {
+    const d = doc('1-REGULAR')
+    const src = readTiered(d)!
+    const g = gearDefaults(d)
+    expect(g.quality.min.any).toBeLessThanOrEqual(src.quality.anyMin || 30)
   })
 })

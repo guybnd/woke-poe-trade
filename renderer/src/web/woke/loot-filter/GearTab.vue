@@ -21,78 +21,95 @@
 
       <div :class="$style.card">
         <div :class="$style.grid">
-          <span class="w-dim text-xs">Shows from drop tier</span>
-          <span :class="$style.colHead" style="color: var(--w-magic, #8888ff);">Magic</span>
-          <span :class="$style.colHead" style="color: var(--w-rare, #ffff77);">Rare</span>
+          <span />
+          <span :class="$style.groupHead" style="grid-column: span 5; color: #a8a8ff;">Magic</span>
+          <span />
+          <span :class="$style.groupHead" style="grid-column: span 5; color: #f3e27a;">Rare</span>
+          <span class="w-faint text-xs">Shows from drop tier</span>
+          <template v-for="r in RARITIES" :key="`h-${r}`">
+            <span v-for="v in SHOW_FROM" :key="v" :class="$style.stepHead">{{ v || 'Off' }}</span>
+            <span v-if="r === 'magic'" />
+          </template>
           <template v-for="row in GEAR_ROWS" :key="row">
-            <span class="flex flex-col">
+            <span :class="$style.rowHead">
               <span>{{ ROW_LABEL[row] }}</span>
               <span class="w-faint text-xs">{{ rowSub(row) }}</span>
             </span>
-            <span v-for="r in RARITIES" :key="r" :class="$style.steps" role="group" :aria-label="`${ROW_LABEL[row]}, ${r}: lowest drop tier shown`">
-              <button v-for="v in SHOW_FROM" :key="v" type="button" :class="[$style.step, shown[row][r] === v && (r === 'magic' ? $style.onMagic : $style.onRare)]"
-                :aria-pressed="shown[row][r] === v" :disabled="row === 'build' && !buildCount"
-                :title="stepTitle(row, r, v)" @click="setShow(row, r, v)">{{ v ? v : row === 'build' ? 'Rank' : 'Off' }}</button>
-            </span>
+            <template v-for="r in RARITIES" :key="r">
+              <button v-for="v in SHOW_FROM" :key="v" type="button" :class="cellClass(row, r, v)"
+                :aria-pressed="shown[row][r] === v" :aria-label="stepTitle(row, r, v)" :disabled="row === 'build' && !buildCount"
+                :title="stepTitle(row, r, v)" @click="setShow(row, r, v)">{{ cellText(row, r, v) }}</button>
+              <span v-if="r === 'magic'" />
+            </template>
           </template>
         </div>
-        <div class="w-faint text-xs">{{ sentence }}</div>
+        <div :class="$style.sentence">
+          <span><b style="color: #f3e27a;">Rare</b> {{ sentence.rare }}</span>
+          <span><b style="color: #a8a8ff;">Magic</b> {{ sentence.magic }}</span>
+          <span v-if="sentence.build">{{ sentence.build }}</span>
+        </div>
       </div>
 
       <div :class="$style.card">
         <div class="flex items-center gap-2">
           <WToggle :model-value="g.quality.on" @update:model-value="setQualityOn">Over-quality bases</WToggle>
-          <WInfo text="Normal, magic or rare gear with this much quality or more, from each row's bases. Off hands it to the rules further down." />
+          <WInfo text="White, magic or rare gear with at least this much quality, from each row's bases. Off hands it to the rules further down." />
         </div>
         <div v-if="g.quality.on" :class="$style.qgrid">
+          <span class="w-faint text-xs">Shows from quality</span>
+          <span v-for="v in QUALITY_STEPS" :key="v" :class="$style.stepHead">{{ v ? `${v}%` : 'Off' }}</span>
           <template v-for="row in GEAR_ROWS" :key="row">
-            <span>{{ ROW_LABEL[row] }}</span>
-            <span :class="$style.steps" role="group" :aria-label="`${ROW_LABEL[row]}: lowest quality shown`">
-              <button v-for="v in QUALITY_STEPS" :key="v" type="button" :class="[$style.step, g.quality.min[row] === v && $style.onRare]"
-                :aria-pressed="g.quality.min[row] === v" @click="setQuality(row, v)">{{ v ? `${v}%` : 'Off' }}</button>
-            </span>
+            <span :class="$style.rowHead">{{ ROW_LABEL[row] }}</span>
+            <button v-for="v in QUALITY_STEPS" :key="v" type="button" :class="qualityClass(row, v)"
+              :aria-pressed="g.quality.min[row] === v" :aria-label="qualityTitle(row, v)" :title="qualityTitle(row, v)" @click="setQuality(row, v)">{{ v && g.quality.min[row] && v >= g.quality.min[row] ? '✓' : '' }}</button>
           </template>
         </div>
-        <div v-else class="w-faint text-xs">NeverSink's own over-quality lists for now.</div>
+        <div v-else class="w-faint text-xs">Using NeverSink's own over-quality lists. Switch on to pick a line per row.</div>
       </div>
 
       <div :class="$style.card">
         <div class="flex items-center gap-2">
-          <span>What you'd see</span>
-          <span class="w-faint text-xs">bases this table shows, of {{ universe.length }} gear bases</span>
+          <span>How much gear this shows</span>
+          <WInfo text="Every gear base in the game, run through the table for each rarity and drop tier. Special gear (influenced, fractured and the rest) comes first in the filter and isn't counted here." />
         </div>
         <div :class="$style.pgrid">
-          <span />
-          <span :class="$style.colHead" style="color: var(--w-magic, #8888ff);">Magic</span>
-          <span :class="$style.colHead" style="color: var(--w-rare, #ffff77);">Rare</span>
+          <span class="w-faint text-xs">Drop tier</span>
+          <span :class="$style.groupHead" style="color: #a8a8ff;">Magic</span>
+          <span :class="$style.groupHead" style="color: #f3e27a;">Rare</span>
           <template v-for="t in DROP_TIERS" :key="t">
-            <span class="text-sm">Tier {{ t }}</span>
-            <span v-for="r in RARITIES" :key="r" :class="$style.bar" :title="`${counts[t][r]} bases`">
-              <span :class="$style.fill" :style="{ width: `${universe.length ? Math.round(counts[t][r] / universe.length * 100) : 0}%` }" />
-              <span :class="$style.barText">{{ counts[t][r] ? `${counts[t][r]} bases` : 'hidden' }}</span>
+            <span :class="$style.rowHead">Tier {{ t }}</span>
+            <span v-for="r in RARITIES" :key="r" :class="$style.bar">
+              <span :class="[$style.fill, r === 'magic' ? $style.fillMagic : $style.fillRare]" :style="{ width: `${universe.length ? Math.round(counts[t][r].n / universe.length * 100) : 0}%` }" />
+              <span :class="$style.barText">{{ countText(counts[t][r]) }}</span>
             </span>
           </template>
         </div>
       </div>
+
       <div :class="$style.card">
         <div class="flex items-center gap-2 flex-wrap">
-          <span>On the ground</span>
-          <span class="w-faint text-xs">{{ pileShown }} of {{ pile.length }} shown, through your filter as it is now</span>
-          <WButton size="sm" style="margin-left: auto;" @click="seed++">Reroll</WButton>
+          <span>Test drops</span>
+          <span class="w-faint text-xs">{{ pile.length }} random gear drops through your whole filter: {{ pileShown }} shown, {{ pile.length - pileShown }} hidden</span>
+          <WButton size="sm" style="margin-left: auto;" @click="seed++">New drops</WButton>
         </div>
         <div class="flex flex-wrap items-center gap-1">
-          <span class="w-dim text-xs">Add</span>
+          <span class="w-dim text-xs">Mix in</span>
           <WChip v-for="d in DECORATORS" :key="d.key" clickable :active="decos.includes(d.key)" @click="toggle(decos, d.key)">{{ d.label }}</WChip>
-          <WToggle v-model="showHidden" style="margin-left: 6px;">Show hidden</WToggle>
         </div>
-        <div :class="$style.ground">
-          <template v-for="d in pile" :key="d.id">
-            <span v-if="d.visibility !== 'Hide' || showHidden" :class="[$style.drop, d.visibility === 'Hide' && $style.hiddenDrop]" :title="d.title">
-              <LabelPreview :text="d.label" :actions="d.actions" :visibility="d.visibility === 'Hide' ? 'Show' : d.visibility" :extras="false" :default-text="d.colour" />
-              <span :class="$style.dropTag">{{ d.caption }}</span>
-            </span>
-          </template>
-        </div>
+        <template v-for="group in pileGroups" :key="group.key">
+          <div v-if="group.drops.length" :class="$style.pileHead">{{ group.label }} · {{ group.drops.length }}</div>
+          <div v-if="group.drops.length" :class="$style.ground">
+            <div v-for="d in group.drops" :key="d.id" :class="[$style.drop, group.key === 'hidden' && $style.hiddenDrop]" :title="d.title">
+              <LabelPreview :text="d.label" :actions="d.actions" :visibility="'Show'" :extras="false" :default-text="d.colour" :scale="1.15" />
+              <span :class="$style.dropWhat">
+                <b :style="{ color: d.rarity === 'Magic' ? '#a8a8ff' : '#f3e27a' }">{{ d.rarity }}</b>
+                · {{ d.tier ? `tier ${d.tier}` : 'no tier' }} · {{ ROW_LABEL[d.row as GearRow] }}
+              </span>
+              <span v-if="d.tags.length" :class="$style.dropTags">{{ d.tags.join(' · ') }}</span>
+              <span :class="$style.dropWhy">{{ d.why }}</span>
+            </div>
+          </div>
+        </template>
       </div>
     </template>
 
@@ -153,11 +170,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useCssModule } from 'vue'
 import { WButton, WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { DROP_TIERS, GEAR_ROWS, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
+import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane } from './gear'
 import { DEFENCES, DEFENCE_ATTR, SLOTS, allGearBases, baseInfo } from './gear-bases'
 import type { BaseInfo, Defence, Slot } from './gear-bases'
@@ -173,6 +190,7 @@ const props = defineProps<{
   config: LootFilterWidget
 }>()
 
+const useCss = useCssModule()
 const RARITIES: GearRarity[] = ['magic', 'rare']
 const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Any other base' }
 const LANE_CAP = 80
@@ -249,49 +267,85 @@ function stepTitle (row: GearRow, r: GearRarity, v: number): string {
   return `Show ${r} ${ROW_LABEL[row].toLowerCase()} from drop tier ${v}`
 }
 
+// A cell is lit when that drop tier shows; the picked one is the line.
+function cellClass (row: GearRow, r: GearRarity, v: number) {
+  const line = shown.value[row][r]
+  const lit = v !== 0 && line !== 0 && v >= line
+  return [
+    useCss.cell,
+    lit && (r === 'magic' ? useCss.litMagic : useCss.litRare),
+    line === v && useCss.line,
+    v === 0 && line === 0 && (row === 'build' ? useCss.followRank : useCss.off)
+  ]
+}
+function cellText (row: GearRow, r: GearRarity, v: number): string {
+  const line = shown.value[row][r]
+  if (v === 0) return line === 0 ? (row === 'build' ? 'Rank' : 'Off') : ''
+  return line !== 0 && v >= line ? '✓' : ''
+}
+function qualityClass (row: GearRow, v: number) {
+  const line = g.value.quality.min[row]
+  return [useCss.cell, v !== 0 && line !== 0 && v >= line && useCss.litRare, line === v && useCss.line, v === 0 && line === 0 && useCss.off]
+}
+function qualityTitle (row: GearRow, v: number): string {
+  return v ? `Show ${ROW_LABEL[row].toLowerCase()} with ${v}% quality or more` : `No over-quality rule for ${ROW_LABEL[row].toLowerCase()}`
+}
+
 const sentence = computed(() => {
   const s = shown.value
   const part = (r: GearRarity) => {
-    const rows = (['r1', 'r2', 'r3', 'any'] as const).map(row => s[row][r] ? `${ROW_LABEL[row].toLowerCase()} from ${s[row][r]}` : null).filter(Boolean)
-    return rows.length ? rows.join(', ') : 'never'
+    const rows = (['r1', 'r2', 'r3', 'any'] as const).map(row => s[row][r] ? `${ROW_LABEL[row].toLowerCase()} from tier ${s[row][r]}` : null).filter(Boolean)
+    return rows.length ? `shows ${rows.join(', ')}.` : 'never shows.'
   }
-  const b = buildCount.value && (s.build.rare || s.build.magic) ? ` Build bases: rare from ${s.build.rare || 'rank'}, magic from ${s.build.magic || 'rank'}.` : ''
-  return `Rares show ${part('rare')}. Magic shows ${part('magic')}.${b}`
+  const build = buildCount.value && (s.build.rare || s.build.magic)
+    ? `Your build's bases: rare from ${s.build.rare ? `tier ${s.build.rare}` : 'their rank'}, magic from ${s.build.magic ? `tier ${s.build.magic}` : 'their rank'}.`
+    : ''
+  return { rare: part('rare'), magic: part('magic'), build }
 })
 
-// ---- Preview: what the table lets through, base by base ----
+// ---- How much gear this shows, base by base ----
 const universe = computed(() => {
   const set = new Set(allGearBases())
   for (const r of RANKS) lists.value[r].forEach(b => set.add(b))
   return [...set]
 })
+interface Count { n: number, rows: GearRow[] }
 const counts = computed(() => {
   const s = shown.value
   const rankOf = new Map<string, GearRow>()
   for (const r of RANKS) lists.value[r].forEach(b => rankOf.set(b, r))
   const never = new Set(lists.value.never)
   const inBuild = new Set(build.value)
-  const out: Record<number, Record<GearRarity, number>> = {}
+  const out: Record<number, Record<GearRarity, Count>> = {}
   for (const t of DROP_TIERS) {
-    out[t] = { magic: 0, rare: 0 }
+    out[t] = { magic: { n: 0, rows: [] }, rare: { n: 0, rows: [] } }
     for (const r of RARITIES) {
+      const c = out[t][r]
       for (const b of universe.value) {
         if (never.has(b)) continue
         const row = rankOf.get(b) ?? 'any'
         const line = s[row][r]
         const buildLine = inBuild.has(b) ? s.build[r] : 0
-        if ((buildLine && t >= buildLine) || (line && t >= line)) out[t][r]++
+        const by: GearRow | null = buildLine && t >= buildLine ? 'build' : line && t >= line ? row : null
+        if (!by) continue
+        c.n++
+        if (!c.rows.includes(by)) c.rows.push(by)
       }
     }
   }
   return out
 })
+const SHORT_ROW: Record<GearRow, string> = { build: 'build', r1: 'rank 1', r2: 'rank 2', r3: 'rank 3', any: 'any base' }
+function countText (c: Count): string {
+  if (!c.n) return 'none'
+  if (c.n >= universe.value.length - lists.value.never.length) return `all ${c.n} bases`
+  const order = GEAR_ROWS.filter(r => c.rows.includes(r)).map(r => SHORT_ROW[r])
+  return `${c.n} bases · ${order.join(', ')}`
+}
 
-// ---- On the ground: a pile of gear through the filter as built ----
+// ---- Test drops: a pile of gear through the filter as built ----
 const seed = ref(1)
 const decos = ref<Decorator[]>(['influenced', 'fractured', 'corrupted'])
-const showHidden = ref(true)
-const ROW_SHORT: Record<string, string> = { build: 'Build', r1: 'R1', r2: 'R2', r3: 'R3', any: 'Any' }
 const pile = computed(() => {
   const doc = props.store.doc.value
   if (!doc) return []
@@ -311,19 +365,32 @@ const pile = computed(() => {
   return drops.map(d => {
     const m = matchItem(doc, d.facts, { brief: true })
     const rule = m.final?.block
-    const what = `${d.facts.rarity} ${d.facts.baseType}, ${d.tier ? `drop tier ${d.tier}` : 'no drop tier'}, ${ROW_SHORT[d.row]}${d.tags.length ? `, ${d.tags.join(', ')}` : ''}`
+    const hidden = m.visibility === 'Hide'
+    const by = !rule
+      ? 'no rule matched'
+      : rule.type === GEAR_TYPE
+        ? 'your Gear table'
+        : rule.type?.startsWith('woke->') ? ruleLabel(rule.type, rule.tier) : `NeverSink: ${ruleLabel(rule.type, rule.tier)}`
     return {
       id: d.id,
       label: d.facts.baseType!,
+      rarity: d.facts.rarity,
+      tier: d.tier,
+      row: d.row,
+      tags: d.tags,
       actions: m.actions,
       visibility: m.visibility,
       colour: defaultTextColour(d.facts),
-      caption: [d.facts.rarity === 'Magic' ? 'M' : 'R', d.tier ? `t${d.tier}` : 'no t', ROW_SHORT[d.row], ...d.tags].join(' · '),
-      title: `${what}\n${m.visibility === 'Hide' ? 'Hidden' : 'Shown'} by ${rule ? ruleLabel(rule.type, rule.tier) : 'no rule (shows by default)'}`
+      why: `${hidden ? 'Hidden' : 'Shown'} by ${by}`,
+      title: `${d.facts.rarity} ${d.facts.baseType}, item level ${d.facts.itemLevel}`
     }
   })
 })
 const pileShown = computed(() => pile.value.filter(d => d.visibility !== 'Hide').length)
+const pileGroups = computed(() => [
+  { key: 'shown', label: 'Shown', drops: pile.value.filter(d => d.visibility !== 'Hide') },
+  { key: 'hidden', label: 'Hidden', drops: pile.value.filter(d => d.visibility === 'Hide') }
+])
 
 // ---- Base ranks ----
 const search = ref('')
@@ -447,45 +514,65 @@ function neverOffBuild () {
 }
 .grid {
   display: grid;
-  grid-template-columns: minmax(8rem, auto) repeat(2, minmax(0, 1fr));
-  gap: 6px 12px;
+  grid-template-columns: minmax(9rem, 12rem) repeat(5, 2.6rem) 1.2rem repeat(5, 2.6rem);
+  gap: 4px 3px;
   align-items: center;
+  justify-content: start;
 }
 .qgrid {
   display: grid;
-  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
-  gap: 6px 12px;
+  grid-template-columns: minmax(9rem, 12rem) repeat(5, 2.6rem);
+  gap: 4px 3px;
   align-items: center;
+  justify-content: start;
 }
 .pgrid {
   display: grid;
-  grid-template-columns: 4rem repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(9rem, 12rem) repeat(2, minmax(10rem, 16rem));
   gap: 4px 8px;
   align-items: center;
+  justify-content: start;
 }
-.colHead {
-  font-size: var(--w-fs-xs, 12px);
+.groupHead {
+  font-size: var(--w-fs-sm, 13px);
   font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid var(--w-border);
+  padding-bottom: 2px;
 }
-.steps {
+.stepHead {
+  font-size: var(--w-fs-xs, 11px);
+  color: var(--w-text-dim);
+  text-align: center;
+}
+.rowHead {
   display: flex;
-  gap: 2px;
+  flex-direction: column;
+  line-height: 1.15;
 }
-.step {
-  min-width: 2.2rem;
-  height: 1.8rem;
-  padding: 0 6px;
+.cell {
+  height: 2rem;
   font-size: var(--w-fs-xs, 12px);
-  border-radius: var(--w-r-sm);
+  border-radius: 2px;
   border: 1px solid var(--w-border);
-  background: transparent;
+  background: rgb(0 0 0 / 25%);
   color: var(--w-text-dim);
   cursor: pointer;
 }
-.step:hover:not(:disabled) { color: var(--w-text); border-color: var(--w-text-dim); }
-.step:disabled { opacity: 0.4; cursor: default; }
-.onMagic { border-color: #8888ff; background: rgb(136 136 255 / 18%); color: #b8b8ff; }
-.onRare { border-color: #e8d24a; background: rgb(232 210 74 / 16%); color: #f3e27a; }
+.cell:hover:not(:disabled) { border-color: var(--w-text-dim); color: var(--w-text); }
+.cell:disabled { opacity: 0.35; cursor: default; }
+.litMagic { background: rgb(136 136 255 / 30%); border-color: rgb(136 136 255 / 50%); color: #d0d0ff; }
+.litRare { background: rgb(232 210 74 / 26%); border-color: rgb(232 210 74 / 45%); color: #fff2a0; }
+.line { box-shadow: inset 0 0 0 2px currentColor; }
+.off { background: rgb(200 60 50 / 22%); border-color: rgb(200 60 50 / 50%); color: #f0a090; }
+.followRank { background: rgb(255 255 255 / 8%); color: var(--w-text); }
+.sentence {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--w-fs-xs, 12px);
+  color: var(--w-text-dim);
+}
 .bar {
   position: relative;
   height: 1.5rem;
@@ -497,32 +584,42 @@ function neverOffBuild () {
 .fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: rgb(0 200 160 / 28%);
 }
+.fillMagic { background: rgb(136 136 255 / 28%); }
+.fillRare { background: rgb(232 210 74 / 24%); }
 .barText {
   position: relative;
   padding: 0 6px;
   line-height: calc(1.5rem * var(--w-text-scale, 1));
 }
+.pileHead {
+  font-size: var(--w-fs-xs, 12px);
+  color: var(--w-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 .ground {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 6px;
+  padding: 8px;
   border-radius: var(--w-r-sm);
   background: #0c0b09;
 }
 .drop {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 2px;
+  padding: 6px;
+  border-radius: var(--w-r-sm);
+  background: rgb(255 255 255 / 3%);
+  min-width: 0;
 }
-.hiddenDrop { opacity: 0.35; }
-.dropTag {
-  font-size: var(--w-fs-xs, 10px);
-  color: var(--w-text-faint, #8f8573);
-}
+.hiddenDrop > :first-child { opacity: 0.4; }
+.dropWhat { font-size: var(--w-fs-xs, 12px); }
+.dropTags { font-size: var(--w-fs-xs, 11px); color: #e0b860; }
+.dropWhy { font-size: var(--w-fs-xs, 11px); color: var(--w-text-dim); }
 .selBar {
   display: flex;
   flex-wrap: wrap;

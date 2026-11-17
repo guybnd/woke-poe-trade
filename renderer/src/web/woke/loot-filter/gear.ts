@@ -106,17 +106,20 @@ export interface TieredSource {
   any: Array<{ min: number, block: FilterBlock, live: boolean }>
   // Blocks the table replaces, in file order.
   replaced: FilterBlock[]
-  quality: { replaced: FilterBlock[], anyClasses: string[] | null }
+  // The block the table's rules go in front of (null: the end of the file).
+  at: FilterBlock | null
+  // NeverSink's over-quality rules, and the lowest quality its any-base rules show.
+  quality: { replaced: FilterBlock[], anyClasses: string[] | null, anyMin: number }
 }
 
 const key = (row: string, tier: number) => `${row}:${tier}`
 
-function itemTierMin (b: FilterBlock): number | null {
-  const c = b.conditions.find(c => c.key === 'UnidentifiedItemTier')
-  if (!c || !c.values.length) return null
-  const n = Number(c.values[0])
-  if (!Number.isFinite(n)) return null
-  return c.op === '>' ? n + 1 : n
+// NeverSink's any-base tiers: anyN catches drop tier N-1 and up (any2 and
+// any3 both from 2). Read from the name, since a preset (hide low item tiers)
+// may have moved the line itself.
+function anyTierMin (tier: string): number | null {
+  const m = ANY_TIER.exec(tier)
+  return m ? Math.max(2, Number(m[1]) - 1) : null
 }
 
 export function readTiered (doc: FilterDoc): TieredSource | null {
@@ -129,13 +132,15 @@ export function readTiered (doc: FilterDoc): TieredSource | null {
     const m = RANK_TIER.exec(b.tier)
     if (m) {
       const rank = `r${m[2]}` as Rank
-      if (!ranks[rank].length) ranks[rank] = [...(b.conditions.find(c => c.key === 'BaseType' && c.op === '==')?.values ?? [])]
+      for (const v of b.conditions.find(c => c.key === 'BaseType' && c.op === '==')?.values ?? []) {
+        if (!ranks[rank].includes(v)) ranks[rank].push(v)
+      }
       cells.set(key(rank, Number(m[1])), { block: b, live: !b.disabled })
       replaced.push(b)
       continue
     }
     if (ANY_TIER.test(b.tier)) {
-      const min = itemTierMin(b)
+      const min = anyTierMin(b.tier)
       if (min == null) continue
       any.push({ min, block: b, live: !b.disabled })
       replaced.push(b)
@@ -144,14 +149,24 @@ export function readTiered (doc: FilterDoc): TieredSource | null {
   if (!replaced.length) return null
   const qualityReplaced: FilterBlock[] = []
   let anyClasses: string[] | null = null
+  let anyMin = 0
   for (const b of doc.blocks) {
     if (b.type !== 'crafting->qualityperfection' || !b.tier) continue
     if (QUALITY_TIER.test(b.tier) || ANY_QUALITY_TIER.test(b.tier)) {
       qualityReplaced.push(b)
-      if (ANY_QUALITY_TIER.test(b.tier) && !anyClasses) anyClasses = b.conditions.find(c => c.key === 'Class')?.values ?? null
+      if (ANY_QUALITY_TIER.test(b.tier)) {
+        if (!anyClasses) anyClasses = b.conditions.find(c => c.key === 'Class')?.values ?? null
+        const q = Number(b.conditions.find(c => c.key === 'Quality')?.values[0])
+        if (!b.disabled && b.visibility === 'Show' && Number.isFinite(q)) anyMin = anyMin ? Math.min(anyMin, q) : q
+      }
     }
   }
-  return { ranks, cells, any, replaced, quality: { replaced: qualityReplaced, anyClasses } }
+  // Where the table goes: after NeverSink's fractured and veiled stranded
+  // rules when they sit among the rank rules, so special gear still comes first.
+  const first = replaced[0]
+  const special = doc.blocks.filter(b => b.type === 'gear->tiered' && /^stranded/.test(b.tier ?? '') && b.index > first.index)
+  const at = special.length ? doc.blocks[special[special.length - 1].index + 1] ?? null : first
+  return { ranks, cells, any, replaced, at, quality: { replaced: qualityReplaced, anyClasses, anyMin } }
 }
 
 // What NeverSink shows today, as table values (both rarities alike: its rules
@@ -176,6 +191,8 @@ export function gearDefaults (doc: FilterDoc): GearSettings {
   if (!src) return d
   const from = sourceShowFrom(src)
   for (const row of ['r1', 'r2', 'r3', 'any'] as const) d.show[row] = { magic: from[row], rare: from[row] }
+  const q = src.quality.anyMin
+  if (q) d.quality.min.any = [...QUALITY_STEPS].reverse().find(s => s && s <= q) ?? QUALITY_STEPS[1]
   return d
 }
 
@@ -255,8 +272,11 @@ function gearBlock (from: FilterBlock, tier: string, note: string, visibility: '
 
 const cond = (k: string, op: string, values: Array<string | number>): FilterCondition => ({ key: k, op, count: null, values: values.map(String) })
 
+// White gear follows the rare column: NeverSink's rules took all three.
 function rarityCondition (rs: GearRarity[]): FilterCondition {
-  return { key: 'Rarity', op: '', count: null, values: rs.map(r => RARITY_NAME[r]) }
+  const values = rs.map(r => RARITY_NAME[r])
+  if (rs.includes('rare')) values.unshift('Normal')
+  return { key: 'Rarity', op: '', count: null, values }
 }
 
 // Splits two rarities into Show / Hide / leave (to later rules) groups.
@@ -272,9 +292,9 @@ function byDecision (decide: (r: GearRarity) => 'Show' | 'Hide' | null): Array<{
   return out
 }
 
-function insertAt (doc: FilterDoc, before: FilterBlock, blocks: FilterBlock[]): void {
+function insertAt (doc: FilterDoc, before: FilterBlock | null, blocks: FilterBlock[]): void {
   if (!blocks.length) return
-  const at = doc.chunks.indexOf(before)
+  const at = before ? doc.chunks.indexOf(before) : -1
   doc.chunks.splice(at < 0 ? doc.chunks.length : at, 0, ...blocks)
   doc.blocks = doc.chunks.filter((c): c is FilterBlock => c.kind === 'block')
   doc.blocks.forEach((b, i) => { b.index = i })
@@ -360,7 +380,7 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   // Bases moved to Never come out of NeverSink's other gear rules' lists only
   // through this table: the Never rule sits first.
   src.replaced.forEach(retire)
-  insertAt(doc, anchor, out)
+  insertAt(doc, src.at, out)
   res.blocks += out.length
   res.replaced += src.replaced.length
 

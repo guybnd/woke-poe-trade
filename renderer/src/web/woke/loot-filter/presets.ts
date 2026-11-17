@@ -737,7 +737,7 @@ function placeSixSockets (doc: FilterDoc): void {
 const PLAIN_GEAR_KEYS = new Set(['UnidentifiedItemTier', 'ItemLevel', 'Rarity', 'Class', 'BaseType', 'DropLevel', 'Width', 'Height'])
 const isItemTierCond = (c: { key: string, op: string }) => c.key === 'UnidentifiedItemTier' && (c.op === '>=' || c.op === '>')
 const isPlainGearTier = (b: FilterBlock) => !b.disabled && !b.continue && b.visibility === 'Show' &&
-  ((b.type === 'gear->tiered' && b.tier !== 'specialclasses') || b.type === 'rr' || b.type?.startsWith('rr->') === true) &&
+  ((b.type === 'gear->tiered' && b.tier !== 'specialclasses') || b.type === GEAR_TYPE || b.type === 'rr' || b.type?.startsWith('rr->') === true) &&
   b.conditions.every(c => PLAIN_GEAR_KEYS.has(c.key)) &&
   // Its gear-only bases, never a unique: the Rarity is all three or fewer.
   b.conditions.some(c => c.key === 'Rarity' && c.values.length > 0 && c.values.every(v => v === 'Normal' || v === 'Magic' || v === 'Rare'))
@@ -768,7 +768,7 @@ function hideLowItemTiers (doc: FilterDoc, tier: number): number {
   const added: Array<[FilterBlock, FilterBlock[]]> = []
   let changed = 0
   for (const b of doc.blocks) {
-    if (b.type?.startsWith('woke->')) continue
+    if (b.type?.startsWith('woke->') && b.type !== GEAR_TYPE) continue
     if (isPlainGearTier(b) && minItemLevel(b) >= MAPS_FROM && itemTierFloor(b) < tier) {
       // NeverSink's own tier line just moves up; it stays unknown to the app,
       // as before. Only a line the preset adds counts as met.
