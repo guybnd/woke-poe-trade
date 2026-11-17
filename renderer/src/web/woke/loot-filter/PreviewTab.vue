@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, onActivated, onDeactivated, reactive, ref, shallowRef, watch } from 'vue'
 import { WBanner, WButton, WChip, WInfo, WSegmented, WSelect, WSkeleton, WToggle, openMenu, toast } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
@@ -126,6 +126,12 @@ const compareOptions = computed(() => {
   return list
 })
 
+// Kept alive while you're on another tab: it doesn't drop the pile or read
+// the other filter again for every edit there, only when you come back.
+const active = ref(true)
+onActivated(() => { active.value = true })
+onDeactivated(() => { active.value = false })
+
 // The other filter, loaded when the comparison changes.
 const other = shallowRef<FilterDoc | null>(null)
 const otherLoading = ref(false)
@@ -133,7 +139,9 @@ const compareError = ref<string | null>(null)
 // A slow read of the level picked before must not land after the one
 // picked now (it would show under the new level's name).
 let compareSeq = 0
-watch([compare, () => props.store.doc.value], async ([c]) => {
+watch([compare, () => active.value && props.store.doc.value], async ([c, doc]) => {
+  // Hidden: the doc it was read for stays until the tab shows again.
+  if (!doc) return
   const seq = ++compareSeq
   compareError.value = null
   if (c === 'off') { other.value = null; otherLoading.value = false; return }
@@ -214,7 +222,13 @@ function diffText (mine: ShownDrop[], theirs: ShownDrop[] | null): string {
   return only ? `${only} shown here, hidden there` : ''
 }
 
+let lastSides: ReturnType<typeof makeSides> = []
 const sides = computed(() => {
+  if (!active.value) return lastSides
+  lastSides = makeSides()
+  return lastSides
+})
+function makeSides () {
   const doc = props.store.doc.value
   if (!doc) return []
   const mine = runDrops(doc, drops.value)
@@ -241,7 +255,7 @@ const sides = computed(() => {
     })
   }
   return out
-})
+}
 
 function ruleName (d: ShownDrop): string {
   return d.type ? ruleLabel(d.type, d.tier) : 'no rule (shows by default)'

@@ -10,9 +10,21 @@ import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 // The name the filter must use instead, or undefined to keep it.
 export type BaseRename = (name: string) => string | undefined
 
+// Every rebuild asks this for each of the filter's few thousand BaseType names,
+// twice, and each lookup hashes the name: remembered per loaded item data
+// (the lookup is replaced when the data loads or the language changes).
+let cache = new Map<string, string | undefined>()
+let cacheFor: typeof ITEM_BY_REF | null = null
 export const gemBaseName: BaseRename = name => {
+  if (cacheFor !== ITEM_BY_REF) {
+    cache = new Map()
+    cacheFor = ITEM_BY_REF
+  }
+  if (cache.has(name)) return cache.get(name)
   const gem = ITEM_BY_REF('GEM', name)?.[0]?.gem
-  return gem?.transfigured && gem.normalVariant ? gem.normalVariant : undefined
+  const out = gem?.transfigured && gem.normalVariant ? gem.normalVariant : undefined
+  cache.set(name, out)
+  return out
 }
 
 const TRANSFIGURED = 'TransfiguredGem'

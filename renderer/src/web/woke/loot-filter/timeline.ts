@@ -83,6 +83,23 @@ function same3 (s: Settings, part: SettingsPart): boolean {
 // Settings moved from `before` to `after`. Going back to what the last step
 // came from is an undo (an Undo note did it), and to what the next step leads to
 // is a redo; anything else is a new step, and steps you'd undone are dropped.
+// Steps never change once made, so each one's size is worked out once (the
+// whole list is ~600 KB of JSON with a few big price applies in it).
+const sizeOf = new WeakMap<TimelineStep, number>()
+function stepSize (s: TimelineStep): number {
+  let n = sizeOf.get(s)
+  if (n == null) {
+    n = JSON.stringify(s).length + 1
+    sizeOf.set(s, n)
+  }
+  return n
+}
+
+// Sizes the saved steps ahead of the first change, while nothing else runs.
+export function measureSteps (t: Timeline): void {
+  t.steps.forEach(stepSize)
+}
+
 export function observe (t: Timeline, before: Settings, after: Settings, label: string, now = Date.now()): Timeline {
   const parts = changedParts(before, after)
   if (!parts.length) return t
@@ -94,7 +111,12 @@ export function observe (t: Timeline, before: Settings, after: Settings, label: 
   if (next && only(next) && same3(after, next.after) && same3(before, next.before)) return { ...t, at: t.at + 1 }
   const step: TimelineStep = { ts: now, label, before: pick(before, parts), after: pick(after, parts) }
   let steps = [...t.steps.slice(0, t.at), step].slice(-TIMELINE_SIZE)
-  while (steps.length > 1 && JSON.stringify(steps).length > TIMELINE_MAX_CHARS) steps = steps.slice(1)
+  // The list as JSON is the steps plus commas and brackets.
+  const sizes = steps.map(stepSize)
+  let total = sizes.reduce((a, b) => a + b, 1)
+  let drop = 0
+  while (steps.length - drop > 1 && total > TIMELINE_MAX_CHARS) total -= sizes[drop++]
+  if (drop) steps = steps.slice(drop)
   return { steps, at: steps.length }
 }
 
