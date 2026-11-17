@@ -151,7 +151,8 @@ import { MODULES, isModuleOn, isWidgetTypeOn } from '../modules'
 import { pressedKeys, sortKeys, isHotkeyTail, isModifierCode } from '../loot-filter/hotkey-match'
 import { whenIdle } from '../shared/perf'
 import { PAGES } from '../settings/pages'
-import { ICON_TOOL_NAMES, iconFor, looksLikeItem, parseWidgetTitle } from '../tab-bar/tools'
+import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
+import { pastedItemText } from './pasted-item'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
@@ -925,8 +926,8 @@ function copyName (name: string) {
 }
 
 function onPaste (e: ClipboardEvent) {
-  const text = e.clipboardData?.getData('text/plain') ?? ''
-  if (!looksLikeItem(text)) return
+  const text = pastedItemText(e.clipboardData?.getData('text/plain') ?? '')
+  if (text == null) return
   e.preventDefault()
   Host.selfDispatch({
     name: 'MAIN->CLIENT::item-text',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { movePin, railDropEdge, stepRailSize, groupByModule, launcherEntries, looksLikeItem, migrateToRail, parseWidgetTitle } from '@/web/woke/tab-bar/tools'
+import { movePin, railDropEdge, stepRailSize, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle } from '@/web/woke/tab-bar/tools'
 import type { TabBarConfig } from '@/web/woke/tab-bar/tools'
+import { pastedItemText } from '@/web/woke/search/pasted-item'
 
 function menu (extra: Partial<TabBarConfig> = {}): TabBarConfig {
   return {
@@ -77,14 +78,14 @@ describe('window titles', () => {
 
 describe('telling an item from a search', () => {
   it('takes copied item text, with either line ending', () => {
-    expect(looksLikeItem('Item Class: Rings\nRarity: Rare\nHate Knuckle\nRuby Ring\n--------\nItem Level: 80\n')).toBe(true)
-    expect(looksLikeItem('Item Class: Rings\r\nRarity: Rare\r\nHate Knuckle\r\n--------\r\nItem Level: 80\r\n')).toBe(true)
+    expect(pastedItemText('Item Class: Rings\nRarity: Rare\nHate Knuckle\nRuby Ring\n--------\nItem Level: 80\n')).not.toBeNull()
+    expect(pastedItemText('Item Class: Rings\r\nRarity: Rare\r\nHate Knuckle\r\n--------\r\nItem Level: 80\r\n')).not.toBeNull()
   })
 
   it('leaves ordinary text as a search', () => {
-    expect(looksLikeItem('boss runs')).toBe(false)
-    expect(looksLikeItem('')).toBe(false)
-    expect(looksLikeItem('a ---------- b')).toBe(false)
+    expect(pastedItemText('boss runs')).toBeNull()
+    expect(pastedItemText('')).toBeNull()
+    expect(pastedItemText('a ---------- b')).toBeNull()
   })
 })
 

@@ -7,6 +7,8 @@ import { shallowReactive, shallowRef } from 'vue'
 
 // An answer is reused this long; after that a click searches again.
 export const ON_DEMAND_FRESH_MS = 15 * 60 * 1000
+// At most this many kept, the oldest dropped first.
+export const ON_DEMAND_MAX_ANSWERS = 200
 
 // A search that never answers gives up its place after this, so later ones
 // aren't stuck behind it (rate limiter waits happen inside, so it's long).
@@ -39,8 +41,25 @@ export function keptAnswer<T> (key: string, now = Date.now()): T | undefined {
   // Read, so a row showing this redraws when any answer comes in.
   if (answered.value < 0) return undefined
   const a = answers.get(key)
-  if (!a || now - a.ts > ON_DEMAND_FRESH_MS) return undefined
+  if (!a) return undefined
+  if (now - a.ts > ON_DEMAND_FRESH_MS) { answers.delete(key); return undefined }
   return a.value as T
+}
+
+// Keeps an answer, dropping expired ones and the oldest past the cap.
+export function keepAnswer (key: string, value: unknown, now = Date.now()) {
+  answers.delete(key)
+  answers.set(key, { value, ts: now })
+  for (const [k, a] of answers) {
+    if (answers.size > ON_DEMAND_MAX_ANSWERS || now - a.ts > ON_DEMAND_FRESH_MS) answers.delete(k)
+    else break
+  }
+  answered.value++
+}
+
+// How many answers are kept (tests).
+export function keptCount (): number {
+  return answers.size
 }
 
 // The answer for a request: kept, already running, or searched in the lane.
@@ -50,7 +69,7 @@ export function askOnce<T> (key: string, work: () => Promise<T>): Promise<T> {
   const already = running.get(key)
   if (already) return already as Promise<T>
   const run = inLane(work)
-    .then((value) => { answers.set(key, { value, ts: Date.now() }); answered.value++; return value })
+    .then((value) => { keepAnswer(key, value); return value })
     .finally(() => { running.delete(key) })
   running.set(key, run)
   return run

@@ -104,6 +104,10 @@ export function parseClipboard (clipboard: string): Result<ParsedItem, string> {
   clipboard = clipboard.replace(ZERO_WIDTH_SPACE, '')
   try {
     let sections = itemTextToSections(clipboard)
+    // woke: poe.ninja puts "Searing Exarch Item" in a section of its own, which
+    // would be left empty for parsers that read its first line.
+    sections.forEach(parseEldritchItem)
+    sections = sections.filter(section => section.length)
 
     if (sections[0][2] === _$.CANNOT_USE_ITEM) {
       sections[0].pop() // remove CANNOT_USE_ITEM line
@@ -392,7 +396,11 @@ function _pickCorrectVariant (variants: BaseType[], item: ParsedItem): BaseType 
 
 function parseNamePlate (section: string[]) {
   let line = section.shift()
-  if (!line?.startsWith(_$.ITEM_CLASS)) {
+  // woke: copies from poe.ninja, trade sites and older tools start at the
+  // rarity line. The category comes from the base, so the class isn't needed.
+  if (line?.startsWith(_$.RARITY)) {
+    section.unshift(line)
+  } else if (!line?.startsWith(_$.ITEM_CLASS)) {
     return err('item.parse_error')
   }
 

@@ -186,7 +186,8 @@ import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '@/web/wo
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
-import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, looksLikeItem, migrateToRail, parseWidgetTitle } from './tools'
+import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle } from './tools'
+import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
 import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
@@ -729,8 +730,8 @@ function sendItem (text: string, from: HTMLElement | null | undefined) {
   emit('paste', text, r?.width ? r : new DOMRect(onRight.value ? window.innerWidth : 0, 0, 0, 0))
 }
 function onBoxPaste (e: ClipboardEvent) {
-  const text = e.clipboardData?.getData('text/plain') ?? ''
-  if (!looksLikeItem(text)) return
+  const text = pastedItemText(e.clipboardData?.getData('text/plain') ?? '')
+  if (text == null) return
   e.preventDefault()
   const box = e.target as HTMLElement
   sendItem(text, box)
@@ -741,8 +742,8 @@ function onOverlayPaste (e: ClipboardEvent) {
   if (wm.widgets.value.some(w => w.wmType === 'settings' && w.wmWants === 'show')) return
   const target = e.target
   if (target instanceof Element && target.closest('input, textarea, [contenteditable]')) return
-  const text = e.clipboardData?.getData('text/plain') ?? ''
-  if (!looksLikeItem(text)) return
+  const text = pastedItemText(e.clipboardData?.getData('text/plain') ?? '')
+  if (text == null) return
   e.preventDefault()
   sendItem(text, railEl.value)
 }

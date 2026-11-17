@@ -1,6 +1,6 @@
 // On-click trade searches: one lane, answers kept by request.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { askOnce, inLane, keptAnswer, resetOnDemand, useOnDemandQuote, ON_DEMAND_FRESH_MS } from '@/web/woke/shared/on-demand'
+import { askOnce, inLane, keepAnswer, keptAnswer, keptCount, resetOnDemand, useOnDemandQuote, ON_DEMAND_FRESH_MS, ON_DEMAND_MAX_ANSWERS } from '@/web/woke/shared/on-demand'
 
 beforeEach(resetOnDemand)
 
@@ -63,5 +63,24 @@ describe('useOnDemandQuote', () => {
     expect(q.rowOf('row', 'req2')).toMatchObject({ state: 'error', error: 'Retry after 5 seconds' })
     await q.ask('row', 'req2', async () => 9)
     expect(q.rowOf('row', 'req2')).toMatchObject({ state: 'done', value: 9 })
+  })
+})
+
+describe('kept answers', () => {
+  it('drop when read after they expire', () => {
+    keepAnswer('old', 1, 0)
+    expect(keptCount()).toBe(1)
+    expect(keptAnswer('old', ON_DEMAND_FRESH_MS + 1)).toBeUndefined()
+    expect(keptCount()).toBe(0)
+  })
+
+  it('drop expired ones and the oldest past the cap when a new one comes', () => {
+    keepAnswer('stale', 1, 0)
+    keepAnswer('fresh', 2, ON_DEMAND_FRESH_MS + 1)
+    expect(keptCount()).toBe(1)
+    for (let i = 0; i < ON_DEMAND_MAX_ANSWERS + 5; i++) keepAnswer(`k${i}`, i, ON_DEMAND_FRESH_MS + 2)
+    expect(keptCount()).toBe(ON_DEMAND_MAX_ANSWERS)
+    expect(keptAnswer('k0', ON_DEMAND_FRESH_MS + 2)).toBeUndefined()
+    expect(keptAnswer(`k${ON_DEMAND_MAX_ANSWERS + 4}`, ON_DEMAND_FRESH_MS + 2)).toBe(ON_DEMAND_MAX_ANSWERS + 4)
   })
 })

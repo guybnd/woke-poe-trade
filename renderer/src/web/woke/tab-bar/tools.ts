@@ -90,12 +90,6 @@ export function railAnchor (): Anchor {
   return { pos: 'tl', x: 0, y: 10.5 }
 }
 
-// Copied item text has separator lines, in every game language. Anything else
-// pasted into the launcher is just a search.
-export function looksLikeItem (text: string): boolean {
-  return /^-{8}\s*$/m.test(text)
-}
-
 // APT's own windows; toolkit modules use their module icon (modules.ts).
 const APT_ICONS: Record<string, string> = {
   'settings': 'fa-cog',
