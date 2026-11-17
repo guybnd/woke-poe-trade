@@ -4,6 +4,8 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
 import { strategyRegexFolder } from '../regex-library/folder-names'
 import { decodeTree } from './tree'
+import { allPaths, movedPath, treeOf } from '../shared/saved-tree'
+import type { TreeNode } from '../shared/saved-tree'
 
 export const ATLAS_TYPE = 'woke-atlas-strategies'
 
@@ -119,52 +121,19 @@ export interface FolderNode {
   children: FolderNode[]
 }
 
-// The list as nested folders: strategies in list order, and folders in `order`
-// (ones it doesn't list after, A to Z).
+// The list as nested folders (shared/saved-tree): strategies in list order,
+// and folders in `order` (ones it doesn't list after, A to Z).
 export function folderTree (strategies: AtlasStrategy[], extra: string[] = [], order: string[] = []): FolderNode {
-  const root: FolderNode = { path: '', name: '', depth: -1, strategies: [], total: 0, children: [] }
-  const at = (path: string): FolderNode => {
-    let node = root
-    let sofar = ''
-    for (const part of path.split('/').filter(Boolean)) {
-      sofar = sofar ? `${sofar}/${part}` : part
-      let child = node.children.find(c => c.path === sofar)
-      if (!child) {
-        child = { path: sofar, name: part, depth: node.depth + 1, strategies: [], total: 0, children: [] }
-        node.children.push(child)
-      }
-      node = child
-    }
-    return node
-  }
-  for (const f of extra) at(cleanFolder(f))
-  for (const s of strategies) at(cleanFolder(s.folder ?? '')).strategies.push(s)
-  const finish = (n: FolderNode): number => {
-    const rank = (p: string) => { const i = order.indexOf(p); return i < 0 ? Infinity : i }
-    n.children.sort((a, b) => (rank(a.path) - rank(b.path)) || a.name.localeCompare(b.name))
-    n.total = n.strategies.length + n.children.reduce((sum, c) => sum + finish(c), 0)
-    return n.total
-  }
-  finish(root)
-  return root
+  const asNode = (n: TreeNode<AtlasStrategy>): FolderNode => ({ path: n.path, name: n.name, depth: n.depth, strategies: n.items, total: n.total, children: n.children.map(asNode) })
+  return asNode(treeOf(strategies, s => s.folder ?? '', extra, order))
 }
 
 export function allFolders (strategies: AtlasStrategy[], extra: string[] = []): string[] {
-  const out = new Set<string>()
-  for (const f of [...extra, ...strategies.map(s => s.folder ?? '')]) {
-    const parts = cleanFolder(f).split('/').filter(Boolean)
-    for (let i = 1; i <= parts.length; i++) out.add(parts.slice(0, i).join('/'))
-  }
-  return [...out].sort((a, b) => a.localeCompare(b))
+  return allPaths([...extra, ...strategies.map(s => s.folder ?? '')])
 }
 
 // A folder moved or renamed: `from` and everything under it now sit at `to`.
-export function movedFolder (folder: string, from: string, to: string): string {
-  const f = cleanFolder(folder)
-  if (f === from) return to
-  if (f.startsWith(from + '/')) return cleanFolder(`${to}/${f.slice(from.length + 1)}`)
-  return f
-}
+export const movedFolder = movedPath
 
 // Strategy codes (Import and Export) are in strategy-code.ts, loaded when used.
 export const CODE_PREFIX = 'woke-atlas:'
