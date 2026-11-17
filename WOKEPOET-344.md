@@ -3,7 +3,7 @@ id: WOKEPOET-344
 title: >-
   Loot filter: redesign gear rules around rank, kind, drop tier, rarity,
   decorators
-status: In Progress
+status: Ready
 priority: Medium
 effort: L
 assignee: unassigned
@@ -68,6 +68,25 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-17T03:35:43.279Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/562 (branch
+      woke/gear-page): the Gear tab. It has the drop tier table
+      (build/exotic/rank 1-3/unranked × magic/rare, with Off/Always/2-5), looks,
+      over-quality, counts with base lists, test drops linked to their rules,
+      and Base ranks lanes with art, kind and defence filters. Two adversarial
+      reviews are fixed with tests. Lint, typecheck, build and 4315 unit tests
+      pass. Sent to the cloud merge thread on Guy's go ("focus on usability and
+      shipping").
+    date: '2026-11-17T04:48:15.914Z'
+    completionComment: true
+    id: c-2026-11-17t04-48-15-914z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-17T04:48:15.914Z'
 needsAction: null
 ---
 > **TL;DR:** One Gear view that shows what happens to every kind of gear drop (base rank × base kind × drop tier × rarity × decorators), instead of ~30 NeverSink groups where rarity is sometimes lumped. Waiting on Guy's pick of A/B/C.
