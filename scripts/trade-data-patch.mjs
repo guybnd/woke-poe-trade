@@ -68,7 +68,7 @@ const GEAR_GROUPS = new Set(['armour', 'weapon'])
 
 function category (group, base) {
   if (group === 'jewel') return / Eye Jewel$/.test(base) ? 'Abyss Jewel' : / Cluster Jewel$/.test(base) ? 'Cluster Jewel' : 'Jewel'
-  if (group === 'accessory') return / Ring$/.test(base) ? 'Ring' : / Amulet$|^Talisman/.test(base) ? 'Amulet' : / (Belt|Sash|Vise|Obi)$/.test(base) ? 'Belt' : null
+  if (group === 'accessory') return / Ring$/.test(base) ? 'Ring' : / Amulet$|^Talisman/.test(base) ? 'Amulet' : / (Belt|Sash|Vise|Obi)$/.test(base) ? 'Belt' : / Quiver$/.test(base) ? 'Quiver' : null
   if (group === 'flask') return 'Flask'
   // 3.30 Wickerman trophies: one implicit each, slot read from the item text.
   if (group === 'viscera') return 'Viscera'
@@ -259,7 +259,17 @@ export function diff (before, after, statLines, itemLines) {
   const byId = new Map()
   for (const s of stats) for (const ids of Object.values(s.trade.ids)) for (const id of ids) byId.set(id, s)
   const byText = new Map()
-  for (const s of stats) for (const m of s.matchers) if (!byText.has(m.string.trim())) byText.set(m.string.trim(), s)
+  // A matcher worth a fixed value (certainChance's "Blind Enemies on Hit")
+  // is a reading of another stat's words, not a stat of its own: a trade stat
+  // with those words gets a stat of its own, and the stand-in goes.
+  const valued = new Map()
+  for (const s of stats) {
+    for (const m of s.matchers) {
+      const t = m.string.trim()
+      if (m.value != null) { if (!valued.has(t)) valued.set(t, s); continue }
+      if (!byText.has(t)) byText.set(t, s)
+    }
+  }
   const report = { newStats: [], newIds: [], reworded: [], newItems: [], byName: [], skipped: [] }
 
   // One id can carry several texts (an atlas "in your Maps" line and the map's
@@ -291,6 +301,8 @@ export function diff (before, after, statLines, itemLines) {
       }
       let stat = added.get(text)
       if (!stat) {
+        const holder = valued.get(text)
+        if (holder) holder.matchers = holder.matchers.filter(m => m.value == null || m.string.trim() !== text)
         stat = { ref: refText(e.text), better: 1, matchers: [{ string: text }], trade: { ids: {} } }
         added.set(text, stat)
         report.newStats.push(stat)

@@ -193,4 +193,18 @@ Can be Anointed up to 3 times`)], items: [], static: [] },
     const mapMod = { ...line('#% chance to contain an Expedition Encounter', { explicit: ['explicit.stat_3'] }), fromAreaMods: 'map' }
     expect(certainChance([mapMod])).toEqual([])
   })
+
+  it('gives a trade stat with the words of a 100% reading a stat of its own', () => {
+    const blind = line('#% chance to Blind Enemies on hit', { explicit: ['explicit.stat_5'] }, ['#% chance to Blind Enemies on Hit'])
+    certainChance([blind])
+    const r = diff({ stats: [], items: [], static: [] }, { stats: [stat('explicit.stat_999', 'Blind Enemies on Hit')], items: [], static: [] }, [blind], [])
+    expect(blind.trade.ids.explicit).toEqual(['explicit.stat_5'])
+    expect(blind.matchers.map(m => m.string)).toEqual(['#% chance to Blind Enemies on Hit'])
+    expect(r.newStats.map((s: Line) => s.trade.ids.explicit)).toEqual([['explicit.stat_999']])
+  })
+
+  it('gives a new quiver base its category', () => {
+    const r = diff({ stats: [], items: [], static: [] }, { stats: [], items: [{ group: 'accessory', name: null, type: 'Enshrouded Quiver' }], static: [] }, [], [])
+    expect(r.newItems).toEqual([{ name: 'Enshrouded Quiver', refName: 'Enshrouded Quiver', namespace: 'ITEM', craftable: { category: 'Quiver' }, icon: '' }])
+  })
 })
