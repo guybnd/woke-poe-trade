@@ -50,7 +50,7 @@
         </div>
       </div>
 
-      <div :class="$style.card">
+      <div ref="looksEl" :class="$style.card">
         <div class="flex items-center gap-2">
           <span>Looks</span>
           <WInfo text="How the table's labels look. NeverSink gives magic and rare gear the same colours; here each rarity can look its own way. Each row and drop tier keeps NeverSink's size and sound." />
@@ -145,7 +145,9 @@
                 · {{ d.tier ? `tier ${d.tier}` : 'no tier' }} · {{ ROW_LABEL[d.row as GearRow] }}
               </span>
               <span v-if="d.tags.length" :class="$style.dropTags">{{ d.tags.join(' · ') }}</span>
-              <span :class="$style.dropWhy">{{ d.why }}</span>
+              <button type="button" :class="$style.dropWhy" :title="d.gear ? `Change the ${d.rarity?.toLowerCase()} look of your Gear table` : 'Open this rule in Rules to change its look'" @click="openDropRule(d)">
+                {{ d.why }} <i class="fas fa-external-link-alt" />
+              </button>
             </div>
           </div>
         </template>
@@ -248,6 +250,7 @@ const props = defineProps<{
   store: LootFilterStore
   config: LootFilterWidget
 }>()
+const emit = defineEmits<{ (e: 'open-rule', rule: { type: string, tier: string | null, base?: string }): void }>()
 
 const useCss = useCssModule()
 const RARITIES: GearRarity[] = ['magic', 'rare']
@@ -478,10 +481,22 @@ const pile = computed(() => {
       visibility: m.visibility,
       colour: defaultTextColour(d.facts),
       why: `${hidden ? 'Hidden' : 'Shown'} by ${by}`,
+      gear: rule?.type === GEAR_TYPE,
+      rule: rule?.type ? { type: rule.type, tier: rule.tier, base: d.facts.baseType } : null,
       title: `${d.facts.rarity} ${d.facts.baseType}, item level ${d.facts.itemLevel}`
     }
   })
 })
+// A drop's rule: the table's own look here, anything else in Rules.
+const looksEl = ref<HTMLElement | null>(null)
+function openDropRule (d: { gear: boolean, rarity?: string, rule: { type: string, tier: string | null, base?: string } | null }) {
+  if (d.gear) {
+    editing.value = d.rarity === 'Magic' ? 'magic' : 'rare'
+    looksEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  if (d.rule) emit('open-rule', d.rule)
+}
 const pileShown = computed(() => pile.value.filter(d => d.visibility !== 'Hide').length)
 const pileGroups = computed(() => [
   { key: 'shown', label: 'Shown', drops: pile.value.filter(d => d.visibility !== 'Hide') },
@@ -775,7 +790,17 @@ function neverOffBuild () {
 .hiddenDrop > :first-child { opacity: 0.4; }
 .dropWhat { font-size: var(--w-fs-xs, 12px); }
 .dropTags { font-size: var(--w-fs-xs, 11px); color: #e0b860; }
-.dropWhy { font-size: var(--w-fs-xs, 11px); color: var(--w-text-dim); }
+.dropWhy {
+  font-size: var(--w-fs-xs, 11px);
+  color: var(--w-text-dim);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.dropWhy:hover { color: #f3d48a; text-decoration: underline; }
+.dropWhy i { font-size: 0.8em; opacity: 0.7; }
 .kinds {
   display: flex;
   flex-wrap: wrap;
