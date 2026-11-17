@@ -150,6 +150,9 @@ export interface WokeOps {
 
   // Stores of overlay records
   'doc-get': Op<DocKey, Json>
+  // Null only when there's nothing to read (no file, or a broken one, moved
+  // aside); throws when the file can't be read right now (locked).
+  'doc-get-strict': Op<DocKey, Json>
   'doc-list': Op<{ collection: string }, Json[]>
   'doc-put': Op<DocKey & { value: Json }, Ok>
   'doc-delete': Op<DocKey, Ok>

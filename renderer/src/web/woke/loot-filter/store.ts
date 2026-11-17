@@ -393,8 +393,12 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   })
   const timeline = history.timeline
   history.ready.then(() => idle(() => measureSteps(toRaw(timeline.value)))).catch(() => {})
-  // Writes a change still waiting (quitting, or the widget going away).
-  const flushHistory = () => { if (history.pending()) history.flush().catch(() => {}) }
+  // Writes a change still waiting (quitting, or the widget going away),
+  // after recording a step that hadn't settled yet.
+  const flushHistory = () => {
+    if (settleTimer) settle()
+    if (history.pending()) history.flush().catch(() => {})
+  }
   let settleTimer: ReturnType<typeof setTimeout> | undefined
 
   function sourceParsed (): FilterDoc | null {

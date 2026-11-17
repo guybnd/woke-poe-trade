@@ -14,8 +14,10 @@ function fakeDocs (start: Record<string, unknown> = {}, opts: { locked?: boolean
   const puts: unknown[] = []
   const request = async (op: string, args: Record<string, unknown>) => {
     const key = `${String(args.collection)}/${String(args.key)}`
-    if (op === 'doc-get') return opts.locked ? null : docs.get(key) ?? null
-    if (op === 'doc-exists') return docs.has(key)
+    if (op === 'doc-get-strict') {
+      if (opts.locked) throw new Error('EBUSY')
+      return docs.get(key) ?? null
+    }
     if (op === 'doc-put') {
       if (opts.putFails) throw new Error('EPERM')
       puts.push(args.value)
@@ -79,6 +81,17 @@ describe('loot filter history file', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('starts over from a broken file (main moved it aside), keeping the steps from old settings', async () => {
+    const cfg = { timeline: timeline(2) }
+    const legacy = legacyOf(cfg)
+    // A broken file reads as nothing.
+    const host = fakeDocs()
+    const h = useFilterHistory(legacy, host.request)
+    await h.ready
+    expect(h.timeline.value.steps).toHaveLength(2)
+    expect(host.puts).toHaveLength(1)
   })
 
   it('writes once a burst of changes settles', async () => {

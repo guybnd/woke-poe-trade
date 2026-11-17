@@ -61,7 +61,7 @@ export function fakeHost (): FakeHost {
         case 'ns-latest': return { version: host.latestVersion, changes: 'Fixes' }
         case 'ns-prune': return {}
         case 'game-filter': return host.gameFilter
-        case 'doc-get': return host.docs.get(`${String(args.collection)}/${String(args.key)}`) ?? null
+        case 'doc-get': case 'doc-get-strict': return host.docs.get(`${String(args.collection)}/${String(args.key)}`) ?? null
         case 'doc-exists': return host.docs.has(`${String(args.collection)}/${String(args.key)}`)
         case 'doc-put': host.docs.set(`${String(args.collection)}/${String(args.key)}`, JSON.parse(JSON.stringify(args.value))); return true
         default: return {}

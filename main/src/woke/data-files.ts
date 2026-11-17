@@ -83,8 +83,14 @@ const docFile = (collection: unknown, key: unknown) => {
 }
 const queued = writeQueue()
 
+// Resolves once every document write asked for so far is on disk (quitting).
+export async function docWritesDone (): Promise<void> {
+  await queued(async () => {})
+}
+
 export const docHandlers: Partial<WokeHandlers> = {
   'doc-get': async ({ collection, key }) => await readJson(docFile(collection, key)),
+  'doc-get-strict': async ({ collection, key }) => await readJsonStrict<unknown>(docFile(collection, key), null),
   'doc-list': async ({ collection }) => {
     if (typeof collection !== 'string' || !collection) throw new Error('No collection given.')
     const dir = path.join(docsRoot(), safeName(collection))

@@ -55,21 +55,17 @@ export function useFilterHistory (legacy: Legacy, request: Request = hostRequest
     const hasLegacy = old.timeline != null || old.history != null
     let file = null as { timeline?: unknown, saves?: unknown } | null
     try {
-      file = await request('doc-get', HISTORY_DOC) as typeof file
-    } catch {}
-    if (file == null) {
-      // A missing file reads as null, and so does one that's locked right now.
-      let exists = false
-      try { exists = await request('doc-exists', HISTORY_DOC) === true } catch { exists = true }
-      if (exists) {
-        readOnly = true
-        if (hasLegacy) {
-          timeline.value = normalizeTimeline(old.timeline)
-          saves.value = normalizeSaves(old.history)
-        }
-        loaded = true
-        return
+      // Null when there's no file, or a broken one (main keeps it aside).
+      file = await request('doc-get-strict', HISTORY_DOC) as typeof file
+    } catch {
+      // There, but can't be read right now (locked): work from memory this run.
+      readOnly = true
+      if (hasLegacy) {
+        timeline.value = normalizeTimeline(old.timeline)
+        saves.value = normalizeSaves(old.history)
       }
+      loaded = true
+      return
     }
     if (file != null && typeof file === 'object') {
       timeline.value = normalizeTimeline(file.timeline)
