@@ -137,7 +137,7 @@
           <div v-for="part in picked2.parts" :key="part.row" class="flex flex-col gap-1">
             <span class="w-dim text-xs">{{ ROW_LABEL[part.row] }} · {{ part.bases.length }}</span>
             <div class="flex flex-wrap gap-1">
-              <span v-for="b in part.bases.slice(0, part.open ? undefined : 40)" :key="b" :class="$style.baseChip" :title="baseTitle(b, part.row)">
+              <span v-for="b in part.bases.slice(0, part.open ? undefined : 40)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, part.row) }" :class="$style.baseChip">
                 <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.chipIcon">{{ b }}
               </span>
               <WButton v-if="part.bases.length > 40 && !part.open" size="sm" variant="ghost" @click="openParts.push(part.row)">+{{ part.bases.length - 40 }} more</WButton>
@@ -226,8 +226,8 @@
             <span class="w-faint text-xs">{{ lane.bases.length }}</span>
           </div>
           <div :class="$style.laneBody" class="w-scroll">
-            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" type="button" :class="[$style.base, picked.includes(b) && $style.picked]"
-              :title="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" @click="pick(b, $event)">
+            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked]"
+              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" @click="pick(b, $event)">
               <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
               <span :class="$style.baseText">
                 <span>{{ b }}</span>
@@ -248,7 +248,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useCssModule } from 'vue'
-import { WButton, WChip, WField, WInfo, WToggle, openMenu } from '../ui'
+import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
