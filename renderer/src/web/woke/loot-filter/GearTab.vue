@@ -236,7 +236,7 @@ const props = defineProps<{
 
 const useCss = useCssModule()
 const RARITIES: GearRarity[] = ['magic', 'rare']
-const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Any other base' }
+const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Unranked (trash)' }
 const LANE_CAP = 80
 const MOVE_TO: Array<{ lane: Lane | 'build' | 'unbuild', label: string }> = [
   { lane: 'build', label: 'Add to Build' },
@@ -303,7 +303,7 @@ function backToNeverSink () {
 
 function rowSub (row: GearRow): string {
   if (row === 'build') return buildCount.value ? `${buildCount.value} from your build` : 'link a PoB build'
-  if (row === 'any') return 'everything unranked'
+  if (row === 'any') return 'every other base; exotics have their own rules'
   return `${lists.value[row].length} bases`
 }
 function stepTitle (row: GearRow, r: GearRarity, v: number): string {
@@ -379,7 +379,7 @@ const counts = computed(() => {
   }
   return out
 })
-const SHORT_ROW: Record<GearRow, string> = { build: 'build', r1: 'rank 1', r2: 'rank 2', r3: 'rank 3', any: 'any base' }
+const SHORT_ROW: Record<GearRow, string> = { build: 'build', r1: 'rank 1', r2: 'rank 2', r3: 'rank 3', any: 'unranked' }
 function countText (c: Count): string {
   if (!c.n) return 'none'
   return GEAR_ROWS.filter(r => c.byRow[r]?.length).map(r => `${c.byRow[r]!.length} ${SHORT_ROW[r]}`).join(' + ')
@@ -500,7 +500,7 @@ const lanes = computed(() => {
     lane('r2', 'Rank 2', lists.value.r2),
     lane('r3', 'Rank 3', lists.value.r3),
     lane('exotic', 'Exotic', exotic),
-    lane('none', 'Unranked', unranked),
+    lane('none', 'Unranked (trash)', unranked),
     lane('never', 'Never', lists.value.never)
   ]
 })
