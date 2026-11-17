@@ -30,6 +30,19 @@ export const SHOW_FROM = [0, 1, 2, 3, 4, 5]
 export const NO_TIER = 1
 export const QUALITY_STEPS = [0, 21, 24, 28, 30]
 
+// Slot groups a row can split into, by the filter's item classes.
+export type SlotGroup = 'body' | 'armour' | 'offhand' | 'jewellery' | 'weapon'
+export const SLOT_GROUPS: Array<{ key: SlotGroup, label: string, classes: string[] }> = [
+  { key: 'body', label: 'Body armours', classes: ['Body Armours'] },
+  { key: 'armour', label: 'Helmets, gloves, boots', classes: ['Helmets', 'Gloves', 'Boots'] },
+  { key: 'offhand', label: 'Shields, quivers', classes: ['Shields', 'Quivers'] },
+  { key: 'jewellery', label: 'Rings, amulets, belts', classes: ['Rings', 'Amulets', 'Belts'] },
+  { key: 'weapon', label: 'Weapons', classes: ['Bows', 'Claws', 'Daggers', 'Rune Daggers', 'One Hand Axes', 'One Hand Maces', 'One Hand Swords', 'Thrusting One Hand Swords', 'Sceptres', 'Staves', 'Warstaves', 'Two Hand Axes', 'Two Hand Maces', 'Two Hand Swords', 'Wands'] }
+]
+// Rows that can split by slot (not the exotic row: NeverSink's own rules).
+export const SLOT_ROWS: GearRow[] = ['build', 'r1', 'r2', 'r3', 'any']
+export type SlotLines = Partial<Record<GearRow, Partial<Record<SlotGroup, Record<GearRarity, number>>>>>
+
 export interface GearSettings {
   // The table replaces NeverSink's tiered gear rules.
   on: boolean
@@ -42,6 +55,8 @@ export interface GearSettings {
   // Labels the table shows: the game's rarity colour for the text (NeverSink
   // paints magic and rare alike), and your own look per rarity on top.
   look: { rarityText: boolean, magic: StylePatch, rare: StylePatch }
+  // Per-slot lines that differ from their row's (F2); slots not listed follow the row.
+  slots: SlotLines
 }
 
 export function defaultGear (): GearSettings {
@@ -60,7 +75,8 @@ export function defaultGear (): GearSettings {
     quality: { on: false, min: { build: 21, exotic: 0, r1: 24, r2: 24, r3: 28, any: 30 } },
     moves: {},
     build: { auto: true, extra: [], removed: [] },
-    look: { rarityText: true, magic: {}, rare: {} }
+    look: { rarityText: true, magic: {}, rare: {} },
+    slots: {}
   }
 }
 
@@ -84,6 +100,14 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
   }
   // The first builds had an on/off switch for exotics at any drop tier.
   if ((g as { exoticAlways?: unknown } | undefined)?.exoticAlways === true && !g?.show?.exotic) show.exotic = { magic: NO_TIER, rare: NO_TIER }
+  const slots: SlotLines = {}
+  for (const row of SLOT_ROWS) {
+    for (const sg of SLOT_GROUPS) {
+      const v = g?.slots?.[row]?.[sg.key]
+      if (!v || typeof v !== 'object') continue
+      ;(slots[row] ??= {})[sg.key] = { magic: pick(v.magic, SHOW_FROM, show[row].magic), rare: pick(v.rare, SHOW_FROM, show[row].rare) }
+    }
+  }
   const moves: Record<string, Lane> = {}
   if (g?.moves && typeof g.moves === 'object') {
     for (const [base, lane] of Object.entries(g.moves)) if (LANES.includes(lane) && safeName(base)) moves[base] = lane
@@ -99,6 +123,7 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
       extra: strings(g?.build?.extra),
       removed: strings(g?.build?.removed)
     },
+    slots,
     look: {
       rarityText: typeof g?.look?.rarityText === 'boolean' ? g.look.rarityText : true,
       magic: isPatch(g?.look?.magic) ? { ...g!.look!.magic } : {},
@@ -342,6 +367,16 @@ function lookUp (b: FilterBlock, g: GearSettings): void {
   if (Object.keys(patch).length) applyStyle(b, patch)
 }
 
+// The conditions limited to these classes: an existing Class line is narrowed
+// (null when nothing is left), otherwise one is added.
+function withClasses (conds: FilterCondition[], classes: string[]): FilterCondition[] | null {
+  const at = conds.findIndex(c => c.key === 'Class')
+  if (at < 0) return [...conds, cond('Class', '==', classes)]
+  const left = conds[at].values.filter(v => classes.includes(v))
+  if (!left.length) return null
+  return conds.map((c, i) => i === at ? { ...c, op: '==', values: left } : c)
+}
+
 function insertAt (doc: FilterDoc, before: FilterBlock | null, blocks: FilterBlock[]): void {
   if (!blocks.length) return
   const at = before ? doc.chunks.indexOf(before) : -1
@@ -376,6 +411,17 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   // Every rank block holds the same conditions apart from bases and tier.
   const template = copyConditions(anchor)
   const out: FilterBlock[] = []
+  // A row's rules: first one set per slot group with a line of its own (with
+  // that group's classes), then one for every other slot.
+  const perSlot = (row: GearRow, conds: FilterCondition[], emit: (line: (r: GearRarity) => number, conds: FilterCondition[], tag: string) => void) => {
+    for (const sg of SLOT_GROUPS) {
+      const own = g.slots[row]?.[sg.key]
+      if (!own) continue
+      const cls = withClasses(conds, sg.classes)
+      if (cls) emit(r => own[r], cls, `-${sg.key}`)
+    }
+    emit(r => g.show[row][r], conds, '')
+  }
 
   if (lists.never.length) {
     const from = src.cells.get(key('r3', 2))?.block ?? anchor
@@ -404,69 +450,79 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
     // Your build's bases: lifted above their rank where the build row says so.
     if (build.length) {
       const from = src.cells.get(key('r1', t))?.block ?? anchor
-      for (const { vis, rarities } of byDecision(r => {
-        const v = g.show.build[r]
-        return v && t >= v ? 'Show' : null
-      })) {
-        out.push(gearBlock(from, `build-t${t}`, `your build's bases, drop tier ${t}`, vis, [
-          ...template, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities), cond('BaseType', '==', build)
-        ], section))
-      }
+      perSlot('build', template, (line, conds, tag) => {
+        for (const { vis, rarities } of byDecision(r => {
+          const v = line(r)
+          return v && t >= v ? 'Show' : null
+        })) {
+          out.push(gearBlock(from, `build${tag}-t${t}`, `your build's bases${tag ? ` (${tag.slice(1)})` : ''}, drop tier ${t}`, vis, [
+            ...conds, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities), cond('BaseType', '==', build)
+          ], section))
+        }
+      })
     }
     for (const rank of RANKS) {
       const bases = lists[rank]
       const cell = src.cells.get(key(rank, t))
       if (!bases.length || !cell) continue
-      for (const { vis, rarities } of byDecision(r => {
-        const v = g.show[rank][r]
-        if (v && t >= v) return 'Show'
-        // Below the line: hidden, except where NeverSink leaves it to later
-        // rules (and the unranked row wouldn't catch it there).
-        const a = g.show.any[r]
-        return cell.live || (a && t >= a) ? 'Hide' : null
-      })) {
-        out.push(gearBlock(cell.block, `${rank}-t${t}`, `rank ${rank.slice(1)} bases, drop tier ${t}`, vis, [
-          ...template, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities), cond('BaseType', '==', bases)
-        ], section))
-      }
+      perSlot(rank, template, (line, conds, tag) => {
+        for (const { vis, rarities } of byDecision(r => {
+          const v = line(r)
+          if (v && t >= v) return 'Show'
+          // Below the line: hidden, except where NeverSink leaves it to later
+          // rules (and the unranked row wouldn't catch it there).
+          const a = g.show.any[r]
+          return cell.live || (a && t >= a) ? 'Hide' : null
+        })) {
+          out.push(gearBlock(cell.block, `${rank}${tag}-t${t}`, `rank ${rank.slice(1)} bases${tag ? ` (${tag.slice(1)})` : ''}, drop tier ${t}`, vis, [
+            ...conds, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities), cond('BaseType', '==', bases)
+          ], section))
+        }
+      })
     }
     // Any other base: NeverSink's class-wide rule that catches this tier.
     const anyRule = src.any.find(a => t >= a.min)
     if (anyRule) {
-      const anyTemplate = copyConditions(anyRule.block)
-      for (const { vis, rarities } of byDecision(r => {
-        const v = g.show.any[r]
-        if (v && t >= v) return 'Show'
-        return anyRule.live ? 'Hide' : null
-      })) {
-        out.push(gearBlock(anyRule.block, `any-t${t}`, `any other base, drop tier ${t}`, vis, [
-          ...anyTemplate, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities)
-        ], section))
-      }
+      perSlot('any', copyConditions(anyRule.block), (line, conds, tag) => {
+        for (const { vis, rarities } of byDecision(r => {
+          const v = line(r)
+          if (v && t >= v) return 'Show'
+          return anyRule.live ? 'Hide' : null
+        })) {
+          out.push(gearBlock(anyRule.block, `any${tag}-t${t}`, `any other base${tag ? ` (${tag.slice(1)})` : ''}, drop tier ${t}`, vis, [
+            ...conds, cond('UnidentifiedItemTier', '>=', [t]), rarityCondition(rarities)
+          ], section))
+        }
+      })
     }
   }
 
   // "No tier": the row's bases without a drop tier too, after every tier.
   const noTier = (row: GearRow, bases: string[] | null, from: FilterBlock, conditions: FilterCondition[]) => {
-    for (const { vis, rarities } of byDecision(r => g.show[row][r] === NO_TIER ? 'Show' : null)) {
-      out.push(gearBlock(from, `${row}-notier`, `${row === 'any' ? 'unranked' : row === 'build' ? 'your build\'s' : `rank ${row.slice(1)}`} bases with no drop tier`, vis, [
-        ...conditions, rarityCondition(rarities), ...(bases ? [cond('BaseType', '==', bases)] : [])
-      ], section))
-    }
+    perSlot(row, conditions, (line, conds, tag) => {
+      for (const { vis, rarities } of byDecision(r => line(r) === NO_TIER ? 'Show' : null)) {
+        out.push(gearBlock(from, `${row}${tag}-notier`, `${row === 'any' ? 'unranked' : row === 'build' ? 'your build\'s' : `rank ${row.slice(1)}`} bases${tag ? ` (${tag.slice(1)})` : ''} with no drop tier`, vis, [
+          ...conds, rarityCondition(rarities), ...(bases ? [cond('BaseType', '==', bases)] : [])
+        ], section))
+      }
+    })
   }
   if (build.length) noTier('build', build, src.cells.get(key('r1', 2))?.block ?? anchor, template)
   for (const rank of RANKS) if (lists[rank].length) noTier(rank, lists[rank], src.cells.get(key(rank, 2))?.block ?? anchor, template)
   const lowAny = src.any[src.any.length - 1]
   if (lowAny) {
     // Ranked bases without Always don't fall into the unranked row's Always.
+    const anyAlways = (r: GearRarity) => g.show.any[r] === NO_TIER || Object.values(g.slots.any ?? {}).some(v => v[r] === NO_TIER)
     for (const rank of RANKS) {
       if (!lists[rank].length) continue
-      const rs = (['magic', 'rare'] as GearRarity[]).filter(r => g.show.any[r] === NO_TIER && g.show[rank][r] !== NO_TIER)
-      if (rs.length) {
-        out.push(gearBlock(src.cells.get(key(rank, 2))?.block ?? anchor, `${rank}-notier-hide`, `rank ${rank.slice(1)} bases with no drop tier`, 'Hide', [
-          ...template, rarityCondition(rs), cond('BaseType', '==', lists[rank])
-        ], section))
-      }
+      perSlot(rank, template, (line, conds, tag) => {
+        const rs = (['magic', 'rare'] as GearRarity[]).filter(r => anyAlways(r) && line(r) !== NO_TIER)
+        if (rs.length) {
+          out.push(gearBlock(src.cells.get(key(rank, 2))?.block ?? anchor, `${rank}${tag}-notier-hide`, `rank ${rank.slice(1)} bases${tag ? ` (${tag.slice(1)})` : ''} with no drop tier`, 'Hide', [
+            ...conds, rarityCondition(rs), cond('BaseType', '==', lists[rank])
+          ], section))
+        }
+      })
     }
     noTier('any', null, lowAny.block, copyConditions(lowAny.block))
   }

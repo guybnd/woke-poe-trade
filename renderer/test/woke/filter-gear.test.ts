@@ -228,4 +228,14 @@ describe('gear table', () => {
     expect(vis(d, { ...R3, rarity: 'Rare', unidentifiedItemTier: 2 })).toBe('Hide')
     expect(vis(d, { ...ANY, rarity: 'Rare', unidentifiedItemTier: 2 })).toBe('Show')
   })
+
+  it('gives a slot its own line inside a row', () => {
+    const d = doc()
+    applyGear(d, gearOn(d, g => { g.show.r1.rare = 4; g.slots.r1 = { jewellery: { magic: 0, rare: 2 } } }), [])
+    const ring = { baseType: 'Two-Stone Ring', itemClass: 'Rings', rarity: 'Rare' as const }
+    expect(vis(d, { ...ring, unidentifiedItemTier: 2 })).toBe('Show')
+    expect(vis(d, { ...R1, rarity: 'Rare', unidentifiedItemTier: 3 })).toBe('Hide')
+    expect(vis(d, { ...R1, rarity: 'Rare', unidentifiedItemTier: 4 })).toBe('Show')
+    expect(validateFilter(parseFilter(serializeFilter(d))).map(p => p.message)).toEqual([])
+  })
 })
