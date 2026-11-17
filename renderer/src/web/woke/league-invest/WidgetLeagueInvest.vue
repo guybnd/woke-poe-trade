@@ -8,7 +8,7 @@
           <div v-for="r in ranked.slice(0, 5)" :key="opportunityKey(r.opportunity)" class="flex justify-between gap-2">
             <span v-item-tip="r.opportunity" class="flex items-center gap-1 min-w-0"><WIcon :src="art(r.opportunity)" fallback="fas fa-coins" /><span class="w-trunc">{{ r.opportunity.name }}<span v-if="r.opportunity.variant" class="w-dim"> {{ r.opportunity.variant }}</span></span></span>
             <span class="w-num whitespace-nowrap"><span class="w-up">+{{ Math.round((r.opportunity.median - 1) * 100) }}%</span>
-              <span v-if="r.chaos != null" class="w-dim"> · {{ formatChaos(r.chaos, snapshot?.divine ?? null) }}</span></span>
+              <span v-if="r.chaos != null" class="w-dim"> · {{ fmt(r.chaos) }}</span></span>
           </div>
           <div v-if="!ranked.length" class="w-dim text-xs">No buys stand out for day {{ day }}.</div>
           <div class="w-faint text-xs mt-1">From past leagues, rise by day {{ (day ?? 0) + config.horizon }}</div>
@@ -69,7 +69,7 @@
           <div class="w-group-label">Suggested split</div>
           <div v-for="line in plan" :key="key(line.opportunity)" class="w-row" :class="$style.planGrid">
             <span v-item-tip="line.opportunity" class="w-trunc flex items-center gap-1"><WIcon :src="art(line.opportunity)" fallback="fas fa-coins" />{{ line.qty }}× {{ label(line.opportunity) }}<i v-if="line.thin" class="fas fa-exclamation-circle w-faint ml-1" :title="THIN_PLAN" /></span>
-            <WPrice :chaos="line.cost" :divine="snapshot?.divine" class="w-dim" />
+            <WPrice :chaos="line.cost" :divine="divine" class="w-dim" />
             <span class="w-num w-up text-right" title="Typical value at the end of the hold, in today's divines">≈ {{ fmtDiv(divOf(line.cost) * line.opportunity.median) }}</span>
           </div>
         </template>
@@ -85,7 +85,7 @@
             <i v-if="r.thin || r.opportunity.reliability < THIN_RELIABILITY" class="fas fa-exclamation-circle w-faint mr-1" :title="THIN_ROW" />{{ label(r.opportunity) }}<span class="w-faint text-xs ml-1">{{ r.opportunity.type }}</span>
             <span v-if="mixed(r.opportunity)" class="text-xs ml-1" style="color: var(--w-warn);" :title="perLeague(r.opportunity)">mixed</span>
           </span>
-          <WPrice :chaos="r.chaos" :divine="snapshot?.divine" title="Price now" />
+          <WPrice :chaos="r.chaos" :divine="divine" title="Price now" />
           <span class="w-num w-up text-right" :title="`Median rise in divines across past leagues\n${perLeague(r.opportunity)}`">×{{ r.opportunity.median.toFixed(r.opportunity.median >= 10 ? 0 : 1) }}</span>
           <span class="w-num w-dim text-right" title="Leagues where it rose ≥10% / leagues with data">{{ hits(r.opportunity) }}/{{ r.opportunity.leagues.length }}</span>
           <span class="w-num text-right" title="Share of days it went up">{{ Math.round(r.opportunity.upDays * 100) }}%</span>
@@ -113,7 +113,8 @@ import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
-import { formatAmount, formatChaos } from '../ui/format'
+import { formatAmount } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { isThin, itemKey } from '../market/types'
 import type { Snapshot } from '../market/types'
 import { THIN_RELIABILITY, opportunityKey, planBudget, rankOpportunities } from './invest'
@@ -265,9 +266,9 @@ const THIN_ROW = 'Thin market: few trades on poe.ninja now or in past leagues. H
 const THIN_PLAN = 'Thin market, so this line gets at most a third of a slot.'
 
 const plan = computed(() => {
-  const divine = snapshot.value?.divine
-  if (!divine) return []
-  return planBudget(ranked.value, (props.config.budgetDiv || 0) * divine, Math.max(1, props.config.slots || 1))
+  const div = divine.value
+  if (!div) return []
+  return planBudget(ranked.value, (props.config.budgetDiv || 0) * div, Math.max(1, props.config.slots || 1))
 })
 const planCost = computed(() => plan.value.reduce((s, l) => s + l.cost, 0))
 const planExpected = computed(() => plan.value.reduce((s, l) => s + divOf(l.cost) * l.opportunity.median, 0))
@@ -312,8 +313,8 @@ function hits (o: Opportunity) { return o.multiples.filter(m => m >= 1.1).length
 function label (o: Opportunity) {
   return [o.name, o.variant, o.links].filter(Boolean).join(' ')
 }
-function divOf (chaos: number) { return chaos / (snapshot.value?.divine || 1) }
-function fmt (chaos: number) { return formatChaos(chaos, snapshot.value?.divine ?? null) }
+const { fmt, divine } = usePriceText(snapshot)
+function divOf (chaos: number) { return chaos / (divine.value || 1) }
 function fmtDiv (div: number) { return `${formatAmount(div)} div` }
 
 // The icon's right-click menu.

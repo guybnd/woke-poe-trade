@@ -5,6 +5,7 @@ import { formatClock } from '../ui/format'
 import type { Boss, BossDrop } from './bosses'
 import { isThin } from '../market/types'
 import type { PriceItem } from '../market/types'
+import { pickRow } from '../shared/price-row'
 
 export interface KillDrop {
   name: string
@@ -137,17 +138,8 @@ export function priceResolver (items: PriceItem[], trade: (name: string) => Trad
     const median = values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2
     return { min: values[0], median, max: values[values.length - 1], count: values.length }
   }
-  const row = (name: string, variant?: string): PriceItem | null => {
-    const list = byName.get(name)
-    if (!list?.length) return null
-    if (variant != null) {
-      const exact = list.find(i => i.variant === variant)
-      if (exact) return exact
-    }
-    const plain = list.find(i => i.variant === '')
-    if (plain) return plain
-    return list.reduce((a, b) => b.chaos < a.chaos ? b : a)
-  }
+  const row = (name: string, variant?: string): PriceItem | null =>
+    pickRow(byName.get(name) ?? [], variant, { fallback: true })
   const price = (name: string, variant?: string): number | null => row(name, variant)?.chaos ?? null
   const thin = (name: string, variant?: string): PriceItem | null => {
     const r = row(name, variant)

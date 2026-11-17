@@ -157,6 +157,7 @@ import { MARKET_TRACKER_TYPE, marketSearchRequest } from '../market/widget'
 import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
 import type { CorruptedFilter, PriceItem } from '../market/types'
+import { pickRow } from '../shared/price-row'
 import { lookupRequest } from '../item-lookup/lookup'
 import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
 import type { LookupTab } from '../item-lookup/lookup'
@@ -395,22 +396,21 @@ function settingEntries (): ActionEntry[] {
 
 // ---- lookups: answers, facts and the web ----
 const lookupContext = computed<LookupContext>(() => {
-  // A name's plain row, else its cheapest variant; and each exact variant.
-  const prices = new Map<string, { chaos: number, plain: boolean }>()
-  const variants = new Map<string, number>()
+  // Each name's rows: an exact variant, else the row every window takes
+  // (shared/price-row pickRow: plain, a currency's first, else the cheapest).
+  const rows = new Map<string, PriceItem[]>()
   for (const i of snapshot.value?.items ?? []) {
-    variants.set(`${i.name}\u0000${i.variant}`, i.chaos)
-    const had = prices.get(i.name)
-    // The plain row wins, a currency's over another type's; else the cheapest variant.
-    if (!i.variant) {
-      if (!had?.plain || i.type === 'Currency') prices.set(i.name, { chaos: i.chaos, plain: true })
-    } else if (!had || (!had.plain && i.chaos < had.chaos)) prices.set(i.name, { chaos: i.chaos, plain: false })
+    const list = rows.get(i.name)
+    if (list) list.push(i)
+    else rows.set(i.name, [i])
   }
   const league = leagues.selectedId.value
   return {
     price: (name, variant) => name === 'Chaos Orb'
       ? 1
-      : variant != null ? variants.get(`${name}\u0000${variant}`) ?? null : prices.get(name)?.chaos ?? null,
+      : variant != null
+        ? rows.get(name)?.find(i => i.variant === variant)?.chaos ?? null
+        : pickRow(rows.get(name) ?? [])?.chaos ?? null,
     tools: new Set<string>(),
     items: snapshot.value?.items ?? [],
     divine: divine.value,
