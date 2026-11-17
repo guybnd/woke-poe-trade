@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import type { AppUpdater } from '../AppUpdater'
 import { appIconFile } from './app-icon'
-import { appPrefs, restartApp, setAppPrefs } from './app-prefs'
+import { appPrefs, canRestartApp, restartApp, setAppPrefs } from './app-prefs'
 import type { AppPrefs } from './app-prefs'
 import { findGameLogs } from './game-log-finder'
 import { migration } from './user-data'
@@ -88,7 +88,7 @@ function prefsView () {
     ...appPrefs(),
     // What this run started with; gpuDrawing is what the next start uses.
     gpuDrawingNow: GPU_AT_START,
-    canRestart: app.isPackaged,
+    canRestart: canRestartApp(),
     openAtLogin: canStartWithWindows() ? app.getLoginItemSettings().openAtLogin : false,
     canOpenAtLogin: canStartWithWindows(),
     canAutoUpdate: app.isPackaged && !process.env.PORTABLE_EXECUTABLE_DIR,

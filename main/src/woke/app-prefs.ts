@@ -31,11 +31,21 @@ const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: 
 const file = () => path.join(app.getPath('userData'), 'apt-data', 'woke-app.json')
 
 let prefs: AppPrefs | null = null
+const listeners: Array<(p: AppPrefs) => void> = []
+
+// Called after every change, wherever it came from (the tray's checkbox
+// follows a change made in Settings).
+export function onAppPrefsChange (fn: (p: AppPrefs) => void) { listeners.push(fn) }
 
 export function appPrefs (): AppPrefs {
   if (!prefs) {
     try {
-      prefs = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(file(), 'utf8')) as Partial<AppPrefs> }
+      const saved = JSON.parse(fs.readFileSync(file(), 'utf8')) as Record<string, unknown> | null
+      prefs = { ...DEFAULTS }
+      // Booleans only: a hand-edited "false" string would read as on.
+      for (const key of Object.keys(DEFAULTS) as Array<keyof AppPrefs>) {
+        if (typeof saved?.[key] === 'boolean') prefs[key] = saved[key] as boolean
+      }
     } catch {
       prefs = { ...DEFAULTS }
     }
@@ -49,6 +59,7 @@ export function setAppPrefs (patch: Partial<AppPrefs>): AppPrefs {
     if (typeof patch[key] === 'boolean') next[key] = patch[key]
   }
   prefs = next
+  for (const fn of listeners) fn(next)
   try {
     fs.mkdirSync(path.dirname(file()), { recursive: true })
     fs.writeFileSync(file(), JSON.stringify(next, null, 2))
@@ -56,9 +67,20 @@ export function setAppPrefs (patch: Partial<AppPrefs>): AppPrefs {
   return next
 }
 
-// Starts the app again (packaged builds; a dev build is restarted by its launcher).
+// The app can start itself again: not a dev build (its launcher restarts it)
+// and not the portable exe (its wrapper deletes the unpacked app on exit).
+export function canRestartApp () {
+  return app.isPackaged && !process.env.PORTABLE_EXECUTABLE_DIR
+}
+
+// With an update downloaded, quitting runs the installer; relaunching on top
+// would race it. The updater registers how to install and start again instead.
+let installAndRestart: (() => boolean) | null = null
+export function onRestartWithUpdate (fn: () => boolean) { installAndRestart = fn }
+
 export function restartApp () {
-  if (!app.isPackaged) return
+  if (!canRestartApp()) return
+  if (installAndRestart?.()) return
   app.relaunch()
   app.quit()
 }

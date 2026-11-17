@@ -2,7 +2,7 @@ import { autoUpdater } from 'electron-updater'
 import type { ServerEvents } from './server'
 import type { Logger } from './RemoteLogger'
 import type { UpdateInfo } from '../../ipc/types'
-import { appPrefs } from './woke/app-prefs'
+import { appPrefs, onRestartWithUpdate } from './woke/app-prefs'
 
 export class AppUpdater {
   private _checkedAtStartup = false
@@ -67,6 +67,15 @@ export class AppUpdater {
     })
     autoUpdater.on('update-downloaded', (info: { version: string }) => {
       this.info = { state: 'update-downloaded', version: info.version }
+    })
+    // A restart asked for in Settings or the tray installs the update and
+    // starts the new version, instead of racing the installer.
+    onRestartWithUpdate(() => {
+      if (this._info.state !== 'update-downloaded') return false
+      if (this.isRestarting) return true
+      this.isRestarting = true
+      autoUpdater.quitAndInstall(true, true)
+      return true
     })
     // on('download-progress') https://github.com/electron-userland/electron-builder/issues/2521
   }

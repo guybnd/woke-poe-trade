@@ -2,7 +2,7 @@ import path from 'path'
 import { app, Tray, Menu, shell, nativeImage, dialog } from 'electron'
 import type { ServerEvents } from './server'
 import { appIconFile } from './woke/app-icon'
-import { appPrefs, restartApp, setAppPrefs } from './woke/app-prefs'
+import { appPrefs, canRestartApp, onAppPrefsChange, restartApp, setAppPrefs } from './woke/app-prefs'
 
 // woke: the overlay can't be seen until it's attached, so the tray says.
 export type TrayStatus = 'waiting' | 'attached' | 'needs-admin'
@@ -59,6 +59,7 @@ export class AppTray {
     this.tray = new Tray(this.loadImage())
     // woke: its tooltip also makes a dev copy easy to tell apart.
     this.rebuildMenu()
+    onAppPrefsChange(() => { this.rebuildMenu() })
 
     server.onEventAnyClient('CLIENT->MAIN::user-action', ({ action }) => {
       if (action === 'quit') {
@@ -111,8 +112,7 @@ export class AppTray {
         checked: appPrefs().gpuDrawing,
         click: () => {
           setAppPrefs({ gpuDrawing: !appPrefs().gpuDrawing })
-          if (app.isPackaged) restartApp()
-          else this.rebuildMenu()
+          if (canRestartApp()) restartApp()
         }
       },
       {
