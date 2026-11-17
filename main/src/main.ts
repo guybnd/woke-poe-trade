@@ -25,6 +25,7 @@ import { initSetup, maybeOpenSetup, openSetupWindow, refreshSetupIcon, savedAppI
 import { setAppIcon } from './woke/app-icon'
 import { saveBeforeQuit } from './woke/quit-flush'
 import { guardWebContents } from './woke/web-guard'
+import { appPrefs } from './woke/app-prefs'
 
 if (!app.requestSingleInstanceLock()) {
   app.exit()
@@ -33,7 +34,9 @@ if (!app.requestSingleInstanceLock()) {
 // woke: crash reports (saved locally, offered for reporting next launch).
 startCrashReporting()
 
-if (process.platform !== 'darwin') {
+// woke: the graphics card draws the overlay only when chosen (app-prefs.ts).
+// Read once here: switching needs a restart.
+if (process.platform !== 'darwin' && !appPrefs().gpuDrawing) {
   app.disableHardwareAcceleration()
 }
 app.enableSandbox()

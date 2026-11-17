@@ -115,6 +115,7 @@ export interface WokeOps {
   'setup-prefs': Op<NoArgs, Json>
   'setup-prefs-set': Op<Record<string, unknown>, Json>
   'setup-open': Op<NoArgs, Ok>
+  'app-restart': Op<NoArgs, Ok>
   'setup-finish': Op<NoArgs, Ok>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>

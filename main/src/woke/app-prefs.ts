@@ -18,9 +18,15 @@ export interface AppPrefs {
   stashReader: boolean
   // The Claude link (claude-link/index.ts) listens on 127.0.0.1. Off by default.
   claudeLink: boolean
+  // Draw the overlay with the graphics card (needs a restart). Off by default:
+  // on some systems a GPU-drawn see-through window turned the whole game
+  // screen black (upstream issue #818). Drawing without it costs CPU time in
+  // proportion to the area that changes, so dragging a big panel on a big
+  // screen stutters.
+  gpuDrawing: boolean
 }
 
-const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false }
+const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false, gpuDrawing: false }
 
 const file = () => path.join(app.getPath('userData'), 'apt-data', 'woke-app.json')
 
@@ -48,4 +54,11 @@ export function setAppPrefs (patch: Partial<AppPrefs>): AppPrefs {
     fs.writeFileSync(file(), JSON.stringify(next, null, 2))
   } catch {}
   return next
+}
+
+// Starts the app again (packaged builds; a dev build is restarted by its launcher).
+export function restartApp () {
+  if (!app.isPackaged) return
+  app.relaunch()
+  app.quit()
 }
