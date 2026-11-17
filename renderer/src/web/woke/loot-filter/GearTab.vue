@@ -96,6 +96,7 @@
         <div class="flex items-center gap-2">
           <span>How much gear this shows</span>
           <WInfo text="Every gear base in the game, run through the table for each rarity and drop tier. Special gear (influenced, fractured and the rest) comes first in the filter and isn't counted here." />
+          <span class="w-faint text-xs">Click a cell for its bases.</span>
         </div>
         <div :class="$style.pgrid">
           <span class="w-faint text-xs">Drop tier</span>
@@ -103,11 +104,24 @@
           <span :class="$style.groupHead" style="color: #f3e27a;">Rare</span>
           <template v-for="t in DROP_TIERS" :key="t">
             <span :class="$style.rowHead">Tier {{ t }}</span>
-            <span v-for="r in RARITIES" :key="r" :class="$style.bar">
+            <button v-for="r in RARITIES" :key="r" type="button" :class="[$style.bar, picks?.t === t && picks?.r === r && $style.barPicked]"
+              :aria-pressed="picks?.t === t && picks?.r === r" @click="picks = picks?.t === t && picks?.r === r ? null : { t, r }">
               <span :class="[$style.fill, r === 'magic' ? $style.fillMagic : $style.fillRare]" :style="{ width: `${universe.length ? Math.round(counts[t][r].n / universe.length * 100) : 0}%` }" />
               <span :class="$style.barText">{{ countText(counts[t][r]) }}</span>
-            </span>
+            </button>
           </template>
+        </div>
+        <div v-if="picked2" :class="$style.baseList">
+          <div class="text-sm">{{ picked2.title }}</div>
+          <div v-for="part in picked2.parts" :key="part.row" class="flex flex-col gap-1">
+            <span class="w-dim text-xs">{{ ROW_LABEL[part.row] }} · {{ part.bases.length }}</span>
+            <div class="flex flex-wrap gap-1">
+              <span v-for="b in part.bases.slice(0, part.open ? undefined : 40)" :key="b" :class="$style.baseChip" :title="baseTitle(b, part.row)">
+                <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.chipIcon">{{ b }}
+              </span>
+              <WButton v-if="part.bases.length > 40 && !part.open" size="sm" variant="ghost" @click="openParts.push(part.row)">+{{ part.bases.length - 40 }} more</WButton>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -338,7 +352,7 @@ const universe = computed(() => {
   for (const r of RANKS) lists.value[r].forEach(b => set.add(b))
   return [...set]
 })
-interface Count { n: number, rows: GearRow[] }
+interface Count { n: number, byRow: Partial<Record<GearRow, string[]>> }
 const counts = computed(() => {
   const s = shown.value
   const rankOf = new Map<string, GearRow>()
@@ -347,7 +361,7 @@ const counts = computed(() => {
   const inBuild = new Set(build.value)
   const out: Record<number, Record<GearRarity, Count>> = {}
   for (const t of DROP_TIERS) {
-    out[t] = { magic: { n: 0, rows: [] }, rare: { n: 0, rows: [] } }
+    out[t] = { magic: { n: 0, byRow: {} }, rare: { n: 0, byRow: {} } }
     for (const r of RARITIES) {
       const c = out[t][r]
       for (const b of universe.value) {
@@ -358,7 +372,7 @@ const counts = computed(() => {
         const by: GearRow | null = buildLine && t >= buildLine ? 'build' : line && t >= line ? row : null
         if (!by) continue
         c.n++
-        if (!c.rows.includes(by)) c.rows.push(by)
+        ;(c.byRow[by] ??= []).push(b)
       }
     }
   }
@@ -367,10 +381,21 @@ const counts = computed(() => {
 const SHORT_ROW: Record<GearRow, string> = { build: 'build', r1: 'rank 1', r2: 'rank 2', r3: 'rank 3', any: 'any base' }
 function countText (c: Count): string {
   if (!c.n) return 'none'
-  if (c.n >= universe.value.length - lists.value.never.length) return `all ${c.n} bases`
-  const order = GEAR_ROWS.filter(r => c.rows.includes(r)).map(r => SHORT_ROW[r])
-  return `${c.n} bases · ${order.join(', ')}`
+  return GEAR_ROWS.filter(r => c.byRow[r]?.length).map(r => `${c.byRow[r]!.length} ${SHORT_ROW[r]}`).join(' + ')
 }
+// The bases behind one cell, row by row.
+const picks = ref<{ t: number, r: GearRarity } | null>(null)
+const openParts = ref<GearRow[]>([])
+const picked2 = computed(() => {
+  const p = picks.value
+  if (!p) return null
+  const c = counts.value[p.t]?.[p.r]
+  if (!c) return null
+  return {
+    title: `${p.r === 'magic' ? 'Magic' : 'Rare'}, drop tier ${p.t}: ${c.n} of ${universe.value.length} gear bases show`,
+    parts: GEAR_ROWS.filter(r => c.byRow[r]?.length).map(r => ({ row: r, bases: [...c.byRow[r]!].sort(), open: openParts.value.includes(r) }))
+  }
+})
 
 // ---- Looks: samples from NeverSink's rank 1 rules with the table's look ----
 const editing = ref<GearRarity | null>(null)
@@ -623,6 +648,13 @@ function neverOffBuild () {
 }
 .bar {
   position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  color: var(--w-text);
+  cursor: pointer;
+  background: transparent;
   height: 1.5rem;
   border-radius: var(--w-r-sm);
   border: 1px solid var(--w-border);
@@ -633,6 +665,27 @@ function neverOffBuild () {
   position: absolute;
   inset: 0 auto 0 0;
 }
+.barPicked { outline: 2px solid var(--w-text-dim); }
+.baseList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--w-r-sm);
+  background: rgb(0 0 0 / 25%);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.baseChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px 2px 2px;
+  font-size: var(--w-fs-xs, 11px);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel);
+}
+.chipIcon { width: 18px; height: 18px; object-fit: contain; }
 .fillMagic { background: rgb(136 136 255 / 28%); }
 .fillRare { background: rgb(232 210 74 / 24%); }
 .barText {
