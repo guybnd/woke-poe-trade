@@ -41,6 +41,16 @@ history:
       Scope widened by Guy to a full gear-rules redesign; model + A/B/C mocks
       posted, waiting on his pick.
     id: a-2026-11-17t03-13-18-126z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T03:19:53.953Z'
+    comment: >-
+      Guy found A-C still confusing and asked where ranks are decided and how to
+      make sweeping changes. Added mock D: rank × rarity "shows from" table +
+      sweeping buttons + one shared rank list (ranks = NeverSink's r1/r2/r3 base
+      lists, 35/136/105, copied into every tier rule today). Waiting on his
+      take.
+    id: a-2026-11-17t03-19-53-953z
 ---
 > **TL;DR:** One Gear view that shows what happens to every kind of gear drop (base rank × base kind × drop tier × rarity × decorators), instead of ~30 NeverSink groups where rarity is sometimes lumped. Waiting on Guy's pick of A/B/C.
 
