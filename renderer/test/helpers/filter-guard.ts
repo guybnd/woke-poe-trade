@@ -15,6 +15,7 @@ import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import type { FilterEdit } from '@/web/woke/loot-filter/edits'
 import { PRESET_NAMES } from '@/web/woke/loot-filter/timeline'
 import { LOOK_LIMITS, scaledFont } from '@/web/woke/loot-filter/look'
+import { defaultGear } from '@/web/woke/loot-filter/gear'
 import { LEVELS, neverSink, neverSinkStyled } from './neversink'
 
 export const FILTERS = [
@@ -231,7 +232,8 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   beams: { on: true, keepTiers: 2 },
   weapons: { on: true, archetype: 'custom', classes: [] },
   look: { on: true, size: LOOK_LIMITS.size.min, background: LOOK_LIMITS.background.min, colour: LOOK_LIMITS.colour.min },
-  lowTiers: { on: true, tier: 5 }
+  lowTiers: { on: true, tier: 5 },
+  gear: { ...defaultGear(), on: true }
 }
 
 export const PRESET_KEYS = Object.keys(HARSHEST) as Key[]

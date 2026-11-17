@@ -76,12 +76,13 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Weapons for your build (no weapon types kept) | nothing |
 | Label look (smallest text, no background, grey) | nothing |
 | Hide low item tiers (below tier 5) | nothing |
+| Gear table | nothing |
 | Quiet mode and fewer beams saved at 1 tier | nothing |
 | Every preset, default settings | nothing |
 | Every preset, harshest settings | nothing |
 | Every preset, harshest, safety net on | nothing |
 
-Also: all 210 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests).
+Also: all 231 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests).
 
 ## Also checked
 
