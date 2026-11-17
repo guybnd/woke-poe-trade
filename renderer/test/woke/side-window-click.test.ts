@@ -4,8 +4,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
 import type { BaseType } from '@/assets/data'
 import { parseClipboard } from '@/parser'
-import { canPriceCheck, priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
-import type { ItemMenuRef } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
+import { sideRow } from '@/web/price-check/related-items/side-row'
 import { loadGameData } from '../helpers/game-data'
 
 vi.mock('@/web/Config', () => ({ AppConfig: () => ({ language: 'en' }) }))
@@ -13,12 +13,6 @@ vi.mock('@/web/Config', () => ({ AppConfig: () => ({ language: 'en' }) }))
 vi.mock('@/web/woke/ui/tooltip/item-tip', () => ({ loadUniqueMods: async () => null }))
 
 beforeAll(loadGameData)
-
-const KIND: Partial<Record<BaseType['namespace'], Partial<ItemMenuRef>>> = {
-  UNIQUE: { rarity: 'unique' },
-  DIVINATION_CARD: { type: 'DivinationCard' },
-  GEM: { type: 'SkillGem' }
-}
 
 function info (queryId: string) {
   const [ns, encoded] = queryId.split('::')
@@ -32,12 +26,21 @@ describe('side window rows', () => {
     const entry = ITEM_DROP.find(e => e.query.includes('DIVINATION_CARD::The Nurse'))!
     expect(entry).toBeTruthy()
     for (const id of [...entry.query, ...entry.items]) {
-      const i = info(id)!
-      const ref: ItemMenuRef = { name: i.refName, ...KIND[i.namespace] }
-      expect(canPriceCheck(ref), id).toBe(true)
-      const input = (await priceCheckRequest(ref))!
+      const row = sideRow(info(id)!, undefined, false, id)
+      expect(row.clickable, id).toBe(true)
+      const input = (await priceCheckRequest(row.ref, row.info))!
       const parsed = input.item ?? parseClipboard(input.clipboard)._unsafeUnwrap()
-      expect(parsed.info.refName, id).toBe(i.refName)
+      expect(parsed.info.refName, id).toBe(row.info.refName)
+    }
+  })
+
+  it('opens a unique on the base its row lists', async () => {
+    for (const base of ['Leviathan Greaves', 'Warlock Boots', 'Velour Boots']) {
+      const id = `UNIQUE::Doryani's Delusion // ${base}`
+      const row = sideRow(info(id)!, undefined, false, id)
+      const input = (await priceCheckRequest(row.ref, row.info))!
+      expect(input.item?.info.refName).toBe("Doryani's Delusion")
+      expect(input.item?.info.unique?.base, base).toBe(base)
     }
   })
 
@@ -47,10 +50,10 @@ describe('side window rows', () => {
       for (const id of [...entry.query, ...entry.items]) {
         const i = info(id)
         if (!i) continue
-        const ref: ItemMenuRef = { name: i.refName, ...KIND[i.namespace] }
-        if (!canPriceCheck(ref)) continue
+        const row = sideRow(i, undefined, false, id)
+        if (!row.clickable) continue
         clickable++
-        const input = (await priceCheckRequest(ref))!
+        const input = (await priceCheckRequest(row.ref, row.info))!
         const parsed = input.item ?? parseClipboard(input.clipboard)._unsafeUnwrap()
         expect(parsed.info.refName, id).toBe(i.refName)
       }

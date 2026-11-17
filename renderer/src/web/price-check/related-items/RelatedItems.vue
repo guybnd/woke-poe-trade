@@ -12,7 +12,7 @@
         <span v-if="sec.family" :class="$style.count">{{ sec.rows.length }} · poe.ninja</span>
       </div>
       <div :class="[$style.list, { [$style.tight]: sec.family }]">
-        <div v-for="row in sec.rows" :key="row.name" v-item-tip="{ name: row.name }"
+        <div v-for="row in sec.rows" :key="row.key" v-item-tip="{ name: row.name }"
           :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
           @click="open(row)">
           <img :class="$style.art" :src="row.icon" :alt="''">
@@ -35,8 +35,8 @@ import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Pr
 import { getDetailsId } from '../trends/getDetailsId'
 import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { ParsedItem } from '@/parser'
-import { canPriceCheck, priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
-import type { ItemMenuRef } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
+import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
 
 const { findPriceByQuery, autoCurrency, xchgRate } = usePoeninja()
@@ -62,20 +62,6 @@ function findPriceByQueryId (queryId: string) {
   }
 }
 
-// woke: every row of the side window, whatever its section.
-interface SideRow { name: string, icon: string, price?: CurrencyValue, highlight: boolean, ref: ItemMenuRef, clickable: boolean }
-
-// The item menu's reference for a data item: its English name and what kind it is.
-const KIND_OF_NS: Partial<Record<BaseType['namespace'], Partial<ItemMenuRef>>> = {
-  UNIQUE: { rarity: 'unique' },
-  DIVINATION_CARD: { type: 'DivinationCard' },
-  GEM: { type: 'SkillGem' }
-}
-function sideRow (info: BaseType, price: CurrencyValue | undefined, highlight: boolean): SideRow {
-  const ref: ItemMenuRef = { name: info.refName, ...KIND_OF_NS[info.namespace] }
-  return { name: info.name, icon: info.icon, price, highlight, ref, clickable: canPriceCheck(ref) }
-}
-
 // woke: the rest of a bulk item's family (fossils, catalysts, essences of its
 // tier...), dearest first, from the item data and poe.ninja rows already loaded.
 // Members come from a scan of the item data, so each family is read once.
@@ -94,7 +80,7 @@ function getFamily (item: ParsedItem) {
   const rows = familyRows(fam, item.info.refName, ref => findPriceByQuery({ ns: 'ITEM', name: ref, variant: undefined })?.chaos ?? null)
   return {
     label: fam.label,
-    related: rows.map(row => sideRow(row.info, row.chaos != null ? autoCurrency(row.chaos) : undefined, row.own))
+    related: rows.map(row => sideRow(row.info, row.chaos != null ? autoCurrency(row.chaos) : undefined, row.own, row.info.refName))
   }
 }
 
@@ -111,14 +97,14 @@ function getItemPrices (queryId: string) {
     const dbItem = findItemByQueryId(itemId)
     if (!dbItem) return { error: `Can't find "${itemId}".` }
 
-    out.related.push(sideRow(dbItem, findPriceByQueryId(itemId), itemId === queryId))
+    out.related.push(sideRow(dbItem, findPriceByQueryId(itemId), itemId === queryId, itemId))
   }
   const chaosOf = (price?: CurrencyValue) => !price ? -1 : (price.currency === 'div' ? price.max * (xchgRate.value ?? 1) : price.max)
   for (const itemId of dropEntry.items) {
     const dbItem = findItemByQueryId(itemId)
     if (!dbItem) return { error: `Can't find "${itemId}".` }
 
-    out.items.push(sideRow(dbItem, findPriceByQueryId(itemId), false))
+    out.items.push(sideRow(dbItem, findPriceByQueryId(itemId), false, itemId))
   }
   out.items.sort((a, b) => chaosOf(b.price) - chaosOf(a.price))
 
@@ -173,10 +159,15 @@ export default defineComponent({
     })
 
     const canOpen = (row: SideRow) => row.clickable && !row.highlight
+    // A unique's mods load before it opens: a later click, or a new check,
+    // wins over a click still waiting.
+    let clickSeq = 0
     async function open (row: SideRow) {
       if (!canOpen(row)) return
-      const input = await priceCheckRequest(row.ref)
-      if (input) emit('check', input)
+      const seq = ++clickSeq
+      const item = props.item
+      const input = await priceCheckRequest(row.ref, row.info)
+      if (input && seq === clickSeq && props.item === item) emit('check', input)
     }
 
     return {
