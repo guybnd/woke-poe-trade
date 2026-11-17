@@ -117,9 +117,10 @@ export function dailyRows (snap: Snapshot): DailyRow[] {
   })
 }
 
-// The prices of the newest snapshot of each league, to skip a save that changes
-// nothing: every overlay start replays the prices it has, and those used to be
-// saved again (half of the snapshots on disk were copies).
+// The prices of the newest snapshot of each league. Every overlay start replays
+// the prices it has, so half of the saves repeat the last one: those still get
+// their snapshot file (movers and "saved at" go by snapshot times), but skip
+// re-merging and rewriting the day's ~2 MB of rows, which wouldn't change.
 const lastSaved = new Map<string, { key: string, date: string }>()
 const pricesKey = (snap: Snapshot) => JSON.stringify([snap.divine, snap.items])
 
@@ -140,9 +141,10 @@ export const marketHandlers: Partial<WokeHandlers> = {
     const snap = snapshot as Snapshot
     return await queued(snap.league, async () => {
       const key = pricesKey(snap)
-      if (await sameAsLast(snap, key)) return true
+      // Day rows first: a snapshot on disk then always has its day rows, so a
+      // repeat of it can safely skip them.
+      if (!await sameAsLast(snap, key)) await saveDaily(snap.league, Array.isArray(daily) ? daily as DailyRow[] : dailyRows(snap))
       await saveSnapshotFile(snap)
-      await saveDaily(snap.league, Array.isArray(daily) ? daily as DailyRow[] : dailyRows(snap))
       lastSaved.set(snap.league, { key, date: utcDate(snap.ts) })
       return true
     })

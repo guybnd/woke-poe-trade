@@ -25,21 +25,26 @@ describe('price history saves', () => {
     expect(rows).toHaveLength(2)
   })
 
-  it('skips a save with the same prices on the same day, even after a restart', async () => {
+  const dayFile = (league: string, date = '2026-11-17') => path.join(process.env.WOKE_FAKE_USER_DATA!, 'woke-market', league, 'daily', `${date}.json`)
+
+  it('keeps every snapshot, but leaves the day rows alone when prices repeat', async () => {
     await save(snap('B', T0))
+    const written = fs.statSync(dayFile('B')).mtimeMs
+    fs.utimesSync(dayFile('B'), 1, 1)
     await save(snap('B', T0 + 60_000))
-    expect(snapshots('B')).toHaveLength(1)
-    await save(snap('B', T0 + 120_000, 6))
     expect(snapshots('B')).toHaveLength(2)
+    expect(fs.statSync(dayFile('B')).mtimeMs).toBe(1000)
+    await save(snap('B', T0 + 120_000, 6))
+    expect(snapshots('B')).toHaveLength(3)
+    expect(fs.statSync(dayFile('B')).mtimeMs).toBeGreaterThanOrEqual(written)
   })
 
-  it('reads the newest snapshot to compare when it has none in memory', async () => {
-    // As written by an earlier run.
-    const dir = path.join(process.env.WOKE_FAKE_USER_DATA!, 'woke-market', 'C', 'snapshots')
-    fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(path.join(dir, `${T0}.json`), JSON.stringify(snap('C', T0)))
+  it('compares with the newest snapshot on disk when it has none in memory', async () => {
+    // As written by an earlier run, whose day rows are already there.
+    await marketHandlers['market-save']!({ snapshot: snap('C', T0), daily: dailyRows(snap('C', T0)) } as never)
+    fs.utimesSync(dayFile('C'), 1, 1)
     await save(snap('C', T0 + 60_000))
-    expect(snapshots('C')).toEqual([`${T0}.json`])
+    expect(fs.statSync(dayFile('C')).mtimeMs).toBe(1000)
   })
 
   it('still saves unchanged prices on a new day, so the day gets its rows', async () => {
