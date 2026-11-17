@@ -15,8 +15,7 @@ import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
-import { useLeagues } from '@/web/background/Leagues'
-import { VARIABLE_ITEMS, useTradePrices } from '../../shared/unid-prices'
+import { usePrice } from '../../shared/price'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
 
 export interface ItemTipRef {
@@ -114,21 +113,20 @@ export async function loadTipItems (): Promise<TipPack['items'] | null> {
 
 const NINJA_NS: Record<TipKind, string> = { unique: 'UNIQUE', gem: 'GEM', card: 'DIVINATION_CARD', item: 'ITEM' }
 
+// Made on the first hover: global state, so one is enough.
+let price: ReturnType<typeof usePrice> | null = null
+
 export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   if (ref.noPrice) return null
   if (ref.prices) return { chaos: ref.prices.low, change: null, graph: [], range: ref.prices }
-  const ninja = usePoeninja()
-  ninja.queuePricesFetch()
   const ns = ref.type === 'Beast' ? 'CAPTURED_BEAST' : NINJA_NS[kind]
-  const info = ninja.findPriceByQuery({ ns, name: ref.name, variant: ref.variant || undefined }) ??
-    (ref.variant ? null : ninja.findPriceByName(ns, ref.name))
-  if (!info) return null
-  const market = marketFromRow(info, ref)
-  if (kind !== 'unique' || !VARIABLE_ITEMS.has(ref.name)) return market
-  // Only a quote already on hand: hovering never spends a trade search.
-  const league = useLeagues().selectedId.value
-  const unid = league ? useTradePrices().get(league, ref.name) : null
-  return unid ? { ...market, unid } : market
+  // The row every window takes for this name; a rolled unique's unidentified
+  // price only from a quote on hand: hovering never spends a trade search.
+  price ??= usePrice()
+  const found = price.priceOf(ref.name, { ns, variant: ref.variant })
+  if (!found) return null
+  const market = marketFromRow(found.row, ref)
+  return found.unid ? { ...market, unid: found.unid } : market
 }
 
 // Marks the uniques on a base that won't turn up as a random drop on it.

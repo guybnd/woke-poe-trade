@@ -52,7 +52,7 @@
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
             <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
-            <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
+            <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
             <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
           </div>
@@ -80,7 +80,7 @@
         <div class="w-group-label">Biggest sources of value</div>
         <div v-for="s in odds.sources" :key="s.name" class="w-row" :class="$style.sourceGrid" @contextmenu="rowMenu($event, s.name)">
           <span v-item-tip="{ name: s.name, type: family.ninjaType }" class="w-trunc">{{ shortName(s.name) }}</span>
-          <WPrice :chaos="s.chaos" :divine="snapshot?.divine" class="text-right" />
+          <WPrice :chaos="s.chaos" :divine="divine" class="text-right" />
           <span class="text-right w-num w-dim">{{ pct(s.valueShare) }}</span>
         </div>
         <div v-if="odds.jackpotOneIn && pool" :class="$style.note" class="w-num">
@@ -101,7 +101,7 @@
           </div>
           <div v-for="r in rareCheap" :key="r.name" class="w-row" :class="$style.rareGrid" @contextmenu="rowMenu($event, r.name)">
             <FlipName :name="r.name" :item="r.name" :rare-cheap="r.rareCheap" :source="r.weightSource" />
-            <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
+            <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
             <span class="text-right w-dim w-num">1 in {{ Math.round(1 / r.share).toLocaleString('en-US') }}</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
           </div>
@@ -132,7 +132,8 @@ import { useLeagues } from '@/web/background/Leagues'
 import { WInfo, WPanel, WTabs, WSegmented, WPrice, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
 import { openItemMenu } from '../ui/tooltip/item-menu'
 import { copyText } from '../ui/copy'
-import { formatAmount, formatChaos } from '../ui/format'
+import { formatAmount } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { gameIcon, moduleIcon } from '../ui/game-icons'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
@@ -489,7 +490,7 @@ function rowMenu (e: MouseEvent, name: string) {
 }
 
 function capitalize (s: string) { return s[0].toUpperCase() + s.slice(1) }
-function fmt (chaos: number) { return formatChaos(chaos, snapshot.value?.divine ?? null) }
+const { fmt, divine } = usePriceText(snapshot)
 function amount (chaos: number) { return formatAmount(chaos) }
 function pct (p: number) {
   const v = p * 100

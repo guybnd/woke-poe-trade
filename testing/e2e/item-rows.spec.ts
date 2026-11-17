@@ -78,6 +78,9 @@ test('Alt + F: the uniques a base can drop as', async ({ overlay, fakeApp }) => 
   await hoverShowsTip(page, row, 'Temptation Step')
   await rightClickGivesStrip(page, row, 'Temptation Step')
   await overlay.snap('alt f can drop as')
+  // A click price checks it.
+  await row.click()
+  await expect(overlay.widget('price-check')).toContainText('Temptation Step')
 })
 
 test('price check side window: a row shows its tooltip and menu, a click price checks it', async ({ overlay }) => {
