@@ -145,6 +145,18 @@
         <div ref="lookSection" :class="$style.section">
           <div class="w-group-label" :class="$style.label">Change the look</div>
           <WSegmented v-if="!isOwn" v-model="scope" :options="scopeOptions" />
+          <template v-if="scope === 'tier' && !isOwn && tierBases.length">
+            <div class="text-xs w-dim">Items in this tier · {{ tierBases.length }}</div>
+            <TierItemChips :items="tierBases" :picked="picked" :price-of="priceOf" :min-chaos="config.safetyNet.minChaos" :tip="baseTip" :current="base"
+              :chip-title="moveRows.length ? 'Click to pick it, shift-click to pick a run, then Move to. Right-click to move just this one.' : 'Click to pick it'"
+              @pick="pickBase" @menu="chipMenu" />
+            <div v-if="picked.length" :class="$style.bulkBar" role="toolbar" aria-label="Picked items">
+              <b class="text-xs">{{ picked.length }} picked</b>
+              <span class="grow" />
+              <WButton v-if="moveRows.length" size="sm" variant="primary" @click="bulkMoveMenu">Move to</WButton>
+              <button type="button" class="w-icon-btn" title="Clear" aria-label="Clear picked items" @click="picked = []"><i aria-hidden="true" class="fas fa-times" /></button>
+            </div>
+          </template>
           <StyleEditor :source="origin.type && origin.tier ? store.sourceLook(origin.type, origin.tier) : null" :look="editLook" :visibility="editVisibility" :preview-text="facts.baseType ?? facts.name"
             :copy-from="scope === 'tier' ? [] : copyRows"
             @patch="onPatch" @visibility="onVisibility" />
@@ -168,8 +180,12 @@
 
 <script setup lang="ts">
 import { conditionWords } from './ladder'
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { WPanel, WBanner, WButton, WSegmented, WChip, toast } from '../ui'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
+import TierItemChips from './TierItemChips.vue'
+import { basePrice } from './economy'
+import { baseTipRef } from './base-tip'
+import { labelCss } from './label-style'
 import { SAFETY_LOOK, SAFETY_RULE_TYPE } from './safety'
 import { hasSpecialLabel, hideFromLabel, isPlainTier, levelStates, ladderLabel, levelOf, priceLadder, specialLabel, tierNeeds, verdictOf } from './item-panel'
 import LabelPreview from './LabelPreview.vue'
@@ -187,7 +203,7 @@ import { LEVEL_NAMES, LEVEL_SHORT } from './strictness'
 import { OWN_RULE_TYPE, blocksOf, conditionSignature, moveTargets, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import { ownActions } from './look'
-import { findBase, groupName } from './groups'
+import { byPrice, findBase, groupName, pickBases } from './groups'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -366,12 +382,73 @@ function moveTo (tier: string) {
 
 const scope = ref<'item' | 'tier'>('item')
 const scopeOptions = computed(() => {
-  const count = tierInfo(final.value.tier ?? '').count
+  const count = tierBases.value.length
   return [
     { value: 'item', label: 'Just this item' },
     { value: 'tier', label: `Whole tier${count ? ` (${count} items)` : ''}` }
   ]
 })
+
+// ---- the tier's items: pick some, move them ----
+
+// Every name the tier lists, most valuable first.
+const tierBases = computed(() => {
+  const doc = props.store.doc.value
+  if (!doc || isOwn.value || !origin.value.type || !origin.value.tier) return []
+  const all = blocksOf(doc, origin.value.type, origin.value.tier)
+  const live = all.filter(b => !b.disabled)
+  const names = new Set<string>()
+  for (const b of live.length ? live : all) {
+    for (const c of b.conditions) if (c.key === 'BaseType' && c.op === '==') c.values.forEach(v => names.add(v))
+  }
+  return byPrice([...names], priceOf)
+})
+const priceOf = (b: string) => basePrice(props.store.prices.lookup.value, origin.value.type, b)
+const baseTip = (b: string) => baseTipRef(props.store.prices.breakdown.value, props.config.safetyNet.minChaos, origin.value.type, b)
+
+const picked = ref<string[]>([])
+const lastPicked = ref<string | null>(null)
+// A move or an undo can take a picked item off the tier.
+watch(tierBases, (list) => {
+  if (picked.value.some(b => !list.includes(b))) picked.value = picked.value.filter(b => list.includes(b))
+})
+watch(() => `${origin.value.type}|${origin.value.tier}`, () => { picked.value = []; lastPicked.value = null })
+
+function pickBase (b: string, e: MouseEvent) {
+  picked.value = pickBases(tierBases.value, picked.value, b, e.shiftKey, lastPicked.value)
+  lastPicked.value = b
+}
+
+// The tiers they can go to, under the names the rows above use.
+const moveRows = computed(() => {
+  const rows = [...(split.value.outside ? [split.value.outside] : []), ...ladderRows.value, ...specialRows.value]
+  return rows.filter(r => !r.current)
+})
+
+function moveBases (bases: string[], to: string) {
+  const type = origin.value.type
+  const from = origin.value.tier
+  if (!bases.length || !type || !from || !to || to === from) return
+  const label = moveRows.value.find(r => r.tier === to)?.label ?? tierLabel(to)
+  const undo = props.store.editsWithUndo(bases.map(b => ({ kind: 'move' as const, type, base: b, from, to })))
+  toast(`Moved ${bases.length > 1 ? `${bases.length} items` : bases[0]} to ${label}`, { undo })
+  picked.value = []
+}
+
+function moveEntries (bases: () => string[]) {
+  return moveRows.value.map(r => ({ label: r.label, labelStyle: labelCss(r.actions), icon: 'fas fa-share', action: () => { moveBases(bases(), r.tier) } }))
+}
+
+function bulkMoveMenu (e: MouseEvent) {
+  const list = [...picked.value]
+  openMenu(e, moveEntries(() => list))
+}
+
+function chipMenu (e: MouseEvent, b: string) {
+  if (!moveRows.value.length) return
+  e.preventDefault()
+  openMenu(e, moveEntries(() => picked.value.includes(b) ? [...picked.value] : [b]))
+}
 
 // The rule's own style, before the look strip, so edits never compound.
 const editLook = computed<StylePatch>(() => readStyle(ownActions(final.value)))
@@ -684,6 +761,16 @@ function unknownKeys (m: BlockMatch): string[] {
   padding: 0 5px;
   border: 1px solid var(--w-line-strong);
   border-bottom-width: 2px;
+  border-radius: var(--w-r-sm);
+}
+.bulkBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: var(--w-panel-3);
+  border: 1px solid var(--w-line-strong);
   border-radius: var(--w-r-sm);
 }
 .num {

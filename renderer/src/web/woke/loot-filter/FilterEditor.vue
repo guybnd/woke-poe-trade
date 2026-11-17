@@ -217,21 +217,9 @@
 
           <template v-if="!isOwnGroup && (tier.bases.length || targets.includes(tier.tier))">
             <div class="w-group-label" style="padding: 8px 0 2px;">Items in this tier · {{ tier.bases.length }}</div>
-            <div class="flex flex-wrap gap-1">
-              <span v-for="b in tierItems" :key="b" :class="$style.chipWrap">
-                <WChip clickable :active="picked.includes(b)" draggable="true"
-                  title="Click to pick it, shift-click to pick a run. Drag onto a tier to move it, with any others you've picked. Right-click for Move to."
-                  @click="pickBase(b, $event)" @contextmenu="baseMenu($event, b)" @dragstart="onDragStart(b, $event)" @dragend="dragOver = null">
-                  <span v-item-tip="baseTip(b)" class="flex items-center gap-1">
-                    <img v-if="baseIcon(b)" :src="baseIcon(b)!" :class="$style.chipArt" alt="">
-                    <span>{{ b }}</span>
-                    <span v-if="priceOf(b) != null" class="w-num" :class="$style[`p_${priceGrade(priceOf(b), config.safetyNet.minChaos)}`]">{{ priceText(priceOf(b)!) }}</span>
-                    <i v-if="movedHere(b)" class="fas fa-lock w-faint" style="font-size: 0.75em;" title="You put it here, so prices won't move it" />
-                  </span>
-                </WChip>
-                <button type="button" :class="$style.chipX" :title="movedHere(b) ? 'Back to where it was' : 'Take it off this tier'" :aria-label="`Take ${b} off this tier`" @click="takeOff(b)"><i aria-hidden="true" class="fas fa-times" /></button>
-              </span>
-            </div>
+            <TierItemChips :items="tierItems" :picked="picked" :price-of="priceOf" :min-chaos="config.safetyNet.minChaos" :tip="baseTip" :locked="movedHere" draggable removable
+              chip-title="Click to pick it, shift-click to pick a run. Drag onto a tier to move it, with any others you've picked. Right-click for Move to."
+              @pick="pickBase" @menu="baseMenu" @dragstart="onDragStart" @dragend="dragOver = null" @remove="takeOff" />
             <div v-if="picked.length" :class="$style.bulkBar" role="toolbar" aria-label="Picked items">
               <b class="text-xs">{{ picked.length }} picked</b>
               <span class="grow" />
@@ -428,15 +416,15 @@ import type { LootFilterStore } from './store'
 import { outputName } from './widget'
 import type { LootFilterWidget } from './widget'
 import { OWN_RULE_TYPE, addEdit, conditionSignature, describeEdit, moveTargets, nextEditId, readStyle, rehome, rehomeOptions } from './edits'
-import { ECONOMY_GROUPS, livePriceMoves } from './economy'
+import { basePrice, livePriceMoves } from './economy'
 import { baseTipRef } from './base-tip'
-import { priceGrade } from './health'
 import type { RehomeOption } from './edits'
 import type { FilterEdit, StylePatch } from './edits'
 import { ruleLabel, tierName } from './parse'
 import type { Visibility } from './parse'
 import { tierLabel } from './names'
 import AddItemField from './AddItemField.vue'
+import TierItemChips from './TierItemChips.vue'
 import RuleNav from './RuleNav.vue'
 import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
@@ -492,13 +480,8 @@ function baseTip (base: string) {
 
 // Today's price of a base, in groups poe.ninja prices.
 function priceOf (base: string): number | null {
-  const lookup = props.store.prices.lookup.value
-  // Prices are in chaos, so poe.ninja doesn't list chaos itself.
-  if (lookup && base === 'Chaos Orb' && selType.value === 'currency') return 1
-  const group = ECONOMY_GROUPS.find(g => g.type === selType.value)
-  return (lookup && group && lookup(group, base)?.chaos) ?? null
+  return basePrice(props.store.prices.lookup.value, selType.value, base)
 }
-const priceText = (chaos: number) => chaos >= 10 ? `${Math.round(chaos)}c` : (chaos < 0.1 ? '<0.1c' : `${Math.round(chaos * 10) / 10}c`)
 const tierItems = computed(() => byPrice(tier.value?.bases ?? [], priceOf))
 
 const tree = computed(() => props.store.doc.value ? buildTree(props.store.doc.value) : [])
@@ -1715,11 +1698,6 @@ function openFolder () {
 }
 .rowArt { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .chipArt { width: 16px; height: 16px; object-fit: contain; flex: none; }
-.chipWrap { display: inline-flex; align-items: center; }
-.p_high { color: var(--w-accent); }
-.p_mid { color: var(--w-dim); }
-.p_trash { color: var(--w-down); }
-.p_unknown { color: var(--w-faint); }
 .bulkBar {
   display: flex;
   flex-wrap: wrap;
@@ -1739,15 +1717,6 @@ function openFolder () {
   background: var(--w-accent-soft);
   border-radius: var(--w-r-sm);
 }
-.chipX {
-  background: none;
-  border: 0;
-  padding: 0 4px 0 2px;
-  color: var(--w-faint);
-  font-size: 0.75em;
-  cursor: pointer;
-}
-.chipX:hover { color: var(--w-fg); }
 .edited {
   display: inline-block;
   margin-left: 6px;

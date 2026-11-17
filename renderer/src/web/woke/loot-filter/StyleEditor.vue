@@ -26,11 +26,14 @@
     </div>
 
     <!-- One extra line at a time keeps the rest in view. -->
-    <button type="button" class="w-focusable" :class="$style.fold" :aria-expanded="open === 'sound'" @click="toggle('sound')">
-      <i aria-hidden="true" :class="open === 'sound' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />Sound
-      <span class="grow" /><span class="w-dim text-xs w-trunc">{{ look.sound ? `${soundLabel(look.sound.id)}, ${look.sound.volume}` : 'None' }}</span>
-      <span v-if="changed('sound')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own sound" aria-label="Reset sound" @click.stop="reset('sound')" @keydown.enter.stop="reset('sound')" @keydown.space.prevent.stop="reset('sound')" />
-    </button>
+    <div :class="$style.foldRow">
+      <button type="button" class="w-focusable" :class="$style.fold" :aria-expanded="open === 'sound'" @click="toggle('sound')">
+        <i aria-hidden="true" :class="open === 'sound' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />Sound
+        <span class="grow" /><span class="w-dim text-xs w-trunc">{{ look.sound ? `${soundLabel(look.sound.id)}, ${look.sound.volume}` : 'None' }}</span>
+        <span v-if="changed('sound')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own sound" aria-label="Reset sound" @click.stop="reset('sound')" @keydown.enter.stop="reset('sound')" @keydown.space.prevent.stop="reset('sound')" />
+      </button>
+      <WToggle :model-value="Boolean(look.sound)" :title="look.sound ? 'Sound off' : 'Sound on'" :aria-label="'Sound'" @update:model-value="switchSound" />
+    </div>
     <div v-if="open === 'sound'" :class="$style.foldBody">
       <span class="flex flex-col gap-1" style="min-width: 0;">
         <select class="w-select" :value="look.sound?.id ?? ''" :class="$style.select" style="width: 100%; min-width: 0;" aria-label="Alert sound"
@@ -60,11 +63,14 @@
 
     </div>
 
-    <button type="button" class="w-focusable" :class="$style.fold" :aria-expanded="open === 'beam'" @click="toggle('beam')">
-      <i aria-hidden="true" :class="open === 'beam' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />Beam
-      <span class="grow" /><span v-if="look.effect" :class="$style.beam" :style="{ background: poeColour(look.effect.color) }" /><span class="w-dim text-xs">{{ look.effect ? `${look.effect.color}${look.effect.temp ? ', on drop' : ''}` : 'None' }}</span>
-      <span v-if="changed('effect')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own beam" aria-label="Reset beam" @click.stop="reset('effect')" @keydown.enter.stop="reset('effect')" @keydown.space.prevent.stop="reset('effect')" />
-    </button>
+    <div :class="$style.foldRow">
+      <button type="button" class="w-focusable" :class="$style.fold" :aria-expanded="open === 'beam'" @click="toggle('beam')">
+        <i aria-hidden="true" :class="open === 'beam' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />Beam
+        <span class="grow" /><span v-if="look.effect" :class="$style.beam" :style="{ background: poeColour(look.effect.color) }" /><span class="w-dim text-xs">{{ look.effect ? `${look.effect.color}${look.effect.temp ? ', on drop' : ''}` : 'None' }}</span>
+        <span v-if="changed('effect')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own beam" aria-label="Reset beam" @click.stop="reset('effect')" @keydown.enter.stop="reset('effect')" @keydown.space.prevent.stop="reset('effect')" />
+      </button>
+      <WToggle :model-value="Boolean(look.effect)" :title="look.effect ? 'Beam off' : 'Beam on'" :aria-label="'Beam'" @update:model-value="switchEffect" />
+    </div>
     <div v-if="open === 'beam'" :class="$style.foldBody">
       <span class="flex items-center gap-1 flex-wrap">
         <button type="button" :class="[$style.dot, $style.none, { [$style.picked]: !look.effect }]" title="No beam" aria-label="No beam"
@@ -80,11 +86,14 @@
 
     </div>
 
-    <button type="button" class="w-focusable" :class="$style.fold" :aria-expanded="open === 'icon'" @click="toggle('icon')">
-      <i aria-hidden="true" :class="open === 'icon' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />Map icon
-      <span class="grow" /><span v-if="look.icon" :style="{ color: poeColour(look.icon.color) }">{{ shapeGlyph(look.icon.shape) }}</span><span class="w-dim text-xs">{{ look.icon ? `${['Large', 'Medium', 'Small'][look.icon.size] ?? ''} ${look.icon.color.toLowerCase()}` : 'None' }}</span>
-      <span v-if="changed('icon')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own map icon" aria-label="Reset map icon" @click.stop="reset('icon')" @keydown.enter.stop="reset('icon')" @keydown.space.prevent.stop="reset('icon')" />
-    </button>
+    <div :class="$style.foldRow">
+      <button type="button" class="w-focusable" :class="$style.fold" :aria-expanded="open === 'icon'" @click="toggle('icon')">
+        <i aria-hidden="true" :class="open === 'icon' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />Map icon
+        <span class="grow" /><span v-if="look.icon" :style="{ color: poeColour(look.icon.color) }">{{ shapeGlyph(look.icon.shape) }}</span><span class="w-dim text-xs">{{ look.icon ? `${['Large', 'Medium', 'Small'][look.icon.size] ?? ''} ${look.icon.color.toLowerCase()}` : 'None' }}</span>
+        <span v-if="changed('icon')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own map icon" aria-label="Reset map icon" @click.stop="reset('icon')" @keydown.enter.stop="reset('icon')" @keydown.space.prevent.stop="reset('icon')" />
+      </button>
+      <WToggle :model-value="Boolean(look.icon)" :title="look.icon ? 'Map icon off' : 'Map icon on'" :aria-label="'Map icon'" @update:model-value="switchIcon" />
+    </div>
     <div v-if="open === 'icon'" :class="$style.foldBody">
       <span class="flex flex-col gap-1">
         <span class="flex items-center gap-1">
@@ -117,8 +126,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { WSegmented, toast } from '../ui'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { WSegmented, WToggle, toast } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { Visibility } from './parse'
 import { tierLabel } from './names'
@@ -294,6 +303,41 @@ function setIcon (change: { size?: string, color?: string, shape?: string }) {
   })
 }
 
+// ---- the on/off switches on the Sound, Beam and Map icon rows ----
+
+// What each one was before you switched it off, so on brings it back.
+// Without one, on uses the filter's own setting, else a plain default.
+type Switchable = 'sound' | 'effect' | 'icon'
+const before = ref<Partial<Pick<StylePatch, Switchable>>>({})
+watch(() => [props.look.sound, props.look.effect, props.look.icon] as const, ([sound, effect, icon]) => {
+  if (sound) before.value.sound = sound
+  if (effect) before.value.effect = effect
+  if (icon) before.value.icon = icon
+}, { immediate: true })
+// Another tier or item: its own last settings, not this one's.
+watch(() => JSON.stringify(props.source), () => { before.value = {} })
+
+const SWITCH_DEFAULTS: Required<Pick<StylePatch, Switchable>> = {
+  sound: { id: '2', volume: 300 },
+  effect: { color: 'White', temp: false },
+  icon: { size: 1, color: 'White', shape: 'Circle' }
+}
+function switchOn<K extends Switchable> (key: K): NonNullable<StylePatch[K]> {
+  return (before.value[key] ?? props.source?.[key] ?? SWITCH_DEFAULTS[key]) as NonNullable<StylePatch[K]>
+}
+
+function switchSound (on: boolean) {
+  const s = on ? switchOn('sound') : null
+  if (s) setSound(s.id, s.volume)
+  else emit('patch', { sound: null })
+}
+function switchEffect (on: boolean) {
+  emit('patch', { effect: on ? switchOn('effect') : null })
+}
+function switchIcon (on: boolean) {
+  emit('patch', { icon: on ? switchOn('icon') : null })
+}
+
 function copy (tier: string) {
   const src = props.copyFrom.find(t => t.tier === tier)
   if (!src) return
@@ -369,6 +413,19 @@ function copy (tier: string) {
   cursor: pointer;
 }
 .fold:hover { border-color: var(--w-line); }
+.foldRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  background: var(--w-panel-2);
+  border-radius: var(--w-r-sm);
+}
+.foldRow > .fold {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
 .fold i { font-size: 0.75em; width: 1em; }
 .swatch {
   width: 22px;
