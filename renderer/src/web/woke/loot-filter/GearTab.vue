@@ -164,15 +164,30 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-1">
-        <WField v-model="search" placeholder="Find a base…" style="width: 12rem;" aria-label="Find a base" />
-        <WChip v-for="s in SLOTS" :key="s" clickable :active="slots.includes(s)" @click="toggle(slots, s)">{{ s }}</WChip>
+      <div :class="$style.kinds">
+        <div v-for="grp in KIND_GROUPS" :key="grp.label" :class="$style.kindGroup">
+          <button type="button" :class="[$style.kindGroupHead, grp.kinds.every(k => kinds.includes(k.category)) && $style.kindOn]"
+            :aria-pressed="grp.kinds.every(k => kinds.includes(k.category))" @click="toggleGroup(grp.kinds.map(k => k.category))">{{ grp.label }}</button>
+          <div class="flex flex-wrap gap-1">
+            <button v-for="k in grp.kinds" :key="k.category" type="button" :class="[$style.kind, kinds.includes(k.category) && $style.kindOn]"
+              :aria-pressed="kinds.includes(k.category)" :title="`${k.label}: ${kindCount(k.category)} bases`" @click="toggle(kinds, k.category)">
+              <img v-if="kindIcon(k.category)" :src="kindIcon(k.category)!" alt="" :class="$style.kindIcon">
+              <span>{{ k.label }}</span>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="flex flex-wrap items-center gap-1">
-        <WChip v-for="d in DEFENCES" :key="d" clickable :active="defences.includes(d)" :title="DEFENCE_ATTR[d]" @click="toggle(defences, d)">{{ d }}</WChip>
+        <WField v-model="search" placeholder="Find a base…" style="width: 12rem;" aria-label="Find a base" />
+        <button v-for="d in DEFENCES" :key="d" type="button" :class="[$style.kind, defences.includes(d) && $style.kindOn]" :aria-pressed="defences.includes(d)"
+          :title="`${d}: needs ${DEFENCE_ATTR[d]}`" @click="toggle(defences, d)">
+          <span v-for="part in d.split('/')" :key="part" :class="$style.defDot" :style="{ background: DEFENCE_COLOURS[part] }" />
+          <span>{{ d }}</span>
+        </button>
         <span class="w-dim text-xs" style="margin-left: 6px;">Drop level</span>
         <WField v-model.number="minLevel" type="number" style="width: 4.5rem;" aria-label="Lowest base drop level" />
         <span class="w-dim text-xs">and up</span>
+        <WButton v-if="kinds.length || defences.length || search || minLevel" size="sm" variant="ghost" @click="clearFilters">Clear</WButton>
       </div>
 
       <div v-if="picked.length" :class="$style.selBar">
@@ -215,8 +230,8 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane } from './gear'
-import { DEFENCES, DEFENCE_ATTR, SLOTS, allGearBases, baseInfo } from './gear-bases'
-import type { BaseInfo, Defence, Slot } from './gear-bases'
+import { DEFENCES, DEFENCE_ATTR, DEFENCE_COLOURS, KIND_GROUPS, allGearBases, baseInfo, kindIcon } from './gear-bases'
+import type { BaseInfo, Defence } from './gear-bases'
 import { DECORATORS, rollPile } from './gear-pile'
 import type { Decorator } from './gear-pile'
 import { matchItem } from './match'
@@ -475,7 +490,23 @@ const pileGroups = computed(() => [
 
 // ---- Base ranks ----
 const search = ref('')
-const slots = ref<Slot[]>([])
+const kinds = ref<string[]>([])
+function toggleGroup (cats: string[]) {
+  const all = cats.every(c => kinds.value.includes(c))
+  kinds.value = all ? kinds.value.filter(c => !cats.includes(c)) : [...new Set([...kinds.value, ...cats])]
+}
+function clearFilters () {
+  kinds.value = []
+  defences.value = []
+  search.value = ''
+  minLevel.value = 0
+}
+const kindCounts = computed(() => {
+  const m = new Map<string, number>()
+  for (const b of universe.value) { const c = info(b).category; if (c) m.set(c, (m.get(c) ?? 0) + 1) }
+  return m
+})
+const kindCount = (cat: string) => kindCounts.value.get(cat) ?? 0
 const defences = ref<Defence[]>([])
 const minLevel = ref(0)
 const picked = ref<string[]>([])
@@ -490,7 +521,7 @@ function toggle<T> (list: T[], v: T) {
 function visible (b: string): boolean {
   const i = info(b)
   if (search.value.trim() && !b.toLowerCase().includes(search.value.trim().toLowerCase())) return false
-  if (slots.value.length && (!i.slot || !slots.value.includes(i.slot))) return false
+  if (kinds.value.length && (!i.category || !kinds.value.includes(i.category))) return false
   if (defences.value.length && (!i.defence || !defences.value.includes(i.defence))) return false
   if (minLevel.value > 0 && (i.dropLevel ?? 0) < minLevel.value) return false
   return true
@@ -745,6 +776,44 @@ function neverOffBuild () {
 .dropWhat { font-size: var(--w-fs-xs, 12px); }
 .dropTags { font-size: var(--w-fs-xs, 11px); color: #e0b860; }
 .dropWhy { font-size: var(--w-fs-xs, 11px); color: var(--w-text-dim); }
+.kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.kindGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kindGroupHead {
+  align-self: flex-start;
+  font-size: var(--w-fs-xs, 11px);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--w-text-dim);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 1.9rem;
+  padding: 0 7px 0 3px;
+  font-size: var(--w-fs-xs, 12px);
+  border-radius: var(--w-r-sm);
+  border: 1px solid var(--w-border);
+  background: rgb(0 0 0 / 20%);
+  color: var(--w-text-dim);
+  cursor: pointer;
+}
+.kind:hover { color: var(--w-text); border-color: var(--w-text-dim); }
+.kindOn { border-color: #e0b860; background: rgb(224 184 96 / 16%); color: #f3d48a; }
+.kindIcon { width: 22px; height: 22px; object-fit: contain; }
+.defDot { width: 9px; height: 9px; border-radius: 50%; margin-left: 3px; }
 .selBar {
   display: flex;
   flex-wrap: wrap;

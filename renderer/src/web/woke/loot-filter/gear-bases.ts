@@ -50,8 +50,20 @@ const ARMOUR_CLASS: Record<string, string> = {
   'Belt': 'Belts'
 }
 
+// The picker's kinds, grouped, with the game's category names.
+export const KIND_GROUPS: Array<{ label: string, kinds: Array<{ category: string, label: string }> }> = [
+  { label: 'Armour', kinds: [{ category: 'Helmet', label: 'Helmets' }, { category: 'Body Armour', label: 'Body' }, { category: 'Gloves', label: 'Gloves' }, { category: 'Boots', label: 'Boots' }, { category: 'Shield', label: 'Shields' }] },
+  { label: 'Jewellery', kinds: [{ category: 'Ring', label: 'Rings' }, { category: 'Amulet', label: 'Amulets' }, { category: 'Belt', label: 'Belts' }, { category: 'Quiver', label: 'Quivers' }] },
+  { label: 'One hand', kinds: [{ category: 'Claw', label: 'Claws' }, { category: 'Dagger', label: 'Daggers' }, { category: 'Rune Dagger', label: 'Rune daggers' }, { category: 'One-Handed Sword', label: 'Swords' }, { category: 'One-Handed Axe', label: 'Axes' }, { category: 'One-Handed Mace', label: 'Maces' }, { category: 'Sceptre', label: 'Sceptres' }, { category: 'Wand', label: 'Wands' }] },
+  { label: 'Two hand', kinds: [{ category: 'Bow', label: 'Bows' }, { category: 'Staff', label: 'Staves' }, { category: 'Warstaff', label: 'Warstaves' }, { category: 'Two-Handed Sword', label: 'Swords' }, { category: 'Two-Handed Axe', label: 'Axes' }, { category: 'Two-Handed Mace', label: 'Maces' }] }
+]
+// Defence colours, as the game draws armour, evasion and energy shield.
+export const DEFENCE_COLOURS: Record<string, string> = { AR: '#d0503c', EV: '#4caf50', ES: '#5a8cff', Ward: '#c8a050' }
+
 export interface BaseInfo {
   name: string
+  // The game's item category ("One-Handed Sword").
+  category: string | null
   // The loot filter's Class for it ("Body Armours").
   cls: string | null
   slot: Slot | null
@@ -78,6 +90,7 @@ export function baseInfo (name: string): BaseInfo {
   }
   info = {
     name,
+    category: category ?? null,
     cls: category ? ARMOUR_CLASS[category] ?? CATEGORY_CLASSES[category]?.[0] ?? null : null,
     slot: (category && CATEGORY_SLOT[category]) ?? null,
     defence,
@@ -86,6 +99,20 @@ export function baseInfo (name: string): BaseInfo {
   }
   cache.set(name, info)
   return info
+}
+
+// The art for a kind: its highest drop level base that has art.
+const kindIcons = new Map<string, string | null>()
+export function kindIcon (category: string): string | null {
+  if (kindIcons.has(category)) return kindIcons.get(category)!
+  let best: BaseInfo | null = null
+  for (const n of allGearBases()) {
+    const i = baseInfo(n)
+    if (i.category === category && i.icon && (!best || (i.dropLevel ?? 0) > (best.dropLevel ?? 0))) best = i
+  }
+  const icon = best?.icon ?? null
+  if (allGearBases().length) kindIcons.set(category, icon)
+  return icon
 }
 
 // Every gear base the game drops, for the "Unranked" lane and search.
