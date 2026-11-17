@@ -423,6 +423,7 @@ import type { FilterEdit, StylePatch } from './edits'
 import { ruleLabel, tierName } from './parse'
 import type { Visibility } from './parse'
 import { tierLabel } from './names'
+import { useTierMove } from './tier-move'
 import AddItemField from './AddItemField.vue'
 import TierItemChips from './TierItemChips.vue'
 import RuleNav from './RuleNav.vue'
@@ -980,15 +981,13 @@ function setTierVisibility (v: Visibility) {
   props.store.edit({ kind: 'visibility', type: selType.value, tier: selTier.value, visibility: v })
 }
 
-function moveBases (bases: string[], to: string) {
-  const type = selType.value
-  const from = selTier.value
-  if (!bases.length || !type || !from || !to || to === from) return
-  const undo = props.store.editsWithUndo(bases.map(base => ({ kind: 'move' as const, type, base, from, to })))
-  toast(`Moved ${bases.length > 1 ? `${bases.length} items` : bases[0]} to ${tierLabel(to)}`, { anchor: panel.value?.el, undo })
-  picked.value = []
-  selTier.value = to
-}
+// The editor follows the items to their new tier.
+const moveBases = useTierMove(props.store, {
+  type: () => selType.value,
+  from: () => selTier.value,
+  anchor: () => panel.value?.el,
+  after: (to) => { picked.value = []; selTier.value = to }
+})
 
 function pickBase (b: string, e: MouseEvent) {
   picked.value = pickBases(tierItems.value, picked.value, b, e.shiftKey, lastPicked.value)

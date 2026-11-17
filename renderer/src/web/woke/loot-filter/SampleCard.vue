@@ -182,6 +182,7 @@
 <script setup lang="ts">
 import { conditionWords } from './ladder'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useFold } from '../ui/fold'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
 import TierItemChips from './TierItemChips.vue'
 import { basePrice } from './economy'
@@ -199,6 +200,7 @@ import { matchItem, sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
 import { formatCondition, ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
+import { useTierMove } from './tier-move'
 import type { FilterCondition, Visibility } from './parse'
 import { LEVEL_NAMES, LEVEL_SHORT } from './strictness'
 import { OWN_RULE_TYPE, blocksOf, conditionSignature, moveTargets, readStyle } from './edits'
@@ -305,7 +307,7 @@ const verdict = computed(() => verdictOf(props.match, level.value))
 // Hidden by the rule we're sure of, but a showing rule above might catch it
 // first (its item tier isn't in the copy): never claim "Hidden" then.
 const maybeShown = computed(() => !verdict.value.shown && props.match.uncertain.some(u => u.block.visibility !== 'Hide'))
-const open = reactive({ special: false, rule: false, also: false, grid: false })
+const open = reactive({ special: useFold('alt-f.special'), rule: useFold('alt-f.rule'), also: useFold('alt-f.also'), grid: useFold('alt-f.grid') })
 
 type Row = ReturnType<typeof tierInfo> & { label: string, note: string, needs: string, current: boolean, status: string, statusClass: string }
 
@@ -432,15 +434,13 @@ const moveRows = computed(() => {
   return rows.filter(r => !r.current)
 })
 
-function moveBases (bases: string[], to: string) {
-  const type = origin.value.type
-  const from = origin.value.tier
-  if (!bases.length || !type || !from || !to || to === from) return
-  const label = moveRows.value.find(r => r.tier === to)?.label ?? tierLabel(to)
-  const undo = props.store.editsWithUndo(bases.map(b => ({ kind: 'move' as const, type, base: b, from, to })))
-  toast(`Moved ${bases.length > 1 ? `${bases.length} items` : bases[0]} to ${label}`, { undo })
-  picked.value = []
-}
+// Named as the rows above name the tiers.
+const moveBases = useTierMove(props.store, {
+  type: () => origin.value.type,
+  from: () => origin.value.tier,
+  label: (to) => moveRows.value.find(r => r.tier === to)?.label ?? tierLabel(to),
+  after: () => { picked.value = [] }
+})
 
 function moveEntries (bases: () => string[]) {
   return moveRows.value.map(r => ({ label: r.label, labelStyle: labelCss(r.actions), icon: 'fas fa-share', action: () => { moveBases(bases(), r.tier) } }))

@@ -34,7 +34,8 @@
 
 <script setup lang="ts">
 // On the Gear tab: what each stage of the build costs.
-import { computed, onMounted, shallowRef } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useOneOpen } from '../ui/fold'
 import { WInfo, WItemRow, WPrice } from '../ui'
 import type { ItemTipRef } from '../ui'
 import { pobItemText } from './item-text'
@@ -46,7 +47,7 @@ import type { PobDetails, PobItem } from './widget'
 const props = defineProps<{ details: PobDetails }>()
 
 const { priceOf, divine, fetch } = useUniquePrice()
-const open = shallowRef<string | null>(null)
+const open = useOneOpen<string>('build-costs.stage')
 
 // A unique's tooltip by name; its menu and click have the build's own copy,
 // so the price check reads its rolls and Text copies it.

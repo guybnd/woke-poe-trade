@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
+import { useFold } from '../ui/fold'
 import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig } from '@/web/Config'
 import { WPanel, WButton, WChip, WField, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
@@ -140,8 +141,8 @@ const HEAD_LABEL: Record<ModRating, string> = { deadly: 'Avoid', warn: 'Careful'
 
 const profile = computed(() => activeProfile(props.config))
 const profileOptions = computed(() => props.config.profiles.map(p => ({ value: String(p.id), label: p.name || 'Unnamed' })))
-const quickOpen = shallowRef(false)
-const minsOpen = shallowRef(false)
+const quickOpen = useFold('map-regex.quick')
+const minsOpen = useFold('map-regex.minimums')
 const presetsOn = computed(() => presets.value.filter(p => p.rating !== 'ok').length)
 const minsSet = computed(() => MIN_KEYS.filter(k => (profile.value.mins[k] ?? 0) > 0).length)
 const presets = computed(() => PRESETS

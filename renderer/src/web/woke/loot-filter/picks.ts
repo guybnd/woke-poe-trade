@@ -1,6 +1,7 @@
 // Ticked rows in a list you review in bulk (the Prices tab's lists): pick all
 // or none, pick where, and shift + click to set a run of rows like a file list.
 import { computed, reactive, watch } from 'vue'
+import { runOf } from '../shared/picks'
 
 export function usePicks<T> (list: () => T[], key: (t: T) => string, initial: (t: T) => boolean = () => false) {
   const ticked = reactive(new Map<string, boolean>())
@@ -34,12 +35,8 @@ export function usePicks<T> (list: () => T[], key: (t: T) => string, initial: (t
     const on = (e.target as HTMLInputElement).checked
     const rows = list()
     if (n >= rows.length) return
-    if (e.shiftKey && last != null && last < rows.length) {
-      const [a, b] = last < n ? [last, n] : [n, last]
-      for (let i = a; i <= b; i++) ticked.set(key(rows[i]), on)
-    } else {
-      ticked.set(key(rows[n]), on)
-    }
+    const run = e.shiftKey && last != null && last < rows.length ? runOf(rows, rows[last], rows[n]) : null
+    for (const t of run ?? [rows[n]]) ticked.set(key(t), on)
     last = n
   }
 
