@@ -9,8 +9,8 @@ describe('rowKeys', () => {
   it('Delete removes, Ctrl + C copies, F2 renames', () => {
     const a = { remove: vi.fn(), copy: vi.fn(), rename: vi.fn() }
     const on = rowKeys(a)
-    on(key('Delete')); on(key('c', { ctrl: true })); on(key('C', { meta: true })); on(key('F2'))
-    expect([a.remove.mock.calls.length, a.copy.mock.calls.length, a.rename.mock.calls.length]).toEqual([1, 2, 1])
+    on(key('Delete')); on(key('Backspace')); on(key('c', { ctrl: true })); on(key('C', { meta: true })); on(key('F2'))
+    expect([a.remove.mock.calls.length, a.copy.mock.calls.length, a.rename.mock.calls.length]).toEqual([2, 2, 1])
   })
   it('passes on keys it has no action for, or with other modifiers', () => {
     const remove = vi.fn()

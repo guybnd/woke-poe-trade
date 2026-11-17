@@ -9,11 +9,12 @@ export interface RowKeyActions {
   rename?: () => void
 }
 
-// A row's keys: Delete removes, Ctrl + C copies, F2 renames. For @keydown on
+// A row's keys: Delete (or Backspace) removes, Ctrl + C copies, F2 renames. For @keydown on
 // the row; a key the list has no action for passes on.
 export function rowKeys (actions: RowKeyActions) {
   return (e: KeyboardEvent) => {
-    const act = e.key === 'Delete' && !e.ctrlKey && !e.altKey
+    // Backspace too, as the lists' old @keydown.delete did.
+    const act = (e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.altKey
       ? actions.remove
       : (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'c'
           ? actions.copy
