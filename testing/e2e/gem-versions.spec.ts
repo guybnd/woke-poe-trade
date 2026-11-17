@@ -115,3 +115,25 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   await page.keyboard.press('Escape')
   expect(searches.length).toBe(before + 1)
 })
+
+test('the same gem again: a version searched before shows its answer at once', async ({ overlay }) => {
+  const searches = await fakeMarket(overlay.page)
+  await overlay.boot()
+  await overlay.copyItem(GEM)
+  const panel = overlay.widget('price-check')
+  const table = panel.locator('[data-gem-versions]')
+  const row = table.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
+  await expect(row).toBeVisible()
+  await overlay.page.waitForTimeout(300)
+  const before = searches.length
+  await row.click()
+  await expect(row).toContainText('31 listed')
+  expect(searches.length).toBe(before + 1)
+
+  // Copied again: the answer is kept (on-click trade lane), no click or search.
+  await overlay.copyItem(GEM)
+  await expect(row).toContainText('31 listed')
+  await row.click()
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBe(before + 1)
+})

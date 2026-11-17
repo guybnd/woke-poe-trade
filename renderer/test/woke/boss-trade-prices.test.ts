@@ -265,6 +265,16 @@ describe('trade price store', () => {
     expect(lookup.mock.calls.map(c => c[1])).toEqual(['A', 'C', 'D', 'E'])
   })
 
+  it('a panel in another league drops names asked for in the old one', async () => {
+    const { prices, lookup } = store()
+    prices.request('Allflame', 400, ['A'])
+    await vi.advanceTimersByTimeAsync(0)
+    prices.ask('Allflame', 400, 'C')
+    prices.request('Standard', 400, ['B'])
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(lookup.mock.calls.map(c => [c[0], c[1]])).toEqual([['Allflame', 'A'], ['Standard', 'B']])
+  })
+
   it('doesn\'t ask again for a fresh quote', async () => {
     const { prices, lookup } = store()
     prices.ask('Allflame', 400, 'A')

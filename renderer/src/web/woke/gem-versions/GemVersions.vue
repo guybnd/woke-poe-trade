@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { usePoeninja } from '@/web/background/Prices'
@@ -46,7 +46,8 @@ import { AppConfig } from '@/web/Config'
 import WPrice from '@/web/woke/ui/WPrice.vue'
 import WItemRow from '@/web/woke/ui/WItemRow.vue'
 import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
-import { gemForms, listVersions, type GemVersion, type NinjaGemRow } from './versions'
+import { gemForms, listVersions, versionFilters, type GemVersion, type NinjaGemRow } from './versions'
+import { useOnDemandQuote } from '../shared/on-demand'
 import { gemVersionsOpen as open } from './open'
 
 const props = defineProps<{
@@ -81,13 +82,20 @@ const versions = computed<GemVersion[]>(() => {
 const low = computed(() => Math.min(...versions.value.map(v => v.chaos)))
 const high = computed(() => Math.max(...versions.value.map(v => v.chaos)))
 
-interface Run { id: number, state: 'loading' | 'done' | 'error', chaos?: number | null, total?: number, error?: string }
-const runs = reactive(new Map<string, Run>())
-let runId = 0
+// Each row searches on a click, through the one on-click trade lane: an
+// answer for the same search (this gem again, within a while) shows at once.
+interface Run { state: 'loading' | 'done' | 'error', chaos?: number | null, total?: number, error?: string }
+const quotes = useOnDemandQuote<{ chaos: number | null, total: number }>()
 const searchCode = shallowRef<typeof import('./search') | null>(null)
 
 // A new gem, or other trade settings (league, online, listed, currency): old row results no longer apply.
-watch([() => props.item, () => JSON.stringify(props.filters.trade)], () => { runs.clear() })
+watch([() => props.item, () => JSON.stringify(props.filters.trade)], () => { quotes.clear() })
+
+// The search a row runs, as its key: the version's filters and trade settings.
+function requestOf (v: GemVersion): string | null {
+  if (!forms.value) return null
+  return JSON.stringify(versionFilters(props.filters, v, forms.value, AppConfig().useIntlSite))
+}
 
 // The version as poe.ninja lists it, for its tooltip and item menu; the
 // click's meaning goes at the bottom of the tooltip.
@@ -101,27 +109,21 @@ function rowKey (v: GemVersion): string {
   return `${v.vaal ? 'V' : ''}${v.key}`
 }
 function runOf (v: GemVersion): Run | undefined {
-  return runs.get(rowKey(v))
+  const r = quotes.rowOf(rowKey(v), requestOf(v))
+  return r && { state: r.state, error: r.error, ...r.value }
 }
 
 async function search (v: GemVersion) {
   if (v.own || !forms.value) return
-  const key = rowKey(v)
-  const prev = runs.get(key)
-  if (prev && prev.state !== 'error') return
-  const id = ++runId
-  runs.set(key, { id, state: 'loading' })
-  try {
+  const request = requestOf(v)
+  if (!request) return
+  const gemForms = forms.value
+  const filters = props.filters
+  const opts = { ...options.value, accountName: AppConfig().accountName, useEn: AppConfig().useIntlSite }
+  await quotes.ask(rowKey(v), request, async () => {
     if (!searchCode.value) searchCode.value = await import('./search')
-    const res = await searchCode.value.searchVersion(props.filters, v, forms.value, {
-      ...options.value,
-      accountName: AppConfig().accountName,
-      useEn: AppConfig().useIntlSite
-    })
-    if (runs.get(key)?.id === id) runs.set(key, { id, state: 'done', ...res })
-  } catch (e) {
-    if (runs.get(key)?.id === id) runs.set(key, { id, state: 'error', error: (e as Error).message })
-  }
+    return await searchCode.value.searchVersion(filters, v, gemForms, opts)
+  })
 }
 </script>
 
