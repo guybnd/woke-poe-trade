@@ -8,6 +8,7 @@ import type { Price } from './build-costs'
 import { pobItemText } from './item-text'
 import type { PobItem } from './widget'
 import type { ParsedItem } from '@/parser'
+import { isFoulborn } from '../shared/item-identity'
 
 export function useUniquePrice () {
   const ninja = usePoeninja()
@@ -20,7 +21,7 @@ export function useUniquePrice () {
       const r = parseClipboard(pobItemText(item))
       parsed = r.isOk() ? r.value : null
     }
-    if (parsed?.rarity === ItemRarity.Unique && !item.name.startsWith('Foulborn ')) {
+    if (parsed?.rarity === ItemRarity.Unique && !isFoulborn(item.name)) {
       try {
         const id = getDetailsId(parsed)
         const exact = id ? ninja.findPriceByQuery(id) : null

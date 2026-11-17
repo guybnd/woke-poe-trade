@@ -9,6 +9,7 @@ import { dropOf } from '@/web/woke/ui/tooltip/tip-content'
 import { cheapestPrices } from '@/web/woke/disenchant/calc'
 import { readCounts } from '@/web/woke/disenchant/listings'
 import { dropUniques, ownUnique } from '@/web/woke/loot-filter/drop-uniques'
+import { dataUniqueName, isFated, isFoulborn, isReplica, readItemName, unfatedBase } from '@/web/woke/shared/item-identity'
 import { loadGameData } from '../helpers/game-data'
 import type { PriceItem } from '@/web/woke/market/types'
 
@@ -60,5 +61,34 @@ describe('how the tools read variant names', () => {
       [price('UniqueAccessory', 'Foulborn X', 7, 'Iron Ring'), price('UniqueAccessory', 'X', 1, 'Iron Ring')],
       ['UniqueAccessory'], 'Iron Ring', null, null)
     expect(out[0].foulborn?.max).toBe(7)
+  })
+})
+
+describe('readItemName', () => {
+  it('reads each league variant and its original', () => {
+    expect(readItemName('Foulborn Headhunter')).toEqual({ name: 'Foulborn Headhunter', plain: 'Headhunter', variant: 'foulborn' })
+    expect(readItemName('Replica Farrul\'s Fur')).toEqual({ name: 'Replica Farrul\'s Fur', plain: 'Farrul\'s Fur', variant: 'replica' })
+    expect(readItemName('Fated Lathi')).toEqual({ name: 'Fated Lathi', plain: 'Lathi', variant: 'fated' })
+    expect(readItemName('Headhunter')).toEqual({ name: 'Headhunter', plain: 'Headhunter', variant: null })
+  })
+
+  it('knows a transfigured gem only from the item data', () => {
+    const gem = ITEM_BY_REF('GEM', 'Ice Nova')![0]
+    const trans = ITEM_BY_REF('GEM', 'Ice Nova of Frostbolts')?.[0]
+    expect(trans?.gem?.transfigured).toBe(true)
+    expect(readItemName('Ice Nova of Frostbolts', ITEM_BY_REF)).toEqual({ name: 'Ice Nova of Frostbolts', plain: 'Ice Nova', variant: 'transfigured' })
+    expect(readItemName('Ice Nova of Frostbolts').variant).toBeNull()
+    expect(readItemName(gem.refName, ITEM_BY_REF).variant).toBeNull()
+  })
+
+  it('has one-word checks the tools use', () => {
+    expect(isFoulborn('Foulborn X')).toBe(true)
+    expect(isFoulborn('X Foulborn')).toBe(false)
+    expect(isReplica('Replica X')).toBe(true)
+    expect(isFated('Fated Lathi')).toBe(true)
+    expect(dataUniqueName('Foulborn X')).toBe('X')
+    expect(dataUniqueName('Replica X')).toBe('Replica X')
+    expect(unfatedBase('Fated Lathi')).toBe('Lathi')
+    expect(unfatedBase('Lathi')).toBe('Lathi')
   })
 })

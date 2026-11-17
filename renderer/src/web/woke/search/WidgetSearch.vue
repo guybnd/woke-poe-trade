@@ -164,6 +164,7 @@ import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '..
 import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
+import { isFoulborn } from '../shared/item-identity'
 import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniqueBaseIndex, uniquePrices } from './search'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -922,7 +923,7 @@ function openTrade (entry: PriceEntry | ItemEntry) {
   const kind = ns === 'UNIQUE' ? 'unique' : ns === 'GEM' ? 'gem' : ns === 'DIVINATION_CARD' ? 'card' : 'item'
   const q = tradeQuery({ name }, kind, info, AppConfig().language === 'en')
   // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn copies only.
-  const foulborn = kind === 'unique' && (/^Foulborn /.test(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name)))
+  const foulborn = kind === 'unique' && (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name)))
   window.open(tradeUrl(league, foulborn ? { ...q, filters: FOULBORN_ONLY } : q, getTradeEndpoint()))
 }
 const FOULBORN_ONLY = { misc_filters: { filters: { foulborn_item: { option: 'true' } } } }

@@ -3,6 +3,7 @@
 import { ITEM_BY_REF } from '@/assets/data'
 import type { BaseType } from '@/assets/data/interfaces'
 import type { ItemTipRef } from './item-tip'
+import { dataUniqueName } from '../../shared/item-identity'
 
 type Lookup = (ns: BaseType['namespace'], name: string) => readonly BaseType[] | undefined
 
@@ -19,7 +20,7 @@ export function itemRefFromText (text: string, lookup: Lookup = ITEM_BY_REF): It
   }
 
   // The whole text is the name: a gem, card, currency or plain base.
-  const uniqueOf = (name: string) => lookup('UNIQUE', name.replace(/^Foulborn /, ''))
+  const uniqueOf = (name: string) => lookup('UNIQUE', dataUniqueName(name))
   if (has(uniqueOf(clean)) || has(lookup('GEM', clean)) || has(lookup('DIVINATION_CARD', clean)) || has(lookup('ITEM', clean))) {
     return { name: clean }
   }

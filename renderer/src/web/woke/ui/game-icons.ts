@@ -5,6 +5,7 @@
 import { ITEM_BY_REF } from '@/assets/data'
 import type { BaseType } from '@/assets/data/interfaces'
 import { MODULES } from '../modules'
+import { dataUniqueName, isFoulborn } from '../shared/item-identity'
 
 type Ns = BaseType['namespace']
 
@@ -70,7 +71,7 @@ export function ninjaIcon (type: string, name: string): string | null {
   if (name === 'Divine Orb') return CURRENCY_ICONS.divine
   const ns: Ns = /^Unique/.test(type) ? 'UNIQUE' : /Gem/.test(type) ? 'GEM' : type === 'DivinationCard' ? 'DIVINATION_CARD' : 'ITEM'
   // The item data has no Foulborn uniques: they look like the original.
-  return gameIcon(name, ns) ?? (ns === 'UNIQUE' && name.startsWith('Foulborn ') ? gameIcon(name.slice(9), ns) : null)
+  return gameIcon(name, ns) ?? (ns === 'UNIQUE' && isFoulborn(name) ? gameIcon(dataUniqueName(name), ns) : null)
 }
 
 // A module's icon: its game art (null when it has none or the art isn't

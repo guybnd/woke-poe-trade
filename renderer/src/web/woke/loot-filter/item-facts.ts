@@ -7,6 +7,7 @@
 import type { ParsedItem } from '@/parser'
 import { ItemRarity } from '@/parser'
 import { BASE_FACTS } from './base-facts'
+import { isFated, isFoulborn, isReplica, unfatedBase } from '../shared/item-identity'
 
 export type FilterRarity = 'Normal' | 'Magic' | 'Rare' | 'Unique'
 
@@ -105,8 +106,8 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
   }
   if (!baseType) baseType = nameLines[nameLines.length - 1]?.replace(/^Superior /, '')
   // "Fated Lathi": the mark, then the base the filter's BaseType names.
-  const fated = parsed ? !!parsed.isFated : rarityText !== 'Unique' && /^Fated /.test(baseType ?? '')
-  if (!parsed && fated) baseType = baseType!.slice('Fated '.length)
+  const fated = parsed ? !!parsed.isFated : rarityText !== 'Unique' && isFated(baseType ?? '')
+  if (!parsed && fated) baseType = unfatedBase(baseType!)
   // The parser's unique maps are just "Map"; filters match "Map (Tier 16)".
   const tier = parsed?.mapTier ?? num(all.find(l => l.startsWith('Map Tier:')))
   // So are blighted ones, whose copy says "Blighted Map (Tier 16)". The tier in
@@ -179,8 +180,8 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
     mirrored: parsed ? !!parsed.isMirrored : all.includes('Mirrored'),
     fractured: parsed ? !!parsed.isFractured : all.includes('Fractured Item'),
     synthesised: parsed ? !!parsed.isSynthesised : all.includes('Synthesised Item'),
-    replica: rarity === 'Unique' && /^Replica /.test(nameLines[0] ?? ''),
-    foulborn: parsed ? !!parsed.isFoulborn : /^Foulborn /.test(name),
+    replica: rarity === 'Unique' && isReplica(nameLines[0] ?? ''),
+    foulborn: parsed ? !!parsed.isFoulborn : isFoulborn(name),
     fated,
     vestigial: parsed ? !!parsed.isVestigial : all.some(l => /^Vestigial\b/.test(l)),
     // Without the parser's data only a gem can be unsure.

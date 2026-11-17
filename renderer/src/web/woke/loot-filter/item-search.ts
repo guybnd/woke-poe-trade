@@ -6,6 +6,7 @@ import type { BaseType } from '@/assets/data'
 import { BASE_FACTS } from './base-facts'
 import type { FilterRarity, ItemFacts } from './item-facts'
 import type { FilterDoc } from './parse'
+import { isReplica } from '../shared/item-identity'
 
 export type SearchKind = 'Unique' | 'Base' | 'Currency' | 'Card' | 'Gem' | 'Map' | 'Item'
 
@@ -237,7 +238,7 @@ export function searchFacts (item: SearchItem, opts: { areaLevel: number, rarity
     mirrored: false,
     fractured: false,
     synthesised: false,
-    replica: item.kind === 'Unique' && item.name.startsWith('Replica '),
+    replica: item.kind === 'Unique' && isReplica(item.name),
     foulborn: false,
     vestigial: false,
     transfigured: item.kind === 'Gem' ? !!item.transfigured : false,

@@ -3,6 +3,7 @@
 import { itemKey, isCorrupted } from '../market/types'
 import type { PriceItem, CorruptedFilter } from '../market/types'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import { dataUniqueName } from '../shared/item-identity'
 
 export const MIN_QUERY = 2
 // More than this and the list is too long to read: keep typing.
@@ -169,9 +170,7 @@ export function typeLabel (type: string): string {
 }
 
 // Foulborn items share their unique's page and base.
-export function baseUniqueName (name: string): string {
-  return name.replace(/^Foulborn /, '')
-}
+export const baseUniqueName = dataUniqueName
 
 export function tradeUrl (league: string, item: { name?: string, type?: string | { option: string, discriminator: string }, filters?: object }, host = 'www.pathofexile.com'): string {
   const query = {
