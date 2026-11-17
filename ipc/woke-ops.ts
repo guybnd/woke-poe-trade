@@ -147,6 +147,9 @@ export interface WokeOps {
   'atlas-overlay-points': Op<{ x: number[], y: number[], r: number[] }, null>
   'atlas-overlay-fit': Op<{ probes: number[][], extra?: number[][], fresh?: boolean }, Json>
   'atlas-overlay-stop': Op<NoArgs, null>
+  // A screenshot (data: URL) read like the game's tree: lit = probes read lax
+  // (node frames), extraLit = extra read strict (lines).
+  'atlas-shot-read': Op<{ image: string, probes: number[][], extra: number[][] }, Json>
 
   // Stores of overlay records
   'doc-get': Op<DocKey, Json>

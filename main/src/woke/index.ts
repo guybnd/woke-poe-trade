@@ -128,6 +128,8 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   registerWokeHandler('atlas-overlay-points', async (args) => { atlasOverlay.setPoints(args); return null })
   registerWokeHandler('atlas-overlay-fit', async (args) => atlasOverlay.hasPoints ? atlasOverlay.fit(args) : { ok: false, reason: 'no-points' })
   registerWokeHandler('atlas-overlay-stop', async () => { atlasOverlay.stop(); return null })
+  // A screenshot of the atlas tree, pasted or picked in Atlas strategies.
+  registerWokeHandler('atlas-shot-read', async (args) => atlasOverlay.readImage(args))
 
   // The stash reader: off unless the player turned it on (or personal.flag).
   // Off, nothing is registered but these three answers.

@@ -1,6 +1,7 @@
 // Build tree over the game's passive tree. Reads the screen to find where the
 // tree sits (tree-fit.ts) and follows the mouse while you drag it. Only looks
 // at the screen; no input goes to the game.
+import { nativeImage } from 'electron'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import type { UiohookKeyboardEvent, UiohookMouseEvent } from 'uiohook-napi'
 import type { GameWindow } from '../windowing/GameWindow'
@@ -92,6 +93,26 @@ export class TreeOverlay {
       height,
       ms: { capture: Math.round(t1 - t0), fit: Math.round(t2 - t1) }
     }
+  }
+
+  // A picture of the tree instead of the game's window (a screenshot pasted
+  // or picked in the overlay): the same fit and reading, nothing kept.
+  // probes are read the lax way (node frames), extra the strict way (lines).
+  readImage (args: { image: string, probes: number[][], extra: number[][] }) {
+    if (!this.pts) return { ok: false as const, reason: 'no-points' }
+    if (typeof args.image !== 'string' || !args.image.startsWith('data:image/')) return { ok: false as const, reason: 'not-an-image' }
+    const img = nativeImage.createFromDataURL(args.image)
+    const { width, height } = img.getSize()
+    if (!width || !height) return { ok: false as const, reason: 'not-an-image' }
+    const t0 = performance.now()
+    // BGRA, as the game's screenshots are.
+    const px = new Uint8Array(img.toBitmap())
+    const fit = fitTree(readScreen(px, width, height), this.pts, null, this.kind)
+    if (!fit || fit.score < MIN_SCORE) return { ok: false as const, reason: 'no-tree' }
+    const lit = litProbes(px, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)), this.tone)
+    const extraLit = litLines(px, width, height, fit, (args.extra ?? []).map(p => Float32Array.from(p)), this.pts, this.tone)
+    perfRecord('Tree overlay: read picture', performance.now() - t0)
+    return { ok: true as const, fit, lit, extraLit, width, height }
   }
 
   stop () {

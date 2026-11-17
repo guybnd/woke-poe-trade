@@ -15,16 +15,18 @@
             @click="sortMenu"><i class="fas fa-sort-amount-down" /></button>
         </template>
         <template #toolbar>
-          <div v-if="importOpen" class="flex flex-col gap-1 w-full">
+          <div v-if="importOpen" class="flex flex-col gap-1 w-full" @dragover="shotDragOver" @drop="shotDrop">
             <textarea class="w-input" v-model="importText" rows="4" :class="$style.textarea" data-import
-              placeholder="An atlas tree link, a guide's text (tree link, Threads, currency, regex) or a strategy code" @keydown.esc="importOpen = false" />
+              placeholder="An atlas tree link, a guide's text (tree link, Threads, currency, regex), a strategy code, or a pasted screenshot of the atlas tree"
+              @keydown.esc="importOpen = false" @paste="shotPaste" />
+            <ShotTray ref="shotTray" :model="atlasTree" @update="shotRead = $event" />
             <div class="flex gap-1 items-center">
               <span class="w-faint text-xs">Into</span>
               <select v-model="importInto" :class="$style.select" class="w-select grow" title="Folder for what you import">
                 <option value="">The top</option>
                 <option v-for="f in folders" :key="f" :value="f">{{ f.split('/').join(' › ') }}</option>
               </select>
-              <WButton size="sm" variant="primary" :disabled="!importText.trim() || importing" @click="doImport">Import</WButton>
+              <WButton size="sm" variant="primary" :disabled="(!importText.trim() && !shotRead?.nodes.length) || importing" @click="doImport">{{ importLabel }}</WButton>
             </div>
             <div v-if="importError" class="w-down text-xs">{{ importError }}</div>
           </div>
@@ -140,6 +142,7 @@ import { formatChaos } from '../ui/format'
 import { FARMING_TYPE, strategyStats } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
 import { expandShortTreeLinks, extractTreeCode } from './tree'
+import type { ShotRead } from './shot-import'
 import { addRegex, joinFolder, libraryOn, regexesIn } from '../regex-library/folders'
 import { claimNewRegexFolder, copyRegexes, refileRegexes } from './strategy-ops'
 import { atlasTreePin } from './atlas-pin'
@@ -148,6 +151,7 @@ import { pins } from '../pins/pins'
 // The tree editor's code loads the first time a strategy is opened.
 const AtlasTree = defineAsyncComponent(() => import('./AtlasTree.vue'))
 const AtlasLoadout = defineAsyncComponent(() => import('./AtlasLoadout.vue'))
+const ShotTray = defineAsyncComponent(() => import('./ShotTray.vue'))
 
 const props = defineProps<{
   config: AtlasWidget
@@ -923,12 +927,60 @@ async function fetchProxied (url: string): Promise<string> {
   return await res.text()
 }
 
+// ---- screenshots of the atlas tree (ShotTray.vue) ----
+
+const shotTray = shallowRef<{ add: (files: Iterable<File>) => boolean, clear: () => void }>()
+const shotRead = shallowRef<ShotRead | null>(null)
+watch(importOpen, (on) => { if (!on) shotRead.value = null })
+
+const importLabel = computed(() => {
+  const n = shotRead.value?.nodes.length ?? 0
+  return n && !importText.value.trim() ? `Import ${n} ${n === 1 ? 'passive' : 'passives'}` : 'Import'
+})
+
+function shotFiles (list: DataTransferItemList | null | undefined): File[] {
+  return [...(list ?? [])].filter(i => i.kind === 'file' && i.type.startsWith('image/')).map(i => i.getAsFile()).filter((f): f is File => f != null)
+}
+
+function shotPaste (e: ClipboardEvent) {
+  const files = shotFiles(e.clipboardData?.items)
+  if (!files.length) return
+  e.preventDefault()
+  shotTray.value?.add(files)
+}
+
+function shotDragOver (e: DragEvent) {
+  if ([...(e.dataTransfer?.items ?? [])].some(i => i.kind === 'file')) e.preventDefault()
+}
+
+function shotDrop (e: DragEvent) {
+  const files = [...(e.dataTransfer?.files ?? [])].filter(f => f.type.startsWith('image/'))
+  if (!files.length) return
+  e.preventDefault()
+  e.stopPropagation()
+  shotTray.value?.add(files)
+}
+
 async function doImport () {
   if (importing.value) return
   importError.value = ''
   const text = importText.value.trim()
-  if (!text) return
+  const shots = shotRead.value
   const into = cleanFolder(importInto.value)
+  if (!text && shots?.nodes.length) {
+    // Always a new strategy: nothing you have is changed.
+    const { encodeAtlasTree } = await import('./atlas-tree')
+    const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), name: 'From screenshot', treeUrl: encodeAtlasTree(shots.nodes, {}), folder: into }
+    fileImported(s, [])
+    props.config.strategies.push(s)
+    props.config.selectedId = s.id
+    props.config.treeHidden = false
+    openFolder(s.folder)
+    shotTray.value?.clear()
+    importOpen.value = false
+    return
+  }
+  if (!text) return
   const added: AtlasStrategy[] = []
   try {
     if (isStrategyCode(text)) {
