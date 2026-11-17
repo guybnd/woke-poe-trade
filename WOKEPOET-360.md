@@ -50,6 +50,13 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T11:33:09.874Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-17T11:55:48.493Z'
+    comment: >-
+      Follow-up #582 merged (cc9bf7fe): kept trade answers pruned (expired on
+      read and set, at most 200).
+    id: a-2026-11-17t11-55-48-493z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/581'
