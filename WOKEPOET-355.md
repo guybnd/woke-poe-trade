@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-355
 title: One item name reader for league variants
-status: Ready
+status: Done
 priority: None
 effort: S
 assignee: unassigned
@@ -39,7 +39,33 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-17T09:51:57.807Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as f4fdc4f6: shared/item-identity.ts reads Foulborn, Replica, Fated
+      and transfigured names; 13 files use it. No behaviour change.
+    completionComment: true
+    date: '2026-11-17T10:03:42.822Z'
+    id: c-2026-11-17t10-03-42-822z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-17T10:03:43.206Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/575'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** Foulborn, transfigured and Fated names are stripped by hand in about ten files. One shared reader tells every tool the plain name and the variant.
 
