@@ -57,6 +57,8 @@ const props = defineProps<{
   titleOf?: (item: T) => string
   // Whether an item has a second line (#sub).
   subFor?: (item: T) => boolean
+  // Backspace removes too (default; PoB builds: Delete only, as before).
+  backspace?: boolean
   // A folder's art, if it has one (Trade searches' folder icons).
   folderIcon?: (path: string) => string | null | undefined
 }>()
@@ -64,6 +66,8 @@ const emit = defineEmits<{
   'item-menu': [e: MouseEvent, item: T]
   'folder-menu': [e: MouseEvent, path: string]
   'open': [item: T]
+  // A key on an item the list has its own use for (PoB builds: P pins).
+  'item-key': [e: KeyboardEvent, item: T]
 }>()
 
 const styles = useCssModule()
@@ -125,7 +129,8 @@ function onItemKey (e: KeyboardEvent, item: T) {
     remove: () => props.tree.removeGroup(item),
     copy: props.copy ? () => props.copy!(props.tree.groupOf(item)) : undefined,
     rename: () => props.tree.startEdit('item', String(item.id), 'rename')
-  }, { backspace: true })(e)
+  }, { backspace: props.backspace ?? true })(e)
+  if (!e.defaultPrevented) emit('item-key', e, item)
 }
 </script>
 

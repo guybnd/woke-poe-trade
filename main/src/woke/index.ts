@@ -4,7 +4,7 @@ import { net } from 'electron'
 import type { ServerEvents } from '../server'
 import type { Logger } from '../RemoteLogger'
 import type { GameWindow } from '../windowing/GameWindow'
-import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, openBuild, readBuild, renameBuild, restoreBuild, saveLiveBuild, showBuild } from './pob-builds'
+import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, moveBuildFolder, openBuild, readBuild, renameBuild, restoreBuild, saveLiveBuild, showBuild } from './pob-builds'
 import { timelessRewrites } from './pob-timeless'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
@@ -43,6 +43,7 @@ const handlers: Partial<WokeHandlers> = {
   'pob-import': importBuild,
   'pob-rename': renameBuild,
   'pob-move': moveBuild,
+  'pob-move-folder': moveBuildFolder,
   'pob-duplicate': duplicateBuild,
   'pob-delete': deleteBuild,
   'pob-restore': restoreBuild,

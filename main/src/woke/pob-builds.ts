@@ -231,6 +231,22 @@ export async function moveBuild (args: { dir?: string, relPath: string, folder: 
   return { relPath: relOf(root, to) }
 }
 
+// A whole folder of builds to another place under the builds folder (a rename
+// or a move in the list). Never into itself, never over a folder that exists.
+export async function moveBuildFolder (args: { dir?: string, from: string, to: string }): Promise<{ ok: true }> {
+  const root = path.resolve(resolveDir(args?.dir))
+  const from = resolveFolder(root, args?.from)
+  const to = resolveFolder(root, args?.to)
+  if (from === root || to === root) throw new Error('Not a folder name')
+  if (samePath(from, to)) return { ok: true }
+  if (to.startsWith(from + path.sep)) throw new Error("A folder can't go inside itself")
+  if (await fs.stat(to).then(() => true, () => false)) throw new Error(`There's already a folder "${path.basename(to)}" there`)
+  await fs.mkdir(path.dirname(to), { recursive: true })
+  await fs.rename(from, to)
+  summaryCache.clear()
+  return { ok: true }
+}
+
 export async function duplicateBuild (args: { dir?: string, relPath: string }): Promise<{ relPath: string }> {
   const from = resolveBuild(args?.dir, args?.relPath)
   const root = path.resolve(resolveDir(args?.dir))

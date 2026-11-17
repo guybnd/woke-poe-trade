@@ -31,7 +31,9 @@ export const app = Object.assign(new EventEmitter(), {
 export const shell = {
   async openPath (p: string) { shellCalls.push({ op: 'openPath', target: p }); return '' },
   showItemInFolder (p: string) { shellCalls.push({ op: 'showItemInFolder', target: p }) },
-  async openExternal (url: string) { shellCalls.push({ op: 'openExternal', target: url }) }
+  async openExternal (url: string) { shellCalls.push({ op: 'openExternal', target: url }) },
+  // The Recycle Bin: the file just goes.
+  async trashItem (p: string) { shellCalls.push({ op: 'trashItem', target: p }); await import('fs').then(fs => fs.promises.rm(p)) }
 }
 
 export const powerMonitor = new EventEmitter()
