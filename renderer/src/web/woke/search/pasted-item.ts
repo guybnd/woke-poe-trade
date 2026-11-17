@@ -6,6 +6,9 @@
 // "Implicits: N").
 import { parseItemText } from '@ipc/pob-item'
 import { pobItemText } from '../pob-builds/item-text'
+import { CLIENT_STRINGS as _$ } from '@/assets/data'
+import { ModifierType } from '@/parser/modifiers'
+import { tryParseTranslation } from '@/parser/stat-translations'
 
 const SEPARATOR = '--------'
 const RARITY = /^Rarity:\s*(\S.*)$/i
@@ -17,6 +20,12 @@ const MOD_RARITIES = new Set(['Normal', 'Magic', 'Rare', 'Unique'])
 const MOD_HEADING = /^\{ .* \}$/
 const IMPLICIT = / \(implicit\)$/
 const TAGGED = / \((?:enchant|scourge)\)$/
+const KIND = / \((crafted|fractured)\)$/
+// Stands in for an unrevealed mod and has no stat.
+const VEILED = /^Veiled (?:Prefix|Suffix)$/
+// Longest stat text, in lines, tried when grouping plain mod lines.
+const MAX_STAT_LINES = 4
+const NEWLINE = String.fromCharCode(10)
 // One-line sections that aren't mods.
 const FLAG = /^(?:Corrupted|Mirrored|Split|Unidentified|Unmodifiable|Foulborn|Synthesised Item|(?:Shaper|Elder|Crusader|Hunter|Redeemer|Warlord|Searing Exarch|Eater of Worlds|Fractured) Item)$/
 
@@ -39,8 +48,9 @@ export function pastedItemText (text: string): string | null {
     return withModHeadings(normal).join('\n')
   }
 
-  // PoB's text has no separators and starts at the rarity.
-  if (RARITY.test(lines[0])) {
+  // PoB's text has no separators, starts at the rarity and always counts its
+  // implicits.
+  if (RARITY.test(lines[0]) && lines.some(line => /^Implicits:\s*\d+$/.test(line.trimEnd()))) {
     const item = parseItemText(lines.join('\n'))
     if (!item.name || !POB_RARITIES.has(item.rarity)) return null
     return pobItemText(item)
@@ -49,9 +59,10 @@ export function pastedItemText (text: string): string | null {
 }
 
 // The plain copy (Ctrl+C, and what sites copy) marks implicits "(implicit)"
-// and leaves explicits bare; the parser only reads mods under headings. A
-// heading goes on every line: lines under one heading are one mod, and the
-// parser keeps one value per stat in a mod.
+// and leaves explicits bare; the parser only reads mods under headings. Each
+// stat gets its own heading (lines under one heading are one mod, and the
+// parser keeps one value per stat in a mod), and a stat whose text runs over
+// two lines keeps them together.
 function withModHeadings (lines: string[]): string[] {
   if (lines.some(line => MOD_HEADING.test(line.trimEnd()))) return lines
   const rarity = lines.map(line => RARITY.exec(line)?.[1].trim()).find(Boolean)
@@ -68,26 +79,60 @@ function withModHeadings (lines: string[]): string[] {
 
   let explicitDone = false
   for (let i = start + 1; i < sections.length; i++) {
-    const section = sections[i]
+    const section = sections[i].map(line => line.trimEnd())
     if (!section.length) continue
-    if (section.every(line => IMPLICIT.test(line.trimEnd()))) {
-      sections[i] = section.flatMap(line => ['{ Implicit Modifier }', line.trimEnd().replace(IMPLICIT, '')])
-    } else if (section.every(line => TAGGED.test(line.trimEnd()) || FLAG.test(line.trimEnd()))) {
+    if (section.every(line => IMPLICIT.test(line))) {
+      const stats = statGroups(section.map(line => line.replace(IMPLICIT, '')), ModifierType.Implicit)
+      sections[i] = stats.groups.flatMap(group => ['{ Implicit Modifier }', ...group])
+    } else if (section.every(line => TAGGED.test(line) || FLAG.test(line))) {
       continue
     } else if (!explicitDone) {
-      // The first other section is the explicits; a unique's flavour text and
-      // notes come after it.
-      explicitDone = true
-      sections[i] = section.flatMap(line => {
-        const bare = line.trimEnd()
-        if (FLAG.test(bare)) return [line]
-        if (bare.endsWith(' (crafted)')) return ['{ Master Crafted Prefix Modifier }', bare.slice(0, -' (crafted)'.length)]
-        if (bare.endsWith(' (fractured)')) return ['{ Fractured Prefix Modifier }', bare.slice(0, -' (fractured)'.length)]
-        return ['{ Unique Modifier }', bare]
+      // The explicits are the first section with a stat in it. Before them may
+      // be "Monster Level" on a map; without them, a flask's or jewel's
+      // description; after them, a unique's flavour text and notes.
+      const flags = section.filter(line => FLAG.test(line))
+      const kinds = new Map<string, string>()
+      const mods = section.filter(line => !FLAG.test(line) && !VEILED.test(line)).map(line => {
+        const kind = KIND.exec(line)
+        if (!kind) return line
+        const bare = line.slice(0, -kind[0].length)
+        kinds.set(bare, kind[1] === 'crafted' ? '{ Master Crafted Prefix Modifier }' : '{ Fractured Prefix Modifier }')
+        return bare
       })
+      const stats = statGroups(mods, ModifierType.Explicit)
+      if (!stats.matched) continue
+      explicitDone = true
+      sections[i] = [
+        ...stats.groups.flatMap(group => [kinds.get(group[0]) ?? '{ Unique Modifier }', ...group]),
+        ...flags
+      ]
     }
   }
   return sections.flatMap((section, i) => i ? [SEPARATOR, ...section] : section)
+}
+
+// Lines grouped into stats as the parser will match them, and how many matched.
+function statGroups (lines: string[], type: ModifierType): { groups: string[][], matched: number } {
+  const groups: string[][] = []
+  let matched = 0
+  for (let start = 0; start < lines.length;) {
+    let end = start
+    for (; end < Math.min(lines.length, start + MAX_STAT_LINES); end++) {
+      let string = lines.slice(start, end + 1).join(NEWLINE)
+      const unscalable = string.endsWith(_$.UNSCALABLE_VALUE)
+      if (unscalable) string = string.slice(0, -_$.UNSCALABLE_VALUE.length)
+      if (tryParseTranslation({ string, unscalable }, type, undefined)) break
+    }
+    if (end < Math.min(lines.length, start + MAX_STAT_LINES)) {
+      matched++
+      groups.push(lines.slice(start, end + 1))
+      start = end + 1
+    } else {
+      groups.push([lines[start]])
+      start++
+    }
+  }
+  return { groups, matched }
 }
 
 function titleCase (s: string): string {

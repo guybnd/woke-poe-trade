@@ -3,7 +3,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { parseClipboard, ItemCategory, ItemRarity } from '@/parser'
 import { pastedItemText } from '@/web/woke/search/pasted-item'
-import { loadGameData } from '../helpers/game-data'
+import { fixture, loadGameData } from '../helpers/game-data'
 
 beforeAll(loadGameData)
 
@@ -142,5 +142,74 @@ Item Level: 84
 { Prefix Modifier "Hale" (Tier: 1) }
 +64 to maximum Life`
     expect(pastedItemText(text)).toBe(text)
+  })
+})
+
+describe('pastedItemText labels only real mods', () => {
+  function unknowns (text: string) {
+    return parseClipboard(pastedItemText(text)!)._unsafeUnwrap()
+  }
+
+  it("reads a 3.30 map's plain copy past its Monster Level", () => {
+    const item = unknowns(fixture('items/map-rare-t16-330.txt'))
+    expect(item.unknownModifiers).toEqual([])
+    expect(item.statsByType.length).toBeGreaterThan(4)
+  })
+
+  it('keeps a two-line stat together', () => {
+    const item = unknowns(`Rarity: Unique
+Brutal Restraint
+Timeless Jewel
+--------
+Limited to: 1 Historic
+Radius: Large
+--------
+Item Level: 84
+--------
+Denoted service of 7993 dekhara in the akhara of Asenath
+Passives in radius are Conquered by the Maraketh
+--------
+With a bit of luck, you could become the next legend.`)
+    expect(item.unknownModifiers).toEqual([])
+    expect(item.statsByType.map(s => s.stat.ref)).toEqual(['Denoted service of # dekhara in the akhara of Asenath'])
+  })
+
+  it("leaves a flask's description alone", () => {
+    const item = unknowns(`Rarity: Normal
+Quicksilver Flask
+--------
+Lasts 4.00 Seconds
+Consumes 30 of 50 Charges on use
+Currently has 0 Charges
+--------
+Requirements:
+Level: 4
+--------
+Item Level: 10
+--------
+Right click to drink. Can only hold charges while in belt. Refills as you kill monsters.`)
+    expect(item.unknownModifiers).toEqual([])
+    expect(item.statsByType).toEqual([])
+  })
+
+  it('reads a veiled mod copy without failing', () => {
+    const item = unknowns(`Rarity: Rare
+Dread Loop
+Ruby Ring
+--------
+Item Level: 84
+--------
++25% to Fire Resistance (implicit)
+--------
+Veiled Prefix
++40 to maximum Life
++30% to Cold Resistance (crafted)`)
+    const refs = item.statsByType.map(s => s.stat.ref)
+    expect(refs).toContain('+# to maximum Life')
+    expect(refs).toContain('+#% to Cold Resistance')
+  })
+
+  it('takes a name after "Rarity:" with no PoB lines as a search', () => {
+    expect(pastedItemText('Rarity: Unique\nHeadhunter')).toBeNull()
   })
 })
