@@ -3,7 +3,7 @@ id: WOKEPOET-344
 title: >-
   Loot filter: redesign gear rules around rank, kind, drop tier, rarity,
   decorators
-status: Grooming
+status: In Progress
 priority: Medium
 effort: L
 assignee: unassigned
@@ -63,6 +63,12 @@ history:
       slot/defence/attribute/drop-level filters, multi-select Move to). Counts
       in E1 preview illustrative. Waiting on Guy.
     id: a-2026-11-17t03-27-56-747z
+  - type: status_change
+    from: Grooming
+    to: In Progress
+    user: Agent
+    date: '2026-11-17T03:35:43.279Z'
+needsAction: null
 ---
 > **TL;DR:** One Gear view that shows what happens to every kind of gear drop (base rank × base kind × drop tier × rarity × decorators), instead of ~30 NeverSink groups where rarity is sometimes lumped. Waiting on Guy's pick of A/B/C.
 
