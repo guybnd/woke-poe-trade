@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-361
 title: Folds remember open or closed
-status: Ready
+status: Done
 priority: None
 effort: S
 assignee: unassigned
@@ -35,7 +35,33 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-17T10:59:51.363Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 4212eab6: ui/fold useFold/useOneOpen; 13 folds remember their
+      state.
+    completionComment: true
+    date: '2026-11-17T11:11:13.981Z'
+    id: c-2026-11-17t11-11-13-981z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-17T11:11:15.330Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/580'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** About 20 folds keep their own open state and forget it; only Gem versions remembers. One `useFold(key)` / WFold in ui/.
 

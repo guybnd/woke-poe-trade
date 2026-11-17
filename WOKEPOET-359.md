@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-359
 title: 'Loot filter: one tier move and one multi-select'
-status: Ready
+status: Done
 priority: None
 effort: M
 assignee: unassigned
@@ -36,7 +36,31 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-17T10:47:12.955Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged as 39a9abde: shared/picks (togglePick, selectPick) and useTierMove.'
+    completionComment: true
+    date: '2026-11-17T11:11:12.921Z'
+    id: c-2026-11-17t11-11-12-921z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-17T11:11:13.476Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/579'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** Moving items between tiers and Shift/Ctrl picking are copied between the filter editor, item card, Gear and Prices tabs and the Atlas window. One `useTierMove` and one `usePicks` for all.
 
