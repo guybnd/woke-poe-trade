@@ -51,6 +51,13 @@ history:
     to: Done
     user: Agent
     date: '2026-11-17T10:26:00.434Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-17T10:49:44.775Z'
+    comment: >-
+      Follow-up #577 merged (b2b85862): Alt+F and PoB build cost uniques price
+      check on click (Guy's pick).
+    id: a-2026-11-17t10-49-44-775z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/576'
