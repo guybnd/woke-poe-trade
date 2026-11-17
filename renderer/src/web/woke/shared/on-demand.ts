@@ -3,7 +3,7 @@
 // at a time and they never pile onto the rate limit together, and answers kept
 // by request for a while, so asking again, or the same item again, costs
 // nothing and shows at once.
-import { shallowReactive, shallowRef } from 'vue'
+import { shallowRef } from 'vue'
 
 // An answer is reused this long; after that a click searches again.
 export const ON_DEMAND_FRESH_MS = 15 * 60 * 1000
@@ -73,42 +73,6 @@ export function askOnce<T> (key: string, work: () => Promise<T>): Promise<T> {
     .finally(() => { running.delete(key) })
   running.set(key, run)
   return run
-}
-
-export interface OnDemandRow<T> {
-  state: 'loading' | 'done' | 'error'
-  value?: T
-  error?: string
-}
-
-// A list's rows that each search on a click: `ask(row, request, work)`;
-// `rowOf(row, request)` shows a kept answer without a click.
-export function useOnDemandQuote<T> () {
-  const rows = shallowReactive(new Map<string, { request: string } & OnDemandRow<T>>())
-
-  function rowOf (row: string, request?: string | null): OnDemandRow<T> | undefined {
-    const r = rows.get(row)
-    if (r && (request == null || r.request === request)) return r as OnDemandRow<T>
-    if (request == null) return undefined
-    const kept = keptAnswer<T>(request)
-    return kept === undefined ? undefined : { state: 'done', value: kept }
-  }
-
-  async function ask (row: string, request: string, work: () => Promise<T>) {
-    const prev = rows.get(row)
-    if (prev && prev.request === request && prev.state !== 'error') return
-    rows.set(row, { request, state: 'loading' })
-    try {
-      const value = await askOnce(request, work)
-      if (rows.get(row)?.request === request) rows.set(row, { request, state: 'done', value })
-    } catch (e) {
-      if (rows.get(row)?.request === request) rows.set(row, { request, state: 'error', error: (e as Error).message })
-    }
-  }
-
-  function clear () { rows.clear() }
-
-  return { rowOf, ask, clear }
 }
 
 // Tests start from an empty lane.

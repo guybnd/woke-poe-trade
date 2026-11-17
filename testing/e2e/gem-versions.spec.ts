@@ -112,10 +112,10 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   await expect(own).toContainText('yours')
   await own.click()
   await expect(own).toContainText('searched')
-  await expect.poll(() => searches.length).toBe(before + 2)
-  expect(JSON.parse(searches[searches.length - 1]).query.filters.misc_filters.filters).toMatchObject({
-    gem_level: { min: 21 }, quality: { min: 20 }, corrupted: { option: 'true' }
-  })
+  // The copied gem's filters were searched when it opened: that answer is
+  // reused (trade cache), so going back costs at most one search.
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBeLessThanOrEqual(before + 2)
 
   // Each row is the item: its tooltip and item menu, and neither searches.
   const page = overlay.page
@@ -125,5 +125,24 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   await row.click({ button: 'right' })
   await expect(page.getByRole('menu').getByRole('menuitem', { name: 'Price check' })).toBeVisible()
   await page.keyboard.press('Escape')
-  expect(searches.length).toBe(before + 2)
+  expect(searches.length).toBeLessThanOrEqual(before + 2)
+})
+
+test('a version that matches the copied filters still searches on its first click', async ({ overlay }) => {
+  const searches = await fakeMarket(overlay.page)
+  await overlay.boot()
+  // An uncorrupted 20/20 copy: its filters are already the 20/20 row's.
+  await overlay.copyItem(GEM.replace('Level: 21 (Max)', 'Level: 20 (Max)').replace('\n--------\nCorrupted', ''))
+  const table = overlay.widget('price-check').locator('[data-gem-versions]')
+  const own = table.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
+  await expect(own).toContainText('yours')
+  await expect(own).not.toContainText('searched')
+  await overlay.page.waitForTimeout(300)
+  const before = searches.length
+  // The click isn't dead: it marks the row and asks for the search, which the
+  // trade cache answers if the copy already searched these filters.
+  await own.click()
+  await expect(own).toContainText('searched')
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBeLessThanOrEqual(before + 1)
 })

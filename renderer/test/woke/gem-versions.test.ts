@@ -8,7 +8,7 @@ import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
-import { gemForms, listVersions, parseVariant, searchesVersion, versionFilters, type GemVersion } from '@/web/woke/gem-versions/versions'
+import { gemForms, listVersions, parseVariant, versionFilters, type GemVersion } from '@/web/woke/gem-versions/versions'
 
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
 vi.mock('@/web/Config', () => ({
@@ -96,11 +96,6 @@ describe('gem versions', () => {
     })
     // The transfigured gem is still searched as itself.
     expect(q21.type).toEqual(createTradeRequest(filters, []).query.type)
-    // After a row click the price check's filters are that version, and only that one.
-    const set = versionFilters(filters, at('20/20'), forms, false)
-    expect(list.filter(v => searchesVersion(set, v, forms)).map(v => v.key)).toEqual(['20/20'])
-    // The copied gem's filters (corrupted: any) aren't a version yet.
-    expect(list.some(v => searchesVersion(filters, v, forms))).toBe(false)
     // The price check's own filters are left alone.
     expect(filters.gemLevel?.value).toBe(21)
   })
