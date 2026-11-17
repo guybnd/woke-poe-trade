@@ -181,6 +181,7 @@
 <script setup lang="ts">
 import { conditionWords } from './ladder'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useFold } from '../ui/fold'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
 import TierItemChips from './TierItemChips.vue'
 import { basePrice } from './economy'
@@ -303,7 +304,7 @@ const verdict = computed(() => verdictOf(props.match, level.value))
 // Hidden by the rule we're sure of, but a showing rule above might catch it
 // first (its item tier isn't in the copy): never claim "Hidden" then.
 const maybeShown = computed(() => !verdict.value.shown && props.match.uncertain.some(u => u.block.visibility !== 'Hide'))
-const open = reactive({ special: false, rule: false, also: false, grid: false })
+const open = reactive({ special: useFold('alt-f.special'), rule: useFold('alt-f.rule'), also: useFold('alt-f.also'), grid: useFold('alt-f.grid') })
 
 type Row = ReturnType<typeof tierInfo> & { label: string, note: string, needs: string, current: boolean, status: string, statusClass: string }
 

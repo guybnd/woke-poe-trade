@@ -84,6 +84,7 @@ export default { name: 'League mechanics' }
 
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
+import { useFold } from '../ui/fold'
 import type { Config } from '@/web/Config'
 import { WIcon, WInfo, WToggle } from '../ui'
 import { usePriceIndex } from '../market/price-index'
@@ -106,7 +107,7 @@ const selected = shallowRef(props.configWidget.tab)
 const mech = computed(() => mechanicById(selected.value) ?? MECHANICS[0])
 const guide = computed(() => GUIDE[mech.value.id])
 const speaks = computed(() => Object.values(NPC_MECHANIC).includes(mech.value.id))
-const rewardsOpen = shallowRef(false)
+const rewardsOpen = useFold('betrayal-rewards')
 
 const prices = usePriceIndex()
 const items = computed(() => prices.snapshot.value?.items ?? [])

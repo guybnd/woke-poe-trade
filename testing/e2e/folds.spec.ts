@@ -19,5 +19,14 @@ test('a fold stays as left when its page is opened again', async ({ overlay }) =
   await settings.getByText('Price check', { exact: true }).first().click()
   await settings.getByText('League mechanics', { exact: true }).first().click()
   await tab('Betrayal').click()
+  await expect(rewards).toBeVisible()
+
+  // Folded, it stays folded too.
+  await settings.getByRole('button', { name: /Edit Betrayal rewards/ }).click()
   await expect(rewards).toBeHidden()
+  await settings.getByText('Price check', { exact: true }).first().click()
+  await settings.getByText('League mechanics', { exact: true }).first().click()
+  await tab('Betrayal').click()
+  await expect(rewards).toBeHidden()
+  expect(await overlay.page.evaluate(() => localStorage.getItem('woke.fold.betrayal-rewards'))).toBe('0')
 })

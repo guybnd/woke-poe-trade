@@ -127,6 +127,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useOneOpen } from '../ui/fold'
 import { WSegmented, WToggle, toast } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { Visibility } from './parse'
@@ -196,7 +197,7 @@ function colourText (key: 'text' | 'border' | 'background'): string {
   return v ? v.slice(0, 3).join(' ') : 'none'
 }
 
-const open = ref<'sound' | 'beam' | 'icon' | null>(null)
+const open = useOneOpen<'sound' | 'beam' | 'icon'>('style-editor')
 function toggle (which: 'sound' | 'beam' | 'icon') {
   open.value = open.value === which ? null : which
 }

@@ -25,7 +25,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue'
+import { computed } from 'vue'
+import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import type { Verdict } from './rules'
@@ -35,7 +36,7 @@ const props = defineProps<{ item: ParsedItem }>()
 
 const VERDICT_LABEL: Record<Verdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN' }
 
-const open = shallowRef(false)
+const open = useFold('map-mod-strip')
 
 const result = computed(() => {
   const config = findMapModsConfig()

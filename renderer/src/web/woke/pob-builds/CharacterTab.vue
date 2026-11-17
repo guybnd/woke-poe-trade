@@ -120,6 +120,7 @@
 <script setup lang="ts">
 // The Character tab: this build against your character, slot by slot.
 import { computed, onBeforeUnmount, onMounted, shallowRef, toRef } from 'vue'
+import { useFold } from '../ui/fold'
 import { WButton, WPrice } from '../ui'
 import { liveBuildPath } from './live-pob'
 import { personalOn } from '../personal'
@@ -172,7 +173,7 @@ function upgradeName (item: PobItem) {
 }
 
 // The notables to take and refund fold under their counts.
-const namesOpen = shallowRef(false)
+const namesOpen = useFold('pob.tree-notables')
 
 const now = shallowRef(Date.now())
 const tick = setInterval(() => { now.value = Date.now() }, 30_000)

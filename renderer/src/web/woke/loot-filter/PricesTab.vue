@@ -169,6 +169,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useFold } from '../ui/fold'
 import { WButton, WChip, WEmpty, WField, WInfo, WKbd, WPrice, WSegmented, WToggle, agoPhrase, gameIcon, ninjaIcon, openMenu, toast, vItemTip } from '../ui'
 import { TURN_OFF_IDS } from './notices'
 import { gradeItems, GRADE_LABEL, healthKey, isDismissed, priceBar, showEffect, trashCount } from './health'
@@ -210,7 +211,7 @@ const SKIP_WHY = {
 } as const
 
 const openRow = ref<string | null>(null)
-const showMoved = ref(false)
+const showMoved = useFold('filter-prices.moved')
 
 function baseTip (type: string, base: string) {
   return baseTipRef(props.store.prices.breakdown.value, props.config.safetyNet.minChaos, type, base)

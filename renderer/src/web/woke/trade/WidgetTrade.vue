@@ -79,6 +79,7 @@ export default { widget: widgetTradeSpec }
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onUnmounted, reactive, shallowRef, watch } from 'vue'
+import { useFold } from '../ui/fold'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -178,7 +179,7 @@ const older = computed(() => {
   const onShow = new Set(shown.value.map(o => o.id))
   return history.offers.value.filter(o => belongsInHistory(o) && o.removedAt == null && !onShow.has(o.id) && (props.config.trackBuying !== false || o.dir === 'sell'))
 })
-const historyOpen = shallowRef(false)
+const historyOpen = useFold('trade.history')
 function toggleHistory () {
   historyOpen.value = !historyOpen.value
   // The clock only runs while there are offers.

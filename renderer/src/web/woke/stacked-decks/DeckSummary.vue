@@ -65,7 +65,8 @@
 // One session's numbers (B1): Opened, Spent, Got, Result and without the top
 // card, the running result, luck against the community weights (C3), and
 // the cards by total value.
-import { computed, shallowRef } from 'vue'
+import { computed } from 'vue'
+import { useFold } from '../ui/fold'
 import { WIcon, WInfo, WSegmented, vItemTip } from '../ui'
 import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
@@ -94,7 +95,7 @@ const COUNT_OPTIONS = [{ value: 'in', label: 'Hidden, counted' }, { value: 'out'
 
 const t = computed(() => totals(props.draws, props.price, props.deckChaos, props.filter))
 const chart = computed(() => runningResult(props.draws, props.price, props.deckChaos, undefined, props.filter))
-const cheapOpen = shallowRef(false)
+const cheapOpen = useFold('decks.cheap')
 const cutOff = computed(() => formatChaos(props.filter?.under ?? 0, null, 'chaos'))
 const cheapTitle = computed(() => props.filter?.count === false
   ? 'Left out of Got, Result and the chart. Change it in the Stacked decks settings.'
