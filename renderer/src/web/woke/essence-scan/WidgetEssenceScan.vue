@@ -100,7 +100,7 @@ import { computed, inject, onUnmounted, shallowRef, watch } from 'vue'
 import { MainProcess } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { formatChaos } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { WPanel, WButton, WEmpty, WKbd, WPrice, toast, vItemTip } from '../ui'
 import { hostRequest } from '../shared/host'
 import DockItem from '../dock/DockItem.vue'
@@ -150,7 +150,8 @@ function onCard (open: boolean) {
 }
 
 const prices = usePriceIndex()
-const divine = computed(() => prices.snapshot.value?.divine ?? null)
+// Divines when large, with the rate every window uses.
+const { divine, fmt } = usePriceText(prices.snapshot)
 const essencePrices = computed(() => {
   const map = new Map<string, number>()
   for (const item of prices.snapshot.value?.items ?? []) {
@@ -165,10 +166,6 @@ function rate (lines: string[]): PricedMonolith | null {
   const scanned = parseMonolith(lines)
   if (!scanned) return null
   return rateMonolith(scanned, props.config.flagTypes, name => essencePrices.value.get(name) ?? null, vaalCost.value)
-}
-
-function fmt (c: number) {
-  return formatChaos(c, null)
 }
 
 function estimateTitle (r: PricedMonolith) {
