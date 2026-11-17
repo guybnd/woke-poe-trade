@@ -13,6 +13,7 @@
       <button v-else-if="row.kind === 'folder'" type="button" :class="[$style.folder, $style.row, mark(row.key), { [$style.nested]: row.depth > 0 }]" class="w-focusable" :style="rowStyle(row.depth)"
         :data-row="row.key" :aria-expanded="row.open" :draggable="true">
         <i class="fas text-xs" :class="row.open ? 'fa-chevron-down' : 'fa-chevron-right'" />
+        <img v-if="folderIcon?.(row.node.path)" :src="folderIcon(row.node.path)!" class="w-game-icon" :class="$style.art" alt="">
         <span class="w-trunc">{{ row.node.name }}</span>
         <span class="ml-auto w-num">{{ row.node.total }}</span>
       </button>
@@ -24,6 +25,8 @@
         <template v-if="$slots.sub && (subFor?.(row.item) ?? true)" #sub><slot name="sub" :item="row.item" /></template>
         <template v-if="$slots.actions" #actions><slot name="actions" :item="row.item" /></template>
       </WListItem>
+      <!-- Under a folder's row: its icon picker, say. -->
+      <slot v-if="row.kind === 'folder'" name="after-folder" :path="row.node.path" />
     </template>
     <div v-if="tree.drag.value" :class="[$style.tail, { [$style.dropTop]: tree.dropAt.value?.kind === 'top' }]" data-row="top" />
     <datalist :id="listId"><option v-for="f in tree.folders.value" :key="f" :value="f" /></datalist>
@@ -54,6 +57,8 @@ const props = defineProps<{
   titleOf?: (item: T) => string
   // Whether an item has a second line (#sub).
   subFor?: (item: T) => boolean
+  // A folder's art, if it has one (Trade searches' folder icons).
+  folderIcon?: (path: string) => string | null | undefined
 }>()
 const emit = defineEmits<{
   'item-menu': [e: MouseEvent, item: T]
@@ -143,6 +148,7 @@ function onItemKey (e: KeyboardEvent, item: T) {
   text-align: left;
 }
 .folder:hover { color: var(--w-fg); }
+.art { width: 16px; height: 16px; flex: none; }
 .editRow {
   display: flex;
   align-items: center;

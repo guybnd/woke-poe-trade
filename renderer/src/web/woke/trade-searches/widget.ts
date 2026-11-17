@@ -43,12 +43,14 @@ export interface TradeSearchesWidget extends Widget {
   lastFolder?: string
   // Folder order and icons (see TradeSearchFolder).
   folders?: TradeSearchFolder[]
+  // Folded folders in the list (shared/use-saved-tree).
+  closedFolders?: string[]
   // The rail's picked view ("all", "pinned", "recent", "live", "folder:<name>") and the list's sort.
   view?: string
   sort?: SearchSort
 }
 
-export type SearchSort = 'opened' | 'name' | 'count' | 'added'
+export type SearchSort = 'manual' | 'opened' | 'name' | 'count' | 'added'
 
 export const UNCATEGORIZED = 'Uncategorized'
 export const RECENT_DAYS = 7
