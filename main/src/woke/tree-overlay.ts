@@ -32,24 +32,43 @@ const MODIFIERS = new Set<number>([
 ])
 
 // A picture read in its own worker (dist/picture.js, next to main.js), so
-// main doesn't stall. Inline if the worker can't start or fails: the job's
-// pixels are copied to the worker, never moved, so they're still here.
-function runPictureJob (job: PictureJob): Promise<PictureResult> {
+// main doesn't stall: one at a time, each worker gone after its picture. The
+// pixels move to the worker (no copy on this thread). Inline only where the
+// worker file is missing (a build without it).
+const PICTURE_TIMEOUT_MS = 20_000
+let pictureQueue: Promise<unknown> = Promise.resolve()
+
+function runPictureJob (job: PictureJob): Promise<PictureFailed | PictureResult> {
+  const run = () => pictureInWorker(job)
+  const next = pictureQueue.then(run, run)
+  pictureQueue = next.catch(() => {})
+  return next
+}
+
+type PictureFailed = { ok: false, reason: 'failed' }
+
+function pictureInWorker (job: PictureJob): Promise<PictureFailed | PictureResult> {
   const file = path.join(__dirname, 'picture.js')
-  if (!fs.existsSync(file)) return Promise.resolve(readPicture(job))
+  if (!fs.existsSync(file)) {
+    try { return Promise.resolve(readPicture(job)) } catch { return Promise.resolve({ ok: false, reason: 'failed' }) }
+  }
   return new Promise((resolve) => {
     const worker = new Worker(file)
     let done = false
-    const finish = (res: PictureResult) => {
+    const finish = (res: PictureFailed | PictureResult) => {
       if (done) return
       done = true
+      clearTimeout(timer)
       resolve(res)
       worker.terminate().catch(() => {})
     }
+    const timer = setTimeout(() => { finish({ ok: false, reason: 'failed' }) }, PICTURE_TIMEOUT_MS)
     worker.once('message', finish)
-    worker.once('error', () => { finish(readPicture(job)) })
-    worker.once('exit', () => { finish(readPicture(job)) })
-    worker.postMessage(job)
+    worker.once('error', () => { finish({ ok: false, reason: 'failed' }) })
+    worker.once('exit', () => { finish({ ok: false, reason: 'failed' }) })
+    const { buffer, byteOffset, byteLength } = job.px
+    // A whole buffer moves; a slice of a bigger one is copied.
+    worker.postMessage(job, byteOffset === 0 && byteLength === buffer.byteLength ? [buffer as ArrayBuffer] : [])
   })
 }
 
@@ -127,7 +146,7 @@ export class TreeOverlay {
   // full screenshot first; else a snip (picture: the fit for a part cut from
   // the screen, no HUD known). probes are read the lax way (node frames),
   // extra the strict way (lines).
-  async readImage (args: { image: string, probes: number[][], extra: number[][] }, picture?: FitKind): Promise<PictureResult | { ok: false, reason: 'no-points' | 'format' | 'too-big' }> {
+  async readImage (args: { image: string, probes: number[][], extra: number[][] }, picture?: FitKind): Promise<PictureResult | { ok: false, reason: 'no-points' | 'format' | 'too-big' | 'failed' }> {
     if (!this.pts) return { ok: false, reason: 'no-points' }
     if (typeof args?.image !== 'string' || !/^data:image\/(png|jpeg);base64,/.test(args.image)) return { ok: false, reason: 'format' }
     const img = nativeImage.createFromDataURL(args.image)
@@ -138,10 +157,11 @@ export class TreeOverlay {
     const t0 = performance.now()
     // BGRA, as the game's screenshots are. Decoding stays here (Electron
     // only); the fit and reading run in a worker.
-    const px = new Uint8Array(img.toBitmap())
+    const bmp = img.toBitmap()
+    const px = new Uint8Array(bmp.buffer, bmp.byteOffset, bmp.byteLength)
+    perfRecord('Tree overlay: decode picture', performance.now() - t0)
     const job: PictureJob = { px, width, height, pts: this.pts, kind: this.kind, snip: picture, tone: this.tone, probes: args.probes ?? [], extra: args.extra ?? [] }
     const res = await runPictureJob(job)
-    perfRecord('Tree overlay: read picture', performance.now() - t0)
     return res
   }
 
