@@ -68,7 +68,12 @@ function pictureInWorker (job: PictureJob): Promise<PictureFailed | PictureResul
     worker.once('exit', () => { finish({ ok: false, reason: 'failed' }) })
     const { buffer, byteOffset, byteLength } = job.px
     // A whole buffer moves; a slice of a bigger one is copied.
-    worker.postMessage(job, byteOffset === 0 && byteLength === buffer.byteLength ? [buffer as ArrayBuffer] : [])
+    // A job that can't be posted (cloning failed) ends the worker now.
+    try {
+      worker.postMessage(job, byteOffset === 0 && byteLength === buffer.byteLength ? [buffer as ArrayBuffer] : [])
+    } catch {
+      finish({ ok: false, reason: 'failed' })
+    }
   })
 }
 
