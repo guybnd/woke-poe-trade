@@ -6,8 +6,7 @@ import { ITEM_BY_REF, ITEM_DROP } from '@/assets/data'
 import type { BaseType } from '@/assets/data'
 import { ItemCategory } from '@/parser'
 import { sideRow } from '@/web/price-check/related-items/side-row'
-import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
-import { canPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
+import { canPriceCheck, priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { loadGameData } from '../helpers/game-data'
 
 vi.mock('@/web/Config', () => ({ AppConfig: () => ({ language: 'en' }) }))
