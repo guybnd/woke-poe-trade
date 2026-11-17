@@ -158,6 +158,7 @@ import type { MarketTrackerWidget } from '../market/widget'
 import { isThin, itemKey, thinTitle } from '../market/types'
 import type { CorruptedFilter, PriceItem } from '../market/types'
 import { pickRow } from '../shared/price-row'
+import { usePriceText } from '../shared/price'
 import { lookupRequest } from '../item-lookup/lookup'
 import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
 import { cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
@@ -227,7 +228,8 @@ const input = shallowRef<HTMLInputElement | null>(null)
 const listEl = shallowRef<HTMLElement | null>(null)
 const pinKeys = shallowRef<string[]>([])
 
-const divine = computed(() => snapshot.value?.divine ?? null)
+// The tooltip's divine rate, else the saved prices'.
+const { divine } = usePriceText(snapshot)
 // Pins follow the latest prices, and go if the item isn't in them (a new league).
 const priceByKey = computed(() => new Map((snapshot.value?.items ?? []).map(i => [itemKey(i), i])))
 const pins = computed(() => pinKeys.value

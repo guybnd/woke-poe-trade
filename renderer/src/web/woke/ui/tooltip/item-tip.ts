@@ -113,16 +113,20 @@ export async function loadTipItems (): Promise<TipPack['items'] | null> {
 
 const NINJA_NS: Record<TipKind, string> = { unique: 'UNIQUE', gem: 'GEM', card: 'DIVINATION_CARD', item: 'ITEM' }
 
+// Made on the first hover: global state, so one is enough.
+let price: ReturnType<typeof usePrice> | null = null
+
 export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   if (ref.noPrice) return null
   if (ref.prices) return { chaos: ref.prices.low, change: null, graph: [], range: ref.prices }
   const ns = ref.type === 'Beast' ? 'CAPTURED_BEAST' : NINJA_NS[kind]
   // The row every window takes for this name; a rolled unique's unidentified
   // price only from a quote on hand: hovering never spends a trade search.
-  const price = usePrice().priceOf(ref.name, { ns, variant: ref.variant })
-  if (!price) return null
-  const market = marketFromRow(price.row, ref)
-  return price.unid ? { ...market, unid: price.unid } : market
+  price ??= usePrice()
+  const found = price.priceOf(ref.name, { ns, variant: ref.variant })
+  if (!found) return null
+  const market = marketFromRow(found.row, ref)
+  return found.unid ? { ...market, unid: found.unid } : market
 }
 
 // Marks the uniques on a base that won't turn up as a random drop on it.
