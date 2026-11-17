@@ -48,6 +48,11 @@ export interface SavedTreeAdapter<T extends { id: number }> {
   cantMoveFolders?: string
   // Reordering items is something the list can't do (sorted by name): a reason.
   cantReorder?: string
+  // A folder another tool keeps its things in: why it can't be renamed, moved
+  // or removed here (null: it can).
+  folderLocked?: (path: string) => string | null
+  // A plain click on an item does this too (Regex library: search the stash).
+  open?: (item: T) => void
 }
 
 export type SavedEdit = { target: 'item' | 'folder', key: string, kind: 'rename' | 'move', id: string, ids?: number[] }
@@ -88,9 +93,17 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
   // A file list (shared/picks): a click opens one, Ctrl picks more, Shift
   // picks the run from the open one.
   function rowClick (e: MouseEvent, item: T) {
-    const next = selectPick(shownIds(), picked.value, item.id, clickOf(e), a.selected())
+    const click = clickOf(e)
+    const next = selectPick(shownIds(), picked.value, item.id, click, a.selected())
     picked.value = next.picked
     if (next.anchor !== a.selected()) a.select(next.anchor)
+    if (!click.ctrl && !click.shift) a.open?.(item)
+  }
+  // Why a folder can't change here, as a note; true when it can't.
+  function locked (path: string): boolean {
+    const why = a.folderLocked?.(path)
+    if (why) a.note(why)
+    return Boolean(why)
   }
 
   // ---- folders ----
@@ -151,6 +164,7 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
   }
   function moveFolderTo (from: string, at: DropAt) {
     if (a.cantMoveFolders) { a.note(a.cantMoveFolders); return }
+    if (locked(from)) return
     const res = folderDropOf(from, at, a.items(), a.folderOf, folders.value)
     if (typeof res === 'string') {
       if (res !== 'gone') a.note(res)
@@ -305,6 +319,7 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
       editing.value = { target, key: itemKey(t.id), kind, id, ids }
     } else {
       if (a.cantMoveFolders && kind === 'move') { a.note(a.cantMoveFolders); return }
+      if (locked(id)) return
       draft.value = kind === 'rename' ? leafOf(id) : parentOf(id)
       editing.value = { target, key: folderKey(id), kind, id }
     }
@@ -369,6 +384,7 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
     inFolder,
     moveFolder,
     sortFolder,
+    locked,
     drag,
     dropAt,
     dragStart,
