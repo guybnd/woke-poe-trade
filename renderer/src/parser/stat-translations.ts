@@ -1,4 +1,4 @@
-import { CLIENT_STRINGS as _$, STAT_BY_MATCH_STR_V2 } from '@/assets/data'
+import { CLIENT_STRINGS as _$, STAT_BY_MATCH_STR_V2, STATS_ITERATOR } from '@/assets/data'
 import type { StatMatcher, Stat, StatGroup } from '@/assets/data'
 import type { ModifierType } from './modifiers'
 import { type ItemCategory, ARMOUR, WEAPON, HEIST_EQUIPMENT } from './meta'
@@ -90,7 +90,7 @@ function * _statPlaceholderGenerator (stat: string) {
     .replace(/\(\)/gm, '') // when GGG didn't provide advanced desc, like in "Passives in Radius of Wicked Ward() can be Allocated"
     // woke: 3.30 folds a long option list to "(...)": "Maximum number of
     // Summoned Golems(...) is Doubled". The plain text is then the stat's.
-    .replace(/\(\.\.\.\)/gm, '')
+    .replace(/ ?\(\.\.\.\)/gm, '')
     .replace(/(?<value>(?<!\d|\))[+-]?\d+(?:\.\d+)?)(?:\((?<min>.[^)-]*)(?:-(?<max>[^)]+))?\))?/gm, (_, roll: string, min?: string, max?: string) => {
       if (min != null && max == null) {
         // example: Sextant "# uses remaining", legacy rolls
@@ -142,8 +142,9 @@ export function tryParseTranslation (
   modType: ModifierType,
   itemCategory: ItemCategory | undefined
 ): ParsedStat | undefined {
+  const folded = stat.string.includes(FOLDED)
   for (const combination of _statPlaceholderGenerator(stat.string)) {
-    const found = findAndResolveTranslation({
+    const found = (folded && findFolded(combination.stat)) || findAndResolveTranslation({
       matchStr: combination.stat,
       modType: modType,
       itemCategory: itemCategory,
@@ -235,6 +236,26 @@ export function getRollOrMinmaxAvg (values: number[]): number {
   } else {
     return values[0]
   }
+}
+
+const FOLDED = '(...)'
+
+// woke: a line whose option list 3.30 folded to "(...)" is a stat with an
+// advanced form, found by that form's plain text. Another stat can own the
+// same plain text ("Socketed Gems are Supported by Level 20 Added Chaos
+// Damage" is both a fixed support and a random support's plain form), and the
+// matcher index gives that one, so look for the advanced owner first.
+function findFolded (matchStr: string): { matcher: StatMatcher, stat: Stat } | undefined {
+  // A piece of the text as it is written in the data file: no line break or
+  // quote, which the file escapes.
+  const key = matchStr.split(String.fromCharCode(10)).flatMap(line => line.split('"'))
+    .reduce((a, b) => b.length > a.length ? b : a, '')
+  if (!key) return undefined
+  for (const stat of STATS_ITERATOR(key)) {
+    const matcher = stat.matchers.find(m => m.advanced && m.advanced !== m.string && m.string === matchStr)
+    if (matcher) return { stat, matcher }
+  }
+  return undefined
 }
 
 interface FindResolveParams {
