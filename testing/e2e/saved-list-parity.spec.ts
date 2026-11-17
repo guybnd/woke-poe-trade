@@ -48,6 +48,20 @@ const LISTS: ListUnderTest[] = [
       })
       return overlay.widget('woke-regex-library')
     }
+  },
+  {
+    name: 'Trade searches',
+    async open (overlay) {
+      await overlay.boot({
+        overlayActive: true,
+        widgets: [{
+          wmType: 'woke-trade-searches', wmWants: 'show', wmFlags: [], wmTitle: 'Trade searches', enableHotkeys: false,
+          anchor: { pos: 'tl', x: 20, y: 12 }, sort: 'manual',
+          entries: SEED.map(s => ({ id: s.id, name: s.name, url: `https://www.pathofexile.com/trade/search/Standard/${s.id}`, category: s.folder, tags: [], notes: '', hotkeyOverlay: null, hotkeyExternal: null }))
+        }]
+      })
+      return overlay.widget('woke-trade-searches')
+    }
   }
 ]
 
