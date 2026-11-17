@@ -230,7 +230,7 @@ import { computed, ref, useCssModule } from 'vue'
 import { WButton, WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
+import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll, takeOver } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane } from './gear'
 import { DEFENCES, DEFENCE_ATTR, DEFENCE_COLOURS, KIND_GROUPS, allGearBases, baseInfo, kindIcon } from './gear-bases'
 import type { BaseInfo, Defence } from './gear-bases'
@@ -291,15 +291,9 @@ const movedCount = computed(() => Object.keys(g.value.moves).length)
 // Takes NeverSink's numbers first, so the first change is the only change.
 function change (fn: (x: GearSettings) => void) {
   const x = g.value
-  if (!x.on) {
-    const doc = props.store.doc.value
-    if (doc && readTiered(doc)) {
-      const d = gearDefaults(doc)
-      x.show = d.show
-      if (!x.quality.on) x.quality.min.any = d.quality.min.any
-    }
-    x.on = true
-  }
+  const doc = props.store.doc.value
+  if (doc) takeOver(x, doc)
+  else x.on = true
   fn(x)
 }
 const quick = (fn: (x: GearSettings) => void) => change(fn)

@@ -517,6 +517,18 @@ function applyQuality (doc: FilterDoc, src: TieredSource, g: GearSettings, lists
   return out.length
 }
 
+// The first change to an untouched table starts from NeverSink's numbers for
+// this file, so it is the only change.
+export function takeOver (g: GearSettings, doc: FilterDoc): void {
+  if (g.on) return
+  if (readTiered(doc)) {
+    const d = gearDefaults(doc)
+    g.show = d.show
+    if (!g.quality.on) g.quality.min.any = d.quality.min.any
+  }
+  g.on = true
+}
+
 // ---- Sweeping changes --------------------------------------------------------
 
 export function shiftAll (g: GearSettings, by: number): void {
