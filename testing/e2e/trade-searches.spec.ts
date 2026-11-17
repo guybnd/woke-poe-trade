@@ -81,5 +81,12 @@ test('the rail picks a view; folders with icons are in the list, and a drag move
   await row('f:Gems').click({ button: 'right' })
   await overlay.page.getByRole('menuitem', { name: 'Change icon' }).click()
   await expect(w.getByRole('group', { name: 'Icon for Gems' })).toBeVisible()
+
+  // A renamed folder keeps its icon.
+  await row('f:Boots to flip').focus()
+  await overlay.page.keyboard.press('F2')
+  await w.locator('input[data-draft]').fill('Boots')
+  await w.locator('input[data-draft]').press('Enter')
+  await expect(row('f:Boots').locator('img.w-game-icon')).toBeVisible()
   await overlay.snap('icon picker')
 })

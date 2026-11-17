@@ -55,7 +55,8 @@ export interface SavedTreeAdapter<T extends { id: number }> {
   open?: (item: T) => void
   // Only these items, as a filter shows them (Trade searches' Pinned view).
   only?: () => ((item: T) => boolean) | null
-  // A folder (and all under it) moved or renamed: other tools' links follow.
+  // A folder (and all under it) is about to move or be renamed: the list's own
+  // records and other tools' links follow.
   onFolderMoved?: (from: string, to: string) => void
 }
 
@@ -137,6 +138,8 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
   }
   function moveFolder (from: string, to: string) {
     if (!to || from === to || to.startsWith(from + '/')) return
+    // First, so a list can carry its own records (icons) to the new paths.
+    a.onFolderMoved?.(from, to)
     for (const t of a.items()) {
       const next = movedPath(a.folderOf(t), from, to)
       if (next !== cleanPath(a.folderOf(t))) a.setFolder(t, next)
@@ -145,7 +148,6 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
     a.setClosed(a.closed().map(f => movedPath(f, from, to)))
     const order = a.folderOrder()
     if (order) a.setFolderOrder([...new Set(order.map(f => movedPath(f, from, to)))])
-    a.onFolderMoved?.(from, to)
     openFolder(to)
   }
   function toManual () {

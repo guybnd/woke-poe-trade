@@ -107,7 +107,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
-import { isUnder, movedPath } from '../shared/saved-tree'
+import { cleanPath, isUnder, movedPath } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { nextId } from '../shared/library'
 import { Host, MainProcess } from '@/web/background/IPC'
@@ -255,8 +255,13 @@ function folderNamesNow (): string[] {
   return (props.config.folders ?? []).map(f => f.name)
 }
 function setFolderNames (names: string[]) {
-  const byName = new Map((props.config.folders ?? []).map(f => [f.name, f]))
-  props.config.folders = names.map(n => byName.get(n) ?? { name: n })
+  // Two records for one folder (a rename into another): the first, with any icon.
+  const byName = new Map<string, NonNullable<typeof props.config.folders>[number]>()
+  for (const f of props.config.folders ?? []) {
+    const had = byName.get(f.name)
+    byName.set(f.name, had ? { ...had, icon: had.icon ?? f.icon } : f)
+  }
+  props.config.folders = [...new Set(names)].map(n => byName.get(n) ?? { name: n })
 }
 // A view other than All shows only its searches, with their folders.
 const shownBy = computed(() => {
@@ -296,6 +301,8 @@ const tree = useSavedTree<TradeSearchEntry>({
   note: (text) => { toast(text, { anchor: panel.value?.el }) },
   // Builds whose Trades tab shows a folder keep showing it; so do the view and the save box.
   onFolderMoved (from, to) {
+    // Folder records (icons) go with their folders.
+    props.config.folders = (props.config.folders ?? []).map(f => isUnder(f.name, from) ? { ...f, name: movedPath(f.name, from, to) } : f)
     for (const w of AppConfig().widgets) {
       if (w.wmType !== POB_BUILDS_TYPE) continue
       const links = (w as PobBuildsWidget).tradeFolders
@@ -349,11 +356,13 @@ function folderMenu (e: MouseEvent, folder: string) {
 // No "are you sure": its searches (and folders) move up to the top, with Undo.
 function removeFolder (folder: string) {
   // Undo puts back only what the delete changed, so opens and renames since stay.
-  const moved = props.config.entries.filter(e => isUnder(e.category, folder)).map(e => ({ id: e.id, category: e.category }))
+  const moved = props.config.entries.filter(e => isUnder(cleanPath(e.category), folder)).map(e => ({ id: e.id, category: e.category }))
   const records = JSON.parse(JSON.stringify(props.config.folders ?? [])) as typeof props.config.folders
   const { lastFolder } = props.config
-  for (const e of props.config.entries) if (isUnder(e.category, folder)) e.category = ''
+  const closedBefore = props.config.closedFolders
+  for (const e of props.config.entries) if (isUnder(cleanPath(e.category), folder)) e.category = ''
   props.config.folders = (props.config.folders ?? []).filter(f => !isUnder(f.name, folder))
+  props.config.closedFolders = (closedBefore ?? []).filter(p => !isUnder(p, folder))
   if (lastFolder && isUnder(lastFolder, folder)) props.config.lastFolder = undefined
   saveConfig()
   toast(`Deleted "${folder}". Its searches are at the top.`, {
@@ -364,6 +373,7 @@ function removeFolder (folder: string) {
         if (e && !e.category) e.category = m.category
       }
       props.config.folders = records
+      props.config.closedFolders = closedBefore
       props.config.lastFolder = lastFolder
       saveConfig()
     }
