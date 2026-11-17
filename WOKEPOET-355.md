@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-355
 title: One item name reader for league variants
-status: In Progress
+status: Ready
 priority: None
 effort: S
 assignee: unassigned
@@ -26,6 +26,19 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-17T09:47:44.438Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      PR #575 (woke/item-names): shared/item-identity.ts, ~13 files moved onto
+      it, no behaviour change. Local checks + e2e pass. Waiting for merge.
+    date: '2026-11-17T09:51:57.806Z'
+    completionComment: true
+    id: c-2026-11-17t09-51-57-806z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-17T09:51:57.807Z'
 needsAction: null
 ---
 > **TL;DR:** Foulborn, transfigured and Fated names are stripped by hand in about ten files. One shared reader tells every tool the plain name and the variant.
