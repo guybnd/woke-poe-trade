@@ -422,6 +422,11 @@ function pickBase (b: string, e: MouseEvent) {
 // The tiers they can go to, under the names the rows above use.
 const moveRows = computed(() => {
   const rows = [...(split.value.outside ? [split.value.outside] : []), ...ladderRows.value, ...specialRows.value]
+  const doc = props.store.doc.value
+  // The item matched a block that doesn't name it: the tiers are still there.
+  if (!rows.length && doc && tierBases.value.length) {
+    return moveTargets(doc, origin.value.type).filter(t => t !== origin.value.tier).map(t => row(tierInfo(t), tierLabel(t))).filter(r => !r.off)
+  }
   return rows.filter(r => !r.current)
 })
 

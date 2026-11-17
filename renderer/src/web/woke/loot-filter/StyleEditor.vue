@@ -32,7 +32,7 @@
         <span class="grow" /><span class="w-dim text-xs w-trunc">{{ look.sound ? `${soundLabel(look.sound.id)}, ${look.sound.volume}` : 'None' }}</span>
         <span v-if="changed('sound')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own sound" aria-label="Reset sound" @click.stop="reset('sound')" @keydown.enter.stop="reset('sound')" @keydown.space.prevent.stop="reset('sound')" />
       </button>
-      <WToggle :model-value="Boolean(look.sound)" :title="look.sound ? 'Sound off' : 'Sound on'" :aria-label="'Sound'" @update:model-value="switchSound" />
+      <WToggle :model-value="Boolean(look.sound)" :title="look.sound ? 'Turn sound off' : 'Turn sound on'" :aria-label="'Sound'" @update:model-value="switchSound" />
     </div>
     <div v-if="open === 'sound'" :class="$style.foldBody">
       <span class="flex flex-col gap-1" style="min-width: 0;">
@@ -69,7 +69,7 @@
         <span class="grow" /><span v-if="look.effect" :class="$style.beam" :style="{ background: poeColour(look.effect.color) }" /><span class="w-dim text-xs">{{ look.effect ? `${look.effect.color}${look.effect.temp ? ', on drop' : ''}` : 'None' }}</span>
         <span v-if="changed('effect')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own beam" aria-label="Reset beam" @click.stop="reset('effect')" @keydown.enter.stop="reset('effect')" @keydown.space.prevent.stop="reset('effect')" />
       </button>
-      <WToggle :model-value="Boolean(look.effect)" :title="look.effect ? 'Beam off' : 'Beam on'" :aria-label="'Beam'" @update:model-value="switchEffect" />
+      <WToggle :model-value="Boolean(look.effect)" :title="look.effect ? 'Turn beam off' : 'Turn beam on'" :aria-label="'Beam'" @update:model-value="switchEffect" />
     </div>
     <div v-if="open === 'beam'" :class="$style.foldBody">
       <span class="flex items-center gap-1 flex-wrap">
@@ -92,7 +92,7 @@
         <span class="grow" /><span v-if="look.icon" :style="{ color: poeColour(look.icon.color) }">{{ shapeGlyph(look.icon.shape) }}</span><span class="w-dim text-xs">{{ look.icon ? `${['Large', 'Medium', 'Small'][look.icon.size] ?? ''} ${look.icon.color.toLowerCase()}` : 'None' }}</span>
         <span v-if="changed('icon')" role="button" tabindex="0" :class="$style.mark" title="Back to the filter's own map icon" aria-label="Reset map icon" @click.stop="reset('icon')" @keydown.enter.stop="reset('icon')" @keydown.space.prevent.stop="reset('icon')" />
       </button>
-      <WToggle :model-value="Boolean(look.icon)" :title="look.icon ? 'Map icon off' : 'Map icon on'" :aria-label="'Map icon'" @update:model-value="switchIcon" />
+      <WToggle :model-value="Boolean(look.icon)" :title="look.icon ? 'Turn map icon off' : 'Turn map icon on'" :aria-label="'Map icon'" @update:model-value="switchIcon" />
     </div>
     <div v-if="open === 'icon'" :class="$style.foldBody">
       <span class="flex flex-col gap-1">
@@ -309,13 +309,15 @@ function setIcon (change: { size?: string, color?: string, shape?: string }) {
 // Without one, on uses the filter's own setting, else a plain default.
 type Switchable = 'sound' | 'effect' | 'icon'
 const before = ref<Partial<Pick<StylePatch, Switchable>>>({})
+// Another tier or item starts from its own settings, not the last one's.
+watch(() => `${props.previewText}|${JSON.stringify(props.source)}`, () => {
+  before.value = { sound: props.look.sound ?? undefined, effect: props.look.effect ?? undefined, icon: props.look.icon ?? undefined }
+})
 watch(() => [props.look.sound, props.look.effect, props.look.icon] as const, ([sound, effect, icon]) => {
   if (sound) before.value.sound = sound
   if (effect) before.value.effect = effect
   if (icon) before.value.icon = icon
 }, { immediate: true })
-// Another tier or item: its own last settings, not this one's.
-watch(() => JSON.stringify(props.source), () => { before.value = {} })
 
 const SWITCH_DEFAULTS: Required<Pick<StylePatch, Switchable>> = {
   sound: { id: '2', volume: 300 },
@@ -323,7 +325,7 @@ const SWITCH_DEFAULTS: Required<Pick<StylePatch, Switchable>> = {
   icon: { size: 1, color: 'White', shape: 'Circle' }
 }
 function switchOn<K extends Switchable> (key: K): NonNullable<StylePatch[K]> {
-  return (before.value[key] ?? props.source?.[key] ?? SWITCH_DEFAULTS[key]) as NonNullable<StylePatch[K]>
+  return { ...(before.value[key] ?? props.source?.[key] ?? SWITCH_DEFAULTS[key]) } as NonNullable<StylePatch[K]>
 }
 
 function switchSound (on: boolean) {
