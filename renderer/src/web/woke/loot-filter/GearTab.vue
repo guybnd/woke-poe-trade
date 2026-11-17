@@ -4,20 +4,22 @@
       <span v-if="g.on" class="w-dim">Your table replaces {{ store.gearReplaced.value }} of NeverSink's gear rules.</span>
       <span v-else class="w-dim">Showing NeverSink's gear rules as they are. Change anything to take them over.</span>
       <WInfo text="Magic and rare gear that drops with a 3.30 item tier. Each cell is the lowest drop tier that shows. Influenced, fractured, veiled and other special gear keeps NeverSink's own rules, which come first." />
-      <WButton v-if="g.on" size="sm" variant="ghost" style="margin-left: auto;" @click="backToNeverSink">Back to NeverSink</WButton>
+      <WButton size="sm" variant="ghost" icon="fas fa-magic" style="margin-left: auto;" title="One-click setups for the whole table" @click="quickMenu">Quick setups ▾</WButton>
+      <WButton v-if="g.on" size="sm" variant="ghost" @click="backToNeverSink">Back to NeverSink</WButton>
     </div>
 
-    <WSegmented v-model="view" :options="[{ value: 'table', label: 'Table' }, { value: 'ranks', label: `Base ranks${movedCount ? ` · ${movedCount} moved` : ''}` }]" />
+    <div :class="$style.subTabs" role="tablist" aria-label="Base types">
+      <button type="button" role="tab" :aria-selected="view === 'table'" :class="[$style.subTab, view === 'table' && $style.subTabOn]" @click="view = 'table'">
+        <span :class="$style.subNum">1</span>
+        <span class="flex flex-col items-start"><span>Drop tiers</span><span :class="$style.subHint">What shows, by rank and rarity</span></span>
+      </button>
+      <button type="button" role="tab" :aria-selected="view === 'ranks'" :class="[$style.subTab, view === 'ranks' && $style.subTabOn]" @click="view = 'ranks'">
+        <span :class="$style.subNum">2</span>
+        <span class="flex flex-col items-start"><span>Base ranks{{ movedCount ? ` · ${movedCount} moved` : '' }}</span><span :class="$style.subHint">Which bases sit in which rank</span></span>
+      </button>
+    </div>
 
     <template v-if="view === 'table'">
-      <div class="flex flex-wrap items-center gap-1">
-        <span class="w-dim text-xs">Quick</span>
-        <WButton size="sm" @click="quick(magicOff)">Magic off</WButton>
-        <WButton size="sm" @click="quick(magicLikeRares)">Magic like rares</WButton>
-        <WButton size="sm" :disabled="!buildCount" @click="quick(onlyBuild)">Only my build's bases</WButton>
-        <WButton size="sm" @click="quick(x => shiftAll(x, 1))">Stricter</WButton>
-        <WButton size="sm" @click="quick(x => shiftAll(x, -1))">Looser</WButton>
-      </div>
 
       <div :class="$style.card">
         <div :class="$style.grid">
@@ -246,7 +248,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useCssModule } from 'vue'
-import { WButton, WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
+import { WButton, WChip, WField, WInfo, WToggle, openMenu } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
@@ -316,6 +318,16 @@ function change (fn: (x: GearSettings) => void) {
   fn(x)
 }
 const quick = (fn: (x: GearSettings) => void) => change(fn)
+function quickMenu (e: MouseEvent) {
+  openMenu(e, [
+    { label: 'Magic off', action: () => quick(magicOff) },
+    { label: 'Magic like rares', action: () => quick(magicLikeRares) },
+    { label: 'Only my build\'s bases', action: () => quick(onlyBuild), disabled: !buildCount.value },
+    { separator: true as const },
+    { label: 'Everything one tier stricter', action: () => quick(x => shiftAll(x, 1)) },
+    { label: 'Everything one tier looser', action: () => quick(x => shiftAll(x, -1)) }
+  ])
+}
 
 function setShow (row: GearRow, r: GearRarity, v: number) {
   change(x => { x.show[row][r] = v })
@@ -725,6 +737,37 @@ function neverOffBuild () {
   align-items: center;
   justify-content: start;
 }
+.subTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border-bottom: 1px solid var(--w-border);
+}
+.subTab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--w-text-dim);
+  text-align: left;
+  cursor: pointer;
+  font-size: var(--w-fs-sm, 13px);
+}
+.subTab:hover { color: var(--w-text); }
+.subTabOn { color: #f3d48a; border-bottom-color: #e0b860; background: rgb(224 184 96 / 8%); }
+.subNum {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: var(--w-fs-xs, 11px);
+}
+.subHint { font-size: var(--w-fs-xs, 11px); color: var(--w-text-faint, #8f8573); }
 .expand {
   width: 1.1rem;
   padding: 0;

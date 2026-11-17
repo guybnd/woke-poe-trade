@@ -529,10 +529,10 @@ const activePriceMoves = computed(() => props.config.priceTiers.on ? livePriceMo
 
 const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
+  { value: 'gear', label: 'Base types', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear bases show, by rank and drop tier' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
   { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && x.on).length || undefined },
-  { value: 'gear', label: 'Gear', count: props.config.presets.gear.on ? 1 : undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
