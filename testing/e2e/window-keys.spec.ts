@@ -39,4 +39,10 @@ test('loot filter: Ctrl + Z and Ctrl + Y step a change back and forth', async ({
   await expect(slider).toHaveValue(start)
   await page.keyboard.press('Control+y')
   await expect(slider).toHaveValue('20')
+
+  // The window's ? lists its keys.
+  await page.getByRole('img', { name: /Keys in this window/ }).first().hover()
+  const card = page.getByText('Undo', { exact: true }).last()
+  await expect(card).toBeVisible()
+  await expect(page.getByText('Mouse back', { exact: false }).last()).toBeVisible()
 })

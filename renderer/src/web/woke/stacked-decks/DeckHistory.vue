@@ -44,7 +44,8 @@
 <script setup lang="ts">
 // Session analytics' Stacked decks tab: every saved deck session.
 import { computed, shallowRef } from 'vue'
-import { WBanner, WButton, WEmpty, WSkeleton, toast, useMouseNav } from '../ui'
+import { WBanner, WButton, WEmpty, WSkeleton, toast } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import { formatChaos, formatDuration } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange, AnalyticsUnit } from '../analytics/types'
@@ -95,7 +96,7 @@ const tone = (v: number | null) => v == null ? '' : v >= 0 ? 'w-up' : 'w-down'
 
 const openId = shallowRef<string | null>(null)
 const root = shallowRef<HTMLElement | null>(null)
-useMouseNav(() => root.value, { back: () => { openId.value = null } })
+useWindowKeys(() => root.value, { back: () => { openId.value = null } })
 const open = computed(() => store.records.value.find(r => r.id === openId.value) ?? null)
 const openLuck = computed(() => {
   const r = open.value

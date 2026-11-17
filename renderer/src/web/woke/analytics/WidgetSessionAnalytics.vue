@@ -1,6 +1,6 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
-    <WPanel ref="panel" :title="config.wmTitle || 'Session analytics'" :icon="panelIcon" width="34rem" :busy="busy">
+    <WPanel ref="panel" :keys="windowKeys.help" :title="config.wmTitle || 'Session analytics'" :icon="panelIcon" width="34rem" :busy="busy">
       <template v-if="store.error.value" #banner>
         <WBanner>Couldn't read your saved sessions: {{ store.error.value }}
           <template #actions><WButton size="sm" @click="reload">Retry</WButton></template>
@@ -223,7 +223,8 @@ import Widget from '@/web/overlay/Widget.vue'
 import { formatDuration } from '../ui/format'
 import { AppConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, useMouseNav, vItemTip } from '../ui'
+import { WInfo, WPanel, WTabs, WSegmented, WButton, WEmpty, WChip, WSpark, WIcon, WBanner, WSkeleton, openMenu, toast, vItemTip } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
@@ -464,7 +465,7 @@ function rename () {
   saveOpen(s => { s.strategy = name })
 }
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-useMouseNav(() => panel.value?.el, { back: () => { if (tab.value === 'sessions') openId.value = null } })
+const windowKeys = useWindowKeys(() => panel.value?.el, { back: () => { if (tab.value === 'sessions') openId.value = null } })
 const busy = shallowRef(false)
 async function reload () {
   busy.value = true

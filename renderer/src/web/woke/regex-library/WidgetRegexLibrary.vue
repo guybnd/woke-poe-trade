@@ -14,7 +14,7 @@
       </template>
     </DockItem>
     <!-- One click listener for the panel's own buttons and every row's pencil and bin (data-act). -->
-    <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
+    <WPanel ref="panel" :keys="windowKeys.help" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
         <WButton size="sm" icon="fas fa-plus" title="Add a search string" data-qa="regex-new" data-act="new">New</WButton>
@@ -102,7 +102,8 @@ import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig, saveConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast, useMouseNav } from '../ui'
+import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
 import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, categoryLabel, categoryView, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
@@ -175,7 +176,7 @@ async function copy (entry: RegexEntry) {
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 // The mouse's back button goes up a folder, like the crumbs' arrow.
-useMouseNav(() => panel.value?.el, { back: () => { if (!searching.value) folderAt.value = folderAt.value.split('/').slice(0, -1).join('/') } })
+const windowKeys = useWindowKeys(() => panel.value?.el, { back: () => { if (!searching.value) folderAt.value = folderAt.value.split('/').slice(0, -1).join('/') } })
 
 function startNew () {
   // A new entry lands in the category you're filtering by, if that's one.

@@ -1,5 +1,5 @@
 <template>
-  <WPanel ref="panel" data-w-switches :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
+  <WPanel ref="panel" data-w-switches :keys="windowKeys.help" :title="config.wmTitle || 'Loot filter'" icon="wisdom" width="68rem" max-height="85vh" :scroll="false" fill :class="{ [$style.dirtyFrame]: unsaved }"
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #tabs>
       <WTabs v-model="tab" :options="tabOptions" />
@@ -386,10 +386,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, useMouseNav, vItemTip } from '../ui'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
-import { hasUndoToast } from '../ui/layer'
 import LabelPreview from './LabelPreview.vue'
 import ItemSearchField from './ItemSearchField.vue'
 import type { SearchItem } from './item-search'
@@ -871,7 +871,15 @@ function goBack () {
 // The mouse's back button undoes the newest of a jump or a folder step in the
 // rule list; forward redoes folder steps.
 const ruleNav = ref<InstanceType<typeof RuleNav> | null>(null)
-useMouseNav(() => panel.value?.el, {
+// Ctrl + Z / Y step the filter's changes while this window is up; Ctrl + S
+// saves (and reloads) from inside it, a field too, never with nothing to save
+// (it'd type /itemfilter).
+const windowKeys = useWindowKeys(() => panel.value?.el, {
+  undo: () => { props.store.undoStep() },
+  redo: () => { props.store.redoStep() },
+  save (repeat) {
+    if (!repeat && unsaved.value && props.store.doc.value && !props.store.saving.value) props.store.save({ reloadNow: true }).catch(() => {})
+  },
   back () {
     const jump = trail.value[trail.value.length - 1]
     const onRules = tab.value === 'rules' && ruleNav.value
@@ -881,7 +889,7 @@ useMouseNav(() => panel.value?.el, {
   forward () {
     if (tab.value === 'rules') ruleNav.value?.forward()
   }
-})
+}, { shown: () => props.config.wmWants === 'show', undoAnywhere: true })
 
 function openRule (rule: { type: string, tier: string | null, base?: string }) {
   if (rule.tier) jumpTo(rule.type, rule.tier, rule.base)
@@ -1322,43 +1330,6 @@ function stepLabel (step: Parameters<typeof describeSavedStep>[0]): string {
   return label
 }
 const shownSteps = computed(() => props.store.timeline.value.steps.map((step, n) => ({ step, n, label: stepLabel(step) })).reverse())
-
-function onUndoKeys (e: KeyboardEvent) {
-  // Only with this window up, and not when something else already took the key
-  // (the Undo note, whichever heard it first) or you're typing somewhere.
-  if (e.defaultPrevented || props.config.wmWants !== 'show') return
-  if (!(e.ctrlKey || e.metaKey) || e.altKey) return
-  // Ctrl + S saves (and reloads) from inside this window, a field too; not
-  // from another widget, and not with nothing to save (it'd type /itemfilter).
-  if (e.key.toLowerCase() === 's' && !e.shiftKey) {
-    const el = panel.value?.el as HTMLElement | undefined
-    // Focus falls to the page when the clicked thing goes away (a chip's x):
-    // then the last click being in here counts.
-    const inside = el && (el.contains(e.target as Node) || (e.target === document.body && lastClickInside))
-    if (!inside) return
-    e.preventDefault()
-    if (!e.repeat && unsaved.value && props.store.doc.value && !props.store.saving.value) props.store.save({ reloadNow: true }).catch(() => {})
-    return
-  }
-  const t = e.target as HTMLElement | null
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
-  const key = e.key.toLowerCase()
-  // A note on screen with Undo on it takes Ctrl + Z first, and it ends in the same place.
-  if (key === 'z' && !e.shiftKey) {
-    if (!hasUndoToast()) { e.preventDefault(); props.store.undoStep() }
-  } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
-    e.preventDefault()
-    props.store.redoStep()
-  }
-}
-let lastClickInside = false
-function onAnyPointer (e: PointerEvent) {
-  lastClickInside = Boolean(panel.value?.el?.contains(e.target as Node))
-}
-onMounted(() => window.addEventListener('pointerdown', onAnyPointer, true))
-onUnmounted(() => window.removeEventListener('pointerdown', onAnyPointer, true))
-onMounted(() => window.addEventListener('keydown', onUndoKeys))
-onUnmounted(() => window.removeEventListener('keydown', onUndoKeys))
 
 const unsaved = computed(() => props.store.dirty.value && !props.store.error.value)
 const groupHiddenByMe = computed(() => props.config.edits.some(e => e.kind === 'group' && e.type === selType.value))

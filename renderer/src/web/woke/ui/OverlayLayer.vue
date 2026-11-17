@@ -128,6 +128,8 @@ function onMenuKey (e: KeyboardEvent) {
 }
 
 function onKey (e: KeyboardEvent) {
+  // A window's own Ctrl + Z (useWindowKeys) came first.
+  if (e.defaultPrevented) return
   const t = e.target as HTMLElement | null
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && undoToast()) e.preventDefault()

@@ -10,11 +10,12 @@
         <i v-else-if="crest" :class="[crest.fa, 'w-crest-icon']" aria-hidden="true" />
         <slot name="title">{{ title }}</slot>
       </span>
-      <span v-if="!minimized && (updated != null || hotkey || $slots.actions)" :class="$style.actions">
+      <span v-if="!minimized && (updated != null || hotkey || keys?.length || $slots.actions)" :class="$style.actions">
         <span v-if="updated != null && (busy || fresh !== 'fresh')" :class="[$style.age, $style[fresh]]" :title="ageTitle">
           <span :class="$style.dot" />{{ busy ? 'refreshing' : ago(updated) }}
         </span>
         <WKbd v-if="hotkey" :keys="hotkey" :title="`Opens with ${hotkey}`" />
+        <WInfo v-if="keys?.length" :keys="keys" text="Keys in this window" />
         <slot name="actions" />
       </span>
       <span v-if="primary && titleActions.length" :class="$style.controls">
@@ -56,6 +57,8 @@ import type { Box, ResizeSide } from './panel-fit'
 import WIcon from './WIcon.vue'
 import { CURRENCY_ICONS, mechanicIcon } from './game-icons'
 import WKbd from './WKbd.vue'
+import WInfo from './WInfo.vue'
+import type { HelpKey } from './help-tip'
 import { unwatchTitle, watchTitle } from './title-fit'
 import { ago, freshness } from './format'
 
@@ -80,6 +83,8 @@ const props = withDefaults(defineProps<{
   freshMin?: number
   staleMin?: number
   hotkey?: string | null
+  // The window's own keys (useWindowKeys), listed under a "?" in the title.
+  keys?: HelpKey[]
   // A refresh is running: keeps the rows and shows a thin bar (pick L2).
   busy?: boolean
   // Rows are old data shown under an error banner: dims the body.
