@@ -22,12 +22,12 @@
       <div :class="$style.card">
         <div :class="$style.grid">
           <span />
-          <span :class="$style.groupHead" style="grid-column: span 5; color: #a8a8ff;">Magic</span>
+          <span :class="$style.groupHead" style="grid-column: span 6; color: #a8a8ff;">Magic</span>
           <span />
-          <span :class="$style.groupHead" style="grid-column: span 5; color: #f3e27a;">Rare</span>
+          <span :class="$style.groupHead" style="grid-column: span 6; color: #f3e27a;">Rare</span>
           <span class="w-faint text-xs">Shows from drop tier</span>
           <template v-for="r in RARITIES" :key="`h-${r}`">
-            <span v-for="v in SHOW_FROM" :key="v" :class="$style.stepHead">{{ v || 'Off' }}</span>
+            <span v-for="v in SHOW_FROM" :key="v" :class="$style.stepHead">{{ v === NO_TIER ? 'Always' : v || 'Off' }}</span>
             <span v-if="r === 'magic'" />
           </template>
           <template v-for="row in GEAR_ROWS" :key="row">
@@ -43,7 +43,6 @@
             </template>
           </template>
         </div>
-        <WToggle :model-value="g.exoticAlways" @update:model-value="v => change(x => { x.exoticAlways = v })">Always show exotic bases: any drop tier or none, any rarity</WToggle>
         <div :class="$style.sentence">
           <span><b style="color: #f3e27a;">Rare</b> {{ sentence.rare }}</span>
           <span><b style="color: #a8a8ff;">Magic</b> {{ sentence.magic }}</span>
@@ -84,7 +83,7 @@
         <div v-if="g.quality.on" :class="$style.qgrid">
           <span class="w-faint text-xs">Shows from quality</span>
           <span v-for="v in QUALITY_STEPS" :key="v" :class="$style.stepHead">{{ v ? `${v}%` : 'Off' }}</span>
-          <template v-for="row in GEAR_ROWS" :key="row">
+          <template v-for="row in QUALITY_ROWS" :key="row">
             <span :class="$style.rowHead">{{ ROW_LABEL[row] }}</span>
             <button v-for="v in QUALITY_STEPS" :key="v" type="button" :class="qualityClass(row, v)"
               :aria-pressed="g.quality.min[row] === v" :aria-label="qualityTitle(row, v)" :title="qualityTitle(row, v)" @click="setQuality(row, v)">{{ v && g.quality.min[row] && v >= g.quality.min[row] ? '✓' : '' }}</button>
@@ -103,8 +102,8 @@
           <span class="w-faint text-xs">Drop tier</span>
           <span :class="$style.groupHead" style="color: #a8a8ff;">Magic</span>
           <span :class="$style.groupHead" style="color: #f3e27a;">Rare</span>
-          <template v-for="t in DROP_TIERS" :key="t">
-            <span :class="$style.rowHead">Tier {{ t }}</span>
+          <template v-for="t in [...DROP_TIERS, NO_TIER]" :key="t">
+            <span :class="$style.rowHead">{{ t === NO_TIER ? 'No tier' : `Tier ${t}` }}</span>
             <button v-for="r in RARITIES" :key="r" type="button" :class="[$style.bar, picks?.t === t && picks?.r === r && $style.barPicked]"
               :aria-pressed="picks?.t === t && picks?.r === r" @click="picks = picks?.t === t && picks?.r === r ? null : { t, r }">
               <span :class="[$style.fill, r === 'magic' ? $style.fillMagic : $style.fillRare]" :style="{ width: `${universe.length ? Math.round(counts[t][r].n / universe.length * 100) : 0}%` }" />
@@ -214,7 +213,7 @@ import { computed, ref, useCssModule } from 'vue'
 import { WButton, WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
+import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane } from './gear'
 import { DEFENCES, DEFENCE_ATTR, SLOTS, allGearBases, baseInfo } from './gear-bases'
 import type { BaseInfo, Defence, Slot } from './gear-bases'
@@ -237,7 +236,7 @@ const props = defineProps<{
 
 const useCss = useCssModule()
 const RARITIES: GearRarity[] = ['magic', 'rare']
-const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Unranked (trash)' }
+const ROW_LABEL: Record<GearRow, string> = { build: 'Build bases', exotic: 'Exotic bases', r1: 'Rank 1', r2: 'Rank 2', r3: 'Rank 3', any: 'Unranked (trash)' }
 const LANE_CAP = 80
 const MOVE_TO: Array<{ lane: Lane | 'build' | 'unbuild', label: string }> = [
   { lane: 'build', label: 'Add to Build' },
@@ -304,11 +303,17 @@ function backToNeverSink () {
 
 function rowSub (row: GearRow): string {
   if (row === 'build') return buildCount.value ? `${buildCount.value} from your build` : 'link a PoB build'
-  if (row === 'any') return 'every other base; exotics have their own rules'
+  if (row === 'exotic') return `${exotics.value.size} · NeverSink's rules first`
+  if (row === 'any') return 'every other base'
   return `${lists.value[row].length} bases`
 }
 function stepTitle (row: GearRow, r: GearRarity, v: number): string {
-  if (!v) return row === 'build' ? `${r === 'magic' ? 'Magic' : 'Rare'} build bases follow their rank` : `Never show ${r} ${ROW_LABEL[row].toLowerCase()} for its drop tier`
+  if (!v) {
+    if (row === 'build') return `${r === 'magic' ? 'Magic' : 'Rare'} build bases follow their rank`
+    if (row === 'exotic') return `Only NeverSink's exotic rules decide ${r} exotic bases`
+    return `Never show ${r} ${ROW_LABEL[row].toLowerCase()} for its drop tier`
+  }
+  if (v === NO_TIER) return `Show ${r} ${ROW_LABEL[row].toLowerCase()} at every drop tier, and with no tier`
   return `Show ${r} ${ROW_LABEL[row].toLowerCase()} from drop tier ${v}`
 }
 
@@ -320,12 +325,12 @@ function cellClass (row: GearRow, r: GearRarity, v: number) {
     useCss.cell,
     lit && (r === 'magic' ? useCss.litMagic : useCss.litRare),
     line === v && useCss.line,
-    v === 0 && line === 0 && (row === 'build' ? useCss.followRank : useCss.off)
+    v === 0 && line === 0 && (row === 'build' || row === 'exotic' ? useCss.followRank : useCss.off)
   ]
 }
 function cellText (row: GearRow, r: GearRarity, v: number): string {
   const line = shown.value[row][r]
-  if (v === 0) return line === 0 ? (row === 'build' ? 'Rank' : 'Off') : ''
+  if (v === 0) return line === 0 ? (row === 'build' ? 'Rank' : row === 'exotic' ? 'NS' : 'Off') : ''
   return line !== 0 && v >= line ? '✓' : ''
 }
 function qualityClass (row: GearRow, v: number) {
@@ -339,7 +344,7 @@ function qualityTitle (row: GearRow, v: number): string {
 const sentence = computed(() => {
   const s = shown.value
   const part = (r: GearRarity) => {
-    const rows = (['r1', 'r2', 'r3', 'any'] as const).map(row => s[row][r] ? `${ROW_LABEL[row].toLowerCase()} from tier ${s[row][r]}` : null).filter(Boolean)
+    const rows = (['exotic', 'r1', 'r2', 'r3', 'any'] as const).map(row => s[row][r] ? `${ROW_LABEL[row].toLowerCase()} ${s[row][r] === NO_TIER ? 'always' : `from tier ${s[row][r]}`}` : null).filter(Boolean)
     return rows.length ? `shows ${rows.join(', ')}.` : 'never shows.'
   }
   const build = buildCount.value && (s.build.rare || s.build.magic)
@@ -362,7 +367,7 @@ const counts = computed(() => {
   const never = new Set(lists.value.never)
   const inBuild = new Set(build.value)
   const out: Record<number, Record<GearRarity, Count>> = {}
-  for (const t of DROP_TIERS) {
+  for (const t of [...DROP_TIERS, NO_TIER]) {
     out[t] = { magic: { n: 0, byRow: {} }, rare: { n: 0, byRow: {} } }
     for (const r of RARITIES) {
       const c = out[t][r]
@@ -371,7 +376,8 @@ const counts = computed(() => {
         const row = rankOf.get(b) ?? 'any'
         const line = s[row][r]
         const buildLine = inBuild.has(b) ? s.build[r] : 0
-        const by: GearRow | null = buildLine && t >= buildLine ? 'build' : line && t >= line ? row : null
+        const exLine = exotics.value.has(b) ? s.exotic[r] : 0
+        const by: GearRow | null = exLine && t >= exLine ? 'exotic' : buildLine && t >= buildLine ? 'build' : line && t >= line ? row : null
         if (!by) continue
         c.n++
         ;(c.byRow[by] ??= []).push(b)
@@ -380,7 +386,7 @@ const counts = computed(() => {
   }
   return out
 })
-const SHORT_ROW: Record<GearRow, string> = { build: 'build', r1: 'rank 1', r2: 'rank 2', r3: 'rank 3', any: 'unranked' }
+const SHORT_ROW: Record<GearRow, string> = { build: 'build', exotic: 'exotic', r1: 'rank 1', r2: 'rank 2', r3: 'rank 3', any: 'unranked' }
 function countText (c: Count): string {
   if (!c.n) return 'none'
   return GEAR_ROWS.filter(r => c.byRow[r]?.length).map(r => `${c.byRow[r]!.length} ${SHORT_ROW[r]}`).join(' + ')
@@ -394,7 +400,7 @@ const picked2 = computed(() => {
   const c = counts.value[p.t]?.[p.r]
   if (!c) return null
   return {
-    title: `${p.r === 'magic' ? 'Magic' : 'Rare'}, drop tier ${p.t}: ${c.n} of ${universe.value.length} gear bases show`,
+    title: `${p.r === 'magic' ? 'Magic' : 'Rare'}, ${p.t === NO_TIER ? 'no drop tier' : `drop tier ${p.t}`}: ${c.n} of ${universe.value.length} gear bases show`,
     parts: GEAR_ROWS.filter(r => c.byRow[r]?.length).map(r => ({ row: r, bases: [...c.byRow[r]!].sort(), open: openParts.value.includes(r) }))
   }
 })
@@ -594,7 +600,7 @@ function neverOffBuild () {
 }
 .grid {
   display: grid;
-  grid-template-columns: minmax(9rem, 12rem) repeat(5, 2.6rem) 1.2rem repeat(5, 2.6rem);
+  grid-template-columns: minmax(9rem, 12rem) repeat(6, 2.6rem) 1.2rem repeat(6, 2.6rem);
   gap: 4px 3px;
   align-items: center;
   justify-content: start;

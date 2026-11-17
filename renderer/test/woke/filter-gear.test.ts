@@ -194,7 +194,16 @@ describe('gear table', () => {
     const talismans = exotic.filter(b => b.endsWith('Talisman'))
     const hidden = talismans.filter(b => vis(d, magic(b)) === 'Hide')
     expect(hidden.length).toBeGreaterThan(0)
-    applyGear(d, gearOn(d, g => { g.exoticAlways = true }), [])
+    applyGear(d, gearOn(d, g => { g.show.exotic = { magic: 1, rare: 1 } }), [])
     expect(hidden.filter(b => vis(d, magic(b)) !== 'Show')).toEqual([])
+  })
+
+  it('shows a row with no drop tier when its line is None', () => {
+    const d = doc()
+    const f = { ...R3, rarity: 'Rare' as const }
+    expect(vis(d, f)).not.toBe('Show')
+    applyGear(d, gearOn(d, g => { g.show.r3.rare = 1 }), [])
+    expect(vis(d, f)).toBe('Show')
+    expect(vis(d, { ...R3, rarity: 'Rare', unidentifiedItemTier: 2 })).toBe('Show')
   })
 })

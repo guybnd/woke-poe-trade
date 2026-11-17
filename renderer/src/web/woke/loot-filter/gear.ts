@@ -14,16 +14,20 @@ import type { StylePatch } from './edits'
 
 export const GEAR_TYPE = 'woke->gear'
 
-export type GearRow = 'build' | 'r1' | 'r2' | 'r3' | 'any'
+export type GearRow = 'build' | 'exotic' | 'r1' | 'r2' | 'r3' | 'any'
 export type Rank = 'r1' | 'r2' | 'r3'
 export type Lane = Rank | 'none' | 'never'
 export type GearRarity = 'magic' | 'rare'
 
-export const GEAR_ROWS: GearRow[] = ['build', 'r1', 'r2', 'r3', 'any']
+export const GEAR_ROWS: GearRow[] = ['build', 'exotic', 'r1', 'r2', 'r3', 'any']
+// Over-quality has no exotic row: NeverSink's exotic rules don't look at quality.
+export const QUALITY_ROWS: GearRow[] = ['build', 'r1', 'r2', 'r3', 'any']
 export const RANKS: Rank[] = ['r1', 'r2', 'r3']
 export const DROP_TIERS = [5, 4, 3, 2]
-// 0 is off: never shows for its drop tier (the build row: same as its rank).
-export const SHOW_FROM = [0, 2, 3, 4, 5]
+// The lowest drop tier shown. 0 is off (the build row: same as its rank; the
+// exotic row: only NeverSink's exotic rules), 1 is every drop tier and none.
+export const SHOW_FROM = [0, 1, 2, 3, 4, 5]
+export const NO_TIER = 1
 export const QUALITY_STEPS = [0, 21, 24, 28, 30]
 
 export interface GearSettings {
@@ -38,9 +42,6 @@ export interface GearSettings {
   // Labels the table shows: the game's rarity colour for the text (NeverSink
   // paints magic and rare alike), and your own look per rarity on top.
   look: { rarityText: boolean, magic: StylePatch, rare: StylePatch }
-  // NeverSink's exotic bases at any drop tier (or none) and any rarity, not
-  // only where its exotic rules ask for a tier or item level.
-  exoticAlways: boolean
 }
 
 export function defaultGear (): GearSettings {
@@ -50,16 +51,16 @@ export function defaultGear (): GearSettings {
     // numbers for the file in use (gearDefaults).
     show: {
       build: { magic: 0, rare: 2 },
+      exotic: { magic: 0, rare: 0 },
       r1: { magic: 3, rare: 3 },
       r2: { magic: 4, rare: 4 },
       r3: { magic: 5, rare: 5 },
       any: { magic: 4, rare: 4 }
     },
-    quality: { on: false, min: { build: 21, r1: 24, r2: 24, r3: 28, any: 30 } },
+    quality: { on: false, min: { build: 21, exotic: 0, r1: 24, r2: 24, r3: 28, any: 30 } },
     moves: {},
     build: { auto: true, extra: [], removed: [] },
-    look: { rarityText: true, magic: {}, rare: {} },
-    exoticAlways: false
+    look: { rarityText: true, magic: {}, rare: {} }
   }
 }
 
@@ -77,6 +78,8 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
     }
     min[row] = pick(g?.quality?.min?.[row], QUALITY_STEPS, d.quality.min[row])
   }
+  // The first builds had an on/off switch for exotics at any drop tier.
+  if ((g as { exoticAlways?: unknown } | undefined)?.exoticAlways === true && !g?.show?.exotic) show.exotic = { magic: NO_TIER, rare: NO_TIER }
   const moves: Record<string, Lane> = {}
   if (g?.moves && typeof g.moves === 'object') {
     for (const [base, lane] of Object.entries(g.moves)) if (LANES.includes(lane)) moves[base] = lane
@@ -96,8 +99,7 @@ export function normalizeGear (g: Partial<GearSettings> | undefined): GearSettin
       rarityText: typeof g?.look?.rarityText === 'boolean' ? g.look.rarityText : true,
       magic: isPatch(g?.look?.magic) ? { ...g!.look!.magic } : {},
       rare: isPatch(g?.look?.rare) ? { ...g!.look!.rare } : {}
-    },
-    exoticAlways: typeof g?.exoticAlways === 'boolean' ? g.exoticAlways : false
+    }
   }
 }
 
@@ -187,7 +189,7 @@ export function readTiered (doc: FilterDoc): TieredSource | null {
 
 // What NeverSink shows today, as table values (both rarities alike: its rules
 // take Normal, Magic and Rare together).
-export function sourceShowFrom (src: TieredSource): Record<Exclude<GearRow, 'build'>, number> {
+export function sourceShowFrom (src: TieredSource): Record<Exclude<GearRow, 'build' | 'exotic'>, number> {
   const out = { r1: 0, r2: 0, r3: 0, any: 0 }
   for (const rank of RANKS) {
     for (const t of [...DROP_TIERS].reverse()) {
@@ -378,16 +380,19 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
     ], section))
   }
 
-  if (g.exoticAlways) {
-    const exotic = exoticBases(doc)
-    const bases = [...exotic.keys()].filter(b => !never.has(b))
+  // Exotic bases: shown on top of NeverSink's exotic rules from the row's tier.
+  const exoticList = [...exoticBases(doc).keys()].filter(b => !never.has(b))
+  if (exoticList.length) {
     // The look of NeverSink's exotic rule with a drop tier, else its first.
     const from = doc.blocks.find(b => b.type === 'exoticbases' && b.tier === 'exoticstiered') ??
       doc.blocks.find(b => b.type === 'exoticbases') ?? anchor
-    if (bases.length) {
-      out.push(gearBlock(from, 'exotic', 'exotic bases at any drop tier', 'Show', [
-        { key: 'Rarity', op: '', count: null, values: ['Normal', 'Magic', 'Rare'] }, cond('BaseType', '==', bases)
-      ], section))
+    for (const { vis, rarities } of byDecision(r => g.show.exotic[r] ? 'Show' : null)) {
+      for (const line of [...new Set(rarities.map(r => g.show.exotic[r]))]) {
+        const rs = rarities.filter(r => g.show.exotic[r] === line)
+        out.push(gearBlock(from, `exotic-${line === NO_TIER ? 'any' : `t${line}`}`, `exotic bases, ${line === NO_TIER ? 'any drop tier' : `drop tier ${line}+`}`, vis, [
+          ...(line === NO_TIER ? [] : [cond('UnidentifiedItemTier', '>=', [line])]), rarityCondition(rs), cond('BaseType', '==', exoticList)
+        ], section))
+      }
     }
   }
 
@@ -434,6 +439,19 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
       }
     }
   }
+
+  // "No tier": the row's bases without a drop tier too, after every tier.
+  const noTier = (row: GearRow, bases: string[] | null, from: FilterBlock, conditions: FilterCondition[]) => {
+    for (const { vis, rarities } of byDecision(r => g.show[row][r] === NO_TIER ? 'Show' : null)) {
+      out.push(gearBlock(from, `${row}-notier`, `${row === 'any' ? 'unranked' : row === 'build' ? 'your build\'s' : `rank ${row.slice(1)}`} bases with no drop tier`, vis, [
+        ...conditions, rarityCondition(rarities), ...(bases ? [cond('BaseType', '==', bases)] : [])
+      ], section))
+    }
+  }
+  if (build.length) noTier('build', build, src.cells.get(key('r1', 2))?.block ?? anchor, template)
+  for (const rank of RANKS) if (lists[rank].length) noTier(rank, lists[rank], src.cells.get(key(rank, 2))?.block ?? anchor, template)
+  const lowAny = src.any[src.any.length - 1]
+  if (lowAny) noTier('any', null, lowAny.block, copyConditions(lowAny.block))
 
   // Bases moved to Never come out of NeverSink's other gear rules' lists only
   // through this table: the Never rule sits first.
@@ -487,7 +505,8 @@ export function shiftAll (g: GearSettings, by: number): void {
   for (const row of GEAR_ROWS) {
     for (const r of ['magic', 'rare'] as GearRarity[]) {
       const v = g.show[row][r]
-      if (!v) continue
+      // Off and "no tier" stay: one is a choice, the other has no tier to move.
+      if (!v || v === NO_TIER) continue
       g.show[row][r] = Math.min(5, Math.max(2, v + by))
     }
   }
