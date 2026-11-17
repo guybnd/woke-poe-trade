@@ -11,8 +11,12 @@ test('loot filter chips: a click toggles one, Shift + click adds the run', async
   fs.copyFileSync(path.join(FIXTURES, 'filters', 'neversink-sample.filter'), path.join(folder, 'NeverSink.filter'))
   await overlay.boot({ widgets: [{ wmType: 'woke-loot-filter', wmFlags: ['invisible-on-blur'], sampleHotkey: 'Alt + F', editorHotkey: 'Alt + Shift + F', folder, sourceName: 'NeverSink.filter' }] })
   await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+Shift+F')
-  await overlay.pressHotkey('Alt + Shift + F')
   const page = overlay.page
+  // On a busy machine the first press can come before the editor is ready.
+  await expect(async () => {
+    await overlay.pressHotkey('Alt + Shift + F')
+    await expect(page.getByRole('tab', { name: 'Rules' })).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 20_000 })
   await page.getByRole('tab', { name: 'Rules' }).click()
   await page.getByRole('button', { name: /Tier 3/ }).first().click()
   const chips = page.locator('[title^="Click to pick"]')

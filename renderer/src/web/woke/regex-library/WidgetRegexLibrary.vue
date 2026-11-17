@@ -13,7 +13,7 @@
         </div>
       </template>
     </DockItem>
-    <!-- One click listener for the panel's own buttons and every row's pencil and bin (data-act). -->
+    <!-- One click listener for the panel's own buttons (data-act). -->
     <WPanel ref="panel" :title="config.wmTitle || 'Regex library'" icon="stash" width="22rem" max-height="70vh" @click="onAction">
       <template #toolbar>
         <WField v-model="filter" icon="fas fa-search" placeholder="Filter by name, tag, category…" class="grow" />
@@ -210,11 +210,7 @@ function onAction (e: MouseEvent) {
   const btn = (e.target as Element).closest<HTMLElement>('[data-act]')
   if (!btn) return
   if (btn.dataset.act === 'new') { startNew(); return }
-  if (btn.dataset.act === 'poe-re') { openPoeRe(); return }
-  const entry = props.config.entries.find(x => String(x.id) === btn.dataset.id)
-  if (!entry) return
-  if (btn.dataset.act === 'edit') edit(entry)
-  else if (btn.dataset.act === 'remove') remove(entry)
+  if (btn.dataset.act === 'poe-re') openPoeRe()
 }
 
 function saveEntry (entry: RegexEntry) {
