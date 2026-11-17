@@ -17,7 +17,22 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-17T12:08:49.115Z'
+    comment: Created ticket.
+    id: a-2026-11-17t12-08-49-115z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T12:08:49.115Z'
     comment: Created as subtask of WOKEPOET-354.
+    id: a-2026-11-17t12-08-49-115z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T12:43:23.944Z'
+    comment: >-
+      Parity 1/4 up: PR #587 (woke/saved-tree-atlas) — shared/saved-tree,
+      use-saved-tree, SavedTree.vue; Atlas on it; parity e2e. Next: Regex
+      library, Trade searches, PoB builds (order kept in widget config, Guy's
+      pick).
+    id: a-2026-11-17t12-43-23-944z
 ---
 > **TL;DR:** Guy picked the follow-up to #585: Atlas strategies and PoB builds use the shared saved-list parts (row keys, rename in place, remove with Undo), and Regex library and Trade searches get nested folders and drag reorder, lifted from Atlas into shared code.
 
