@@ -8,6 +8,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ITEM_BY_REF } from '@/assets/data'
 import { agoPhrase } from '../ui'
 import UniquesOnBase from '../shared/UniquesOnBase.vue'
 import type { UniqueOnBaseRow } from '../shared/UniquesOnBase.vue'
@@ -48,7 +49,10 @@ const list = computed<UniqueOnBaseRow[]>(() => rows.value.map(u => ({
   price: u.chaos == null ? null : { low: u.chaos, high: u.chaos, thin: u.thin },
   setsTier: u.setsTier,
   own: u.own,
-  foulborn: u.foulborn
+  foulborn: u.foulborn,
+  // A click price checks it, on this base.
+  check: true,
+  info: ITEM_BY_REF('UNIQUE', u.name)?.find(i => i.unique?.base === props.facts.baseType)
 })))
 
 </script>

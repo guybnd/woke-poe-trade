@@ -12,14 +12,14 @@
         </span>
       </button>
       <template v-if="open === s.title">
-        <WItemRow v-for="(r, i) in s.uniques" :key="`u${i}`" :item="tipOf(r.item)" :class="$style.line">
+        <WItemRow v-for="(r, i) in s.uniques" :key="`u${i}`" :item="tipOf(r.item)" action="price-check" :class="$style.line" class="w-focusable">
           <span class="w-rarity-unique w-trunc">{{ r.item.name }}</span>
           <span class="ml-auto flex items-center gap-1 whitespace-nowrap">
             <WPrice :chaos="r.price?.chaos" :divine="divine" />
             <template v-if="r.price?.high != null"><span class="w-dim text-xs">to</span><WPrice :chaos="r.price.high" :divine="divine" /></template>
           </span>
         </WItemRow>
-        <WItemRow v-for="(r, i) in s.unpriced" :key="`n${i}`" :item="tipOf(r.item)" :class="$style.line">
+        <WItemRow v-for="(r, i) in s.unpriced" :key="`n${i}`" :item="tipOf(r.item)" action="price-check" :class="$style.line" class="w-focusable">
           <span class="w-rarity-unique w-trunc">{{ r.item.name }}</span>
           <span class="ml-auto w-faint text-xs">no price</span>
         </WItemRow>
@@ -48,8 +48,8 @@ const props = defineProps<{ details: PobDetails }>()
 const { priceOf, divine, fetch } = useUniquePrice()
 const open = shallowRef<string | null>(null)
 
-// A unique's tooltip by name; its menu has the build's own copy, so Price
-// checks it with its rolls and Text copies it.
+// A unique's tooltip by name; its menu and click have the build's own copy,
+// so the price check reads its rolls and Text copies it.
 function tipOf (item: PobItem): ItemTipRef {
   return { name: item.name, noPrice: true, menu: { name: item.name, rarity: 'unique', text: pobItemText(item) } }
 }

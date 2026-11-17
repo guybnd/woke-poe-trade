@@ -5,7 +5,7 @@
       <span class="text-right"><slot name="aside">Price</slot></span>
     </div>
     <template v-for="u in shown" :key="u.key">
-      <WItemRow :item="u.tip ?? { name: u.refName }" :art="false" :action="u.pick ? 'pick' : null"
+      <WItemRow :item="u.tip ?? { name: u.refName }" :art="false" :info="u.info" :action="u.pick ? 'pick' : u.check ? 'price-check' : null"
         :class="[$style.row, { [$style.own]: u.own }]" data-testid="unique-on-base" @pick="emit('pick', u)">
         <template #default="{ art }">
           <span :class="$style.name">
@@ -33,12 +33,13 @@
 // A base's uniques, the same list in Search and on the Alt+F card: art,
 // tooltip and item menu on every row, price or range, and the extras a list
 // has (the unique that set the base's tier, the Foulborn range, the copy you
-// hold). Rows with `pick` open on click; the rest only show.
+// hold). A click opens the row (`pick`) or price checks it (`check`).
 import { computed, ref, watch } from 'vue'
 import WIcon from '../ui/WIcon.vue'
 import WItemRow from '../ui/WItemRow.vue'
 import WPrice from '../ui/WPrice.vue'
 import type { ItemTipRef } from '../ui/tooltip/item-tip'
+import type { BaseType } from '@/assets/data'
 
 export interface UniqueOnBaseRow {
   key: string
@@ -52,7 +53,11 @@ export interface UniqueOnBaseRow {
   setsTier?: boolean
   own?: boolean
   foulborn?: { max: number, thin: boolean } | null
+  // Click: the list's own action (`pick`), or a price check of the unique
+  // (`check`, on this base: `info`).
   pick?: boolean
+  check?: boolean
+  info?: BaseType
 }
 
 const props = withDefaults(defineProps<{
