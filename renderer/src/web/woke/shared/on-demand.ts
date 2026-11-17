@@ -3,25 +3,41 @@
 // at a time and they never pile onto the rate limit together, and answers kept
 // by request for a while, so asking again, or the same item again, costs
 // nothing and shows at once.
-import { shallowReactive } from 'vue'
+import { shallowReactive, shallowRef } from 'vue'
 
 // An answer is reused this long; after that a click searches again.
 export const ON_DEMAND_FRESH_MS = 15 * 60 * 1000
 
+// A search that never answers gives up its place after this, so later ones
+// aren't stuck behind it (rate limiter waits happen inside, so it's long).
+export const LANE_TIMEOUT_MS = 120_000
+
 let lane: Promise<unknown> = Promise.resolve()
+
+function timed<T> (work: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const expired = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => { reject(new Error('Timed out')) }, LANE_TIMEOUT_MS)
+  })
+  return Promise.race([work(), expired]).finally(() => { clearTimeout(timer) })
+}
 
 // Runs `work` after every search already in the lane.
 export function inLane<T> (work: () => Promise<T>): Promise<T> {
-  const run = lane.then(work, work)
+  const run = lane.then(() => timed(work), () => timed(work))
   lane = run.catch(() => {})
   return run
 }
 
 const answers = new Map<string, { value: unknown, ts: number }>()
 const running = new Map<string, Promise<unknown>>()
+// Bumped with each new answer, so rows showing kept answers redraw.
+const answered = shallowRef(0)
 
 // A kept answer for this request, if fresh.
 export function keptAnswer<T> (key: string, now = Date.now()): T | undefined {
+  // Read, so a row showing this redraws when any answer comes in.
+  if (answered.value < 0) return undefined
   const a = answers.get(key)
   if (!a || now - a.ts > ON_DEMAND_FRESH_MS) return undefined
   return a.value as T
@@ -34,7 +50,7 @@ export function askOnce<T> (key: string, work: () => Promise<T>): Promise<T> {
   const already = running.get(key)
   if (already) return already as Promise<T>
   const run = inLane(work)
-    .then((value) => { answers.set(key, { value, ts: Date.now() }); return value })
+    .then((value) => { answers.set(key, { value, ts: Date.now() }); answered.value++; return value })
     .finally(() => { running.delete(key) })
   running.set(key, run)
   return run

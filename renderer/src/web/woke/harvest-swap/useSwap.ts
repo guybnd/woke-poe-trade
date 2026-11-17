@@ -114,7 +114,8 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     const key = currentKey(cand, mode)
     const args = [filters.value, stats.value, cand, mode, { ...options.value, accountName: AppConfig().accountName }, item.value.category] as const
     const search = () => runSwapSearch(...args)
-    return key ? await askOnce(`${filters.value.trade.league}|${key}`, search) : await inLane(search)
+    // Without a divine rate, divine listings don't count: not the same answer.
+    return key ? await askOnce(`${filters.value.trade.league}|${options.value.divine ? 'd' : ''}|${key}`, search) : await inLane(search)
   }
 
   async function run (cand: SwapCandidate, mode: SwapMode) {
