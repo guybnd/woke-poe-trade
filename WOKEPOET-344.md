@@ -51,6 +51,18 @@ history:
       lists, 35/136/105, copied into every tier rule today). Waiting on his
       take.
     id: a-2026-11-17t03-19-53-953z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T03:27:56.747Z'
+    comment: >-
+      Guy liked D's table; wants A/B/C's useful parts folded in, a god-tier base
+      picker, and build fit. Added E1 (Gear page: Build bases row + rank rows ×
+      Magic/Rare shows-from, quick buttons, Special gear list from B, live "what
+      you'd see" preview from A, ground preview) and E2 (base ranks as lanes
+      Build/R1/R2/R3/Unranked/Never, PoB-driven Build lane,
+      slot/defence/attribute/drop-level filters, multi-select Move to). Counts
+      in E1 preview illustrative. Waiting on Guy.
+    id: a-2026-11-17t03-27-56-747z
 ---
 > **TL;DR:** One Gear view that shows what happens to every kind of gear drop (base rank × base kind × drop tier × rarity × decorators), instead of ~30 NeverSink groups where rarity is sometimes lumped. Waiting on Guy's pick of A/B/C.
 
