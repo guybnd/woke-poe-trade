@@ -7,8 +7,8 @@
           <div v-for="r in rolls" :key="r.color" class="flex items-center gap-2">
             <span :class="[$style.dot, $style[r.color]]" />
             <span v-item-tip="r.top[0] ? gemTip(r.top[0].name) : null" class="w-trunc flex-1">{{ r.top[0]?.name ?? (thinInPool(allPrices, thin, r.color) ? 'only thin prices' : 'no prices yet') }}</span>
-            <WPrice v-if="r.top[0]" :chaos="r.top[0].chaos ?? 0" :divine="snapshot?.divine" />
-            <span class="w-faint text-xs w-num" title="Expected value of a roll of this colour">EV <WPrice :chaos="r.ev" :divine="snapshot?.divine" /></span>
+            <WPrice v-if="r.top[0]" :chaos="r.top[0].chaos ?? 0" :divine="divine" />
+            <span class="w-faint text-xs w-num" title="Expected value of a roll of this colour">EV <WPrice :chaos="r.ev" :divine="divine" /></span>
           </div>
         </div>
       </template>
@@ -36,7 +36,7 @@
 
       <div v-if="config.runner" class="flex flex-wrap gap-2 items-center py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad); border-bottom: 1px solid var(--w-line);">
         <span class="w-dim text-xs">{{ config.runnerLab === 'eternal' ? 'Eternal' : 'Merciless' }}, {{ config.runnerGemCost ?? 1 }}c gem, {{ config.runnerMinutes ?? 6 }} min a run</span>
-        <span class="w-dim text-xs">Entry <WPrice :chaos="entryCost" :divine="snapshot?.divine" /></span>
+        <span class="w-dim text-xs">Entry <WPrice :chaos="entryCost" :divine="divine" /></span>
         <span v-if="config.view === 'color' && bestRoll" class="ml-auto w-num" title="Best colour EV for each font craft in this lab, minus entry and gems, per run and per hour">
           <span :class="runProfit >= 0 ? 'w-up' : 'w-down'">{{ fmt(runProfit) }}</span> / run
           <template v-if="perHour != null"> · {{ fmt(perHour) }} / h</template>
@@ -64,7 +64,7 @@
           <div v-for="g in roll.top" :key="g.name" v-item-tip="gemTip(g.name)" class="w-row" :class="$style.gemGrid" @contextmenu="gemMenu($event, g.name)">
             <img v-if="gemIcon(g.name)" :src="gemIcon(g.name)!" :class="$style.icon" alt="" loading="lazy" decoding="async" draggable="false"><span v-else />
             <span class="w-trunc w-rarity-gem"><i v-if="thin.has(g.name)" class="fas fa-exclamation-circle w-faint mr-1" :title="THIN_NOTE" />{{ g.name }}</span>
-            <WPrice :chaos="g.chaos ?? 0" :divine="snapshot?.divine" />
+            <WPrice :chaos="g.chaos ?? 0" :divine="divine" />
           </div>
         </div>
       </template>
@@ -78,15 +78,15 @@
               @contextmenu="gemMenu($event, p.baseName)">
               <span :class="[$style.dot, $style[p.color]]" />
               <span v-item-tip="gemTip(p.baseName)" :class="$style.named"><img v-if="gemIcon(p.baseName)" :src="gemIcon(p.baseName)!" :class="$style.icon" alt="" loading="lazy" decoding="async" draggable="false"><span v-else :class="$style.icon" /><span class="w-trunc">{{ p.baseName }} <i class="fas text-xs w-faint" :class="expanded === p.baseName ? 'fa-chevron-up' : 'fa-chevron-down'" /></span></span>
-              <span class="text-right w-dim" title="Base gem price"><WPrice v-if="p.baseChaos != null" :chaos="p.baseChaos" :divine="snapshot?.divine" /><template v-else>?</template></span>
-              <WPrice :chaos="value(p)" :divine="snapshot?.divine" />
-              <span class="text-right w-up w-num" :title="config.runner ? 'Profit after the base gem and the lab entry' : 'Profit after buying the base gem'">+<WPrice :chaos="profit(p)" :divine="snapshot?.divine" /></span>
+              <span class="text-right w-dim" title="Base gem price"><WPrice v-if="p.baseChaos != null" :chaos="p.baseChaos" :divine="divine" /><template v-else>?</template></span>
+              <WPrice :chaos="value(p)" :divine="divine" />
+              <span class="text-right w-up w-num" :title="config.runner ? 'Profit after the base gem and the lab entry' : 'Profit after buying the base gem'">+<WPrice :chaos="profit(p)" :divine="divine" /></span>
             </button>
             <template v-if="expanded === p.baseName">
               <div v-for="v in shownVariants(p)" :key="v.name" v-item-tip="gemTip(v.name)" class="w-row" :class="$style.gemGrid" @contextmenu="gemMenu($event, v.name)">
                 <img v-if="gemIcon(v.name)" :src="gemIcon(v.name)!" :class="$style.icon" alt="" loading="lazy" decoding="async" draggable="false"><span v-else />
                 <span class="w-trunc w-rarity-gem"><i v-if="thin.has(v.name)" class="fas fa-exclamation-circle w-faint mr-1" :title="THIN_NOTE" />{{ v.name }}</span>
-                <WPrice :chaos="v.chaos" :divine="snapshot?.divine" />
+                <WPrice :chaos="v.chaos" :divine="divine" />
               </div>
             </template>
           </template>
@@ -113,7 +113,7 @@ import { openItemMenu } from '../ui/tooltip/item-menu'
 import { useLeagues } from '@/web/background/Leagues'
 import { useMarketCollector } from '../market/collector'
 import { latestSnapshots } from '../market/db'
-import { formatChaos } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import type { Snapshot } from '../market/types'
 import { GEM_STATES, colorRolls, evByState, gemPrices, pickProfit, pickValue, specificPicks, thinGems, thinInPool, withoutThinGems } from './font'
 import type { GemColor, GemState, SpecificPick } from './font'
@@ -223,7 +223,7 @@ function toggle (name: string) { expanded.value = expanded.value === name ? null
 function gemMenu (e: MouseEvent, name: string) {
   openItemMenu(e, gemTip(name))
 }
-function fmt (chaos: number) { return formatChaos(chaos, snapshot.value?.divine ?? null) }
+const { fmt, divine } = usePriceText(snapshot)
 function pct (p: number) { return `${(p * 100).toFixed(1)}%` }
 
 function stateLabel (s: GemState) {

@@ -170,7 +170,7 @@ import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
-import { formatChaos } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { usePriceIndex } from '../market/price-index'
 import { FARMING_TYPE, strategyStats, withScarabCosts } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
@@ -207,7 +207,7 @@ const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 const editing = shallowRef(false)
 const { copied, copy } = useCopy()
 const prices = usePriceIndex()
-function fmt (chaos: number) { return formatChaos(chaos, prices.snapshot.value?.divine ?? null) }
+const { fmt } = usePriceText(prices.snapshot)
 
 watch(() => props.strategy.id, () => { editing.value = false; adding.value = false; compareId.value = null })
 

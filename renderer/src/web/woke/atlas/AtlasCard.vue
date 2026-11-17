@@ -24,7 +24,7 @@
 import { computed } from 'vue'
 import { WIcon, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
-import { formatChaos } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { usePriceIndex } from '../market/price-index'
 import { parseCostLines, priceLines, priceThreads } from './loadout'
 import type { AtlasStrategy } from './strategies'
@@ -33,7 +33,7 @@ const props = defineProps<{ strategy: AtlasStrategy, regexes: Array<{ name: stri
 
 const { copied, copy } = useCopy()
 const prices = usePriceIndex()
-function fmt (chaos: number) { return formatChaos(chaos, prices.snapshot.value?.divine ?? null) }
+const { fmt } = usePriceText(prices.snapshot)
 const items = computed(() => prices.snapshot.value?.items ?? null)
 const lines = computed(() => {
   const l = parseCostLines(props.strategy.scarabs)

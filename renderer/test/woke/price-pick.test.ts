@@ -2,6 +2,7 @@
 // (live poe.ninja) and the Boss runs / Analytics resolver (Market snapshot).
 import { describe, expect, it, vi } from 'vitest'
 import { priceResolver } from '@/web/woke/boss-runs/calc'
+import { divineRate, pickRow } from '@/web/woke/shared/price-row'
 import type { PriceItem } from '@/web/woke/market/types'
 
 // The tooltip module styles the page as it loads: a page that takes anything.
@@ -68,8 +69,42 @@ describe('price row by name', () => {
     expect(marketFor({ name: 'Nothing' }, 'unique')).toBeNull()
   })
 
-  it('tooltip today: no plain row takes the first variant listed, not the cheapest', async () => {
+  it('tooltip: no plain row takes the cheapest variant, as every window does', async () => {
     const { marketFor } = await import('@/web/woke/ui/tooltip/item-tip')
-    expect(marketFor({ name: 'Two Variants' }, 'unique')?.chaos).toBe(90)
+    expect(marketFor({ name: 'Two Variants' }, 'unique')?.chaos).toBe(10)
+  })
+
+  it('a row and its tooltip show the same price for the same item', async () => {
+    const { marketFor } = await import('@/web/woke/ui/tooltip/item-tip')
+    const boss = priceResolver(SNAPSHOT)
+    for (const [name, variant] of [['Two Variants'], ['Two Variants', 'Dear'], ['Has Plain'], ['Has Plain', '6L']] as Array<[string, string?]>) {
+      expect(marketFor({ name, variant }, 'unique')?.chaos, `${name} ${variant ?? ''}`).toBe(boss.price(name, variant))
+    }
+  })
+})
+
+describe('pickRow', () => {
+  const r = (variant: string, chaos: number, type = 'UniqueArmour') => ({ variant, chaos, type })
+  it('takes the asked variant only, unless told to fall back', () => {
+    expect(pickRow([r('A', 5), r('', 9)], 'A')?.chaos).toBe(5)
+    expect(pickRow([r('A', 5), r('', 9)], 'B')).toBeNull()
+    expect(pickRow([r('A', 5), r('', 9)], 'B', { fallback: true })?.chaos).toBe(9)
+  })
+  it("takes the plain row, a currency's first, else the cheapest", () => {
+    expect(pickRow([r('A', 5), r('', 9)])?.chaos).toBe(9)
+    expect(pickRow([r('', 9, 'Fragment'), r('', 7, 'Currency')])?.chaos).toBe(7)
+    expect(pickRow([r('A', 5), r('B', 3)])?.chaos).toBe(3)
+    expect(pickRow([])).toBeNull()
+  })
+  it('reads a missing variant as plain', () => {
+    expect(pickRow([{ chaos: 4 }, { variant: 'X', chaos: 1 }])?.chaos).toBe(4)
+  })
+})
+
+describe('divineRate', () => {
+  it("is live poe.ninja's, else the window's snapshot", () => {
+    expect(divineRate(200, 150)).toBe(200)
+    expect(divineRate(null, 150)).toBe(150)
+    expect(divineRate(undefined, null)).toBeNull()
   })
 })

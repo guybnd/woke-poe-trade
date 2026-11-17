@@ -177,7 +177,8 @@ import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
 import { getDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { usePriceIndex } from '../market/price-index'
-import { formatChaos, formatClock } from '../ui/format'
+import { formatClock } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { itemKey } from '../market/types'
 import type { PriceItem } from '../market/types'
 import { onGameLog } from '../shared/game-log'
@@ -245,7 +246,7 @@ const dockBadge = computed(() => {
   if (mapClock.value != null) return formatClock(mapClock.value)
   const ph = t.value.perHour
   if (ph == null) return null
-  const div = prices.snapshot.value?.divine
+  const div = divine.value
   return div ? `${(ph / div).toFixed(1)}d` : `${Math.round(ph)}c`
 })
 const price = (r: PricedRef) => prices.price(r)
@@ -270,9 +271,7 @@ const costResults = computed(() => prices.search(costQuery.value, 8, isMapCostIt
 
 function key (r: PricedRef) { return itemKey(r) }
 
-function fmt (chaos: number) {
-  return formatChaos(chaos, prices.snapshot.value?.divine ?? null)
-}
+const { fmt, divine } = usePriceText(prices.snapshot)
 
 // Share of time in maps, including the zone you're in right now.
 const mapShare = computed(() => {
@@ -395,7 +394,7 @@ function end () {
     const record = toSessionRecord(sess, props.config.costs, price, rules.value, {
       now: nowTs,
       league: leagues.selectedId.value ?? '',
-      divine: prices.snapshot.value?.divine ?? null,
+      divine: divine.value,
       strategy: props.config.strategy
     })
     sessionStore.save(record).catch(() => {})
@@ -406,7 +405,7 @@ function end () {
       maps: sess.maps,
       costChaos: tt.cost,
       lootChaos: tt.loot,
-      divine: prices.snapshot.value?.divine ?? null
+      divine: divine.value
     })
   }
   props.config.session = null
