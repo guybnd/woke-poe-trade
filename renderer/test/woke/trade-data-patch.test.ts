@@ -1,7 +1,7 @@
 // The launch-day data patch (scripts/trade-data-patch.mjs): only what changed
 // between two trade-site snapshots reaches our data.
 import { describe, it, expect } from 'vitest'
-import { diff, matcherText, remap, remapIds, scope } from '../../../scripts/trade-data-patch.mjs'
+import { certainChance, diff, matcherText, remap, remapIds, scope } from '../../../scripts/trade-data-patch.mjs'
 
 const stat = (id: string, text: string, type = 'explicit') => ({ id, text, type })
 type Line = { ref: string, better: number, matchers: Array<{ string: string }>, trade: { ids: Record<string, string[]> } }
@@ -158,5 +158,39 @@ describe('trade data patch', () => {
     expect(r.newStats.map((s: { ref: string }) => s.ref)).toEqual(['#% chance to gain Elusive on Kill'])
     expect(r.newItems).toEqual([{ name: 'Ghostly Claw', refName: 'Ghostly Claw', namespace: 'ITEM', craftable: { category: 'Viscera' }, icon: '' }])
     expect(() => scope(after, 'jewel')).toThrow(/No scoped run/)
+  })
+})
+
+describe('two-line texts and 100% chances', () => {
+  const SHRINE = `Gain a random Shrine Buff for # seconds when you Blind a
+non-Blinded Rare or Unique Enemy`
+
+  it("adds a new stat whose text wraps, as the game copies it", () => {
+    const r = diff({ stats: [], items: [], static: [] }, { stats: [stat('explicit.stat_7', SHRINE)], items: [], static: [] }, [], [])
+    expect(r.newStats.map((s: Line) => s.matchers[0].string)).toEqual([SHRINE])
+  })
+
+  it('never takes a two-line text as a rewording', () => {
+    const ours = [line('Can be Anointed up to 3 times', { explicit: ['explicit.stat_8'] })]
+    const r = diff(
+      { stats: [stat('explicit.stat_8', 'Can be Anointed up to 3 times')], items: [], static: [] },
+      { stats: [stat('explicit.stat_8', `Area is infested with Fungal Growths
+Can be Anointed up to 3 times`)], items: [], static: [] },
+      ours, [])
+    expect(r.reworded).toEqual([])
+    expect(ours[0].matchers).toHaveLength(1)
+  })
+
+  it('reads "Blind Enemies on Hit" as a 100% chance, unless another stat has the words', () => {
+    const blind = line('#% chance to Blind Enemies on hit', { explicit: ['explicit.stat_5'] }, ['#% chance to Blind Enemies on Hit'])
+    const triple = line('#% chance to deal Triple Damage', { explicit: ['explicit.stat_6'] })
+    const own = line('Deal Triple Damage', { explicit: ['explicit.stat_4'] })
+    const added = certainChance([blind, triple, own])
+    expect(added).toEqual(['Blind Enemies on Hit'])
+    expect(blind.matchers[1]).toEqual({ string: 'Blind Enemies on Hit', value: 100 })
+    expect(triple.matchers).toHaveLength(1)
+    expect(certainChance([blind])).toEqual([])
+    const mapMod = { ...line('#% chance to contain an Expedition Encounter', { explicit: ['explicit.stat_3'] }), fromAreaMods: 'map' }
+    expect(certainChance([mapMod])).toEqual([])
   })
 })
