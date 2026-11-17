@@ -193,14 +193,14 @@
               <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
               <span :class="$style.baseText">
                 <span>{{ b }}</span>
-                <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(b).slot, info(b).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(b, lane.key)"> · was {{ wasRank(b, lane.key) }}</template></span>
+                <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(b).slot, info(b).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(b, lane.key)"> · was {{ wasRank(b, lane.key) }}</template><template v-if="lane.key !== 'exotic' && exotics.has(b)"> · <span style="color: #e0b860;">exotic</span></template></span>
               </span>
             </button>
             <span v-if="lane.bases.length > LANE_CAP" class="w-faint text-xs">+{{ lane.bases.length - LANE_CAP }} more, narrow with search</span>
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by.</div>
       <div class="flex gap-1">
         <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
       </div>
@@ -213,7 +213,7 @@ import { computed, ref, useCssModule } from 'vue'
 import { WButton, WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
+import { DROP_TIERS, GEAR_ROWS, GEAR_TYPE, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, rankLists, readTiered, shiftAll } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane } from './gear'
 import { DEFENCES, DEFENCE_ATTR, SLOTS, allGearBases, baseInfo } from './gear-bases'
 import type { BaseInfo, Defence, Slot } from './gear-bases'
@@ -223,6 +223,7 @@ import { matchItem } from './match'
 import { defaultTextColour } from './drops'
 import { ruleLabel } from './parse'
 import LabelPreview from './LabelPreview.vue'
+import { tierLabel } from './names'
 import StyleEditor from './StyleEditor.vue'
 import { applyStyle as applyStyleTo, readStyle } from './edits'
 import type { StylePatch } from './edits'
@@ -487,15 +488,18 @@ function visible (b: string): boolean {
   if (minLevel.value > 0 && (i.dropLevel ?? 0) < minLevel.value) return false
   return true
 }
+const exotics = computed(() => props.store.doc.value ? exoticBases(props.store.doc.value) : new Map<string, string[]>())
 const lanes = computed(() => {
   const ranked = new Set([...lists.value.r1, ...lists.value.r2, ...lists.value.r3, ...lists.value.never])
-  const unranked = universe.value.filter(b => !ranked.has(b))
+  const unranked = universe.value.filter(b => !ranked.has(b) && !exotics.value.has(b))
+  const exotic = [...exotics.value.keys()].filter(b => !ranked.has(b) && info(b).slot).sort()
   const lane = (key: string, label: string, bases: string[]) => ({ key, label, bases: bases.filter(visible) })
   return [
     lane('build', 'Build', build.value),
     lane('r1', 'Rank 1', lists.value.r1),
     lane('r2', 'Rank 2', lists.value.r2),
     lane('r3', 'Rank 3', lists.value.r3),
+    lane('exotic', 'Exotic', exotic),
     lane('none', 'Unranked', unranked),
     lane('never', 'Never', lists.value.never)
   ]
@@ -523,6 +527,8 @@ function baseTitle (b: string, lane: string): string {
   const parts = [b, i.slot, i.defence && `${i.defence} (${DEFENCE_ATTR[i.defence]})`, i.dropLevel != null ? `drop level ${i.dropLevel}` : null]
   const was = wasRank(b, lane)
   if (was) parts.push(`NeverSink: ${was}`)
+  const ex = exotics.value.get(b)
+  if (ex) parts.push(`NeverSink's Exotic bases show it first (${ex.map(tierLabel).join(', ')}); change those under Rules`)
   return parts.filter(Boolean).join(' · ')
 }
 function moveTo (lane: Lane | 'build' | 'unbuild') {
@@ -744,7 +750,7 @@ function neverOffBuild () {
 }
 .lanes {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 .lane {

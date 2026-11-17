@@ -207,6 +207,22 @@ export function gearDefaults (doc: FilterDoc): GearSettings {
   return d
 }
 
+// NeverSink's Exotic bases (talismans, experimented and other special bases):
+// their own rules show them before the table, by base and sometimes item
+// level or drop tier. Base -> the exotic tiers that list it (live Show rules).
+export function exoticBases (doc: FilterDoc): Map<string, string[]> {
+  const out = new Map<string, string[]>()
+  for (const b of doc.blocks) {
+    if (b.type !== 'exoticbases' || b.disabled || b.visibility !== 'Show' || !b.tier) continue
+    for (const v of b.conditions.find(c => c.key === 'BaseType' && c.op === '==')?.values ?? []) {
+      const list = out.get(v) ?? []
+      if (!list.includes(b.tier)) list.push(b.tier)
+      out.set(v, list)
+    }
+  }
+  return out
+}
+
 // ---- Lanes ------------------------------------------------------------------
 
 export function laneOf (src: TieredSource | null, g: GearSettings, base: string): Lane {
