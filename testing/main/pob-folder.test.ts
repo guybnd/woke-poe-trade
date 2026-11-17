@@ -2,8 +2,8 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { describe, expect, it } from 'vitest'
-import { moveBuildFolder } from '../../main/src/woke/pob-builds'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { moveBuildFolder, recoverFolderMoves } from '../../main/src/woke/pob-builds'
 
 function folder (files: string[]): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-pobf-'))
@@ -54,5 +54,50 @@ describe('moveBuildFolder', () => {
   it('has nothing to move for a folder that is only in the list', async () => {
     const dir = folder(['A/x.xml'])
     expect(await moveBuildFolder({ dir, from: 'Empty', to: 'Full' })).toEqual({ to: 'Full' })
+  })
+})
+
+describe('a folder move stopped half way', () => {
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('a failed case-only rename puts the folder back under its name', async () => {
+    // A case-only rename is a Windows thing (samePath reads the platform).
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { value: 'win32' })
+    onTestFinished(() => { Object.defineProperty(process, 'platform', platform) })
+    const dir = folder(['Lev/x.xml'])
+    const rename = fs.promises.rename
+    let calls = 0
+    vi.spyOn(fs.promises, 'rename').mockImplementation(async (a, b) => {
+      if (++calls === 2) throw new Error('disk busy')
+      return rename(a, b)
+    })
+    await expect(moveBuildFolder({ dir, from: 'Lev', to: 'LEV' })).rejects.toThrow(/disk busy/)
+    expect(fs.readdirSync(dir)).toEqual(['Lev'])
+    expect(fs.existsSync(path.join(dir, 'Lev/x.xml'))).toBe(true)
+  })
+
+  it('a leftover in-between folder goes back to its name on start', async () => {
+    const dir = folder(['Lev.woke-move-1700000000000/x.xml', 'Acts/Mid.woke-move-1700000000001/y.xml', 'Plain/z.xml'])
+    const back = await recoverFolderMoves(dir)
+    expect(back.sort()).toEqual([path.join(dir, 'Acts/Mid'), path.join(dir, 'Lev')].sort())
+    expect(fs.existsSync(path.join(dir, 'Lev/x.xml'))).toBe(true)
+    expect(fs.existsSync(path.join(dir, 'Acts/Mid/y.xml'))).toBe(true)
+    expect(fs.existsSync(path.join(dir, 'Plain/z.xml'))).toBe(true)
+  })
+
+  it('leaves the leftover alone, and logs, when its name is taken', async () => {
+    const dir = folder(['Lev/a.xml', 'Lev.woke-move-1700000000000/x.xml'])
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(await recoverFolderMoves(dir)).toEqual([])
+    expect(fs.existsSync(path.join(dir, 'Lev.woke-move-1700000000000/x.xml'))).toBe(true)
+    expect(fs.existsSync(path.join(dir, 'Lev/a.xml'))).toBe(true)
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
+  it('never touches folders that only look alike', async () => {
+    const dir = folder(['Lev.woke-move-soon/x.xml', '.woke-move-1/y.xml'])
+    expect(await recoverFolderMoves(dir)).toEqual([])
+    expect(fs.readdirSync(dir).sort()).toEqual(['.woke-move-1', 'Lev.woke-move-soon'])
   })
 })

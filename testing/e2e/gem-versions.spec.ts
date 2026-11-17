@@ -91,19 +91,31 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before)
 
+  // A click sets the price check to that version and runs its search, once.
   await row.click()
-  await expect(row).toContainText('31 listed')
-  expect(searches.length).toBe(before + 1)
+  await expect(row).toContainText('searched')
+  await expect.poll(() => searches.length).toBe(before + 1)
   const body = JSON.parse(searches[searches.length - 1])
   expect(body.query.filters.misc_filters.filters).toMatchObject({
     gem_level: { min: 20 }, quality: { min: 20 }, corrupted: { option: 'false' }
   })
+  await expect(panel).toContainText('31')
   await overlay.snap('gem-versions-open')
 
-  // A second click on a searched row spends nothing.
+  // A second click on the searched row spends nothing.
   await row.click()
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before + 1)
+
+  // Your own row puts the search back to your gem.
+  const own = table.getByRole('row').filter({ hasText: /^21\s*20\s*corr/ })
+  await expect(own).toContainText('yours')
+  await own.click()
+  await expect(own).toContainText('searched')
+  // The copied gem's filters were searched when it opened: that answer is
+  // reused (trade cache), so going back costs at most one search.
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBeLessThanOrEqual(before + 2)
 
   // Each row is the item: its tooltip and item menu, and neither searches.
   const page = overlay.page
@@ -113,27 +125,24 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   await row.click({ button: 'right' })
   await expect(page.getByRole('menu').getByRole('menuitem', { name: 'Price check' })).toBeVisible()
   await page.keyboard.press('Escape')
-  expect(searches.length).toBe(before + 1)
+  expect(searches.length).toBeLessThanOrEqual(before + 2)
 })
 
-test('the same gem again: a version searched before shows its answer at once', async ({ overlay }) => {
+test('a version that matches the copied filters still searches on its first click', async ({ overlay }) => {
   const searches = await fakeMarket(overlay.page)
   await overlay.boot()
-  await overlay.copyItem(GEM)
-  const panel = overlay.widget('price-check')
-  const table = panel.locator('[data-gem-versions]')
-  const row = table.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
-  await expect(row).toBeVisible()
+  // An uncorrupted 20/20 copy: its filters are already the 20/20 row's.
+  await overlay.copyItem(GEM.replace('Level: 21 (Max)', 'Level: 20 (Max)').replace('\n--------\nCorrupted', ''))
+  const table = overlay.widget('price-check').locator('[data-gem-versions]')
+  const own = table.getByRole('row').filter({ hasText: /^20\s*20\s*25/ })
+  await expect(own).toContainText('yours')
+  await expect(own).not.toContainText('searched')
   await overlay.page.waitForTimeout(300)
   const before = searches.length
-  await row.click()
-  await expect(row).toContainText('31 listed')
-  expect(searches.length).toBe(before + 1)
-
-  // Copied again: the answer is kept (on-click trade lane), no click or search.
-  await overlay.copyItem(GEM)
-  await expect(row).toContainText('31 listed')
-  await row.click()
+  // The click isn't dead: it marks the row and asks for the search, which the
+  // trade cache answers if the copy already searched these filters.
+  await own.click()
+  await expect(own).toContainText('searched')
   await overlay.page.waitForTimeout(300)
-  expect(searches.length).toBe(before + 1)
+  expect(searches.length).toBeLessThanOrEqual(before + 1)
 })

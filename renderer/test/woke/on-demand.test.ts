@@ -1,6 +1,6 @@
 // On-click trade searches: one lane, answers kept by request.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { askOnce, inLane, keepAnswer, keptAnswer, keptCount, resetOnDemand, useOnDemandQuote, ON_DEMAND_FRESH_MS, ON_DEMAND_MAX_ANSWERS } from '@/web/woke/shared/on-demand'
+import { askOnce, inLane, keepAnswer, keptAnswer, keptCount, resetOnDemand, ON_DEMAND_FRESH_MS, ON_DEMAND_MAX_ANSWERS } from '@/web/woke/shared/on-demand'
 
 beforeEach(resetOnDemand)
 
@@ -42,27 +42,6 @@ describe('askOnce', () => {
   it('keeps nothing from a failed search', async () => {
     await expect(askOnce('bad', async () => { throw new Error('rate') })).rejects.toThrow('rate')
     expect(keptAnswer('bad')).toBeUndefined()
-  })
-})
-
-describe('useOnDemandQuote', () => {
-  it('a row loads, then is done; a kept answer shows without asking', async () => {
-    const q = useOnDemandQuote<number>()
-    const asked = q.ask('row', 'req', async () => 5)
-    expect(q.rowOf('row', 'req')?.state).toBe('loading')
-    await asked
-    expect(q.rowOf('row', 'req')).toMatchObject({ state: 'done', value: 5 })
-    q.clear()
-    expect(q.rowOf('row', 'req')).toMatchObject({ state: 'done', value: 5 })
-    expect(q.rowOf('row', 'other')).toBeUndefined()
-  })
-
-  it('a failed row says why and can be asked again', async () => {
-    const q = useOnDemandQuote<number>()
-    await q.ask('row', 'req2', async () => { throw new Error('Retry after 5 seconds') })
-    expect(q.rowOf('row', 'req2')).toMatchObject({ state: 'error', error: 'Retry after 5 seconds' })
-    await q.ask('row', 'req2', async () => 9)
-    expect(q.rowOf('row', 'req2')).toMatchObject({ state: 'done', value: 9 })
   })
 })
 

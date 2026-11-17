@@ -10,25 +10,20 @@
     </button>
     <table v-if="open" :class="$style.table">
       <thead>
-        <tr><th>Level</th><th>Quality</th><th></th><th :class="$style.r">poe.ninja</th><th :class="$style.r">Trade</th></tr>
+        <tr><th>Level</th><th>Quality</th><th></th><th :class="$style.r">poe.ninja</th><th></th></tr>
       </thead>
       <tbody>
-        <WItemRow v-for="v of versions" :key="rowKey(v)" as="tr" :item="tipOf(v)" :art="false" :action="v.own ? null : 'pick'"
-          :class="[v.own ? $style.own : $style.click]"
+        <WItemRow v-for="v of versions" :key="rowKey(v)" as="tr" :item="tipOf(v)" :art="false" action="pick"
+          :class="[$style.click, { [$style.own]: v.own, [$style.on]: isSearched(v) }]"
+          :aria-current="isSearched(v) ? 'true' : undefined"
           @pick="search(v)">
           <td>{{ v.level }}</td>
           <td>{{ v.quality }}</td>
           <td :class="$style.corr">{{ v.vaal ? 'Vaal' : v.corrupted ? 'corr' : '' }}</td>
           <td :class="$style.r"><w-price :chaos="v.chaos" :divine="divine" /></td>
           <td :class="$style.r">
-            <template v-if="v.own">yours</template>
-            <template v-else-if="runOf(v)?.state === 'loading'"><span class="w-dim">searching…</span></template>
-            <template v-else-if="runOf(v)?.state === 'error'"><span :class="$style.bad" :title="runOf(v)!.error">failed, retry</span></template>
-            <template v-else-if="runOf(v)?.state === 'done'">
-              <span v-if="!runOf(v)!.total" class="w-dim">none listed</span>
-              <span v-else :class="$style.got"><w-price :chaos="runOf(v)!.chaos" :divine="divine" /><span class="w-dim">· {{ runOf(v)!.total }} listed</span></span>
-            </template>
-            <span v-else class="w-faint">search</span>
+            <span v-if="isSearched(v)" :class="$style.mark">searched</span>
+            <span v-else-if="v.own" class="w-dim">yours</span>
           </td>
         </WItemRow>
       </tbody>
@@ -37,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue'
+import { computed, inject, ref, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
 import { usePoeninja } from '@/web/background/Prices'
@@ -46,9 +41,9 @@ import { AppConfig } from '@/web/Config'
 import WPrice from '@/web/woke/ui/WPrice.vue'
 import WItemRow from '@/web/woke/ui/WItemRow.vue'
 import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
-import { gemForms, listVersions, versionFilters, type GemVersion, type NinjaGemRow } from './versions'
-import { useOnDemandQuote } from '../shared/on-demand'
+import { gemForms, listVersions, versionFilters, type GemForms, type GemVersion, type NinjaGemRow } from './versions'
 import { gemVersionsOpen as open } from './open'
+import { rawClone } from '@/web/woke/raw-clone'
 
 const props = defineProps<{
   item: ParsedItem
@@ -57,7 +52,9 @@ const props = defineProps<{
 
 const ninja = usePoeninja()
 const league = computed(() => props.filters.trade.league)
-const { options, divine } = useInsight(ref([]), league)
+const { divine } = useInsight(ref([]), league)
+// The price check's own search: runs on the next tick, with the filters a click set.
+const runSearch = inject<() => void>('price-check-search', () => {})
 
 const forms = computed(() => gemForms(props.item))
 
@@ -82,48 +79,64 @@ const versions = computed<GemVersion[]>(() => {
 const low = computed(() => Math.min(...versions.value.map(v => v.chaos)))
 const high = computed(() => Math.max(...versions.value.map(v => v.chaos)))
 
-// Each row searches on a click, through the one on-click trade lane: an
-// answer for the same search (this gem again, within a while) shows at once.
-interface Run { state: 'loading' | 'done' | 'error', chaos?: number | null, total?: number, error?: string }
-const quotes = useOnDemandQuote<{ chaos: number | null, total: number }>()
-const searchCode = shallowRef<typeof import('./search') | null>(null)
-
-// A new gem, or other trade settings (league, online, listed, currency): old row results no longer apply.
-watch([() => props.item, () => JSON.stringify(props.filters.trade)], () => { quotes.clear() })
-
-// The search a row runs, as its key: the version's filters and trade settings.
-function requestOf (v: GemVersion): string | null {
-  if (!forms.value) return null
-  return JSON.stringify(versionFilters(props.filters, v, forms.value, AppConfig().useIntlSite))
-}
-
 // The version as poe.ninja lists it, for its tooltip and item menu; the
 // click's meaning goes at the bottom of the tooltip.
 function tipOf (v: GemVersion): ItemTipRef | null {
   const gem = v.vaal ? forms.value?.vaal : forms.value?.base
   if (!gem) return null
-  return { name: gem.refName, type: 'SkillGem', variant: v.key, note: v.own ? 'Your gem: the search below' : 'Click to search this version (1 trade search)' }
+  const note = isSearched(v) ? 'The search below'
+    : v.own ? 'Click to search your gem again (1 trade search)'
+      : 'Click to search this version (1 trade search)'
+  return { name: gem.refName, type: 'SkillGem', variant: v.key, note }
 }
 
 function rowKey (v: GemVersion): string {
   return `${v.vaal ? 'V' : ''}${v.key}`
 }
-function runOf (v: GemVersion): Run | undefined {
-  const r = quotes.rowOf(rowKey(v), requestOf(v))
-  return r && { state: r.state, error: r.error, ...r.value }
+
+// The filters a row click sets. The copied gem's own row puts back the
+// filters it was copied with (corrupted any, imbued, quality waiting at 20).
+type VersionFields = Pick<ItemFilters, 'searchExact' | 'searchRelaxed' | 'gemLevel' | 'quality' | 'corrupted' | 'imbuedGem'>
+function fieldsOf (f: ItemFilters): VersionFields {
+  return rawClone({
+    searchExact: f.searchExact,
+    searchRelaxed: f.searchRelaxed,
+    gemLevel: f.gemLevel,
+    quality: f.quality,
+    corrupted: f.corrupted,
+    imbuedGem: f.imbuedGem
+  })
 }
 
-async function search (v: GemVersion) {
-  if (v.own || !forms.value) return
-  const request = requestOf(v)
-  if (!request) return
-  const gemForms = forms.value
-  const filters = props.filters
-  const opts = { ...options.value, accountName: AppConfig().accountName, useEn: AppConfig().useIntlSite }
-  await quotes.ask(rowKey(v), request, async () => {
-    if (!searchCode.value) searchCode.value = await import('./search')
-    return await searchCode.value.searchVersion(filters, v, gemForms, opts)
-  })
+let copied: VersionFields | null = null
+// The row last clicked and what it set: "searched" while the filters stay so.
+const clicked = shallowRef<{ key: string, set: string } | null>(null)
+watch(() => props.item, () => {
+  copied = fieldsOf(props.filters)
+  clicked.value = null
+}, { immediate: true })
+
+function isSearched (v: GemVersion): boolean {
+  const c = clicked.value
+  return c != null && c.key === rowKey(v) && c.set === JSON.stringify(fieldsOf(props.filters))
+}
+
+function fieldsFor (v: GemVersion, gem: GemForms): VersionFields {
+  if (v.own && copied) return rawClone(copied)
+  const next = fieldsOf(versionFilters(props.filters, v, gem, AppConfig().useIntlSite))
+  // Empower, Enlighten and Enhance have no quality box: don't add one.
+  if (!props.filters.quality && v.quality <= 0) next.quality = undefined
+  return next
+}
+
+// A click sets the price check's level, quality, corrupted and Vaal filters
+// to the version and runs its search: one trade search, only on a click.
+function search (v: GemVersion) {
+  const f = forms.value
+  if (!f || isSearched(v)) return
+  Object.assign(props.filters, fieldsFor(v, f))
+  clicked.value = { key: rowKey(v), set: JSON.stringify(fieldsOf(props.filters)) }
+  runSearch()
 }
 </script>
 
@@ -144,7 +157,7 @@ async function search (v: GemVersion) {
 .corr { color: var(--w-mod-corrupted); }
 .click { cursor: pointer; }
 .click:hover td { background: var(--w-chip-ground); }
-.own td { color: var(--w-gold-hi); background: var(--w-accent-soft); }
-.got { display: inline-flex; align-items: center; gap: 4px; }
-.bad { color: var(--w-bad-fg); }
+.own td { color: var(--w-gold-hi); }
+.on td { background: var(--w-accent-soft); }
+.mark { color: var(--w-gold-hi); }
 </style>
