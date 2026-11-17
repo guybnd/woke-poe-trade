@@ -35,10 +35,9 @@ test('Atlas strategies: F2 renames in place, Delete removes, Undo brings it back
   await expect(w.locator('[data-row="s:3"]')).toBeVisible()
 })
 
-test('Atlas strategies: Ctrl + C on a row copies nothing yet', async ({ overlay }) => {
+test('Atlas strategies: Ctrl + C on a row copies its strategy code', async ({ overlay }) => {
   const w = await atlas(overlay)
   await w.locator('[data-row="s:1"] button').first().focus()
   await overlay.page.keyboard.press('Control+c')
-  await overlay.page.waitForTimeout(500)
-  await expect(overlay.page.getByText('Strategy code copied')).toHaveCount(0)
+  await expect(overlay.page.getByText('Strategy code copied')).toBeVisible()
 })
