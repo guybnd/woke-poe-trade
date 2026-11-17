@@ -61,7 +61,7 @@
       </div>
 
       <!-- Splits panel -->
-      <WPanel v-if="config.expanded" ref="panel" width="21rem" max-height="60vh">
+      <WPanel v-if="config.expanded" ref="panel" :keys="windowKeys.help" width="21rem" max-height="60vh">
         <template #title>
           <template v-if="reviewRun">{{ reviewRun.charName || 'Unknown' }}</template>
           <template v-else-if="run">Run<template v-if="run.charName"> · {{ run.charName }}<span class="w-dim"> ({{ run.className }})</span></template></template>
@@ -188,7 +188,8 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatClock } from '../ui/format'
 import { useVisibleClock } from '../shared/visible-clock'
-import { WPanel, WTabs, WChip, WEmpty, toast, useMouseNav } from '../ui'
+import { WPanel, WTabs, WChip, WEmpty, toast } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { dockIconShowing, hideWhilePlaying, tickWhile } from '../dock/dock'
@@ -355,7 +356,7 @@ function pickCompare (r: CampaignRun) {
   props.config.compareTo = r.id === pb.value?.id ? null : r.id
 }
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-useMouseNav(() => panel.value?.el, { back: () => { if (tab.value === 'history') reviewId.value = null } })
+const windowKeys = useWindowKeys(() => panel.value?.el, { back: () => { if (tab.value === 'history') reviewId.value = null } })
 // No "are you sure": delete now, offer Undo (P9).
 function removeRun (id: number) {
   const before = props.config.history

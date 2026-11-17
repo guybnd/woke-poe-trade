@@ -128,9 +128,12 @@ function onMenuKey (e: KeyboardEvent) {
 }
 
 function onKey (e: KeyboardEvent) {
+  // A window's own Ctrl + Z (useWindowKeys) came first.
+  if (e.defaultPrevented) return
   const t = e.target as HTMLElement | null
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && undoToast()) e.preventDefault()
+  // Ctrl + Shift + Z is redo, never a note's undo.
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && undoToast()) e.preventDefault()
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))

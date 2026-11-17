@@ -102,6 +102,7 @@ import { totalsHover } from './totals-hover'
 import PinButton from '../pins/PinButton.vue'
 import type { Pin } from '../pins/pins'
 import type { ThreadSlot } from './widget'
+import { windowKeyAction } from '../ui/window-keys'
 
 // `lit`: mechanics lit, in picked order. `bare`: only the tree, for a pin.
 const props = defineProps<{
@@ -289,10 +290,15 @@ function redo () {
   apply(next)
 }
 
+// The map's keys, as every window's (ui/window-keys), while it has focus. Its
+// own undo goes first: an Undo note elsewhere keeps its Ctrl + Z for later.
+const MAP_KEYS = { undo: () => undo(), redo: () => redo(), save: () => { if (props.dirty) emit('save') } }
 function keys (e: KeyboardEvent) {
-  if (!e.ctrlKey) return
-  if (e.key === 's') { e.preventDefault(); if (props.dirty) emit('save'); return }
-  if (e.key === 'z') { e.preventDefault(); undo() } else if (e.key === 'y') { e.preventDefault(); redo() }
+  const what = windowKeyAction(e, MAP_KEYS, { inside: true, shown: true, toast: false })
+  if (!what || what === 'close' || what === 'back' || what === 'forward') return
+  e.preventDefault()
+  if (what === 'save') MAP_KEYS.save()
+  else MAP_KEYS[what]()
 }
 
 // `effect`: the type to give `id` when it asks for one.

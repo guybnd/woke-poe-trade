@@ -72,6 +72,7 @@ import type { Config } from '@/web/Config'
 import type { Widget, WidgetManager } from '@/web/overlay/interfaces'
 import { Host } from '@/web/background/IPC'
 import { WIcon, WKbd, provideHotkeyContext, toast } from '../ui'
+import { useWindowKeys } from '../ui/window-keys'
 import { ensureWokeConfig, isModuleOn, setModuleOn } from '../modules'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import { allowsCopies } from '../tab-bar/tools'
@@ -366,13 +367,14 @@ function onKeydown (e: KeyboardEvent) {
     e.preventDefault()
     searchEl.value?.focus()
     searchEl.value?.select()
-  } else if (e.key === 'Escape') {
-    e.preventDefault()
-    close()
   }
 }
 
-// Esc also works when nothing inside the window has focus.
+// Esc closes, from anywhere while Settings is up (ui/window-keys); the search
+// box's Esc clears it first.
+useWindowKeys(() => winEl.value, { close }, { shown: () => props.widget.wmWants === 'show', closeAnywhere: true })
+
+// Ctrl + F also works when nothing inside the window has focus.
 function onWindowKey (e: KeyboardEvent) {
   if (props.widget.wmWants !== 'show' || e.defaultPrevented) return
   if (winEl.value?.contains(document.activeElement)) return
