@@ -34,37 +34,16 @@
           <WField v-else v-model="filter" icon="fas fa-search" placeholder="Filter by name, Thread, folder…" class="grow" />
         </template>
 
-        <div :class="$style.rows" data-rows @dragover="dragOver" @drop="dropHere" @dragleave="dragLeave">
-          <template v-for="row in rows" :key="row.key">
-            <div v-if="editing && editing.key === row.key" :class="$style.editRow" :style="rowStyle(row.depth)">
-              <span class="w-faint text-xs whitespace-nowrap">{{ editing.kind === 'move' ? 'Folder' : 'Name' }}</span>
-              <input data-draft v-model="draft" :class="['w-field', $style.edit]" spellcheck="false" :list="editing.kind === 'move' ? 'atlas-folders' : undefined"
-                :placeholder="editing.kind === 'move' ? 'Empty: the top' : ''"
-                @keydown.enter.prevent="finishEdit" @keydown.esc.prevent="editing = null" @blur="finishEdit">
-            </div>
-            <button v-else-if="row.kind === 'folder'" type="button" :class="[$style.folder, $style.row, dropClass(row.key), { [$style.nested]: row.depth > 0 }]" class="w-focusable" :style="rowStyle(row.depth)"
-              :data-row="row.key" :aria-expanded="row.open" :draggable="true" @dragstart="dragStart($event, row)" @dragend="dragEnd"
-              @click="toggleFolder(row.node.path)" @contextmenu="folderMenu($event, row.node.path)"
-              @keydown.f2.prevent="startEdit('folder', row.node.path, 'rename')" @keydown="folderKeys($event, row.node.path)">
-              <i class="fas text-xs" :class="row.open ? 'fa-chevron-down' : 'fa-chevron-right'" />
-              <span class="w-trunc">{{ row.node.name }}</span>
-              <span class="ml-auto w-num">{{ row.node.total }}</span>
-            </button>
-            <div v-else-if="row.kind === 'new-folder'" />
-            <WListItem v-else :active="config.selectedId === row.s.id" :class="[$style.row, dropClass(row.key), { [$style.picked]: isPicked(row.s.id), [$style.nested]: row.depth > 0 }]" :style="rowStyle(row.depth)"
-              :data-row="row.key" :draggable="true" @dragstart="dragStart($event, row)" @dragend="dragEnd"
-              @click="rowClick($event, row.s)" @contextmenu="rowMenu($event, row.s)" @keydown="rowKeys($event, row.s)"
-              @keydown.delete.prevent="removeKey(row.s)" @keydown.f2.prevent="startEdit('strategy', String(row.s.id), 'rename')">
-              <span class="w-trunc">{{ row.s.name || 'Untitled' }}</span>
-              <span v-if="isDirty(config, row.s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
-              <span v-if="earnings.get(row.s.name)" class="ml-auto w-num text-xs" :class="earnings.get(row.s.name)!.perHour >= 0 ? 'w-up' : 'w-down'"
-                :title="`${earnings.get(row.s.name)!.hours.toFixed(1)} h farmed`">{{ fmt(earnings.get(row.s.name)!.perHour) }}/h</span>
-              <template #sub>{{ describe(row.s) }}</template>
-            </WListItem>
+        <SavedTree :tree="tree" list-id="atlas-folders" :active-id="config.selectedId" :copy="copyCode"
+          @item-menu="rowMenu" @folder-menu="folderMenu">
+          <template #item="{ item: s }">
+            <span class="w-trunc">{{ s.name || 'Untitled' }}</span>
+            <span v-if="isDirty(config, s)" :class="$style.unsavedTag" title="Tree changes not saved">Unsaved</span>
+            <span v-if="earnings.get(s.name)" class="ml-auto w-num text-xs" :class="earnings.get(s.name)!.perHour >= 0 ? 'w-up' : 'w-down'"
+              :title="`${earnings.get(s.name)!.hours.toFixed(1)} h farmed`">{{ fmt(earnings.get(s.name)!.perHour) }}/h</span>
           </template>
-          <div v-if="drag" :class="[$style.tail, { [$style.dropTop]: dropAt?.kind === 'top' }]" data-row="top" />
-        </div>
-        <datalist id="atlas-folders"><option v-for="f in folders" :key="f" :value="f" /></datalist>
+          <template #sub="{ item: s }">{{ describe(s) }}</template>
+        </SavedTree>
         <WEmpty v-if="!config.strategies.length && !folders.length" :art="{ mechanic: 'map' }">
           No strategies yet. Start one and click passives on the tree, or import a guide's tree link or text.
           <template #actions>
@@ -72,7 +51,7 @@
             <WButton size="sm" icon="fas fa-file-import" @click="importOpen = true">Import</WButton>
           </template>
         </WEmpty>
-        <WEmpty v-else-if="filter && !rows.length" icon="fas fa-search">
+        <WEmpty v-else-if="filter && !tree.rows.value.length" icon="fas fa-search">
           No strategy matches "{{ filter }}".
           <template #actions><WButton size="sm" variant="ghost" @click="filter = ''">Clear filter</WButton></template>
         </WEmpty>
@@ -123,23 +102,22 @@
 <script setup lang="ts">
 // The Atlas strategies window: the list with folders, the tree, the loadout.
 // Loads the first time the window opens (WidgetAtlas.vue is the shell).
-import { computed, defineAsyncComponent, inject, nextTick, shallowRef, useCssModule, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { MainProcess } from '@/web/background/IPC'
-import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
+import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast, useCopy } from '../ui'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { AppConfig } from '@/web/Config'
 import {
-  allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, folderTree, isStrategyCode, movedFolder,
+  allFolders, claimRegexFolders, setPointsAt, takePointsAt, dropDraft, isDirty, saveDraft, setDraft, strategyBack, takeDrafts, workingTree, cleanFolder, emptyStrategy, regexFolderOf, isStrategyCode,
   strategyMatches, useAtlasData, retryAtlasData, atlasDataState
 } from './widget'
-import type { FolderNode } from './widget'
-import { folderDrop, folderOrderOf, isUnder, moveStrategies, nudgeFolder, parentOf, placeFolder, sortFolderByName } from './list-order'
-import type { DropAt } from './list-order'
+import { isUnder } from './list-order'
 import { useWidgetVisible } from '../shared/visible-clock'
 import { parseGuideText } from './guide'
 import { usePriceIndex } from '../market/price-index'
-import { clickOf, selectPick } from '../shared/picks'
+import { useSavedTree } from '../shared/use-saved-tree'
+import SavedTree from '../shared/SavedTree.vue'
 import { usePriceText } from '../shared/price'
 import { FARMING_TYPE, strategyStats } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
@@ -183,7 +161,6 @@ watch(() => panelVisible.value && props.config.dataUrl, () => {
 }, { immediate: true })
 
 const filter = shallowRef('')
-const styles = useCssModule()
 const { copy } = useCopy()
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
 type SortBy = NonNullable<AtlasWidget['sortBy']>
@@ -221,7 +198,7 @@ watch(() => props.config.strategies.map(s => [s.id, contentOf(s)] as const), (no
   // Picked ids that went away, or were given to a new strategy, drop out.
   const prev = new Set(was.keys())
   const cur = new Set(now.map(([id]) => id))
-  if (picked.value.some(id => !prev.has(id) || !cur.has(id))) picked.value = picked.value.filter(id => prev.has(id) && cur.has(id))
+  tree.forgetPicks(tree.picked.value.filter(id => !prev.has(id) || !cur.has(id)))
 })
 
 const selected = computed(() => props.config.strategies.find(s => s.id === props.config.selectedId) ?? null)
@@ -331,97 +308,6 @@ function describe (s: AtlasStrategy): string {
 
 const folders = computed(() => allFolders(props.config.strategies, props.config.folders))
 
-type Row =
-  | { kind: 'folder', key: string, depth: number, node: FolderNode, open: boolean }
-  | { kind: 'strategy', key: string, depth: number, s: AtlasStrategy }
-  | { kind: 'new-folder', key: string, depth: number }
-
-const rows = computed<Row[]>(() => {
-  const q = filter.value.trim()
-  const list = props.config.strategies.filter(s => strategyMatches(s, q))
-  const v = (name: string) => earnings.value.get(name)?.perHour ?? -Infinity
-  const by = sortBy.value
-  const ordered = by === 'earnings'
-    ? [...list].sort((a, b) => v(b.name) - v(a.name))
-    : by === 'name'
-      ? [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-      : by === 'changed' ? [...list].sort((a, b) => (b.changedAt ?? 0) - (a.changedAt ?? 0)) : list
-  const tree = folderTree(ordered, q ? [] : props.config.folders, by === 'name' ? [] : props.config.folderOrder ?? [])
-  const closed = new Set(props.config.closedFolders ?? [])
-  const out: Row[] = []
-  function walk (node: FolderNode) {
-    for (const child of node.children) {
-      if (q && !child.total) continue
-      const open = Boolean(q) || !closed.has(child.path)
-      out.push({ kind: 'folder', key: 'f:' + child.path, depth: child.depth, node: child, open })
-      if (open) walkAll(child)
-    }
-  }
-  // A folder's strategies come before the folders inside it, so loose ones
-  // never look like the last folder's.
-  function walkAll (node: FolderNode) {
-    for (const s of node.strategies) out.push({ kind: 'strategy', key: 's:' + s.id, depth: node.depth + 1, s })
-    walk(node)
-  }
-  walkAll(tree)
-  if (editing.value?.target === 'folder' && editing.value.key.startsWith('n:')) {
-    // A folder being made: where it will sit.
-    // At the end of its parent's contents, where folders go.
-    const parent = editing.value.key.slice(2)
-    const depth = parent ? parent.split('/').length : 0
-    const head = parent ? out.findIndex(r => r.kind === 'folder' && r.node.path === parent) : -1
-    let at = out.length
-    if (head >= 0) {
-      at = head + 1
-      while (at < out.length && out[at].depth >= depth) at++
-    }
-    out.splice(at, 0, { kind: 'new-folder', key: editing.value.key, depth })
-  }
-  return out
-})
-
-function indent (depth: number): string {
-  return `calc(var(--w-pad) + ${Math.max(0, depth) * 12}px)`
-}
-
-// A faint line down the side of a folder's contents.
-function rowStyle (depth: number) {
-  return depth > 0
-    ? { 'padding-left': indent(depth), '--guide': `calc(var(--w-pad) + ${(depth - 1) * 12 + 4}px)` }
-    : { paddingLeft: indent(depth) }
-}
-
-// ---- several at once (Ctrl and Shift click) ----
-
-const picked = shallowRef<number[]>([])
-function isPicked (id: number) { return picked.value.length > 1 && picked.value.includes(id) }
-// What a row's menu, drag or Delete acts on: the picked group if it's in it.
-function groupOf (s: AtlasStrategy): AtlasStrategy[] {
-  if (!isPicked(s.id)) return [s]
-  const ids = new Set(picked.value)
-  const shown = new Set(rows.value.flatMap(r => r.kind === 'strategy' ? [r.s.id] : []))
-  return props.config.strategies.filter(o => ids.has(o.id) && shown.has(o.id))
-}
-watch(filter, () => { picked.value = [] })
-
-// A file list (shared/picks): a click opens one, Ctrl picks more, Shift picks
-// the run from the open one.
-function rowClick (e: MouseEvent, s: AtlasStrategy) {
-  const shown = rows.value.flatMap(r => r.kind === 'strategy' ? [r.s.id] : [])
-  const next = selectPick(shown, picked.value, s.id, clickOf(e), props.config.selectedId)
-  picked.value = next.picked
-  if (next.anchor !== props.config.selectedId) props.config.selectedId = next.anchor
-}
-
-// Strategies that leave a folder take their regexes along.
-function refile (list: AtlasStrategy[], folder: string) {
-  for (const s of list) {
-    if (cleanFolder(s.folder) === folder) continue
-    s.folder = folder
-    refileRegexes(s, props.config.strategies)
-  }
-}
-
 // Dragging and Alt + arrows work on the order you set: other sorts switch back to it.
 function toManual () {
   if (sortBy.value === 'manual') return
@@ -429,206 +315,50 @@ function toManual () {
   toast('Sorted by My order', { anchor: panel.value?.el })
 }
 
-// For Alt + arrows: the rows as My order shows them, without switching yet.
-function manualRows (): Row[] {
-  const by = props.config.sortBy
-  if (sortBy.value === 'manual') return rows.value
-  props.config.sortBy = 'manual'
-  const out = rows.value
-  props.config.sortBy = by
-  return out
-}
+// The list's folders, picking, drag and drop, Alt + arrows and inline field
+// (shared/use-saved-tree, drawn by SavedTree.vue).
+const tree = useSavedTree<AtlasStrategy>({
+  root: () => panel.value?.el,
+  items: () => props.config.strategies,
+  setItems: (list) => { props.config.strategies = list },
+  folderOf: s => s.folder ?? '',
+  // Strategies that leave a folder, or get a new name, take their regexes along.
+  setFolder: (s, folder) => { s.folder = folder; refileRegexes(s, props.config.strategies) },
+  nameOf: s => s.name,
+  setName: (s, name) => { s.name = name; refileRegexes(s, props.config.strategies) },
+  extraFolders: () => props.config.folders ?? [],
+  setExtraFolders: (list) => { props.config.folders = list },
+  folderOrder: () => props.config.folderOrder,
+  setFolderOrder: (order) => { props.config.folderOrder = order },
+  closed: () => props.config.closedFolders ?? [],
+  setClosed: (list) => { props.config.closedFolders = list },
+  query: () => filter.value,
+  matches: strategyMatches,
+  sorted (list) {
+    const v = (name: string) => earnings.value.get(name)?.perHour ?? -Infinity
+    const by = sortBy.value
+    return by === 'earnings'
+      ? [...list].sort((a, b) => v(b.name) - v(a.name))
+      : by === 'name'
+        ? [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+        : by === 'changed' ? [...list].sort((a, b) => (b.changedAt ?? 0) - (a.changedAt ?? 0)) : list
+  },
+  manual: () => sortBy.value === 'manual',
+  toManual,
+  foldersByName: () => sortBy.value === 'name',
+  selected: () => props.config.selectedId,
+  select: (id) => { props.config.selectedId = id },
+  remove: (list) => { removeMany(list) },
+  note: (text) => { toast(text, { anchor: panel.value?.el }) }
+})
+const { openFolder, startFolder, inFolder } = tree
 
-function moveTo (ids: number[], at: DropAt): boolean {
-  const res = moveStrategies(props.config.strategies, ids, at)
-  if (!res) return false
-  const want = new Set(ids)
-  props.config.strategies = res.list
-  refile(res.list.filter(s => want.has(s.id)), res.folder)
-  openFolder(res.folder)
-  return true
-}
-
-// The folder order as shown now, with every folder in it.
-function fullFolderOrder (): string[] {
-  return folderOrderOf(props.config.strategies, props.config.folders ?? [], props.config.folderOrder ?? [])
-}
-
-function moveFolderTo (from: string, at: DropAt) {
-  const res = folderDrop(from, at, props.config.strategies, folders.value)
-  if (typeof res === 'string') {
-    if (res !== 'gone') toast(res, { anchor: panel.value?.el })
-    return
-  }
-  // A moved folder is kept, so moving its last strategy out later doesn't remove it.
-  if (res.to !== from) {
-    if (!(props.config.folders ?? []).includes(from)) props.config.folders = [...(props.config.folders ?? []), from]
-    moveFolder(from, res.to)
-  }
-  props.config.folderOrder = placeFolder(fullFolderOrder(), res.to, res.before)
-}
-
-// ---- drag and drop ----
-
-type Drag = { kind: 'strategies', ids: number[] } | { kind: 'folder', path: string }
-const drag = shallowRef<Drag | null>(null)
-const dropAt = shallowRef<DropAt | null>(null)
-let openTimer: ReturnType<typeof setTimeout> | null = null
-let openFor = ''
-
-function dragStart (e: DragEvent, row: Row) {
-  if (editing.value) { e.preventDefault(); return }
-  if (row.kind === 'strategy') {
-    const group = groupOf(row.s)
-    drag.value = { kind: 'strategies', ids: group.map(s => s.id) }
-    e.dataTransfer?.setData('text/plain', group.map(s => s.name).join(', '))
-  } else if (row.kind === 'folder') {
-    drag.value = { kind: 'folder', path: row.node.path }
-    e.dataTransfer?.setData('text/plain', row.node.path)
-  }
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
-}
-
-function stopOpenTimer () {
-  if (openTimer) clearTimeout(openTimer)
-  openTimer = null
-  openFor = ''
-}
-
-function dragEnd () {
-  drag.value = null
-  dropAt.value = null
-  stopOpenTimer()
-}
-
-// What the pointer is over, and where in it.
-function dropFor (e: DragEvent): DropAt | null {
-  const d = drag.value
-  if (!d) return null
-  const el = (e.target as Element | null)?.closest<HTMLElement>('[data-row]')
-  const key = el?.dataset.row ?? 'top'
-  if (key === 'top' || !el) return { kind: 'top' }
-  const r = el.getBoundingClientRect()
-  const y = (e.clientY - r.top) / Math.max(1, r.height)
-  if (key.startsWith('f:')) {
-    const path = key.slice(2)
-    if (d.kind === 'folder' && isUnder(path, d.path)) return null
-    // A strategy goes into it: one dropped "before" would land above all the
-    // parent's folders, not where the line showed.
-    return { kind: 'folder', path, where: d.kind === 'folder' && y < 0.3 ? 'before' : 'into' }
-  }
-  const id = Number(key.slice(2))
-  // Folders sit after a folder's strategies, never between them.
-  if (d.kind === 'folder') return null
-  return { kind: 'strategy', id, where: y < 0.5 ? 'before' : 'after' }
-}
-
-function dragOver (e: DragEvent) {
-  const at = dropFor(e)
-  if (!at) { dropAt.value = null; stopOpenTimer(); return }
-  e.preventDefault()
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
-  if (JSON.stringify(at) !== JSON.stringify(dropAt.value)) dropAt.value = at
-  // Held over a folded folder: it opens.
-  const folded = at.kind === 'folder' && at.where === 'into' && (props.config.closedFolders ?? []).includes(at.path) ? at.path : ''
-  if (folded !== openFor) {
-    stopOpenTimer()
-    if (folded) {
-      openFor = folded
-      openTimer = setTimeout(() => { openFolder(folded); openTimer = null }, 500)
-    }
-  }
-}
-
-function dragLeave (e: DragEvent) {
-  const to = e.relatedTarget as Node | null
-  if (to && (e.currentTarget as Element).contains(to)) return
-  dropAt.value = null
-  stopOpenTimer()
-}
-
-function dropHere (e: DragEvent) {
-  const d = drag.value
-  const at = dropFor(e)
-  dragEnd()
-  if (!d || !at) return
-  e.preventDefault()
-  if (d.kind === 'strategies') {
-    toManual()
-    moveTo(d.ids, at)
-  } else {
-    if (sortBy.value === 'name') toManual()
-    moveFolderTo(d.path, at)
-  }
-}
-
-function dropClass (key: string) {
-  const at = dropAt.value
-  if (!at || at.kind === 'top') return undefined
-  if (at.kind === 'folder' && key === 'f:' + at.path) return at.where === 'into' ? styles.dropInto : styles.dropBefore
-  if (at.kind === 'strategy' && key === 's:' + at.id) return at.where === 'before' ? styles.dropBefore : styles.dropAfter
-  return undefined
-}
-
-// ---- Alt + arrows ----
-
-function focusRow (key: string) {
-  nextTick(() => {
-    const el = panel.value?.el?.querySelector<HTMLElement>(`[data-row="${CSS.escape(key)}"]`)
-    ;(el?.matches('button') ? el : el?.querySelector<HTMLElement>('button'))?.focus()
-  })
-}
-
-function rowKeys (e: KeyboardEvent, s: AtlasStrategy) {
-  if (!e.altKey || !['ArrowUp', 'ArrowDown', 'ArrowLeft'].includes(e.key)) return
-  // Not the panel's arrow keys, which would move the focus off it.
-  e.preventDefault()
-  e.stopPropagation()
-  const list = manualRows().filter(r => r.kind !== 'new-folder')
-  const i = list.findIndex(r => r.kind === 'strategy' && r.s.id === s.id)
-  if (i < 0) return
-  const folder = cleanFolder(s.folder)
-  let at: DropAt | null = null
-  if (e.key === 'ArrowLeft') {
-    if (folder) at = { kind: 'folder', path: folder, where: 'before' }
-  } else if (e.key === 'ArrowUp') {
-    const prev = list[i - 1]
-    if (prev?.kind === 'strategy') at = { kind: 'strategy', id: prev.s.id, where: 'before' }
-    else if (prev?.kind === 'folder' && prev.node.path === folder) at = { kind: 'folder', path: folder, where: 'before' }
-  } else {
-    const next = list[i + 1]
-    if (next?.kind === 'strategy' && cleanFolder(next.s.folder) === folder) at = { kind: 'strategy', id: next.s.id, where: 'after' }
-    else if (next?.kind === 'folder' && parentOf(next.node.path) === folder) at = { kind: 'folder', path: next.node.path, where: 'start' }
-  }
-  if (!at) return
-  toManual()
-  if (moveTo([s.id], at)) focusRow('s:' + s.id)
-}
-
-function folderKeys (e: KeyboardEvent, path: string) {
-  if (!e.altKey || !['ArrowUp', 'ArrowDown'].includes(e.key)) return
-  e.preventDefault()
-  e.stopPropagation()
-  if (sortBy.value === 'name') toManual()
-  const next = nudgeFolder(fullFolderOrder(), path, e.key === 'ArrowUp' ? -1 : 1)
-  if (!next) return
-  props.config.folderOrder = next
-  focusRow('f:' + path)
-}
-
-function toggleFolder (path: string) {
-  const closed = props.config.closedFolders ?? []
-  props.config.closedFolders = closed.includes(path) ? closed.filter(p => p !== path) : [...closed, path]
+function startEdit (target: 'strategy' | 'folder', id: string, kind: 'rename' | 'move', ids?: number[]) {
+  tree.startEdit(target === 'strategy' ? 'item' : 'folder', id, kind, ids)
 }
 
 // New things go in the selected strategy's folder.
 const newIn = computed(() => selected.value?.folder ?? '')
-
-function openFolder (path: string) {
-  const parts = cleanFolder(path).split('/').filter(Boolean)
-  const opens = parts.map((_, i) => parts.slice(0, i + 1).join('/'))
-  props.config.closedFolders = (props.config.closedFolders ?? []).filter(p => !opens.includes(p))
-}
 
 function addStrategy (folder: string) {
   const s = { ...emptyStrategy(props.config.strategies), name: 'New strategy', folder }
@@ -638,87 +368,6 @@ function addStrategy (folder: string) {
   props.config.treeHidden = false
   openFolder(folder)
   startEdit('strategy', String(s.id), 'rename')
-}
-
-// ---- rename, move, new folder: one inline field ----
-
-// `ids`: Move to folder for a picked group.
-const editing = shallowRef<{ target: 'strategy' | 'folder', key: string, kind: 'rename' | 'move', id: string, ids?: number[] } | null>(null)
-const draft = shallowRef('')
-
-function startEdit (target: 'strategy' | 'folder', id: string, kind: 'rename' | 'move', ids?: number[]) {
-  if (target === 'strategy') {
-    const s = props.config.strategies.find(x => String(x.id) === id)
-    if (!s) return
-    draft.value = kind === 'rename' ? s.name : s.folder
-    editing.value = { target, key: 's:' + id, kind, id, ids }
-  } else {
-    draft.value = kind === 'rename' ? id.split('/').at(-1) ?? '' : id.split('/').slice(0, -1).join('/')
-    editing.value = { target, key: 'f:' + id, kind, id }
-  }
-  focusDraft()
-}
-
-function startFolder (parent: string) {
-  draft.value = ''
-  editing.value = { target: 'folder', key: 'n:' + parent, kind: 'rename', id: '' }
-  openFolder(parent)
-  focusDraft()
-}
-
-function focusDraft () {
-  nextTick(() => {
-    const el = panel.value?.el?.querySelector<HTMLInputElement>('[data-draft]')
-    el?.focus()
-    el?.select()
-  })
-}
-
-function finishEdit () {
-  const e = editing.value
-  if (!e) return
-  editing.value = null
-  const value = draft.value.trim()
-  if (e.target === 'strategy') {
-    if (e.kind === 'move' && e.ids) {
-      const want = new Set(e.ids)
-      refile(props.config.strategies.filter(s => want.has(s.id)), cleanFolder(value))
-      openFolder(cleanFolder(value))
-      return
-    }
-    const s = props.config.strategies.find(x => String(x.id) === e.id)
-    if (!s) return
-    if (e.kind === 'rename') { if (value) s.name = value } else { s.folder = cleanFolder(value); openFolder(s.folder) }
-    refileRegexes(s, props.config.strategies)
-    return
-  }
-  if (e.key.startsWith('n:')) {
-    if (!value) return
-    const path = cleanFolder(joinFolder(e.key.slice(2), value))
-    props.config.folders = [...new Set([...(props.config.folders ?? []), path])]
-    openFolder(path)
-    return
-  }
-  const from = e.id
-  const to = e.kind === 'rename'
-    ? (value ? cleanFolder(joinFolder(from.split('/').slice(0, -1).join('/'), value.replace(/[/\\]+/g, '-'))) : from)
-    : cleanFolder(joinFolder(value, from.split('/').at(-1) ?? ''))
-  moveFolder(from, to)
-}
-
-function moveFolder (from: string, to: string) {
-  if (!to || from === to || to.startsWith(from + '/')) return
-  // Each strategy that moves takes its own regexes along.
-  for (const s of props.config.strategies) {
-    const next = movedFolder(s.folder, from, to)
-    if (next === cleanFolder(s.folder)) continue
-    s.folder = next
-    refileRegexes(s, props.config.strategies)
-  }
-  props.config.folders = (props.config.folders ?? []).map(f => movedFolder(f, from, to))
-  props.config.closedFolders = (props.config.closedFolders ?? []).map(f => movedFolder(f, from, to))
-  if (props.config.folderOrder) props.config.folderOrder = [...new Set(props.config.folderOrder.map(f => movedFolder(f, from, to)))]
-  openFolder(to)
 }
 
 // ---- menus ----
@@ -744,8 +393,6 @@ function movePins (moves: Array<{ old: AtlasStrategy, back: AtlasStrategy }>, be
 // No "are you sure": remove now, offer Undo. Their regexes stay in the library.
 function remove (s: AtlasStrategy) { removeMany([s]) }
 
-function removeKey (s: AtlasStrategy) { removeMany(groupOf(s)) }
-
 function removeMany (list: AtlasStrategy[]) {
   if (!list.length) return
   const ids = new Set(list.map(s => s.id))
@@ -753,7 +400,7 @@ function removeMany (list: AtlasStrategy[]) {
   const selectedBefore = props.config.selectedId
   props.config.strategies = props.config.strategies.filter(o => !ids.has(o.id))
   if (selectedBefore != null && ids.has(selectedBefore)) props.config.selectedId = null
-  picked.value = picked.value.filter(id => !ids.has(id))
+  tree.forgetPicks(ids)
   const drafts = takeDrafts(props.config, ids)
   const pinned = pinsOf(list)
   const sliders = takePointsAt(props.config, ids)
@@ -798,17 +445,21 @@ function duplicate (s: AtlasStrategy) {
   props.config.selectedId = copyOf.id
 }
 
+function copyCode (list: AtlasStrategy[]) {
+  codeFor(list).then(copy).then(() => toast('Strategy code copied', { anchor: panel.value?.el })).catch(() => {})
+}
+
 async function codeFor (list: AtlasStrategy[], base = ''): Promise<string> {
   const { strategyCode } = await import('./strategy-code')
   return strategyCode(list.map(s => ({ ...s, regexes: regexesIn(regexFolderOf(s)).map(r => ({ name: r.name, text: r.text })) })), base)
 }
 
 function rowMenu (e: MouseEvent, s: AtlasStrategy) {
-  const group = groupOf(s)
+  const group = tree.groupOf(s)
   if (group.length > 1) {
     openMenu(e, [
       { label: `Move ${group.length} to folder`, icon: 'fas fa-folder-open', action: () => startEdit('strategy', String(s.id), 'move', group.map(g => g.id)) },
-      { label: 'Copy strategy code', icon: 'fas fa-share-square', action: () => { codeFor(group).then(copy).then(() => toast('Strategy code copied', { anchor: panel.value?.el })).catch(() => {}) } },
+      { label: 'Copy strategy code', icon: 'fas fa-share-square', keys: 'Ctrl + C', action: () => copyCode(group) },
       { separator: true },
       { label: `Remove ${group.length} strategies`, icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => removeMany(group) }
     ])
@@ -818,14 +469,10 @@ function rowMenu (e: MouseEvent, s: AtlasStrategy) {
     { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => startEdit('strategy', String(s.id), 'rename') },
     { label: 'Move to folder', icon: 'fas fa-folder-open', action: () => startEdit('strategy', String(s.id), 'move') },
     { label: 'Duplicate', icon: 'far fa-clone', action: () => duplicate(s) },
-    { label: 'Copy strategy code', icon: 'fas fa-share-square', action: () => { codeFor([s]).then(copy).then(() => toast('Strategy code copied', { anchor: panel.value?.el })).catch(() => {}) } },
+    { label: 'Copy strategy code', icon: 'fas fa-share-square', keys: 'Ctrl + C', action: () => copyCode([s]) },
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => remove(s) }
   ])
-}
-
-function inFolder (path: string): AtlasStrategy[] {
-  return props.config.strategies.filter(s => { const f = cleanFolder(s.folder); return f === path || f.startsWith(path + '/') })
 }
 
 function folderMenu (e: MouseEvent, path: string) {
@@ -837,20 +484,14 @@ function folderMenu (e: MouseEvent, path: string) {
     { label: 'Copy folder code', icon: 'fas fa-share-square', disabled: !inFolder(path).length, action: () => { codeFor(inFolder(path), path).then(copy).then(() => toast('Folder code copied', { anchor: panel.value?.el })).catch(() => {}) } },
     { separator: true },
     { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => sortFolder(path) },
-    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: () => { props.config.closedFolders = [...folders.value] } },
-    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: () => { props.config.closedFolders = [] } },
+    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
+    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll },
     { separator: true },
     { label: 'Remove folder', icon: 'fas fa-trash', danger: true, action: () => removeFolder(path) }
   ])
 }
 
-// Once: its strategies and the folders right inside it, by name.
-function sortFolder (path: string) {
-  toManual()
-  const res = sortFolderByName(props.config.strategies, fullFolderOrder(), path)
-  props.config.strategies = res.list
-  props.config.folderOrder = res.order
-}
+const sortFolder = tree.sortFolder
 
 // Takes the folder and every strategy in it; Undo puts all of it back.
 function removeFolder (path: string) {
@@ -1047,31 +688,6 @@ function pasteSearch (text: string) {
   border: 1px solid var(--w-line);
   border-radius: var(--w-r-sm);
 }
-.folder {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding-top: 5px;
-  padding-bottom: 3px;
-  padding-right: var(--w-pad);
-  font-size: var(--w-fs-caps);
-  text-transform: var(--w-caps-case);
-  letter-spacing: 0.08em;
-  font-family: var(--w-caps-face);
-  color: var(--w-dim);
-  text-align: left;
-}
-.folder:hover { color: var(--w-fg); }
-.editRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-top: 3px;
-  padding-bottom: 3px;
-  padding-right: var(--w-pad);
-}
-.edit { flex: 1; min-width: 0; }
 .unsavedTag {
   flex: none;
   font-size: var(--w-fs-caps);
@@ -1110,34 +726,4 @@ function pasteSearch (text: string) {
 .askBody { padding: 10px var(--w-pad); color: var(--w-fg); line-height: 1.5; }
 .askList { margin: 4px 0 0; padding-left: 1.1rem; list-style: disc; max-height: 8rem; overflow-y: auto; }
 .askFoot { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; padding: 6px var(--w-pad); border-top: 1px solid var(--w-line); }
-.rows { display: flex; flex-direction: column; }
-.row { position: relative; }
-.nested::before {
-  content: "";
-  position: absolute;
-  left: var(--guide);
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--w-line);
-  pointer-events: none;
-}
-.dropBefore::after, .dropAfter::after, .dropTop::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--w-accent);
-  pointer-events: none;
-  z-index: 1;
-}
-.dropBefore::after { top: -1px; }
-.dropAfter::after { bottom: -1px; }
-.dropTop::after { top: 0; }
-.dropInto { background: var(--w-accent-soft); outline: 1px dashed var(--w-accent); outline-offset: -1px; color: var(--w-fg); }
-.picked { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); }
-/* Room under the last row to drop on the top level while dragging. */
-.tail { position: relative; height: 24px; }
 </style>
