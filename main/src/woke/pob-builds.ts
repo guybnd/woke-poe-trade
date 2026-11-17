@@ -81,6 +81,12 @@ async function walk (root: string, rel: string, depth: number, out: PobBuildEntr
 
 export async function listBuilds (args: { dir?: string }): Promise<{ dir: string, builds: PobBuildEntry[] }> {
   const dir = resolveDir(args?.dir)
+  // Once per folder after start: a folder move the app didn't finish.
+  const root = path.resolve(dir)
+  if (!recovered.has(root)) {
+    recovered.add(root)
+    await recoverFolderMoves(root).catch(() => {})
+  }
   const builds: PobBuildEntry[] = []
   await walk(path.resolve(dir), '', 0, builds)
   return { dir, builds }
@@ -250,9 +256,15 @@ export async function moveBuildFolder (args: { dir?: string, from: string, to: s
   if (depthOf(to) + await deepestUnder(from) > MAX_DEPTH) throw new Error('That folder would be too deep for the build list')
   if (samePath(from, to)) {
     // Only the letter case changes: through a free name, as the disk sees both as one.
-    const step = `${from}.woke-move-${Date.now()}`
+    const step = `${from}${MOVE_STEP}${Date.now()}`
     await fs.rename(from, step)
-    await fs.rename(step, to)
+    try {
+      await fs.rename(step, to)
+    } catch (err) {
+      // Back to where it was, so nothing is left under the in-between name.
+      await fs.rename(step, from).catch(() => {})
+      throw err
+    }
   } else {
     if (await fs.stat(to).then(() => true, () => false)) throw new Error(`There's already a folder "${path.basename(to)}" there`)
     await fs.mkdir(path.dirname(to), { recursive: true })
@@ -260,6 +272,33 @@ export async function moveBuildFolder (args: { dir?: string, from: string, to: s
   }
   summaryCache.clear()
   return done
+}
+
+// A case-only folder rename goes through "<folder>.woke-move-<time>". One the
+// app stopped in the middle of goes back to its name, if that name is free;
+// otherwise it stays, and the log says so. Returns the folders put back.
+const MOVE_STEP = '.woke-move-'
+const recovered = new Set<string>()
+export async function recoverFolderMoves (root: string, depth = 0): Promise<string[]> {
+  const back: string[] = []
+  const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => [] as Dirent[])
+  for (const e of entries) {
+    if (!e.isDirectory()) continue
+    const full = path.join(root, e.name)
+    const at = e.name.lastIndexOf(MOVE_STEP)
+    if (at > 0 && /^\d+$/.test(e.name.slice(at + MOVE_STEP.length))) {
+      const original = path.join(root, e.name.slice(0, at))
+      if (await fs.stat(original).then(() => true, () => false)) {
+        console.warn(`[pob-builds] left "${full}" as it is: "${original}" exists`)
+      } else {
+        await fs.rename(full, original)
+        back.push(original)
+      }
+      continue
+    }
+    if (depth < MAX_DEPTH) back.push(...await recoverFolderMoves(full, depth + 1))
+  }
+  return back
 }
 
 // How many folder levels lie under a folder (0: none).
