@@ -68,7 +68,7 @@ const GEAR_GROUPS = new Set(['armour', 'weapon'])
 
 function category (group, base) {
   if (group === 'jewel') return / Eye Jewel$/.test(base) ? 'Abyss Jewel' : / Cluster Jewel$/.test(base) ? 'Cluster Jewel' : 'Jewel'
-  if (group === 'accessory') return / Ring$/.test(base) ? 'Ring' : / Amulet$|^Talisman/.test(base) ? 'Amulet' : / (Belt|Sash|Vise|Obi)$/.test(base) ? 'Belt' : null
+  if (group === 'accessory') return / Ring$/.test(base) ? 'Ring' : / Amulet$|^Talisman/.test(base) ? 'Amulet' : / (Belt|Sash|Vise|Obi)$/.test(base) ? 'Belt' : / Quiver$/.test(base) ? 'Quiver' : null
   if (group === 'flask') return 'Flask'
   // 3.30 Wickerman trophies: one implicit each, slot read from the item text.
   if (group === 'viscera') return 'Viscera'
@@ -230,12 +230,46 @@ export function remapIds (statLines, liveIds, moved) {
   return n
 }
 
+// The game writes a 100% chance without its number: "#% chance to Blind
+// Enemies on Hit" at 100 reads "Blind Enemies on Hit". Each "#% chance to X"
+// matcher gets an "X" matcher worth 100, unless some stat already reads "X".
+export function certainChance (statLines) {
+  const stats = statLines.flatMap(s => s.stats ?? [s])
+  const texts = new Set(stats.flatMap(s => s.matchers.map(m => m.string.trim())))
+  const added = []
+  for (const s of stats) {
+    // Map mods read their own list of texts (the map mod checker, its regex).
+    if (s.fromAreaMods) continue
+    for (const m of [...s.matchers]) {
+      const r = CHANCE_TO.exec(m.string.trim())
+      if (!r || m.negate || m.value != null) continue
+      const text = r[1][0].toUpperCase() + r[1].slice(1)
+      if (texts.has(text)) continue
+      s.matchers.push({ string: text, value: 100 })
+      texts.add(text)
+      added.push(text)
+    }
+  }
+  return added
+}
+const CHANCE_TO = /^#% chance to (\S[\s\S]*)$/
+
 export function diff (before, after, statLines, itemLines) {
   const stats = statLines.flatMap(s => s.stats ?? [s])
   const byId = new Map()
   for (const s of stats) for (const ids of Object.values(s.trade.ids)) for (const id of ids) byId.set(id, s)
   const byText = new Map()
-  for (const s of stats) for (const m of s.matchers) if (!byText.has(m.string.trim())) byText.set(m.string.trim(), s)
+  // A matcher worth a fixed value (certainChance's "Blind Enemies on Hit")
+  // is a reading of another stat's words, not a stat of its own: a trade stat
+  // with those words gets a stat of its own, and the stand-in goes.
+  const valued = new Map()
+  for (const s of stats) {
+    for (const m of s.matchers) {
+      const t = m.string.trim()
+      if (m.value != null) { if (!valued.has(t)) valued.set(t, s); continue }
+      if (!byText.has(t)) byText.set(t, s)
+    }
+  }
   const report = { newStats: [], newIds: [], reworded: [], newItems: [], byName: [], skipped: [] }
 
   // One id can carry several texts (an atlas "in your Maps" line and the map's
@@ -246,8 +280,11 @@ export function diff (before, after, statLines, itemLines) {
     oldTexts.get(e.id).add(matcherText(e.text))
   }
   const added = new Map()
+  // Two-line texts too: a unique's long line wraps ("Gain a random Shrine Buff
+  // for # seconds when you Blind a" / "non-Blinded Rare or Unique Enemy"), and
+  // our matchers keep the line break as the game copies it.
   for (const e of after.stats) {
-    if (!ITEM_STAT_TYPES.has(e.type) || e.text.includes('\n')) continue
+    if (!ITEM_STAT_TYPES.has(e.type)) continue
     const prev = oldTexts.get(e.id)
     const text = matcherText(e.text)
     if (!prev) {
@@ -264,12 +301,14 @@ export function diff (before, after, statLines, itemLines) {
       }
       let stat = added.get(text)
       if (!stat) {
+        const holder = valued.get(text)
+        if (holder) holder.matchers = holder.matchers.filter(m => m.value == null || m.string.trim() !== text)
         stat = { ref: refText(e.text), better: 1, matchers: [{ string: text }], trade: { ids: {} } }
         added.set(text, stat)
         report.newStats.push(stat)
       }
       ;(stat.trade.ids[e.type] ??= []).push(e.id)
-    } else if (!prev.has(text)) {
+    } else if (!prev.has(text) && !text.includes('\n')) {
       const ours = byId.get(e.id)
       if (!ours) continue
       // A map mod's id is shared with its atlas passive ("... in your Maps").
@@ -404,6 +443,9 @@ async function main () {
   if (report.byName.length) console.log(`Added by name only (no item class known): ${report.byName.length}\n  ${report.byName.slice(0, 40).join('\n  ')}`)
   if (report.skipped.length) console.log(`Left out (add by hand if needed):\n  ${report.skipped.join('\n  ')}`)
   if (mode === 'check') return
+
+  const certain = mode === 'remap' ? [] : certainChance([...statLines, ...report.newStats])
+  console.log(`100% chance texts added: ${certain.length}`)
 
   const write = (file, lines) => {
     const eol = eolOf(file)
