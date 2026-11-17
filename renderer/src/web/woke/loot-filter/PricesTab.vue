@@ -68,7 +68,7 @@
         <div class="text-xs w-dim" :class="$style.why">
           Prices say these belong in another tier, but they stay put.
           <span v-for="r in reasonCounts" :key="r.reason"><b>{{ SKIP_WHY[r.reason].label }}</b>: {{ SKIP_WHY[r.reason].short }}. </span>
-          Tick some to {{ reasonCounts.some(r => r.reason === 'locked') ? 'unlock or ' : '' }}move them now, or leave them.
+          {{ nextStep }}
         </div>
         <div :class="$style.filters">
           <WChip v-for="r in reasonCounts" :key="r.reason" clickable :active="skipReason === r.reason" :title="SKIP_WHY[r.reason].title" @click="skipReason = skipReason === r.reason ? null : r.reason">{{ SKIP_WHY[r.reason].label }} · {{ r.count }}</WChip>
@@ -78,23 +78,25 @@
           </template>
         </div>
         <div :class="$style.pickBar">
-          <input type="checkbox" :class="$style.check" :checked="skipPicks.all.value" :indeterminate="skipPicks.some.value" aria-label="Pick every item shown under Not moved" title="Pick all shown or none" @change="skipPicks.allOrNone">
+          <input type="checkbox" :class="$style.check" :checked="skipPicks.all.value" :indeterminate="skipPicks.some.value" aria-label="Pick every item under Not moved" :title="`Pick all ${skipList.length} (with the filters above), or none`" @change="skipPicks.allOrNone">
           <span class="w-group-label">{{ skipPicks.picked.value.length }} of {{ skipList.length }} picked</span>
           <span class="grow" />
           <WButton v-if="pickedLocked.length" size="sm" variant="ghost" icon="fas fa-unlock" title="Prices may move them again. Any move you made by hand goes too." @click="unlockMany(pickedLocked)">Unlock {{ pickedLocked.length }}</WButton>
-          <WButton v-if="pickedUnsure.length" size="sm" variant="ghost" title="Move them to the tier their price says, though the price may not be real" @click="moveAnywayMany(pickedUnsure)">Move {{ pickedUnsure.length }} anyway</WButton>
+          <WButton v-if="pickedUnsure.length" size="sm" variant="ghost" title="Move them to the tier their price says, though the price may not be real" @click="moveAnywayMany(pickedUnsure)">Move {{ pickedUnsure.length }} anyway<template v-if="pickedHides"> · {{ pickedHides }} would hide</template></WButton>
         </div>
         <div v-for="(s, n) in skipShown" :key="'s' + s.type + s.base" :class="$style.row">
           <input :checked="skipPicks.isPicked(s)" type="checkbox" :class="$style.check" :aria-label="`Pick ${s.base}`" @click="skipPicks.click($event, n)">
           <LabelPreview :text="s.base" :actions="lookOf(s.type, s.tier)" :extras="false" />
           <button type="button" :class="$style.link" class="w-focusable text-xs" :title="`Open ${groupLabel(s.type)} ${s.tier} in Rules`" @click="emit('open-rule', { type: s.type, tier: s.tier, base: s.base })">{{ groupLabel(s.type) }}, {{ tierLabel(s.tier) }} <i class="fas fa-external-link-alt" /></button>
           <WChip :title="SKIP_WHY[s.reason].title">{{ SKIP_WHY[s.reason].label }}</WChip>
+          <WChip v-if="s.hides" :class="$style.bad" title="The tier its price says is hidden at your strictness">would hide it</WChip>
           <span class="grow" />
           <span class="w-faint text-xs">price says {{ tierLabel(s.wanted) }}</span>
           <WButton v-if="s.reason !== 'locked'" size="sm" variant="ghost" title="Move it, though this price may not be real" @click="moveAnywayMany([s])">Move anyway</WButton>
           <WButton v-else size="sm" variant="ghost" title="Let prices move it again" @click="unlockMany([s])">Unlock</WButton>
           <WPrice bulk :chaos="s.chaos" :divine="divine" />
         </div>
+        <div v-if="!skipList.length" class="w-dim text-xs" :class="$style.more">Nothing matches both filters.</div>
         <button v-if="skipList.length > skipShown.length" type="button" :class="[$style.link, $style.more]" class="w-focusable text-xs" @click="skipLimit = skipList.length">Show all {{ skipList.length }}</button>
       </template>
     </template>
@@ -386,6 +388,12 @@ const skipShown = computed(() => skipList.value.slice(0, skipLimit.value))
 const skipPicks = usePicks(() => skipList.value, s => `${s.type}|${s.base}|${s.reason}`)
 const pickedLocked = computed(() => skipPicks.picked.value.filter(s => s.reason === 'locked'))
 const pickedUnsure = computed(() => skipPicks.picked.value.filter(s => s.reason !== 'locked'))
+const pickedHides = computed(() => pickedUnsure.value.filter(s => s.hides).length)
+const nextStep = computed(() => {
+  const locked = reasonCounts.value.some(r => r.reason === 'locked')
+  const unsure = reasonCounts.value.some(r => r.reason !== 'locked')
+  return `Tick some to ${locked && unsure ? 'unlock them or move them now' : locked ? 'unlock them' : 'move them now'}, or leave them.`
+})
 const skippedEl = ref<HTMLElement | null>(null)
 function toSkipped () {
   skippedEl.value?.scrollIntoView({ block: 'start', behavior: 'smooth' })
@@ -409,9 +417,18 @@ function rank (tier: string): number {
   return tierRank(tier, [], ECONOMY_GROUPS.find(g => g.extraTiers?.[tier] != null)) ?? 99
 }
 
+// The first live block of each tier, worked out once per doc: long lists ask per row.
+const tierLooks = computed(() => {
+  const out = new Map<string, FilterAction[]>()
+  for (const b of props.store.doc.value?.blocks ?? []) {
+    if (b.disabled || !b.type || !b.tier) continue
+    const k = `${b.type}|${b.tier}`
+    if (!out.has(k)) out.set(k, b.actions)
+  }
+  return out
+})
 function lookOf (type: string, tier: string): FilterAction[] {
-  const b = props.store.doc.value?.blocks.find(x => x.type === type && x.tier === tier && !x.disabled)
-  return b?.actions ?? []
+  return tierLooks.value.get(`${type}|${tier}`) ?? []
 }
 
 function icon (m: { type: string, base: string }): string | null {
@@ -453,7 +470,7 @@ function unlockMany (list: PriceSkip[]) {
   if (!list.length) return
   skipPicks.forget(list)
   const keys = new Set(list.map(s => lockKey(s.type, s.base)))
-  const ownMoves = props.config.edits.filter(e => e.kind === 'move' && keys.has(lockKey(e.type, e.base))).length
+  const ownMoves = new Set(props.config.edits.flatMap(e => e.kind === 'move' && keys.has(lockKey(e.type, e.base)) ? [lockKey(e.type, e.base)] : [])).size
   const undo = props.store.changeWithUndo(c => {
     c.priceTiers.locks = c.priceTiers.locks.filter(k => !keys.has(k))
     c.edits = c.edits.filter(e => !(e.kind === 'move' && keys.has(lockKey(e.type, e.base))))

@@ -1022,7 +1022,7 @@ test('prices: kept items list under Not moved, unlock in bulk, and both steps un
   await kept.click()
   await expect(page.getByText(/^\d+ of \d+ picked$/)).toBeVisible()
   await overlay.snap('prices tab, not moved filtered to kept')
-  await page.getByRole('checkbox', { name: 'Pick every item shown under Not moved' }).check()
+  await page.getByRole('checkbox', { name: 'Pick every item under Not moved' }).check()
   const unlock = page.getByRole('button', { name: /Unlock \d+/ })
   expect(Number((await unlock.innerText()).replace(/\D/g, ''))).toBeGreaterThanOrEqual(wouldMove)
   await unlock.click()
