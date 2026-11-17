@@ -33,6 +33,14 @@ history:
       library, Trade searches, PoB builds (order kept in widget config, Guy's
       pick).
     id: a-2026-11-17t12-43-23-944z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T13:12:44.163Z'
+    comment: >-
+      #587 merged (Atlas on shared tree). Parity 2/4 up: PR #590
+      (woke/saved-tree-regex-2), Regex library on the shared tree; locked
+      Atlas/PoB folders. Next: Trade searches, PoB builds.
+    id: a-2026-11-17t13-12-44-163z
 ---
 > **TL;DR:** Guy picked the follow-up to #585: Atlas strategies and PoB builds use the shared saved-list parts (row keys, rename in place, remove with Undo), and Regex library and Trade searches get nested folders and drag reorder, lifted from Atlas into shared code.
 
