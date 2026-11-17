@@ -112,6 +112,7 @@ import { poeOn } from '@/web/woke/price-insight/window-style'
 import { artShown, ART_FRAME_INSET } from '@/web/woke/ui/theme'
 import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
+import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
 const UNSUPPORTED = 'woke.unsupported'
@@ -425,10 +426,7 @@ export default defineComponent({
       clickPosition,
       // woke: a family row price checks its item where this check was.
       checkRelated (input: { clipboard: string, item?: ParsedItem }) {
-        Host.selfDispatch({
-          name: 'MAIN->CLIENT::item-text',
-          payload: { clipboard: input.clipboard, item: input.item, position: checkPosition.value, focusOverlay: true, target: 'price-check' }
-        })
+        dispatchPriceCheck(input, checkPosition.value)
       },
       isBrowserShown,
       iframeEl,

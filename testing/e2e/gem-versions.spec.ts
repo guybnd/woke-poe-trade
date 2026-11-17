@@ -104,4 +104,14 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   await row.click()
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before + 1)
+
+  // Each row is the item: its tooltip and item menu, and neither searches.
+  const page = overlay.page
+  await row.hover()
+  await expect(page.getByRole('tooltip')).toContainText('Eye of Winter of Transience')
+  await expect(page.getByRole('tooltip')).toContainText('Click to search this version')
+  await row.click({ button: 'right' })
+  await expect(page.getByRole('menu').getByRole('menuitem', { name: 'Price check' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  expect(searches.length).toBe(before + 1)
 })

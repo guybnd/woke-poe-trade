@@ -12,17 +12,17 @@
         </span>
       </button>
       <template v-if="open === s.title">
-        <div v-for="(r, i) in s.uniques" :key="`u${i}`" :class="$style.line">
+        <WItemRow v-for="(r, i) in s.uniques" :key="`u${i}`" :item="tipOf(r.item)" :class="$style.line">
           <span class="w-rarity-unique w-trunc">{{ r.item.name }}</span>
           <span class="ml-auto flex items-center gap-1 whitespace-nowrap">
             <WPrice :chaos="r.price?.chaos" :divine="divine" />
             <template v-if="r.price?.high != null"><span class="w-dim text-xs">to</span><WPrice :chaos="r.price.high" :divine="divine" /></template>
           </span>
-        </div>
-        <div v-for="(r, i) in s.unpriced" :key="`n${i}`" :class="$style.line">
+        </WItemRow>
+        <WItemRow v-for="(r, i) in s.unpriced" :key="`n${i}`" :item="tipOf(r.item)" :class="$style.line">
           <span class="w-rarity-unique w-trunc">{{ r.item.name }}</span>
           <span class="ml-auto w-faint text-xs">no price</span>
-        </div>
+        </WItemRow>
         <button v-for="(r, i) in s.rares" :key="`r${i}`" type="button" :class="$style.line" class="w-focusable" :title="`Price check this ${r.item.base} with its stats`" @click="openPriceCheck(r.item, $event)">
           <span class="w-rarity-rare w-trunc">{{ r.item.base || r.item.name }}</span>
           <span class="ml-auto w-dim text-xs whitespace-nowrap"><i class="fas fa-search" /> {{ r.slot }}</span>
@@ -35,16 +35,24 @@
 <script setup lang="ts">
 // On the Gear tab: what each stage of the build costs.
 import { computed, onMounted, shallowRef } from 'vue'
-import { WInfo, WPrice } from '../ui'
+import { WInfo, WItemRow, WPrice } from '../ui'
+import type { ItemTipRef } from '../ui'
+import { pobItemText } from './item-text'
 import { stageCosts } from './build-costs'
 import { useUniquePrice } from './unique-price'
 import { openPriceCheck } from './open-price-check'
-import type { PobDetails } from './widget'
+import type { PobDetails, PobItem } from './widget'
 
 const props = defineProps<{ details: PobDetails }>()
 
 const { priceOf, divine, fetch } = useUniquePrice()
 const open = shallowRef<string | null>(null)
+
+// A unique's tooltip by name; its menu has the build's own copy, so Price
+// checks it with its rolls and Text copies it.
+function tipOf (item: PobItem): ItemTipRef {
+  return { name: item.name, noPrice: true, menu: { name: item.name, rarity: 'unique', text: pobItemText(item) } }
+}
 
 // Other windows may not have asked for prices yet.
 onMounted(fetch)

@@ -159,13 +159,15 @@ import { isThin, itemKey, thinTitle } from '../market/types'
 import type { CorruptedFilter, PriceItem } from '../market/types'
 import { lookupRequest } from '../item-lookup/lookup'
 import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
 import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniqueBaseIndex, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
 import BaseUniques from './BaseUniques.vue'
@@ -195,7 +197,7 @@ import type { MechanicsWidget } from '../mechanics/widget'
 import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
 import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
-import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial, loadUniqueMods } from '../ui/tooltip/item-tip'
+import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
@@ -240,26 +242,17 @@ const key = itemKey
 // ---- every item in the game, for the ones without a price ----
 const NAMESPACES = new Set<BaseType['namespace']>(['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD'])
 let allItems: BaseType[] | null = null
-// Each base's uniques and each unique's bases (English names).
-let uniquesByBase = new Map<string, string[]>()
-let basesOfUnique = new Map<string, string[]>()
 let uniqueBases: BaseType[] = []
 function gameItems (): BaseType[] {
   if (!allItems) {
     const byName = new Map<string, BaseType>()
-    // Every unique entry, before names are made unique: one per base.
-    const uniques: BaseType[] = []
     for (const item of ITEMS_ITERATOR('"namespace":"')) {
-      if (item.namespace === 'UNIQUE') uniques.push(item)
       if (NAMESPACES.has(item.namespace) && !byName.has(item.name)) byName.set(item.name, item)
     }
     // The data isn't loaded yet: try again on the next search.
     if (!byName.size) return []
     allItems = [...byName.values()]
-    const index = uniqueBaseIndex(uniques)
-    uniquesByBase = index.byBase
-    basesOfUnique = index.basesOf
-    uniqueBases = allItems.filter(i => i.namespace === 'ITEM' && uniquesByBase.has(i.refName))
+    uniqueBases = allItems.filter(i => i.namespace === 'ITEM' && hasUniques(i.refName))
   }
   return allItems
 }
@@ -285,7 +278,7 @@ function priceEntry (group: PriceGroup): PriceEntry {
 // several, in the game's language.
 function onBaseEntry (group: PriceGroup, shown?: ReadonlySet<string>): PriceEntry {
   const entry = priceEntry(group)
-  const bases = basesOfUnique.get(baseUniqueName(group.name)) ?? []
+  const bases = basesOfUnique(baseUniqueName(group.name))
   const ref = bases.find(b => shown?.has(b)) ?? bases[0]
   if (ref) {
     const base = ITEM_BY_REF('ITEM', ref)?.[0]?.name ?? ref
@@ -582,7 +575,7 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
   // A base brings its uniques: "shagreen" lists Three-step Assault.
   const bases = basesWithUniques(q)
   const listed = new Set(groups.map(groupKey))
-  const onBase = uniquePrices(items, new Set(bases.flatMap(b => uniquesByBase.get(b.refName) ?? [])), { corrupted: corrupted.value })
+  const onBase = uniquePrices(items, new Set(bases.flatMap(b => uniquesOnBase(b.refName))), { corrupted: corrupted.value })
     .filter(g => !listed.has(groupKey(g)))
   const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
@@ -640,7 +633,7 @@ const baseUniques = computed(() => {
   const base = e?.kind === 'item' && e.info.namespace === 'ITEM'
     ? e.info.refName
     : e?.kind === 'price' && e.group.type === 'BaseType' ? e.group.name : null
-  const names = base ? uniquesByBase.get(base) : undefined
+  const names = base ? uniquesOnBase(base) : undefined
   if (!names?.length) return null
   const items = snapshot.value?.items ?? []
   const shown = new Set([base!])
@@ -898,15 +891,10 @@ async function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
   remember(entry)
   const info = infoFor(entry)
   if (!info) return
-  const position = { x: e.screenX, y: e.screenY }
   // Its mods as stat rows (English data only); one price row says which variant.
+  // A Foulborn row is priced as its unique (the data has no Foulborn uniques).
   const variant = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant || undefined : undefined
-  const mods = AppConfig().language === 'en' ? await loadUniqueMods(info.refName, variant) : null
-  const item = virtualUnique(info, mods)
-  Host.selfDispatch({
-    name: 'MAIN->CLIENT::item-text',
-    payload: { clipboard: item.rawText, item, position, focusOverlay: true, target: 'price-check' }
-  })
+  await openPriceCheck({ name: info.refName, rarity: 'unique', variant }, cursorPoint(e), info)
 }
 function openTrade (entry: PriceEntry | ItemEntry) {
   remember(entry)

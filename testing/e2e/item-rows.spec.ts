@@ -46,6 +46,7 @@ test('Search: a base\'s uniques show their tooltip and menu, a click opens the u
   await panel.getByRole('button', { name: /^Shagreen Boots/ }).first().click()
   await expect(panel.getByText('Uniques on this base')).toBeVisible()
   const row = panel.getByRole('button', { name: /Temptation Step.*40/ }).last()
+  await expect(panel.getByTestId('unique-on-base').filter({ hasText: 'Temptation Step' })).toHaveCount(1)
   await hoverShowsTip(page, row, 'Temptation Step')
   await rightClickGivesStrip(page, row, 'Temptation Step')
   await row.click()
@@ -70,12 +71,12 @@ test('Alt + F: the uniques a base can drop as', async ({ overlay, fakeApp }) => 
   await overlay.copyItem('items/unique-three-step-assault.txt', 'Alt + F')
   const page = overlay.page
   await expect(page.getByText('Can drop as')).toBeVisible()
-  const row = page.getByText('Temptation Step', { exact: true })
+  // The same list as Search's: art, tooltip and item menu on every row.
+  const row = page.getByTestId('unique-on-base').filter({ hasText: 'Temptation Step' })
   await expect(row).toBeVisible()
-  // Today: no tooltip on the row.
-  await row.hover()
-  await page.waitForTimeout(400)
-  await expect(tooltip(page)).toBeHidden()
+  await expect(row.locator('img.w-game-icon')).toBeVisible()
+  await hoverShowsTip(page, row, 'Temptation Step')
+  await rightClickGivesStrip(page, row, 'Temptation Step')
   await overlay.snap('alt f can drop as')
 })
 

@@ -38,20 +38,15 @@
 
 <script setup lang="ts">
 import { WButton, WIcon, WPrice, vItemTip } from '../ui'
-import { gameIcon } from '../ui/game-icons'
+import { itemArt } from '../ui/game-icons'
 import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupSection, LookupTableRow } from './lookups/types'
 
 defineProps<{ card: LookupCard, divine: number | null }>()
 
 // An item row's art, whatever kind of item it is (rows name it, not its kind).
-const ICON_NS = ['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD'] as const
 function rowIcon (name: string): string | undefined {
-  for (const ns of ICON_NS) {
-    const icon = gameIcon(name, ns)
-    if (icon) return icon
-  }
-  return undefined
+  return itemArt({ name }) ?? undefined
 }
 // Rows without an item keep a blank icon box so the names line up.
 const hasItems = (section: LookupSection) => !!section.rows?.some(r => r.item)

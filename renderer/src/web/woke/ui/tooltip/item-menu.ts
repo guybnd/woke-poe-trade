@@ -27,7 +27,7 @@ import { hideTip } from './tooltip'
 import { marketFor } from './item-tip'
 import { NS, infoOf, kindOf, nameClass, plainName, priceCheckInput, tradeQuery } from './item-menu-logic'
 import type { ItemMenuRef } from './item-menu-logic'
-import { priceCheckRequest } from './item-price-check'
+import { openPriceCheck } from './item-price-check'
 
 export type { ItemMenuRef } from './item-menu-logic'
 
@@ -40,6 +40,14 @@ function marketTracker (): MarketTrackerWidget | undefined {
 }
 
 // ---- the menu ----
+
+// Opens the item on the trade site (the menu's Trade button, item rows).
+export function openTrade (ref: ItemMenuRef) {
+  const league = useLeagues().selectedId.value
+  if (!league) { toast('Pick a league in the settings first'); return }
+  const kind = kindOf(ref)
+  window.open(tradeUrl(league, tradeQuery(ref, kind, infoOf(ref, kind), AppConfig().language === 'en'), getTradeEndpoint()))
+}
 
 function screenPoint (e: MouseEvent) {
   return { x: e.screenX, y: e.screenY }
@@ -62,25 +70,13 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
       title: 'Price check',
       icon: 'fas fa-balance-scale',
       disabled: !check,
-      action: async () => {
-        if (!check) return
-        hideTip()
-        const input = await priceCheckRequest(ref) ?? check
-        Host.selfDispatch({
-          name: 'MAIN->CLIENT::item-text',
-          payload: { clipboard: input.clipboard, item: input.item, position: pos, focusOverlay: true, target: 'price-check' }
-        })
-      }
+      action: async () => { if (check) await openPriceCheck(ref, pos) }
     },
     {
       label: 'Trade',
       title: 'Open on the trade site',
       icon: 'fas fa-external-link-alt',
-      action: () => {
-        const league = useLeagues().selectedId.value
-        if (!league) { toast('Pick a league in the settings first'); return }
-        window.open(tradeUrl(league, tradeQuery(ref, kind, info, AppConfig().language === 'en'), getTradeEndpoint()))
-      }
+      action: () => openTrade(ref)
     },
     {
       label: 'Wiki',

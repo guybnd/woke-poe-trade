@@ -92,3 +92,16 @@ export function moduleIconForWidget (wmType: string): { art: string | null, fa: 
   const m = MODULES.find(_ => _.widgetTypes.includes(wmType))
   return m ? moduleIcon(m.id) : null
 }
+
+// An item's art from what a list knows of it: its poe.ninja row type when it
+// has one, else its name in the item data (an item, unique, gem, then a
+// card). The one lookup item rows use.
+const ART_NAMESPACES: Ns[] = ['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD']
+export function itemArt (ref: { name: string, type?: string }): string | null {
+  if (ref.type) return ninjaIcon(ref.type, ref.name)
+  for (const ns of ART_NAMESPACES) {
+    const src = gameIcon(ns === 'UNIQUE' ? dataUniqueName(ref.name) : ref.name, ns)
+    if (src) return src
+  }
+  return null
+}

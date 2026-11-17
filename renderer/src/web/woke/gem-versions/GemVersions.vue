@@ -13,10 +13,9 @@
         <tr><th>Level</th><th>Quality</th><th></th><th :class="$style.r">poe.ninja</th><th :class="$style.r">Trade</th></tr>
       </thead>
       <tbody>
-        <tr v-for="v of versions" :key="rowKey(v)"
+        <WItemRow v-for="v of versions" :key="rowKey(v)" as="tr" :item="tipOf(v)" :art="false" :action="v.own ? null : 'pick'"
           :class="[v.own ? $style.own : $style.click]"
-          :title="v.own ? 'Your gem: the search below' : 'Search this version (1 trade search)'"
-          @click="search(v)">
+          @pick="search(v)">
           <td>{{ v.level }}</td>
           <td>{{ v.quality }}</td>
           <td :class="$style.corr">{{ v.vaal ? 'Vaal' : v.corrupted ? 'corr' : '' }}</td>
@@ -31,7 +30,7 @@
             </template>
             <span v-else class="w-faint">search</span>
           </td>
-        </tr>
+        </WItemRow>
       </tbody>
     </table>
   </div>
@@ -45,6 +44,8 @@ import { usePoeninja } from '@/web/background/Prices'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { AppConfig } from '@/web/Config'
 import WPrice from '@/web/woke/ui/WPrice.vue'
+import WItemRow from '@/web/woke/ui/WItemRow.vue'
+import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
 import { gemForms, listVersions, type GemVersion, type NinjaGemRow } from './versions'
 import { gemVersionsOpen as open } from './open'
 
@@ -87,6 +88,14 @@ const searchCode = shallowRef<typeof import('./search') | null>(null)
 
 // A new gem, or other trade settings (league, online, listed, currency): old row results no longer apply.
 watch([() => props.item, () => JSON.stringify(props.filters.trade)], () => { runs.clear() })
+
+// The version as poe.ninja lists it, for its tooltip and item menu; the
+// click's meaning goes at the bottom of the tooltip.
+function tipOf (v: GemVersion): ItemTipRef | null {
+  const gem = v.vaal ? forms.value?.vaal : forms.value?.base
+  if (!gem) return null
+  return { name: gem.refName, type: 'SkillGem', variant: v.key, note: v.own ? 'Your gem: the search below' : 'Click to search this version (1 trade search)' }
+}
 
 function rowKey (v: GemVersion): string {
   return `${v.vaal ? 'V' : ''}${v.key}`

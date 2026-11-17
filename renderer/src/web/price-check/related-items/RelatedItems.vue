@@ -12,16 +12,16 @@
         <span v-if="sec.family" :class="$style.count">{{ sec.rows.length }} · poe.ninja</span>
       </div>
       <div :class="[$style.list, { [$style.tight]: sec.family }]">
-        <div v-for="row in sec.rows" :key="row.key" v-item-tip="{ name: row.name }"
+        <WItemRow v-for="row in sec.rows" :key="row.key" :item="tipOf(row)" :art="false" :info="row.info" :action="canOpen(row) ? 'pick' : null"
           :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
-          @click="open(row)">
+          @pick="open(row)">
           <img :class="$style.art" :src="row.icon" :alt="''">
           <span :class="$style.name">{{ row.name }}</span>
           <span :class="$style.price">
             <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
             <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
           </span>
-        </div>
+        </WItemRow>
       </div>
     </template>
     <div v-if="sections.some(sec => sec.rows.some(canOpen))" :class="$style.ft">Click to price check</div>
@@ -33,7 +33,8 @@ import { computed, defineComponent, PropType } from 'vue'
 import { BaseType, ITEM_BY_REF, ITEM_DROP, ITEMS_ITERATOR } from '@/assets/data'
 import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Prices'
 import { getDetailsId } from '../trends/getDetailsId'
-import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
+import WItemRow from '@/web/woke/ui/WItemRow.vue'
+import type { ItemTipRef } from '@/web/woke/ui/tooltip/item-tip'
 import { ParsedItem } from '@/parser'
 import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
 import { sideRow, type SideRow } from './side-row'
@@ -112,7 +113,7 @@ function getItemPrices (queryId: string) {
 }
 
 export default defineComponent({
-  directives: { itemTip: vItemTip },
+  components: { WItemRow },
   props: {
     item: {
       type: Object as PropType<ParsedItem | null>,
@@ -170,11 +171,16 @@ export default defineComponent({
       if (input && seq === clickSeq && props.item === item) emit('check', input)
     }
 
+    // The row's own item (English name, kind, base) for the tooltip and menu,
+    // as its click uses.
+    const tipOf = (row: SideRow): ItemTipRef => ({ name: row.ref.name, type: row.ref.type, menu: row.ref })
+
     return {
       result,
       sections,
       canOpen,
       open,
+      tipOf,
       priceText: (price: CurrencyValue) => (price.min === price.max)
         ? displayRounding(price.min, true)
         : `${displayRounding(price.min, true)}–${displayRounding(price.max, true)}`,
