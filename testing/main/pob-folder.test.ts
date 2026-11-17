@@ -2,7 +2,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { moveBuildFolder, recoverFolderMoves } from '../../main/src/woke/pob-builds'
 
 function folder (files: string[]): string {
@@ -61,6 +61,10 @@ describe('a folder move stopped half way', () => {
   afterEach(() => { vi.restoreAllMocks() })
 
   it('a failed case-only rename puts the folder back under its name', async () => {
+    // A case-only rename is a Windows thing (samePath reads the platform).
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { value: 'win32' })
+    onTestFinished(() => { Object.defineProperty(process, 'platform', platform) })
     const dir = folder(['Lev/x.xml'])
     const rename = fs.promises.rename
     let calls = 0
