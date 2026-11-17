@@ -247,6 +247,8 @@ export interface PriceSkip {
   // Where the price alone would have put it.
   wanted: string
   reason: 'thin' | 'locked' | 'volatile'
+  // The tier the price says is hidden at this strictness.
+  hides?: boolean
 }
 
 export interface GroupReport {
@@ -364,15 +366,16 @@ export function planRetier (doc: FilterDoc, lookup: PriceLookup, opts: PlanOptio
       const target = up < cur ? up : (down > cur ? down : cur)
       if (target === cur) continue
       const to = anchors[target].tier
+      const toBlocks = blocks.filter(b => b.tier === to)
+      const hides = toBlocks.length > 0 && toBlocks.every(b => b.visibility === 'Hide')
+      const skip = (reason: PriceSkip['reason']) => plan.skipped.push({ type: group.type, base, tier: band.tier, chaos: price.chaos, wanted: to, reason, ...(hides ? { hides } : {}) })
       if (locked.has(lockKey(group.type, base))) {
-        plan.skipped.push({ type: group.type, base, tier: band.tier, chaos: price.chaos, wanted: to, reason: 'locked' })
+        skip('locked')
       } else if (price.thin) {
-        plan.skipped.push({ type: group.type, base, tier: band.tier, chaos: price.chaos, wanted: to, reason: 'thin' })
+        skip('thin')
       } else if (price.volatile) {
-        plan.skipped.push({ type: group.type, base, tier: band.tier, chaos: price.chaos, wanted: to, reason: 'volatile' })
+        skip('volatile')
       } else {
-        const toBlocks = blocks.filter(b => b.tier === to)
-        const hides = toBlocks.length > 0 && toBlocks.every(b => b.visibility === 'Hide')
         plan.moves.push({ type: group.type, base, from: band.tier, to, chaos: price.chaos, note: price.note, ...(hides ? { hides } : {}) })
       }
     }
