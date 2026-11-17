@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="none" :removable="false" :inline-edit="false" :readonly="true">
     <WPanel v-if="open" width="66rem" max-height="72vh" :scroll="false" :resizable="false">
-      <div :class="$style.root" data-search-palette @click="keepTyping" @keydown="onHotkey">
+      <div :class="$style.root" data-search-palette @click="keepTyping" @keydown="onHotkey" @keyup="onHotkeyUp" @pointerdown="forgetHeld" @input="forgetHeld">
         <div v-if="pins.length" :class="$style.pins">
           <button v-for="(p, i) in pins" :key="key(p)" v-item-tip="p" :class="[$style.pin, { [$style.pinTop]: i === 0 && pins.length > 1 }]"
             title="Remove from the comparison" @click="togglePin(p)">
@@ -148,7 +148,7 @@ import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
 import { convNumber, currencyConversions } from './conversions'
 import { MODULES, isModuleOn, isWidgetTypeOn } from '../modules'
-import { pressedKeys, sortKeys } from '../loot-filter/hotkey-match'
+import { pressedKeys, sortKeys, isHotkeyTail, isModifierCode } from '../loot-filter/hotkey-match'
 import { whenIdle } from '../shared/perf'
 import { PAGES } from '../settings/pages'
 import { ICON_TOOL_NAMES, iconFor, looksLikeItem, parseWidgetTitle } from '../tab-bar/tools'
@@ -956,15 +956,42 @@ function keepTyping (e: MouseEvent) {
 }
 // Global hotkeys are off while the overlay has the keyboard, so the key that
 // opened this has to be caught here to close it again.
+// Opened by the hotkey, its modifier may still be held: see isHotkeyTail.
+let heldFromOpen = false
+// The bare key went down: a tap closes on release, but a second keydown first
+// is the opening press still held and repeating, which must not close it.
+let tail: 'none' | 'tap' | 'held' = 'none'
 function onHotkey (e: KeyboardEvent) {
   const key = props.config.hotkey
-  if (key && pressedKeys(e) === sortKeys(key)) {
+  if (!key) return
+  if (pressedKeys(e) === sortKeys(key)) {
     e.preventDefault()
     // Still held from opening it.
     if (!e.repeat) close()
+  } else if (heldFromOpen && query.value === '' && isHotkeyTail(e, key)) {
+    e.preventDefault()
+    tail = (tail === 'none' && !e.repeat) ? 'tap' : 'held'
+  } else if (!isModifierCode(e.code)) {
+    forgetHeld()
   }
 }
+function onHotkeyUp (e: KeyboardEvent) {
+  const key = props.config.hotkey
+  if (isModifierCode(e.code)) {
+    heldFromOpen = false
+  } else if (tail !== 'none' && key && isHotkeyTail(e, key)) {
+    const tap = tail === 'tap'
+    tail = 'none'
+    if (tap) close()
+  }
+}
+// A click or a paste is something other than the hotkey again.
+function forgetHeld () {
+  heldFromOpen = false
+  tail = 'none'
+}
 function start (text: string) {
+  forgetHeld()
   holdPricesForSearch()
   query.value = text
   corrupted.value = 'any'
@@ -980,6 +1007,7 @@ function start (text: string) {
   whenIdle(loadVisceraTable)
 }
 function close () {
+  forgetHeld()
   wm.hide(props.config.wmId)
   if (Host.isElectron) Host.sendEvent({ name: 'OVERLAY->MAIN::focus-game', payload: undefined })
 }
@@ -987,7 +1015,10 @@ function close () {
 const hotkeys = Host.onEvent('MAIN->CLIENT::widget-action', (e) => {
   if (e.target !== SEARCH_TARGET) return
   if (open.value && wm.active.value) close()
-  else start('')
+  else {
+    start('')
+    heldFromOpen = true
+  }
 })
 onBeforeUnmount(() => { hotkeys.abort() })
 
