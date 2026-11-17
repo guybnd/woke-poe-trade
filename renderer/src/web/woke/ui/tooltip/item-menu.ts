@@ -27,6 +27,7 @@ import { hideTip } from './tooltip'
 import { loadUniqueMods, marketFor } from './item-tip'
 import { NS, infoOf, kindOf, nameClass, plainName, priceCheckInput, tradeQuery } from './item-menu-logic'
 import type { ItemMenuRef } from './item-menu-logic'
+import { priceCheckRequest } from './item-price-check'
 
 export type { ItemMenuRef } from './item-menu-logic'
 
@@ -64,12 +65,7 @@ export function itemMenuHead (ref: ItemMenuRef, at: MouseEvent): MenuItemHead | 
       action: async () => {
         if (!check) return
         hideTip()
-        // A unique priced by name gets its mods as stat rows, when the data loads.
-        const english = AppConfig().language === 'en'
-        const withMods = (check.item && kind === 'unique' && english && info)
-          ? priceCheckInput(ref, kind, info, english, await loadUniqueMods(info.refName, ref.variant))
-          : null
-        const input = withMods ?? check
+        const input = await priceCheckRequest(ref) ?? check
         Host.selfDispatch({
           name: 'MAIN->CLIENT::item-text',
           payload: { clipboard: input.clipboard, item: input.item, position: pos, focusOverlay: true, target: 'price-check' }
