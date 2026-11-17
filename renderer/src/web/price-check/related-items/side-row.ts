@@ -21,7 +21,8 @@ export interface SideRow {
 const KIND_OF_NS: Partial<Record<BaseType['namespace'], Partial<ItemMenuRef>>> = {
   UNIQUE: { rarity: 'unique' },
   DIVINATION_CARD: { type: 'DivinationCard' },
-  GEM: { type: 'SkillGem' }
+  GEM: { type: 'SkillGem' },
+  CAPTURED_BEAST: { type: 'Beast' }
 }
 
 export function sideRow (info: BaseType, price: CurrencyValue | undefined, highlight: boolean, key: string): SideRow {
