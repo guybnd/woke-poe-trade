@@ -59,7 +59,7 @@
                 @keydown.enter.prevent="finishEntryRename(entry)" @keydown.esc.prevent="renaming = null" @blur="finishEntryRename(entry)">
               <WListItem v-else :active="openId === entry.id" draggable="true"
                 :title="tooltip(entry)" @select="open(entry, 'overlay')" @dragstart="dragId = entry.id" @dragend="dragId = null; dropOn = null"
-                @contextmenu="rowMenu($event, entry)" @keydown.c.ctrl.prevent="copyLink(entry)" @keydown.delete.prevent="remove(entry)" @keydown.f2.prevent="startEntryRename(entry)">
+                @contextmenu="rowMenu($event, entry)" @keydown="rowKeys({ remove: () => remove(entry), copy: () => copyLink(entry), rename: () => startEntryRename(entry) })($event)">
                 <i v-if="entry.pinned" class="fas fa-thumbtack w-accent text-xs" title="Pinned" />
                 <i v-if="isLiveSearch(entry.url)" class="fas fa-bolt w-accent" title="Live search" />
                 <span class="w-trunc grow">{{ entry.name || entry.url }}</span>
@@ -118,6 +118,8 @@ export default { widget: widgetTradeSearchesSpec }
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
+import { removeEntry, rowKeys, useDraftName } from '../shared/saved-list'
+import { nextId } from '../shared/library'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig, pushHostConfig, saveConfig } from '@/web/Config'
 import { POB_BUILDS_TYPE } from '../pob-builds/widget'
@@ -283,30 +285,22 @@ function iconSrc (key: string | undefined): string | null {
 }
 
 // Inline rename and new folder: one field at a time.
-const renaming = shallowRef<string | null>(null)
-const draft = shallowRef('')
+// (shared/saved-list: one field at a time, focused with its text picked.)
+const names = useDraftName(() => panel.value?.el)
+const { editing: renaming, draft } = names
 const pickingIcon = shallowRef<string | null>(null)
-watch(renaming, async (r) => {
-  if (!r) return
-  await nextTick()
-  const input = panel.value?.el?.querySelector<HTMLInputElement>('[data-draft]')
-  input?.focus()
-  input?.select()
-})
-function startNewFolder () { draft.value = ''; renaming.value = 'new' }
+function startNewFolder () { names.start('new') }
 function finishNewFolder () {
-  if (renaming.value !== 'new') return
-  renaming.value = null
-  const name = draft.value.trim()
+  const name = names.finish('new')
   if (!name) return
   ensureFolder(props.config, name)
   props.config.view = `folder:${name}`
   saveConfig()
 }
 function finishFolderRename (from: string) {
-  if (renaming.value !== `folder:${from}`) return
-  renaming.value = null
-  const to = renameFolder(props.config, from, draft.value)
+  const typed = names.finish(`folder:${from}`)
+  if (typed == null) return
+  const to = renameFolder(props.config, from, typed)
   // Builds whose Trades tab shows this folder keep showing it.
   for (const w of AppConfig().widgets) {
     if (w.wmType !== POB_BUILDS_TYPE) continue
@@ -318,11 +312,10 @@ function finishFolderRename (from: string) {
   pickingIcon.value = null
   saveConfig()
 }
-function startEntryRename (entry: TradeSearchEntry) { draft.value = entry.name; renaming.value = `entry:${entry.id}` }
+function startEntryRename (entry: TradeSearchEntry) { names.start(`entry:${entry.id}`, entry.name) }
 function finishEntryRename (entry: TradeSearchEntry) {
-  if (renaming.value !== `entry:${entry.id}`) return
-  renaming.value = null
-  if (draft.value.trim()) { entry.name = draft.value.trim(); saveConfig() }
+  const name = names.finish(`entry:${entry.id}`)
+  if (name) { entry.name = name; saveConfig() }
 }
 
 function setIcon (folder: string, key: string | undefined) {
@@ -351,7 +344,7 @@ function dropInto (folder: string) {
 
 function folderMenu (e: MouseEvent, folder: string, index: number) {
   const items: MenuEntry[] = [
-    { label: 'Rename', icon: 'fas fa-pen', action: () => { draft.value = folder; renaming.value = `folder:${folder}` } },
+    { label: 'Rename', icon: 'fas fa-pen', action: () => { names.start(`folder:${folder}`, folder) } },
     { label: 'Change icon', icon: 'far fa-image', disabled: folder === UNCATEGORIZED, action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } },
     { label: 'Move up', icon: 'fas fa-arrow-up', disabled: index === 0 || folder === UNCATEGORIZED, action: () => { moveFolder(props.config, folder, -1); saveConfig() } },
     { label: 'Move down', icon: 'fas fa-arrow-down', disabled: index === folders.value.length - 1 || folder === UNCATEGORIZED, action: () => { moveFolder(props.config, folder, 1); saveConfig() } },
@@ -441,15 +434,17 @@ function copyLink (entry: TradeSearchEntry) {
   copyText(urlFor(entry)).then(ok => { if (ok) toast('Copied the trade link', { anchor: panel.value?.el, ms: 1800 }) })
 }
 
-// No "are you sure": remove now, offer Undo (P9).
+// No "are you sure": remove now, offer Undo (P9), which puts back just this
+// one where it was (shared/saved-list): changes made since stay.
 function remove (entry: TradeSearchEntry) {
-  const before = props.config.entries
+  const out = removeEntry(props.config.entries, entry.id)
+  if (!out) return
   if (openId.value === entry.id) closeBrowser()
-  props.config.entries = before.filter(e => e.id !== entry.id)
+  props.config.entries = out.list
   pushHostConfig()
   toast(`Removed "${entry.name || 'search'}"`, {
     anchor: panel.value?.el,
-    undo: () => { props.config.entries = before; pushHostConfig() }
+    undo: () => { props.config.entries = out.restore(props.config.entries, () => nextId(props.config.entries)); pushHostConfig() }
   })
 }
 

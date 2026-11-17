@@ -41,7 +41,7 @@
         <template v-for="entry in group.entries" :key="entry.id">
         <RegexEntryForm v-if="editing === entry.id" :entry="entry" @save="saveEntry" @cancel="editing = null" />
         <WListItem v-else :class="$style.row" :title="tooltip(entry)" @select="stashSearch(effectiveText(entry))"
-          @contextmenu="rowMenu($event, entry)" @keydown.c.ctrl.prevent="copy(entry)" @keydown.delete.prevent="remove(entry)">
+          @contextmenu="rowMenu($event, entry)" @keydown="rowKeys({ remove: () => remove(entry), copy: () => copy(entry), rename: () => edit(entry) })($event)">
           <span class="w-trunc">{{ entry.name || effectiveText(entry) }}</span>
           <WChip v-if="entry.negate && canNegate(entry.text)" title="Highlights items WITHOUT this">not</WChip>
           <WChip v-for="tag in entry.tags.slice(0, 2)" :key="tag">{{ tag }}</WChip>
@@ -104,6 +104,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WListItem, WButton, openMenu, toast } from '../ui'
 import { useWindowKeys } from '../ui/window-keys'
+import { removeEntry, rowKeys } from '../shared/saved-list'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
 import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, categoryLabel, categoryView, effectiveText, emptyEntry, groupByCategory, matchesFilter } from './widget'
@@ -225,22 +226,18 @@ function openPoeRe () {
   openPoeReWindow(wm, props.config.wmId, panel.value?.el)
 }
 
-// No "are you sure": remove now, offer Undo (P9).
+// No "are you sure": remove now, offer Undo (P9), which puts back just this
+// entry where it was (shared/saved-list): edits and saves made since stay.
 function remove (entry: RegexEntry) {
   if (editing.value === entry.id) editing.value = null
-  const at = props.config.entries.findIndex(e => e.id === entry.id)
-  if (at < 0) return
-  const removed = props.config.entries[at]
-  props.config.entries = props.config.entries.filter(e => e.id !== entry.id)
+  const out = removeEntry(props.config.entries, entry.id)
+  if (!out) return
+  props.config.entries = out.list
   pushHostConfig()
   toast(`Removed "${entry.name || effectiveText(entry)}"`, {
     anchor: panel.value?.el,
-    // Puts back just this entry: edits and saves made since stay. An entry
-    // added since may have taken its id: then it comes back under a new one.
     undo: () => {
-      const list = props.config.entries
-      const id = list.some(e => e.id === removed.id) ? emptyEntry(list).id : removed.id
-      props.config.entries = [...list.slice(0, at), { ...removed, id }, ...list.slice(at)]
+      props.config.entries = out.restore(props.config.entries, () => emptyEntry(props.config.entries).id)
       pushHostConfig()
     }
   })
@@ -250,7 +247,7 @@ function rowMenu (e: MouseEvent, entry: RegexEntry) {
   openMenu(e, [
     { label: 'Search stash', icon: 'fas fa-search', keys: 'Enter', action: () => stashSearch(effectiveText(entry)) },
     { label: 'Copy string', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => { copy(entry) } },
-    { label: 'Edit', icon: 'fas fa-pen', action: () => edit(entry) },
+    { label: 'Edit', icon: 'fas fa-pen', keys: 'F2', action: () => edit(entry) },
     ...(entry.tags.length ? [{ label: `Filter by "${entry.tags[0]}"`, icon: 'fas fa-filter', action: () => { filter.value = entry.tags[0] } }] : []),
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => remove(entry) }
