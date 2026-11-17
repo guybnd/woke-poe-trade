@@ -112,3 +112,15 @@ export function versionFilters (filters: ItemFilters, v: GemVersion, forms: GemF
   }
   return f
 }
+
+/** The price check's filters already search this version (a row click set them, or they started that way). */
+export function searchesVersion (filters: ItemFilters, v: GemVersion, forms: GemForms): boolean {
+  const level = filters.gemLevel
+  const levelOk = v.level <= 1 ? (!level || level.disabled || level.value <= 1) : (!!level && !level.disabled && level.value === v.level)
+  const quality = filters.quality
+  const qualityOk = v.quality <= 0 ? (!quality || quality.disabled || quality.value <= 0) : (!!quality && !quality.disabled && quality.value === v.quality)
+  const corruptedOk = filters.corrupted?.search === (v.corrupted ? 'corrupted' : 'not-corrupted')
+  const exact = filters.searchExact
+  const searchesVaal = exact.sub ? !exact.sub.disabled : (!!forms.vaal && exact.baseType === forms.vaal.name)
+  return levelOk && qualityOk && corruptedOk && searchesVaal === v.vaal
+}
