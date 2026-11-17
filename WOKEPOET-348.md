@@ -28,7 +28,13 @@ history:
       https://claude.ai/artifact/SkDyaqDS6dbtsuEVL4QkQh (picks in db
       picks/current). Building B (picture tray, merged shots) meanwhile.
     id: a-2026-11-17t06-10-17-219z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T06:23:39.000Z'
+    comment: Updated implementation link.
+    id: a-2026-11-17t06-23-39-000z
 needsAction: null
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/565'
 ---
 Guy asked (2026-11-17) whether an atlas strategy can be imported from a screenshot, pasted or picked from a file.
 
