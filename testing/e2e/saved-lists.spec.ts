@@ -48,7 +48,7 @@ test('trade searches: F2 renames a row in place', async ({ overlay }) => {
   await expect(w.getByText('Life and speed boots', { exact: true })).toBeVisible()
 })
 
-test('regex library: Delete removes a row, Undo brings it back; F2 edits it', async ({ overlay }) => {
+test('regex library: Delete removes a row, Undo brings it back; F2 renames it in place', async ({ overlay }) => {
   await overlay.boot({
     overlayActive: true,
     patch: c => { c.widgets.find((w: { wmType: string }) => w.wmType === 'woke-regex-library').wmWants = 'show' }
@@ -57,9 +57,9 @@ test('regex library: Delete removes a row, Undo brings it back; F2 edits it', as
   const row = library.locator('button', { hasText: '20% quality' }).first()
   await row.focus()
   await overlay.page.keyboard.press('F2')
-  await expect(library.locator('form')).toHaveCount(1)
-  await library.getByRole('button', { name: 'Cancel' }).click()
-  await expect(library.locator('form')).toHaveCount(0)
+  await expect(library.locator('input[data-draft]')).toBeFocused()
+  await overlay.page.keyboard.press('Escape')
+  await expect(library.locator('input[data-draft]')).toHaveCount(0)
   await row.focus()
   await overlay.page.keyboard.press('Delete')
   await expect(library.getByText('20% quality', { exact: true })).toHaveCount(0)

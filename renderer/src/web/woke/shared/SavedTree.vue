@@ -16,12 +16,14 @@
         <span class="ml-auto w-num">{{ row.node.total }}</span>
       </button>
       <div v-else-if="row.kind === 'new-folder'" />
+      <slot v-else-if="editorFor != null && row.item.id === editorFor" name="editor" :item="row.item" />
       <WListItem v-else :active="active(row.item)" :class="[$style.row, mark(row.key), { [$style.picked]: tree.isPicked(row.item.id), [$style.nested]: row.depth > 0 }]" :style="rowStyle(row.depth)"
-        :data-row="row.key" :draggable="true" @dragstart="tree.dragStart($event, row)" @dragend="tree.dragEnd"
+        :data-row="row.key" :draggable="true" :title="titleOf?.(row.item)" @dragstart="tree.dragStart($event, row)" @dragend="tree.dragEnd"
         @click="tree.rowClick($event, row.item)" @dblclick="emit('open', row.item)" @contextmenu="emit('item-menu', $event, row.item)"
         @keydown="onItemKey($event, row.item)">
         <slot name="item" :item="row.item" />
-        <template v-if="$slots.sub" #sub><slot name="sub" :item="row.item" /></template>
+        <template v-if="$slots.sub && (subFor?.(row.item) ?? true)" #sub><slot name="sub" :item="row.item" /></template>
+        <template v-if="$slots.actions" #actions><slot name="actions" :item="row.item" /></template>
       </WListItem>
     </template>
     <div v-if="tree.drag.value" :class="[$style.tail, { [$style.dropTop]: tree.dropAt.value?.kind === 'top' }]" data-row="top" />
@@ -46,6 +48,12 @@ const props = defineProps<{
   copy?: (items: T[]) => void
   // Enter / double click on an item, when a click only picks it.
   activeId?: number | null
+  // The item shown as its edit form (#editor) instead of its row.
+  editorFor?: number | null
+  // A row's tooltip.
+  titleOf?: (item: T) => string
+  // Whether an item has a second line (#sub).
+  subFor?: (item: T) => boolean
 }>()
 const emit = defineEmits<{
   'item-menu': [e: MouseEvent, item: T]

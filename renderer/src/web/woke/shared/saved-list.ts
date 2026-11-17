@@ -27,21 +27,32 @@ export function rowKeys (actions: RowKeyActions, opts: { backspace?: boolean } =
   }
 }
 
-// Takes one entry out of a list; `restore` puts back just it, where it was, in
-// whatever the list has become since (edits and adds stay). An entry added
-// since may have taken its id: then it comes back under `freshId`.
-export function removeEntry<T extends { id: number }> (list: readonly T[], id: number): { list: T[], restore: (now: readonly T[], freshId: () => number) => T[] } | null {
-  const at = list.findIndex(e => e.id === id)
-  if (at < 0) return null
-  const removed = list[at]
+// Takes entries out of a list; `restore` puts back just them, each where it
+// was, in whatever the list has become since (edits and adds stay). One whose
+// id an entry added since took comes back under `freshId` (given the list).
+export function removeEntries<T extends { id: number }> (list: readonly T[], ids: Iterable<number>): { list: T[], removed: T[], restore: (now: readonly T[], freshId: (list: readonly T[]) => number) => T[] } | null {
+  const want = new Set(ids)
+  const at = list.map((e, i) => want.has(e.id) ? i : -1).filter(i => i >= 0)
+  if (!at.length) return null
+  const removed = at.map(i => list[i])
   return {
-    list: list.filter(e => e.id !== id),
+    list: list.filter(e => !want.has(e.id)),
+    removed,
     restore (now, freshId) {
-      const back = now.some(e => e.id === removed.id) ? { ...removed, id: freshId() } : removed
-      const i = Math.min(at, now.length)
-      return [...now.slice(0, i), back, ...now.slice(i)]
+      let out = [...now]
+      removed.forEach((r, k) => {
+        const back = out.some(e => e.id === r.id) ? { ...r, id: freshId(out) } : r
+        const i = Math.min(at[k], out.length)
+        out = [...out.slice(0, i), back, ...out.slice(i)]
+      })
+      return out
     }
   }
+}
+
+// One entry: removeEntries for one id.
+export function removeEntry<T extends { id: number }> (list: readonly T[], id: number) {
+  return removeEntries(list, [id])
 }
 
 // One name field at a time, by key ("entry:3", "folder:Gems", "new"): it

@@ -25,6 +25,11 @@ export interface RegexLibraryWidget extends Widget {
   anchor: Anchor
   enableHotkeys: boolean
   entries: RegexEntry[]
+  // The list's folders (shared/use-saved-tree): kept while empty, their
+  // order, and the folded ones.
+  folders?: string[]
+  folderOrder?: string[]
+  closedFolders?: string[]
 }
 
 export function emptyEntry (entries: RegexEntry[]): RegexEntry {
