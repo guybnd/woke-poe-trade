@@ -1,6 +1,6 @@
 // The editor parses each NeverSink text once and composes on copies of it.
-import { describe, expect, it } from 'vitest'
-import { cloneDoc, parseFilter, parseFilterCopy, serializeFilter } from '@/web/woke/loot-filter/parse'
+import { describe, expect, it, vi } from 'vitest'
+import { PARSE_CACHE_IDLE_MS, cloneDoc, parseFilter, parseFilterCopy, parseCacheSize, releaseParseCache, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { neverSink } from '../helpers/neversink'
 
 describe('parseFilterCopy', () => {
@@ -30,5 +30,28 @@ describe('parseFilterCopy', () => {
     a.blocks.splice(0, 1)
     expect(parseFilterCopy(text)).toEqual(fresh)
     expect(cloneDoc(fresh)).toEqual(fresh)
+  })
+})
+
+describe('parse cache release', () => {
+  it('lets the parsed text go after a while unused', () => {
+    vi.useFakeTimers()
+    try {
+      const text = neverSink('1-REGULAR')
+      releaseParseCache()
+      parseFilterCopy(text)
+      vi.advanceTimersByTime(PARSE_CACHE_IDLE_MS - 1)
+      expect(parseCacheSize()).toBe(1)
+      // A use starts the wait again.
+      parseFilterCopy(text)
+      vi.advanceTimersByTime(PARSE_CACHE_IDLE_MS - 1)
+      expect(parseCacheSize()).toBe(1)
+      vi.advanceTimersByTime(1)
+      expect(parseCacheSize()).toBe(0)
+      expect(parseFilterCopy(text)).toEqual(parseFilter(text))
+    } finally {
+      releaseParseCache()
+      vi.useRealTimers()
+    }
   })
 })

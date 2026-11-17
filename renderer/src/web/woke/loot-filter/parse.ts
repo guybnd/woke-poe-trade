@@ -395,9 +395,21 @@ export function cloneDoc (doc: FilterDoc): FilterDoc {
 }
 
 // The editor composes the same NeverSink text on every edit: parsed once,
-// then copied. Keeps the last two texts (your level and a compared one).
+// then copied. Keeps the last two texts (your level and a compared one), and
+// lets them go after a while unused, so the overlay doesn't hold them idle.
 const parsed: Array<{ text: string, doc: FilterDoc }> = []
+export const PARSE_CACHE_IDLE_MS = 30_000
+let releaseTimer: ReturnType<typeof setTimeout> | undefined
+export function releaseParseCache (): void {
+  clearTimeout(releaseTimer)
+  releaseTimer = undefined
+  parsed.length = 0
+}
+// For the tests: how many parsed texts are held.
+export const parseCacheSize = (): number => parsed.length
 export function parseFilterCopy (text: string): FilterDoc {
+  clearTimeout(releaseTimer)
+  releaseTimer = setTimeout(releaseParseCache, PARSE_CACHE_IDLE_MS)
   let hit = parsed.find(p => p.text === text)
   if (!hit) {
     hit = { text, doc: parseFilter(text) }
