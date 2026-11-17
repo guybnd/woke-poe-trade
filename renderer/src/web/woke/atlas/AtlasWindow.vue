@@ -20,6 +20,7 @@
               placeholder="An atlas tree link, a guide's text (tree link, Threads, currency, regex), a strategy code, or a pasted screenshot of the atlas tree"
               @keydown.esc="importOpen = false" @paste="shotPaste" />
             <ShotTray ref="shotTray" :model="atlasTree" @update="shotRead = $event" />
+            <WField v-model="importName" placeholder="Name" data-import-name @keydown.enter="doImport" />
             <div class="flex gap-1 items-center">
               <span class="w-faint text-xs">Into</span>
               <select v-model="importInto" :class="$style.select" class="w-select grow" title="Folder for what you import">
@@ -931,7 +932,10 @@ async function fetchProxied (url: string): Promise<string> {
 
 const shotTray = shallowRef<{ add: (files: Iterable<File>) => boolean, clear: () => void }>()
 const shotRead = shallowRef<ShotRead | null>(null)
-watch(importOpen, (on) => { if (!on) shotRead.value = null })
+// The imported strategy's name (Guy: "allow to set a name"). Empty: the
+// guide's own name, else "From screenshot" / "Imported tree".
+const importName = shallowRef('')
+watch(importOpen, (on) => { if (!on) { shotRead.value = null; importName.value = '' } })
 
 const importLabel = computed(() => {
   const n = shotRead.value?.nodes.length ?? 0
@@ -970,7 +974,7 @@ async function doImport () {
   if (!text && shots?.nodes.length) {
     // Always a new strategy: nothing you have is changed.
     const { encodeAtlasTree } = await import('./atlas-tree')
-    const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), name: 'From screenshot', treeUrl: encodeAtlasTree(shots.nodes, {}), folder: into }
+    const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), name: importName.value.trim() || 'From screenshot', treeUrl: encodeAtlasTree(shots.nodes, {}), folder: into }
     fileImported(s, [])
     props.config.strategies.push(s)
     props.config.selectedId = s.id
@@ -985,9 +989,11 @@ async function doImport () {
   try {
     if (isStrategyCode(text)) {
       const { readStrategyCode } = await import('./strategy-code')
-      for (const shared of readStrategyCode(text)) {
+      const codes = readStrategyCode(text)
+      for (const shared of codes) {
         const { regexes, ...rest } = shared
         const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), ...rest, folder: joinFolder(into, rest.folder) }
+        if (codes.length === 1 && importName.value.trim()) s.name = importName.value.trim()
         fileImported(s, regexes)
         props.config.strategies.push(s)
         added.push(s)
@@ -998,6 +1004,7 @@ async function doImport () {
       const lone = !/\s/.test(full) && extractTreeCode(full)
       const parsed = lone ? { name: 'Imported tree', treeUrl: full } : parseGuideText(full)
       const s: AtlasStrategy = { ...emptyStrategy(props.config.strategies), ...parsed, folder: into }
+      if (importName.value.trim()) s.name = importName.value.trim()
       fileImported(s, [])
       props.config.strategies.push(s)
       added.push(s)
