@@ -498,10 +498,14 @@ function reset () {
 
 // Every tier the item can go to. The one its price says moves it as a price
 // move; any other is your own move, so prices leave it there after.
-function tierEntries (type: string, from: string, wanted: string, base: string, byPrice: () => void) {
+// A locked item's price move would sit under your own move and do nothing, so
+// every tier there is a move by hand (`byPrice` null).
+function tierEntries (type: string, from: string, wanted: string, base: string, byPrice: (() => void) | null) {
   const byHand = useTierMove(props.store, { type: () => type, from: () => from, anchor: () => props.anchor as HTMLElement | null })
-  return tierMoveEntries(props.store.doc.value, type, from, to => { if (to === wanted) byPrice(); else byHand([base], to) }, {
-    label: to => `Move to ${tierLabel(to)}${to === wanted ? ' · price says' : ''}`
+  return tierMoveEntries(props.store.doc.value, type, from, to => { if (to === wanted && byPrice) byPrice(); else byHand([base], to) }, {
+    label: to => `Move to ${tierLabel(to)}${to === wanted ? ' · price says' : ''}`,
+    also: wanted,
+    markHidden: true
   })
 }
 
@@ -515,7 +519,7 @@ function moveMenu (e: MouseEvent, m: PriceMove) {
 
 function skipMenu (e: MouseEvent, s: PriceSkip) {
   openMenu(e, [
-    ...tierEntries(s.type, s.tier, s.wanted, s.base, () => { moveAnywayMany([s]) }),
+    ...tierEntries(s.type, s.tier, s.wanted, s.base, s.reason === 'locked' ? null : () => { moveAnywayMany([s]) }),
     ...(s.reason === 'locked' ? [{ separator: true } as const, { label: 'Unlock', icon: 'fas fa-unlock', action: () => { unlockMany([s]) } }] : [])
   ])
 }

@@ -37,10 +37,17 @@ export function useTierMove (store: LootFilterStore, at: TierMoveAt) {
 
 // The "Move to" menu: every tier of the group the items can go to, each drawn
 // in its own look. One list for the editor, Alt+F and the Prices tab.
-export function tierMoveEntries (doc: FilterDoc | null | undefined, type: string | null | undefined, from: string | null | undefined, pick: (to: string) => void, opts: { label?: (to: string) => string } = {}): MenuEntry[] {
+// `also`: a tier to offer even if it isn't one you'd move to by hand.
+// `markHidden`: say which tiers hide what goes there.
+export function tierMoveEntries (doc: FilterDoc | null | undefined, type: string | null | undefined, from: string | null | undefined, pick: (to: string) => void, opts: { label?: (to: string) => string, also?: string | null, markHidden?: boolean } = {}): MenuEntry[] {
   if (!doc || !type) return []
-  return moveTargets(doc, type).filter(t => t !== from).map(t => {
-    const block = doc.blocks.find(x => x.type === type && x.tier === t && !x.disabled) ?? doc.blocks.find(x => x.type === type && x.tier === t)
-    return { label: opts.label?.(t) ?? tierLabel(t), labelStyle: block ? labelCss(block.actions) : undefined, icon: 'fas fa-share', action: () => { pick(t) } }
+  const tiers = moveTargets(doc, type)
+  if (opts.also && !tiers.includes(opts.also)) tiers.push(opts.also)
+  return tiers.filter(t => t !== from).map(t => {
+    const blocks = doc.blocks.filter(x => x.type === type && x.tier === t)
+    const block = blocks.find(x => !x.disabled) ?? blocks[0]
+    const live = blocks.filter(x => !x.disabled)
+    const hides = opts.markHidden === true && live.length > 0 && live.every(x => x.visibility === 'Hide')
+    return { label: `${opts.label?.(t) ?? tierLabel(t)}${hides ? ' · hides it' : ''}`, labelStyle: block ? labelCss(block.actions) : undefined, icon: 'fas fa-share', action: () => { pick(t) } }
   })
 }
