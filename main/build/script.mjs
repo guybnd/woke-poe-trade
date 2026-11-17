@@ -32,6 +32,15 @@ const visionBuild = await esbuild.build({
   outfile: 'dist/vision.js'
 })
 
+// Reads pasted pictures of a tree off the main thread (woke/tree-overlay.ts).
+await esbuild.build({
+  entryPoints: ['src/woke/picture-worker.ts'],
+  bundle: true,
+  minify: !isDev,
+  platform: 'node',
+  outfile: 'dist/picture.js'
+})
+
 const mainContext = await esbuild.context({
   entryPoints: ['src/main.ts'],
   bundle: true,

@@ -1,11 +1,16 @@
 // Build tree over the game's passive tree. Reads the screen to find where the
 // tree sits (tree-fit.ts) and follows the mouse while you drag it. Only looks
 // at the screen; no input goes to the game.
+import fs from 'fs'
+import path from 'path'
+import { Worker } from 'worker_threads'
 import { nativeImage } from 'electron'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import type { UiohookKeyboardEvent, UiohookMouseEvent } from 'uiohook-napi'
 import type { GameWindow } from '../windowing/GameWindow'
-import { fitPicture, fitTree, litLines, litProbes, MIN_SCORE, PASSIVE_FIT, readScreen } from './tree-fit'
+import { fitTree, litLines, litProbes, MIN_SCORE, PASSIVE_FIT, readScreen } from './tree-fit'
+import { readPicture } from './picture-worker'
+import type { PictureJob, PictureResult } from './picture-worker'
 import type { FitKind, LitTone, TreeFit, TreePoints } from './tree-fit'
 import { perfRecord } from './perf'
 import { insideGame, TreeDrag } from './tree-drag'
@@ -25,6 +30,28 @@ const MODIFIERS = new Set<number>([
   UiohookKey.Shift, UiohookKey.ShiftRight,
   UiohookKey.Meta, UiohookKey.MetaRight
 ])
+
+// A picture read in its own worker (dist/picture.js, next to main.js), so
+// main doesn't stall. Inline if the worker can't start or fails: the job's
+// pixels are copied to the worker, never moved, so they're still here.
+function runPictureJob (job: PictureJob): Promise<PictureResult> {
+  const file = path.join(__dirname, 'picture.js')
+  if (!fs.existsSync(file)) return Promise.resolve(readPicture(job))
+  return new Promise((resolve) => {
+    const worker = new Worker(file)
+    let done = false
+    const finish = (res: PictureResult) => {
+      if (done) return
+      done = true
+      resolve(res)
+      worker.terminate().catch(() => {})
+    }
+    worker.once('message', finish)
+    worker.once('error', () => { finish(readPicture(job)) })
+    worker.once('exit', () => { finish(readPicture(job)) })
+    worker.postMessage(job)
+  })
+}
 
 // After the last scroll or key, wait this long for the game to redraw.
 const SETTLE_MS = 160
@@ -100,23 +127,22 @@ export class TreeOverlay {
   // full screenshot first; else a snip (picture: the fit for a part cut from
   // the screen, no HUD known). probes are read the lax way (node frames),
   // extra the strict way (lines).
-  readImage (args: { image: string, probes: number[][], extra: number[][] }, picture?: FitKind) {
-    if (!this.pts) return { ok: false as const, reason: 'no-points' }
-    if (typeof args?.image !== 'string' || !/^data:image\/(png|jpeg);base64,/.test(args.image)) return { ok: false as const, reason: 'format' }
+  async readImage (args: { image: string, probes: number[][], extra: number[][] }, picture?: FitKind): Promise<PictureResult | { ok: false, reason: 'no-points' | 'format' | 'too-big' }> {
+    if (!this.pts) return { ok: false, reason: 'no-points' }
+    if (typeof args?.image !== 'string' || !/^data:image\/(png|jpeg);base64,/.test(args.image)) return { ok: false, reason: 'format' }
     const img = nativeImage.createFromDataURL(args.image)
     const { width, height } = img.getSize()
-    if (!width || !height) return { ok: false as const, reason: 'format' }
-    // Two BGRA copies on this thread: 8K by 4K is plenty for any screen.
-    if (width * height > 7680 * 4320) return { ok: false as const, reason: 'too-big' }
+    if (!width || !height) return { ok: false, reason: 'format' }
+    // 8K by 4K is plenty for any screen.
+    if (width * height > 7680 * 4320) return { ok: false, reason: 'too-big' }
     const t0 = performance.now()
-    // BGRA, as the game's screenshots are.
+    // BGRA, as the game's screenshots are. Decoding stays here (Electron
+    // only); the fit and reading run in a worker.
     const px = new Uint8Array(img.toBitmap())
-    const { fit, bare } = fitPicture(px, width, height, this.pts, this.kind, picture)
+    const job: PictureJob = { px, width, height, pts: this.pts, kind: this.kind, snip: picture, tone: this.tone, probes: args.probes ?? [], extra: args.extra ?? [] }
+    const res = await runPictureJob(job)
     perfRecord('Tree overlay: read picture', performance.now() - t0)
-    if (!fit) return { ok: false as const, reason: 'no-tree' }
-    const lit = litProbes(px, width, height, fit, (args.probes ?? []).map(p => Float32Array.from(p)), this.tone)
-    const extraLit = litLines(px, width, height, fit, (args.extra ?? []).map(p => Float32Array.from(p)), this.pts, this.tone, bare)
-    return { ok: true as const, lit, extraLit, width, height, bare }
+    return res
   }
 
   stop () {

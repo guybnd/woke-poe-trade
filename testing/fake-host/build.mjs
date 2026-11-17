@@ -61,6 +61,18 @@ await esbuild.build({
   logLevel: 'warning'
 })
 
+// The picture reader's worker (pasted screenshots of a tree).
+await esbuild.build({
+  entryPoints: [path.join(here, '../../main/src/woke/picture-worker.ts')],
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node20',
+  outfile: path.join(out, 'picture.js'),
+  nodePaths,
+  logLevel: 'warning'
+})
+
 // The same vision code, as a library for the OCR tests (testing/vision).
 await esbuild.build({
   entryPoints: [path.join(here, 'vision-lib.ts')],

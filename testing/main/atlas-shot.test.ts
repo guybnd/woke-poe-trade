@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { Worker } from 'worker_threads'
 import { describe, it, expect } from 'vitest'
 import { PNG } from 'pngjs'
 import { ATLAS_FIT, ATLAS_PICTURE_FIT, fitPicture, fitTree, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
@@ -74,6 +75,20 @@ describe('atlas tree screenshots to a strategy', () => {
     const r = readShots(model, lines, [snip.lines], ringIds, [snip.rings])
     const whole = readShots(model, lines, [out.lines], ringIds, [out.rings])
     expect(r.nodes.sort()).toEqual(whole.nodes.sort())
+  })
+
+  it('reads off the main thread in the picture worker (built by build:host)', async () => {
+    const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '../fixtures/screens/atlas-tree-real-zoomed-out.png')))
+    const px = new Uint8Array(png.data)
+    for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
+    const worker = new Worker(path.join(__dirname, '../fake-host/dist/picture.js'))
+    const res = await new Promise<{ ok: boolean, lit: boolean[], extraLit: boolean[] }>((resolve, reject) => {
+      worker.once('message', resolve)
+      worker.once('error', reject)
+      worker.postMessage({ px, width: png.width, height: png.height, pts, kind: ATLAS_FIT, snip: ATLAS_PICTURE_FIT, tone: 'blue', probes: rings.map(r => [...r]), extra: extra.map(e => [...e]) })
+    }).finally(() => worker.terminate())
+    expect(res.ok).toBe(true)
+    expect(readShots(model, lines, [res.extraLit], ringIds, [res.lit]).nodes).toHaveLength(13)
   })
 
   it('finds no atlas tree on other screens', () => {
