@@ -30,7 +30,7 @@
       </div>
       <template v-if="showMoved">
         <div class="w-group-label" :class="$style.label">Moved by prices</div>
-        <div v-for="m in movedList" :key="'d' + m.type + m.base" :class="$style.row">
+        <div v-for="m in movedList" :key="'d' + m.type + m.base" v-item-tip="baseTip(m.type, m.base)" :class="$style.row">
           <LabelPreview :text="m.base" :actions="lookOf(m.type, m.to)" :extras="false" />
           <button type="button" :class="$style.link" class="w-focusable text-xs w-trunc" :title="`Open ${groupLabel(m.type)} ${m.to} in Rules`" @click="emit('open-rule', { type: m.type, tier: m.to, base: m.base })">{{ groupLabel(m.type) }} <i class="fas fa-external-link-alt" /></button>
           <span class="w-num text-xs w-dim">{{ tierLabel(m.from) }} → {{ tierLabel(m.to) }}</span>
@@ -84,7 +84,7 @@
           <WButton v-if="pickedLocked.length" size="sm" variant="ghost" icon="fas fa-unlock" title="Prices may move them again. Any move you made by hand goes too." @click="unlockMany(pickedLocked)">Unlock {{ pickedLocked.length }}</WButton>
           <WButton v-if="pickedUnsure.length" size="sm" variant="ghost" title="Move them to the tier their price says, though the price may not be real" @click="moveAnywayMany(pickedUnsure)">Move {{ pickedUnsure.length }} anyway<template v-if="pickedHides"> · {{ pickedHides }} would hide</template></WButton>
         </div>
-        <div v-for="(s, n) in skipShown" :key="'s' + s.type + s.base" :class="$style.row">
+        <div v-for="(s, n) in skipShown" :key="'s' + s.type + s.base" v-item-tip="baseTip(s.type, s.base)" :class="$style.row" @contextmenu="skipMenu($event, s)">
           <input :checked="skipPicks.isPicked(s)" type="checkbox" :class="$style.check" :aria-label="`Pick ${s.base}`" @click="skipPicks.click($event, n)">
           <LabelPreview :text="s.base" :actions="lookOf(s.type, s.tier)" :extras="false" />
           <button type="button" :class="$style.link" class="w-focusable text-xs" :title="`Open ${groupLabel(s.type)} ${s.tier} in Rules`" @click="emit('open-rule', { type: s.type, tier: s.tier, base: s.base })">{{ groupLabel(s.type) }}, {{ tierLabel(s.tier) }} <i class="fas fa-external-link-alt" /></button>
@@ -187,6 +187,7 @@ import { groupName } from './groups'
 import type { FilterAction } from './parse'
 import { tierLabel } from './names'
 import { usePicks } from './picks'
+import { tierMoveEntries, useTierMove } from './tier-move'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -495,10 +496,31 @@ function reset () {
   moved('Price groups are back on NeverSink\'s tiers', props.store.resetPrices())
 }
 
+// Every tier the item can go to. The one its price says moves it as a price
+// move; any other is your own move, so prices leave it there after.
+// A locked item's price move would sit under your own move and do nothing, so
+// every tier there is a move by hand (`byPrice` null).
+function tierEntries (type: string, from: string, wanted: string, base: string, byPrice: (() => void) | null) {
+  const byHand = useTierMove(props.store, { type: () => type, from: () => from, anchor: () => props.anchor as HTMLElement | null })
+  return tierMoveEntries(props.store.doc.value, type, from, to => { if (to === wanted && byPrice) byPrice(); else byHand([base], to) }, {
+    label: to => `Move to ${tierLabel(to)}${to === wanted ? ' · price says' : ''}`,
+    also: wanted,
+    markHidden: true
+  })
+}
+
 function moveMenu (e: MouseEvent, m: PriceMove) {
   openMenu(e, [
-    { label: `Move ${m.base} to ${tierLabel(m.to)}`, icon: 'fas fa-exchange-alt', action: () => { moved(`Moved ${m.base} to ${tierLabel(m.to)}`, props.store.applyPrices([m])) } },
+    ...tierEntries(m.type, m.from, m.to, m.base, () => { moved(`Moved ${m.base} to ${tierLabel(m.to)}`, props.store.applyPrices([m])) }),
+    { separator: true },
     { label: 'Keep it where it is', icon: 'fas fa-lock', action: () => { const undo = props.store.lockItem(m.type, m.base); toast(`${m.base} stays in ${tierLabel(m.from)}`, { anchor: props.anchor, undo }) } }
+  ])
+}
+
+function skipMenu (e: MouseEvent, s: PriceSkip) {
+  openMenu(e, [
+    ...tierEntries(s.type, s.tier, s.wanted, s.base, s.reason === 'locked' ? null : () => { moveAnywayMany([s]) }),
+    ...(s.reason === 'locked' ? [{ separator: true } as const, { label: 'Unlock', icon: 'fas fa-unlock', action: () => { unlockMany([s]) } }] : [])
   ])
 }
 
