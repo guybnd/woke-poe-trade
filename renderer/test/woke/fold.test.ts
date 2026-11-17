@@ -1,6 +1,6 @@
 // Folds stay as left: one shared state per key, saved in storage.
 import { beforeAll, describe, expect, it } from 'vitest'
-import { nextTick } from 'vue'
+import { effectScope, nextTick } from 'vue'
 
 const store = new Map<string, string>()
 beforeAll(() => {
@@ -33,9 +33,19 @@ describe('useFold', () => {
     expect(o.value).toBeNull()
     o.value = 'b'
     await nextTick()
-    expect(store.get('woke.fold.t.acc')).toBe('b')
+    expect(store.get('woke.fold.one.t.acc')).toBe('b')
     o.value = null
     await nextTick()
-    expect(store.get('woke.fold.t.acc')).toBe('')
+    expect(store.get('woke.fold.one.t.acc')).toBe('')
+  })
+
+  it('keeps saving after the first component to ask is gone', async () => {
+    const { useFold } = await import('@/web/woke/ui/fold')
+    const first = effectScope()
+    const a = first.run(() => useFold('t.scope'))!
+    first.stop()
+    a.value = true
+    await nextTick()
+    expect(store.get('woke.fold.t.scope')).toBe('1')
   })
 })
