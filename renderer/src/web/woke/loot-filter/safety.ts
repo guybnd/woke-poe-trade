@@ -10,7 +10,7 @@ import { readStyle } from './edits'
 import { ownMatchActions } from './look'
 import type { EconomyGroup, PriceLookup } from './economy'
 import { NET_GROUPS } from './economy'
-import { matchItem } from './match'
+import { byBase, matchItem } from './match'
 import type { ItemFacts } from './item-facts'
 import { BASE_FACTS } from './base-facts'
 
@@ -126,8 +126,8 @@ function plainDrop (group: EconomyGroup, base: string, itemClass: string | undef
 // Taking the first rule that listed a base read every Replica and Foulborn rule
 // as "this base shows", and the net left the plain unique hidden. A hide the
 // walk can't rule out counts as hidden: a false alarm costs one click.
-function verdictOf (doc: FilterDoc, drop: ItemFacts): { block: FilterBlock | null, state: ItemState, mine: boolean } {
-  const m = matchItem(doc, drop, { brief: true })
+function verdictOf (rules: (drop: ItemFacts) => FilterDoc, drop: ItemFacts): { block: FilterBlock | null, state: ItemState, mine: boolean } {
+  const m = matchItem(rules(drop), drop, { brief: true })
   // A rule that names this base, or a unique rule when the drop is one, is about
   // this item. A class-wide rule we can't judge without the item's class isn't.
   const about = (b: FilterBlock) => b.conditions.some(c =>
@@ -152,6 +152,7 @@ export function auditBases (doc: FilterDoc, lookup: PriceLookup, minChaos: numbe
   const walked: FilterDoc = doc.blocks.some(b => b.type === SAFETY_RULE_TYPE)
     ? { ...doc, blocks: doc.blocks.filter(b => b.type !== SAFETY_RULE_TYPE) }
     : doc
+  const rules = byBase(walked)
   for (const group of groups) {
     // A base and the Class of a rule that lists it. A tier this level has
     // commented out still names the base, which then falls to a later rule.
@@ -173,7 +174,7 @@ export function auditBases (doc: FilterDoc, lookup: PriceLookup, minChaos: numbe
     for (const [base, itemClass] of bases) {
       const price = lookup(group, base)
       if (!price || price.chaos < minChaos) continue
-      out.push({ group, base, chaos: price.chaos, thin: price.thin, note: price.note, ...verdictOf(walked, plainDrop(group, base, itemClass)) })
+      out.push({ group, base, chaos: price.chaos, thin: price.thin, note: price.note, ...verdictOf(rules, plainDrop(group, base, itemClass)) })
     }
   }
   return out.sort((a, b) => b.chaos - a.chaos)
@@ -248,6 +249,7 @@ const STACKS = /Currency|Divination|Fragment/
 export function stackNet (doc: FilterDoc, lookup: PriceLookup, minChaos: number, skip?: (group: EconomyGroup, base: string) => boolean): Record<string, string[]> {
   const out: Record<string, string[]> = {}
   const walked: FilterDoc = { ...doc, blocks: doc.blocks.filter(b => b.type !== SAFETY_RULE_TYPE) }
+  const rules = byBase(walked)
   for (const group of NET_GROUPS) {
     if (group.unique) continue
     const seen = new Set<string>()
@@ -264,7 +266,7 @@ export function stackNet (doc: FilterDoc, lookup: PriceLookup, minChaos: number,
           if (!price || price.chaos >= minChaos || skip?.(group, base)) continue
           const size = STACK_SIZES.find(n => price.chaos * n >= minChaos)
           if (size == null) continue
-          const v = verdictOf(walked, { ...plainDrop(group, base, itemClass), stackSize: size })
+          const v = verdictOf(rules, { ...plainDrop(group, base, itemClass), stackSize: size })
           if (v.state === 'hidden' && !v.mine) (out[size] ??= []).push(base)
         }
       }

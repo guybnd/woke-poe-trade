@@ -167,7 +167,8 @@ export interface WokeOps {
   'doc-exists': Op<DocKey, boolean>
   'death-recap-read': Op<NoArgs, { deaths: Json[], runs: Json[] }>
   'death-recap-write': Op<{ deaths: Json[], runs: Json[] }, Ok>
-  'market-save': Op<{ snapshot: Json, daily: Json[] }, Ok>
+  // Main builds the daily rows from the snapshot when `daily` is left out.
+  'market-save': Op<{ snapshot: Json, daily?: Json[] }, Ok>
   'market-latest': Op<League & { count: number }, Json[]>
   'market-at': Op<League & { ts: number }, Json>
   'market-daily-date': Op<League & { date: string }, Json[]>

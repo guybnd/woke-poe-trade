@@ -234,6 +234,46 @@ export function sameOutcome (a: MatchResult, b: MatchResult): boolean {
   return a.visibility === b.visibility && sameRule(a, b) && actionsKey(a) === actionsKey(b)
 }
 
+// For walking many items through one filter (the safety net checks every
+// priced base, on every rebuild): a rule whose exact BaseType list leaves out
+// the item's base can never take it, so each base only walks the rules that
+// could. Same results as matchItem on the whole doc, in about half the time.
+// The doc must not change while the returned function is in use.
+export function byBase (doc: FilterDoc): (item: ItemFacts) => FilterDoc {
+  const open: number[] = []
+  const named = new Map<string, number[]>()
+  doc.blocks.forEach((b, i) => {
+    if (b.disabled) return
+    const list = b.conditions.find(c => c.key === 'BaseType' && c.op === '==' && c.count == null)
+    if (!list) { open.push(i); return }
+    for (const v of new Set(list.values)) {
+      const at = named.get(v)
+      if (at) at.push(i)
+      else named.set(v, [i])
+    }
+  })
+  const views = new Map<string, FilterDoc>()
+  return item => {
+    const base = item.filterBase ?? item.baseType
+    // An unknown base leaves every exact list unknown, not false.
+    if (base == null) return doc
+    let view = views.get(base)
+    if (!view) {
+      const mine = named.get(base) ?? []
+      const order: number[] = []
+      let i = 0
+      let j = 0
+      while (i < open.length || j < mine.length) {
+        if (j >= mine.length || (i < open.length && open[i] < mine[j])) order.push(open[i++])
+        else order.push(mine[j++])
+      }
+      view = { ...doc, blocks: order.map(k => doc.blocks[k]) }
+      views.set(base, view)
+    }
+    return view
+  }
+}
+
 export function matchItem (doc: FilterDoc, item: ItemFacts, opts: { brief?: boolean } = {}): MatchResult {
   const layers: BlockMatch[] = []
   const uncertain: BlockMatch[] = []

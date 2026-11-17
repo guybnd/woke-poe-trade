@@ -4,8 +4,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { onWokePricesLoaded, replayWokePrices } from './hook'
 import { findDivinePrice, parseDenseChunks } from './parse'
 import { saveSnapshot } from './db'
-import { utcDate } from './types'
-import type { DailyRow, Snapshot } from './types'
+import type { Snapshot } from './types'
 import { perfTime, perfTimeAsync, whenIdle } from '../shared/perf'
 
 // APT only refreshes poe.ninja prices (about every 31 min) while something
@@ -40,15 +39,8 @@ const useCollectorState = createGlobalState(() => {
     if (!items.length) return
     const divine = findDivinePrice(items)
     const snapshot: Snapshot = { league, ts, divine, items }
-    const date = utcDate(ts)
-    const daily: DailyRow[] = items.map(item => {
-      const row: DailyRow & { d1?: number, d7?: number } = { league, date, divine, ts, ...item }
-      delete row.d1
-      delete row.d7
-      return row
-    })
 
-    perfTimeAsync('Prices: save to history', saveSnapshot(snapshot, daily))
+    perfTimeAsync('Prices: save to history', saveSnapshot(snapshot))
       .then(() => {
         lastSnapshot.value = { league, ts, count: items.length, divine }
         lastError.value = null

@@ -15,10 +15,12 @@ const SLOW_MS = 120_000
 // thousand items, so read it from disk once and share it.
 const latestCache = new Map<string, Promise<Snapshot | null>>()
 
-export async function saveSnapshot (snapshot: Snapshot, daily: DailyRow[]): Promise<void> {
+// Main makes the day's rows from the snapshot, and skips a save whose prices
+// match the last one.
+export async function saveSnapshot (snapshot: Snapshot): Promise<void> {
   latestCache.delete(snapshot.league)
   await importOldHistory()
-  await hostRequest('market-save', { snapshot, daily }, SLOW_MS)
+  await hostRequest('market-save', { snapshot }, SLOW_MS)
   latestCache.set(snapshot.league, Promise.resolve(snapshot))
 }
 

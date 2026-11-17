@@ -103,12 +103,49 @@ async function readSnapshot (league: string, ts: number): Promise<Snapshot | nul
   return await readJson<Snapshot>(path.join(leagueDir(league), 'snapshots', `${ts}.json`))
 }
 
+const utcDate = (ts: number) => new Date(ts).toISOString().slice(0, 10)
+
+// One row per item for the snapshot's UTC day (what market/collector.ts sent
+// before the overlay stopped sending them: the same list again, ~2 MB).
+export function dailyRows (snap: Snapshot): DailyRow[] {
+  const date = utcDate(snap.ts)
+  return snap.items.map(item => {
+    const row = { league: snap.league, date, divine: snap.divine, ts: snap.ts, ...(item as object) } as unknown as DailyRow & { d1?: unknown, d7?: unknown }
+    delete row.d1
+    delete row.d7
+    return row
+  })
+}
+
+// The prices of the newest snapshot of each league. Every overlay start replays
+// the prices it has, so half of the saves repeat the last one: those still get
+// their snapshot file (movers and "saved at" go by snapshot times), but skip
+// re-merging and rewriting the day's ~2 MB of rows, which wouldn't change.
+const lastSaved = new Map<string, { key: string, date: string }>()
+const pricesKey = (snap: Snapshot) => JSON.stringify([snap.divine, snap.items])
+
+async function sameAsLast (snap: Snapshot, key: string): Promise<boolean> {
+  let last = lastSaved.get(snap.league)
+  if (!last) {
+    const ts = (await snapshotTimes(snap.league))[0]
+    const prev = ts != null ? await readSnapshot(snap.league, ts) : null
+    if (!prev) return false
+    last = { key: pricesKey(prev), date: utcDate(prev.ts) }
+  }
+  // A new day still gets its own daily rows.
+  return last.key === key && last.date === utcDate(snap.ts)
+}
+
 export const marketHandlers: Partial<WokeHandlers> = {
   'market-save': async ({ snapshot, daily }) => {
     const snap = snapshot as Snapshot
     return await queued(snap.league, async () => {
+      const key = pricesKey(snap)
+      // Day rows first: a snapshot on disk then always has its day rows, so a
+      // repeat of it can safely skip them.
+      if (!await sameAsLast(snap, key)) await saveDaily(snap.league, Array.isArray(daily) ? daily as DailyRow[] : dailyRows(snap))
       await saveSnapshotFile(snap)
-      await saveDaily(snap.league, daily as DailyRow[])
+      lastSaved.set(snap.league, { key, date: utcDate(snap.ts) })
       return true
     })
   },
