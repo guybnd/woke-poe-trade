@@ -53,6 +53,11 @@ export interface SavedTreeAdapter<T extends { id: number }> {
   folderLocked?: (path: string) => string | null
   // A plain click on an item does this too (Regex library: search the stash).
   open?: (item: T) => void
+  // Only these items, as a filter shows them (Trade searches' Pinned view).
+  only?: () => ((item: T) => boolean) | null
+  // A folder (and all under it) is about to move or be renamed: the list's own
+  // records and other tools' links follow.
+  onFolderMoved?: (from: string, to: string) => void
 }
 
 // `start`: the text the field opened with.
@@ -69,13 +74,14 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
 
   function rowsFor (sortedList: boolean): Array<TreeRow<T>> {
     const q = a.query().trim()
-    const list = a.items().filter(t => a.matches(t, q))
+    const only = a.only?.() ?? null
+    const list = a.items().filter(t => a.matches(t, q) && (!only || only(t)))
     const ordered = sortedList && a.sorted ? a.sorted(list) : list
     const byName = sortedList && (a.foldersByName?.() ?? false)
-    const tree = treeOf(ordered, a.folderOf, q ? [] : a.extraFolders(), byName ? [] : a.folderOrder() ?? [])
+    const tree = treeOf(ordered, a.folderOf, q || only ? [] : a.extraFolders(), byName ? [] : a.folderOrder() ?? [])
     const e = editing.value
     const newIn = e?.target === 'folder' && e.key.startsWith('n:') ? e.key.slice(2) : null
-    return treeRows(tree, { closed: a.closed(), filtering: Boolean(q), newIn })
+    return treeRows(tree, { closed: a.closed(), filtering: Boolean(q) || Boolean(only), newIn })
   }
   const rows = computed(() => rowsFor(true))
   const shownIds = () => rows.value.flatMap(r => r.kind === 'item' ? [r.item.id] : [])
@@ -132,6 +138,8 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
   }
   function moveFolder (from: string, to: string) {
     if (!to || from === to || to.startsWith(from + '/')) return
+    // First, so a list can carry its own records (icons) to the new paths.
+    a.onFolderMoved?.(from, to)
     for (const t of a.items()) {
       const next = movedPath(a.folderOf(t), from, to)
       if (next !== cleanPath(a.folderOf(t))) a.setFolder(t, next)

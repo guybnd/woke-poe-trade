@@ -27,39 +27,17 @@
               @click="pickView(v.id)">
               <i :class="[v.icon, $style.ic]" /><span class="w-trunc">{{ v.label }}</span><span :class="$style.n">{{ counts[v.id] || '' }}</span>
             </button>
-            <div class="w-group-label" :class="$style.sec">Folders</div>
-            <template v-for="(f, i) in folders" :key="f">
-              <input v-if="renaming === `folder:${f}`" data-draft v-model="draft" :class="['w-field', $style.edit]" spellcheck="false"
-                @keydown.enter.prevent="finishFolderRename(f)" @keydown.esc.prevent="renaming = null" @blur="finishFolderRename(f)">
-              <button v-else type="button" :class="[$style.rl, { [$style.on]: view === `folder:${f}` && !filter, [$style.drop]: dropOn === f }]"
-                @click="pickView(`folder:${f}`)" @contextmenu="folderMenu($event, f, i)"
-                @dragover.prevent="dropOn = f" @dragleave="dropOn = dropOn === f ? null : dropOn" @drop.prevent="dropInto(f)">
-                <img v-if="iconSrc(folderIcon(config, f))" :src="iconSrc(folderIcon(config, f))!" class="w-game-icon" :class="$style.art" alt="">
-                <i v-else :class="['fas fa-folder', $style.ic]" />
-                <span class="w-trunc">{{ f }}</span><span :class="$style.n">{{ counts[`folder:${f}`] || '' }}</span>
-              </button>
-              <div v-if="pickingIcon === f" :class="$style.icons" role="group" :aria-label="`Icon for ${f}`">
-                <button v-for="key in iconChoices" :key="key" type="button" :class="[$style.iconBtn, { [$style.on]: folderIcon(config, f) === key }]"
-                  :title="key.slice(key.indexOf(':') + 1)" @click="setIcon(f, key)">
-                  <img :src="iconSrc(key)!" class="w-game-icon" alt="" @error="(($event.target as HTMLElement).parentElement as HTMLElement).style.display = 'none'">
-                </button>
-                <button type="button" :class="$style.iconBtn" title="Plain folder" @click="setIcon(f, undefined)"><i class="fas fa-folder" /></button>
-              </div>
-            </template>
-            <input v-if="renaming === 'new'" data-draft v-model="draft" :class="['w-field', $style.edit]" placeholder="Folder name" spellcheck="false"
-              @keydown.enter.prevent="finishNewFolder" @keydown.esc.prevent="renaming = null" @blur="finishNewFolder">
-            <button v-else type="button" :class="[$style.rl, $style.add]" @click="startNewFolder"><i :class="['fas fa-plus', $style.ic]" />New folder</button>
+            <button type="button" :class="[$style.rl, $style.add]" @click="tree.startFolder('')"><i :class="['fas fa-plus', $style.ic]" />New folder</button>
           </nav>
 
           <div :class="$style.list">
             <div v-if="filter" class="w-faint text-xs" :class="$style.note">Searching every folder</div>
-            <div v-if="rows.length" :class="$style.head"><span>Name</span><span>Opened</span><span>Times</span></div>
-            <template v-for="entry in rows" :key="entry.id">
-              <input v-if="renaming === `entry:${entry.id}`" data-draft v-model="draft" :class="['w-field', $style.edit]" spellcheck="false"
-                @keydown.enter.prevent="finishEntryRename(entry)" @keydown.esc.prevent="renaming = null" @blur="finishEntryRename(entry)">
-              <WListItem v-else :active="openId === entry.id" draggable="true"
-                :title="tooltip(entry)" @select="open(entry, 'overlay')" @dragstart="dragId = entry.id" @dragend="dragId = null; dropOn = null"
-                @contextmenu="rowMenu($event, entry)" @keydown="rowKeys({ remove: () => remove(entry), copy: () => copyLink(entry), rename: () => startEntryRename(entry) })($event)">
+            <div v-if="tree.rows.value.length" :class="$style.head"><span>Name</span><span>Opened</span><span>Times</span></div>
+            <!-- The list (shared/SavedTree): nested folders that fold, drag, Ctrl /
+                 Shift picks, Alt + arrows, F2. A click opens the search here. -->
+            <SavedTree :tree="tree" list-id="trade-folders" :active-id="openId" :copy="copyLinks" :title-of="tooltip"
+              :folder-icon="path => iconSrc(folderIcon(config, path))" @item-menu="rowMenu" @folder-menu="folderMenu">
+              <template #item="{ item: entry }">
                 <i v-if="entry.pinned" class="fas fa-thumbtack w-accent text-xs" title="Pinned" />
                 <i v-if="isLiveSearch(entry.url)" class="fas fa-bolt w-accent" title="Live search" />
                 <span class="w-trunc grow">{{ entry.name || entry.url }}</span>
@@ -67,21 +45,30 @@
                 <WKbd v-if="config.enableHotkeys && entry.hotkeyOverlay" :keys="entry.hotkeyOverlay" />
                 <span :class="$style.num">{{ ago(entry.lastOpened) || '–' }}</span>
                 <span :class="$style.num">{{ entry.openCount || '' }}</span>
-                <template #actions>
-                  <button @click="open(entry, 'external')" class="w-icon-btn" title="Open in your browser">
-                    <i class="fas fa-external-link-alt" />
+              </template>
+              <template #actions="{ item: entry }">
+                <button @click.stop="open(entry, 'external')" class="w-icon-btn" title="Open in your browser">
+                  <i class="fas fa-external-link-alt" />
+                </button>
+              </template>
+              <template #after-folder="{ path }">
+                <div v-if="pickingIcon === path" :class="$style.icons" role="group" :aria-label="`Icon for ${path}`">
+                  <button v-for="key in iconChoices" :key="key" type="button" :class="[$style.iconBtn, { [$style.on]: folderIcon(config, path) === key }]"
+                    :title="key.slice(key.indexOf(':') + 1)" @click="setIcon(path, key)">
+                    <img :src="iconSrc(key)!" class="w-game-icon" alt="" @error="(($event.target as HTMLElement).parentElement as HTMLElement).style.display = 'none'">
                   </button>
-                </template>
-              </WListItem>
-            </template>
-            <WEmpty v-if="!rows.length && filter" icon="fas fa-filter">
+                  <button type="button" :class="$style.iconBtn" title="Plain folder" @click="setIcon(path, undefined)"><i class="fas fa-folder" /></button>
+                </div>
+              </template>
+            </SavedTree>
+            <WEmpty v-if="!tree.rows.value.length && filter" icon="fas fa-filter">
               Nothing matches "{{ filter }}".
               <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
             </WEmpty>
-            <WEmpty v-else-if="!rows.length && config.entries.length" icon="far fa-folder-open">
-              Nothing here yet. Drag a search onto a folder in the list on the left.
+            <WEmpty v-else-if="!tree.rows.value.length && config.entries.length" icon="far fa-folder-open">
+              Nothing here yet.
             </WEmpty>
-            <WEmpty v-else-if="!rows.length" :art="{ currency: 'exalted' }">
+            <WEmpty v-else-if="!tree.rows.value.length && !(config.folders ?? []).length" :art="{ currency: 'exalted' }">
               No saved searches. Save one with the bookmark next to Trade in price check, or paste a trade link in Settings.
             </WEmpty>
           </div>
@@ -118,7 +105,10 @@ export default { widget: widgetTradeSearchesSpec }
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
-import { removeEntry, rowKeys, useDraftName } from '../shared/saved-list'
+import { removeEntries } from '../shared/saved-list'
+import { useSavedTree } from '../shared/use-saved-tree'
+import { cleanPath, isUnder, movedPath } from '../shared/saved-tree'
+import SavedTree from '../shared/SavedTree.vue'
 import { nextId } from '../shared/library'
 import { Host, MainProcess } from '@/web/background/IPC'
 import { AppConfig, pushHostConfig, saveConfig } from '@/web/Config'
@@ -126,15 +116,15 @@ import { POB_BUILDS_TYPE } from '../pob-builds/widget'
 import type { PobBuildsWidget } from '../pob-builds/widget'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WSelect, WChip, WKbd, WEmpty, WListItem, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
+import { WPanel, WField, WSelect, WChip, WKbd, WEmpty, WButton, ago, gameIcon, mechanicIcon, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui'
 import { copyText } from '../ui/copy'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, saveDock } from '../dock/dock'
 import { useLeagues } from '@/web/background/Leagues'
-import { FOLDER_ICONS, UNCATEGORIZED, deleteFolder, ensureFolder, folderIcon, folderNames, folderOf, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, moveFolder, parseHotkeyTarget, pinnedFirst, renameFolder, sortEntries, withLeague } from './widget'
-import type { OpenTarget, SearchSort, TradeSearchEntry, TradeSearchFolder } from './widget'
+import { FOLDER_ICONS, ensureFolder, folderIcon, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, parseHotkeyTarget, pinnedFirst, sortEntries, withLeague } from './widget'
+import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
 
 const props = defineProps<{
   config: TradeSearchesWidget
@@ -234,6 +224,7 @@ const VIEWS = [
   { id: 'live', label: 'Live searches', icon: 'fas fa-bolt' }
 ]
 const SORTS: Array<{ value: SearchSort, label: string }> = [
+  { value: 'manual', label: 'My order' },
   { value: 'opened', label: 'Last opened' },
   { value: 'name', label: 'Name' },
   { value: 'count', label: 'Times opened' },
@@ -244,34 +235,88 @@ const sort = computed({
   get: () => props.config.sort ?? 'opened',
   set: (v: string) => { props.config.sort = v as SearchSort; saveConfig() }
 })
-const folders = computed(() => folderNames(props.config))
 const counts = computed(() => {
   const now = Date.now()
   const out: Record<string, number> = {}
-  for (const id of [...VIEWS.map(v => v.id), ...folders.value.map(f => `folder:${f}`)]) {
-    out[id] = props.config.entries.filter(e => inView(e, id, now)).length
-  }
+  for (const v of VIEWS) out[v.id] = props.config.entries.filter(e => inView(e, v.id, now)).length
   return out
 })
-// A filter searches every folder; otherwise the picked view. Pinned lead.
-const rows = computed(() => {
-  const now = Date.now()
-  const list = filter.value
-    ? props.config.entries.filter(e => matchesFilter(e, filter.value))
-    : props.config.entries.filter(e => inView(e, view.value, now))
-  return pinnedFirst(sortEntries(list, sort.value))
-})
-
-// A folder picked in the rail that no longer exists falls back to All.
-watch(folders, (list) => {
-  if (view.value.startsWith('folder:') && !list.includes(view.value.slice(7))) props.config.view = 'all'
-})
-
+// A folder view from before folders moved into the list: All, with it open.
+if (view.value.startsWith('folder:')) props.config.view = 'all'
 function pickView (id: string) {
   filter.value = ''
   props.config.view = id
   saveConfig()
 }
+
+const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
+// The folder records (icons, order), by path.
+function folderNamesNow (): string[] {
+  return (props.config.folders ?? []).map(f => f.name)
+}
+function setFolderNames (names: string[]) {
+  // Two records for one folder (a rename into another): the first, with any icon.
+  const byName = new Map<string, NonNullable<typeof props.config.folders>[number]>()
+  for (const f of props.config.folders ?? []) {
+    const had = byName.get(f.name)
+    byName.set(f.name, had ? { ...had, icon: had.icon ?? f.icon } : f)
+  }
+  props.config.folders = [...new Set(names)].map(n => byName.get(n) ?? { name: n })
+}
+// A view other than All shows only its searches, with their folders.
+const shownBy = computed(() => {
+  if (filter.value || view.value === 'all') return null
+  const now = Date.now()
+  const v = view.value
+  return (e: TradeSearchEntry) => inView(e, v, now)
+})
+
+// The list (shared/use-saved-tree, as Atlas strategies): nested folders, drag,
+// picks, Alt + arrows, inline names. Pinned lead in every sort but My order.
+const tree = useSavedTree<TradeSearchEntry>({
+  root: () => panel.value?.el,
+  items: () => props.config.entries,
+  setItems: (list) => { props.config.entries = list; pushHostConfig() },
+  folderOf: e => e.category,
+  setFolder: (e, folder) => { e.category = folder },
+  nameOf: e => e.name || e.url,
+  setName: (e, name) => { e.name = name },
+  extraFolders: folderNamesNow,
+  setExtraFolders: setFolderNames,
+  folderOrder: folderNamesNow,
+  setFolderOrder: setFolderNames,
+  closed: () => props.config.closedFolders ?? [],
+  setClosed: (list) => { props.config.closedFolders = list },
+  query: () => filter.value,
+  matches: matchesFilter,
+  only: () => shownBy.value,
+  sorted: (list) => sort.value === 'manual' ? list : pinnedFirst(sortEntries(list, sort.value)),
+  manual: () => sort.value === 'manual',
+  toManual: () => { sort.value = 'manual'; toast('Sorted by My order', { anchor: panel.value?.el }) },
+  foldersByName: () => sort.value === 'name',
+  selected: () => pickedFrom.value,
+  select: (id) => { pickedFrom.value = id },
+  open: (e) => { open(e, 'overlay') },
+  remove: (list) => { removeMany(list) },
+  note: (text) => { toast(text, { anchor: panel.value?.el }) },
+  // Builds whose Trades tab shows a folder keep showing it; so do the view and the save box.
+  onFolderMoved (from, to) {
+    // Folder records (icons) go with their folders.
+    props.config.folders = (props.config.folders ?? []).map(f => isUnder(f.name, from) ? { ...f, name: movedPath(f.name, from, to) } : f)
+    for (const w of AppConfig().widgets) {
+      if (w.wmType !== POB_BUILDS_TYPE) continue
+      const links = (w as PobBuildsWidget).tradeFolders
+      if (links && Object.values(links).some(f => isUnder(f, from))) {
+        (w as PobBuildsWidget).tradeFolders = Object.fromEntries(Object.entries(links).map(([rel, f]) => [rel, movedPath(f, from, to)]))
+      }
+    }
+    if (props.config.lastFolder && isUnder(props.config.lastFolder, from)) props.config.lastFolder = movedPath(props.config.lastFolder, from, to)
+    pickingIcon.value = null
+    saveConfig()
+  }
+})
+// The anchor for Shift picks: the last row clicked.
+const pickedFrom = shallowRef<number | null>(null)
 
 // Only icons the item data has art for.
 const iconChoices = computed(() => FOLDER_ICONS.filter(key => iconSrc(key)))
@@ -284,39 +329,7 @@ function iconSrc (key: string | undefined): string | null {
   return kind === 'mechanic' ? mechanicIcon(name).src : gameIcon(name)
 }
 
-// Inline rename and new folder: one field at a time.
-// (shared/saved-list: one field at a time, focused with its text picked.)
-const names = useDraftName(() => panel.value?.el)
-const { editing: renaming, draft } = names
 const pickingIcon = shallowRef<string | null>(null)
-function startNewFolder () { names.start('new') }
-function finishNewFolder () {
-  const name = names.finish('new')
-  if (!name) return
-  ensureFolder(props.config, name)
-  props.config.view = `folder:${name}`
-  saveConfig()
-}
-function finishFolderRename (from: string) {
-  const typed = names.finish(`folder:${from}`)
-  if (typed == null) return
-  const to = renameFolder(props.config, from, typed)
-  // Builds whose Trades tab shows this folder keep showing it.
-  for (const w of AppConfig().widgets) {
-    if (w.wmType !== POB_BUILDS_TYPE) continue
-    const links = (w as PobBuildsWidget).tradeFolders
-    if (links && Object.values(links).includes(from)) {
-      (w as PobBuildsWidget).tradeFolders = Object.fromEntries(Object.entries(links).map(([rel, f]) => [rel, f === from ? to : f]))
-    }
-  }
-  pickingIcon.value = null
-  saveConfig()
-}
-function startEntryRename (entry: TradeSearchEntry) { names.start(`entry:${entry.id}`, entry.name) }
-function finishEntryRename (entry: TradeSearchEntry) {
-  const name = names.finish(`entry:${entry.id}`)
-  if (name) { entry.name = name; saveConfig() }
-}
 
 function setIcon (folder: string, key: string | undefined) {
   ensureFolder(props.config, folder).icon = key
@@ -324,53 +337,43 @@ function setIcon (folder: string, key: string | undefined) {
   saveConfig()
 }
 
-function moveTo (entry: TradeSearchEntry, folder: string) {
-  entry.category = folder === UNCATEGORIZED ? '' : folder
-  saveConfig()
-}
-
-// Drag a row onto a folder in the rail.
-const dragId = shallowRef<number | null>(null)
-const dropOn = shallowRef<string | null>(null)
-function dropInto (folder: string) {
-  const entry = props.config.entries.find(e => e.id === dragId.value)
-  dropOn.value = null
-  dragId.value = null
-  if (entry && folderOf(entry) !== folder) {
-    moveTo(entry, folder)
-    toast(`Moved "${entry.name || 'search'}" to ${folder}`, { anchor: panel.value?.el, ms: 1800 })
-  }
-}
-
-function folderMenu (e: MouseEvent, folder: string, index: number) {
+function folderMenu (e: MouseEvent, folder: string) {
   const items: MenuEntry[] = [
-    { label: 'Rename', icon: 'fas fa-pen', action: () => { names.start(`folder:${folder}`, folder) } },
-    { label: 'Change icon', icon: 'far fa-image', disabled: folder === UNCATEGORIZED, action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } },
-    { label: 'Move up', icon: 'fas fa-arrow-up', disabled: index === 0 || folder === UNCATEGORIZED, action: () => { moveFolder(props.config, folder, -1); saveConfig() } },
-    { label: 'Move down', icon: 'fas fa-arrow-down', disabled: index === folders.value.length - 1 || folder === UNCATEGORIZED, action: () => { moveFolder(props.config, folder, 1); saveConfig() } },
+    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => tree.startFolder(folder) },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('folder', folder, 'rename') },
+    { label: 'Change icon', icon: 'far fa-image', action: () => { pickingIcon.value = pickingIcon.value === folder ? null : folder } },
+    { label: 'Move', icon: 'fas fa-folder-open', action: () => tree.startEdit('folder', folder, 'move') },
     { separator: true },
-    { label: 'Delete folder', icon: 'fas fa-trash', danger: true, disabled: folder === UNCATEGORIZED, action: () => removeFolder(folder) }
+    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => tree.sortFolder(folder) },
+    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
+    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll },
+    { separator: true },
+    { label: 'Delete folder', icon: 'fas fa-trash', danger: true, action: () => removeFolder(folder) }
   ]
   openMenu(e, items)
 }
 
-// No "are you sure": the searches move to Uncategorized, with Undo.
+// No "are you sure": its searches (and folders) move up to the top, with Undo.
 function removeFolder (folder: string) {
   // Undo puts back only what the delete changed, so opens and renames since stay.
-  const moved = props.config.entries.filter(e => folderOf(e) === folder).map(e => ({ id: e.id, category: e.category }))
-  const folders: TradeSearchFolder[] = JSON.parse(JSON.stringify(props.config.folders ?? []))
-  const { view: viewBefore, lastFolder } = props.config
-  deleteFolder(props.config, folder)
+  const moved = props.config.entries.filter(e => isUnder(cleanPath(e.category), folder)).map(e => ({ id: e.id, category: e.category }))
+  const records = JSON.parse(JSON.stringify(props.config.folders ?? [])) as typeof props.config.folders
+  const { lastFolder } = props.config
+  const closedBefore = props.config.closedFolders
+  for (const e of props.config.entries) if (isUnder(cleanPath(e.category), folder)) e.category = ''
+  props.config.folders = (props.config.folders ?? []).filter(f => !isUnder(f.name, folder))
+  props.config.closedFolders = (closedBefore ?? []).filter(p => !isUnder(p, folder))
+  if (lastFolder && isUnder(lastFolder, folder)) props.config.lastFolder = undefined
   saveConfig()
-  toast(`Deleted "${folder}". Its searches are in ${UNCATEGORIZED}.`, {
+  toast(`Deleted "${folder}". Its searches are at the top.`, {
     anchor: panel.value?.el,
     undo: () => {
       for (const m of moved) {
         const e = props.config.entries.find(e => e.id === m.id)
         if (e && !e.category) e.category = m.category
       }
-      props.config.folders = folders
-      props.config.view = viewBefore
+      props.config.folders = records
+      props.config.closedFolders = closedBefore
       props.config.lastFolder = lastFolder
       saveConfig()
     }
@@ -428,53 +431,56 @@ const hotkeyController = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) 
 })
 onUnmounted(() => { hotkeyController.abort() })
 
-const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-
 function copyLink (entry: TradeSearchEntry) {
   copyText(urlFor(entry)).then(ok => { if (ok) toast('Copied the trade link', { anchor: panel.value?.el, ms: 1800 }) })
 }
 
-// No "are you sure": remove now, offer Undo (P9), which puts back just this
-// one where it was (shared/saved-list): changes made since stay.
-function remove (entry: TradeSearchEntry) {
-  const out = removeEntry(props.config.entries, entry.id)
+function copyLinks (list: TradeSearchEntry[]) {
+  if (list.length === 1) { copyLink(list[0]); return }
+  copyText(list.map(urlFor).join('\n')).then(ok => { if (ok) toast(`Copied ${list.length} trade links`, { anchor: panel.value?.el, ms: 1800 }) }).catch(() => {})
+}
+
+// No "are you sure": remove now, offer Undo (P9), which puts back just these
+// where they were (shared/saved-list): changes made since stay.
+function remove (entry: TradeSearchEntry) { removeMany([entry]) }
+function removeMany (list: TradeSearchEntry[]) {
+  const out = removeEntries(props.config.entries, list.map(e => e.id))
   if (!out) return
-  if (openId.value === entry.id) closeBrowser()
+  if (list.some(e => e.id === openId.value)) closeBrowser()
   props.config.entries = out.list
+  tree.forgetPicks(list.map(e => e.id))
   pushHostConfig()
-  toast(`Removed "${entry.name || 'search'}"`, {
+  toast(list.length === 1 ? `Removed "${list[0].name || 'search'}"` : `Removed ${list.length} searches`, {
     anchor: panel.value?.el,
     undo: () => { props.config.entries = out.restore(props.config.entries, l => nextId([...l])); pushHostConfig() }
   })
 }
 
 function rowMenu (e: MouseEvent, entry: TradeSearchEntry) {
+  const group = tree.groupOf(entry)
+  if (group.length > 1) {
+    openMenu(e, [
+      { label: `Move ${group.length} to folder`, icon: 'fas fa-folder-open', action: () => tree.startEdit('item', String(entry.id), 'move', group.map(g => g.id)) },
+      { label: 'Copy links', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => copyLinks(group) },
+      { separator: true },
+      { label: `Remove ${group.length} searches`, icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => removeMany(group) }
+    ])
+    return
+  }
   openMenu(e, [
     { label: 'Open here', icon: 'far fa-window-maximize', keys: entry.hotkeyOverlay ?? 'Enter', action: () => open(entry, 'overlay') },
     { label: 'Open in browser', icon: 'fas fa-external-link-alt', keys: entry.hotkeyExternal ?? undefined, action: () => open(entry, 'external') },
     { label: 'Copy link', icon: 'far fa-copy', keys: 'Ctrl + C', action: () => copyLink(entry) },
     { label: entry.pinned ? 'Unpin' : 'Pin to the top', icon: 'fas fa-thumbtack', action: () => { entry.pinned = !entry.pinned; saveConfig() } },
-    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => startEntryRename(entry) },
-    { label: 'Move to folder', icon: 'fas fa-folder', action: () => moveMenu(e, entry) },
+    { label: 'Rename', icon: 'fas fa-pen', keys: 'F2', action: () => tree.startEdit('item', String(entry.id), 'rename') },
+    { label: 'Move to folder', icon: 'fas fa-folder', action: () => tree.startEdit('item', String(entry.id), 'move') },
     { separator: true },
     { label: 'Remove', icon: 'fas fa-trash', keys: 'Del', danger: true, action: () => remove(entry) }
   ])
 }
 
-function moveMenu (e: MouseEvent, entry: TradeSearchEntry) {
-  const here = folderOf(entry)
-  const items: MenuEntry[] = folders.value.filter(f => f !== here).map(f => ({
-    label: f,
-    icon: 'fas fa-folder',
-    gameIcon: iconSrc(folderIcon(props.config, f)) ?? undefined,
-    action: () => moveTo(entry, f)
-  }))
-  if (!items.length) items.push({ label: 'No other folders yet', icon: 'fas fa-folder', disabled: true, action: () => {} })
-  openMenu({ x: e.clientX, y: e.clientY }, items)
-}
-
 function tooltip (entry: TradeSearchEntry) {
-  return [entry.url, `Folder: ${folderOf(entry)}`, entry.tags.length ? `Tags: ${entry.tags.join(', ')}` : '', entry.notes]
+  return [entry.url, entry.category ? `Folder: ${entry.category}` : '', entry.tags.length ? `Tags: ${entry.tags.join(', ')}` : '', entry.notes]
     .filter(Boolean).join('\n')
 }
 

@@ -34,7 +34,7 @@ test('the save box offers the item as the name and saves into a folder', async (
   await expect(box.locator('input').nth(1)).toHaveValue('Rings to flip')
 })
 
-test('the folder rail: views, folders with icons, sort, drag to move', async ({ overlay }) => {
+test('the rail picks a view; folders with icons are in the list, and a drag moves a search into one', async ({ overlay }) => {
   const now = Date.now()
   await overlay.boot({
     overlayActive: true,
@@ -58,23 +58,35 @@ test('the folder rail: views, folders with icons, sort, drag to move', async ({ 
   const w = overlay.widget('woke-trade-searches')
   const rail = w.getByRole('navigation', { name: 'Folders' })
   await expect(rail).toBeVisible({ timeout: 15_000 })
-  await expect(rail.getByRole('button')).toContainText(['All', 'Pinned', 'Recently opened', 'Live searches', 'Boots to flip', 'Gems', 'Saved from price check', 'Uniques', 'New folder'])
+  // The rail picks a view; folders are in the list (shared saved tree).
+  await expect(rail.getByRole('button')).toContainText(['All', 'Pinned', 'Recently opened', 'Live searches', 'New folder'])
+  const row = (key: string) => w.locator(`[data-row="${key}"]`)
+  for (const f of ['Boots to flip', 'Gems', 'Saved from price check', 'Uniques']) await expect(row(`f:${f}`)).toBeVisible()
+  await expect(row('f:Boots to flip').locator('img.w-game-icon')).toBeVisible()
   await overlay.snap('all')
 
-  await rail.getByRole('button', { name: /Boots to flip/ }).click()
-  await expect(w.getByRole('button', { name: /Two-Toned Boots/ })).toHaveCount(2)
+  // Pinned: only the pinned search, with its folder.
+  await rail.getByRole('button', { name: /Pinned/ }).click()
+  await expect(w.getByRole('button', { name: /Mageblood/ })).toHaveCount(1)
   await expect(w.getByRole('button', { name: /Spark/ })).toHaveCount(0)
+  await rail.getByRole('button').filter({ hasText: 'All' }).first().click()
+
+  // Drag Spark into Boots to flip.
+  await row('s:4').dragTo(row('f:Boots to flip'), { targetPosition: { x: 40, y: 10 } })
+  await expect.poll(async () => (await w.locator('[data-row]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.row))).indexOf('s:4'))
+    .toBeLessThan(await w.locator('[data-row]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.row)).then(o => o.indexOf('f:Gems')))
   await overlay.snap('folder')
 
-  // Drag Spark onto Boots to flip.
-  await rail.getByRole('button').filter({ hasText: 'All' }).first().click()
-  await w.getByRole('button', { name: /Spark/ }).dragTo(rail.getByRole('button', { name: /Boots to flip/ }))
-  await rail.getByRole('button', { name: /Boots to flip/ }).click()
-  await expect(w.getByRole('button', { name: /Spark/ })).toHaveCount(1)
-
   // Icon picker from the folder's right-click menu.
-  await rail.getByRole('button').filter({ hasText: 'Gems' }).first().click({ button: 'right' })
+  await row('f:Gems').click({ button: 'right' })
   await overlay.page.getByRole('menuitem', { name: 'Change icon' }).click()
-  await expect(rail.getByRole('group', { name: 'Icon for Gems' })).toBeVisible()
+  await expect(w.getByRole('group', { name: 'Icon for Gems' })).toBeVisible()
+
+  // A renamed folder keeps its icon.
+  await row('f:Boots to flip').focus()
+  await overlay.page.keyboard.press('F2')
+  await w.locator('input[data-draft]').fill('Boots')
+  await w.locator('input[data-draft]').press('Enter')
+  await expect(row('f:Boots').locator('img.w-game-icon')).toBeVisible()
   await overlay.snap('icon picker')
 })
