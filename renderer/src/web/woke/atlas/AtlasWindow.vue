@@ -139,6 +139,7 @@ import type { DropAt } from './list-order'
 import { useWidgetVisible } from '../shared/visible-clock'
 import { parseGuideText } from './guide'
 import { usePriceIndex } from '../market/price-index'
+import { clickOf, selectPick } from '../shared/picks'
 import { formatChaos } from '../ui/format'
 import { FARMING_TYPE, strategyStats } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
@@ -403,26 +404,13 @@ function groupOf (s: AtlasStrategy): AtlasStrategy[] {
 }
 watch(filter, () => { picked.value = [] })
 
+// A file list (shared/picks): a click opens one, Ctrl picks more, Shift picks
+// the run from the open one.
 function rowClick (e: MouseEvent, s: AtlasStrategy) {
-  if (e.ctrlKey || e.metaKey) {
-    const sel = props.config.selectedId
-    const selShown = sel != null && rows.value.some(r => r.kind === 'strategy' && r.s.id === sel)
-    const now = picked.value.length ? picked.value : (selShown ? [sel] : [])
-    picked.value = now.includes(s.id) ? now.filter(id => id !== s.id) : [...now, s.id]
-    if (picked.value.includes(s.id)) props.config.selectedId = s.id
-    return
-  }
-  if (e.shiftKey && props.config.selectedId != null) {
-    const shown = rows.value.flatMap(r => r.kind === 'strategy' ? [r.s.id] : [])
-    const a = shown.indexOf(props.config.selectedId)
-    const b = shown.indexOf(s.id)
-    if (a >= 0 && b >= 0) {
-      picked.value = shown.slice(Math.min(a, b), Math.max(a, b) + 1)
-      return
-    }
-  }
-  picked.value = []
-  props.config.selectedId = s.id
+  const shown = rows.value.flatMap(r => r.kind === 'strategy' ? [r.s.id] : [])
+  const next = selectPick(shown, picked.value, s.id, clickOf(e), props.config.selectedId)
+  picked.value = next.picked
+  if (next.anchor !== props.config.selectedId) props.config.selectedId = next.anchor
 }
 
 // Strategies that leave a folder take their regexes along.

@@ -245,6 +245,7 @@ import StyleEditor from './StyleEditor.vue'
 import { applyStyle as applyStyleTo, readStyle } from './edits'
 import type { StylePatch } from './edits'
 import type { FilterAction } from './parse'
+import { clickOf, togglePick } from '../shared/picks'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -561,17 +562,10 @@ const lanes = computed(() => {
     lane('never', 'Never', lists.value.never)
   ]
 })
+// Shift counts its run within the one lane holding both (shared/picks).
 function pick (b: string, e: MouseEvent) {
-  if (e.shiftKey && lastPick) {
-    const lane = lanes.value.find(l => l.bases.includes(b) && l.bases.includes(lastPick!))
-    if (lane) {
-      const [a, z] = [lane.bases.indexOf(lastPick), lane.bases.indexOf(b)].sort((x, y) => x - y)
-      picked.value = [...new Set([...picked.value, ...lane.bases.slice(a, z + 1)])]
-      lastPick = b
-      return
-    }
-  }
-  picked.value = picked.value.includes(b) ? picked.value.filter(x => x !== b) : [...picked.value, b]
+  const lane = lastPick ? lanes.value.find(l => l.bases.includes(b) && l.bases.includes(lastPick!)) : undefined
+  picked.value = togglePick(lane?.bases ?? [], picked.value, b, clickOf(e), lastPick)
   lastPick = b
 }
 function wasRank (b: string, lane: string): string {

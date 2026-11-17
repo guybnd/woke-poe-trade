@@ -198,6 +198,7 @@ import { matchItem, sameRule } from './match'
 import type { BlockMatch, MatchResult, Tri } from './match'
 import { formatCondition, ruleLabel, tierName } from './parse'
 import { tierLabel } from './names'
+import { useTierMove } from './tier-move'
 import type { FilterCondition, Visibility } from './parse'
 import { LEVEL_NAMES, LEVEL_SHORT } from './strictness'
 import { OWN_RULE_TYPE, blocksOf, conditionSignature, moveTargets, readStyle } from './edits'
@@ -430,15 +431,13 @@ const moveRows = computed(() => {
   return rows.filter(r => !r.current)
 })
 
-function moveBases (bases: string[], to: string) {
-  const type = origin.value.type
-  const from = origin.value.tier
-  if (!bases.length || !type || !from || !to || to === from) return
-  const label = moveRows.value.find(r => r.tier === to)?.label ?? tierLabel(to)
-  const undo = props.store.editsWithUndo(bases.map(b => ({ kind: 'move' as const, type, base: b, from, to })))
-  toast(`Moved ${bases.length > 1 ? `${bases.length} items` : bases[0]} to ${label}`, { undo })
-  picked.value = []
-}
+// Named as the rows above name the tiers.
+const moveBases = useTierMove(props.store, {
+  type: () => origin.value.type,
+  from: () => origin.value.tier,
+  label: (to) => moveRows.value.find(r => r.tier === to)?.label ?? tierLabel(to),
+  after: () => { picked.value = [] }
+})
 
 function moveEntries (bases: () => string[]) {
   return moveRows.value.map(r => ({ label: r.label, labelStyle: labelCss(r.actions), icon: 'fas fa-share', action: () => { moveBases(bases(), r.tier) } }))

@@ -3,6 +3,7 @@
 import { EDITOR_GROUPS, UNTAGGED_PREFIX } from './parse'
 import { groupLabel, sectionLabel } from './names'
 import type { FilterBlock, FilterDoc, Visibility } from './parse'
+import { togglePick } from '../shared/picks'
 import { OWN_RULE_TYPE } from './edits'
 import { BUILD_RULE_TYPE } from './build-rules'
 import { SAFETY_RULE_TYPE } from './safety'
@@ -163,13 +164,9 @@ export function addSearch (doc: FilterDoc, type: string, tier: string, query: st
 }
 
 // Clicking a chip: a plain click picks or unpicks it, shift picks the run from
-// the last one clicked.
+// the last one clicked (shared/picks, as every pick list).
 export function pickBases (list: string[], picked: string[], base: string, shift: boolean, last: string | null): string[] {
-  if (shift && last != null && list.includes(last)) {
-    const [a, b] = [list.indexOf(last), list.indexOf(base)].sort((x, y) => x - y)
-    return [...new Set([...picked, ...list.slice(a, b + 1)])]
-  }
-  return picked.includes(base) ? picked.filter(x => x !== base) : [...picked, base]
+  return togglePick(list, picked, base, { shift, ctrl: false }, last)
 }
 
 // Most valuable first; with no price, they keep their order at the end.
