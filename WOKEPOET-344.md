@@ -17,6 +17,15 @@ history:
     user: Agent
     date: '2026-11-17T03:00:23.902Z'
     comment: Created ticket.
+    id: a-2026-11-17t03-00-23-902z
+  - type: activity
+    user: Agent
+    date: '2026-11-17T03:01:21.216Z'
+    comment: >-
+      Answer and workaround posted to Guy; mocks A (group rarity chips,
+      recommended) / B (per-row chips) / C (preset switch) at
+      https://claude.ai/artifact/EW2VfJb3iVNViWBdAddezP, waiting on his pick.
+    id: a-2026-11-17t03-01-21-216z
 ---
 Guy asked how the filter tells high tier rares from high tier magics on gear, and how to hide the magics but keep rares.
 
