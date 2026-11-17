@@ -10,6 +10,8 @@
           <button @click="importOpen = !importOpen" class="w-icon-btn" :class="{ 'w-icon-btn--on': importOpen }" title="Import a pobb.in / pastebin link or PoB code">
             <i class="fas fa-file-import" />
           </button>
+          <button class="w-icon-btn" :class="{ 'w-icon-btn--on': config.sortBy === 'manual' }" :title="config.sortBy === 'manual' ? 'Sort: My order. Click for latest save first' : 'Sort: latest save first. Click for My order'"
+            @click="config.sortBy = config.sortBy === 'manual' ? undefined : 'manual'; saveConfig()"><i class="fas fa-sort-amount-down" /></button>
           <button @click="refresh" class="w-icon-btn" title="Reload builds folder">
             <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }" />
           </button>
@@ -30,38 +32,25 @@
 
         <WSkeleton v-if="loading && !builds.length" :rows="6" />
 
-        <template v-for="g in groups" :key="g.folder">
-          <button v-if="groups.length > 1" type="button" :class="$style.folder" class="w-focusable" :aria-expanded="isOpen(g)" @click="toggleFolder(g)">
-            <i class="fas text-xs" :class="isOpen(g) ? 'fa-chevron-down' : 'fa-chevron-right'" />
-            <span class="w-trunc">{{ g.label }}</span>
-            <span class="ml-auto w-num">{{ g.builds.length }}</span>
-          </button>
-          <template v-if="isOpen(g)">
-            <template v-for="b in g.builds" :key="b.relPath">
-            <div v-if="editing?.relPath === b.relPath" :class="$style.editRow">
-              <span class="w-faint text-xs whitespace-nowrap">{{ editing.kind === 'rename' ? 'Name' : 'Folder' }}</span>
-              <input data-draft v-model="draft" :class="['w-field', $style.edit]" spellcheck="false" :list="editing.kind === 'move' ? 'pob-folders' : undefined"
-                :placeholder="editing.kind === 'move' ? 'Empty: the top of the builds folder' : ''"
-                @keydown.enter.prevent="finishEdit" @keydown.esc.prevent="editing = null" @blur="editing = null">
-            </div>
-            <WListItem v-else :active="selected === b.relPath" :title="b.relPath" @select="select(b)"
-              @contextmenu="buildMenu($event, b)" @keydown.p.prevent="togglePin(b.relPath)"
-              @keydown.f2.prevent="startEdit(b, 'rename')" @keydown="$event.key === 'Delete' && ($event.preventDefault(), removeBuild(b))">
-              <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
-              <span class="w-trunc">{{ b.name }}</span>
-              <span class="ml-auto w-num w-dim text-xs whitespace-nowrap" title="Saved in PoB">{{ statLine(b.stats) }}</span>
-              <template #sub>{{ describe(b) }}<template v-if="b.folder.includes('/')"> · {{ b.folder.split('/').slice(1).join('/') }}</template></template>
-              <template #actions>
-                <button @click="togglePin(b.relPath)" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }"
-                  :title="isPinned(b.relPath) ? 'Unpin' : 'Pin to top'">
-                  <i class="fas fa-thumbtack" />
-                </button>
-              </template>
-            </WListItem>
-            </template>
+        <!-- The list (shared/SavedTree, as every saved list): the builds
+             folder's folders, drag, Ctrl / Shift picks, Alt + arrows, F2. A
+             click shows the build. The order you set is kept in the app; the
+             files only move when a build changes folder. -->
+        <SavedTree :tree="tree" list-id="pob-folders" :active-id="selectedRow?.id ?? null" :title-of="r => r.relPath" :backspace="false"
+          @item-menu="buildMenu" @folder-menu="folderMenu" @item-key="onBuildKey">
+          <template #item="{ item: b }">
+            <i v-if="config.activeBuild === b.relPath" class="fas fa-check-circle w-up" title="In use" />
+            <span class="w-trunc">{{ b.name }}</span>
+            <span class="ml-auto w-num w-dim text-xs whitespace-nowrap" title="Saved in PoB">{{ statLine(b.stats) }}</span>
           </template>
-        </template>
-        <datalist id="pob-folders"><option v-for="f in folders" :key="f" :value="f" /></datalist>
+          <template #sub="{ item: b }">{{ describe(b) }}</template>
+          <template #actions="{ item: b }">
+            <button @click.stop="togglePin(b.relPath)" class="w-icon-btn" :class="{ 'w-icon-btn--on': isPinned(b.relPath) }"
+              :title="isPinned(b.relPath) ? 'Unpin' : 'Pin to top'">
+              <i class="fas fa-thumbtack" />
+            </button>
+          </template>
+        </SavedTree>
         <WEmpty v-if="!loading && !shown.length && !error && builds.length" icon="fas fa-filter">
           Nothing matches "{{ filter }}".
           <template #actions><WButton size="sm" @click="filter = ''">Clear search</WButton></template>
@@ -93,10 +82,13 @@ export default { widget: widgetPobBuildsSpec }
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { inject, computed, nextTick, shallowRef, watch, defineAsyncComponent } from 'vue'
+import { inject, computed, shallowRef, watch, defineAsyncComponent } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WField, WButton, WEmpty, WListItem, WBanner, WSkeleton, openMenu, toast } from '../ui'
+import { WPanel, WField, WButton, WEmpty, WBanner, WSkeleton, openMenu, toast } from '../ui'
+import { useSavedTree } from '../shared/use-saved-tree'
+import { isUnder, movedPath } from '../shared/saved-tree'
+import SavedTree from '../shared/SavedTree.vue'
 import { saveConfig } from '@/web/Config'
 import DockItem from '../dock/DockItem.vue'
 import BuildCompare from './BuildCompare.vue'
@@ -114,8 +106,8 @@ import { showWithOverlay } from '../dock/dock'
 import { toggleBuildTree, treeOn } from './tree-toggle'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
-import { PINNED_GROUP, buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi, treeHotkeyOf } from './widget'
-import type { BuildGroup, PobBuildEntry, PobDetails } from './widget'
+import { buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi, sortBuilds, treeHotkeyOf } from './widget'
+import type { PobBuildEntry, PobDetails } from './widget'
 
 // The tree loads on first open: it's big and most sessions never open it.
 const BuildTree = defineAsyncComponent(() => import('./BuildTree.vue'))
@@ -302,24 +294,60 @@ async function doImport () {
 }
 
 const shown = computed(() => builds.value.filter(b => buildMatches(b, filter.value)))
-const groups = computed(() => groupBuilds(shown.value, props.config.pinned))
 
-// By hand, for this session. Until then: pinned, the latest folder, and the
-// folder holding the build in use.
-const folderChoice = shallowRef<Record<string, boolean>>({})
-function isOpen (g: BuildGroup) {
-  if (filter.value.trim() || groups.value.length < 2) return true
-  const chosen = folderChoice.value[g.folder]
-  if (chosen != null) return chosen
-  const firstFolder = groups.value.find(x => x.folder !== PINNED_GROUP)
-  return g.folder === PINNED_GROUP || g === firstFolder ||
-    g.builds.some(b => b.relPath === props.config.activeBuild || b.relPath === selected.value)
+// A build in the list: its file, and an id for the list's picks and rows.
+type BuildRow = PobBuildEntry & { id: number }
+const rowIds = new Map<string, number>()
+let lastRowId = 0
+function idOf (relPath: string): number {
+  let id = rowIds.get(relPath)
+  if (id == null) rowIds.set(relPath, id = ++lastRowId)
+  return id
 }
-function toggleFolder (g: BuildGroup) {
-  // A filter shows every match, whatever is open.
-  if (filter.value.trim()) return
-  folderChoice.value = { ...folderChoice.value, [g.folder]: !isOpen(g) }
+// In the order you set (kept in the app); builds not in it yet after, by name.
+const rows = computed<BuildRow[]>(() => {
+  const order = props.config.buildOrder ?? []
+  const at = new Map(order.map((rel, i) => [rel, i]))
+  return [...builds.value]
+    .sort((a, b) => (at.get(a.relPath) ?? Infinity) - (at.get(b.relPath) ?? Infinity) || a.name.localeCompare(b.name, undefined, { numeric: true }))
+    .map(b => ({ ...b, id: idOf(b.relPath) }))
+})
+const selectedRow = computed(() => rows.value.find(r => r.relPath === selected.value) ?? null)
+const pickedFrom = shallowRef<number | null>(null)
+const manualOrder = computed(() => props.config.sortBy === 'manual')
+
+const tree = useSavedTree<BuildRow>({
+  root: () => panel.value?.el,
+  items: () => rows.value,
+  setItems: (list) => { props.config.buildOrder = list.map(r => r.relPath); saveConfig() },
+  folderOf: r => r.folder,
+  setFolder: (r, folder) => { queueMove(r, folder) },
+  nameOf: r => r.name,
+  setName: (r, name) => { renameTo(r, name).catch(() => {}) },
+  extraFolders: () => props.config.folders ?? [],
+  setExtraFolders: (list) => { props.config.folders = list },
+  folderOrder: () => props.config.folderOrder,
+  setFolderOrder: (order) => { props.config.folderOrder = order },
+  closed: () => props.config.closedFolders ?? [],
+  setClosed: (list) => { props.config.closedFolders = list },
+  query: () => filter.value,
+  matches: buildMatches,
+  // Latest save first (pinned first) unless you set your own order.
+  sorted: (list) => manualOrder.value ? list : sortBuilds(list, props.config.pinned) as BuildRow[],
+  manual: () => manualOrder.value,
+  toManual: () => { props.config.sortBy = 'manual'; saveConfig(); note('Sorted by My order') },
+  selected: () => pickedFrom.value,
+  select: (id) => { pickedFrom.value = id },
+  open: (r) => { select(r) },
+  remove: (list) => { removeBuilds(list).catch(() => {}) },
+  note: (text) => { note(text) },
+  moveFolderAs: (from, to) => { moveFolderOnDisk(from, to).catch(() => {}) }
+})
+
+function onBuildKey (e: KeyboardEvent, r: BuildRow) {
+  if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); togglePin(r.relPath) }
 }
+
 const selectedBuild = computed(() => builds.value.find(b => b.relPath === selected.value) ?? null)
 
 async function refresh () {
@@ -417,50 +445,119 @@ function buildMenu (e: MouseEvent, b: PobBuildEntry) {
 // the build is open there: its next save writes the old file again.
 
 const panel = shallowRef<InstanceType<typeof WPanel> | null>(null)
-const editing = shallowRef<{ relPath: string, kind: 'rename' | 'move' } | null>(null)
-const draft = shallowRef('')
-const folders = computed(() => [...new Set(builds.value.map(b => b.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b)))
 
 function note (text: string, undo?: () => void) {
   toast(text, { anchor: panel.value?.el, undo })
 }
 
 function startEdit (b: PobBuildEntry, kind: 'rename' | 'move') {
-  draft.value = kind === 'rename' ? b.name : b.folder
-  editing.value = { relPath: b.relPath, kind }
-  nextTick(() => {
-    const input = panel.value?.el?.querySelector<HTMLInputElement>('[data-draft]')
-    input?.focus()
-    input?.select()
-  })
+  tree.startEdit('item', String(idOf(b.relPath)), kind)
 }
 
-async function finishEdit () {
-  const edit = editing.value
-  if (!edit) return
-  editing.value = null
-  const b = builds.value.find(x => x.relPath === edit.relPath)
-  if (!b) return
-  const text = draft.value.trim()
-  if (edit.kind === 'rename' ? !text || text === b.name : text.toLowerCase() === b.folder.toLowerCase()) return
+async function renameTo (b: PobBuildEntry, text: string) {
+  if (!text || text === b.name) return
   try {
-    const { relPath } = edit.kind === 'rename'
-      ? await pobApi.rename(props.config, b.relPath, text)
-      : await pobApi.move(props.config, b.relPath, text)
+    const { relPath } = await pobApi.rename(props.config, b.relPath, text)
     if (relPath === b.relPath) return
     followFile(b.relPath, relPath)
     await refresh()
-    const back = () => {
-      const call = edit.kind === 'rename' ? pobApi.rename(props.config, relPath, b.name) : pobApi.move(props.config, relPath, b.folder)
-      call.then(r => { followFile(relPath, r.relPath); return refresh() }, (err: Error) => note(err.message))
-    }
-    note(edit.kind === 'rename' ? `Renamed to ${relPath.split('/').pop()!.replace(/\.xml$/i, '')}` : `Moved to ${relPath.includes('/') ? relPath.slice(0, relPath.lastIndexOf('/')) : 'the builds folder'}`, back)
+    note(`Renamed to ${relPath.split('/').pop()!.replace(/\.xml$/i, '')}`, () => {
+      pobApi.rename(props.config, relPath, b.name).then(r => { followFile(relPath, r.relPath); return refresh() }, (err: Error) => note(err.message))
+    })
   } catch (err) {
     note((err as Error).message)
   }
 }
 
+// Builds a drag or Move sends to another folder: their files move, one at a
+// time, then one note with Undo for all of them.
+let moving: Array<{ b: PobBuildEntry, folder: string }> = []
+function queueMove (b: PobBuildEntry, folder: string) {
+  if (folder.toLowerCase() === b.folder.toLowerCase()) return
+  moving.push({ b, folder })
+  if (moving.length === 1) queueMicrotask(() => { flushMoves().catch(() => {}) })
+}
+async function flushMoves () {
+  const batch = moving
+  moving = []
+  const done: Array<{ from: string, to: string, folder: string }> = []
+  try {
+    for (const { b, folder } of batch) {
+      const { relPath } = await pobApi.move(props.config, b.relPath, folder)
+      if (relPath === b.relPath) continue
+      followFile(b.relPath, relPath)
+      done.push({ from: b.relPath, to: relPath, folder: b.folder })
+    }
+  } catch (err) {
+    note((err as Error).message)
+  }
+  await refresh()
+  if (!done.length) return
+  const where = batch[0].folder || 'the builds folder'
+  note(done.length === 1 ? `Moved to ${where}` : `Moved ${done.length} builds to ${where}`, () => {
+    (async () => {
+      for (const m of done) {
+        const r = await pobApi.move(props.config, m.to, m.folder)
+        followFile(m.to, r.relPath)
+      }
+      await refresh()
+    })().catch((err: Error) => note(err.message))
+  })
+}
+
+// A folder renamed or moved: the folder itself moves on disk, its builds'
+// settings follow their files.
+async function moveFolderOnDisk (from: string, asked: string) {
+  // The list's own folder settings already moved to `asked`; they follow the
+  // disk's name (cleaned of characters a file name can't have), or go back.
+  const relist = (a: string, b: string) => {
+    const map = (list?: string[]) => list && [...new Set(list.map(p => movedPath(p, a, b)))]
+    props.config.folders = map(props.config.folders)
+    props.config.closedFolders = map(props.config.closedFolders)
+    props.config.folderOrder = map(props.config.folderOrder)
+  }
+  const inIt = builds.value.filter(b => isUnder(b.folder, from))
+  const fileIn = (folder: string, rel: string) => folder + '/' + rel.split('/').pop()
+  let to: string
+  try {
+    to = (await pobApi.moveFolder(props.config, from, asked)).to
+  } catch (err) {
+    relist(asked, from)
+    saveConfig()
+    note((err as Error).message)
+    await refresh()
+    return
+  }
+  if (to !== asked) relist(asked, to)
+  for (const b of inIt) followFile(b.relPath, fileIn(movedPath(b.folder, from, to), b.relPath))
+  saveConfig()
+  await refresh()
+  note(`Moved "${from}" to "${to}"`, () => {
+    pobApi.moveFolder(props.config, to, from).then(() => {
+      relist(to, from)
+      for (const b of inIt) followFile(fileIn(movedPath(b.folder, from, to), b.relPath), b.relPath)
+      saveConfig()
+      return refresh()
+    }, (err: Error) => note(err.message))
+  })
+}
+
+function folderMenu (e: MouseEvent, path: string) {
+  openMenu(e, [
+    { label: 'New folder inside', icon: 'fas fa-folder-plus', action: () => tree.startFolder(path) },
+    { label: 'Rename', icon: 'fas fa-i-cursor', keys: 'F2', action: () => tree.startEdit('folder', path, 'rename') },
+    { label: 'Move', icon: 'fas fa-folder-open', action: () => tree.startEdit('folder', path, 'move') },
+    { separator: true },
+    { label: 'Sort this folder A to Z', icon: 'fas fa-sort-alpha-down', action: () => tree.sortFolder(path) },
+    { label: 'Fold all folders', icon: 'fas fa-compress-alt', action: tree.foldAll },
+    { label: 'Open all folders', icon: 'fas fa-expand-alt', action: tree.openAll }
+  ])
+}
+
 function followFile (from: string, to: string) {
+  // Its row stays the same row (picks, focus).
+  const id = rowIds.get(from)
+  if (id != null) { rowIds.delete(from); rowIds.set(to, id) }
   moveBuildRefs(props.config, from, to)
   // Its regexes in the Regex library follow the file too.
   moveRegexFolder(buildRegexFolder(from), buildRegexFolder(to))
@@ -481,26 +578,45 @@ async function duplicateBuild (b: PobBuildEntry) {
   }
 }
 
+// To the Recycle Bin, with one Undo for all of them.
+async function removeBuilds (list: PobBuildEntry[]) {
+  tree.forgetPicks(list.map(b => idOf(b.relPath)))
+  const gone: Array<() => Promise<void>> = []
+  for (const b of list) {
+    try {
+      gone.push(await takeBuild(b))
+    } catch (err) {
+      note((err as Error).message)
+    }
+  }
+  saveConfig()
+  await refresh()
+  if (!gone.length) return
+  note(gone.length === 1 ? `Moved ${list[0].name} to the Recycle Bin` : `Moved ${gone.length} builds to the Recycle Bin`, () => {
+    (async () => {
+      for (const back of gone) await back()
+      saveConfig()
+      await refresh()
+    })().catch((err: Error) => note(err.message))
+  })
+}
+
 async function removeBuild (b: PobBuildEntry) {
-  try {
-    const { xml } = await pobApi.delete(props.config, b.relPath)
-    const putBack = moveBuildRefs(props.config, b.relPath, null)
-    // Its pinned pieces go with it, and come back on Undo.
-    const { list, dropped } = moveBuildPins(pins.value, b.relPath, null)
-    pins.value = list
-    if (selected.value === b.relPath) selected.value = null
-    saveConfig()
-    await refresh()
-    note(`Moved ${b.name} to the Recycle Bin`, () => {
-      pobApi.restore(props.config, b.relPath, xml).then(() => {
-        putBack()
-        pins.value = [...pins.value.filter(p => !dropped.some(d => d.id === p.id)), ...dropped]
-        saveConfig()
-        return refresh()
-      }, (err: Error) => note(err.message))
-    })
-  } catch (err) {
-    note((err as Error).message)
+  await removeBuilds([b])
+}
+
+// One build to the Recycle Bin; returns what puts it back.
+async function takeBuild (b: PobBuildEntry): Promise<() => Promise<void>> {
+  const { xml } = await pobApi.delete(props.config, b.relPath)
+  const putBack = moveBuildRefs(props.config, b.relPath, null)
+  // Its pinned pieces go with it, and come back on Undo.
+  const { list, dropped } = moveBuildPins(pins.value, b.relPath, null)
+  pins.value = list
+  if (selected.value === b.relPath) selected.value = null
+  return async () => {
+    await pobApi.restore(props.config, b.relPath, xml)
+    putBack()
+    pins.value = [...pins.value.filter(p => !dropped.some(d => d.id === p.id)), ...dropped]
   }
 }
 

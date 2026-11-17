@@ -55,6 +55,9 @@ export interface SavedTreeAdapter<T extends { id: number }> {
   open?: (item: T) => void
   // Only these items, as a filter shows them (Trade searches' Pinned view).
   only?: () => ((item: T) => boolean) | null
+  // Moves a whole folder itself (files on disk); its items then aren't moved
+  // one by one.
+  moveFolderAs?: (from: string, to: string) => void
   // A folder (and all under it) is about to move or be renamed: the list's own
   // records and other tools' links follow.
   onFolderMoved?: (from: string, to: string) => void
@@ -140,9 +143,12 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
     if (!to || from === to || to.startsWith(from + '/')) return
     // First, so a list can carry its own records (icons) to the new paths.
     a.onFolderMoved?.(from, to)
-    for (const t of a.items()) {
-      const next = movedPath(a.folderOf(t), from, to)
-      if (next !== cleanPath(a.folderOf(t))) a.setFolder(t, next)
+    if (a.moveFolderAs) a.moveFolderAs(from, to)
+    else {
+      for (const t of a.items()) {
+        const next = movedPath(a.folderOf(t), from, to)
+        if (next !== cleanPath(a.folderOf(t))) a.setFolder(t, next)
+      }
     }
     a.setExtraFolders(a.extraFolders().map(f => movedPath(f, from, to)))
     a.setClosed(a.closed().map(f => movedPath(f, from, to)))

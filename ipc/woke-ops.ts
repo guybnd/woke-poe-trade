@@ -69,6 +69,7 @@ export interface WokeOps {
   'pob-import': Op<{ dir?: string, input: string, name?: string }, { relPath: string }>
   'pob-rename': Op<PobArgs & { name: string }, { relPath: string }>
   'pob-move': Op<PobArgs & { folder: string }, { relPath: string }>
+  'pob-move-folder': Op<{ dir?: string, from: string, to: string }, { to: string }>
   'pob-duplicate': Op<PobArgs, { relPath: string }>
   'pob-delete': Op<PobArgs, { xml: string }>
   'pob-restore': Op<PobArgs & { xml: string }, void>

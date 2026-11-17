@@ -25,6 +25,14 @@ export interface PobBuildsWidget extends Widget {
   unlinkedSets?: string[]
   // Build file -> its Trade searches folder, for the build panel's Trades tab.
   tradeFolders?: Record<string, string>
+  // The list (shared/use-saved-tree): your order of build files (relPaths),
+  // 'manual' to show it (else latest save first), folders kept while empty,
+  // their order, and the folded ones. Kept in the app; files stay as they are.
+  buildOrder?: string[]
+  sortBy?: 'manual'
+  folders?: string[]
+  folderOrder?: string[]
+  closedFolders?: string[]
   // Build file -> your own notes on it, shown in the Notes tab.
   myNotes?: Record<string, string>
   // Draws the active build over the game's passive tree. Missing = the
@@ -210,6 +218,8 @@ export const pobApi = {
     hostRequest('pob-rename', { dir: dirArg(cfg), relPath, name }),
   move: (cfg: PobBuildsWidget, relPath: string, folder: string) =>
     hostRequest('pob-move', { dir: dirArg(cfg), relPath, folder }),
+  moveFolder: (cfg: PobBuildsWidget, from: string, to: string) =>
+    hostRequest('pob-move-folder', { dir: dirArg(cfg), from, to }),
   duplicate: (cfg: PobBuildsWidget, relPath: string) =>
     hostRequest('pob-duplicate', { dir: dirArg(cfg), relPath }),
   delete: (cfg: PobBuildsWidget, relPath: string) =>
@@ -245,10 +255,16 @@ export function moveBuildRefs (w: PobBuildsWidget, from: string, to: string | nu
   const loadouts = Object.fromEntries(Object.entries(w.loadouts).filter(([rel]) => rel !== from))
   w.loadouts = pick && to ? { ...loadouts, [to]: pick } : loadouts
   // The set link and the Trades folder: keyed by the file, so they follow it too.
+  const orderAt = (w.buildOrder ?? []).indexOf(from)
   const wasUnlinked = (w.unlinkedSets ?? []).includes(from)
   const folder = w.tradeFolders?.[from]
   const notes = w.myNotes?.[from]
   const moveExtras = (a: string, b: string | null) => {
+    // Its place in the order you set.
+    if (orderAt >= 0) {
+      const rest = (w.buildOrder ?? []).filter(r => r !== a)
+      w.buildOrder = b ? [...rest.slice(0, orderAt), b, ...rest.slice(orderAt)] : rest
+    }
     if (wasUnlinked) w.unlinkedSets = [...(w.unlinkedSets ?? []).filter(r => r !== a), ...(b ? [b] : [])]
     if (folder != null) {
       const rest = Object.fromEntries(Object.entries(w.tradeFolders ?? {}).filter(([rel]) => rel !== a))

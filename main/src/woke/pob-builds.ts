@@ -231,6 +231,47 @@ export async function moveBuild (args: { dir?: string, relPath: string, folder: 
   return { relPath: relOf(root, to) }
 }
 
+// A whole folder of builds to another place under the builds folder (a rename
+// or a move in the list). Never into itself, never over a folder that exists,
+// never deeper than the list reads. Returns where it went, as the disk names it
+// (a name is cleaned of characters a file name can't have). A folder that is
+// only in the list (no file in it yet) has nothing to move.
+export async function moveBuildFolder (args: { dir?: string, from: string, to: string }): Promise<{ to: string }> {
+  const root = path.resolve(resolveDir(args?.dir))
+  const from = resolveFolder(root, args?.from)
+  const to = resolveFolder(root, args?.to)
+  if (from === root || to === root) throw new Error('Not a folder name')
+  const done = { to: relOf(root, to) }
+  if (from === to) return done
+  const inside = path.relative(from, to)
+  if (inside && !inside.startsWith('..') && !path.isAbsolute(inside)) throw new Error("A folder can't go inside itself")
+  if (!await fs.stat(from).then(st => st.isDirectory(), () => false)) return done
+  const depthOf = (full: string) => path.relative(root, full).split(path.sep).filter(Boolean).length
+  if (depthOf(to) + await deepestUnder(from) > MAX_DEPTH) throw new Error('That folder would be too deep for the build list')
+  if (samePath(from, to)) {
+    // Only the letter case changes: through a free name, as the disk sees both as one.
+    const step = `${from}.woke-move-${Date.now()}`
+    await fs.rename(from, step)
+    await fs.rename(step, to)
+  } else {
+    if (await fs.stat(to).then(() => true, () => false)) throw new Error(`There's already a folder "${path.basename(to)}" there`)
+    await fs.mkdir(path.dirname(to), { recursive: true })
+    await fs.rename(from, to)
+  }
+  summaryCache.clear()
+  return done
+}
+
+// How many folder levels lie under a folder (0: none).
+async function deepestUnder (dir: string): Promise<number> {
+  let deepest = 0
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => [])
+  for (const e of entries) {
+    if (e.isDirectory()) deepest = Math.max(deepest, 1 + await deepestUnder(path.join(dir, e.name)))
+  }
+  return deepest
+}
+
 export async function duplicateBuild (args: { dir?: string, relPath: string }): Promise<{ relPath: string }> {
   const from = resolveBuild(args?.dir, args?.relPath)
   const root = path.resolve(resolveDir(args?.dir))

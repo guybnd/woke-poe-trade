@@ -3,7 +3,10 @@
 // Shift picking, Alt + arrows, drag into a folder, a right-click menu. One set
 // of checks, run on each list with the same items:
 //   A, B, C at the top; Box with D; Box/Inner with E.
-import { test, expect } from './harness'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { test, expect, FIXTURES } from './harness'
 import type { Locator } from '@playwright/test'
 import type { Overlay } from './harness'
 
@@ -62,6 +65,26 @@ const LISTS: ListUnderTest[] = [
       })
       return overlay.widget('woke-trade-searches')
     }
+  },
+  {
+    // Files on disk: a build is its file; the order is kept in the app.
+    name: 'PoB builds',
+    async open (overlay) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-pob-'))
+      const xml = fs.readFileSync(path.join(FIXTURES, 'pob', 'Showcase.xml'))
+      for (const s of SEED) {
+        fs.mkdirSync(path.join(dir, s.folder), { recursive: true })
+        fs.writeFileSync(path.join(dir, s.folder, `${s.name}.xml`), xml)
+      }
+      await overlay.boot({
+        overlayActive: true,
+        widgets: [{
+          wmType: 'woke-pob-builds', wmWants: 'show', wmFlags: ['invisible-on-blur'], anchor: { pos: 'tl', x: 5, y: 12 },
+          buildsDir: dir, pobExe: '', pinned: [], activeBuild: null, followChars: {}, sortBy: 'manual'
+        } as never]
+      })
+      return overlay.widget('woke-pob-builds')
+    }
   }
 ]
 
@@ -100,7 +123,7 @@ for (const list of LISTS) {
     await focusItem(w, 3)
     await page.keyboard.press('Delete')
     await expect(row(w, 's:3')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Undo' }).first().click()
+    await page.getByRole('status').filter({ hasText: 'Charlie' }).getByRole('button', { name: 'Undo' }).click()
     await expect(row(w, 's:3')).toBeVisible()
     expect((await order(w)).slice(0, 3)).toEqual(['s:1', 's:2', 's:3'])
 
