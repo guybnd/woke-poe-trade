@@ -3,17 +3,18 @@
     <div v-if="'error' in result" class="p-2">
       {{ result.error }}
     </div>
-    <!-- woke: the item's family, then its own drop group when that adds items.
-         A click price checks the row's item; nothing searches before that. -->
+    <!-- woke: the item's family, its drop group, what it drops: one row and one
+         click for every section. A click price checks the row's item the way the
+         item menu's Price button does; nothing searches before that. -->
     <template v-for="sec in sections" :key="sec.title">
       <div :class="$style.hd">
         <span>{{ sec.title }}</span>
         <span v-if="sec.family" :class="$style.count">{{ sec.rows.length }} · poe.ninja</span>
       </div>
       <div :class="[$style.list, { [$style.tight]: sec.family }]">
-        <div v-for="row in sec.rows" :key="row.name" v-item-tip="{ name: row.name }"
-          :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: row.check && !row.highlight }]"
-          @click="!row.highlight && row.check && $emit('check', row.check)">
+        <div v-for="row in sec.rows" :key="row.key" v-item-tip="{ name: row.name }"
+          :class="[$style.row, { [$style.me]: row.highlight, [$style.click]: canOpen(row) }]"
+          @click="open(row)">
           <img :class="$style.art" :src="row.icon" :alt="''">
           <span :class="$style.name">{{ row.name }}</span>
           <span :class="$style.price">
@@ -23,18 +24,7 @@
         </div>
       </div>
     </template>
-    <div v-if="sections.some(sec => sec.rows.some(r => r.check && !r.highlight))" :class="$style.ft">Click to price check</div>
-    <template v-if="'items' in result && result.items.length">
-      <div :class="$style.hd">Drops in {{ item!.info.name }}</div>
-      <div v-for="row in result.items" :key="row.name" v-item-tip="{ name: row.name }" :class="$style.row">
-        <img :class="$style.art" :src="row.icon" :alt="''">
-        <span :class="$style.name">{{ row.name }}</span>
-        <span :class="$style.price">
-          <template v-if="row.price">{{ priceText(row.price) }}<img :class="$style.coin" :src="coin(row.price)" :alt="row.price.currency"></template>
-          <span v-else :class="$style.none" title="poe.ninja has no price for this">?</span>
-        </span>
-      </div>
-    </template>
+    <div v-if="sections.some(sec => sec.rows.some(canOpen))" :class="$style.ft">Click to price check</div>
   </div>
 </template>
 
@@ -45,8 +35,8 @@ import { usePoeninja, CurrencyValue, displayRounding } from '@/web/background/Pr
 import { getDetailsId } from '../trends/getDetailsId'
 import { vItemTip } from '@/web/woke/ui/tooltip/item-tip'
 import { ParsedItem } from '@/parser'
-import { AppConfig } from '@/web/Config'
-import { priceCheckInput, type PriceCheckInput } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { priceCheckRequest } from '@/web/woke/ui/tooltip/item-price-check'
+import { sideRow, type SideRow } from './side-row'
 import { familyOf, familyRows, type Family } from '@/web/woke/related-family/family'
 
 const { findPriceByQuery, autoCurrency, xchgRate } = usePoeninja()
@@ -72,14 +62,6 @@ function findPriceByQueryId (queryId: string) {
   }
 }
 
-interface RelatedRow { name: string, icon: string, price?: CurrencyValue, highlight: boolean, check?: PriceCheckInput | null }
-
-// woke: what a click on a row price checks: a stackable item as the game copies it.
-function checkInput (info: BaseType): PriceCheckInput | null {
-  if (info.namespace !== 'ITEM') return null
-  return priceCheckInput({ name: info.refName }, 'item', info, AppConfig().language === 'en')
-}
-
 // woke: the rest of a bulk item's family (fossils, catalysts, essences of its
 // tier...), dearest first, from the item data and poe.ninja rows already loaded.
 // Members come from a scan of the item data, so each family is read once.
@@ -98,13 +80,7 @@ function getFamily (item: ParsedItem) {
   const rows = familyRows(fam, item.info.refName, ref => findPriceByQuery({ ns: 'ITEM', name: ref, variant: undefined })?.chaos ?? null)
   return {
     label: fam.label,
-    related: rows.map((row): RelatedRow => ({
-      name: row.info.name,
-      icon: row.info.icon,
-      price: row.chaos != null ? autoCurrency(row.chaos) : undefined,
-      highlight: row.own,
-      check: checkInput(row.info)
-    }))
+    related: rows.map(row => sideRow(row.info, row.chaos != null ? autoCurrency(row.chaos) : undefined, row.own, row.info.refName))
   }
 }
 
@@ -114,34 +90,23 @@ function getItemPrices (queryId: string) {
 
   const out = {
     label: undefined as string | undefined,
-    related: [] as RelatedRow[],
-    items: [] as Array<{ name: string, icon: string, price?: CurrencyValue, chaos: number }>
+    related: [] as SideRow[],
+    items: [] as SideRow[]
   }
   for (const itemId of dropEntry.query) {
     const dbItem = findItemByQueryId(itemId)
     if (!dbItem) return { error: `Can't find "${itemId}".` }
 
-    out.related.push({
-      icon: dbItem.icon,
-      name: dbItem.name,
-      price: findPriceByQueryId(itemId),
-      highlight: (itemId === queryId),
-      check: checkInput(dbItem)
-    })
+    out.related.push(sideRow(dbItem, findPriceByQueryId(itemId), itemId === queryId, itemId))
   }
+  const chaosOf = (price?: CurrencyValue) => !price ? -1 : (price.currency === 'div' ? price.max * (xchgRate.value ?? 1) : price.max)
   for (const itemId of dropEntry.items) {
     const dbItem = findItemByQueryId(itemId)
     if (!dbItem) return { error: `Can't find "${itemId}".` }
 
-    const price = findPriceByQueryId(itemId)
-    out.items.push({
-      icon: dbItem.icon,
-      name: dbItem.name,
-      price,
-      chaos: !price ? -1 : (price.currency === 'div' ? price.max * (xchgRate.value ?? 1) : price.max)
-    })
+    out.items.push(sideRow(dbItem, findPriceByQueryId(itemId), false, itemId))
   }
-  out.items.sort((a, b) => b.chaos - a.chaos)
+  out.items.sort((a, b) => chaosOf(b.price) - chaosOf(a.price))
 
   return out
 }
@@ -159,7 +124,7 @@ export default defineComponent({
     }
   },
   emits: ['check'],
-  setup (props) {
+  setup (props, { emit }) {
     const { updatedAt } = usePoeninja()
     const result = computed(() => {
       // Prices arrive after the panel first shows.
@@ -171,7 +136,7 @@ export default defineComponent({
         : null
       const family = getFamily(props.item)
       if (!family) return drops ?? undefined
-      if (!drops || 'error' in drops) return { ...family, items: [], dropRelated: [] as RelatedRow[] }
+      if (!drops || 'error' in drops) return { ...family, items: [], dropRelated: [] as SideRow[] }
       // The drop group stays when it adds items (an essence's other tiers), and
       // what the item drops leaves out what the family already lists.
       const listed = new Set(family.related.map(r => r.name))
@@ -182,19 +147,34 @@ export default defineComponent({
       }
     })
 
-    interface Section { title: string, family: boolean, rows: RelatedRow[] }
+    interface Section { title: string, family: boolean, rows: SideRow[] }
     const sections = computed<Section[]>(() => {
       const res = result.value
       if (!res || !('related' in res)) return []
       const out: Section[] = []
       if (res.related.length > 1) out.push({ title: res.label ?? `Related to ${props.item!.info.name}`, family: res.label != null, rows: res.related })
       if ('dropRelated' in res && res.dropRelated.length > 1) out.push({ title: `Related to ${props.item!.info.name}`, family: false, rows: res.dropRelated })
+      if (res.items.length) out.push({ title: `Drops in ${props.item!.info.name}`, family: false, rows: res.items })
       return out
     })
+
+    const canOpen = (row: SideRow) => row.clickable && !row.highlight
+    // A unique's mods load before it opens: a later click, or a new check,
+    // wins over a click still waiting.
+    let clickSeq = 0
+    async function open (row: SideRow) {
+      if (!canOpen(row)) return
+      const seq = ++clickSeq
+      const item = props.item
+      const input = await priceCheckRequest(row.ref, row.info)
+      if (input && seq === clickSeq && props.item === item) emit('check', input)
+    }
 
     return {
       result,
       sections,
+      canOpen,
+      open,
       priceText: (price: CurrencyValue) => (price.min === price.max)
         ? displayRounding(price.min, true)
         : `${displayRounding(price.min, true)}–${displayRounding(price.max, true)}`,
