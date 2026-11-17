@@ -116,7 +116,7 @@ test('a gem lists its other versions with poe.ninja prices and searches one only
   expect(searches.length).toBe(before + 1)
 })
 
-test('the same gem again: a version searched before needs a click, which the trade cache answers', async ({ overlay }) => {
+test('the same gem again: a version searched before shows its answer at once', async ({ overlay }) => {
   const searches = await fakeMarket(overlay.page)
   await overlay.boot()
   await overlay.copyItem(GEM)
@@ -130,11 +130,10 @@ test('the same gem again: a version searched before needs a click, which the tra
   await expect(row).toContainText('31 listed')
   expect(searches.length).toBe(before + 1)
 
-  // Copied again: the rows start fresh; a click answers from the trade
-  // request cache (5 minutes), with no new search.
+  // Copied again: the answer is kept (on-click trade lane), no click or search.
   await overlay.copyItem(GEM)
-  await expect(row).not.toContainText('31 listed')
-  await row.click()
   await expect(row).toContainText('31 listed')
+  await row.click()
+  await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before + 1)
 })

@@ -10,6 +10,7 @@ import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 // Detection loads with the first price check, not at startup.
+import { askOnce, inLane } from '../shared/on-demand'
 import type { SwapCandidate } from './detect'
 // The search code loads on the first swap search, not with the price check.
 import type { SwapMode, SwapSearchResult } from './search'
@@ -106,6 +107,16 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     return key != null && r.result!.request !== key
   }
 
+  // Through the one on-click trade lane: the same search again (this item
+  // again, within a while) is answered without searching.
+  async function swapSearch (cand: SwapCandidate, mode: SwapMode) {
+    const { runSwapSearch } = await loadSearch()
+    const key = currentKey(cand, mode)
+    const args = [filters.value, stats.value, cand, mode, { ...options.value, accountName: AppConfig().accountName }, item.value.category] as const
+    const search = () => runSwapSearch(...args)
+    return key ? await askOnce(`${filters.value.trade.league}|${key}`, search) : await inLane(search)
+  }
+
   async function run (cand: SwapCandidate, mode: SwapMode) {
     view.value = 'flip'
     const prev = runs.get(cand.filter)
@@ -114,11 +125,7 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
     const id = ++runId
     runs.set(cand.filter, { id, mode, state: 'loading' })
     try {
-      const { runSwapSearch } = await loadSearch()
-      const result = await runSwapSearch(
-        filters.value, stats.value, cand, mode,
-        { ...options.value, accountName: AppConfig().accountName },
-        item.value.category)
+      const result = await swapSearch(cand, mode)
       if (runs.get(cand.filter)?.id === id) runs.set(cand.filter, { id, mode, state: 'done', result })
     } catch (e) {
       if (runs.get(cand.filter)?.id === id) runs.set(cand.filter, { id, mode, state: 'error', error: (e as Error).message })
@@ -135,11 +142,7 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
       if (now?.id === id) runs.set(cand.filter, { ...now, refining: undefined, ...patch })
     }
     try {
-      const { runSwapSearch } = await loadSearch()
-      const one = await runSwapSearch(
-        filters.value, stats.value, cand, key,
-        { ...options.value, accountName: AppConfig().accountName },
-        item.value.category)
+      const one = await swapSearch(cand, key)
       const now = runs.get(cand.filter)
       if (now?.id !== id || !now.result) return
       const price = one.prices.find(p => p.key === key)

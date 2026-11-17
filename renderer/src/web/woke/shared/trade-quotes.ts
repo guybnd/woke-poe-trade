@@ -5,6 +5,7 @@
 // time, well spaced, only for what's on screen (the Boss runs panel, a boss
 // arena's card, the item picked in Search), and the results are kept a while.
 import { shallowRef } from 'vue'
+import { inLane } from './on-demand'
 
 export interface TradeQuote {
   chaos: number
@@ -120,7 +121,7 @@ export function createTradePrices (deps: TradePriceDeps) {
     const forLeague = league
     nextAt = now() + GAP_MS
     try {
-      save(forLeague, name, await withTimeout(deps.lookup(forLeague, name, divine)))
+      save(forLeague, name, await inLane(() => withTimeout(deps.lookup(forLeague, name, divine))))
     } catch {
       failedAt.set(`${forLeague}|${name}`, now())
       nextAt = now() + FAILED_GAP_MS
@@ -138,8 +139,7 @@ export function createTradePrices (deps: TradePriceDeps) {
 
   // Replaces what's queued; the opened boss goes first each time it changes.
   function request (forLeague: string, forDivine: number, names: string[]) {
-    league = forLeague
-    divine = forDivine
+    // Names asked for in another league are that league's.
     if (forLeague !== league) asked = []
     league = forLeague
     divine = forDivine
