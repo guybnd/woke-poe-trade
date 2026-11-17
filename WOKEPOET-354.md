@@ -26,6 +26,7 @@ subtasks:
   - WOKEPOET-361
   - WOKEPOET-362
   - WOKEPOET-363
+  - WOKEPOET-364
 ---
 > **TL;DR:** Nine places where the same behaviour was written by hand in several windows get one shared version each, so a fix in one list applies to all. Guy said "Let's do all" on the audit page.
 

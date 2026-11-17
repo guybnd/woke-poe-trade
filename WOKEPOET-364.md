@@ -1,0 +1,24 @@
+---
+id: WOKEPOET-364
+title: >-
+  Saved lists, step 2: Atlas and PoB on the shared list; folders and drag for
+  Regex and Trade
+status: In Progress
+priority: None
+effort: L
+assignee: unassigned
+tags:
+  - cleanup
+  - ui
+createdBy: Agent
+updatedBy: Agent
+parentId: WOKEPOET-354
+history:
+  - type: activity
+    user: Agent
+    date: '2026-11-17T12:08:49.115Z'
+    comment: Created as subtask of WOKEPOET-354.
+---
+> **TL;DR:** Guy picked the follow-up to #585: Atlas strategies and PoB builds use the shared saved-list parts (row keys, rename in place, remove with Undo), and Regex library and Trade searches get nested folders and drag reorder, lifted from Atlas into shared code.
+
+Keep each list's current behaviour; PoB keeps its files-on-disk data source. Characterization tests first; one or two PRs.
