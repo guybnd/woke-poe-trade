@@ -497,6 +497,48 @@ test('Alt + F: a card alone for the hovered item, a key hides it', async ({ over
   await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toMatch(/Hide # \$type->woke->own [^\n]*\n(\t[^\n]*\n)*\tBaseType == "Divine Orb"/)
 })
 
+test('Alt + F: Whole tier lists its items, picked ones move together, and the look rows switch on and off', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [lootFilter(folder)] })
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/currency-divine.txt', 'Alt + F')
+  const page = overlay.page
+  await expect(page.getByText('Filter rule for this item')).toBeVisible()
+
+  await page.getByRole('button', { name: /^Whole tier/ }).click()
+  await expect(page.getByText('Items in this tier · 2')).toBeVisible()
+  await page.getByText('Mirror of Kalandra', { exact: true }).click()
+  await expect(page.getByText('1 picked')).toBeVisible()
+  await overlay.snap('alt f whole tier items')
+  await page.getByRole('toolbar', { name: 'Picked items' }).getByRole('button', { name: 'Move to' }).click()
+  await page.getByRole('menuitem').first().click()
+  await expect(page.getByText(/^Moved Mirror of Kalandra to /)).toBeVisible()
+  await expect(page.getByText('Items in this tier · 1')).toBeVisible()
+
+  // The beam switch turns it off and back on to what it was.
+  const beam = page.getByRole('switch', { name: 'Beam' })
+  await expect(beam).toHaveAttribute('aria-checked', 'true')
+  await beam.click()
+  await expect(beam).toHaveAttribute('aria-checked', 'false')
+  await beam.click()
+  await expect(beam).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('button', { name: /^Beam.*Red/ })).toBeVisible()
+  // A sound off with nothing before it comes on with a plain default.
+  const sound = page.getByRole('switch', { name: 'Sound' })
+  await sound.click()
+  await expect(sound).toHaveAttribute('aria-checked', 'false')
+  await sound.click()
+  await expect(sound).toHaveAttribute('aria-checked', 'true')
+
+  await page.getByRole('button', { name: /^Save/ }).click()
+  const out = path.join(folder, 'NeverSink (woke).filter')
+  // Mirror moved; Divine stays with its beam and sound as they were.
+  await expect.poll(() => fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '').toMatch(/\$tier->t1exalted[^\n]*\n(\t[^\n]*\n)*\tBaseType == "Divine Orb"\r?\n/)
+  const text = fs.readFileSync(out, 'utf8')
+  expect(text).toMatch(/\$tier->t2divine[^\n]*\n(\t[^\n]*\n)*\tBaseType == [^\n]*"Mirror of Kalandra"/)
+  expect(text).toMatch(/\$tier->t1exalted[^\n]*\n(\t[^\n]*\n)*\tPlayAlertSound 6 300\r?\n\tPlayEffect Red\r?\n/)
+})
+
 test('Alt + F on a unique: a verdict line, plain value tiers, special rules folded', async ({ overlay, fakeApp }) => {
   // NeverSink's real Strict filter.
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))

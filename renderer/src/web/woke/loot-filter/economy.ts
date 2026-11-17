@@ -431,3 +431,11 @@ export function lockedByEdits (edits: FilterEdit[], extra: string[] = []): Set<s
   }
   return out
 }
+
+// Today's price of a base in a filter group, when poe.ninja prices that group.
+export function basePrice (lookup: PriceLookup | null, type: string | null, base: string): number | null {
+  // Prices are in chaos, so poe.ninja doesn't list chaos itself.
+  if (lookup && base === 'Chaos Orb' && type === 'currency') return 1
+  const group = ECONOMY_GROUPS.find(g => g.type === type)
+  return (lookup && group && lookup(group, base)?.chaos) ?? null
+}
