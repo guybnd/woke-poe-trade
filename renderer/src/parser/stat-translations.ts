@@ -144,7 +144,7 @@ export function tryParseTranslation (
 ): ParsedStat | undefined {
   const folded = stat.string.includes(FOLDED)
   for (const combination of _statPlaceholderGenerator(stat.string)) {
-    const found = (folded && findFolded(combination.stat)) || findAndResolveTranslation({
+    const found = (folded && findFolded(combination.stat, modType)) || findAndResolveTranslation({
       matchStr: combination.stat,
       modType: modType,
       itemCategory: itemCategory,
@@ -245,13 +245,16 @@ const FOLDED = '(...)'
 // same plain text ("Socketed Gems are Supported by Level 20 Added Chaos
 // Damage" is both a fixed support and a random support's plain form), and the
 // matcher index gives that one, so look for the advanced owner first.
-function findFolded (matchStr: string): { matcher: StatMatcher, stat: Stat } | undefined {
+// Only a stat with a trade id for the mod's kind counts; otherwise the normal
+// lookup runs.
+function findFolded (matchStr: string, modType: ModifierType): { matcher: StatMatcher, stat: Stat } | undefined {
   // A piece of the text as it is written in the data file: no line break or
   // quote, which the file escapes.
   const key = matchStr.split(String.fromCharCode(10)).flatMap(line => line.split('"'))
     .reduce((a, b) => b.length > a.length ? b : a, '')
   if (!key) return undefined
   for (const stat of STATS_ITERATOR(key)) {
+    if (!(modType in stat.trade.ids)) continue
     const matcher = stat.matchers.find(m => m.advanced && m.advanced !== m.string && m.string === matchStr)
     if (matcher) return { stat, matcher }
   }

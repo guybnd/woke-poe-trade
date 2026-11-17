@@ -60,3 +60,13 @@ describe('folded option lists on random gems', () => {
     expect(folded!.stat.trade.ids.explicit).toEqual(['explicit.indexable_skill_29'])
   })
 })
+
+describe('folded lines of another kind', () => {
+  it('falls back to the normal lookup when the advanced stat has no id for the kind', () => {
+    // The golem stat is explicit only: as an implicit it isn't the folded stat.
+    const r = tryParseTranslation({ string: 'Maximum number of Summoned Golems(...) is Doubled\nCannot have Minions other than Summoned Golems(...)', unscalable: false }, ModifierType.Implicit, undefined)
+    expect(r).toBeUndefined()
+    const e = tryParseTranslation({ string: 'Maximum number of Summoned Golems(...) is Doubled\nCannot have Minions other than Summoned Golems(...)', unscalable: false }, ModifierType.Explicit, undefined)
+    expect(e!.stat.trade.ids.explicit).toEqual(['explicit.stat_56473917|2'])
+  })
+})
