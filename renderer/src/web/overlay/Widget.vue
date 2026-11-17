@@ -415,6 +415,10 @@ export default defineComponent({
       // While dragging, the widget is only shifted on screen (CSS translate, at
       // most once a frame): the panel isn't rebuilt or laid out again for every
       // mouse move, which made big panels lag. The new spot is saved on release.
+      // No will-change: the overlay draws without the GPU, and a panel on its
+      // own layer splits into dozens of overlapping layers that are all drawn
+      // again every frame (the loot filter editor dropped frames down to 12 fps).
+      // Redrawing the moved strip of the page costs far less.
       function place () {
         frame = 0
         const ev = last
@@ -442,7 +446,6 @@ export default defineComponent({
             props.config.anchor.y += y / window.innerHeight * 100
             fitShift.value = { x: 0, y: 0 }
           }
-          el.style.willChange = 'translate'
           anchorAtStart = props.config.anchor
           emit('moved')
         }
@@ -466,7 +469,6 @@ export default defineComponent({
             props.config.anchor.y = startY + offset.dy / window.innerHeight * 100
           }
           el.style.removeProperty('translate')
-          el.style.removeProperty('will-change')
           swallowNextClick()
         }
         clearGuides()
