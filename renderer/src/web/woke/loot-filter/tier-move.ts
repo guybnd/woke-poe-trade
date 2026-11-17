@@ -1,6 +1,10 @@
 // Moving items between a group's tiers, the same from the filter editor and
 // the Alt+F card: one undo step for the lot and a "Moved …" note with Undo.
 import { toast } from '../ui/layer'
+import type { MenuEntry } from '../ui/layer'
+import { moveTargets } from './edits'
+import { labelCss } from './label-style'
+import type { FilterDoc } from './parse'
 import { tierLabel } from './names'
 import type { LootFilterStore } from './store'
 
@@ -29,4 +33,14 @@ export function useTierMove (store: LootFilterStore, at: TierMoveAt) {
     toast(movedNote(bases, at.label?.(to) ?? tierLabel(to)), { anchor: at.anchor?.() ?? undefined, undo })
     at.after?.(to)
   }
+}
+
+// The "Move to" menu: every tier of the group the items can go to, each drawn
+// in its own look. One list for the editor, Alt+F and the Prices tab.
+export function tierMoveEntries (doc: FilterDoc | null | undefined, type: string | null | undefined, from: string | null | undefined, pick: (to: string) => void, opts: { label?: (to: string) => string } = {}): MenuEntry[] {
+  if (!doc || !type) return []
+  return moveTargets(doc, type).filter(t => t !== from).map(t => {
+    const block = doc.blocks.find(x => x.type === type && x.tier === t && !x.disabled) ?? doc.blocks.find(x => x.type === type && x.tier === t)
+    return { label: opts.label?.(t) ?? tierLabel(t), labelStyle: block ? labelCss(block.actions) : undefined, icon: 'fas fa-share', action: () => { pick(t) } }
+  })
 }

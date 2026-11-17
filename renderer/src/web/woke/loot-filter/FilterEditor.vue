@@ -423,14 +423,14 @@ import type { FilterEdit, StylePatch } from './edits'
 import { ruleLabel, tierName } from './parse'
 import type { Visibility } from './parse'
 import { tierLabel } from './names'
-import { useTierMove } from './tier-move'
+import { tierMoveEntries as sharedTierMoveEntries, useTierMove } from './tier-move'
 import AddItemField from './AddItemField.vue'
 import TierItemChips from './TierItemChips.vue'
 import RuleNav from './RuleNav.vue'
 import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
-import { baseIcon, cssColour, labelCss } from './label-style'
+import { baseIcon, cssColour } from './label-style'
 import { axisName, buildLadder, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
@@ -1055,13 +1055,7 @@ function bulkTakeOff () {
 }
 
 function tierMoveEntries (bases: () => string[]) {
-  const doc = props.store.doc.value
-  const type = selType.value
-  if (!doc || !type) return []
-  return targets.value.filter(t => t !== selTier.value).map(t => {
-    const block = doc.blocks.find(x => x.type === type && x.tier === t && !x.disabled) ?? doc.blocks.find(x => x.type === type && x.tier === t)
-    return { label: tierLabel(t), labelStyle: block ? labelCss(block.actions) : undefined, icon: 'fas fa-share', action: () => { moveBases(bases(), t) } }
-  })
+  return sharedTierMoveEntries(props.store.doc.value, selType.value, selTier.value, t => { moveBases(bases(), t) })
 }
 
 function bulkMoveMenu (e: MouseEvent) {

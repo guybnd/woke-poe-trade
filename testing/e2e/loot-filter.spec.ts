@@ -1022,6 +1022,9 @@ test('prices: kept items list under Not moved, unlock in bulk, and both steps un
   await kept.click()
   await expect(page.getByText(/^\d+ of \d+ picked$/)).toBeVisible()
   await overlay.snap('prices tab, not moved filtered to kept')
+  // A held-back row shows the item's tooltip on hover, like the rows above it.
+  await page.getByRole('checkbox', { name: /^Pick (?!every)/ }).first().locator('xpath=..').hover()
+  await expect(page.getByRole('tooltip')).toBeVisible()
   await page.getByRole('checkbox', { name: 'Pick every item under Not moved' }).check()
   const unlock = page.getByRole('button', { name: /Unlock \d+/ })
   expect(Number((await unlock.innerText()).replace(/\D/g, ''))).toBeGreaterThanOrEqual(wouldMove)
@@ -1034,4 +1037,27 @@ test('prices: kept items list under Not moved, unlock in bulk, and both steps un
   await note.locator('xpath=..').getByRole('button', { name: 'Undo', exact: true }).click()
   await expect(apply).toBeHidden()
   await expect(kept).toBeVisible()
+})
+
+test('prices: a would-move row can go to any tier, not just the one its price says', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters', 'neversink', '1-REGULAR.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
+  await openEditor(overlay, fakeApp)
+  const page = overlay.page
+  await page.getByRole('tab', { name: /^Prices/ }).click()
+  const retier = page.getByRole('switch', { name: /Re-tier from poe.ninja prices/ })
+  if (await retier.getAttribute('aria-checked') !== 'true') await retier.click()
+  const apply = page.getByRole('button', { name: /^Apply \d+$/ })
+  await expect(apply).toBeVisible({ timeout: 20_000 })
+  await page.getByRole('checkbox', { name: /^Move / }).first().locator('xpath=..').click({ button: 'right' })
+  await expect(page.getByText(/Move to Tier \d+ · price says/)).toBeVisible()
+  await overlay.snap('prices row move to menu')
+  const other = page.getByText(/^Move to Tier \d+$/).first()
+  const label = (await other.innerText()).trim()
+  await other.click()
+  await expect(page.getByText(new RegExp(`^Moved .+ to ${label.replace('Move to ', '')}`))).toBeVisible()
+  // Your own move: prices leave it there, under Not moved as kept by you.
+  await expect(apply).toBeHidden()
+  await expect(page.getByRole('button', { name: /^kept by you · 1$/ })).toBeVisible()
 })
