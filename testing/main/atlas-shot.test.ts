@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
 import { PNG } from 'pngjs'
-import { ATLAS_FIT, fitTree, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
+import { ATLAS_FIT, ATLAS_PICTURE_FIT, fitPicture, fitTree, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
 import { readAtlasTree } from '../../renderer/src/web/woke/atlas/atlas-tree'
 import { fitPoints, lineProbes } from '../../renderer/src/web/woke/pob-builds/tree-overlay'
 import { readShots, ringNodes, ringProbes, shotLines } from '../../renderer/src/web/woke/atlas/shot-import'
@@ -18,15 +18,27 @@ const extra = lineProbes(lines, model.nodes).map(p => Float32Array.from(p))
 const ringIds = ringNodes(model)
 const rings = ringProbes(model, ringIds).map(p => Float32Array.from(p))
 
-function read (file: string) {
+// As main's TreeOverlay.readImage: a full screenshot first, else a snip.
+// crop: a part cut from the picture, as Win+Shift+S would.
+function read (file: string, crop?: { x: number, y: number, w: number, h: number }) {
   const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '../fixtures/screens', file)))
-  const px = new Uint8Array(png.data)
+  let px = new Uint8Array(png.data)
+  let width = png.width
+  let height = png.height
+  if (crop) {
+    const out = new Uint8Array(crop.w * crop.h * 4)
+    for (let y = 0; y < crop.h; y++) out.set(px.subarray(((crop.y + y) * width + crop.x) * 4, ((crop.y + y) * width + crop.x + crop.w) * 4), y * crop.w * 4)
+    px = out
+    width = crop.w
+    height = crop.h
+  }
   for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
-  const fit = fitTree(readScreen(px, png.width, png.height), pts, null, ATLAS_FIT)
+  const { fit, bare } = fitPicture(px, width, height, pts, ATLAS_FIT, ATLAS_PICTURE_FIT)
   if (!fit) return null
   return {
-    lines: litLines(px, png.width, png.height, fit, extra, pts, 'blue'),
-    rings: litProbes(px, png.width, png.height, fit, rings, 'blue')
+    bare,
+    lines: litLines(px, width, height, fit, extra, pts, 'blue', bare),
+    rings: litProbes(px, width, height, fit, rings, 'blue')
   }
 }
 
@@ -53,6 +65,15 @@ describe('atlas tree screenshots to a strategy', () => {
     for (const id of alone.nodes) expect(whole.nodes).toContain(id)
     const both = readShots(model, lines, [out.lines, inn.lines], ringIds, [out.rings, inn.rings])
     expect(both.nodes.sort()).toEqual(whole.nodes.sort())
+  })
+
+  it('reads a snip cut from the screen (Win+Shift+S)', () => {
+    // The middle of the zoomed-out shot, half its size: the whole plan is in it.
+    const snip = read('atlas-tree-real-zoomed-out.png', { x: 640, y: 360, w: 1280, h: 720 })!
+    expect(snip).not.toBeNull()
+    const r = readShots(model, lines, [snip.lines], ringIds, [snip.rings])
+    const whole = readShots(model, lines, [out.lines], ringIds, [out.rings])
+    expect(r.nodes.sort()).toEqual(whole.nodes.sort())
   })
 
   it('finds no atlas tree on other screens', () => {

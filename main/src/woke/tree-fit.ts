@@ -62,14 +62,16 @@ export interface Screen {
   headY: number
 }
 
-export function readScreen (bgra: Uint8Array, width: number, height: number): Screen {
+// bare: a picture that may be cut from the screen (a snip), so no part of it
+// is known to be HUD.
+export function readScreen (bgra: Uint8Array, width: number, height: number, bare = false): Screen {
   const mw = width >> 1
   const mh = height >> 1
   const k = height / REF_H
-  const hudTop = Math.round(1210 * k)
+  const hudTop = bare ? height : Math.round(1210 * k)
   const headX0 = Math.round(width / 2 - 460 * k)
   const headX1 = Math.round(width / 2 + 460 * k)
-  const headY = Math.round(240 * k)
+  const headY = bare ? 0 : Math.round(240 * k)
 
   const g = new Float32Array(mw * mh)
   const row = width * 4
@@ -132,6 +134,12 @@ export interface FitKind {
   minDark: number
   // The zoom range searched when no step fits, at 1440 high.
   sweep: [number, number]
+  // Zooms as given, not scaled to the picture's height: for a snip, whose
+  // height says nothing about the game window's.
+  fixed?: boolean
+  // Stricter or looser than MIN_SCORE / MIN_HITS.
+  minScore?: number
+  minHits?: number
 }
 
 export const PASSIVE_FIT: FitKind = { steps: STEPS_1440, minDark: MIN_DARK, sweep: [0.1, 0.9] }
@@ -141,12 +149,27 @@ export const PASSIVE_FIT: FitKind = { steps: STEPS_1440, minDark: MIN_DARK, swee
 // the score and hit share still keep play screens out.
 export const ATLAS_FIT: FitKind = { steps: [0.0810, 0.1710, 0.3515], minDark: 0.3, sweep: [0.05, 0.9] }
 
+// A snip of the atlas tree: the steps at 1080p, 1440p and 4K windows, then
+// everything between.
+export const ATLAS_PICTURE_FIT: FitKind = {
+  steps: [0.75, 1, 1.5].flatMap(k => ATLAS_FIT.steps.map(z => z * k)),
+  minDark: 0.3,
+  sweep: [0.04, 0.6],
+  fixed: true,
+  // A snip holds fewer nodes and more of the bright middle, so it scores
+  // lower (4.2 for half of the zoomed-out tree); nearly every node on it
+  // must land on one instead.
+  minScore: 3.6,
+  minHits: 0.85
+}
+
 // Allocated lines: pale gold on the passive tree, pale blue on the atlas.
 export type LitTone = 'gold' | 'blue'
 
 // hint: the last fit, when only the offset may have changed (a drag).
 export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } | null, kind: FitKind = PASSIVE_FIT): TreeFit | null {
   if (scr.dark < kind.minDark) return null
+  const minScore = kind.minScore ?? MIN_SCORE
   const tryZooms = (zooms: number[]) => {
     let best: TreeFit | null = null
     for (const z of zooms) {
@@ -159,23 +182,44 @@ export function fitTree (scr: Screen, pts: TreePoints, hint?: { zoom: number } |
   }
   let best: TreeFit | null = null
   if (hint) best = tryZooms([hint.zoom])
-  if (!best || best.score < MIN_SCORE) {
-    const other = tryZooms(zoomSteps(scr.height, kind.steps))
+  if (!best || best.score < minScore) {
+    const other = tryZooms(kind.fixed ? kind.steps : zoomSteps(scr.height, kind.steps))
     if (other && (!best || other.score > best.score)) best = other
   }
-  if (!best || best.score < MIN_SCORE) {
+  if (!best || best.score < minScore) {
     // Not one of the steps we know: look everywhere in between.
-    const k = scr.height / REF_H
+    const k = kind.fixed ? 1 : scr.height / REF_H
     const zooms: number[] = []
     const [lo, hi] = kind.sweep
     for (let i = 0; i < 60; i++) zooms.push(k * lo * Math.pow(hi / lo, i / 59))
     const other = tryZooms(zooms)
     if (other && (!best || other.score > best.score)) best = other
   }
-  if (!best || best.score < MIN_SCORE) return null
+  if (!best || best.score < minScore) return null
   const fit = refine(scr, pts, best)
   fit.hits = hitShare(scr, pts, fit.zoom, fit.ox, fit.oy)
-  return fit.score >= MIN_SCORE && fit.hits >= MIN_HITS ? fit : null
+  return fit.score >= minScore && fit.hits >= (kind.minHits ?? MIN_HITS) ? fit : null
+}
+
+// Screen sizes: a picture this size is taken as a whole screenshot.
+const SCREEN_SIZES = new Set(['1366x768', '1600x900', '1680x1050', '1920x1080', '1920x1200', '2560x1080', '2560x1440', '2560x1600',
+  '2880x1620', '3440x1440', '3840x1600', '3840x2160', '5120x1440', '5120x2160'])
+// Pictures must land nearly every node on one: snips of play screens fitted
+// at 0.67 to 0.83, real atlas shots 0.9 and up.
+const PICTURE_HITS = 0.88
+
+// fitTree for a picture (a pasted or picked screenshot), not the game's
+// window. A whole screenshot is the size of a screen; anything else is a
+// snip, whose edges aren't the game's HUD (bare). Each is tried the other
+// way if it fails.
+export function fitPicture (bgra: Uint8Array, width: number, height: number, pts: TreePoints, kind: FitKind, snip?: FitKind): { fit: TreeFit | null, bare: boolean } {
+  const modes: Array<[boolean, FitKind]> = [[false, { ...kind, minHits: Math.max(PICTURE_HITS, kind.minHits ?? 0) }]]
+  if (snip) modes[SCREEN_SIZES.has(`${width}x${height}`) ? 'push' : 'unshift']([true, { ...snip, minHits: Math.max(PICTURE_HITS, snip.minHits ?? 0) }])
+  for (const [bare, k] of modes) {
+    const fit = fitTree(readScreen(bgra, width, height, bare), pts, null, k)
+    if (fit) return { fit, bare }
+  }
+  return { fit: null, bare: false }
 }
 
 // The 8 offsets with most votes at zoom z.
@@ -353,14 +397,14 @@ function litAt (bgra: Uint8Array, width: number, x: number, y: number, tone: Lit
 // to refund a point. Stricter: points on a node's frame or icon, or under the
 // HUD, the Skills header and the life and mana orbs, aren't read (gold art
 // there reads as lit), and a line needs two clear points to count.
-export function litLines (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[], pts: TreePoints, tone: LitTone = 'gold'): boolean[] {
+export function litLines (bgra: Uint8Array, width: number, height: number, fit: TreeFit, probes: Float32Array[], pts: TreePoints, tone: LitTone = 'gold', bare = false): boolean[] {
   const k = height / REF_H
-  const hudTop = 1210 * k
+  const hudTop = bare ? Infinity : 1210 * k
   const headX0 = width / 2 - 460 * k
   const headX1 = width / 2 + 460 * k
-  const headY = 240 * k
-  const orbW = 330 * k
-  const orbY = 1080 * k
+  const headY = bare ? -1 : 240 * k
+  const orbW = bare ? -1 : 330 * k
+  const orbY = bare ? Infinity : 1080 * k
   // Node frames on screen, in 64 px cells.
   const CELL = 64
   const cols = Math.ceil(width / CELL) + 1

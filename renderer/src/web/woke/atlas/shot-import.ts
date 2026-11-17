@@ -24,8 +24,11 @@ export interface ShotRead {
 }
 
 // Every line the game draws between two passives, arcs along their orbit.
+// Wormholes are linked to their pair in the data, but no line joins them on
+// screen (it would run straight across the tree).
 export function shotLines (model: AtlasTreeModel): BuildLine[] {
-  return offBuildLines(model.nodes, [], model.art)
+  const hole = (id: number) => model.nodes.get(id)?.kind === 'wormhole'
+  return offBuildLines(model.nodes, [], model.art).filter(l => !(hole(l.a) && hole(l.b)))
 }
 
 // Passives whose frame can be read: everything a point goes in.

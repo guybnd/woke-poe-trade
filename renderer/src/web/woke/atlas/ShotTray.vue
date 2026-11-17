@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.tray" data-shot-tray>
     <div v-if="shots.length" :class="$style.grid">
-      <div v-for="s in shots" :key="s.id" :class="[$style.shot, { [$style.bad]: s.state === 'none' || s.state === 'error' }]" data-shot>
+      <div v-for="s in shots" :key="s.id" :class="[$style.shot, { [$style.bad]: BAD.has(s.state) }]" data-shot>
         <img :src="s.thumb" :alt="s.name">
         <button type="button" :class="$style.remove" class="w-focusable" :title="`Remove ${s.name}`" @click="remove(s.id)"><i class="fas fa-times" /></button>
         <div :class="[$style.cap, captionClass(s)]" class="w-trunc" :title="s.name">{{ caption(s) }}</div>
@@ -10,12 +10,13 @@
     <div class="flex gap-1 items-center flex-wrap">
       <WButton size="sm" icon="fas fa-image" @click="pick">Screenshots…</WButton>
       <!-- The count is on the Import button; only passives no lit line showed are said here. -->
+      <span v-if="total && model && total.nodes.length > model.points" class="w-down text-xs" data-shot-over>Over {{ model.points }} points</span>
       <span v-if="total?.joined" class="w-faint text-xs" data-shot-total title="Passives on the shortest path to lit ones no line showed: under the bottom bar, off the picture, or next to the start">
         {{ total.joined }} guessed
       </span>
       <span v-else-if="shots.length && !model" class="w-faint text-xs">Loading the atlas tree…</span>
     </div>
-    <input ref="input" type="file" accept="image/*" multiple hidden @change="picked">
+    <input ref="input" type="file" accept="image/png,image/jpeg" multiple hidden @change="picked">
   </div>
 </template>
 
@@ -30,18 +31,19 @@ import type { AtlasTreeModel } from './atlas-tree'
 import type { ShotRead } from './shot-import'
 
 const props = defineProps<{ model: AtlasTreeModel | null }>()
-const emit = defineEmits<{ (e: 'update', read: ShotRead | null): void }>()
+const emit = defineEmits<{ (e: 'update', read: ShotRead | null): void, (e: 'pending', on: boolean): void }>()
 
 interface Shot {
   id: number
   name: string
   thumb: string
   image: string
-  state: 'waiting' | 'reading' | 'ok' | 'none' | 'error'
+  state: 'waiting' | 'reading' | 'ok' | 'none' | 'format' | 'too-big' | 'error'
   lines?: boolean[]
   rings?: boolean[]
 }
 
+const BAD = new Set<Shot['state']>(['none', 'format', 'too-big', 'error'])
 const shots = shallowRef<Shot[]>([])
 const input = shallowRef<HTMLInputElement>()
 let nextId = 1
@@ -56,8 +58,8 @@ async function prepare (model: AtlasTreeModel) {
   const [lib, overlay]: [Lib, Overlay] = await Promise.all([import('./shot-import'), import('../pob-builds/tree-overlay')])
   const lines = lib.shotLines(model)
   const ringIds = lib.ringNodes(model)
-  // The same points the Alt+T atlas drawing sends: same tree, same fit.
-  await hostRequest('atlas-overlay-points', overlay.fitPoints(model.nodes))
+  // The same points the Alt+T atlas drawing fits, sent to the picture reader.
+  await hostRequest('atlas-shot-points', overlay.fitPoints(model.nodes))
   prepared = { model, lib, lines, ringIds, probes: lib.ringProbes(model, ringIds), extra: overlay.lineProbes(lines, model.nodes) }
   return prepared
 }
@@ -73,9 +75,12 @@ function readFile (file: File): Promise<string> {
 
 function add (files: Iterable<File>) {
   const images = [...files].filter(f => f.type.startsWith('image/'))
+  // Not a picture main can open: said on the thumbnail, never read.
+  const known = (f: File) => f.type === 'image/png' || f.type === 'image/jpeg'
   for (const f of images) {
     const id = nextId++
     shots.value = [...shots.value, { id, name: f.name || 'Pasted screenshot', thumb: URL.createObjectURL(f), image: '', state: 'waiting' }]
+    if (!known(f)) { patch(id, { state: 'format' }); continue }
     readFile(f)
       .then(url => { patch(id, { image: url }); readNext().catch(() => {}) })
       .catch(() => patch(id, { state: 'error' }))
@@ -100,21 +105,21 @@ async function readNext () {
     const res = await hostRequest('atlas-shot-read', { image: s.image, probes: p.probes, extra: p.extra }) as
       { ok: true, lit: boolean[], extraLit: boolean[] } | { ok: false, reason: string }
     if (!shots.value.some(x => x.id === s.id)) return
-    if (res.ok) patch(s.id, { state: 'ok', lines: res.extraLit, rings: res.lit, image: '' })
-    else patch(s.id, { state: res.reason === 'no-tree' ? 'none' : 'error', image: '' })
+    // The picture is kept until imported: new tree data reads it again.
+    if (res.ok) patch(s.id, { state: 'ok', lines: res.extraLit, rings: res.lit })
+    else patch(s.id, { state: res.reason === 'no-tree' ? 'none' : res.reason === 'format' || res.reason === 'too-big' ? res.reason : 'error' })
   } catch {
-    patch(s.id, { state: 'error', image: '' })
+    patch(s.id, { state: 'error' })
   } finally {
     busy = false
     readNext().catch(() => {})
   }
 }
 
-// A new tree (data reloaded) reads every picture again; they're kept only
-// as thumbnails, so ask for them again instead.
+// A new tree (data reloaded): every picture is read again.
 watch(() => props.model, (m, old) => {
-  if (old && m !== old) clear()
-  else readNext().catch(() => {})
+  if (old && m !== old) shots.value = shots.value.map(s => s.image && s.state !== 'reading' ? { ...s, state: 'waiting', lines: undefined, rings: undefined } : s)
+  readNext().catch(() => {})
 })
 
 function readOf (list: Shot[]): ShotRead | null {
@@ -139,6 +144,8 @@ function added (s: Shot): { own: number, fresh: number } {
 function caption (s: Shot): string {
   if (s.state === 'waiting' || s.state === 'reading') return 'Reading…'
   if (s.state === 'none') return 'No atlas tree'
+  if (s.state === 'format') return 'PNG or JPEG only'
+  if (s.state === 'too-big') return 'Too big'
   if (s.state === 'error') return 'Couldn\'t read'
   const { own, fresh } = added(s)
   const n = `${own} ${own === 1 ? 'passive' : 'passives'}`
@@ -146,7 +153,7 @@ function caption (s: Shot): string {
 }
 
 function captionClass (s: Shot): string {
-  return s.state === 'ok' ? 'w-up' : s.state === 'none' || s.state === 'error' ? 'w-down' : 'w-faint'
+  return s.state === 'ok' ? 'w-up' : BAD.has(s.state) ? 'w-down' : 'w-faint'
 }
 
 function remove (id: number) {
@@ -169,7 +176,11 @@ function picked () {
 
 onBeforeUnmount(clear)
 
-defineExpose({ add, clear, count: computed(() => shots.value.length) })
+// Still reading: importing now would leave those pictures out.
+const pending = computed(() => shots.value.some(s => s.state === 'waiting' || s.state === 'reading'))
+watch(pending, (p) => emit('pending', p), { immediate: true })
+
+defineExpose({ add, clear })
 </script>
 
 <style module>

@@ -13,7 +13,7 @@ import { WokeHoverTracker } from './hover'
 import { readStashTab } from './stash-read'
 import { StashWatch } from './stash-watch'
 import { TreeOverlay } from './tree-overlay'
-import { ATLAS_FIT } from './tree-fit'
+import { ATLAS_FIT, ATLAS_PICTURE_FIT } from './tree-fit'
 import { perfRecord } from './perf'
 import type { OverlayWindow } from '../windowing/OverlayWindow'
 import type { GameLogWatcher } from '../host-files/GameLogWatcher'
@@ -128,8 +128,11 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
   registerWokeHandler('atlas-overlay-points', async (args) => { atlasOverlay.setPoints(args); return null })
   registerWokeHandler('atlas-overlay-fit', async (args) => atlasOverlay.hasPoints ? atlasOverlay.fit(args) : { ok: false, reason: 'no-points' })
   registerWokeHandler('atlas-overlay-stop', async () => { atlasOverlay.stop(); return null })
-  // A screenshot of the atlas tree, pasted or picked in Atlas strategies.
-  registerWokeHandler('atlas-shot-read', async (args) => atlasOverlay.readImage(args))
+  // Screenshots of the atlas tree, pasted or picked in Atlas strategies: their
+  // own reader, so the Alt+T drawing's fit and points are never touched.
+  const atlasShots = new TreeOverlay(poeWindow, () => {}, ATLAS_FIT, 'blue')
+  registerWokeHandler('atlas-shot-points', async (args) => { atlasShots.setPoints(args); return null })
+  registerWokeHandler('atlas-shot-read', async (args) => atlasShots.readImage(args, ATLAS_PICTURE_FIT))
 
   // The stash reader: off unless the player turned it on (or personal.flag).
   // Off, nothing is registered but these three answers.
