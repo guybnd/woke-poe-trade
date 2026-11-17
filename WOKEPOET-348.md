@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-348
 title: 'Atlas strategies: import a strategy from atlas tree screenshots'
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -48,8 +48,34 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-17T06:43:49.934Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as ee47a979: atlas screenshot import (tray B, Name field, snip
+      support, review fixes). Mock pick still open in the artifact. Follow-up:
+      async picture read in main.
+    completionComment: true
+    date: '2026-11-17T06:54:56.141Z'
+    id: c-2026-11-17t06-54-56-141z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-17T06:54:56.663Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/565'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy asked (2026-11-17) whether an atlas strategy can be imported from a screenshot, pasted or picked from a file.
 
