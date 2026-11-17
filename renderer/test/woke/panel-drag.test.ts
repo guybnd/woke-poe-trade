@@ -6,7 +6,7 @@ import { createSSRApp, h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clampDrag, releaseWebviewsForDrag } from '@/web/woke/ui/snap'
-import { anchorShare, fitOffset, heightCap, resizeAxis, unzoom } from '@/web/woke/ui/panel-fit'
+import { anchorShare, edgeSlack, fitOffset, heightCap, resizeAxis, unzoom } from '@/web/woke/ui/panel-fit'
 import WPanel from '@/web/woke/ui/WPanel.vue'
 
 const W = 1920
@@ -178,6 +178,24 @@ describe('resizeAxis', () => {
     expect(resizeAxis({ ...base, side: 'start', delta: -900, room: 40 })).toEqual({ size: 540, shift: -40 })
   })
 
+  // A short panel beside a tall one (the Atlas strategy list beside the tree):
+  // the room below the widget is small, but the panel can still grow down to
+  // the tall neighbour's bottom, and past it into that room.
+  it('grows into the space beside a taller neighbour', () => {
+    expect(resizeAxis({ ...base, side: 'end', delta: 300, room: 40, slack: 400 }).size).toBe(800)
+    expect(resizeAxis({ ...base, side: 'end', delta: 900, room: 40, slack: 400 }).size).toBe(940)
+    expect(resizeAxis({ ...base, side: 'end', delta: 900, room: -50, slack: 400 }).size).toBe(900)
+    expect(resizeAxis({ ...base, side: 'start', delta: -900, room: 40, slack: 400 }).size).toBe(940)
+  })
+
+  it('moves the anchor only for growth past the neighbours', () => {
+    expect(resizeAxis({ ...base, side: 'end', delta: 300, slack: 400, share: 1 }).shift).toBe(0)
+    expect(resizeAxis({ ...base, side: 'end', delta: 500, slack: 400, share: 1 }).shift).toBe(100)
+    expect(resizeAxis({ ...base, side: 'end', delta: -100, slack: 400, share: 1 }).shift).toBe(0)
+    expect(resizeAxis({ ...base, side: 'start', delta: -500, slack: 400, share: 0 }).shift).toBe(-100)
+    expect(resizeAxis({ ...base, side: 'end', delta: -100, share: 1 }).shift).toBe(-100)
+  })
+
   it('can shrink a panel with no room left, even one past the screen', () => {
     expect(resizeAxis({ ...base, side: 'end', delta: -100, room: -300 }).size).toBe(400)
   })
@@ -194,6 +212,29 @@ describe('resizeAxis', () => {
     const a = resizeAxis({ ...base, size: 675, scale: 1.35, side: 'end', delta: 135, share: 1 })
     expect(a.size).toBe(600)
     expect(a.shift).toBeCloseTo(135)
+  })
+})
+
+describe('edgeSlack', () => {
+  // The Atlas row: a short list, then a tall tree to its right.
+  const list = { left: 0, top: 0, right: 300, bottom: 400 }
+  const tree = { left: 310, top: 0, right: 1000, bottom: 900 }
+  const widget = { left: 0, top: 0, right: 1000, bottom: 900 }
+
+  it('is the gap down to a taller neighbour beside the panel', () => {
+    expect(edgeSlack(list, widget, [tree], 'y', 'end')).toBe(500)
+  })
+
+  it('is none toward a neighbour in the way', () => {
+    expect(edgeSlack(list, widget, [tree], 'x', 'end')).toBe(0)
+    expect(edgeSlack(tree, widget, [list], 'x', 'start')).toBe(0)
+    const below = { left: 0, top: 410, right: 300, bottom: 900 }
+    expect(edgeSlack(list, widget, [below], 'y', 'end')).toBe(0)
+  })
+
+  it('is none for the tallest panel, or a lone one in a padded widget', () => {
+    expect(edgeSlack(tree, widget, [list], 'y', 'end')).toBe(0)
+    expect(edgeSlack(list, { left: -2, top: -2, right: 302, bottom: 402 }, [], 'y', 'end')).toBe(0)
   })
 })
 

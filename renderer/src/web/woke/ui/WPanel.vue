@@ -51,7 +51,7 @@
 // "/" jumps to the first search field, Esc leaves a field.
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
 import { snapEdge, clearGuides, releaseWebviewsForDrag } from './snap'
-import { anchorShare, heightCap, resizeAxis, unzoom } from './panel-fit'
+import { anchorShare, edgeSlack, heightCap, resizeAxis, unzoom } from './panel-fit'
 import type { Box, ResizeSide } from './panel-fit'
 import WIcon from './WIcon.vue'
 import { CURRENCY_ICONS, mechanicIcon } from './game-icons'
@@ -218,6 +218,10 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
   // Neighbours in the widget move along with this panel, so they aren't snap
   // targets: their edge sits on this one and would hold it in place.
   const snapSelf = cfg.element ?? el
+  const others: Box[] = cfg.element
+    ? [...cfg.element.querySelectorAll('[data-w-panel]')].filter(p => p !== el)
+        .map(p => p.getBoundingClientRect()).filter(p => p.width && p.height)
+    : []
   const restoreWebviews = releaseWebviewsForDrag()
 
   function onMove (ev: MouseEvent) {
@@ -234,6 +238,7 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
         delta: edge - xEdge,
         size: r.width,
         room: hSide === 'start' ? box.left : W - box.right,
+        slack: edgeSlack(r, box, others, 'x', hSide),
         scale,
         min: 200,
         share: anchorShare(anchor().pos, 'x')
@@ -248,6 +253,7 @@ function startResize (e: MouseEvent, hSide: ResizeSide | null, vSide: ResizeSide
         delta: edge - yEdge,
         size: r.height,
         room: vSide === 'start' ? box.top : H - box.bottom,
+        slack: edgeSlack(r, box, others, 'y', vSide),
         scale,
         min: 120,
         share: anchorShare(anchor().pos, 'y')
