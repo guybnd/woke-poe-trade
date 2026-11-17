@@ -140,7 +140,7 @@ import { useWidgetVisible } from '../shared/visible-clock'
 import { parseGuideText } from './guide'
 import { usePriceIndex } from '../market/price-index'
 import { clickOf, selectPick } from '../shared/picks'
-import { formatChaos } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { FARMING_TYPE, strategyStats } from '../farming/farming'
 import type { FarmingWidget } from '../farming/farming'
 import { expandShortTreeLinks, extractTreeCode } from './tree'
@@ -197,7 +197,7 @@ function sortMenu (e: MouseEvent) {
   })))
 }
 const prices = usePriceIndex()
-function fmt (chaos: number) { return formatChaos(chaos, prices.snapshot.value?.divine ?? null) }
+const { fmt } = usePriceText(prices.snapshot)
 
 const earnings = computed(() => {
   const history = AppConfig().widgets

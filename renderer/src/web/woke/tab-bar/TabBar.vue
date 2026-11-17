@@ -192,6 +192,7 @@ import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '..
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
 import { groupKey, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
+import { usePriceText } from '../shared/price'
 
 const props = defineProps<{ config: TabBarConfig }>()
 const emit = defineEmits<{ (e: 'paste', text: string, from: DOMRect): void }>()
@@ -709,7 +710,7 @@ function canAddCopy (wmType: string) {
 
 // Prices for what's typed. Clicking one opens the full search on it.
 const snapshot = useSearchSnapshot()
-const divine = computed(() => snapshot.value?.divine ?? null)
+const { divine } = usePriceText(snapshot)
 const priceGroups = computed(() => {
   if (popup.value?.kind !== 'launcher') return []
   return searchPrices(snapshot.value?.items ?? [], launcherQuery.value, { limit: 5 })

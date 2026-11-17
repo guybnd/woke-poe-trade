@@ -102,6 +102,7 @@ import type { ReplyId } from './widget'
 import { artNames, offerLabel, parseTradeLine, priceLabel } from './whispers'
 import { bulkDelta, priceChaos } from './value'
 import { formatChaos } from '../ui/format'
+import { usePriceText } from '../shared/price'
 import { tradeTotals, tradesInRange, useOfferHistory, useTradeLog } from './log-store'
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('trade').art ?? 'divine'
@@ -136,7 +137,7 @@ const history = useOfferHistory()
 
 // --- Prices ---
 const prices = usePriceIndex()
-const divine = computed(() => prices.snapshot.value?.divine ?? null)
+const { divine } = usePriceText(prices.snapshot)
 const px = computed(() => {
   const r = priceResolver(prices.snapshot.value?.items ?? [])
   return { price: (name: string) => name === 'Chaos Orb' ? 1 : r.price(name) }
