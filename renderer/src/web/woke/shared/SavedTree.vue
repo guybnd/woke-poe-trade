@@ -131,6 +131,7 @@ function onItemKey (e: KeyboardEvent, item: T) {
   border-radius: 1px;
   background: var(--w-accent);
   pointer-events: none;
+  z-index: 1;
 }
 .dropBefore::after { top: -1px; }
 .dropAfter::after { bottom: -1px; }

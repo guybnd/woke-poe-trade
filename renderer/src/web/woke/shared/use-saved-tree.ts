@@ -352,7 +352,7 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
   function removeGroup (item: T) { a.remove(groupOf(item)) }
   function forgetPicks (ids: Iterable<number>) {
     const gone = new Set(ids)
-    picked.value = picked.value.filter(id => !gone.has(id))
+    if (picked.value.some(id => gone.has(id))) picked.value = picked.value.filter(id => !gone.has(id))
   }
 
   return {
