@@ -53,6 +53,7 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
   parseFlask,
   parseTincture,
   parseStackSize,
+  parseStoredExperience,
   parseCorrupted,
   parseImbuedGem,
   parseFoil,
@@ -640,6 +641,7 @@ function parseStackSize (section: string[], item: ParsedItem) {
     // Portal Scroll "Stack Size: 2[localized separator]448/40"
     const [value, max] = section[0].slice(_$.STACK_SIZE.length).replace(/[^\d/]/g, '').split('/').map(Number)
     item.stackSize = { value, max }
+    parseStoredExperienceNested(section, item)
 
     return 'SECTION_PARSED'
   }
@@ -679,6 +681,27 @@ function parseQualityNested (section: string[], item: ParsedItem): boolean {
     }
   }
   return false
+}
+
+// woke: Facetor's Lens "Stored Experience: 500000000". Only the digits are
+// kept, in case the game adds a thousands separator.
+function parseStoredExperienceNested (section: string[], item: ParsedItem): boolean {
+  const prefix = _$.STORED_EXPERIENCE
+  if (!prefix) return false
+  for (const line of section) {
+    if (line.startsWith(prefix)) {
+      const digits = line.slice(prefix.length).replace(/\D/g, '')
+      if (!digits) return false
+      item.storedExperience = Number(digits)
+      return true
+    }
+  }
+  return false
+}
+
+function parseStoredExperience (section: string[], item: ParsedItem) {
+  if (item.category !== ItemCategory.Currency) return 'PARSER_SKIPPED'
+  return parseStoredExperienceNested(section, item) ? 'SECTION_PARSED' : 'SECTION_SKIPPED'
 }
 
 function parseMemoryStrandsNested (section: string[], item: ParsedItem): boolean {
