@@ -28,7 +28,12 @@ history:
     date: '2026-11-18T12:00:56.006Z'
     comment: Updated implementation link.
     id: a-2026-11-18t12-00-56-006z
-implementationLink: woke/deck-tabs
+  - type: activity
+    user: Agent
+    date: '2026-11-18T12:02:54.367Z'
+    comment: Updated implementation link.
+    id: a-2026-11-18t12-02-54-367z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/624'
 ---
 Guy: "move the stacked deck session analytics section into its own tab from here too".
 
