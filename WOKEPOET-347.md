@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-347
 title: 'Gear tab: per-slot lines (F2) and Alt+F rank moves'
-status: Ready
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -33,7 +33,34 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-18T06:27:21.021Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 2e165c4c: per-slot lines, Alt+F Gear rank strip, Base types tab
+      (second, numbered sub-tabs), Quick setups menu, base tooltips. Review
+      fixes included. F1 (ranks from prices, in the Prices tab) is still open.
+    completionComment: true
+    date: '2026-11-18T07:01:34.867Z'
+    id: c-2026-11-18t07-01-34-867z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T07:01:35.265Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/606'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** Guy picked F2 from the Gear canvas (per-slot lines), and asked for the Alt+F card to show a base's Gear rank with easy up/down. Branch woke/gear-slots, on the dev build for him to try.
 
