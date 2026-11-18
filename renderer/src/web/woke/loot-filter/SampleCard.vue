@@ -559,16 +559,18 @@ const onBlur = () => { focused.value = false }
 
 // The rule that decided the item, in the editor: the Base types tab for the
 // table's own rules, the rule itself for anything else.
+// The rule behind the safety net, as "Show this rule in the editor" uses: the
+// net's own rules aren't in the rule list.
 const canGoTo = computed(() => {
-  const b = props.match.final?.block
+  const b = ruleMatch.value.final?.block
   return !!(b?.type && b.tier && !b.tier.startsWith('#'))
 })
 const goToLabel = computed(() => {
-  const b = props.match.final?.block
+  const b = ruleMatch.value.final?.block
   return b ? placeOf(b) : 'its rule'
 })
 function goToRule () {
-  const b = props.match.final?.block
+  const b = ruleMatch.value.final?.block
   if (!b?.type || !b.tier || b.tier.startsWith('#')) { emit('open-editor'); return }
   emit('open-editor', { type: b.type, tier: b.tier })
 }
