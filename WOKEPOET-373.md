@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-373
 title: 'Tools launcher overhaul: easier to read'
-status: Grooming
+status: Ready
 priority: None
 effort: M
 assignee: unassigned
@@ -34,8 +34,51 @@ history:
       descriptions, pins, text size):
       https://claude.ai/artifact/LMVyehVRAXpqAUvhyn2iph. Picks save to its db at
       picks/current. No code until he picks.
-swimlane: require-input
+  - type: activity
+    user: Agent
+    date: '2026-11-18T12:27:43.414Z'
+    comment: >-
+      Guy picked A, 3, 1, 3, 1 plus his section moves and a bigger size. Built
+      in https://github.com/guybnd/woke-poe-trade/pull/625. Review fixes are in,
+      and the local checks and rail e2e pass. Handed to the coordinator to
+      merge.
+    id: a-2026-11-18t12-27-43-414z
+  - type: comment
+    user: Agent
+    comment: 'Guy picked A, 3, 1, 3, 1.'
+    date: '2026-11-18T12:27:44.327Z'
+    id: c-2026-11-18t12-27-44-327z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-18T12:27:44.327Z'
+    comment: 'Guy picked A, 3, 1, 3, 1.'
+  - type: activity
+    user: Agent
+    date: '2026-11-18T12:27:44.945Z'
+    comment: Updated implementation link.
+    id: a-2026-11-18t12-27-44-945z
+  - type: comment
+    user: Agent
+    comment: >-
+      Built in PR #625: five columns with game heading bars, a hover description
+      line, gold pinned names with a blue dot for open windows, bigger text and
+      window, and the launcher never covers the rail. Lab gems moved to Campaign
+      & lab, Farming to Mapping, Wickerman to Economy. Review fixes are in.
+      Unit, lint, build, typecheck:test and the tab-rail e2e all pass. Waiting
+      on the merge.
+    date: '2026-11-18T12:27:49.683Z'
+    completionComment: true
+    id: c-2026-11-18t12-27-49-683z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T12:27:49.683Z'
+swimlane: null
 needsAction: null
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/625'
 ---
 > **TL;DR** Guy finds the tools launcher (rail grid button: search box + Economy / Mapping / Campaign & lab / Builds & trade / Overlay columns, icons, pins, "Off" labels) hard to read. Mock options in the PoE look, Guy picks, then build.
 
