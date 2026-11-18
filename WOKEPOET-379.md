@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-379
 title: 'Price check mod row right-click menu: grouped, Fractured only on any mod'
-status: Grooming
+status: Done
 priority: Medium
 effort: M
 assignee: Agent
@@ -29,7 +29,48 @@ history:
       build OK. Handed to coordinator for merge. Untried in the live overlay.
       Guy's mock picks not saved yet (asked in thread).
     id: a-2026-11-18t14-31-15-511z
-implementationLink: woke/mod-row-menu @ e66d9b99
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as PR #628 (9e9f2ab0): grouped right-click menu, Fractured only on
+      any explicit mod, 10% looser bound, stash search copy, Ctrl+Click search
+      only this, menu closes when its panel goes away.
+    date: '2026-11-18T15:36:58.700Z'
+    completionComment: true
+    id: c-2026-11-18t15-36-58-700z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T15:36:58.700Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #628 (9e9f2ab0). Guy's extra picks (next tier up, all tiers,
+      always/never tick, Alt+Click exclude) follow on branch
+      woke/mod-menu-extras.
+    completionComment: true
+    date: '2026-11-18T15:37:04.619Z'
+    id: c-2026-11-18t15-37-04-619z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T15:37:04.988Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/628'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy asked (2026-11-18) for a better right-click menu on price check mod rows, e.g. Fractured only on any mod, and ideas.
 

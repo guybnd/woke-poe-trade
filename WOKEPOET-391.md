@@ -15,6 +15,15 @@ history:
     user: Agent
     date: '2026-11-18T15:29:48.199Z'
     comment: Created ticket.
+    id: a-2026-11-18t15-29-48-199z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T15:37:03.985Z'
+    comment: >-
+      Follow-up asked by Guy: normal cluster jewels get a poe.ninja price.
+      Branch woke/cluster-ninja-price (1f1c2daf), stacked on woke/pc-bughunt;
+      reviewed, 4599 tests green; sent to merge.
+    id: a-2026-11-18t15-37-03-985z
 ---
 Bug hunt (team 1 of 3). Branch `woke/pc-bughunt` (2fafb2c2), sent to merge.
 
