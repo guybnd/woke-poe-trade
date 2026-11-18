@@ -11,6 +11,7 @@ import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './woke/death-recap/widget'
 import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './woke/stacked-decks/deck'
 import { POE_RE_TYPE, initPoeReWidget } from './woke/regex-library/poe-re-widget'
+import { MEGALO_TYPE, initMegaloWidget } from './woke/megalo/widget'
 import { SEARCH_TYPE, initSearchWidget, moveSearchKey } from './woke/search/widget'
 import type { SearchWidget } from './woke/search/widget'
 import { moveStashSearchToLibrary } from './woke/regex-library/apt-import'
@@ -525,6 +526,9 @@ function upgradeConfig (_config: Config): Config {
   }
   if (!config.widgets.some(w => w.wmType === POE_RE_TYPE)) {
     config.widgets.push(initPoeReWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+  }
+  if (!config.widgets.some(w => w.wmType === MEGALO_TYPE)) {
+    config.widgets.push(initMegaloWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
   }
   // woke: the search hotkey. A key you already use elsewhere isn't taken over.
   {

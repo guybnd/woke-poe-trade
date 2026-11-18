@@ -193,8 +193,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, provide, shallowRef, watch } from 'vue'
+import { computed, defineAsyncComponent, inject, onBeforeUnmount, provide, shallowRef, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WPanel, WButton, WEmpty, WTabs, WChip, WKbd, openMenu } from '../ui'
+import { openMegalo } from '../megalo/open'
 import { buildRegexFolder } from '../regex-library/folder-names'
 // Loads with the Notes tab.
 const RegexFolderList = defineAsyncComponent(() => import('../regex-library/RegexFolderList.vue'))
@@ -268,11 +270,14 @@ function setActive () {
   saveConfig()
 }
 
+const wm = inject<WidgetManager>('wm')!
+
 function moreMenu (e: MouseEvent) {
   const name = charName.value
   openMenu(e, [
     { label: 'Compare with another build', icon: 'fas fa-balance-scale', action: () => emit('compare', props.entry.relPath) },
     { label: 'Show file', icon: 'fas fa-folder-open', action: () => run(pobApi.show(props.config, props.entry.relPath)) },
+    { label: 'Megalomaniac searcher', icon: 'fas fa-circle-nodes', action: () => openMegalo(wm, { pobPath: props.entry.relPath }) },
     ...(name
       ? [{
           label: followsMe.value ? `Stop following ${name}` : `Follow ${name}`,
