@@ -292,8 +292,11 @@ jobs:
         pattern: fake-game-blob-*
         path: testing/all-blob
         merge-multiple: true
+    # Exits 1 when a test failed; the steps after it still run, and the last
+    # one fails the job.
     - name: Merge into one report
       if: ${{ hashFiles('testing/all-blob/*.zip') != '' }}
+      continue-on-error: true
       run: npx playwright merge-reports --reporter=html,json ./all-blob
       working-directory: ./testing
       env:
@@ -302,11 +305,11 @@ jobs:
         PLAYWRIGHT_JSON_OUTPUT_NAME: report/results.json
     # A retry turns a flaky test green, so the run alone never shows it.
     - name: List flaky and failed tests
-      if: ${{ hashFiles('testing/report/results.json') != '' }}
+      if: ${{ !cancelled() && hashFiles('testing/report/results.json') != '' }}
       run: node tools/flaky-summary.mjs report/results.json >> "$GITHUB_STEP_SUMMARY"
       working-directory: ./testing
     - name: Upload report (screenshots of every scenario)
-      if: ${{ hashFiles('testing/report/index.html') != '' }}
+      if: ${{ !cancelled() && hashFiles('testing/report/index.html') != '' }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: fake-game-report
