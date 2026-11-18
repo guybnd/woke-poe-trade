@@ -51,6 +51,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-12T11:49:58.501Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:05:57.107Z'
+    comment: >-
+      2026-11-18: Guy's maybes built as pick A on woke/search-maybes (fd703c0e,
+      pushed): zone cards, Pantheon (PoB Pantheons.lua + poedb maps), saved
+      items opening in their tools. Two adversarial reviews, fixes in, local
+      checks pass. Handed to coordinator for merge. Untried in app.
+    id: a-2026-11-18t07-05-57-107z
 needsAction: null
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/401'
