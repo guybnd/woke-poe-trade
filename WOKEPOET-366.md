@@ -66,6 +66,14 @@ history:
       range (Small 2-3, Medium 4-6, Large 8-12). Branch woke/cluster-passives
       a67bbda5, handed to coordinator for merge.
     id: a-2026-11-18t05-17-12-134z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T05:33:49.252Z'
+    comment: >-
+      Passive range follow-up merged:
+      https://github.com/guybnd/woke-poe-trade/pull/602 (832efb9a). Another size
+      searches its whole passive range; Yours keeps the copy's count.
+    id: a-2026-11-18t05-33-49-252z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/600'
