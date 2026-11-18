@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-347
 title: 'Gear tab: per-slot lines (F2) and Alt+F rank moves'
-status: In Progress
+status: Ready
 priority: Medium
 effort: M
 assignee: unassigned
@@ -16,6 +16,24 @@ history:
     user: Agent
     date: '2026-11-17T06:00:25.815Z'
     comment: Created ticket.
+    id: a-2026-11-17t06-00-25-815z
+  - type: comment
+    user: Agent
+    comment: >-
+      Branch woke/gear-slots 17c83318 is handed to the coordinator for PR and
+      merge (before v1.330.10). It has per-slot lines, the Alt+F rank strip, the
+      Base types tab (second, numbered sub-tabs), Quick setups menu and base
+      tooltips. The review's 5 findings are fixed with tests. Lint, typecheck,
+      build and 4448 tests pass.
+    date: '2026-11-18T06:27:21.021Z'
+    completionComment: true
+    id: c-2026-11-18t06-27-21-021z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-18T06:27:21.021Z'
+needsAction: null
 ---
 > **TL;DR:** Guy picked F2 from the Gear canvas (per-slot lines), and asked for the Alt+F card to show a base's Gear rank with easy up/down. Branch woke/gear-slots, on the dev build for him to try.
 
