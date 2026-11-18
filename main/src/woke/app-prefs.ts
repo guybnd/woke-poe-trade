@@ -3,6 +3,7 @@
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { relaunchArgs } from './update-install'
 
 export interface AppPrefs {
   // The setup window has been shown once (finished or closed).
@@ -81,6 +82,7 @@ export function onRestartWithUpdate (fn: () => boolean) { installAndRestart = fn
 export function restartApp () {
   if (!canRestartApp()) return
   if (installAndRestart?.()) return
-  app.relaunch()
+  // Without a one-run flag (update-install.ts), or it would stick for good.
+  app.relaunch({ args: relaunchArgs(process.argv, false) })
   app.quit()
 }

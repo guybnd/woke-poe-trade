@@ -7,7 +7,8 @@ import type { GameWindow } from './windowing/GameWindow'
 import { appPrefs, canRestartApp, onRestartWithUpdate } from './woke/app-prefs'
 import {
   GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, RECHECK_MS, VERDICT_TEXT, afterEvent, describeUpdateError,
-  installVerdict, installerProblem, isGameRunning, stillClosed, type InstallVerdict, type UpdaterEvent
+  installVerdict, installerLogFailure, installerProblem, isGameRunning, isSpawnFailure, relaunchArgs, stillClosed,
+  type InstallVerdict, type UpdaterEvent
 } from './woke/update-install'
 
 // electron-updater keeps these protected; read only, for the checks below.
@@ -71,7 +72,10 @@ export class AppUpdater {
     // woke: electron-updater's own steps (feed, download, installer) in the
     // app's log. Its errors come with the stack.
     autoUpdater.logger = {
-      info: (m?: unknown) => { this.logger.write(`info [AppUpdater] ${String(m)}`) },
+      info: (m?: unknown) => {
+        this.logger.write(`info [AppUpdater] ${String(m)}`)
+        if (this.stage === 'installing' && installerLogFailure(String(m))) this.installFailed()
+      },
       warn: (m?: unknown) => { this.logger.write(`warn [AppUpdater] ${String(m)}`) },
       error: (m?: unknown) => { this.logger.write(`error [AppUpdater] ${String(m)}`) },
       debug: () => {}
@@ -104,18 +108,19 @@ export class AppUpdater {
       this.info = { state: 'update-not-available', checkedAt: Date.now() }
     })
     autoUpdater.on('error', (err: Error) => {
-      const installing = this.stage === 'installing'
+      const failedInstall = this.stage === 'installing' && isSpawnFailure(err, internals().installerPath)
       this.logger.write(`error [AppUpdater] ${describeUpdateError(err, this.stage, app.getVersion(), this.target)}`)
-      if (installing) this.installFailed()
-      if (!this.apply({ type: 'error', installing })) {
+      if (failedInstall) this.installFailed()
+      if (!this.apply({ type: 'error', installing: failedInstall })) {
         // A failed check: the downloaded update is still there to install.
-        this.stage = 'waiting to install'
+        if (!this.quitPending) this.stage = 'waiting to install'
         return
       }
       this.info = { state: 'error', checkedAt: Date.now() }
     })
     autoUpdater.on('update-downloaded', (info: { version: string }) => {
       this.downloaded = info.version
+      autoUpdater.autoInstallOnAppQuit = true
       this.target = info.version
       this.stage = 'waiting to install'
       this.info = { state: 'update-downloaded', version: info.version }
@@ -123,11 +128,18 @@ export class AppUpdater {
     })
     // A restart asked for in Settings or the tray installs the update and
     // starts the new version, instead of racing the installer.
-    // An installer that can't be read means a plain restart instead.
+    // An installer that can't be read means a plain restart instead, with
+    // install-on-quit off so electron-updater can't start it under the new copy.
     onRestartWithUpdate(() => {
-      if (!this.downloaded) return false
+      if (!this.downloaded) {
+        autoUpdater.autoInstallOnAppQuit = false
+        return false
+      }
       if (this.isRestarting) return true
-      if (!this.installerOk()) return false
+      if (!this.installerOk()) {
+        autoUpdater.autoInstallOnAppQuit = false
+        return false
+      }
       this.isRestarting = true
       this.logger.write(`info [AppUpdater] Installing ${this.downloaded}: restart asked for.`)
       this.install(true, true)
@@ -166,6 +178,8 @@ export class AppUpdater {
     if (this.downloaded && !next.downloaded) {
       this.logger.write(`info [AppUpdater] ${this.downloaded} no longer waits to install.`)
       this.stopWaiting()
+      // Nor on quit: a pulled release, a failed install. A newer download turns it back on.
+      autoUpdater.autoInstallOnAppQuit = false
     }
     this.downloaded = next.downloaded
     return next.show
@@ -190,19 +204,26 @@ export class AppUpdater {
     // Set only once the installer has been started; a refusal before that
     // (no installer) doesn't quit.
     this.quitPending = internals().quitAndInstallCalled === true
-    if (!this.quitPending) this.isRestarting = false
+    if (!this.quitPending) {
+      this.isRestarting = false
+      this.stage = this.downloaded ? 'waiting to install' : 'checking for updates'
+    }
   }
 
-  // The installer didn't start. If the app is already quitting for it, start
+  // The installer didn't start: a spawn error event, or electron-updater's
+  // ENOENT log line (installerLogFailure). An EACCES/UNKNOWN start is retried
+  // through elevate.exe and counts only if that spawn fails too; a UAC prompt
+  // the player declines can't be seen from here, and leaves the app closed.
+  // If the app is already quitting for it, start
   // the app again (no installer runs, so nothing races it), without automatic
   // installs this time, so a blocked installer can't loop.
   private installFailed () {
+    if (!this.quitPending && !this.isRestarting) return
     this.logger.write(`error [AppUpdater] The installer didn't start: ${internals().installerPath ?? 'no installer path'}`)
     this.isRestarting = false
     if (this.quitPending && canRestartApp()) {
       this.logger.write('info [AppUpdater] Starting the app again without the update.')
-      const args = process.argv.slice(1).filter(a => a !== NO_AUTO_INSTALL_ARG)
-      app.relaunch({ args: [...args, NO_AUTO_INSTALL_ARG] })
+      app.relaunch({ args: relaunchArgs(process.argv, true) })
     }
     this.quitPending = false
   }

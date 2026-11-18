@@ -5,8 +5,8 @@ import os from 'os'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
 import {
-  GAME_CLOSED_GRACE_MS, afterEvent, describeUpdateError, installVerdict, installerProblem, stillClosed,
-  tasklistHasGame, type InstallInputs
+  GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, afterEvent, describeUpdateError, installVerdict, installerLogFailure,
+  installerProblem, isSpawnFailure, relaunchArgs, stillClosed, tasklistHasGame, type InstallInputs
 } from '../../main/src/woke/update-install'
 
 const NOW = 1_000_000_000
@@ -136,12 +136,13 @@ describe('installerProblem', () => {
 
 describe('afterEvent', () => {
   it('keeps a downloaded update through later checks and failed checks', () => {
-    for (const ev of [{ type: 'checking' }, { type: 'not-available' }, { type: 'error', installing: false }, { type: 'available', version: '1.330.10' }] as const) {
+    for (const ev of [{ type: 'checking' }, { type: 'error', installing: false }, { type: 'available', version: '1.330.10' }] as const) {
       expect(afterEvent('1.330.10', ev)).toEqual({ show: false, downloaded: '1.330.10' })
     }
   })
 
-  it('drops it for a newer version or a failed install', () => {
+  it('drops it for a newer version, a pulled release or a failed install', () => {
+    expect(afterEvent('1.330.10', { type: 'not-available' })).toEqual({ show: true, downloaded: null })
     expect(afterEvent('1.330.10', { type: 'available', version: '1.330.11' })).toEqual({ show: true, downloaded: null })
     expect(afterEvent('1.330.10', { type: 'error', installing: true })).toEqual({ show: true, downloaded: null })
   })
@@ -149,5 +150,54 @@ describe('afterEvent', () => {
   it('shows every event when nothing is downloaded', () => {
     expect(afterEvent(null, { type: 'error', installing: false })).toEqual({ show: true, downloaded: null })
     expect(afterEvent(null, { type: 'checking' })).toEqual({ show: true, downloaded: null })
+  })
+})
+
+describe('relaunchArgs', () => {
+  const argv = ['C:\\app\\Woke PoE Trade.exe', '--no-updates']
+
+  it('adds the one-run flag only when asked', () => {
+    expect(relaunchArgs(argv, true)).toEqual(['--no-updates', NO_AUTO_INSTALL_ARG])
+    expect(relaunchArgs(argv, false)).toEqual(['--no-updates'])
+  })
+
+  it('never carries the flag on into a later restart', () => {
+    expect(relaunchArgs([...argv, NO_AUTO_INSTALL_ARG], false)).toEqual(['--no-updates'])
+    expect(relaunchArgs([...argv, NO_AUTO_INSTALL_ARG], true)).toEqual(['--no-updates', NO_AUTO_INSTALL_ARG])
+  })
+})
+
+describe('isSpawnFailure', () => {
+  const installer = 'C:\\Users\\x\\AppData\\Local\\woke-poe-trade-updater\\pending\\Setup.exe'
+
+  it('counts failed starts of the installer or elevate.exe', () => {
+    expect(isSpawnFailure(Object.assign(new Error('spawn EPERM'), { syscall: 'spawn', path: installer }), installer)).toBe(true)
+    expect(isSpawnFailure(Object.assign(new Error('spawn elevate.exe ENOENT'), { syscall: 'spawn elevate.exe', path: 'elevate.exe' }), installer)).toBe(true)
+    expect(isSpawnFailure({ path: installer }, installer)).toBe(true)
+  })
+
+  it('ignores feed and download errors that land while quitting', () => {
+    expect(isSpawnFailure(Object.assign(new Error('net::ERR_INTERNET_DISCONNECTED'), { code: 'ERR_INTERNET_DISCONNECTED' }), installer)).toBe(false)
+    expect(isSpawnFailure(Object.assign(new Error('HttpError: 503'), { statusCode: 503 }), installer)).toBe(false)
+    expect(isSpawnFailure(undefined, installer)).toBe(false)
+    expect(isSpawnFailure({ path: 'other' }, null)).toBe(false)
+  })
+})
+
+describe('installerLogFailure', () => {
+  const line = (code: string) => `Cannot run installer: error code: ${code}, error message: "spawn x ${code}", will be executed again using elevate if EACCES, and will try to use electron.shell.openItem if ENOENT`
+
+  it('treats a missing installer as failed', () => {
+    expect(installerLogFailure(line('ENOENT'))).toBe(true)
+  })
+
+  it('leaves the elevate.exe retry to its own spawn error', () => {
+    expect(installerLogFailure(line('EACCES'))).toBe(false)
+    expect(installerLogFailure(line('UNKNOWN'))).toBe(false)
+  })
+
+  it('ignores other log lines', () => {
+    expect(installerLogFailure('Install: isSilent: true, isForceRunAfter: true')).toBe(false)
+    expect(installerLogFailure('Executing: C:\\x\\Setup.exe with args: --updated,/S')).toBe(false)
   })
 })

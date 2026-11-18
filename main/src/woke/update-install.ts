@@ -130,9 +130,9 @@ export function installerProblem (file: string | null | undefined): string | nul
 
 // What a later updater event does to a downloaded update waiting to install.
 // A failed or repeated check (offline, GitHub down) mustn't hide it: it stays
-// installable from Restart now, on quit and once the game is closed. Only a
-// newer version (which replaces the cached installer) or a failed install
-// drops it.
+// installable from Restart now, on quit and once the game is closed. A newer
+// version (which replaces the cached installer), a successful check that finds
+// nothing (the release was pulled) or a failed install drops it.
 export type UpdaterEvent =
   | { type: 'checking' }
   | { type: 'not-available' }
@@ -143,8 +143,9 @@ export function afterEvent (downloaded: string | null, ev: UpdaterEvent): { show
   if (!downloaded) return { show: true, downloaded: null }
   switch (ev.type) {
     case 'checking':
-    case 'not-available':
       return { show: false, downloaded }
+    case 'not-available':
+      return { show: true, downloaded: null }
     case 'available':
       return ev.version === downloaded ? { show: false, downloaded } : { show: true, downloaded: null }
     case 'error':
@@ -156,3 +157,29 @@ export function afterEvent (downloaded: string | null, ev: UpdaterEvent): { show
 // doesn't try the same automatic install again (and loop). It still installs
 // on quit, and from Restart now.
 export const NO_AUTO_INSTALL_ARG = '--woke-no-auto-install'
+
+// The arguments for starting the app again: never the flag above, so it lasts
+// one run only.
+export function relaunchArgs (argv: string[], noAutoInstall: boolean): string[] {
+  const args = argv.slice(1).filter(a => a !== NO_AUTO_INSTALL_ARG)
+  return noAutoInstall ? [...args, NO_AUTO_INSTALL_ARG] : args
+}
+
+// An updater error is an install failure only when starting a program failed
+// (the installer, or elevate.exe retrying it). A feed or download error that
+// lands while the app waits to quit is not one.
+export function isSpawnFailure (err: unknown, installerPath: string | null | undefined): boolean {
+  const e = (err ?? {}) as { syscall?: unknown, path?: unknown }
+  if (typeof e.syscall === 'string' && e.syscall.startsWith('spawn')) return true
+  return installerPath != null && e.path === installerPath
+}
+
+// electron-updater handles some failed installer starts itself and sends no
+// error event, only this log line. ENOENT: it then tries shell.openPath on the
+// missing file, which fails silently, so the installer never runs. EACCES and
+// UNKNOWN: it retries through elevate.exe; a failed retry arrives as a spawn
+// error, a successful one runs the installer, so these lines aren't failures.
+export function installerLogFailure (message: string): boolean {
+  const m = /^Cannot run installer: error code: (\S+?),/.exec(message)
+  return m != null && m[1] === 'ENOENT'
+}
