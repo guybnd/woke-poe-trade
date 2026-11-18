@@ -14,6 +14,28 @@ history:
     user: Agent
     date: '2026-11-18T11:12:13.177Z'
     comment: Created ticket.
+    id: a-2026-11-18t11-12-13-177z
+  - type: comment
+    user: Agent
+    comment: >-
+      Mockups ready for Guy's picks (layout A-D, switched-off tools,
+      descriptions, pins, text size):
+      https://claude.ai/artifact/LMVyehVRAXpqAUvhyn2iph. Picks save to its db at
+      picks/current. No code until he picks.
+    date: '2026-11-18T11:16:41.248Z'
+    id: c-2026-11-18t11-16-41-248z
+  - type: swimlane_change
+    swimlane: require-input
+    action: set
+    user: Agent
+    date: '2026-11-18T11:16:41.248Z'
+    comment: >-
+      Mockups ready for Guy's picks (layout A-D, switched-off tools,
+      descriptions, pins, text size):
+      https://claude.ai/artifact/LMVyehVRAXpqAUvhyn2iph. Picks save to its db at
+      picks/current. No code until he picks.
+swimlane: require-input
+needsAction: null
 ---
 > **TL;DR** Guy finds the tools launcher (rail grid button: search box + Economy / Mapping / Campaign & lab / Builds & trade / Overlay columns, icons, pins, "Off" labels) hard to read. Mock options in the PoE look, Guy picks, then build.
 
