@@ -3,6 +3,7 @@
 // Path of Exile has been closed for a few minutes, and never while the game
 // runs: installing restarts the overlay.
 import { execFile } from 'child_process'
+import fs from 'fs'
 
 // The game must stay closed this long first: a crash, a relaunch or a patch
 // restart brings it back within seconds.
@@ -99,3 +100,59 @@ export function describeUpdateError (err: unknown, stage: string, current: strin
   const first = message.split('\n')[0].trim()
   return `Update failed while ${stage} (${versions})${codes.length ? ` [${codes.join(', ')}]` : ''}: ${first}`
 }
+
+// Just before an automatic install: the game must still be closed by both
+// process checks, and its window must not have come back in between.
+export function stillClosed (first: boolean | null, second: boolean | null, attached: boolean): boolean {
+  return first === false && second === false && !attached
+}
+
+// Why the downloaded installer can't run, or null when it can: antivirus may
+// have quarantined it, or something may hold it locked. Checked before an
+// automatic install, since electron-updater quits the app even when the
+// installer then fails to start.
+export function installerProblem (file: string | null | undefined): string | null {
+  if (!file) return 'no installer path'
+  let fd: number | undefined
+  try {
+    fd = fs.openSync(file, 'r')
+    const size = fs.fstatSync(fd).size
+    if (size === 0) return `installer is empty: ${file}`
+    fs.readSync(fd, Buffer.alloc(1), 0, 1, 0)
+    return null
+  } catch (e) {
+    const code = (e as { code?: unknown }).code
+    return `can't read the installer${typeof code === 'string' ? ` (${code})` : ''}: ${file}`
+  } finally {
+    if (fd !== undefined) try { fs.closeSync(fd) } catch {}
+  }
+}
+
+// What a later updater event does to a downloaded update waiting to install.
+// A failed or repeated check (offline, GitHub down) mustn't hide it: it stays
+// installable from Restart now, on quit and once the game is closed. Only a
+// newer version (which replaces the cached installer) or a failed install
+// drops it.
+export type UpdaterEvent =
+  | { type: 'checking' }
+  | { type: 'not-available' }
+  | { type: 'available', version: string }
+  | { type: 'error', installing: boolean }
+
+export function afterEvent (downloaded: string | null, ev: UpdaterEvent): { show: boolean, downloaded: string | null } {
+  if (!downloaded) return { show: true, downloaded: null }
+  switch (ev.type) {
+    case 'checking':
+    case 'not-available':
+      return { show: false, downloaded }
+    case 'available':
+      return ev.version === downloaded ? { show: false, downloaded } : { show: true, downloaded: null }
+    case 'error':
+      return ev.installing ? { show: true, downloaded: null } : { show: false, downloaded }
+  }
+}
+
+// Passed to the relaunched app after an installer failed to start, so it
+// doesn't try the same automatic install again (and loop). It still installs
+// on quit, and from Restart now.
+export const NO_AUTO_INSTALL_ARG = '--woke-no-auto-install'

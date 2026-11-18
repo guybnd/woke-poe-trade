@@ -1,8 +1,12 @@
 // A downloaded update installs by itself only while Path of Exile is closed
 // (main/src/woke/update-install.ts), and its errors log with context.
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { describe, it, expect } from 'vitest'
 import {
-  GAME_CLOSED_GRACE_MS, describeUpdateError, installVerdict, tasklistHasGame, type InstallInputs
+  GAME_CLOSED_GRACE_MS, afterEvent, describeUpdateError, installVerdict, installerProblem, stillClosed,
+  tasklistHasGame, type InstallInputs
 } from '../../main/src/woke/update-install'
 
 const NOW = 1_000_000_000
@@ -93,5 +97,57 @@ describe('describeUpdateError', () => {
   it('copes with a thrown string or nothing', () => {
     expect(describeUpdateError('offline', 'downloading', '1.0.0', '1.0.1')).toBe('Update failed while downloading (1.0.0 -> 1.0.1): offline')
     expect(describeUpdateError(undefined, 'downloading', '1.0.0', null)).toBe('Update failed while downloading (1.0.0): undefined')
+  })
+})
+
+describe('stillClosed', () => {
+  it('installs only when both checks say closed and the window is gone', () => {
+    expect(stillClosed(false, false, false)).toBe(true)
+    expect(stillClosed(false, true, false)).toBe(false)
+    expect(stillClosed(false, null, false)).toBe(false)
+    expect(stillClosed(true, false, false)).toBe(false)
+    expect(stillClosed(null, false, false)).toBe(false)
+    expect(stillClosed(false, false, true)).toBe(false)
+  })
+})
+
+describe('installerProblem', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-installer-'))
+
+  it('accepts a readable installer', () => {
+    const file = path.join(dir, 'Woke-PoE-Trade-Setup-1.330.10.exe')
+    fs.writeFileSync(file, 'MZ')
+    expect(installerProblem(file)).toBeNull()
+  })
+
+  it('names a missing installer with its path, as after a quarantine', () => {
+    const file = path.join(dir, 'gone.exe')
+    expect(installerProblem(file)).toBe(`can't read the installer (ENOENT): ${file}`)
+  })
+
+  it('refuses an empty file or no path', () => {
+    const file = path.join(dir, 'empty.exe')
+    fs.writeFileSync(file, '')
+    expect(installerProblem(file)).toBe(`installer is empty: ${file}`)
+    expect(installerProblem(null)).toBe('no installer path')
+    expect(installerProblem(undefined)).toBe('no installer path')
+  })
+})
+
+describe('afterEvent', () => {
+  it('keeps a downloaded update through later checks and failed checks', () => {
+    for (const ev of [{ type: 'checking' }, { type: 'not-available' }, { type: 'error', installing: false }, { type: 'available', version: '1.330.10' }] as const) {
+      expect(afterEvent('1.330.10', ev)).toEqual({ show: false, downloaded: '1.330.10' })
+    }
+  })
+
+  it('drops it for a newer version or a failed install', () => {
+    expect(afterEvent('1.330.10', { type: 'available', version: '1.330.11' })).toEqual({ show: true, downloaded: null })
+    expect(afterEvent('1.330.10', { type: 'error', installing: true })).toEqual({ show: true, downloaded: null })
+  })
+
+  it('shows every event when nothing is downloaded', () => {
+    expect(afterEvent(null, { type: 'error', installing: false })).toEqual({ show: true, downloaded: null })
+    expect(afterEvent(null, { type: 'checking' })).toEqual({ show: true, downloaded: null })
   })
 })
