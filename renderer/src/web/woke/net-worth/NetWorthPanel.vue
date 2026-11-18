@@ -51,7 +51,7 @@
         <section v-if="shown.numbers" :class="$style.kpis">
           <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
           <div><span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b></div>
-          <div><span :class="$style.caps">≈ Chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b></div>
+          <div><span :class="$style.caps">Total in chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b></div>
           <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
         </section>
 

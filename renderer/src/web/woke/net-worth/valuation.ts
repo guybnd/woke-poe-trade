@@ -97,6 +97,15 @@ export function isUniqueFrame (frame: number): boolean {
   return frame === 3 || frame === 9 || frame === 10
 }
 
+// poe.ninja's category slug (from its url) to ours. Omens trade like
+// currency (the currency exchange), so they count as currency and liquid.
+const CURRENCY_SLUGS = new Set(['currency', 'omens'])
+const FRAGMENT_SLUGS = new Set(['fragments', 'scarabs', 'invitations', 'artifacts'])
+
+export function categoryOfSlug (slug: string): Category {
+  return CURRENCY_SLUGS.has(slug) ? 'currency' : FRAGMENT_SLUGS.has(slug) ? 'fragments' : 'other'
+}
+
 function categoryOfFrame (frame: number): Category {
   if (isUniqueFrame(frame)) return 'gear'
   if (frame === 6) return 'cards'
