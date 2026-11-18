@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-192
 title: 'M. Boss runs: Atziri moves to the Temple'
-status: Grooming
+status: Done
 priority: Low
 effort: None
 assignee: unassigned
@@ -31,6 +31,45 @@ history:
       Adversarial review fixes in; local checks pass. Handed to coordinator for
       merge.
     id: a-2026-11-18t06-33-56-392z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #607 (7ff0c495): Atziri and Uber Atziri in the Temple of
+      Atzoatl, temple entry rows from poe.ninja, Mortal fragments removed, Royal
+      Visage and Cradle Soul Cores added, Vaal Orb recipe 5 gems.
+    date: '2026-11-18T06:46:09.386Z'
+    completionComment: true
+    id: c-2026-11-18t06-46-09-386z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T06:46:09.386Z'
+  - type: comment
+    user: Agent
+    comment: 'Merged #607: boss runs follow Atziri to the Temple of Atzoatl for 3.30.'
+    completionComment: true
+    date: '2026-11-18T06:46:12.307Z'
+    id: c-2026-11-18t06-46-12-307z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T06:46:12.759Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/607'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > TL;DR: the Uber Atziri entry in boss runs assumes the old Alluring Abyss and fragments. Both are gone in 3.30.
 
