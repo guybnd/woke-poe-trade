@@ -15,6 +15,8 @@ interface Snapshot { league: string, ts: number, items: unknown[], divine: numbe
 interface DailyRow { league: string, date: string, type: string, name: string, variant: string, [k: string]: unknown }
 
 const SNAPSHOT_RETENTION_MS = 3 * 24 * 60 * 60 * 1000
+// The intraday movers' spans (renderer market/widget.ts PERIOD_MS; 7 d reads day rows).
+const MOVER_SPANS_MS = [6 * 3600 * 1000, 24 * 3600 * 1000]
 
 const root = () => dataDir('woke-market')
 const IMPORTED_MARK = () => path.join(root(), 'imported-from-indexeddb')
@@ -114,9 +116,16 @@ export async function trimOldSnapshots (now = Date.now()): Promise<number> {
       const days = new Set(await listNames(path.join(root(), folder, 'daily'), '.json'))
       // The newest stays anyway, and is its own day's point.
       const dayPoint = new Set<string>(times.length ? [utcDate(times[0])] : [])
+      // So do the snapshots the 6 h and 24 h movers compare the newest with
+      // (market-at: the newest at or before), for a league no longer saving.
+      const movers = new Set(MOVER_SPANS_MS.map(span => times.find(t => t <= times[0] - span)).filter((t): t is number => t != null))
       for (const ts of times.slice(1)) {
-        if (ts >= now - SNAPSHOT_RETENTION_MS) continue
         const day = utcDate(ts)
+        if (ts >= now - SNAPSHOT_RETENTION_MS || movers.has(ts)) {
+          // Kept anyway: it's that day's point too.
+          dayPoint.add(day)
+          continue
+        }
         // Newest first: the first one met is the day's last.
         if (!days.has(day) && !dayPoint.has(day)) {
           dayPoint.add(day)

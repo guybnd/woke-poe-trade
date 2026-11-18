@@ -68,10 +68,11 @@ describe('price history saves', () => {
     // A league still played: within the last three days, untouched.
     await save(snap('Live', T0 - 3600_000))
     await save(snap('Live', T0 - 1800_000, 7))
-    expect(await trimOldSnapshots(T0)).toBe(times.length - 2)
+    expect(await trimOldSnapshots(T0)).toBe(times.length - 3)
     const left = fs.readdirSync(path.join(root, 'snapshots')).map(f => Number(f.slice(0, -5))).sort()
-    // The day without rows (the middle one) keeps its last snapshot; the newest stays.
-    expect(left).toEqual([times[7], times[11]])
+    // The newest (day 2, 20:00), what 6 h and 24 h movers compare it with (12:00
+    // that day, 20:00 the day before, also the last of a day without rows).
+    expect(left).toEqual([times[7], times[10], times[11]])
     expect(snapshots('Live')).toHaveLength(2)
   })
 })
