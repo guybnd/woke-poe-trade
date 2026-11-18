@@ -55,7 +55,9 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     // The read: Divine and Chaos from the currency tab, Headhunter and the rest
     // from the dump, priced from poe.ninja.
     await expect(panel.getByText('Headhunter').first()).toBeVisible({ timeout: 20_000 })
-    await expect(panel.getByText('Divine Orb').first()).toBeVisible()
+    // 12 Divine Orbs at 1 div each (poe.ninja's fixture), 340 Chaos at its rate.
+    await expect(panel.locator('tr', { hasText: 'Divine Orb' })).toContainText(/12\s*1\.0\s*12\.0/)
+    await expect(panel.locator('tr', { hasText: 'Chaos Orb' })).toContainText('340')
     await expect(panel.getByText('Dump', { exact: true }).first()).toBeVisible()
     await overlay.snap('net worth after a read')
     expect(fakeApp.site.requests.some(u => u.includes('tabIndex=1'))).toBe(true)
