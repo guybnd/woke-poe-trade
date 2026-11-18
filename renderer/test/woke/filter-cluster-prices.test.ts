@@ -39,13 +39,16 @@ describe('planning NeverSink\'s rules', () => {
   const plan = (tier: string) => plans.find(p => p.block.tier === tier)!
 
   it('reads each rule as size, passives and item level', () => {
-    expect(ruleKey(blocksOf(doc, 'jewels->clustereco', 'n12_i84_t1')[0])).toEqual({ size: 'Large', passives: 12, ilvl: 84 })
-    expect(ruleKey(blocksOf(doc, 'jewels->clustereco', 'n12_i75_t1')[0])).toEqual({ size: 'Large', passives: 12, ilvl: 75 })
+    expect(ruleKey(blocksOf(doc, 'jewels->clustereco', 'n12_i84_t1')[0])).toEqual({ size: 'Large', passives: [12], ilvl: 84 })
+    expect(ruleKey(blocksOf(doc, 'jewels->clustereco', 'n12_i75_t1')[0])).toEqual({ size: 'Large', passives: [12], ilvl: 75 })
+    // NeverSink's Medium "4" rules say EnchantmentPassiveNum <= 5: 4 and 5.
+    expect(ruleKey(blocksOf(doc, 'jewels->clustereco', 'n4_i84_t1')[0])).toEqual({ size: 'Medium', passives: [5, 4], ilvl: 84 })
   })
 
-  it('puts types over the top line in t1 and between the lines in t2, skipping thin prices', () => {
+  it('puts types over the top line in t1 and over the good line in t2, skipping thin prices', () => {
     expect(plan('n12_i84_t1').nodes).toEqual(['Minion Damage'])
-    expect(plan('n12_i84_t2').nodes).toEqual(['Fire Damage'])
+    // t2 holds t1's types too, as NeverSink's does.
+    expect(plan('n12_i84_t2').nodes).toEqual(['Fire Damage', 'Minion Damage'])
     expect(plan('n8_i84_t2').nodes).toEqual(['Mace and Staff Damage'])
     // 75-83 has no row of its own on poe.ninja: priced at 68.
     expect(plan('n8_i75_t1').nodes).toEqual(['Minion Damage'])
@@ -57,7 +60,13 @@ describe('planning NeverSink\'s rules', () => {
     const at = (tier: string) => p.find(x => x.block.tier === tier)!.nodes
     expect(at('n12_i84_t1')).toEqual(['Wand Damage'])
     expect(at('n11_i84_t1')).toEqual(['Wand Damage'])
-    expect(at('n12_i84_t2')).toEqual(['Fire Damage'])
+    expect(at('n12_i84_t2')).toEqual(['Fire Damage', 'Wand Damage'])
+  })
+
+  it('prices a rule over every passive count it catches', () => {
+    const lines = [line('Minions have 12% increased maximum Life', 'Medium', 5, 84, 300)]
+    const p = planClusterRules(doc, readClusterLines(lines), ON)
+    expect(p.find(x => x.block.tier === 'n4_i84_t1')!.nodes).toEqual(['Minion Life'])
   })
 })
 
@@ -105,7 +114,7 @@ describe('rewriting the filter', () => {
 
 describe('settings', () => {
   it('keeps good at or under top and drops unknown pins', () => {
-    expect(normalizeClusterPrices({ on: false, top: 50, good: 80, pins: { 'Large|Minion Damage': 'top', 'Huge|X': 'top', 'Small|Life': 'maybe' } }))
+    expect(normalizeClusterPrices({ on: false, top: 50, good: 80, pins: { 'Large|Minion Damage': 'top', 'Huge|X': 'top', 'Small|Life': 'maybe', 'Large|Made Up" Hide': 'top' } }))
       .toEqual({ on: false, top: 50, good: 50, pins: { 'Large|Minion Damage': 'top' } })
     expect(normalizeClusterPrices(undefined).on).toBe(true)
   })

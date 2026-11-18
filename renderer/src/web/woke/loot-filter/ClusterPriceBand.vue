@@ -48,7 +48,7 @@
 import { computed } from 'vue'
 import { WToggle, agoPhrase } from '../ui'
 import LabelPreview from './LabelPreview.vue'
-import { CLUSTER_PRICE_TYPE, MIN_LISTINGS, nodesOf, rankOf, ruleKey } from './cluster-prices'
+import { CLUSTER_PRICE_TYPE, MIN_LISTINGS, nodesOf, priceOnRule, rankOf, ruleKey } from './cluster-prices'
 import type { ClusterPin, ClusterPrice, ClusterPriceSettings } from './cluster-prices'
 import type { ClusterSize } from '../cluster-type/types'
 import type { FilterDoc } from './parse'
@@ -67,6 +67,7 @@ const SIZES: ClusterSize[] = ['Large', 'Medium', 'Small']
 const status = computed(() => {
   if (props.prices?.length) return props.updatedAt ? `Prices ${agoPhrase(props.updatedAt)}` : ''
   if (props.error) return `No prices: ${props.error}. NeverSink's list stays.`
+  if (props.prices) return "poe.ninja has no cluster jewel prices for this league yet; NeverSink's list stays."
   return 'Waiting for prices; NeverSink\'s list until then.'
 })
 
@@ -76,11 +77,6 @@ function fmt (chaos: number): string {
 
 const sizes = computed(() => SIZES.map(size => {
   const blocks = props.doc.blocks.filter(b => b.type === CLUSTER_PRICE_TYPE && ruleKey(b)?.size === size)
-  const priceAt = (passives: number, ilvl: number, node: string) => {
-    const bands = [...new Set((props.prices ?? []).map(p => p.ilvl))].filter(b => b <= ilvl)
-    const band = bands.length ? Math.max(...bands) : null
-    return props.prices?.find(p => p.size === size && p.passives === passives && p.ilvl === band && p.node === node && p.listings >= MIN_LISTINGS)?.chaos ?? null
-  }
   // Rules that name the same types at the same rank read as one line:
   // "Top · 12, 11 passives · item level 68+".
   const groups = new Map<string, typeof blocks>()
@@ -92,12 +88,12 @@ const sizes = computed(() => SIZES.map(size => {
     const b = list[0]
     const keys = list.map(x => ruleKey(x)!)
     const rank = rankOf(b.tier)
-    const passives = [...new Set(keys.map(k => k.passives))].sort((x, y) => y - x)
+    const passives = [...new Set(keys.flatMap(k => k.passives))].sort((x, y) => y - x)
     const ilvl = Math.min(...keys.map(k => k.ilvl))
     const nodes = b.conditions.find(c => c.key === 'EnchantmentPassiveNode')?.values ?? []
     // A type's price where it's worth most among these rules.
     const best = (node: string) => {
-      const ps = keys.map(k => priceAt(k.passives, k.ilvl, node)).filter((x): x is number => x != null)
+      const ps = keys.map(k => priceOnRule(props.prices ?? [], k, node)).filter((x): x is number => x != null)
       return ps.length ? Math.max(...ps) : null
     }
     return {

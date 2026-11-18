@@ -1203,7 +1203,9 @@ function bulkMoveMenu (e: MouseEvent) {
 // ---- what you changed ----
 
 function changedIn (type: string): number {
-  return props.config.edits.filter(e => e.type === type).length
+  // The Cluster page holds the cluster price rules too.
+  const also = type === CLUSTER_GROUP && hasClusterPage.value ? CLUSTER_PRICE_TYPE : null
+  return props.config.edits.filter(e => e.type === type || e.type === also).length
 }
 
 // ---- stack sizes ----

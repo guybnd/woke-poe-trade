@@ -87,14 +87,43 @@ export function ninjaBand (ilvl: number, bands: number[]): number | null {
   return below.length ? Math.max(...below) : null
 }
 
-// A price rule's own numbers: size, passive count, lowest item level.
-export function ruleKey (b: Pick<FilterBlock, 'conditions'>): { size: ClusterSize, passives: number, ilvl: number } | null {
+// Passive counts each size rolls with.
+const PASSIVES: Record<ClusterSize, [number, number]> = { Small: [2, 3], Medium: [4, 6], Large: [8, 12] }
+
+export interface RuleKey {
+  size: ClusterSize
+  // The passive counts it catches (Medium "<= 5" is 4 and 5), highest first.
+  passives: number[]
+  // Lowest item level.
+  ilvl: number
+}
+
+// A price rule's own numbers: size, passive counts, lowest item level.
+export function ruleKey (b: Pick<FilterBlock, 'conditions'>): RuleKey | null {
   const base = b.conditions.find(c => c.key === 'BaseType')?.values
   const size = base?.length === 1 ? sizeOf(base[0]) : null
-  const nums = numberChecks(b.conditions)
-  const passives = nums.find(c => c.key === 'EnchantmentPassiveNum' && c.bound === 'exact')?.value
-  const ilvl = nums.find(c => c.key === 'ItemLevel' && c.bound === 'min')?.value ?? 1
-  return size && passives ? { size, passives, ilvl } : null
+  if (!size) return null
+  const nums = numberChecks(b.conditions).filter(c => c.key === 'EnchantmentPassiveNum')
+  if (!nums.length) return null
+  let [lo, hi] = PASSIVES[size]
+  for (const c of nums) {
+    if (c.bound === 'exact') { lo = Math.max(lo, c.value); hi = Math.min(hi, c.value) }
+    if (c.bound === 'min') lo = Math.max(lo, c.value)
+    if (c.bound === 'max') hi = Math.min(hi, c.value)
+  }
+  if (lo > hi) return null
+  const passives: number[] = []
+  for (let n = hi; n >= lo; n--) passives.push(n)
+  const ilvl = numberChecks(b.conditions).find(c => c.key === 'ItemLevel' && c.bound === 'min')?.value ?? 1
+  return { size, passives, ilvl }
+}
+
+// What a passive type is worth on a rule: the best over the counts it catches.
+export function priceOnRule (prices: ClusterPrice[], key: RuleKey, node: string): number | null {
+  const bands = [...new Set(prices.map(p => p.ilvl))]
+  const band = ninjaBand(key.ilvl, bands)
+  const hits = prices.filter(p => p.size === key.size && key.passives.includes(p.passives) && p.ilvl === band && p.node === node && p.listings >= MIN_LISTINGS)
+  return hits.length ? Math.max(...hits.map(p => p.chaos)) : null
 }
 
 // t1, t2 from NeverSink's tier name ("n12_i84_t1").
@@ -121,18 +150,22 @@ export function planClusterRules (doc: FilterDoc, prices: ClusterPrice[], s: Clu
     const key = ruleKey(block)
     if (!rank || !key) continue
     const band = ninjaBand(key.ilvl, bands)
-    const here = prices.filter(p => p.size === key.size && p.passives === key.passives && p.ilvl === band && p.listings >= MIN_LISTINGS)
-    const priceOf = new Map(here.map(p => [p.node, p.chaos]))
+    const priceOf = new Map<string, number>()
+    for (const p of prices) {
+      if (p.size !== key.size || !key.passives.includes(p.passives) || p.ilvl !== band || p.listings < MIN_LISTINGS) continue
+      priceOf.set(p.node, Math.max(priceOf.get(p.node) ?? 0, p.chaos))
+    }
     const nodes = new Set<string>()
-    for (const p of here) {
-      const pin = s.pins[`${key.size}|${p.node}`]
-      if (pin) continue
-      if (rank === 1 ? p.chaos >= s.top : p.chaos >= s.good && p.chaos < s.top) nodes.add(p.node)
+    // t2 lists t1's types too, as NeverSink does: a top rule you turn off
+    // leaves its types to the good one, not to the plain cluster rules.
+    for (const [node, chaos] of priceOf) {
+      if (s.pins[`${key.size}|${node}`]) continue
+      if (rank === 1 ? chaos >= s.top : chaos >= s.good) nodes.add(node)
     }
     for (const [k, pin] of Object.entries(s.pins)) {
       const [size, node] = k.split('|')
       if (size !== key.size) continue
-      if ((pin === 'top' && rank === 1) || (pin === 'good' && rank === 2)) nodes.add(node)
+      if ((pin === 'top' && (rank === 1 || rank === 2)) || (pin === 'good' && rank === 2)) nodes.add(node)
     }
     const list = [...nodes].sort((a, b) => a.localeCompare(b))
     out.push({ block, rank, nodes: list, prices: Object.fromEntries(list.map(n => [n, priceOf.get(n) ?? null])) })
@@ -174,7 +207,11 @@ export function normalizeClusterPrices (v: unknown): ClusterPriceSettings {
   const num = (n: unknown, dflt: number) => typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.min(100000, n) : dflt
   const pins: Record<string, ClusterPin> = {}
   if (x.pins && typeof x.pins === 'object') {
-    for (const [k, p] of Object.entries(x.pins)) if (/^(Small|Medium|Large)\|.+/.test(k) && (p === 'top' || p === 'good' || p === 'never')) pins[k] = p
+    for (const [k, p] of Object.entries(x.pins)) {
+      // Only the game's own passive types: a pin's name goes into the filter.
+      const [size, node] = k.split('|') as [ClusterSize, string]
+      if ((p === 'top' || p === 'good' || p === 'never') && (size in PASSIVES) && nodesOf(size).includes(node)) pins[k] = p
+    }
   }
   const top = num(x.top, d.top)
   return { on: typeof x.on === 'boolean' ? x.on : d.on, top, good: Math.min(num(x.good, d.good), top), pins }

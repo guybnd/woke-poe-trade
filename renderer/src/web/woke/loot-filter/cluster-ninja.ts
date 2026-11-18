@@ -17,31 +17,36 @@ export const clusterPricesError = shallowRef<string | null>(null)
 
 // poe.ninja updates hourly.
 const FRESH_MS = 60 * 60 * 1000
-let loading: Promise<void> | null = null
-let failedAt = 0
+let loading: { league: string, token: object, done: Promise<void> } | null = null
+let failed: { league: string, at: number } | null = null
 
 export function loadClusterPrices (league: string | null | undefined): Promise<void> {
   if (!league) return Promise.resolve()
   const have = clusterPrices.value
   if (have && have.league === league && Date.now() - have.ts < FRESH_MS) return Promise.resolve()
-  // A failed try waits a few minutes before the next.
-  if (Date.now() - failedAt < 5 * 60 * 1000) return Promise.resolve()
-  if (loading) return loading
-  loading = (async () => {
+  // A failed try waits a few minutes before the next, for that league.
+  if (failed?.league === league && Date.now() - failed.at < 5 * 60 * 1000) return Promise.resolve()
+  if (loading?.league === league) return loading.done
+  const token = {}
+  const done = (async () => {
     try {
       const res = await Host.proxy(`poe.ninja/poe1/api/economy/stash/current/item/overview?league=${encodeURIComponent(league)}&type=ClusterJewel`)
       if (!res.ok) throw new Error(`poe.ninja answered ${res.status}`)
       const body = await res.json() as { lines?: NinjaClusterLine[] }
+      // Another league picked meanwhile: its own request answers it.
+      if (loading?.token !== token) return
       clusterPrices.value = { league, ts: Date.now(), prices: readClusterLines(Array.isArray(body.lines) ? body.lines : []) }
       clusterPricesError.value = null
     } catch (err) {
-      failedAt = Date.now()
+      if (loading?.token !== token) return
+      failed = { league, at: Date.now() }
       clusterPricesError.value = err instanceof Error ? err.message : String(err)
     } finally {
-      loading = null
+      if (loading?.token === token) loading = null
     }
   })()
-  return loading
+  loading = { league, token, done }
+  return done
 }
 
 // This league's prices, or null.
