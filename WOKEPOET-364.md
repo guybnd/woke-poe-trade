@@ -3,7 +3,7 @@ id: WOKEPOET-364
 title: >-
   Saved lists, step 2: Atlas and PoB on the shared list; folders and drag for
   Regex and Trade
-status: In Progress
+status: Done
 priority: None
 effort: L
 assignee: unassigned
@@ -50,6 +50,46 @@ history:
       disk via pob-move-folder. Parity e2e covers all four lists. Close after
       #595 merges.
     id: a-2026-11-17t14-03-46-142z
+  - type: comment
+    user: Agent
+    comment: >-
+      All four parity PRs merged (#587, #590, #594, #595); #595 shipped in
+      v1.330.9.
+    date: '2026-11-18T05:57:15.127Z'
+    completionComment: true
+    id: c-2026-11-18t05-57-15-127z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-18T05:57:15.127Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Saved lists parity 1-4 merged (#587, #590, #594, #595); shipped in
+      v1.330.9.
+    completionComment: true
+    date: '2026-11-18T05:57:21.408Z'
+    id: c-2026-11-18t05-57-21-408z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T05:57:21.818Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/595'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** Guy picked the follow-up to #585: Atlas strategies and PoB builds use the shared saved-list parts (row keys, rename in place, remove with Undo), and Regex library and Trade searches get nested folders and drag reorder, lifted from Atlas into shared code.
 
