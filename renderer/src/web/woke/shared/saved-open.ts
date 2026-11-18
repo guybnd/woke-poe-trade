@@ -6,7 +6,13 @@ export interface SavedOpen {
   tool: string
   // An entry id, or a PoB build's file.
   id: string
+  // When it was asked for (ms): a tool that mounts much later ignores it.
+  at: number
 }
+
+// Older than this, a request is left alone: a tool that wasn't there to
+// take it then shouldn't jump open minutes later.
+export const SAVED_OPEN_MAX_AGE = 10_000
 
 export const savedOpenRequest = shallowRef<SavedOpen | null>(null)
 
@@ -15,7 +21,7 @@ export function onSavedOpen (tool: string, open: (id: string) => void): void {
   watch(savedOpenRequest, (req) => {
     if (req?.tool !== tool) return
     savedOpenRequest.value = null
-    open(req.id)
+    if (Date.now() - req.at <= SAVED_OPEN_MAX_AGE) open(req.id)
   }, { immediate: true })
 }
 

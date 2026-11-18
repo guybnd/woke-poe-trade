@@ -52,6 +52,17 @@ describe('savedLookup', () => {
       { label: 'Main skill', value: 'Lightning Arrow' }
     ])
   })
+  it('leaves the locked root folders of strategy and build regexes out of the search', () => {
+    const filed: RegexEntry[] = [
+      { id: 9, name: 'Map mods', text: 'eflec', category: 'Atlas strategies/Juicing/Breach juice', tags: [], notes: '', hotkey: null },
+      { id: 10, name: 'Flasks', text: 'flask', category: 'PoB builds/3.30/Breach farmer LA', tags: [], notes: '', hotkey: null }
+    ]
+    const find = savedLookup(savedItems({ regex: filed }))
+    expect(find('atlas', ctx)).toEqual([])
+    expect(find('pob builds', ctx)).toEqual([])
+    expect(find('juicing', ctx).map(c => c.sub)).toEqual(['Regex · Atlas strategies/Juicing/Breach juice'])
+    expect(find('breach farmer', ctx).map(c => c.name)).toEqual(['Flasks'])
+  })
   it('skips matches inside a word and short queries', () => {
     expect(lookup('reach', ctx)).toEqual([])
     expect(lookup('br', ctx)).toEqual([])

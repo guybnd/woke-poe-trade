@@ -59,6 +59,13 @@ export interface Route {
 
 const TRIAL_TEXT = 'Trial of Ascendancy'
 
+// Typos in the upstream route files, put right when shown. The files stay as
+// exile-leveling has them, so an update copies straight over.
+const ARENA_FIXES: Record<string, string> = {
+  "The Bring King's Throne": "The Brine King's Throne"
+}
+export const arenaName = (name: string) => ARENA_FIXES[name] ?? name
+
 const DIRS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
 
 function defines (opts: RouteOptions): Set<string> {
@@ -116,7 +123,7 @@ export function parseRoute (sources: string[], data: RouteData, opts: RouteOptio
         return { kind: town ? 'town' : 'area', text: areaName(args[0]) }
       }
       case 'area': return { kind: 'area', text: areaName(args[0]) }
-      case 'arena': return { kind: 'area', text: args[0] }
+      case 'arena': return { kind: 'area', text: arenaName(args[0]) }
       case 'kill': return { kind: 'kill', text: shortBossName(args[0]) }
       case 'logout':
         enterArea(state.lastTown)

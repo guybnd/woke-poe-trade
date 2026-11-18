@@ -3,6 +3,7 @@
 // poedb's maps, see scripts/build-pantheon-data.mjs), fetched on palette open.
 // Where the god itself is killed comes from the levelling route's zones.
 import { matchRank } from '../search'
+import { actName } from './zones'
 import type { Zone } from './zones'
 import type { Lookup, LookupCard, LookupSection } from './types'
 
@@ -47,7 +48,7 @@ export function godCard (god: PantheonGod, zones: readonly Zone[] = []): LookupC
   const sections: LookupSection[] = [{
     label: `Base power · ${god.major ? 'Major god' : 'Minor god'}`,
     text: own?.lines ?? [],
-    rows: kills.map(k => ({ label: 'Unlocked by', value: `${k.boss} · Act ${k.zone.act}, ${k.zone.name}` }))
+    rows: kills.map(k => ({ label: 'Unlocked by', value: `${k.boss} · ${actName(k.zone.act)}, ${k.zone.name}` }))
   }]
   upgrades.forEach((soul, i) => {
     sections.push({
@@ -82,13 +83,12 @@ export function pantheonLookup (data: PantheonData | null, zones: readonly Zone[
     if (matchRank('pantheon', q) === 0) {
       return [...data.gods].sort((a, b) => Number(b.major) - Number(a.major)).map(g => godCard(g, zones))
     }
+    // Matched without "Captured" and "Soul of", so "soul" alone isn't every god.
     const bare = q.replace(/^captured\s+/i, '').replace(/^soul of\s+/i, '')
-    const rankOf = (name: string) => {
-      const r = Math.min(...[matchRank(name, q), bare.length >= 4 ? matchRank(name, bare) : -1].map(r => r < 0 ? 9 : r))
-      return r
-    }
+    if (bare.length < 4) return []
+    const rankOf = (name: string) => { const r = matchRank(name, bare); return r < 0 ? 9 : r }
     return data.gods
-      .map(g => ({ g, rank: Math.min(rankOf(g.name), ...g.souls.map(s => rankOf(s.name))) }))
+      .map(g => ({ g, rank: Math.min(rankOf(g.name), ...g.souls.slice(1).map(s => rankOf(s.name))) }))
       .filter(h => h.rank < 2)
       .sort((a, b) => a.rank - b.rank)
       .slice(0, 4)

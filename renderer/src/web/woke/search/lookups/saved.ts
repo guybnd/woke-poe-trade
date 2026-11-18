@@ -1,6 +1,7 @@
 // Your saved items: regexes, trade searches, PoB builds and atlas strategies,
 // found by name, folder or tag. Each is one result; Enter opens it in its tool.
 import { REGEX_LIBRARY_TYPE, effectiveText } from '../../regex-library/widget'
+import { ATLAS_FOLDER, POB_FOLDER } from '../../regex-library/folder-names'
 import type { RegexEntry } from '../../regex-library/widget'
 import { TRADE_SEARCHES_TYPE, folderOf as tradeFolderOf } from '../../trade-searches/widget'
 import type { TradeSearchEntry } from '../../trade-searches/widget'
@@ -33,12 +34,24 @@ interface Saved {
   id: string
   name: string
   folder: string
+  // The folder as searched, when it differs from the one shown.
+  findBy?: string
   tags: string[]
   card: () => Omit<LookupCard, 'id' | 'group' | 'name' | 'sub' | 'icon'>
 }
 
 const open = (kind: SavedKind, id: string): LookupAction => ({ label: `Open in ${TOOL[kind].name}`, open: { tool: TOOL[kind].type, id } })
 const folderRow = (kind: SavedKind, folder: string): LookupRow => ({ label: TOOL[kind].name, value: folder || 'Top level' })
+// A strategy's or a build's regexes sit under "Atlas strategies/" or
+// "PoB builds/": searching "atlas" shouldn't list all of them.
+export function regexFindFolder (folder: string): string {
+  for (const root of [ATLAS_FOLDER, POB_FOLDER]) {
+    if (folder === root) return ''
+    if (folder.startsWith(`${root}/`)) return folder.slice(root.length + 1)
+  }
+  return folder
+}
+
 const notes = (text: string | undefined): LookupSection[] => text?.trim() ? [{ text: [text.trim()] }] : []
 
 export function savedItems (lists: SavedLists): Saved[] {
@@ -50,6 +63,7 @@ export function savedItems (lists: SavedLists): Saved[] {
       id: String(e.id),
       name: e.name || text,
       folder: e.category,
+      findBy: regexFindFolder(e.category),
       tags: e.tags,
       card: () => ({
         sections: [{ rows: [folderRow('regex', e.category)] }, { text: [text] }, ...notes(e.notes)],
@@ -133,7 +147,7 @@ export function savedLookup (items: readonly Saved[]): Lookup {
     const name = (r: number) => r < 0 || r > 1 ? 9 : r
     const other = (r: number) => r < 0 || r > 1 ? 9 : r + 2
     return items
-      .map(s => ({ s, rank: Math.min(name(matchRank(s.name, query)), ...[s.folder, ...s.tags].map(f => other(matchRank(f, query)))) }))
+      .map(s => ({ s, rank: Math.min(name(matchRank(s.name, query)), ...[s.findBy ?? s.folder, ...s.tags].map(f => other(matchRank(f, query)))) }))
       .filter(h => h.rank < 9)
       .sort((a, b) => a.rank - b.rank || a.s.name.localeCompare(b.s.name))
       .slice(0, MAX)

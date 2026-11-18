@@ -70,6 +70,8 @@ describe('pantheonLookup', () => {
   it('waits for the data and four letters', () => {
     expect(pantheonLookup(null)('lunaris', ctx)).toEqual([])
     expect(lookup('lun', ctx)).toEqual([])
+    expect(lookup('soul', ctx)).toEqual([])
+    expect(lookup('soul of', ctx)).toEqual([])
   })
   it('answers its example', () => {
     expect(EXAMPLES.some(e => e.query === 'soul of lunaris')).toBe(true)

@@ -161,3 +161,28 @@ export function tradeUrl (league: string, item: { name?: string, type?: string |
   }
   return `https://${host}/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`
 }
+
+// The palette's result groups in order. Tools come first when one's name
+// starts with the query, so "market" opens Market, not The Marketplace zone,
+// and "atlas" Atlas strategies before the regexes filed under it.
+export interface ResultSection<E> { label: string, entries: E[], capped?: boolean }
+export function arrangeSections<E> (query: string, parts: {
+  answer: Array<ResultSection<E>>
+  items: Array<ResultSection<E>>
+  cards: Array<ResultSection<E>>
+  tools: Array<E & { name: string }>
+  rest: Array<ResultSection<E>>
+  web: Array<ResultSection<E>>
+}): Array<ResultSection<E>> {
+  const tools: ResultSection<E> = { label: 'Tools', entries: parts.tools }
+  const lead = parts.tools.some(t => matchRank(t.name, query) === 0)
+  return [
+    ...parts.answer,
+    ...(lead ? [tools] : []),
+    ...parts.items,
+    ...parts.cards,
+    ...(lead ? [] : [tools]),
+    ...parts.rest,
+    ...parts.web
+  ].filter(s => s.entries.length)
+}

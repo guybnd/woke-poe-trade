@@ -169,7 +169,7 @@ import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -540,8 +540,10 @@ function loadBuildList () {
   const last = lastBuildList.value
   if (!w || buildsLoading || (last && Date.now() - last.at < BUILD_LIST_MAX_AGE)) return
   buildsLoading = true
+  const asked = Date.now()
   pobApi.list(w)
-    .then(res => { lastBuildList.value = { at: Date.now(), builds: res.builds } })
+    // The PoB window may have read a newer list meanwhile.
+    .then(res => { if ((lastBuildList.value?.at ?? 0) < asked) lastBuildList.value = { at: Date.now(), builds: res.builds } })
     .catch(() => {})
     .finally(() => { buildsLoading = false })
 }
@@ -569,7 +571,7 @@ const stopDataWatch = onSharedDataChange(() => {
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), zoneLookup(zones.value, gemRewards.value), pantheonLookup(pantheonData.value, zones.value ?? []), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -597,7 +599,7 @@ function act (action: LookupAction) {
     if (w) wm.show(w.wmId)
   } else if ('open' in action) {
     // The tool shows it; the palette steps aside.
-    savedOpenRequest.value = action.open
+    savedOpenRequest.value = { ...action.open, at: Date.now() }
     wm.hide(props.config.wmId)
   } else if ('trade' in action) tradeBeast(action.trade)
   else if ('copy' in action) copyText(action.copy).then(ok => { if (ok) toast(`Copied ${action.copy}`, { ms: 1800 }) })
@@ -642,18 +644,21 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     .filter(g => !listed.has(groupKey(g)))
   const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
-  const out = [
-    ...cardSections(cards, ['Answer']),
-    { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
-    { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(g => onBaseEntry(g, shownBases)) as Entry[] },
-    { label: 'Other items', entries: other as Entry[] },
-    ...cardSections(cards, null, ['Answer', 'Search the web']),
-    { label: 'Tools', entries: searchNamed(toolEntries(), q, e => e.name) as Entry[] },
-    { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
-    { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] },
-    ...cardSections(cards, ['Search the web'])
-  ]
-  return out.filter(s => s.entries.length)
+  return arrangeSections<Entry>(q, {
+    answer: cardSections(cards, ['Answer']),
+    items: [
+      { label: 'Prices', entries: groups.map(priceEntry) as Entry[], capped: groups.length >= PRICE_GROUP_LIMIT },
+      { label: bases.length === 1 ? `Uniques on ${bases[0].name}` : 'Uniques on these bases', entries: onBase.map(g => onBaseEntry(g, shownBases)) as Entry[] },
+      { label: 'Other items', entries: other as Entry[] }
+    ],
+    cards: cardSections(cards, null, ['Answer', 'Search the web']),
+    tools: searchNamed(toolEntries(), q, e => e.name),
+    rest: [
+      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
+      { label: 'Settings', entries: searchNamed(settingEntries(), q, e => e.name) as Entry[] }
+    ],
+    web: cardSections(cards, ['Search the web'])
+  })
 })
 const entries = computed(() => sections.value.flatMap(s => s.entries))
 
@@ -1044,6 +1049,8 @@ function forgetHeld () {
 }
 function start (text: string) {
   forgetHeld()
+  // An open asked for last time that no tool took.
+  savedOpenRequest.value = null
   holdPricesForSearch()
   query.value = text
   corrupted.value = 'any'

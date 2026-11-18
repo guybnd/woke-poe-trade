@@ -2,7 +2,7 @@
 // does there (bosses, Trials of Ascendancy, quest items, hand-ins). All from
 // the Campaign tool's bundled exile-leveling route (MIT, see
 // campaign/route/README.md), read once when the palette opens.
-import { DEFAULT_ROUTE_OPTIONS, parseRoute } from '../../campaign/route-parse'
+import { DEFAULT_ROUTE_OPTIONS, arenaName, parseRoute } from '../../campaign/route-parse'
 import type { RouteData } from '../../campaign/route-parse'
 import { matchRank } from '../search'
 import type { GemTable } from './gems'
@@ -28,7 +28,8 @@ export interface Zone {
   crafts: string[]
   bosses: ZoneBoss[]
   trial: boolean
-  questItems: string[]
+  // Things the route has you find, take or use there ("Glyph", "Map Device").
+  objectives: string[]
   // Quests the route hands in here (towns).
   quests: string[]
   // Zones the route goes on to from here, in route order.
@@ -45,7 +46,7 @@ export function zoneFacts (sources: string[], data: RouteData): Zone[] {
     let z = zones.get(id)
     if (!z) {
       const [name, act, level, town, waypoint, parent, crafts] = row
-      z = { id, name, act, level, town, waypoint, townName: parent ? data.areas[parent]?.[0] ?? null : null, crafts: [...crafts], bosses: [], trial: false, questItems: [], quests: [], next: [] }
+      z = { id, name, act, level, town, waypoint, townName: parent ? data.areas[parent]?.[0] ?? null : null, crafts: [...crafts], bosses: [], trial: false, objectives: [], quests: [], next: [] }
       zones.set(id, z)
     }
     return z
@@ -64,7 +65,7 @@ export function zoneFacts (sources: string[], data: RouteData): Zone[] {
         if (to && to.id !== here.id && !to.town && !here.town) add(here.next, to.name)
         break
       }
-      case 'arena': arena = { step, name: args[0] }; break
+      case 'arena': arena = { step, name: arenaName(args[0]) }; break
       case 'kill': {
         // "Kill {kill|Everything}" is clearing the zone, not a boss.
         if (here.town || args[0] === 'Everything' || here.bosses.some(b => b.name === args[0])) break
@@ -74,7 +75,7 @@ export function zoneFacts (sources: string[], data: RouteData): Zone[] {
         break
       }
       case 'trial': here.trial = true; break
-      case 'quest_text': add(here.questItems, args[0]); break
+      case 'quest_text': add(here.objectives, args[0]); break
       case 'quest': if (here.town && args[0]) add(here.quests, data.quests[args[0]] ?? args[0]); break
     }
   })
@@ -94,9 +95,12 @@ export function rewardCounts (table: GemTable | null): Map<string, number> {
   return out
 }
 
+// Past act 10 is the epilogue (Karui Shores).
+export const actName = (act: number) => act > 10 ? 'Epilogue' : `Act ${act}`
+
 export function zoneCard (z: Zone, rewards: ReadonlyMap<string, number> = new Map()): LookupCard {
   const facts: LookupRow[] = [
-    { label: 'Act', value: String(z.act) },
+    { label: 'Act', value: z.act > 10 ? 'Epilogue' : String(z.act) },
     ...(z.town ? [] : [{ label: 'Area level', value: String(z.level) }]),
     { label: 'Waypoint', value: z.waypoint ? 'Yes' : 'No' },
     ...(!z.town && z.townName ? [{ label: 'Town', value: z.townName }] : [])
@@ -109,13 +113,14 @@ export function zoneCard (z: Zone, rewards: ReadonlyMap<string, number> = new Ma
     })
   }
   if (z.trial) sections.push({ label: 'Trial of Ascendancy', text: ['One of the six trials for the Labyrinth is here.'] })
-  if (z.questItems.length) sections.push({ label: 'Quest items', rows: z.questItems.map(label => ({ label })) })
+  if (z.objectives.length) sections.push({ label: 'Quest objectives', rows: z.objectives.map(label => ({ label })) })
   if (z.quests.length) {
     sections.push({
       label: 'Quests handed in here',
       rows: z.quests.map(q => {
         const n = rewards.get(q)
-        return { label: q, value: n ? `${n} gem rewards` : undefined }
+        // Every class's choices together: you take one of your class's.
+        return { label: q, value: n ? `gem reward: pick from ${n}, all classes` : undefined }
       })
     })
   }
@@ -127,7 +132,7 @@ export function zoneCard (z: Zone, rewards: ReadonlyMap<string, number> = new Ma
     id: `zone:${z.id}`,
     group: 'Zones',
     name: z.name,
-    sub: z.town ? `Act ${z.act} town` : `Act ${z.act} · level ${z.level}${z.trial ? ' · trial' : ''}`,
+    sub: z.town ? `${actName(z.act)} town` : `${actName(z.act)} · level ${z.level}${z.trial ? ' · trial' : ''}`,
     icon: z.town ? 'fas fa-campground' : 'fas fa-map-location-dot',
     sections,
     actions: [
@@ -136,6 +141,9 @@ export function zoneCard (z: Zone, rewards: ReadonlyMap<string, number> = new Ma
     ]
   }
 }
+
+// "lunaris temple" is four zones in two acts, "lunaris" six.
+const MAX_ZONES = 8
 
 // Zones by name; "the" alone matches nothing. The same name in two acts
 // (The Coast) gives a card for each.
@@ -147,7 +155,7 @@ export function zoneLookup (zones: readonly Zone[] | null, rewards: ReadonlyMap<
       .map(z => ({ z, rank: Math.min(...[matchRank(z.name, query), matchRank(z.name.replace(/^The /, ''), q)].map(r => r < 0 ? 9 : r)) }))
       .filter(h => h.rank < 2)
       .sort((a, b) => a.rank - b.rank || a.z.act - b.z.act)
-      .slice(0, 4)
+      .slice(0, MAX_ZONES)
       .map(h => zoneCard(h.z, rewards))
   }
 }

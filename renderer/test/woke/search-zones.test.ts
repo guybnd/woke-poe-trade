@@ -21,12 +21,15 @@ describe('zoneFacts', () => {
     expect(byId('1_1_7_2').bosses).toEqual([{ name: 'Brutus, Lord Incarcerator', arena: "The Warden's Quarters", level: 8 }])
     expect(byId('1_1_1').bosses.map(b => b.name)).toEqual(['Hillock'])
   })
-  it('marks trial zones, quest items and town hand-ins', () => {
+  it('marks trial zones, quest objectives and town hand-ins', () => {
     expect(byId('1_1_7_1').trial).toBe(true)
     expect(byId('1_1_2').trial).toBe(false)
-    expect(byId('1_1_3').questItems).toContain('Glyph')
+    expect(byId('1_1_3').objectives).toContain('Glyph')
     expect(byId('1_1_town').quests).toContain('Enemy at the Gate')
     expect(byId('1_1_town').bosses).toEqual([])
+  })
+  it('shows the Brine King arena by its real name', () => {
+    expect(byId('2_6_15').bosses[0].arena).toBe("The Brine King's Throne")
   })
   it('leaves out "Kill Everything" lines', () => {
     expect(zones.flatMap(z => z.bosses).map(b => b.name)).not.toContain('Everything')
@@ -39,6 +42,11 @@ describe('zoneLookup', () => {
     const cards = lookup('the coast', ctx)
     expect(cards.map(c => c.sub)).toEqual(['Act 1 · level 2', 'Act 6 · level 45'])
     expect(lookup('coast', ctx)).toHaveLength(2)
+  })
+  it('lists every Lunaris Temple, act 8 too', () => {
+    const subs = lookup('lunaris temple', ctx).map(c => c.sub)
+    expect(subs).toContain('Act 8 · level 59')
+    expect(subs.filter(s => s.startsWith('Act 8'))).toHaveLength(2)
   })
   it('needs four letters past "the"', () => {
     expect(lookup('the', ctx)).toEqual([])
@@ -67,7 +75,12 @@ describe('zoneCard', () => {
     expect(card.sub).toBe('Act 1 town')
     expect(card.sections[0].rows!.map(r => r.label)).not.toContain('Area level')
     const quest = card.sections.find(s => s.label === 'Quests handed in here')!.rows!.find(r => r.label === 'Enemy at the Gate')!
-    expect(quest.value).toMatch(/^\d+ gem rewards$/)
+    expect(quest.value).toMatch(/^gem reward: pick from \d+, all classes$/)
+  })
+  it('calls Karui Shores the epilogue town', () => {
+    const card = zoneCard(zones.find(z => z.name === 'Karui Shores')!)
+    expect(card.sub).toBe('Epilogue town')
+    expect(card.sections[0].rows![0]).toEqual({ label: 'Act', value: 'Epilogue' })
   })
   it('lists the boss with its arena and level', () => {
     const rows = zoneCard(byId('1_1_7_2')).sections.find(s => s.label === 'Bosses')!.rows!

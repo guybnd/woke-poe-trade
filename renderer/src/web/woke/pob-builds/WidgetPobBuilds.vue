@@ -368,6 +368,7 @@ async function refresh () {
     active.reload()
   } catch (err) {
     builds.value = []
+    lastBuildList.value = null
     error.value = (err as Error).message
   } finally {
     loading.value = false
