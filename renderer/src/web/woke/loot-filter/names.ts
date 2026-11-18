@@ -91,40 +91,143 @@ export function groupLabel (type: string): string {
 const ITEM_WORDS = new Set(['exalted', 'divine', 'annul', 'chaos', 'alchemy', 'chrom', 'chance', 'trans', 'armour', 'lifeforce'])
 
 const WHOLE_TIERS: Record<string, string> = {
-  any: 'Any',
-  anyother: 'Any other',
-  exhide: 'Hidden extras',
-  hideable: 'Can be hidden',
-  restex: 'The rest',
+  'any': 'Any',
+  'anyother': 'Any other',
+  'exhide': 'Hidden extras',
+  'hideable': 'Can be hidden',
+  'restex': 'The rest',
   // NeverSink 8.21's Fated rares (3.30).
-  fatedgear: 'Fated gear',
-  fatedoverride: 'Fated, any base',
-  fatedspecial: 'Fated jewels, flasks and heist',
-  identifieditemhandling: 'Identified rares, not corrupted or mirrored',
+  'fatedgear': 'Fated gear',
+  'fatedoverride': 'Fated, any base',
+  'fatedspecial': 'Fated jewels, flasks and heist',
+  'identifieditemhandling': 'Identified rares, not corrupted or mirrored',
   // NeverSink 8.21's endgame tinctures and flasks.
-  overqual1: 'Quality 26+, not corrupted or mirrored',
-  overqual2: 'Quality 21+, not corrupted or mirrored',
-  tinc85: 'Item level 85+',
-  tinc82: 'Item level 82+',
-  overqualcorrupted: 'Corrupted, quality 30+',
-  overqualutil1: 'Utility, quality 26+',
-  overqualutil2: 'Utility, quality 21+',
-  overquallife1: 'Life and mana, quality 30+',
-  overquallife2: 'Life and mana, quality 21+',
-  utility85: 'Utility, item level 85+',
-  utility84: 'Utility, item level 84+',
-  utility82: 'Utility, item level 82+',
-  lifemana82: 'Life and mana, item level 82+',
-  any20qualflask: 'Any flask, quality 20+',
-  qualityhigh: 'Quality 10+, early maps',
-  qualitylow: 'Any quality, early maps',
-  earlymappingflasks: 'Utility, early maps',
-  anyutility: 'Any utility flask',
-  earlymappinglifemana: 'Life and mana, early maps',
+  'overqual1': 'Quality 26+, not corrupted or mirrored',
+  'overqual2': 'Quality 21+, not corrupted or mirrored',
+  'tinc85': 'Item level 85+',
+  'tinc82': 'Item level 82+',
+  'overqualcorrupted': 'Corrupted, quality 30+',
+  'overqualutil1': 'Utility, quality 26+',
+  'overqualutil2': 'Utility, quality 21+',
+  'overquallife1': 'Life and mana, quality 30+',
+  'overquallife2': 'Life and mana, quality 21+',
+  'utility85': 'Utility, item level 85+',
+  'utility84': 'Utility, item level 84+',
+  'utility82': 'Utility, item level 82+',
+  'lifemana82': 'Life and mana, item level 82+',
+  'any20qualflask': 'Any flask, quality 20+',
+  'qualityhigh': 'Quality 10+, early maps',
+  'qualitylow': 'Any quality, early maps',
+  'earlymappingflasks': 'Utility, early maps',
+  'anyutility': 'Any utility flask',
+  'earlymappinglifemana': 'Life and mana, early maps',
   // NeverSink's Maps to hide, shipped off.
-  corruptedmaphider: 'Hide corrupted maps',
-  mirroredmaphider: 'Hide mirrored maps'
+  'corruptedmaphider': 'Hide corrupted maps',
+  'mirroredmaphider': 'Hide mirrored maps',
+  // NeverSink's shorthand tags, named from what each rule catches.
+  // Gems › Special: picked gems by level and quality.
+  'altany': 'Any transfigured gem',
+  '2020z': 'Level 20+, quality 20+, not corrupted',
+  'xx20z': 'Quality 19+, not corrupted',
+  '2120': 'Level 21+, quality 20+',
+  '2023': 'Level 20+, quality 23+',
+  '2123any': 'Level 21+, quality 23+, any gem',
+  'xx23': 'Quality 23+',
+  '21xx': 'Level 21+',
+  // Gems › Generic: level and quality tiers.
+  'lt1': 'Level 21+',
+  'lt2': 'Level 20+',
+  'lt3': 'Level 18+',
+  'lt4': 'Level 2+',
+  'qt1': 'Quality 23+',
+  'qt2': 'Quality 20+',
+  'qt3': 'Quality 13+',
+  'qt4': 'Quality 1+',
+  'qt4lvl': 'Quality 1+, while levelling',
+  // Uniques.
+  '6s': '6 sockets',
+  'exforgesword': 'Starforge, Shaper or Elder',
+  'exrationaljewel': 'Rational Doctrine, synthesised',
+  'exuberimpresence': 'Impresence, Shaper and Elder',
+  'hideable2': 'Can be hidden, second list',
+  // Sockets and links.
+  '6sockets4h': '6 sockets, 4 squares tall',
+  // Crafting › Quality and perfection.
+  'armors1q1': 'Tier 1 armour, quality 28+',
+  'armors1q2': 'Tier 1 armour, quality 24+',
+  'weapont1q1': 'Tier 1 weapons, quality 28+, item level 83+',
+  'weapont1q2': 'Tier 1 weapons, quality 24+, item level 83+',
+  'weapont2q1': 'Tier 2 weapons, quality 28+, item level 83+',
+  'weapont2q2': 'Tier 2 weapons, quality 24+, item level 83+',
+  // Exotic bases.
+  'ecotinkbases': 'Hand-added bases',
+  'ecotinkbases84': 'Hand-added bases, item level 84+',
+  'exoticstiered': 'Item tier 5+',
+  'v83': 'Talismans and rings, item level 83+',
+  'v84': 'Talismans and rings, item level 84+',
+  'v85': 'Talismans and rings, item level 85+',
+  'v86': 'Talismans and rings, item level 86+',
+  // Identified rares.
+  'idaj_attack': 'Abyss jewel attack',
+  'idaj_caster': 'Abyss jewel caster',
+  'idaj_minion': 'Abyss jewel minion',
+  'idaj_mixer': 'Abyss jewel mixed',
+  'quiv_hit': 'Quivers hit damage',
+  // Rares with blended mods.
+  'wamuletsblend': 'Amulets',
+  'wbeltsblend': 'Belts',
+  'wringsblend': 'Rings',
+  'wsmallarmorsblend': 'Boots, gloves and helmets',
+  'weleattackblend': 'Elemental attack weapons',
+  'wcastermin': 'Caster weapons and shields',
+  // Rares to hide.
+  'outdatedlevelflaska': 'Outdated Small to Large flasks, area 15+',
+  'outdatedlevelflaskb': 'Outdated Greater and Grand flasks, area 30+',
+  'outdatedlevelflaskc': 'Outdated Giant to Sacred flasks, area 48+',
+  'outdatedlevelflaskd': 'Outdated Sanctified and Hallowed flasks, area 60+',
+  'rrihide1': 'Rare armour under drop level 75, area 82+',
+  'rrihide2': 'Rare armour under drop level 60, area 80+',
+  'rrihide3': 'Rare armour under drop level 50, area 78+',
+  'rrihide4': 'Rare armour under drop level 40, area 73+',
+  // Fragments, cards and chancing.
+  't3stackedex': 'Tier 3, stacks of 3+',
+  't4c': 'Tier 4, shown longer',
+  't5c': 'Tier 5, shown longer',
+  'hh': 'Leather and Heavy belts',
+  // Levelling › Weapon progression: normal weapons with 3+ sockets.
+  'r01': 'Drop level 5+, item level up to 9',
+  'r02': 'Drop level 11+, item level up to 15',
+  'r03': 'Drop level 15+, item level up to 18',
+  'r04': 'Drop level 18+, item level up to 22',
+  'r05': 'Drop level 22+, item level up to 26',
+  'r06': 'Drop level 26+, item level up to 30',
+  'r07': 'Drop level 30+, item level up to 34',
+  'r08': 'Drop level 34+, item level up to 40',
+  'r09': 'Drop level 40+, item level up to 44',
+  'r10': 'Drop level 44+, item level up to 48',
+  'r11': 'Drop level 48+, item level up to 52',
+  'r12': 'Drop level 52+, item level up to 56',
+  'r13': 'Drop level 56+, item level up to 60',
+  'r14': 'Drop level 60+, item level up to 64',
+  'r15bas': 'Drop level 64+, item level up to 68',
+  // Levelling › Rare weapons.
+  'l1': 'Area level up to 25',
+  'l2': 'Drop level 10+, area level up to 30',
+  'l3': 'Drop level 15+, area level up to 35',
+  'l4': 'Drop level 20+, area level up to 45',
+  'l5': 'Drop level 25+, area level up to 55',
+  'l6': 'Drop level 30+, area level up to 60',
+  'l7': 'Drop level 35+, area level up to 65',
+  'l8': 'Drop level 40+, area level up to 70',
+  // Levelling › Wand progression.
+  'w1': 'Somatic Wand, area level up to 24',
+  'w2': 'Blasting Wand, area level up to 50',
+  'w3': 'Kinetic Wand, area level up to 67'
 }
+
+// NeverSink's map progression: maps_a_t14 is a tier 14 map in its high reds
+// (a), then low reds (b), yellows (c) and whites (d). maps_a_t16 is 16 and up.
+const MAP_COLOURS: Record<string, string> = { a: 'red', b: 'red', c: 'yellow', d: 'white' }
 
 export function tierLabel (tier: string): string {
   if (tier.startsWith('#')) return 'Rule'
@@ -133,6 +236,8 @@ export function tierLabel (tier: string): string {
   if (m) return `Tier ${m[1]}, item level ${m[2]}`
   m = /^n(\d+)_i(\d+)_t(\d+)$/.exec(tier)
   if (m) return `${m[1]} nodes, item level ${m[2]}, tier ${m[3]}`
+  m = /^maps_([a-d])_t(\d+)$/.exec(tier)
+  if (m) return `Map tier ${m[2]}${m[2] === '16' ? '+' : ''}, ${MAP_COLOURS[m[1]]}`
   // NeverSink 8.21's tiered gear: item tier and base rank (t5r1), and its
   // any-base rules, where any5 catches item tier 4 and up.
   m = /^t(\d)r(\d)$/.exec(tier)

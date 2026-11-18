@@ -130,7 +130,7 @@ const SPECIAL_TIERS: Record<string, string> = {
   'multispecial': 'Base with several uniques',
   'earlyleague': 'Early league',
   't3boss': 'Boss drops',
-  'hideable2': 'Can be hidden, 2',
+  'hideable2': 'Can be hidden, second list',
   'exuniqueidols': 'Idols',
   'vestige': 'Vestigial'
 }
