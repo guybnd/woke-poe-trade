@@ -140,12 +140,13 @@ test('two-line rows have no next step button and close on click too', async ({ o
 
 test('the bubble stays past the old five seconds and through a hover', async ({ overlay, fakeApp }) => {
   clearHistory(fakeApp.opts.userData)
+  await overlay.page.clock.install()
   await overlay.boot({ widgets: [TRADE] })
   await overlay.log(upTo('Kaltenhalt: Hi, I would like to buy your Headhunter'))
   const icon = overlay.dockIcon('trade')
   await expect(icon).toContainText('Kaltenhalt: Headhunter Leather Belt · 120 div')
   await overlay.hoverDockIcon('trade')
-  await overlay.page.waitForTimeout(5500)
+  await overlay.page.clock.fastForward(5500)
   await expect(icon.locator('[class*="peekText"]')).toContainText('Kaltenhalt: Headhunter')
 })
 
@@ -175,6 +176,7 @@ test('an offer open since before a restart shows the bubble', async ({ overlay, 
 
 test('the skip key moves the bubble on, and reopening brings it back', async ({ overlay, fakeApp }) => {
   clearHistory(fakeApp.opts.userData)
+  await overlay.page.clock.install()
   await overlay.boot({ widgets: [{ ...TRADE, skipHotkey: 'F5' }] })
   await overlay.log(upTo('Kaltenhalt: Hi, I would like to buy your Headhunter'))
   const icon = overlay.dockIcon('trade')
@@ -184,7 +186,7 @@ test('the skip key moves the bubble on, and reopening brings it back', async ({ 
   await overlay.pressHotkey('F5')
   await expect(bubble).toContainText('xXLeagueStartXx')
   // Past the old short peek: it stays.
-  await overlay.page.waitForTimeout(3000)
+  await overlay.page.clock.fastForward(3000)
   await expect(bubble).toContainText('xXLeagueStartXx')
 
   await overlay.hoverDockIcon('trade')
