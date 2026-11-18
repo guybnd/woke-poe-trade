@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
 // @ts-expect-error plain JS module
-import { scope } from '../tools/ci-scope.mjs'
+import { scope, SCANS } from '../tools/ci-scope.mjs'
 
 const ROOT = path.resolve(__dirname, '../..')
 const DOC = JSON.parse(fs.readFileSync(path.join(ROOT, 'testing/e2e/scope.json'), 'utf8')) as { smoke: string[], specs: Record<string, string[]> }
@@ -13,6 +13,18 @@ describe('the spec map', () => {
   it('lists every spec, and only specs that exist', () => {
     expect(Object.keys(DOC.specs).sort()).toEqual(SPECS)
     for (const s of DOC.smoke) expect(SPECS).toContain(s)
+  })
+
+  it('has every spec that copies items list the parser and price check', () => {
+    const copies = /Ctrl \+ D|Alt \+ D|Alt \+ M|Alt \+ F'|'Alt \+ F|items\/|hoverItem|priceCheck\(/
+    const missing = SPECS.filter(s => !s.startsWith('landing-') && !s.startsWith('demo-'))
+      .filter(s => copies.test(fs.readFileSync(path.join(ROOT, 'testing/e2e', s), 'utf8')))
+      .filter(s => !DOC.specs[s].includes('renderer/src/parser/'))
+    expect(missing).toEqual([])
+  })
+
+  it('names unit tests that read source files, and they exist', () => {
+    for (const f of SCANS as string[]) expect(fs.existsSync(path.join(ROOT, 'renderer', f))).toBe(true)
   })
 
   it('names paths that exist', () => {
@@ -25,7 +37,7 @@ describe('a pull request', () => {
   it('changing one module runs its specs and the smoke set', () => {
     const r = scope(['renderer/src/web/woke/wickerman/WickermanDock.vue'])
     expect(r.e2e).toEqual(['in-game.spec.ts', 'toolkit.spec.ts', 'wickerman-dock.spec.ts', 'wickerman-window.spec.ts'])
-    expect(r.unit).toEqual(['src/web/woke/wickerman/WickermanDock.vue'])
+    expect(r.unit).toEqual(['src/web/woke/wickerman/WickermanDock.vue', ...SCANS].sort())
   })
 
   it('changing shared code runs every spec', () => {
@@ -49,14 +61,20 @@ describe('a pull request', () => {
     expect(scope(['renderer/package-lock.json']).unit).toBe('all')
   })
 
-  it('docs alone run nothing', () => {
-    expect(scope(['docs/index.md', 'README.md'])).toEqual({ e2e: [], unit: [] })
+  it('docs alone run nothing; the README runs the test of its module table', () => {
+    expect(scope(['docs/index.md', 'CHANGELOG.md'])).toEqual({ e2e: [], unit: [] })
+    expect(scope(['README.md'])).toEqual({ e2e: [], unit: ['test/woke/readme.test.ts'] })
+  })
+
+  it('a parser change runs the specs that copy items', () => {
+    const r = scope(['renderer/src/parser/Parser.ts'])
+    for (const s of ['loot-filter.spec.ts', 'death-recap.spec.ts', 'map-mods-tabs.spec.ts', 'text-size.spec.ts']) expect(r.e2e).toContain(s)
   })
 
   it('price check code runs the price check specs', () => {
     const r = scope(['renderer/src/web/price-check/filters/create-stat-filters.ts'])
     expect(r.e2e).toContain('price-check.spec.ts')
     expect(r.e2e).toContain('pseudo-split.spec.ts')
-    expect(r.e2e).not.toContain('loot-filter.spec.ts')
+    expect(r.e2e).not.toContain('wickerman-dock.spec.ts')
   })
 })
