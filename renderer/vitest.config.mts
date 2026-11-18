@@ -16,7 +16,7 @@ export default defineConfig({
       if (id.startsWith('/data/')) return path.resolve(__dirname, 'public' + id)
       // Images and other files the app serves from public/ (/images/...): only
       // `vitest related` (pull requests, ci-scope) reaches the pages using them.
-      if (id.startsWith('/') && !id.startsWith('//') && fs.existsSync(path.join(__dirname, 'public', id))) return path.join(__dirname, 'public', id)
+      if (/^\/[^/]/.test(id) && fs.statSync(path.join(__dirname, 'public', id), { throwIfNoEntry: false })?.isFile()) return path.join(__dirname, 'public', id)
     }
   }],
   resolve: {

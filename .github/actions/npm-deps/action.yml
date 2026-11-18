@@ -1,10 +1,13 @@
 name: npm dependencies
 description: >
   node_modules for renderer/, main/ and testing/, kept between runs by each
-  lockfile, so most jobs skip npm ci. main's install skips its scripts and
-  Electron's binary (the fake game and the type check don't need them); the
-  Windows package job installs main in full on its own. Run after checkout
-  and setup-node.
+  package.json and lockfile, so most jobs skip npm ci (a package.json out of
+  step with its lock misses the cache and fails npm ci, as before). main's
+  install skips its scripts and Electron's binary (the fake game and the type
+  check don't need them); the Windows package job installs main in full on
+  its own. Saved right after the install, so what a job adds later (Electron's
+  binary in game-checks) never lands in the cache. Run after checkout and
+  setup-node.
 inputs:
   dirs:
     description: Which to install, space-separated (renderer main testing)
@@ -14,33 +17,53 @@ runs:
   steps:
   - id: renderer
     if: contains(inputs.dirs, 'renderer')
-    uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
     with:
       path: renderer/node_modules
-      key: nm-renderer-${{ runner.os }}-node22-${{ hashFiles('renderer/package-lock.json') }}
+      key: nm-renderer-${{ runner.os }}-node22-${{ hashFiles('renderer/package.json', 'renderer/package-lock.json') }}
   - if: contains(inputs.dirs, 'renderer') && steps.renderer.outputs.cache-hit != 'true'
     run: npm ci
     shell: bash
     working-directory: ./renderer
+  - if: contains(inputs.dirs, 'renderer') && steps.renderer.outputs.cache-hit != 'true'
+    uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    continue-on-error: true
+    with:
+      path: renderer/node_modules
+      key: ${{ steps.renderer.outputs.cache-primary-key }}
+
   - id: main
     if: contains(inputs.dirs, 'main')
-    uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
     with:
       path: main/node_modules
-      key: nm-main-noscripts-${{ runner.os }}-node22-${{ hashFiles('main/package-lock.json') }}
+      key: nm-main-noscripts-${{ runner.os }}-node22-${{ hashFiles('main/package.json', 'main/package-lock.json') }}
   - if: contains(inputs.dirs, 'main') && steps.main.outputs.cache-hit != 'true'
     run: npm ci --ignore-scripts
     shell: bash
     working-directory: ./main
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  - if: contains(inputs.dirs, 'main') && steps.main.outputs.cache-hit != 'true'
+    uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    continue-on-error: true
+    with:
+      path: main/node_modules
+      key: ${{ steps.main.outputs.cache-primary-key }}
+
   - id: testing
     if: contains(inputs.dirs, 'testing')
-    uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
     with:
       path: testing/node_modules
-      key: nm-testing-${{ runner.os }}-node22-${{ hashFiles('testing/package-lock.json') }}
+      key: nm-testing-${{ runner.os }}-node22-${{ hashFiles('testing/package.json', 'testing/package-lock.json') }}
   - if: contains(inputs.dirs, 'testing') && steps.testing.outputs.cache-hit != 'true'
     run: npm ci
     shell: bash
     working-directory: ./testing
+  - if: contains(inputs.dirs, 'testing') && steps.testing.outputs.cache-hit != 'true'
+    uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    continue-on-error: true
+    with:
+      path: testing/node_modules
+      key: ${{ steps.testing.outputs.cache-primary-key }}

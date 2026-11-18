@@ -64,9 +64,12 @@ function Invoke-Local {
   $unitAll = $true; $unitFiles = @()
   $e2eAll = $true; $e2eSpecs = @()
   if (-not $Full) {
-    $files = @(& git -C $Root diff --name-only origin/master...HEAD) + @(& git -C $Root diff --name-only HEAD) + @(& git -C $Root ls-files --others --exclude-standard)
+    $branch = @(& git -C $Root diff --name-only origin/master...HEAD)
+    # No origin/master here (another remote name, a shallow clone): everything.
+    $traced = $LASTEXITCODE -eq 0
+    $files = $branch + @(& git -C $Root diff --name-only HEAD) + @(& git -C $Root ls-files --others --exclude-standard)
     $files = @($files | Where-Object { $_ } | Sort-Object -Unique)
-    if ($files.Count) {
+    if ($traced -and $files.Count) {
       $json = ($files -join "`n") | & node (Join-Path $Root 'testing\tools\ci-scope.mjs')
       if ($LASTEXITCODE -eq 0 -and $json) {
         $s = $json | ConvertFrom-Json
