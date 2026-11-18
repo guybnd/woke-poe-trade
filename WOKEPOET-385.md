@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-385
 title: 'F1-F3: fix the top e2e flakes'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -29,5 +29,46 @@ history:
       run-timeline/cluster/item-tip leaks fixed in #632 (pending CI); done when
       it merges.
     id: a-2026-11-18t15-58-03-396z
+  - type: comment
+    user: Agent
+    comment: >-
+      #632 (9998bb80) fixes item-copy-failed (leftover hovered item) and the
+      dock-card intercepts behind run-timeline, item-tip and cluster-type; #635
+      (3220b89f) fixes the rail drag swallowing a real click.
+    date: '2026-11-18T16:10:06.314Z'
+    completionComment: true
+    id: c-2026-11-18t16-10-06-314z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T16:10:06.314Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged via #632 (9998bb80) and #635 (3220b89f): top e2e flakes fixed at
+      the cause.
+    completionComment: true
+    date: '2026-11-18T16:10:12.560Z'
+    id: c-2026-11-18t16-10-12-560z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T16:10:12.814Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/632'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Retried in 69 CI runs: item-copy-failed.spec.ts:4 every run (3 s toast wait right after boot; guess: hotkey before overlay ready). run-timeline.spec.ts:55 (25) and :22 (15): likely reading runs before the save lands. cluster-type.spec.ts:8 rows (6), tab-rail.spec.ts:280 pinned drag (4 + 1 hard fail), item-tip.spec.ts:104 unique base (4 + 1 hard fail). Diagnose each before changing timeouts.
