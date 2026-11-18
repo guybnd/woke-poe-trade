@@ -7,7 +7,7 @@ import { ItemRarity, type ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
-import { exclude, fracturedOnlyIds, include, isFracturedOnly, isHybrid, looseBound, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, stashSearch, tierBound } from './pseudo-split'
+import { boundAt, exclude, fracturedOnlyIds, include, isFracturedOnly, isHybrid, looseBound, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, stashSearch, tierBound } from './pseudo-split'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import { poeOn } from './window-style'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
@@ -44,7 +44,10 @@ export interface StatActions {
   searchMod: (filter: StatFilter) => void
   /** Ticks this row alone. */
   searchOnly: (filter: StatFilter) => void
-  menu: (e: MouseEvent, filter: StatFilter) => void
+  /** Excludes the row, or includes it again (Alt + Click on its tick box). */
+  toggleExclude: (filter: StatFilter) => void
+  canExclude: (filter: StatFilter) => boolean
+  menu: (e: MouseEvent, filter: StatFilter) => Promise<void>
 }
 
 const KEY: InjectionKey<StatActions> = Symbol('woke-stat-actions')
@@ -235,9 +238,37 @@ export function provideStatActions (
     f.disabled = false
   }
 
+  const canExclude = (f: StatFilter) =>
+    f.tag === ModifierType.Explicit || f.tag === ModifierType.Fractured || f.tag === ModifierType.Crafted
+
+  function toggleExclude (f: StatFilter) {
+    if (!canExclude(f)) return
+    if (f.not) { include(f); return }
+    // "Items without it" means any copy, not just a fractured one.
+    setFracturedOnly(f, item.value, false)
+    exclude(f)
+  }
+
+  // Every tier of the row's mod; a click sets the min (or max) to that tier's worst roll.
+  function tiersMenu (at: { x: number, y: number, from?: Element | null }, f: StatFilter, steps: Array<{ tier: number, min: number, max: number }>, mine: number, setBound: (v: number) => void) {
+    const lowerBetter = f.roll?.better === -1
+    const items: MenuEntry[] = [{ separator: true, heading: lowerBetter ? 'Max from tier' : 'Min from tier' }]
+    for (const s of steps) {
+      const range = s.min === s.max ? `${s.min}` : `${s.min}–${s.max}`
+      items.push({ label: `T${s.tier}  ${range}`, checked: s.tier === mine, action: () => setBound(boundAt(f, s.min, s.max)) })
+    }
+    openMenu(at, items)
+  }
+
   // Grouped under small headings (Guy's pick B); on/off lines show a ✓.
   // Only the "Price as" lines search, one search each.
-  function menu (e: MouseEvent, f: StatFilter) {
+  async function menu (e: MouseEvent, f: StatFilter) {
+    const at = { x: e.clientX, y: e.clientY, from: e.target instanceof Element ? e.target : null }
+    // Loaded on the first right-click, not with the price check.
+    const [tiers, { setTickPref, tickPref }] = await Promise.all([import('./tier-ladder'), import('./tick-prefs')])
+    // The tiers' data, read once; the menu doesn't wait long for it.
+    const tierData = (f.roll && f.sources.length === 1) ? await tiers.tierDataSoon() : null
+    const ladder = tierData ? tiers.rowLadder(tierData, item.value, f) : null
     const items: MenuEntry[] = [{ separator: true, heading: 'Search' }]
     items.push({ label: 'Search only this', keys: 'Ctrl + Click', action: () => searchOnly(f) })
     // Not on a Harvest swap pick: the row searches the swap's ids then, and
@@ -250,17 +281,8 @@ export function provideStatActions (
       // the mod on its own row (one line per mod) and switch that row.
       items.push({ label: 'Fractured only', checked: false, action: () => fracturedViaSplit(f) })
     }
-    if (f.tag === ModifierType.Explicit || f.tag === ModifierType.Fractured || f.tag === ModifierType.Crafted) {
-      items.push({
-        label: 'Exclude it',
-        checked: f.not === true,
-        action: () => {
-          if (f.not) { include(f); return }
-          // "Items without it" means any copy, not just a fractured one.
-          setFracturedOnly(f, item.value, false)
-          exclude(f)
-        }
-      })
+    if (canExclude(f)) {
+      items.push({ label: 'Exclude it', keys: 'Alt + Click', checked: f.not === true, action: () => toggleExclude(f) })
     }
     const mod = soleMod(f)
     // PoE mode only: Standard hides the local rows such a search ticks.
@@ -289,9 +311,17 @@ export function provideStatActions (
       if (loose != null) {
         items.push({ label: `10% ${lowerBetter ? 'over' : 'under'} (${loose})`, action: () => setBound(loose) })
       }
+      if (ladder && ladder.mine > 1) {
+        const up = ladder.steps[ladder.mine - 2]
+        const v = boundAt(f, up.min, up.max)
+        items.push({ label: `Next tier up (T${up.tier}, ${v})`, action: () => setBound(v) })
+      }
       const tier = tierBound(f)
       if (tier != null) {
         items.push({ label: `${lowerBetter ? 'Top' : 'Bottom'} of tier (${tier})`, action: () => setBound(tier) })
+      }
+      if (ladder) {
+        items.push({ label: 'All tiers…', action: () => tiersMenu(at, f, ladder.steps, ladder.mine, setBound) })
       }
       items.push({ label: 'Clear min and max', action: () => { roll.min = ''; roll.max = '' } })
     }
@@ -310,6 +340,13 @@ export function provideStatActions (
       }
     }
 
+    if (!f.not) {
+      const pref = tickPref(f)
+      items.push({ separator: true, heading: 'Next price checks' })
+      items.push({ label: 'Always tick this', checked: pref === 'on', action: () => setTickPref(f, pref === 'on' ? undefined : 'on') })
+      items.push({ label: 'Never tick this', checked: pref === 'off', action: () => setTickPref(f, pref === 'off' ? undefined : 'off') })
+    }
+
     items.push({ separator: true, heading: 'Copy' })
     const copy = (text: string) => { copyText(text).then(ok => { if (ok) toast('Copied') }).catch(() => {}) }
     items.push({ label: 'Mod text', action: () => copy(rollText(f)) })
@@ -319,7 +356,7 @@ export function provideStatActions (
     openMenu(e, items)
   }
 
-  const actions: StatActions = { canSplit, isSplit, isChild, toggleSplit, hybridPart, searchMod, searchOnly, menu }
+  const actions: StatActions = { canSplit, isSplit, isChild, toggleSplit, hybridPart, searchMod, searchOnly, toggleExclude, canExclude, menu }
   provide(KEY, actions)
   return actions
 }

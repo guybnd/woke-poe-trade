@@ -273,11 +273,18 @@ export default defineComponent({
       props.filter.disabled = false
     }
 
+    function modClick (e: MouseEvent): boolean {
+      if (!actions || props.filter.group) return false
+      if (e.ctrlKey) { actions.searchOnly(props.filter); return true }
+      if (e.altKey && actions.canExclude(props.filter)) { actions.toggleExclude(props.filter); return true }
+      return false
+    }
+
     function toggleFilter (e: MouseEvent) {
       if (e.detail === 0) return
       e.preventDefault()
-      // woke: Ctrl + Click ticks this row alone (the right-click menu's Search only this).
-      if (e.ctrlKey && actions && !props.filter.group) { actions.searchOnly(props.filter); return }
+      // woke: Ctrl + Click ticks this row alone, Alt + Click excludes it (the right-click menu's lines).
+      if (modClick(e)) return
 
       props.filter.disabled = !props.filter.disabled
     }
@@ -289,7 +296,7 @@ export default defineComponent({
     function smartToggle (e: MouseEvent) {
       if (e.detail === 0) return
       e.preventDefault()
-      if (e.ctrlKey && actions && !props.filter.group) { actions.searchOnly(props.filter); return }
+      if (modClick(e)) return
 
       if (!props.filter.disabled && props.groupExpanded === true) {
         ctx.emit('update:groupExpanded', false)

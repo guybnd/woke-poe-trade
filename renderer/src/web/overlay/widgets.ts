@@ -58,6 +58,8 @@ export interface PriceCheckWidget extends Widget {
   builtinBrowser: boolean
   // woke: 'standard' is the window as it was; 'poe' (and unset) draws the filters like the game's tooltip (price-insight/window-style.ts).
   wokeWindowStyle?: 'standard' | 'poe'
+  // woke: the right-click menu's Always tick / Never tick, by row kind and stat (price-insight/tick-prefs.ts).
+  wokeTickPrefs?: Record<string, 'on' | 'off'>
 }
 
 export interface StopwatchWidget extends Widget {

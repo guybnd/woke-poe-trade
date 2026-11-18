@@ -267,7 +267,7 @@ export default defineComponent({
         // Typing in a min or max keeps the usual text menu.
         if ((e.target as HTMLElement).closest('input')) return
         e.preventDefault()
-        actions.menu(e, filter)
+        actions.menu(e, filter).catch(() => {})
       },
       statsVisibility,
       toggleAll,

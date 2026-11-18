@@ -107,6 +107,26 @@ export function pickAtTier (f: StatFilter) {
 
 /** The tier's worst roll, in the filter's own terms, for a filter from one tiered mod; else null.
  *  Uncatalysed, so copies without catalyst quality clear it too. */
+/** What one unit of the row's one mod counts for in the row: a pseudo total
+ *  counts its mod more than once (all resistances count three times). */
+export function shareScale (f: StatFilter): number {
+  const source = f.sources[0]
+  const scaled = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
+  const share = source.contributes
+  return (!share || !scaled)
+    ? 1
+    : (scaled.max !== 0) ? share.max / scaled.max : (scaled.min !== 0) ? share.min / scaled.min : 1
+}
+
+/** A tier's bound in the row's units, rounded the way that still clears every
+ *  copy at the tier: its worst roll, the max where lower is better. */
+export function boundAt (f: StatFilter, min: number, max: number): number {
+  const roll = f.roll!
+  const bound = Math.round((roll.better === -1 ? max : min) * shareScale(f) * 1e6) / 1e6
+  if (roll.dp) return bound
+  return roll.better === -1 ? Math.ceil(bound) : Math.floor(bound)
+}
+
 export function tierBound (f: StatFilter): number | null {
   const roll = f.roll
   // A property row (Attacks per Second, Energy Shield) is the item's number, not its mod's.
@@ -115,17 +135,7 @@ export function tierBound (f: StatFilter): number | null {
   if (source.modifier.info.tier == null) return null
   const tier = source.stat.roll
   if (!tier) return null
-  // A pseudo total counts its mod more than once (all resistances count three
-  // times): scale by its share of the total, as rollWithoutCatalyst does.
-  const scaled = (applyIncr(source.modifier.info, source.stat) ?? source.stat).roll
-  const share = source.contributes
-  const multi = (!share || !scaled)
-    ? 1
-    : (scaled.max !== 0) ? share.max / scaled.max : (scaled.min !== 0) ? share.min / scaled.min : 1
-  const bound = Math.round((roll.better === -1 ? tier.max : tier.min) * multi * 1e6) / 1e6
-  if (roll.dp) return bound
-  // Rounded the way that still clears every copy at the tier.
-  return roll.better === -1 ? Math.ceil(bound) : Math.floor(bound)
+  return boundAt(f, tier.min, tier.max)
 }
 
 // What a row was before Exclude it, put back by Include it again.

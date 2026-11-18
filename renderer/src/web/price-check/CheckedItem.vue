@@ -129,6 +129,7 @@ import FilterName from './filters/FilterName.vue'
 import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
+import { applyTickPrefs } from '@/web/woke/price-insight/tick-prefs'
 import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
@@ -253,6 +254,10 @@ export default defineComponent({
           item.info.refName === prevItem.info.refName
         ) ? prevCurrency : widget.value.defaultCurrency
       })
+      // woke: the right-click menu's Always tick / Never tick (price-insight/tick-prefs.ts).
+      for (const p of presets.value.presets) {
+        if (p.id !== 'filters.preset_bulk') applyTickPrefs(p.stats)
+      }
 
       if ((!props.advancedCheck && !widget.value.smartInitialSearch) ||
           (props.advancedCheck && !widget.value.lockedInitialSearch)) {
