@@ -112,7 +112,7 @@ const TABLE: DropEntry[] = [
   { name: 'Iron Ring', cls: 'Rings', w: 1, h: 1, drop: 1, weight: 2, gear: true },
   { name: 'Coral Amulet', cls: 'Amulets', w: 1, h: 1, drop: 1, weight: 2, gear: true },
   { name: 'Leather Belt', cls: 'Belts', w: 2, h: 1, drop: 8, weight: 2, gear: true },
-  { name: 'Saintly Chainmail', cls: 'Body Armours', w: 2, h: 3, drop: 35, weight: 2, max: 72, gear: true },
+  { name: 'Holy Chainmail', cls: 'Body Armours', w: 2, h: 3, drop: 35, weight: 2, max: 72, gear: true },
   { name: 'Vaal Regalia', cls: 'Body Armours', w: 2, h: 3, drop: 68, weight: 2, gear: true },
   { name: 'Astral Plate', cls: 'Body Armours', w: 2, h: 3, drop: 62, weight: 2, gear: true },
   { name: 'Glorious Plate', cls: 'Body Armours', w: 2, h: 3, drop: 68, weight: 2, gear: true },
@@ -156,6 +156,22 @@ const TABLE: DropEntry[] = [
   { name: 'Plate Vest', cls: 'Body Armours', w: 2, h: 3, drop: 1, weight: 0.5, rarity: 'Unique' }
 ]
 
+// The game's own DropLevel of a base, when it has one.
+function baseDropLevel (e: DropEntry): number | undefined {
+  return e.gear || e.rarity === 'Unique' ? BASE_FACTS[e.name]?.[0] : undefined
+}
+
+// The lowest area a row drops in: never below its base's DropLevel, which the
+// game never drops under.
+function firstArea (e: DropEntry): number {
+  return Math.max(e.drop, baseDropLevel(e) ?? 0)
+}
+
+// Each row's area window and its DropLevel, for the tests.
+export function dropWindows (): Array<{ name: string, from: number, to: number | undefined, dropLevel: number }> {
+  return TABLE.filter(e => !e.map).map(e => ({ name: e.name, from: firstArea(e), to: e.max, dropLevel: baseDropLevel(e) ?? e.drop }))
+}
+
 // Every item the table can drop, with the game data namespace it's in.
 export function tableNames (): Array<{ name: string, ns: 'ITEM' | 'GEM' | 'DIVINATION_CARD' }> {
   return TABLE.filter(e => !e.map).map(e => ({ name: e.name, ns: e.gem ? 'GEM' : e.cls === DIV ? 'DIVINATION_CARD' : 'ITEM' }))
@@ -196,7 +212,7 @@ function sockets (r: () => number, e: DropEntry): string[] | undefined {
 // `count` drops for an area level, the same pile for the same seed.
 export function rollDrops (areaLevel: number, seed: number, count = 60): Drop[] {
   const r = rng(seed * 7919 + areaLevel)
-  const pool = TABLE.filter(e => areaLevel >= e.drop && (e.max == null || areaLevel <= e.max))
+  const pool = TABLE.filter(e => areaLevel >= firstArea(e) && (e.max == null || areaLevel <= e.max))
   const total = pool.reduce((s, e) => s + e.weight, 0)
   const out: Drop[] = []
   for (let i = 0; i < count; i++) {
@@ -251,7 +267,7 @@ function makeDrop (id: number, e: DropEntry, areaLevel: number, r: () => number)
     rarity: e.rarity ?? 'Normal',
     itemLevel: areaLevel,
     // The game's own DropLevel for a base; the area it starts in otherwise.
-    dropLevel: (e.gear || e.rarity === 'Unique' ? BASE_FACTS[e.name]?.[0] : undefined) ?? e.drop,
+    dropLevel: baseDropLevel(e) ?? e.drop,
     width: e.w,
     height: e.h,
     identified: false,

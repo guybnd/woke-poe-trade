@@ -2,7 +2,7 @@
 // preview's drop table, the safety net and NeverSink 8.21's real filter.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { ITEM_BY_REF } from '@/assets/data'
-import { everyDrop, rollDrops, tableNames, THREADS } from '@/web/woke/loot-filter/drops'
+import { dropWindows, everyDrop, rollDrops, tableNames, THREADS } from '@/web/woke/loot-filter/drops'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import { auditBases, safetyBases, safetyBlocks, stackNet, SAFETY_RULE_TYPE } from '@/web/woke/loot-filter/safety'
@@ -66,6 +66,16 @@ describe('the preview drop table', () => {
     const vise = everyDrop(83).find(d => d.facts.baseType === 'Stygian Vise')!
     expect(vise.facts.dropLevel).toBe(1)
     expect(everyDrop(83).find(d => d.facts.baseType === 'Simplex Amulet')!.facts.dropLevel).toBe(80)
+  })
+
+  it('never drops a base below its own DropLevel', () => {
+    expect(dropWindows().filter(w => w.from < w.dropLevel).map(w => w.name)).toEqual([])
+    // Every row can still drop somewhere.
+    expect(dropWindows().filter(w => w.to != null && w.to < w.from).map(w => w.name)).toEqual([])
+    for (const area of [1, 8, 20, 40, 60, 69, 83]) {
+      const under = rollDrops(area, 11, 5000).filter(d => (d.facts.dropLevel ?? 0) > area && d.facts.mapTier == null)
+      expect(under.map(d => d.facts.baseType), `area ${area}`).toEqual([])
+    }
   })
 
   it('drops a magic or rare Stygian Vise at item tier 5 only, which NeverSink shows', () => {
