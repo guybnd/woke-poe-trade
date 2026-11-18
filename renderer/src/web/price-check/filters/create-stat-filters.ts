@@ -15,6 +15,8 @@ import { applyHeistRules } from './pseudo/heist'
 import { filterTimelessJewelKeystones } from './pseudo/timeless-jewel'
 import { decodeOils, applyAnointmentRules } from './pseudo/anointments'
 import { addClusterResPseudo } from './pseudo/cluster-res'
+import { markClusterSpots } from '@/web/woke/cluster-type/spots'
+import { clusterSizeOf } from '@/web/woke/cluster-type/apply'
 import { StatBetter } from '@/assets/data'
 
 export interface FiltersCreationContext {
@@ -603,6 +605,9 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
   if (item.category === ItemCategory.ClusterJewel && item.rarity !== ItemRarity.Unique) {
     applyClusterJewelRules(ctx.filters, false)
     addClusterResPseudo(ctx.filters, item, ctx.searchInRange)
+    // woke: front / back on each notable (WOKEPOET-367).
+    const size = clusterSizeOf(item.info.refName)
+    if (size) markClusterSpots(ctx.filters, size)
   } else if (item.category === ItemCategory.Flask) {
     applyFlaskRules(ctx.filters)
     applyFlaskHybridMod(ctx)

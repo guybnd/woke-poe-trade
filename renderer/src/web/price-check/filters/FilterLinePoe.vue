@@ -19,6 +19,7 @@
     </button>
     <!-- A local line's own mod, once split out of the line two mods add up to. -->
     <span v-if="modName" class="w-poe-modname">{{ modName }}</span>
+    <cluster-spot-tag :filter="filter" />
     <!-- The catalyst's Q tag, as on the picked row: it switches the catalyst quality filter, not the line. -->
     <button v-if="qTag != null" type="button" data-catalyst-tag
       class="w-poe-qtag" :class="{ on: qOn }"
@@ -37,6 +38,7 @@ import EldritchMark from '@/web/woke/price-insight/EldritchMark.vue'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { rollPair } from '@/web/woke/price-insight/roll-pair'
 import { INTERNAL_TRADE_IDS, StatFilter } from './interfaces'
+import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
 
 const props = defineProps<{ filter: StatFilter }>()
 const { t } = useI18n()

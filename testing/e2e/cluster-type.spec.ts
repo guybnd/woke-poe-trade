@@ -64,3 +64,40 @@ test(`a cluster jewel title picks a size and type, typed or clicked, and only Se
   expect(searches.length).toBe(before + 1)
 })
 }
+
+const DUAL = `Item Class: Jewels
+Rarity: Rare
+Grim Spark
+Large Cluster Jewel
+--------
+Requirements:
+Level: 54
+--------
+Item Level: 84
+--------
+Adds 8 Passive Skills (enchant)
+2 Added Passive Skills are Jewel Sockets (enchant)
+Added Small Passive Skills grant: 12% increased Attack Damage while Dual Wielding (enchant)
+--------
+{ Prefix Modifier "Insatiable Killer" (Tier: 1) }
+1 Added Passive Skill is Insatiable Killer
+{ Prefix Modifier "Combat Rhythm" (Tier: 1) }
+1 Added Passive Skill is Combat Rhythm
+{ Suffix Modifier "Heavy Hitter" (Tier: 1) }
+1 Added Passive Skill is Heavy Hitter
+--------
+Place into an allocated Large Jewel Socket on the Passive Skill Tree. Added passives do not interact with jewel radiuses. Right click to remove from the Socket.`
+
+for (const style of ['rows', 'poe'] as const) {
+  test(`each notable says where it sits on the jewel, front first (${style})`, async ({ overlay }) => {
+    await overlay.boot({
+      patch: (config: any) => { config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle = style }
+    })
+    await overlay.copyItem(DUAL)
+    const panel = overlay.widget('price-check')
+    const tags = panel.locator('[data-cluster-spot]')
+    await expect(tags).toHaveText(['front · 2 pts', 'front · 2 pts', 'back · 5 pts'])
+    await expect(panel.getByText('Insatiable Killer').last()).toBeVisible()
+    await overlay.snap(`cluster-spots-${style}`)
+  })
+}

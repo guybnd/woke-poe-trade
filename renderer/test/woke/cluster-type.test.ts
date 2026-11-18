@@ -6,6 +6,7 @@ import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { applyClusterType, clusterTypes, currentType, matchTypes, ownType, pickedSize } from '@/web/woke/cluster-type/apply'
+import { clusterSpots } from '@/web/woke/cluster-type/spots'
 
 // vi.mock is hoisted above the imports.
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
@@ -117,5 +118,29 @@ describe('cluster jewel type picker', () => {
     applyClusterType(preset.filters, preset.stats, 'Small', 'Small', type('Small', 'Life'))
     applyClusterType(preset.filters, preset.stats, 'Small', 'Small', own)
     expect(JSON.stringify(createTradeRequest(preset.filters, preset.stats))).toBe(before)
+  })
+})
+
+describe('cluster notable spots', () => {
+  beforeAll(loadGameData)
+
+  it('lays a Large jewel out as PoB does: two notables in front, one at the back', () => {
+    const spots = clusterSpots('Large', 8, 2, ['Insatiable Killer', 'Combat Rhythm', 'Heavy Hitter'])
+    expect(spots.get('Combat Rhythm')).toEqual({ points: 2, side: 'front' })
+    expect(spots.get('Heavy Hitter')).toEqual({ points: 2, side: 'front' })
+    expect(spots.get('Insatiable Killer')).toEqual({ points: 5, side: 'back' })
+  })
+
+  it('a single notable gets its points and no side; unknown names are skipped', () => {
+    const one = clusterSpots('Medium', 5, 1, ['Blowback', 'Not A Notable'])
+    expect([...one.keys()]).toEqual(['Blowback'])
+    expect(one.get('Blowback')!.side).toBeNull()
+    expect(one.get('Blowback')!.points).toBeGreaterThan(1)
+  })
+
+  it('marks the copied jewel\'s notable rows', () => {
+    const { rows } = setup()
+    const blowback = rows().find(s => s.statRef === '1 Added Passive Skill is Blowback')!
+    expect(blowback.clusterSpot).toEqual(expect.objectContaining({ side: null }))
   })
 })

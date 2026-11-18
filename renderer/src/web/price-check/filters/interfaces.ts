@@ -185,6 +185,8 @@ export interface StatFilter {
     tradeId: string[]
     roll?: { min: number | '' | undefined, max: number | '' | undefined }
   }
+  /** woke: a cluster jewel notable's place on the jewel (cluster-type/spots.ts). */
+  clusterSpot?: { points: number, side: 'front' | 'middle' | 'back' | null }
   disabled: boolean // NOTE: mutable in UI
 }
 
