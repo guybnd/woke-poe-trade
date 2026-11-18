@@ -4,7 +4,7 @@
       <span :class="$style.part">
         <span :class="$style.word">{{ g.label }}</span>
         <template v-if="g.exact"><NumBox :check="g.exact" :spec="g.spec" @set="emitSet" /></template>
-        <template v-else-if="g.lo && g.hi"><NumBox :check="g.lo" :spec="g.spec" @set="emitSet" /><span>–</span><NumBox :check="g.hi" :spec="g.spec" @set="emitSet" /></template>
+        <template v-else-if="g.lo && g.hi"><NumBox :check="g.lo" :spec="g.spec" :hi="g.hi.value" @set="emitSet" /><span>–</span><NumBox :check="g.hi" :spec="g.spec" :lo="g.lo.value" @set="emitSet" /></template>
         <template v-else-if="g.lo"><NumBox :check="g.lo" :spec="g.spec" @set="emitSet" /><span>+</span></template>
         <template v-else-if="g.hi"><span :class="$style.word">up to</span><NumBox :check="g.hi" :spec="g.spec" @set="emitSet" /></template>
       </span>
@@ -45,14 +45,15 @@ const BOUND_WORDS: Record<NumberBound, string> = { min: 'lowest', max: 'highest'
 
 // One number box. Enter or leaving it commits; Esc puts it back.
 const NumBox = defineComponent({
-  props: { check: { type: Object as PropType<NumberCheck>, required: true }, spec: { type: Object as PropType<NumberSpec>, required: true } },
+  // lo / hi: the other end of a range, which this box can't pass.
+  props: { check: { type: Object as PropType<NumberCheck>, required: true }, spec: { type: Object as PropType<NumberSpec>, required: true }, lo: { type: Number, default: null }, hi: { type: Number, default: null } },
   emits: ['set'],
   setup (p, { emit: e }) {
     function commit (ev: Event) {
       const input = ev.target as HTMLInputElement
       const n = Math.round(Number(input.value))
       if (input.value.trim() === '' || !Number.isFinite(n)) { input.value = String(p.check.value); return }
-      const v = Math.min(p.spec.max, Math.max(p.spec.min, n))
+      const v = Math.min(p.hi ?? p.spec.max, p.spec.max, Math.max(p.lo ?? p.spec.min, p.spec.min, n))
       input.value = String(v)
       if (v !== p.check.value) e('set', p.check, v)
     }

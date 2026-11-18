@@ -36,7 +36,7 @@ export const NUMBER_KEYS: Record<string, NumberSpec> = {
 // One condition as a bound on its number, or null when it isn't one: a list
 // ("== 1 16"), a "!=", a key we don't edit.
 export function boundOf (c: FilterCondition): NumberBound | null {
-  if (!NUMBER_KEYS[c.key] || c.count != null || c.values.length !== 1 || !/^-?\d+$/.test(c.values[0])) return null
+  if (!Object.hasOwn(NUMBER_KEYS, c.key) || c.count != null || c.values.length !== 1 || !/^-?\d+$/.test(c.values[0])) return null
   switch (c.op) {
     case '>=': case '>': return 'min'
     case '<=': case '<': return 'max'

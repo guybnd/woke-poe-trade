@@ -203,7 +203,7 @@
               <span class="text-sm">{{ NUMBER_KEYS[c.key].label }}</span>
               <WSelect :model-value="c.bound" :options="BOUND_OPTIONS" :aria-label="`${NUMBER_KEYS[c.key].label}: how it compares`" @update:model-value="changeBound(tier, c.key, c.bound, c.value, $event as NumberBound)" />
               <input class="w-input w-num" type="number" :class="$style.stackInput" :min="NUMBER_KEYS[c.key].min" :max="NUMBER_KEYS[c.key].max" :value="c.value" :aria-label="NUMBER_KEYS[c.key].label"
-                @keydown.enter="($event.target as HTMLInputElement).blur()" @change="onNumberField(tier, c.key, c.bound, c.value, $event)">
+                @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc.stop="resetField($event, c.value)" @change="onNumberField(tier, c.key, c.bound, c.value, $event)">
               <button type="button" class="w-icon-btn w-focusable" :title="`Stop checking ${NUMBER_KEYS[c.key].label.toLowerCase()} here`" :aria-label="`Stop checking ${NUMBER_KEYS[c.key].label.toLowerCase()}`" @click="setNumber(tier, c.key, c.bound, null)"><i aria-hidden="true" class="fas fa-times" /></button>
             </div>
             <WSelect model-value="" :options="addNumberOptions" aria-label="Add a number to check" style="max-width: 14rem;" @update:model-value="addNumber(tier, $event)" />
@@ -683,14 +683,15 @@ function rowConditions (t: TierNode): string {
   // Rules listed with their numbers up front: those and, under a heading for
   // its items, the item names aren't said twice.
   const row = lad.value.rows.find(r => r.tiers.includes(t))
-  const skip = !lad.value.axis && hasNumbers.value
+  const skip = !lad.value.axis && hasNumbers.value && numbersEditable(t)
     ? (c: FilterCondition) => boundOf(c) != null || (Boolean(row?.section) && c.key === 'BaseType')
     : undefined
   return distinctWords(t, sharedConds.value, lad.value.axis, skip).join(' · ')
 }
 
 // The group's rules differ by numbers (passives, item level): rows lead with them.
-const hasNumbers = computed(() => !isOwnGroup.value && !isSwitchGroup.value && lad.value.rows.some(r => numberChecks(firstLive(r.tiers[0]).conditions).length > 0))
+// Your own rules and the safety net (woke->) hold copies and keep their words.
+const hasNumbers = computed(() => !isOwnGroup.value && !selType.value?.startsWith('woke->') && !isSwitchGroup.value && lad.value.rows.some(r => numberChecks(firstLive(r.tiers[0]).conditions).length > 0))
 
 // Your own rules and the safety net hold copies: those change with what made them.
 function numbersEditable (t: TierNode, orGroup = false): boolean {
@@ -722,13 +723,27 @@ function addNumber (t: TierNode, key: string) {
 function changeBound (t: TierNode, key: string, from: NumberBound, value: number, to: NumberBound) {
   const type = selType.value
   if (from === to || !type) return
+  const label = NUMBER_KEYS[key].label
+  // Already has that bound: one rule can't say "at most" twice.
+  if (numberChecks(firstLive(t).conditions).some(c => c.key === key && c.bound === to)) {
+    toast(`${label} already has an "${BOUND_OPTIONS.find(o => o.value === to)!.label}" here: change or remove that one`, { anchor: panel.value?.el })
+    return
+  }
+  const dropsRange = to === 'exact' && numberChecks(firstLive(t).conditions).filter(c => c.key === key).length > 1
   const undo = props.store.changeWithUndo(c => {
     c.edits = c.edits.filter(e => !(e.kind === 'number' && e.type === type && e.tier === t.tier && e.key === key && (e.bound === from || e.bound === to)))
     const src = (b: NumberBound) => props.store.sourceNumber(type, t.tier, key, b)
     if (src(from) != null) c.edits = addEdit(c.edits, { id: nextEditId(), kind: 'number', type, tier: t.tier, key, bound: from, value: null })
     if (src(to) !== value) c.edits = addEdit(c.edits, { id: nextEditId(), kind: 'number', type, tier: t.tier, key, bound: to, value })
   })
-  toast(`${NUMBER_KEYS[key].label}: ${BOUND_OPTIONS.find(o => o.value === to)!.label} ${value}`, { anchor: panel.value?.el, undo })
+  toast(`${label}: ${BOUND_OPTIONS.find(o => o.value === to)!.label} ${value}${dropsRange ? ', in place of the range' : ''}`, { anchor: panel.value?.el, undo })
+}
+
+// Esc puts the field back and leaves it, without closing the editor.
+function resetField (e: Event, was: number) {
+  const input = e.target as HTMLInputElement
+  input.value = String(was)
+  input.blur()
 }
 
 function onNumberField (t: TierNode, key: string, bound: NumberBound, was: number, e: Event) {
@@ -751,7 +766,18 @@ function catchAllText (r: { tiers: TierNode[], section: string | null }): string
 function setNumber (t: TierNode, key: string, bound: NumberBound, value: number | null) {
   const type = selType.value
   if (!type || type.startsWith('woke->')) return
-  const now = numberChecks(firstLive(t).conditions).find(c => c.key === key && c.bound === bound)?.value ?? null
+  const checks = numberChecks(firstLive(t).conditions)
+  const now = checks.find(c => c.key === key && c.bound === bound)?.value ?? null
+  // A lowest above the highest (or the other way) catches nothing: stop at the other end.
+  const lo = checks.find(c => c.key === key && c.bound === 'min')?.value
+  const hi = checks.find(c => c.key === key && c.bound === 'max')?.value
+  if (value != null && bound === 'min' && hi != null && value > hi) {
+    value = hi
+    toast(`${NUMBER_KEYS[key].label} can't start above ${hi}, where this rule stops`, { anchor: panel.value?.el })
+  } else if (value != null && bound === 'max' && lo != null && value < lo) {
+    value = lo
+    toast(`${NUMBER_KEYS[key].label} can't stop below ${lo}, where this rule starts`, { anchor: panel.value?.el })
+  }
   if (now === value) return
   const mine = props.config.edits.find(e => e.kind === 'number' && e.type === type && e.tier === t.tier && e.key === key && e.bound === bound)
   if (mine && props.store.sourceNumber(type, t.tier, key, bound) === value) props.store.removeEdit(mine.id)

@@ -61,6 +61,7 @@ describe('the number edit', () => {
     expect(isValidEdit(edit({ value: null } as Partial<FilterEdit>))).toBe(true)
     expect(isValidEdit(edit({ value: 40 } as Partial<FilterEdit>))).toBe(false)
     expect(isValidEdit(edit({ key: 'StackSize' } as Partial<FilterEdit>))).toBe(false)
+    expect(isValidEdit(edit({ key: 'constructor', value: null } as Partial<FilterEdit>))).toBe(false)
     expect(isValidEdit(edit({ bound: 'less' } as unknown as Partial<FilterEdit>))).toBe(false)
   })
 
@@ -90,6 +91,16 @@ describe('cluster jewels in the editor', () => {
     expect(l.axis).toBeNull()
     expect(l.specials).toEqual([])
     expect([...new Set(l.rows.map(r => r.section))]).toEqual(['Large Cluster Jewel', 'Medium Cluster Jewel', 'Small Cluster Jewel'])
+  })
+
+  it('lists by numbers only the groups that two numbers split', () => {
+    const groups = buildTree(parseFilter(neverSink('2-SEMI-STRICT'))).flatMap(x => x.groups)
+    const listed = groups.filter(g => g.tiers.length > 1 && buildLadder(g.tiers).axis == null && buildLadder(g.tiers.filter(t => !t.blocks[0].continue)).rows.length > 1)
+      .map(g => g.type)
+    // Gems by quality and the hide layer by area level keep their order: the
+    // second number sits on a few of their rules only.
+    for (const kept of ['maps', 'gems->generic', 'crafting->qualityperfection', 'hidelayer']) expect(listed).not.toContain(kept)
+    for (const two of ['jewels->cluster', 'jewels->clustereco', 'endgameflasks', 'leveling->weaponprogression']) expect(listed).toContain(two)
   })
 
   it('keeps one order where one number does', () => {

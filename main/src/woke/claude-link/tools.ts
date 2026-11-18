@@ -439,13 +439,13 @@ export function buildTools (deps: LinkDeps): ToolDef[] {
     },
     {
       name: 'suggest_filter_change',
-      description: 'Adds a loot filter change to the Suggestions card; Apply adds it to the app\'s loot filter and saves. edit is one editor change keyed by NeverSink tags, e.g. { "kind": "visibility", "type": "currency", "tier": "t5", "visibility": "Hide" }, { "kind": "move", "type": "currency", "base": "Orb of Alchemy", "from": "t4", "to": "t3" }, or { "kind": "stack", "type": "currency->stackedthree", "tier": "t5", "size": 3 }.',
+      description: 'Adds a loot filter change to the Suggestions card; Apply adds it to the app\'s loot filter and saves. edit is one editor change keyed by NeverSink tags, e.g. { "kind": "visibility", "type": "currency", "tier": "t5", "visibility": "Hide" }, { "kind": "move", "type": "currency", "base": "Orb of Alchemy", "from": "t4", "to": "t3" }, { "kind": "stack", "type": "currency->stackedthree", "tier": "t5", "size": 3 }, or { "kind": "number", "type": "jewels->cluster", "tier": "highlarge", "key": "EnchantmentPassiveNum", "bound": "max", "value": 8 } (bound min | max | exact, value null removes it).',
       inputSchema: {
         type: 'object',
         properties: {
           title: { type: 'string' },
           why: { type: 'string' },
-          edit: { type: 'object', description: 'kind: move | visibility | stack | group | style | item; type: NeverSink $type tag; plus the fields of that kind' }
+          edit: { type: 'object', description: 'kind: move | visibility | stack | number | group | style | item; type: NeverSink $type tag; plus the fields of that kind' }
         },
         required: ['title', 'edit']
       },

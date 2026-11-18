@@ -7,7 +7,7 @@ export const MAX_SUGGESTIONS = 100
 // More open rows than this and Claude is told to wait.
 export const MAX_OPEN = 20
 
-const FILTER_KINDS = new Set(['move', 'style', 'visibility', 'group', 'stack', 'item'])
+const FILTER_KINDS = new Set(['move', 'style', 'visibility', 'group', 'stack', 'number', 'item'])
 
 function text (v: unknown, field: string, max: number, required = true): string {
   if (v == null || v === '') {

@@ -7,7 +7,7 @@ import { readStyle } from './edits'
 import type { Colour, StylePatch } from './edits'
 import type { FilterBlock, FilterCondition } from './parse'
 import type { TierNode } from './groups'
-import { NUMBER_KEYS, boundOf } from './numbers'
+import { boundOf } from './numbers'
 
 export interface Range { lo: number, hi: number }
 
@@ -174,22 +174,20 @@ function isSpan (c: FilterCondition): boolean {
   return nums[nums.length - 1] - nums[0] === nums.length - 1
 }
 
-// Number keys whose bounds differ between these tiers.
+// Number keys whose bounds differ between these tiers, and that at least half
+// of them check: one odd rule with an area level is a detail, not a second order.
 function varyingNumbers (tiers: TierNode[]): string[] {
-  const seen = new Map<string, Set<string>>()
-  for (const t of tiers) {
+  const sigs = tiers.map(t => {
     const sig = new Map<string, string[]>()
-    for (const c of live(t).conditions) {
-      if (!NUMBER_KEYS[c.key] || !boundOf(c)) continue
-      sig.set(c.key, [...(sig.get(c.key) ?? []), `${c.op}${c.values[0]}`])
-    }
-    for (const key of Object.keys(NUMBER_KEYS)) {
-      let s = seen.get(key)
-      if (!s) seen.set(key, s = new Set())
-      s.add((sig.get(key) ?? []).sort().join(','))
-    }
-  }
-  return [...seen].filter(([, s]) => s.size > 1).map(([k]) => k)
+    for (const c of live(t).conditions) if (boundOf(c)) sig.set(c.key, [...(sig.get(c.key) ?? []), `${c.op}${c.values[0]}`])
+    return sig
+  })
+  const keys = new Set(sigs.flatMap(s => [...s.keys()]))
+  return [...keys].filter(k => {
+    const checking = sigs.filter(s => s.has(k)).length
+    const spans = new Set(sigs.map(s => (s.get(k) ?? []).sort().join(',')))
+    return spans.size > 1 && checking * 2 >= tiers.length
+  })
 }
 
 // One order works when tiers differ by one number (map tier, quality). When

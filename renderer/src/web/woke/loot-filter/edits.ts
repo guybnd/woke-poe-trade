@@ -99,7 +99,7 @@ export function isValidEdit (e: unknown): e is FilterEdit {
     case 'stack': return str('tier') && typeof x.size === 'number' && Number.isInteger(x.size) && x.size > 0 && x.size <= STACK_MAX
     case 'item': return str('tier', 'base') && VISIBILITIES.includes(x.visibility as string) && isPatch(x.patch)
     case 'number': {
-      const spec = typeof x.key === 'string' ? NUMBER_KEYS[x.key] : undefined
+      const spec = typeof x.key === 'string' && Object.hasOwn(NUMBER_KEYS, x.key) ? NUMBER_KEYS[x.key] : undefined
       return str('tier') && spec != null && ['min', 'max', 'exact'].includes(x.bound as string) &&
         (x.value === null || (typeof x.value === 'number' && Number.isInteger(x.value) && x.value >= spec.min && x.value <= spec.max))
     }
