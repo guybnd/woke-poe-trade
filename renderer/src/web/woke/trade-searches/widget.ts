@@ -1,5 +1,6 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
+import { cleanPath, isUnder } from '../shared/saved-tree'
 
 export { groupByCategory } from '../shared/library'
 
@@ -66,6 +67,19 @@ export const FOLDER_ICONS: string[] = [
 
 export function folderOf (entry: TradeSearchEntry): string {
   return entry.category.trim() || UNCATEGORIZED
+}
+
+// The searches in a folder and every folder under it (a build's Trades tab).
+// `sub` is the path below `folder`, '' for the folder itself.
+export function searchesIn (entries: readonly TradeSearchEntry[], folder: string): Array<{ entry: TradeSearchEntry, sub: string }> {
+  const root = cleanPath(folder)
+  if (!root) return []
+  const out: Array<{ entry: TradeSearchEntry, sub: string }> = []
+  for (const entry of entries) {
+    const path = cleanPath(folderOf(entry))
+    if (isUnder(path, root)) out.push({ entry, sub: path.slice(root.length + 1) })
+  }
+  return out
 }
 
 // Folders in rail order: the user's order first, then any others by name.

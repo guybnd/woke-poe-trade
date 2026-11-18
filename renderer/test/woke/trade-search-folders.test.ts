@@ -91,3 +91,23 @@ describe('views and sort', () => {
     expect(pinnedFirst(sortEntries(list, 'name')).map(e => e.id)).toEqual([2, 3, 1])
   })
 })
+
+describe('a build\'s Trades tab', () => {
+  it('lists the linked folder and every folder under it, with the path below it', async () => {
+    const { searchesIn } = await import('@/web/woke/trade-searches/widget')
+    const list = [
+      entry(1, 'boots', 'Build X'),
+      entry(2, 'ring', 'Build X/Jewellery'),
+      entry(3, 'abyss', 'Build X/Jewellery/Abyss'),
+      entry(4, 'other', 'Build X2'),
+      entry(5, 'loose', ''),
+      entry(6, 'untidy', ' Build X / Gear ')
+    ]
+    expect(searchesIn(list, 'Build X').map(f => [f.entry.id, f.sub])).toEqual([
+      [1, ''], [2, 'Jewellery'], [3, 'Jewellery/Abyss'], [6, 'Gear']
+    ])
+    expect(searchesIn(list, 'Build X/Jewellery').map(f => f.entry.id)).toEqual([2, 3])
+    expect(searchesIn(list, UNCATEGORIZED).map(f => f.entry.id)).toEqual([5])
+    expect(searchesIn(list, '')).toEqual([])
+  })
+})

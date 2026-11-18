@@ -10,12 +10,13 @@
         <button type="button" :class="$style.open" class="w-focusable" :title="`Open ${e.name || 'this search'} in the trade window`" @click="open(e, 'overlay')">
           <i v-if="e.pinned" class="fas fa-thumbtack text-xs w-faint" />
           <span class="w-trunc">{{ e.name || 'Untitled search' }}</span>
+          <span v-if="subOf.get(e.id)" class="w-faint text-xs w-trunc" :class="$style.sub" :title="`In ${folder}/${subOf.get(e.id)}`"><i class="fas fa-folder" /> {{ subOf.get(e.id) }}</span>
           <span class="ml-auto w-faint text-xs whitespace-nowrap">{{ agoPhrase(e.lastOpened) }}</span>
         </button>
         <button type="button" class="w-icon-btn" title="Open in your browser" @click="open(e, 'external')"><i class="fas fa-external-link-alt" /></button>
       </div>
       <WEmpty v-if="!list.length" icon="fas fa-folder-open">
-        No searches in {{ folder }} yet. Save one from the price check into this folder.
+        No searches in {{ folder }} or its folders yet. Save one from the price check into this folder.
       </WEmpty>
     </template>
     <WEmpty v-else icon="fas fa-link">
@@ -32,7 +33,7 @@ import { computed } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import { MainProcess } from '@/web/background/IPC'
 import { WButton, WEmpty, WSelect, agoPhrase, openMenu } from '../ui'
-import { TRADE_SEARCHES_TYPE, ensureFolder, folderNames, folderOf, hotkeyTarget, pinnedFirst, sortEntries } from '../trade-searches/widget'
+import { TRADE_SEARCHES_TYPE, ensureFolder, folderNames, hotkeyTarget, pinnedFirst, searchesIn, sortEntries } from '../trade-searches/widget'
 import type { TradeSearchEntry, TradeSearchesWidget } from '../trade-searches/widget'
 import type { PobBuildEntry, PobBuildsWidget } from './widget'
 
@@ -50,11 +51,13 @@ const folderOptions = computed(() => [
   ...(searches.value ? folderNames(searches.value) : []).map(n => ({ value: n, label: n }))
 ])
 
-const list = computed(() => {
+// The linked folder and every folder under it.
+const found = computed(() => {
   const w = searches.value
-  if (!w || !folder.value) return []
-  return pinnedFirst(sortEntries(w.entries.filter(e => folderOf(e) === folder.value), 'opened'))
+  return w && folder.value ? searchesIn(w.entries, folder.value) : []
 })
+const list = computed(() => pinnedFirst(sortEntries(found.value.map(f => f.entry), 'opened')))
+const subOf = computed(() => new Map(found.value.map(f => [f.entry.id, f.sub])))
 
 function link (name: string) {
   const rest = Object.fromEntries(Object.entries(props.config.tradeFolders ?? {}).filter(([rel]) => rel !== props.entry.relPath))
@@ -93,5 +96,6 @@ function rowMenu (ev: MouseEvent, e: TradeSearchEntry) {
   border-bottom: 1px solid var(--w-line-soft);
 }
 .row:hover { background: var(--w-accent-soft); }
+.sub { flex-shrink: 1; max-width: 40%; }
 .open { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; padding: 5px 4px; text-align: left; }
 </style>
