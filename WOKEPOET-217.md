@@ -60,9 +60,21 @@ history:
       items opening in their tools. Two adversarial reviews, fixes in, local
       checks pass. Handed to coordinator for merge. Untried in app.
     id: a-2026-11-18t07-05-57-107z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:19:13.378Z'
+    comment: Updated implementation link.
+    id: a-2026-11-18t07-19-13-378z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:19:14.088Z'
+    comment: >-
+      Maybes merged as #611 (ac9cc166): zone cards, Pantheon, saved items.
+      https://github.com/guybnd/woke-poe-trade/pull/611
+    id: a-2026-11-18t07-19-14-088z
 needsAction: null
 baselineCommit: 4cf5d0ff7c5caef33fd34897ba841c262fe72169
-implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/401'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/611'
 swimlane: null
 diffSummary:
   - file: scripts/upstream-data.mjs
