@@ -14,6 +14,17 @@ history:
     user: Agent
     date: '2026-11-18T10:00:08.739Z'
     comment: Created ticket.
+    id: a-2026-11-18t10-00-08-739z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T10:02:52.779Z'
+    comment: >-
+      Mocks and picks page for Guy:
+      https://claude.ai/artifact/7cDTZMXj5YkjCqk2UYTW9U (build source, where it
+      lives, list layout, count default, full tag list, notes). Picks land in
+      its db under picks/* and notes/main. Waiting on Guy; don't build until he
+      picks.
+    id: a-2026-11-18t10-02-52-779z
 ---
 Guy's ask (2026-11-18): a "Megalomaniac searcher" that suggests a trade search for the Megalomaniac notables relevant to his build.
 
