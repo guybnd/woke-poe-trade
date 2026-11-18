@@ -22,6 +22,22 @@ history:
       Mockups for Guy's picks: https://claude.ai/artifact/Q5BRTNyyaz4HX6d4LFXcJ5
       (picks in its db at picks/current).
     id: a-2026-11-18t11-24-14-332z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T11:27:31.059Z'
+    comment: Updated tags.
+    id: a-2026-11-18t11-27-31-059z
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy's picks (2026-11-18): layout A (one list per size, rules in words),
+      edit numbers in row AND side panel, M (merge price + fallback cluster
+      groups into one page), scope All number-keyed groups, P (passive types
+      priced live from poe.ninja, pinnable).
+    date: '2026-11-18T11:27:32.120Z'
+    selfAttested: true
+    pin: true
+    id: c-2026-11-18t11-27-32-120z
 ---
 Guy found Jewels > Cluster in the tier editor very hard to read: "Show from: enchantment passive num", tier names cut off, empty "Also needs", struck-through specials.
 
