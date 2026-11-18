@@ -127,3 +127,28 @@ describe('poe.ninja note with no listings', () => {
     expect(fits.points[0].note).toBe('Average of recent listings across the league')
   })
 })
+
+describe('normal cluster jewels', () => {
+  beforeAll(loadGameData)
+
+  const cluster = (rarity: string, ilvl: number) => fixture('items/rare-cluster-large.txt')
+    .replace('Rarity: Rare\nHavoc Spark\n', `Rarity: ${rarity}\n`)
+    .replace('Item Level: 84', `Item Level: ${ilvl}`)
+    .split('\n--------\n{ Prefix')[0] + '\n'
+
+  it('look up their enchant, passive count and item level band', () => {
+    expect(getDetailsId(parseItem(cluster('Normal', 84)))).toEqual({ ns: 'ITEM', name: '12% increased Fire Damage', variant: '8 passives, 84' })
+    expect(getDetailsId(parseItem(cluster('Normal', 72)))?.variant).toBe('8 passives, 68')
+  })
+
+  it('join a two-line enchant in the game\'s order', () => {
+    const text = cluster('Normal', 50).replace(
+      'Added Small Passive Skills grant: 12% increased Fire Damage (enchant)',
+      'Added Small Passive Skills grant: 12% increased Damage with Bows (enchant)\nAdded Small Passive Skills grant: 12% increased Damage Over Time with Bow Skills (enchant)')
+    expect(getDetailsId(parseItem(text))?.name).toBe('12% increased Damage with Bows, 12% increased Damage Over Time with Bow Skills')
+  })
+
+  it('leave rare ones alone', () => {
+    expect(getDetailsId(parseItem(fixture('items/rare-cluster-large.txt')))?.name).toBe('Large Cluster Jewel')
+  })
+})

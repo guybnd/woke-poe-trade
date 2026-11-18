@@ -49,6 +49,9 @@ export function getDetailsId (item: ParsedItem) {
       variant: floorToBracket(item.itemLevel!, [1, 70, 80, 84]).toString()
     }
   }
+  if (item.category === ItemCategory.ClusterJewel && item.rarity === ItemRarity.Normal) {
+    return forClusterJewel(item)
+  }
   // woke: poe.ninja prices Wombgifts by item level ("Ancient Wombgift", "40").
   if (item.info.refName.endsWith(' Wombgift') && item.itemLevel) {
     return {
@@ -65,6 +68,31 @@ export function getDetailsId (item: ParsedItem) {
 }
 
 const WOMBGIFT_LEVELS = [40, 68, 75, 84]
+
+// woke: a normal cluster jewel's row is its enchant ("12% increased Fire
+// Damage", two lines joined by ", " in the game's order) and "8 passives, 84":
+// passive count and item level band.
+const CLUSTER_LEVELS = [1, 50, 68, 75, 84]
+const CLUSTER_PASSIVES = /^Adds (\d+) Passive Skills? \(enchant\)$/
+const CLUSTER_GRANT = /^Added Small Passive Skills grant: (.+) \(enchant\)$/
+
+function forClusterJewel (item: ParsedItem) {
+  if (!item.itemLevel) return
+  let passives: string | undefined
+  const grants: string[] = []
+  for (const line of item.rawText.split(/\r?\n/)) {
+    const count = CLUSTER_PASSIVES.exec(line)
+    if (count) passives = count[1]
+    const grant = CLUSTER_GRANT.exec(line)
+    if (grant) grants.push(grant[1])
+  }
+  if (!passives || !grants.length) return
+  return {
+    ns: item.info.namespace,
+    name: grants.join(', '),
+    variant: `${passives} passives, ${floorToBracket(item.itemLevel, CLUSTER_LEVELS)}`
+  }
+}
 
 // poe.ninja lists double influence in this order: "83, Shaper/Elder".
 const INFLUENCE_ORDER = ['Shaper', 'Elder', 'Crusader', 'Redeemer', 'Warlord', 'Hunter']
