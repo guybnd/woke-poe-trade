@@ -1,0 +1,57 @@
+name: Fake-game setup
+description: >
+  Everything the fake-game jobs share: the overlay built, main's code
+  installed without Electron or native hooks (the fake game replaces them),
+  the testing package, the OCR files and Chromium. Run after checkout and
+  setup-node.
+runs:
+  using: composite
+  steps:
+  - run: npm ci
+    shell: bash
+    working-directory: ./renderer
+  - name: Build the overlay
+    run: npx vite build
+    shell: bash
+    working-directory: ./renderer
+  # main's code runs in the fake app with Electron and the native hooks
+  # replaced by the fake game, so their install scripts are skipped.
+  - run: npm ci --ignore-scripts
+    shell: bash
+    working-directory: ./main
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  - run: npm ci
+    shell: bash
+    working-directory: ./testing
+  - name: Cache OCR files
+    uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    with:
+      path: testing/.cache/cv-ocr
+      key: cv-ocr-v3.20.10007
+  - name: Get OCR files (opencv + tesseract, from APT's release)
+    run: npm run get:ocr
+    shell: bash
+    working-directory: ./testing
+  # Ubuntu's mirrors sometimes crawl (8.5 minutes for 22 MB), so Chromium's system
+  # packages are kept between runs. Any that changed are downloaded as usual.
+  - name: Cache Chromium's system packages
+    uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    with:
+      path: ~/apt-debs
+      key: apt-debs-${{ runner.os }}-${{ hashFiles('testing/package-lock.json') }}
+      restore-keys: apt-debs-${{ runner.os }}-
+  - name: Install Chromium
+    shell: bash
+    run: |
+      mkdir -p ~/apt-debs
+      sudo cp ~/apt-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+      echo "Packages from the cache: $(ls ~/apt-debs | wc -l)"
+      npx playwright install --with-deps chromium
+      cp /var/cache/apt/archives/*.deb ~/apt-debs/ 2>/dev/null || true
+      echo "Packages to keep: $(ls ~/apt-debs | wc -l)"
+    working-directory: ./testing
+  - name: Build the fake app
+    run: npm run build:host
+    shell: bash
+    working-directory: ./testing
