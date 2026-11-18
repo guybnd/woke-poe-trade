@@ -8,6 +8,8 @@ import { ModifierType } from '@/parser/modifiers'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
 import { loadModTiers, tierClassKey, tierLadder } from '@/web/woke/ui/tooltip/mod-tiers'
+import { onSharedDataChange } from '@/web/woke/app/live-data'
+import { isHybrid } from './pseudo-split'
 import type { LadderStep, TierData } from '@/web/woke/ui/tooltip/mod-tiers'
 import type { TipBase } from '@/web/woke/ui/tooltip/tip-content'
 
@@ -18,6 +20,8 @@ export interface RowLadder {
 }
 
 let data: TierData | null = null
+// A newer download is read on the next right-click.
+onSharedDataChange(() => { data = null })
 
 /** The tier data, waiting at most a moment for its first read: the menu opens
  *  without tiers rather than late. */
@@ -39,11 +43,12 @@ export function rowLadder (d: TierData, item: ParsedItem, f: StatFilter): RowLad
   const { modifier, stat } = f.sources[0]
   const type = modifier.info.type
   if (type !== ModifierType.Explicit && type !== ModifierType.Fractured) return null
-  if (modifier.info.tier == null || !stat.roll) return null
+  // One half of a hybrid has its own tiers, which the data lists only as whole hybrids.
+  if (modifier.info.tier == null || !stat.roll || isHybrid(modifier)) return null
   // One number per line: an "Adds # to #" roll is an average, not a tier's range.
   const text = template(stat.translation.string)
   if ((text.match(/#/g) ?? []).length !== 1) return null
-  const base: TipBase = { ar: item.armourAR ? [1, 1] : undefined, ev: item.armourEV ? [1, 1] : undefined, es: item.armourES ? [1, 1] : undefined } as TipBase
+  const base: TipBase = { ar: item.armourAR ? [1, 1] : undefined, ev: item.armourEV ? [1, 1] : undefined, es: item.armourES ? [1, 1] : undefined, wd: item.armourWARD ? [1, 1] : undefined }
   const key = tierClassKey(item.category, base)
   if (!key) return null
   const ladder = tierLadder(d, key, text, stat.roll.value, modifier.info.generation)

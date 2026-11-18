@@ -3,7 +3,7 @@
 // and laid over every new price check's ticks. It changes only what the first
 // search looks for; it never searches by itself.
 
-import { AppConfig, saveConfig } from '@/web/Config'
+import { AppConfig, saveConfigQuietly } from '@/web/Config'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 
@@ -30,18 +30,21 @@ export function setTickPref (f: StatFilter, pref: TickPref | undefined) {
   if (pref) prefs[key] = pref
   w.wokeTickPrefs = prefs
   if (pref) f.disabled = (pref === 'off')
-  saveConfig()
+  // Quietly: the price check is an exclusive window, and saveConfig waits
+  // until no such window shows.
+  saveConfigQuietly()
 }
 
 /** Ticks or unticks every row with a remembered choice. Excluded rows keep
- *  their tick: their tick is the exclusion. */
+ *  their tick (it is the exclusion); rows the price check keeps off on purpose
+ *  stay off: a local line its total already counts, a hidden row. */
 export function applyTickPrefs (stats: FilterOrGroup[]) {
   const prefs = widget()?.wokeTickPrefs
   if (!prefs) return
   for (const s of stats) {
     if ('group' in s && s.group) continue
     const f = s as StatFilter
-    if (f.not) continue
+    if (f.not || f.inTotal || f.hidden) continue
     const pref = prefs[tickKey(f)]
     if (pref) f.disabled = (pref === 'off')
   }
