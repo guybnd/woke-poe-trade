@@ -9,6 +9,7 @@ import type { PriceLookup, UniqueRule } from './economy'
 
 import { uniquesOnBase } from '../shared/uniques-on-base'
 import { loadTipDrops } from '../ui/tooltip/item-tip'
+import { onSharedDataChange } from '../app/live-data'
 import { randomDropsOnBase } from './random-drops'
 import type { TipPack } from '../ui/tooltip/tip-content'
 
@@ -18,12 +19,23 @@ export function useFilterPrices (rule: () => UniqueRule) {
   const index = usePriceIndex()
   const ninja = usePoeninja()
   const currentLeague = useLeagues().selectedId
+  // The wiki drop data. The prices wait for it, so the filter isn't written
+  // once with every unique and again without; a failed load counts every one.
   const drops = shallowRef<TipPack['drops'] | null>(null)
-  loadTipDrops().then(d => { drops.value = d }).catch(() => {})
+  const dropsReady = shallowRef(false)
+  function loadDrops () {
+    loadTipDrops().catch(() => null).then(d => {
+      drops.value = d
+      dropsReady.value = true
+    })
+  }
+  loadDrops()
+  // New data from GitHub, or a load that failed: try again.
+  onSharedDataChange(loadDrops)
   const randomOnBase = computed(() => randomDropsOnBase(drops.value))
   const lookup = computed<PriceLookup | null>(() => {
     const snap = index.snapshot.value
-    if (!snap?.items.length) return null
+    if (!snap?.items.length || !dropsReady.value) return null
     return priceLookup(snap.items, randomOnBase.value, rule())
   })
   // What this snapshot has at all: a type it lacks isn't priced at zero.
@@ -31,13 +43,11 @@ export function useFilterPrices (rule: () => UniqueRule) {
   // Never follows the "cheapest unique" setting: see safetyLookup.
   const safety = computed<PriceLookup | null>(() => {
     const snap = index.snapshot.value
-    if (!snap?.items.length) return null
+    if (!snap?.items.length || !dropsReady.value) return null
     return safetyLookup(snap.items, randomOnBase.value)
   })
   // Every unique on the base, for lists that show them all (Alt+F, tooltips).
   const breakdown = computed(() => priceBreakdown(index.snapshot.value?.items ?? [], uniquesOnBase))
-  // Only the random drops, for what the filter decides (hiding cheap bases).
-  const dropBreakdown = computed(() => priceBreakdown(index.snapshot.value?.items ?? [], randomOnBase.value))
   const items = computed(() => index.snapshot.value?.items ?? [])
   const updatedAt = computed(() => index.snapshot.value?.ts ?? null)
   const league = computed(() => index.snapshot.value?.league ?? null)
@@ -46,5 +56,5 @@ export function useFilterPrices (rule: () => UniqueRule) {
   function wantPrices () {
     try { ninja.queuePricesFetch() } catch {}
   }
-  return { lookup, safety, pricedTypes, currentLeague, breakdown, dropBreakdown, items, updatedAt, league, divine, wantPrices }
+  return { lookup, safety, pricedTypes, currentLeague, breakdown, items, updatedAt, league, divine, wantPrices }
 }

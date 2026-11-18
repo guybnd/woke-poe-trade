@@ -31,4 +31,11 @@ describe('the filter prices a unique base by its random drops', () => {
     }
     expect(safetyLookup(items, uniquesOnBase)(group, 'Topaz Ring')?.chaos).toBe(20000)
   })
+  it('leaves a base whose uniques are all restricted unpriced, so it keeps its NeverSink tier', () => {
+    const base = 'Steel Ring'
+    const names = uniquesOnBase(base)
+    expect(names.length).toBeGreaterThan(0)
+    expect(randomDropsOnBase(drops)(base)).toEqual([])
+    expect(safetyLookup(names.map(n => item(n, 500)), randomDropsOnBase(drops))(group, base)).toBeNull()
+  })
 })
