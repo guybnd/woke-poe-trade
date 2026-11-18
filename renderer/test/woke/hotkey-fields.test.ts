@@ -1,11 +1,11 @@
 // The Hotkeys page and the clash warnings list every key the app registers.
 import { describe, expect, it, vi } from 'vitest'
-
-// Config pulls in every window; the code under test only needs a stand-in.
-vi.mock('@/web/Config', () => ({ AppConfig: () => ({ widgets: [] }), saveConfig: () => {}, pushHostConfig: () => {} }))
 import { fieldKey, hotkeyFields, hotkeyUses } from '@/web/woke/settings/hotkey-fields'
 import { normalizeKey } from '@/web/woke/ui/hotkey-context'
 import type { Config } from '@/web/Config'
+
+// Config pulls in every window; the code under test only needs a stand-in.
+vi.mock('@/web/Config', () => ({ AppConfig: () => ({ widgets: [] }), saveConfig: () => {}, pushHostConfig: () => {} }))
 
 function config (widgets: Array<Record<string, unknown>>): Config {
   return {
