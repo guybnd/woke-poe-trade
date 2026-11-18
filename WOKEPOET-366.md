@@ -24,6 +24,14 @@ history:
     date: '2026-11-18T04:10:52.042Z'
     selfAttested: true
     id: c-2026-11-18t04-10-52-042z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T04:35:12.784Z'
+    comment: >-
+      Built C on branch woke/cluster-type (59ac354d): title picker with size
+      tabs + type-to-filter, review fixes in. Checks green (lint, tsc, 4434
+      unit, build, e2e). Handed to coordinator for merge.
+    id: a-2026-11-18t04-35-12-784z
 ---
 > **TL;DR:** On a cluster jewel price check, a dropdown swaps the enchant type (e.g. Attack Damage while Dual Wielding → Spell Damage) so Guy can price a different cluster of the same size. Mocks first, Guy picks.
 
