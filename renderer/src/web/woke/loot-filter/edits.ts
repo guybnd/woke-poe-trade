@@ -181,6 +181,12 @@ export function applyStyle (block: FilterBlock, patch: StylePatch): void {
   }
   block.actions = actions
   block.dirty = true
+  // Taken off on purpose while hidden: showing the rule again mustn't bring it back.
+  const m = muted.get(block)
+  if (m) {
+    const off = [patch.sound === null && 'sound', patch.effect === null && 'PlayEffect', patch.icon === null && 'MinimapIcon'].filter(Boolean)
+    if (off.length) m.removed = m.removed.filter(a => !off.includes(slotOf(a.key)))
+  }
 }
 
 const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
@@ -219,7 +225,8 @@ function setVisibility (block: FilterBlock, visibility: Visibility): void {
   const wasHidden = block.visibility === 'Hide'
   block.visibility = visibility
   if (visibility === 'Hide') silence(block)
-  else if (wasHidden) unsilence(block)
+  // Minimal (Ruthless) stays quiet, as before.
+  else if (wasHidden && visibility === 'Show') unsilence(block)
   block.dirty = true
 }
 

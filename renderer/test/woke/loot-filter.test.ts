@@ -183,6 +183,22 @@ describe('hiding a whole group, then showing one tier of it', () => {
     expect(loud(t1(doc).actions)).toEqual(['MinimapIcon', 'PlayAlertSound', 'PlayEffect'])
   })
 
+  it('a beam or sound you took off stays off when the tier shows again', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(doc, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'style', type: 'currency', tier: 't1exalted', patch: { effect: null, sound: null } },
+      { id: 3, kind: 'visibility', type: 'currency', tier: 't1exalted', visibility: 'Show' }
+    ])
+    expect(loud(t1(doc).actions)).toEqual(['MinimapIcon'])
+    const own = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(own, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'item', type: 'currency', tier: 't1exalted', base: 'Divine Orb', visibility: 'Show', patch: { sound: null, icon: null } }
+    ])
+    expect(loud(own.blocks.find(b => b.type === 'woke->own')!.actions)).toEqual(['PlayEffect'])
+  })
+
   it('an own rule that shows one item of the hidden group gets the look too', () => {
     const doc = parseFilter(neverSink('1-REGULAR'))
     applyEdits(doc, [
