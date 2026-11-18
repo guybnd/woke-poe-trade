@@ -14,6 +14,15 @@ history:
     user: Agent
     date: '2026-11-18T07:37:17.317Z'
     comment: Created ticket.
+    id: a-2026-11-18t07-37-17-317z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:44:57.188Z'
+    comment: >-
+      Mocks A/B/C posted for Guy's pick:
+      https://claude.ai/artifact/WxrTzDuLUGY9LBgT5J1ddN (B recommended, building
+      B). Branch woke/drop-restricted, worktree E:\Git\woke\wt\drop-restricted.
+    id: a-2026-11-18t07-44-57-188z
 ---
 Guy (2026-11-18): on the Alt+F "Can drop as" list (#549), chip uniques that can't drop from random monsters (boss-only, league mechanic, vendor recipe / div card, Vaal transform, drop-disabled), so it's easier to decide whether to show or hide the base. Same info in the base hover tooltip under "Items in this tier" in the tier editor.
 
