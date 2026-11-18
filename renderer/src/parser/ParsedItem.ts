@@ -73,6 +73,8 @@ export interface ParsedItem {
   // 3.30 Wickerman trophies: the Wickerman slot the item text names.
   visceraSlot?: VisceraSlot
   memoryStrands?: number
+  /** woke: the experience a Facetor's Lens holds. */
+  storedExperience?: number
   quality?: number
   sockets?: {
     linked?: number // only 5 or 6

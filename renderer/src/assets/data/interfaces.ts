@@ -152,6 +152,8 @@ export interface TranslationDict {
   SOCKETS: string
   QUALITY: string
   MEMORY_STRANDS: string
+  /** woke: Facetor's Lens. English only until the other languages' text is known. */
+  STORED_EXPERIENCE?: string
   PHYSICAL_DAMAGE: string
   ELEMENTAL_DAMAGE: string
   CRIT_CHANCE: string

@@ -195,6 +195,7 @@ const _INTERNAL_TRADE_IDS = [
   'item.count_one_group',
   'item.base_percentile',
   'item.memory_strands',
+  'item.stored_experience',
   'item.armour',
   'item.evasion_rating',
   'item.energy_shield',

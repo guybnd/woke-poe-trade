@@ -43,6 +43,22 @@ export function filterMemoryStrands (ctx: FiltersCreationContext, hidden?: strin
   }
 }
 
+// woke: Facetor's Lens. Read in millions: "Stored Experience: 512.34M". Rounded
+// down, so the default search never asks for more than the lens holds.
+export function filterStoredExperience (ctx: FiltersCreationContext) {
+  if (ctx.item.storedExperience != null) {
+    const millions = Math.floor(ctx.item.storedExperience / 1e4) / 100
+    ctx.filters.push(propToFilter({
+      ref: 'Stored Experience: #M',
+      tradeId: 'item.stored_experience',
+      roll: { min: 0, max: millions, value: millions },
+      dp: true,
+      sources: [],
+      disabled: false
+    }, ctx))
+  }
+}
+
 export const ARMOUR_STATS = new Set<string>([
   ...QUALITY_STATS.ARMOUR.flat,
   ...QUALITY_STATS.EVASION.flat,
