@@ -6,7 +6,7 @@ import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { applyClusterType, clusterTypes, currentType, matchTypes, ownType, pickedSize } from '@/web/woke/cluster-type/apply'
-import { clusterSpots } from '@/web/woke/cluster-type/spots'
+import { clusterSpots, markClusterSpots } from '@/web/woke/cluster-type/spots'
 
 // vi.mock is hoisted above the imports.
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
@@ -136,6 +136,15 @@ describe('cluster notable spots', () => {
     expect([...one.keys()]).toEqual(['Blowback'])
     expect(one.get('Blowback')!.side).toBeNull()
     expect(one.get('Blowback')!.points).toBeGreaterThan(1)
+  })
+
+  it('puts no tags on a jewel with a notable the tree data doesn\'t know', () => {
+    const rows = [
+      { statRef: '1 Added Passive Skill is Combat Rhythm' },
+      { statRef: '1 Added Passive Skill is Brand New Notable' }
+    ] as StatFilter[]
+    markClusterSpots(rows, 'Large')
+    expect(rows.every(r => r.clusterSpot == null)).toBe(true)
   })
 
   it('marks the copied jewel\'s notable rows', () => {

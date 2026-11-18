@@ -29,5 +29,6 @@ const label = computed(() => {
   text-transform: none;
 }
 .w-cspot.front { color: var(--w-up, #8fbf6a); border-color: color-mix(in srgb, var(--w-up, #8fbf6a) 40%, transparent); }
+.w-cspot.middle { color: var(--w-fg); }
 .w-cspot.back { color: #e0a060; border-color: rgba(224, 160, 96, .4); }
 </style>

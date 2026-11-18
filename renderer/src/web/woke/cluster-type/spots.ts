@@ -100,10 +100,11 @@ const PASSIVES = 'Adds # Passive Skills'
 export function markClusterSpots (filters: FilterOrGroup[], size: ClusterSize): void {
   const rows = filters.filter((s): s is StatFilter => !('group' in s && s.group))
   const nodeCount = rows.find(s => s.statRef === PASSIVES)?.roll?.value ?? null
-  const sockets = rows.find(s => s.statRef === '# Added Passive Skills are Jewel Sockets')?.roll?.value ??
-    (rows.some(s => s.statRef === '1 Added Passive Skill is a Jewel Socket') ? 1 : 0)
-  const notableRows = rows.filter(s => s.statRef.startsWith(NOTABLE) && ORDER.has(s.statRef.slice(NOTABLE.length)))
-  if (!notableRows.length) return
+  // "1 Added Passive Skill is a Jewel Socket" parses onto this row too, as 1.
+  const sockets = rows.find(s => s.statRef === '# Added Passive Skills are Jewel Sockets')?.roll?.value ?? 0
+  const notableRows = rows.filter(s => s.statRef.startsWith(NOTABLE))
+  // A notable the tree data doesn't know (a new league's) shifts every slot: no tags beat wrong ones.
+  if (!notableRows.length || notableRows.some(s => !ORDER.has(s.statRef.slice(NOTABLE.length)))) return
   const spots = clusterSpots(size, nodeCount, sockets, notableRows.map(s => s.statRef.slice(NOTABLE.length)))
   for (const s of notableRows) {
     const spot = spots.get(s.statRef.slice(NOTABLE.length))
