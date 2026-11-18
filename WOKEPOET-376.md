@@ -14,6 +14,15 @@ history:
     user: Agent
     date: '2026-11-18T11:24:08.955Z'
     comment: Created ticket.
+    id: a-2026-11-18t11-24-08-955z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T11:26:34.951Z'
+    comment: >-
+      Mocks A/B/C with pick buttons sent to Guy:
+      https://claude.ai/artifact/PYHSvx6zzXCq1rF5EhMe42 (picks in its db at
+      picks/current). Recommended A.
+    id: a-2026-11-18t11-26-34-951z
 ---
 Guy: "move the stacked deck session analytics section into its own tab from here too".
 
