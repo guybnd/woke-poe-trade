@@ -23,6 +23,12 @@ history:
       https://claude.ai/artifact/PYHSvx6zzXCq1rF5EhMe42 (picks in its db at
       picks/current). Recommended A.
     id: a-2026-11-18t11-26-34-951z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T12:00:56.006Z'
+    comment: Updated implementation link.
+    id: a-2026-11-18t12-00-56-006z
+implementationLink: woke/deck-tabs
 ---
 Guy: "move the stacked deck session analytics section into its own tab from here too".
 
