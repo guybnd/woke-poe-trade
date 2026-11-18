@@ -205,3 +205,32 @@ export function tierOfLine (data: TierData, key: string, line: string): ModTier 
     gen: hit.gen === 1 ? 'prefix' : 'suffix'
   }
 }
+
+export interface LadderStep {
+  tier: number
+  min: number
+  max: number
+}
+
+/** Every tier of a one-number mod line on this class, best first, and which of
+ *  them the value sits in. Only plain mods (not one half of a hybrid) of the
+ *  given prefix/suffix kind. Null when the data has no such line. */
+export function tierLadder (data: TierData, key: string, template: string, value: number, gen: 'prefix' | 'suffix' | undefined): { steps: LadderStep[], mine: number } | null {
+  const lines = linesFor(data, key)
+  if (!lines) return null
+  const g = gen === 'prefix' ? 1 : gen === 'suffix' ? 2 : 0
+  const options = (lines.get(template) ?? []).filter(e => e.whole && e.ranges.length === 1 && (!g || e.gen === g))
+  const v = Math.abs(value)
+  const hit = options.filter(e => v >= e.ranges[0][0] && v <= e.ranges[0][1]).sort((a, b) => b.level - a.level)[0]
+  if (!hit) return null
+  const family = options.filter(e => e.family === hit.family && e.gen === hit.gen).sort((a, b) => b.level - a.level)
+  const steps: LadderStep[] = []
+  let mine = 0
+  for (const e of family) {
+    // Two mods at one level share a tier, as tierOfLine counts them.
+    if (steps.length && family[family.indexOf(e) - 1].level === e.level) continue
+    steps.push({ tier: steps.length + 1, min: e.ranges[0][0], max: e.ranges[0][1] })
+    if (e === hit || (e.level === hit.level)) mine = steps.length
+  }
+  return { steps, mine }
+}

@@ -156,6 +156,14 @@ export function planClusterRules (doc: FilterDoc, prices: ClusterPrice[], s: Clu
       priceOf.set(p.node, Math.max(priceOf.get(p.node) ?? 0, p.chaos))
     }
     const nodes = new Set<string>()
+    // No usable price for this rule at all (a band poe.ninja hasn't priced,
+    // only thin listings, a league's first days): that isn't "worth nothing",
+    // so NeverSink's own list stands, with your picks on it.
+    if (!priceOf.size) {
+      for (const node of block.conditions.find(c => c.key === 'EnchantmentPassiveNode')?.values ?? []) {
+        if (!s.pins[`${key.size}|${node}`]) nodes.add(node)
+      }
+    }
     // t2 lists t1's types too, as NeverSink does: a top rule you turn off
     // leaves its types to the good one, not to the plain cluster rules.
     for (const [node, chaos] of priceOf) {

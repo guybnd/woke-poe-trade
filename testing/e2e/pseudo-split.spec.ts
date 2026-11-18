@@ -25,7 +25,9 @@ test('the Pseudo chip splits a total into its mods and folds them back', async (
 
   // Right-click offers the row's actions, including the swap.
   await fireRow.click({ button: 'right' })
-  await expect(overlay.page.getByText('Price as Cold')).toBeVisible()
+  const menu = overlay.page.getByRole('menu')
+  await expect(menu.getByText('Price as', { exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: /^Cold/ })).toBeVisible()
   await expect(overlay.page.getByText('Search only this')).toBeVisible()
   await overlay.snap('pseudo-split-menu')
   await overlay.page.keyboard.press('Escape')

@@ -1,6 +1,6 @@
 // The stash reader for players: hidden until Economy is clicked 5 times, asks
 // before turning on, and comes and goes at runtime without a restart.
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { createSSRApp, h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
@@ -141,6 +141,10 @@ describe('turn-on confirm', () => {
 })
 
 describe('stash reader on and off at runtime', () => {
+  // Turning it on loads Net worth's chunk, a cold transform that can take
+  // longer than a test's 20 s on a busy machine, and every test after depends
+  // on that one. Load it here, with time to spare.
+  beforeAll(async () => { await import('@/web/woke/net-worth/enable') }, 120_000)
   beforeEach(() => { host.calls.length = 0 })
 
   it('loads nothing for a player who never turned it on', async () => {
@@ -182,6 +186,8 @@ describe('stash reader on and off at runtime', () => {
     expect(hasModule()).toBe(false)
   })
 
+  // Two server renders of the settings list: about 2 s alone, past 20 s with
+  // every core busy, and the tests after it build on this one.
   it('unlocking shows the row; turning on adds the module, widget and page right away', async () => {
     await personal.setExperimentalUnlocked(true)
     expect(personal.experimentalUnlocked.value).toBe(true)
@@ -212,7 +218,7 @@ describe('stash reader on and off at runtime', () => {
     expect(on).toContain(COPY.warnTitle)
     // Its own row, not a second plain module row.
     expect(on.match(/aria-label="Net worth"/g)).toHaveLength(1)
-  })
+  }, 60_000)
 
   it('turning off removes it all, keeps the placed widget off, and on again brings it back', async () => {
     await personal.setStashReaderOn(false)

@@ -61,7 +61,10 @@ export function provideSwap (item: Ref<ParsedItem>, filters: Ref<ItemFilters>, s
   const detectCode = shallowRef<typeof import('./detect') | null>(null)
   import('./detect').then(code => { detectCode.value = code }).catch(() => { /* no markers: the price check works as before */ })
   const candidates = computed(() => (enabled.value && detectCode.value)
+    // Not a fractured-only row: a swap search would mix its fractured id with
+    // the other elements' any-copy ids.
     ? detectCode.value.detectSwaps(item.value, stats.value, config.value)
+        .filter(c => !c.filter.tradeId[0]?.startsWith('fractured.'))
     : [])
   const runs = reactive(new Map<StatFilter, SwapRun>())
   const view = ref<'results' | 'flip'>('results')

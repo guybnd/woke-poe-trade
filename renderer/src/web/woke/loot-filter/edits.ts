@@ -181,18 +181,52 @@ export function applyStyle (block: FilterBlock, patch: StylePatch): void {
   }
   block.actions = actions
   block.dirty = true
+  // Taken off on purpose while hidden: showing the rule again mustn't bring it back.
+  const m = muted.get(block)
+  if (m) {
+    const off = [patch.sound === null && 'sound', patch.effect === null && 'PlayEffect', patch.icon === null && 'MinimapIcon'].filter(Boolean)
+    if (off.length) m.removed = m.removed.filter(a => !off.includes(slotOf(a.key)))
+  }
 }
+
+const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
+const LOUD_KEYS = [...SOUND_KEYS, 'PlayEffect', 'MinimapIcon']
+// One alert sound per rule: any of the sound keys stands for all of them.
+const slotOf = (key: string) => SOUND_KEYS.includes(key) ? 'sound' : key
+
+// What hiding took off a rule, so showing it again in the same pass gives it
+// back: "Hide whole group", then "Show this tier", must not leave the top tier
+// silent with no beam or map icon.
+const muted = new WeakMap<FilterBlock, { removed: FilterAction[], addedDisable: boolean }>()
 
 // A hidden drop shouldn't still beam, ping or show on the minimap.
 function silence (block: FilterBlock): void {
-  block.actions = block.actions.filter(a => !['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional', 'PlayEffect', 'MinimapIcon'].includes(a.key))
-  if (!block.actions.some(a => a.key === 'DisableDropSound')) block.actions.push({ key: 'DisableDropSound', args: ['True'] })
+  const removed = block.actions.filter(a => LOUD_KEYS.includes(a.key))
+  block.actions = block.actions.filter(a => !LOUD_KEYS.includes(a.key))
+  const addedDisable = !block.actions.some(a => a.key === 'DisableDropSound')
+  if (addedDisable) block.actions.push({ key: 'DisableDropSound', args: ['True'] })
+  const prev = muted.get(block)
+  muted.set(block, { removed: [...(prev?.removed ?? []), ...removed], addedDisable: Boolean(prev?.addedDisable) || addedDisable })
+}
+
+// Undoes silence(), leaving alone what an edit set since (a new sound wins).
+function unsilence (block: FilterBlock): void {
+  const m = muted.get(block)
+  if (!m) return
+  muted.delete(block)
+  if (m.addedDisable) block.actions = block.actions.filter(a => a.key !== 'DisableDropSound')
+  for (const a of m.removed) {
+    if (!block.actions.some(x => slotOf(x.key) === slotOf(a.key))) block.actions.push({ ...a, args: [...a.args] })
+  }
 }
 
 function setVisibility (block: FilterBlock, visibility: Visibility): void {
   if (block.visibility === visibility) return
+  const wasHidden = block.visibility === 'Hide'
   block.visibility = visibility
   if (visibility === 'Hide') silence(block)
+  // Minimal (Ruthless) stays quiet, as before.
+  else if (wasHidden && visibility === 'Show') unsilence(block)
   block.dirty = true
 }
 
@@ -236,7 +270,9 @@ export function slug (text: string): string {
 function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
   switch (edit.kind) {
     case 'group': {
-      const blocks = doc.blocks.filter(b => b.type === edit.type || b.type?.startsWith(edit.type + '->'))
+      // Only this group: the editor lists `currency->trial->omen` and the rest
+      // as groups of their own, so hiding Currency mustn't hide Omens too.
+      const blocks = doc.blocks.filter(b => b.type === edit.type)
       if (!blocks.length) return { edit, ok: false, blocks: 0, message: 'Group not found in this filter' }
       if (edit.hidden) for (const b of blocks) if (b.visibility !== 'Hide') setVisibility(b, 'Hide')
       return { edit, ok: true, blocks: blocks.length }
@@ -367,6 +403,9 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
         inherited: true,
         editId: edit.id
       }
+      // Copied from a rule a group hide silenced: showing the copy brings its look back too.
+      const sourceMuted = muted.get(source)
+      if (sourceMuted) muted.set(clone, { removed: sourceMuted.removed.map(a => ({ ...a, args: [...a.args] })), addedDisable: sourceMuted.addedDisable })
       applyStyle(clone, edit.patch)
       setVisibility(clone, edit.visibility)
       // Also over a look kept from when this rule showed the item.

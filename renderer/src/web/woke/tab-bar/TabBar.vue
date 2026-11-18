@@ -593,10 +593,16 @@ function startIconDrag (tab: Tab, start: MouseEvent) {
     if (!d?.active) return
     props.config.pinned = movePin(props.config.pinned ?? [], pinTabs.value.map(x => x.wmId), d.id, d.at)
     // The click that ends a drag doesn't open the tool. If none follows, the
-    // next real one still counts.
+    // next real one still counts: it starts with a new press, which ends the
+    // swallowing even inside the 50 ms.
     const swallow = (e: Event) => { e.stopPropagation(); e.preventDefault() }
+    const done = () => {
+      window.removeEventListener('click', swallow, { capture: true })
+      window.removeEventListener('mousedown', done, { capture: true })
+    }
     window.addEventListener('click', swallow, { capture: true, once: true })
-    setTimeout(() => { window.removeEventListener('click', swallow, { capture: true }) }, 50)
+    window.addEventListener('mousedown', done, { capture: true, once: true })
+    setTimeout(done, 50)
   }
   iconDrag.value = { id: tab.wmId, active: false, x: start.clientX, y: start.clientY, at: 0 }
   endIconDrag = stop

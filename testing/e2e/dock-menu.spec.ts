@@ -91,10 +91,12 @@ test('dismissed for this map: gone through the hideout and back, back with the n
 })
 
 test('a new offer brings a dismissed icon back, but not one dismissed for good', async ({ overlay, fakeApp }) => {
+  // The page's clock, so the start-up wait below takes no real time.
+  await overlay.page.clock.install()
   await overlay.boot({ widgets: [TRADE, { wmType: 'woke-mechanics' }] })
   await overlay.log(WHISPER)
   // Offers read at start-up don't count, so past that first.
-  await overlay.page.waitForTimeout(21_000)
+  await overlay.page.clock.fastForward(21_000)
 
   await rightClickIcon(overlay, fakeApp, 'trade')
   await overlay.dockIcon('trade').getByRole('menuitem', { name: 'Today' }).click()

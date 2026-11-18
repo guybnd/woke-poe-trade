@@ -1,3 +1,5 @@
 # Written by a test snapshot (renderer/test/woke/filter-guard-report.test.ts),
 # compared byte for byte: keep LF on every checkout.
 docs/loot-filter-guard.md text eol=lf
+# Written by renderer/test/woke/trade-query-golden.test.ts, compared the same way.
+testing/fixtures/trade-queries.json text eol=lf

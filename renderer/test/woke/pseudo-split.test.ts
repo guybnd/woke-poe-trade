@@ -5,7 +5,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
-import { exclude, include, splitFilters, tierBound } from '@/web/woke/price-insight/pseudo-split'
+import { exclude, fracturedOnlyIds, include, isFracturedOnly, looseBound, setFracturedOnly, splitFilters, stashSearch, tierBound } from '@/web/woke/price-insight/pseudo-split'
 import { detectSwaps } from '@/web/woke/harvest-swap/detect'
 
 // vi.mock is hoisted above the imports.
@@ -153,5 +153,73 @@ Item Level: 84
     const total = stats.find((s): s is StatFilter => !s.group && s.statRef === '+#% total Elemental Resistance')!
     expect(total.sources.some(s => s.modifier.info.type === 'fractured')).toBe(false)
     expect(splitFilters(total, stats, item, 10).some(p => p.statRef === '+#% to Fire Resistance' && p.roll?.value === 38)).toBe(false)
+  })
+})
+
+describe('right-click menu helpers', () => {
+  beforeAll(loadGameData)
+
+  const RING = `Item Class: Rings
+Rarity: Rare
+Woe Loop
+Gold Ring
+--------
+Item Level: 84
+--------
+{ Prefix Modifier "Rotund" (Tier: 3) — Life }
++64(60-69) to maximum Life
+{ Suffix Modifier "of Burning" (Tier: 4) — Elemental, Fire, Resistance }
+-12(-12--10)% to Fire Resistance
+`
+  // A ring's life folds into the pseudo total; its split row is the explicit one.
+  const rows = (text: string) => {
+    const item = parseItem(text)
+    const all = initUiModFilters(item, { searchStatRange: 10 }).filter((f): f is StatFilter => !f.group)
+    const total = all.find(f => f.statRef === '+# total maximum Life')!
+    return { item, rows: splitFilters(total, all, item, 10) }
+  }
+
+  it('switches any explicit mod to its fractured copy and back', () => {
+    const { item, rows: r } = rows(RING)
+    const life = r.find(f => f.statRef === '+# to maximum Life' && f.tag === 'explicit')!
+    const was = life.tradeId
+    life.disabled = true
+    expect(fracturedOnlyIds(life, item)?.[0]).toMatch(/^fractured\./)
+    expect(isFracturedOnly(life, item)).toBe(false)
+    setFracturedOnly(life, item, true)
+    expect(isFracturedOnly(life, item)).toBe(true)
+    expect(life.tradeId[0]).toMatch(/^fractured\./)
+    expect(life.disabled).toBe(false)
+    setFracturedOnly(life, item, false)
+    expect(life.tradeId).toEqual(was)
+  })
+
+  it('offers no Fractured only on an excluded row or a unique', () => {
+    const { item, rows: r } = rows(RING)
+    const life = r.find(f => f.statRef === '+# to maximum Life' && f.tag === 'explicit')!
+    expect(fracturedOnlyIds({ ...life, not: true }, item)).toBeUndefined()
+    expect(fracturedOnlyIds(life, { ...item, rarity: 'Unique' as typeof item.rarity })).toBeUndefined()
+  })
+
+  it('loosens a min by a tenth, rounding down so the roll still matches', () => {
+    const { rows: r } = rows(RING)
+    const life = r.find(f => f.statRef === '+# to maximum Life' && f.tag === 'explicit')!
+    expect(looseBound(life)).toBe(57)
+    const at = (value: number, better: 1 | -1, dp = false) => looseBound({ ...life, roll: { ...life.roll!, value, better, dp } })
+    // Negative rolls loosen away from zero.
+    expect(at(-12, 1)).toBe(-14)
+    expect(at(-12, -1)).toBe(-10)
+    // No float noise: 50 * 1.1 is not 56.
+    expect(at(50, -1)).toBe(55)
+    expect(at(0.7, -1, true)).toBe(0.8)
+    // Nothing to loosen into, or 0 ("any").
+    expect(at(1, 1)).toBeNull()
+  })
+
+  it('makes a quoted stash search from the mod text', () => {
+    expect(stashSearch('+# to maximum Life')).toBe('"to maximum life"')
+    expect(stashSearch('Adds # to # Physical Damage to Attacks')).toBe('"physical damage to attacks"')
+    expect(stashSearch('#% increased Attack Speed')).toBe('"increased attack speed"')
+    expect(stashSearch('#')).toBeNull()
   })
 })
