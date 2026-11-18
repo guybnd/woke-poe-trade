@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-366
 title: 'Price check: pick another cluster jewel type'
-status: Grooming
+status: Done
 priority: Medium
 effort: S
 assignee: Agent
@@ -32,6 +32,46 @@ history:
       tabs + type-to-filter, review fixes in. Checks green (lint, tsc, 4434
       unit, build, e2e). Handed to coordinator for merge.
     id: a-2026-11-18t04-35-12-784z
+  - type: comment
+    user: Agent
+    comment: 'Type picker (Guy''s pick C + typing) merged in #600 (09865d0a).'
+    date: '2026-11-18T05:05:10.035Z'
+    completionComment: true
+    id: c-2026-11-18t05-05-10-035z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T05:05:10.035Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged in #600 (09865d0a): a cluster jewel's price check title picks size
+      (Small/Medium/Large tabs) and type, with typing to filter. Pick rewrites
+      base, enchant, passive min, unticks notables; picking own restores; never
+      searches until Search.
+    completionComment: true
+    date: '2026-11-18T05:05:13.968Z'
+    id: c-2026-11-18t05-05-13-968z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T05:05:14.434Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/600'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR:** On a cluster jewel price check, a dropdown swaps the enchant type (e.g. Attack Damage while Dual Wielding → Spell Damage) so Guy can price a different cluster of the same size. Mocks first, Guy picks.
 
