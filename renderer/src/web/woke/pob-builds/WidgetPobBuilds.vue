@@ -368,7 +368,9 @@ async function refresh () {
     active.reload()
   } catch (err) {
     builds.value = []
-    lastBuildList.value = null
+    // An empty list stamped now: the palette's 5-minute wait and its
+    // newer-list check still hold.
+    lastBuildList.value = { at: Date.now(), builds: [] }
     error.value = (err as Error).message
   } finally {
     loading.value = false

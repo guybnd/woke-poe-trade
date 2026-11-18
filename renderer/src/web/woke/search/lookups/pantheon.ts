@@ -83,9 +83,10 @@ export function pantheonLookup (data: PantheonData | null, zones: readonly Zone[
     if (matchRank('pantheon', q) === 0) {
       return [...data.gods].sort((a, b) => Number(b.major) - Number(a.major)).map(g => godCard(g, zones))
     }
-    // Matched without "Captured" and "Soul of", so "soul" alone isn't every god.
+    // Matched without "Captured" and "Soul of", so "soul" alone isn't every
+    // god. After "soul of " a short start is enough: "soul of yug".
     const bare = q.replace(/^captured\s+/i, '').replace(/^soul of\s+/i, '')
-    if (bare.length < 4) return []
+    if (bare.length < (bare === q ? 4 : 2)) return []
     const rankOf = (name: string) => { const r = matchRank(name, bare); return r < 0 ? 9 : r }
     return data.gods
       .map(g => ({ g, rank: Math.min(rankOf(g.name), ...g.souls.slice(1).map(s => rankOf(s.name))) }))

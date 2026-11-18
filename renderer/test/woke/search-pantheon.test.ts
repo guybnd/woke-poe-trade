@@ -73,6 +73,11 @@ describe('pantheonLookup', () => {
     expect(lookup('soul', ctx)).toEqual([])
     expect(lookup('soul of', ctx)).toEqual([])
   })
+  it('takes a short start after "Soul of"', () => {
+    expect(lookup('soul of yug', ctx).map(c => c.name)).toEqual(['Yugul'])
+    expect(lookup('soul of shak', ctx).map(c => c.name)).toEqual(['Shakari'])
+    expect(lookup('yug', ctx)).toEqual([])
+  })
   it('answers its example', () => {
     expect(EXAMPLES.some(e => e.query === 'soul of lunaris')).toBe(true)
   })
