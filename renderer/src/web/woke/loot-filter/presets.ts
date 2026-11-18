@@ -858,11 +858,14 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     if (p.lowMaps.on && b.type === 'maps' && !b.continue && b.visibility !== 'Hide') {
       const cap = mapTierCap(b)
       if (cap != null && cap < p.lowMaps.tier) {
-        // A map above the zone you're in is progress (NeverSink's map-up
-        // rule marks it): that one falls through and still shows.
-        hideBlock(b)
-        b.conditions = [...b.conditions, cond('HasInfluence', '', ['None']), cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])]
-        touched = true
+        // A hidden copy above the rule, so what it lets through (a map above
+        // the zone you're in is progress, an influenced map) still gets this
+        // rule's own look, not NeverSink's plain catch-all.
+        mapCopies.push([b, addedBlock(PRESET_TYPE, 'lowmaps', `maps below tier ${p.lowMaps.tier}`, [
+          ...b.conditions,
+          cond('HasInfluence', '', ['None']),
+          cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])
+        ], 'Hide', 'Presets')])
       } else if (cap == null) {
         // NeverSink's top rule (MapTier >= 16) has no cap: a hidden copy above
         // it takes the tiers below the line, and higher ones still reach it.

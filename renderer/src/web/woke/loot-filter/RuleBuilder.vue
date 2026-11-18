@@ -20,8 +20,8 @@
           <datalist :id="`${uid}-${c.key}`">
             <option v-for="v in suggestions(c.key)" :key="v" :value="v" />
           </datalist>
-          <div v-if="c.key === 'BaseType' && unknownBases(c.values).length" class="text-xs" style="color: var(--w-warn);">
-            Check the spelling of {{ unknownBases(c.values).join(', ') }}: the game refuses a whole filter over a base it doesn't know.
+          <div v-if="(c.key === 'BaseType' || c.key === 'Class') && unknownNames(c.key, c.values).length" class="text-xs" style="color: var(--w-warn);">
+            Check the spelling of {{ unknownNames(c.key, c.values).join(', ') }}: the game refuses a whole filter over a name it doesn't know.
           </div>
         </template>
         <template v-else-if="kindOf(c) === 'number'">
@@ -81,7 +81,6 @@
 </template>
 
 <script setup lang="ts">
-import { BASE_FACTS } from './base-facts'
 import { computed } from 'vue'
 import { WChip, WField, WInfo, WSegmented, WToggle } from '../ui'
 import StyleEditor from './StyleEditor.vue'
@@ -90,7 +89,7 @@ import type { FilterCondition } from './parse'
 import { readStyle } from './edits'
 import { ownActions } from './look'
 import type { StylePatch } from './edits'
-import { CONDITION_KINDS, INFLUENCES, ITEM_TIERS, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, newCondition, ruleProblem, ruleTier, tierLit } from './rules'
+import { CONDITION_KINDS, INFLUENCES, ITEM_TIERS, NUMBER_OPS, RARITIES, RULE_TYPE, cleanValue, conditionKind, knownValues, nameCheck, newCondition, ruleProblem, ruleTier, tierLit } from './rules'
 import type { OwnRule } from './rules'
 import { everyDrop } from './drops'
 import { matchItem } from './match'
@@ -132,15 +131,16 @@ const known = computed(() => ({
   BaseType: knownValues(props.store.doc.value, 'BaseType')
 }))
 
-function unknownBases (values: string[]): string[] {
-  return values.filter(v => !(v in BASE_FACTS) && !known.value.BaseType.includes(v))
+const names = computed(() => nameCheck(props.store.doc.value))
+function unknownNames (key: 'BaseType' | 'Class', values: string[]): string[] {
+  return values.filter(v => !names.value(key, v))
 }
 
 function suggestions (key: string): string[] {
   return key === 'Class' ? known.value.Class : key === 'BaseType' ? known.value.BaseType : []
 }
 
-const problem = computed(() => ruleProblem(props.rule))
+const problem = computed(() => ruleProblem(props.rule, names.value))
 
 // How much of a pretend map's loot the rule catches, in the filter as it is.
 const catches = computed(() => {

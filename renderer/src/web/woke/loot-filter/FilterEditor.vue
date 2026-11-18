@@ -59,12 +59,12 @@
             <span :class="$style.groupTitle">Rules you made</span>
             <span class="w-faint text-xs">top of the filter, first one wins</span>
           </div>
-          <button v-for="r in config.rules" :key="r.id" class="w-focusable" :class="[$style.tierRow, { [$style.active]: r.id === editingRuleId, [$style.off]: !r.on || ruleProblem(r) }]"
+          <button v-for="r in config.rules" :key="r.id" class="w-focusable" :class="[$style.tierRow, { [$style.active]: r.id === editingRuleId, [$style.off]: !r.on || ruleProblem(r, ruleNames) }]"
             @click="editingRuleId = r.id" @contextmenu="ruleMenu($event, r)">
             <span :class="$style.tierName" :title="r.name">{{ r.name }}</span>
             <LabelPreview :text="r.conditions.find(c => c.key === 'BaseType')?.values[0] ?? r.name" :style-override="r.patch" :visibility="r.visibility" style="max-width: 100%; overflow: hidden;" />
             <span :class="$style.bases" class="w-trunc">
-              <span v-if="ruleProblem(r)" style="color: var(--w-warn);">{{ ruleProblem(r) }}</span>
+              <span v-if="ruleProblem(r, ruleNames)" style="color: var(--w-warn);">{{ ruleProblem(r, ruleNames) }}</span>
               <template v-else>{{ r.on ? '' : 'off · ' }}{{ ruleSummary(r) }}</template>
             </span>
           </button>
@@ -423,7 +423,7 @@ import { GEAR_TYPE } from './gear'
 import LookStrip from './LookStrip.vue'
 import { ownActions } from './look'
 import RuleBuilder from './RuleBuilder.vue'
-import { RULE_TYPE, newRule, ruleProblem, ruleSummary } from './rules'
+import { RULE_TYPE, nameCheck, newRule, ruleProblem, ruleSummary } from './rules'
 import type { OwnRule } from './rules'
 import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
@@ -525,6 +525,8 @@ watch(tierItems, (list) => {
   if (picked.value.some(b => !list.includes(b))) picked.value = picked.value.filter(b => list.includes(b))
 })
 const isOwnGroup = computed(() => selType.value === OWN_RULE_TYPE)
+// What a rule may name: the game refuses a whole filter over a name it doesn't know.
+const ruleNames = computed(() => nameCheck(props.store.doc.value))
 // The search box shows items as they drop where you are now.
 const searchAreaLevel = computed(() => props.store.areaLevel.value ?? props.config.fallbackAreaLevel)
 // Items searched on the Preview tab lie on its ground, newest first, a few at most.
@@ -1444,7 +1446,9 @@ function useShared (how: 'add' | 'replace') {
       c.presets = s.presets
       c.priceTiers.locks = s.locks
     } else {
-      c.edits = [...c.edits, ...edits]
+      // Folded like edits made here: a second "Hide whole group" of the same
+      // group would take two clicks of Show group again to undo.
+      c.edits = edits.reduce<FilterEdit[]>((list, e) => addEdit(list, e), c.edits)
       c.rules = [...c.rules, ...rules]
       c.priceTiers.locks = [...new Set([...c.priceTiers.locks, ...s.locks])]
     }
