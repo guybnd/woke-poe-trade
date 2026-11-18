@@ -45,6 +45,7 @@ import WKbd from './WKbd.vue'
 import ToastRow from './ToastRow.vue'
 import { closeMenu, menuState, toasts, undoToast, type MenuEntry, type MenuItemAction } from './layer'
 import { snapGuides } from './snap'
+import { Host } from '@/web/background/IPC'
 
 const menu = menuState
 const list = toasts
@@ -59,9 +60,26 @@ function readScale () {
   scale.value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
 }
 
+// A menu never outlives what it was opened on: the overlay going inactive or
+// hidden, or its panel closing (Esc, a hotkey, a click on the game) closes it.
+Host.onEvent('MAIN->OVERLAY::focus-change', (state) => { if (!state.overlay) closeMenu() })
+Host.onEvent('MAIN->OVERLAY::visibility', (e) => { if (!e.isVisible) closeMenu() })
+let anchorTimer: ReturnType<typeof setInterval> | undefined
+function watchAnchor (anchor: Element | null | undefined) {
+  clearInterval(anchorTimer)
+  anchorTimer = undefined
+  if (!anchor) return
+  // Gone from the page, or drawn nowhere (display: none on a hidden panel).
+  anchorTimer = setInterval(() => {
+    if (!anchor.isConnected || anchor.getClientRects().length === 0) closeMenu()
+  }, 250)
+}
+onUnmounted(() => clearInterval(anchorTimer))
+
 watch(toasts, readScale)
 watch(menu, async (m) => {
   hl.value = -1
+  watchAnchor(m?.anchor)
   if (!m) return
   readScale()
   await nextTick()

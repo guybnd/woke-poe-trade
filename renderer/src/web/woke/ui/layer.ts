@@ -37,7 +37,10 @@ export interface MenuItemHead {
 
 // `frame`: opened from the app's frame (Settings, the rail, the dock), so it
 // wears the app colours (app-colors.ts) instead of the theme.
-export interface MenuState { items: MenuEntry[], x: number, y: number, item?: MenuItemHead, frame?: boolean }
+// anchor: the panel (widget) right-clicked in; the menu closes once it is gone
+// or hidden (the price check dismissed under the open menu). Its panel, not
+// the element itself: a hover tip under the menu may hide while it is open.
+export interface MenuState { items: MenuEntry[], x: number, y: number, item?: MenuItemHead, frame?: boolean, anchor?: Element | null }
 
 // A right-click on an item (v-item-tip) offers that item to whichever menu the
 // same click opens, so screens with their own row menu get the item strip too.
@@ -61,7 +64,7 @@ export function openMenu (at: MouseEvent | { x: number, y: number }, items: Menu
   if ('preventDefault' in at) at.preventDefault()
   const target = 'target' in at && at.target instanceof Element ? at.target : null
   const frame = Boolean(target?.closest('[data-w-settings], [data-woke-frame]'))
-  menuState.value = { items, x, y, item: head, frame }
+  menuState.value = { items, x, y, item: head, frame, anchor: target?.closest('[id^="widget-"]') ?? null }
 }
 export function closeMenu () { menuState.value = null }
 
