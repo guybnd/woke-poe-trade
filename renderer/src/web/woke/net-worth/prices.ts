@@ -2,10 +2,8 @@
 // Never a trade search: rares and other gear without a poe.ninja row stay
 // unpriced.
 import { usePoeninja } from '@/web/background/Prices'
-import { gemVariant, isUniqueFrame } from './valuation'
-import type { Category, Priced, PriceOf, StashItemLike } from './valuation'
-
-const FRAGMENT_SLUGS = new Set(['fragments', 'scarabs', 'invitations', 'artifacts'])
+import { categoryOfSlug, gemVariant, isUniqueFrame } from './valuation'
+import type { Priced, PriceOf, StashItemLike } from './valuation'
 
 interface Row { chaos: number, variant?: string, graph?: Array<number | null> }
 
@@ -56,8 +54,7 @@ export function ninjaPriceOf (): PriceOf {
     if (exact) {
       // url: https://poe.ninja/poe1/economy/<league>/<category>/<item>
       const slug = exact.url.split('/')[6] ?? ''
-      const category: Category = slug === 'currency' ? 'currency' : FRAGMENT_SLUGS.has(slug) ? 'fragments' : 'other'
-      return { chaos: exact.chaos, category, graph: exact.graph }
+      return { chaos: exact.chaos, category: categoryOfSlug(slug), graph: exact.graph }
     }
     const any = cheapest((ninja.findPricesByName('ITEM', item.typeLine) as Row[])
       .filter(r => !(item.frame === 0 && !item.mapTier && BASE_TYPE_VARIANT.test(r.variant ?? ''))))

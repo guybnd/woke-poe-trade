@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { MODULES } from '@/web/woke/modules'
 import { personalOn, loadPersonal } from '@/web/woke/personal'
 import {
-  baselineOf, diffStash, emptyHistory, gemVariant, isUniqueFrame, itemKey, itemLabel, perHourToday, recordRead, sinceYesterday, valueStash
+  baselineOf, categoryOfSlug, diffStash, emptyHistory, gemVariant, isUniqueFrame, itemKey, itemLabel, perHourToday, recordRead, sinceYesterday, valueStash
 } from '@/web/woke/net-worth/valuation'
 import { valueByTab } from '@/web/woke/net-worth/ledger'
 import type { PriceOf, StashItemLike } from '@/web/woke/net-worth/valuation'
@@ -223,5 +223,14 @@ describe('bug hunt round 2', () => {
     expect(itemKey(relic)).not.toBe(itemKey({ ...relic, name: '', frame: 0 }))
     const v = valueStash([{ name: 'A', items: [relic] }], () => ({ chaos: 91, category: 'gear' }))
     expect(v.lines[0].tipName).toBe('Kingmaker')
+  })
+})
+
+describe('net worth categories from poe.ninja', () => {
+  it('counts omens as currency, so they are liquid', () => {
+    expect(categoryOfSlug('omens')).toBe('currency')
+    expect(categoryOfSlug('currency')).toBe('currency')
+    expect(categoryOfSlug('scarabs')).toBe('fragments')
+    expect(categoryOfSlug('essences')).toBe('other')
   })
 })
