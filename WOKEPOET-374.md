@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-374
 title: 'Loot filter: tiers keyed on numbers, not names (cluster jewels first)'
-status: Todo
+status: Done
 priority: Medium
 effort: L
 assignee: unassigned
@@ -90,8 +90,48 @@ history:
       https://github.com/guybnd/woke-poe-trade/pull/626, reviewed and fixed, and
       handed to the coordinator to merge.
     id: a-2026-11-18t12-35-15-461z
-implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/622'
+  - type: comment
+    user: Agent
+    comment: >-
+      Both parts merged: #622 (a69cc8a4) number edits and cluster rules by size;
+      #626 (3c634d10) cluster price rules from poe.ninja on the Cluster page.
+    date: '2026-11-18T12:47:25.129Z'
+    completionComment: true
+    id: c-2026-11-18t12-47-25-129z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-18T12:47:25.129Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Done. #622 (a69cc8a4) added number edits in rows and the side panel, and
+      lists number-keyed groups numbers-first, with cluster jewels by size. #626
+      (3c634d10) makes the cluster price rules follow poe.ninja, adds pins, and
+      puts the "Worth money" band on the Cluster page. Untried in game.
+    completionComment: true
+    date: '2026-11-18T12:47:30.599Z'
+    id: c-2026-11-18t12-47-30-599z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T12:47:31.226Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/626'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR** Make loot filter tiers that differ by numbers (cluster passives + item level, flask area level + quality…) readable and editable; merge the cluster price group into the cluster page and price its passive types live from poe.ninja. Guy picked A, 1+2, M, All, P on the mockups (https://claude.ai/artifact/Q5BRTNyyaz4HX6d4LFXcJ5).
 
