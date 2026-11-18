@@ -19,7 +19,7 @@
     <div :class="$style.table">
       <div :class="[$style.trow, $style.thead]"><span>Icon</span><span>Show</span><span>Peek</span></div>
       <div v-for="id in rows" :key="id" :class="$style.trow">
-        <span>{{ DOCK_NAMES[id] }}</span>
+        <span>{{ dockListName(id) }}</span>
         <w-toggle :model-value="!dock.hidden.includes(id)" @update:model-value="toggle(dock.hidden, id)" />
         <w-toggle :model-value="!dock.noPeek.includes(id)" :disabled="!dock.peeks || dock.hidden.includes(id)" @update:model-value="toggle(dock.noPeek, id)" />
       </div>
@@ -38,7 +38,7 @@ import { computed } from 'vue'
 import type { Config } from '@/web/Config'
 import { WButton, WInfo, WSettingRow, WSettingSection, WToggle } from '../ui'
 import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
-import { DEFAULT_DOCK, DOCK_NAMES, DOCK_ORDER } from './dock'
+import { DEFAULT_DOCK, DOCK_ORDER, dockListName } from './dock'
 import type { DockConfig } from './dock'
 
 // `config` is the settings window's working copy; changes apply as you make them.

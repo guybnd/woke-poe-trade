@@ -147,13 +147,17 @@ export function hotkeyFields (config: Config): HotkeyField[] {
       }
     })
   }
+  // Every PoB builds copy registers the same tree key: listed once.
+  const firstPob = find(POB_BUILDS_TYPE)
   for (const w of widgets) {
     const spec = WOKE_KEYS[w.wmType]
     const off = !isWidgetTypeOn(config, w.wmType)
+    // Net worth's page and module exist only while the stash reader is on.
+    if (w.wmType === 'woke-net-worth' && off) continue
     const group = moduleNameFor(w.wmType)
     if (spec) {
       for (const [prop, label] of spec.keys) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, ...field(w, prop) })
-    } else if (w.wmType === POB_BUILDS_TYPE) {
+    } else if (w.wmType === POB_BUILDS_TYPE && w === firstPob) {
       // Unset means the default (Alt + T), which shortcuts.ts registers too.
       const pob = w as unknown as PobBuildsWidget
       out.push({

@@ -35,11 +35,14 @@ describe('hotkey fields', () => {
     expect(hotkeyUses(hotkeyFields(c)).get(normalizeKey('Alt + T'))).toHaveLength(2)
   })
 
-  it('lists the Net worth key, and leaves it out while the stash reader is off', () => {
+  it('leaves the Net worth key out while the stash reader is off', () => {
     const fields = hotkeyFields(config([{ wmType: 'woke-net-worth', hotkey: 'Alt + N' }]))
-    const nw = fields.find(f => f.label.startsWith('Net worth'))
-    expect(nw && fieldKey(nw)).toBe('Alt + N')
-    // Not registered while its module is off, so not a clash either.
-    expect(nw?.off).toBe(true)
+    expect(fields.find(f => f.label.startsWith('Net worth'))).toBeUndefined()
+  })
+
+  it('lists the tree key once with several PoB builds windows (no false clash)', () => {
+    const c = config([{ wmType: 'woke-pob-builds' }, { wmType: 'woke-pob-builds' }])
+    expect(hotkeyFields(c).filter(f => f.id.endsWith('-treeHotkey'))).toHaveLength(1)
+    expect(hotkeyUses(hotkeyFields(c)).get(normalizeKey('Alt + T'))).toHaveLength(1)
   })
 })

@@ -6,7 +6,7 @@ import { computed, markRaw, shallowReactive, shallowRef, watch } from 'vue'
 import { isPinned } from '../pins/pins'
 import type { Slots } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
-import { ensureWokeConfig } from '../modules'
+import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
 import { moduleIcon } from '../ui/game-icons'
 import { Host } from '@/web/background/IPC'
 import type { WidgetManager } from '@/web/overlay/interfaces'
@@ -118,8 +118,14 @@ export const DOCK_NAMES: Record<string, string> = {
   'scarab-flip': 'Flips',
   'wealthy-exile': 'Wealthy Exile',
   'loot-filter': 'Loot filter',
-  'pob-builds': 'PoB build',
   'net-worth': 'Net worth'
+}
+
+// For lists of icons only (bring-back, Settings › Icon row): the PoB icon's
+// card and menu go by the active build's name, its title.
+export const DOCK_LIST_NAMES: Record<string, string> = { 'pob-builds': 'PoB builds' }
+export function dockListName (id: string): string {
+  return DOCK_NAMES[id] ?? DOCK_LIST_NAMES[id] ?? id
 }
 
 export interface DockConfig {
@@ -347,7 +353,9 @@ export function dismissedIcons (now = Date.now()): DismissedIcon[] {
   const d = dockConfig()
   const out: DismissedIcon[] = []
   for (const id of DOCK_ORDER) {
-    const name = DOCK_NAMES[id] ?? id
+    // Net worth can't show while the stash reader is off.
+    if (id === 'net-worth' && !isWidgetTypeOn(AppConfig(), 'woke-net-worth')) continue
+    const name = dockListName(id)
     const here = dismissedHere.value[id]
     const until = d.dismissed?.[id]
     if (d.hidden.includes(id)) out.push({ id, name, left: 'always' })

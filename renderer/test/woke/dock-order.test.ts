@@ -21,7 +21,8 @@ const block = (name: string) => {
   return m[1].replace(/\/\/.*$/gm, '')
 }
 const order = [...block('DOCK_ORDER').matchAll(/'([a-z-]+)'/g)].map(m => m[1])
-const named = new Set([...block('DOCK_NAMES').matchAll(/'([a-z-]+)':/g)].map(m => m[1]))
+const listNames = /export const DOCK_LIST_NAMES.*/.exec(dockTs)?.[0] ?? ''
+const named = new Set([...(block('DOCK_NAMES') + listNames).matchAll(/'([a-z-]+)':/g)].map(m => m[1]))
 
 describe('dock icons', () => {
   const ids = new Set<string>()
