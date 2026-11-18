@@ -32,7 +32,9 @@
           <i v-if="l.mine" class="fas fa-thumbtack" :class="$style.pin" />{{ l.state === 'unpriced' ? '—' : show('unit', l.unitChaos) }}
         </td>
         <td class="w-num" :title="l.state === 'unpriced' ? undefined : other('chaos', l.chaos)">{{ l.state === 'unpriced' ? '—' : show('chaos', l.chaos) }}</td>
-        <td><span v-if="!l.state" :class="$style.share"><i :style="{ width: Math.max(2, l.chaos / top * 100) + '%' }" /></span></td>
+        <td :class="$style.shareCell" :title="l.state ? undefined : `${shareText(l.chaos)} of your net worth`">
+          <template v-if="!l.state"><span class="w-num w-dim" :class="$style.pctText">{{ shareText(l.chaos) }}</span><span :class="$style.share"><i :style="{ width: Math.min(100, Math.max(2, share(l.chaos) * 100)) + '%' }" /></span></template>
+        </td>
         <td class="w-num" :class="tone(changes.get(l.key))">{{ pct(changes.get(l.key)) }}</td>
         <td class="w-dim w-trunc" :class="$style.tab" :title="l.tabIds.map(nameOfTab).join(', ')">{{ tabText(l) }}</td>
       </tr>
@@ -69,6 +71,8 @@ const props = defineProps<{
   tabNames: Map<string, string>
   // A filter is on: the empty row offers to clear it.
   filtered?: boolean
+  // Net worth in chaos: Share is a row's part of it. Without it, of the rows given.
+  total?: number
   // Each and Total in divines or chaos: a click on the header's icon swaps.
   units?: { each?: 'd' | 'c', total?: 'd' | 'c' }
 }>()
@@ -147,7 +151,13 @@ const shown = computed(() => {
   return [...priced.slice(0, limit.value), ...all.filter(l => l.state)]
 })
 const more = computed(() => Math.max(0, props.lines.filter(l => !l.state).length - limit.value))
-const top = computed(() => Math.max(1, ...props.lines.filter(l => !l.state).map(l => l.chaos)))
+// Share: a row's part of the whole net worth, so it stays put while filters change.
+const whole = computed(() => props.total ?? props.lines.reduce((x, l) => l.state ? x : x + l.chaos, 0))
+const share = (chaos: number) => whole.value > 0 ? chaos / whole.value : 0
+function shareText (chaos: number) {
+  const p = share(chaos) * 100
+  return p >= 10 ? `${Math.round(p)}%` : p >= 0.1 ? `${p.toFixed(1)}%` : p > 0 ? '<0.1%' : '0%'
+}
 
 const div = (chaos: number) => {
   // The unit is in the column header.
@@ -254,7 +264,7 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .table { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); table-layout: fixed; }
 .table th { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); font-weight: 500; text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--w-line-strong); cursor: pointer; white-space: nowrap; user-select: none; }
 .table th:nth-child(1) { width: 34%; }
-.table th:nth-child(5) { width: 54px; }
+.table th:nth-child(5) { width: calc(52px + 3.6em); }
 .table th:nth-child(7) { width: 16%; }
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
@@ -262,7 +272,9 @@ function menuOf (l: ValuedLine): ItemMenuRef {
 .on { color: var(--w-gold) !important; }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
-.share { display: inline-block; width: 44px; height: 5px; background: var(--w-panel-3); vertical-align: middle; }
+.shareCell { white-space: nowrap; }
+.pctText { display: inline-block; min-width: 3.2em; margin-right: 6px; font-size: var(--w-fs-sm); text-align: right; }
+.share { display: inline-block; width: 40px; height: 5px; background: var(--w-panel-3); vertical-align: middle; }
 .share i { display: block; height: 100%; background: color-mix(in srgb, var(--w-gold) 70%, transparent); }
 .unitBtn { cursor: pointer; padding: 0; border-radius: var(--w-r-sm); }
 .unitBtn:hover { box-shadow: 0 0 0 1px var(--w-gold); }
