@@ -265,7 +265,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       prices: {
         lookup: prices.lookup.value,
         safety: cfg().safetyNet.on ? prices.safety.value : null,
-        breakdown: cfg().presets.cheapUniques.on ? prices.breakdown.value : null,
+        breakdown: cfg().presets.cheapUniques.on ? prices.dropBreakdown.value : null,
         pricedTypes: cfg().safetyNet.on ? prices.pricedTypes?.value : null
       },
       dustList: dustList.value,

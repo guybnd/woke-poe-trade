@@ -301,7 +301,7 @@ const uniqueNote = computed(() => {
   if (!props.store.prices.items.value.length || !doc || !p.value.cheapUniques.on) return 'Waiting for poe.ninja prices.'
   const d = p.value.dust
   const keep = [...(d.on ? neverSinkDustBases(doc) : []), ...(d.on && d.fromPrices ? dustList.value : []), ...(build.value?.uniqueBases ?? [])]
-  return priceNote(cheapUniqueBases(doc, props.store.prices.breakdown.value, p.value.cheapUniques.chaos, keep, guard()))
+  return priceNote(cheapUniqueBases(doc, props.store.prices.dropBreakdown.value, p.value.cheapUniques.chaos, keep, guard()))
 })
 // Auto with no build hides nothing, so every chip shows as kept.
 const keptWeapons = computed(() => archetypeClasses(p.value, build.value?.weaponClasses ?? null) ?? WEAPON_CLASSES)
