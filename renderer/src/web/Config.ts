@@ -530,6 +530,9 @@ function upgradeConfig (_config: Config): Config {
   if (!config.widgets.some(w => w.wmType === MEGALO_TYPE)) {
     config.widgets.push(initMegaloWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
   }
+  for (const w of config.widgets) {
+    if (w.wmType === MEGALO_TYPE && w.wmFlags.includes('menu::skip')) w.wmFlags = w.wmFlags.filter((f: string) => f !== 'menu::skip')
+  }
   // woke: the search hotkey. A key you already use elsewhere isn't taken over.
   {
     const taken = [...JSON.stringify(config).matchAll(/"((?:[A-Z][a-z]+ \+ )+\w+)"/g)].map(m => m[1])

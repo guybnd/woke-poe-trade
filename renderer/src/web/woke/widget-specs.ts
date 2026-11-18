@@ -233,6 +233,7 @@ export const widgetPoeReSpec = {
 
 export const widgetMegaloSpec = {
   type: MEGALO_TYPE,
-  instances: 'single',
-  initInstance: () => initMegaloWidget(0)
+  instances: 'multi',
+  trNameKey: 'Megalomaniac searcher',
+  defaultInstances: () => [initMegaloWidget(0)]
 } satisfies WidgetSpec

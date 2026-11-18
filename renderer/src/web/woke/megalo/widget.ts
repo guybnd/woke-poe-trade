@@ -34,8 +34,7 @@ export function initMegaloWidget (wmId: number): MegaloWidget {
     wmTitle: 'Megalomaniac searcher',
     wmWants: 'hide',
     wmZorder: null,
-    // Opened from the search palette and the PoB builds window, not a tool of its own.
-    wmFlags: ['invisible-on-blur', 'menu::skip'],
+    wmFlags: ['invisible-on-blur'],
     anchor: popupAnchor(),
     source: 'pob',
     edits: {},

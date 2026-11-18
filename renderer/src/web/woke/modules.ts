@@ -89,6 +89,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'pob-builds', name: 'PoB builds', description: 'Your Path of Building folder', group: 'builds', widgetTypes: ['woke-pob-builds'], icon: { fa: 'fas fa-diagram-project', item: 'Enlighten Support' }, needs: [] },
   { id: 'trade-searches', name: 'Trade searches', description: 'Saved trade site searches', group: 'builds', widgetTypes: ['woke-trade-searches'], icon: { fa: 'fas fa-search-dollar', currency: 'exalted' }, needs: ['hotkeys'] },
   { id: 'trade', name: 'Trades', description: 'Trade whispers, quick replies and a sales log', group: 'builds', widgetTypes: ['woke-trade'], icon: { fa: 'fas fa-handshake', src: '/images/art/bust-of-emperor-caspiro.png' }, needs: ['log', 'hotkeys', 'prices'] },
+  { id: 'megalo', name: 'Megalomaniac searcher', description: 'A trade search for the Megalomaniac notables your build wants', group: 'builds', widgetTypes: ['woke-megalo'], icon: { fa: 'fas fa-circle-nodes', item: 'Medium Cluster Jewel' }, needs: [] },
   { id: 'regex-library', name: 'Regex library', description: 'Saved stash search strings', group: 'builds', widgetTypes: ['woke-regex-library'], icon: { fa: 'fas fa-search', mechanic: 'stash' }, needs: ['hotkeys'] },
 
   // APT features: only their hotkeys can be switched off.

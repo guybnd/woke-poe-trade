@@ -98,6 +98,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Builds & trade | PoB builds | Your Path of Building folder |
 | Builds & trade | Trade searches | Saved trade site searches |
 | Builds & trade | Trades | Trade whispers, quick replies and a sales log |
+| Builds & trade | Megalomaniac searcher | A trade search for the Megalomaniac notables your build wants |
 | Builds & trade | Regex library | Saved stash search strings |
 | Price check (Awakened PoE Trade) | Price check hotkeys | Check an item under the cursor |
 | Price check (Awakened PoE Trade) | Item info hotkeys | Item info, wiki, poedb, Craft of Exile, similar items |
