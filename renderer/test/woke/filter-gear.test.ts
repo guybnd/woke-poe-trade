@@ -278,4 +278,24 @@ describe('gear table', () => {
     shiftAll(g, 1)
     expect(g.slots.r1?.body).toEqual({ magic: 0, rare: 4 })
   })
+
+  it('writes no empty Class line when every slot of a row has its own line', () => {
+    // Guy's settings on 2026-11-18: rank 1 split into all five slots.
+    const d = doc()
+    applyGear(d, gearOn(d, g => {
+      g.show.r1 = { magic: 5, rare: 3 }
+      g.slots.r1 = {
+        body: { magic: 0, rare: 3 },
+        armour: { magic: 0, rare: 3 },
+        offhand: { magic: 0, rare: 5 },
+        jewellery: { magic: 0, rare: 3 },
+        weapon: { magic: 5, rare: 5 }
+      }
+    }), [])
+    const out = parseFilter(serializeFilter(d))
+    expect(out.blocks.filter(b => !b.disabled && b.conditions.some(c => c.key === 'Class' && !c.values.length))).toEqual([])
+    expect(validateFilter(out).map(p => p.message)).toEqual([])
+    expect(vis(d, { ...R1, rarity: 'Rare', unidentifiedItemTier: 3 })).toBe('Show')
+    expect(vis(d, { ...R1, rarity: 'Magic', unidentifiedItemTier: 5 })).not.toBe('Show')
+  })
 })

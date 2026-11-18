@@ -370,6 +370,9 @@ function lookUp (b: FilterBlock, g: GearSettings): void {
 // The conditions limited to these classes: an existing Class line is narrowed
 // (null when nothing is left), otherwise one is added.
 function withClasses (conds: FilterCondition[], classes: string[]): FilterCondition[] | null {
+  // No classes left (every slot of the row has its own line): no rule, as
+  // the game rejects a Class line without values.
+  if (!classes.length) return null
   const at = conds.findIndex(c => c.key === 'Class')
   if (at < 0) return [...conds, cond('Class', '==', classes)]
   const left = conds[at].values.filter(v => classes.includes(v))
