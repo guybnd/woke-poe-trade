@@ -18,7 +18,7 @@
     </w-setting-row>
     <div :class="$style.table">
       <div :class="[$style.trow, $style.thead]"><span>Icon</span><span>Show</span><span>Peek</span></div>
-      <div v-for="id in DOCK_ORDER" :key="id" :class="$style.trow">
+      <div v-for="id in rows" :key="id" :class="$style.trow">
         <span>{{ DOCK_NAMES[id] }}</span>
         <w-toggle :model-value="!dock.hidden.includes(id)" @update:model-value="toggle(dock.hidden, id)" />
         <w-toggle :model-value="!dock.noPeek.includes(id)" :disabled="!dock.peeks || dock.hidden.includes(id)" @update:model-value="toggle(dock.noPeek, id)" />
@@ -37,7 +37,7 @@ export default {
 import { computed } from 'vue'
 import type { Config } from '@/web/Config'
 import { WButton, WInfo, WSettingRow, WSettingSection, WToggle } from '../ui'
-import { ensureWokeConfig } from '../modules'
+import { ensureWokeConfig, isWidgetTypeOn } from '../modules'
 import { DEFAULT_DOCK, DOCK_NAMES, DOCK_ORDER } from './dock'
 import type { DockConfig } from './dock'
 
@@ -53,6 +53,8 @@ function ensureDock (): DockConfig {
 }
 ensureDock()
 const dock = computed<DockConfig>(() => props.config.woke?.dock ?? ensureDock())
+// Net worth comes with the opt-in stash reader: listed only while that's on.
+const rows = computed(() => DOCK_ORDER.filter(id => id !== 'net-worth' || isWidgetTypeOn(props.config, 'woke-net-worth')))
 
 function toggle (list: string[], id: string) {
   const i = list.indexOf(id)

@@ -82,7 +82,10 @@ export interface DockEntry {
 // Fixed order, so icons don't jump around as they come and go.
 export const DOCK_ORDER = [
   'toolkit', 'claude', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'farming', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap',
-  'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'league-invest', 'scarab-flip', 'wealthy-exile', 'loot-filter', 'wickerman'
+  'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'league-invest', 'scarab-flip', 'wealthy-exile', 'loot-filter', 'wickerman',
+  // Last, where they sat before they were listed: an icon missing here can't
+  // be brought back once dismissed (dismissedIcons, Settings › Icon row).
+  'pob-builds', 'net-worth'
 ]
 
 // Icons that grow into a line when something happens: "no pop-ups" means
@@ -114,7 +117,9 @@ export const DOCK_NAMES: Record<string, string> = {
   'league-invest': 'Investments',
   'scarab-flip': 'Flips',
   'wealthy-exile': 'Wealthy Exile',
-  'loot-filter': 'Loot filter'
+  'loot-filter': 'Loot filter',
+  'pob-builds': 'PoB build',
+  'net-worth': 'Net worth'
 }
 
 export interface DockConfig {

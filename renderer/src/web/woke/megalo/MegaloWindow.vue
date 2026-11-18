@@ -107,6 +107,7 @@ import { useActiveBuild } from '../pob-builds/active'
 import { character } from '../pob-builds/character'
 import { mainGroupOf } from '../pob-builds/build-model'
 import { loadPassiveTree, passiveTreeClusters } from '../pob-builds/passive-tree'
+import { onSharedDataChange } from '../app/live-data'
 import { POB_BUILDS_TYPE, pobApi } from '../pob-builds/widget'
 import type { PobBuildsWidget, PobDetails } from '../pob-builds/widget'
 import { TAGS, TAG_GROUPS } from './tags'
@@ -140,9 +141,18 @@ async function loadPool () {
     pool.value = all.filter(n => statId(n.name))
     unknown.value = all.length - pool.value.length
   } catch { /* No tree data yet: the list says it's loading. */ }
-  if (!pool.value.length) toast("Couldn't read the notable list. Open the PoB builds window once to download the tree data.", { anchor: panel.value?.el })
+  if (!pool.value.length) {
+    // Tried again the next time the window opens (the toast says how to fix it).
+    loaded = false
+    toast("Couldn't read the notable list. Open the PoB builds window once to download the tree data.", { anchor: panel.value?.el })
+  }
 }
 watch(() => config.wmWants, (w) => { if (w === 'show') loadPool().catch(() => {}) }, { immediate: true })
+// Newer tree or trade data (a league's new notables): read the list again.
+onBeforeUnmount(onSharedDataChange(() => {
+  loaded = false
+  if (config.wmWants === 'show') setTimeout(() => { loadPool().catch(() => {}) }, 0)
+}))
 
 // ---- the build ----
 // No build to read yet: show the list, save no changes.
