@@ -21,7 +21,7 @@ import { readGameLogTail } from './game-log-tail'
 import { readLogRange } from './game-log-range'
 import { perfSnapshot, startProcessSampler } from './perf'
 import { hotkeyFailures } from './hotkey-failures'
-import { marketHandlers } from './market-store'
+import { marketHandlers, trimOldSnapshots } from './market-store'
 import { labLayoutImage } from './lab-layout'
 import { sessionHandlers } from './session-store'
 import { tradeLogHandlers } from './trade-log'
@@ -81,7 +81,15 @@ export function registerWokeHandler<K extends WokeOp> (op: K, handler: WokeHandl
   (handlers as Record<K, WokeHandler<K>>)[op] = handler
 }
 
+const TRIM_AFTER_START_MS = 60_000
+
 export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameWindow, gameLog: GameLogWatcher): void {
+  // Old price snapshots go a minute in, out of the way of the start.
+  setTimeout(() => {
+    trimOldSnapshots()
+      .then(n => { if (n) logger.write(`info [market] Trimmed ${n} old price snapshots (day rows kept)`) })
+      .catch((e: unknown) => { logger.write(`error [market] Trimming old snapshots failed: ${String(e)}`) })
+  }, TRIM_AFTER_START_MS).unref?.()
   registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
   registerWokeHandler('game-log-range', async (args) => await readLogRange(gameLog.actualPath, Number(args?.from), Number(args?.to)))
   // Follow the running game's Client.txt (another drive, another Steam

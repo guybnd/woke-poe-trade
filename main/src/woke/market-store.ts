@@ -15,6 +15,8 @@ interface Snapshot { league: string, ts: number, items: unknown[], divine: numbe
 interface DailyRow { league: string, date: string, type: string, name: string, variant: string, [k: string]: unknown }
 
 const SNAPSHOT_RETENTION_MS = 3 * 24 * 60 * 60 * 1000
+// The intraday movers' spans (renderer market/widget.ts PERIOD_MS; 7 d reads day rows).
+const MOVER_SPANS_MS = [6 * 3600 * 1000, 24 * 3600 * 1000]
 
 const root = () => dataDir('woke-market')
 const IMPORTED_MARK = () => path.join(root(), 'imported-from-indexeddb')
@@ -92,6 +94,49 @@ async function saveSnapshotFile (snapshot: Snapshot) {
   for (const name of await listNames(dir, '.json')) {
     if (Number(name) < snapshot.ts - SNAPSHOT_RETENTION_MS) await fs.rm(path.join(dir, `${name}.json`), { force: true })
   }
+}
+
+// Snapshots older than the retention are only removed when that league saves
+// again, so a league you stopped playing (or Standard after a look) kept
+// hundreds of 1.3 MB files: 600 MB on Guy's PC. Once a run, every league is
+// trimmed to the day rows (one point per item per day), keeping the league's
+// newest snapshot, and a day's last snapshot when that day has no day rows.
+export async function trimOldSnapshots (now = Date.now()): Promise<number> {
+  let removed = 0
+  let leagues: string[] = []
+  try {
+    leagues = (await fs.readdir(root(), { withFileTypes: true })).filter(d => d.isDirectory()).map(d => d.name)
+  } catch {
+    return 0
+  }
+  for (const folder of leagues) {
+    const dir = path.join(root(), folder, 'snapshots')
+    await queued(folder, async () => {
+      const times = (await listNames(dir, '.json')).map(Number).filter(n => Number.isFinite(n)).sort((a, b) => b - a)
+      const days = new Set(await listNames(path.join(root(), folder, 'daily'), '.json'))
+      // The newest stays anyway, and is its own day's point.
+      const dayPoint = new Set<string>(times.length ? [utcDate(times[0])] : [])
+      // So do the snapshots the 6 h and 24 h movers compare the newest with
+      // (market-at: the newest at or before), for a league no longer saving.
+      const movers = new Set(MOVER_SPANS_MS.map(span => times.find(t => t <= times[0] - span)).filter((t): t is number => t != null))
+      for (const ts of times.slice(1)) {
+        const day = utcDate(ts)
+        if (ts >= now - SNAPSHOT_RETENTION_MS || movers.has(ts)) {
+          // Kept anyway: it's that day's point too.
+          dayPoint.add(day)
+          continue
+        }
+        // Newest first: the first one met is the day's last.
+        if (!days.has(day) && !dayPoint.has(day)) {
+          dayPoint.add(day)
+          continue
+        }
+        await fs.rm(path.join(dir, `${ts}.json`), { force: true })
+        removed++
+      }
+    })
+  }
+  return removed
 }
 
 async function snapshotTimes (league: string): Promise<number[]> {

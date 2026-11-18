@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { dailyRows, marketHandlers } from '../../main/src/woke/market-store'
+import { dailyRows, marketHandlers, trimOldSnapshots } from '../../main/src/woke/market-store'
 
 const DAY = 24 * 3600 * 1000
 const T0 = Date.UTC(2026, 10, 17, 10)
@@ -53,5 +53,26 @@ describe('price history saves', () => {
     expect(snapshots('D')).toHaveLength(2)
     const rows = await marketHandlers['market-daily-date']!({ league: 'D', date: '2026-11-18' } as never) as unknown[]
     expect(rows).toHaveLength(2)
+  })
+
+  it('trims old snapshots to the day rows, keeping the newest and a day with no rows', async () => {
+    const root = path.join(process.env.WOKE_FAKE_USER_DATA!, 'woke-market', 'Old')
+    fs.mkdirSync(path.join(root, 'snapshots'), { recursive: true })
+    fs.mkdirSync(path.join(root, 'daily'), { recursive: true })
+    const H = 3600 * 1000
+    // Two days with day rows, one without; four snapshots a day.
+    const D0 = Date.UTC(2026, 10, 7)
+    const times = [0, 1, 2].flatMap(d => [1, 6, 12, 20].map(h => D0 + d * DAY + h * H))
+    for (const ts of times) fs.writeFileSync(path.join(root, 'snapshots', `${ts}.json`), '{}')
+    for (const d of [0, 2]) fs.writeFileSync(path.join(root, 'daily', `${new Date(D0 + d * DAY).toISOString().slice(0, 10)}.json`), '[]')
+    // A league still played: within the last three days, untouched.
+    await save(snap('Live', T0 - 3600_000))
+    await save(snap('Live', T0 - 1800_000, 7))
+    expect(await trimOldSnapshots(T0)).toBe(times.length - 3)
+    const left = fs.readdirSync(path.join(root, 'snapshots')).map(f => Number(f.slice(0, -5))).sort()
+    // The newest (day 2, 20:00), what 6 h and 24 h movers compare it with (12:00
+    // that day, 20:00 the day before, also the last of a day without rows).
+    expect(left).toEqual([times[7], times[10], times[11]])
+    expect(snapshots('Live')).toHaveLength(2)
   })
 })
