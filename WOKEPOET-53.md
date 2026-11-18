@@ -52,6 +52,16 @@ history:
     selfAttested: true
     pin: true
     id: c-2026-11-13t03-02-28-376z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:25:27.880Z'
+    comment: >-
+      Built on woke/safer-updates (c6aa8fee, pushed): error logs, install while
+      the game is closed, Guy's picks E (notice) and A+B (Go back in About +
+      tray). Four adversarial reviews, all fixed; local checks pass. Untried in
+      a real packaged install (downgrade, GitHub download, notices, tray).
+      Handed to coordinator. Code signing out of scope.
+    id: a-2026-11-18t07-25-27-880z
 subtasks:
   - WOKEPOET-260
 ---
