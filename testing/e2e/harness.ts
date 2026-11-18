@@ -152,9 +152,12 @@ export class Overlay {
     this.app.clearReceived()
     this.app.game.resetInputLog()
     // The fake app lives for the whole worker, so the mouse is wherever the
-    // last test left it. A dock icon that appears under it opens its card,
-    // which then covers what this test clicks (the stack sizes flake). Every
-    // test starts with the mouse in the middle, as the first one does.
+    // last test left it, over whatever item it hovered. A dock icon that
+    // appears under it opens its card, which then covers what this test clicks
+    // (the stack sizes flake), and Ctrl + D finds the old item (the "no item
+    // under the mouse" flake). Every test starts as the first one does: the
+    // mouse in the middle, over nothing.
+    this.app.hoverItem(null)
     this.app.moveMouse(960, 540)
     this.app.focusGame(true)
     await this.page.goto(this.app.url)
