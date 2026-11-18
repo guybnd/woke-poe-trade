@@ -414,13 +414,20 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   // A row's rules: first one set per slot group with a line of its own (with
   // that group's classes), then one for every other slot.
   const perSlot = (row: GearRow, conds: FilterCondition[], emit: (line: (r: GearRarity) => number, conds: FilterCondition[], tag: string) => void) => {
+    const rest: string[] = []
+    let split = false
     for (const sg of SLOT_GROUPS) {
       const own = g.slots[row]?.[sg.key]
-      if (!own) continue
+      if (!own) { rest.push(...sg.classes); continue }
+      split = true
       const cls = withClasses(conds, sg.classes)
       if (cls) emit(r => own[r], cls, `-${sg.key}`)
     }
-    emit(r => g.show[row][r], conds, '')
+    // A slot with its own line never falls into the row's rule, even where
+    // its own answer is "leave it to later rules".
+    if (!split) { emit(r => g.show[row][r], conds, ''); return }
+    const restConds = withClasses(conds, rest)
+    if (restConds) emit(r => g.show[row][r], restConds, '')
   }
 
   if (lists.never.length) {
@@ -512,17 +519,24 @@ export function applyGear (doc: FilterDoc, g: GearSettings, auto: string[]): Gea
   const lowAny = src.any[src.any.length - 1]
   if (lowAny) {
     // Ranked bases without Always don't fall into the unranked row's Always.
-    const anyAlways = (r: GearRarity) => g.show.any[r] === NO_TIER || Object.values(g.slots.any ?? {}).some(v => v[r] === NO_TIER)
+    const lineIn = (row: GearRow, sg: SlotGroup, r: GearRarity) => g.slots[row]?.[sg]?.[r] ?? g.show[row][r]
+    const sliced = Object.keys(g.slots.any ?? {}).length > 0
     for (const rank of RANKS) {
       if (!lists[rank].length) continue
-      perSlot(rank, template, (line, conds, tag) => {
-        const rs = (['magic', 'rare'] as GearRarity[]).filter(r => anyAlways(r) && line(r) !== NO_TIER)
-        if (rs.length) {
-          out.push(gearBlock(src.cells.get(key(rank, 2))?.block ?? anchor, `${rank}${tag}-notier-hide`, `rank ${rank.slice(1)} bases${tag ? ` (${tag.slice(1)})` : ''} with no drop tier`, 'Hide', [
-            ...conds, rarityCondition(rs), cond('BaseType', '==', lists[rank])
-          ], section))
-        }
-      })
+      const from = src.cells.get(key(rank, 2))?.block ?? anchor
+      // Slot by slot when the any row is split, as each slot's Always differs.
+      const groups: Array<{ key: SlotGroup | null, classes: string[] | null }> = sliced || Object.keys(g.slots[rank] ?? {}).length
+        ? SLOT_GROUPS.map(sg => ({ key: sg.key, classes: sg.classes }))
+        : [{ key: null, classes: null }]
+      for (const grp of groups) {
+        const rs = (['magic', 'rare'] as GearRarity[]).filter(r => grp.key
+          ? lineIn('any', grp.key, r) === NO_TIER && lineIn(rank, grp.key, r) !== NO_TIER
+          : g.show.any[r] === NO_TIER && g.show[rank][r] !== NO_TIER)
+        if (!rs.length) continue
+        out.push(gearBlock(from, `${rank}${grp.key ? `-${grp.key}` : ''}-notier-hide`, `rank ${rank.slice(1)} bases${grp.key ? ` (${grp.key})` : ''} with no drop tier`, 'Hide', [
+          ...template, ...(grp.classes ? [cond('Class', '==', grp.classes)] : []), rarityCondition(rs), cond('BaseType', '==', lists[rank])
+        ], section))
+      }
     }
     noTier('any', null, lowAny.block, copyConditions(lowAny.block))
   }
@@ -587,21 +601,26 @@ export function takeOver (g: GearSettings, doc: FilterDoc): void {
 
 // ---- Sweeping changes --------------------------------------------------------
 
+// Every line in the table: each row's, then each slot line of its own.
+function allLines (g: GearSettings): Array<Record<GearRarity, number>> {
+  return [...GEAR_ROWS.map(row => g.show[row]), ...Object.values(g.slots).flatMap(s => Object.values(s ?? {}))]
+}
+
 export function shiftAll (g: GearSettings, by: number): void {
-  for (const row of GEAR_ROWS) {
+  for (const line of allLines(g)) {
     for (const r of ['magic', 'rare'] as GearRarity[]) {
-      const v = g.show[row][r]
+      const v = line[r]
       // Off and "no tier" stay: one is a choice, the other has no tier to move.
       if (!v || v === NO_TIER) continue
-      g.show[row][r] = Math.min(5, Math.max(2, v + by))
+      line[r] = Math.min(5, Math.max(2, v + by))
     }
   }
 }
 
 export function magicOff (g: GearSettings): void {
-  for (const row of GEAR_ROWS) g.show[row].magic = 0
+  for (const line of allLines(g)) line.magic = 0
 }
 
 export function magicLikeRares (g: GearSettings): void {
-  for (const row of GEAR_ROWS) g.show[row].magic = g.show[row].rare
+  for (const line of allLines(g)) line.magic = line.rare
 }

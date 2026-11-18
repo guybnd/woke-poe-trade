@@ -340,13 +340,18 @@ function setQualityOn (v: boolean) {
   change(x => { x.quality.on = v })
 }
 function onlyBuild (x: GearSettings) {
-  for (const row of ['r1', 'r2', 'r3', 'any'] as const) x.show[row] = { magic: 0, rare: 0 }
+  for (const row of ['r1', 'r2', 'r3', 'any'] as const) {
+    x.show[row] = { magic: 0, rare: 0 }
+    x.slots = { ...x.slots, [row]: {} }
+  }
   if (!x.show.build.rare) x.show.build.rare = 2
 }
 function backToNeverSink () {
   const x = g.value
   x.on = false
   x.quality.on = false
+  // Slot lines belong to the rows NeverSink's numbers replace next time.
+  x.slots = {}
 }
 
 function rowSub (row: GearRow): string {

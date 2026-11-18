@@ -238,4 +238,44 @@ describe('gear table', () => {
     expect(vis(d, { ...R1, rarity: 'Rare', unidentifiedItemTier: 4 })).toBe('Show')
     expect(validateFilter(parseFilter(serializeFilter(d))).map(p => p.message)).toEqual([])
   })
+
+  it('never lets a slot with its own line fall into its row', () => {
+    const at = (level: typeof LEVELS[number], change: (g: GearSettings) => void, f: Partial<ItemFacts>) => {
+      const d = doc(level)
+      applyGear(d, gearOn(d, change), ['Twilight Regalia'])
+      return { with: vis(d, f), base: (() => { const b = doc(level); applyGear(b, gearOn(b, g => { change(g); g.slots = {} }), ['Twilight Regalia']); return b })() }
+    }
+    const off = { magic: 0, rare: 0 }
+    // Rank 1 shows from 2, its body armours are off.
+    let r = at('6-UBER-PLUS-STRICT', g => { g.show.r1 = { magic: 2, rare: 2 }; g.slots.r1 = { body: off } }, { ...R1, rarity: 'Rare', unidentifiedItemTier: 2 })
+    expect(r.with).not.toBe('Show')
+    // Unranked from 2, its body armours off.
+    r = at('6-UBER-PLUS-STRICT', g => { g.show.any = { magic: 2, rare: 2 }; g.slots.any = { body: off } }, { ...ANY, rarity: 'Rare', unidentifiedItemTier: 3 })
+    expect(r.with).not.toBe('Show')
+    // Rank 1 always, its body armours from 3: with no tier they go where a
+    // plain "from 3" row sends them, not to the row's Always rule.
+    r = at('1-REGULAR', g => { g.show.r1 = { magic: 1, rare: 1 }; g.slots.r1 = { body: { magic: 3, rare: 3 } } }, { ...R1, rarity: 'Rare' })
+    const plain = doc('1-REGULAR')
+    applyGear(plain, gearOn(plain, g => { g.show.r1 = { magic: 3, rare: 3 } }), ['Twilight Regalia'])
+    expect(r.with).toBe(vis(plain, { ...R1, rarity: 'Rare' }))
+    // Build body armours follow their rank (off here).
+    r = at('1-REGULAR', g => { g.show.build = { magic: 2, rare: 2 }; g.show.r1 = off; g.slots.build = { body: off } }, { ...R1, rarity: 'Rare', unidentifiedItemTier: 3 })
+    expect(r.with).toBe('Hide')
+  })
+
+  it('takes the unranked row\'s Always slot by slot', () => {
+    const d = doc('1-REGULAR')
+    applyGear(d, gearOn(d, g => { g.show.any = { magic: 3, rare: 3 }; g.slots.any = { jewellery: { magic: 1, rare: 1 } } }), [])
+    const base = doc('1-REGULAR')
+    applyGear(base, gearOn(base, g => { g.show.any = { magic: 3, rare: 3 } }), [])
+    expect(vis(d, { ...R1, rarity: 'Rare' })).toBe(vis(base, { ...R1, rarity: 'Rare' }))
+  })
+
+  it('moves slot lines with the quick setups', () => {
+    const g = normalizeGear({ on: true, slots: { r1: { body: { magic: 2, rare: 3 } } } } as never)
+    magicOff(g)
+    expect(g.slots.r1?.body).toEqual({ magic: 0, rare: 3 })
+    shiftAll(g, 1)
+    expect(g.slots.r1?.body).toEqual({ magic: 0, rare: 4 })
+  })
 })

@@ -20,8 +20,8 @@ import { computed } from 'vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { exoticBases, laneOf, readTiered, takeOver } from './gear'
-import type { GearRarity, Lane, Rank } from './gear'
+import { NO_TIER, SLOT_GROUPS, buildBases, exoticBases, laneOf, readTiered, takeOver } from './gear'
+import type { GearRarity, GearRow, Lane, Rank } from './gear'
 import { baseInfo } from './gear-bases'
 import { tierLabel } from './names'
 
@@ -54,17 +54,24 @@ const exotic = computed(() => {
   return tiers?.map(tierLabel).join(', ') ?? ''
 })
 
-// What the table says for this rarity and row.
+// What the table says for this item: its rarity (white follows rare), its
+// slot's own line if it has one, and the build row when the base is in it.
 const lineText = computed(() => {
   if (lane.value === 'never') return 'Never shown'
-  const row = lane.value === 'none' ? 'any' : lane.value
+  const row: GearRow = lane.value === 'none' ? 'any' : lane.value
   const r: GearRarity = props.facts.rarity === 'Magic' ? 'magic' : 'rare'
-  const v = g.value.on ? g.value.show[row][r] : null
-  const what = `${r === 'magic' ? 'Magic' : 'Rare'} ${LANE_LABEL[lane.value].toLowerCase()} bases`
-  if (v == null) return `${what}: NeverSink's numbers`
-  if (!v) return `${what}: off`
-  if (v === 1) return `${what}: always`
-  return `${what} show from drop tier ${v}`
+  const label = props.facts.rarity === 'Magic' ? 'Magic' : props.facts.rarity === 'Normal' ? 'White' : 'Rare'
+  if (!g.value.on) return `${label} ${LANE_LABEL[lane.value].toLowerCase()} bases: NeverSink's numbers`
+  const cls = props.facts.itemClass ?? baseInfo(base.value).cls
+  const sg = cls ? SLOT_GROUPS.find(s => s.classes.includes(cls))?.key : undefined
+  const lineOf = (rw: GearRow) => (sg ? g.value.slots[rw]?.[sg]?.[r] : undefined) ?? g.value.show[rw][r]
+  const inBuild = buildBases(g.value, props.store.buildInput.value?.rareBases ?? []).includes(base.value)
+  const b = inBuild ? lineOf('build') : 0
+  const v = lineOf(row)
+  const say = (n: number) => !n ? 'off' : n === NO_TIER ? 'always' : `from drop tier ${n}`
+  const what = `${label} ${LANE_LABEL[lane.value].toLowerCase()} bases${sg && g.value.slots[row]?.[sg] ? ' (this slot)' : ''}: ${say(v)}`
+  const extra = [b ? `your build's bases: ${say(b)}` : '', exotic.value ? 'NeverSink\'s exotic rules come first' : ''].filter(Boolean)
+  return [what, ...extra].join(' · ')
 })
 
 function moveTo (to: Lane) {
