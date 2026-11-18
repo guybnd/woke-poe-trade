@@ -61,6 +61,7 @@ app.on('ready', async () => {
   const gameConfig = new GameConfig(eventPipe, logger)
   const poeWindow = new GameWindow()
   const appUpdater = new AppUpdater(eventPipe, logger)
+  appUpdater.watchGame(poeWindow)
   const _httpProxy = new HttpProxy(httpRoutes, logger)
   initWoke(eventPipe, logger, poeWindow, gameLogWatcher)
   registerWokeHandler('game-binds', async () => gameConfig.binds)
