@@ -42,6 +42,8 @@ export function buildPath (all: Map<number, TreeNode>, ids: number[], art: TreeA
     for (const id of n.out) {
       const m = all.get(id)
       if (!drawn(m) || !inBuild.has(id)) continue
+      // Paired atlas gateways: linked, but no line on screen (tree-draw.ts).
+      if (n.kind === 'wormhole' && m.kind === 'wormhole') continue
       const key = n.id < m.id ? `${n.id}-${m.id}` : `${m.id}-${n.id}`
       if (seen.has(key)) continue
       seen.add(key)

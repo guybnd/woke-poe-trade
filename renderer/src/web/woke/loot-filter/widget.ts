@@ -102,6 +102,8 @@ export interface LootFilterWidget extends Widget {
   savedBuildSig?: string
   // Fingerprint of price moves + safety net at the last save.
   savedExtraSig?: string
+  // What the cluster price rules named at the last save (cluster-prices.ts).
+  savedClusterSig?: string
   // The same without the net's list: your changes, as last saved.
   savedUserSig?: string
   // The source and its text, as the last save was made from them.

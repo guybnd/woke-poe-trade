@@ -5,7 +5,7 @@ import { shallowRef } from 'vue'
 import type { PobItem } from '../../pob-builds/widget'
 import type { ListingDetail } from '../../price-insight/listing-tip-detail'
 import type { SwapResult } from '../../pob-builds/swap-check'
-import type { TipModel } from './tip-content'
+import type { DropSource, TipModel } from './tip-content'
 
 export interface GemTip {
   kind: 'gem'
@@ -51,7 +51,7 @@ export interface TipBaseUnique {
   label: string
   thin: boolean
   // Not a random drop on this base: only from somewhere in particular.
-  drop?: 'restricted'
+  drop?: DropSource
 }
 
 export interface LookupTip {

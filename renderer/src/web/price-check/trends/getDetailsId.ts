@@ -21,11 +21,14 @@ export function getDetailsId (item: ParsedItem) {
     return forSkillGem(item)
   }
   if (item.category === ItemCategory.Map) {
+    // woke: 3.30 maps are "Map (Tier 16)"; poe.ninja names its rows that way
+    // and puts T0 in every variant ("Map (Tier 16)", "T0, Gen-24").
+    const tiered = item.rarity !== ItemRarity.Unique && item.mapTier != null
     return {
       ns: item.info.namespace,
-      name: item.info.refName,
+      name: tiered ? `${item.info.refName} (Tier ${item.mapTier})` : item.info.refName,
       variant: variant([
-        `T${(item.rarity === ItemRarity.Unique ? undefined : item.mapTier) ?? 0}`,
+        'T0',
         (item.rarity !== ItemRarity.Unique)
           ? (item.mapTier) ? 'Gen-24' : 'Atlas'
           : null
@@ -40,13 +43,22 @@ export function getDetailsId (item: ParsedItem) {
   }
   if (item.info.refName === 'Filled Coffin') {
     const stat = item.statsByType[0]
-    const t = {
+    return {
       ns: item.info.namespace,
       name: stat.stat.ref.replace('#', String(stat.sources[0].contributes?.value)),
       variant: floorToBracket(item.itemLevel!, [1, 70, 80, 84]).toString()
     }
-    console.log(t)
-    return t
+  }
+  if (item.category === ItemCategory.ClusterJewel && item.rarity === ItemRarity.Normal) {
+    return forClusterJewel(item)
+  }
+  // woke: poe.ninja prices Wombgifts by item level ("Ancient Wombgift", "40").
+  if (item.info.refName.endsWith(' Wombgift') && item.itemLevel) {
+    return {
+      ns: item.info.namespace,
+      name: item.info.refName,
+      variant: floorToBracket(item.itemLevel, WOMBGIFT_LEVELS).toString()
+    }
   }
   return {
     ns: item.info.namespace,
@@ -55,7 +67,54 @@ export function getDetailsId (item: ParsedItem) {
   }
 }
 
+const WOMBGIFT_LEVELS = [40, 68, 75, 84]
+
+// woke: a normal cluster jewel's row is its enchant ("12% increased Fire
+// Damage", two lines joined by ", " in the game's order) and "8 passives, 84":
+// passive count and item level band.
+const CLUSTER_LEVELS = [1, 50, 68, 75, 84]
+const CLUSTER_PASSIVES = /^Adds (\d+) Passive Skills? \(enchant\)$/
+const CLUSTER_GRANT = /^Added Small Passive Skills grant: (.+) \(enchant\)$/
+
+function forClusterJewel (item: ParsedItem) {
+  if (!item.itemLevel) return
+  let passives: string | undefined
+  const grants: string[] = []
+  for (const line of item.rawText.split(/\r?\n/)) {
+    const count = CLUSTER_PASSIVES.exec(line)
+    if (count) passives = count[1]
+    const grant = CLUSTER_GRANT.exec(line)
+    if (grant) grants.push(grant[1])
+  }
+  if (!passives || !grants.length) return
+  return {
+    ns: item.info.namespace,
+    name: grants.join(', '),
+    variant: `${passives} passives, ${floorToBracket(item.itemLevel, CLUSTER_LEVELS)}`
+  }
+}
+
+// poe.ninja lists double influence in this order: "83, Shaper/Elder".
+const INFLUENCE_ORDER = ['Shaper', 'Elder', 'Crusader', 'Redeemer', 'Warlord', 'Hunter']
+
 function forSkillGem (item: ParsedItem) {
+  // woke: poe.ninja prices imbued gems apart ("Sunder", "Constriction"), in a
+  // list we don't load. The plain gem's price is far off, so none is better.
+  if (item.imbuedGem) return
+  // woke: Awakened Empower, Enlighten and Enhance are listed at level 1 (with
+  // quality) and at their top level, 4 and 5c (without): a maxed one was
+  // looked up as level 1, or not found once corrupted.
+  if (
+    item.info.refName.startsWith('Awakened ') &&
+    SPECIAL_SUPPORT_GEM.includes(item.info.refName.slice('Awakened '.length)) &&
+    item.gemLevel! >= (item.info.gem?.maxLevel ?? 20)
+  ) {
+    return {
+      ns: item.info.namespace,
+      name: item.info.refName,
+      variant: `${item.gemLevel}${item.isCorrupted ? 'c' : ''}`
+    }
+  }
   let variant = ''
   if (
     SPECIAL_SUPPORT_GEM.includes(item.info.refName) ||
@@ -90,14 +149,16 @@ function forSkillGem (item: ParsedItem) {
 }
 
 function forBasetype (item: ParsedItem) {
-  if (item.influences.length > 1) return
+  if (item.influences.length > 2) return
+  const influences = [...item.influences]
+    .sort((a, b) => INFLUENCE_ORDER.indexOf(a) - INFLUENCE_ORDER.indexOf(b))
 
   return {
     ns: item.info.namespace,
     name: item.info.refName,
     variant: variant([
       (item.itemLevel! >= 86) ? '86+' : String(item.itemLevel!),
-      (item.influences.length) ? item.influences[0] : null
+      (influences.length) ? influences.join('/') : null
     ])
   }
 }
@@ -112,7 +173,9 @@ function forUniqueItem (item: ParsedItem) {
       getUniqueVariant(item),
       (item.category === ItemCategory.Flask) ? null
         : (item.category === ItemCategory.SanctumRelic) ? 'Relic'
-            : item.uniqueBase.refName,
+            // woke: unique tinctures are listed as "Tincture", not by base.
+            : (item.category === ItemCategory.Tincture) ? 'Tincture'
+                : item.uniqueBase.refName,
       (item.sockets?.linked) ? `${item.sockets.linked}L` : null
     ])
   }
@@ -131,17 +194,8 @@ function getUniqueVariant (item: ParsedItem) {
 
   const uniqueName = item.info.refName
 
-  if (uniqueName === 'Vessel of Vinktar') {
-    if (hasStat(item, 'Adds # to # Lightning Damage to Attacks during Flask effect')) {
-      return 'Added Attacks'
-    } else if (hasStat(item, 'Adds # to # Lightning Damage to Spells during Flask effect')) {
-      return 'Added Spells'
-    } else if (hasStat(item, 'Damage Penetrates #% Lightning Resistance during Flask effect')) {
-      return 'Penetration'
-    } else if (hasStat(item, '#% of Physical Damage Converted to Lightning during Flask effect')) {
-      return 'Conversion'
-    }
-  } else if (uniqueName === "Atziri's Splendour") {
+  // woke: poe.ninja no longer splits Vessel of Vinktar or Yriel's Fostering by mod.
+  if (uniqueName === "Atziri's Splendour") {
     if (hasStat(item, '#% increased Armour, Evasion and Energy Shield')) {
       return 'Armour/Evasion/ES'
     } else if (hasStat(item, '#% increased Evasion and Energy Shield') && hasStat(item, '+# to maximum Energy Shield')) {
@@ -176,14 +230,6 @@ function getUniqueVariant (item: ParsedItem) {
       return 'Fire'
     } else if (hasStat(item, 'Adds # to # Lightning Damage to Spells and Attacks')) {
       return 'Lightning'
-    }
-  } else if (uniqueName === "Yriel's Fostering") {
-    if (hasStat(item, 'Projectiles from Attacks have #% chance to Maim on Hit while\nyou have a Bestial Minion')) {
-      return 'Maim'
-    } else if (hasStat(item, 'Projectiles from Attacks have #% chance to Poison on Hit while\nyou have a Bestial Minion')) {
-      return 'Poison'
-    } else if (hasStat(item, 'Projectiles from Attacks have #% chance to inflict Bleeding on Hit while\nyou have a Bestial Minion')) {
-      return 'Bleeding'
     }
   } else if (uniqueName === "Doryani's Invitation") {
     if (hasStat(item, '#% increased Global Physical Damage')) {

@@ -103,7 +103,10 @@ export function buildBlend (input: BlendInput): Blend {
             ? `No price on about ${input.ninja.gaps} of every 7 days: counted lightly`
             : (unfit && fair != null)
                 ? 'Its price is for any roll, uncorrupted and without a Foulborn mod: counted lightly because listings are few'
-                : 'Average of recent listings across the league'
+                // woke: with no listings it still counts, but it isn't this item's price.
+                : unfit
+                  ? 'Its price is for any roll, uncorrupted and without a Foulborn mod: a rough guide, as there are no listings'
+                  : 'Average of recent listings across the league'
     })
   }
 

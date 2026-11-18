@@ -82,7 +82,40 @@ export const nativeImage = {
   }
 }
 export class Tray {}
-export const net = { request () { throw new Error('No network in the fake app') } }
+// pathofexile.com as main's own requests see it (the stash reader: /my-account
+// and get-stash-items). A test sets `reply`; any URL it answers null for has
+// no network, as before. Redirects aren't followed, like sessionFetch asks.
+export interface SiteReply { status: number, headers?: Record<string, string>, body: string }
+export const site = {
+  reply: null as null | ((url: string) => SiteReply | null),
+  requests: [] as string[]
+}
+export const net = {
+  request (opts: { url: string } | string) {
+    const url = typeof opts === 'string' ? opts : opts.url
+    const r = site.reply?.(url) ?? null
+    if (!r) throw new Error('No network in the fake app')
+    site.requests.push(url)
+    let aborted = false
+    const req = Object.assign(new EventEmitter(), {
+      abort () { aborted = true },
+      end () {
+        setImmediate(() => {
+          if (aborted) return
+          if (r.status >= 300 && r.status < 400) {
+            req.emit('redirect', r.status, 'GET', r.headers?.location ?? '', r.headers ?? {})
+            return
+          }
+          const res = Object.assign(new EventEmitter(), { statusCode: r.status, headers: r.headers ?? {} })
+          req.emit('response', res)
+          res.emit('data', Buffer.from(r.body, 'utf8'))
+          res.emit('end')
+        })
+      }
+    })
+    return req
+  }
+}
 export const session = { defaultSession: { webRequest: { onHeadersReceived () {} } } }
 export type Rectangle = { x: number, y: number, width: number, height: number }
 

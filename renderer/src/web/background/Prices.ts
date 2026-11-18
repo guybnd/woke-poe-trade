@@ -12,7 +12,8 @@ interface NinjaDenseInfo {
   variant?: string
 }
 
-type PriceDatabase = Array<{ ns: string, url: string, lines: string }>
+// `lookupOnly`: loaded so price checks can find its rows, kept out of the Market.
+type PriceDatabase = Array<{ ns: string, url: string, lines: string, lookupOnly?: boolean }>
 const RETRY_INTERVAL_MS = 4 * 60 * 1000
 const UPDATE_INTERVAL_MS = 31 * 60 * 1000
 const INTEREST_SPAN_MS = 20 * 60 * 1000
@@ -81,7 +82,7 @@ export const usePoeninja = createGlobalState(() => {
       if (downloadController !== controller || leagues.selected.value?.id !== league.id) return
 
       PRICES_DB = readOverviews(jsonBlob)
-      emitWokePricesLoaded(league.id, PRICES_DB)
+      emitWokePricesLoaded(league.id, PRICES_DB.filter(chunk => !chunk.lookupOnly))
       const divine = findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })
       lastUpdateTime = Date.now()
       if (divine && divine.chaos >= 30) {
@@ -248,6 +249,9 @@ function readOverviews (jsonBlob: string): PriceDatabase {
 }
 
 const MAX_UNLISTED_ENTRIES = 500
+// woke: big categories the Market doesn't list, which price checks still look up.
+// Normal cluster jewels are priced by enchant, passive count and item level.
+const LOOKUP_ONLY_TYPES = new Set(['ClusterJewel'])
 
 function entryCount (lines: string): number {
   let count = 0
@@ -260,6 +264,7 @@ function splitJsonBlob (jsonBlob: string): PriceDatabase {
 
   const database: PriceDatabase = []
   const unlisted: PriceDatabase = []
+  const lookupOnly: PriceDatabase = []
   const seenBlocks = new Set<string>()
   let startPos = jsonBlob.indexOf(NINJA_OVERVIEW)
   if (startPos === -1) return []
@@ -285,6 +290,8 @@ function splitJsonBlob (jsonBlob: string): PriceDatabase {
       // can't take over a name they share.
       if (isListedType(type)) {
         database.push({ ns: isSupported.ns, url: isSupported.url, lines })
+      } else if (LOOKUP_ONLY_TYPES.has(type)) {
+        lookupOnly.push({ ns: isSupported.ns, url: isSupported.url, lines, lookupOnly: true })
       } else if (entryCount(lines) <= MAX_UNLISTED_ENTRIES) {
         // A big category we don't list (enchants, cluster jewels) isn't a
         // league's new currency, and would fill the market tracker.
@@ -295,7 +302,7 @@ function splitJsonBlob (jsonBlob: string): PriceDatabase {
     if (endPos === -1) break
     startPos = endPos
   }
-  return [...database, ...unlisted]
+  return [...database, ...unlisted, ...lookupOnly]
 }
 
 export function displayRounding (value: number, fraction: boolean = false): string {

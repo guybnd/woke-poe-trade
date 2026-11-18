@@ -164,12 +164,53 @@ jobs:
     - name: Unit tests
       run: npm test
       working-directory: ./renderer
+      env:
+        # The loot filter guard's pairs and random mixes: master only.
+        WOKE_FULL_GUARD: ${{ github.event_name != 'pull_request' && '1' || '' }}
     - name: Type check (main)
       run: npx tsc --noEmit
       working-directory: ./main
 
-  game:
-    name: Fake-game tests
+  # The fake-game tests run as three jobs side by side: the overlay tests in
+  # two halves (game-e2e) and the OCR, performance and real Electron checks
+  # (game-checks). "Fake-game tests" waits for all three and fails if any did.
+  # A master ruleset requires that name, so keep it on the last job.
+  game-e2e:
+    name: Fake-game e2e (${{ matrix.shard }}/2)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.game != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: |
+          renderer/package-lock.json
+          main/package-lock.json
+          testing/package-lock.json
+    - uses: ./.github/actions/fake-game-setup
+    # The blob report carries screenshots and traces; the last job merges the
+    # halves into one HTML report.
+    - name: Overlay tests on the fake game
+      run: npx playwright test --shard=${{ matrix.shard }}/2 --reporter=blob,github,list
+      working-directory: ./testing
+    - name: Upload this half's report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: fake-game-blob-${{ matrix.shard }}
+        path: testing/blob-report
+        retention-days: 2
+
+  game-checks:
+    name: Fake-game OCR, perf, Electron
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.game != 'false' }}
     runs-on: ubuntu-latest
@@ -184,49 +225,9 @@ jobs:
           renderer/package-lock.json
           main/package-lock.json
           testing/package-lock.json
-    - run: npm ci
-      working-directory: ./renderer
-    - name: Build the overlay
-      run: npx vite build
-      working-directory: ./renderer
-    # main's code runs in the fake app with Electron and the native hooks
-    # replaced by the fake game, so their install scripts are skipped.
-    - run: npm ci --ignore-scripts
-      working-directory: ./main
-      env:
-        ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-    - run: npm ci
-      working-directory: ./testing
-    - name: Cache OCR files
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-      with:
-        path: testing/.cache/cv-ocr
-        key: cv-ocr-v3.20.10007
-    - name: Get OCR files (opencv + tesseract, from APT's release)
-      run: npm run get:ocr
-      working-directory: ./testing
-    # Ubuntu's mirrors sometimes crawl (8.5 minutes for 22 MB), so Chromium's system
-    # packages are kept between runs. Any that changed are downloaded as usual.
-    - name: Cache Chromium's system packages
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-      with:
-        path: ~/apt-debs
-        key: apt-debs-${{ runner.os }}-${{ hashFiles('testing/package-lock.json') }}
-        restore-keys: apt-debs-${{ runner.os }}-
-    - name: Install Chromium
-      run: |
-        mkdir -p ~/apt-debs
-        sudo cp ~/apt-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
-        echo "Packages from the cache: $(ls ~/apt-debs | wc -l)"
-        npx playwright install --with-deps chromium
-        cp /var/cache/apt/archives/*.deb ~/apt-debs/ 2>/dev/null || true
-        echo "Packages to keep: $(ls ~/apt-debs | wc -l)"
-      working-directory: ./testing
+    - uses: ./.github/actions/fake-game-setup
     - name: OCR tests
-      run: npm run test:main
-      working-directory: ./testing
-    - name: Overlay tests on the fake game
-      run: npx playwright test
+      run: npx vitest run
       working-directory: ./testing
     # Every module on: startup, a map, opening the overlay, a price check,
     # memory. Counts and sizes over testing/perf/budgets.json fail the run.
@@ -260,16 +261,70 @@ jobs:
     - name: Real Electron smoke test
       run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:electron
       working-directory: ./testing
-    - name: Upload report (screenshots of every scenario)
+    - name: Upload perf results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
-        name: fake-game-report
+        name: fake-game-perf
         path: |
-          testing/report
-          testing/test-results
           testing/perf-results
+          testing/test-results
         retention-days: 14
+
+  game:
+    name: Fake-game tests
+    needs: [changes, game-e2e, game-checks]
+    if: ${{ !cancelled() && needs.changes.outputs.game != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: testing/package-lock.json
+    - run: npm ci
+      working-directory: ./testing
+    # A half that was cancelled or broke before its upload leaves nothing here;
+    # the last step still fails the job for it.
+    - name: Get both halves' reports
+      continue-on-error: true
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        pattern: fake-game-blob-*
+        path: testing/all-blob
+        merge-multiple: true
+    # Exits 1 when a test failed; the steps after it still run, and the last
+    # one fails the job.
+    - name: Merge into one report
+      if: ${{ hashFiles('testing/all-blob/*.zip') != '' }}
+      continue-on-error: true
+      run: npx playwright merge-reports --reporter=html,json ./all-blob
+      working-directory: ./testing
+      env:
+        PLAYWRIGHT_HTML_OUTPUT_DIR: report
+        PLAYWRIGHT_HTML_OPEN: never
+        PLAYWRIGHT_JSON_OUTPUT_NAME: report/results.json
+    # A retry turns a flaky test green, so the run alone never shows it.
+    - name: List flaky and failed tests
+      if: ${{ !cancelled() && hashFiles('testing/report/results.json') != '' }}
+      run: node tools/flaky-summary.mjs report/results.json >> "$GITHUB_STEP_SUMMARY"
+      working-directory: ./testing
+    - name: Upload report (screenshots of every scenario)
+      if: ${{ !cancelled() && hashFiles('testing/report/index.html') != '' }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: fake-game-report
+        path: testing/report
+        retention-days: 14
+    - name: All fake-game jobs passed
+      env:
+        E2E: ${{ needs.game-e2e.result }}
+        CHECKS: ${{ needs.game-checks.result }}
+      run: |
+        echo "Overlay tests: $E2E, OCR/perf/Electron: $CHECKS"
+        [ "$E2E" = success ] && [ "$CHECKS" = success ]
 
   # The Windows installer built as release.yml builds it, without publishing,
   # so a broken install or package step fails a pull request instead of the

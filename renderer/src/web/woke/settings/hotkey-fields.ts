@@ -8,6 +8,8 @@ import { normalizeKey } from '../ui/hotkey-context'
 import { MAP_CHECK_DEFAULT_KEY } from '../shortcuts'
 import { MAP_MODS_TYPE, initMapModsWidget } from '../map-mods/widget'
 import type { MapModsWidget } from '../map-mods/widget'
+import { POB_BUILDS_TYPE, treeHotkeyOf } from '../pob-builds/widget'
+import type { PobBuildsWidget } from '../pob-builds/widget'
 
 type W = Widget & Record<string, unknown>
 
@@ -50,6 +52,8 @@ const WOKE_KEYS: Record<string, { page: string, keys: Array<[string, string]> }>
   'woke-loot-filter': { page: 'loot-filter', keys: [['sampleHotkey', 'Loot filter rule for the hovered item'], ['editorHotkey', 'Open the loot filter editor'], ['reloadHotkey', 'Reload the saved loot filter in game'], ['stricterHotkey', 'Loot filter one step stricter'], ['looserHotkey', 'Loot filter one step looser']] },
   'woke-farming': { page: 'farming', keys: [['lootHotkey', 'Farming: add the hovered item']] },
   'woke-drop-counter': { page: 'drop-counter', keys: [['hotkey', 'Drop counter: +1 the hovered item']] },
+  // Registered by net-worth/enable.ts while the stash reader is on.
+  'woke-net-worth': { page: 'net-worth', keys: [['hotkey', 'Net worth: show / hide']] },
   'woke-trade': { page: 'trade', keys: [['stepHotkey', 'Trade: next step for the top offer'], ['busyHotkey', 'Trade: busy reply'], ['skipHotkey', 'Trade: skip to the next offer']] }
 }
 
@@ -143,12 +147,28 @@ export function hotkeyFields (config: Config): HotkeyField[] {
       }
     })
   }
+  // Every PoB builds copy registers the same tree key: listed once.
+  const firstPob = find(POB_BUILDS_TYPE)
   for (const w of widgets) {
     const spec = WOKE_KEYS[w.wmType]
     const off = !isWidgetTypeOn(config, w.wmType)
+    // Net worth's page and module exist only while the stash reader is on.
+    if (w.wmType === 'woke-net-worth' && off) continue
     const group = moduleNameFor(w.wmType)
     if (spec) {
       for (const [prop, label] of spec.keys) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, ...field(w, prop) })
+    } else if (w.wmType === POB_BUILDS_TYPE && w === firstPob) {
+      // Unset means the default (Alt + T), which shortcuts.ts registers too.
+      const pob = w as unknown as PobBuildsWidget
+      out.push({
+        id: `${w.wmId}-treeHotkey`,
+        label: 'Draw the build (or atlas strategy) on the game\'s tree',
+        group,
+        page: 'builds',
+        off,
+        get: () => treeHotkeyOf(pob),
+        set: (v) => { pob.treeHotkey = v }
+      })
     } else if (w.wmType === 'woke-regex-library') {
       for (const e of (w.entries as Array<{ id: number, name: string, text: string, hotkey: string | null }>) ?? []) {
         out.push({

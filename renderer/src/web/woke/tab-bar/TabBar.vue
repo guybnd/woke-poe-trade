@@ -86,16 +86,18 @@
               <span :class="$style.priceNow"><template v-if="g.low !== g.high"><WPrice :bulk="g.high < 1" :chaos="g.low" :divine="divine" /> to </template><WPrice :bulk="g.high < 1" :chaos="g.high" :divine="divine" /></span>
             </button>
           </div>
-          <div :class="$style.cols">
+          <div :class="$style.cols" @mouseleave="hovered = null">
             <div v-for="(col, i) in launcherColumns" :key="i">
               <template v-for="group in col" :key="group.label">
-                <div v-if="group.items.length" :class="$style.head">{{ group.label }}</div>
+                <div v-if="group.items.length" :class="['w-category', $style.head, $style.groupHead]">{{ group.label }}</div>
                 <div v-for="entry in group.items" :key="entry.key"
-                  :class="[$style.row, { [$style.rowOpen]: entry.tab?.open, [$style.rowOff]: entry.state === 'off' }]"
+                  :class="[$style.row, { [$style.rowPinned]: entry.tab?.pinned, [$style.rowOff]: entry.state === 'off' }]"
+                  @mouseenter="hovered = entry" @focusin="hovered = entry"
                   @contextmenu.prevent.stop="entry.tab && openMenu(entry.tab, $event)">
                   <button :class="$style.rowMain" :aria-label="entry.name" :title="ENTRY_HINT[entry.state]" @click="activate(entry)">
                     <tool-icon :art="entry.art" :icon="entry.icon" />
                     <span :class="$style.rowName">{{ entry.name }}</span>
+                    <span v-if="entry.tab?.open" :class="$style.openDot" title="Window open" />
                     <span v-if="entry.tab && entry.tab.copies > 1" :class="$style.dup" title="Several copies of this tool">×{{ entry.tab.copies }}</span>
                   </button>
                   <span v-if="entry.state === 'off'" :class="$style.rowTag">Off</span>
@@ -110,6 +112,10 @@
             </div>
           </div>
           <div v-if="!launcherHasMatch && !priceGroups.length" :class="$style.none">Nothing matches "{{ launcherQuery }}"</div>
+          <div v-else :class="$style.foot" data-launcher-foot>
+            <template v-if="hovered"><span :class="$style.footName">{{ hovered.name }}</span><span :class="$style.footText">{{ [toolDescription(hovered.wmType), ENTRY_HINT[hovered.state]].filter(Boolean).join('. ') }}</span></template>
+            <span v-else :class="$style.footHint">Point at a tool to see what it does. Right-click for more.</span>
+          </div>
         </div>
 
         <!-- the rail's own layout and size -->
@@ -176,7 +182,7 @@
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { registry } from '@/web/overlay/widget-registry'
@@ -186,7 +192,7 @@ import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '@/web/wo
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
-import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle } from './tools'
+import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
 import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
@@ -402,17 +408,20 @@ function hideTip () { tip.value = null }
 // y: where the popup's top goes when it opens downward; above: where its
 // bottom goes when there is no room below and it opens upward instead.
 type PopupKind = 'menu' | 'launcher' | 'layout'
-const POPUP_WIDTH: Record<PopupKind, number> = { menu: 240, launcher: 900, layout: 240 }
-const popup = ref<{ kind: PopupKind, x: number, y: number, above: number, up?: boolean, wmId?: number } | null>(null)
+const POPUP_WIDTH: Record<PopupKind, number> = { menu: 240, launcher: 1360, layout: 240 }
+// w: a narrower width when the screen has less room beside the rail than the launcher wants.
+const popup = ref<{ kind: PopupKind, x: number, y: number, above: number, up?: boolean, wmId?: number, w?: number } | null>(null)
 const popupEl = ref<HTMLElement | null>(null)
 const menuTab = computed(() => tabs.value.find(tab => tab.wmId === popup.value?.wmId))
 const popupStyle = computed(() => {
   if (!popup.value) return {}
-  const x = Math.min(popup.value.x, window.innerWidth - POPUP_WIDTH[popup.value.kind] - 4)
+  const w = popup.value.w ?? POPUP_WIDTH[popup.value.kind]
+  const x = Math.min(popup.value.x, window.innerWidth - w - 4)
   const left = `${Math.max(4, x)}px`
+  const width = popup.value.w != null ? { width: `${w}px` } : {}
   return popup.value.up
-    ? { left, bottom: `${window.innerHeight - popup.value.above}px`, maxHeight: `${popup.value.above - 4}px`, overflowY: 'auto' as const }
-    : { left, top: `${popup.value.y}px`, maxHeight: `calc(100vh - ${popup.value.y + 4}px)`, overflowY: 'auto' as const }
+    ? { left, ...width, bottom: `${window.innerHeight - popup.value.above}px`, maxHeight: `${popup.value.above - 4}px`, overflowY: 'auto' as const }
+    : { left, ...width, top: `${popup.value.y}px`, maxHeight: `calc(100vh - ${popup.value.y + 4}px)`, overflowY: 'auto' as const }
 })
 // Flip upward when the popup would run off the bottom of the screen and
 // there is more room above the click than below it.
@@ -439,18 +448,28 @@ function openBesideRail (kind: 'launcher' | 'layout') {
   const r = railEl.value!.getBoundingClientRect()
   popup.value = flat.value
     ? { kind, x: r.left, y: r.bottom + 4, above: r.top - 4 }
-    : {
-        kind,
-        x: onRight.value ? r.left - 4 - POPUP_WIDTH[kind] : r.right + 4,
-        y: r.top,
-        above: r.bottom
-      }
+    : { kind, ...besideRail(r, POPUP_WIDTH[kind]), y: r.top, above: r.bottom }
   placePopup()
   if (kind !== 'launcher') return
   query.value = ''
   nextTick(() => searchInput.value?.focus())
 }
 function openLayout () { openBesideRail('layout') }
+// The side facing the screen, unless only the other side has room. When neither
+// fits the full width, the roomier side and a narrower popup: never over the rail.
+function besideRail (r: DOMRect, want: number): { x: number, w?: number } {
+  const roomRight = window.innerWidth - r.right - 8
+  const roomLeft = r.left - 8
+  const preferRight = !onRight.value
+  const fits = (onRightSide: boolean) => (onRightSide ? roomRight : roomLeft) >= want
+  const right = fits(preferRight) ? preferRight
+    : fits(!preferRight) ? !preferRight
+      : roomRight >= roomLeft
+  const room = right ? roomRight : roomLeft
+  const w = room < want ? Math.max(room, 240) : undefined
+  const width = w ?? want
+  return { x: right ? r.right + 4 : r.left - 4 - width, w }
+}
 
 // ---- arranging the rail ----
 // Where the buff row ends: lying along the top, the rail sits just under it.
@@ -574,10 +593,16 @@ function startIconDrag (tab: Tab, start: MouseEvent) {
     if (!d?.active) return
     props.config.pinned = movePin(props.config.pinned ?? [], pinTabs.value.map(x => x.wmId), d.id, d.at)
     // The click that ends a drag doesn't open the tool. If none follows, the
-    // next real one still counts.
+    // next real one still counts: it starts with a new press, which ends the
+    // swallowing even inside the 50 ms.
     const swallow = (e: Event) => { e.stopPropagation(); e.preventDefault() }
+    const done = () => {
+      window.removeEventListener('click', swallow, { capture: true })
+      window.removeEventListener('mousedown', done, { capture: true })
+    }
     window.addEventListener('click', swallow, { capture: true, once: true })
-    setTimeout(() => { window.removeEventListener('click', swallow, { capture: true }) }, 50)
+    window.addEventListener('mousedown', done, { capture: true, once: true })
+    setTimeout(done, 50)
   }
   iconDrag.value = { id: tab.wmId, active: false, x: start.clientX, y: start.clientY, at: 0 }
   endIconDrag = stop
@@ -629,11 +654,11 @@ const launcherMatches = computed(() => {
   return q ? shown.filter(entry => entry.name.toLowerCase().includes(q)) : shown
 })
 const launcherHasMatch = computed(() => launcherMatches.value.length > 0)
-// One column per group; whatever is left shares the last one.
-const launcherColumns = computed(() => {
-  const groups = groupByModule(launcherMatches.value)
-  return [[groups[0]], [groups[1]], [groups[2]], groups.slice(3)]
-})
+// One column per group, Overlay included.
+const launcherColumns = computed(() => groupByModule(launcherMatches.value).map(g => [g]))
+// The tool under the mouse, explained along the launcher's foot.
+const hovered = shallowRef<LauncherEntry<Tab> | null>(null)
+watch([query, () => popup.value?.kind, launcherMatches], () => { hovered.value = null })
 // Opening a tool is what the launcher is for, so it steps aside; closing one
 // leaves it up for the next.
 function onRowClick (tab: Tab) {
@@ -901,12 +926,12 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   font-size: var(--w-fs-md);
 }
 
-.launcher { box-sizing: border-box; width: 900px; max-width: calc(100vw - 8px); padding: 10px; background: var(--w-panel-solid); }
+.launcher { box-sizing: border-box; width: 1360px; max-width: calc(100vw - 8px); padding: 10px; background: var(--w-panel-solid); }
 .find {
   display: flex;
   align-items: center;
   gap: 9px;
-  height: 36px;
+  height: 40px;
   flex: none;
   padding: 0 10px;
   margin-bottom: 10px;
@@ -918,7 +943,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .findInput {
   flex: 1;
   min-width: 0;
-  height: 18px;
+  height: 22px;
   padding: 0;
   resize: none;
   overflow: hidden;
@@ -927,7 +952,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   outline: 0;
   background: none;
   color: var(--w-fg);
-  font: var(--w-fs-md)/calc(18px * var(--w-text-scale, 1)) var(--w-body);
+  font: var(--w-fs-lg)/calc(22px * var(--w-text-scale, 1)) var(--w-body);
 }
 .findInput::placeholder { color: var(--w-dim); }
 .prices { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--w-line); }
@@ -935,19 +960,23 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .priceRow:hover { background: var(--w-accent-soft); }
 .priceSub { color: var(--w-dim); font-size: var(--w-fs-sm); white-space: nowrap; }
 .priceNow { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
-.cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 10px; align-items: start; }
+.cols { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 14px; align-items: start; }
 .row {
+  position: relative;
   display: flex;
   align-items: center;
-  height: 32px;
+  height: 42px;
   padding: 0 4px 0 7px;
   border-radius: var(--w-r-sm);
 }
 .row:hover { background: var(--w-accent-soft); }
-.rowMain { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: 9px; text-align: left; color: var(--w-fg); }
+.rowMain { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: 9px; text-align: left; color: var(--w-fg); font-size: var(--w-fs-xl); }
+/* Larger than other lists (Guy asked for big, easy-to-read rows). */
+.rowMain :is(img, i) { --w-icon-md: 28px; }
 .rowMain > i { color: var(--w-dim); }
 .rowName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rowOpen .rowName { color: var(--w-accent); }
+.rowPinned .rowName { color: var(--w-accent); }
+.openDot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--w-info); }
 .pin {
   flex: none;
   display: inline-grid;
@@ -961,8 +990,28 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 }
 .pin:hover { color: var(--w-fg); background: var(--w-panel-3); }
 .pinOn, .pinOn:hover { color: var(--w-accent); }
+/* An unpinned row's pin floats over the row's end, so names get the space. */
+.pin:not(.pinOn) { position: absolute; right: 4px; }
+.row:hover .pin:not(.pinOn) { background: var(--w-panel-solid); }
 .row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; }
 .none { padding: 10px 8px; color: var(--w-dim); }
+.foot {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 30px;
+  margin-top: 8px;
+  padding: 8px 8px 0;
+  border-top: 1px solid var(--w-line);
+  color: var(--w-dim);
+  font-size: var(--w-fs-lg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.footName { flex: none; color: var(--w-accent); font-family: var(--w-caps-face); font-size: var(--w-fs-xl); }
+.footText, .footHint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.footHint { color: var(--w-faint); }
 .rowTag { flex: none; padding: 0 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
 
@@ -975,6 +1024,8 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   text-transform: var(--w-caps-case);
   font-family: var(--w-caps-face);
 }
+.groupHead { margin-bottom: 4px; color: var(--w-fg); font-size: var(--w-fs-xl); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:global(:root[data-woke-art]) .groupHead { justify-content: center; min-height: 32px; padding: 0 6px; }
 .item {
   display: flex;
   align-items: center;

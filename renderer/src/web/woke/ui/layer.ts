@@ -13,8 +13,10 @@ export type MenuEntry =
     disabled?: boolean
     labelStyle?: Record<string, string> // draws the label as what it stands for
     wrap?: boolean // a long label wraps instead of being cut (a passive's effect)
+    checked?: boolean // an on/off line: a ✓ in the icon's place while on
   }
-  | { separator: true }
+  // With a heading: a small title over the lines that follow it.
+  | { separator: true, heading?: string }
 
 // The item a menu is about (pick C): its name, art and price at the top, then a
 // strip of big icon buttons for what any item can do (item-menu.ts).
@@ -35,7 +37,10 @@ export interface MenuItemHead {
 
 // `frame`: opened from the app's frame (Settings, the rail, the dock), so it
 // wears the app colours (app-colors.ts) instead of the theme.
-export interface MenuState { items: MenuEntry[], x: number, y: number, item?: MenuItemHead, frame?: boolean }
+// anchor: the panel (widget) right-clicked in; the menu closes once it is gone
+// or hidden (the price check dismissed under the open menu). Its panel, not
+// the element itself: a hover tip under the menu may hide while it is open.
+export interface MenuState { items: MenuEntry[], x: number, y: number, item?: MenuItemHead, frame?: boolean, anchor?: Element | null }
 
 // A right-click on an item (v-item-tip) offers that item to whichever menu the
 // same click opens, so screens with their own row menu get the item strip too.
@@ -51,15 +56,16 @@ function offeredItem (at: unknown): MenuItemHead | undefined {
 export const menuState = shallowRef<MenuState | null>(null)
 
 // Open at the mouse (or a point). Destructive items go last, after a separator.
-export function openMenu (at: MouseEvent | { x: number, y: number }, items: MenuEntry[], item?: MenuItemHead) {
+// from: what a point-opened menu belongs to (a follow-up menu from a row's menu).
+export function openMenu (at: MouseEvent | { x: number, y: number, from?: Element | null }, items: MenuEntry[], item?: MenuItemHead) {
   const head = item ?? offeredItem(at)
   if (!items.length && !head) return
   const x = 'clientX' in at ? at.clientX : at.x
   const y = 'clientY' in at ? at.clientY : at.y
   if ('preventDefault' in at) at.preventDefault()
-  const target = 'target' in at && at.target instanceof Element ? at.target : null
+  const target = 'target' in at && at.target instanceof Element ? at.target : ('from' in at ? at.from ?? null : null)
   const frame = Boolean(target?.closest('[data-w-settings], [data-woke-frame]'))
-  menuState.value = { items, x, y, item: head, frame }
+  menuState.value = { items, x, y, item: head, frame, anchor: target?.closest('[id^="widget-"]') ?? null }
 }
 export function closeMenu () { menuState.value = null }
 

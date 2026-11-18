@@ -135,6 +135,7 @@ import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
+import { isFracturedOnly, setFracturedOnly } from '@/web/woke/price-insight/pseudo-split'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { onlyCatalysed } from '@/web/ui/catalyst-zone'
 import { AppConfig } from '@/web/Config'
@@ -272,9 +273,18 @@ export default defineComponent({
       props.filter.disabled = false
     }
 
+    function modClick (e: MouseEvent): boolean {
+      if (!actions || props.filter.group) return false
+      if (e.ctrlKey) { actions.searchOnly(props.filter); return true }
+      if (e.altKey && actions.canExclude(props.filter)) { actions.toggleExclude(props.filter); return true }
+      return false
+    }
+
     function toggleFilter (e: MouseEvent) {
       if (e.detail === 0) return
       e.preventDefault()
+      // woke: Ctrl + Click ticks this row alone, Alt + Click excludes it (the right-click menu's lines).
+      if (modClick(e)) return
 
       props.filter.disabled = !props.filter.disabled
     }
@@ -286,6 +296,7 @@ export default defineComponent({
     function smartToggle (e: MouseEvent) {
       if (e.detail === 0) return
       e.preventDefault()
+      if (modClick(e)) return
 
       if (!props.filter.disabled && props.groupExpanded === true) {
         ctx.emit('update:groupExpanded', false)
@@ -301,17 +312,14 @@ export default defineComponent({
     const { t } = useI18n()
 
     // woke: PoE mode's "Fractured only": the row searches the fractured copy of its mod.
+    // The chip sits on a fractured mod's row, and on any row the menu switched.
     // PoE mode's code (poe-kit.ts) is loaded before a PoE row is drawn.
     const kit = props.poe ? poeKit.value : null
-    const fracIds = computed(() => kit?.fracturedIds(props.filter))
-    const fracOnly = computed(() => fracIds.value != null && props.filter.tradeId.join() === fracIds.value.join())
+    const fracOnly = computed(() => !props.filter.group && isFracturedOnly(props.filter, props.item))
+    // None on a Harvest swap pick: its search would mix fractured and any-copy ids.
+    const fracIds = computed(() => props.filter.swapPick ? undefined : kit?.fracturedIds(props.filter) ?? (fracOnly.value ? props.filter.tradeId : undefined))
     function toggleFractured () {
-      const ids = fracIds.value
-      if (!ids) return
-      props.filter.tradeId = fracOnly.value
-        ? props.filter.sources[0].stat.stat.trade.ids[ModifierType.Explicit]
-        : ids
-      props.filter.disabled = false
+      setFracturedOnly(props.filter, props.item, !fracOnly.value)
     }
 
     // Only PoE rows listen for the drag.

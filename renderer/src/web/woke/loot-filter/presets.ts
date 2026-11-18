@@ -3,6 +3,8 @@
 // 6-sockets); the others adjust NeverSink's own rules after your edits
 // (quiet mode, bigger labels, colour-blind beams and icons). Your own rules are
 // never touched; the safety net only takes the colour-blind colours.
+import { normalizeClusterPrices } from './cluster-prices'
+import type { ClusterPriceSettings } from './cluster-prices'
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { ECONOMY_GROUPS } from './economy'
 import type { EconomyGroup, PriceLookup } from './economy'
@@ -55,6 +57,8 @@ export interface Presets {
   vendorQuality: { on: boolean }
   // Every drop sound at this share of its volume.
   volume: { on: boolean, percent: number }
+  // NeverSink's cluster jewel price rules follow poe.ninja (cluster-prices.ts).
+  clusterPrices: ClusterPriceSettings
   // Beams and minimap icons only for the top tiers (t1..tN).
   beams: { on: boolean, keepTiers: number }
   // While levelling, hide white and blue weapons other builds use and dim
@@ -95,7 +99,8 @@ export function defaultPresets (): Presets {
     weapons: { on: false, archetype: 'auto', classes: [] },
     look: defaultLook(),
     lowTiers: { on: false, tier: 3 },
-    gear: defaultGear()
+    gear: defaultGear(),
+    clusterPrices: normalizeClusterPrices(undefined)
   }
 }
 
@@ -148,7 +153,8 @@ export function normalizePresets (p: Partial<Presets> | undefined): Presets {
     weapons: normalizeWeapons(p?.weapons, on(p?.weapons), d.weapons),
     look: normalizeLook(p?.look),
     lowTiers: { on: on(p?.lowTiers), tier: Math.round(num(p?.lowTiers?.tier, ITEM_TIER_MIN, ITEM_TIER_MAX, d.lowTiers.tier)) },
-    gear: normalizeGear(p?.gear)
+    gear: normalizeGear(p?.gear),
+    clusterPrices: normalizeClusterPrices(p?.clusterPrices)
   }
 }
 
@@ -852,11 +858,14 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
     if (p.lowMaps.on && b.type === 'maps' && !b.continue && b.visibility !== 'Hide') {
       const cap = mapTierCap(b)
       if (cap != null && cap < p.lowMaps.tier) {
-        // A map above the zone you're in is progress (NeverSink's map-up
-        // rule marks it): that one falls through and still shows.
-        hideBlock(b)
-        b.conditions = [...b.conditions, cond('HasInfluence', '', ['None']), cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])]
-        touched = true
+        // A hidden copy above the rule, so what it lets through (a map above
+        // the zone you're in is progress, an influenced map) still gets this
+        // rule's own look, not NeverSink's plain catch-all.
+        mapCopies.push([b, addedBlock(PRESET_TYPE, 'lowmaps', `maps below tier ${p.lowMaps.tier}`, [
+          ...b.conditions,
+          cond('HasInfluence', '', ['None']),
+          cond('AreaLevel', '>=', [MAP_LEVEL_BASE + cap])
+        ], 'Hide', 'Presets')])
       } else if (cap == null) {
         // NeverSink's top rule (MapTier >= 16) has no cap: a hidden copy above
         // it takes the tiers below the line, and higher ones still reach it.
@@ -906,5 +915,7 @@ export function applyPresetChanges (doc: FilterDoc, p: Presets): number {
 
 export function presetsOn (p: Presets): boolean {
   // The look strip counts only while it changes something.
-  return Object.entries(p).some(([k, v]) => k === 'look' ? lookChanges(p.look) : v.on)
+  // The look strip and cluster prices count only while changed from the start:
+  // cluster prices are on from the start, and follow prices like price tiers.
+  return Object.entries(p).some(([k, v]) => k === 'look' ? lookChanges(p.look) : k === 'clusterPrices' ? JSON.stringify(v) !== JSON.stringify(normalizeClusterPrices(undefined)) : v.on)
 }

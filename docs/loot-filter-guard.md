@@ -84,7 +84,7 @@ Each one on every file. "Taken away" is what the preset is allowed to take, as i
 | Every preset, harshest settings | nothing |
 | Every preset, harshest, safety net on | nothing |
 
-Also: all 231 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests).
+Also: all 231 pairs of presets at their harshest (on Regular and Uber+), and 200 seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (`filter-guard-pairs` and `filter-guard-random` tests, run on every push to master rather than on each pull request).
 
 ## Also checked
 

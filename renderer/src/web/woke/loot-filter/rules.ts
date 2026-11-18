@@ -3,6 +3,9 @@
 // kept in the widget config, so a new NeverSink version keeps them.
 import type { FilterBlock, FilterCondition, FilterDoc, Visibility } from './parse'
 import { applyStyle } from './edits'
+import { BASE_FACTS } from './base-facts'
+import { WEAPON_CLASSES } from './build-rules'
+import { ITEM_BY_REF } from '@/assets/data'
 import type { StylePatch } from './edits'
 
 export const RULE_TYPE = 'woke->rule'
@@ -99,7 +102,28 @@ export function cleanValue (v: string): string {
 }
 
 // Why a rule can't be written (it is skipped until fixed), or null.
-export function ruleProblem (r: OwnRule): string | null {
+// Says whether the game knows a base type or item class. The game refuses the
+// whole filter over one it doesn't, so a rule with a misspelt name is held back.
+export type NameCheck = (key: 'BaseType' | 'Class', value: string) => boolean
+
+// Names the filter itself uses, gear bases, and the game data's items and gems.
+// Before the game data has loaded, any base passes (nothing to check against).
+export function nameCheck (doc: FilterDoc | null): NameCheck {
+  const listed = { BaseType: new Set(knownValues(doc, 'BaseType')), Class: new Set(knownValues(doc, 'Class')) }
+  const dataLoaded = Boolean(ITEM_BY_REF('ITEM', 'Chaos Orb')?.length)
+  return (key, value) => {
+    if (listed[key].has(value)) return true
+    if (key === 'Class') return KNOWN_CLASSES.has(value) || listed.Class.size === 0
+    // 3.30 maps go by tier, and the game data has no base for them.
+    if (/^Map \(Tier \d+\)$/.test(value)) return true
+    return value in BASE_FACTS || !dataLoaded || Boolean(ITEM_BY_REF('ITEM', value)?.length || ITEM_BY_REF('GEM', value)?.length)
+  }
+}
+
+// Classes a rule may want that NeverSink's file doesn't name.
+const KNOWN_CLASSES = new Set([...WEAPON_CLASSES, 'Body Armours', 'Helmets', 'Gloves', 'Boots', 'Shields', 'Quivers', 'Rings', 'Amulets', 'Belts', 'Jewels', 'Abyss Jewels'])
+
+export function ruleProblem (r: OwnRule, knownNames?: NameCheck): string | null {
   if (r.conditions.some(c => !conditionKind(c.key) || c.values.some(v => v !== cleanValue(v) || !v))) return 'A condition has a value the game can\'t read'
   for (const c of r.conditions) {
     if (!c.values.length) return `${conditionKind(c.key)?.label ?? c.key} is empty`
@@ -109,6 +133,14 @@ export function ruleProblem (r: OwnRule): string | null {
       if (!Number.isInteger(n) || (kind.min != null && n < kind.min) || (kind.max != null && n > kind.max)) {
         return `${kind.label} must be a whole number from ${kind.min} to ${kind.max}`
       }
+    }
+  }
+  // The game refuses the whole filter over a name it doesn't know.
+  if (knownNames) {
+    // Classes are only warned about: no list here holds every class the game has.
+    for (const key of ['BaseType'] as const) {
+      const unknown = r.conditions.filter(c => c.key === key).flatMap(c => c.values).filter(v => !knownNames(key, v))
+      if (unknown.length) return `The game doesn't know ${unknown.slice(0, 3).join(', ')}: check the base type`
     }
   }
   const live = r.conditions.filter(c => c.values.length)
@@ -158,10 +190,10 @@ export function ruleTier (r: OwnRule): string {
   return `r${r.id}`
 }
 
-export function ruleBlocks (rules: OwnRule[]): FilterBlock[] {
+export function ruleBlocks (rules: OwnRule[], knownNames?: NameCheck): FilterBlock[] {
   const out: FilterBlock[] = []
   for (const r of rules) {
-    if (!r.on || ruleProblem(r)) continue
+    if (!r.on || ruleProblem(r, knownNames)) continue
     const b = addedBlock(RULE_TYPE, ruleTier(r), r.name.replace(/[\r\n]/g, ' ').slice(0, 60), r.conditions, r.visibility, 'Your rules')
     if (r.visibility !== 'Hide') applyStyle(b, r.patch)
     out.push(b)

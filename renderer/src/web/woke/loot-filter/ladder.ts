@@ -7,6 +7,7 @@ import { readStyle } from './edits'
 import type { Colour, StylePatch } from './edits'
 import type { FilterBlock, FilterCondition } from './parse'
 import type { TierNode } from './groups'
+import { boundOf } from './numbers'
 
 export interface Range { lo: number, hi: number }
 
@@ -20,6 +21,9 @@ export interface LadderRow {
   // Marks that only apply sometimes (area level, mods): what they'd add.
   maybeMarks: MarkGroup[]
   shown: boolean
+  // The items this row and its neighbours are about, when a group mixes
+  // several (Large, Medium and Small Cluster Jewels): a heading over them.
+  section: string | null
 }
 
 export interface MarkGroup {
@@ -158,8 +162,8 @@ export function distinctConditions (t: TierNode, shared: Set<string>, axis: stri
 }
 
 // The same, in words for a row: "Not mirrored · Not corrupted · Quality 26+".
-export function distinctWords (t: TierNode, shared: Set<string>, axis: string | null): string[] {
-  return live(t).conditions.filter(c => !(c.key === axis && isSpan(c)) && !shared.has(conditionText(c))).map(conditionWords)
+export function distinctWords (t: TierNode, shared: Set<string>, axis: string | null, skip?: (c: FilterCondition) => boolean): string[] {
+  return live(t).conditions.filter(c => !(c.key === axis && isSpan(c)) && !shared.has(conditionText(c)) && !skip?.(c)).map(conditionWords)
 }
 
 // An order condition a span says exactly: not `!= 16`, not `== 1 16`.
@@ -170,10 +174,58 @@ function isSpan (c: FilterCondition): boolean {
   return nums[nums.length - 1] - nums[0] === nums.length - 1
 }
 
+// Number keys whose bounds differ between these tiers, and that at least half
+// of them check: one odd rule with an area level is a detail, not a second order.
+function varyingNumbers (tiers: TierNode[]): string[] {
+  const sigs = tiers.map(t => {
+    const sig = new Map<string, string[]>()
+    for (const c of live(t).conditions) if (boundOf(c)) sig.set(c.key, [...(sig.get(c.key) ?? []), `${c.op}${c.values[0]}`])
+    return sig
+  })
+  const keys = new Set(sigs.flatMap(s => [...s.keys()]))
+  return [...keys].filter(k => {
+    const checking = sigs.filter(s => s.has(k)).length
+    const spans = new Set(sigs.map(s => (s.get(k) ?? []).sort().join(',')))
+    return spans.size > 1 && checking * 2 >= tiers.length
+  })
+}
+
+// One order works when tiers differ by one number (map tier, quality). When
+// they differ by two (passives and item level), an order by one of them hides
+// the other: list the rules as they are.
+function axisFor (tiers: TierNode[]): string | null {
+  const axis = findAxis(tiers)
+  if (!axis) return null
+  const onIt = tiers.filter(t => rangeOf(live(t), axis))
+  return varyingNumbers(onIt).length > 1 ? null : axis
+}
+
+// The BaseType list a tier names, or null.
+function baseKey (t: TierNode): string | null {
+  const c = live(t).conditions.find(x => x.key === 'BaseType')
+  return c ? [...c.values].sort().join(' | ') : null
+}
+
+// Headings when the rules split cleanly by what they're about: each names its
+// own items, a few lists in all, none shared between two.
+function sectionsOf (tiers: TierNode[]): Map<TierNode, string> | null {
+  const keys = tiers.map(baseKey)
+  if (keys.some(k => k == null)) return null
+  const lists = [...new Set(keys as string[])]
+  if (lists.length < 2 || lists.length * 2 > tiers.length) return null
+  const names = lists.map(l => l.split(' | '))
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) if (names[i].some(n => names[j].includes(n))) return null
+  }
+  // Runs, not scattered: a heading must hold its rules together.
+  for (let i = 1; i < keys.length; i++) if (keys[i] !== keys[i - 1] && keys.slice(0, i - 1).includes(keys[i])) return null
+  return new Map(tiers.map((t, i) => [t, keys[i]!.split(' | ').join(', ')]))
+}
+
 export function buildLadder (tiers: TierNode[]): Ladder {
   const marksSrc = tiers.filter(t => live(t).continue)
   const rest = tiers.filter(t => !live(t).continue)
-  const axis = findAxis(rest)
+  const axis = axisFor(rest)
   const shared = sharedConditions(tiers)
 
   // Marks: border-only rules, one group per look.
@@ -212,7 +264,13 @@ export function buildLadder (tiers: TierNode[]): Ladder {
       prev.range = union(prev.range, range)
       continue
     }
-    rows.push({ tiers: [t], range, markLook: {}, maybeMarks: [], shown: shownTier(t) })
+    rows.push({ tiers: [t], range, markLook: {}, maybeMarks: [], shown: shownTier(t), section: null })
+  }
+  // Without an order the rows are the rules in file order: headed by what
+  // each is about, when that splits cleanly.
+  if (!axis) {
+    const sections = sectionsOf(rows.map(r => r.tiers[0]))
+    if (sections) for (const r of rows) r.section = sections.get(r.tiers[0]) ?? null
   }
 
   for (const row of rows) {

@@ -260,6 +260,7 @@ export const PRESET_NAMES: Record<keyof Presets, string> = {
   cheapUniques: 'hide cheap uniques',
   cheapSplinters: 'hide cheap splinters',
   msBoots: 'movement speed boots',
+  clusterPrices: 'cluster jewel prices',
   hideRgb: 'hide R-G-B items',
   vendorQuality: 'quality gems and flasks',
   volume: 'drop sound volume',

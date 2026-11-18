@@ -4,6 +4,7 @@
 import { ruleLabel } from './parse'
 import { tierLabel } from './names'
 import { STACK_MAX } from './stack'
+import { NUMBER_KEYS, boundOf, numberEditWords, setNumber } from './numbers'
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc, Visibility } from './parse'
 
 export type Colour = [number, number, number, number]
@@ -34,6 +35,9 @@ export type FilterEdit =
   | EditBase & { kind: 'visibility', tier: string, visibility: Visibility, on?: boolean }
   | EditBase & { kind: 'group', hidden: boolean }
   | EditBase & { kind: 'stack', tier: string, size: number }
+  // One number a tier checks: "item level 84 or more" (min), "8 passives or
+  // fewer" (max), "exactly 12" (exact). null takes that bound off the rule.
+  | EditBase & { kind: 'number', tier: string, key: string, bound: NumberBound, value: number | null }
   | EditBase & {
     kind: 'item'
     tier: string
@@ -46,6 +50,8 @@ export type FilterEdit =
     // Goes above everything, so nothing earlier in the filter can catch it.
     pin?: boolean
   }
+
+export type NumberBound = 'min' | 'max' | 'exact'
 
 // A FilterEdit before it gets an id.
 export type NewFilterEdit = FilterEdit extends infer E ? (E extends FilterEdit ? Omit<E, 'id'> : never) : never
@@ -92,6 +98,11 @@ export function isValidEdit (e: unknown): e is FilterEdit {
     case 'group': return typeof x.hidden === 'boolean'
     case 'stack': return str('tier') && typeof x.size === 'number' && Number.isInteger(x.size) && x.size > 0 && x.size <= STACK_MAX
     case 'item': return str('tier', 'base') && VISIBILITIES.includes(x.visibility as string) && isPatch(x.patch)
+    case 'number': {
+      const spec = typeof x.key === 'string' && Object.hasOwn(NUMBER_KEYS, x.key) ? NUMBER_KEYS[x.key] : undefined
+      return str('tier') && spec != null && ['min', 'max', 'exact'].includes(x.bound as string) &&
+        (x.value === null || (typeof x.value === 'number' && Number.isInteger(x.value) && x.value >= spec.min && x.value <= spec.max))
+    }
     default: return false
   }
 }
@@ -170,18 +181,52 @@ export function applyStyle (block: FilterBlock, patch: StylePatch): void {
   }
   block.actions = actions
   block.dirty = true
+  // Taken off on purpose while hidden: showing the rule again mustn't bring it back.
+  const m = muted.get(block)
+  if (m) {
+    const off = [patch.sound === null && 'sound', patch.effect === null && 'PlayEffect', patch.icon === null && 'MinimapIcon'].filter(Boolean)
+    if (off.length) m.removed = m.removed.filter(a => !off.includes(slotOf(a.key)))
+  }
 }
+
+const SOUND_KEYS = ['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional']
+const LOUD_KEYS = [...SOUND_KEYS, 'PlayEffect', 'MinimapIcon']
+// One alert sound per rule: any of the sound keys stands for all of them.
+const slotOf = (key: string) => SOUND_KEYS.includes(key) ? 'sound' : key
+
+// What hiding took off a rule, so showing it again in the same pass gives it
+// back: "Hide whole group", then "Show this tier", must not leave the top tier
+// silent with no beam or map icon.
+const muted = new WeakMap<FilterBlock, { removed: FilterAction[], addedDisable: boolean }>()
 
 // A hidden drop shouldn't still beam, ping or show on the minimap.
 function silence (block: FilterBlock): void {
-  block.actions = block.actions.filter(a => !['PlayAlertSound', 'PlayAlertSoundPositional', 'CustomAlertSound', 'CustomAlertSoundOptional', 'PlayEffect', 'MinimapIcon'].includes(a.key))
-  if (!block.actions.some(a => a.key === 'DisableDropSound')) block.actions.push({ key: 'DisableDropSound', args: ['True'] })
+  const removed = block.actions.filter(a => LOUD_KEYS.includes(a.key))
+  block.actions = block.actions.filter(a => !LOUD_KEYS.includes(a.key))
+  const addedDisable = !block.actions.some(a => a.key === 'DisableDropSound')
+  if (addedDisable) block.actions.push({ key: 'DisableDropSound', args: ['True'] })
+  const prev = muted.get(block)
+  muted.set(block, { removed: [...(prev?.removed ?? []), ...removed], addedDisable: Boolean(prev?.addedDisable) || addedDisable })
+}
+
+// Undoes silence(), leaving alone what an edit set since (a new sound wins).
+function unsilence (block: FilterBlock): void {
+  const m = muted.get(block)
+  if (!m) return
+  muted.delete(block)
+  if (m.addedDisable) block.actions = block.actions.filter(a => a.key !== 'DisableDropSound')
+  for (const a of m.removed) {
+    if (!block.actions.some(x => slotOf(x.key) === slotOf(a.key))) block.actions.push({ ...a, args: [...a.args] })
+  }
 }
 
 function setVisibility (block: FilterBlock, visibility: Visibility): void {
   if (block.visibility === visibility) return
+  const wasHidden = block.visibility === 'Hide'
   block.visibility = visibility
   if (visibility === 'Hide') silence(block)
+  // Minimal (Ruthless) stays quiet, as before.
+  else if (wasHidden && visibility === 'Show') unsilence(block)
   block.dirty = true
 }
 
@@ -225,7 +270,9 @@ export function slug (text: string): string {
 function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
   switch (edit.kind) {
     case 'group': {
-      const blocks = doc.blocks.filter(b => b.type === edit.type || b.type?.startsWith(edit.type + '->'))
+      // Only this group: the editor lists `currency->trial->omen` and the rest
+      // as groups of their own, so hiding Currency mustn't hide Omens too.
+      const blocks = doc.blocks.filter(b => b.type === edit.type)
       if (!blocks.length) return { edit, ok: false, blocks: 0, message: 'Group not found in this filter' }
       if (edit.hidden) for (const b of blocks) if (b.visibility !== 'Hide') setVisibility(b, 'Hide')
       return { edit, ok: true, blocks: blocks.length }
@@ -258,6 +305,19 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
         b.dirty = true
       }
       return { edit, ok: true, blocks: sized.length }
+    }
+    case 'number': {
+      const blocks = blocksOf(doc, edit.type, edit.tier)
+      if (!blocks.length) return { edit, ok: false, blocks: 0, message: 'Tier not found in this filter' }
+      // Only rules that check this number already: a tier of several rules
+      // (one per base) keeps the ones that never did as they are.
+      const checking = blocks.filter(b => b.conditions.some(c => c.key === edit.key && boundOf(c) != null))
+      const targets = checking.length ? checking : blocks
+      for (const b of targets) {
+        b.conditions = setNumber(b.conditions, edit.key, edit.bound, edit.value)
+        b.dirty = true
+      }
+      return { edit, ok: true, blocks: targets.length }
     }
     case 'move': {
       // Out of the tier it was moved from: stack tiers list one base many times,
@@ -343,6 +403,9 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
         inherited: true,
         editId: edit.id
       }
+      // Copied from a rule a group hide silenced: showing the copy brings its look back too.
+      const sourceMuted = muted.get(source)
+      if (sourceMuted) muted.set(clone, { removed: sourceMuted.removed.map(a => ({ ...a, args: [...a.args] })), addedDisable: sourceMuted.addedDisable })
       applyStyle(clone, edit.patch)
       setVisibility(clone, edit.visibility)
       // Also over a look kept from when this rule showed the item.
@@ -391,6 +454,7 @@ export function addEdit (list: FilterEdit[], edit: FilterEdit, opts: { separateM
       case 'style': return (e as typeof edit).tier === edit.tier
       case 'visibility': return (e as typeof edit).tier === edit.tier
       case 'stack': return (e as typeof edit).tier === edit.tier
+      case 'number': return (e as typeof edit).tier === edit.tier && (e as typeof edit).key === edit.key && (e as typeof edit).bound === edit.bound
       case 'group': return true
     }
     return false
@@ -417,7 +481,7 @@ export function addEdit (list: FilterEdit[], edit: FilterEdit, opts: { separateM
       anchor: edit.anchor ?? prev.anchor,
       pin: edit.pin ?? prev.pin
     }
-  } else if (edit.kind === 'stack') {
+  } else if (edit.kind === 'stack' || edit.kind === 'number') {
     merged = { ...edit, id: prev.id }
   } else if (edit.kind === 'group' && !edit.hidden) {
     merged = null
@@ -438,6 +502,7 @@ export function describeEdit (e: FilterEdit): string {
       return `${e.visibility} ${ruleLabel(e.type, e.tier)}`
     case 'group': return `Hid the whole ${group} group`
     case 'stack': return `${ruleLabel(e.type, e.tier)}: stacks of ${e.size} or more`
+    case 'number': return `${ruleLabel(e.type, e.tier)}: ${numberEditWords(e.key, e.bound, e.value)}`
     case 'item': return `Own rule for ${e.base} (${e.visibility === 'Hide' ? 'hidden' : 'restyled'})`
   }
 }
@@ -509,6 +574,13 @@ export function rehomeOptions (doc: FilterDoc, edit: FilterEdit): RehomeOption[]
       for (const t of types()) {
         for (const tier of tiersOf(doc, t)) {
           if (blocksOf(doc, t, tier).some(b => b.conditions.some(c => c.key === 'StackSize' && c.op === '>='))) out.push({ type: t, tier, label: place(t, tier) })
+        }
+      }
+      break
+    case 'number':
+      for (const t of types()) {
+        for (const tier of tiersOf(doc, t)) {
+          if (blocksOf(doc, t, tier).some(b => b.conditions.some(c => c.key === edit.key))) out.push({ type: t, tier, label: place(t, tier) })
         }
       }
       break

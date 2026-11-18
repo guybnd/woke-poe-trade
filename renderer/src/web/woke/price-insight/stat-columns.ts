@@ -147,7 +147,11 @@ export function pickStatColumns (stats: readonly FilterOrGroup[]): StatColumn[] 
       key: `${index}|${filter.tradeId.join('|')}|${filter.statRef}`,
       label: PROPERTIES[id]?.label ?? pickedLabel(filter) ?? statColumnLabel(filter.statRef),
       title: filter.text,
-      yours: filter.roll.value,
+      // A fractured item's total leaves its fractured mod out; a listing's total
+      // counts every mod, so yours takes the share back to compare like with like.
+      yours: (source.kind === 'total' && filter.fracShare)
+        ? Math.round((filter.roll.value + filter.fracShare) * 100) / 100
+        : filter.roll.value,
       better: filter.roll.better ?? 0,
       dp: filter.roll.dp,
       source

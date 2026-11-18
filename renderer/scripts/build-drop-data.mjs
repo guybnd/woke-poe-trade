@@ -9,6 +9,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { shortSource } from './drop-source.mjs'
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public/data/tips')
 const UA = 'woke-poe-trade drop-data'
@@ -62,7 +63,7 @@ async function page (offset) {
   const url = 'https://www.poewiki.net/w/api.php?' + new URLSearchParams({
     action: 'cargoquery',
     tables: 'items',
-    fields: 'name,drop_enabled,is_drop_restricted,drop_text',
+    fields: 'name,drop_enabled,is_drop_restricted,drop_text,drop_monsters,acquisition_tags',
     // Every unique: a name with any row that drops at random is left out.
     where: 'rarity_id="unique"',
     order_by: 'name',
@@ -77,9 +78,35 @@ async function page (offset) {
   return body.cargoquery.map(r => r.title)
 }
 
+// Monster ids ("Metadata/Monsters/...") to their names, from the wiki's monster table.
+async function monsterNames (ids) {
+  const names = new Map()
+  const list = [...ids]
+  for (let i = 0; i < list.length; i += 40) {
+    const chunk = list.slice(i, i + 40)
+    const url = 'https://www.poewiki.net/w/api.php?' + new URLSearchParams({
+      action: 'cargoquery',
+      tables: 'monsters',
+      fields: 'metadata_id=id,name',
+      where: `metadata_id IN (${chunk.map(id => `"${id}"`).join(',')})`,
+      limit: '500',
+      format: 'json'
+    })
+    const res = await fetch(url, { headers: { 'User-Agent': UA } })
+    if (!res.ok) throw new Error(`${res.status} from ${url}`)
+    const body = await res.json()
+    for (const r of body.cargoquery ?? []) names.set(r.title.id, plainText(r.title.name ?? ''))
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+  return names
+}
+
 async function main () {
-  // name -> { d: 1 } drop disabled, or { r: 1 } restricted; t: where from.
+  // name -> { d: 1 } drop disabled, or { r: 1 } restricted; t: where from;
+  // s: that in a word or two for a chip; u: 1 when s is only a guess.
   const out = {}
+  // The rows' monsters and league tags, for the short source.
+  const extra = {}
   const droppable = new Set()
   for (let offset = 0; ; offset += PAGE) {
     const rows = await page(offset)
@@ -93,6 +120,9 @@ async function main () {
       const entry = row['drop enabled'] === '0' ? { d: 1 } : { r: 1 }
       const text = plainText(row['drop text'] ?? '')
       if (text) entry.t = text
+      const ex = extra[name] ??= { monsters: new Set(), tags: new Set() }
+      for (const m of (row['drop monsters'] ?? '').split(',')) if (m) ex.monsters.add(m)
+      for (const t of (row['acquisition tags'] ?? '').split(',')) if (t) ex.tags.add(t)
       // Listed twice: restricted beats drop disabled, and a text beats none.
       const had = out[name]
       if (had?.r && entry.d) continue
@@ -102,12 +132,28 @@ async function main () {
     await new Promise(resolve => setTimeout(resolve, 500))
   }
   for (const name of droppable) delete out[name]
+  const ids = new Set(Object.keys(out).flatMap(name => [...extra[name].monsters]))
+  const monsters = await monsterNames(ids)
+  for (const [name, entry] of Object.entries(out)) {
+    const ex = extra[name]
+    const named = [...new Set([...ex.monsters].map(id => monsters.get(id)).filter(Boolean))]
+    // No drop text: the monsters it drops from say where.
+    if (!entry.t && named.length) entry.t = `Drops from ${named.join(', ')}.`
+    const src = shortSource({
+      text: entry.t,
+      monsters: named,
+      tags: [...ex.tags],
+      disabled: !!entry.d
+    })
+    entry.s = src.s
+    if (src.guess) entry.u = 1
+  }
   mkdirSync(OUT, { recursive: true })
   const sorted = Object.fromEntries(Object.entries(out).sort(([a], [b]) => a < b ? -1 : 1))
   const text = JSON.stringify(sorted)
   writeFileSync(join(OUT, 'drops.json'), text)
   const n = Object.values(out)
-  console.log(`drops.json: ${n.length} uniques (${n.filter(e => e.d).length} don't drop), ${(text.length / 1024).toFixed(0)} KB`)
+  console.log(`drops.json: ${n.length} uniques (${n.filter(e => e.d).length} don't drop, ${n.filter(e => e.u).length} with no stated source), ${(text.length / 1024).toFixed(0)} KB`)
 }
 
 await main()

@@ -141,7 +141,7 @@
           :title="floor.limiting === 'div' ? 'The divine limit is higher, so it is the one hiding rows' : 'Hide rows worth less in total. Scroll the number or click it to type'"
           @on="config.hideChaosOn = $event" @value="config.hideBelowChaos = $event" />
       </section>
-      <ItemTable :lines="tableLines" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
+      <ItemTable :lines="tableLines" :total="v?.chaos" :units="config.tableUnits" :filtered="cat !== 'all' || tabs.length > 0 || !!query.trim() || floor.minChaos > 0" :divine="divine" :changes="changes" :tab-names="tabNames"
         @units="config.tableUnits = $event" @clear="clearFilters" @price="onPrice" @ignore="onIgnore" />
 
       <div class="w-dim text-xs" :class="$style.foot">

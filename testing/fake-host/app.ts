@@ -10,7 +10,7 @@ import path from 'path'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { game } from './game'
 import nodeGypBuild from './stubs/node-gyp-build.cjs'
-import { registeredShortcuts, shellCalls } from 'electron'
+import { registeredShortcuts, shellCalls, site } from 'electron'
 import { uIOhook, UiohookKey, EventType } from 'uiohook-napi'
 import { startServer, eventPipe, httpRoutes, startConfigOver } from '../../main/src/server'
 import { Logger } from '../../main/src/RemoteLogger'
@@ -59,6 +59,8 @@ export class FakeApp {
   readonly received: Array<{ name: string, payload: any, at: number }> = [] // eslint-disable-line @typescript-eslint/no-explicit-any
   readonly requests: RecordedRequest[] = []
   readonly logLines: string[] = []
+  // pathofexile.com for main's own requests (the stash reader); see stubs/electron.ts.
+  readonly site = site
   readonly game = game
   readonly shellCalls = shellCalls
   clientLogPath: string

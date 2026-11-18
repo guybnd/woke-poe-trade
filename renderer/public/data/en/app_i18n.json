@@ -80,6 +80,7 @@
     "white_sockets": "White: {0}",
     "quality": "Quality: {0}",
     "memory_strands": "Memory Strands: {0}",
+    "stored_experience": "Stored Experience: {0}M",
     "gem_level": "Level: {0}",
     "sentinel_charge": "Charge: {0}",
     "find_in_stash": "Find in Stash",

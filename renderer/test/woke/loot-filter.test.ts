@@ -5,6 +5,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 import fs from 'fs'
 import path from 'path'
 import { FIXTURES } from '../helpers/game-data'
+import { neverSink } from '../helpers/neversink'
 import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import { itemFacts } from '@/web/woke/loot-filter/item-facts'
@@ -137,6 +138,77 @@ describe('edits', () => {
     list = addEdit(list, { id: 5, kind: 'style', type: 'rings', tier: 'rare', patch: { fontSize: 35, text: [1, 2, 3, 255] } })
     expect(list).toHaveLength(1)
     expect(list[0]).toMatchObject({ id: 4, patch: { fontSize: 35, text: [1, 2, 3, 255] } })
+  })
+})
+
+describe('hiding a whole group, then showing one tier of it', () => {
+  const t1 = (doc: ReturnType<typeof parseFilter>) => doc.blocks.find(b => b.type === 'currency' && b.tier === 't1exalted')!
+  const loud = (actions: Array<{ key: string }>) => actions.map(a => a.key).filter(k => ['PlayAlertSound', 'PlayEffect', 'MinimapIcon', 'DisableDropSound'].includes(k)).sort()
+
+  it('hides only that group, not the groups named under it', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(doc, [{ id: 1, kind: 'group', type: 'currency', hidden: true }])
+    expect(doc.blocks.filter(b => b.type === 'currency' && !b.disabled).every(b => b.visibility === 'Hide')).toBe(true)
+    const omens = doc.blocks.filter(b => b.type === 'currency->trial->omen' && !b.disabled)
+    expect(omens.length).toBeGreaterThan(0)
+    expect(omens.some(b => b.visibility === 'Show')).toBe(true)
+    expect(doc.blocks.filter(b => b.type === 'currency->fossil' && !b.disabled).some(b => b.visibility === 'Show')).toBe(true)
+  })
+
+  it('gives the shown tier its sound, beam and map icon back', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    const before = t1(doc).actions.map(a => ({ ...a, args: [...a.args] }))
+    applyEdits(doc, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'visibility', type: 'currency', tier: 't1exalted', visibility: 'Show' }
+    ])
+    expect(t1(doc).visibility).toBe('Show')
+    expect(loud(t1(doc).actions)).toEqual(['MinimapIcon', 'PlayAlertSound', 'PlayEffect'])
+    expect(t1(doc).actions).toEqual(expect.arrayContaining(before))
+    // The rest of the group stays hidden and silent.
+    const t2 = doc.blocks.find(b => b.type === 'currency' && b.tier === 't2divine')!
+    expect(t2.visibility).toBe('Hide')
+    expect(loud(t2.actions)).toEqual(['DisableDropSound'])
+  })
+
+  it('keeps a sound you set on the tier while it was hidden', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(doc, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'style', type: 'currency', tier: 't1exalted', patch: { sound: { id: '3', volume: 100 } } },
+      { id: 3, kind: 'visibility', type: 'currency', tier: 't1exalted', visibility: 'Show' }
+    ])
+    const sounds = t1(doc).actions.filter(a => a.key === 'PlayAlertSound')
+    expect(sounds).toEqual([{ key: 'PlayAlertSound', args: ['3', '100'] }])
+    expect(loud(t1(doc).actions)).toEqual(['MinimapIcon', 'PlayAlertSound', 'PlayEffect'])
+  })
+
+  it('a beam or sound you took off stays off when the tier shows again', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(doc, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'style', type: 'currency', tier: 't1exalted', patch: { effect: null, sound: null } },
+      { id: 3, kind: 'visibility', type: 'currency', tier: 't1exalted', visibility: 'Show' }
+    ])
+    expect(loud(t1(doc).actions)).toEqual(['MinimapIcon'])
+    const own = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(own, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'item', type: 'currency', tier: 't1exalted', base: 'Divine Orb', visibility: 'Show', patch: { sound: null, icon: null } }
+    ])
+    expect(loud(own.blocks.find(b => b.type === 'woke->own')!.actions)).toEqual(['PlayEffect'])
+  })
+
+  it('an own rule that shows one item of the hidden group gets the look too', () => {
+    const doc = parseFilter(neverSink('1-REGULAR'))
+    applyEdits(doc, [
+      { id: 1, kind: 'group', type: 'currency', hidden: true },
+      { id: 2, kind: 'item', type: 'currency', tier: 't1exalted', base: 'Divine Orb', visibility: 'Show', patch: {} }
+    ])
+    const m = matchItem(doc, { name: 'Divine Orb', baseType: 'Divine Orb', itemClass: 'Stackable Currency', stackSize: 1, influences: [], explicitModNames: [] } as never)
+    expect(m.final?.block.type).toBe('woke->own')
+    expect(m.visibility).toBe('Show')
+    expect(loud(m.actions)).toEqual(['MinimapIcon', 'PlayAlertSound', 'PlayEffect'])
   })
 })
 

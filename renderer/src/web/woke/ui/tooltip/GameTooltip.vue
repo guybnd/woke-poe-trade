@@ -129,10 +129,10 @@
           </div>
         </section>
         <footer v-if="lookup.uniques" :class="$style.uniques">
-          <div v-for="u in shownUniques" :key="u.name" :class="$style.uniqueRow">
+          <div v-for="u in shownUniques" :key="u.name" :class="[$style.uniqueRow, { [$style.restrictedRow]: u.drop }]">
             <span :class="$style.uniqueCell">
               <span :class="[$style.uniqueName, 'w-trunc']">{{ u.name }}</span>
-              <span v-if="u.drop" :class="$style.noDrop" title="Not a random drop on this base: it comes from a boss, a league mechanic, a vendor or a card">restricted</span>
+              <span v-if="u.drop" :class="$style.noDrop" :title="u.drop.title">{{ u.drop.label }}</span>
             </span>
             <WPrice bulk v-if="u.chaos != null" :chaos="u.chaos" :divine="xchgRate ?? null" />
             <span v-else class="w-faint">no price</span>
@@ -590,6 +590,8 @@ onUnmounted(() => {
 .effectOn { color: var(--w-accent); }
 .uniqueCell { display: flex; align-items: baseline; gap: var(--w-s2); min-width: 0; }
 .noDrop { flex: none; color: var(--w-down); font-size: 0.85em; }
+/* Not a random drop: listed after the ones that are, faded. */
+.restrictedRow { opacity: 0.6; }
 .g-high { color: var(--w-accent); }
 .g-mid { color: var(--w-dim); }
 .g-trash { color: var(--w-down); }

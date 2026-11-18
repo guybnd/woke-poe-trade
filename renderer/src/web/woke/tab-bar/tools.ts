@@ -103,6 +103,19 @@ export const ICON_TOOL_NAMES: Record<string, string> = {
   'item-search': 'Item search'
 }
 
+// The launcher's foot line: what the hovered tool does.
+const APT_DESCRIPTIONS: Record<string, string> = {
+  'settings': 'Every switch and hotkey the overlay has',
+  'item-search': 'Find any item and its price',
+  'timer': 'A stopwatch on the screen',
+  'image-strip': 'Pictures you keep on the screen, like cheat sheets',
+  'delve-grid': 'The Delve map grid'
+}
+
+export function toolDescription (wmType: string): string {
+  return MODULES.find(m => m.widgetTypes.includes(wmType))?.description ?? APT_DESCRIPTIONS[wmType] ?? ''
+}
+
 export function artFor (wmType: string): string | null {
   return moduleIconForWidget(wmType)?.art ?? null
 }

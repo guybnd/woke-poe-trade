@@ -8,7 +8,7 @@ import type { ObjectDirective } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { Host } from '@/web/background/IPC'
 import { usePoeninja } from '@/web/background/Prices'
-import { buildTip, dropOf, kindOfNinjaType, packFiles } from './tip-content'
+import { buildTip, dropOf, dropSource, kindOfNinjaType, packFiles, randomDropsFirst } from './tip-content'
 import type { TipKind, TipModel, TipPack } from './tip-content'
 import { hideTip, marketFromRow, onTipHide, showTipAt } from './tooltip'
 import { offerItem, openItemMenu } from './item-menu'
@@ -129,12 +129,14 @@ export function marketFor (ref: ItemTipRef, kind: TipKind): TipMarket | null {
   return found.unid ? { ...market, unid: found.unid } : market
 }
 
-// Marks the uniques on a base that won't turn up as a random drop on it.
+// Marks the uniques on a base that won't turn up as a random drop on it, with
+// where they come from, and lists them after the ones that do.
 function withDrops (uniques: TipBaseUnique[], drops: TipPack['drops']): TipBaseUnique[] {
-  return uniques.map(u => {
-    const d = dropOf(drops, u.name)
-    return d?.d || d?.r ? { ...u, drop: 'restricted' as const } : u
+  const marked = uniques.map(u => {
+    const drop = dropSource(dropOf(drops, u.name))
+    return drop ? { ...u, drop } : u
   })
+  return randomDropsFirst(marked, u => !!u.drop)
 }
 
 // A Viscera (3.30): poe.ninja prices each of its effects, so the tooltip lists
@@ -157,12 +159,12 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
     await loadFile('drops')
     const uniques = withDrops(listed, pack.drops)
     usePoeninja().queuePricesFetch()
-    // The list comes most valuable first: that one in full, then all of them.
+    // The dearest one in full (restricted or not), then the list, random drops first.
     // With no prices yet there's no telling which is best, so just the list.
     const header = { name: ref.name, base: `${uniques.length} uniques on this base`, frame: 'unique' as const, sections: [] }
-    if (uniques[0].chaos == null && uniques.length > 1) return { model: header, market: null, uniques }
+    if (listed[0].chaos == null && listed.length > 1) return { model: header, market: null, uniques }
     await Promise.all(packFiles('unique').map(loadFile))
-    const model = buildTip(pack, { name: uniques[0].name, kind: 'unique', base: ref.name, atBase: ref.name })
+    const model = buildTip(pack, { name: listed[0].name, kind: 'unique', base: ref.name, atBase: ref.name })
     return { model, market: null, uniques }
   }
   const kind = ref.type ? kindOfNinjaType(ref.type) : kindOfName(ref.name)

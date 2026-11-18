@@ -83,7 +83,7 @@ function report (): string {
   L.push('|---|---|')
   for (const s of SETUPS) L.push(`| ${s.name} | ${changesFor(s.name)} |`)
   L.push('')
-  L.push(`Also: all ${pairSetups().length} pairs of presets at their harshest (on Regular and Uber+), and ${25 * FILTERS.length} seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (\`filter-guard-pairs\` and \`filter-guard-random\` tests).`)
+  L.push(`Also: all ${pairSetups().length} pairs of presets at their harshest (on Regular and Uber+), and ${25 * FILTERS.length} seeded random mixes of presets and settings, 25 per file, with the safety net on in about half (\`filter-guard-pairs\` and \`filter-guard-random\` tests, run on every push to master rather than on each pull request).`)
   L.push('')
   L.push('## Also checked')
   L.push('')

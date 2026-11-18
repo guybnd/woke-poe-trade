@@ -59,12 +59,12 @@
             <span :class="$style.groupTitle">Rules you made</span>
             <span class="w-faint text-xs">top of the filter, first one wins</span>
           </div>
-          <button v-for="r in config.rules" :key="r.id" class="w-focusable" :class="[$style.tierRow, { [$style.active]: r.id === editingRuleId, [$style.off]: !r.on || ruleProblem(r) }]"
+          <button v-for="r in config.rules" :key="r.id" class="w-focusable" :class="[$style.tierRow, { [$style.active]: r.id === editingRuleId, [$style.off]: !r.on || ruleProblem(r, ruleNames) }]"
             @click="editingRuleId = r.id" @contextmenu="ruleMenu($event, r)">
             <span :class="$style.tierName" :title="r.name">{{ r.name }}</span>
             <LabelPreview :text="r.conditions.find(c => c.key === 'BaseType')?.values[0] ?? r.name" :style-override="r.patch" :visibility="r.visibility" style="max-width: 100%; overflow: hidden;" />
             <span :class="$style.bases" class="w-trunc">
-              <span v-if="ruleProblem(r)" style="color: var(--w-warn);">{{ ruleProblem(r) }}</span>
+              <span v-if="ruleProblem(r, ruleNames)" style="color: var(--w-warn);">{{ ruleProblem(r, ruleNames) }}</span>
               <template v-else>{{ r.on ? '' : 'off · ' }}{{ ruleSummary(r) }}</template>
             </span>
           </button>
@@ -90,6 +90,8 @@
             </div>
           </template>
           <template v-else>
+          <ClusterPriceBand v-if="selType === CLUSTER_GROUP && store.doc.value" :doc="store.doc.value" :settings="config.presets.clusterPrices" :prices="clusterPricesFor(store.prices.currentLeague.value)"
+            :updated-at="clusterPrices?.ts ?? null" :error="clusterPricesError" @open-rule="jumpTo(CLUSTER_PRICE_TYPE, $event)" />
           <div v-if="lad.marks.length" :class="$style.marks">
             <div class="text-xs"><span style="font-weight: 600;">Marks</span> <span class="w-dim">paint on top of a tier's look. They never show or hide anything.</span></div>
             <div class="flex flex-wrap gap-1">
@@ -115,16 +117,23 @@
             <span><i class="fas fa-volume-up" aria-hidden="true" /> 2 sound and its number</span>
             <span><span :class="$style.edited">edited</span> you changed it</span>
           </div>
-          <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.ladderStack]: hasStacks }]">
-            <span>{{ lad.axis ? axisName(lad.axis) : 'Tier' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
+          <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.numbersMode]: !lad.axis && hasNumbers, [$style.ladderStack]: hasStacks }]">
+            <span>{{ lad.axis ? axisName(lad.axis) : 'Rule' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis || hasNumbers ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
           </div>
           <template v-for="(r, i) in lad.rows" :key="r.tiers[0].tier">
             <div v-if="lad.cut === i" :class="$style.cut"><span />Hidden below this line<span /></div>
-            <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
+            <div v-if="r.section && r.section !== lad.rows[i - 1]?.section" :class="$style.sectionHead">{{ r.section }}</div>
+            <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.numbersMode]: !lad.axis && hasNumbers, [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
               :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
               @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
-                <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span></span>
+                <span v-if="!lad.axis && hasNumbers" :class="$style.rowHead" style="white-space: normal;">
+                  <NumberLine v-if="numbersEditable(r.tiers[0])" :conditions="firstLive(r.tiers[0]).conditions" :disabled="r.tiers[0].disabled" :name="tierName(firstLive(r.tiers[0]))" @set="(k, b, v) => setNumber(r.tiers[0], k, b, v)" />
+                  <template v-else>{{ catchAllText(r) }}</template>
+                  <span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span>
+                </span>
+                <span v-else :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span></span>
+                <span v-if="!lad.axis && hasNumbers" class="w-faint text-xs w-trunc">{{ tierName(firstLive(r.tiers[0])) }}</span>
                 <span v-if="lad.axis && r.tiers.length > 1" class="w-faint text-xs w-trunc">{{ r.tiers.length }} tiers, same look</span>
                 <span v-else-if="lad.axis && sameRangeRows.has(rangeText(lad.axis, r.range))" class="w-faint text-xs w-trunc">{{ tierName(firstLive(r.tiers[0])) }}</span>
               </span>
@@ -190,6 +199,17 @@
             <WButton v-if="tierChanged(tier.tier) && !isOwnGroup" size="sm" variant="ghost" icon="fas fa-undo" title="Take back your changes to this tier" @click="resetTier(tier.tier)">Reset tier</WButton>
           </div>
           <div class="text-xs w-faint" :title="tier.blocks.map(b => `Line ${b.line} in the file`).join('\n')">{{ placeText(tier) }}</div>
+          <div v-if="numberPanel" :class="$style.numberPanel">
+            <div class="w-group-label">Numbers it checks</div>
+            <div v-for="c in numberChecks(firstLive(tier).conditions)" :key="`${c.key}|${c.bound}`" :class="$style.numberField">
+              <span class="text-sm">{{ NUMBER_KEYS[c.key].label }}</span>
+              <WSelect :model-value="c.bound" :options="BOUND_OPTIONS" :aria-label="`${NUMBER_KEYS[c.key].label}: how it compares`" @update:model-value="changeBound(tier, c.key, c.bound, c.value, $event as NumberBound)" />
+              <input class="w-input w-num" type="number" :class="$style.stackInput" :min="NUMBER_KEYS[c.key].min" :max="NUMBER_KEYS[c.key].max" :value="c.value" :aria-label="NUMBER_KEYS[c.key].label"
+                @keydown.enter="($event.target as HTMLInputElement).blur()" @keydown.esc.stop="resetField($event, c.value)" @change="onNumberField(tier, c.key, c.bound, c.value, $event)">
+              <button type="button" class="w-icon-btn w-focusable" :title="`Stop checking ${NUMBER_KEYS[c.key].label.toLowerCase()} here`" :aria-label="`Stop checking ${NUMBER_KEYS[c.key].label.toLowerCase()}`" @click="setNumber(tier, c.key, c.bound, null)"><i aria-hidden="true" class="fas fa-times" /></button>
+            </div>
+            <WSelect model-value="" :options="addNumberOptions" aria-label="Add a number to check" style="max-width: 14rem;" @update:model-value="addNumber(tier, $event)" />
+          </div>
           <div v-if="tier.disabled" :class="$style.offNote" class="text-xs">
             <span class="grow">{{ offWhy(tier) }}. It catches nothing; its items go on to the rules below.</span>
             <WButton v-if="!emptied(tier)" size="sm" variant="primary" @click="setRowOn([tier])">Turn on</WButton>
@@ -399,10 +419,11 @@ import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
+import { GEAR_TYPE } from './gear'
 import LookStrip from './LookStrip.vue'
 import { ownActions } from './look'
 import RuleBuilder from './RuleBuilder.vue'
-import { RULE_TYPE, newRule, ruleProblem, ruleSummary } from './rules'
+import { RULE_TYPE, nameCheck, newRule, ruleProblem, ruleSummary } from './rules'
 import type { OwnRule } from './rules'
 import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
@@ -421,7 +442,7 @@ import { baseTipRef } from './base-tip'
 import type { RehomeOption } from './edits'
 import type { FilterEdit, StylePatch } from './edits'
 import { ruleLabel, tierName } from './parse'
-import type { Visibility } from './parse'
+import type { FilterCondition, Visibility } from './parse'
 import { tierLabel } from './names'
 import { tierMoveEntries as sharedTierMoveEntries, useTierMove } from './tier-move'
 import AddItemField from './AddItemField.vue'
@@ -431,6 +452,12 @@ import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour } from './label-style'
+import NumberLine from './NumberLine.vue'
+import ClusterPriceBand from './ClusterPriceBand.vue'
+import { CLUSTER_PRICE_TYPE } from './cluster-prices'
+import { clusterPrices as clusterPricesRef, clusterPricesError as clusterPricesErrorRef, clusterPricesFor } from './cluster-ninja'
+import { NUMBER_KEYS, boundOf, numberChecks } from './numbers'
+import type { NumberBound } from './edits'
 import { axisName, buildLadder, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
@@ -487,7 +514,9 @@ const tierItems = computed(() => byPrice(tier.value?.bases ?? [], priceOf))
 
 const tree = computed(() => props.store.doc.value ? buildTree(props.store.doc.value) : [])
 // Your made rules have their own row above the list.
-const navTree = computed(() => tree.value.map(x => ({ ...x, groups: x.groups.filter(g => g.type !== RULE_TYPE) })).filter(x => x.groups.length))
+// The cluster price rules live on the Cluster page (ClusterPriceBand), not as a group of their own.
+const hasClusterPage = computed(() => tree.value.some(x => x.groups.some(g => g.type === CLUSTER_GROUP)))
+const navTree = computed(() => tree.value.map(x => ({ ...x, groups: x.groups.filter(g => g.type !== RULE_TYPE && !(g.type === CLUSTER_PRICE_TYPE && hasClusterPage.value)) })).filter(x => x.groups.length))
 const allGroups = computed(() => tree.value.flatMap(s => s.groups))
 const group = computed<GroupNode | null>(() => allGroups.value.find(g => g.type === selType.value) ?? null)
 const tier = computed<TierNode | null>(() => group.value?.tiers.find(t => t.tier === selTier.value) ?? null)
@@ -496,6 +525,8 @@ watch(tierItems, (list) => {
   if (picked.value.some(b => !list.includes(b))) picked.value = picked.value.filter(b => list.includes(b))
 })
 const isOwnGroup = computed(() => selType.value === OWN_RULE_TYPE)
+// What a rule may name: the game refuses a whole filter over a name it doesn't know.
+const ruleNames = computed(() => nameCheck(props.store.doc.value))
 // The search box shows items as they drop where you are now.
 const searchAreaLevel = computed(() => props.store.areaLevel.value ?? props.config.fallbackAreaLevel)
 // Items searched on the Preview tab lie on its ground, newest first, a few at most.
@@ -516,7 +547,7 @@ const tabOptions = computed(() => [
   { value: 'gear', label: 'Base types', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear bases show, by rank and drop tier' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
-  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && x.on).length || undefined },
+  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'clusterPrices' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
@@ -658,7 +689,112 @@ function pickRow (tiers: TierNode[]) {
 }
 
 function rowConditions (t: TierNode): string {
-  return distinctWords(t, sharedConds.value, lad.value.axis).join(' · ')
+  // Rules listed with their numbers up front: those and, under a heading for
+  // its items, the item names aren't said twice.
+  const row = lad.value.rows.find(r => r.tiers.includes(t))
+  const skip = !lad.value.axis && hasNumbers.value && numbersEditable(t)
+    ? (c: FilterCondition) => boundOf(c) != null || (Boolean(row?.section) && c.key === 'BaseType')
+    : undefined
+  return distinctWords(t, sharedConds.value, lad.value.axis, skip).join(' · ')
+}
+
+// The group's rules differ by numbers (passives, item level): rows lead with them.
+// Your own rules and the safety net (woke->) hold copies and keep their words.
+const hasNumbers = computed(() => !isOwnGroup.value && !selType.value?.startsWith('woke->') && !isSwitchGroup.value && lad.value.rows.some(r => numberChecks(firstLive(r.tiers[0]).conditions).length > 0))
+
+// Your own rules and the safety net hold copies: those change with what made them.
+function numbersEditable (t: TierNode, orGroup = false): boolean {
+  if (!selType.value || selType.value.startsWith('woke->')) return false
+  return numberChecks(firstLive(t).conditions).length > 0 || (orGroup && hasNumbers.value)
+}
+
+const CLUSTER_GROUP = 'jewels->cluster'
+const clusterPrices = computed(() => clusterPricesRef.value)
+const clusterPricesError = computed(() => clusterPricesErrorRef.value)
+
+const BOUND_OPTIONS = [
+  { value: 'min', label: 'at least' },
+  { value: 'max', label: 'at most' },
+  { value: 'exact', label: 'exactly' }
+]
+
+// The side panel's number fields: NeverSink's rules (yours and the net hold
+// copies), not hide-only switches, and rules that check a number or whose
+// group does.
+const numberPanel = computed(() => Boolean(tier.value) && !isOwnGroup.value && !isSwitchGroup.value && numbersEditable(tier.value!, true))
+
+const addNumberOptions = computed(() => {
+  const have = new Set(tier.value ? numberChecks(firstLive(tier.value).conditions).map(c => c.key) : [])
+  return [{ value: '', label: '+ Check another number' }, ...Object.entries(NUMBER_KEYS).filter(([k]) => !have.has(k)).map(([value, s]) => ({ value, label: s.label }))]
+})
+
+function addNumber (t: TierNode, key: string) {
+  const spec = NUMBER_KEYS[key]
+  if (spec) setNumber(t, key, 'min', spec.min)
+}
+
+function changeBound (t: TierNode, key: string, from: NumberBound, value: number, to: NumberBound) {
+  const type = selType.value
+  if (from === to || !type) return
+  const label = NUMBER_KEYS[key].label
+  // Already has that bound: one rule can't say "at most" twice.
+  if (numberChecks(firstLive(t).conditions).some(c => c.key === key && c.bound === to)) {
+    toast(`${label} already has an "${BOUND_OPTIONS.find(o => o.value === to)!.label}" here: change or remove that one`, { anchor: panel.value?.el })
+    return
+  }
+  const dropsRange = to === 'exact' && numberChecks(firstLive(t).conditions).filter(c => c.key === key).length > 1
+  const undo = props.store.changeWithUndo(c => {
+    c.edits = c.edits.filter(e => !(e.kind === 'number' && e.type === type && e.tier === t.tier && e.key === key && (e.bound === from || e.bound === to)))
+    const src = (b: NumberBound) => props.store.sourceNumber(type, t.tier, key, b)
+    if (src(from) != null) c.edits = addEdit(c.edits, { id: nextEditId(), kind: 'number', type, tier: t.tier, key, bound: from, value: null })
+    if (src(to) !== value) c.edits = addEdit(c.edits, { id: nextEditId(), kind: 'number', type, tier: t.tier, key, bound: to, value })
+  })
+  toast(`${label}: ${BOUND_OPTIONS.find(o => o.value === to)!.label} ${value}${dropsRange ? ', in place of the range' : ''}`, { anchor: panel.value?.el, undo })
+}
+
+// Esc puts the field back and leaves it, without closing the editor.
+function resetField (e: Event, was: number) {
+  const input = e.target as HTMLInputElement
+  input.value = String(was)
+  input.blur()
+}
+
+function onNumberField (t: TierNode, key: string, bound: NumberBound, was: number, e: Event) {
+  const input = e.target as HTMLInputElement
+  const spec = NUMBER_KEYS[key]
+  const n = Math.round(Number(input.value))
+  if (input.value.trim() === '' || !Number.isFinite(n)) { input.value = String(was); return }
+  const v = Math.min(spec.max, Math.max(spec.min, n))
+  input.value = String(v)
+  setNumber(t, key, bound, v)
+}
+
+// A rule with no numbers among rules that have them: it takes what's left.
+function catchAllText (r: { tiers: TierNode[], section: string | null }): string {
+  const others = lad.value.rows.filter(x => x.section === r.section && x.tiers[0] !== r.tiers[0])
+  return others.some(x => numberChecks(firstLive(x.tiers[0]).conditions).length) ? 'Everything else' : tierName(firstLive(r.tiers[0]))
+}
+
+// Sets one number bound on a tier. Back to what NeverSink has is no edit.
+function setNumber (t: TierNode, key: string, bound: NumberBound, value: number | null) {
+  const type = selType.value
+  if (!type || type.startsWith('woke->')) return
+  const checks = numberChecks(firstLive(t).conditions)
+  const now = checks.find(c => c.key === key && c.bound === bound)?.value ?? null
+  // A lowest above the highest (or the other way) catches nothing: stop at the other end.
+  const lo = checks.find(c => c.key === key && c.bound === 'min')?.value
+  const hi = checks.find(c => c.key === key && c.bound === 'max')?.value
+  if (value != null && bound === 'min' && hi != null && value > hi) {
+    value = hi
+    toast(`${NUMBER_KEYS[key].label} can't start above ${hi}, where this rule stops`, { anchor: panel.value?.el })
+  } else if (value != null && bound === 'max' && lo != null && value < lo) {
+    value = lo
+    toast(`${NUMBER_KEYS[key].label} can't stop below ${lo}, where this rule starts`, { anchor: panel.value?.el })
+  }
+  if (now === value) return
+  const mine = props.config.edits.find(e => e.kind === 'number' && e.type === type && e.tier === t.tier && e.key === key && e.bound === bound)
+  if (mine && props.store.sourceNumber(type, t.tier, key, bound) === value) props.store.removeEdit(mine.id)
+  else props.store.edit({ kind: 'number', type, tier: t.tier, key, bound, value })
 }
 
 // Rows whose order label is the same ("item level 82+" twice): they get
@@ -915,7 +1051,10 @@ function goTo (type: string, t: string, base?: string) {
 }
 
 watch(() => props.focus, (f) => {
-  if (f) goTo(f.type, f.tier)
+  if (!f) return
+  // The Base types table's own rules live on that tab, not in the rule list.
+  if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
+  goTo(f.type, f.tier)
 }, { immediate: true })
 
 watch(() => props.openTab, (t) => {
@@ -1066,7 +1205,9 @@ function bulkMoveMenu (e: MouseEvent) {
 // ---- what you changed ----
 
 function changedIn (type: string): number {
-  return props.config.edits.filter(e => e.type === type).length
+  // The Cluster page holds the cluster price rules too.
+  const also = type === CLUSTER_GROUP && hasClusterPage.value ? CLUSTER_PRICE_TYPE : null
+  return props.config.edits.filter(e => e.type === type || e.type === also).length
 }
 
 // ---- stack sizes ----
@@ -1146,7 +1287,7 @@ function onStackChange (t: TierNode, e: Event) {
 function touchesTier (e: FilterEdit, t: string): boolean {
   switch (e.kind) {
     case 'move': return e.from === t || e.to === t
-    case 'style': case 'visibility': case 'item': case 'stack': return e.tier === t
+    case 'style': case 'visibility': case 'item': case 'stack': case 'number': return e.tier === t
     default: return false
   }
 }
@@ -1305,7 +1446,9 @@ function useShared (how: 'add' | 'replace') {
       c.presets = s.presets
       c.priceTiers.locks = s.locks
     } else {
-      c.edits = [...c.edits, ...edits]
+      // Folded like edits made here: a second "Hide whole group" of the same
+      // group would take two clicks of Show group again to undo.
+      c.edits = edits.reduce<FilterEdit[]>((list, e) => addEdit(list, e, { separateMoves: props.store.separateMoves(e) }), c.edits)
       c.rules = [...c.rules, ...rules]
       c.priceTiers.locks = [...new Set([...c.priceTiers.locks, ...s.locks])]
     }
@@ -1378,6 +1521,7 @@ function iconFor (kind: FilterEdit['kind']): string {
     case 'group': return 'fas fa-eye-slash'
     case 'item': return 'fas fa-star'
     case 'stack': return 'fas fa-layer-group'
+    case 'number': return 'fas fa-sort-numeric-up'
   }
 }
 
@@ -1502,6 +1646,7 @@ function openFolder () {
   cursor: pointer;
 }
 .ladderRow, .ladderHead { grid-template-columns: 7rem 11rem minmax(0, 1fr) minmax(4rem, max-content); }
+.ladderRow.numbersMode, .ladderHead.numbersMode { grid-template-columns: minmax(12rem, 15rem) 11rem minmax(0, 1fr) minmax(4rem, max-content); }
 .ladderRow.ladderStack, .ladderHead.ladderStack { grid-template-columns: 6rem 4.5rem 11rem minmax(0, 1fr) minmax(4rem, max-content); }
 .ladderHead {
   display: grid;
@@ -1599,6 +1744,14 @@ function openFolder () {
   color: var(--w-dim);
 }
 .specialHead { padding-top: 8px; }
+.sectionHead {
+  padding: 8px 2px 0;
+  font-family: var(--w-font-title, inherit);
+  color: var(--w-accent);
+  font-size: var(--w-fs-sm);
+}
+.numberPanel { display: flex; flex-direction: column; gap: 4px; padding: 6px 0 2px; }
+.numberField { display: grid; grid-template-columns: minmax(0, 1fr) 7rem 4rem auto; gap: 6px; align-items: center; }
 .specials {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));

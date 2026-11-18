@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { movePin, railDropEdge, stepRailSize, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle } from '@/web/woke/tab-bar/tools'
+import { movePin, railDropEdge, stepRailSize, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from '@/web/woke/tab-bar/tools'
 import type { TabBarConfig } from '@/web/woke/tab-bar/tools'
 import { pastedItemText } from '@/web/woke/search/pasted-item'
 
@@ -96,6 +96,19 @@ describe('launcher groups', () => {
     expect(groups[0].items).toEqual([{ wmType: 'woke-boss-runs' }])
     expect(groups[1].items).toEqual([])
     expect(groups[4].items).toEqual([{ wmType: 'image-strip' }])
+  })
+
+  it('puts Lab gems under Campaign & lab, Farming under Mapping and Wickerman under Economy', () => {
+    const groups = groupByModule([{ wmType: 'woke-lab-gems' }, { wmType: 'woke-farming' }, { wmType: 'woke-wickerman' }])
+    expect(groups[0].items).toEqual([{ wmType: 'woke-wickerman' }])
+    expect(groups[1].items).toEqual([{ wmType: 'woke-farming' }])
+    expect(groups[2].items).toEqual([{ wmType: 'woke-lab-gems' }])
+  })
+
+  it('says what a tool does, for module tools and the overlay tools', () => {
+    expect(toolDescription('woke-lab-gems')).toBe('Divine Font gem values by colour')
+    expect(toolDescription('image-strip')).toMatch(/cheat sheets/)
+    expect(toolDescription('no-such-tool')).toBe('')
   })
 })
 

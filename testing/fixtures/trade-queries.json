@@ -1,0 +1,4718 @@
+{
+ "chart-sandy-seabed.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_3582759801",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1309819744",
+       "value": {
+        "min": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3448216135",
+       "value": {
+        "min": 25
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3246076198",
+       "value": {
+        "min": 10
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1708461270",
+       "value": {
+        "min": 47
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "area_level": {
+       "min": 83
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "chart",
+    "option": "AbyssalPlain"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_3582759801",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1309819744",
+       "value": {
+        "min": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3448216135",
+       "value": {
+        "min": 25
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3246076198",
+       "value": {
+        "min": 10
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1708461270",
+       "value": {
+        "min": 47
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "area_level": {
+       "min": 83
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "chart",
+    "option": "AbyssalPlain"
+   }
+  }
+ },
+ "currency-divine.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Divine Orb"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Divine Orb"
+  }
+ },
+ "currency-stacked-deck.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Stacked Deck"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Stacked Deck"
+  }
+ },
+ "essence-deafening-misery.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Deafening Essence of Misery"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "Deafening Essence of Misery"
+  }
+ },
+ "gem-enlighten.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "gem_level": {
+       "min": 3
+      }
+     }
+    }
+   },
+   "type": "Enlighten Support"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "gem_level": {
+       "min": 3
+      }
+     }
+    }
+   },
+   "type": "Enlighten Support"
+  }
+ },
+ "gem-transfigured.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "alt_x",
+    "option": "Ice Nova"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "alt_x",
+    "option": "Ice Nova"
+   }
+  }
+ },
+ "magic-flask.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_2448920197",
+       "value": {
+        "min": 25
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1256719186",
+       "value": {
+        "min": -33
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "flask"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_2448920197",
+       "value": {
+        "min": 25
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1256719186",
+       "value": {
+        "min": -33
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "flask"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
+ "map-rare-t16-330.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "enchant.stat_3240183538",
+       "value": {
+        "min": 25
+       },
+       "disabled": true
+      },
+      {
+       "id": "enchant.stat_112276874",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "enchant.stat_3240183538",
+       "value": {
+        "min": 25
+       },
+       "disabled": false
+      },
+      {
+       "id": "enchant.stat_112276874",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  }
+ },
+ "map-rare-t16-deadly.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_799271621",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3376488707",
+       "value": {
+        "min": -20
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1910157106",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_4154059009",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_799271621",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3376488707",
+       "value": {
+        "min": -20
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1910157106",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4154059009",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  }
+ },
+ "map-rare-t16.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_2961018200",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1497673356",
+       "value": {
+        "min": 110
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2326202293",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1708461270",
+       "value": {
+        "min": 70
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2138205941",
+       "value": {
+        "min": 40
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_4181072906",
+       "value": {
+        "min": 60
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_2961018200",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1497673356",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2326202293",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1708461270",
+       "value": {
+        "min": 70
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2138205941",
+       "value": {
+        "min": 40
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4181072906",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    },
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "map_filters": {
+     "filters": {
+      "map_tier": {
+       "min": 16,
+       "max": 16
+      },
+      "map_blighted": {
+       "option": "false"
+      },
+      "map_uberblighted": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": {
+    "discriminator": "map",
+    "option": "Map"
+   }
+  }
+ },
+ "rare-belt-catalysed.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 18
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 18
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_strength",
+       "value": {
+        "min": 32
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_dexterity",
+       "value": {
+        "min": 50
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 88
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_jewellery_attribute_quality",
+       "value": {
+        "min": 20
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "accessory.belt"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 18
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 18
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_strength",
+       "value": {
+        "min": 32
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_dexterity",
+       "value": {
+        "min": 50
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 88
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_jewellery_attribute_quality",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "accessory.belt"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-body-armour-ar-ev.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3484657501",
+       "value": {
+        "min": 82
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_53045048",
+       "value": {
+        "min": 76
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2451402625",
+       "value": {
+        "min": 101
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 42
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_cold_resistance",
+       "value": {
+        "min": 42
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3484657501",
+       "value": {
+        "min": 82
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_53045048",
+       "value": {
+        "min": 76
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2451402625",
+       "value": {
+        "min": 101
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 42
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_cold_resistance",
+       "value": {
+        "min": 42
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {
+       "min": 1782
+      },
+      "ev": {
+       "min": 1965
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-body-armour-es-crusader.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 110
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_988575597",
+       "value": {
+        "min": 8
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_has_crusader_influence",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 1089
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_988575597",
+       "value": {
+        "min": 8
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_has_crusader_influence",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 1089
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-body-armour-es.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 149
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 62
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_chaos_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2511217560",
+       "value": {
+        "min": 17
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 1089
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 149
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 62
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_chaos_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 110
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2511217560",
+       "value": {
+        "min": 17
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.chest"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 1089
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-cluster-large.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "enchant.stat_3086156145",
+       "value": {
+        "max": 8
+       },
+       "disabled": false
+      },
+      {
+       "id": "enchant.stat_4079888060",
+       "value": {
+        "min": 2
+       },
+       "disabled": true
+      },
+      {
+       "id": "enchant.stat_3948993189|13",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1612414696",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3258414199",
+       "value": {
+        "min": 6
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": "Large Cluster Jewel"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "enchant.stat_3086156145",
+       "value": {
+        "max": 8
+       },
+       "disabled": false
+      },
+      {
+       "id": "enchant.stat_4079888060",
+       "value": {
+        "min": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "enchant.stat_3948993189|13",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1612414696",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3258414199",
+       "value": {
+        "min": 6
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": "Large Cluster Jewel"
+  }
+ },
+ "rare-eldritch.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_2154246560",
+       "value": {
+        "min": 10
+       },
+       "disabled": true
+      },
+      {
+       "id": "implicit.stat_3680664274",
+       "value": {
+        "min": 5
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.boots"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_2154246560",
+       "value": {
+        "min": 10
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_3680664274",
+       "value": {
+        "min": 5
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "armour.boots"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {
+       "min": 151
+      },
+      "es": {
+       "min": 31
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-fractured.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "fractured.stat_1509134228",
+       "value": {
+        "min": 170
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_global_critical_strike_multiplier",
+       "value": {
+        "min": 60
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_691932474",
+       "value": {
+        "min": 108
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "weapon_filters": {
+     "filters": {
+      "pdps": {
+       "min": 127
+      }
+     }
+    }
+   },
+   "type": "Reaver Sword"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "fractured.stat_1509134228",
+       "value": {
+        "min": 170
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_global_critical_strike_multiplier",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_691932474",
+       "value": {
+        "min": 108
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "weapon_filters": {
+     "filters": {
+      "pdps": {
+       "min": 127
+      },
+      "aps": {
+       "min": 1.5
+      },
+      "crit": {
+       "min": 5
+      }
+     }
+    }
+   },
+   "type": "Reaver Sword"
+  }
+ },
+ "rare-ring-fractured.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "fractured.stat_3032590688",
+       "value": {
+        "min": 9
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 139
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 59
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": true,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_number_of_crafted_prefix_mods",
+       "value": {
+        "min": 1
+       },
+       "disabled": true
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": true,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_number_of_affix_mods",
+       "value": {
+        "min": 6
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": "Two-Stone Ring"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "fractured.stat_3032590688",
+       "value": {
+        "min": 9
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 139
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 59
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_number_of_crafted_prefix_mods",
+       "value": {
+        "min": 1
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_number_of_affix_mods",
+       "value": {
+        "min": 6
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": "Two-Stone Ring"
+  }
+ },
+ "rare-ring.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 139
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 59
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3032590688",
+       "value": {
+        "min": 9
+       },
+       "disabled": true
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": true,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_number_of_crafted_prefix_mods",
+       "value": {
+        "min": 1
+       },
+       "disabled": true
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": true,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_number_of_affix_mods",
+       "value": {
+        "min": 6
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "accessory.ring"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 139
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 59
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_life",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3032590688",
+       "value": {
+        "min": 9
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_number_of_crafted_prefix_mods",
+       "value": {
+        "min": 1
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_prefix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_number_of_affix_mods",
+       "value": {
+        "min": 6
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "accessory.ring"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-shield-fractured-res.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "fractured.stat_3393628375",
+       "value": {
+        "min": 16
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3484657501",
+       "value": {
+        "min": 146
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_4052037485",
+       "value": {
+        "min": 54
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2511217560",
+       "value": {
+        "min": 20
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "type": "Steel Kite Shield"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "fractured.stat_3393628375",
+       "value": {
+        "min": 16
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3484657501",
+       "value": {
+        "min": 146
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4052037485",
+       "value": {
+        "min": 54
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2511217560",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {
+       "min": 350
+      },
+      "es": {
+       "min": 98
+      },
+      "block": {
+       "min": 26
+      }
+     }
+    }
+   },
+   "type": "Steel Kite Shield"
+  }
+ },
+ "rare-sword-ele-chaos.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_709508406",
+       "value": {
+        "min": 100
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3336890334",
+       "value": {
+        "min": 105
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2375316951",
+       "value": {
+        "min": 30
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_global_critical_strike_multiplier",
+       "value": {
+        "min": 25
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2223678961",
+       "value": {
+        "min": 112
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": true,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_suffix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_number_of_crafted_suffix_mods",
+       "value": {
+        "min": 1
+       },
+       "disabled": true
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": true,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_suffix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_number_of_affix_mods",
+       "value": {
+        "min": 6
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "weapon.onesword"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "weapon_filters": {
+     "filters": {
+      "dps": {
+       "min": 634
+      },
+      "edps": {
+       "min": 328
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_709508406",
+       "value": {
+        "min": 100
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3336890334",
+       "value": {
+        "min": 105
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2375316951",
+       "value": {
+        "min": 30
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_global_critical_strike_multiplier",
+       "value": {
+        "min": 25
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2223678961",
+       "value": {
+        "min": 112
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_suffix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_number_of_crafted_suffix_mods",
+       "value": {
+        "min": 1
+       },
+       "disabled": false
+      }
+     ]
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1,
+      "max": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "pseudo.pseudo_number_of_empty_suffix_mods",
+       "value": {
+        "min": 1,
+        "max": 1
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_number_of_affix_mods",
+       "value": {
+        "min": 6
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "weapon.onesword"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "weapon_filters": {
+     "filters": {
+      "dps": {
+       "min": 634
+      },
+      "edps": {
+       "min": 328
+      },
+      "pdps": {
+       "min": 126
+      },
+      "aps": {
+       "min": 1.6
+      },
+      "crit": {
+       "min": 7.1
+      }
+     }
+    }
+   }
+  }
+ },
+ "rare-sword-local-phys.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1509134228",
+       "value": {
+        "min": 170
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1940865751",
+       "value": {
+        "min": 40
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_210067635",
+       "value": {
+        "min": 26
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": true
+      },
+      {
+       "id": "pseudo.pseudo_global_critical_strike_multiplier",
+       "value": {
+        "min": 60
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "weapon.twosword"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "weapon_filters": {
+     "filters": {
+      "pdps": {
+       "min": 646
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1509134228",
+       "value": {
+        "min": 170
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1940865751",
+       "value": {
+        "min": 40
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_210067635",
+       "value": {
+        "min": 26
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 31
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_global_critical_strike_multiplier",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "weapon.twosword"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    },
+    "weapon_filters": {
+     "filters": {
+      "pdps": {
+       "min": 646
+      },
+      "aps": {
+       "min": 1.89
+      },
+      "crit": {
+       "min": 5
+      }
+     }
+    }
+   }
+  }
+ },
+ "unique-belt-catalysed.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_jewellery_attack_quality",
+       "value": {
+        "min": 20
+       },
+       "disabled": true
+      },
+      {
+       "id": "implicit.stat_3489782002",
+       "value": {
+        "min": 73
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3489782002",
+       "value": {
+        "min": 60
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1050105434",
+       "value": {
+        "min": 48
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1194648995",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_4116409626",
+       "value": {
+        "min": 30
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Auxium",
+   "type": "Crystal Belt"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_jewellery_attack_quality",
+       "value": {
+        "min": 20
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_3489782002",
+       "value": {
+        "min": 73
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3489782002",
+       "value": {
+        "min": 60
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1050105434",
+       "value": {
+        "min": 48
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1194648995",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4116409626",
+       "value": {
+        "min": 30
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Auxium",
+   "type": "Crystal Belt"
+  }
+ },
+ "unique-brutal-restraint-330.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "explicit.pseudo_timeless_jewel_balbala",
+       "value": {
+        "min": 7993,
+        "max": 7993
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.pseudo_timeless_jewel_asenath",
+       "value": {
+        "min": 7993,
+        "max": 7993
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.pseudo_timeless_jewel_nasima",
+       "value": {
+        "min": 7993,
+        "max": 7993
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Brutal Restraint",
+   "type": "Timeless Jewel"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    },
+    {
+     "type": "count",
+     "value": {
+      "min": 1
+     },
+     "disabled": false,
+     "filters": [
+      {
+       "id": "explicit.pseudo_timeless_jewel_balbala",
+       "value": {
+        "min": 7993,
+        "max": 7993
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.pseudo_timeless_jewel_asenath",
+       "value": {
+        "min": 7993,
+        "max": 7993
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.pseudo_timeless_jewel_nasima",
+       "value": {
+        "min": 7993,
+        "max": 7993
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Brutal Restraint",
+   "type": "Timeless Jewel"
+  }
+ },
+ "unique-bubonic-trail.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3527617737",
+       "value": {
+        "min": 2,
+        "max": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_651875072",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_287112619",
+       "value": {
+        "min": -54
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3874817029",
+       "value": {
+        "min": 27
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2811179011",
+       "value": {
+        "min": 19
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Bubonic Trail",
+   "type": "Murder Boots"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3527617737",
+       "value": {
+        "min": 2,
+        "max": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_651875072",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_287112619",
+       "value": {
+        "min": -54
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3874817029",
+       "value": {
+        "min": 27
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2811179011",
+       "value": {
+        "min": 19
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ev": {},
+      "es": {},
+      "base_defence_percentile": {
+       "min": 4
+      }
+     }
+    }
+   },
+   "name": "Bubonic Trail",
+   "type": "Murder Boots"
+  }
+ },
+ "unique-ebers-unification-zwsp.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1869144397",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 155
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1050105434",
+       "value": {
+        "min": 73
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2511217560",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_3495544060",
+       "value": {
+        "min": 5
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Eber's Unification",
+   "type": "Hubris Circlet"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_1869144397",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_4015621042",
+       "value": {
+        "min": 155
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1050105434",
+       "value": {
+        "min": 73
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2511217560",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3495544060",
+       "value": {
+        "min": 5
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "es": {
+       "min": 275
+      },
+      "base_defence_percentile": {
+       "min": 82
+      }
+     }
+    }
+   },
+   "name": "Eber's Unification",
+   "type": "Hubris Circlet"
+  }
+ },
+ "unique-kaoms-heart-corrupted.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3962278098",
+       "value": {
+        "min": 40
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {
+        "min": 500
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Kaom's Heart",
+   "type": "Glorious Plate"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3962278098",
+       "value": {
+        "min": 40
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {
+        "min": 500
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Kaom's Heart",
+   "type": "Glorious Plate"
+  }
+ },
+ "unique-kaoms-heart-foulborn.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4004011170",
+       "value": {
+        "min": 12
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Kaom's Heart",
+   "type": "Glorious Plate"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_4004011170",
+       "value": {
+        "min": 12
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Kaom's Heart",
+   "type": "Glorious Plate"
+  }
+ },
+ "unique-kaoms-heart.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3962278098",
+       "value": {
+        "min": 40
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Kaom's Heart",
+   "type": "Glorious Plate"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3962278098",
+       "value": {
+        "min": 40
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3299347043",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ar": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Kaom's Heart",
+   "type": "Glorious Plate"
+  }
+ },
+ "unique-prismweave.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Prismweave",
+   "type": "Rustic Sash"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Prismweave",
+   "type": "Rustic Sash"
+  }
+ },
+ "unique-three-step-assault.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Three-step Assault",
+   "type": "Shagreen Boots"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "armour_filters": {
+     "filters": {
+      "ev": {},
+      "es": {},
+      "base_defence_percentile": {
+       "min": 100
+      }
+     }
+    }
+   },
+   "name": "Three-step Assault",
+   "type": "Shagreen Boots"
+  }
+ },
+ "unique-watchers-eye.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_2482852589",
+       "value": {
+        "min": 4
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_983749596",
+       "value": {
+        "min": 4
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2748665614",
+       "value": {
+        "min": 4
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2255914633",
+       "value": {
+        "min": 15
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Watcher's Eye",
+   "type": "Prismatic Jewel"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_2482852589",
+       "value": {
+        "min": 4
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_983749596",
+       "value": {
+        "min": 4
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2748665614",
+       "value": {
+        "min": 4
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2255914633",
+       "value": {
+        "min": 15
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "Watcher's Eye",
+   "type": "Prismatic Jewel"
+  }
+ },
+ "viscera-ghostly-claw.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_922882178",
+       "value": {
+        "min": 8
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.arm"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_922882178",
+       "value": {
+        "min": 8
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.arm"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
+ "viscera-greater-skeletal-leg.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_2567747215",
+       "value": {
+        "min": 62
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.leg"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_2567747215",
+       "value": {
+        "min": 62
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.leg"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
+ "viscera-lesser-skeletal-leg.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.leg"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.leg"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
+ "viscera-molten-core.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 22
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 22
+       },
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.body"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "pseudo.pseudo_total_elemental_resistance",
+       "value": {
+        "min": 22
+       },
+       "disabled": false
+      },
+      {
+       "id": "pseudo.pseudo_total_fire_resistance",
+       "value": {
+        "min": 22
+       },
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.body"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ }
+}

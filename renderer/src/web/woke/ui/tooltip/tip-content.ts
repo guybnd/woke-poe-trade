@@ -34,8 +34,9 @@ export interface TipGem {
   lv: Record<string, { r?: number, a?: { s?: number, d?: number, i?: number }, c?: string, x?: string[] }>
 }
 // From the wiki (scripts/build-drop-data.mjs): d, never drops; r, only from
-// somewhere in particular (a boss, a league mechanic, a recipe); t, where from.
-export interface TipDrop { d?: 1, r?: 1, t?: string }
+// somewhere in particular (a boss, a league mechanic, a recipe); t, where from;
+// s, that in a word or two for a chip; u, the wiki doesn't say where from.
+export interface TipDrop { d?: 1, r?: 1, t?: string, s?: string, u?: 1 }
 export interface TipItem { d?: string, u?: string, n?: number }
 export interface TipBase {
   ar?: Range
@@ -285,6 +286,25 @@ export function dropOf (drops: TipPack['drops'], name: string): TipDrop | undefi
   return drops?.[name] ?? drops?.[dataUniqueName(name)]
 }
 
+// A unique that isn't a random drop, for a chip on a list: where it comes
+// from in a word or two ("Uber Eater", "Kingsmarch"), and the wiki's sentence.
+export interface DropSource {
+  label: string
+  // The chip's hover.
+  title: string
+}
+export function dropSource (drop: TipDrop | undefined): DropSource | null {
+  if (!drop?.d && !drop?.r) return null
+  const label = drop.s ?? (drop.d ? 'No drop' : 'Restricted')
+  const why = drop.t ?? (drop.d ? 'The game never drops it.' : 'The PoE wiki doesn\'t say where it comes from.')
+  return { label, title: `Not a random drop on this base. ${why}` }
+}
+
+// Random drops first, restricted ones after, each keeping its order.
+export function randomDropsFirst<T> (rows: T[], restricted: (row: T) => boolean): T[] {
+  return [...rows.filter(r => !restricted(r)), ...rows.filter(restricted)]
+}
+
 // Where a unique comes from, when that isn't a random drop.
 const DROP_TEXT_MAX = 180
 export function dropLines (drop: TipDrop | undefined): TipLine[] {
@@ -293,7 +313,7 @@ export function dropLines (drop: TipDrop | undefined): TipLine[] {
   return [
     // The wiki's "drop disabled" covers uniques you still get from a vendor,
     // a card or a boss, so both read the same: just not at random.
-    plain('Restricted drop: not a random drop on its base', 'corrupted'),
+    plain(drop.s && !drop.u && drop.s !== 'No drop' ? `Not a random drop: ${drop.s}` : 'Restricted drop: not a random drop on its base', 'corrupted'),
     ...(where ? [plain(where, 'dim')] : [])
   ]
 }
