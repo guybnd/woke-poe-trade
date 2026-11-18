@@ -164,6 +164,9 @@ jobs:
     - name: Unit tests
       run: npm test
       working-directory: ./renderer
+      env:
+        # The loot filter guard's pairs and random mixes: master only.
+        WOKE_FULL_GUARD: ${{ github.event_name != 'pull_request' && '1' || '' }}
     - name: Type check (main)
       run: npx tsc --noEmit
       working-directory: ./main
