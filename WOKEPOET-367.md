@@ -24,6 +24,13 @@ history:
     date: '2026-11-18T04:35:13.917Z'
     selfAttested: true
     id: c-2026-11-18t04-35-13-917z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T04:52:42.812Z'
+    comment: >-
+      Built Guy's pick A on woke/cluster-type (381f042c + review fix 83080a05),
+      merging with #600. Checks green.
+    id: a-2026-11-18t04-52-42-812z
 ---
 > **TL;DR:** On a Large (and Medium) cluster price check, show which notables sit at the front (next to the entry) and which at the back, as PoB lays them out, with the points to reach each one. Mocks first, Guy picks.
 
