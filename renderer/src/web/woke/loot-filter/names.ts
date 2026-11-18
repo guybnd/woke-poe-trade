@@ -146,8 +146,8 @@ const WHOLE_TIERS: Record<string, string> = {
   'qt4lvl': 'Quality 1+, while levelling',
   // Uniques.
   '6s': '6 sockets',
-  'exforgesword': 'Starforge, Shaper or Elder',
-  'exrationaljewel': 'Rational Doctrine, synthesised',
+  'exforgesword': 'Infernal Sword unique, Shaper or Elder',
+  'exrationaljewel': 'Synthesised unique Cobalt Jewel',
   'exuberimpresence': 'Impresence, Shaper and Elder',
   'hideable2': 'Can be hidden, second list',
   // Sockets and links.
@@ -181,18 +181,18 @@ const WHOLE_TIERS: Record<string, string> = {
   'weleattackblend': 'Elemental attack weapons',
   'wcastermin': 'Caster weapons and shields',
   // Rares to hide.
-  'outdatedlevelflaska': 'Outdated Small to Large flasks, area 15+',
-  'outdatedlevelflaskb': 'Outdated Greater and Grand flasks, area 30+',
-  'outdatedlevelflaskc': 'Outdated Giant to Sacred flasks, area 48+',
-  'outdatedlevelflaskd': 'Outdated Sanctified and Hallowed flasks, area 60+',
+  'outdatedlevelflaska': 'Outdated Small to Large flasks, quality 0, area 15+',
+  'outdatedlevelflaskb': 'Outdated Greater and Grand flasks, quality 0, area 30+',
+  'outdatedlevelflaskc': 'Outdated Giant to Sacred flasks, quality 0, area 48+',
+  'outdatedlevelflaskd': 'Outdated Sanctified and Hallowed flasks, quality 0, area 60+',
   'rrihide1': 'Rare armour under drop level 75, area 82+',
   'rrihide2': 'Rare armour under drop level 60, area 80+',
   'rrihide3': 'Rare armour under drop level 50, area 78+',
   'rrihide4': 'Rare armour under drop level 40, area 73+',
   // Fragments, cards and chancing.
   't3stackedex': 'Tier 3, stacks of 3+',
-  't4c': 'Tier 4, shown longer',
-  't5c': 'Tier 5, shown longer',
+  't4c': 'Tier 4, kept at stricter levels',
+  't5c': 'Tier 5, kept at stricter levels',
   'hh': 'Leather and Heavy belts',
   // Levelling › Weapon progression: normal weapons with 3+ sockets.
   'r01': 'Drop level 5+, item level up to 9',
@@ -226,8 +226,9 @@ const WHOLE_TIERS: Record<string, string> = {
 }
 
 // NeverSink's map progression: maps_a_t14 is a tier 14 map in its high reds
-// (a), then low reds (b), yellows (c) and whites (d). maps_a_t16 is 16 and up.
-const MAP_COLOURS: Record<string, string> = { a: 'red', b: 'red', c: 'yellow', d: 'white' }
+// (a), then low reds (b), yellows (c) and whites (d). maps_a_t16 is 16 and
+// up. The colour follows the map tier itself: 1-5 white, 6-10 yellow, 11+ red.
+const mapColour = (tier: number) => tier >= 11 ? 'red' : tier >= 6 ? 'yellow' : 'white'
 
 export function tierLabel (tier: string): string {
   if (tier.startsWith('#')) return 'Rule'
@@ -237,7 +238,7 @@ export function tierLabel (tier: string): string {
   m = /^n(\d+)_i(\d+)_t(\d+)$/.exec(tier)
   if (m) return `${m[1]} nodes, item level ${m[2]}, tier ${m[3]}`
   m = /^maps_([a-d])_t(\d+)$/.exec(tier)
-  if (m) return `Map tier ${m[2]}${m[2] === '16' ? '+' : ''}, ${MAP_COLOURS[m[1]]}`
+  if (m) return `Map tier ${m[2]}${m[2] === '16' ? '+' : ''}, ${mapColour(Number(m[2]))}`
   // NeverSink 8.21's tiered gear: item tier and base rank (t5r1), and its
   // any-base rules, where any5 catches item tier 4 and up.
   m = /^t(\d)r(\d)$/.exec(tier)
