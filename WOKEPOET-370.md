@@ -46,6 +46,13 @@ history:
       Guy put v1.330.10 on hold for this. Waiting on his layout pick and his
       answer on the safety net before handing it to be merged.
     id: a-2026-11-18t07-56-12-354z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T08:34:36.768Z'
+    comment: >-
+      Guy picked B (what's built). Still waiting on his answer to the safety-net
+      question.
+    id: a-2026-11-18t08-34-36-768z
 needsAction: null
 ---
 Guy (2026-11-18): on the Alt+F "Can drop as" list (#549), chip uniques that can't drop from random monsters (boss-only, league mechanic, vendor recipe / div card, Vaal transform, drop-disabled), so it's easier to decide whether to show or hide the base. Same info in the base hover tooltip under "Items in this tier" in the tier editor.
