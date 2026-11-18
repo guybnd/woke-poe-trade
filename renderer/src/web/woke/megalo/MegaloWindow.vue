@@ -83,7 +83,7 @@
           <input :class="$style.num" type="number" min="0" step="0.5" placeholder="any" :value="config.maxDiv ?? ''"
             aria-label="Highest price in divines" data-qa="megalo-max" @keydown.stop @change="setMax(($event.target as HTMLInputElement).value)">
           <span :class="$style.dim">div</span>
-          <SaveSearchButton :class="$style.end" :get-link="searchLink" :suggest-name="saveName" data-qa="megalo-save" />
+          <span :class="$style.end" data-qa="megalo-save"><SaveSearchButton :get-link="searchLink" :suggest-name="saveName" /></span>
           <WButton size="sm" variant="primary" data-qa="megalo-search" :disabled="!ticked.length" @click="search">Search</WButton>
         </div>
         <div :class="$style.dim" data-qa="megalo-summary">{{ summary }}</div>

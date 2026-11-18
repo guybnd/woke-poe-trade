@@ -134,11 +134,11 @@ export interface SearchPick { statId: string, weight: number, must?: boolean }
 // others (none left: no count group). In Weighted sum they also add to the total.
 export function megaloQuery (picks: readonly SearchPick[], opts: { mode: SearchMode, need: number, minWeight: number, maxDiv: number | null }) {
   const must = picks.filter(p => p.must).slice(0, 3)
-  const rest = picks.filter(p => !must.includes(p)).slice(0, MAX_TRADE_FILTERS)
+  const rest = picks.filter(p => !must.includes(p)).slice(0, MAX_TRADE_FILTERS - 2 * must.length)
   const stats: Array<{ type: string, value?: { min: number }, filters: Array<{ id: string, value?: { weight: number } }> }> = []
   if (must.length) stats.push({ type: 'and', filters: must.map(p => ({ id: p.statId })) })
   if (opts.mode === 'weight') {
-    const filters = [...must, ...rest].slice(0, MAX_TRADE_FILTERS).map(p => ({ id: p.statId, value: { weight: p.weight } }))
+    const filters = [...must, ...rest].map(p => ({ id: p.statId, value: { weight: p.weight } }))
     stats.push({ type: 'weight', value: { min: opts.minWeight }, filters })
   } else {
     const left = Math.max(0, Math.min(3, opts.need) - must.length)
