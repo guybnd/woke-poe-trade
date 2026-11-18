@@ -53,6 +53,14 @@ history:
       Guy picked B (what's built). Still waiting on his answer to the safety-net
       question.
     id: a-2026-11-18t08-34-36-768z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T10:10:45.981Z'
+    comment: >-
+      Guy said yes to safety net/tiers skipping restricted uniques. Built on
+      woke/restricted-safety (from 61773d30, #615 already merged); review fixed,
+      checks green, handed to the coordinator to merge.
+    id: a-2026-11-18t10-10-45-981z
 needsAction: null
 ---
 Guy (2026-11-18): on the Alt+F "Can drop as" list (#549), chip uniques that can't drop from random monsters (boss-only, league mechanic, vendor recipe / div card, Vaal transform, drop-disabled), so it's easier to decide whether to show or hide the base. Same info in the base hover tooltip under "Items in this tier" in the tier editor.
