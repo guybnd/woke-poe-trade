@@ -1,22 +1,22 @@
 {
   "format": 1,
-  "version": 24,
+  "version": 25,
   "files": {
     "en": {
-      "items": "e074afa496479e9b821a5d9785404eeb83120eb5d3c6c0a7968decb3b97cd3ac",
-      "stats": "478b5514d4e3ffbfd7d0e4af6bc31beb9501c76e64f4fa4228f6871b11eeac54"
+      "items": "2b69af8ec2d180563fa774fe06929af365e6522ceb6f76d5b800f8369635c76f",
+      "stats": "54f2a6d6c3fa7f23c38e63147580d096d79327cfa0c911be1471c91940abb8c7"
     },
     "ru": {
-      "items": "bca66968b116c1206603e49fff8b50f32b8d5c0529e8b8bae348c94ce9f67d58",
-      "stats": "aaf7a39af8afb1614f361bcda55e985fdae06e1b1059436abcdd1b5552b888f3"
+      "items": "4ad5a1510c6bbeb6927b60ac58edff88f4230724ea9e9f2af303831213c8b1f5",
+      "stats": "f22cc50657deb6a6b40193703d50dbf48431100ac19e1daa0ab38d7426fe4f76"
     },
     "cmn-Hant": {
-      "items": "0f3e70cf9baab9ff5aedc4821b2d0787454a505f4c5cd58569ec3dd44f77e0be",
-      "stats": "5e41c9c5b3abdf1a7871cb6a03a066c830710dcd0e93663ddf551575f0885464"
+      "items": "2f947b72a67c652fc1bfb8bf9c497396170248d189ea5c0dcfe3197974024f50",
+      "stats": "36fc1423bd8c4e7339f91cb964033b161948ad6e095773281e06a2904b4a2369"
     },
     "ko": {
-      "items": "500f7fd43932f1505d7a3fdf23ab093d7e6bd38d3fab54a105a191ba817a3b0c",
-      "stats": "56323e62c6709e5c78c1b9419391210f9f7a75ccfb29c85bd8aea5bc5344820c"
+      "items": "050cf8dce5b31076b0247e8dd164a3fa7c49b406292247f7fa0cd6a3e5e3a7f3",
+      "stats": "92609d02e678b29e9e772591fb81a415313ee3040f023b2800d7e7a4f41fb6af"
     }
   },
   "shared": {
