@@ -82,7 +82,8 @@ const rows = computed<Row[]>(() => {
         }
     }
   }
-  if (s.skip) {
+  // Not while going back: undoing then would let the skipped version straight back.
+  if (s.skip && (s.phase === 'idle' || s.phase === 'failed')) {
     out.push({
       key: 'skip',
       label: `Skipping ${s.skip}`,

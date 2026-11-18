@@ -7,7 +7,7 @@ import type { GameWindow } from './windowing/GameWindow'
 import { appPrefs, canRestartApp, onRestartWithUpdate } from './woke/app-prefs'
 import {
   GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, RECHECK_MS, VERDICT_TEXT, afterEvent, describeUpdateError,
-  installVerdict, installerLogFailure, installerProblem, isGameRunning, isSpawnFailure, relaunchArgs, stillClosed,
+  installVerdict, installerLogFailure, installerProblem, isGameRunning, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed,
   type InstallVerdict, type UpdaterEvent
 } from './woke/update-install'
 import { Rollback, clearUpdateNote, isSkipped, takeUpdateNote, trayEntry, writeUpdateNote } from './woke/rollback'
@@ -41,6 +41,8 @@ export class AppUpdater {
   // then each newer version is downloaded by hand (onAvailable).
   private autoWanted = false
   private loggedSkip: string | null = null
+  // woke: a plain restart was chosen; nothing installs on this quit.
+  private plainRestart = false
   // woke: going back to the previous release (rollback.ts).
   readonly rollback: Rollback
   // woke: the tray's notifications and menu (set in main.ts).
@@ -111,7 +113,11 @@ export class AppUpdater {
     )
     this.applyAutoDownload()
     // A rollback waiting for the game to close installs on quit too, like an update.
+    // Registered before electron-updater's own quit handler (added at the first
+    // download), so this runs first: install-on-quit is settled here, at the
+    // moment of quitting, and never runs alongside a rollback's installer.
     app.once('quit', () => {
+      this.syncQuitInstall()
       if (this.rollback.readyFile && !this.isRestarting) void this.rollback.install(false)
     })
 
@@ -156,11 +162,14 @@ export class AppUpdater {
     })
     autoUpdater.on('update-downloaded', (info: { version: string }) => {
       this.downloaded = info.version
-      // Not while a rollback waits: quitting installs that instead.
-      autoUpdater.autoInstallOnAppQuit = !this.rollback.readyFile
+      // On while electron-updater registers its quit handler, right after
+      // this event; then settled (off while a rollback is under way). The
+      // quit listener above settles it again at the moment of quitting.
+      autoUpdater.autoInstallOnAppQuit = true
+      setImmediate(() => { this.syncQuitInstall() })
       this.target = info.version
       this.stage = 'waiting to install'
-      this.info = { state: 'update-downloaded', version: info.version }
+      this.info = this.downloadedInfo(info.version)
       this.waitForGameClosed()
     })
     // A restart asked for in Settings or the tray installs the update and
@@ -175,19 +184,22 @@ export class AppUpdater {
         void this.installRollback(true).then((ok) => {
           if (ok) return
           // A plain restart: nothing may install under the new copy.
-          autoUpdater.autoInstallOnAppQuit = false
+          this.plainRestart = true
+          this.syncQuitInstall()
           app.relaunch({ args: relaunchArgs(process.argv, false) })
           app.quit()
         })
         return true
       }
       if (!this.downloaded) {
-        autoUpdater.autoInstallOnAppQuit = false
+        this.plainRestart = true
+        this.syncQuitInstall()
         return false
       }
       if (this.isRestarting) return true
       if (!this.installerOk()) {
-        autoUpdater.autoInstallOnAppQuit = false
+        this.plainRestart = true
+        this.syncQuitInstall()
         return false
       }
       this.isRestarting = true
@@ -204,6 +216,24 @@ export class AppUpdater {
     this.autoWanted = on
     this.applyAutoDownload()
     this.noAutoUpdatesReason = on ? null : 'disabled-by-flag'
+    if (this.downloaded && this._info.state === 'update-downloaded') this.info = this.downloadedInfo(this.downloaded)
+  }
+
+  // electron-updater installs the downloaded update on quit only with this on.
+  // Never while a rollback is under way: two installers would run at once.
+  private syncQuitInstall () {
+    autoUpdater.autoInstallOnAppQuit = quitInstallAllowed({
+      downloaded: this.downloaded != null,
+      rollbackActive: this.rollback.active,
+      plainRestart: this.plainRestart
+    })
+  }
+
+  // Update notice E: what the overlay says about a downloaded update. It only
+  // installs by itself while the game is closed when automatic updates are on
+  // and this run may install by itself; otherwise it says "when you quit".
+  private downloadedInfo (version: string): UpdateInfo {
+    return { state: 'update-downloaded', version, whenClosed: this.autoWanted && !this.autoInstallBlocked && canRestartApp() }
   }
 
   private applyAutoDownload () {
@@ -259,7 +289,7 @@ export class AppUpdater {
   private rollbackChanged () {
     this.applyAutoDownload()
     const ready = this.rollback.readyFile != null
-    autoUpdater.autoInstallOnAppQuit = !ready && this.downloaded != null
+    this.syncQuitInstall()
     this.server.sendEventTo('broadcast', {
       name: 'MAIN->CLIENT::woke-event',
       payload: { topic: 'rollback-state', data: this.rollback.state }
@@ -272,7 +302,7 @@ export class AppUpdater {
   // running) when it didn't start.
   private async installRollback (runAfter: boolean): Promise<boolean> {
     this.stopWaiting()
-    autoUpdater.autoInstallOnAppQuit = false
+    this.syncQuitInstall()
     const ok = await this.rollback.install(runAfter)
     if (ok) {
       app.quit()
@@ -281,7 +311,7 @@ export class AppUpdater {
     this.isRestarting = false
     const s = this.rollback.state
     this.notify(`Couldn't go back to ${s.target ?? 'the previous version'}`, s.error ?? '')
-    autoUpdater.autoInstallOnAppQuit = this.downloaded != null
+    this.syncQuitInstall()
     if (this.downloaded) this.waitForGameClosed()
     return false
   }
@@ -309,10 +339,10 @@ export class AppUpdater {
     if (this.downloaded && !next.downloaded) {
       this.logger.write(`info [AppUpdater] ${this.downloaded} no longer waits to install.`)
       if (!this.rollback.readyFile) this.stopWaiting()
-      // Nor on quit: a pulled release, a failed install. A newer download turns it back on.
-      autoUpdater.autoInstallOnAppQuit = false
     }
     this.downloaded = next.downloaded
+    // Nor on quit: a pulled release, a failed install. A newer download turns it back on.
+    this.syncQuitInstall()
     return next.show
   }
 

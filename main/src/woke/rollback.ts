@@ -10,7 +10,9 @@ import { spawn } from 'child_process'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
-import { once } from 'events'
+import { Readable, Transform } from 'stream'
+import { pipeline } from 'stream/promises'
+import type { ReadableStream as WebReadableStream } from 'stream/web'
 import type { WokeRollbackState } from '../../../ipc/woke-ops'
 import { installerProblem } from './update-install'
 
@@ -20,6 +22,9 @@ const HEADERS = { 'User-Agent': 'woke-poe-trade (rollback)' }
 const INSTALLER_NAME = /^Woke-PoE-Trade-Setup-\d+\.\d+\.\d+\.exe$/
 // The release list is read with each update check, and when About opens if older.
 const RELEASES_MAX_AGE_MS = 60 * 60_000
+// A request that answers nothing for this long is given up (the installer
+// download: no new data for this long).
+const FETCH_TIMEOUT_MS = 15_000
 
 // ---------- Versions ----------
 
@@ -41,14 +46,16 @@ export function compareVersions (a: string, b: string): number {
 
 export interface ReleaseEntry { tag_name?: unknown, draft?: unknown, prerelease?: unknown }
 
-// The newest published release older than the running one.
-export function previousVersion (current: string, releases: ReleaseEntry[]): string | null {
+// The newest published release older than the running one, never the one
+// automatic updates skip.
+export function previousVersion (current: string, releases: ReleaseEntry[], skip: string | null = null): string | null {
   if (!parseVersion(current)) return null
   let best: string | null = null
   for (const r of releases) {
     if (r.draft !== false || r.prerelease !== false || typeof r.tag_name !== 'string') continue
     const v = r.tag_name.replace(/^v/, '')
     if (!parseVersion(v) || !(compareVersions(v, current) < 0)) continue
+    if (skip != null && compareVersions(v, skip) === 0) continue
     if (best == null || compareVersions(v, best) > 0) best = v
   }
   return best
@@ -109,6 +116,13 @@ export function isSkipped (version: string, skip: string | null): boolean {
   if (!skip) return false
   const c = compareVersions(version, skip)
   return !Number.isNaN(c) && c <= 0
+}
+
+// Going back from `running` skips it, and keeps skipping anything a first
+// rollback skipped: going back twice must not bring the first bad version back.
+export function skipAfterRollback (skip: string | null, running: string): string {
+  if (!skip || !parseVersion(skip)) return running
+  return compareVersions(skip, running) > 0 ? skip : running
 }
 
 // Once the app runs the skipped version or newer (reinstalled by hand, or a
@@ -181,6 +195,8 @@ export class Rollback {
   private file: string | null = null
   private abort: AbortController | null = null
   private skip: string | null = null
+  // The skip before this rollback set its own; put back on cancel or failure.
+  private skipBefore: { value: string | null } | null = null
   private lastSent = 0
 
   constructor (
@@ -196,12 +212,18 @@ export class Rollback {
       this.setSkip(null)
     }
     // A download from a run that never installed it.
+    try {
+      const left = fs.readdirSync(downloadDir()).filter(f => INSTALLER_NAME.test(f))
+      for (const f of left) this.log(`info [Rollback] Dropped a rollback that was waiting to install (${f}): the app ended without a clean quit.`)
+    } catch {}
     try { fs.rmSync(downloadDir(), { recursive: true, force: true }) } catch {}
   }
 
   get skipped () { return this.skip }
   get readyFile () { return this.phase === 'ready' ? this.file : null }
-  get previous () { return this.releases ? previousVersion(app.getVersion(), this.releases) : null }
+  get previous () { return this.releases ? previousVersion(app.getVersion(), this.releases, this.skip) : null }
+  // Waiting to install, or installing: an update mustn't install alongside.
+  get active () { return this.phase === 'downloading' || this.phase === 'ready' || this.phase === 'installing' }
 
   get state (): WokeRollbackState {
     return {
@@ -223,7 +245,10 @@ export class Rollback {
     if (this.fetching) return await this.fetching
     this.fetching = (async () => {
       try {
-        const res = await net.fetch(RELEASES_URL, { headers: { ...HEADERS, Accept: 'application/vnd.github+json' } })
+        const res = await net.fetch(RELEASES_URL, {
+          headers: { ...HEADERS, Accept: 'application/vnd.github+json' },
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+        })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const list = await res.json() as unknown
         if (!Array.isArray(list)) throw new Error('not a release list')
@@ -243,24 +268,41 @@ export class Rollback {
   // Downloads and checks the previous release's installer; then it waits to
   // install like an update. Resolves when the download ends either way.
   async start (): Promise<void> {
-    if (!this.offered || this.phase === 'downloading' || this.phase === 'ready' || this.phase === 'installing') return
+    if (!this.offered || this.active) return
+    // Before the first await: a second start returns above, and the reply to
+    // this one already says downloading.
+    this.phase = 'downloading'
+    this.target = this.previous
+    this.progress = null
+    this.error = null
+    const abort = new AbortController()
+    this.abort = abort
+    const signal = abort.signal
+    this.changed()
     await this.refresh()
+    if (signal.aborted) return
     const version = this.previous
     if (!version) {
       this.fail(null, 'no earlier release found')
       return
     }
-    this.phase = 'downloading'
-    this.target = version
-    this.progress = null
-    this.error = null
-    this.abort = new AbortController()
-    const signal = this.abort.signal
-    this.changed()
+    if (version !== this.target) {
+      this.target = version
+      this.changed()
+    }
     this.log(`info [Rollback] Going back to ${version}: downloading.`)
     let part: string | null = null
+    const stalled = new AbortController()
+    let stallTimer: ReturnType<typeof setTimeout> | undefined
+    const resetStall = () => {
+      clearTimeout(stallTimer)
+      stallTimer = setTimeout(() => { stalled.abort() }, FETCH_TIMEOUT_MS)
+    }
     try {
-      const ymlRes = await net.fetch(installerUrl(version, 'latest.yml'), { headers: HEADERS, signal })
+      const ymlRes = await net.fetch(installerUrl(version, 'latest.yml'), {
+        headers: HEADERS,
+        signal: AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])
+      })
       if (!ymlRes.ok) throw new Error(`latest.yml: HTTP ${ymlRes.status}`)
       const yml = parseLatestYml(await ymlRes.text())
       const problem = ymlProblem(yml, version)
@@ -269,26 +311,26 @@ export class Rollback {
       fs.mkdirSync(downloadDir(), { recursive: true })
       const final = path.join(downloadDir(), yml.file)
       part = final + '.part'
-      const res = await net.fetch(installerUrl(version, yml.file), { headers: HEADERS, signal })
+      const both = AbortSignal.any([signal, stalled.signal])
+      resetStall()
+      const res = await net.fetch(installerUrl(version, yml.file), { headers: HEADERS, signal: both })
       if (!res.ok || !res.body) throw new Error(`installer: HTTP ${res.status}`)
       const total = Number(res.headers.get('content-length')) || yml.size || 0
       const hash = crypto.createHash('sha512')
-      const out = fs.createWriteStream(part)
       let got = 0
-      try {
-        const reader = res.body.getReader()
-        for (;;) {
-          const { done, value } = await reader.read()
-          if (done) break
-          hash.update(value)
-          got += value.length
-          if (!out.write(value)) await once(out, 'drain')
+      const tap = new Transform({
+        transform: (chunk: Buffer, _enc, done) => {
+          hash.update(chunk)
+          got += chunk.length
+          resetStall()
           if (total) this.setProgress(got / total)
+          done(null, chunk)
         }
-      } finally {
-        out.end()
-        await once(out, 'close')
-      }
+      })
+      // pipeline: a write error (disk full, a lock) rejects here and closes
+      // every stream, instead of an unhandled stream error.
+      await pipeline(Readable.fromWeb(res.body as unknown as WebReadableStream), tap, fs.createWriteStream(part), { signal: both })
+      clearTimeout(stallTimer)
       if (yml.size != null && got !== yml.size) throw new Error(`installer is ${got} bytes, latest.yml says ${yml.size}`)
       if (hash.digest('base64') !== yml.sha512) throw new Error('installer doesn\'t match the SHA-512 in latest.yml')
       fs.renameSync(part, final)
@@ -298,25 +340,29 @@ export class Rollback {
       this.phase = 'ready'
       this.progress = 1
       this.abort = null
-      this.setSkip(app.getVersion())
-      this.log(`info [Rollback] ${version} downloaded and checked: ${final}. Skipping ${app.getVersion()} from now on.`)
+      this.skipBefore = { value: this.skip }
+      this.setSkip(skipAfterRollback(this.skip, app.getVersion()))
+      this.log(`info [Rollback] ${version} downloaded and checked: ${final}. Skipping ${this.skip ?? ''} and older from now on.`)
       this.changed()
     } catch (e) {
+      clearTimeout(stallTimer)
       if (part) removeFile(part)
       if (signal.aborted) return
-      this.fail(version, e instanceof Error ? e.message : String(e))
+      const message = stalled.signal.aborted
+        ? `the download stopped for ${FETCH_TIMEOUT_MS / 1000} s`
+        : e instanceof Error ? e.message : String(e)
+      this.fail(version, message)
     }
   }
 
   // Stops going back: the download, or the installer waiting for the game to close.
   cancel () {
     if (this.phase !== 'downloading' && this.phase !== 'ready' && this.phase !== 'failed') return
-    const wasReady = this.phase === 'ready'
     this.abort?.abort()
     this.abort = null
     if (this.file) removeFile(this.file)
     this.file = null
-    if (wasReady && this.skip === app.getVersion()) this.setSkip(null)
+    this.restoreSkip()
     this.log(`info [Rollback] Not going back to ${this.target ?? 'the previous version'}.`)
     this.phase = 'idle'
     this.target = null
@@ -325,8 +371,10 @@ export class Rollback {
     this.changed()
   }
 
+  // Not while going back: the rollback would still install and the version
+  // it goes back from would come straight back. Cancel first.
   undoSkip () {
-    if (!this.skip) return
+    if (!this.skip || this.active) return
     this.log(`info [Rollback] No longer skipping ${this.skip}.`)
     this.setSkip(null)
     this.changed()
@@ -364,7 +412,9 @@ export class Rollback {
   private fail (version: string | null, message: string) {
     this.log(`error [Rollback] Couldn't go back${version ? ` to ${version}` : ''}: ${message}`)
     // The version gone back from isn't skipped when going back didn't happen.
-    if (this.skip === app.getVersion()) this.setSkip(null)
+    this.restoreSkip()
+    if (this.file) removeFile(this.file)
+    this.file = null
     this.phase = 'failed'
     this.target = version
     this.error = message
@@ -378,6 +428,12 @@ export class Rollback {
     if (Date.now() - this.lastSent < 500) return
     this.lastSent = Date.now()
     this.changed()
+  }
+
+  private restoreSkip () {
+    if (!this.skipBefore) return
+    this.setSkip(this.skipBefore.value)
+    this.skipBefore = null
   }
 
   private setSkip (skip: string | null) {

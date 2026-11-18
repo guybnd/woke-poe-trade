@@ -23,8 +23,11 @@ test('the launch toast names the overlay key and version, never takes the mouse 
   expect(box.y + box.height).toBeLessThan(1250)
 
   // An update found while the note is up shows on the version line.
-  overlay.app.sendToOverlay({ name: 'MAIN->CLIENT::updater-state', payload: { state: 'update-downloaded', version: '9.9.9' } })
+  overlay.app.sendToOverlay({ name: 'MAIN->CLIENT::updater-state', payload: { state: 'update-downloaded', version: '9.9.9', whenClosed: true } })
   await expect(version).toContainText('· Update 9.9.9 installs when Path of Exile is closed')
+  // Automatic updates off, or blocked this run: only on quit.
+  overlay.app.sendToOverlay({ name: 'MAIN->CLIENT::updater-state', payload: { state: 'update-downloaded', version: '9.9.9', whenClosed: false } })
+  await expect(version).toContainText('· Update 9.9.9 installs when you quit')
   await page.waitForTimeout(300)
   await overlay.snap('launch toast')
   await expect(toast).toHaveCount(0, { timeout: 4000 })

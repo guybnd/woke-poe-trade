@@ -258,7 +258,8 @@
     "check_now": "Check now",
     "install_now": "Install now",
     "downloads_page": "Open the Downloads page",
-    "installed_on_exit": "Installs when Path of Exile is closed, or when you quit",
+    "installed_on_exit": "Installs when you quit",
+    "installed_when_closed": "Installs when Path of Exile is closed, or when you quit",
     "download_manually": "You can download it from GitHub",
     "download_disabled": "You have disabled automatic updates download"
   },

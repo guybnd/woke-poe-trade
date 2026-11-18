@@ -32,7 +32,7 @@ const iconUrl = computed(() => appIconUrl(AppConfig().appIcon))
 const update = computed(() => {
   const info = Host.updateInfo.value
   switch (info.state) {
-    case 'update-downloaded': return `Update ${info.version} installs when Path of Exile is closed`
+    case 'update-downloaded': return `Update ${info.version} installs when ${info.whenClosed ? 'Path of Exile is closed' : 'you quit'}`
     case 'update-available': return info.noDownloadReason ? `Update ${info.version} available` : `Update ${info.version} downloading`
     case 'update-not-available': return 'Up to date'
     default: return null

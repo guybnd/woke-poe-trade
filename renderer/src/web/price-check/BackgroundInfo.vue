@@ -43,7 +43,7 @@ const updateInfo = computed(() => {
   const rawInfo = Host.updateInfo.value
   switch (rawInfo.state) {
     case 'update-downloaded':
-      return { str1: t('updates.available', [rawInfo.version]), str2: t('updates.installed_on_exit') }
+      return { str1: t('updates.available', [rawInfo.version]), str2: t(rawInfo.whenClosed ? 'updates.installed_when_closed' : 'updates.installed_on_exit') }
     case 'update-available':
       return (rawInfo.noDownloadReason)
         ? { str1: t('updates.available', [rawInfo.version]), str2: (rawInfo.noDownloadReason === 'not-supported') ? t('updates.download_manually') : t('updates.download_disabled') }

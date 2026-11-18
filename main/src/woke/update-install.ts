@@ -183,3 +183,11 @@ export function installerLogFailure (message: string): boolean {
   const m = /^Cannot run installer: error code: (\S+?),/.exec(message)
   return m != null && m[1] === 'ENOENT'
 }
+
+// electron-updater's install-on-quit: only with an update downloaded, never
+// while a rollback is downloading, waiting or installing (its own installer
+// runs; two at once would fight), and never on a plain restart (the new copy
+// would start under the installer).
+export function quitInstallAllowed (i: { downloaded: boolean, rollbackActive: boolean, plainRestart: boolean }): boolean {
+  return i.downloaded && !i.rollbackActive && !i.plainRestart
+}

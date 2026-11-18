@@ -9,7 +9,7 @@ import path from 'path'
 import { describe, it, expect } from 'vitest'
 import {
   compareVersions, fileSha512, installerUrl, isSkipped, noteToShow, parseLatestYml, parseVersion,
-  previousVersion, skipStillNeeded, trayEntry, ymlProblem
+  previousVersion, skipAfterRollback, skipStillNeeded, trayEntry, ymlProblem
 } from '../../main/src/woke/rollback'
 import type { WokeRollbackState } from '../../ipc/woke-ops'
 
@@ -41,6 +41,12 @@ describe('previousVersion', () => {
   it('leaves out drafts, prereleases and odd tags', () => {
     const list = [rel('v1.330.8', { draft: true }), rel('v1.330.7', { prerelease: true }), rel('nightly'), { tag_name: 5 }, rel('v1.330.6')]
     expect(previousVersion('1.330.9', list)).toBe('1.330.6')
+  })
+
+  it('never picks the version automatic updates skip', () => {
+    const list = [rel('v1.330.9'), rel('v1.330.8'), rel('v1.330.7')]
+    expect(previousVersion('1.330.10', list, '1.330.9')).toBe('1.330.8')
+    expect(previousVersion('1.330.9', list, '1.330.11')).toBe('1.330.8')
   })
 
   it('has nothing to offer for the oldest release or a dev version', () => {
@@ -157,5 +163,21 @@ describe('tray entry', () => {
     expect(trayEntry(state({ offered: false }))).toBeNull()
     expect(trayEntry(state({ phase: 'installing', target: '1.330.8' }))).toBeNull()
     expect(trayEntry(state({ previous: null }))).toBeNull()
+  })
+})
+
+describe('skip after going back', () => {
+  it('skips the running version on a first rollback', () => {
+    expect(skipAfterRollback(null, '1.330.9')).toBe('1.330.9')
+  })
+
+  it('keeps the first bad version skipped when going back twice', () => {
+    // 1.330.9 was bad: back to 1.330.8 (skip 9), then back again to 1.330.7.
+    expect(skipAfterRollback('1.330.9', '1.330.8')).toBe('1.330.9')
+  })
+
+  it('moves the skip up when the running version is newer', () => {
+    expect(skipAfterRollback('1.330.8', '1.330.10')).toBe('1.330.10')
+    expect(skipAfterRollback('junk', '1.330.10')).toBe('1.330.10')
   })
 })

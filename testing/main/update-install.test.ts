@@ -6,7 +6,7 @@ import path from 'path'
 import { describe, it, expect } from 'vitest'
 import {
   GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, afterEvent, describeUpdateError, installVerdict, installerLogFailure,
-  installerProblem, isSpawnFailure, relaunchArgs, stillClosed, tasklistHasGame, type InstallInputs
+  installerProblem, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed, tasklistHasGame, type InstallInputs
 } from '../../main/src/woke/update-install'
 
 const NOW = 1_000_000_000
@@ -199,5 +199,20 @@ describe('installerLogFailure', () => {
   it('ignores other log lines', () => {
     expect(installerLogFailure('Install: isSilent: true, isForceRunAfter: true')).toBe(false)
     expect(installerLogFailure('Executing: C:\\x\\Setup.exe with args: --updated,/S')).toBe(false)
+  })
+})
+
+describe('quitInstallAllowed', () => {
+  it('installs a downloaded update on quit', () => {
+    expect(quitInstallAllowed({ downloaded: true, rollbackActive: false, plainRestart: false })).toBe(true)
+  })
+
+  it('never while a rollback is under way: two installers would run at once', () => {
+    expect(quitInstallAllowed({ downloaded: true, rollbackActive: true, plainRestart: false })).toBe(false)
+  })
+
+  it('never on a plain restart, or with nothing downloaded', () => {
+    expect(quitInstallAllowed({ downloaded: true, rollbackActive: false, plainRestart: true })).toBe(false)
+    expect(quitInstallAllowed({ downloaded: false, rollbackActive: false, plainRestart: false })).toBe(false)
   })
 })

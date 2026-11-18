@@ -52,6 +52,8 @@ export type UpdateInfo =
   } | {
     state: 'update-downloaded'
     version: string
+    // woke: installs by itself once Path of Exile is closed (else on quit).
+    whenClosed?: boolean
   } | {
     state: 'update-not-available' | 'error'
     checkedAt: number

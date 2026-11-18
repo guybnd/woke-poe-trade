@@ -78,7 +78,7 @@ export default defineComponent({
         case 'error':
           return { str1: t('updates.maybe_outdated'), str2: t('updates.error'), action: openDownloadPage, actionText: t('updates.downloads_page') }
         case 'update-downloaded':
-          return { str1: t('updates.available', [rawInfo.version]), str2: t('updates.installed_on_exit'), action: quitAndInstall, actionText: t('updates.install_now') }
+          return { str1: t('updates.available', [rawInfo.version]), str2: t(rawInfo.whenClosed ? 'updates.installed_when_closed' : 'updates.installed_on_exit'), action: quitAndInstall, actionText: t('updates.install_now') }
         case 'update-available':
           return (rawInfo.noDownloadReason)
             ? { str1: t('updates.available', [rawInfo.version]), str2: (rawInfo.noDownloadReason === 'not-supported') ? t('updates.download_manually') : t('updates.download_disabled'), action: openDownloadPage, actionText: t('updates.downloads_page') }
