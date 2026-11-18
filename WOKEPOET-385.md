@@ -14,6 +14,20 @@ history:
   - type: activity
     user: Agent
     date: '2026-11-18T15:25:54.477Z'
+    comment: Created ticket.
+    id: a-2026-11-18t15-25-54-477z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T15:25:54.477Z'
     comment: Created as subtask of WOKEPOET-380.
+    id: a-2026-11-18t15-25-54-477z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T15:58:03.396Z'
+    comment: >-
+      Rail drag click fix merged (#635, 3220b89f). item-copy-failed and
+      run-timeline/cluster/item-tip leaks fixed in #632 (pending CI); done when
+      it merges.
+    id: a-2026-11-18t15-58-03-396z
 ---
 Retried in 69 CI runs: item-copy-failed.spec.ts:4 every run (3 s toast wait right after boot; guess: hotkey before overlay ready). run-timeline.spec.ts:55 (25) and :22 (15): likely reading runs before the save lands. cluster-type.spec.ts:8 rows (6), tab-rail.spec.ts:280 pinned drag (4 + 1 hard fail), item-tip.spec.ts:104 unique base (4 + 1 hard fail). Diagnose each before changing timeouts.
