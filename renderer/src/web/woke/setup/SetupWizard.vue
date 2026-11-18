@@ -108,7 +108,7 @@
           <label v-if="prefs.canAutoUpdate" :class="$style.toggle">
             <div class="min-w-0">
               <div>Install updates automatically</div>
-              <div class="w-faint">Downloads in the background and installs when you quit. Never in the middle of a map.</div>
+              <div class="w-faint">Downloads in the background and installs when Path of Exile is closed, or when you quit. Never in the middle of a map.</div>
             </div>
             <w-toggle :model-value="prefs.autoUpdate" :aria-label="TOGGLE_LABEL.autoUpdate" @update:model-value="v => setPref({ autoUpdate: v })" />
           </label>

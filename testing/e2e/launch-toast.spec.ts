@@ -24,7 +24,7 @@ test('the launch toast names the overlay key and version, never takes the mouse 
 
   // An update found while the note is up shows on the version line.
   overlay.app.sendToOverlay({ name: 'MAIN->CLIENT::updater-state', payload: { state: 'update-downloaded', version: '9.9.9' } })
-  await expect(version).toContainText('· Update 9.9.9 installs when you quit')
+  await expect(version).toContainText('· Update 9.9.9 installs when Path of Exile is closed')
   await page.waitForTimeout(300)
   await overlay.snap('launch toast')
   await expect(toast).toHaveCount(0, { timeout: 4000 })

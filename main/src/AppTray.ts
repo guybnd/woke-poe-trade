@@ -41,6 +41,8 @@ export class AppTray {
   serverPort = 0
   // woke: opens the first-run setup window.
   onRunSetup?: () => void
+  // woke: "Go back to X" (AppUpdater.trayRollbackItem).
+  rollbackItem?: () => { label: string, click: () => void } | null
 
   private loadImage () {
     const image = nativeImage.createFromPath(appIconFile(process.platform === 'win32' ? 'ico' : 'png'))
@@ -115,6 +117,7 @@ export class AppTray {
           if (canRestartApp()) restartApp()
         }
       },
+      ...((item) => item ? [item] : [])(this.rollbackItem?.() ?? null),
       {
         label: 'Open config folder',
         click: () => {

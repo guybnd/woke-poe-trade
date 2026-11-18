@@ -17,6 +17,7 @@
       <button v-if="info.action" @click="info.action"
         class="btn w-full mt-1">{{ info.actionText }}</button>
     </div>
+    <rollback-rows />
     <div class="text-center mt-auto py-8">
       <p>{{ t('app.contact_me') }} <br><span class="font-sans text-gray-500 select-all">@whec</span></p>
       <ul class="flex justify-center gap-4">
@@ -34,6 +35,7 @@ import { DateTime } from 'luxon'
 import { reportProblem, openCrashFolder } from '@/web/woke/app/report'
 import { AppConfig } from '@/web/Config'
 import { appIconUrl } from '@/web/woke/ui/app-icon'
+import RollbackRows from '@/web/woke/app/RollbackRows.vue'
 
 function checkForUpdates () {
   Host.sendEvent({
@@ -59,6 +61,7 @@ function fmtTime (millis: number) {
 
 export default defineComponent({
   name: 'settings.about',
+  components: { RollbackRows },
   inheritAttrs: false,
   setup () {
     const { t } = useI18n()

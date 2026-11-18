@@ -95,6 +95,13 @@ app.on('ready', async () => {
   registerWokeHandler('game-filter', async () => await gameFilterSetting(gameConfig.actualPath))
   initSetup(appUpdater)
   appTray.onRunSetup = openSetupWindow
+  // woke: going back, from the tray too (a broken overlay can't reach About),
+  // and "Updated to X" after an update installed by itself.
+  appUpdater.notify = (title, body) => { appTray.notify(title, body) }
+  appUpdater.onTrayChange = () => { appTray.rebuildMenu() }
+  appTray.rollbackItem = () => appUpdater.trayRollbackItem()
+  appTray.rebuildMenu()
+  appUpdater.showUpdateNote()
 
   setTimeout(
     async () => {

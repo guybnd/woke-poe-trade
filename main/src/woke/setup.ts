@@ -123,6 +123,11 @@ export function initSetup (appUpdater: AppUpdater) {
   })
   registerWokeHandler('setup-open', async () => { openSetupWindow(); return true })
   registerWokeHandler('app-restart', async () => { restartApp(); return true })
+  // Going back to the previous release (Settings › About).
+  registerWokeHandler('rollback-state', async () => await appUpdater.rollbackState())
+  registerWokeHandler('rollback-start', async () => appUpdater.startRollback())
+  registerWokeHandler('rollback-cancel', async () => appUpdater.cancelRollback())
+  registerWokeHandler('rollback-undo-skip', async () => appUpdater.undoSkip())
   registerWokeHandler('setup-finish', async () => {
     setAppPrefs({ wizardShown: true })
     // Let the reply reach the page before it goes away.

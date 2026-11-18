@@ -41,6 +41,23 @@ export interface WokePathStat {
   modified: number | null
 }
 
+// Going back to the previous release (main/src/woke/rollback.ts).
+export interface WokeRollbackState {
+  // An installed build: the portable exe and dev builds can't go back.
+  offered: boolean
+  current: string
+  // The release before this one, once the release list has loaded.
+  previous: string | null
+  phase: 'idle' | 'downloading' | 'ready' | 'installing' | 'failed'
+  // The version being gone back to.
+  target: string | null
+  // Download progress, 0 to 1, when the size is known.
+  progress: number | null
+  error: string | null
+  // Automatic updates skip this version and older.
+  skip: string | null
+}
+
 export interface WokePendingCrash {
   id: string
   at: number
@@ -117,6 +134,10 @@ export interface WokeOps {
   'setup-prefs-set': Op<Record<string, unknown>, Json>
   'setup-open': Op<NoArgs, Ok>
   'app-restart': Op<NoArgs, Ok>
+  'rollback-state': Op<NoArgs, WokeRollbackState>
+  'rollback-start': Op<NoArgs, WokeRollbackState>
+  'rollback-cancel': Op<NoArgs, WokeRollbackState>
+  'rollback-undo-skip': Op<NoArgs, WokeRollbackState>
   'setup-finish': Op<NoArgs, Ok>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>

@@ -2,7 +2,7 @@
   <div v-if="show" :class="$style.stack">
     <div v-if="updateReady" data-w-popup :class="$style.pill" role="status">
       <i class="fas fa-arrow-circle-up w-accent" />
-      <span>Update {{ updateReady }} ready, installs when you quit</span>
+      <span>Update {{ updateReady }} ready, installs when Path of Exile is closed</span>
       <w-button size="sm" @click="restartNow">Restart now</w-button>
       <button type="button" class="w-icon-btn" title="Hide" aria-label="Hide" @click="hiddenUpdate = updateReady"><i class="fas fa-times" /></button>
     </div>
