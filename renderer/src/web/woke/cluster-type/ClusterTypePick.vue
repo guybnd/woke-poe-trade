@@ -4,6 +4,7 @@
   <div class="w-ctp" data-cluster-type>
     <button type="button" class="filter-name-label w-ctp-title" :data-rarity="item.rarity"
       :aria-expanded="open" aria-haspopup="listbox"
+      @mousedown.prevent
       :title="'Search a different cluster jewel: pick its size and type'"
       @click="toggle">{{ title }}<i class="fas fa-caret-down w-ctp-caret" aria-hidden="true" /></button>
     <div v-if="open" class="w-ctp-drop" @mousedown.prevent>
@@ -32,31 +33,39 @@
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { FilterOrGroup, ItemFilters } from '@/web/price-check/filters/interfaces'
-import { CLUSTER_SIZES, applyClusterType, clusterTypes, currentType, matchTypes, ownTypeRef, pickedSize, type ClusterPick, type ClusterSize } from './apply'
+import { CLUSTER_SIZES, applyClusterType, clusterTypes, currentType, enchantRow, matchTypes, ownType, pickedSize, type ClusterPick, type ClusterSize } from './apply'
 
 const props = defineProps<{ item: ParsedItem, filters: ItemFilters, stats: FilterOrGroup[], ownSize: ClusterSize }>()
 
 // The copied jewel's type, and the size searched now. Both are kept with the
 // search (apply.ts), so the picker reads them back if it is drawn again.
-const ownRef = shallowRef<string | undefined>()
+const open = ref(false)
+const own = shallowRef<ClusterPick | undefined>()
 const size = ref<ClusterSize>(props.ownSize)
 watch(() => [props.item, props.filters], () => {
-  ownRef.value = ownTypeRef(props.filters, props.stats, props.ownSize)
+  own.value = ownType(props.filters, props.stats, props.ownSize)
   size.value = pickedSize(props.filters, props.ownSize)
+  open.value = false
 }, { immediate: true })
 
-const now = computed(() => currentType(size.value, props.stats))
+const now = computed(() => currentType(size.value, props.stats) ??
+  (size.value === props.ownSize && own.value && enchantRow(props.stats)?.statRef === own.value.ref ? own.value : undefined))
 const title = computed(() => `${size.value} Cluster Jewel · ${now.value?.name ?? 'any type'}`)
 
-const open = ref(false)
 const query = ref('')
 const tab = ref<ClusterSize>('Large')
 const sel = ref(0)
 const box = shallowRef<HTMLInputElement>()
 
+// The copy's own type leads its size's list when the trade site no longer lists it.
+const listOf = (s: ClusterSize) => {
+  const list = clusterTypes(s)
+  const o = own.value
+  return (s === props.ownSize && o && !list.some(t => t.ref === o.ref)) ? [o, ...list] : list
+}
 const counts = computed(() => Object.fromEntries(CLUSTER_SIZES.map(s =>
-  [s, matchTypes(clusterTypes(s), query.value).length])) as Record<ClusterSize, number>)
-const results = computed(() => matchTypes(clusterTypes(tab.value), query.value))
+  [s, matchTypes(listOf(s), query.value).length])) as Record<ClusterSize, number>)
+const results = computed(() => matchTypes(listOf(tab.value), query.value))
 watch([query, tab], () => { sel.value = 0 })
 // Typing that matches nothing in this size moves to a size it does match.
 watch(query, () => {
@@ -66,7 +75,7 @@ watch(query, () => {
 })
 
 function isNow (t: ClusterPick) { return now.value?.ref === t.ref && tab.value === size.value }
-function isOwn (t: ClusterPick) { return ownRef.value === t.ref && tab.value === props.ownSize }
+function isOwn (t: ClusterPick) { return own.value?.ref === t.ref && tab.value === props.ownSize }
 
 function toggle () {
   if (open.value) { open.value = false; return }

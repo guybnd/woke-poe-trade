@@ -55,5 +55,12 @@ test(`a cluster jewel title picks a size and type, typed or clicked, and only Se
   await drop.getByRole('tab', { name: 'Large' }).click()
   await drop.getByRole('option', { name: /^Spell Damage/ }).click()
   await expect(title).toHaveText(/Large Cluster Jewel · Spell Damage/)
+  // Clicking the title again closes it; none of this searched.
+  await title.click()
+  await expect(drop).toHaveCount(1)
+  await title.click()
+  await expect(drop).toHaveCount(0)
+  await overlay.page.waitForTimeout(300)
+  expect(searches.length).toBe(before + 1)
 })
 }

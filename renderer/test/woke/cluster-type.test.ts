@@ -5,7 +5,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
-import { applyClusterType, clusterTypes, currentType, matchTypes, pickedSize } from '@/web/woke/cluster-type/apply'
+import { applyClusterType, clusterTypes, currentType, matchTypes, ownType, pickedSize } from '@/web/woke/cluster-type/apply'
 
 // vi.mock is hoisted above the imports.
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
@@ -92,5 +92,30 @@ describe('cluster jewel type picker', () => {
     expect(notable.disabled).toBe(false)
     expect({ min: passives.roll!.min, max: passives.roll!.max }).toEqual(before)
     expect(JSON.stringify(createTradeRequest(filters, stats))).toBe(enchBefore)
+  })
+
+  it('a Small pick unticks the small passive effect, which Small never rolls', () => {
+    const { filters, stats, rows } = setup()
+    const effect = { tradeId: ['explicit.stat_effect'], statRef: 'Added Small Passive Skills have #% increased Effect', text: '', tag: 'explicit' as StatFilter['tag'], sources: [], disabled: false }
+    stats.push(effect)
+    applyClusterType(filters, stats, 'Large', 'Small', type('Small', 'Life'))
+    expect(rows().find(s => s.statRef === effect.statRef)!.disabled).toBe(true)
+    applyClusterType(filters, stats, 'Large', 'Large', type('Large', 'Fire Damage'))
+    expect(rows().find(s => s.statRef === effect.statRef)!.disabled).toBe(false)
+  })
+
+  it('a legacy type the trade site no longer lists is still offered back', () => {
+    const item = parseItem(fixture('items/rare-cluster-large.txt')
+      .replace('Large Cluster Jewel', 'Small Cluster Jewel')
+      .replace('Adds 8 Passive Skills (enchant)\n2 Added Passive Skills are Jewel Sockets (enchant)\nAdded Small Passive Skills grant: 12% increased Fire Damage (enchant)',
+        'Adds 2 Passive Skills (enchant)\nAdded Small Passive Skills grant: +10 to Strength (enchant)'))
+    const presets = createPresets(item, OPTS)
+    const preset = presets.presets.find(p => p.id === presets.active)!
+    const before = JSON.stringify(createTradeRequest(preset.filters, preset.stats))
+    const own = ownType(preset.filters, preset.stats, 'Small')
+    if (!own) return // the parser has no row for this old line: nothing to restore
+    applyClusterType(preset.filters, preset.stats, 'Small', 'Small', type('Small', 'Life'))
+    applyClusterType(preset.filters, preset.stats, 'Small', 'Small', own)
+    expect(JSON.stringify(createTradeRequest(preset.filters, preset.stats))).toBe(before)
   })
 })

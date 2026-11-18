@@ -13,6 +13,8 @@ export const CLUSTER_SIZES: readonly ClusterSize[] = ['Small', 'Medium', 'Large'
 const GRANT = 'Added Small Passive Skills grant: '
 const NOTABLE = '1 Added Passive Skill is '
 const PASSIVES = 'Adds # Passive Skills'
+// Medium and Large only: a Small jewel never rolls it.
+const EFFECT = 'Added Small Passive Skills have '
 // The fewest passives a jewel of each size adds: any jewel of that size.
 const MIN_PASSIVES: Record<ClusterSize, number> = { Small: 2, Medium: 4, Large: 8 }
 
@@ -74,7 +76,8 @@ interface Own {
   baseTypeTrade: string | undefined
   relaxed: boolean | undefined
   enchant: Pick<StatFilter, 'tradeId' | 'statRef' | 'text' | 'sources' | 'disabled'> | null
-  notables: Map<StatFilter, boolean>
+  /** Every row's tick, to put back. */
+  ticks: Map<StatFilter, boolean>
   passives: { min: number | '' | undefined, max: number | '' | undefined } | null
 }
 const OWN = new WeakMap<ItemFilters, Own>()
@@ -85,10 +88,16 @@ export function pickedSize (filters: ItemFilters, own: ClusterSize): ClusterSize
   return PICKED.get(filters) ?? own
 }
 
-/** The copied jewel's enchant ref, from before any pick. */
-export function ownTypeRef (filters: ItemFilters, stats: FilterOrGroup[], ownSize: ClusterSize): string | undefined {
+/**
+ * The copied jewel's type, from before any pick. A legacy type the trade site no
+ * longer lists still comes back, so picking it restores the copy.
+ */
+export function ownType (filters: ItemFilters, stats: FilterOrGroup[], ownSize: ClusterSize): ClusterPick | undefined {
   const own = OWN.get(filters)
-  return own ? own.enchant?.statRef : currentType(ownSize, stats)?.ref
+  const row = own ? own.enchant : enchantRow(stats)
+  if (!row) return undefined
+  const listed = clusterTypes(ownSize).find(t => t.ref === row.statRef)
+  return listed ?? { name: row.text.replace(GRANT, ''), ref: row.statRef, tradeId: [...row.tradeId], text: row.text }
 }
 
 function remember (filters: ItemFilters, stats: FilterOrGroup[], size: ClusterSize): Own {
@@ -103,7 +112,7 @@ function remember (filters: ItemFilters, stats: FilterOrGroup[], size: ClusterSi
     baseTypeTrade: filters.searchExact.baseTypeTrade,
     relaxed: filters.searchRelaxed?.disabled,
     enchant: ench ? { tradeId: [...ench.tradeId], statRef: ench.statRef, text: ench.text, sources: ench.sources, disabled: ench.disabled } : null,
-    notables: new Map(list.filter(s => s.statRef.startsWith(NOTABLE)).map(s => [s, s.disabled])),
+    ticks: new Map(list.map(s => [s, s.disabled])),
     passives: passives?.roll ? { min: passives.roll.min, max: passives.roll.max } : null
   }
   OWN.set(filters, own)
@@ -117,7 +126,7 @@ function remember (filters: ItemFilters, stats: FilterOrGroup[], size: ClusterSi
 export function applyClusterType (filters: ItemFilters, stats: FilterOrGroup[], ownSize: ClusterSize, size: ClusterSize, type: ClusterPick): void {
   const own = remember(filters, stats, ownSize)
   const list = rows(stats)
-  const isOwn = size === own.size && own.enchant?.statRef === type.ref
+  const isOwn = size === own.size && (own.enchant ? own.enchant.statRef === type.ref : false)
   PICKED.set(filters, size)
 
   // Base type: this size. The search names it in the same language the copy used.
@@ -136,12 +145,19 @@ export function applyClusterType (filters: ItemFilters, stats: FilterOrGroup[], 
 
   // The enchant row: the copied one back, or the picked type's.
   let ench = enchantRow(stats)
-  if (!ench) {
+  if (isOwn && !own.enchant && ench) {
+    // Only reached by a copy without one: the row a pick added goes again.
+    stats.splice(stats.indexOf(ench), 1)
+    ench = undefined
+  }
+  if (!ench && !(isOwn && !own.enchant)) {
     stats.unshift({ tradeId: [], statRef: GRANT, text: '', tag: 'enchant' as StatFilter['tag'], sources: [], disabled: false })
     // Through the list again: a reactive list hands back its own copy of the row.
     ench = enchantRow(stats)!
   }
-  if (isOwn && own.enchant) {
+  if (!ench) {
+    // The copy had no enchant row and is picked again: nothing to set.
+  } else if (isOwn && own.enchant) {
     Object.assign(ench, { ...own.enchant, tradeId: [...own.enchant.tradeId] })
   } else {
     ench.tradeId = [...type.tradeId]
@@ -151,10 +167,15 @@ export function applyClusterType (filters: ItemFilters, stats: FilterOrGroup[], 
     ench.disabled = false
   }
 
-  // Notables: the copied jewel's ticks back, or none (they don't roll on another type).
+  // The copy's ticks back; else no notables (they belong to the old type) and,
+  // on a Small jewel, no small passive effect (it never rolls there).
   for (const s of list) {
-    if (!s.statRef.startsWith(NOTABLE)) continue
-    s.disabled = isOwn ? (own.notables.get(s) ?? s.disabled) : true
+    if (s.statRef.startsWith(GRANT) || s.statRef === PASSIVES) continue
+    if (isOwn) {
+      s.disabled = own.ticks.get(s) ?? s.disabled
+    } else if (s.statRef.startsWith(NOTABLE) || (size === 'Small' && s.statRef.startsWith(EFFECT))) {
+      s.disabled = true
+    }
   }
 
   // Passive count: the copy's box for its own size, any count for another.
