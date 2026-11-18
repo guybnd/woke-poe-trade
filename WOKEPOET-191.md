@@ -49,6 +49,16 @@ history:
       do: a Viscera economy group once poe.ninja has a category for them (no
       Covens data on poe.ninja yet at 19:45 UTC). The scarab group is now empty.
     id: a-2026-11-13t19-51-47-827z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T06:50:10.618Z'
+    comment: >-
+      Built on woke/filter-330-lists (10c47e5c, pushed, reviewed, checks pass):
+      3.30 drop table + safety net + guard. Not done (no data source): min item
+      tier per base beyond Stygian Vise, Wickerman/Viscera groups, Soul
+      Core/Essence of Trickery drop areas. Divine Vessel stack size 20 and
+      normal-Vise tier unverified.
+    id: a-2026-11-18t06-50-10-618z
 ---
 > TL;DR: what our filter groups, drop table and safety net need for 3.30 items. Most of it lands through NeverSink's 3.30 filter; this ticket covers our own lists.
 
