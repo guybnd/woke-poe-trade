@@ -120,6 +120,9 @@ export function drawTree (d: DrawInput) {
         if (!m || !drawnRadius(m) || m.kind === 'mastery') continue
         // A class start links to its ascendancies' starts: no line between.
         if ((n.kind === 'ascstart') !== (m.kind === 'ascstart') && (n.kind === 'start' || m.kind === 'start')) continue
+        // The atlas's paired gateways (Mortal, Cryptic) link to each other,
+        // but the game draws no line: one would run straight across the tree.
+        if (n.kind === 'wormhole' && m.kind === 'wormhole') continue
         if (linkState(state(n.id), state(m.id)) !== lit) continue
         ctx.moveTo(X(n.x), Y(n.y))
         const centre = n.group === m.group && n.radius === m.radius && n.radius > 0 ? art.groups[n.group] : null

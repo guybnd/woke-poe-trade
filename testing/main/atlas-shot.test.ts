@@ -6,7 +6,7 @@ import { PNG } from 'pngjs'
 import { ATLAS_FIT, ATLAS_PICTURE_FIT, fitPicture, fitTree, litLines, litProbes, readScreen } from '../../main/src/woke/tree-fit'
 import { readPicture } from '../../main/src/woke/picture-worker'
 import { readAtlasTree } from '../../renderer/src/web/woke/atlas/atlas-tree'
-import { fitPoints, lineProbes } from '../../renderer/src/web/woke/pob-builds/tree-overlay'
+import { buildPath, fitPoints, lineProbes } from '../../renderer/src/web/woke/pob-builds/tree-overlay'
 import { readShots, ringNodes, ringProbes, shotLines } from '../../renderer/src/web/woke/atlas/shot-import'
 
 // Screenshots of the game's atlas tree read into a strategy (Atlas
@@ -105,6 +105,16 @@ describe('atlas tree screenshots to a strategy', () => {
     const n = readShots(model, lines, [res.extraLit], ringIds, [res.lit]).nodes.length
     expect(n).toBeGreaterThanOrEqual(140)
     expect(n).toBeLessThanOrEqual(158)
+  })
+
+  it('draws no line between paired gateways (Mortal, Cryptic)', () => {
+    // Linked in the data, so a path may jump between them; the game draws no
+    // line, and one drawn lit ran across the tree over passives not taken.
+    const holes = [...model.nodes.values()].filter(n => n.kind === 'wormhole').map(n => n.id)
+    expect(holes).toHaveLength(4)
+    const path = buildPath(model.nodes, holes, model.art)
+    expect(path.lines).toHaveLength(0)
+    expect(lines.some(l => holes.includes(l.a) && holes.includes(l.b))).toBe(false)
   })
 
   it('finds no atlas tree on other screens', () => {
