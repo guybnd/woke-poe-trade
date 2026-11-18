@@ -6,7 +6,7 @@
 import { computed, nextTick, shallowRef, watch } from 'vue'
 import { clickOf, selectPick } from './picks'
 import {
-  allPaths, altArrowTarget, cleanPath, folderDropOf, folderKey, fullOrder, isUnder, itemKey, joinPath, leafOf,
+  allPaths, altArrowTarget, cleanPath, folderDropOf, folderKey, fullOrder, isUnder, itemKey, itemsUnder, joinPath, leafOf,
   moveItems, movedPath, nudgeFolder, parentOf, placeFolder, sortFolderAtoZ, treeOf, treeRows
 } from './saved-tree'
 import type { DropAt, TreeRow } from './saved-tree'
@@ -134,7 +134,7 @@ export function useSavedTree<T extends { id: number }> (a: SavedTreeAdapter<T>) 
     return fullOrder(a.items(), a.folderOf, a.extraFolders(), a.folderOrder() ?? [])
   }
   function inFolder (path: string): T[] {
-    return a.items().filter(t => isUnder(cleanPath(a.folderOf(t)), path))
+    return itemsUnder(a.items(), a.folderOf, path).map(x => x.item)
   }
   function refile (list: T[], folder: string) {
     for (const t of list) if (cleanPath(a.folderOf(t)) !== folder) a.setFolder(t, folder)

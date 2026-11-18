@@ -10,7 +10,7 @@
         <button type="button" :class="$style.open" class="w-focusable" :title="`Open ${e.name || 'this search'} in the trade window`" @click="open(e, 'overlay')">
           <i v-if="e.pinned" class="fas fa-thumbtack text-xs w-faint" />
           <span class="w-trunc">{{ e.name || 'Untitled search' }}</span>
-          <span v-if="subOf.get(e.id)" class="w-faint text-xs w-trunc" :class="$style.sub" :title="`In ${folder}/${subOf.get(e.id)}`"><i class="fas fa-folder" /> {{ subOf.get(e.id) }}</span>
+          <span v-if="subOf(e)" class="w-faint text-xs w-trunc" :class="$style.sub" :title="`In ${folder}/${subOf(e)}`"><i class="fas fa-folder" /> {{ subOf(e) }}</span>
           <span class="ml-auto w-faint text-xs whitespace-nowrap">{{ agoPhrase(e.lastOpened) }}</span>
         </button>
         <button type="button" class="w-icon-btn" title="Open in your browser" @click="open(e, 'external')"><i class="fas fa-external-link-alt" /></button>
@@ -32,8 +32,9 @@
 import { computed } from 'vue'
 import { AppConfig, saveConfig } from '@/web/Config'
 import { MainProcess } from '@/web/background/IPC'
+import { cleanPath } from '../shared/saved-tree'
 import { WButton, WEmpty, WSelect, agoPhrase, openMenu } from '../ui'
-import { TRADE_SEARCHES_TYPE, ensureFolder, folderNames, hotkeyTarget, pinnedFirst, searchesIn, sortEntries } from '../trade-searches/widget'
+import { TRADE_SEARCHES_TYPE, ensureFolder, hotkeyTarget, linkableFolders, pinnedFirst, searchesIn, sortEntries } from '../trade-searches/widget'
 import type { TradeSearchEntry, TradeSearchesWidget } from '../trade-searches/widget'
 import type { PobBuildEntry, PobBuildsWidget } from './widget'
 
@@ -41,14 +42,16 @@ const props = defineProps<{ config: PobBuildsWidget, entry: PobBuildEntry }>()
 
 const searches = computed(() => AppConfig<TradeSearchesWidget>(TRADE_SEARCHES_TYPE))
 
+const folders = computed(() => searches.value ? linkableFolders(searches.value) : [])
+
 const folder = computed(() => {
-  const name = props.config.tradeFolders?.[props.entry.relPath]
-  return name && searches.value && folderNames(searches.value).includes(name) ? name : null
+  const name = cleanPath(props.config.tradeFolders?.[props.entry.relPath])
+  return name && folders.value.includes(name) ? name : null
 })
 
 const folderOptions = computed(() => [
   { value: '', label: 'No folder' },
-  ...(searches.value ? folderNames(searches.value) : []).map(n => ({ value: n, label: n }))
+  ...folders.value.map(n => ({ value: n, label: n }))
 ])
 
 // The linked folder and every folder under it.
@@ -57,7 +60,12 @@ const found = computed(() => {
   return w && folder.value ? searchesIn(w.entries, folder.value) : []
 })
 const list = computed(() => pinnedFirst(sortEntries(found.value.map(f => f.entry), 'opened')))
-const subOf = computed(() => new Map(found.value.map(f => [f.entry.id, f.sub])))
+// The search's folder below the linked one ('' when it sits in it).
+function subOf (e: TradeSearchEntry): string {
+  const root = folder.value
+  const at = cleanPath(e.category)
+  return root && at.length > root.length ? at.slice(root.length + 1) : ''
+}
 
 function link (name: string) {
   const rest = Object.fromEntries(Object.entries(props.config.tradeFolders ?? {}).filter(([rel]) => rel !== props.entry.relPath))

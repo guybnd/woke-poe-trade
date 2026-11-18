@@ -36,6 +36,19 @@ export function joinPath (parent: string, name: string): string {
   return cleanPath(parent ? `${parent}/${name}` : name)
 }
 
+// Items in `path` or any folder under it, each with its folder below `path`
+// ('' when it sits in `path` itself). An empty path matches nothing.
+export function itemsUnder<T> (items: readonly T[], folderOf: FolderOf<T>, path: string): Array<{ item: T, sub: string }> {
+  const root = cleanPath(path)
+  if (!root) return []
+  const out: Array<{ item: T, sub: string }> = []
+  for (const item of items) {
+    const at = cleanPath(folderOf(item))
+    if (isUnder(at, root)) out.push({ item, sub: at.slice(root.length + 1) })
+  }
+  return out
+}
+
 // A folder moved or renamed: `from` and everything under it now sit at `to`.
 export function movedPath (folder: string, from: string, to: string): string {
   const f = cleanPath(folder)

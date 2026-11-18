@@ -1,6 +1,6 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { importList, matchesQuery, nextId, str, strList } from '../shared/library'
-import { cleanPath, isUnder } from '../shared/saved-tree'
+import { allPaths, cleanPath, itemsUnder } from '../shared/saved-tree'
 
 export { groupByCategory } from '../shared/library'
 
@@ -71,14 +71,22 @@ export function folderOf (entry: TradeSearchEntry): string {
 
 // The searches in a folder and every folder under it (a build's Trades tab).
 // `sub` is the path below `folder`, '' for the folder itself.
+// A build's Trades tab: the searches in `folder` and every folder under it,
+// each with its folder below `folder`. Paths match the list's tree, where a
+// search with no folder sits at the top; the "Uncategorized" pick holds those.
 export function searchesIn (entries: readonly TradeSearchEntry[], folder: string): Array<{ entry: TradeSearchEntry, sub: string }> {
-  const root = cleanPath(folder)
-  if (!root) return []
-  const out: Array<{ entry: TradeSearchEntry, sub: string }> = []
-  for (const entry of entries) {
-    const path = cleanPath(folderOf(entry))
-    if (isUnder(path, root)) out.push({ entry, sub: path.slice(root.length + 1) })
-  }
+  const found = itemsUnder(entries, e => e.category, folder).map(({ item, sub }) => ({ entry: item, sub }))
+  if (cleanPath(folder) !== UNCATEGORIZED) return found
+  return [...entries.filter(e => !cleanPath(e.category)).map(entry => ({ entry, sub: '' })), ...found]
+}
+
+// Folders a build can link to: the user's order first, then every other
+// folder and parent folder A to Z, then "Uncategorized" if a search has no folder.
+export function linkableFolders (widget: Pick<TradeSearchesWidget, 'entries' | 'folders'>): string[] {
+  const listed = (widget.folders ?? []).map(f => cleanPath(f.name)).filter(Boolean)
+  const all = allPaths([...listed, ...widget.entries.map(e => e.category)])
+  const out = [...new Set([...listed, ...all])]
+  if (!out.includes(UNCATEGORIZED) && widget.entries.some(e => !cleanPath(e.category))) out.push(UNCATEGORIZED)
   return out
 }
 

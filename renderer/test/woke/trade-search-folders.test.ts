@@ -110,4 +110,20 @@ describe('a build\'s Trades tab', () => {
     expect(searchesIn(list, UNCATEGORIZED).map(f => f.entry.id)).toEqual([5])
     expect(searchesIn(list, '')).toEqual([])
   })
+
+  it('keeps searches with no folder out of a real "Uncategorized" folder\'s subfolders', async () => {
+    const { searchesIn } = await import('@/web/woke/trade-searches/widget')
+    const list = [entry(1, 'loose', ''), entry(2, 'kept', 'Uncategorized/Old'), entry(3, 'x', 'X')]
+    expect(searchesIn(list, 'X').map(f => f.entry.id)).toEqual([3])
+    expect(searchesIn(list, UNCATEGORIZED).map(f => [f.entry.id, f.sub])).toEqual([[1, ''], [2, 'Old']])
+  })
+
+  it('offers parent folders that only hold folders', async () => {
+    const { linkableFolders } = await import('@/web/woke/trade-searches/widget')
+    const widget = {
+      entries: [entry(1, 'a', 'Builds/Uber'), entry(2, 'b', 'Builds/Sirus/Gear'), entry(3, 'c', '')],
+      folders: [{ name: 'Zed' }]
+    }
+    expect(linkableFolders(widget)).toEqual(['Zed', 'Builds', 'Builds/Sirus', 'Builds/Sirus/Gear', 'Builds/Uber', UNCATEGORIZED])
+  })
 })
