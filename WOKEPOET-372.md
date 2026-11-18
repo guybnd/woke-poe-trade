@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-372
 title: 'Megalomaniac searcher: build-aware notable search'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -64,7 +64,49 @@ history:
       eslint, vitest 4542, vite build. Handed to the coordinator for the merge
       thread.
     id: a-2026-11-18t10-31-20-434z
+  - type: comment
+    user: Agent
+    comment: >-
+      Megalomaniac searcher merged as #617 (5679732a). Review fixes are in, and
+      local checks pass.
+    date: '2026-11-18T10:44:29.447Z'
+    completionComment: true
+    id: c-2026-11-18t10-44-29-447z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T10:44:29.447Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Megalomaniac searcher shipped in #617 (5679732a). It reads the PoB build
+      or character and tags it with editable tags. Notables show as chips
+      grouped by tag, with hover text, ticks and editable weights. Searches can
+      use Count or Weighted sum, with a divine price cap. Opens from Ctrl+Space
+      "megalo" and PoB › More. Not yet tried in game.
+    completionComment: true
+    date: '2026-11-18T10:44:35.352Z'
+    id: c-2026-11-18t10-44-35-352z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T10:44:35.818Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/617'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy's ask (2026-11-18): a "Megalomaniac searcher" that suggests a trade search for the Megalomaniac notables relevant to his build.
 
