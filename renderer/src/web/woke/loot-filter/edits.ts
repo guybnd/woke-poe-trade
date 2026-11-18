@@ -4,6 +4,7 @@
 import { ruleLabel } from './parse'
 import { tierLabel } from './names'
 import { STACK_MAX } from './stack'
+import { NUMBER_KEYS, boundOf, numberEditWords, setNumber } from './numbers'
 import type { FilterAction, FilterBlock, FilterCondition, FilterDoc, Visibility } from './parse'
 
 export type Colour = [number, number, number, number]
@@ -34,6 +35,9 @@ export type FilterEdit =
   | EditBase & { kind: 'visibility', tier: string, visibility: Visibility, on?: boolean }
   | EditBase & { kind: 'group', hidden: boolean }
   | EditBase & { kind: 'stack', tier: string, size: number }
+  // One number a tier checks: "item level 84 or more" (min), "8 passives or
+  // fewer" (max), "exactly 12" (exact). null takes that bound off the rule.
+  | EditBase & { kind: 'number', tier: string, key: string, bound: NumberBound, value: number | null }
   | EditBase & {
     kind: 'item'
     tier: string
@@ -46,6 +50,8 @@ export type FilterEdit =
     // Goes above everything, so nothing earlier in the filter can catch it.
     pin?: boolean
   }
+
+export type NumberBound = 'min' | 'max' | 'exact'
 
 // A FilterEdit before it gets an id.
 export type NewFilterEdit = FilterEdit extends infer E ? (E extends FilterEdit ? Omit<E, 'id'> : never) : never
@@ -92,6 +98,11 @@ export function isValidEdit (e: unknown): e is FilterEdit {
     case 'group': return typeof x.hidden === 'boolean'
     case 'stack': return str('tier') && typeof x.size === 'number' && Number.isInteger(x.size) && x.size > 0 && x.size <= STACK_MAX
     case 'item': return str('tier', 'base') && VISIBILITIES.includes(x.visibility as string) && isPatch(x.patch)
+    case 'number': {
+      const spec = typeof x.key === 'string' ? NUMBER_KEYS[x.key] : undefined
+      return str('tier') && spec != null && ['min', 'max', 'exact'].includes(x.bound as string) &&
+        (x.value === null || (typeof x.value === 'number' && Number.isInteger(x.value) && x.value >= spec.min && x.value <= spec.max))
+    }
     default: return false
   }
 }
@@ -259,6 +270,19 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
       }
       return { edit, ok: true, blocks: sized.length }
     }
+    case 'number': {
+      const blocks = blocksOf(doc, edit.type, edit.tier)
+      if (!blocks.length) return { edit, ok: false, blocks: 0, message: 'Tier not found in this filter' }
+      // Only rules that check this number already: a tier of several rules
+      // (one per base) keeps the ones that never did as they are.
+      const checking = blocks.filter(b => b.conditions.some(c => c.key === edit.key && boundOf(c) != null))
+      const targets = checking.length ? checking : blocks
+      for (const b of targets) {
+        b.conditions = setNumber(b.conditions, edit.key, edit.bound, edit.value)
+        b.dirty = true
+      }
+      return { edit, ok: true, blocks: targets.length }
+    }
     case 'move': {
       // Out of the tier it was moved from: stack tiers list one base many times,
       // and the others stay. If that tier no longer has it (a new version, new
@@ -391,6 +415,7 @@ export function addEdit (list: FilterEdit[], edit: FilterEdit, opts: { separateM
       case 'style': return (e as typeof edit).tier === edit.tier
       case 'visibility': return (e as typeof edit).tier === edit.tier
       case 'stack': return (e as typeof edit).tier === edit.tier
+      case 'number': return (e as typeof edit).tier === edit.tier && (e as typeof edit).key === edit.key && (e as typeof edit).bound === edit.bound
       case 'group': return true
     }
     return false
@@ -417,7 +442,7 @@ export function addEdit (list: FilterEdit[], edit: FilterEdit, opts: { separateM
       anchor: edit.anchor ?? prev.anchor,
       pin: edit.pin ?? prev.pin
     }
-  } else if (edit.kind === 'stack') {
+  } else if (edit.kind === 'stack' || edit.kind === 'number') {
     merged = { ...edit, id: prev.id }
   } else if (edit.kind === 'group' && !edit.hidden) {
     merged = null
@@ -438,6 +463,7 @@ export function describeEdit (e: FilterEdit): string {
       return `${e.visibility} ${ruleLabel(e.type, e.tier)}`
     case 'group': return `Hid the whole ${group} group`
     case 'stack': return `${ruleLabel(e.type, e.tier)}: stacks of ${e.size} or more`
+    case 'number': return `${ruleLabel(e.type, e.tier)}: ${numberEditWords(e.key, e.bound, e.value)}`
     case 'item': return `Own rule for ${e.base} (${e.visibility === 'Hide' ? 'hidden' : 'restyled'})`
   }
 }
@@ -509,6 +535,13 @@ export function rehomeOptions (doc: FilterDoc, edit: FilterEdit): RehomeOption[]
       for (const t of types()) {
         for (const tier of tiersOf(doc, t)) {
           if (blocksOf(doc, t, tier).some(b => b.conditions.some(c => c.key === 'StackSize' && c.op === '>='))) out.push({ type: t, tier, label: place(t, tier) })
+        }
+      }
+      break
+    case 'number':
+      for (const t of types()) {
+        for (const tier of tiersOf(doc, t)) {
+          if (blocksOf(doc, t, tier).some(b => b.conditions.some(c => c.key === edit.key))) out.push({ type: t, tier, label: place(t, tier) })
         }
       }
       break

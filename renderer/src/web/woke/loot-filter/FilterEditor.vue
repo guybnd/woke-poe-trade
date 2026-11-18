@@ -116,15 +116,22 @@
             <span><span :class="$style.edited">edited</span> you changed it</span>
           </div>
           <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.ladderStack]: hasStacks }]">
-            <span>{{ lad.axis ? axisName(lad.axis) : 'Tier' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
+            <span>{{ lad.axis ? axisName(lad.axis) : 'Rule' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis || hasNumbers ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
           </div>
           <template v-for="(r, i) in lad.rows" :key="r.tiers[0].tier">
             <div v-if="lad.cut === i" :class="$style.cut"><span />Hidden below this line<span /></div>
+            <div v-if="r.section && r.section !== lad.rows[i - 1]?.section" :class="$style.sectionHead">{{ r.section }}</div>
             <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
               :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
               @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
-                <span :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span></span>
+                <span v-if="!lad.axis && hasNumbers" :class="$style.rowHead" style="white-space: normal;">
+                  <NumberLine v-if="numbersEditable(r.tiers[0])" :conditions="firstLive(r.tiers[0]).conditions" :disabled="r.tiers[0].disabled" :name="tierName(firstLive(r.tiers[0]))" @set="(k, b, v) => setNumber(r.tiers[0], k, b, v)" />
+                  <template v-else>{{ catchAllText(r) }}</template>
+                  <span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span>
+                </span>
+                <span v-else :class="$style.rowHead">{{ lad.axis ? rangeText(lad.axis, r.range) : tierName(firstLive(r.tiers[0])) }}<span v-if="r.tiers.some(t => tierChanged(t.tier))" :class="$style.edited" title="You changed this tier">edited</span></span>
+                <span v-if="!lad.axis && hasNumbers" class="w-faint text-xs w-trunc">{{ tierName(firstLive(r.tiers[0])) }}</span>
                 <span v-if="lad.axis && r.tiers.length > 1" class="w-faint text-xs w-trunc">{{ r.tiers.length }} tiers, same look</span>
                 <span v-else-if="lad.axis && sameRangeRows.has(rangeText(lad.axis, r.range))" class="w-faint text-xs w-trunc">{{ tierName(firstLive(r.tiers[0])) }}</span>
               </span>
@@ -190,6 +197,17 @@
             <WButton v-if="tierChanged(tier.tier) && !isOwnGroup" size="sm" variant="ghost" icon="fas fa-undo" title="Take back your changes to this tier" @click="resetTier(tier.tier)">Reset tier</WButton>
           </div>
           <div class="text-xs w-faint" :title="tier.blocks.map(b => `Line ${b.line} in the file`).join('\n')">{{ placeText(tier) }}</div>
+          <div v-if="numberPanel" :class="$style.numberPanel">
+            <div class="w-group-label">Numbers it checks</div>
+            <div v-for="c in numberChecks(firstLive(tier).conditions)" :key="`${c.key}|${c.bound}`" :class="$style.numberField">
+              <span class="text-sm">{{ NUMBER_KEYS[c.key].label }}</span>
+              <WSelect :model-value="c.bound" :options="BOUND_OPTIONS" :aria-label="`${NUMBER_KEYS[c.key].label}: how it compares`" @update:model-value="changeBound(tier, c.key, c.bound, c.value, $event as NumberBound)" />
+              <input class="w-input w-num" type="number" :class="$style.stackInput" :min="NUMBER_KEYS[c.key].min" :max="NUMBER_KEYS[c.key].max" :value="c.value" :aria-label="NUMBER_KEYS[c.key].label"
+                @keydown.enter="($event.target as HTMLInputElement).blur()" @change="onNumberField(tier, c.key, c.bound, c.value, $event)">
+              <button type="button" class="w-icon-btn w-focusable" :title="`Stop checking ${NUMBER_KEYS[c.key].label.toLowerCase()} here`" :aria-label="`Stop checking ${NUMBER_KEYS[c.key].label.toLowerCase()}`" @click="setNumber(tier, c.key, c.bound, null)"><i aria-hidden="true" class="fas fa-times" /></button>
+            </div>
+            <WSelect model-value="" :options="addNumberOptions" aria-label="Add a number to check" style="max-width: 14rem;" @update:model-value="addNumber(tier, $event)" />
+          </div>
           <div v-if="tier.disabled" :class="$style.offNote" class="text-xs">
             <span class="grow">{{ offWhy(tier) }}. It catches nothing; its items go on to the rules below.</span>
             <WButton v-if="!emptied(tier)" size="sm" variant="primary" @click="setRowOn([tier])">Turn on</WButton>
@@ -422,7 +440,7 @@ import { baseTipRef } from './base-tip'
 import type { RehomeOption } from './edits'
 import type { FilterEdit, StylePatch } from './edits'
 import { ruleLabel, tierName } from './parse'
-import type { Visibility } from './parse'
+import type { FilterCondition, Visibility } from './parse'
 import { tierLabel } from './names'
 import { tierMoveEntries as sharedTierMoveEntries, useTierMove } from './tier-move'
 import AddItemField from './AddItemField.vue'
@@ -432,6 +450,9 @@ import { navStamp } from './nav'
 import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour } from './label-style'
+import NumberLine from './NumberLine.vue'
+import { NUMBER_KEYS, boundOf, numberChecks } from './numbers'
+import type { NumberBound } from './edits'
 import { axisName, buildLadder, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
 import type { Ladder } from './ladder'
 import type { AddResult } from './groups'
@@ -659,7 +680,82 @@ function pickRow (tiers: TierNode[]) {
 }
 
 function rowConditions (t: TierNode): string {
-  return distinctWords(t, sharedConds.value, lad.value.axis).join(' · ')
+  // Rules listed with their numbers up front: those and, under a heading for
+  // its items, the item names aren't said twice.
+  const row = lad.value.rows.find(r => r.tiers.includes(t))
+  const skip = !lad.value.axis && hasNumbers.value
+    ? (c: FilterCondition) => boundOf(c) != null || (Boolean(row?.section) && c.key === 'BaseType')
+    : undefined
+  return distinctWords(t, sharedConds.value, lad.value.axis, skip).join(' · ')
+}
+
+// The group's rules differ by numbers (passives, item level): rows lead with them.
+const hasNumbers = computed(() => !isOwnGroup.value && !isSwitchGroup.value && lad.value.rows.some(r => numberChecks(firstLive(r.tiers[0]).conditions).length > 0))
+
+// Your own rules and the safety net hold copies: those change with what made them.
+function numbersEditable (t: TierNode, orGroup = false): boolean {
+  if (!selType.value || selType.value.startsWith('woke->')) return false
+  return numberChecks(firstLive(t).conditions).length > 0 || (orGroup && hasNumbers.value)
+}
+
+const BOUND_OPTIONS = [
+  { value: 'min', label: 'at least' },
+  { value: 'max', label: 'at most' },
+  { value: 'exact', label: 'exactly' }
+]
+
+// The side panel's number fields: NeverSink's rules (yours and the net hold
+// copies), not hide-only switches, and rules that check a number or whose
+// group does.
+const numberPanel = computed(() => Boolean(tier.value) && !isOwnGroup.value && !isSwitchGroup.value && numbersEditable(tier.value!, true))
+
+const addNumberOptions = computed(() => {
+  const have = new Set(tier.value ? numberChecks(firstLive(tier.value).conditions).map(c => c.key) : [])
+  return [{ value: '', label: '+ Check another number' }, ...Object.entries(NUMBER_KEYS).filter(([k]) => !have.has(k)).map(([value, s]) => ({ value, label: s.label }))]
+})
+
+function addNumber (t: TierNode, key: string) {
+  const spec = NUMBER_KEYS[key]
+  if (spec) setNumber(t, key, 'min', spec.min)
+}
+
+function changeBound (t: TierNode, key: string, from: NumberBound, value: number, to: NumberBound) {
+  const type = selType.value
+  if (from === to || !type) return
+  const undo = props.store.changeWithUndo(c => {
+    c.edits = c.edits.filter(e => !(e.kind === 'number' && e.type === type && e.tier === t.tier && e.key === key && (e.bound === from || e.bound === to)))
+    const src = (b: NumberBound) => props.store.sourceNumber(type, t.tier, key, b)
+    if (src(from) != null) c.edits = addEdit(c.edits, { id: nextEditId(), kind: 'number', type, tier: t.tier, key, bound: from, value: null })
+    if (src(to) !== value) c.edits = addEdit(c.edits, { id: nextEditId(), kind: 'number', type, tier: t.tier, key, bound: to, value })
+  })
+  toast(`${NUMBER_KEYS[key].label}: ${BOUND_OPTIONS.find(o => o.value === to)!.label} ${value}`, { anchor: panel.value?.el, undo })
+}
+
+function onNumberField (t: TierNode, key: string, bound: NumberBound, was: number, e: Event) {
+  const input = e.target as HTMLInputElement
+  const spec = NUMBER_KEYS[key]
+  const n = Math.round(Number(input.value))
+  if (input.value.trim() === '' || !Number.isFinite(n)) { input.value = String(was); return }
+  const v = Math.min(spec.max, Math.max(spec.min, n))
+  input.value = String(v)
+  setNumber(t, key, bound, v)
+}
+
+// A rule with no numbers among rules that have them: it takes what's left.
+function catchAllText (r: { tiers: TierNode[], section: string | null }): string {
+  const others = lad.value.rows.filter(x => x.section === r.section && x.tiers[0] !== r.tiers[0])
+  return others.some(x => numberChecks(firstLive(x.tiers[0]).conditions).length) ? 'Everything else' : tierName(firstLive(r.tiers[0]))
+}
+
+// Sets one number bound on a tier. Back to what NeverSink has is no edit.
+function setNumber (t: TierNode, key: string, bound: NumberBound, value: number | null) {
+  const type = selType.value
+  if (!type || type.startsWith('woke->')) return
+  const now = numberChecks(firstLive(t).conditions).find(c => c.key === key && c.bound === bound)?.value ?? null
+  if (now === value) return
+  const mine = props.config.edits.find(e => e.kind === 'number' && e.type === type && e.tier === t.tier && e.key === key && e.bound === bound)
+  if (mine && props.store.sourceNumber(type, t.tier, key, bound) === value) props.store.removeEdit(mine.id)
+  else props.store.edit({ kind: 'number', type, tier: t.tier, key, bound, value })
 }
 
 // Rows whose order label is the same ("item level 82+" twice): they get
@@ -1150,7 +1246,7 @@ function onStackChange (t: TierNode, e: Event) {
 function touchesTier (e: FilterEdit, t: string): boolean {
   switch (e.kind) {
     case 'move': return e.from === t || e.to === t
-    case 'style': case 'visibility': case 'item': case 'stack': return e.tier === t
+    case 'style': case 'visibility': case 'item': case 'stack': case 'number': return e.tier === t
     default: return false
   }
 }
@@ -1382,6 +1478,7 @@ function iconFor (kind: FilterEdit['kind']): string {
     case 'group': return 'fas fa-eye-slash'
     case 'item': return 'fas fa-star'
     case 'stack': return 'fas fa-layer-group'
+    case 'number': return 'fas fa-sort-numeric-up'
   }
 }
 
@@ -1603,6 +1700,14 @@ function openFolder () {
   color: var(--w-dim);
 }
 .specialHead { padding-top: 8px; }
+.sectionHead {
+  padding: 8px 2px 0;
+  font-family: var(--w-font-title, inherit);
+  color: var(--w-accent);
+  font-size: var(--w-fs-sm);
+}
+.numberPanel { display: flex; flex-direction: column; gap: 4px; padding: 6px 0 2px; }
+.numberField { display: grid; grid-template-columns: minmax(0, 1fr) 7rem 4rem auto; gap: 6px; align-items: center; }
 .specials {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));

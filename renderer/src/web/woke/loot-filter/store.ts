@@ -14,7 +14,8 @@ import { composeFilter } from './compose'
 import type { FilterDoc, Visibility } from './parse'
 import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
 import { lookChanges } from './look'
-import type { EditStatus, FilterEdit, NewFilterEdit, StylePatch } from './edits'
+import type { EditStatus, FilterEdit, NewFilterEdit, NumberBound, StylePatch } from './edits'
+import { numberChecks } from './numbers'
 import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
@@ -439,6 +440,16 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     for (const b of blocksOf(doc, type, tier)) {
       const c = b.conditions.find(x => x.key === 'StackSize' && x.op === '>=')
       if (c) return Number(c.values[0])
+    }
+    return null
+  }
+  // A number bound as NeverSink has the tier, or null when it has none.
+  function sourceNumber (type: string, tier: string, key: string, bound: NumberBound): number | null {
+    const doc = sourceParsed()
+    if (!doc) return null
+    for (const b of blocksOf(doc, type, tier)) {
+      const hit = numberChecks(b.conditions).find(c => c.key === key && c.bound === bound)
+      if (hit) return hit.value
     }
     return null
   }
@@ -1217,6 +1228,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     sourceLook,
     sourceVisibility,
     sourceStack,
+    sourceNumber,
     resetPrices,
     editWithUndo,
     // Something you changed is not saved yet (not counting price drift).
