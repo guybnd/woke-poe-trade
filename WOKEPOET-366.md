@@ -14,6 +14,16 @@ history:
     user: Agent
     date: '2026-11-18T04:08:42.928Z'
     comment: Created ticket.
+    id: a-2026-11-18t04-08-42-928z
+  - type: comment
+    user: Agent
+    comment: >-
+      Mocks A/B/C posted for Guy's pick:
+      https://claude.ai/artifact/RF9U9wYhr2cqeNgznmDT69 (A recommended: type
+      chip in header).
+    date: '2026-11-18T04:10:52.042Z'
+    selfAttested: true
+    id: c-2026-11-18t04-10-52-042z
 ---
 > **TL;DR:** On a cluster jewel price check, a dropdown swaps the enchant type (e.g. Attack Damage while Dual Wielding → Spell Damage) so Guy can price a different cluster of the same size. Mocks first, Guy picks.
 
