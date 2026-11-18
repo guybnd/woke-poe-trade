@@ -82,7 +82,8 @@
           <input :class="$style.num" type="number" min="0" step="0.5" placeholder="any" :value="config.maxDiv ?? ''"
             aria-label="Highest price in divines" data-qa="megalo-max" @keydown.stop @change="setMax(($event.target as HTMLInputElement).value)">
           <span :class="$style.dim">div</span>
-          <WButton size="sm" variant="primary" :class="$style.end" data-qa="megalo-search" :disabled="!ticked.length" @click="search">Search</WButton>
+          <SaveSearchButton :class="$style.end" :get-link="searchLink" :suggest-name="saveName" data-qa="megalo-save" />
+          <WButton size="sm" variant="primary" data-qa="megalo-search" :disabled="!ticked.length" @click="search">Search</WButton>
         </div>
         <div :class="$style.dim" data-qa="megalo-summary">{{ summary }}</div>
       </div>
@@ -102,6 +103,7 @@ import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import { WButton, WChip, WField, WInfo, WPanel, WSegmented, toast } from '../ui'
 import { hideHelp, showHelp } from '../ui/help-tip'
 import { tradeUrl } from '../search/search'
+import SaveSearchButton from '../trade-searches/SaveSearchButton.vue'
 import { useActiveBuild } from '../pob-builds/active'
 import { character } from '../pob-builds/character'
 import { mainGroupOf } from '../pob-builds/build-model'
@@ -321,18 +323,33 @@ function statId (name: string): string | null {
   return s.trade.ids.explicit?.[0] ?? null
 }
 
-function search () {
+// The trade site link for what's ticked, or '' (and a note why) when there's none.
+function searchLink (quiet = false): string {
+  const say = (text: string) => { if (!quiet) toast(text, { anchor: panel.value?.el }) }
   const league = leagues.selectedId.value
-  if (!league) { toast('Pick a league in the settings first', { anchor: panel.value?.el }); return }
+  if (!league) { say('Pick a league in the settings first'); return '' }
   const picksForTrade = ticked.value.flatMap(r => { const id = statId(r.name); return id ? [{ statId: id, weight: weightOf(r) }] : [] })
-  if (!picksForTrade.length) { toast("The trade data doesn't know these notables yet", { anchor: panel.value?.el }); return }
+  if (!picksForTrade.length) { say('Tick at least one notable first'); return '' }
   const q = megaloQuery(picksForTrade, { mode: config.mode, need: Math.min(config.need, picksForTrade.length), minWeight: minWeight.value, maxDiv: config.maxDiv })
   // The international site takes English names, a regional one its own.
   if (poeWebApi() !== 'www.pathofexile.com') {
     q.name = ITEM_BY_REF('UNIQUE', MEGALO_NAME)?.[0]?.name ?? MEGALO_NAME
     q.type = ITEM_BY_REF('ITEM', MEGALO_BASE)?.[0]?.name ?? MEGALO_BASE
   }
-  window.open(tradeUrl(league, q, getTradeEndpoint()))
+  return tradeUrl(league, q, getTradeEndpoint())
+}
+
+function search () {
+  const link = searchLink()
+  if (link) window.open(link)
+}
+
+// "Megalomaniac: Feasting Fiends, Renewal +3 (2 of 5)" for the save box.
+function saveName (): string {
+  const names = ticked.value.map(r => r.name)
+  const head = names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2}` : '')
+  const rule = config.mode === 'count' ? `${Math.min(config.need, names.length)} of ${names.length}` : `weight ${minWeight.value}+`
+  return `Megalomaniac: ${head} (${rule})`
 }
 
 const sourceLine = computed(() => source.value.label)
