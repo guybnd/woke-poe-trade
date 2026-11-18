@@ -254,6 +254,88 @@ export function certainChance (statLines) {
 }
 const CHANCE_TO = /^#% chance to (\S[\s\S]*)$/
 
+// The trade site has one text per stat, but the game words a stat by its
+// value: "Goreblossom has +1 maximum Bloom" and "+3 to maximum Blooms", "10%
+// increased X" and "10% reduced X", "Melee Critical Strikes have 50% chance to
+// Poison the Enemy" and, at 100, "Melee Critical Strikes Poison the Enemy". A
+// stat this patch adds knows only the trade text, so the game's other
+// wordings came out as unknown mods. The game's own wordings come from
+// RePoE's stat_translations.json, which names each one's trade stat id.
+// A wording is added to our stat when:
+// - the game stat is a single stat (no hybrid lines) and our stat has its
+//   trade id
+// - one of the game's wordings is already one of our matchers (so we know
+//   which wording our numbers follow)
+// - it shows the number the same way (same handlers but negate), or shows no
+//   number at a fixed value, read as that value
+// - no stat of ours already reads those words
+// A stat we read with no number ("Trigger Level 20 Lesser Raise Spiders on
+// Kill") gets nothing: its other wordings carry numbers it has no place for.
+export const WORDINGS_URL = 'https://repoe-fork.github.io/stat_translations.json'
+const PLACEHOLDER = /\{(\d+)\}/g
+const shown = v => [...v.string.matchAll(PLACEHOLDER)].filter(p => v.format[+p[1]] !== 'ignore')
+export function wordingText (v) {
+  return v.string
+    .replace(/\[([^\]|]+)\|([^\]]+)\]/g, '$2').replace(/\[([^\]]+)\]/g, '$1')
+    .replace(PLACEHOLDER, (_, i) => v.format[+i] === 'ignore' ? '' : '#')
+    .replace(/ {2,}/g, ' ').trim()
+}
+// Numbers as "#" and no sign, so our matchers and the game's line up.
+const wordingKey = text => text.replace(/[+-]?\d+(\.\d+)?/g, '#').replace(/[+-]#/g, '#').replace(/\s+/g, ' ').trim()
+const isNegated = v => (v.index_handlers[0] ?? []).includes('negate')
+const handlersOf = v => (v.index_handlers[0] ?? []).filter(h => h !== 'negate').sort().join(',')
+export function gameWordings (statLines, translations) {
+  const stats = statLines.flatMap(s => s.stats ?? [s])
+  const texts = new Set(stats.flatMap(s => s.matchers.map(m => m.string.trim())))
+  const keys = new Set(stats.flatMap(s => s.matchers.map(m => wordingKey(m.string))))
+  const byTrade = new Map()
+  for (const t of translations) {
+    if (t.ids.length !== 1 || t.hidden || !t.English?.length) continue
+    for (const ts of t.trade_stats ?? []) {
+      if (!byTrade.has(ts.id)) byTrade.set(ts.id, [])
+      byTrade.get(ts.id).push(t)
+    }
+  }
+  const added = []
+  for (const s of stats) {
+    if (s.fromAreaMods) continue
+    // Our wording's key -> whether our matcher reads it negated.
+    const own = new Map(s.matchers.filter(m => m.value == null).map(m => [wordingKey(m.string), Boolean(m.negate)]))
+    const seen = new Set()
+    for (const id of Object.values(s.trade.ids).flat()) {
+      for (const t of byTrade.get(id) ?? []) {
+        if (seen.has(t)) continue
+        seen.add(t)
+        const variants = t.English.filter(v => !v.is_markup && v.format.length <= 1)
+        const ref = variants.find(v => shown(v).length === 1 && own.has(wordingKey(wordingText(v))))
+        if (!ref) continue
+        // The game's sign flipped by ref's handler, then by our matcher's flag.
+        const refNeg = isNegated(ref) !== own.get(wordingKey(wordingText(ref)))
+        for (const v of variants) {
+          if (v === ref) continue
+          const text = wordingText(v)
+          if (!text || texts.has(text) || keys.has(wordingKey(text))) continue
+          let matcher
+          if (shown(v).length === 1) {
+            if (handlersOf(v) !== handlersOf(ref)) continue
+            matcher = isNegated(v) !== refNeg ? { string: text, negate: true } : { string: text }
+          } else {
+            const c = v.condition[0]
+            if (!c || c.negated || c.min == null || (c.max != null && c.max !== c.min)) continue
+            if (refNeg || handlersOf(ref) || c.min <= 0) continue
+            matcher = { string: text, value: c.min }
+          }
+          s.matchers.push(matcher)
+          texts.add(text)
+          keys.add(wordingKey(text))
+          added.push({ ref: s.ref, ...matcher })
+        }
+      }
+    }
+  }
+  return added
+}
+
 export function diff (before, after, statLines, itemLines) {
   const stats = statLines.flatMap(s => s.stats ?? [s])
   const byId = new Map()
@@ -315,7 +397,10 @@ export function diff (before, after, statLines, itemLines) {
       // The atlas wording would only crowd the map mod checker's list.
       if (ours.fromAreaMods && /\byour Maps\b/.test(text)) continue
       if (!ours.matchers.some(m => m.string.trim() === text)) {
-        ours.matchers.push({ string: text })
+        // The new words read the number the way the old ones did: Hindered's
+        // "Nearby ... reduced" is negated, so "within 3.5 metres ... reduced" is too.
+        const was = ours.matchers.find(m => m.value == null && [...prev].some(p => m.string.trim() === matcherText(p)))
+        ours.matchers.push(was?.negate ? { string: text, negate: true } : { string: text })
         report.reworded.push({ id: e.id, from: [...prev].join(' / '), to: e.text })
       }
     }
@@ -381,6 +466,23 @@ export function scope (after, group) {
   }
 }
 
+const flat = t => t.replace(/\n/g, ' / ')
+const describeWording = w =>
+  `  + ${flat(w.string)}${w.negate ? '  (negated)' : ''}${w.value != null ? `  (= ${w.value})` : ''}  <-  ${flat(w.ref)}`
+
+function writeNdjson (file, lines) {
+  const eol = eolOf(file)
+  fs.writeFileSync(file, lines.map(l => JSON.stringify(l)).join(eol) + eol)
+}
+
+async function fetchWordings () {
+  const res = await fetch(WORDINGS_URL, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(45_000) })
+  if (!res.ok) throw new Error(`stat_translations.json: HTTP ${res.status}`)
+  const list = await res.json()
+  if (!Array.isArray(list) || list.length < 1000) throw new Error('stat_translations.json: not a full list')
+  return list
+}
+
 async function main () {
   const mode = process.argv[2]
   const groupAt = process.argv.indexOf('--group')
@@ -394,7 +496,19 @@ async function main () {
     }
     return
   }
-  if (!['apply', 'check', 'remap'].includes(mode)) throw new Error('Usage: node scripts/trade-data-patch.mjs snapshot|apply|check|remap')
+  if (mode === 'wordings') {
+    const file = path.join(DATA, 'stats.ndjson')
+    const lines = readNdjson(file)
+    const added = gameWordings(lines, await fetchWordings())
+    console.log(`Game wordings added: ${added.length}`)
+    for (const a of added) console.log(describeWording(a))
+    if (added.length) {
+      writeNdjson(file, lines)
+      console.log('Patched. Next: node renderer/src/assets/bump-data-version.mjs')
+    }
+    return
+  }
+  if (!['apply', 'check', 'remap'].includes(mode)) throw new Error('Usage: node scripts/trade-data-patch.mjs snapshot|apply|check|remap|wordings')
 
   const before = {}
   const after = {}
@@ -444,13 +558,22 @@ async function main () {
   if (report.skipped.length) console.log(`Left out (add by hand if needed):\n  ${report.skipped.join('\n  ')}`)
   if (mode === 'check') return
 
+  // Best effort: without RePoE the patch still lands, run `wordings` later.
+  // A --group run leaves every other stat alone, so no wordings either.
+  let worded = []
+  if (mode !== 'remap' && !group) {
+    try {
+      worded = gameWordings([...statLines, ...report.newStats], await fetchWordings())
+    } catch (e) {
+      console.log(`Game wordings skipped (${e.message}); run \`node scripts/trade-data-patch.mjs wordings\` later`)
+    }
+  }
+  console.log(`New game wordings: ${worded.length}`)
+  for (const w of worded) console.log(describeWording(w))
   const certain = mode === 'remap' ? [] : certainChance([...statLines, ...report.newStats])
   console.log(`100% chance texts added: ${certain.length}`)
 
-  const write = (file, lines) => {
-    const eol = eolOf(file)
-    fs.writeFileSync(file, lines.map(l => JSON.stringify(l)).join(eol) + eol)
-  }
+  const write = writeNdjson
   write(statsFile, [...statLines, ...report.newStats])
   write(itemsFile, [...itemLines, ...report.newItems])
   const liveIds = new Set(after.stats.map(e => e.id))
