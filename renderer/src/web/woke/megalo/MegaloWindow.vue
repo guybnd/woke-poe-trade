@@ -62,6 +62,7 @@
             {{ showOther ? 'Hide' : 'Show' }} {{ otherRows.length }} notables that fit none of your tags
           </WButton>
           <span v-if="pool.length && !shownGroups.length" :class="$style.dim">No notable matches that filter.</span>
+          <span v-if="unknown" :class="$style.dim" data-qa="megalo-unknown">{{ unknown }} new {{ unknown === 1 ? 'notable isn\'t' : 'notables aren\'t' }} in the trade data yet, so {{ unknown === 1 ? 'it\'s' : 'they\'re' }} left out.</span>
         </section>
 
         <!-- The search -->
@@ -126,26 +127,41 @@ const active = useActiveBuild()
 
 // ---- the notable list ----
 const pool = shallowRef<Notable[]>([])
+const unknown = shallowRef(0)
 onMounted(async () => {
   try {
     await loadPassiveTree()
-    pool.value = notablePool(passiveTreeClusters()?.named)
+    // A notable the trade data doesn't know yet (a new league's) can't be searched.
+    const all = notablePool(passiveTreeClusters()?.named)
+    pool.value = all.filter(n => statId(n.name))
+    unknown.value = all.length - pool.value.length
   } catch { /* No tree data yet: the list says it's loading. */ }
   if (!pool.value.length) toast("Couldn't read the notable list. Open the PoB builds window once to download the tree data.", { anchor: panel.value?.el })
 })
 
 // ---- the build ----
+// No build to read yet: show the list, save no changes.
+const WAITING = ''
 // A build opened from its own page, when it isn't the one in use.
 const otherPath = computed(() => config.source === 'pob' && config.pobPath && config.pobPath !== active.relPath.value ? config.pobPath : null)
 const other = shallowRef<PobDetails | null>(null)
-watch(otherPath, async (path) => {
-  other.value = null
+const otherFailed = shallowRef(false)
+// PoB may have saved it since: read it again each time the window opens.
+const shown = computed(() => config.wmWants === 'show')
+let otherRead = 0
+watch([otherPath, shown], async ([path, open], old) => {
+  const was = old?.[0]
+  if (!path || (!open && path === was)) return
+  const read = ++otherRead
+  if (path !== was) { other.value = null; otherFailed.value = false }
   const pob = AppConfig().widgets.find(w => w.wmType === POB_BUILDS_TYPE) as PobBuildsWidget | undefined
-  if (!path || !pob) return
   try {
+    if (!pob) throw new Error('no PoB builds window')
     const d = await pobApi.read(pob, path)
-    if (otherPath.value === path) other.value = d
-  } catch { /* Moved or deleted: the line says so. */ }
+    if (read === otherRead) { other.value = d; otherFailed.value = false }
+  } catch {
+    if (read === otherRead) { other.value = null; otherFailed.value = true }
+  }
 }, { immediate: true })
 function useActive () { config.pobPath = null }
 
@@ -153,8 +169,9 @@ const source = computed<{ key: string, label: string, build: BuildSource | null 
   if (config.source === 'pob') {
     const path = otherPath.value ?? active.relPath.value
     const d = otherPath.value ? other.value : active.details.value
-    if (!path) return { key: buildKey('none', ''), label: 'No PoB build in use. Pick one in PoB builds.', build: null }
-    if (!d) return { key: buildKey('none', ''), label: `Reading ${path.replace(/\.xml$/i, '')}…`, build: null }
+    const name = path?.replace(/\.xml$/i, '')
+    if (!path) return { key: WAITING, label: 'No PoB build in use. Pick one in PoB builds.', build: null }
+    if (!d) return { key: WAITING, label: otherPath.value && otherFailed.value ? `Couldn't read ${name}. It may have moved.` : `Reading ${name}…`, build: null }
     const main = mainGroupOf(d.skills)
     const gems = d.skills.filter(g => g.enabled).flatMap(g => g.gems.filter(x => x.enabled).map(x => x.name))
     return {
@@ -165,7 +182,7 @@ const source = computed<{ key: string, label: string, build: BuildSource | null 
   }
   if (config.source === 'character') {
     const c = character.value
-    if (!c) return { key: buildKey('none', ''), label: 'No character read yet. Read it in PoB builds › Character.', build: null }
+    if (!c) return { key: WAITING, label: 'No character read yet. Read it in PoB builds › Character.', build: null }
     const groups = c.gems.filter(g => g.gems.length)
     const main = [...groups].sort((a, b) => b.gems.length - a.gems.length)[0]
     return {
@@ -177,6 +194,7 @@ const source = computed<{ key: string, label: string, build: BuildSource | null 
   return { key: buildKey('none', ''), label: 'Pick the tags yourself.', build: null }
 })
 
+const waiting = computed(() => source.value.key === WAITING)
 const found = computed<FoundTags>(() => source.value.build ? buildTags(source.value.build) : { found: [], main: [] })
 const edits = computed<TagEdits>(() => config.edits[source.value.key] ?? { add: [], drop: [] })
 const weights = computed(() => tagWeights(found.value, edits.value))
@@ -186,6 +204,7 @@ const activeTags = computed(() => [...weights.value.keys()]
   .map(id => ({ id, found: found.value.found.includes(id), main: found.value.main.includes(id) })))
 
 function toggleTag (id: string) {
+  if (waiting.value) return
   const e: TagEdits = { add: [...edits.value.add], drop: [...edits.value.drop] }
   if (weights.value.has(id)) {
     e.add = e.add.filter(x => x !== id)
@@ -221,6 +240,7 @@ const defaults = computed(() => defaultOn(scoredAll.value))
 const picks = computed<Record<string, NotablePick>>(() => config.picks[source.value.key] ?? {})
 
 function setPick (name: string, change: NotablePick) {
+  if (waiting.value) return
   const mine = { ...picks.value, [name]: { ...picks.value[name], ...change } }
   config.picks = { ...config.picks, [source.value.key]: mine }
 }
@@ -229,6 +249,7 @@ function toggleOn (name: string) { setPick(name, { on: !isOn(name) }) }
 function edited (name: string): boolean { return picks.value[name]?.weight != null }
 function weightOf (r: Scored): number { return picks.value[r.name]?.weight ?? r.weight }
 function setWeight (r: Scored, raw: string) {
+  if (raw.trim() === '') { resetWeight(r.name); return }
   const v = Math.max(0, Math.min(100, Math.round(Number(raw) || 0)))
   setPick(r.name, { weight: v === r.weight ? undefined : v })
 }

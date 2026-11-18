@@ -1,6 +1,6 @@
 // Reads a build's tags, scores Megalomaniac's notables against them and
 // writes the trade search. No app imports: the tests load it on its own.
-import { TAGS, TAG_BY_ID, MINION_LINE } from './tags'
+import { TAGS, TAG_BY_ID, MINION_LINE, DEFENCE_LINE, MOVEMENT_GEM } from './tags'
 
 export const MEGALO_NAME = 'Megalomaniac'
 export const MEGALO_BASE = 'Medium Cluster Jewel'
@@ -26,9 +26,11 @@ export function notableTags (n: Notable): NotableTags {
   for (const raw of n.stats) {
     const line = raw.toLowerCase()
     const minion = MINION_LINE.test(line)
+    const defence = DEFENCE_LINE.test(line)
     for (const tag of TAGS) {
       if (!tag.notable.test(line)) continue
       if (tag.self && minion) continue
+      if (tag.damage && defence) continue
       const had = out.get(tag.id) ?? { minion: false, self: false }
       out.set(tag.id, { minion: had.minion || minion, self: had.self || !minion })
     }
@@ -50,7 +52,8 @@ export function buildTags (src: BuildSource): FoundTags {
   const main = new Set<string>()
   for (const tag of TAGS) {
     if (!tag.gem) continue
-    if (src.mainGems.some(g => tag.gem!.test(g))) { main.add(tag.id); found.add(tag.id) } else if (src.gems.some(g => tag.gem!.test(g))) found.add(tag.id)
+    const use = (g: string) => tag.id === 'Movement skills' || !MOVEMENT_GEM.test(g)
+    if (src.mainGems.some(g => use(g) && tag.gem!.test(g))) { main.add(tag.id); found.add(tag.id) } else if (src.gems.some(g => use(g) && tag.gem!.test(g))) found.add(tag.id)
   }
   for (const el of ['Fire', 'Cold', 'Lightning']) {
     if (main.has(el)) main.add('Elemental')
@@ -103,7 +106,7 @@ export function scoreNotables (pool: readonly Notable[], weights: ReadonlyMap<st
     for (const [id, how] of tags) {
       const w = weights.get(id)
       if (!w) continue
-      const off = minionBuild && TAG_BY_ID.get(id)?.damage && !how.minion
+      const off = TAG_BY_ID.get(id)?.damage && (minionBuild ? !how.minion : !how.self)
       const got = off ? w * 0.25 : w
       if (off) weak.push(id)
       score += got

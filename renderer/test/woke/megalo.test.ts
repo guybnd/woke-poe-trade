@@ -80,6 +80,34 @@ describe('scoreNotables', () => {
   })
 })
 
+describe('review fixes', () => {
+  const tagsOf = (...stats: string[]) => [...notableTags({ name: 'x', stats }).keys()]
+  it('Critical Strike is not a Strike, Energy Shield not a Shield', () => {
+    expect(tagsOf('30% increased Critical Strike Chance')).not.toContain('Strikes')
+    expect(tagsOf('15% increased maximum Energy Shield')).not.toContain('Shield')
+    expect(tagsOf('+5% Chance to Block Attack Damage while holding a Shield')).toContain('Shield')
+  })
+  it('your resistances and blocks are not a kind of damage or skill', () => {
+    expect(tagsOf('+20% to Cold Resistance')).not.toContain('Cold')
+    expect(tagsOf('+5% Chance to Block Attack Damage')).not.toContain('Attacks')
+    expect(tagsOf('+5% chance to Suppress Spell Damage')).not.toContain('Spells')
+    expect(tagsOf('Enemies Ignited by you have -5% to Fire Resistance')).toContain('Fire')
+  })
+  it('movement skills and crit supports tag nothing else', () => {
+    const f = buildTags({ mainGems: ['Boneshatter', 'Brutality Support'], gems: ['Flame Dash', 'Frostblink', 'Increased Critical Strikes Support'] })
+    expect(f.found).not.toContain('Fire')
+    expect(f.found).not.toContain('Cold')
+    expect(f.found).toContain('Movement skills')
+    expect(buildTags({ mainGems: ['Arc', 'Increased Critical Strikes Support'], gems: [] }).found).not.toContain('Strikes')
+  })
+  it("minions' damage lines count little on a build of your own", () => {
+    const pool = notablePool({ Mine: { stats: ['30% increased Fire Damage'] }, Theirs: { stats: ['Minions deal 30% increased Fire Damage'] } })
+    const rows = scoreNotables(pool, tagWeights({ found: ['Fire'], main: ['Fire'] }, { add: [], drop: [] }))
+    expect(rows[0].name).toBe('Mine')
+    expect(rows.find(r => r.name === 'Theirs')!.weak).toContain('Fire')
+  })
+})
+
 describe('megaloQuery', () => {
   const picks = [{ statId: 'explicit.stat_1', weight: 100 }, { statId: 'explicit.stat_2', weight: 60 }]
   it('writes a count group', () => {

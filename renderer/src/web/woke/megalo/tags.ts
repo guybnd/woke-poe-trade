@@ -32,34 +32,34 @@ export const TAGS: readonly TagDef[] = [
   // Damage type
   t('Physical', 'Damage type', /physical|bleed|impale/, /boneshatter|cyclone|lacerate|sunder|earthquake|ground slam|split arrow|tornado shot|puncture|pride|exsanguinate|reap|perforate|bladestorm|blade (vortex|flurry|blast)|ethereal knives|shrapnel|galvanic|splitting steel|shattering steel|lancing steel|bladefall|tectonic slam|rage vortex|frenzy|ice crash|double strike|dual strike|reave|cleave|heavy strike|flicker strike/i, true),
   t('Fire', 'Damage type', /\bfire\b|burning|ignite/, /fire|flame|burn|ignit|incinerat|scorch|cremat|volcan|infernal|combust|immolat|magma|explosive|blaz|\banger\b|herald of ash|raging spirit|molten|searing|cremation|detonate dead|righteous|armageddon|elemental hit/i, true),
-  t('Cold', 'Damage type', /\bcold\b|freez|chill|frozen/, /\bcold\b|\bice\b|frost|freez|glacial|hatred|winter|arctic|vortex|blizzard|hypothermia|bonechill|creeping frost|eye of winter|frostbite|herald of ice|ice crash|ice nova|ice spear|ice shot|ice trap|cold snap|elemental hit/i, true),
-  t('Lightning', 'Damage type', /lightning|shock/, /lightning|shock|spark|\barc\b|storm|\bwrath\b|thunder|crackling|galvanic|conductivity|static|herald of thunder|orb of storms|stormbind|elemental hit/i, true),
-  t('Chaos', 'Damage type', /\bchaos\b|poison|wither/, /chaos|poison|blight|essence drain|contagion|\bbane\b|toxic|caustic|viper|despair|soulrend|herald of agony|malevolence|venom|wither|forbidden rite|dark pact|corrupting/i, true),
+  t('Cold', 'Damage type', /\bcold\b|freez|chill|frozen/, /\bcold\b|\bice\b|frost|freez|glacial|hatred|winter|arctic|(?<!rage )vortex|blizzard|hypothermia|bonechill|creeping frost|eye of winter|frostbite|herald of ice|ice crash|ice nova|ice spear|ice shot|ice trap|cold snap|elemental hit/i, true),
+  t('Lightning', 'Damage type', /lightning|shock/, /lightning|shock(?!wave)|spark|\barc\b|\bstorms?\b|stormblast|\bwrath\b|thunder|crackling|galvanic|conductivity|static|herald of thunder|orb of storms|stormbind|elemental hit/i, true),
+  t('Chaos', 'Damage type', /\bchaos\b|poison|wither/, /chaos|poison|blight|essence drain|contagion|\bbane\b|toxic|caustic|viper|despair|soulrend|herald of agony|malevolence|venom|wither|forbidden rite|dark pact/i, true),
   t('Elemental', 'Damage type', /elemental/, undefined, true),
   t('Conversion', 'Damage type', /converted|gained as extra/),
   t('Penetration', 'Damage type', /penetrat|-\d+% to .*resistance/),
   t('Exposure', 'Damage type', /exposure/),
   // Skill kind
-  t('Attacks', 'Skill kind', /attack|with hits/, /strike|slam|shot|arrow|attack|cleave|lacerate|sunder|boneshatter|cyclone|reave|blade flurry|bladestorm|flicker|frenzy|puncture|barrage|rain of arrows|toxic rain|kinetic|power siphon/i, true),
-  t('Spells', 'Skill kind', /\bspells?\b|cast speed/, /spell echo|spell cascade|controlled destruction|unleash|arcane surge|elemental focus|concentrated effect|added (fire|cold|lightning|chaos)|infused channelling|intensify|fireball|arc\b|freezing pulse|ball lightning|spark|ice nova|incinerate|essence drain|bane|blight|vortex|cold snap|storm brand|penance brand|armageddon brand|wintertide brand|soulrend|forbidden rite|kinetic bolt/i, true),
-  t('Melee', 'Skill kind', /melee/, /melee|strike|slam|cleave|cyclone|lacerate|sunder|boneshatter|reave|flicker|bladestorm|ground slam|earthquake/i),
+  t('Attacks', 'Skill kind', /attack|with hits/, /(?<!critical )\bstrike\b|slam|shot|arrow|attack|cleave|lacerate|sunder|boneshatter|cyclone|reave|blade flurry|bladestorm|flicker|frenzy|puncture|barrage|rain of arrows|toxic rain|kinetic|power siphon/i, true),
+  t('Spells', 'Skill kind', /\bspells?\b|cast speed/, /spell echo|spell cascade|controlled destruction|unleash|arcane surge|elemental focus|concentrated effect|added (fire|cold|lightning|chaos)|infused channelling|intensify|fireball|arc\b|freezing pulse|ball lightning|spark|ice nova|incinerate|essence drain|bane|blight|(?<!rage )vortex|cold snap|storm brand|penance brand|armageddon brand|wintertide brand|soulrend|forbidden rite/i, true),
+  t('Melee', 'Skill kind', /melee/, /melee|(?<!critical )\bstrike\b|slam|cleave|cyclone|lacerate|sunder|boneshatter|reave|flicker|bladestorm|ground slam|earthquake/i),
   t('Projectiles', 'Skill kind', /projectile|arrow/, /arrow|shot|barrage|projectile|spark|fireball|ball lightning|ethereal knives|kinetic|freezing pulse|ice spear|tornado shot|power siphon|toxic rain|caustic arrow|galvanic arrow|lancing steel|shattering steel|splitting steel/i, true),
   t('Area', 'Skill kind', /area of effect|\barea\b/, /slam|earthquake|cyclone|vortex|nova|blight|righteous fire|detonate|explosive|armageddon|volcanic|increased area|concentrated effect/i),
   t('Channelling', 'Skill kind', /channel/, /cyclone|blight|incinerate|scorching ray|winter orb|blade flurry|flameblast|divine ire|lightning tendrils|wild strike|infused channelling/i),
   t('Slams', 'Skill kind', /\bslams?\b/, /slam|earthquake|sunder|ground|tectonic|ancestral warchief|boneshatter/i),
-  t('Strikes', 'Skill kind', /\bstrikes?\b/, /strike/i),
+  t('Strikes', 'Skill kind', /(?<!critical |culling )\bstrikes?\b/, /(?<!critical )\bstrike\b/i),
   t('Brands', 'Skill kind', /\bbrands?\b/, /brand/i),
-  t('Totems', 'Skill kind', /totem/, /totem|ancestral|holy flame|searing bond|shockwave totem|siege ballista|artillery ballista|spell totem/i),
+  t('Totems', 'Skill kind', /totem/, /totem|ancestral (warchief|protector)|holy flame|searing bond|shockwave totem|siege ballista|artillery ballista|spell totem/i),
   t('Traps', 'Skill kind', /\btraps?\b/, /trap/i),
   t('Mines', 'Skill kind', /\bmines?\b/, /mine/i),
   t('Triggered spells', 'Skill kind', /trigger/, /cast on|cast when|trigger|arcanist brand|kinetic instability|cast while channelling/i),
-  t('Warcries', 'Skill kind', /warcr|\bshouts?\b/, /cry\b|shout|warcry|call\b|rallying/i),
+  t('Warcries', 'Skill kind', /warcr|\bshouts?\b/, /\bcry\b|shout|warcry/i),
   t('Movement skills', 'Skill kind', /movement skill|travel skill/, /dash|leap slam|whirling blades|flame dash|shield charge|frostblink|blink arrow|lightning warp|bodyswap|withering step|smoke mine|charged dash/i),
   t('Vaal skills', 'Skill kind', /vaal|soul/, /^vaal /i),
   t('Cooldowns', 'Skill kind', /cooldown/),
   t('Skill duration', 'Skill kind', /skill effect duration|\bduration\b/),
   // Minions
-  t('Minions', 'Minions', /minion|zombie|spectre|skeleton|golem|raging spirit/, /summon|raise|animate|minion|golem|dominating blow|absolution|herald of (purity|agony)|blink arrow|mirror arrow|holy relic|spectre|zombie|skeleton|raging spirit|carrion|offering/i),
+  t('Minions', 'Minions', /minion|zombie|spectre|skeleton|golem|raging spirit/, /summon|raise|animate|minion|golem|dominating blow|absolution|blink arrow|mirror arrow|holy relic|spectre|zombie|skeleton|raging spirit|carrion|offering/i),
   t('Spectres', 'Minions', /spectre/, /raise spectre/i),
   t('Golems', 'Minions', /golem/, /golem/i),
   t('Skeletons', 'Minions', /skeleton/, /skeleton/i),
@@ -76,7 +76,7 @@ export const TAGS: readonly TagDef[] = [
   t('Two-handed', 'Weapon', /two handed/),
   t('One-handed', 'Weapon', /one handed/),
   t('Dual wield', 'Weapon', /dual wield/),
-  t('Shield', 'Weapon', /shield/),
+  t('Shield', 'Weapon', /(?<!energy )\bshields?\b/),
   t('Axes', 'Weapon', /\baxes?\b/),
   t('Swords', 'Weapon', /\bswords?\b/),
   t('Maces & sceptres', 'Weapon', /\bmaces?\b|sceptre/),
@@ -95,7 +95,7 @@ export const TAGS: readonly TagDef[] = [
   t('Non-damaging ailments', 'Ailments & DoT', /non-damaging ailment|effect of (cold|lightning) ailments|scorch|brittle|sap/),
   t('Ailment avoidance', 'Ailments & DoT', /avoid .*(ignite|freez|chill|shock|bleed|poison|ailment)|cannot be (ignited|frozen|chilled|shocked|poisoned)/),
   // Crit & speed
-  t('Crit', 'Crit & speed', /critical strike/, /increased critical|power charge on critical|assassin's mark|precision/i, true),
+  t('Crit', 'Crit & speed', /critical strike/, /increased critical|power charge on critical|assassin's mark/i, true),
   t('Non-crit', 'Crit & speed', /never deal critical|non-critical/),
   t('Accuracy', 'Crit & speed', /accuracy/),
   t('Attack speed', 'Crit & speed', /attack speed/),
@@ -112,7 +112,7 @@ export const TAGS: readonly TagDef[] = [
   t('Reservation', 'Buffs & debuffs', /reservation/),
   t('Onslaught', 'Buffs & debuffs', /onslaught/),
   t('Fortify', 'Buffs & debuffs', /fortif/, /fortify/i),
-  t('Rage', 'Buffs & debuffs', /\brage\b/, /rage|berserk/i),
+  t('Rage', 'Buffs & debuffs', /\brage\b/, /\brage\b|berserk/i),
   t('Intimidate', 'Buffs & debuffs', /intimidat/),
   t('Blind', 'Buffs & debuffs', /blind/),
   t('Hinder & maim', 'Buffs & debuffs', /hinder|maim/),
@@ -156,4 +156,13 @@ export const TAGS: readonly TagDef[] = [
 export const TAG_BY_ID: ReadonlyMap<string, TagDef> = new Map(TAGS.map(x => [x.id, x]))
 
 // A line about minions: on a minion build, its damage tags count in full.
+// A line about your defences ("+20% to Cold Resistance", "Avoid Bleeding",
+// "Chance to Block Attack Damage"): it doesn't make a notable a fit for a
+// kind of damage or skill.
+export const DEFENCE_LINE = /^\+?\d+% to [a-z ]*resistances?$|maximum [a-z ]*resistance|\bavoid|cannot be|unaffected|damage reduction|\bremove|damage taken|\bblock\b|suppress/
+
+// Movement skills say nothing about what a build hits with (Flame Dash,
+// Frostblink): only the Movement skills tag reads them.
+export const MOVEMENT_GEM = /flame dash|frostblink|\bdash\b|leap slam|whirling blades|shield charge|blink arrow|lightning warp|bodyswap|withering step|smoke mine|charged dash/i
+
 export const MINION_LINE = /minion|zombie|spectre|skeleton|golem|raging spirit/
