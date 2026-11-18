@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Event Horizon
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -82,6 +82,14 @@ history:
     to: Todo
     user: Event Horizon
     date: '2026-11-18T12:24:30.189Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-18T12:35:15.461Z'
+    comment: >-
+      Part 1 merged (#622, a69cc8a4). Part 2 is PR
+      https://github.com/guybnd/woke-poe-trade/pull/626, reviewed and fixed, and
+      handed to the coordinator to merge.
+    id: a-2026-11-18t12-35-15-461z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/622'
 needsAction: null
 ---
