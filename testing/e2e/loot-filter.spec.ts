@@ -577,6 +577,15 @@ test('Alt + F on a unique off the value ladder: its own tier leads, keys 2 and 3
   await overlay.snap('alt f off-ladder card')
 })
 
+// Kingmaker comes from a vendor recipe, so the filter's prices skip it: make
+// Debeon's Dirge the valuable Despot Axe unique and Kingmaker the trash one.
+async function despotAxeWorthIt (overlay: Overlay) {
+  const body = fs.readFileSync(path.join(FIXTURES, 'http/poe.ninja/poe1/api/economy/current/dense/overviews.json'), 'utf8')
+    .replace(`"name":"Kingmaker","chaos":91,`, `"name":"Kingmaker","chaos":1,`)
+    .replace(`"name":"Debeon's Dirge","chaos":1,`, `"name":"Debeon's Dirge","chaos":91,`)
+  await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({ contentType: 'application/json', body }))
+}
+
 test('prices: a hidden valuable unique lists what else would show, and Show it does what it says', async ({ overlay, fakeApp }) => {
   // A long walk through the editor: under full-suite load it can outlast the default.
   test.slow()
@@ -593,6 +602,7 @@ test('prices: a hidden valuable unique lists what else would show, and Show it d
     ''
   ].join('\r\n'))
   // Reload wherever you are, so a save that typed /itemfilter would show in chat.
+  await despotAxeWorthIt(overlay)
   await overlay.boot({ widgets: [{ ...lootFilter(folder), reloadWhenSafe: false }] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
@@ -814,6 +824,7 @@ test('a save nobody asked to reload waits on the dock icon, and one key sends it
     '\tBaseType == "Despot Axe"',
     ''
   ].join('\r\n'))
+  await despotAxeWorthIt(overlay)
   await overlay.boot({ widgets: [lootFilter(folder)] })
   await openEditor(overlay, fakeApp)
   const page = overlay.page
