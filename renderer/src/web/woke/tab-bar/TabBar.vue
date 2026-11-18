@@ -408,7 +408,7 @@ function hideTip () { tip.value = null }
 // y: where the popup's top goes when it opens downward; above: where its
 // bottom goes when there is no room below and it opens upward instead.
 type PopupKind = 'menu' | 'launcher' | 'layout'
-const POPUP_WIDTH: Record<PopupKind, number> = { menu: 240, launcher: 1120, layout: 240 }
+const POPUP_WIDTH: Record<PopupKind, number> = { menu: 240, launcher: 1360, layout: 240 }
 const popup = ref<{ kind: PopupKind, x: number, y: number, above: number, up?: boolean, wmId?: number } | null>(null)
 const popupEl = ref<HTMLElement | null>(null)
 const menuTab = computed(() => tabs.value.find(tab => tab.wmId === popup.value?.wmId))
@@ -907,12 +907,12 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   font-size: var(--w-fs-md);
 }
 
-.launcher { box-sizing: border-box; width: 1120px; max-width: calc(100vw - 8px); padding: 10px; background: var(--w-panel-solid); }
+.launcher { box-sizing: border-box; width: 1360px; max-width: calc(100vw - 8px); padding: 10px; background: var(--w-panel-solid); }
 .find {
   display: flex;
   align-items: center;
   gap: 9px;
-  height: 36px;
+  height: 40px;
   flex: none;
   padding: 0 10px;
   margin-bottom: 10px;
@@ -924,7 +924,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .findInput {
   flex: 1;
   min-width: 0;
-  height: 18px;
+  height: 22px;
   padding: 0;
   resize: none;
   overflow: hidden;
@@ -933,7 +933,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   outline: 0;
   background: none;
   color: var(--w-fg);
-  font: var(--w-fs-md)/calc(18px * var(--w-text-scale, 1)) var(--w-body);
+  font: var(--w-fs-lg)/calc(22px * var(--w-text-scale, 1)) var(--w-body);
 }
 .findInput::placeholder { color: var(--w-dim); }
 .prices { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--w-line); }
@@ -945,14 +945,14 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .row {
   display: flex;
   align-items: center;
-  height: 36px;
+  height: 42px;
   padding: 0 4px 0 7px;
   border-radius: var(--w-r-sm);
 }
 .row:hover { background: var(--w-accent-soft); }
-.rowMain { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: 9px; text-align: left; color: var(--w-fg); font-size: var(--w-fs-lg); }
-/* About 15% larger than other lists (Guy's pick): text and art. */
-.rowMain :is(img, i) { --w-icon-md: 24px; }
+.rowMain { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: 9px; text-align: left; color: var(--w-fg); font-size: var(--w-fs-xl); }
+/* Larger than other lists (Guy asked for big, easy-to-read rows). */
+.rowMain :is(img, i) { --w-icon-md: 28px; }
 .rowMain > i { color: var(--w-dim); }
 .rowName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rowPinned .rowName { color: var(--w-accent); }
@@ -981,12 +981,12 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   padding: 8px 8px 0;
   border-top: 1px solid var(--w-line);
   color: var(--w-dim);
-  font-size: var(--w-fs-md);
+  font-size: var(--w-fs-lg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.footName { flex: none; color: var(--w-accent); font-family: var(--w-caps-face); font-size: var(--w-fs-lg); }
+.footName { flex: none; color: var(--w-accent); font-family: var(--w-caps-face); font-size: var(--w-fs-xl); }
 .footHint { color: var(--w-faint); }
 .rowTag { flex: none; padding: 0 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
@@ -1000,8 +1000,8 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   text-transform: var(--w-caps-case);
   font-family: var(--w-caps-face);
 }
-.groupHead { margin-bottom: 4px; color: var(--w-fg); font-size: var(--w-fs-lg); }
-:global(:root[data-woke-art]) .groupHead { justify-content: center; min-height: 28px; padding: 0 6px; }
+.groupHead { margin-bottom: 4px; color: var(--w-fg); font-size: var(--w-fs-xl); }
+:global(:root[data-woke-art]) .groupHead { justify-content: center; min-height: 32px; padding: 0 6px; }
 .item {
   display: flex;
   align-items: center;
