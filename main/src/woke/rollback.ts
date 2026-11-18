@@ -99,6 +99,13 @@ export function ymlProblem (yml: LatestYml | null, version: string): string | nu
   return null
 }
 
+// A rollback installer left in the download folder at start: dropped unless
+// it is the version now running (that rollback installed).
+export function droppedRollback (file: string, running: string): boolean {
+  const m = /^Woke-PoE-Trade-Setup-(\d+\.\d+\.\d+)\.exe$/.exec(file)
+  return m != null && m[1] !== running
+}
+
 export function installerUrl (version: string, file: string): string {
   return `https://github.com/${REPO}/releases/download/v${version}/${file}`
 }
@@ -211,10 +218,14 @@ export class Rollback {
       this.log(`info [Rollback] Running ${app.getVersion()}: no longer skipping ${this.skip}.`)
       this.setSkip(null)
     }
-    // A download from a run that never installed it.
+    // A download from a run that never installed it. The installer of a
+    // rollback that did install stays behind too: that one is the version now
+    // running, and is just deleted.
     try {
       const left = fs.readdirSync(downloadDir()).filter(f => INSTALLER_NAME.test(f))
-      for (const f of left) this.log(`info [Rollback] Dropped a rollback that was waiting to install (${f}): the app ended without a clean quit.`)
+      for (const f of left) {
+        if (droppedRollback(f, app.getVersion())) this.log(`info [Rollback] Dropped a rollback that was waiting to install (${f}): the app ended without a clean quit.`)
+      }
     } catch {}
     try { fs.rmSync(downloadDir(), { recursive: true, force: true }) } catch {}
   }
@@ -314,6 +325,8 @@ export class Rollback {
       const both = AbortSignal.any([signal, stalled.signal])
       resetStall()
       const res = await net.fetch(installerUrl(version, yml.file), { headers: HEADERS, signal: both })
+      // The answer came: the 15 s now count from here, not from the request.
+      resetStall()
       if (!res.ok || !res.body) throw new Error(`installer: HTTP ${res.status}`)
       const total = Number(res.headers.get('content-length')) || yml.size || 0
       const hash = crypto.createHash('sha512')

@@ -188,6 +188,15 @@ export function installerLogFailure (message: string): boolean {
 // while a rollback is downloading, waiting or installing (its own installer
 // runs; two at once would fight), and never on a plain restart (the new copy
 // would start under the installer).
+// Whether an install may start now. Nothing once the app is restarting or
+// quitting (an install under way, a plain restart, a relaunch after a failed
+// installer). The update never while a rollback is under way: the rollback's
+// installer would run beside it, or the bad version would come back.
+export function installGate (i: { job: 'update' | 'rollback', restarting: boolean, plainRestart: boolean, rollbackActive: boolean }): boolean {
+  if (i.restarting || i.plainRestart) return false
+  return i.job === 'rollback' || !i.rollbackActive
+}
+
 export function quitInstallAllowed (i: { downloaded: boolean, rollbackActive: boolean, plainRestart: boolean }): boolean {
   return i.downloaded && !i.rollbackActive && !i.plainRestart
 }

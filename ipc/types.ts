@@ -54,6 +54,8 @@ export type UpdateInfo =
     version: string
     // woke: installs by itself once Path of Exile is closed (else on quit).
     whenClosed?: boolean
+    // woke: a rollback is under way, so the update doesn't install now.
+    blocked?: boolean
   } | {
     state: 'update-not-available' | 'error'
     checkedAt: number

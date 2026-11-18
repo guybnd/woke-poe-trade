@@ -8,7 +8,7 @@ import os from 'os'
 import path from 'path'
 import { describe, it, expect } from 'vitest'
 import {
-  compareVersions, fileSha512, installerUrl, isSkipped, noteToShow, parseLatestYml, parseVersion,
+  compareVersions, droppedRollback, fileSha512, installerUrl, isSkipped, noteToShow, parseLatestYml, parseVersion,
   previousVersion, skipAfterRollback, skipStillNeeded, trayEntry, ymlProblem
 } from '../../main/src/woke/rollback'
 import type { WokeRollbackState } from '../../ipc/woke-ops'
@@ -179,5 +179,19 @@ describe('skip after going back', () => {
   it('moves the skip up when the running version is newer', () => {
     expect(skipAfterRollback('1.330.8', '1.330.10')).toBe('1.330.10')
     expect(skipAfterRollback('junk', '1.330.10')).toBe('1.330.10')
+  })
+})
+
+describe('leftover rollback installer at start', () => {
+  it('is the version now running after a rollback that installed: no log', () => {
+    expect(droppedRollback('Woke-PoE-Trade-Setup-1.330.8.exe', '1.330.8')).toBe(false)
+  })
+
+  it('is a dropped rollback when another version runs', () => {
+    expect(droppedRollback('Woke-PoE-Trade-Setup-1.330.8.exe', '1.330.9')).toBe(true)
+  })
+
+  it('ignores other files', () => {
+    expect(droppedRollback('Woke-PoE-Trade-Setup-1.330.8.exe.part', '1.330.9')).toBe(false)
   })
 })

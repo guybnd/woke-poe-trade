@@ -6,7 +6,7 @@ import path from 'path'
 import { describe, it, expect } from 'vitest'
 import {
   GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, afterEvent, describeUpdateError, installVerdict, installerLogFailure,
-  installerProblem, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed, tasklistHasGame, type InstallInputs
+  installGate, installerProblem, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed, tasklistHasGame, type InstallInputs
 } from '../../main/src/woke/update-install'
 
 const NOW = 1_000_000_000
@@ -214,5 +214,26 @@ describe('quitInstallAllowed', () => {
   it('never on a plain restart, or with nothing downloaded', () => {
     expect(quitInstallAllowed({ downloaded: true, rollbackActive: false, plainRestart: true })).toBe(false)
     expect(quitInstallAllowed({ downloaded: false, rollbackActive: false, plainRestart: false })).toBe(false)
+  })
+})
+
+describe('installGate', () => {
+  const gate = (patch: Partial<Parameters<typeof installGate>[0]>) =>
+    installGate({ job: 'update', restarting: false, plainRestart: false, rollbackActive: false, ...patch })
+
+  it('lets an update or a rollback install when nothing else is going on', () => {
+    expect(gate({})).toBe(true)
+    expect(gate({ job: 'rollback', rollbackActive: true })).toBe(true)
+  })
+
+  it('refuses the update (Restart now, Install now, game closed) while going back', () => {
+    expect(gate({ rollbackActive: true })).toBe(false)
+  })
+
+  it('starts nothing once the app is restarting or on a plain restart', () => {
+    expect(gate({ restarting: true })).toBe(false)
+    expect(gate({ plainRestart: true })).toBe(false)
+    expect(gate({ job: 'rollback', rollbackActive: true, restarting: true })).toBe(false)
+    expect(gate({ job: 'rollback', rollbackActive: true, plainRestart: true })).toBe(false)
   })
 })

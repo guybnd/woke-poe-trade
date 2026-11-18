@@ -7,7 +7,7 @@ import type { GameWindow } from './windowing/GameWindow'
 import { appPrefs, canRestartApp, onRestartWithUpdate } from './woke/app-prefs'
 import {
   GAME_CLOSED_GRACE_MS, NO_AUTO_INSTALL_ARG, RECHECK_MS, VERDICT_TEXT, afterEvent, describeUpdateError,
-  installVerdict, installerLogFailure, installerProblem, isGameRunning, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed,
+  installGate, installVerdict, installerLogFailure, installerProblem, isGameRunning, isSpawnFailure, quitInstallAllowed, relaunchArgs, stillClosed,
   type InstallVerdict, type UpdaterEvent
 } from './woke/update-install'
 import { Rollback, clearUpdateNote, isSkipped, takeUpdateNote, trayEntry, writeUpdateNote } from './woke/rollback'
@@ -75,7 +75,7 @@ export class AppUpdater {
       } else if (action === 'update-and-restart') {
         // woke: quitting now waits for a save, so a second click can land before
         // it's done, and would start the installer twice.
-        if (this.isRestarting || !this.downloaded) return
+        if (!this.downloaded || !this.gate('update')) return
         if (!this.installerOk()) return
         this.isRestarting = true
         this.logger.write(`info [AppUpdater] Installing ${this.downloaded}: asked from the overlay.`)
@@ -118,7 +118,7 @@ export class AppUpdater {
     // moment of quitting, and never runs alongside a rollback's installer.
     app.once('quit', () => {
       this.syncQuitInstall()
-      if (this.rollback.readyFile && !this.isRestarting) void this.rollback.install(false)
+      if (this.rollback.readyFile && !this.isRestarting && !this.plainRestart) void this.rollback.install(false)
     })
 
     autoUpdater.on('checking-for-update', () => {
@@ -183,7 +183,9 @@ export class AppUpdater {
         this.logger.write('info [AppUpdater] Going back: restart asked for.')
         void this.installRollback(true).then((ok) => {
           if (ok) return
-          // A plain restart: nothing may install under the new copy.
+          // A plain restart: nothing may install under the new copy, and
+          // tryInstall must not start anything while it quits.
+          this.isRestarting = true
           this.plainRestart = true
           this.syncQuitInstall()
           app.relaunch({ args: relaunchArgs(process.argv, false) })
@@ -191,13 +193,16 @@ export class AppUpdater {
         })
         return true
       }
-      if (!this.downloaded) {
+      if (this.isRestarting) return true
+      // No update, or a rollback still downloading: a plain restart.
+      if (!this.downloaded || !this.gate('update')) {
+        this.isRestarting = true
         this.plainRestart = true
         this.syncQuitInstall()
         return false
       }
-      if (this.isRestarting) return true
       if (!this.installerOk()) {
+        this.isRestarting = true
         this.plainRestart = true
         this.syncQuitInstall()
         return false
@@ -233,7 +238,21 @@ export class AppUpdater {
   // installs by itself while the game is closed when automatic updates are on
   // and this run may install by itself; otherwise it says "when you quit".
   private downloadedInfo (version: string): UpdateInfo {
-    return { state: 'update-downloaded', version, whenClosed: this.autoWanted && !this.autoInstallBlocked && canRestartApp() }
+    return {
+      state: 'update-downloaded',
+      version,
+      whenClosed: this.autoWanted && !this.autoInstallBlocked && canRestartApp(),
+      // Restart now / Install now are hidden while going back.
+      blocked: this.rollback.active
+    }
+  }
+
+  private gate (job: 'update' | 'rollback'): boolean {
+    const open = installGate({ job, restarting: this.isRestarting, plainRestart: this.plainRestart, rollbackActive: this.rollback.active })
+    if (!open && job === 'update' && this.rollback.active && !this.isRestarting) {
+      this.logger.write('info [AppUpdater] Not installing the update: going back to the previous version.')
+    }
+    return open
   }
 
   private applyAutoDownload () {
@@ -290,6 +309,9 @@ export class AppUpdater {
     this.applyAutoDownload()
     const ready = this.rollback.readyFile != null
     this.syncQuitInstall()
+    if (this.downloaded && this._info.state === 'update-downloaded' && this._info.blocked !== this.rollback.active) {
+      this.info = this.downloadedInfo(this.downloaded)
+    }
     this.server.sendEventTo('broadcast', {
       name: 'MAIN->CLIENT::woke-event',
       payload: { topic: 'rollback-state', data: this.rollback.state }
@@ -381,10 +403,18 @@ export class AppUpdater {
   private installFailed () {
     if (!this.quitPending && !this.isRestarting) return
     this.logger.write(`error [AppUpdater] The installer didn't start: ${internals().installerPath ?? 'no installer path'}`)
-    this.isRestarting = false
-    if (this.quitPending && canRestartApp()) {
-      this.logger.write('info [AppUpdater] Starting the app again without the update.')
-      app.relaunch({ args: relaunchArgs(process.argv, true) })
+    if (this.quitPending) {
+      // The app is quitting: it stays "restarting", and as a plain restart
+      // nothing else (a rollback's installer on quit, tryInstall) starts
+      // under the relaunched copy.
+      this.plainRestart = true
+      this.syncQuitInstall()
+      if (canRestartApp()) {
+        this.logger.write('info [AppUpdater] Starting the app again without the update.')
+        app.relaunch({ args: relaunchArgs(process.argv, true) })
+      }
+    } else {
+      this.isRestarting = false
     }
     this.quitPending = false
   }
@@ -399,9 +429,9 @@ export class AppUpdater {
   // closed and nobody is using the overlay; otherwise logs why not (once per
   // reason) and waits.
   private tryInstall = async () => {
-    if (this.isRestarting) return
+    if (this.isRestarting || this.plainRestart) return
     const job = this.rollback.readyFile ? 'rollback' : this.downloaded ? 'update' : null
-    if (!job) return
+    if (!job || !installGate({ job, restarting: this.isRestarting, plainRestart: this.plainRestart, rollbackActive: this.rollback.active })) return
     if (job === 'update' && this.autoInstallBlocked) {
       this.logVerdict('blocked')
       return
@@ -428,7 +458,7 @@ export class AppUpdater {
       this.logVerdict('game-running')
       return
     }
-    if (this.isRestarting) return
+    if (!installGate({ job, restarting: this.isRestarting, plainRestart: this.plainRestart, rollbackActive: this.rollback.active })) return
     if (job === 'rollback') {
       if (!this.rollback.readyFile) return
       this.isRestarting = true
