@@ -32,6 +32,10 @@
           <span v-if="maybeShown" :style="{ fontSize: 'var(--w-fs-lg)', color: 'var(--w-warn)' }" title="A rule above may show it, but the copy doesn't say enough to be sure">? Probably shows</span>
           <span v-else :class="verdict.shown ? 'w-up' : 'w-down'" :style="{ fontSize: 'var(--w-fs-lg)' }">{{ verdict.shown ? '✓ Shows' : '✗ Hidden' }}</span>
           <LabelPreview :text="facts.baseType ?? facts.name" :actions="match.actions" :visibility="match.visibility" :scale="1.15" />
+          <span class="grow" />
+          <button v-if="canGoTo" type="button" :class="$style.goTo" class="w-focusable" :title="`Open the editor on ${goToLabel} (G)`" @click="goToRule">
+            <span :class="$style.cap" :style="focused ? '' : 'opacity: .55'">G</span> Go to rule ›
+          </button>
         </div>
         <div class="text-xs w-dim">{{ whyLine }}</div>
         <div v-for="u in match.uncertain.slice(0, 2)" :key="u.block.index" class="text-xs" style="color: var(--w-warn);">
@@ -553,11 +557,32 @@ const focused = ref(document.hasFocus())
 const onFocus = () => { focused.value = true }
 const onBlur = () => { focused.value = false }
 
+// The rule that decided the item, in the editor: the Base types tab for the
+// table's own rules, the rule itself for anything else.
+const canGoTo = computed(() => {
+  const b = props.match.final?.block
+  return !!(b?.type && b.tier && !b.tier.startsWith('#'))
+})
+const goToLabel = computed(() => {
+  const b = props.match.final?.block
+  return b ? placeOf(b) : 'its rule'
+})
+function goToRule () {
+  const b = props.match.final?.block
+  if (!b?.type || !b.tier || b.tier.startsWith('#')) { emit('open-editor'); return }
+  emit('open-editor', { type: b.type, tier: b.tier })
+}
+
 // Keys reach the overlay only while it has focus, so they never drink a flask.
 function onKey (e: KeyboardEvent) {
   if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return
   const t = e.target as HTMLElement | null
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+  if ((e.key === 'g' || e.key === 'G') && canGoTo.value) {
+    e.preventDefault()
+    goToRule()
+    return
+  }
   const q = quick.value.find(x => x.key === e.key)
   if (!q || q.disabled) return
   e.preventDefault()
@@ -761,6 +786,20 @@ function unknownKeys (m: BlockMatch): string[] {
   opacity: 0.4;
   cursor: default;
 }
+.goTo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 5px 10px;
+  border-radius: var(--w-r-sm);
+  border: 1px solid #e0b860;
+  background: rgb(224 184 96 / 16%);
+  color: #f3d48a;
+  font-size: var(--w-fs-sm, 13px);
+  cursor: pointer;
+}
+.goTo:hover { background: rgb(224 184 96 / 26%); }
 .cap {
   font-family: var(--w-mono);
   font-weight: 600;

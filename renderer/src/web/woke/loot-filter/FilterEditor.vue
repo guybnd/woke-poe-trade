@@ -399,6 +399,7 @@ import PricesTab from './PricesTab.vue'
 import PreviewTab from './PreviewTab.vue'
 import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
+import { GEAR_TYPE } from './gear'
 import LookStrip from './LookStrip.vue'
 import { ownActions } from './look'
 import RuleBuilder from './RuleBuilder.vue'
@@ -915,7 +916,10 @@ function goTo (type: string, t: string, base?: string) {
 }
 
 watch(() => props.focus, (f) => {
-  if (f) goTo(f.type, f.tier)
+  if (!f) return
+  // The Base types table's own rules live on that tab, not in the rule list.
+  if (f.type === GEAR_TYPE) { tab.value = 'gear'; return }
+  goTo(f.type, f.tier)
 }, { immediate: true })
 
 watch(() => props.openTab, (t) => {
