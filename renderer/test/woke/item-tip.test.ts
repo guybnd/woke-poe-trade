@@ -267,7 +267,7 @@ describe('where a unique drops', () => {
 
   it('says nothing for a unique that drops anywhere', () => {
     const lines = all(buildTip(pack, { name: 'Headhunter', kind: 'unique' }))
-    expect(lines.some(l => /Restricted drop|No longer drops/.test(l))).toBe(false)
+    expect(lines.some(l => /Restricted drop|No longer drops|Not a random drop/.test(l))).toBe(false)
   })
 
   it('keeps a long source short', () => {

@@ -313,7 +313,7 @@ export function dropLines (drop: TipDrop | undefined): TipLine[] {
   return [
     // The wiki's "drop disabled" covers uniques you still get from a vendor,
     // a card or a boss, so both read the same: just not at random.
-    plain(drop.s && !drop.u ? `Not a random drop: ${drop.s}` : 'Restricted drop: not a random drop on its base', 'corrupted'),
+    plain(drop.s && !drop.u && drop.s !== 'No drop' ? `Not a random drop: ${drop.s}` : 'Restricted drop: not a random drop on its base', 'corrupted'),
     ...(where ? [plain(where, 'dim')] : [])
   ]
 }

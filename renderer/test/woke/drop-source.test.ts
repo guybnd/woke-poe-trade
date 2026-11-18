@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-// @ts-expect-error a plain .mjs build script, no types
 import { shortSource } from '../../scripts/drop-source.mjs'
 import { dropLines, dropSource, randomDropsFirst } from '@/web/woke/ui/tooltip/tip-content'
 
@@ -20,6 +19,7 @@ describe('a restricted unique in a word or two', () => {
     expect(shortSource({ text: 'Replicas can be obtained from Curio Displays in the final reward rooms of any Grand Heist.' }).s).toBe('Heist')
     expect(shortSource({ text: 'Can drop from Runic monsters in Expeditions or Logbooks.' }).s).toBe('Expedition')
     expect(shortSource({ text: 'Drops from Astral monsters in Mirages.' }).s).toBe('Mirage')
+    expect(shortSource({ text: 'Can drop at a fixed 50% drop rate from final map bosses in the Legacy of Phrecia event.', disabled: true }).s).toBe('Event only')
     expect(shortSource({ text: 'Broadstroke is drop disabled. It can be acquired from existing owners.', disabled: true }).s).toBe('No drop')
   })
   it('falls back to the league tag, and flags a restriction with no source', () => {

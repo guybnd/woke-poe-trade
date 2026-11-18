@@ -159,7 +159,7 @@ async function tipFor (ref: ItemTipRef): Promise<{ model: TipModel | null, marke
     await loadFile('drops')
     const uniques = withDrops(listed, pack.drops)
     usePoeninja().queuePricesFetch()
-    // The list comes most valuable first: that one in full, then all of them.
+    // The dearest one in full (restricted or not), then the list, random drops first.
     // With no prices yet there's no telling which is best, so just the list.
     const header = { name: ref.name, base: `${uniques.length} uniques on this base`, frame: 'unique' as const, sections: [] }
     if (listed[0].chaos == null && listed.length > 1) return { model: header, market: null, uniques }

@@ -27,8 +27,8 @@
         </template>
       </WItemRow>
     </template>
-    <button v-if="limit && rows.length > limit" type="button" class="w-focusable" :class="$style.more" @click="all = !all">
-      {{ all ? 'Fewer' : `${rows.length - limit} more` }}
+    <button v-if="limit && (all || rows.length > shown.length)" type="button" class="w-focusable" :class="$style.more" @click="all = !all">
+      {{ all ? 'Fewer' : `${rows.length - shown.length} more` }}
     </button>
   </div>
 </template>
@@ -83,7 +83,8 @@ const emit = defineEmits<{ pick: [row: UniqueOnBaseRow] }>()
 
 const all = ref(false)
 watch(() => props.resetKey, () => { all.value = false })
-const shown = computed(() => (!props.limit || all.value) ? props.rows : props.rows.slice(0, props.limit))
+// The unique that set the tier and the copy you hold stay in view past the cut.
+const shown = computed(() => (!props.limit || all.value) ? props.rows : props.rows.filter((u, i) => i < props.limit || u.setsTier || u.own))
 const restrictedCount = computed(() => props.rows.filter(u => u.restricted).length)
 </script>
 

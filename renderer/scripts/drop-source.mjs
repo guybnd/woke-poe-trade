@@ -24,6 +24,7 @@ const MECHANICS = [
   [/\bUltimatum|\bTrialmaster/i, 'Ultimatum'],
   [/\bRitual/i, 'Ritual'],
   [/\bHarvest/i, 'Harvest'],
+  [/\bwarband/i, 'Warbands'],
   [/\bAzurite Mine|\bDelve/i, 'Delve'],
   [/\bMirage|\bAstral monsters/i, 'Mirage'],
   [/\bBreach/i, 'Breach'],
@@ -47,7 +48,8 @@ const TAG_LABEL = {
 }
 const NOT_A_SOURCE = new Set(['league-specific'])
 
-const MAX = 24
+// "Uber Incarnation of Neglect"; the chip ellipsises anything longer on screen.
+const MAX = 28
 
 // What the "drops from X" pattern catches that isn't a boss.
 const NOT_A_BOSS = [
@@ -94,8 +96,15 @@ function bossFromMonsters (names) {
   return null
 }
 
+/**
+ * @param {{ text?: string, monsters?: string[], tags?: string[], disabled?: boolean }} row
+ * @returns {{ s: string, guess?: boolean }}
+ */
 export function shortSource ({ text, monsters = [], tags = [], disabled = false }) {
   const t = text ?? ''
+  // Race and event rewards: "final map bosses in the Legacy of Phrecia event"
+  // or "Endless Heist" would otherwise read as a mechanic you can farm.
+  if (/\bunobtainable in the core game|\brace events?\b|\bLegacy of Phrecia\b/i.test(t)) return { s: 'Event only' }
   if (/\bdrop disabled\b|\bno longer (?:drops|obtainable)\b/i.test(t)) return { s: 'No drop' }
   if (/\bvendor recipe\b/i.test(t)) return { s: 'Vendor recipe' }
   const boss = bossFromText(t)
