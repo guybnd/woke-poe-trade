@@ -130,11 +130,11 @@ export const BOSSES: Boss[] = ([
     name: 'Uber Atziri',
     tier: 'uber',
     // 3.30: in a Temple of Atzoatl with the Cradle of Creation (area level
-    // 84). The Chronicle that opens the temple is the entry; it also pays for
-    // every other room.
-    entry: [{ name: 'Chronicle of Atzoatl', qty: 1 }],
+    // 84). poe.ninja prices Chronicles by their best room, so the entry is the
+    // "Cradle of Creation (Tier 3)" row. It also pays for every other room.
+    entry: [{ name: 'Cradle of Creation (Tier 3)', qty: 1 }],
     runSeconds: 240,
-    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'uber-atziri', kills: 60, note: 'Measured in 3.29, before Atziri moved to the Temple. Small sample: drops not seen in it have no rate. The Chronicle opens the whole temple, not only this fight.' },
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'uber-atziri', kills: 60, note: 'Measured in 3.29, before Atziri moved to the Temple. Small sample: drops not seen in it have no rate. The Cradle of Creation Chronicle opens the whole temple, not only this fight.' },
     drops: [
       { name: 'The Vertex', chance: 0.4167 },
       { name: "Atziri's Splendour", chance: 0.35 },
@@ -148,7 +148,8 @@ export const BOSSES: Boss[] = ([
       { name: 'Triskaidekaphobia', chance: null },
       { name: 'Greater Spell Echo Support', chance: null, variant: '1' },
       { name: 'Vaal Sacrifice Support', chance: null, variant: '1' },
-      // 3.30: Cradle of Creation temples (area level 84).
+      // 3.30 patch notes: Royal Visage in level 81+ temples; in Cradle of
+      // Creation temples, Soul Cores of Intellect, Might and Finesse.
       { name: 'Royal Visage', chance: null },
       { name: 'Soul Core of Intellect', chance: null },
       { name: 'Soul Core of Might', chance: null },
@@ -364,10 +365,11 @@ export const BOSSES: Boss[] = ([
     name: 'Atziri',
     tier: 'pinnacle',
     // 3.30: Atziri lives in the Temple of Atzoatl. Sacrifice and Mortal
-    // fragments are gone.
-    entry: [{ name: 'Chronicle of Atzoatl', qty: 1 }],
+    // fragments are gone. Any temple has her; poe.ninja's plain finished
+    // temple row ("Apex of Atzoatl") stands in for the entry.
+    entry: [{ name: 'Apex of Atzoatl', qty: 1 }],
     runSeconds: 180,
-    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'atziri', kills: null, note: 'The Chronicle opens the whole temple, not only this fight.' },
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'atziri', kills: null, note: 'Entry is a plain finished temple from poe.ninja. The Chronicle opens the whole temple, not only this fight.' },
     drops: [
       { name: "Atziri's Promise", chance: null },
       { name: "Atziri's Step", chance: null },
@@ -375,12 +377,10 @@ export const BOSSES: Boss[] = ([
       { name: "Doryani's Invitation", chance: null },
       { name: 'Pledge of Hands', chance: null },
       { name: 'Triumvirate Authority', chance: null },
-      // 3.30: Royal Visage in level 81+ temples, a Soul Core in level 80+.
-      { name: 'Royal Visage', chance: null },
-      { name: 'Soul Core of Finesse', chance: null },
-      { name: 'Soul Core of Instability', chance: null },
-      { name: 'Soul Core of Intellect', chance: null },
-      { name: 'Soul Core of Might', chance: null }
+      // 3.30: Royal Visage in level 81+ temples. The patch notes also give a
+      // Soul Core in level 80+ temples without naming which; Intellect, Might
+      // and Finesse are named only for Cradle of Creation temples (Uber).
+      { name: 'Royal Visage', chance: null }
     ]
   },
   {

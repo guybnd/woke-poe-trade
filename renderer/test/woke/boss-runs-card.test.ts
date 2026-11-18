@@ -89,11 +89,18 @@ describe('boss runs card', () => {
 
   it('3.30: both Atziris live in the Temple, with no Sacrifice or Mortal fragments', () => {
     for (const id of ['atziri', 'uber-atziri']) {
-      expect(boss(id).entry).toEqual([{ name: 'Chronicle of Atzoatl', qty: 1 }])
       const names = boss(id).drops.map(d => d.name)
       expect(names.filter(n => /^(Mortal|Sacrifice at) /.test(n))).toEqual([])
       expect(names).toContain('Royal Visage')
     }
-    expect(boss('uber-atziri').drops.map(d => d.name)).not.toContain('Soul Core of Instability')
+    // poe.ninja lists temples by their best room, all with base type Chronicle of Atzoatl.
+    const priced = priceResolver([
+      { name: 'Cradle of Creation (Tier 3)', chaos: 455 },
+      { name: 'Apex of Atzoatl', chaos: 30 }
+    ] as Parameters<typeof priceResolver>[0])
+    expect(evaluateBoss(boss('uber-atziri'), prefs(), priced).entry).toBe(455)
+    expect(evaluateBoss(boss('atziri'), prefs(), priced).entry).toBe(30)
+    // Intellect, Might and Finesse are named only for Cradle of Creation temples.
+    expect(boss('atziri').drops.map(d => d.name).filter(n => n.startsWith('Soul Core'))).toEqual([])
   })
 })
