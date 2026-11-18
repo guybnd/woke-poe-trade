@@ -9,6 +9,7 @@
     <filter-name
       ref="nameComponent"
       :filters="itemFilters"
+      :stats="itemStats"
       :item="item">
       <template #meta>
         <woke-dust-chip v-if="item.dustEquivalent" :amount="item.dustEquivalent" />

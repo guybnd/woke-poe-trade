@@ -4,13 +4,20 @@
     <div class="filter-name-main">
       <div class="filter-name-title">
         <!-- woke: with a Generic/Base choice, clicking the name switches it: the category, or this base type. -->
-        <button v-if="filters.searchRelaxed" type="button" class="filter-name-label filter-name-cycle" data-scope-cycle
+        <!-- woke: a cluster jewel's title picks another size and type (WOKEPOET-366). -->
+        <cluster-type-pick v-if="clusterSize && stats" :item="item" :filters="filters" :stats="stats" :own-size="clusterSize" />
+        <button v-else-if="filters.searchRelaxed" type="button" class="filter-name-label filter-name-cycle" data-scope-cycle
           :data-rarity="item.rarity" :title="`${label}. Click to search ${filters.searchRelaxed.disabled ? 'any item of this category' : 'only this base type'}.`"
           @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ label }}<i class="fas fa-right-left filter-name-swap" aria-hidden="true" /></button>
         <span v-else class="filter-name-label" :data-rarity="item.rarity" :title="label">{{ label }}</span>
         <span v-if="baseName" class="filter-name-base">{{ baseName }}</span>
       </div>
       <div class="filter-name-chips">
+        <!-- The title's scope switch, moved here while the title picks the type. -->
+        <button v-if="clusterSize && stats && filters.searchRelaxed" type="button" data-cluster-scope
+          class="filter-name-corrupted" :class="{ on: !filters.searchRelaxed.disabled }"
+          :title="filters.searchRelaxed.disabled ? 'Searching this size only. Click to search every size.' : 'Searching every size. Click to search this size only.'"
+          @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ filters.searchRelaxed.disabled ? 'This size' : 'Any size' }}</button>
         <button v-if="filters.corrupted" type="button" data-corrupted-chip
           class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
           title="Corrupted filter. Click to change: Any, Corr (corrupted only), Not (uncorrupted only)."
@@ -74,7 +81,7 @@
 <script lang="ts">
 import { defineComponent, PropType, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { ParsedItem } from '@/parser'
+import { ItemCategory, ItemRarity, type ParsedItem } from '@/parser'
 import type { CorruptedSearch, ItemFilters } from './interfaces'
 import { CATEGORY_TO_TRADE_ID } from '../trade/pathofexile-trade'
 import { WIcon } from '@/web/woke/ui'
@@ -82,10 +89,13 @@ import FilterBtnNumeric from './FilterBtnNumeric.vue'
 import { NUMERIC_LIMITS } from './numeric-limits'
 import FilterBtnLogical from './FilterBtnLogical.vue'
 import { poeOn } from '@/web/woke/price-insight/window-style'
+import type { FilterOrGroup } from './interfaces'
+import { clusterSizeOf } from '@/web/woke/cluster-type/apply'
+import ClusterTypePick from '@/web/woke/cluster-type/ClusterTypePick.vue'
 
 export default defineComponent({
   name: 'FilterName',
-  components: { FilterBtnNumeric, FilterBtnLogical, WIcon },
+  components: { FilterBtnNumeric, FilterBtnLogical, WIcon, ClusterTypePick },
   props: {
     filters: {
       type: Object as PropType<ItemFilters>,
@@ -94,6 +104,11 @@ export default defineComponent({
     item: {
       type: Object as PropType<ParsedItem>,
       required: true
+    },
+    // woke: the search's mod rows, for the cluster jewel type picker.
+    stats: {
+      type: Array as PropType<FilterOrGroup[]>,
+      default: undefined
     }
   },
   setup (props) {
@@ -150,9 +165,17 @@ export default defineComponent({
       filter.search = corruptedStates[(at + 1) % corruptedStates.length].search
     }
 
+    // A non-unique cluster jewel's size: its title becomes the size and type picker.
+    const clusterSize = computed(() => {
+      const { item } = props
+      if (item.category !== ItemCategory.ClusterJewel || item.rarity === ItemRarity.Unique) return null
+      return clusterSizeOf(item.info.refName)
+    })
+
     return {
       t,
       poe: poeOn,
+      clusterSize,
       NUMERIC_LIMITS,
       label,
       baseName,
