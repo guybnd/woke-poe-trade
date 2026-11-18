@@ -18,11 +18,13 @@
       <div v-if="menu.items.length" :class="$style.sep" role="separator" />
     </template>
     <template v-for="(item, i) in menu.items" :key="i">
-      <div v-if="'separator' in item" :class="$style.sep" role="separator" />
-      <button v-else type="button" role="menuitem" :disabled="item.disabled"
+      <div v-if="'separator' in item && item.heading" :class="[$style.heading, { [$style.first]: i === 0 }]" role="separator">{{ item.heading }}</div>
+      <div v-else-if="'separator' in item" :class="$style.sep" role="separator" />
+      <button v-else type="button" :role="item.checked !== undefined ? 'menuitemcheckbox' : 'menuitem'" :aria-checked="item.checked" :disabled="item.disabled"
         :class="[$style.item, { [$style.danger]: item.danger, [$style.hl]: i === hl, [$style.tall]: item.wrap }]"
         @mouseenter="hl = i" @click="pick(item)">
         <img v-if="item.gameIcon" :src="item.gameIcon" class="w-game-icon" :class="$style.ic" alt="">
+        <i v-else-if="item.checked !== undefined" :class="[item.checked ? 'fas fa-check' : '', $style.ic, $style.check]" />
         <i v-else :class="[item.icon, $style.ic]" />
         <span :class="[$style.label, item.wrap ? $style.wrap : 'w-trunc']"><span :class="{ [$style.drawn]: item.labelStyle }" :style="item.labelStyle">{{ item.label }}</span></span>
         <WKbd v-if="item.keys" :keys="item.keys" :class="$style.keys" />
@@ -180,6 +182,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .act:hover:not(:disabled), .act:focus-visible { background: var(--w-accent-soft); outline: none; }
 .act:disabled { opacity: 0.4; }
 .sep { height: 1px; margin: var(--w-s1) 2px; background: var(--w-line); }
+.heading {
+  margin-top: var(--w-s1); padding: var(--w-s1) var(--w-s2) 2px; border-top: 1px solid var(--w-line);
+  font-size: var(--w-fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--w-dim);
+}
+.heading.first { margin-top: 0; border-top: 0; }
+.check { color: var(--w-gold, var(--w-accent)); }
 .guide { position: fixed; z-index: 999; pointer-events: none; }
 .gx { top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); }
 .gy { left: 0; right: 0; height: 0; border-top: 1px dashed var(--w-info); }

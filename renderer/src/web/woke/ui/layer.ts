@@ -13,8 +13,10 @@ export type MenuEntry =
     disabled?: boolean
     labelStyle?: Record<string, string> // draws the label as what it stands for
     wrap?: boolean // a long label wraps instead of being cut (a passive's effect)
+    checked?: boolean // an on/off line: a ✓ in the icon's place while on
   }
-  | { separator: true }
+  // With a heading: a small title over the lines that follow it.
+  | { separator: true, heading?: string }
 
 // The item a menu is about (pick C): its name, art and price at the top, then a
 // strip of big icon buttons for what any item can do (item-menu.ts).

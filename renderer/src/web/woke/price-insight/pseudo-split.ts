@@ -2,7 +2,7 @@
 // menu. Pure (no DOM), so they can be tested.
 
 import { toRaw } from 'vue'
-import type { ParsedItem } from '@/parser'
+import { ItemRarity, type ParsedItem } from '@/parser'
 import { applyIncr } from '@/parser/advanced-mod-desc'
 import { ModifierType, StatSource } from '@/parser/modifiers'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
@@ -147,4 +147,57 @@ export function include (f: StatFilter) {
     f.disabled = was.disabled
     beforeExclude.delete(toRaw(f))
   }
+}
+
+// "Fractured only" from the right-click menu, on any explicit mod: the row
+// searches the fractured copy of its mod. What it searched before, put back.
+const beforeFractured = new WeakMap<StatFilter, string[]>()
+
+/** The trade ids of the fractured copy of the row's one mod, when the row can
+ *  switch to them: an explicit row (a mechanic's explicit tag too) of one mod,
+ *  not excluded, on an item that can be fractured. */
+export function fracturedOnlyIds (f: StatFilter, item: ParsedItem): string[] | undefined {
+  const explicit = f.tag === FilterTag.Explicit || String(f.tag).startsWith('explicit-')
+  if (!explicit || f.not || f.sources.length !== 1 || item.rarity === ItemRarity.Unique) return undefined
+  return f.sources[0].stat.stat.trade.ids[ModifierType.Fractured]
+}
+
+export function isFracturedOnly (f: StatFilter, item: ParsedItem): boolean {
+  const ids = fracturedOnlyIds(f, item)
+  return ids != null && f.tradeId.join() === ids.join()
+}
+
+export function setFracturedOnly (f: StatFilter, item: ParsedItem, on: boolean) {
+  const ids = fracturedOnlyIds(f, item)
+  if (!ids || on === isFracturedOnly(f, item)) return
+  const raw = toRaw(f)
+  if (on) {
+    beforeFractured.set(raw, f.tradeId)
+    f.tradeId = ids
+    f.disabled = false
+  } else {
+    f.tradeId = beforeFractured.get(raw) ?? f.sources[0].stat.stat.trade.ids[ModifierType.Explicit] ?? f.tradeId
+    beforeFractured.delete(raw)
+  }
+}
+
+/** A min (or, where lower is better, a max) a tenth looser than the roll:
+ *  rounded the way that still lets the roll itself match. */
+export function looseBound (f: StatFilter): number | null {
+  const roll = f.roll
+  if (!roll || roll.better == null || roll.better === 0 || !roll.value) return null
+  const v = roll.value * (roll.better === -1 ? 1.1 : 0.9)
+  const step = roll.dp ? 10 : 1
+  const out = roll.better === -1 ? Math.ceil(v * step) / step : Math.floor(v * step) / step
+  return out === roll.value ? null : out
+}
+
+/** Text for the game's stash search box that finds items with this mod: the
+ *  longest run of words in the mod text, quoted, within the box's 50 characters. */
+export function stashSearch (text: string): string | null {
+  const runs = text.split(/[#\d.+\-%()]+/).map(s => s.trim().replace(/\s+/g, ' ')).filter(s => /[a-z]/i.test(s))
+  if (!runs.length) return null
+  let best = runs.reduce((a, b) => (b.length > a.length ? b : a)).toLowerCase()
+  if (best.length > 48) best = best.slice(0, 48).replace(/\s+\S*$/, '')
+  return `"${best}"`
 }

@@ -1,13 +1,13 @@
 // Price check stat rows: splitting a pseudo total into the mods behind it, and
-// the right-click menu. Nothing here searches, except the menu's swap lines,
+// the right-click menu. Nothing here searches, except the menu's Price as lines,
 // which are the ⇄ buttons' one search each.
 
 import { inject, InjectionKey, provide, ref, Ref, toRaw, watch } from 'vue'
-import type { ParsedItem } from '@/parser'
+import { ItemRarity, type ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
-import { exclude, include, isHybrid, pickAtTier, soleMod, splitByMod, splitFilters, tierBound } from './pseudo-split'
+import { exclude, fracturedOnlyIds, include, isFracturedOnly, isHybrid, looseBound, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, stashSearch, tierBound } from './pseudo-split'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import { poeOn } from './window-style'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
@@ -42,6 +42,8 @@ export interface StatActions {
   hybridPart: (filter: StatFilter) => HybridPart | undefined
   /** Ticks every line of the row's one hybrid mod at its tier's worst roll. */
   searchMod: (filter: StatFilter) => void
+  /** Ticks this row alone. */
+  searchOnly: (filter: StatFilter) => void
   menu: (e: MouseEvent, filter: StatFilter) => void
 }
 
@@ -92,7 +94,9 @@ export function provideStatActions (
     // A cluster jewel's resistance row folds its one line away too.
     (f.sources.length >= 2 || (f.sources.length === 1 && (clusterResColumnStats(f) != null ||
       // A fractured mod in a one-mod total: the split is where "Fractured only" lives.
-      f.sources[0].modifier.info.type === ModifierType.Fractured))))
+      f.sources[0].modifier.info.type === ModifierType.Fractured)))) ||
+    // Split from the menu's Fractured only: it folds back as any split does.
+    isSplit(f)
   const hybridPart = (f: StatFilter) => version.value >= 0 ? hybrids.get(toRaw(f)) : undefined
 
   // A row of the list by its plain object.
@@ -202,23 +206,70 @@ export function provideStatActions (
     }
   }
 
+  // A one-mod pseudo total whose mod has a fractured copy to search.
+  function fracturedBehind (f: StatFilter): boolean {
+    if (f.tag !== ModifierType.Pseudo || f.sources.length !== 1 || isChild(f) || isSplit(f)) return false
+    const src = f.sources[0]
+    const type = src.modifier.info.type
+    return (type === ModifierType.Explicit || type === ModifierType.Fractured) &&
+      item.value.rarity !== ItemRarity.Unique &&
+      src.stat.stat.trade.ids[ModifierType.Fractured] != null
+  }
+
+  function fracturedViaSplit (f: StatFilter) {
+    toggleSplit(f)
+    const open = splits.get(toRaw(f))
+    if (!open) return
+    for (const child of open.children) {
+      const row = stats.value.find(s => toRaw(s) === child)
+      if (row && isFilter(row)) setFracturedOnly(row, item.value, true)
+    }
+  }
+
+  // Ticks this row and unticks every other (Ctrl + Click on its tick box).
+  function searchOnly (f: StatFilter) {
+    for (const s of stats.value) {
+      if (isFilter(s)) s.disabled = (s !== f)
+      else s.meta.disabled = true
+    }
+    f.disabled = false
+  }
+
+  // Grouped under small headings (Guy's pick B); on/off lines show a ✓.
+  // Only the "Price as" lines search, one search each.
   function menu (e: MouseEvent, f: StatFilter) {
-    const items: MenuEntry[] = []
-    items.push({
-      label: 'Search only this',
-      icon: 'fas fa-filter',
-      action: () => {
-        for (const s of stats.value) {
-          if (isFilter(s)) s.disabled = (s !== f)
-          else s.meta.disabled = true
-        }
-        f.disabled = false
-      }
-    })
+    const items: MenuEntry[] = [{ separator: true, heading: 'Search' }]
+    items.push({ label: 'Search only this', keys: 'Ctrl + Click', action: () => searchOnly(f) })
+    if (fracturedOnlyIds(f, item.value)) {
+      const on = isFracturedOnly(f, item.value)
+      items.push({ label: 'Fractured only', checked: on, action: () => setFracturedOnly(f, item.value, !on) })
+    } else if (fracturedBehind(f)) {
+      // A one-mod total (life on a ring) can't search a fractured copy: list
+      // the mod on its own row (one line per mod) and switch that row.
+      items.push({ label: 'Fractured only', checked: false, action: () => fracturedViaSplit(f) })
+    }
     if (f.tag === ModifierType.Explicit || f.tag === ModifierType.Fractured || f.tag === ModifierType.Crafted) {
-      items.push(f.not
-        ? { label: 'Include it again', icon: 'fas fa-plus', action: () => include(f) }
-        : { label: 'Exclude it (items without)', icon: 'fas fa-ban', action: () => exclude(f) })
+      items.push({
+        label: 'Exclude it',
+        checked: f.not === true,
+        action: () => {
+          if (f.not) { include(f); return }
+          // "Items without it" means any copy, not just a fractured one.
+          setFracturedOnly(f, item.value, false)
+          exclude(f)
+        }
+      })
+    }
+    const mod = soleMod(f)
+    // PoE mode only: Standard hides the local rows such a search ticks.
+    if (poeOn.value && mod && isHybrid(mod)) {
+      const name = [mod.info.tier != null ? `T${mod.info.tier}` : '', mod.info.name ?? ''].filter(Boolean).join(' ')
+      items.push({ label: `Search this hybrid mod${name ? ` (${name})` : ''}`, action: () => searchMod(f) })
+    }
+    if (canSplit(f)) {
+      items.push(isSplit(f)
+        ? { label: 'Fold back into the total', action: () => toggleSplit(f) }
+        : { label: f.sources.length > 1 ? `Split into its ${f.sources.length} mods` : 'Show the mod behind it', action: () => toggleSplit(f) })
     }
 
     const roll = f.roll
@@ -226,54 +277,45 @@ export function provideStatActions (
       // Where lower is better the bound that matters is the max, as the
       // price check's own Low/Approx/High set it.
       const lowerBetter = roll.better === -1
-      const word = lowerBetter ? 'Max' : 'Min'
       const setBound = (v: number) => {
         if (lowerBetter) { roll.max = v; roll.min = '' } else { roll.min = v; roll.max = '' }
         f.disabled = false
       }
-      items.push({ separator: true })
-      items.push({ label: `${word}: my roll (${roll.value})`, action: () => setBound(roll.value) })
+      items.push({ separator: true, heading: lowerBetter ? 'Max' : 'Min' })
+      items.push({ label: `My roll (${roll.value})`, action: () => setBound(roll.value) })
+      const loose = looseBound(f)
+      if (loose != null) {
+        items.push({ label: `10% ${lowerBetter ? 'over' : 'under'} (${loose})`, action: () => setBound(loose) })
+      }
       const tier = tierBound(f)
       if (tier != null) {
-        items.push({ label: `${word}: ${lowerBetter ? 'top' : 'bottom'} of tier (${tier})`, action: () => setBound(tier) })
+        items.push({ label: `${lowerBetter ? 'Top' : 'Bottom'} of tier (${tier})`, action: () => setBound(tier) })
       }
       items.push({ label: 'Clear min and max', action: () => { roll.min = ''; roll.max = '' } })
     }
 
     const cand = swap?.candidateFor(f)
     if (swap && cand) {
-      items.push({ separator: true })
+      items.push({ separator: true, heading: 'Price as' })
       if (!cand.family.random) {
-        items.push({ label: 'Price as any element', keys: '1 search', action: () => { swap.run(cand, 'any').catch(() => {}) } })
+        items.push({ label: 'Any element', keys: '1 search', action: () => { swap.run(cand, 'any').catch(() => {}) } })
         for (const t of cand.targets) {
-          items.push({ label: `Price as ${t[0].toUpperCase()}${t.slice(1)}`, keys: '1 search', action: () => { swap.run(cand, t).catch(() => {}) } })
+          items.push({ label: `${t[0].toUpperCase()}${t.slice(1)}`, keys: '1 search', action: () => { swap.run(cand, t).catch(() => {}) } })
         }
       } else {
-        items.push({ label: 'Price the ducat swap', keys: '1 search', action: () => { swap.run(cand, 'any').catch(() => {}) } })
+        items.push({ label: 'The ducat swap', keys: '1 search', action: () => { swap.run(cand, 'any').catch(() => {}) } })
       }
     }
 
-    items.push({ separator: true })
-    const mod = soleMod(f)
-    // PoE mode only: Standard hides the local rows such a search ticks.
-    if (poeOn.value && mod && isHybrid(mod)) {
-      const name = [mod.info.tier != null ? `T${mod.info.tier}` : '', mod.info.name ?? ''].filter(Boolean).join(' ')
-      items.push({ label: `Search this hybrid mod${name ? ` (${name})` : ''}`, icon: 'fas fa-link', action: () => searchMod(f) })
-    }
-    if (canSplit(f)) {
-      items.push(isSplit(f)
-        ? { label: 'Fold back into the total', icon: 'fas fa-compress', action: () => toggleSplit(f) }
-        : { label: f.sources.length > 1 ? `Split into its ${f.sources.length} mods` : 'Show the mod behind it', icon: 'fas fa-expand', action: () => toggleSplit(f) })
-    }
-    items.push({
-      label: 'Copy mod text',
-      icon: 'far fa-copy',
-      action: () => { copyText(rollText(f)).then(ok => { if (ok) toast('Copied') }).catch(() => {}) }
-    })
+    items.push({ separator: true, heading: 'Copy' })
+    const copy = (text: string) => { copyText(text).then(ok => { if (ok) toast('Copied') }).catch(() => {}) }
+    items.push({ label: 'Mod text', action: () => copy(rollText(f)) })
+    const find = stashSearch(f.text)
+    if (find) items.push({ label: 'Stash search', action: () => copy(find) })
     openMenu(e, items)
   }
 
-  const actions: StatActions = { canSplit, isSplit, isChild, toggleSplit, hybridPart, searchMod, menu }
+  const actions: StatActions = { canSplit, isSplit, isChild, toggleSplit, hybridPart, searchMod, searchOnly, menu }
   provide(KEY, actions)
   return actions
 }
