@@ -16,6 +16,7 @@ import { addEdit, blocksOf, nextEditId, readStyle } from './edits'
 import { lookChanges } from './look'
 import type { EditStatus, FilterEdit, NewFilterEdit, NumberBound, StylePatch } from './edits'
 import { numberChecks } from './numbers'
+import { clusterPrices, clusterPricesFor, loadClusterPrices } from './cluster-ninja'
 import { describeStep, measureSteps, observe, settingsAt } from './timeline'
 import type { Settings } from './timeline'
 import { HISTORY_SIZE, baseFromCopy, isWokeCopy, outputName } from './widget'
@@ -83,6 +84,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
   const presetChanges = ref(0)
   // NeverSink rules the Gear page's table replaced (0 while it's off).
   const gearReplaced = ref(0)
+  const clusterSig = ref('')
   const prices = useFilterPrices(() => cfg().priceTiers.uniqueRule)
   // Bases for the dust preset's price rule, only while it's on.
   const dustList = computed(() => {
@@ -119,6 +121,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     if (presetsOn(cfg().presets)) parts.push(presetsSig(), presetList.value)
     const src = sourceSig()
     if (src.length) parts.push(src)
+    if (clusterSig.value) parts.push(clusterSig.value)
     return hash(JSON.stringify(parts))
   }
   const signature = () => JSON.stringify([cfg().edits, hash(buildSig.value), extraSig()])
@@ -271,7 +274,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       },
       dustList: dustList.value,
       heldBack,
-      stackHeld: (group, base) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base)
+      stackHeld: (group, base) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base),
+      clusterPrices: clusterPricesFor(prices.currentLeague.value)
     })
   }
 
@@ -291,6 +295,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     if (c.netFresh && JSON.stringify(cfg().safetyNet.last) !== JSON.stringify(c.netFresh)) cfg().safetyNet.last = c.netFresh
     presetChanges.value = c.presetChanges
     gearReplaced.value = c.gearReplaced
+    clusterSig.value = c.clusterSig
     presetList.value = c.presetSig
     statuses.value = cfg().edits.map(e => c.results.get(e.id)!)
     priceMoved = c.outOfPlace
@@ -511,6 +516,10 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     rebuild()
     return () => { cfg().priceTiers.moves = before; rebuild() }
   }
+
+  // Cluster jewel prices come in their own request.
+  watch(clusterPrices, () => { if (baseText.value != null) rebuild() })
+  watch(prices.currentLeague, (league) => { if (baseText.value != null) loadClusterPrices(league) })
 
   // Price index updates, or settings that change the net: refresh.
   watch(() => [prices.lookup.value, prices.safety.value, cfg().safetyNet.on, cfg().safetyNet.minChaos, cfg().priceTiers.on, cfg().netDismissed, prices.currentLeague.value], () => {
@@ -845,6 +854,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       loading.value = true
       error.value = null
       prices.wantPrices()
+      loadClusterPrices(prices.currentLeague.value)
       try {
         const ns = cfg().neversink
         const got = await readNeverSink(ns.version, ns.level)
@@ -885,6 +895,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     loading.value = true
     error.value = null
     prices.wantPrices()
+    loadClusterPrices(prices.currentLeague.value)
     try {
       const source = cfg().sourceName
       let { text } = await hostRequest('filter-read', { dir: cfg().folder, name: source, online: cfg().sourceOnline })

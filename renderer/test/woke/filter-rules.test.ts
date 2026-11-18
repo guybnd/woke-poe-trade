@@ -104,6 +104,7 @@ describe('presets', () => {
   const all: Presets = {
     cheapCurrency: { on: true, chaos: 5 },
     chaosRecipe: { on: true, slots: RECIPE_SLOTS.map(s => s.key) },
+    clusterPrices: { on: true, top: 100, good: 15, pins: {} },
     quiet: { on: true, keepTiers: 2 },
     bigger: { on: true, size: 40 },
     colourBlind: { on: true },

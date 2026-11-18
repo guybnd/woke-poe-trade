@@ -51,3 +51,36 @@ test('cluster jewel rules read as passives and item level, and a number changed 
     return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
   }).toMatch(/\$tier->highlarge[^\n]*\r?\n\tRarity Normal Magic Rare\r?\n\tEnchantmentPassiveNum <= 6/)
 })
+
+test('the Cluster page shows the price rules from poe.ninja, and a picked passive type reaches the saved filter', async ({ overlay, fakeApp }) => {
+  const folder = filterFolder()
+  await overlay.boot({ widgets: [{ wmType: 'woke-loot-filter', wmFlags: ['invisible-on-blur'], sampleHotkey: 'Alt + F', editorHotkey: 'Alt + Shift + F', folder, sourceName: 'NeverSink.filter' }] })
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+Shift+F')
+  await overlay.pressHotkey('Alt + Shift + F')
+  const page = overlay.page
+  await page.getByRole('tab', { name: 'Rules' }).click()
+  await page.getByPlaceholder('Filter groups').fill('cluster')
+  // One page: the price rules aren't a group of their own any more.
+  await expect(page.getByText('Jewels › Cluster jewels by price', { exact: true })).toHaveCount(0)
+  await page.getByText('Jewels › Cluster', { exact: true }).click()
+
+  await expect(page.getByText('Worth money', { exact: true })).toBeVisible()
+  const top12 = page.getByRole('button', { name: /Top · 12 passives · item level 84\+/ })
+  await expect(top12).toContainText('Minion Damage')
+  await expect(page.getByRole('button', { name: /Good · 12 passives · item level 84\+/ })).toContainText('Fire Damage')
+  await overlay.snap('cluster price rules from poe.ninja')
+
+  // Wand Damage is worth 2c: pin it to the top rule.
+  const large = page.locator('details').first()
+  await large.locator('summary').click()
+  await large.getByRole('button', { name: /^Wand Damage: by price/ }).click()
+  await expect(large.getByRole('button', { name: /^Wand Damage: always top/ })).toBeVisible()
+  await expect(top12).toContainText('Wand Damage')
+  await overlay.snap('cluster passive type picked as always top')
+
+  await page.getByRole('button', { name: /^Save/ }).click()
+  await expect.poll(() => {
+    const out = path.join(folder, 'NeverSink (woke).filter')
+    return fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : ''
+  }).toMatch(/\$tier->n12_i84_t1[^\n]*(\r?\n\t[^\n]*)*\r?\n\tEnchantmentPassiveNode == "Minion Damage" "Wand Damage"/)
+})

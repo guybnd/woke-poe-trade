@@ -230,6 +230,7 @@ type Key = keyof Presets
 export const HARSHEST: { [K in Key]: Presets[K] } = {
   cheapCurrency: { on: true, chaos: 50 },
   chaosRecipe: { on: true, slots: RECIPE_SLOTS.map(s => s.key) },
+  clusterPrices: { on: true, top: 100, good: 15, pins: {} },
   quiet: { on: true, keepTiers: 2 },
   bigger: { on: true, size: 45 },
   colourBlind: { on: true },
@@ -252,7 +253,9 @@ export const HARSHEST: { [K in Key]: Presets[K] } = {
   gear: { ...defaultGear(), on: true }
 }
 
-export const PRESET_KEYS = Object.keys(HARSHEST) as Key[]
+// Cluster prices hide nothing by themselves: they only pick which passive types
+// the price rules name, from prices these setups don't have.
+export const PRESET_KEYS = (Object.keys(HARSHEST) as Key[]).filter(k => k !== 'clusterPrices')
 
 // The harshest settings in words, for setup names.
 const HARSH_WORDS: Partial<Record<Key, string>> = {

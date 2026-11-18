@@ -1,0 +1,67 @@
+{
+ "lines": [
+  {
+   "name": "Minions deal 10% increased Damage",
+   "baseType": "Large Cluster Jewel",
+   "variant": "12 passives",
+   "levelRequired": 84,
+   "chaosValue": 420,
+   "listingCount": 60,
+   "detailsId": "x"
+  },
+  {
+   "name": "12% increased Fire Damage",
+   "baseType": "Large Cluster Jewel",
+   "variant": "12 passives",
+   "levelRequired": 84,
+   "chaosValue": 45,
+   "listingCount": 60,
+   "detailsId": "x"
+  },
+  {
+   "name": "10% increased Spell Damage",
+   "baseType": "Large Cluster Jewel",
+   "variant": "8 passives",
+   "levelRequired": 84,
+   "chaosValue": 130,
+   "listingCount": 60,
+   "detailsId": "x"
+  },
+  {
+   "name": "12% increased Physical Damage",
+   "baseType": "Large Cluster Jewel",
+   "variant": "8 passives",
+   "levelRequired": 84,
+   "chaosValue": 22,
+   "listingCount": 60,
+   "detailsId": "x"
+  },
+  {
+   "name": "Wand Attacks deal 12% increased Damage with Hits and Ailments",
+   "baseType": "Large Cluster Jewel",
+   "variant": "8 passives",
+   "levelRequired": 84,
+   "chaosValue": 2,
+   "listingCount": 60,
+   "detailsId": "x"
+  },
+  {
+   "name": "Minions have 12% increased maximum Life",
+   "baseType": "Medium Cluster Jewel",
+   "variant": "4 passives",
+   "levelRequired": 84,
+   "chaosValue": 35,
+   "listingCount": 60,
+   "detailsId": "x"
+  },
+  {
+   "name": "6% increased Mana Reservation Efficiency of Skills",
+   "baseType": "Small Cluster Jewel",
+   "variant": "3 passives",
+   "levelRequired": 84,
+   "chaosValue": 180,
+   "listingCount": 60,
+   "detailsId": "x"
+  }
+ ]
+}

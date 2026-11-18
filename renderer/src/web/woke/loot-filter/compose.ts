@@ -19,6 +19,8 @@ import { SAFETY_RULE_TYPE, auditBases, lastLookup, netFromAudit, safetyBlocks, s
 import type { BaseVerdict, NetList, SafetyNet } from './safety'
 import { applyLook } from './look'
 import { gemBaseName, renameBases } from './gem-bases'
+import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
+import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 
 // The safety net's rule names (safetyBlocks): items, uniques, stacks20...
@@ -46,6 +48,8 @@ export interface ComposeInput {
   // What you held back from the net: "Not for me", or moved down yourself.
   heldBack: (v: BaseVerdict) => boolean
   stackHeld: (group: EconomyGroup, base: string) => boolean
+  // poe.ninja's cluster jewel prices for this league, or null.
+  clusterPrices?: ClusterPrice[] | null
   // Names the game's filter can't take and what to write instead; the game
   // data's transfigured gems unless given (tests).
   renameBase?: BaseRename
@@ -67,6 +71,8 @@ export interface Composed {
   // Rules the Gear page wrote, and NeverSink rules it replaced.
   gearBlocks: number
   gearReplaced: number
+  // What the cluster price rules name after following prices ('' when untouched).
+  clusterSig: string
 }
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
@@ -92,6 +98,11 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   if (cfg.moves.length) {
     outOfPlace = movesOutOfPlace(next, cfg.moves)
     movesFit = applyPriceMoves(next, cfg.moves)
+  }
+  // Cluster jewel price rules from poe.ninja, before your edits so they win.
+  let clusterSig = ''
+  if (cfg.clusterPrices?.length && applyClusterPrices(next, cfg.clusterPrices, cfg.presets.clusterPrices)) {
+    clusterSig = JSON.stringify(next.blocks.filter(b => b.type === CLUSTER_PRICE_TYPE).map(b => [b.tier, b.disabled, b.conditions.find(c => c.key === 'EnchantmentPassiveNode')?.values ?? []]))
   }
   const isNetEdit = (e: FilterEdit) => e.type === SAFETY_RULE_TYPE
   const results = new Map(applyEdits(next, cfg.edits.filter(e => !isNetEdit(e))).map(r => [r.edit.id, r]))
@@ -158,5 +169,5 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   // Again over the net's and restyled rules: one transfigured gem name in a
   // BaseType list and the game refuses to load the whole filter.
   renameBases(next, renameBase)
-  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced }
+  return { doc: next, results, buildCount, netCount, netStackCount, netList, netFresh, movesFit, outOfPlace, presetChanges, presetSig: JSON.stringify(presetTop.map(b => b.conditions)), gearBlocks: gear.blocks, gearReplaced: gear.replaced, clusterSig }
 }

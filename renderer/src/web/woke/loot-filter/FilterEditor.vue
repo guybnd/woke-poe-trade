@@ -90,6 +90,8 @@
             </div>
           </template>
           <template v-else>
+          <ClusterPriceBand v-if="selType === CLUSTER_GROUP && store.doc.value" :doc="store.doc.value" :settings="config.presets.clusterPrices" :prices="clusterPricesFor(store.prices.currentLeague.value)"
+            :updated-at="clusterPrices?.ts ?? null" :error="clusterPricesError" @open-rule="jumpTo(CLUSTER_PRICE_TYPE, $event)" />
           <div v-if="lad.marks.length" :class="$style.marks">
             <div class="text-xs"><span style="font-weight: 600;">Marks</span> <span class="w-dim">paint on top of a tier's look. They never show or hide anything.</span></div>
             <div class="flex flex-wrap gap-1">
@@ -451,6 +453,9 @@ import StackScale from './StackScale.vue'
 import { STACK_MAX, cleanStackSize, stackLadder, tierStack, unreachableTiers } from './stack'
 import { baseIcon, cssColour } from './label-style'
 import NumberLine from './NumberLine.vue'
+import ClusterPriceBand from './ClusterPriceBand.vue'
+import { CLUSTER_PRICE_TYPE } from './cluster-prices'
+import { clusterPrices as clusterPricesRef, clusterPricesError as clusterPricesErrorRef, clusterPricesFor } from './cluster-ninja'
 import { NUMBER_KEYS, boundOf, numberChecks } from './numbers'
 import type { NumberBound } from './edits'
 import { axisName, buildLadder, conditionWords, distinctWords, markName, markWhen, rangeText, sharedConditions, showFrom, showFromChanges } from './ladder'
@@ -509,7 +514,9 @@ const tierItems = computed(() => byPrice(tier.value?.bases ?? [], priceOf))
 
 const tree = computed(() => props.store.doc.value ? buildTree(props.store.doc.value) : [])
 // Your made rules have their own row above the list.
-const navTree = computed(() => tree.value.map(x => ({ ...x, groups: x.groups.filter(g => g.type !== RULE_TYPE) })).filter(x => x.groups.length))
+// The cluster price rules live on the Cluster page (ClusterPriceBand), not as a group of their own.
+const hasClusterPage = computed(() => tree.value.some(x => x.groups.some(g => g.type === CLUSTER_GROUP)))
+const navTree = computed(() => tree.value.map(x => ({ ...x, groups: x.groups.filter(g => g.type !== RULE_TYPE && !(g.type === CLUSTER_PRICE_TYPE && hasClusterPage.value)) })).filter(x => x.groups.length))
 const allGroups = computed(() => tree.value.flatMap(s => s.groups))
 const group = computed<GroupNode | null>(() => allGroups.value.find(g => g.type === selType.value) ?? null)
 const tier = computed<TierNode | null>(() => group.value?.tiers.find(t => t.tier === selTier.value) ?? null)
@@ -538,7 +545,7 @@ const tabOptions = computed(() => [
   { value: 'gear', label: 'Base types', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear bases show, by rank and drop tier' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
-  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && x.on).length || undefined },
+  { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'clusterPrices' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
   { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
@@ -698,6 +705,10 @@ function numbersEditable (t: TierNode, orGroup = false): boolean {
   if (!selType.value || selType.value.startsWith('woke->')) return false
   return numberChecks(firstLive(t).conditions).length > 0 || (orGroup && hasNumbers.value)
 }
+
+const CLUSTER_GROUP = 'jewels->cluster'
+const clusterPrices = computed(() => clusterPricesRef.value)
+const clusterPricesError = computed(() => clusterPricesErrorRef.value)
 
 const BOUND_OPTIONS = [
   { value: 'min', label: 'at least' },
