@@ -62,6 +62,17 @@ history:
       a real packaged install (downgrade, GitHub download, notices, tray).
       Handed to coordinator. Code signing out of scope.
     id: a-2026-11-18t07-25-27-880z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:26:22.048Z'
+    comment: >-
+      Guy picked "ship it visible, test after" (2026-11-18). OPEN: a real Go
+      back test from 1.330.10 to 1.330.9 on Guy's install (while not playing) —
+      checks the downgrade install, GitHub download + hash check, skip rule,
+      tray item and About rows. Also untried live: automatic install while the
+      game is closed and the "Updated to X" notice.
+    pin: true
+    id: a-2026-11-18t07-26-22-048z
 subtasks:
   - WOKEPOET-260
 ---
