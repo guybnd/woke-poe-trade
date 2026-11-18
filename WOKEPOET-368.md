@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-368
 title: 'Price check: read the game''s other wordings of 3.30 stats (Goreblossom Blooms)'
-status: Ready
+status: Done
 priority: High
 effort: S
 assignee: unassigned
@@ -30,7 +30,34 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-18T05:05:00.486Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as eefd37a8; data v22 live. 78 game wordings (Goreblossom Blooms
+      plural, reduced/less, 100% forms) + Hindered/Stun sign fix; gameWordings
+      step in trade-data-patch.
+    completionComment: true
+    date: '2026-11-18T05:15:45.932Z'
+    id: c-2026-11-18t05-15-45-932z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T05:15:49.013Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/601'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy's price check showed "Goreblossom has +3(1-3) to maximum Blooms" as "Not recognized modifier". The trade site writes the stat "Goreblossom has +# maximum Bloom"; the game uses "+# to maximum Blooms" for 2 and up. Stats our 3.30 trade-data patch added knew only the trade wording, so plural, reduced/less and 100% wordings were unreadable.
 
