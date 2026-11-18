@@ -268,7 +268,8 @@ function resetWeight (name: string) { setPick(name, { weight: undefined }) }
 const filter = shallowRef<string | number>('')
 const showOther = shallowRef(false)
 function matches (r: Scored, q: string): boolean {
-  return !q || r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q))
+  return !q || r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)) ||
+    r.stats.some(s => s.toLowerCase().includes(q))
 }
 const otherRows = computed(() => scoredAll.value.filter(r => !r.matched.length))
 const shownGroups = computed(() => {
@@ -284,7 +285,7 @@ const shownGroups = computed(() => {
     else if (showOther.value || q) other.push(r)
   }
   const out = [...groups].filter(([, rows]) => rows.length).map(([tag, rows]) => ({ tag, rows }))
-  if (other.length) out.push({ tag: 'Fits none of your tags', rows: other })
+  if (other.length) out.push({ tag: q ? 'Other matches (outside your tags)' : 'Fits none of your tags', rows: other })
   return out
 })
 
