@@ -37,6 +37,15 @@ history:
     to: Done
     user: Agent
     date: '2026-11-16T04:09:41.913Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-18T07:13:28.858Z'
+    comment: >-
+      Follow-up merged as #609 (dfea7842,
+      https://github.com/guybnd/woke-poe-trade/pull/609): plain names for the
+      last 101 raw NeverSink tags (r01, maps_a_t14…); the test now fails on any
+      unnamed tag. Guy OK'd the names 2026-11-18.
+    id: a-2026-11-18t07-13-28-858z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/550'

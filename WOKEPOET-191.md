@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-191
 title: L. Loot filter content for 3.30
-status: Grooming
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -59,6 +59,48 @@ history:
       Core/Essence of Trickery drop areas. Divine Vessel stack size 20 and
       normal-Vise tier unverified.
     id: a-2026-11-18t06-50-10-618z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #610 (63637621): 3.30 items in the preview drop table, safety
+      net and filter guard. Not done (no data source): per-base tier gates
+      beyond Stygian Vise, Wickerman/Viscera groups.
+    date: '2026-11-18T07:13:22.655Z'
+    completionComment: true
+    id: c-2026-11-18t07-13-22-655z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T07:13:22.655Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged #610: loot filter knows the 3.30 items (Threads, Frayed Thread,
+      Royal Visage, new bases, tier-5 Stygian Vise) in the drop table, safety
+      net and guard.
+    completionComment: true
+    date: '2026-11-18T07:13:27.305Z'
+    id: c-2026-11-18t07-13-27-305z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T07:13:27.735Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/610'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > TL;DR: what our filter groups, drop table and safety net need for 3.30 items. Most of it lands through NeverSink's 3.30 filter; this ticket covers our own lists.
 
