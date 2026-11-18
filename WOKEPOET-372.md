@@ -93,6 +93,19 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T10:44:35.818Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-18T11:46:02.315Z'
+    comment: >-
+      Follow-ups merged in #619 (fd988335),
+      https://github.com/guybnd/woke-poe-trade/pull/619. They add a tools menu
+      entry under Builds & trade, one mod per line in the tooltip, Save to Trade
+      searches, right-click must-haves (and group), a filter that matches mod
+      text, and the price check's seller setting. The window contents stay
+      unmounted until the first open. Leftover folder
+      E:\Git\woke\wt\megalo-launcher (git worktree already removed) couldn't be
+      deleted (permission denied); delete it by hand.
+    id: a-2026-11-18t11-46-02-315z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/617'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
