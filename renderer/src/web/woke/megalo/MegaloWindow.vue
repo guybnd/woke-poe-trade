@@ -1,5 +1,4 @@
 <template>
-  <Widget :config="config" move-handles="corners" :inline-edit="false" readonly :removable="false">
     <WPanel ref="panel" size-key="megalo" title="Megalomaniac searcher" icon="/images/art/o-eternal.png" width="34rem" max-height="80vh">
       <div :class="$style.wrap" data-qa="megalo">
         <!-- Where the build comes from -->
@@ -42,7 +41,7 @@
             <WInfo text="Right-click a notable to make it a must-have (up to 3): every result has it. Click a notable to tick or untick it. The number is its weight: the best fit is 100. Click the number to change it; ↺ goes back to the suggestion. Hover a notable to see what it does." />
             <WField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" placeholder="Filter notables or tags" icon="fas fa-filter" data-qa="megalo-filter" />
           </div>
-          <div v-if="!pool.length" :class="$style.dim">Loading the notable list…</div>
+          <div v-if="!pool.length" :class="$style.dim">The notable list loads when the window opens…</div>
           <div v-for="g in shownGroups" :key="g.tag" :class="$style.ngroup">
             <span :class="$style.glabel">{{ g.tag }}</span>
             <div :class="$style.chips">
@@ -89,14 +88,12 @@
         <div :class="$style.dim" data-qa="megalo-summary">{{ summary }}</div>
       </div>
     </WPanel>
-  </Widget>
 </template>
 
 <script setup lang="ts">
 // The Megalomaniac searcher: reads your build's tags, scores every notable
 // Megalomaniac can roll, and searches trade for jewels with the ones you tick.
-import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
-import Widget from '@/web/overlay/Widget.vue'
+import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { STAT_BY_REF_V2, ITEM_BY_REF } from '@/assets/data'
 import { AppConfig, poeWebApi } from '@/web/Config'
 import type { PriceCheckWidget } from '@/web/overlay/widgets'
@@ -132,7 +129,10 @@ const active = useActiveBuild()
 // ---- the notable list ----
 const pool = shallowRef<Notable[]>([])
 const unknown = shallowRef(0)
-onMounted(async () => {
+let loaded = false
+async function loadPool () {
+  if (loaded) return
+  loaded = true
   try {
     await loadPassiveTree()
     // A notable the trade data doesn't know yet (a new league's) can't be searched.
@@ -141,7 +141,8 @@ onMounted(async () => {
     unknown.value = all.length - pool.value.length
   } catch { /* No tree data yet: the list says it's loading. */ }
   if (!pool.value.length) toast("Couldn't read the notable list. Open the PoB builds window once to download the tree data.", { anchor: panel.value?.el })
-})
+}
+watch(() => config.wmWants, (w) => { if (w === 'show') loadPool().catch(() => {}) }, { immediate: true })
 
 // ---- the build ----
 // No build to read yet: show the list, save no changes.

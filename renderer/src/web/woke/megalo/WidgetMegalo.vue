@@ -1,6 +1,7 @@
 <template>
-  <!-- Nothing (no code, no listeners) until the first time it's opened. -->
-  <MegaloWindow v-if="opened" :config="config" />
+  <Widget :config="config" move-handles="corners" :inline-edit="false" readonly :removable="false">
+    <MegaloWindow :config="config" />
+  </Widget>
 </template>
 
 <script lang="ts">
@@ -10,7 +11,8 @@ export default { widget: widgetMegaloSpec }
 </script>
 
 <script setup lang="ts">
-import { defineAsyncComponent, shallowRef, watch } from 'vue'
+import { defineAsyncComponent } from 'vue'
+import Widget from '@/web/overlay/Widget.vue'
 import { initMegaloWidget } from './widget'
 import type { MegaloWidget } from './widget'
 
@@ -20,11 +22,16 @@ const props = defineProps<{
   config: MegaloWidget
 }>()
 
-if (props.config.wmFlags.includes('uninitialized')) {
-  const { wmId, wmType, wmWants, wmZorder } = props.config
-  Object.assign(props.config, initMegaloWidget(wmId), { wmType, wmWants, wmZorder })
+// One made from the tool list starts bare, and a config can lack fields added
+// later: fill in whatever is missing, keeping what's there.
+{
+  const c = props.config as unknown as Record<string, unknown>
+  const defaults = initMegaloWidget(props.config.wmId) as unknown as Record<string, unknown>
+  const fresh = !Array.isArray(c.wmFlags) || (c.wmFlags as string[]).includes('uninitialized')
+  for (const [k, v] of Object.entries(defaults)) {
+    if (k === 'wmId' || k === 'wmType' || k === 'wmWants' || k === 'wmZorder') continue
+    if (c[k] == null || (fresh && (k === 'wmFlags' || k === 'wmTitle'))) c[k] = v
+  }
 }
 
-const opened = shallowRef(false)
-watch(() => props.config.wmWants, (w) => { if (w === 'show') opened.value = true }, { immediate: true })
 </script>
