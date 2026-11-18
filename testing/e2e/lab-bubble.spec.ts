@@ -21,9 +21,9 @@ const LAB = {
   notes: ''
 }
 
-async function boot (overlay: Overlay, overlayActive: boolean) {
+async function boot (overlay: Overlay, overlayActive: boolean, keepMouse = false) {
   await overlay.page.route(IMG, route => route.fulfill({ contentType: 'image/png', body: PIXEL }))
-  return await overlay.boot({ overlayActive, widgets: [LAB] })
+  return await overlay.boot({ overlayActive, widgets: [LAB], keepMouse })
 }
 
 // The test browser has no <webview>: answer as poelab's page would.
@@ -78,7 +78,8 @@ test('Lab layout: a new page knows the mouse is already on the icon', async ({ o
   const map = overlay.page.locator(`[data-dock="lab"] img[src="${IMG}"]`)
   await expect(map).toBeVisible()
 
-  await boot(overlay, true)
+  // The mouse stays on the icon through the reload.
+  await boot(overlay, true, true)
   await openNormal(overlay)
   overlay.app.focusGame(true)
   await expect(overlay.dockIcon('lab')).toBeVisible()

@@ -68,6 +68,10 @@ export interface BootOptions {
   // Client.txt lines written before the app starts (a fixture path or lines),
   // as when you played before opening the toolkit.
   logBefore?: string | string[]
+  // Leave the game mouse and hovered item where they are, for a test about a
+  // page that loads under a mouse that doesn't move. Otherwise every boot
+  // starts with the mouse in the middle, over nothing.
+  keepMouse?: boolean
 }
 
 let defaultConfigJson: string | null = null
@@ -157,8 +161,10 @@ export class Overlay {
     // (the stack sizes flake), and Ctrl + D finds the old item (the "no item
     // under the mouse" flake). Every test starts as the first one does: the
     // mouse in the middle, over nothing.
-    this.app.hoverItem(null)
-    this.app.moveMouse(960, 540)
+    if (!opts.keepMouse) {
+      this.app.hoverItem(null)
+      this.app.moveMouse(960, 540)
+    }
     this.app.focusGame(true)
     await this.page.goto(this.app.url)
     await this.app.waitForReceived('CLIENT->MAIN::update-host-config', undefined, 20_000)
