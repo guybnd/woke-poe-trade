@@ -84,7 +84,7 @@ interface Own {
   ticks: Map<StatFilter, boolean>
   /** Where each notable sits on the copied jewel (spots.ts). */
   spots: Map<StatFilter, NonNullable<StatFilter['clusterSpot']>>
-  passives: Pick<NonNullable<StatFilter['roll']>, 'value' | 'min' | 'max' | 'default' | 'bounds'> | null
+  passives: (Pick<NonNullable<StatFilter['roll']>, 'min' | 'max' | 'default' | 'bounds'> & { text: string }) | null
 }
 const OWN = new WeakMap<ItemFilters, Own>()
 // The size picked last, per search; the copied jewel's until a pick.
@@ -122,7 +122,7 @@ function remember (filters: ItemFilters, stats: FilterOrGroup[], size: ClusterSi
     spots: new Map(list.filter(s => s.clusterSpot).map(s => [s, s.clusterSpot!])),
     passives: passives?.roll
       ? {
-          value: passives.roll.value,
+          text: passives.text,
           min: passives.roll.min,
           max: passives.roll.max,
           default: { ...passives.roll.default },
@@ -195,16 +195,19 @@ export function applyClusterType (filters: ItemFilters, stats: FilterOrGroup[], 
     }
   }
 
-  // Passive count: the copy's own for its size; another size's whole range,
-  // with its line reading that size's fewest.
+  // Passive count: the copy's own for its size; another size's whole range.
   const passives = list.find(s => s.statRef === PASSIVES)
   if (passives?.roll) {
     if (size === own.size && own.passives) {
       const o = own.passives
-      Object.assign(passives.roll, { value: o.value, min: o.min, max: o.max, default: { ...o.default }, bounds: o.bounds ? { ...o.bounds } : undefined })
+      passives.text = o.text
+      Object.assign(passives.roll, { min: o.min, max: o.max, default: { ...o.default }, bounds: o.bounds ? { ...o.bounds } : undefined })
     } else if (size !== own.size) {
       const r = PASSIVE_RANGE[size]
-      Object.assign(passives.roll, { value: r.min, min: r.min, max: r.max, default: { ...r }, bounds: { ...r } })
+      // The line reads the size's range; its value stays the copy's count, which
+      // results ("Yours") and roll menus read as the item's own.
+      if (own.passives) passives.text = own.passives.text.replace('#', `${r.min}-${r.max}`)
+      Object.assign(passives.roll, { min: r.min, max: r.max, default: { ...r }, bounds: { ...r } })
     }
   }
 }

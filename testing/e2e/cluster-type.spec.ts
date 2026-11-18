@@ -38,7 +38,7 @@ test(`a cluster jewel title picks a size and type, typed or clicked, and only Se
   await expect(drop).toHaveCount(0)
   await expect(title).toHaveText(/Medium Cluster Jewel · Critical Chance/)
   // The passive count follows the size: its line and both boxes.
-  await expect(panel.getByText('Adds 4 Passive Skills')).toBeVisible()
+  await expect(panel.getByText('Adds 4-6 Passive Skills')).toBeVisible()
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before)
 
