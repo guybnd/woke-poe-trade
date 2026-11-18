@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-154
 title: E. Regenerate item data for 3.30
-status: Grooming
+status: Done
 priority: High
 effort: None
 assignee: unassigned
@@ -151,8 +151,46 @@ history:
       your Maps" wording (map-mods regex test). Not in the trade lists yet:
       Viscera and the 11 new uniques. Rerun `check` in a day or two.
     id: a-2026-11-13t19-51-45-377z
+  - type: comment
+    user: Agent
+    comment: >-
+      Shipped: 3.30 item and stat data regenerated in #423 (data v7) and #450
+      (v11), with later bumps up to v22 (#601).
+    date: '2026-11-18T06:12:57.718Z'
+    completionComment: true
+    id: c-2026-11-18t06-12-57-718z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T06:12:57.718Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      3.30 item and stat data regenerated (#423, #450), kept current through
+      data v22 (#601).
+    completionComment: true
+    date: '2026-11-18T06:13:03.747Z'
+    id: c-2026-11-18t06-13-03-747z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T06:13:04.121Z'
 swimlane: null
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/450'
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > TL;DR: regenerate item and stat data from the 3.30 client on launch day. Without it, price check misses every mod GGG reworded.
 

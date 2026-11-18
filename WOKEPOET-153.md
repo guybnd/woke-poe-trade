@@ -39,6 +39,14 @@ history:
       Head): its item class, tier line and mod line, and whether that mod
       matches a trade stat. Plus a Thread copy.
     id: a-2026-11-13t02-43-47-197z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T06:12:59.185Z'
+    comment: >-
+      2026-11-18 check: tier parsing and the filter's UnidentifiedItemTier match
+      shipped in #545/#548. Left: the T2-T5 chip by the name in price check
+      (pick A); nothing in renderer/src/web/price-check reads the tier yet.
+    id: a-2026-11-18t06-12-59-185z
 ---
 > TL;DR: on launch day, copy real 3.30 items to check how the game writes them. Then read the tier into price check as Guy's pick A, a T2-T5 chip by the name (mock https://claude.ai/artifact/XR9H8kNY9NnKJiE6hFmR5F).
 

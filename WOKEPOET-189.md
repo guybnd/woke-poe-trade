@@ -62,6 +62,14 @@ history:
     comment: >-
       Guy, 2026-11-11: the game already colours these suffixes differently, so
       the map checker leaves them neutral and adds no highlight of its own.
+  - type: activity
+    user: Agent
+    date: '2026-11-18T06:13:00.672Z'
+    comment: >-
+      2026-11-18 check: Atlas Drops line (#479) and 3.30 map suffixes (#482)
+      shipped. Left to confirm: removed corruption outcomes, the Delirious % mod
+      from Delirium Orbs, and the 31 added/removed maps in our map lists.
+    id: a-2026-11-18t06-13-00-672z
 swimlane: null
 needsAction: null
 ---
