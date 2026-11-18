@@ -119,6 +119,11 @@ test('a base in a unique tier lists the uniques it can drop as, with their price
   // Many uniques on one base: the best in full, then each with its price and grade.
   await page.locator('[data-tiers~="multispecialhigh"]').first().click()
   const chip = page.getByText('Leather Belt', { exact: true }).first()
+  // Scrolling hides the tooltip. hover() scrolls the side panel to the chip and
+  // its scroll event can land after the mouse enters, cancelling the tooltip:
+  // scroll first and let the event pass, then hover.
+  await chip.scrollIntoViewIfNeeded()
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   await chip.hover()
   await expect(tip).toContainText('Headhunter')
   await expect(tip).toContainText('Leather Belt')
