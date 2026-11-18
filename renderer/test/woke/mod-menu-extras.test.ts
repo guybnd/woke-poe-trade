@@ -15,6 +15,7 @@ vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response
 vi.mock('@/web/Config', () => ({
   AppConfig: () => config,
   saveConfig: () => {},
+  saveConfigQuietly: () => {},
   poeWebApi: () => 'www.pathofexile.com'
 }))
 

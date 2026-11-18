@@ -7,7 +7,7 @@ import { ItemRarity, type ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
-import { boundAt, exclude, fracturedOnlyIds, include, isFracturedOnly, isHybrid, looseBound, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, stashSearch, tierBound } from './pseudo-split'
+import { boundAt, exclude, shareScale, fracturedOnlyIds, include, isFracturedOnly, isHybrid, looseBound, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, stashSearch, tierBound } from './pseudo-split'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import { poeOn } from './window-style'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
@@ -253,8 +253,11 @@ export function provideStatActions (
   function tiersMenu (at: { x: number, y: number, from?: Element | null }, f: StatFilter, steps: Array<{ tier: number, min: number, max: number }>, mine: number, setBound: (v: number) => void) {
     const lowerBetter = f.roll?.better === -1
     const items: MenuEntry[] = [{ separator: true, heading: lowerBetter ? 'Max from tier' : 'Min from tier' }]
+    // In the row's units: a total counts its mod more than once (all resistances x3).
+    const k = shareScale(f)
+    const shown = (v: number) => Math.round(v * k * 100) / 100
     for (const s of steps) {
-      const range = s.min === s.max ? `${s.min}` : `${s.min}–${s.max}`
+      const range = s.min === s.max ? `${shown(s.min)}` : `${shown(s.min)}–${shown(s.max)}`
       items.push({ label: `T${s.tier}  ${range}`, checked: s.tier === mine, action: () => setBound(boundAt(f, s.min, s.max)) })
     }
     openMenu(at, items)
@@ -264,10 +267,14 @@ export function provideStatActions (
   // Only the "Price as" lines search, one search each.
   async function menu (e: MouseEvent, f: StatFilter) {
     const at = { x: e.clientX, y: e.clientY, from: e.target instanceof Element ? e.target : null }
+    const shownItem = item.value
     // Loaded on the first right-click, not with the price check.
     const [tiers, { setTickPref, tickPref }] = await Promise.all([import('./tier-ladder'), import('./tick-prefs')])
     // The tiers' data, read once; the menu doesn't wait long for it.
     const tierData = (f.roll && f.sources.length === 1) ? await tiers.tierDataSoon() : null
+    // A new price check, or this one closed, while it waited: no menu.
+    if (item.value !== shownItem || !stats.value.some(s => toRaw(s) === toRaw(f)) ||
+      (at.from && (!at.from.isConnected || at.from.getClientRects().length === 0))) return
     const ladder = tierData ? tiers.rowLadder(tierData, item.value, f) : null
     const items: MenuEntry[] = [{ separator: true, heading: 'Search' }]
     items.push({ label: 'Search only this', keys: 'Ctrl + Click', action: () => searchOnly(f) })
