@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-376
 title: 'Stacked decks window: session analytics in its own tab'
-status: Grooming
+status: Done
 priority: Medium
 effort: S
 assignee: unassigned
@@ -33,7 +33,44 @@ history:
     date: '2026-11-18T12:02:54.367Z'
     comment: Updated implementation link.
     id: a-2026-11-18t12-02-54-367z
+  - type: comment
+    user: Agent
+    comment: 'Session | Past sessions tabs (Guy''s pick A), PR #624, merged as 9d8a06db.'
+    date: '2026-11-18T12:16:35.587Z'
+    completionComment: true
+    id: c-2026-11-18t12-16-35-587z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T12:16:35.587Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 9d8a06db: Stacked decks window has Session | Past sessions tabs;
+      Past sessions reuses DeckHistory.
+    completionComment: true
+    date: '2026-11-18T12:16:41.924Z'
+    id: c-2026-11-18t12-16-41-924z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T12:16:47.257Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/624'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy: "move the stacked deck session analytics section into its own tab from here too".
 
