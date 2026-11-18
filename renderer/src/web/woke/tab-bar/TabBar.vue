@@ -956,6 +956,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 .priceNow { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
 .cols { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 14px; align-items: start; }
 .row {
+  position: relative;
   display: flex;
   align-items: center;
   height: 42px;
@@ -983,9 +984,10 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 }
 .pin:hover { color: var(--w-fg); background: var(--w-panel-3); }
 .pinOn, .pinOn:hover { color: var(--w-accent); }
-/* No room taken until it shows, so names get the space. */
-.pin:not(.pinOn) { width: 0; overflow: hidden; }
-.row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; width: 22px; }
+/* An unpinned row's pin floats over the row's end, so names get the space. */
+.pin:not(.pinOn) { position: absolute; right: 4px; }
+.row:hover .pin:not(.pinOn) { background: var(--w-panel-solid); }
+.row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; }
 .none { padding: 10px 8px; color: var(--w-dim); }
 .foot {
   display: flex;
