@@ -1,0 +1,96 @@
+// The cluster jewel picker on the price check's title: picking a size and type
+// rewrites the search, and picking the copied jewel's own puts it back.
+import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { fixture, loadGameData, parseItem } from '../helpers/game-data'
+import { createPresets } from '@/web/price-check/filters/create-presets'
+import type { StatFilter } from '@/web/price-check/filters/interfaces'
+import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
+import { applyClusterType, clusterTypes, currentType, matchTypes, pickedSize } from '@/web/woke/cluster-type/apply'
+
+// vi.mock is hoisted above the imports.
+vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
+vi.mock('@/web/Config', () => ({
+  AppConfig: () => ({ apiLatencySeconds: 2, accountName: '' }),
+  poeWebApi: () => 'www.pathofexile.com'
+}))
+
+const OPTS = { league: 'Mirage', merchantOnly: true, currency: null, collapseListings: 'api' as const, activateStockFilter: false, searchStatRange: 10, useEn: true }
+
+function setup () {
+  const item = parseItem(fixture('items/rare-cluster-large.txt'))
+  const presets = createPresets(item, OPTS)
+  const preset = presets.presets.find(p => p.id === presets.active)!
+  const rows = () => preset.stats.filter((s): s is StatFilter => !('group' in s && s.group))
+  return { filters: preset.filters, stats: preset.stats, rows }
+}
+
+const type = (size: 'Small' | 'Medium' | 'Large', name: string) => clusterTypes(size).find(t => t.name === name)!
+const ids = (body: ReturnType<typeof createTradeRequest>) => body.query.stats.flatMap(g => g.filters.filter(f => !f.disabled).map(f => f.id))
+
+describe('cluster jewel type picker', () => {
+  beforeAll(loadGameData)
+
+  it('lists each size with a trade id, two-line types as one', () => {
+    expect(clusterTypes('Large').map(t => t.name)).toContain('Attack Damage while Dual Wielding')
+    expect(clusterTypes('Large')).toHaveLength(17)
+    expect(clusterTypes('Medium')).toHaveLength(21)
+    // The old attribute types have no trade id any more.
+    expect(clusterTypes('Small').map(t => t.name)).not.toContain('Strength')
+    expect(clusterTypes('Small')).toHaveLength(14)
+    const axe = type('Large', 'Axe and Sword Damage')
+    expect(axe.ref.split('\n')).toHaveLength(2)
+    expect(axe.tradeId).toEqual(['enchant.stat_3948993189|1'])
+    expect(clusterTypes('Large').every(t => t.tradeId[0].startsWith('enchant.stat_3948993189|'))).toBe(true)
+  })
+
+  it('reads the copied type and filters by typed words', () => {
+    const { stats } = setup()
+    expect(currentType('Large', stats)?.name).toBe('Fire Damage')
+    expect(matchTypes(clusterTypes('Large'), 'dual').map(t => t.name)).toEqual(['Attack Damage while Dual Wielding'])
+    expect(matchTypes(clusterTypes('Large'), 'damage cold').map(t => t.name)).toEqual(['Cold Damage'])
+    expect(matchTypes(clusterTypes('Medium'), 'zzz')).toEqual([])
+  })
+
+  it('a type of the same size swaps the enchant and unticks the notables', () => {
+    const { filters, stats, rows } = setup()
+    const notable = rows().find(s => s.statRef.startsWith('1 Added Passive Skill is '))!
+    notable.disabled = false
+    applyClusterType(filters, stats, 'Large', 'Large', type('Large', 'Spell Damage'))
+    expect(currentType('Large', stats)?.name).toBe('Spell Damage')
+    expect(notable.disabled).toBe(true)
+    expect(filters.searchExact.baseType).toBe('Large Cluster Jewel')
+    const body = createTradeRequest(filters, stats)
+    expect(ids(body)).toContain(type('Large', 'Spell Damage').tradeId[0])
+    expect(ids(body)).not.toContain(type('Large', 'Fire Damage').tradeId[0])
+    expect(body.query.type).toBe('Large Cluster Jewel')
+  })
+
+  it('another size changes the base and opens the passive count', () => {
+    const { filters, stats, rows } = setup()
+    applyClusterType(filters, stats, 'Large', 'Medium', type('Medium', 'Critical Chance'))
+    expect(pickedSize(filters, 'Large')).toBe('Medium')
+    expect(filters.searchExact.baseType).toBe('Medium Cluster Jewel')
+    expect(filters.searchExact.baseTypeTrade).toBe('Medium Cluster Jewel')
+    const passives = rows().find(s => s.statRef === 'Adds # Passive Skills')!
+    expect(passives.roll!.min).toBe(4)
+    expect(passives.roll!.max).toBe('')
+    const body = createTradeRequest(filters, stats)
+    expect(body.query.type).toBe('Medium Cluster Jewel')
+    expect(ids(body)).toContain(type('Medium', 'Critical Chance').tradeId[0])
+  })
+
+  it('picking the copied size and type puts every change back', () => {
+    const { filters, stats, rows } = setup()
+    const notable = rows().find(s => s.statRef.startsWith('1 Added Passive Skill is '))!
+    notable.disabled = false
+    const passives = rows().find(s => s.statRef === 'Adds # Passive Skills')!
+    const before = { min: passives.roll!.min, max: passives.roll!.max }
+    const enchBefore = JSON.stringify(createTradeRequest(filters, stats))
+    applyClusterType(filters, stats, 'Large', 'Small', type('Small', 'Life'))
+    applyClusterType(filters, stats, 'Large', 'Medium', type('Medium', 'Minion Life'))
+    applyClusterType(filters, stats, 'Large', 'Large', type('Large', 'Fire Damage'))
+    expect(notable.disabled).toBe(false)
+    expect({ min: passives.roll!.min, max: passives.roll!.max }).toEqual(before)
+    expect(JSON.stringify(createTradeRequest(filters, stats))).toBe(enchBefore)
+  })
+})
