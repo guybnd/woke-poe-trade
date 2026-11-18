@@ -11,12 +11,12 @@ import { LEVELS, neverSink } from '../helpers/neversink'
 const block = (lines: string[]) => parseFilter(['Show', ...lines.map(l => `\t${l}`)].join('\n')).blocks[0]
 
 describe('reading numbers', () => {
-  it('reads bounds, folding > and < in', () => {
+  it('reads bounds, folding > and < in, what the item is before where it dropped', () => {
     const b = block(['ItemLevel > 83', 'EnchantmentPassiveNum <= 8', 'MapTier 12', 'Rarity Rare'])
     expect(numberChecks(b.conditions)).toEqual([
-      { key: 'ItemLevel', bound: 'min', value: 84 },
       { key: 'EnchantmentPassiveNum', bound: 'max', value: 8 },
-      { key: 'MapTier', bound: 'exact', value: 12 }
+      { key: 'MapTier', bound: 'exact', value: 12 },
+      { key: 'ItemLevel', bound: 'min', value: 84 }
     ])
   })
 
@@ -28,7 +28,7 @@ describe('reading numbers', () => {
 
   it('says a range as one span', () => {
     const b = block(['ItemLevel >= 75', 'ItemLevel <= 83', 'EnchantmentPassiveNum 12'])
-    expect(numberWords(b.conditions).map(w => w.text)).toEqual(['Item level 75–83', 'Passives 12'])
+    expect(numberWords(b.conditions).map(w => w.text)).toEqual(['Passives 12', 'Item level 75–83'])
   })
 })
 

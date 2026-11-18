@@ -1,7 +1,6 @@
 <template>
   <span :class="$style.line">
-    <template v-for="(g, i) in groups" :key="g.key">
-      <span v-if="i" class="w-faint">·</span>
+    <template v-for="g in groups" :key="g.key">
       <span :class="$style.part">
         <span :class="$style.word">{{ g.label }}</span>
         <template v-if="g.exact"><NumBox :check="g.exact" :spec="g.spec" @set="emitSet" /></template>
@@ -58,28 +57,28 @@ const NumBox = defineComponent({
       if (v !== p.check.value) e('set', p.check, v)
     }
     return () => h('input', {
-      class: ['w-input', 'w-num', 'w-focusable'],
-      style: 'width: 3.2rem; padding: 0 3px; text-align: center; font-weight: 600;',
-      type: 'number',
-      min: p.spec.min,
-      max: p.spec.max,
-      value: p.check.value,
-      disabled: props.disabled,
+      'class': ['w-input', 'w-num', 'w-focusable'],
+      'style': 'width: 3.2rem; padding: 0 3px; text-align: center; font-weight: 600;',
+      'type': 'number',
+      'min': p.spec.min,
+      'max': p.spec.max,
+      'value': p.check.value,
+      'disabled': props.disabled,
       'aria-label': [props.name, `${BOUND_WORDS[p.check.bound]} ${p.spec.label.toLowerCase()}`.trim()].filter(Boolean).join(': '),
-      onClick: (ev: Event) => ev.stopPropagation(),
-      onKeydown: (ev: KeyboardEvent) => {
+      'onClick': (ev: Event) => ev.stopPropagation(),
+      'onKeydown': (ev: KeyboardEvent) => {
         ev.stopPropagation()
         if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur()
         if (ev.key === 'Escape') { (ev.target as HTMLInputElement).value = String(p.check.value); (ev.target as HTMLInputElement).blur() }
       },
-      onChange: commit
+      'onChange': commit
     })
   }
 })
 </script>
 
 <style module>
-.line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
+.line { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
 .part { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .word { font-weight: 600; }
 </style>

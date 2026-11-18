@@ -115,13 +115,13 @@
             <span><i class="fas fa-volume-up" aria-hidden="true" /> 2 sound and its number</span>
             <span><span :class="$style.edited">edited</span> you changed it</span>
           </div>
-          <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.ladderStack]: hasStacks }]">
+          <div v-if="lad.rows.length" :class="[$style.ladderHead, { [$style.numbersMode]: !lad.axis && hasNumbers, [$style.ladderStack]: hasStacks }]">
             <span>{{ lad.axis ? axisName(lad.axis) : 'Rule' }}</span><span v-if="hasStacks">Stack</span><span>Looks like</span><span>{{ lad.axis || hasNumbers ? 'Also needs' : 'Catches' }}</span><span style="text-align: right;">Shown</span>
           </div>
           <template v-for="(r, i) in lad.rows" :key="r.tiers[0].tier">
             <div v-if="lad.cut === i" :class="$style.cut"><span />Hidden below this line<span /></div>
             <div v-if="r.section && r.section !== lad.rows[i - 1]?.section" :class="$style.sectionHead">{{ r.section }}</div>
-            <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
+            <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.numbersMode]: !lad.axis && hasNumbers, [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
               :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
               @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
               <span :class="$style.tierName" :title="r.tiers.map(t => tierName(firstLive(t))).join(' · ')">
@@ -1603,6 +1603,7 @@ function openFolder () {
   cursor: pointer;
 }
 .ladderRow, .ladderHead { grid-template-columns: 7rem 11rem minmax(0, 1fr) minmax(4rem, max-content); }
+.ladderRow.numbersMode, .ladderHead.numbersMode { grid-template-columns: minmax(12rem, 15rem) 11rem minmax(0, 1fr) minmax(4rem, max-content); }
 .ladderRow.ladderStack, .ladderHead.ladderStack { grid-template-columns: 6rem 4.5rem 11rem minmax(0, 1fr) minmax(4rem, max-content); }
 .ladderHead {
   display: grid;

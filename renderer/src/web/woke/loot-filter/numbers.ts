@@ -13,14 +13,12 @@ export interface NumberSpec {
 
 // Keys the game takes one whole number for, with the range it accepts.
 export const NUMBER_KEYS: Record<string, NumberSpec> = {
-  ItemLevel: { label: 'Item level', min: 1, max: 100 },
-  DropLevel: { label: 'Drop level', min: 1, max: 100 },
-  AreaLevel: { label: 'Area level', min: 1, max: 100 },
-  Quality: { label: 'Quality', min: 0, max: 30 },
-  GemLevel: { label: 'Gem level', min: 1, max: 21 },
+  // What the item is first (passives, tier, gem level), where it dropped last.
+  EnchantmentPassiveNum: { label: 'Passives', min: 1, max: 12 },
   MapTier: { label: 'Map tier', min: 1, max: 17 },
   WaystoneTier: { label: 'Waystone tier', min: 1, max: 16 },
-  EnchantmentPassiveNum: { label: 'Passives', min: 1, max: 12 },
+  GemLevel: { label: 'Gem level', min: 1, max: 21 },
+  Quality: { label: 'Quality', min: 0, max: 30 },
   LinkedSockets: { label: 'Linked sockets', min: 0, max: 6 },
   CorruptedMods: { label: 'Corrupted mods', min: 0, max: 6 },
   MemoryStrands: { label: 'Memory strands', min: 0, max: 100 },
@@ -29,7 +27,10 @@ export const NUMBER_KEYS: Record<string, NumberSpec> = {
   BaseEnergyShield: { label: 'Base energy shield', min: 0, max: 1000 },
   BaseWard: { label: 'Base ward', min: 0, max: 1000 },
   BaseDefencePercentile: { label: 'Defence roll %', min: 0, max: 100 },
-  UnidentifiedItemTier: { label: 'Unidentified tier', min: 1, max: 5 }
+  UnidentifiedItemTier: { label: 'Unidentified tier', min: 1, max: 5 },
+  ItemLevel: { label: 'Item level', min: 1, max: 100 },
+  DropLevel: { label: 'Drop level', min: 1, max: 100 },
+  AreaLevel: { label: 'Area level', min: 1, max: 100 }
 }
 
 // One condition as a bound on its number, or null when it isn't one: a list
@@ -68,7 +69,8 @@ export function numberChecks (conditions: FilterCondition[]): NumberCheck[] {
     if (prev) prev.value = bound === 'min' ? Math.max(prev.value, value) : bound === 'max' ? Math.min(prev.value, value) : value
     else out.push({ key: c.key, bound, value })
   }
-  return out
+  const order = Object.keys(NUMBER_KEYS)
+  return out.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
 }
 
 const OP: Record<NumberBound, string> = { min: '>=', max: '<=', exact: '==' }
