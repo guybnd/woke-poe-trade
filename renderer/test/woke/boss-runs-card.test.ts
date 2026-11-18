@@ -86,4 +86,14 @@ describe('boss runs card', () => {
     // Median of 100 and 900, without the thin 300.
     expect(killDropPrice({ name: 'Forbidden Flame' }, prices, prefs({ skipThin: true, priceModes: { 'Forbidden Flame': 'median' } }))).toBe(500)
   })
+
+  it('3.30: both Atziris live in the Temple, with no Sacrifice or Mortal fragments', () => {
+    for (const id of ['atziri', 'uber-atziri']) {
+      expect(boss(id).entry).toEqual([{ name: 'Chronicle of Atzoatl', qty: 1 }])
+      const names = boss(id).drops.map(d => d.name)
+      expect(names.filter(n => /^(Mortal|Sacrifice at) /.test(n))).toEqual([])
+      expect(names).toContain('Royal Visage')
+    }
+    expect(boss('uber-atziri').drops.map(d => d.name)).not.toContain('Soul Core of Instability')
+  })
 })

@@ -41,7 +41,7 @@ export const RECIPES: Recipe[] = [
   R("Blacksmith's Whetstone", ['Weapons whose quality adds up to 40%'], { note: 'Or one weapon at 20% quality.', words: 'weapon quality' }),
   R("Glassblower's Bauble", ['Flasks whose quality adds up to 40%'], { note: 'Or one flask at 20% quality.', words: 'flask quality' }),
   R("Gemcutter's Prism", ['Skill gems whose quality adds up to 40%'], { note: 'Or one gem at 20% quality.', words: 'gcp, gem quality' }),
-  R('Vaal Orb', ['7 Vaal skill gems'], { note: 'Or 1 Sacrifice fragment (Sacrifice at Dawn, Noon, Dusk or Midnight).', words: 'vaal gems, sacrifice' }),
+  R('Vaal Orb', ['5 Vaal skill gems'], { words: 'vaal gems' }),
   // ---- currency exchange at vendors ----
   R('Orb of Alchemy', ['1 Orb of Regret'], { note: 'Clarissa, Act 3.' }),
   R('Orb of Regret', ['2 Orb of Scouring'], { note: 'Yeena, Act 2.' }),

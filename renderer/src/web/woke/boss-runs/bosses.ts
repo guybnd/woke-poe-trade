@@ -129,14 +129,12 @@ export const BOSSES: Boss[] = ([
     id: 'uber-atziri',
     name: 'Uber Atziri',
     tier: 'uber',
-    entry: [
-      { name: 'Mortal Hope', qty: 1 },
-      { name: 'Mortal Grief', qty: 1 },
-      { name: 'Mortal Rage', qty: 1 },
-      { name: 'Mortal Ignorance', qty: 1 }
-    ],
+    // 3.30: in a Temple of Atzoatl with the Cradle of Creation (area level
+    // 84). The Chronicle that opens the temple is the entry; it also pays for
+    // every other room.
+    entry: [{ name: 'Chronicle of Atzoatl', qty: 1 }],
     runSeconds: 240,
-    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'uber-atziri', kills: 60, note: 'Small sample: drops not seen in it have no rate.' },
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'uber-atziri', kills: 60, note: 'Measured in 3.29, before Atziri moved to the Temple. Small sample: drops not seen in it have no rate. The Chronicle opens the whole temple, not only this fight.' },
     drops: [
       { name: 'The Vertex', chance: 0.4167 },
       { name: "Atziri's Splendour", chance: 0.35 },
@@ -149,7 +147,12 @@ export const BOSSES: Boss[] = ([
       { name: 'The Price of Devotion', chance: null },
       { name: 'Triskaidekaphobia', chance: null },
       { name: 'Greater Spell Echo Support', chance: null, variant: '1' },
-      { name: 'Vaal Sacrifice Support', chance: null, variant: '1' }
+      { name: 'Vaal Sacrifice Support', chance: null, variant: '1' },
+      // 3.30: Cradle of Creation temples (area level 84).
+      { name: 'Royal Visage', chance: null },
+      { name: 'Soul Core of Intellect', chance: null },
+      { name: 'Soul Core of Might', chance: null },
+      { name: 'Soul Core of Finesse', chance: null }
     ]
   },
   {
@@ -360,25 +363,24 @@ export const BOSSES: Boss[] = ([
     id: 'atziri',
     name: 'Atziri',
     tier: 'pinnacle',
-    entry: [
-      { name: 'Sacrifice at Dusk', qty: 1 },
-      { name: 'Sacrifice at Dawn', qty: 1 },
-      { name: 'Sacrifice at Noon', qty: 1 },
-      { name: 'Sacrifice at Midnight', qty: 1 }
-    ],
+    // 3.30: Atziri lives in the Temple of Atzoatl. Sacrifice and Mortal
+    // fragments are gone.
+    entry: [{ name: 'Chronicle of Atzoatl', qty: 1 }],
     runSeconds: 180,
-    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'atziri', kills: null },
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'atziri', kills: null, note: 'The Chronicle opens the whole temple, not only this fight.' },
     drops: [
-      { name: 'Mortal Hope', chance: null },
-      { name: 'Mortal Grief', chance: null },
-      { name: 'Mortal Rage', chance: null },
-      { name: 'Mortal Ignorance', chance: null },
       { name: "Atziri's Promise", chance: null },
       { name: "Atziri's Step", chance: null },
       { name: "Doryani's Catalyst", chance: null },
       { name: "Doryani's Invitation", chance: null },
       { name: 'Pledge of Hands', chance: null },
-      { name: 'Triumvirate Authority', chance: null }
+      { name: 'Triumvirate Authority', chance: null },
+      // 3.30: Royal Visage in level 81+ temples, a Soul Core in level 80+.
+      { name: 'Royal Visage', chance: null },
+      { name: 'Soul Core of Finesse', chance: null },
+      { name: 'Soul Core of Instability', chance: null },
+      { name: 'Soul Core of Intellect', chance: null },
+      { name: 'Soul Core of Might', chance: null }
     ]
   },
   {

@@ -160,10 +160,6 @@ export const ESTIMATED_RATES: Record<string, Record<string, number>> = {
     'Voidstorm Support': 10
   },
   'atziri': {
-    'Mortal Hope': 6,
-    'Mortal Grief': 18,
-    'Mortal Rage': 8,
-    'Mortal Ignorance': 3,
     "Atziri's Promise": 48,
     "Atziri's Step": 15,
     "Doryani's Catalyst": 3,

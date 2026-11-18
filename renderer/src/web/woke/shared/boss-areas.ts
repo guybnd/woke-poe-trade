@@ -13,6 +13,8 @@ interface Arena {
 }
 
 const ARENAS: Arena[] = [
+  // Before 3.30. Atziri now lives in the Temple of Atzoatl, which isn't
+  // counted as a boss fight (it holds a whole temple run).
   { areaIds: ['MapAtziri1'], names: ['The Apex of Sacrifice'], bosses: ['atziri'] },
   { areaIds: ['MapAtziri2'], names: ['The Alluring Abyss'], bosses: ['uber-atziri'] },
   { areaIds: ['MapWorldsShapersRealm'], names: ["The Shaper's Realm"], bosses: ['shaper', 'uber-shaper'] },
