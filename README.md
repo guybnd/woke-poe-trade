@@ -74,26 +74,26 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | --- | --- | --- |
 | Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
 | Economy | Investments | League-start buys ranked from past leagues |
-| Economy | Lab gems | Divine Font gem values by colour |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
 | Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
 | Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
-| Economy | Farming | Session profit per hour |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |
 | Economy | Stacked decks | Cards from the Stacked Decks you open: profit, big hits and luck |
 | Economy | Session analytics | Profit per map, strategy and hour over time |
+| Economy | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Economy | Boss runs | Profit per boss kill |
 | Mapping | Map mods | Danger strip on price check and map regex |
+| Mapping | Farming | Session profit per hour |
 | Mapping | Map scan | Reads map tooltips on screen |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
 | Mapping | Atlas strategies | Atlas tree, Threads and regex per strategy |
-| Mapping | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Mapping | League mechanics | Prices and picks for each league mechanic |
 | Campaign & lab | Campaign | Next steps for the act you are in |
 | Campaign & lab | Run timer | Act splits and personal bests |
 | Campaign & lab | Lab layouts | Today's poelab layout and reset countdown |
+| Campaign & lab | Lab gems | Divine Font gem values by colour |
 | Campaign & lab | Challenge guide | League challenge guide with your progress |
 | Builds & trade | PoB builds | Your Path of Building folder |
 | Builds & trade | Trade searches | Saved trade site searches |
