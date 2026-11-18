@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-373
 title: 'Tools launcher overhaul: easier to read'
-status: Ready
+status: Done
 priority: None
 effort: M
 assignee: unassigned
@@ -76,9 +76,36 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-18T12:27:49.683Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as a446e0f7. The tools launcher now has five columns with game
+      heading bars, a hover description line, gold pinned names with a blue dot
+      for open windows, and larger text in a 1360px window that never covers the
+      rail. Lab gems moved to Campaign & lab, Farming to Mapping, Wickerman to
+      Economy.
+    completionComment: true
+    date: '2026-11-18T12:42:47.012Z'
+    id: c-2026-11-18t12-42-47-012z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T12:42:47.542Z'
 swimlane: null
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/625'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR** Guy finds the tools launcher (rail grid button: search box + Economy / Mapping / Campaign & lab / Builds & trade / Overlay columns, icons, pins, "Off" labels) hard to read. Mock options in the PoE look, Guy picks, then build.
 
