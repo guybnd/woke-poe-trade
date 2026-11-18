@@ -5,10 +5,11 @@ import { shallowRef } from 'vue'
 // A key row: boxed keys, then what they do.
 export interface HelpKey { keys: string, label: string }
 
-export const helpTip = shallowRef<{ owner: object, text: string, keys?: HelpKey[], anchor: DOMRect } | null>(null)
+// `lines`: each line break in a paragraph starts a new line (item mods, one per line).
+export const helpTip = shallowRef<{ owner: object, text: string, keys?: HelpKey[], anchor: DOMRect, lines?: boolean } | null>(null)
 
-export function showHelp (owner: object, target: HTMLElement, text: string, keys?: HelpKey[]) {
-  helpTip.value = { owner, text, keys, anchor: target.getBoundingClientRect() }
+export function showHelp (owner: object, target: HTMLElement, text: string, keys?: HelpKey[], opts: { lines?: boolean } = {}) {
+  helpTip.value = { owner, text, keys, anchor: target.getBoundingClientRect(), lines: opts.lines }
 }
 
 export function hideHelp (owner?: object) {

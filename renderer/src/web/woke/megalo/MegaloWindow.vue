@@ -291,7 +291,7 @@ function tip (e: Event, r: Scored) {
     ...(edited(r.name) ? [`Your weight: ${weightOf(r)}.`] : []),
     isOn(r.name) ? 'Click to leave it out of the search.' : 'Click to add it to the search.'
   ]
-  showHelp(tipOwner, e.currentTarget as HTMLElement, parts.join('\n\n'))
+  showHelp(tipOwner, e.currentTarget as HTMLElement, parts.join('\n\n'), undefined, { lines: true })
 }
 function untip () { hideHelp(tipOwner) }
 onBeforeUnmount(untip)
