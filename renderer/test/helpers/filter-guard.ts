@@ -66,6 +66,22 @@ export const PRECIOUS: Precious[] = [
     chaos: 0,
     facts: { itemClass: 'Rings', baseType: 'Two-Stone Ring', rarity: 'Rare', identified: false, unidentifiedItemTier: 5, itemLevel: 84, width: 1, height: 1 }
   },
+  // 3.30: bases new to the core pool, gated by drop tier. (Royal Visage isn't
+  // here: NeverSink ranks it tier 3, so quiet mode may take its sound.)
+  {
+    name: 'Simplex Amulet',
+    why: 'NeverSink\'s apex base, new to the core pool in 3.30',
+    rule: 'exoticbases/t1',
+    chaos: 0,
+    facts: { itemClass: 'Amulets', baseType: 'Simplex Amulet', rarity: 'Normal', itemLevel: 84, width: 1, height: 1 }
+  },
+  {
+    name: 'Stygian Vise, item tier 5',
+    why: 'only drops at item tier 5 since 3.30',
+    rule: 'exoticbases/exoticstiered',
+    chaos: 0,
+    facts: { itemClass: 'Belts', baseType: 'Stygian Vise', rarity: 'Rare', identified: false, unidentifiedItemTier: 5, itemLevel: 84, width: 2, height: 1 }
+  },
   {
     name: 'Six-link Assassin\'s Garb',
     why: 'a 6-link on a top base',

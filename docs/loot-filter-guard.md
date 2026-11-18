@@ -29,6 +29,8 @@ Checked on NeverSink 8.21.0a, every strictness (Soft, Regular, Semi-strict, Stri
 | The Maven's Writ | top fragment | `fragments/t1` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Empower Support (level 3) | exceptional gem | `gems->exceptional/t1` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Two-Stone Ring, item tier 5 | NeverSink's best tiered gear (t5r1), the drop PR #426 found muted | `gear->tiered/t5r1` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Simplex Amulet | NeverSink's apex base, new to the core pool in 3.30 | `exoticbases/t1` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Stygian Vise, item tier 5 | only drops at item tier 5 since 3.30 | `exoticbases/exoticstiered` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Six-link Assassin's Garb | a 6-link on a top base | `6l/hightier` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Six-link Reaver Sword while levelling | a 6-link in the campaign, whatever the weapon | `6l/others` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | HIDDEN, silent, no beam | ✓ |
 | Divine Orb while levelling | a Divine in the campaign | `currency/t1exalted` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
