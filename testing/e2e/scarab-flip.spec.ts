@@ -3,6 +3,10 @@
 import type { Page } from '@playwright/test'
 import { test, expect, fixtureText, logFixture } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const DENSE = '**/poe.ninja/poe1/api/economy/current/dense/overviews*'
 const EXCHANGE = '**/poe.ninja/poe1/api/economy/exchange/current/overview*'
 

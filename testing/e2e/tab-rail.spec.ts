@@ -3,6 +3,10 @@
 import { test, expect, fixtureText } from './harness'
 import type { Overlay } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const ITEM = fixtureText('items/rare-ring.txt')
 
 const icon = (overlay: Overlay, name: string) =>

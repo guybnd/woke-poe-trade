@@ -3,6 +3,10 @@
 import { test, expect } from './harness'
 import type { Overlay } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const SEARCH_KEY = 'Ctrl + Space'
 
 // Prices are saved a moment after they load.

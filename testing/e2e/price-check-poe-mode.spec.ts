@@ -3,6 +3,10 @@
 // and a picked one as the usual row with boxes.
 import { test, expect } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const poe = (config: any) => {
   config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeWindowStyle = 'poe'
 }

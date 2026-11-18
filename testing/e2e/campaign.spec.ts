@@ -1,6 +1,10 @@
 // Campaign + run timer, driven by a recorded Client.txt.
 import { test, expect, logFixture } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const CAMPAIGN = { wmType: 'woke-campaign', wmWants: 'show' as const }
 const RUN_TIMER = { wmType: 'woke-run-timer', wmWants: 'show' as const }
 

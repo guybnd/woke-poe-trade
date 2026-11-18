@@ -3,6 +3,10 @@
 // recorded trade site and poe.ninja responses.
 import { test, expect } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 test('currency: Ctrl+D shows the poe.ninja price and bulk exchange offers', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')

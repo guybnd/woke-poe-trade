@@ -1,29 +1,18 @@
 name: Fake-game setup
 description: >
-  Everything the fake-game jobs share: the overlay built, main's code
-  installed without Electron or native hooks (the fake game replaces them),
-  the testing package, the OCR files and Chromium. Run after checkout and
-  setup-node.
+  Everything the fake-game jobs share: the installs (npm-deps, kept between
+  runs), the overlay built, the OCR files and Chromium. Run after checkout
+  and setup-node.
 runs:
   using: composite
   steps:
-  - run: npm ci
-    shell: bash
-    working-directory: ./renderer
+  - uses: ./.github/actions/npm-deps
+    with:
+      dirs: renderer main testing
   - name: Build the overlay
     run: npx vite build
     shell: bash
     working-directory: ./renderer
-  # main's code runs in the fake app with Electron and the native hooks
-  # replaced by the fake game, so their install scripts are skipped.
-  - run: npm ci --ignore-scripts
-    shell: bash
-    working-directory: ./main
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-  - run: npm ci
-    shell: bash
-    working-directory: ./testing
   - name: Cache OCR files
     uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
     with:

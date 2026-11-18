@@ -7,6 +7,10 @@ import path from 'path'
 import { test, expect, FIXTURES } from './harness'
 import type { Overlay } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const DATA = 'https://raw.githubusercontent.com/grindinggear/atlastree-export/master/data.json'
 
 // A link taking the start's neighbours and a few steps out: a real path.

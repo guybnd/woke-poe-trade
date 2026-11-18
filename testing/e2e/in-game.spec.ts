@@ -2,6 +2,10 @@
 // panels that come and go with the zone you're in.
 import { test, expect, logFixture } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 test('regex library: clicking a saved string searches the stash in game', async ({ overlay, fakeApp }) => {
   await overlay.boot({
     overlayActive: true,

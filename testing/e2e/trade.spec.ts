@@ -5,6 +5,10 @@ import fs from 'fs'
 import path from 'path'
 import { test, expect, logFixture } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const LINES = logFixture('client-logs/trade-hideout.txt')
 const upTo = (text: string) => LINES.slice(0, LINES.findIndex(l => l.includes(text)) + 1)
 // A worker's tests share one user data folder, and a reopened offer comes back.

@@ -34,6 +34,10 @@ jobs:
       game: ${{ steps.result.outputs.game }}
       package: ${{ steps.result.outputs.package }}
       site: ${{ steps.files.outputs.site }}
+      # A pull request's own share of the tests (testing/tools/ci-scope.mjs):
+      # "all", nothing (""), or a space-separated list. Pushes run everything.
+      e2e: ${{ steps.scope.outputs.e2e }}
+      unitFiles: ${{ steps.scope.outputs.unit }}
     steps:
     - id: files
       env:
@@ -50,6 +54,7 @@ jobs:
           # GitHub lists at most 3000 files, so a list that long may be cut short.
           files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)') || files=
           if [ -n "$files" ] && [ "$(printf '%s\n' "$files" | wc -l)" -lt 3000 ]; then
+            printf '%s\n' "$files" > "$RUNNER_TEMP/pr-files.txt"
             unit=false
             game=false
             package=false
@@ -60,6 +65,9 @@ jobs:
                 docs/*) site=true ;;
                 testing/fixtures/screens/frames/*|testing/fixtures/lab-layout.jpg) ;;
                 testing/e2e/landing-*.spec.ts) landing=true ;;
+                # Unit tests only: nothing the overlay runs. Before renderer/*,
+                # which would match them too.
+                renderer/test/*) unit=true ;;
                 # The landing page reads the module list, fonts and frame art
                 # from the app, and the version from main.
                 renderer/*) unit=true; game=true; site=true ;;
@@ -93,6 +101,29 @@ jobs:
       run: |
         npm ci
         npx playwright test --list e2e/landing- > /dev/null
+    - if: steps.files.outputs.landing != 'true' && github.event_name == 'pull_request'
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        sparse-checkout: |
+          testing/tools/ci-scope.mjs
+          testing/e2e/scope.json
+        sparse-checkout-cone-mode: false
+    # On a pull request with its whole file list: only the tests it can reach.
+    # Otherwise, and whenever this step fails, everything (the jobs read an
+    # empty output as "all" too).
+    - id: scope
+      continue-on-error: true
+      run: |
+        e2e=all
+        unit=all
+        if [ "$GITHUB_EVENT_NAME" = pull_request ] && [ -s "$RUNNER_TEMP/pr-files.txt" ]; then
+          out=$(node testing/tools/ci-scope.mjs < "$RUNNER_TEMP/pr-files.txt")
+          echo "Scope: $out"
+          e2e=$(node -e 'const s = JSON.parse(process.argv[1]).e2e; console.log(s === "all" ? "all" : s.length ? s.map(f => "e2e/" + f).join(" ") : "none")' "$out")
+          unit=$(node -e 'const s = JSON.parse(process.argv[1]).unit; console.log(s === "all" ? "all" : s.length ? s.join(" ") : "none")' "$out")
+        fi
+        echo "e2e=$e2e" >> "$GITHUB_OUTPUT"
+        echo "unit=$unit" >> "$GITHUB_OUTPUT"
     - id: result
       env:
         UNIT: ${{ steps.files.outputs.unit }}
@@ -147,36 +178,45 @@ jobs:
         cache-dependency-path: |
           renderer/package-lock.json
           main/package-lock.json
-    - run: npm ci
-      working-directory: ./renderer
-    # Before the renderer's checks too: its tests import some of main's code.
-    # Only the TypeScript and plain JS are used; the native modules and Electron
-    # itself aren't needed for that.
-    - run: npm ci --ignore-scripts
-      working-directory: ./main
-      env:
-        ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    # main too, before the renderer's checks: its tests import some of main's
+    # code. Only the TypeScript and plain JS are used; the native modules and
+    # Electron itself aren't needed for that.
+    - uses: ./.github/actions/npm-deps
+      with:
+        dirs: renderer main
     - run: npm run lint
       working-directory: ./renderer
     - name: Type check (app + tests)
       run: npm run typecheck:test
       working-directory: ./renderer
+    # A pull request runs the tests that import what it changed (vitest
+    # related); "all" (or no answer) runs every test, as pushes always do.
     - name: Unit tests
-      run: npm test
+      run: |
+        # A deleted or renamed file can't be traced: everything, then.
+        for f in $SCOPE; do
+          case "$f" in none|all) ;; *) [ -e "$f" ] || SCOPE=all ;; esac
+        done
+        case "$SCOPE" in
+          none) echo "No renderer code or unit tests changed." ;;
+          ''|all) npm test ;;
+          *) npx vitest related --run $SCOPE ;;
+        esac
       working-directory: ./renderer
       env:
+        SCOPE: ${{ needs.changes.outputs.unitFiles }}
         # The loot filter guard's pairs and random mixes: master only.
         WOKE_FULL_GUARD: ${{ github.event_name != 'pull_request' && '1' || '' }}
     - name: Type check (main)
       run: npx tsc --noEmit
       working-directory: ./main
 
-  # The fake-game tests run as three jobs side by side: the overlay tests in
-  # two halves (game-e2e) and the OCR, performance and real Electron checks
-  # (game-checks). "Fake-game tests" waits for all three and fails if any did.
+  # The fake-game tests run side by side: the overlay tests in four parts
+  # (game-e2e) and the OCR, performance and real Electron checks
+  # (game-checks). "Fake-game tests" waits for them all and fails if any did.
   # A master ruleset requires that name, so keep it on the last job.
   game-e2e:
-    name: Fake-game e2e (${{ matrix.shard }}/2)
+    name: Fake-game e2e (${{ matrix.shard }}/4)
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.game != 'false' }}
     runs-on: ubuntu-latest
@@ -184,7 +224,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -197,11 +237,16 @@ jobs:
           testing/package-lock.json
     - uses: ./.github/actions/fake-game-setup
     # The blob report carries screenshots and traces; the last job merges the
-    # halves into one HTML report.
+    # parts into one HTML report.
     - name: Overlay tests on the fake game
-      run: npx playwright test --shard=${{ matrix.shard }}/2 --reporter=blob,github,list
+      if: needs.changes.outputs.e2e != 'none'
+      run: |
+        case "$SCOPE" in ''|all) SCOPE= ;; *) echo "This pull request's specs: $SCOPE" ;; esac
+        npx playwright test --shard=${{ matrix.shard }}/4 --pass-with-no-tests --reporter=blob,github,list $SCOPE
       working-directory: ./testing
-    - name: Upload this half's report
+      env:
+        SCOPE: ${{ needs.changes.outputs.e2e }}
+    - name: Upload this part's report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
@@ -284,11 +329,12 @@ jobs:
         node-version: 22
         cache: npm
         cache-dependency-path: testing/package-lock.json
-    - run: npm ci
-      working-directory: ./testing
-    # A half that was cancelled or broke before its upload leaves nothing here;
+    - uses: ./.github/actions/npm-deps
+      with:
+        dirs: testing
+    # A part that was cancelled or broke before its upload leaves nothing here;
     # the last step still fails the job for it.
-    - name: Get both halves' reports
+    - name: Get every part's report
       continue-on-error: true
       uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:

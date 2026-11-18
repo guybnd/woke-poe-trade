@@ -3,6 +3,10 @@ import path from 'path'
 import { test, expect, FIXTURES } from './harness'
 import type { Overlay } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const BUILDS = process.env.WOKE_POB_DIR ?? path.join(FIXTURES, 'pob')
 const BUILD = process.env.WOKE_POB_BUILD ?? 'Showcase'
 

@@ -81,6 +81,15 @@ Path of Exile is open. Run it from anywhere inside a clone or worktree.
   workflow started by hand, which also builds the Windows package.
 - `woke-check local` or `woke-check cloud` forces one, as does
   `WOKE_CHECKS=local|cloud`. The cloud run needs the work committed.
+- Like a pull request, a local run tests only what the branch reaches: the
+  unit tests importing changed files (`vitest related`) and the fake-game specs
+  `testing/e2e/scope.json` lists for the changed folders, plus a smoke set.
+  Shared code (the UI kit, main, the overlay core, CI) runs everything, as
+  does `-Full`. Pushes to master always run everything.
+
+A new fake-game spec needs a line in `testing/e2e/scope.json` naming the
+folders it covers (a test fails until it has one). Without folders, it runs
+only when everything does.
 
 # How to build
 

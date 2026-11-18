@@ -4,6 +4,8 @@
 #   woke-check            auto: local if PoE is closed, cloud if it is open
 #   woke-check local      lint, type checks, unit tests on this PC (low priority)
 #   woke-check local -E2e also builds the overlay and runs the fake-game tests
+#   woke-check local -Full runs every unit and fake-game test; without it, only
+#                         those this branch's changes reach, as a pull request does
 #   woke-check cloud      push the branch and wait for the Tests workflow on GitHub
 #   woke-check -Rerun     reruns the failed jobs when this commit already failed
 #
@@ -12,6 +14,7 @@
 param(
   [string]$Mode = '',
   [switch]$E2e,
+  [switch]$Full,
   [switch]$Rerun,
   [int]$TimeoutMinutes = 60
 )
@@ -55,15 +58,37 @@ function Invoke-Local {
   # Children inherit this, so the checks give way to anything else running.
   try { (Get-Process -Id $PID).PriorityClass = 'BelowNormal' } catch {}
 
+  # What this branch reaches (testing/tools/ci-scope.mjs), as a pull request
+  # would: its commits since master and anything not committed yet.
+  # PowerShell 5.1 unrolls one-item lists, so "all" is kept as flags.
+  $unitAll = $true; $unitFiles = @()
+  $e2eAll = $true; $e2eSpecs = @()
+  if (-not $Full) {
+    $files = @(& git -C $Root diff --name-only origin/master...HEAD) + @(& git -C $Root diff --name-only HEAD) + @(& git -C $Root ls-files --others --exclude-standard)
+    $files = @($files | Where-Object { $_ } | Sort-Object -Unique)
+    if ($files.Count) {
+      $json = ($files -join "`n") | & node (Join-Path $Root 'testing\tools\ci-scope.mjs')
+      if ($LASTEXITCODE -eq 0 -and $json) {
+        $s = $json | ConvertFrom-Json
+        if (-not ($s.unit -is [string] -and $s.unit -eq 'all')) { $unitAll = $false; $unitFiles = @($s.unit | Where-Object { $_ }) }
+        if (-not ($s.e2e -is [string] -and $s.e2e -eq 'all')) { $e2eAll = $false; $e2eSpecs = @($s.e2e | Where-Object { $_ } | ForEach-Object { "e2e/$_" }) }
+        # Deleted files can't be traced.
+        if (@($unitFiles | Where-Object { -not (Test-Path (Join-Path (Join-Path $Root 'renderer') $_)) }).Count) { $unitAll = $true }
+      }
+    }
+    Say "Unit tests: $(if ($unitAll) { 'all' } else { "the tests of $($unitFiles.Count) changed files" }); fake-game tests: $(if ($e2eAll) { 'all' } else { "$($e2eSpecs.Count) specs" }) (-Full for everything)"
+  }
   $steps = @(
     @{ Name = 'Lint'; Dir = 'renderer'; Cmd = 'npm run lint' },
-    @{ Name = 'Type check (app + tests)'; Dir = 'renderer'; Cmd = 'npm run typecheck:test' },
-    @{ Name = 'Unit tests'; Dir = 'renderer'; Cmd = 'npm test' },
-    @{ Name = 'Type check (main)'; Dir = 'main'; Cmd = 'npx tsc --noEmit' }
+    @{ Name = 'Type check (app + tests)'; Dir = 'renderer'; Cmd = 'npm run typecheck:test' }
   )
-  if ($E2e) {
+  if ($unitAll) { $steps += @{ Name = 'Unit tests'; Dir = 'renderer'; Cmd = 'npm test' } }
+  elseif ($unitFiles.Count) { $steps += @{ Name = 'Unit tests'; Dir = 'renderer'; Cmd = "npx vitest related --run $($unitFiles -join ' ')" } }
+  $steps += @{ Name = 'Type check (main)'; Dir = 'main'; Cmd = 'npx tsc --noEmit' }
+  if ($E2e -and ($e2eAll -or $e2eSpecs.Count)) {
+    $only = if ($e2eAll) { '' } else { ' ' + ($e2eSpecs -join ' ') }
     $steps += @{ Name = 'Build the overlay'; Dir = 'renderer'; Cmd = 'npx vite build' }
-    $steps += @{ Name = 'Fake-game tests'; Dir = 'testing'; Cmd = 'npx playwright test --trace off' }
+    $steps += @{ Name = 'Fake-game tests'; Dir = 'testing'; Cmd = "npx playwright test --trace off$only" }
   }
 
   foreach ($dir in ($steps | ForEach-Object { $_.Dir } | Select-Object -Unique)) {

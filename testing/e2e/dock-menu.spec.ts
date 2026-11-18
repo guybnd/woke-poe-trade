@@ -3,6 +3,10 @@
 import { test, expect, logFixture } from './harness'
 import type { Overlay } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const session = logFixture('client-logs/mapping-session.txt')
 const lineOf = (text: string, from = 0) => session.findIndex((l, i) => i >= from && l.includes(text))
 // The hideout, up to and including "You have entered".

@@ -7,6 +7,10 @@ import zlib from 'zlib'
 import { test, expect, FIXTURES } from './harness'
 import type { FakeApp, Overlay } from './harness'
 
+// Each test boots its own overlay: the file's tests can spread over workers
+// and shards (one file alone otherwise sets how short a shard can be).
+test.describe.configure({ mode: 'parallel' })
+
 const FILTER = process.env.WOKE_FILTER_FIXTURE ?? path.join(FIXTURES, 'filters', 'neversink-sample.filter')
 
 function filterFolder (): string {
