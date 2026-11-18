@@ -70,6 +70,44 @@ describe('planning NeverSink\'s rules', () => {
   })
 })
 
+describe('a rule poe.ninja has no usable price for', () => {
+  const doc = parseFilter(neverSink('1-REGULAR'))
+  // NeverSink ships a few price rules switched on with a list (n12_i84_t1,
+  // n3_i84_t1...); the rest are off and empty until prices fill them.
+  const shipped = (tier: string) => [...blocksOf(doc, 'jewels->clustereco', tier)[0].conditions.find(c => c.key === 'EnchantmentPassiveNode')!.values].sort((a, b) => a.localeCompare(b))
+  const MEDIUM = readClusterLines([line('Minions have 12% increased maximum Life', 'Medium', 5, 84, 300)])
+
+  it('keeps NeverSink\'s list instead of turning the rule off', () => {
+    // Only a Medium price: the Large and Small rules have none at all.
+    const plans = planClusterRules(doc, MEDIUM, ON)
+    expect(shipped('n12_i84_t1').length).toBeGreaterThan(0)
+    expect(plans.find(p => p.block.tier === 'n12_i84_t1')!.nodes).toEqual(shipped('n12_i84_t1'))
+    expect(plans.find(p => p.block.tier === 'n3_i84_t1')!.nodes).toEqual(shipped('n3_i84_t1'))
+    // A rule that does have prices still follows them.
+    expect(plans.find(p => p.block.tier === 'n4_i84_t1')!.nodes).toEqual(['Minion Life'])
+    const after = parseFilter(neverSink('1-REGULAR'))
+    applyClusterPrices(after, MEDIUM, ON)
+    expect(blocksOf(after, 'jewels->clustereco', 'n12_i84_t1')[0].disabled).toBe(false)
+  })
+
+  it('only thin listings count as no price', () => {
+    const thin = readClusterLines([line('Minions deal 10% increased Damage', 'Large', 12, 84, 400, 2)])
+    expect(planClusterRules(doc, thin, ON).find(p => p.block.tier === 'n12_i84_t1')!.nodes).toEqual(shipped('n12_i84_t1'))
+  })
+
+  it('a rule with prices but nothing over the line still turns off', () => {
+    const cheap = readClusterLines([line('Minions deal 10% increased Damage', 'Large', 12, 84, 3)])
+    expect(planClusterRules(doc, cheap, ON).find(p => p.block.tier === 'n12_i84_t1')!.nodes).toEqual([])
+  })
+
+  it('still takes your picks: never drops a type, top adds one', () => {
+    const [first] = shipped('n12_i84_t1')
+    const plan = planClusterRules(doc, MEDIUM, { ...ON, pins: { [`Large|${first}`]: 'never', 'Large|Wand Damage': 'top' } }).find(p => p.block.tier === 'n12_i84_t1')!
+    expect(plan.nodes).not.toContain(first)
+    expect(plan.nodes).toContain('Wand Damage')
+  })
+})
+
 describe('rewriting the filter', () => {
   it.each(LEVELS)('%s: lists what prices say, turns off what has nothing, and the game can read it', (level) => {
     const doc = parseFilter(neverSink(level))
