@@ -60,7 +60,8 @@ describe('own rules', () => {
   it('the builder\'s test set shows what a rule catches', () => {
     const doc = withBlocks(ruleBlocks([{ ...rareRings, conditions: rareRings.conditions.slice(0, 2) }]))
     const hits = everyDrop(83).filter(d => matchItem(doc, d.facts).final?.block.type === RULE_TYPE)
-    expect(hits.map(d => d.facts.baseType).sort()).toEqual(['Iron Ring', 'Two-Stone Ring', 'Vermillion Ring'])
+    // Every rare ring in the table, 3.30's core-pool rings too.
+    expect(hits.map(d => d.facts.baseType).sort()).toEqual(['Cogwork Ring', 'Composite Ring', 'Geodesic Ring', 'Helical Ring', 'Iron Ring', 'Manifold Ring', 'Ratcheting Ring', 'Two-Stone Ring', 'Vermillion Ring'])
     for (const d of hits) expect(d.facts.rarity).toBe('Rare')
   })
 

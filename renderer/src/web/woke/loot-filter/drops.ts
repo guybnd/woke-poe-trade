@@ -3,6 +3,7 @@
 // drops. Seeded, so a reroll is a new pile and two filters can be compared on
 // the same pile.
 import type { FilterRarity, ItemFacts } from './item-facts'
+import { BASE_FACTS } from './base-facts'
 
 interface DropEntry {
   name: string
@@ -21,11 +22,17 @@ interface DropEntry {
   gear?: boolean
   map?: boolean
   gem?: boolean
+  // 3.30: the only drop tier (UnidentifiedItemTier) a magic or rare copy of
+  // this base drops at, when it's gated to one.
+  tier?: number
 }
 
 const C = 'Stackable Currency'
 const DIV = 'Divination Cards'
 const FRAG = 'Map Fragments'
+
+// The ten mechanic Threads of 3.30, by name as the game data has them.
+export const THREADS = ['Abyss', 'Bestiary', 'Betrayal', 'Blight', 'Breach', 'Expedition', 'Incursion', 'Legion', 'Ritual', 'Ultimatum'].map(m => `${m} Thread`)
 
 const TABLE: DropEntry[] = [
   // Currency, roughly by how often it drops.
@@ -44,7 +51,6 @@ const TABLE: DropEntry[] = [
   { name: 'Orb of Fusing', cls: C, w: 1, h: 1, drop: 10, weight: 6 },
   { name: 'Orb of Alchemy', cls: C, w: 1, h: 1, drop: 10, weight: 6 },
   { name: 'Orb of Scouring', cls: C, w: 1, h: 1, drop: 10, weight: 5 },
-  { name: 'Orb of Binding', cls: C, w: 1, h: 1, drop: 10, weight: 5 },
   { name: 'Blessed Orb', cls: C, w: 1, h: 1, drop: 30, weight: 3 },
   { name: 'Chaos Orb', cls: C, w: 1, h: 1, drop: 12, weight: 4 },
   { name: 'Regal Orb', cls: C, w: 1, h: 1, drop: 30, weight: 2.5 },
@@ -74,11 +80,13 @@ const TABLE: DropEntry[] = [
   { name: 'The Hoarder', cls: DIV, w: 1, h: 1, drop: 40, weight: 0.4 },
   { name: 'The Apothecary', cls: DIV, w: 1, h: 1, drop: 68, weight: 0.03 },
   { name: 'The Doctor', cls: DIV, w: 1, h: 1, drop: 75, weight: 0.03 },
-  // Fragments and scarabs.
-  { name: 'Ambush Scarab', cls: FRAG, w: 1, h: 1, drop: 68, weight: 1.5 },
-  { name: 'Abyss Scarab', cls: FRAG, w: 1, h: 1, drop: 68, weight: 1.2 },
-  { name: 'Ambush Scarab of Containment', cls: FRAG, w: 1, h: 1, drop: 70, weight: 0.4 },
-  { name: 'Sacrifice at Dusk', cls: FRAG, w: 1, h: 1, drop: 68, weight: 0.6 },
+  // 3.30 Threads took the scarabs' place (one per mechanic). NeverSink 8.21
+  // lists them as "Map Fragments" "Misc Map Items"; Frayed Thread sits with
+  // the currency.
+  ...THREADS.map((name): DropEntry => ({ name, cls: FRAG, w: 1, h: 1, drop: 68, weight: 0.4 })),
+  { name: 'Frayed Thread', cls: C, w: 1, h: 1, drop: 68, weight: 0.6 },
+  // Atziri's, in level 81+ Temples. Sacrifice and Mortal fragments are gone.
+  { name: 'Royal Visage', cls: C, w: 1, h: 1, drop: 81, weight: 0.02 },
   { name: 'Simulacrum Splinter', cls: C, w: 1, h: 1, drop: 68, weight: 0.8, stack: [1, 3] },
   { name: 'Timeless Karui Splinter', cls: C, w: 1, h: 1, drop: 68, weight: 0.6 },
   // Maps (tier from the area level).
@@ -114,7 +122,19 @@ const TABLE: DropEntry[] = [
   { name: 'Two-Toned Boots', cls: 'Boots', w: 2, h: 2, drop: 70, weight: 1.5, gear: true },
   { name: 'Sorcerer Gloves', cls: 'Gloves', w: 2, h: 2, drop: 70, weight: 2, gear: true },
   { name: 'Fingerless Silk Gloves', cls: 'Gloves', w: 2, h: 2, drop: 70, weight: 1, gear: true },
-  { name: 'Stygian Vise', cls: 'Belts', w: 2, h: 1, drop: 65, weight: 1.5, gear: true },
+  // 3.30 core-pool bases, gated by drop tier rather than area level.
+  // Stygian Vise only drops at tier 5.
+  { name: 'Stygian Vise', cls: 'Belts', w: 2, h: 1, drop: 68, weight: 0.5, gear: true, tier: 5 },
+  { name: 'Cord Belt', cls: 'Belts', w: 2, h: 1, drop: 68, weight: 0.3, gear: true },
+  { name: 'Astrolabe Amulet', cls: 'Amulets', w: 1, h: 1, drop: 75, weight: 0.3, gear: true },
+  { name: 'Focused Amulet', cls: 'Amulets', w: 1, h: 1, drop: 80, weight: 0.2, gear: true },
+  { name: 'Simplex Amulet', cls: 'Amulets', w: 1, h: 1, drop: 80, weight: 0.1, gear: true },
+  { name: 'Cogwork Ring', cls: 'Rings', w: 1, h: 1, drop: 68, weight: 0.3, gear: true },
+  { name: 'Composite Ring', cls: 'Rings', w: 1, h: 1, drop: 68, weight: 0.3, gear: true },
+  { name: 'Geodesic Ring', cls: 'Rings', w: 1, h: 1, drop: 68, weight: 0.3, gear: true },
+  { name: 'Ratcheting Ring', cls: 'Rings', w: 1, h: 1, drop: 68, weight: 0.3, gear: true },
+  { name: 'Helical Ring', cls: 'Rings', w: 1, h: 1, drop: 75, weight: 0.3, gear: true },
+  { name: 'Manifold Ring', cls: 'Rings', w: 1, h: 1, drop: 75, weight: 0.3, gear: true },
   { name: 'Crystal Belt', cls: 'Belts', w: 2, h: 1, drop: 79, weight: 1, gear: true },
   { name: 'Two-Stone Ring', cls: 'Rings', w: 1, h: 1, drop: 20, weight: 2, gear: true },
   { name: 'Vermillion Ring', cls: 'Rings', w: 1, h: 1, drop: 80, weight: 1, gear: true },
@@ -135,6 +155,11 @@ const TABLE: DropEntry[] = [
   { name: 'Hubris Circlet', cls: 'Helmets', w: 2, h: 2, drop: 69, weight: 0.3, rarity: 'Unique' },
   { name: 'Plate Vest', cls: 'Body Armours', w: 2, h: 3, drop: 1, weight: 0.5, rarity: 'Unique' }
 ]
+
+// Every item the table can drop, with the game data namespace it's in.
+export function tableNames (): Array<{ name: string, ns: 'ITEM' | 'GEM' | 'DIVINATION_CARD' }> {
+  return TABLE.filter(e => !e.map).map(e => ({ name: e.name, ns: e.gem ? 'GEM' : e.cls === DIV ? 'DIVINATION_CARD' : 'ITEM' }))
+}
 
 const MAP_NAMES = ['Strand Map', 'Dunes Map', 'Cemetery Map', 'Toxic Sewer Map', 'Crimson Township Map', 'Burial Chambers Map', 'Defiled Cathedral Map', 'Mesa Map', 'Jungle Valley Map', 'Tower Map']
 
@@ -206,11 +231,16 @@ export function everyDrop (areaLevel: number): Drop[] {
     const rarities: FilterRarity[] = e.gear ? ['Normal', 'Magic', 'Rare'] : [e.rarity ?? 'Normal']
     for (const rarity of rarities) {
       const d = makeDrop(out.length, e, areaLevel, r)
-      d.facts = { ...d.facts, rarity }
+      d.facts = { ...d.facts, rarity, unidentifiedItemTier: tierOf(e, rarity) }
       out.push(d)
     }
   }
   return out
+}
+
+// Drop tiers are for magic and rare gear.
+function tierOf (e: DropEntry, rarity: FilterRarity | undefined): number | undefined {
+  return e.tier != null && (rarity === 'Magic' || rarity === 'Rare') ? e.tier : undefined
 }
 
 function makeDrop (id: number, e: DropEntry, areaLevel: number, r: () => number): Drop {
@@ -220,7 +250,8 @@ function makeDrop (id: number, e: DropEntry, areaLevel: number, r: () => number)
     baseType: e.name,
     rarity: e.rarity ?? 'Normal',
     itemLevel: areaLevel,
-    dropLevel: e.drop,
+    // The game's own DropLevel for a base; the area it starts in otherwise.
+    dropLevel: (e.gear || e.rarity === 'Unique' ? BASE_FACTS[e.name]?.[0] : undefined) ?? e.drop,
     width: e.w,
     height: e.h,
     identified: false,
@@ -234,7 +265,7 @@ function makeDrop (id: number, e: DropEntry, areaLevel: number, r: () => number)
     const n = e.stack[0] + Math.floor(r() * (e.stack[1] - e.stack[0] + 1))
     facts.stackSize = n
     if (n > 1) label = `${n}x ${e.name}`
-  } else if (e.cls === C || e.cls === DIV) {
+  } else if (e.cls === C || e.cls === DIV || e.cls === FRAG) {
     facts.stackSize = 1
   }
   if (e.gear) {
@@ -242,6 +273,7 @@ function makeDrop (id: number, e: DropEntry, areaLevel: number, r: () => number)
     facts.rarity = roll < 0.12 ? 'Rare' : roll < 0.5 ? 'Magic' : 'Normal'
     facts.socketGroups = sockets(r, e)
   }
+  facts.unidentifiedItemTier = tierOf(e, facts.rarity)
   if (e.rarity === 'Unique') facts.socketGroups = sockets(r, { ...e, gear: true })
   if (e.map) {
     const tier = Math.max(1, Math.min(16, areaLevel - 67 + Math.floor(r() * 3) - 1))

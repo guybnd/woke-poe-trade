@@ -242,6 +242,10 @@ function block (tier: string, conditions: FilterBlock['conditions']): FilterBloc
 
 const STACK_SIZES = [5, 10, 20, 40]
 const STACKS = /Currency|Divination|Fragment/
+// Items whose stacks stop below the biggest size above: no stack of 40 can
+// drop, so a net rule for one would never fire. Divine Vessel stacks to 20
+// since 3.30.
+const STACK_LIMITS: Readonly<Record<string, number>> = { 'Divine Vessel': 20 }
 
 // A strict filter can hide a stack worth more than the line, item by item too
 // cheap to count. Each item goes in at the smallest stack that's over the line
@@ -264,7 +268,7 @@ export function stackNet (doc: FilterDoc, lookup: PriceLookup, minChaos: number,
           seen.add(base)
           const price = lookup(group, base)
           if (!price || price.chaos >= minChaos || skip?.(group, base)) continue
-          const size = STACK_SIZES.find(n => price.chaos * n >= minChaos)
+          const size = STACK_SIZES.find(n => n <= (STACK_LIMITS[base] ?? Infinity) && price.chaos * n >= minChaos)
           if (size == null) continue
           const v = verdictOf(rules, { ...plainDrop(group, base, itemClass), stackSize: size })
           if (v.state === 'hidden' && !v.mine) (out[size] ??= []).push(base)
@@ -292,7 +296,7 @@ export function lastLookup (last: NetList | undefined, minChaos: number): PriceL
   return (group, base) => (group.unique ? unique : plain).has(base) ? { chaos: minChaos, thin: false } : null
 }
 
-// The net's rules (0-2): currency-like bases (cards, scarabs... never
+// The net's rules (0-2): currency-like bases (cards, Threads... never
 // unique), and unique bases with `Rarity Unique` so a valuable unique's base
 // doesn't light up every white and rare copy.
 export function safetyBlocks (bases: NetList): FilterBlock[] {
