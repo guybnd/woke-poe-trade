@@ -5,7 +5,7 @@ import type { Lookup } from './types'
 
 export const megaloLookup: Lookup = (query, ctx) => {
   const q = query.trim()
-  if (q.length < 4) return []
+  if (q.length < 4 || !ctx.tools.has(MEGALO_TYPE)) return []
   if (matchRank('Megalomaniac searcher', q) < 0 && matchRank('Megalo search', q) < 0) return []
   return [{
     id: 'megalo-searcher',

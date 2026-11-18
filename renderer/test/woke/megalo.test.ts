@@ -127,6 +127,18 @@ describe('megaloQuery', () => {
     const many = Array.from({ length: 50 }, (_, i) => ({ statId: `s${i}`, weight: 5 }))
     expect(megaloQuery(many, { mode: 'count', need: 2, minWeight: 0, maxDiv: null }).stats[0].filters).toHaveLength(MAX_TRADE_FILTERS)
   })
+  it('must-haves are an and group and count toward need', () => {
+    const three = [{ statId: 'a', weight: 100, must: true }, { statId: 'b', weight: 60 }, { statId: 'c', weight: 40 }]
+    expect(megaloQuery(three, { mode: 'count', need: 2, minWeight: 0, maxDiv: null }).stats).toEqual([
+      { type: 'and', filters: [{ id: 'a' }] },
+      { type: 'count', value: { min: 1 }, filters: [{ id: 'b' }, { id: 'c' }] }
+    ])
+    const two = three.map(p => ({ ...p, must: p.statId !== 'c' }))
+    expect(megaloQuery(two, { mode: 'count', need: 2, minWeight: 0, maxDiv: null }).stats).toEqual([{ type: 'and', filters: [{ id: 'a' }, { id: 'b' }] }])
+    const w = megaloQuery(three, { mode: 'weight', need: 2, minWeight: 150, maxDiv: null }).stats
+    expect(w[0]).toEqual({ type: 'and', filters: [{ id: 'a' }] })
+    expect(w[1].filters).toHaveLength(3)
+  })
   it('suggests a total two good fits reach', () => {
     expect(suggestedMinWeight([40, 100, 85])).toBe(185)
   })

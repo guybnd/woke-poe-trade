@@ -9,7 +9,8 @@ export const MEGALO_TYPE = 'woke-megalo'
 export type MegaloSource = 'pob' | 'character' | 'none'
 
 // Your changes to one notable, for one build.
-export interface NotablePick { on?: boolean, weight?: number }
+// `must`: every result has it (right-click); the count or weight covers the rest.
+export interface NotablePick { on?: boolean, weight?: number, must?: boolean }
 
 export type MegaloWidget = Widget & {
   anchor: Anchor

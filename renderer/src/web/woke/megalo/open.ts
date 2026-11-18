@@ -3,10 +3,13 @@
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { AppConfig } from '@/web/Config'
 import { showWithOverlay } from '../dock/dock'
+import { ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '../modules'
 import { MEGALO_TYPE, initMegaloWidget } from './widget'
 
 export function openMegalo (wm: WidgetManager, opts: { pobPath?: string } = {}) {
   const config = AppConfig()
+  // Switched off: asking for it from a build page turns it back on.
+  if (!isWidgetTypeOn(config, MEGALO_TYPE)) setModuleOn(ensureWokeConfig(config), 'megalo', true)
   let w = config.widgets.find(w => w.wmType === MEGALO_TYPE)
   if (!w) {
     config.widgets.push(initMegaloWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))

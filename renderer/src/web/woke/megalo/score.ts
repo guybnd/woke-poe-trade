@@ -127,19 +127,27 @@ export function defaultOn (rows: readonly Scored[], min = 40, max = 12): Set<str
 
 export type SearchMode = 'count' | 'weight'
 
-export interface SearchPick { statId: string, weight: number }
+export interface SearchPick { statId: string, weight: number, must?: boolean }
 
+// Must-haves go in an "and" group: every result has them. In Count mode they
+// count toward "need", so the count group asks only for what's left from the
+// others (none left: no count group). In Weighted sum they also add to the total.
 export function megaloQuery (picks: readonly SearchPick[], opts: { mode: SearchMode, need: number, minWeight: number, maxDiv: number | null }) {
-  const filters = picks.slice(0, MAX_TRADE_FILTERS).map(p => opts.mode === 'weight'
-    ? { id: p.statId, value: { weight: p.weight } }
-    : { id: p.statId })
-  const group = opts.mode === 'weight'
-    ? { type: 'weight', value: { min: opts.minWeight }, filters }
-    : { type: 'count', value: { min: Math.max(1, Math.min(3, opts.need)) }, filters }
+  const must = picks.filter(p => p.must).slice(0, 3)
+  const rest = picks.filter(p => !must.includes(p)).slice(0, MAX_TRADE_FILTERS)
+  const stats: Array<{ type: string, value?: { min: number }, filters: Array<{ id: string, value?: { weight: number } }> }> = []
+  if (must.length) stats.push({ type: 'and', filters: must.map(p => ({ id: p.statId })) })
+  if (opts.mode === 'weight') {
+    const filters = [...must, ...rest].slice(0, MAX_TRADE_FILTERS).map(p => ({ id: p.statId, value: { weight: p.weight } }))
+    stats.push({ type: 'weight', value: { min: opts.minWeight }, filters })
+  } else {
+    const left = Math.max(0, Math.min(3, opts.need) - must.length)
+    if (left > 0 && rest.length) stats.push({ type: 'count', value: { min: Math.min(left, rest.length) }, filters: rest.map(p => ({ id: p.statId })) })
+  }
   return {
     name: MEGALO_NAME,
     type: MEGALO_BASE,
-    stats: [group],
+    stats,
     ...(opts.maxDiv != null && opts.maxDiv > 0
       ? { filters: { trade_filters: { filters: { price: { max: opts.maxDiv, option: 'divine' } } } } }
       : {})

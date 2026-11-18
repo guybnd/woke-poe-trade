@@ -39,17 +39,18 @@
         <section :class="$style.sec">
           <div :class="$style.head">
             <span>Notables</span>
-            <WInfo text="Click a notable to tick or untick it. The number is its weight: the best fit is 100. Click the number to change it; ↺ goes back to the suggestion. Hover a notable to see what it does." />
+            <WInfo text="Right-click a notable to make it a must-have (up to 3): every result has it. Click a notable to tick or untick it. The number is its weight: the best fit is 100. Click the number to change it; ↺ goes back to the suggestion. Hover a notable to see what it does." />
             <WField v-model="filter" :class="$style.end" :style="{ width: '11rem' }" placeholder="Filter notables or tags" icon="fas fa-filter" data-qa="megalo-filter" />
           </div>
           <div v-if="!pool.length" :class="$style.dim">Loading the notable list…</div>
           <div v-for="g in shownGroups" :key="g.tag" :class="$style.ngroup">
             <span :class="$style.glabel">{{ g.tag }}</span>
             <div :class="$style.chips">
-              <span v-for="r in g.rows" :key="r.name" :class="[$style.nchip, { [$style.on]: isOn(r.name) }]" data-qa="megalo-notable"
+              <span v-for="r in g.rows" :key="r.name" :class="[$style.nchip, { [$style.on]: isOn(r.name), [$style.must]: isMust(r.name) }]" data-qa="megalo-notable"
                 role="checkbox" :aria-checked="isOn(r.name)" tabindex="0"
-                @click="toggleOn(r.name)" @keydown.enter.space.prevent="toggleOn(r.name)"
+                @click="toggleOn(r.name)" @keydown.enter.space.prevent="toggleOn(r.name)" @contextmenu.prevent="toggleMust(r.name)"
                 @mouseenter="tip($event, r)" @mouseleave="untip" @focus="tip($event, r)" @blur="untip">
+                <i v-if="isMust(r.name)" class="fas fa-lock" :class="$style.lock" title="Must have: every result has it" />
                 <span>{{ r.name }}</span>
                 <input :class="[$style.wt, { [$style.edited]: edited(r.name) }]" type="number" min="0" max="100" step="5"
                   :value="weightOf(r)" :aria-label="`Weight for ${r.name}`" data-qa="megalo-weight"
@@ -246,8 +247,14 @@ function setPick (name: string, change: NotablePick) {
   const mine = { ...picks.value, [name]: { ...picks.value[name], ...change } }
   config.picks = { ...config.picks, [source.value.key]: mine }
 }
-function isOn (name: string): boolean { return picks.value[name]?.on ?? defaults.value.has(name) }
-function toggleOn (name: string) { setPick(name, { on: !isOn(name) }) }
+function isOn (name: string): boolean { return isMust(name) || (picks.value[name]?.on ?? defaults.value.has(name)) }
+// Unticking a must-have drops the must too.
+function toggleOn (name: string) { setPick(name, isOn(name) ? { on: false, must: undefined } : { on: true }) }
+function isMust (name: string): boolean { return picks.value[name]?.must === true }
+function toggleMust (name: string) {
+  if (!isMust(name) && mustCount.value >= 3) { toast('Up to 3 must-haves: a Megalomaniac has 3 notables', { anchor: panel.value?.el }); return }
+  setPick(name, isMust(name) ? { must: undefined } : { must: true, on: true })
+}
 function edited (name: string): boolean { return picks.value[name]?.weight != null }
 function weightOf (r: Scored): number { return picks.value[r.name]?.weight ?? r.weight }
 function setWeight (r: Scored, raw: string) {
@@ -291,6 +298,7 @@ function tip (e: Event, r: Scored) {
     `Tags: ${r.tags.length ? r.tags.join(', ') : 'none'}`,
     hits.length ? `Suggested ${r.weight}: fits ${hits.join(', ')}.` : 'Fits none of your tags.',
     ...(edited(r.name) ? [`Your weight: ${weightOf(r)}.`] : []),
+    isMust(r.name) ? 'Must have: every result has it. Right-click to undo.' : 'Right-click: must have it.',
     isOn(r.name) ? 'Click to leave it out of the search.' : 'Click to add it to the search.'
   ]
   showHelp(tipOwner, e.currentTarget as HTMLElement, parts.join('\n\n'), undefined, { lines: true })
@@ -299,7 +307,8 @@ function untip () { hideHelp(tipOwner) }
 onBeforeUnmount(untip)
 
 // ---- search ----
-const ticked = computed(() => scoredAll.value.filter(r => isOn(r.name)).sort((a, b) => weightOf(b) - weightOf(a)))
+const ticked = computed(() => scoredAll.value.filter(r => isOn(r.name)).sort((a, b) => Number(isMust(b.name)) - Number(isMust(a.name)) || weightOf(b) - weightOf(a)))
+const mustCount = computed(() => ticked.value.filter(r => isMust(r.name)).length)
 const minSuggested = computed(() => suggestedMinWeight(ticked.value.map(weightOf)))
 const minWeight = computed(() => config.minWeight ?? minSuggested.value)
 
@@ -310,11 +319,15 @@ const summary = computed(() => {
   const n = ticked.value.length
   if (!n) return 'Tick at least one notable to search.'
   const over = n > MAX_TRADE_FILTERS ? ` Only the top ${MAX_TRADE_FILTERS} go in: the trade site takes no more.` : ''
+  const must = ticked.value.filter(r => isMust(r.name)).map(r => r.name)
+  const has = must.length ? `Jewels with ${must.join(' and ')}` : 'Jewels'
   if (config.mode === 'count') {
     const need = Math.min(config.need, n)
+    const left = Math.min(Math.max(0, need - must.length), n - must.length)
+    if (must.length) return left > 0 ? `${has}, and ${left} more of the other ${n - must.length}.${over}` : `${has}.${over}`
     return `Jewels with at least ${need} of these ${n} notables.${over}`
   }
-  return `Jewels whose ticked notables add up to ${minWeight.value} or more, out of ${n}.${over}`
+  return `${has}${must.length ? ',' : ''} whose ticked notables add up to ${minWeight.value} or more, out of ${n}.${over}`
 })
 
 function statId (name: string): string | null {
@@ -328,7 +341,7 @@ function searchLink (quiet = false): string {
   const say = (text: string) => { if (!quiet) toast(text, { anchor: panel.value?.el }) }
   const league = leagues.selectedId.value
   if (!league) { say('Pick a league in the settings first'); return '' }
-  const picksForTrade = ticked.value.flatMap(r => { const id = statId(r.name); return id ? [{ statId: id, weight: weightOf(r) }] : [] })
+  const picksForTrade = ticked.value.flatMap(r => { const id = statId(r.name); return id ? [{ statId: id, weight: weightOf(r), must: isMust(r.name) }] : [] })
   if (!picksForTrade.length) { say('Tick at least one notable first'); return '' }
   const q = megaloQuery(picksForTrade, { mode: config.mode, need: Math.min(config.need, picksForTrade.length), minWeight: minWeight.value, maxDiv: config.maxDiv })
   // The international site takes English names, a regional one its own.
@@ -375,6 +388,8 @@ const sourceLine = computed(() => source.value.label)
 }
 .nchip:hover, .nchip:focus-visible { color: var(--w-fg); outline: none; border-color: var(--w-line-strong); }
 .nchip.on { color: var(--w-fg); border-color: var(--w-accent); background: var(--w-accent-soft); }
+.nchip.must { border-color: var(--w-gold-hi); box-shadow: inset 0 0 0 1px var(--w-gold-hi); }
+.lock { color: var(--w-gold-hi); font-size: 0.8em; }
 .wt {
   width: 3.1em; background: transparent; border: 1px solid transparent; color: var(--w-gold-hi);
   font: inherit; font-variant-numeric: tabular-nums; text-align: right; padding: 0 2px;

@@ -106,9 +106,9 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library'] },
-  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman'] },
-  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
+  { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman', 'megalo'] },
+  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
 
