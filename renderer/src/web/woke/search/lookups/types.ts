@@ -41,7 +41,9 @@ export type LookupAction =
   // A trade search for a captured beast by its English name.
   { label: string, trade: string } |
   // Opens a tool by its widget type, when it's switched on.
-  { label: string, tool: string }
+  { label: string, tool: string } |
+  // Opens one of your saved items in its tool (shared/saved-open).
+  { label: string, open: { tool: string, id: string } }
 
 export interface LookupCard {
   // Unique within the palette's results.

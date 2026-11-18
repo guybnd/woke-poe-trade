@@ -88,12 +88,13 @@ import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WField, WChip, WKbd, WEmpty, WButton, openMenu, toast } from '../ui'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
-import { isUnder } from '../shared/saved-tree'
+import { onSavedOpen } from '../shared/saved-open'
+import { isUnder, itemKey } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { ATLAS_FOLDER, POB_FOLDER } from './folder-names'
 import { openPoeReWindow } from './poe-re'
 import { useCopy } from '../ui/copy'
-import { GAME_PATCH, MAX_SEARCH_LENGTH, canNegate, effectiveText, emptyEntry, matchesFilter } from './widget'
+import { GAME_PATCH, MAX_SEARCH_LENGTH, REGEX_LIBRARY_TYPE, canNegate, effectiveText, emptyEntry, matchesFilter } from './widget'
 import type { RegexEntry } from './widget'
 import DockItem from '../dock/DockItem.vue'
 import { saveDock } from '../dock/dock'
@@ -182,6 +183,17 @@ const tree = useSavedTree<RegexEntry>({
   folderLocked: path => isLocked(path)
     ? 'Atlas strategies and PoB builds keep their regexes in this folder: rename or move them there'
     : null
+})
+
+// Picked in the search palette: show it, unfolded and selected.
+onSavedOpen(REGEX_LIBRARY_TYPE, (id) => {
+  const e = props.config.entries.find(e => String(e.id) === id)
+  if (!e) return
+  filter.value = ''
+  tree.openFolder(e.category)
+  selectedId.value = e.id
+  wm.show(props.config.wmId)
+  tree.focusRow(itemKey(e.id))
 })
 
 function copyMany (list: RegexEntry[]) {

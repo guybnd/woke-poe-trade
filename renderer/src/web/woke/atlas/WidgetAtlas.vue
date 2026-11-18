@@ -30,7 +30,8 @@ import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 import { useWidgetVisible } from '../shared/visible-clock'
 import { regexesIn } from '../regex-library/folders'
-import { migrateAtlasWidget, regexFolderOf } from './widget'
+import { ATLAS_TYPE, migrateAtlasWidget, regexFolderOf } from './widget'
+import { onSavedOpen, unfold } from '../shared/saved-open'
 
 const AtlasWindow = defineAsyncComponent(() => import('./AtlasWindow.vue'))
 const AtlasCard = defineAsyncComponent(() => import('./AtlasCard.vue'))
@@ -51,6 +52,15 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   wm.show(props.config.wmId)
 }
 migrateAtlasWidget(props.config)
+
+// Picked in the search palette: select it, unfold its folder, show the window.
+onSavedOpen(ATLAS_TYPE, (id) => {
+  const s = props.config.strategies.find(s => String(s.id) === id)
+  if (!s) return
+  props.config.selectedId = s.id
+  props.config.closedFolders = unfold(props.config.closedFolders, s.folder)
+  wm.show(props.config.wmId)
+})
 
 // Mounted from the first time it's on screen, and kept.
 const visible = useWidgetVisible(() => props.config)

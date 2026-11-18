@@ -11,6 +11,7 @@
     "tip-data": "node scripts/build-tip-data.mjs",
     "craft-data": "node scripts/build-craft-data.mjs",
     "bestiary-data": "node scripts/build-bestiary-data.mjs",
+    "pantheon-data": "node scripts/build-pantheon-data.mjs",
     "mod-tiers": "node scripts/build-mod-tiers.mjs",
     "drop-data": "node scripts/build-drop-data.mjs",
     "tree-data": "node scripts/build-tree-data.mjs",

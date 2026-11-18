@@ -106,7 +106,8 @@ import { showWithOverlay } from '../dock/dock'
 import { toggleBuildTree, treeOn } from './tree-toggle'
 import { useActiveBuild } from './active'
 import { statLine } from './build-model'
-import { buildMatches, describe, groupBuilds, migratePobWidget, moveBuildRefs, pobApi, sortBuilds, treeHotkeyOf } from './widget'
+import { POB_BUILDS_TYPE, buildMatches, describe, groupBuilds, lastBuildList, migratePobWidget, moveBuildRefs, pobApi, sortBuilds, treeHotkeyOf } from './widget'
+import { onSavedOpen } from '../shared/saved-open'
 import type { PobBuildEntry, PobDetails } from './widget'
 
 // The tree loads on first open: it's big and most sessions never open it.
@@ -357,6 +358,7 @@ async function refresh () {
     const res = await pobApi.list(props.config)
     const before = selectedBuild.value?.mtime
     builds.value = res.builds
+    lastBuildList.value = { at: Date.now(), builds: res.builds }
     dir.value = res.dir
     // PoB saved the build you are looking at.
     const now = selectedBuild.value
@@ -380,6 +382,15 @@ function openOnActive () {
   const rel = props.config.activeBuild
   if (!selected.value && rel && builds.value.some(b => b.relPath === rel)) selected.value = rel
 }
+
+// Picked in the search palette: show its details, its folder unfolded.
+onSavedOpen(POB_BUILDS_TYPE, (relPath) => {
+  filter.value = ''
+  const folder = builds.value.find(b => b.relPath === relPath)?.folder ?? relPath.split('/').slice(0, -1).join('/')
+  tree.openFolder(folder)
+  selected.value = relPath
+  wm.show(props.config.wmId)
+})
 
 function select (b: PobBuildEntry) {
   selected.value = selected.value === b.relPath ? null : b.relPath

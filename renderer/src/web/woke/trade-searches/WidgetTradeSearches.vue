@@ -107,6 +107,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import { inject, computed, watch, shallowRef, nextTick, onUnmounted } from 'vue'
 import { removeEntries } from '../shared/saved-list'
 import { useSavedTree } from '../shared/use-saved-tree'
+import { onSavedOpen } from '../shared/saved-open'
 import { cleanPath, isUnder, movedPath } from '../shared/saved-tree'
 import SavedTree from '../shared/SavedTree.vue'
 import { nextId } from '../shared/library'
@@ -123,7 +124,7 @@ import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, saveDock } from '../dock/dock'
 import { useLeagues } from '@/web/background/Leagues'
-import { FOLDER_ICONS, ensureFolder, folderIcon, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, parseHotkeyTarget, pinnedFirst, sortEntries, withLeague } from './widget'
+import { FOLDER_ICONS, TRADE_SEARCHES_TYPE, ensureFolder, folderIcon, inView, isLiveSearch, isValidUrl, leagueOf, matchesFilter, parseHotkeyTarget, pinnedFirst, sortEntries, withLeague } from './widget'
 import type { OpenTarget, SearchSort, TradeSearchEntry } from './widget'
 
 const props = defineProps<{
@@ -418,6 +419,12 @@ function open (entry: TradeSearchEntry, where: OpenTarget) {
     if (webviewEl.value) webviewEl.value.src = url
   })
 }
+
+// Picked in the search palette: open it, as a click on it would.
+onSavedOpen(TRADE_SEARCHES_TYPE, (id) => {
+  const entry = props.config.entries.find(e => String(e.id) === id)
+  if (entry) open(entry, 'overlay')
+})
 
 function closeBrowser () {
   openId.value = null

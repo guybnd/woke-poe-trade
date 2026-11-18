@@ -10,6 +10,8 @@ export interface Example {
   live?: boolean
   // A hint, not a search: picking it only puts the cursor in the box.
   hint?: boolean
+  // A hint's card title.
+  title?: string
 }
 
 export const EXAMPLES: Example[] = [
@@ -21,8 +23,11 @@ export const EXAMPLES: Example[] = [
   { query: 'herald of ash', shows: 'Quest reward and vendors, by class', icon: 'fas fa-gem' },
   { query: 'resolute technique', shows: 'Keystone stats; uniques that grant it', icon: 'fas fa-dharmachakra' },
   { query: 'lord of drought', shows: 'Cluster jewel notable stats', icon: 'fas fa-circle-nodes' },
+  { query: 'the coast', shows: 'Act, area level, waypoint, next zones', icon: 'fas fa-map-location-dot' },
+  { query: 'soul of lunaris', shows: 'Pantheon powers; maps for the upgrade souls', icon: 'fas fa-sun' },
   { query: 'lab reset', shows: 'Time to the lab layout reset', icon: 'fas fa-hourglass-half' },
   { query: 'market', shows: 'Opens Market', icon: 'fas fa-chart-line' },
+  { query: 'a saved name or folder', shows: 'Your regexes, trade searches, PoB builds, atlas strategies', icon: 'fas fa-bookmark', hint: true, title: 'Find your saved items' },
   { query: 'any words', shows: 'poewiki and poedb search', icon: 'fas fa-book', hint: true }
 ]
 
@@ -36,7 +41,7 @@ export function exampleCards (answer: (query: string) => string | null = () => n
     name: e.query,
     sub: (e.live ? answer(e.query) : null) ?? e.shows,
     icon: e.icon,
-    title: e.hint ? 'Search the web' : `Try "${e.query}"`,
+    title: e.hint ? (e.title ?? 'Search the web') : `Try "${e.query}"`,
     sections: [{ text: [e.shows] }],
     actions: [{ label: e.hint ? 'Type anything' : `Search "${e.query}"`, search: e.hint ? '' : e.query }]
   }))

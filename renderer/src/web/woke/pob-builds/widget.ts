@@ -1,4 +1,5 @@
 import type { Widget, Anchor } from '@/web/overlay/widgets'
+import { shallowRef } from 'vue'
 import { hostRequest } from '../shared/host'
 
 export const POB_BUILDS_TYPE = 'woke-pob-builds'
@@ -202,6 +203,10 @@ export interface PobDetails {
 function dirArg (cfg: PobBuildsWidget) {
   return cfg.buildsDir || undefined
 }
+
+// The last build list read (by the PoB builds window or the search palette),
+// so the palette can search builds without reading the folder every time.
+export const lastBuildList = shallowRef<{ at: number, builds: PobBuildEntry[] } | null>(null)
 
 export const pobApi = {
   list: (cfg: PobBuildsWidget) =>
