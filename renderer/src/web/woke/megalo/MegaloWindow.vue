@@ -99,6 +99,7 @@ import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 import Widget from '@/web/overlay/Widget.vue'
 import { STAT_BY_REF_V2, ITEM_BY_REF } from '@/assets/data'
 import { AppConfig, poeWebApi } from '@/web/Config'
+import type { PriceCheckWidget } from '@/web/overlay/widgets'
 import { useLeagues } from '@/web/background/Leagues'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import { WButton, WChip, WField, WInfo, WPanel, WSegmented, toast } from '../ui'
@@ -350,12 +351,19 @@ function searchLink (quiet = false): string {
     q.name = ITEM_BY_REF('UNIQUE', MEGALO_NAME)?.[0]?.name ?? MEGALO_NAME
     q.type = ITEM_BY_REF('ITEM', MEGALO_BASE)?.[0]?.name ?? MEGALO_BASE
   }
-  return tradeUrl(league, q, getTradeEndpoint())
+  const full = { ...q, status: { option: tradeStatus() } }
+  return tradeUrl(league, full, getTradeEndpoint())
 }
 
 function search () {
   const link = searchLink()
   if (link) window.open(link)
+}
+
+// The same listings as the price check: Instant buyout when that's its
+// setting (the default), else any seller who's online.
+function tradeStatus (): 'securable' | 'available' {
+  return AppConfig<PriceCheckWidget>('price-check')?.merchantOnly === false ? 'available' : 'securable'
 }
 
 // "Megalomaniac: Feasting Fiends, Renewal +3 (2 of 5)" for the save box.
