@@ -74,10 +74,19 @@ describe('cluster jewel type picker', () => {
     expect(filters.searchExact.baseTypeTrade).toBe('Medium Cluster Jewel')
     const passives = rows().find(s => s.statRef === 'Adds # Passive Skills')!
     expect(passives.roll!.min).toBe(4)
-    expect(passives.roll!.max).toBe('')
+    expect(passives.roll!.max).toBe(6)
+    // The copy's own count stays its value (results' Yours); the line reads the range.
+    expect(passives.roll!.value).toBe(8)
+    expect(passives.text).toBe('Adds 4-6 Passive Skills')
     const body = createTradeRequest(filters, stats)
     expect(body.query.type).toBe('Medium Cluster Jewel')
     expect(ids(body)).toContain(type('Medium', 'Critical Chance').tradeId[0])
+    applyClusterType(filters, stats, 'Large', 'Small', type('Small', 'Life'))
+    expect([passives.roll!.min, passives.roll!.max, passives.roll!.value]).toEqual([2, 3, 8])
+    // The copied jewel's notable places don't describe another jewel.
+    expect(rows().find(s => s.statRef === '1 Added Passive Skill is Blowback')!.clusterSpot).toBeUndefined()
+    applyClusterType(filters, stats, 'Large', 'Large', type('Large', 'Fire Damage'))
+    expect(rows().find(s => s.statRef === '1 Added Passive Skill is Blowback')!.clusterSpot).toBeDefined()
   })
 
   it('picking the copied size and type puts every change back', () => {
@@ -85,13 +94,14 @@ describe('cluster jewel type picker', () => {
     const notable = rows().find(s => s.statRef.startsWith('1 Added Passive Skill is '))!
     notable.disabled = false
     const passives = rows().find(s => s.statRef === 'Adds # Passive Skills')!
-    const before = { min: passives.roll!.min, max: passives.roll!.max }
+    const before = JSON.stringify(passives.roll)
     const enchBefore = JSON.stringify(createTradeRequest(filters, stats))
     applyClusterType(filters, stats, 'Large', 'Small', type('Small', 'Life'))
     applyClusterType(filters, stats, 'Large', 'Medium', type('Medium', 'Minion Life'))
     applyClusterType(filters, stats, 'Large', 'Large', type('Large', 'Fire Damage'))
     expect(notable.disabled).toBe(false)
-    expect({ min: passives.roll!.min, max: passives.roll!.max }).toEqual(before)
+    expect(JSON.stringify(passives.roll)).toBe(before)
+    expect(passives.text).toBe('Adds # Passive Skills')
     expect(JSON.stringify(createTradeRequest(filters, stats))).toBe(enchBefore)
   })
 

@@ -15,8 +15,12 @@ const NOTABLE = '1 Added Passive Skill is '
 const PASSIVES = 'Adds # Passive Skills'
 // Medium and Large only: a Small jewel never rolls it.
 const EFFECT = 'Added Small Passive Skills have '
-// The fewest passives a jewel of each size adds: any jewel of that size.
-const MIN_PASSIVES: Record<ClusterSize, number> = { Small: 2, Medium: 4, Large: 8 }
+// How many passives a jewel of each size adds.
+const PASSIVE_RANGE: Record<ClusterSize, { min: number, max: number }> = {
+  Small: { min: 2, max: 3 },
+  Medium: { min: 4, max: 6 },
+  Large: { min: 8, max: 12 }
+}
 
 export interface ClusterPick {
   name: string
@@ -78,7 +82,9 @@ interface Own {
   enchant: Pick<StatFilter, 'tradeId' | 'statRef' | 'text' | 'sources' | 'disabled'> | null
   /** Every row's tick, to put back. */
   ticks: Map<StatFilter, boolean>
-  passives: { min: number | '' | undefined, max: number | '' | undefined } | null
+  /** Where each notable sits on the copied jewel (spots.ts). */
+  spots: Map<StatFilter, NonNullable<StatFilter['clusterSpot']>>
+  passives: (Pick<NonNullable<StatFilter['roll']>, 'min' | 'max' | 'default' | 'bounds'> & { text: string }) | null
 }
 const OWN = new WeakMap<ItemFilters, Own>()
 // The size picked last, per search; the copied jewel's until a pick.
@@ -113,7 +119,16 @@ function remember (filters: ItemFilters, stats: FilterOrGroup[], size: ClusterSi
     relaxed: filters.searchRelaxed?.disabled,
     enchant: ench ? { tradeId: [...ench.tradeId], statRef: ench.statRef, text: ench.text, sources: ench.sources, disabled: ench.disabled } : null,
     ticks: new Map(list.map(s => [s, s.disabled])),
-    passives: passives?.roll ? { min: passives.roll.min, max: passives.roll.max } : null
+    spots: new Map(list.filter(s => s.clusterSpot).map(s => [s, s.clusterSpot!])),
+    passives: passives?.roll
+      ? {
+          text: passives.text,
+          min: passives.roll.min,
+          max: passives.roll.max,
+          default: { ...passives.roll.default },
+          bounds: passives.roll.bounds ? { ...passives.roll.bounds } : undefined
+        }
+      : null
   }
   OWN.set(filters, own)
   return own
@@ -171,6 +186,8 @@ export function applyClusterType (filters: ItemFilters, stats: FilterOrGroup[], 
   // on a Small jewel, no small passive effect (it never rolls there).
   for (const s of list) {
     if (s.statRef.startsWith(GRANT) || s.statRef === PASSIVES) continue
+    // A notable's place is the copied jewel's: shown only while that jewel is searched.
+    if (own.spots.has(s)) s.clusterSpot = isOwn ? own.spots.get(s) : undefined
     if (isOwn) {
       s.disabled = own.ticks.get(s) ?? s.disabled
     } else if (s.statRef.startsWith(NOTABLE) || (size === 'Small' && s.statRef.startsWith(EFFECT))) {
@@ -178,15 +195,19 @@ export function applyClusterType (filters: ItemFilters, stats: FilterOrGroup[], 
     }
   }
 
-  // Passive count: the copy's box for its own size, any count for another.
+  // Passive count: the copy's own for its size; another size's whole range.
   const passives = list.find(s => s.statRef === PASSIVES)
   if (passives?.roll) {
     if (size === own.size && own.passives) {
-      passives.roll.min = own.passives.min
-      passives.roll.max = own.passives.max
+      const o = own.passives
+      passives.text = o.text
+      Object.assign(passives.roll, { min: o.min, max: o.max, default: { ...o.default }, bounds: o.bounds ? { ...o.bounds } : undefined })
     } else if (size !== own.size) {
-      passives.roll.min = MIN_PASSIVES[size]
-      passives.roll.max = ''
+      const r = PASSIVE_RANGE[size]
+      // The line reads the size's range; its value stays the copy's count, which
+      // results ("Yours") and roll menus read as the item's own.
+      if (own.passives) passives.text = own.passives.text.replace('#', `${r.min}-${r.max}`)
+      Object.assign(passives.roll, { min: r.min, max: r.max, default: { ...r }, bounds: { ...r } })
     }
   }
 }

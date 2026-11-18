@@ -37,6 +37,8 @@ test(`a cluster jewel title picks a size and type, typed or clicked, and only Se
   await overlay.page.keyboard.press('Enter')
   await expect(drop).toHaveCount(0)
   await expect(title).toHaveText(/Medium Cluster Jewel · Critical Chance/)
+  // The passive count follows the size: its line and both boxes.
+  await expect(panel.getByText('Adds 4-6 Passive Skills')).toBeVisible()
   await overlay.page.waitForTimeout(300)
   expect(searches.length).toBe(before)
 
@@ -47,6 +49,8 @@ test(`a cluster jewel title picks a size and type, typed or clicked, and only Se
   expect(body.query.type).toBe('Medium Cluster Jewel')
   const ids = body.query.stats.flatMap((g: { filters: Array<{ id: string, disabled?: boolean }> }) => g.filters.filter(f => !f.disabled).map(f => f.id))
   expect(ids).toContain('enchant.stat_3948993189|29')
+  const counts = body.query.stats.flatMap((g: { filters: Array<{ value?: { min?: number, max?: number } }> }) => g.filters.map(f => f.value))
+  expect(counts).toContainEqual(expect.objectContaining({ min: 4, max: 6 }))
   expect(ids.some((id: string) => id.includes('|') && id !== 'enchant.stat_3948993189|29')).toBe(false)
   await overlay.snap(`cluster-type-picked-${style}`)
 
