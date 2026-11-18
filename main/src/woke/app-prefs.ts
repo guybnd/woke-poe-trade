@@ -18,15 +18,18 @@ export interface AppPrefs {
   stashReader: boolean
   // The Claude link (claude-link/index.ts) listens on 127.0.0.1. Off by default.
   claudeLink: boolean
-  // Draw the overlay with the graphics card (needs a restart). Off by default:
-  // on some systems a GPU-drawn see-through window turned the whole game
-  // screen black (upstream issue #818). Drawing without it costs CPU time in
-  // proportion to the area that changes, so dragging a big panel on a big
-  // screen stutters.
+  // Draw the overlay with the graphics card (needs a restart). On by default
+  // since 1.330.10: drawing without it costs CPU time in proportion to the
+  // area that changes, so dragging a big panel on a big screen stutters. On
+  // some systems a GPU-drawn see-through window turned the whole game screen
+  // black (upstream issue #818); the tray icon's checkbox turns it off.
   gpuDrawing: boolean
+  // The player set gpuDrawing themselves. Older files saved every key, so a
+  // false there is the old default, not a choice, and reads as the new one.
+  gpuDrawingChosen: boolean
 }
 
-const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false, gpuDrawing: false }
+const DEFAULTS: AppPrefs = { wizardShown: false, autoUpdate: true, crashPrompt: true, experimental: false, stashReader: false, claudeLink: false, gpuDrawing: true, gpuDrawingChosen: false }
 
 const file = () => path.join(app.getPath('userData'), 'apt-data', 'woke-app.json')
 
@@ -46,6 +49,7 @@ export function appPrefs (): AppPrefs {
       for (const key of Object.keys(DEFAULTS) as Array<keyof AppPrefs>) {
         if (typeof saved?.[key] === 'boolean') prefs[key] = saved[key] as boolean
       }
+      if (!prefs.gpuDrawingChosen) prefs.gpuDrawing = DEFAULTS.gpuDrawing
     } catch {
       prefs = { ...DEFAULTS }
     }
@@ -58,6 +62,7 @@ export function setAppPrefs (patch: Partial<AppPrefs>): AppPrefs {
   for (const key of Object.keys(DEFAULTS) as Array<keyof AppPrefs>) {
     if (typeof patch[key] === 'boolean') next[key] = patch[key]
   }
+  if (typeof patch.gpuDrawing === 'boolean') next.gpuDrawingChosen = true
   prefs = next
   for (const fn of listeners) fn(next)
   try {
