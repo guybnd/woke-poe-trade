@@ -15,8 +15,14 @@
     </DockItem>
 
     <WPanel ref="panel" :title="config.wmTitle || 'Stacked decks'" icon="fas fa-layer-group" width="26rem">
+      <template #tabs>
+        <WTabs v-model="tab" :options="tabOptions" />
+      </template>
       <div class="flex flex-col gap-3 py-2" style="padding-left: var(--w-pad); padding-right: var(--w-pad);">
-        <template v-if="session">
+        <template v-if="tab === 'past'">
+          <DeckHistory range="all" unit="chaos" :league="leagues.selectedId.value ?? ''" :now="now" />
+        </template>
+        <template v-else-if="session">
           <div class="flex items-baseline gap-2">
             <span class="w-accent font-medium">This session</span>
             <span class="w-dim text-xs grow">since {{ clock(session.startedAt) }}</span>
@@ -24,18 +30,7 @@
           </div>
           <DeckSummary :draws="session.draws" :price="price" :deck-chaos="sessionDeck" :divine="sessionDivine" :filter="filter" switchable :luck="luck" @count="setCountCheap" />
         </template>
-        <template v-else>
-          <WEmpty :art="{ item: STACKED_DECK }">Open a Stacked Deck in game to start a session. It ends after 15 minutes without a card.</WEmpty>
-          <template v-if="lastRecord">
-            <div class="flex items-baseline gap-2">
-              <span class="w-accent font-medium">Last session</span>
-              <span class="w-dim text-xs">{{ clock(lastRecord.startedAt) }}</span>
-            </div>
-            <DeckSummary :draws="lastRecord.draws" :price="recordPrice(lastRecord)" :deck-chaos="lastRecord.deckChaos" :divine="lastRecord.divine" :filter="filter" switchable :limit="12" @count="setCountCheap" />
-          </template>
-        </template>
-        <OwnAverageLine :records="store.records.value" :price="price" :deck-chaos="deckChaos" :divine="divine" />
-        <div class="text-xs w-faint">Every session is saved in Session analytics, under Stacked decks.</div>
+        <WEmpty v-else :art="{ item: STACKED_DECK }">Open a Stacked Deck in game to start a session. It ends after 15 minutes without a card.</WEmpty>
       </div>
     </WPanel>
 
@@ -67,7 +62,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { beforeQuitSave, saveConfig } from '@/web/Config'
 import { useLeagues } from '@/web/background/Leagues'
-import { WButton, WEmpty, WIcon, WPanel, toast } from '../ui'
+import { WButton, WEmpty, WIcon, WPanel, WTabs, toast } from '../ui'
 import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
@@ -77,8 +72,8 @@ import type { DockMenuAction } from '../dock/dock'
 import { followGameLog } from '../shared/game-log'
 import { lineTime } from '../campaign/log-tail'
 import DeckSummary from './DeckSummary.vue'
-import OwnAverageLine from './OwnAverageLine.vue'
-import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, cardFilterOf, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, recordPrice, replaySince, startSession, toRecord, totals } from './deck'
+import DeckHistory from './DeckHistory.vue'
+import { ACTIVE_MS, IDLE_END_MS, STACKED_DECK, cardFilterOf, initStackedDecks, isBigHit, isOver, markSeen, parseCardLine, replaySince, startSession, toRecord, totals } from './deck'
 import type { StackedDecksWidget } from './deck'
 import { useDeckPrices, useLuck } from './prices'
 import { useDeckStore } from './store'
@@ -109,7 +104,15 @@ const session = computed(() => props.config.session)
 // The session's own deck price and divine rate, once known.
 const sessionDeck = computed(() => session.value?.deckChaos ?? deckChaos.value)
 const sessionDivine = computed(() => session.value?.divine ?? divine.value)
-const lastRecord = computed(() => store.records.value[0] ?? null)
+// Session | Past sessions (Guy's pick A): past sessions are the list from
+// Session analytics' Stacked decks tab.
+const tab = shallowRef<'session' | 'past'>('session')
+const tabOptions = computed(() => [
+  { value: 'session', label: 'Session' },
+  { value: 'past', label: 'Past sessions', count: store.records.value.length }
+])
+// A new session brings the window back to it.
+watch(() => props.config.session?.id, (id) => { if (id) tab.value = 'session' })
 // Cards under the cut-off fold into one line, and may leave the totals.
 const filter = computed(() => cardFilterOf(props.config))
 
