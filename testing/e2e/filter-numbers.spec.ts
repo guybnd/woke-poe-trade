@@ -65,7 +65,7 @@ test('the Cluster page shows the price rules from poe.ninja, and a picked passiv
   await page.getByText('Jewels › Cluster', { exact: true }).click()
 
   await expect(page.getByText('Worth money', { exact: true })).toBeVisible()
-  const top12 = page.getByRole('button', { name: /Top · 12 passives · item level 84\+/ })
+  const top12 = page.getByRole('button', { name: /Top · 12(, 11)? passives · item level 84\+/ })
   await expect(top12).toContainText('Minion Damage')
   await expect(page.getByRole('button', { name: /Good · 12 passives · item level 84\+/ })).toContainText('Fire Damage')
   await overlay.snap('cluster price rules from poe.ninja')
