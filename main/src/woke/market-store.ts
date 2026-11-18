@@ -94,6 +94,42 @@ async function saveSnapshotFile (snapshot: Snapshot) {
   }
 }
 
+// Snapshots older than the retention are only removed when that league saves
+// again, so a league you stopped playing (or Standard after a look) kept
+// hundreds of 1.3 MB files: 600 MB on Guy's PC. Once a run, every league is
+// trimmed to the day rows (one point per item per day), keeping the league's
+// newest snapshot, and a day's last snapshot when that day has no day rows.
+export async function trimOldSnapshots (now = Date.now()): Promise<number> {
+  let removed = 0
+  let leagues: string[] = []
+  try {
+    leagues = (await fs.readdir(root(), { withFileTypes: true })).filter(d => d.isDirectory()).map(d => d.name)
+  } catch {
+    return 0
+  }
+  for (const folder of leagues) {
+    const dir = path.join(root(), folder, 'snapshots')
+    await queued(folder, async () => {
+      const times = (await listNames(dir, '.json')).map(Number).filter(n => Number.isFinite(n)).sort((a, b) => b - a)
+      const days = new Set(await listNames(path.join(root(), folder, 'daily'), '.json'))
+      // The newest stays anyway, and is its own day's point.
+      const dayPoint = new Set<string>(times.length ? [utcDate(times[0])] : [])
+      for (const ts of times.slice(1)) {
+        if (ts >= now - SNAPSHOT_RETENTION_MS) continue
+        const day = utcDate(ts)
+        // Newest first: the first one met is the day's last.
+        if (!days.has(day) && !dayPoint.has(day)) {
+          dayPoint.add(day)
+          continue
+        }
+        await fs.rm(path.join(dir, `${ts}.json`), { force: true })
+        removed++
+      }
+    })
+  }
+  return removed
+}
+
 async function snapshotTimes (league: string): Promise<number[]> {
   const names = await listNames(path.join(leagueDir(league), 'snapshots'), '.json')
   return names.map(Number).filter(n => Number.isFinite(n)).sort((a, b) => b - a)
