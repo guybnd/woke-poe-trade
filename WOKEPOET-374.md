@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-374
 title: 'Loot filter: tiers keyed on numbers, not names (cluster jewels first)'
-status: Grooming
+status: In Progress
 priority: Medium
 effort: L
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: claude-code@guy-pc
 history:
   - type: activity
     user: Agent
@@ -52,7 +52,32 @@ history:
     date: '2026-11-18T11:52:11.056Z'
     comment: Updated description. Changed effort to L. Updated implementation link.
     id: a-2026-11-18t11-52-11-056z
+  - type: activity
+    user: Agent
+    date: '2026-11-18T11:53:13.512Z'
+    comment: Updated description.
+    id: a-2026-11-18t11-53-13-512z
+  - type: status_change
+    from: Grooming
+    to: Todo
+    user: Agent
+    date: '2026-11-18T11:53:15.153Z'
+  - type: activity
+    user: claude-code@guy-pc
+    date: '2026-11-18T11:53:19.835Z'
+    comment: Claimed by claude-code@guy-pc
+    id: a-2026-11-18t11-53-19-835z
+  - type: status_change
+    from: Todo
+    to: In Progress
+    user: claude-code@guy-pc
+    date: '2026-11-18T11:53:19.835Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/622'
+needsAction: null
+claim:
+  holder: claude-code@guy-pc
+  claimedAt: '2026-11-18T11:53:19.835Z'
+  expiresAt: '2026-11-18T12:23:19.835Z'
 ---
 > **TL;DR** Make loot filter tiers that differ by numbers (cluster passives + item level, flask area level + quality…) readable and editable; merge the cluster price group into the cluster page and price its passive types live from poe.ninja. Guy picked A, 1+2, M, All, P on the mockups (https://claude.ai/artifact/Q5BRTNyyaz4HX6d4LFXcJ5).
 
@@ -76,5 +101,10 @@ The price group ([2705] clustereco, 54 tiers) runs first: passive count × ilvl 
 - [ ] Price rules shown on the Cluster page; separate group gone from the list
 - [ ] Passive types per price rule follow poe.ninja, with lines and pins
 - [ ] Adversarial review fixes, local checks, merged
+
+## Test plan
+- Unit: renderer/test/woke/filter-numbers.test.ts (numbers, edit apply on NeverSink's real cluster rules, ladder per strictness); filter-ladder.test.ts unchanged and green.
+- e2e: testing/e2e/filter-numbers.spec.ts (headings, row box edit reaches the saved file, side panel).
+- Part 2: unit test mapping poe.ninja ClusterJewel lines to EnchantmentPassiveNode names and rewriting clustereco tiers; e2e for pins.
 
 Worktree: E:\Git\woke\wt\cluster-tiers (branch woke/cluster-tiers).
