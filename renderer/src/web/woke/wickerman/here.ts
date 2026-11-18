@@ -1,3 +1,4 @@
+// probe
 // The Viscera bosses drop in the zone you stand in, for the dock icon, the
 // League mechanics card line and the Wickerman window. One table per app.
 import { computed, onBeforeUnmount, shallowRef } from 'vue'
