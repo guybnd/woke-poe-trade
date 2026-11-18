@@ -58,6 +58,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-18T05:05:14.434Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-18T05:17:12.134Z'
+    comment: >-
+      Follow-up fix from Guy: another size now searches its whole passive count
+      range (Small 2-3, Medium 4-6, Large 8-12). Branch woke/cluster-passives
+      a67bbda5, handed to coordinator for merge.
+    id: a-2026-11-18t05-17-12-134z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/600'
