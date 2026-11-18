@@ -151,6 +151,11 @@ export class Overlay {
     this.app.newClientLog(typeof opts.logBefore === 'string' ? logFixture(opts.logBefore) : opts.logBefore ?? [])
     this.app.clearReceived()
     this.app.game.resetInputLog()
+    // The fake app lives for the whole worker, so the mouse is wherever the
+    // last test left it. A dock icon that appears under it opens its card,
+    // which then covers what this test clicks (the stack sizes flake). Every
+    // test starts with the mouse in the middle, as the first one does.
+    this.app.moveMouse(960, 540)
     this.app.focusGame(true)
     await this.page.goto(this.app.url)
     await this.app.waitForReceived('CLIENT->MAIN::update-host-config', undefined, 20_000)
