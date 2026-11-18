@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-53
 title: 'Updates: prompt when the game is closed, rollback, signing, log errors'
-status: Grooming
+status: Done
 priority: Medium
 effort: L
 assignee: unassigned
@@ -73,7 +73,49 @@ history:
       game is closed and the "Updated to X" notice.
     pin: true
     id: a-2026-11-18t07-26-22-048z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #612 (209a831b): full update error logs, install while the game
+      is closed, "Updated to X" notice, Go back in About + tray. Still open: a
+      real Go back test (1.330.10 → 1.330.9) after v1.330.10 ships. Code signing
+      stays out of scope (Guy's call).
+    date: '2026-11-18T07:40:00.138Z'
+    completionComment: true
+    id: c-2026-11-18t07-40-00-138z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-18T07:40:00.138Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged #612. Open after release: Guy tries Go back from 1.330.10 to
+      1.330.9 once on his install (pinned note above).
+    completionComment: true
+    date: '2026-11-18T07:40:06.512Z'
+    id: c-2026-11-18t07-40-06-512z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-18T07:40:06.998Z'
 subtasks:
   - WOKEPOET-260
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/612'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR** C8. Update timing is fine, but there's no way back from a bad release, no code signing, update errors aren't logged (AppUpdater.ts), and it installs only on quit, which tray apps rarely do. Signing costs money, so that part is Guy's decision. Consider replacing the PowerShell call in runningGameLog, which antivirus tools dislike. Logging the error is an easy first step.
