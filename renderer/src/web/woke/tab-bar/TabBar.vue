@@ -113,7 +113,7 @@
           </div>
           <div v-if="!launcherHasMatch && !priceGroups.length" :class="$style.none">Nothing matches "{{ launcherQuery }}"</div>
           <div v-else :class="$style.foot" data-launcher-foot>
-            <template v-if="hovered"><span :class="$style.footName">{{ hovered.name }}</span><span>{{ ENTRY_HINT[hovered.state] ?? toolDescription(hovered.wmType) }}</span></template>
+            <template v-if="hovered"><span :class="$style.footName">{{ hovered.name }}</span><span :class="$style.footText">{{ [toolDescription(hovered.wmType), ENTRY_HINT[hovered.state]].filter(Boolean).join('. ') }}</span></template>
             <span v-else :class="$style.footHint">Point at a tool to see what it does. Right-click for more.</span>
           </div>
         </div>
@@ -409,16 +409,19 @@ function hideTip () { tip.value = null }
 // bottom goes when there is no room below and it opens upward instead.
 type PopupKind = 'menu' | 'launcher' | 'layout'
 const POPUP_WIDTH: Record<PopupKind, number> = { menu: 240, launcher: 1360, layout: 240 }
-const popup = ref<{ kind: PopupKind, x: number, y: number, above: number, up?: boolean, wmId?: number } | null>(null)
+// w: a narrower width when the screen has less room beside the rail than the launcher wants.
+const popup = ref<{ kind: PopupKind, x: number, y: number, above: number, up?: boolean, wmId?: number, w?: number } | null>(null)
 const popupEl = ref<HTMLElement | null>(null)
 const menuTab = computed(() => tabs.value.find(tab => tab.wmId === popup.value?.wmId))
 const popupStyle = computed(() => {
   if (!popup.value) return {}
-  const x = Math.min(popup.value.x, window.innerWidth - POPUP_WIDTH[popup.value.kind] - 4)
+  const w = popup.value.w ?? POPUP_WIDTH[popup.value.kind]
+  const x = Math.min(popup.value.x, window.innerWidth - w - 4)
   const left = `${Math.max(4, x)}px`
+  const width = popup.value.w != null ? { width: `${w}px` } : {}
   return popup.value.up
-    ? { left, bottom: `${window.innerHeight - popup.value.above}px`, maxHeight: `${popup.value.above - 4}px`, overflowY: 'auto' as const }
-    : { left, top: `${popup.value.y}px`, maxHeight: `calc(100vh - ${popup.value.y + 4}px)`, overflowY: 'auto' as const }
+    ? { left, ...width, bottom: `${window.innerHeight - popup.value.above}px`, maxHeight: `${popup.value.above - 4}px`, overflowY: 'auto' as const }
+    : { left, ...width, top: `${popup.value.y}px`, maxHeight: `calc(100vh - ${popup.value.y + 4}px)`, overflowY: 'auto' as const }
 })
 // Flip upward when the popup would run off the bottom of the screen and
 // there is more room above the click than below it.
@@ -445,18 +448,28 @@ function openBesideRail (kind: 'launcher' | 'layout') {
   const r = railEl.value!.getBoundingClientRect()
   popup.value = flat.value
     ? { kind, x: r.left, y: r.bottom + 4, above: r.top - 4 }
-    : {
-        kind,
-        x: onRight.value ? r.left - 4 - POPUP_WIDTH[kind] : r.right + 4,
-        y: r.top,
-        above: r.bottom
-      }
+    : { kind, ...besideRail(r, POPUP_WIDTH[kind]), y: r.top, above: r.bottom }
   placePopup()
   if (kind !== 'launcher') return
   query.value = ''
   nextTick(() => searchInput.value?.focus())
 }
 function openLayout () { openBesideRail('layout') }
+// The side facing the screen, unless only the other side has room. When neither
+// fits the full width, the roomier side and a narrower popup: never over the rail.
+function besideRail (r: DOMRect, want: number): { x: number, w?: number } {
+  const roomRight = window.innerWidth - r.right - 8
+  const roomLeft = r.left - 8
+  const preferRight = !onRight.value
+  const fits = (onRightSide: boolean) => (onRightSide ? roomRight : roomLeft) >= want
+  const right = fits(preferRight) ? preferRight
+    : fits(!preferRight) ? !preferRight
+      : roomRight >= roomLeft
+  const room = right ? roomRight : roomLeft
+  const w = room < want ? Math.max(room, 240) : undefined
+  const width = w ?? want
+  return { x: right ? r.right + 4 : r.left - 4 - width, w }
+}
 
 // ---- arranging the rail ----
 // Where the buff row ends: lying along the top, the rail sits just under it.
@@ -639,7 +652,7 @@ const launcherHasMatch = computed(() => launcherMatches.value.length > 0)
 const launcherColumns = computed(() => groupByModule(launcherMatches.value).map(g => [g]))
 // The tool under the mouse, explained along the launcher's foot.
 const hovered = shallowRef<LauncherEntry<Tab> | null>(null)
-watch([query, () => popup.value?.kind], () => { hovered.value = null })
+watch([query, () => popup.value?.kind, launcherMatches], () => { hovered.value = null })
 // Opening a tool is what the launcher is for, so it steps aside; closing one
 // leaves it up for the next.
 function onRowClick (tab: Tab) {
@@ -970,7 +983,9 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
 }
 .pin:hover { color: var(--w-fg); background: var(--w-panel-3); }
 .pinOn, .pinOn:hover { color: var(--w-accent); }
-.row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; }
+/* No room taken until it shows, so names get the space. */
+.pin:not(.pinOn) { width: 0; overflow: hidden; }
+.row:hover .pin, .pinOn, .pin:focus-visible { opacity: 1; width: 22px; }
 .none { padding: 10px 8px; color: var(--w-dim); }
 .foot {
   display: flex;
@@ -987,6 +1002,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   text-overflow: ellipsis;
 }
 .footName { flex: none; color: var(--w-accent); font-family: var(--w-caps-face); font-size: var(--w-fs-xl); }
+.footText, .footHint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .footHint { color: var(--w-faint); }
 .rowTag { flex: none; padding: 0 4px; font-size: var(--w-fs-sm); color: var(--w-dim); }
 .rowOff .rowName, .rowOff .rowMain > * { opacity: 0.55; }
@@ -1000,7 +1016,7 @@ onBeforeUnmount(() => document.removeEventListener('paste', onOverlayPaste))
   text-transform: var(--w-caps-case);
   font-family: var(--w-caps-face);
 }
-.groupHead { margin-bottom: 4px; color: var(--w-fg); font-size: var(--w-fs-xl); }
+.groupHead { margin-bottom: 4px; color: var(--w-fg); font-size: var(--w-fs-xl); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :global(:root[data-woke-art]) .groupHead { justify-content: center; min-height: 32px; padding: 0 6px; }
 .item {
   display: flex;
