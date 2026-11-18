@@ -240,10 +240,12 @@ export function provideStatActions (
   function menu (e: MouseEvent, f: StatFilter) {
     const items: MenuEntry[] = [{ separator: true, heading: 'Search' }]
     items.push({ label: 'Search only this', keys: 'Ctrl + Click', action: () => searchOnly(f) })
-    if (fracturedOnlyIds(f, item.value)) {
-      const on = isFracturedOnly(f, item.value)
-      items.push({ label: 'Fractured only', checked: on, action: () => setFracturedOnly(f, item.value, !on) })
-    } else if (fracturedBehind(f)) {
+    // Not on a Harvest swap pick: the row searches the swap's ids then, and
+    // the swap's search can't take a fractured-only id.
+    const fracOnly = isFracturedOnly(f, item.value)
+    if (!f.swapPick && fracturedOnlyIds(f, item.value)) {
+      items.push({ label: 'Fractured only', checked: fracOnly, action: () => setFracturedOnly(f, item.value, !fracOnly) })
+    } else if (!f.swapPick && fracturedBehind(f)) {
       // A one-mod total (life on a ring) can't search a fractured copy: list
       // the mod on its own row (one line per mod) and switch that row.
       items.push({ label: 'Fractured only', checked: false, action: () => fracturedViaSplit(f) })
@@ -294,7 +296,8 @@ export function provideStatActions (
       items.push({ label: 'Clear min and max', action: () => { roll.min = ''; roll.max = '' } })
     }
 
-    const cand = swap?.candidateFor(f)
+    // A fractured-only row's swap would mix fractured and any-copy ids.
+    const cand = fracOnly ? undefined : swap?.candidateFor(f)
     if (swap && cand) {
       items.push({ separator: true, heading: 'Price as' })
       if (!cand.family.random) {
@@ -310,7 +313,8 @@ export function provideStatActions (
     items.push({ separator: true, heading: 'Copy' })
     const copy = (text: string) => { copyText(text).then(ok => { if (ok) toast('Copied') }).catch(() => {}) }
     items.push({ label: 'Mod text', action: () => copy(rollText(f)) })
-    const find = stashSearch(f.text)
+    // A total's text ("total maximum Life") is on no item.
+    const find = f.tag === ModifierType.Pseudo ? null : stashSearch(f.text)
     if (find) items.push({ label: 'Stash search', action: () => copy(find) })
     openMenu(e, items)
   }

@@ -205,6 +205,15 @@ Item Level: 84
     const { rows: r } = rows(RING)
     const life = r.find(f => f.statRef === '+# to maximum Life' && f.tag === 'explicit')!
     expect(looseBound(life)).toBe(57)
+    const at = (value: number, better: 1 | -1, dp = false) => looseBound({ ...life, roll: { ...life.roll!, value, better, dp } })
+    // Negative rolls loosen away from zero.
+    expect(at(-12, 1)).toBe(-14)
+    expect(at(-12, -1)).toBe(-10)
+    // No float noise: 50 * 1.1 is not 56.
+    expect(at(50, -1)).toBe(55)
+    expect(at(0.7, -1, true)).toBe(0.8)
+    // Nothing to loosen into, or 0 ("any").
+    expect(at(1, 1)).toBeNull()
   })
 
   it('makes a quoted stash search from the mod text', () => {

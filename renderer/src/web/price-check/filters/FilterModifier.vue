@@ -309,7 +309,8 @@ export default defineComponent({
     // PoE mode's code (poe-kit.ts) is loaded before a PoE row is drawn.
     const kit = props.poe ? poeKit.value : null
     const fracOnly = computed(() => !props.filter.group && isFracturedOnly(props.filter, props.item))
-    const fracIds = computed(() => kit?.fracturedIds(props.filter) ?? (fracOnly.value ? props.filter.tradeId : undefined))
+    // None on a Harvest swap pick: its search would mix fractured and any-copy ids.
+    const fracIds = computed(() => props.filter.swapPick ? undefined : kit?.fracturedIds(props.filter) ?? (fracOnly.value ? props.filter.tradeId : undefined))
     function toggleFractured () {
       setFracturedOnly(props.filter, props.item, !fracOnly.value)
     }
