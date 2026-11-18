@@ -1,6 +1,9 @@
 <template>
+  <!-- The frame is always placed; nothing inside runs (no build reads, no
+       tree data) until the first time it's opened. -->
   <Widget :config="config" move-handles="corners" :inline-edit="false" readonly :removable="false">
-    <MegaloWindow :config="config" />
+    <MegaloWindow v-if="opened" :config="config" />
+    <span v-else class="sr-only">Megalomaniac searcher</span>
   </Widget>
 </template>
 
@@ -11,7 +14,7 @@ export default { widget: widgetMegaloSpec }
 </script>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, shallowRef, watch } from 'vue'
 import Widget from '@/web/overlay/Widget.vue'
 import { initMegaloWidget } from './widget'
 import type { MegaloWidget } from './widget'
@@ -34,4 +37,6 @@ const props = defineProps<{
   }
 }
 
+const opened = shallowRef(false)
+watch(() => props.config.wmWants, (w) => { if (w === 'show') opened.value = true }, { immediate: true })
 </script>
