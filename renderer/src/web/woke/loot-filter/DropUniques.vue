@@ -7,7 +7,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { ITEM_BY_REF } from '@/assets/data'
 import { agoPhrase } from '../ui'
 import UniquesOnBase from '../shared/UniquesOnBase.vue'
@@ -15,6 +15,9 @@ import type { UniqueOnBaseRow } from '../shared/UniquesOnBase.vue'
 import { ECONOMY_GROUPS } from './economy'
 import { dropUniques, ownUnique, setterName } from './drop-uniques'
 import { uniquesOnBase } from './prices'
+import { loadTipDrops } from '../ui/tooltip/item-tip'
+import { dropOf, dropSource, randomDropsFirst } from '../ui/tooltip/tip-content'
+import type { TipPack } from '../ui/tooltip/tip-content'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
@@ -27,6 +30,10 @@ const props = defineProps<{
 
 const LIMIT = 6
 const group = ECONOMY_GROUPS.find(g => g.unique)!
+
+// Where the uniques that aren't random drops come from (the tooltip's wiki file).
+const drops = shallowRef<TipPack['drops'] | null>(null)
+loadTipDrops().then(d => { drops.value = d }).catch(() => {})
 
 const rows = computed(() => {
   const base = props.facts.baseType
@@ -42,7 +49,7 @@ const rows = computed(() => {
   const own = props.facts.identified ? ownUnique(props.facts.name, base) : null
   return dropUniques(prices.breakdown.value(group, base), prices.items.value, group.ninja, base, setter, own)
 })
-const list = computed<UniqueOnBaseRow[]>(() => rows.value.map(u => ({
+const list = computed<UniqueOnBaseRow[]>(() => randomDropsFirst(rows.value.map(u => ({
   key: u.name,
   name: u.name,
   refName: u.name,
@@ -52,8 +59,9 @@ const list = computed<UniqueOnBaseRow[]>(() => rows.value.map(u => ({
   foulborn: u.foulborn,
   // A click price checks it, on this base.
   check: true,
-  info: ITEM_BY_REF('UNIQUE', u.name)?.find(i => i.unique?.base === props.facts.baseType)
-})))
+  info: ITEM_BY_REF('UNIQUE', u.name)?.find(i => i.unique?.base === props.facts.baseType),
+  restricted: dropSource(dropOf(drops.value ?? undefined, u.name))
+})), u => !!u.restricted))
 
 </script>
 

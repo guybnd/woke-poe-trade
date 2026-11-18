@@ -250,13 +250,13 @@ describe('parseGemVariant and kinds', () => {
 describe('where a unique drops', () => {
   it('says a boss-only unique is a restricted drop, and where it comes from', () => {
     const lines = all(buildTip(pack, { name: 'Hand of Thought and Motion', kind: 'unique' }))
-    expect(lines).toContain('Restricted drop: not a random drop on its base')
+    expect(lines).toContain('Not a random drop: Genesis Tree')
     expect(lines.some(l => /Esh|Tul|Genesis Tree/.test(l))).toBe(true)
   })
 
   it('says it for a Foulborn one too', () => {
     const lines = all(buildTip(pack, { name: 'Foulborn Starforge', kind: 'unique', base: 'Infernal Sword' }))
-    expect(lines).toContain('Restricted drop: not a random drop on its base')
+    expect(lines).toContain('Not a random drop: Uber Shaper')
   })
 
   it('cleans the wiki markup out of where it comes from', () => {
