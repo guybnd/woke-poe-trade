@@ -56,13 +56,14 @@ function offeredItem (at: unknown): MenuItemHead | undefined {
 export const menuState = shallowRef<MenuState | null>(null)
 
 // Open at the mouse (or a point). Destructive items go last, after a separator.
-export function openMenu (at: MouseEvent | { x: number, y: number }, items: MenuEntry[], item?: MenuItemHead) {
+// from: what a point-opened menu belongs to (a follow-up menu from a row's menu).
+export function openMenu (at: MouseEvent | { x: number, y: number, from?: Element | null }, items: MenuEntry[], item?: MenuItemHead) {
   const head = item ?? offeredItem(at)
   if (!items.length && !head) return
   const x = 'clientX' in at ? at.clientX : at.x
   const y = 'clientY' in at ? at.clientY : at.y
   if ('preventDefault' in at) at.preventDefault()
-  const target = 'target' in at && at.target instanceof Element ? at.target : null
+  const target = 'target' in at && at.target instanceof Element ? at.target : ('from' in at ? at.from ?? null : null)
   const frame = Boolean(target?.closest('[data-w-settings], [data-woke-frame]'))
   menuState.value = { items, x, y, item: head, frame, anchor: target?.closest('[id^="widget-"]') ?? null }
 }
