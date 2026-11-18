@@ -1448,7 +1448,7 @@ function useShared (how: 'add' | 'replace') {
     } else {
       // Folded like edits made here: a second "Hide whole group" of the same
       // group would take two clicks of Show group again to undo.
-      c.edits = edits.reduce<FilterEdit[]>((list, e) => addEdit(list, e), c.edits)
+      c.edits = edits.reduce<FilterEdit[]>((list, e) => addEdit(list, e, { separateMoves: props.store.separateMoves(e) }), c.edits)
       c.rules = [...c.rules, ...rules]
       c.priceTiers.locks = [...new Set([...c.priceTiers.locks, ...s.locks])]
     }

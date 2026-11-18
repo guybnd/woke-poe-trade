@@ -250,7 +250,7 @@ const STACK_LIMITS: Readonly<Record<string, number>> = { 'Divine Vessel': 20 }
 // A strict filter can hide a stack worth more than the line, item by item too
 // cheap to count. Each item goes in at the smallest stack that's over the line
 // and hidden.
-export function stackNet (doc: FilterDoc, lookup: PriceLookup, minChaos: number, skip?: (group: EconomyGroup, base: string, chaos?: number) => boolean): Record<string, string[]> {
+export function stackNet (doc: FilterDoc, lookup: PriceLookup, minChaos: number, skip?: (group: EconomyGroup, base: string) => boolean): Record<string, string[]> {
   const out: Record<string, string[]> = {}
   const walked: FilterDoc = { ...doc, blocks: doc.blocks.filter(b => b.type !== SAFETY_RULE_TYPE) }
   const rules = byBase(walked)
@@ -267,7 +267,7 @@ export function stackNet (doc: FilterDoc, lookup: PriceLookup, minChaos: number,
           if (seen.has(base)) continue
           seen.add(base)
           const price = lookup(group, base)
-          if (!price || price.chaos >= minChaos || skip?.(group, base, price.chaos)) continue
+          if (!price || price.chaos >= minChaos || skip?.(group, base)) continue
           const size = STACK_SIZES.find(n => n <= (STACK_LIMITS[base] ?? Infinity) && price.chaos * n >= minChaos)
           if (size == null) continue
           const v = verdictOf(rules, { ...plainDrop(group, base, itemClass), stackSize: size })

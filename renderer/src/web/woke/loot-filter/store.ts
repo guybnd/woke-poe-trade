@@ -278,10 +278,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       },
       dustList: dustList.value,
       heldBack,
-      // "Not for me" holds, for stacks too, until a piece's price doubles.
-      stackHeld: (group, base, chaos) => (chaos != null
-        ? isDismissed(cfg().netDismissed, { group, base, chaos })
-        : cfg().netDismissed[`${group.type}|${base}`] != null) || movedDown(group, base),
+      stackHeld: (group, base) => cfg().netDismissed[`${group.type}|${base}`] != null || movedDown(group, base),
       clusterPrices: clusterPricesFor(prices.currentLeague.value)
     })
   }
@@ -1235,6 +1232,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     get config () { return cfg() },
     prices,
     sourceGuard,
+    separateMoves,
     plan,
     health,
     safetyCount,

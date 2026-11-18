@@ -20,13 +20,14 @@ describe('own rule names', () => {
   const names: ReturnType<typeof nameCheck> = (k, v) => nameCheck(doc)(k, v)
 
   it('knows the game\'s bases, gems, currency and classes', () => {
-    for (const v of ['Gold Ring', 'Chaos Orb', 'Divine Orb', 'Fireball', 'Stygian Vise']) expect(names('BaseType', v), v).toBe(true)
+    for (const v of ['Gold Ring', 'Chaos Orb', 'Divine Orb', 'Fireball', 'Stygian Vise', 'Map (Tier 16)', 'Map (Tier 1)']) expect(names('BaseType', v), v).toBe(true)
     for (const v of ['Rings', 'Stackable Currency', 'Skill Gems']) expect(names('Class', v), v).toBe(true)
   })
 
   it('holds back a rule with a misspelt base type or class', () => {
     expect(ruleProblem(rule('BaseType', ['Gold Rnig']), names)).toMatch(/Gold Rnig/)
-    expect(ruleProblem(rule('Class', ['Ringz']), names)).toMatch(/Ringz/)
+    // Classes are only warned about in the builder: no full list to check.
+    expect(ruleProblem(rule('Class', ['Expedition Logbooks']), names)).toBeNull()
     expect(ruleBlocks([rule('BaseType', ['Gold Rnig'])], names)).toEqual([])
     expect(ruleBlocks([rule('BaseType', ['Gold Ring'])], names)).toHaveLength(1)
   })
@@ -34,7 +35,7 @@ describe('own rule names', () => {
   it('the saved filter leaves the misspelt rule out', () => {
     const c = composeFilter(neverSink('1-REGULAR'), {
       presets: defaultPresets(),
-      rules: [rule('Class', ['Ringz']), { ...rule('BaseType', ['Gold Ring']), id: 8 }],
+      rules: [rule('BaseType', ['Gold Rnig']), { ...rule('BaseType', ['Gold Ring']), id: 8 }],
       edits: [],
       buildRules: { bases: false, gems: false, uniques: false, hideWeapons: false } as never,
       build: null,

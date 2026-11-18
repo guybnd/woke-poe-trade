@@ -47,8 +47,7 @@ export interface ComposeInput {
   dustList: string[] | null
   // What you held back from the net: "Not for me", or moved down yourself.
   heldBack: (v: BaseVerdict) => boolean
-  // `chaos`: a piece's price now, when known ("Not for me" lapses once it doubles).
-  stackHeld: (group: EconomyGroup, base: string, chaos?: number) => boolean
+  stackHeld: (group: EconomyGroup, base: string) => boolean
   // poe.ninja's cluster jewel prices for this league, or null.
   clusterPrices?: ClusterPrice[] | null
   // Names the game's filter can't take and what to write instead; the game

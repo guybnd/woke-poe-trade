@@ -1,10 +1,8 @@
-// Hide low maps: the maps it lets through keep their own rule's look, and
-// "Not for me" on a stack lapses when the price doubles, as for single items.
+// Hide low maps: the maps it lets through keep their own rule's look.
 import { describe, it, expect } from 'vitest'
 import { parseFilterCopy } from '@/web/woke/loot-filter/parse'
 import { applyPresetChanges, defaultPresets } from '@/web/woke/loot-filter/presets'
 import { matchItem } from '@/web/woke/loot-filter/match'
-import { stackNet } from '@/web/woke/loot-filter/safety'
 import { neverSink } from '../helpers/neversink'
 
 const map = (tier: number, area: number, influences: string[] = []) =>
@@ -29,15 +27,5 @@ describe('hide low maps', () => {
       expect(after.final?.block.tier).toBe(before.final?.block.tier)
       expect(after.actions).toEqual(before.actions)
     }
-  })
-})
-
-describe('the net and stacks you said are not for you', () => {
-  it('come back when a piece is worth twice what it was', () => {
-    const doc = parseFilterCopy(neverSink('4-VERY-STRICT'))
-    const seen: Array<number | undefined> = []
-    stackNet(doc, (g) => g.type === 'currency' ? { chaos: 3, thin: false } : null, 20, (_g, _b, chaos) => { seen.push(chaos); return false })
-    expect(seen.length).toBeGreaterThan(0)
-    expect(seen.every(c => c === 3)).toBe(true)
   })
 })

@@ -114,6 +114,8 @@ export function nameCheck (doc: FilterDoc | null): NameCheck {
   return (key, value) => {
     if (listed[key].has(value)) return true
     if (key === 'Class') return KNOWN_CLASSES.has(value) || listed.Class.size === 0
+    // 3.30 maps go by tier, and the game data has no base for them.
+    if (/^Map \(Tier \d+\)$/.test(value)) return true
     return value in BASE_FACTS || !dataLoaded || Boolean(ITEM_BY_REF('ITEM', value)?.length || ITEM_BY_REF('GEM', value)?.length)
   }
 }
@@ -135,9 +137,10 @@ export function ruleProblem (r: OwnRule, knownNames?: NameCheck): string | null 
   }
   // The game refuses the whole filter over a name it doesn't know.
   if (knownNames) {
-    for (const key of ['BaseType', 'Class'] as const) {
+    // Classes are only warned about: no list here holds every class the game has.
+    for (const key of ['BaseType'] as const) {
       const unknown = r.conditions.filter(c => c.key === key).flatMap(c => c.values).filter(v => !knownNames(key, v))
-      if (unknown.length) return `The game doesn't know ${unknown.slice(0, 3).join(', ')}: check the ${key === 'Class' ? 'item class' : 'base type'}`
+      if (unknown.length) return `The game doesn't know ${unknown.slice(0, 3).join(', ')}: check the base type`
     }
   }
   const live = r.conditions.filter(c => c.values.length)
