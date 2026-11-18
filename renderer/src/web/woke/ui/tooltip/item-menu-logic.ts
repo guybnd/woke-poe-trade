@@ -218,7 +218,8 @@ export function priceCheckInput (ref: ItemMenuRef, kind: TipKind, info: BaseType
   if (!english) return null
   if (kind === 'card') return { clipboard: stackText(info.refName, 'Divination Card', 'Divination Cards') }
   // Currency, scarabs, essences, fragments, tattoos: what trades in bulk.
-  if (info.tradeTag) return { clipboard: stackText(info.refName, 'Currency', 'Stackable Currency') }
+  // Facetor's Lens trades one by one (no bulk tag): searched by name.
+  if (info.tradeTag || info.refName === "Facetor's Lens") return { clipboard: stackText(info.refName, 'Currency', 'Stackable Currency') }
   return null
 }
 

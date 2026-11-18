@@ -43,8 +43,9 @@ export function filterMemoryStrands (ctx: FiltersCreationContext, hidden?: strin
   }
 }
 
-// woke: Facetor's Lens. Read in millions: "Stored Experience: 512.34M". Rounded
-// down, so the default search never asks for more than the lens holds.
+// woke: Facetor's Lens, read in millions ("Stored Experience: 512M"; decimals
+// only under 10M). Rounded down, so the default search never asks for more
+// than the lens holds. A lens under 10,000 reads 0: left unticked.
 export function filterStoredExperience (ctx: FiltersCreationContext) {
   if (ctx.item.storedExperience != null) {
     const millions = Math.floor(ctx.item.storedExperience / 1e4) / 100
@@ -54,7 +55,7 @@ export function filterStoredExperience (ctx: FiltersCreationContext) {
       roll: { min: 0, max: millions, value: millions },
       dp: true,
       sources: [],
-      disabled: false
+      disabled: millions === 0
     }, ctx))
   }
 }

@@ -6,6 +6,7 @@ import { ITEM_BY_REF } from '@/assets/data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
+import { kindOfName, priceCheckInput } from '@/web/woke/ui/tooltip/item-menu-logic'
 
 // vi.mock is hoisted above the imports.
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
@@ -81,5 +82,17 @@ describe("Facetor's Lens", () => {
     row.roll!.max = 600.5
     const sx = createTradeRequest(filters, all).query.filters.misc_filters!.filters.stored_experience!
     expect(sx).toMatchObject({ min: 300000000, max: 600500000 })
+  })
+
+  it('is price checked by name from Ctrl+Space search', () => {
+    const info = ITEM_BY_REF('ITEM', "Facetor's Lens")![0]
+    const input = priceCheckInput({ name: "Facetor's Lens" }, kindOfName("Facetor's Lens"), info)
+    expect(input).not.toBeNull()
+    expect(parseItem(input!.clipboard).info.refName).toBe("Facetor's Lens")
+  })
+
+  it('leaves a lens under 10,000 experience unticked', () => {
+    const { stats } = setup(ALONE.replace('512345678', '9000'))
+    expect(stats.find(s => s.tradeId[0] === 'item.stored_experience')!.disabled).toBe(true)
   })
 })
