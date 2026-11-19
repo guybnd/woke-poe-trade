@@ -176,8 +176,7 @@ export default defineComponent({
     ]
     // Any linked item: right-click Links shows its colour tiles, off; again hides them unless one is on.
     function toggleColourTiles (e: MouseEvent) {
-      // The number box keeps its own copy / paste menu.
-      if ((e.target as HTMLElement).closest('input')) return
+      // Anywhere on the tile, the number too: copy / paste of a link count isn't worth a dead spot.
       e.preventDefault()
       e.stopPropagation()
       const { filters, item } = props
