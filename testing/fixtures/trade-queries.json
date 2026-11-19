@@ -2109,13 +2109,6 @@
        "option": "false"
       }
      }
-    },
-    "weapon_filters": {
-     "filters": {
-      "pdps": {
-       "min": 127
-      }
-     }
     }
    },
    "type": "Reaver Sword"
@@ -2208,7 +2201,7 @@
        "value": {
         "min": 139
        },
-       "disabled": false
+       "disabled": true
       },
       {
        "id": "pseudo.pseudo_total_fire_resistance",
@@ -2222,7 +2215,7 @@
        "value": {
         "min": 60
        },
-       "disabled": false
+       "disabled": true
       }
      ]
     },
@@ -2682,7 +2675,7 @@
        "value": {
         "min": 31
        },
-       "disabled": false
+       "disabled": true
       },
       {
        "id": "explicit.stat_2511217560",
