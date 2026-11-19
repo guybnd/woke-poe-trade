@@ -23,6 +23,13 @@ history:
       Guy picked A (2026-11-19). Built on branch woke/map-mods-redesign; review
       then merge.
     id: a-2026-11-19t02-19-00-338z
+  - type: activity
+    user: Agent
+    date: '2026-11-19T02:24:25.066Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/647 up, review fixes in,
+      sent to the cloud merge thread.
+    id: a-2026-11-19t02-24-25-066z
 ---
 Guy (2026-11-19): couldn't find where to set wanted currency/rewards; asked for a holistic redesign of the Map mods page, "god tier UI UX". Also: let him name searches saved to the Regex library.
 
