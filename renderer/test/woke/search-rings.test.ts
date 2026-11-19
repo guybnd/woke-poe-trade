@@ -51,10 +51,22 @@ describe('ringAnointLookup', () => {
     expect(lookup('ring anoint glacial cage', ctx).length).toBeGreaterThan(1)
     expect(lookup('blight ring meteor', ctx).every(c => c.name.includes('Meteor'))).toBe(true)
   })
+  it('finds Glacial Cage enchants with no "tower" in them', () => {
+    expect(lookup('glacial cage tower', ctx).map(c => c.name)).toContain('Enemies inside Glacial Cage take 10% increased Damage')
+  })
+  it("takes English words on other languages' data", () => {
+    const ru = readFileSync(join(__dirname, '../../public/data/ru/stats.ndjson'), 'utf8')
+      .split('\n').filter(Boolean).map(l => JSON.parse(l)).flatMap(s => s.stats ?? [s])
+    const cards = ringAnointLookup(ringAnoints(ru, oilNames))('arc tower chains', ctx)
+    expect(cards[0].sub).toBe('Blight ring anoint · Amber + Golden')
+  })
   it('stays out of a plain gem or word search', () => {
     expect(lookup('fireball', ctx)).toEqual([])
     expect(lookup('increased damage', ctx)).toEqual([])
     expect(lookup('ring', ctx)).toEqual([])
+    expect(lookup('tower', ctx)).toEqual([])
+    expect(lookup('ring life', ctx)).toEqual([])
+    expect(lookup('ring anoint', ctx)).toEqual([])
     expect(ringAnointLookup(null)('arc tower', ctx)).toEqual([])
   })
 })

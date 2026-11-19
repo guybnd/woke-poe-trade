@@ -10,6 +10,9 @@ export interface RingAnoint {
   text: string
   // The two oils, lowest tier first.
   oils: string[]
+  // What a query matches: the text, the English line (so English words work
+  // on any language's data) and "tower", which "Glacial Cage" lacks.
+  match: string
 }
 
 interface AnointStat {
@@ -37,14 +40,18 @@ export function ringAnoints (stats: Iterable<AnointStat>, oilNames: (encoded: st
     for (const a of stat.anointments ?? []) {
       const oils = oilNames(a.oils)
       if (oils.length !== 2 || !oils.every(Boolean)) continue
-      out.push({ text: anointText(stat, a.roll), oils })
+      const text = anointText(stat, a.roll)
+      out.push({ text, oils, match: `${text} ${stat.ref.replace('#', '')} towers` })
     }
   }
   return out
 }
 
 // Words that say you want a ring anoint, dropped before matching the enchant.
-const ASK = /^(?:blight(?:ed)?|ring|rings|anoints?|anointments?|anointed|enchants?|enchantments?|oils?)$/
+// "ring" alone doesn't ask ("ring life" is an item hunt), but goes with one.
+const ASK = /^(?:blight(?:ed)?|anoints?|anointments?|anointed)$/
+const FILLER = /^(?:rings?|enchants?|enchantments?|oils?)$/
+const TOWER = /^towers?$/
 
 function ringCard (r: RingAnoint, ctx: LookupContext): LookupCard {
   return {
@@ -67,12 +74,12 @@ export function ringAnointLookup (anoints: readonly RingAnoint[] | null): Lookup
   return (query, ctx) => {
     if (!anoints?.length) return []
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
-    const asked = words.some(w => ASK.test(w))
-    const rest = words.filter(w => !ASK.test(w)).join(' ')
-    if (!asked && !/\btowers?\b/.test(rest)) return []
-    if (rest.length < 3) return []
+    if (!words.some(w => ASK.test(w) || TOWER.test(w))) return []
+    const rest = words.filter(w => !ASK.test(w) && !FILLER.test(w))
+    // Needs more than the asking words: a bare "tower" is Tower Map.
+    if (rest.filter(w => !TOWER.test(w)).join(' ').length < 3) return []
     return anoints
-      .map(r => ({ r, rank: matchRank(r.text, rest) }))
+      .map(r => ({ r, rank: matchRank(r.match, rest.join(' ')) }))
       .filter(h => h.rank >= 0 && h.rank < 2)
       .sort((a, b) => a.rank - b.rank || a.r.text.length - b.r.text.length)
       // A tower has up to six.
