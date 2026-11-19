@@ -1,0 +1,24 @@
+Item Class: Body Armours
+Rarity: Unique
+Skin of the Lords
+Simple Robe
+--------
+Quality: +20% (augmented)
+Energy Shield: 0
+--------
+Sockets: R-R-G-B-R-G
+--------
+Item Level: 84
+--------
+{ Unique Modifier }
+Sockets cannot be modified
+{ Unique Modifier — Gem }
++2 to Level of Socketed Gems
+{ Unique Modifier — Defences }
+100% increased Global Defences
+{ Unique Modifier }
+You can only Socket Corrupted Gems in this item
+{ Unique Modifier }
+Iron Reflexes
+--------
+Corrupted

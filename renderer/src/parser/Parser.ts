@@ -652,8 +652,11 @@ function parseSockets (section: string[], item: ParsedItem) {
   if (section[0].startsWith(_$.SOCKETS)) {
     let sockets = section[0].slice(_$.SOCKETS.length).trimEnd()
 
+    const count = (c: string) => sockets.split(/[ -]/).filter(s => s === c).length
     item.sockets = {
-      white: (sockets.split('W').length - 1),
+      white: count('W'),
+      // woke: colours matter where they can't be changed (Skin of the Loyal, corrupted 6Ls).
+      colours: { r: count('R'), g: count('G'), b: count('B'), w: count('W') },
       linked: undefined
     }
 

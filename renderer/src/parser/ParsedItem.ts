@@ -23,6 +23,9 @@ export enum ItemInfluence {
   Warlord = 'Warlord'
 }
 
+/** Socket count per colour (abyss and delve sockets not counted). */
+export interface SocketColours { r: number, g: number, b: number, w: number }
+
 export interface ParsedItem {
   rarity?: ItemRarity
   itemLevel?: number
@@ -79,6 +82,7 @@ export interface ParsedItem {
   sockets?: {
     linked?: number // only 5 or 6
     white: number
+    colours?: SocketColours
   }
   stackSize?: { value: number, max: number }
   isUnidentified: boolean

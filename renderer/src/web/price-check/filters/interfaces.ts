@@ -1,4 +1,4 @@
-import type { ItemInfluence, ItemCategory } from '@/parser'
+import type { ItemInfluence, ItemCategory, SocketColours } from '@/parser'
 import { ModifierType, ModifierMechanic, type StatCalculated } from '@/parser/modifiers'
 
 export type CorruptedSearch = 'any' | 'corrupted' | 'not-corrupted'
@@ -33,6 +33,11 @@ export interface ItemFilters {
   }
   linkedSockets?: FilterNumeric
   whiteSockets?: FilterNumeric
+  // woke: the item's socket colours, asked as minimums, where colours can't be changed.
+  socketColours?: {
+    value: SocketColours
+    disabled: boolean
+  }
   corrupted?: {
     search: CorruptedSearch
   }

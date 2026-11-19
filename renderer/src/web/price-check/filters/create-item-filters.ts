@@ -8,6 +8,9 @@ import { BaseType, ITEM_BY_REF } from '@/assets/data'
 import { CATEGORY_TO_TRADE_ID, VISCERA_SLOT_TRADE_ID } from '../trade/pathofexile-trade'
 import { PERMANENT_SC } from '../../background/Leagues'
 
+// The unique line that locks an item's sockets (Skin of the Loyal / Lords).
+const SOCKETS_LOCKED = 'Sockets cannot be modified'
+
 export const SPECIAL_SUPPORT_GEM = ['Empower Support', 'Enlighten Support', 'Enhance Support']
 
 export interface CreateOptions {
@@ -272,6 +275,16 @@ export function createFilters (
   // Any item that takes quality gets the box, so you can ask for more than it has (a 27% Twilight Regalia).
   if (!filters.quality && takesQuality(item)) {
     filters.quality = suggestedQuality(item.quality ?? 0)
+  }
+
+  // woke: socket colours, only where nothing can change them: on for "Sockets cannot be
+  // modified" (Skin of the Loyal / Lords), offered off on corrupted 5L and 6L items.
+  const colours = item.sockets?.colours
+  if (colours && (colours.r + colours.g + colours.b + colours.w) > 0) {
+    const locked = item.statsByType.some(calc => calc.stat.ref === SOCKETS_LOCKED)
+    if (locked || (item.isCorrupted && (item.sockets?.linked ?? 0) >= 5)) {
+      filters.socketColours = { value: { ...colours }, disabled: !locked }
+    }
   }
 
   if (item.sockets?.linked) {

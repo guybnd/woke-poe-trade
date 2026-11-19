@@ -58,6 +58,14 @@
     <div class="filter-name-tiles">
       <filter-btn-numeric :chip="poe" v-if="filters.linkedSockets" :limit="NUMERIC_LIMITS.links"
         :filter="filters.linkedSockets" :name="t('item.linked_sockets')" />
+      <!-- woke: socket colours, where nothing can change them. Click to search any colours. -->
+      <button v-if="filters.socketColours" type="button" data-socket-colours
+        class="filter-name-corrupted filter-name-colours" :class="{ on: !filters.socketColours.disabled, 'w-poe-chip': poe }"
+        :aria-pressed="!filters.socketColours.disabled"
+        :title="filters.socketColours.disabled ? 'Any socket colours. Click to search at least these colours.' : 'Searching at least these socket colours. Click to search any colours.'"
+        @click="toggleColours">
+        <span class="filter-name-sdots" aria-hidden="true"><i v-for="(c, i) of colourDots" :key="i" :class="c" /></span>{{ colourText }}
+      </button>
       <filter-btn-numeric :chip="poe" v-if="filters.mapTier" :limit="NUMERIC_LIMITS.mapTier"
         :filter="filters.mapTier" :name="t('item.map_tier')" />
       <filter-btn-numeric :chip="poe" v-if="filters.areaLevel" :limit="NUMERIC_LIMITS.areaLevel"
@@ -159,6 +167,11 @@ export default defineComponent({
       { search: 'corrupted', label: 'Corr' },
       { search: 'not-corrupted', label: 'Not' }
     ]
+    function toggleColours () {
+      const filter = props.filters.socketColours!
+      filter.disabled = !filter.disabled
+    }
+
     function cycleCorrupted () {
       const filter = props.filters.corrupted!
       const at = corruptedStates.findIndex(state => state.search === filter.search)
@@ -172,9 +185,23 @@ export default defineComponent({
       return clusterSizeOf(item.info.refName)
     })
 
+    // woke: the colours chip reads "3R 2G 1B", one dot per socket.
+    const COLOURS = ['r', 'g', 'b', 'w'] as const
+    const colourDots = computed(() => {
+      const c = props.filters.socketColours?.value
+      return c ? COLOURS.flatMap(k => Array<string>(c[k]).fill(k)) : []
+    })
+    const colourText = computed(() => {
+      const c = props.filters.socketColours?.value
+      return c ? COLOURS.filter(k => c[k] > 0).map(k => `${c[k]}${k.toUpperCase()}`).join(' ') : ''
+    })
+
     return {
       t,
       poe: poeOn,
+      colourDots,
+      colourText,
+      toggleColours,
       clusterSize,
       NUMERIC_LIMITS,
       label,
@@ -265,6 +292,16 @@ export default defineComponent({
   border-color: var(--w-down);
   color: var(--w-down);
 }
+.filter-name-colours.on {
+  border-color: var(--w-gold-hi, #e8c470);
+  color: var(--w-gold-hi, #e8c470);
+}
+.filter-name-sdots { display: inline-flex; gap: 2px; }
+.filter-name-sdots > i { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0007; }
+.filter-name-sdots > .r { background: #c8413a; }
+.filter-name-sdots > .g { background: #6cb33f; }
+.filter-name-sdots > .b { background: #4f7fd8; }
+.filter-name-sdots > .w { background: #e8e4da; }
 .filter-name-tiles {
   display: flex;
   flex: none;

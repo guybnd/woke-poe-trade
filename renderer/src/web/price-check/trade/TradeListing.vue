@@ -88,7 +88,8 @@
             <td v-if="showItemLevel" class="px-2 text-right">{{ item.itemLevel }}</td>
             <td v-if="item.category === 'Gem'" />
             <td v-if="showQuality" />
-            <td v-if="showSockets" class="px-2 w-pc-sockets" :class="item.sockets?.linked === 6 ? 'l6' : ''">{{ item.sockets?.linked ? `${item.sockets.linked}L` : '' }}</td>
+            <td v-if="showSockets && showColours" class="px-2 w-pc-sockets" :title="`Your sockets: ${item.sockets?.linked ? item.sockets.linked + 'L' : ''}`"><span class="w-pc-sdots"><i v-for="(d, i) of ownSocketDots(item.sockets?.colours, item.sockets?.linked)" :key="i" :class="['w-pc-sdot', d.colour, { link: d.link }]" /></span></td>
+            <td v-else-if="showSockets" class="px-2 w-pc-sockets" :class="item.sockets?.linked === 6 ? 'l6' : ''">{{ item.sockets?.linked ? `${item.sockets.linked}L` : '' }}</td>
             <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat">{{ col.yours }}</td>
             <td v-if="hiddenColumns.length" />
             <td v-if="showSeller" />
@@ -134,7 +135,8 @@
               <td v-if="showItemLevel" class="px-2 whitespace-nowrap text-right">{{ row.lead.itemLevel }}</td>
               <td v-if="item.category === 'Gem'" class="pl-2 whitespace-nowrap">{{ row.lead.level }}</td>
               <td v-if="showQuality" class="px-2 whitespace-nowrap text-blue-400 text-right">{{ row.lead.quality }}</td>
-              <td v-if="showSockets" class="px-2 whitespace-nowrap w-pc-sockets" :class="socketSummary(row.lead.listedItem?.sockets).tone">{{ socketSummary(row.lead.listedItem?.sockets).text }}</td>
+              <td v-if="showSockets && showColours" class="px-2 whitespace-nowrap w-pc-sockets" :title="socketSummary(row.lead.listedItem?.sockets).text"><span class="w-pc-sdots"><i v-for="(d, i) of socketDots(row.lead.listedItem?.sockets)" :key="i" :class="['w-pc-sdot', d.colour, { link: d.link }]" /></span></td>
+              <td v-else-if="showSockets" class="px-2 whitespace-nowrap w-pc-sockets" :class="socketSummary(row.lead.listedItem?.sockets).tone">{{ socketSummary(row.lead.listedItem?.sockets).text }}</td>
               <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat" :class="toneClass(row.lead, col)" :style="toneStyle(row.lead, col)">{{ formatStatValue(statValue(row.lead, col), col) }}<span v-if="statLabel(row.lead, col)" class="w-pc-stat-key">{{ statLabel(row.lead, col) }}</span></td>
               <td v-if="hiddenColumns.length" />
               <td v-if="showSeller" class="px-2 whitespace-nowrap">
@@ -186,7 +188,7 @@ import { PriceCheckWidget } from '@/web/overlay/interfaces'
 import { ItemFilters, FilterOrGroup } from '../filters/interfaces'
 import { ParsedItem } from '@/parser'
 import { ItemCategory } from '@/parser/meta'
-import { socketSummary } from '@/web/woke/price-insight/listing-tip'
+import { socketSummary, socketDots, ownSocketDots } from '@/web/woke/price-insight/listing-tip'
 import { artificialSlowdown } from './artificial-slowdown'
 import { useRetryCountdown } from './retry-countdown'
 import OnlineFilter from './OnlineFilter.vue'
@@ -219,6 +221,8 @@ const MIN_GROUPED = 10
 // Room the table's other columns take, in px at normal text size.
 const WIDTH_BASE = 200 // price, count, listed
 const WIDTH_NUMBER_COLUMN = 44
+// Six socket dots need more than a number column.
+const WIDTH_SOCKET_DOTS = 26
 const WIDTH_SELLER = 90
 const WIDTH_TAG = 60
 const WIDTH_STASH_ICON = 24
@@ -407,6 +411,8 @@ export default defineComponent({
       props.filters.quality && !props.filters.quality.disabled))
     // woke: items that can have six sockets list them in their own column (Guy's pick "6L / 6S column").
     const showSockets = computed(() => props.item.category != null && SIX_SOCKETS.has(props.item.category))
+    // woke: where colours are searchable, the column shows each listing's colours instead.
+    const showColours = computed(() => props.filters.socketColours != null)
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
@@ -419,6 +425,7 @@ export default defineComponent({
       if (props.item.category === 'Gem') width += WIDTH_NUMBER_COLUMN
       if (showQuality.value) width += WIDTH_NUMBER_COLUMN
       if (showSockets.value) width += WIDTH_NUMBER_COLUMN
+      if (showSockets.value && showColours.value) width += WIDTH_SOCKET_DOTS
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
       if (listings.some(r => !r.hasFee)) width += WIDTH_STASH_ICON
@@ -485,13 +492,16 @@ export default defineComponent({
     return {
       t,
       showSockets,
+      showColours,
       socketSummary,
+      socketDots,
+      ownSocketDots,
       list: searchResult,
       improved,
       blankSearch,
       verdictInsight,
       skipsTop: computed(() => skipsTopMods(props.item, props.stats)),
-      ninjaFits: computed(() => ninjaFitsSearch(props.item, props.stats, props.filters.corrupted?.search)),
+      ninjaFits: computed(() => ninjaFitsSearch(props.item, props.stats, props.filters.corrupted?.search, props.filters.socketColours?.disabled === false)),
       verdictSlot,
       insight,
       insightOptions,

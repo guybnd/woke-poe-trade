@@ -229,3 +229,13 @@
 .w-pc-sockets { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--w-dim); text-align: left; }
 .w-pc-sockets.l6 { color: var(--w-gold-hi, #e8c470); }
 .w-pc-sockets.s6 { color: #7fa8f0; }
+/* Socket colours, where they can't be changed (Skin of the Loyal, corrupted 6Ls). */
+.w-pc-sdots { display: inline-flex; align-items: center; vertical-align: middle; }
+.w-pc-sdot { width: 7px; height: 7px; border-radius: 50%; margin-left: 2px; box-shadow: inset 0 0 0 1px #0007; background: var(--w-dim); }
+.w-pc-sdot:first-child { margin-left: 0; }
+/* Linked sockets sit close; a gap marks a break in the links. */
+.w-pc-sdot:not(.link):not(:first-child) { margin-left: 5px; }
+.w-pc-sdot.r { background: #c8413a; }
+.w-pc-sdot.g { background: #6cb33f; }
+.w-pc-sdot.b { background: #4f7fd8; }
+.w-pc-sdot.w { background: #e8e4da; }

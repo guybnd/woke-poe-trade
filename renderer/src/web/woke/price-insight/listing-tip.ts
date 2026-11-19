@@ -3,6 +3,7 @@
 // extra requests. Pure functions.
 
 import type { PobItem, PobRarity } from '../pob-builds/widget'
+import type { SocketColours } from '@/parser'
 
 // The trade API sends explicitMods as objects that name their own kind: a
 // fractured mod is in explicitMods with domain "fractured". Other lists can
@@ -103,6 +104,21 @@ export function socketSummary (sockets: ListingItem['sockets']): { text: string,
   if (total >= 6) return { text: '6S', tone: 's6' }
   if (link === 5) return { text: '5L', tone: '' }
   return { text: total ? `${total}S` : '', tone: '' }
+}
+
+/** A listing's sockets as coloured dots, in order; `link` says it joins the one before. */
+export function socketDots (sockets: ListingItem['sockets']): Array<{ colour: string, link: boolean }> {
+  return (sockets ?? []).map((s, i, all) => ({
+    colour: s.sColour.toLowerCase(),
+    link: i > 0 && all[i - 1].group === s.group
+  }))
+}
+
+/** Your item's sockets as dots, from its colour counts (the copy text's order isn't kept). */
+export function ownSocketDots (c: SocketColours | undefined, linked: number | undefined): Array<{ colour: string, link: boolean }> {
+  if (!c) return []
+  const colours = [...'r'.repeat(c.r), ...'g'.repeat(c.g), ...'b'.repeat(c.b), ...'w'.repeat(c.w)]
+  return colours.map((colour, i) => ({ colour, link: i > 0 && linked != null && linked >= colours.length }))
 }
 
 function socketsText (sockets: ListingItem['sockets']): string {
