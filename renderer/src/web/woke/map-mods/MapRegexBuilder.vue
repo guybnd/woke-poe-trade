@@ -88,6 +88,7 @@
                       :aria-pressed="pipsOf(key) >= n"
                       :class="[$style.pip, { [$style.on]: pipsOf(key) >= n }]"
                       @click="setPips(key, n)" />
+                    <span class="w-num w-faint" :class="$style.weight">{{ weightOf(key).toFixed(1) }}</span>
                   </span>
                 </td>
               </tr>
@@ -440,6 +441,7 @@ function paste () {
   border: 1px solid var(--w-line-strong);
   background: var(--w-panel-3);
 }
+.weight { margin-left: 4px; font-size: var(--w-fs-xs); }
 .pip:hover { border-color: var(--w-accent); }
 .pip.on { background: var(--w-accent); border-color: var(--w-accent); }
 .regex {

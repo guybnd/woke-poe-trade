@@ -49,8 +49,8 @@ export interface MapCheckResult {
   // Its mods are hidden, so the verdict means nothing yet.
   unidentified: boolean
   // The profile's minimums against this map's stats (maps tab only; empty
-  // when none are set). `any`: one met minimum is enough.
-  goals: { rows: RewardGoal[], any: boolean }
+  // when none are set); null on anything but a map. `any`: one met minimum is enough.
+  goals: { rows: RewardGoal[], any: boolean } | null
 }
 
 export interface RewardGoal {
@@ -146,10 +146,10 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
     .filter(mod => rated(mod.type))
     .map(mod => mod.text)
 
-  const goals = {
-    rows: mode === 'maps' ? rewardGoals(item, profile.mins) : [],
-    any: !!profile.minsAny
-  }
+  // Only maps carry these stats: invitations and logbooks get no rewards block.
+  const goals = mode === 'maps' && item.category === ItemCategory.Map
+    ? { rows: rewardGoals(item, profile.mins), any: !!profile.minsAny }
+    : null
 
   return { mode, name, sub: subParts.join(' · '), verdict, juice, props, unknown, unidentified: item.isUnidentified, goals }
 }

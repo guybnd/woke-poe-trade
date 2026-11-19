@@ -27,7 +27,7 @@
     <div v-if="showGoals" :class="$style.goals" data-testid="map-rewards">
       <div class="flex items-baseline gap-2">
         <span class="w-group-label flex-1" style="padding: 0;">Your rewards</span>
-        <span v-if="goalRows.length" class="text-xs w-num" :class="goalsMet ? 'w-up' : 'w-down'">{{ metCount }} of {{ goalRows.length }} met{{ result.goals.any ? ' · any one' : '' }}</span>
+        <span v-if="goalRows.length" class="text-xs w-num" :class="goalsMet ? 'w-up' : 'w-down'">{{ metCount }} of {{ goalRows.length }} met{{ result.goals?.any ? ' · any one' : '' }}</span>
       </div>
       <div v-for="g in goalRows" :key="g.stat" :class="$style.goal">
         <span>{{ g.label }}</span>
@@ -81,7 +81,7 @@ const goalRows = computed(() => props.result.goals?.rows ?? [])
 const metCount = computed(() => goalRows.value.filter(g => g.met).length)
 const goalsMet = computed(() => props.result.goals?.any ? metCount.value > 0 : metCount.value === goalRows.value.length)
 const wanted = computed(() => props.result.verdict.good.map(m => shortLabel(m.matcher)))
-const showGoals = computed(() => props.result.mode === 'maps' && !props.result.unidentified &&
+const showGoals = computed(() => props.result.goals != null && !props.result.unidentified &&
   (goalRows.value.length > 0 || wanted.value.length > 0 || props.canEdit))
 
 const VERDICT_LABEL: Record<Verdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN' }
