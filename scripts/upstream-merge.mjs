@@ -189,7 +189,9 @@ function merge3 (b, o, t, path, area = false) {
     }
     return out
   }
-  return t === undefined ? o : t
+  // Upstream's "no icon found" marker never beats a value of ours.
+  if (t === undefined || (t === '%NOT_FOUND%' && o !== undefined)) return o
+  return t
 }
 
 const placeholder = (o) => typeof o?.ref === 'string' && Array.isArray(o.matchers) && o.matchers.length > 0 &&
