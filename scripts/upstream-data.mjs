@@ -42,6 +42,9 @@ function seenCopy (rel) {
   }
 }
 
+let seenReachable = true
+try { git('cat-file', '-e', `${state.seen}^{commit}`) } catch { seenReachable = false }
+
 const changed = []
 const report = []
 const clashes = []
@@ -51,6 +54,8 @@ const clashes = []
 // So are upstream's placeholder pseudo stats (scripts/upstream-merge.mjs).
 let renames = new Map()
 let placeholders = new Set()
+// The merged English stats, which the other languages follow.
+let english
 {
   const rel = `${DATA}/en/stats.ndjson`
   const theirs = read(path.join(UPSTREAM, rel))
@@ -67,16 +72,21 @@ for (const lang of LANGUAGES) {
     const theirs = read(path.join(UPSTREAM, rel))
     if (theirs == null) continue
     // Only a file upstream itself changed is looked at.
-    const seen = seenCopy(rel)
-    if (seen != null && seen.trim() === theirs.trim()) continue
+    // A file new since then has an empty base.
+    const seen = seenCopy(rel) ?? (seenReachable ? '' : null)
+    // Without upstream's copy at the commit we last took, the merge can't tell
+    // our changes from upstream's: renames would come back as second stats.
+    if (seen == null) throw new Error(`Upstream's ${rel} at ${state.seen} is out of reach (force-pushed, or past the clone depth). Merge this one by hand.`)
+    if (seen.trim() === theirs.trim()) continue
     const file = path.join(ROOT, rel)
     const oursText = read(file)
     const kind = name.startsWith('items') ? 'items' : 'stats'
     const ours = parseNdjson(oursText)
-    const res = mergeData({ base: parseNdjson(seen), ours, theirs: parseNdjson(theirs), kind, ...(kind === 'stats' ? { renames, placeholders } : {}) })
+    const res = mergeData({ base: parseNdjson(seen), ours, theirs: parseNdjson(theirs), kind, ...(kind === 'stats' ? { renames, placeholders, english: lang === 'en' ? undefined : english } : {}) })
     const text = toNdjson(res.list)
+    if (lang === 'en' && kind === 'stats') english = { refs: new Set(res.list.filter(o => typeof o.ref === 'string').map(o => o.ref)), covered: res.covered }
     report.push(`| \`${lang}/${name}\` | ${Object.entries(res.count).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')} |`)
-    if (kind === 'stats') for (const c of newClashes(res.list, ours)) clashes.push(`${lang}: ${c}`)
+    if (kind === 'stats') for (const c of newClashes(res.list, ours, parseNdjson(theirs))) clashes.push(`${lang}: ${c}`)
     // read() drops carriage returns; files are written with \n, like upstream's.
     if (text !== (oursText ?? '')) {
       fs.writeFileSync(file, text)
@@ -102,9 +112,7 @@ try {
 const out = process.env.GITHUB_OUTPUT
 const say = (line) => { if (out) fs.appendFileSync(out, line + '\n'); else console.log(line) }
 
-if (!changed.some(f => !f.endsWith('client_strings.js'))) {
-  // Only data reaching players is worth a pull request; the rest waits for one.
-  for (const rel of changed) execFileSync('git', ['-C', ROOT, 'checkout', '--', rel])
+if (!changed.length) {
   say('changed=false')
   console.log(`Upstream ${head.slice(0, 7)}: item and stat data unchanged. ${commits.length} new upstream commits.`)
 } else {
