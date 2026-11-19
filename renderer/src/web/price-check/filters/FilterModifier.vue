@@ -54,11 +54,11 @@
             <div class="flex gap-x-px">
               <input :class="[$style['rollInput'], 'w-roll-input', { 'w-poe-drag': poe, [$style.catOnly]: catOnly === 'above', 'w-roll-cat': catOnly === 'above' }]" :placeholder="t('min')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMinEl"
-                v-model.number="inputMin" @focus="inputFocus($event, 'min')" @mousewheel.stop
+                v-model.number="inputMin" :data-wheel-from="roll?.default.min" @focus="inputFocus($event, 'min')" @input="wheeled"
                 v-on="minDrag ?? {}">
               <input :class="[$style['rollInput'], 'w-roll-input', { [$style.catOnly]: catOnly === 'below', 'w-roll-cat': catOnly === 'below' }]" :placeholder="t('max')" :min="roll?.bounds?.min" :max="roll?.bounds?.max" :step="changeStep" type="number"
                 ref="inputMaxEl"
-                v-model.number="inputMax" @focus="inputFocus($event, 'max')" @mousewheel.stop>
+                v-model.number="inputMax" :data-wheel-from="roll?.default.max" @focus="inputFocus($event, 'max')" @input="wheeled">
             </div>
           </div>
           <filter-modifier-options v-else-if="miniFilter && rollOptions"
@@ -255,6 +255,12 @@ export default defineComponent({
         props.filter.disabled = false
       }
     })
+
+    // A number changed without focus (the mouse wheel) switches the row on, as
+    // clicking into the box does.
+    function wheeled (e: Event) {
+      if (document.activeElement !== e.target) props.filter.disabled = false
+    }
 
     function inputFocus (e: FocusEvent, type: 'min' | 'max') {
       const target = e.target as HTMLInputElement
@@ -459,6 +465,7 @@ export default defineComponent({
       showBoundsTagGap: computed(() => Boolean(showTag.value || props.filter.not)),
       showRollPick: computed(() => canPickRoll(props.filter) && props.item.category !== ItemCategory.Map),
       inputFocus,
+      wheeled,
       toggleFilter,
       toggleExpanded,
       smartToggle

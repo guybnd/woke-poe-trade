@@ -209,6 +209,14 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "number-wheel.spec.ts": [
+   "renderer/src/main.ts",
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/loot-filter/",
+   "renderer/src/web/woke/ui/number-wheel.ts"
+  ],
   "panel-layers.spec.ts": [
    "main/src/woke/loot-filter.ts",
    "main/src/woke/neversink.ts",
