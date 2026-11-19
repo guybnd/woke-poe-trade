@@ -33,11 +33,8 @@ export interface ItemFilters {
   }
   linkedSockets?: FilterNumeric
   whiteSockets?: FilterNumeric
-  // woke: the item's socket colours, asked as minimums, where colours can't be changed.
-  socketColours?: {
-    value: SocketColours
-    disabled: boolean
-  }
+  // woke: one tile per socket colour, each "at least this many" (Guy's pick B).
+  socketColours?: Record<keyof SocketColours, FilterNumeric>
   corrupted?: {
     search: CorruptedSearch
   }

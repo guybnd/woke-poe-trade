@@ -396,10 +396,10 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
   }
 
   // woke: the trade site reads each colour as "at least this many".
-  if (filters.socketColours && !filters.socketColours.disabled) {
+  if (filters.socketColours) {
     for (const c of ['r', 'g', 'b', 'w'] as const) {
-      const n = filters.socketColours.value[c]
-      if (n > 0) propSet(query.filters, `socket_filters.filters.sockets.${c}`, n)
+      const tile = filters.socketColours[c]
+      if (!tile.disabled && tile.value > 0) propSet(query.filters, `socket_filters.filters.sockets.${c}`, tile.value)
     }
   }
 

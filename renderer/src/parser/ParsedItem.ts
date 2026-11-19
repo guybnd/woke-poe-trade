@@ -83,6 +83,8 @@ export interface ParsedItem {
     linked?: number // only 5 or 6
     white: number
     colours?: SocketColours
+    // The copy text's sockets as written ("R-R-G B"), for drawing them.
+    layout?: string
   }
   stackSize?: { value: number, max: number }
   isUnidentified: boolean

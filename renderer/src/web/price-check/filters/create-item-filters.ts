@@ -1,5 +1,5 @@
 import type { ItemFilters } from './interfaces'
-import { ParsedItem, ItemCategory, ItemRarity } from '@/parser'
+import { ParsedItem, ItemCategory, ItemRarity, type SocketColours } from '@/parser'
 import { MAGIC_ONLY_OR_UNIQUE_ITEM, CONSUMABLE_CRAFTABLE_ITEM, JEWELLERY, WEAPON, ARMOUR } from '@/parser/meta'
 import { getPropQuality } from '@/parser/calc-q20'
 import { tradeTag } from '../trade/common'
@@ -10,6 +10,12 @@ import { PERMANENT_SC } from '../../background/Leagues'
 
 // The unique line that locks an item's sockets (Skin of the Loyal / Lords).
 const SOCKETS_LOCKED = 'Sockets cannot be modified'
+
+/** The R / G / B / W tiles at the item's own counts; `on` switches on each colour it has. */
+export function socketColourFilters (colours: SocketColours, on: boolean): NonNullable<ItemFilters['socketColours']> {
+  const tile = (n: number) => ({ value: n, disabled: !(on && n > 0) })
+  return { r: tile(colours.r), g: tile(colours.g), b: tile(colours.b), w: tile(colours.w) }
+}
 
 export const SPECIAL_SUPPORT_GEM = ['Empower Support', 'Enlighten Support', 'Enhance Support']
 
@@ -283,7 +289,7 @@ export function createFilters (
   if (colours && (colours.r + colours.g + colours.b + colours.w) > 0) {
     const locked = item.statsByType.some(calc => calc.stat.ref === SOCKETS_LOCKED)
     if (locked || (item.isCorrupted && (item.sockets?.linked ?? 0) >= 5)) {
-      filters.socketColours = { value: { ...colours }, disabled: !locked }
+      filters.socketColours = socketColourFilters(colours, locked)
     }
   }
 

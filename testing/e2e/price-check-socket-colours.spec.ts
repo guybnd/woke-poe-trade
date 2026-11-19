@@ -1,5 +1,5 @@
-// Socket colours: a Skin of the Lords searches its colours by default, listings show
-// their colours as dots, and the chip turns the colours off.
+// Socket colour tiles (Guy's pick B): a Skin of the Lords searches its colours by default,
+// listings show their colours as dots, and right-click on Links offers the tiles on any linked item.
 import type { Page } from '@playwright/test'
 import { test, expect } from './harness'
 
@@ -38,7 +38,15 @@ async function fakeTrade (page: Page) {
   }))
 }
 
-test('Skin of the Lords searches its socket colours, and the chip turns them off', async ({ overlay }) => {
+async function searchNow (page: Page, panel: ReturnType<Page['locator']>, searches: any[]) {
+  const before = searches.length
+  const search = panel.getByRole('button', { name: 'Search' })
+  if (await search.isVisible()) await search.click()
+  await expect.poll(() => searches.length).toBeGreaterThan(before)
+  return searches.at(-1).query.filters.socket_filters?.filters.sockets
+}
+
+test('Skin of the Lords searches its socket colours, and each colour tile turns off', async ({ overlay }) => {
   await fakeTrade(overlay.page)
   const searches: any[] = []
   overlay.page.on('request', (req) => {
@@ -48,24 +56,44 @@ test('Skin of the Lords searches its socket colours, and the chip turns them off
   await overlay.copyItem('items/unique-skin-of-the-lords.txt')
   const panel = overlay.widget('price-check')
 
-  const chip = panel.locator('[data-socket-colours]')
-  await expect(chip).toHaveText(/3R 2G 1B/)
-  await expect(chip).toHaveAttribute('aria-pressed', 'true')
-
-  const search = panel.getByRole('button', { name: 'Search' })
-  if (await search.isVisible()) await search.click()
-  await expect.poll(() => searches.length).toBeGreaterThan(0)
+  await expect(panel.locator('[data-socket-colour]')).toHaveCount(4)
+  if (!searches.length) await searchNow(overlay.page, panel, searches)
   expect(searches[0].query.filters.socket_filters.filters.sockets).toEqual({ r: 3, g: 2, b: 1 })
 
   // Each listing's sockets show as six dots in the Sockets column.
   await expect(panel.locator('.w-pc-sdots').nth(1).locator('.w-pc-sdot')).toHaveCount(6)
-  await overlay.snap('socket colours on')
+  await overlay.snap('socket colour tiles')
 
-  const before = searches.length
-  await chip.click()
-  await expect(chip).toHaveAttribute('aria-pressed', 'false')
-  if (await search.isVisible()) await search.click()
-  await expect.poll(() => searches.length).toBeGreaterThan(before)
-  expect(searches.at(-1).query.filters.socket_filters?.filters.sockets).toBeUndefined()
-  await overlay.snap('socket colours off')
+  // Switching the G tile off leaves R and B.
+  await panel.locator('[data-socket-colour="g"]').getByText('G', { exact: true }).click()
+  expect(await searchNow(overlay.page, panel, searches)).toEqual({ r: 3, b: 1 })
+})
+
+test('right-click Links shows colour tiles on any linked item, off until switched on', async ({ overlay }) => {
+  await fakeTrade(overlay.page)
+  const searches: any[] = []
+  overlay.page.on('request', (req) => {
+    if (req.url().includes('/api/trade/search/')) searches.push(req.postDataJSON())
+  })
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-ar-ev.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-links-tile]')).toBeVisible()
+  await expect(panel.locator('[data-socket-colour]')).toHaveCount(0)
+
+  await panel.locator('[data-links-tile]').click({ button: 'right' })
+  await expect(panel.locator('[data-socket-colour]')).toHaveCount(4)
+  await overlay.snap('colour tiles from right-click')
+  // Shown off: nothing about colours is searched until a tile is switched on.
+  expect(searches.every(s => s.query.filters.socket_filters?.filters.sockets == null)).toBe(true)
+
+  await panel.locator('[data-socket-colour="g"]').getByText('G', { exact: true }).click()
+  expect(await searchNow(overlay.page, panel, searches)).toEqual({ g: 4 })
+
+  // A second right-click keeps tiles that are on; with all off it hides them.
+  await panel.locator('[data-links-tile]').click({ button: 'right' })
+  await expect(panel.locator('[data-socket-colour]')).toHaveCount(4)
+  await panel.locator('[data-socket-colour="g"]').getByText('G', { exact: true }).click()
+  await panel.locator('[data-links-tile]').click({ button: 'right' })
+  await expect(panel.locator('[data-socket-colour]')).toHaveCount(0)
 })

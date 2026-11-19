@@ -1,4 +1,4 @@
-// Socket colours count only where nothing can change them: Skin of the Loyal / Lords
+// Socket colour tiles (R / G / B / W, each "at least"): Skin of the Loyal / Lords
 // ("Sockets cannot be modified") search them by default, corrupted 5L/6L offer them off.
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { fixture, loadGameData, parseItem } from '../helpers/game-data'
@@ -12,7 +12,7 @@ vi.mock('@/web/Config', () => ({
 /* eslint-disable import/first */
 import { createFilters } from '@/web/price-check/filters/create-item-filters'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
-import { ninjaFitsSearch } from '@/web/woke/price-insight/search-scope'
+import { ninjaFitsSearch, socketColoursOn } from '@/web/woke/price-insight/search-scope'
 import { ownSocketDots, socketDots } from '@/web/woke/price-insight/listing-tip'
 /* eslint-enable import/first */
 
@@ -44,16 +44,26 @@ describe('Socket colours', () => {
   it('searches the colours of an item whose sockets cannot be modified', () => {
     const item = parseItem(SKIN())
     const filters = createFilters(item, OPTS)
-    expect(filters.socketColours).toEqual({ value: { r: 3, g: 2, b: 1, w: 0 }, disabled: false })
-    const query = createTradeRequest(filters, [], item).query
+    expect(filters.socketColours).toEqual({
+      r: { value: 3, disabled: false },
+      g: { value: 2, disabled: false },
+      b: { value: 1, disabled: false },
+      w: { value: 0, disabled: true }
+    })
+    const query = createTradeRequest(filters, []).query
     expect(query.filters.socket_filters?.filters.sockets).toEqual({ r: 3, g: 2, b: 1 })
+
+    // One tile off, another raised: only what's on is asked.
+    filters.socketColours!.g.disabled = true
+    filters.socketColours!.b.value = 2
+    expect(createTradeRequest(filters, []).query.filters.socket_filters?.filters.sockets).toEqual({ r: 3, b: 2 })
   })
 
   it('offers them off on a corrupted 6L, and not at all on an uncorrupted one', () => {
     const corrupted = parseItem(RARE_6L + '\n--------\nCorrupted')
     const filters = createFilters(corrupted, OPTS)
-    expect(filters.socketColours).toEqual({ value: { r: 3, g: 2, b: 1, w: 0 }, disabled: true })
-    expect(createTradeRequest(filters, [], corrupted).query.filters.socket_filters?.filters.sockets).toBeUndefined()
+    expect(Object.values(filters.socketColours!).map(t => [t.value, t.disabled])).toEqual([[3, true], [2, true], [1, true], [0, true]])
+    expect(createTradeRequest(filters, []).query.filters.socket_filters?.filters.sockets).toBeUndefined()
 
     expect(createFilters(parseItem(RARE_6L), OPTS).socketColours).toBeUndefined()
   })
@@ -62,11 +72,16 @@ describe('Socket colours', () => {
     const item = parseItem(SKIN().replace('\n--------\nCorrupted', ''))
     expect(ninjaFitsSearch(item, [], 'not-corrupted')).toBe(true)
     expect(ninjaFitsSearch(item, [], 'not-corrupted', true)).toBe(false)
+    const filters = createFilters(item, OPTS)
+    expect(socketColoursOn(filters)).toBe(true)
+    for (const tile of Object.values(filters.socketColours!)) tile.disabled = true
+    expect(socketColoursOn(filters)).toBe(false)
   })
 
   it('draws listing sockets in order with link breaks', () => {
     const dots = socketDots([{ group: 0, sColour: 'R' }, { group: 0, sColour: 'G' }, { group: 1, sColour: 'W' }])
     expect(dots).toEqual([{ colour: 'r', link: false }, { colour: 'g', link: true }, { colour: 'w', link: false }])
-    expect(ownSocketDots({ r: 1, g: 0, b: 1, w: 0 }, undefined).map(d => d.colour)).toEqual(['r', 'b'])
+    expect(ownSocketDots(parseItem(SKIN()).sockets?.layout).map(d => d.link)).toEqual([false, true, true, true, true, true])
+    expect(ownSocketDots('R-G B')).toEqual([{ colour: 'r', link: false }, { colour: 'g', link: true }, { colour: 'b', link: false }])
   })
 })

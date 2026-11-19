@@ -657,6 +657,7 @@ function parseSockets (section: string[], item: ParsedItem) {
       white: count('W'),
       // woke: colours matter where they can't be changed (Skin of the Loyal, corrupted 6Ls).
       colours: { r: count('R'), g: count('G'), b: count('B'), w: count('W') },
+      layout: sockets,
       linked: undefined
     }
 

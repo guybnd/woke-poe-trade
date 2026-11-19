@@ -88,7 +88,7 @@
             <td v-if="showItemLevel" class="px-2 text-right">{{ item.itemLevel }}</td>
             <td v-if="item.category === 'Gem'" />
             <td v-if="showQuality" />
-            <td v-if="showSockets && showColours" class="px-2 w-pc-sockets" :title="`Your sockets: ${item.sockets?.linked ? item.sockets.linked + 'L' : ''}`"><span class="w-pc-sdots"><i v-for="(d, i) of ownSocketDots(item.sockets?.colours, item.sockets?.linked)" :key="i" :class="['w-pc-sdot', d.colour, { link: d.link }]" /></span></td>
+            <td v-if="showSockets && showColours" class="px-2 w-pc-sockets" :title="`Your sockets: ${item.sockets?.linked ? item.sockets.linked + 'L' : ''}`"><span class="w-pc-sdots"><i v-for="(d, i) of ownSocketDots(item.sockets?.layout)" :key="i" :class="['w-pc-sdot', d.colour, { link: d.link }]" /></span></td>
             <td v-else-if="showSockets" class="px-2 w-pc-sockets" :class="item.sockets?.linked === 6 ? 'l6' : ''">{{ item.sockets?.linked ? `${item.sockets.linked}L` : '' }}</td>
             <td v-for="col in shownColumns" :key="col.key" class="w-pc-stat">{{ col.yours }}</td>
             <td v-if="hiddenColumns.length" />
@@ -206,7 +206,7 @@ import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
 import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
-import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods } from '@/web/woke/price-insight/search-scope'
+import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
 
 const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
 
@@ -222,7 +222,7 @@ const MIN_GROUPED = 10
 const WIDTH_BASE = 200 // price, count, listed
 const WIDTH_NUMBER_COLUMN = 44
 // Six socket dots need more than a number column.
-const WIDTH_SOCKET_DOTS = 26
+const WIDTH_SOCKET_DOTS = 40
 const WIDTH_SELLER = 90
 const WIDTH_TAG = 60
 const WIDTH_STASH_ICON = 24
@@ -501,7 +501,7 @@ export default defineComponent({
       blankSearch,
       verdictInsight,
       skipsTop: computed(() => skipsTopMods(props.item, props.stats)),
-      ninjaFits: computed(() => ninjaFitsSearch(props.item, props.stats, props.filters.corrupted?.search, props.filters.socketColours?.disabled === false)),
+      ninjaFits: computed(() => ninjaFitsSearch(props.item, props.stats, props.filters.corrupted?.search, socketColoursOn(props.filters))),
       verdictSlot,
       insight,
       insightOptions,

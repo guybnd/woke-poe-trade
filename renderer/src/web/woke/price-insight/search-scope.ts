@@ -22,10 +22,17 @@ export function isBlankRareSearch (item: ParsedItem, filters: ItemFilters, stats
     filters.sentinelCharge != null ||
     (filters.itemLevel && !filters.itemLevel.disabled) ||
     (filters.linkedSockets && !filters.linkedSockets.disabled) ||
+    socketColoursOn(filters) ||
     (filters.quality && !filters.quality.disabled) ||
     (filters.veiled && !filters.veiled.disabled) ||
     filters.influences?.some(i => !i.disabled)
   )
+}
+
+/** Whether the search asks for any socket colour. */
+export function socketColoursOn (filters: ItemFilters): boolean {
+  const c = filters.socketColours
+  return c != null && Object.values(c).some(tile => !tile.disabled && tile.value > 0)
 }
 
 /**
