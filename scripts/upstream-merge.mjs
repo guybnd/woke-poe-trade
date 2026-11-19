@@ -79,10 +79,13 @@ const tradeIds = (o) => Object.values(o?.trade?.ids ?? {}).flat()
 // the next (base then has upstream's new ref). Base isn't needed; the
 // parameter stays for callers.
 export function findRenames (_base, ours, theirs) {
-  const refs = (list) => new Set(list.filter(o => typeof o.ref === 'string').map(o => o.ref.replace(ZWSP, '')))
+  // Refs inside stat groups count too: upstream renamed some grouped stats
+  // into single ones ("Nearby Enemies are Chilled").
+  const members = (list) => list.flatMap(o => typeof o.ref === 'string' ? [o] : (o.stats ?? []))
+  const refs = (list) => new Set(members(list).filter(o => typeof o.ref === 'string').map(o => o.ref.replace(ZWSP, '')))
   const ourRefs = refs(ours); const theirRefs = refs(theirs)
   const added = new Map()
-  for (const o of theirs) {
+  for (const o of members(theirs)) {
     if (typeof o.ref !== 'string') continue
     const ref = o.ref.replace(ZWSP, '')
     if (ourRefs.has(ref)) continue
@@ -92,7 +95,7 @@ export function findRenames (_base, ours, theirs) {
     }
   }
   const pairs = new Map()
-  for (const o of ours) {
+  for (const o of members(ours)) {
     if (typeof o.ref !== 'string' || theirRefs.has(o.ref)) continue
     const cand = new Set()
     for (const id of tradeIds(o)) for (const r of added.get(id) ?? []) cand.add(r)
@@ -202,8 +205,8 @@ export function findPlaceholders (base, theirs) {
 // Merges one file. base/ours/theirs are parsed ndjson lists. Returns the
 // merged list and counts for the report.
 /**
- * @param {{ base: any[], ours: any[], theirs: any[], kind: string, renames?: Map<string, string>, placeholders?: Set<string>, english?: { refs: Set<string>, covered: Map<string, string>, droppedGroups?: Set<string>, groups?: Set<string> } }} args
- * @returns {{ list: any[], count: Record<string, number>, renames: Map<string, string>, covered: Map<string, string>, droppedGroups: Set<string>, groups: Set<string> }}
+ * @param {{ base: any[], ours: any[], theirs: any[], kind: string, renames?: Map<string, string>, placeholders?: Set<string>, english?: { refs: Set<string>, covered: Map<string, string>, droppedGroups?: Set<string>, groups?: Set<string>, joined?: Map<string, string>, keptGroups?: Set<string> } }} args
+ * @returns {{ list: any[], count: Record<string, number>, renames: Map<string, string>, covered: Map<string, string>, droppedGroups: Set<string>, groups: Set<string>, joined: Map<string, string>, keptGroups: Set<string> }}
  */
 export function mergeData ({ base, ours, theirs, kind, renames, placeholders, english }) {
   const keyOf = kind === 'items' ? itemKey : statKey
@@ -240,21 +243,26 @@ export function mergeData ({ base, ours, theirs, kind, renames, placeholders, en
   for (const nu of renames.keys()) if (theirs.some(x => x.ref === nu)) count.renamed++
 
   // Ours that upstream doesn't have, in place after the entry before it in ours.
+  const upstreamKeys = new Set([...Tm.keys()].map(k => k.includes(DUP) ? k.slice(0, k.indexOf(DUP)) : k))
   // Kept even so: an entry upstream dropped (scarabs, coins, Captured Beasts
-  // are still on the trade site). Not kept when we never changed it and it
-  // was a stat group upstream split into single stats, or one variant of a
-  // repeated item upstream replaced: those would stand beside their successor.
+  // are still on the trade site). Not kept when we never changed it and it is
+  // one variant of a repeated item upstream still lists in other variants: it
+  // would stand beside its successor. (Split stat groups: dropSplitGroups.)
   for (const [k, o] of O) {
     if (Tm.has(k)) continue
     const b = B.get(k)
-    if (b && same(o, b) && (k.includes(DUP) || (kind === 'stats' && typeof o.ref !== 'string'))) { count.droppedLikeUpstream++; continue }
+    if (b && same(o, b) && k.includes(DUP) && upstreamKeys.has(k.slice(0, k.indexOf(DUP)))) { count.droppedLikeUpstream++; continue }
     // Another language follows the merged English: a stat English no longer
     // has, upstream dropped here too.
     if (english && typeof o.ref === 'string' && !english.refs.has(o.ref)) { count.droppedLikeUpstream++; continue }
+    // A group upstream dropped here that English doesn't have, unchanged by
+    // us, was this language's own (two English stats sharing one wording).
+    if (english?.keptGroups && b && same(o, b) && typeof o.ref !== 'string' && !english.keptGroups.has(k)) { count.droppedLikeUpstream++; continue }
     rows.set(k, o)
   }
+  const joined = new Map()
   if (kind === 'stats') {
-    count.droppedLikeUpstream += dropSplitGroups(rows, B, Tm, Om, english?.groups)
+    count.droppedLikeUpstream += dropSplitGroups(rows, B, Tm, Om, english?.groups, english?.joined, joined)
     // Stat groups English left out are left out here too.
     for (const k of english?.droppedGroups ?? []) if (rows.delete(k)) count.droppedLikeUpstream++
   }
@@ -287,16 +295,20 @@ export function mergeData ({ base, ours, theirs, kind, renames, placeholders, en
     else { if (!after.has(prev)) after.set(prev, []); after.get(prev).push(k) }
     prev = k
   }
+  // The very same entry twice (a group reached under two keys) is written once.
   const out = []
+  const written = new Set()
   const emit = (k) => {
-    out.push(rows.get(k))
+    const line = stableJson(rows.get(k))
+    if (!written.has(line)) { written.add(line); out.push(rows.get(k)) }
     for (const k2 of after.get(k) ?? []) emit(k2)
   }
   for (const k of head) emit(k)
   for (const [k] of T) if (rows.has(k) && Tm.has(k)) emit(k)
   const droppedGroups = new Set([...Tm.keys(), ...O.map(([k]) => k)].filter(k => k.startsWith('resolve:') && !rows.has(k)))
   const groups = new Set([...Tm.keys()].filter(k => k.startsWith('resolve:')))
-  return { list: out, count, renames, covered, droppedGroups, groups }
+  const keptGroups = new Set([...rows.keys()].filter(k => k.startsWith('resolve:')))
+  return { list: out, count, renames, covered, droppedGroups, groups, joined, keptGroups }
 }
 
 // A stat group upstream dropped whose stats all stand on their own after the
@@ -305,7 +317,8 @@ export function mergeData ({ base, ours, theirs, kind, renames, placeholders, en
 // either. Unchanged by us, the group goes. Changed by us (#434 routed the
 // granted skills' 3.30 wording through such a group), the group stays and
 // upstream's new single stats for it go.
-function dropSplitGroups (rows, B, Tm, Om, englishGroups) {
+function dropSplitGroups (rows, B, Tm, Om, englishGroups, englishJoined, joined) {
+  const word = (m) => `${matcherKey(m)}0000${m?.value ?? ''}`
   const single = new Map()
   for (const [k, r] of rows) if (typeof r.ref === 'string') single.set(r.ref, k)
   let n = 0
@@ -326,6 +339,39 @@ function dropSplitGroups (rows, B, Tm, Om, englishGroups) {
   // "#% more Maximum Life", the Raise Spectre and granted-aura stats). Our
   // single stats stay, as code and tests read them that way (a folded random
   // gem searches only its own id), so the new group goes.
+  // Upstream's new single stat that one of our groups already answers for
+  // (#434's granted-skill groups read "Grants Level # Anger" and carry its
+  // trade ids): its other wordings ("Grants Anger") join that group stat and
+  // it goes.
+  const groupWords = new Map() // wording -> [group key, stat index]
+  for (const [k, r] of rows) {
+    if (typeof r.ref === 'string' || !Om.has(k)) continue
+    ;(r.stats ?? []).forEach((st, i) => {
+      for (const m of st.matchers ?? []) groupWords.set(word(m), [k, i])
+    })
+  }
+  for (const [k, r] of [...rows]) {
+    if (typeof r.ref !== 'string' || B.has(k) || Om.has(k) || !r.matchers?.length) continue
+    // Another language finds the group the English merge picked.
+    let hit = r.matchers.map(m => groupWords.get(word(m))).find(Boolean)
+    if (!hit && englishJoined?.has(r.ref) && rows.has(englishJoined.get(r.ref))) {
+      const gk = englishJoined.get(r.ref)
+      const i = rows.get(gk).stats.findIndex(st => tradeIds(r).every(id => tradeIds(st).includes(id)))
+      if (i >= 0) hit = [gk, i]
+    }
+    if (!hit) continue
+    const [gk, i] = hit
+    const group = rows.get(gk)
+    const st = group.stats[i]
+    if (!tradeIds(r).every(id => tradeIds(st).includes(id))) continue
+    joined.set(r.ref, gk)
+    const have = new Set((st.matchers ?? []).map(word))
+    const add = r.matchers.filter(m => !have.has(word(m)))
+    const stats = group.stats.map((x, j) => j === i ? { ...x, matchers: [...(x.matchers ?? []), ...add] } : x)
+    rows.set(gk, { ...group, stats })
+    rows.delete(k)
+    n++
+  }
   // A group only another language has (two English stats share one Russian
   // wording) is upstream's own business: our unchanged single stats go.
   for (const [k, r] of [...rows]) {
@@ -438,11 +484,27 @@ export function toNdjson (list, eol = '\n') {
 // upstream's file count.
 export function newClashes (merged, ours, theirs) {
   const clashes = (list) => {
-    const seen = new Map(); const refs = new Set(); const out = new Set(); const ids = new Map(); const grouped = new Set()
+    const seen = new Map(); const refs = new Set(); const out = new Set(); const ids = new Map(); const grouped = new Set(); let gi = 0
     for (const s of list) {
       // Resolve groups repeat their stats' refs on purpose.
       if (typeof s.ref !== 'string') {
-        for (const g of s.stats ?? []) if (typeof g.ref === 'string') grouped.add(g.ref)
+        // A group's stats may share refs, wordings and ids among themselves
+        // on purpose; not with a stat outside the group.
+        const owner = 'group ' + gi++
+        for (const g of s.stats ?? []) {
+          if (typeof g.ref !== 'string') continue
+          grouped.add(g.ref)
+          for (const m of g.matchers ?? []) {
+            if (typeof m.string !== 'string') continue
+            const k = m.string + '\u0000' + (m.negate ? '-' : '') + (m.value ?? '')
+            if (seen.has(k) && seen.get(k) !== owner) out.add('matcher: ' + m.string)
+            else seen.set(k, owner)
+          }
+          for (const id of tradeIds(g)) {
+            if (ids.has(id) && ids.get(id) !== owner) out.add('trade id on two stats: ' + id)
+            else ids.set(id, owner)
+          }
+        }
         continue
       }
       if (refs.has(s.ref)) out.add('ref: ' + s.ref)
@@ -464,7 +526,7 @@ export function newClashes (merged, ours, theirs) {
   }
   const before = clashes(ours)
   // Upstream's own (it lists some trade ids on two stats) aren't the merge's.
-  const upstream = clashes((theirs ?? []).map(o => typeof o.ref === 'string' ? { ...o, ref: o.ref.replace(ZWSP, '') } : o))
+  const upstream = clashes(normalizeUpstream(theirs ?? [], new Map()))
   return [...clashes(merged)].filter(k => !before.has(k) && !upstream.has(k))
 }
 

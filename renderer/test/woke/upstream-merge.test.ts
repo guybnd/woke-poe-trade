@@ -239,4 +239,23 @@ describe('stats', () => {
     const { list } = mergeData({ base: [one], ours: [one], theirs: [group], kind: 'stats', renames: new Map(), english })
     expect(list).toEqual([group])
   })
+
+  it('keeps every variant of a repeated item upstream dropped altogether', () => {
+    const a = item('Stormblood', 'UNIQUE', { unique: { base: 'Sapphire Flask' } })
+    const b = item('Stormblood', 'UNIQUE', { unique: { base: 'Topaz Flask' } })
+    const { list } = mergeData({ base: [a, b], ours: [a, b], theirs: [], kind: 'items' })
+    expect(list).toEqual([a, b])
+  })
+
+  it('keeps a stat group upstream dropped without splitting it', () => {
+    const group = { resolve: { strat: 'trivial-merge' }, stats: [stat('#% increased Quantity of Items dropped in Heists', ['explicit.stat_1']), stat('#% increased Quantity of Items dropped in Heists', ['implicit.stat_1'])] }
+    const { list } = mergeData({ base: [group], ours: [group], theirs: [], kind: 'stats' })
+    expect(list).toEqual([group])
+  })
+
+  it('reports a wording on a group and on a single stat', () => {
+    const group = { resolve: { strat: 'trivial-merge' }, stats: [stat('Nearby Enemies are Chilled', ['explicit.stat_1'], ['Enemies within 3 metres are Chilled'])] }
+    const merged = [group, stat('Enemies within 3 metres are Chilled', ['explicit.stat_1'])]
+    expect(newClashes(merged, [group]).sort()).toEqual(['matcher: Enemies within 3 metres are Chilled', 'trade id on two stats: explicit.stat_1'])
+  })
 })
