@@ -121,8 +121,7 @@ test('loot filter: the wheel steps a rule\'s number box without a click', async 
   await expect(box).toHaveValue('8')
 
   // A scroll that drifts onto the box carries on: the box doesn't take it.
-  const spot = (await box.boundingBox())!
-  await page.mouse.move(spot.x - 60, spot.y + spot.height / 2)
+  await page.locator('[data-tiers="highlarge"]').getByText('Large Cluster Jewel').hover()
   await page.mouse.wheel(0, 100)
   await box.hover()
   await page.mouse.wheel(0, 100)
