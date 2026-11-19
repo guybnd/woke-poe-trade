@@ -9,7 +9,6 @@ import { captureRendererErrors, captureVueError } from './web/woke/app/report'
 import { checkLiveDataNow, rescheduleLiveDataChecks, startLiveDataChecks, useDownloadedData } from './web/woke/app/live-data'
 import { useLeagues } from './web/background/Leagues'
 import { loadPersonal, tidyPersonal } from './web/woke/personal'
-import { installNumberWheel } from './web/woke/ui/number-wheel'
 
 // woke: the first-run setup window loads this page with #setup. It needs no
 // item data, so it opens quicker.
@@ -46,8 +45,9 @@ const isSetupWindow = window.location.hash === '#setup'
     await I18n.loadLang(AppConfig().language)
   })
 
-  // woke: the mouse wheel steps every number box (ui/number-wheel.ts).
-  installNumberWheel()
+  // woke: the mouse wheel steps every number box (ui/number-wheel.ts). Its own
+  // chunk, so startup JS stays inside the budget.
+  import('./web/woke/ui/number-wheel').then(m => m.installNumberWheel()).catch(() => {})
   const app = createApp(App)
   app.config.errorHandler = captureVueError
   app.use(i18nPlugin).mount('#app')

@@ -1,7 +1,7 @@
 <template>
   <!-- A number chip as price check has: the label switches it, the number (dashed
        underline) types or scrolls, and changing the number switches it on. -->
-  <span :class="[$style.chip, { [$style.on]: on, [$style.idle]: on && idle }]" :title="title" @wheel.prevent="onWheel">
+  <span :class="[$style.chip, { [$style.on]: on, [$style.idle]: on && idle }]" :title="title" data-own-wheel @wheel.prevent="onWheel">
     <button type="button" :class="$style.label" :aria-pressed="on" @click="emit('on', !on)">Hide &lt;</button>
     <input :class="$style.num" type="number" min="0" step="any" :value="text" :aria-label="`Hide items worth less than this many ${chaos ? 'chaos' : 'divines'}`"
       :style="{ width: `${0.8 + Math.max(text.length, 1)}ch` }"

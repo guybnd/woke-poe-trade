@@ -2,6 +2,7 @@
   <span :class="$style.wrap">
     <i v-if="icon" :class="[icon, $style.icon]" />
     <input :class="['w-field', $style.field, { [$style.withIcon]: icon }]" :type="type" :value="modelValue" :placeholder="placeholder" :aria-label="label"
+      :min="min" :max="max" :step="step"
       @input="onInput" @keydown.esc="clearOnEsc && type !== 'number' && emit('update:modelValue', '')">
     <span v-if="suffix" :class="$style.suffix">{{ suffix }}</span>
   </span>
@@ -19,7 +20,11 @@ const props = withDefaults(defineProps<{
   // Esc empties a text field. Never a number field: those are settings, and
   // Esc (to leave the overlay) used to reset them to 0.
   clearOnEsc?: boolean
-}>(), { type: 'text', placeholder: undefined, icon: undefined, suffix: undefined, label: undefined, clearOnEsc: true })
+  // Number fields: the bounds and step the mouse wheel and arrow keys keep to.
+  min?: number | string
+  max?: number | string
+  step?: number | string
+}>(), { type: 'text', placeholder: undefined, icon: undefined, suffix: undefined, label: undefined, clearOnEsc: true, min: undefined, max: undefined, step: undefined })
 const emit = defineEmits<{ (e: 'update:modelValue', v: string | number): void }>()
 
 function onInput (e: Event) {

@@ -259,7 +259,7 @@ export default defineComponent({
     // A number changed without focus (the mouse wheel) switches the row on, as
     // clicking into the box does.
     function wheeled (e: Event) {
-      if (document.activeElement !== e.target) props.filter.disabled = false
+      if (!document.hasFocus() || document.activeElement !== e.target) props.filter.disabled = false
     }
 
     function inputFocus (e: FocusEvent, type: 'min' | 'max') {

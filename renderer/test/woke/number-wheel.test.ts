@@ -28,6 +28,11 @@ describe('wheelValue', () => {
     expect(wheelValue({ value: '', min: '30', max: '40' }, -1)).toBe('40')
     expect(wheelValue({ value: '' }, 1)).toBe('0')
   })
+  it('never wheels a box with no min below 0, but steps a typed negative', () => {
+    expect(wheelValue({ value: '0' }, -1)).toBeNull()
+    expect(wheelValue({ value: '0.5', step: 'any' }, -1)).toBe('0')
+    expect(wheelValue({ value: '-2' }, -1)).toBe('-3')
+  })
   it('handles negative ranges', () => {
     expect(wheelValue({ value: '-5', min: '-10', max: '-1' }, 1)).toBe('-4')
   })

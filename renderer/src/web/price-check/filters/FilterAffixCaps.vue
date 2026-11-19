@@ -7,7 +7,7 @@
       class="w-poe-nchip w-affix-cap" :class="{ on: caps[side.key] != null }"
       :data-affix-cap="side.key"
       :title="`Most ${side.what} a listing may have. Empty: any. Click to step down, scroll or type. Searches when you press Search.`"
-      @wheel.prevent.stop="e => nudge(side.key, e.deltaY < 0 ? 1 : -1)">
+      data-own-wheel @wheel.prevent.stop="e => nudge(side.key, e.deltaY < 0 ? 1 : -1)">
       <button type="button" class="w-poe-nlab" :aria-pressed="caps[side.key] != null"
         @click="step(side.key)">{{ side.label }} <span class="w-sym">≤</span></button>
       <input class="w-poe-ninp" type="number" min="0" :max="caps.most - 1" :aria-label="`Most ${side.what}`"

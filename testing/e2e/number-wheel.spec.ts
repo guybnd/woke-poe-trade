@@ -9,7 +9,8 @@ import path from 'path'
 import zlib from 'zlib'
 import { test, expect, FIXTURES } from './harness'
 
-// One notch, as Chrome sends it with Windows' default 3 lines.
+// One notch, as Chrome sends it with Windows' default 3 lines. A box takes
+// the wheel only when no scroll was going on, so this waits that out first.
 async function wheel (page: Page, box: Locator, notches: number) {
   await box.hover()
   for (let i = 0; i < Math.abs(notches); i++) {
@@ -45,31 +46,38 @@ async function fakeTrade (page: Page) {
   }))
 }
 
-test('price check: the wheel steps a mod row\'s min and max boxes without a click', async ({ overlay }) => {
-  await fakeTrade(overlay.page)
+test('price check: the wheel steps a mod row's min and max boxes without a click', async ({ overlay }) => {
   await overlay.boot()
   await watchScroll(overlay.page)
-  await overlay.copyItem('items/rare-body-armour-es.txt')
-  const panel = overlay.widget('price-check')
-  const row = panel.locator('div', { has: overlay.page.locator('input.w-roll-input') })
-    .filter({ hasText: 'to Fire Resistance' }).last()
+  await overlay.copyItem('items/unique-belt-catalysed.txt')
+  const win = overlay.page.locator('#price-window')
+  await expect(win).toContainText('Elemental Damage with Attack Skills')
+  const row = win.locator('div', { has: overlay.page.locator('[data-catalyst-band]') })
+    .filter({ hasText: 'Elemental Damage with Attack Skills' }).last()
   const min = row.locator('input.w-roll-input').first()
   const max = row.locator('input.w-roll-input').nth(1)
-  await expect(min).toBeVisible()
+  await min.fill('25')
+  await min.press('Tab')
+  await max.fill('')
+  await max.press('Tab')
+  await max.evaluate((e: HTMLInputElement) => e.blur())
+  await expect(min).not.toBeFocused()
+  await expect(max).not.toBeFocused()
 
-  const before = Number(await min.inputValue())
   await wheel(overlay.page, min, -1)
-  await expect(min).toHaveValue(String(before - 1))
+  await expect(min).toHaveValue('24')
   expect(await overlay.page.evaluate(() => (window as any).__wheelStopped)).toBe(true)
   await wheel(overlay.page, min, 2)
-  await expect(min).toHaveValue(String(before + 1))
+  await expect(min).toHaveValue('26')
   await expect(min).not.toBeFocused()
 
   // An empty max starts from the item's own roll, then steps from there.
   await expect(max).toHaveValue('')
+  await overlay.page.waitForTimeout(600)
   await wheel(overlay.page, max, 1)
+  await expect(max).not.toHaveValue('')
   const start = Number(await max.inputValue())
-  expect(start).toBeGreaterThanOrEqual(before)
+  expect(start).toBeGreaterThanOrEqual(26)
   await wheel(overlay.page, max, -1)
   await expect(max).toHaveValue(String(start - 1))
   await overlay.snap('roll boxes stepped by the wheel')
@@ -111,6 +119,16 @@ test('loot filter: the wheel steps a rule\'s number box without a click', async 
 
   const box = page.getByRole('spinbutton', { name: 'High large: highest passives', exact: true })
   await expect(box).toHaveValue('8')
+
+  // A scroll that drifts onto the box carries on: the box doesn't take it.
+  const spot = (await box.boundingBox())!
+  await page.mouse.move(spot.x - 60, spot.y + spot.height / 2)
+  await page.mouse.wheel(0, 100)
+  await box.hover()
+  await page.mouse.wheel(0, 100)
+  await expect(box).toHaveValue('8')
+  expect(await page.evaluate(() => (window as any).__wheelStopped)).toBe(false)
+  await page.waitForTimeout(600)
   await wheel(page, box, -1)
   await expect(page.getByRole('spinbutton', { name: 'High large: highest passives', exact: true })).toHaveValue('7')
   expect(await page.evaluate(() => (window as any).__wheelStopped)).toBe(true)

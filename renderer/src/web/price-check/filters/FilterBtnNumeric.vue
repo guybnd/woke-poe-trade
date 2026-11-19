@@ -3,6 +3,7 @@
        scrolls or drags sideways, and changing it switches the filter on. -->
   <span v-if="chip" class="w-poe-nchip" :class="{ on: !filter.disabled, suggested: filter.suggested && filter.disabled, dragging }"
     :data-numeric-chip="label"
+    data-own-wheel
     @wheel.prevent.stop="handleWheel"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
@@ -37,6 +38,7 @@
   </span>
   <div v-else :class="[$style.tile, { [$style.active]: !filter.disabled, [$style.suggested]: filter.suggested && filter.disabled, [$style.dragging]: dragging }]"
     title="Click to turn on or off. Scroll, or drag a number up and down, to change it"
+    data-own-wheel
     @wheel.prevent.stop="handleWheel"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
