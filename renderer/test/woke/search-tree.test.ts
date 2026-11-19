@@ -49,16 +49,19 @@ describe('notable anoint oils', () => {
     expect(notableOils('Resolute Technique', statByRef)).toBeUndefined()
     expect(notableOils('Not A Notable', statByRef)).toBeUndefined()
   })
+  it('finds a recipe inside a stat group', () => {
+    const group = { stats: [{ ref: 'Allocates Hematophagy', anointments: [{ oils: '8,10,12' }] }, { ref: 'Allocates Vampirism', anointments: [{ oils: '3,5,8' }] }] }
+    expect(notableOils('Vampirism', () => group)).toEqual(['Amber Oil', 'Teal Oil', 'Violet Oil'])
+  })
   it('shows the oils with prices and a total on a notable card', () => {
     const list = withOils(passives, n => notableOils(n, statByRef))
     const prices: Record<string, number> = { 'Clear Oil': 1, 'Azure Oil': 2, 'Black Oil': 5, 'Prismatic Oil': 0.5 }
     const priced = { price: (n: string) => prices[n] ?? null } as unknown as LookupContext
-    const [card] = treeLookup(list, new Map(), n => `/icons/${n}.png`)("sione's ambition", priced)
+    const [card] = treeLookup(list)("sione's ambition", priced)
     const anoint = card.sections.find(s => s.label === 'Anoint')!
     expect(anoint.rows!.map(r => [r.label, r.chaos])).toEqual([
       ['Prismatic Oil', 0.5], ['Azure Oil', 2], ['Black Oil', 5], ['Total', 7.5]
     ])
-    expect(anoint.rows![0].icon).toBe('/icons/Prismatic Oil.png')
     // A missing price leaves the total blank rather than short.
     const partial = { price: (n: string) => n === 'Black Oil' ? 5 : null } as unknown as LookupContext
     const rows = treeLookup(list)("sione's ambition", partial)[0].sections.find(s => s.label === 'Anoint')!.rows!

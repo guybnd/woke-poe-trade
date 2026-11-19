@@ -36,7 +36,7 @@ export function decodeOils (calc: StatCalculated): string[] | undefined {
   return oilNames(encoded).reverse() // [Golden Oil ... Clear Oil]
 }
 
-// The oils of an encoded recipe ("1,8,10"), cheapest first. Undefined when
+// The oils of an encoded recipe ("1,8,10"), lowest tier first. Undefined when
 // an index isn't a known oil.
 export function oilNames (encoded: string): string[] {
   return encoded
@@ -46,13 +46,16 @@ export function oilNames (encoded: string): string[] {
     .map(idx => OILS[idx])
 }
 
-// The oils that anoint a passive notable onto an amulet, cheapest first,
+// The oils that anoint a passive notable onto an amulet, lowest tier first,
 // from the "Allocates <notable>" enchant's recipe. Undefined when it can't
 // be anointed.
 export function notableOils (name: string, statByRef: (ref: string) => unknown): string[] | undefined {
   const ref = `Allocates ${name}`
-  const stat = statByRef(ref) as { ref?: string, anointments?: Array<{ oils: string }> } | undefined
-  // The ref index is a hash: make sure it found this stat.
+  type AnointStat = { ref?: string, anointments?: Array<{ oils: string }> }
+  const found = statByRef(ref) as (AnointStat & { stats?: AnointStat[] }) | undefined
+  // Some languages group stats that share a translation; the ref index is a
+  // hash, so make sure it found this stat.
+  const stat = found?.stats ? found.stats.find(s => s.ref === ref) : found
   if (stat?.ref !== ref) return
   const encoded = stat.anointments?.[0]?.oils
   if (!encoded) return

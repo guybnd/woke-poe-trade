@@ -9,7 +9,7 @@ export interface Passive {
   name: string
   kind: PassiveKind
   stats: string[]
-  // The three oils that anoint it onto an amulet, cheapest first.
+  // The three oils that anoint it onto an amulet, lowest tier first.
   oils?: string[]
 }
 
@@ -70,19 +70,19 @@ export function withOils (list: Passive[], oilsOf: (name: string) => string[] | 
   })
 }
 
-function anointSection (oils: readonly string[], ctx?: LookupContext, iconOf?: (name: string) => string | undefined): LookupSection {
+function anointSection (oils: readonly string[], ctx?: LookupContext): LookupSection {
   const prices = oils.map(o => ctx?.price(o) ?? null)
   const total = prices.every(c => c != null) ? prices.reduce<number>((a, c) => a + c!, 0) : null
   return {
     label: 'Anoint',
     rows: [
-      ...oils.map((o, i) => ({ label: o, icon: iconOf?.(o), chaos: prices[i], item: { name: o } })),
+      ...oils.map((o, i) => ({ label: o, chaos: prices[i], item: { name: o }, bulk: true })),
       ...(ctx ? [{ label: 'Total', chaos: total, dim: true }] : [])
     ]
   }
 }
 
-export function passiveCard (p: Passive, ctx?: LookupContext, grantedBy: readonly string[] = [], iconOf?: (name: string) => string | undefined): LookupCard {
+export function passiveCard (p: Passive, ctx?: LookupContext, grantedBy: readonly string[] = []): LookupCard {
   const slug = encodeURIComponent(p.name.replaceAll("'", '').replaceAll(' ', '_'))
   return {
     id: `passive:${p.kind}:${p.name}`,
@@ -92,7 +92,7 @@ export function passiveCard (p: Passive, ctx?: LookupContext, grantedBy: readonl
     icon: p.kind.includes('Keystone') ? 'fas fa-dharmachakra' : 'fas fa-circle-nodes',
     sections: [
       { label: p.kind, text: p.stats.length ? p.stats : ['No stats in the tree data.'] },
-      ...(p.oils ? [anointSection(p.oils, ctx, iconOf)] : []),
+      ...(p.oils ? [anointSection(p.oils, ctx)] : []),
       ...(grantedBy.length ? [{ label: 'Uniques that grant it', rows: grantedBy.map(name => ({ label: name, chaos: ctx?.price(name) ?? null, item: { name }, bulk: true })) }] : [])
     ],
     actions: [
@@ -102,7 +102,7 @@ export function passiveCard (p: Passive, ctx?: LookupContext, grantedBy: readonl
   }
 }
 
-export function treeLookup (passives: readonly Passive[] | null, grants: ReadonlyMap<string, string[]> = new Map(), iconOf?: (name: string) => string | undefined): Lookup {
+export function treeLookup (passives: readonly Passive[] | null, grants: ReadonlyMap<string, string[]> = new Map()): Lookup {
   return (query, ctx) => {
     if (!passives || query.trim().length < 4) return []
     return passives
@@ -111,6 +111,6 @@ export function treeLookup (passives: readonly Passive[] | null, grants: Readonl
       // Keystones first on a tie: they're what people look up.
       .sort((a, b) => a.rank - b.rank || Number(b.p.kind === 'Keystone') - Number(a.p.kind === 'Keystone') || a.p.name.length - b.p.name.length)
       .slice(0, 4)
-      .map(h => passiveCard(h.p, ctx, h.p.kind.includes('Keystone') ? grants.get(h.p.name) ?? [] : [], iconOf))
+      .map(h => passiveCard(h.p, ctx, h.p.kind.includes('Keystone') ? grants.get(h.p.name) ?? [] : []))
   }
 }

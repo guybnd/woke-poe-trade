@@ -11,10 +11,7 @@
       <div v-for="(row, j) in section.rows ?? []" :key="'r' + j" v-item-tip="row.item ?? null" :class="$style.row">
         <span :class="$style.name">
           <WIcon v-if="row.item || hasItems(section)" :src="row.item ? rowIcon(row.item.name) : undefined" />
-          <span :class="$style.name">
-          <WIcon v-if="row.icon" :src="row.icon" size="sm" />
           <span class="w-trunc" :class="row.dim ? 'w-dim' : undefined">{{ row.label }}</span>
-        </span>
         </span>
         <WPrice v-if="row.chaos !== undefined" :bulk="!!row.bulk" :chaos="row.chaos" :divine="divine" />
         <span v-else-if="row.value" :class="[$style.value, row.dim ? 'w-dim' : undefined]">{{ row.value }}</span>
@@ -72,7 +69,6 @@ defineEmits<{ (e: 'act', action: LookupAction): void }>()
 .label { font-size: var(--w-fs-caps); font-weight: var(--w-caps-weight); letter-spacing: 0.05em; text-transform: var(--w-caps-case); color: var(--w-dim); font-family: var(--w-caps-face); border-bottom: 1px solid var(--w-line); padding-bottom: 2px; }
 .text { margin: 4px 0; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: var(--w-s3); min-height: var(--w-row-h); border-bottom: 1px solid var(--w-line-soft); }
-.name { display: flex; align-items: center; gap: var(--w-s1); min-width: 0; }
 .value { text-align: right; min-width: 0; }
 .rowAct { flex: none; }
 .name { flex: 1 1 auto; display: flex; align-items: center; gap: var(--w-s2); min-width: 0; }
