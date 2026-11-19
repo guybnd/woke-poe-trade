@@ -11,7 +11,10 @@ test('rewards set in Map mods show on the map check card', async ({ overlay }) =
 
   await rewards.getByLabel('Minimum atlas drops').fill('80')
   await rewards.getByLabel('Minimum pack size').fill('25')
-  await expect(rewards).toContainText('2 minimums set')
+  await expect(rewards.getByText('A map must meet')).toHaveAttribute('title', '2 minimums set')
+  // The juice squares explain themselves.
+  await expect(rewards.getByRole('columnheader', { name: /Juice score/ })).toBeVisible()
+  await expect(rewards.getByText('normal').first()).toBeVisible()
   // The search picks up the minimums.
   await expect(panel.locator('code').first()).toContainText('ops: .')
 
