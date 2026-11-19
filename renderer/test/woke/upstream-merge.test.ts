@@ -145,13 +145,13 @@ describe('stats', () => {
     expect(list.map(s => [s.ref, s.matchers.map((m: M) => m.string)])).toEqual([['a', ['a', 'shared']], ['b', ['b']]])
   })
 
-  it('a stat upstream dropped stays, without wordings an upstream stat now has', () => {
+  it('a stat upstream dropped gives its wordings to an upstream stat, and goes when that empties it', () => {
     const base = [stat('+# to Level of all Arcane Link Gems', ['explicit.skill_288'], ['# to Level of all Arcane Link Gems'])]
     const theirs = [stat('+# to Level of all Arcane Link Gems (Random Skill Gem)', ['explicit.skill_288'], ['# to Level of all Arcane Link Gems'])]
     // Not taken as a rename (say English didn't find it).
     const { list } = mergeData({ base, ours: base, theirs, kind: 'stats', renames: new Map() })
-    expect(list.map(s => s.ref).sort()).toEqual(['+# to Level of all Arcane Link Gems', '+# to Level of all Arcane Link Gems (Random Skill Gem)'])
-    expect(list.find(s => s.ref === '+# to Level of all Arcane Link Gems')!.matchers).toEqual([])
+    // Left with no wording and no trade id of its own, it goes.
+    expect(list.map(s => s.ref)).toEqual(['+# to Level of all Arcane Link Gems (Random Skill Gem)'])
     expect(newClashes(list, base)).toEqual([])
   })
 
@@ -159,5 +159,84 @@ describe('stats', () => {
     const ours = [stat('a', ['explicit.stat_1'], ['same'])]
     const merged = [...ours, stat('b', ['explicit.stat_2'], ['same']), stat('a', ['explicit.stat_1'])]
     expect(newClashes(merged, ours)).toEqual(['matcher: same', 'ref: a'])
+  })
+
+  it('a stat kept under our ref on one run stays one stat on the next', () => {
+    const old = '#% chance to Blind Enemies on hit'
+    const nu = '#% chance to Blind Enemies on Hit'
+    // Next run: base is upstream's last copy, with its new ref; ours has our ref.
+    const base = [stat(nu, ['explicit.stat_2'], [nu])]
+    const ours = [stat(old, ['explicit.stat_2'], [old, nu])]
+    const theirs = [stat(nu, ['explicit.stat_2'], [nu, 'Blind Enemies on Hit'])]
+    const { list } = mergeData({ base, ours, theirs, kind: 'stats' })
+    expect(list).toEqual([stat(old, ['explicit.stat_2'], [old, nu, 'Blind Enemies on Hit'])])
+  })
+
+  it('a zero-width space in base is no change upstream', () => {
+    const ref = 'Socketed Gems are Supported by Level # Empower Support'
+    const zw = 'Socketed Gems are Supported by Level # ​Empower Support'
+    const ours = [stat(ref, ['explicit.effect_1'], [ref, 'ours'])]
+    const { list, count } = mergeData({ base: [stat(ref, ['explicit.effect_1'], [zw])], ours, theirs: [stat(ref, ['explicit.effect_1'], [zw])], kind: 'stats' })
+    expect(list).toEqual(ours)
+    expect(count.upstreamChanged).toBe(0)
+  })
+
+  it('a stat group upstream split into single stats goes', () => {
+    const a = stat('a', ['explicit.stat_1'])
+    const group = { resolve: { strat: 'trivial-merge' }, stats: [a, stat('a', ['implicit.stat_1'])] }
+    const { list } = mergeData({ base: [group], ours: [group], theirs: [stat('a', ['explicit.stat_1', 'implicit.stat_1'])], kind: 'stats' })
+    expect(list).toEqual([stat('a', ['explicit.stat_1', 'implicit.stat_1'])])
+  })
+
+  it('our single stat stays when upstream folds it into a new group, and the group goes', () => {
+    const single = stat('#% more Maximum Life', ['explicit.stat_1', 'implicit.stat_2'])
+    const group = { resolve: { strat: 'trivial-merge' }, stats: [stat('#% more Maximum Life', ['explicit.stat_1']), stat('#% more Maximum Life', ['implicit.stat_2'])] }
+    const { list } = mergeData({ base: [single], ours: [single], theirs: [group], kind: 'stats' })
+    expect(list).toEqual([single])
+  })
+
+  it('pairs repeated items by content, not position', () => {
+    const a = item("Precursor's Emblem", 'UNIQUE', { unique: { base: 'Topaz Ring' } })
+    const b = item("Precursor's Emblem", 'UNIQUE', { unique: { base: 'Ruby Ring' } })
+    const mine = item("Precursor's Emblem", 'UNIQUE', { unique: { base: 'Gold Ring' } })
+    // Upstream dropped the first variant; we added one of our own.
+    const { list } = mergeData({ base: [a, b], ours: [a, b, mine], theirs: [b], kind: 'items' })
+    expect(list).toEqual([b, mine])
+  })
+
+  it('another language follows the merged English stats', () => {
+    const english = { refs: new Set(['Areas contain a Mirror of Delirium', 'kept']), covered: new Map([['+#% to Item Rarity', 'kept']]) }
+    const base = [stat('Area contains a Mirror of Delirium', ['enchant.stat_1'], ['ru old']), stat('kept', ['explicit.stat_9'], ['ru kept'])]
+    const theirs = [
+      stat('Areas contain a Mirror of Delirium', ['enchant.stat_1'], ['ru new']),
+      stat('kept', ['explicit.stat_9'], ['ru kept']),
+      stat('+#% to Item Rarity', ['explicit.stat_3'], ['ru rarity'])
+    ]
+    const { list } = mergeData({ base, ours: base, theirs, kind: 'stats', renames: new Map(), english })
+    expect(list.map(s => s.ref)).toEqual(['Areas contain a Mirror of Delirium', 'kept'])
+    expect(list[1].trade.ids.explicit).toEqual(['explicit.stat_9', 'explicit.stat_3'])
+  })
+
+  it("reports stats left with no wording and trade ids on two stats, but not upstream's own", () => {
+    const ours = [stat('a', ['explicit.stat_1'])]
+    const merged = [...ours, stat('b', ['explicit.stat_1'], [])]
+    expect(newClashes(merged, ours)).toEqual(['no wording: b', 'trade id on two stats: explicit.stat_1'])
+    expect(newClashes(merged, ours, merged)).toEqual([])
+  })
+
+  it("a stat group we changed stays, and upstream's single stat for it goes", () => {
+    const plain = stat('Grants Level # Anger Skill', ['explicit.stat_1'])
+    const base = [{ resolve: { strat: 'select' }, stats: [plain, stat('Grants Level # Anger Skill', ['explicit.stat_2'])] }]
+    const ours = [{ resolve: { strat: 'select' }, stats: [plain, stat('Grants Level # Anger Skill', ['explicit.effect_9'], ['Grants Level # Anger Skill', 'Grants Level # Anger'])] }]
+    const { list } = mergeData({ base, ours, theirs: [plain], kind: 'stats' })
+    expect(list).toEqual(ours)
+  })
+
+  it('a group only another language has replaces our unchanged single stats there', () => {
+    const one = stat('1 Added Passive Skill is Savage Response', ['explicit.stat_1'], ['ru shared'])
+    const group = { resolve: { strat: 'trivial-merge' }, stats: [stat('1 added passive skill is Cruel Retort', ['enchant.stat_2'], ['ru shared']), one] }
+    const english = { refs: new Set([one.ref, '1 added passive skill is Cruel Retort']), covered: new Map(), groups: new Set<string>() }
+    const { list } = mergeData({ base: [one], ours: [one], theirs: [group], kind: 'stats', renames: new Map(), english })
+    expect(list).toEqual([group])
   })
 })

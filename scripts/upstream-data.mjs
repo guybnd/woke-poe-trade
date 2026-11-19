@@ -84,7 +84,7 @@ for (const lang of LANGUAGES) {
     const ours = parseNdjson(oursText)
     const res = mergeData({ base: parseNdjson(seen), ours, theirs: parseNdjson(theirs), kind, ...(kind === 'stats' ? { renames, placeholders, english: lang === 'en' ? undefined : english } : {}) })
     const text = toNdjson(res.list)
-    if (lang === 'en' && kind === 'stats') english = { refs: new Set(res.list.filter(o => typeof o.ref === 'string').map(o => o.ref)), covered: res.covered }
+    if (lang === 'en' && kind === 'stats') english = { refs: new Set(res.list.filter(o => typeof o.ref === 'string').map(o => o.ref)), covered: res.covered, droppedGroups: res.droppedGroups, groups: res.groups }
     report.push(`| \`${lang}/${name}\` | ${Object.entries(res.count).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')} |`)
     if (kind === 'stats') for (const c of newClashes(res.list, ours, parseNdjson(theirs))) clashes.push(`${lang}: ${c}`)
     // read() drops carriage returns; files are written with \n, like upstream's.

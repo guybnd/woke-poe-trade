@@ -202,8 +202,8 @@ export function findPlaceholders (base, theirs) {
 // Merges one file. base/ours/theirs are parsed ndjson lists. Returns the
 // merged list and counts for the report.
 /**
- * @param {{ base: any[], ours: any[], theirs: any[], kind: string, renames?: Map<string, string>, placeholders?: Set<string>, english?: { refs: Set<string>, covered: Map<string, string> } }} args
- * @returns {{ list: any[], count: Record<string, number>, renames: Map<string, string>, covered: Map<string, string> }}
+ * @param {{ base: any[], ours: any[], theirs: any[], kind: string, renames?: Map<string, string>, placeholders?: Set<string>, english?: { refs: Set<string>, covered: Map<string, string>, droppedGroups?: Set<string>, groups?: Set<string> } }} args
+ * @returns {{ list: any[], count: Record<string, number>, renames: Map<string, string>, covered: Map<string, string>, droppedGroups: Set<string>, groups: Set<string> }}
  */
 export function mergeData ({ base, ours, theirs, kind, renames, placeholders, english }) {
   const keyOf = kind === 'items' ? itemKey : statKey
@@ -253,13 +253,18 @@ export function mergeData ({ base, ours, theirs, kind, renames, placeholders, en
     if (english && typeof o.ref === 'string' && !english.refs.has(o.ref)) { count.droppedLikeUpstream++; continue }
     rows.set(k, o)
   }
-  if (kind === 'stats') count.droppedLikeUpstream += dropSplitGroups(rows, B, Tm)
+  if (kind === 'stats') {
+    count.droppedLikeUpstream += dropSplitGroups(rows, B, Tm, Om, english?.groups)
+    // Stat groups English left out are left out here too.
+    for (const k of english?.droppedGroups ?? []) if (rows.delete(k)) count.droppedLikeUpstream++
+  }
   let covered = new Map()
   if (kind === 'stats') {
     const settled = settleClashes(rows, B, T, O)
     covered = settled.covered
     count.matchersMoved = settled.matchersMoved
     count.upstreamCovered = settled.upstreamCovered
+    count.droppedLikeUpstream += settled.droppedLikeUpstream
     // Upstream stats English left out for ours: left out here too.
     for (const [loser, winner] of english?.covered ?? []) {
       const lk = [...rows.keys()].find(k => rows.get(k).ref === loser && !B.has(k) && !Om.has(k))
@@ -289,48 +294,50 @@ export function mergeData ({ base, ours, theirs, kind, renames, placeholders, en
   }
   for (const k of head) emit(k)
   for (const [k] of T) if (rows.has(k) && Tm.has(k)) emit(k)
-  return { list: out, count, renames, covered }
+  const droppedGroups = new Set([...Tm.keys(), ...O.map(([k]) => k)].filter(k => k.startsWith('resolve:') && !rows.has(k)))
+  const groups = new Set([...Tm.keys()].filter(k => k.startsWith('resolve:')))
+  return { list: out, count, renames, covered, droppedGroups, groups }
 }
 
 // A stat group upstream dropped whose stats all stand on their own after the
-// merge (3.30 split "trivial-merge" groups into single stats) goes too, else
-// one ref would be both in the group and on its own and lookups pick either.
-// Wordings we added to its stats move to the single stats.
-function dropSplitGroups (rows, B, Tm) {
+// merge (3.30 split "trivial-merge" and Heist "select" groups into single
+// stats) would put one ref both in the group and on its own, and lookups pick
+// either. Unchanged by us, the group goes. Changed by us (#434 routed the
+// granted skills' 3.30 wording through such a group), the group stays and
+// upstream's new single stats for it go.
+function dropSplitGroups (rows, B, Tm, Om, englishGroups) {
   const single = new Map()
   for (const [k, r] of rows) if (typeof r.ref === 'string') single.set(r.ref, k)
   let n = 0
   for (const [k, r] of [...rows]) {
     if (typeof r.ref === 'string' || Tm.has(k) || !Array.isArray(r.stats) || !r.stats.length) continue
-    if (!r.stats.every(s => single.has(s.ref))) continue
-    const before = new Map((B.get(k)?.stats ?? []).map(s => [s.ref, s]))
-    for (const s of r.stats) {
-      const sk = single.get(s.ref)
-      const row = rows.get(sk)
-      const word = (m) => matcherKey(m) + ' ' + (m.value ?? '')
-      const had = new Set((before.get(s.ref)?.matchers ?? []).map(word))
-      const has = new Set((row.matchers ?? []).map(word))
-      const add = (s.matchers ?? []).filter(m => !had.has(word(m)) && !has.has(word(m)))
-      if (add.length) rows.set(sk, { ...row, matchers: [...(row.matchers ?? []), ...add] })
+    if (!r.stats.every(st => single.has(st.ref))) continue
+    if (B.has(k) && same(r, B.get(k))) {
+      rows.delete(k)
+      n++
+      continue
     }
-    rows.delete(k)
-    n++
-  }
-  // The other way round: upstream folded single stats into a group ("#% more
-  // Maximum Life" in 3.30). Our single goes when the group's stats carry all
-  // its trade ids.
-  const inGroups = new Map()
-  for (const [k, r] of rows) {
-    if (typeof r.ref === 'string' || !Tm.has(k)) continue
-    for (const s of r.stats ?? []) {
-      if (!inGroups.has(s.ref)) inGroups.set(s.ref, new Set())
-      for (const id of tradeIds(s)) inGroups.get(s.ref).add(id)
+    for (const st of r.stats) {
+      const sk = single.get(st.ref)
+      if (sk != null && rows.has(sk) && !B.has(sk) && !Om.has(sk)) { rows.delete(sk); n++ }
     }
   }
+  // The other way round: upstream folded single stats into a new group (3.30:
+  // "#% more Maximum Life", the Raise Spectre and granted-aura stats). Our
+  // single stats stay, as code and tests read them that way (a folded random
+  // gem searches only its own id), so the new group goes.
+  // A group only another language has (two English stats share one Russian
+  // wording) is upstream's own business: our unchanged single stats go.
   for (const [k, r] of [...rows]) {
-    if (typeof r.ref !== 'string' || Tm.has(k) || !inGroups.has(r.ref)) continue
-    const ids = inGroups.get(r.ref)
-    if (!tradeIds(r).every(id => ids.has(id))) continue
+    if (typeof r.ref === 'string' || !Tm.has(k) || B.has(k) || !Array.isArray(r.stats) || !r.stats.length) continue
+    if (englishGroups && !englishGroups.has(k)) {
+      for (const st of r.stats) {
+        const sk = single.get(st.ref)
+        if (sk != null && rows.has(sk) && B.has(sk) && same(rows.get(sk), B.get(sk))) { rows.delete(sk); n++ }
+      }
+      continue
+    }
+    if (!r.stats.every(st => single.has(st.ref) && Om.has(single.get(st.ref)))) continue
     rows.delete(k)
     n++
   }
@@ -378,7 +385,7 @@ function settleClashes (rows, B, T, O) {
       ourAdds.get(mk).add(k)
     }
   }
-  const counts = { matchersMoved: 0, upstreamCovered: 0, covered: new Map() }
+  const counts = { matchersMoved: 0, upstreamCovered: 0, droppedLikeUpstream: 0, covered: new Map() }
   const winnerOf = new Map() // losing key -> a key that kept its wording
   for (const [mk, keys] of byMatcher(rows)) {
     if (keys.size < 2) continue
@@ -398,7 +405,14 @@ function settleClashes (rows, B, T, O) {
   }
   for (const [k, win] of winnerOf) {
     const row = rows.get(k)
-    if (row.matchers.length || B.has(k) || Om.has(k)) continue
+    if (row.matchers.length) continue
+    // One upstream dropped, now with no wording and nothing the winner lacks.
+    if (!Tm.has(k)) {
+      const has = new Set(tradeIds(rows.get(win)))
+      if (tradeIds(row).every(id => has.has(id))) { rows.delete(k); counts.droppedLikeUpstream++ }
+      continue
+    }
+    if (B.has(k) || Om.has(k)) continue
     rows.delete(k)
     counts.upstreamCovered++
     counts.covered.set(row.ref, rows.get(win).ref)
