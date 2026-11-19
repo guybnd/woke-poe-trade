@@ -138,8 +138,8 @@ import { registry } from '@/web/overlay/widget-registry'
 import { AppConfig } from '@/web/Config'
 import { Host } from '@/web/background/IPC'
 import { useLeagues } from '@/web/background/Leagues'
-import { ITEM_BY_REF, ITEMS_ITERATOR, STAT_BY_REF_V2 } from '@/assets/data'
-import { notableOils } from '@/web/price-check/filters/pseudo/anointments'
+import { ITEM_BY_REF, ITEMS_ITERATOR, STAT_BY_REF_V2, STATS_ITERATOR } from '@/assets/data'
+import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointments'
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
@@ -191,6 +191,8 @@ import type { BeastRecipe, BestiaryData } from './lookups/bestiary'
 import { gemLookup, transfiguredBase } from './lookups/gems'
 import { keystoneUniques, passiveList, treeLookup, withOils } from './lookups/tree'
 import { megaloLookup } from './lookups/megalo'
+import { ringAnointLookup, ringAnoints } from './lookups/rings'
+import type { RingAnoint } from './lookups/rings'
 import type { Passive } from './lookups/tree'
 import { betrayalLookup } from './lookups/betrayal'
 import { rewardCounts, zoneFacts, zoneLookup } from './lookups/zones'
@@ -511,6 +513,17 @@ function loadTree () {
     passives.value = withOils(list, name => notableOils(name, STAT_BY_REF_V2))
   }).catch(() => {})
 }
+// Blight ring anoints, from the stat data. Read again when the data's
+// language changes.
+let ringAnointsFrom: typeof STATS_ITERATOR | null = null
+let ringAnointCache: RingAnoint[] = []
+function ringAnointList (): RingAnoint[] {
+  if (ringAnointsFrom !== STATS_ITERATOR) {
+    ringAnointsFrom = STATS_ITERATOR
+    ringAnointCache = ringAnoints(STATS_ITERATOR('"anointments"'), oilNames)
+  }
+  return ringAnointCache
+}
 // Campaign zones, from the Campaign tool's levelling route, read on first open.
 const zones = shallowRef<Zone[] | null>(null)
 function loadZones () {
@@ -573,7 +586,7 @@ const stopDataWatch = onSharedDataChange(() => {
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
