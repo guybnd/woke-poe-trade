@@ -46,7 +46,7 @@ async function fakeTrade (page: Page) {
   }))
 }
 
-test('price check: the wheel steps a mod row's min and max boxes without a click', async ({ overlay }) => {
+test('price check: the wheel steps a mod row min and max boxes without a click', async ({ overlay }) => {
   await overlay.boot()
   await watchScroll(overlay.page)
   await overlay.copyItem('items/unique-belt-catalysed.txt')
