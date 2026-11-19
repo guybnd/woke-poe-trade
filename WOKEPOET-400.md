@@ -14,6 +14,14 @@ history:
     user: Agent
     date: '2026-11-19T15:03:15.493Z'
     comment: Created ticket.
+    id: a-2026-11-19t15-03-15-493z
+  - type: activity
+    user: Agent
+    date: '2026-11-19T15:03:59.963Z'
+    comment: >-
+      Pushed woke/boss-catarina (1613fdc7). Review clean; typecheck, lint, 4686
+      unit tests pass. Handed to coordinator for merge + dev build.
+    id: a-2026-11-19t15-03-59-963z
 ---
 Guy asked why Catarina isn't in Boss runs. The boss table (renderer/src/web/woke/boss-runs/bosses.ts) is hand-typed and never had her.
 
