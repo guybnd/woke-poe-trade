@@ -317,3 +317,24 @@ describe('estimated drop chances', () => {
     }
   })
 })
+
+describe('boss list', () => {
+  it('has the Syndicate Mastermind, opened with a Syndicate Medallion', () => {
+    expect(boss('catarina').entry).toEqual([{ name: 'Syndicate Medallion', qty: 1 }])
+    expect(boss('catarina').drops.map(d => d.name)).toContain('Veiled Exalted Orb')
+  })
+
+  it('prices Saresh\'s belt from unidentified listings', () => {
+    expect(VARIABLE_ITEMS.has('Screams of the Desiccated')).toBe(true)
+    expect(boss('saresh').drops.find(d => d.name === 'Screams of the Desiccated')?.variable).toBe(true)
+    expect(tradeQuery('Screams of the Desiccated', true).query).toMatchObject({ name: 'Screams of the Desiccated', type: 'Leather Belt' })
+  })
+
+  it('has unique ids and no drop listed twice for one boss', () => {
+    expect(new Set(BOSSES.map(b => b.id)).size).toBe(BOSSES.length)
+    for (const b of BOSSES) {
+      const names = b.drops.map(d => d.name)
+      expect(new Set(names).size, b.id).toBe(names.length)
+    }
+  })
+})

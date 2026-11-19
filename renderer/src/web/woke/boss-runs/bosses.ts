@@ -249,6 +249,91 @@ export const BOSSES: Boss[] = ([
     ]
   },
   {
+    id: 'uber-incarnation-of-fear',
+    name: 'Uber Incarnation of Fear',
+    tier: 'uber',
+    entry: [{ name: 'Traumatic Fragment', qty: 4 }],
+    runSeconds: 240,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-incarnation-of-fear', kills: null },
+    drops: [
+      { name: 'The Caged Mammoth', chance: null },
+      { name: 'The Unseen Hue', chance: null },
+      { name: 'Coiling Whisper', chance: null },
+      { name: 'Woespike', chance: null },
+      { name: 'Wing of the Wyvern', chance: null },
+      { name: 'Bound By Destiny', chance: null },
+      { name: 'Orb of Intention', chance: null },
+      { name: 'Traumatic Reliquary Key', chance: null },
+      { name: 'Greater Devour Support', chance: null, variant: '1' },
+      { name: 'Runic Astrolabe', chance: null },
+      { name: 'Chaotic Astrolabe', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Timeless Astrolabe', chance: null },
+      { name: 'Nameless Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null },
+      { name: 'Fruiting Astrolabe', chance: null },
+      { name: 'Lightless Astrolabe', chance: null },
+      { name: 'Grasping Astrolabe', chance: null }
+    ]
+  },
+  {
+    id: 'uber-incarnation-of-neglect',
+    name: 'Uber Incarnation of Neglect',
+    tier: 'uber',
+    entry: [{ name: 'Lonely Fragment', qty: 4 }],
+    runSeconds: 240,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-incarnation-of-neglect', kills: null },
+    drops: [
+      { name: 'Haunting Memories', chance: null },
+      { name: 'Bitter Instinct', chance: null },
+      { name: 'Refuge in Isolation', chance: null },
+      { name: 'Festering Resentment', chance: null },
+      { name: 'Bound By Destiny', chance: null },
+      { name: 'Orb of Remembrance', chance: null },
+      { name: 'Monochrome', chance: null },
+      { name: 'Lonely Reliquary Key', chance: null },
+      { name: 'Frostmage Support', chance: null, variant: '1' },
+      { name: 'Runic Astrolabe', chance: null },
+      { name: 'Chaotic Astrolabe', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Timeless Astrolabe', chance: null },
+      { name: 'Enshrouded Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null },
+      { name: 'Nameless Astrolabe', chance: null },
+      { name: 'Fruiting Astrolabe', chance: null },
+      { name: 'Lightless Astrolabe', chance: null },
+      { name: 'Grasping Astrolabe', chance: null }
+    ]
+  },
+  {
+    id: 'uber-incarnation-of-dread',
+    name: 'Uber Incarnation of Dread',
+    tier: 'uber',
+    entry: [{ name: 'Reverent Fragment', qty: 4 }],
+    runSeconds: 240,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'uber-incarnation-of-dread', kills: null },
+    drops: [
+      { name: 'Whispers of Infinity', chance: null },
+      { name: 'The Hallowed Monarch', chance: null },
+      { name: 'Wellwater Phylactery', chance: null },
+      { name: 'The Golden Charlatan', chance: null },
+      { name: 'Bound By Destiny', chance: null },
+      { name: 'Orb of Unravelling', chance: null },
+      { name: 'Reverent Reliquary Key', chance: null },
+      { name: 'Congregation Support', chance: null, variant: '1' },
+      { name: 'Runic Astrolabe', chance: null },
+      { name: 'Chaotic Astrolabe', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Timeless Astrolabe', chance: null },
+      { name: 'Enshrouded Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null },
+      { name: 'Nameless Astrolabe', chance: null },
+      { name: 'Fruiting Astrolabe', chance: null },
+      { name: 'Lightless Astrolabe', chance: null },
+      { name: 'Grasping Astrolabe', chance: null }
+    ]
+  },
+  {
     id: 'maven',
     name: 'The Maven',
     tier: 'pinnacle',
@@ -333,6 +418,34 @@ export const BOSSES: Boss[] = ([
       { name: 'Mark of the Elder', chance: null },
       { name: 'Voidfletcher', chance: null },
       { name: 'Cooldown Recovery Support', chance: null, variant: '1' }
+    ]
+  },
+  {
+    id: 'elder',
+    name: 'The Elder',
+    tier: 'pinnacle',
+    entry: [
+      { name: 'Fragment of Enslavement', qty: 1 },
+      { name: 'Fragment of Eradication', qty: 1 },
+      { name: 'Fragment of Purification', qty: 1 },
+      { name: 'Fragment of Constriction', qty: 1 }
+    ],
+    runSeconds: 240,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'elder', kills: null },
+    drops: [
+      { name: 'Nebuloch', chance: null },
+      { name: 'Cyclopean Coil', chance: null },
+      { name: "Blasphemer's Grasp", chance: null },
+      { name: 'Hopeshredder', chance: null },
+      { name: 'Shimmeron', chance: null },
+      { name: 'Impresence', chance: null },
+      { name: "Watcher's Eye", chance: null },
+      { name: 'Fragment of Terror', chance: null },
+      { name: 'Fragment of Emptiness', chance: null },
+      { name: 'Orb of Dominance', chance: null },
+      { name: "Elder's Exalted Orb", chance: null },
+      { name: 'Void of the Elements', chance: null },
+      { name: 'Eldritch Blasphemy Support', chance: null, variant: '1' }
     ]
   },
   {
@@ -489,6 +602,172 @@ export const BOSSES: Boss[] = ([
       { name: 'Hextoad Support', chance: null, variant: '1' },
       { name: 'The Burden of Shadows', chance: null },
       { name: 'The Endless Darkness', chance: null }
+    ]
+  },
+  {
+    id: 'catarina',
+    name: 'Catarina, Master of Undeath',
+    tier: 'pinnacle',
+    // The Syndicate Mastermind fight, opened with a Syndicate Medallion.
+    entry: [{ name: 'Syndicate Medallion', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'catarina-the-mastermind', kills: null },
+    drops: [
+      { name: 'Veiled Exalted Orb', chance: null },
+      { name: 'Cinderswallow Urn', chance: null },
+      { name: 'Bitterbind Point', chance: null },
+      { name: 'Cane of Kulemak', chance: null },
+      { name: 'Spinehail', chance: null },
+      { name: "The Queen's Hunger", chance: null },
+      { name: 'The Devouring Diadem', chance: null },
+      { name: 'Communion Support', chance: null, variant: '1' },
+      { name: "Zorath's Eye of the Endless", chance: null },
+      { name: 'Allflame Ember of Kulemak', chance: null },
+      { name: 'Allflame Ember of Resplendence', chance: null },
+      { name: 'Allflame Ember of Propagation', chance: null },
+      { name: "Keeper's Corruption", chance: null },
+      { name: "Nook's Crown", chance: null }
+    ]
+  },
+  {
+    id: 'incarnation-of-fear',
+    name: 'Incarnation of Fear',
+    tier: 'pinnacle',
+    entry: [{ name: 'Echo of Trauma', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'incarnation-of-fear', kills: 2439, note: 'Drops not seen in the sample have no rate.' },
+    drops: [
+      { name: "Enmity's Embrace", chance: 0.1193 },
+      { name: 'Servant of Decay', chance: 0.0248 },
+      { name: 'Orb of Intention', chance: 0.0258 },
+      { name: 'Bound By Destiny', chance: 0.0052 },
+      { name: 'Starcaller', chance: 0.0005 },
+      { name: 'Greater Devour Support', chance: 0.0041, variant: '1' },
+      { name: 'Chaotic Astrolabe', chance: 0.0077 },
+      { name: 'Lightless Astrolabe', chance: 0.0041 },
+      { name: 'Fruiting Astrolabe', chance: 0.0031 },
+      { name: 'Runic Astrolabe', chance: 0.0026 },
+      { name: 'Grasping Astrolabe', chance: 0.0021 },
+      { name: 'The Unseen Hue', chance: null },
+      { name: 'Coiling Whisper', chance: null },
+      { name: 'Traumatic Reliquary Key', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Timeless Astrolabe', chance: null },
+      { name: 'Nameless Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null }
+    ]
+  },
+  {
+    id: 'incarnation-of-neglect',
+    name: 'Incarnation of Neglect',
+    tier: 'pinnacle',
+    entry: [{ name: 'Echo of Loneliness', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'incarnation-of-neglect', kills: null },
+    drops: [
+      { name: "Betrayal's Sting", chance: null },
+      { name: "The Arkhon's Tools", chance: null },
+      { name: "Venarius' Astrolabe", chance: null },
+      { name: 'Legacy of the Rose', chance: null },
+      { name: 'Bound By Destiny', chance: null },
+      { name: 'Orb of Remembrance', chance: null },
+      { name: 'Monochrome', chance: null },
+      { name: 'Frostmage Support', chance: null, variant: '1' },
+      { name: 'Runic Astrolabe', chance: null },
+      { name: 'Chaotic Astrolabe', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Timeless Astrolabe', chance: null },
+      { name: 'Nameless Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null },
+      { name: 'Fruiting Astrolabe', chance: null },
+      { name: 'Lightless Astrolabe', chance: null },
+      { name: 'Grasping Astrolabe', chance: null }
+    ]
+  },
+  {
+    id: 'incarnation-of-dread',
+    name: 'Incarnation of Dread',
+    tier: 'pinnacle',
+    entry: [{ name: 'Echo of Reverence', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'incarnation-of-dread', kills: null },
+    drops: [
+      { name: 'The Dark Monarch', chance: null },
+      { name: 'Seven Teachings', chance: null },
+      { name: 'Wine of the Prophet', chance: null },
+      { name: 'Bonemeld', chance: null },
+      { name: 'Bound By Destiny', chance: null },
+      { name: 'Orb of Unravelling', chance: null },
+      { name: 'Congregation Support', chance: null, variant: '1' },
+      { name: 'Runic Astrolabe', chance: null },
+      { name: 'Chaotic Astrolabe', chance: null },
+      { name: 'Templar Astrolabe', chance: null },
+      { name: 'Timeless Astrolabe', chance: null },
+      { name: 'Nameless Astrolabe', chance: null },
+      { name: 'Fungal Astrolabe', chance: null },
+      { name: 'Fruiting Astrolabe', chance: null },
+      { name: 'Lightless Astrolabe', chance: null },
+      { name: 'Grasping Astrolabe', chance: null }
+    ]
+  },
+  {
+    id: 'oshabi',
+    name: 'Oshabi, Avatar of the Grove',
+    tier: 'pinnacle',
+    entry: [{ name: 'Sacred Blossom', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poe.how drop list, no rates yet', url: POE_HOW + 'oshabi', kills: null },
+    drops: [
+      { name: 'Forbidden Shako', chance: null },
+      { name: 'Abhorrent Interrogation', chance: null },
+      { name: 'Law of the Wilds', chance: null },
+      { name: "Witchhunter's Judgment", chance: null },
+      { name: 'Sacred Crystallised Lifeforce', chance: null },
+      { name: 'The Aspirant', chance: null },
+      { name: 'The Bitter Blossom', chance: null },
+      { name: 'Pacifism Support', chance: null, variant: '1' },
+      { name: 'Greater Unleash Support', chance: null, variant: '1' }
+    ]
+  },
+  {
+    id: 'hive-colony',
+    name: 'The Hive Colony',
+    tier: 'pinnacle',
+    entry: [{ name: 'Hivebrain Gland', qty: 1 }],
+    runSeconds: 180,
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'hive-colony', kills: 10, note: 'Tiny sample: treat every rate as rough.' },
+    drops: [
+      { name: 'Hand of the Lords', chance: 0.2 },
+      { name: 'The Will of Esh', chance: 0.2 },
+      { name: 'The Will of Tul', chance: 0.2 },
+      { name: 'The Will of Xoph', chance: 0.2 },
+      { name: 'The Will of Uul-Netol', chance: 0.1 },
+      { name: 'The Sundered Will', chance: 0.1 },
+      { name: "Uul-Netol's Vow", chance: null },
+      { name: 'The Grey Wind', chance: null },
+      { name: 'Foulgrasp Support', chance: null, variant: '1' },
+      { name: 'Hiveborn Support', chance: null, variant: '1' }
+    ]
+  },
+  {
+    id: 'zorath',
+    name: 'Zorath',
+    tier: 'pinnacle',
+    entry: [
+      { name: "Zorath's Eye of Malevolence", qty: 2 },
+      { name: "Zorath's Eye of the Inevitable", qty: 1 },
+      { name: "Zorath's Eye of the Endless", qty: 1 }
+    ],
+    runSeconds: 180,
+    source: { label: 'poe.how community runs (3.29)', url: POE_HOW + 'zorath', kills: 208 },
+    drops: [
+      { name: 'Subsume the Source', chance: 0.4038 },
+      { name: 'Spinesnatch', chance: 0.1779 },
+      { name: 'Festering Vengeance', chance: 0.1202 },
+      { name: 'Baleful Dominion', chance: 0.1106 },
+      { name: 'Destructive Aspiration', chance: 0.0962 },
+      { name: 'Extinguishing Grasp', chance: 0.0913 },
+      { name: 'Crystalfall Support', chance: 0.1202, variant: '1' }
     ]
   },
   {
