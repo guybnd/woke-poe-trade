@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-400
 title: 'Boss runs: add Catarina and other missing bosses; Saresh belt unid price'
-status: In Progress
+status: Done
 priority: None
 effort: S
 assignee: unassigned
@@ -22,6 +22,47 @@ history:
       Pushed woke/boss-catarina (1613fdc7). Review clean; typecheck, lint, 4686
       unit tests pass. Handed to coordinator for merge + dev build.
     id: a-2026-11-19t15-03-59-963z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as PR 658. Screams of the Desiccated base confirmed as Leather Belt
+      in game item data and poe.ninja.
+    date: '2026-11-19T15:10:58.689Z'
+    completionComment: true
+    id: c-2026-11-19t15-10-58-689z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-19T15:10:58.689Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Catarina, Elder, Incarnations + Ubers, Oshabi, Hive Colony, Zorath added
+      to Boss runs; Screams of the Desiccated priced unidentified (base Leather
+      Belt confirmed). Merged as PR 658.
+    completionComment: true
+    date: '2026-11-19T15:10:59.972Z'
+    id: c-2026-11-19t15-10-59-972z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-19T15:11:00.473Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/658'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy asked why Catarina isn't in Boss runs. The boss table (renderer/src/web/woke/boss-runs/bosses.ts) is hand-typed and never had her.
 
