@@ -344,6 +344,15 @@
   "scarab-flip.spec.ts": [
    "renderer/src/web/woke/scarab-flip/"
   ],
+  "search-price-check.spec.ts": [
+   "main/src/woke/market-store.ts",
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/market/",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/wickerman/"
+  ],
   "search.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/web/woke/market/",
@@ -404,6 +413,12 @@
   "trade.spec.ts": [
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/trade/"
+  ],
+  "viscera-versions.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/wickerman/"
   ],
   "wickerman-dock.spec.ts": [
    "renderer/src/web/woke/wickerman/"

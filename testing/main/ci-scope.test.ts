@@ -36,7 +36,7 @@ describe('the spec map', () => {
 describe('a pull request', () => {
   it('changing one module runs its specs and the smoke set', () => {
     const r = scope(['renderer/src/web/woke/wickerman/WickermanDock.vue'])
-    expect(r.e2e).toEqual(['in-game.spec.ts', 'toolkit.spec.ts', 'wickerman-dock.spec.ts', 'wickerman-window.spec.ts'])
+    expect(r.e2e).toEqual(['in-game.spec.ts', 'search-price-check.spec.ts', 'toolkit.spec.ts', 'viscera-versions.spec.ts', 'wickerman-dock.spec.ts', 'wickerman-window.spec.ts'])
     expect(r.unit).toEqual(['src/web/woke/wickerman/WickermanDock.vue', ...SCANS].sort())
   })
 
