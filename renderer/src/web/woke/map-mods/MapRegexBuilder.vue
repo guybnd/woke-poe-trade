@@ -64,7 +64,7 @@
             <span class="w-group-label flex-1" style="padding: 0;">Rewards</span>
             <WInfo :text="REWARDS_HELP" />
           </div>
-          <div class="w-dim text-xs">What you want from a map. Minimums filter the stash search and are ticked on the Alt+M card. Squares set how much a stat adds to the juice score.</div>
+          <div class="w-dim text-xs">What you want from a map. Minimums are ticked on the Alt+M card and filter the stash search for maps to run. Squares set how much a stat adds to the juice score.</div>
           <table :class="$style.rw">
             <thead>
               <tr>
@@ -186,17 +186,18 @@ const HIGHLIGHT_OPTIONS = [
   { value: 'bad', label: 'Maps to skip' }
 ]
 const MINS_MODE_OPTIONS = [
-  { value: 'all', label: 'every one' },
+  { value: 'all', label: 'every' },
   { value: 'any', label: 'any one' }
 ]
 const MIN_KEYS: MinStat[] = ['quantity', 'rarity', 'packSize', 'currency', 'scarabs', 'maps', 'divCards', 'quality']
-const REWARDS_HELP = 'Map must have: the lowest roll you accept, like 40 under More currency. ' +
-  'The stash search then lights up only maps that have it, and the Alt+M card ticks or crosses it. Blank means no minimum. ' +
-  'Juice score: how much the stat counts toward the 0-100 score on the Alt+M card. No squares lit means the score ignores it. ' +
-  'Every one / any one: whether a map must meet all the minimums you set, or just one of them.'
-const JUICE_HELP = 'The Alt+M card scores each map from 0 to 100 on how rewarding it is. ' +
-  'These squares set how much each stat counts in that score: no squares = ignored, 2 = normal, 4 = counts double. ' +
-  'Click a square to set it, click the last lit one to lower it. It only changes the score, it filters nothing.'
+const REWARDS_HELP = 'Map must have: the lowest roll you accept, like 40 under More currency. Blank means no minimum. ' +
+  'The Alt+M card ticks or crosses each one, and when the stash search lights up maps to run, it shows only maps that have them. ' +
+  'Juice score: how much the stat counts toward the 0-100 score on the Alt+M card. ' +
+  'Every / any one: whether a map must meet all the minimums you set, or just one of them.'
+const JUICE_HELP = 'The Alt+M card scores each map from 0 to 100 on how rewarding it is. These squares set how much each stat counts. ' +
+  'Atlas drops, item rarity and pack size are weighed against each other. The More currency, scarabs, maps and div cards squares add on top. ' +
+  'No squares lit means the score ignores the stat. Click a square to set it, click the last lit one to lower it. ' +
+  'This changes only the score, never the search.'
 // Juice weight squares: each is half a point, four make the 2× maximum.
 const PIP_STEP = 0.5
 const PIPS = [1, 2, 3, 4]
@@ -319,8 +320,10 @@ type WeightKey = keyof JuiceWeights
 function weightOf (key: MinStat): number {
   return key === 'quality' ? 0 : props.config.weights[key as WeightKey] ?? 0
 }
+// Any weight above 0 lights at least one square, so "none lit" always means ignored.
 function pipsOf (key: MinStat): number {
-  return Math.round(weightOf(key) / PIP_STEP)
+  const w = weightOf(key)
+  return w > 0 ? Math.max(1, Math.min(PIPS.length, Math.round(w / PIP_STEP))) : 0
 }
 // Clicking the last lit square lowers it by one; any other square sets the weight there.
 function setPips (key: MinStat, n: number) {
@@ -328,14 +331,10 @@ function setPips (key: MinStat, n: number) {
   const next = pipsOf(key) === n ? n - 1 : n
   props.config.weights = { ...props.config.weights, [key]: next * PIP_STEP }
 }
-// The weight in words; the exact number is in the tooltip.
+// The squares in words; the exact number is in the tooltip.
+const WEIGHT_WORDS = ['off', 'low', 'normal', 'high', 'max']
 function weightWord (key: MinStat): string {
-  const w = weightOf(key)
-  if (w <= 0) return 'off'
-  if (w < 0.75) return 'low'
-  if (w <= 1.25) return 'normal'
-  if (w < 2) return 'high'
-  return 'max'
+  return WEIGHT_WORDS[pipsOf(key)]
 }
 function isQuiet (key: MinStat): boolean {
   return !weightOf(key) && !(profile.value.mins[key] ?? 0)
