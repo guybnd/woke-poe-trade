@@ -7,6 +7,7 @@ import type { StatFilter } from '@/web/price-check/filters/interfaces'
 import { createTradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { applyClusterType, clusterTypes, currentType, matchTypes, ownType, pickedSize } from '@/web/woke/cluster-type/apply'
 import { clusterSpots, markClusterSpots } from '@/web/woke/cluster-type/spots'
+import { listingDetail } from '@/web/woke/price-insight/listing-tip-detail'
 
 // vi.mock is hoisted above the imports.
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: async () => new Response('{}') } }))
@@ -161,5 +162,43 @@ describe('cluster notable spots', () => {
     const { rows } = setup()
     const blowback = rows().find(s => s.statRef === '1 Added Passive Skill is Blowback')!
     expect(blowback.clusterSpot).toEqual(expect.objectContaining({ side: null }))
+  })
+})
+
+// A trade listing's hover tooltip tags the same notables (listing-tip-detail.ts).
+describe('cluster notable spots on a trade listing', () => {
+  const notable = (name: string, tier: string) => ({ description: `1 Added Passive Skill is ${name}`, mods: [{ name, tier, magnitudes: [] }] })
+  const listing = (over: Record<string, unknown> = {}) => ({
+    name: 'Honour Prism',
+    baseType: 'Large Cluster Jewel',
+    typeLine: 'Large Cluster Jewel',
+    rarity: 'Rare',
+    frameType: 2,
+    enchantMods: ['Adds 8 Passive Skills', '2 Added Passive Skills are Jewel Sockets', 'Added Small Passive Skills grant: 12% increased Attack Damage while Dual Wielding'],
+    explicitMods: [notable('Insatiable Killer', 'P1'), notable('Combat Rhythm', 'P1'), notable('Heavy Hitter', 'S1')],
+    ...over
+  })
+  const spotsOf = (detail: ReturnType<typeof listingDetail>) => detail.groups.flatMap(g => g.lines)
+    .filter(l => l.clusterSpot)
+    .map(l => `${l.parts.map(p => p.text).join('')}: ${l.clusterSpot!.side} ${l.clusterSpot!.points}`)
+
+  it('tags each notable line with the price check\'s front / back spot', () => {
+    expect(spotsOf(listingDetail(listing() as any)).sort()).toEqual([
+      '1 Added Passive Skill is Combat Rhythm: front 2',
+      '1 Added Passive Skill is Heavy Hitter: front 2',
+      '1 Added Passive Skill is Insatiable Killer: back 5'
+    ])
+  })
+
+  it('reads the sockets as a one-socket line too', () => {
+    const one = listing({ enchantMods: ['Adds 8 Passive Skills'], explicitMods: [notable('Combat Rhythm', 'P1'), notable('Heavy Hitter', 'S1'), { description: '1 Added Passive Skill is a Jewel Socket' }] })
+    const tags = spotsOf(listingDetail(one as any))
+    expect(tags).toHaveLength(2)
+  })
+
+  it('leaves uniques, other bases and unknown notables untagged', () => {
+    expect(spotsOf(listingDetail(listing({ rarity: 'Unique', frameType: 3 }) as any))).toEqual([])
+    expect(spotsOf(listingDetail(listing({ baseType: 'Cobalt Jewel' }) as any))).toEqual([])
+    expect(spotsOf(listingDetail(listing({ explicitMods: [notable('Combat Rhythm', 'P1'), notable('Brand New Notable', 'S1')] }) as any))).toEqual([])
   })
 })

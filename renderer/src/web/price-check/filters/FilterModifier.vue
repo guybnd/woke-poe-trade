@@ -28,7 +28,7 @@
               <span class="search-text-full whitespace-pre-wrap"><item-modifier-text :text="text" :roll="roll?.value" /></span>
             </div>
           </button>
-          <cluster-spot-tag :filter="filter" />
+          <cluster-spot-tag :spot="filter.clusterSpot" />
           <button v-if="groupExpanded !== undefined"
             :class="$style.expandBtn" @click="toggleExpanded" type="button">
             <i :class="groupExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />

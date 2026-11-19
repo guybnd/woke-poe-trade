@@ -6,12 +6,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { StatFilter } from '@/web/price-check/filters/interfaces'
+import type { ClusterSpot } from './spots'
 
-const props = defineProps<{ filter: StatFilter }>()
-const spot = computed(() => props.filter.clusterSpot)
+const props = defineProps<{ spot?: ClusterSpot | null }>()
 const label = computed(() => {
-  const s = spot.value!
+  const s = props.spot!
   return s.side ? `${s.side} · ${s.points} pts` : `${s.points} pts`
 })
 </script>

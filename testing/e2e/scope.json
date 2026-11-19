@@ -147,7 +147,10 @@
   "listing-tooltip.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
-   "renderer/src/web/price-check/"
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/cluster-type/",
+   "renderer/src/web/woke/price-insight/",
+   "renderer/src/web/woke/ui/tooltip/"
   ],
   "loot-filter.spec.ts": [
    "main/src/woke/loot-filter.ts",

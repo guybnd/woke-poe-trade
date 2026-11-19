@@ -7,17 +7,17 @@ const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-ra
 // A fractured weapon, a crafted body armour and a unique.
 const ITEMS: unknown[] = JSON.parse(readFileSync(new URL('../fixtures/trade/listing-tiers.json', import.meta.url), 'utf-8'))
 
-async function fakeTrade (page: Page) {
+async function fakeTrade (page: Page, items: unknown[] = ITEMS) {
   await page.route('**/api/trade/search/**', (route) => route.fulfill({
     contentType: 'application/json',
     headers: LIMITS,
-    body: JSON.stringify({ id: 'q', total: ITEMS.length, result: ITEMS.map((_, i) => `r${i}`) })
+    body: JSON.stringify({ id: 'q', total: items.length, result: items.map((_, i) => `r${i}`) })
   }))
   await page.route('**/api/trade/fetch/**', (route) => route.fulfill({
     contentType: 'application/json',
     headers: LIMITS,
     body: JSON.stringify({
-      result: ITEMS.map((item, i) => ({
+      result: items.map((item, i) => ({
         id: `r${i}`,
         item,
         listing: {
@@ -65,4 +65,32 @@ test('a listing shows tiers, rolls and its numbers on hover', async ({ overlay }
   await expect(tip).toContainText('Starforge')
   await expect(tip).toContainText('405(400-450)% increased Physical Damage')
   await overlay.snap('listing tooltip unique')
+})
+
+// A rare Large Cluster Jewel, as the trade site lists it.
+const notable = (name: string, tier: string) => ({ description: `1 Added Passive Skill is ${name}`, domain: 'explicit', mods: [{ name, tier, magnitudes: [] }] })
+const CLUSTER = {
+  w: 1, h: 1, league: 'Allflame', identified: true, ilvl: 84,
+  name: 'Honour Prism', typeLine: 'Large Cluster Jewel', baseType: 'Large Cluster Jewel', rarity: 'Rare', frameType: 2,
+  enchantMods: ['Adds 8 Passive Skills', '2 Added Passive Skills are Jewel Sockets', 'Added Small Passive Skills grant: 12% increased Attack Damage while Dual Wielding'],
+  explicitMods: [notable('Insatiable Killer', 'P1'), notable('Combat Rhythm', 'P1'), notable('Heavy Hitter', 'S1')]
+}
+
+test('a cluster jewel listing says where each notable sits on hover', async ({ overlay }) => {
+  await fakeTrade(overlay.page, [CLUSTER])
+  await overlay.boot()
+  await overlay.copyItem('items/rare-cluster-large.txt')
+  const panel = overlay.widget('price-check')
+  await panel.getByRole('button', { name: 'Search' }).click()
+  await expect(panel.locator('.w-pc-foot')).toBeVisible()
+
+  const tip = overlay.page.getByRole('tooltip')
+  await panel.locator('.w-pc-table tbody tr').last().hover()
+  await expect(tip).toContainText('Honour Prism')
+  const line = (name: string) => tip.locator('div', { hasText: `1 Added Passive Skill is ${name}` }).last().locator('[data-cluster-spot]')
+  await expect(line('Combat Rhythm')).toHaveText('front · 2 pts')
+  await expect(line('Heavy Hitter')).toHaveText('front · 2 pts')
+  await expect(line('Insatiable Killer')).toHaveText('back · 5 pts')
+  await expect(tip.locator('[data-cluster-spot]')).toHaveCount(3)
+  await overlay.snap('listing tooltip cluster spots')
 })

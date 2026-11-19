@@ -6,6 +6,7 @@ import { incrRoll } from '@/parser/advanced-mod-desc'
 import { linesToStatStrings, tryParseTranslation } from '@/parser/stat-translations'
 import { modDomain, modText, stripLinks, ListingItem, ListingMod } from './listing-tip'
 import { corruptionKey, eldritchKey, modSource, EldritchKey, ModSource } from './eldritch-listing'
+import { clusterSpotsFromText, notableOfLine, type ClusterSpot } from '../cluster-type/spots'
 
 export type PartTone = 'label' | 'value' | 'aug' | 'fire' | 'cold' | 'lightning' | 'chaos'
 
@@ -38,6 +39,8 @@ export interface ModLine {
   source?: ModSource
   // Where the roll sits in its range, 0 to 100. Null when the line can't roll.
   quality: number | null
+  // A cluster jewel notable's place on the jewel, as the price check tags it.
+  clusterSpot?: ClusterSpot
 }
 
 export interface ModGroup {
@@ -355,7 +358,15 @@ function veiledText (mod: ListingMod): ListingMod {
   return { ...mod, description: `Veiled ${affix}`, mods: [{ name: 'Veiled' }] }
 }
 
+// Where each notable sits on a non-unique cluster jewel, from its enchants and mods.
+function clusterSpotsOf (item: ListingItem): Map<string, ClusterSpot> {
+  if (item.rarity === 'Unique' || item.frameType === 3) return new Map()
+  const all = [...(item.enchantMods ?? []), ...(item.explicitMods ?? []), ...(item.fracturedMods ?? []), ...(item.craftedMods ?? [])]
+  return clusterSpotsFromText(item.baseType, all.map(modText).flatMap(t => t.split('\n')))
+}
+
 function buildGroups (item: ListingItem, catalyst: Catalyst | null): ModGroup[] {
+  const spots = clusterSpotsOf(item)
   const listed = (item.explicitMods ?? []).filter(m => !['enchant', 'implicit'].includes(modDomain(m)))
   const entries: Array<{ mod: ListingMod, kind: ModLine['kind'] }> = [
     ...(item.fracturedMods ?? []).map(mod => ({ mod, kind: 'fractured' as const })),
@@ -372,6 +383,9 @@ function buildGroups (item: ListingItem, catalyst: Catalyst | null): ModGroup[] 
     const line = buildLine(mod, kind, catalyst)
     const source = modSource(mod)
     if (source) { line.source = source; line.label = source.label }
+    const notable = spots.size ? notableOfLine(modText(mod)) : null
+    const spot = notable ? spots.get(notable) : undefined
+    if (spot) line.clusterSpot = spot
     const firstTier = typeof mod === 'string' ? undefined : mod.mods?.[0]?.tier
     const known = groups.find(g => g.heading === heading)
     if (known) known.lines.push(line)

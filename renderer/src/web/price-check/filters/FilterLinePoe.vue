@@ -19,7 +19,7 @@
     </button>
     <!-- A local line's own mod, once split out of the line two mods add up to. -->
     <span v-if="modName" class="w-poe-modname">{{ modName }}</span>
-    <cluster-spot-tag :filter="filter" />
+    <cluster-spot-tag :spot="filter.clusterSpot" />
     <!-- The catalyst's Q tag, as on the picked row: it switches the catalyst quality filter, not the line. -->
     <button v-if="qTag != null" type="button" data-catalyst-tag
       class="w-poe-qtag" :class="{ on: qOn }"

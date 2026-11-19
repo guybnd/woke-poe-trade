@@ -12,6 +12,7 @@
           <span v-if="corrupt(line)" :class="$style.corrupt" title="Corruption implicit" />
           <img v-if="line.source && !chunk.heading" :src="line.source.icon" alt="" :class="$style.icon">
           <template v-for="(p, i) in line.parts" :key="i"><span v-if="p.number" class="w-num" :class="$style.number">{{ p.text }}</span><span v-else-if="p.raw" class="w-num" :class="$style.raw" title="Rolled before catalyst quality">{{ p.text }}</span><span v-else-if="p.range" class="w-num" :class="$style.range">{{ p.text }}</span><span v-else><template v-for="(w, j) in elementParts(p.text)" :key="j"><span v-if="w.ele" class="w-ele" :data-ele="w.ele">{{ w.text }}</span><template v-else>{{ w.text }}</template></template></span></template>
+          <span v-if="line.clusterSpot" :class="$style.spot"><ClusterSpotTag :spot="line.clusterSpot" /></span>
           <template v-if="line.quality != null">
             <i :class="$style.track" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }"><i :style="{ width: `${line.quality}%` }" /></i>
             <span class="w-num" :class="$style.quality" :style="{ '--q': line.quality, '--roll': rollColour(line.quality) }">{{ line.quality }}%</span>
@@ -31,6 +32,7 @@ import { computed, useCssModule } from 'vue'
 import type { ModGroup, ModLine } from '../../price-insight/listing-tip-detail'
 import { elementParts } from '../element-words'
 import EldritchMark from '../../price-insight/EldritchMark.vue'
+import ClusterSpotTag from '../../cluster-type/ClusterSpotTag.vue'
 import { eldritchMark, implicitTable, isCorruption, loadImplicitTable } from '../../price-insight/eldritch-listing'
 import type { ModLine as Line } from '../../price-insight/listing-tip-detail'
 
@@ -140,6 +142,8 @@ function rollColour (quality: number) {
 .track > i { display: block; height: 100%; background: var(--roll); }
 /* Hangs off the line's end, so the % doesn't push the text off centre. */
 .quality { position: absolute; left: 100%; bottom: 1px; margin-left: 5px; font-family: var(--w-num); font-size: var(--w-fs-xs); font-weight: 600; line-height: 1; white-space: nowrap; color: var(--roll); }
+/* A cluster notable's place hangs off the end too. */
+.spot { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); display: flex; white-space: nowrap; }
 
 /* PoE 1 / PoE 2 art: a bronze track that fills with gold, brighter for a
  * better roll, with a faint glow from about 70% up. The % keeps the red to

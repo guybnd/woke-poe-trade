@@ -115,3 +115,36 @@ export function markClusterSpots (filters: FilterOrGroup[], size: ClusterSize): 
   const sorted = [...notableRows].sort((a, b) => (a.clusterSpot?.points ?? 99) - (b.clusterSpot?.points ?? 99))
   slots.forEach((at, k) => { filters[at] = sorted[k] })
 }
+
+const ADDS_RE = /^Adds (\d+) Passive Skills$/
+const SOCKETS_RE = /^(\d+) Added Passive Skills? (?:is a Jewel Socket|are Jewel Sockets)$/
+const NOTABLE_RE = /^1 Added Passive Skill is (.+)$/
+
+/**
+ * The same spots read from a jewel's mod lines as text, such as a trade listing's
+ * enchants and explicits. Keyed by notable name. Empty when a notable is unknown
+ * to the tree data (it would shift every slot) or the base isn't a cluster jewel.
+ */
+export function clusterSpotsFromText (baseType: string | undefined, lines: string[]): Map<string, ClusterSpot> {
+  const size = /^(Small|Medium|Large) Cluster Jewel$/.exec(baseType ?? '')?.[1] as ClusterSize | undefined
+  if (!size) return new Map()
+  let nodeCount: number | null = null
+  let sockets = 0
+  const notables: string[] = []
+  for (const raw of lines) {
+    const line = raw.trim()
+    const adds = ADDS_RE.exec(line)
+    if (adds) { nodeCount = Number(adds[1]); continue }
+    const socket = SOCKETS_RE.exec(line)
+    if (socket) { sockets = Number(socket[1]); continue }
+    const notable = NOTABLE_RE.exec(line)
+    if (notable) notables.push(notable[1])
+  }
+  if (!notables.length || notables.some(n => !ORDER.has(n))) return new Map()
+  return clusterSpots(size, nodeCount, sockets, notables)
+}
+
+/** The notable a mod line names, to look its spot up. */
+export function notableOfLine (line: string): string | null {
+  return NOTABLE_RE.exec(line.trim())?.[1] ?? null
+}
