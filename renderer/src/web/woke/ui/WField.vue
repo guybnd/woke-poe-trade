@@ -1,7 +1,7 @@
 <template>
   <span :class="$style.wrap">
     <i v-if="icon" :class="[icon, $style.icon]" />
-    <input :class="['w-field', $style.field, { [$style.withIcon]: icon }]" :type="type" :value="modelValue" :placeholder="placeholder"
+    <input :class="['w-field', $style.field, { [$style.withIcon]: icon }]" :type="type" :value="modelValue" :placeholder="placeholder" :aria-label="label"
       @input="onInput" @keydown.esc="clearOnEsc && type !== 'number' && emit('update:modelValue', '')">
     <span v-if="suffix" :class="$style.suffix">{{ suffix }}</span>
   </span>
@@ -14,10 +14,12 @@ const props = withDefaults(defineProps<{
   placeholder?: string
   icon?: string
   suffix?: string
+  // Read out for the input when no visible label names it.
+  label?: string
   // Esc empties a text field. Never a number field: those are settings, and
   // Esc (to leave the overlay) used to reset them to 0.
   clearOnEsc?: boolean
-}>(), { type: 'text', placeholder: undefined, icon: undefined, suffix: undefined, clearOnEsc: true })
+}>(), { type: 'text', placeholder: undefined, icon: undefined, suffix: undefined, label: undefined, clearOnEsc: true })
 const emit = defineEmits<{ (e: 'update:modelValue', v: string | number): void }>()
 
 function onInput (e: Event) {

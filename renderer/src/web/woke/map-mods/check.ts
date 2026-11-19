@@ -9,6 +9,8 @@ import { heistRowOf } from './data'
 import { juiceScore, modRatings, rateMods } from './rules'
 import type { JuiceResult, MapVerdict, ModMode } from './rules'
 import { MAP_MODS_TYPE, activeProfile, importAptOnce, initMapModsWidget } from './widget'
+import { MIN_LABELS } from './regex'
+import type { MinStat } from './regex'
 import type { MapModsWidget } from './widget'
 
 export function isMapLike (item: ParsedItem): boolean {
@@ -46,6 +48,40 @@ export interface MapCheckResult {
   unknown: string[]
   // Its mods are hidden, so the verdict means nothing yet.
   unidentified: boolean
+  // The profile's minimums against this map's stats (maps tab only; empty
+  // when none are set). `any`: one met minimum is enough.
+  goals: { rows: RewardGoal[], any: boolean }
+}
+
+export interface RewardGoal {
+  stat: MinStat
+  label: string
+  need: number
+  value: number
+  met: boolean
+}
+
+const GOAL_ORDER: MinStat[] = ['quantity', 'rarity', 'packSize', 'quality', 'currency', 'scarabs', 'maps', 'divCards']
+
+// Each minimum the profile sets, with this map's value for it.
+export function rewardGoals (item: ParsedItem, mins: Partial<Record<MinStat, number>>): RewardGoal[] {
+  const value: Record<MinStat, number | undefined> = {
+    quantity: item.areaAtlasDrops ?? item.areaItemQuantity,
+    rarity: item.areaItemRarity,
+    packSize: item.areaPackSize,
+    quality: item.quality,
+    currency: item.mapMoreCurrency,
+    scarabs: item.mapMoreScarabs,
+    maps: item.mapMoreMaps,
+    divCards: item.mapMoreDivCards
+  }
+  return GOAL_ORDER
+    .filter(stat => (mins[stat] ?? 0) > 0)
+    .map(stat => {
+      const need = mins[stat]!
+      const v = value[stat] ?? 0
+      return { stat, label: MIN_LABELS[stat], need, value: v, met: v >= need }
+    })
 }
 
 export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResult {
@@ -110,7 +146,12 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
     .filter(mod => rated(mod.type))
     .map(mod => mod.text)
 
-  return { mode, name, sub: subParts.join(' · '), verdict, juice, props, unknown, unidentified: item.isUnidentified }
+  const goals = {
+    rows: mode === 'maps' ? rewardGoals(item, profile.mins) : [],
+    any: !!profile.minsAny
+  }
+
+  return { mode, name, sub: subParts.join(' · '), verdict, juice, props, unknown, unidentified: item.isUnidentified, goals }
 }
 
 // A RUN can't be trusted when a mod couldn't be read; hidden mods say nothing at all.

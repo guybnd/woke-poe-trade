@@ -157,6 +157,13 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/loot-filter/"
   ],
+  "map-mods-rewards.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/map-mods/",
+   "renderer/src/web/woke/regex-library/"
+  ],
   "map-mods-tabs.spec.ts": [
    "main/src/woke/map-scan-vision.ts",
    "main/src/woke/map-scan.ts",

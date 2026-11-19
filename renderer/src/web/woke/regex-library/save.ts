@@ -47,6 +47,33 @@ export function saveToRegexLibrary (entry: { name: string, text: string, categor
   return 'saved'
 }
 
+function libraryEntryFor (text: string): RegexEntry | undefined {
+  const config = AppConfig()
+  if (!isModuleOn(config, 'regex-library')) return undefined
+  const clean = text.trim()
+  for (const w of config.widgets) {
+    if (w.wmType !== REGEX_LIBRARY_TYPE) continue
+    const hit = (w as RegexLibraryWidget).entries?.find(e => e.text.trim() === clean)
+    if (hit) return hit
+  }
+  return undefined
+}
+
+// The name a search string is already saved under, if it is.
+export function savedRegexName (text: string): string | null {
+  return libraryEntryFor(text)?.name ?? null
+}
+
+// Renames the saved entry holding this exact string.
+export function renameSavedRegex (text: string, name: string): boolean {
+  const hit = libraryEntryFor(text)
+  if (!hit || !name.trim()) return false
+  hit.name = name.trim()
+  saveConfig()
+  pushHostConfig()
+  return true
+}
+
 export const SAVE_MESSAGE: Record<SaveResult, string> = {
   'saved': 'Saved to the Regex library',
   'exists': 'Already in the Regex library',

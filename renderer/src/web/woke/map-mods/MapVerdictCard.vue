@@ -24,6 +24,23 @@
         </div>
       </div>
     </div>
+    <div v-if="showGoals" :class="$style.goals" data-testid="map-rewards">
+      <div class="flex items-baseline gap-2">
+        <span class="w-group-label flex-1" style="padding: 0;">Your rewards</span>
+        <span v-if="goalRows.length" class="text-xs w-num" :class="goalsMet ? 'w-up' : 'w-down'">{{ metCount }} of {{ goalRows.length }} met{{ result.goals.any ? ' · any one' : '' }}</span>
+      </div>
+      <div v-for="g in goalRows" :key="g.stat" :class="$style.goal">
+        <span>{{ g.label }}</span>
+        <span class="w-dim text-xs">need {{ g.need }}</span>
+        <span class="w-num" :class="g.met ? 'w-up' : 'w-down'">+{{ g.value }}% <i class="fas" :class="g.met ? 'fa-check' : 'fa-times'" /></span>
+      </div>
+      <div class="flex items-center gap-1 flex-wrap">
+        <span v-if="!goalRows.length && !wanted.length" class="w-dim text-xs">No rewards set</span>
+        <span v-for="m in wanted" :key="m" :class="$style.want" :title="m"><i class="fas fa-check" /> {{ m }}</span>
+        <span class="flex-1" />
+        <button v-if="canEdit" type="button" :class="$style.link" @click="emit('edit-rewards')">{{ goalRows.length || wanted.length ? 'Edit rewards' : 'Set rewards' }} <i class="fas fa-chevron-right" /></button>
+      </div>
+    </div>
     <div class="w-group-label">Mods</div>
     <div v-if="!result.verdict.mods.length && !result.unknown.length" class="w-dim px-3 pb-2">No mods</div>
     <button v-for="(mod, i) in result.verdict.mods" :key="`${i}:${mod.matcher}`" type="button"
@@ -45,7 +62,7 @@
 import { computed } from 'vue'
 import { WPanel } from '../ui'
 import { heistRowOf } from './data'
-import { modRatings, nextModRating, setModRatings, withRating } from './rules'
+import { modRatings, nextModRating, setModRatings, shortLabel, withRating } from './rules'
 import type { ModRating, Verdict } from './rules'
 import { activeProfile } from './widget'
 import type { MapModsWidget } from './widget'
@@ -55,7 +72,17 @@ import type { MapCheckResult } from './check'
 const props = defineProps<{
   result: MapCheckResult
   config: MapModsWidget
+  // Shows "Edit rewards", which opens the Map mods window.
+  canEdit?: boolean
 }>()
+const emit = defineEmits<{ (e: 'edit-rewards'): void }>()
+
+const goalRows = computed(() => props.result.goals?.rows ?? [])
+const metCount = computed(() => goalRows.value.filter(g => g.met).length)
+const goalsMet = computed(() => props.result.goals?.any ? metCount.value > 0 : metCount.value === goalRows.value.length)
+const wanted = computed(() => props.result.verdict.good.map(m => shortLabel(m.matcher)))
+const showGoals = computed(() => props.result.mode === 'maps' && !props.result.unidentified &&
+  (goalRows.value.length > 0 || wanted.value.length > 0 || props.canEdit))
 
 const VERDICT_LABEL: Record<Verdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN' }
 const RATING_LABEL: Record<ModRating, string> = { deadly: "can't run", warn: 'careful', good: 'juice', ok: 'ok' }
@@ -136,6 +163,37 @@ function cycle (matcher: string, current: ModRating) {
   border-radius: var(--w-r-sm);
   background: var(--w-panel-2);
 }
+
+.goals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px var(--w-pad);
+  border-bottom: 1px solid var(--w-line);
+}
+.goal {
+  display: grid;
+  grid-template-columns: 1fr auto 5.5rem;
+  gap: 10px;
+  align-items: baseline;
+  font-size: var(--w-fs-sm);
+}
+.goal > :last-child { text-align: right; }
+.want {
+  font-size: var(--w-fs-xs);
+  padding: 0 7px;
+  border-radius: var(--w-r-pill);
+  color: var(--w-up);
+  border: 1px solid color-mix(in srgb, var(--w-up) 45%, transparent);
+  background: color-mix(in srgb, var(--w-up) 10%, transparent);
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link { font-size: var(--w-fs-sm); color: var(--w-accent); white-space: nowrap; }
+.link:hover { text-decoration: underline; }
+.link i { font-size: 0.7em; }
 
 .mod {
   display: flex;

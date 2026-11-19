@@ -1,7 +1,7 @@
 <template>
   <Widget :config="config" move-handles="corners" :removable="false" :readonly="true" :inline-edit="false" @moved="config.moved = true">
     <div class="flex flex-col gap-1 items-stretch">
-      <MapVerdictCard v-if="result && mapMods" :result="result" :config="mapMods" />
+      <MapVerdictCard v-if="result && mapMods" :result="result" :config="mapMods" can-edit @edit-rewards="openRewards" />
       <WPanel v-else title="Map check" icon="map" width="22rem">
         <WEmpty :art="{ mechanic: 'map' }">That item isn't a map, invitation, logbook, heist contract or chart.</WEmpty>
       </WPanel>
@@ -28,7 +28,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WPanel, WEmpty, WButton } from '../ui'
 import MapVerdictCard from './MapVerdictCard.vue'
-import { MAP_MODS_TARGET } from './widget'
+import { MAP_MODS_TARGET, showRewards } from './widget'
 import { checkMap, ensureMapModsConfig, findMapModsConfig, isMapLike } from './check'
 import type { MapCheckWidget } from './map-check'
 
@@ -70,6 +70,11 @@ onUnmounted(() => { handler.abort() })
 function close () {
   if (Host.isElectron) Host.sendEvent({ name: 'OVERLAY->MAIN::focus-game', payload: undefined })
   else wm.hide(props.config.wmId)
+}
+
+function openRewards () {
+  showRewards()
+  openRegex()
 }
 
 function openRegex () {

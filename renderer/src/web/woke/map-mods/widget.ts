@@ -1,3 +1,4 @@
+import { shallowRef } from 'vue'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { AppConfig } from '@/web/Config'
 import type { MapCheckConfig } from '@/web/map-check/common'
@@ -9,6 +10,11 @@ import type { JuiceWeights, MapModProfile } from './rules'
 export const MAP_MODS_TYPE = 'woke-map-mods'
 // copy-item target for the checker's own hotkey.
 export const MAP_MODS_TARGET = 'woke-map-mods'
+
+// Bumped by "Edit rewards" on the map check card: the Map mods window opens on
+// the Maps tab and points at its Rewards table.
+export const rewardsAsk = shallowRef(0)
+export function showRewards () { rewardsAsk.value++ }
 
 export interface MapModsWidget extends Widget {
   anchor: Anchor

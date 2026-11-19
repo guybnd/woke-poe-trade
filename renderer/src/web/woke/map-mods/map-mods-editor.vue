@@ -22,7 +22,7 @@
         <WButton size="sm" icon="fas fa-copy" @click="copyProfile">Copy</WButton>
         <WButton v-if="w.profiles.length > 1" size="sm" variant="danger" icon="fas fa-trash" @click="removeProfile">Delete</WButton>
       </div>
-      <div class="flex items-center gap-2 w-dim text-sm">How profiles work <w-info text="One profile per build. Pick mods to avoid or want, and minimum quantity etc., in the Map mods overlay widget. Maps, heist and charts each keep their own picks." /></div>
+      <div class="flex items-center gap-2 w-dim text-sm">How profiles work <w-info text="One profile per build. Rate mods and set rewards (minimums and juice weights) in the Map mods window. Maps, heist and charts each keep their own picks." /></div>
       <div v-if="dead.length" class="text-sm flex items-center gap-2 flex-wrap" style="color: var(--w-warn);">
         <span :title="dead.join('\n')">{{ dead.length }} rated {{ dead.length === 1 ? "mod isn't" : "mods aren't" }} in the game any more, so {{ dead.length === 1 ? 'it' : 'they' }} can't match a map.</span>
         <WButton size="sm" @click="removeDead">Remove</WButton>
