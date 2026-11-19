@@ -4150,6 +4150,142 @@
    "type": "Rustic Sash"
   }
  },
+ "unique-skin-of-the-lords.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3192592092",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_2843100721",
+       "value": {
+        "min": 2
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_1389153006",
+       "value": {
+        "min": 100
+       },
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_608438307",
+       "value": {},
+       "disabled": true
+      },
+      {
+       "id": "explicit.stat_326965591",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      },
+      "sockets": {
+       "r": 3,
+       "g": 2,
+       "b": 1
+      }
+     }
+    }
+   },
+   "name": "Skin of the Lords",
+   "type": "Simple Robe"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "explicit.stat_3192592092",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_2843100721",
+       "value": {
+        "min": 2
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_1389153006",
+       "value": {
+        "min": 100
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_608438307",
+       "value": {},
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_326965591",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    },
+    "socket_filters": {
+     "filters": {
+      "links": {
+       "min": 6
+      },
+      "sockets": {
+       "r": 3,
+       "g": 2,
+       "b": 1
+      }
+     }
+    }
+   },
+   "name": "Skin of the Lords",
+   "type": "Simple Robe"
+  }
+ },
  "unique-three-step-assault.txt": {
   "opened": {
    "status": {
