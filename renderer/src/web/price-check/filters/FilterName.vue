@@ -59,7 +59,7 @@
       <!-- woke: right-click Links to show or hide the socket colour tiles. -->
       <span v-if="filters.linkedSockets" class="filter-name-links" data-links-tile
         :title="item.sockets?.colours ? 'Right-click: socket colours' : undefined"
-        @contextmenu.prevent.stop="toggleColourTiles">
+        @contextmenu="toggleColourTiles">
         <filter-btn-numeric :chip="poe" :limit="NUMERIC_LIMITS.links"
           :filter="filters.linkedSockets" :name="t('item.linked_sockets')" />
       </span>
@@ -175,7 +175,11 @@ export default defineComponent({
       { search: 'not-corrupted', label: 'Not' }
     ]
     // Any linked item: right-click Links shows its colour tiles, off; again hides them unless one is on.
-    function toggleColourTiles () {
+    function toggleColourTiles (e: MouseEvent) {
+      // The number box keeps its own copy / paste menu.
+      if ((e.target as HTMLElement).closest('input')) return
+      e.preventDefault()
+      e.stopPropagation()
       const { filters, item } = props
       if (!filters.socketColours) {
         if (item.sockets?.colours) filters.socketColours = socketColourFilters(item.sockets.colours, false)
@@ -298,6 +302,10 @@ export default defineComponent({
 .filter-name-scol.g :is(.w-poe-nlab, [class*="label"]) { color: #7fc94f; }
 .filter-name-scol.b :is(.w-poe-nlab, [class*="label"]) { color: #6f9cf0; }
 .filter-name-scol.w :is(.w-poe-nlab, [class*="label"]) { color: #ece8de; }
+#price-window.w-poe .filter-name-scol.r .w-poe-nlab { color: #e0645c; }
+#price-window.w-poe .filter-name-scol.g .w-poe-nlab { color: #7fc94f; }
+#price-window.w-poe .filter-name-scol.b .w-poe-nlab { color: #6f9cf0; }
+#price-window.w-poe .filter-name-scol.w .w-poe-nlab { color: #ece8de; }
 .filter-name-tiles {
   display: flex;
   flex: none;

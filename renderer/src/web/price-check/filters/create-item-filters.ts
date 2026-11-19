@@ -11,9 +11,12 @@ import { PERMANENT_SC } from '../../background/Leagues'
 // The unique line that locks an item's sockets (Skin of the Loyal / Lords).
 const SOCKETS_LOCKED = 'Sockets cannot be modified'
 
-/** The R / G / B / W tiles at the item's own counts; `on` switches on each colour it has. */
+/** The R / G / B / W tiles at the item's own counts; `on` switches on each colour it has.
+ *  A colour the item lacks waits at 1, dashed, so switching it on asks for one. */
 export function socketColourFilters (colours: SocketColours, on: boolean): NonNullable<ItemFilters['socketColours']> {
-  const tile = (n: number) => ({ value: n, disabled: !(on && n > 0) })
+  const tile = (n: number) => n > 0
+    ? { value: n, disabled: !on }
+    : { value: 1, disabled: true, suggested: true }
   return { r: tile(colours.r), g: tile(colours.g), b: tile(colours.b), w: tile(colours.w) }
 }
 

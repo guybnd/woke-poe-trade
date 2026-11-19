@@ -48,7 +48,7 @@ describe('Socket colours', () => {
       r: { value: 3, disabled: false },
       g: { value: 2, disabled: false },
       b: { value: 1, disabled: false },
-      w: { value: 0, disabled: true }
+      w: { value: 1, disabled: true, suggested: true }
     })
     const query = createTradeRequest(filters, []).query
     expect(query.filters.socket_filters?.filters.sockets).toEqual({ r: 3, g: 2, b: 1 })
@@ -57,12 +57,15 @@ describe('Socket colours', () => {
     filters.socketColours!.g.disabled = true
     filters.socketColours!.b.value = 2
     expect(createTradeRequest(filters, []).query.filters.socket_filters?.filters.sockets).toEqual({ r: 3, b: 2 })
+    // A colour it lacks, switched on, asks for one.
+    filters.socketColours!.w.disabled = false
+    expect(createTradeRequest(filters, []).query.filters.socket_filters?.filters.sockets).toEqual({ r: 3, b: 2, w: 1 })
   })
 
   it('offers them off on a corrupted 6L, and not at all on an uncorrupted one', () => {
     const corrupted = parseItem(RARE_6L + '\n--------\nCorrupted')
     const filters = createFilters(corrupted, OPTS)
-    expect(Object.values(filters.socketColours!).map(t => [t.value, t.disabled])).toEqual([[3, true], [2, true], [1, true], [0, true]])
+    expect(Object.values(filters.socketColours!).map(t => [t.value, t.disabled])).toEqual([[3, true], [2, true], [1, true], [1, true]])
     expect(createTradeRequest(filters, []).query.filters.socket_filters?.filters.sockets).toBeUndefined()
 
     expect(createFilters(parseItem(RARE_6L), OPTS).socketColours).toBeUndefined()
