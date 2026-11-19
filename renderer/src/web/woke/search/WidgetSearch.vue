@@ -207,7 +207,7 @@ import type { PobBuildsWidget } from '../pob-builds/widget'
 import { ATLAS_TYPE } from '../atlas/strategies'
 import type { AtlasWidget } from '../atlas/strategies'
 import { visceraLookup } from './lookups/viscera'
-import { loadViscera, tierItemName, visceraByName, visceraItemText } from '../wickerman/viscera'
+import { loadViscera, visceraByName, visceraItemText } from '../wickerman/viscera'
 import type { VisceraTable } from '../wickerman/viscera'
 import { HELP_QUERY, exampleCards } from './lookups/examples'
 import { MECHANICS_TYPE } from '../mechanics/widget'
@@ -951,9 +951,10 @@ function infoFor (entry: PriceEntry | ItemEntry): BaseType | undefined {
 function menuRef (entry: PriceEntry | ItemEntry) {
   return entry.kind === 'price' ? { name: entry.group.name, type: entry.group.type } : { name: entry.info.refName }
 }
-// A Viscera and the version its name says (Wickerman module on).
+// A Viscera and the version its name says (Wickerman module on). Its copy is
+// written in English, which only an English client's price check reads.
 function visceraOf (entry: PriceEntry | ItemEntry) {
-  if (!visceraTable.value || !isModuleOn(AppConfig(), 'wickerman')) return null
+  if (!visceraTable.value || !isModuleOn(AppConfig(), 'wickerman') || AppConfig().language !== 'en') return null
   const name = entry.kind === 'price' ? entry.group.name : entry.info.refName
   const effect = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant : undefined
   return visceraByName(visceraTable.value, name, effect)
@@ -973,7 +974,9 @@ async function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
   // A Viscera: priced as a copy of that version, so its strip can switch versions.
   const viscera = visceraOf(entry)
   if (viscera) {
-    await openPriceCheck({ name: tierItemName(viscera.v, viscera.tier), text: visceraItemText(viscera.v, viscera.tier) }, cursorPoint(e))
+    // The name as listed: poe.ninja calls a pinnacle Uber version "Greater ...".
+    const name = entry.kind === 'price' ? entry.group.name : entry.info.refName
+    await openPriceCheck({ name, text: visceraItemText(viscera.v, viscera.tier, name) }, cursorPoint(e))
     return
   }
   const info = infoFor(entry)

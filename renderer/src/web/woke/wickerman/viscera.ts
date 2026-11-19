@@ -62,8 +62,10 @@ export function loadViscera (): Promise<VisceraTable | null> {
 // "(10-15)% chance" -> template "#% chance" and the allowed [min, max] per number.
 function tierPattern (line: string): { template: string, ranges: Array<[number, number]> } {
   const ranges: Array<[number, number]> = []
-  const template = line.replace(/\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)|-?\d+(?:\.\d+)?/g, (m, lo?: string, hi?: string) => {
-    ranges.push(lo != null ? [Number(lo), Number(hi)] : [Number(m), Number(m)])
+  // "-(30-20)" is a range of negative numbers: the item reads "-25".
+  const template = line.replace(/(?<![\w)])(-?)\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)|-?\d+(?:\.\d+)?/g, (m, sign?: string, lo?: string, hi?: string) => {
+    const k = sign ? -1 : 1
+    ranges.push(lo != null ? [k * Number(lo), k * Number(hi)] : [Number(m), Number(m)])
     return '#'
   })
   return { template: norm(template), ranges }
@@ -284,25 +286,22 @@ export function visceraByName (table: VisceraTable, name: string, effect?: strin
     const i = byLabel(word[1].toLowerCase() === 'lesser' ? 'Low' : 'High')
     if (i >= 0) return { v, tier: i }
   }
-  // A plain name is the middle version; Low, Med and High read alike, so only
-  // named versions (Grim Fate, Uber) go by the effect.
-  const med = byLabel('Med')
-  if (med >= 0) return { v, tier: med }
-  if (effect) {
-    const want = effectShape(effect)
-    const i = v.tiers.findIndex(t => effectShape(t.text) === want)
-    if (i >= 0) return { v, tier: i }
-  }
-  return { v, tier: 0 }
+  // The versions whose effect reads like the row's (Queen, Uber); Low, Med
+  // and High often read alike, and a plain name among them is Med.
+  const want = effect ? effectShape(effect) : null
+  const fits = v.tiers.map((t, i) => i).filter(i => want == null || effectShape(v.tiers[i].text) === want)
+  const pool = fits.length ? fits : v.tiers.map((_t, i) => i)
+  const med = pool.find(i => v.tiers[i].label === 'Med')
+  return { v, tier: med ?? pool[0] }
 }
 
 // An advanced game copy of that version, each roll at the bottom of its
 // range, for the price check to read as if you'd copied one.
-export function visceraItemText (v: Viscera, tier: number): string {
+export function visceraItemText (v: Viscera, tier: number, name = tierItemName(v, tier)): string {
   const mod = v.tiers[tier].text.split('\n')
     .map(l => l.replace(/\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)/g, (_m, lo: string, hi: string) => `${lo}(${lo}-${hi})`))
   return [
-    'Item Class: Viscera', tierItemName(v, tier), '--------',
+    'Item Class: Viscera', name, '--------',
     v.slot, '--------',
     '{ Implicit Modifier }', ...mod, '--------',
     'Take this to the Wickerman in a town or hideout to attach it.'
@@ -320,7 +319,7 @@ export function pickPriceRow<T extends { variant?: string }> (rows: readonly T[]
 
 // An effect's first line with "#" for its numbers, "+" signs dropped.
 function effectShape (text: string): string {
-  return norm(text.split('\n')[0].replace(/\+(?=[\d(])/g, '').replace(/\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)|-?\d+(?:\.\d+)?/g, '#'))
+  return norm(text.split('\n')[0].replace(/\+(?=[\d(#])/g, '').replace(/\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)|-?\d+(?:\.\d+)?/g, '#'))
 }
 
 // "Act 1 · Fire Fury, The Coast"

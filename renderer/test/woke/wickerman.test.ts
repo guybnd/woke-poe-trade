@@ -114,7 +114,19 @@ describe('price check by name', () => {
     expect(visceraByName(TABLE, "Eater of Worlds' Head", '#% to Quality of all Skill Gems')?.tier).toBe(1)
     expect(visceraByName(TABLE, "Eater of Worlds' Head")?.tier).toBe(0)
     expect(visceraByName(TABLE, "Greater Eater of Worlds' Head")?.v).toBe(eater)
+    // poe.ninja's row for the Uber version (Guy's screenshot, 2026-11-19).
+    expect(visceraByName(TABLE, "Greater Eater of Worlds' Head", '+#% to Quality of all Skill Gems')?.tier).toBe(1)
+    const uber = visceraItemText(eater, 1, "Greater Eater of Worlds' Head")
+    expect(parseItem(uber).info.refName).toBe("Eater of Worlds' Head")
+    expect(label(eater, heldTier(eater, "Greater Eater of Worlds' Head", lines(uber)))).toBe('Uber')
     expect(visceraByName(TABLE, 'Divine Orb')).toBeNull()
+    // A Queen row among Low / Med / High is the Queen version.
+    const crab = get("Crustacean's Claw")
+    const queen = crab.tiers.findIndex(t => t.label === 'Queen')
+    // (or a version with the very same text, which searches the same)
+    const got = visceraByName(TABLE, "Crustacean's Claw", crab.tiers[queen].text)!.tier
+    expect(crab.tiers[got].text).toBe(crab.tiers[queen].text)
+    expect(crab.tiers[got].label).not.toBe('Med')
   })
 
   it('writes a copy the price check reads as that version', () => {
@@ -127,6 +139,14 @@ describe('price check by name', () => {
     expect(label(leg, heldTier(leg, "Greater Skeletal Warrior's Leg", lines(text)))).toBe('High')
     const arm = get('Scorched Arm')
     expect(visceraItemText(arm, 0)).toContain('10(10-15)% chance to Ignite')
+    // Every version of every Viscera reads back as itself, negative ranges too.
+    for (const v of TABLE.viscera) {
+      v.tiers.forEach((_t, i) => {
+        const copy = visceraItemText(v, i)
+        const held = heldTier(v, tierItemName(v, i), lines(copy))
+        expect(held == null ? null : v.tiers[held].text, `${v.name} ${v.tiers[i].label}`).toBe(v.tiers[i].text)
+      })
+    }
   })
 })
 
