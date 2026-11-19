@@ -1,5 +1,6 @@
-// Run by .github/workflows/upstream-data.yml: copies upstream Awakened PoE
-// Trade's item and stat data when it changes, bumps data-version.json, and
+// Run by .github/workflows/upstream-data.yml: merges upstream Awakened PoE
+// Trade's item and stat data into ours when it changes (scripts/upstream-merge.mjs:
+// woke's own entries and stat refs survive), bumps data-version.json, and
 // writes the pull request text, including upstream's code changes since the
 // last copy (league parser fixes come that way and need merging by hand).
 //
@@ -11,15 +12,18 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { findPlaceholders, findRenames, mergeData, newClashes, parseNdjson, toNdjson } from './upstream-merge.mjs'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const UPSTREAM = process.argv[2]
 if (!UPSTREAM) throw new Error('Usage: node scripts/upstream-data.mjs <upstream checkout>')
 const STATE = path.join(ROOT, '.github/upstream-data.json')
 const LANGUAGES = ['en', 'ru', 'cmn-Hant', 'ko']
-// Item and stat data reach players without a release; client_strings.js ships
-// with the next one.
-const FILES = ['items.ndjson', 'stats.ndjson', 'client_strings.js']
+// Item and stat data reach players without a release. client_strings.js is
+// left alone and only listed: it goes with upstream's parser code (3.30 renamed
+// MAP_MORE_SCARABS, which Parser.ts reads), so it's ported with that by hand.
+const FILES = ['items.ndjson', 'stats.ndjson']
+const STRINGS = 'client_strings.js'
 const DATA = 'renderer/public/data'
 
 const state = JSON.parse(fs.readFileSync(STATE, 'utf8'))
@@ -39,21 +43,53 @@ function seenCopy (rel) {
 }
 
 const changed = []
+const report = []
+const clashes = []
+
+// Stat renames are found once, in English, and used for every language: refs
+// are English in all of them.
+// So are upstream's placeholder pseudo stats (scripts/upstream-merge.mjs).
+let renames = new Map()
+let placeholders = new Set()
+{
+  const rel = `${DATA}/en/stats.ndjson`
+  const theirs = read(path.join(UPSTREAM, rel))
+  if (theirs != null) {
+    const base = parseNdjson(seenCopy(rel))
+    renames = findRenames(base, parseNdjson(read(path.join(ROOT, rel))), parseNdjson(theirs))
+    placeholders = findPlaceholders(base, parseNdjson(theirs))
+  }
+}
+
 for (const lang of LANGUAGES) {
   for (const name of FILES) {
     const rel = `${DATA}/${lang}/${name}`
     const theirs = read(path.join(UPSTREAM, rel))
     if (theirs == null) continue
-    // Only a file upstream itself changed is copied: our own launch-day patch
-    // (scripts/trade-data-patch.mjs) must not be undone by upstream's old copy.
+    // Only a file upstream itself changed is looked at.
     const seen = seenCopy(rel)
     if (seen != null && seen.trim() === theirs.trim()) continue
-    if (theirs !== read(path.join(ROOT, rel))) {
-      fs.writeFileSync(path.join(ROOT, rel), theirs)
+    const file = path.join(ROOT, rel)
+    const oursText = read(file)
+    const kind = name.startsWith('items') ? 'items' : 'stats'
+    const ours = parseNdjson(oursText)
+    const res = mergeData({ base: parseNdjson(seen), ours, theirs: parseNdjson(theirs), kind, ...(kind === 'stats' ? { renames, placeholders } : {}) })
+    const text = toNdjson(res.list)
+    report.push(`| \`${lang}/${name}\` | ${Object.entries(res.count).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')} |`)
+    if (kind === 'stats') for (const c of newClashes(res.list, ours)) clashes.push(`${lang}: ${c}`)
+    // read() drops carriage returns; files are written with \n, like upstream's.
+    if (text !== (oursText ?? '')) {
+      fs.writeFileSync(file, text)
       changed.push(rel)
     }
   }
 }
+
+const strings = LANGUAGES.map(lang => `${DATA}/${lang}/${STRINGS}`).filter(rel => {
+  const theirs = read(path.join(UPSTREAM, rel))
+  const seen = seenCopy(rel)
+  return theirs != null && seen != null && theirs.trim() !== seen.trim()
+})
 
 let commits = []
 try {
@@ -66,33 +102,12 @@ try {
 const out = process.env.GITHUB_OUTPUT
 const say = (line) => { if (out) fs.appendFileSync(out, line + '\n'); else console.log(line) }
 
-// Upstream's English files replace ours whole, so whatever our launch-day
-// patch (scripts/trade-data-patch.mjs) added and upstream still lacks is run
-// again on top. It first moves stat ids the trade site moved (and drops ones
-// it dropped), so they don't come back as duplicate stats. A failed run (the
-// trade site down or refusing the runner) leaves upstream's files as they are
-// and says so in the PR.
-function reapplyPatch () {
-  if (!changed.some(f => f.endsWith('stats.ndjson') || f.startsWith(`${DATA}/en/`))) return null
-  if (!fs.existsSync(path.join(ROOT, 'scripts/trade-baseline/stats.json'))) return null
-  try {
-    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts/trade-data-patch.mjs'), 'apply'], { encoding: 'utf8', timeout: 180_000 })
-    const lines = out.split('\n').filter(Boolean)
-    const counts = lines.filter(l => /^(Moved|Folded|Dropped|New|Reworded|Left out)/.test(l))
-    const shown = lines.filter(l => /^\s+[+~>=-] /.test(l)).slice(0, 40)
-    return ['```', ...counts, ...shown, '```'].join('\n')
-  } catch (e) {
-    return `Could not run it: ${String(e.message ?? e).split('\n')[0]}. Run \`node scripts/trade-data-patch.mjs apply\` on this branch by hand.`
-  }
-}
-
 if (!changed.some(f => !f.endsWith('client_strings.js'))) {
   // Only data reaching players is worth a pull request; the rest waits for one.
   for (const rel of changed) execFileSync('git', ['-C', ROOT, 'checkout', '--', rel])
   say('changed=false')
   console.log(`Upstream ${head.slice(0, 7)}: item and stat data unchanged. ${commits.length} new upstream commits.`)
 } else {
-  const patch = reapplyPatch()
   execFileSync(process.execPath, [path.join(ROOT, 'renderer/src/assets/bump-data-version.mjs')], { stdio: 'inherit' })
   fs.writeFileSync(STATE, JSON.stringify({ ...state, seen: head }, null, 2) + '\n')
   const version = JSON.parse(fs.readFileSync(path.join(ROOT, DATA, 'data-version.json'), 'utf8')).version
@@ -108,7 +123,20 @@ if (!changed.some(f => !f.endsWith('client_strings.js'))) {
     '',
     ...(commits.length ? commits.map(c => `- ${c}`) : ['- none']),
     '',
-    ...(patch ? ['### Our trade-site data patch, run again on top', patch, ''] : [])
+    ...(strings.length
+      ? ['### Not copied', `Upstream changed ${strings.map(f => `\`${f}\``).join(', ')}. Port it with the parser code that reads it, in a pull request of its own.`, '']
+      : []),
+    '### Merge',
+    'Merged with ours three ways (scripts/upstream-merge.mjs): woke-only entries, entries upstream dropped and our stat refs are kept; upstream renames keep our ref with upstream\'s matchers added.',
+    `Stat renames found: ${renames.size}.`,
+    '',
+    '| File | Entries |',
+    '| --- | --- |',
+    ...report,
+    '',
+    ...(clashes.length
+      ? ['**Matching clashes this merge adds (one wording or ref on two stats). Fix before merging:**', ...clashes.slice(0, 40).map(c => `- ${c}`), '']
+      : ['No new matching clashes (one wording or ref on two stats).', ''])
   ].join('\n')
   fs.writeFileSync(path.join(ROOT, '.upstream-data-pr.md'), body)
   say('changed=true')

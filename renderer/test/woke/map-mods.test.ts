@@ -47,8 +47,10 @@ function mapTooltip (mods: string[], props: { quantity?: number, rarity?: number
 }
 
 let MODS: string[]
-// See 'finds a unique token…' below.
-const KNOWN_UNSEARCHABLE = 27
+// See 'finds a unique token…' below. 30 since upstream's 3.30 data (data
+// version 25): it added "Players in Area are 100% Delirious" next to the #%
+// wording and made the Towers cost mods area mods.
+const KNOWN_UNSEARCHABLE = 30
 beforeAll(async () => {
   await loadGameData()
   MODS = allAreaMods()
@@ -227,15 +229,16 @@ describe('map scan: mods on several tooltip lines', () => {
     expect(scanned.mods.map(m => m.matcher)).toContain(TWO_LINE.split('\n')[0])
   })
 
-  it('tells apart mods that differ only in a fixed number', () => {
-    const read = (value: number) => new TooltipMatcher(allAreaMods()).parse([
+  // 3.30 dropped the Blight Chest line (and with it the 25%/50% variants that
+  // differed only in a fixed number): the trade site words it this way.
+  it('reads the 3.30 Fungal Growths mod across its lines', () => {
+    const mods = new TooltipMatcher(allAreaMods()).parse([
       'Area is infested with Fungal Growths',
-      `Map's Item Quantity Modifiers also affect Blight Chest count at ${value}% value`,
       'Can be Anointed up to 3 times'
     ])!.mods.filter(m => m.matcher.includes('\n'))
-    expect(read(50).map(m => m.matcher)).toEqual([expect.stringContaining('at 50% value')])
-    expect(read(50)[0].roll).toBe(3)
-    expect(read(25).map(m => m.matcher)).toEqual([expect.stringContaining('at 25% value')])
+    expect(mods.length).toBeGreaterThan(0)
+    for (const m of mods) expect(m.matcher).toContain('\nCan be Anointed up to ')
+    expect(mods.some(m => m.roll === 3)).toBe(true)
   })
 
   it('needs every line of the mod', () => {
