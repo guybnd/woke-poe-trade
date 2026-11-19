@@ -3724,6 +3724,7 @@
 {"name":"Vine Circlet","refName":"Vine Circlet","namespace":"ITEM","craftable":{"category":"Helmet"},"armour":{"es":[7,10]},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9IZWxtZXRzL0hlbG1ldEludDEiLCJ3IjoyLCJoIjoyLCJzY2FsZSI6MX1d/78dd152257/HelmetInt1.png","w":2,"h":2}
 {"name":"Violet Oil","refName":"Violet Oil","namespace":"ITEM","tradeTag":"violet-oil","exchangeable":true,"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvT2lscy9WaW9sZXRPaWwiLCJzY2FsZSI6MX1d/76c3dc06f8/VioletOil.png"}
 {"name":"Viridian Jewel","refName":"Viridian Jewel","namespace":"ITEM","craftable":{"category":"Jewel"},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL2Jhc2ljZGV4IiwidyI6MSwiaCI6MSwic2NhbGUiOjF9XQ/9ed22a2b94/basicdex.png"}
+{"name":"Viscera","refName":"Viscera","namespace":"ITEM","icon":""}
 {"name":"Visceral Reliquary Key","refName":"Visceral Reliquary Key","namespace":"ITEM","icon":"https://web.poecdn.com/gen/image/WzI4LDE0LHsiZiI6IjJESXRlbXMvTWFwcy9FYXRlck9mV29ybGRzRm9pbCIsInNjYWxlIjoxfV0/9b4e8c2e7c/EaterOfWorldsFoil.png"}
 {"name":"Visored Sallet","refName":"Visored Sallet","namespace":"ITEM","craftable":{"category":"Helmet"},"armour":{"ar":[64,80],"ev":[64,80]},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9IZWxtZXRzL0hlbG1ldFN0ckRleDMiLCJ3IjoyLCJoIjoyLCJzY2FsZSI6MX1d/12db09a4ce/HelmetStrDex3.png","w":2,"h":2}
 {"name":"Vivid Crystallised Lifeforce","refName":"Vivid Crystallised Lifeforce","namespace":"ITEM","tradeTag":"vivid-lifeforce","exchangeable":true,"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvSGFydmVzdC9WaXZpZExpZmVmb3JjZSIsInNjYWxlIjoxfV0/a355b8a5a2/VividLifeforce.png"}
@@ -3961,30 +3962,6 @@
 {"name":"Balefire","refName":"Balefire","namespace":"UNIQUE","unique":{"base":"Opal Sceptre","disenchantValue":5.72},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9PbmVIYW5kV2VhcG9ucy9TY2VwdGVycy9CYWVsZmlyZSIsInciOjIsImgiOjMsInNjYWxlIjoxfV0/082c0ee423/Baelfire.png"}
 {"name":"Baleful Dominion","refName":"Baleful Dominion","namespace":"UNIQUE","unique":{"base":"Hypnotic Eye Jewel","fixedStats":["Historic"],"disenchantValue":10},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL0dsaW50aW5nRGVzcGFpclJpdmV0ZWQiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MX1d/7a233ac972/GlintingDespairRiveted.png"}
 {"name":"Bane of the Apostate","refName":"Bane of the Apostate","namespace":"UNIQUE","unique":{"base":"Judgement Staff","disenchantValue":9.06},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9TdGF2ZXMvQm9uZmlyZXNDZW5zdXJlIiwidyI6MiwiaCI6NCwic2NhbGUiOjF9XQ/0e4ebc3f2b/BonfiresCensure.png"}
-{"name":"The Covetous Dark","refName":"The Covetous Dark","namespace":"UNIQUE","unique":{"base":"Eye Gouger"},"icon":""}
-{"name":"Al-Hezmin's Head","refName":"Al-Hezmin's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Coven Queen's Crown","refName":"Coven Queen's Crown","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Drox's Head","refName":"Drox's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Eater of Worlds' Head","refName":"Eater of Worlds' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Elder's Head","refName":"Elder's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Incarnation of Dread's Head","refName":"Incarnation of Dread's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Incarnation of Neglect's Cube","refName":"Incarnation of Neglect's Cube","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Maven's Orrery","refName":"Maven's Orrery","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Nightmarish Wings of Catarina","refName":"Nightmarish Wings of Catarina","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Nightmarish Book of Depravity","refName":"Nightmarish Book of Depravity","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Nightmarish Wings of Lycia","refName":"Nightmarish Wings of Lycia","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Nightmarish Core of the Unbreakable","refName":"Nightmarish Core of the Unbreakable","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Shaper's Head","refName":"Shaper's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Sirus' Head","refName":"Sirus' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Venarius' Scripture","refName":"Venarius' Scripture","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Veritania's Head","refName":"Veritania's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Incarnation of Fear's Head","refName":"Incarnation of Fear's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Searing Exarch's Descry","refName":"Searing Exarch's Descry","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Enshrouded Quiver","refName":"Enshrouded Quiver","namespace":"ITEM","craftable":{"category":"Quiver"},"icon":""}
-{"name":"Severed Scythe-hand","refName":"Severed Scythe-hand","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Hallowed Descry","refName":"Hallowed Descry","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Nightmarish Head of Uhtred","refName":"Nightmarish Head of Uhtred","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
-{"name":"Spiked Carapace","refName":"Spiked Carapace","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"Bated Breath","refName":"Bated Breath","namespace":"UNIQUE","unique":{"base":"Chain Belt","disenchantValue":1.86},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQmVsdHMvQmF0ZWRCcmVhdGgiLCJ3IjoyLCJoIjoxLCJzY2FsZSI6MX1d/0a8cc4529f/BatedBreath.png"}
 {"name":"Beacon of Madness","refName":"Beacon of Madness","namespace":"UNIQUE","unique":{"base":"Two-Toned Boots","fixedStats":["Grants Level # Embrace Madness","#% increased Movement Speed"],"disenchantValue":17.82},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb290cy9UYW5nbWF6dWFybW91cmJvb3RzIiwidyI6MiwiaCI6Miwic2NhbGUiOjF9XQ/664521517c/Tangmazuarmourboots.png"}
 {"name":"Bear's Girdle","refName":"Bear's Girdle","namespace":"UNIQUE","unique":{"base":"Leather Belt","disenchantValue":1.63},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQmVsdHMvQmVhcnNDbHV0Y2giLCJ3IjoyLCJoIjoxLCJzY2FsZSI6MX1d/31930452e4/BearsClutch.png"}
@@ -4906,6 +4883,30 @@
 {"name":"The Coming Calamity","refName":"The Coming Calamity","namespace":"UNIQUE","unique":{"base":"Destroyer Regalia","disenchantValue":5.81},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb2R5QXJtb3Vycy9TcGlyaXRIYXJuZXNzIiwidyI6MiwiaCI6Mywic2NhbGUiOjF9XQ/69c0a6780d/SpiritHarness.png"}
 {"name":"The Consuming Dark","refName":"The Consuming Dark","namespace":"UNIQUE","unique":{"base":"Fiend Dagger","disenchantValue":5.81},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9PbmVIYW5kV2VhcG9ucy9EYWdnZXJzL0NvbnN1bWluZ3RoZURhcmsiLCJ3IjoxLCJoIjozLCJzY2FsZSI6MX1d/71882cbd42/ConsumingtheDark.png"}
 {"name":"The Covenant","refName":"The Covenant","namespace":"UNIQUE","unique":{"base":"Spidersilk Robe","disenchantValue":24.79},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb2R5QXJtb3Vycy9FbWJyYWNlIiwidyI6MiwiaCI6Mywic2NhbGUiOjF9XQ/d0110e7660/Embrace.png"}
+{"name":"The Covetous Dark","refName":"The Covetous Dark","namespace":"UNIQUE","unique":{"base":"Eye Gouger","fixedStats":["#% chance to Blind Enemies on Hit","Blind you inflict is permanent"],"disenchantValue":8.05},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9PbmVIYW5kV2VhcG9ucy9DbGF3cy9FeWV0aGllZl9UaWVyMDIiLCJ3IjoyLCJoIjoyLCJzY2FsZSI6MX1d/6f9965e78a/Eyethief_Tier02.png"}
+{"name":"Al-Hezmin's Head","refName":"Al-Hezmin's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Coven Queen's Crown","refName":"Coven Queen's Crown","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Drox's Head","refName":"Drox's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Eater of Worlds' Head","refName":"Eater of Worlds' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Elder's Head","refName":"Elder's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Incarnation of Dread's Head","refName":"Incarnation of Dread's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Incarnation of Neglect's Cube","refName":"Incarnation of Neglect's Cube","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Maven's Orrery","refName":"Maven's Orrery","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Wings of Catarina","refName":"Nightmarish Wings of Catarina","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Book of Depravity","refName":"Nightmarish Book of Depravity","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Wings of Lycia","refName":"Nightmarish Wings of Lycia","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Core of the Unbreakable","refName":"Nightmarish Core of the Unbreakable","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Shaper's Head","refName":"Shaper's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Sirus' Head","refName":"Sirus' Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Venarius' Scripture","refName":"Venarius' Scripture","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Veritania's Head","refName":"Veritania's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Incarnation of Fear's Head","refName":"Incarnation of Fear's Head","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Searing Exarch's Descry","refName":"Searing Exarch's Descry","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Enshrouded Quiver","refName":"Enshrouded Quiver","namespace":"ITEM","craftable":{"category":"Quiver"},"icon":""}
+{"name":"Severed Scythe-hand","refName":"Severed Scythe-hand","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Hallowed Descry","refName":"Hallowed Descry","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Nightmarish Head of Uhtred","refName":"Nightmarish Head of Uhtred","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
+{"name":"Spiked Carapace","refName":"Spiked Carapace","namespace":"ITEM","craftable":{"category":"Viscera"},"icon":""}
 {"name":"The Coward's Trial","refName":"The Coward's Trial","namespace":"UNIQUE","unique":{"base":"Map"},"area":{"screenshot":"https://i.imgur.com/BCOsIS2.jpg"},"icon":"https://web.poecdn.com/gen/image/WzI4LDE0LHsiZiI6IjJESXRlbXMvTWFwcy9VbmRlYWRTaWVnZSIsInciOjEsImgiOjEsInNjYWxlIjoxfV0/53f1dbdcb4/UndeadSiege.png"}
 {"name":"The Crimson Storm","refName":"The Crimson Storm","namespace":"UNIQUE","unique":{"base":"Steelwood Bow","disenchantValue":10.47},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9Cb3dzL0ZvcnRpZmljYXRpb25zVW5pcXVlIiwidyI6MiwiaCI6NCwic2NhbGUiOjF9XQ/b95b104d3e/FortificationsUnique.png"}
 {"name":"The Crustacean's Call","refName":"The Crustacean's Call","namespace":"UNIQUE","unique":{"base":"Primordial Staff","disenchantValue":9.87},"icon":"https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9TdGF2ZXMvQ2xhd2Nhc3RlciIsInciOjIsImgiOjQsInNjYWxlIjoxfV0/ee90a52733/Clawcaster.png"}
