@@ -665,7 +665,10 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
   }
 
   promoteFractured(ctx)
-  tickTopTierMods(ctx.filters, item)
+  // A fractured mod with no trade stat (3.30 granted skills) leads nothing:
+  // that item is picked like any other.
+  const fracLead = ctx.filters.some(f => f.fracLead)
+  tickTopTierMods(ctx.filters, item, fracLead)
 
   const basePercentile = ctx.filters.find(fitler => fitler.tradeId[0] === 'item.base_percentile')
   if (basePercentile && item.rarity === ItemRarity.Unique) {
@@ -684,7 +687,7 @@ function finalFilterTweaks (ctx: FiltersCreationContext) {
     if (basePercentile) basePercentile.disabled = true
   }
 
-  untickBesideFractured(ctx)
+  if (fracLead) untickBesideFractured(ctx)
 }
 
 // woke (Guy, 2026-11-19): a fractured item is bought for its fractured mod on
@@ -775,9 +778,9 @@ function bestTier (filter: StatFilter): number {
   return Math.min(9, ...filter.sources.filter(source => isTopTierSource(filter, source)).map(s => s.modifier.info.tier!))
 }
 
-function tickTopTierMods (filters: StatFilter[], item: ParsedItem) {
+function tickTopTierMods (filters: StatFilter[], item: ParsedItem, fracLead: boolean) {
   // A fractured item starts as its fractured mod alone (untickBesideFractured).
-  if (item.rarity !== ItemRarity.Rare || item.isVeiled || item.isFractured) return
+  if (item.rarity !== ItemRarity.Rare || item.isVeiled || fracLead) return
 
   filters
     .filter(f => !f.hidden && isTopTierFilter(f, item))

@@ -83,4 +83,32 @@ describe('fractured item ticks only its fractured mod and base', () => {
     expect(ticked.some(f => f.tag === 'enchant')).toBe(true)
     expect(ticked.some(f => /Strength/.test(f.statRef))).toBe(false)
   })
+
+  // 3.30 fractured granted skills have no trade stat, so nothing leads: the
+  // ring is picked like an unfractured rare instead of searching the bare base.
+  it('fractured mod with no row: top mods still tick', () => {
+    const text = `Item Class: Rings
+Rarity: Rare
+Doom Loop
+Two-Stone Ring
+--------
+Requirements:
+Level: 60
+--------
+Item Level: 84
+--------
++14(12-16)% to Cold and Lightning Resistances (implicit)
+--------
+{ Fractured Prefix Modifier "of Anger" }
+Grants Level 22 Anger Skill
+{ Prefix Modifier "Rapturous" (Tier: 1) }
++64(60-69) to maximum Life
+{ Suffix Modifier "of the Ice" (Tier: 1) }
++46(46-48)% to Lightning Resistance
+--------
+Fractured Item`
+    const p = active(text)
+    expect(p.stats.some(s => !s.group && s.fracLead)).toBe(false)
+    expect(tickedRows(p).length).toBeGreaterThan(0)
+  })
 })
