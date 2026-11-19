@@ -8,7 +8,7 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 vi.mock('@/web/woke/app/live-data', () => ({ dataFileUrl: (f: string) => f, onSharedDataChange: () => () => {} }))
 
 /* eslint-disable import-x/first */
-import { heldTier, otherTierText, pickPriceRow, searchViscera, tierItemName, visceraHere, visceraInZone } from '@/web/woke/wickerman/viscera'
+import { heldTier, otherTierText, pickPriceRow, searchViscera, tierItemName, visceraByName, visceraHere, visceraInZone, visceraItemText } from '@/web/woke/wickerman/viscera'
 import type { Viscera, VisceraTable } from '@/web/woke/wickerman/viscera'
 import { ModifierType } from '@/parser/modifiers'
 import { visceraLookup } from '@/web/woke/search/lookups/viscera'
@@ -76,6 +76,19 @@ describe('heldTier', () => {
     expect(label(claw, heldTier(claw, "Lesser King Crab's Claw", four))).toBe('Low')
   })
 
+  it("knows a line the game words apart from the table by its stat (Maven's Orrery)", () => {
+    const orrery = get("Maven's Orrery")
+    const copy = fixture('items/viscera-mavens-orrery.txt')
+    expect(label(orrery, heldTier(orrery, "Maven's Orrery", lines(copy)))).toBe('Grim Fate')
+    // Uber's lines swap in for the copy's own line, and that copy reads as Uber.
+    const uber = otherTierText(orrery, copy, 0, 1)!
+    expect(uber).toContain('+1 to maximum number of Sacred Wisps')
+    expect(uber).not.toContain('Scorched')
+    expect(label(orrery, heldTier(orrery, "Maven's Orrery", lines(uber)))).toBe('Uber')
+    // Two lines the stat list reads as different stats never match.
+    expect(heldTier(orrery, "Maven's Orrery", ['Nearby Enemies are Blinded'])).toBeNull()
+  })
+
   it('falls back to the name word when no line fits', () => {
     const arm = get('Scorched Arm')
     expect(label(arm, heldTier(arm, 'Greater Scorched Arm', ['A line the table lacks']))).toBe('High')
@@ -86,6 +99,34 @@ describe('heldTier', () => {
     const claw = get("Crustacean's Claw")
     const line = ['11% more Maximum Physical Attack Damage']
     expect(label(claw, heldTier(claw, "Greater Crustacean's Claw", line))).toBe('High')
+  })
+})
+
+describe('price check by name', () => {
+  beforeAll(loadGameData)
+
+  it('finds the version a name or poe.ninja row says', () => {
+    const leg = get("Skeletal Warrior's Leg")
+    expect(visceraByName(TABLE, "Greater Skeletal Warrior's Leg")).toEqual({ v: leg, tier: 2 })
+    expect(visceraByName(TABLE, "lesser skeletal warrior's leg")).toEqual({ v: leg, tier: 0 })
+    expect(visceraByName(TABLE, "Skeletal Warrior's Leg", leg.tiers[0].text)).toEqual({ v: leg, tier: 1 })
+    const eater = get("Eater of Worlds' Head")
+    expect(visceraByName(TABLE, "Eater of Worlds' Head", '#% to Quality of all Skill Gems')?.tier).toBe(1)
+    expect(visceraByName(TABLE, "Eater of Worlds' Head")?.tier).toBe(0)
+    expect(visceraByName(TABLE, "Greater Eater of Worlds' Head")?.v).toBe(eater)
+    expect(visceraByName(TABLE, 'Divine Orb')).toBeNull()
+  })
+
+  it('writes a copy the price check reads as that version', () => {
+    const leg = get("Skeletal Warrior's Leg")
+    const text = visceraItemText(leg, 2)
+    const item = parseItem(text)
+    expect(item.info.refName).toBe("Skeletal Warrior's Leg")
+    expect(item.visceraSlot).toBe('Lower Limb')
+    expect(item.statsByType.map(s => s.type)).toEqual([ModifierType.Implicit])
+    expect(label(leg, heldTier(leg, "Greater Skeletal Warrior's Leg", lines(text)))).toBe('High')
+    const arm = get('Scorched Arm')
+    expect(visceraItemText(arm, 0)).toContain('10(10-15)% chance to Ignite')
   })
 })
 

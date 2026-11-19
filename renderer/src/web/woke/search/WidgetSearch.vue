@@ -81,7 +81,7 @@
                 <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
-                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Live listings</WButton>
+                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Price check</WButton>
                 <WButton size="sm" @click="openTrade(selected)">Trade site</WButton>
                 <WButton size="sm" @click="findInStash(selected.name)">Find in stash</WButton>
                 <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
@@ -96,7 +96,7 @@
               <div :class="$style.acts">
                 <WButton size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
                 <WButton size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
-                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Live listings</WButton>
+                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Price check</WButton>
                 <WButton size="sm" @click="openTrade(selected)">Trade site</WButton>
                 <WButton size="sm" @click="findInStash(selected.name)">Find in stash</WButton>
                 <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
@@ -162,7 +162,7 @@ import { pickRow } from '../shared/price-row'
 import { usePriceText } from '../shared/price'
 import { lookupRequest } from '../item-lookup/lookup'
 import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
-import { cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
+import { canPriceCheck as canCheckByName, cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
 import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
@@ -207,7 +207,7 @@ import type { PobBuildsWidget } from '../pob-builds/widget'
 import { ATLAS_TYPE } from '../atlas/strategies'
 import type { AtlasWidget } from '../atlas/strategies'
 import { visceraLookup } from './lookups/viscera'
-import { loadViscera } from '../wickerman/viscera'
+import { loadViscera, tierItemName, visceraByName, visceraItemText } from '../wickerman/viscera'
 import type { VisceraTable } from '../wickerman/viscera'
 import { HELP_QUERY, exampleCards } from './lookups/examples'
 import { MECHANICS_TYPE } from '../mechanics/widget'
@@ -947,8 +947,20 @@ function infoFor (entry: PriceEntry | ItemEntry): BaseType | undefined {
   // poe.ninja's names are the English ones, whatever the game's language.
   return ITEM_BY_REF(nsOf(entry.group.type), baseUniqueName(entry.group.name))?.[0]
 }
+// The item as the item menu names it: a poe.ninja row with its type.
+function menuRef (entry: PriceEntry | ItemEntry) {
+  return entry.kind === 'price' ? { name: entry.group.name, type: entry.group.type } : { name: entry.info.refName }
+}
+// A Viscera and the version its name says (Wickerman module on).
+function visceraOf (entry: PriceEntry | ItemEntry) {
+  if (!visceraTable.value || !isModuleOn(AppConfig(), 'wickerman')) return null
+  const name = entry.kind === 'price' ? entry.group.name : entry.info.refName
+  const effect = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant : undefined
+  return visceraByName(visceraTable.value, name, effect)
+}
 function canPriceCheck (entry: PriceEntry | ItemEntry) {
-  return infoFor(entry)?.namespace === 'UNIQUE'
+  const info = infoFor(entry)
+  return info?.namespace === 'UNIQUE' || visceraOf(entry) != null || canCheckByName(menuRef(entry), info)
 }
 function openLookup (entry: PriceEntry | ItemEntry, tab: LookupTab) {
   remember(entry)
@@ -958,8 +970,18 @@ function openLookup (entry: PriceEntry | ItemEntry, tab: LookupTab) {
 }
 async function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
   remember(entry)
+  // A Viscera: priced as a copy of that version, so its strip can switch versions.
+  const viscera = visceraOf(entry)
+  if (viscera) {
+    await openPriceCheck({ name: tierItemName(viscera.v, viscera.tier), text: visceraItemText(viscera.v, viscera.tier) }, cursorPoint(e))
+    return
+  }
   const info = infoFor(entry)
-  if (!info) return
+  if (info?.namespace !== 'UNIQUE') {
+    // Gems, cards, currency, beasts: as the item menu's Price check does.
+    await openPriceCheck(menuRef(entry), cursorPoint(e), info)
+    return
+  }
   // Its mods as stat rows (English data only); one price row says which variant.
   // A Foulborn row is priced as its unique (the data has no Foulborn uniques).
   const variant = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant || undefined : undefined

@@ -4605,6 +4605,98 @@
    }
   }
  },
+ "viscera-mavens-orrery.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_3733114005",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.body"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_3733114005",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "type_filters": {
+     "filters": {
+      "rarity": {
+       "option": "nonunique"
+      },
+      "category": {
+       "option": "viscera.body"
+      }
+     }
+    },
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "false"
+      },
+      "fractured_item": {
+       "option": "false"
+      },
+      "split": {
+       "option": "false"
+      },
+      "mirrored": {
+       "option": "false"
+      }
+     }
+    }
+   }
+  }
+ },
  "viscera-molten-core.txt": {
   "opened": {
    "status": {

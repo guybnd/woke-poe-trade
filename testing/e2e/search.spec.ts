@@ -62,7 +62,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await expect(panel.getByText('Trade site')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
-  await expect(panel.getByText('Live listings')).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Price check', exact: true })).toBeVisible()
   await overlay.snap('search-unique')
 
   // A gem: the Vaal orb button narrows it to corrupted variants.

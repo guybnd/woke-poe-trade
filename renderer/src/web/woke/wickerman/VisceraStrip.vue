@@ -1,7 +1,7 @@
 <template>
   <div v-if="v" :class="$style.strip" data-woke-viscera>
     <!-- A click prices that version: the search below swaps to its mod and range. -->
-    <div v-for="(t, i) in v.tiers" :key="t.label"
+    <div v-for="(t, i) in v.tiers" :key="t.label" :data-viscera-tier="t.label"
       :class="[$style.tier, i === shown && $style.held, canPick(i) && $style.pick]"
       :role="canPick(i) ? 'button' : undefined"
       :title="canPick(i) ? (i === held ? 'Back to your version' : `Price the ${t.label} version`) : undefined"
