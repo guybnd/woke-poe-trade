@@ -33,13 +33,31 @@ export function decodeOils (calc: StatCalculated): string[] | undefined {
   }
   if (!encoded) return
 
-  const decoded = encoded
+  return oilNames(encoded).reverse() // [Golden Oil ... Clear Oil]
+}
+
+// The oils of an encoded recipe ("1,8,10"), cheapest first. Undefined when
+// an index isn't a known oil.
+export function oilNames (encoded: string): string[] {
+  return encoded
     .split(',')
     .map(Number)
-    .sort((a, b) => b - a) // [Golden Oil ... Clear Oil]
+    .sort((a, b) => a - b)
     .map(idx => OILS[idx])
+}
 
-  return decoded
+// The oils that anoint a passive notable onto an amulet, cheapest first,
+// from the "Allocates <notable>" enchant's recipe. Undefined when it can't
+// be anointed.
+export function notableOils (name: string, statByRef: (ref: string) => unknown): string[] | undefined {
+  const ref = `Allocates ${name}`
+  const stat = statByRef(ref) as { ref?: string, anointments?: Array<{ oils: string }> } | undefined
+  // The ref index is a hash: make sure it found this stat.
+  if (stat?.ref !== ref) return
+  const encoded = stat.anointments?.[0]?.oils
+  if (!encoded) return
+  const oils = oilNames(encoded)
+  return oils.length === 3 && oils.every(Boolean) ? oils : undefined
 }
 
 export function applyAnointmentRules (filters: StatFilter[], item: ParsedItem) {

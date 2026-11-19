@@ -11,6 +11,8 @@ export interface LookupRow {
   // A price in chaos, drawn as chaos or divines.
   chaos?: number | null
   item?: { name: string, type?: string }
+  // An image url drawn before the label.
+  icon?: string
   dim?: boolean
   // `chaos` is one item's price: under 1c it reads "1 div / N". Leave it off
   // for totals (qty × each, sets, costs, profits).
