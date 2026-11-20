@@ -55,6 +55,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T10:53:41.905Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-ups merged and live in the dev build: #676 added per hour to the
+      hover card. #678 added Guy's C1: a window picker, a "Leave out hideout
+      time" toggle, the map/hideout split, average map time, and the card picker
+      plus graph.
+    date: '2026-11-20T12:07:54.877Z'
+    selfAttested: true
+    id: c-2026-11-20t12-07-54-877z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/675'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
