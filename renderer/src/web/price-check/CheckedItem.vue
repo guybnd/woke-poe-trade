@@ -25,7 +25,7 @@
         :filters="itemFilters" />
     </filter-name>
     <woke-map-strip :item="item" :stats="itemStats" :filters="itemFilters" :worth="isNightmareMap" :add-mods="!presets.some(p => p.active && p.id === 'filters.preset_bulk')" class="mb-2">
-      <!-- woke: a Nightmare Map's worth sits between Run it? and Trade search (Guy's pick A). -->
+      <!-- woke: a Nightmare Map's worth sits under the map section (Guy's pick A, 2026-11-21). -->
       <template v-if="isNightmareMap" #worth><woke-nightmare-strip :item="item" /></template>
     </woke-map-strip>
     <!-- woke: the gem's other versions with poe.ninja prices; a row searches trade only when clicked. -->
