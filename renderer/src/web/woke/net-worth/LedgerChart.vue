@@ -15,7 +15,7 @@
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
            names take the item tooltip and menu. -->
-      <div ref="tipEl" :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align], { [$style.pinned]: !!pinned }]"
+      <div ref="tipEl" :class="[$style.tip, place.below ? $style.below : $style.above, $style[place.align], { [$style.pinned]: !!pinned, [$style.wide]: !!tipBelow }]"
         :style="{ left: shown.x + '%', top: shown.y + '%' }" data-chart-card>
         <b class="w-num">{{ when(shown.p.at) }} · {{ fmt(shown.p.div) }}<Coin /><template v-if="shown.p.netDiv != null"> · {{ signed(shown.p.netDiv) }}<Coin /></template></b>
         <span v-if="shown.p.top.length">
@@ -97,7 +97,11 @@ watch(pinned, (on, was) => {
     document.removeEventListener('keydown', onKey)
   }
 })
-watch(() => [props.series, props.mode], () => { pinned.value = null })
+// New points drop the pinned card only when its point is gone (the dock card
+// rebuilds its series as the clock moves).
+watch(() => [props.series, props.mode], () => {
+  if (pinned.value && !props.series.some(p => p.at === pinned.value!.p.at)) pinned.value = null
+})
 onUnmounted(() => {
   document.removeEventListener('pointerdown', outside, true)
   document.removeEventListener('keydown', onKey)
@@ -185,6 +189,8 @@ function when (at: number) {
   padding: 4px 7px; font-size: var(--w-fs-xs); color: var(--w-fg); box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
 }
 .pinned { pointer-events: auto; border-color: var(--w-gold); }
+/* Below the point, as wide as the chart: never past the dock card's sides. */
+.wide { left: 0 !important; right: 0; width: auto; max-width: none; transform: translate(0, 12px) !important; }
 .item { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
 .chart { cursor: pointer; }
 .above { --ty: calc(-100% - 10px); }

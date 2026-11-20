@@ -101,8 +101,11 @@ const series = computed<SeriesPoint[]>(() => {
   const all = seriesFor(pts, historyNow.value.days, '7d', end, divineRate.value)
   const i = all.findIndex(p => p.at >= from)
   // No read inside the window: a flat line from the last one.
-  if (i < 0) { const last = all[all.length - 1]; return last ? [last, { ...last, at: end, netDiv: null, top: [] }] : [] }
-  return all.slice(Math.max(0, i - 1))
+  if (i < 0) { const last = all[all.length - 1]; return last ? [{ ...last, at: from, netDiv: null, top: [] }, { ...last, at: end, netDiv: null, top: [], daily: false }] : [] }
+  // The read before the window starts the line at the window's start, so the
+  // window fills the chart (its x axis is time).
+  const out = all.slice(i)
+  return i > 0 ? [{ ...all[i - 1], at: Math.min(from, out[0].at - 1), netDiv: null, top: [] }, ...out] : out
 })
 const big = computed(() => bigGains(series.value))
 // The last read's changes, if that read had any to compare.
