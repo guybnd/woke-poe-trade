@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-417
 title: 'Session story: night strip card when you stop playing'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -34,7 +34,33 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-20T15:03:25.131Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 377616fb. Session story module: night strip card, dock icon,
+      Ctrl+Space "tonight", nights saved in woke-docs/session-story.
+    completionComment: true
+    date: '2026-11-20T15:04:16.171Z'
+    id: c-2026-11-20t15-04-16-171z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-20T15:04:16.649Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/683'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy asked to build it (2026-11-20). Mock: https://claude.ai/artifact/C69uz3mGDDWMSQ68RTKcSp option story-B (night strip): one block per map shaded by profit, hideout gaps striped, death ticks, best drop star, totals row (profit, per hour, hideout, deaths). Ctrl+Space "tonight" card.
 
