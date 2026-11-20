@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-420
 title: 'Price check: roll quality on unique mod lines + high-roll chip'
-status: Ready
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -41,8 +41,35 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-20T15:27:20.501Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged #684 (11fe2f06): unique lines in PoE mode show Alt-style ranges per
+      number, gold when ≥90% up the range (Guy's pick C); High roll N% chip when
+      ≥2 rolling lines average ≥75%, click = one trade search. Startup JS kept
+      under 1640 KB by lazy-loading anointment and cluster spot tags.
+    completionComment: true
+    date: '2026-11-20T15:33:37.163Z'
+    id: c-2026-11-20t15-33-37-163z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-20T15:33:37.715Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/684'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy (2026-11-20, Bino's Kitchen Knife): show how high each unique mod rolled in its range, and flag when the copy is a high roll worth a real trade search (poe.ninja prices an average copy).
 
