@@ -41,7 +41,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject, onBeforeUnmount, watchEffect } from 'vue'
+import type { ShallowRef } from 'vue'
 import { WInfo } from '../ui'
 import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
@@ -59,6 +60,12 @@ const result = computed(() => {
   if (!config || !config.stripOnPriceCheck || !isMapLike(props.item) || props.item.isUnidentified) return null
   return checkMap(props.item, config)
 })
+
+// Tells the price check which number rows the chips stand in for (CheckedItem.vue).
+const owns = inject<ShallowRef<ReadonlySet<string> | null> | null>('map-strip-owns', null)
+const PROP_IDS: ReadonlySet<string> = new Set(Object.values(PROP_TRADE_ID))
+watchEffect(() => { if (owns) owns.value = result.value ? PROP_IDS : null })
+onBeforeUnmount(() => { if (owns) owns.value = null })
 
 const headline = computed(() => {
   const v = result.value!.verdict

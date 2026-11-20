@@ -129,7 +129,6 @@ import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
 import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
-import WokeMapStrip from '@/web/woke/map-mods/MapModStrip.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
 import { applyTickPrefs } from '@/web/woke/price-insight/tick-prefs'
@@ -139,7 +138,6 @@ import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-tr
 import { rawClone } from '@/web/woke/raw-clone'
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '@/web/woke/modules'
-import { mapStripShown, PROP_TRADE_ID } from '@/web/woke/map-mods/check'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
@@ -153,7 +151,8 @@ const SEARCH_HOVER_MS = 150
 export default defineComponent({
   name: 'CheckedItem',
   components: {
-    WokeMapStrip,
+    // woke: lazy, so the map strip and its checks stay out of the startup bundle.
+    WokeMapStrip: defineAsyncComponent(() => import('@/web/woke/map-mods/MapModStrip.vue')),
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
     WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
@@ -198,7 +197,9 @@ export default defineComponent({
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
     const itemStats = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.stats)
     // woke: a map's mods and numbers are set on the map strip, so the rows leave them out.
-    const stripProps = computed(() => mapStripShown(props.item) ? new Set(Object.values(PROP_TRADE_ID)) : null)
+    // The trade ids the map strip shows as chips, set by the strip while it's up (MapModStrip.vue).
+    const stripProps = shallowRef<ReadonlySet<string> | null>(null)
+    provide('map-strip-owns', stripProps)
     const rowStats = computed(() => {
       const onStrip = (s: FilterOrGroup) => !s.group && (s.mapMod || (stripProps.value?.has(s.tradeId[0]) ?? false))
       return itemStats.value.some(onStrip) ? itemStats.value.filter(s => !onStrip(s)) : itemStats.value

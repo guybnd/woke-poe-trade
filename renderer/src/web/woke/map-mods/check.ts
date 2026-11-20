@@ -169,12 +169,6 @@ export const PROP_TRADE_ID: Record<string, string> = {
   Pack: 'item.map_pack_size'
 }
 
-// Whether the price check shows the map strip for this item (MapModStrip.vue),
-// which then holds the map's numbers and mods for the search.
-export function mapStripShown (item: ParsedItem): boolean {
-  return !!findMapModsConfig()?.stripOnPriceCheck && isMapLike(item) && !item.isUnidentified
-}
-
 export function findMapModsConfig (): MapModsWidget | null {
   // Switched off in Settings → Modules: no strip in price check / map check.
   if (!isModuleOn(AppConfig(), 'map-mods')) return null
