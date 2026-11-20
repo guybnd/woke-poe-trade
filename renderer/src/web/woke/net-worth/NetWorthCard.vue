@@ -15,10 +15,11 @@
         </div>
         <div v-else class="w-dim text-xs">Waiting for poe.ninja prices…</div>
         <!-- Per hour of play, as in the window: hideout, town, closed and AFK left out. -->
-        <div v-if="v && rateRow" :class="$style.rates" class="w-num text-xs">
-          <span :class="$style.caps">Per hour</span>
-          <span v-for="x in rateRow" :key="x.id" :class="tone(x.div)" :title="x.tip">{{ x.id }} {{ x.div == null ? '—' : signed(x.div) }}</span>
-          <span><Coin :chaos="!divineRate" />/h</span>
+        <!-- The window picked here (shared with the window's Details) sets the
+             per hour figure and the graph. -->
+        <div v-if="v" :class="$style.rates">
+          <WSegmented :model-value="win" :options="WINDOW_OPTIONS" @update:model-value="pick" />
+          <span class="w-num" :class="tone(rate.div)" :title="rate.tip">{{ rate.div == null ? '—' : signed(rate.div) }}<Coin :chaos="!divineRate" />/h</span>
         </div>
         <WSpark v-if="spark.length > 1" :values="spark" :width="270" :height="26" :class="$style.spark" />
         <template v-if="v">
@@ -47,22 +48,25 @@
 <script setup lang="ts">
 // Loaded the first time the card opens, with the window's data (store.ts).
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
-import { WSpark, vItemTip } from '../ui'
+import { WSegmented, WSpark, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
-import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
+import { refreshWaitMs, topCardChanges } from './ledger'
 import type { ReaderStatus } from './widget'
 import Coin from './Coin.vue'
-import { RATE_WINDOWS, rateTip } from './play-time'
+import { RATE_WINDOWS, rateTip, startOfDay } from './play-time'
+import type { RateWindow } from './play-time'
 
 const props = defineProps<{
   status: ReaderStatus | null
   league: string | null
   // The window's "Leave out hideout time" unticked.
   withHub?: boolean
+  // The per hour window picked (here or in the window).
+  rateWindow?: RateWindow
 }>()
-const emit = defineEmits<{ (e: 'refresh' | 'settings'): void }>()
+const emit = defineEmits<{ (e: 'refresh' | 'settings'): void, (e: 'window', w: RateWindow): void }>()
 
 // The clock for "in N min" and "3h ago": only while the card is shown.
 const now = shallowRef(Date.now())
@@ -83,7 +87,17 @@ const sameLeague = computed(() => stashNow.value?.league === props.league && (!p
 const v = computed(() => sameLeague.value ? valuation.value : null)
 const signedOut = computed(() => props.status?.error?.kind === 'signed-out' || (props.status != null && !props.status.account))
 const today = computed(() => sameLeague.value ? summary.value?.sinceYesterdayDiv ?? null : null)
-const spark = computed(() => !sameLeague.value ? [] : seriesFor(ledger.value.points, historyNow.value.days, '7d', now.value, divineRate.value).map(p => p.div))
+// Net worth over the picked window: its reads, from the one before it starts.
+const spark = computed(() => {
+  if (!sameLeague.value) return []
+  const pts = ledger.value.points
+  const end = Math.max(now.value, pts[pts.length - 1]?.at ?? 0)
+  const from = win.value === 'today' ? startOfDay(end) : end - (RATE_WINDOWS.find(w => w.id === win.value)?.ms ?? 3_600_000)
+  let i = pts.findIndex(p => p.at >= from)
+  if (i < 0) return []
+  if (i > 0) i--
+  return pts.slice(i).map(p => toDiv(p.chaos))
+})
 // The last read's changes, if that read had any to compare.
 const diff = computed(() => {
   const d = ledger.value.diffs[ledger.value.diffs.length - 1]
@@ -96,13 +110,15 @@ const canRefresh = computed(() => !!props.status?.account && !props.status.runni
 // Reads "now" so it moves with the clock.
 const readLine = computed(() => now.value && props.status?.lastReadAt ? `Read ${agoPhrase(props.status.lastReadAt)}` : '')
 
-// The same numbers as the window's summary row (store.ratesAt).
-const rateRow = computed(() => {
-  if (!sameLeague.value) return null
+const WINDOW_OPTIONS = [{ value: '1h', label: '1h' }, { value: '2h', label: '2h' }, { value: '3h', label: '3h' }, { value: 'today', label: 'Today' }]
+const win = computed<RateWindow>(() => WINDOW_OPTIONS.some(o => o.value === props.rateWindow) ? props.rateWindow! : '1h')
+const pick = (w: string) => { emit('window', w as RateWindow) }
+// The same numbers as the window (store.ratesAt).
+const rate = computed(() => {
   const r = ratesAt(now.value, props.withHub === true)
+  const x = r[win.value]
   const amount = (chaos: number) => `${signed(toDiv(chaos))} ${divineRate.value ? 'd' : 'c'}`
-  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog, amount, r.withHub) }))
-  return row.some(x => x.div != null) ? row : null
+  return { div: !sameLeague.value || x.perHour == null ? null : toDiv(x.perHour), tip: rateTip(win.value, x, r.fromLog, amount, r.withHub) }
 })
 
 const fmt = (n: number) => formatAmount(n)
@@ -121,7 +137,7 @@ const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : 
 .total { display: flex; align-items: baseline; gap: 8px; }
 .total b { font-size: calc(20px * var(--w-text-scale, 1)); font-weight: 500; color: var(--w-fg); line-height: 1.1; }
 .spark { width: 100%; }
-.rates { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rates { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 6px; align-items: center; }
 .art { width: 14px; height: 14px; object-fit: contain; }
