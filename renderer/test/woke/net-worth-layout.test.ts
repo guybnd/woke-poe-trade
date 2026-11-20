@@ -13,10 +13,12 @@ describe('net worth section sizes', () => {
 
   it('moves one column edge, never below 15% of the row', () => {
     const w = dragCols([1, 1, 1], 0, 100, 300)
-    expect(w[0]).toBeCloseTo(2)
+    expect(w[0]).toBeCloseTo(1.55)
     expect(w[1]).toBeCloseTo(0.45)
     expect(w[2]).toBe(1)
     expect(dragCols([1, 1], 0, -1000, 200)[0]).toBeCloseTo(0.3)
+    // Old sizes too small to keep 15% each: split evenly, never negative.
+    expect(dragCols([0.05, 0.05, 10], 0, 10, 100)).toEqual([0.05, 0.05, 10])
   })
 
   it('places the handles at the column edges', () => {

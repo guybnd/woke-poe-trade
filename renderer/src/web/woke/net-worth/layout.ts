@@ -40,8 +40,11 @@ export function dragCols (weights: readonly number[], i: number, dx: number, wid
   const total = weights.reduce((s, w) => s + w, 0)
   const min = total * 0.15
   const d = dx / widthPx * total
+  const pair = weights[i] + weights[i + 1]
   let a = weights[i] + d
   let b = weights[i + 1] - d
+  // Too narrow together to keep the minimum each: leave them as they are.
+  if (pair < 2 * min) return [...weights]
   if (a < min) { b -= min - a; a = min }
   if (b < min) { a -= min - b; b = min }
   const out = [...weights]

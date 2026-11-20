@@ -9,8 +9,8 @@
 import { shallowRef } from 'vue'
 
 const props = withDefaults(defineProps<{ dir: 'x' | 'y', title?: string }>(), { title: 'Drag to resize · double-click to reset' })
-// move: px since the drag started; end: the drag is over (save then).
-const emit = defineEmits<{ (e: 'move', px: number): void, (e: 'end' | 'reset'): void }>()
+// start: a drag begins; move: px since it started; end: it's over (save then).
+const emit = defineEmits<{ (e: 'move', px: number): void, (e: 'start' | 'end' | 'reset'): void }>()
 
 const dragging = shallowRef(false)
 let start = 0
@@ -22,17 +22,27 @@ function down (e: PointerEvent) {
   el.setPointerCapture(e.pointerId)
   start = props.dir === 'x' ? e.clientX : e.clientY
   dragging.value = true
-  const move = (ev: PointerEvent) => { emit('move', (props.dir === 'x' ? ev.clientX : ev.clientY) - start) }
+  emit('start')
+  let done = false
   const up = () => {
+    if (done) return
+    done = true
     dragging.value = false
     el.removeEventListener('pointermove', move)
     el.removeEventListener('pointerup', up)
     el.removeEventListener('pointercancel', up)
+    el.removeEventListener('lostpointercapture', up)
     emit('end')
+  }
+  const move = (ev: PointerEvent) => {
+    // The button came up without a pointerup reaching us (focus lost).
+    if (!(ev.buttons & 1)) { up(); return }
+    emit('move', (props.dir === 'x' ? ev.clientX : ev.clientY) - start)
   }
   el.addEventListener('pointermove', move)
   el.addEventListener('pointerup', up)
   el.addEventListener('pointercancel', up)
+  el.addEventListener('lostpointercapture', up)
 }
 </script>
 

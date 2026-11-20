@@ -52,7 +52,7 @@
               <div v-if="chartMode === 'category'" :class="$style.legend">
                 <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
               </div>
-              <SplitHandle dir="y" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+              <SplitHandle @start="startDrag" dir="y" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
             </section>
             <div v-if="shown.where" :class="$style.whereBlock">
                 <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
@@ -87,7 +87,7 @@
               <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
             </div>
           </div>
-          <SplitHandle v-if="leftOn && rightOn" dir="x" :style="{ left: top * 100 + '%' }" @move="dragTop" @end="saveLayout" @reset="resetLayout('top')" />
+          <SplitHandle @start="startDrag" v-if="leftOn && rightOn" dir="x" :style="{ left: top * 100 + '%' }" @move="dragTop" @end="saveLayout" @reset="resetLayout('top')" />
         </div>
 
         <section v-if="showChanges || showMoves" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
@@ -131,7 +131,7 @@
             </div>
             <div v-if="moves.length > 8" class="w-dim text-xs" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
           </div>
-          <SplitHandle v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
+          <SplitHandle @start="startDrag" v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
         </section>
       </template>
 
@@ -347,17 +347,27 @@ const colIds = computed<ColId[]>(() => [
   showChanges.value ? 'changes' : null,
   showMoves.value ? 'moves' : null
 ].filter((x): x is ColId => x != null))
-const draft = shallowRef<{ top?: number, cols?: number[], chartH?: number } | null>(null)
-let dragBase: { top: number, cols: number[], chartH: number } | null = null
+// cols: the columns' weights, for the columns shown when the drag began.
+const draft = shallowRef<{ top?: number, cols?: { ids: ColId[], w: number[] }, chartH?: number } | null>(null)
+let dragBase: { top: number, ids: ColId[], cols: number[], chartH: number } | null = null
 const top = computed(() => draft.value?.top ?? topOf(props.config.layout))
 const chartH = computed(() => draft.value?.chartH ?? chartHOf(props.config.layout))
-const weights = computed(() => draft.value?.cols ?? colWeights(props.config.layout, colIds.value))
+const sameIds = (a: readonly ColId[], b: readonly ColId[]) => a.length === b.length && a.every((x, i) => x === b[i])
+// A column shown or hidden mid-drag (a read landing) drops that drag's widths.
+const weights = computed(() => {
+  const c = draft.value?.cols
+  return c && sameIds(c.ids, colIds.value) ? c.w : colWeights(props.config.layout, colIds.value)
+})
 const colsTemplate = computed(() => weights.value.map(w => `minmax(0, ${w}fr)`).join(' '))
 const colEdges = computed(() => edges(weights.value))
 const topRowEl = shallowRef<HTMLElement | null>(null)
 const colsEl = shallowRef<HTMLElement | null>(null)
+function startDrag () {
+  draft.value = null
+  dragBase = { top: top.value, ids: [...colIds.value], cols: [...weights.value], chartH: chartH.value }
+}
 function base () {
-  dragBase ??= { top: top.value, cols: [...weights.value], chartH: chartH.value }
+  dragBase ??= { top: top.value, ids: [...colIds.value], cols: [...weights.value], chartH: chartH.value }
   return dragBase
 }
 function dragTop (px: number) {
@@ -367,7 +377,8 @@ function dragTop (px: number) {
 }
 function dragCol (i: number, px: number) {
   const b = base()
-  draft.value = { ...draft.value, cols: dragCols(b.cols, i, px, colsEl.value?.clientWidth ?? 0) }
+  if (!sameIds(b.ids, colIds.value)) return
+  draft.value = { ...draft.value, cols: { ids: b.ids, w: dragCols(b.cols, i, px, colsEl.value?.clientWidth ?? 0) } }
 }
 function dragChartH (px: number) {
   draft.value = { ...draft.value, chartH: clampChartH(base().chartH + px) }
@@ -379,9 +390,10 @@ function saveLayout () {
   const l: PanelLayout = { ...props.config.layout }
   if (d.top != null) l.top = Math.round(d.top * 1000) / 1000
   if (d.chartH != null) l.chartH = d.chartH
-  if (d.cols) {
+  const dc = d.cols
+  if (dc) {
     const cols = { ...l.cols }
-    colIds.value.forEach((id, i) => { cols[id] = Math.round(d.cols![i] * 1000) / 1000 })
+    dc.ids.forEach((id, i) => { cols[id] = Math.round(dc.w[i] * 1000) / 1000 })
     l.cols = cols
   }
   props.config.layout = l
