@@ -32,6 +32,8 @@
       </section>
 
       <template v-if="detailsOpen && anyDetails">
+        <!-- Layout A: the chart and per hour share the top row. -->
+        <div v-if="shown.chart || shown.perHour" :class="[$style.topRow, { [$style.one]: !(shown.chart && shown.perHour) }]">
         <section v-if="shown.chart" :class="$style.chartBlock">
           <div :class="$style.chartHead">
             <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
@@ -66,21 +68,15 @@
             <span v-for="x in splitParts" :key="x.id"><i :class="$style[x.id]" />{{ x.label }} {{ Math.round(x.ms / splitTotal * 100) }}%</span>
           </div>
         </section>
+        </div>
 
-        <section v-if="shown.numbers" :class="$style.kpis">
-          <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
-          <div><span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b></div>
-          <div><span :class="$style.caps">Total in chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b></div>
-          <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
-        </section>
-
-        <section v-if="shown.moves && moves.length" :class="$style.moves" class="text-xs">
-          <span :class="$style.caps">Price moves today</span>
-          <span v-for="m in moves.slice(0, 2)" :key="m.key" class="w-trunc"><span v-item-tip="tipFor(tips, m.key, m.name)">{{ m.name }}</span> <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
-          <span v-if="moves.length > 2" class="w-dim" :title="moves.slice(2).map(moveText).join('\n')">+{{ moves.length - 2 }} more</span>
-        </section>
-
-        <section v-if="showChanges || shown.where" :class="[$style.cols, { [$style.one]: !(showChanges && shown.where) }]">
+        <section v-if="showChanges || shown.where || shown.numbers" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
+          <div v-if="shown.numbers" :class="$style.kpis">
+            <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
+            <div><span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b></div>
+            <div><span :class="$style.caps">Total in chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b></div>
+            <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
+          </div>
           <div v-if="showChanges" :class="[$style.changesCol, { [$style.capped]: shown.where }]">
             <div :class="$style.colHead">
               <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
@@ -120,6 +116,12 @@
               <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
             </button>
           </div>
+        </section>
+
+        <section v-if="shown.moves && moves.length" :class="$style.moves" class="text-xs">
+          <span :class="$style.caps">Price moves today</span>
+          <span v-for="m in moves.slice(0, 2)" :key="m.key" class="w-trunc"><span v-item-tip="tipFor(tips, m.key, m.name)">{{ m.name }}</span> <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
+          <span v-if="moves.length > 2" class="w-dim" :title="moves.slice(2).map(moveText).join('\n')">+{{ moves.length - 2 }} more</span>
         </section>
       </template>
 
@@ -322,6 +324,12 @@ function openSections (e: MouseEvent) {
   })))
 }
 // Details with every section in it off: no toggle, nothing to open.
+// Numbers, Since last refresh and Where it is side by side (layout A).
+const colsTemplate = computed(() => [
+  shown.value.numbers ? 'minmax(0, .8fr)' : '',
+  showChanges.value ? 'minmax(0, 1.3fr)' : '',
+  shown.value.where ? 'minmax(0, 1fr)' : ''
+].filter(Boolean).join(' '))
 const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
 // Tab labels switched off: a tab pick nothing shows any more is dropped.
 watch(() => shown.value.tabs, (on) => { if (!on) tabs.value = [] })
@@ -534,10 +542,16 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.perHour { display: grid; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.topRow { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); border-bottom: 1px solid var(--w-line); }
+.topRow.one { grid-template-columns: minmax(0, 1fr); }
+.topRow > section { border-bottom: 0; min-width: 0; }
+.topRow > section + section { border-left: 1px solid var(--w-line); }
+.perHour { display: grid; align-content: start; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
 .phHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
-.phStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--w-s2); }
-.phStats > div { display: grid; gap: 1px; min-width: 0; }
+/* One line per figure: label, value, and its detail under the value. */
+.phStats { display: grid; gap: 4px; }
+.phStats > div { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: var(--w-s2); align-items: baseline; min-width: 0; }
+.phStats > div > :nth-child(3) { grid-column: 2; }
 .split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
 .split > span { flex-basis: 0; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: 0; }
@@ -555,12 +569,11 @@ function refresh () {
 .goalLine { color: var(--w-up); }
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
-.kpis { display: flex; gap: var(--w-s4); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; }
-.kpis > div { display: flex; flex-direction: column; min-width: 0; max-width: 40%; }
+.kpis { display: flex; flex-direction: column; gap: 6px; }
+.kpis > div { display: flex; flex-direction: column; min-width: 0; }
 .kpis b { font-size: var(--w-fs-md); font-weight: 500; }
 .moves { display: flex; gap: var(--w-s3); padding: 4px var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: baseline; min-width: 0; }
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--w-line); }
-.cols.one { grid-template-columns: minmax(0, 1fr); }
 .cols > div { padding: var(--w-s2) var(--w-pad); min-width: 0; }
 .cols > div + div { border-left: 1px solid var(--w-line); }
 .colHead { display: flex; justify-content: space-between; gap: var(--w-s2); margin-bottom: 2px; }
