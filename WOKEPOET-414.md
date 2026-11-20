@@ -73,6 +73,15 @@ history:
     date: '2026-11-20T12:41:37.317Z'
     selfAttested: true
     id: c-2026-11-20t12-41-37-317z
+  - type: comment
+    user: Agent
+    comment: >-
+      #682 merged; master is on the dev build. The window layout is the version
+      Guy approved ("looks good"): the chart beside the per hour box, lighter
+      controls, and item icons.
+    date: '2026-11-20T14:05:36.233Z'
+    selfAttested: true
+    id: c-2026-11-20t14-05-36-233z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/675'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
