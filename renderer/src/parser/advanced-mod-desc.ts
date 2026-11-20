@@ -71,6 +71,16 @@ export function parseModInfoLine (line: string): ModifierInfo {
       case _$.CRAFTED_PREFIX:
       case _$.CRAFTED_SUFFIX:
         type = ModifierType.Crafted; break
+      case _$.RARE_ONLY_PREFIX:
+      case _$.RARE_ONLY_SUFFIX:
+        mechanic = ModifierMechanic.RareOnly; break
+    }
+
+    // Some languages write both rare-only lines the same way, so the line
+    // can't tell prefix from suffix there.
+    if (_$.RARE_ONLY_PREFIX !== _$.RARE_ONLY_SUFFIX) {
+      if (match.groups!.type === _$.RARE_ONLY_PREFIX) generation = 'prefix'
+      else if (match.groups!.type === _$.RARE_ONLY_SUFFIX) generation = 'suffix'
     }
 
     switch (match.groups!.type) {

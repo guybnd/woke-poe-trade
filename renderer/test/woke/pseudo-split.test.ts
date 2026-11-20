@@ -5,7 +5,8 @@ import { fixture, loadGameData, parseItem } from '../helpers/game-data'
 import { createPresets } from '@/web/price-check/filters/create-presets'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
-import { exclude, fracturedOnlyIds, include, isFracturedOnly, looseBound, setFracturedOnly, splitFilters, stashSearch, tierBound } from '@/web/woke/price-insight/pseudo-split'
+import { exclude, fracturedOnlyIds, include, isFracturedOnly, setFracturedOnly, splitFilters, tierBound } from '@/web/woke/price-insight/pseudo-split'
+import { looseBound, stashSearch } from '@/web/woke/price-insight/tier-ladder'
 import { detectSwaps } from '@/web/woke/harvest-swap/detect'
 
 // vi.mock is hoisted above the imports.

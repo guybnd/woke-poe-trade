@@ -26,6 +26,8 @@ const UNID_BASES: Record<string, string> = {
   // Not jewels, but the roll picks the variant poe.ninja prices.
   "Atziri's Splendour": 'Sacrificial Garb',
   "Doryani's Invitation": 'Heavy Belt',
+  // Saresh's belt drops unidentified; poe.ninja only has identified copies.
+  'Screams of the Desiccated': 'Leather Belt',
   // Element: Chaos is worth far more than the other four.
   'Impresence': 'Onyx Amulet',
   'Beauty': 'Vaal Aspect'

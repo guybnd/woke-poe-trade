@@ -7,7 +7,7 @@ import { ItemRarity, type ParsedItem } from '@/parser'
 import { ModifierType } from '@/parser/modifiers'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
-import { boundAt, exclude, shareScale, fracturedOnlyIds, include, isFracturedOnly, isHybrid, looseBound, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, stashSearch, tierBound } from './pseudo-split'
+import { boundAt, exclude, fracturedOnlyIds, include, isFracturedOnly, isHybrid, pickAtTier, setFracturedOnly, soleMod, splitByMod, splitFilters, tierBound } from './pseudo-split'
 import type { ParsedModifier } from '@/parser/advanced-mod-desc'
 import { poeOn } from './window-style'
 import { clusterResColumnStats } from '@/web/price-check/filters/pseudo/cluster-res'
@@ -249,20 +249,6 @@ export function provideStatActions (
     exclude(f)
   }
 
-  // Every tier of the row's mod; a click sets the min (or max) to that tier's worst roll.
-  function tiersMenu (at: { x: number, y: number, from?: Element | null }, f: StatFilter, steps: Array<{ tier: number, min: number, max: number }>, mine: number, setBound: (v: number) => void) {
-    const lowerBetter = f.roll?.better === -1
-    const items: MenuEntry[] = [{ separator: true, heading: lowerBetter ? 'Max from tier' : 'Min from tier' }]
-    // In the row's units: a total counts its mod more than once (all resistances x3).
-    const k = shareScale(f)
-    const shown = (v: number) => Math.round(v * k * 100) / 100
-    for (const s of steps) {
-      const range = s.min === s.max ? `${shown(s.min)}` : `${shown(s.min)}–${shown(s.max)}`
-      items.push({ label: `T${s.tier}  ${range}`, checked: s.tier === mine, action: () => setBound(boundAt(f, s.min, s.max)) })
-    }
-    openMenu(at, items)
-  }
-
   // Grouped under small headings (Guy's pick B); on/off lines show a ✓.
   // Only the "Price as" lines search, one search each.
   async function menu (e: MouseEvent, f: StatFilter) {
@@ -314,7 +300,7 @@ export function provideStatActions (
       }
       items.push({ separator: true, heading: lowerBetter ? 'Max' : 'Min' })
       items.push({ label: `My roll (${roll.value})`, action: () => setBound(roll.value) })
-      const loose = looseBound(f)
+      const loose = tiers.looseBound(f)
       if (loose != null) {
         items.push({ label: `10% ${lowerBetter ? 'over' : 'under'} (${loose})`, action: () => setBound(loose) })
       }
@@ -328,7 +314,7 @@ export function provideStatActions (
         items.push({ label: `${lowerBetter ? 'Top' : 'Bottom'} of tier (${tier})`, action: () => setBound(tier) })
       }
       if (ladder) {
-        items.push({ label: 'All tiers…', action: () => tiersMenu(at, f, ladder.steps, ladder.mine, setBound) })
+        items.push({ label: 'All tiers…', action: () => tiers.tiersMenu(at, f, ladder.steps, ladder.mine, setBound, openMenu) })
       }
       items.push({ label: 'Clear min and max', action: () => { roll.min = ''; roll.max = '' } })
     }
@@ -358,7 +344,7 @@ export function provideStatActions (
     const copy = (text: string) => { copyText(text).then(ok => { if (ok) toast('Copied') }).catch(() => {}) }
     items.push({ label: 'Mod text', action: () => copy(rollText(f)) })
     // A total's text ("total maximum Life") is on no item.
-    const find = f.tag === ModifierType.Pseudo ? null : stashSearch(f.text)
+    const find = f.tag === ModifierType.Pseudo ? null : tiers.stashSearch(f.text)
     if (find) items.push({ label: 'Stash search', action: () => copy(find) })
     openMenu(e, items)
   }

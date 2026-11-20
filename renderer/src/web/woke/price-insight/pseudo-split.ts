@@ -190,28 +190,3 @@ export function setFracturedOnly (f: StatFilter, item: ParsedItem, on: boolean) 
     beforeFractured.delete(raw)
   }
 }
-
-/** A min (or, where lower is better, a max) a tenth looser than the roll:
- *  rounded the way that still lets the roll itself match. None when that is
- *  the roll itself or 0 (a roll of 1, which would read "any"). */
-export function looseBound (f: StatFilter): number | null {
-  const roll = f.roll
-  if (!roll || roll.better == null || roll.better === 0 || !roll.value) return null
-  // Looser by a tenth of its size, so a negative roll (-12% Fire Resistance) moves away from zero too.
-  const delta = Math.abs(roll.value) * 0.1
-  // Rounded first: 50 * 1.1 is 55.000000000000007, which ceil makes 56.
-  const v = Math.round((roll.better === -1 ? roll.value + delta : roll.value - delta) * 1e6) / 1e6
-  const step = roll.dp ? 10 : 1
-  const out = roll.better === -1 ? Math.ceil(v * step) / step : Math.floor(v * step) / step
-  return (out === roll.value || out === 0) ? null : out
-}
-
-/** Text for the game's stash search box that finds items with this mod: the
- *  longest run of words in the mod text, quoted, within the box's 50 characters. */
-export function stashSearch (text: string): string | null {
-  const runs = text.split(/[#\d.+\-%()]+/).map(s => s.trim().replace(/\s+/g, ' ')).filter(s => /[a-z]/i.test(s))
-  if (!runs.length) return null
-  let best = runs.reduce((a, b) => (b.length > a.length ? b : a)).toLowerCase()
-  if (best.length > 48) best = best.slice(0, 48).replace(/\s+\S*$/, '')
-  return `"${best}"`
-}

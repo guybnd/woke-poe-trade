@@ -79,6 +79,10 @@
             <span :class="$style.bossName" class="grow w-trunc">{{ sel.boss.name }}</span>
             <WChip v-if="sel.boss.source?.kills" :class="sel.boss.source.kills >= 1000 ? 'w-up' : ''">{{ sel.boss.source.kills.toLocaleString() }} community kills</WChip>
             <WChip v-if="sel.kills">{{ sel.kills }} of my kills</WChip>
+            <label v-if="isNightmare(sel.boss)" class="flex items-center gap-1 w-dim text-sm" title="Uber fragments the boss drops a kill. More with higher Atlas Drops on the map.">Fragments a kill
+              <input class="w-input" :value="fragsPerKill" :class="$style.input" style="width: 3rem;" inputmode="decimal"
+                @change="setFragsPerKill(($event.target as HTMLInputElement).value, $event)">
+            </label>
             <label class="flex items-center gap-1 w-dim text-sm">Run time
               <input class="w-input" :value="formatRunTime(sel.runSeconds)" :class="$style.input" style="width: 4rem;" title="m:ss, or minutes"
                 @change="setRunTime(sel.boss.id, ($event.target as HTMLInputElement).value, $event)">
@@ -140,7 +144,7 @@
                       sel.unrated ? '? has no known drop rate and counts as 0. Log kills or type a rate under Rates & sources.' : ''
                     ].filter(Boolean).join('\n\n')" />
                   </div>
-                  <div v-if="sel.estimated" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">~ is an estimated chance ({{ ESTIMATE_SOURCE_LABEL }}). Loot and profit are rough.</div>
+                  <div v-if="sel.estimated" class="text-xs" style="padding: 6px var(--w-pad) 0; color: var(--w-warn);">~ is an estimated chance ({{ estimateLabel(sel.boss) }}). Loot and profit are rough.</div>
                   <div v-if="sel.unpriced" class="text-xs" style="padding: 0 var(--w-pad) 6px; color: var(--w-warn);">{{ sel.unpriced }} {{ sel.unpriced === 1 ? 'drop has' : 'drops have' }} no price yet and count as 0.</div>
                 </template>
               </template>
@@ -148,9 +152,9 @@
               <!-- my kills -->
               <template v-else-if="tab === 'kills'">
                 <div v-if="logging" class="flex flex-col gap-2" style="padding: 8px var(--w-pad);">
-                  <div class="w-dim text-sm">Tick what this kill dropped.</div>
+                  <div class="w-dim text-sm">Tick what this kill dropped.<template v-if="isNightmare(sel.boss)"> Click again for 2 or 3 of one.</template></div>
                   <div class="flex flex-wrap gap-1">
-                    <WChip v-for="d in sel.drops" :key="d.name" v-item-tip="{ name: d.name, type: typeByName.get(d.name), variant: d.variant }" clickable :active="!!logging[d.name]" @click="toggleLogged(d.name, d.variant)">{{ d.name }}</WChip>
+                    <WChip v-for="d in sel.drops" :key="d.name" v-item-tip="{ name: d.name, type: typeByName.get(d.name), variant: d.variant }" clickable :active="!!logging[d.name]" @click="toggleLogged(d.name, d.variant)">{{ d.name }}<template v-if="(logging[d.name]?.qty ?? 0) > 1"> ×{{ logging[d.name].qty }}</template></WChip>
                   </div>
                   <div class="relative">
                     <WField v-model="logQuery" icon="fas fa-plus" placeholder="Something else… (search prices)" class="w-full" />
@@ -192,8 +196,9 @@
                   </div>
                   <div v-else class="w-dim">No public drop data for this boss. Add its drops below and type rates you trust, or log kills.</div>
                   <div v-if="sel.estimated" style="color: var(--w-warn);">
-                    {{ sel.estimated }} {{ sel.estimated === 1 ? 'drop uses' : 'drops use' }} estimated chances, not measured kills: {{ ESTIMATE_SOURCE_LABEL }}.
-                    <a v-if="estimateUrl(sel.boss.id)" :href="estimateUrl(sel.boss.id)!" target="_blank" class="w-accent">Open source ↗</a>
+                    {{ sel.estimated }} {{ sel.estimated === 1 ? 'drop uses' : 'drops use' }} estimated chances, not measured kills: {{ estimateLabel(sel.boss) }}.
+                    <a v-if="estimateLink(sel.boss)" :href="estimateLink(sel.boss)!" target="_blank" class="w-accent">Open source ↗</a>
+                    <div v-if="isNightmare(sel.boss)">{{ fragsPerKill }} fragments a kill, {{ Math.round(FAVOURED_SHARE * 100) }}% of them from the ones this boss favours, the rest spread over the other uber fragments.</div>
                   </div>
                   <div><WInfo text="Your typed rates win over community rates, then your kill log, then estimates. Prices are from poe.ninja; Search trade prices jewels from unidentified trade listings." /></div>
                 </div>
@@ -274,6 +279,8 @@ import { usePriceIndex } from '../market/price-index'
 import { useLeagues } from '@/web/background/Leagues'
 import { poeWebApi } from '@/web/Config'
 import { BOSSES } from './bosses'
+import type { Boss } from './bosses'
+import { DEFAULT_FRAGMENTS_PER_KILL, FAVOURED_SHARE, isNightmare, nightmareBosses } from './nightmare'
 import DockItem from '../dock/DockItem.vue'
 import { showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
@@ -314,7 +321,7 @@ props.config.dropToggles ??= {}
 props.config.priceModes ??= {}
 props.config.customPrices ??= {}
 
-const tierOptions = [{ value: 'all', label: 'All' }, { value: 'uber', label: 'Uber' }, { value: 'pinnacle', label: 'Normal' }]
+const tierOptions = [{ value: 'all', label: 'All' }, { value: 'uber', label: 'Uber' }, { value: 'pinnacle', label: 'Normal' }, { value: 'nightmare', label: 'Nightmare' }]
 const sortOptions = [{ value: 'hour', label: 'Per hour' }, { value: 'run', label: 'Per run' }, { value: 'safe', label: 'Safest' }]
 
 const prices = usePriceIndex()
@@ -357,7 +364,23 @@ function searchTrade () {
 }
 watch(onScreen, (show) => { if (!show) tradePrices.stop() })
 
-const results = computed(() => BOSSES
+// Nightmare (T17) map bosses depend on the fragments-a-kill setting.
+const fragsPerKill = computed(() => props.config.nightmareFrags ?? DEFAULT_FRAGMENTS_PER_KILL)
+const allBosses = computed(() => [...BOSSES, ...nightmareBosses(fragsPerKill.value)])
+function setFragsPerKill (text: string, e: Event) {
+  const n = Number(text.trim().replace(',', '.'))
+  const rounded = Math.round(n * 10) / 10
+  if (Number.isFinite(rounded) && rounded > 0 && rounded <= 20) props.config.nightmareFrags = rounded
+  else (e.target as HTMLInputElement).value = String(fragsPerKill.value)
+}
+function estimateLabel (boss: Boss) {
+  return boss.estimateSource?.label ?? ESTIMATE_SOURCE_LABEL
+}
+function estimateLink (boss: Boss) {
+  return boss.estimateSource?.url ?? estimateUrl(boss.id)
+}
+
+const results = computed(() => allBosses.value
   .filter(b => props.config.tier === 'all' || b.tier === props.config.tier)
   .map(b => evaluateBoss(b, props.config, px.value)))
 
@@ -496,10 +519,13 @@ function startLog () {
   logging.value = {}
   tab.value = 'kills'
 }
+// A Nightmare boss can drop several of one fragment: clicks count 1, 2, 3, then off.
 function toggleLogged (name: string, variant?: string) {
   if (!logging.value) return
+  const had = logging.value[name]
   const next = Object.fromEntries(Object.entries(logging.value).filter(([n]) => n !== name))
-  if (!logging.value[name]) next[name] = { variant, qty: 1 }
+  if (!had) next[name] = { variant, qty: 1 }
+  else if (sel.value && isNightmare(sel.value.boss) && had.qty < 3) next[name] = { ...had, qty: had.qty + 1 }
   logging.value = next
 }
 const leagues = useLeagues()

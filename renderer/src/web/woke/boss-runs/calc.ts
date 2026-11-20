@@ -44,6 +44,8 @@ export interface BossPrefs {
   // A drop whose poe.ninja row is a thin market counts as 0, so loot and
   // profit are a floor (unset: off). Entry costs are never touched.
   skipThin?: boolean
+  // Uber fragments a Nightmare (T17) boss drops a kill (unset: 2).
+  nightmareFrags?: number
 }
 
 // 'unid' = unidentified trade listings; 'median' is the poe.ninja price.
@@ -204,6 +206,18 @@ export function tradeWanted (bosses: Boss[], selectedId: string | null, prefs: B
   return [...names]
 }
 
+// Average copies of each drop a kill, for bosses that drop several of one
+// item (Nightmare fragments). Can pass 1.
+export function observedCopies (kills: KillRecord[]): Map<string, number> {
+  const total = new Map<string, number>()
+  for (const kill of kills) {
+    for (const d of kill.drops) total.set(d.name, (total.get(d.name) ?? 0) + d.qty)
+  }
+  const out = new Map<string, number>()
+  for (const [name, n] of total) out.set(name, n / kills.length)
+  return out
+}
+
 export function observedRates (kills: KillRecord[]): Map<string, number> {
   const seen = new Map<string, number>()
   for (const kill of kills) {
@@ -266,9 +280,10 @@ export function evaluateBoss (
   const toggles = prefs.dropToggles[boss.id] ?? {}
   const minChance = prefs.plannedRuns > 0 ? 1 / prefs.plannedRuns : 0
   const kills = prefs.kills[boss.id] ?? []
-  const mine = observedRates(kills)
+  const copies = boss.tier === 'nightmare'
+  const mine = copies ? observedCopies(kills) : observedRates(kills)
   const custom = prefs.rates[boss.id] ?? {}
-  const estimates = ESTIMATED_RATES[boss.id] ?? {}
+  const estimates = boss.estimates ?? ESTIMATED_RATES[boss.id] ?? {}
 
   let entry = 0
   const entryMissing: string[] = []
@@ -295,7 +310,9 @@ export function evaluateBoss (
     } else if (estimates[d.name] != null) {
       chance = estimates[d.name] / 100; rateSource = 'estimate'
     }
-    const qty = d.qty ?? 1
+    let qty = d.estimateQty && rateSource !== 'estimate' ? 1 : d.qty ?? 1
+    // Copies a kill past one (your Nightmare kill log): the rest goes in qty.
+    if (copies && rateSource === 'mine' && chance != null && chance > 1) { qty = chance; chance = 1 }
     const { price: p, spread, mode, source, listings } = dropPrice(d, prices, prefs)
     const tooRare = chance != null && chance > 0 && chance < minChance
     const included = toggles[d.name] ?? !tooRare

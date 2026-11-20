@@ -18,7 +18,7 @@ const ARENAS: Arena[] = [
   { areaIds: ['MapAtziri1'], names: ['The Apex of Sacrifice'], bosses: ['atziri'] },
   { areaIds: ['MapAtziri2'], names: ['The Alluring Abyss'], bosses: ['uber-atziri'] },
   { areaIds: ['MapWorldsShapersRealm'], names: ["The Shaper's Realm"], bosses: ['shaper', 'uber-shaper'] },
-  { areaIds: ['MapWorldsElderArena'], names: [], bosses: [] },
+  { areaIds: ['MapWorldsElderArena'], names: [], bosses: ['elder'] },
   { areaIds: ['MapWorldsElderArenaUber'], names: ['Absence of Value and Meaning'], bosses: ['uber-elder', 'uber-uber-elder'] },
   { areaIds: ['MapWorldsPrimordialBoss1'], names: ['Seething Chyme'], bosses: ['infinite-hunger'] },
   { areaIds: ['MapWorldsPrimordialBoss2'], names: ['Polaric Void'], bosses: ['black-star'] },

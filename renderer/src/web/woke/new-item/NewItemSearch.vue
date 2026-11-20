@@ -5,7 +5,7 @@
       <div class="text-base">{{ query.type }}</div>
     </div>
     <div class="rounded px-2 py-1" style="background: var(--w-panel); border-left: 2px solid var(--w-accent)">
-      New item. Searched by name only. Mod filters come with the next item data update.
+      {{ note }}
     </div>
     <div v-if="state === 'loading'" class="w-dim"><i class="fas fa-dna fa-spin" /> Searching…</div>
     <div v-else-if="state === 'error'" class="text-red-400">{{ error }}</div>
@@ -21,15 +21,16 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { AppConfig, poeWebApi } from '@/web/Config'
 import { requestResults, requestTradeResultList } from '@/web/price-check/trade/pathofexile-trade'
 import type { PricingResult, TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
-import { newItemTradeBody, newItemTradeUrl } from './query'
+import { newItemNote, newItemTradeBody, newItemTradeUrl } from './query'
 import type { NewItemQuery } from './query'
 
 const props = defineProps<{ query: NewItemQuery, league: string }>()
 
+const note = computed(() => newItemNote(props.query))
 const state = shallowRef<'loading' | 'error' | 'done'>('loading')
 const error = shallowRef('')
 const total = shallowRef(0)

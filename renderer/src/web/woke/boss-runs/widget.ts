@@ -9,5 +9,5 @@ export interface BossRunsWidget extends Widget, BossPrefs {
   anchor: Anchor
   selected: string
   sort: BossSort
-  tier: 'all' | 'uber' | 'pinnacle'
+  tier: 'all' | 'uber' | 'pinnacle' | 'nightmare'
 }

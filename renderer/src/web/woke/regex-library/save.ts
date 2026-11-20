@@ -74,6 +74,18 @@ export function renameSavedRegex (text: string, name: string): boolean {
   return true
 }
 
+// Puts a new search string into a saved entry, keeping its name, folder,
+// notes and hotkey.
+export function replaceSavedRegex (entry: RegexEntry, text: string): boolean {
+  const clean = text.trim()
+  if (!clean || !isModuleOn(AppConfig(), 'regex-library')) return false
+  entry.text = clean
+  entry.patch = GAME_PATCH
+  saveConfig()
+  pushHostConfig()
+  return true
+}
+
 export const SAVE_MESSAGE: Record<SaveResult, string> = {
   'saved': 'Saved to the Regex library',
   'exists': 'Already in the Regex library',

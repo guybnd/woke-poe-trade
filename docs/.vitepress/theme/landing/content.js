@@ -24,6 +24,11 @@ export const HIGHLIGHTS = [
     slides: [
       { label: 'Competing listings', module: 'apt-price-check', shot: 'clip-price-check', clip: 'clip-price-check', focus: [900, 0, 1152], text: 'Every listing beside yours, stat by stat. Green where yours is better, red where theirs is. Hover one to see its tiers and rolls.', alt: 'Price check of a body armour: the mouse moves down the listings, each compared stat by stat to yours, and the tooltip of each opens with its mod tiers' },
       { label: 'Listing tooltip', module: 'apt-price-check', shot: 'hl-price-tooltip', focus: [1060, 90, 920], text: 'Hover a listing to see the item as the game shows it, with mod tiers and a line under each mod showing how good its roll is.', alt: 'Tooltip of a listed body armour with the tier and roll quality of each mod' },
+      { label: 'Mod menu', module: 'apt-price-check', shot: 'hl-pc-mod-menu', focus: [830, 120, 920], text: 'Right-click a mod to search only it, set its minimum from its tier, or always tick it on later checks.', alt: 'Price check of a body armour with the right-click menu of its life row: search only this, minimums and tick choices' },
+      { label: 'Sockets', module: 'apt-price-check', shot: 'hl-pc-sockets', focus: [780, 60, 1000], text: 'Socket colours as tiles you can switch off, and each listing\'s sockets as coloured dots. Right-click Links for the tiles on any item.', alt: 'Price check of Skin of the Lords: R, G and B tiles beside the name, and each listing\'s sockets as dots' },
+      { label: 'Versions', module: 'apt-price-check', shot: 'hl-pc-versions', focus: [780, 60, 1000], text: 'A gem\'s other levels and qualities with poe.ninja prices. Click one to search it.', alt: 'Price check of a corrupted level 21 gem listing its seven versions with poe.ninja prices' },
+      { label: 'Open affixes', module: 'apt-price-check', shot: 'hl-pc-affixes', focus: [760, 200, 900], text: 'Pre ≤ and Suf ≤ find items with a prefix or suffix still open. Add any mod to the search by typing its name.', alt: 'Price check of a body armour with Pre ≤ 2 set and the add-a-mod box listing movement speed mods' },
+      { label: 'Saved searches', module: 'trade-searches', shot: 'hl-trade-searches', focus: [180, 60, 1100], text: 'Save a price check\'s trade search, then reopen it, or its live search, from a folder.', alt: 'Trade searches window: folders of saved searches with when each was last opened, and a pinned live search' }
     ]
   },
   {
@@ -35,7 +40,7 @@ export const HIGHLIGHTS = [
       { label: 'Gear and links', module: 'pob-builds', shot: 'hl-pob-gear', focus: [800, 130, 920], text: 'Your gear and links from PoB. Search any item to price check it.', alt: 'A build\'s gear tab with an item tooltip and a price check button on each item' },
       { label: 'Levelling', module: 'pob-builds', shot: 'hl-pob-levelling', focus: [780, 220, 900], text: 'Gems by level, and where to get each one.', alt: 'A build\'s leveling tab: gem links, and each gem by level with its vendor or quest' },
       { label: 'Next step', module: 'pob-builds', shot: 'hl-pob-next', focus: [770, 160, 900], text: 'What changes in your next tree, gems and gear, before you get there.', alt: 'The Next section of a build: new passive points, gems to add and drop, and the gear that changes' },
-      { label: 'Passive tree', module: 'pob-builds', shot: 'hl-pob-tree', focus: [900, 190, 1000], text: 'The tree right in the overlay: your points in gold, new ones in green, respecs in red.', alt: 'Passive tree panel with allocated paths, new points and a list of what the next tree adds and removes' },
+      { label: 'Passive tree', module: 'pob-builds', shot: 'hl-pob-tree', focus: [900, 190, 1000], text: 'The tree right in the overlay: your points in gold, new ones in green, respecs in red. Alt+T draws it over the game\'s own tree.', alt: 'Passive tree panel with allocated paths, new points and a list of what the next tree adds and removes' },
       { label: 'Stage costs', module: 'pob-builds', shot: 'hl-pob-costs', focus: [770, 150, 900], text: 'What the uniques in each stage of the build cost at poe.ninja prices, with the rares to search for.', alt: 'Gear tab with the cost of each stage, and one stage opened to its uniques and rares' },
       { label: 'Compare builds', module: 'pob-builds', shot: 'hl-pob-compare', focus: [690, 0, 1150], text: 'Pick any two of your builds to see how their stats, gear, gems and tree differ.', alt: 'Compare builds panel: the gear that differs, the gems only one has, and tree differences' },
       { label: 'Swap check', module: 'pob-builds', shot: 'hl-pob-swap', focus: [800, 128, 1100], text: 'Price check a piece of gear and compare its numbers to what your build wears.', alt: 'Price check of a body armour with a tooltip comparing its numbers to the build\'s body armour' },
@@ -62,9 +67,10 @@ export const HIGHLIGHTS = [
       { label: 'Flips', module: 'scarab-flip', shot: 'hl-flips', focus: [310, 100, 900], text: 'Vendor recipes and Harvest rerolls that pay today, sorted by profit.', alt: 'Flips window: scarabs worth vendoring, with price, profit and supply' },
       { label: 'Disenchant', module: 'disenchant', shot: 'hl-disenchant', focus: [380, 140, 1040], text: 'Every unique ranked by Thaumaturgic Dust per chaos at today\'s prices, with the gold fee if you want it counted.', alt: 'Disenchant window: uniques ranked by dust per chaos, with price, dust and gold fee' },
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', focus: [600, 140, 1040], text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
-      { label: 'Price tracker', module: 'market', shot: 'tour-market', focus: [80, 120, 900], text: 'poe.ninja prices kept as history on your PC, with movers and a watchlist.', alt: 'Market tracker watchlist with a gem\'s tooltip, beside the flips window' },
+      { label: 'Prices', module: 'market', shot: 'hl-market-prices', focus: [295, 20, 1135], text: 'Every poe.ninja category in one window, with the last 7 days. Movers and a watchlist are in the next tabs.', alt: 'Market window on Currency: categories down the side, each item with its value and 7-day line' },
       { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', focus: [300, 100, 900], text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' },
-      { label: 'Investments', module: 'league-invest', shot: 'hl-invest', focus: [100, 30, 920], text: 'What rose most reliably from this day in past leagues, split across your budget.', alt: 'League investments window: a suggested split of a 5 divine budget, and items ranked by how often they rose' }
+      { label: 'Investments', module: 'league-invest', shot: 'hl-invest', focus: [100, 30, 920], text: 'What rose most reliably from this day in past leagues, split across your budget.', alt: 'League investments window: a suggested split of a 5 divine budget, and items ranked by how often they rose' },
+      { label: 'Stacked decks', module: 'stacked-decks', shot: 'hl-stacked-decks', focus: [710, 300, 760], text: 'Open decks and it counts the cards from your game log: what you spent, what you got and the result, priced.', alt: 'Stacked decks card: 8 opened, 24c spent, The Doctor drawn, result +4.9 div' }
     ]
   },
   {
@@ -90,6 +96,8 @@ export const HIGHLIGHTS = [
         ]
       },
       { label: 'Campaign', module: 'campaign', shot: 'hl-campaign', focus: [720, 430, 800], text: 'Your zone, your level against it, the next steps and your run timer.', alt: 'Campaign card: the current zone, level and the next steps' },
+      { label: 'Run timer', module: 'run-timer', shot: 'hl-run-timer', focus: [100, 120, 900], text: 'Splits for every act and zone, your level over time and your deaths, kept for each run.', alt: 'Run timer timeline: act bars, a level chart and the time in each Act 1 zone' },
+      { label: 'Wickerman', module: 'wickerman', shot: 'hl-wickerman', focus: [330, 60, 1100], text: 'Every 3.30 Viscera with its mod, the bosses that drop it and where they are.', alt: 'Wickerman window: Viscera by slot, each with its mod and the bosses and maps it drops in' },
       { label: 'Challenges', module: 'challenges', shot: 'hl-challenges', focus: [700, 420, 720], text: 'Your count and what is next, on one small icon.', alt: 'Challenges card under a small icon: 23 of 40 and the next three' },
       { label: 'Lab run', module: 'lab', shot: 'hl-lab', focus: [900, 65, 1100], text: 'Today\'s layout stays one hover away while you run.', alt: 'Today\'s Normal Labyrinth layout in a card under a small icon' },
       { label: 'Drop counter', module: 'drop-counter', shot: 'hl-drop-counter', focus: [700, 330, 760], text: 'A tally of the drops you care about. Press +1 while you play, and maps count themselves.', alt: 'Drop counter card: maps run, and Divine Orb, Exalted Orb and Annulment counts with how long since the last' },
@@ -105,6 +113,7 @@ export const HIGHLIGHTS = [
       { label: 'Any price', shot: 'hl-search-price', focus: [180, 130, 900], text: 'Press Ctrl+Space and type. Any item\'s price now, a day ago and a week ago, without leaving the game.', alt: 'Search palette on Mageblood: each variant\'s price now, 24 hours ago and 7 days ago, with buttons for the wiki, poedb and the trade site' },
       { label: 'Compare', shot: 'hl-search-compare', focus: [190, 140, 900], text: 'Pin a few prices to keep them side by side while you look up the next one.', alt: 'Search palette with Divine Orb, Headhunter and Mirror of Kalandra pinned along the top' },
       { label: 'Item on hover', shot: 'hl-search-hover', focus: [560, 200, 900], text: 'Hover a result to see the item as the game shows it, with its price.', alt: 'Search palette with the Headhunter tooltip shown over its result' },
+      { label: 'Lookups', shot: 'hl-search-lookups', focus: [1320, 180, 1000], text: 'Bench and Harvest crafts, ring anoints with their oils, bestiary recipes, bosses and campaign zones, with today\'s prices.', alt: 'Search palette for arc tower chains: the Blight ring anoint with Amber and Golden Oil priced' },
       { label: 'Tools and settings', shot: 'hl-search-tools', focus: [190, 150, 900], text: 'It finds tools, actions and settings too. Paste an item from chat and it opens in price check.', alt: 'Search palette for "filter": the loot filter tool, a reload action with its hotkey, and the settings page' }
     ]
   },
@@ -115,7 +124,7 @@ export const HIGHLIGHTS = [
     slides: [
       { label: 'Map scan', module: 'map-scan', shot: 'hl-map-scan', focus: [500, 0, 1152], text: 'Press Alt+S on a map. It reads the tooltip and flags the mods you said to watch.', alt: 'Map scan reading a T16 map tooltip and marking it CARE for max res down' },
       { label: 'Essence scan', module: 'essence-scan', shot: 'hl-essence-scan', focus: [500, 0, 1152], text: 'Press Alt+E on a monolith to see whether corrupting it pays, at today\'s prices.', alt: 'Essence scan beside a monolith, saying CORRUPT with what each essence is worth' },
-      { label: 'Atlas strategies', module: 'atlas', shot: 'hl-atlas', focus: [700, 150, 900], text: 'Each strategy\'s tree, priced scarabs, map device and regex, in one place.', alt: 'Atlas strategies window: an essence strategy with its scarabs, map device, notes and what to allocate' }
+      { label: 'Atlas strategies', module: 'atlas', shot: 'hl-atlas', focus: [700, 150, 900], text: 'Each strategy\'s tree, priced scarabs, map device and regex, in one place. Alt+T draws the tree on the game\'s atlas.', alt: 'Atlas strategies window: an essence strategy with its scarabs, map device, notes and what to allocate' }
     ]
   },
   {
@@ -123,7 +132,7 @@ export const HIGHLIGHTS = [
     name: 'Regex',
     tag: 'Stop typing stash searches',
     slides: [
-      { label: 'Maker', module: 'map-mods', shot: 'hl-regex-maker', focus: [780, 60, 1010], text: 'Pick the map mods you avoid and want, and get the stash search for them.', alt: 'Map mods window: avoid, careful and want choices and the search string it builds' },
+      { label: 'Maker', module: 'map-mods', shot: 'hl-regex-maker', focus: [780, 60, 1010], text: 'Rate map mods as avoid, careful or want, set the rewards a map must have, and get the stash search.', alt: 'Map mods window: mods rated careful and want, the Rewards table, and the stash search it builds' },
       { label: 'Clipboard', module: 'regex-library', shot: 'hl-regex-clipboard', focus: [400, 120, 880], text: 'Your saved strings and the classics, one click from the stash search.', alt: 'Regex library with saved stash search strings' }
     ]
   },

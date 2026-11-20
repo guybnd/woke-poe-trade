@@ -69,51 +69,99 @@ export const TOOLTIP_LINES = [
   'map'
 ]
 
-// "#% increased Pack size" -> lowercase text split at the rolled numbers
-// and at line breaks: the search box takes one line, so a token can't span two.
-function segments (matcher: string): string[] {
-  return matcher.toLowerCase().split(/[#0-9+%\n-]+/).map(s => s.trim()).filter(Boolean)
+// Text in the form tokens are made and compared in: lowercase, each rolled
+// number (or `#`) folded to one `#`. A token may cross a number, so "expire #%
+// f" tells "Buffs on Players expire #% faster" from the "slower" wording, and
+// it may be pinned to a line's start or end (`^`, `$`, as poe.re does), so
+// "% item r" and "marker$" find mods whose words all sit in longer ones.
+// A number's sign folds in too: the stat data drops the `+` the game shows
+// ("Monsters have +20% Chance to Block"), so the sign is never relied on.
+function canon (text: string): string {
+  return text.toLowerCase().replace(/[+-]?[0-9#]+(?:\.[0-9#]+)?/g, '#')
 }
 
-function usable (token: string): boolean {
-  // Leading/trailing spaces are fragile, and quotes/regex characters would
-  // need escaping.
-  return token.length >= 3 && token.trim() === token && !/["|!\\.*?()[\]{}^$]/.test(token)
+// What a token turns into in the search box: a number may carry a sign. Map
+// mods roll whole numbers; `\d` is what poe.re uses too. Any other `+` is a
+// regex character, so a `.` stands in for it.
+function render (token: string): string {
+  return token.replace(/\+/g, '.').replace(/#/g, '[+-]?\\d+')
 }
 
-// Joins two words (or the two lines of a mod) by a single letter: "m h"
-// from "from hits" also matches a rare map's random name ("Grim Hollow") by
-// chance, so such a token is only used when a mod has nothing better.
-function joinsByLetter (token: string): boolean {
-  const words = token.split(/[ \n]/)
+// Letters a token may hold: none of PoE's search syntax (quotes, `|`, `!`) or
+// regex characters besides the `+` that render() handles.
+const PLAIN = /^[^"|!\\.*?()[\]{}^$]*$/
+
+// A candidate: text of one canonical line, maybe anchored at either end.
+interface Candidate { start: boolean, body: string, end: boolean }
+
+function candidateText (c: Candidate): string {
+  return (c.start ? '^' : '') + render(c.body) + (c.end ? '$' : '')
+}
+
+function matchesLine (c: Candidate, line: string): boolean {
+  if (!c.body.includes('+')) {
+    if (c.start && c.end) return line === c.body
+    if (c.start) return line.startsWith(c.body)
+    if (c.end) return line.endsWith(c.body)
+    return line.includes(c.body)
+  }
+  // `+` is rendered as `.`, which matches any character.
+  const re = c.body.split('+').map(p => p.replace(/[\^$.*?()[\]{}|]/g, '\\$&')).join('.')
+  return new RegExp((c.start ? '^' : '') + re + (c.end ? '$' : '')).test(line)
+}
+
+// Joins two words by a single letter: "m h" from "from hits" also matches a
+// rare map's random name ("Grim Hollow") by chance, so such a token is only
+// used when a mod has nothing better. A name has no numbers or `%`.
+function joinsByLetter (body: string): boolean {
+  if (/[#%+]/.test(body)) return false
+  const words = body.split(' ')
   return words.length > 1 && words.some(word => word.length < 2)
 }
 
-// Shortest substring of `target` found in none of `others`, of at least `minLen`
-// letters when it has one that long.
+// Shortest search text (as typed) matching `target` and none of `others`. Its
+// unanchored text is at least `minLen` long when it can be. Lines are compared
+// one at a time: a token can't span a line break, the search box takes one
+// line. A line that reads like one of the target's (a two-line mod that
+// contains a one-line one, or "100% Delirious" next to "#% Delirious") shows
+// the same text in the tooltip, so matching it too is right.
 export function uniqueToken (target: string, others: string[], minLen = 3): string | null {
-  const segs = segments(target)
-  // Compared line by line. A line that reads exactly like one of the target's
-  // (a two-line mod that contains a one-line one) shows the same text in the
-  // tooltip, so matching it too is right.
-  const own = new Set(target.toLowerCase().split('\n'))
-  const hay = others.flatMap(o => o.toLowerCase().split('\n')).filter(h => !own.has(h))
-  let fallback: string | null = null
-  for (let len = minLen; len <= 40; len++) {
-    const found: string[] = []
-    for (const seg of segs) {
-      for (let i = 0; i + len <= seg.length; i++) {
-        const tok = seg.slice(i, i + len)
-        if (!usable(tok)) continue
-        if (!hay.some(h => h.includes(tok))) found.push(tok)
+  const lines = canon(target).split('\n')
+  const own = new Set(lines)
+  const hay = [...new Set(others.flatMap(o => canon(o).split('\n')))].filter(h => !own.has(h))
+  let best: { text: string, safe: boolean } | null = null
+  const better = (text: string, safe: boolean) => !best ||
+    (safe && !best.safe) || (safe === best.safe && (text.length < best.text.length || (text.length === best.text.length && text < best.text)))
+  for (let len = minLen; len <= 60; len++) {
+    // A token of `len` letters is at least that long once typed; a safe one
+    // already found can't be beaten.
+    if (best?.safe && len > best.text.length) break
+    for (const line of lines) {
+      for (let i = 0; i + len <= line.length; i++) {
+        const body = line.slice(i, i + len)
+        if (!PLAIN.test(body)) continue
+        const start = i === 0
+        const end = i + len === line.length
+        for (const c of [
+          { start: false, body, end: false },
+          ...(start ? [{ start: true, body, end: false }] : []),
+          ...(end ? [{ start: false, body, end: true }] : []),
+          ...(start && end ? [{ start: true, body, end: true }] : [])
+        ]) {
+          // Spaces at an open end are fragile, and a number there is the same as
+          // none ("#% f" finds what "% f" finds).
+          if (!c.start && /^[ #]/.test(body)) continue
+          if (!c.end && /[ #]$/.test(body)) continue
+          if (hay.some(h => matchesLine(c, h))) continue
+          const text = candidateText(c)
+          const safe = !joinsByLetter(body)
+          if (better(text, safe)) best = { text, safe }
+        }
       }
     }
-    found.sort()
-    const safe = found.find(t => !joinsByLetter(t))
-    if (safe) return safe
-    fallback ??= found[0] ?? null
   }
-  return fallback ?? (minLen > 3 ? uniqueToken(target, others) : null)
+  if (best) return best.text
+  return minLen > 3 ? uniqueToken(target, others) : null
 }
 
 // Regex for whole numbers >= n (n in 1..999), e.g. 80 -> ([89][0-9]|[1-9][0-9][0-9]).

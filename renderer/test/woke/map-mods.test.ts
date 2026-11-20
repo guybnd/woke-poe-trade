@@ -3,7 +3,8 @@
 // default profile are checked against the same data.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { loadGameData } from '../helpers/game-data'
-import { allAreaMods, allMapNames, profileRegex } from '@/web/woke/map-mods/data'
+import { allAreaMods, allMapNames } from '@/web/woke/map-mods/data'
+import { profileRegex } from '@/web/woke/map-mods/search'
 import { atLeast, buildMapRegex, MAX_SEARCH_LENGTH, TOOLTIP_LINES } from '@/web/woke/map-mods/regex'
 import { PRESETS, copyOfProfile, defaultProfile, rateMods, juiceScore } from '@/web/woke/map-mods/rules'
 import { TooltipMatcher } from '@/web/woke/map-mods/tooltip-parse'
@@ -11,12 +12,13 @@ import type { MapModProfile } from '@/web/woke/map-mods/rules'
 
 // PoE's stash search: space-separated terms (quotes group spaces), all must
 // match; `|` is OR inside a term; a leading `!` negates the term; terms are
-// case-insensitive regexes over the item text.
+// case-insensitive regexes over the item text, with `^` and `$` at each line's
+// start and end (poe.re's map tokens rely on that too).
 function stashSearch (search: string, itemText: string): boolean {
   const terms = [...search.matchAll(/"([^"]*)"|(\S+)/g)].map(m => m[1] ?? m[2])
   return terms.every(term => {
     const negate = term.startsWith('!')
-    const re = new RegExp(negate ? term.slice(1) : term, 'i')
+    const re = new RegExp(negate ? term.slice(1) : term, 'im')
     return re.test(itemText) !== negate
   })
 }
@@ -47,10 +49,6 @@ function mapTooltip (mods: string[], props: { quantity?: number, rarity?: number
 }
 
 let MODS: string[]
-// See 'finds a unique token…' below. 30 since upstream's 3.30 data (data
-// version 25): it added "Players in Area are 100% Delirious" next to the #%
-// wording and made the Towers cost mods area mods.
-const KNOWN_UNSEARCHABLE = 30
 beforeAll(async () => {
   await loadGameData()
   MODS = allAreaMods()
@@ -80,18 +78,22 @@ describe('stash regex', () => {
   it('each avoided mod hides exactly the maps that have it', () => {
     const mapNames = allMapNames()
     const wrong: string[] = []
-    // Mods sharing a token are the same mod in different wordings; group by
-    // the stat so "other mods" means mods of other stats.
+    // A two-line mod holding this mod's line (or one that reads the same once
+    // the number is in) shows that line, so hiding it too is right.
+    const sameLine = (a: string, b: string) => a.toLowerCase().replace(/[0-9#]+/g, '#') === b.toLowerCase().replace(/[0-9#]+/g, '#')
     for (const mod of MODS) {
       const { text, missing } = buildMapRegex({ avoid: [mod], want: [], mins: {}, highlight: 'good' }, MODS, mapNames)
       if (missing.length) continue // no unique text: reported by the next test
       if (stashSearch(text, mapTooltip([mod]))) wrong.push(`${mod}: not hidden by ${text}`)
+      // The stat data drops the sign the game shows ("+20% Chance to Block").
+      if (stashSearch(text, mapTooltip([mod.replace(/#/g, '+#')]))) wrong.push(`${mod}: with a + sign, not hidden by ${text}`)
+      if (stashSearch(text, mapTooltip([mod.replace(/#/g, '-#')]))) wrong.push(`${mod}: with a - sign, not hidden by ${text}`)
       const name = RARE_NAMES.find(n => !stashSearch(text, mapTooltip([], {}).replace('Grim Hollow', n)))
       if (name) wrong.push(`${mod}: token ${text} also hides a map named "${name}"`)
-      const tokenLower = text.replace(/^"!|"$/g, '').toLowerCase()
       for (const other of MODS) {
         if (other === mod) continue
-        if (!stashSearch(text, mapTooltip([other])) && !other.toLowerCase().includes(tokenLower)) {
+        if (mod.split('\n').some(line => other.split('\n').some(o => sameLine(o, line)))) continue
+        if (!stashSearch(text, mapTooltip([other]))) {
           wrong.push(`${mod}: token ${text} also hides "${other}"`)
           break
         }
@@ -100,13 +102,34 @@ describe('stash regex', () => {
     expect(wrong).toEqual([])
   })
 
-  // Known gap: some mods' words all appear in other mods ("Monsters have #%
-  // increased Area of Effect" vs the boss's "#% increased Area of Effect"),
-  // and tokens don't span the rolled number, so these can't be searched for.
-  // The builder reports them as "missing". Don't let the list grow.
-  it('finds a unique token for all but a known few mods', () => {
+  // Every mod gets a token, even when all its words sit in other mods
+  // ("Monsters have #% increased Area of Effect" vs the boss's "#% increased
+  // Area of Effect"): tokens cross the rolled number and pin to a line's start
+  // or end, like poe.re's. Up to 3.30 data v26, 30 mods had none.
+  it('finds a unique token for every mod', () => {
     const missing = MODS.filter(mod => buildMapRegex({ avoid: [mod], want: [], mins: {}, highlight: 'good' }, MODS, allMapNames()).missing.length)
-    expect(missing.length, missing.join('\n')).toBeLessThanOrEqual(KNOWN_UNSEARCHABLE)
+    expect(missing).toEqual([])
+  })
+
+  it('the mods that had no token tell apart from their look-alikes', () => {
+    const cases: Array<[string, string]> = [
+      ['Buffs on Players expire #% faster', 'Debuffs on Monsters expire #% faster'],
+      ['Monsters have #% increased Area of Effect', 'Unique Boss has #% increased Area of Effect'],
+      ['Monsters have #% increased Area of Effect', 'Monsters have #% reduced Area of Effect'],
+      ['#% increased Area of Effect', 'Monsters have #% increased Area of Effect'],
+      ['#% Pack Size', '#% increased Pack size'],
+      ['#% Item Quantity', 'Modifiers to Item Quantity will affect the number of encounter rewards dropped'],
+      ['Skills fire # additional Projectiles', 'Monsters fire # additional Projectiles'],
+      ['#% increased Cost of Building and Upgrading Towers', '#% increased Cost of Building and Upgrading Towers in your Maps'],
+      ['Area contains # additional Chest Marker', 'Area contains # additional Chest Markers'],
+      ['Buffs on Players expire #% faster', 'Buffs on Players expire #% slower']
+    ]
+    for (const [mod, other] of cases) {
+      const { text, missing } = buildMapRegex({ avoid: [mod], want: [], mins: {}, highlight: 'good' }, MODS, allMapNames())
+      expect(missing, mod).toEqual([])
+      expect(stashSearch(text, mapTooltip([mod])), `${mod}: ${text}`).toBe(false)
+      expect(stashSearch(text, mapTooltip([other])), `${mod} vs ${other}: ${text}`).toBe(true)
+    }
   })
 
   // The search box takes one line, so a token across a two-line mod's line

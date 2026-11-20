@@ -70,7 +70,7 @@ export function withOils (list: Passive[], oilsOf: (name: string) => string[] | 
   })
 }
 
-function anointSection (oils: readonly string[], ctx?: LookupContext): LookupSection {
+export function anointSection (oils: readonly string[], ctx?: LookupContext): LookupSection {
   const prices = oils.map(o => ctx?.price(o) ?? null)
   const total = prices.every(c => c != null) ? prices.reduce<number>((a, c) => a + c!, 0) : null
   return {

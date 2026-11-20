@@ -131,8 +131,8 @@ export function itemFacts (clipboard: string, parsed: ParsedItem | null): ItemFa
   let exarchTier = 0
   let eaterTier = 0
   for (const l of all) {
-    // Fractured mods are explicit mods too ("{ Fractured Prefix Modifier "Merciless" … }").
-    const mod = /^\{ (?:Fractured )?(Prefix|Suffix) Modifier "([^"]+)"/.exec(l)
+    // Fractured and 3.30 rare-only mods are explicit mods too ("{ Fractured Prefix Modifier "Merciless" … }").
+    const mod = /^\{ (?:Fractured |Rare-only )?(Prefix|Suffix) Modifier "([^"]+)"/.exec(l)
     if (mod) explicitModNames.push(mod[2])
     // Corrupted, eldritch, vestigial and synthesised implicits count as well.
     if (/^\{ (?:[\w' ]+ )?Implicit Modifier\b/.test(l)) hasImplicit = true

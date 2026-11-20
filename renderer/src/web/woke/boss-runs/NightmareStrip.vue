@@ -1,0 +1,156 @@
+<template>
+  <!-- A Nightmare Map goes into any of the five T17 maps: each one's boss
+       fragments and unique, maps across (best first), drops down the side. -->
+  <div v-if="cols.length" :class="$style.strip" data-woke-nightmare>
+    <div :class="$style.wrap">
+      <table :class="$style.grid">
+        <thead>
+          <tr>
+            <th :class="$style.lab">Fragment · price</th>
+            <th v-for="c in cols" :key="c.id" :class="$style.map" :data-nightmare-map="c.id">{{ c.name }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="f in fragRows" :key="f.name" :data-nightmare-frag="f.name">
+            <td><span :class="$style.item"><WIcon :src="itemArt({ name: f.name, type: 'Fragment' }) ?? undefined" fallback="fas fa-puzzle-piece" size="sm" />{{ f.short }} <span class="w-dim">{{ chaos(f.price) }}</span></span></td>
+            <td v-for="(cell, i) in f.cells" :key="cols[i].id" :class="[cell.favoured ? $style.fav : $style.low, cell.estimate && cell.favoured && $style.est]">
+              {{ cell.estimate ? '~' : '' }}{{ cell.pct }}%
+            </td>
+          </tr>
+          <tr :class="$style.sep" data-nightmare-unique>
+            <td :class="$style.uniq">Unique</td>
+            <td v-for="c in cols" :key="c.id" :class="$style.ucell" :title="c.unique?.name">
+              <template v-if="c.unique">
+                <WIcon :src="itemArt({ name: c.unique.name }) ?? undefined" fallback="fas fa-gem" size="md" :class="$style.uicon" />
+                <div :class="c.unique.estimate && $style.est">{{ c.unique.estimate ? '~' : '' }}{{ c.unique.pct }}%</div>
+                <div>{{ chaos(c.unique.price) }}</div>
+              </template>
+            </td>
+          </tr>
+          <tr :class="$style.sep">
+            <td class="w-dim">Loot</td>
+            <td v-for="c in cols" :key="c.id" :class="estimated && $style.est">{{ estimated ? '~' : '' }}{{ chaos(c.loot) }}</td>
+          </tr>
+          <tr>
+            <td class="w-dim">Profit <span :class="$style.mapcost">(map {{ chaos(mapPrice) }})</span></td>
+            <td v-for="c in cols" :key="c.id" :class="$style.profit" :data-nightmare-profit="c.id">
+              <span v-if="c.profit != null" :class="c.profit >= 0 ? 'w-up' : 'w-down'">{{ c.profit >= 0 ? '+' : '' }}{{ chaos(c.profit) }}</span>
+              <span v-else class="w-faint" title="No Nightmare Map price on poe.ninja">?</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div :class="$style.note">
+      <template v-if="estimated">~ is an estimate: no drop rates are published. {{ perKill }} fragments a kill, % = copies a kill; the unique's 5% is a 3.29 guide's figure.</template>
+      Fragments a kill and your kill log live in Boss runs › Nightmare.
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { AppConfig } from '@/web/Config'
+import WIcon from '../ui/WIcon.vue'
+import { itemArt } from '../ui/game-icons'
+import { usePriceIndex } from '../market/price-index'
+import { evaluateBoss, priceResolver } from './calc'
+import type { BossPrefs, DropRow } from './calc'
+import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, nightmareBosses, UBER_FRAGMENTS } from './nightmare'
+import { BOSS_RUNS_TYPE } from './widget'
+import type { BossRunsWidget } from './widget'
+
+// Mounted only with the Boss runs module on (CheckedItem.vue).
+const prices = usePriceIndex()
+// Plain chaos in the grid: one unit across every cell, so columns compare at a glance.
+function chaos (n: number | null | undefined) {
+  if (n == null) return '?'
+  return `${Math.abs(n) >= 10 ? Math.round(n) : +n.toFixed(1)}c`
+}
+
+const DEFAULT_PREFS: BossPrefs = {
+  runSeconds: {}, rates: {}, extraDrops: {}, kills: {}, ownEntry: false, plannedRuns: 0, dropToggles: {}, priceModes: {}, customPrices: {}
+}
+// Boss runs' settings (fragments a kill, typed rates, kill log), else defaults.
+const prefs = computed<BossPrefs>(() => {
+  const w = AppConfig().widgets.find(x => x.wmType === BOSS_RUNS_TYPE) as BossRunsWidget | undefined
+  // The map in hand is the entry, so its cost always counts; every drop counts.
+  return w ? { ...DEFAULT_PREFS, ...w, ownEntry: false, plannedRuns: 0 } : DEFAULT_PREFS
+})
+const perKill = computed(() => prefs.value.nightmareFrags ?? DEFAULT_FRAGMENTS_PER_KILL)
+
+const px = computed(() => priceResolver(prices.snapshot.value?.items ?? []))
+const mapPrice = computed(() => px.value.price(NIGHTMARE_MAP))
+
+const results = computed(() => {
+  if (!prices.snapshot.value) return []
+  return nightmareBosses(prefs.value.nightmareFrags)
+    .map(b => evaluateBoss(b, prefs.value, px.value))
+    .filter(r => r.hasRates)
+    // Same map cost for all five, so loot ranks them even without a map price.
+    .sort((a, b) => b.loot - a.loot)
+})
+const estimated = computed(() => results.value.some(r => r.estimated))
+
+// Copies a kill as a percentage: whole numbers, one decimal under 10%.
+const pct = (n: number) => n >= 0.1 ? String(Math.round(n * 100)) : (n * 100).toFixed(1).replace(/\.0$/, '')
+const copies = (d: DropRow) => (d.chance ?? 0) * d.qty
+
+const cols = computed(() => results.value.map(r => {
+  const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
+  const u = r.drops.find(d => d.name === map.unique)
+  return {
+    id: r.boss.id,
+    name: r.boss.name.replace(/ Map$/, ''),
+    favoured: map.favoured,
+    drops: new Map(r.drops.map(d => [d.name, d])),
+    unique: u ? { name: u.name, pct: pct(copies(u)), estimate: u.rateSource === 'estimate', price: u.price } : null,
+    loot: r.loot,
+    profit: r.entryMissing.length ? null : r.profit
+  }
+}))
+
+// Dearest fragment first.
+const fragRows = computed(() => UBER_FRAGMENTS
+  .map(name => ({
+    name,
+    short: name.replace(/ Fragment$/, ''),
+    price: px.value.price(name),
+    cells: cols.value.map(c => {
+      const d = c.drops.get(name)
+      return { pct: d ? pct(copies(d)) : '0', estimate: d?.rateSource === 'estimate', favoured: c.favoured.includes(name) }
+    })
+  }))
+  .sort((a, b) => (b.price ?? -1) - (a.price ?? -1)))
+</script>
+
+<style module>
+.strip {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px 6px;
+  border-radius: var(--w-r-md);
+  border: 1px solid var(--w-line-strong);
+  background: var(--w-panel);
+  color: var(--w-fg);
+  font-family: var(--w-body);
+  font-size: var(--w-fs-xs);
+}
+.wrap { overflow-x: auto; }
+.grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.grid th, .grid td { padding: 1px 4px; text-align: right; white-space: nowrap; }
+.grid th:first-child, .grid td:first-child { text-align: left; padding-left: 0; }
+.lab { color: var(--w-faint); font-weight: 400; }
+.mapcost { color: var(--w-faint); font-weight: 400; }
+.map { color: var(--w-gold); font-family: var(--w-caps-face); font-weight: 400; vertical-align: bottom; }
+.item { display: inline-flex; align-items: center; gap: 4px; }
+.fav { color: var(--w-fg); font-weight: 600; }
+.low { color: var(--w-faint); }
+.est { color: var(--w-warn); }
+.sep td { border-top: 1px solid var(--w-line); padding-top: 3px; }
+.uniq { color: var(--w-r-unique); }
+.ucell { text-align: center !important; vertical-align: top; }
+.uicon { display: block; margin: 0 auto 1px; }
+.profit { font-weight: 600; }
+.note { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--w-line); color: var(--w-faint); }
+</style>

@@ -1,0 +1,21 @@
+Item Class: Maps
+Rarity: Rare
+Dread Hollow
+Nightmare Map
+--------
+Atlas Drops: +120% (augmented)
+Item Rarity: +80% (augmented)
+Monster Pack Size: +40% (augmented)
+--------
+Item Level: 84
+--------
+Monster Level: 84
+--------
+Monsters Poison on Hit
+Monsters have 50% increased Accuracy Rating
+Players gain 50% reduced Flask Charges
+Rare Monsters have Physical Thorns reflecting 800 Physical Damage
+Monsters have a 50% chance to avoid Poison, Impale, and Bleeding
+Players have -20% to amount of Suppressed Spell Damage Prevented
+--------
+Travel to a Map of this tier or lower by using this in a personal Map Device. Maps can only be used once. 

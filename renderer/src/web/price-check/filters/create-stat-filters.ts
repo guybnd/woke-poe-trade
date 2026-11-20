@@ -75,7 +75,9 @@ export function createExactStatFilters (
       : opts.searchStatRange,
     filters: [],
     groups: [],
-    statsByType: statsByType.filter(calc => keepByType.includes(calc.type))
+    statsByType: statsByType.filter(calc =>
+      keepByType.includes(calc.type) ||
+      calc.sources.some(({ modifier }) => modifier.info.mechanic === ModifierMechanic.RareOnly))
   }
 
   filterBasePercentile(ctx)
@@ -861,6 +863,10 @@ function showHasEmptyModifier (ctx: FiltersCreationContext): ItemHasEmptyModifie
     (randomMods.length === 5 && !craftedMod) ||
     (randomMods.length === 6 && craftedMod)
   ) {
+    // A rare-only mod in a language that writes both sides alike has no side,
+    // so the open one can't be told.
+    if (randomMods.some(mod => mod.info.generation == null)) return false
+
     let prefixes = randomMods.filter(mod => mod.info.generation === 'prefix').length
     let suffixes = randomMods.filter(mod => mod.info.generation === 'suffix').length
 
