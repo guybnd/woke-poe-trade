@@ -315,8 +315,6 @@ const splitTotal = computed(() => splitParts.value.reduce((s, x) => s + x.ms, 0)
 // Hovering a colour (or its legend entry) outlines it and puts its share above it.
 const splitPick = shallowRef<string | null>(null)
 const pickSplit = (id: string | null) => { splitPick.value = id }
-// The bar can unmount under the cursor (window switch): drop the pick with it.
-watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = null })
 const pct = (ms: number) => { const n = ms / splitTotal.value * 100; return n < 1 ? '<1%' : `${Math.round(n)}%` }
 const splitLabel = computed(() => {
   const total = splitTotal.value
@@ -618,6 +616,9 @@ const errorLine = computed(() => {
 function refresh () {
   hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
 }
+// The time bar can unmount under the cursor (window switch): drop its hover
+// pick with it. Down here so everything rateShown reads is set up first.
+watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = null })
 </script>
 
 <style module>
