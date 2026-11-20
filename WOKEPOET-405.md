@@ -14,6 +14,13 @@ history:
     user: Agent
     date: '2026-11-20T03:23:56.108Z'
     comment: Created ticket.
+    id: a-2026-11-20t03-23-56-108z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T03:24:44.953Z'
+    comment: Updated implementation link.
+    id: a-2026-11-20t03-24-44-953z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/665'
 ---
 Guy's screenshot: Primordial Exalted Orb price check showed the new-item fallback ("Mod filters come with the next item data update") with 2 listings.
 
