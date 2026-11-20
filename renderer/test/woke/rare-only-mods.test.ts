@@ -21,6 +21,12 @@ describe('rare-only mods', () => {
     expect(info.mechanic).toBe(ModifierMechanic.RareOnly)
   })
 
+  it('reads a rare-only heading with no name', () => {
+    const info = parseModInfoLine('{ Rare-only Prefix Modifier (Tier: 1) }')
+    expect(info.generation).toBe('prefix')
+    expect(info.tier).toBe(1)
+  })
+
   it('still reads a normal prefix', () => {
     const info = parseModInfoLine('{ Prefix Modifier "Tyrannical" (Tier: 1) }')
     expect(info.generation).toBe('prefix')
