@@ -69,7 +69,7 @@
               <div :title="leaveOutHub ? 'Time in maps and other areas' : 'Time in maps, other areas and hideout'"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
             <template v-if="splitTotal > 0">
-              <div :class="[$style.split, { [$style.splitPick]: splitPick }]" @mouseleave="pickSplit(null)">
+              <div :class="[$style.split, { [$style.splitPick]: splitLabel }]" @mouseleave="pickSplit(null)">
                 <span v-for="x in splitParts" :key="x.id" :class="[$style[x.id], { [$style.picked]: splitPick === x.id }]" :style="{ flexGrow: x.ms }" @mouseenter="pickSplit(x.id)" />
                 <span v-if="splitLabel" :class="$style.splitLabel" class="w-num" :style="splitLabel.style">{{ splitLabel.text }}</span>
               </div>
