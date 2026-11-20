@@ -85,6 +85,8 @@ export interface Toast {
   beside?: { top: number, bottom: number }
   // Takes the mouse while it's over it, so Undo can be clicked in game.
   clickable: boolean
+  // A click anywhere on it closes it (it takes the mouse while you're over it).
+  closeOnClick?: boolean
 }
 
 export const toasts = shallowRef<Toast[]>([])
@@ -95,7 +97,7 @@ let nextId = 1
 // `dock`: from a dock icon's menu, while you may be playing. Sits clear of the
 // row, so nothing moves under it, and Undo can be clicked.
 // `center`: high in the middle of the screen, above your character.
-export function toast (text: string, opts: { undo?: () => void, anchor?: Element | null, ms?: number, dock?: boolean, clickOnly?: boolean, center?: boolean } = {}) {
+export function toast (text: string, opts: { undo?: () => void, anchor?: Element | null, ms?: number, dock?: boolean, clickOnly?: boolean, center?: boolean, closeOnClick?: boolean } = {}) {
   const box = opts.anchor?.getBoundingClientRect()
   // A hidden panel has no size: its corner would put the note off screen.
   const r = box && box.width > 0 && box.height > 0 ? box : undefined
@@ -107,7 +109,8 @@ export function toast (text: string, opts: { undo?: () => void, anchor?: Element
     x: r ? r.left + r.width / 2 : window.innerWidth / 2,
     y: r ? r.bottom - 10 : opts.center ? Math.round(window.innerHeight * 0.3) : window.innerHeight - 80,
     beside: r && opts.dock ? { top: r.top, bottom: r.bottom } : undefined,
-    clickable: opts.dock === true && opts.undo != null
+    clickable: (opts.dock === true && opts.undo != null) || opts.closeOnClick === true,
+    closeOnClick: opts.closeOnClick
   }
   toasts.value = [...toasts.value.filter(o => Math.abs(o.y - t.y) > 4 || Math.abs(o.x - t.x) > 4), t]
   setTimeout(() => dismissToast(t.id), opts.ms ?? 5000)

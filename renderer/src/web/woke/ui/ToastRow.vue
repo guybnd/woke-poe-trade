@@ -1,5 +1,6 @@
 <template>
-  <div ref="el" data-w-popup :class="[$style.toast, 'w-enter']" :style="place" role="status">
+  <div ref="el" data-w-popup :class="[$style.toast, 'w-enter', { [$style.closes]: toast.closeOnClick }]" :style="place" role="status"
+    :title="toast.closeOnClick ? 'Click to close' : undefined" @click="toast.closeOnClick && dismissToast(toast.id)">
     <span :class="$style.text">{{ toast.text }}</span>
     <button v-if="toast.undo" type="button" :class="$style.undo" @click="undoToast(toast.id)">Undo</button>
     <WKbd v-if="toast.undo" keys="Ctrl + Z" />
@@ -12,7 +13,7 @@
 // on its own, and mustn't catch clicks meant for the game.
 import { onMounted, shallowRef } from 'vue'
 import WKbd from './WKbd.vue'
-import { undoToast, type Toast } from './layer'
+import { dismissToast, undoToast, type Toast } from './layer'
 import { useHoverZone } from '../shared/hover'
 
 const props = defineProps<{ toast: Toast }>()
@@ -49,5 +50,6 @@ onMounted(() => {
 /* A note is never cut short: long text wraps. */
 .text { min-width: 0; overflow-wrap: anywhere; }
 .undo { color: var(--w-accent); font-weight: 600; padding: 0 4px; }
+.closes { cursor: pointer; }
 .undo:hover { text-decoration: underline; }
 </style>

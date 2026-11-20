@@ -16,6 +16,7 @@
           <span class="w-dim text-xs" title="A line about each map you leave: time, deaths, league NPCs met, level-ups">After a map</span>
           <WSegmented v-model="chipPlace" :options="CHIP_OPTIONS" />
           <WSelect v-if="chipPlace !== 'off'" v-model="chipSeconds" :options="CHIP_TIMES" title="How long the line stays" />
+          <WToggle v-if="chipPlace === 'center'" v-model="chipClick">Click closes it</WToggle>
         </div>
       </template>
       <WEmpty v-if="!list.length" icon="fas fa-moon">
@@ -49,7 +50,7 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel, WSegmented, WSelect, dismissToast, toast } from '../ui'
+import { WBanner, WEmpty, WPanel, WSegmented, WSelect, WToggle, dismissToast, toast } from '../ui'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -64,7 +65,9 @@ import type { NightStory } from './story'
 import { MapLog, tierText, usualMapMs } from './map-log'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
+import { CHIP_CLOSE_TARGET } from './widget'
 import type { ChipPlace, SessionStoryWidget } from './widget'
+import { MainProcess } from '@/web/background/IPC'
 
 const props = defineProps<{ config: SessionStoryWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -85,6 +88,16 @@ const chipMs = () => {
   return s === 0 ? UNTIL_MAP_MS : typeof s === 'number' && s > 0 ? s * 1000 : CHIP_MS
 }
 let chipToast: number | null = null
+function closeChip () {
+  if (chipToast != null) dismissToast(chipToast)
+  chipToast = null
+  dockRef.value?.unpeek()
+}
+// The close hotkey (Settings).
+const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
+  if (e.target === CHIP_CLOSE_TARGET) closeChip()
+})
+onUnmounted(() => { chipKeySub.abort() })
 // A finished night shows on the dock for this long.
 const RECENT_MS = 12 * 3_600_000
 
@@ -94,15 +107,12 @@ const mapLog = new MapLog({
     if (!live) return
     const place = props.config.chipPlace ?? 'dock'
     // The note in the middle never takes the mouse: clicks go to the game.
-    if (place === 'center') chipToast = toast(chipText(rec), { center: true, ms: chipMs() })
+    if (place === 'center') chipToast = toast(chipText(rec), { center: true, ms: chipMs(), closeOnClick: props.config.chipClick === true })
     else if (place === 'dock') dockRef.value?.peek(chipText(rec), chipMs())
   },
   // Into the next map: a line set to stay until then goes.
   onEnter: () => {
-    if (!live || props.config.chipSeconds !== 0) return
-    if (chipToast != null) dismissToast(chipToast)
-    chipToast = null
-    dockRef.value?.unpeek()
+    if (live && props.config.chipSeconds === 0) closeChip()
   },
   onDone: (rec) => { store.addMap(rec).catch(() => {}) }
 })
@@ -255,6 +265,10 @@ const CHIP_TIMES = [
 const chipSeconds = computed({
   get: () => String(props.config.chipSeconds ?? 8),
   set: (v: string) => { props.config.chipSeconds = Number(v) }
+})
+const chipClick = computed({
+  get: () => props.config.chipClick === true,
+  set: (v: boolean) => { props.config.chipClick = v }
 })
 const chipPlace = computed({
   get: () => props.config.chipPlace ?? 'dock',

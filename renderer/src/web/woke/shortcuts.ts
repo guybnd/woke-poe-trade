@@ -36,6 +36,8 @@ import { TRADE_TYPE, hotkeyTarget as tradeHotkeyTarget } from './trade/widget'
 import type { TradeWidget } from './trade/widget'
 
 import { SEARCH_TYPE, SEARCH_TARGET } from './search/widget'
+import { SESSION_STORY_TYPE, CHIP_CLOSE_TARGET } from './session-story/widget'
+import type { SessionStoryWidget } from './session-story/widget'
 import type { SearchWidget } from './search/widget'
 
 export const HIDE_ALL_TARGET = 'woke-hide-all'
@@ -140,6 +142,11 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     const farming = widget as FarmingWidget
     if (!farming.lootHotkey) return []
     return [{ shortcut: farming.lootHotkey, action: { type: 'copy-item', target: FARMING_LOOT_TARGET } }]
+  }
+  if (widget.wmType === SESSION_STORY_TYPE) {
+    const story = widget as SessionStoryWidget
+    if (!story.chipKey || story.chipPlace === 'off') return []
+    return [{ shortcut: story.chipKey, action: { type: 'trigger-event', target: CHIP_CLOSE_TARGET } }]
   }
   if (widget.wmType === DROP_COUNTER_TYPE) {
     const counter = widget as DropCounterWidget

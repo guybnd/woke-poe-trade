@@ -12,7 +12,13 @@ export interface SessionStoryWidget extends Widget {
   chipPlace?: ChipPlace
   // How long the line stays, in seconds; 0: until you go into a map.
   chipSeconds?: number
+  // A click on the line closes it (the line then takes the mouse while it's under it).
+  chipClick?: boolean
+  // A hotkey that closes it. Registered like any hotkey: the game no longer gets that key.
+  chipKey?: string | null
 }
+
+export const CHIP_CLOSE_TARGET = 'woke-session-story-chip'
 
 export function initSessionStoryWidget (wmId: number): SessionStoryWidget {
   return {
