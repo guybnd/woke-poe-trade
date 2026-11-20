@@ -75,7 +75,9 @@ export function createExactStatFilters (
       : opts.searchStatRange,
     filters: [],
     groups: [],
-    statsByType: statsByType.filter(calc => keepByType.includes(calc.type))
+    statsByType: statsByType.filter(calc =>
+      keepByType.includes(calc.type) ||
+      calc.sources.some(({ modifier }) => modifier.info.mechanic === ModifierMechanic.RareOnly))
   }
 
   filterBasePercentile(ctx)
