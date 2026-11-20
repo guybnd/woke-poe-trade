@@ -55,6 +55,19 @@ describe('reading a time range of Client.txt', () => {
     expect((await readLogRange(path.join(os.tmpdir(), 'no-such-dir-x', 'Client.txt'), 0, 1)).path).toBeNull()
   })
 
+  it('adds game start and AFK lines only when asked', async () => {
+    const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'woke-log-')), 'Client.txt')
+    const t = (s: number) => stamp(new Date(start.getTime() + s * 1000))
+    fs.writeFileSync(f, [
+      `${t(0)} ***** LOG FILE OPENING *****`,
+      `${t(1)} 1 abc [DEBUG Client 1] Generating level 60 area "HideoutFoo" with seed 1`,
+      `${t(2)} 1 abc [INFO Client 1] : AFK mode is now ON. Autoreply "This player is AFK."`,
+      `${t(3)} 1 abc [INFO Client 1] : AFK mode is now OFF.`
+    ].join('\r\n') + '\r\n')
+    expect((await readLogRange(f, start.getTime(), start.getTime() + 10_000)).lines).toHaveLength(1)
+    expect((await readLogRange(f, start.getTime(), start.getTime() + 10_000, true)).lines).toHaveLength(4)
+  })
+
   it('reads the game timestamp as local time', () => {
     expect(logLineTime('2026/11/04 18:00:01 1 abc [INFO Client 1] x')).toBe(new Date(2026, 10, 4, 18, 0, 1).getTime())
     expect(logLineTime('nope')).toBeNull()

@@ -20,10 +20,15 @@
       <!-- H1: one summary line; the rest folds away under Details -->
       <section :class="$style.summary">
         <span :class="$style.total" class="w-num" :title="`${inChaos(v.chaos)} · liquid ${div(liquid)} ${unit}`">{{ div(v.chaos) }}<Coin :chaos="!divine" /></span>
-        <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" title="Since yesterday's last read">
+        <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
           <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
         </span>
-        <span v-if="perHourDiv != null" class="w-num" :class="tone(perHourDiv)" :title="inChaos(sum?.perHourChaos ?? 0) + ' per hour, today'">{{ signed(perHourDiv) }}<Coin :chaos="!divine" />/h</span>
+        <!-- Per hour of play: hideout, town, closed and AFK time left out. -->
+        <span v-if="rateRow" :class="$style.rates" class="w-num">
+          <span :class="$style.caps">Per hour</span>
+          <span v-for="r in rateRow" :key="r.id" :class="tone(r.div)" :title="r.tip">{{ r.id }} {{ r.div == null ? '—' : signed(r.div) }}</span>
+          <span><Coin :chaos="!divine" />/h</span>
+        </span>
         <WSpark v-if="spark.length > 1" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
           Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
@@ -180,10 +185,12 @@ import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
-import { divine, historyNow, leagueNow, ledger, setIgnored, setMyPrice, summary, tabValues, valuation, wantPrices } from './store'
+import { divine, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, summary, tabValues, valuation, wantPrices } from './store'
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
+import { RATE_WINDOWS } from './play-time'
+import type { PlayRate } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
@@ -249,7 +256,28 @@ const moveText = (m: PriceMove) => `${m.name} ${signedPct(m.change)} (${signed(t
 const etaText = (days: number) => days < 1 ? `${Math.max(1, Math.round(days * 24))} h` : days < 60 ? `${Math.round(days)} days` : `${Math.round(days / 30)} months`
 
 const liquid = computed(() => v.value ? liquidChaos(v.value) : 0)
-const perHourDiv = computed(() => sum.value?.perHourChaos == null ? null : toDiv(sum.value.perHourChaos))
+// ---------- per hour of play (last 1, 2, 3 hours) ----------
+const WINDOW_NAME: Record<string, string> = { '1h': 'Last hour', '2h': 'Last 2 hours', '3h': 'Last 3 hours', 'today': 'Today' }
+// Moves with each stash read, zone read and the 30 s clock.
+const rates = computed(() => ratesAt(now.value))
+function rateTip (id: string, r: PlayRate, fromLog: boolean): string {
+  const head = r.perHour == null
+    ? `${WINDOW_NAME[id]}: under 10 min of play`
+    : `${WINDOW_NAME[id]}: ${signed(toDiv(r.chaos))} ${unit.value} in ${duration(r.playMs)} of play`
+  if (!fromLog) return `${head}. Client.txt not found: hideout time not left out`
+  const out = [r.hubMs >= 60_000 ? `${duration(r.hubMs)} in hideout and town` : '', r.offMs >= 60_000 ? `${duration(r.offMs)} closed or AFK` : ''].filter(Boolean)
+  return out.length ? `${head}. Left out: ${out.join(', ')}` : head
+}
+const rateRow = computed(() => {
+  const r = rates.value
+  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog) }))
+  return row.some(x => x.div != null) ? row : null
+})
+const todayTip = computed(() => {
+  const t = rates.value.today
+  return t.perHour == null ? "Since yesterday's last read" : `Since yesterday's last read
+Per hour of play today: ${signed(toDiv(t.perHour))} ${unit.value}/h over ${duration(t.playMs)}`
+})
 const best = computed(() => v.value?.lines[0] ?? null)
 
 // ---------- sections (⚙ flyout, Settings) and what's open ----------
@@ -476,6 +504,7 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
+.rates { display: inline-flex; align-items: baseline; gap: var(--w-s2); }
 .total { font-size: calc(20px * var(--w-text-scale, 1)); color: var(--w-fg); line-height: 1.1; }
 .spark { margin-left: auto; }
 .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--w-dim); font-size: var(--w-fs-sm); cursor: pointer; padding: 1px 4px; border-radius: var(--w-r-sm); white-space: nowrap; }

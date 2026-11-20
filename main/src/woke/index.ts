@@ -91,7 +91,7 @@ export function initWoke (server: ServerEvents, logger: Logger, poeWindow: GameW
       .catch((e: unknown) => { logger.write(`error [market] Trimming old snapshots failed: ${String(e)}`) })
   }, TRIM_AFTER_START_MS).unref?.()
   registerWokeHandler('game-log-tail', async (args) => await readGameLogTail(gameLog, args ?? undefined))
-  registerWokeHandler('game-log-range', async (args) => await readLogRange(gameLog.actualPath, Number(args?.from), Number(args?.to)))
+  registerWokeHandler('game-log-range', async (args) => await readLogRange(gameLog.actualPath, Number(args?.from), Number(args?.to), args?.sessions === true))
   // Follow the running game's Client.txt (another drive, another Steam
   // library) instead of a stale copy in a default folder.
   poeWindow.onAttach(() => { gameLog.gameStarted().catch(() => {}) })

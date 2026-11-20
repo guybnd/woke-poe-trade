@@ -212,6 +212,11 @@ import { POB_BUILDS_TYPE, lastBuildList, pobApi } from '../pob-builds/widget'
 import type { PobBuildsWidget } from '../pob-builds/widget'
 import { ATLAS_TYPE } from '../atlas/strategies'
 import type { AtlasWidget } from '../atlas/strategies'
+import { netWorthLookup } from './lookups/net-worth'
+import { hostRequest } from '../shared/host'
+import { NET_WORTH_TYPE } from '../net-worth/widget'
+import { DOCS as NET_WORTH_DOCS, glanceKey, isGlance } from '../net-worth/glance'
+import type { Glance } from '../net-worth/glance'
 import { visceraLookup } from './lookups/viscera'
 import { loadViscera, visceraByName, visceraItemText } from '../wickerman/viscera'
 import type { VisceraTable } from '../wickerman/viscera'
@@ -501,6 +506,15 @@ function loadVisceraTable () {
   if (visceraTable.value || !isModuleOn(AppConfig(), 'wickerman')) return
   loadViscera().then(t => { visceraTable.value = t }).catch(() => {})
 }
+// Net worth's per hour numbers: its small saved glance, read on open while it's on.
+const netWorthGlance = shallowRef<Glance | null>(null)
+function loadNetWorthGlance () {
+  const league = AppConfig().leagueId
+  if (!league || !isWidgetTypeOn(AppConfig(), NET_WORTH_TYPE)) { netWorthGlance.value = null; return }
+  hostRequest('doc-get', { collection: NET_WORTH_DOCS, key: glanceKey(league) })
+    .then((g) => { netWorthGlance.value = isGlance(g) && g.league === league ? g : null })
+    .catch(() => {})
+}
 // Keystones and notables with what they do, from the PoB tool's tree.
 const passives = shallowRef<Passive[] | null>(null)
 const keystoneGrants = shallowRef<ReadonlyMap<string, string[]>>(new Map())
@@ -591,7 +605,7 @@ onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
 // Boss runs' settings for the Nightmare cards; null with the module off.
 const bossPrefs = computed(() => isModuleOn(AppConfig(), 'boss-runs') ? (toolOn<BossRunsWidget>(BOSS_RUNS_TYPE) ?? {} as BossRunsWidget) : null)
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -1109,6 +1123,7 @@ function start (text: string) {
   whenIdle(loadBestiary)
   whenIdle(loadTree)
   whenIdle(loadVisceraTable)
+  whenIdle(loadNetWorthGlance)
   whenIdle(loadZones)
   whenIdle(loadPantheon)
   whenIdle(loadBuildList)

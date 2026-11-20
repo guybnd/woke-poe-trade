@@ -9,6 +9,10 @@ import readline from 'readline'
 // "2026/11/04 18:00:01 ..." in local time, as the game writes it.
 const TIME_RE = /^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2}) /
 const WANTED_RE = /Generating level \d+ area "|\] : You have entered |\] : \S+ \([^)]+\) is now level \d+|\] : \S+ has been slain\./
+// With `sessions`: the game starting (and the line before it) and AFK on/off
+// too, for net worth's play time.
+const OPENING_RE = /\*\*\*\*\* LOG FILE OPENING \*\*\*\*\*/
+const SESSION_RE = /\*\*\*\*\* LOG FILE OPENING \*\*\*\*\*|\] : AFK mode is now O(?:N|FF)/
 
 // A run is a few days at most; past this many lines something is wrong.
 const MAX_LINES = 50_000
@@ -54,7 +58,7 @@ export async function findStart (path: string, from: number): Promise<number> {
   }
 }
 
-export async function readLogRange (path: string | null, from: number, to: number): Promise<{ path: string | null, lines: string[] }> {
+export async function readLogRange (path: string | null, from: number, to: number, sessions = false): Promise<{ path: string | null, lines: string[] }> {
   if (!path || !Number.isFinite(from) || !Number.isFinite(to) || to < from) return { path, lines: [] }
   let start: number
   try {
@@ -63,6 +67,7 @@ export async function readLogRange (path: string | null, from: number, to: numbe
     return { path: null, lines: [] }
   }
   const lines: string[] = []
+  let before: string | null = null
   const stream = createReadStream(path, { start, encoding: 'utf8' })
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
   try {
@@ -72,6 +77,12 @@ export async function readLogRange (path: string | null, from: number, to: numbe
       if (t < from) continue
       if (t > to) break
       if (WANTED_RE.test(raw)) lines.push(raw.trimEnd())
+      else if (sessions && SESSION_RE.test(raw)) {
+        // The line before a game start is when the game was last running.
+        if (OPENING_RE.test(raw) && before && lines[lines.length - 1] !== before) lines.push(before)
+        lines.push(raw.trimEnd())
+      }
+      before = raw.trimEnd()
       if (lines.length >= MAX_LINES) break
     }
   } finally {

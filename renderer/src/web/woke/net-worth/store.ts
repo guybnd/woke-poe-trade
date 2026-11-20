@@ -7,15 +7,17 @@ import { hostRequest } from '../shared/host'
 import { toast } from '../ui/layer'
 import { ninjaPriceOf } from './prices'
 import {
-  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, perHourToday, recordRead, sinceYesterday, tabSetOf, valueStash
+  addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
-import { glanceKey, ledgerKey } from './glance'
+import { glanceKey, glanceRates, ledgerKey } from './glance'
 import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
 import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
+import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
+import type { PlayMarks, PlayRates } from './play-time'
 
 interface CachedStash { league: string, account: string, skipped?: number, tabs: Array<StashTabLike & { id: string, colour: string | null, readAt: number | null }> }
 
@@ -61,10 +63,49 @@ export const summary = computed(() => {
   return {
     chaos: v.chaos,
     sinceYesterdayDiv: sinceYesterday(history.value, v.chaos, divine.value, now),
-    perHourChaos: perHourToday(history.value, now),
+    perHourChaos: ratesAt(now).today.perHour,
     tabs: stash.value?.tabs.length ?? 0
   }
 })
+
+// Where you were (map, hideout, closed) from Client.txt, read up to the last
+// stash read: rates only look at time between reads.
+const marks = shallowRef<PlayMarks>(emptyMarks())
+// false while Client.txt hasn't been read or couldn't be.
+const marksFromLog = shallowRef(false)
+// The state at a window's start needs the zone before it: read this far back.
+const LOOKBACK_MS = 2 * 3_600_000
+let marksFrom: number | null = null
+let marksPath: string | null = null
+
+// Reads Client.txt zone lines new since the last time (all of them the first time).
+async function readMarks (now: number) {
+  const from = Math.min(startOfDay(now), now - RATE_WINDOWS[RATE_WINDOWS.length - 1].ms) - LOOKBACK_MS
+  let fresh = marksFrom == null || marks.value.lastAt == null || from < marksFrom
+  let res: { path: string | null, lines: string[] }
+  try {
+    res = await hostRequest('game-log-range', { from: fresh ? from : Math.max(marks.value.lastAt!, from), to: now, sessions: true }, 30_000)
+    // The app moved to another Client.txt: start over on it.
+    if (!fresh && res.path && res.path !== marksPath) {
+      fresh = true
+      res = await hostRequest('game-log-range', { from, to: now, sessions: true }, 30_000)
+    }
+  } catch {
+    return
+  }
+  if (!res.path) { if (fresh) marksFromLog.value = false; return }
+  const base = fresh ? emptyMarks(from) : marks.value
+  marks.value = trimMarks(feedMarks(base, res.lines), from)
+  if (fresh) marksFrom = from
+  marksPath = res.path
+  marksFromLog.value = true
+}
+
+// Profit per hour of play over the last 1, 2, 3 hours and today, at `now`.
+export function ratesAt (now: number): PlayRates {
+  const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos }))
+  return playRates(points, marks.value.marks, now, marksFromLog.value)
+}
 
 export const lastDiff = computed(() => history.value.lastDiff)
 export const ledger = computed(() => ledgerRef.value)
@@ -99,6 +140,7 @@ async function loadLeague (id: string) {
   // A failed read never gets saved over.
   prefsFor = own === undefined ? null : id
   stash.value = cache
+  await readMarks(Date.now())
 }
 
 // After a read: value it, count it once, and diff it against the read before.
@@ -141,7 +183,11 @@ async function countRead (id: string, readAt: number) {
     diffs: diff ? keepDiff(led.diffs, diff) : led.diffs,
     tabChaos: { prev: led.tabChaos.last, last: tabNow }
   }
+  // Zone lines up to this read first, so the window never shows the new
+  // point with old zones.
+  await readMarks(Date.now())
   ledgerRef.value = nextLedger
+  const rates = ratesAt(readAt)
   const todayDiv = sinceYesterday(next, v.chaos, divine.value, readAt)
   const g: Glance = {
     league: id,
@@ -149,7 +195,8 @@ async function countRead (id: string, readAt: number) {
     chaos: v.chaos,
     netChaos: diff?.netChaos ?? null,
     divine: divine.value,
-    perHourChaos: perHourToday(next, readAt),
+    perHourChaos: rates.today.perHour,
+    rates: glanceRates(rates),
     todayChaos: todayDiv != null && divine.value ? todayDiv * divine.value : null
   }
   glance.value = g
