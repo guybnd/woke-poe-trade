@@ -524,7 +524,7 @@ export default defineComponent({
       hideTip,
       travelState,
       travelNote,
-      travel: (listing: PricingResult) => { if (listing.hideoutToken) void travelToHideout(listing.hideoutToken) },
+      travel: (listing: PricingResult) => { if (listing.hideoutToken) travelToHideout(listing.hideoutToken).catch(() => {}) },
       openItemMenu,
       pobMenuRef,
       FIX_TAG,
