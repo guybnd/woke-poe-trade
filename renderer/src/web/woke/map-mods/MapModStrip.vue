@@ -180,7 +180,9 @@ function propTitle (label: string): string {
 const picked = computed(() => {
   const has = searchable.value.filter(f => stateOf(f) === 'has').length
   const not = searchable.value.filter(f => stateOf(f) === 'not').length
-  return [has ? `has ${has}` : '', not ? `not ${not}` : ''].filter(Boolean).join(' · ')
+  // Mods added from the line below count too, so a folded section still says what it searches.
+  const added = (props.filters?.addedMods ?? []).filter(m => !m.disabled).length
+  return [has ? `has ${has}` : '', not ? `not ${not}` : '', added ? `+${added} added` : ''].filter(Boolean).join(' · ')
 })
 
 const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m.matcher)).join(' · '))

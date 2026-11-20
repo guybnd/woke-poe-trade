@@ -204,7 +204,8 @@ export default defineComponent({
     const stripProps = shallowRef<ReadonlySet<string> | null>(null)
     provide('map-strip-owns', stripProps)
     const rowStats = computed(() => {
-      const onStrip = (s: FilterOrGroup) => !s.group && (s.mapMod || (stripProps.value?.has(s.tradeId[0]) ?? false))
+      // Only while the strip is up: with Map mods off, the map's mods stay rows.
+      const onStrip = (s: FilterOrGroup) => !s.group && stripProps.value != null && (!!s.mapMod || stripProps.value.has(s.tradeId[0]))
       return itemStats.value.some(onStrip) ? itemStats.value.filter(s => !onStrip(s)) : itemStats.value
     })
     const doSearch = ref(false)

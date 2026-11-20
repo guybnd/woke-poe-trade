@@ -83,7 +83,8 @@ const open = useFold('nightmare-strip', true)
 const gridOpen = useFold('nightmare-grid', false)
 // Each bar against the best map's value (profit, or loot without a map price).
 function barWidth (c: { profit: number | null, loot: number }) {
-  const v = (x: { profit: number | null, loot: number }) => Math.max(0, x.profit ?? x.loot)
+  // Against the largest swing either way, so a losing map's red bar shows too.
+  const v = (x: { profit: number | null, loot: number }) => Math.abs(x.profit ?? x.loot)
   const top = Math.max(...cols.value.map(v), 1)
   return `${Math.round(v(c) / top * 100)}%`
 }
