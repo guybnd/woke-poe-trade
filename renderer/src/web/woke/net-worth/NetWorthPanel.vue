@@ -69,11 +69,12 @@
               <div :title="leaveOutHub ? 'Time in maps and other areas' : 'Time in maps, other areas and hideout'"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
             <template v-if="splitTotal > 0">
-              <div :class="$style.split">
-                <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" :title="`${x.label}: ${span(x.ms)} (${Math.round(x.ms / splitTotal * 100)}%)`" />
+              <div :class="[$style.split, { [$style.splitPick]: splitLabel }]" @mouseleave="pickSplit(null)">
+                <span v-for="(x, i) in splitParts" :key="x.id" :class="[$style[x.id], { [$style.segOn]: splitPick === x.id, [$style.segFirst]: i === 0, [$style.segLast]: i === splitParts.length - 1 }]" :style="{ flexGrow: x.ms }" @mouseenter="pickSplit(x.id)" />
+                <span v-if="splitLabel" :class="$style.splitLabel" class="w-num" :style="splitLabel.style">{{ splitLabel.text }}</span>
               </div>
-              <div :class="[$style.legend, $style.timeLegend]">
-                <span v-for="x in splitParts" :key="x.id" :title="`${x.label}: ${Math.round(x.ms / splitTotal * 100)}%`"><i :class="$style[x.id]" />{{ x.short }} {{ span(x.ms) }}</span>
+              <div :class="[$style.legend, $style.timeLegend]" @mouseleave="pickSplit(null)">
+                <span v-for="x in splitParts" :key="x.id" :title="`${x.label}: ${pct(x.ms)}`" @mouseenter="pickSplit(x.id)"><i :class="$style[x.id]" />{{ x.short }} {{ span(x.ms) }}</span>
               </div>
             </template>
           </div>
@@ -311,6 +312,23 @@ const splitParts = computed(() => {
   ].filter(x => x.ms >= 60_000)
 })
 const splitTotal = computed(() => splitParts.value.reduce((s, x) => s + x.ms, 0))
+// Hovering a colour (or its legend entry) outlines it and puts its share above it.
+const splitPick = shallowRef<string | null>(null)
+const pickSplit = (id: string | null) => { splitPick.value = id }
+const pct = (ms: number) => { const n = ms / splitTotal.value * 100; return n < 1 ? '<1%' : `${Math.round(n)}%` }
+const splitLabel = computed(() => {
+  const total = splitTotal.value
+  let start = 0
+  for (const x of splitParts.value) {
+    if (x.id === splitPick.value && total > 0) {
+      const mid = (start + x.ms / 2) / total
+      const style = mid < 0.2 ? { left: '0' } : mid > 0.8 ? { right: '0' } : { left: `${mid * 100}%`, transform: 'translateX(-50%)' }
+      return { text: `${x.short} ${pct(x.ms)}`, style }
+    }
+    start += x.ms
+  }
+  return null
+})
 const timeNote = computed(() => {
   if (!rates.value.fromLog) return 'Client.txt not found: nothing left out'
   return leaveOutHub.value ? 'Hideout time left out' : 'Hideout time counted as play'
@@ -598,6 +616,9 @@ const errorLine = computed(() => {
 function refresh () {
   hostRequest('stash-reader-read', null, 15 * 60_000).catch(() => {})
 }
+// The time bar can unmount under the cursor (window switch): drop its hover
+// pick with it. Down here so everything rateShown reads is set up first.
+watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = null })
 </script>
 
 <style module>
@@ -626,8 +647,13 @@ function refresh () {
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
 .moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; font-size: var(--w-fs-sm); }
 .more { font-size: var(--w-fs-xs); color: var(--w-dim); }
-.split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
-.split > span { flex-basis: 0; }
+.split { position: relative; display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; }
+.split > span:not(.splitLabel) { flex-basis: 0; position: relative; transition: opacity 0.1s; }
+.split > .segFirst { border-top-left-radius: 1px; border-bottom-left-radius: 1px; }
+.split > .segLast { border-top-right-radius: 1px; border-bottom-right-radius: 1px; }
+.splitPick > span:not(.segOn, .splitLabel) { opacity: 0.45; }
+.split > .segOn { z-index: 1; outline: 1px solid var(--w-fg); outline-offset: 1px; }
+.splitLabel { position: absolute; bottom: calc(100% + 4px); z-index: 2; padding: 0 5px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel); color: var(--w-fg); font-size: var(--w-fs-xs); white-space: nowrap; pointer-events: none; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: 0; }
 .map { background: var(--w-up); }
 .other { background: var(--w-info); }

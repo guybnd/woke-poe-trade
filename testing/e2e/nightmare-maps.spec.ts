@@ -103,7 +103,7 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   expect(overlay.errors).toEqual([])
 })
 
-test('Nightmare Map with Map mods: Run it?, Worth running, Trade search in that order', async ({ overlay }) => {
+test('Nightmare Map with Map mods: the map section, then Worth running', async ({ overlay }) => {
   const searches = await setup(overlay, false, true)
   await overlay.copyItem('items/map-nightmare-330.txt')
   const panel = overlay.widget('price-check')
@@ -111,17 +111,18 @@ test('Nightmare Map with Map mods: Run it?, Worth running, Trade search in that 
   await expect(strip.locator('[data-woke-nightmare] [data-nightmare-bars]')).toContainText('Zigg', SLOW)
   const order = await strip.evaluate(el => [...el.querySelectorAll('[data-map-run], [data-woke-nightmare], [data-map-trade]')].map(n =>
     n.hasAttribute('data-map-run') ? 'run' : n.hasAttribute('data-woke-nightmare') ? 'worth' : 'trade'))
-  expect(order).toEqual(['run', 'worth', 'trade'])
+  // Guy's pick A (2026-11-20): verdict and trade search are one section.
+  expect(order).toEqual(['run', 'worth'])
   // Only one Nightmare grid on the page.
   await expect(panel.locator('[data-woke-nightmare]')).toHaveCount(1)
-  // One section open at a time: opening Trade search folds Worth running, and back.
+  // One section open at a time: opening the map's mods folds Worth running, and back.
   await strip.locator('[data-map-trade] > button').first().click()
   await expect(strip.locator('[data-nightmare-bars]')).toHaveCount(0)
   await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'true')
   await strip.locator('[data-nightmare-fold]').click()
   await expect(strip.locator('[data-nightmare-bars]')).toBeVisible()
   await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'false')
-  await overlay.snap('nightmare map holistic A')
+  await overlay.snap('nightmare map one section')
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
 })
