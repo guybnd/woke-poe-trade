@@ -23,7 +23,7 @@
         :item="item"
         :filters="itemFilters" />
     </filter-name>
-    <woke-map-strip :item="item" :stats="itemStats" :filters="itemFilters" :add-mods="!presets.some(p => p.active && p.id === 'filters.preset_bulk')" class="mb-2">
+    <woke-map-strip :item="item" :stats="itemStats" :filters="itemFilters" :worth="isNightmareMap" :add-mods="!presets.some(p => p.active && p.id === 'filters.preset_bulk')" class="mb-2">
       <!-- woke: a Nightmare Map's worth sits between Run it? and Trade search (Guy's pick A). -->
       <template v-if="isNightmareMap" #worth><woke-nightmare-strip :item="item" /></template>
     </woke-map-strip>
