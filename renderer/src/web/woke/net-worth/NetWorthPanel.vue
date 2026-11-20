@@ -52,13 +52,11 @@
       </div>
 
       <template v-if="detailsOpen && anyDetails">
-        <!-- Layout F: two boxes under the chart, then Since last refresh
-             beside Where it is and the price moves. -->
         <!-- Two boxes under the chart (G): per hour of play | what you hold. -->
         <section v-if="shown.perHour || shown.numbers" :class="$style.boxes">
           <div v-if="shown.perHour" :class="$style.box">
             <div :class="$style.boxHead">
-              <span :class="$style.caps">Per hour</span>
+              <span :class="$style.caps">Play</span>
               <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
             </div>
             <div :class="$style.kv">
