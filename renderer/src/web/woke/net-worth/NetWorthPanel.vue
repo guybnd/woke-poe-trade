@@ -42,14 +42,14 @@
         <section v-if="shown.chart || shown.perHour" :class="[$style.halves, { [$style.one]: !(shown.chart && shown.perHour) }]">
           <section v-if="shown.chart" :class="$style.chartBlock">
             <div :class="$style.chartHead">
-              <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
+              <TextTabs v-model="chartMode" :options="MODE_OPTIONS" />
               <span v-if="goal" class="text-xs" :class="$style.goalLine">
                 {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
                 <template v-if="eta.reached">reached</template>
                 <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
                 <template v-else>no ETA yet</template>
               </span>
-              <WSegmented v-model="range" :options="RANGE_OPTIONS" />
+              <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
             <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
             <div v-if="chartMode === 'category'" :class="$style.legend">
@@ -59,8 +59,8 @@
           </section>
           <div v-if="shown.perHour" :class="$style.box">
             <div :class="$style.boxHead">
-              <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
-              <WToggle v-model="leaveOutHub">Leave out hideout</WToggle>
+              <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
+              <button type="button" role="checkbox" :aria-checked="leaveOutHub" :class="$style.check" @click="leaveOutHub = !leaveOutHub"><i :class="leaveOutHub ? 'fas fa-check-square' : 'far fa-square'" />Leave out hideout</button>
             </div>
             <div>
               <div :class="$style.caps">Per hour of play</div>
@@ -201,7 +201,7 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, WToggle, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, openMenu, toast, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -221,6 +221,7 @@ import { rateTip, shortSpan, span } from './play-time'
 import { chartHOf, clampChartH, colWeights, dragCols, edges } from './layout'
 import type { ColId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
+import TextTabs from './TextTabs.vue'
 import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
@@ -619,6 +620,9 @@ function refresh () {
 .halves > .chartBlock { display: flex; flex-direction: column; }
 .chartFill { flex: 1 1 auto; height: auto !important; min-height: 80px; }
 .spark + .holdings { margin-left: 0; }
+.check { display: inline-flex; align-items: center; gap: 5px; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; }
+.check:hover { color: var(--w-fg); }
+.check i { color: var(--w-gold); }
 .holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
