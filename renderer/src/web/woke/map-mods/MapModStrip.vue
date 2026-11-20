@@ -16,7 +16,7 @@
       <template v-for="p in result.props" :key="p.label">
         <button v-if="propFilter(p.label)" type="button" :class="[$style.chip, $style.propChip, !propFilter(p.label)!.disabled && $style.propOn]" class="w-num"
           :aria-pressed="!propFilter(p.label)!.disabled" :title="propTitle(p.label)" :data-map-prop="p.label"
-          @click="toggleProp(p.label)" @wheel.prevent="wheelMin(p.label, $event)">
+          data-own-wheel @click="toggleProp(p.label)" @wheel.prevent.stop="wheelMin(p.label, $event)">
           {{ p.label }} {{ p.value }}%<template v-if="!propFilter(p.label)!.disabled && minOf(p.label) != null"> ≥{{ minOf(p.label) }}</template>
         </button>
         <span v-else :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
@@ -125,9 +125,11 @@ function toggleProp (label: string) {
 // The wheel moves the min, as on the rows it replaced; turns the chip on.
 function wheelMin (label: string, e: WheelEvent) {
   const f = propFilter(label)
-  if (!f?.roll) return
+  // Sideways scroll and Ctrl+wheel (zoom) aren't a step, as on the other chips.
+  if (!f?.roll || e.deltaY === 0 || e.ctrlKey) return
   const now = typeof f.roll.min === 'number' ? f.roll.min : f.roll.value
-  f.roll.min = Math.max(0, now + (e.deltaY < 0 ? 1 : -1))
+  // Never past the map's own number, or the search leaves this map out.
+  f.roll.min = Math.min(f.roll.value, Math.max(0, now + (e.deltaY < 0 ? 1 : -1)))
   f.disabled = false
 }
 function propTitle (label: string): string {
