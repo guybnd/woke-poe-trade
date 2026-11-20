@@ -11,6 +11,12 @@
       <template v-if="store.loadError.value" #banner>
         <WBanner>Couldn't read your saved nights: {{ store.loadError.value }}</WBanner>
       </template>
+      <template #meta>
+        <div class="flex flex-wrap items-center gap-2" data-chip-place>
+          <span class="w-dim text-xs" title="A line about each map you leave: time, deaths, league NPCs met, level-ups">After a map</span>
+          <WSegmented v-model="chipPlace" :options="CHIP_OPTIONS" />
+        </div>
+      </template>
       <WEmpty v-if="!list.length" icon="fas fa-moon">
         No nights yet. A night is read from the game's log, from your first map until it goes quiet for 15 minutes.
       </WEmpty>
@@ -42,7 +48,7 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel, toast } from '../ui'
+import { WBanner, WEmpty, WPanel, WSegmented, toast } from '../ui'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -57,7 +63,7 @@ import type { NightStory } from './story'
 import { MapLog, tierText, usualMapMs } from './map-log'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
-import type { SessionStoryWidget } from './widget'
+import type { ChipPlace, SessionStoryWidget } from './widget'
 
 const props = defineProps<{ config: SessionStoryWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -217,6 +223,17 @@ function peekText (s: NightStory): string {
   const profit = p != null ? ` · ${p > 0 ? '+' : ''}${formatChaos(p, s.divine)}` : ''
   return `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${profit}`
 }
+
+// Same choice as in Settings › Farming & sessions.
+const CHIP_OPTIONS: Array<{ value: ChipPlace, label: string }> = [
+  { value: 'dock', label: 'On the dock icon' },
+  { value: 'center', label: 'Middle of the screen' },
+  { value: 'off', label: 'Off' }
+]
+const chipPlace = computed({
+  get: () => props.config.chipPlace ?? 'dock',
+  set: (v: ChipPlace) => { props.config.chipPlace = v }
+})
 
 const dockMenu = computed<DockMenuAction[]>(() => [{
   label: 'All nights',
