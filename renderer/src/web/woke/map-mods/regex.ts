@@ -74,15 +74,17 @@ export const TOOLTIP_LINES = [
 // f" tells "Buffs on Players expire #% faster" from the "slower" wording, and
 // it may be pinned to a line's start or end (`^`, `$`, as poe.re does), so
 // "% item r" and "marker$" find mods whose words all sit in longer ones.
+// A number's sign folds in too: the stat data drops the `+` the game shows
+// ("Monsters have +20% Chance to Block"), so the sign is never relied on.
 function canon (text: string): string {
-  return text.toLowerCase().replace(/[0-9#]+(?:\.[0-9#]+)?/g, '#')
+  return text.toLowerCase().replace(/[+-]?[0-9#]+(?:\.[0-9#]+)?/g, '#')
 }
 
-// What a token turns into in the search box. Map mods roll whole numbers;
-// `\d` is what poe.re uses too. `+` is a regex character, so a `.` stands in
-// for it.
+// What a token turns into in the search box: a number may carry a sign. Map
+// mods roll whole numbers; `\d` is what poe.re uses too. Any other `+` is a
+// regex character, so a `.` stands in for it.
 function render (token: string): string {
-  return token.replace(/\+/g, '.').replace(/#/g, '\\d+')
+  return token.replace(/\+/g, '.').replace(/#/g, '[+-]?\\d+')
 }
 
 // Letters a token may hold: none of PoE's search syntax (quotes, `|`, `!`) or

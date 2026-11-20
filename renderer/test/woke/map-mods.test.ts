@@ -85,6 +85,9 @@ describe('stash regex', () => {
       const { text, missing } = buildMapRegex({ avoid: [mod], want: [], mins: {}, highlight: 'good' }, MODS, mapNames)
       if (missing.length) continue // no unique text: reported by the next test
       if (stashSearch(text, mapTooltip([mod]))) wrong.push(`${mod}: not hidden by ${text}`)
+      // The stat data drops the sign the game shows ("+20% Chance to Block").
+      if (stashSearch(text, mapTooltip([mod.replace(/#/g, '+#')]))) wrong.push(`${mod}: with a + sign, not hidden by ${text}`)
+      if (stashSearch(text, mapTooltip([mod.replace(/#/g, '-#')]))) wrong.push(`${mod}: with a - sign, not hidden by ${text}`)
       const name = RARE_NAMES.find(n => !stashSearch(text, mapTooltip([], {}).replace('Grim Hollow', n)))
       if (name) wrong.push(`${mod}: token ${text} also hides a map named "${name}"`)
       for (const other of MODS) {
