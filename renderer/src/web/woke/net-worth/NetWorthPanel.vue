@@ -34,7 +34,7 @@
       <template v-if="detailsOpen && anyDetails">
         <!-- Layout D: one stat strip, the chart full width, then Since last
              refresh beside Where it is and the price moves. -->
-        <section v-if="shown.perHour || shown.numbers" :class="$style.strip">
+        <section v-if="shown.perHour || shown.numbers" :class="$style.statStrip">
           <template v-if="shown.perHour">
             <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
             <span :class="$style.stat" :title="rateShown.tip"><span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" /></template><template v-else>—</template></b></span>
@@ -258,7 +258,6 @@ const fmt = (n: number) => formatAmount(n)
 // The chaos behind a divine figure, for hover titles.
 const inChaos = (chaos: number) => `${formatAmount(Math.round(chaos))} chaos`
 const unit = computed(() => divine.value ? 'd' : 'c')
-const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatAmount(n)
 const toDiv = (chaos: number) => divine.value ? chaos / divine.value : chaos
 const div = (chaos: number) => {
   const d = toDiv(chaos)
@@ -329,7 +328,7 @@ function openSections (e: MouseEvent) {
 }
 // Details with every section in it off: no toggle, nothing to open.
 // Since last refresh beside Where it is and the price moves (layout D).
-// Their widths, the top row's split and the chart's height can be dragged;
+// Their widths, the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
 const showSide = computed(() => shown.value.where || showMoves.value)
@@ -597,7 +596,7 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.strip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.statStrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); }
 .stat { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
 .stat b { font-weight: 500; }
 .stat .split { align-self: center; width: 90px; flex: none; }
@@ -606,7 +605,6 @@ function refresh () {
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
 .moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; }
-/* One line per figure: label, value, and its detail under the value. */
 .split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
 .split > span { flex-basis: 0; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: 0; }
