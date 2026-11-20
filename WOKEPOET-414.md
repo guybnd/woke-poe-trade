@@ -65,6 +65,14 @@ history:
     date: '2026-11-20T12:07:54.877Z'
     selfAttested: true
     id: c-2026-11-20t12-07-54-877z
+  - type: comment
+    user: Agent
+    comment: >-
+      #680 merged and live in the dev build. It adds the card chart with hover,
+      window layout C with resizable sections, and median map time.
+    date: '2026-11-20T12:41:37.317Z'
+    selfAttested: true
+    id: c-2026-11-20t12-41-37-317z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/675'
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
