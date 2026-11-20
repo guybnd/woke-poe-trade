@@ -51,11 +51,11 @@
               </span>
               <WSegmented v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
             <div v-if="chartMode === 'category'" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
-            <SplitHandle dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+            <SplitHandle v-if="!shown.perHour" dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
           </section>
           <div v-if="shown.perHour" :class="$style.box">
             <div :class="$style.boxHead">
@@ -69,17 +69,17 @@
             <div :class="$style.tiles">
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
-              <div><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
+              <div :title="leaveOutHub ? 'Maps and other areas' : 'Maps, other areas and hideout'"><span :class="$style.caps">{{ leaveOutHub ? 'Played' : 'Played + hideout' }}</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
             <template v-if="splitTotal > 0">
               <div :class="$style.split">
                 <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" :title="`${x.label}: ${span(x.ms)} (${Math.round(x.ms / splitTotal * 100)}%)`" />
               </div>
               <div :class="[$style.legend, $style.timeLegend]">
-                <span v-for="x in splitParts" :key="x.id" :title="`${Math.round(x.ms / splitTotal * 100)}%`"><i :class="$style[x.id]" />{{ x.label }} {{ span(x.ms) }}</span>
+                <span v-for="x in splitParts" :key="x.id" :title="`${x.label}: ${Math.round(x.ms / splitTotal * 100)}%`"><i :class="$style[x.id]" />{{ x.short }} {{ span(x.ms) }}</span>
               </div>
             </template>
-            <div class="w-dim text-xs">{{ timeNote }}</div>
+            <div :class="$style.note">{{ timeNote }}</div>
           </div>
         </section>
 
@@ -307,10 +307,10 @@ const rateShown = computed(() => {
 const splitParts = computed(() => {
   const r = rateShown.value.r
   return [
-    { id: 'map', label: 'Maps', ms: r.mapMs },
-    { id: 'other', label: 'Other areas', ms: r.otherMs },
-    { id: 'hub', label: 'Hideout and town', ms: r.hubMs },
-    { id: 'off', label: 'Closed or AFK', ms: r.offMs }
+    { id: 'map', label: 'Maps', short: 'Maps', ms: r.mapMs },
+    { id: 'other', label: 'Other areas (campaign, bosses)', short: 'Other', ms: r.otherMs },
+    { id: 'hub', label: 'Hideout and town', short: 'Hideout', ms: r.hubMs },
+    { id: 'off', label: 'Closed or AFK', short: 'Off', ms: r.offMs }
   ].filter(x => x.ms >= 60_000)
 })
 const splitTotal = computed(() => splitParts.value.reduce((s, x) => s + x.ms, 0))
@@ -608,12 +608,16 @@ function refresh () {
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
 .halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: stretch; }
 .halves.one { grid-template-columns: minmax(0, 1fr); }
-.halves > .chartBlock { padding: 0; border-bottom: 0; min-width: 0; align-self: start; }
+.halves > .chartBlock { padding: 0; border-bottom: 0; min-width: 0; }
 .bigRate { display: block; font-size: calc(22px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 4px 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
 .tiles b { font-weight: 500; }
+.timeLegend { flex-wrap: nowrap; gap: var(--w-s2); white-space: nowrap; overflow: hidden; }
 .timeLegend i { opacity: 1; }
+.note { font-size: var(--w-fs-xs); color: var(--w-dim); }
+.halves > .chartBlock { display: flex; flex-direction: column; }
+.chartFill { flex: 1 1 auto; height: auto !important; min-height: 80px; }
 .spark + .holdings { margin-left: 0; }
 .holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
@@ -625,9 +629,9 @@ function refresh () {
 .split > span { flex-basis: 0; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: 0; }
 .map { background: var(--w-up); }
-.other { background: var(--w-accent); }
+.other { background: var(--w-info); }
 .hub { background: var(--w-gold); }
-.off { background: var(--w-line-strong); }
+.off { background: color-mix(in srgb, var(--w-fg) 22%, transparent); }
 .total { font-size: calc(20px * var(--w-text-scale, 1)); color: var(--w-fg); line-height: 1.1; }
 .spark { margin-left: auto; }
 .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--w-dim); font-size: var(--w-fs-sm); cursor: pointer; padding: 1px 4px; border-radius: var(--w-r-sm); white-space: nowrap; }
