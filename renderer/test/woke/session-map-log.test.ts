@@ -1,6 +1,7 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
-import { MapLog, chipLines, compareMap, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import { MapLog, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import { chipLines, compareMap } from '@/web/woke/session-story/chip'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`

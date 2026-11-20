@@ -40,7 +40,8 @@ import { computed, shallowRef } from 'vue'
 import { formatClock } from '../ui/format'
 import { useHoverZone } from '../shared/hover'
 import { tierText } from './map-log'
-import type { MapCompare, MapRecord } from './map-log'
+import type { MapRecord } from './map-log'
+import type { MapCompare } from './chip'
 
 const props = defineProps<{ chip: { rec: MapRecord, cmp: MapCompare } | null, clickToClose: boolean }>()
 const emit = defineEmits<{ close: [] }>()
