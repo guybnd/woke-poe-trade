@@ -31,11 +31,19 @@ export class HttpProxy {
         }
       }
 
+      // woke: the trade site's hideout travel (POST /api/trade/whisper) is
+      // refused without the site's own Origin, as its page sends it.
+      const path = req.url.slice(('/proxy/' + host).length).split('?')[0]
+      const siteHeaders: Record<string, string> = official && req.method === 'POST' && /^\/api\/trade2?\/whisper$/.test(path)
+        ? { origin: `https://${host}`, referer: `https://${host}/trade` }
+        : {}
+
       const proxyReq = net.request({
         url: 'https://' + req.url.slice('/proxy/'.length),
         method: req.method,
         headers: {
           ...req.headers,
+          ...siteHeaders,
           'user-agent': app.userAgentFallback
         },
         useSessionCookies: true,

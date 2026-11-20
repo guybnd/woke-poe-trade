@@ -239,3 +239,25 @@
 .w-pc-sdot.g { background: #6cb33f; }
 .w-pc-sdot.b { background: #4f7fd8; }
 .w-pc-sdot.w { background: #e8e4da; }
+
+/* ---------- hideout travel (instant buyout rows) ---------- */
+.w-pc-travel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--w-r-sm);
+  background: none;
+  color: var(--w-dim);
+  font-size: var(--w-fs-xs);
+  vertical-align: bottom;
+  cursor: pointer;
+}
+.w-pc-travel:hover, .w-pc-travel.w-pc-travel-on { color: var(--w-accent); border-color: var(--w-line-strong); background: var(--w-accent-soft); }
+.w-pc-travel:disabled { cursor: progress; }
+.w-pc-travel:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
+.w-pc-travel-note { color: var(--w-accent); }
+.w-pc-travel-note.w-pc-travel-warn { color: var(--w-warn); }

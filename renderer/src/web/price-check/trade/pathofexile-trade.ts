@@ -250,6 +250,8 @@ interface FetchResult {
       type: '~price'
     }
     fee?: number
+    // woke: instant buyout listings in a signed-in fetch; see woke/hideout-travel
+    hideout_token?: string
     account: Account
   }
 }
@@ -273,6 +275,8 @@ export interface PricingResult {
   isMine: boolean
   hasNote: boolean
   hasFee: boolean
+  // woke: travel pass for an instant buyout listing (signed-in fetches only)
+  hideoutToken?: string
   accountName: string
   accountStatus: 'offline' | 'online' | 'afk'
   ign: string
@@ -905,6 +909,7 @@ export async function requestResults (
       priceCurrency: result.listing.price?.currency ?? 'no price',
       hasNote: result.item.note != null,
       hasFee: result.listing.fee != null,
+      hideoutToken: result.listing.fee != null ? result.listing.hideout_token : undefined,
       isMine: isOwnAccount(result.listing.account.name, opts.accountName),
       ign: result.listing.account.lastCharacterName,
       accountName: result.listing.account.name,

@@ -127,6 +127,11 @@
                     <img :class="$style.stashIcon" src="/images/stash.png">
                     <i v-if="!row.lead.hasNote" class="fas fa-question" />
                   </span>
+                  <button v-else-if="row.lead.hideoutToken && !row.lead.isMine" type="button" class="w-pc-travel"
+                    :class="{ 'w-pc-travel-on': !!travelStates.get(row.lead.id) }"
+                    :disabled="travelStates.get(row.lead.id)?.kind === 'sending'"
+                    title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
+                    @click.stop="travel(row.lead)" @mouseenter.stop="hideTip"><i class="fas fa-door-open" /></button>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
                   <span v-if="row.lead.corrupted" class="w-pc-tag">Corrupted</span>
                 </span>
@@ -145,7 +150,10 @@
               </td>
               <td class="px-2 w-pc-age">
                 <span v-if="!showSeller && row.lead.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
-                <span class="w-pc-age-inner">
+                <span v-if="travelNote(travelStates.get(row.lead.id))" class="w-pc-travel-note"
+                  :class="{ 'w-pc-travel-warn': travelNote(travelStates.get(row.lead.id))!.tone === 'warn' }"
+                  :title="travelNote(travelStates.get(row.lead.id))!.title">{{ travelNote(travelStates.get(row.lead.id))!.text }}</span>
+                <span v-else class="w-pc-age-inner">
                   <span :class="[$style.accountStatus, $style[row.status]]"></span>
                   <span>{{ improved && row.ageText ? row.ageText : row.lead.relativeDate }}</span>
                 </span>
@@ -206,6 +214,7 @@ import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
 import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
+import { travelStates, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
 
 const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
@@ -428,7 +437,7 @@ export default defineComponent({
       if (showSockets.value && showColours.value) width += WIDTH_SOCKET_DOTS
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
-      if (listings.some(r => !r.hasFee)) width += WIDTH_STASH_ICON
+      if (listings.some(r => !r.hasFee || r.hideoutToken)) width += WIDTH_STASH_ICON
       return width
     })
     const columnCap = computed(() =>
@@ -513,6 +522,9 @@ export default defineComponent({
         if (row.lead.tipItem) showTip(e, { kind: 'item', item: row.lead.tipItem, listing: row.lead.listedItem && listingDetail(row.lead.listedItem) })
       },
       hideTip,
+      travelStates,
+      travelNote,
+      travel: (listing: PricingResult) => { if (listing.hideoutToken) void travelToHideout(listing.id, listing.hideoutToken) },
       openItemMenu,
       pobMenuRef,
       FIX_TAG,
