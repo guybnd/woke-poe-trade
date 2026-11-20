@@ -4,7 +4,7 @@
 
 import type { PriceItem } from '../market/types'
 import { TROPHY_SLOTS, slotMatcher } from './covens'
-import { beastKindLabel } from './beast-kinds'
+import { BEAST_FAMILIES, beastKind } from './beast-kinds'
 
 export interface PriceGroup {
   label: string
@@ -15,11 +15,21 @@ export interface PriceGroup {
   unit?: number
   // Short tag shown next to an item, e.g. the Expedition vendor.
   tag?: (item: PriceItem) => string | undefined
+  // Rows split into kinds (beast families): each name gets its kind's icon,
+  // and the full panel shows the kinds as chips that filter the list.
+  kinds?: GroupKind[]
+  kindOf?: (item: PriceItem) => string | undefined
   // Prices here can't rank the items against each other, so no "best" call.
   unranked?: boolean
   // A name with many priced variants (a Viscera's effects) shows its cheapest.
   cheapest?: boolean
   limit?: number
+}
+
+export interface GroupKind {
+  id: string
+  label: string
+  icon: string
 }
 
 export interface Mechanic {
@@ -279,7 +289,14 @@ export const MECHANICS: Mechanic[] = [
     short: 'BST',
     icon: 'fas fa-paw',
     groups: [
-      { label: 'Captured beasts', types: ['Beast'], tag: i => beastKindLabel(i.name), limit: 12 }
+      {
+        label: 'Captured beasts',
+        types: ['Beast'],
+        tag: i => beastKind(i.name)?.group,
+        kinds: BEAST_FAMILIES.map(f => ({ id: f.id, label: f.short, icon: f.icon })),
+        kindOf: i => beastKind(i.name)?.family,
+        limit: 12
+      }
     ],
     scarabs: /Bestiary/,
     tips: [
@@ -332,6 +349,7 @@ export interface PricedRow {
   chaos: number
   unit: number
   tag?: string
+  kind?: GroupKind
 }
 
 // leaveOut: drops a name whose chosen row it matches (a thin market, say)
@@ -352,7 +370,10 @@ export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (i
     const prev = best.get(item.name)
     if (!prev || better(item, prev)) best.set(item.name, item)
   }
-  const rows: PricedRow[] = [...best.values()].filter(item => !leaveOut?.(item)).map(item => ({ item, chaos: item.chaos * unit, unit, tag: group.tag?.(item) }))
+  const rows: PricedRow[] = [...best.values()].filter(item => !leaveOut?.(item)).map(item => {
+    const kind = group.kindOf?.(item)
+    return { item, chaos: item.chaos * unit, unit, tag: group.tag?.(item), kind: group.kinds?.find(k => k.id === kind) }
+  })
   rows.sort((a, b) => b.chaos - a.chaos)
   return rows.slice(0, group.limit ?? 20)
 }

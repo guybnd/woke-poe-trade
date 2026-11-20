@@ -267,6 +267,14 @@ const GROUP_BEASTS: Record<string, string[]> = {
   ]
 }
 
+// The game's Bestiary family icons (UIImages/InGame/Bestiary/Icon*), in its order.
+export const BEAST_FAMILIES: Array<{ id: BeastFamily, short: string, icon: string }> = [
+  { id: 'The Wilds', short: 'Wilds', icon: '/images/bestiary/wilds.png' },
+  { id: 'The Sands', short: 'Sands', icon: '/images/bestiary/sands.png' },
+  { id: 'The Caverns', short: 'Caverns', icon: '/images/bestiary/caverns.png' },
+  { id: 'The Deep', short: 'Deep', icon: '/images/bestiary/deep.png' }
+]
+
 export interface BeastKind {
   // "Amphibian"
   group: string

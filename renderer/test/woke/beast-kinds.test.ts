@@ -2,7 +2,9 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
-import { beastKind, beastKindLabel } from '@/web/woke/mechanics/beast-kinds'
+import { BEAST_FAMILIES, beastKind, beastKindLabel } from '@/web/woke/mechanics/beast-kinds'
+import { mechanicById, priceGroup } from '@/web/woke/mechanics/data'
+import type { PriceItem } from '@/web/woke/market/types'
 
 describe('beast kinds', () => {
   it('knows every captured beast in the item data', () => {
@@ -22,5 +24,27 @@ describe('beast kinds', () => {
     // poe.ninja and the game spell it with and without the accent.
     expect(beastKindLabel('Black Morrigan')).toBe('Unnatural · Wilds')
     expect(beastKindLabel('Mirror of Kalandra')).toBeUndefined()
+  })
+})
+
+describe('Bestiary price list kinds', () => {
+  const beast = (name: string, chaos: number): PriceItem => ({ name, type: 'Beast', variant: '', chaos })
+  const items = [beast('Craicic Croaker', 200), beast('Wild Hellion Alpha', 199), beast('Fenumal Plagued Arachnid', 140), beast('Vivid Vulture', 60)]
+  const group = mechanicById('bestiary')!.groups[0]
+
+  it('ships an icon per family', () => {
+    for (const f of BEAST_FAMILIES) {
+      expect(fs.existsSync(path.resolve(__dirname, '../../public', f.icon.slice(1)))).toBe(true)
+    }
+  })
+
+  it('gives each row its family and group', () => {
+    const rows = priceGroup(group, items)
+    expect(rows.map(r => [r.kind?.label, r.tag])).toEqual([['Deep', 'Amphibian'], ['Wilds', 'Feline'], ['Caverns', 'Arachnid'], ['Sands', 'Avian']])
+  })
+
+  it('narrows to one family before the limit', () => {
+    const rows = priceGroup(group, items, item => group.kindOf!(item) !== 'The Wilds')
+    expect(rows.map(r => r.item.name)).toEqual(['Wild Hellion Alpha'])
   })
 })

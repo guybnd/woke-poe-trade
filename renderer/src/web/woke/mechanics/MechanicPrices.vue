@@ -7,12 +7,18 @@
     </div>
     <template v-for="g in shownGroups" :key="g.label">
       <div class="w-group-label">{{ g.label }}</div>
+      <div v-if="g.kinds && top == null && items.length" :class="$style.kinds">
+        <WChip v-for="k in g.kinds" :key="k.id" clickable :active="picked === k.id" :title="picked === k.id ? 'Show all' : `Show only ${k.label}`" @click="picked = picked === k.id ? null : k.id">
+          <WIcon :src="k.icon" />{{ k.label }}
+        </WChip>
+      </div>
       <WSkeleton v-if="!items.length" :rows="Math.min(top ?? 4, 4)" />
       <div v-else-if="g.thinOnly" class="w-faint text-xs" style="padding: 2px var(--w-pad) 6px;">Only thin-market prices here, and Skip low confidence hides them.</div>
-      <div v-else-if="!g.rows.length" class="w-faint text-xs" style="padding: 2px var(--w-pad) 6px;">poe.ninja has no prices for these.</div>
+      <div v-else-if="!g.rows.length" class="w-faint text-xs" style="padding: 2px var(--w-pad) 6px;">{{ g.picked ? `Nothing priced from ${g.picked.label}.` : 'poe.ninja has no prices for these.' }}</div>
       <div v-for="(row, i) in g.rows" :key="row.item.name" class="w-row" :class="$style.priceGrid">
         <span v-item-tip="row.item" class="flex items-center gap-1" :class="$style.name">
-          <WIcon :src="ninjaIcon(row.item.type, row.item.name) ?? ninjaArt(row.item.type, row.item.name)" fallback="fas fa-coins" /><i v-if="isThin(row.item)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(row.item)" /><span :class="$style.label">{{ row.item.name }}</span><span v-if="row.tag" class="w-faint ml-1 text-xs" :class="$style.tag">{{ row.tag }}</span>
+          <WIcon v-if="row.kind" :src="row.kind.icon" :title="`The ${row.kind.label}`" />
+          <WIcon v-else :src="ninjaIcon(row.item.type, row.item.name) ?? ninjaArt(row.item.type, row.item.name)" fallback="fas fa-coins" /><i v-if="isThin(row.item)" class="fas fa-exclamation-circle w-faint" :title="thinTitle(row.item)" /><span :class="$style.label">{{ row.item.name }}</span><span v-if="row.tag" class="w-faint ml-1 text-xs" :class="$style.tag">{{ row.tag }}</span>
           <span v-if="i === 0 && !g.unranked" class="w-up ml-1" :class="$style.best">best</span>
         </span>
         <span :class="$style.bar"><i :style="{ width: barWidth(row.chaos, g.max) }" /></span>
@@ -23,12 +29,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { WPrice, WIcon, WSkeleton, vItemTip } from '../ui'
+import { computed, ref, watch } from 'vue'
+import { WChip, WPrice, WIcon, WSkeleton, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { ninjaArt } from '../market/ninja-icons'
 import { priceGroup, verdict } from './data'
-import type { Mechanic } from './data'
+import type { Mechanic, PriceGroup } from './data'
 import { isThin, thinTitle } from '../market/types'
 import type { PriceItem } from '../market/types'
 
@@ -42,19 +48,25 @@ const props = withDefaults(defineProps<{
   skipThin?: boolean
 }>(), { top: undefined, skipThin: false })
 
+// A kind chip (beast family) narrows the groups that have kinds, before their limit.
+const picked = ref<string | null>(null)
+watch(() => props.mech.id, () => { picked.value = null })
+const offKind = (g: PriceGroup) => (item: PriceItem) => picked.value != null && g.kindOf != null && g.kindOf(item) !== picked.value
 // Thin is judged on the row priceGroup picked for a name (plain before 5L/6L),
 // so a thin plain row drops the name rather than promoting a linked one.
 const groups = computed(() => props.mech.groups.map(g => {
-  const rows = priceGroup(g, props.items, props.skipThin ? isThin : undefined)
-  const thinOnly = props.skipThin && !rows.length && priceGroup(g, props.items).length > 0
-  return { label: g.unit ? `${g.label} (per ${g.unit})` : g.label, unit: g.unit, rows, max: rows[0]?.chaos ?? 0, unranked: g.unranked, thinOnly }
+  const off = offKind(g)
+  const rows = priceGroup(g, props.items, item => off(item) || (props.skipThin && isThin(item)))
+  const thinOnly = props.skipThin && !rows.length && priceGroup(g, props.items, off).length > 0
+  const pickedKind = g.kindOf ? g.kinds?.find(k => k.id === picked.value) : undefined
+  return { label: g.unit ? `${g.label} (per ${g.unit})` : g.label, unit: g.unit, rows, max: rows[0]?.chaos ?? 0, unranked: g.unranked, thinOnly, kinds: g.kinds, picked: pickedKind }
 }))
 const shownGroups = computed(() => props.top == null
   ? groups.value
   : groups.value.slice(0, 1).map(g => ({ ...g, rows: g.rows.slice(0, props.top) })))
 // Best: the top of the first group that has rows, as verdict() does.
 const pick = computed(() => {
-  if (!props.skipThin) return verdict(props.mech, props.items)
+  if (!props.skipThin && picked.value == null) return verdict(props.mech, props.items)
   const g = groups.value.find(x => x.rows.length || x.thinOnly)
   return g && g.rows.length && !g.unranked ? { best: g.rows[0], next: g.rows[1] } : null
 })
@@ -77,8 +89,10 @@ function barWidth (chaos: number, max: number) {
 /* Long names ("Greater Incarnation of Dread's Head") wrap to a second line instead of being cut. */
 .name { min-width: 0; }
 .label { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
-/* A tag ("Arachnid · Caverns") stays on one line; the name gives way. */
+/* A tag ("Arachnid") stays on one line; the name gives way. */
 .tag { flex-shrink: 0; white-space: nowrap; }
+.kinds { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px var(--w-pad) 6px; }
+.kinds :global(.w-chip) { display: inline-flex; align-items: center; gap: 4px; }
 .best { font-size: var(--w-fs-caps); letter-spacing: 0.06em; text-transform: var(--w-caps-case); font-family: var(--w-caps-face); }
 .bar { height: 5px; border-radius: var(--w-r-sm); background: var(--w-panel-3); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--w-accent); opacity: 0.75; }
