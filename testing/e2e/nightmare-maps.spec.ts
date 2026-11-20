@@ -111,7 +111,7 @@ test('Nightmare Map with Map mods: the map section, then Worth running', async (
   await expect(strip.locator('[data-woke-nightmare] [data-nightmare-bars]')).toContainText('Zigg', SLOW)
   const order = await strip.evaluate(el => [...el.querySelectorAll('[data-map-run], [data-woke-nightmare], [data-map-trade]')].map(n =>
     n.hasAttribute('data-map-run') ? 'run' : n.hasAttribute('data-woke-nightmare') ? 'worth' : 'trade'))
-  // Guy's pick A (2026-11-21): verdict and trade search are one section.
+  // Guy's pick A (2026-11-20): verdict and trade search are one section.
   expect(order).toEqual(['run', 'worth'])
   // Only one Nightmare grid on the page.
   await expect(panel.locator('[data-woke-nightmare]')).toHaveCount(1)

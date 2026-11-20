@@ -1,15 +1,16 @@
 <template>
-  <!-- Guy's pick A (2026-11-21): one section. The verdict, its reason and Juice
-       are the top line; the counts, the number chips and the mod list (with
-       the trade search's Any / Has / Not) follow. Worth running (a Nightmare
+  <!-- Guy's pick A (2026-11-20): one section. Its top line is shared: Trade
+       search on the left, the verdict (reason, badge) and Juice on the right.
+       The counts, the number chips and the mod list (Any / Has / Not) follow. Worth running (a Nightmare
        Map) sits under it. Each mod is listed once. -->
   <div v-if="result" :class="[$style.strip, isUnsure(result) ? $style.unknown : $style[result.verdict.verdict]]" data-map-strip>
     <section :class="$style.zone" data-map-run data-map-trade>
       <button type="button" :class="$style.row" @click="open = !open"
         :aria-expanded="open">
-        <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
-        <span :class="$style.headline" class="w-trunc">{{ headline }}</span>
+        <span :class="$style.title">Trade search</span>
         <span class="flex-1" />
+        <span v-if="headline" :class="$style.headline" class="w-trunc">{{ headline }}</span>
+        <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
         <template v-if="result.juice">
           <span class="w-dim text-xs">Juice</span>
           <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
@@ -214,6 +215,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .summary { color: var(--w-dim); font-size: var(--w-fs-xs); }
 .skip [data-map-run] { border-color: color-mix(in srgb, var(--w-down) 55%, transparent); }
 .careful [data-map-run] { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
+.title { flex: none; color: var(--w-gold); font-family: var(--w-caps-face); font-size: var(--w-fs-sm); }
 .row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
 .badge {
   flex: none;
@@ -227,7 +229,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .careful .badge { background: var(--w-warn); }
 .run .badge { background: var(--w-up); }
 .unknown .badge { background: var(--w-panel-3); color: var(--w-dim); }
-.headline { font-weight: 500; min-width: 0; }
+.headline { font-weight: 500; min-width: 0; text-align: right; }
 .skip .headline { color: var(--w-down); }
 .careful .headline { color: var(--w-warn); }
 .run .headline { color: var(--w-up); }
