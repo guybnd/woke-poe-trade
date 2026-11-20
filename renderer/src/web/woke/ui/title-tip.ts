@@ -3,12 +3,15 @@
 // `title="…"` anywhere just works, and nothing per element is needed.
 //
 // The browser draws its tooltip from the attribute, so while the pointer is on
-// the element the title is taken off it and put back when the pointer leaves or
-// presses (a click keeps the browser's tooltip away by itself). A title that
-// changes while hovered (Vue updating `:title`) is taken again and the card follows.
+// the element the title is taken off it, and put back when the pointer leaves.
+// A press hides the card until the pointer leaves, with the title still off (put
+// back, the browser would show it on the next nudge). A title that changes while
+// hovered (Vue updating `:title`) is taken again and the card follows.
 //
-// Opt out with `data-native-title` on the element or a parent.
+// Opt out with `data-native-title` on the element or a parent. The e2e harness
+// turns it off (window.__wokeNativeTitles) so getByTitle finds hovered elements.
 import { hideHelp, helpTip, showHelp } from './help-tip'
+import { tip as gameTip } from './tooltip/tooltip'
 
 // Elements that draw their own tooltip (v-item-tip): a title around them stays
 // quiet while the pointer is on them.
@@ -18,7 +21,17 @@ const COLD_MS = 450
 // Moving from one title straight to the next shows it at once, like the system tooltip.
 const WARM_MS = 600
 
-export function installTitleTips (doc: Document = document): () => void {
+export interface TitleTips {
+  // Hide the card and drop a pending one until the pointer leaves (overlay
+  // closed, scroll, drag).
+  cancel: () => void
+  stop: () => void
+}
+
+export function installTitleTips (doc: Document = document): TitleTips {
+  if ((window as unknown as { __wokeNativeTitles?: boolean }).__wokeNativeTitles) {
+    return { cancel () {}, stop () {} }
+  }
   const owner = {}
   let held: HTMLElement | null = null
   // The title taken off `held`; null once Vue cleared it, so it isn't put back.
@@ -26,15 +39,16 @@ export function installTitleTips (doc: Document = document): () => void {
   let at = { x: 0, y: 0 }
   let timer: ReturnType<typeof setTimeout> | undefined
   let lastShown = 0
-  // Pressed: its title stays on until the pointer leaves.
-  let pressed: HTMLElement | null = null
+  // No card for `held` until the pointer leaves it (pressed, or cancelled).
+  let muted = false
 
   const observer = new MutationObserver(() => {
     if (!held) return
     const now = held.getAttribute('title')
-    if (now == null || now === '') {
+    if (now == null || !now.trim()) {
       // Cleared while hovered: nothing to show or put back.
-      text = null
+      if (now == null) text = null
+      else { text = now; take(held) }
       hideHelp(owner)
       return
     }
@@ -49,21 +63,35 @@ export function installTitleTips (doc: Document = document): () => void {
   }
 
   function show () {
-    if (!held || !text || !held.isConnected) return
+    if (!held || muted || !text?.trim() || !held.isConnected) return
+    // Never over another card (a WInfo, a chip's own help) or the item tooltip.
+    if (helpTip.value && helpTip.value.owner !== owner) return
+    if (gameTip.value) return
     lastShown = Date.now()
     showHelp(owner, held, text, undefined, { at, fit: true, lines: true })
   }
 
-  function release () {
+  function stopTimer () {
     clearTimeout(timer)
     timer = undefined
+  }
+
+  function hide () {
+    stopTimer()
+    if (helpTip.value?.owner === owner) {
+      lastShown = Date.now()
+      hideHelp(owner)
+    }
+  }
+
+  function release () {
+    hide()
     if (!held) return
     observer.disconnect()
     if (text != null && !held.hasAttribute('title')) held.setAttribute('title', text)
-    if (helpTip.value?.owner === owner) lastShown = Date.now()
-    hideHelp(owner)
     held = null
     text = null
+    muted = false
   }
 
   // The element whose title the browser would show for this target. `quiet`:
@@ -76,9 +104,9 @@ export function installTitleTips (doc: Document = document): () => void {
       if (ownTipEls.has(node)) quiet = true
       if (node.hasAttribute('data-native-title')) return null
       const t = node.getAttribute('title')
-      if (t) return node instanceof HTMLElement && !(node instanceof HTMLIFrameElement) ? { el: node, quiet } : null
+      if (t?.trim()) return node instanceof HTMLElement && !(node instanceof HTMLIFrameElement) ? { el: node, quiet } : null
       // title="" (WInfo) silences any title further up, as in the browser.
-      if (t === '') return null
+      if (t != null) return null
       node = node.parentElement
     }
     return null
@@ -86,19 +114,19 @@ export function installTitleTips (doc: Document = document): () => void {
 
   function onOver (e: MouseEvent) {
     at = { x: e.clientX, y: e.clientY }
+    // Dragging (a number, a pin, the rail grip): no tooltips, as in the browser.
+    if (e.buttons !== 0 && !held) return
     const found = titled(e.target)
     if (!found || found.el !== held) {
       release()
-      if (!found || found.el === pressed) return
+      if (!found || e.buttons !== 0) return
       held = found.el
       text = held.getAttribute('title')
       take(held)
       observer.observe(held, { attributes: true, attributeFilter: ['title'] })
     }
-    if (found.quiet) {
-      clearTimeout(timer)
-      timer = undefined
-      hideHelp(owner)
+    if (found.quiet || muted) {
+      hide()
       return
     }
     if (helpTip.value?.owner === owner || timer) return
@@ -114,26 +142,28 @@ export function installTitleTips (doc: Document = document): () => void {
 
   function onOut (e: MouseEvent) {
     const to = e.relatedTarget as Node | null
-    if (pressed && !(to && pressed.contains(to))) pressed = null
     if (!held || (to && held.contains(to))) return
     release()
   }
 
-  function onDown () {
+  function cancel () {
     if (!held) return
-    pressed = held
-    release()
+    muted = true
+    hide()
   }
 
   doc.addEventListener('mouseover', onOver, true)
   doc.addEventListener('mousemove', onMove, { capture: true, passive: true })
   doc.addEventListener('mouseout', onOut, true)
-  doc.addEventListener('pointerdown', onDown, true)
-  return () => {
-    release()
-    doc.removeEventListener('mouseover', onOver, true)
-    doc.removeEventListener('mousemove', onMove, true)
-    doc.removeEventListener('mouseout', onOut, true)
-    doc.removeEventListener('pointerdown', onDown, true)
+  doc.addEventListener('pointerdown', cancel, true)
+  return {
+    cancel,
+    stop () {
+      release()
+      doc.removeEventListener('mouseover', onOver, true)
+      doc.removeEventListener('mousemove', onMove, true)
+      doc.removeEventListener('mouseout', onOut, true)
+      doc.removeEventListener('pointerdown', cancel, true)
+    }
   }
 }

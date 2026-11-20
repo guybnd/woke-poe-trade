@@ -43,18 +43,17 @@ const pos = computed(() => placed.value
 // It sits outside the panel, so nothing hides it with the panel, and the overlay
 // gets no mouse events once the game has focus: closing the overlay mid-hover
 // must not leave it over the game. A scroll moves the "?" away from under it.
-const close = () => { hideHelp() }
+const titles = installTitleTips()
+const close = () => { titles.cancel(); hideHelp() }
 const wm = inject<WidgetManager | undefined>('wm', undefined)
 watch(() => wm?.active.value, close)
-let uninstallTitles: (() => void) | undefined
 onMounted(() => {
-  uninstallTitles = installTitleTips()
   window.addEventListener('blur', close)
   window.addEventListener('scroll', close, true)
   window.addEventListener('dragstart', close, true)
 })
 onUnmounted(() => {
-  uninstallTitles?.()
+  titles.stop()
   window.removeEventListener('blur', close)
   window.removeEventListener('scroll', close, true)
   window.removeEventListener('dragstart', close, true)

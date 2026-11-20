@@ -5,7 +5,7 @@ import { test, expect } from './harness'
 const RELOAD = 'Load the league list again'
 
 test('a title hover shows the app card under the pointer and puts the title back', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true, widgets: [] })
+  await overlay.boot({ overlayActive: true, widgets: [], titleTips: true })
   await overlay.widget('menu').locator('.fa-cog').click()
   const page = overlay.page
   const reload = page.getByTitle(RELOAD)
@@ -34,14 +34,35 @@ test('a title hover shows the app card under the pointer and puts the title back
   expect(await handle!.getAttribute('title')).toBe(RELOAD)
 })
 
-test('clicking a titled button hides the card and leaves the title on it', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true, widgets: [] })
+test('pressing a titled button hides the card until the pointer leaves, and the title comes back', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [], titleTips: true })
   await overlay.widget('menu').locator('.fa-cog').click()
   const page = overlay.page
   const reload = page.getByTitle(RELOAD)
-  await reload.hover()
-  await expect(page.getByRole('tooltip')).toHaveText(RELOAD)
-  await reload.click()
-  await expect(page.getByRole('tooltip')).toHaveCount(0)
-  await expect(page.getByTitle(RELOAD)).toHaveCount(1)
+  const handle = (await reload.elementHandle())!
+  await handle.hover()
+  const card = page.getByRole('tooltip')
+  await expect(card).toHaveText(RELOAD)
+  const btn = (await handle.boundingBox())!
+  await page.mouse.click(btn.x + btn.width / 2, btn.y + btn.height / 2)
+  await expect(card).toHaveCount(0)
+  // A nudge on the same button brings no card back, and no browser tooltip: the title stays off.
+  await page.mouse.move(btn.x + btn.width / 2 + 1, btn.y + btn.height / 2)
+  await page.waitForTimeout(700)
+  await expect(card).toHaveCount(0)
+  expect(await handle.getAttribute('title')).toBeNull()
+  await page.mouse.move(5, page.viewportSize()!.height - 5)
+  expect(await handle.getAttribute('title')).toBe(RELOAD)
+})
+
+test('the settings Close button stays put while hovered', async ({ overlay }) => {
+  await overlay.boot({ overlayActive: true, widgets: [], titleTips: true })
+  await overlay.widget('menu').locator('.fa-cog').click()
+  const page = overlay.page
+  const close = page.locator('[data-w-settings] [data-w-close]')
+  await close.hover()
+  await expect(page.getByRole('tooltip')).toHaveText('Close')
+  await expect(close).toBeVisible()
+  await close.click()
+  await expect(page.locator('[data-w-settings]')).toBeHidden()
 })
