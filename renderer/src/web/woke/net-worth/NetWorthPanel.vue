@@ -388,9 +388,8 @@ function saveLayout () {
   draft.value = null
 }
 function resetLayout (part: keyof PanelLayout) {
-  const l: PanelLayout = { ...props.config.layout }
-  delete l[part]
-  props.config.layout = l
+  // Left unset, each size falls back to its default (layout.ts).
+  props.config.layout = { ...props.config.layout, [part]: undefined }
 }
 const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
 // Tab labels switched off: a tab pick nothing shows any more is dropped.
