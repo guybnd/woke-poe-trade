@@ -2,7 +2,8 @@
 // the verdict on heist items and charts. The chart is real item text from the game.
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { fixture, loadGameData, parseItem } from '../helpers/game-data'
-import { allAreaMods, chartMods, heistMods, modsForMode, profileRegex, tier17Mods } from '@/web/woke/map-mods/data'
+import { allAreaMods, chartMods, heistMods, modsForMode, tier17Mods } from '@/web/woke/map-mods/data'
+import { profileRegex } from '@/web/woke/map-mods/search'
 import { MAX_SEARCH_LENGTH } from '@/web/woke/map-mods/regex'
 import { defaultProfile, modListRows, setSearchOption } from '@/web/woke/map-mods/rules'
 import type { MapModProfile } from '@/web/woke/map-mods/rules'

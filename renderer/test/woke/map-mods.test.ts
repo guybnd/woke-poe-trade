@@ -3,7 +3,8 @@
 // default profile are checked against the same data.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { loadGameData } from '../helpers/game-data'
-import { allAreaMods, allMapNames, profileRegex } from '@/web/woke/map-mods/data'
+import { allAreaMods, allMapNames } from '@/web/woke/map-mods/data'
+import { profileRegex } from '@/web/woke/map-mods/search'
 import { atLeast, buildMapRegex, MAX_SEARCH_LENGTH, TOOLTIP_LINES } from '@/web/woke/map-mods/regex'
 import { PRESETS, copyOfProfile, defaultProfile, rateMods, juiceScore } from '@/web/woke/map-mods/rules'
 import { TooltipMatcher } from '@/web/woke/map-mods/tooltip-parse'

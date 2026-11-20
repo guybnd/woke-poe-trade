@@ -57,8 +57,67 @@
         </div>
       </div>
 
-      <!-- Right: what you want from a map, and the search you take into the game. -->
+      <!-- Right: the search you take into the game, then what you want from a map. -->
       <div :class="$style.right" class="w-scroll">
+        <section :class="$style.pane" data-testid="map-stash-search">
+          <span class="w-group-label" style="padding: 0;">Stash search</span>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-dim">Lights up</span>
+            <WSegmented :model-value="tabOptions.highlight" :options="HIGHLIGHT_OPTIONS"
+              title="Which maps the search lights up in the stash"
+              @update:model-value="setSearchOption(profile, mode, { highlight: $event as 'good' | 'bad' })" />
+          </div>
+          <code :class="[$style.regex, { 'w-dim': !regex.text }]" :title="regex.text">{{ regex.text || emptyText }}</code>
+          <div :class="$style.meter">
+            <span :class="$style.bar"><span :class="{ [$style.over]: regex.tooLong }" :style="{ width: meterWidth }" /></span>
+            <span class="w-num" :class="regex.tooLong ? 'w-down' : 'w-dim'">{{ regex.length }} / {{ MAX_SEARCH_LENGTH }}</span>
+          </div>
+          <div v-if="regex.tooLong" class="w-down text-xs">Too long by {{ regex.length - MAX_SEARCH_LENGTH }}. Biggest: {{ costliest }}</div>
+          <div v-else-if="regex.dropped.length" class="w-warn text-xs" :title="regex.dropped.join('\n')">
+            Left out {{ regex.dropped.length }} to fit: {{ regex.dropped.slice(0, 3).join(', ') }}{{ regex.dropped.length > 3 ? '…' : '' }}
+          </div>
+          <div v-if="regex.missing.length" class="w-warn text-xs">No unique text found for: {{ regex.missing.join(', ') }}</div>
+
+          <template v-if="naming">
+            <form :class="$style.savebox" @submit.prevent="confirmSave">
+              <span class="text-xs w-accent">{{ existingName ? 'Rename' : target ? 'Overwrite' : 'Save as' }}</span>
+              <WField ref="nameField" v-model="saveName" :clear-on-esc="false" :class="$style.saveName" label="Name in the Regex library" />
+              <button v-if="!existingName && saves.length" type="button" :class="$style.pickBtn" class="w-focusable"
+                :aria-expanded="pickOpen" title="Pick a saved search to overwrite" aria-label="Saved searches"
+                @click="pickOpen = !pickOpen"><i class="fas" :class="pickOpen ? 'fa-chevron-up' : 'fa-chevron-down'" /></button>
+              <span :class="$style.saveBtns">
+                <WButton size="sm" variant="primary" :disabled="!saveName.trim()" @click="confirmSave">{{ saveVerb }}</WButton>
+                <WButton size="sm" variant="ghost" @click="naming = false">Cancel</WButton>
+              </span>
+            </form>
+            <div v-if="pickOpen && saves.length" :class="$style.picks" class="w-scroll" role="listbox" aria-label="Saved searches to overwrite">
+              <button v-for="(e, i) in saves" :key="i" type="button" role="option" :aria-selected="target === e"
+                :class="[$style.pick, { [$style.picked]: target === e }]" class="w-focusable" :title="e.text" @click="pick(e)">
+                <span class="w-trunc">{{ e.name }}</span>
+                <code class="w-trunc w-faint">{{ e.text }}</code>
+              </button>
+            </div>
+            <div class="w-faint text-xs">
+              <template v-if="existingName">Already saved as "{{ existingName }}".</template>
+              <template v-else-if="target">Replaces the search saved as "{{ target.name }}". Its notes and hotkey stay.</template>
+              <template v-else-if="saves.length">Goes into the Regex library under {{ LIBRARY_NAME[mode] }}. The arrow picks a saved one to overwrite.</template>
+              <template v-else>Goes into the Regex library under {{ LIBRARY_NAME[mode] }}. Enter saves.</template>
+            </div>
+          </template>
+          <div v-else class="flex items-center gap-2 flex-wrap">
+            <WButton size="sm" variant="primary" :icon="copied ? 'fas fa-check' : 'far fa-copy'" :disabled="!regex.text" @click="copy">Copy</WButton>
+            <WButton size="sm" icon="fas fa-search" :disabled="!regex.text" @click="paste" title="Type it into the open stash's search box">Paste in stash</WButton>
+          </div>
+          <div class="flex items-center gap-2">
+            <WButton v-if="!naming" size="sm" variant="ghost" icon="far fa-bookmark" :disabled="!regex.text" @click="startSave" title="Keep this search in the Regex library">Save…</WButton>
+            <span class="flex-1" />
+            <WChip clickable :active="tabOptions.autoTrim" @click="setSearchOption(profile, mode, { autoTrim: !tabOptions.autoTrim })"
+              title="When the search is too long, leave out wanted mods first, then avoided mods that aren't in a preset, longest first">
+              <i class="fas fa-cut" /> Trim to fit
+            </WChip>
+          </div>
+        </section>
+
         <section v-if="mode === 'maps'" ref="rewardsEl" :class="[$style.pane, { [$style.flash]: flash }]" data-testid="map-rewards-table">
           <div class="flex items-baseline gap-2">
             <span class="w-group-label flex-1" style="padding: 0;">Rewards</span>
@@ -102,53 +161,6 @@
             <span class="w-dim">minimum</span>
           </div>
         </section>
-
-        <span class="flex-1" />
-
-        <section :class="[$style.pane, $style.dock]">
-          <span class="w-group-label" style="padding: 0;">Stash search</span>
-          <div class="flex items-center gap-2 text-xs">
-            <span class="w-dim">Lights up</span>
-            <WSegmented :model-value="tabOptions.highlight" :options="HIGHLIGHT_OPTIONS"
-              title="Which maps the search lights up in the stash"
-              @update:model-value="setSearchOption(profile, mode, { highlight: $event as 'good' | 'bad' })" />
-          </div>
-          <code :class="[$style.regex, { 'w-dim': !regex.text }]" :title="regex.text">{{ regex.text || emptyText }}</code>
-          <div :class="$style.meter">
-            <span :class="$style.bar"><span :class="{ [$style.over]: regex.tooLong }" :style="{ width: meterWidth }" /></span>
-            <span class="w-num" :class="regex.tooLong ? 'w-down' : 'w-dim'">{{ regex.length }} / {{ MAX_SEARCH_LENGTH }}</span>
-          </div>
-          <div v-if="regex.tooLong" class="w-down text-xs">Too long by {{ regex.length - MAX_SEARCH_LENGTH }}. Biggest: {{ costliest }}</div>
-          <div v-else-if="regex.dropped.length" class="w-warn text-xs" :title="regex.dropped.join('\n')">
-            Left out {{ regex.dropped.length }} to fit: {{ regex.dropped.slice(0, 3).join(', ') }}{{ regex.dropped.length > 3 ? '…' : '' }}
-          </div>
-          <div v-if="regex.missing.length" class="w-warn text-xs">No unique text found for: {{ regex.missing.join(', ') }}</div>
-
-          <template v-if="naming">
-            <form :class="$style.savebox" @submit.prevent="confirmSave">
-              <span class="text-xs w-accent">{{ existingName ? 'Rename' : 'Save as' }}</span>
-              <WField ref="nameField" v-model="saveName" :clear-on-esc="false" class="flex-1" label="Name in the Regex library" />
-              <WButton size="sm" variant="primary" :disabled="!saveName.trim()" @click="confirmSave">{{ existingName ? 'Rename' : 'Save' }}</WButton>
-              <WButton size="sm" variant="ghost" @click="naming = false">Cancel</WButton>
-            </form>
-            <div class="w-faint text-xs">
-              <template v-if="existingName">Already saved as "{{ existingName }}".</template>
-              <template v-else>Goes into the Regex library under {{ LIBRARY_NAME[mode] }}. Enter saves.</template>
-            </div>
-          </template>
-          <div v-else class="flex items-center gap-2 flex-wrap">
-            <WButton size="sm" variant="primary" :icon="copied ? 'fas fa-check' : 'far fa-copy'" :disabled="!regex.text" @click="copy">Copy</WButton>
-            <WButton size="sm" icon="fas fa-search" :disabled="!regex.text" @click="paste" title="Type it into the open stash's search box">Paste in stash</WButton>
-          </div>
-          <div class="flex items-center gap-2">
-            <WButton v-if="!naming" size="sm" variant="ghost" icon="far fa-bookmark" :disabled="!regex.text" @click="startSave" title="Keep this search in the Regex library">Save…</WButton>
-            <span class="flex-1" />
-            <WChip clickable :active="tabOptions.autoTrim" @click="setSearchOption(profile, mode, { autoTrim: !tabOptions.autoTrim })"
-              title="When the search is too long, leave out wanted mods first, then avoided mods that aren't in a preset, longest first">
-              <i class="fas fa-cut" /> Trim to fit
-            </WChip>
-          </div>
-        </section>
       </div>
     </div>
   </WPanel>
@@ -162,12 +174,15 @@ import { MainProcess } from '@/web/background/IPC'
 import { pushHostConfig } from '@/web/Config'
 import { WPanel, WButton, WChip, WField, WInfo, WSegmented, WSelect, WTabs, WToggle, WEmpty, toast } from '../ui'
 import { useCopy } from '../ui/copy'
-import { SAVE_MESSAGE, renameSavedRegex, saveToRegexLibrary, savedRegexName } from '../regex-library/save'
+import { SAVE_MESSAGE, renameSavedRegex, replaceSavedRegex, saveToRegexLibrary, savedRegexName } from '../regex-library/save'
+import { regexesIn } from '../regex-library/folders'
+import type { RegexEntry } from '../regex-library/widget'
 import { PRESETS, applyPreset, modListRows, modRatings, nextPresetRating, presetRating, searchOptions, setModRatings, setSearchOption, withRating } from './rules'
 import type { JuiceWeights, MapModPreset, ModMode, ModRating } from './rules'
 import { MAX_SEARCH_LENGTH, MIN_LABELS, tokenCost } from './regex'
 import type { MinStat } from './regex'
-import { modsForMode, profileRegex, tier17Mods } from './data'
+import { modsForMode, tier17Mods } from './data'
+import { profileRegex } from './search'
 import { activeProfile, rewardsAsk } from './widget'
 import type { MapModsWidget } from './widget'
 import { moduleIcon } from '../ui/game-icons'
@@ -362,15 +377,28 @@ async function copy () {
   await copyText(regex.value.text)
 }
 
-// Save asks for a name first. A string that's already saved offers to rename it.
+// Save asks for a name first. A string that's already saved offers to rename
+// it. Picking one of the tab's saved searches, or typing its name, overwrites it.
 const naming = shallowRef(false)
 const saveName = shallowRef('')
 const existingName = shallowRef<string | null>(null)
 const nameField = shallowRef<ComponentPublicInstance | null>(null)
+const pickOpen = shallowRef(false)
+const saves = computed(() => naming.value && existingName.value == null ? regexesIn(LIBRARY_NAME[mode.value]) : [])
+const target = computed(() => {
+  const name = saveName.value.trim().toLowerCase()
+  return name ? saves.value.find(e => e.name.trim().toLowerCase() === name) ?? null : null
+})
+const saveVerb = computed(() => existingName.value != null ? 'Rename' : target.value ? 'Overwrite' : 'Save')
+function pick (e: RegexEntry) {
+  saveName.value = e.name
+  pickOpen.value = false
+}
 async function startSave () {
   if (!regex.value.text) return
   existingName.value = savedRegexName(regex.value.text)
   saveName.value = existingName.value ?? `${LIBRARY_NAME[mode.value]}: ${profile.value.name || 'Unnamed'}`
+  pickOpen.value = false
   naming.value = true
   await nextTick()
   const input = (nameField.value?.$el as HTMLElement | undefined)?.querySelector('input')
@@ -382,6 +410,9 @@ function confirmSave () {
   if (!name || !regex.value.text) return
   if (existingName.value != null) {
     toast(renameSavedRegex(regex.value.text, name) ? `Renamed to "${name}"` : SAVE_MESSAGE['module-off'])
+  } else if (target.value) {
+    const old = target.value.name
+    toast(replaceSavedRegex(target.value, regex.value.text) ? `Overwrote "${old}"` : SAVE_MESSAGE['module-off'])
   } else {
     const library = LIBRARY_NAME[mode.value]
     toast(SAVE_MESSAGE[saveToRegexLibrary({ name, text: regex.value.text, category: library })])
@@ -435,9 +466,8 @@ function paste () {
   padding: 10px var(--w-pad);
   transition: background 0.6s;
 }
-.pane:first-child:not(.dock) { border-bottom: 1px solid var(--w-line); }
+.pane + .pane { border-top: 1px solid var(--w-line); }
 .flash { background: var(--w-accent-soft); }
-.dock { border-top: 1px solid var(--w-line); }
 .rw { width: 100%; border-collapse: collapse; font-size: var(--w-fs-sm); }
 .rw th {
   text-align: left;
@@ -494,7 +524,44 @@ function paste () {
   border-radius: var(--w-r-sm);
   border: 1px solid var(--w-accent);
   background: var(--w-accent-soft);
+  flex-wrap: wrap;
 }
+/* The name keeps room to read; the buttons drop to a second row when the
+   pane is narrow. */
+.saveName { flex: 1 1 9rem; }
+.saveBtns { display: flex; gap: 6px; margin-left: auto; }
+.pickBtn {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: var(--w-r-sm);
+  border: 1px solid var(--w-line);
+  background: var(--w-panel);
+  color: var(--w-dim);
+  font-size: var(--w-fs-xs);
+}
+.pickBtn:hover, .pickBtn[aria-expanded="true"] { color: var(--w-fg); border-color: var(--w-line-strong); }
+.picks {
+  display: flex;
+  flex-direction: column;
+  max-height: 10rem;
+  border: 1px solid var(--w-line);
+  border-radius: var(--w-r-sm);
+  background: var(--w-panel);
+}
+.pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 4px 8px;
+  text-align: left;
+  font-size: var(--w-fs-sm);
+  border-bottom: 1px solid var(--w-line-soft);
+}
+.pick:last-child { border-bottom: 0; }
+.pick:hover { background: var(--w-panel-2); }
+.pick code { font-family: var(--w-mono); font-size: var(--w-fs-xs); }
+.picked { color: var(--w-accent); }
 .preset {
   font-size: var(--w-fs-sm);
   padding: 1px 8px;
