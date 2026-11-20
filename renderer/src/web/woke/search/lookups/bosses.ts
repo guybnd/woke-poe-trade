@@ -1,6 +1,7 @@
 // Boss cards (entry, drops, prices) and "where does this drop", from the
 // Boss runs tool's table.
 import { BOSSES } from '../../boss-runs/bosses'
+import { nightmareBosses } from '../../boss-runs/nightmare'
 import type { Boss } from '../../boss-runs/bosses'
 import { BOSS_RUNS_TYPE } from '../../boss-runs/widget'
 import { matchRank } from '../search'
@@ -123,11 +124,14 @@ export const bossLookup: Lookup = (query, ctx) => {
 }
 
 // Every boss that drops each item.
-const DROPPED_BY = new Map<string, Array<{ boss: Boss, chance: number | null, variant?: string, variable?: boolean }>>()
-for (const boss of BOSSES) {
+// Nightmare (T17) map bosses carry estimated chances (default fragments a kill).
+const DROPPED_BY = new Map<string, Array<{ boss: Boss, chance: number | null, variant?: string, variable?: boolean, estimate?: boolean }>>()
+for (const boss of [...BOSSES, ...nightmareBosses(undefined)]) {
   for (const d of boss.drops) {
     const list = DROPPED_BY.get(d.name) ?? []
-    if (!list.some(x => x.boss.id === boss.id)) list.push({ boss, chance: d.chance, variant: d.variant, variable: d.variable })
+    const est = boss.estimates?.[d.name]
+    const chance = d.chance ?? (est != null ? est / 100 * (d.qty ?? 1) : null)
+    if (!list.some(x => x.boss.id === boss.id)) list.push({ boss, chance, variant: d.variant, variable: d.variable, estimate: d.chance == null && est != null })
     DROPPED_BY.set(d.name, list)
   }
 }
@@ -144,10 +148,11 @@ export const dropLookup: Lookup = (query, ctx) => {
   for (const name of names) {
     const bosses = DROPPED_BY.get(name)!
     const { variant, variable } = bosses[0]
-    const rows: LookupRow[] = bosses.map(({ boss, chance }) => {
+    // Likeliest first.
+    const rows: LookupRow[] = [...bosses].sort((a, b) => (b.chance ?? -1) - (a.chance ?? -1)).map(({ boss, chance, estimate }) => {
       const cost = entryCost(boss, ctx)
       return {
-        label: chance != null ? `${boss.name} · ${percent(chance)} of kills` : boss.name,
+        label: chance == null ? boss.name : estimate ? `${boss.name} · ~${percent(chance)} a kill (est.)` : `${boss.name} · ${percent(chance)} of kills`,
         value: cost != null && boss.entry.length ? `entry ${Math.round(cost)} c` : undefined
       }
     })
