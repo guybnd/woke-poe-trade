@@ -7,7 +7,6 @@
             :title="isSplit ? 'Fold its mods back into the total' : `Show the mods behind this line${fracInside ? FRAC_INSIDE : ''}`"
             @click="actions!.toggleSplit(filter)">{{ poeTierText || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
           <span v-else-if="poe && poeEldritch" class="w-poe-tier"><component :is="poeEldritchMark" v-bind="poeEldritch" /></span>
-          <span v-else-if="poe && !poeTierText && rollPct != null" class="w-poe-tier w-poe-roll" :class="{ 'w-poe-t1': rollPct >= TOP_LINE_PCT }" :title="uniqueRollTitle(filter, rollPct)">{{ rollPct }}%</span>
           <span v-else-if="poe" class="w-poe-tier" :class="{ 'w-poe-t1': poeTierTop }">{{ poeTierText }}</span>
           <button :class="[$style.checkbox, { [$style.checked]: !isDisabled, [$style.uncheckedHint]: isDisabled && groupExpanded }, 'w-pc-check']"
             @click="toggleFilter" type="submit">
@@ -22,7 +21,7 @@
             <span v-if="poeKind" class="w-poe-row-text" :class="`w-poe-k-${poeKind.kind}`" :title="poeKind.label">
               <img v-if="poeKind.icon" class="w-poe-icon" :src="poeKind.icon" alt="">
               <span v-else-if="poeKind.corrupted" class="w-poe-corrupt" />
-              <item-modifier-text class="w-pc-modtext" :text="text" :roll="roll?.value" />
+              <item-modifier-text class="w-pc-modtext" :text="text" :roll="roll?.value" :rolls="poePair" :ranges="poeRanges?.ranges" :top="poeRanges?.top" />
             </span>
             <div v-else class="search-text flex-1 relative flex min-w-0" style="line-height: calc(1rem * var(--w-text-scale, 1));">
               <span class="truncate"><item-modifier-text :text="text" :roll="roll?.value" /></span>
@@ -134,7 +133,8 @@ import WokeModWorthTag from '@/web/woke/price-insight/ModWorthTag.vue'
 import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
 import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
-import { uniqueRollPct, uniqueRollTitle, TOP_LINE_PCT } from '@/web/woke/price-insight/unique-roll'
+import { uniqueLineRanges } from '@/web/woke/price-insight/unique-roll'
+import { rollPair } from '@/web/woke/price-insight/roll-pair'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { isFracturedOnly, setFracturedOnly } from '@/web/woke/price-insight/pseudo-split'
@@ -367,10 +367,9 @@ export default defineComponent({
       minDrag,
       poeKind: computed(() => kit?.poeLook(props.filter)),
       poeTierText: computed(() => kit?.poeTier(props.filter) ?? ''),
-      // A unique's lines have no tier: how far up its range the line rolled (pick A, WOKEPOET-420).
-      rollPct: computed(() => uniqueRollPct(props.filter, props.item)),
-      uniqueRollTitle,
-      TOP_LINE_PCT,
+      // A unique's ranges in the line, as the game's Alt view shows them (pick C, WOKEPOET-420).
+      poeRanges: computed(() => props.poe ? uniqueLineRanges(props.filter, props.item) : undefined),
+      poePair: computed(() => props.poe ? rollPair(props.filter) : undefined),
       poeEldritch: computed(() => kit?.eldritchMark(props.filter) ?? null),
       poeEldritchMark: kit?.EldritchMark,
       poeTierTop: computed(() => kit?.isTopTier(kit.poeTier(props.filter)) ?? false),

@@ -231,6 +231,10 @@
 /* ItemModifierText's own greys and fonts give way to the line's colour. */
 #price-window.w-poe .w-pc-modtext,
 #price-window.w-poe .w-pc-modtext > span { color: inherit !important; font-family: inherit; font-weight: inherit; }
+/* A unique's ranges, as the game's Alt view shows them (pick C, WOKEPOET-420):
+   the range faint and smaller, the numbers gold when the line rolled near the top. */
+#price-window.w-poe .w-pc-modtext > span.w-roll-range { color: var(--w-faint) !important; font-size: 0.85em; }
+#price-window.w-poe .w-pc-modtext > span.w-roll-top { color: var(--w-gold-hi) !important; }
 
 #price-window.w-poe .w-poe-icon { width: 18px; height: 18px; flex: none; }
 #price-window.w-poe .w-poe-corrupt {

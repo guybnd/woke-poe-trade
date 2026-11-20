@@ -5,7 +5,7 @@ import { loadGameData, parseItem } from '../helpers/game-data'
 import { ItemRarity } from '@/parser'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import type { StatFilter } from '@/web/price-check/filters/interfaces'
-import { highRoll, uniqueRollPct } from '@/web/woke/price-insight/unique-roll'
+import { highRoll, uniqueLineRanges, uniqueRollPct } from '@/web/woke/price-insight/unique-roll'
 
 function knife (crit: string, chaos: string) {
   return parseItem([
@@ -49,5 +49,13 @@ describe('unique roll quality', () => {
     const item = knife('48(30-50)%', '+21(17-21)%')
     const stats = initUiModFilters(item, { searchStatRange: 10 }) as StatFilter[]
     expect(uniqueRollPct(line(stats, '+#% to Chaos Resistance'), { ...item, rarity: ItemRarity.Rare })).toBeUndefined()
+  })
+  it('shows each number with its range, gold near the top', () => {
+    const item = knife('45(30-50)%', '+21(17-21)%')
+    const stats = initUiModFilters(item, { searchStatRange: 10 }) as StatFilter[]
+    expect(uniqueLineRanges(line(stats, '#% increased Critical Strike Chance'), item))
+      .toEqual({ ranges: [{ min: 30, max: 50 }], top: false, pct: 75 })
+    expect(uniqueLineRanges(line(stats, '+#% to Chaos Resistance'), item))
+      .toMatchObject({ ranges: [{ min: 17, max: 21 }], top: true })
   })
 })
