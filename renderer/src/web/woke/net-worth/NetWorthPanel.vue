@@ -604,7 +604,7 @@ function refresh () {
 .phHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 /* One line per figure: label, value, and its detail under the value. */
 .phStats { display: grid; gap: 4px; }
-.phStats > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--w-s2); align-items: baseline; min-width: 0; }
+.phStats > div { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); column-gap: var(--w-s2); align-items: baseline; min-width: 0; }
 .phStats > div > :nth-child(3) { grid-column: 2; }
 .split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
 .split > span { flex-basis: 0; }
