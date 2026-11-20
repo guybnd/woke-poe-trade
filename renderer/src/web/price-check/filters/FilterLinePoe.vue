@@ -15,7 +15,7 @@
       <img v-else-if="look.icon" class="w-poe-icon" :src="look.icon" alt="">
       <img v-if="filter.mercenary?.icon" class="w-poe-icon" :src="filter.mercenary.icon" alt="">
       <span v-if="filter.not" class="w-poe-not">{{ t('filters.tag_not') }}</span>
-      <item-modifier-text class="w-pc-modtext" :text="text" :roll="filter.roll?.value" :rolls="pair" :ranges="ranges?.ranges" :top="ranges?.top" />
+      <poe-mod-text class="w-pc-modtext" :text="text" :roll="filter.roll?.value" :rolls="pair" :ranges="ranges?.ranges" :top="ranges?.top" />
     </button>
     <!-- A local line's own mod, once split out of the line two mods add up to. -->
     <span v-if="modName" class="w-poe-modname">{{ modName }}</span>
@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ItemModifierText from '@/web/ui/ItemModifierText.vue'
+import PoeModText from '@/web/woke/price-insight/PoeModText.vue'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { poeLook, poeTier, isTopTier, eldritchMark } from '@/web/woke/price-insight/poe-kind'
 import EldritchMark from '@/web/woke/price-insight/EldritchMark.vue'

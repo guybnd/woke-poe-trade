@@ -24,7 +24,7 @@ function line (stats: StatFilter[], text: string) {
 }
 
 const FIRE = '#% increased Fire Damage'
-const LIFE = '+# to maximum Life'
+const LIFE = '# to maximum Life'
 
 describe('unique roll quality', () => {
   beforeAll(loadGameData)
