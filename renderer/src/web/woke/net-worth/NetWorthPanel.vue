@@ -66,7 +66,7 @@
               <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
-              <div :title="leaveOutHub ? 'Maps and other areas' : 'Maps, other areas and hideout'"><span :class="$style.caps">{{ leaveOutHub ? 'Played' : 'Played + hideout' }}</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
+              <div :title="leaveOutHub ? 'Time in maps and other areas' : 'Time in maps, other areas and hideout'"><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
             <template v-if="splitTotal > 0">
               <div :class="$style.split">
@@ -608,7 +608,8 @@ function refresh () {
 .halves > .chartBlock { padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); min-width: 0; }
 .bigRate { display: block; font-size: calc(18px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
 .tiles { display: grid; grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr)); gap: var(--w-s3); }
-.tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tiles > div { display: flex; flex-direction: column; justify-content: space-between; gap: 1px; min-width: 0; }
+.tiles > div > :first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tiles b { font-weight: 500; }
 .timeLegend { flex-wrap: nowrap; gap: var(--w-s2); white-space: nowrap; overflow: hidden; }
 .timeLegend i { opacity: 1; }
