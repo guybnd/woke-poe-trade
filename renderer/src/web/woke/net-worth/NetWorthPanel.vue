@@ -60,13 +60,10 @@
           <div v-if="shown.perHour" :class="$style.box">
             <div :class="$style.boxHead">
               <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
-              <button type="button" role="checkbox" :aria-checked="leaveOutHub" :class="$style.check" @click="leaveOutHub = !leaveOutHub"><i :class="leaveOutHub ? 'fas fa-check-square' : 'far fa-square'" />Leave out hideout</button>
-            </div>
-            <div>
-              <div :class="$style.caps">Per hour of play</div>
-              <b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>
+              <button type="button" role="checkbox" :aria-checked="leaveOutHub" :class="$style.check" :title="timeNote" @click="leaveOutHub = !leaveOutHub"><i :class="leaveOutHub ? 'fas fa-check-square' : 'far fa-square'" />Leave out hideout</button>
             </div>
             <div :class="$style.tiles">
+              <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
               <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
               <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
               <div :title="leaveOutHub ? 'Maps and other areas' : 'Maps, other areas and hideout'"><span :class="$style.caps">{{ leaveOutHub ? 'Played' : 'Played + hideout' }}</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
@@ -79,7 +76,6 @@
                 <span v-for="x in splitParts" :key="x.id" :title="`${x.label}: ${Math.round(x.ms / splitTotal * 100)}%`"><i :class="$style[x.id]" />{{ x.short }} {{ span(x.ms) }}</span>
               </div>
             </template>
-            <div :class="$style.note">{{ timeNote }}</div>
           </div>
         </section>
 
@@ -610,13 +606,12 @@ function refresh () {
 .halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: stretch; }
 .halves.one { grid-template-columns: minmax(0, 1fr); }
 .halves > .chartBlock { padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); min-width: 0; }
-.bigRate { display: block; font-size: calc(22px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
-.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 4px 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
+.bigRate { display: block; font-size: calc(18px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
+.tiles { display: grid; grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr)); gap: var(--w-s3); }
+.tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .tiles b { font-weight: 500; }
 .timeLegend { flex-wrap: nowrap; gap: var(--w-s2); white-space: nowrap; overflow: hidden; }
 .timeLegend i { opacity: 1; }
-.note { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .halves > .chartBlock { display: flex; flex-direction: column; }
 .chartFill { flex: 1 1 auto; height: auto !important; min-height: 80px; }
 .spark + .holdings { margin-left: 0; }
