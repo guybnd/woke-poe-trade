@@ -9,6 +9,9 @@ export interface NewItemQuery {
   type: string
   // Uniques search as uniques; a rare's base searches without its name.
   rarity?: 'unique' | 'nonunique'
+  // Currency and cards are priced on the bulk exchange once the item data
+  // knows their trade tag; gems by level and quality. Others by mods.
+  kind?: 'stack' | 'gem'
 }
 
 const SEPARATOR = '--------'
@@ -36,14 +39,23 @@ export function newItemQuery (rawText: string): NewItemQuery | null {
     case 'Rare':
       return lines.length === 2 ? { type: lines[1], rarity: 'nonunique' } : null
     case 'Currency':
-    case 'Gem':
     case 'Divination Card':
+      return lines.length === 1 ? { type: lines[0], kind: 'stack' } : null
+    case 'Gem':
+      return lines.length === 1 ? { type: lines[0].replace(/^Superior /, ''), kind: 'gem' } : null
     case 'Normal':
       // A magic item's name carries its affixes, so it can't be searched by name.
       return lines.length === 1 ? { type: lines[0].replace(/^Superior /, '') } : null
     default:
       return null
   }
+}
+
+// What the name-only search leaves out, and what the next data update brings.
+export function newItemNote (q: NewItemQuery): string {
+  if (q.kind === 'stack') return 'New item. Searched single listings by name. Bulk exchange and poe.ninja prices come with the next item data update.'
+  if (q.kind === 'gem') return 'New gem. Searched by name only. Level and quality filters come with the next item data update.'
+  return 'New item. Searched by name only. Mod filters come with the next item data update.'
 }
 
 function queryFields (q: NewItemQuery) {

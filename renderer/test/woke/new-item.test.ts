@@ -1,6 +1,6 @@
 // A new league's item, before the item data has it, is searched by name.
 import { describe, expect, it } from 'vitest'
-import { newItemQuery, newItemTradeUrl } from '@/web/woke/new-item/query'
+import { newItemNote, newItemQuery, newItemTradeUrl } from '@/web/woke/new-item/query'
 
 const text = (...head: string[]) => [...head, '--------', 'Item Level: 84', '--------', 'Some mod'].join('\n')
 
@@ -18,9 +18,9 @@ describe('newItemQuery', () => {
       .toEqual({ type: 'Veil Ring', rarity: 'nonunique' })
   })
   it('searches currency, gems and cards by name', () => {
-    expect(newItemQuery(text('Item Class: Stackable Currency', 'Rarity: Currency', 'Orb of Veils'))).toEqual({ type: 'Orb of Veils' })
-    expect(newItemQuery(text('Item Class: Skill Gems', 'Rarity: Gem', 'Veil Strike'))).toEqual({ type: 'Veil Strike' })
-    expect(newItemQuery(text('Item Class: Divination Cards', 'Rarity: Divination Card', 'The Veil'))).toEqual({ type: 'The Veil' })
+    expect(newItemQuery(text('Item Class: Stackable Currency', 'Rarity: Currency', 'Orb of Veils'))).toEqual({ type: 'Orb of Veils', kind: 'stack' })
+    expect(newItemQuery(text('Item Class: Skill Gems', 'Rarity: Gem', 'Veil Strike'))).toEqual({ type: 'Veil Strike', kind: 'gem' })
+    expect(newItemQuery(text('Item Class: Divination Cards', 'Rarity: Divination Card', 'The Veil'))).toEqual({ type: 'The Veil', kind: 'stack' })
   })
   it('gives up on magic items and other languages', () => {
     expect(newItemQuery(text('Item Class: Rings', 'Rarity: Magic', 'Glinting Veil Ring of the Fox'))).toBeNull()
@@ -31,7 +31,12 @@ describe('newItemQuery', () => {
     expect(newItemQuery(raw)).toEqual({ name: 'Veilwoven Grasp', type: 'Vaal Gauntlets', rarity: 'unique' })
   })
   it('handles Windows line ends', () => {
-    expect(newItemQuery('Rarity: Currency\r\nOrb of Veils\r\n--------\r\nStack Size: 1/10')).toEqual({ type: 'Orb of Veils' })
+    expect(newItemQuery('Rarity: Currency\r\nOrb of Veils\r\n--------\r\nStack Size: 1/10')).toEqual({ type: 'Orb of Veils', kind: 'stack' })
+  })
+  it('never promises mod filters for currency, cards or gems', () => {
+    expect(newItemNote({ type: 'Orb of Veils', kind: 'stack' })).not.toMatch(/mod filters/i)
+    expect(newItemNote({ type: 'Veil Strike', kind: 'gem' })).not.toMatch(/mod filters/i)
+    expect(newItemNote({ type: 'Veil Ring', rarity: 'nonunique' })).toMatch(/mod filters/i)
   })
   it('builds a trade link for the league', () => {
     const url = newItemTradeUrl('Veilborn', { name: 'A', type: 'B', rarity: 'unique' })
