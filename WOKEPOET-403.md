@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-403
 title: 'Nightmare (T17) map value: map price vs boss fragment EV'
-status: Ready
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -53,8 +53,36 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-20T02:48:25.310Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as 9e239ee0 (golden trade-query entry added in ca04682a by the
+      merge thread). Boss runs Nightmare tab + Nightmare Map price check grid
+      with icons and unique row. Estimates marked ~; follow-ups: Ctrl+Space
+      search lacks Nightmare bosses, exceptional supports not modelled, 3.30
+      rates unconfirmed.
+    completionComment: true
+    date: '2026-11-20T02:57:15.094Z'
+    id: c-2026-11-20t02-57-15-094z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-20T02:57:15.443Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/663'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 For each T17 map (Fortress, Abomination, Citadel, Sanctuary, Ziggurat): poe.ninja price of the map vs expected value of the uber fragments its boss drops; show which ones pay.
 
