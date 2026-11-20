@@ -97,7 +97,7 @@ export const GUIDE: Record<string, MechanicGuide> = {
   },
   bestiary: {
     kind: 'npc',
-    gets: 'Captured beasts by price, so you know which to itemise and sell. Bestiary scarabs in the full panel.',
+    gets: "Captured beasts by price, with each one's group and family, so you know which to itemise and sell. Bestiary scarabs in the full panel.",
     when: ['Einhar speaks in a map or the Menagerie']
   },
   incursion: {

@@ -4,6 +4,7 @@
 
 import type { PriceItem } from '../market/types'
 import { TROPHY_SLOTS, slotMatcher } from './covens'
+import { beastKindLabel } from './beast-kinds'
 
 export interface PriceGroup {
   label: string
@@ -278,7 +279,7 @@ export const MECHANICS: Mechanic[] = [
     short: 'BST',
     icon: 'fas fa-paw',
     groups: [
-      { label: 'Captured beasts', types: ['Beast'], limit: 12 }
+      { label: 'Captured beasts', types: ['Beast'], tag: i => beastKindLabel(i.name), limit: 12 }
     ],
     scarabs: /Bestiary/,
     tips: [

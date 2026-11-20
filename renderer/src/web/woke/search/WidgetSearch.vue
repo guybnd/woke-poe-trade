@@ -42,7 +42,7 @@
               <div :class="$style.title">
                 <WIcon :src="ninjaIcon(selected.group.type, selected.group.name) ?? ninjaArt(selected.group.type, selected.group.name)" size="lg" />
                 <span :class="rarityClass(selected.group.type)">{{ selected.group.name }}</span>
-                <span class="w-dim" :class="$style.small">{{ typeLabel(selected.group.type) }}</span>
+                <span class="w-dim" :class="$style.small">{{ kindLabel(selected.group.type, selected.group.name) }}</span>
               </div>
               <div :class="[$style.grid, $style.gridHead]"><span>Variant</span><span class="text-right">Now</span><span class="text-right">24h ago</span><span class="text-right">7d ago</span><span class="text-right">24h</span><span class="text-right">7d</span><span /></div>
               <div v-for="v in selected.group.variants" :key="key(v)" v-item-tip="v" :class="[$style.grid, $style.row, { [$style.rowPicked]: shownVariant != null && v.variant === shownVariant }]">
@@ -176,6 +176,7 @@ import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
 import BaseUniques from './BaseUniques.vue'
 import BeastRecipes from './BeastRecipes.vue'
+import { beastKindLabel } from '../mechanics/beast-kinds'
 import UniqueDetails from './UniqueDetails.vue'
 import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
@@ -300,7 +301,7 @@ function priceEntry (group: PriceGroup): PriceEntry {
     kind: 'price',
     id: `p:${groupKey(group)}`,
     name: group.name,
-    sub: group.variants.length > 1 ? `${group.variants.length} prices` : (group.variants[0].variant || typeLabel(group.type)),
+    sub: group.variants.length > 1 ? `${group.variants.length} prices` : (group.variants[0].variant || kindLabel(group.type, group.name)),
     group
   }
 }
@@ -875,6 +876,11 @@ function run (entry: Entry) {
 }
 
 // ---- Blood Altar ----
+// A captured beast's type reads "Beast · Amphibian · Deep".
+function kindLabel (type: string, name: string) {
+  const kind = type === 'Beast' ? beastKindLabel(name) : undefined
+  return kind ? `${typeLabel(type)} · ${kind}` : typeLabel(type)
+}
 const beastPrice = (name: string) => lookupContext.value.price(name)
 // A beast's recipes, or for a spirit boss's unique the portal to its den.
 const beastBox = computed(() => {
