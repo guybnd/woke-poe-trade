@@ -5,6 +5,11 @@
       :wake="store.finished.value" card-width="24rem" :menu="dockMenu">
       <template #card>
         <NightCard v-if="shown" :story="shown.story" :live="shown.live" :farm="farmOf(shown.story)" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)" />
+        <div :class="$style.cardGear">
+          <button type="button" class="w-icon-btn text-xs" :class="{ 'w-accent': cardGear }" data-chip-gear-card
+            title="After a map: where its time shows and how it goes away" @click="cardGear = !cardGear"><i class="fas fa-cog" /> After a map</button>
+          <ChipSettings v-if="cardGear" :config="config" :show-me="showMe" :can-show="!!store.maps.value.length" live class="mt-1" />
+        </div>
       </template>
     </DockItem>
     <WPanel :title="config.wmTitle || 'Session story'" width="34rem" max-height="80vh">
@@ -16,21 +21,8 @@
           data-chip-gear @click="gearOpen = !gearOpen"><i class="fas fa-cog" /></button>
       </template>
       <template v-if="gearOpen" #toolbar>
-        <div :class="$style.gear" data-chip-settings>
-          <span class="w-dim">After a map, show its time</span>
-          <WSegmented v-model="chipPlace" :options="CHIP_OPTIONS" />
-          <template v-if="chipPlace !== 'off'">
-            <span class="w-dim">Goes away</span>
-            <WSelect v-model="chipSeconds" :options="CHIP_TIMES" />
-          </template>
-          <template v-if="chipPlace === 'center'">
-            <span class="w-dim">Click closes it</span>
-            <WToggle v-model="chipClick" />
-          </template>
-          <span class="w-dim">Close key</span>
-          <span class="text-xs">{{ config.chipKey || 'None' }} <span class="w-faint">(Settings › Farming &amp; sessions)</span></span>
-          <span />
-          <WButton size="sm" :disabled="chipPlace === 'off' || !store.maps.value.length" @click="showMe">Show me with your last map</WButton>
+        <div :class="$style.gear">
+          <ChipSettings :config="config" :show-me="showMe" :can-show="!!store.maps.value.length" live />
         </div>
       </template>
       <WEmpty v-if="!list.length" icon="fas fa-moon">
@@ -65,8 +57,9 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WButton, WEmpty, WPanel, WSegmented, WSelect, WToggle } from '../ui'
+import { WBanner, WEmpty, WPanel } from '../ui'
 import MapToast from './MapToast.vue'
+import ChipSettings from './ChipSettings.vue'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -82,9 +75,8 @@ import { MapLog, chipLines, compareMap } from './map-log'
 import type { MapCompare, MapRecord } from './map-log'
 import { useNights } from './store'
 import { CHIP_CLOSE_TARGET } from './widget'
-import type { ChipPlace, SessionStoryWidget } from './widget'
+import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
-import { pushHostConfig } from '@/web/Config'
 
 const props = defineProps<{ config: SessionStoryWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -272,10 +264,11 @@ function chipText (rec: MapRecord): string {
 
 // The settings' preview: your last saved map, against the maps before it.
 const gearOpen = shallowRef(false)
+const cardGear = shallowRef(false)
 function showMe () {
   const [last, ...before] = store.maps.value
   if (!last) return
-  if (chipPlace.value === 'center') showChip(last, compareMap(last, before), chipMs())
+  if ((props.config.chipPlace ?? 'dock') === 'center') showChip(last, compareMap(last, before), chipMs())
   else {
     dockRef.value?.peek(chipLines(last, compareMap(last, before), formatClock).join(' · '), chipMs())
     chipPeek = true
@@ -289,32 +282,6 @@ function peekText (s: NightStory): string {
 }
 
 // Same choice as in Settings › Farming & sessions.
-const CHIP_OPTIONS: Array<{ value: ChipPlace, label: string }> = [
-  { value: 'dock', label: 'On the dock icon' },
-  { value: 'center', label: 'Middle of the screen' },
-  { value: 'off', label: 'Off' }
-]
-const CHIP_TIMES = [
-  { value: '5', label: '5 s' },
-  { value: '8', label: '8 s' },
-  { value: '15', label: '15 s' },
-  { value: '30', label: '30 s' },
-  { value: '0', label: 'Until the next map' }
-]
-const chipSeconds = computed({
-  get: () => String(props.config.chipSeconds ?? 8),
-  set: (v: string) => { props.config.chipSeconds = Number(v) }
-})
-const chipClick = computed({
-  get: () => props.config.chipClick === true,
-  set: (v: boolean) => { props.config.chipClick = v }
-})
-const chipPlace = computed({
-  get: () => props.config.chipPlace ?? 'dock',
-  // The close key is registered only while the line shows somewhere.
-  set: (v: ChipPlace) => { props.config.chipPlace = v; pushHostConfig() }
-})
-
 const dockMenu = computed<DockMenuAction[]>(() => [{
   label: 'All nights',
   icon: 'fas fa-list',
@@ -323,16 +290,8 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 </script>
 
 <style module>
-.gear {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 10px;
-  align-items: center;
-  padding: 8px var(--w-pad);
-  border-bottom: 1px solid var(--w-line);
-  font-size: var(--w-fs-sm);
-}
-.gear > * { justify-self: start; }
+.gear { padding: 8px var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.cardGear { padding: 4px var(--w-pad) 6px; border-top: 1px solid var(--w-line-soft); }
 .label { padding: 10px var(--w-pad) 2px; border-top: 1px solid var(--w-line); margin-top: 6px; }
 .row {
   display: flex;
