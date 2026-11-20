@@ -431,7 +431,9 @@
    "renderer/src/web/price-check/"
   ],
   "title-tip.spec.ts": [
-   "renderer/src/web/woke/ui/"
+   "renderer/src/web/woke/ui/HelpCard.vue",
+   "renderer/src/web/woke/ui/help-tip.ts",
+   "renderer/src/web/woke/ui/title-tip.ts"
   ],
   "toolkit.spec.ts": [
    "main/src/woke/essence-scan-vision.ts",

@@ -65,6 +65,10 @@ export interface BootOptions {
   patch?: (config: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
   // Start with the overlay active (Shift+Space) instead of the game focused.
   overlayActive?: boolean
+  // Title hovers in the app's card (title-tip.ts). Off by default: it takes a
+  // hovered element's title off while the card shows, so getByTitle would miss
+  // whatever the mouse rests on. title-tip.spec.ts turns it on.
+  titleTips?: boolean
   // Client.txt lines written before the app starts (a fixture path or lines),
   // as when you played before opening the toolkit.
   logBefore?: string | string[]
@@ -124,6 +128,7 @@ export class Overlay {
     // WOKE_UI_ART=poe1|poe2|simple runs a test in that UI style, to look over each.
     const art = process.env.WOKE_UI_ART
     if (art) await this.page.addInitScript(a => { try { localStorage.setItem('woke.uiArt', a) } catch {} }, art)
+    if (!opts.titleTips) await this.page.addInitScript(() => { (window as unknown as { __wokeNativeTitles?: boolean }).__wokeNativeTitles = true })
     const config = await this.defaultConfig()
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
