@@ -105,7 +105,7 @@
                       <span v-item-tip="tipFor(tips, l.key, l.name, l.count)" class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
                       <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
                     </div>
-                    <div v-if="g.lines.length > 5" class="w-dim text-xs">+{{ g.lines.length - 5 }} more</div>
+                    <div v-if="g.lines.length > 5" :class="$style.more">+{{ g.lines.length - 5 }} more</div>
                   </template>
                 </div>
                 <button v-if="groups.length > groupLimit" type="button" :class="$style.clear" class="text-xs" @click="groupLimit += GROUP_STEP">Show older ({{ groups.length - groupLimit }})</button>
@@ -126,11 +126,11 @@
             </div>
             <div v-if="showMoves" :class="$style.movesCol">
               <div :class="$style.caps" style="margin-bottom: 4px">Price moves today</div>
-              <div v-for="m in moves.slice(0, 8)" :key="m.key" :class="$style.moveRow" class="text-xs">
+              <div v-for="m in moves.slice(0, 8)" :key="m.key" :class="$style.moveRow">
                 <span v-item-tip="tipFor(tips, m.key, m.name)" class="w-trunc">{{ m.name }}</span>
                 <span class="w-num" :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span>
               </div>
-              <div v-if="moves.length > 8" class="w-dim text-xs" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
+              <div v-if="moves.length > 8" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
             </div>
           </div>
           <SplitHandle v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @start="startDrag" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
@@ -608,7 +608,7 @@ function refresh () {
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
 .halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: stretch; }
 .halves.one { grid-template-columns: minmax(0, 1fr); }
-.halves > .chartBlock { padding: 0; border-bottom: 0; min-width: 0; }
+.halves > .chartBlock { padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); min-width: 0; }
 .bigRate { display: block; font-size: calc(22px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 4px 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
@@ -624,7 +624,8 @@ function refresh () {
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
-.moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; }
+.moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; font-size: var(--w-fs-sm); }
+.more { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
 .split > span { flex-basis: 0; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: 0; }
