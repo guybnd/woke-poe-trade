@@ -28,7 +28,7 @@
               <span class="search-text-full whitespace-pre-wrap"><item-modifier-text :text="text" :roll="roll?.value" /></span>
             </div>
           </button>
-          <cluster-spot-tag :spot="filter.clusterSpot" />
+          <cluster-spot-tag v-if="filter.clusterSpot" :spot="filter.clusterSpot" />
           <button v-if="groupExpanded !== undefined"
             :class="$style.expandBtn" @click="toggleExpanded" type="button">
             <i :class="groupExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
@@ -116,7 +116,7 @@
         ? `Above ${roll.plain.max}: only catalysed items match.`
         : `Below ${roll.plain.min}: only catalysed items match.` }}</div>
     </div>
-    <modifier-anointment class="self-center" :filter="filter" />
+    <modifier-anointment v-if="filter.oils" class="self-center" :filter="filter" />
   </div>
 </template>
 
@@ -126,11 +126,9 @@ import { useI18n } from 'vue-i18n'
 import UiPopover from '@/web/ui/Popover.vue'
 import StatRollSlider from '../../ui/StatRollSlider.vue'
 import ItemModifierText from '../../ui/ItemModifierText.vue'
-import ModifierAnointment from './FilterModifierAnointment.vue'
 import FilterModifierOptions, { RollOption } from './FilterModifierOptions.vue'
 import FilterModifierTiers from './FilterModifierTiers.vue'
 import WokeModWorthTag from '@/web/woke/price-insight/ModWorthTag.vue'
-import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
 import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
@@ -147,7 +145,7 @@ import { ModifierType } from '@/parser/modifiers'
 import { poeKit } from '@/web/woke/price-insight/window-style'
 
 export default defineComponent({
-  components: { WokeModWorthTag, ClusterSpotTag, WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeSwapElement: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapElementPick.vue')), WokeRollPick, ItemModifierText, ModifierAnointment, FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
+  components: { WokeModWorthTag, ClusterSpotTag: defineAsyncComponent(() => import('@/web/woke/cluster-type/ClusterSpotTag.vue')), WokeSwapMarker: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapMarker.vue')), WokeSwapElement: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapElementPick.vue')), WokeRollPick, ItemModifierText, ModifierAnointment: defineAsyncComponent(() => import('./FilterModifierAnointment.vue')), FilterModifierOptions, FilterModifierTiers, StatRollSlider, UiPopover },
   emits: ['update:groupExpanded'],
   props: {
     filter: {
