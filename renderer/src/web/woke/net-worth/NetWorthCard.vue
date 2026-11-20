@@ -59,6 +59,8 @@ import { RATE_WINDOWS, rateTip } from './play-time'
 const props = defineProps<{
   status: ReaderStatus | null
   league: string | null
+  // The window's "Leave out hideout time" unticked.
+  withHub?: boolean
 }>()
 const emit = defineEmits<{ (e: 'refresh' | 'settings'): void }>()
 
@@ -97,9 +99,9 @@ const readLine = computed(() => now.value && props.status?.lastReadAt ? `Read ${
 // The same numbers as the window's summary row (store.ratesAt).
 const rateRow = computed(() => {
   if (!sameLeague.value) return null
-  const r = ratesAt(now.value)
+  const r = ratesAt(now.value, props.withHub === true)
   const amount = (chaos: number) => `${signed(toDiv(chaos))} ${divineRate.value ? 'd' : 'c'}`
-  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog, amount) }))
+  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog, amount, r.withHub) }))
   return row.some(x => x.div != null) ? row : null
 })
 

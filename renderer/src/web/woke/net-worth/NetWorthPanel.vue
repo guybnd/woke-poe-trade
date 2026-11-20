@@ -23,12 +23,8 @@
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
           <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
         </span>
-        <!-- Per hour of play: hideout, town, closed and AFK time left out. -->
-        <span v-if="rateRow" :class="$style.rates" class="w-num">
-          <span :class="$style.caps">Per hour</span>
-          <span v-for="r in rateRow" :key="r.id" :class="tone(r.div)" :title="r.tip">{{ r.id }} {{ r.div == null ? '—' : signed(r.div) }}</span>
-          <span><Coin :chaos="!divine" />/h</span>
-        </span>
+        <!-- Per hour of play over the window picked under Details. -->
+        <span v-if="rateShown.div != null" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
         <WSpark v-if="spark.length > 1" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
           Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
@@ -50,6 +46,24 @@
           <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
           <div v-if="chartMode === 'category'" :class="$style.legend">
             <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+          </div>
+        </section>
+
+        <section v-if="shown.perHour" :class="$style.perHour">
+          <div :class="$style.phHead">
+            <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
+            <WToggle v-model="leaveOutHub">Leave out hideout time</WToggle>
+          </div>
+          <div :class="$style.phStats">
+            <div><span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b><span class="w-dim text-xs w-num">{{ rateShown.r.perHour != null ? `${rateAmount(rateShown.r.chaos)} in ${span(rateShown.r.playMs)}` : 'Under 10 min of play' }}</span></div>
+            <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b><span class="w-dim text-xs w-num">{{ rateShown.r.maps ? `avg ${span(rateShown.r.mapMs / rateShown.r.maps)}` : '—' }}</span></div>
+            <div><span :class="$style.caps">Time</span><b class="w-num">{{ span(rateShown.r.mapMs) }} maps · {{ span(rateShown.r.hubMs) }} hideout</b><span class="w-dim text-xs w-num">{{ timeNote }}</span></div>
+          </div>
+          <div v-if="splitTotal > 0" :class="$style.split" :title="splitParts.map(x => `${x.label} ${span(x.ms)}`).join(' · ')">
+            <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" />
+          </div>
+          <div v-if="splitTotal > 0" :class="$style.legend" class="text-xs">
+            <span v-for="x in splitParts" :key="x.id"><i :class="$style[x.id]" />{{ x.label }} {{ Math.round(x.ms / splitTotal * 100) }}%</span>
           </div>
         </section>
 
@@ -173,7 +187,7 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSegmented, WSpark, WToggle, openMenu, toast, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -189,7 +203,8 @@ import { divine, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice,
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
-import { RATE_WINDOWS, rateTip } from './play-time'
+import { rateTip, span } from './play-time'
+import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
@@ -257,12 +272,36 @@ const etaText = (days: number) => days < 1 ? `${Math.max(1, Math.round(days * 24
 const liquid = computed(() => v.value ? liquidChaos(v.value) : 0)
 // ---------- per hour of play (last 1, 2, 3 hours) ----------
 // Moves with each stash read, zone read and the 30 s clock.
-const rates = computed(() => ratesAt(now.value))
+const WINDOW_OPTIONS = [{ value: '1h', label: '1h' }, { value: '2h', label: '2h' }, { value: '3h', label: '3h' }, { value: 'today', label: 'Today' }]
+const rateWindow = computed<RateWindow>({
+  get: () => WINDOW_OPTIONS.some(o => o.value === props.config.rateWindow) ? props.config.rateWindow! : '1h',
+  set: (w) => { props.config.rateWindow = w }
+})
+const leaveOutHub = computed<boolean>({
+  get: () => props.config.rateWithHub !== true,
+  set: (on) => { props.config.rateWithHub = !on }
+})
+const rates = computed(() => ratesAt(now.value, !leaveOutHub.value))
 const rateAmount = (chaos: number) => `${signed(toDiv(chaos))} ${unit.value}`
-const rateRow = computed(() => {
-  const r = rates.value
-  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog, rateAmount) }))
-  return row.some(x => x.div != null) ? row : null
+const rateShown = computed(() => {
+  const r = rates.value[rateWindow.value]
+  return { r, div: r.perHour == null ? null : toDiv(r.perHour), tip: rateTip(rateWindow.value, r, rates.value.fromLog, rateAmount, rates.value.withHub) }
+})
+// The window's time by kind, for the bar under the numbers.
+const splitParts = computed(() => {
+  const r = rateShown.value.r
+  return [
+    { id: 'map', label: 'Maps', ms: r.mapMs },
+    { id: 'other', label: 'Other areas', ms: r.otherMs },
+    { id: 'hub', label: 'Hideout and town', ms: r.hubMs },
+    { id: 'off', label: 'Closed or AFK', ms: r.offMs }
+  ].filter(x => x.ms >= 60_000)
+})
+const splitTotal = computed(() => splitParts.value.reduce((s, x) => s + x.ms, 0))
+const timeNote = computed(() => {
+  if (!rates.value.fromLog) return 'Client.txt not found: nothing left out'
+  const off = rateShown.value.r.offMs >= 60_000 ? `${span(rateShown.value.r.offMs)} closed or AFK, ` : ''
+  return `${off}${leaveOutHub.value ? 'hideout left out' : 'hideout counted'}`
 })
 const todayTip = computed(() => {
   const t = rates.value.today
@@ -283,7 +322,7 @@ function openSections (e: MouseEvent) {
   })))
 }
 // Details with every section in it off: no toggle, nothing to open.
-const anyDetails = computed(() => shown.value.chart || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
+const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
 // Tab labels switched off: a tab pick nothing shows any more is dropped.
 watch(() => shown.value.tabs, (on) => { if (!on) tabs.value = [] })
 // "Since last refresh" only when it has something.
@@ -495,7 +534,17 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.rates { display: inline-flex; align-items: baseline; gap: var(--w-s2); }
+.perHour { display: grid; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.phHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
+.phStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--w-s2); }
+.phStats > div { display: grid; gap: 1px; min-width: 0; }
+.split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
+.split > span { flex-basis: 0; }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: 0; }
+.map { background: var(--w-up); }
+.other { background: var(--w-accent); }
+.hub { background: var(--w-gold); }
+.off { background: var(--w-line-strong); }
 .total { font-size: calc(20px * var(--w-text-scale, 1)); color: var(--w-fg); line-height: 1.1; }
 .spark { margin-left: auto; }
 .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--w-dim); font-size: var(--w-fs-sm); cursor: pointer; padding: 1px 4px; border-radius: var(--w-r-sm); white-space: nowrap; }

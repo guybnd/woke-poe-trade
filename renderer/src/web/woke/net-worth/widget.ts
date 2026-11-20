@@ -1,6 +1,7 @@
 import type { ShortcutAction } from '@ipc/types'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { GlanceShows } from './glance'
+import type { RateWindow } from './play-time'
 
 export const NET_WORTH_TYPE = 'woke-net-worth'
 export const NET_WORTH_MODULE = 'net-worth'
@@ -27,11 +28,16 @@ export interface NetWorthWidget extends Widget {
   // What the dock icon's number shows (glance.ts). The mouse wheel over the
   // icon steps through them.
   glanceShows?: GlanceShows
+  // Per hour: the window picked (default the last hour), and hideout and
+  // town time counted as play (default left out).
+  rateWindow?: RateWindow
+  rateWithHub?: boolean
 }
 
-export type Section = 'chart' | 'numbers' | 'moves' | 'changes' | 'where' | 'tabs'
+export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'where' | 'tabs'
 export const SECTIONS: Array<{ id: Section, label: string }> = [
   { id: 'chart', label: 'Chart' },
+  { id: 'perHour', label: 'Per hour' },
   { id: 'numbers', label: 'Numbers' },
   { id: 'moves', label: 'Price moves' },
   { id: 'changes', label: 'Since last refresh' },

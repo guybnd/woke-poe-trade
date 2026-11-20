@@ -28,7 +28,7 @@ describe('play time from Client.txt', () => {
     ])
     const t = timeIn(m.marks, T0, T0 + 100 * MIN)
     // Closed from the last line (town at 50) till the game started again at 60, then the login screen.
-    expect(t).toEqual({ play: 50 * MIN, hub: 10 * MIN, off: 40 * MIN })
+    expect(t).toEqual({ map: 50 * MIN, play: 0, hub: 10 * MIN, off: 40 * MIN })
   })
 
   it('AFK is left out and goes back to where you were', () => {
@@ -37,7 +37,7 @@ describe('play time from Client.txt', () => {
       line(10, ': AFK mode is now ON. Autoreply "x"'),
       line(25, ': AFK mode is now OFF.')
     ])
-    expect(timeIn(m.marks, T0, T0 + 30 * MIN)).toEqual({ play: 15 * MIN, hub: 0, off: 15 * MIN })
+    expect(timeIn(m.marks, T0, T0 + 30 * MIN)).toEqual({ map: 15 * MIN, play: 0, hub: 0, off: 15 * MIN })
   })
 
   it('a crash in a map keeps the play up to the last line before the game started again', () => {
@@ -47,7 +47,7 @@ describe('play time from Client.txt', () => {
       line(60, '***** LOG FILE OPENING *****').replace(' 1 abc [DEBUG Client 1]', ''),
       area(61, 'HideoutFoo')
     ])
-    expect(timeIn(m.marks, T0, T0 + 70 * MIN)).toEqual({ play: 40 * MIN, hub: 9 * MIN, off: 21 * MIN })
+    expect(timeIn(m.marks, T0, T0 + 70 * MIN)).toEqual({ map: 40 * MIN, play: 0, hub: 9 * MIN, off: 21 * MIN })
   })
 
   it('a fresh read leaves out time before the game started', () => {
@@ -73,8 +73,8 @@ describe('play time from Client.txt', () => {
     const a = feedMarks(emptyMarks(), [area(0, 'MapWorldsStrand'), area(10, 'HideoutFoo')])
     // The range is read again from the last line's second.
     const b = feedMarks(a, [area(10, 'HideoutFoo'), area(15, 'MapWorldsStrand')])
-    expect(b.marks.map(x => x.s)).toEqual(['play', 'hub', 'play'])
-    expect(trimMarks(b, T0 + 12 * MIN).marks.map(x => x.s)).toEqual(['hub', 'play'])
+    expect(b.marks.map(x => x.s)).toEqual(['map', 'hub', 'map'])
+    expect(trimMarks(b, T0 + 12 * MIN).marks.map(x => x.s)).toEqual(['hub', 'map'])
   })
 })
 
@@ -115,9 +115,53 @@ describe('profit per hour of play', () => {
   })
 })
 
+describe('maps and hideout time', () => {
+  const lines = [
+    area(0, 'MapWorldsStrand'),
+    area(10, 'HideoutFoo'),
+    // Back through the portal: the same map.
+    area(12, 'MapWorldsStrand'),
+    area(20, 'HideoutFoo'),
+    line(25, 'Generating level 83 area "MapWorldsFortress" with seed 9'),
+    area(45, 'HideoutFoo')
+  ]
+  const m = feedMarks(emptyMarks(), lines)
+  const points = [{ at: T0, netChaos: null }, { at: T0 + 45 * MIN, netChaos: 450 }]
+
+  it('counts a map once, however often you go back in', () => {
+    expect(m.maps).toHaveLength(2)
+    const r = playRate(points, m.marks, T0, T0 + 45 * MIN, false, m.maps)
+    expect(r.maps).toBe(2)
+    expect(r.mapMs).toBe(38 * MIN)
+    expect(r.hubMs).toBe(7 * MIN)
+  })
+
+  it('a map already running when the window starts counts once', () => {
+    // Window from minute 5: Strand (opened at 0) is still running, then Fortress.
+    const r = playRate(points, m.marks, T0 + 5 * MIN, T0 + 45 * MIN, false, m.maps)
+    expect(r.maps).toBe(2)
+    expect(r.mapMs).toBe(33 * MIN)
+  })
+
+  it('maps in a stretch with nothing to compare are left out with its time', () => {
+    const pts = [{ at: T0, netChaos: null }, { at: T0 + 20 * MIN, netChaos: null }, { at: T0 + 45 * MIN, netChaos: 300 }]
+    const r = playRate(pts, m.marks, T0, T0 + 45 * MIN, false, m.maps)
+    expect(r.maps).toBe(1)
+    expect(r.mapMs).toBe(20 * MIN)
+  })
+
+  it('hideout time counts as play with the box unticked', () => {
+    expect(playRate(points, m.marks, T0, T0 + 45 * MIN, false, m.maps).playMs).toBe(38 * MIN)
+    const r = playRate(points, m.marks, T0, T0 + 45 * MIN, true, m.maps)
+    expect(r.playMs).toBe(45 * MIN)
+    expect(r.perHour).toBeCloseTo(600)
+    expect(rateTip('1h', r, true, c => `+${c}c`, true)).toBe('Last hour: +450c in 45m of play')
+  })
+})
+
 describe('hover text', () => {
   it('names the unit, the play time and what was left out', () => {
-    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, hubMs: 15 * MIN, offMs: 0 }
+    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 30 * MIN, otherMs: 0, hubMs: 15 * MIN, offMs: 0, maps: 4 }
     const amount = (c: number) => `+${(c / 200).toFixed(1)} d`
     expect(rateTip('1h', r, true, amount)).toBe('Last hour: +1.5 d in 30m of play. Left out: 15m in hideout and town')
     expect(rateTip('2h', { ...r, perHour: null }, false, amount)).toBe('Last 2 hours: under 10 min of play. Client.txt not found: hideout time not left out')

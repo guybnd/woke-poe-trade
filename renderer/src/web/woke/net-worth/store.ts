@@ -103,10 +103,11 @@ async function readMarks (now: number) {
 
 // Profit per hour of play over the last 1, 2, 3 hours and today, at `now`.
 // A read that just landed counts even before the caller's clock ticks past it.
-export function ratesAt (now: number): PlayRates {
+// `withHub`: hideout and town time counts as play.
+export function ratesAt (now: number, withHub = false): PlayRates {
   const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos }))
   const at = Math.max(now, points[points.length - 1]?.at ?? 0)
-  return playRates(points, marks.value.marks, at, marksFromLog.value)
+  return playRates(points, marks.value.marks, at, marksFromLog.value, withHub, marks.value.maps)
 }
 
 export const lastDiff = computed(() => history.value.lastDiff)
