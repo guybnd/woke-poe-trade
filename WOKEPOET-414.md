@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-414
 title: 'Net worth per hour: skip hideout time, show last 1/2/3 h'
-status: Grooming
+status: Done
 priority: None
 effort: M
 assignee: unassigned
@@ -28,7 +28,47 @@ history:
     date: '2026-11-20T10:46:50.652Z'
     comment: Updated implementation link.
     id: a-2026-11-20t10-46-50-652z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as #675 (7540d5ea). Dev build reloaded on master. Not yet tried in
+      game.
+    date: '2026-11-20T10:53:37.233Z'
+    completionComment: true
+    id: c-2026-11-20t10-53-37-233z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-20T10:53:37.233Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Net worth per hour now counts only play time and shows the last 1, 2 and 3
+      hours, with the same numbers in Ctrl+Space. Merged as #675, and the dev
+      build is reloaded.
+    completionComment: true
+    date: '2026-11-20T10:53:41.450Z'
+    id: c-2026-11-20t10-53-41-450z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-20T10:53:41.905Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/675'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy (2026-11-20): net worth profit per hour should leave out time in hideout/town, and show rolling last 1, 2 and 3 hour windows.
 
