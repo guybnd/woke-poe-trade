@@ -85,7 +85,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Mapping | Map mods | Danger strip on price check and map regex |
 | Mapping | Farming | Session profit per hour |
 | Mapping | Map scan | Reads map tooltips on screen |
-| Mapping | Session story | A card of the night, a line on each map you finish, and your map history |
+| Mapping | Session story | A summary card when you log off, a per map run toast, and your map history |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
