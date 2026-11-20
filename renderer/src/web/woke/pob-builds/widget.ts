@@ -72,12 +72,13 @@ export function isTreeHotkeyTarget (target: string): boolean {
 }
 
 // The tree key draws the build on the passive tree and the atlas strategy on
-// the atlas tree, so either module keeps it (pobOn/atlasOn). Registered once:
-// the key is set on the first PoB widget; without one it's the default.
+// the atlas tree, so either module keeps it (pobOn/atlasOn). Registered once,
+// from the first PoB widget, which holds the key and is what Settings lists
+// (and checks for clashes); no PoB widget, no key.
 export function treeKeyOf (widgets: readonly Widget[], pobOn: boolean, atlasOn: boolean): string | null {
   if (!pobOn && !atlasOn) return null
   const pob = widgets.find(w => w.wmType === POB_BUILDS_TYPE) as PobBuildsWidget | undefined
-  return pob ? treeHotkeyOf(pob) : TREE_HOTKEY_DEFAULT
+  return pob ? treeHotkeyOf(pob) : null
 }
 
 // Set titles, not positions: PoB can reorder sets. Sets sharing a title form

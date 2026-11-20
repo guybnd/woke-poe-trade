@@ -14,8 +14,8 @@ describe('tree key (Alt + T)', () => {
     expect(treeKeyOf([pob('Alt + G'), atlas], false, true)).toBe('Alt + G')
   })
 
-  it('uses the default with no PoB widget', () => {
-    expect(treeKeyOf([atlas], true, true)).toBe('Alt + T')
+  it('is not registered without a PoB widget, as Settings could not list it', () => {
+    expect(treeKeyOf([atlas], true, true)).toBeNull()
   })
 
   it('takes the first PoB widget\'s key', () => {

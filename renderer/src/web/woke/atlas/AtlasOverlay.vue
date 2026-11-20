@@ -30,6 +30,7 @@ import { ATLAS_TYPE, retryAtlasData, useAtlasData, workingTree } from './widget'
 import type { AtlasStrategy, AtlasWidget } from './widget'
 import { atlasOn, registerAtlasDrawer } from './atlas-overlay-toggle'
 import { NO_MECHANIC, planColours } from './mechanic-colours'
+import { isWidgetTypeOn } from '../modules'
 
 interface Fit { zoom: number, ox: number, oy: number }
 type FitReply =
@@ -304,7 +305,8 @@ function note (text: string) {
 
 const unregister = registerAtlasDrawer({
   isOn: () => on.value,
-  ready: () => selected() != null,
+  // Atlas strategies off: the tree key leaves the atlas tree alone.
+  ready: () => isWidgetTypeOn(AppConfig(), ATLAS_TYPE) && selected() != null,
   start,
   stop
 })
