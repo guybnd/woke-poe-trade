@@ -133,8 +133,6 @@ import WokeModWorthTag from '@/web/woke/price-insight/ModWorthTag.vue'
 import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
 import WokeRollPick from '@/web/woke/price-insight/RollPick.vue'
 import { canPickRoll, isOpenBound } from '@/web/woke/price-insight/roll-presets'
-import { uniqueLineRanges } from '@/web/woke/price-insight/unique-roll'
-import { rollPair } from '@/web/woke/price-insight/roll-pair'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { isFracturedOnly, setFracturedOnly } from '@/web/woke/price-insight/pseudo-split'
@@ -368,8 +366,8 @@ export default defineComponent({
       poeKind: computed(() => kit?.poeLook(props.filter)),
       poeTierText: computed(() => kit?.poeTier(props.filter) ?? ''),
       // A unique's ranges in the line, as the game's Alt view shows them (pick C, WOKEPOET-420).
-      poeRanges: computed(() => props.poe ? uniqueLineRanges(props.filter, props.item) : undefined),
-      poePair: computed(() => props.poe ? rollPair(props.filter) : undefined),
+      poeRanges: computed(() => kit?.uniqueLineRanges(props.filter, props.item)),
+      poePair: computed(() => kit?.rollPair(props.filter)),
       poeEldritch: computed(() => kit?.eldritchMark(props.filter) ?? null),
       poeEldritchMark: kit?.EldritchMark,
       poeTierTop: computed(() => kit?.isTopTier(kit.poeTier(props.filter)) ?? false),
