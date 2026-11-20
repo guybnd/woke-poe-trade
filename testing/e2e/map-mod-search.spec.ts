@@ -45,6 +45,13 @@ test('map: no search until Search, then each mod searches as has or not', async 
   const rarity = panel.locator('[data-map-prop="Rarity"]')
   const pack = panel.locator('[data-map-prop="Pack"]')
   await expect(rarity).toHaveAttribute('aria-pressed', 'true')
+  // The wheel moves the min the rows used to edit.
+  const before = await rarity.textContent()
+  await rarity.hover()
+  await overlay.page.mouse.wheel(0, -100)
+  await expect(rarity).not.toHaveText(before!)
+  // Says what the switches do.
+  await expect(panel.locator('[data-map-mod] [data-state="not"]').first()).toHaveAttribute('title', 'Trade search finds maps without this mod')
   await pack.click()
   await expect(pack).toHaveAttribute('aria-pressed', 'false')
   await expect(panel.locator('form')).not.toContainText('Monster Pack Size')
