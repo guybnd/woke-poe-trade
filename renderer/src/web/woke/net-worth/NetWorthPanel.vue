@@ -75,11 +75,11 @@
               <div :class="$style.split">
                 <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" :title="`${x.label}: ${span(x.ms)} (${Math.round(x.ms / splitTotal * 100)}%)`" />
               </div>
-              <div :class="$style.legend" class="text-xs">
+              <div :class="[$style.legend, $style.timeLegend]">
                 <span v-for="x in splitParts" :key="x.id" :title="`${Math.round(x.ms / splitTotal * 100)}%`"><i :class="$style[x.id]" />{{ x.label }} {{ span(x.ms) }}</span>
               </div>
             </template>
-            <div v-if="timeNote" class="w-dim text-xs">{{ timeNote }}</div>
+            <div class="w-dim text-xs">{{ timeNote }}</div>
           </div>
         </section>
 
@@ -608,11 +608,13 @@ function refresh () {
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
 .halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: stretch; }
 .halves.one { grid-template-columns: minmax(0, 1fr); }
-.halves > .chartBlock { padding: 0; border-bottom: 0; min-width: 0; }
+.halves > .chartBlock { padding: 0; border-bottom: 0; min-width: 0; align-self: start; }
 .bigRate { display: block; font-size: calc(22px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 4px 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
 .tiles b { font-weight: 500; }
+.timeLegend i { opacity: 1; }
+.spark + .holdings { margin-left: 0; }
 .holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
