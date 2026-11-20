@@ -17,9 +17,7 @@
     </WEmpty>
     <WEmpty v-else-if="!v" icon="fas fa-hourglass-half">Waiting for poe.ninja prices…</WEmpty>
     <div v-else :class="$style.body">
-      <!-- H1: one summary line; the rest folds away under Details. With Details
-           open the chart sits beside it (layout F). -->
-      <div :class="[$style.hero, { [$style.heroOn]: heroChart }]">
+      <!-- H1: one summary line; the rest folds away under Details -->
       <section :class="$style.summary">
         <span :class="$style.total" class="w-num" :title="`${inChaos(v.chaos)} · liquid ${div(liquid)} ${unit}`">{{ div(v.chaos) }}<Coin :chaos="!divine" /></span>
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
@@ -27,57 +25,61 @@
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
-        <WSpark v-if="spark.length > 1 && !heroChart" :values="spark" :width="90" :height="18" :class="$style.spark" />
+        <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
+        <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
+          <span :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span> {{ div(liquid) }}<Coin :chaos="!divine" /></span>
+          <span v-if="best" class="w-trunc" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span> {{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></span>
+          <span v-if="session" :class="tone(session.div)"><span :class="$style.caps">Session</span> {{ signed(session.div) }}<Coin :chaos="!divine" /></span>
+        </span>
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
           Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
         </button>
       </section>
-        <section v-if="heroChart" :class="$style.chartBlock">
-          <div :class="$style.chartHead">
-            <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
-            <span v-if="goal" class="text-xs" :class="$style.goalLine">
-              {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
-              <template v-if="eta.reached">reached</template>
-              <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
-              <template v-else>no ETA yet</template>
-            </span>
-            <WSegmented v-model="range" :options="RANGE_OPTIONS" />
-          </div>
-          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
-          <div v-if="chartMode === 'category'" :class="$style.legend">
-            <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
-          </div>
-          <SplitHandle dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
-        </section>
-      </div>
 
       <template v-if="detailsOpen && anyDetails">
-        <!-- Two boxes under the chart (G): per hour of play | what you hold. -->
-        <section v-if="shown.perHour || shown.numbers" :class="$style.boxes">
+        <!-- Two halves: the chart | per hour of play (H), with what each colour
+             of the time bar is under it. -->
+        <section v-if="shown.chart || shown.perHour" :class="[$style.halves, { [$style.one]: !(shown.chart && shown.perHour) }]">
+          <section v-if="shown.chart" :class="$style.chartBlock">
+            <div :class="$style.chartHead">
+              <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
+              <span v-if="goal" class="text-xs" :class="$style.goalLine">
+                {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
+                <template v-if="eta.reached">reached</template>
+                <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
+                <template v-else>no ETA yet</template>
+              </span>
+              <WSegmented v-model="range" :options="RANGE_OPTIONS" />
+            </div>
+            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+            <div v-if="chartMode === 'category'" :class="$style.legend">
+              <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+            </div>
+            <SplitHandle dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+          </section>
           <div v-if="shown.perHour" :class="$style.box">
             <div :class="$style.boxHead">
-              <span :class="$style.caps">Play</span>
               <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
+              <WToggle v-model="leaveOutHub">Leave out hideout</WToggle>
             </div>
-            <div :class="$style.kv">
-              <span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" /></template><template v-else>—</template></b>
-              <span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b>
-              <span :class="$style.caps">Median map</span><b class="w-num" title="The middle map's time: short visits barely move it">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b>
-              <span :class="$style.caps">Time</span><b class="w-num" :title="splitTip">{{ span(rateShown.r.mapMs) }} maps · {{ span(rateShown.r.hubMs) }} hideout</b>
+            <div>
+              <div :class="$style.caps">Per hour of play</div>
+              <b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>
             </div>
-            <div v-if="splitTotal > 0" :class="$style.split" :title="splitTip">
-              <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" />
+            <div :class="$style.tiles">
+              <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></div>
+              <div title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ rateShown.r.medianMapMs != null ? shortSpan(rateShown.r.medianMapMs) : '—' }}</b></div>
+              <div><span :class="$style.caps">Played</span><b class="w-num">{{ span(rateShown.r.playMs) }}</b></div>
             </div>
-            <WToggle v-model="leaveOutHub" :class="$style.boxEnd">Leave out hideout</WToggle>
-          </div>
-          <div v-if="shown.numbers" :class="$style.box">
-            <div :class="$style.boxHead"><span :class="$style.caps">Holdings</span></div>
-            <div :class="$style.kv">
-              <span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b>
-              <template v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></template>
-              <span :class="$style.caps">Session</span><b class="w-num" :class="session ? tone(session.div) : 'w-dim'"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>None running</template></b>
-              <span :class="$style.caps">In chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b>
-            </div>
+            <template v-if="splitTotal > 0">
+              <div :class="$style.split">
+                <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" :title="`${x.label}: ${span(x.ms)} (${Math.round(x.ms / splitTotal * 100)}%)`" />
+              </div>
+              <div :class="$style.legend" class="text-xs">
+                <span v-for="x in splitParts" :key="x.id" :title="`${Math.round(x.ms / splitTotal * 100)}%`"><i :class="$style[x.id]" />{{ x.label }} {{ span(x.ms) }}</span>
+              </div>
+            </template>
+            <div v-if="timeNote" class="w-dim text-xs">{{ timeNote }}</div>
           </div>
         </section>
 
@@ -265,7 +267,6 @@ watch(() => props.status?.league, () => { picked.value = false; picking.value = 
 
 // ---------- numbers ----------
 const fmt = (n: number) => formatAmount(n)
-const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : formatAmount(n)
 // The chaos behind a divine figure, for hover titles.
 const inChaos = (chaos: number) => `${formatAmount(Math.round(chaos))} chaos`
 const unit = computed(() => divine.value ? 'd' : 'c')
@@ -313,11 +314,10 @@ const splitParts = computed(() => {
   ].filter(x => x.ms >= 60_000)
 })
 const splitTotal = computed(() => splitParts.value.reduce((s, x) => s + x.ms, 0))
-const splitTip = computed(() => [splitParts.value.map(x => `${x.label} ${span(x.ms)}`).join(' · '), timeNote.value].join('\n'))
 const timeNote = computed(() => {
   if (!rates.value.fromLog) return 'Client.txt not found: nothing left out'
-  const off = rateShown.value.r.offMs >= 60_000 ? `${span(rateShown.value.r.offMs)} closed or AFK, ` : ''
-  return `${off}${leaveOutHub.value ? 'hideout left out' : 'hideout counted'}`
+
+  return leaveOutHub.value ? 'Hideout time left out' : 'Hideout time counted as play'
 })
 const todayTip = computed(() => {
   const t = rates.value.today
@@ -341,8 +341,6 @@ function openSections (e: MouseEvent) {
 // Since last refresh beside Where it is and the price moves (layout D).
 // Their widths, the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
-// The chart beside the summary, while Details is open.
-const heroChart = computed(() => detailsOpen.value && anyDetails.value && shown.value.chart)
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
 const showSide = computed(() => shown.value.where || showMoves.value)
 const colIds = computed<ColId[]>(() => [
@@ -609,15 +607,16 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.heroOn { display: grid; grid-template-columns: max-content minmax(0, 1fr); border-bottom: 1px solid var(--w-line); }
-.heroOn > .summary { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; border-bottom: 0; border-right: 1px solid var(--w-line); }
-.heroOn > .chartBlock { border-bottom: 0; min-width: 0; }
-.boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: stretch; }
+.halves.one { grid-template-columns: minmax(0, 1fr); }
+.halves > .chartBlock { padding: 0; border-bottom: 0; min-width: 0; }
+.bigRate { display: block; font-size: calc(22px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tiles > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 4px 6px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); }
+.tiles b { font-weight: 500; }
+.holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
-.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px var(--w-s3); align-items: baseline; }
-.kv > b { font-weight: 500; min-width: 0; }
-.boxEnd { margin-top: auto; align-self: flex-start; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
 .moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; }
