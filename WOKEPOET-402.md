@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-402
 title: 'Port upstream rare-only mods (3.30) and review data PR #657'
-status: In Progress
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -30,6 +30,56 @@ history:
       nothing dropped (Exalted Orbs from #665, Facetor's Lens, beasts, scarabs
       kept), no stat refs or matchers lost. Go given to merge thread.
     id: a-2026-11-20t03-34-00-618z
+  - type: comment
+    user: Agent
+    comment: >-
+      #660 merged as 41e639cf (rare-only mods) and #657 merged as 67e5f628
+      (upstream data v27).
+    date: '2026-11-20T03:38:12.171Z'
+    completionComment: true
+    id: c-2026-11-20t03-38-12-171z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-20T03:38:12.171Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      #657 (upstream item data, v27) merged as 67e5f628 after two independent
+      reviews. It drops none of Woke's entries and the hashes match. #660 (3.30
+      rare-only mods read as prefix or suffix, plus the review fixes and a
+      startup JS win) merged as 41e639cf. #656 duplicates #654 and still needs
+      closing on GitHub.
+    completionComment: true
+    date: '2026-11-20T03:38:17.466Z'
+    id: c-2026-11-20t03-38-17-466z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-20T03:38:18.043Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-20T03:38:29.752Z'
+    comment: 'Correction: #656 is already closed on GitHub.'
+    id: a-2026-11-20t03-38-29-752z
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: >-
+  https://github.com/guybnd/woke-poe-trade/pull/657,
+  https://github.com/guybnd/woke-poe-trade/pull/660
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Review of #657 (upstream data v26): no woke entries lost, no stat matchers lost, hashes match, 6 new stats, 3 trade id additions. Clean to merge.
 
