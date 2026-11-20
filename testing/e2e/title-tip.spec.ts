@@ -30,7 +30,8 @@ test('a title hover shows the app card under the pointer and puts the title back
   expect(box.y).toBeGreaterThan(btn.y)
 
   await page.mouse.move(5, view.height - 5)
-  await expect(card).toHaveCount(0)
+  // Something titled there may show its own card at once; this one is gone.
+  await expect(card.filter({ hasText: RELOAD })).toHaveCount(0)
   expect(await handle!.getAttribute('title')).toBe(RELOAD)
 })
 

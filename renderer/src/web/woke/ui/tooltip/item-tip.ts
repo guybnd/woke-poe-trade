@@ -15,7 +15,7 @@ import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
-import { ownTipEls } from '../title-tip'
+import { ownTipEls } from '../help-tip'
 import { usePrice } from '../../shared/price'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
 
