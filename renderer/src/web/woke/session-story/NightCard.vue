@@ -18,7 +18,7 @@
       <span v-if="perHour != null"><span class="w-dim">per h</span> {{ formatChaos(perHour, story.divine) }}</span>
       <span v-if="story.maps.length"><span class="w-dim">Avg map</span> {{ formatClock(story.mapMs / story.maps.length) }}</span>
       <span v-if="mapsPerHour != null"><span class="w-dim">Maps/h</span> {{ mapsPerHour }}</span>
-      <span @mouseenter="tip($event, 'Hideout, town and anything else that isn't a map')" @mouseleave="untip"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
+      <span @mouseenter="tip($event, HIDEOUT_TIP)" @mouseleave="untip"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
       <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
     </div>
@@ -63,6 +63,8 @@ const deathMarks = computed(() => {
   const span = played.value
   return span > 0 ? props.story.deathsAt.map(at => Math.min(100, Math.max(0, (at - props.story.startedAt) / span * 100))) : []
 })
+
+const HIDEOUT_TIP = "Hideout, town and anything else that isn't a map"
 
 // The app's own tooltip card, not the browser's.
 const tipOwner = {}
