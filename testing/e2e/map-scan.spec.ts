@@ -21,7 +21,7 @@ async function expectAt (marker: Locator, cursor: { x: number, y: number }) {
   expect(Math.abs(box.y + box.height / 2 - cursor.y * 0.75)).toBeLessThan(3)
 }
 
-test('Alt+S scans the hovered map: a map with max res down gets CAREFUL with its flagged mods', async ({ overlay }) => {
+test('Alt+S scans the hovered map: a map with max res down gets Risky with its flagged mods', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-map-mods' }] })
   // Real screenshot: Players have -20% to all maximum Resistances, cursed
   // with Temporal Chains and Enfeeble.

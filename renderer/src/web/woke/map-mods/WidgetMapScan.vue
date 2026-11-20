@@ -8,9 +8,9 @@
         <div v-else-if="paused" class="w-dim text-xs px-3 pt-2">Paused while the essence scan runs. It resumes when that stops.</div>
         <div v-if="rolling" class="w-dim text-xs px-3 pt-2"><i class="fas fa-dice" /> Rolling · {{ rolls.length }} rerolls</div>
         <div :class="$style.tally">
-          <div><span class="w-num w-up">{{ tally.run }}</span><span class="w-dim">run</span></div>
-          <div><span class="w-num" style="color: var(--w-warn);">{{ tally.careful }}</span><span class="w-dim">careful</span></div>
-          <div><span class="w-num w-down">{{ tally.skip }}</span><span class="w-dim">skip</span></div>
+          <div><span class="w-num w-up">{{ tally.run }}</span><span class="w-dim">safe</span></div>
+          <div><span class="w-num" style="color: var(--w-warn);">{{ tally.careful }}</span><span class="w-dim">risky</span></div>
+          <div><span class="w-num w-down">{{ tally.skip }}</span><span class="w-dim">dangerous</span></div>
         </div>
         <div v-for="e in recent.slice(0, 5)" :key="e.id" :class="[$style.entry, $style[e.verdict]]">
           <span :class="$style.tag">{{ VERDICT_LABEL[e.verdict] }}</span>
@@ -47,9 +47,9 @@
         </div>
       </div>
       <div :class="$style.tally">
-        <div><span class="w-num w-up">{{ tally.run }}</span><span class="w-dim">run</span></div>
-        <div><span class="w-num" style="color: var(--w-warn);">{{ tally.careful }}</span><span class="w-dim">careful</span></div>
-        <div><span class="w-num w-down">{{ tally.skip }}</span><span class="w-dim">skip</span></div>
+        <div><span class="w-num w-up">{{ tally.run }}</span><span class="w-dim">safe</span></div>
+        <div><span class="w-num" style="color: var(--w-warn);">{{ tally.careful }}</span><span class="w-dim">risky</span></div>
+        <div><span class="w-num w-down">{{ tally.skip }}</span><span class="w-dim">dangerous</span></div>
       </div>
       <div v-for="e in recent" :key="e.id" :class="[$style.entry, $style[e.verdict]]">
         <span :class="$style.tag">{{ VERDICT_LABEL[e.verdict] }}</span>

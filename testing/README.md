@@ -36,7 +36,7 @@ test('Alt+S scans the hovered map', async ({ overlay }) => {
   await overlay.showScreen('screens/map-real-07.png')
   await overlay.moveMouse(605, 810)
   await overlay.pressHotkey('Alt + S')
-  await expect(overlay.page.getByText('CARE')).toBeVisible()
+  await expect(overlay.page.getByText('Risky')).toBeVisible()
 })
 ```
 

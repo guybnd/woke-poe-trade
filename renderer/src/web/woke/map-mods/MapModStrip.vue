@@ -53,7 +53,8 @@ const result = computed(() => {
 const headline = computed(() => {
   const v = result.value!.verdict
   // The badge says how bad; this says why, once (the warn chip is gone).
-  if (v.deadly.length) return v.deadly.map(m => shortLabel(m.matcher)).join(' · ')
+  // Deadly first; risky ones too, so a folded strip still names them.
+  if (v.deadly.length) return [...v.deadly, ...v.warn].map(m => shortLabel(m.matcher)).join(' · ')
   if (v.warn.length) return warnText.value
   if (result.value!.unknown.length) return "Couldn't read every mod"
   return ''
@@ -142,7 +143,6 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
   background: var(--w-panel-2);
   color: var(--w-dim);
 }
-.warnChip { color: var(--w-warn); background: color-mix(in srgb, var(--w-warn) 12%, transparent); }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
 .mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 0; }
 .text { flex: 1; min-width: 0; }

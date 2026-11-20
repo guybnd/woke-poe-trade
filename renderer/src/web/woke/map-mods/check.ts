@@ -154,7 +154,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   return { mode, name, sub: subParts.join(' · '), verdict, juice, props, unknown, unidentified: item.isUnidentified, goals }
 }
 
-// A RUN can't be trusted when a mod couldn't be read; hidden mods say nothing at all.
+// A Safe verdict can't be trusted when a mod couldn't be read; hidden mods say nothing at all.
 export function isUnsure (result: Pick<MapCheckResult, 'unidentified' | 'unknown' | 'verdict'>): boolean {
   return result.unidentified || (result.verdict.verdict === 'run' && result.unknown.length > 0)
 }

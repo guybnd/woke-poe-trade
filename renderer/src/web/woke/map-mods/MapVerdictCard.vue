@@ -117,8 +117,10 @@ function cycle (matcher: string, current: ModRating) {
 }
 .badge {
   flex: none;
-  width: 44px;
+  /* A word now (Safe / Risky / Dangerous), so it grows from the square. */
+  min-width: 44px;
   height: 44px;
+  padding: 0 8px;
   border-radius: var(--w-r-md);
   display: flex;
   align-items: center;

@@ -122,7 +122,7 @@ export const HIGHLIGHTS = [
     name: 'Maps',
     tag: 'Know before you run it',
     slides: [
-      { label: 'Map scan', module: 'map-scan', shot: 'hl-map-scan', focus: [500, 0, 1152], text: 'Press Alt+S on a map. It reads the tooltip and flags the mods you said to watch.', alt: 'Map scan reading a T16 map tooltip and marking it CARE for max res down' },
+      { label: 'Map scan', module: 'map-scan', shot: 'hl-map-scan', focus: [500, 0, 1152], text: 'Press Alt+S on a map. It reads the tooltip and flags the mods you said to watch.', alt: 'Map scan reading a T16 map tooltip and marking it Risky for max res down' },
       { label: 'Essence scan', module: 'essence-scan', shot: 'hl-essence-scan', focus: [500, 0, 1152], text: 'Press Alt+E on a monolith to see whether corrupting it pays, at today\'s prices.', alt: 'Essence scan beside a monolith, saying CORRUPT with what each essence is worth' },
       { label: 'Atlas strategies', module: 'atlas', shot: 'hl-atlas', focus: [700, 150, 900], text: 'Each strategy\'s tree, priced scarabs, map device and regex, in one place. Alt+T draws the tree on the game\'s atlas.', alt: 'Atlas strategies window: an essence strategy with its scarabs, map device, notes and what to allocate' }
     ]
