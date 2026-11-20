@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-2" data-map-history>
-    <WBanner v-if="store.mapsError.value">Couldn't read your map history: {{ store.mapsError.value }}</WBanner>
+    <WBanner v-if="readError || store.mapsError.value">Couldn't read your map history: {{ readError || store.mapsError.value }}</WBanner>
     <WEmpty v-else-if="!on" :art="{ mechanic: 'map' }">
       Turn on Session story (Settings › Farming &amp; sessions) to keep a history of every map you run.
     </WEmpty>
@@ -62,19 +62,31 @@ const on = computed(() => isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE))
 // read only their own files; League and All read every day.
 const all = shallowRef<MapRecord[]>([])
 const loading = shallowRef(false)
+const readError = shallowRef('')
 let readId = 0
-watch(() => [props.range, on.value, store.maps.value] as const, async ([range]) => {
+watch(() => [props.range, on.value] as const, async ([range]) => {
   if (!on.value) return
   const id = ++readId
-  loading.value = !all.value.length
-  const got = range === '7d'
-    ? (await Promise.all(Array.from({ length: 8 }, (_, i) => readMapDay(dayKey(props.now - i * DAY_MS_EXPORT)).catch(() => [])))).flat()
-        .sort((a, b) => b.enteredAt - a.enteredAt)
-    : await readAllMaps()
-  if (id !== readId) return
-  all.value = got
-  loading.value = false
+  loading.value = true
+  try {
+    const got = range === '7d'
+      ? (await Promise.all(Array.from({ length: 8 }, (_, i) => readMapDay(dayKey(props.now - i * DAY_MS_EXPORT))))).flat()
+          .sort((a, b) => b.enteredAt - a.enteredAt)
+      : await readAllMaps()
+    if (id !== readId) return
+    all.value = got
+    readError.value = ''
+  } catch (e) {
+    if (id === readId) readError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    if (id === readId) loading.value = false
+  }
 }, { immediate: true })
+// A map finished while the tab is open: add it, without reading every day again.
+watch(() => store.maps.value[0], (rec) => {
+  // The newest saved copy already holds any earlier visit to the same map.
+  if (rec) all.value = [rec, ...all.value.filter(m => m.key !== rec.key)]
+})
 
 // "League" and "7 days" are this league's; maps saved before leagues were noted count as this one.
 const list = computed(() => all.value.filter(m =>
