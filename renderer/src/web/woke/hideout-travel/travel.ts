@@ -43,9 +43,13 @@ export function tokenExpired (token: string, now = Date.now()): boolean {
   return exp != null && now > exp - EXP_MARGIN_S * 1000
 }
 
-// Per listing id. Kept across re-renders of the table; a new search brings new
-// ids (and tokens), so old entries just stop being read.
+// Per token, not per listing: a listing keeps its id across searches, but each
+// fetch gives it a new token, so a fresh search starts clean.
 export const travelStates = shallowReactive(new Map<string, TravelState>())
+
+export function travelState (token: string | undefined): TravelState | undefined {
+  return token ? travelStates.get(token) : undefined
+}
 
 export type WhisperReply = { success?: boolean, error?: { code?: number, message?: string } | null }
 
@@ -66,16 +70,17 @@ export function readReply (status: number, body: WhisperReply | null, retryAfter
 }
 
 // One request per call. A second click on an in-demand row sends continue.
-export async function travelToHideout (id: string, token: string): Promise<void> {
-  const prev = travelStates.get(id)
-  if (prev?.kind === 'sending') return
+// Once the site has said yes, further clicks send nothing.
+export async function travelToHideout (token: string): Promise<void> {
+  const prev = travelStates.get(token)
+  if (prev?.kind === 'sending' || prev?.kind === 'travelling') return
   if (tokenExpired(token)) {
-    travelStates.set(id, { kind: 'expired' })
+    travelStates.set(token, { kind: 'expired' })
     return
   }
   const body: { token: string, continue?: boolean } = { token }
   if (prev?.kind === 'in-demand') body.continue = true
-  travelStates.set(id, { kind: 'sending' })
+  travelStates.set(token, { kind: 'sending' })
   try {
     const res = await Host.proxy(`${getTradeEndpoint()}/api/trade/whisper`, {
       method: 'POST',
@@ -89,9 +94,9 @@ export async function travelToHideout (id: string, token: string): Promise<void>
     let json: WhisperReply | null = null
     try { json = await res.json() as WhisperReply } catch { json = null }
     const retry = Number(res.headers.get('retry-after'))
-    travelStates.set(id, readReply(res.status, json, Number.isFinite(retry) && retry > 0 ? retry : null))
+    travelStates.set(token, readReply(res.status, json, Number.isFinite(retry) && retry > 0 ? retry : null))
   } catch (e) {
-    travelStates.set(id, { kind: 'failed', reason: e instanceof Error && e.message ? e.message : 'No answer from the trade site' })
+    travelStates.set(token, { kind: 'failed', reason: e instanceof Error && e.message ? e.message : 'No answer from the trade site' })
   }
 }
 

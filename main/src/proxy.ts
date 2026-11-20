@@ -47,6 +47,7 @@ export class HttpProxy {
           'user-agent': app.userAgentFallback
         },
         useSessionCookies: true,
+        ...(siteHeaders.origin ? { origin: siteHeaders.origin } : {}),
         referrerPolicy: 'no-referrer-when-downgrade'
       })
       proxyReq.addListener('response', (proxyRes) => {

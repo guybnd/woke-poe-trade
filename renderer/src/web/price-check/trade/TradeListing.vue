@@ -128,10 +128,10 @@
                     <i v-if="!row.lead.hasNote" class="fas fa-question" />
                   </span>
                   <button v-else-if="row.lead.hideoutToken && !row.lead.isMine" type="button" class="w-pc-travel"
-                    :class="{ 'w-pc-travel-on': !!travelStates.get(row.lead.id) }"
-                    :disabled="travelStates.get(row.lead.id)?.kind === 'sending'"
+                    :class="{ 'w-pc-travel-on': !!travelState(row.lead.hideoutToken) }"
+                    :disabled="travelState(row.lead.hideoutToken)?.kind === 'sending'"
                     title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
-                    @click.stop="travel(row.lead)" @mouseenter.stop="hideTip"><i class="fas fa-door-open" /></button>
+                    @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
                   <span v-if="row.lead.corrupted" class="w-pc-tag">Corrupted</span>
                 </span>
@@ -150,9 +150,9 @@
               </td>
               <td class="px-2 w-pc-age">
                 <span v-if="!showSeller && row.lead.isMine" class="w-pc-you mr-1">{{ t('You') }}</span>
-                <span v-if="travelNote(travelStates.get(row.lead.id))" class="w-pc-travel-note"
-                  :class="{ 'w-pc-travel-warn': travelNote(travelStates.get(row.lead.id))!.tone === 'warn' }"
-                  :title="travelNote(travelStates.get(row.lead.id))!.title">{{ travelNote(travelStates.get(row.lead.id))!.text }}</span>
+                <span v-if="travelNote(travelState(row.lead.hideoutToken))" class="w-pc-travel-note"
+                  :class="{ 'w-pc-travel-warn': travelNote(travelState(row.lead.hideoutToken))!.tone === 'warn' }"
+                  :title="travelNote(travelState(row.lead.hideoutToken))!.title">{{ travelNote(travelState(row.lead.hideoutToken))!.text }}</span>
                 <span v-else class="w-pc-age-inner">
                   <span :class="[$style.accountStatus, $style[row.status]]"></span>
                   <span>{{ improved && row.ageText ? row.ageText : row.lead.relativeDate }}</span>
@@ -214,7 +214,7 @@ import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
 import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
-import { travelStates, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
+import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
 
 const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
@@ -522,9 +522,9 @@ export default defineComponent({
         if (row.lead.tipItem) showTip(e, { kind: 'item', item: row.lead.tipItem, listing: row.lead.listedItem && listingDetail(row.lead.listedItem) })
       },
       hideTip,
-      travelStates,
+      travelState,
       travelNote,
-      travel: (listing: PricingResult) => { if (listing.hideoutToken) void travelToHideout(listing.id, listing.hideoutToken) },
+      travel: (listing: PricingResult) => { if (listing.hideoutToken) void travelToHideout(listing.hideoutToken) },
       openItemMenu,
       pobMenuRef,
       FIX_TAG,

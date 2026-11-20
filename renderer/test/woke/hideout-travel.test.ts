@@ -4,7 +4,7 @@ const proxy = vi.fn()
 vi.mock('@/web/background/IPC', () => ({ Host: { proxy: (...a: unknown[]) => proxy(...a) } }))
 vi.mock('@/web/price-check/trade/common', () => ({ getTradeEndpoint: () => 'www.pathofexile.com' }))
 
-const { tokenExpiry, tokenExpired, readReply, travelToHideout, travelStates } = await import('@/web/woke/hideout-travel/travel')
+const { tokenExpiry, tokenExpired, readReply, travelToHideout, travelStates, travelState } = await import('@/web/woke/hideout-travel/travel')
 
 // A same-shape stand-in for the site's JWT: only the payload is read.
 function fakeToken (payload: object): string {
@@ -55,50 +55,71 @@ describe('travelToHideout', () => {
   it('posts the token once and records travelling', async () => {
     const token = fresh()
     proxy.mockResolvedValueOnce(json({ success: true }))
-    await travelToHideout('id1', token)
+    await travelToHideout(token)
     expect(proxy).toHaveBeenCalledTimes(1)
     const [url, init] = proxy.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('www.pathofexile.com/api/trade/whisper')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body as string)).toEqual({ token })
     expect((init.headers as Record<string, string>)['X-Requested-With']).toBe('XMLHttpRequest')
-    expect(travelStates.get('id1')).toEqual({ kind: 'travelling' })
+    expect(travelStates.get(token)).toEqual({ kind: 'travelling' })
   })
 
   it('sends continue on the click after in demand', async () => {
     const token = fresh()
     proxy.mockResolvedValueOnce(json({ success: false })).mockResolvedValueOnce(json({ success: true }))
-    await travelToHideout('id1', token)
-    expect(travelStates.get('id1')).toEqual({ kind: 'in-demand' })
-    await travelToHideout('id1', token)
+    await travelToHideout(token)
+    expect(travelStates.get(token)).toEqual({ kind: 'in-demand' })
+    await travelToHideout(token)
     expect(JSON.parse((proxy.mock.calls[1][1] as RequestInit).body as string)).toEqual({ token, continue: true })
-    expect(travelStates.get('id1')).toEqual({ kind: 'travelling' })
+    expect(travelStates.get(token)).toEqual({ kind: 'travelling' })
+  })
+
+  it('sends nothing more once travelling', async () => {
+    const token = fresh()
+    proxy.mockResolvedValueOnce(json({ success: true }))
+    await travelToHideout(token)
+    await travelToHideout(token)
+    expect(proxy).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts clean for the same listing after a new search', async () => {
+    const old = fakeToken({ exp: Math.floor(Date.now() / 1000) + 100 })
+    proxy.mockResolvedValueOnce(json({ success: false })).mockResolvedValueOnce(json({ success: false }))
+    await travelToHideout(old)
+    const renewed = fresh()
+    expect(travelState(renewed)).toBeUndefined()
+    await travelToHideout(renewed)
+    expect(JSON.parse((proxy.mock.calls[1][1] as RequestInit).body as string)).toEqual({ token: renewed })
   })
 
   it('sends nothing for an expired token', async () => {
-    await travelToHideout('id1', fakeToken({ exp: Math.floor(Date.now() / 1000) - 1 }))
+    const token = fakeToken({ exp: Math.floor(Date.now() / 1000) - 1 })
+    await travelToHideout(token)
     expect(proxy).not.toHaveBeenCalled()
-    expect(travelStates.get('id1')).toEqual({ kind: 'expired' })
+    expect(travelStates.get(token)).toEqual({ kind: 'expired' })
   })
 
   it('ignores a second click while the first is in flight', async () => {
     let answer!: (r: Response) => void
     proxy.mockReturnValueOnce(new Promise<Response>(r => { answer = r }))
     const token = fresh()
-    const first = travelToHideout('id1', token)
-    await travelToHideout('id1', token)
+    const first = travelToHideout(token)
+    await travelToHideout(token)
     expect(proxy).toHaveBeenCalledTimes(1)
     answer(json({ success: true }))
     await first
-    expect(travelStates.get('id1')).toEqual({ kind: 'travelling' })
+    expect(travelStates.get(token)).toEqual({ kind: 'travelling' })
   })
 
   it('shows a network failure and a non-JSON answer', async () => {
     proxy.mockRejectedValueOnce(new Error('net::ERR_FAILED'))
-    await travelToHideout('id1', fresh())
-    expect(travelStates.get('id1')).toEqual({ kind: 'failed', reason: 'net::ERR_FAILED' })
+    const token = fresh()
+    await travelToHideout(token)
+    expect(travelStates.get(token)).toEqual({ kind: 'failed', reason: 'net::ERR_FAILED' })
     proxy.mockResolvedValueOnce(new Response('<html>', { status: 403 }))
-    await travelToHideout('id2', fresh())
-    expect(travelStates.get('id2')).toEqual({ kind: 'failed', reason: 'Trade site answered 403' })
+    const token2 = fakeToken({ exp: Math.floor(Date.now() / 1000) + 200 })
+    await travelToHideout(token2)
+    expect(travelStates.get(token2)).toEqual({ kind: 'failed', reason: 'Trade site answered 403' })
   })
 })
