@@ -17,7 +17,9 @@
     </WEmpty>
     <WEmpty v-else-if="!v" icon="fas fa-hourglass-half">Waiting for poe.ninja prices…</WEmpty>
     <div v-else :class="$style.body">
-      <!-- H1: one summary line; the rest folds away under Details -->
+      <!-- H1: one summary line; the rest folds away under Details. With Details
+           open the chart sits beside it (layout F). -->
+      <div :class="[$style.hero, { [$style.heroOn]: heroChart }]">
       <section :class="$style.summary">
         <span :class="$style.total" class="w-num" :title="`${inChaos(v.chaos)} · liquid ${div(liquid)} ${unit}`">{{ div(v.chaos) }}<Coin :chaos="!divine" /></span>
         <span class="w-num" :class="tone(sum?.sinceYesterdayDiv)" :title="todayTip">
@@ -25,15 +27,33 @@
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
-        <WSpark v-if="spark.length > 1" :values="spark" :width="90" :height="18" :class="$style.spark" />
+        <WSpark v-if="spark.length > 1 && !heroChart" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
           Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
         </button>
       </section>
+        <section v-if="heroChart" :class="$style.chartBlock">
+          <div :class="$style.chartHead">
+            <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
+            <span v-if="goal" class="text-xs" :class="$style.goalLine">
+              {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
+              <template v-if="eta.reached">reached</template>
+              <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
+              <template v-else>no ETA yet</template>
+            </span>
+            <WSegmented v-model="range" :options="RANGE_OPTIONS" />
+          </div>
+          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+          <div v-if="chartMode === 'category'" :class="$style.legend">
+            <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+          </div>
+          <SplitHandle dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+        </section>
+      </div>
 
       <template v-if="detailsOpen && anyDetails">
-        <!-- Layout D: one stat strip, the chart full width, then Since last
-             refresh beside Where it is and the price moves. -->
+        <!-- Layout F: the stat strip under the chart, then Since last refresh
+             beside Where it is and the price moves. -->
         <section v-if="shown.perHour || shown.numbers" :class="$style.statStrip">
           <template v-if="shown.perHour">
             <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
@@ -51,24 +71,6 @@
             <span v-if="best" :class="[$style.stat, $style.best]" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span><b class="w-num w-trunc">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></span>
           </template>
           <WToggle v-if="shown.perHour" v-model="leaveOutHub" :class="$style.stripEnd">Leave out hideout</WToggle>
-        </section>
-
-        <section v-if="shown.chart" :class="$style.chartBlock">
-          <div :class="$style.chartHead">
-            <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
-            <span v-if="goal" class="text-xs" :class="$style.goalLine">
-              {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
-              <template v-if="eta.reached">reached</template>
-              <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
-              <template v-else>no ETA yet</template>
-            </span>
-            <WSegmented v-model="range" :options="RANGE_OPTIONS" />
-          </div>
-          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
-          <div v-if="chartMode === 'category'" :class="$style.legend">
-            <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
-          </div>
-          <SplitHandle dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
         </section>
 
         <section v-if="showChanges || showSide" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
@@ -330,6 +332,8 @@ function openSections (e: MouseEvent) {
 // Since last refresh beside Where it is and the price moves (layout D).
 // Their widths, the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
+// The chart beside the summary, while Details is open.
+const heroChart = computed(() => detailsOpen.value && anyDetails.value && shown.value.chart)
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
 const showSide = computed(() => shown.value.where || showMoves.value)
 const colIds = computed<ColId[]>(() => [
@@ -596,6 +600,9 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
+.heroOn { display: grid; grid-template-columns: max-content minmax(0, 1fr); border-bottom: 1px solid var(--w-line); }
+.heroOn > .summary { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; border-bottom: 0; border-right: 1px solid var(--w-line); }
+.heroOn > .chartBlock { border-bottom: 0; min-width: 0; }
 .statStrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); }
 .stat { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
 .stat b { font-weight: 500; }
