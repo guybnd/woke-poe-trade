@@ -230,6 +230,7 @@ import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { hostRequest } from '../shared/host'
 import { BOSSES } from '../boss-runs/bosses'
+import { nightmareBosses } from '../boss-runs/nightmare'
 import { BOSS_RUNS_TYPE } from '../boss-runs/widget'
 import type { BossRunsWidget } from '../boss-runs/widget'
 import { evaluateBoss, priceResolver } from '../boss-runs/calc'
@@ -324,7 +325,7 @@ const bossRows = computed<StrategyRow[]>(() => {
   if (!rate) return []
   const px = priceResolver(prices.snapshot.value?.items ?? [])
   const out: StrategyRow[] = []
-  for (const boss of BOSSES) {
+  for (const boss of [...BOSSES, ...nightmareBosses(w.nightmareFrags)]) {
     // "League" shows this league's kills (and old kills saved without one).
     const kills = (w.kills[boss.id] ?? []).filter(k => inRange(k.ts, props.config.range, now.value) &&
       (props.config.range === 'all' || !k.league || k.league === league.value))

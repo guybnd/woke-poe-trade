@@ -28,6 +28,8 @@
     <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
     <woke-viscera-strip v-if="isViscera" :item="item" class="mb-2" />
+    <!-- woke: a Nightmare Map goes into any of the five T17 maps; boss fragment value of each (Boss runs module). -->
+    <woke-nightmare-strip v-if="isNightmareMap" :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
     <template v-if="!wokeVerdictShown">
       <price-prediction v-if="showPredictedPrice" class="mb-4"
@@ -135,6 +137,7 @@ import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { rawClone } from '@/web/woke/raw-clone'
 import { AppConfig } from '@/web/Config'
+import { isModuleOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
@@ -153,6 +156,7 @@ export default defineComponent({
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
     WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
+    WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
     WTabs,
     WokeDustChip,
     WokeDustVerdictChip,
@@ -436,6 +440,7 @@ export default defineComponent({
       wokeVerdictShown,
       isGem: computed(() => props.item.category === ItemCategory.Gem),
       isViscera: computed(() => props.item.category === ItemCategory.Viscera),
+      isNightmareMap: computed(() => props.item.info.refName === 'Nightmare Map' && isModuleOn(AppConfig(), 'boss-runs')),
       ninjaCardOpen,
       showTrendCard: computed(() => !wokeVerdictShown.value && !showPredictedPrice.value),
       verdictHeld: computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade'),

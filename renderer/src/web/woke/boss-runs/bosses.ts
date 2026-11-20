@@ -29,6 +29,9 @@ export interface BossDrop {
   // radius, ascendancy...). Priced from unidentified trade listings unless the
   // player picks poe.ninja or types a price.
   variable?: boolean
+  // qty is part of an estimate (copies past one a kill), so it only applies
+  // while the estimate is in use.
+  estimateQty?: boolean
 }
 
 // Uniques that drop unidentified and whose value depends on what they roll.
@@ -43,12 +46,16 @@ export interface BossEntry {
 export interface Boss {
   id: string
   name: string
-  tier: 'uber' | 'pinnacle'
+  tier: 'uber' | 'pinnacle' | 'nightmare'
   entry: BossEntry[]
   // Default fight + travel time in seconds; the player can change it.
   runSeconds: number
   drops: BossDrop[]
   source: DataSource | null
+  // Estimated chances (percent) by drop name, in place of estimates.ts.
+  estimates?: Record<string, number>
+  // Where those estimates come from.
+  estimateSource?: { label: string, url: string }
 }
 
 const POE_HOW = 'https://poe.how/economy/bosses/'

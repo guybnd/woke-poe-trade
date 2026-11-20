@@ -204,6 +204,12 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "nightmare-maps.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/boss-runs/",
+   "renderer/src/web/woke/market/"
+  ],
   "number-tiles.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
