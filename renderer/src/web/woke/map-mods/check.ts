@@ -161,6 +161,20 @@ export function isUnsure (result: Pick<MapCheckResult, 'unidentified' | 'unknown
 
 // The checker's config, for the strip inside APT's own windows. Null when the
 // widget hasn't been added from the overlay menu yet.
+// The trade filter behind each number chip on the map strip (pseudo/maps.ts).
+export const PROP_TRADE_ID: Record<string, string> = {
+  Drops: 'item.map_atlas_drops',
+  Quant: 'item.map_item_quantity',
+  Rarity: 'item.map_item_rarity',
+  Pack: 'item.map_pack_size'
+}
+
+// Whether the price check shows the map strip for this item (MapModStrip.vue),
+// which then holds the map's numbers and mods for the search.
+export function mapStripShown (item: ParsedItem): boolean {
+  return !!findMapModsConfig()?.stripOnPriceCheck && isMapLike(item) && !item.isUnidentified
+}
+
 export function findMapModsConfig (): MapModsWidget | null {
   // Switched off in Settings → Modules: no strip in price check / map check.
   if (!isModuleOn(AppConfig(), 'map-mods')) return null

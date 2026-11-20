@@ -12,7 +12,15 @@
       <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
     <div :class="$style.chips">
-      <span v-for="p in result.props" :key="p.label" :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
+      <!-- A number with a trade filter is a toggle: on, the search wants at least the min. -->
+      <template v-for="p in result.props" :key="p.label">
+        <button v-if="propFilter(p.label)" type="button" :class="[$style.chip, $style.propChip, !propFilter(p.label)!.disabled && $style.propOn]" class="w-num"
+          :aria-pressed="!propFilter(p.label)!.disabled" :title="propTitle(p.label)" :data-map-prop="p.label"
+          @click="toggleProp(p.label)">
+          {{ p.label }} {{ p.value }}%<template v-if="!propFilter(p.label)!.disabled && minOf(p.label) != null"> ≥{{ minOf(p.label) }}</template>
+        </button>
+        <span v-else :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
+      </template>
       <!-- What the mod switches below add to the search, while the list is folded too. -->
       <span v-if="picked" :class="[$style.chip, $style.pickChip]" data-map-mod-picked>{{ picked }}</span>
     </div>
@@ -37,7 +45,7 @@ import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import { VERDICT_LABEL } from './rules'
-import { checkMap, findMapModsConfig, isMapLike, isUnsure } from './check'
+import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[] }>()
@@ -94,6 +102,26 @@ function setState (f: StatFilter, state: ModState) {
     f.roll.max = state === 'not' ? '' : made.max
   }
 }
+function propFilter (label: string): StatFilter | null {
+  const id = PROP_TRADE_ID[label]
+  if (!id) return null
+  return (props.stats ?? []).find((s): s is StatFilter => !s.group && s.tradeId[0] === id) ?? null
+}
+function minOf (label: string): number | null {
+  const min = propFilter(label)?.roll?.min
+  return typeof min === 'number' ? min : null
+}
+function toggleProp (label: string) {
+  const f = propFilter(label)
+  if (f) f.disabled = !f.disabled
+}
+function propTitle (label: string): string {
+  const on = !propFilter(label)!.disabled
+  // Checked 2026-11-15: the trade site's Atlas Drops filter matched no listing.
+  if (label === 'Drops') return on ? 'Searching Atlas Drops. The trade site found no listings for this filter in 3.30, so results may be empty.' : 'Search at least this Atlas Drops. The trade site found no listings for this filter in 3.30.'
+  return on ? 'In the search. Click to leave it out.' : 'Click to search at least this.'
+}
+
 const picked = computed(() => {
   const has = searchable.value.filter(f => stateOf(f) === 'has').length
   const not = searchable.value.filter(f => stateOf(f) === 'not').length
@@ -157,6 +185,9 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
 .pickChip { color: var(--w-fg); background: var(--w-accent-soft); }
+.propChip { cursor: pointer; border: 1px solid transparent; }
+.propChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
+.propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }

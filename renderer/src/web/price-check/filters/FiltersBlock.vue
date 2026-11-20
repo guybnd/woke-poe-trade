@@ -15,7 +15,8 @@
       </button>
       <button type="button" :class="$style.statBtn" :aria-expanded="!statsVisibility.disabled"
         @click="statsVisibility.disabled = !statsVisibility.disabled">
-        <span>{{ (totalSelectedMods > 0)
+        <span v-if="onStrip && !stats.length">Map numbers and mods are set above</span>
+        <span v-else>{{ (totalSelectedMods > 0)
           ? t((presets.length > 1) ? 'filters.selected_some_short' : 'filters.selected_some', [totalSelectedMods, stats.length])
           : t('filters.selected_none') }}</span>
         <i class="pl-1 text-xs" :class="statsVisibility.disabled ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" />
@@ -53,7 +54,7 @@
             :filter="filter"
             :sources="sourcesShown.get(filter)!" />
         </template>
-        <div v-if="!filteredStats.length && !showUnknownMods"
+        <div v-if="!filteredStats.length && !showUnknownMods && !onStrip"
           class="border-b border-gray-700 py-2">{{ t('filters.empty') }}</div>
         <template v-if="showUnknownMods">
           <unknown-modifier v-for="stat of item.unknownModifiers" :key="stat.type + '/' + stat.text"
@@ -114,6 +115,11 @@ export default defineComponent({
     stats: {
       type: Array as PropType<FilterOrGroup[]>,
       required: true
+    },
+    // woke: the map strip holds the map's numbers and mods (MapModStrip.vue).
+    onStrip: {
+      type: Boolean,
+      default: false
     },
     item: {
       type: Object as PropType<ParsedItem>,

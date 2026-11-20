@@ -41,6 +41,13 @@ test('map: no search until Search, then each mod searches as has or not', async 
   await twin.locator('[data-state="has"]').click()
   await expect(hexproof.locator('[data-state="not"]')).toHaveAttribute('aria-checked', 'true')
   await expect(panel.locator('[data-map-mod-picked]')).toHaveText('has 1 · not 1')
+  // The map's numbers are chips on the strip, not rows below: Rarity on, Pack off.
+  const rarity = panel.locator('[data-map-prop="Rarity"]')
+  const pack = panel.locator('[data-map-prop="Pack"]')
+  await expect(rarity).toHaveAttribute('aria-pressed', 'true')
+  await pack.click()
+  await expect(pack).toHaveAttribute('aria-pressed', 'false')
+  await expect(panel.locator('form')).not.toContainText('Monster Pack Size')
   await overlay.snap('map mods has and not')
 
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
@@ -51,5 +58,8 @@ test('map: no search until Search, then each mod searches as has or not', async 
   expect(not.filters[0].disabled).toBeFalsy()
   const and = stats.find(g => g.type === 'and')!
   expect(and.filters.filter(f => !f.disabled).length).toBeGreaterThanOrEqual(1)
+  // Pack size went out of the search with its chip.
+  const filters = searches[0].query as unknown as { filters?: { map_filters?: { filters?: Record<string, { min?: number } | undefined> } } }
+  expect(filters.filters?.map_filters?.filters?.map_packsize).toBeUndefined()
   expect(overlay.errors).toEqual([])
 })

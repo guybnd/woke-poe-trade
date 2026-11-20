@@ -42,6 +42,7 @@
       ref="filtersComponent"
       :filters="itemFilters"
       :stats="rowStats"
+      :on-strip="rowStats.length < itemStats.length"
       :item="item"
       :presets="presets"
       @preset="selectPreset"
@@ -138,6 +139,7 @@ import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-tr
 import { rawClone } from '@/web/woke/raw-clone'
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '@/web/woke/modules'
+import { mapStripShown, PROP_TRADE_ID } from '@/web/woke/map-mods/check'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
@@ -195,8 +197,12 @@ export default defineComponent({
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
     const itemStats = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.stats)
-    // woke: a map's mods are set on the map strip, so the rows leave them out.
-    const rowStats = computed(() => itemStats.value.some(s => !s.group && s.mapMod) ? itemStats.value.filter(s => s.group || !s.mapMod) : itemStats.value)
+    // woke: a map's mods and numbers are set on the map strip, so the rows leave them out.
+    const stripProps = computed(() => mapStripShown(props.item) ? new Set(Object.values(PROP_TRADE_ID)) : null)
+    const rowStats = computed(() => {
+      const onStrip = (s: FilterOrGroup) => !s.group && (s.mapMod || (stripProps.value?.has(s.tradeId[0]) ?? false))
+      return itemStats.value.some(onStrip) ? itemStats.value.filter(s => !onStrip(s)) : itemStats.value
+    })
     const doSearch = ref(false)
     let searchHover: ReturnType<typeof setTimeout> | undefined
     function cancelSearchHover () {
