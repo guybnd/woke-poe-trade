@@ -620,7 +620,8 @@ function refresh () {
 .half { display: flex; flex-direction: column; min-width: 0; }
 .half > section { border-bottom: 0; }
 .half + .half { border-left: 1px solid var(--w-line); }
-.whereBlock { padding: var(--w-s2) var(--w-pad); border-top: 1px solid var(--w-line); }
+.whereBlock { padding: var(--w-s2) var(--w-pad); }
+.half > * + * { border-top: 1px solid var(--w-line); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
 .moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; }
 .perHour { display: grid; align-content: start; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
@@ -646,7 +647,7 @@ function refresh () {
 .goalLine { color: var(--w-up); }
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
-.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px var(--w-s3); padding: var(--w-s2) var(--w-pad); border-top: 1px solid var(--w-line); }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px var(--w-s3); padding: var(--w-s2) var(--w-pad); }
 .kpis > div { display: flex; flex-direction: column; min-width: 0; }
 .kpis b { font-size: var(--w-fs-md); font-weight: 500; }
 .cols { position: relative; display: grid; border-bottom: 1px solid var(--w-line); }
@@ -662,7 +663,6 @@ function refresh () {
 .changesCol { display: flex; flex-direction: column; }
 .scrollBox { flex: 1 1 auto; min-height: 0; }
 .scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-/* Beside "Where it is": as tall as that column (at least 240px), scrolling inside. */
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }

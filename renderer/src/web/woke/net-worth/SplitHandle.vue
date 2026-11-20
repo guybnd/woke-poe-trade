@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { onBeforeUnmount, shallowRef } from 'vue'
 
 const props = withDefaults(defineProps<{ dir: 'x' | 'y', title?: string }>(), { title: 'Drag to resize · double-click to reset' })
 // start: a drag begins; move: px since it started; end: it's over (save then).
@@ -14,6 +14,9 @@ const emit = defineEmits<{ (e: 'move', px: number): void, (e: 'start' | 'end' | 
 
 const dragging = shallowRef(false)
 let start = 0
+// A handle removed mid-drag (its column went away) still ends the drag.
+let stop: (() => void) | null = null
+onBeforeUnmount(() => { stop?.() })
 
 function down (e: PointerEvent) {
   if (e.button !== 0) return
@@ -27,6 +30,7 @@ function down (e: PointerEvent) {
   const up = () => {
     if (done) return
     done = true
+    stop = null
     dragging.value = false
     el.removeEventListener('pointermove', move)
     el.removeEventListener('pointerup', up)
@@ -43,6 +47,7 @@ function down (e: PointerEvent) {
   el.addEventListener('pointerup', up)
   el.addEventListener('pointercancel', up)
   el.addEventListener('lostpointercapture', up)
+  stop = up
 }
 </script>
 

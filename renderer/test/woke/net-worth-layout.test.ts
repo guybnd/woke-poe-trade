@@ -17,7 +17,7 @@ describe('net worth section sizes', () => {
     expect(w[1]).toBeCloseTo(0.45)
     expect(w[2]).toBe(1)
     expect(dragCols([1, 1], 0, -1000, 200)[0]).toBeCloseTo(0.3)
-    // Old sizes too small to keep 15% each: split evenly, never negative.
+    // Old sizes too small to keep 15% each: leave them as they are, never negative.
     expect(dragCols([0.05, 0.05, 10], 0, 10, 100)).toEqual([0.05, 0.05, 10])
   })
 
