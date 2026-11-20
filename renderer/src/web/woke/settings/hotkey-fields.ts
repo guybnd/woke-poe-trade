@@ -165,7 +165,8 @@ export function hotkeyFields (config: Config): HotkeyField[] {
         label: 'Draw the build (or atlas strategy) on the game\'s tree',
         group,
         page: 'builds',
-        off,
+        // The atlas strategy drawing keeps the key with PoB off.
+        off: off && !isModuleOn(config, 'atlas'),
         get: () => treeHotkeyOf(pob),
         set: (v) => { pob.treeHotkey = v }
       })
