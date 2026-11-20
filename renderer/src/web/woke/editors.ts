@@ -11,6 +11,7 @@ import { ATLAS_TYPE } from './atlas/widget'
 import { LAB_TYPE } from './lab/lab'
 import { CHALLENGES_TYPE } from './challenges/widget'
 import { FARMING_TYPE } from './farming/farming'
+import { SESSION_STORY_TYPE } from './session-story/widget'
 import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
 import { STACKED_DECKS_TYPE } from './stacked-decks/deck'
 import { MECHANICS_TYPE } from './mechanics/widget'
@@ -35,6 +36,7 @@ const AtlasEditor = defineAsyncComponent(() => import('./atlas/atlas-editor.vue'
 const LabEditor = defineAsyncComponent(() => import('./lab/lab-editor.vue'))
 const ChallengesEditor = defineAsyncComponent(() => import('./challenges/challenges-editor.vue'))
 const FarmingEditor = defineAsyncComponent(() => import('./farming/farming-editor.vue'))
+const SessionStoryEditor = defineAsyncComponent(() => import('./session-story/session-story-editor.vue'))
 const DropCounterEditor = defineAsyncComponent(() => import('./drop-counter/drop-counter-editor.vue'))
 const StackedDecksEditor = defineAsyncComponent(() => import('./stacked-decks/stacked-decks-editor.vue'))
 const MechanicsEditor = defineAsyncComponent(() => import('./mechanics/mechanics-editor.vue'))
@@ -66,6 +68,7 @@ const editors: Record<string, Component> = {
   [MECHANICS_TYPE]: MechanicsEditor,
   [LOOT_FILTER_TYPE]: LootFilterEditor,
   [FARMING_TYPE]: FarmingEditor,
+  [SESSION_STORY_TYPE]: SessionStoryEditor,
   [DROP_COUNTER_TYPE]: DropCounterEditor,
   [STACKED_DECKS_TYPE]: StackedDecksEditor,
   [TRADE_TYPE]: TradeEditor,

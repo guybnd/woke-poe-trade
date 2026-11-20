@@ -15,7 +15,27 @@ import type { MapRecord } from './map-log'
 
 export const NIGHTS_COLLECTION = 'session-story'
 export const NIGHTS_KEY = 'nights'
-export const MAPS_KEY = 'maps'
+// One small file per day of maps (map-history/2026-11-20.json): saving a map
+// rewrites only its day, and only the last two days stay in memory.
+export const MAPS_COLLECTION = 'map-history'
+export function dayKey (ms: number): string {
+  const d = new Date(ms)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const DAY_MS = 86_400_000
+export const DAY_MS_EXPORT = DAY_MS
+const KEPT_DAYS = 2
+
+export async function readMapDay (key: string, strict = false): Promise<MapRecord[]> {
+  const saved = await (hostRequest(strict ? 'doc-get-strict' : 'doc-get', { collection: MAPS_COLLECTION, key }) as Promise<unknown>)
+  return Array.isArray(saved) ? saved.filter(isMapRecord) : []
+}
+
+// Every saved day, for the history tab (read when it opens, never kept).
+export async function readAllMaps (): Promise<MapRecord[]> {
+  const days = await (hostRequest('doc-list', { collection: MAPS_COLLECTION }) as Promise<unknown[]>).catch(() => [])
+  return days.flatMap(d => Array.isArray(d) ? d.filter(isMapRecord) : []).sort((a, b) => b.enteredAt - a.enteredAt)
+}
 
 export const useNights = createGlobalState(() => {
   const nights = shallowRef<NightStory[]>([])
@@ -24,10 +44,14 @@ export const useNights = createGlobalState(() => {
   // Nights finished since the app started: wakes the dock icon.
   const finished = shallowRef(0)
   let loading: Promise<void> | null = null
-  // Every map run, newest first (Session analytics' Map history).
+  // The last two days of maps, newest first: the chip's average, the replay
+  // cut and Ctrl+Space. Older days stay on disk.
   const maps = shallowRef<MapRecord[]>([])
   const mapsError = shallowRef('')
   let mapsLoading: Promise<void> | null = null
+  const days = new Map<string, MapRecord[]>()
+  // Days that couldn't be read: never written over this run.
+  const badDays = new Set<string>()
 
   function load (): Promise<void> {
     // Strict: null only when there's no file (main keeps a broken one aside);
@@ -40,19 +64,42 @@ export const useNights = createGlobalState(() => {
 
   // Stash numbers for the night, when the reader read inside it (or within
   // the quiet gap after, which is when the last map's loot lands).
+  async function loadDay (key: string): Promise<MapRecord[]> {
+    let list = days.get(key)
+    if (list) return list
+    try {
+      list = await readMapDay(key, true)
+    } catch (e) {
+      badDays.add(key)
+      mapsError.value = e instanceof Error ? e.message : String(e)
+      list = []
+    }
+    // Another load may have finished first.
+    list = days.get(key) ?? list
+    days.set(key, list)
+    return list
+  }
+
+  function syncRecent () {
+    const keep = new Set(Array.from({ length: KEPT_DAYS }, (_, i) => dayKey(Date.now() - i * DAY_MS)))
+    for (const k of [...days.keys()]) if (!keep.has(k)) days.delete(k)
+    maps.value = [...days.values()].flat().sort((a, b) => b.enteredAt - a.enteredAt)
+  }
+
   function loadMaps (): Promise<void> {
-    mapsLoading ??= (hostRequest('doc-get-strict', { collection: NIGHTS_COLLECTION, key: MAPS_KEY }) as Promise<unknown>)
-      .then((saved) => { maps.value = Array.isArray(saved) ? saved.filter(isMapRecord) : [] })
-      .catch((e) => { mapsError.value = e instanceof Error ? e.message : String(e) })
+    mapsLoading ??= Promise.all(Array.from({ length: KEPT_DAYS }, (_, i) => loadDay(dayKey(Date.now() - i * DAY_MS))))
+      .then(() => { syncRecent() })
     return mapsLoading
   }
 
   async function addMap (rec: MapRecord): Promise<void> {
     await loadMaps()
+    const key = dayKey(rec.enteredAt)
     const league = useLeagues().selectedId.value
-    maps.value = keepMap(maps.value, { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) })
-    // A history that couldn't be read would be written over.
-    if (!mapsError.value) await hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: MAPS_KEY, value: maps.value }).catch(() => {})
+    const next = keepMap(await loadDay(key), { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) })
+    days.set(key, next)
+    syncRecent()
+    if (!badDays.has(key)) await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: next }).catch(() => {})
   }
 
   // A night that ended because the game restarted gets no extra time: the

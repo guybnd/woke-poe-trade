@@ -42,7 +42,7 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel } from '../ui'
+import { WBanner, WEmpty, WPanel, toast } from '../ui'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -76,7 +76,13 @@ const RECENT_MS = 12 * 3_600_000
 
 // Each map, for the chip and Session analytics' Map history.
 const mapLog = new MapLog({
-  onLeave: (rec) => { if (live) dockRef.value?.peek(chipText(rec), CHIP_MS) },
+  onLeave: (rec) => {
+    if (!live) return
+    const place = props.config.chipPlace ?? 'dock'
+    // The note in the middle never takes the mouse: clicks go to the game.
+    if (place === 'center') toast(chipText(rec), { center: true, ms: CHIP_MS })
+    else if (place === 'dock') dockRef.value?.peek(chipText(rec), CHIP_MS)
+  },
   onDone: (rec) => { store.addMap(rec).catch(() => {}) }
 })
 

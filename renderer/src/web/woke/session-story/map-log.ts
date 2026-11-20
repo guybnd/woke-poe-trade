@@ -11,8 +11,8 @@ import { NIGHT_GAP_MS } from './story'
 
 const OPENING = '***** LOG FILE OPENING *****'
 
-// Maps kept on disk.
-export const MAX_MAPS = 3000
+// Maps kept in one day's file (a lot more than a day of play).
+export const MAX_MAPS = 1000
 // Maps the "faster than usual" figure averages over.
 export const USUAL_OF = 10
 

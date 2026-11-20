@@ -274,8 +274,8 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     icon: modulePageIcon('farming'),
     description: 'Profit per hour now, per map and strategy over time, and a card of each night.',
     modules: ['farming', 'session-analytics', 'session-story'],
-    widgets: ['woke-farming', 'woke-session-analytics'],
-    find: ['Bulk price', 'Junk below', 'Auto pause', 'Session analytics', 'Session story']
+    widgets: ['woke-farming', 'woke-session-analytics', 'woke-session-story'],
+    find: ['Bulk price', 'Junk below', 'Auto pause', 'Session analytics', 'Session story', 'Map chip', 'Middle of the screen']
   },
   {
     id: 'drop-counter',

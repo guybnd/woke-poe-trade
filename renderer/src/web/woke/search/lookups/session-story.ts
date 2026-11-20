@@ -67,7 +67,7 @@ export function mapsLookup (maps: readonly MapRecord[]): Lookup {
       id: 'answer:map-history',
       group: 'Answer',
       name: `Last maps${usual != null ? `: average ${formatClock(usual)}` : ''}`,
-      sub: `${maps.length} maps in your history`,
+      sub: `${maps.length} maps in the last 2 days`,
       icon: 'fas fa-map',
       sections: [{
         rows: last.map(m => ({

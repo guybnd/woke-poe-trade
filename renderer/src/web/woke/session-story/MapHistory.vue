@@ -4,6 +4,7 @@
     <WEmpty v-else-if="!on" :art="{ mechanic: 'map' }">
       Turn on Session story (Settings › Farming &amp; sessions) to keep a history of every map you run.
     </WEmpty>
+    <WSkeleton v-else-if="loading" :rows="4" />
     <WEmpty v-else-if="!list.length" :art="{ mechanic: 'map' }">
       Maps show here as you run them. They're read from the game's log.
     </WEmpty>
@@ -40,26 +41,43 @@
 
 <script setup lang="ts">
 // Session analytics' Map history tab: every map read from Client.txt by Session story.
-import { computed, shallowRef } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
-import { WBanner, WEmpty } from '../ui'
+import { WBanner, WEmpty, WSkeleton } from '../ui'
 import { formatClock } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
 import { isWidgetTypeOn } from '../modules'
 import { tierText } from './map-log'
 import type { MapRecord } from './map-log'
-import { useNights } from './store'
+import { DAY_MS_EXPORT, dayKey, readAllMaps, readMapDay, useNights } from './store'
 import { SESSION_STORY_TYPE } from './widget'
 
 const props = defineProps<{ range: AnalyticsRange, league: string, now: number }>()
 
 const store = useNights()
 const on = computed(() => isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE))
-if (on.value) store.loadMaps().catch(() => {})
+
+// Read from disk while the tab is open, and let go when it closes. Seven days
+// read only their own files; League and All read every day.
+const all = shallowRef<MapRecord[]>([])
+const loading = shallowRef(false)
+let readId = 0
+watch(() => [props.range, on.value, store.maps.value] as const, async ([range]) => {
+  if (!on.value) return
+  const id = ++readId
+  loading.value = !all.value.length
+  const got = range === '7d'
+    ? (await Promise.all(Array.from({ length: 8 }, (_, i) => readMapDay(dayKey(props.now - i * DAY_MS_EXPORT)).catch(() => [])))).flat()
+        .sort((a, b) => b.enteredAt - a.enteredAt)
+    : await readAllMaps()
+  if (id !== readId) return
+  all.value = got
+  loading.value = false
+}, { immediate: true })
 
 // "League" and "7 days" are this league's; maps saved before leagues were noted count as this one.
-const list = computed(() => store.maps.value.filter(m =>
+const list = computed(() => all.value.filter(m =>
   (props.range === 'all' || !m.league || m.league === props.league) && inRange(m.enteredAt, props.range, props.now)))
 
 const PAGE = 100
