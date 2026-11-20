@@ -14,6 +14,12 @@
           <span v-if="today != null" class="w-num text-xs" :class="tone(today)">{{ today >= 0 ? '▲' : '▼' }} {{ signed(today) }} today</span>
         </div>
         <div v-else class="w-dim text-xs">Waiting for poe.ninja prices…</div>
+        <!-- Per hour of play, as in the window: hideout, town, closed and AFK left out. -->
+        <div v-if="v && rateRow" :class="$style.rates" class="w-num text-xs">
+          <span :class="$style.caps">Per hour</span>
+          <span v-for="x in rateRow" :key="x.id" :class="tone(x.div)" :title="x.tip">{{ x.id }} {{ x.div == null ? '—' : signed(x.div) }}</span>
+          <span><Coin :chaos="!divineRate" />/h</span>
+        </div>
         <WSpark v-if="spark.length > 1" :values="spark" :width="270" :height="26" :class="$style.spark" />
         <template v-if="v">
           <div v-if="diff" :class="$style.caps">Since last read · <span class="w-num" :class="tone(diff.netChaos)">{{ signed(toDiv(diff.netChaos)) }}<Coin :chaos="!divineRate" /></span></div>
@@ -44,10 +50,11 @@ import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { WSpark, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
-import { divine as divineRate, historyNow, ledger, onStatus, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
+import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
 import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { ReaderStatus } from './widget'
 import Coin from './Coin.vue'
+import { RATE_WINDOWS } from './play-time'
 
 const props = defineProps<{
   status: ReaderStatus | null
@@ -87,6 +94,24 @@ const canRefresh = computed(() => !!props.status?.account && !props.status.runni
 // Reads "now" so it moves with the clock.
 const readLine = computed(() => now.value && props.status?.lastReadAt ? `Read ${agoPhrase(props.status.lastReadAt)}` : '')
 
+// The same numbers as the window's summary row (store.ratesAt).
+const rateRow = computed(() => {
+  if (!sameLeague.value) return null
+  const r = ratesAt(now.value)
+  const row = RATE_WINDOWS.map(w => {
+    const x = r[w.id]
+    const tip = x.perHour == null
+      ? `Under 10 min of play in the last ${w.id}`
+      : `${signed(toDiv(x.chaos))} in ${minutes(x.playMs)} of play${r.fromLog && x.hubMs >= 60_000 ? `, ${minutes(x.hubMs)} in hideout and town left out` : ''}`
+    return { id: w.id, div: x.perHour == null ? null : toDiv(x.perHour), tip }
+  })
+  return row.some(x => x.div != null) ? row : null
+})
+const minutes = (ms: number) => {
+  const m = Math.round(ms / 60_000)
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
+}
+
 const fmt = (n: number) => formatAmount(n)
 const toDiv = (chaos: number) => divineRate.value ? chaos / divineRate.value : chaos
 const div = (chaos: number) => {
@@ -103,6 +128,7 @@ const tone = (n: number | null | undefined) => n == null || n === 0 ? 'w-dim' : 
 .total { display: flex; align-items: baseline; gap: 8px; }
 .total b { font-size: calc(20px * var(--w-text-scale, 1)); font-weight: 500; color: var(--w-fg); line-height: 1.1; }
 .spark { width: 100%; }
+.rates { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 6px; align-items: center; }
 .art { width: 14px; height: 14px; object-fit: contain; }
