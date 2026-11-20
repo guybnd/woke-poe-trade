@@ -8,7 +8,7 @@ describe('net worth section sizes', () => {
     expect(topOf({ top: 2 })).toBe(0.8)
     expect(chartHOf({ chartH: -5 })).toBe(80)
     expect(chartHOf({ chartH: 1000 })).toBe(320)
-    expect(colWeights({ cols: { changes: 2 } }, ['numbers', 'changes'])).toEqual([0.8, 2])
+    expect(colWeights({ cols: { changes: 2 } }, ['changes', 'moves'])).toEqual([2, 1])
   })
 
   it('moves one column edge, never below 15% of the row', () => {

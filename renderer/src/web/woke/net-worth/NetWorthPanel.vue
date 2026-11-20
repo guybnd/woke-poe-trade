@@ -32,55 +32,66 @@
       </section>
 
       <template v-if="detailsOpen && anyDetails">
-        <!-- Layout A: the chart and per hour share the top row. -->
-        <div v-if="shown.chart || shown.perHour" ref="topRowEl" :class="[$style.topRow, { [$style.one]: !(shown.chart && shown.perHour) }]"
-          :style="shown.chart && shown.perHour ? { gridTemplateColumns: `minmax(0, ${top}fr) minmax(0, ${1 - top}fr)` } : undefined">
-        <section v-if="shown.chart" :class="$style.chartBlock">
-          <div :class="$style.chartHead">
-            <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
-            <span v-if="goal" class="text-xs" :class="$style.goalLine">
-              {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
-              <template v-if="eta.reached">reached</template>
-              <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
-              <template v-else>no ETA yet</template>
-            </span>
-            <WSegmented v-model="range" :options="RANGE_OPTIONS" />
+        <!-- Layout C: two halves (the chart with Where it is | per hour with the
+             numbers), then Since last refresh beside the price moves. -->
+        <div v-if="leftOn || rightOn" ref="topRowEl" :class="[$style.topRow, { [$style.one]: !(leftOn && rightOn) }]"
+          :style="leftOn && rightOn ? { gridTemplateColumns: `minmax(0, ${top}fr) minmax(0, ${1 - top}fr)` } : undefined">
+          <div v-if="leftOn" :class="$style.half">
+            <section v-if="shown.chart" :class="$style.chartBlock">
+              <div :class="$style.chartHead">
+                <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
+                <span v-if="goal" class="text-xs" :class="$style.goalLine">
+                  {{ goal.name || 'Goal' }}: {{ fmt(goal.div) }}<Coin /> ·
+                  <template v-if="eta.reached">reached</template>
+                  <template v-else-if="eta.days != null">about {{ etaText(eta.days) }}</template>
+                  <template v-else>no ETA yet</template>
+                </span>
+                <WSegmented v-model="range" :options="RANGE_OPTIONS" />
+              </div>
+              <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+              <div v-if="chartMode === 'category'" :class="$style.legend">
+                <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+              </div>
+              <SplitHandle dir="y" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+            </section>
+            <div v-if="shown.where" :class="$style.whereBlock">
+                <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
+                <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
+                  :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
+                  <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
+                </button>
+            </div>
           </div>
-          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
-          <div v-if="chartMode === 'category'" :class="$style.legend">
-            <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
+          <div v-if="rightOn" :class="$style.half">
+            <section v-if="shown.perHour" :class="$style.perHour">
+              <div :class="$style.phHead">
+                <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
+                <WToggle v-model="leaveOutHub">Leave out hideout time</WToggle>
+              </div>
+              <div :class="$style.phStats">
+                <div><span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b><span class="w-dim text-xs w-num">{{ rateShown.r.perHour != null ? `${rateAmount(rateShown.r.chaos)} in ${span(rateShown.r.playMs)}` : 'Under 10 min of play' }}</span></div>
+                <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b><span class="w-dim text-xs w-num">{{ rateShown.r.maps ? `avg ${span(rateShown.r.mapMs / rateShown.r.maps)}` : '—' }}</span></div>
+                <div><span :class="$style.caps">Time</span><b class="w-num">{{ span(rateShown.r.mapMs) }} maps · {{ span(rateShown.r.hubMs) }} hideout</b><span class="w-dim text-xs w-num">{{ timeNote }}</span></div>
+              </div>
+              <div v-if="splitTotal > 0" :class="$style.split" :title="splitParts.map(x => `${x.label} ${span(x.ms)}`).join(' · ')">
+                <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" />
+              </div>
+              <div v-if="splitTotal > 0" :class="$style.legend" class="text-xs">
+                <span v-for="x in splitParts" :key="x.id"><i :class="$style[x.id]" />{{ x.label }} {{ Math.round(x.ms / splitTotal * 100) }}%</span>
+              </div>
+            </section>
+            <div v-if="shown.numbers" :class="$style.kpis">
+              <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
+              <div><span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b></div>
+              <div><span :class="$style.caps">Total in chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b></div>
+              <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
+            </div>
           </div>
-          <SplitHandle dir="y" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
-        </section>
-
-        <section v-if="shown.perHour" :class="$style.perHour">
-          <div :class="$style.phHead">
-            <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
-            <WToggle v-model="leaveOutHub">Leave out hideout time</WToggle>
-          </div>
-          <div :class="$style.phStats">
-            <div><span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b><span class="w-dim text-xs w-num">{{ rateShown.r.perHour != null ? `${rateAmount(rateShown.r.chaos)} in ${span(rateShown.r.playMs)}` : 'Under 10 min of play' }}</span></div>
-            <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b><span class="w-dim text-xs w-num">{{ rateShown.r.maps ? `avg ${span(rateShown.r.mapMs / rateShown.r.maps)}` : '—' }}</span></div>
-            <div><span :class="$style.caps">Time</span><b class="w-num">{{ span(rateShown.r.mapMs) }} maps · {{ span(rateShown.r.hubMs) }} hideout</b><span class="w-dim text-xs w-num">{{ timeNote }}</span></div>
-          </div>
-          <div v-if="splitTotal > 0" :class="$style.split" :title="splitParts.map(x => `${x.label} ${span(x.ms)}`).join(' · ')">
-            <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" />
-          </div>
-          <div v-if="splitTotal > 0" :class="$style.legend" class="text-xs">
-            <span v-for="x in splitParts" :key="x.id"><i :class="$style[x.id]" />{{ x.label }} {{ Math.round(x.ms / splitTotal * 100) }}%</span>
-          </div>
-        </section>
-        <SplitHandle v-if="shown.chart && shown.perHour" dir="x" :style="{ left: top * 100 + '%' }" @move="dragTop" @end="saveLayout" @reset="resetLayout('top')" />
+          <SplitHandle v-if="leftOn && rightOn" dir="x" :style="{ left: top * 100 + '%' }" @move="dragTop" @end="saveLayout" @reset="resetLayout('top')" />
         </div>
 
-        <section v-if="showChanges || shown.where || shown.numbers" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
-          <div v-if="shown.numbers" :class="$style.kpis">
-            <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
-            <div><span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b></div>
-            <div><span :class="$style.caps">Total in chaos</span><b class="w-num">{{ compact(v.chaos) }}<Coin chaos /></b></div>
-            <div v-if="best"><span :class="$style.caps">Best item</span><b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></div>
-          </div>
-          <div v-if="showChanges" :class="[$style.changesCol, { [$style.capped]: shown.where }]">
+        <section v-if="showChanges || showMoves" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
+          <div v-if="showChanges" :class="$style.changesCol">
             <div :class="$style.colHead">
               <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
               <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
@@ -112,20 +123,15 @@
               <WButton size="sm" @click="endSession">End session</WButton>
             </div>
           </div>
-          <div v-if="shown.where">
-            <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
-            <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
-              :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
-              <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
-            </button>
+          <div v-if="showMoves" :class="$style.movesCol">
+            <div :class="$style.caps" style="margin-bottom: 4px">Price moves today</div>
+            <div v-for="m in moves.slice(0, 8)" :key="m.key" :class="$style.moveRow" class="text-xs">
+              <span v-item-tip="tipFor(tips, m.key, m.name)" class="w-trunc">{{ m.name }}</span>
+              <span class="w-num" :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span>
+            </div>
+            <div v-if="moves.length > 8" class="w-dim text-xs" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
           </div>
           <SplitHandle v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
-        </section>
-
-        <section v-if="shown.moves && moves.length" :class="$style.moves" class="text-xs">
-          <span :class="$style.caps">Price moves today</span>
-          <span v-for="m in moves.slice(0, 2)" :key="m.key" class="w-trunc"><span v-item-tip="tipFor(tips, m.key, m.name)">{{ m.name }}</span> <span :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span></span>
-          <span v-if="moves.length > 2" class="w-dim" :title="moves.slice(2).map(moveText).join('\n')">+{{ moves.length - 2 }} more</span>
         </section>
       </template>
 
@@ -331,13 +337,15 @@ function openSections (e: MouseEvent) {
   })))
 }
 // Details with every section in it off: no toggle, nothing to open.
-// Numbers, Since last refresh and Where it is side by side (layout A).
+// Since last refresh beside the price moves (layout C).
 // Their widths, the top row's split and the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
+const leftOn = computed(() => shown.value.chart || shown.value.where)
+const rightOn = computed(() => shown.value.perHour || shown.value.numbers)
+const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
 const colIds = computed<ColId[]>(() => [
-  shown.value.numbers ? 'numbers' : null,
   showChanges.value ? 'changes' : null,
-  shown.value.where ? 'where' : null
+  showMoves.value ? 'moves' : null
 ].filter((x): x is ColId => x != null))
 const draft = shallowRef<{ top?: number, cols?: number[], chartH?: number } | null>(null)
 let dragBase: { top: number, cols: number[], chartH: number } | null = null
@@ -598,8 +606,12 @@ function refresh () {
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
 .topRow { position: relative; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); border-bottom: 1px solid var(--w-line); }
 .topRow.one { grid-template-columns: minmax(0, 1fr); }
-.topRow > section { border-bottom: 0; min-width: 0; }
-.topRow > section + section { border-left: 1px solid var(--w-line); }
+.half { display: flex; flex-direction: column; min-width: 0; }
+.half > section { border-bottom: 0; }
+.half + .half { border-left: 1px solid var(--w-line); }
+.whereBlock { padding: var(--w-s2) var(--w-pad); border-top: 1px solid var(--w-line); }
+.movesCol { display: flex; flex-direction: column; gap: 2px; }
+.moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; }
 .perHour { display: grid; align-content: start; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
 .phHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 /* One line per figure: label, value, and its detail under the value. */
@@ -623,10 +635,9 @@ function refresh () {
 .goalLine { color: var(--w-up); }
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; opacity: .7; }
-.kpis { display: flex; flex-direction: column; gap: 6px; }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px var(--w-s3); padding: var(--w-s2) var(--w-pad); border-top: 1px solid var(--w-line); }
 .kpis > div { display: flex; flex-direction: column; min-width: 0; }
 .kpis b { font-size: var(--w-fs-md); font-weight: 500; }
-.moves { display: flex; gap: var(--w-s3); padding: 4px var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: baseline; min-width: 0; }
 .cols { position: relative; display: grid; border-bottom: 1px solid var(--w-line); }
 .cols > div:not([role=separator]) { padding: var(--w-s2) var(--w-pad); min-width: 0; }
 .cols > div:not([role=separator]) + div:not([role=separator]) { border-left: 1px solid var(--w-line); }
@@ -641,9 +652,6 @@ function refresh () {
 .scrollBox { flex: 1 1 auto; min-height: 0; }
 .scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 /* Beside "Where it is": as tall as that column (at least 240px), scrolling inside. */
-.capped { min-height: 240px; }
-.capped .scrollBox { position: relative; }
-.capped .scroll { position: absolute; inset: 0; max-height: none; }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }

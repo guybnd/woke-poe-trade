@@ -1,10 +1,10 @@
-// The Net worth window's resizable sections: the chart beside per hour, the
-// three columns under them, and the chart's height. Pure: no Vue.
+// The Net worth window's resizable sections: the two halves, the columns
+// under them, and the chart's height. Pure: no Vue.
 
-export type ColId = 'numbers' | 'changes' | 'where'
+export type ColId = 'changes' | 'moves'
 
 export interface PanelLayout {
-  // The chart's share of the top row (per hour gets the rest).
+  // The left half's share of the top row (the chart's side).
   top?: number
   // The columns' widths, relative to each other.
   cols?: Partial<Record<ColId, number>>
@@ -14,7 +14,7 @@ export interface PanelLayout {
 
 export const TOP_DEFAULT = 0.6
 export const CHART_H_DEFAULT = 80
-export const COL_DEFAULT: Record<ColId, number> = { numbers: 0.8, changes: 1.3, where: 1 }
+export const COL_DEFAULT: Record<ColId, number> = { changes: 1.3, moves: 1 }
 
 const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
 
