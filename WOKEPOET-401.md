@@ -14,6 +14,16 @@ history:
     user: Agent
     date: '2026-11-20T01:02:48.172Z'
     comment: Created ticket.
+    id: a-2026-11-20t01-02-48-172z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T01:06:02.030Z'
+    comment: >-
+      Mocks A/B/C posted for Guy's pick:
+      https://claude.ai/artifact/RE1GguCZNVsswrAhxsVFkM. Building C (slides +
+      live release line) in E:\Git\woke\wt\landing-refresh, branch
+      woke/landing-refresh.
+    id: a-2026-11-20t01-06-02-030z
 ---
 Landing content (docs/.vitepress/theme/landing/content.js) last changed 2026-11-13. Since then 1.330.5–1.330.10 and unreleased master added: Alt+T atlas/tree overlays, Ctrl+Space lookups (zones, pantheon, saved lists, bestiary recipes, anoints, crafts), Market prices list, map mods two-pane redesign, mod right-click menu, gem/cluster/Viscera version clicks, socket colour tiles, fractured pricing, cluster notable positions, update-while-closed with Go back.
 
