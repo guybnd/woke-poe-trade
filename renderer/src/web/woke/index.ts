@@ -64,6 +64,7 @@ export const wokeWidgets: WidgetComponent[] = [
   lazy(specs.widgetLootFilterSpec, () => import('./loot-filter/WidgetLootFilter.vue')),
   lazy(specs.widgetSessionAnalyticsSpec, () => import('./analytics/WidgetSessionAnalytics.vue')),
   lazy(specs.widgetDeathRecapSpec, () => import('./death-recap/WidgetDeathRecap.vue')),
+  lazy(specs.widgetSessionStorySpec, () => import('./session-story/WidgetSessionStory.vue')),
   lazy(specs.widgetTradeSpec, () => import('./trade/WidgetTrade.vue')),
   lazy(specs.widgetDisenchantSpec, () => import('./disenchant/WidgetDisenchant.vue')),
   lazy(specs.widgetWickermanSpec, () => import('./wickerman/WidgetWickerman.vue')),

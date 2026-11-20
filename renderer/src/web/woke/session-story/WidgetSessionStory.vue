@@ -1,0 +1,180 @@
+<template>
+  <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
+    <!-- A night is read from Client.txt: see story.ts. -->
+    <DockItem ref="dockRef" id="session-story" title="Session story" :show="!!shown" :wm-id="config.wmId"
+      :wake="store.finished.value" card-width="24rem" :menu="dockMenu">
+      <template #card>
+        <NightCard v-if="shown" :story="shown.story" :live="shown.live" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)" />
+      </template>
+    </DockItem>
+    <WPanel :title="config.wmTitle || 'Session story'" width="34rem" max-height="80vh">
+      <template v-if="store.loadError.value" #banner>
+        <WBanner>Couldn't read your saved nights: {{ store.loadError.value }}</WBanner>
+      </template>
+      <WEmpty v-if="!list.length" icon="fas fa-moon">
+        No nights yet. A night is read from the game's log, from your first map until it goes quiet for 15 minutes.
+      </WEmpty>
+      <template v-else>
+        <NightCard v-if="selected" :story="selected.story" :live="selected.live"
+          :title="selected.live ? 'Tonight so far' : nightTitle(selected.story)" />
+        <div class="w-group-label" :class="$style.label">Nights</div>
+        <button v-for="n in list" :key="n.story.id" type="button" :class="[$style.row, { [$style.on]: selected?.story.id === n.story.id }]"
+          data-night-row @click="picked = n.story.id">
+          <span class="flex-1 w-trunc">{{ n.live ? 'Tonight so far' : nightTitle(n.story) }}</span>
+          <span class="w-dim w-num">{{ formatDuration(n.story.endedAt - n.story.startedAt) }} · {{ n.story.maps.length }} maps</span>
+          <span v-if="n.story.profitChaos != null" class="w-num" :class="n.story.profitChaos >= 0 ? 'w-up' : 'w-down'">
+            {{ formatChaos(n.story.profitChaos, n.story.divine) }}
+          </span>
+        </button>
+      </template>
+    </WPanel>
+  </Widget>
+</template>
+
+<script lang="ts">
+import { widgetSessionStorySpec } from '../widget-specs'
+import { initSessionStoryWidget } from './widget'
+
+export default { widget: widgetSessionStorySpec }
+</script>
+
+<script setup lang="ts">
+import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
+import Widget from '@/web/overlay/Widget.vue'
+import { WBanner, WEmpty, WPanel } from '../ui'
+import { formatChaos, formatDuration, nowMinute } from '../ui/format'
+import DockItem from '../dock/DockItem.vue'
+import type { DockMenuAction } from '../dock/dock'
+import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
+import { lineTime } from '../campaign/log-tail'
+import { followGameLog } from '../shared/game-log'
+import NightCard from './NightCard.vue'
+import { NIGHT_GAP_MS, NightTracker } from './story'
+import type { NightStory } from './story'
+import { useNights } from './store'
+import type { SessionStoryWidget } from './widget'
+
+const props = defineProps<{ config: SessionStoryWidget }>()
+const wm = inject<WidgetManager>('wm')!
+
+if (props.config.wmFlags[0] === 'uninitialized') {
+  Object.assign(props.config, initSessionStoryWidget(props.config.wmId))
+}
+hideWhilePlaying(props.config)
+
+const store = useNights()
+const dockRef = shallowRef<{ peek: (text: string) => void } | null>(null)
+// A finished night shows on the dock for this long.
+const RECENT_MS = 12 * 3_600_000
+
+const tracker = new NightTracker((draft) => {
+  store.finish(draft).then(async (story) => {
+    // The icon only shows once the saved night is drawn; a peek before that is dropped.
+    await nextTick()
+    if (live) dockRef.value?.peek(peekText(story))
+  }).catch(() => {})
+})
+// Back after the module was off: carry on with the night it was reading.
+tracker.draft = store.keptDraft()
+
+function syncLive () {
+  store.setLive(tracker.draft)
+}
+
+// Ends a night once the log has been quiet: one timer, pushed back with each
+// line, so nothing wakes up while you play.
+let quietTimer: ReturnType<typeof setTimeout> | undefined
+function armQuiet () {
+  clearTimeout(quietTimer)
+  if (!tracker.draft) return
+  quietTimer = setTimeout(() => {
+    tracker.tick(Date.now())
+    syncLive()
+  }, NIGHT_GAP_MS + 1000)
+}
+
+let live = false
+let tailLines = new Set<string>()
+let stopLog: (() => void) | null = null
+let stopped = false
+onUnmounted(() => {
+  stopped = true
+  stopLog?.()
+  clearTimeout(quietTimer)
+})
+
+// Saved nights first, so the tail only replays what came after the last one.
+store.load().then(() => {
+  if (stopped) return
+  stopLog = followGameLog({
+    since: () => null,
+    onTail: (tail) => {
+      live = false
+      tailLines = new Set(tail.lines)
+      // Read again when the game opens a new log: only lines not seen yet.
+      const lastEnd = Math.max(store.nights.value[0]?.endedAt ?? 0, tracker.draft?.lastAt ?? 0)
+      for (const line of tail.lines) {
+        const at = lineTime(line)
+        if (at != null && at > lastEnd) tracker.feed(line, at)
+      }
+      // A night that went quiet while the app was closed ends now.
+      tracker.tick(Date.now())
+      syncLive()
+      armQuiet()
+    },
+    onLines: (lines) => {
+      live = true
+      for (const { line, at } of lines) {
+        if (!tailLines.delete(line)) tracker.feed(line, at)
+      }
+      syncLive()
+      armQuiet()
+    }
+  })
+})
+
+interface Shown { story: NightStory, live: boolean }
+
+const shown = computed<Shown | null>(() => {
+  if (store.live.value) return { story: store.live.value, live: true }
+  const last = store.nights.value[0]
+  return last && nowMinute.value - last.endedAt < RECENT_MS ? { story: last, live: false } : null
+})
+
+const list = computed<Shown[]>(() => [
+  ...(store.live.value ? [{ story: store.live.value, live: true }] : []),
+  ...store.nights.value.map(story => ({ story, live: false }))
+])
+const picked = shallowRef<string | null>(null)
+const selected = computed(() => list.value.find(n => n.story.id === picked.value) ?? list.value[0] ?? null)
+
+function nightTitle (s: NightStory): string {
+  const d = new Date(s.startedAt)
+  return `Night of ${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}`
+}
+
+function peekText (s: NightStory): string {
+  const profit = s.profitChaos != null ? ` · ${s.profitChaos > 0 ? '+' : ''}${formatChaos(s.profitChaos, s.divine)}` : ''
+  return `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${profit}`
+}
+
+const dockMenu = computed<DockMenuAction[]>(() => [{
+  label: 'All nights',
+  icon: 'fas fa-list',
+  action: () => showWithOverlay(wm, props.config.wmId)
+}])
+</script>
+
+<style module>
+.label { padding: 10px var(--w-pad) 2px; border-top: 1px solid var(--w-line); margin-top: 6px; }
+.row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 5px var(--w-pad);
+  text-align: left;
+  border-top: 1px solid var(--w-line-soft);
+}
+.row:hover, .on { background: var(--w-panel-2); }
+</style>

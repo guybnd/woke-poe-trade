@@ -1,0 +1,198 @@
+// A night of play read from Client.txt: the maps, the time out of maps, and
+// the deaths, from the first zone change until the log goes quiet. Pure: no Vue or IO.
+//
+// The game logs no logout line (checked in a real Client.txt), so a night
+// ends when nothing is written for NIGHT_GAP_MS, or when the game starts a new
+// log section (it was closed and opened again).
+import { lineTime } from '../campaign/log-tail'
+import { parseLogLine, slainName } from '../campaign/log-parse'
+import { isMapArea, mapNameFromArea } from '../farming/farming'
+import { staysInRun } from '../death-recap/death-log'
+
+export const NIGHT_GAP_MS = 15 * 60_000
+const OPENING = '***** LOG FILE OPENING *****'
+// Nights kept on disk.
+export const MAX_NIGHTS = 20
+
+interface Seg {
+  at: number
+  map: boolean
+  // The map instance ("areaId:seed"); side areas keep their map's.
+  key: string
+  name: string
+  named: boolean
+  level: number
+}
+
+export interface NightDraft {
+  startedAt: number
+  // Time of the last line written.
+  lastAt: number
+  segs: Seg[]
+  deaths: Array<{ at: number, key: string }>
+  // The game was closed and opened again: the next night can start right away.
+  endedByOpening?: boolean
+}
+
+export interface StoryMap {
+  name: string
+  level: number
+  enteredAt: number
+  mapMs: number
+  // Time out of maps after this one, until the next.
+  otherMs: number
+  deaths: number
+}
+
+// One stretch of the strip: a map (index into maps) or time out of maps.
+export interface StripPart { ms: number, map: number | null }
+
+export interface NightStory {
+  id: string
+  startedAt: number
+  endedAt: number
+  maps: StoryMap[]
+  strip: StripPart[]
+  mapMs: number
+  // Hideout, town and anything else that isn't a map.
+  otherMs: number
+  // When each death happened (ms).
+  deathsAt: number[]
+  // From the stash reader, when it read during the night.
+  profitChaos: number | null
+  divine: number | null
+  best: { name: string, chaos: number } | null
+  // Stash reads up to here count for this night (the next one starts after).
+  stashTo?: number
+  endedByOpening?: boolean
+}
+
+export class NightTracker {
+  draft: NightDraft | null = null
+
+  constructor (private readonly onFinished: (draft: NightDraft) => void) {}
+
+  feed (line: string, fallbackAt: number): void {
+    const at = lineTime(line) ?? fallbackAt
+    if (line.includes(OPENING)) {
+      if (this.draft) this.draft.endedByOpening = true
+      this.finish()
+      return
+    }
+    if (this.draft && at - this.draft.lastAt >= NIGHT_GAP_MS) this.finish()
+    const ev = parseLogLine(line)
+    if (ev?.kind === 'area') {
+      this.draft ??= { startedAt: at, lastAt: at, segs: [], deaths: [] }
+      const prev = this.draft.segs[this.draft.segs.length - 1]
+      // Side areas, encounters and towers inside a map stay part of it.
+      const side = staysInRun(ev.areaId) && !!prev?.map
+      const map = isMapArea(ev.areaId) || side
+      const key = side ? prev.key : `${ev.areaId}:${ev.seed ?? ''}`
+      this.draft.segs.push({ at, map, key, name: map && !side ? mapNameFromArea(ev.areaId) : '', named: side, level: ev.areaLevel })
+    } else if (ev?.kind === 'zone') {
+      const seg = this.draft?.segs[this.draft.segs.length - 1]
+      // "You have entered Strand." names the map it follows.
+      if (seg?.map && !seg.named) {
+        seg.name = ev.name
+        seg.named = true
+      }
+    } else if (!ev && this.draft) {
+      const seg = this.draft.segs[this.draft.segs.length - 1]
+      if (seg && slainName(line)) this.draft.deaths.push({ at, key: seg.key })
+    }
+    if (this.draft) this.draft.lastAt = Math.max(this.draft.lastAt, at)
+  }
+
+  // Ends a night that has been quiet long enough. Call on a timer.
+  tick (now: number): void {
+    if (this.draft && now - this.draft.lastAt >= NIGHT_GAP_MS) this.finish()
+  }
+
+  finish (): void {
+    const d = this.draft
+    this.draft = null
+    if (d && hasMaps(d)) this.onFinished(d)
+  }
+}
+
+export function hasMaps (d: NightDraft): boolean {
+  return d.segs.some(s => s.map)
+}
+
+// The night as the card shows it. `endedAt`: the last line, or now for a night still going.
+export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
+  const maps: StoryMap[] = []
+  const byKey = new Map<string, number>()
+  const strip: StripPart[] = []
+  let mapMs = 0
+  let otherMs = 0
+  let lastMap: number | null = null
+  d.segs.forEach((s, i) => {
+    const end = i + 1 < d.segs.length ? d.segs[i + 1].at : endedAt
+    const ms = Math.max(0, end - s.at)
+    let part: number | null = null
+    if (s.map) {
+      let idx = byKey.get(s.key)
+      if (idx == null) {
+        idx = maps.length
+        byKey.set(s.key, idx)
+        maps.push({ name: s.name, level: s.level, enteredAt: s.at, mapMs: 0, otherMs: 0, deaths: 0 })
+      } else if (s.named && s.name) {
+        maps[idx].name = s.name
+      }
+      maps[idx].mapMs += ms
+      mapMs += ms
+      lastMap = idx
+      part = idx
+    } else {
+      otherMs += ms
+      if (lastMap != null) maps[lastMap].otherMs += ms
+    }
+    const prev = strip[strip.length - 1]
+    if (prev && prev.map === part) prev.ms += ms
+    else strip.push({ ms, map: part })
+  })
+  for (const death of d.deaths) {
+    const idx = byKey.get(death.key)
+    if (idx != null) maps[idx].deaths++
+  }
+  return {
+    id: String(d.startedAt),
+    startedAt: d.startedAt,
+    endedAt,
+    maps,
+    strip: strip.filter(p => p.ms > 0),
+    mapMs,
+    otherMs,
+    deathsAt: d.deaths.map(x => x.at),
+    profitChaos: null,
+    divine: null,
+    best: null,
+    endedByOpening: d.endedByOpening
+  }
+}
+
+// The newest night first; the same night again replaces the old copy.
+export function keepNight (nights: NightStory[], story: NightStory): NightStory[] {
+  return [story, ...nights.filter(n => n.id !== story.id)]
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, MAX_NIGHTS)
+}
+
+export function isNightStory (v: unknown): v is NightStory {
+  const n = v as NightStory
+  return !!n && typeof n.id === 'string' && typeof n.startedAt === 'number' && Array.isArray(n.maps) && Array.isArray(n.strip)
+}
+
+// The biggest single gain in stash changes between two times.
+export function bestDrop (diffs: Array<{ at: number, added: Array<{ name: string, count: number, chaos: number }> }>, from: number, to: number): { name: string, chaos: number } | null {
+  let best: { name: string, chaos: number } | null = null
+  for (const diff of diffs) {
+    if (diff.at < from || diff.at > to) continue
+    for (const line of diff.added) {
+      if (!(line.chaos > 0)) continue
+      if (!best || line.chaos > best.chaos) best = { name: line.count > 1 ? `${line.count} × ${line.name}` : line.name, chaos: line.chaos }
+    }
+  }
+  return best
+}

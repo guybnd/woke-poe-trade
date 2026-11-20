@@ -10,6 +10,7 @@ import { RUN_TIMER_TYPE } from './campaign/run-timer'
 import { CAMPAIGN_TYPE } from './campaign/widget'
 import { CHALLENGES_TYPE } from './challenges/widget'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './death-recap/widget'
+import { SESSION_STORY_TYPE, initSessionStoryWidget } from './session-story/widget'
 import { DISENCHANT_TYPE } from './disenchant/widget'
 import { WICKERMAN_TYPE } from './wickerman/widget'
 import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
@@ -191,6 +192,13 @@ export const widgetDeathRecapSpec = {
   instances: 'single',
   trNameKey: 'Death recap',
   initInstance: () => initDeathRecapWidget(0)
+} satisfies WidgetSpec
+
+export const widgetSessionStorySpec = {
+  type: SESSION_STORY_TYPE,
+  instances: 'single',
+  trNameKey: 'Session story',
+  initInstance: () => initSessionStoryWidget(0)
 } satisfies WidgetSpec
 
 export const widgetTradeSpec = {
