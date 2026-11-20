@@ -180,7 +180,7 @@ export class MapLog {
 }
 
 // Mean time of the last few finished maps before this one, or null with too few.
-export function usualMapMs (history: MapRecord[], n = USUAL_OF): number | null {
+export function usualMapMs (history: readonly MapRecord[], n = USUAL_OF): number | null {
   const recent = history.filter(m => m.mapMs > 30_000).slice(0, n)
   if (recent.length < 3) return null
   return recent.reduce((s, m) => s + m.mapMs, 0) / recent.length

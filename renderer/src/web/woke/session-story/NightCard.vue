@@ -19,7 +19,7 @@
       <span v-if="story.maps.length"><span class="w-dim">Avg map</span> {{ formatClock(story.mapMs / story.maps.length) }}</span>
       <span v-if="mapsPerHour != null"><span class="w-dim">Maps/h</span> {{ mapsPerHour }}</span>
       <span title="Hideout, town and anything else that isn't a map"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
-      <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatDuration(story.longestBreakMs) }}</span>
+      <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
     </div>
     <div v-if="story.levelUps?.length" :class="$style.line" class="w-num" data-night-levels>
@@ -67,10 +67,10 @@ function tier (level: number): string {
   return level >= 68 && level <= 83 ? `T${level - 67}` : `level ${level}`
 }
 function partTitle (p: StripPart): string {
-  if (p.map == null) return `Out of maps · ${formatDuration(p.ms)}`
+  if (p.map == null) return `Out of maps · ${formatClock(p.ms)}`
   const m = props.story.maps[p.map]
   const deaths = m.deaths ? ` · ${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : ''
-  return `${m.name} ${tier(m.level)} · ${formatDuration(m.mapMs)} in the map${deaths}`
+  return `${m.name} ${tier(m.level)} · ${formatClock(m.mapMs)} in the map${deaths}`
 }
 function clock (ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })

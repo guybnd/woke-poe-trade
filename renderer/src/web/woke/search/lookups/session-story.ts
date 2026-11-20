@@ -32,7 +32,7 @@ function rows (s: NightStory): LookupRow[] {
   for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })
   out.push({ label: 'Deaths', value: String(s.deathsAt.length) })
   out.push({ label: 'Hideout', value: formatDuration(s.otherMs) })
-  if (s.longestBreakMs && s.longestBreakMs >= 60_000) out.push({ label: 'Longest break', value: formatDuration(s.longestBreakMs) })
+  if (s.longestBreakMs && s.longestBreakMs >= 60_000) out.push({ label: 'Longest break', value: formatClock(s.longestBreakMs) })
   return out
 }
 
