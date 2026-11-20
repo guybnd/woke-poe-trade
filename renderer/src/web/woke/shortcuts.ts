@@ -146,7 +146,7 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
   if (widget.wmType === SESSION_STORY_TYPE) {
     const story = widget as SessionStoryWidget
     if (!story.chipKey || story.chipPlace === 'off') return []
-    return [{ shortcut: story.chipKey, action: { type: 'trigger-event', target: CHIP_CLOSE_TARGET } }]
+    return [{ shortcut: story.chipKey, keepModKeys: true, action: { type: 'trigger-event', target: CHIP_CLOSE_TARGET } }]
   }
   if (widget.wmType === DROP_COUNTER_TYPE) {
     const counter = widget as DropCounterWidget

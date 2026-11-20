@@ -48,7 +48,7 @@ onMounted(() => {
   zoom: var(--w-ui-scale, 1);
 }
 /* A note is never cut short: long text wraps. */
-.text { min-width: 0; overflow-wrap: anywhere; }
+.text { min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
 .undo { color: var(--w-accent); font-weight: 600; padding: 0 4px; }
 .closes { cursor: pointer; }
 .undo:hover { text-decoration: underline; }

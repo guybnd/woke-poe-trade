@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
-import { MapLog, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import { MapLog, chipLines, compareMap, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
@@ -90,6 +90,23 @@ describe('maps from Client.txt', () => {
     const kept = keepMap(keepMap([], r(1000, 60_000, 1)), r(5_000_000, 30_000, 0))
     expect(kept).toHaveLength(1)
     expect(kept[0]).toMatchObject({ enteredAt: 1000, mapMs: 90_000, deaths: 1 })
+  })
+
+  it("compares a map with the same map's last hour and with the run before", () => {
+    const M = 60_000
+    const rec = (name: string, at: number, ms: number, extra: Partial<MapRecord> = {}) =>
+      ({ key: `${name}:${at}`, name, areaLevel: 83, enteredAt: at, mapMs: ms, deaths: 0, npcs: [], levelsGained: 0, charLevel: null, ...extra } as unknown as MapRecord)
+    const now = 100 * M
+    const recent = [rec('Strand', now - 5 * M, 3 * M), rec('Fortress', now - 10 * M, 2 * M), rec('Fortress', now - 30 * M, 2.5 * M), rec('Fortress', now - 90 * M, 9 * M), rec('Fortress', now - 40 * M, 0.2 * M)]
+    const done = rec('Fortress', now, 1.5 * M, { deaths: 1, npcs: ['Einhar'] })
+    const cmp = compareMap(done, recent)
+    expect(cmp).toMatchObject({ hourAvg: 2.25 * M, hourRuns: 2, prev: { name: 'Strand', mapMs: 3 * M }, usual: null })
+    const clock = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
+    expect(chipLines(done, cmp, clock)).toEqual(['Fortress T16 · 1:30', '1h avg 2:15 (2) ▼0:45 · Last (Strand) 3:00 ▼1:30 · 1 death · Einhar'])
+    // First run of a map this hour: against your usual.
+    const first = compareMap(rec('Grotto', now, M), recent)
+    expect(first.hourAvg).toBeNull()
+    expect(first.usual).toBeCloseTo((3 + 2 + 2.5 + 9) / 4 * M)
   })
 
   it('names NPCs and tiers', () => {

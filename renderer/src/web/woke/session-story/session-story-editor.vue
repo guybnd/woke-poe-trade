@@ -10,7 +10,7 @@
     </div>
     <w-toggle v-model="chipClick">Click the line in the middle of the screen to close it (it then takes the mouse while it's under the cursor)</w-toggle>
     <div class="w-dim text-sm">A close key is taken from the game while it's set, so pick one you don't play with: Space would stop reaching the game.</div>
-    <div class="w-dim text-sm">The line shows map, tier, time against your last 10 maps, deaths, league NPCs met and level-ups. In the middle of the screen it never catches a click.</div>
+    <div class="w-dim text-sm">The line shows map, tier, time against that map's average in the last hour and against your previous map, deaths, league NPCs met and level-ups. In the middle of the screen it never catches a click unless "Click" is on below, and then only while the cursor is over it.</div>
   </div>
 </template>
 

@@ -62,12 +62,13 @@ import { NIGHT_GAP_MS, NightTracker, farmingProfit } from './story'
 import { useSessionStore } from '../analytics/store'
 import { sessionTotals } from '../analytics/stats'
 import type { NightStory } from './story'
-import { MapLog, tierText, usualMapMs } from './map-log'
+import { MapLog, chipLines, compareMap } from './map-log'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
 import { CHIP_CLOSE_TARGET } from './widget'
 import type { ChipPlace, SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
+import { pushHostConfig } from '@/web/Config'
 
 const props = defineProps<{ config: SessionStoryWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -88,10 +89,13 @@ const chipMs = () => {
   return s === 0 ? UNTIL_MAP_MS : typeof s === 'number' && s > 0 ? s * 1000 : CHIP_MS
 }
 let chipToast: number | null = null
+// The dock is showing the map line (not the night's summary).
+let chipPeek = false
 function closeChip () {
   if (chipToast != null) dismissToast(chipToast)
   chipToast = null
-  dockRef.value?.unpeek()
+  if (chipPeek) dockRef.value?.unpeek()
+  chipPeek = false
 }
 // The close hotkey (Settings).
 const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
@@ -106,13 +110,18 @@ const mapLog = new MapLog({
   onLeave: (rec) => {
     if (!live) return
     const place = props.config.chipPlace ?? 'dock'
-    // The note in the middle never takes the mouse: clicks go to the game.
-    if (place === 'center') chipToast = toast(chipText(rec), { center: true, ms: chipMs(), closeOnClick: props.config.chipClick === true })
-    else if (place === 'dock') dockRef.value?.peek(chipText(rec), chipMs())
+    // The note in the middle takes the mouse only with "Click closes it" on,
+    // and only while the cursor is over it.
+    if (place === 'center') chipToast = toast(chipText(rec, 2), { center: true, ms: chipMs(), closeOnClick: props.config.chipClick === true })
+    else if (place === 'dock') {
+      dockRef.value?.peek(chipText(rec, 1), chipMs())
+      chipPeek = true
+    }
   },
-  // Into the next map: a line set to stay until then goes.
+  // Into a map: a line set to stay until then goes, and so does one that can
+  // take the mouse (it would catch clicks meant for the fight).
   onEnter: () => {
-    if (live && props.config.chipSeconds === 0) closeChip()
+    if (live && (props.config.chipSeconds === 0 || props.config.chipClick === true)) closeChip()
   },
   onDone: (rec) => { store.addMap(rec).catch(() => {}) }
 })
@@ -122,7 +131,9 @@ const tracker = new NightTracker((draft) => {
   store.finish(draft).then(async (story) => {
     // The icon only shows once the saved night is drawn; a peek before that is dropped.
     await nextTick()
-    if (live) dockRef.value?.peek(peekText(story))
+    if (!live) return
+    dockRef.value?.peek(peekText(story))
+    chipPeek = false
   }).catch(() => {})
 })
 // Back after the module was off: carry on with the night it was reading.
@@ -231,16 +242,11 @@ function profitOf (s: NightStory): number | null {
 }
 
 // "Fortress T16 · 6:42 ▼0:38 · 1 death · Einhar, Niko · Level 95"
-function chipText (rec: MapRecord): string {
-  const parts = [`${rec.name} ${tierText(rec.areaLevel)}`]
-  const usual = usualMapMs(store.maps.value)
-  const diff = usual != null ? rec.mapMs - usual : null
-  const delta = diff != null && Math.abs(diff) >= 5000 ? ` ${diff < 0 ? '▼' : '▲'}${formatClock(Math.abs(diff))}` : ''
-  parts.push(`${formatClock(rec.mapMs)}${delta}`)
-  if (rec.deaths) parts.push(`${rec.deaths} ${rec.deaths === 1 ? 'death' : 'deaths'}`)
-  if (rec.npcs.length) parts.push(rec.npcs.join(', '))
-  if (rec.levelsGained && rec.charLevel != null) parts.push(`Level ${rec.charLevel + rec.levelsGained}`)
-  return parts.join(' · ')
+// Two lines in the middle of the screen, one on the dock.
+function chipText (rec: MapRecord, lines: 1 | 2): string {
+  const out = chipLines(rec, compareMap(rec, store.maps.value), formatClock)
+  return out.join(lines === 2 ? '
+' : ' · ')
 }
 
 function peekText (s: NightStory): string {
@@ -272,7 +278,8 @@ const chipClick = computed({
 })
 const chipPlace = computed({
   get: () => props.config.chipPlace ?? 'dock',
-  set: (v: ChipPlace) => { props.config.chipPlace = v }
+  // The close key is registered only while the line shows somewhere.
+  set: (v: ChipPlace) => { props.config.chipPlace = v; pushHostConfig() }
 })
 
 const dockMenu = computed<DockMenuAction[]>(() => [{
