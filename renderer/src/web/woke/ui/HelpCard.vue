@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="tip" ref="el" data-w-popup :class="[$style.card, { [$style.keysOnly]: !paragraphs.length }]" :style="pos" role="tooltip">
+    <div v-if="tip" ref="el" data-w-popup :class="[$style.card, { [$style.keysOnly]: !paragraphs.length || tip.fit }]" :style="pos" role="tooltip">
       <p v-for="(p, i) in paragraphs" :key="i" :class="{ [$style.more]: i > 0, [$style.lines]: tip.lines }">{{ p }}</p>
       <div v-if="tip.keys?.length" :class="[$style.keys, { [$style.more]: paragraphs.length }]">
         <template v-for="(k, i) in tip.keys" :key="i"><WKbd :keys="k.keys" /><span>{{ k.label }}</span></template>
@@ -10,10 +10,12 @@
 </template>
 
 <script setup lang="ts">
-// Mounted once in the overlay. Draws the card behind a WInfo "?".
+// Mounted once in the overlay. Draws the card behind a WInfo "?", and every
+// `title` hover (title-tip.ts) in place of the browser's own tooltip.
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
-import { helpParagraphs, helpTip as tip, hideHelp, placeHelp } from './help-tip'
+import { helpParagraphs, helpTip as tip, hideHelp, placeAtPointer, placeHelp } from './help-tip'
+import { installTitleTips } from './title-tip'
 import WKbd from './WKbd.vue'
 
 const el = ref<HTMLElement | null>(null)
@@ -29,7 +31,8 @@ watch(tip, async (t) => {
   // With CSS zoom, left and top are in zoomed units.
   const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--w-ui-scale')) || 1
   const r = card.getBoundingClientRect()
-  const at = placeHelp(t.anchor, r, { width: window.innerWidth, height: window.innerHeight })
+  const screen = { width: window.innerWidth, height: window.innerHeight }
+  const at = t.at ? placeAtPointer(t.at, r, screen) : placeHelp(t.anchor, r, screen)
   placed.value = { left: at.left / scale, top: at.top / scale }
 })
 
@@ -43,12 +46,15 @@ const pos = computed(() => placed.value
 const close = () => { hideHelp() }
 const wm = inject<WidgetManager | undefined>('wm', undefined)
 watch(() => wm?.active.value, close)
+let uninstallTitles: (() => void) | undefined
 onMounted(() => {
+  uninstallTitles = installTitleTips()
   window.addEventListener('blur', close)
   window.addEventListener('scroll', close, true)
   window.addEventListener('dragstart', close, true)
 })
 onUnmounted(() => {
+  uninstallTitles?.()
   window.removeEventListener('blur', close)
   window.removeEventListener('scroll', close, true)
   window.removeEventListener('dragstart', close, true)

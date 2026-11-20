@@ -78,6 +78,10 @@ art wherever the game has it, readable fonts (nothing under 11px).
 
 Helpers: `ago(ts)` / `freshness(ts)` (one shared clock), `gameIcon(name, ns)`.
 
+## Title hovers
+
+A plain `title="…"` (or `:title`) on any element shows in the app's own card (`HelpCard`), under the pointer, after a short wait and at once when moving straight from one title to the next. Nothing to import: `title-tip.ts` listens once for the whole overlay. Line breaks in the title stay. Use it for short labels; longer explanations go in `WInfo`. `title=""` silences a title further up, as in the browser, and `data-native-title` on an element or parent keeps the browser's own tooltip. A title around a `v-item-tip` stays quiet while the item tooltip shows.
+
 ## Item tooltip
 
 Put `v-item-tip="{ name, type?, variant?, prices?, noPrice? }"` on a row or name to show the game-style tooltip at the cursor, with the item's text and a poe.ninja price strip. `type` is the poe.ninja row type; without it the kind comes from the name. Any market row works as is: `v-item-tip="m"`. The text lives in `public/data/tips` and loads on the first hover; rebuild it each league with `npm run tip-data -- <league>`.
