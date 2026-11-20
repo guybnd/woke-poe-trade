@@ -6,9 +6,9 @@ describe('net worth section sizes', () => {
   it('falls back to the defaults for missing or broken values', () => {
     expect(topOf(undefined)).toBe(0.6)
     expect(topOf({ top: 2 })).toBe(0.8)
-    expect(chartHOf({ chartH: -5 })).toBe(80)
+    expect(chartHOf({ chartH: -5 })).toBe(60)
     expect(chartHOf({ chartH: 1000 })).toBe(320)
-    expect(colWeights({ cols: { changes: 2 } }, ['changes', 'moves'])).toEqual([2, 1])
+    expect(colWeights({ cols: { changes: 2 } }, ['changes', 'side'])).toEqual([2, 1])
   })
 
   it('moves one column edge, never below 15% of the row', () => {

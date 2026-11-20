@@ -1,7 +1,7 @@
 // The Net worth window's resizable sections: the two halves, the columns
 // under them, and the chart's height. Pure: no Vue.
 
-export type ColId = 'changes' | 'moves'
+export type ColId = 'changes' | 'side'
 
 export interface PanelLayout {
   // The left half's share of the top row (the chart's side).
@@ -13,8 +13,8 @@ export interface PanelLayout {
 }
 
 export const TOP_DEFAULT = 0.6
-export const CHART_H_DEFAULT = 80
-export const COL_DEFAULT: Record<ColId, number> = { changes: 1.3, moves: 1 }
+export const CHART_H_DEFAULT = 60
+export const COL_DEFAULT: Record<ColId, number> = { changes: 1.3, side: 1 }
 
 const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
 
