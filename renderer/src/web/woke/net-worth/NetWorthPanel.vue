@@ -607,7 +607,7 @@ function refresh () {
 .halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: stretch; }
 .halves.one { grid-template-columns: minmax(0, 1fr); }
 .halves > .chartBlock { padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); min-width: 0; }
-.bigRate { display: block; font-size: calc(18px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
+.bigRate { display: block; white-space: nowrap; font-size: calc(18px * var(--w-text-scale, 1)); font-weight: 500; line-height: 1.15; }
 .tiles { display: grid; grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr)); gap: var(--w-s3); }
 .tiles > div { display: flex; flex-direction: column; justify-content: space-between; gap: 1px; min-width: 0; }
 .tiles > div > :first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -659,9 +659,9 @@ function refresh () {
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
-.catName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.catName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .moveName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.catRow { display: grid; grid-template-columns: 8em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
+.catRow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }
 .catRow b { text-align: right; font-weight: 500; }
