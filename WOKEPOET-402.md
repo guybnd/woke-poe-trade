@@ -22,6 +22,14 @@ history:
       41e639cf. Ticket stays open until #657 (data v26) merges; it waits on
       Guy's workflow approval. #656 still to close (duplicate of #654).
     id: a-2026-11-20t01-28-22-260z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T03:34:00.618Z'
+    comment: >-
+      Re-reviewed #657 rebuilt as data v27 (49b14701, on master): hashes match,
+      nothing dropped (Exalted Orbs from #665, Facetor's Lens, beasts, scarabs
+      kept), no stat refs or matchers lost. Go given to merge thread.
+    id: a-2026-11-20t03-34-00-618z
 ---
 Review of #657 (upstream data v26): no woke entries lost, no stat matchers lost, hashes match, 6 new stats, 3 trade id additions. Clean to merge.
 
