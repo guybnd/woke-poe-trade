@@ -316,7 +316,6 @@ const splitParts = computed(() => {
 const splitTotal = computed(() => splitParts.value.reduce((s, x) => s + x.ms, 0))
 const timeNote = computed(() => {
   if (!rates.value.fromLog) return 'Client.txt not found: nothing left out'
-
   return leaveOutHub.value ? 'Hideout time left out' : 'Hideout time counted as play'
 })
 const todayTip = computed(() => {
