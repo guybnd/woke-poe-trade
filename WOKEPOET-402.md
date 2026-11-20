@@ -13,6 +13,15 @@ history:
     user: Agent
     date: '2026-11-20T01:02:51.055Z'
     comment: Created ticket.
+    id: a-2026-11-20t01-02-51-055z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T01:28:22.260Z'
+    comment: >-
+      #660 (rare-only mods port + review fixes + startup JS win) merged as
+      41e639cf. Ticket stays open until #657 (data v26) merges; it waits on
+      Guy's workflow approval. #656 still to close (duplicate of #654).
+    id: a-2026-11-20t01-28-22-260z
 ---
 Review of #657 (upstream data v26): no woke entries lost, no stat matchers lost, hashes match, 6 new stats, 3 trade id additions. Clean to merge.
 
