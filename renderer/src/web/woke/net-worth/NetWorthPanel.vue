@@ -189,8 +189,7 @@ import { divine, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice,
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
-import { RATE_WINDOWS } from './play-time'
-import type { PlayRate } from './play-time'
+import { RATE_WINDOWS, rateTip } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
@@ -257,20 +256,12 @@ const etaText = (days: number) => days < 1 ? `${Math.max(1, Math.round(days * 24
 
 const liquid = computed(() => v.value ? liquidChaos(v.value) : 0)
 // ---------- per hour of play (last 1, 2, 3 hours) ----------
-const WINDOW_NAME: Record<string, string> = { '1h': 'Last hour', '2h': 'Last 2 hours', '3h': 'Last 3 hours', 'today': 'Today' }
 // Moves with each stash read, zone read and the 30 s clock.
 const rates = computed(() => ratesAt(now.value))
-function rateTip (id: string, r: PlayRate, fromLog: boolean): string {
-  const head = r.perHour == null
-    ? `${WINDOW_NAME[id]}: under 10 min of play`
-    : `${WINDOW_NAME[id]}: ${signed(toDiv(r.chaos))} ${unit.value} in ${duration(r.playMs)} of play`
-  if (!fromLog) return `${head}. Client.txt not found: hideout time not left out`
-  const out = [r.hubMs >= 60_000 ? `${duration(r.hubMs)} in hideout and town` : '', r.offMs >= 60_000 ? `${duration(r.offMs)} closed or AFK` : ''].filter(Boolean)
-  return out.length ? `${head}. Left out: ${out.join(', ')}` : head
-}
+const rateAmount = (chaos: number) => `${signed(toDiv(chaos))} ${unit.value}`
 const rateRow = computed(() => {
   const r = rates.value
-  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog) }))
+  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog, rateAmount) }))
   return row.some(x => x.div != null) ? row : null
 })
 const todayTip = computed(() => {

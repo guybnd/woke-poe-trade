@@ -102,9 +102,11 @@ async function readMarks (now: number) {
 }
 
 // Profit per hour of play over the last 1, 2, 3 hours and today, at `now`.
+// A read that just landed counts even before the caller's clock ticks past it.
 export function ratesAt (now: number): PlayRates {
   const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos }))
-  return playRates(points, marks.value.marks, now, marksFromLog.value)
+  const at = Math.max(now, points[points.length - 1]?.at ?? 0)
+  return playRates(points, marks.value.marks, at, marksFromLog.value)
 }
 
 export const lastDiff = computed(() => history.value.lastDiff)

@@ -156,6 +156,23 @@ export interface PlayRates {
   'fromLog': boolean
 }
 
+const WINDOW_NAME: Record<string, string> = { '1h': 'Last hour', '2h': 'Last 2 hours', '3h': 'Last 3 hours', 'today': 'Today' }
+const span = (ms: number) => {
+  const m = Math.round(ms / 60_000)
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
+}
+
+// A window's hover text, the same in the window and the dock card.
+// `amount`: a chaos sum as shown, unit included ("+0.8 d").
+export function rateTip (id: string, r: PlayRate, fromLog: boolean, amount: (chaos: number) => string): string {
+  const head = r.perHour == null
+    ? `${WINDOW_NAME[id]}: under 10 min of play`
+    : `${WINDOW_NAME[id]}: ${amount(r.chaos)} in ${span(r.playMs)} of play`
+  if (!fromLog) return `${head}. Client.txt not found: hideout time not left out`
+  const out = [r.hubMs >= 60_000 ? `${span(r.hubMs)} in hideout and town` : '', r.offMs >= 60_000 ? `${span(r.offMs)} closed or AFK` : ''].filter(Boolean)
+  return out.length ? `${head}. Left out: ${out.join(', ')}` : head
+}
+
 export function startOfDay (at: number): number {
   const d = new Date(at)
   d.setHours(0, 0, 0, 0)

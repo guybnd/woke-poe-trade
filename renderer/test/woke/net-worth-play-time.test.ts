@@ -1,7 +1,7 @@
 // Net worth per hour of play: hideout, town, closed and AFK time left out,
 // over the last 1, 2 and 3 hours (play-time.ts), and its Ctrl+Space card.
 import { describe, it, expect } from 'vitest'
-import { emptyMarks, feedMarks, playRate, playRates, timeIn, trimMarks } from '@/web/woke/net-worth/play-time'
+import { emptyMarks, feedMarks, playRate, playRates, rateTip, timeIn, trimMarks } from '@/web/woke/net-worth/play-time'
 import { glanceRates } from '@/web/woke/net-worth/glance'
 import { netWorthLookup } from '@/web/woke/search/lookups/net-worth'
 import type { Glance } from '@/web/woke/net-worth/glance'
@@ -112,6 +112,15 @@ describe('profit per hour of play', () => {
     const r = playRates(points, marks, T0 + 90 * MIN, false)
     expect(r['3h'].perHour).toBeCloseTo(400)
     expect(r.fromLog).toBe(false)
+  })
+})
+
+describe('hover text', () => {
+  it('names the unit, the play time and what was left out', () => {
+    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, hubMs: 15 * MIN, offMs: 0 }
+    const amount = (c: number) => `+${(c / 200).toFixed(1)} d`
+    expect(rateTip('1h', r, true, amount)).toBe('Last hour: +1.5 d in 30m of play. Left out: 15m in hideout and town')
+    expect(rateTip('2h', { ...r, perHour: null }, false, amount)).toBe('Last 2 hours: under 10 min of play. Client.txt not found: hideout time not left out')
   })
 })
 

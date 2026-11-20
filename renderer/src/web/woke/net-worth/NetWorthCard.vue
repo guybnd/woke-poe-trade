@@ -54,7 +54,7 @@ import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs
 import { refreshWaitMs, seriesFor, topCardChanges } from './ledger'
 import type { ReaderStatus } from './widget'
 import Coin from './Coin.vue'
-import { RATE_WINDOWS } from './play-time'
+import { RATE_WINDOWS, rateTip } from './play-time'
 
 const props = defineProps<{
   status: ReaderStatus | null
@@ -98,19 +98,10 @@ const readLine = computed(() => now.value && props.status?.lastReadAt ? `Read ${
 const rateRow = computed(() => {
   if (!sameLeague.value) return null
   const r = ratesAt(now.value)
-  const row = RATE_WINDOWS.map(w => {
-    const x = r[w.id]
-    const tip = x.perHour == null
-      ? `Under 10 min of play in the last ${w.id}`
-      : `${signed(toDiv(x.chaos))} in ${minutes(x.playMs)} of play${r.fromLog && x.hubMs >= 60_000 ? `, ${minutes(x.hubMs)} in hideout and town left out` : ''}`
-    return { id: w.id, div: x.perHour == null ? null : toDiv(x.perHour), tip }
-  })
+  const amount = (chaos: number) => `${signed(toDiv(chaos))} ${divineRate.value ? 'd' : 'c'}`
+  const row = RATE_WINDOWS.map(w => ({ id: w.id, div: r[w.id].perHour == null ? null : toDiv(r[w.id].perHour!), tip: rateTip(w.id, r[w.id], r.fromLog, amount) }))
   return row.some(x => x.div != null) ? row : null
 })
-const minutes = (ms: number) => {
-  const m = Math.round(ms / 60_000)
-  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
-}
 
 const fmt = (n: number) => formatAmount(n)
 const toDiv = (chaos: number) => divineRate.value ? chaos / divineRate.value : chaos
