@@ -14,6 +14,15 @@ history:
     user: Agent
     date: '2026-11-20T10:28:16.619Z'
     comment: Created ticket.
+    id: a-2026-11-20t10-28-16-619z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T10:34:06.707Z'
+    comment: >-
+      Option A built on woke/networth-active-hour (commit 6baf1665-ish,
+      amended). Mocks/pick: https://claude.ai/artifact/4AMW4gkqA9KvuwhxgF78hH —
+      question to Guy in the project thread. Review + CI running.
+    id: a-2026-11-20t10-34-06-707z
 ---
 Guy (2026-11-20): net worth profit per hour should leave out time in hideout/town, and show rolling last 1, 2 and 3 hour windows.
 
