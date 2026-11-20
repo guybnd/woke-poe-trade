@@ -8,7 +8,7 @@
       <span v-if="!open" :class="$style.best">
         <template v-for="(c, i) in cols.slice(0, 3)" :key="c.id">{{ i ? ' · ' : '' }}{{ c.name }} <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b></template>
       </span>
-      <span v-else class="w-dim">best {{ cols[0].name }} <b :class="(cols[0].profit ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit) }}</b></span>
+      <span v-else class="w-dim">best {{ cols[0].name }} <b :class="(cols[0].profit ?? cols[0].loot) >= 0 ? 'w-up' : 'w-down'">{{ cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit) }}</b></span>
       <span class="flex-1" />
       <i class="fas w-dim" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
@@ -17,7 +17,7 @@
         <thead>
           <tr>
             <th :class="$style.lab">Fragment · price</th>
-            <th v-for="c in cols" :key="c.id" :class="$style.map" :data-nightmare-map="c.id">{{ c.name }}</th>
+            <th v-for="c in cols" :key="c.id" :class="$style.map" :data-nightmare-map="c.id" :title="c.name">{{ c.short }}</th>
           </tr>
         </thead>
         <tbody>
@@ -106,8 +106,16 @@ const results = computed(() => {
 })
 const estimated = computed(() => results.value.some(r => r.estimated))
 
-// Copies a kill as a percentage: whole numbers, one decimal under 10%.
-const pct = (n: number) => n >= 0.1 ? String(Math.round(n * 100)) : (n * 100).toFixed(1).replace(/\.0$/, '')
+// Column heads: five fit side by side in the price check.
+const SHORT: Record<string, string> = {
+  'nightmare-abomination': 'Abom',
+  'nightmare-citadel': 'Citadel',
+  'nightmare-fortress': 'Fortress',
+  'nightmare-sanctuary': 'Sanct',
+  'nightmare-ziggurat': 'Zigg'
+}
+// Copies a kill as a percentage: whole numbers, one decimal under 1%.
+const pct = (n: number) => n >= 0.01 ? String(Math.round(n * 100)) : (n * 100).toFixed(1).replace(/\.0$/, '')
 const copies = (d: DropRow) => (d.chance ?? 0) * d.qty
 
 const cols = computed(() => results.value.map(r => {
@@ -116,6 +124,7 @@ const cols = computed(() => results.value.map(r => {
   return {
     id: r.boss.id,
     name: r.boss.name.replace(/ Map$/, ''),
+    short: SHORT[r.boss.id] ?? r.boss.name,
     favoured: map.favoured,
     drops: new Map(r.drops.map(d => [d.name, d])),
     unique: u ? { name: u.name, pct: pct(copies(u)), estimate: u.rateSource === 'estimate', price: u.price } : null,
@@ -154,9 +163,11 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .fold { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: var(--w-fs-sm); }
 .title { color: var(--w-gold); font-family: var(--w-caps-face); }
 .best { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.grid th, .grid td { padding: 1px 4px; text-align: right; white-space: nowrap; }
-.grid th:first-child, .grid td:first-child { text-align: left; padding-left: 0; }
+/* Fixed columns, every map cell centred: headers, chances, unique, loot and
+   profit line up whatever the window's text alignment (PoE layout centres rows). */
+.grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.grid th, .grid td { padding: 1px 2px; text-align: center !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid th:first-child, .grid td:first-child { text-align: left !important; padding-left: 0; width: 34%; }
 .lab { color: var(--w-faint); font-weight: 400; }
 .mapcost { color: var(--w-faint); font-weight: 400; }
 .map { color: var(--w-gold); font-family: var(--w-caps-face); font-weight: 400; vertical-align: bottom; }
@@ -166,7 +177,7 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .est { color: var(--w-warn); }
 .sep td { border-top: 1px solid var(--w-line); padding-top: 3px; }
 .uniq { color: var(--w-r-unique); }
-.ucell { text-align: center !important; vertical-align: top; }
+.ucell { vertical-align: top; }
 .uicon { display: block; margin: 0 auto 1px; }
 .profit { font-weight: 600; }
 .note { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--w-line); color: var(--w-faint); }

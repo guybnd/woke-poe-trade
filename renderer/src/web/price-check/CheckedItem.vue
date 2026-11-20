@@ -47,7 +47,7 @@
       @preset="selectPreset"
       @submit="doSearch = true">
       <template #rolls>
-        <woke-roll-presets :stats="itemStats" :item="item" :league="itemFilters.trade.league" @apply="searchAfterPreset" />
+        <woke-roll-presets :stats="rowStats" :item="item" :league="itemFilters.trade.league" @apply="searchAfterPreset" />
       </template>
     </filters-block>
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->

@@ -70,7 +70,10 @@ const searchable = computed(() => (props.stats ?? []).filter((s): s is StatFilte
 const rows = computed(() => {
   const used = new Set<StatFilter>()
   return result.value!.verdict.mods.map(mod => {
-    const filter = searchable.value.find(f => !used.has(f) && f.statRef === mod.matcher) ?? null
+    // The verdict names a mod by its wording, the filter by its stat's ref; a
+    // stat has several wordings (plural, 100%, reworded), so any of them counts.
+    const filter = searchable.value.find(f => !used.has(f) && (f.statRef === mod.matcher ||
+      f.sources.some(s => s.stat.stat.matchers.some(m => m.string === mod.matcher)))) ?? null
     if (filter) used.add(filter)
     return { mod, filter }
   })
@@ -78,13 +81,18 @@ const rows = computed(() => {
 function stateOf (f: StatFilter): ModState {
   return f.disabled ? 'any' : f.not ? 'not' : 'has'
 }
-// Has searches at least this map's roll; Not wants none of it, any roll.
+// The roll range each filter was made with (one-sided: at least a good roll,
+// at most a bad one), put back when Has follows Not.
+const madeWith = new WeakMap<StatFilter, { min: number | '' | undefined, max: number | '' | undefined }>()
+// Has searches this map's roll as the filter was made; Not wants none of it, any roll.
 function setState (f: StatFilter, state: ModState) {
+  if (f.roll && !madeWith.has(f)) madeWith.set(f, { min: f.roll.min, max: f.roll.max })
   f.disabled = state === 'any'
   f.not = state === 'not' ? true : undefined
   if (f.roll) {
-    f.roll.min = state === 'not' ? '' : f.roll.default.min
-    f.roll.max = state === 'not' ? '' : f.roll.default.max
+    const made = madeWith.get(f)!
+    f.roll.min = state === 'not' ? '' : made.min
+    f.roll.max = state === 'not' ? '' : made.max
   }
 }
 const picked = computed(() => {

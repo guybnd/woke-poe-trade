@@ -71,7 +71,7 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   const maps = strip.locator('[data-nightmare-map]')
   await expect(maps).toHaveCount(5, SLOW)
   // Ziggurat (Devouring) pays most, Fortress least, at these prices.
-  await expect(maps.first()).toHaveText('Ziggurat')
+  await expect(maps.first()).toHaveText('Zigg')
   await expect(maps.last()).toHaveText('Fortress')
   // Devouring: ~80% under Ziggurat, which favours it; ~5% elsewhere.
   const devouring = strip.locator('[data-nightmare-frag="Devouring Fragment"] td')
@@ -79,7 +79,7 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await expect(devouring.nth(2)).toHaveText('~5%')
   // Sanctuary favours three: ~53% each.
   const sanct = await maps.allTextContents()
-  const col = sanct.indexOf('Sanctuary') + 1
+  const col = sanct.indexOf('Sanct') + 1
   await expect(strip.locator('[data-nightmare-frag="Reverent Fragment"] td').nth(col)).toHaveText('~53%')
   // Each boss's own unique, priced, in its map's column.
   const unique = strip.locator('[data-nightmare-unique] td').nth(col)
