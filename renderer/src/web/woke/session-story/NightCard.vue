@@ -6,19 +6,19 @@
     </div>
     <div :class="$style.strip" data-night-strip>
       <span v-for="(p, i) in story.strip" :key="i" :class="p.map == null ? $style.out : $style.map"
-        :style="{ flexGrow: p.ms }" :title="partTitle(p)" />
-      <span v-for="(x, i) in deathMarks" :key="'d' + i" :class="$style.death" :style="{ left: `${x}%` }" title="Death" />
+        :style="{ flexGrow: p.ms }" @mouseenter="tip($event, partTitle(p))" @mouseleave="untip" />
+      <span v-for="(x, i) in deathMarks" :key="'d' + i" :class="$style.death" :style="{ left: `${x}%` }" />
     </div>
     <div :class="$style.axis" class="w-num w-dim">
       <span>{{ clock(story.startedAt) }}</span>
       <span>{{ live ? 'now' : clock(story.endedAt) }}</span>
     </div>
     <div :class="$style.totals" class="w-num" data-night-totals>
-      <span v-if="profit" :title="profit.from"><span class="w-dim">Profit</span> <span :class="profit.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(profit.chaos) }}</span></span>
+      <span v-if="profit" @mouseenter="tip($event, profit.from)" @mouseleave="untip"><span class="w-dim">Profit</span> <span :class="profit.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(profit.chaos) }}</span></span>
       <span v-if="perHour != null"><span class="w-dim">per h</span> {{ formatChaos(perHour, story.divine) }}</span>
       <span v-if="story.maps.length"><span class="w-dim">Avg map</span> {{ formatClock(story.mapMs / story.maps.length) }}</span>
       <span v-if="mapsPerHour != null"><span class="w-dim">Maps/h</span> {{ mapsPerHour }}</span>
-      <span title="Hideout, town and anything else that isn't a map"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
+      <span @mouseenter="tip($event, 'Hideout, town and anything else that isn't a map')" @mouseleave="untip"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
       <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatClock(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
     </div>
@@ -32,7 +32,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted } from 'vue'
+import { hideHelp, showHelp } from '../ui/help-tip'
 import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import type { NightStory, StripPart } from './story'
 
@@ -62,6 +63,14 @@ const deathMarks = computed(() => {
   const span = played.value
   return span > 0 ? props.story.deathsAt.map(at => Math.min(100, Math.max(0, (at - props.story.startedAt) / span * 100))) : []
 })
+
+// The app's own tooltip card, not the browser's.
+const tipOwner = {}
+function tip (e: MouseEvent, text: string) {
+  showHelp(tipOwner, e.currentTarget as HTMLElement, text)
+}
+function untip () { hideHelp(tipOwner) }
+onUnmounted(untip)
 
 function tier (level: number): string {
   return level >= 68 && level <= 83 ? `T${level - 67}` : `level ${level}`

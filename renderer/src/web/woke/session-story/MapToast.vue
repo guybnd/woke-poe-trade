@@ -1,14 +1,13 @@
 <template>
   <Teleport to="body">
-    <div v-if="chip" ref="el" :class="[$style.toast, 'w-enter']" data-map-toast role="status"
-      :title="clickToClose ? 'Click to close' : undefined">
+    <div v-if="chip" ref="el" :class="[$style.toast, 'w-enter']" data-map-toast role="status">
       <div :class="$style.top">
         <div :class="$style.lead">
           <div :class="$style.name">{{ chip.rec.name }} <span :class="$style.tier">{{ tierText(chip.rec.areaLevel) }}</span></div>
           <div :class="$style.time" class="w-num">{{ formatClock(chip.rec.mapMs) }}</div>
           <div v-if="headDiff != null" class="w-num" :class="[$style.delta, tone(headDiff)]">{{ signed(headDiff) }} <span :class="$style.vs">{{ headLabel }}</span></div>
         </div>
-        <div v-if="chip.cmp.runs.length > 1" :class="$style.bars" :title="`Your last ${chip.cmp.runs.length} runs of ${chip.rec.name} this hour`">
+        <div v-if="chip.cmp.runs.length > 1" :class="$style.bars">
           <i v-for="(ms, i) in chip.cmp.runs" :key="i" :class="{ [$style.now]: i === chip.cmp.runs.length - 1 }"
             :style="{ height: `${Math.max(8, ms / barTop * 100)}%` }" />
           <span v-if="chip.cmp.hourAvg != null" :class="$style.avg" :style="{ bottom: `${chip.cmp.hourAvg / barTop * 100}%` }" />
