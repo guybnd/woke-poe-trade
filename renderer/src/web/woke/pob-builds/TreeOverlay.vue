@@ -384,7 +384,11 @@ async function press () {
   if (on.value) { stop(); return }
   const atlas = atlasDrawer()
   if (atlas?.isOn()) { atlas.stop(); return }
-  if (!atlas?.ready()) { await start(); return }
+  if (!atlas?.ready()) {
+    // PoB builds off: the key is only here for the atlas drawing.
+    if (!active.pobWidget.value) { note('Select an atlas strategy with a tree first.'); return }
+    await start(); return
+  }
   const build = Boolean(active.details.value)
   if (!build) { await atlas.start(); return }
   const tryAtlas = () => atlas.start(true)
