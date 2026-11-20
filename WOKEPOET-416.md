@@ -20,6 +20,13 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-20T12:13:38.659Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-20T12:23:34.625Z'
+    comment: >-
+      PR #679 open. Separate bug review clean, cloud checks green. Sent to the
+      merge thread through the coordinator.
+    id: a-2026-11-20t12-23-34-625z
 needsAction: null
 ---
 > **TL;DR** Guy picked layout B for beast types (WOKEPOET-415) and asked for real game icons and clickable family headers that filter the list.
