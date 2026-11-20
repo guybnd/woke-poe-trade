@@ -64,10 +64,18 @@ export function readPicture (job: PictureJob): PictureResult {
     // Its lines were shrunk with it: paler.
     if (tone === 'blue') tone = 'pale'
   }
-  const { fit, bare } = fitPicture(px, width, height, pts, job.kind, job.snip)
+  let { fit, bare } = fitPicture(px, width, height, pts, job.kind, job.snip)
+  // The website's atlas viewer (pathofexile.com): a grey page, not the game's
+  // dark backdrop, so the dark check fails it. Its taken lines are cream, and
+  // every frame on it has blue art, so frames aren't read (they made 255).
+  let web = false
+  if (!fit && tone !== 'gold') {
+    ;({ fit, bare } = fitPicture(px, width, height, pts, { ...job.kind, minDark: 0 }, job.snip ? { ...job.snip, minDark: 0 } : undefined))
+    web = fit != null
+  }
   if (!fit) return { ok: false, reason: 'no-tree' }
-  const lit = litProbes(px, width, height, fit, job.probes.map(p => Float32Array.from(p)), tone)
-  const extraLit = litLines(px, width, height, fit, job.extra.map(p => Float32Array.from(p)), pts, tone, bare)
+  const lit = web ? job.probes.map(() => false) : litProbes(px, width, height, fit, job.probes.map(p => Float32Array.from(p)), tone)
+  const extraLit = litLines(px, width, height, fit, job.extra.map(p => Float32Array.from(p)), pts, web ? 'cream' : tone, bare)
   return { ok: true, lit, extraLit, width, height, bare }
 }
 

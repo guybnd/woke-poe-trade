@@ -14,6 +14,10 @@ import { NODE_RADIUS } from '../pob-builds/passive-tree'
 import { pathTo } from './atlas-tree'
 import type { AtlasTreeModel } from './atlas-tree'
 
+// A short branch whose lines are under its frames (a leaf notable): one or
+// two passives past the last lit line.
+const GLOW_STEPS = 3
+
 export interface ShotRead {
   // Passives taken, start left out.
   nodes: number[]
@@ -97,16 +101,22 @@ export function readShots (model: AtlasTreeModel, lines: BuildLine[], lit: boole
     for (const id of group) taken.add(id)
     left = left.filter((_, j) => j !== i)
   }
-  // Lit frames next to what's taken, until no more join.
+  // Lit frames next to what's taken, at most GLOW_STEPS out from what the
+  // lines gave: blue icons inside unlit frames read as glow too, and chained
+  // freely they ran across the whole tree (255 passives on a full one).
   const glows = new Set(ringIds.filter((_, i) => rings.some(r => r[i])))
   taken.add(model.start)
-  for (let grew = true; grew;) {
-    grew = false
-    for (const id of glows) {
-      if (taken.has(id) || !(model.links.get(id) ?? []).some(m => taken.has(m))) continue
-      taken.add(id)
-      grew = true
+  let edge = [...taken]
+  for (let step = 0; step < GLOW_STEPS && edge.length; step++) {
+    const next: number[] = []
+    for (const a of edge) {
+      for (const id of model.links.get(a) ?? []) {
+        if (!glows.has(id) || taken.has(id)) continue
+        taken.add(id)
+        next.push(id)
+      }
     }
+    edge = next
   }
   taken.delete(model.start)
   return { nodes: [...taken], joined, lines: on.filter(Boolean).length }

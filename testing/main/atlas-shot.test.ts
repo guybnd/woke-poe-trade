@@ -117,6 +117,22 @@ describe('atlas tree screenshots to a strategy', () => {
     expect(lines.some(l => holes.includes(l.a) && holes.includes(l.b))).toBe(false)
   })
 
+  it('reads the atlas viewer on the website (cream lines, grey page)', () => {
+    // Guy's import that came out as 255 passives: frames there all have blue
+    // art, which read as taken and chained across the tree.
+    const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '../fixtures/screens/atlas-tree-website.png')))
+    const px = new Uint8Array(png.data)
+    for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
+    const res = readPicture({ px, width: png.width, height: png.height, pts, kind: ATLAS_FIT, snip: ATLAS_PICTURE_FIT, tone: 'blue', probes: rings.map(r => [...r]), extra: extra.map(e => [...e]) })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const r = readShots(model, lines, [res.extraLit], ringIds, [res.lit])
+    // 143 on the picture, checked by eye along its cream lines.
+    expect(r.nodes.length).toBeGreaterThanOrEqual(135)
+    expect(r.nodes.length).toBeLessThanOrEqual(150)
+    expect(r.joined).toBeLessThanOrEqual(5)
+  })
+
   it('finds no atlas tree on other screens', () => {
     for (const file of ['passive-tree-real-zoomed-in.png', 'area-mods-real-1.png', 'map-real-01.png', 'stash-general-real.png']) expect(read(file), file).toBeNull()
   })
