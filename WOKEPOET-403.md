@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-403
 title: 'Nightmare (T17) map value: map price vs boss fragment EV'
-status: Grooming
+status: In Progress
 priority: Medium
 effort: M
 assignee: unassigned
@@ -14,6 +14,22 @@ history:
     user: Agent
     date: '2026-11-20T02:21:46.778Z'
     comment: Created ticket.
+    id: a-2026-11-20t02-21-46-778z
+  - type: status_change
+    from: Grooming
+    to: In Progress
+    user: Agent
+    date: '2026-11-20T02:23:53.489Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-20T02:23:57.693Z'
+    comment: >-
+      Mocks A/B/C with pick buttons:
+      https://claude.ai/artifact/JnieYEaSRWxQ9bQ5PeeRmL (pick in its db at
+      picks/current). Building A in wt/nightmare-maps, branch
+      woke/nightmare-maps.
+    id: a-2026-11-20t02-23-57-693z
+needsAction: null
 ---
 For each T17 map (Fortress, Abomination, Citadel, Sanctuary, Ziggurat): poe.ninja price of the map vs expected value of the uber fragments its boss drops; show which ones pay.
 
