@@ -10,7 +10,8 @@
       <i class="fas w-dim" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
     <!-- Guy's holistic pick A: profit bars for the five maps, the grid one click further. -->
-    <div v-if="open" :class="$style.bars" data-nightmare-bars>
+    <!-- The grid takes the bars' place, so opening it doesn't push what's below out of the window (Guy, 2026-11-20). -->
+    <div v-if="open && !gridOpen" :class="$style.bars" data-nightmare-bars>
       <template v-for="c in cols" :key="c.id">
         <span :title="c.name">{{ c.short }}</span>
         <span :class="$style.bar"><i :class="(c.profit ?? c.loot) >= 0 ? $style.barUp : $style.barDown" :style="{ width: barWidth(c) }" /></span>
@@ -18,7 +19,7 @@
       </template>
     </div>
     <button v-if="open" type="button" :class="$style.gridToggle" :aria-expanded="gridOpen" data-nightmare-grid @click="gridOpen = !gridOpen">
-      {{ estimated ? '~ estimates · ' : '' }}{{ gridOpen ? 'Hide' : 'Show' }} the fragment × map grid <i class="fas" :class="gridOpen ? 'fa-chevron-up' : 'fa-chevron-down'" />
+      {{ estimated ? '~ estimates · ' : '' }}{{ gridOpen ? 'Back to the profit bars' : 'Show the fragment × map grid' }} <i class="fas" :class="gridOpen ? 'fa-chart-bar' : 'fa-table'" />
     </button>
     <div v-if="open && gridOpen" :class="$style.wrap">
       <table :class="$style.grid">

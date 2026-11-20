@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, watchEffect } from 'vue'
+import { computed, inject, onBeforeUnmount, useSlots, watch, watchEffect } from 'vue'
 import type { ShallowRef } from 'vue'
 import { WInfo } from '../ui'
 import { useFold } from '../ui/fold'
@@ -71,6 +71,13 @@ import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[], filters?: ItemFilters, addMods?: boolean }>()
 
 const open = useFold('map-mod-strip')
+// With Worth running in the slot (a Nightmare Map), one of it and Trade search
+// is open at a time, so neither pushes the other out of the window (Guy, 2026-11-20).
+const slots = useSlots()
+const worthOpen = useFold('nightmare-strip', true)
+if (slots.worth && open.value && worthOpen.value) open.value = false
+watch(open, (now) => { if (now && slots.worth) worthOpen.value = false })
+watch(worthOpen, (now) => { if (now && slots.worth) open.value = false })
 
 const result = computed(() => {
   const config = findMapModsConfig()

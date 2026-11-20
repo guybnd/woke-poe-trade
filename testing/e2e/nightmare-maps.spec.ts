@@ -73,6 +73,8 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await expect(strip.locator('[data-nightmare-bars]')).toContainText('Zigg', SLOW)
   await strip.locator('[data-nightmare-grid]').click()
   await expect(maps).toHaveCount(5, SLOW)
+  // The grid takes the bars' place.
+  await expect(strip.locator('[data-nightmare-bars]')).toHaveCount(0)
   // Ziggurat (Devouring) pays most, Fortress least, at these prices.
   await expect(maps.first()).toHaveText('Zigg')
   await expect(maps.last()).toHaveText('Fortress')
@@ -112,6 +114,13 @@ test('Nightmare Map with Map mods: Run it?, Worth running, Trade search in that 
   expect(order).toEqual(['run', 'worth', 'trade'])
   // Only one Nightmare grid on the page.
   await expect(panel.locator('[data-woke-nightmare]')).toHaveCount(1)
+  // One section open at a time: opening Trade search folds Worth running, and back.
+  await strip.locator('[data-map-trade] > button').first().click()
+  await expect(strip.locator('[data-nightmare-bars]')).toHaveCount(0)
+  await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'true')
+  await strip.locator('[data-nightmare-fold]').click()
+  await expect(strip.locator('[data-nightmare-bars]')).toBeVisible()
+  await expect(strip.locator('[data-map-trade] > button').first()).toHaveAttribute('aria-expanded', 'false')
   await overlay.snap('nightmare map holistic A')
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
