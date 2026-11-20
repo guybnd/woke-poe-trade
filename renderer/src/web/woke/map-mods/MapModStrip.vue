@@ -110,7 +110,7 @@ const headline = computed(() => {
   if (v.deadly.length) return [...v.deadly, ...v.warn].map(m => shortLabel(m.matcher)).join(' · ')
   if (v.warn.length) return warnText.value
   if (result.value!.unknown.length) return "Couldn't read every mod"
-  return 'Safe'
+  return ''
 })
 
 // The price check's filters for the map's own mods (create-stat-filters.ts): each
