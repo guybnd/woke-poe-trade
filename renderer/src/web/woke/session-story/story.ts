@@ -164,10 +164,13 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   strip.forEach((p, i) => {
     if (p.map == null && i > 0 && i < strip.length - 1) longestBreakMs = Math.max(longestBreakMs, p.ms)
   })
+  // Party members' level-ups are logged too: follow the first character
+  // that levels, as the run timer does.
   const levelUps: Array<{ char: string, from: number, to: number }> = []
+  const mine = d.levels?.[0]?.char
   for (const l of d.levels ?? []) {
-    const known = levelUps.find(x => x.char === l.char)
-    if (known) known.to = Math.max(known.to, l.level)
+    if (l.char !== mine) continue
+    if (levelUps[0]) levelUps[0].to = Math.max(levelUps[0].to, l.level)
     else levelUps.push({ char: l.char, from: l.level - 1, to: l.level })
   }
   for (const death of d.deaths) {
@@ -204,15 +207,19 @@ export function isNightStory (v: unknown): v is NightStory {
   return !!n && typeof n.id === 'string' && typeof n.startedAt === 'number' && Array.isArray(n.maps) && Array.isArray(n.strip)
 }
 
-// The biggest single gain in stash changes between two times.
-// Profit from Farming sessions that ran inside the night (loot minus map
-// costs, as Session analytics counts them), or null when none did.
-export function farmingProfit (night: Pick<NightStory, 'startedAt' | 'endedAt'>, sessions: Array<{ startedAt: number, endedAt: number, profit: number }>): { chaos: number, sessions: number } | null {
-  const inside = sessions.filter(s => s.startedAt < night.endedAt + NIGHT_GAP_MS && s.endedAt > night.startedAt)
+// Profit from Farming sessions of the night (loot minus map costs, as
+// Session analytics counts them), or null when there were none. A session
+// belongs to the night it started in (or just before), never to two:
+// `nextStartedAt` is the next night's start.
+export function farmingProfit (night: Pick<NightStory, 'startedAt' | 'endedAt'>, nextStartedAt: number | null, sessions: Array<{ startedAt: number, endedAt: number, profit: number }>): { chaos: number, sessions: number } | null {
+  const inside = sessions.filter(s => s.startedAt + NIGHT_GAP_MS >= night.startedAt &&
+    s.startedAt <= night.endedAt + NIGHT_GAP_MS &&
+    (nextStartedAt == null || s.startedAt + NIGHT_GAP_MS < nextStartedAt))
   if (!inside.length) return null
   return { chaos: inside.reduce((n, s) => n + s.profit, 0), sessions: inside.length }
 }
 
+// The biggest single gain in stash changes between two times.
 export function bestDrop (diffs: Array<{ at: number, added: Array<{ name: string, count: number, chaos: number }> }>, from: number, to: number): { name: string, chaos: number } | null {
   let best: { name: string, chaos: number } | null = null
   for (const diff of diffs) {

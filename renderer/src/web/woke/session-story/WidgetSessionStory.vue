@@ -161,7 +161,11 @@ const sessions = useSessionStore()
 sessions.load().catch(() => {})
 const farmSessions = computed(() => sessions.sessions.value.map(s => ({ startedAt: s.startedAt, endedAt: s.endedAt, profit: sessionTotals(s).profit })))
 function farmOf (s: NightStory) {
-  return s.profitChaos != null ? null : farmingProfit(s, farmSessions.value)
+  if (s.profitChaos != null) return null
+  // The next night: the one just newer in the list (the live one is newest).
+  const i = list.value.findIndex(n => n.story.id === s.id)
+  const next = i > 0 ? list.value[i - 1].story.startedAt : null
+  return farmingProfit(s, next, farmSessions.value)
 }
 function profitOf (s: NightStory): number | null {
   return s.profitChaos ?? farmOf(s)?.chaos ?? null

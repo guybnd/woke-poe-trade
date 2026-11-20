@@ -105,7 +105,7 @@ describe('night extras', () => {
 
   it('reads level-ups and the longest break between maps', () => {
     const level = (time: string, n: number) => info(time, `: whekq (Gladiator) is now level ${n}`)
-    const { tracker } = follow([...NIGHT.slice(0, 5), level('21:06:00', 94), ...NIGHT.slice(5), level('21:21:00', 95)])
+    const { tracker } = follow([...NIGHT.slice(0, 5), level('21:06:00', 94), ...NIGHT.slice(5), level('21:21:00', 95), info('21:21:30', ': friend (Witch) is now level 40')])
     const s = summarize(tracker.draft!)
     expect(s.levelUps).toEqual([{ char: 'whekq', from: 93, to: 95 }])
     // Gaps between maps: 1 min, 1 min, 2 min; not the 2 min before the first or after the last.
@@ -113,10 +113,13 @@ describe('night extras', () => {
   })
 
   it('adds up Farming sessions inside the night', () => {
-    const night = { startedAt: 1000, endedAt: 5000 }
-    expect(farmingProfit(night, [{ startedAt: 1500, endedAt: 4000, profit: 300 }, { startedAt: 4500, endedAt: 9000, profit: -50 }, { startedAt: 0, endedAt: 900, profit: 99 }]))
-      .toEqual({ chaos: 250, sessions: 2 })
-    expect(farmingProfit(night, [])).toBeNull()
+    const H = 3_600_000
+    const night = { startedAt: 10 * H, endedAt: 14 * H }
+    const list = [{ startedAt: 10.5 * H, endedAt: 12 * H, profit: 300 }, { startedAt: 13 * H, endedAt: 16 * H, profit: -50 }, { startedAt: 2 * H, endedAt: 11 * H, profit: 99 }]
+    expect(farmingProfit(night, null, list)).toEqual({ chaos: 250, sessions: 2 })
+    // A session that started in the next night is that night's only.
+    expect(farmingProfit(night, 12.9 * H, list)).toEqual({ chaos: 300, sessions: 1 })
+    expect(farmingProfit(night, null, [])).toBeNull()
   })
 
   it('keeps nights newest first, one copy each', () => {
