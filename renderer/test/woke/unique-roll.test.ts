@@ -15,7 +15,7 @@ function knife (crit: string, chaos: string) {
     '{ Implicit Modifier — Damage, Critical }', '30% increased Global Critical Strike Chance (implicit)', '--------',
     '{ Unique Modifier — Damage, Critical }', `${crit} increased Critical Strike Chance`,
     '{ Unique Modifier — Chaos, Resistance }', `${chaos} to Chaos Resistance`,
-    '{ Unique Modifier }', 'Enemies Killed by your Hits are destroyed', '--------', ''
+    '{ Unique Modifier — Life }', '+40 to maximum Life', '--------', ''
   ].join('\n'))
 }
 
@@ -31,8 +31,8 @@ describe('unique roll quality', () => {
     const stats = initUiModFilters(item, { searchStatRange: 10 }) as StatFilter[]
     expect(uniqueRollPct(line(stats, '#% increased Critical Strike Chance'), item)).toBe(75)
     expect(uniqueRollPct(line(stats, '+#% to Chaos Resistance'), item)).toBe(50)
-    // No range: a fixed line, like the implicit here.
-    expect(uniqueRollPct(line(stats, '#% increased Global Critical Strike Chance'), item)).toBeUndefined()
+    // No range: a fixed line.
+    expect(uniqueRollPct(line(stats, '+# to maximum Life'), item)).toBeUndefined()
   })
 
   it('flags a copy whose lines average 75% or more', () => {
