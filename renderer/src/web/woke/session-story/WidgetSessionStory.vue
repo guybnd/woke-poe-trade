@@ -11,12 +11,26 @@
       <template v-if="store.loadError.value" #banner>
         <WBanner>Couldn't read your saved nights: {{ store.loadError.value }}</WBanner>
       </template>
-      <template #meta>
-        <div class="flex flex-wrap items-center gap-2" data-chip-place>
-          <span class="w-dim text-xs" title="A line about each map you leave: time, deaths, league NPCs met, level-ups">After a map</span>
+      <template #actions>
+        <button type="button" class="w-icon-btn" :class="{ 'w-accent': gearOpen }" title="After a map: where its time shows and how it goes away"
+          data-chip-gear @click="gearOpen = !gearOpen"><i class="fas fa-cog" /></button>
+      </template>
+      <template v-if="gearOpen" #toolbar>
+        <div :class="$style.gear" data-chip-settings>
+          <span class="w-dim">After a map, show its time</span>
           <WSegmented v-model="chipPlace" :options="CHIP_OPTIONS" />
-          <WSelect v-if="chipPlace !== 'off'" v-model="chipSeconds" :options="CHIP_TIMES" title="How long the line stays" />
-          <WToggle v-if="chipPlace === 'center'" v-model="chipClick">Click closes it</WToggle>
+          <template v-if="chipPlace !== 'off'">
+            <span class="w-dim">Goes away</span>
+            <WSelect v-model="chipSeconds" :options="CHIP_TIMES" />
+          </template>
+          <template v-if="chipPlace === 'center'">
+            <span class="w-dim">Click closes it</span>
+            <WToggle v-model="chipClick" />
+          </template>
+          <span class="w-dim">Close key</span>
+          <span class="text-xs">{{ config.chipKey || 'None' }} <span class="w-faint">(Settings › Farming &amp; sessions)</span></span>
+          <span />
+          <WButton size="sm" :disabled="chipPlace === 'off' || !store.maps.value.length" @click="showMe">Show me with your last map</WButton>
         </div>
       </template>
       <WEmpty v-if="!list.length" icon="fas fa-moon">
@@ -36,6 +50,7 @@
         </button>
       </template>
     </WPanel>
+    <MapToast :chip="chip" :click-to-close="config.chipClick === true" @close="closeChip" />
   </Widget>
 </template>
 
@@ -50,7 +65,8 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel, WSegmented, WSelect, WToggle, dismissToast, toast } from '../ui'
+import { WBanner, WButton, WEmpty, WPanel, WSegmented, WSelect, WToggle } from '../ui'
+import MapToast from './MapToast.vue'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -63,7 +79,7 @@ import { useSessionStore } from '../analytics/store'
 import { sessionTotals } from '../analytics/stats'
 import type { NightStory } from './story'
 import { MapLog, chipLines, compareMap } from './map-log'
-import type { MapRecord } from './map-log'
+import type { MapCompare, MapRecord } from './map-log'
 import { useNights } from './store'
 import { CHIP_CLOSE_TARGET } from './widget'
 import type { ChipPlace, SessionStoryWidget } from './widget'
@@ -88,12 +104,20 @@ const chipMs = () => {
   const s = props.config.chipSeconds
   return s === 0 ? UNTIL_MAP_MS : typeof s === 'number' && s > 0 ? s * 1000 : CHIP_MS
 }
-let chipToast: number | null = null
+// The toast in the middle of the screen, while it shows.
+const chip = shallowRef<{ rec: MapRecord, cmp: MapCompare } | null>(null)
+let chipTimer: ReturnType<typeof setTimeout> | undefined
+function showChip (rec: MapRecord, cmp: MapCompare, ms: number) {
+  clearTimeout(chipTimer)
+  chip.value = { rec: { ...rec, npcs: [...rec.npcs] }, cmp }
+  chipTimer = setTimeout(() => { chip.value = null }, ms)
+}
+onUnmounted(() => { clearTimeout(chipTimer) })
 // The dock is showing the map line (not the night's summary).
 let chipPeek = false
 function closeChip () {
-  if (chipToast != null) dismissToast(chipToast)
-  chipToast = null
+  clearTimeout(chipTimer)
+  chip.value = null
   if (chipPeek) dockRef.value?.unpeek()
   chipPeek = false
 }
@@ -112,9 +136,9 @@ const mapLog = new MapLog({
     const place = props.config.chipPlace ?? 'dock'
     // The note in the middle takes the mouse only with "Click closes it" on,
     // and only while the cursor is over it.
-    if (place === 'center') chipToast = toast(chipText(rec, 2), { center: true, ms: chipMs(), closeOnClick: props.config.chipClick === true })
+    if (place === 'center') showChip(rec, compareMap(rec, store.maps.value), chipMs())
     else if (place === 'dock') {
-      dockRef.value?.peek(chipText(rec, 1), chipMs())
+      dockRef.value?.peek(chipText(rec), chipMs())
       chipPeek = true
     }
   },
@@ -241,11 +265,21 @@ function profitOf (s: NightStory): number | null {
   return s.profitChaos ?? farmOf(s)?.chaos ?? null
 }
 
-// "Fortress T16 · 6:42 ▼0:38 · 1 death · Einhar, Niko · Level 95"
-// Two lines in the middle of the screen, one on the dock.
-function chipText (rec: MapRecord, lines: 1 | 2): string {
-  const out = chipLines(rec, compareMap(rec, store.maps.value), formatClock)
-  return out.join(lines === 2 ? '\n' : ' · ')
+// One line on the dock: "Fortress T16 · 1:30 · 1h avg 2:15 (2) ▼0:45 · …"
+function chipText (rec: MapRecord): string {
+  return chipLines(rec, compareMap(rec, store.maps.value), formatClock).join(' · ')
+}
+
+// The settings' preview: your last saved map, against the maps before it.
+const gearOpen = shallowRef(false)
+function showMe () {
+  const [last, ...before] = store.maps.value
+  if (!last) return
+  if (chipPlace.value === 'center') showChip(last, compareMap(last, before), chipMs())
+  else {
+    dockRef.value?.peek(chipLines(last, compareMap(last, before), formatClock).join(' · '), chipMs())
+    chipPeek = true
+  }
 }
 
 function peekText (s: NightStory): string {
@@ -289,6 +323,16 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 </script>
 
 <style module>
+.gear {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  padding: 8px var(--w-pad);
+  border-bottom: 1px solid var(--w-line);
+  font-size: var(--w-fs-sm);
+}
+.gear > * { justify-self: start; }
 .label { padding: 10px var(--w-pad) 2px; border-top: 1px solid var(--w-line); margin-top: 6px; }
 .row {
   display: flex;

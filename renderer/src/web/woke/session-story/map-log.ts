@@ -221,6 +221,10 @@ export interface MapCompare {
   prev: { name: string, mapMs: number } | null
   // Your last USUAL_OF maps, any map, when there's no hour of this one.
   usual: number | null
+  // This map's runs in the hour, oldest first, ending with this one (at most 6).
+  runs: number[]
+  // The fastest of those runs, this one included.
+  best: number
 }
 
 const HOUR_MS = 3_600_000
@@ -235,7 +239,9 @@ export function compareMap (rec: MapRecord, recent: readonly MapRecord[]): MapCo
     hourAvg: same.length ? same.reduce((s, m) => s + m.mapMs, 0) / same.length : null,
     hourRuns: same.length,
     prev: prev ? { name: prev.name, mapMs: prev.mapMs } : null,
-    usual: same.length ? null : usualMapMs(others)
+    usual: same.length ? null : usualMapMs(others),
+    runs: [...same.slice(0, 5).map(m => m.mapMs).reverse(), rec.mapMs],
+    best: Math.min(rec.mapMs, ...same.map(m => m.mapMs))
   }
 }
 
