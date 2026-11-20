@@ -9,6 +9,7 @@ import { addEssenceScanWidget } from './woke/essence-scan/widget'
 import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog, WOKE_CONFIG_VERSION } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
 import { DEATH_RECAP_TYPE, initDeathRecapWidget } from './woke/death-recap/widget'
+import { SESSION_STORY_TYPE, initSessionStoryWidget } from './woke/session-story/widget'
 import { STACKED_DECKS_TYPE, initStackedDecksWidget } from './woke/stacked-decks/deck'
 import { POE_RE_TYPE, initPoeReWidget } from './woke/regex-library/poe-re-widget'
 import { MEGALO_TYPE, initMegaloWidget } from './woke/megalo/widget'
@@ -517,6 +518,12 @@ function upgradeConfig (_config: Config): Config {
     // New to this config: stays off for anyone who has Map mods off, like "Price check only".
     const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
     if (!isModuleOn(woke, 'map-mods')) ensureWokeConfig(woke).woke.off.push('death-recap')
+  }
+  if (!config.widgets.some(w => w.wmType === SESSION_STORY_TYPE)) {
+    config.widgets.push(initSessionStoryWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+    // New to this config: stays off for anyone who has Farming off, like "Price check only".
+    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
+    if (woke.woke && !isModuleOn(woke, 'farming')) woke.woke.off.push('session-story')
   }
   if (!config.widgets.some(w => w.wmType === STACKED_DECKS_TYPE)) {
     config.widgets.push(initStackedDecksWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
