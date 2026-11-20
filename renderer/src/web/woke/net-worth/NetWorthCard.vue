@@ -93,10 +93,12 @@ const spark = computed(() => {
   const pts = ledger.value.points
   const end = Math.max(now.value, pts[pts.length - 1]?.at ?? 0)
   const from = win.value === 'today' ? startOfDay(end) : end - (RATE_WINDOWS.find(w => w.id === win.value)?.ms ?? 3_600_000)
-  let i = pts.findIndex(p => p.at >= from)
-  if (i < 0) return []
-  if (i > 0) i--
-  return pts.slice(i).map(p => toDiv(p.chaos))
+  // Each read in its own day's divine rate, as the window's chart has it.
+  const val = (p: { chaos: number, divine: number | null }) => divineRate.value ? p.chaos / (p.divine ?? divineRate.value) : p.chaos
+  const i = pts.findIndex(p => p.at >= from)
+  // No read inside the window: a flat line at the last value.
+  if (i < 0) return pts.length ? [val(pts[pts.length - 1]), val(pts[pts.length - 1])] : []
+  return pts.slice(Math.max(0, i - 1)).map(val)
 })
 // The last read's changes, if that read had any to compare.
 const diff = computed(() => {
