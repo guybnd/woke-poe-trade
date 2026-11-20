@@ -143,6 +143,9 @@ export interface PlayRate {
   offMs: number
   // Maps opened in the window.
   maps: number
+  // The middle map's time (from opening it to opening the next): short
+  // visits such as reward vaults barely move it. Null without a whole map.
+  medianMapMs: number | null
 }
 
 // Needs this much play in the window before giving a rate.
@@ -159,6 +162,8 @@ export function playRate (
   const counted = (t: Record<PlayState, number>) => t.map + t.play + (withHub ? t.hub : 0)
   let chaos = 0
   let maps = 0
+  const opened: number[] = []
+  let last: number | null = null
   const total = zero()
   for (let i = 1; i < points.length; i++) {
     const p = points[i]
@@ -175,10 +180,20 @@ export function playRate (
     // Maps opened in the same stretch whose time counts, and one already
     // running when the window starts.
     const a = Math.max(start, from)
-    maps += mapTimes.filter(t => (t > a || (t === a && a === from)) && t <= p.at).length
+    const here = mapTimes.filter(t => (t > a || (t === a && a === from)) && t <= p.at)
+    maps += here.length
+    opened.push(...here)
+    last = p.at
     if (start < from && marks.length && stateAt(marks, a) === 'map') maps++
   }
   const playMs = counted(total)
+  // Each map's time runs until the next map opens (or the last read).
+  const durations = opened.map(t => {
+    const next = mapTimes.find(x => x > t)
+    return timeIn(marks, t, Math.min(next ?? Infinity, last ?? t)).map
+  }).filter(ms => ms > 0).sort((x, y) => x - y)
+  const mid = durations.length >> 1
+  const medianMapMs = !durations.length ? null : durations.length % 2 ? durations[mid] : (durations[mid - 1] + durations[mid]) / 2
   return {
     perHour: playMs >= MIN_PLAY_MS ? chaos / (playMs / 3_600_000) : null,
     chaos,
@@ -187,7 +202,8 @@ export function playRate (
     otherMs: total.play,
     hubMs: total.hub,
     offMs: total.off,
-    maps
+    maps,
+    medianMapMs
   }
 }
 
@@ -211,6 +227,12 @@ export interface PlayRates {
 }
 
 const WINDOW_NAME: Record<string, string> = { '1h': 'Last hour', '2h': 'Last 2 hours', '3h': 'Last 3 hours', 'today': 'Today' }
+// "1m 40s" under ten minutes, else as span.
+export const shortSpan = (ms: number) => {
+  const s = Math.round(ms / 1000)
+  if (s >= 600) return span(ms)
+  return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s` : `${s}s`
+}
 export const span = (ms: number) => {
   const m = Math.round(ms / 60_000)
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`

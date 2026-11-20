@@ -134,6 +134,8 @@ describe('maps and hideout time', () => {
     expect(r.maps).toBe(2)
     expect(r.mapMs).toBe(38 * MIN)
     expect(r.hubMs).toBe(7 * MIN)
+    // Strand 0-25 (18 min in it, portal trip out), Fortress 25-45 (20 min): median of the two.
+    expect(r.medianMapMs).toBe(19 * MIN)
   })
 
   it('a map already running when the window starts counts once', () => {
@@ -161,7 +163,7 @@ describe('maps and hideout time', () => {
 
 describe('hover text', () => {
   it('names the unit, the play time and what was left out', () => {
-    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 30 * MIN, otherMs: 0, hubMs: 15 * MIN, offMs: 0, maps: 4 }
+    const r = { perHour: 600, chaos: 300, playMs: 30 * MIN, mapMs: 30 * MIN, otherMs: 0, hubMs: 15 * MIN, offMs: 0, maps: 4, medianMapMs: 7 * MIN }
     const amount = (c: number) => `+${(c / 200).toFixed(1)} d`
     expect(rateTip('1h', r, true, amount)).toBe('Last hour: +1.5 d in 30m of play. Left out: 15m in hideout and town')
     expect(rateTip('2h', { ...r, perHour: null }, false, amount)).toBe('Last 2 hours: under 10 min of play. Client.txt not found: hideout time not left out')

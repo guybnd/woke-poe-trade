@@ -70,7 +70,7 @@
               </div>
               <div :class="$style.phStats">
                 <div><span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b><span class="w-dim text-xs w-num">{{ rateShown.r.perHour != null ? `${rateAmount(rateShown.r.chaos)} in ${span(rateShown.r.playMs)}` : 'Under 10 min of play' }}</span></div>
-                <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b><span class="w-dim text-xs w-num">{{ rateShown.r.maps ? `avg ${span(rateShown.r.mapMs / rateShown.r.maps)}` : '—' }}</span></div>
+                <div><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b><span class="w-dim text-xs w-num">{{ rateShown.r.medianMapMs != null ? `median ${shortSpan(rateShown.r.medianMapMs)}` : '—' }}</span></div>
                 <div><span :class="$style.caps">Time</span><b class="w-num">{{ span(rateShown.r.mapMs) }} maps · {{ span(rateShown.r.hubMs) }} hideout</b><span class="w-dim text-xs w-num">{{ timeNote }}</span></div>
               </div>
               <div v-if="splitTotal > 0" :class="$style.split" :title="splitParts.map(x => `${x.label} ${span(x.ms)}`).join(' · ')">
@@ -215,7 +215,7 @@ import { divine, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice,
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
-import { rateTip, span } from './play-time'
+import { rateTip, shortSpan, span } from './play-time'
 import { chartHOf, clampChartH, clampTop, colWeights, dragCols, edges, topOf } from './layout'
 import type { ColId, PanelLayout } from './layout'
 import SplitHandle from './SplitHandle.vue'
