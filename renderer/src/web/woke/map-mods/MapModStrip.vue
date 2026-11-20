@@ -6,7 +6,7 @@
   <div v-if="result" :class="[$style.strip, isUnsure(result) ? $style.unknown : $style[result.verdict.verdict]]" data-map-strip>
     <section :class="$style.zone" data-map-run data-map-trade>
       <button type="button" :class="$style.row" @click="open = !open"
-        :aria-expanded="open" aria-label="Show the map's mods">
+        :aria-expanded="open">
         <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
         <span :class="$style.headline" class="w-trunc">{{ headline }}</span>
         <span class="flex-1" />
@@ -73,7 +73,7 @@ const result = computed(() => {
   return checkMap(props.item, config)
 })
 
-// With Worth running in the slot (a Nightmare Map), one of it and Trade search
+// With Worth running in the slot (a Nightmare Map), one of it and the mod list
 // is open at a time, so neither pushes the other out of the window (Guy, 2026-11-20).
 // The strip is reused from item to item, so it watches the worth prop rather
 // than checking once at setup.
