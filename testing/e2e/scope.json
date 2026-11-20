@@ -431,8 +431,8 @@
    "renderer/src/web/price-check/"
   ],
   "title-tip.spec.ts": [
-   "renderer/src/web/woke/ui/HelpCard.vue",
-   "renderer/src/web/woke/ui/help-tip.ts",
+   "renderer/src/web/woke/ui/page-hooks.ts",
+   "renderer/src/web/woke/ui/poe-frame.css",
    "renderer/src/web/woke/ui/title-tip.ts"
   ],
   "toolkit.spec.ts": [

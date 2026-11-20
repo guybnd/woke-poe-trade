@@ -60,7 +60,7 @@ test('the settings Close button stays put while hovered', async ({ overlay }) =>
   await overlay.boot({ overlayActive: true, widgets: [], titleTips: true })
   await overlay.widget('menu').locator('.fa-cog').click()
   const page = overlay.page
-  const close = page.locator('[data-w-settings] [data-w-close]')
+  const close = page.locator('[data-w-settings] > header button:has(> .fa-times)')
   await close.hover()
   await expect(page.getByRole('tooltip')).toHaveText('Close')
   await expect(close).toBeVisible()
