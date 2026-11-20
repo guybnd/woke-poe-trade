@@ -60,7 +60,7 @@
           <div v-if="shown.perHour" :class="$style.box">
             <div :class="$style.boxHead">
               <TextTabs v-model="rateWindow" :options="WINDOW_OPTIONS" />
-              <button type="button" role="checkbox" :aria-checked="leaveOutHub" :class="$style.check" :title="timeNote" @click="leaveOutHub = !leaveOutHub"><i :class="leaveOutHub ? 'fas fa-check-square' : 'far fa-square'" />Leave out hideout</button>
+              <label :class="$style.check" :title="timeNote"><input v-model="leaveOutHub" type="checkbox">Leave out hideout</label>
             </div>
             <div :class="$style.tiles">
               <div><span :class="$style.caps">Per hour</span><b :class="[$style.bigRate, tone(rateShown.div)]" class="w-num" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b></div>
@@ -619,7 +619,6 @@ function refresh () {
 .spark + .holdings { margin-left: 0; }
 .check { display: inline-flex; align-items: center; gap: 5px; font-size: var(--w-fs-xs); color: var(--w-dim); cursor: pointer; }
 .check:hover { color: var(--w-fg); }
-.check i { color: var(--w-gold); }
 .holdings { display: inline-flex; gap: var(--w-s3); align-items: baseline; min-width: 0; margin-left: auto; }
 .box { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .boxHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
