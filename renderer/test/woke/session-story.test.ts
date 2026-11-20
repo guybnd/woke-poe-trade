@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
-import { NightTracker, NIGHT_GAP_MS, bestDrop, keepNight, summarize } from '@/web/woke/session-story/story'
+import { NightTracker, NIGHT_GAP_MS, bestDrop, farmingProfit, keepNight, summarize } from '@/web/woke/session-story/story'
 import type { NightDraft, NightStory } from '@/web/woke/session-story/story'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
@@ -101,6 +101,22 @@ describe('night extras', () => {
     expect(bestDrop(diffs, 0, 20)).toEqual({ name: 'Forbidden Flame', chaos: 800 })
     expect(bestDrop(diffs, 0, 6)).toEqual({ name: '3 × Divine Orb', chaos: 600 })
     expect(bestDrop([], 0, 20)).toBeNull()
+  })
+
+  it('reads level-ups and the longest break between maps', () => {
+    const level = (time: string, n: number) => info(time, `: whekq (Gladiator) is now level ${n}`)
+    const { tracker } = follow([...NIGHT.slice(0, 5), level('21:06:00', 94), ...NIGHT.slice(5), level('21:21:00', 95)])
+    const s = summarize(tracker.draft!)
+    expect(s.levelUps).toEqual([{ char: 'whekq', from: 93, to: 95 }])
+    // Gaps between maps: 1 min, 1 min, 2 min; not the 2 min before the first or after the last.
+    expect(s.longestBreakMs).toBe(2 * 60_000)
+  })
+
+  it('adds up Farming sessions inside the night', () => {
+    const night = { startedAt: 1000, endedAt: 5000 }
+    expect(farmingProfit(night, [{ startedAt: 1500, endedAt: 4000, profit: 300 }, { startedAt: 4500, endedAt: 9000, profit: -50 }, { startedAt: 0, endedAt: 900, profit: 99 }]))
+      .toEqual({ chaos: 250, sessions: 2 })
+    expect(farmingProfit(night, [])).toBeNull()
   })
 
   it('keeps nights newest first, one copy each', () => {

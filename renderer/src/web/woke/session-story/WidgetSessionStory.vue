@@ -4,7 +4,7 @@
     <DockItem ref="dockRef" id="session-story" title="Session story" :show="!!shown" :wm-id="config.wmId"
       :wake="store.finished.value" card-width="24rem" :menu="dockMenu">
       <template #card>
-        <NightCard v-if="shown" :story="shown.story" :live="shown.live" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)" />
+        <NightCard v-if="shown" :story="shown.story" :live="shown.live" :farm="farmOf(shown.story)" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)" />
       </template>
     </DockItem>
     <WPanel :title="config.wmTitle || 'Session story'" width="34rem" max-height="80vh">
@@ -15,15 +15,15 @@
         No nights yet. A night is read from the game's log, from your first map until it goes quiet for 15 minutes.
       </WEmpty>
       <template v-else>
-        <NightCard v-if="selected" :story="selected.story" :live="selected.live"
+        <NightCard v-if="selected" :story="selected.story" :live="selected.live" :farm="farmOf(selected.story)"
           :title="selected.live ? 'Tonight so far' : nightTitle(selected.story)" />
         <div class="w-group-label" :class="$style.label">Nights</div>
         <button v-for="n in list" :key="n.story.id" type="button" :class="[$style.row, { [$style.on]: selected?.story.id === n.story.id }]"
           data-night-row @click="picked = n.story.id">
           <span class="flex-1 w-trunc">{{ n.live ? 'Tonight so far' : nightTitle(n.story) }}</span>
           <span class="w-dim w-num">{{ formatDuration(n.story.endedAt - n.story.startedAt) }} · {{ n.story.maps.length }} maps</span>
-          <span v-if="n.story.profitChaos != null" class="w-num" :class="n.story.profitChaos >= 0 ? 'w-up' : 'w-down'">
-            {{ formatChaos(n.story.profitChaos, n.story.divine) }}
+          <span v-if="profitOf(n.story) != null" class="w-num" :class="profitOf(n.story)! >= 0 ? 'w-up' : 'w-down'">
+            {{ formatChaos(profitOf(n.story)!, n.story.divine) }}
           </span>
         </button>
       </template>
@@ -50,7 +50,9 @@ import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
 import { lineTime } from '../campaign/log-tail'
 import { followGameLog } from '../shared/game-log'
 import NightCard from './NightCard.vue'
-import { NIGHT_GAP_MS, NightTracker } from './story'
+import { NIGHT_GAP_MS, NightTracker, farmingProfit } from './story'
+import { useSessionStore } from '../analytics/store'
+import { sessionTotals } from '../analytics/stats'
 import type { NightStory } from './story'
 import { useNights } from './store'
 import type { SessionStoryWidget } from './widget'
@@ -154,8 +156,20 @@ function nightTitle (s: NightStory): string {
   return `Night of ${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}`
 }
 
+// Farming's saved sessions: profit for nights the stash reader didn't read.
+const sessions = useSessionStore()
+sessions.load().catch(() => {})
+const farmSessions = computed(() => sessions.sessions.value.map(s => ({ startedAt: s.startedAt, endedAt: s.endedAt, profit: sessionTotals(s).profit })))
+function farmOf (s: NightStory) {
+  return s.profitChaos != null ? null : farmingProfit(s, farmSessions.value)
+}
+function profitOf (s: NightStory): number | null {
+  return s.profitChaos ?? farmOf(s)?.chaos ?? null
+}
+
 function peekText (s: NightStory): string {
-  const profit = s.profitChaos != null ? ` · ${s.profitChaos > 0 ? '+' : ''}${formatChaos(s.profitChaos, s.divine)}` : ''
+  const p = profitOf(s)
+  const profit = p != null ? ` · ${p > 0 ? '+' : ''}${formatChaos(p, s.divine)}` : ''
   return `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${profit}`
 }
 

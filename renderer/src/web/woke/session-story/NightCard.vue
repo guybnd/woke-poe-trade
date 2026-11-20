@@ -1,5 +1,5 @@
 <template>
-  <div data-night-card>
+  <div data-night-card :class="$style.card">
     <div :class="$style.head">
       <span class="w-head-font w-accent" :class="$style.title">{{ title }}</span>
       <span class="w-dim text-xs w-num">{{ formatDuration(played) }} · {{ story.maps.length }} {{ story.maps.length === 1 ? 'map' : 'maps' }}</span>
@@ -13,32 +13,50 @@
       <span>{{ clock(story.startedAt) }}</span>
       <span>{{ live ? 'now' : clock(story.endedAt) }}</span>
     </div>
-    <div :class="$style.totals" class="w-num">
-      <span v-if="story.profitChaos != null"><span class="w-dim">Profit</span> <span :class="story.profitChaos >= 0 ? 'w-up' : 'w-down'">{{ signed(story.profitChaos) }}</span></span>
+    <div :class="$style.totals" class="w-num" data-night-totals>
+      <span v-if="profit" :title="profit.from"><span class="w-dim">Profit</span> <span :class="profit.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(profit.chaos) }}</span></span>
       <span v-if="perHour != null"><span class="w-dim">per h</span> {{ formatChaos(perHour, story.divine) }}</span>
-      <span><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
+      <span v-if="story.maps.length"><span class="w-dim">Avg map</span> {{ formatClock(story.mapMs / story.maps.length) }}</span>
+      <span v-if="mapsPerHour != null"><span class="w-dim">Maps/h</span> {{ mapsPerHour }}</span>
+      <span title="Hideout, town and anything else that isn't a map"><span class="w-dim">Hideout</span> {{ formatDuration(story.otherMs) }}</span>
+      <span v-if="story.longestBreakMs && story.longestBreakMs >= 60_000"><span class="w-dim">Longest break</span> {{ formatDuration(story.longestBreakMs) }}</span>
       <span><span class="w-dim">Deaths</span> {{ story.deathsAt.length }}</span>
     </div>
-    <div v-if="story.best" :class="$style.best" class="w-num" data-night-best>
-      <span class="w-accent">★</span> {{ story.best.name }} · {{ formatChaos(story.best.chaos, story.divine) }}
+    <div v-if="story.levelUps?.length" :class="$style.line" class="w-num" data-night-levels>
+      <span v-for="l in story.levelUps" :key="l.char"><span class="w-dim">{{ story.levelUps.length > 1 ? l.char : 'Level' }}</span> {{ l.from }} → {{ l.to }}</span>
     </div>
-    <div v-else-if="story.profitChaos == null && !live" :class="$style.best" class="w-dim text-xs">
-      Profit and best drop need the stash reader (Net worth) to read during the night.
+    <div v-if="story.best" :class="$style.line" class="w-num" data-night-best>
+      <span class="w-accent">★</span> {{ story.best.name }} · {{ formatChaos(story.best.chaos, story.divine) }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatChaos, formatDuration } from '../ui/format'
+import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import type { NightStory, StripPart } from './story'
 
-const props = defineProps<{ story: NightStory, live?: boolean, title: string }>()
+const props = defineProps<{
+  story: NightStory
+  live?: boolean
+  title: string
+  // Profit from Farming sessions inside the night, used when the stash reader didn't read.
+  farm?: { chaos: number, sessions: number } | null
+}>()
 
 const played = computed(() => props.story.endedAt - props.story.startedAt)
+const profit = computed(() => {
+  if (props.story.profitChaos != null) return { chaos: props.story.profitChaos, from: 'From stash reads (Net worth)' }
+  if (props.farm) return { chaos: props.farm.chaos, from: `From Farming's loot, ${props.farm.sessions} ${props.farm.sessions === 1 ? 'session' : 'sessions'}` }
+  return null
+})
 const perHour = computed(() => {
   const hours = played.value / 3_600_000
-  return props.story.profitChaos != null && hours >= 0.25 ? props.story.profitChaos / hours : null
+  return profit.value && hours >= 0.25 ? profit.value.chaos / hours : null
+})
+const mapsPerHour = computed(() => {
+  const hours = played.value / 3_600_000
+  return hours >= 0.25 ? (props.story.maps.length / hours).toFixed(1) : null
 })
 const deathMarks = computed(() => {
   const span = played.value
@@ -93,5 +111,6 @@ function signed (chaos: number): string {
   gap: 2px 12px;
   padding: 6px var(--w-pad) 0;
 }
-.best { padding: 3px var(--w-pad) 6px; }
+.line { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 3px var(--w-pad) 0; }
+.card { padding-bottom: 6px; }
 </style>

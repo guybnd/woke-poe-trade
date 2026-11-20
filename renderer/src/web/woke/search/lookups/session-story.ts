@@ -1,5 +1,5 @@
 // The night so far, or the last one, from Session story.
-import { formatChaos, formatDuration } from '../../ui/format'
+import { formatChaos, formatClock, formatDuration } from '../../ui/format'
 import { SESSION_STORY_TYPE } from '../../session-story/widget'
 import type { NightStory } from '../../session-story/story'
 import type { Lookup, LookupRow } from './types'
@@ -23,10 +23,13 @@ function rows (s: NightStory): LookupRow[] {
   ]
   if (s.profitChaos != null) out.push({ label: 'Profit', value: signed(s.profitChaos, s.divine) })
   if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}` })
+  const hours = (s.endedAt - s.startedAt) / 3_600_000
+  if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })
+  if (hours >= 0.25) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
+  for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })
   out.push({ label: 'Deaths', value: String(s.deathsAt.length) })
   out.push({ label: 'Hideout', value: formatDuration(s.otherMs) })
-  const fastest = [...s.maps].filter(m => m.mapMs > 60_000).sort((a, b) => a.mapMs - b.mapMs)[0]
-  if (fastest && s.maps.length > 1) out.push({ label: 'Fastest map', value: `${fastest.name} · ${formatDuration(fastest.mapMs)}`, dim: true })
+  if (s.longestBreakMs && s.longestBreakMs >= 60_000) out.push({ label: 'Longest break', value: formatDuration(s.longestBreakMs) })
   return out
 }
 
