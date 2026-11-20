@@ -14,6 +14,16 @@ history:
     user: Agent
     date: '2026-11-20T10:13:39.461Z'
     comment: Created ticket.
+    id: a-2026-11-20t10-13-39-461z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T10:27:07.638Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/674 (option A). Review
+      fixes in: state per token, no resend after travelling. Cloud checks green
+      except a loot-filter e2e shard (unrelated), rerunning. Mocks/pick:
+      https://claude.ai/artifact/A5yxWPNGwBtZ2UmEdjT4A1
+    id: a-2026-11-20t10-27-07-638z
 ---
 Guy approved (2026-11-20, project chat). Instant buyout (merchant) listings in the price check get a button that sends you to the seller's hideout; stash listings keep the whisper.
 
