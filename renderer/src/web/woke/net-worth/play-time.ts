@@ -187,10 +187,13 @@ export function playRate (
     if (start < from && marks.length && stateAt(marks, a) === 'map') maps++
   }
   const playMs = counted(total)
-  // Each map's time runs until the next map opens (or the last read).
-  const durations = opened.map(t => {
+  // Each map's time runs until the next map opens. The newest counts only
+  // once you've left it by the last read (a map still running isn't whole).
+  const end = last
+  const durations = end == null ? [] : opened.flatMap(t => {
     const next = mapTimes.find(x => x > t)
-    return timeIn(marks, t, Math.min(next ?? Infinity, last ?? t)).map
+    if (next != null && next <= end) return [timeIn(marks, t, next).map]
+    return stateAt(marks, end) === 'map' ? [] : [timeIn(marks, t, end).map]
   }).filter(ms => ms > 0).sort((x, y) => x - y)
   const mid = durations.length >> 1
   const medianMapMs = !durations.length ? null : durations.length % 2 ? durations[mid] : (durations[mid - 1] + durations[mid]) / 2

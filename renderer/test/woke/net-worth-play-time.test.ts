@@ -136,6 +136,9 @@ describe('maps and hideout time', () => {
     expect(r.hubMs).toBe(7 * MIN)
     // Strand 0-25 (18 min in it, portal trip out), Fortress 25-45 (20 min): median of the two.
     expect(r.medianMapMs).toBe(19 * MIN)
+    // Still in Fortress at the read: only Strand is a whole map.
+    const early = [{ at: T0, netChaos: null }, { at: T0 + 40 * MIN, netChaos: 400 }]
+    expect(playRate(early, m.marks, T0, T0 + 45 * MIN, false, m.maps).medianMapMs).toBe(18 * MIN)
   })
 
   it('a map already running when the window starts counts once', () => {
