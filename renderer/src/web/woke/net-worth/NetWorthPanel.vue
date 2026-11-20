@@ -24,7 +24,7 @@
           <template v-if="sum?.sinceYesterdayDiv != null">{{ signed(sum.sinceYesterdayDiv) }}<Coin /> today</template><template v-else>— today</template>
         </span>
         <!-- Per hour of play over the window picked under Details. -->
-        <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
+        <span v-if="rateShown.div != null" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
         <WSpark v-if="spark.length > 1" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <button v-if="anyDetails" type="button" :class="$style.toggle" :aria-expanded="detailsOpen" @click="config.detailsOpen = !detailsOpen">
           Details <i :class="detailsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
@@ -32,27 +32,6 @@
       </section>
 
       <template v-if="detailsOpen && anyDetails">
-        <!-- Layout D: one stat strip, the chart full width, then Since last
-             refresh beside Where it is and the price moves. -->
-        <section v-if="shown.perHour || shown.numbers" :class="$style.statStrip">
-          <template v-if="shown.perHour">
-            <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
-            <span :class="$style.stat" :title="rateShown.tip"><span :class="$style.caps">Per hour</span><b class="w-num" :class="tone(rateShown.div)"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" /></template><template v-else>—</template></b></span>
-            <span :class="$style.stat"><span :class="$style.caps">Maps</span><b class="w-num">{{ rateShown.r.maps }}</b></span>
-            <span v-if="rateShown.r.medianMapMs != null" :class="$style.stat" title="The middle map's time: short visits barely move it"><span :class="$style.caps">Median map</span><b class="w-num">{{ shortSpan(rateShown.r.medianMapMs) }}</b></span>
-            <span v-if="splitTotal > 0" :class="$style.stat" :title="splitTip">
-              <span :class="$style.split"><span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" /></span>
-              <b class="w-num">{{ span(rateShown.r.mapMs) }} maps</b>
-            </span>
-          </template>
-          <template v-if="shown.numbers">
-            <span v-if="session" :class="$style.stat"><span :class="$style.caps">Session</span><b class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /></b></span>
-            <span :class="$style.stat" :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span><b class="w-num">{{ div(liquid) }}<Coin :chaos="!divine" /></b></span>
-            <span v-if="best" :class="[$style.stat, $style.best]" :title="inChaos(best.chaos)"><span :class="$style.caps">Best</span><b class="w-num w-trunc">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b></span>
-          </template>
-          <WToggle v-if="shown.perHour" v-model="leaveOutHub" :class="$style.stripEnd">Leave out hideout</WToggle>
-        </section>
-
         <section v-if="shown.chart" :class="$style.chartBlock">
           <div :class="$style.chartHead">
             <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
@@ -69,6 +48,38 @@
             <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
           </div>
           <SplitHandle dir="y" @start="startDrag" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
+        </section>
+
+        <!-- Layout E: three cards of the same height under the chart. -->
+        <section v-if="shown.perHour || shown.where || shown.numbers" :class="$style.cards">
+          <div v-if="shown.perHour" :class="$style.card">
+            <WSegmented v-model="rateWindow" :options="WINDOW_OPTIONS" />
+            <div :class="$style.caps">Per hour</div>
+            <b class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip"><template v-if="rateShown.div != null">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h</template><template v-else>—</template></b>
+            <span class="w-dim w-num">{{ rateShown.r.maps }} {{ rateShown.r.maps === 1 ? 'map' : 'maps' }}<template v-if="rateShown.r.medianMapMs != null"> · median {{ shortSpan(rateShown.r.medianMapMs) }}</template></span>
+            <div v-if="splitTotal > 0" :class="$style.split" :title="splitTip">
+              <span v-for="x in splitParts" :key="x.id" :class="$style[x.id]" :style="{ flexGrow: x.ms }" />
+            </div>
+            <span v-if="splitTotal > 0" class="w-dim w-num">{{ span(rateShown.r.mapMs) }} maps · {{ span(rateShown.r.hubMs) }} hideout</span>
+            <WToggle v-model="leaveOutHub" :class="$style.cardEnd">Leave out hideout</WToggle>
+          </div>
+          <div v-if="shown.where" :class="$style.card">
+            <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
+            <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
+              :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
+              <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
+            </button>
+          </div>
+          <div v-if="shown.numbers" :class="$style.card">
+            <div :class="$style.caps">This session</div>
+            <b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>None running</template></b>
+            <div :class="$style.caps">Liquid</div>
+            <b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b>
+            <template v-if="best">
+              <div :class="$style.caps">Best item</div>
+              <b class="w-num w-trunc" :title="inChaos(best.chaos)">{{ best.name }} {{ div(best.chaos) }}<Coin :chaos="!divine" /></b>
+            </template>
+          </div>
         </section>
 
         <section v-if="showChanges || showSide" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
@@ -105,13 +116,6 @@
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
-            <div v-if="shown.where">
-              <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
-              <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
-                :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
-                <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
-              </button>
-            </div>
             <div v-if="showMoves" :class="$style.movesCol">
               <div :class="$style.caps" style="margin-bottom: 4px">Price moves today</div>
               <div v-for="m in moves.slice(0, 8)" :key="m.key" :class="$style.moveRow" class="text-xs">
@@ -327,11 +331,11 @@ function openSections (e: MouseEvent) {
   })))
 }
 // Details with every section in it off: no toggle, nothing to open.
-// Since last refresh beside Where it is and the price moves (layout D).
+// Since last refresh beside the price moves (layout E).
 // Their widths, the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
-const showSide = computed(() => shown.value.where || showMoves.value)
+const showSide = computed(() => showMoves.value)
 const colIds = computed<ColId[]>(() => [
   showChanges.value ? 'changes' : null,
   showSide.value ? 'side' : null
@@ -596,12 +600,11 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.statStrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); }
-.stat { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
-.stat b { font-weight: 500; }
-.stat .split { align-self: center; width: 90px; flex: none; }
-.best { max-width: 16rem; }
-.stripEnd { margin-left: auto; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.card { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: var(--w-s2); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
+.card b { font-size: var(--w-fs-md); font-weight: 500; }
+.card .split { margin-top: 2px; }
+.cardEnd { margin-top: auto; padding-top: 4px; }
 .sideCol { display: flex; flex-direction: column; gap: var(--w-s3); }
 .movesCol { display: flex; flex-direction: column; gap: 2px; }
 .moveRow { display: flex; justify-content: space-between; gap: var(--w-s2); min-width: 0; }
