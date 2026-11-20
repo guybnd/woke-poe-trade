@@ -33,7 +33,8 @@
 
       <template v-if="detailsOpen && anyDetails">
         <!-- Layout A: the chart and per hour share the top row. -->
-        <div v-if="shown.chart || shown.perHour" :class="[$style.topRow, { [$style.one]: !(shown.chart && shown.perHour) }]">
+        <div v-if="shown.chart || shown.perHour" ref="topRowEl" :class="[$style.topRow, { [$style.one]: !(shown.chart && shown.perHour) }]"
+          :style="shown.chart && shown.perHour ? { gridTemplateColumns: `minmax(0, ${top}fr) minmax(0, ${1 - top}fr)` } : undefined">
         <section v-if="shown.chart" :class="$style.chartBlock">
           <div :class="$style.chartHead">
             <WSegmented v-model="chartMode" :options="MODE_OPTIONS" />
@@ -45,10 +46,11 @@
             </span>
             <WSegmented v-model="range" :options="RANGE_OPTIONS" />
           </div>
-          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+          <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="chartH" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
           <div v-if="chartMode === 'category'" :class="$style.legend">
             <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
           </div>
+          <SplitHandle dir="y" :style="{ top: '100%' }" title="Drag to change the chart's height · double-click to reset" @move="dragChartH" @end="saveLayout" @reset="resetLayout('chartH')" />
         </section>
 
         <section v-if="shown.perHour" :class="$style.perHour">
@@ -68,9 +70,10 @@
             <span v-for="x in splitParts" :key="x.id"><i :class="$style[x.id]" />{{ x.label }} {{ Math.round(x.ms / splitTotal * 100) }}%</span>
           </div>
         </section>
+        <SplitHandle v-if="shown.chart && shown.perHour" dir="x" :style="{ left: top * 100 + '%' }" @move="dragTop" @end="saveLayout" @reset="resetLayout('top')" />
         </div>
 
-        <section v-if="showChanges || shown.where || shown.numbers" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
+        <section v-if="showChanges || shown.where || shown.numbers" ref="colsEl" :class="$style.cols" :style="{ gridTemplateColumns: colsTemplate }">
           <div v-if="shown.numbers" :class="$style.kpis">
             <div><span :class="$style.caps">This session</span><b class="w-num" :class="tone(session?.div)"><template v-if="session">{{ signed(session.div) }}<Coin :chaos="!divine" /> · {{ duration(session.ms) }}</template><template v-else>—</template></b></div>
             <div><span :class="$style.caps">Liquid</span><b class="w-num" :title="inChaos(liquid)">{{ div(liquid) }}<Coin :chaos="!divine" /></b></div>
@@ -116,6 +119,7 @@
               <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
             </button>
           </div>
+          <SplitHandle v-for="(e, i) in colEdges" :key="i" dir="x" :style="{ left: e * 100 + '%' }" @move="dragCol(i, $event)" @end="saveLayout" @reset="resetLayout('cols')" />
         </section>
 
         <section v-if="shown.moves && moves.length" :class="$style.moves" class="text-xs">
@@ -206,6 +210,9 @@ import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFl
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
 import { rateTip, span } from './play-time'
+import { chartHOf, clampChartH, clampTop, colWeights, dragCols, edges, topOf } from './layout'
+import type { ColId, PanelLayout } from './layout'
+import SplitHandle from './SplitHandle.vue'
 import type { RateWindow } from './play-time'
 import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
@@ -325,11 +332,58 @@ function openSections (e: MouseEvent) {
 }
 // Details with every section in it off: no toggle, nothing to open.
 // Numbers, Since last refresh and Where it is side by side (layout A).
-const colsTemplate = computed(() => [
-  shown.value.numbers ? 'minmax(0, .8fr)' : '',
-  showChanges.value ? 'minmax(0, 1.3fr)' : '',
-  shown.value.where ? 'minmax(0, 1fr)' : ''
-].filter(Boolean).join(' '))
+// Their widths, the top row's split and the chart's height can be dragged;
+// a drag shows a draft and saves once, when it ends.
+const colIds = computed<ColId[]>(() => [
+  shown.value.numbers ? 'numbers' : null,
+  showChanges.value ? 'changes' : null,
+  shown.value.where ? 'where' : null
+].filter((x): x is ColId => x != null))
+const draft = shallowRef<{ top?: number, cols?: number[], chartH?: number } | null>(null)
+let dragBase: { top: number, cols: number[], chartH: number } | null = null
+const top = computed(() => draft.value?.top ?? topOf(props.config.layout))
+const chartH = computed(() => draft.value?.chartH ?? chartHOf(props.config.layout))
+const weights = computed(() => draft.value?.cols ?? colWeights(props.config.layout, colIds.value))
+const colsTemplate = computed(() => weights.value.map(w => `minmax(0, ${w}fr)`).join(' '))
+const colEdges = computed(() => edges(weights.value))
+const topRowEl = shallowRef<HTMLElement | null>(null)
+const colsEl = shallowRef<HTMLElement | null>(null)
+function base () {
+  dragBase ??= { top: top.value, cols: [...weights.value], chartH: chartH.value }
+  return dragBase
+}
+function dragTop (px: number) {
+  const b = base()
+  const w = topRowEl.value?.clientWidth ?? 0
+  if (w > 0) draft.value = { ...draft.value, top: clampTop(b.top + px / w) }
+}
+function dragCol (i: number, px: number) {
+  const b = base()
+  draft.value = { ...draft.value, cols: dragCols(b.cols, i, px, colsEl.value?.clientWidth ?? 0) }
+}
+function dragChartH (px: number) {
+  draft.value = { ...draft.value, chartH: clampChartH(base().chartH + px) }
+}
+function saveLayout () {
+  const d = draft.value
+  dragBase = null
+  if (!d) return
+  const l: PanelLayout = { ...props.config.layout }
+  if (d.top != null) l.top = Math.round(d.top * 1000) / 1000
+  if (d.chartH != null) l.chartH = d.chartH
+  if (d.cols) {
+    const cols = { ...l.cols }
+    colIds.value.forEach((id, i) => { cols[id] = Math.round(d.cols![i] * 1000) / 1000 })
+    l.cols = cols
+  }
+  props.config.layout = l
+  draft.value = null
+}
+function resetLayout (part: keyof PanelLayout) {
+  const l: PanelLayout = { ...props.config.layout }
+  delete l[part]
+  props.config.layout = l
+}
 const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
 // Tab labels switched off: a tab pick nothing shows any more is dropped.
 watch(() => shown.value.tabs, (on) => { if (!on) tabs.value = [] })
@@ -542,7 +596,7 @@ function refresh () {
 .body { display: flex; flex-direction: column; }
 .caps { font-family: var(--w-caps-face); text-transform: var(--w-caps-case); font-size: var(--w-fs-caps); color: var(--w-dim); }
 .summary { display: flex; align-items: center; gap: var(--w-s3); padding: 6px var(--w-pad); border-bottom: 1px solid var(--w-line); flex-wrap: wrap; font-size: var(--w-fs-sm); }
-.topRow { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); border-bottom: 1px solid var(--w-line); }
+.topRow { position: relative; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); border-bottom: 1px solid var(--w-line); }
 .topRow.one { grid-template-columns: minmax(0, 1fr); }
 .topRow > section { border-bottom: 0; min-width: 0; }
 .topRow > section + section { border-left: 1px solid var(--w-line); }
@@ -550,7 +604,7 @@ function refresh () {
 .phHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 /* One line per figure: label, value, and its detail under the value. */
 .phStats { display: grid; gap: 4px; }
-.phStats > div { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: var(--w-s2); align-items: baseline; min-width: 0; }
+.phStats > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--w-s2); align-items: baseline; min-width: 0; }
 .phStats > div > :nth-child(3) { grid-column: 2; }
 .split { display: flex; height: 8px; border: 1px solid var(--w-line); border-radius: 2px; overflow: hidden; }
 .split > span { flex-basis: 0; }
@@ -564,7 +618,7 @@ function refresh () {
 .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--w-dim); font-size: var(--w-fs-sm); cursor: pointer; padding: 1px 4px; border-radius: var(--w-r-sm); white-space: nowrap; }
 .toggle:hover { color: var(--w-fg); background: var(--w-panel-2); }
 .toggle i { font-size: calc(9px * var(--w-text-scale, 1)); }
-.chartBlock { display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
+.chartBlock { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px var(--w-pad) 8px; border-bottom: 1px solid var(--w-line); }
 .chartHead { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); flex-wrap: wrap; }
 .goalLine { color: var(--w-up); }
 .legend { display: flex; gap: var(--w-s2); flex-wrap: wrap; font-size: var(--w-fs-xs); color: var(--w-dim); }
@@ -573,10 +627,10 @@ function refresh () {
 .kpis > div { display: flex; flex-direction: column; min-width: 0; }
 .kpis b { font-size: var(--w-fs-md); font-weight: 500; }
 .moves { display: flex; gap: var(--w-s3); padding: 4px var(--w-pad); border-bottom: 1px solid var(--w-line); align-items: baseline; min-width: 0; }
-.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--w-line); }
-.cols > div { padding: var(--w-s2) var(--w-pad); min-width: 0; }
-.cols > div + div { border-left: 1px solid var(--w-line); }
-.colHead { display: flex; justify-content: space-between; gap: var(--w-s2); margin-bottom: 2px; }
+.cols { position: relative; display: grid; border-bottom: 1px solid var(--w-line); }
+.cols > div:not([role=separator]) { padding: var(--w-s2) var(--w-pad); min-width: 0; }
+.cols > div:not([role=separator]) + div:not([role=separator]) { border-left: 1px solid var(--w-line); }
+.colHead { display: flex; justify-content: space-between; gap: 2px var(--w-s2); flex-wrap: wrap; min-width: 0; margin-bottom: 2px; }
 .colHead b { font-weight: 500; font-size: var(--w-fs-sm); }
 .group { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
 .groupHead { display: flex; align-items: baseline; gap: 6px; width: 100%; font-size: var(--w-fs-xs); color: var(--w-dim); border-bottom: 1px dashed var(--w-line); text-align: left; cursor: pointer; }
@@ -593,7 +647,7 @@ function refresh () {
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
-.catRow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 64px; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
+.catRow { display: grid; grid-template-columns: 6em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }
 .catRow b { text-align: right; font-weight: 500; }

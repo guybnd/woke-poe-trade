@@ -1,0 +1,47 @@
+<template>
+  <!-- A thin grab bar between two sections: drag it to resize them. -->
+  <div :class="[$style.handle, dir === 'x' ? $style.x : $style.y, { [$style.active]: dragging }]"
+    role="separator" :aria-orientation="dir === 'x' ? 'vertical' : 'horizontal'" :title="title"
+    @pointerdown="down" @dblclick="emit('reset')" />
+</template>
+
+<script setup lang="ts">
+import { shallowRef } from 'vue'
+
+const props = withDefaults(defineProps<{ dir: 'x' | 'y', title?: string }>(), { title: 'Drag to resize · double-click to reset' })
+// move: px since the drag started; end: the drag is over (save then).
+const emit = defineEmits<{ (e: 'move', px: number): void, (e: 'end' | 'reset'): void }>()
+
+const dragging = shallowRef(false)
+let start = 0
+
+function down (e: PointerEvent) {
+  if (e.button !== 0) return
+  e.preventDefault()
+  const el = e.currentTarget as HTMLElement
+  el.setPointerCapture(e.pointerId)
+  start = props.dir === 'x' ? e.clientX : e.clientY
+  dragging.value = true
+  const move = (ev: PointerEvent) => { emit('move', (props.dir === 'x' ? ev.clientX : ev.clientY) - start) }
+  const up = () => {
+    dragging.value = false
+    el.removeEventListener('pointermove', move)
+    el.removeEventListener('pointerup', up)
+    el.removeEventListener('pointercancel', up)
+    emit('end')
+  }
+  el.addEventListener('pointermove', move)
+  el.addEventListener('pointerup', up)
+  el.addEventListener('pointercancel', up)
+}
+</script>
+
+<style module>
+.handle { position: absolute; z-index: 3; touch-action: none; }
+.x { top: 0; bottom: 0; width: 7px; margin-left: -3px; cursor: col-resize; }
+.y { left: 0; right: 0; height: 7px; margin-top: -3px; cursor: row-resize; }
+.handle::after { content: ''; position: absolute; background: transparent; transition: background .1s; }
+.x::after { top: 0; bottom: 0; left: 3px; width: 1px; }
+.y::after { left: 0; right: 0; top: 3px; height: 1px; }
+.handle:hover::after, .active::after { background: var(--w-gold); }
+</style>

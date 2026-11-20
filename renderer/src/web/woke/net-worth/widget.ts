@@ -2,6 +2,7 @@ import type { ShortcutAction } from '@ipc/types'
 import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { GlanceShows } from './glance'
 import type { RateWindow } from './play-time'
+import type { PanelLayout } from './layout'
 
 export const NET_WORTH_TYPE = 'woke-net-worth'
 export const NET_WORTH_MODULE = 'net-worth'
@@ -32,6 +33,8 @@ export interface NetWorthWidget extends Widget {
   // town time counted as play (default left out).
   rateWindow?: RateWindow
   rateWithHub?: boolean
+  // Section sizes dragged under Details (layout.ts).
+  layout?: PanelLayout
 }
 
 export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'where' | 'tabs'
