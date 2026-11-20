@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-404
 title: 'Map mods: every mod gets a stash token; search on top; Save can overwrite'
-status: Ready
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -30,7 +30,33 @@ history:
     to: Ready
     user: Agent
     date: '2026-11-20T02:41:41.194Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged as f7010e50. All 309 map mods get a stash token now. Stash search
+      is above Rewards, and Save can overwrite a saved search (option A).
+    completionComment: true
+    date: '2026-11-20T02:46:42.144Z'
+    id: c-2026-11-20t02-46-42-144z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-20T02:46:42.712Z'
 needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/662'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy saw "No unique text found for: Buffs on Players expire #% faster" on the Map mods page.
 
