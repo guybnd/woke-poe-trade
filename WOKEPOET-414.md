@@ -23,6 +23,12 @@ history:
       amended). Mocks/pick: https://claude.ai/artifact/4AMW4gkqA9KvuwhxgF78hH —
       question to Guy in the project thread. Review + CI running.
     id: a-2026-11-20t10-34-06-707z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T10:46:50.652Z'
+    comment: Updated implementation link.
+    id: a-2026-11-20t10-46-50-652z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/675'
 ---
 Guy (2026-11-20): net worth profit per hour should leave out time in hideout/town, and show rolling last 1, 2 and 3 hour windows.
 
