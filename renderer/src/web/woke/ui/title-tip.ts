@@ -8,9 +8,8 @@
 // back, the browser would show it on the next nudge). A title that changes while
 // hovered (Vue updating `:title`) is taken again and the card follows.
 //
-// WokeOverlay loads this on the first mouse move and it installs itself, so
-// startup JS doesn't carry it. The card draws itself (no Vue) and never covers
-// a WInfo card or the item tooltip (v-item-tip).
+// Installed by page-hooks.ts, outside startup JS. The card draws itself (no
+// Vue) and never covers a WInfo card or the item tooltip (v-item-tip).
 //
 // Opt out with `data-native-title` on the element or a parent. The e2e harness
 // turns it off (window.__wokeNativeTitles) so getByTitle finds hovered elements.
@@ -131,7 +130,7 @@ export function installTitleTips (doc: Document = document): () => void {
     else timer = setTimeout(() => { timer = undefined; show() }, COLD_MS)
   }
 
-  // Loaded mid-hover: the pointer's element had its mouseover before this ran.
+  // Installed mid-hover: the pointer's element had its mouseover before this ran.
   let primed = false
   function onMove (e: MouseEvent) {
     if (!primed) {
@@ -198,5 +197,3 @@ export function placeAtPointer (
     : Math.max(GAP, at.y - 8 - card.height)
   return { left, top }
 }
-
-if (typeof document !== 'undefined') installTitleTips()

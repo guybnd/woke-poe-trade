@@ -36,8 +36,6 @@ import { toast } from './ui'
 import { LOOT_FILTER_SAMPLE_TARGET } from './loot-filter/widget'
 
 const WickermanDock = defineAsyncComponent(() => import('./wickerman/WickermanDock.vue'))
-// Title hovers in the app's card (ui/title-tip.ts): loaded on the first mouse move, not at startup.
-document.addEventListener('mousemove', () => { import('./ui/title-tip').catch(() => {}) }, { once: true, passive: true })
 const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 
 // A hotkey that copies an item found nothing to copy. The loot filter's sample

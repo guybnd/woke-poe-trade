@@ -5,7 +5,7 @@
       <span :class="$style.barEnd">
         <span class="w-dim" :class="$style.small">Changes save as you go</span>
         <w-kbd keys="Esc" />
-        <button type="button" class="w-icon-btn" title="Close" data-w-close @click="close"><i class="fas fa-times" /></button>
+        <button type="button" class="w-icon-btn" title="Close" @click="close"><i class="fas fa-times" /></button>
       </span>
     </header>
 
