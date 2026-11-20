@@ -54,6 +54,16 @@ history:
     to: Done
     user: Agent
     date: '2026-11-20T16:16:53.459Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Follow-up merged as #688 (6829fc83): map toast redesign per Guy's picks
+      (A's timer + B's run bars; settings gear B in dock card, window and
+      Settings), themed strip tooltips, Guy's module description. Open: whether
+      Zealot's Vault counts as a map.
+    date: '2026-11-20T17:46:00.970Z'
+    selfAttested: true
+    id: c-2026-11-20t17-46-00-970z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/686'
