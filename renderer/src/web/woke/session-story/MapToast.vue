@@ -1,6 +1,8 @@
 <template>
   <Teleport to="body">
-    <div v-if="chip" ref="el" :class="[$style.toast, 'w-enter']" data-map-toast role="status">
+    <!-- Centred by the outer box, so the opening motion (which sets transform) can't move it. -->
+    <div v-if="chip" :class="$style.place">
+    <div ref="el" :class="[$style.toast, 'w-enter']" data-map-toast role="status">
       <div :class="$style.top">
         <div :class="$style.lead">
           <div :class="$style.name">{{ chip.rec.name }} <span :class="$style.tier">{{ tierText(chip.rec.areaLevel) }}</span></div>
@@ -25,6 +27,7 @@
       <div v-if="tags.length" :class="$style.tags">
         <span v-for="t in tags" :key="t.text" :class="[$style.tag, t.tone && $style[t.tone]]">{{ t.text }}</span>
       </div>
+    </div>
     </div>
   </Teleport>
 </template>
@@ -74,8 +77,11 @@ function tone (diff: number): string {
 </script>
 
 <style module>
+.place {
+  position: fixed; z-index: 1002; left: 0; right: 0; top: 30%;
+  display: flex; justify-content: center; pointer-events: none;
+}
 .toast {
-  position: fixed; z-index: 1002; left: 50%; top: 30%; transform: translateX(-50%);
   min-width: 300px; max-width: 420px; padding: 9px 12px 8px;
   background: var(--w-panel-3); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-md);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); color: var(--w-fg); font-family: var(--w-body);

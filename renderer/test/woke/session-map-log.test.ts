@@ -101,6 +101,9 @@ describe('maps from Client.txt', () => {
     const done = rec('Fortress', now, 1.5 * M, { deaths: 1, npcs: ['Einhar'] })
     const cmp = compareMap(done, recent)
     expect(cmp).toMatchObject({ hourAvg: 2.25 * M, hourRuns: 2, prev: { name: 'Strand', mapMs: 3 * M }, usual: null })
+    // Oldest first, ending with this run; the 90-minute-old run and the quick look are out.
+    expect(cmp.runs).toEqual([2.5 * M, 2 * M, 1.5 * M])
+    expect(cmp.best).toBe(1.5 * M)
     const clock = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
     expect(chipLines(done, cmp, clock)).toEqual(['Fortress T16 · 1:30', '1h avg 2:15 (2) ▼0:45 · Last (Strand) 3:00 ▼1:30 · 1 death · Einhar'])
     // First run of a map this hour: against your usual.

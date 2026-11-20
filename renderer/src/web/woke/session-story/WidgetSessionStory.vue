@@ -134,8 +134,8 @@ const mapLog = new MapLog({
       chipPeek = true
     }
   },
-  // Into a map: a line set to stay until then goes, and so does one that can
-  // take the mouse (it would catch clicks meant for the fight).
+  // Into a map: a line set to stay until then goes, and so does a clickable
+  // one (a click on it in a fight would close it by accident).
   onEnter: () => {
     if (live && (props.config.chipSeconds === 0 || props.config.chipClick === true)) closeChip()
   },
@@ -290,7 +290,7 @@ const dockMenu = computed<DockMenuAction[]>(() => [{
 </script>
 
 <style module>
-.gear { padding: 8px var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.gear { padding: 0 2px; }
 .cardGear { padding: 4px var(--w-pad) 6px; border-top: 1px solid var(--w-line-soft); }
 .label { padding: 10px var(--w-pad) 2px; border-top: 1px solid var(--w-line); margin-top: 6px; }
 .row {
