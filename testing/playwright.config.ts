@@ -9,7 +9,9 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   // One fake app per worker process; tests in a file share it.
   fullyParallel: false,
-  workers: process.env.CI ? 2 : undefined,
+  // Locally, half the cores would each start a fake app and Chromium, which
+  // stutters a game running alongside. WOKE_TEST_WORKERS overrides it.
+  workers: process.env.CI ? 2 : (Number(process.env.WOKE_TEST_WORKERS) || 2),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
     ? [['list'], ['html', { open: 'never', outputFolder: 'report' }], ['github']]

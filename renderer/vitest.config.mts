@@ -5,6 +5,11 @@ import path from 'path'
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
+function localWorkers (fallback: number) {
+  if (process.env.CI) return undefined
+  return Number(process.env.WOKE_TEST_WORKERS) || fallback
+}
+
 export default defineConfig({
   // Data files load from `/data/...` (public/). The fetch shim in
   // test/setup/env.ts reads them; this resolves the dynamic imports.
@@ -32,6 +37,9 @@ export default defineConfig({
     environment: 'node',
     globalSetup: ['test/setup/global.ts'],
     setupFiles: ['test/setup/env.ts'],
-    testTimeout: 20_000
+    testTimeout: 20_000,
+    // One worker per core by default, which stutters a game running alongside.
+    // CI keeps the default; WOKE_TEST_WORKERS overrides it locally.
+    poolOptions: { forks: { maxForks: localWorkers(4), minForks: 1 } }
   }
 })
