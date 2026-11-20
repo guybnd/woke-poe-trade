@@ -18,6 +18,7 @@
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
       <woke-deck-verdict-chip :item="item" />
+      <woke-high-roll-chip v-if="item.rarity === 'Unique'" :item="item" :stats="itemStats" @search="searchAfterPreset" />
       <!-- woke: the poe.ninja price folded onto the name row; its chevron opens the card below. -->
       <price-trend v-if="showTrendCard && !ninjaCardOpen" inline
         :item="item"
@@ -166,6 +167,7 @@ export default defineComponent({
     WokeDustVerdictChip,
     WokeRollPresets,
     WokeBuildFitChip,
+    WokeHighRollChip: defineAsyncComponent(() => import('@/web/woke/price-insight/HighRollChip.vue')),
     WokeFilterVerdictChip,
     WokeDeckVerdictChip,
     PricePrediction,

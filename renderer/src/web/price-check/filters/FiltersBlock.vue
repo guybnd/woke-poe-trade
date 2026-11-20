@@ -41,7 +41,8 @@
           <component :is="poeKit!.FilterLinePoe" v-else-if="poeMode && filter.disabled" :key="`line_${filter.tag}_${filter.text}`"
             :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
             :data-stat-row="i"
-            :filter="filter" />
+            :filter="filter"
+            :item="item" />
           <filter-modifier v-else :key="`${filter.tag}_${filter.text}_${poeMode}`"
             :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
             :data-stat-row="i"

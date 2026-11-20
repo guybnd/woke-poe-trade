@@ -15,7 +15,7 @@
       <img v-else-if="look.icon" class="w-poe-icon" :src="look.icon" alt="">
       <img v-if="filter.mercenary?.icon" class="w-poe-icon" :src="filter.mercenary.icon" alt="">
       <span v-if="filter.not" class="w-poe-not">{{ t('filters.tag_not') }}</span>
-      <item-modifier-text class="w-pc-modtext" :text="text" :roll="filter.roll?.value" :rolls="pair" />
+      <poe-mod-text class="w-pc-modtext" :text="text" :roll="filter.roll?.value" :rolls="pair" :ranges="ranges?.ranges" :top="ranges?.top" />
     </button>
     <!-- A local line's own mod, once split out of the line two mods add up to. -->
     <span v-if="modName" class="w-poe-modname">{{ modName }}</span>
@@ -31,16 +31,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ItemModifierText from '@/web/ui/ItemModifierText.vue'
+import PoeModText from '@/web/woke/price-insight/PoeModText.vue'
 import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { poeLook, poeTier, isTopTier, eldritchMark } from '@/web/woke/price-insight/poe-kind'
 import EldritchMark from '@/web/woke/price-insight/EldritchMark.vue'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { rollPair } from '@/web/woke/price-insight/roll-pair'
+import { uniqueLineRanges } from '@/web/woke/price-insight/unique-roll'
+import type { ParsedItem } from '@/parser'
 import { INTERNAL_TRADE_IDS, StatFilter } from './interfaces'
 import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
 
-const props = defineProps<{ filter: StatFilter }>()
+const props = defineProps<{ filter: StatFilter, item?: ParsedItem }>()
 const { t } = useI18n()
 const actions = useStatActions()
 
@@ -49,6 +51,8 @@ const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, ca
 const qOn = computed(() => catalyst?.filter.value?.disabled === false)
 const look = computed(() => poeLook(props.filter))
 const tier = computed(() => poeTier(props.filter))
+// A unique's ranges in the line, as the game's Alt view shows them (pick C, WOKEPOET-420).
+const ranges = computed(() => props.item ? uniqueLineRanges(props.filter, props.item) : undefined)
 const eldritch = computed(() => eldritchMark(props.filter))
 const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
 const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)
