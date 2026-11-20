@@ -509,33 +509,24 @@ function upgradeConfig (_config: Config): Config {
     itemCheck.bookmarksKey ??= null
     itemCheck.bookmarks ??= []
   }
-  // woke: single-instance windows are only created on a fresh config.
-  if (!config.widgets.some(w => w.wmType === MAP_CHECK_TYPE)) {
-    config.widgets.push(initMapCheckWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-  }
-  if (!config.widgets.some(w => w.wmType === DEATH_RECAP_TYPE)) {
-    config.widgets.push(initDeathRecapWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-    // New to this config: stays off for anyone who has Map mods off, like "Price check only".
+  // woke: single-instance windows are only created on a fresh config. One new
+  // to this config stays off for anyone who has the module it follows off,
+  // like "Price check only" (death recap: even before any module choice).
+  {
     const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
-    if (!isModuleOn(woke, 'map-mods')) ensureWokeConfig(woke).woke.off.push('death-recap')
-  }
-  if (!config.widgets.some(w => w.wmType === SESSION_STORY_TYPE)) {
-    config.widgets.push(initSessionStoryWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-    // New to this config: stays off for anyone who has Farming off, like "Price check only".
-    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
-    if (woke.woke && !isModuleOn(woke, 'farming')) woke.woke.off.push('session-story')
-  }
-  if (!config.widgets.some(w => w.wmType === STACKED_DECKS_TYPE)) {
-    config.widgets.push(initStackedDecksWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-    // New to this config: stays off for anyone who has Farming off, like "Price check only".
-    const woke = config as unknown as { woke?: WokeModulesConfig, widgets: Array<{ wmType: string }> }
-    if (woke.woke && !isModuleOn(woke, 'farming')) woke.woke.off.push('stacked-decks')
-  }
-  if (!config.widgets.some(w => w.wmType === POE_RE_TYPE)) {
-    config.widgets.push(initPoeReWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
-  }
-  if (!config.widgets.some(w => w.wmType === MEGALO_TYPE)) {
-    config.widgets.push(initMegaloWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1))
+    const singles: Array<[string, (wmId: number) => unknown, string?, string?, boolean?]> = [
+      [MAP_CHECK_TYPE, initMapCheckWidget],
+      [DEATH_RECAP_TYPE, initDeathRecapWidget, 'death-recap', 'map-mods', true],
+      [SESSION_STORY_TYPE, initSessionStoryWidget, 'session-story', 'farming'],
+      [STACKED_DECKS_TYPE, initStackedDecksWidget, 'stacked-decks', 'farming'],
+      [POE_RE_TYPE, initPoeReWidget],
+      [MEGALO_TYPE, initMegaloWidget]
+    ]
+    for (const [type, init, module, follows, always] of singles) {
+      if (config.widgets.some(w => w.wmType === type)) continue
+      config.widgets.push(init(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1) as typeof config.widgets[number])
+      if (module && follows && (always || woke.woke) && !isModuleOn(woke, follows)) ensureWokeConfig(woke).woke.off.push(module)
+    }
   }
   for (const w of config.widgets) {
     if (w.wmType === MEGALO_TYPE && w.wmFlags.includes('menu::skip')) w.wmFlags = w.wmFlags.filter((f: string) => f !== 'menu::skip')
