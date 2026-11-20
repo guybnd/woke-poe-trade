@@ -21,7 +21,9 @@
           <WSegmented :model-value="win" :options="WINDOW_OPTIONS" @update:model-value="pick" />
           <span class="w-num" :class="tone(rate.div)" :title="rate.tip">{{ rate.div == null ? '—' : signed(rate.div) }}<Coin :chaos="!divineRate" />/h</span>
         </div>
-        <WSpark v-if="spark.length > 1" :values="spark" :width="270" :height="26" :class="$style.spark" />
+        <!-- The window's chart, short: hover a point for what changed, click to keep it. -->
+        <LedgerChart v-if="series.length > 1" :series="series" :big="big" mode="total" :goal-div="null" :height="48" tip-below
+          :tip-of="(name, count) => tipFor(tips, null, name, count)" :class="$style.spark" />
         <template v-if="v">
           <div v-if="diff" :class="$style.caps">Since last read · <span class="w-num" :class="tone(diff.netChaos)">{{ signed(toDiv(diff.netChaos)) }}<Coin :chaos="!divineRate" /></span></div>
           <div v-for="c in changes" :key="c.key + c.count" :class="$style.row">
@@ -48,13 +50,15 @@
 <script setup lang="ts">
 // Loaded the first time the card opens, with the window's data (store.ts).
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
-import { WSegmented, WSpark, vItemTip } from '../ui'
+import { WSegmented, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount } from '../ui/format'
 import { divine as divineRate, historyNow, ledger, onStatus, ratesAt, pricePrefs, setLeague, stashNow, summary, valuation, wantPrices } from './store'
-import { refreshWaitMs, topCardChanges } from './ledger'
+import { bigGains, refreshWaitMs, seriesFor, topCardChanges } from './ledger'
+import type { SeriesPoint } from './ledger'
 import type { ReaderStatus } from './widget'
 import Coin from './Coin.vue'
+import LedgerChart from './LedgerChart.vue'
 import { RATE_WINDOWS, rateTip, startOfDay } from './play-time'
 import type { RateWindow } from './play-time'
 
@@ -87,19 +91,20 @@ const sameLeague = computed(() => stashNow.value?.league === props.league && (!p
 const v = computed(() => sameLeague.value ? valuation.value : null)
 const signedOut = computed(() => props.status?.error?.kind === 'signed-out' || (props.status != null && !props.status.account))
 const today = computed(() => sameLeague.value ? summary.value?.sinceYesterdayDiv ?? null : null)
-// Net worth over the picked window: its reads, from the one before it starts.
-const spark = computed(() => {
+// Net worth over the picked window, as the window's chart draws it: its reads,
+// from the one before it starts.
+const series = computed<SeriesPoint[]>(() => {
   if (!sameLeague.value) return []
   const pts = ledger.value.points
   const end = Math.max(now.value, pts[pts.length - 1]?.at ?? 0)
   const from = win.value === 'today' ? startOfDay(end) : end - (RATE_WINDOWS.find(w => w.id === win.value)?.ms ?? 3_600_000)
-  // Each read in its own day's divine rate, as the window's chart has it.
-  const val = (p: { chaos: number, divine: number | null }) => divineRate.value ? p.chaos / (p.divine ?? divineRate.value) : p.chaos
-  const i = pts.findIndex(p => p.at >= from)
-  // No read inside the window: a flat line at the last value.
-  if (i < 0) return pts.length ? [val(pts[pts.length - 1]), val(pts[pts.length - 1])] : []
-  return pts.slice(Math.max(0, i - 1)).map(val)
+  const all = seriesFor(pts, historyNow.value.days, '7d', end, divineRate.value)
+  const i = all.findIndex(p => p.at >= from)
+  // No read inside the window: a flat line from the last one.
+  if (i < 0) { const last = all[all.length - 1]; return last ? [last, { ...last, at: end, netDiv: null, top: [] }] : [] }
+  return all.slice(Math.max(0, i - 1))
 })
+const big = computed(() => bigGains(series.value))
 // The last read's changes, if that read had any to compare.
 const diff = computed(() => {
   const d = ledger.value.diffs[ledger.value.diffs.length - 1]

@@ -1,5 +1,5 @@
 <template>
-  <div ref="box" :class="$style.chart" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
+  <div ref="box" :class="$style.chart" :style="height ? { height: `${height}px` } : undefined" @mousemove="onMove" @mouseleave="hover = null" @click="onClick">
     <svg :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" :class="$style.svg" aria-hidden="true">
       <template v-if="mode === 'total'">
         <path v-if="area" :d="area" :class="$style.area" />
@@ -49,6 +49,11 @@ const props = defineProps<{
   goalDiv: number | null
   // The item tooltip for a name in a pinned card.
   tipOf?: (name: string, count: number) => ItemTipRef
+  // px; 80 when left out (the dock card uses a shorter one).
+  height?: number
+  // Always open the hover card below the line (the dock card scrolls, so
+  // one above the chart would be cut off).
+  tipBelow?: boolean
 }>()
 
 const W = 400
@@ -112,7 +117,11 @@ const span = computed(() => {
   return { t0, t1: t1 === t0 ? t0 + 1 : t1, lo, hi }
 })
 
-const place = computed(() => shown.value ? tipPlacement(shown.value.x, shown.value.y) : { below: false, align: 'center' as const })
+const place = computed(() => {
+  if (!shown.value) return { below: false, align: 'center' as const }
+  const p = tipPlacement(shown.value.x, shown.value.y)
+  return props.tipBelow ? { ...p, below: true } : p
+})
 
 const xOf = (at: number) => (at - span.value.t0) / (span.value.t1 - span.value.t0) * W
 const yOf = (v: number) => H - PAD - (v - span.value.lo) / (span.value.hi - span.value.lo) * (H - 2 * PAD)
