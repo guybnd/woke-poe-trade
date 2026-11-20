@@ -103,7 +103,7 @@ describe('atlas tree screenshots to a strategy', () => {
     // The game said 150/150; within a few either way (arcs aren't read, so
     // their passives are guessed by path).
     const n = readShots(model, lines, [res.extraLit], ringIds, [res.lit]).nodes.length
-    expect(n).toBeGreaterThanOrEqual(140)
+    expect(n).toBeGreaterThanOrEqual(148)
     expect(n).toBeLessThanOrEqual(158)
   })
 
@@ -131,6 +131,50 @@ describe('atlas tree screenshots to a strategy', () => {
     expect(r.nodes.length).toBeGreaterThanOrEqual(135)
     expect(r.nodes.length).toBeLessThanOrEqual(150)
     expect(r.joined).toBeLessThanOrEqual(5)
+  })
+
+  it('reads the website at a screen size, on its own page or a dark one', () => {
+    // A full-window browser shot: no HUD to skip. On a dark page the dark
+    // check passes, so the website is told by its cream lines.
+    const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '../fixtures/screens/atlas-tree-website.png')))
+    for (const bg of [[37, 39, 50], [20, 20, 20]]) {
+      const W = 1920
+      const H = 1080
+      const px = new Uint8Array(W * H * 4)
+      for (let i = 0; i < px.length; i += 4) { px[i] = bg[2]; px[i + 1] = bg[1]; px[i + 2] = bg[0]; px[i + 3] = 255 }
+      const ox = (W - png.width) >> 1
+      const oy = (H - png.height) >> 1
+      for (let y = 0; y < png.height; y++) {
+        for (let x = 0; x < png.width; x++) {
+          const s = (y * png.width + x) * 4
+          const d = ((oy + y) * W + ox + x) * 4
+          px[d] = png.data[s + 2]; px[d + 1] = png.data[s + 1]; px[d + 2] = png.data[s]; px[d + 3] = 255
+        }
+      }
+      const res = readPicture({ px, width: W, height: H, pts, kind: ATLAS_FIT, snip: ATLAS_PICTURE_FIT, tone: 'blue', probes: rings.map(r => [...r]), extra: extra.map(e => [...e]) })
+      expect(res.ok, String(bg)).toBe(true)
+      if (!res.ok) continue
+      expect(res.lit.some(Boolean), 'frames are not read on the website').toBe(false)
+      const n = readShots(model, lines, [res.extraLit], ringIds, [res.lit]).nodes.length
+      expect(n, String(bg)).toBeGreaterThanOrEqual(130)
+      expect(n, String(bg)).toBeLessThanOrEqual(150)
+    }
+  })
+
+  it('reads no tree in pictures of other screens, bright ones too', () => {
+    // Through readPicture: its website retry drops the dark check.
+    const job = (px: Uint8Array, width: number, height: number) => readPicture({ px, width, height, pts, kind: ATLAS_FIT, snip: ATLAS_PICTURE_FIT, tone: 'blue', probes: [], extra: [] })
+    for (const file of ['passive-tree-real-zoomed-in.png', 'area-mods-real-1.png', 'map-real-01.png', 'stash-general-real.png']) {
+      const png = PNG.sync.read(fs.readFileSync(path.join(__dirname, '../fixtures/screens', file)))
+      const px = new Uint8Array(png.data)
+      for (let i = 0; i < px.length; i += 4) { const t = px[i]; px[i] = px[i + 2]; px[i + 2] = t }
+      expect(job(px, png.width, png.height).ok, file).toBe(false)
+    }
+    const W = 2560
+    const H = 1440
+    const bright = new Uint8Array(W * H * 4)
+    for (let i = 0; i < bright.length; i++) bright[i] = 40 + ((i * 2654435761) >>> 24) % 120
+    expect(job(bright, W, H).ok, 'bright noise').toBe(false)
   })
 
   it('finds no atlas tree on other screens', () => {

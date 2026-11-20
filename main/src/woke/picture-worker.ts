@@ -65,19 +65,36 @@ export function readPicture (job: PictureJob): PictureResult {
     if (tone === 'blue') tone = 'pale'
   }
   let { fit, bare } = fitPicture(px, width, height, pts, job.kind, job.snip)
-  // The website's atlas viewer (pathofexile.com): a grey page, not the game's
-  // dark backdrop, so the dark check fails it. Its taken lines are cream, and
-  // every frame on it has blue art, so frames aren't read (they made 255).
+  // The website's atlas viewer (pathofexile.com) draws the same tree: on a
+  // grey page (so the dark check fails it), with taken lines cream, and blue
+  // art in every frame (read as glow, it chained across the tree: 255).
   let web = false
   if (!fit && tone !== 'gold') {
     ;({ fit, bare } = fitPicture(px, width, height, pts, { ...job.kind, minDark: 0 }, job.snip ? { ...job.snip, minDark: 0 } : undefined))
     web = fit != null
   }
   if (!fit) return { ok: false, reason: 'no-tree' }
+  const extra = job.extra.map(p => Float32Array.from(p))
+  // A web page has no HUD, whatever its size.
+  if (web) bare = true
+  let extraLit = litLines(px, width, height, fit, extra, pts, web ? 'cream' : tone, bare)
+  // Dark around it (a dark site theme, the browser, a dark crop edge) passes
+  // the dark check: it's the website when its lines read cream, not blue.
+  if (!web && tone !== 'gold') {
+    const cream = litLines(px, width, height, fit, extra, pts, 'cream', true)
+    if (WEB_LINES(count(cream), count(extraLit))) {
+      web = true
+      bare = true
+      extraLit = cream
+    }
+  }
   const lit = web ? job.probes.map(() => false) : litProbes(px, width, height, fit, job.probes.map(p => Float32Array.from(p)), tone)
-  const extraLit = litLines(px, width, height, fit, job.extra.map(p => Float32Array.from(p)), pts, web ? 'cream' : tone, bare)
   return { ok: true, lit, extraLit, width, height, bare }
 }
+
+const count = (flags: boolean[]) => flags.reduce((n, f) => n + (f ? 1 : 0), 0)
+// Cream lines well past blue ones: the website.
+export const WEB_LINES = (cream: number, blue: number) => cream >= 30 && cream > 3 * blue
 
 parentPort?.once('message', (job: PictureJob) => {
   parentPort!.postMessage(readPicture(job))
