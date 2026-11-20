@@ -15,7 +15,6 @@ import { offerItem, openItemMenu } from './item-menu'
 import { kindOfName, uniqueModLines } from './item-menu-logic'
 import type { ItemMenuRef, UniqueModLines } from './item-menu-logic'
 import { dataFileUrl, onSharedDataChange } from '../../app/live-data'
-import { ownTipEls } from '../help-tip'
 import { usePrice } from '../../shared/price'
 import type { TipBaseUnique, TipContent, TipEffect, TipMarket } from './tooltip'
 
@@ -280,7 +279,6 @@ export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefine
     watchHoverZones()
     watchRightClicks()
     refs.set(el, binding.value)
-    ownTipEls.add(el)
     el.addEventListener('mouseenter', enter)
     el.addEventListener('mouseleave', leave)
     el.addEventListener('contextmenu', menu)
@@ -293,7 +291,6 @@ export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefine
     if (hovered === el && (before?.name !== after?.name || before?.variant !== after?.variant)) leave()
   },
   beforeUnmount (el) {
-    ownTipEls.delete(el)
     el.removeEventListener('mouseenter', enter)
     el.removeEventListener('mouseleave', leave)
     el.removeEventListener('contextmenu', menu)

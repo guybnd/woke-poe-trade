@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { helpParagraphs, helpTip, hideHelp, placeAtPointer, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
+import { helpParagraphs, helpTip, hideHelp, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
+import { placeAtPointer } from '@/web/woke/ui/title-tip'
 
 const screen = { width: 1000, height: 600 }
 const card = { width: 300, height: 100 }
@@ -54,7 +55,7 @@ describe('showHelp and hideHelp', () => {
   })
 })
 
-describe('placeAtPointer', () => {
+describe('placeAtPointer (title hovers)', () => {
   it('sits under the pointer', () => {
     expect(placeAtPointer({ x: 200, y: 100 }, card, screen)).toEqual({ left: 192, top: 120 })
   })
