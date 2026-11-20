@@ -29,7 +29,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Mapping | Map mods | Danger strip on price check and map regex |
 | Mapping | Farming | Session profit per hour |
 | Mapping | Map scan | Reads map tooltips on screen |
-| Mapping | Session story | A card of the night when you stop: maps, time out of maps, deaths, profit and best drop |
+| Mapping | Session story | A card of the night, a line on each map you finish, and your map history |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |
 | Mapping | Loot filter editor | Edit the NeverSink rule for a sampled item |
