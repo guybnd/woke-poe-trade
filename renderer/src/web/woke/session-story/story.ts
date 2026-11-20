@@ -6,7 +6,8 @@
 // log section (it was closed and opened again).
 import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName } from '../campaign/log-parse'
-import { isMapArea, isMapSideArea, mapNameFromArea } from '../farming/farming'
+import { isMapArea, mapNameFromArea } from '../farming/farming'
+import { staysInRun } from '../death-recap/death-log'
 
 export const NIGHT_GAP_MS = 15 * 60_000
 const OPENING = '***** LOG FILE OPENING *****'
@@ -29,6 +30,8 @@ export interface NightDraft {
   lastAt: number
   segs: Seg[]
   deaths: Array<{ at: number, key: string }>
+  // The game was closed and opened again: the next night can start right away.
+  endedByOpening?: boolean
 }
 
 export interface StoryMap {
@@ -59,6 +62,9 @@ export interface NightStory {
   profitChaos: number | null
   divine: number | null
   best: { name: string, chaos: number } | null
+  // Stash reads up to here count for this night (the next one starts after).
+  stashTo?: number
+  endedByOpening?: boolean
 }
 
 export class NightTracker {
@@ -69,6 +75,7 @@ export class NightTracker {
   feed (line: string, fallbackAt: number): void {
     const at = lineTime(line) ?? fallbackAt
     if (line.includes(OPENING)) {
+      if (this.draft) this.draft.endedByOpening = true
       this.finish()
       return
     }
@@ -77,9 +84,10 @@ export class NightTracker {
     if (ev?.kind === 'area') {
       this.draft ??= { startedAt: at, lastAt: at, segs: [], deaths: [] }
       const prev = this.draft.segs[this.draft.segs.length - 1]
-      const side = isMapSideArea(ev.areaId)
-      const map = isMapArea(ev.areaId) || (side && !!prev?.map)
-      const key = side && prev?.map ? prev.key : `${ev.areaId}:${ev.seed ?? ''}`
+      // Side areas, encounters and towers inside a map stay part of it.
+      const side = staysInRun(ev.areaId) && !!prev?.map
+      const map = isMapArea(ev.areaId) || side
+      const key = side ? prev.key : `${ev.areaId}:${ev.seed ?? ''}`
       this.draft.segs.push({ at, map, key, name: map && !side ? mapNameFromArea(ev.areaId) : '', named: side, level: ev.areaLevel })
     } else if (ev?.kind === 'zone') {
       const seg = this.draft?.segs[this.draft.segs.length - 1]
@@ -159,7 +167,8 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
     deathsAt: d.deaths.map(x => x.at),
     profitChaos: null,
     divine: null,
-    best: null
+    best: null,
+    endedByOpening: d.endedByOpening
   }
 }
 

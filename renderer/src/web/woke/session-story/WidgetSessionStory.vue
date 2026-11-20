@@ -39,18 +39,18 @@ export default { widget: widgetSessionStorySpec }
 </script>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, shallowRef } from 'vue'
+import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WBanner, WEmpty, WPanel } from '../ui'
-import { formatChaos, formatDuration } from '../ui/format'
+import { formatChaos, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
 import { lineTime } from '../campaign/log-tail'
 import { followGameLog } from '../shared/game-log'
 import NightCard from './NightCard.vue'
-import { NIGHT_GAP_MS, NightTracker, hasMaps } from './story'
+import { NIGHT_GAP_MS, NightTracker } from './story'
 import type { NightStory } from './story'
 import { useNights } from './store'
 import type { SessionStoryWidget } from './widget'
@@ -69,14 +69,17 @@ const dockRef = shallowRef<{ peek: (text: string) => void } | null>(null)
 const RECENT_MS = 12 * 3_600_000
 
 const tracker = new NightTracker((draft) => {
-  store.finish(draft).then((story) => {
+  store.finish(draft).then(async (story) => {
+    // The icon only shows once the saved night is drawn; a peek before that is dropped.
+    await nextTick()
     if (live) dockRef.value?.peek(peekText(story))
   }).catch(() => {})
 })
+// Back after the module was off: carry on with the night it was reading.
+tracker.draft = store.keptDraft()
 
 function syncLive () {
-  const d = tracker.draft
-  store.setLive(d && hasMaps(d) ? d : null)
+  store.setLive(tracker.draft)
 }
 
 // Ends a night once the log has been quiet: one timer, pushed back with each
@@ -136,7 +139,7 @@ interface Shown { story: NightStory, live: boolean }
 const shown = computed<Shown | null>(() => {
   if (store.live.value) return { story: store.live.value, live: true }
   const last = store.nights.value[0]
-  return last && Date.now() - last.endedAt < RECENT_MS ? { story: last, live: false } : null
+  return last && nowMinute.value - last.endedAt < RECENT_MS ? { story: last, live: false } : null
 })
 
 const list = computed<Shown[]>(() => [

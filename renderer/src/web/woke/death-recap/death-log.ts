@@ -140,7 +140,7 @@ export interface LogEvents {
 
 // Reached from inside a map, on top of the areas farming counts: they stay that
 // map's run. Only keeps a run that's going, so one entered from a hideout has none.
-function staysInRun (areaId: string): boolean {
+export function staysInRun (areaId: string): boolean {
   return isMapSideArea(areaId) || /^(MapAtlasEncounter|ChayulaLeagueTower)/i.test(areaId)
 }
 

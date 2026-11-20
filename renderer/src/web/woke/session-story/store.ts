@@ -8,7 +8,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import { hostRequest } from '../shared/host'
 import { stashGainsBetween } from '../net-worth/gains'
 import { ledgerKey } from '../net-worth/glance'
-import { NIGHT_GAP_MS, bestDrop, isNightStory, keepNight, summarize } from './story'
+import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
 
 export const NIGHTS_COLLECTION = 'session-story'
@@ -23,7 +23,9 @@ export const useNights = createGlobalState(() => {
   let loading: Promise<void> | null = null
 
   function load (): Promise<void> {
-    loading ??= (hostRequest('doc-get', { collection: NIGHTS_COLLECTION, key: NIGHTS_KEY }) as Promise<unknown>)
+    // Strict: null only when there's no file (main keeps a broken one aside);
+    // a locked one throws, and then nothing is saved over it this run.
+    loading ??= (hostRequest('doc-get-strict', { collection: NIGHTS_COLLECTION, key: NIGHTS_KEY }) as Promise<unknown>)
       .then((saved) => { nights.value = Array.isArray(saved) ? saved.filter(isNightStory) : [] })
       .catch((e) => { loadError.value = e instanceof Error ? e.message : String(e) })
     return loading
@@ -31,21 +33,27 @@ export const useNights = createGlobalState(() => {
 
   // Stash numbers for the night, when the reader read inside it (or within
   // the quiet gap after, which is when the last map's loot lands).
+  // A night that ended because the game restarted gets no extra time: the
+  // next one starts right away. Reads already counted for an earlier night
+  // never count again.
   async function withStash (story: NightStory): Promise<NightStory> {
     const league = useLeagues().selectedId.value
     const divine = usePoeninja().xchgRate.value ?? null
-    if (!league) return { ...story, divine }
-    const to = story.endedAt + NIGHT_GAP_MS
+    const to = story.endedByOpening ? story.endedAt : story.endedAt + NIGHT_GAP_MS
+    if (!league) return { ...story, divine, stashTo: to }
+    const before = nights.value.find(n => n.startedAt < story.startedAt)
+    const from = Math.max(story.startedAt, (before?.stashTo ?? 0) + 1)
     const [gains, ledger] = await Promise.all([
-      stashGainsBetween(league, story.startedAt, to).catch(() => null),
+      stashGainsBetween(league, from, to).catch(() => null),
       (hostRequest('doc-get', { collection: 'net-worth', key: ledgerKey(league) }) as Promise<{ diffs?: unknown } | null>).catch(() => null)
     ])
     const diffs = Array.isArray(ledger?.diffs) ? ledger.diffs as Parameters<typeof bestDrop>[0] : []
     return {
       ...story,
       divine,
+      stashTo: to,
       profitChaos: gains && gains.reads ? gains.chaos : null,
-      best: bestDrop(diffs, story.startedAt, to)
+      best: bestDrop(diffs, from, to)
     }
   }
 
@@ -60,9 +68,20 @@ export const useNights = createGlobalState(() => {
     return story
   }
 
-  function setLive (draft: NightDraft | null) {
-    live.value = draft ? summarize(draft) : null
+  // The night being read, kept here so turning the window's module off and on
+  // again carries on with it.
+  let draft: NightDraft | null = null
+  let liveSig = ''
+  function setLive (d: NightDraft | null) {
+    draft = d
+    // Once a minute at most while nothing changes, so Ctrl+Space doesn't redo
+    // its answers on every log line.
+    const sig = d ? `${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}` : ''
+    if (sig === liveSig) return
+    liveSig = sig
+    live.value = d && hasMaps(d) ? summarize(d) : null
   }
+  const keptDraft = () => draft
 
-  return { nights, live, loadError, finished, load, finish, setLive }
+  return { nights, live, loadError, finished, load, finish, setLive, keptDraft }
 })

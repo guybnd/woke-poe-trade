@@ -66,6 +66,23 @@ describe('a night from Client.txt', () => {
     expect(tracker.draft).toBeNull()
   })
 
+  it('keeps encounters and towers inside a map as that map', () => {
+    const { tracker } = follow([
+      area('22:00:00', 'MapWorldsStrand', '31'),
+      area('22:03:00', 'MapAtlasEncounterBoss', '32'),
+      area('22:05:00', 'MapWorldsStrand', '31'),
+      area('22:06:00', 'HideoutChurch', '1', 68)
+    ])
+    const s = summarize(tracker.draft!)
+    expect(s.maps).toHaveLength(1)
+    expect(s.maps[0].mapMs).toBe(6 * 60_000)
+  })
+
+  it('marks a night that ended because the game restarted', () => {
+    const { done } = follow([...NIGHT, `${stamp('21:23:00')} ***** LOG FILE OPENING *****`])
+    expect(summarize(done[0]).endedByOpening).toBe(true)
+  })
+
   it('skips a night with no maps', () => {
     const { tracker, done } = follow([area('10:00:00', 'HideoutChurch', '1', 68)])
     tracker.tick(at('10:00:00') + NIGHT_GAP_MS)
