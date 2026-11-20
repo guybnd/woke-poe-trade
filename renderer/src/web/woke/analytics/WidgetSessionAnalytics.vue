@@ -184,6 +184,7 @@
         </template>
 
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
+        <MapHistory v-else-if="tab === 'history'" :range="config.range" :league="league" :now="now" />
         <DeckHistory v-else-if="tab === 'decks'" :range="config.range" :unit="config.unit" :league="league" :now="now" />
 
         <!-- ===== Maps ===== -->
@@ -238,6 +239,7 @@ import { useSessionStore } from './store'
 import { tradeTotals, tradesInRange, useTradeLog } from '../trade/log-store'
 import { isModuleOn } from '../modules'
 import DeckHistory from '../stacked-decks/DeckHistory.vue'
+import MapHistory from '../session-story/MapHistory.vue'
 import { useVisibleClock } from '../shared/visible-clock'
 import {
   MIN_UNITS_FOR_RANGE, buildRow, chanceBetter, exportRows, filterSessions, formatSessionDate,
@@ -264,11 +266,12 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   wm.show(props.config.wmId)
 }
 
-const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'decks'>('strategies')
+const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>('strategies')
 const tabOptions = computed(() => [
   { value: 'strategies', label: 'Strategies' },
   { value: 'sessions', label: 'Sessions' },
   { value: 'maps', label: 'Maps' },
+  ...(isModuleOn(AppConfig(), 'session-story') ? [{ value: 'history', label: 'Map history' }] : []),
   ...(isModuleOn(AppConfig(), 'stacked-decks') ? [{ value: 'decks', label: 'Stacked decks' }] : [])
 ])
 const rangeOptions = [{ value: '7d', label: '7 days' }, { value: 'league', label: 'League' }, { value: 'all', label: 'All' }]

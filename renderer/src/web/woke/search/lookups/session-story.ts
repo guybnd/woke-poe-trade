@@ -1,7 +1,10 @@
 // The night so far, or the last one, from Session story.
 import { formatChaos, formatClock, formatDuration } from '../../ui/format'
 import { SESSION_STORY_TYPE } from '../../session-story/widget'
+import { ANALYTICS_TYPE } from '../../analytics/types'
 import type { NightStory } from '../../session-story/story'
+import { tierText, usualMapMs } from '../../session-story/map-log'
+import type { MapRecord } from '../../session-story/map-log'
 import type { Lookup, LookupRow } from './types'
 
 const WORDS = ['tonight', 'last night', 'session story', 'session summary', 'night']
@@ -47,6 +50,32 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       icon: 'fas fa-moon',
       sections: [{ rows: rows(s) }],
       actions: [{ label: 'Open Session story', tool: SESSION_STORY_TYPE }]
+    }]
+  }
+}
+
+const MAP_WORDS = ['maps', 'last maps', 'map history', 'map times']
+
+// The last maps you ran, from Session story's map history.
+export function mapsLookup (maps: readonly MapRecord[]): Lookup {
+  return (query) => {
+    const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
+    if (!maps.length || !MAP_WORDS.some(w => w.startsWith(q) && q.length >= 4)) return []
+    const last = maps.slice(0, 8)
+    const usual = usualMapMs(maps)
+    return [{
+      id: 'answer:map-history',
+      group: 'Answer',
+      name: `Last maps${usual != null ? `: average ${formatClock(usual)}` : ''}`,
+      sub: `${maps.length} maps in your history`,
+      icon: 'fas fa-map',
+      sections: [{
+        rows: last.map(m => ({
+          label: `${m.name} ${tierText(m.areaLevel)}`,
+          value: [formatClock(m.mapMs), m.deaths ? `${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : '', m.npcs.join(', ')].filter(Boolean).join(' · ')
+        }))
+      }],
+      actions: [{ label: 'Open Session analytics', tool: ANALYTICS_TYPE }]
     }]
   }
 }

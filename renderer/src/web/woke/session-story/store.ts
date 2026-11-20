@@ -10,9 +10,12 @@ import { stashGainsBetween } from '../net-worth/gains'
 import { ledgerKey } from '../net-worth/glance'
 import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
+import { isMapRecord, keepMap } from './map-log'
+import type { MapRecord } from './map-log'
 
 export const NIGHTS_COLLECTION = 'session-story'
 export const NIGHTS_KEY = 'nights'
+export const MAPS_KEY = 'maps'
 
 export const useNights = createGlobalState(() => {
   const nights = shallowRef<NightStory[]>([])
@@ -21,6 +24,10 @@ export const useNights = createGlobalState(() => {
   // Nights finished since the app started: wakes the dock icon.
   const finished = shallowRef(0)
   let loading: Promise<void> | null = null
+  // Every map run, newest first (Session analytics' Map history).
+  const maps = shallowRef<MapRecord[]>([])
+  const mapsError = shallowRef('')
+  let mapsLoading: Promise<void> | null = null
 
   function load (): Promise<void> {
     // Strict: null only when there's no file (main keeps a broken one aside);
@@ -33,6 +40,21 @@ export const useNights = createGlobalState(() => {
 
   // Stash numbers for the night, when the reader read inside it (or within
   // the quiet gap after, which is when the last map's loot lands).
+  function loadMaps (): Promise<void> {
+    mapsLoading ??= (hostRequest('doc-get-strict', { collection: NIGHTS_COLLECTION, key: MAPS_KEY }) as Promise<unknown>)
+      .then((saved) => { maps.value = Array.isArray(saved) ? saved.filter(isMapRecord) : [] })
+      .catch((e) => { mapsError.value = e instanceof Error ? e.message : String(e) })
+    return mapsLoading
+  }
+
+  async function addMap (rec: MapRecord): Promise<void> {
+    await loadMaps()
+    const league = useLeagues().selectedId.value
+    maps.value = keepMap(maps.value, { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) })
+    // A history that couldn't be read would be written over.
+    if (!mapsError.value) await hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: MAPS_KEY, value: maps.value }).catch(() => {})
+  }
+
   // A night that ended because the game restarted gets no extra time: the
   // next one starts right away. Reads already counted for an earlier night
   // never count again.
@@ -83,5 +105,5 @@ export const useNights = createGlobalState(() => {
   }
   const keptDraft = () => draft
 
-  return { nights, live, loadError, finished, load, finish, setLive, keptDraft }
+  return { nights, live, loadError, finished, load, finish, setLive, keptDraft, maps, mapsError, loadMaps, addMap }
 })

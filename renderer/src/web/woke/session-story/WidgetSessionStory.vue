@@ -43,7 +43,7 @@ import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WBanner, WEmpty, WPanel } from '../ui'
-import { formatChaos, formatDuration, nowMinute } from '../ui/format'
+import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
@@ -54,6 +54,8 @@ import { NIGHT_GAP_MS, NightTracker, farmingProfit } from './story'
 import { useSessionStore } from '../analytics/store'
 import { sessionTotals } from '../analytics/stats'
 import type { NightStory } from './story'
+import { MapLog, tierText, usualMapMs } from './map-log'
+import type { MapRecord } from './map-log'
 import { useNights } from './store'
 import type { SessionStoryWidget } from './widget'
 
@@ -66,11 +68,20 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 hideWhilePlaying(props.config)
 
 const store = useNights()
-const dockRef = shallowRef<{ peek: (text: string) => void } | null>(null)
+const dockRef = shallowRef<{ peek: (text: string, ms?: number) => void } | null>(null)
+// The map chip stays this long after you leave a map.
+const CHIP_MS = 8000
 // A finished night shows on the dock for this long.
 const RECENT_MS = 12 * 3_600_000
 
+// Each map, for the chip and Session analytics' Map history.
+const mapLog = new MapLog({
+  onLeave: (rec) => { if (live) dockRef.value?.peek(chipText(rec), CHIP_MS) },
+  onDone: (rec) => { store.addMap(rec).catch(() => {}) }
+})
+
 const tracker = new NightTracker((draft) => {
+  mapLog.finish(draft.lastAt)
   store.finish(draft).then(async (story) => {
     // The icon only shows once the saved night is drawn; a peek before that is dropped.
     await nextTick()
@@ -101,14 +112,21 @@ let tailLines = new Set<string>()
 let stopLog: (() => void) | null = null
 let stopped = false
 onUnmounted(() => {
+  // The map being read is saved as it stands.
+  if (mapLog.current) mapLog.finish(Date.now())
   stopped = true
   stopLog?.()
   clearTimeout(quietTimer)
 })
 
 // Saved nights first, so the tail only replays what came after the last one.
-store.load().then(() => {
+Promise.all([store.load(), store.loadMaps()]).then(() => {
   if (stopped) return
+  // The character the last saved map was run on, until the log names one.
+  const lastMap = store.maps.value[0]
+  if (lastMap?.char && lastMap.className && lastMap.charLevel != null) {
+    mapLog.char = { name: lastMap.char, className: lastMap.className, level: lastMap.charLevel + lastMap.levelsGained }
+  }
   stopLog = followGameLog({
     since: () => null,
     onTail: (tail) => {
@@ -116,9 +134,11 @@ store.load().then(() => {
       tailLines = new Set(tail.lines)
       // Read again when the game opens a new log: only lines not seen yet.
       const lastEnd = Math.max(store.nights.value[0]?.endedAt ?? 0, tracker.draft?.lastAt ?? 0)
+      const mapsEnd = Math.max(store.maps.value[0]?.leftAt ?? 0, mapLog.current?.leftAt ?? 0)
       for (const line of tail.lines) {
         const at = lineTime(line)
         if (at != null && at > lastEnd) tracker.feed(line, at)
+        if (at != null && at > mapsEnd) mapLog.feed(line, at)
       }
       // A night that went quiet while the app was closed ends now.
       tracker.tick(Date.now())
@@ -128,7 +148,9 @@ store.load().then(() => {
     onLines: (lines) => {
       live = true
       for (const { line, at } of lines) {
-        if (!tailLines.delete(line)) tracker.feed(line, at)
+        if (tailLines.delete(line)) continue
+        tracker.feed(line, at)
+        mapLog.feed(line, at)
       }
       syncLive()
       armQuiet()
@@ -169,6 +191,19 @@ function farmOf (s: NightStory) {
 }
 function profitOf (s: NightStory): number | null {
   return s.profitChaos ?? farmOf(s)?.chaos ?? null
+}
+
+// "Fortress T16 · 6:42 ▼0:38 · 1 death · Einhar, Niko · Level 95"
+function chipText (rec: MapRecord): string {
+  const parts = [`${rec.name} ${tierText(rec.areaLevel)}`]
+  const usual = usualMapMs(store.maps.value)
+  const diff = usual != null ? rec.mapMs - usual : null
+  const delta = diff != null && Math.abs(diff) >= 5000 ? ` ${diff < 0 ? '▼' : '▲'}${formatClock(Math.abs(diff))}` : ''
+  parts.push(`${formatClock(rec.mapMs)}${delta}`)
+  if (rec.deaths) parts.push(`${rec.deaths} ${rec.deaths === 1 ? 'death' : 'deaths'}`)
+  if (rec.npcs.length) parts.push(rec.npcs.join(', '))
+  if (rec.levelsGained && rec.charLevel != null) parts.push(`Level ${rec.charLevel + rec.levelsGained}`)
+  return parts.join(' · ')
 }
 
 function peekText (s: NightStory): string {
