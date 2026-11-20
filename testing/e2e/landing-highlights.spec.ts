@@ -1143,6 +1143,8 @@ test('price check: open affixes and any mod', async ({ overlay }) => {
   const prefix = panel.locator('[data-affix-cap="prefix"]:visible')
   await prefix.locator('input').fill('2')
   await prefix.locator('input').press('Tab')
+  await panel.getByRole('button', { name: 'Search' }).click()
+  await expect(panel.locator('tbody').last()).toContainText('1268', { timeout: 15_000 })
   const box = panel.getByRole('combobox', { name: 'Add a mod to search for' })
   await box.click()
   await box.fill('movement speed')
