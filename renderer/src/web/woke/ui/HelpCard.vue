@@ -15,7 +15,7 @@
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { helpParagraphs, helpTip as tip, hideHelp, placeAtPointer, placeHelp } from './help-tip'
-import { installTitleTips } from './title-tip'
+import type { TitleTips } from './title-tip'
 import WKbd from './WKbd.vue'
 
 const el = ref<HTMLElement | null>(null)
@@ -40,11 +40,18 @@ const pos = computed(() => placed.value
   ? { left: `${placed.value.left}px`, top: `${placed.value.top}px` }
   : { left: '0', top: '0', visibility: 'hidden' as const })
 
+// Title hovers load on the first mouse move over the overlay, not at startup.
+let titles: TitleTips | undefined
+let unmounted = false
+function loadTitles () {
+  void import('./title-tip').then(m => { if (!unmounted) titles = m.installTitleTips() })
+}
+document.addEventListener('mousemove', loadTitles, { once: true, passive: true })
+
 // It sits outside the panel, so nothing hides it with the panel, and the overlay
 // gets no mouse events once the game has focus: closing the overlay mid-hover
 // must not leave it over the game. A scroll moves the "?" away from under it.
-const titles = installTitleTips()
-const close = () => { titles.cancel(); hideHelp() }
+const close = () => { titles?.cancel(); hideHelp() }
 const wm = inject<WidgetManager | undefined>('wm', undefined)
 watch(() => wm?.active.value, close)
 onMounted(() => {
@@ -53,7 +60,9 @@ onMounted(() => {
   window.addEventListener('dragstart', close, true)
 })
 onUnmounted(() => {
-  titles.stop()
+  unmounted = true
+  document.removeEventListener('mousemove', loadTitles)
+  titles?.stop()
   window.removeEventListener('blur', close)
   window.removeEventListener('scroll', close, true)
   window.removeEventListener('dragstart', close, true)

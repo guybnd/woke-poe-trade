@@ -16,6 +16,10 @@ export function showHelp (owner: object, target: HTMLElement, text: string, keys
   helpTip.value = { owner, text, keys, anchor: target.getBoundingClientRect(), ...opts }
 }
 
+// Elements that draw their own tooltip (v-item-tip): a title around them stays
+// quiet (title-tip.ts) while the pointer is on them.
+export const ownTipEls = new WeakSet<Element>()
+
 export function hideHelp (owner?: object) {
   if (!owner || helpTip.value?.owner === owner) helpTip.value = null
 }

@@ -8,14 +8,13 @@
 // back, the browser would show it on the next nudge). A title that changes while
 // hovered (Vue updating `:title`) is taken again and the card follows.
 //
+// HelpCard loads this after startup (it isn't needed for the first paint).
+//
 // Opt out with `data-native-title` on the element or a parent. The e2e harness
 // turns it off (window.__wokeNativeTitles) so getByTitle finds hovered elements.
-import { hideHelp, helpTip, showHelp } from './help-tip'
+import { watch } from 'vue'
+import { hideHelp, helpTip, ownTipEls, showHelp } from './help-tip'
 import { tip as gameTip } from './tooltip/tooltip'
-
-// Elements that draw their own tooltip (v-item-tip): a title around them stays
-// quiet while the pointer is on them.
-export const ownTipEls = new WeakSet<Element>()
 
 const COLD_MS = 450
 // Moving from one title straight to the next shows it at once, like the system tooltip.
@@ -146,6 +145,14 @@ export function installTitleTips (doc: Document = document): TitleTips {
     release()
   }
 
+  // A drag ended over a title: no mouseover comes until the pointer moves on.
+  function onUp (e: PointerEvent) {
+    if (!held) onOver(e)
+  }
+
+  // The item tooltip came up after the card (its data loads on first hover).
+  const stopGameWatch = watch(gameTip, (t) => { if (t) hide() })
+
   function cancel () {
     if (!held) return
     muted = true
@@ -156,6 +163,7 @@ export function installTitleTips (doc: Document = document): TitleTips {
   doc.addEventListener('mousemove', onMove, { capture: true, passive: true })
   doc.addEventListener('mouseout', onOut, true)
   doc.addEventListener('pointerdown', cancel, true)
+  doc.addEventListener('pointerup', onUp, true)
   return {
     cancel,
     stop () {
@@ -164,6 +172,8 @@ export function installTitleTips (doc: Document = document): TitleTips {
       doc.removeEventListener('mousemove', onMove, true)
       doc.removeEventListener('mouseout', onOut, true)
       doc.removeEventListener('pointerdown', cancel, true)
+      doc.removeEventListener('pointerup', onUp, true)
+      stopGameWatch()
     }
   }
 }
