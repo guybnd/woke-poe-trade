@@ -9,6 +9,7 @@
       :title="isSplit ? 'Fold its mods back into the total' : 'Show the mods behind this line'"
       @click="actions!.toggleSplit(filter)">{{ tier || `×${filter.sources.length}` }} {{ isSplit ? '▴' : '▾' }}</button>
     <span v-else-if="eldritch" class="w-poe-tier"><EldritchMark v-bind="eldritch" /></span>
+    <span v-else-if="!tier && rollPct != null" class="w-poe-tier w-poe-roll" :class="{ 'w-poe-t1': rollPct >= TOP_LINE_PCT }" :title="uniqueRollTitle(filter, rollPct)">{{ rollPct }}%</span>
     <span v-else class="w-poe-tier" :class="{ 'w-poe-t1': isTopTier(tier) }">{{ tier }}</span>
     <button type="button" class="w-poe-line-text" :class="`w-poe-k-${look.kind}`">
       <span v-if="look.corrupted" class="w-poe-corrupt" />
@@ -37,10 +38,12 @@ import { poeLook, poeTier, isTopTier, eldritchMark } from '@/web/woke/price-insi
 import EldritchMark from '@/web/woke/price-insight/EldritchMark.vue'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { rollPair } from '@/web/woke/price-insight/roll-pair'
+import { uniqueRollPct, uniqueRollTitle, TOP_LINE_PCT } from '@/web/woke/price-insight/unique-roll'
+import type { ParsedItem } from '@/parser'
 import { INTERNAL_TRADE_IDS, StatFilter } from './interfaces'
 import ClusterSpotTag from '@/web/woke/cluster-type/ClusterSpotTag.vue'
 
-const props = defineProps<{ filter: StatFilter }>()
+const props = defineProps<{ filter: StatFilter, item?: ParsedItem }>()
 const { t } = useI18n()
 const actions = useStatActions()
 
@@ -49,6 +52,8 @@ const qTag = computed(() => catalyst?.filter.value ? tagQuality(props.filter, ca
 const qOn = computed(() => catalyst?.filter.value?.disabled === false)
 const look = computed(() => poeLook(props.filter))
 const tier = computed(() => poeTier(props.filter))
+// A unique's lines have no tier: how far up its range the line rolled (pick A, WOKEPOET-420).
+const rollPct = computed(() => props.item ? uniqueRollPct(props.filter, props.item) : undefined)
 const eldritch = computed(() => eldritchMark(props.filter))
 const canSplit = computed(() => actions?.canSplit(props.filter) ?? false)
 const isSplit = computed(() => actions?.isSplit(props.filter) ?? false)

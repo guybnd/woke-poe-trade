@@ -18,6 +18,7 @@
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
       <woke-deck-verdict-chip :item="item" />
+      <woke-high-roll-chip :item="item" :stats="itemStats" @search="searchAfterPreset" />
       <!-- woke: the poe.ninja price folded onto the name row; its chevron opens the card below. -->
       <price-trend v-if="showTrendCard && !ninjaCardOpen" inline
         :item="item"
@@ -129,6 +130,7 @@ import WokeDustChip from '@/web/woke/price-insight/DustChip.vue'
 import WokeDustVerdictChip from '@/web/woke/disenchant/DustVerdictChip.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
 import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
+import WokeHighRollChip from '@/web/woke/price-insight/HighRollChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
 import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
@@ -166,6 +168,7 @@ export default defineComponent({
     WokeDustVerdictChip,
     WokeRollPresets,
     WokeBuildFitChip,
+    WokeHighRollChip,
     WokeFilterVerdictChip,
     WokeDeckVerdictChip,
     PricePrediction,
