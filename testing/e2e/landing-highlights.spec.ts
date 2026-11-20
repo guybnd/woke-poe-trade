@@ -1005,6 +1005,180 @@ test('setup: pick how you play', async ({ overlay, fakeApp }) => {
   await writeWebp(page, 'hl-setup', await page.screenshot())
 })
 
+// ---- 2026-11-20 refresh: 1.330.x features ----
+
+test('price check: right-click a mod for its menu', async ({ overlay }) => {
+  await statListings(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/town-inventory.jpg')
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  await panel.getByRole('button', { name: 'Search' }).click()
+  await expect(panel.locator('tbody')).toContainText('1268', { timeout: 15_000 })
+  const life = panel.getByRole('button', { name: /maximum Life$/ }).first()
+  await life.click({ button: 'right' })
+  const menu = overlay.page.getByRole('menu')
+  await expect(menu.getByText('Always tick this')).toBeVisible()
+  await allflameLabel(overlay.page.locator('body'))
+  await saveAround(overlay, 'hl-pc-mod-menu', [panel.locator('.w-pc-table'), panel.getByText('Body Armour'), menu], 1240)
+})
+
+const SKIN_COLOURS = [['R', 'R', 'R', 'G', 'G', 'B'], ['R', 'R', 'R', 'G', 'G', 'B'], ['R', 'R', 'G', 'G', 'G', 'B'], ['B', 'B', 'B', 'B', 'G', 'G'], ['R', 'R', 'R', 'G', 'B', 'B']]
+
+test('price check: socket colour tiles', async ({ overlay }) => {
+  await overlay.page.route('**/api/trade/search/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({ id: 'q', total: 17, result: SKIN_COLOURS.map((_, i) => `r${i}`) })
+  }))
+  await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({
+      result: route.request().url().split('/fetch/')[1].split('?')[0].split(',').map(id => ({
+        id,
+        item: {
+          ilvl: 84,
+          frameType: 3,
+          corrupted: true,
+          name: 'Skin of the Lords',
+          typeLine: 'Simple Robe',
+          sockets: SKIN_COLOURS[Number(id.slice(1))].map(sColour => ({ group: 0, sColour })),
+          explicitMods: ['Sockets cannot be modified', '+2 to Level of Socketed Gems', 'Iron Reflexes']
+        },
+        listing: {
+          indexed: new Date().toISOString(),
+          fee: 1,
+          price: { amount: 3 + Number(id.slice(1)) * 0.5, currency: 'divine' },
+          account: { name: `seller${id}`, lastCharacterName: `char${id}` }
+        }
+      }))
+    })
+  }))
+  await overlay.boot()
+  await backdrop(overlay, 'frames/town-inventory.jpg')
+  await overlay.copyItem('items/unique-skin-of-the-lords.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-socket-colour]')).toHaveCount(4)
+  const search = panel.getByRole('button', { name: 'Search' })
+  if (await search.isVisible()) await search.click()
+  await expect(panel.locator('.w-pc-sdots').nth(1).locator('.w-pc-sdot')).toHaveCount(6)
+  await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(overlay.page.locator('body'))
+  await saveAround(overlay, 'hl-pc-sockets', [panel.locator('.w-pc-table'), panel.locator('[data-socket-colour]')], 1240)
+})
+
+const TRANSIENCE = `Item Class: Skill Gems
+Rarity: Gem
+Eye of Winter of Transience
+--------
+Projectile, Spell, Cold, Duration
+Level: 21 (Max)
+Cost: 20 Mana
+Cast Time: 0.70 sec
+Quality: +20% (augmented)
+--------
+Requirements:
+Level: 72
+Int: 155
+--------
+Fires a projectile.
+--------
+Experience: 1/1
+--------
+Place into an item socket of the right colour to gain this skill. Right click to remove from a socket.
+--------
+Corrupted`
+
+test('price check: a gem\'s other versions, priced', async ({ overlay }) => {
+  // Real poe.ninja prices for this gem on 2026-11-16.
+  const versions: Array<[string, number]> = [['21/23c', 155], ['21/20c', 90], ['21c', 30], ['20/20', 25], ['20/20c', 20], ['1/20', 10], ['1', 3]]
+  await overlay.page.route('**/dense/overviews**', (route) => {
+    const data = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
+    const gems = data.itemOverviews.find((o: { type: string }) => o.type === 'SkillGem')
+    gems.lines.push(...versions.map(([variant, chaos]) => ({ name: 'Eye of Winter of Transience', variant, chaos, graph: [0, 0, 0, 0, 0, 0, 0] })))
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) })
+  })
+  await overlay.page.route('**/api/trade/search/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({ id: 'q', total: 31, result: ['r0', 'r1', 'r2', 'r3'] })
+  }))
+  await overlay.page.route('**/api/trade/fetch/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: LIMITS,
+    body: JSON.stringify({
+      result: route.request().url().split('/fetch/')[1].split('?')[0].split(',').map((id, i) => ({
+        id,
+        item: { frameType: 4, name: '', typeLine: 'Eye of Winter of Transience', corrupted: true },
+        listing: {
+          indexed: new Date().toISOString(),
+          fee: 1,
+          price: { amount: 28 + i * 2, currency: 'chaos' },
+          account: { name: `seller${id}`, lastCharacterName: `char${id}` }
+        }
+      }))
+    })
+  }))
+  await overlay.boot()
+  await backdrop(overlay, 'frames/town-inventory.jpg')
+  await overlay.copyItem(TRANSIENCE)
+  const panel = overlay.widget('price-check')
+  await expect(panel.locator('[data-gem-versions]').getByRole('row')).toHaveCount(8)
+  await expect(panel.locator('tbody').last()).toContainText('34', { timeout: 15_000 })
+  await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(overlay.page.locator('body'))
+  await saveAround(overlay, 'hl-pc-versions', [panel.locator('[data-gem-versions]'), panel.getByText('Eye of Winter of Transience').first()], 1240)
+})
+
+test('price check: open affixes and any mod', async ({ overlay }) => {
+  await statListings(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/town-inventory.jpg')
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  const search = panel.getByRole('button', { name: 'Search' })
+  if (await search.isVisible()) await search.click()
+  await expect(panel).toContainText('Matched', { timeout: 20_000 })
+  const prefix = panel.locator('[data-affix-cap="prefix"]:visible')
+  await prefix.locator('input').fill('2')
+  await prefix.locator('input').press('Tab')
+  const box = panel.getByRole('combobox', { name: 'Add a mod to search for' })
+  await box.click()
+  await box.fill('movement speed')
+  await expect(panel.getByRole('option').first()).toBeVisible()
+  await allflameLabel(overlay.page.locator('body'))
+  await saveAround(overlay, 'hl-pc-affixes', [panel.locator('.w-pc-table'), panel.getByText('Body Armour'), panel.getByRole('option').first()], 1240)
+})
+
+test('search: anoints, crafts and recipes', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot()
+  await backdrop(overlay, 'frames/hideout.jpg')
+  const { panel, palette } = await searchFor(overlay, 'arc tower chains', /Arc Towers/)
+  await panel.getByRole('button', { name: /Arc Towers/ }).first().click()
+  await expect(panel.getByText(/Amber/).first()).toBeVisible()
+  await overlay.page.mouse.move(1900, 1060)
+  await allflameLabel(palette)
+  await saveAround(overlay, 'hl-search-lookups', [palette], 1240)
+})
+
+test('market: a poe.ninja-style price list', async ({ overlay }) => {
+  await liveNinja(overlay.page)
+  await overlay.boot({
+    overlayActive: true,
+    widgets: [{ wmType: 'woke-market-tracker', wmWants: 'show', wmFlags: ['uninitialized'], anchor: { pos: 'tl', x: 4, y: 12 } }]
+  })
+  await backdrop(overlay, 'frames/town.jpg')
+  const panel = overlay.widget('woke-market-tracker')
+  const side = panel.getByRole('navigation', { name: 'Categories' })
+  await expect(side.getByRole('button', { name: /^Currency\s*\d+$/ })).toBeVisible({ timeout: 20_000 })
+  await expect(panel.locator('.w-row:not(.w-row--head)').first()).toBeVisible()
+  await overlay.page.waitForTimeout(1500)
+  await overlay.page.mouse.move(1900, 1060)
+  await saveAround(overlay, 'hl-market-prices', [panel.locator('[data-w-panel]').first()], 1280)
+})
+
 // ---- Clips: the same setups, recorded while the overlay is used ----
 //
 //   WOKE_LANDING_CLIPS=1 npx playwright test landing-highlights -g "clip:"

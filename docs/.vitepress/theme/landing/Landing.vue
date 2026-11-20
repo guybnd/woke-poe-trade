@@ -8,6 +8,7 @@ import { withBase } from 'vitepress'
 import { MODULES } from '../../../../renderer/src/web/woke/modules.ts'
 import { CREDIT_GROUPS } from '../../../../renderer/src/web/woke/settings/credits.ts'
 import { REPO, DOWNLOAD, HIGHLIGHTS } from './content.js'
+import { LATEST, releaseLine } from './release.js'
 
 const shot = (name) => withBase(`/shots/${name}.webp`)
 // Made by docs/scripts/phone-shots.mjs: the shot at 1280px wide, and the 4:5
@@ -121,7 +122,17 @@ onMounted(() => {
   }, { threshold: 0.35 })
   for (const el of document.querySelectorAll('.landing section.highlight[id]')) watcher.observe(el)
   nextTick(playClips)
+  loadRelease()
 })
+
+// The latest release under the header. No answer, no line.
+const release = ref(null)
+async function loadRelease () {
+  try {
+    const res = await fetch(LATEST, { headers: { Accept: 'application/vnd.github+json' } })
+    if (res.ok) release.value = releaseLine(await res.json())
+  } catch {}
+}
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', closeTip)
   document.removeEventListener('keydown', onKey)
@@ -156,6 +167,14 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
         <p class="phone-note">On a phone? Open this page on your PC to install.</p>
       </div>
     </header>
+
+    <aside v-if="release" class="release" aria-label="Latest release">
+      <p class="release-head"><b>{{ release.version }}</b><span v-if="release.date">{{ release.date }}</span></p>
+      <ul v-if="release.lines.length">
+        <li v-for="l in release.lines" :key="l">{{ l }}</li>
+      </ul>
+      <a v-if="release.url" :href="release.url">What's new</a>
+    </aside>
 
     <main>
       <section v-for="h in HIGHLIGHTS" :id="h.id" :key="h.id" class="highlight" :aria-labelledby="`${h.id}-title`">
@@ -447,6 +466,17 @@ const more = MODULES.filter(m => !withSlide.has(m.id))
 .viewer p { padding: 0 16px; font-size: 15px; text-align: center; }
 .viewer-close { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); width: 44px; height: 44px; padding: 0; background: none; border: 0; color: var(--text); font: 32px/1 'Fontin', Georgia, serif; cursor: pointer; }
 .phone-note { display: none; }
+
+/* ---------- the latest release, under the header ---------- */
+/* As wide as the highlights below (.item with a strip). */
+.release { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; width: min(calc(min(720px, max(280px, calc(100vh - 264px))) * 16 / 9), calc(100% - 32px)); margin: 0 auto 4px; padding: 12px 20px; background: rgba(0, 0, 0, 0.85); border: 1px solid #4a3218; border-top-color: var(--unique); }
+.release-head { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.release-head b { font: 22px var(--caps); font-weight: normal; color: var(--unique-on); }
+.release-head span { font-size: 15px; color: var(--dim); }
+.release ul { display: flex; flex-wrap: wrap; gap: 4px 22px; flex: 1 1 420px; min-width: 0; }
+.release li { color: var(--magic); font-size: 16px; }
+.release li::before { content: '◆'; margin-right: 7px; color: var(--unique); font-size: 10px; vertical-align: 2px; }
+.release a { font: 18px var(--caps); white-space: nowrap; }
 
 /* ---------- and many more ---------- */
 .more { columns: 2; column-gap: 48px; padding: 18px 28px 6px; }
