@@ -67,6 +67,8 @@ export interface MapLogEvents {
   onLeave: (rec: MapRecord) => void
   // The map is over: another map started, or the night ended.
   onDone: (rec: MapRecord) => void
+  // Into a map (a new one, or back through a portal).
+  onEnter?: () => void
 }
 
 export class MapLog {
@@ -116,6 +118,7 @@ export class MapLog {
         // Back from a side area: still the same stretch inside.
         if (!this.inMap) {
           this.inMap = true
+          this.events.onEnter?.()
           this.since = at
         }
         return

@@ -10,6 +10,8 @@ export type ChipPlace = 'dock' | 'center' | 'off'
 export interface SessionStoryWidget extends Widget {
   anchor: Anchor
   chipPlace?: ChipPlace
+  // How long the line stays, in seconds; 0: until you go into a map.
+  chipSeconds?: number
 }
 
 export function initSessionStoryWidget (wmId: number): SessionStoryWidget {

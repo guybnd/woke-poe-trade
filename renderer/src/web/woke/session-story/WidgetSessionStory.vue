@@ -15,6 +15,7 @@
         <div class="flex flex-wrap items-center gap-2" data-chip-place>
           <span class="w-dim text-xs" title="A line about each map you leave: time, deaths, league NPCs met, level-ups">After a map</span>
           <WSegmented v-model="chipPlace" :options="CHIP_OPTIONS" />
+          <WSelect v-if="chipPlace !== 'off'" v-model="chipSeconds" :options="CHIP_TIMES" title="How long the line stays" />
         </div>
       </template>
       <WEmpty v-if="!list.length" icon="fas fa-moon">
@@ -48,7 +49,7 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel, WSegmented, toast } from '../ui'
+import { WBanner, WEmpty, WPanel, WSegmented, WSelect, dismissToast, toast } from '../ui'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
@@ -74,9 +75,16 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 hideWhilePlaying(props.config)
 
 const store = useNights()
-const dockRef = shallowRef<{ peek: (text: string, ms?: number) => void } | null>(null)
+const dockRef = shallowRef<{ peek: (text: string, ms?: number) => void, unpeek: () => void } | null>(null)
 // The map chip stays this long after you leave a map.
 const CHIP_MS = 8000
+// "Until the next map" still lets go after this long.
+const UNTIL_MAP_MS = 2 * 3_600_000
+const chipMs = () => {
+  const s = props.config.chipSeconds
+  return s === 0 ? UNTIL_MAP_MS : typeof s === 'number' && s > 0 ? s * 1000 : CHIP_MS
+}
+let chipToast: number | null = null
 // A finished night shows on the dock for this long.
 const RECENT_MS = 12 * 3_600_000
 
@@ -86,8 +94,15 @@ const mapLog = new MapLog({
     if (!live) return
     const place = props.config.chipPlace ?? 'dock'
     // The note in the middle never takes the mouse: clicks go to the game.
-    if (place === 'center') toast(chipText(rec), { center: true, ms: CHIP_MS })
-    else if (place === 'dock') dockRef.value?.peek(chipText(rec), CHIP_MS)
+    if (place === 'center') chipToast = toast(chipText(rec), { center: true, ms: chipMs() })
+    else if (place === 'dock') dockRef.value?.peek(chipText(rec), chipMs())
+  },
+  // Into the next map: a line set to stay until then goes.
+  onEnter: () => {
+    if (!live || props.config.chipSeconds !== 0) return
+    if (chipToast != null) dismissToast(chipToast)
+    chipToast = null
+    dockRef.value?.unpeek()
   },
   onDone: (rec) => { store.addMap(rec).catch(() => {}) }
 })
@@ -230,6 +245,17 @@ const CHIP_OPTIONS: Array<{ value: ChipPlace, label: string }> = [
   { value: 'center', label: 'Middle of the screen' },
   { value: 'off', label: 'Off' }
 ]
+const CHIP_TIMES = [
+  { value: '5', label: '5 s' },
+  { value: '8', label: '8 s' },
+  { value: '15', label: '15 s' },
+  { value: '30', label: '30 s' },
+  { value: '0', label: 'Until the next map' }
+]
+const chipSeconds = computed({
+  get: () => String(props.config.chipSeconds ?? 8),
+  set: (v: string) => { props.config.chipSeconds = Number(v) }
+})
 const chipPlace = computed({
   get: () => props.config.chipPlace ?? 'dock',
   set: (v: ChipPlace) => { props.config.chipPlace = v }
