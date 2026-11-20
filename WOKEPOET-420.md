@@ -23,6 +23,12 @@ history:
       woke/unique-roll-quality, on the dev build; review fixes in (chip skips
       hidden rows and mods already in a total). Cloud checks running.
     id: a-2026-11-20t14-43-59-926z
+  - type: activity
+    user: Agent
+    date: '2026-11-20T14:54:06.768Z'
+    comment: Updated implementation link.
+    id: a-2026-11-20t14-54-06-768z
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/684'
 ---
 Guy (2026-11-20, Bino's Kitchen Knife): show how high each unique mod rolled in its range, and flag when the copy is a high roll worth a real trade search (poe.ninja prices an average copy).
 
