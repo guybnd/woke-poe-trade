@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { helpParagraphs, helpTip, hideHelp, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
+import { helpParagraphs, helpTip, hideHelp, placeAtPointer, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
 
 const screen = { width: 1000, height: 600 }
 const card = { width: 300, height: 100 }
@@ -51,5 +51,18 @@ describe('showHelp and hideHelp', () => {
     showHelp({}, target, 'a')
     hideHelp()
     expect(helpTip.value).toBeNull()
+  })
+})
+
+describe('placeAtPointer', () => {
+  it('sits under the pointer', () => {
+    expect(placeAtPointer({ x: 200, y: 100 }, card, screen)).toEqual({ left: 192, top: 120 })
+  })
+  it('goes above the pointer at the bottom edge', () => {
+    expect(placeAtPointer({ x: 200, y: 550 }, card, screen).top).toBe(442)
+  })
+  it('stays inside the window at the right and top edges', () => {
+    expect(placeAtPointer({ x: 990, y: 100 }, card, screen).left).toBe(692)
+    expect(placeAtPointer({ x: 200, y: 40 }, { width: 300, height: 580 }, screen).top).toBe(8)
   })
 })

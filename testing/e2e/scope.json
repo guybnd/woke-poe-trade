@@ -430,6 +430,9 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "title-tip.spec.ts": [
+   "renderer/src/web/woke/ui/"
+  ],
   "toolkit.spec.ts": [
    "main/src/woke/essence-scan-vision.ts",
    "main/src/woke/market-store.ts",
