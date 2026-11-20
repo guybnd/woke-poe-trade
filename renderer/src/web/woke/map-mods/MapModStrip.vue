@@ -1,32 +1,26 @@
 <template>
-  <!-- Guy's holistic pick A (2026-11-20): three questions, one section each.
-       Run it? (your build, read-only) · Worth running (slot: Nightmare grid) ·
-       Trade search (the only switches). Each mod is listed once, in Trade search. -->
+  <!-- Guy's pick A (2026-11-20): one section. Its top line is shared: Trade
+       search on the left, the verdict (reason, badge) and Juice on the right.
+       The counts, the number chips and the mod list (Any / Has / Not) follow. Worth running (a Nightmare
+       Map) sits under it. Each mod is listed once. -->
   <div v-if="result" :class="[$style.strip, isUnsure(result) ? $style.unknown : $style[result.verdict.verdict]]" data-map-strip>
-    <section :class="$style.zone" data-map-run>
-      <div :class="$style.row">
-        <span :class="$style.title">Run it?</span>
-        <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
-        <span :class="$style.headline" class="w-trunc">{{ headline }}</span>
+    <section :class="$style.zone" data-map-run data-map-trade>
+      <button type="button" :class="$style.row" @click="open = !open"
+        :aria-expanded="open">
+        <span :class="$style.title">Trade search</span>
         <span class="flex-1" />
+        <span v-if="headline" :class="$style.headline" class="w-trunc">{{ headline }}</span>
+        <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
         <template v-if="result.juice">
           <span class="w-dim text-xs">Juice</span>
-          <span class="w-num w-accent font-semibold">{{ result.juice.score }}</span>
+          <span class="w-num w-accent font-semibold" data-map-juice>{{ result.juice.score }}</span>
         </template>
-      </div>
-      <div v-if="summary" :class="$style.summary">{{ summary }}</div>
-    </section>
-    <slot name="worth" />
-    <section :class="$style.zone" data-map-trade>
-      <button type="button" :class="$style.row" @click="open = !open"
-        :aria-expanded="open" aria-label="Show the map's mods for the trade search">
-        <span :class="$style.title">Trade search</span>
-        <span v-if="picked" :class="[$style.chip, $style.pickChip]" data-map-mod-picked>{{ picked }}</span>
-        <span class="flex-1" />
-        <span class="w-dim text-xs">only this search</span>
-        <WInfo text="Only this price check's trade search: nothing is searched until you press Search. A number chip searches at least its minimum (scroll to change it). Has finds maps with the mod, Not finds maps without it, Any ignores it. Your Map mods ratings (the dots and the verdict) don't change." />
+        <WInfo text="The badge and dots are your Map mods ratings. Has finds maps with the mod, Not finds maps without it, Any ignores it; a number chip searches at least its minimum (scroll to change it). These change only this price check's search, and nothing is searched until you press Search." />
         <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
       </button>
+      <div v-if="summary || picked" :class="$style.summary">
+        {{ summary }}<template v-if="summary && picked"> · </template><template v-if="picked">Search: <span :class="$style.picked" data-map-mod-picked>{{ picked }}</span></template>
+      </div>
       <div :class="$style.chips">
         <!-- A number with a trade filter is a toggle: on, the search wants at least the min. -->
         <template v-for="p in result.props" :key="p.label">
@@ -52,6 +46,7 @@
         <FilterAddMod v-if="filters && addMods" :filters="filters" data-map-add-mod />
       </div>
     </section>
+    <slot name="worth" />
   </div>
 </template>
 
@@ -79,7 +74,7 @@ const result = computed(() => {
   return checkMap(props.item, config)
 })
 
-// With Worth running in the slot (a Nightmare Map), one of it and Trade search
+// With Worth running in the slot (a Nightmare Map), one of it and the mod list
 // is open at a time, so neither pushes the other out of the window (Guy, 2026-11-20).
 // The strip is reused from item to item, so it watches the worth prop rather
 // than checking once at setup.
@@ -95,8 +90,8 @@ const PROP_IDS: ReadonlySet<string> = new Set(Object.values(PROP_TRADE_ID))
 watchEffect(() => { if (owns) owns.value = result.value ? PROP_IDS : null })
 onBeforeUnmount(() => { if (owns) owns.value = null })
 
-// Run it?'s second line: how many mods of each rating, so the mod list can
-// live in Trade search without the verdict losing its reasons.
+// The second line: how many mods of each rating, so a folded section keeps
+// the verdict's reasons.
 const RATING_TITLE: Record<string, string> = { deadly: "Your build can't run this", warn: 'Risky for your build', good: 'Wanted (juice)', ok: 'Not rated' }
 const summary = computed(() => {
   const v = result.value!.verdict
@@ -217,10 +212,10 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
   border: 1px solid var(--w-line-strong);
   background: var(--w-panel);
 }
-.title { flex: none; color: var(--w-gold); font-family: var(--w-caps-face); font-size: var(--w-fs-sm); }
 .summary { color: var(--w-dim); font-size: var(--w-fs-xs); }
 .skip [data-map-run] { border-color: color-mix(in srgb, var(--w-down) 55%, transparent); }
 .careful [data-map-run] { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
+.title { flex: none; color: var(--w-gold); font-family: var(--w-caps-face); font-size: var(--w-fs-sm); }
 .row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
 .badge {
   flex: none;
@@ -234,7 +229,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .careful .badge { background: var(--w-warn); }
 .run .badge { background: var(--w-up); }
 .unknown .badge { background: var(--w-panel-3); color: var(--w-dim); }
-.headline { font-weight: 500; min-width: 0; }
+.headline { font-weight: 500; min-width: 0; text-align: right; }
 .skip .headline { color: var(--w-down); }
 .careful .headline { color: var(--w-warn); }
 .run .headline { color: var(--w-up); }
@@ -251,7 +246,6 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .text { flex: 1; min-width: 0; }
 .has .text { color: var(--w-up); }
 .not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
-.listHead { display: flex; justify-content: space-between; color: var(--w-faint); font-size: var(--w-fs-xs); }
 .seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
 .seg button { padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
 .seg button:first-child { border-left: 0; }
@@ -259,7 +253,7 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }
 .seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
 .seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
-.pickChip { color: var(--w-fg); background: var(--w-accent-soft); }
+.picked { color: var(--w-fg); }
 .propChip { cursor: pointer; border: 1px solid transparent; }
 .propChip:hover { border-color: var(--w-line-strong); color: var(--w-fg); }
 .propOn { color: var(--w-fg); background: var(--w-accent-soft); border-color: var(--w-accent); }
