@@ -13,10 +13,10 @@
         @click="toggleAll">
         <i :class="(allState === 'none') ? 'far fa-square' : (allState === 'all') ? 'fas fa-check-square' : 'fas fa-minus-square'" />
       </button>
-      <button type="button" :class="$style.statBtn" :aria-expanded="!statsVisibility.disabled"
+      <!-- woke: a map whose numbers and mods all sit on the strip has no rows here: just the presets. -->
+      <button v-if="!(onStrip && !stats.length)" type="button" :class="$style.statBtn" :aria-expanded="!statsVisibility.disabled"
         @click="statsVisibility.disabled = !statsVisibility.disabled">
-        <span v-if="onStrip && !stats.length">Map numbers and mods are set above</span>
-        <span v-else>{{ (totalSelectedMods > 0)
+        <span>{{ (totalSelectedMods > 0)
           ? t((presets.length > 1) ? 'filters.selected_some_short' : 'filters.selected_some', [totalSelectedMods, stats.length])
           : t('filters.selected_none') }}</span>
         <i class="pl-1 text-xs" :class="statsVisibility.disabled ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" />
@@ -26,7 +26,7 @@
         v-model="showFilterSources" :class="$style.headToggle">{{ t('filters.mods_toggle') }}</ui-toggle>
       <slot name="rolls" />
     </div>
-    <div v-if="!statsVisibility.disabled && hasStats" class="mb-3">
+    <div v-if="!statsVisibility.disabled && hasStats && !(onStrip && !stats.length)" class="mb-3">
       <!-- woke: one right-click listener for every row (price-insight/stat-actions.ts). -->
       <form @submit.prevent="handleStatsSubmit" @contextmenu="openRowMenu" :class="{ 'w-poe-well': poeMode }">
         <!-- woke: weapon/armour numbers (stat-header.ts); its picked numbers are the rows under it. -->
@@ -61,7 +61,8 @@
             :stat="stat" />
         </template>
         <!-- woke: mods the item doesn't have, to search for on top of its own. -->
-        <filter-add-mod v-if="canAddMods" :filters="filters" />
+        <!-- woke: on a map the strip's Trade search holds this (MapModStrip.vue). -->
+        <filter-add-mod v-if="canAddMods && !onStrip" :filters="filters" />
         <input type="submit" class="hidden" />
       </form>
       <!-- woke: the toggles keep their label on one line; with no room one moves to a second line. -->
@@ -300,7 +301,7 @@ export default defineComponent({
       canAddMods,
       hasStats: computed(() =>
         props.stats.length ||
-        canAddMods.value ||
+        (canAddMods.value && !props.onStrip) ||
         (showUnknownMods.value && props.item.rarity === ItemRarity.Unique) ||
         props.presets.length > 1),
       handleStatsSubmit () {

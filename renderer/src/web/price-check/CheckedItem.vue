@@ -23,13 +23,16 @@
         :item="item"
         :filters="itemFilters" />
     </filter-name>
-    <woke-map-strip :item="item" :stats="itemStats" class="mb-2" />
+    <woke-map-strip :item="item" :stats="itemStats" :filters="itemFilters" :add-mods="!presets.some(p => p.active && p.id === 'filters.preset_bulk')" class="mb-2">
+      <!-- woke: a Nightmare Map's worth sits between Run it? and Trade search (Guy's pick A). -->
+      <template v-if="isNightmareMap" #worth><woke-nightmare-strip :item="item" /></template>
+    </woke-map-strip>
     <!-- woke: the gem's other versions with poe.ninja prices; a row searches trade only when clicked. -->
     <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
     <woke-viscera-strip v-if="isViscera" :item="item" class="mb-2" />
     <!-- woke: a Nightmare Map goes into any of the five T17 maps; boss fragment value of each (Boss runs module). -->
-    <woke-nightmare-strip v-if="isNightmareMap" :item="item" class="mb-2" />
+    <woke-nightmare-strip v-if="isNightmareMap && !stripProps" :item="item" class="mb-2" />
     <!-- woke: the improved verdict below shows poeprices and poe.ninja once listings load. -->
     <template v-if="!wokeVerdictShown">
       <price-prediction v-if="showPredictedPrice" class="mb-4"
@@ -42,7 +45,7 @@
       ref="filtersComponent"
       :filters="itemFilters"
       :stats="rowStats"
-      :on-strip="rowStats.length < itemStats.length"
+      :on-strip="!!stripProps"
       :item="item"
       :presets="presets"
       @preset="selectPreset"
@@ -461,6 +464,7 @@ export default defineComponent({
       itemFilters,
       itemStats,
       rowStats,
+      stripProps,
       searched,
       resultsStale,
       doSearch,

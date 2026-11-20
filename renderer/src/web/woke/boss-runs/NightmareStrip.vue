@@ -4,15 +4,23 @@
   <div v-if="cols.length" :class="$style.strip" data-woke-nightmare>
     <!-- Folds to one line, the best three maps; remembered (Guy, 2026-11-20). -->
     <button type="button" :class="$style.fold" :aria-expanded="open" data-nightmare-fold @click="open = !open">
-      <span :class="$style.title">Run it as</span>
-      <span v-if="!open" :class="$style.best">
-        <template v-for="(c, i) in cols.slice(0, 3)" :key="c.id">{{ i ? ' · ' : '' }}{{ c.name }} <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b></template>
-      </span>
-      <span v-else class="w-dim">best {{ cols[0].name }} <b :class="(cols[0].profit ?? cols[0].loot) >= 0 ? 'w-up' : 'w-down'">{{ cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit) }}</b></span>
+      <span :class="$style.title">Worth running</span>
       <span class="flex-1" />
+      <span class="w-dim">as {{ cols[0].name }} <b :class="(cols[0].profit ?? cols[0].loot) >= 0 ? 'w-up' : 'w-down'">{{ cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit) }}</b></span>
       <i class="fas w-dim" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
     </button>
-    <div v-if="open" :class="$style.wrap">
+    <!-- Guy's holistic pick A: profit bars for the five maps, the grid one click further. -->
+    <div v-if="open" :class="$style.bars" data-nightmare-bars>
+      <template v-for="c in cols" :key="c.id">
+        <span :title="c.name">{{ c.short }}</span>
+        <span :class="$style.bar"><i :class="(c.profit ?? c.loot) >= 0 ? $style.barUp : $style.barDown" :style="{ width: barWidth(c) }" /></span>
+        <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b>
+      </template>
+    </div>
+    <button v-if="open" type="button" :class="$style.gridToggle" :aria-expanded="gridOpen" data-nightmare-grid @click="gridOpen = !gridOpen">
+      {{ estimated ? '~ estimates · ' : '' }}{{ gridOpen ? 'Hide' : 'Show' }} the fragment × map grid <i class="fas" :class="gridOpen ? 'fa-chevron-up' : 'fa-chevron-down'" />
+    </button>
+    <div v-if="open && gridOpen" :class="$style.wrap">
       <table :class="$style.grid">
         <thead>
           <tr>
@@ -51,7 +59,7 @@
         </tbody>
       </table>
     </div>
-    <div v-if="open" :class="$style.note">
+    <div v-if="open && gridOpen" :class="$style.note">
       <template v-if="estimated">~ is an estimate: no drop rates are published. {{ perKill }} fragments a kill, % = copies a kill; the unique's 5% is a 3.29 guide's figure.</template>
       Fragments a kill and your kill log live in Boss runs › Nightmare.
     </div>
@@ -72,6 +80,13 @@ import { BOSS_RUNS_TYPE } from './widget'
 import type { BossRunsWidget } from './widget'
 
 const open = useFold('nightmare-strip', true)
+const gridOpen = useFold('nightmare-grid', false)
+// Each bar against the best map's value (profit, or loot without a map price).
+function barWidth (c: { profit: number | null, loot: number }) {
+  const v = (x: { profit: number | null, loot: number }) => Math.max(0, x.profit ?? x.loot)
+  const top = Math.max(...cols.value.map(v), 1)
+  return `${Math.round(v(c) / top * 100)}%`
+}
 function signed (n: number) { return `${n >= 0 ? '+' : ''}${chaos(n)}` }
 
 // Mounted only with the Boss runs module on (CheckedItem.vue).
@@ -162,7 +177,13 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .wrap { overflow-x: auto; margin-top: 3px; }
 .fold { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: var(--w-fs-sm); }
 .title { color: var(--w-gold); font-family: var(--w-caps-face); }
-.best { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bars { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto; gap: 3px 8px; align-items: center; margin-top: 4px; font-size: var(--w-fs-xs); }
+.bar { height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-2); overflow: hidden; }
+.bar i { display: block; height: 100%; }
+.barUp { background: var(--w-up); }
+.barDown { background: var(--w-down); }
+.gridToggle { align-self: flex-start; margin-top: 4px; color: var(--w-faint); font-size: var(--w-fs-xs); }
+.gridToggle:hover { color: var(--w-fg); }
 /* Fixed columns, every map cell centred: headers, chances, unique, loot and
    profit line up whatever the window's text alignment (PoE layout centres rows). */
 .grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }

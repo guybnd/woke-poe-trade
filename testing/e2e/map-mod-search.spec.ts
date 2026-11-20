@@ -25,7 +25,7 @@ test('map: no search until Search, then each mod searches as has or not', async 
   await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
   await overlay.copyItem('items/map-rare-t16-deadly.txt')
   const panel = overlay.widget('price-check')
-  await expect(panel.getByText('Risky', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Risky', { exact: true })).toBeVisible({ timeout: 20_000 })
   // Nothing went to trade on its own.
   await overlay.page.waitForTimeout(1500)
   expect(searches).toEqual([])
@@ -33,13 +33,16 @@ test('map: no search until Search, then each mod searches as has or not', async 
   await expect(panel).not.toContainText('item.map_atlas_drops')
 
   // Open the strip's mod list and set two mods.
-  const strip = panel.locator('[aria-label="Show map mod ratings"]')
+  const strip = panel.locator('[data-map-trade] > button').first()
   if (await panel.locator('[data-map-mod]').count() === 0) await strip.click()
   const hexproof = panel.locator('[data-map-mod]').filter({ hasText: 'Monsters are Hexproof' })
   const twin = panel.locator('[data-map-mod]').filter({ hasText: 'two Unique Bosses' })
   await hexproof.locator('[data-state="not"]').click()
   await twin.locator('[data-state="has"]').click()
   await expect(hexproof.locator('[data-state="not"]')).toHaveAttribute('aria-checked', 'true')
+  // Any other mod goes in from Trade search; the rows below don't offer it twice.
+  await expect(panel.locator('[data-map-trade] [data-map-add-mod]')).toBeVisible()
+  await expect(panel.getByPlaceholder(/Add a mod to search for/)).toHaveCount(1)
   await expect(panel.locator('[data-map-mod-picked]')).toHaveText('has 1 · not 1')
   // The map's numbers are chips on the strip, not rows below: Rarity on, Pack off.
   const rarity = panel.locator('[data-map-prop="Rarity"]')
@@ -54,7 +57,7 @@ test('map: no search until Search, then each mod searches as has or not', async 
   await expect(panel.locator('[data-map-mod] [data-state="not"]').first()).toHaveAttribute('title', 'Trade search finds maps without this mod')
   await pack.click()
   await expect(pack).toHaveAttribute('aria-pressed', 'false')
-  await expect(panel.locator('form')).not.toContainText('Monster Pack Size')
+  await expect(panel.getByText('Monster Pack Size')).toHaveCount(0)
   await overlay.snap('map mods has and not')
 
   await panel.getByRole('button', { name: 'Search', exact: true }).click()

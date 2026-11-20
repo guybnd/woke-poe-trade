@@ -28,7 +28,7 @@ const UNIQUES = [
 const MAPS = JSON.stringify({ type: 'Map', lines: [{ name: 'Nightmare Map', variant: 'T0, Gen-24', chaos: 65, graph: FLAT }] })
 const SLOW = { timeout: 20_000 }
 
-async function setup (overlay: Overlay, show: boolean) {
+async function setup (overlay: Overlay, show: boolean, mapMods = false) {
   const recorded = fs.readFileSync(DENSE, 'utf8')
   await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({
     contentType: 'application/json',
@@ -45,7 +45,7 @@ async function setup (overlay: Overlay, show: boolean) {
   })
   await overlay.boot({
     overlayActive: show,
-    widgets: [{ wmType: 'woke-boss-runs' }],
+    widgets: mapMods ? [{ wmType: 'woke-boss-runs' }, { wmType: 'woke-map-mods' }] : [{ wmType: 'woke-boss-runs' }],
     patch: c => {
       const w = c.widgets.find((w: { wmType: string }) => w.wmType === 'woke-boss-runs')
       w.wmFlags = ['invisible-on-blur']
@@ -69,6 +69,9 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await overlay.copyItem('items/map-nightmare-330.txt')
   const strip = overlay.widget('price-check').locator('[data-woke-nightmare]')
   const maps = strip.locator('[data-nightmare-map]')
+  // Bars first, best first; the grid is one click further.
+  await expect(strip.locator('[data-nightmare-bars]')).toContainText('Zigg', SLOW)
+  await strip.locator('[data-nightmare-grid]').click()
   await expect(maps).toHaveCount(5, SLOW)
   // Ziggurat (Devouring) pays most, Fortress least, at these prices.
   await expect(maps.first()).toHaveText('Zigg')
@@ -87,13 +90,29 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await expect(unique).toContainText('~5%')
   await expect(strip).toContainText('~ is an estimate')
   await overlay.snap('nightmare map price check')
-  // Folds to one line with the best three, and opens again.
+  // Folds to one line with the best map, and opens again.
   await strip.locator('[data-nightmare-fold]').click()
   await expect(maps).toHaveCount(0)
-  await expect(strip.locator('[data-nightmare-fold]')).toContainText('Ziggurat +')
+  await expect(strip.locator('[data-nightmare-fold]')).toContainText('as Ziggurat +')
   await overlay.snap('nightmare map folded')
   await strip.locator('[data-nightmare-fold]').click()
   await expect(maps).toHaveCount(5)
+  expect(searches).toEqual([])
+  expect(overlay.errors).toEqual([])
+})
+
+test('Nightmare Map with Map mods: Run it?, Worth running, Trade search in that order', async ({ overlay }) => {
+  const searches = await setup(overlay, false, true)
+  await overlay.copyItem('items/map-nightmare-330.txt')
+  const panel = overlay.widget('price-check')
+  const strip = panel.locator('[data-map-strip]')
+  await expect(strip.locator('[data-woke-nightmare] [data-nightmare-bars]')).toContainText('Zigg', SLOW)
+  const order = await strip.evaluate(el => [...el.querySelectorAll('[data-map-run], [data-woke-nightmare], [data-map-trade]')].map(n =>
+    n.hasAttribute('data-map-run') ? 'run' : n.hasAttribute('data-woke-nightmare') ? 'worth' : 'trade'))
+  expect(order).toEqual(['run', 'worth', 'trade'])
+  // Only one Nightmare grid on the page.
+  await expect(panel.locator('[data-woke-nightmare]')).toHaveCount(1)
+  await overlay.snap('nightmare map holistic A')
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
 })

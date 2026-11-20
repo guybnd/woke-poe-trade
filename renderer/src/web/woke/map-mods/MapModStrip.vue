@@ -1,42 +1,57 @@
 <template>
-  <div v-if="result" :class="[$style.strip, isUnsure(result) ? $style.unknown : $style[result.verdict.verdict]]">
-    <button type="button" :class="$style.row" @click="open = !open"
-      :aria-expanded="open" aria-label="Show map mod ratings">
-      <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
-      <span :class="$style.headline" class="w-trunc">{{ headline }}</span>
-      <span class="flex-1" />
-      <template v-if="result.juice">
-        <span class="w-dim text-xs">Juice</span>
-        <span class="w-num w-accent font-semibold">{{ result.juice.score }}</span>
-      </template>
-      <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
-    </button>
-    <div :class="$style.chips">
-      <!-- A number with a trade filter is a toggle: on, the search wants at least the min. -->
-      <template v-for="p in result.props" :key="p.label">
-        <button v-if="propFilter(p.label)" type="button" :class="[$style.chip, $style.propChip, !propFilter(p.label)!.disabled && $style.propOn]" class="w-num"
-          :aria-pressed="!propFilter(p.label)!.disabled" :title="propTitle(p.label)" :data-map-prop="p.label"
-          data-own-wheel @click="toggleProp(p.label)" @wheel.prevent.stop="wheelMin(p.label, $event)">
-          {{ p.label }} {{ p.value }}%<template v-if="!propFilter(p.label)!.disabled && minOf(p.label) != null"> ≥{{ minOf(p.label) }}</template>
-        </button>
-        <span v-else :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
-      </template>
-      <!-- What the mod switches below add to the search, while the list is folded too. -->
-      <span v-if="picked" :class="[$style.chip, $style.pickChip]" data-map-mod-picked>{{ picked }}</span>
-    </div>
-    <div v-if="open" :class="$style.list">
-      <div v-if="searchable.length" :class="$style.listHead"><span>Mods</span>
-        <span class="flex items-center gap-1">Trade search <WInfo text="Only this price check's trade search. Has finds maps with the mod, Not finds maps without it, Any ignores it. Your Map mods ratings (the dots and the verdict) don't change." /></span></div>
-      <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`" :class="[$style.mod, row.filter && $style[stateOf(row.filter)]]" data-map-mod>
-        <span :class="[$style.dot, $style[row.mod.rating]]" />
-        <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
-        <span v-if="row.filter" :class="$style.seg" role="radiogroup" :aria-label="`Search ${row.mod.text}`">
-          <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(row.filter) === opt"
-            :class="stateOf(row.filter) === opt && $style[`on_${opt}`]" :data-state="opt" :title="STATE_TITLE[opt]"
-            @click="setState(row.filter, opt)">{{ STATE_LABEL[opt] }}</button>
-        </span>
+  <!-- Guy's holistic pick A (2026-11-20): three questions, one section each.
+       Run it? (your build, read-only) · Worth running (slot: Nightmare grid) ·
+       Trade search (the only switches). Each mod is listed once, in Trade search. -->
+  <div v-if="result" :class="[$style.strip, isUnsure(result) ? $style.unknown : $style[result.verdict.verdict]]" data-map-strip>
+    <section :class="$style.zone" data-map-run>
+      <div :class="$style.row">
+        <span :class="$style.title">Run it?</span>
+        <span :class="$style.badge">{{ isUnsure(result) ? '?' : VERDICT_LABEL[result.verdict.verdict] }}</span>
+        <span :class="$style.headline" class="w-trunc">{{ headline }}</span>
+        <span class="flex-1" />
+        <template v-if="result.juice">
+          <span class="w-dim text-xs">Juice</span>
+          <span class="w-num w-accent font-semibold">{{ result.juice.score }}</span>
+        </template>
       </div>
-    </div>
+      <div v-if="summary" :class="$style.summary">{{ summary }}</div>
+    </section>
+    <slot name="worth" />
+    <section :class="$style.zone" data-map-trade>
+      <button type="button" :class="$style.row" @click="open = !open"
+        :aria-expanded="open" aria-label="Show the map's mods for the trade search">
+        <span :class="$style.title">Trade search</span>
+        <span v-if="picked" :class="[$style.chip, $style.pickChip]" data-map-mod-picked>{{ picked }}</span>
+        <span class="flex-1" />
+        <span class="w-dim text-xs">only this search</span>
+        <WInfo text="Only this price check's trade search: nothing is searched until you press Search. A number chip searches at least its minimum (scroll to change it). Has finds maps with the mod, Not finds maps without it, Any ignores it. Your Map mods ratings (the dots and the verdict) don't change." />
+        <i class="fas w-dim text-xs" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
+      </button>
+      <div :class="$style.chips">
+        <!-- A number with a trade filter is a toggle: on, the search wants at least the min. -->
+        <template v-for="p in result.props" :key="p.label">
+          <button v-if="propFilter(p.label)" type="button" :class="[$style.chip, $style.propChip, !propFilter(p.label)!.disabled && $style.propOn]" class="w-num"
+            :aria-pressed="!propFilter(p.label)!.disabled" :title="propTitle(p.label)" :data-map-prop="p.label"
+            data-own-wheel @click="toggleProp(p.label)" @wheel.prevent.stop="wheelMin(p.label, $event)">
+            {{ p.label }} {{ p.value }}%<template v-if="!propFilter(p.label)!.disabled && minOf(p.label) != null"> ≥{{ minOf(p.label) }}</template>
+          </button>
+          <span v-else :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
+        </template>
+      </div>
+      <div v-if="open" :class="$style.list">
+        <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`" :class="[$style.mod, row.filter && $style[stateOf(row.filter)]]" data-map-mod>
+          <span :class="[$style.dot, $style[row.mod.rating]]" :title="RATING_TITLE[row.mod.rating]" />
+          <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
+          <span v-if="row.filter" :class="$style.seg" role="radiogroup" :aria-label="`Search ${row.mod.text}`">
+            <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(row.filter) === opt"
+              :class="stateOf(row.filter) === opt && $style[`on_${opt}`]" :data-state="opt" :title="STATE_TITLE[opt]"
+              @click="setState(row.filter, opt)">{{ STATE_LABEL[opt] }}</button>
+          </span>
+        </div>
+        <!-- Guy: any other mod goes in from here; the price check's own rows keep only special ones (enchants). -->
+        <FilterAddMod v-if="filters && addMods" :filters="filters" data-map-add-mod />
+      </div>
+    </section>
   </div>
 </template>
 
@@ -49,9 +64,11 @@ import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure, PROP_TRADE_ID } from './check'
-import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
+import type { FilterOrGroup, ItemFilters, StatFilter } from '@/web/price-check/filters/interfaces'
+import FilterAddMod from '@/web/price-check/filters/FilterAddMod.vue'
 
-const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[] }>()
+// addMods: off on the bulk preset, which searches maps by type only.
+const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[], filters?: ItemFilters, addMods?: boolean }>()
 
 const open = useFold('map-mod-strip')
 
@@ -66,6 +83,20 @@ const owns = inject<ShallowRef<ReadonlySet<string> | null> | null>('map-strip-ow
 const PROP_IDS: ReadonlySet<string> = new Set(Object.values(PROP_TRADE_ID))
 watchEffect(() => { if (owns) owns.value = result.value ? PROP_IDS : null })
 onBeforeUnmount(() => { if (owns) owns.value = null })
+
+// Run it?'s second line: how many mods of each rating, so the mod list can
+// live in Trade search without the verdict losing its reasons.
+const RATING_TITLE: Record<string, string> = { deadly: "Your build can't run this", warn: 'Risky for your build', good: 'Wanted (juice)', ok: 'Not rated' }
+const summary = computed(() => {
+  const v = result.value!.verdict
+  const n = (k: number, one: string, many: string) => k ? `${k} ${k === 1 ? one : many}` : ''
+  return [
+    n(v.deadly.length, "mod your build can't run", "mods your build can't run"),
+    n(v.warn.length, 'risky mod', 'risky mods'),
+    n(v.good.length, 'good mod', 'good mods'),
+    n(result.value!.unknown.length, "mod I couldn't read", "mods I couldn't read")
+  ].filter(Boolean).join(' · ')
+})
 
 const headline = computed(() => {
   const v = result.value!.verdict
@@ -159,17 +190,24 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 .strip {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  color: var(--w-fg);
+  font-family: var(--w-body);
+  font-size: var(--w-fs-md);
+}
+.zone {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
   padding: 6px 8px;
   border-radius: var(--w-r-md);
   border: 1px solid var(--w-line-strong);
   background: var(--w-panel);
-  color: var(--w-fg);
-  font-family: var(--w-body);
-  font-size: var(--w-fs-md);
 }
-.skip { border-color: color-mix(in srgb, var(--w-down) 55%, transparent); }
-.careful { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
+.title { flex: none; color: var(--w-gold); font-family: var(--w-caps-face); font-size: var(--w-fs-sm); }
+.summary { color: var(--w-dim); font-size: var(--w-fs-xs); }
+.skip [data-map-run] { border-color: color-mix(in srgb, var(--w-down) 55%, transparent); }
+.careful [data-map-run] { border-color: color-mix(in srgb, var(--w-warn) 45%, transparent); }
 .row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
 .badge {
   flex: none;
