@@ -245,8 +245,7 @@ function profitOf (s: NightStory): number | null {
 // Two lines in the middle of the screen, one on the dock.
 function chipText (rec: MapRecord, lines: 1 | 2): string {
   const out = chipLines(rec, compareMap(rec, store.maps.value), formatClock)
-  return out.join(lines === 2 ? '
-' : ' · ')
+  return out.join(lines === 2 ? '\n' : ' · ')
 }
 
 function peekText (s: NightStory): string {
