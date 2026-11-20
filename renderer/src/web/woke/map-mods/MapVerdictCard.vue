@@ -62,8 +62,8 @@
 import { computed } from 'vue'
 import { WPanel } from '../ui'
 import { heistRowOf } from './data'
-import { modRatings, nextModRating, setModRatings, shortLabel, withRating } from './rules'
-import type { ModRating, Verdict } from './rules'
+import { modRatings, nextModRating, setModRatings, shortLabel, VERDICT_LABEL, withRating } from './rules'
+import type { ModRating } from './rules'
 import { activeProfile } from './widget'
 import type { MapModsWidget } from './widget'
 import { isUnsure } from './check'
@@ -84,7 +84,6 @@ const wanted = computed(() => props.result.verdict.good.map(m => shortLabel(m.ma
 const showGoals = computed(() => props.result.goals != null && !props.result.unidentified &&
   (goalRows.value.length > 0 || wanted.value.length > 0 || props.canEdit))
 
-const VERDICT_LABEL: Record<Verdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN' }
 const RATING_LABEL: Record<ModRating, string> = { deadly: "can't run", warn: 'careful', good: 'juice', ok: 'ok' }
 
 const profileName = computed(() => activeProfile(props.config).name)
@@ -96,7 +95,7 @@ const headline = computed(() => {
   if (v.warn.length) return `${v.warn.length} ${v.warn.length === 1 ? 'mod' : 'mods'} to be careful with`
   const unread = props.result.unknown.length
   if (unread) return `${unread} ${unread === 1 ? "mod I couldn't read" : "mods I couldn't read"}, so check before you run it`
-  return 'Safe for your build'
+  return "Nothing your build can't run"
 })
 
 function cycle (matcher: string, current: ModRating) {

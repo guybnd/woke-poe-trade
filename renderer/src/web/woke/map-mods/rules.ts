@@ -283,6 +283,9 @@ export interface CheckedMod {
 
 export type Verdict = 'skip' | 'careful' | 'run'
 
+// The verdict's one word, on every badge (Guy, 2026-11-20: CARE + "Careful" said it twice).
+export const VERDICT_LABEL: Record<Verdict, string> = { skip: 'Dangerous', careful: 'Risky', run: 'Safe' }
+
 export interface MapVerdict {
   verdict: Verdict
   mods: CheckedMod[]

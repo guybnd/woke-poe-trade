@@ -32,7 +32,7 @@ test('Alt+S scans the hovered map: a map with max res down gets CAREFUL with its
 
   const badge = overlay.page.locator('[class*="badge"]').first()
   await expect(badge).toBeVisible({ timeout: 20_000 })
-  await expect(badge).toContainText('CARE')
+  await expect(badge).toContainText('Risky')
   await expect(badge).toContainText(/maximum Resistances|max res/i)
   await overlay.snap('map scan badge on a max res map')
 

@@ -886,7 +886,7 @@ test('maps: map scan marks what your build can\'t run', async ({ overlay }) => {
   await overlay.moveMouse(cursor.x, cursor.y)
   await overlay.pressHotkey('Alt + S')
   const badge = overlay.page.locator('[class*="badge"]').first()
-  await expect(badge).toContainText('CARE', { timeout: 20_000 })
+  await expect(badge).toContainText('Risky', { timeout: 20_000 })
   await overlay.page.waitForTimeout(500)
   await writeWebp(overlay.page, 'hl-map-scan', await overlay.page.screenshot({ clip: { x: 0, y: 165, width: 960, height: 540 } }))
 })

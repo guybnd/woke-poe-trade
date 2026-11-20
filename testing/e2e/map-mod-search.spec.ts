@@ -25,7 +25,7 @@ test('map: no search until Search, then each mod searches as has or not', async 
   await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
   await overlay.copyItem('items/map-rare-t16-deadly.txt')
   const panel = overlay.widget('price-check')
-  await expect(panel.getByText('CARE', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Risky', { exact: true })).toBeVisible()
   // Nothing went to trade on its own.
   await overlay.page.waitForTimeout(1500)
   expect(searches).toEqual([])

@@ -253,7 +253,7 @@ test('map: price check shows the map mod verdict strip', async ({ overlay }) => 
   await overlay.copyItem('items/map-rare-t16-deadly.txt')
   const panel = overlay.widget('price-check')
   // Default profile: max res and no regen are "careful", twin bosses "good".
-  await expect(panel.getByText('CARE', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Risky', { exact: true })).toBeVisible()
   await expect(panel).toContainText('Quant 64%')
   await overlay.snap('map verdict strip')
 })
@@ -263,7 +263,7 @@ test('map check hotkey (Alt+M) opens the verdict card, even before the widget is
   await overlay.copyItem('items/map-rare-t16.txt', 'Alt + M')
   const card = overlay.widget('woke-map-check')
   await expect(card).toContainText('Strand')
-  await expect(card).toContainText('RUN')
+  await expect(card).toContainText('Safe')
   await overlay.snap('map check card')
 })
 

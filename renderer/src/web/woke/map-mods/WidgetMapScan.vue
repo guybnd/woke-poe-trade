@@ -115,7 +115,7 @@ import { hostRequest } from '../shared/host'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { dockIconEl, hideWhilePlaying } from '../dock/dock'
-import { DEFAULT_JUICE_WEIGHTS, defaultProfile, juiceScore, rateMods, shortLabel } from './rules'
+import { DEFAULT_JUICE_WEIGHTS, defaultProfile, juiceScore, rateMods, shortLabel, VERDICT_LABEL as VERDICT_WORD } from './rules'
 import type { ModRating, Verdict } from './rules'
 import { TooltipMatcher } from './tooltip-parse'
 import { allAreaMods } from './data'
@@ -135,7 +135,7 @@ hideWhilePlaying(props.config)
 
 // 'unsure': would be a run, but some lines were read with low confidence.
 type ShownVerdict = Verdict | 'unsure'
-const VERDICT_LABEL: Record<ShownVerdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN', unsure: '?' }
+const VERDICT_LABEL: Record<ShownVerdict, string> = { ...VERDICT_WORD, unsure: '?' }
 
 interface Entry {
   id: number

@@ -13,7 +13,6 @@
     </button>
     <div :class="$style.chips">
       <span v-for="p in result.props" :key="p.label" :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
-      <span v-if="result.verdict.warn.length" :class="[$style.chip, $style.warnChip]">{{ warnText }}</span>
       <!-- What the mod switches below add to the search, while the list is folded too. -->
       <span v-if="picked" :class="[$style.chip, $style.pickChip]" data-map-mod-picked>{{ picked }}</span>
     </div>
@@ -37,13 +36,11 @@ import { computed } from 'vue'
 import { useFold } from '../ui/fold'
 import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
-import type { Verdict } from './rules'
+import { VERDICT_LABEL } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure } from './check'
 import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 
 const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[] }>()
-
-const VERDICT_LABEL: Record<Verdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN' }
 
 const open = useFold('map-mod-strip')
 
@@ -55,10 +52,11 @@ const result = computed(() => {
 
 const headline = computed(() => {
   const v = result.value!.verdict
+  // The badge says how bad; this says why, once (the warn chip is gone).
   if (v.deadly.length) return v.deadly.map(m => shortLabel(m.matcher)).join(' · ')
-  if (v.warn.length) return 'Careful'
+  if (v.warn.length) return warnText.value
   if (result.value!.unknown.length) return "Couldn't read every mod"
-  return 'Safe for your build'
+  return ''
 })
 
 // The price check's filters for the map's own mods (create-stat-filters.ts): each
