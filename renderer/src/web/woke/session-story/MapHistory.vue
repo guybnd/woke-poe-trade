@@ -33,7 +33,7 @@
           Show more ({{ list.length - visible.length }} older)
         </button>
       </div>
-      <div class="text-xs w-faint">The character is the last one the log saw level up or die. Kills, XP and loot aren't in the log.</div>
+      <div class="text-xs w-faint">The character is the last one the log saw level up, so a character switch shows from its first level-up. Kills, XP and loot aren't in the log.</div>
     </template>
   </div>
 </template>
@@ -66,7 +66,9 @@ const PAGE = 100
 const limit = shallowRef(PAGE)
 const visible = computed(() => list.value.slice(0, limit.value))
 
-const avgMs = computed(() => list.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, list.value.length))
+// As the chip counts it: maps under 30 s (a quick look in) left out.
+const counted = computed(() => list.value.filter(m => m.mapMs > 30_000))
+const avgMs = computed(() => counted.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, counted.value.length))
 const deaths = computed(() => list.value.reduce((s, m) => s + m.deaths, 0))
 
 function levelText (m: MapRecord): string {

@@ -52,6 +52,46 @@ describe('maps from Client.txt', () => {
     expect(log.current).toMatchObject({ char: 'whekq', charLevel: 89, levelsGained: 1 })
   })
 
+  it('ends a map at its last line when the game restarts or goes quiet', () => {
+    const { done } = follow([
+      area('21:02:00', 'MapWorldsStrand', '11'),
+      slain('21:04:00'),
+      `${stamp('21:05:00')} ***** LOG FILE OPENING *****`,
+      area('23:00:00', 'MapWorldsCemetery', '13'),
+      area('23:01:00', 'HideoutChurch', '1', 68),
+      area('23:40:00', 'HideoutChurch', '2', 68)
+    ])
+    expect(done.map(r => [r.name, r.mapMs])).toEqual([['Strand', 2 * 60_000], ['Cemetery', 60_000]])
+  })
+
+  it('follows a character switch outside maps, not a party member inside one', () => {
+    const { log } = follow([
+      level('20:00:00', 94),
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      level('21:01:00', 41, 'friend'),
+      area('21:02:00', 'HideoutChurch', '1', 68),
+      level('21:30:00', 70, 'alt'),
+      area('21:31:00', 'MapWorldsCemetery', '13')
+    ])
+    expect(log.current).toMatchObject({ name: 'Cemetery', char: 'alt', charLevel: 70 })
+  })
+
+  it("doesn't take a side area's name for the map", () => {
+    const { log } = follow([
+      area('21:00:00', 'MapWorldsStrand', '11'),
+      area('21:01:00', 'MapSideArea1', '12'),
+      entered('21:01:01', 'Vaal Temple')
+    ])
+    expect(log.current?.name).toBe('Strand')
+  })
+
+  it('adds a second visit to a map already saved', () => {
+    const r = (enteredAt: number, mapMs: number, deaths: number) => ({ key: 'a:1', name: 'Strand', enteredAt, leftAt: enteredAt + mapMs, mapMs, deaths, npcs: ['Niko'], levelsGained: 0 } as unknown as MapRecord)
+    const kept = keepMap(keepMap([], r(1000, 60_000, 1)), r(5_000_000, 30_000, 0))
+    expect(kept).toHaveLength(1)
+    expect(kept[0]).toMatchObject({ enteredAt: 1000, mapMs: 90_000, deaths: 1 })
+  })
+
   it('names NPCs and tiers', () => {
     expect(npcOf('Niko, Master of the Depths')).toBe('Niko')
     expect(npcOf('Tujen, the Haggler')).toBe('Expedition')

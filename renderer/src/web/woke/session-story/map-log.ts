@@ -7,6 +7,9 @@ import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
+import { NIGHT_GAP_MS } from './story'
+
+const OPENING = '***** LOG FILE OPENING *****'
 
 // Maps kept on disk.
 export const MAX_MAPS = 3000
@@ -69,15 +72,25 @@ export interface MapLogEvents {
 export class MapLog {
   current: MapRecord | null = null
   char: CharInfo | null = null
+  // Time of the last line read.
+  lastAt = 0
   private inMap = false
   private since = 0
+  // The next "You have entered" names the map just generated.
+  private naming = false
 
   constructor (private readonly events: MapLogEvents) {}
 
   feed (line: string, fallbackAt: number): void {
     const at = lineTime(line) ?? fallbackAt
+    // The game was closed, or nothing was written for a long time: the map
+    // ended with the last line, not whenever the next one comes.
+    if (line.includes(OPENING) || (this.lastAt && at - this.lastAt >= NIGHT_GAP_MS)) this.finish(this.lastAt || at)
+    this.lastAt = Math.max(this.lastAt, at)
+    if (line.includes(OPENING)) return
     const ev = parseLogLine(line)
     if (ev?.kind === 'area') {
+      this.naming = false
       const side = staysInRun(ev.areaId) && this.inMap
       if (side) return
       if (isMapArea(ev.areaId)) {
@@ -98,6 +111,7 @@ export class MapLog {
             charLevel: this.char?.level ?? null,
             levelsGained: 0
           }
+          this.naming = true
         }
         // Back from a side area: still the same stretch inside.
         if (!this.inMap) {
@@ -111,15 +125,17 @@ export class MapLog {
     }
     if (ev?.kind === 'zone') {
       // "You have entered Strand." names the map just generated.
-      if (this.inMap && this.current && this.current.enteredAt === this.since) this.current.name = ev.name
+      if (this.naming && this.inMap && this.current) this.current.name = ev.name
+      this.naming = false
       return
     }
     if (ev?.kind === 'level') {
-      const prev = this.char
-      // Party members' level-ups are logged too: follow the first character seen.
-      if (prev && prev.name !== ev.charName && this.current?.char === prev.name) return
-      this.char = { name: ev.charName, className: ev.className, level: ev.level }
       const cur = this.current
+      // Party members' level-ups are logged too: inside a map run on a known
+      // character, another name is someone else's. Anywhere else it's yours
+      // (you switched characters).
+      if (this.inMap && cur?.char && cur.char !== ev.charName) return
+      this.char = { name: ev.charName, className: ev.className, level: ev.level }
       if (this.inMap && cur) {
         if (cur.char == null) {
           cur.char = ev.charName
@@ -170,9 +186,21 @@ export function usualMapMs (history: MapRecord[], n = USUAL_OF): number | null {
   return recent.reduce((s, m) => s + m.mapMs, 0) / recent.length
 }
 
-// Newest first, one copy per map instance.
+// Newest first, one copy per map instance: going back into a map saved
+// already (after a long break) adds to it.
 export function keepMap (history: MapRecord[], rec: MapRecord): MapRecord[] {
-  return [rec, ...history.filter(m => !(m.key === rec.key && m.enteredAt === rec.enteredAt))]
+  const old = history.find(m => m.key === rec.key)
+  const merged = !old || old.enteredAt === rec.enteredAt
+    ? rec
+    : {
+        ...old,
+        leftAt: Math.max(old.leftAt, rec.leftAt),
+        mapMs: old.mapMs + rec.mapMs,
+        deaths: old.deaths + rec.deaths,
+        npcs: [...new Set([...old.npcs, ...rec.npcs])],
+        levelsGained: old.levelsGained + rec.levelsGained
+      }
+  return [merged, ...history.filter(m => m.key !== rec.key)]
     .sort((a, b) => b.enteredAt - a.enteredAt)
     .slice(0, MAX_MAPS)
 }

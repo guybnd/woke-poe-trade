@@ -134,7 +134,7 @@ Promise.all([store.load(), store.loadMaps()]).then(() => {
       tailLines = new Set(tail.lines)
       // Read again when the game opens a new log: only lines not seen yet.
       const lastEnd = Math.max(store.nights.value[0]?.endedAt ?? 0, tracker.draft?.lastAt ?? 0)
-      const mapsEnd = Math.max(store.maps.value[0]?.leftAt ?? 0, mapLog.current?.leftAt ?? 0)
+      const mapsEnd = Math.max(store.maps.value[0]?.leftAt ?? 0, mapLog.lastAt)
       for (const line of tail.lines) {
         const at = lineTime(line)
         if (at != null && at > lastEnd) tracker.feed(line, at)
