@@ -161,15 +161,15 @@ export function change24h (graph: Array<number | null> | undefined): number | nu
   return b / a - 1
 }
 
-export interface PriceMove { key: string, name: string, change: number, valueChaos: number }
+export interface PriceMove { key: string, name: string, icon?: string, change: number, valueChaos: number }
 
 // What today's price moves did to what you hold: the 3 biggest, either way.
-export function priceMoves (lines: Array<Pick<ValuedLine, 'key' | 'name' | 'chaos'>>, changeOf: (key: string) => number | null, n = 3): PriceMove[] {
+export function priceMoves (lines: Array<Pick<ValuedLine, 'key' | 'name' | 'chaos'> & { icon?: string }>, changeOf: (key: string) => number | null, n = 3): PriceMove[] {
   const out: PriceMove[] = []
   for (const l of lines) {
     const c = changeOf(l.key)
     if (c == null || c === 0 || !(c > -1)) continue
-    out.push({ key: l.key, name: l.name, change: c, valueChaos: l.chaos - l.chaos / (1 + c) })
+    out.push({ key: l.key, name: l.name, icon: l.icon, change: c, valueChaos: l.chaos - l.chaos / (1 + c) })
   }
   return out.sort((a, b) => Math.abs(b.valueChaos) - Math.abs(a.valueChaos)).slice(0, n)
 }

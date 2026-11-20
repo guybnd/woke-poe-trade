@@ -117,13 +117,13 @@
               <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
               <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
                 :aria-pressed="cat === c.id" @click="cat = cat === c.id ? 'all' : c.id">
-                <span>{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
+                <span :class="$style.catName"><img v-if="c.icon" :src="c.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />{{ c.label }}</span><i :style="{ width: c.share * 100 + '%' }" /><b class="w-num" :title="inChaos(c.chaos)">{{ div(c.chaos) }}<Coin :chaos="!divine" /></b>
               </button>
             </div>
             <div v-if="showMoves" :class="$style.movesCol">
               <div :class="$style.caps" style="margin-bottom: 4px">Price moves today</div>
               <div v-for="m in moves.slice(0, 8)" :key="m.key" :class="$style.moveRow">
-                <span v-item-tip="tipFor(tips, m.key, m.name)" class="w-trunc">{{ m.name }}</span>
+                <span :class="$style.moveName"><img v-if="m.icon" :src="m.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="tipFor(tips, m.key, m.name)" class="w-trunc">{{ m.name }}</span></span>
                 <span class="w-num" :class="tone(m.change)" :title="inChaos(m.valueChaos)">{{ signedPct(m.change) }} ({{ signed(toDiv(m.valueChaos)) }}<Coin :chaos="!divine" />)</span>
               </div>
               <div v-if="moves.length > 8" :class="$style.more" :title="moves.slice(8).map(moveText).join('\n')">+{{ moves.length - 8 }} more</div>
@@ -483,7 +483,8 @@ const cats = computed(() => {
   const val = v.value
   if (!val) return []
   const max = Math.max(1, ...Object.values(val.byCategory))
-  return CATEGORIES.map(c => ({ ...c, chaos: val.byCategory[c.id], share: val.byCategory[c.id] / max }))
+  // Each category shows its most valuable item's icon.
+  return CATEGORIES.map(c => ({ ...c, chaos: val.byCategory[c.id], share: val.byCategory[c.id] / max, icon: val.lines.find(l => l.category === c.id)?.icon ?? '' }))
 })
 
 const tabNames = computed(() => new Map(tabValues.value.map(t => [t.id, t.name])))
@@ -657,9 +658,11 @@ function refresh () {
 .scrollBox { flex: 1 1 auto; min-height: 0; }
 .scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
-.icon { width: 16px; height: 16px; object-fit: contain; }
+.icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
-.catRow { display: grid; grid-template-columns: 6em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
+.catName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.moveName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.catRow { display: grid; grid-template-columns: 8em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }
 .catRow b { text-align: right; font-weight: 500; }
