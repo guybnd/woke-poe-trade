@@ -87,6 +87,13 @@ test('Nightmare Map price check: five maps ranked by fragment value', async ({ o
   await expect(unique).toContainText('~5%')
   await expect(strip).toContainText('~ is an estimate')
   await overlay.snap('nightmare map price check')
+  // Folds to one line with the best three, and opens again.
+  await strip.locator('[data-nightmare-fold]').click()
+  await expect(maps).toHaveCount(0)
+  await expect(strip.locator('[data-nightmare-fold]')).toContainText('Ziggurat +')
+  await overlay.snap('nightmare map folded')
+  await strip.locator('[data-nightmare-fold]').click()
+  await expect(maps).toHaveCount(5)
   expect(searches).toEqual([])
   expect(overlay.errors).toEqual([])
 })

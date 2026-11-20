@@ -14,11 +14,19 @@
     <div :class="$style.chips">
       <span v-for="p in result.props" :key="p.label" :class="$style.chip" class="w-num">{{ p.label }} {{ p.value }}%</span>
       <span v-if="result.verdict.warn.length" :class="[$style.chip, $style.warnChip]">{{ warnText }}</span>
+      <!-- What the mod switches below add to the search, while the list is folded too. -->
+      <span v-if="picked" :class="[$style.chip, $style.pickChip]" data-map-mod-picked>{{ picked }}</span>
     </div>
     <div v-if="open" :class="$style.list">
-      <div v-for="(mod, i) in result.verdict.mods" :key="`${i}:${mod.matcher}`" :class="$style.mod">
-        <span :class="[$style.dot, $style[mod.rating]]" />
-        <span :class="{ 'w-dim': mod.rating === 'ok' }">{{ mod.text }}</span>
+      <div v-if="searchable.length" :class="$style.listHead"><span>Mods</span><span>Any / Has / Not</span></div>
+      <div v-for="(row, i) in rows" :key="`${i}:${row.mod.matcher}`" :class="[$style.mod, row.filter && $style[stateOf(row.filter)]]" data-map-mod>
+        <span :class="[$style.dot, $style[row.mod.rating]]" />
+        <span :class="[$style.text, { 'w-dim': row.mod.rating === 'ok' && !row.filter?.disabled }]">{{ row.mod.text }}</span>
+        <span v-if="row.filter" :class="$style.seg" role="radiogroup" :aria-label="`Search ${row.mod.text}`">
+          <button v-for="opt in STATES" :key="opt" type="button" role="radio" :aria-checked="stateOf(row.filter) === opt"
+            :class="stateOf(row.filter) === opt && $style[`on_${opt}`]" :data-state="opt"
+            @click="setState(row.filter, opt)">{{ STATE_LABEL[opt] }}</button>
+        </span>
       </div>
     </div>
   </div>
@@ -31,8 +39,9 @@ import type { ParsedItem } from '@/parser'
 import { shortLabel } from './rules'
 import type { Verdict } from './rules'
 import { checkMap, findMapModsConfig, isMapLike, isUnsure } from './check'
+import type { FilterOrGroup, StatFilter } from '@/web/price-check/filters/interfaces'
 
-const props = defineProps<{ item: ParsedItem }>()
+const props = defineProps<{ item: ParsedItem, stats?: FilterOrGroup[] }>()
 
 const VERDICT_LABEL: Record<Verdict, string> = { skip: 'SKIP', careful: 'CARE', run: 'RUN' }
 
@@ -50,6 +59,38 @@ const headline = computed(() => {
   if (v.warn.length) return 'Careful'
   if (result.value!.unknown.length) return "Couldn't read every mod"
   return 'Safe for your build'
+})
+
+// The price check's filters for the map's own mods (create-stat-filters.ts): each
+// verdict line gets an Any / Has / Not switch for the trade search.
+type ModState = 'any' | 'has' | 'not'
+const STATES: ModState[] = ['any', 'has', 'not']
+const STATE_LABEL: Record<ModState, string> = { any: 'Any', has: 'Has', not: 'Not' }
+const searchable = computed(() => (props.stats ?? []).filter((s): s is StatFilter => !s.group && !!s.mapMod))
+const rows = computed(() => {
+  const used = new Set<StatFilter>()
+  return result.value!.verdict.mods.map(mod => {
+    const filter = searchable.value.find(f => !used.has(f) && f.statRef === mod.matcher) ?? null
+    if (filter) used.add(filter)
+    return { mod, filter }
+  })
+})
+function stateOf (f: StatFilter): ModState {
+  return f.disabled ? 'any' : f.not ? 'not' : 'has'
+}
+// Has searches at least this map's roll; Not wants none of it, any roll.
+function setState (f: StatFilter, state: ModState) {
+  f.disabled = state === 'any'
+  f.not = state === 'not' ? true : undefined
+  if (f.roll) {
+    f.roll.min = state === 'not' ? '' : f.roll.default.min
+    f.roll.max = state === 'not' ? '' : f.roll.default.max
+  }
+}
+const picked = computed(() => {
+  const has = searchable.value.filter(f => stateOf(f) === 'has').length
+  const not = searchable.value.filter(f => stateOf(f) === 'not').length
+  return [has ? `has ${has}` : '', not ? `not ${not}` : ''].filter(Boolean).join(' · ')
 })
 
 const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m.matcher)).join(' · '))
@@ -97,7 +138,19 @@ const warnText = computed(() => result.value!.verdict.warn.map(m => shortLabel(m
 }
 .warnChip { color: var(--w-warn); background: color-mix(in srgb, var(--w-warn) 12%, transparent); }
 .list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid var(--w-line); }
-.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); }
+.mod { display: flex; align-items: center; gap: 6px; font-size: var(--w-fs-sm); padding: 1px 0; }
+.text { flex: 1; min-width: 0; }
+.has .text { color: var(--w-up); }
+.not .text { color: var(--w-down); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--w-down) 50%, transparent); }
+.listHead { display: flex; justify-content: space-between; color: var(--w-faint); font-size: var(--w-fs-xs); }
+.seg { flex: none; display: inline-flex; border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); overflow: hidden; }
+.seg button { padding: 0 6px; font-size: var(--w-fs-xs); color: var(--w-dim); border-left: 1px solid var(--w-line); }
+.seg button:first-child { border-left: 0; }
+.seg button:hover { background: var(--w-chip-ground); }
+.seg .on_any { background: var(--w-panel-2); color: var(--w-fg); }
+.seg .on_has { background: color-mix(in srgb, var(--w-up) 28%, transparent); color: var(--w-fg); }
+.seg .on_not { background: color-mix(in srgb, var(--w-down) 28%, transparent); color: var(--w-fg); }
+.pickChip { color: var(--w-fg); background: var(--w-accent-soft); }
 .dot { flex: none; width: 7px; height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-3); }
 .dot.deadly { background: var(--w-down); }
 .dot.warn { background: var(--w-warn); }

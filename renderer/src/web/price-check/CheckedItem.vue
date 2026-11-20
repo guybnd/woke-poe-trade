@@ -23,7 +23,7 @@
         :item="item"
         :filters="itemFilters" />
     </filter-name>
-    <woke-map-strip :item="item" class="mb-2" />
+    <woke-map-strip :item="item" :stats="itemStats" class="mb-2" />
     <!-- woke: the gem's other versions with poe.ninja prices; a row searches trade only when clicked. -->
     <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
@@ -41,7 +41,7 @@
     <filters-block
       ref="filtersComponent"
       :filters="itemFilters"
-      :stats="itemStats"
+      :stats="rowStats"
       :item="item"
       :presets="presets"
       @preset="selectPreset"
@@ -195,6 +195,8 @@ export default defineComponent({
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
     const itemFilters = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.filters)
     const itemStats = computed(() => presets.value.presets.find(preset => preset.id === presets.value.active)!.stats)
+    // woke: a map's mods are set on the map strip, so the rows leave them out.
+    const rowStats = computed(() => itemStats.value.some(s => !s.group && s.mapMod) ? itemStats.value.filter(s => s.group || !s.mapMod) : itemStats.value)
     const doSearch = ref(false)
     let searchHover: ReturnType<typeof setTimeout> | undefined
     function cancelSearchHover () {
@@ -265,6 +267,10 @@ export default defineComponent({
 
       if ((!props.advancedCheck && !widget.value.smartInitialSearch) ||
           (props.advancedCheck && !widget.value.lockedInitialSearch)) {
+        doSearch.value = false
+      } else if (item.category === ItemCategory.Map) {
+        // woke: maps get checked by habit (danger, juice): no trade search
+        // until you press Search (Guy, 2026-11-20).
         doSearch.value = false
       } else {
         doSearch.value = Boolean(
@@ -447,6 +453,7 @@ export default defineComponent({
       t,
       itemFilters,
       itemStats,
+      rowStats,
       searched,
       resultsStale,
       doSearch,

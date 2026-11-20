@@ -151,6 +151,8 @@ export interface StatFilter {
   mercenary?: { icon?: string, tier?: number, maxTier?: boolean }
   sources: StatCalculated['sources']
   not?: true
+  /** woke: one of a map's mods, set Any / Has / Not on the map strip (MapModStrip.vue), not listed in the rows. */
+  mapMod?: true
   roll?: {
     value: number
     min: number | '' | undefined // NOTE: mutable in UI

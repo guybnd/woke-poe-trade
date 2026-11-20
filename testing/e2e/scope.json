@@ -160,6 +160,11 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/loot-filter/"
   ],
+  "map-mod-search.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/map-mods/"
+  ],
   "map-mods-rewards.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

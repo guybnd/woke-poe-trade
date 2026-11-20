@@ -63,6 +63,10 @@ export function createExactStatFilters (
   } else if (item.rarity === ItemRarity.Rare && item.category === ItemCategory.Idol) {
     keepByType.push(ModifierType.Explicit)
   }
+  // woke: a map's own mods, all off, so the map strip can search by them (has or not).
+  const mapMods = item.category === ItemCategory.Map && opts.mode === 'props' &&
+    item.rarity !== ItemRarity.Unique && !item.mapCompletionReward
+  if (mapMods) keepByType.push(ModifierType.Explicit)
 
   if (item.category === ItemCategory.Flask) {
     keepByType.push(ModifierType.Crafted)
@@ -91,6 +95,13 @@ export function createExactStatFilters (
     ...ctx.statsByType.map(mod => calculatedStatToFilter(mod, ctx.searchInRange, item))
   )
 
+  if (mapMods) {
+    for (const f of ctx.filters) {
+      if (f.tag !== FilterTag.Explicit) continue
+      f.mapMod = true
+    }
+  }
+
   if (item.info.refName === 'Chronicle of Atzoatl') {
     applyAtzoatlRules(ctx.filters)
     return ctx.filters
@@ -105,7 +116,9 @@ export function createExactStatFilters (
 
     filter.hidden = undefined
 
-    if (filter.tag === FilterTag.Explicit) {
+    if (filter.mapMod) {
+      filter.disabled = true
+    } else if (filter.tag === FilterTag.Explicit) {
       filter.disabled = !filter.sources.some(source =>
         source.modifier.info.tier != null &&
         source.modifier.info.tier <= 2

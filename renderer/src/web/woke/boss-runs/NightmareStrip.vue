@@ -2,7 +2,17 @@
   <!-- A Nightmare Map goes into any of the five T17 maps: each one's boss
        fragments and unique, maps across (best first), drops down the side. -->
   <div v-if="cols.length" :class="$style.strip" data-woke-nightmare>
-    <div :class="$style.wrap">
+    <!-- Folds to one line, the best three maps; remembered (Guy, 2026-11-20). -->
+    <button type="button" :class="$style.fold" :aria-expanded="open" data-nightmare-fold @click="open = !open">
+      <span :class="$style.title">Run it as</span>
+      <span v-if="!open" :class="$style.best">
+        <template v-for="(c, i) in cols.slice(0, 3)" :key="c.id">{{ i ? ' · ' : '' }}{{ c.name }} <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b></template>
+      </span>
+      <span v-else class="w-dim">best {{ cols[0].name }} <b :class="(cols[0].profit ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ cols[0].profit == null ? chaos(cols[0].loot) : signed(cols[0].profit) }}</b></span>
+      <span class="flex-1" />
+      <i class="fas w-dim" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'" />
+    </button>
+    <div v-if="open" :class="$style.wrap">
       <table :class="$style.grid">
         <thead>
           <tr>
@@ -41,7 +51,7 @@
         </tbody>
       </table>
     </div>
-    <div :class="$style.note">
+    <div v-if="open" :class="$style.note">
       <template v-if="estimated">~ is an estimate: no drop rates are published. {{ perKill }} fragments a kill, % = copies a kill; the unique's 5% is a 3.29 guide's figure.</template>
       Fragments a kill and your kill log live in Boss runs › Nightmare.
     </div>
@@ -50,6 +60,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
 import { itemArt } from '../ui/game-icons'
@@ -59,6 +70,9 @@ import type { BossPrefs, DropRow } from './calc'
 import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, nightmareBosses, UBER_FRAGMENTS } from './nightmare'
 import { BOSS_RUNS_TYPE } from './widget'
 import type { BossRunsWidget } from './widget'
+
+const open = useFold('nightmare-strip', true)
+function signed (n: number) { return `${n >= 0 ? '+' : ''}${chaos(n)}` }
 
 // Mounted only with the Boss runs module on (CheckedItem.vue).
 const prices = usePriceIndex()
@@ -136,7 +150,10 @@ const fragRows = computed(() => UBER_FRAGMENTS
   font-family: var(--w-body);
   font-size: var(--w-fs-xs);
 }
-.wrap { overflow-x: auto; }
+.wrap { overflow-x: auto; margin-top: 3px; }
+.fold { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: var(--w-fs-sm); }
+.title { color: var(--w-gold); font-family: var(--w-caps-face); }
+.best { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .grid th, .grid td { padding: 1px 4px; text-align: right; white-space: nowrap; }
 .grid th:first-child, .grid td:first-child { text-align: left; padding-left: 0; }
