@@ -1,7 +1,8 @@
 // Boss cards (entry, drops, prices) and "where does this drop", from the
 // Boss runs tool's table.
 import { BOSSES } from '../../boss-runs/bosses'
-import { nightmareBosses } from '../../boss-runs/nightmare'
+import type { BossPrefs } from '../../boss-runs/calc'
+import { nightmareDropSources } from './nightmare'
 import type { Boss } from '../../boss-runs/bosses'
 import { BOSS_RUNS_TYPE } from '../../boss-runs/widget'
 import { matchRank } from '../search'
@@ -124,14 +125,11 @@ export const bossLookup: Lookup = (query, ctx) => {
 }
 
 // Every boss that drops each item.
-// Nightmare (T17) map bosses carry estimated chances (default fragments a kill).
-const DROPPED_BY = new Map<string, Array<{ boss: Boss, chance: number | null, variant?: string, variable?: boolean, estimate?: boolean }>>()
-for (const boss of [...BOSSES, ...nightmareBosses(undefined)]) {
+const DROPPED_BY = new Map<string, Array<{ boss: Boss, chance: number | null, variant?: string, variable?: boolean }>>()
+for (const boss of BOSSES) {
   for (const d of boss.drops) {
     const list = DROPPED_BY.get(d.name) ?? []
-    const est = boss.estimates?.[d.name]
-    const chance = d.chance ?? (est != null ? est / 100 * (d.qty ?? 1) : null)
-    if (!list.some(x => x.boss.id === boss.id)) list.push({ boss, chance, variant: d.variant, variable: d.variable, estimate: d.chance == null && est != null })
+    if (!list.some(x => x.boss.id === boss.id)) list.push({ boss, chance: d.chance, variant: d.variant, variable: d.variable })
     DROPPED_BY.set(d.name, list)
   }
 }
@@ -140,39 +138,64 @@ export function droppedBy (name: string) {
   return DROPPED_BY.get(name) ?? []
 }
 
-export const dropLookup: Lookup = (query, ctx) => {
-  if (query.trim().length < MIN_QUERY) return []
-  const out: LookupCard[] = []
-  // The closest names first: "awakened enl" before every other Awakened gem.
-  const names = [...DROPPED_BY.keys()].filter(n => matchRank(n, query) === 0).sort((a, b) => a.length - b.length)
-  for (const name of names) {
-    const bosses = DROPPED_BY.get(name)!
-    const { variant, variable } = bosses[0]
-    // Likeliest first.
-    const rows: LookupRow[] = [...bosses].sort((a, b) => (b.chance ?? -1) - (a.chance ?? -1)).map(({ boss, chance, estimate }) => {
-      const cost = entryCost(boss, ctx)
-      return {
-        label: chance == null ? boss.name : estimate ? `${boss.name} · ~${percent(chance)} a kill (est.)` : `${boss.name} · ${percent(chance)} of kills`,
-        value: cost != null && boss.entry.length ? `entry ${Math.round(cost)} c` : undefined
-      }
-    })
-    out.push({
-      id: `drop:${name}`,
-      group: 'Where it drops',
-      name: `${name} drops from ${bosses.length === 1 ? bosses[0].boss.name : `${bosses.length} bosses`}`,
-      sub: 'Boss drop',
-      icon: 'fas fa-gift',
-      tip: { name },
-      sections: [
-        { rows: [variable ? unidRow(ctx, name, name) : { label: name, chaos: dropPrice(ctx, name, variant), item: { name }, bulk: true }] },
-        { label: 'Dropped by', rows }
-      ],
-      actions: [
-        ...bosses.slice(0, 3).map(({ boss }) => ({ label: boss.name, search: boss.name })),
-        ...(ctx.tools.has(BOSS_RUNS_TYPE) ? [{ label: 'Open Boss runs', tool: BOSS_RUNS_TYPE }] : [])
-      ]
-    })
-    if (out.length >= 3) break
+// `nightmare`: Boss runs' settings, so Nightmare (T17) maps are listed too
+// (null: the Boss runs module is off).
+export function dropLookupWith (nightmare: BossPrefs | null): Lookup {
+  return (query, ctx) => {
+    if (query.trim().length < MIN_QUERY) return []
+    const out: LookupCard[] = []
+    const nm = nightmare ? nightmareDropSources(nightmare, ctx) : new Map<string, Array<{ name: string, copies: number | null, estimate: boolean }>>()
+    // The closest names first: "awakened enl" before every other Awakened gem.
+    const names = [...new Set([...DROPPED_BY.keys(), ...nm.keys()])].filter(n => matchRank(n, query) === 0).sort((a, b) => a.length - b.length)
+    for (const name of names) {
+      const bosses = DROPPED_BY.get(name) ?? []
+      const maps = nm.get(name) ?? []
+      const { variant, variable } = bosses[0] ?? {}
+      // Likeliest first; Nightmare maps by estimated copies a kill.
+      const sources = [
+        ...bosses.map(({ boss, chance }) => ({
+          name: boss.name,
+          sort: chance ?? -1,
+          boss,
+          row: (): LookupRow => {
+            const cost = entryCost(boss, ctx)
+            return {
+              label: chance != null ? `${boss.name} · ${percent(chance)} of kills` : boss.name,
+              value: cost != null && boss.entry.length ? `entry ${Math.round(cost)} c` : undefined
+            }
+          }
+        })),
+        ...maps.map(m => ({
+          name: m.name,
+          sort: m.copies ?? -1,
+          boss: null,
+          row: (): LookupRow => ({
+            label: m.copies == null ? m.name : m.copies > 1 ? `${m.name} · ${m.estimate ? '~' : ''}${+m.copies.toFixed(1)} a kill${m.estimate ? ' (est.)' : ''}` : `${m.name} · ${m.estimate ? '~' : ''}${percent(m.copies)} a kill${m.estimate ? ' (est.)' : ''}`,
+            value: 'Nightmare map'
+          })
+        }))
+      ].sort((a, b) => b.sort - a.sort)
+      const rows: LookupRow[] = sources.map(s => s.row())
+      out.push({
+        id: `drop:${name}`,
+        group: 'Where it drops',
+        name: `${name} drops from ${sources.length === 1 ? sources[0].name : `${sources.length} bosses`}`,
+        sub: 'Boss drop',
+        icon: 'fas fa-gift',
+        tip: { name },
+        sections: [
+          { rows: [variable ? unidRow(ctx, name, name) : { label: name, chaos: dropPrice(ctx, name, variant), item: { name }, bulk: true }] },
+          { label: 'Dropped by', rows }
+        ],
+        actions: [
+          ...sources.slice(0, 3).map(s => ({ label: s.name, search: s.name })),
+          ...(ctx.tools.has(BOSS_RUNS_TYPE) ? [{ label: 'Open Boss runs', tool: BOSS_RUNS_TYPE }] : [])
+        ]
+      })
+      if (out.length >= 3) break
+    }
+    return out
   }
-  return out
 }
+
+export const dropLookup = dropLookupWith(null)

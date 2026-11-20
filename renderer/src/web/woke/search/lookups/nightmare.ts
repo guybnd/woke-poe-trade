@@ -29,6 +29,7 @@ function copies (d: DropRow): number {
   return (d.chance ?? 0) * d.qty
 }
 function pct (d: DropRow): string {
+  if (d.chance == null) return 'rate unknown'
   const p = copies(d) * 100
   return `${d.rateSource === 'estimate' ? '~' : ''}${p >= 10 ? Math.round(p) : +p.toFixed(1)}%`
 }
@@ -116,6 +117,21 @@ function mapCard (r: BossResult, prefs: BossPrefs, ctx: LookupContext): LookupCa
   }
 }
 
+// Which Nightmare maps drop each item, as expected copies a kill, for the
+// "where it drops" cards. null: the Boss runs module is off.
+export function nightmareDropSources (prefs: BossPrefs | null, ctx: LookupContext): Map<string, Array<{ name: string, copies: number | null, estimate: boolean }>> {
+  const out = new Map<string, Array<{ name: string, copies: number | null, estimate: boolean }>>()
+  if (!prefs) return out
+  for (const r of evaluate({ ...DEFAULT_PREFS, ...prefs }, ctx)) {
+    for (const d of r.drops) {
+      const list = out.get(d.name) ?? []
+      list.push({ name: r.boss.name, copies: d.chance == null ? null : copies(d), estimate: d.rateSource === 'estimate' })
+      out.set(d.name, list)
+    }
+  }
+  return out
+}
+
 // null: the Boss runs module is off, so no Nightmare cards.
 export function nightmareLookup (prefs: BossPrefs | null): Lookup {
   if (!prefs) return () => []
@@ -128,6 +144,8 @@ export function nightmareLookup (prefs: BossPrefs | null): Lookup {
     const hits = NIGHTMARE_MAPS.filter(m => [m.name, m.name.replace(/ Map$/, ''), ...BOSS_NAMES[m.id]].some(n => { const r = matchRank(n, q); return r === 0 || r === 1 }))
     if (!hits.length) return []
     const results = evaluate(p, ctx)
+    // "nightmare of" names every boss: the overview says it best.
+    if (hits.length > 2) return [overviewCard(results, p, ctx)]
     return hits.slice(0, 2).map(m => mapCard(results.find(r => r.boss.id === m.id)!, p, ctx))
   }
 }

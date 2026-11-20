@@ -181,7 +181,7 @@ import { uniqueDetails, uniqueFacts } from './unique-details'
 import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupContext } from './lookups/types'
 import { countdownLookup, currencyLookup, webLookup } from './lookups/answers'
-import { bossLookup, dropLookup } from './lookups/bosses'
+import { bossLookup, dropLookupWith } from './lookups/bosses'
 import { nightmareLookup } from './lookups/nightmare'
 import { BOSS_RUNS_TYPE } from '../boss-runs/widget'
 import type { BossRunsWidget } from '../boss-runs/widget'
@@ -589,7 +589,9 @@ const stopDataWatch = onSharedDataChange(() => {
 })
 onBeforeUnmount(stopDataWatch)
 const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['namespace'], name)?.length
-const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(isModuleOn(AppConfig(), 'boss-runs') ? (toolOn<BossRunsWidget>(BOSS_RUNS_TYPE) ?? {} as BossRunsWidget) : null), dropLookup, cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
+// Boss runs' settings for the Nightmare cards; null with the module off.
+const bossPrefs = computed(() => isModuleOn(AppConfig(), 'boss-runs') ? (toolOn<BossRunsWidget>(BOSS_RUNS_TYPE) ?? {} as BossRunsWidget) : null)
+const lookups = computed(() => [currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))

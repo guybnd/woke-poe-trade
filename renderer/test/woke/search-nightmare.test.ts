@@ -1,7 +1,7 @@
 // Search palette: Nightmare (T17) map cards and fragments' "where it drops".
 import { describe, it, expect } from 'vitest'
 import { nightmareLookup } from '@/web/woke/search/lookups/nightmare'
-import { dropLookup } from '@/web/woke/search/lookups/bosses'
+import { dropLookup, dropLookupWith } from '@/web/woke/search/lookups/bosses'
 import type { BossPrefs } from '@/web/woke/boss-runs/calc'
 import { BOSS_RUNS_TYPE } from '@/web/woke/boss-runs/widget'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -60,9 +60,21 @@ describe('nightmareLookup', () => {
 
 describe('dropLookup for fragments', () => {
   it('lists the Nightmare maps a fragment drops in, likeliest first, as estimates', () => {
-    const [card] = dropLookup('reality fragment', ctx)
+    const [card] = dropLookupWith({} as BossPrefs)('reality fragment', ctx)
     const rows = card.sections.find(s => s.label === 'Dropped by')!.rows!
     expect(rows[0].label).toBe('Abomination Map · ~80% a kill (est.)')
     expect(rows).toHaveLength(5)
+    // More than one copy a kill reads as copies.
+    const [many] = dropLookupWith({ nightmareFrags: 4 } as BossPrefs)('reality fragment', ctx)
+    expect(many.sections.find(s => s.label === 'Dropped by')!.rows![0].label).toBe('Abomination Map · ~1.6 a kill (est.)')
+  })
+
+  it('leaves Nightmare maps out with the Boss runs module off', () => {
+    expect(dropLookup('wraithlord', ctx)).toEqual([])
+    expect(dropLookupWith({} as BossPrefs)('wraithlord', ctx)[0].name).toBe('Wraithlord drops from Ziggurat Map')
+  })
+
+  it('shows the overview when a query names every boss', () => {
+    expect(lookup('nightmare of', ctx).map(c => c.id)).toEqual(['nightmare:all'])
   })
 })
