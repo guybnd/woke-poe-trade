@@ -29,7 +29,8 @@ function rows (s: NightStory): LookupRow[] {
   ]
   if (s.profitChaos != null) out.push({ label: 'Profit', value: signed(s.profitChaos, s.divine) })
   if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}` })
-  const hours = played(s) / 3_600_000
+  // Hideout and town left out, as the night card does by default.
+  const hours = (played(s) - (s.hubMs ?? 0)) / 3_600_000
   if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })
   if (hours >= 0.25) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
   for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })

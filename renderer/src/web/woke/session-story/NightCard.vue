@@ -72,7 +72,7 @@ const leaveOutHub = computed({
   }
 })
 const rateHours = computed(() => (played.value - (leaveOutHub.value ? props.story.hubMs ?? 0 : 0)) / 3_600_000)
-const hoursTip = computed(() => `Per hour of ${formatDuration(rateHours.value * 3_600_000)}: AFK${leaveOutHub.value ? ', hideout and town' : ''} left out`)
+const hoursTip = computed(() => `Per hour of ${formatDuration(rateHours.value * 3_600_000)}: ${props.story.hubMs == null ? 'hideout time not recorded for this night' : `AFK${leaveOutHub.value ? ', hideout and town' : ''} left out`}`)
 const profit = computed(() => {
   if (props.story.profitChaos != null) return { chaos: props.story.profitChaos, from: 'From stash reads (Net worth)' }
   if (props.farm) return { chaos: props.farm.chaos, from: `From Farming's loot, ${props.farm.sessions} ${props.farm.sessions === 1 ? 'session' : 'sessions'}` }

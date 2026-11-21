@@ -109,8 +109,10 @@ export class NightTracker {
     if (this.draft && at - this.draft.lastAt >= NIGHT_GAP_MS) this.finish()
     const d = this.draft
     if (d && AFK_ON.test(line)) {
-      d.afkAt ??= at
-      d.lastAt = Math.max(d.lastAt, at)
+      if (d.afkAt == null) {
+        d.afkAt = at
+        d.lastAt = Math.max(d.lastAt, at)
+      }
       return
     }
     const ev = parseLogLine(line)
@@ -183,23 +185,37 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   let lastMap: number | null = null
   const skip = skippedKeys(d)
   const afk = [...(d.afk ?? []), ...(d.afkAt != null && endedAt > d.afkAt ? [[d.afkAt, endedAt] as [number, number]] : [])]
+  // Draws a stretch, with any AFK inside it where it happened (counted as neither).
+  const draw = (from: number, to: number, map: number | null, skipped: boolean) => {
+    const add = (ms: number, isAfk: boolean) => {
+      if (ms <= 0) return
+      const prev = strip[strip.length - 1]
+      if (prev && !!prev.afk === isAfk && (isAfk || (!!prev.skipped === skipped && prev.map === map))) prev.ms += ms
+      else strip.push(isAfk ? { ms, map: null, afk: true } : skipped ? { ms, map: null, skipped: true } : { ms, map })
+    }
+    let t = from
+    for (const [a, b] of afk) {
+      const x = Math.max(a, t)
+      const y = Math.min(b, to)
+      if (y <= x) continue
+      add(x - t, false)
+      add(y - x, true)
+      t = y
+    }
+    add(to - t, false)
+  }
   d.segs.forEach((s, i) => {
     const end = i + 1 < d.segs.length ? d.segs[i + 1].at : endedAt
-    // AFK inside this stretch: drawn after it, counted as neither.
     const away = afk.reduce((n, [a, b]) => n + Math.max(0, Math.min(b, end) - Math.max(a, s.at)), 0)
     const ms = Math.max(0, end - s.at - away)
     if (s.hub) hubMs += ms
     afkMs += away
-    const afkPart = () => { if (away) strip.push({ ms: away, map: null, afk: true }) }
     // A vault isn't a map: its time counts with the hideout's (time out of
     // maps), drawn as its own faint part.
     if (s.map && skip.has(s.key)) {
       otherMs += ms
       if (lastMap != null) maps[lastMap].otherMs += ms
-      const prev = strip[strip.length - 1]
-      if (prev?.skipped) prev.ms += ms
-      else strip.push({ ms, map: null, skipped: true })
-      afkPart()
+      draw(s.at, end, null, true)
       return
     }
     let part: number | null = null
@@ -220,13 +236,11 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       otherMs += ms
       if (lastMap != null) maps[lastMap].otherMs += ms
     }
-    const prev = strip[strip.length - 1]
-    if (prev && !prev.skipped && !prev.afk && prev.map === part) prev.ms += ms
-    else strip.push({ ms, map: part })
-    afkPart()
+    draw(s.at, end, part, false)
   })
   // Only gaps with a map on both sides: not the time before the first or after
-  // the last. Hideout and vault stretches next to each other are one break.
+  // the last. Hideout and vault stretches next to each other are one break;
+  // AFK isn't part of one.
   let longestBreakMs = 0
   let gap = 0
   let afterMap = false
@@ -235,7 +249,7 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       if (afterMap) longestBreakMs = Math.max(longestBreakMs, gap)
       gap = 0
       afterMap = true
-    } else gap += p.ms
+    } else if (!p.afk) gap += p.ms
   }
   // Party members' level-ups are logged too: follow the first character
   // that levels, as the run timer does.

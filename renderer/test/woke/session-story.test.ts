@@ -51,10 +51,12 @@ describe('AFK in a night', () => {
     expect(done).toHaveLength(0)
     const s = summarize(tracker.draft!)
     expect(s.afkMs).toBe(10 * 60_000)
-    // Hideout: 2 before Strand, 2 before AFK, 2 after it (drawn as one part, then the AFK).
+    // Hideout: 2 before Strand, 2 before AFK, 2 after it.
     expect(s.otherMs).toBe(6 * 60_000)
     expect(s.hubMs).toBe(6 * 60_000)
-    expect(s.strip.map(p => p.afk ? 'afk' : p.map)).toEqual([null, 0, null, 'afk', 1])
+    expect(s.strip.map(p => p.afk ? 'afk' : p.map)).toEqual([null, 0, null, 'afk', null, 1])
+    // AFK isn't a break: hideout 2 + 2 between the maps.
+    expect(s.longestBreakMs).toBe(4 * 60_000)
     expect(s.strip.reduce((n, p) => n + p.ms, 0)).toBe(at('21:30:00') - at('21:00:00'))
   })
 
@@ -71,6 +73,15 @@ describe('AFK in a night', () => {
     tracker.tick(at('21:12:00') + NIGHT_GAP_MS)
     expect(done).toHaveLength(1)
     expect(tracker.draft).toBeNull()
+  })
+
+  it('draws AFK inside a map where it happened, and it is no break', () => {
+    const lines = [area('21:00:00', 'MapWorldsStrand', '11'), info('21:02:00', ': AFK mode is now ON.'), info('21:10:00', ': AFK mode is now OFF.'),
+      area('21:15:00', 'HideoutChurch', '1', 68), area('21:17:00', 'MapWorldsCemetery', '13'), area('21:20:00', 'HideoutChurch', '1', 68)]
+    const s = summarize(follow(lines).tracker.draft!)
+    expect(s.strip.map(p => [p.afk ? 'afk' : p.map, p.ms / 60_000])).toEqual([[0, 2], ['afk', 8], [0, 5], [null, 2], [1, 3]])
+    expect(s.maps[0].mapMs).toBe(7 * 60_000)
+    expect(s.longestBreakMs).toBe(2 * 60_000)
   })
 
   it('counts AFK still going on a live night', () => {
