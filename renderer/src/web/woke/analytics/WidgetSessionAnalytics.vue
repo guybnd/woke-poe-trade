@@ -240,6 +240,7 @@ import { evaluateBoss, priceResolver } from '../boss-runs/calc'
 import { useSessionStore } from './store'
 import { tradeTotals, tradesInRange, useTradeLog } from '../trade/log-store'
 import { isModuleOn } from '../modules'
+import MapHistory from '../session-story/MapHistory.vue'
 import DeckHistory from '../stacked-decks/DeckHistory.vue'
 import { useVisibleClock } from '../shared/visible-clock'
 import {
@@ -248,11 +249,9 @@ import {
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
-// Tonight's card, loaded with import() so it stays in Session story's chunk
-// (already loaded when Session story is on) and adds nothing to startup.
-const TonightBand = defineAsyncComponent(() => import('../session-story/TonightBand.vue'))
-// Map history reads its own files; its code loads the first time the tab opens.
-const MapHistory = defineAsyncComponent(() => import('../session-story/MapHistory.vue'))
+// Tonight's card, from Session story's own chunk (already loaded when Session
+// story is on), so it adds nothing to startup.
+const TonightBand = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.TonightBand))
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('session-analytics').art ?? 'divine'
 

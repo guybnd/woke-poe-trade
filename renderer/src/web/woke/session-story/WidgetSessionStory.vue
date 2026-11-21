@@ -52,6 +52,10 @@ import { widgetSessionStorySpec } from '../widget-specs'
 import { initSessionStoryWidget } from './widget'
 
 export default { widget: widgetSessionStorySpec }
+// Session analytics shows tonight's card through this chunk (loaded whenever
+// Session story is on). Importing TonightBand.vue there directly would split it
+// into its own chunk and grow the startup bundle's preload lists.
+export { default as TonightBand } from './TonightBand.vue'
 </script>
 
 <script setup lang="ts">

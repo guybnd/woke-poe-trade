@@ -4,8 +4,7 @@
 </template>
 
 <script setup lang="ts">
-// Session analytics loads this with import(): it stays in Session story's own
-// chunk, which is already loaded whenever Session story is on.
+// Session analytics gets this through WidgetSessionStory.vue's export.
 import NightCard from './NightCard.vue'
 import { nightTitle, useNightList } from './nights'
 
