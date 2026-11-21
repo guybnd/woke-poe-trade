@@ -12,6 +12,8 @@
         <span class="text-xs">{{ config.chipKey || 'None' }} <span class="w-faint">(set in Settings › Farming &amp; sessions)</span></span>
       </slot>
     </template>
+    <span class="w-dim">While in a map</span>
+    <WToggle v-model="glance" title="A thin bar at the top with the map, its minutes and tonight's maps and profit. It never takes the mouse.">Bar at the top</WToggle>
     <template v-if="showMe">
       <span />
       <WButton size="sm" :disabled="place === 'off' || !canShow" @click="showMe">Show me with your last map</WButton>
@@ -27,6 +29,7 @@ import { pushHostConfig } from '@/web/Config'
 import WButton from '../ui/WButton.vue'
 import WSegmented from '../ui/WSegmented.vue'
 import WSelect from '../ui/WSelect.vue'
+import WToggle from '../ui/WToggle.vue'
 import type { ChipPlace, SessionStoryWidget } from './widget'
 
 const props = defineProps<{
@@ -58,6 +61,10 @@ const place = computed({
     // The close key is registered only while the line shows somewhere.
     if (props.live) pushHostConfig()
   }
+})
+const glance = computed({
+  get: () => props.config.glance === true,
+  set: (v: boolean) => { props.config.glance = v }
 })
 const seconds = computed({
   get: () => String(props.config.chipSeconds ?? 8),

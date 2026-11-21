@@ -22,6 +22,8 @@ export interface SessionStoryWidget extends Widget {
   historySkipped?: boolean
   // A hotkey that closes it. Registered like any hotkey: the game no longer gets that key.
   chipKey?: string | null
+  // While in a map: a thin bar at the top with the map, its minutes and tonight's total. Off unless on.
+  glance?: boolean
 }
 
 export const CHIP_CLOSE_TARGET = 'woke-session-story-chip'
