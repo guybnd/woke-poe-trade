@@ -186,7 +186,8 @@
         </template>
 
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
-        <MapHistory v-else-if="tab === 'history'" :range="config.range" :league="league" :now="now" />
+        <!-- Only while the window is open: it reads every map day from disk, and the window mounts hidden at startup. -->
+        <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" /></template>
         <DeckHistory v-else-if="tab === 'decks'" :range="config.range" :unit="config.unit" :league="league" :now="now" />
 
         <!-- ===== Maps ===== -->
