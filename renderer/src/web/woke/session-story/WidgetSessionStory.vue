@@ -14,7 +14,7 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" />
+    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" />
     <MapToast :chip="chip" :close-key="config.chipKey || null" :scale="toastScale" @close="closeChip" @hold="holdChip" @resize="resizeChip" />
   </Widget>
 </template>
@@ -139,12 +139,14 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 onUnmounted(() => { chipKeySub.abort() })
 // The glance bar (off unless turned on): the map you're in, from the map log.
 const glanceSince = shallowRef(0)
+const glanceBefore = shallowRef(0)
 const glanceMap = shallowRef<{ name: string, areaLevel: number } | null>(null)
 // `replayed`: right after reading the log's tail, when you may already be in a map.
 function syncGlance (replayed = false) {
   const cur = (live || replayed) && props.config.glance && mapLog.inCountedMap ? mapLog.current : null
   if (!cur) { glanceMap.value = null; return }
   glanceSince.value = mapLog.enteredThisTime
+  glanceBefore.value = cur.mapMs
   // The name comes a line after the area starts: update when it changes.
   if (glanceMap.value?.name !== cur.name || glanceMap.value.areaLevel !== cur.areaLevel) glanceMap.value = { name: cur.name, areaLevel: cur.areaLevel }
 }
@@ -212,7 +214,10 @@ onUnmounted(() => {
 })
 
 // Saved nights first, so the tail only replays what came after the last one.
-Promise.all([store.load(), store.loadMaps()]).then(() => {
+Promise.all([store.load(), store.loadMaps()]).then(async () => {
+  // After an app restart: the night as saved, then the tail adds what came after.
+  const saved = await store.readDraft()
+  if (!tracker.draft) tracker.draft = saved
   if (stopped) return
   // The character the last saved map was run on, until the log names one.
   const lastMap = store.maps.value[0]

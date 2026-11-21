@@ -53,6 +53,20 @@ export function corruptedPrice (rows: GemVersion[], vaal: boolean, level: number
   return { chaos: null, est: 'no price, counted as 0' }
 }
 
+/**
+ * A corrupted version poe.ninja may not list: its own price, else the
+ * cheapest version at or under its level and quality (often a clean 1/0),
+ * the safe side of what it's worth.
+ */
+function atLeast (rows: GemVersion[], level: number, quality: number): Priced {
+  const p = corruptedPrice(rows, false, level, quality)
+  if (p.chaos != null) return p
+  const floor = rows.filter(r => !r.vaal && r.level <= level && r.quality <= quality)
+  if (!floor.length) return p
+  const f = floor.reduce((a, b) => b.chaos < a.chaos ? b : a)
+  return { chaos: f.chaos, est: `priced as ${f.level}/${f.quality} ${f.corrupted ? 'corrupted' : 'clean'}` }
+}
+
 export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm: boolean): VaalEv | null {
   // Max level: the highest clean level poe.ninja prices at 20% (20, or 3
   // for an exceptional support, 5 for an awakened one).
@@ -82,8 +96,8 @@ export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm:
     out[0].label = 'No change · no Vaal form'
   }
   add('level-up', `Level ${level + 1}`, 0.125, corruptedPrice(rows, false, level + 1, quality))
-  // A corrupted gem still gains experience: a 19 levels back to 20.
-  add('level-down', `Level ${level - 1}`, 0.125, { chaos: same.chaos, est: `levels back to ${level}` })
+  // Guy (2026-11-21): a lost level is a loss, worth a corrupted level 1.
+  add('level-down', `Level ${level - 1}`, 0.125, atLeast(rows, 1, quality))
 
   // Quality: each of the 20 steps (+1..+10, -1..-10) equally likely.
   const steps = new Map<number, number>()
@@ -107,17 +121,7 @@ export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm:
   if (down.length) {
     const lo = Math.min(...down.map(([q]) => q))
     const hi = Math.max(...down.map(([q]) => q))
-    let p = corruptedPrice(rows, false, level, hi)
-    if (p.chaos == null) {
-      // poe.ninja rarely lists low-quality corrupted gems: no less than a
-      // version it beats on both level and quality (a clean 1/0).
-      const floor = rows.filter(r => !r.vaal && r.level <= level && r.quality <= hi)
-      if (floor.length) {
-        const f = floor.reduce((a, b) => b.chaos > a.chaos ? b : a)
-        p = { chaos: f.chaos, est: `priced as ${f.level}/${f.quality}${f.corrupted ? ' corrupted' : ''}` }
-      }
-    }
-    add('q-down', `Quality ${lo}–${hi}`, down.reduce((s, [, c]) => s + c, 0), p)
+    add('q-down', `Quality ${lo}–${hi}`, down.reduce((s, [, c]) => s + c, 0), atLeast(rows, level, hi))
   }
 
   const ev = out.reduce((s, o) => s + o.chance * (o.chaos ?? 0), 0) - cost

@@ -48,6 +48,7 @@ export function vaalGemCard (name: string, ctx: LookupContext): LookupCard | nul
         }
       },
       ...(r.unpriced ? [{ text: [`${Math.round(r.unpriced * 100)}% of outcomes have no poe.ninja price and count as 0.`] }] : []),
+      { text: [`Assumes a clean ${start} gem. A lost level counts as a corrupted level 1.`] },
       { text: ['Community odds, 25% each: no change, Vaal form, level ±1, quality ±1 to 10 (max 23). poe.ninja prices.'] }
     ],
     actions: [{ label: 'Copy name', copy: name }]
