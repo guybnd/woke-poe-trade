@@ -13,6 +13,8 @@
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
+      <button type="button" class="w-pc-bulk mr-1" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
+        :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
       <button type="button" class="w-icon-btn mr-1" :class="{ invisible: !list }" title="Search again: results are otherwise kept for 5 minutes"
         :disabled="fetching" @click="refresh"><i class="fas fa-sync-alt text-xs" /><span v-if="refreshNote" class="text-xs ml-1">{{ refreshNote }}</span></button>
       <trade-links :class="{ invisible: !list }"
@@ -163,8 +165,8 @@
         </tbody>
       </table>
     </div>
-    <div v-if="improved" class="w-pc-foot" :class="{ invisible: !(listSettled && list && rows.length) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+    <div v-if="improved || bulk" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk)) }"
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -209,6 +211,7 @@ import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
 import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
+import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
@@ -278,15 +281,38 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
     return out
   })
 
+  // The search the pages below belong to, and how many of its ids are fetched.
+  let fetched = 0
+  let pages: Promise<void> = Promise.resolve()
+  const morePages = shallowRef(false)
+
+  function fetchPage (_searchId: number, _searchResult: SearchResult, into: PricingResult[]) {
+    const ids = _searchResult.result.slice(fetched, fetched + 10)
+    fetched += 10
+    return requestResults(_searchResult.id, ids, { accountName: AppConfig().accountName })
+      .then(
+        results => { if (_searchId === searchId) into.push(...results) },
+        // A failed page can be asked for again.
+        err => { if (_searchId === searchId) fetched -= 10; throw err })
+  }
+
+  function canFetchMore (_searchResult: SearchResult) {
+    return fetched < _searchResult.result.length && fetched < API_FETCH_LIMIT
+  }
+
   async function search (filters: ItemFilters, stats: FilterOrGroup[]) {
     searchId += 1
     const _searchId = searchId
     fetching.value = true
+    morePages.value = false
+    let done!: () => void
+    pages = new Promise(resolve => { done = resolve })
     try {
       error.value = null
       searchResult.value = null
       const _fetchResults: PricingResult[] = shallowReactive([])
       fetchResults.value = _fetchResults
+      fetched = 0
 
       const request = createTradeRequest(filters, stats)
       const _searchResult = await requestTradeResultList(request, filters.trade.league)
@@ -307,17 +333,18 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
               .then(results => r1
                 .then(() => { _fetchResults.push(...results) }))
           : Promise.resolve()
+        fetched = 20
         // woke: a failed second page leaves the first on screen. Loading further pages
         // would leave a hole in the prices, so stop there.
-        const pages = await Promise.allSettled([r1, r2])
-        const failed = pages.find((page): page is PromiseRejectedResult => page.status === 'rejected')
+        const settled = await Promise.allSettled([r1, r2])
+        const failed = settled.find((page): page is PromiseRejectedResult => page.status === 'rejected')
         if (failed) {
           if (!_fetchResults.length) throw failed.reason
+          fetched = API_FETCH_LIMIT
           return
         }
       }
 
-      let fetched = 20
       async function fetchMore (): Promise<void> {
         if (_searchId !== searchId) return
         const totalGrouped = groupedResults.value.length
@@ -325,25 +352,58 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
           res.listedTimes <= 2 ? len + 1 : len, 0)
         if (
           (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) &&
-          fetched < _searchResult.result.length &&
-          fetched < API_FETCH_LIMIT
+          canFetchMore(_searchResult)
         ) {
-          await requestResults(_searchResult.id, _searchResult.result.slice(fetched, fetched + 10), { accountName: AppConfig().accountName })
-            .then(results => { _fetchResults.push(...results) })
-          fetched += 10
+          await fetchPage(_searchId, _searchResult, _fetchResults)
           return fetchMore()
         }
       }
       // A later page failing leaves what already loaded on screen.
-      await fetchMore().catch((err) => { if (!_fetchResults.length) throw err })
+      await fetchMore().catch((err) => {
+        fetched = API_FETCH_LIMIT
+        if (!_fetchResults.length) throw err
+      })
     } catch (err) {
       if (_searchId === searchId) error.value = (err as Error).message
     } finally {
-      if (_searchId === searchId) fetching.value = false
+      if (_searchId === searchId) {
+        fetching.value = false
+        morePages.value = searchResult.value != null && canFetchMore(searchResult.value)
+      }
+      done()
     }
   }
 
-  return { error, searchResult, groupedResults, fetchResults, fetching, search }
+  // woke: on a click only (the Bulk toggle): pulls further pages of the same search,
+  // ten listings each, until enough() holds or the search runs out. Searches nothing new.
+  // Resolves with a note when the trade site stopped it, else null.
+  function loadMore (enough: () => boolean): Promise<string | null> {
+    const _searchId = searchId
+    const run = pages.then(async (): Promise<string | null> => {
+      const _searchResult = searchResult.value
+      if (_searchId !== searchId || !_searchResult || error.value) return null
+      const into = fetchResults.value
+      fetching.value = true
+      try {
+        while (_searchId === searchId && !enough() && canFetchMore(_searchResult)) {
+          preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
+          await fetchPage(_searchId, _searchResult, into)
+        }
+        return null
+      } catch (err) {
+        return (err as Error).message
+      } finally {
+        if (_searchId === searchId) {
+          fetching.value = false
+          morePages.value = canFetchMore(_searchResult)
+        }
+      }
+    })
+    pages = run.then(() => {})
+    return run
+  }
+
+  return { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore }
 }
 
 export default defineComponent({
@@ -379,7 +439,7 @@ export default defineComponent({
     const statValue = (listing: PricingResult, col: StatColumn) =>
       listingStatValue(listing.listedItem, col, props.item.category)
 
-    const { error, searchResult, groupedResults, fetchResults, fetching, search } = useTradeApi((a, b) =>
+    const { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore } = useTradeApi((a, b) =>
       allColumns.value.every(col => formatStatValue(statValue(a, col), col) === formatStatValue(statValue(b, col), col)))
     const { retryIn, rateLimited } = useRetryCountdown(error)
     const refreshNote = shallowRef('')
@@ -448,7 +508,23 @@ export default defineComponent({
     // woke: improved merges a price into one row; classic stays one row per listing.
     // The trade site orders by its own currency ratios; re-sort what's fetched by
     // poe.ninja's rates so chaos and divine prices interleave by real value.
-    const rows = computed(() => sortByValue(groupListings(groupedResults.value, {
+    // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
+    const bulk = shallowRef(false)
+    const bulkNote = shallowRef('')
+    watch(searchResult, () => { bulk.value = false; bulkNote.value = '' })
+    const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value) : groupedResults.value)
+    async function toggleBulk () {
+      bulk.value = !bulk.value
+      bulkNote.value = ''
+      if (!bulk.value) return
+      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value) >= BULK_ENOUGH)
+      if (note && bulk.value) {
+        bulkNote.value = note
+        setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
+      }
+    }
+
+    const rows = computed(() => sortByValue(groupListings(tableListings.value, {
       now: nowMinute.value,
       merge: improved.value,
       dropped: insight.value.dropped,
@@ -555,6 +631,15 @@ export default defineComponent({
         return tone ? { '--w-pc-stat-k': tone.strength } : undefined
       },
       shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
+      bulk,
+      bulkNote,
+      toggleBulk,
+      bulkSellers: computed(() => bulkSellerCount(groupedResults.value)),
+      bulkTitle: computed(() => bulk.value
+        ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
+        : morePages.value
+          ? `Only sellers with 2 or more copies at one price. Loads more listings if fewer than ${BULK_ENOUGH} sellers show (up to ${API_FETCH_LIMIT}).`
+          : 'Only sellers with 2 or more copies at one price.'),
       tableLoading,
       listSettled,
       slowdownReady: slowdown.isReady,
