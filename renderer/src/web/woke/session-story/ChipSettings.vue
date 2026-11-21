@@ -6,10 +6,6 @@
       <span class="w-dim">Goes away</span>
       <WSelect v-model="seconds" :options="CHIP_TIMES" />
     </template>
-    <template v-if="place === 'center'">
-      <span class="w-dim">Click closes it</span>
-      <WToggle v-model="click" />
-    </template>
     <template v-if="place !== 'off'">
       <span class="w-dim">Close key</span>
       <slot name="key">
@@ -31,7 +27,6 @@ import { pushHostConfig } from '@/web/Config'
 import WButton from '../ui/WButton.vue'
 import WSegmented from '../ui/WSegmented.vue'
 import WSelect from '../ui/WSelect.vue'
-import WToggle from '../ui/WToggle.vue'
 import type { ChipPlace, SessionStoryWidget } from './widget'
 
 const props = defineProps<{
@@ -67,10 +62,6 @@ const place = computed({
 const seconds = computed({
   get: () => String(props.config.chipSeconds ?? 8),
   set: (v: string) => { props.config.chipSeconds = Number(v) }
-})
-const click = computed({
-  get: () => props.config.chipClick === true,
-  set: (v: boolean) => { props.config.chipClick = v }
 })
 </script>
 

@@ -1,7 +1,7 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
-import { MapLog, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
-import { chipLines, compareMap } from '@/web/woke/session-story/chip'
+import { MapLog, keepMap, npcOf, tierLine, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import { chipLines, clampScale, compareMap } from '@/web/woke/session-story/chip'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
@@ -126,5 +126,22 @@ describe('maps from Client.txt', () => {
     expect(usualMapMs([m(60_000, 3), m(120_000, 2)])).toBeNull()
     expect(usualMapMs([m(60_000, 3), m(120_000, 2), m(180_000, 1)])).toBe(120_000)
     expect(keepMap(keepMap([m(1, 1)], m(2, 2)), m(3, 2)).map(x => x.mapMs)).toEqual([3, 1])
+  })
+})
+
+describe('map toast', () => {
+  it('names the tier like the map tooltip', () => {
+    expect(tierLine(83)).toBe('Tier 16 Map')
+    expect(tierLine(68)).toBe('Tier 1 Map')
+    expect(tierLine(84)).toBe('Area level 84')
+    expect(tierLine(45)).toBe('Area level 45')
+  })
+  it('keeps its saved size in range', () => {
+    expect(clampScale(undefined)).toBe(1)
+    expect(clampScale(Number.NaN)).toBe(1)
+    expect(clampScale('2')).toBe(1)
+    expect(clampScale(0.1)).toBe(0.6)
+    expect(clampScale(9)).toBe(2)
+    expect(clampScale(1.234)).toBe(1.23)
   })
 })

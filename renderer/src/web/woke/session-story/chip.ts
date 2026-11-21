@@ -52,3 +52,9 @@ export function chipLines (rec: MapRecord, cmp: MapCompare, clock: (ms: number) 
   if (rec.levelsGained && rec.charLevel != null) parts.push(`Level ${rec.charLevel + rec.levelsGained}`)
   return parts.length ? [head, parts.join(' · ')] : [head]
 }
+
+// The map toast's saved size, kept between 60% and 200%; 1 = as designed.
+export function clampScale (s: unknown): number {
+  if (typeof s !== 'number' || !Number.isFinite(s)) return 1
+  return Math.round(Math.min(2, Math.max(0.6, s)) * 100) / 100
+}

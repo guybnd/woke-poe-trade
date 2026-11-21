@@ -62,6 +62,11 @@ export function tierText (areaLevel: number): string {
   return areaLevel >= 68 && areaLevel <= 83 ? `T${areaLevel - 67}` : `Level ${areaLevel}`
 }
 
+// The map toast's second header line, as on the map's tooltip: "Tier 16 Map".
+export function tierLine (areaLevel: number): string {
+  return areaLevel >= 68 && areaLevel <= 83 ? `Tier ${areaLevel - 67} Map` : `Area level ${areaLevel}`
+}
+
 export interface MapLogEvents {
   // Out of a map into the hideout or town (again, after a portal back in).
   onLeave: (rec: MapRecord) => void

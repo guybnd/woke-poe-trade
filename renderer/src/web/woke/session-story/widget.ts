@@ -12,8 +12,10 @@ export interface SessionStoryWidget extends Widget {
   chipPlace?: ChipPlace
   // How long the line stays, in seconds; 0: until you go into a map.
   chipSeconds?: number
-  // A click on the line closes it (the line then takes the mouse while it's under it).
+  // No longer used: a click on the toast always closes it now. Old configs may hold it.
   chipClick?: boolean
+  // The toast's size, set by dragging its corner; 1 = as designed.
+  chipScale?: number
   // A hotkey that closes it. Registered like any hotkey: the game no longer gets that key.
   chipKey?: string | null
 }
