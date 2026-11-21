@@ -307,7 +307,7 @@ test('an offer reopened before a restart comes back open, old as it is', async (
   await expect(trade.locator('[data-offer-history]')).toHaveCount(0)
 })
 
-test('whispers you send show under the offers; the sales log and Session analytics show the sale', async ({ overlay }) => {
+test('whispers you send show under the offers; the sales log shows the sale', async ({ overlay }) => {
   await overlay.boot({
     widgets: [{ ...TRADE, wmWants: 'show' as const, tab: 'log' }, { wmType: 'woke-session-analytics', wmWants: 'show' as const }],
     overlayActive: true
@@ -322,8 +322,8 @@ test('whispers you send show under the offers; the sales log and Session analyti
   await expect(trade).toContainText('Ozzy_Seller')
   await expect(trade).toContainText('Mageblood Heavy Belt')
   await overlay.snap('trades window')
-  // With Session story on the window opens on Map history; Trading is under Strategies.
+  // Session analytics' Strategies tab (and its Trading line) is retired: no tab.
   const analytics = overlay.widget('woke-session-analytics')
-  await analytics.getByRole('tab', { name: 'Strategies' }).dispatchEvent('click')
-  await expect(analytics.locator('[data-analytics="trading"]')).toContainText('Trading')
+  await expect(analytics.getByRole('tab', { name: 'Map history' })).toBeVisible()
+  await expect(analytics.getByRole('tab', { name: 'Strategies' })).toHaveCount(0)
 })

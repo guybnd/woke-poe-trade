@@ -280,7 +280,7 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 
 const storyOn = computed(() => isModuleOn(AppConfig(), 'session-story'))
 // With Session story on, the window opens on the maps you ran: tonight's strip sits above them.
-const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'nights' | 'decks'>(storyOn.value ? 'history' : 'strategies')
+const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'nights' | 'decks'>(storyOn.value ? 'history' : 'sessions')
 // A map picked on tonight's strip (or its row): Map history shows and scrolls to it.
 const focusAt = shallowRef<number | null>(null)
 // A saved night picked in Nights, shown on top; null: tonight.
@@ -305,15 +305,16 @@ onSavedOpen(ANALYTICS_TYPE, (id) => {
   if (id.startsWith('map:')) pickMap(Number(id.slice(4)))
   else tab.value = id === 'nights' ? 'nights' : 'history'
 })
-// Session story turned off while its tab shows: back to Strategies.
+// Session story turned off while its tab shows: back to Sessions.
 watch(storyOn, (on) => {
   if (on) return
-  if (tab.value === 'history' || tab.value === 'nights') tab.value = 'strategies'
+  if (tab.value === 'history' || tab.value === 'nights') tab.value = 'sessions'
   nightId.value = null
 })
 const tabOptions = computed(() => [
   ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Nights' }] : []),
-  { value: 'strategies', label: 'Strategies' },
+  // Strategies is retired (Guy, Nov 2026): it only had Farming's sessions.
+  // Its tab body stays below for when Farming comes back.
   { value: 'sessions', label: 'Sessions' },
   { value: 'maps', label: 'Maps' },
   ...(isModuleOn(AppConfig(), 'stacked-decks') ? [{ value: 'decks', label: 'Stacked decks' }] : [])
