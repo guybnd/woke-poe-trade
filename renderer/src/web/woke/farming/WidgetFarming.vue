@@ -462,7 +462,7 @@ onGameLog((lines) => {
   let changed = false
   for (const { ev } of lines) {
     if (ev?.kind === 'zone') {
-      nameRun(sess, ev.name)
+      if (nameRun(sess, ev.name)) changed = true
       continue
     }
     if (ev?.kind !== 'area') continue
@@ -472,14 +472,19 @@ onGameLog((lines) => {
     onZoneChange(sess, inMap || isMapSideArea(ev.areaId), nowTs)
     if (inMap && sess.runningSince != null && props.config.autoCountMaps && countNewMap(sess, ev.areaId, ev.seed)) {
       sess.maps++
-      startRun(sess, ev.areaId, ev.areaLevel, nowTs)
+      const run = startRun(sess, ev.areaId, ev.areaLevel, nowTs)
       now.value = nowTs
-      const per = t.value.perMap
-      const prev = sess.runs && sess.runs.length >= 2 ? sess.runs[sess.runs.length - 2] : null
-      const text = prev
-        ? `Map ${sess.maps} · last map ${fmt(runResult(prev))}`
-        : `Map ${sess.maps}` + (per != null ? ` · ${fmt(per)} per map so far` : '')
-      setTimeout(() => dockRef.value?.peek(text), 1500)
+      // Built when shown: by then an area skipped by name ("You have entered"
+      // comes after loading) has taken this map back, and shows nothing.
+      setTimeout(() => {
+        if (currentRun(sess) !== run) return
+        const per = t.value.perMap
+        const prev = sess.runs && sess.runs.length >= 2 ? sess.runs[sess.runs.length - 2] : null
+        const text = prev
+          ? `Map ${sess.maps} · last map ${fmt(runResult(prev))}`
+          : `Map ${sess.maps}` + (per != null ? ` · ${fmt(per)} per map so far` : '')
+        dockRef.value?.peek(text)
+      }, 1500)
     }
     changed = true
   }

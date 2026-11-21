@@ -103,7 +103,7 @@ import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
 import { dockIconEl, showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
-import { countNewMap, isMapArea } from '../farming/farming'
+import { countNewMap, isFarmedMap } from '../farming/farming'
 import { usePriceIndex } from '../market/price-index'
 import { searchPrices, typeLabel } from '../search/search'
 import { onGameLog } from '../shared/game-log'
@@ -257,7 +257,7 @@ onGameLog((lines) => {
   if (!props.config.autoCountMaps) return
   let changed = false
   for (const { ev } of lines) {
-    if (ev?.kind !== 'area' || !isMapArea(ev.areaId)) continue
+    if (ev?.kind !== 'area' || !isFarmedMap(ev.areaId)) continue
     if (countNewMap(props.config, ev.areaId, ev.seed)) {
       changeMaps(props.config, 1)
       changed = true

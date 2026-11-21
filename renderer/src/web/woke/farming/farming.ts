@@ -202,15 +202,15 @@ export function totals (
   }
 }
 
-// Endgame maps are generated with an area id starting with "Map"
-// (e.g. "MapWorldsStrand"); hideouts, towns and campaign areas are not, and
-// neither are pinnacle boss arenas (MapWorldsShapersRealm...).
 // A map you farm: not one of Session story's skipped areas (the 3.30 vaults),
 // known here by area id. Areas skipped by name are dropped in nameRun.
 export function isFarmedMap (areaId: string): boolean {
   return isMapArea(areaId) && !isSkippedArea(knownAreaName(areaId))
 }
 
+// Endgame maps are generated with an area id starting with "Map"
+// (e.g. "MapWorldsStrand"); hideouts, towns and campaign areas are not, and
+// neither are pinnacle boss arenas (MapWorldsShapersRealm...).
 export function isMapArea (areaId: string): boolean {
   return /^Map/i.test(areaId) && !/hideout/i.test(areaId) && !isBossArea(areaId) && !isMapSideArea(areaId)
 }
@@ -322,22 +322,25 @@ export function startRun (s: FarmingSession, areaId: string, level: number, now:
 }
 
 // "You have entered Strand." right after a map was generated names the run.
-export function nameRun (s: FarmingSession, zoneName: string): void {
+// Returns true when it changed the session.
+export function nameRun (s: FarmingSession, zoneName: string): boolean {
   const run = currentRun(s)
   // An area skipped by name (Session story's list): its time isn't map time,
-  // and a map just counted for it is taken back.
+  // and a map counted for it at this very zone change is taken back.
   if (s.inMap && isSkippedArea(zoneName)) {
     s.inMap = false
-    if (run && !run.named && run.mapMs === 0) {
+    if (run && !run.named && run.mapMs === 0 && run.enteredAt === s.lastZoneAt) {
       s.runs!.pop()
       s.maps = Math.max(0, s.maps - 1)
     }
-    return
+    return true
   }
   if (run && s.inMap && !run.named) {
     run.name = zoneName
     run.named = true
+    return true
   }
+  return false
 }
 
 function addTo (lines: LootLine[], ref: PricedRef, qty: number) {

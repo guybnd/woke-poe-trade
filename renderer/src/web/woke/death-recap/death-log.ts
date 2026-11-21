@@ -5,7 +5,7 @@
 // killer, no damage, no map mods. Mods only exist if the map was checked with
 // the item copy hotkeys before it was opened, so they're matched to the map by
 // name and level, and a match says how sure it is.
-import { isMapArea, isMapSideArea } from '../farming/farming'
+import { isFarmedMap, isMapSideArea } from '../farming/farming'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { lineTime } from '../campaign/log-tail'
 
@@ -182,13 +182,13 @@ export class DeathTracker {
       if (staysInRun(ev.areaId)) {
         // Keeps the run.
       } else {
-        this.runKey = isMapArea(ev.areaId) ? this.key : null
+        this.runKey = isFarmedMap(ev.areaId) ? this.key : null
       }
       return
     }
     if (ev?.kind === 'zone') {
       this.name = ev.name
-      if (isMapArea(this.areaId) && !staysInRun(this.areaId)) {
+      if (isFarmedMap(this.areaId) && !staysInRun(this.areaId)) {
         this.events.onMap({ key: this.key, name: ev.name, level: this.level, at, returned: this.returned })
       }
       return
