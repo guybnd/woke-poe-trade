@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-431
 title: Vault rewards and value in Ctrl+Space and the Nightmare check
-status: In Progress
+status: Todo
 priority: Medium
 effort: M
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Event Horizon
 history:
   - type: activity
     user: Agent
@@ -34,11 +34,17 @@ history:
       boss's quadrant vault ~54% (107/198 in his Client.txt). Mockups/picks:
       https://claude.ai/artifact/JRyG3cdwwonZFeuM6Lys6s
     id: a-2026-11-21t03-45-54-671z
+  - type: activity
+    user: Event Horizon
+    date: '2026-11-21T04:04:03.230Z'
+    comment: Claim by claude-code@guy-pc expired (no heartbeat for 30 min)
+    id: a-2026-11-21t04-04-03-230z
+  - type: status_change
+    from: In Progress
+    to: Todo
+    user: Event Horizon
+    date: '2026-11-21T04:04:03.309Z'
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-21T03:33:59.810Z'
-  expiresAt: '2026-11-21T04:03:59.810Z'
 ---
 The four 3.30 Templar Vaults (Zealot's, Scholar's, Arkhon's, Machinist's): each one's reward pool from poewiki, priced live from poe.ninja, with a ~typical-pick estimate (no weights or spawn chance are published).
 
