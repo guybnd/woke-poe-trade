@@ -79,6 +79,7 @@ describe('tradeQuery', () => {
     expect(tradeQuery({ name: 'Cortex' }, 'unique', cortex)).toEqual(map)
     expect(tradeQuery({ name: 'Cortex' }, 'unique', undefined)).toEqual(map)
     expect(tradeQuery({ name: 'Cortex' }, 'unique', cortex, false)).toEqual(map)
+    expect(tradeQuery({ name: 'Map' }, 'item', ITEM_BY_REF('ITEM', 'Map')![0])).toEqual({ type: { option: 'Map', discriminator: 'map' } })
   })
 
   it('searches a Foulborn unique for Foulborn copies only, and a plain unique without them', () => {

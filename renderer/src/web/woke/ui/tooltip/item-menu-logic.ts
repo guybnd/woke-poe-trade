@@ -261,6 +261,8 @@ export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | un
     return base ? { name, type: base } : { name }
   }
   if (ref.base) return { type: info?.name ?? ref.base }
+  // The plain Map base also needs its discriminator, as in the price check.
+  if (info?.refName === 'Map') return { type: { option: info.name, discriminator: 'map' } }
   // The trade site lists a transfigured gem as its plain gem plus which one.
   const plain = info?.gem?.transfigured && info.gem.normalVariant && info.tradeDisc
     ? ITEM_BY_REF('GEM', info.gem.normalVariant)?.[0]
