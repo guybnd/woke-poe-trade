@@ -35,7 +35,15 @@ const ARENAS: Arena[] = [
   { areaIds: ['MavenHub'], names: ["The Maven's Crucible"], bosses: ['feared'] },
   { areaIds: ['AtlasExilesBoss5'], names: ['Eye of the Storm'], bosses: ['sirus', 'uber-sirus'] },
   { areaIds: ['Synthesis_MapBoss'], names: ['Cortex'], bosses: ['venarius', 'uber-cortex'] },
-  { areaIds: [], names: ['The Feared'], bosses: ['feared'] }
+  { areaIds: [], names: ['The Feared'], bosses: ['feared'] },
+  // 3.30 Incarnations: Fear, Neglect, Dread (poedb; MapWorldsMemoryBoss3 seen
+  // in a real Client.txt). The Uber fight (level 85) has its own id.
+  ...['Fear/Trauma', 'Neglect/Loneliness', 'Dread/Reverence'].map((x, i) => {
+    const [b, n] = x.split('/')
+    const id = `MapWorldsMemoryBoss${i + 1}`
+    const boss = `incarnation-of-${b.toLowerCase()}`
+    return { areaIds: [id, `${id}_Uber`], names: [`Moment of ${n}`], bosses: [boss, `uber-${boss}`] }
+  })
 ]
 
 // By lower-cased area id.

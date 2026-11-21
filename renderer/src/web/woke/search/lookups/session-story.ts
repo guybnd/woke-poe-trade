@@ -38,7 +38,7 @@ function rows (s: NightStory): LookupRow[] {
 
 // `live`: the night still going; `last`: the newest finished one.
 export function sessionStoryLookup (live: NightStory | null, last: NightStory | null): Lookup {
-  return (query) => {
+  return (query, ctx) => {
     const s = live ?? last
     if (!s || !wanted(query)) return []
     const when = new Date(s.startedAt).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
@@ -49,7 +49,8 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       sub: `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: 'fas fa-moon',
       sections: [{ rows: rows(s) }],
-      actions: [{ label: 'Open Session analytics', open: { tool: ANALYTICS_TYPE, id: 'history' } }]
+      // Session analytics holds tonight and Map history: only offered while it's on.
+      actions: ctx.tools.has(ANALYTICS_TYPE) ? [{ label: 'Open Session analytics', open: { tool: ANALYTICS_TYPE, id: 'history' } }] : []
     }]
   }
 }
@@ -58,28 +59,31 @@ const MAP_WORDS = ['maps', 'last maps', 'map history', 'map times']
 
 // The last maps you ran, from Session story's map history.
 export function mapsLookup (all: readonly MapRecord[]): Lookup {
-  return (query) => {
+  return (query, ctx) => {
     // Vaults saved before they were skipped don't count.
     const maps = all.filter(m => !isSkippedArea(m.name))
     const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
     if (!maps.length || !MAP_WORDS.some(w => w.startsWith(q) && q.length >= 4)) return []
     const last = maps.slice(0, 8)
+    // Map history lives in Session analytics: its buttons only while that's on.
+    const history = ctx.tools.has(ANALYTICS_TYPE)
     const usual = usualMapMs(maps)
     return [{
       id: 'answer:map-history',
       group: 'Answer',
       name: `Last maps${usual != null ? `: average ${formatClock(usual)}` : ''}`,
-      sub: `${maps.length} maps in the last 2 days`,
+      // The recent list holds your last 20 maps, whenever you ran them.
+      sub: `Your last ${maps.length} ${maps.length === 1 ? 'map' : 'maps'}`,
       icon: 'fas fa-map',
       sections: [{
         rows: last.map(m => ({
           label: `${m.name} ${tierText(m.areaLevel)}`,
           value: [formatClock(m.mapMs), m.deaths ? `${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : '', m.npcs.join(', ')].filter(Boolean).join(' · '),
           // Opens Map history at that map's row.
-          action: { label: 'Show', open: { tool: ANALYTICS_TYPE, id: `map:${m.enteredAt}` } }
+          ...(history ? { action: { label: 'Show', open: { tool: ANALYTICS_TYPE, id: `map:${m.enteredAt}` } } } : {})
         }))
       }],
-      actions: [{ label: 'Open Map history', open: { tool: ANALYTICS_TYPE, id: 'history' } }]
+      actions: history ? [{ label: 'Open Map history', open: { tool: ANALYTICS_TYPE, id: 'history' } }] : []
     }]
   }
 }
