@@ -201,17 +201,15 @@ export function totals (
   }
 }
 
-// Session story's skip list (the 3.30 vaults), handed in when that module
-// loads so its code stays out of startup JS. Until then: the vaults by id.
-// `name` runs on "You have entered X." while in a map; true: X is skipped
-// (it has taken back the map counted for it).
-interface AreaSkip { id: (areaId: string) => boolean, name: (s: FarmingSession, name: string) => boolean }
-let skip: AreaSkip = { id: (areaId) => /^MapWorldsMemoryVault\d$/.test(areaId), name: () => false }
-export function setAreaSkip (check: AreaSkip): void { skip = check }
+// Session story's skip list (the 3.30 vaults), by area id, handed in when
+// that module loads so its code stays out of startup JS; until then the vaults.
+// Areas added to the list by name are left out in Session story only.
+let skipArea = (areaId: string) => /^MapWorldsMemoryVault\d$/.test(areaId)
+export function setAreaSkip (check: (areaId: string) => boolean): void { skipArea = check }
 
-// A map you farm: not on the skip list by area id.
+// A map you farm: not on the skip list.
 export function isFarmedMap (areaId: string): boolean {
-  return isMapArea(areaId) && !skip.id(areaId)
+  return isMapArea(areaId) && !skipArea(areaId)
 }
 
 // Endgame maps are generated with an area id starting with "Map"
@@ -328,16 +326,12 @@ export function startRun (s: FarmingSession, areaId: string, level: number, now:
 }
 
 // "You have entered Strand." right after a map was generated names the run.
-// Returns true when it changed the session.
-export function nameRun (s: FarmingSession, zoneName: string): boolean {
+export function nameRun (s: FarmingSession, zoneName: string): void {
   const run = currentRun(s)
-  if (s.inMap && skip.name(s, zoneName)) return true
   if (run && s.inMap && !run.named) {
     run.name = zoneName
     run.named = true
-    return true
   }
-  return false
 }
 
 function addTo (lines: LootLine[], ref: PricedRef, qty: number) {

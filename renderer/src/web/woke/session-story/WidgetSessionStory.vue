@@ -77,7 +77,7 @@ import { chipLines, clampScale, compareMap } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
-import { farmingNameSkip, isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
+import { isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
 import { setAreaSkip } from '../farming/farming'
 import { CHIP_CLOSE_TARGET } from './widget'
 import type { SessionStoryWidget } from './widget'
@@ -95,7 +95,7 @@ hideWhilePlaying(props.config)
 const store = useNights()
 // Vaults and other areas that aren't counted as maps (Settings); Farming,
 // Net worth, the drop counter and death recap use the same list.
-setAreaSkip({ id: (areaId) => isSkippedArea(knownAreaName(areaId)), name: farmingNameSkip })
+setAreaSkip((areaId) => isSkippedArea(knownAreaName(areaId)))
 watch(() => props.config.skipAreas, (list, old) => {
   setSkipAreas(list)
   // Tonight's card and Ctrl+Space follow a changed list right away.
