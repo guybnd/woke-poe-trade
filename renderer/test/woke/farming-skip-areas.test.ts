@@ -1,7 +1,10 @@
 // Session story's skip list (the 3.30 vaults) in Farming's map count and map time.
 import { afterEach, describe, expect, it } from 'vitest'
-import { isFarmedMap, nameRun, newSession, onZoneChange, startRun } from '@/web/woke/farming/farming'
-import { setSkipAreas } from '@/web/woke/session-story/skip-areas'
+import { isFarmedMap, nameRun, newSession, onZoneChange, setAreaSkip, startRun } from '@/web/woke/farming/farming'
+import { isSkippedArea, knownAreaName, setSkipAreas } from '@/web/woke/session-story/skip-areas'
+
+// As Session story hands it in when it loads.
+setAreaSkip({ id: (areaId) => isSkippedArea(knownAreaName(areaId)), name: isSkippedArea })
 
 afterEach(() => { setSkipAreas(undefined) })
 

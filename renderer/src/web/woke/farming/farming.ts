@@ -3,7 +3,6 @@ import { BULK_TYPES } from '../league-invest/invest'
 import { isListedType, itemKey } from '../market/types'
 import { isBossArea } from '../shared/boss-areas'
 import type { SavedLoot, SessionRecord } from '../analytics/types'
-import { isSkippedArea, knownAreaName } from '../session-story/skip-areas'
 
 export const FARMING_TYPE = 'woke-farming'
 // copy-item target for the "add hovered item to loot" hotkey.
@@ -202,10 +201,16 @@ export function totals (
   }
 }
 
-// A map you farm: not one of Session story's skipped areas (the 3.30 vaults),
-// known here by area id. Areas skipped by name are dropped in nameRun.
+// Session story's skip list (the 3.30 vaults), handed in when that module
+// loads so its code stays out of startup JS. Until then: the vaults by id.
+interface AreaSkip { id: (areaId: string) => boolean, name: (name: string) => boolean }
+let skip: AreaSkip = { id: (areaId) => /^MapWorldsMemoryVault\d$/.test(areaId), name: () => false }
+export function setAreaSkip (check: AreaSkip): void { skip = check }
+
+// A map you farm: not on the skip list by area id. Areas skipped by name are
+// dropped in nameRun, once their name is logged.
 export function isFarmedMap (areaId: string): boolean {
-  return isMapArea(areaId) && !isSkippedArea(knownAreaName(areaId))
+  return isMapArea(areaId) && !skip.id(areaId)
 }
 
 // Endgame maps are generated with an area id starting with "Map"
@@ -327,7 +332,7 @@ export function nameRun (s: FarmingSession, zoneName: string): boolean {
   const run = currentRun(s)
   // An area skipped by name (Session story's list): its time isn't map time,
   // and a map counted for it at this very zone change is taken back.
-  if (s.inMap && isSkippedArea(zoneName)) {
+  if (s.inMap && skip.name(zoneName)) {
     s.inMap = false
     if (run && !run.named && run.mapMs === 0 && run.enteredAt === s.lastZoneAt) {
       s.runs!.pop()
