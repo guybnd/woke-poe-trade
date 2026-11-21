@@ -274,11 +274,19 @@ function menu (e: Event) {
   openItemMenu(e as MouseEvent, menuRef(refs.get(e.currentTarget as HTMLElement)))
 }
 
+// Marks an element that shows the item tooltip, for the e2e hover gate
+// (testing/e2e/tip-audit.ts): a row naming an item must be inside one.
+function mark (el: HTMLElement, ref: ItemTipRef | null | undefined) {
+  const on = !!ref?.name
+  if (on !== el.hasAttribute('data-item-tip')) el.toggleAttribute('data-item-tip', on)
+}
+
 export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefined> = {
   mounted (el, binding) {
     watchHoverZones()
     watchRightClicks()
     refs.set(el, binding.value)
+    mark(el, binding.value)
     el.addEventListener('mouseenter', enter)
     el.addEventListener('mouseleave', leave)
     el.addEventListener('contextmenu', menu)
@@ -287,6 +295,7 @@ export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefine
     const before = refs.get(el)
     const after = binding.value
     refs.set(el, after)
+    mark(el, after)
     // A list re-sorted under the pointer now has a different item here.
     if (hovered === el && (before?.name !== after?.name || before?.variant !== after?.variant)) leave()
   },

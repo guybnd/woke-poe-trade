@@ -58,7 +58,7 @@
           <div :class="$style.link">
             <SocketDots :colours="linkColours(g)" />
             <span v-if="linkItem(g)" :class="$style.linkItem" class="ml-auto text-xs whitespace-nowrap"
-              @mouseenter="showTip($event, { kind: 'item', item: linkItem(g)! })" @mouseleave="hideTip">{{ g.label || slotLabel(g.slot) }}</span>
+              data-item-tip @mouseenter="showTip($event, { kind: 'item', item: linkItem(g)! })" @mouseleave="hideTip">{{ g.label || slotLabel(g.slot) }}</span>
             <span v-else-if="g.label || g.slot" class="ml-auto w-faint text-xs whitespace-nowrap">{{ g.label || slotLabel(g.slot) }}</span>
             <PinButton :class="$style.rowPin" :make="() => gemsPin(entry.relPath, shownSet!.groups, g)" title="Pin this gem chain: keep it on screen while you play" />
           </div>

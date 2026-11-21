@@ -72,7 +72,7 @@
         </div>
         <button v-for="(u, i) in upgrades.rows" :key="u.slot" type="button" :class="$style.buy" class="w-focusable"
           :title="`Price check ${u.item.name}${u.unique ? '' : ' with its stats'}`" @click="openPriceCheck(u.item, $event)"
-          @mouseenter="showTip($event, { kind: 'item', item: u.item })" @mouseleave="hideTip">
+          data-item-tip @mouseenter="showTip($event, { kind: 'item', item: u.item })" @mouseleave="hideTip">
           <span class="w-faint w-num">{{ i + 1 }}.</span>
           <span class="w-trunc" :class="rarityClass(u.item)">{{ upgradeName(u.item) }}</span>
           <span class="w-faint text-xs">{{ slotLabel(u.slot) }}</span>
@@ -88,8 +88,8 @@
       <div v-if="!diff.gear.length" class="w-dim text-xs">No gear in the build's item set.</div>
       <div v-for="r in diff.gear" :key="r.slot" :class="$style.gear">
         <span class="w-faint">{{ slotLabel(r.slot) }}</span>
-        <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build, compare: wornCompare(r.slot, r.build) ?? undefined })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
-        <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
+        <span class="w-trunc" :class="rarityClass(r.build)" :data-item-tip="r.build ? '' : undefined" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build, compare: wornCompare(r.slot, r.build) ?? undefined })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
+        <span class="w-trunc" :class="rarityClass(r.worn)" :data-item-tip="r.worn ? '' : undefined" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
         <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
       </div>
 
@@ -98,8 +98,8 @@
         <div :class="$style.heading">Jewels</div>
         <div v-for="r in diff.jewels" :key="r.node" :class="$style.gear">
           <span class="w-faint w-trunc" :title="r.socket || 'A socket on a cluster jewel'">{{ shortSocket(r.socket) }}</span>
-          <span class="w-trunc" :class="rarityClass(r.build)" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
-          <span class="w-trunc" :class="rarityClass(r.worn)" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
+          <span class="w-trunc" :class="rarityClass(r.build)" :data-item-tip="r.build ? '' : undefined" @mouseenter="r.build && showTip($event, { kind: 'item', item: r.build })" @mouseleave="hideTip">{{ r.build ? r.build.name : '—' }}</span>
+          <span class="w-trunc" :class="rarityClass(r.worn)" :data-item-tip="r.worn ? '' : undefined" @mouseenter="r.worn && showTip($event, { kind: 'item', item: r.worn })" @mouseleave="hideTip">{{ r.worn ? r.worn.name : 'empty' }}</span>
           <span :class="[$style.state, stateTone(r.state)]">{{ STATE[r.state] }}</span>
         </div>
       </template>
