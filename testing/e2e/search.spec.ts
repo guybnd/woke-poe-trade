@@ -60,7 +60,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   await overlay.pressHotkey(SEARCH_KEY)
   const { panel, box } = await waitForPrices(overlay)
 
-  await expect(panel.getByText('Trade site')).toBeVisible()
+  await expect(panel.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Price check', exact: true })).toBeVisible()
   // Trade site leads; Open in Market comes last, as a quiet link.
@@ -127,7 +127,7 @@ test('the launcher lists prices, and a click opens the palette on them', async (
   await overlay.page.getByRole('button', { name: /Headhunter/ }).click()
   const palette = overlay.widget('woke-search')
   await expect(palette.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Headhunter')
-  await expect(palette.getByText('Trade site')).toBeVisible()
+  await expect(palette.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   expect(overlay.errors).toEqual([])
 })
 
@@ -407,7 +407,7 @@ test("a unique's details: variants, Foulborn kinds with what they replace, and i
     w.open = (url: string) => { w.__opened = url; return null }
   })
   await panel.getByRole('button', { name: /^4 Flasks Rightmost/ }).click()
-  await panel.getByText('Trade site').click()
+  await panel.getByRole('button', { name: /^Trade site/ }).click()
   const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
   expect(decodeURIComponent(url)).toContain('"foulborn_item":{"option":"true"}')
 

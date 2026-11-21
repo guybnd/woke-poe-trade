@@ -920,26 +920,22 @@ function onKey (e: KeyboardEvent) {
     e.preventDefault()
     e.stopPropagation()
     move(e.key === 'ArrowDown' ? 1 : -1)
-  } else if (e.key === 'Enter' && e.ctrlKey) {
+  } else if (e.key === 'Enter' && e.ctrlKey && itemEntry()) {
     e.preventDefault()
-    const entry = itemEntry()
+    if (e.repeat) return
+    const entry = itemEntry()!
     // From the keyboard there's no pointer: near the top of the window, as a paste opens it.
-    if (entry && canPriceCheck(entry)) priceCheck(entry, { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 })
+    if (canPriceCheck(entry)) priceCheck(entry, { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 })
   } else if (e.key === 'Enter') {
     e.preventDefault()
-    if (selected.value) run(selected.value)
-  } else if (e.key.toLowerCase() === 'f' && e.ctrlKey && !e.shiftKey && !e.altKey) {
-    const entry = itemEntry()
-    if (entry) {
-      e.preventDefault()
-      findInStash(entry.name)
-    }
-  } else if (e.key.toLowerCase() === 'c' && e.ctrlKey && e.shiftKey && !e.altKey) {
-    const entry = itemEntry()
-    if (entry) {
-      e.preventDefault()
-      copyName(entry.name)
-    }
+    // Held down: one trade tab, not one per repeat.
+    if (selected.value && !e.repeat) run(selected.value)
+  } else if (e.code === 'KeyF' && e.ctrlKey && !e.shiftKey && !e.altKey && itemEntry()) {
+    e.preventDefault()
+    if (!e.repeat) findInStash(itemEntry()!.name)
+  } else if (e.code === 'KeyC' && e.ctrlKey && e.shiftKey && !e.altKey && itemEntry()) {
+    e.preventDefault()
+    if (!e.repeat) copyName(itemEntry()!.name)
   } else if (e.key === 'Escape') {
     // Main takes Esc first in the app; this is for the browser.
     e.stopPropagation()
