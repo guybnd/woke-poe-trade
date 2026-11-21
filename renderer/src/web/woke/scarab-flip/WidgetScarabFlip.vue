@@ -51,7 +51,7 @@
             </span>
           </div>
           <div v-for="r in buy" :key="r.name" class="w-row" :class="$style.buyGrid" @contextmenu="rowMenu($event, itemName(r))">
-            <FlipName :name="r.name" :item="itemName(r)" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
+            <FlipName :name="r.name" :item="itemName(r)" :type="family.ninjaType" :rare-cheap="'rareCheap' in r && r.rareCheap" :source="'weightSource' in r ? r.weightSource : undefined" />
             <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
             <span class="text-right w-up w-num">+{{ amount(r.profitEach) }}c</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
@@ -100,7 +100,7 @@
             <span v-if="hasVolume" class="text-right" :title="SUPPLY_TITLE">Supply</span>
           </div>
           <div v-for="r in rareCheap" :key="r.name" class="w-row" :class="$style.rareGrid" @contextmenu="rowMenu($event, r.name)">
-            <FlipName :name="r.name" :item="r.name" :rare-cheap="r.rareCheap" :source="r.weightSource" />
+            <FlipName :name="r.name" :item="r.name" :type="family.ninjaType" :rare-cheap="r.rareCheap" :source="r.weightSource" />
             <WPrice :chaos="r.chaos" :divine="divine" class="text-right" />
             <span class="text-right w-dim w-num">1 in {{ Math.round(1 / r.share).toLocaleString('en-US') }}</span>
             <span v-if="hasVolume" class="text-right">{{ supplyLevel(r.supplyPerDay) ?? '' }}</span>
@@ -123,7 +123,7 @@ export default { widget: widgetScarabFlipSpec }
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch, withDirectives } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -329,7 +329,7 @@ const verdictSub = computed(() => {
 const profitTitle = computed(() => {
   const { inputs } = method.value
   if (method.value.id === 'upgrade') return `What each item you put in makes: the price of the next tier after your sell discount, minus ${inputs} of this one, divided by ${inputs}.`
-  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & investments.'
+  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & flips.'
   return `What each item you put in makes: the return of a recipe, minus its ${inputs} items, divided by ${inputs}.`
 })
 
@@ -389,6 +389,8 @@ const FlipName = defineComponent({
   props: {
     name: { type: String, required: true },
     item: { type: String, required: true },
+    // The poe.ninja row type, for the tooltip and its menu.
+    type: { type: String, default: undefined },
     rareCheap: { type: Boolean, default: false },
     source: { type: String as PropType<WeightSource>, default: undefined }
   },
@@ -397,7 +399,8 @@ const FlipName = defineComponent({
       const icon = gameIcon(p.item)
       return h('span', { class: 'flex items-center gap-1 min-w-0', title: p.item }, [
         icon ? h('img', { src: icon, style: 'width: 20px; height: 20px; object-fit: contain; flex: none;', alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }) : null,
-        h('span', { class: 'w-trunc' }, shortName(p.name)),
+        // The name carries the item tooltip; the chips after it keep their own hints.
+        withDirectives(h('span', { class: 'w-trunc' }, shortName(p.name)), [[vItemTip, { name: p.item, type: p.type }]]),
         p.rareCheap
           ? h('i', { class: 'fas fa-star w-warn', style: 'flex: none; font-size: calc(11px * var(--w-text-scale, 1));', title: 'Exceptionally rare and cheap: it may rise later, so think before flipping it' })
           : null,

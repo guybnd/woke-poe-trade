@@ -39,7 +39,7 @@
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
-              <div :class="$style.title">
+              <div v-item-tip="groupTip(selected.group)" :class="$style.title">
                 <WIcon :src="ninjaIcon(selected.group.type, selected.group.name) ?? ninjaArt(selected.group.type, selected.group.name)" size="lg" />
                 <span :class="rarityClass(selected.group.type)">{{ selected.group.name }}</span>
                 <span class="w-dim" :class="$style.small">{{ kindLabel(selected.group.type, selected.group.name) }}</span>
@@ -88,7 +88,7 @@
               </div>
             </template>
             <template v-else-if="selected?.kind === 'item'">
-              <div :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
+              <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
               <p class="w-dim">{{ snapshot ? "poe.ninja has no price for this. Rares, bases, flasks and cluster jewels aren't in the saved prices." : 'No saved prices yet, so this has no price here.' }}</p>
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
@@ -143,7 +143,7 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -303,7 +303,8 @@ function gameItems (): BaseType[] {
 function tipOf (entry: Entry) {
   if (entry.kind === 'price') return groupTip(entry.group)
   if (entry.kind === 'item') return { name: entry.info.refName }
-  if (entry.kind === 'lookup') return entry.card.tip ?? null
+  // A card about an item (a Viscera, a gem, a div card) shows that item.
+  if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromName(entry.card.title ?? entry.card.name)
   return null
 }
 

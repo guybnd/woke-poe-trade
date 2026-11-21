@@ -25,6 +25,8 @@ async function rightClickGivesStrip (page: Page, row: Locator, name: string | Re
   await expect(menu).toBeVisible()
   await expect(menu).toContainText(name)
   await expect(menu.getByRole('menuitem', { name: 'Price check' })).toBeVisible()
+  // The item's own menu: the window around it doesn't add its entries.
+  await expect(menu.getByRole('menuitem', { name: /window/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(menu).toBeHidden()
 }

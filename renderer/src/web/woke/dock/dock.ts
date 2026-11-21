@@ -81,8 +81,10 @@ export interface DockEntry {
 
 // Fixed order, so icons don't jump around as they come and go.
 export const DOCK_ORDER = [
-  'toolkit', 'claude', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'farming', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap', 'session-story',
-  'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'league-invest', 'scarab-flip', 'wealthy-exile', 'loot-filter', 'wickerman',
+  // Retired (modules.ts RETIRED_MODULES), out of the icon lists until they come
+  // back: 'farming' sat after 'mechanics', 'league-invest' after 'market'.
+  'toolkit', 'claude', 'trade', 'campaign', 'run-timer', 'lab', 'lab-gems', 'challenges', 'mechanics', 'drop-counter', 'stacked-decks', 'boss-runs', 'death-recap', 'session-story',
+  'map-scan', 'essence-scan', 'trade-live', 'atlas', 'regex-library', 'market', 'scarab-flip', 'wealthy-exile', 'loot-filter', 'wickerman',
   // Last, where they sat before they were listed: an icon missing here can't
   // be brought back once dismissed (dismissedIcons, Settings › Icon row).
   'pob-builds', 'net-worth'

@@ -3,7 +3,7 @@
 // module pages edit the same fields, so the two can't disagree.
 import type { Config } from '@/web/Config'
 import type { Widget } from '@/web/overlay/widgets'
-import { MODULES, isModuleOn, isWidgetTypeOn } from '../modules'
+import { MODULES, isModuleOn, isRetiredWidgetType, isWidgetTypeOn } from '../modules'
 import { normalizeKey } from '../ui/hotkey-context'
 import { MAP_CHECK_DEFAULT_KEY } from '../shortcuts'
 import { MAP_MODS_TYPE, initMapModsWidget } from '../map-mods/widget'
@@ -154,6 +154,8 @@ export function hotkeyFields (config: Config): HotkeyField[] {
     const off = !isWidgetTypeOn(config, w.wmType)
     // Net worth's page and module exist only while the stash reader is on.
     if (w.wmType === 'woke-net-worth' && off) continue
+    // Retired tools (modules.ts) have no page or switch to turn them back on.
+    if (isRetiredWidgetType(w.wmType)) continue
     const group = moduleNameFor(w.wmType)
     if (spec) {
       for (const [prop, label] of spec.keys) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, ...field(w, prop) })

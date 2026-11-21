@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.page">
     <w-setting-section title="League">
-      <w-setting-row label="League" hint="Price check, market, investments, lab gems, trade searches and farming all use this one.">
+      <w-setting-row label="League" hint="Price check, market, lab gems, trade searches and sessions all use this one.">
         <w-select v-if="leagueOptions.length" :model-value="config.leagueId ?? ''" :options="leagueOptions" @update:model-value="config.leagueId = $event" />
         <span v-else-if="leagues.isLoading.value" class="w-dim">Loading leagues…</span>
         <span v-else class="w-dim">Couldn't load the league list</span>
@@ -15,7 +15,7 @@
       </w-setting-row>
       <!-- woke: the log-reading tools only know the English game text (WOKEPOET-91). -->
       <p v-if="config.language !== 'en'" class="text-xs" style="color: var(--w-warn); margin: 0;" data-qa="log-language-warning">
-        <i class="fas fa-exclamation-triangle" /> Tools that read the game's log (campaign, run timer, trades, death recap, farming, league mechanics) know English game text only.
+        <i class="fas fa-exclamation-triangle" /> Tools that read the game's log (campaign, run timer, trades, death recap, drop counter, league mechanics) know English game text only.
         With the game in another language they still follow zone changes and map counts, but miss zone names, level-ups, boss splits, whispers, deaths and the death recap's map list.
       </p>
       <w-setting-row v-if="config.language === 'cmn-Hant'" label="Realm">

@@ -963,7 +963,8 @@ test('on screen: Betrayal, the slots worth having', async ({ overlay }) => {
   await saveAround(overlay, 'hl-betrayal', [w.locator('[data-w-panel]').first()], 1280)
 })
 
-test('market: league-start investments', async ({ overlay }) => {
+// League investments is retired for now (modules.ts RETIRED_MODULES).
+test.skip('market: league-start investments', async ({ overlay }) => {
   await livePrices(overlay)
   await overlay.boot({
     overlayActive: true,

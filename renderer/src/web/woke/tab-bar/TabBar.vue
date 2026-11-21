@@ -79,7 +79,7 @@
           </label>
           <div v-if="priceGroups.length" :class="$style.prices">
             <div :class="$style.head">Prices</div>
-            <button v-for="g in priceGroups" :key="groupKey(g)" :class="$style.priceRow" @click="openSearch(g.name)">
+            <button v-for="g in priceGroups" :key="groupKey(g)" v-item-tip="groupTip(g)" :class="$style.priceRow" @click="openSearch(g.name)">
               <WIcon :src="ninjaIcon(g.type, g.name) ?? undefined" size="md" />
               <span :class="[$style.rowName, rarityClass(g.type)]">{{ g.name }}</span>
               <span :class="$style.priceSub">{{ g.variants.length > 1 ? `${g.variants.length} prices` : g.variants[0].variant }}</span>
@@ -200,7 +200,7 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { registry } from '@/web/overlay/widget-registry'
 import { AppConfig, pushHostConfig } from '@/web/Config'
 import { appIconUrl } from '../ui/app-icon'
-import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
+import { MODULES, ensureWokeConfig, isRetiredWidgetType, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
@@ -208,9 +208,9 @@ import { MAX_UI_SIZE, MIN_UI_SIZE, nudgeUiSize, uiSize } from '../ui/ui-size'
 import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
+import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
-import { groupKey, rarityClass, searchPrices } from '../search/search'
+import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
 
@@ -647,7 +647,8 @@ const launcherQuery = computed(() => query.value.trim().replace(/\s+/g, ' ').toL
 // Every tool: what's placed, what isn't yet, and what's switched off.
 const launcherAll = computed(() => launcherEntries(
   registry.widgets
-    .filter(({ widget }) => widget.instances === 'multi' && widget.type !== 'stash-search')
+    // Retired tools (modules.ts) aren't offered at all, not even switched off.
+    .filter(({ widget }) => widget.instances === 'multi' && widget.type !== 'stash-search' && !isRetiredWidgetType(widget.type))
     .map(({ widget }) => ({ type: widget.type, name: typeName(widget.type) })),
   tabs.value,
   wmType => !isWidgetTypeOn(AppConfig(), wmType),

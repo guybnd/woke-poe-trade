@@ -1,6 +1,6 @@
 <template>
   <div class="m-4 flex flex-col gap-2" data-testid="new-item-search">
-    <div>
+    <div data-no-item-tip="the heading of the item being searched, which the player is hovering in game">
       <div v-if="query.name" class="text-base text-orange-400">{{ query.name }}</div>
       <div class="text-base">{{ query.type }}</div>
     </div>

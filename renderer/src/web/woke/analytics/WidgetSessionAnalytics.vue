@@ -25,7 +25,7 @@
         <!-- ===== Strategies (A1) ===== -->
         <template v-else-if="tab === 'strategies'">
           <WEmpty v-if="!rows.length" :art="{ mechanic: 'map' }">
-            Maps show here after you end a session in Farming.
+            Strategies came from Farming sessions. Farming is retired for now, so only past sessions show here.
           </WEmpty>
           <template v-else>
             <div>
@@ -34,7 +34,7 @@
               </div>
               <button v-for="row in rows" :key="row.key" class="w-row px-0 w-full text-left" :class="[$style.stratGrid, row.key === selectedRow?.key ? $style.sel : '']"
                 @click="selectedKey = row.key" @contextmenu="strategyMenu($event, row)">
-                <span class="w-trunc">
+                <span class="w-trunc" data-no-item-tip="a strategy's name; some are named after the card or item they farm">
                   <WIcon v-if="row.kind === 'boss'" mechanic="maven" title="Boss run" class="mr-1" />{{ row.strategy }}
                 </span>
                 <span class="text-right w-num w-dim">{{ row.kind === 'boss' ? row.units.length : row.maps }}<span v-if="row.kind === 'boss'" class="w-faint text-xs"> k</span></span>
@@ -114,7 +114,7 @@
               <button v-for="sum in sessionList" :key="sum.s.id" class="w-row px-0 w-full text-left w-focusable" :class="$style.sessGrid" @click="openId = sum.s.id"
                 @contextmenu="sessionMenu($event, sum.s)" @keydown.delete.prevent="deleteSession(sum.s)">
                 <span class="w-trunc w-dim">{{ formatSessionDate(sum.s.startedAt) }}</span>
-                <span class="w-trunc">{{ sum.s.strategy || 'Unnamed' }}<i v-if="sum.s.imported" class="fas fa-box-archive w-faint text-xs ml-1" title="From Farming's old history: totals only" /></span>
+                <span class="w-trunc" data-no-item-tip="a strategy's name; some are named after the card or item they farm">{{ sum.s.strategy || 'Unnamed' }}<i v-if="sum.s.imported" class="fas fa-box-archive w-faint text-xs ml-1" title="From Farming's old history: totals only" /></span>
                 <span class="text-right w-num">{{ sum.s.maps }}</span>
                 <span class="text-right w-num w-dim">{{ formatDuration(sum.s.durationMs) }}</span>
                 <span class="text-right w-num" :class="(sum.profit ?? 0) >= 0 ? 'w-up' : 'w-down'">{{ maybe(sum.profit, true) }}</span>

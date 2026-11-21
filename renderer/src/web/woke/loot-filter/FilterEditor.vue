@@ -122,7 +122,7 @@
           </div>
           <template v-for="(r, i) in lad.rows" :key="r.tiers[0].tier">
             <div v-if="lad.cut === i" :class="$style.cut"><span />Hidden below this line<span /></div>
-            <div v-if="r.section && r.section !== lad.rows[i - 1]?.section" :class="$style.sectionHead">{{ r.section }}</div>
+            <div v-if="r.section && r.section !== lad.rows[i - 1]?.section" v-item-tip="itemRefFromName(r.section)" :class="$style.sectionHead">{{ r.section }}</div>
             <div class="w-focusable" role="button" tabindex="0" :class="[$style.ladderRow, { [$style.numbersMode]: !lad.axis && hasNumbers, [$style.ladderStack]: hasStacks, [$style.active]: r.tiers.some(t => t.tier === selTier), [$style.off]: r.tiers.every(t => t.disabled), [$style.hiddenRow]: !r.shown, [$style.dropOk]: dragOver === r.tiers[0].tier }]"
               :data-tiers="r.tiers.map(t => t.tier).join(' ')" @click="pickRow(r.tiers)" @contextmenu="tierMenu($event, r.tiers[0])" @keydown.enter.self="pickRow(r.tiers)" @keydown.space.self.prevent="pickRow(r.tiers)"
               @dragover="r.tiers.length === 1 && onDragOver(r.tiers[0], $event)" @dragleave="dragOver = dragOver === r.tiers[0].tier ? null : dragOver" @drop="r.tiers.length === 1 && onDrop(r.tiers[0], $event)">
@@ -407,7 +407,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip } from '../ui'
+import { WPanel, WButton, WSelect, WField, WTabs, WToggle, WListItem, WChip, WEmpty, WInfo, WKbd, WBanner, WSkeleton, agoPhrase, openMenu, toast, useCopy, vItemTip, itemRefFromName } from '../ui'
 import { useWindowKeys } from '../ui/window-keys'
 import { copyText } from '../ui/copy'
 import LabelPreview from './LabelPreview.vue'

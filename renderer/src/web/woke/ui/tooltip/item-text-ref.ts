@@ -40,3 +40,11 @@ export function itemRefFromText (text: string, lookup: Lookup = ITEM_BY_REF): It
   }
   return null
 }
+
+// A heading or title that is exactly one item's name: its ref, else null. Unlike
+// itemRefFromText, "Sapphire Ring, Ruby Ring" or "Big Ruby Ring" isn't read as
+// the base at its end.
+export function itemRefFromName (text: string, lookup: Lookup = ITEM_BY_REF): ItemTipRef | null {
+  const ref = itemRefFromText(text, lookup)
+  return ref && !ref.variant && ref.name === text.replace(/\s+/g, ' ').trim() ? ref : null
+}

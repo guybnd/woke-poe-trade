@@ -140,7 +140,7 @@ test('flips: the lifeforce cost set in settings changes the panel, and blank goe
 
   await overlay.widget('menu').locator('.fa-cog').click()
   const settings = overlay.widget('settings')
-  await settings.getByText('Market & investments', { exact: true }).first().click()
+  await settings.getByText('Market & flips', { exact: true }).first().click()
   const input = settings.locator('[data-setting="Lifeforce per item for Harvest rerolls"] input')
   // The panel stays mounted but hidden while settings are open.
   await input.fill('100')

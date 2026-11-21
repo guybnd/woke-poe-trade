@@ -12,7 +12,7 @@
 
     <div v-if="picks.length" :class="$style.picks">
       <span class="w-dim text-xs">Searched</span>
-      <WChip v-for="p in picks" :key="p.key" clickable :title="`Take ${p.item.name} off the ground`" @click="emit('drop-pick', p.key)">
+      <WChip v-for="p in picks" :key="p.key" v-item-tip="{ ...itemRefFromText(p.item.name) ?? { name: p.item.name }, note: 'Click to take it off the ground' }" clickable :title="`Take ${p.item.name} off the ground`" @click="emit('drop-pick', p.key)">
         {{ p.item.name }}<template v-if="p.item.gear"> · {{ p.rarity }}</template> <i class="fas fa-times" />
       </WChip>
     </div>
@@ -32,7 +32,7 @@
         </template>
         <span v-for="(d, i) in side.placed" :key="d.shown.drop.id" :class="[$style.drop, { [$style.ghost]: d.shown.visibility === 'Hide', [$style.differs]: d.differs, [$style.picked]: d.shown.drop.id >= PICK_ID }]"
           :style="{ left: `${d.rect.x}px`, top: `${d.rect.y}px`, animationDelay: `${i * 14}ms` }"
-          :title="describe(d.shown)" @click="clickDrop(d.shown)" @contextmenu="dropMenu($event, d.shown)">
+          v-item-tip="dropTip(d.shown)" :title="dropTip(d.shown) ? undefined : describe(d.shown)" @click="clickDrop(d.shown)" @contextmenu="dropMenu($event, d.shown)">
           <LabelPreview :text="d.shown.drop.label" :actions="[]" :style-override="d.shown.look" :visibility="d.shown.visibility" :extras="false"
             :scale="SCALE" :default-text="defaultTextColour(d.shown.drop.facts)" />
         </span>
@@ -60,7 +60,8 @@
 
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, reactive, ref, shallowRef, watch } from 'vue'
-import { WBanner, WButton, WChip, WInfo, WSegmented, WSelect, WSkeleton, WToggle, openMenu, toast } from '../ui'
+import { WBanner, WButton, WChip, WInfo, WSegmented, WSelect, WSkeleton, WToggle, itemRefFromName, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
+import type { ItemTipRef } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
@@ -259,6 +260,17 @@ function makeSides () {
 
 function ruleName (d: ShownDrop): string {
   return d.type ? ruleLabel(d.type, d.tier) : 'no rule (shows by default)'
+}
+
+// The drop's item tooltip, with which rule shows it underneath.
+const dropTips = new WeakMap<ShownDrop, ItemTipRef | null>()
+function dropTip (d: ShownDrop): ItemTipRef | null {
+  if (dropTips.has(d)) return dropTips.get(d)!
+  const f = d.drop.facts
+  const ref = itemRefFromName(f.name) ?? (f.baseType ? itemRefFromName(f.baseType) : null)
+  const tip = ref && { ...ref, note: describe(d) }
+  dropTips.set(d, tip)
+  return tip
 }
 
 function describe (d: ShownDrop): string {

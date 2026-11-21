@@ -69,7 +69,6 @@ export const HIGHLIGHTS = [
       { label: 'Boss runs', module: 'boss-runs', shot: 'tour-boss-runs', focus: [600, 140, 1040], text: 'Every boss costed from entry and drops, per run and per hour, with a luck check.', alt: 'Boss runs window: Uber Atziri loot, profit per run and the luck check' },
       { label: 'Prices', module: 'market', shot: 'hl-market-prices', focus: [295, 20, 1135], text: 'Every poe.ninja category in one window, with the last 7 days. Movers and a watchlist are in the next tabs.', alt: 'Market window on Currency: categories down the side, each item with its value and 7-day line' },
       { label: 'Lab gems', module: 'lab-gems', shot: 'hl-lab-gems', focus: [300, 100, 900], text: 'What each Divine Font roll is worth today, by gem colour and level.', alt: 'Lab gems window: value of red, green and blue gems at each level and quality' },
-      { label: 'Investments', module: 'league-invest', shot: 'hl-invest', focus: [100, 30, 920], text: 'What rose most reliably from this day in past leagues, split across your budget.', alt: 'League investments window: a suggested split of a 5 divine budget, and items ranked by how often they rose' },
       { label: 'Stacked decks', module: 'stacked-decks', shot: 'hl-stacked-decks', focus: [710, 300, 760], text: 'Open decks and it counts the cards from your game log: what you spent, what you got and the result, priced.', alt: 'Stacked decks card: 8 opened, 24c spent, The Doctor drawn, result +4.9 div' }
     ]
   },

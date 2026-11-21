@@ -2,7 +2,7 @@
   <!-- woke: PoE mode puts the same parts in a 2x2 grid: name | poe.ninja, scope and chips | numbers. -->
   <div class="filter-name" :class="{ 'w-poe-head': poe }">
     <div class="filter-name-main">
-      <div class="filter-name-title">
+      <div class="filter-name-title" data-no-item-tip="the price check's own item, which the player is already hovering in game">
         <!-- woke: with a Generic/Base choice, clicking the name switches it: the category, or this base type. -->
         <!-- woke: a cluster jewel's title picks another size and type (WOKEPOET-366). -->
         <cluster-type-pick v-if="clusterSize && stats" :item="item" :filters="filters" :stats="stats" :own-size="clusterSize" />
