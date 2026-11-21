@@ -11,6 +11,8 @@ import type { Rates, Sale, SalesReply } from './sales'
 
 const reply = shallowRef<SalesReply | null>(null)
 const reading = shallowRef(false)
+// The last ask main couldn't answer (the stash reader off).
+const failed = shallowRef<SalesReply['error']>(null)
 let loadedFor: string | null = null
 
 const ninja = usePoeninja()
@@ -18,6 +20,7 @@ const ninja = usePoeninja()
 export const salesReply = computed(() => reply.value)
 export const sales = computed<Sale[]>(() => reply.value?.sales ?? [])
 export const salesReading = computed(() => reading.value)
+export const salesFailed = computed(() => failed.value)
 
 export const rates = computed<Rates>(() => {
   // Read so a new price download values again.
@@ -55,7 +58,13 @@ export async function loadSales (league: string | null, read: 'none' | 'manual' 
   try {
     const r = await hostRequest('trade-history', { league, read }, 60_000).catch(() => null)
     if (loadedFor !== league) return
-    if (ok(r)) reply.value = r
+    // Another league's reply (a read for it was under way) isn't this one's.
+    if (ok(r) && r.league === league) {
+      reply.value = r
+      failed.value = null
+    } else if (!r && read === 'manual') {
+      failed.value = { kind: 'failed', message: "Couldn't read your sales. Is the stash reader on (Settings › Modules)?" }
+    }
   } finally {
     if (read === 'manual') reading.value = false
   }

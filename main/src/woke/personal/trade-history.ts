@@ -10,7 +10,7 @@
 import path from 'path'
 import { dataDir, leagueName, readJson, writeAtomic, writeQueue } from '../data-files'
 import { RateLimiter } from './rate-limit'
-import { POE_SITE, isSignedOut } from './stash-reader'
+import { POE_SITE } from './stash-reader'
 import type { Fetcher } from './stash-reader'
 
 export interface Sale {
@@ -29,6 +29,8 @@ export interface Sale {
   gemLevel?: number
   quality?: number
   mapTier?: number
+  // The biggest linked group, when 5 or more (a 6L unique prices apart).
+  links?: number
   price: { amount: number, currency: string }
 }
 
@@ -63,8 +65,9 @@ export interface SalesDeps {
 
 // Quiet reads at most this often.
 export const AUTO_EVERY_MS = 30 * 60 * 1000
-// Manual reads closer together than this answer from the file.
-export const MANUAL_GAP_MS = 60 * 1000
+// Manual reads closer together than this answer from the file: the limit
+// allows 15 calls in 3 hours, shared with your browser.
+export const MANUAL_GAP_MS = 5 * 60 * 1000
 // Sales kept per league, newest first.
 export const MAX_SALES = 5000
 
@@ -97,6 +100,16 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[1]) : undefined
 }
 
+function biggestLinks (sockets: unknown): number {
+  if (!Array.isArray(sockets)) return 0
+  const groups = new Map<number, number>()
+  for (const s of sockets as Raw[]) {
+    const g = num(s?.group)
+    if (g != null) groups.set(g, (groups.get(g) ?? 0) + 1)
+  }
+  return Math.max(0, ...groups.values())
+}
+
 export function parseSale (e: unknown): Sale | null {
   if (!e || typeof e !== 'object') return null
   const r = e as Raw
@@ -127,6 +140,8 @@ export function parseSale (e: unknown): Sale | null {
   if (quality) sale.quality = quality
   const tier = property(item, 'Map Tier')
   if (tier) sale.mapTier = tier
+  const links = biggestLinks(item.sockets)
+  if (links >= 5) sale.links = links
   return sale
 }
 
@@ -138,10 +153,12 @@ export function parseHistory (body: string): Sale[] | null {
   return list.map(parseSale).filter((s): s is Sale => s != null)
 }
 
-// New sales in, by id; newest first; the oldest past MAX_SALES dropped.
+// New sales in, by id and time (an item sold again is another sale);
+// newest first; the oldest past MAX_SALES dropped.
+const saleKey = (s: Sale) => `${s.id}|${s.at}`
 export function mergeSales (old: Sale[], fresh: Sale[]): Sale[] {
-  const byId = new Map(old.map(s => [s.id, s]))
-  for (const s of fresh) byId.set(s.id, s)
+  const byId = new Map(old.map(s => [saleKey(s), s]))
+  for (const s of fresh) byId.set(saleKey(s), s)
   return [...byId.values()].sort((a, b) => b.at - a.at).slice(0, MAX_SALES)
 }
 
@@ -150,6 +167,9 @@ const emptyCache = (league: string): SalesCache => ({ version: 1, league, readAt
 export class TradeHistory {
   private limiter: RateLimiter
   private running: Promise<SalesReply> | null = null
+  private runningLeague: string | null = null
+  // When a call last went out (index.ts tells the overlay after one).
+  lastFetchAt = 0
   private lastTry = 0
   private lastAuto = 0
   private error: SalesError | null = null
@@ -181,7 +201,9 @@ export class TradeHistory {
   // 'none' answers from the file. 'auto' reads when the last quiet read is
   // AUTO_EVERY_MS old; 'manual' when the last read is MANUAL_GAP_MS old.
   async read (league: string, mode: SalesReadMode): Promise<SalesReply> {
-    if (this.running) return await this.running
+    // A read under way for this league answers this one too; one for
+    // another league leaves this one to the file.
+    if (this.running) return this.runningLeague === league ? await this.running : await this.reply(league)
     const now = this.deps.now()
     if (this.stopped || mode === 'none') return await this.reply(league)
     if (mode === 'auto' && now - this.lastAuto < AUTO_EVERY_MS) return await this.reply(league)
@@ -192,7 +214,8 @@ export class TradeHistory {
       if (mode === 'manual') this.setError(league, { kind: 'rate-limited', message: 'pathofexile.com asks to wait before reading your sales again.', retryAt: now + wait })
       return await this.reply(league)
     }
-    this.running = this.fetch(league, mode).finally(() => { this.running = null })
+    this.runningLeague = league
+    this.running = this.fetch(league, mode).finally(() => { this.running = null; this.runningLeague = null })
     return await this.running
   }
 
@@ -204,7 +227,9 @@ export class TradeHistory {
   private async fetch (league: string, mode: SalesReadMode): Promise<SalesReply> {
     const now = this.deps.now()
     this.lastTry = now
-    if (mode === 'auto') this.lastAuto = now
+    this.lastFetchAt = now
+    // Any read counts for the quiet ones: a hideout right after a Refresh doesn't call again.
+    this.lastAuto = now
     this.limiter.record(now)
     let r
     try {
@@ -215,7 +240,9 @@ export class TradeHistory {
     }
     this.limiter.update(r.status, r.headers, this.deps.now())
     if (this.stopped) return await this.reply(league)
-    if (isSignedOut(r)) {
+    // Only a 401 or a redirect to the login: this call's 403s say nothing
+    // about the login, and signing out would stop the whole stash reader.
+    if (r.status === 401 || (r.status >= 300 && r.status < 400)) {
       this.setError(league, { kind: 'signed-out', message: 'Signed out of pathofexile.com. Sign in again in Settings › Game & league.' })
       this.deps.signedOut?.()
       return await this.reply(league)

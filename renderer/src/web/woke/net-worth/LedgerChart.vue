@@ -14,7 +14,7 @@
     <!-- Purchases (spend.ts): a dashed line, so a drop that isn't a loss reads as one. -->
     <span v-for="m in spends" :key="'s' + m.at" :class="$style.spend" :style="{ left: m.x + '%' }" />
     <!-- Sales (sales.ts): a gold dot on the line where each sold. -->
-    <span v-for="m in saleDots" :key="'d' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%' }" />
+    <span v-for="(m, i) in saleDots" :key="'d' + i + ':' + m.at" :class="$style.sale" :style="{ left: m.x + '%', top: m.y + '%' }" />
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item

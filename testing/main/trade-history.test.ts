@@ -79,7 +79,7 @@ describe('reads', () => {
     expect(fs.readdirSync(dir)).toEqual(['Covens.json'])
   })
 
-  it('a manual read within a minute of the last answers from the file', async () => {
+  it('a manual read within 5 minutes of the last answers from the file', async () => {
     const { th, calls, advance } = setup([ok(), ok()])
     await th.read('Covens', 'manual')
     advance(MANUAL_GAP_MS - 1000)
@@ -103,13 +103,45 @@ describe('reads', () => {
     const { th, calls, advance } = setup(Array.from({ length: 20 }, () => ok()))
     for (let i = 0; i < 20; i++) {
       await th.read('Covens', 'manual')
-      advance(61_000)
+      advance(MANUAL_GAP_MS + 1000)
     }
     // 10 in 10 minutes allowed: 5 used; 15 in 3 hours: 7.
     expect(calls.length).toBeLessThanOrEqual(7)
     const last = await th.read('Covens', 'manual')
     expect(last.error?.kind).toBe('rate-limited')
     expect(last.error?.retryAt).toBeGreaterThan(Date.parse('2026-11-21T12:00:00Z'))
+  })
+
+  it('a hideout right after a Refresh does not call again', async () => {
+    const { th, calls, advance } = setup([ok(), ok()])
+    await th.read('Covens', 'manual')
+    advance(MANUAL_GAP_MS + 1000)
+    await th.read('Covens', 'auto')
+    expect(calls).toHaveLength(1)
+  })
+
+  it("a read under way for another league never answers this league's", async () => {
+    let release: (r: HttpReply) => void = () => {}
+    const t = Date.parse('2026-11-21T12:00:00Z')
+    const th = new TradeHistory({ fetch: async () => await new Promise<HttpReply>(resolve => { release = resolve }), now: () => t, dir: () => dir })
+    const a = th.read('Covens', 'manual')
+    const b = await th.read('Standard', 'manual')
+    expect(b.league).toBe('Standard')
+    expect(b.sales).toEqual([])
+    release(ok())
+    expect((await a).league).toBe('Covens')
+  })
+
+  it('a 403 from this call is a failure, not a sign-out', async () => {
+    const { th, signedOut } = setup([{ status: 403, headers: {}, body: '{"error":{"code":6,"message":"Forbidden"}}' }])
+    const r = await th.read('Covens', 'manual')
+    expect(r.error?.kind).toBe('failed')
+    expect(signedOut()).toBe(0)
+  })
+
+  it('an item sold again is another sale', () => {
+    const s = (at: number) => ({ id: 'a', at } as Sale)
+    expect(mergeSales([s(1)], [s(2)])).toHaveLength(2)
   })
 
   it('signed out: says so and tells the reader', async () => {

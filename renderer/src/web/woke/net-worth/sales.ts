@@ -2,6 +2,8 @@
 // window: what each sold for in chaos, its type, totals per range and type,
 // and which sales fall in a refresh. Pure: no Vue, no requests.
 
+import { itemKey } from './valuation'
+
 // What main sends (trade-history.ts Sale).
 export interface Sale {
   id: string
@@ -17,6 +19,7 @@ export interface Sale {
   gemLevel?: number
   quality?: number
   mapTier?: number
+  links?: number
   price: { amount: number, currency: string }
 }
 
@@ -166,11 +169,26 @@ export function salesInWindow (sales: Sale[], from: number | null, to: number): 
   return sales.filter(s => s.at <= to && (from == null ? s.at > to - 3_600_000 : s.at > from))
 }
 
-// Removed lines that a sale explains, by name: those rows give way to the
-// sale's own row. Returns the keys of the lines matched.
-export function matchedLines (lines: Array<{ key: string, name: string, dir: 'add' | 'remove' }>, sales: Sale[]): Set<string> {
-  const names = new Set(sales.map(s => s.name || s.typeLine))
-  return new Set(lines.filter(l => l.dir === 'remove' && names.has(l.name)).map(l => l.key))
+// The stash's key for a sale's item (valuation.ts itemKey), to find its line.
+export function saleKey (s: Sale): string {
+  return itemKey({ name: s.name, typeLine: s.typeLine, baseType: s.baseType, frame: s.frameType, stack: s.stack, icon: s.icon, gemLevel: s.gemLevel, quality: s.quality, mapTier: s.mapTier, corrupted: s.corrupted, links: s.links })
+}
+
+// The change list's lines with the sold items taken out of their removed
+// lines, by item and count: 10 scarabs sold out of 60 gone leaves 50 (and
+// their share of the chaos). Added lines are never touched.
+export function withoutSold<L extends { key: string, count: number, chaos: number, dir: 'add' | 'remove' }> (lines: L[], sales: Sale[]): L[] {
+  if (!sales.length) return lines
+  const sold = new Map<string, number>()
+  for (const s of sales) { const k = saleKey(s); sold.set(k, (sold.get(k) ?? 0) + s.stack) }
+  const out: L[] = []
+  for (const l of lines) {
+    const n = l.dir === 'remove' ? sold.get(l.key) ?? 0 : 0
+    if (!n) { out.push(l); continue }
+    if (n >= l.count) continue
+    out.push({ ...l, count: l.count - n, chaos: l.chaos * (l.count - n) / l.count })
+  }
+  return out
 }
 
 // Ctrl+Space: sales whose name has every word of the query.

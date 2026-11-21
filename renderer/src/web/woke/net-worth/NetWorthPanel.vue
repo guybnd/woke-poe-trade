@@ -1,6 +1,6 @@
 <template>
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
-    :hotkey="config.hotkey" :busy="status?.running === true" :stale="!!status?.error && !!v">
+    :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : status?.running === true" :stale="view === 'sales' ? !!salesError : !!status?.error && !!v">
     <template #actions>
       <!-- Your stash or your sales (pick C). -->
       <TextTabs v-model="view" :options="VIEW_OPTIONS" :class="$style.viewTabs" />
@@ -11,14 +11,15 @@
       <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" title="Sections to show" aria-label="Sections to show" @click="openSections" />
     </template>
     <template v-if="view === 'sales' && salesError" #banner>
-      <WBanner :tone="salesError.kind === 'rate-limited' ? 'warn' : 'error'">{{ salesErrorLine }}</WBanner>
+      <WBanner :tone="salesError?.kind === 'rate-limited' ? 'warn' : 'error'">{{ salesErrorLine }}</WBanner>
     </template>
     <template v-else-if="view !== 'sales' && status?.error && !showPicker" #banner>
-      <WBanner :tone="status.error.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
+      <WBanner :tone="status?.error?.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
     </template>
 
     <div v-if="view === 'sales'" :class="$style.body">
-      <SalesView :divine="divine" :range="config.salesRange" @range="config.salesRange = $event" />
+      <WEmpty v-if="!status?.account && !sales.length" icon="fas fa-coins">Sign in under Settings › Game & league, then press Refresh.</WEmpty>
+      <SalesView v-else :divine="divine" :range="config.salesRange" @range="config.salesRange = $event" />
       <div class="w-dim text-xs" :class="$style.foot">
         <span>pathofexile.com sends your last 100 sales; older ones stay here once read</span>
         <span><template v-if="salesReadLine">Sales {{ salesReadLine }} · </template>poe.ninja · {{ ninjaAge }}</span>
@@ -235,7 +236,7 @@ import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
 import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, openMenu, toast, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
-import { agoPhrase, formatAmount } from '../ui/format'
+import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
 import { isWidgetTypeOn } from '../modules'
@@ -263,9 +264,9 @@ import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
-import { inRange, marketText, matchedLines, saleChaos, saleName, salesInWindow, totals } from './sales'
+import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
-import { loadSales, marketOf, rates as saleRates, sales, salesReading, salesReply } from './sales-store'
+import { loadSales, marketOf, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
 
 const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
 
@@ -725,18 +726,21 @@ const groupSalesOf = computed(() => {
     const first = g.reads[0]
     const last = g.reads[g.reads.length - 1]
     const list = first == null ? [] : salesInWindow(sales.value, readBefore.value.get(first) ?? null, last)
-    const hide = matchedLines(g.lines, list)
-    out.set(g.key, { sales: list, lines: hide.size ? g.lines.filter(l => !hide.has(l.key)) : g.lines })
+    out.set(g.key, { sales: list, lines: withoutSold(g.lines, list) })
   }
   return out
 })
 const groupSales = (g: ChangeGroup) => groupSalesOf.value.get(g.key) ?? { sales: [], lines: g.lines }
-const salesError = computed(() => salesReply.value?.error ?? null)
+// A wait that's over isn't shown; the reader off says so.
+const salesError = computed(() => {
+  const e = salesReply.value?.error ?? salesFailed.value
+  return e && !(e.kind === 'rate-limited' && e.retryAt != null && e.retryAt <= nowMinute.value) ? e : null
+})
 const salesErrorLine = computed(() => {
   const e = salesError.value
   if (!e) return ''
   if (e.kind === 'rate-limited' && e.retryAt) {
-    const min = Math.max(1, Math.ceil((e.retryAt - Date.now()) / 60_000))
+    const min = Math.max(1, Math.ceil((e.retryAt - nowMinute.value) / 60_000))
     return `pathofexile.com allows few trade history reads. Try again in ${min} min.`
   }
   return e.message

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byType, inRange, marketText, matchedLines, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket } from '@/web/woke/net-worth/sales'
+import { byType, inRange, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket } from '@/web/woke/net-worth/sales'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { salesLookup } from '@/web/woke/search/lookups/sales'
 
@@ -87,13 +87,25 @@ describe('sales in a refresh', () => {
     expect(salesInWindow([a, b, c], null, NOW - 0.5 * H)).toEqual([b])
   })
 
-  it("matches a sale to its item's removed line by name, never an added one", () => {
+  it('takes sold items out of their removed line by item and count, never an added one', () => {
     const lines = [
-      { key: 'hh', name: 'Headhunter', dir: 'remove' as const },
-      { key: 'div', name: 'Divine Orb', dir: 'add' as const },
-      { key: 'x', name: 'Exalted Orb', dir: 'remove' as const }
+      { key: 'Headhunter Leather Belt', count: 1, chaos: 8000, dir: 'remove' as const },
+      { key: 'Divine Orb', count: 40, chaos: 8000, dir: 'add' as const },
+      { key: 'Ambush Scarab', count: 60, chaos: 600, dir: 'remove' as const },
+      { key: 'Vaal Grace|L20|Q20', count: 1, chaos: 50, dir: 'remove' as const }
     ]
-    expect([...matchedLines(lines, [sale({ frameType: 3, name: 'Headhunter' }), sale({ typeLine: 'Divine Orb' })])]).toEqual(['hh'])
+    const out = withoutSold(lines, [
+      sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt' }),
+      sale({ typeLine: 'Divine Orb' }),
+      sale({ typeLine: 'Ambush Scarab', stack: 10 }),
+      sale({ frameType: 4, typeLine: 'Vaal Grace', gemLevel: 20, quality: 20, corrupted: true })
+    ])
+    expect(out.map(l => [l.key, l.count, l.chaos])).toEqual([
+      ['Divine Orb', 40, 8000],
+      ['Ambush Scarab', 50, 500],
+      // A corrupted gem is another item.
+      ['Vaal Grace|L20|Q20', 1, 50]
+    ])
   })
 
   it('searches by every word', () => {

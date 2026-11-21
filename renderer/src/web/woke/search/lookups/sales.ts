@@ -1,7 +1,7 @@
 // Your sales (Net worth's trade history): "sold" or "sales" for the totals and
 // latest sales; an item's name for when and for how much you sold it.
 import { NET_WORTH_TYPE } from '../../net-worth/widget'
-import { inRange, saleChaos, saleName, searchSales, totals } from '../../net-worth/sales'
+import { NINJA_CURRENCY, inRange, saleChaos, saleName, searchSales, totals } from '../../net-worth/sales'
 import type { Rates, Sale } from '../../net-worth/sales'
 import type { Lookup, LookupCard, LookupRow } from './types'
 
@@ -31,8 +31,9 @@ export function salesLookup (sales: Sale[] | null): Lookup {
     if (!sales?.length) return []
     const rates: Rates = { chaos: 1 }
     if (ctx.divine) rates.divine = ctx.divine
-    for (const id of ['exalted', 'mirror']) {
-      const c = ctx.price(id === 'exalted' ? 'Exalted Orb' : 'Mirror of Kalandra')
+    // The same currencies the Net worth window prices.
+    for (const [id, name] of Object.entries(NINJA_CURRENCY)) {
+      const c = ctx.price(name)
       if (c) rates[id] = c
     }
     const cards: LookupCard[] = []

@@ -342,8 +342,9 @@ function startReader (ctx: PersonalContext): () => void {
     // New sales tell the overlay; a skipped read (too soon) says nothing.
     const league = reader.league
     if (league && reader.account) {
+      const before = sales.lastFetchAt
       sales.read(league, 'auto').then((r) => {
-        if (live && r.readAt != null && r.readAt >= Date.now() - 60_000) ctx.broadcast('trade-history', r)
+        if (live && sales.lastFetchAt !== before) ctx.broadcast('trade-history', r)
       }).catch(() => {})
     }
     const run = reader.readIfDue()
