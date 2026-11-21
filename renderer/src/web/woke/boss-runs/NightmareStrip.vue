@@ -16,6 +16,7 @@
         <span :title="c.name">{{ c.short }}</span>
         <span :class="$style.bar"><i :class="(c.profit ?? c.loot) >= 0 ? $style.barUp : $style.barDown" :style="{ width: barWidth(c) }" /></span>
         <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b>
+        <span :class="$style.vault" :title="c.vault ? vaultTitle(c.vault) : undefined" :data-nightmare-vault="c.id">{{ c.vault ? `+${chaos(c.vault.value)} ${c.vault.short}` : '' }}</span>
       </template>
     </div>
     <button v-if="open" type="button" :class="$style.gridToggle" :aria-expanded="gridOpen" data-nightmare-grid @click="gridOpen = !gridOpen">
@@ -46,6 +47,12 @@
               </template>
             </td>
           </tr>
+          <tr v-if="cols.some(c => c.vault)" :class="$style.sep" data-nightmare-vault-row>
+            <td class="w-dim" :title="`${vaultChance}% of maps spawn their quadrant's vault; ~typical pick of its four rewards`">Vault {{ vaultChance }}%</td>
+            <td v-for="c in cols" :key="c.id" :class="$style.est" :title="c.vault ? vaultTitle(c.vault) : undefined">
+              <template v-if="c.vault">~{{ chaos(c.vault.value) }}<div :class="$style.vname">{{ c.vault.short }}</div></template>
+            </td>
+          </tr>
           <tr :class="$style.sep">
             <td class="w-dim">Loot</td>
             <td v-for="c in cols" :key="c.id" :class="estimated && $style.est">{{ estimated ? '~' : '' }}{{ chaos(c.loot) }}</td>
@@ -62,13 +69,14 @@
     </div>
     <div v-if="open && gridOpen" :class="$style.note">
       <template v-if="estimated">~ is an estimate: no drop rates are published. {{ perKill }} fragments a kill, % = copies a kill; the unique's 5% is a 3.29 guide's figure.</template>
+      <template v-if="cols.some(c => c.vault)"> Vault: {{ vaultChance }}% of maps spawn their boss's quadrant vault ({{ NIGHTMARE_VAULT_SOURCE }}) × its ~typical pick; counted in loot and profit.</template>
       Fragments a kill and your kill log live in Boss runs › Nightmare.
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, shallowRef } from 'vue'
 import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
@@ -79,6 +87,8 @@ import type { BossPrefs, DropRow } from './calc'
 import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, nightmareBosses, UBER_FRAGMENTS } from './nightmare'
 import { BOSS_RUNS_TYPE } from './widget'
 import type { BossRunsWidget } from './widget'
+import { loadVaults, nightmareVaultValue, NIGHTMARE_VAULT_SOURCE, shortName, typicalPick, vaultChanceOf } from '../vaults/vaults'
+import type { VaultTable } from '../vaults/vaults'
 
 const open = useFold('nightmare-strip', true)
 const gridOpen = useFold('nightmare-grid', false)
@@ -121,7 +131,14 @@ const results = computed(() => {
     // Same map cost for all five, so loot ranks them even without a map price.
     .sort((a, b) => b.loot - a.loot)
 })
-const estimated = computed(() => results.value.some(r => r.estimated))
+// The Templar Vault each map spawns about half the time (woke/vaults).
+const vaultTable = shallowRef<VaultTable | null>(null)
+onMounted(() => { loadVaults().then(t => { vaultTable.value = t }).catch(() => {}) })
+const vaultChance = computed(() => vaultChanceOf(prefs.value.nightmareVaultChance))
+function vaultTitle (v: { name: string, typical: number | null, chance: number }) {
+  return `${v.name}: ${v.chance}% of maps × ~${chaos(v.typical)} typical pick`
+}
+const estimated = computed(() => results.value.some(r => r.estimated) || cols.value.some(c => c.vault))
 
 // Column heads: five fit side by side in the price check.
 const SHORT: Record<string, string> = {
@@ -138,6 +155,10 @@ const copies = (d: DropRow) => (d.chance ?? 0) * d.qty
 const cols = computed(() => results.value.map(r => {
   const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
   const u = r.drops.find(d => d.name === map.unique)
+  const price = (name: string, variant?: string) => px.value.price(name, variant)
+  const v = nightmareVaultValue(vaultTable.value, r.boss.id, prefs.value.nightmareVaultChance, price)
+  const vault = v ? { name: v.vault.name, short: shortName(v.vault), value: v.value, typical: typicalPick(v.vault, price), chance: v.chance } : null
+  const extra = vault?.value ?? 0
   return {
     id: r.boss.id,
     name: r.boss.name.replace(/ Map$/, ''),
@@ -145,10 +166,11 @@ const cols = computed(() => results.value.map(r => {
     favoured: map.favoured,
     drops: new Map(r.drops.map(d => [d.name, d])),
     unique: u ? { name: u.name, pct: pct(copies(u)), estimate: u.rateSource === 'estimate', price: u.price } : null,
-    loot: r.loot,
-    profit: r.entryMissing.length ? null : r.profit
+    vault,
+    loot: r.loot + extra,
+    profit: r.entryMissing.length ? null : r.profit + extra
   }
-}))
+}).sort((a, b) => b.loot - a.loot))
 
 // Dearest fragment first.
 const fragRows = computed(() => UBER_FRAGMENTS
@@ -179,11 +201,13 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .wrap { overflow-x: auto; margin-top: 3px; }
 .fold { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: var(--w-fs-sm); }
 .title { color: var(--w-gold); font-family: var(--w-caps-face); }
-.bars { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto; gap: 3px 8px; align-items: center; margin-top: 4px; font-size: var(--w-fs-xs); }
+.bars { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto auto; gap: 3px 8px; align-items: center; margin-top: 4px; font-size: var(--w-fs-xs); }
 .bar { height: 7px; border-radius: var(--w-r-sm); background: var(--w-panel-2); overflow: hidden; }
 .bar i { display: block; height: 100%; }
 .barUp { background: var(--w-up); }
 .barDown { background: var(--w-down); }
+.vault { color: var(--w-gold); font-size: var(--w-fs-xs); white-space: nowrap; }
+.vname { color: var(--w-faint); font-size: var(--w-fs-xs); }
 .gridToggle { align-self: flex-start; margin-top: 4px; color: var(--w-faint); font-size: var(--w-fs-xs); }
 .gridToggle:hover { color: var(--w-fg); }
 /* Fixed columns, every map cell centred: headers, chances, unique, loot and

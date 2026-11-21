@@ -223,6 +223,9 @@ import { NET_WORTH_TYPE } from '../net-worth/widget'
 import { DOCS as NET_WORTH_DOCS, glanceKey, isGlance } from '../net-worth/glance'
 import type { Glance } from '../net-worth/glance'
 import { visceraLookup } from './lookups/viscera'
+import { vaultLookup } from './lookups/vaults'
+import { loadVaults } from '../vaults/vaults'
+import type { VaultTable } from '../vaults/vaults'
 import { loadViscera, visceraByName, visceraItemText } from '../wickerman/viscera'
 import type { VisceraTable } from '../wickerman/viscera'
 import { HELP_QUERY, exampleCards } from './lookups/examples'
@@ -511,6 +514,12 @@ function loadVisceraTable () {
   if (visceraTable.value || !isModuleOn(AppConfig(), 'wickerman')) return
   loadViscera().then(t => { visceraTable.value = t }).catch(() => {})
 }
+// Templar Vaults: rewards from a data file, read on open.
+const vaultTable = shallowRef<VaultTable | null>(null)
+function loadVaultTable () {
+  if (vaultTable.value) return
+  loadVaults().then(t => { vaultTable.value = t }).catch(() => {})
+}
 // Net worth's per hour numbers: its small saved glance, read on open while it's on.
 const netWorthGlance = shallowRef<Glance | null>(null)
 function loadNetWorthGlance () {
@@ -612,6 +621,7 @@ const stopDataWatch = onSharedDataChange(() => {
   tipItems.value = null
   passives.value = null
   visceraTable.value = null
+  vaultTable.value = null
   treeLoads++
 })
 onBeforeUnmount(stopDataWatch)
@@ -620,7 +630,7 @@ const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['na
 const bossPrefs = computed(() => isModuleOn(AppConfig(), 'boss-runs') ? (toolOn<BossRunsWidget>(BOSS_RUNS_TYPE) ?? {} as BossRunsWidget) : null)
 // The calculator takes only whole currency words: "50d / 7", never "50 har".
 const exactCurrency = computed(() => { const n = currencyNamer(currencyNames.value); return (word: string) => n(word, true) })
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -1155,6 +1165,7 @@ function start (text: string) {
   whenIdle(loadBestiary)
   whenIdle(loadTree)
   whenIdle(loadVisceraTable)
+  whenIdle(loadVaultTable)
   whenIdle(loadNetWorthGlance)
   whenIdle(loadNights)
   whenIdle(loadZones)

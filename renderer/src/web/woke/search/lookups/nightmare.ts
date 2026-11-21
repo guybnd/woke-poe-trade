@@ -8,6 +8,8 @@ import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, NIGHTMARE_SO
 import { BOSS_RUNS_TYPE } from '../../boss-runs/widget'
 import { matchRank } from '../search'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
+import { nightmareVaultValue, NIGHTMARE_VAULT_SOURCE, shortName, vaultChanceOf } from '../../vaults/vaults'
+import type { VaultTable } from '../../vaults/vaults'
 
 // The boss behind each map, for searches by boss name (poedb, 3.30).
 const BOSS_NAMES: Record<string, string[]> = {
@@ -44,8 +46,14 @@ function evaluate (prefs: BossPrefs, ctx: LookupContext): BossResult[] {
     .sort((a, b) => b.loot - a.loot)
 }
 
-function note (prefs: BossPrefs): string {
-  return `~ = estimated: no drop rates are published. ${prefs.nightmareFrags ?? DEFAULT_FRAGMENTS_PER_KILL} fragments a kill, 80% from the ones each boss favours; the unique's 5% is a 3.29 guide's figure. % = copies a kill. Change it or log kills in Boss runs › Nightmare.`
+function note (prefs: BossPrefs, vaults: VaultTable | null): string {
+  const vault = vaults ? ` Loot includes the vault: ${vaultChanceOf(prefs.nightmareVaultChance)}% of maps spawn their boss's quadrant vault (${NIGHTMARE_VAULT_SOURCE}) × its ~typical pick.` : ''
+  return `~ = estimated: no drop rates are published. ${prefs.nightmareFrags ?? DEFAULT_FRAGMENTS_PER_KILL} fragments a kill, 80% from the ones each boss favours; the unique's 5% is a 3.29 guide's figure. % = copies a kill.${vault} Change it or log kills in Boss runs › Nightmare.`
+}
+
+// A map's vault share (null without the vault table).
+function vaultOf (r: BossResult, prefs: BossPrefs, vaults: VaultTable | null, ctx: LookupContext) {
+  return nightmareVaultValue(vaults, r.boss.id, prefs.nightmareVaultChance, ctx.price)
 }
 
 function actions (ctx: LookupContext): LookupAction[] {
@@ -55,21 +63,25 @@ function actions (ctx: LookupContext): LookupAction[] {
   return out
 }
 
-function overviewCard (results: BossResult[], prefs: BossPrefs, ctx: LookupContext): LookupCard {
+function overviewCard (all: BossResult[], prefs: BossPrefs, vaults: VaultTable | null, ctx: LookupContext): LookupCard {
   const mapPrice = ctx.price(NIGHTMARE_MAP)
-  const rows = results.map(r => {
+  const results = all
+    .map(r => ({ r, v: vaultOf(r, prefs, vaults, ctx) }))
+    .map(x => ({ ...x, loot: x.r.loot + (x.v?.value ?? 0) }))
+    .sort((a, b) => b.loot - a.loot)
+  const rows = results.map(({ r, v, loot }) => {
     const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
     const favoured = map.favoured.map(f => r.drops.find(d => d.name === f)!).map(d => `${short(d.name)} ${pct(d)}`)
     const u = r.drops.find(d => d.name === map.unique)
     return {
       cells: [
-        { text: r.boss.name.replace(/ Map$/, ''), sub: [...favoured, u ? `${u.name} ${pct(u)}` : ''].filter(Boolean).join(' · ') },
-        `${Math.round(r.loot)} c`
+        { text: r.boss.name.replace(/ Map$/, ''), sub: [...favoured, u ? `${u.name} ${pct(u)}` : '', v ? `${shortName(v.vault)} vault ~${Math.round(v.value)} c` : ''].filter(Boolean).join(' · ') },
+        `${Math.round(loot)} c`
       ],
-      chaos: r.entryMissing.length ? null : r.profit
+      chaos: r.entryMissing.length ? null : r.profit + (v?.value ?? 0)
     }
   })
-  const best = results[0]
+  const best = results[0]?.r
   return {
     id: 'nightmare:all',
     group: 'Bosses',
@@ -80,13 +92,15 @@ function overviewCard (results: BossResult[], prefs: BossPrefs, ctx: LookupConte
     sections: [
       { rows: [{ label: `${NIGHTMARE_MAP}, one price for all five`, chaos: mapPrice, item: { name: NIGHTMARE_MAP } }] },
       { label: 'Run it as', table: { head: ['Map · favoured drops', 'Loot', 'Profit'], priceAt: 2, rows } },
-      { text: [note(prefs)] }
+      { text: [note(prefs, vaults)] }
     ],
     actions: actions(ctx)
   }
 }
 
-function mapCard (r: BossResult, prefs: BossPrefs, ctx: LookupContext): LookupCard {
+function mapCard (r: BossResult, prefs: BossPrefs, vaults: VaultTable | null, ctx: LookupContext): LookupCard {
+  const v = vaultOf(r, prefs, vaults, ctx)
+  const extra = v?.value ?? 0
   const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
   const drops: LookupRow[] = [...r.drops]
     .sort((a, b) => b.value - a.value)
@@ -98,20 +112,21 @@ function mapCard (r: BossResult, prefs: BossPrefs, ctx: LookupContext): LookupCa
     }))
   const summary: LookupRow[] = [
     { label: `Entry: ${NIGHTMARE_MAP}`, chaos: r.entryMissing.length ? null : r.entry, item: { name: NIGHTMARE_MAP } },
-    { label: 'Loot per kill', chaos: r.loot },
-    { label: 'Profit per map', chaos: r.entryMissing.length ? null : r.profit }
+    ...(v ? [{ label: `${v.vault.name} · ${v.chance}% of maps, ~typical pick`, chaos: v.value }] : []),
+    { label: v ? 'Loot per map, with the vault' : 'Loot per kill', chaos: r.loot + extra },
+    { label: 'Profit per map', chaos: r.entryMissing.length ? null : r.profit + extra }
   ]
   return {
     id: `nightmare:${r.boss.id}`,
     group: 'Bosses',
     name: `${r.boss.name} (Nightmare)`,
-    sub: `${BOSS_NAMES[r.boss.id][0]} · ${r.entryMissing.length ? 'T17' : `${r.profit >= 0 ? '+' : ''}${Math.round(r.profit)} c a map`}`,
+    sub: `${BOSS_NAMES[r.boss.id][0]} · ${r.entryMissing.length ? 'T17' : `${r.profit + extra >= 0 ? '+' : ''}${Math.round(r.profit + extra)} c a map`}`,
     icon: 'fas fa-dragon',
     tip: { name: NIGHTMARE_MAP },
     sections: [
       { rows: summary },
       { label: 'Drops', rows: drops },
-      { text: [note(prefs)] }
+      { text: [note(prefs, vaults)] }
     ],
     actions: actions(ctx)
   }
@@ -133,19 +148,19 @@ export function nightmareDropSources (prefs: BossPrefs | null, ctx: LookupContex
 }
 
 // null: the Boss runs module is off, so no Nightmare cards.
-export function nightmareLookup (prefs: BossPrefs | null): Lookup {
+export function nightmareLookup (prefs: BossPrefs | null, vaults: VaultTable | null = null): Lookup {
   if (!prefs) return () => []
   return (query, ctx) => {
     const q = query.trim()
     if (q.length < 3) return []
     const p = { ...DEFAULT_PREFS, ...prefs }
-    if (OVERVIEW.test(q)) return [overviewCard(evaluate(p, ctx), p, ctx)]
+    if (OVERVIEW.test(q)) return [overviewCard(evaluate(p, ctx), p, vaults, ctx)]
     if (q.length < MIN_QUERY) return []
     const hits = NIGHTMARE_MAPS.filter(m => [m.name, m.name.replace(/ Map$/, ''), ...BOSS_NAMES[m.id]].some(n => { const r = matchRank(n, q); return r === 0 || r === 1 }))
     if (!hits.length) return []
     const results = evaluate(p, ctx)
     // "nightmare of" names every boss: the overview says it best.
-    if (hits.length > 2) return [overviewCard(results, p, ctx)]
-    return hits.slice(0, 2).map(m => mapCard(results.find(r => r.boss.id === m.id)!, p, ctx))
+    if (hits.length > 2) return [overviewCard(results, p, vaults, ctx)]
+    return hits.slice(0, 2).map(m => mapCard(results.find(r => r.boss.id === m.id)!, p, vaults, ctx))
   }
 }
