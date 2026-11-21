@@ -1,0 +1,41 @@
+---
+id: WOKEPOET-431
+title: Vault rewards and value in Ctrl+Space and the Nightmare check
+status: In Progress
+priority: Medium
+effort: M
+assignee: unassigned
+tags:
+  - feature
+createdBy: Agent
+updatedBy: claude-code@guy-pc
+history:
+  - type: activity
+    user: Agent
+    date: '2026-11-21T03:33:56.686Z'
+    comment: Created ticket.
+    id: a-2026-11-21t03-33-56-686z
+  - type: activity
+    user: claude-code@guy-pc
+    date: '2026-11-21T03:33:59.810Z'
+    comment: Claimed by claude-code@guy-pc
+    id: a-2026-11-21t03-33-59-810z
+  - type: status_change
+    from: Todo
+    to: In Progress
+    user: claude-code@guy-pc
+    date: '2026-11-21T03:33:59.810Z'
+needsAction: null
+claim:
+  holder: claude-code@guy-pc
+  claimedAt: '2026-11-21T03:33:59.810Z'
+  expiresAt: '2026-11-21T04:03:59.810Z'
+---
+The four 3.30 Templar Vaults (Zealot's, Scholar's, Arkhon's, Machinist's): each one's reward pool from poewiki, priced live from poe.ninja, with a ~typical-pick estimate (no weights or spawn chance are published).
+
+- Ctrl+Space: "vault" lists the overview and each vault; vault names find their card.
+- Nightmare map check: each map tagged with the vault its favoured fragments' pinnacle fight leads to (not added to profit); Arkhon's Vault also gives Nightmare Maps.
+- League update: data file + league-migration checklist step.
+
+Mockups: https://claude.ai/artifact/JRyG3cdwwonZFeuM6Lys6s
+Open: whether uber pinnacle kills spawn vaults (wiki silent).

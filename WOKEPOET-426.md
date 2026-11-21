@@ -42,6 +42,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T02:58:44.752Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-21T03:33:56.237Z'
+    comment: >-
+      Follow-up #697 merged: vaults (by area id) also out of Farming, Session
+      analytics, Net worth map count/time, drop counter, death recap. Name-added
+      areas stay Session story only (startup JS budget).
+    id: a-2026-11-21t03-33-56-237z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/694'
