@@ -232,23 +232,23 @@ function tone (diff: number): string {
   border: 10px solid transparent; border-image: url(/images/poe-ui/frame-thin.png) 11 / 10px round;
   background: url(/images/poe-ui/stone.png) center / cover, #221c15;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), inset 0 0 22px 6px rgba(0, 0, 0, 0.6);
-  color: #e8dcc4; font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: 14px; line-height: 20px;
+  color: #e8dcc4; font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: calc(14px * var(--w-text-scale, 1)); line-height: calc(20px * var(--w-text-scale, 1));
   zoom: calc(var(--w-ui-scale, 1) * var(--toast-scale, 1));
 }
 .title {
   height: 40px; margin: -10px -10px 0; padding: 0 76px; display: flex; align-items: center; justify-content: center; gap: 6px;
-  font-size: 18px; color: #e7d3a8; text-shadow: 0 1px 2px #000; white-space: nowrap;
+  font-size: calc(18px * var(--w-text-scale, 1)); color: #e7d3a8; text-shadow: 0 1px 2px #000; white-space: nowrap;
   background:
     url(/images/poe-ui/titlebar-left.png) left center / auto 100% no-repeat,
     url(/images/poe-ui/titlebar-right.png) right center / auto 100% no-repeat,
     url(/images/poe-ui/titlebar-middle.png) center / auto 100% repeat-x;
 }
 .titleName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.title small { flex: none; font-size: 13px; color: #a89670; }
+.title small { flex: none; font-size: calc(13px * var(--w-text-scale, 1)); color: #a89670; }
 .row { display: flex; align-items: center; gap: 14px; padding: 10px 6px 4px; }
 .lead { flex: none; }
-.time { font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: 44px; line-height: 1; color: #e3c27d; text-shadow: 0 2px 4px #000; }
-.delta { font-size: 13px; margin-top: 2px; white-space: nowrap; }
+.time { font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: calc(44px * var(--w-text-scale, 1)); line-height: 1; color: #e3c27d; text-shadow: 0 2px 4px #000; }
+.delta { font-size: calc(13px * var(--w-text-scale, 1)); margin-top: 2px; white-space: nowrap; }
 .label { color: #a2927a; }
 .bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 40px; flex: none; }
 .bars i { display: block; width: 9px; background: #5a4c3a; }
@@ -258,7 +258,7 @@ function tone (diff: number): string {
 .props > div { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
 .props > div > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rule { height: 1px; margin: 6px 24px 7px; background: linear-gradient(90deg, transparent, #8a7149, transparent); }
-.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 14px 2px 6px; font-size: 13px; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 14px 2px 6px; font-size: calc(13px * var(--w-text-scale, 1)); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .chip { border: 1px solid #5c4d39; padding: 0 6px; color: #cdbb98; background: rgba(0, 0, 0, 0.3); }
 .bad { color: var(--w-down, #e0675a); border-color: #6e3a32; }
