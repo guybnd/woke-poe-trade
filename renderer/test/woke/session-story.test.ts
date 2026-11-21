@@ -148,16 +148,17 @@ describe('areas on the skip list', () => {
   ]
   afterEach(() => { setSkipAreas(undefined) })
 
-  it('leaves a vault out of the maps, both times and its deaths, as a faint strip part', () => {
+  it('leaves a vault out of the maps and its deaths, and counts its time as out of maps', () => {
     const s = summarize(follow(VAULT_NIGHT).tracker.draft!)
     expect(s.maps.map(m => m.name)).toEqual(['Strand', 'Cemetery'])
     expect(s.mapMs).toBe(12 * 60_000)
-    // Hideout: 2 before Strand, 2 + 2 around the vault, 2 at the end; the vault's 2 are nowhere.
-    expect(s.otherMs).toBe(8 * 60_000)
+    // Out of maps: 2 before Strand, 2 + 2 around the vault, the vault's 2, 2 at the end.
+    expect(s.otherMs).toBe(10 * 60_000)
     // Hideout, Strand, hideout, vault, hideout, Cemetery, hideout: the strip still adds up to the clock.
     expect(s.strip.map(p => p.skipped ? 'vault' : p.map)).toEqual([null, 0, null, 'vault', null, 1, null])
     expect(s.strip.reduce((n, p) => n + p.ms, 0)).toBe(at('21:22:00') - at('21:00:00'))
-    expect(s.longestBreakMs).toBe(2 * 60_000)
+    // Hideout, vault, hideout between the two maps: one 6-minute break.
+    expect(s.longestBreakMs).toBe(6 * 60_000)
     expect(s.deathsAt).toEqual([])
   })
 

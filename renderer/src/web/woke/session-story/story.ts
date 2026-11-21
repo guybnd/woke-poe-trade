@@ -50,8 +50,8 @@ export interface StoryMap {
 export interface StripPart {
   ms: number
   map: number | null
-  // An area on the skip list (a vault): drawn faint, counted as neither map nor
-  // hideout time, so the strip still matches the clock.
+  // An area on the skip list (a vault): drawn faint, never a map; its time
+  // counts as time out of maps, with the hideout's.
   skipped?: boolean
 }
 
@@ -153,8 +153,11 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   d.segs.forEach((s, i) => {
     const end = i + 1 < d.segs.length ? d.segs[i + 1].at : endedAt
     const ms = Math.max(0, end - s.at)
-    // A vault counts as neither map nor hideout time: its own faint part.
+    // A vault isn't a map: its time counts with the hideout's (time out of
+    // maps), drawn as its own faint part.
     if (s.map && skip.has(s.key)) {
+      otherMs += ms
+      if (lastMap != null) maps[lastMap].otherMs += ms
       const prev = strip[strip.length - 1]
       if (prev?.skipped) prev.ms += ms
       else strip.push({ ms, map: null, skipped: true })
@@ -182,11 +185,18 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
     if (prev && !prev.skipped && prev.map === part) prev.ms += ms
     else strip.push({ ms, map: part })
   })
-  // Only gaps with a map on both sides: not the time before the first or after the last.
+  // Only gaps with a map on both sides: not the time before the first or after
+  // the last. Hideout and vault stretches next to each other are one break.
   let longestBreakMs = 0
-  strip.forEach((p, i) => {
-    if (p.map == null && !p.skipped && i > 0 && i < strip.length - 1) longestBreakMs = Math.max(longestBreakMs, p.ms)
-  })
+  let gap = 0
+  let afterMap = false
+  for (const p of strip) {
+    if (p.map != null) {
+      if (afterMap) longestBreakMs = Math.max(longestBreakMs, gap)
+      gap = 0
+      afterMap = true
+    } else gap += p.ms
+  }
   // Party members' level-ups are logged too: follow the first character
   // that levels, as the run timer does.
   const levelUps: Array<{ char: string, from: number, to: number }> = []
