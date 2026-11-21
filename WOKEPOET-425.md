@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-425
 title: 'Map toast: PoE 1 redesign, click to dismiss, resizable'
-status: In Progress
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Guy
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -30,6 +30,47 @@ history:
     date: '2026-11-21T02:19:39.317Z'
     selfAttested: true
     id: c-2026-11-21t02-19-39-317z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged #693: plaque look (Guy's B), click to dismiss, resizable
+      (chipScale), key chip with Dismiss, two review passes, CI green.
+    date: '2026-11-21T02:38:45.653Z'
+    completionComment: true
+    id: c-2026-11-21t02-38-45-653z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-21T02:38:45.653Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Map toast as Guy's pick B (stone plaque), click to dismiss, corner resize
+      saved, waits under the pointer, close key with Dismiss; card gear row
+      fixed.
+    completionComment: true
+    date: '2026-11-21T02:38:47.048Z'
+    id: c-2026-11-21t02-38-47-048z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T02:38:47.474Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/693'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy's ask (2026-11-21): redesign the post-map screen (map toast from Session story, #686/#688) in the PoE 1 look, with several mocks. Click on it dismisses it (it takes clicks on itself only, never blocks gameplay elsewhere, still auto-hides). Resizable while up, size saved.
 
