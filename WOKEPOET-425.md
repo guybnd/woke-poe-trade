@@ -14,6 +14,16 @@ history:
     user: Agent
     date: '2026-11-21T02:08:41.473Z'
     comment: Created ticket.
+    id: a-2026-11-21t02-08-41-473z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T02:11:12.428Z'
+    comment: >-
+      Mocks A-D with pick buttons:
+      https://claude.ai/artifact/9YEfnCCJHfBTdBLS2EiPS3 (db picks/current).
+      Building A (item tooltip) meanwhile. Guy added: show the close key on it
+      as a key chip.
+    id: a-2026-11-21t02-11-12-428z
 ---
 Guy's ask (2026-11-21): redesign the post-map screen (map toast from Session story, #686/#688) in the PoE 1 look, with several mocks. Click on it dismisses it (it takes clicks on itself only, never blocks gameplay elsewhere, still auto-hides). Resizable while up, size saved.
 
