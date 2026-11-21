@@ -31,7 +31,7 @@
               <template v-if="it.read.purchase">
                 <span class="w-dim"> · purchase</span><span v-if="it.read.spent" class="w-dim" title="Left out of profit as spent"> ({{ formatChaos(it.read.spent, it.read.rate) }} spent)</span>
               </template>
-              <span v-if="it.read.perHour != null" class="w-dim"> · {{ formatChaos(it.read.perHour, it.read.rate) }}/h</span>
+              <span v-if="it.read.perHour != null && !it.read.purchase" class="w-dim"> · {{ formatChaos(it.read.perHour, it.read.rate) }}/h</span>
             </span>
             <span class="text-right w-num" :class="it.read.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(it.read.chaos, it.read.rate) }}</span>
           </div>
@@ -145,9 +145,11 @@ async function readGains () {
   if (id === gainsId) gains.value = got
 }
 watch(() => [props.league, on.value] as const, () => { if (on.value) readGains() }, { immediate: true })
-// A read usually follows a map: look again when one is saved.
-watch(() => store.lastSaved.value, () => { if (on.value) readGains() })
-const reads = computed(() => incomeRows(gains.value.filter(g => inRange(g.at, props.range, props.now)), maps.value))
+// A read lands a few minutes after a map, and a purchase can be marked later
+// on the Net worth chart: look again each minute while the tab is open.
+watch(() => [store.lastSaved.value, props.now], () => { if (on.value) readGains() })
+// Purchases are worked out over every read, then cut to the range.
+const reads = computed(() => incomeRows(gains.value, maps.value).filter(r => inRange(r.at, props.range, props.now)))
 const items = computed(() => interleave(list.value, reads.value))
 const visible = computed(() => items.value.slice(0, limit.value))
 const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${formatChaos(chaos, rate)}`
