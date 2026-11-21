@@ -3,7 +3,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ITEM_BY_REF } from '@/assets/data'
 import { parseClipboard, ItemCategory, ItemRarity } from '@/parser'
-import { priceCheckInput, tradeQuery, uniqueBaseOf } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { priceCheckInput, tradeQuery, tradeSearch, uniqueBaseOf } from '@/web/woke/ui/tooltip/item-menu-logic'
+import { tradeStatusFor, tradeUrl } from '@/web/woke/search/search'
 import { closeMenu, menuState, offerMenuItem, openMenu } from '@/web/woke/ui/layer'
 import { loadGameData } from '../helpers/game-data'
 
@@ -70,6 +71,35 @@ describe('tradeQuery', () => {
     expect(tradeQuery({ name: 'Foulborn Headhunter' }, 'unique', hh)).toEqual({ name: 'Headhunter', type: 'Leather Belt' })
     expect(tradeQuery({ name: 'Dread Shell', base: 'Two-Stone Ring' }, 'item', undefined)).toEqual({ type: 'Two-Stone Ring' })
     expect(tradeQuery({ name: 'Cleave' }, 'gem', undefined)).toEqual({ type: 'Cleave' })
+  })
+
+  it('searches a unique map on the Map base with its map discriminator, as the price check does', () => {
+    const cortex = ITEM_BY_REF('UNIQUE', 'Cortex')![0]
+    const map = { name: { option: 'Cortex', discriminator: 'map' }, type: { option: 'Map', discriminator: 'map' } }
+    expect(tradeQuery({ name: 'Cortex' }, 'unique', cortex)).toEqual(map)
+    expect(tradeQuery({ name: 'Cortex' }, 'unique', undefined)).toEqual(map)
+    expect(tradeQuery({ name: 'Cortex' }, 'unique', cortex, false)).toEqual(map)
+    expect(tradeQuery({ name: 'Map' }, 'item', ITEM_BY_REF('ITEM', 'Map')![0])).toEqual({ type: { option: 'Map', discriminator: 'map' } })
+  })
+
+  it('searches a Foulborn unique for Foulborn copies only, and a plain unique without them', () => {
+    const hh = ITEM_BY_REF('UNIQUE', 'Headhunter')![0]
+    const only = (v: string) => ({ misc_filters: { filters: { foulborn_item: { option: v } } } })
+    expect(tradeSearch({ name: 'Foulborn Headhunter' }, 'unique', hh)).toEqual({ name: 'Headhunter', type: 'Leather Belt', filters: only('true') })
+    expect(tradeSearch({ name: 'Headhunter' }, 'unique', hh)).toEqual({ name: 'Headhunter', type: 'Leather Belt', filters: only('false') })
+    expect(tradeSearch({ name: 'Headhunter' }, 'unique', hh, true, true).filters).toEqual(only('true'))
+    expect(tradeSearch({ name: 'Cleave' }, 'gem', undefined)).toEqual({ type: 'Cleave' })
+  })
+
+  it("opens price check's listings: Instant buyout unless that setting is off, any online seller for exchange-only items", () => {
+    expect(tradeStatusFor(true)).toBe('securable')
+    expect(tradeStatusFor(undefined)).toBe('securable')
+    expect(tradeStatusFor(false)).toBe('available')
+    expect(tradeStatusFor(true, { exchangeable: true })).toBe('available')
+    expect(tradeStatusFor(true, { exchangeable: true, tradeTag: 'chaos' })).toBe('securable')
+    const url = decodeURIComponent(tradeUrl('Standard', { name: 'Headhunter', status: { option: 'securable' } }))
+    expect(url).toContain('"status":{"option":"securable"}')
+    expect(url).not.toContain('"online"')
   })
 
   it('searches a unique on several bases by name alone', () => {

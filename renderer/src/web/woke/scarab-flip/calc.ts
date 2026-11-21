@@ -1,13 +1,9 @@
-// Expected value of a flip: put in some items, get back a random one. Scarabs,
+// Expected value of a flip: put in some items, get back a random one. Threads,
 // catalysts and runegrafts go through vendor recipes; catalysts, delirium orbs,
 // fossils and essences through Harvest rerolls. Which is which: families.ts.
 import { median } from '../analytics/stats'
 import type { PriceItem } from '../market/types'
-import { SAMPLE_ROLLS } from './weights'
 
-// Scarabs: drop chance at or under this counts as exceptionally rare. The
-// sample has a clear gap: nothing falls between 0.10% and 0.51%.
-export const RARE_SHARE = 0.0015
 // A rare item is cheap when it costs under this part of a typical rare one.
 export const CHEAP_RATIO = 1 / 3
 // Under this much chaos traded a day, a price means nothing.
@@ -50,11 +46,6 @@ export interface FlipRecipe {
   // The weight before your own numbers, which the average is taken from: changing
   // one item mustn't move what an unmeasured one is worth. Missing: weightOf.
   listedOf?: (name: string) => ItemWeight | null
-}
-
-export function scarabWeight (name: string): ItemWeight | null {
-  const rolls = SAMPLE_ROLLS[name]
-  return rolls ? { weight: rolls, source: 'sample' } : null
 }
 
 export interface FlipRow {
@@ -402,9 +393,4 @@ export function flipOdds (model: FlipModel): Odds {
     jackpotOneIn: jackpotChance > 0 ? 1 / jackpotChance : null,
     withoutJackpot: saleValue - jackpots.reduce((n, r) => n + r.share * r.chaos * keep, 0)
   }
-}
-
-// "Harvest Scarab of Doubling" -> "Harvest of Doubling"
-export function shortScarab (name: string): string {
-  return name.replace(/(\S) Scarab/, '$1')
 }

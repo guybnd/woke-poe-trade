@@ -154,7 +154,8 @@ import type { CorruptedFilter, PriceItem } from '../market/types'
 import { pickRow } from '../shared/price-row'
 import { usePriceText } from '../shared/price'
 import { lookupRequest } from '../item-lookup/lookup'
-import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { tradeSearch, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { priceCheckTradeStatus } from '../shared/trade-status'
 import { canPriceCheck as canCheckByName, cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { ScreenPoint } from '../ui/tooltip/item-price-check'
 import ItemActions from './ItemActions.vue'
@@ -220,6 +221,9 @@ import { NET_WORTH_TYPE } from '../net-worth/widget'
 import { DOCS as NET_WORTH_DOCS, glanceKey, isGlance } from '../net-worth/glance'
 import type { Glance } from '../net-worth/glance'
 import { visceraLookup } from './lookups/viscera'
+import { flipsLookup } from './lookups/flips'
+import { SCARAB_FLIP_TYPE } from '../scarab-flip/widget'
+import type { ScarabFlipWidget } from '../scarab-flip/widget'
 import { vaultLookup } from './lookups/vaults'
 import { loadVaults } from '../vaults/vaults'
 import type { VaultTable } from '../vaults/vaults'
@@ -661,7 +665,13 @@ const knownItem = (ns: string, name: string) => !!ITEM_BY_REF(ns as BaseType['na
 const bossPrefs = computed(() => isModuleOn(AppConfig(), 'boss-runs') ? (toolOn<BossRunsWidget>(BOSS_RUNS_TYPE) ?? {} as BossRunsWidget) : null)
 // The calculator takes only whole currency words: "50d / 7", never "50 har".
 const exactCurrency = computed(() => { const n = currencyNamer(currencyNames.value); return (word: string) => n(word, true) })
-const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
+// The Flips panel's settings, while it's switched on.
+function flipsConfig (): ScarabFlipWidget | null {
+  const config = AppConfig()
+  if (!isWidgetTypeOn(config, SCARAB_FLIP_TYPE)) return null
+  return (config.widgets.find(w => w.wmType === SCARAB_FLIP_TYPE) as ScarabFlipWidget | undefined) ?? null
+}
+const lookups = computed(() => [calcLookup(exactCurrency.value), currencyLookup(currencyNames.value), countdownLookup, bossLookup, nightmareLookup(bossPrefs.value, vaultTable.value), vaultLookup(vaultTable.value), dropLookupWith(bossPrefs.value), cardLookup(cards.value, knownItem), recipeLookup, flipsLookup(flipsConfig()), craftLookup(craftData.value), bestiaryLookup(bestiaryData.value), gemLookup(gemTable.value, gemNames.value), vaalGemLookup, treeLookup(passives.value, keystoneGrants.value), (q: string, c: LookupContext) => ringAnointLookup(ringAnointList())(q, c), megaloLookup, pantheonLookup(pantheonData.value, zones.value ?? []), zoneLookup(zones.value, gemRewards.value), savedLookup(saved.value), betrayalLookup(betrayalOverrides), visceraLookup(isModuleOn(AppConfig(), 'wickerman') ? visceraTable.value : null), netWorthLookup(netWorthGlance.value), salesLookup(salesList.value), sessionStoryLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.live.value : null, isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.nights.value[0] ?? null : null), mapsLookup(isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nights.maps.value : []), webLookup])
 
 // Kept apart from the prices, so switching a tool doesn't rebuild them.
 const lookupTools = computed(() => new Set(wm.widgets.value.filter(w => isWidgetTypeOn(AppConfig(), w.wmType)).map(w => w.wmType)))
@@ -1019,7 +1029,7 @@ function tradeBeast (name: string) {
   }
   // The international site takes the English name, a regional one its own.
   const type = poeWebApi() === 'www.pathofexile.com' ? name : ITEM_BY_REF('CAPTURED_BEAST', name)?.[0]?.name ?? name
-  window.open(tradeUrl(league, { type }, getTradeEndpoint()))
+  window.open(tradeUrl(league, { type, status: priceCheckTradeStatus() }, getTradeEndpoint()))
 }
 
 // ---- recent lookups, saved with the window ----
@@ -1131,12 +1141,12 @@ function openTrade (entry: PriceEntry | ItemEntry) {
   // and a unique on several bases by name alone.
   const ns = info?.namespace ?? (entry.kind === 'price' ? nsOf(entry.group.type) : 'ITEM')
   const kind = ns === 'UNIQUE' ? 'unique' : ns === 'GEM' ? 'gem' : ns === 'DIVINATION_CARD' ? 'card' : 'item'
-  const q = tradeQuery({ name }, kind, info, AppConfig().language === 'en')
-  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn copies only.
-  const foulborn = kind === 'unique' && (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name)))
-  window.open(tradeUrl(league, foulborn ? { ...q, filters: FOULBORN_ONLY } : q, getTradeEndpoint()))
+  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn
+  // copies only. Any other unique: none of them.
+  const foulborn = isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name))
+  const q = tradeSearch({ name }, kind, info, AppConfig().language === 'en', foulborn)
+  window.open(tradeUrl(league, { ...q, status: priceCheckTradeStatus(info) }, getTradeEndpoint()))
 }
-const FOULBORN_ONLY = { misc_filters: { filters: { foulborn_item: { option: 'true' } } } }
 function findInStash (name: string) {
   Host.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'stash-search', text: JSON.stringify(name) } })
 }
