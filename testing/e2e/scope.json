@@ -84,6 +84,9 @@
    "renderer/src/web/price-check/",
    "renderer/src/web/woke/gem-versions/"
   ],
+  "glance-bar.spec.ts": [
+   "renderer/src/web/woke/session-story/"
+  ],
   "harvest-swap.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

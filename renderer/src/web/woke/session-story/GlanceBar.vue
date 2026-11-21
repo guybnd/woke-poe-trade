@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
-    <!-- While you're in a map: a thin bar, click-through while you play. With the
-         overlay open it can be dragged anywhere (and shows even outside a map). -->
+    <!-- While you're in a map: a thin bar, click-through while you play. While
+         Settings is open it can be dragged anywhere (and shows even outside a map). -->
     <div v-if="map || editing" :class="[$style.bar, { [$style.editing]: editing }]" :style="place" class="w-num" data-glance-bar role="status"
       :title="editing ? 'Drag to move' : undefined" @pointerdown="startDrag">
       <template v-if="map">
@@ -36,7 +36,7 @@ const props = defineProps<{
   // When you went in this time through the portal, and the map's time before that.
   since: number
   before: number
-  // The overlay is open: the bar takes the mouse and can be dragged.
+  // Settings is open: the bar takes the mouse and can be dragged.
   editing?: boolean
   // Where it sits: its top centre, as a share of the screen; null: top centre.
   pos?: { x: number, y: number } | null
