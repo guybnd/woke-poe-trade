@@ -40,7 +40,7 @@ describe('vaal it', () => {
     expect(r.ev).toBeCloseTo(0.625 * 119 + 0.125 * 483 + 0.1 * 180 + 0.025 * 119 + 0.125 * 15 - 1)
     expect(r.profit).toBeCloseTo(r.ev - 116)
     expect(r.gain + r.same + r.lose).toBeCloseTo(1)
-    expect(r.unpriced).toBe(false)
+    expect(r.unpriced).toBe(0)
   })
 
   it('uses the Vaal gem\'s own price for the Vaal form', () => {
@@ -51,7 +51,8 @@ describe('vaal it', () => {
     expect(r.cost).toBe(2)
     // Level 21 has no row: no price, counted as nothing and said so.
     expect(r.outcomes.find(o => o.id === 'level-up')!.chaos).toBeNull()
-    expect(r.unpriced).toBe(true)
+    // Level 21 and quality 10–19.
+    expect(r.unpriced).toBeCloseTo(0.25)
   })
 
   it('needs a clean and a corrupted 20/20 price', () => {
@@ -76,7 +77,7 @@ describe('vaal it in the search', async () => {
 
   it('answers "vaal <gem>" with the expected profit', () => {
     const [card] = vaalGemLookup('vaal tempest', ctx)
-    expect(card.name).toBe('Vaal Tempest Shield 20/20')
+    expect(card.name).toBe('Tempest Shield 20/20: Vaal it?')
     expect(card.sub).toMatch(/^\+\d+ c on average/)
     expect(card.sections[1].table!.rows).toHaveLength(6)
   })
@@ -101,5 +102,17 @@ describe('versions table, clean and corrupted side by side', async () => {
     expect(r20.delta).toBe(300 - 119)
     expect(rows[2].delta).toBe(483 - 119)
     expect(rows[0].firstOfLevel).toBe(false)
+  })
+})
+
+describe('vaal it search, narrow', async () => {
+  const { vaalGemLookup } = await import('@/web/woke/search/lookups/vaal-gem')
+  const gem = (name: string) => [['20/20', 20], ['20/20c', 18]].map(([variant, chaos]) => ({ type: 'SkillGem', name, variant: variant as string, chaos: chaos as number }))
+  const ctx = { price: () => null, items: [...gem('Arc'), ...gem('Arcane Cloak'), ...gem('Corrupting Fever')], tools: new Set<string>(), divine: 210, now: 0, league: null }
+  it('prefers names that start with the query, and leaves "corrupting ..." gem names alone', () => {
+    // Names that start with it, shortest first; "fever" deep inside a name doesn't count.
+    expect(vaalGemLookup('vaal arc', ctx).map(c => c.id)).toEqual(['vaal-gem:Arc', 'vaal-gem:Arcane Cloak'])
+    expect(vaalGemLookup('vaal fever', ctx).map(c => c.id)).toEqual(['vaal-gem:Corrupting Fever'])
+    expect(vaalGemLookup('corrupting fever', ctx)).toEqual([])
   })
 })

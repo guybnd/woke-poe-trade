@@ -5,7 +5,7 @@ import { listVersions } from '../../gem-versions/versions'
 import { vaalEv } from '../../gem-versions/vaal-ev'
 import type { Lookup, LookupCard, LookupContext } from './types'
 
-const QUERY = /^(?:vaal(?:ing)?|corrupt(?:ing)?)\s+(.{3,})$/i
+const QUERY = /^(?:vaal(?:ing)?|corrupt)\s+(.{3,})$/i
 const SKIP = /^(it|orb|orbs|gem|gems)$/i
 
 function signed (n: number): string {
@@ -22,9 +22,9 @@ export function vaalGemCard (name: string, ctx: LookupContext): LookupCard | nul
   return {
     id: `vaal-gem:${name}`,
     group: 'Vaal it?',
-    name: `Vaal ${name} 20/20`,
-    title: `Vaal ${name} 20/20?`,
-    sub: `${signed(r.profit)} on average · ${Math.round(r.gain * 100)}% gain, ${Math.round(r.lose * 100)}% lose`,
+    name: `${name} 20/20: Vaal it?`,
+    title: `${name} 20/20: Vaal it?`,
+    sub: `${signed(r.profit)}${r.unpriced ? '?' : ''} on average · ${Math.round(r.gain * 100)}% gain, ${Math.round(r.lose * 100)}% lose`,
     icon: 'fas fa-dice',
     tip: { name, type: 'SkillGem' },
     sections: [
@@ -46,6 +46,7 @@ export function vaalGemCard (name: string, ctx: LookupContext): LookupCard | nul
           }))
         }
       },
+      ...(r.unpriced ? [{ text: [`${Math.round(r.unpriced * 100)}% of outcomes have no poe.ninja price and count as 0.`] }] : []),
       { text: ['Community odds, 25% each: no change, Vaal form, level ±1, quality ±1 to 10 (max 23). poe.ninja prices.'] }
     ],
     actions: [{ label: 'Copy name', copy: name }]
@@ -60,9 +61,12 @@ export const vaalGemLookup: Lookup = (query, ctx) => {
   for (const i of ctx.items) {
     if (i.type === 'SkillGem' && !i.name.startsWith('Vaal ') && /^20\/20$/.test(i.variant)) names.add(i.name)
   }
-  return [...names]
+  const hits = [...names]
     .map(name => ({ name, rank: matchRank(name, q) }))
     .filter(h => h.rank >= 0 && h.rank < 2)
+  // "vaal arc": Arc itself, not Arcane Cloak too.
+  const best = hits.some(h => h.rank === 0) ? hits.filter(h => h.rank === 0) : hits
+  return best
     .sort((a, b) => a.rank - b.rank || a.name.length - b.name.length)
     .slice(0, 3)
     .map(h => vaalGemCard(h.name, ctx))

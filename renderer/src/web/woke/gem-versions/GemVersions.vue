@@ -168,7 +168,7 @@ function search (v: GemVersion) {
 .table td.cell:hover { background: var(--w-chip-ground); box-shadow: inset 0 0 0 1px var(--w-line-strong); }
 .corrupted, .vaal { color: var(--w-mod-corrupted); }
 .none { color: var(--w-faint); opacity: 0.5; }
-.table td.own { box-shadow: inset 0 0 0 1px var(--w-gold-hi); color: var(--w-gold-hi); }
+.table td.own, .table td.own:hover { box-shadow: inset 0 0 0 1px var(--w-gold-hi); color: var(--w-gold-hi); }
 .table td.on { background: var(--w-accent-soft); }
 .note { font-size: var(--w-fs-xs); white-space: nowrap; }
 .mark { color: var(--w-gold-hi); }

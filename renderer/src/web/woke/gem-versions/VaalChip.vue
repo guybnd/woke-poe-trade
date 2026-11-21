@@ -1,7 +1,7 @@
 <template>
-  <span v-if="r" ref="chip" :class="[$style.chip, r.profit >= 0 ? $style.good : $style.bad]" tabindex="0" data-vaal-chip
-    @mouseenter="show" @mouseleave="hide" @focus="show" @blur="hide">
-    Vaal 20/20 <b class="w-num">{{ signed(r.profit) }}</b>
+  <span v-if="r" ref="chip" :class="[$style.chip, r.unpriced ? $style.unsure : r.profit >= 0 ? $style.good : $style.bad]" tabindex="0" data-vaal-chip
+    @mouseenter="show" @mouseleave="hide" @focus="onFocus" @blur="hide">
+    Vaal 20/20 <b class="w-num">{{ signed(r.profit) }}{{ r.unpriced ? '?' : '' }}</b>
   </span>
   <Teleport to="body">
     <div v-if="r && open" ref="card" :class="[$style.card, 'w-pc-side', 'w-surface', 'w-corners']" :style="pos" role="tooltip" data-vaal-card>
@@ -32,6 +32,7 @@
           <tr><td>Average, minus 1 Vaal Orb</td><td /><td><w-price :chaos="r.ev" :divine="divine" /></td><td :class="tone(r.profit)">{{ signed(r.profit) }}</td></tr>
         </tfoot>
       </table>
+      <div v-if="r.unpriced" :class="$style.warn">{{ pct(r.unpriced) }} of outcomes have no poe.ninja price and count as 0.</div>
       <div :class="$style.foot">Community odds, 25% each: no change, Vaal form, level ±1, quality ±1 to 10 (max 23). poe.ninja prices.</div>
     </div>
   </Teleport>
@@ -70,7 +71,7 @@ const pos = shallowRef<Record<string, string>>({ visibility: 'hidden' })
 
 async function show () {
   open.value = true
-  pos.value = { visibility: 'hidden' }
+  pos.value = { visibility: 'hidden', left: '0', top: '0' }
   await nextTick()
   const b = chip.value?.getBoundingClientRect()
   const el = card.value
@@ -85,13 +86,26 @@ async function show () {
 function hide () {
   open.value = false
 }
+// Keyboard focus only: a click also focuses the chip, and the window getting
+// focus back would reopen the card with the mouse elsewhere.
+function onFocus (e: FocusEvent) {
+  if ((e.target as HTMLElement).matches(':focus-visible')) show()
+}
 
 // Never leave the card over the game.
 const wm = inject<WidgetManager | undefined>('wm', undefined)
 watch(() => wm?.active.value, (active) => { if (!active) hide() })
 watch(() => props.item, hide)
+watch(r, (v) => { if (!v) hide() })
+const onScroll = () => { if (open.value) hide() }
 window.addEventListener('blur', hide)
-onUnmounted(() => { window.removeEventListener('blur', hide) })
+document.addEventListener('scroll', onScroll, true)
+document.addEventListener('dragstart', onScroll, true)
+onUnmounted(() => {
+  window.removeEventListener('blur', hide)
+  document.removeEventListener('scroll', onScroll, true)
+  document.removeEventListener('dragstart', onScroll, true)
+})
 </script>
 
 <style module>
@@ -104,6 +118,8 @@ onUnmounted(() => { window.removeEventListener('blur', hide) })
 .good { color: var(--w-fg); background: color-mix(in srgb, var(--w-up) 12%, transparent); border-color: color-mix(in srgb, var(--w-up) 55%, transparent); }
 .good b { color: var(--w-up); }
 .bad b { color: var(--w-down); }
+.unsure b { color: var(--w-dim); }
+.warn { font-size: var(--w-fs-xs); color: var(--w-warn); }
 .card {
   position: fixed; z-index: 1001; width: 23rem; padding: var(--w-s2) var(--w-s3);
   background: var(--w-pc-window); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-md); box-shadow: var(--w-shadow);

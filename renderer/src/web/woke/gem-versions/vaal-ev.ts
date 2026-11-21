@@ -31,18 +31,19 @@ export interface VaalEv {
   gain: number
   same: number
   lose: number
-  // Some outcome had no price and counts as 0.
-  unpriced: boolean
+  // The chance of outcomes with no price, counted as 0.
+  unpriced: number
 }
 
 interface Priced { chaos: number | null, est?: string }
 
 /**
- * A corrupted version's price: its own row, else the best-priced corrupted
- * row at that level with no more quality (it can't be worth less than that).
+ * A corrupted version's price: its own row, else the corrupted row at that
+ * level with the most quality under it (it can't be worth less than that).
+ * A Vaal gem is always corrupted, whatever its variant says.
  */
 export function corruptedPrice (rows: GemVersion[], vaal: boolean, level: number, quality: number): Priced {
-  const at = rows.filter(r => r.vaal === vaal && r.corrupted && r.level === level)
+  const at = rows.filter(r => r.vaal === vaal && (r.corrupted || r.vaal) && r.level === level)
   const exact = at.find(r => r.quality === quality)
   if (exact) return { chaos: exact.chaos }
   const below = at.filter(r => r.quality < quality).sort((a, b) => b.quality - a.quality)[0]
@@ -115,6 +116,6 @@ export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm:
     gain,
     lose,
     same: Math.max(0, 1 - gain - lose),
-    unpriced: out.some(o => o.chaos == null)
+    unpriced: sum(o => o.chaos == null)
   }
 }
