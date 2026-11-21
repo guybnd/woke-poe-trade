@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 history:
   - type: activity
     user: Agent
@@ -24,6 +24,12 @@ history:
       Building A (item tooltip) meanwhile. Guy added: show the close key on it
       as a key chip.
     id: a-2026-11-21t02-11-12-428z
+  - type: comment
+    user: Guy
+    comment: Guy picked B (stone plaque); the key chip should say "Dismiss" next to it.
+    date: '2026-11-21T02:19:39.317Z'
+    selfAttested: true
+    id: c-2026-11-21t02-19-39-317z
 ---
 Guy's ask (2026-11-21): redesign the post-map screen (map toast from Session story, #686/#688) in the PoE 1 look, with several mocks. Click on it dismisses it (it takes clicks on itself only, never blocks gameplay elsewhere, still auto-hides). Resizable while up, size saved.
 
