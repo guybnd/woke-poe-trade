@@ -5,7 +5,7 @@
     <!-- The hover zone. While you resize it grows a wide margin, so dragging out
          past the old edge doesn't hand the mouse back to the game mid-drag. -->
     <div ref="el" :class="[$style.zone, resizing && $style.resizing]" data-map-toast-zone>
-    <div :class="[$style.toast, 'w-enter']" :style="sizeStyle" data-map-toast role="status"
+    <div :class="[$style.toast, 'w-enter', size?.h && $style.tall]" :style="sizeStyle" data-map-toast role="status"
       @pointerdown="onPointerDown" @click="onDomClick">
       <!-- The title bar is its handle: drag it to move the toast (the spot is kept). -->
       <div :class="$style.title" data-map-toast-handle title="Drag to move" @pointerdown="startMove">
@@ -18,7 +18,7 @@
             <span :class="tone(headDiff)">{{ signed(headDiff) }}</span> <span :class="$style.label">{{ headLabel }}</span>
           </div>
         </div>
-        <div v-if="chip.cmp.runs.length > 1" :class="$style.bars">
+        <div v-if="chip.cmp.runs.length > 1" :class="$style.bars" data-map-toast-bars>
           <i v-for="(ms, i) in chip.cmp.runs" :key="i" :class="{ [$style.now]: i === chip.cmp.runs.length - 1 }"
             :style="{ height: `${Math.max(8, ms / barTop * 100)}%` }" />
           <span v-if="chip.cmp.hourAvg != null" :class="$style.avg" :style="{ bottom: `${chip.cmp.hourAvg / barTop * 100}%` }" />
@@ -141,7 +141,12 @@ watch(() => props.chip, (c, old) => {
   if (!c) {
     armed.value = false
     // Closed mid-drag (you went into a map): keep the size it had got to.
-    if (resizing.value) { endResize?.(); if (props.size) emit('resize', props.size, true) }
+    // Closed mid-drag (you went into a map): save what it had got to.
+    if (resizing.value) {
+      endResize?.()
+      if (props.size) emit('resize', props.size, true)
+      else if (props.pos) emit('move', props.pos, true)
+    }
     resizing.value = false
   }
 })
@@ -175,6 +180,11 @@ function startResize (e: PointerEvent) {
   const box = toast.getBoundingClientRect()
   const w0 = box.width / zoom
   const h0 = box.height / zoom
+  // The height the content needs: a saved height (a min-height) taken off.
+  const saved = toast.style.minHeight
+  toast.style.minHeight = ''
+  const natural = toast.getBoundingClientRect().height / zoom
+  toast.style.minHeight = saved
   const x0 = e.clientX
   const y0 = e.clientY
   let s: ToastSize = { w: w0, h: props.size?.h }
@@ -183,8 +193,9 @@ function startResize (e: PointerEvent) {
   const move = (ev: PointerEvent) => {
     const w = w0 + (ev.clientX - x0) * 2 / zoom
     const h = h0 + (ev.clientY - y0) / zoom
-    // A height under what the content needs does nothing (it's a min-height).
-    s = clampToastSize({ w, h }) ?? { w: TOAST_WIDTH }
+    // Only a height past what the content needs is kept: a sideways drag, or
+    // one back up to the content, leaves the height to the content.
+    s = clampToastSize({ w, h: h > natural + 4 ? h : undefined }) ?? { w: TOAST_WIDTH }
     emit('resize', s, false)
   }
   const detach = () => {
@@ -321,7 +332,9 @@ function tone (diff: number): string {
 .time { font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: calc(44px * var(--w-text-scale, 1)); line-height: 1; color: #e3c27d; text-shadow: 0 2px 4px #000; }
 .delta { font-size: calc(13px * var(--w-text-scale, 1)); margin-top: 2px; white-space: nowrap; }
 .label { color: #a2927a; }
-.bars { position: relative; display: flex; align-items: flex-end; gap: 3px; align-self: stretch; min-height: 40px; max-height: 240px; flex: 0 1 auto; min-width: 0; }
+.bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 40px; flex: 0 1 auto; min-width: 0; }
+/* Made taller by its corner: the bars take the row's height. */
+.tall .bars { align-self: stretch; height: auto; min-height: 40px; }
 .bars i { display: block; width: 9px; flex: 0 1 9px; min-width: 3px; background: #5a4c3a; }
 .bars i.now { background: #e3c27d; }
 .avg { position: absolute; left: -3px; right: -3px; border-top: 1px dashed rgba(227, 194, 125, 0.7); }

@@ -4,7 +4,7 @@ import { test, expect } from './harness'
 test('dragging the toast corner makes it wider and taller, text the same size', async ({ overlay }) => {
   await overlay.boot({
     overlayActive: true,
-    widgets: [{ wmType: 'woke-session-story' }],
+    // The default config already has the session story widget.
     patch: c => {
       const w = c.widgets.find((w: { wmType: string }) => w.wmType === 'woke-session-story')
       w.chipPlace = 'center'
@@ -17,7 +17,12 @@ test('dragging the toast corner makes it wider and taller, text the same size', 
     '2026/11/05 15:01:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 83 area "MapWorldsStrand" with seed 7',
     '2026/11/05 15:01:01 3727812 cffb065b [INFO Client 25552] : You have entered Strand.',
     '2026/11/05 15:04:30 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1',
-    '2026/11/05 15:04:31 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.'
+    '2026/11/05 15:04:31 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.',
+    // A second map, so the toast has run bars.
+    '2026/11/05 15:05:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 83 area "MapWorldsStrand" with seed 8',
+    '2026/11/05 15:05:01 3727812 cffb065b [INFO Client 25552] : You have entered Strand.',
+    '2026/11/05 15:08:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1',
+    '2026/11/05 15:08:01 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.'
   ])
   const page = overlay.page
   const toast = page.locator('[data-map-toast]')
@@ -25,6 +30,9 @@ test('dragging the toast corner makes it wider and taller, text the same size', 
   const time = page.locator('[data-map-toast-time]')
   const fontBefore = await time.evaluate(el => el.getBoundingClientRect().height)
   const before = (await toast.boundingBox())!
+  const bars = page.locator('[data-map-toast-bars]')
+  // As designed until it is made taller.
+  expect((await bars.boundingBox())!.height).toBeCloseTo(40, 0)
 
   const grip = (await page.locator('[data-map-toast-grip]').boundingBox())!
   await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
@@ -37,5 +45,15 @@ test('dragging the toast corner makes it wider and taller, text the same size', 
   expect(after.height).toBeGreaterThan(before.height + 50)
   // Room, not zoom: the big time is the same size.
   expect(await time.evaluate(el => el.getBoundingClientRect().height)).toBeCloseTo(fontBefore, 0)
-  await expect(toast).toBeVisible()
+  // The bars take the new room.
+  expect((await bars.boundingBox())!.height).toBeGreaterThan(60)
+
+  // A sideways drag keeps the height to the content.
+  const grip2 = (await page.locator('[data-map-toast-grip]').boundingBox())!
+  await page.mouse.move(grip2.x + grip2.width / 2, grip2.y + grip2.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(grip2.x + grip2.width / 2 + 20, grip2.y - 200, { steps: 6 })
+  await page.mouse.up()
+  expect((await toast.boundingBox())!.height).toBeLessThanOrEqual(before.height + 1)
+  expect((await bars.boundingBox())!.height).toBeCloseTo(40, 0)
 })
