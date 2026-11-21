@@ -5,14 +5,17 @@
       Turn on Session story (Settings › Farming &amp; sessions) to keep a history of every map you run.
     </WEmpty>
     <WSkeleton v-else-if="loading" :rows="4" />
-    <WEmpty v-else-if="!list.length" :art="{ mechanic: 'map' }">
+    <WEmpty v-else-if="!inView.length" :art="{ mechanic: 'map' }">
       Maps show here as you run them. They're read from the game's log.
     </WEmpty>
     <template v-else>
-      <div class="flex flex-wrap gap-x-3 text-xs w-dim w-num">
-        <span>{{ list.length }} {{ list.length === 1 ? 'map' : 'maps' }}</span>
-        <span>Average {{ formatClock(avgMs) }}</span>
+      <div class="flex flex-wrap items-center gap-x-3 text-xs w-dim w-num">
+        <span>{{ mapCount }} {{ mapCount === 1 ? 'map' : 'maps' }}<template v-if="skippedCount"> · {{ skippedCount }} {{ skippedCount === 1 ? 'vault' : 'vaults' }}</template></span>
+        <span v-if="counted.length">Average {{ formatClock(avgMs) }}</span>
         <span>{{ deaths }} {{ deaths === 1 ? 'death' : 'deaths' }}</span>
+        <WChip clickable :active="showSkipped" class="ml-auto" data-history-skipped
+          title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
+          @click="showSkipped = !showSkipped">Vaults</WChip>
       </div>
       <div>
         <div class="w-row w-row--head px-0" :class="$style.grid">
@@ -20,7 +23,7 @@
         </div>
         <div v-for="m in visible" :key="m.key + m.enteredAt" class="w-row px-0" :class="$style.grid" data-map-row>
           <span class="w-dim w-num w-trunc">{{ formatSessionDate(m.enteredAt) }}</span>
-          <span class="w-trunc">{{ m.name }} <span class="w-dim">{{ tierText(m.areaLevel) }}</span></span>
+          <span class="w-trunc" :class="{ 'w-dim': skippedRow(m) }">{{ m.name }} <span class="w-dim">{{ skippedRow(m) ? 'not counted' : tierText(m.areaLevel) }}</span></span>
           <span class="text-right w-num">
             {{ formatClock(m.mapMs) }}<span v-if="m.deaths" class="w-down" :title="`${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}`"> ✕{{ m.deaths }}</span>
           </span>
@@ -43,7 +46,8 @@
 // Session analytics' Map history tab: every map read from Client.txt by Session story.
 import { computed, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
-import { WBanner, WEmpty, WSkeleton } from '../ui'
+import { saveConfig } from '@/web/Config'
+import { WBanner, WChip, WEmpty, WSkeleton } from '../ui'
 import { formatClock } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
@@ -53,6 +57,7 @@ import { isSkippedArea } from './skip-areas'
 import type { MapRecord } from './map-log'
 import { DAY_MS_EXPORT, dayKey, readAllMaps, readMapDay, useNights } from './store'
 import { SESSION_STORY_TYPE } from './widget'
+import type { SessionStoryWidget } from './widget'
 
 const props = defineProps<{ range: AnalyticsRange, league: string, now: number }>()
 
@@ -84,24 +89,41 @@ watch(() => [props.range, on.value] as const, async ([range]) => {
   }
 }, { immediate: true })
 // A map finished while the tab is open: add it, without reading every day again.
-watch(() => store.maps.value[0], (rec) => {
+watch(() => store.lastSaved.value, (rec) => {
   // The newest saved copy already holds any earlier visit to the same map.
   if (rec) all.value = [rec, ...all.value.filter(m => m.key !== rec.key)]
 })
 
+// Vaults and other skipped areas: listed only when asked for, never counted.
+// Kept on Session story's settings, next to the list itself.
+const storyConfig = () => AppConfig().widgets.find(w => w.wmType === SESSION_STORY_TYPE) as SessionStoryWidget | undefined
+const showSkipped = computed({
+  get: () => storyConfig()?.historySkipped === true,
+  set: (v: boolean) => {
+    const c = storyConfig()
+    if (!c) return
+    c.historySkipped = v
+    saveConfig()
+  }
+})
+const skippedRow = (m: MapRecord) => isSkippedArea(m.name)
+
 // "League" and "7 days" are this league's; maps saved before leagues were noted count as this one.
-// Vaults saved before they were skipped are left out too.
-const list = computed(() => all.value.filter(m => !isSkippedArea(m.name) &&
+const inView = computed(() => all.value.filter(m =>
   (props.range === 'all' || !m.league || m.league === props.league) && inRange(m.enteredAt, props.range, props.now)))
+const maps = computed(() => inView.value.filter(m => !skippedRow(m)))
+const list = computed(() => showSkipped.value ? inView.value : maps.value)
+const mapCount = computed(() => maps.value.length)
+const skippedCount = computed(() => showSkipped.value ? inView.value.length - maps.value.length : 0)
 
 const PAGE = 100
 const limit = shallowRef(PAGE)
 const visible = computed(() => list.value.slice(0, limit.value))
 
 // As the chip counts it: maps under 30 s (a quick look in) left out.
-const counted = computed(() => list.value.filter(m => m.mapMs > 30_000))
+const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))
 const avgMs = computed(() => counted.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, counted.value.length))
-const deaths = computed(() => list.value.reduce((s, m) => s + m.deaths, 0))
+const deaths = computed(() => maps.value.reduce((s, m) => s + m.deaths, 0))
 
 function levelText (m: MapRecord): string {
   return m.levelsGained ? `${m.charLevel} → ${m.charLevel! + m.levelsGained}` : String(m.charLevel)

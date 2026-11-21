@@ -11,3 +11,4 @@
 - After-map toast: maps where you stepped into a Mirage get a Mirage chip, also shown in map history and Ctrl+Space search. A Mirage you skip isn't logged by the game, so it can't show.
 - Ctrl+Space search: Templar Vaults. Type "vault" for one card with all four (Zealot's, Scholar's, Arkhon's, Machinist's): each one's quadrant, the bosses and Nightmare maps that spawn it, and every reliquary reward at poe.ninja prices, with an estimated typical pick. A vault's name ("zealot") puts that one first.
 - Nightmare map price check: each map shows the vault it can spawn (Fortress and Citadel: Zealot's, Abomination: Arkhon's, Ziggurat: Scholar's, Sanctuary: Machinist's), and the big view has a Vaults tab with each vault's rewards and prices.
+- Session analytics › Map history: a Vaults chip lists vault runs too (marked "not counted"); they stay out of the count and average.

@@ -11,7 +11,7 @@ import { ledgerKey } from '../net-worth/glance'
 import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
-import { skipVersion } from './skip-areas'
+import { isSkippedArea, skipVersion } from './skip-areas'
 import type { MapRecord } from './map-log'
 
 export const NIGHTS_COLLECTION = 'session-story'
@@ -50,6 +50,8 @@ export const useNights = createGlobalState(() => {
   let loading: Promise<void> | null = null
   // The last RECENT maps, newest first.
   const maps = shallowRef<MapRecord[]>([])
+  // The newest map saved, vaults included, for Map history while it's open.
+  const lastSaved = shallowRef<MapRecord | null>(null)
   const mapsError = shallowRef('')
   let mapsLoading: Promise<void> | null = null
   let recentBad = false
@@ -83,8 +85,11 @@ export const useNights = createGlobalState(() => {
     const key = dayKey(rec.enteredAt)
     const league = useLeagues().selectedId.value
     const row = { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) }
-    maps.value = keepMap(maps.value, row).slice(0, RECENT)
-    if (!recentBad) await hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: RECENT_KEY, value: maps.value }).catch(() => {})
+    // Vaults go to their day only: the recent list feeds the toast's averages.
+    if (!isSkippedArea(row.name)) {
+      maps.value = keepMap(maps.value, row).slice(0, RECENT)
+      if (!recentBad) await hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: RECENT_KEY, value: maps.value }).catch(() => {})
+    }
     let day: MapRecord[]
     try {
       day = await readMapDay(key, true)
@@ -93,7 +98,10 @@ export const useNights = createGlobalState(() => {
       mapsError.value = e instanceof Error ? e.message : String(e)
       return
     }
-    await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: keepMap(day, row) }).catch(() => {})
+    const merged = keepMap(day, row)
+    const ok = await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: merged }).then(() => true, () => false)
+    // As saved: merged with an earlier visit to the same map.
+    if (ok) lastSaved.value = merged.find(m => m.key === row.key) ?? row
   }
 
   function addMap (rec: MapRecord): Promise<void> {
@@ -151,5 +159,5 @@ export const useNights = createGlobalState(() => {
   }
   const keptDraft = () => draft
 
-  return { nights, live, loadError, finished, load, finish, setLive, keptDraft, maps, mapsError, loadMaps, addMap }
+  return { nights, live, loadError, finished, load, finish, setLive, keptDraft, maps, lastSaved, mapsError, loadMaps, addMap }
 })
