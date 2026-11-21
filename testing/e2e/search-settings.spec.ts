@@ -1,5 +1,6 @@
 // Search palette: "settings" finds the settings window and every page, and a
-// setting's name jumps straight to its row.
+// setting's name jumps straight to its row. A result's name starts with its
+// icon's space.
 import { test, expect } from './harness'
 
 test.describe.configure({ mode: 'parallel' })
@@ -16,13 +17,14 @@ test('"settings" lists Open settings and every page, and a page opens', async ({
   await expect(box).toBeFocused()
 
   await box.fill('settings')
-  await expect(panel.getByRole('button', { name: /^Open settings\s*Settings$/ })).toBeVisible()
+  await expect(panel.getByRole('button', { name: /^\s*Open settings\s*Settings$/ })).toBeVisible()
   for (const name of ['Game & league', 'Hotkeys', 'Performance', 'About']) {
-    await expect(panel.getByRole('button', { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*Settings page$`) })).toBeVisible()
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    await expect(panel.getByRole('button', { name: new RegExp('^\\s*' + escaped + '\\s*Settings page$') })).toBeVisible()
   }
   await overlay.snap('search-settings')
 
-  await panel.getByRole('button', { name: /^Hotkeys\s*Settings page$/ }).dblclick()
+  await panel.getByRole('button', { name: /^\s*Hotkeys\s*Settings page$/ }).dblclick()
   const settings = overlay.widget('settings')
   await expect(settings.getByPlaceholder('Find an action or key')).toBeVisible()
   expect(overlay.errors).toEqual([])
@@ -37,7 +39,7 @@ test('a setting by name opens its page and flashes its row', async ({ overlay })
   const box = panel.getByRole('textbox', { name: 'Search', exact: true })
 
   await box.fill('account name')
-  const hit = panel.getByRole('button', { name: /^Account name\s*Setting · Game & league$/ })
+  const hit = panel.getByRole('button', { name: /^\s*Account name\s*Setting · Game & league$/ })
   await expect(hit).toBeVisible()
   await hit.click()
   await expect(panel.getByRole('button', { name: 'Go to the setting' })).toBeVisible()
