@@ -3,7 +3,7 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { GlanceShows } from './glance'
 import type { RateWindow } from './play-time'
 import type { PanelLayout } from './layout'
-import type { SaleRange } from './sales'
+import type { SaleRange, SaleSort } from './sales'
 
 export const NET_WORTH_TYPE = 'woke-net-worth'
 export const NET_WORTH_MODULE = 'net-worth'
@@ -40,6 +40,8 @@ export interface NetWorthWidget extends Widget {
   // the Sales view's range.
   view?: 'holdings' | 'sales'
   salesRange?: SaleRange
+  // The Sales table's sort (default When, newest first).
+  salesSort?: SaleSort
 }
 
 export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'sold' | 'where' | 'tabs'

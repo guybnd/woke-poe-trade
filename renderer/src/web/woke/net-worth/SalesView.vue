@@ -29,10 +29,17 @@
     <div :class="$style.scroll">
       <table :class="$style.table">
         <thead>
-          <tr><th :class="$style.left">Item</th><th>Price</th><th><Coin :chaos="!divine" /></th><th title="Against poe.ninja's price for it now">vs ninja</th><th>When</th></tr>
+          <tr>
+            <th v-for="c in COLS" :key="c.key" :class="{ [$style.left]: c.key === 'item' }" :aria-sort="sort.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'">
+              <button type="button" :class="[$style.sortBtn, { [$style.sorted]: sort.key === c.key }]" :title="c.tip" :aria-label="c.key === 'value' ? 'Sold for' : undefined" @click="sortBy(c.key)">
+                <Coin v-if="c.key === 'value'" :chaos="!divine" /><template v-else>{{ c.label }}</template>
+                <i v-if="sort.key === c.key" :class="['fas', sort.dir === 'asc' ? 'fa-caret-up' : 'fa-caret-down']" aria-hidden="true" />
+              </button>
+            </th>
+          </tr>
         </thead>
         <tbody>
-          <tr v-for="s in rows.slice(0, limit)" :key="s.id">
+          <tr v-for="s in sorted.slice(0, limit)" :key="s.id">
             <td :class="$style.left">
               <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(s)" class="w-trunc" :style="{ color: colourOf(s.frameType) }">{{ saleName(s) }}</span></span>
             </td>
@@ -58,12 +65,12 @@ import { saleTip } from './sale-tip'
 import { formatAmount, nowMinute } from '../ui/format'
 import TextTabs from './TextTabs.vue'
 import Coin from './Coin.vue'
-import { byType, inRange, marketText, saleChaos, saleName, saleType, totals, SALE_TYPES } from './sales'
-import type { Sale, SaleRange, SaleType, TypeRow } from './sales'
+import { byType, inRange, marketText, nextSaleSort, saleChaos, saleName, saleSortOf, saleType, sortSales, totals, SALE_TYPES } from './sales'
+import type { Sale, SaleRange, SaleSort, SaleSortKey, SaleType, TypeRow } from './sales'
 import { marketOf, rates, sales, salesReading } from './sales-store'
 
-const props = defineProps<{ divine: number | null, range?: SaleRange }>()
-const emit = defineEmits<{ range: [r: SaleRange] }>()
+const props = defineProps<{ divine: number | null, range?: SaleRange, sort?: SaleSort }>()
+const emit = defineEmits<{ range: [r: SaleRange], sort: [s: SaleSort] }>()
 
 const RANGES = [{ value: 'today', label: 'Today' }, { value: '7d', label: '7d' }, { value: '30d', label: '30d' }, { value: 'league', label: 'League' }]
 const range = computed<SaleRange>({
@@ -73,7 +80,7 @@ const range = computed<SaleRange>({
 const type = shallowRef<SaleType | null>(null)
 const query = shallowRef('')
 const limit = shallowRef(100)
-watch([range, type, query], () => { limit.value = 100 })
+watch([range, type, query, () => props.sort], () => { limit.value = 100 })
 
 const reading = salesReading
 const all = sales
@@ -87,6 +94,17 @@ const rows = computed(() => {
   return inR.value.filter(s => (!type.value || saleType(s) === type.value) &&
     words.every(w => `${s.name} ${s.typeLine}`.toLowerCase().includes(w)))
 })
+
+const COLS: Array<{ key: SaleSortKey, label: string, tip: string }> = [
+  { key: 'item', label: 'Item', tip: 'Sort by item name' },
+  { key: 'price', label: 'Price', tip: 'Sort by price, compared by chaos value' },
+  { key: 'value', label: '', tip: 'Sort by what it sold for' },
+  { key: 'market', label: 'vs ninja', tip: "Sort by price against poe.ninja's price for it now" },
+  { key: 'when', label: 'When', tip: 'Sort by when it sold' }
+]
+const sort = computed(() => saleSortOf(props.sort))
+function sortBy (key: SaleSortKey) { emit('sort', nextSaleSort(sort.value, key)) }
+const sorted = computed(() => sortSales(rows.value, sort.value, rates.value, marketOf))
 
 const chaosOf = (s: Sale) => saleChaos(s, rates.value)
 const fmt = (n: number) => formatAmount(n)
@@ -155,6 +173,9 @@ watch(types, (list) => { if (type.value && !list.some(t => t.id === type.value))
 .table td { padding: 2px 6px; text-align: right; border-bottom: 1px solid var(--w-line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .table tbody tr:hover td { background: var(--w-panel-2); }
 .left { text-align: left !important; }
+.sortBtn { display: inline-flex; align-items: center; gap: 3px; font: inherit; color: inherit; text-transform: inherit; cursor: pointer; border-radius: var(--w-r-sm); }
+.sortBtn:hover, .sorted { color: var(--w-fg); }
+.sortBtn:focus-visible { outline: 1px solid var(--w-gold); }
 .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .icon { width: 18px; height: 18px; object-fit: contain; flex: none; }
 .sale { color: var(--w-gold); }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { byType, inRange, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket } from '@/web/woke/net-worth/sales'
+import { byType, inRange, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket, nextSaleSort, saleSortOf, sortSales, DEFAULT_SALE_SORT } from '@/web/woke/net-worth/sales'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { salesLookup } from '@/web/woke/search/lookups/sales'
 import { saleItem, saleTip } from '@/web/woke/net-worth/sale-tip'
@@ -154,5 +154,45 @@ describe('Ctrl+Space', () => {
   it('stays quiet without sales or for short queries', () => {
     expect(salesLookup(null)('sold', ctx)).toEqual([])
     expect(salesLookup(list)('he', ctx)).toEqual([])
+  })
+})
+
+describe('sortSales', () => {
+  const a = sale({ id: 'a', name: 'Headhunter', frameType: 3, at: NOW - 3 * H, price: { amount: 2, currency: 'divine' } })
+  const b = sale({ id: 'b', typeLine: 'Ambush Scarab', at: NOW - 2 * H, price: { amount: 150, currency: 'chaos' } })
+  const c = sale({ id: 'c', typeLine: 'Chaos Orb', at: NOW - H, price: { amount: 5, currency: 'mystery' } })
+  const d = sale({ id: 'd', typeLine: 'blessed Orb', at: NOW - 4 * H, price: { amount: 30, currency: 'chaos' } })
+  const all = [a, b, c, d]
+  const market = (s: Sale) => ({ a: 0.1, b: -0.2, d: 0.5 } as Record<string, number>)[s.id] ?? null
+  const ids = (sort: Parameters<typeof sortSales>[1]) => sortSales(all, sort, RATES, market).map(s => s.id).join('')
+
+  it('defaults to When, newest first', () => {
+    expect(DEFAULT_SALE_SORT).toEqual({ key: 'when', dir: 'desc' })
+    expect(ids(DEFAULT_SALE_SORT)).toBe('cbad')
+    expect(ids({ key: 'when', dir: 'asc' })).toBe('dabc')
+  })
+  it('sorts price by chaos value, unpriced last either way', () => {
+    expect(ids({ key: 'price', dir: 'desc' })).toBe('abdc')
+    expect(ids({ key: 'price', dir: 'asc' })).toBe('dbac')
+    expect(ids({ key: 'value', dir: 'desc' })).toBe('abdc')
+  })
+  it('sorts vs ninja with no comparison last', () => {
+    expect(ids({ key: 'market', dir: 'desc' })).toBe('dabc')
+    expect(ids({ key: 'market', dir: 'asc' })).toBe('badc')
+  })
+  it('sorts items by name, ignoring case', () => {
+    expect(ids({ key: 'item', dir: 'asc' })).toBe('bdca')
+    expect(ids({ key: 'item', dir: 'desc' })).toBe('acdb')
+  })
+  it('flips the same column and starts a new one at its first direction', () => {
+    expect(nextSaleSort(DEFAULT_SALE_SORT, 'when')).toEqual({ key: 'when', dir: 'asc' })
+    expect(nextSaleSort(DEFAULT_SALE_SORT, 'item')).toEqual({ key: 'item', dir: 'asc' })
+    expect(nextSaleSort({ key: 'item', dir: 'asc' }, 'item')).toEqual({ key: 'item', dir: 'desc' })
+    expect(nextSaleSort({ key: 'item', dir: 'asc' }, 'price')).toEqual({ key: 'price', dir: 'desc' })
+  })
+  it('falls back to the default for a missing or broken stored sort', () => {
+    expect(saleSortOf(undefined)).toEqual(DEFAULT_SALE_SORT)
+    expect(saleSortOf({ key: 'nope', dir: 'asc' })).toEqual(DEFAULT_SALE_SORT)
+    expect(saleSortOf({ key: 'price', dir: 'asc' })).toEqual({ key: 'price', dir: 'asc' })
   })
 })

@@ -170,6 +170,56 @@ export function marketText (v: number | null): string {
   return `${Math.round(Math.abs(v) * 100)}% ${v < 0 ? 'under' : 'over'}`
 }
 
+// The Sales table's sort: a column and a direction. Price and the value column
+// both sort by the sale's chaos value, so 1 div beats 150c.
+export type SaleSortKey = 'item' | 'price' | 'value' | 'market' | 'when'
+export interface SaleSort { key: SaleSortKey, dir: 'asc' | 'desc' }
+export const DEFAULT_SALE_SORT: SaleSort = { key: 'when', dir: 'desc' }
+const SORT_KEYS: SaleSortKey[] = ['item', 'price', 'value', 'market', 'when']
+
+// A header click: the same column flips, a new one starts at its first
+// direction (Item A to Z, numbers and dates highest/newest first).
+export function nextSaleSort (cur: SaleSort, key: SaleSortKey): SaleSort {
+  if (cur.key === key) return { key, dir: cur.dir === 'asc' ? 'desc' : 'asc' }
+  return { key, dir: key === 'item' ? 'asc' : 'desc' }
+}
+
+// A stored sort, or the default when it's missing or broken.
+export function saleSortOf (v: unknown): SaleSort {
+  const s = v as Partial<SaleSort> | null | undefined
+  return s && SORT_KEYS.includes(s.key as SaleSortKey) && (s.dir === 'asc' || s.dir === 'desc')
+    ? { key: s.key as SaleSortKey, dir: s.dir }
+    : DEFAULT_SALE_SORT
+}
+
+// The rows in the chosen order. Rows without a value for the column (no price,
+// no poe.ninja comparison) go last either way; ties keep newest first.
+export function sortSales (sales: Sale[], sort: SaleSort, rates: Rates, market: (s: Sale) => number | null): Sale[] {
+  const sign = sort.dir === 'asc' ? 1 : -1
+  const keyed = sales.map(s => {
+    let v: number | string | null
+    switch (sort.key) {
+      case 'item': v = (s.name || s.typeLine).toLowerCase(); break
+      case 'price':
+      case 'value': v = saleChaos(s, rates); break
+      case 'market': v = market(s); break
+      default: v = s.at
+    }
+    if (typeof v === 'number' && !Number.isFinite(v)) v = null
+    return { s, v }
+  })
+  keyed.sort((a, b) => {
+    if (a.v == null || b.v == null) {
+      if (a.v != null) return -1
+      if (b.v != null) return 1
+    } else if (a.v !== b.v) {
+      return sign * (typeof a.v === 'string' ? a.v.localeCompare(b.v as string) : (a.v as number) - (b.v as number))
+    }
+    return b.s.at - a.s.at
+  })
+  return keyed.map(k => k.s)
+}
+
 // The sales in each refresh: those after the read before it, up to it. reads
 // are the refreshes' times (any order); before: the read before the first.
 export function salesInWindow (sales: Sale[], from: number | null, to: number): Sale[] {

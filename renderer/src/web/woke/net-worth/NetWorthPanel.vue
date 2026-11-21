@@ -22,7 +22,7 @@
 
     <div v-if="view === 'sales'" :class="$style.body">
       <WEmpty v-if="!status?.account && !sales.length" icon="fas fa-coins">Sign in under Settings › Game & league, then press Refresh.</WEmpty>
-      <SalesView v-else :divine="divine" :range="config.salesRange" @range="config.salesRange = $event" />
+      <SalesView v-else :divine="divine" :range="config.salesRange" @range="config.salesRange = $event" :sort="config.salesSort" @sort="config.salesSort = $event" />
       <div class="w-dim text-xs" :class="$style.foot">
         <span>pathofexile.com sends your last 100 sales; older ones stay here once read</span>
         <span><template v-if="salesReadLine">Sales {{ salesReadLine }} · </template>poe.ninja · {{ ninjaAge }}</span>

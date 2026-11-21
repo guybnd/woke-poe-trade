@@ -7,12 +7,22 @@ import { test, expect, FIXTURES } from './harness'
 
 const LIST = fs.readFileSync(path.join(FIXTURES, 'stash/tab-list.json'), 'utf8')
 const DUMP = fs.readFileSync(path.join(FIXTURES, 'stash/tab-dump.json'), 'utf8')
+// Three sales from the trade history: newest first, priced in chaos and divines.
+const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString()
+const SALES = JSON.stringify({
+  result: [
+    { time: ago(1), item_id: 's1', price: { amount: 44, currency: 'chaos' }, item: { typeLine: 'Empower Support', baseType: 'Empower Support', frameType: 4, icon: '', properties: [{ name: 'Level', values: [['4', 0]] }, { name: 'Quality', values: [['+20%', 1]] }] } },
+    { time: ago(2), item_id: 's2', price: { amount: 1, currency: 'divine' }, item: { typeLine: "Maven's Writ", baseType: "Maven's Writ", frameType: 0, icon: '' } },
+    { time: ago(3), item_id: 's3', price: { amount: 2, currency: 'divine' }, item: { name: 'Headhunter', typeLine: 'Leather Belt', baseType: 'Leather Belt', frameType: 3, icon: '' } }
+  ]
+})
 
 test('the stash reader turns on, reads the picked tabs, and Net worth prices them', async ({ overlay, fakeApp }) => {
   fakeApp.site.reply = (url) => {
     const u = new URL(url)
     if (u.pathname === '/my-account') return { status: 200, body: '<html><title>View Profile - Path of Exile - Tester#1234</title></html>' }
     if (u.pathname === '/character-window/get-stash-items') return { status: 200, body: u.searchParams.get('tabIndex') === '0' ? LIST : DUMP }
+    if (u.pathname.startsWith('/api/trade/history/')) return { status: 200, body: SALES }
     return null
   }
   try {
@@ -61,6 +71,27 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await expect(panel.getByText('Dump', { exact: true }).first()).toBeVisible()
     await overlay.snap('net worth after a read')
     expect(fakeApp.site.requests.some(u => u.includes('tabIndex=1'))).toBe(true)
+
+    // The Sales view: a header click sorts the table, a second click flips it.
+    // Price compares by value: 44c sorts under 1 div though 44 > 1.
+    await panel.getByRole('tab', { name: 'Sales' }).click()
+    await panel.getByRole('button', { name: 'Refresh' }).click()
+    const rows = panel.locator('tbody tr')
+    const names = () => rows.locator('td:first-child').allInnerTexts()
+    await expect(rows).toHaveCount(3, { timeout: 10_000 })
+    expect(await names()).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
+    const price = panel.getByRole('button', { name: 'Price', exact: true })
+    await price.click()
+    await expect.poll(names).toEqual(['Headhunter', "Maven's Writ", 'Empower Support 4/20'])
+    await expect(panel.locator('th[aria-sort="descending"]')).toContainText('Price')
+    await price.click()
+    await expect.poll(names).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
+    await expect(panel.locator('th[aria-sort="ascending"]')).toContainText('Price')
+    await rows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
+    await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
+    await overlay.snap('net worth sales sorted by price')
+    await panel.getByRole('button', { name: 'When', exact: true }).click()
+    await panel.getByRole('tab', { name: 'Holdings' }).click()
 
     // Off again, without asking, and the window goes. The fake app lives on
     // for the next test in this worker, so it must find the reader off.
