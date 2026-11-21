@@ -19,6 +19,11 @@ describe('mechanics card in 3.30', () => {
     expect(priceScarabs(mechanicById('blight')!.scarabs!, COVENS).map(r => r.item.name)).toEqual(['Blight Thread'])
   })
 
+  it("finds Threads under poe.ninja's own Thread type", () => {
+    const rows = [item('Thread', 'Legion Thread', 4), item('Thread', 'Frayed Thread', 1), item('Thread', 'Breach Thread', 0.4)]
+    expect(priceScarabs(mechanicById('legion')!.scarabs!, rows).map(r => r.item.name)).toEqual(['Legion Thread'])
+  })
+
   it('still prices scarabs in a league that has them', () => {
     const old = [item('Scarab', 'Legion Scarab of Eras', 2), item('Scarab', 'Breach Scarab', 1)]
     expect(priceScarabs(mechanicById('legion')!.scarabs!, old).map(r => r.item.name)).toEqual(['Legion Scarab of Eras'])

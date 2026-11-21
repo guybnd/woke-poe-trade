@@ -1,5 +1,5 @@
 // The flips panel on recorded poe.ninja prices: the verdict, each view, the
-// rare-but-cheap marks, and the families beyond scarabs.
+// Threads, Delirium and Oils tabs, stash outlines and Settings weights.
 import type { Page } from '@playwright/test'
 import { test, expect, fixtureText, logFixture } from './harness'
 
@@ -18,6 +18,19 @@ const ORBS: Array<[string, number, number]> = [
   ['Whispering Delirium Orb', 7, 70],
   ['Fine Delirium Orb', 37.55, 5701],
   ["Diviner's Delirium Orb", 34.6, 496]
+]
+// Covens prices, 22 Nov 2026.
+const THREADS: Array<[string, number, number]> = [
+  ['Legion Thread', 4, 414436],
+  ['Abyss Thread', 3.6, 325490],
+  ['Bestiary Thread', 2.7, 215574],
+  ['Ultimatum Thread', 2.1, 218292],
+  ['Blight Thread', 0.7, 45841],
+  ['Breach Thread', 0.4, 18055],
+  ['Ritual Thread', 0.4, 19891],
+  ['Betrayal Thread', 0.3, 12489],
+  ['Incursion Thread', 0.3, 10958],
+  ['Expedition Thread', 0.2, 10978]
 ]
 const OILS: Array<[string, number, number]> = [
   ['Violet Oil', 1.46, 124],
@@ -38,38 +51,43 @@ async function routePrices (overlay: { page: Page }) {
   const dense = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
   dense.itemOverviews.push(
     { type: 'DeliriumOrb', lines: ORBS.map(([name, chaos]) => ({ name, chaos, graph: [] })) },
-    { type: 'Oil', lines: OILS.map(([name, chaos]) => ({ name, chaos, graph: [] })) }
+    { type: 'Oil', lines: OILS.map(([name, chaos]) => ({ name, chaos, graph: [] })) },
+    { type: 'Thread', lines: THREADS.map(([name, chaos]) => ({ name, chaos, graph: [] })) }
   )
   dense.currencyOverviews[0].lines.push({ name: 'Primal Crystallised Lifeforce', chaos: 0.033, graph: [] })
   await overlay.page.route(DENSE, route => route.fulfill({ json: dense }))
   await overlay.page.route(EXCHANGE, route => {
     const type = new URL(route.request().url()).searchParams.get('type')
-    const rows = type === 'DeliriumOrb' ? ORBS : type === 'Oil' ? OILS : []
+    const rows = type === 'DeliriumOrb' ? ORBS : type === 'Oil' ? OILS : type === 'Thread' ? THREADS : []
     return route.fulfill({ json: exchangeFeed(rows) })
   })
 }
 
-test('flips: buy list, odds and rare scarabs from recorded prices', async ({ overlay }) => {
+test('flips: the Threads tab, marked low confidence, with its buy list and odds', async ({ overlay }) => {
+  await routePrices(overlay)
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show' }] })
   const panel = overlay.widget('woke-scarab-flip')
 
-  await expect(panel.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
+  // No scarab tab in 3.30; Threads comes first.
+  await expect(panel.getByRole('tab', { name: 'Scarabs' })).toHaveCount(0)
+  await expect(panel.getByText(/\d+ threads? worth vendoring/)).toBeVisible()
+  await expect(panel.getByText(/Low confidence: no measured weights yet/)).toBeVisible()
   // Volume comes from the exchange feed, so the Supply column shows, as a word.
   await expect(panel.getByRole('button', { name: /Supply/ })).toHaveAttribute('title', /currency exchange/)
-  await expect(panel.getByText('Market / day')).toHaveCount(0)
-  await expect(panel.getByText('Max profit / day')).toHaveCount(0)
   await expect(panel.getByRole('button', { name: /Profit each/ })).toHaveAttribute('title', /divided by 3/)
-  await expect(panel.getByText('Breach of the Hive', { exact: true })).toBeVisible()
-  await overlay.snap('flips-scarabs-buy')
+  const expedition = panel.locator('.w-row').filter({ hasText: 'Expedition' })
+  await expect(expedition.getByText('EST', { exact: true })).toBeVisible()
+  // Every Thread equally likely: ((sum - 0.2) / 9 - 3 x 0.2) / 3.
+  await expect(expedition.getByText('+0.3c')).toBeVisible()
+  // Frayed Thread has no price, so it gets what one opens to: the plain average.
+  await expect(panel.getByText(/opens to 1\.5 ?c on average/)).toBeVisible()
+  await expect(panel.locator('[data-item-tip]').filter({ hasText: /^Frayed Thread$/ })).toHaveCount(1)
+  await overlay.snap('flips-threads-buy')
 
   await panel.getByRole('button', { name: 'Odds', exact: true }).click()
   await expect(panel.getByText('Biggest sources of value')).toBeVisible()
-  await expect(panel.getByText('200c+', { exact: true })).toBeVisible()
-  await overlay.snap('flips-scarabs-odds')
-
-  await panel.getByRole('button', { name: /^Rare & cheap/ }).click()
-  await expect(panel.getByText('Scarab of Radiant Storms', { exact: true })).toBeVisible()
-  await overlay.snap('flips-scarabs-rare')
+  await expect(panel.getByRole('button', { name: /^Rare & cheap/ })).toHaveCount(0)
+  await overlay.snap('flips-threads-odds')
 })
 
 test('flips: a Harvest reroll tab and a known-result tab', async ({ overlay }) => {
@@ -152,16 +170,17 @@ test('flips: the lifeforce cost set in settings changes the panel, and blank goe
   await expect(input).toHaveValue('')
 })
 
-test('flips: the shortcut outlines the scarab tab, and a click clears them', async ({ overlay, fakeApp }) => {
+test('flips: the shortcut outlines the Delirium tab, and a click clears them', async ({ overlay, fakeApp }) => {
+  await routePrices(overlay)
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
-  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.showScreen('screens/stash-delirium-real.png')
   const layer = overlay.page.locator('[data-stash-outlines]')
   await expect(layer).toHaveCount(0)
 
   await overlay.pressHotkey('Alt + J')
   await expect(layer).toBeVisible()
   await overlay.snap('flips-stash-outlines')
-  expect(await layer.locator('> div').count()).toBeGreaterThan(5)
+  expect(await layer.locator('> div').count()).toBeGreaterThan(1)
 
   // Nothing is left on the wrong slots after swapping tabs or moving an item.
   fakeApp.pressMouse(400, 200)
@@ -185,9 +204,10 @@ test('flips: the shortcut draws nothing on a tab it cannot read', async ({ overl
 })
 
 test('flips: clicking the dock icon outlines the stash tab, and again clears them', async ({ overlay, fakeApp }) => {
+  await routePrices(overlay)
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip' }] })
   await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
-  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.showScreen('screens/stash-delirium-real.png')
   const layer = overlay.page.locator('[data-stash-outlines]')
   await overlay.restAndClickDockIcon('scarab-flip')
   await expect(layer).toBeVisible()
@@ -199,7 +219,7 @@ test('flips: clicking the dock icon outlines the stash tab, and again clears the
 test('flips: a dock icon click the game also got reads nothing', async ({ overlay, fakeApp }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip' }] })
   await overlay.log(logFixture('client-logs/mapping-session.txt').slice(0, 3)) // The hideout.
-  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.showScreen('screens/stash-delirium-real.png')
   await overlay.clickDockIconAndLeave('scarab-flip')
   fakeApp.releaseMouse()
   await overlay.page.waitForTimeout(300)
@@ -207,8 +227,9 @@ test('flips: a dock icon click the game also got reads nothing', async ({ overla
 })
 
 test('flips: the stack total, switched on, shows under the per item figure', async ({ overlay }) => {
+  await routePrices(overlay)
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: true } as never] })
-  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.showScreen('screens/stash-delirium-real.png')
   await overlay.pressHotkey('Alt + J')
   const layer = overlay.page.locator('[data-stash-outlines]')
   await expect(layer).toBeVisible()
@@ -218,8 +239,9 @@ test('flips: the stack total, switched on, shows under the per item figure', asy
 })
 
 test('flips: outlines show only the per item figure by default', async ({ overlay }) => {
+  await routePrices(overlay)
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
-  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.showScreen('screens/stash-delirium-real.png')
   await overlay.pressHotkey('Alt + J')
   const layer = overlay.page.locator('[data-stash-outlines]')
   await expect(layer).toBeVisible()
@@ -252,7 +274,16 @@ test('flips: a tab with no flips says which tabs work', async ({ overlay }) => {
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
   await overlay.showScreen('screens/stash-general-real.png')
   await overlay.pressHotkey('Alt + J')
-  await expect(overlay.page.getByText(/Outlines work on Scarab, Delirium, Delve, Essence and Blight/)).toBeVisible()
+  await expect(overlay.page.getByText(/Outlines work on Delirium, Delve, Essence and Blight/)).toBeVisible()
+})
+
+test('flips: the old Scarab tab says scarabs left the game', async ({ overlay }) => {
+  await routePrices(overlay)
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J' } as never] })
+  await overlay.showScreen('screens/stash-scarab-real.png')
+  await overlay.pressHotkey('Alt + J')
+  await expect(overlay.page.getByText('Scarabs left the game in 3.30, so there is nothing to outline here')).toBeVisible()
+  await expect(overlay.page.locator('[data-stash-outlines]')).toHaveCount(0)
 })
 
 // A dock low on the screen, where a note must stand on the icon. Left, so the note can't centre on it.
@@ -281,34 +312,44 @@ for (const [where, patch, size] of [['high', undefined, null], ['low', lowDock, 
   })
 }
 
-test('flips: an unmeasured orb is marked EST, and Settings sets your own weight', async ({ overlay }) => {
-  const dense = JSON.parse(fixtureText('http/poe.ninja/poe1/api/economy/current/dense/overviews.json'))
-  const lines: Array<[string, number, number]> = [...ORBS, ['Kalguuran Delirium Orb', 2, 0]]
-  dense.itemOverviews.push({ type: 'DeliriumOrb', lines: lines.map(([name, chaos]) => ({ name, chaos, graph: [] })) })
-  dense.currencyOverviews[0].lines.push({ name: 'Primal Crystallised Lifeforce', chaos: 0.033, graph: [] })
-  await overlay.page.route(DENSE, route => route.fulfill({ json: dense }))
-  await overlay.page.route(EXCHANGE, route => route.fulfill({ json: exchangeFeed([]) }))
+test('flips: Settings sets your own Thread weight', async ({ overlay }) => {
+  await routePrices(overlay)
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show' }] })
 
   const panel = overlay.widget('woke-scarab-flip')
-  await panel.getByRole('tab', { name: 'Delirium', exact: true }).click()
-  await expect(panel.getByText(/1 estimated/)).toBeVisible()
-  const row = panel.locator('.w-row').filter({ hasText: 'Kalguuran' })
-  await expect(row.getByText('EST', { exact: true })).toBeVisible()
+  await expect(panel.getByText(/10 estimated/)).toBeVisible()
   await overlay.snap('flips-est')
 
   await panel.getByRole('button', { name: 'Weights', exact: true }).click()
   const weights = overlay.page.locator('[data-flip-weights]')
   await expect(weights).toBeInViewport()
-  const kalguuran = weights.getByLabel('Kalguuran', { exact: true })
-  const line = kalguuran.locator('xpath=..')
+  const legion = weights.getByLabel('Legion', { exact: true })
+  const line = legion.locator('xpath=..')
   await expect(line.getByText('Estimated')).toBeVisible()
-  await kalguuran.fill('25')
-  await kalguuran.blur()
-  await expect(kalguuran).toHaveValue('25')
+  await legion.fill('25')
+  await legion.blur()
+  await expect(legion).toHaveValue('25')
   await expect(line.getByText('Yours')).toBeVisible()
+  await expect(panel.getByText(/9 estimated, 1 yours/)).toBeAttached()
   await overlay.snap('flips-weights')
 
   await line.getByRole('button', { name: 'Reset' }).click()
   await expect(line.getByText('Estimated')).toBeVisible()
+})
+
+test('flips: Ctrl+Space says whether a Thread is worth flipping', async ({ overlay }) => {
+  await routePrices(overlay)
+  await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip' }] })
+  await overlay.pressHotkey('Ctrl + Space')
+  const search = overlay.widget('woke-search')
+  const box = search.getByRole('textbox', { name: 'Search', exact: true })
+  const result = search.getByRole('button', { name: /Flip Expedition Thread/ }).first()
+  await expect(async () => {
+    await box.fill('expedition thread')
+    await expect(result).toBeVisible({ timeout: 500 })
+  }).toPass({ timeout: 20_000 })
+  await result.click()
+  await expect(search.getByText('Profit per item put in')).toBeVisible()
+  await expect(search.getByText(/^\+0\.\d+c each$/)).toBeVisible()
+  await overlay.snap('search flips thread')
 })

@@ -32,6 +32,9 @@
         <span class="w-dim">{{ verdictSub }}</span>
       </div>
       <div v-if="warning" :class="[$style.note, $style.warning]">{{ warning }}</div>
+      <div v-if="openerValue != null" :class="$style.note" class="w-num">
+        <span v-item-tip="{ name: family.opener!, type: family.ninjaType }">{{ family.opener }}</span> opens to {{ fmt(openerValue) }} on average<template v-if="family.lowConfidence && !countOf('yours')">, with every result counted as equally likely</template>. It has no price to buy at.
+      </div>
 
       <WSkeleton v-if="!snapshot" :rows="8" />
       <WEmpty v-else-if="!flip" icon="fas fa-recycle">poe.ninja has no {{ family.noun }} prices yet.</WEmpty>
@@ -144,7 +147,7 @@ import type { DockMenuAction } from '../dock/dock'
 import { useZone } from '../shared/zone'
 import { DEFAULT_FLIP_SORT, JACKPOT_CHAOS, SUPPLY_HIGH, SUPPLY_MEDIUM, buyList, firstSortDir, isTraded, flipOdds, parseExchange, rareCheapList, sortFlips, supplyLevel } from './calc'
 import type { FlipRow, FlipSortKey, UpgradeRow, WeightSource } from './calc'
-import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, familyById, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
+import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, knownFamily, parseLifeforce, priceFlip, pricedFamilies, shortName, shownFamily, unpricedShare } from './families'
 import type { Exchanges, FlipMethodId } from './families'
 import { stashHotkeyTarget } from './widget'
 import type { ScarabFlipWidget } from './widget'
@@ -308,6 +311,8 @@ function sortLabel (c: { key: FlipSortKey, label: string }) {
 const buy = computed(() => sortFlips<FlipRow | UpgradeRow>(buyList(rows.value, props.config.hideUntraded), sort.value, shortName))
 const rareCheap = computed(() => pool.value ? rareCheapList(pool.value) : [])
 const odds = computed(() => pool.value ? flipOdds(pool.value) : null)
+// What the family's opener is worth used: the average result, after the sell discount.
+const openerValue = computed(() => family.value.opener && odds.value && odds.value.saleValue > 0 ? odds.value.saleValue : null)
 // Both bars use one scale, so a long value bar means more than a long chance bar.
 const oddsScale = computed(() => Math.max(...(odds.value?.buckets ?? []).flatMap(b => [b.chance, b.valueShare]), 0.0001))
 
@@ -405,7 +410,7 @@ const FlipName = defineComponent({
           ? h('i', { class: 'fas fa-star w-warn', style: 'flex: none; font-size: calc(11px * var(--w-text-scale, 1));', title: 'Exceptionally rare and cheap: it may rise later, so think before flipping it' })
           : null,
         p.source === 'estimate'
-          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight: uses the average of the others. Change it in Settings.' }, 'EST')
+          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight, so this is an estimate. Change it in Settings.' }, 'EST')
           : null,
         p.source === 'yours'
           ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-info);', title: 'Your own weight, from Settings.' }, 'YOURS')
@@ -439,13 +444,19 @@ async function toggleOutlines () {
     readingStash = false
   }
   if (!read.found) {
-    stashNote("Can't read this tab. Outlines work on Scarab, Delirium, Delve, Essence and Blight tabs, mouse off them. All but Scarab need a game window 1080p or taller.")
+    stashNote("Can't read this tab. Outlines work on Delirium, Delve, Essence and Blight tabs, mouse off them, in a game window 1080p or taller.")
+    hostRequest('stash-watch-stop', null).catch(() => {})
+    return
+  }
+  // The old Scarab tab still reads, but scarabs left the game in 3.30.
+  const tabFamily = knownFamily(read.family)
+  if (!tabFamily) {
+    stashNote('Scarabs left the game in 3.30, so there is nothing to outline here')
     hostRequest('stash-watch-stop', null).catch(() => {})
     return
   }
   // The method the panel has picked for this family, and the same advice as the
   // panel: no untraded prices, and hold rare and cheap ones.
-  const tabFamily = familyById(read.family)
   const picked = props.config.methods?.[tabFamily.id]
   const tabMethod = tabFamily.methods.find(m => m.id === picked) ?? tabFamily.methods[0]
   const priced = priceFlip(tabFamily, tabMethod, prices.items, exchanges.value, options.value, lifeforcePerItem.value, props.config.weights)

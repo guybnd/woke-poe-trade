@@ -17,24 +17,21 @@ export const CATALYST_WEIGHTS: Record<string, number> = {
 }
 
 // Patch 3.22.0. Calculated item weights for Delirium Orbs using BAYESIAN method from 5 datasets.
+// Cut to the orbs that drop in 3.30 (poewiki's drop-enabled list): Abyssal,
+// Fossilised, Fragmented, Imperial, Obscured and Timeless are gone, and
+// Skittering was renamed Threaded, so Threaded keeps Skittering's weight.
 export const DELIRIUM_WEIGHTS: Record<string, number> = {
-  'Abyssal Delirium Orb': 0.030211,
   "Armoursmith's Delirium Orb": 0.12239,
   "Blacksmith's Delirium Orb": 0.11569,
   'Blighted Delirium Orb': 0.032788,
   "Cartographer's Delirium Orb": 0.029854,
   "Diviner's Delirium Orb": 0.058411,
   'Fine Delirium Orb': 0.12635,
-  'Fossilised Delirium Orb': 0.033023,
-  'Fragmented Delirium Orb': 0.030608,
   "Jeweller's Delirium Orb": 0.10164,
-  'Obscured Delirium Orb': 0.01747,
   'Singular Delirium Orb': 0.024527,
-  'Skittering Delirium Orb': 0.035405,
   "Thaumaturge's Delirium Orb": 0.028411,
-  'Timeless Delirium Orb': 0.02851,
-  'Whispering Delirium Orb': 0.050956,
-  'Imperial Delirium Orb': 0.052327
+  'Threaded Delirium Orb': 0.035405,
+  'Whispering Delirium Orb': 0.050956
 }
 
 // Patch 3.19.0. Calculated item weights for Fossils using BAYESIAN method from 9 datasets.
