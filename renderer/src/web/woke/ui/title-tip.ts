@@ -34,7 +34,7 @@ const CARD_STYLE = [
 ].join(';')
 const KEYS_STYLE = 'display:flex;gap:3px;margin-top:5px'
 const KBD_STYLE = [
-  'font-family:var(--w-num)', 'font-size:var(--w-fs-xs)', 'line-height:14px', 'padding:0 5px',
+  'font-family:var(--w-num)', 'font-size:var(--w-fs-xs)', 'line-height:calc(14px * var(--w-text-scale, 1))', 'padding:0 5px',
   'border:1px solid var(--w-line-strong)', 'border-bottom-width:2px', 'border-radius:var(--w-r-sm)', 'color:var(--w-fg)'
 ].join(';')
 
