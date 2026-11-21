@@ -140,7 +140,6 @@ watch(() => props.chip, (c, old) => {
   }
   if (!c) {
     armed.value = false
-    // Closed mid-drag (you went into a map): keep the size it had got to.
     // Closed mid-drag (you went into a map): save what it had got to.
     if (resizing.value) {
       endResize?.()
@@ -195,7 +194,7 @@ function startResize (e: PointerEvent) {
     const h = h0 + (ev.clientY - y0) / zoom
     // Only a height past what the content needs is kept: a sideways drag, or
     // one back up to the content, leaves the height to the content.
-    s = clampToastSize({ w, h: h > natural + 4 ? h : undefined }) ?? { w: TOAST_WIDTH }
+    s = clampToastSize({ w, h: h > natural + 12 ? h : undefined }) ?? { w: TOAST_WIDTH }
     emit('resize', s, false)
   }
   const detach = () => {

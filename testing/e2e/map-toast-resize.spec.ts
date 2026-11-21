@@ -20,7 +20,10 @@ test('dragging the toast corner makes it wider and taller, text the same size', 
     '2026/11/05 15:04:31 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.',
     // A second map, so the toast has run bars.
     '2026/11/05 15:05:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 83 area "MapWorldsStrand" with seed 8',
-    '2026/11/05 15:05:01 3727812 cffb065b [INFO Client 25552] : You have entered Strand.',
+    '2026/11/05 15:05:01 3727812 cffb065b [INFO Client 25552] : You have entered Strand.'
+  ])
+  // Apart: the first run is saved when the second map starts, before this leave compares to it.
+  await overlay.log([
     '2026/11/05 15:08:00 3725546 1186a8a3 [DEBUG Client 25552] Generating level 60 area "HideoutArenaSearingExarch" with seed 1',
     '2026/11/05 15:08:01 3727812 cffb065b [INFO Client 25552] : You have entered Searing Hideout.'
   ])
