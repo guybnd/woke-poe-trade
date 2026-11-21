@@ -21,6 +21,8 @@ const CASH_SHARE = 0.75
 export const RETURN_WINDOW_MS = 2 * 3_600_000
 const RETURN_MIN = 0.5
 const RETURN_MAX = 1.15
+// Smaller purchases are never cancelled: a loot refresh would match them.
+const RETURN_FLOOR_DIV = 5
 
 // The guess: 'spend' is a purchase.
 export type SpendKind = 'spend'
@@ -37,6 +39,9 @@ export interface SpendFields {
   mark?: SpendMark
   // With mark 'spend': how much you said you spent (chaos), from the chart.
   markChaos?: number
+  // The read's divines (for its rate) and its biggest new item (chaos).
+  netDivine?: number | null
+  topAddChaos?: number
 }
 
 // What a refresh adds to profit, the chaos left out as spent, and the chaos
@@ -66,6 +71,16 @@ function purchaseCounts (g: SpendFields): number {
   return g.cashChaos != null && g.cashChaos < 0 ? Math.min(0, net - g.cashChaos) : 0
 }
 
+// Chaos per divine at that read, from its own numbers.
+const rateOf = (g: SpendFields) => g.netDivine && g.netChaos ? g.netChaos / g.netDivine : FALLBACK_DIVINE
+
+// A gain that looks like a purchase coming back: mostly currency (a trade
+// that fell through), or one item worth most of it (the bought item stashed).
+function looksBack (g: SpendFields): boolean {
+  if (g.cashChaos != null && g.cashChaos >= CASH_SHARE * g.netChaos) return true
+  return g.topAddChaos != null && g.topAddChaos >= 0.5 * g.netChaos
+}
+
 // Every refresh's share of profit, worked out in time order (so flipping one
 // call moves the ones after it too). Keyed by the read's time.
 export function resolveSpends (gains: readonly SpendFields[]): Map<number, Resolved> {
@@ -75,18 +90,19 @@ export function resolveSpends (gains: readonly SpendFields[]): Map<number, Resol
     if (isPurchase(g)) {
       const counted = purchaseCounts(g)
       const spent = Math.max(0, counted - g.netChaos)
-      if (spent > 0) open.push({ at: g.at, left: spent })
+      if (spent >= RETURN_FLOOR_DIV * rateOf(g)) open.push({ at: g.at, left: spent })
       out.set(g.at, { counted, spent, back: 0 })
       continue
     }
     let back = 0
-    if (g.netChaos > 0 && g.mark !== 'counted') {
-      // The oldest purchase still out, in the window, that this gain is about the size of.
+    if (g.netChaos > 0 && g.mark !== 'counted' && looksBack(g)) {
+      // The oldest purchase still out, in the window, that this gain is about
+      // the size of. One gain closes it: nothing else can match it after.
       const o = open.find(x => x.left > 0 && x.at >= g.at - RETURN_WINDOW_MS && x.at < g.at &&
         g.netChaos >= RETURN_MIN * x.left && g.netChaos <= RETURN_MAX * x.left)
       if (o) {
         back = Math.min(g.netChaos, o.left)
-        o.left -= back
+        o.left = 0
       }
     }
     out.set(g.at, { counted: g.netChaos - back, spent: 0, back })

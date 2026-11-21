@@ -30,7 +30,7 @@
              or say a purchase wasn't one. -->
         <div v-if="pinAction" :class="$style.spendBar">
           <template v-if="pinAction.mark === 'spend'">
-            <label :class="$style.spendAmount">Spent <input id="ledger-spend-amount" v-model.number="amountDiv" type="number" min="0" step="0.1" :class="$style.spendInput" aria-label="Amount spent"><Coin /></label>
+            <label :class="$style.spendAmount">Spent <input v-model.number="amountDiv" type="number" min="0" step="0.1" :class="$style.spendInput" aria-label="Amount spent"><Coin /></label>
             <button type="button" :class="$style.spendBtn" @click="markSpend('spend', amountDiv)">Mark as purchase</button>
           </template>
           <button v-else type="button" :class="$style.spendBtn" @click="markSpend(pinAction.mark)">{{ pinAction.label }}</button>

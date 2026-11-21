@@ -479,7 +479,10 @@ function chartSpendAction (at: number) {
   return x ? markAction(x, shares.value.get(at)) : null
 }
 function onChartSpend (at: number, mark: SpendMark | null, amount?: number) {
-  setSpendMark(at, mark, amount == null ? undefined : divine.value ? amount * divine.value : amount)
+  // The chart shows each point at its own read's rate: back to chaos at it.
+  const g = gainAt.value.get(at)
+  const rate = g?.netDivine && g.netChaos ? g.netChaos / g.netDivine : divine.value
+  setSpendMark(at, mark, amount == null ? undefined : rate ? amount * rate : amount)
 }
 // A group's refreshes that are purchases, cancel one, or lost currency, each
 // with its switch. Losses where under 1 div of currency left get none here

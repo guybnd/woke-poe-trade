@@ -46,12 +46,23 @@ describe('what comes back after a purchase', () => {
   it('the currency back, or the bought item stashed, cancels it', () => {
     expect(resolveSpends([spend, { at: H, netChaos: 50 * DIV, cashChaos: 50 * DIV }]).get(H)).toEqual({ counted: 0, spent: 0, back: 50 * DIV })
     // The item bought, priced a bit under what it cost.
-    expect(resolveSpends([spend, { at: H, netChaos: 40 * DIV, cashChaos: 0 }]).get(H)!.counted).toBe(0)
+    expect(resolveSpends([spend, { at: H, netChaos: 40 * DIV, cashChaos: 0, topAddChaos: 40 * DIV }]).get(H)!.counted).toBe(0)
   })
   it('gains of another size, or later, are profit', () => {
     expect(resolveSpends([spend, { at: H, netChaos: 12 * DIV }]).get(H)!.counted).toBe(12 * DIV)
     expect(resolveSpends([spend, { at: H, netChaos: 80 * DIV }]).get(H)!.counted).toBe(80 * DIV)
     expect(resolveSpends([spend, { at: RETURN_WINDOW_MS + 1, netChaos: 50 * DIV }]).get(RETURN_WINDOW_MS + 1)!.counted).toBe(50 * DIV)
+  })
+  it('farming loot after a purchase stays profit', () => {
+    // Many small things, little currency: not the purchase coming back.
+    expect(resolveSpends([spend, { at: H, netChaos: 40 * DIV, cashChaos: 2 * DIV, topAddChaos: 3 * DIV }]).get(H)!.counted).toBe(40 * DIV)
+    // One gain closes a purchase; the next one is profit.
+    const r = resolveSpends([spend, { at: H, netChaos: 30 * DIV, cashChaos: 30 * DIV }, { at: 1.5 * H, netChaos: 20 * DIV, cashChaos: 20 * DIV }])
+    expect(r.get(H)!.back).toBe(30 * DIV)
+    expect(r.get(1.5 * H)!.counted).toBe(20 * DIV)
+    // Small marked purchases are never cancelled.
+    const small = resolveSpends([{ at: 0, netChaos: -2 * DIV, mark: 'spend' }, { at: H, netChaos: 2 * DIV, cashChaos: 2 * DIV }])
+    expect(small.get(H)!.counted).toBe(2 * DIV)
   })
   it('flipping the purchase moves what comes back too', () => {
     const back = { at: H, netChaos: 50 * DIV, cashChaos: 50 * DIV }
@@ -65,9 +76,9 @@ describe('what comes back after a purchase', () => {
   it('matches each purchase once, oldest first', () => {
     const r = resolveSpends([
       { at: 0, netChaos: -50 * DIV, cashChaos: -50 * DIV, auto: 'spend' },
-      { at: 1.5 * H, netChaos: 50 * DIV },
+      { at: 1.5 * H, netChaos: 50 * DIV, cashChaos: 50 * DIV },
       { at: 1.6 * H, netChaos: -30 * DIV, cashChaos: -30 * DIV, auto: 'spend' },
-      { at: 1.7 * H, netChaos: 30 * DIV }
+      { at: 1.7 * H, netChaos: 30 * DIV, cashChaos: 30 * DIV }
     ])
     expect(r.get(1.5 * H)!.back).toBe(50 * DIV)
     expect(r.get(1.7 * H)!.back).toBe(30 * DIV)
@@ -97,7 +108,7 @@ describe('session total', () => {
     expect(r.spent).toBe(50 * DIV)
   })
   it('a purchase before the session can be cancelled inside it', () => {
-    const gains = [gain(0, -50 * DIV, { cashChaos: -50 * DIV, auto: 'spend' }), gain(H, 50 * DIV)]
+    const gains = [gain(0, -50 * DIV, { cashChaos: -50 * DIV, auto: 'spend' }), gain(H, 50 * DIV, { cashChaos: 50 * DIV })]
     expect(gainsBetween(gains, 1, 2 * H).chaos).toBe(0)
   })
 })

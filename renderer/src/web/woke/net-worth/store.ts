@@ -226,8 +226,11 @@ function withSpends (points: LedgerPoint[], gains: StashGain[]): LedgerPoint[] {
   const share = resolveSpends(gains)
   return points.map(p => {
     const r = share.get(p.at)
-    const counted = r && p.netChaos != null && r.counted !== p.netChaos ? Math.round(r.counted * 10) / 10 : undefined
-    const spent = r?.spent ? Math.round(r.spent * 10) / 10 : undefined
+    // Older than the oldest gain kept: left as it was.
+    if (!r) return p
+    const c = Math.round(r.counted * 10) / 10
+    const counted = p.netChaos != null && c !== p.netChaos ? c : undefined
+    const spent = r.spent ? Math.round(r.spent * 10) / 10 : undefined
     if (p.counted === counted && p.spent === spent) return p
     const next = { ...p }
     delete next.counted

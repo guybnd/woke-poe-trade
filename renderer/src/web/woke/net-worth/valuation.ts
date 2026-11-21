@@ -352,6 +352,7 @@ export interface StashGain {
   auto?: SpendKind
   mark?: SpendMark
   markChaos?: number
+  topAddChaos?: number
 }
 
 const MAX_GAINS = 2000
@@ -360,6 +361,7 @@ export function gainOf (diff: StashDiff, since: number | null, divine: number | 
   return {
     ...guess,
     cashChaos: diff.cashChaos,
+    topAddChaos: diff.added[0]?.chaos ?? 0,
     at: diff.at,
     since,
     netChaos: diff.netChaos,
