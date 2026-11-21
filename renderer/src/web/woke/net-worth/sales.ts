@@ -21,6 +21,8 @@ export interface Sale {
   mapTier?: number
   links?: number
   price: { amount: number, currency: string }
+  // Gear's item data for the tooltip (trade-history.ts tipOf).
+  tip?: Record<string, unknown>
 }
 
 export interface SalesReply {

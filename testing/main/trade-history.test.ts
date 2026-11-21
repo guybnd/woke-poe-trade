@@ -56,6 +56,15 @@ describe('parse', () => {
     expect(list[0].at).toBe(Date.parse('2026-11-21T10:07:21Z'))
   })
 
+  it("keeps gear's mods for its tooltip, not a gem's or currency's", () => {
+    const list = parseHistory(JSON.stringify({ result: [
+      entry('r', '2026-11-21T10:00:00Z', { name: 'Vengeance Crown', typeLine: 'Prophet Crown', frameType: 2, rarity: 'Rare', icon: 'x.png', explicitMods: ['+80 to maximum Life'], w: 2, h: 2, flavourText: ['x'] }),
+      entry('g', '2026-11-21T10:00:00Z', { typeLine: 'Empower Support', frameType: 4, explicitMods: ['x'] })
+    ] }))!
+    expect(list[0].tip).toEqual({ name: 'Vengeance Crown', typeLine: 'Prophet Crown', frameType: 2, rarity: 'Rare', explicitMods: ['+80 to maximum Life'] })
+    expect(list[1].tip).toBeUndefined()
+  })
+
   it('says null for a reply that is not trade history', () => {
     expect(parseHistory('<html>')).toBeNull()
     expect(parseHistory('{"error":{"code":2}}')).toBeNull()

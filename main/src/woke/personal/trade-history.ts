@@ -32,6 +32,10 @@ export interface Sale {
   // The biggest linked group, when 5 or more (a 6L unique prices apart).
   links?: number
   price: { amount: number, currency: string }
+  // Gear's mods and properties as the site sent them, for the item tooltip
+  // (the trade listing tooltip reads the same shape). Left out for gems,
+  // currency and cards: their tooltip comes from the name.
+  tip?: Record<string, unknown>
 }
 
 export interface SalesError {
@@ -100,6 +104,22 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[1]) : undefined
 }
 
+// The item fields the tooltip draws from (listing-tip.ts ListingItem).
+const TIP_KEYS = [
+  'name', 'typeLine', 'baseType', 'frameType', 'rarity', 'ilvl', 'corrupted', 'mirrored', 'influences',
+  'implicitMods', 'enchantMods', 'utilityMods', 'fracturedMods', 'explicitMods', 'craftedMods', 'scourgeMods', 'veiledMods',
+  'sockets', 'fractured', 'synthesised', 'searing', 'tangled', 'properties', 'requirements', 'extended'
+]
+// Gems, currency, cards and quest items: the name gives their tooltip.
+const NAME_TIP_FRAMES = new Set([4, 5, 6, 7, 8])
+
+export function tipOf (item: Raw): Record<string, unknown> | undefined {
+  if (NAME_TIP_FRAMES.has(num(item.frameType) ?? -1)) return undefined
+  const out: Record<string, unknown> = {}
+  for (const k of TIP_KEYS) if (item[k] !== undefined) out[k] = item[k]
+  return out
+}
+
 function biggestLinks (sockets: unknown): number {
   if (!Array.isArray(sockets)) return 0
   const groups = new Map<number, number>()
@@ -142,6 +162,8 @@ export function parseSale (e: unknown): Sale | null {
   if (tier) sale.mapTier = tier
   const links = biggestLinks(item.sockets)
   if (links >= 5) sale.links = links
+  const tip = tipOf(item)
+  if (tip) sale.tip = tip
   return sale
 }
 
