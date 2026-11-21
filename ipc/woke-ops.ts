@@ -228,6 +228,7 @@ export interface WokeOps {
   'stash-tab-set-delete': Op<{ league: string | undefined, name: string }, Json>
   'worn-items': Op<{ character?: string }, Json>
   'character-sync': Op<{ character?: string, auto?: boolean, read?: 'now' }, Json>
+  'trade-history': Op<{ league?: string, read?: 'manual' | 'auto' | 'none' }, Json>
 
   // Claude link (Settings › Experimental) and its Suggestions card
   'claude-link-state': Op<NoArgs, ClaudeLinkState>

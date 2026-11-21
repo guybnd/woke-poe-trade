@@ -2,16 +2,29 @@
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
     :hotkey="config.hotkey" :busy="status?.running === true" :stale="!!status?.error && !!v">
     <template #actions>
+      <!-- Your stash or your sales (pick C). -->
+      <TextTabs v-model="view" :options="VIEW_OPTIONS" :class="$style.viewTabs" />
       <!-- The read's age is in the footer: beside the title it ran into the game look's plaque. -->
-      <WButton size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" :title="readLine ? `Stash ${readLine}` : undefined" @click="refresh">Refresh</WButton>
-      <WButton size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
+      <WButton v-if="view === 'sales'" size="sm" icon="fas fa-sync-alt" :disabled="salesReading" :title="salesReadLine ? `Sales ${salesReadLine}` : undefined" @click="refreshSales">Refresh</WButton>
+      <WButton v-else size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" :title="readLine ? `Stash ${readLine}` : undefined" @click="refresh">Refresh</WButton>
+      <WButton v-if="view !== 'sales'" size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
       <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" title="Sections to show" aria-label="Sections to show" @click="openSections" />
     </template>
-    <template v-if="status?.error && !showPicker" #banner>
+    <template v-if="view === 'sales' && salesError" #banner>
+      <WBanner :tone="salesError.kind === 'rate-limited' ? 'warn' : 'error'">{{ salesErrorLine }}</WBanner>
+    </template>
+    <template v-else-if="view !== 'sales' && status?.error && !showPicker" #banner>
       <WBanner :tone="status.error.kind === 'rate-limited' ? 'warn' : 'error'">{{ errorLine }}</WBanner>
     </template>
 
-    <TabPicker v-if="showPicker" :key="status?.league ?? ''" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" :running="status?.running === true" @done="onPicked" />
+    <div v-if="view === 'sales'" :class="$style.body">
+      <SalesView :divine="divine" :range="config.salesRange" @range="config.salesRange = $event" />
+      <div class="w-dim text-xs" :class="$style.foot">
+        <span>pathofexile.com sends your last 100 sales; older ones stay here once read</span>
+        <span><template v-if="salesReadLine">Sales {{ salesReadLine }} · </template>poe.ninja · {{ ninjaAge }}</span>
+      </div>
+    </div>
+    <TabPicker v-else-if="showPicker" :key="status?.league ?? ''" :can-cancel="!needsPick" :remove-only="status?.skipped ?? 0" :running="status?.running === true" @done="onPicked" />
     <WEmpty v-else-if="!v && !status?.lastReadAt" icon="fas fa-box-open">
       {{ status?.running ? `Stash ${readLine}` : status?.account ? 'Not read yet. Press Refresh.' : 'Sign in under Settings › Game & league, then press Refresh.' }}
     </WEmpty>
@@ -25,6 +38,7 @@
         </span>
         <!-- Per hour of play over the window picked under Details. -->
         <span v-if="rateShown.div != null && !(detailsOpen && shown.perHour)" class="w-num" :class="tone(rateShown.div)" :title="rateShown.tip">{{ signed(rateShown.div) }}<Coin :chaos="!divine" />/h <span class="w-dim">{{ rateWindow === 'today' ? 'today' : rateWindow }}</span></span>
+        <button v-if="soldToday.count" type="button" class="w-num" :class="$style.soldToday" :title="`${soldToday.count} ${soldToday.count === 1 ? 'sale' : 'sales'} today. Click for the Sales view`" @click="view = 'sales'">Sold {{ div(soldToday.chaos) }}<Coin :chaos="!divine" /> today</button>
         <WSpark v-if="spark.length > 1 && !(detailsOpen && shown.chart)" :values="spark" :width="90" :height="18" :class="$style.spark" />
         <span v-if="detailsOpen && shown.numbers" :class="$style.holdings" class="w-num text-xs">
           <span :title="inChaos(liquid)"><span :class="$style.caps">Liquid</span> {{ div(liquid) }}<Coin :chaos="!divine" /></span>
@@ -51,7 +65,7 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" @spend="onChartSpend" />
+            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" :sales="chartSales" @spend="onChartSpend" />
             <div v-if="chartMode === 'category'" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -94,16 +108,22 @@
                 <div v-for="(g, i) in groups.slice(0, groupLimit)" :key="g.key" :class="$style.group">
                   <button type="button" :class="$style.groupHead" :aria-expanded="groupOpen(g.key, i)" @click="toggleGroup(g.key, i)">
                     <i :class="groupOpen(g.key, i) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
-                    <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template><span v-if="spendRows(g).some(r => r.spent)" :class="$style.spendChip" title="A purchase: it counts 0 toward profit per hour and the session">purchase</span></span>
+                    <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template><span v-if="spendRows(g).some(r => r.spent)" :class="$style.spendChip" title="A purchase: it counts 0 toward profit per hour and the session">purchase</span><span v-if="groupSales(g).sales.length" :class="$style.saleChip" title="Items sold on pathofexile.com in this refresh">sale</span></span>
                     <b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b>
                   </button>
                   <template v-if="groupOpen(g.key, i)">
-                    <div v-for="l in g.lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
+                    <!-- A sale takes the place of its item's removed line (sales.ts). -->
+                    <div v-for="s in groupSales(g).sales" :key="'sale' + s.id" :class="$style.feedRow">
+                      <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
+                      <span class="w-trunc" :title="saleTitle(s)">Sold {{ saleName(s) }}</span>
+                      <span class="w-num" :class="$style.saleNum" :title="`${fmt(s.price.amount)} ${s.price.currency}`">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span>
+                    </div>
+                    <div v-for="l in groupSales(g).lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
                       <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
                       <span v-item-tip="tipFor(tips, l.key, l.name, l.count)" class="w-trunc">{{ l.count > 1 ? `${fmt(l.count)} × ` : '' }}{{ l.name }}</span>
                       <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
                     </div>
-                    <div v-if="g.lines.length > 5" :class="$style.more">+{{ g.lines.length - 5 }} more</div>
+                    <div v-if="groupSales(g).lines.length > 5" :class="$style.more">+{{ groupSales(g).lines.length - 5 }} more</div>
                     <div v-for="r in spendRows(g)" :key="'spend' + r.at" :class="$style.spendRow">
                       <span class="w-trunc" :title="r.tip">{{ r.text }}</span>
                       <button type="button" :class="$style.spendBtn" @click="setSpendMark(r.at, r.action.mark)">{{ r.action.label }}</button>
@@ -119,6 +139,16 @@
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
+            <div v-if="showSold">
+              <button type="button" :class="$style.soldHead" title="Open the Sales view" @click="view = 'sales'">
+                <span :class="$style.caps">Sold</span>
+                <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
+              </button>
+              <div v-for="s in recentSales" :key="s.id" :class="$style.moveRow">
+                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span class="w-trunc" :title="saleTitle(s)">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" class="text-xs" :class="marketTone(s)">{{ marketText(marketOf(s)) }}</span></span>
+                <span class="w-num" :class="$style.saleNum" :title="new Date(s.at).toLocaleString()">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
+              </div>
+            </div>
             <div v-if="shown.where">
               <div :class="$style.caps" style="margin-bottom: 6px">Where it is</div>
               <button v-for="c in cats" :key="c.id" type="button" :class="[$style.catRow, { [$style.catOn]: cat === c.id }]"
@@ -232,6 +262,10 @@ import LedgerChart from './LedgerChart.vue'
 import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
+import SalesView from './SalesView.vue'
+import { inRange, marketText, matchedLines, saleChaos, saleName, salesInWindow, totals } from './sales'
+import type { Sale } from './sales'
+import { loadSales, marketOf, rates as saleRates, sales, salesReading, salesReply } from './sales-store'
 
 const TabPicker = defineAsyncComponent(() => import('./TabPicker.vue'))
 
@@ -364,7 +398,8 @@ function openSections (e: MouseEvent) {
 // Their widths, the chart's height can be dragged;
 // a drag shows a draft and saves once, when it ends.
 const showMoves = computed(() => shown.value.moves && moves.value.length > 0)
-const showSide = computed(() => shown.value.where || showMoves.value)
+const showSold = computed(() => shown.value.sold && recentSales.value.length > 0)
+const showSide = computed(() => shown.value.where || showMoves.value || showSold.value)
 const colIds = computed<ColId[]>(() => [
   showChanges.value ? 'changes' : null,
   showSide.value ? 'side' : null
@@ -417,7 +452,7 @@ function resetLayout (part: keyof PanelLayout) {
   // Left unset, each size falls back to its default (layout.ts).
   props.config.layout = { ...props.config.layout, [part]: undefined }
 }
-const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where)
+const anyDetails = computed(() => shown.value.chart || shown.value.perHour || shown.value.numbers || shown.value.moves || shown.value.changes || shown.value.where || showSold.value)
 // Tab labels switched off: a tab pick nothing shows any more is dropped.
 watch(() => shown.value.tabs, (on) => { if (!on) tabs.value = [] })
 // "Since last refresh" only when it has something.
@@ -643,6 +678,75 @@ function onIgnore (key: string, name: string, on: boolean) {
   toast(on ? `Ignoring ${name}` : `${name} counts again`, { undo: () => { setIgnored(key, !on) } })
 }
 
+// ---------- sales (pick A: Sold section, sale lines, chart dots; pick C: the Sales view) ----------
+const VIEW_OPTIONS = [{ value: 'holdings', label: 'Holdings' }, { value: 'sales', label: 'Sales' }]
+const view = computed<string>({
+  get: () => props.config.view === 'sales' ? 'sales' : 'holdings',
+  set: (x) => { props.config.view = x === 'sales' ? 'sales' : 'holdings' }
+})
+const salesLeague = computed(() => props.status?.league ?? leagueNow.value ?? null)
+watch(salesLeague, (id) => { loadSales(id).catch(() => {}) }, { immediate: true })
+function refreshSales () {
+  loadSales(salesLeague.value, 'manual').catch(() => {})
+}
+const saleChaosOf = (s: Sale) => saleChaos(s, saleRates.value)
+// In divines (chaos without a rate); a currency poe.ninja can't price as sold.
+function salePrice (s: Sale) {
+  const c = saleChaosOf(s)
+  return c == null ? `${fmt(s.price.amount)} ${s.price.currency}` : div(c)
+}
+const soldToday = computed(() => totals(inRange(sales.value, 'today', now.value), saleRates.value))
+const soldWeek = computed(() => totals(inRange(sales.value, '7d', now.value), saleRates.value))
+const recentSales = computed(() => sales.value.slice(0, 6))
+const clockOf = (at: number) => {
+  const d = new Date(at)
+  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+function saleTitle (s: Sale) {
+  const vs = marketText(marketOf(s))
+  return `${saleName(s)} sold for ${fmt(s.price.amount)} ${s.price.currency} · ${new Date(s.at).toLocaleString()}${vs ? ` · ${vs} against poe.ninja now` : ''}`
+}
+function marketTone (s: Sale) {
+  const x = marketOf(s)
+  return x == null || Math.abs(x) < 0.03 ? 'w-dim' : x < 0 ? 'w-down' : 'w-up'
+}
+// The chart's dots: each sale, named for the hover card.
+const chartSales = computed(() => sales.value.map(s => ({ at: s.at, text: `${saleName(s)} ${salePrice(s)}${saleChaosOf(s) == null ? '' : ` ${unit.value}`}` })))
+// A group's sales: those after the read before its first, up to its last. Their
+// items' removed lines give way to the sale rows.
+const readBefore = computed(() => {
+  const pts = ledger.value.points
+  return new Map(pts.map((p, i) => [p.at, i > 0 ? pts[i - 1].at : null]))
+})
+const groupSalesOf = computed(() => {
+  const out = new Map<string, { sales: Sale[], lines: ChangeGroup['lines'] }>()
+  for (const g of groups.value) {
+    const first = g.reads[0]
+    const last = g.reads[g.reads.length - 1]
+    const list = first == null ? [] : salesInWindow(sales.value, readBefore.value.get(first) ?? null, last)
+    const hide = matchedLines(g.lines, list)
+    out.set(g.key, { sales: list, lines: hide.size ? g.lines.filter(l => !hide.has(l.key)) : g.lines })
+  }
+  return out
+})
+const groupSales = (g: ChangeGroup) => groupSalesOf.value.get(g.key) ?? { sales: [], lines: g.lines }
+const salesError = computed(() => salesReply.value?.error ?? null)
+const salesErrorLine = computed(() => {
+  const e = salesError.value
+  if (!e) return ''
+  if (e.kind === 'rate-limited' && e.retryAt) {
+    const min = Math.max(1, Math.ceil((e.retryAt - Date.now()) / 60_000))
+    return `pathofexile.com allows few trade history reads. Try again in ${min} min.`
+  }
+  return e.message
+})
+const salesReadLine = computed(() => {
+  if (salesReading.value) return 'reading…'
+  const at = salesReply.value?.readAt
+  return at ? `read ${agoPhrase(at)}` : ''
+})
+
 // ---------- header and footer ----------
 const readLine = computed(() => {
   const s = props.status
@@ -733,6 +837,13 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .spendChip { margin-left: 6px; padding: 0 5px; border: 1px solid var(--w-info); color: var(--w-info); border-radius: 2px; font-size: var(--w-fs-xs); }
 .spendRow { display: flex; justify-content: space-between; gap: 6px; align-items: center; font-size: var(--w-fs-xs); color: var(--w-dim); }
 .spendBtn { color: var(--w-accent); text-decoration: underline; white-space: nowrap; background: none; border: 0; padding: 0; cursor: pointer; font-size: var(--w-fs-xs); }
+.saleChip { margin-left: 6px; padding: 0 5px; border: 1px solid var(--w-gold); color: var(--w-gold); border-radius: 2px; font-size: var(--w-fs-xs); }
+.saleNum { color: var(--w-gold); font-weight: 500; }
+.soldToday { color: var(--w-gold); cursor: pointer; white-space: nowrap; }
+.soldToday:hover { text-decoration: underline; }
+.soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
+.soldHead:hover .caps { color: var(--w-fg); }
+.viewTabs { margin-right: var(--w-s2); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
