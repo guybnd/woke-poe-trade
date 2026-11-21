@@ -3,7 +3,7 @@
 // prices, best typical pick first (Guy's pick B, 2026-11-21). The table loads
 // when the palette opens (woke/vaults).
 import { matchRank } from '../search'
-import { nightmareMapsFor, OFFERS, shortName, typicalPick, rewardPrice, DEFAULT_NIGHTMARE_VAULT_CHANCE, NIGHTMARE_VAULT_SOURCE } from '../../vaults/vaults'
+import { nightmareMapsFor, OFFERS, shortName, typicalPick, rewardPrice } from '../../vaults/vaults'
 import type { Vault, VaultTable } from '../../vaults/vaults'
 import type { Lookup, LookupCard, LookupContext, LookupRow, LookupSection } from './types'
 
@@ -47,7 +47,7 @@ function vaultsCard (table: VaultTable, ctx: LookupContext, first: Vault | null)
     icon: 'fas fa-dungeon',
     sections: [
       ...order.map(v => vaultSection(v, table, ctx)),
-      { text: [NOTE, `About ${DEFAULT_NIGHTMARE_VAULT_CHANCE}% of Nightmare maps spawn their boss's quadrant vault (${NIGHTMARE_VAULT_SOURCE}). Rewards from ${table.source}, read ${table.read}.`] }
+      { text: [NOTE, `Rewards from ${table.source}, read ${table.read}.`] }
     ],
     actions: [{ label: 'poewiki', url: first?.wiki ?? WIKI }]
   }

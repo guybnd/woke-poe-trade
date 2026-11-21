@@ -8,7 +8,7 @@ import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, NIGHTMARE_SO
 import { BOSS_RUNS_TYPE } from '../../boss-runs/widget'
 import { matchRank } from '../search'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
-import { DEFAULT_NIGHTMARE_VAULT_CHANCE, shortName, typicalPick, vaultForNightmare } from '../../vaults/vaults'
+import { shortName, typicalPick, vaultForNightmare } from '../../vaults/vaults'
 import type { Vault, VaultTable } from '../../vaults/vaults'
 
 // The boss behind each map, for searches by boss name (poedb, 3.30).
@@ -88,7 +88,7 @@ function overviewCard (results: BossResult[], prefs: BossPrefs, vaults: VaultTab
   }
 }
 
-// The Templar Vault a map spawns about half the time; shown, not in profit.
+// The Templar Vault a map can spawn; shown, not in profit.
 function vaultTag (r: BossResult, vaults: VaultTable | null): string {
   const v = vaults ? vaultForNightmare(vaults, r.boss.id) : null
   return v ? `${shortName(v)} vault` : ''
@@ -97,7 +97,7 @@ function vaultTag (r: BossResult, vaults: VaultTable | null): string {
 function vaultRow (vault: Vault, ctx: LookupContext): LookupRow {
   const typical = typicalPick(vault, ctx.price)
   return {
-    label: `Vault: ${vault.name}, ~${DEFAULT_NIGHTMARE_VAULT_CHANCE}% of maps · ~typical pick, not in profit`,
+    label: `Vault: ${vault.name} · ~typical pick, not in profit`,
     ...(typical != null ? { chaos: typical } : { value: 'varies', dim: true }),
     action: { label: 'Vault rewards', search: shortName(vault) }
   }
