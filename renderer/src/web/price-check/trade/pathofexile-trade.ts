@@ -423,7 +423,7 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     }
   }
 
-  if (filters.mapCompletionReward) {
+  if (filters.mapCompletionReward && !filters.mapCompletionReward.disabled) {
     propSet(query.filters, 'map_filters.filters.map_completion_reward.option', filters.mapCompletionReward.nameTrade)
   }
 

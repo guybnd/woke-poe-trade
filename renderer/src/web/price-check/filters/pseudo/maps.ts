@@ -145,18 +145,22 @@ export function chartProps (bulk: boolean, ctx: FiltersCreationContext): void {
   }
 }
 
+// woke: one filter for the Void mod on every Valdo map: a void map searches
+// void maps, any other searches maps without it. The Valdo strip (ValdoStrip.vue)
+// switches it Any / Void / No void.
 export function valdoBadMods (ctx: FiltersCreationContext): void {
   if (!ctx.item.mapCompletionReward) return
 
   for (const lethalStatRef of VALDO_LETHAL_STATS) {
-    if (ctx.item.statsByType.some(calc => calc.stat.ref === lethalStatRef)) continue
-
+    const has = ctx.item.statsByType.some(calc => calc.stat.ref === lethalStatRef)
     const lethalStat = findAndResolveByRef(lethalStatRef, ModifierType.Explicit, ctx.item.category)
     const filter = statToNotFilter({
       stat: lethalStat,
       type: ModifierType.Explicit,
       disabled: false
     })
+    if (has) filter.not = undefined
+    filter.valdoVoid = true
     ctx.filters.push(filter)
   }
 }

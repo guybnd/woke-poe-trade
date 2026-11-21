@@ -28,6 +28,8 @@
       <!-- woke: a Nightmare Map's worth sits under the map section (Guy's pick A, 2026-11-21). -->
       <template v-if="isNightmareMap" #worth><woke-nightmare-strip :item="item" /></template>
     </woke-map-strip>
+    <!-- woke: a Valdo map: Void and Reward for the trade search, and its mods. -->
+    <woke-valdo-strip v-if="item.mapCompletionReward" :item="item" :stats="itemStats" :filters="itemFilters" class="mb-2" />
     <!-- woke: the gem's other versions with poe.ninja prices; a row searches trade only when clicked. -->
     <woke-gem-versions v-if="isGem && tradeAPI === 'trade'" :item="item" :filters="itemFilters" class="mb-2" />
     <!-- woke: 3.30 Wickerman module, Viscera versions and drop sources (remove with the league). -->
@@ -157,6 +159,7 @@ export default defineComponent({
   components: {
     // woke: lazy, so the map strip and its checks stay out of the startup bundle.
     WokeMapStrip: defineAsyncComponent(() => import('@/web/woke/map-mods/MapModStrip.vue')),
+    WokeValdoStrip: defineAsyncComponent(() => import('@/web/woke/valdo/ValdoStrip.vue')),
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
     WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
@@ -207,7 +210,8 @@ export default defineComponent({
     provide('map-strip-owns', stripProps)
     const rowStats = computed(() => {
       // Only while the strip is up: with Map mods off, the map's mods stay rows.
-      const onStrip = (s: FilterOrGroup) => !s.group && stripProps.value != null && (!!s.mapMod || stripProps.value.has(s.tradeId[0]))
+      // A Valdo map's Void filter is on the Valdo strip, which is always up.
+      const onStrip = (s: FilterOrGroup) => !s.group && (!!s.valdoVoid || (stripProps.value != null && (!!s.mapMod || stripProps.value.has(s.tradeId[0]))))
       return itemStats.value.some(onStrip) ? itemStats.value.filter(s => !onStrip(s)) : itemStats.value
     })
     const doSearch = ref(false)

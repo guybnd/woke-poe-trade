@@ -458,6 +458,12 @@
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/trade/"
   ],
+  "valdo-map.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/valdo/",
+   "renderer/src/web/woke/map-mods/"
+  ],
   "viscera-versions.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",

@@ -74,6 +74,8 @@ export interface ItemFilters {
   mapCompletionReward?: {
     name: string
     nameTrade: string
+    /** woke: Any reward, from the Valdo strip (ValdoStrip.vue). */
+    disabled?: boolean
   }
   itemLevel?: FilterNumeric
   stackSize?: FilterNumeric
@@ -153,6 +155,8 @@ export interface StatFilter {
   not?: true
   /** woke: one of a map's mods, set Any / Has / Not on the map strip (MapModStrip.vue), not listed in the rows. */
   mapMod?: true
+  /** woke: a Valdo map's "sent to the Void" mod, set Any / Void / No void on the Valdo strip (ValdoStrip.vue), not listed in the rows. */
+  valdoVoid?: true
   roll?: {
     value: number
     min: number | '' | undefined // NOTE: mutable in UI

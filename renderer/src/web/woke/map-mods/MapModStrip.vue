@@ -70,7 +70,8 @@ const open = useFold('map-mod-strip')
 
 const result = computed(() => {
   const config = findMapModsConfig()
-  if (!config || !config.stripOnPriceCheck || !isMapLike(props.item) || props.item.isUnidentified) return null
+  // A Valdo map has its own strip (ValdoStrip.vue): its mods are fixed and the trade site can't search them.
+  if (!config || !config.stripOnPriceCheck || !isMapLike(props.item) || props.item.isUnidentified || props.item.mapCompletionReward) return null
   return checkMap(props.item, config)
 })
 

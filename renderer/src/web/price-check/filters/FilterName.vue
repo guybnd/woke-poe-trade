@@ -32,7 +32,7 @@
         </button>
         <filter-btn-logical v-if="searchSub"
           :filter="searchSub" :text="searchSub.name ?? searchSub.baseType!" />
-        <filter-btn-logical v-if="filters.mapCompletionReward" readonly
+        <filter-btn-logical v-if="filters.mapCompletionReward && !filters.mapCompletionReward.disabled" readonly
           :filter="{ disabled: false }" :text="t('item.map_foil_reward', [filters.mapCompletionReward.name])" />
         <template v-if="filters.influences">
           <filter-btn-logical v-for="influence of filters.influences" :key="influence.value"

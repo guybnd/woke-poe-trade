@@ -112,7 +112,7 @@ export function createExactStatFilters (
   }
 
   for (const filter of ctx.filters) {
-    if (filter.not) continue
+    if (filter.not || filter.valdoVoid) continue
 
     filter.hidden = undefined
 
