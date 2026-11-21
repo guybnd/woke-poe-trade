@@ -64,7 +64,7 @@ const deathMarks = computed(() => {
   return span > 0 ? props.story.deathsAt.map(at => Math.min(100, Math.max(0, (at - props.story.startedAt) / span * 100))) : []
 })
 
-const HIDEOUT_TIP = "Hideout, town and anything else that isn't a map"
+const HIDEOUT_TIP = "Hideout, town, vaults and anything else that isn't a map"
 
 // The app's own tooltip card, not the browser's.
 const tipOwner = {}
@@ -78,7 +78,7 @@ function tier (level: number): string {
   return level >= 68 && level <= 83 ? `T${level - 67}` : `level ${level}`
 }
 function partTitle (p: StripPart): string {
-  if (p.skipped) return `Not counted (vault) · ${formatClock(p.ms)}`
+  if (p.skipped) return `Vault, counted as time out of maps · ${formatClock(p.ms)}`
   if (p.map == null) return `Out of maps · ${formatClock(p.ms)}`
   const m = props.story.maps[p.map]
   const deaths = m.deaths ? ` · ${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : ''
