@@ -192,7 +192,12 @@ function cancel () {
 }
 onTipHide(cancel)
 
+// A row closed while the pointer is still on it (hidden, re-sorted, right-clicked)
+// stays closed until the pointer goes somewhere else.
+let closed: HTMLElement | null = null
+
 function leave () {
+  closed = hovered
   hovered = null
   clearInterval(watch)
   hideTip()
@@ -259,12 +264,15 @@ function watchHover () {
   document.addEventListener('mouseover', (e) => {
     const el = tipEl(e.target)
     if (el === hovered) return
+    if (el && el === closed) return
+    closed = null
     if (hovered) leave()
+    closed = null
     if (el) enter(el)
   })
   // Out of the window: no mouseover follows.
   document.addEventListener('mouseout', (e) => {
-    if (!e.relatedTarget && hovered) leave()
+    if (!e.relatedTarget && hovered) { leave(); closed = null }
   })
 }
 
@@ -299,22 +307,28 @@ function watchRightClicks () {
     if (!tipEl(e.target)) return
     // The menu opens where the tooltip would be in the way.
     leave()
-    offerItem(e, menuRef(menuTipRef(e.target)))
+    const owner = menuOwner(e.target)
+    if (!owner) return
+    const ref = menuRef(refs.get(owner))
+    offerItem(e, ref)
+    // After the handlers inside the item, at the item itself, as a listener of
+    // its own would: the item's menu alone, unless they opened one. A row or
+    // window around it that opens its own later replaces it, still with the
+    // item on top (and the window menu skips a click already handled). Only
+    // for this click, so rows don't each keep a listener.
+    const open = (ev: Event) => openItemMenu(ev as MouseEvent, ref)
+    owner.addEventListener('contextmenu', open, { once: true })
+    setTimeout(() => owner.removeEventListener('contextmenu', open), 0)
   }, true)
-  // After them: a row that opened its own menu (openMenu prevents the default)
-  // already shows the item on top; otherwise the item's menu opens alone.
-  document.addEventListener('contextmenu', (e) => {
-    if (tipEl(e.target)) openItemMenu(e, menuRef(menuTipRef(e.target)))
-  })
 }
 
 // The innermost item under the pointer that has a name, for its menu; none
 // inside a row whose right-click is its own (noMenu).
-function menuTipRef (target: EventTarget | null): ItemTipRef | null {
+function menuOwner (target: EventTarget | null): HTMLElement | null {
   for (let el = tipEl(target); el; el = tipEl(el.parentElement)) {
     const ref = refs.get(el)
     if (ref?.noMenu) return null
-    if (ref?.name) return ref
+    if (ref?.name) return el
   }
   return null
 }
