@@ -145,9 +145,9 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 onUnmounted(() => { chipKeySub.abort() })
 // The glance bar (off unless turned on): the map you're in, from the map log.
-// Dragged with the overlay open; saved when the drag ends.
 // The glance bar takes the mouse and shows its drag handle only while Settings
-// is open, not over a price check, trade search or any other window.
+// is open, not over a price check, trade search or any other window. The spot
+// is saved when Settings closes (saveConfig waits while it's open).
 const placingGlance = computed(() => wm.active.value &&
   wm.widgets.value.some(w => w.wmType === 'settings' && w.wmWants === 'show'))
 function moveGlance (pos: { x: number, y: number }, done: boolean) {

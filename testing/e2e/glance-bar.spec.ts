@@ -3,7 +3,8 @@
 import { test, expect } from './harness'
 
 test('the glance bar handle shows with Settings open, not over a price check', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-session-story', glance: true }], overlayActive: true })
+  const boot = () => overlay.boot({ widgets: [{ wmType: 'woke-session-story', glance: true }], overlayActive: true })
+  await boot()
   const bar = overlay.page.locator('[data-glance-bar]')
   const handle = overlay.page.locator('[data-glance-drag]')
 
@@ -11,13 +12,16 @@ test('the glance bar handle shows with Settings open, not over a price check', a
   await expect(overlay.widget('menu')).toBeVisible()
   await expect(bar).toBeHidden()
 
-  // A price check is up: still no handle.
+  // A price check is up (it hides every other window): still no handle.
   await overlay.copyItem('items/currency-divine.txt')
   await expect(overlay.widget('price-check')).toContainText('Divine Orb')
   await expect(bar).toBeHidden()
   await expect(handle).toBeHidden()
 
-  // Settings open: the bar shows with its handle, and can be dragged.
+  // Settings open (from a fresh overlay: the menu is under the price check):
+  // the bar shows with its handle, and can be dragged.
+  await boot()
+  await expect(bar).toBeHidden()
   await overlay.widget('menu').locator('.fa-cog').click()
   await expect(overlay.widget('settings')).toBeVisible()
   await expect(bar).toBeVisible()
