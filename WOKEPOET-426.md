@@ -50,6 +50,13 @@ history:
       analytics, Net worth map count/time, drop counter, death recap. Name-added
       areas stay Session story only (startup JS budget).
     id: a-2026-11-21t03-33-56-237z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T04:24:53.450Z'
+    comment: >-
+      Follow-up #702 merged: Map history Vaults chip (Guy's ask); vault runs
+      saved to day files again, still no toast and out of counts/averages.
+    id: a-2026-11-21t04-24-53-450z
 needsAction: null
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/694'
