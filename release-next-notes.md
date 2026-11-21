@@ -22,3 +22,4 @@
 - Session story: tonight's night carries on after the app restarts. Before, a restart rebuilt it from the end of the game's log only, so the map count dropped back to about a dozen maps.
 - Session story no longer has a window of its own. Its dock icon is now called Session analytics and works the same way (tonight's card, the after-map line), and clicking it opens Session analytics. Its right-click menu has Map history and All nights.
 - Session story's glance bar: drag it anywhere with the overlay open (it shows then even outside a map); its spot is kept. While you play it still never takes the mouse.
+- After-map toast: drag it by its title bar to put it anywhere; its spot is kept (Show me with your last map in its settings brings it up to place).

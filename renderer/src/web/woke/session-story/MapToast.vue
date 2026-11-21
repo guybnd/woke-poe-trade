@@ -1,13 +1,14 @@
 <template>
   <Teleport to="body">
     <!-- Centred by the outer box, so the opening motion (which sets transform) can't move it. -->
-    <div v-if="chip" :class="$style.place">
+    <div v-if="chip" :class="$style.place" :style="placeStyle">
     <!-- The hover zone. While you resize it grows a wide margin, so dragging out
          past the old edge doesn't hand the mouse back to the game mid-drag. -->
     <div ref="el" :class="[$style.zone, resizing && $style.resizing]" data-map-toast-zone>
     <div :class="[$style.toast, 'w-enter']" :style="{ '--toast-scale': String(scale) }" data-map-toast role="status"
       @pointerdown="onPointerDown" @click="onDomClick">
-      <div :class="$style.title">
+      <!-- The title bar is its handle: drag it to move the toast (the spot is kept). -->
+      <div :class="$style.title" data-map-toast-handle title="Drag to move" @pointerdown="startMove">
         <span :class="$style.titleName">{{ chip.rec.name }}</span><small>{{ tierText(chip.rec.areaLevel) }}</small>
       </div>
       <div :class="$style.row">
@@ -70,6 +71,8 @@ const props = defineProps<{
   closeKey: string | null
   // Its saved size, 1 = as designed.
   scale: number
+  // Where it sits: its top centre as a share of the screen; null: as designed.
+  pos?: { x: number, y: number } | null
 }>()
 const emit = defineEmits<{
   close: []
@@ -77,7 +80,12 @@ const emit = defineEmits<{
   hold: [on: boolean]
   // Resizing: the new size; `done` when the drag ends (save then).
   resize: [scale: number, done: boolean]
+  // Dragged by its title bar: the new spot; `done` when the drag ends (save then).
+  move: [pos: { x: number, y: number }, done: boolean]
 }>()
+const placeStyle = computed(() => props.pos
+  ? { top: `${props.pos.y * 100}%`, left: `${props.pos.x * 100}%`, right: 'auto', transform: 'translateX(-50%)' }
+  : undefined)
 
 const el = shallowRef<HTMLElement | null>(null)
 const resizing = shallowRef(false)
@@ -190,6 +198,46 @@ function startResize (e: PointerEvent) {
   window.addEventListener('pointerup', up)
 }
 
+// The same as a resize for the zone (it grows, a click at the end doesn't close it).
+function startMove (e: PointerEvent) {
+  if (e.button !== 0) return
+  e.preventDefault()
+  e.stopPropagation()
+  domDownAt = Date.now()
+  const handle = e.currentTarget as HTMLElement
+  const box = handle.parentElement!.getBoundingClientRect()
+  const dx = e.clientX - (box.left + box.width / 2)
+  const dy = e.clientY - box.top
+  const at = (ev: PointerEvent) => ({
+    x: Math.min(1, Math.max(0, (ev.clientX - dx) / window.innerWidth)),
+    y: Math.min(1 - box.height / window.innerHeight, Math.max(0, (ev.clientY - dy) / window.innerHeight))
+  })
+  let last = props.pos ?? null
+  resizing.value = true
+  try { handle.setPointerCapture(e.pointerId) } catch {}
+  const move = (ev: PointerEvent) => { last = at(ev); emit('move', last, false) }
+  const detach = () => {
+    handle.removeEventListener('pointermove', move)
+    handle.removeEventListener('pointerup', up)
+    handle.removeEventListener('pointercancel', up)
+    handle.removeEventListener('lostpointercapture', up)
+    window.removeEventListener('pointerup', up)
+    endResize = null
+  }
+  function up () {
+    if (endResize !== detach) return
+    detach()
+    if (last) emit('move', last, true)
+    setTimeout(() => { resizing.value = false }, 0)
+  }
+  endResize = detach
+  handle.addEventListener('pointermove', move)
+  handle.addEventListener('pointerup', up)
+  handle.addEventListener('pointercancel', up)
+  handle.addEventListener('lostpointercapture', up)
+  window.addEventListener('pointerup', up)
+}
+
 const headDiff = computed(() => {
   const c = props.chip
   if (!c) return null
@@ -243,6 +291,7 @@ function tone (diff: number): string {
     url(/images/poe-ui/titlebar-right.png) right center / auto 100% no-repeat,
     url(/images/poe-ui/titlebar-middle.png) center / auto 100% repeat-x;
 }
+.title { cursor: move; }
 .titleName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .title small { flex: none; font-size: calc(13px * var(--w-text-scale, 1)); color: #a89670; }
 .row { display: flex; align-items: center; gap: 14px; padding: 10px 6px 4px; }

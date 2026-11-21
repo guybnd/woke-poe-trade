@@ -16,6 +16,8 @@ export interface SessionStoryWidget extends Widget {
   chipClick?: boolean
   // The toast's size, set by dragging its corner; 1 = as designed.
   chipScale?: number
+  // Where the toast sits (its top centre, share of the screen), set by dragging its title bar.
+  chipPos?: { x: number, y: number }
   // Areas left out as maps, by the name the game logs (see skip-areas.ts); undefined: the defaults.
   skipAreas?: string[]
   // Session analytics › Map history also lists those areas (marked).
