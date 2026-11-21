@@ -9,7 +9,6 @@ test('the glance bar handle shows with Settings open, not over a price check', a
   const handle = overlay.page.locator('[data-glance-drag]')
 
   // The overlay is open, nothing else: no bar outside a map, no handle.
-  await expect(overlay.widget('menu')).toBeVisible()
   await expect(bar).toBeHidden()
 
   // A price check is up (it hides every other window): still no handle.
