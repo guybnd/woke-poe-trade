@@ -242,9 +242,6 @@ import { tradeTotals, tradesInRange, useTradeLog } from '../trade/log-store'
 import { isModuleOn } from '../modules'
 import DeckHistory from '../stacked-decks/DeckHistory.vue'
 import MapHistory from '../session-story/MapHistory.vue'
-// Tonight's card, loaded with import() so it stays in Session story's chunk
-// (already loaded when Session story is on) and adds nothing to startup.
-const TonightBand = defineAsyncComponent(() => import('../session-story/TonightBand.vue'))
 import { useVisibleClock } from '../shared/visible-clock'
 import {
   MIN_UNITS_FOR_RANGE, buildRow, chanceBetter, exportRows, filterSessions, formatSessionDate,
@@ -252,6 +249,9 @@ import {
 } from './stats'
 import type { StrategyRow, Unit } from './stats'
 import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
+// Tonight's card, loaded with import() so it stays in Session story's chunk
+// (already loaded when Session story is on) and adds nothing to startup.
+const TonightBand = defineAsyncComponent(() => import('../session-story/TonightBand.vue'))
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('session-analytics').art ?? 'divine'
 
