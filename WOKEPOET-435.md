@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -31,6 +31,15 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-21T06:07:07.904Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-21T06:10:25.234Z'
+    comment: >-
+      Branch session-window-shell (worktree E:\Git\woke\wt\session-window):
+      NightCard band in Session analytics' banner slot, Map history first tab,
+      nights logic extracted to session-story/nights.ts. CI check and
+      adversarial review running.
+    id: a-2026-11-21t06-10-25-234z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
