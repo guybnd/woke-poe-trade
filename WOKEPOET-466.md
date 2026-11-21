@@ -1,13 +1,13 @@
 ---
 id: WOKEPOET-466
 title: Port upstream APT 3.30 fixes
-status: In Progress
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -33,11 +33,50 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-21T16:16:15.011Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 749 merged after adversarial review and green CI: six upstream 3.30
+      ports, Twice Corrupted done Guy's way (both searched, chip on results).
+    date: '2026-11-21T16:44:45.273Z'
+    completionComment: true
+    id: c-2026-11-21t16-44-45-273z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-21T16:44:45.273Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged PR 749 (792a0bed): temple rules + reminder text, More Threads
+      (incl. Map mods regex token fix), Twice Corrupted chip on filter and
+      result listings (fetch JSON item.doubleCorrupted; no trade filter),
+      item-drop.json, Not Catalysed (off by default), veiled names. Review fixes
+      applied. All CI green.
+    completionComment: true
+    date: '2026-11-21T16:44:54.589Z'
+    id: c-2026-11-21t16-44-54-589z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T16:44:54.903Z'
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-21T16:16:15.011Z'
-  expiresAt: '2026-11-21T16:46:15.011Z'
+reviewState: approved
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/749'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Port upstream Awakened PoE Trade 3.30 changes as one PR:
 1. Temple rules + reminder text (22006b33)
