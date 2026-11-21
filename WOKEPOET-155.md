@@ -62,6 +62,15 @@ history:
       they can be rerolled at all". On launch day, check what a Thread can be
       turned into: a 3-for-1 vendor, a Harvest reroll, or only Frayed Thread to
       a random Thread. Then build the tab for what exists.
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy's tool audit (2026-11-21): Flips is marked "improve". The 3.30 rework
+      here is the improvement. Card:
+      https://claude.ai/artifact/GcCaMCbbGftoqCeMA5CbGD
+    date: '2026-11-21T13:14:19.652Z'
+    selfAttested: true
+    id: c-2026-11-21t13-14-19-652z
 swimlane: null
 needsAction: null
 ---
