@@ -37,13 +37,18 @@
     <!-- A3 + C2: one popup for a big hit, gone by itself. -->
     <Teleport to="body">
       <div v-if="hit" :key="hit.key" :class="$style.hitLayer">
-        <div :class="$style.hit" data-deck="big-hit">
+        <!-- With the overlay open it can be dragged (its spot is kept); while you play it never takes the mouse. -->
+        <!-- The spot goes on this box: the popup's own fade sets transform. -->
+        <div :style="spotStyle(config.hitPos)">
+        <div :class="[$style.hit, { [$style.hitMove]: wm.active.value, [$style.hitStill]: placing }]" data-deck="big-hit"
+          :title="wm.active.value ? 'Drag to move' : undefined" @pointerdown="moveHit">
           <WIcon :src="art(hit.name)" fallback="fas fa-clone" size="lg" />
           <div class="min-w-0">
             <div class="w-head-font w-accent w-trunc" :class="$style.hitName">{{ hit.name }}</div>
             <div class="text-xs w-dim">Deck {{ hit.deck }} · session {{ hit.result != null ? signed(hit.result) : '—' }}</div>
           </div>
           <span class="w-num font-semibold" :class="$style.hitValue">{{ money(hit.chaos) }}</span>
+        </div>
         </div>
       </div>
     </Teleport>
@@ -67,7 +72,8 @@ import { formatChaos } from '../ui/format'
 import { ninjaIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'
-import { dockIconEl, showWithOverlay, tickWhile } from '../dock/dock'
+import { dockIconEl, openOverlay, showWithOverlay, tickWhile } from '../dock/dock'
+import { dragSpot, spotStyle } from '../ui/drag-spot'
 import type { DockMenuAction } from '../dock/dock'
 import { followGameLog } from '../shared/game-log'
 import { lineTime } from '../campaign/log-tail'
@@ -222,7 +228,8 @@ function openWindow () {
 
 const dockMenu = computed<DockMenuAction[]>(() => [
   { label: 'New session', icon: 'fas fa-redo', action: () => { newSession(true) } },
-  { label: 'Open in window', icon: 'fas fa-up-right-from-square', action: openWindow }
+  { label: 'Open in window', icon: 'fas fa-up-right-from-square', action: openWindow },
+  ...(props.config.hitPopup ? [{ label: 'Place the big-hit popup', icon: 'fas fa-grip-vertical', action: () => { openOverlay(); placeHit() } }] : [])
 ])
 
 // --- Cards from Client.txt ---
@@ -232,7 +239,28 @@ let hitTimer: ReturnType<typeof setTimeout> | undefined
 let hitKey = 0
 onUnmounted(() => { clearTimeout(hitTimer) })
 
+// The big-hit popup's spot: dragged with the overlay open, saved on drop.
+function moveHit (e: PointerEvent) {
+  if (!wm.active.value) return
+  const handle = e.currentTarget as HTMLElement
+  dragSpot(e, handle, (spot, done) => {
+    props.config.hitPos = spot
+    if (done) saveConfig()
+  }, handle.parentElement!)
+}
+// "Place the big-hit popup": a sample stays up while the overlay is open.
+const placing = shallowRef(false)
+function placeHit () {
+  clearTimeout(hitTimer)
+  placing.value = true
+  hit.value = { key: ++hitKey, name: 'The Doctor', chaos: 900, deck: 1, result: null }
+}
+watch(() => wm.active.value, (on) => {
+  if (!on && placing.value) { placing.value = false; hit.value = null }
+})
 function showHit (h: Omit<Hit, 'key'>) {
+  // A real hit ends the sample, shown or not.
+  if (placing.value) { placing.value = false; hit.value = null }
   if (props.config.hitPopup) {
     hit.value = { ...h, key: ++hitKey }
     clearTimeout(hitTimer)
@@ -298,6 +326,7 @@ followGameLog({
 }
 .action:hover { color: var(--w-fg); background: var(--w-line-soft); }
 .hitLayer { position: fixed; inset: 0; pointer-events: none; z-index: 1000; display: flex; justify-content: center; align-items: flex-start; padding-top: 24vh; }
+.hitMove { pointer-events: auto; cursor: move; user-select: none; }
 .hit {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -315,6 +344,7 @@ followGameLog({
 }
 .hitName { font-size: var(--w-fs-lg); }
 .hitValue { font-size: var(--w-fs-lg); color: var(--w-up); }
+.hit.hitStill { animation: none; }
 @keyframes hit-in-out {
   0% { opacity: 0; transform: translateY(-8px) scale(0.97); }
   6% { opacity: 1; transform: none; }

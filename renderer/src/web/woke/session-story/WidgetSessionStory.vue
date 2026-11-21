@@ -14,8 +14,10 @@
         </div>
       </template>
     </DockItem>
-    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" />
-    <MapToast :chip="chip" :close-key="config.chipKey || null" :scale="toastScale" @close="closeChip" @hold="holdChip" @resize="resizeChip" />
+    <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" :editing="wm.active.value" :pos="config.glancePos ?? null"
+      @move="moveGlance" />
+    <MapToast :chip="chip" :close-key="config.chipKey || null" :scale="toastScale" @close="closeChip" @hold="holdChip" @resize="resizeChip"
+      :pos="config.chipPos ?? null" @move="moveChip" />
   </Widget>
 </template>
 
@@ -118,6 +120,11 @@ function holdChip (on: boolean) {
 }
 // Its size, from dragging its corner; saved when the drag ends.
 const toastScale = computed(() => clampScale(props.config.chipScale))
+// Dragged by its title bar; saved when the drag ends.
+function moveChip (pos: { x: number, y: number }, done: boolean) {
+  props.config.chipPos = pos
+  if (done) saveConfig()
+}
 function resizeChip (scale: number, done: boolean) {
   props.config.chipScale = scale
   if (done) saveConfig()
@@ -138,6 +145,11 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 onUnmounted(() => { chipKeySub.abort() })
 // The glance bar (off unless turned on): the map you're in, from the map log.
+// Dragged with the overlay open; saved when the drag ends.
+function moveGlance (pos: { x: number, y: number }, done: boolean) {
+  props.config.glancePos = pos
+  if (done) saveConfig()
+}
 const glanceSince = shallowRef(0)
 const glanceBefore = shallowRef(0)
 const glanceMap = shallowRef<{ name: string, areaLevel: number } | null>(null)

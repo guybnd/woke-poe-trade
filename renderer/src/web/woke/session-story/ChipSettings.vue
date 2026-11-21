@@ -13,7 +13,7 @@
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
-    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and tonight's maps and profit. It never takes the mouse.">Bar at the top</WToggle>
+    <WToggle v-model="glance" title="A thin bar at the top with the map, its time so far and tonight's maps and profit. While you play it never takes the mouse; with the overlay open, drag it to move it.">Bar at the top</WToggle>
     <template v-if="showMe">
       <span />
       <WButton size="sm" :disabled="place === 'off' || !canShow" @click="showMe">Show me with your last map</WButton>
