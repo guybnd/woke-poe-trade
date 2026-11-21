@@ -48,13 +48,14 @@ test('map scan: a clean map gets a verdict, and moving off it reads nothing new'
   await overlay.moveMouse(cursor.x, cursor.y)
   await overlay.pressHotkey('Alt + S')
 
-  const panel = overlay.widget('woke-map-mods').getByTestId('map-scan-box')
-  await expect(panel).toContainText('1 scanned', { timeout: 20_000 })
-  await overlay.snap('map mods scan box after one map')
+  // Map mods' Scan tab counts the maps read.
+  const scanTab = overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/ })
+  await expect(scanTab).toHaveText(/Scan\s*1$/, { timeout: 20_000 })
+  await overlay.snap('map mods scan tab after one map')
   // Off the tooltip: still one reading.
   await overlay.moveMouse(2300, 1300)
   await overlay.page.waitForTimeout(1500)
-  await expect(panel).toContainText('1 scanned')
+  await expect(scanTab).toHaveText(/Scan\s*1$/)
   // The fake app outlives the page: leave the scanner off for the next test.
   await overlay.pressHotkey('Alt + S')
 })
@@ -83,13 +84,13 @@ test('rolling mode follows the cursor to another map', async ({ overlay }) => {
   const first = screen('map-real-07').cursor
   await overlay.moveMouse(first.x, first.y)
   await overlay.pressHotkey('Alt + R')
-  const panel = overlay.widget('woke-map-mods').getByTestId('map-scan-box')
-  await expect(panel).toContainText('1 scanned', { timeout: 20_000 })
+  const scanTab = overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/ })
+  await expect(scanTab).toHaveText(/Scan\s*1$/, { timeout: 20_000 })
 
   await overlay.showScreen('screens/map-real-09.png')
   const second = screen('map-real-09').cursor
   await overlay.moveMouse(second.x, second.y)
-  await expect(panel).toContainText('2 scanned', { timeout: 20_000 })
+  await expect(scanTab).toHaveText(/Scan\s*2$/, { timeout: 20_000 })
   await expectAt(overlay.page.locator('[class*="marker"]').last(), second)
   await overlay.pressHotkey('Alt + S')
 })

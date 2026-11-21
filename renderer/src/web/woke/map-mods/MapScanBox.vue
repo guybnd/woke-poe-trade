@@ -1,5 +1,5 @@
 <template>
-  <section :class="$style.box" data-testid="map-scan-box">
+  <section :class="[$style.box, { [$style.full]: full }]" data-testid="map-scan-box">
     <div class="flex items-center gap-2">
       <span class="w-group-label flex items-center gap-2" style="padding: 0;">
         Map scan
@@ -31,7 +31,7 @@
     <template v-if="entries.length">
       <MapScanTally />
       <div :class="$style.list">
-        <MapScanEntry v-for="e in recent" :key="e.id" :entry="e" show-rerolls />
+        <MapScanEntry v-for="e in shown" :key="e.id" :entry="e" show-rerolls :detail="full" />
       </div>
       <div class="flex items-center gap-2 w-dim text-xs">
         <span class="flex-1">{{ entries.length }} scanned</span>
@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { WButton, WInfo, WKbd, toast } from '../ui'
 import MapScanTally from './MapScanTally.vue'
 import MapScanEntry from './MapScanEntry.vue'
@@ -59,7 +59,10 @@ import {
   setupProblem, probeOcr, toggleRoll, toggleScan
 } from './scan-session'
 
-defineProps<{ config: MapModsWidget }>()
+const props = defineProps<{ config: MapModsWidget, full?: boolean }>()
+
+// The Scan tab lists every map read, newest first; the short form the latest 8.
+const shown = computed(() => props.full ? entries.value.slice().reverse() : recent.value)
 
 probeOcr()
 
@@ -76,6 +79,7 @@ function clear () {
 
 <style module>
 .box { display: flex; flex-direction: column; gap: 7px; padding: 10px var(--w-pad); border-bottom: 1px solid var(--w-line); }
+.full { border-bottom: none; padding: 12px var(--w-pad); gap: 10px; }
 .box :global(.w-group-label) { color: var(--w-dim); }
 .led { width: 8px; height: 8px; border-radius: var(--w-r-sm); background: var(--w-faint); }
 .led.on { background: var(--w-up); }

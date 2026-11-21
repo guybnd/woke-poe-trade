@@ -12,7 +12,7 @@
     </label>
 
     <section v-if="scanOwner" class="flex flex-col gap-2" data-testid="map-scan-settings">
-      <span class="w-group-label flex items-center gap-2" style="padding: 0;">Map scan <w-info text="Scan mode reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map, and puts a verdict next to it from the active profile. Rerolling a map in place reads it again.&#10;&#10;Rolling mode locks onto one map's tooltip and re-reads only that box, for long reroll sessions.&#10;&#10;Start and stop it from the Maps tab of the Map mods window too. It needs Windows and the OCR files (Settings › Screen reading)." /></span>
+      <span class="w-group-label flex items-center gap-2" style="padding: 0;">Map scan <w-info text="Scan mode reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map, and puts a verdict next to it from the active profile. Rerolling a map in place reads it again.&#10;&#10;Rolling mode locks onto one map's tooltip and re-reads only that box, for long reroll sessions.&#10;&#10;Start and stop it from the Scan tab of the Map mods window too. It needs Windows and the OCR files (Settings › Screen reading)." /></span>
       <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
         <span>Hotkey: scan mode on / off</span>
         <w-hotkey-cell v-model="scanHotkey" />

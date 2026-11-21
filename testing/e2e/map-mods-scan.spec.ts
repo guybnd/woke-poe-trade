@@ -1,4 +1,4 @@
-// Map scan lives in Map mods (WOKEPOET-458): the scan box in the Maps tab,
+// Map scan lives in Map mods (WOKEPOET-458): its own Scan tab,
 // its list (hover and click), the dock icon, the keys moved over from the old
 // Map scan window, and Ctrl+Space finding it. Readings are sent as main sends
 // them, so no OCR files are needed (map-scan.spec.ts reads real screenshots).
@@ -13,6 +13,7 @@ function scanEvent (overlay: Overlay, data: Record<string, unknown>) {
 
 async function bootWithReadings (overlay: Overlay) {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-map-mods', wmWants: 'show' }] })
+  await overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/ }).click()
   const box = overlay.widget('woke-map-mods').getByTestId('map-scan-box')
   await expect(box).toBeVisible()
   scanEvent(overlay, { type: 'state', running: true })
@@ -32,6 +33,9 @@ test('the scan box lists scanned maps, each with a hover card of what decided it
   // Newest first.
   await expect(rows.nth(0)).toContainText('T16 map')
   await expect(rows.nth(1)).toContainText('Risky')
+  // The Scan tab names each flagged mod under its map, and counts the maps.
+  await expect(rows.nth(1)).toContainText(/max res|maximum Resistances/i)
+  await expect(overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/ })).toContainText('2')
   await expect(box.getByTestId('map-scan-tally')).toContainText('1safe')
   await expect(box.getByTestId('map-scan-tally')).toContainText('1risky')
 
@@ -55,6 +59,7 @@ test('clearing the scan list can be undone', async ({ overlay }) => {
 
 test('the Scan button starts main\'s scanner and Stop ends it', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-map-mods', wmWants: 'show' }] })
+  await overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/ }).click()
   const box = overlay.widget('woke-map-mods').getByTestId('map-scan-box')
   await expect(box).toBeVisible()
   // The fake app outlives the page: an earlier test may have left it scanning.
@@ -68,12 +73,18 @@ test('the Scan button starts main\'s scanner and Stop ends it', async ({ overlay
   if (before === 'Stop') await button.click()
 })
 
-test('the scan box is on the Maps tab only', async ({ overlay }) => {
+test('Scan is its own tab: the rating view leaves while it is open and comes back', async ({ overlay }) => {
   await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-map-mods', wmWants: 'show' }] })
   const panel = overlay.widget('woke-map-mods')
+  await expect(panel.getByTestId('map-scan-box')).toHaveCount(0)
+  await expect(panel.getByTestId('map-stash-search')).toBeVisible()
+  await panel.getByRole('tab', { name: /Scan/ }).click()
   await expect(panel.getByTestId('map-scan-box')).toBeVisible()
+  await expect(panel.getByTestId('map-stash-search')).toHaveCount(0)
+  await overlay.snap('map mods scan tab')
   await panel.getByRole('tab', { name: /Heist/ }).click()
   await expect(panel.getByTestId('map-scan-box')).toHaveCount(0)
+  await expect(panel.getByTestId('map-stash-search')).toBeVisible()
 })
 
 test('a new Map mods window registers the scan keys; Ctrl+Space finds map scan in Map mods', async ({ overlay }) => {
