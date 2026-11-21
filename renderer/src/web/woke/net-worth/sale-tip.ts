@@ -24,6 +24,9 @@ export function saleTip (s: Sale): ItemTipRef {
   const item = saleItem(s)
   if (item) return { name, content: { kind: 'item', item } }
   const gem = s.frameType === 4 ? { fallback: { kind: 'gem' as const, name: s.typeLine, level: s.gemLevel ?? null, quality: s.quality ?? null } } : {}
+  // Gear read before its mods were kept: a rare's own name ("Doom Loop") finds
+  // nothing, so its base's tooltip.
+  if (s.frameType <= 2 && s.name) return { name: s.typeLine, count: s.stack }
   // A unique is found by its name. Its base isn't a poe.ninja type: passed as
   // one, the lookup came back empty and the row had no tooltip.
   const unique = s.frameType === 3 || s.frameType === 9 || s.frameType === 10

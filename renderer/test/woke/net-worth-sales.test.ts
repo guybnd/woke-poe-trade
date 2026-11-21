@@ -134,6 +134,8 @@ describe('tooltips', () => {
     const hh = saleTip(sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt' }))
     expect(hh).toMatchObject({ name: 'Headhunter' })
     expect(hh.type).toBeUndefined()
+    // A rare without its mods: its base's tooltip.
+    expect(saleTip(sale({ frameType: 2, name: 'Doom Loop', typeLine: 'Two-Toned Boots' }))).toEqual({ name: 'Two-Toned Boots', count: 1 })
   })
 })
 
