@@ -153,17 +153,18 @@ export const useNights = createGlobalState(() => {
   // again carries on with it.
   let draft: NightDraft | null = null
   let liveSig = ''
-  // The night being read is also saved (when an area changes), so an app
+  // The night being read is also saved as it goes, so an app
   // restart carries on with it: the log's start-up tail only reaches back
   // about 256 KB, a dozen maps or so.
-  let savedSegs = -1
+  let savedSig = ''
   // Nothing is written until the saved one has been read (a write first would wipe it).
   let draftRead = false
   function saveDraft (d: NightDraft | null) {
     if (!draftRead) return
-    const segs = d ? d.segs.length : 0
-    if (segs === savedSegs) return
-    savedSegs = segs
+    // On an area change, and at most once a minute otherwise (long hideout stretches).
+    const sig = d ? `${d.startedAt}:${d.segs.length}:${Math.floor(d.lastAt / 60_000)}` : ''
+    if (sig === savedSig) return
+    savedSig = sig
     hostRequest('doc-put', { collection: NIGHTS_COLLECTION, key: DRAFT_KEY, value: d && hasMaps(d) ? d : null }).catch(() => {})
   }
   // The saved night, unless it's one already finished.
@@ -172,7 +173,6 @@ export const useNights = createGlobalState(() => {
     draftRead = true
     if (!isNightDraft(saved)) return null
     if (nights.value.some(n => n.startedAt === saved.startedAt || n.endedAt >= saved.lastAt)) return null
-    savedSegs = saved.segs.length
     return saved
   }
   function setLive (d: NightDraft | null) {
