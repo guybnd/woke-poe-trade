@@ -21,3 +21,4 @@
 - Ctrl+Space search: "maps" opens Map history, and each map in the card has a Show button that opens Map history at that map's row. The tonight card can open Map history too.
 - Session story: tonight's night carries on after the app restarts. Before, a restart rebuilt it from the end of the game's log only, so the map count dropped back to about a dozen maps.
 - Session story no longer has a window of its own. Its dock icon is now called Session analytics and works the same way (tonight's card, the after-map line), and clicking it opens Session analytics. Its right-click menu has Map history and All nights.
+- Session story's glance bar: drag it anywhere with the overlay open (it shows then even outside a map); its spot is kept. While you play it still never takes the mouse.
