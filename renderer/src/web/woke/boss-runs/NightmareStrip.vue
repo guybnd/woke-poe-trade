@@ -17,7 +17,7 @@
         <span :class="$style.bar"><i :class="(c.profit ?? c.loot) >= 0 ? $style.barUp : $style.barDown" :style="{ width: barWidth(c) }" /></span>
         <b :class="(c.profit ?? c.loot) >= 0 ? 'w-up' : 'w-down'">{{ c.profit == null ? chaos(c.loot) : signed(c.profit) }}</b>
         <!-- The vault this map can spawn; a tag, not in profit (Guy's pick, 2026-11-21). -->
-        <span :class="$style.vault" :title="c.vault ? vaultTitle(c.vault) : undefined" :data-nightmare-vault="c.id">{{ c.vault?.short ?? '' }}</span>
+        <span :class="$style.vault" :data-nightmare-vault="c.id" @mouseenter="hoverVault(c.vault, $event)" @mouseleave="hovered = null">{{ c.vault?.short ?? '' }}</span>
       </template>
     </div>
     <button v-if="open" type="button" :class="$style.gridToggle" :aria-expanded="gridOpen" data-nightmare-grid @click="gridOpen = !gridOpen">
@@ -67,7 +67,7 @@
           </tr>
           <tr v-if="cols.some(c => c.vault)" :class="$style.sep" data-nightmare-vault-row>
             <td class="w-dim">Vault</td>
-            <td v-for="c in cols" :key="c.id" :title="c.vault ? vaultTitle(c.vault) : undefined">{{ c.vault?.short ?? '' }}</td>
+            <td v-for="c in cols" :key="c.id" @mouseenter="hoverVault(c.vault, $event)" @mouseleave="hovered = null">{{ c.vault?.short ?? '' }}</td>
           </tr>
           <tr :class="$style.sep">
             <td class="w-dim">Loot</td>
@@ -87,16 +87,19 @@
       <template v-if="estimated">~ is an estimate: no drop rates are published. {{ perKill }} fragments a kill, % = copies a kill; the unique's 5% is a 3.29 guide's figure.</template>
       Fragments a kill and your kill log live in Boss runs › Nightmare.
     </div>
+    <VaultHoverCard :vault="hoverCard" :anchor="hovered?.rect ?? null" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
 import { onSharedDataChange } from '../app/live-data'
 import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
 import WIcon from '../ui/WIcon.vue'
 import WSegmented from '../ui/WSegmented.vue'
+import VaultHoverCard from '../vaults/VaultHoverCard.vue'
 import { itemArt } from '../ui/game-icons'
 import { usePriceIndex } from '../market/price-index'
 import { evaluateBoss, priceResolver } from './calc'
@@ -104,7 +107,7 @@ import type { BossPrefs, DropRow } from './calc'
 import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, nightmareBosses, UBER_FRAGMENTS } from './nightmare'
 import { BOSS_RUNS_TYPE } from './widget'
 import type { BossRunsWidget } from './widget'
-import { loadVaults, nightmareMapsFor, rewardPrice, shortName, typicalPick, vaultForNightmare } from '../vaults/vaults'
+import { loadVaults, nightmareMapsFor, rewardIcon, rewardPrice, shortName, typicalPick, vaultForNightmare } from '../vaults/vaults'
 import type { Vault, VaultTable } from '../vaults/vaults'
 
 const open = useFold('nightmare-strip', true)
@@ -159,13 +162,28 @@ onBeforeUnmount(onSharedDataChange(() => { vaultTable.value = null; readVaults()
 const bigTab = shallowRef<'frags' | 'vaults'>('frags')
 const TYPICAL_TIP = '~ = the estimated typical pick: the best of four offers, no weights are published.'
 const priceOf = (name: string, variant?: string) => px.value.price(name, variant)
-// The hover: the vault's reward options and their prices, dearest first (Guy, 2026-11-21).
-function vaultTitle (v: { id: string }) {
-  const b = vaultBlocks.value.find(x => x.id === v.id)
-  if (!b) return undefined
-  const lines = b.rewards.map(r => `${r.text}${r.rare ? ' (rare)' : ''}: ${r.chaos != null ? chaos(r.chaos) : 'varies'}`)
-  return [`${b.name} · ${b.quadrant} · ~${chaos(b.typical)} typical pick`, ...lines].join('\n')
+// The hover card: the vault's reward options with art and prices, dearest
+// first (Guy, 2026-11-21).
+const hovered = shallowRef<{ id: string, rect: DOMRect } | null>(null)
+function hoverVault (v: { id: string } | null, e: MouseEvent) {
+  hovered.value = v ? { id: v.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() } : null
 }
+const hoverCard = computed(() => vaultBlocks.value.find(b => b.id === hovered.value?.id) ?? null)
+// Folding or switching views removes the tag under the pointer without a mouseleave.
+watch([open, gridOpen, bigTab], () => { hovered.value = null })
+// Never leave the card over the game: the overlay closing, the window losing
+// focus, a scroll or a drag all drop it (as VaalChip and HelpCard do).
+const wm = inject<WidgetManager | undefined>('wm', undefined)
+watch(() => wm?.active.value, (active) => { if (!active) hovered.value = null })
+const unhover = () => { hovered.value = null }
+window.addEventListener('blur', unhover)
+document.addEventListener('scroll', unhover, true)
+document.addEventListener('dragstart', unhover, true)
+onBeforeUnmount(() => {
+  window.removeEventListener('blur', unhover)
+  document.removeEventListener('scroll', unhover, true)
+  document.removeEventListener('dragstart', unhover, true)
+})
 // Every vault, the ones these maps spawn first, best typical pick first.
 const vaultBlocks = computed(() => {
   const t = vaultTable.value
@@ -177,7 +195,7 @@ const vaultBlocks = computed(() => {
     maps: nightmareMapsFor(t, v),
     typical: typicalPick(v, priceOf),
     rewards: v.rewards
-      .map(r => ({ text: r.text, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf) }))
+      .map(r => ({ text: r.text, kind: r.kind, rare: !!r.rare, note: r.note, chaos: rewardPrice(r, priceOf), icon: rewardIcon(r) }))
       .sort((a, b) => (b.chaos ?? -1) - (a.chaos ?? -1))
   })
   return t.vaults.map(block).sort((a, b) => (b.maps.length ? 1 : 0) - (a.maps.length ? 1 : 0) || (b.typical ?? -1) - (a.typical ?? -1))
