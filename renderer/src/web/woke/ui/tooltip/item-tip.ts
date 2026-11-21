@@ -36,6 +36,8 @@ export interface ItemTipRef {
   menu?: ItemMenuRef
   // How many of it (a stack, a stash line): the price strip adds their value.
   count?: number
+  // The row's right-click is its own (the drop counter's take-one-back): no item menu.
+  noMenu?: boolean
   // Shown as it is, with no lookup: an item whose own mods are known (a sold
   // item from the trade history).
   content?: TipContent
@@ -190,7 +192,12 @@ function cancel () {
 }
 onTipHide(cancel)
 
+// A row closed while the pointer is still on it (hidden, re-sorted, right-clicked)
+// stays closed until the pointer goes somewhere else.
+let closed: HTMLElement | null = null
+
 function leave () {
+  closed = hovered
   hovered = null
   clearInterval(watch)
   hideTip()
@@ -209,8 +216,7 @@ function watchHovered () {
   }, 400)
 }
 
-function enter (e: Event) {
-  const el = e.currentTarget as HTMLElement
+function enter (el: HTMLElement) {
   const ref = refs.get(el)
   hovered = el
   watchHovered()
@@ -225,11 +231,12 @@ function enter (e: Event) {
   timer = setTimeout(() => {
     tipFor(ref).then(({ model, market, uniques, effects }) => {
       if (mine !== seq || !el.isConnected) return
-      if (model && ref.note) model = { ...model, sections: [...model.sections, ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] }
+      const note = ref.note ? [ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] : []
+      if (model && note.length) model = { ...model, sections: [...model.sections, ...note] }
       if (model) showTipAt(el, { kind: 'lookup', model, market, uniques, effects })
       else if (ref.fallback) showTipAt(el, ref.fallback)
-      // No text for it, but a price is still worth showing.
-      else if (market) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: [] }, market })
+      // No text for it, but a price or the caller's note is still worth showing.
+      else if (market || note.length) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: note }, market })
       else hideTip()
     }).catch(() => {
       if (mine !== seq) return
@@ -237,6 +244,36 @@ function enter (e: Event) {
       else hideTip()
     })
   }, SHOW_DELAY_MS)
+}
+
+// One pair of listeners for the whole page, not three per row: the innermost
+// element with v-item-tip under the pointer is the hovered one. (Per-row
+// listeners put long lists over the perf budget's listener count.)
+function tipEl (node: EventTarget | null): HTMLElement | null {
+  let el = node instanceof Element ? node : node instanceof Node ? node.parentElement : null
+  for (; el; el = el.parentElement) {
+    if (refs.has(el as HTMLElement)) return el as HTMLElement
+  }
+  return null
+}
+
+let watchingHover = false
+function watchHover () {
+  if (watchingHover) return
+  watchingHover = true
+  document.addEventListener('mouseover', (e) => {
+    const el = tipEl(e.target)
+    if (el === hovered) return
+    if (el && el === closed) return
+    closed = null
+    if (hovered) leave()
+    closed = null
+    if (el) enter(el)
+  })
+  // Out of the window: no mouseover follows.
+  document.addEventListener('mouseout', (e) => {
+    if (!e.relatedTarget && hovered) { leave(); closed = null }
+  })
 }
 
 // Dock cards take clicks while the game has focus. Leaving one makes the window
@@ -253,7 +290,7 @@ function watchHoverZones () {
 // ---- right-click ----
 
 function menuRef (ref: ItemTipRef | null | undefined): ItemMenuRef | null {
-  if (!ref?.name) return null
+  if (!ref?.name || ref.noMenu) return null
   if (ref.menu) return ref.menu
   // A base's unique list or a price range isn't one item's price.
   return { name: ref.name, type: ref.type, variant: ref.variant, noPrice: ref.noPrice || !!ref.prices || !!ref.uniques }
@@ -267,41 +304,60 @@ function watchRightClicks () {
   if (offering) return
   offering = true
   document.addEventListener('contextmenu', (e) => {
-    for (let el = e.target as Element | null; el; el = el.parentElement) {
-      const ref = refs.get(el as HTMLElement)
-      if (ref?.name) { offerItem(e, menuRef(ref)); return }
-    }
+    if (!tipEl(e.target)) return
+    // The menu opens where the tooltip would be in the way.
+    leave()
+    const owner = menuOwner(e.target)
+    if (!owner) return
+    const ref = menuRef(refs.get(owner))
+    offerItem(e, ref)
+    // After the handlers inside the item, at the item itself, as a listener of
+    // its own would: the item's menu alone, unless they opened one. A row or
+    // window around it that opens its own later replaces it, still with the
+    // item on top (and the window menu skips a click already handled). Only
+    // for this click, so rows don't each keep a listener.
+    const open = (ev: Event) => openItemMenu(ev as MouseEvent, ref)
+    owner.addEventListener('contextmenu', open, { once: true })
+    setTimeout(() => owner.removeEventListener('contextmenu', open), 0)
   }, true)
 }
 
-// After them: nothing opened a menu, so the item's alone. An ancestor row that
-// opens its own later replaces it, still with the item on top.
-function menu (e: Event) {
-  // The menu opens where the tooltip would be in the way.
-  leave()
-  openItemMenu(e as MouseEvent, menuRef(refs.get(e.currentTarget as HTMLElement)))
+// The innermost item under the pointer that has a name, for its menu; none
+// inside a row whose right-click is its own (noMenu).
+function menuOwner (target: EventTarget | null): HTMLElement | null {
+  for (let el = tipEl(target); el; el = tipEl(el.parentElement)) {
+    const ref = refs.get(el)
+    if (ref?.noMenu) return null
+    if (ref?.name) return el
+  }
+  return null
+}
+
+// Marks an element that shows the item tooltip, for the e2e hover gate
+// (testing/e2e/tip-audit.ts): a row naming an item must be inside one.
+function mark (el: HTMLElement, ref: ItemTipRef | null | undefined) {
+  const on = !!ref?.name
+  if (on !== el.hasAttribute('data-item-tip')) el.toggleAttribute('data-item-tip', on)
 }
 
 export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefined> = {
   mounted (el, binding) {
     watchHoverZones()
     watchRightClicks()
+    watchHover()
     refs.set(el, binding.value)
-    el.addEventListener('mouseenter', enter)
-    el.addEventListener('mouseleave', leave)
-    el.addEventListener('contextmenu', menu)
+    mark(el, binding.value)
   },
   updated (el, binding) {
     const before = refs.get(el)
     const after = binding.value
     refs.set(el, after)
+    mark(el, after)
     // A list re-sorted under the pointer now has a different item here.
     if (hovered === el && (before?.name !== after?.name || before?.variant !== after?.variant)) leave()
   },
   beforeUnmount (el) {
-    el.removeEventListener('mouseenter', enter)
-    el.removeEventListener('mouseleave', leave)
-    el.removeEventListener('contextmenu', menu)
+    refs.delete(el)
     if (hovered === el) leave()
   }
 }

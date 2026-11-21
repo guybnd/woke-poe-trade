@@ -86,6 +86,8 @@ A plain `title="…"` (or `:title`) on any element shows in the app's own card (
 
 Put `v-item-tip="{ name, type?, variant?, prices?, noPrice? }"` on a row or name to show the game-style tooltip at the cursor, with the item's text and a poe.ninja price strip. `type` is the poe.ninja row type; without it the kind comes from the name. Any market row works as is: `v-item-tip="m"`. The text lives in `public/data/tips` and loads on the first hover; rebuild it each league with `npm run tip-data -- <league>`.
 
+Every row that names an item must have it (Guy's rule; see the repo's CLAUDE.md). Use `WItemRow` for list rows: it brings the tooltip, the item menu and the art. The directive marks its element with `data-item-tip`, and every fake-game test fails on an item name shown outside such an element (`testing/e2e/tip-audit.ts`). If you call `showTip` with an item yourself, put `data-item-tip` on the hovered element. A name that rightly has no tooltip takes `data-no-item-tip="<why>"`.
+
 ## Utility classes
 
 `w-verdict` (a verdict strip: gold wash and small caps headline `<b>` in the game look), `w-corners` (lit corner marks on a framed window that isn't a WPanel), `w-row` (grid row; set `grid-template-columns` yourself), `w-row--head`,

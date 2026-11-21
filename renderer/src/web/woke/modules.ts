@@ -60,7 +60,6 @@ export const MODULE_GROUPS: Array<{ id: ModuleGroup, label: string }> = [
 // Reactive: the stash reader's module joins and leaves at runtime.
 export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'market', name: 'Market', description: 'Every poe.ninja price by category, plus movers and a watchlist', group: 'economy', widgetTypes: ['woke-market-tracker'], icon: { fa: 'fas fa-chart-line', currency: 'divine' }, needs: ['poll'] },
-  { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
   { id: 'scarab-flip', name: 'Flips', description: 'Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more', group: 'economy', widgetTypes: ['woke-scarab-flip'], icon: { fa: 'fas fa-recycle', item: 'Harvest Scarab' }, needs: ['poll', 'network'] },
   { id: 'disenchant', name: 'Disenchant', description: 'Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant', group: 'economy', widgetTypes: ['woke-disenchant'], icon: { fa: 'fas fa-hammer', currency: 'dust' }, needs: ['prices'] },
   { id: 'wealthy-exile', name: 'Wealthy Exile', description: 'The Wealthy Exile net worth site in an overlay window', group: 'economy', widgetTypes: ['woke-wealthy-exile'], icon: { fa: 'fas fa-wallet', src: '/images/art/crested-golden-idol.png' }, needs: ['hotkeys', 'network'] },
@@ -72,7 +71,6 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'boss-runs', name: 'Boss runs', description: 'Profit per boss kill', group: 'economy', widgetTypes: ['woke-boss-runs'], icon: { fa: 'fas fa-skull', mechanic: 'maven' }, needs: ['log', 'prices'] },
 
   { id: 'map-mods', name: 'Map mods', description: 'Danger strip on price check and map regex', group: 'mapping', widgetTypes: ['woke-map-mods'], icon: { fa: 'fas fa-map', item: 'Nightmare Map' }, needs: ['hotkeys'] },
-  { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'mapping', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
   { id: 'map-scan', name: 'Map scan', description: 'Reads map tooltips on screen', group: 'mapping', widgetTypes: ['woke-map-scan'], icon: { fa: 'fas fa-crosshairs', mechanic: 'map' }, needs: ['ocr', 'hotkeys'] },
   { id: 'session-story', name: 'Session story', description: 'A summary card when you log off, a per map run toast, and your map history', group: 'mapping', widgetTypes: ['woke-session-story'], icon: { fa: 'fas fa-moon', item: "Cartographer's Chisel" }, needs: ['log'] },
   { id: 'death-recap', name: 'Death recap', description: 'Where you died, and the mods of maps you checked', group: 'mapping', widgetTypes: ['woke-death-recap'], icon: { fa: 'fas fa-skull', item: 'Portal Scroll' }, needs: ['log'] },
@@ -98,6 +96,20 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
   { id: 'apt-item-info', name: 'Item info hotkeys', description: 'Item info, wiki, poedb, Craft of Exile, similar items', group: 'apt', widgetTypes: [], icon: { fa: 'fas fa-info-circle', item: 'Scroll of Wisdom' }, needs: ['hotkeys'] }
 ])
 
+// Retired for now (Guy, Nov 2026): kept off every list (launcher, dock,
+// Ctrl+Space, Settings, presets) with their code and saved data left alone.
+// Their placed windows stay in config but are never mounted, so their hotkeys
+// stay unregistered. To bring one back, move its entry into MODULES and drop
+// its widget type from removedTypes below.
+export const RETIRED_MODULES: ModuleDef[] = [
+  { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
+  { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'mapping', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] }
+]
+const retiredTypes = new Set(RETIRED_MODULES.flatMap(m => m.widgetTypes))
+export function isRetiredWidgetType (wmType: string): boolean {
+  return retiredTypes.has(wmType)
+}
+
 export interface Preset {
   id: string
   label: string
@@ -107,9 +119,9 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'everything', label: 'Everything', on: 'all' },
-  { id: 'mapper', label: 'Mapper', on: ['market', 'farming', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
+  { id: 'mapper', label: 'Mapper', on: ['market', 'drop-counter', 'stacked-decks', 'session-analytics', 'boss-runs', 'map-mods', 'map-scan', 'death-recap', 'session-story', 'essence-scan', 'loot-filter', 'atlas', 'mechanics', 'wickerman', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
   { id: 'leveling', label: 'Leveling', on: ['campaign', 'run-timer', 'lab', 'challenges', 'pob-builds', 'regex-library', 'wickerman', 'megalo'] },
-  { id: 'trader', label: 'Trader', on: ['market', 'league-invest', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
+  { id: 'trader', label: 'Trader', on: ['market', 'lab-gems', 'scarab-flip', 'disenchant', 'stacked-decks', 'wealthy-exile', 'trade-searches', 'trade', 'regex-library', 'megalo'] },
   { id: 'price-check-only', label: 'Price check only', on: [] }
 ]
 
@@ -154,7 +166,8 @@ for (const m of MODULES) for (const t of m.widgetTypes) moduleByWidget.set(t, m)
 // Opt-in widget types start out removed, so a widget placed while the stash
 // reader was on stays off after a restart with it off (addModule clears it).
 // woke-market: a dev build's separate Market window, folded into Market's tabs.
-const removedTypes = reactive(new Set<string>(['woke-net-worth', 'woke-market']))
+// Retired modules (RETIRED_MODULES) count as removed for good.
+const removedTypes = reactive(new Set<string>(['woke-net-worth', 'woke-market', ...retiredTypes]))
 const optInIds = reactive(new Set<string>())
 
 // Opt-in modules (the stash reader, personal.ts) join the list when turned on,

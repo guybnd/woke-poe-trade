@@ -47,7 +47,7 @@
           @contextmenu="rowMenu($event, r)">
           <span :class="$style.named">
             <span v-item-tip="{ name: r.name }" class="w-trunc w-rarity-unique">{{ r.name }}</span>
-            <span class="w-trunc w-faint text-xs">{{ r.base }}<template v-if="r.quality === 0"> · q0</template><span v-if="r.catalyse" :class="$style.cat" :title="`Buy ${CATALYSTS_FOR_Q20} catalysts for 20% quality first; the cost includes them`"> · catalyse</span><span v-if="r.thin" class="w-down" title="Low confidence: poe.ninja had no price on 3 or more of the last 7 days"> · low confidence</span></span>
+            <span class="w-trunc w-faint text-xs"><span v-item-tip="{ name: r.base }">{{ r.base }}</span><template v-if="r.quality === 0"> · q0</template><span v-if="r.catalyse" :class="$style.cat" :title="`Buy ${CATALYSTS_FOR_Q20} catalysts for 20% quality first; the cost includes them`"> · catalyse</span><span v-if="r.thin" class="w-down" title="Low confidence: poe.ninja had no price on 3 or more of the last 7 days"> · low confidence</span></span>
           </span>
           <WPrice :chaos="r.chaos" :divine="snapshot?.divine" class="text-right" />
           <span class="text-right w-num">{{ amount(r.dust) }}</span>

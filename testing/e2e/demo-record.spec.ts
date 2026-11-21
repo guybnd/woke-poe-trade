@@ -23,7 +23,7 @@ interface Rec { dir: 'in' | 'out', name: string, payload: unknown }
 
 // The demo's tools: the rail of a player who maps, plus the scanners.
 const WIDGETS = [
-  'woke-market-tracker', 'woke-farming', 'woke-session-analytics', 'woke-map-mods', 'woke-map-scan', 'woke-essence-scan',
+  'woke-market-tracker', 'woke-session-analytics', 'woke-map-mods', 'woke-map-scan', 'woke-essence-scan',
   'woke-atlas-strategies', 'woke-mechanics', 'woke-lab', 'woke-lab-gems', 'woke-scarab-flip', 'woke-trade', 'woke-regex-library', 'woke-trade-searches',
   'woke-boss-runs', 'woke-campaign', 'woke-run-timer'
 ]
@@ -100,7 +100,7 @@ test('record the demo', async ({ overlay, fakeApp }) => {
     ],
     patch: (config) => {
       const menu = config.widgets.find((w: { wmType: string }) => w.wmType === 'menu')
-      const pinned = ['woke-market-tracker', 'woke-farming', 'woke-session-analytics', 'woke-boss-runs', 'woke-map-mods', 'woke-essence-scan', 'woke-loot-filter',
+      const pinned = ['woke-market-tracker', 'woke-session-analytics', 'woke-boss-runs', 'woke-map-mods', 'woke-essence-scan', 'woke-loot-filter',
         'woke-campaign', 'woke-lab', 'woke-trade', 'woke-regex-library']
       menu.pinned = config.widgets.filter((w: { wmType: string }) => pinned.includes(w.wmType)).map((w: { wmId: number }) => w.wmId)
       menu.dismissed = []

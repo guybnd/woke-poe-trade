@@ -73,7 +73,6 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Area | Module | What it does |
 | --- | --- | --- |
 | Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
-| Economy | Investments | League-start buys ranked from past leagues |
 | Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
 | Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
 | Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
@@ -83,7 +82,6 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Economy | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Economy | Boss runs | Profit per boss kill |
 | Mapping | Map mods | Danger strip on price check and map regex |
-| Mapping | Farming | Session profit per hour |
 | Mapping | Map scan | Reads map tooltips on screen |
 | Mapping | Session story | A summary card when you log off, a per map run toast, and your map history |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div :class="$style.title">
+    <div v-item-tip="card.tip ?? itemRefFromName(card.title ?? card.name)" :class="$style.title">
       <WIcon v-if="isImageIcon(card.icon)" :src="card.icon" size="lg" />
       <i v-else :class="card.icon" />
       <span>{{ card.title ?? card.name }}</span>
@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { WButton, WIcon, WPrice, vItemTip } from '../ui'
+import { WButton, WIcon, WPrice, itemRefFromName, vItemTip } from '../ui'
 import { itemArt } from '../ui/game-icons'
 import { isImageIcon } from './lookups/types'
 import type { LookupAction, LookupCard, LookupSection, LookupTableRow } from './lookups/types'

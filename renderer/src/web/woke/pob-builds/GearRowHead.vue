@@ -1,6 +1,6 @@
 <template>
   <div :class="small ? $style.gearRowPlain : $style.gearRow"
-    @mouseenter="row.item && showTip($event, { kind: 'item', item: row.item, compare: wornCompare(row.slot, row.item) ?? undefined })" @mouseleave="hideTip"
+    :data-item-tip="row.item ? '' : undefined" @mouseenter="row.item && showTip($event, { kind: 'item', item: row.item, compare: wornCompare(row.slot, row.item) ?? undefined })" @mouseleave="hideTip"
     @contextmenu.capture="offerItem($event, menuRef)" @contextmenu="openItemMenu($event, menuRef)">
     <span :class="[$style.cell, small && $style.cellSmall, cellClass]">
       <img v-if="art" :src="art" alt="" :class="['w-game-icon', small ? $style.artSmall : $style.art]" loading="lazy" draggable="false">

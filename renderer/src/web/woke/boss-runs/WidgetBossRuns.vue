@@ -123,7 +123,7 @@
                     <span :class="$style.share"><i :style="{ width: (sel.loot > 0 ? d.value / sel.loot * 100 : 0) + '%' }" /></span>
                   </div>
                   <div v-if="editing === d.name && editingRow" class="flex flex-wrap items-center gap-2 text-sm" :class="$style.editor">
-                    <span class="w-accent">{{ editingRow.name }}</span>
+                    <span v-item-tip="{ name: editingRow.name, type: typeByName.get(editingRow.name) }" class="w-accent">{{ editingRow.name }}</span>
                     <span v-if="editingRow.listings != null" class="w-dim">{{ editingRow.listings.toLocaleString() }} unidentified instant buyouts.</span>
                     <span class="flex items-center gap-1 w-dim">poe.ninja <WPrice :chaos="editingRow.spread?.median" :divine="divine" /></span>
                     <WSegmented :model-value="editingRow.priceMode === 'min' ? 'median' : editingRow.priceMode ?? 'median'" :options="modeOptions" @update:model-value="setMode(editingRow.name, $event)" />
@@ -245,7 +245,7 @@
                 <div :class="$style.k">Entry</div>
                 <div :class="$style.kv">
                   <template v-for="e in sel.boss.entry" :key="e.name">
-                    <span class="flex items-center gap-1 min-w-0"><WIcon :src="art(e.name)" fallback="fas fa-puzzle-piece" /><span class="w-trunc">{{ e.qty > 1 ? `${e.qty}× ` : '' }}{{ e.name }}</span></span>
+                    <span v-item-tip="{ name: e.name, type: typeByName.get(e.name) }" class="flex items-center gap-1 min-w-0"><WIcon :src="art(e.name)" fallback="fas fa-puzzle-piece" /><span class="w-trunc">{{ e.qty > 1 ? `${e.qty}× ` : '' }}{{ e.name }}</span></span>
                     <WPrice :chaos="entryPrice(e.name, e.qty)" :divine="divine" />
                   </template>
                 </div>

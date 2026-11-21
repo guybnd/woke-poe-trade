@@ -2,7 +2,7 @@
   <div ref="root" class="flex flex-col gap-2" data-map-history>
     <WBanner v-if="readError || store.mapsError.value">Couldn't read your map history: {{ readError || store.mapsError.value }}</WBanner>
     <WEmpty v-else-if="!on" :art="{ mechanic: 'map' }">
-      Turn on Session story (Settings › Farming &amp; sessions) to keep a history of every map you run.
+      Turn on Session story (Settings › Sessions) to keep a history of every map you run.
     </WEmpty>
     <WSkeleton v-else-if="loading" :rows="4" />
     <WEmpty v-else-if="!inView.length" :art="{ mechanic: 'map' }">
@@ -18,7 +18,7 @@
           {{ c.label }} <span class="w-dim">{{ c.count }}</span>
         </WChip>
         <WChip clickable :active="showSkipped" data-history-skipped
-          title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
+          title="Also list vaults and other areas that aren't counted as maps (Settings › Sessions). They stay out of the count and average."
           @click="showSkipped = !showSkipped">Vaults</WChip>
       </div>
       <div v-if="notSaved" class="text-xs w-dim" data-history-not-saved>

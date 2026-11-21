@@ -9,7 +9,7 @@
     <template v-if="place !== 'off'">
       <span class="w-dim">Close key</span>
       <slot name="key">
-        <span class="text-xs">{{ config.chipKey || 'None' }} <span class="w-faint">(set in Settings › Farming &amp; sessions)</span></span>
+        <span class="text-xs">{{ config.chipKey || 'None' }} <span class="w-faint">(set in Settings › Sessions)</span></span>
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 // The map line's settings, the same block in the dock card, the window's gear
-// and Settings › Farming & sessions.
+// and Settings › Sessions.
 import { computed } from 'vue'
 import { pushHostConfig } from '@/web/Config'
 import WButton from '../ui/WButton.vue'

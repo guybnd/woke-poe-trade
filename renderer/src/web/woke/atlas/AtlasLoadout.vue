@@ -168,6 +168,7 @@
 // as notables by mechanic.
 import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
+import { isWidgetTypeOn } from '../modules'
 import { WButton, WField, WPanel, WBanner, WIcon, WSkeleton, openMenu, toast, useCopy, vItemTip } from '../ui'
 import { ninjaIcon } from '../ui/game-icons'
 import { usePriceText } from '../shared/price'
@@ -293,7 +294,8 @@ const mapCost = computed(() => {
   return parts.length ? parts.reduce((a, b) => a + b, 0) : null
 })
 
-const farmingWidget = computed(() => AppConfig<FarmingWidget>(FARMING_TYPE))
+// Farming is retired (modules.ts): no window to send the costs to while it's off.
+const farmingWidget = computed(() => isWidgetTypeOn(AppConfig(), FARMING_TYPE) ? AppConfig<FarmingWidget>(FARMING_TYPE) : undefined)
 const usedInFarming = shallowRef(false)
 function useInFarming () {
   const farm = farmingWidget.value

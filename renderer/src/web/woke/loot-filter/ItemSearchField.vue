@@ -9,7 +9,7 @@
         <WChip v-for="r in RARITIES" :key="r" clickable :active="rarity === r" @click="rarity = r">{{ r }}</WChip>
       </div>
       <button v-for="(r, i) in rows" :key="`${r.item.kind}|${r.item.name}`" type="button" role="option" :aria-selected="i === hl"
-        :class="[$style.row, { [$style.hl]: i === hl }]" :title="r.title" @mouseenter="hl = i" @click="pick(r)">
+        v-item-tip="r.facts ? null : itemRefFromName(r.item.name)" :class="[$style.row, { [$style.hl]: i === hl }]" :title="r.title" @mouseenter="hl = i" @click="pick(r)">
         <img v-if="r.icon" :src="r.icon" :class="$style.art" alt="">
         <span v-else :class="$style.art" />
         <span :class="$style.text">
@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { WChip, WField } from '../ui'
+import { WChip, WField, itemRefFromName, vItemTip } from '../ui'
 import { gameIcon } from '../ui/game-icons'
 import LabelPreview from './LabelPreview.vue'
 import { baseIcon } from './label-style'

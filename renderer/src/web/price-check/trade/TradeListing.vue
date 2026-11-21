@@ -111,6 +111,7 @@
                 'w-pc-stale': improved && row.band === 'stale' && !row.dropped && !allStale
               }"
               :title="improved && !row.lead.tipItem ? rowTitle(row) : undefined"
+              :data-item-tip="row.lead.tipItem ? '' : undefined"
               @mouseenter="showRowTip($event, row)"
               @mouseleave="hideTip"
               @contextmenu="row.lead.tipItem && openItemMenu($event, pobMenuRef(row.lead.tipItem))">

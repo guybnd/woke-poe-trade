@@ -16,6 +16,8 @@ import os from 'os'
 import path from 'path'
 import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
+import { installTipAudit, itemNames } from './tip-audit'
+import type { TipGap } from './tip-audit'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 export const FIXTURES = path.resolve(here, '../fixtures')
@@ -101,7 +103,27 @@ export class Overlay {
       this.errors.push(`${e.message}\n${e.stack ?? ''}`)
     })
     page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) this.errors.push(m.text()) })
+    // Every item named on screen has the item tooltip (tip-audit.ts).
+    this.auditReady = page.addInitScript(installTipAudit, itemNames())
   }
+
+  // Items shown without the item tooltip on hover, since the page last loaded
+  // (tip-audit.ts). The harness fails a test that leaves any.
+  async tipGaps (): Promise<TipGap[]> {
+    if (this.page.isClosed() || this.page.url() === 'about:blank') return this.pastGaps
+    const now = await this.page.evaluate(() => {
+      const w = window as unknown as { __wokeTipGaps?: TipGap[], __wokeTipAudit?: () => void }
+      w.__wokeTipAudit?.()
+      return w.__wokeTipGaps ?? []
+    }).catch(() => [] as TipGap[])
+    const type = (id: string | null) => this.config?.widgets.find((w: { wmId: number }) => `widget-${w.wmId}` === id)?.wmType ?? id
+    return [...this.pastGaps, ...now.map(g => ({ ...g, widget: type(g.widget) }))]
+  }
+
+  private auditReady: Promise<unknown>
+
+  // Gaps from pages a test has since left (a second boot reloads the page).
+  private pastGaps: TipGap[] = []
 
   // The config APT writes on first start (defaults + upgrades), captured once.
   private async defaultConfig (): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -125,6 +147,7 @@ export class Overlay {
   // Starts the overlay with this setup: writes config.json, loads the page
   // and waits until it has connected and sent its hotkeys to the app.
   async boot (opts: BootOptions = {}) {
+    await this.auditReady
     // WOKE_UI_ART=poe1|poe2|simple runs a test in that UI style, to look over each.
     const art = process.env.WOKE_UI_ART
     if (art) await this.page.addInitScript(a => { try { localStorage.setItem('woke.uiArt', a) } catch {} }, art)
@@ -156,6 +179,8 @@ export class Overlay {
     // boot) first: it can still save its own settings on the way out, which
     // would land over the config written here.
     if (this.page.url() !== 'about:blank') {
+      // Only a booted page's: the default-config capture isn't any test's screen.
+      this.pastGaps = this.config ? await this.tipGaps() : []
       await this.page.goto('about:blank')
       await this.app.settled(300, 5000)
     }
@@ -335,6 +360,11 @@ export const test = base.extend<{ overlay: Overlay }, { fakeApp: FakeApp }>({
     }
     fakeApp.requests.length = 0
     expect(overlay.errors, 'errors in the overlay page').toEqual([])
+    // Guy's rule: an item named on screen shows the item tooltip on hover.
+    // Put v-item-tip (or WItemRow) on its row; see tip-audit.ts for the rare
+    // name that rightly has none.
+    const gaps = (await overlay.tipGaps()).map(g => `${g.name} — in ${g.widget ?? 'the page'}: ${g.where}`)
+    expect(gaps, 'items shown without the item tooltip (testing/e2e/tip-audit.ts)').toEqual([])
   }
 })
 

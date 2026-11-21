@@ -1,7 +1,7 @@
 # Next release notes
 
 - After-map toast: redesigned as a small game window (carved title bar, stone, bronze edge). Click it to close it, drag its corner to resize it (the size is kept), and it waits while your pointer is on it. It shows your close key with Dismiss beside it, and it only takes the mouse once you rest the pointer on it.
-- Session story: vaults (Zealot's, Scholar's, Arkhon's, Machinist's) no longer count as maps in the night summary, map toast, times and averages. Change the list in Settings › Farming & sessions.
+- Session story: vaults (Zealot's, Scholar's, Arkhon's, Machinist's) no longer count as maps in the night summary, map toast, times and averages. Change the list in Settings › Sessions.
 - Farming sessions, Session analytics, Net worth's map count, the drop counter and death recap no longer count vaults as maps either.
 - Ctrl+Space search: a calculator. Type a sum such as 70 * 38, (12 + 8) x 1.5 or 200 + 10% and the answer is the top row; Enter copies it. Currency works too: 50d / 7 or 2 div + 30c use poe.ninja prices.
 - Ctrl+Space search: every keystroke picks the top result, so Enter does what the first row says (a sum's answer, the best item match) instead of the web search row you had a moment before.
@@ -17,7 +17,7 @@
 - Session analytics › Map history: each Net worth stash read is its own row between your maps, with what came in since the read before, how many maps that covers and the rate per hour. Purchases show as spent, not as a loss.
 - Session analytics: click a map on tonight's strip to jump to its row in Map history (the row and the strip segment light up together; clicking a row marks it on the strip). Map history has chips for the mechanics you met (Delirium, Expedition, Zana…) and for maps with a death; click one to list only those.
 - Session analytics: a Nights tab lists every night with its own strip, time, maps and profit. Click one to show it at the top of the window, then click its maps to find them in Map history.
-- Session story: an optional bar at the top of the screen while you're in a map, with the map, its time so far and tonight's maps and profit. It never takes the mouse and sits alongside the after-map toast. Turn it on under the map settings (dock card › After a map, or Settings › Farming & sessions).
+- Session story: an optional bar at the top of the screen while you're in a map, with the map, its time so far and tonight's maps and profit. It never takes the mouse and sits alongside the after-map toast. Turn it on under the map settings (dock card › After a map, or Settings › Sessions).
 - Ctrl+Space search: "maps" opens Map history, and each map in the card has a Show button that opens Map history at that map's row. The tonight card can open Map history too.
 - Session story: tonight's night carries on after the app restarts. Before, a restart rebuilt it from the end of the game's log only, so the map count dropped back to about a dozen maps.
 - Session story no longer has a window of its own. Its dock icon is now called Session analytics and works the same way (tonight's card, the after-map line), and clicking it opens Session analytics. Its right-click menu has Map history and All nights.
@@ -34,5 +34,7 @@
 - Price check: a Bulk button above the listings shows only sellers with 2 or more copies at one price. If fewer than 10 show, the click loads more listings (up to 100) right then; opening a check never loads extra.
 - Price check: Search bulk, next to Search, does both in one go: it searches with Bulk already on, loading more listings if fewer than 10 bulk sellers show.
 - Price check: the hideout and stash icons come first in each row, before the ×count, so they sit in one column.
+- Every list that names an item now shows the game's item tooltip on hover, including Wickerman's Viscera, Disenchant bases, Scarab flip, Boss runs entry items, the Drop counter, the Trade log, the build compare, the loot filter's drop preview and item search, the Ctrl+Space launcher's prices and search cards about an item.
 - After-map toast: maps where you went into a Starfall Crater (the Black Knight's fallen star) get a Starfall Crater chip, also shown in map history and Ctrl+Space search. The crater stays part of the map's run and time.
+- League investments and Farming are retired for now: they're gone from the tool launcher, the icon row, Ctrl+Space, Settings and the presets, and their hotkeys are off. Your saved sessions and settings are kept, so they can come back later. Session analytics keeps your past Farming sessions on its Strategies tab; the Settings page is now called Sessions. Net worth's session view now follows tonight's night from Session story (it starts and ends by itself), so it no longer needs a Farming session.
 - Ctrl+Space search: settings are findable. Type "settings" for Open settings and every settings page, or a setting's name (such as account name, panel opacity or map regex) to jump to its page with the row highlighted.

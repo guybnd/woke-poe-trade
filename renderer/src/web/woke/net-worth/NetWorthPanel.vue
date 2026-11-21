@@ -139,7 +139,7 @@
             </div>
             <div v-if="session" :class="$style.sessionFoot">
               <span class="w-dim text-xs">Gains are read when you enter your hideout</span>
-              <WButton size="sm" @click="endSession">End session</WButton>
+              <WButton v-if="session.endable" size="sm" @click="endSession">End session</WButton>
             </div>
           </div>
           <div v-if="showSide" :class="$style.sideCol">
@@ -243,6 +243,8 @@ import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
 import { FARMING_TYPE, elapsed, requestEndSession } from '../farming/farming'
 import { isWidgetTypeOn } from '../modules'
+import { useNights } from '../session-story/store'
+import { SESSION_STORY_TYPE } from '../session-story/widget'
 import { stashGainsBetween } from './gains'
 import type { FarmingWidget } from '../farming/farming'
 import { CATEGORIES } from './valuation'
@@ -486,7 +488,20 @@ const moves = computed(() => priceMoves(v.value?.lines ?? [], k => changes.value
 // Its module must be on: off, the window isn't there to end it.
 const farmingWidget = computed(() => AppConfig().widgets.find(x =>
   x.wmType === FARMING_TYPE && (x as FarmingWidget).session && isWidgetTypeOn(AppConfig(), x.wmType)) as FarmingWidget | undefined)
-const farming = computed(() => farmingWidget.value?.session ?? null)
+// Farming is retired (modules.ts), so the session is usually tonight's night
+// from Session story: it starts and ends by itself, with its maps as runs.
+const nightStore = useNights()
+// The night's time (AFK left out) runs to its last log line; past that, at
+// most this much more counts, so a long AFK doesn't drag profit per hour down.
+const NIGHT_TAIL_MS = 2 * 60_000
+interface PanelSession { startedAt: number, maps: number, runs: Array<{ name: string, enteredAt: number, mapMs: number }>, ms: (now: number) => number, endable: boolean }
+const farming = computed<PanelSession | null>(() => {
+  const s = farmingWidget.value?.session
+  if (s) return { startedAt: s.startedAt, maps: s.maps, runs: s.runs ?? [], ms: now => elapsed(s, now), endable: true }
+  const n = isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nightStore.live.value : null
+  if (!n) return null
+  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => n.mapMs + n.otherMs + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
+})
 // The session's clock moves while you sit in the hideout.
 const now = shallowRef(Date.now())
 const clock = setInterval(() => { now.value = Date.now() }, 30_000)
@@ -495,19 +510,23 @@ onUnmounted(() => { clearInterval(clock) })
 const sessionChaos = shallowRef(0)
 // Chaos left out as spent on purchases (spend.ts).
 const sessionSpent = shallowRef(0)
-watch([farming, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow, gainsNow], async () => {
+// Only its start matters here: the night's object is replaced every minute.
+let gainsAsk = 0
+watch([() => farming.value?.startedAt, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow, gainsNow], async () => {
   const s = farming.value
   const id = leagueNow.value
+  const ask = ++gainsAsk
   const g = s && id ? await stashGainsBetween(id, s.startedAt, Date.now()) : null
+  if (ask !== gainsAsk) return
   sessionChaos.value = g?.chaos ?? 0
   sessionSpent.value = g?.spent ?? 0
 }, { immediate: true })
 const session = computed(() => {
   const s = farming.value
   if (!s) return null
-  const ms = elapsed(s, now.value)
+  const ms = s.ms(now.value)
   const divVal = toDiv(sessionChaos.value)
-  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value }
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value, endable: s.endable }
 })
 const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
 // Every refresh's share of profit (spend.ts), worked out in time order.
@@ -547,7 +566,7 @@ function spendRows (g: ChangeGroup) {
 }
 const groups = computed(() => {
   const s = farming.value
-  return s ? groupByRuns(ledger.value.diffs, s.runs ?? [], s.startedAt) : groupByRefresh(ledger.value.diffs, ledger.value.diffs.length)
+  return s ? groupByRuns(ledger.value.diffs, s.runs, s.startedAt) : groupByRefresh(ledger.value.diffs, ledger.value.diffs.length)
 })
 // The newest 5 groups, "Show older" adds more; the newest 2 open, the rest
 // folded to their header unless clicked.

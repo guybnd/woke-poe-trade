@@ -28,9 +28,9 @@
         v-model="filters.league" :value="league.id" :disabled="context === 'settings'">{{ league.id }}</UiRadio>
       <template v-if="api === 'trade'">
         <UiRadio class="mt-3" v-model="filters.currency" :value="null">{{ t(':currency_any') }}</UiRadio>
-        <UiRadio v-model="filters.currency" value="chaos">{{ t(':currency_only_chaos') }}</UiRadio>
-        <UiRadio v-model="filters.currency" value="divine">{{ t(':currency_only_div') }}</UiRadio>
-        <UiRadio v-model="filters.currency" value="chaos_divine">{{ t(':currency_chaos_div') }}</UiRadio>
+        <UiRadio data-no-item-tip="a trade filter choice: which currency listings ask for" v-model="filters.currency" value="chaos">{{ t(':currency_only_chaos') }}</UiRadio>
+        <UiRadio data-no-item-tip="a trade filter choice: which currency listings ask for" v-model="filters.currency" value="divine">{{ t(':currency_only_div') }}</UiRadio>
+        <UiRadio data-no-item-tip="a trade filter choice: which currency listings ask for" v-model="filters.currency" value="chaos_divine">{{ t(':currency_chaos_div') }}</UiRadio>
       </template>
     </div>
   </div>

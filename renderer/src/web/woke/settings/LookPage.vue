@@ -3,7 +3,7 @@
     <appearance-settings />
 
     <w-setting-section title="App icon" hint="Shown in the tray and on the overlay. The exe keeps the Eternal Orb.">
-      <div :class="$style.icons">
+      <div :class="$style.icons" data-no-item-tip="app icon choices, each named after the item it pictures">
         <label v-for="i in APP_ICONS" :key="i.id" :class="[$style.icon, { [$style.iconPicked]: appIconId(config.appIcon) === i.id }]">
           <input type="radio" name="woke-app-icon" :value="i.id" :checked="appIconId(config.appIcon) === i.id" class="sr-only" @change="config.appIcon = i.id">
           <img :src="appIconUrl(i.id)" alt="" width="32" height="32">

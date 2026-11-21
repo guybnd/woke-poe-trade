@@ -20,7 +20,7 @@
 
     <div :class="$style.body">
       <div class="flex items-center gap-2">
-        <span :class="$style.itemName" class="w-trunc grow">{{ facts.name || facts.baseType }}</span>
+        <span :class="$style.itemName" class="w-trunc grow" data-no-item-tip="the item the player is checking, which they are hovering in game">{{ facts.name || facts.baseType }}</span>
         <label class="flex items-center gap-1 text-xs w-dim" title="AreaLevel conditions use this. It follows the last map or zone you entered.">
           Area lvl
           <input class="w-input" v-model.number="areaLevelModel" type="number" min="1" max="86" :class="$style.num">
