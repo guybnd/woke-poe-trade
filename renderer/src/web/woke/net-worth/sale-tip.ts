@@ -24,5 +24,8 @@ export function saleTip (s: Sale): ItemTipRef {
   const item = saleItem(s)
   if (item) return { name, content: { kind: 'item', item } }
   const gem = s.frameType === 4 ? { fallback: { kind: 'gem' as const, name: s.typeLine, level: s.gemLevel ?? null, quality: s.quality ?? null } } : {}
-  return { name, ...(s.name ? { type: s.typeLine } : {}), count: s.stack, ...gem }
+  // A unique is found by its name. Its base isn't a poe.ninja type: passed as
+  // one, the lookup came back empty and the row had no tooltip.
+  const unique = s.frameType === 3 || s.frameType === 9 || s.frameType === 10
+  return { name, ...(s.name && !unique ? { type: s.typeLine } : {}), count: s.stack, ...gem }
 }

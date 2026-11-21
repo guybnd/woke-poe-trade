@@ -130,7 +130,10 @@ describe('tooltips', () => {
     expect(saleItem(gem)).toBeNull()
     expect(saleTip(gem)).toMatchObject({ name: 'Empower Support', fallback: { kind: 'gem', level: 4, quality: 20 } })
     // Read before tooltips were kept: by name.
-    expect(saleTip(sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt' }))).toMatchObject({ name: 'Headhunter', type: 'Leather Belt' })
+    // A unique by its name alone: its base isn't a poe.ninja type.
+    const hh = saleTip(sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt' }))
+    expect(hh).toMatchObject({ name: 'Headhunter' })
+    expect(hh.type).toBeUndefined()
   })
 })
 
