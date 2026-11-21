@@ -12,3 +12,4 @@
 - Ctrl+Space search: Templar Vaults. Type "vault" for one card with all four (Zealot's, Scholar's, Arkhon's, Machinist's): each one's quadrant, the bosses and Nightmare maps that spawn it, and every reliquary reward at poe.ninja prices, with an estimated typical pick. A vault's name ("zealot") puts that one first.
 - Nightmare map price check: each map shows the vault it can spawn (Fortress and Citadel: Zealot's, Abomination: Arkhon's, Ziggurat: Scholar's, Sanctuary: Machinist's), and the big view has a Vaults tab with each vault's rewards and prices.
 - Session analytics › Map history: a Vaults chip lists vault runs too (marked "not counted"); they stay out of the count and average.
+- Price check: listings now sort by real value. Chaos and divine prices (and other currencies) are compared at the current poe.ninja rate, so a 150c listing no longer shows after a 1 div one.
