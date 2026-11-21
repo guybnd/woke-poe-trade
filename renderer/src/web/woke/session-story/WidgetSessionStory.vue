@@ -55,7 +55,7 @@ export default { widget: widgetSessionStorySpec }
 </script>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
+import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { WBanner, WButton, WEmpty, WPanel } from '../ui'
@@ -77,6 +77,7 @@ import { chipLines, clampScale, compareMap } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
+import { setSkipAreas } from './skip-areas'
 import { CHIP_CLOSE_TARGET } from './widget'
 import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
@@ -89,6 +90,8 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   Object.assign(props.config, initSessionStoryWidget(props.config.wmId))
 }
 hideWhilePlaying(props.config)
+// Vaults and other areas that aren't counted as maps (Settings).
+watch(() => props.config.skipAreas, (list) => { setSkipAreas(list) }, { immediate: true, deep: true })
 
 const store = useNights()
 const dockRef = shallowRef<{ peek: (text: string, ms?: number) => void, unpeek: () => void } | null>(null)

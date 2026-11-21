@@ -129,6 +129,25 @@ describe('maps from Client.txt', () => {
   })
 })
 
+describe('vaults in the map log', () => {
+  it('drops a vault once its name is logged: no toast, nothing saved', () => {
+    const { log, left, done } = follow([
+      area('21:02:00', 'MapWorldsStrand', '11'),
+      entered('21:02:01', 'Strand'),
+      area('21:08:00', 'HideoutChurch', '1', 68),
+      area('21:10:00', 'MapWorldsMemoryVault2', '21', 84),
+      entered('21:10:01', "Zealot's Vault"),
+      area('21:12:00', 'HideoutChurch', '1', 68),
+      area('21:13:00', 'MapWorldsMemoryVault2', '21', 84),
+      entered('21:13:01', "Zealot's Vault"),
+      area('21:14:00', 'HideoutChurch', '1', 68)
+    ])
+    expect(left.map(r => r.name)).toEqual(['Strand'])
+    expect(done.map(r => r.name)).toEqual(['Strand'])
+    expect(log.current).toBeNull()
+  })
+})
+
 describe('map toast', () => {
   it('keeps its saved size in range', () => {
     expect(clampScale(undefined)).toBe(1)

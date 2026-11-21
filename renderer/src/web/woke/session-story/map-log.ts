@@ -7,6 +7,7 @@ import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
+import { isSkippedArea } from './skip-areas'
 import { NIGHT_GAP_MS } from './story'
 
 const OPENING = '***** LOG FILE OPENING *****'
@@ -128,7 +129,15 @@ export class MapLog {
     }
     if (ev?.kind === 'zone') {
       // "You have entered Strand." names the map just generated.
-      if (this.naming && this.inMap && this.current) this.current.name = ev.name
+      if (this.naming && this.inMap && this.current) {
+        this.current.name = ev.name
+        // A vault on the skip list: not a map. Dropped before anything saw it
+        // leave, so there's no toast and nothing saved.
+        if (isSkippedArea(ev.name)) {
+          this.current = null
+          this.inMap = false
+        }
+      }
       this.naming = false
       return
     }
@@ -184,7 +193,7 @@ export class MapLog {
 
 // Mean time of the last few finished maps before this one, or null with too few.
 export function usualMapMs (history: readonly MapRecord[], n = USUAL_OF): number | null {
-  const recent = history.filter(m => m.mapMs > 30_000).slice(0, n)
+  const recent = history.filter(m => m.mapMs > 30_000 && !isSkippedArea(m.name)).slice(0, n)
   if (recent.length < 3) return null
   return recent.reduce((s, m) => s + m.mapMs, 0) / recent.length
 }

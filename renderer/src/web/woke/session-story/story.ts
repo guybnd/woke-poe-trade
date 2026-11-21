@@ -8,6 +8,7 @@ import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
+import { isSkippedArea } from './skip-areas'
 
 export const NIGHT_GAP_MS = 15 * 60_000
 const OPENING = '***** LOG FILE OPENING *****'
@@ -123,7 +124,14 @@ export class NightTracker {
 }
 
 export function hasMaps (d: NightDraft): boolean {
-  return d.segs.some(s => s.map)
+  const skip = skippedKeys(d)
+  return d.segs.some(s => s.map && !skip.has(s.key))
+}
+
+// Map instances in an area on the skip list (vaults): read at summary time, so
+// a list changed in Settings applies to tonight too.
+function skippedKeys (d: NightDraft): Set<string> {
+  return new Set(d.segs.filter(s => s.map && s.name && isSkippedArea(s.name)).map(s => s.key))
 }
 
 // The night as the card shows it. `endedAt`: the last line, or now for a night still going.
@@ -134,7 +142,10 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   let mapMs = 0
   let otherMs = 0
   let lastMap: number | null = null
+  const skip = skippedKeys(d)
   d.segs.forEach((s, i) => {
+    // A vault counts as neither map nor hideout time, and leaves no mark on the strip.
+    if (s.map && skip.has(s.key)) return
     const end = i + 1 < d.segs.length ? d.segs[i + 1].at : endedAt
     const ms = Math.max(0, end - s.at)
     let part: number | null = null
