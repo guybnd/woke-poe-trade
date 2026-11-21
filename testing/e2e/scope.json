@@ -387,7 +387,8 @@
    "renderer/src/web/woke/trade-searches/"
   ],
   "scarab-flip.spec.ts": [
-   "renderer/src/web/woke/scarab-flip/"
+   "renderer/src/web/woke/scarab-flip/",
+   "renderer/src/web/woke/search/lookups/flips.ts"
   ],
   "search-price-check.spec.ts": [
    "main/src/woke/market-store.ts",

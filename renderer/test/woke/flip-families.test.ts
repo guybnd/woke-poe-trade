@@ -1,4 +1,4 @@
-// The flip families beyond scarabs: Harvest rerolls, catalyst recipes, tier
+// The flip families: Thread and catalyst recipes, Harvest rerolls, tier
 // upgrades, and how each is priced.
 import { describe, it, expect } from 'vitest'
 import { DEFAULT_FLIP_SORT, buyList, flipModel, parseExchange, sortFlips, supplyLevel, upgradeRows } from '@/web/woke/scarab-flip/calc'
@@ -312,7 +312,7 @@ describe('family data', () => {
     expect(shortName('Imbued Catalyst')).toBe('Imbued')
     expect(shortName('Deafening Essence of Anger')).toBe('Deafening Anger')
     expect(shortName('Runegraft of the Bound')).toBe('Bound')
-    expect(shortName('Harvest Scarab of Doubling')).toBe('Harvest of Doubling')
+    expect(shortName('Legion Thread')).toBe('Legion')
     expect(shortName('Black to Opalescent Oil')).toBe('Black to Opalescent Oil')
   })
 })
@@ -384,7 +384,7 @@ describe('estimated and your own weights', () => {
   const orbs = (): PriceItem[] => [
     item('DeliriumOrb', 'Fine Delirium Orb', 10),
     item('DeliriumOrb', 'Singular Delirium Orb', 10),
-    item('DeliriumOrb', 'Kalguuran Delirium Orb', 10)
+    item('DeliriumOrb', 'Spectral Delirium Orb', 10)
   ]
   const family = familyById('delirium')
   const method = family.methods[0]
@@ -399,13 +399,13 @@ describe('estimated and your own weights', () => {
   it('gives an unmeasured orb the average of the others, and marks it', () => {
     const m = rows()
     expect(m.unrated).toEqual([])
-    const row = m.rows.find(r => r.name === 'Kalguuran Delirium Orb')!
+    const row = m.rows.find(r => r.name === 'Spectral Delirium Orb')!
     expect(row.weightSource).toBe('estimate')
     // Your own numbers don't move what an estimate is worth.
     const fine = rows({ delirium: { 'Fine Delirium Orb': 9 } }).rows
-    const kalguuran = fine.find(r => r.name === 'Kalguuran Delirium Orb')!
+    const spectral = fine.find(r => r.name === 'Spectral Delirium Orb')!
     const singular = fine.find(r => r.name === 'Singular Delirium Orb')!
-    expect(kalguuran.share / singular.share).toBeCloseTo(row.share / m.rows.find(r => r.name === 'Singular Delirium Orb')!.share, 8)
+    expect(spectral.share / singular.share).toBeCloseTo(row.share / m.rows.find(r => r.name === 'Singular Delirium Orb')!.share, 8)
     expect(row.share).toBeCloseTo(1 / 3, 8)
   })
 
@@ -435,12 +435,12 @@ describe('estimated and your own weights', () => {
     const items = [...orbs(), item('Currency', 'Primal Crystallised Lifeforce', 0.01)]
     const reroll = priceFlip(family, method, items, lifeforce, { sellDiscount: 0, reroll: true }, 30, { delirium: { 'Fine Delirium Orb': 0 } })
     expect(reroll?.kind === 'pool' && Number.isFinite(reroll.model.recipeValue)).toBe(true)
-    const none = rows({ delirium: { 'Fine Delirium Orb': 0, 'Singular Delirium Orb': 0, 'Kalguuran Delirium Orb': 0 } })
+    const none = rows({ delirium: { 'Fine Delirium Orb': 0, 'Singular Delirium Orb': 0, 'Spectral Delirium Orb': 0 } })
     expect(none.rows.every(r => r.share === 0)).toBe(true)
   })
 
   it('reaches the typed share, and keeps the others in proportion', () => {
-    const names = ['Fine Delirium Orb', 'Singular Delirium Orb', 'Kalguuran Delirium Orb', 'Not An Orb']
+    const names = ['Fine Delirium Orb', 'Singular Delirium Orb', 'Spectral Delirium Orb', 'Not An Orb']
     const before = weightRows(family, names)
     expect(before.map(r => r.name)).not.toContain('Not An Orb')
     expect(before.reduce((n, r) => n + r.percent!, 0)).toBeCloseTo(100, 8)
@@ -449,8 +449,8 @@ describe('estimated and your own weights', () => {
     expect(after.find(r => r.name === 'Singular Delirium Orb')).toMatchObject({ source: 'yours' })
     expect(after.find(r => r.name === 'Singular Delirium Orb')!.percent).toBeCloseTo(25, 8)
     const share = (rs: typeof after, n: string) => rs.find(r => r.name === n)!.percent!
-    expect(share(after, 'Fine Delirium Orb') / share(after, 'Kalguuran Delirium Orb'))
-      .toBeCloseTo(share(before, 'Fine Delirium Orb') / share(before, 'Kalguuran Delirium Orb'), 8)
+    expect(share(after, 'Fine Delirium Orb') / share(after, 'Spectral Delirium Orb'))
+      .toBeCloseTo(share(before, 'Fine Delirium Orb') / share(before, 'Spectral Delirium Orb'), 8)
   })
 })
 
@@ -471,7 +471,54 @@ describe('families poe.ninja prices', () => {
   })
 
   it('keeps the picked family when it is priced', () => {
-    const items = [item('Scarab', 'Ambush Scarab'), item('Oil', 'Golden Oil')]
+    const items = [item('Thread', 'Legion Thread'), item('Oil', 'Golden Oil')]
     expect(shownFamily('oils', pricedFamilies(items)).id).toBe('oils')
+  })
+})
+
+describe('3.30 families', () => {
+  const threads = familyById('threads')
+  const items = [
+    item('Thread', 'Legion Thread', 4), item('Thread', 'Abyss Thread', 3.6), item('Thread', 'Expedition Thread', 0.2),
+    item('Thread', 'Frayed Thread', 1), item('Currency', 'Chaos Orb', 1)
+  ]
+
+  it('prices Threads as a 3 for 1 recipe with every Thread equally likely', () => {
+    expect(threads.methods.map(m => [m.id, m.inputs, m.excludeInput])).toEqual([['vendor', 3, true]])
+    const flip = priceFlip(threads, threads.methods[0], items, new Map(), PLAIN, 30)
+    if (flip?.kind !== 'pool') throw new Error('expected a pool')
+    // Frayed Thread isn't a Thread.
+    expect(flip.model.rows.map(r => r.name).sort()).toEqual(['Abyss Thread', 'Expedition Thread', 'Legion Thread'])
+    expect(flip.model.rows.every(r => r.weightSource === 'estimate' && Math.abs(r.share - 1 / 3) < 1e-9)).toBe(true)
+    const expedition = flip.model.rows.find(r => r.name === 'Expedition Thread')!
+    expect(expedition.profitEach).toBeCloseTo(((4 + 3.6) / 2 - 3 * 0.2) / 3, 8)
+  })
+
+  it('keeps low-confidence Threads out of the best flip', () => {
+    expect(threads.lowConfidence).toBeTruthy()
+    const best = bestFlip(items, new Map(), PLAIN, 30)
+    expect(best?.family.id).not.toBe('threads')
+  })
+
+  it('names Frayed Thread as what opens to a random Thread', () => {
+    expect(threads.opener).toBe('Frayed Thread')
+  })
+
+  it('has no scarab tab', () => {
+    expect(FAMILIES.map(f => f.id)).not.toContain('scarabs')
+  })
+
+  it('weighs only the Delirium Orbs that drop in 3.30', () => {
+    expect(delirium.match('Threaded Delirium Orb')).toBe(true)
+    for (const gone of ['Skittering', 'Fragmented', 'Abyssal', 'Imperial', 'Timeless', 'Obscured', 'Fossilised']) {
+      expect(delirium.match(`${gone} Delirium Orb`)).toBe(false)
+    }
+    expect(Object.keys(delirium.weights!)).toHaveLength(11)
+    expect(delirium.weights!['Threaded Delirium Orb']).toBe(0.035405)
+  })
+
+  it('leaves catalysts out that a recipe or reroll can never give', () => {
+    for (const name of ['Tainted Catalyst', 'Sinistral Catalyst', 'Dextral Catalyst']) expect(catalysts.match(name)).toBe(false)
+    expect(catalysts.match('Imbued Catalyst')).toBe(true)
   })
 })
