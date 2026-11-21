@@ -6,6 +6,7 @@
 // npc, 'q' (quest reward) | 'v' (vendor), class mask].
 import type { InjectionKey, Ref } from 'vue'
 import raw from './gem-sources.json'
+import { gemDrop } from '../search/lookups/gem-drops'
 import type { PobDetails } from './widget'
 
 export type GemSource = [number, string, string, string, string]
@@ -132,6 +133,10 @@ function sourceLabel (pick: Source | null): string | null {
 export function gemWhere (name: string, className: string): string {
   const entry = DATA[name] ?? DATA[`${name} Support`]
   if (!entry) return gemData(name) ? 'Not in the campaign: buy or drop' : ''
+  if (!entry.s.length) {
+    const drop = gemDrop(DATA[name] ? name : `${name} Support`)
+    if (drop) return drop.sub
+  }
   const idx = CLASSES.indexOf(baseClass(className))
   const fits = entry.s.filter(s => idx < 0 || s[4][idx] === '1')
   const byQuest = [...fits].sort((a, b) => questStep(a) - questStep(b))
