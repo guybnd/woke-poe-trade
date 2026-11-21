@@ -129,6 +129,36 @@ describe('maps from Client.txt', () => {
   })
 })
 
+describe('vaults in the map log', () => {
+  it('drops a vault once its name is logged: no toast, nothing saved', () => {
+    const { log, left, done } = follow([
+      area('21:02:00', 'MapWorldsStrand', '11'),
+      entered('21:02:01', 'Strand'),
+      area('21:08:00', 'HideoutChurch', '1', 68),
+      area('21:10:00', 'MapWorldsMemoryVault2', '21', 84),
+      entered('21:10:01', "Zealot's Vault"),
+      area('21:12:00', 'HideoutChurch', '1', 68),
+      area('21:13:00', 'MapWorldsMemoryVault2', '21', 84),
+      entered('21:13:01', "Zealot's Vault"),
+      area('21:14:00', 'HideoutChurch', '1', 68)
+    ])
+    expect(left.map(r => r.name)).toEqual(['Strand'])
+    // A vault doesn't end the map before it: that waits for the next map or the night's end.
+    expect(log.current?.name).toBe('Strand')
+    log.finish(0)
+    expect(done.map(r => r.name)).toEqual(['Strand'])
+    expect(done[0].mapMs).toBe(6 * 60_000)
+  })
+
+  it('never starts a vault as a map, so going in fires no map entry', () => {
+    let entered = 0
+    const log = new MapLog({ onLeave: () => {}, onDone: () => {}, onEnter: () => { entered++ } })
+    log.feed(area('21:10:00', 'MapWorldsMemoryVault2', '21', 84), 0)
+    expect(log.current).toBeNull()
+    expect(entered).toBe(0)
+  })
+})
+
 describe('map toast', () => {
   it('keeps its saved size in range', () => {
     expect(clampScale(undefined)).toBe(1)

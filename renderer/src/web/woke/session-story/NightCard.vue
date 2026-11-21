@@ -5,7 +5,7 @@
       <span class="w-dim text-xs w-num">{{ formatDuration(played) }} · {{ story.maps.length }} {{ story.maps.length === 1 ? 'map' : 'maps' }}</span>
     </div>
     <div :class="$style.strip" data-night-strip>
-      <span v-for="(p, i) in story.strip" :key="i" :class="p.map == null ? $style.out : $style.map"
+      <span v-for="(p, i) in story.strip" :key="i" :class="p.skipped ? $style.skipped : p.map == null ? $style.out : $style.map"
         :style="{ flexGrow: p.ms }" @mouseenter="tip($event, partTitle(p))" @mouseleave="untip" />
       <span v-for="(x, i) in deathMarks" :key="'d' + i" :class="$style.death" :style="{ left: `${x}%` }" />
     </div>
@@ -78,6 +78,7 @@ function tier (level: number): string {
   return level >= 68 && level <= 83 ? `T${level - 67}` : `level ${level}`
 }
 function partTitle (p: StripPart): string {
+  if (p.skipped) return `Not counted (vault) · ${formatClock(p.ms)}`
   if (p.map == null) return `Out of maps · ${formatClock(p.ms)}`
   const m = props.story.maps[p.map]
   const deaths = m.deaths ? ` · ${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : ''
@@ -107,6 +108,7 @@ function signed (chaos: number): string {
   min-width: 1px;
   background: repeating-linear-gradient(90deg, var(--w-line) 0 3px, transparent 3px 6px);
 }
+.skipped { min-width: 1px; background: var(--w-line); opacity: 0.45; }
 .death {
   position: absolute;
   top: -3px;

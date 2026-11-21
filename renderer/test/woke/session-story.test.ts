@@ -1,6 +1,7 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
-import { describe, expect, it } from 'vitest'
-import { NightTracker, NIGHT_GAP_MS, bestDrop, farmingProfit, keepNight, summarize } from '@/web/woke/session-story/story'
+import { afterEach, describe, expect, it } from 'vitest'
+import { NightTracker, NIGHT_GAP_MS, bestDrop, farmingProfit, hasMaps, keepNight, summarize } from '@/web/woke/session-story/story'
+import { isSkippedArea, parseSkipAreas, setSkipAreas } from '@/web/woke/session-story/skip-areas'
 import type { NightDraft, NightStory } from '@/web/woke/session-story/story'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
@@ -126,5 +127,60 @@ describe('night extras', () => {
     const n = (id: number) => ({ id: String(id), startedAt: id } as unknown as NightStory)
     const kept = keepNight(keepNight([n(1), n(3)], n(2)), n(3))
     expect(kept.map(k => k.id)).toEqual(['3', '2', '1'])
+  })
+})
+
+describe('areas on the skip list', () => {
+  // Zealot's Vault is MapWorldsMemoryVault2 in a real Client.txt.
+  const VAULT_NIGHT = [
+    area('21:00:00', 'HideoutChurch', '1', 68),
+    area('21:02:00', 'MapWorldsStrand', '11'),
+    entered('21:02:01', 'Strand'),
+    area('21:08:00', 'HideoutChurch', '1', 68),
+    area('21:10:00', 'MapWorldsMemoryVault2', '21', 84),
+    entered('21:10:01', "Zealot's Vault"),
+    slain('21:11:00'),
+    area('21:12:00', 'HideoutChurch', '1', 68),
+    area('21:14:00', 'MapWorldsCemetery', '13'),
+    entered('21:14:01', 'Cemetery'),
+    area('21:20:00', 'HideoutChurch', '1', 68),
+    info('21:22:00', ': AFK mode is now ON.')
+  ]
+  afterEach(() => { setSkipAreas(undefined) })
+
+  it('leaves a vault out of the maps, both times and its deaths, as a faint strip part', () => {
+    const s = summarize(follow(VAULT_NIGHT).tracker.draft!)
+    expect(s.maps.map(m => m.name)).toEqual(['Strand', 'Cemetery'])
+    expect(s.mapMs).toBe(12 * 60_000)
+    // Hideout: 2 before Strand, 2 + 2 around the vault, 2 at the end; the vault's 2 are nowhere.
+    expect(s.otherMs).toBe(8 * 60_000)
+    // Hideout, Strand, hideout, vault, hideout, Cemetery, hideout: the strip still adds up to the clock.
+    expect(s.strip.map(p => p.skipped ? 'vault' : p.map)).toEqual([null, 0, null, 'vault', null, 1, null])
+    expect(s.strip.reduce((n, p) => n + p.ms, 0)).toBe(at('21:22:00') - at('21:00:00'))
+    expect(s.longestBreakMs).toBe(2 * 60_000)
+    expect(s.deathsAt).toEqual([])
+  })
+
+  it('knows a vault by its area id, without the English entry line', () => {
+    const s = summarize(follow(VAULT_NIGHT.filter(l => !l.includes("Zealot's Vault"))).tracker.draft!)
+    expect(s.maps.map(m => m.name)).toEqual(['Strand', 'Cemetery'])
+  })
+
+  it('counts it again once taken off the list, and takes any area added by name', () => {
+    setSkipAreas([])
+    expect(summarize(follow(VAULT_NIGHT).tracker.draft!).maps).toHaveLength(3)
+    setSkipAreas(['  cemetery '])
+    expect(summarize(follow(VAULT_NIGHT).tracker.draft!).maps.map(m => m.name)).toEqual(['Strand', "Zealot's Vault"])
+  })
+
+  it('has no maps when the night was only vaults', () => {
+    const d = follow(VAULT_NIGHT.slice(3, 8)).tracker.draft!
+    expect(hasMaps(d)).toBe(false)
+  })
+
+  it('reads the list as typed', () => {
+    expect(parseSkipAreas("Zealot's Vault, scholar's vault\n\n zealot's vault \nArkhon’s Vault")).toEqual(["Zealot's Vault", "scholar's vault", 'Arkhon’s Vault'])
+    expect(isSkippedArea('Arkhon’s Vault')).toBe(true)
+    expect(isSkippedArea('Vault')).toBe(false)
   })
 })

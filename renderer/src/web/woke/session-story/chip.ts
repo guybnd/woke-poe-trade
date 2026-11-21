@@ -1,6 +1,7 @@
 // The map line: what a finished map is compared with, and its text. Kept out
 // of map-log.ts so it loads with the Session story window, not at startup.
 import { tierText, usualMapMs } from './map-log'
+import { isSkippedArea } from './skip-areas'
 import type { MapRecord } from './map-log'
 
 export interface MapCompare {
@@ -22,7 +23,8 @@ const HOUR_MS = 3_600_000
 // What a finished map is compared with. `recent`: saved maps, newest first,
 // without this one. Quick looks in (under 30 s) don't count.
 export function compareMap (rec: MapRecord, recent: readonly MapRecord[]): MapCompare {
-  const others = recent.filter(m => m.key !== rec.key && m.mapMs > 30_000 && m.enteredAt < rec.enteredAt)
+  // Vaults saved before they were skipped don't count either.
+  const others = recent.filter(m => m.key !== rec.key && m.mapMs > 30_000 && m.enteredAt < rec.enteredAt && !isSkippedArea(m.name))
   const same = others.filter(m => m.name === rec.name && rec.enteredAt - m.enteredAt <= HOUR_MS)
   const prev = others[0] ?? null
   return {

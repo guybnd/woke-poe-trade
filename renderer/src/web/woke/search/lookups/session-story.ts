@@ -6,6 +6,7 @@ import type { NightStory } from '../../session-story/story'
 import { tierText, usualMapMs } from '../../session-story/map-log'
 import type { MapRecord } from '../../session-story/map-log'
 import type { Lookup, LookupRow } from './types'
+import { isSkippedArea } from '../../session-story/skip-areas'
 
 const WORDS = ['tonight', 'last night', 'session story', 'session summary', 'night']
 
@@ -57,8 +58,10 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
 const MAP_WORDS = ['maps', 'last maps', 'map history', 'map times']
 
 // The last maps you ran, from Session story's map history.
-export function mapsLookup (maps: readonly MapRecord[]): Lookup {
+export function mapsLookup (all: readonly MapRecord[]): Lookup {
   return (query) => {
+    // Vaults saved before they were skipped don't count.
+    const maps = all.filter(m => !isSkippedArea(m.name))
     const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
     if (!maps.length || !MAP_WORDS.some(w => w.startsWith(q) && q.length >= 4)) return []
     const last = maps.slice(0, 8)
