@@ -223,14 +223,14 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   },
   {
     id: 'map-mods',
-    name: 'Map mods & map scan',
+    name: 'Map mods',
     group: 'modules',
     sub: 'Maps & atlas',
     icon: modulePageIcon('map-mods'),
-    description: 'Danger strip for map mods, profiles and weights, the on-screen map scan, and the death recap.',
-    modules: ['map-mods', 'map-scan', 'death-recap'],
-    widgets: ['woke-map-mods', 'woke-map-scan'],
-    find: ['Death recap', 'Map mod weights', 'Profiles', 'Danger strip', 'Map regex', 'Rolling mode', 'Alert when a map passes', 'Map check', 'Heist', 'Charts', 'T17', 'Nightmare'],
+    description: 'Danger strip for map mods, profiles and weights, map scan (reads hovered maps on screen), and the death recap.',
+    modules: ['map-mods', 'death-recap'],
+    widgets: ['woke-map-mods'],
+    find: ['Death recap', 'Map scan', 'Scan mode', 'Map mod weights', 'Profiles', 'Danger strip', 'Map regex', 'Rolling mode', 'Alert when a map passes', 'Map check', 'Heist', 'Charts', 'T17', 'Nightmare'],
     aliases: ['map_check.name']
   },
   {

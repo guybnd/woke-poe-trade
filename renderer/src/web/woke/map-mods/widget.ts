@@ -32,6 +32,13 @@ export interface MapModsWidget extends Widget {
   aptImported?: boolean
   // ...again when its list and card were removed, for marks made after that.
   aptImportedFinal?: boolean
+  // Map scan (merged in from its own window): reads hovered map tooltips with
+  // OCR. Turns scan mode on and off.
+  scanHotkey: string | null
+  // Rolling mode: lock onto the hovered map's tooltip and re-read only that.
+  scanRollHotkey: string | null
+  // Flash the badge when a reroll on the same map turns it into a "run".
+  scanAlertOnPass: boolean
 }
 
 export function initMapModsWidget (w: MapModsWidget) {
@@ -45,7 +52,25 @@ export function initMapModsWidget (w: MapModsWidget) {
   w.activeProfile = 1
   w.profiles = [defaultProfile()]
   w.weights = { ...DEFAULT_JUICE_WEIGHTS }
+  // Kept when set already: Map scan's keys carried over (Config.ts), or null
+  // because Map scan was switched off. Otherwise the defaults, when no other
+  // window has them: only the first Map mods window scans, and a key another
+  // tool uses isn't taken over.
+  const taken = takenKeys(w)
+  if (w.scanHotkey === undefined) w.scanHotkey = taken.has('Alt + S') ? null : 'Alt + S'
+  if (w.scanRollHotkey === undefined) w.scanRollHotkey = taken.has('Alt + R') ? null : 'Alt + R'
+  if (typeof w.scanAlertOnPass !== 'boolean') w.scanAlertOnPass = true
   importAptOnce(w)
+}
+
+// Hotkeys the rest of the config uses ("Alt + S"), and every key of another
+// Map mods window (only the first one scans). Empty when the config isn't loaded.
+function takenKeys (w: MapModsWidget): Set<string> {
+  try {
+    const others = AppConfig().widgets.filter(_ => _.wmId !== w.wmId)
+    if (others.some(_ => _.wmType === MAP_MODS_TYPE)) return new Set(['Alt + S', 'Alt + R'])
+    return new Set([...JSON.stringify(others).matchAll(/"((?:[A-Z][a-z]+ \+ )+\w+)"/g)].map(m => m[1]))
+  } catch { return new Set() }
 }
 
 // APT's item info map check is replaced by this module: bring its ratings over.
@@ -82,6 +107,10 @@ export function normalizeMapModsWidget (w: MapModsWidget) {
   if (w.hotkey === undefined) w.hotkey = null
   if (w.regexHotkey === undefined) w.regexHotkey = null
   if (typeof w.regexText !== 'string') w.regexText = ''
+  // A Map mods window from before the merge never had scan keys.
+  if (w.scanHotkey === undefined) w.scanHotkey = null
+  if (w.scanRollHotkey === undefined) w.scanRollHotkey = null
+  if (typeof w.scanAlertOnPass !== 'boolean') w.scanAlertOnPass = true
   for (const p of w.profiles) {
     if (!p.mins || typeof p.mins !== 'object') p.mins = {}
     if (p.highlight !== 'bad') p.highlight = 'good'

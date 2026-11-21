@@ -1,6 +1,6 @@
 // Map scan (OCR): the scan hotkey starts main's screen scanner, which
 // screenshots the fake game, reads the tooltip under the cursor with the real
-// vision worker (opencv + tesseract), and the widget shows a verdict badge.
+// vision worker (opencv + tesseract), and Map mods shows a verdict badge.
 //
 // Needs the OCR files (`npm run get:ocr`); skipped without them.
 import fs from 'fs'
@@ -22,7 +22,7 @@ async function expectAt (marker: Locator, cursor: { x: number, y: number }) {
 }
 
 test('Alt+S scans the hovered map: a map with max res down gets Risky with its flagged mods', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-map-mods' }] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
   // Real screenshot: Players have -20% to all maximum Resistances, cursed
   // with Temporal Chains and Enfeeble.
   await overlay.showScreen('screens/map-real-07.png')
@@ -42,19 +42,20 @@ test('Alt+S scans the hovered map: a map with max res down gets Risky with its f
 })
 
 test('map scan: a clean map gets a verdict, and moving off it reads nothing new', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan', wmWants: 'show' }, { wmType: 'woke-map-mods' }] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods', wmWants: 'show' }] })
   await overlay.showScreen('screens/map-real-09.png')
   const { cursor } = screen('map-real-09')
   await overlay.moveMouse(cursor.x, cursor.y)
   await overlay.pressHotkey('Alt + S')
 
-  const panel = overlay.widget('woke-map-scan')
-  await expect(panel).toContainText('1 scanned', { timeout: 20_000 })
-  await overlay.snap('map scan panel after one map')
+  // Map mods' Scan tab counts the maps read (the window hides while the game has focus).
+  const scanTab = overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/, includeHidden: true })
+  await expect(scanTab).toHaveText(/Scan\s*1$/, { timeout: 20_000 })
+  await overlay.snap('map mods scan tab after one map')
   // Off the tooltip: still one reading.
   await overlay.moveMouse(2300, 1300)
   await overlay.page.waitForTimeout(1500)
-  await expect(panel).toContainText('1 scanned')
+  await expect(scanTab).toHaveText(/Scan\s*1$/)
   // The fake app outlives the page: leave the scanner off for the next test.
   await overlay.pressHotkey('Alt + S')
 })
@@ -62,7 +63,7 @@ test('map scan: a clean map gets a verdict, and moving off it reads nothing new'
 // The badge and marker follow the real cursor, even when it got to the map with
 // a mouse button held (the global mouse hook reports no moves then).
 test('map scan: the marker sits on the map when the cursor was dragged there', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-map-mods' }] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
   await overlay.showScreen('screens/map-real-07.png')
   const { cursor } = screen('map-real-07')
   await overlay.moveMouse(2300, 1300)
@@ -78,18 +79,18 @@ test('map scan: the marker sits on the map when the cursor was dragged there', a
 // Rolling: moving on to another map (or another stash tab) finds its tooltip
 // instead of watching the box locked on the first one.
 test('rolling mode follows the cursor to another map', async ({ overlay }) => {
-  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan', wmWants: 'show' }, { wmType: 'woke-map-mods' }] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods', wmWants: 'show' }] })
   await overlay.showScreen('screens/map-real-07.png')
   const first = screen('map-real-07').cursor
   await overlay.moveMouse(first.x, first.y)
   await overlay.pressHotkey('Alt + R')
-  const panel = overlay.widget('woke-map-scan')
-  await expect(panel).toContainText('1 scanned', { timeout: 20_000 })
+  const scanTab = overlay.widget('woke-map-mods').getByRole('tab', { name: /Scan/, includeHidden: true })
+  await expect(scanTab).toHaveText(/Scan\s*1$/, { timeout: 20_000 })
 
   await overlay.showScreen('screens/map-real-09.png')
   const second = screen('map-real-09').cursor
   await overlay.moveMouse(second.x, second.y)
-  await expect(panel).toContainText('2 scanned', { timeout: 20_000 })
+  await expect(scanTab).toHaveText(/Scan\s*2$/, { timeout: 20_000 })
   await expectAt(overlay.page.locator('[class*="marker"]').last(), second)
   await overlay.pressHotkey('Alt + S')
 })

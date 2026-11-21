@@ -11,11 +11,15 @@
 // Installed by page-hooks.ts, outside startup JS. The card draws itself (no
 // Vue) and never covers a WInfo card or the item tooltip (v-item-tip).
 //
+// `data-tip-keys="Ctrl + Enter"` on the element adds its shortcut under the
+// text as boxed keys, like WKbd.
+//
 // Opt out with `data-native-title` on the element or a parent. The e2e harness
 // turns it off (window.__wokeNativeTitles) so getByTitle finds hovered elements.
 import { watch } from 'vue'
 import { helpTip } from './help-tip'
 import { tip as gameTip } from './tooltip/tooltip'
+import { hotkeyParts } from './key-label'
 
 const COLD_MS = 450
 // Moving from one title straight to the next shows it at once, like the system tooltip.
@@ -28,6 +32,27 @@ const CARD_STYLE = [
   'box-shadow:var(--w-shadow)', 'color:var(--w-fg)', 'font-size:var(--w-fs-sm)', 'font-weight:400',
   'line-height:1.45', 'white-space:pre-line', 'text-align:left', 'overflow-wrap:anywhere'
 ].join(';')
+const KEYS_STYLE = 'display:flex;gap:3px;margin-top:5px'
+const KBD_STYLE = [
+  'font-family:var(--w-num)', 'font-size:var(--w-fs-xs)', 'line-height:calc(14px * var(--w-text-scale, 1))', 'padding:0 5px',
+  'border:1px solid var(--w-line-strong)', 'border-bottom-width:2px', 'border-radius:var(--w-r-sm)', 'color:var(--w-fg)'
+].join(';')
+
+// The card's content: the text, then the shortcut's keys if the element names one.
+export function fillTipCard (card: HTMLElement, text: string, keys: string | null) {
+  card.textContent = text.trim()
+  const parts = hotkeyParts(keys)
+  if (!parts.length) return
+  const row = card.ownerDocument.createElement('div')
+  row.setAttribute('style', KEYS_STYLE)
+  for (const k of parts) {
+    const kbd = card.ownerDocument.createElement('kbd')
+    kbd.setAttribute('style', KBD_STYLE)
+    kbd.textContent = k
+    row.appendChild(kbd)
+  }
+  card.appendChild(row)
+}
 
 export function installTitleTips (doc: Document = document): () => void {
   const win = doc.defaultView
@@ -68,7 +93,7 @@ export function installTitleTips (doc: Document = document): () => void {
       card.setAttribute('style', CARD_STYLE + ';visibility:hidden')
       doc.body.appendChild(card)
     }
-    card.textContent = text.trim()
+    fillTipCard(card, text, held.getAttribute('data-tip-keys'))
     // With CSS zoom, left and top are in zoomed units.
     const scale = parseFloat(win!.getComputedStyle(doc.documentElement).getPropertyValue('--w-ui-scale')) || 1
     const r = card.getBoundingClientRect()

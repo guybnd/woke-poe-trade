@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { helpParagraphs, helpTip, hideHelp, placeHelp, showHelp } from '@/web/woke/ui/help-tip'
-import { placeAtPointer } from '@/web/woke/ui/title-tip'
+import { fillTipCard, placeAtPointer } from '@/web/woke/ui/title-tip'
 
 const screen = { width: 1000, height: 600 }
 const card = { width: 300, height: 100 }
@@ -65,5 +65,34 @@ describe('placeAtPointer (title hovers)', () => {
   it('stays inside the window at the right and top edges', () => {
     expect(placeAtPointer({ x: 990, y: 100 }, card, screen).left).toBe(692)
     expect(placeAtPointer({ x: 200, y: 40 }, { width: 300, height: 580 }, screen).top).toBe(8)
+  })
+})
+
+describe('fillTipCard', () => {
+  // A stand-in for the few DOM calls the card makes (tests run without a DOM).
+  class FakeEl {
+    children: FakeEl[] = []
+    attrs: Record<string, string> = {}
+    ownerDocument = { createElement: (tag: string) => new FakeEl(tag) }
+    tag: string
+    private text = ''
+    constructor (tag: string) { this.tag = tag }
+    setAttribute (k: string, v: string) { this.attrs[k] = v }
+    appendChild (c: FakeEl) { this.children.push(c) }
+    get textContent () { return this.text }
+    set textContent (v: string) { this.text = v; this.children = [] }
+  }
+  const el = (tag: string) => new FakeEl(tag)
+  it('shows only the text without a shortcut', () => {
+    const card = el('div')
+    fillTipCard(card as unknown as HTMLElement, ' Open the poedb page. ', null)
+    expect(card.textContent).toBe('Open the poedb page.')
+    expect(card.children).toHaveLength(0)
+  })
+  it('adds the shortcut as boxed keys', () => {
+    const card = el('div')
+    fillTipCard(card as unknown as HTMLElement, 'Copy the name.', 'Ctrl + Shift + C')
+    expect(card.children).toHaveLength(1)
+    expect(card.children[0].children.map(k => [k.tag, k.textContent])).toEqual([['kbd', 'Ctrl'], ['kbd', 'Shift'], ['kbd', 'C']])
   })
 })
