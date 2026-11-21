@@ -56,6 +56,27 @@ describe('parse', () => {
     expect(list[0].at).toBe(Date.parse('2026-11-21T10:07:21Z'))
   })
 
+  it("keeps gear's mods for its tooltip, not a gem's or currency's", () => {
+    const list = parseHistory(JSON.stringify({ result: [
+      entry('r', '2026-11-21T10:00:00Z', {
+        name: 'Vengeance Crown', typeLine: 'Prophet Crown', frameType: 2, rarity: 'Rare', icon: 'x.png', w: 2, h: 2, flavourText: ['x'],
+        explicitMods: [{ description: '+80 to maximum Life', domain: 'item', mods: [{ name: 'Fecund', tier: 'S1', magnitudes: [{ min: 80, max: 89 }] }] }],
+        properties: [{ name: 'Quality', type: 6, values: [['+20%', 1]] }, { name: 'Armour', type: 16, values: [['800', 1]] }],
+        extended: { text: 'big', mods: {}, hashes: {} }
+      }),
+      entry('g', '2026-11-21T10:00:00Z', { typeLine: 'Empower Support', frameType: 4, explicitMods: ['x'] }),
+      entry('w', '2026-11-21T10:00:00Z', { typeLine: 'Superior Leviathan Gauntlets', frameType: 0 })
+    ] }))!
+    expect(list[0].tip).toEqual({
+      name: 'Vengeance Crown', typeLine: 'Prophet Crown', frameType: 2, rarity: 'Rare',
+      explicitMods: [{ description: '+80 to maximum Life', domain: 'item' }],
+      properties: [{ name: 'Quality', type: 6, values: [['+20%', 1]] }]
+    })
+    expect(list[1].tip).toBeUndefined()
+    // No mods: the name's tooltip, nothing kept.
+    expect(list[2].tip).toBeUndefined()
+  })
+
   it('says null for a reply that is not trade history', () => {
     expect(parseHistory('<html>')).toBeNull()
     expect(parseHistory('{"error":{"code":2}}')).toBeNull()

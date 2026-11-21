@@ -32,6 +32,10 @@ export interface Sale {
   // The biggest linked group, when 5 or more (a 6L unique prices apart).
   links?: number
   price: { amount: number, currency: string }
+  // Gear's mods and properties as the site sent them, for the item tooltip
+  // (the trade listing tooltip reads the same shape). Left out for gems,
+  // currency and cards: their tooltip comes from the name.
+  tip?: Record<string, unknown>
 }
 
 export interface SalesError {
@@ -100,6 +104,42 @@ function property (item: Raw, name: string): number | undefined {
   return m ? Number(m[1]) : undefined
 }
 
+// What the tooltip draws from (listing-tip.ts listingTipItem reads only
+// these). Mod objects keep their text and kind, not their tiers and rolls.
+const TIP_KEYS = ['name', 'typeLine', 'baseType', 'frameType', 'rarity', 'ilvl', 'corrupted', 'mirrored', 'influences', 'sockets']
+const MOD_KEYS = ['implicitMods', 'enchantMods', 'utilityMods', 'fracturedMods', 'explicitMods', 'craftedMods']
+// Gems, currency, cards and quest items: the name gives their tooltip.
+const NAME_TIP_FRAMES = new Set([4, 5, 6, 7, 8])
+// The quality property (its name varies by kind).
+const QUALITY_TYPE = 6
+
+function slimMod (m: unknown): unknown {
+  if (typeof m === 'string') return m
+  if (!m || typeof m !== 'object') return undefined
+  const r = m as Raw
+  const out: Raw = {}
+  if (typeof r.description === 'string') out.description = r.description
+  if (typeof r.domain === 'string') out.domain = r.domain
+  if (r.flags && typeof r.flags === 'object') out.flags = r.flags
+  return out
+}
+
+// Only gear with mods: without any, the tooltip is the name's.
+export function tipOf (item: Raw): Record<string, unknown> | undefined {
+  if (NAME_TIP_FRAMES.has(num(item.frameType) ?? -1)) return undefined
+  const out: Record<string, unknown> = {}
+  let mods = 0
+  for (const k of MOD_KEYS) {
+    const list = Array.isArray(item[k]) ? (item[k] as unknown[]).map(slimMod).filter(x => x !== undefined) : []
+    if (list.length) { out[k] = list; mods += list.length }
+  }
+  if (!mods) return undefined
+  for (const k of TIP_KEYS) if (item[k] !== undefined) out[k] = item[k]
+  const props = Array.isArray(item.properties) ? (item.properties as Raw[]).filter(x => x && x.type === QUALITY_TYPE) : []
+  if (props.length) out.properties = props
+  return out
+}
+
 function biggestLinks (sockets: unknown): number {
   if (!Array.isArray(sockets)) return 0
   const groups = new Map<number, number>()
@@ -142,6 +182,8 @@ export function parseSale (e: unknown): Sale | null {
   if (tier) sale.mapTier = tier
   const links = biggestLinks(item.sockets)
   if (links >= 5) sale.links = links
+  const tip = tipOf(item)
+  if (tip) sale.tip = tip
   return sale
 }
 

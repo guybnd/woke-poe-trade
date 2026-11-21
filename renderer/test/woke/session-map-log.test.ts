@@ -102,6 +102,29 @@ describe('maps from Client.txt', () => {
     expect(log.current?.npcs).toEqual([])
   })
 
+  it('marks a map whose Starfall Crater you went into, keeping one run, as Client.txt logs it', () => {
+    const loading = (time: string, name: string) => info(time, `[LOADING SCREEN] (${name}) Duration = 1.37694 seconds`)
+    const { done, left, log } = follow([
+      area('20:03:28', 'MapWorldsFortress', '3822646249'),
+      entered('20:03:30', 'Fortress'),
+      loading('20:03:30', 'Fortress'),
+      area('20:04:10', 'SettlersBossFallenStar', '3511095274'),
+      entered('20:04:11', 'Starfall Crater'),
+      loading('20:04:11', 'Starfall Crater'),
+      say('20:04:12', 'The Black Knight'),
+      area('20:05:28', 'MapWorldsFortress', '3822646249'),
+      entered('20:05:30', 'Fortress'),
+      area('20:06:28', 'SettlersBossFallenStar', '1'),
+      area('20:07:28', 'MapWorldsFortress', '3822646249'),
+      area('20:08:28', 'HideoutArenaSearingExarch', '1', 60),
+      area('20:09:00', 'MapWorldsFortress', '288524962'),
+      entered('20:09:01', 'Fortress')
+    ])
+    expect(left.map(r => r.name)).toEqual(['Fortress'])
+    expect(done.map(r => [r.name, r.npcs, r.mapMs])).toEqual([['Fortress', ['Starfall Crater'], 5 * 60_000]])
+    expect(log.current?.npcs).toEqual([])
+  })
+
   it("doesn't take a side area's name for the map", () => {
     const { log } = follow([
       area('21:00:00', 'MapWorldsStrand', '11'),

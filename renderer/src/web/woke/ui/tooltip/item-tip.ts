@@ -38,6 +38,9 @@ export interface ItemTipRef {
   count?: number
   // The row's right-click is its own (the drop counter's take-one-back): no item menu.
   noMenu?: boolean
+  // Shown as it is, with no lookup: an item whose own mods are known (a sold
+  // item from the trade history).
+  content?: TipContent
 }
 
 const SHOW_DELAY_MS = 60
@@ -216,6 +219,11 @@ function enter (e: Event) {
   if (!ref?.name) { hideTip(); return }
   cancel()
   const mine = seq
+  const own = ref.content
+  if (own) {
+    timer = setTimeout(() => { if (mine === seq && el.isConnected) showTipAt(el, own) }, SHOW_DELAY_MS)
+    return
+  }
   timer = setTimeout(() => {
     tipFor(ref).then(({ model, market, uniques, effects }) => {
       if (mine !== seq || !el.isConnected) return

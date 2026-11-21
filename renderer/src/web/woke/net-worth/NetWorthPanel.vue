@@ -2,13 +2,16 @@
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
     :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : status?.running === true" :stale="view === 'sales' ? !!salesError : !!status?.error && !!v">
     <template #actions>
-      <!-- Your stash or your sales (pick C). -->
-      <TextTabs v-model="view" :options="VIEW_OPTIONS" :class="$style.viewTabs" />
       <!-- The read's age is in the footer: beside the title it ran into the game look's plaque. -->
       <WButton v-if="view === 'sales'" size="sm" icon="fas fa-sync-alt" :disabled="salesReading" :title="salesReadLine ? `Sales ${salesReadLine}` : undefined" @click="refreshSales">Refresh</WButton>
       <WButton v-else size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" :title="readLine ? `Stash ${readLine}` : undefined" @click="refresh">Refresh</WButton>
       <WButton v-if="view !== 'sales'" size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
       <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" title="Sections to show" aria-label="Sections to show" @click="openSections" />
+    </template>
+    <!-- Your stash or your sales (pick C), as window tabs: in the title bar the
+         switch ran under the game look's title plaque. -->
+    <template #tabs>
+      <WTabs v-model="view" :options="VIEW_OPTIONS" />
     </template>
     <template v-if="view === 'sales' && salesError" #banner>
       <WBanner :tone="salesError?.kind === 'rate-limited' ? 'warn' : 'error'">{{ salesErrorLine }}</WBanner>
@@ -116,8 +119,8 @@
                     <!-- A sale takes the place of its item's removed line (sales.ts). -->
                     <div v-for="s in groupSales(g).sales" :key="'sale' + s.id" :class="$style.feedRow">
                       <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
-                      <span class="w-trunc" :title="saleTitle(s)">Sold {{ saleName(s) }}</span>
-                      <span class="w-num" :class="$style.saleNum" :title="`${fmt(s.price.amount)} ${s.price.currency}`">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span>
+                      <span v-item-tip="saleTip(s)" class="w-trunc">Sold {{ saleName(s) }}</span>
+                      <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span>
                     </div>
                     <div v-for="l in groupSales(g).lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
                       <img v-if="l.icon" :src="l.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
@@ -146,8 +149,8 @@
                 <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
               </button>
               <div v-for="s in recentSales" :key="s.id" :class="$style.moveRow">
-                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span class="w-trunc" :title="saleTitle(s)">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" class="text-xs" :class="marketTone(s)">{{ marketText(marketOf(s)) }}</span></span>
-                <span class="w-num" :class="$style.saleNum" :title="new Date(s.at).toLocaleString()">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
+                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleTip(s)" class="w-trunc">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" :class="[$style.saleTag, marketTone(s)]">{{ marketText(marketOf(s)) }}</span></span>
+                <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
               </div>
             </div>
             <div v-if="shown.where">
@@ -234,7 +237,7 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, openMenu, toast, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -264,6 +267,7 @@ import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
+import { saleTip } from './sale-tip'
 import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
 import { loadSales, marketOf, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
@@ -847,13 +851,15 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldToday:hover { text-decoration: underline; }
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }
-.viewTabs { margin-right: var(--w-s2); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
 .catName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .moveName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+/* A sale's "7% under" and price never wrap: the name is cut short instead. */
+.saleTag { flex: none; white-space: nowrap; font-size: var(--w-fs-xs); }
+.sideCol .moveRow > :global(.w-num) { flex: none; white-space: nowrap; }
 .catRow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }

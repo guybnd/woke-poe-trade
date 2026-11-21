@@ -34,7 +34,7 @@
         <tbody>
           <tr v-for="s in rows.slice(0, limit)" :key="s.id">
             <td :class="$style.left">
-              <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span class="w-trunc" :style="{ color: colourOf(s.frameType) }" :title="saleName(s)">{{ saleName(s) }}</span></span>
+              <span :class="$style.name"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-item-tip="saleTip(s)" class="w-trunc" :style="{ color: colourOf(s.frameType) }">{{ saleName(s) }}</span></span>
             </td>
             <td class="w-num w-dim">{{ fmt(s.price.amount) }} {{ s.price.currency }}</td>
             <td class="w-num" :class="$style.sale">{{ chaosOf(s) == null ? '—' : div(chaosOf(s)!) }}</td>
@@ -53,7 +53,8 @@
 // The Sales view (pick C): your sales for a range, a ranked bar per type that
 // filters the table under it, and every sale kept.
 import { computed, shallowRef, watch } from 'vue'
-import { WButton, WChip, WEmpty, WField } from '../ui'
+import { WButton, WChip, WEmpty, WField, vItemTip } from '../ui'
+import { saleTip } from './sale-tip'
 import { formatAmount, nowMinute } from '../ui/format'
 import TextTabs from './TextTabs.vue'
 import Coin from './Coin.vue'

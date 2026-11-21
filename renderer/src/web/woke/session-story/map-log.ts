@@ -30,7 +30,7 @@ export interface MapRecord {
   mapMs: number
   deaths: number
   // Mechanics seen in the map: an NPC spoke ("Einhar", "Delirium"…), or you
-  // stepped into a Mirage.
+  // stepped into a Mirage or a Starfall Crater.
   npcs: string[]
   char: string | null
   className: string | null
@@ -62,6 +62,15 @@ export const MIRAGE = 'Mirage'
 
 export function isMirageLoad (line: string): boolean {
   return MIRAGE_RE.test(line)
+}
+
+// A Settlers fallen star in a map opens Starfall Crater (the Black Knight):
+// its own area with its own seed, then back to the map's seed. It stays in the
+// run as a side area (`staysInRun`). Checked against a real Client.txt.
+export const STARFALL = 'Starfall Crater'
+
+export function isStarfallArea (areaId: string): boolean {
+  return /^SettlersBossFallenStar/i.test(areaId)
 }
 
 export function npcOf (speaker: string): string | null {
@@ -111,7 +120,10 @@ export class MapLog {
     if (ev?.kind === 'area') {
       this.naming = false
       const side = staysInRun(ev.areaId) && this.inMap
-      if (side) return
+      if (side) {
+        if (isStarfallArea(ev.areaId)) this.mark(STARFALL)
+        return
+      }
       if (isMapArea(ev.areaId)) {
         // A vault on the skip list is still saved (Map history can show it),
         // but gets no toast and fires no map entry: see `skipped`.
@@ -180,7 +192,12 @@ export class MapLog {
     }
     const speaker = speakerOf(line)
     const npc = speaker && /\[INFO Client \d+\]/.test(line) ? npcOf(speaker) : isMirageLoad(line) ? MIRAGE : null
-    if (npc && this.inMap && this.current && !this.current.npcs.includes(npc)) this.current.npcs.push(npc)
+    if (npc && this.inMap) this.mark(npc)
+  }
+
+  // Adds a mechanic to the map you're in, once.
+  private mark (label: string): void {
+    if (this.current && !this.current.npcs.includes(label)) this.current.npcs.push(label)
   }
 
   // The current record is an area on the skip list (a vault): kept, never toasted.

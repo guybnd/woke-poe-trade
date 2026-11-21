@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { byType, inRange, marketText, withoutSold, saleChaos, saleName, saleType, salesInWindow, searchSales, totals, versusMarket } from '@/web/woke/net-worth/sales'
 import type { Sale } from '@/web/woke/net-worth/sales'
 import { salesLookup } from '@/web/woke/search/lookups/sales'
+import { saleItem, saleTip } from '@/web/woke/net-worth/sale-tip'
 
 const H = 3_600_000
 const NOW = new Date(2026, 10, 21, 12, 0).getTime()
@@ -117,6 +118,19 @@ describe('sales in a refresh', () => {
     const list = [sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt' }), sale({ typeLine: 'Divine Orb' })]
     expect(searchSales(list, 'head belt').map(s => s.name)).toEqual(['Headhunter'])
     expect(searchSales(list, '')).toEqual([])
+  })
+})
+
+describe('tooltips', () => {
+  it('draws gear from its own mods, everything else by name', () => {
+    const rare = sale({ frameType: 2, name: 'Vengeance Crown', typeLine: 'Prophet Crown', tip: { name: 'Vengeance Crown', typeLine: 'Prophet Crown', baseType: 'Prophet Crown', frameType: 2, rarity: 'Rare', explicitMods: ['+80 to maximum Life'] } })
+    expect(saleItem(rare)?.rarity).toBe('RARE')
+    expect(saleTip(rare)).toMatchObject({ name: 'Vengeance Crown', content: { kind: 'item' } })
+    const gem = sale({ frameType: 4, typeLine: 'Empower Support', gemLevel: 4, quality: 20 })
+    expect(saleItem(gem)).toBeNull()
+    expect(saleTip(gem)).toMatchObject({ name: 'Empower Support', fallback: { kind: 'gem', level: 4, quality: 20 } })
+    // Read before tooltips were kept: by name.
+    expect(saleTip(sale({ frameType: 3, name: 'Headhunter', typeLine: 'Leather Belt' }))).toMatchObject({ name: 'Headhunter', type: 'Leather Belt' })
   })
 })
 
