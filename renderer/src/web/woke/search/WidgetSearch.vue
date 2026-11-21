@@ -164,7 +164,8 @@ import type { CorruptedFilter, PriceItem } from '../market/types'
 import { pickRow } from '../shared/price-row'
 import { usePriceText } from '../shared/price'
 import { lookupRequest } from '../item-lookup/lookup'
-import { tradeQuery, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { tradeSearch, virtualUnique } from '../ui/tooltip/item-menu-logic'
+import { priceCheckTradeStatus } from '../shared/trade-status'
 import { canPriceCheck as canCheckByName, cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
@@ -1027,7 +1028,7 @@ function tradeBeast (name: string) {
   }
   // The international site takes the English name, a regional one its own.
   const type = poeWebApi() === 'www.pathofexile.com' ? name : ITEM_BY_REF('CAPTURED_BEAST', name)?.[0]?.name ?? name
-  window.open(tradeUrl(league, { type }, getTradeEndpoint()))
+  window.open(tradeUrl(league, { type, status: priceCheckTradeStatus() }, getTradeEndpoint()))
 }
 
 // ---- recent lookups, saved with the window ----
@@ -1139,12 +1140,12 @@ function openTrade (entry: PriceEntry | ItemEntry) {
   // and a unique on several bases by name alone.
   const ns = info?.namespace ?? (entry.kind === 'price' ? nsOf(entry.group.type) : 'ITEM')
   const kind = ns === 'UNIQUE' ? 'unique' : ns === 'GEM' ? 'gem' : ns === 'DIVINATION_CARD' ? 'card' : 'item'
-  const q = tradeQuery({ name }, kind, info, AppConfig().language === 'en')
-  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn copies only.
-  const foulborn = kind === 'unique' && (isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name)))
-  window.open(tradeUrl(league, foulborn ? { ...q, filters: FOULBORN_ONLY } : q, getTradeEndpoint()))
+  // A Foulborn row, or a Foulborn kind picked under the unique: Foulborn
+  // copies only. Any other unique: none of them.
+  const foulborn = isFoulborn(name) || (pickedFoul.value != null && detailName.value === baseUniqueName(name))
+  const q = tradeSearch({ name }, kind, info, AppConfig().language === 'en', foulborn)
+  window.open(tradeUrl(league, { ...q, status: priceCheckTradeStatus(info) }, getTradeEndpoint()))
 }
-const FOULBORN_ONLY = { misc_filters: { filters: { foulborn_item: { option: 'true' } } } }
 function findInStash (name: string) {
   Host.sendEvent({ name: 'CLIENT->MAIN::user-action', payload: { action: 'stash-search', text: JSON.stringify(name) } })
 }

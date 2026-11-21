@@ -235,14 +235,34 @@ export function uniqueBaseOf (name: string): string | undefined {
   return [...bases][0]
 }
 
-export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): { name?: string, type?: TradeType } {
+// The trade link's search: tradeQuery plus, for a unique, its Foulborn copies
+// only or none of them, as the price check searches a plain unique without
+// its Foulborn copies.
+export function tradeSearch (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true, foulborn = isFoulborn(ref.name)): { name?: TradeType, type?: TradeType, filters?: object } {
+  const q = tradeQuery(ref, kind, info, english)
+  return kind === 'unique' ? { ...q, filters: foulbornFilters(foulborn) } : q
+}
+export function foulbornFilters (foulborn: boolean) {
+  return { misc_filters: { filters: { foulborn_item: { option: String(foulborn) } } } }
+}
+
+export function tradeQuery (ref: ItemMenuRef, kind: TipKind, info: BaseType | undefined, english = true): { name?: TradeType, type?: TradeType } {
   if (kind === 'unique') {
     const name = info?.name ?? plainName(ref.name)
+    // A unique map (Cortex, Mao Kun) is on the plain Map base, which the
+    // trade site only takes with its "map" discriminator, as the price check sends it.
+    const refName = info?.namespace === 'UNIQUE' ? info.refName : plainName(ref.name)
+    if ((info?.unique?.base ?? uniqueBaseOf(refName)) === 'Map') {
+      const map = ITEM_BY_REF('ITEM', 'Map')?.[0]?.name ?? 'Map'
+      return { name: { option: name, discriminator: 'map' }, type: { option: map, discriminator: 'map' } }
+    }
     // Other languages' trade sites take the name alone.
-    const base = english ? uniqueBaseOf(info?.namespace === 'UNIQUE' ? info.refName : plainName(ref.name)) : undefined
+    const base = english ? uniqueBaseOf(refName) : undefined
     return base ? { name, type: base } : { name }
   }
   if (ref.base) return { type: info?.name ?? ref.base }
+  // The plain Map base also needs its discriminator, as in the price check.
+  if (info?.refName === 'Map') return { type: { option: info.name, discriminator: 'map' } }
   // The trade site lists a transfigured gem as its plain gem plus which one.
   const plain = info?.gem?.transfigured && info.gem.normalVariant && info.tradeDisc
     ? ITEM_BY_REF('GEM', info.gem.normalVariant)?.[0]
