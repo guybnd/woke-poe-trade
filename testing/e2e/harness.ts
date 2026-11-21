@@ -136,7 +136,8 @@ export class Overlay {
     const seeded: number[] = []
     for (const seed of opts.widgets ?? []) {
       const { wmType, wmWants, wmFlags, ...rest } = seed
-      seeded.push(nextId)
+      // A widget of a module switched off never mounts (module ids are mostly the type's name).
+      if (!opts.off?.includes(wmType.replace(/^woke-/, ''))) seeded.push(nextId)
       config.widgets.push({
         wmId: nextId++,
         wmType,
