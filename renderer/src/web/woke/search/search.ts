@@ -123,10 +123,18 @@ export function passesCorrupted (item: { type: string, variant: string }, filter
 }
 
 // Anything else with a name: tools, settings pages, items with no price.
-export function searchNamed<T> (list: readonly T[], query: string, name: (entry: T) => string, limit = 8): T[] {
+// `name` can give other words for it too ("bug" for Report an issue); the
+// best of them ranks the entry.
+export function searchNamed<T> (list: readonly T[], query: string, name: (entry: T) => string | readonly string[], limit = 8): T[] {
   if (normalize(query).length < MIN_QUERY) return []
+  const rankOf = (entry: T) => {
+    const names = name(entry)
+    if (typeof names === 'string') return matchRank(names, query)
+    const ranks = names.map(n => matchRank(n, query)).filter(r => r >= 0)
+    return ranks.length ? Math.min(...ranks) : -1
+  }
   return list
-    .map(entry => ({ entry, rank: matchRank(name(entry), query) }))
+    .map(entry => ({ entry, rank: rankOf(entry) }))
     .filter(r => r.rank >= 0)
     .sort((a, b) => a.rank - b.rank)
     .slice(0, limit)

@@ -245,6 +245,7 @@ import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
+import { openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -262,7 +263,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, keywords?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -430,6 +431,21 @@ function commandEntries (): ActionEntry[] {
       }
     })
   }
+  // The palette steps aside; the overlay stays open for the form.
+  out.push({
+    kind: 'command',
+    id: 'c:report-issue',
+    name: 'Report an issue',
+    sub: 'Bug or idea, on GitHub',
+    icon: 'fas fa-bug',
+    keywords: ['report', 'bug', 'issue', 'feedback', 'github', 'idea'],
+    about: 'Write up a bug or an idea. Opens a pre-filled GitHub issue in your browser; nothing is sent by itself.',
+    verb: 'Open',
+    action: () => {
+      wm.hide(props.config.wmId)
+      openReportDialog()
+    }
+  })
   return out
 }
 
@@ -767,7 +783,7 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
     tools: searchNamed(toolEntries(), q, e => e.name),
     rest: [
-      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
+      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => [e.name, ...(e.keywords ?? [])]) as Entry[] },
       { label: 'Settings', entries: settingEntries(q) as Entry[] }
     ],
     web: cardSections(cards, ['Search the web'])

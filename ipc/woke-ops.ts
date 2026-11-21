@@ -58,6 +58,30 @@ export interface WokeRollbackState {
   skip: string | null
 }
 
+export interface WokeIssueRequest {
+  kind: 'bug' | 'idea'
+  title: string
+  text: string
+  includeInfo: boolean
+  includeLog: boolean
+  // Modules on, league.
+  info?: string[]
+  // Account and character names to hide.
+  names?: string[]
+  open: boolean
+}
+
+export interface WokeIssue {
+  url: string
+  title: string
+  body: string
+  labels: string
+  // The whole log, put on the clipboard when only its end fits in the link.
+  clipboard: string | null
+  logLines: number
+  logLinesShown: number
+}
+
 export interface WokePendingCrash {
   id: string
   at: number
@@ -142,8 +166,10 @@ export interface WokeOps {
   'setup-finish': Op<NoArgs, Ok>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>
-  'crash-report': Op<{ id?: string | null, context?: string }, Ok>
+  'crash-report': Op<{ id?: string | null, context?: string, names?: string[] }, Ok>
   'crash-folder': Op<NoArgs, Ok>
+  // "Report an issue": builds the GitHub link (open: false, for the preview) or opens it.
+  'issue-report': Op<WokeIssueRequest, WokeIssue>
   'renderer-error': Op<{ text: string }, Ok>
 
   // Screen readers
