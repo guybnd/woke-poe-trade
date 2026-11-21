@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2" data-map-history>
+  <div ref="root" class="flex flex-col gap-2" data-map-history>
     <WBanner v-if="readError || store.mapsError.value">Couldn't read your map history: {{ readError || store.mapsError.value }}</WBanner>
     <WEmpty v-else-if="!on" :art="{ mechanic: 'map' }">
       Turn on Session story (Settings › Farming &amp; sessions) to keep a history of every map you run.
@@ -13,7 +13,11 @@
         <span>{{ mapCount }} {{ mapCount === 1 ? 'map' : 'maps' }}<template v-if="skippedCount"> · {{ skippedCount }} {{ skippedCount === 1 ? 'vault' : 'vaults' }}</template></span>
         <span v-if="counted.length">Average {{ formatClock(avgMs) }}</span>
         <span>{{ deaths }} {{ deaths === 1 ? 'death' : 'deaths' }}</span>
-        <WChip clickable :active="showSkipped" class="ml-auto" data-history-skipped
+        <span class="ml-auto" />
+        <WChip v-for="c in chips" :key="c.id" clickable :active="filter === c.id" data-history-chip @click="filter = filter === c.id ? null : c.id">
+          {{ c.label }} <span class="w-dim">{{ c.count }}</span>
+        </WChip>
+        <WChip clickable :active="showSkipped" data-history-skipped
           title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
           @click="showSkipped = !showSkipped">Vaults</WChip>
       </div>
@@ -35,7 +39,8 @@
             </span>
             <span class="text-right w-num" :class="it.read.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(it.read.chaos, it.read.rate) }}</span>
           </div>
-          <div v-else class="w-row px-0" :class="$style.grid" data-map-row>
+          <div v-else class="w-row px-0" :class="[$style.grid, $style.mapRow, { [$style.sel]: isFocus(it.map) }]" data-map-row
+            :data-map-at="it.map.enteredAt" @click="emit('select', it.map.enteredAt)">
             <span class="w-dim w-num w-trunc">{{ formatSessionDate(it.map.enteredAt) }}</span>
             <span class="w-trunc" :class="{ 'w-dim': skippedRow(it.map) }">{{ it.map.name }} <span class="w-dim">{{ skippedRow(it.map) ? 'not counted' : tierText(it.map.areaLevel) }}</span></span>
             <span class="text-right w-num">
@@ -56,10 +61,9 @@
     </template>
   </div>
 </template>
-
 <script setup lang="ts">
 // Session analytics' Map history tab: every map read from Client.txt by Session story.
-import { computed, shallowRef, watch } from 'vue'
+import { computed, nextTick, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { saveConfig } from '@/web/Config'
 import { WBanner, WChip, WEmpty, WSkeleton } from '../ui'
@@ -76,12 +80,17 @@ import type { MapRecord } from './map-log'
 import { DAY_MS_EXPORT, dayKey, readAllMaps, readMapDay, useNights } from './store'
 import { SESSION_STORY_TYPE } from './widget'
 import type { SessionStoryWidget } from './widget'
-
-const props = defineProps<{ range: AnalyticsRange, league: string, now: number }>()
-
+const props = defineProps<{
+  range: AnalyticsRange
+  league: string
+  now: number
+  // A map picked on tonight's strip, by when you entered it: shown and scrolled to.
+  focus?: number | null
+}>()
+const emit = defineEmits<{ select: [enteredAt: number] }>()
+const root = shallowRef<HTMLElement | null>(null)
 const store = useNights()
 const on = computed(() => isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE))
-
 // Read from disk while the tab is open, and let go when it closes. Seven days
 // read only their own files; League and All read every day.
 const all = shallowRef<MapRecord[]>([])
@@ -111,7 +120,6 @@ watch(() => store.lastSaved.value, (rec) => {
   // The newest saved copy already holds any earlier visit to the same map.
   if (rec) all.value = [rec, ...all.value.filter(m => m.key !== rec.key)]
 })
-
 // Vaults and other skipped areas: listed only when asked for, never counted.
 // Kept on Session story's settings, next to the list itself.
 const storyConfig = () => AppConfig().widgets.find(w => w.wmType === SESSION_STORY_TYPE) as SessionStoryWidget | undefined
@@ -125,15 +133,28 @@ const showSkipped = computed({
   }
 })
 const skippedRow = (m: MapRecord) => isSkippedArea(m.name)
-
 // "League" and "7 days" are this league's; maps saved before leagues were noted count as this one.
 const inView = computed(() => all.value.filter(m =>
   (props.range === 'all' || !m.league || m.league === props.league) && inRange(m.enteredAt, props.range, props.now)))
 const maps = computed(() => inView.value.filter(m => !skippedRow(m)))
-const list = computed(() => showSkipped.value ? inView.value : maps.value)
+// Chips: the mechanics met in the listed maps, and maps with a death.
+const filter = shallowRef<string | null>(null)
+// Not a name the log gives an NPC.
+const DEATHS = '#deaths'
+const chips = computed(() => {
+  const count = new Map<string, number>()
+  for (const m of maps.value) for (const n of new Set(m.npcs)) count.set(n, (count.get(n) ?? 0) + 1)
+  const out = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, n]) => ({ id, label: id, count: n }))
+  const died = maps.value.filter(m => m.deaths > 0).length
+  if (died) out.push({ id: DEATHS, label: 'Deaths', count: died })
+  // The picked chip stays while its maps are listed.
+  return out
+})
+watch(chips, (list) => { if (filter.value && !list.some(c => c.id === filter.value)) filter.value = null })
+const matches = (m: MapRecord) => !filter.value || (filter.value === DEATHS ? m.deaths > 0 : m.npcs.includes(filter.value))
+const list = computed(() => (showSkipped.value ? inView.value : maps.value).filter(matches))
 const mapCount = computed(() => maps.value.length)
 const skippedCount = computed(() => showSkipped.value ? inView.value.length - maps.value.length : 0)
-
 const PAGE = 100
 const limit = shallowRef(PAGE)
 // Net worth's stash reads in the same range, as their own rows between maps.
@@ -152,18 +173,32 @@ watch(() => [store.lastSaved.value, props.now], () => { if (on.value) readGains(
 const reads = computed(() => incomeRows(gains.value, maps.value).filter(r => inRange(r.at, props.range, props.now)))
 const items = computed(() => interleave(list.value, reads.value))
 const visible = computed(() => items.value.slice(0, limit.value))
+// The strip and the log can differ by a moment on when you entered.
+const NEAR_MS = 60_000
+const isFocus = (m: MapRecord) => props.focus != null && Math.abs(m.enteredAt - props.focus) <= NEAR_MS
+// Also once the maps have loaded: the tab may open on a pick.
+watch(() => [props.focus, loading.value] as const, async ([at, busy]) => {
+  if (at == null || busy) return
+  // A chip that hides the map lets go; then page down to it and scroll there.
+  if (filter.value && !maps.value.some(m => isFocus(m) && matches(m))) filter.value = null
+  const idx = items.value.findIndex(it => it.kind === 'map' && isFocus(it.map))
+  if (idx < 0) return
+  if (idx >= limit.value) limit.value = idx + PAGE
+  await nextTick()
+  const rows = root.value?.querySelectorAll<HTMLElement>('[data-map-at]') ?? []
+  for (const el of rows) {
+    if (Math.abs(Number(el.dataset.mapAt) - at) <= NEAR_MS) { el.scrollIntoView({ block: 'nearest' }); break }
+  }
+}, { immediate: true })
 const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${formatChaos(chaos, rate)}`
-
 // As the chip counts it: maps under 30 s (a quick look in) left out.
 const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))
 const avgMs = computed(() => counted.value.reduce((s, m) => s + m.mapMs, 0) / Math.max(1, counted.value.length))
 const deaths = computed(() => maps.value.reduce((s, m) => s + m.deaths, 0))
-
 function levelText (m: MapRecord): string {
   return m.levelsGained ? `${m.charLevel} → ${m.charLevel! + m.levelsGained}` : String(m.charLevel)
 }
 </script>
-
 <style module>
 .grid {
   display: grid;
@@ -172,5 +207,7 @@ function levelText (m: MapRecord): string {
   align-items: baseline;
 }
 .read { background: var(--w-accent-soft); }
+.mapRow { cursor: pointer; }
+.sel { box-shadow: inset 2px 0 0 var(--w-accent); background: var(--w-accent-soft); }
 .readText { grid-column: 2 / span 3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

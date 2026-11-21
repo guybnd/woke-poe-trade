@@ -5,8 +5,10 @@
       <span class="w-dim text-xs w-num">{{ formatDuration(played) }} · {{ story.maps.length }} {{ story.maps.length === 1 ? 'map' : 'maps' }}</span>
     </div>
     <div :class="$style.strip" data-night-strip>
-      <span v-for="(p, i) in story.strip" :key="i" :class="p.skipped ? $style.skipped : p.map == null ? $style.out : $style.map"
-        :style="{ flexGrow: p.ms }" @mouseenter="tip($event, partTitle(p))" @mouseleave="untip" />
+      <span v-for="(p, i) in story.strip" :key="i"
+        :class="[p.skipped ? $style.skipped : p.map == null ? $style.out : $style.map, { [$style.pick]: pickable && p.map != null, [$style.sel]: p.map != null && story.maps[p.map].enteredAt === selected }]"
+        :style="{ flexGrow: p.ms }" @mouseenter="tip($event, partTitle(p))" @mouseleave="untip"
+        @click="p.map != null && pickable && emit('pick', story.maps[p.map].enteredAt)" />
       <span v-for="(x, i) in deathMarks" :key="'d' + i" :class="$style.death" :style="{ left: `${x}%` }" />
     </div>
     <div :class="$style.axis" class="w-num w-dim">
@@ -43,7 +45,12 @@ const props = defineProps<{
   title: string
   // Profit from Farming sessions inside the night, used when the stash reader didn't read.
   farm?: { chaos: number, sessions: number } | null
+  // Map segments can be clicked (Session analytics: opens that map's row).
+  pickable?: boolean
+  // The map shown as picked, by when you entered it.
+  selected?: number | null
 }>()
+const emit = defineEmits<{ pick: [enteredAt: number] }>()
 
 const played = computed(() => props.story.endedAt - props.story.startedAt)
 const profit = computed(() => {
@@ -104,6 +111,8 @@ function signed (chaos: number): string {
 }
 .map { min-width: 2px; background: var(--w-accent); opacity: 0.75; }
 .map:hover { opacity: 1; }
+.pick { cursor: pointer; }
+.sel { opacity: 1; outline: 2px solid var(--w-fg); outline-offset: 1px; position: relative; z-index: 1; }
 .out {
   min-width: 1px;
   background: repeating-linear-gradient(90deg, var(--w-line) 0 3px, transparent 3px 6px);

@@ -6,7 +6,7 @@
           <template #actions><WButton size="sm" @click="reload">Retry</WButton></template>
         </WBanner>
         <!-- Tonight's strip and totals stay on top of every tab (Session story's card). -->
-        <div v-if="storyOn" :class="$style.tonight" data-analytics-tonight><TonightBand /></div>
+        <div v-if="storyOn" :class="$style.tonight" data-analytics-tonight><TonightBand pickable :selected="focusAt" @pick="pickMap" /></div>
       </template>
       <template #tabs>
         <WTabs v-model="tab" :options="tabOptions" />
@@ -187,7 +187,7 @@
 
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
         <!-- Only while the window is open: it reads every map day from disk, and the window mounts hidden at startup. -->
-        <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" /></template>
+        <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" :focus="focusAt" @select="focusAt = $event" /></template>
         <DeckHistory v-else-if="tab === 'decks'" :range="config.range" :unit="config.unit" :league="league" :now="now" />
 
         <!-- ===== Maps ===== -->
@@ -275,6 +275,12 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 const storyOn = computed(() => isModuleOn(AppConfig(), 'session-story'))
 // With Session story on, the window opens on the maps you ran: tonight's strip sits above them.
 const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>(storyOn.value ? 'history' : 'strategies')
+// A map picked on tonight's strip (or its row): Map history shows and scrolls to it.
+const focusAt = shallowRef<number | null>(null)
+function pickMap (enteredAt: number) {
+  tab.value = 'history'
+  focusAt.value = enteredAt
+}
 // Session story turned off while its tab shows: back to Strategies.
 watch(storyOn, (on) => { if (!on && tab.value === 'history') tab.value = 'strategies' })
 const tabOptions = computed(() => [

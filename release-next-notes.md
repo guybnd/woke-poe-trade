@@ -15,3 +15,4 @@
 - Price check: listings now sort by real value. Chaos and divine prices (and other currencies) are compared at the current poe.ninja rate, so a 150c listing no longer shows after a 1 div one.
 - Session analytics: tonight's strip and totals (from Session story) now sit at the top of the window on every tab, and the window opens on Map history first. First step toward one Session window.
 - Session analytics › Map history: each Net worth stash read is its own row between your maps, with what came in since the read before, how many maps that covers and the rate per hour. Purchases show as spent, not as a loss.
+- Session analytics: click a map on tonight's strip to jump to its row in Map history (the row and the strip segment light up together; clicking a row marks it on the strip). Map history has chips for the mechanics you met (Delirium, Expedition, Zana…) and for maps with a death; click one to list only those.
