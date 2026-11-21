@@ -10,7 +10,7 @@ import {
   addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
-import { classify, countedChaos, spentChaos } from './spend'
+import { classify, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
@@ -181,7 +181,7 @@ async function countRead (id: string, readAt: number) {
     // Every refresh's net change, for session profit elsewhere (gains.ts),
     // with the guess whether it's a purchase (spend.ts).
     const old = await stashGains(id)
-    gain = gainOf(diff, since, divine.value, classify(diff, readAt, old, divine.value))
+    gain = gainOf(diff, since, divine.value, classify(diff, divine.value))
     const gains = addGain(old, gain)
     gainsRef.value = gains
     await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).catch(() => {})
@@ -195,7 +195,7 @@ async function countRead (id: string, readAt: number) {
   const led = ledgerRef.value
   const tabNow = Object.fromEntries(tabValues.value.map(t => [t.id, t.chaos]))
   const nextLedger: Ledger = {
-    points: addPoint(led.points, { at: readAt, chaos: v.chaos, divine: divine.value, byCategory: { ...v.byCategory }, netChaos: diff?.netChaos ?? null, top: topChanges(diff), ...spendOfPoint(gain) }),
+    points: withSpends(addPoint(led.points, { at: readAt, chaos: v.chaos, divine: divine.value, byCategory: { ...v.byCategory }, netChaos: diff?.netChaos ?? null, top: topChanges(diff) }), gainsRef.value),
     diffs: diff ? keepDiff(led.diffs, diff) : led.diffs,
     tabChaos: { prev: led.tabChaos.last, last: tabNow }
   }
@@ -220,13 +220,22 @@ function glanceAt (id: string, at: number, chaos: number, netChaos: number | nul
   return g
 }
 
-// A ledger point's purchase fields: only when the read isn't counted as is.
-function spendOfPoint (g: StashGain | null): { counted?: number, spent?: number } {
-  if (!g) return {}
-  const counted = countedChaos(g)
-  if (counted === g.netChaos) return {}
-  const spent = spentChaos(g)
-  return spent ? { counted, spent } : { counted }
+// The points' purchase fields from the gains, worked out in time order
+// (spend.ts): a flip moves the refreshes after it too.
+function withSpends (points: LedgerPoint[], gains: StashGain[]): LedgerPoint[] {
+  const share = resolveSpends(gains)
+  return points.map(p => {
+    const r = share.get(p.at)
+    const counted = r && p.netChaos != null && r.counted !== p.netChaos ? Math.round(r.counted * 10) / 10 : undefined
+    const spent = r?.spent ? Math.round(r.spent * 10) / 10 : undefined
+    if (p.counted === counted && p.spent === spent) return p
+    const next = { ...p }
+    delete next.counted
+    delete next.spent
+    if (counted != null) next.counted = counted
+    if (spent != null) next.spent = spent
+    return next
+  })
 }
 
 // Your call on a refresh (null: back to the guess), and with 'spend' how much
@@ -254,14 +263,7 @@ export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: 
     }
     gainsRef.value = nextGains
     const led = ledgerRef.value
-    const points = led.points.map(p => {
-      if (p.at !== at) return p
-      const base = { ...p }
-      delete base.counted
-      delete base.spent
-      return { ...base, ...spendOfPoint(g) }
-    })
-    const nextLedger = { ...led, points }
+    const nextLedger = { ...led, points: withSpends(led.points, nextGains) }
     ledgerRef.value = nextLedger
     await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
     // The saved dock number follows, when this was the last read.

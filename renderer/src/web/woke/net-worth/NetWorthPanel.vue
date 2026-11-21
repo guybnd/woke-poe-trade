@@ -216,7 +216,7 @@ import type { Category } from './valuation'
 import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
 import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
-import { countedChaos, markAction, spentChaos } from './spend'
+import { markAction, resolveSpends } from './spend'
 import type { SpendMark } from './spend'
 import type { ChangeGroup } from './ledger'
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
@@ -469,31 +469,36 @@ const session = computed(() => {
   const divVal = toDiv(sessionChaos.value)
   return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value }
 })
+const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
+// Every refresh's share of profit (spend.ts), worked out in time order.
+const shares = computed(() => resolveSpends(gainsNow.value))
 // The chart's purchase switch for a clicked point, and its click (amount in
 // the shown unit: divines, or chaos without a rate).
 function chartSpendAction (at: number) {
   const x = gainAt.value.get(at)
-  return x ? markAction(x) : null
+  return x ? markAction(x, shares.value.get(at)) : null
 }
 function onChartSpend (at: number, mark: SpendMark | null, amount?: number) {
   setSpendMark(at, mark, amount == null ? undefined : divine.value ? amount * divine.value : amount)
 }
-// A group's refreshes that are purchases, returns or losses, each with its
-// switch (spend.ts).
-const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
+// A group's refreshes that are purchases, cancel one, or lost currency, each
+// with its switch. Losses where under 1 div of currency left get none here
+// (maps eat scarabs every refresh); the chart offers them all.
 function spendRows (g: ChangeGroup) {
+  const smallCash = divine.value ?? 150
   return g.reads.flatMap(at => {
     const x = gainAt.value.get(at)
-    const action = x && markAction(x)
+    const r = shares.value.get(at)
+    const action = x && markAction(x, r)
     if (!x || !action) return []
-    const spent = spentChaos(x)
-    const counted = countedChaos(x)
+    if (!x.mark && !x.auto && !r?.back && !(x.cashChaos != null && x.cashChaos <= -smallCash)) return []
+    const spent = r?.spent ?? 0
     const when = g.reads.length > 1 ? `${new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}: ` : ''
     const text = spent > 0
       ? `${when}Purchase, ${div(spent)} ${unit.value} not counted`
-      : x.auto === 'return' && counted !== x.netChaos
-        ? `${when}Currency back from a purchase, not counted`
-        : `${when}Counted as a loss`
+      : r?.back
+        ? `${when}Back from a purchase, ${div(r.back)} ${unit.value} not counted`
+        : x.netChaos < 0 ? `${when}Counted as a loss` : `${when}Counted as profit`
     return [{ at, action, spent, text, tip: 'Purchases count 0 toward profit per hour, the session and the session story' }]
   })
 }

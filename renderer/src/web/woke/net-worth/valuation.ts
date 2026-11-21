@@ -1,7 +1,7 @@
 // Net worth data layer: values stash items, sums them by category, diffs two
 // reads and keeps daily snapshots. Knows nothing about how the stash was read
 // (the personal reader today; another source later) or about Vue.
-import { countedChaos, spentChaos } from './spend'
+import { resolveSpends } from './spend'
 import type { SpendKind, SpendMark } from './spend'
 
 // The item fields valuing needs. The personal reader's records fit it.
@@ -350,14 +350,13 @@ export interface StashGain {
   // Purchases and their returns (spend.ts). Older gains lack them.
   cashChaos?: number
   auto?: SpendKind
-  back?: number
   mark?: SpendMark
   markChaos?: number
 }
 
 const MAX_GAINS = 2000
 
-export function gainOf (diff: StashDiff, since: number | null, divine: number | null, guess: Pick<StashGain, 'auto' | 'back'> = {}): StashGain {
+export function gainOf (diff: StashDiff, since: number | null, divine: number | null, guess: Pick<StashGain, 'auto'> = {}): StashGain {
   return {
     ...guess,
     cashChaos: diff.cashChaos,
@@ -378,12 +377,15 @@ export function addGain (gains: StashGain[], gain: StashGain): StashGain[] {
 // read, so a session's profit counts the reads inside it. Purchases count at
 // most 0 (spend.ts); `spent` is what they left out.
 export function gainsBetween (gains: StashGain[], from: number, to: number) {
+  // Worked out over every gain: a purchase before `from` can be cancelled inside.
+  const share = resolveSpends(gains)
   const inside = gains.filter(g => g.at >= from && g.at <= to)
-  const chaos = inside.reduce((s, g) => s + countedChaos(g), 0)
-  const spent = inside.reduce((s, g) => s + spentChaos(g), 0)
+  const counted = (g: StashGain) => share.get(g.at)?.counted ?? g.netChaos
+  const chaos = inside.reduce((s, g) => s + counted(g), 0)
+  const spent = inside.reduce((s, g) => s + (share.get(g.at)?.spent ?? 0), 0)
   // Each gain in divines at its own read's rate.
   const divOf = (g: StashGain) => {
-    const c = countedChaos(g)
+    const c = counted(g)
     if (c === g.netChaos) return g.netDivine!
     return g.netChaos ? g.netDivine! * c / g.netChaos : 0
   }
