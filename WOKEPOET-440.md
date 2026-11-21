@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-440
 title: 'Session window 6: switch over and retire the old two windows'
-status: In Progress
+status: Done
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -69,11 +69,50 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-21T08:28:29.155Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 716 merged (da7f365b): Session story window retired; dock icon "Session
+      analytics" opens the combined window. CI green, review fixes applied.
+    date: '2026-11-21T08:56:05.283Z'
+    completionComment: true
+    id: c-2026-11-21t08-56-05-283z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-21T08:56:05.283Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged (da7f365b). Session story panel removed (menu::skip so it leaves
+      the tab bar/Ctrl+Space tool list). Dock icon keeps its live card/peeks,
+      titled Session analytics, wm-id = the placed analytics window (opens in
+      game too); overlay click also jumps to Map history; menu: Map history, All
+      nights; toast if the analytics module is off. Related fixes this session:
+      glance seconds (PR 715), tonight survives restarts (PR 718). Release notes
+      added.
+    completionComment: true
+    date: '2026-11-21T08:56:07.580Z'
+    id: c-2026-11-21t08-56-07-580z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T08:56:08.047Z'
 swimlane: null
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-21T08:28:29.155Z'
-  expiresAt: '2026-11-21T08:58:29.155Z'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/716'
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Point dock, settings and toasts at the new window; remove Session analytics and Session story widgets; migrate their saved config. Release note line.

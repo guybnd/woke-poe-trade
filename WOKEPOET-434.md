@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-434
 title: 'Session window: merge Session analytics and Session story (A + D glance)'
-status: Todo
+status: Done
 priority: High
 effort: XL
 assignee: unassigned
@@ -16,6 +16,35 @@ history:
     date: '2026-11-21T06:06:41.473Z'
     comment: Created ticket.
     id: a-2026-11-21t06-06-41-473z
+  - type: comment
+    user: Agent
+    comment: 'All subtasks merged: PRs 705, 707, 708, 709, 710, 712, 715, 716, 718.'
+    date: '2026-11-21T08:56:13.440Z'
+    completionComment: true
+    id: c-2026-11-21t08-56-13-440z
+  - type: status_change
+    from: Todo
+    to: Ready
+    user: Agent
+    date: '2026-11-21T08:56:13.440Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Epic done. Session analytics is now the one Session window: tonight's
+      strip on top (705), stash-read income rows (707), strip click-through and
+      chips (708), Nights tab (709), opt-in glance bar with seconds timer
+      alongside the toast (710, 715), Ctrl+Space to a row (712), Session story
+      window retired with its dock icon opening Session analytics (716), tonight
+      survives restarts (718). Open: glance bar placement vs PoE's top-centre
+      boss bar not checked in game.
+    completionComment: true
+    date: '2026-11-21T08:56:19.606Z'
+    id: c-2026-11-21t08-56-19-606z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T08:56:20.090Z'
 subtasks:
   - WOKEPOET-435
   - WOKEPOET-436
@@ -24,6 +53,20 @@ subtasks:
   - WOKEPOET-439
   - WOKEPOET-440
   - WOKEPOET-442
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/716'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy picked concept A (The Ledger) plus D (glance bar) on 2026-11-21. Mockups: https://claude.ai/artifact/S91TdBrGyCdFHcwWfN5xbS
 
