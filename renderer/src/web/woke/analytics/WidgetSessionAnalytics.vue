@@ -275,6 +275,8 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 const storyOn = computed(() => isModuleOn(AppConfig(), 'session-story'))
 // With Session story on, the window opens on the maps you ran: tonight's strip sits above them.
 const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>(storyOn.value ? 'history' : 'strategies')
+// Session story turned off while its tab shows: back to Strategies.
+watch(storyOn, (on) => { if (!on && tab.value === 'history') tab.value = 'strategies' })
 const tabOptions = computed(() => [
   ...(storyOn.value ? [{ value: 'history', label: 'Map history' }] : []),
   { value: 'strategies', label: 'Strategies' },

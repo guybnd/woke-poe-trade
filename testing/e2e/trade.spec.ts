@@ -322,5 +322,8 @@ test('whispers you send show under the offers; the sales log and Session analyti
   await expect(trade).toContainText('Ozzy_Seller')
   await expect(trade).toContainText('Mageblood Heavy Belt')
   await overlay.snap('trades window')
-  await expect(overlay.widget('woke-session-analytics').locator('[data-analytics="trading"]')).toContainText('Trading')
+  // With Session story on the window opens on Map history; Trading is under Strategies.
+  const analytics = overlay.widget('woke-session-analytics')
+  await analytics.getByRole('tab', { name: 'Strategies' }).dispatchEvent('click')
+  await expect(analytics.locator('[data-analytics="trading"]')).toContainText('Trading')
 })
