@@ -35,3 +35,4 @@
 - Price check: Search bulk, next to Search, does both in one go: it searches with Bulk already on, loading more listings if fewer than 10 bulk sellers show.
 - Price check: the hideout and stash icons come first in each row, before the ×count, so they sit in one column.
 - After-map toast: maps where you went into a Starfall Crater (the Black Knight's fallen star) get a Starfall Crater chip, also shown in map history and Ctrl+Space search. The crater stays part of the map's run and time.
+- Ctrl+Space search: settings are findable. Type "settings" for Open settings and every settings page, or a setting's name (such as account name, panel opacity or map regex) to jump to its page with the row highlighted.

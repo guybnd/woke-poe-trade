@@ -398,6 +398,10 @@
    "renderer/src/web/woke/search/",
    "renderer/src/web/woke/wickerman/"
   ],
+  "search-settings.spec.ts": [
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/settings/"
+  ],
   "search.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/web/woke/market/",

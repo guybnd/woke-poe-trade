@@ -253,6 +253,9 @@ function open (id: string) {
 
 function groupLabel (p: SettingsPage) { return GROUPS.find(g => g.id === p.group)?.label ?? '' }
 
+// A pending scroll-to-a-setting (go, flash below); before the flag watch, which runs at once.
+let goTimer: ReturnType<typeof setTimeout> | undefined
+
 // Other windows open a page by flag: a widget's gear, or the hotkey warning.
 watch(() => props.widget.wmFlags, (flags) => {
   const pageFlag = flags.find(f => f.startsWith('settings::page='))
@@ -260,6 +263,13 @@ watch(() => props.widget.wmFlags, (flags) => {
     const page = pageByName(pageFlag.slice('settings::page='.length))
     if (page) open(page.id)
     wm.setFlag(props.widget.wmId, pageFlag, false)
+  }
+  // The search palette: a setting's row to scroll to and flash, on the page just opened.
+  const findFlag = flags.find(f => f.startsWith('settings::find='))
+  if (findFlag) {
+    const label = findFlag.slice('settings::find='.length)
+    if (label) flash(label)
+    wm.setFlag(props.widget.wmId, findFlag, false)
   }
   const widgetFlag = flags.find(f => f.startsWith('settings::widget='))
   if (widgetFlag) {
@@ -338,27 +348,41 @@ const results = computed<Result[]>(() => {
 
 function go (r: Result) {
   open(r.page.id)
-  if (!r.highlight) return
-  const needle = r.highlight.toLowerCase()
-  // Pages render on the next tick; find the row by its label and flash it.
-  setTimeout(() => {
-    const root = mainEl.value
-    if (!root) return
-    let el: Element | null = [...root.querySelectorAll('[data-setting]')]
-      .find(e => (e.getAttribute('data-setting') ?? '').toLowerCase().includes(needle)) ?? null
+  clearTimeout(goTimer)
+  if (r.highlight) flash(r.highlight)
+}
+
+function flash (label: string) {
+  clearTimeout(goTimer)
+  const needle = label.toLowerCase()
+  // Pages render on the next tick, and some load first: find the row by its
+  // label and flash it, trying for a second.
+  let tries = 0
+  const attempt = () => {
+    const el = mainEl.value ? findRow(mainEl.value, needle) : null
     if (!el) {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-      let n: Node | null
-      while ((n = walker.nextNode())) {
-        if ((n.textContent ?? '').toLowerCase().includes(needle)) { el = n.parentElement; break }
-      }
+      if (++tries < 20) goTimer = setTimeout(attempt, 60)
+      return
     }
-    if (!el) return
     el.scrollIntoView({ block: 'center' })
     el.classList.remove('w-flash')
     el.getBoundingClientRect()
     el.classList.add('w-flash')
-  }, 60)
+  }
+  goTimer = setTimeout(attempt, 60)
+}
+onUnmounted(() => { clearTimeout(goTimer) })
+
+function findRow (root: HTMLElement, needle: string): Element | null {
+  const el = [...root.querySelectorAll('[data-setting]')]
+    .find(e => (e.getAttribute('data-setting') ?? '').toLowerCase().includes(needle))
+  if (el) return el
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let n: Node | null
+  while ((n = walker.nextNode())) {
+    if ((n.textContent ?? '').toLowerCase().includes(needle)) return n.parentElement
+  }
+  return null
 }
 
 function onKeydown (e: KeyboardEvent) {
