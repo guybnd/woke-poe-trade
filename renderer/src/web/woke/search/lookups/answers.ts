@@ -63,8 +63,10 @@ function bigNumber (n: number): string {
   return Math.abs(n) >= 0.1 ? String(+n.toFixed(2)) : formatAmount(n)
 }
 
-export function currencyLookup (currencyNames: readonly string[]): Lookup {
-  const names = (text: string, exact = false): string | null => {
+// A typed currency word to its poe.ninja name: an alias, the whole name, or
+// (unless `exact`) the start of only one name.
+export function currencyNamer (currencyNames: readonly string[]) {
+  return (text: string, exact = false): string | null => {
     const t = text.trim().toLowerCase().replace(/’/g, "'")
     const alias = ALIASES.get(t)
     if (alias) return alias
@@ -74,6 +76,10 @@ export function currencyLookup (currencyNames: readonly string[]): Lookup {
     const hits = currencyNames.filter(n => matchRank(n, t) === 0)
     return hits.length === 1 ? hits[0] : hits.find(n => n.toLowerCase() === t) ?? null
   }
+}
+
+export function currencyLookup (currencyNames: readonly string[]): Lookup {
+  const names = currencyNamer(currencyNames)
   return (query, ctx) => {
     const q = parseCurrencyQuery(query, names)
     if (!q) return []
