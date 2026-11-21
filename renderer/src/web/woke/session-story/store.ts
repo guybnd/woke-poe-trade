@@ -85,7 +85,6 @@ export const useNights = createGlobalState(() => {
     const key = dayKey(rec.enteredAt)
     const league = useLeagues().selectedId.value
     const row = { ...rec, npcs: [...rec.npcs], ...(league ? { league } : {}) }
-    lastSaved.value = row
     // Vaults go to their day only: the recent list feeds the toast's averages.
     if (!isSkippedArea(row.name)) {
       maps.value = keepMap(maps.value, row).slice(0, RECENT)
@@ -99,7 +98,10 @@ export const useNights = createGlobalState(() => {
       mapsError.value = e instanceof Error ? e.message : String(e)
       return
     }
-    await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: keepMap(day, row) }).catch(() => {})
+    const merged = keepMap(day, row)
+    const ok = await hostRequest('doc-put', { collection: MAPS_COLLECTION, key, value: merged }).then(() => true, () => false)
+    // As saved: merged with an earlier visit to the same map.
+    if (ok) lastSaved.value = merged.find(m => m.key === row.key) ?? row
   }
 
   function addMap (rec: MapRecord): Promise<void> {

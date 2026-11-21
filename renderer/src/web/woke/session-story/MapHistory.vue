@@ -5,13 +5,13 @@
       Turn on Session story (Settings › Farming &amp; sessions) to keep a history of every map you run.
     </WEmpty>
     <WSkeleton v-else-if="loading" :rows="4" />
-    <WEmpty v-else-if="!list.length" :art="{ mechanic: 'map' }">
+    <WEmpty v-else-if="!inView.length" :art="{ mechanic: 'map' }">
       Maps show here as you run them. They're read from the game's log.
     </WEmpty>
     <template v-else>
       <div class="flex flex-wrap items-center gap-x-3 text-xs w-dim w-num">
         <span>{{ mapCount }} {{ mapCount === 1 ? 'map' : 'maps' }}<template v-if="skippedCount"> · {{ skippedCount }} {{ skippedCount === 1 ? 'vault' : 'vaults' }}</template></span>
-        <span>Average {{ formatClock(avgMs) }}</span>
+        <span v-if="counted.length">Average {{ formatClock(avgMs) }}</span>
         <span>{{ deaths }} {{ deaths === 1 ? 'death' : 'deaths' }}</span>
         <WChip clickable :active="showSkipped" class="ml-auto" data-history-skipped
           title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
