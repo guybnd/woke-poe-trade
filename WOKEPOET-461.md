@@ -14,6 +14,14 @@ history:
     user: Agent
     date: '2026-11-21T14:30:24.698Z'
     comment: Created ticket.
+    id: a-2026-11-21t14-30-24-698z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T14:37:09.629Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/742 open; adversarial
+      review and CI running.
+    id: a-2026-11-21t14-37-09-629z
 ---
 Add a "Check for updates" button next to the Version row on the Install page, and a matching Ctrl+Space search command.
 
