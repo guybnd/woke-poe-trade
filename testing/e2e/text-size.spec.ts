@@ -25,6 +25,8 @@ test('Settings offers Text size and Price check window size, each doing its job'
   await overlay.widget('menu').locator('.fa-cog').click()
   const settings = overlay.widget('settings')
   await settings.getByText('Look & icon row').first().click()
+  // The part sizes sit folded under UI size.
+  await settings.locator('#woke-size-fine-tune').click()
   const text = settings.locator('#woke-text-scale')
   await expect(text).toBeVisible()
   await expect(settings.getByText('Price check window size')).toBeVisible()

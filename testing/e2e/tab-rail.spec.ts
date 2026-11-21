@@ -321,7 +321,17 @@ test('the settings button appears on hover, and flips and resizes the rail with 
   await menu.getByRole('button', { name: 'XXL', exact: true }).click()
   await expect.poll(async () => (await rail.boundingBox())!.height).toBeGreaterThan(before * 1.3)
 
-  await menu.getByRole('button', { name: 'Reset position and size' }).click()
+  // Below the separator: UI size, for every window, not just the toolbar.
+  await expect(menu.getByText('Tools look and size')).toBeVisible()
+  const pct = menu.locator('[data-rail-ui-size-pct]')
+  await expect(pct).toHaveText('100%')
+  await menu.getByRole('button', { name: 'Everything bigger' }).click()
+  await expect(pct).toHaveText('105%')
+  await expect.poll(() => overlay.page.evaluate(() => localStorage.getItem('woke.uiSize'))).toBe('105')
+  await menu.getByRole('button', { name: 'Everything smaller' }).click()
+  await expect(pct).toHaveText('100%')
+
+  await menu.getByRole('button', { name: 'Reset toolbar position and size' }).click()
   await expect.poll(async () => { const b = await rail.boundingBox(); return b!.height > b!.width }).toBe(true)
 })
 

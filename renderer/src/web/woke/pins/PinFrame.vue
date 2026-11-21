@@ -1,7 +1,7 @@
 <template>
   <div :class="[$style.spot, { [$style.under]: wm?.active.value }]" :style="{ left: `min(${spot.x}%, calc(100% - ${size.w}px))`, top: `min(${spot.y}%, calc(100% - ${size.h}px))` }">
     <div ref="el" :class="[$style.pin, { [$style.dragging]: dragging }]" data-w-panel :data-pin="pin.id"
-      :style="{ opacity: solid ? 1 : pin.opacity / 100, zoom: pinScale / 100 }">
+      :style="{ opacity: solid ? 1 : pin.opacity / 100, zoom: pinScale * uiSize / 10000 }">
       <div ref="head" :class="$style.head" title="Drag to move. It keeps one spot in towns and hideouts and another everywhere else."
         @pointerdown="startDrag">
         <i :class="pin.icon" class="w-accent" />
@@ -34,6 +34,7 @@
 import { computed, inject, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { hoverZonesMoved, useHoverZone } from '../shared/hover'
+import { uiSize } from '../ui/ui-size'
 import { MAX_PIN_OPACITY, MIN_PIN_OPACITY, movePin, pinScale, place, removePin, setPinOpacity, spotOf } from './pins'
 import type { Pin } from './pins'
 

@@ -12,7 +12,7 @@
     <div id="price-window" ref="windowEl" class="layout-column shrink-0 text-gray-200 pointer-events-auto relative"
       :class="{ [$style.movable]: !isBrowserShown, 'w-poe': poeOn }" :style="windowStyle" @mousedown="startMove"
       v-on="poeOn ? { keydown: onEsc } : {}">
-      <AppTitleBar @close="closePriceCheck" @click="openLeagueSelection" :title="title">
+      <AppTitleBar :class="$style.zoomed" @close="closePriceCheck" @click="openLeagueSelection" :title="title">
         <button v-if="floating" data-testid="price-window-dock" title="Back to the side of the screen" @click="dock">
           <i class="fas fa-columns" />
         </button>
@@ -34,7 +34,7 @@
         <div v-else class="w-8" />
         <template #end><price-style-menu /></template>
       </AppTitleBar>
-      <div class="grow layout-column min-h-0 bg-gray-800">
+      <div class="grow layout-column min-h-0 bg-gray-800" :class="$style.zoomed">
         <background-info />
         <check-position-circle v-if="showCheckPos"
           :position="checkPosition" style="z-index: -1;" />
@@ -72,6 +72,7 @@
       width="100%" height="100%" />
     <div v-else class="layout-column flex-1 min-w-0">
       <div class="flex" :class="{
+        [$style.zoomed]: true,
         'flex-row': clickPosition === 'stash',
         'flex-row-reverse': clickPosition === 'inventory'
       }">
@@ -94,7 +95,7 @@ import BackgroundInfo from './BackgroundInfo.vue'
 import { MainProcess, Host } from '@/web/background/IPC'
 import { usePoeninja } from '../background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
-import { AppConfig } from '@/web/Config'
+import { AppConfig, rootFontPx } from '@/web/Config'
 import { ItemCategory, ItemRarity, parseClipboard, ParsedItem } from '@/parser'
 import RelatedItems from './related-items/RelatedItems.vue'
 import RateLimiterState from './trade/RateLimiterState.vue'
@@ -109,6 +110,7 @@ import { PriceCheckWidget, WidgetManager, WidgetSpec } from '../overlay/interfac
 import { clampDrag, clearGuides, releaseWebviewsForDrag, snapEdge, snapMove, swallowNextClick } from '@/web/woke/ui/snap'
 import { poeOn } from '@/web/woke/price-insight/window-style'
 import { artShown, ART_FRAME_INSET } from '@/web/woke/ui/theme'
+import { uiZoom } from '@/web/woke/ui/ui-size'
 import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
@@ -119,8 +121,9 @@ const UNSUPPORTED = 'woke.unsupported'
 const DRAG_START_PX = 4
 const WINDOW_REM = 28.75
 // The game art keeps a buffer inside the frame; the window grows by it so the table keeps its room.
+// Screen px: UI size zooms the title bar and body (.zoomed), not the frame.
 function windowWidth () {
-  return WINDOW_REM * AppConfig().fontSize + (artShown() ? 2 * ART_FRAME_INSET : 0)
+  return WINDOW_REM * rootFontPx() * uiZoom() + (artShown() ? 2 * ART_FRAME_INSET : 0)
 }
 
 export default defineComponent({
@@ -206,7 +209,7 @@ export default defineComponent({
           name: 'OVERLAY->MAIN::track-area',
           payload: {
             holdKey: props.config.hotkeyHold,
-            closeThreshold: 2.5 * AppConfig().fontSize,
+            closeThreshold: 2.5 * rootFontPx() * uiZoom(),
             from: e.position,
             area: placed
               ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
@@ -460,6 +463,7 @@ export default defineComponent({
 /* With the style menu's own auto margin, the league sits centred between the side controls. */
 :global(#price-window [data-price-title-text]) { margin-left: auto; }
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
+.zoomed { zoom: var(--w-ui-size, 1); }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
 .edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }
 .corner { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }

@@ -17,6 +17,15 @@
           <button v-for="l in LAYOUTS" :key="l.id" :class="[$style.chip, { [$style.on]: layout === l.id }]"
             :aria-pressed="layout === l.id" @click="setLayout(l.id)">{{ l.label }}</button>
         </div>
+        <div :class="$style.head">Size</div>
+        <div :class="$style.size">
+          <button :class="$style.step" data-price-size="smaller" title="Smaller" aria-label="Price check smaller"
+            :disabled="windowPx <= MIN_WINDOW_PX" @click="stepSize(-1)"><i class="fas fa-minus" /></button>
+          <span class="w-num" :class="$style.pct" data-price-size-pct>{{ windowPct }}%</span>
+          <button :class="$style.step" data-price-size="bigger" title="Bigger" aria-label="Price check bigger"
+            :disabled="windowPx >= MAX_WINDOW_PX" @click="stepSize(1)"><i class="fas fa-plus" /></button>
+          <span :class="$style.sizeNote">This window, map check and Settings. UI size (toolbar menu, Settings) sizes all the panels too.</span>
+        </div>
         <div :class="$style.note">The look changes every panel, not just the price check.</div>
       </div>
     </template>
@@ -45,6 +54,18 @@ watch(() => AppConfig<PriceCheckWidget>('price-check')?.wmWants, (wants) => {
 })
 const layout = computed<Layout>(() =>
   AppConfig<PriceCheckWidget>('price-check')?.wokeWindowStyle === 'standard' ? 'standard' : 'poe')
+
+// Settings > Look > Price check window size: the root font size in px, 16 = 100%.
+const MIN_WINDOW_PX = 10
+const MAX_WINDOW_PX = 32
+const windowPx = computed(() => AppConfig().fontSize)
+const windowPct = computed(() => Math.round(windowPx.value / 16 * 100))
+function stepSize (px: number) {
+  const next = Math.min(MAX_WINDOW_PX, Math.max(MIN_WINDOW_PX, windowPx.value + px))
+  if (next === windowPx.value) return
+  AppConfig().fontSize = next
+  saveConfig()
+}
 
 function setLayout (id: Layout) {
   const widget = AppConfig<PriceCheckWidget>('price-check')
@@ -81,6 +102,16 @@ function setLayout (id: Layout) {
 .chip.on { border-color: var(--w-accent); background: var(--w-accent-soft) !important; }
 .look.on { color: var(--w-accent); }
 .look.on .swatch { border-color: var(--w-accent); }
+.size { display: flex; align-items: center; gap: 6px; }
+.step {
+  width: 26px; height: 26px; flex: none; display: grid; place-items: center; padding: 0 !important;
+  border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); color: var(--w-fg); background: none !important;
+  font-size: var(--w-fs-xs);
+}
+.step:hover:not(:disabled) { border-color: var(--w-accent); color: var(--w-accent); }
+.step:disabled { opacity: 0.4; }
+.pct { min-width: 3.2em; text-align: center; font-size: var(--w-fs-md); }
+.sizeNote { font-size: var(--w-fs-xs); color: var(--w-faint); line-height: 1.25; }
 .note { font-size: var(--w-fs-xs); color: var(--w-faint); }
 .swatch { width: 24px; height: 16px; flex: none; border-radius: 3px; border: 1px solid var(--w-line-strong); }
 .swatch[data-theme="poe1"] { background: linear-gradient(135deg, #1a130a 55%, #c8a25a 55%); }
