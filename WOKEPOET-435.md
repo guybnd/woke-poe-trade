@@ -40,10 +40,21 @@ history:
       nights logic extracted to session-story/nights.ts. CI check and
       adversarial review running.
     id: a-2026-11-21t06-10-25-234z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T06:19:56.663Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/705. First CI run:
+      trade.spec e2e failed (fixed: test clicks Strategies) and startup JS
+      1640.1 KB vs budget 1640 (master sits at exactly 1640). Fix: new
+      session-story/TonightBand.vue, loaded by analytics with
+      defineAsyncComponent so it stays in Session story's chunk and adds no
+      shared chunk to the index preload lists. Re-running CI.
+    id: a-2026-11-21t06-19-56-663z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
   claimedAt: '2026-11-21T06:07:07.904Z'
-  expiresAt: '2026-11-21T06:37:07.904Z'
+  expiresAt: '2026-11-21T06:49:54.768Z'
 ---
 New Session window: live band (current map, timer, profit) + NightCard strip and totals on top; tabs Tonight / Nights / Maps / Strategies / Decks reuse the existing analytics tab bodies. Dock icon and map toast open it at Tonight. Old windows untouched.
