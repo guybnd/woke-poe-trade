@@ -298,7 +298,7 @@ function peekText (s: NightStory): string {
 function openAnalytics (id: 'history' | 'nights') {
   // Its module off: nothing would open, so point at the switch instead.
   if (!isModuleOn(AppConfig(), 'session-analytics')) {
-    toast('Turn on Session analytics (Settings › Farming & sessions) to see your maps and nights.', { ms: 4000 })
+    toast('Turn on Session analytics (Settings › Sessions) to see your maps and nights.', { ms: 4000 })
     return
   }
   openOverlay()

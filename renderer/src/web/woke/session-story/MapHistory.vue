@@ -18,7 +18,7 @@
           {{ c.label }} <span class="w-dim">{{ c.count }}</span>
         </WChip>
         <WChip clickable :active="showSkipped" data-history-skipped
-          title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
+          title="Also list vaults and other areas that aren't counted as maps (Settings › Sessions). They stay out of the count and average."
           @click="showSkipped = !showSkipped">Vaults</WChip>
       </div>
       <div v-if="notSaved" class="text-xs w-dim" data-history-not-saved>

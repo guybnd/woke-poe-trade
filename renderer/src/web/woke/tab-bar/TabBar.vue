@@ -188,7 +188,7 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import { registry } from '@/web/overlay/widget-registry'
 import { AppConfig, pushHostConfig } from '@/web/Config'
 import { appIconUrl } from '../ui/app-icon'
-import { MODULES, ensureWokeConfig, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
+import { MODULES, ensureWokeConfig, isRetiredWidgetType, isWidgetTypeOn, setModuleOn } from '@/web/woke/modules'
 import { useI18n } from 'vue-i18n'
 import { useHotkeyHealth } from '../switchboard/hotkey-health'
 import ToolIcon from './ToolIcon.vue'
@@ -634,7 +634,8 @@ const launcherQuery = computed(() => query.value.trim().replace(/\s+/g, ' ').toL
 // Every tool: what's placed, what isn't yet, and what's switched off.
 const launcherAll = computed(() => launcherEntries(
   registry.widgets
-    .filter(({ widget }) => widget.instances === 'multi' && widget.type !== 'stash-search')
+    // Retired tools (modules.ts) aren't offered at all, not even switched off.
+    .filter(({ widget }) => widget.instances === 'multi' && widget.type !== 'stash-search' && !isRetiredWidgetType(widget.type))
     .map(({ widget }) => ({ type: widget.type, name: typeName(widget.type) })),
   tabs.value,
   wmType => !isWidgetTypeOn(AppConfig(), wmType),

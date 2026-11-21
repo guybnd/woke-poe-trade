@@ -25,7 +25,7 @@
         <!-- ===== Strategies (A1) ===== -->
         <template v-else-if="tab === 'strategies'">
           <WEmpty v-if="!rows.length" :art="{ mechanic: 'map' }">
-            Maps show here after you end a session in Farming.
+            Strategies came from Farming sessions. Farming is retired for now, so only past sessions show here.
           </WEmpty>
           <template v-else>
             <div>

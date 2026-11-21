@@ -179,14 +179,14 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   },
   {
     id: 'market',
-    name: 'Market & investments',
+    name: 'Market & flips',
     group: 'modules',
     sub: 'Trade & prices',
     icon: modulePageIcon('market'),
-    description: 'Movers, watchlist, league-start investments, flips and dust from poe.ninja, and Wealthy Exile.',
-    modules: ['market', 'league-invest', 'scarab-flip', 'disenchant', 'wealthy-exile'],
-    widgets: ['woke-market-tracker', 'woke-league-invest', 'woke-scarab-flip', 'woke-disenchant', 'woke-wealthy-exile'],
-    find: ['Market', 'Watchlist', 'Investments', 'League day', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Wealthy Exile', 'Net worth']
+    description: 'Movers, watchlist, flips and dust from poe.ninja, and Wealthy Exile.',
+    modules: ['market', 'scarab-flip', 'disenchant', 'wealthy-exile'],
+    widgets: ['woke-market-tracker', 'woke-scarab-flip', 'woke-disenchant', 'woke-wealthy-exile'],
+    find: ['Market', 'Watchlist', 'Flips', 'Scarab flip', 'Scarab vendor recipe', 'Harvest reroll', 'Lifeforce', 'Stash outlines', 'Catalyst', 'Delirium orb', 'Disenchant', 'Thaumaturgic Dust', 'Kingsmarch', 'Gold fee', 'Wealthy Exile', 'Net worth']
   },
   {
     id: 'campaign',
@@ -268,14 +268,14 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
   },
   {
     id: 'farming',
-    name: 'Farming & sessions',
+    name: 'Sessions',
     group: 'modules',
     sub: 'Maps & atlas',
-    icon: modulePageIcon('farming'),
-    description: 'Profit per hour now, per map and strategy over time, and a card of each night.',
-    modules: ['farming', 'session-analytics', 'session-story'],
-    widgets: ['woke-farming', 'woke-session-analytics', 'woke-session-story'],
-    find: ['Bulk price', 'Junk below', 'Auto pause', 'Session analytics', 'Session story', 'Map chip', 'Middle of the screen']
+    icon: modulePageIcon('session-analytics'),
+    description: 'Profit per map and strategy over time, and a card of each night.',
+    modules: ['session-analytics', 'session-story'],
+    widgets: ['woke-session-analytics', 'woke-session-story'],
+    find: ['Session analytics', 'Session story', 'Map chip', 'Middle of the screen']
   },
   {
     id: 'drop-counter',
