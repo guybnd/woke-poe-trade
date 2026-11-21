@@ -270,6 +270,12 @@ export function createFilters (
     }
   }
 
+  // Jewellery without catalyst quality: a chip to find only uncatalysed copies.
+  // Off by default (Guy's pick; upstream has it on).
+  if (JEWELLERY.has(item.category!) && !item.quality) {
+    filters.notCatalysed = { disabled: true }
+  }
+
   if (item.quality && item.quality >= 20 && !JEWELLERY.has(item.category!)) {
     if (
       item.category === ItemCategory.Flask || item.category === ItemCategory.Tincture ||
@@ -313,7 +319,8 @@ export function createFilters (
     // has one is priced against other corrupted items.
     const corruptImplicit = item.newMods.some(mod => mod.info.mechanic === ModifierMechanic.Corruption)
     filters.corrupted = {
-      search: !item.isCorrupted ? 'not-corrupted' : (forAdornedJewel || corruptImplicit) ? 'corrupted' : 'any'
+      search: !item.isCorrupted ? 'not-corrupted' : (forAdornedJewel || corruptImplicit) ? 'corrupted' : 'any',
+      ...(item.isTwiceCorrupted ? { twice: true as const } : {})
     }
   }
 
@@ -532,7 +539,8 @@ function createGemFilters (
   }
 
   filters.corrupted = {
-    search: item.isCorrupted ? 'any' : 'not-corrupted'
+    search: item.isCorrupted ? 'any' : 'not-corrupted',
+    ...(item.isTwiceCorrupted ? { twice: true as const } : {})
   }
 
   if (!item.imbuedGem && item.isCorrupted && item.gemLevel! >= 20) {

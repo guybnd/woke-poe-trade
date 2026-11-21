@@ -138,7 +138,7 @@
                   <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
                   <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
-                  <span v-if="row.lead.corrupted" class="w-pc-tag">Corrupted</span>
+                  <span v-if="row.lead.corrupted" class="w-pc-tag">{{ row.lead.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</span>
                 </span>
               </td>
               <td v-if="item.stackSize" class="px-2 text-right">{{ row.lead.stackSize }}</td>
@@ -242,6 +242,10 @@ const WIDTH_NUMBER_COLUMN = 44
 const WIDTH_SOCKET_DOTS = 40
 const WIDTH_SELLER = 90
 const WIDTH_TAG = 60
+// "Twice Corrupted" is longer than the other tags.
+const WIDTH_TAG_TWICE = 40
+// Clean, corrupted and twice-corrupted copies sell differently: they never share a row.
+const corruptKind = (r: PricingResult) => r.corrupted ? (r.twiceCorrupted ? 2 : 1) : 0
 const WIDTH_STASH_ICON = 24
 
 // sameStats: a seller's listings only count as one when their stat columns match.
@@ -262,7 +266,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         continue
       }
       // woke: a seller's corrupted and clean copies stay apart.
-      const existingRes = out.find((added, idx) => Boolean(added.corrupted) === Boolean(result.corrupted) && sameStats(added, result) && (
+      const existingRes = out.find((added, idx) => corruptKind(added) === corruptKind(result) && sameStats(added, result) && (
         (
           added.accountName === result.accountName &&
           added.priceCurrency === result.priceCurrency &&
@@ -506,6 +510,7 @@ export default defineComponent({
       if (showSockets.value && showColours.value) width += WIDTH_SOCKET_DOTS
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
+      if (listings.some(r => r.corrupted && r.twiceCorrupted)) width += WIDTH_TAG_TWICE
       if (anyIcon.value) width += WIDTH_STASH_ICON
       return width
     })
@@ -530,7 +535,7 @@ export default defineComponent({
       toggleBulk()
     })
     // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
-    const sameKind = (r: PricingResult) => [Boolean(r.corrupted), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
+    const sameKind = (r: PricingResult) => [corruptKind(r), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
     const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value, sameKind) : groupedResults.value)
     async function toggleBulk () {
       bulk.value = !bulk.value
@@ -550,7 +555,7 @@ export default defineComponent({
       dropped: insight.value.dropped,
       detail: (r) => {
         // Corrupted and clean copies sell differently, so they keep their own rows.
-        const parts: unknown[] = [Boolean(r.corrupted)]
+        const parts: unknown[] = [corruptKind(r)]
         if (props.item.stackSize) parts.push(r.stackSize)
         if (showItemLevel.value) parts.push(r.itemLevel)
         if (props.item.category === 'Gem') parts.push(r.level)

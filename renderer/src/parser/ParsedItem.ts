@@ -51,7 +51,7 @@ export interface ParsedItem {
   mapCompletionReward?: BaseType
   mapTier?: number
   mapMoreMaps?: number
-  mapMoreScarabs?: number
+  mapMoreThreads?: number
   mapMoreCurrency?: number
   mapMoreDivCards?: number
   heistBlueprint?: {
@@ -91,6 +91,8 @@ export interface ParsedItem {
   // 3.30's drop tier, from "Unidentified (Tier 2)" (UnidentifiedItemTier).
   unidentifiedTier?: number
   isCorrupted: boolean
+  // woke: the "Twice Corrupted" line (3.30). isCorrupted is true too.
+  isTwiceCorrupted?: boolean
   isUnmodifiable?: boolean
   isMirrored?: boolean
   isSplit?: boolean

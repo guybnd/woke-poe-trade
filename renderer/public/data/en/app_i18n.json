@@ -98,6 +98,8 @@
     "info": "Item info",
     "corrupted": "Corrupted",
     "not_corrupted": "Uncorrupted",
+    "twice_corrupted": "Twice Corrupted",
+    "not_catalysed": "Not Catalysed",
     "corrupted_any": "Any",
     "mod_tier": "Tier: {0}",
     "mod_rank": "Rank: {0}",

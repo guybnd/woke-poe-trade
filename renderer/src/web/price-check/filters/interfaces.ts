@@ -35,8 +35,15 @@ export interface ItemFilters {
   whiteSockets?: FilterNumeric
   // woke: one tile per socket colour, each "at least this many" (Guy's pick B).
   socketColours?: Record<keyof SocketColours, FilterNumeric>
+  // Jewellery: on, the search asks for no quality (no catalyst).
+  notCatalysed?: {
+    disabled: boolean
+  }
   corrupted?: {
     search: CorruptedSearch
+    // The item is twice corrupted: the chip says so. The search still finds
+    // once and twice corrupted items alike (Guy's pick).
+    twice?: true
   }
   fractured?: {
     value: false
@@ -151,6 +158,7 @@ export interface StatFilter {
   tag: FilterTag
   oils?: string[]
   mercenary?: { icon?: string, tier?: number, maxTier?: boolean }
+  reminderText?: string
   sources: StatCalculated['sources']
   not?: true
   /** woke: one of a map's mods, set Any / Has / Not on the map strip (MapModStrip.vue), not listed in the rows. */

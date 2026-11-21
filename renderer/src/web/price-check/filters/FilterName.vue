@@ -20,14 +20,16 @@
           @click="setScope(filters.searchRelaxed.disabled ? 'generic' : 'base')">{{ filters.searchRelaxed.disabled ? 'This size' : 'Any size' }}</button>
         <button v-if="filters.corrupted" type="button" data-corrupted-chip
           class="filter-name-corrupted" :class="{ on: filters.corrupted.search === 'corrupted' }"
-          title="Corrupted filter. Click to change: Any, Corr (corrupted only), Not (uncorrupted only)."
+          :title="filters.corrupted.twice
+            ? 'This item is twice corrupted. Corrupted filter: click to change: Any, Twice Corrupted (corrupted only, once or twice), Not (uncorrupted only).'
+            : 'Corrupted filter. Click to change: Any, Corr (corrupted only), Not (uncorrupted only).'"
           @click="cycleCorrupted">
           <!-- The Vaal Orb says what the chip is about. Every label stays in the grid cell,
                so the chip keeps its width and stays under the mouse. -->
           <w-icon item="Vaal Orb" size="sm" title="" />
           <span class="filter-name-corrupted-labels">
             <span v-for="state of corruptedStates" :key="state.search"
-              :class="{ shown: state.search === filters.corrupted.search }">{{ state.label }}</span>
+              :class="{ shown: state.search === filters.corrupted.search }">{{ (state.search === 'corrupted' && filters.corrupted.twice) ? t('item.twice_corrupted') : state.label }}</span>
           </span>
         </button>
         <filter-btn-logical v-if="searchSub"
@@ -48,6 +50,9 @@
           :filter="filters.foil" :text="t('item.foil_unique')" />
         <filter-btn-logical v-if="filters.mirrored && !filters.mirrored.hidden" active
           :filter="filters.mirrored" :text="t(filters.mirrored.disabled ? 'item.not_mirrored' : 'item.mirrored')" />
+        <filter-btn-logical v-if="filters.notCatalysed" data-not-catalysed
+          title="Only items without catalyst quality."
+          :filter="filters.notCatalysed" :text="t('item.not_catalysed')" />
         <filter-btn-logical v-if="filters.split && !filters.split.hidden" active
           :filter="filters.split" :text="t(filters.split.disabled ? 'item.not_split' : 'item.split')" />
         <slot name="meta" />

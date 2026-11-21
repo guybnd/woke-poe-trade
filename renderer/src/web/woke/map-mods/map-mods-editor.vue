@@ -75,7 +75,7 @@ const WEIGHT_LABELS: Record<keyof JuiceWeights, string> = {
   rarity: 'Item rarity',
   packSize: 'Pack size',
   currency: 'More currency',
-  scarabs: 'More scarabs',
+  scarabs: 'More threads',
   maps: 'More maps',
   divCards: 'More div cards'
 }

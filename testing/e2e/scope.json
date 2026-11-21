@@ -202,7 +202,7 @@
    "renderer/src/web/woke/map-mods/"
   ],
   "map-toast-resize.spec.ts": [
-    "renderer/src/web/woke/session-story/"
+   "renderer/src/web/woke/session-story/"
   ],
   "market-browser.spec.ts": [
    "main/src/woke/market-store.ts",
@@ -493,6 +493,12 @@
   "trade.spec.ts": [
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/trade/"
+  ],
+  "twice-corrupted.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/ui/tooltip/"
   ],
   "ui-size.spec.ts": [
    "renderer/src/parser/",

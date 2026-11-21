@@ -327,6 +327,7 @@ export function calculatedStatToFilter (
       tag: (type === ModifierType.Enchant)
         ? FilterTag.Enchant
         : FilterTag.Variant,
+      reminderText: sources[0].stat.stat.reminderText,
       sources: sources,
       option: {
         value: sources[0].contributes!.value
@@ -347,6 +348,7 @@ export function calculatedStatToFilter (
     text: translation.string,
     tag: type,
     oils: decodeOils(calc),
+    reminderText: sources.find(({ stat }) => stat.stat.reminderText != null)?.stat.stat.reminderText,
     sources: sources,
     roll: undefined,
     disabled: true

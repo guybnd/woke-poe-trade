@@ -238,6 +238,8 @@ interface FetchResult {
     ilvl?: number
     stackSize?: number
     corrupted?: boolean
+    // Set on twice-corrupted listings (seen in a 3.30 fetch), absent otherwise.
+    doubleCorrupted?: boolean
     // properties[].type: 78 Corpse Level (Filled Coffin), 30 Spawns a Level %0
     // Monster when Harvested, 6 Quality, 5 Level
     note?: string
@@ -261,6 +263,7 @@ export interface PricingResult {
   itemLevel?: string
   stackSize?: number
   corrupted?: boolean
+  twiceCorrupted?: boolean
   quality?: string
   level?: string
   relativeDate: string
@@ -376,6 +379,9 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
     propSet(query.filters, 'misc_filters.filters.gem_level.min', filters.gemLevel.value)
   }
 
+  if (filters.notCatalysed && !filters.notCatalysed.disabled) {
+    propSet(query.filters, 'misc_filters.filters.quality.max', 0)
+  }
   if (filters.quality && !filters.quality.disabled) {
     propSet(query.filters, 'misc_filters.filters.quality.min', filters.quality.value)
   }
@@ -899,6 +905,7 @@ export async function requestResults (
       itemLevel: result.item.properties?.find(prop => prop.type === 78)?.values[0][0] ?? String(result.item.ilvl),
       stackSize: result.item.stackSize,
       corrupted: result.item.corrupted,
+      twiceCorrupted: result.item.doubleCorrupted === true,
       quality: result.item.properties?.find(prop => prop.type === 6)?.values[0][0],
       level: result.item.properties?.find(prop => prop.type === 5)?.values[0][0],
       relativeDate: DateTime.fromISO(result.listing.indexed).toRelative({ style: 'short' }) ?? '',

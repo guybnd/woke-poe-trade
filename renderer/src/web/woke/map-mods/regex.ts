@@ -29,7 +29,7 @@ const MIN_PREFIX: Record<MinStat, string> = {
   packSize: 'ze: .',
   quality: 'lity: .',
   currency: 'ncy: .',
-  scarabs: 'abs: .',
+  scarabs: 'eads: .',
   maps: 'aps: .',
   divCards: 'rds: .'
 }
@@ -40,7 +40,7 @@ export const MIN_LABELS: Record<MinStat, string> = {
   packSize: 'Pack size',
   quality: 'Quality',
   currency: 'More currency',
-  scarabs: 'More scarabs',
+  scarabs: 'More threads',
   maps: 'More maps',
   divCards: 'More div cards'
 }
@@ -58,7 +58,7 @@ export const TOOLTIP_LINES = [
   'monster pack size: +100%',
   'quality: +20%',
   'more currency: +100%',
-  'more scarabs: +100%',
+  'more threads: +100%',
   'more maps: +100%',
   'more divination cards: +100%',
   'item level: 83',

@@ -71,7 +71,7 @@ export function rewardGoals (item: ParsedItem, mins: Partial<Record<MinStat, num
     packSize: item.areaPackSize,
     quality: item.quality,
     currency: item.mapMoreCurrency,
-    scarabs: item.mapMoreScarabs,
+    scarabs: item.mapMoreThreads,
     maps: item.mapMoreMaps,
     divCards: item.mapMoreDivCards
   }
@@ -115,7 +115,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
     rarity: item.areaItemRarity,
     packSize: item.areaPackSize,
     currency: item.mapMoreCurrency,
-    scarabs: item.mapMoreScarabs,
+    scarabs: item.mapMoreThreads,
     maps: item.mapMoreMaps,
     divCards: item.mapMoreDivCards,
     goodMods: verdict.good.length
@@ -128,7 +128,7 @@ export function checkMap (item: ParsedItem, config: MapModsWidget): MapCheckResu
   add('Rarity', item.areaItemRarity)
   add('Pack', item.areaPackSize)
   add('Currency', item.mapMoreCurrency)
-  add('Scarabs', item.mapMoreScarabs)
+  add('Threads', item.mapMoreThreads)
   add('Maps', item.mapMoreMaps)
   add('Div cards', item.mapMoreDivCards)
 

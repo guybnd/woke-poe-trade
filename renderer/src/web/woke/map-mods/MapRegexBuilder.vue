@@ -216,7 +216,7 @@ const REWARDS_HELP = 'Map must have: the lowest roll you accept, like 40 under M
   'Juice score: how much the stat counts toward the 0-100 score on the Alt+M card. ' +
   'Every / any one: whether a map must meet all the minimums you set, or just one of them.'
 const JUICE_HELP = 'The Alt+M card scores each map from 0 to 100 on how rewarding it is. These squares set how much each stat counts. ' +
-  'Atlas drops, item rarity and pack size are weighed against each other. The More currency, scarabs, maps and div cards squares add on top. ' +
+  'Atlas drops, item rarity and pack size are weighed against each other. The More currency, threads, maps and div cards squares add on top. ' +
   'No squares lit means the score ignores the stat. Click a square to set it, click the last lit one to lower it. ' +
   'This changes only the score, never the search.'
 // Juice weight squares: each is half a point, four make the 2× maximum.

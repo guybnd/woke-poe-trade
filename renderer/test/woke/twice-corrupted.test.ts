@@ -39,6 +39,13 @@ describe('twice-corrupted items', () => {
     expect(opening(belt('--------', line))).toEqual({ corrupted: true, search: 'corrupted' })
   })
 
+  it.each([['Corrupted', false], ['Twice Corrupted', true], ['Twice-Corrupted', true]])('marks the "%s" line twice: %s, and the filter still searches both', (line, twice) => {
+    const item = parseItem(belt('--------', line as string))
+    expect(Boolean(item.isTwiceCorrupted)).toBe(twice)
+    // No twice_corrupted trade filter: the chip only says it (Guy's pick).
+    expect(createFilters(item, OPTS).corrupted).toEqual(twice ? { search: 'corrupted', twice: true } : { search: 'corrupted' })
+  })
+
   it('counts a corruption implicit as corrupted when the line is not recognised', () => {
     expect(opening(belt('--------', 'Doubly Tainted'))).toEqual({ corrupted: true, search: 'corrupted' })
   })
