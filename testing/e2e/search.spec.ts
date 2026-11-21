@@ -12,7 +12,7 @@ const SEARCH_KEY = 'Ctrl + Space'
 // Prices are saved a moment after they load.
 async function waitForPrices (overlay: Overlay) {
   const panel = overlay.widget('woke-search')
-  const box = panel.getByRole('textbox', { name: 'Search' })
+  const box = panel.getByRole('textbox', { name: 'Search', exact: true })
   await expect(async () => {
     await box.fill('headhunter')
     await expect(panel.getByRole('button', { name: /Headhunter/ }).first()).toBeVisible({ timeout: 500 })
@@ -34,7 +34,7 @@ test('the hotkey opens the palette ready to type, and Esc leaves it', async ({ o
 
   await overlay.pressHotkey(SEARCH_KEY)
   const palette = overlay.widget('woke-search')
-  const box = palette.getByRole('textbox', { name: 'Search' })
+  const box = palette.getByRole('textbox', { name: 'Search', exact: true })
   await expect(box).toBeVisible()
   await expect(box).toBeFocused()
   await overlay.snap('search-opened')
@@ -112,7 +112,7 @@ test('the launcher lists prices, and a click opens the palette on them', async (
 
   await overlay.page.getByRole('button', { name: /Headhunter/ }).click()
   const palette = overlay.widget('woke-search')
-  await expect(palette.getByRole('textbox', { name: 'Search' })).toHaveValue('Headhunter')
+  await expect(palette.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Headhunter')
   await expect(palette.getByText('Trade site')).toBeVisible()
   expect(overlay.errors).toEqual([])
 })

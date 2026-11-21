@@ -36,7 +36,7 @@ test('Search: a base\'s uniques show their tooltip and menu, a click opens the u
   await overlay.pressHotkey('Ctrl + Space')
   const page = overlay.page
   const panel = overlay.widget('woke-search')
-  const box = panel.getByRole('textbox', { name: 'Search' })
+  const box = panel.getByRole('textbox', { name: 'Search', exact: true })
   await expect(async () => {
     await box.fill('headhunter')
     await expect(panel.getByRole('button', { name: /Headhunter/ }).first()).toBeVisible({ timeout: 500 })

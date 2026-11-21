@@ -3,15 +3,19 @@
 //
 // The game logs no logout line (checked in a real Client.txt), so a night
 // ends when nothing is written for NIGHT_GAP_MS, or when the game starts a new
-// log section (it was closed and opened again).
+// log section (it was closed and opened again). AFK time, as Net worth reads
+// it, doesn't count: chat while AFK doesn't keep a night going, 15 minutes AFK
+// ends it, and a shorter AFK is left out of the night's time.
 import { lineTime } from '../campaign/log-tail'
-import { parseLogLine, slainName } from '../campaign/log-parse'
+import { isTownLike, parseLogLine, slainName } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
 import { isSkippedArea, knownAreaName } from './skip-areas'
 
 export const NIGHT_GAP_MS = 15 * 60_000
 const OPENING = '***** LOG FILE OPENING *****'
+const AFK_ON = /\] : AFK mode is now ON/
+const AFK_OFF = /\] : AFK mode is now OFF/
 // Nights kept on disk.
 export const MAX_NIGHTS = 20
 
@@ -23,6 +27,8 @@ interface Seg {
   name: string
   named: boolean
   level: number
+  // Hideout or town.
+  hub?: boolean
 }
 
 export interface NightDraft {
@@ -32,6 +38,9 @@ export interface NightDraft {
   segs: Seg[]
   deaths: Array<{ at: number, key: string }>
   levels?: Array<{ char: string, level: number }>
+  // AFK since then (lastAt stays there), and the AFK stretches that ended.
+  afkAt?: number
+  afk?: Array<[number, number]>
   // The game was closed and opened again: the next night can start right away.
   endedByOpening?: boolean
 }
@@ -53,6 +62,8 @@ export interface StripPart {
   // An area on the skip list (a vault): drawn faint, never a map; its time
   // counts as time out of maps, with the hideout's.
   skipped?: boolean
+  // AFK: counts as neither.
+  afk?: boolean
 }
 
 export interface NightStory {
@@ -62,8 +73,12 @@ export interface NightStory {
   maps: StoryMap[]
   strip: StripPart[]
   mapMs: number
-  // Hideout, town and anything else that isn't a map.
+  // Hideout, town and anything else that isn't a map, AFK left out.
   otherMs: number
+  // Of that, hideout and town.
+  hubMs?: number
+  // AFK inside the night (shorter than NIGHT_GAP_MS each).
+  afkMs?: number
   // When each death happened (ms).
   deathsAt: number[]
   // From the stash reader, when it read during the night.
@@ -92,7 +107,24 @@ export class NightTracker {
       return
     }
     if (this.draft && at - this.draft.lastAt >= NIGHT_GAP_MS) this.finish()
+    const d = this.draft
+    if (d && AFK_ON.test(line)) {
+      if (d.afkAt == null) {
+        d.afkAt = at
+        d.lastAt = Math.max(d.lastAt, at)
+      }
+      return
+    }
     const ev = parseLogLine(line)
+    // AFK ends with its OFF line or a zone change; other lines (chat) don't
+    // keep the night going meanwhile.
+    let away = false
+    if (d?.afkAt != null) {
+      if (AFK_OFF.test(line) || ev?.kind === 'area') {
+        if (at > d.afkAt) (d.afk ??= []).push([d.afkAt, at])
+        d.afkAt = undefined
+      } else away = true
+    }
     if (ev?.kind === 'area') {
       this.draft ??= { startedAt: at, lastAt: at, segs: [], deaths: [] }
       const prev = this.draft.segs[this.draft.segs.length - 1]
@@ -101,7 +133,7 @@ export class NightTracker {
       const map = isMapArea(ev.areaId) || side
       const key = side ? prev.key : `${ev.areaId}:${ev.seed ?? ''}`
       const known = map && !side ? knownAreaName(ev.areaId) : null
-      this.draft.segs.push({ at, map, key, name: map && !side ? known ?? mapNameFromArea(ev.areaId) : '', named: side || !!known, level: ev.areaLevel })
+      this.draft.segs.push({ at, map, key, name: map && !side ? known ?? mapNameFromArea(ev.areaId) : '', named: side || !!known, level: ev.areaLevel, ...(isTownLike(ev.areaId) ? { hub: true } : {}) })
     } else if (ev?.kind === 'zone') {
       const seg = this.draft?.segs[this.draft.segs.length - 1]
       // "You have entered Strand." names the map it follows.
@@ -115,7 +147,7 @@ export class NightTracker {
       const seg = this.draft.segs[this.draft.segs.length - 1]
       if (seg && slainName(line)) this.draft.deaths.push({ at, key: seg.key })
     }
-    if (this.draft) this.draft.lastAt = Math.max(this.draft.lastAt, at)
+    if (this.draft && !away) this.draft.lastAt = Math.max(this.draft.lastAt, at)
   }
 
   // Ends a night that has been quiet long enough. Call on a timer.
@@ -148,19 +180,42 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   const strip: StripPart[] = []
   let mapMs = 0
   let otherMs = 0
+  let hubMs = 0
+  let afkMs = 0
   let lastMap: number | null = null
   const skip = skippedKeys(d)
+  const afk = [...(d.afk ?? []), ...(d.afkAt != null && endedAt > d.afkAt ? [[d.afkAt, endedAt] as [number, number]] : [])]
+  // Draws a stretch, with any AFK inside it where it happened (counted as neither).
+  const draw = (from: number, to: number, map: number | null, skipped: boolean) => {
+    const add = (ms: number, isAfk: boolean) => {
+      if (ms <= 0) return
+      const prev = strip[strip.length - 1]
+      if (prev && !!prev.afk === isAfk && (isAfk || (!!prev.skipped === skipped && prev.map === map))) prev.ms += ms
+      else strip.push(isAfk ? { ms, map: null, afk: true } : skipped ? { ms, map: null, skipped: true } : { ms, map })
+    }
+    let t = from
+    for (const [a, b] of afk) {
+      const x = Math.max(a, t)
+      const y = Math.min(b, to)
+      if (y <= x) continue
+      add(x - t, false)
+      add(y - x, true)
+      t = y
+    }
+    add(to - t, false)
+  }
   d.segs.forEach((s, i) => {
     const end = i + 1 < d.segs.length ? d.segs[i + 1].at : endedAt
-    const ms = Math.max(0, end - s.at)
+    const away = afk.reduce((n, [a, b]) => n + Math.max(0, Math.min(b, end) - Math.max(a, s.at)), 0)
+    const ms = Math.max(0, end - s.at - away)
+    if (s.hub) hubMs += ms
+    afkMs += away
     // A vault isn't a map: its time counts with the hideout's (time out of
     // maps), drawn as its own faint part.
     if (s.map && skip.has(s.key)) {
       otherMs += ms
       if (lastMap != null) maps[lastMap].otherMs += ms
-      const prev = strip[strip.length - 1]
-      if (prev?.skipped) prev.ms += ms
-      else strip.push({ ms, map: null, skipped: true })
+      draw(s.at, end, null, true)
       return
     }
     let part: number | null = null
@@ -181,12 +236,11 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       otherMs += ms
       if (lastMap != null) maps[lastMap].otherMs += ms
     }
-    const prev = strip[strip.length - 1]
-    if (prev && !prev.skipped && prev.map === part) prev.ms += ms
-    else strip.push({ ms, map: part })
+    draw(s.at, end, part, false)
   })
   // Only gaps with a map on both sides: not the time before the first or after
-  // the last. Hideout and vault stretches next to each other are one break.
+  // the last. Hideout and vault stretches next to each other are one break;
+  // AFK isn't part of one.
   let longestBreakMs = 0
   let gap = 0
   let afterMap = false
@@ -195,7 +249,7 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       if (afterMap) longestBreakMs = Math.max(longestBreakMs, gap)
       gap = 0
       afterMap = true
-    } else gap += p.ms
+    } else if (!p.afk) gap += p.ms
   }
   // Party members' level-ups are logged too: follow the first character
   // that levels, as the run timer does.
@@ -218,6 +272,8 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
     strip: strip.filter(p => p.ms > 0),
     mapMs,
     otherMs,
+    hubMs,
+    afkMs,
     // Deaths in a vault aren't the night's map deaths.
     deathsAt: d.deaths.filter(x => !skip.has(x.key)).map(x => x.at),
     profitChaos: null,

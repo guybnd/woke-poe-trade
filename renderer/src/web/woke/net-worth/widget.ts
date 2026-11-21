@@ -3,6 +3,7 @@ import type { Widget, Anchor } from '@/web/overlay/widgets'
 import type { GlanceShows } from './glance'
 import type { RateWindow } from './play-time'
 import type { PanelLayout } from './layout'
+import type { SaleRange } from './sales'
 
 export const NET_WORTH_TYPE = 'woke-net-worth'
 export const NET_WORTH_MODULE = 'net-worth'
@@ -35,15 +36,20 @@ export interface NetWorthWidget extends Widget {
   rateWithHub?: boolean
   // Section sizes dragged under Details (layout.ts).
   layout?: PanelLayout
+  // What the window shows: your stash (default) or your sales (pick C), and
+  // the Sales view's range.
+  view?: 'holdings' | 'sales'
+  salesRange?: SaleRange
 }
 
-export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'where' | 'tabs'
+export type Section = 'chart' | 'perHour' | 'numbers' | 'moves' | 'changes' | 'sold' | 'where' | 'tabs'
 export const SECTIONS: Array<{ id: Section, label: string }> = [
   { id: 'chart', label: 'Chart' },
   { id: 'perHour', label: 'Per hour' },
   { id: 'numbers', label: 'Numbers' },
   { id: 'moves', label: 'Price moves' },
   { id: 'changes', label: 'Since last refresh' },
+  { id: 'sold', label: 'Sold' },
   { id: 'where', label: 'Where it is' },
   { id: 'tabs', label: 'Tab labels' }
 ]

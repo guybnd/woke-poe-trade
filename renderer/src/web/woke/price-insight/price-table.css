@@ -25,6 +25,18 @@
 .w-pc-toolbar .w-pc-matched b { font-weight: 600; color: var(--w-fg); font-variant-numeric: tabular-nums; }
 /* The filter's label gives way first, so the controls on the right never clip. */
 .w-pc-toolbar .w-pc-online { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+/* Bulk: a small bordered chip like the affix caps; lit while on. */
+.w-pc-toolbar .w-pc-bulk {
+  padding: 0 6px;
+  border: 1px solid var(--w-chip-line);
+  border-radius: 3px;
+  color: var(--w-dim);
+  font-family: var(--w-label);
+  font-size: .85em;
+  line-height: 1.5;
+}
+.w-pc-toolbar .w-pc-bulk:hover { color: var(--w-fg); }
+.w-pc-toolbar .w-pc-bulk.on { color: var(--w-gold-hi, var(--w-fg)); border-color: var(--w-gold); }
 
 :root:not([data-woke-theme="classic"]) .w-pc-online-btn {
   display: inline-flex;
@@ -258,6 +270,7 @@
 }
 .w-pc-travel:hover, .w-pc-travel.w-pc-travel-on { color: var(--w-accent); border-color: var(--w-line-strong); background: var(--w-accent-soft); }
 .w-pc-travel:disabled { cursor: progress; }
+.w-pc-travel-gap { display: inline-block; flex: none; width: 1.25rem; }
 .w-pc-travel:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .w-pc-travel-note { display: inline-block; max-width: 11em; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: var(--w-accent); }
 .w-pc-travel-note.w-pc-travel-warn { color: var(--w-warn); }

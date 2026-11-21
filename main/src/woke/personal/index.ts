@@ -16,6 +16,8 @@ import type { Fetcher, HttpReply, ReaderStatus } from './stash-reader'
 import { TEMPLATES, deleteSet, fitsTemplate, readLeagueTabs, saveSet, setChoice } from './tab-choice'
 import type { TabChoice } from './tab-choice'
 import { WornReader } from './worn-items'
+import { TradeHistory } from './trade-history'
+import type { SalesReadMode } from './trade-history'
 import { CharacterSync, fileStore } from './character-sync'
 import type { WokeHandler } from '../../../../ipc/woke-ops'
 
@@ -65,7 +67,7 @@ export const READER_OPS = [
   'stash-auth-status', 'stash-sign-in', 'stash-sign-out', 'stash-reader-config',
   'stash-reader-status', 'stash-reader-read', 'stash-cache',
   'stash-tab-list', 'stash-tab-choice', 'stash-tab-set-save', 'stash-tab-set-delete',
-  'worn-items', 'character-sync'
+  'worn-items', 'character-sync', 'trade-history'
 ] as const
 export type ReaderOp = typeof READER_OPS[number]
 
@@ -220,6 +222,18 @@ function startReader (ctx: PersonalContext): () => void {
     }
   })
 
+  // Your sold items (trade-history.ts), for Net worth's Sold section and Sales view.
+  const sales = new TradeHistory({
+    fetch: sessionFetch,
+    now: () => Date.now(),
+    log: (line) => ctx.logger.write(line),
+    signedOut: () => {
+      if (!live || !reader.account) return
+      reader.signedOut()
+      saveAccount(null).catch(() => {})
+    }
+  })
+
   const authStatus = async (verify: boolean) => {
     if (verify) {
       const name = await fetchAccountName(sessionFetch).catch(() => undefined)
@@ -302,6 +316,14 @@ function startReader (ctx: PersonalContext): () => void {
       const hint = typeof args?.character === 'string' ? args.character.trim() : ''
       return await worn.read(hint).catch((e: Error) => ({ error: e.message }))
     },
+    // Your sales in a league (the reader's league when left out). read:
+    // 'manual' (Refresh), 'auto' (at most every 30 min) or 'none' (the file).
+    'trade-history': async (args) => {
+      const league = typeof args?.league === 'string' && args.league ? args.league : reader.league
+      if (!league) return null
+      const mode: SalesReadMode = args?.read === 'manual' || args?.read === 'auto' ? args.read : 'none'
+      return await sales.read(league, mode)
+    },
     // The synced character. read: 'now' reads (at most every 30 s); auto turns
     // the read on entering an area on or off; character names the one in play.
     'character-sync': async (args) => {
@@ -317,6 +339,14 @@ function startReader (ctx: PersonalContext): () => void {
   const onLines = (lines: string[]) => {
     if (entersArea(lines)) character.read('area').catch(() => {})
     if (!entersHideout(lines)) return
+    // New sales tell the overlay; a skipped read (too soon) says nothing.
+    const league = reader.league
+    if (league && reader.account) {
+      const before = sales.lastFetchAt
+      sales.read(league, 'auto').then((r) => {
+        if (live && sales.lastFetchAt !== before) ctx.broadcast('trade-history', r)
+      }).catch(() => {})
+    }
     const run = reader.readIfDue()
     run?.then((s: ReaderStatus) => {
       if (s.error && s.error.kind !== 'signed-out') ctx.logger.write(`warn [stash-reader] ${s.error.message}`)
@@ -330,6 +360,7 @@ function startReader (ctx: PersonalContext): () => void {
     if (ctx.gameLog.onLines === onLines) ctx.gameLog.onLines = null
     reader.stop()
     character.stop()
+    sales.stop()
   }
 }
 

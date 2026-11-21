@@ -45,7 +45,7 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   const stunBeforeSearch = await top(panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first())
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   // Through the first search too: loading, then the verdict arriving.
   expect(await top(panel.locator('[data-stat-row]').getByText('18% increased Stun and Block Recovery').first())).toBe(stunBeforeSearch)
   await expect(panel).toContainText('Matched: 12')
@@ -87,7 +87,7 @@ test('ticking and unticking mods leaves everything where it is', async ({ overla
   await stun.hover()
 
   // Passing over Search on the way to the results doesn't search.
-  const search = (await panel.getByRole('button', { name: 'Search' }).boundingBox())!
+  const search = (await panel.getByRole('button', { name: 'Search', exact: true }).boundingBox())!
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height / 2)
   await overlay.page.mouse.move(search.x + search.width / 2, search.y + search.height + 40)
   await overlay.page.waitForTimeout(300)

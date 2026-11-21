@@ -43,7 +43,7 @@ test(`a cluster jewel title picks a size and type, typed or clicked, and only Se
   expect(searches.length).toBe(before)
 
   // Search runs the picked jewel.
-  await panel.getByRole('button', { name: 'Search' }).first().click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).first().click()
   await expect.poll(() => searches.length).toBe(before + 1)
   const body = JSON.parse(searches[searches.length - 1])
   expect(body.query.type).toBe('Medium Cluster Jewel')

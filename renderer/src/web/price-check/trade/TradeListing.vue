@@ -10,6 +10,8 @@
         <b v-else class="font-normal">{{ list.total }}{{ list.inexact ? '+' : '' }}</b>
       </div>
       <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
+      <button type="button" class="w-pc-bulk" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
+        :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
@@ -121,8 +123,7 @@
               </td>
               <td class="px-2">
                 <span class="w-pc-count">
-                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
-                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
+                  <!-- woke: the hideout / stash icon first, so it stays in one place whatever the count. -->
                   <span v-if="!row.lead.hasFee" :class="$style.stashListing" :title="row.lead.hasNote ? 'Stash listing' : 'Stash listing without a price note'">
                     <img :class="$style.stashIcon" src="/images/stash.png">
                     <i v-if="!row.lead.hasNote" class="fas fa-question" />
@@ -132,6 +133,9 @@
                     :disabled="travelState(row.lead.hideoutToken)?.kind === 'sending'"
                     title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
                     @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
+                  <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
+                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
+                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
                   <span v-if="row.lead.corrupted" class="w-pc-tag">Corrupted</span>
                 </span>
@@ -163,8 +167,8 @@
         </tbody>
       </table>
     </div>
-    <div v-if="improved" class="w-pc-foot" :class="{ invisible: !(listSettled && list && rows.length) }"
-      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
+    <div v-if="improved || bulk" class="w-pc-foot" :class="{ invisible: !(listSettled && list && (rows.length || bulk)) }"
+      title="Prices come from the cheapest listings the trade site returned"><template v-if="list"><span v-if="allStale" class="w-warn">{{ allInstant ? 'All unsold for over a week' : 'All over a week old, so they may be gone' }} · </span><template v-if="bulk">{{ bulkSellers || 'No' }} bulk {{ bulkSellers === 1 ? 'seller' : 'sellers' }} in </template>{{ shownCount }} of {{ list.total }}{{ list.inexact ? '+' : '' }} listings</template><template v-else>&nbsp;</template></div>
   </div>
   <ui-error-box v-else>
     <template #name>{{ t(':error') }}</template>
@@ -179,7 +183,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
+import { defineAsyncComponent, defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { hideTip, showTip } from '@/web/woke/ui/tooltip/tooltip'
 import { openItemMenu } from '@/web/woke/ui/tooltip/item-menu'
@@ -203,12 +207,12 @@ import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
 import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import PriceVerdict from '@/web/woke/price-insight/PriceVerdict.vue'
-import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
 import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
 import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
+import { bulkOnly, bulkSellerCount, BULK_ENOUGH } from '@/web/woke/price-insight/bulk-sellers'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
 import { textScale } from '@/web/woke/ui/text-scale'
@@ -216,6 +220,9 @@ import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
+
+// woke: the drivers load with the first price check, not at startup; results take longer.
+const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
 
 const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
 
@@ -278,15 +285,38 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
     return out
   })
 
+  // The search the pages below belong to, and how many of its ids are fetched.
+  let fetched = 0
+  let pages: Promise<void> = Promise.resolve()
+  const morePages = shallowRef(false)
+
+  function fetchPage (_searchId: number, _searchResult: SearchResult, into: PricingResult[]) {
+    const ids = _searchResult.result.slice(fetched, fetched + 10)
+    fetched += 10
+    return requestResults(_searchResult.id, ids, { accountName: AppConfig().accountName })
+      .then(
+        results => { if (_searchId === searchId) into.push(...results) },
+        // A failed page can be asked for again.
+        err => { if (_searchId === searchId) fetched -= 10; throw err })
+  }
+
+  function canFetchMore (_searchResult: SearchResult) {
+    return fetched < _searchResult.result.length && fetched < API_FETCH_LIMIT
+  }
+
   async function search (filters: ItemFilters, stats: FilterOrGroup[]) {
     searchId += 1
     const _searchId = searchId
     fetching.value = true
+    morePages.value = false
+    let done!: () => void
+    pages = new Promise(resolve => { done = resolve })
     try {
       error.value = null
       searchResult.value = null
       const _fetchResults: PricingResult[] = shallowReactive([])
       fetchResults.value = _fetchResults
+      fetched = 0
 
       const request = createTradeRequest(filters, stats)
       const _searchResult = await requestTradeResultList(request, filters.trade.league)
@@ -307,17 +337,18 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
               .then(results => r1
                 .then(() => { _fetchResults.push(...results) }))
           : Promise.resolve()
+        fetched = 20
         // woke: a failed second page leaves the first on screen. Loading further pages
         // would leave a hole in the prices, so stop there.
-        const pages = await Promise.allSettled([r1, r2])
-        const failed = pages.find((page): page is PromiseRejectedResult => page.status === 'rejected')
+        const settled = await Promise.allSettled([r1, r2])
+        const failed = settled.find((page): page is PromiseRejectedResult => page.status === 'rejected')
         if (failed) {
           if (!_fetchResults.length) throw failed.reason
+          if (_searchId === searchId) fetched = API_FETCH_LIMIT
           return
         }
       }
 
-      let fetched = 20
       async function fetchMore (): Promise<void> {
         if (_searchId !== searchId) return
         const totalGrouped = groupedResults.value.length
@@ -325,29 +356,63 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
           res.listedTimes <= 2 ? len + 1 : len, 0)
         if (
           (totalNotGrouped < MIN_NOT_GROUPED || totalGrouped < MIN_GROUPED) &&
-          fetched < _searchResult.result.length &&
-          fetched < API_FETCH_LIMIT
+          canFetchMore(_searchResult)
         ) {
-          await requestResults(_searchResult.id, _searchResult.result.slice(fetched, fetched + 10), { accountName: AppConfig().accountName })
-            .then(results => { _fetchResults.push(...results) })
-          fetched += 10
+          await fetchPage(_searchId, _searchResult, _fetchResults)
           return fetchMore()
         }
       }
       // A later page failing leaves what already loaded on screen.
-      await fetchMore().catch((err) => { if (!_fetchResults.length) throw err })
+      await fetchMore().catch((err) => {
+        if (_searchId === searchId) fetched = API_FETCH_LIMIT
+        if (!_fetchResults.length) throw err
+      })
     } catch (err) {
       if (_searchId === searchId) error.value = (err as Error).message
     } finally {
-      if (_searchId === searchId) fetching.value = false
+      if (_searchId === searchId) {
+        fetching.value = false
+        morePages.value = searchResult.value != null && canFetchMore(searchResult.value)
+      }
+      done()
     }
   }
 
-  return { error, searchResult, groupedResults, fetchResults, fetching, search }
+  // woke: on a click only (the Bulk toggle): pulls further pages of the same search,
+  // ten listings each, until enough() holds or the search runs out. Searches nothing new.
+  // Resolves with a note when the trade site stopped it, else null.
+  function loadMore (enough: () => boolean): Promise<string | null> {
+    const _searchId = searchId
+    const run = pages.then(async (): Promise<string | null> => {
+      const _searchResult = searchResult.value
+      if (_searchId !== searchId || !_searchResult || error.value) return null
+      const into = fetchResults.value
+      fetching.value = true
+      try {
+        for (;;) {
+          if (_searchId !== searchId || enough() || !canFetchMore(_searchResult)) break
+          preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
+          await fetchPage(_searchId, _searchResult, into)
+        }
+        return null
+      } catch (err) {
+        return (err as Error).message
+      } finally {
+        if (_searchId === searchId) {
+          fetching.value = false
+          morePages.value = canFetchMore(_searchResult)
+        }
+      }
+    })
+    pages = run.then(() => {})
+    return run
+  }
+
+  return { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore }
 }
 
 export default defineComponent({
-  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers },
+  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers: defineAsyncComponent(loadDrivers) },
   emits: ['reset'],
   props: {
     filters: {
@@ -371,6 +436,7 @@ export default defineComponent({
   setup (props, ctx) {
     const widget = computed(() => AppConfig<PriceCheckWidget>('price-check')!)
 
+    loadDrivers().catch(() => {})
     watch(() => props.item, (item) => {
       slowdown.reset(item)
     }, { immediate: true })
@@ -379,7 +445,7 @@ export default defineComponent({
     const statValue = (listing: PricingResult, col: StatColumn) =>
       listingStatValue(listing.listedItem, col, props.item.category)
 
-    const { error, searchResult, groupedResults, fetchResults, fetching, search } = useTradeApi((a, b) =>
+    const { error, searchResult, groupedResults, fetchResults, fetching, morePages, search, loadMore } = useTradeApi((a, b) =>
       allColumns.value.every(col => formatStatValue(statValue(a, col), col) === formatStatValue(statValue(b, col), col)))
     const { retryIn, rateLimited } = useRetryCountdown(error)
     const refreshNote = shallowRef('')
@@ -425,6 +491,8 @@ export default defineComponent({
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
+    // A row without a stash or hideout icon keeps its room, so the counts line up.
+    const anyIcon = computed(() => groupedResults.value.some(r => !r.hasFee || (r.hideoutToken && !r.isMine)))
     // A tag or stash icon in the count column leaves less room, so check every listing.
     const otherColumnsWidth = computed(() => {
       const listings = groupedResults.value
@@ -437,7 +505,7 @@ export default defineComponent({
       if (showSockets.value && showColours.value) width += WIDTH_SOCKET_DOTS
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
-      if (listings.some(r => !r.hasFee || r.hideoutToken)) width += WIDTH_STASH_ICON
+      if (anyIcon.value) width += WIDTH_STASH_ICON
       return width
     })
     const columnCap = computed(() =>
@@ -448,7 +516,34 @@ export default defineComponent({
     // woke: improved merges a price into one row; classic stays one row per listing.
     // The trade site orders by its own currency ratios; re-sort what's fetched by
     // poe.ninja's rates so chaos and divine prices interleave by real value.
-    const rows = computed(() => sortByValue(groupListings(groupedResults.value, {
+    // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
+    const bulk = shallowRef(false)
+    const bulkNote = shallowRef('')
+    // Search bulk asks for it with the search itself; any other search starts with it off.
+    let bulkNext = false
+    watch(searchResult, (result) => {
+      bulk.value = false
+      bulkNote.value = ''
+      if (!result || !bulkNext) return
+      bulkNext = false
+      toggleBulk()
+    })
+    // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
+    const sameKind = (r: PricingResult) => [Boolean(r.corrupted), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
+    const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value, sameKind) : groupedResults.value)
+    async function toggleBulk () {
+      bulk.value = !bulk.value
+      bulkNote.value = ''
+      if (!bulk.value) return
+      const forSearch = searchResult.value
+      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value, sameKind) >= BULK_ENOUGH)
+      if (note && bulk.value && searchResult.value === forSearch) {
+        bulkNote.value = note
+        setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
+      }
+    }
+
+    const rows = computed(() => sortByValue(groupListings(tableListings.value, {
       now: nowMinute.value,
       merge: improved.value,
       dropped: insight.value.dropped,
@@ -537,6 +632,7 @@ export default defineComponent({
       allStale,
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.
+      anyIcon,
       showCountBar: computed(() => improved.value && maxCount.value > 1 && !shownColumns.value.length),
       showItemLevel,
       showQuality,
@@ -555,10 +651,21 @@ export default defineComponent({
         return tone ? { '--w-pc-stat-k': tone.strength } : undefined
       },
       shownCount: computed(() => fetchResults.value.filter(r => r != null).length),
+      bulk,
+      bulkNote,
+      toggleBulk,
+      bulkSellers: computed(() => bulkSellerCount(groupedResults.value, sameKind)),
+      bulkTitle: computed(() => bulk.value
+        ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
+        : morePages.value
+          ? `Only sellers with 2 or more copies at one price. Loads more listings if fewer than ${BULK_ENOUGH} sellers show (up to ${API_FETCH_LIMIT}).`
+          : 'Only sellers with 2 or more copies at one price.'),
       tableLoading,
       listSettled,
       slowdownReady: slowdown.isReady,
-      execSearch: () => {
+      // bulk: Search bulk was clicked. (Retry passes its click event, which isn't true.)
+      execSearch: (bulk?: unknown) => {
+        bulkNext = bulk === true
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
@@ -578,6 +685,7 @@ export default defineComponent({
         clearTradeCache()
         clearDriverCaches()
         measuredDrivers.value = null
+        bulkNext = bulk.value
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
@@ -640,7 +748,9 @@ export default defineComponent({
   filter: grayscale(1) opacity(0.5);
   display: inline-block;
   max-width: none;
+  width: 1.25rem;
   height: 1.25rem;
+  object-fit: contain;
   vertical-align: bottom;
 }
 

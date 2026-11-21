@@ -133,8 +133,11 @@ export class Overlay {
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
     let nextId = Math.max(0, ...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
+    const seeded: number[] = []
     for (const seed of opts.widgets ?? []) {
       const { wmType, wmWants, wmFlags, ...rest } = seed
+      // A widget of a module switched off never mounts (module ids are mostly the type's name).
+      if (!opts.off?.includes(wmType.replace(/^woke-/, ''))) seeded.push(nextId)
       config.widgets.push({
         wmId: nextId++,
         wmType,
@@ -179,6 +182,13 @@ export class Overlay {
     await this.page.waitForTimeout(150)
     // Hotkeys register once the game window is attached and focused.
     await expect.poll(() => this.app.registeredHotkeys().length).toBeGreaterThan(0)
+    // A placed widget's hotkeys register from the saved config, before its lazy
+    // chunk has loaded and it listens; a key pressed in between is lost (the
+    // loot filter editor flake, under CI load). Its element appears once it
+    // has mounted. Bounded: a widget that renders nothing never shows one.
+    for (const id of seeded) {
+      await this.page.locator(`#widget-${id}`).waitFor({ state: 'attached', timeout: 15_000 }).catch(() => {})
+    }
     if (opts.overlayActive) await this.pressHotkey(config.overlayKey)
     this.config = config
     return config

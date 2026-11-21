@@ -56,7 +56,7 @@ test(`${layout}: affix caps search only on Search and leave out fuller listings`
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   await overlay.snap('caps empty')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel).toContainText('Matched: 12')
   expect(searches).toHaveLength(1)
   expect(JSON.stringify(searches[0].query.stats)).not.toContain('pseudo_number_of_prefix_mods')
@@ -69,7 +69,7 @@ test(`${layout}: affix caps search only on Search and leave out fuller listings`
   await prefix.locator('input').fill('2')
   await prefix.locator('input').press('Tab')
   // The bar gives way to the Search row; the caps stay where they were.
-  await expect(panel.getByRole('button', { name: 'Search' })).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Search', exact: true })).toBeVisible()
   const onRow = (await prefix.boundingBox())!
   expect(Math.abs(onRow.x - onBar.x)).toBeLessThan(2)
   expect(Math.abs(onRow.y - onBar.y)).toBeLessThan(6)
@@ -79,7 +79,7 @@ test(`${layout}: affix caps search only on Search and leave out fuller listings`
   // No search of its own: the results go stale and wait for the button.
   expect(searches).toHaveLength(1)
   await overlay.snap('caps set, waiting for Search')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(2)
   const not = searches[1].query.stats.find((g: any) => g.type === 'not')
   expect(not.filters).toEqual(expect.arrayContaining([
@@ -90,7 +90,7 @@ test(`${layout}: affix caps search only on Search and leave out fuller listings`
   // Clearing a box drops that cap only.
   await prefix.locator('input').fill('')
   await prefix.locator('input').press('Tab')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(3)
   const stats = JSON.stringify(searches[2].query.stats)
   expect(stats).not.toContain('pseudo_number_of_prefix_mods')

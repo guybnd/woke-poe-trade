@@ -36,6 +36,9 @@ export interface ItemTipRef {
   menu?: ItemMenuRef
   // How many of it (a stack, a stash line): the price strip adds their value.
   count?: number
+  // Shown as it is, with no lookup: an item whose own mods are known (a sold
+  // item from the trade history).
+  content?: TipContent
 }
 
 const SHOW_DELAY_MS = 60
@@ -214,6 +217,11 @@ function enter (e: Event) {
   if (!ref?.name) { hideTip(); return }
   cancel()
   const mine = seq
+  const own = ref.content
+  if (own) {
+    timer = setTimeout(() => { if (mine === seq && el.isConnected) showTipAt(el, own) }, SHOW_DELAY_MS)
+    return
+  }
   timer = setTimeout(() => {
     tipFor(ref).then(({ model, market, uniques, effects }) => {
       if (mine !== seq || !el.isConnected) return
