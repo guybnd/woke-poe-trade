@@ -14,3 +14,4 @@
 - Session analytics › Map history: a Vaults chip lists vault runs too (marked "not counted"); they stay out of the count and average.
 - Price check: listings now sort by real value. Chaos and divine prices (and other currencies) are compared at the current poe.ninja rate, so a 150c listing no longer shows after a 1 div one.
 - Session analytics: tonight's strip and totals (from Session story) now sit at the top of the window on every tab, and the window opens on Map history first. First step toward one Session window.
+- Session analytics › Map history: each Net worth stash read is its own row between your maps, with what came in since the read before, how many maps that covers and the rate per hour. Purchases show as spent, not as a loss.

@@ -21,20 +21,35 @@
         <div class="w-row w-row--head px-0" :class="$style.grid">
           <span>When</span><span>Map</span><span class="text-right">Time</span><span>Character</span><span>Met</span>
         </div>
-        <div v-for="m in visible" :key="m.key + m.enteredAt" class="w-row px-0" :class="$style.grid" data-map-row>
-          <span class="w-dim w-num w-trunc">{{ formatSessionDate(m.enteredAt) }}</span>
-          <span class="w-trunc" :class="{ 'w-dim': skippedRow(m) }">{{ m.name }} <span class="w-dim">{{ skippedRow(m) ? 'not counted' : tierText(m.areaLevel) }}</span></span>
-          <span class="text-right w-num">
-            {{ formatClock(m.mapMs) }}<span v-if="m.deaths" class="w-down" :title="`${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}`"> ✕{{ m.deaths }}</span>
-          </span>
-          <span class="w-trunc" :title="m.className ?? undefined">
-            <template v-if="m.char">{{ m.char }}<span v-if="m.charLevel != null" class="w-dim w-num"> {{ levelText(m) }}</span></template>
-            <span v-else class="w-faint">—</span>
-          </span>
-          <span class="w-trunc w-dim text-xs">{{ m.npcs.join(', ') }}</span>
-        </div>
-        <button v-if="list.length > visible.length" type="button" class="w-accent text-xs pt-1" @click="limit += PAGE">
-          Show more ({{ list.length - visible.length }} older)
+        <template v-for="it in visible" :key="it.kind + it.at">
+          <!-- A Net worth stash read: what came in since the read before. -->
+          <div v-if="it.kind === 'read'" class="w-row px-0" :class="[$style.grid, $style.read]" data-income-row>
+            <span class="w-num w-trunc">{{ formatSessionDate(it.read.at) }}</span>
+            <span :class="$style.readText" class="w-num">
+              <span class="w-accent">Stash read</span>
+              <span v-if="it.read.maps" class="w-dim"> · {{ it.read.maps }} {{ it.read.maps === 1 ? 'map' : 'maps' }}</span>
+              <template v-if="it.read.purchase">
+                <span class="w-dim"> · purchase</span><span v-if="it.read.spent" class="w-dim" title="Left out of profit as spent"> ({{ formatChaos(it.read.spent, it.read.rate) }} spent)</span>
+              </template>
+              <span v-if="it.read.perHour != null" class="w-dim"> · {{ formatChaos(it.read.perHour, it.read.rate) }}/h</span>
+            </span>
+            <span class="text-right w-num" :class="it.read.chaos >= 0 ? 'w-up' : 'w-down'">{{ signed(it.read.chaos, it.read.rate) }}</span>
+          </div>
+          <div v-else class="w-row px-0" :class="$style.grid" data-map-row>
+            <span class="w-dim w-num w-trunc">{{ formatSessionDate(it.map.enteredAt) }}</span>
+            <span class="w-trunc" :class="{ 'w-dim': skippedRow(it.map) }">{{ it.map.name }} <span class="w-dim">{{ skippedRow(it.map) ? 'not counted' : tierText(it.map.areaLevel) }}</span></span>
+            <span class="text-right w-num">
+              {{ formatClock(it.map.mapMs) }}<span v-if="it.map.deaths" class="w-down" :title="`${it.map.deaths} ${it.map.deaths === 1 ? 'death' : 'deaths'}`"> ✕{{ it.map.deaths }}</span>
+            </span>
+            <span class="w-trunc" :title="it.map.className ?? undefined">
+              <template v-if="it.map.char">{{ it.map.char }}<span v-if="it.map.charLevel != null" class="w-dim w-num"> {{ levelText(it.map) }}</span></template>
+              <span v-else class="w-faint">—</span>
+            </span>
+            <span class="w-trunc w-dim text-xs">{{ it.map.npcs.join(', ') }}</span>
+          </div>
+        </template>
+        <button v-if="items.length > visible.length" type="button" class="w-accent text-xs pt-1" @click="limit += PAGE">
+          Show more ({{ items.length - visible.length }} older)
         </button>
       </div>
       <div class="text-xs w-faint">The character is the last one the log saw level up, so a character switch shows from its first level-up. Kills, XP and loot aren't in the log.</div>
@@ -48,11 +63,14 @@ import { computed, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { saveConfig } from '@/web/Config'
 import { WBanner, WChip, WEmpty, WSkeleton } from '../ui'
-import { formatClock } from '../ui/format'
+import { formatChaos, formatClock } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
 import { isWidgetTypeOn } from '../modules'
 import { tierText } from './map-log'
+import { incomeRows, interleave } from './income'
+import { stashGains } from '../net-worth/gains'
+import type { StashGain } from '../net-worth/valuation'
 import { isSkippedArea } from './skip-areas'
 import type { MapRecord } from './map-log'
 import { DAY_MS_EXPORT, dayKey, readAllMaps, readMapDay, useNights } from './store'
@@ -118,7 +136,21 @@ const skippedCount = computed(() => showSkipped.value ? inView.value.length - ma
 
 const PAGE = 100
 const limit = shallowRef(PAGE)
-const visible = computed(() => list.value.slice(0, limit.value))
+// Net worth's stash reads in the same range, as their own rows between maps.
+const gains = shallowRef<StashGain[]>([])
+let gainsId = 0
+async function readGains () {
+  const id = ++gainsId
+  const got = props.league ? await stashGains(props.league) : []
+  if (id === gainsId) gains.value = got
+}
+watch(() => [props.league, on.value] as const, () => { if (on.value) readGains() }, { immediate: true })
+// A read usually follows a map: look again when one is saved.
+watch(() => store.lastSaved.value, () => { if (on.value) readGains() })
+const reads = computed(() => incomeRows(gains.value.filter(g => inRange(g.at, props.range, props.now)), maps.value))
+const items = computed(() => interleave(list.value, reads.value))
+const visible = computed(() => items.value.slice(0, limit.value))
+const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${formatChaos(chaos, rate)}`
 
 // As the chip counts it: maps under 30 s (a quick look in) left out.
 const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))
@@ -137,4 +169,6 @@ function levelText (m: MapRecord): string {
   gap: 8px;
   align-items: baseline;
 }
+.read { background: var(--w-accent-soft); }
+.readText { grid-column: 2 / span 3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
