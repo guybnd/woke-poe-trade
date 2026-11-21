@@ -90,7 +90,17 @@ export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 // them as stat rows, at the bottom of each roll range: the price check can
 // then filter by them though no rolls were copied. Every row starts unticked
 // (`rollsFromData`), as a low roll could look like a best one.
+// Uniques that only ever drop corrupted (checked on the trade site): priced
+// without game text, they search corrupted copies, or the search finds none.
+const ALWAYS_CORRUPTED = new Set(['Cortex', 'Replica Cortex'])
+
 export function virtualUnique (info: BaseType, mods?: UniqueModLines | null): ParsedItem {
+  const item = virtualUniqueItem(info, mods)
+  if (ALWAYS_CORRUPTED.has(info.refName)) item.isCorrupted = true
+  return item
+}
+
+function virtualUniqueItem (info: BaseType, mods?: UniqueModLines | null): ParsedItem {
   const uniqueBase = info.unique ? ITEM_BY_REF('ITEM', info.unique.base)?.[0] : undefined
   // A rolled unique (Watcher's Eye, Forbidden Flame...) is priced as it drops:
   // unidentified, with no mods. The price check's Unidentified chip turns it off.
