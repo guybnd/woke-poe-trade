@@ -160,7 +160,8 @@ By hand, once the league is out (one Event Horizon ticket each):
 
 - [ ] Item tooltips: `npm run tip-data -- <League>` in `renderer/`, once poe.ninja lists the league's uniques.
 - [ ] Passive tree: `npm run tree-data -- "<PoB folder>/TreeData/<version>/tree.lua"` in `renderer/`, once Path of Building has the tree.
-- [ ] After either: `node src/assets/bump-data-version.mjs` in `renderer/`. Both reach players without a release.
+- [ ] Templar Vault rewards: `npm run vault-data` in `renderer/` re-reads the four poewiki vault pages. It names any reward line it has no poe.ninja pricing for (add it to `PRICES` in `scripts/build-vault-data.mjs`). Also recheck the vault rate after Nightmare maps (`DEFAULT_NIGHTMARE_VAULT_CHANCE` in `woke/vaults/vaults.ts`, measured from Client.txt) and whether vaults still exist at all.
+- [ ] After any of these: `node src/assets/bump-data-version.mjs` in `renderer/`. They reach players without a release.
 - [ ] Gem vendors (`renderer/src/web/woke/pob-builds/gem-sources.json`) when the league adds gems.
 - [ ] Scarab weights (`woke/scarab-flip/weights.ts`) and the scarab stash layout (`main/src/woke/stash-scarab-data.ts`, new screenshots) when scarabs change.
 - [ ] Mechanics cheat sheets and the Betrayal board (`woke/mechanics/`), boss areas (`woke/shared/boss-areas.ts`) and essences (`woke/essence-scan/essences.ts`) when the league changes them.

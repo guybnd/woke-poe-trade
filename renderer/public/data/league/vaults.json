@@ -1,0 +1,232 @@
+{
+  "source": "poewiki (Templar Vault and the four vault pages)",
+  "read": "2026-11-21",
+  "note": "Four reliquaries, take one. GGG publishes no reward weights and no vault spawn chance.",
+  "vaults": [
+    {
+      "id": "MapWorldsMemoryVault1",
+      "name": "Machinist's Vault",
+      "quadrant": "Northwest",
+      "bosses": [
+        "Incarnation of Neglect",
+        "Incarnation of Fear",
+        "Incarnation of Dread"
+      ],
+      "wiki": "https://www.poewiki.net/wiki/Machinist's_Vault",
+      "rewards": [
+        {
+          "text": "T3+ Unique weapon/jewellery",
+          "kind": "unique",
+          "note": "Depends on the unique"
+        },
+        {
+          "text": "11-20x Stacked Decks",
+          "kind": "currency",
+          "items": [
+            {
+              "name": "Stacked Deck"
+            }
+          ],
+          "qty": 15.5
+        },
+        {
+          "text": "1-2x rarer divination cards",
+          "kind": "card",
+          "note": "Depends on the card"
+        }
+      ]
+    },
+    {
+      "id": "MapWorldsMemoryVault2",
+      "name": "Zealot's Vault",
+      "quadrant": "Northeast",
+      "bosses": [
+        "The Shaper",
+        "Uber Elder",
+        "Venarius"
+      ],
+      "wiki": "https://www.poewiki.net/wiki/Zealot's_Vault",
+      "rewards": [
+        {
+          "text": "Greater Multistrike Support",
+          "kind": "gem",
+          "rare": true,
+          "items": [
+            {
+              "name": "Greater Multistrike Support",
+              "variant": "1"
+            }
+          ]
+        },
+        {
+          "text": "Invention Support",
+          "kind": "gem",
+          "rare": true,
+          "items": [
+            {
+              "name": "Invention Support",
+              "variant": "1"
+            }
+          ]
+        },
+        {
+          "text": "T3+ Unique armour/jewellery",
+          "kind": "unique",
+          "note": "Depends on the unique"
+        },
+        {
+          "text": "Valuable gems (20/20, 21/20, Empower/Enhance/Enlighten)",
+          "kind": "gem",
+          "note": "Depends on the gem"
+        },
+        {
+          "text": "Facetor's Lens (350m, 500m, 750m)",
+          "kind": "currency",
+          "note": "Priced by stored experience; not on poe.ninja"
+        }
+      ]
+    },
+    {
+      "id": "MapWorldsMemoryVault4",
+      "name": "Scholar's Vault",
+      "quadrant": "Southwest",
+      "bosses": [
+        "The Searing Exarch",
+        "The Eater of Worlds"
+      ],
+      "wiki": "https://www.poewiki.net/wiki/Scholar's_Vault",
+      "rewards": [
+        {
+          "text": "1-5x Valuable currency",
+          "kind": "currency",
+          "note": "Depends on the currency"
+        },
+        {
+          "text": "20x regular currency",
+          "kind": "currency",
+          "note": "Depends on the currency"
+        },
+        {
+          "text": "Orb of Intention, Orb of Remembrance, Orb of Unravelling",
+          "kind": "currency",
+          "items": [
+            {
+              "name": "Orb of Intention"
+            },
+            {
+              "name": "Orb of Remembrance"
+            },
+            {
+              "name": "Orb of Unravelling"
+            }
+          ],
+          "note": "One of the three"
+        },
+        {
+          "text": "Reflecting Mist",
+          "kind": "currency",
+          "items": [
+            {
+              "name": "Reflecting Mist"
+            }
+          ]
+        },
+        {
+          "text": "Valdo's Puzzle Box",
+          "kind": "fragment",
+          "items": [
+            {
+              "name": "Valdo's Puzzle Box"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MapWorldsMemoryVault3",
+      "name": "Arkhon's Vault",
+      "quadrant": "Southeast",
+      "bosses": [
+        "The Maven",
+        "Sirus, Awakener of Worlds"
+      ],
+      "wiki": "https://www.poewiki.net/wiki/Arkhon's_Vault",
+      "rewards": [
+        {
+          "text": "Greater Spell Cascade Support",
+          "kind": "gem",
+          "rare": true,
+          "items": [
+            {
+              "name": "Greater Spell Cascade Support",
+              "variant": "1"
+            }
+          ]
+        },
+        {
+          "text": "Cooldown Recovery Support",
+          "kind": "gem",
+          "rare": true,
+          "items": [
+            {
+              "name": "Cooldown Recovery Support",
+              "variant": "1"
+            }
+          ]
+        },
+        {
+          "text": "Shaper Guardian/Elder Guardian/Conqueror maps",
+          "kind": "map",
+          "note": "Depends on the map"
+        },
+        {
+          "text": "Synthesised maps (including Cortex)",
+          "kind": "map",
+          "note": "Depends on the map"
+        },
+        {
+          "text": "Nightmare maps",
+          "kind": "map",
+          "items": [
+            {
+              "name": "Nightmare Map"
+            }
+          ]
+        },
+        {
+          "text": "Valdo's Puzzle Box",
+          "kind": "fragment",
+          "items": [
+            {
+              "name": "Valdo's Puzzle Box"
+            }
+          ]
+        },
+        {
+          "text": "#x Threads",
+          "kind": "currency",
+          "note": "Depends on the thread and how many"
+        },
+        {
+          "text": "Uber Elder Fragments",
+          "kind": "fragment",
+          "items": [
+            {
+              "name": "Fragment of Shape"
+            },
+            {
+              "name": "Fragment of Knowledge"
+            },
+            {
+              "name": "Fragment of Terror"
+            },
+            {
+              "name": "Fragment of Emptiness"
+            }
+          ],
+          "note": "One of the four"
+        }
+      ]
+    }
+  ]
+}

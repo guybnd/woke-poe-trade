@@ -8,6 +8,8 @@ import { DEFAULT_FRAGMENTS_PER_KILL, NIGHTMARE_MAP, NIGHTMARE_MAPS, NIGHTMARE_SO
 import { BOSS_RUNS_TYPE } from '../../boss-runs/widget'
 import { matchRank } from '../search'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
+import { DEFAULT_NIGHTMARE_VAULT_CHANCE, shortName, typicalPick, vaultForNightmare } from '../../vaults/vaults'
+import type { Vault, VaultTable } from '../../vaults/vaults'
 
 // The boss behind each map, for searches by boss name (poedb, 3.30).
 const BOSS_NAMES: Record<string, string[]> = {
@@ -55,7 +57,7 @@ function actions (ctx: LookupContext): LookupAction[] {
   return out
 }
 
-function overviewCard (results: BossResult[], prefs: BossPrefs, ctx: LookupContext): LookupCard {
+function overviewCard (results: BossResult[], prefs: BossPrefs, vaults: VaultTable | null, ctx: LookupContext): LookupCard {
   const mapPrice = ctx.price(NIGHTMARE_MAP)
   const rows = results.map(r => {
     const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
@@ -63,7 +65,7 @@ function overviewCard (results: BossResult[], prefs: BossPrefs, ctx: LookupConte
     const u = r.drops.find(d => d.name === map.unique)
     return {
       cells: [
-        { text: r.boss.name.replace(/ Map$/, ''), sub: [...favoured, u ? `${u.name} ${pct(u)}` : ''].filter(Boolean).join(' · ') },
+        { text: r.boss.name.replace(/ Map$/, ''), sub: [...favoured, u ? `${u.name} ${pct(u)}` : '', vaultTag(r, vaults)].filter(Boolean).join(' · ') },
         `${Math.round(r.loot)} c`
       ],
       chaos: r.entryMissing.length ? null : r.profit
@@ -86,7 +88,23 @@ function overviewCard (results: BossResult[], prefs: BossPrefs, ctx: LookupConte
   }
 }
 
-function mapCard (r: BossResult, prefs: BossPrefs, ctx: LookupContext): LookupCard {
+// The Templar Vault a map spawns about half the time; shown, not in profit.
+function vaultTag (r: BossResult, vaults: VaultTable | null): string {
+  const v = vaults ? vaultForNightmare(vaults, r.boss.id) : null
+  return v ? `${shortName(v)} vault` : ''
+}
+
+function vaultRow (vault: Vault, ctx: LookupContext): LookupRow {
+  const typical = typicalPick(vault, ctx.price)
+  return {
+    label: `Vault: ${vault.name}, ~${DEFAULT_NIGHTMARE_VAULT_CHANCE}% of maps · ~typical pick, not in profit`,
+    ...(typical != null ? { chaos: typical } : { value: 'varies', dim: true }),
+    action: { label: 'Vault rewards', search: shortName(vault) }
+  }
+}
+
+function mapCard (r: BossResult, prefs: BossPrefs, vaults: VaultTable | null, ctx: LookupContext): LookupCard {
+  const vault = vaults ? vaultForNightmare(vaults, r.boss.id) : null
   const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
   const drops: LookupRow[] = [...r.drops]
     .sort((a, b) => b.value - a.value)
@@ -99,7 +117,8 @@ function mapCard (r: BossResult, prefs: BossPrefs, ctx: LookupContext): LookupCa
   const summary: LookupRow[] = [
     { label: `Entry: ${NIGHTMARE_MAP}`, chaos: r.entryMissing.length ? null : r.entry, item: { name: NIGHTMARE_MAP } },
     { label: 'Loot per kill', chaos: r.loot },
-    { label: 'Profit per map', chaos: r.entryMissing.length ? null : r.profit }
+    { label: 'Profit per map', chaos: r.entryMissing.length ? null : r.profit },
+    ...(vault ? [vaultRow(vault, ctx)] : [])
   ]
   return {
     id: `nightmare:${r.boss.id}`,
@@ -133,19 +152,19 @@ export function nightmareDropSources (prefs: BossPrefs | null, ctx: LookupContex
 }
 
 // null: the Boss runs module is off, so no Nightmare cards.
-export function nightmareLookup (prefs: BossPrefs | null): Lookup {
+export function nightmareLookup (prefs: BossPrefs | null, vaults: VaultTable | null = null): Lookup {
   if (!prefs) return () => []
   return (query, ctx) => {
     const q = query.trim()
     if (q.length < 3) return []
     const p = { ...DEFAULT_PREFS, ...prefs }
-    if (OVERVIEW.test(q)) return [overviewCard(evaluate(p, ctx), p, ctx)]
+    if (OVERVIEW.test(q)) return [overviewCard(evaluate(p, ctx), p, vaults, ctx)]
     if (q.length < MIN_QUERY) return []
     const hits = NIGHTMARE_MAPS.filter(m => [m.name, m.name.replace(/ Map$/, ''), ...BOSS_NAMES[m.id]].some(n => { const r = matchRank(n, q); return r === 0 || r === 1 }))
     if (!hits.length) return []
     const results = evaluate(p, ctx)
     // "nightmare of" names every boss: the overview says it best.
-    if (hits.length > 2) return [overviewCard(results, p, ctx)]
-    return hits.slice(0, 2).map(m => mapCard(results.find(r => r.boss.id === m.id)!, p, ctx))
+    if (hits.length > 2) return [overviewCard(results, p, vaults, ctx)]
+    return hits.slice(0, 2).map(m => mapCard(results.find(r => r.boss.id === m.id)!, p, vaults, ctx))
   }
 }
