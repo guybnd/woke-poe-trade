@@ -61,9 +61,13 @@
     </filters-block>
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
-      <div class="flex w-40" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
+      <div class="flex" style="min-width: 10rem;" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
         <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+        <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed. -->
+        <button v-if="canSearchBulk" class="btn ml-1 whitespace-nowrap" data-search-bulk
+          title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
+          @click="cancelSearchHover(); searchBulk()">Search bulk</button>
       </div>
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
            at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
@@ -255,9 +259,12 @@ export default defineComponent({
     const tradeAPI = ref<'trade' | 'bulk'>('bulk')
 
     // TradeListing.vue OR TradeBulk.vue
-    const tradeService = ref<{ execSearch(): void } | null>(null)
+    const tradeService = ref<{ execSearch(bulk?: boolean): void } | null>(null)
     // woke: a search started before the trade listing was there to run it (see below).
     let searchWaiting = false
+    // woke: Search bulk's click, for the search it starts (and one still waiting for the listing).
+    let bulkClick = false
+    let bulkWaiting = false
     // FiltersBlock.vue
     const filtersComponent = ref<ComponentPublicInstance>(null!)
     // FilterName.vue, which holds the tiles and chips
@@ -327,6 +334,8 @@ export default defineComponent({
     watch(() => [props.item, doSearch.value], () => {
       // A new item or a cancelled search drops one still waiting for the listing.
       searchWaiting = false
+      const bulk = bulkClick
+      bulkClick = false
       if (doSearch.value === false) return
 
       tradeAPI.value = apiToSatisfySearch(props.item, itemStats.value, itemFilters.value)
@@ -340,9 +349,10 @@ export default defineComponent({
       nextTick(() => {
         if (tradeService.value) {
           searchWaiting = false
-          tradeService.value.execSearch()
+          tradeService.value.execSearch(bulk)
         } else {
           searchWaiting = true
+          bulkWaiting = bulk
         }
       })
     }, { deep: false, immediate: true })
@@ -354,7 +364,7 @@ export default defineComponent({
       if (!service) return
       if (!searchWaiting || !doSearch.value) return
       searchWaiting = false
-      service.execSearch()
+      service.execSearch(bulkWaiting)
     })
 
     watch(() => [props.item, doSearch.value, itemStats.value, itemFilters.value], (curr, prev) => {
@@ -478,6 +488,11 @@ export default defineComponent({
       searched,
       resultsStale,
       doSearch,
+      canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
+      searchBulk () {
+        bulkClick = true
+        doSearch.value = true
+      },
       tradeAPI,
       tradeService,
       filtersComponent,

@@ -515,7 +515,15 @@ export default defineComponent({
     // woke: Bulk keeps sellers with two or more copies at a price. Off for each new search.
     const bulk = shallowRef(false)
     const bulkNote = shallowRef('')
-    watch(searchResult, () => { bulk.value = false; bulkNote.value = '' })
+    // Search bulk asks for it with the search itself; any other search starts with it off.
+    let bulkNext = false
+    watch(searchResult, (result) => {
+      bulk.value = false
+      bulkNote.value = ''
+      if (!result || !bulkNext) return
+      bulkNext = false
+      toggleBulk()
+    })
     // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
     const sameKind = (r: PricingResult) => [Boolean(r.corrupted), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
     const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value, sameKind) : groupedResults.value)
@@ -650,7 +658,9 @@ export default defineComponent({
       tableLoading,
       listSettled,
       slowdownReady: slowdown.isReady,
-      execSearch: () => {
+      // bulk: Search bulk was clicked. (Retry passes its click event, which isn't true.)
+      execSearch: (bulk?: unknown) => {
+        bulkNext = bulk === true
         holdVerdictHeight()
         search(props.filters, props.stats)
       },
@@ -670,6 +680,7 @@ export default defineComponent({
         clearTradeCache()
         clearDriverCaches()
         measuredDrivers.value = null
+        bulkNext = bulk.value
         holdVerdictHeight()
         search(props.filters, props.stats)
       },

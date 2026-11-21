@@ -29,3 +29,4 @@
 - Session analytics nights use the game's AFK mode, like Net worth: 15 minutes AFK ends the night (chat no longer keeps it going), a shorter AFK is left out of the time played, and the night card shows it. The night card has Net worth's "Leave out hideout" box for its per hour and maps per hour.
 - Nightmare map price check: hovering a map's vault shows its rewards as a list, one line each with the item's picture and price.
 - Price check: a Bulk button above the listings shows only sellers with 2 or more copies at one price. If fewer than 10 show, the click loads more listings (up to 100) right then; opening a check never loads extra.
+- Price check: Search bulk, next to Search, does both in one go: it searches with Bulk already on, loading more listings if fewer than 10 bulk sellers show.

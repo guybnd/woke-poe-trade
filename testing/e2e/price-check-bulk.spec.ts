@@ -26,11 +26,15 @@ function listing (i: number) {
 
 async function fakeTrade (page: Page) {
   const fetches: string[][] = []
-  await page.route('**/api/trade/search/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    headers: LIMITS,
-    body: JSON.stringify({ id: 'q', total: TOTAL, result: Array.from({ length: TOTAL }, (_, i) => `r${i}`) })
-  }))
+  const searches: number[] = []
+  await page.route('**/api/trade/search/**', (route) => {
+    searches.push(1)
+    return route.fulfill({
+      contentType: 'application/json',
+      headers: LIMITS,
+      body: JSON.stringify({ id: 'q', total: TOTAL, result: Array.from({ length: TOTAL }, (_, i) => `r${i}`) })
+    })
+  })
   await page.route('**/api/trade/fetch/**', (route) => {
     const ids = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop()!).split(',')
     fetches.push(ids)
@@ -40,7 +44,7 @@ async function fakeTrade (page: Page) {
       body: JSON.stringify({ result: ids.map(id => listing(Number(id.slice(1)))) })
     })
   })
-  return fetches
+  return Object.assign(fetches, { searches })
 }
 
 // Runs in the default improved view: one row per price, ×2 on a pair.
@@ -75,5 +79,20 @@ test('Bulk shows only multi-copy sellers and loads more pages on the click', asy
   await bulk.click()
   await expect(foot).toContainText('10 bulk sellers')
   expect(fetches).toHaveLength(4)
+  expect(overlay.errors).toEqual([])
+})
+
+test('Search bulk: one search, Bulk on, more pages loaded right away', async ({ overlay }) => {
+  const fetches = await fakeTrade(overlay.page)
+  await overlay.boot()
+  await overlay.copyItem('items/rare-body-armour-es.txt')
+  const panel = overlay.widget('price-check')
+  await panel.getByRole('button', { name: 'Search bulk' }).click()
+  const foot = panel.locator('.w-pc-foot')
+  await expect(foot).toContainText('10 bulk sellers in 40 of 60 listings')
+  await expect(panel.getByRole('button', { name: 'Bulk', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(fetches.searches).toHaveLength(1)
+  expect(fetches).toHaveLength(4)
+  await overlay.snap('price check search bulk')
   expect(overlay.errors).toEqual([])
 })
