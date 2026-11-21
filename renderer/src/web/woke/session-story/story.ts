@@ -8,7 +8,7 @@ import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
-import { isSkippedArea } from './skip-areas'
+import { isSkippedArea, knownAreaName } from './skip-areas'
 
 export const NIGHT_GAP_MS = 15 * 60_000
 const OPENING = '***** LOG FILE OPENING *****'
@@ -47,7 +47,13 @@ export interface StoryMap {
 }
 
 // One stretch of the strip: a map (index into maps) or time out of maps.
-export interface StripPart { ms: number, map: number | null }
+export interface StripPart {
+  ms: number
+  map: number | null
+  // An area on the skip list (a vault): drawn faint, counted as neither map nor
+  // hideout time, so the strip still matches the clock.
+  skipped?: boolean
+}
 
 export interface NightStory {
   id: string
@@ -94,7 +100,8 @@ export class NightTracker {
       const side = staysInRun(ev.areaId) && !!prev?.map
       const map = isMapArea(ev.areaId) || side
       const key = side ? prev.key : `${ev.areaId}:${ev.seed ?? ''}`
-      this.draft.segs.push({ at, map, key, name: map && !side ? mapNameFromArea(ev.areaId) : '', named: side, level: ev.areaLevel })
+      const known = map && !side ? knownAreaName(ev.areaId) : null
+      this.draft.segs.push({ at, map, key, name: map && !side ? known ?? mapNameFromArea(ev.areaId) : '', named: side || !!known, level: ev.areaLevel })
     } else if (ev?.kind === 'zone') {
       const seg = this.draft?.segs[this.draft.segs.length - 1]
       // "You have entered Strand." names the map it follows.
@@ -144,10 +151,15 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
   let lastMap: number | null = null
   const skip = skippedKeys(d)
   d.segs.forEach((s, i) => {
-    // A vault counts as neither map nor hideout time, and leaves no mark on the strip.
-    if (s.map && skip.has(s.key)) return
     const end = i + 1 < d.segs.length ? d.segs[i + 1].at : endedAt
     const ms = Math.max(0, end - s.at)
+    // A vault counts as neither map nor hideout time: its own faint part.
+    if (s.map && skip.has(s.key)) {
+      const prev = strip[strip.length - 1]
+      if (prev?.skipped) prev.ms += ms
+      else strip.push({ ms, map: null, skipped: true })
+      return
+    }
     let part: number | null = null
     if (s.map) {
       let idx = byKey.get(s.key)
@@ -167,13 +179,13 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
       if (lastMap != null) maps[lastMap].otherMs += ms
     }
     const prev = strip[strip.length - 1]
-    if (prev && prev.map === part) prev.ms += ms
+    if (prev && !prev.skipped && prev.map === part) prev.ms += ms
     else strip.push({ ms, map: part })
   })
   // Only gaps with a map on both sides: not the time before the first or after the last.
   let longestBreakMs = 0
   strip.forEach((p, i) => {
-    if (p.map == null && i > 0 && i < strip.length - 1) longestBreakMs = Math.max(longestBreakMs, p.ms)
+    if (p.map == null && !p.skipped && i > 0 && i < strip.length - 1) longestBreakMs = Math.max(longestBreakMs, p.ms)
   })
   // Party members' level-ups are logged too: follow the first character
   // that levels, as the run timer does.
@@ -196,7 +208,8 @@ export function summarize (d: NightDraft, endedAt = d.lastAt): NightStory {
     strip: strip.filter(p => p.ms > 0),
     mapMs,
     otherMs,
-    deathsAt: d.deaths.map(x => x.at),
+    // Deaths in a vault aren't the night's map deaths.
+    deathsAt: d.deaths.filter(x => !skip.has(x.key)).map(x => x.at),
     profitChaos: null,
     divine: null,
     best: null,

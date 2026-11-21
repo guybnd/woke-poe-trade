@@ -7,7 +7,7 @@ import { lineTime } from '../campaign/log-tail'
 import { parseLogLine, slainName, speakerOf } from '../campaign/log-parse'
 import { isMapArea, mapNameFromArea } from '../farming/farming'
 import { staysInRun } from '../death-recap/death-log'
-import { isSkippedArea } from './skip-areas'
+import { isSkippedArea, knownAreaName } from './skip-areas'
 import { NIGHT_GAP_MS } from './story'
 
 const OPENING = '***** LOG FILE OPENING *****'
@@ -96,6 +96,11 @@ export class MapLog {
       this.naming = false
       const side = staysInRun(ev.areaId) && this.inMap
       if (side) return
+      // A vault on the skip list, known by its id: not a map at all.
+      if (isSkippedArea(knownAreaName(ev.areaId))) {
+        this.leave(at)
+        return
+      }
       if (isMapArea(ev.areaId)) {
         const key = `${ev.areaId}:${ev.seed ?? ''}`
         if (this.current?.key !== key) {

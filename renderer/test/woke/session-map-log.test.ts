@@ -143,8 +143,19 @@ describe('vaults in the map log', () => {
       area('21:14:00', 'HideoutChurch', '1', 68)
     ])
     expect(left.map(r => r.name)).toEqual(['Strand'])
+    // A vault doesn't end the map before it: that waits for the next map or the night's end.
+    expect(log.current?.name).toBe('Strand')
+    log.finish(0)
     expect(done.map(r => r.name)).toEqual(['Strand'])
+    expect(done[0].mapMs).toBe(6 * 60_000)
+  })
+
+  it('never starts a vault as a map, so going in fires no map entry', () => {
+    let entered = 0
+    const log = new MapLog({ onLeave: () => {}, onDone: () => {}, onEnter: () => { entered++ } })
+    log.feed(area('21:10:00', 'MapWorldsMemoryVault2', '21', 84), 0)
     expect(log.current).toBeNull()
+    expect(entered).toBe(0)
   })
 })
 

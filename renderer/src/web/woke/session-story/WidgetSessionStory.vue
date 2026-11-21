@@ -77,7 +77,7 @@ import { chipLines, clampScale, compareMap } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
-import { setSkipAreas } from './skip-areas'
+import { isSkippedArea, setSkipAreas } from './skip-areas'
 import { CHIP_CLOSE_TARGET } from './widget'
 import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
@@ -90,10 +90,14 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   Object.assign(props.config, initSessionStoryWidget(props.config.wmId))
 }
 hideWhilePlaying(props.config)
-// Vaults and other areas that aren't counted as maps (Settings).
-watch(() => props.config.skipAreas, (list) => { setSkipAreas(list) }, { immediate: true, deep: true })
 
 const store = useNights()
+// Vaults and other areas that aren't counted as maps (Settings).
+watch(() => props.config.skipAreas, (list, old) => {
+  setSkipAreas(list)
+  // Tonight's card and Ctrl+Space follow a changed list right away.
+  if (old !== undefined || list !== undefined) store.setLive(store.keptDraft())
+}, { immediate: true, deep: true })
 const dockRef = shallowRef<{ peek: (text: string, ms?: number) => void, unpeek: () => void } | null>(null)
 // The map chip stays this long after you leave a map.
 const CHIP_MS = 8000
@@ -295,7 +299,7 @@ function chipText (rec: MapRecord): string {
 const gearOpen = shallowRef(false)
 const cardGear = shallowRef(false)
 function showMe () {
-  const [last, ...before] = store.maps.value
+  const [last, ...before] = store.maps.value.filter(m => !isSkippedArea(m.name))
   if (!last) return
   if ((props.config.chipPlace ?? 'dock') === 'center') showChip(last, compareMap(last, before), chipMs())
   else {

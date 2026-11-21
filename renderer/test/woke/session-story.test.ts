@@ -148,14 +148,22 @@ describe('areas on the skip list', () => {
   ]
   afterEach(() => { setSkipAreas(undefined) })
 
-  it('leaves a vault out of the maps, both times and the strip', () => {
+  it('leaves a vault out of the maps, both times and its deaths, as a faint strip part', () => {
     const s = summarize(follow(VAULT_NIGHT).tracker.draft!)
     expect(s.maps.map(m => m.name)).toEqual(['Strand', 'Cemetery'])
     expect(s.mapMs).toBe(12 * 60_000)
     // Hideout: 2 before Strand, 2 + 2 around the vault, 2 at the end; the vault's 2 are nowhere.
     expect(s.otherMs).toBe(8 * 60_000)
-    expect(s.strip.map(p => p.map)).toEqual([null, 0, null, 1, null])
-    expect(s.longestBreakMs).toBe(4 * 60_000)
+    // Hideout, Strand, hideout, vault, hideout, Cemetery, hideout: the strip still adds up to the clock.
+    expect(s.strip.map(p => p.skipped ? 'vault' : p.map)).toEqual([null, 0, null, 'vault', null, 1, null])
+    expect(s.strip.reduce((n, p) => n + p.ms, 0)).toBe(at('21:22:00') - at('21:00:00'))
+    expect(s.longestBreakMs).toBe(2 * 60_000)
+    expect(s.deathsAt).toEqual([])
+  })
+
+  it('knows a vault by its area id, without the English entry line', () => {
+    const s = summarize(follow(VAULT_NIGHT.filter(l => !l.includes("Zealot's Vault"))).tracker.draft!)
+    expect(s.maps.map(m => m.name)).toEqual(['Strand', 'Cemetery'])
   })
 
   it('counts it again once taken off the list, and takes any area added by name', () => {

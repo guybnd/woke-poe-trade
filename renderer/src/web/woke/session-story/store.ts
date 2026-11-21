@@ -11,6 +11,7 @@ import { ledgerKey } from '../net-worth/glance'
 import { NIGHT_GAP_MS, bestDrop, hasMaps, isNightStory, keepNight, summarize } from './story'
 import type { NightDraft, NightStory } from './story'
 import { isMapRecord, keepMap } from './map-log'
+import { skipVersion } from './skip-areas'
 import type { MapRecord } from './map-log'
 
 export const NIGHTS_COLLECTION = 'session-story'
@@ -143,7 +144,7 @@ export const useNights = createGlobalState(() => {
     draft = d
     // Once a minute at most while nothing changes, so Ctrl+Space doesn't redo
     // its answers on every log line.
-    const sig = d ? `${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}` : ''
+    const sig = d ? `${skipVersion()}:${d.startedAt}:${d.segs.length}:${d.deaths.length}:${d.levels?.length ?? 0}:${d.segs[d.segs.length - 1]?.name}:${Math.floor(d.lastAt / 60_000)}` : ''
     if (sig === liveSig) return
     liveSig = sig
     live.value = d && hasMaps(d) ? summarize(d) : null

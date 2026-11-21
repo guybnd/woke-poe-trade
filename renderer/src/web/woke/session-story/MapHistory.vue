@@ -49,6 +49,7 @@ import { formatSessionDate, inRange } from '../analytics/stats'
 import type { AnalyticsRange } from '../analytics/types'
 import { isWidgetTypeOn } from '../modules'
 import { tierText } from './map-log'
+import { isSkippedArea } from './skip-areas'
 import type { MapRecord } from './map-log'
 import { DAY_MS_EXPORT, dayKey, readAllMaps, readMapDay, useNights } from './store'
 import { SESSION_STORY_TYPE } from './widget'
@@ -89,7 +90,8 @@ watch(() => store.maps.value[0], (rec) => {
 })
 
 // "League" and "7 days" are this league's; maps saved before leagues were noted count as this one.
-const list = computed(() => all.value.filter(m =>
+// Vaults saved before they were skipped are left out too.
+const list = computed(() => all.value.filter(m => !isSkippedArea(m.name) &&
   (props.range === 'all' || !m.league || m.league === props.league) && inRange(m.enteredAt, props.range, props.now)))
 
 const PAGE = 100
