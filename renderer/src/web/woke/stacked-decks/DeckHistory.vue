@@ -19,7 +19,7 @@
             @click="openId = row.r.id" @keydown.delete.prevent="remove(row.r)">
             <span class="w-trunc w-dim">{{ formatSessionDate(row.r.startedAt) }}</span>
             <span class="text-right w-num">{{ row.r.decks.toLocaleString('en-US') }}</span>
-            <span class="w-trunc">{{ row.t.top?.name ?? '—' }}</span>
+            <span v-item-tip="row.t.top ? { name: row.t.top.name } : null" class="w-trunc">{{ row.t.top?.name ?? '—' }}</span>
             <span class="text-right w-num" :class="tone(row.t.result)">{{ row.t.result != null ? signed(row.t.result, row.r) : '—' }}</span>
           </button>
         </div>
@@ -44,7 +44,7 @@
 <script setup lang="ts">
 // Session analytics' Stacked decks tab: every saved deck session.
 import { computed, shallowRef } from 'vue'
-import { WBanner, WButton, WEmpty, WSkeleton, toast } from '../ui'
+import { WBanner, WButton, WEmpty, WSkeleton, toast, vItemTip } from '../ui'
 import { useWindowKeys } from '../ui/window-keys'
 import { formatChaos, formatDuration } from '../ui/format'
 import { formatSessionDate, inRange } from '../analytics/stats'

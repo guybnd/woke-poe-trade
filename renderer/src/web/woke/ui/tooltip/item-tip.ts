@@ -211,8 +211,7 @@ function watchHovered () {
   }, 400)
 }
 
-function enter (e: Event) {
-  const el = e.currentTarget as HTMLElement
+function enter (el: HTMLElement) {
   const ref = refs.get(el)
   hovered = el
   watchHovered()
@@ -240,6 +239,33 @@ function enter (e: Event) {
       else hideTip()
     })
   }, SHOW_DELAY_MS)
+}
+
+// One pair of listeners for the whole page, not three per row: the innermost
+// element with v-item-tip under the pointer is the hovered one. (Per-row
+// listeners put long lists over the perf budget's listener count.)
+function tipEl (node: EventTarget | null): HTMLElement | null {
+  let el = node instanceof Element ? node : node instanceof Node ? node.parentElement : null
+  for (; el; el = el.parentElement) {
+    if (refs.has(el as HTMLElement)) return el as HTMLElement
+  }
+  return null
+}
+
+let watchingHover = false
+function watchHover () {
+  if (watchingHover) return
+  watchingHover = true
+  document.addEventListener('mouseover', (e) => {
+    const el = tipEl(e.target)
+    if (el === hovered) return
+    if (hovered) leave()
+    if (el) enter(el)
+  })
+  // Out of the window: no mouseover follows.
+  document.addEventListener('mouseout', (e) => {
+    if (!e.relatedTarget && hovered) leave()
+  })
 }
 
 // Dock cards take clicks while the game has focus. Leaving one makes the window
@@ -270,21 +296,27 @@ function watchRightClicks () {
   if (offering) return
   offering = true
   document.addEventListener('contextmenu', (e) => {
-    for (let el = e.target as Element | null; el; el = el.parentElement) {
-      const ref = refs.get(el as HTMLElement)
-      if (ref?.noMenu) return
-      if (ref?.name) { offerItem(e, menuRef(ref)); return }
-    }
+    if (!tipEl(e.target)) return
+    // The menu opens where the tooltip would be in the way.
+    leave()
+    offerItem(e, menuRef(menuTipRef(e.target)))
   }, true)
+  // After them: a row that opened its own menu (openMenu prevents the default)
+  // already shows the item on top; otherwise the item's menu opens alone.
+  document.addEventListener('contextmenu', (e) => {
+    if (tipEl(e.target)) openItemMenu(e, menuRef(menuTipRef(e.target)))
+  })
 }
 
-// After them: nothing opened a menu, so the item's alone. An ancestor row that
-// opens its own later replaces it, still with the item on top.
-function menu (e: Event) {
-  // The menu opens where the tooltip would be in the way.
-  leave()
-  if (refs.get(e.currentTarget as HTMLElement)?.noMenu) return
-  openItemMenu(e as MouseEvent, menuRef(refs.get(e.currentTarget as HTMLElement)))
+// The innermost item under the pointer that has a name, for its menu; none
+// inside a row whose right-click is its own (noMenu).
+function menuTipRef (target: EventTarget | null): ItemTipRef | null {
+  for (let el = tipEl(target); el; el = tipEl(el.parentElement)) {
+    const ref = refs.get(el)
+    if (ref?.noMenu) return null
+    if (ref?.name) return ref
+  }
+  return null
 }
 
 // Marks an element that shows the item tooltip, for the e2e hover gate
@@ -298,11 +330,9 @@ export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefine
   mounted (el, binding) {
     watchHoverZones()
     watchRightClicks()
+    watchHover()
     refs.set(el, binding.value)
     mark(el, binding.value)
-    el.addEventListener('mouseenter', enter)
-    el.addEventListener('mouseleave', leave)
-    el.addEventListener('contextmenu', menu)
   },
   updated (el, binding) {
     const before = refs.get(el)
@@ -313,9 +343,7 @@ export const vItemTip: ObjectDirective<HTMLElement, ItemTipRef | null | undefine
     if (hovered === el && (before?.name !== after?.name || before?.variant !== after?.variant)) leave()
   },
   beforeUnmount (el) {
-    el.removeEventListener('mouseenter', enter)
-    el.removeEventListener('mouseleave', leave)
-    el.removeEventListener('contextmenu', menu)
+    refs.delete(el)
     if (hovered === el) leave()
   }
 }
