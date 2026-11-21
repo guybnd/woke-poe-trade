@@ -15,7 +15,7 @@ test("a Viscera from search opens its price check: Maven's Orrery", async ({ ove
   await overlay.showScreen('screens/map-real-01.png')
   await overlay.pressHotkey('Ctrl + Space')
   const search = overlay.widget('woke-search')
-  const box = search.getByRole('textbox', { name: 'Search' })
+  const box = search.getByRole('textbox', { name: 'Search', exact: true })
   const result = search.getByRole('button', { name: /Maven's Orrery/ }).first()
   await expect(async () => {
     await box.fill("maven's orrery")

@@ -88,7 +88,7 @@ test('price check: boxes that had their own wheel still step once a notch', asyn
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel).toContainText('Matched: 1')
 
   const cap = panel.locator('[data-affix-cap="prefix"]:visible input')

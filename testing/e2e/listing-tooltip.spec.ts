@@ -36,7 +36,7 @@ test('a listing shows tiers, rolls and its numbers on hover', async ({ overlay }
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel.locator('.w-pc-foot')).toBeVisible()
 
   const tip = overlay.page.getByRole('tooltip')
@@ -81,7 +81,7 @@ test('a cluster jewel listing says where each notable sits on hover', async ({ o
   await overlay.boot()
   await overlay.copyItem('items/rare-cluster-large.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(panel.locator('.w-pc-foot')).toBeVisible()
 
   const tip = overlay.page.getByRole('tooltip')

@@ -53,7 +53,7 @@ test('Bulk shows only multi-copy sellers and loads more pages on the click', asy
   await overlay.boot()
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   const foot = panel.locator('.w-pc-foot')
   await expect(foot).toContainText('20 of 60 listings')
   // Opening the check fetched only the usual two pages.

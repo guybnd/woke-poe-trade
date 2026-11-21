@@ -40,7 +40,7 @@ async function fakeTrade (page: Page) {
 
 async function searchNow (page: Page, panel: ReturnType<Page['locator']>, searches: any[]) {
   const before = searches.length
-  const search = panel.getByRole('button', { name: 'Search' })
+  const search = panel.getByRole('button', { name: 'Search', exact: true })
   if (await search.isVisible()) await search.click()
   await expect.poll(() => searches.length).toBeGreaterThan(before)
   return searches.at(-1).query.filters.socket_filters?.filters.sockets

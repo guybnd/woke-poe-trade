@@ -28,7 +28,7 @@ test(`${layout}: an added mod waits for Search, then searches with the item`, as
   await overlay.boot(patch ? { patch } : {})
   await overlay.copyItem('items/rare-ring.txt')
   const panel = overlay.widget('price-check')
-  await panel.getByRole('button', { name: 'Search' }).waitFor()
+  await panel.getByRole('button', { name: 'Search', exact: true }).waitFor()
   const before = searches.length
 
   const box = panel.getByRole('combobox', { name: 'Add a mod to search for' })
@@ -55,7 +55,7 @@ test(`${layout}: an added mod waits for Search, then searches with the item`, as
   expect(searches.length).toBe(before)
   await overlay.snap('added, waiting for Search')
 
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(before + 1)
   const and = searches[before].query.stats[0]
   expect(and.filters).toContainEqual({ id: 'pseudo.pseudo_increased_rarity', value: { min: 25 }, disabled: false })
@@ -64,7 +64,7 @@ test(`${layout}: an added mod waits for Search, then searches with the item`, as
 
   // Unticking keeps it in the query, switched off; ✕ drops it.
   await row.getByRole('checkbox').click()
-  await panel.getByRole('button', { name: 'Search' }).click()
+  await panel.getByRole('button', { name: 'Search', exact: true }).click()
   await expect.poll(() => searches.length).toBe(before + 2)
   expect(searches[before + 1].query.stats[0].filters)
     .toContainEqual(expect.objectContaining({ id: 'pseudo.pseudo_increased_rarity', disabled: true }))

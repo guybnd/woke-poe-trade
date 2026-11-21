@@ -7,7 +7,7 @@ test('a unique priced from search lists its mods, and a ticked one goes into the
   await overlay.showScreen('screens/map-real-01.png')
   await overlay.pressHotkey('Ctrl + Space')
   const search = overlay.widget('woke-search')
-  await search.getByRole('textbox', { name: 'Search' }).fill('mortem morsu')
+  await search.getByRole('textbox', { name: 'Search', exact: true }).fill('mortem morsu')
   const result = search.getByRole('button', { name: /Mortem Morsu/ }).first()
   await expect(result).toBeVisible({ timeout: 20_000 })
   await result.click({ button: 'right' })
