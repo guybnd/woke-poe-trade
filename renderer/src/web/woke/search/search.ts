@@ -187,3 +187,14 @@ export function arrangeSections<E> (query: string, parts: {
     ...parts.web
   ].filter(s => s.entries.length)
 }
+
+// Whether the row you had stays picked as the list is rebuilt. While you type,
+// the web search is only a fallback, and a new answer at the top takes over:
+// "50d/" picks the web row, "50d/c" its answer. A refresh with the same query
+// (prices, a countdown ticking) keeps your row.
+export function keepSelection<E> (kept: E | undefined, first: E | undefined, typed: boolean, group: (e: E) => string | null): E | undefined {
+  if (!kept || !typed) return kept
+  if (group(kept) === 'Search the web') return undefined
+  if (first !== undefined && first !== kept && group(first) === 'Answer' && group(kept) !== 'Answer') return undefined
+  return kept
+}

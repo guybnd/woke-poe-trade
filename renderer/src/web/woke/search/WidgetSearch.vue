@@ -170,7 +170,7 @@ import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, keepSelection, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -838,6 +838,8 @@ const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ?
 let showAnswer = false
 // A jump from a beast's recipes picks this entry once the list has it.
 let wantEntry: ((e: Entry) => boolean) | null = null
+// The query the list was last built for.
+let listQuery = ''
 watch(entries, (list) => {
   const id = selected.value?.id
   const wanted = wantEntry ? list.find(wantEntry) : undefined
@@ -845,8 +847,15 @@ watch(entries, (list) => {
   const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
   showAnswer = false
   const picked = id != null && id === pickedId ? selected.value : null
-  selected.value = wanted ?? answer ?? list.find(e => e.id === id) ?? picked ?? list[0] ?? null
+  // The web search is only the fallback while you type: once "50d/" becomes
+  // "50d/c", its answer (or whatever now leads) is what you see.
+  // A refresh with the same query (prices, a ticking countdown) keeps your row.
+  const typed = query.value !== listQuery
+  listQuery = query.value
+  const keep = keepSelection(list.find(e => e.id === id), list[0], typed, groupOf)
+  selected.value = wanted ?? answer ?? keep ?? picked ?? list[0] ?? null
 })
+const groupOf = (e: Entry) => e.kind === 'lookup' ? e.card.group : null
 
 function move (dir: 1 | -1) {
   const list = entries.value
