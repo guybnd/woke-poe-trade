@@ -61,22 +61,21 @@ import Widget from '@/web/overlay/Widget.vue'
 import { WBanner, WButton, WEmpty, WPanel } from '../ui'
 import MapToast from './MapToast.vue'
 import ChipSettings from './ChipSettings.vue'
-import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
+import { formatChaos, formatClock, formatDuration } from '../ui/format'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'
 import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
 import { lineTime } from '../campaign/log-tail'
 import { followGameLog } from '../shared/game-log'
 import NightCard from './NightCard.vue'
-import { NIGHT_GAP_MS, NightTracker, farmingProfit } from './story'
-import { useSessionStore } from '../analytics/store'
-import { sessionTotals } from '../analytics/stats'
+import { NIGHT_GAP_MS, NightTracker } from './story'
 import type { NightStory } from './story'
 import { MapLog } from './map-log'
 import { chipLines, clampScale, compareMap } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
+import { nightTitle, useNightList } from './nights'
 import { isSkippedArea, knownAreaName, setSkipAreas } from './skip-areas'
 import { setAreaSkip } from '../farming/farming'
 import { CHIP_CLOSE_TARGET } from './widget'
@@ -155,9 +154,6 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
   if (e.target === CHIP_CLOSE_TARGET) closeChip()
 })
 onUnmounted(() => { chipKeySub.abort() })
-// A finished night shows on the dock for this long.
-const RECENT_MS = 12 * 3_600_000
-
 // Each map, for the chip and Session analytics' Map history.
 const mapLog = new MapLog({
   onLeave: (rec) => {
@@ -258,40 +254,9 @@ Promise.all([store.load(), store.loadMaps()]).then(() => {
   })
 })
 
-interface Shown { story: NightStory, live: boolean }
-
-const shown = computed<Shown | null>(() => {
-  if (store.live.value) return { story: store.live.value, live: true }
-  const last = store.nights.value[0]
-  return last && nowMinute.value - last.endedAt < RECENT_MS ? { story: last, live: false } : null
-})
-
-const list = computed<Shown[]>(() => [
-  ...(store.live.value ? [{ story: store.live.value, live: true }] : []),
-  ...store.nights.value.map(story => ({ story, live: false }))
-])
+const { shown, list, farmOf, profitOf } = useNightList()
 const picked = shallowRef<string | null>(null)
 const selected = computed(() => list.value.find(n => n.story.id === picked.value) ?? list.value[0] ?? null)
-
-function nightTitle (s: NightStory): string {
-  const d = new Date(s.startedAt)
-  return `Night of ${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}`
-}
-
-// Farming's saved sessions: profit for nights the stash reader didn't read.
-const sessions = useSessionStore()
-sessions.load().catch(() => {})
-const farmSessions = computed(() => sessions.sessions.value.map(s => ({ startedAt: s.startedAt, endedAt: s.endedAt, profit: sessionTotals(s).profit })))
-function farmOf (s: NightStory) {
-  if (s.profitChaos != null) return null
-  // The next night: the one just newer in the list (the live one is newest).
-  const i = list.value.findIndex(n => n.story.id === s.id)
-  const next = i > 0 ? list.value[i - 1].story.startedAt : null
-  return farmingProfit(s, next, farmSessions.value)
-}
-function profitOf (s: NightStory): number | null {
-  return s.profitChaos ?? farmOf(s)?.chaos ?? null
-}
 
 // One line on the dock: "Fortress T16 · 1:30 · 1h avg 2:15 (2) ▼0:45 · …"
 function chipText (rec: MapRecord): string {

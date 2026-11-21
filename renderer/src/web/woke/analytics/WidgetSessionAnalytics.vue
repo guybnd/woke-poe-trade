@@ -1,10 +1,14 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
     <WPanel ref="panel" :keys="windowKeys.help" :title="config.wmTitle || 'Session analytics'" :icon="panelIcon" width="34rem" :busy="busy">
-      <template v-if="store.error.value" #banner>
-        <WBanner>Couldn't read your saved sessions: {{ store.error.value }}
+      <template v-if="store.error.value || tonight" #banner>
+        <WBanner v-if="store.error.value">Couldn't read your saved sessions: {{ store.error.value }}
           <template #actions><WButton size="sm" @click="reload">Retry</WButton></template>
         </WBanner>
+        <!-- Tonight's strip and totals stay on top of every tab (Session story's card). -->
+        <div v-if="tonight" :class="$style.tonight" data-analytics-tonight>
+          <NightCard :story="tonight.story" :live="tonight.live" :farm="farmOf(tonight.story)" :title="tonight.live ? 'Tonight so far' : nightTitle(tonight.story)" />
+        </div>
       </template>
       <template #tabs>
         <WTabs v-model="tab" :options="tabOptions" />
@@ -240,6 +244,8 @@ import { tradeTotals, tradesInRange, useTradeLog } from '../trade/log-store'
 import { isModuleOn } from '../modules'
 import DeckHistory from '../stacked-decks/DeckHistory.vue'
 import MapHistory from '../session-story/MapHistory.vue'
+import NightCard from '../session-story/NightCard.vue'
+import { nightTitle, useNightList } from '../session-story/nights'
 import { useVisibleClock } from '../shared/visible-clock'
 import {
   MIN_UNITS_FOR_RANGE, buildRow, chanceBetter, exportRows, filterSessions, formatSessionDate,
@@ -266,18 +272,25 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   wm.show(props.config.wmId)
 }
 
-const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>('strategies')
+const storyOn = computed(() => isModuleOn(AppConfig(), 'session-story'))
+// With Session story on, the window opens on the maps you ran: tonight's strip sits above them.
+const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>(storyOn.value ? 'history' : 'strategies')
 const tabOptions = computed(() => [
+  ...(storyOn.value ? [{ value: 'history', label: 'Map history' }] : []),
   { value: 'strategies', label: 'Strategies' },
   { value: 'sessions', label: 'Sessions' },
   { value: 'maps', label: 'Maps' },
-  ...(isModuleOn(AppConfig(), 'session-story') ? [{ value: 'history', label: 'Map history' }] : []),
   ...(isModuleOn(AppConfig(), 'stacked-decks') ? [{ value: 'decks', label: 'Stacked decks' }] : [])
 ])
 const rangeOptions = [{ value: '7d', label: '7 days' }, { value: 'league', label: 'League' }, { value: 'all', label: 'All' }]
 const unitOptions = [{ value: 'div', label: 'div' }, { value: 'chaos', label: 'c' }]
 
 const store = useSessionStore()
+
+// Tonight (or a night that ended in the last 12 hours), from Session story.
+const nightList = useNightList()
+const farmOf = nightList.farmOf
+const tonight = computed(() => storyOn.value ? nightList.shown.value : null)
 // Re-read when the window opens, in case another copy of the app saved.
 watch(() => props.config.wmWants, (wants) => { if (wants === 'show') store.load(true) }, { immediate: true })
 store.load()
@@ -543,6 +556,7 @@ const tiles = computed(() => mapTileRows(inView.value, props.config.unit, divine
 </script>
 
 <style module>
+.tonight { padding: 2px 0 8px; border-bottom: 1px solid var(--w-line); }
 .stratGrid { grid-template-columns: minmax(0, 1fr) 40px 40px 136px 52px; gap: 6px; }
 .sessGrid { grid-template-columns: 104px minmax(0, 1fr) 36px 52px 56px 52px; gap: 6px; }
 .tileGrid { grid-template-columns: minmax(0, 1fr) 36px 56px 56px 56px 48px; gap: 6px; }
