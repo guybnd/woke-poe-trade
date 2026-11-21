@@ -103,7 +103,7 @@ export const MODULES: ModuleDef[] = shallowReactive<ModuleDef[]>([
 // its widget type from removedTypes below.
 export const RETIRED_MODULES: ModuleDef[] = [
   { id: 'league-invest', name: 'Investments', description: 'League-start buys ranked from past leagues', group: 'economy', widgetTypes: ['woke-league-invest'], icon: { fa: 'fas fa-seedling', item: 'Mirror Shard' }, needs: ['poll', 'network'] },
-  { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'mapping', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] },
+  { id: 'farming', name: 'Farming', description: 'Session profit per hour', group: 'mapping', widgetTypes: ['woke-farming'], icon: { fa: 'fas fa-coins', currency: 'chaos' }, needs: ['log', 'prices', 'hotkeys'] }
 ]
 const retiredTypes = new Set(RETIRED_MODULES.flatMap(m => m.widgetTypes))
 export function isRetiredWidgetType (wmType: string): boolean {
