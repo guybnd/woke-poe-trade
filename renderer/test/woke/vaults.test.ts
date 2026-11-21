@@ -145,6 +145,8 @@ describe('search', () => {
     expect(lookup("arkhon's vault", ctx)[0].sections[0].label!.startsWith("Arkhon's Vault")).toBe(true)
     expect(lookup('zea', ctx)).toEqual([])
     expect(vaultLookup(null)('vault', ctx)).toEqual([])
+    // No spawn rate: it depends on how you play (Guy, 2026-11-21).
+    expect(JSON.stringify(card)).not.toMatch(/\d+% of/)
   })
 
   it('names each Nightmare map’s vault without adding it to profit', () => {

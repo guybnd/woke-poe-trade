@@ -164,8 +164,7 @@ function vaultTitle (v: { id: string }) {
   const b = vaultBlocks.value.find(x => x.id === v.id)
   if (!b) return undefined
   const lines = b.rewards.map(r => `${r.text}${r.rare ? ' (rare)' : ''}: ${r.chaos != null ? chaos(r.chaos) : 'varies'}`)
-  return [`${b.name} · ${b.quadrant} · ~${chaos(b.typical)} typical pick`, ...lines].join('
-')
+  return [`${b.name} · ${b.quadrant} · ~${chaos(b.typical)} typical pick`, ...lines].join('\n')
 }
 // Every vault, the ones these maps spawn first, best typical pick first.
 const vaultBlocks = computed(() => {
