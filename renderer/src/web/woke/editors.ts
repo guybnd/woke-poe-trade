@@ -16,7 +16,6 @@ import { DROP_COUNTER_TYPE } from './drop-counter/drop-counter'
 import { STACKED_DECKS_TYPE } from './stacked-decks/deck'
 import { MECHANICS_TYPE } from './mechanics/widget'
 import { MAP_MODS_TYPE } from './map-mods/widget'
-import { MAP_SCAN_TYPE } from './map-mods/scan'
 import { ESSENCE_SCAN_TYPE } from './essence-scan/widget'
 import { LOOT_FILTER_TYPE } from './loot-filter/widget'
 import { TRADE_TYPE } from './trade/widget'
@@ -41,7 +40,6 @@ const DropCounterEditor = defineAsyncComponent(() => import('./drop-counter/drop
 const StackedDecksEditor = defineAsyncComponent(() => import('./stacked-decks/stacked-decks-editor.vue'))
 const MechanicsEditor = defineAsyncComponent(() => import('./mechanics/mechanics-editor.vue'))
 const MapModsEditor = defineAsyncComponent(() => import('./map-mods/map-mods-editor.vue'))
-const MapScanEditor = defineAsyncComponent(() => import('./map-mods/map-scan-editor.vue'))
 const EssenceScanEditor = defineAsyncComponent(() => import('./essence-scan/essence-scan-editor.vue'))
 const LootFilterEditor = defineAsyncComponent(() => import('./loot-filter/loot-filter-editor.vue'))
 const TradeEditor = defineAsyncComponent(() => import('./trade/trade-editor.vue'))
@@ -63,7 +61,6 @@ const editors: Record<string, Component> = {
   [LAB_TYPE]: LabEditor,
   [CHALLENGES_TYPE]: ChallengesEditor,
   [MAP_MODS_TYPE]: MapModsEditor,
-  [MAP_SCAN_TYPE]: MapScanEditor,
   [ESSENCE_SCAN_TYPE]: EssenceScanEditor,
   [MECHANICS_TYPE]: MechanicsEditor,
   [LOOT_FILTER_TYPE]: LootFilterEditor,

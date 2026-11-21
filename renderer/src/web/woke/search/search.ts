@@ -123,6 +123,18 @@ export function passesCorrupted (item: { type: string, variant: string }, filter
 }
 
 // Anything else with a name: tools, settings pages, items with no price.
+// The one of several names (a tool's name and its old ones) that best matches
+// the query, for searchNamed. The first name when none matches.
+export function bestName (names: readonly string[], query: string): string {
+  let best = names[0]
+  let rank = -1
+  for (const n of names) {
+    const r = matchRank(n, query)
+    if (r >= 0 && (rank < 0 || r < rank)) { best = n; rank = r }
+  }
+  return best
+}
+
 export function searchNamed<T> (list: readonly T[], query: string, name: (entry: T) => string, limit = 8): T[] {
   if (normalize(query).length < MIN_QUERY) return []
   return list

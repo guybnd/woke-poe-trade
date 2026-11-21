@@ -14,8 +14,7 @@ import { WEALTHY_EXILE_TYPE, wealthyExileShortcuts } from './wealthy-exile/widge
 import type { WealthyExileWidget } from './wealthy-exile/widget'
 import { MAP_MODS_TYPE, MAP_MODS_TARGET } from './map-mods/widget'
 import type { MapModsWidget } from './map-mods/widget'
-import { MAP_SCAN_TYPE, rollHotkeyTarget, scanHotkeyTarget } from './map-mods/scan'
-import type { MapScanWidget } from './map-mods/scan'
+import { rollHotkeyTarget, scanHotkeyTarget } from './map-mods/scan'
 import { isModuleOn, isWidgetTypeOn } from './modules'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from './essence-scan/widget'
 import type { EssenceScanWidget } from './essence-scan/widget'
@@ -136,6 +135,15 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     if (mapMods.regexHotkey && mapMods.regexText) {
       actions.push({ shortcut: mapMods.regexHotkey, action: { type: 'stash-search', text: mapMods.regexText } })
     }
+    // Map scan runs in the first Map mods window only (scan-session.ts).
+    if (config.widgets.find(w => w.wmType === MAP_MODS_TYPE)?.wmId === widget.wmId) {
+      if (mapMods.scanHotkey) {
+        actions.push({ shortcut: mapMods.scanHotkey, keepModKeys: true, action: { type: 'trigger-event', target: scanHotkeyTarget(widget.wmId) } })
+      }
+      if (mapMods.scanRollHotkey) {
+        actions.push({ shortcut: mapMods.scanRollHotkey, keepModKeys: true, action: { type: 'trigger-event', target: rollHotkeyTarget(widget.wmId) } })
+      }
+    }
     return actions
   }
   if (widget.wmType === FARMING_TYPE) {
@@ -152,17 +160,6 @@ export function wokeShortcutsFor (widget: Widget, config: { woke?: { setupDone: 
     const counter = widget as DropCounterWidget
     if (!counter.hotkey) return []
     return [{ shortcut: counter.hotkey, action: { type: 'copy-item', target: DROP_COUNTER_TARGET } }]
-  }
-  if (widget.wmType === MAP_SCAN_TYPE) {
-    const scan = widget as MapScanWidget
-    const actions: ShortcutAction[] = []
-    if (scan.hotkey) {
-      actions.push({ shortcut: scan.hotkey, keepModKeys: true, action: { type: 'trigger-event', target: scanHotkeyTarget(widget.wmId) } })
-    }
-    if (scan.rollHotkey) {
-      actions.push({ shortcut: scan.rollHotkey, keepModKeys: true, action: { type: 'trigger-event', target: rollHotkeyTarget(widget.wmId) } })
-    }
-    return actions
   }
   if (widget.wmType === SCARAB_FLIP_TYPE) {
     const key = (widget as ScarabFlipWidget).stashHotkey

@@ -28,6 +28,8 @@ export interface HotkeyField {
   hold?: { get: () => string, set: (v: string) => void }
   // Its module is off: the key is free while it stays off.
   off: boolean
+  // Starts or steers a screen scan (listed on Settings › Screen reading).
+  scan?: boolean
 }
 
 function field (w: W, prop: string): Pick<HotkeyField, 'get' | 'set'> {
@@ -47,7 +49,6 @@ const WOKE_KEYS: Record<string, { page: string, keys: Array<[string, string]> }>
   'woke-wealthy-exile': { page: 'market', keys: [['hotkey', 'Show / hide Wealthy Exile']] },
   'woke-challenges': { page: 'challenges', keys: [['hotkey', 'Show / hide the challenge guide']] },
   'woke-map-mods': { page: 'map-mods', keys: [['hotkey', 'Check the hovered map'], ['regexHotkey', 'Paste the map regex']] },
-  'woke-map-scan': { page: 'map-mods', keys: [['hotkey', 'Map scan on / off'], ['rollHotkey', 'Map scan: rolling mode']] },
   'woke-essence-scan': { page: 'essence-scan', keys: [['hotkey', 'Essence scan on / off'], ['onceHotkey', 'Read every essence once']] },
   'woke-loot-filter': { page: 'loot-filter', keys: [['sampleHotkey', 'Loot filter rule for the hovered item'], ['editorHotkey', 'Open the loot filter editor'], ['reloadHotkey', 'Reload the saved loot filter in game'], ['stricterHotkey', 'Loot filter one step stricter'], ['looserHotkey', 'Loot filter one step looser']] },
   'woke-farming': { page: 'farming', keys: [['lootHotkey', 'Farming: add the hovered item']] },
@@ -56,6 +57,8 @@ const WOKE_KEYS: Record<string, { page: string, keys: Array<[string, string]> }>
   'woke-net-worth': { page: 'net-worth', keys: [['hotkey', 'Net worth: show / hide']] },
   'woke-trade': { page: 'trade', keys: [['stepHotkey', 'Trade: next step for the top offer'], ['busyHotkey', 'Trade: busy reply'], ['skipHotkey', 'Trade: skip to the next offer']] }
 }
+
+const MAP_SCAN_KEYS: Array<[string, string]> = [['scanHotkey', 'Map scan on / off'], ['scanRollHotkey', 'Map scan: rolling mode']]
 
 function moduleNameFor (wmType: string): string {
   return MODULES.find(m => m.widgetTypes.includes(wmType))?.name ?? 'Toolkit'
@@ -158,7 +161,12 @@ export function hotkeyFields (config: Config): HotkeyField[] {
     if (isRetiredWidgetType(w.wmType)) continue
     const group = moduleNameFor(w.wmType)
     if (spec) {
-      for (const [prop, label] of spec.keys) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, ...field(w, prop) })
+      const scan = w.wmType === 'woke-essence-scan'
+      for (const [prop, label] of spec.keys) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, scan, ...field(w, prop) })
+      // Map scan's keys: only the first Map mods window scans (shortcuts.ts).
+      if (w.wmType === MAP_MODS_TYPE && w === find(MAP_MODS_TYPE)) {
+        for (const [prop, label] of MAP_SCAN_KEYS) out.push({ id: `${w.wmId}-${prop}`, label, group, page: spec.page, off, scan: true, ...field(w, prop) })
+      }
     } else if (w.wmType === POB_BUILDS_TYPE && w === firstPob) {
       // Unset means the default (Alt + T), which shortcuts.ts registers too.
       const pob = w as unknown as PobBuildsWidget

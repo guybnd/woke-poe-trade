@@ -59,6 +59,7 @@
 
       <!-- Right: the search you take into the game, then what you want from a map. -->
       <div :class="$style.right" class="w-scroll">
+        <MapScanBox v-if="mode === 'maps' && scanOwner" :config="config" />
         <section :class="$style.pane" data-testid="map-stash-search">
           <span class="w-group-label" style="padding: 0;">Stash search</span>
           <div class="flex items-center gap-2 text-xs">
@@ -186,6 +187,8 @@ import { profileRegex } from './search'
 import { activeProfile, rewardsAsk } from './widget'
 import type { MapModsWidget } from './widget'
 import { moduleIcon } from '../ui/game-icons'
+import MapScanBox from './MapScanBox.vue'
+import { isScanOwner } from './scan-session'
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('map-mods').art ?? 'map'
 
@@ -239,6 +242,8 @@ const shownPresets = computed(() => presetsOpen.value ? presets.value : presets.
 const search = shallowRef('')
 const filter = shallowRef('all')
 const mode = shallowRef<ModMode>('maps')
+// Map scan lives in the first Map mods window only.
+const scanOwner = computed(() => isScanOwner(props.config))
 
 // Mods the player hurts themselves with vs. mods that add monsters/rewards.
 function isDanger (m: string) {
