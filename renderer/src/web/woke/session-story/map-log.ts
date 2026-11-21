@@ -29,7 +29,8 @@ export interface MapRecord {
   leftAt: number
   mapMs: number
   deaths: number
-  // Mechanics whose NPC spoke in the map: "Einhar", "Delirium"…
+  // Mechanics seen in the map: an NPC spoke ("Einhar", "Delirium"…), or you
+  // stepped into a Mirage.
   npcs: string[]
   char: string | null
   className: string | null
@@ -52,6 +53,16 @@ const NPCS: Array<[RegExp, string]> = [
   [/^Oshabi$/, 'Harvest'],
   [/^(Tujen|Rog|Dannig|Gwennen)\b/, 'Expedition']
 ]
+
+// Stepping into a Mirage reloads the same map instance, and only the
+// loading screen tells: "[LOADING SCREEN] (Mirage of Fortress) Duration = …".
+// Checked against a real Client.txt.
+const MIRAGE_RE = /\[INFO Client \d+\] \[LOADING SCREEN\] \(Mirage of [^)]+\)/
+export const MIRAGE = 'Mirage'
+
+export function isMirageLoad (line: string): boolean {
+  return MIRAGE_RE.test(line)
+}
 
 export function npcOf (speaker: string): string | null {
   for (const [re, label] of NPCS) if (re.test(speaker)) return label
@@ -171,7 +182,7 @@ export class MapLog {
       return
     }
     const speaker = speakerOf(line)
-    const npc = speaker && /\[INFO Client \d+\]/.test(line) ? npcOf(speaker) : null
+    const npc = speaker && /\[INFO Client \d+\]/.test(line) ? npcOf(speaker) : isMirageLoad(line) ? MIRAGE : null
     if (npc && this.inMap && this.current && !this.current.npcs.includes(npc)) this.current.npcs.push(npc)
   }
 
