@@ -340,7 +340,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
         const failed = settled.find((page): page is PromiseRejectedResult => page.status === 'rejected')
         if (failed) {
           if (!_fetchResults.length) throw failed.reason
-          fetched = API_FETCH_LIMIT
+          if (_searchId === searchId) fetched = API_FETCH_LIMIT
           return
         }
       }
@@ -360,7 +360,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
       }
       // A later page failing leaves what already loaded on screen.
       await fetchMore().catch((err) => {
-        fetched = API_FETCH_LIMIT
+        if (_searchId === searchId) fetched = API_FETCH_LIMIT
         if (!_fetchResults.length) throw err
       })
     } catch (err) {
@@ -512,13 +512,16 @@ export default defineComponent({
     const bulk = shallowRef(false)
     const bulkNote = shallowRef('')
     watch(searchResult, () => { bulk.value = false; bulkNote.value = '' })
-    const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value) : groupedResults.value)
+    // A seller's copies only add up when they'd share a row: same stats, both corrupted or clean.
+    const sameKind = (r: PricingResult) => [Boolean(r.corrupted), ...allColumns.value.map(col => formatStatValue(statValue(r, col), col))].join('|')
+    const tableListings = computed(() => bulk.value ? bulkOnly(groupedResults.value, sameKind) : groupedResults.value)
     async function toggleBulk () {
       bulk.value = !bulk.value
       bulkNote.value = ''
       if (!bulk.value) return
-      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value) >= BULK_ENOUGH)
-      if (note && bulk.value) {
+      const forSearch = searchResult.value
+      const note = await loadMore(() => !bulk.value || bulkSellerCount(groupedResults.value, sameKind) >= BULK_ENOUGH)
+      if (note && bulk.value && searchResult.value === forSearch) {
         bulkNote.value = note
         setTimeout(() => { if (bulkNote.value === note) bulkNote.value = '' }, 3000)
       }
@@ -634,7 +637,7 @@ export default defineComponent({
       bulk,
       bulkNote,
       toggleBulk,
-      bulkSellers: computed(() => bulkSellerCount(groupedResults.value)),
+      bulkSellers: computed(() => bulkSellerCount(groupedResults.value, sameKind)),
       bulkTitle: computed(() => bulk.value
         ? 'Showing sellers with 2 or more copies at one price. Click to show all.'
         : morePages.value

@@ -12,17 +12,20 @@ export interface BulkListing {
 /** Rows the toggle aims for before it stops pulling more result pages. */
 export const BULK_ENOUGH = 10
 
-function key (l: BulkListing) {
-  return `${l.accountName}|${l.priceAmount}|${l.priceCurrency}`
+// kind: what else two copies must share to count as one item (stats, corruption).
+type Kind<T> = (l: T) => string
+
+function key<T extends BulkListing> (l: T, kind?: Kind<T>) {
+  return `${l.accountName}|${l.priceAmount}|${l.priceCurrency}|${kind?.(l) ?? ''}`
 }
 
-export function bulkOnly<T extends BulkListing> (listings: readonly T[]): T[] {
+export function bulkOnly<T extends BulkListing> (listings: readonly T[], kind?: Kind<T>): T[] {
   const copies = new Map<string, number>()
-  for (const l of listings) copies.set(key(l), (copies.get(key(l)) ?? 0) + l.listedTimes)
-  return listings.filter(l => (l.stackSize ?? 0) > 1 || copies.get(key(l))! > 1)
+  for (const l of listings) copies.set(key(l, kind), (copies.get(key(l, kind)) ?? 0) + l.listedTimes)
+  return listings.filter(l => (l.stackSize ?? 0) > 1 || copies.get(key(l, kind))! > 1)
 }
 
-/** Sellers the filter keeps: one per account and price. */
-export function bulkSellerCount (listings: readonly BulkListing[]): number {
-  return new Set(bulkOnly(listings).map(key)).size
+/** Sellers the filter keeps: one per account, price and kind. */
+export function bulkSellerCount<T extends BulkListing> (listings: readonly T[], kind?: Kind<T>): number {
+  return new Set(bulkOnly(listings, kind).map(l => key(l, kind))).size
 }

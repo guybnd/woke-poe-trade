@@ -22,6 +22,12 @@ describe('bulkOnly', () => {
     expect(bulkOnly([l('a', 1, 1, { stackSize: 4 }), l('b', 1, 1, { stackSize: 1 })]).map(x => x.accountName)).toEqual(['a'])
   })
 
+  it('does not add copies of a different kind', () => {
+    const a = { ...l('a', 2), corrupted: true }
+    const b = { ...l('a', 2), corrupted: false }
+    expect(bulkOnly([a, b], x => String(x.corrupted))).toEqual([])
+  })
+
   it('counts one seller per account and price', () => {
     expect(bulkSellerCount([l('a', 2), l('a', 2), l('b', 5, 3), l('c', 1)])).toBe(2)
   })

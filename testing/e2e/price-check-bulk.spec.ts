@@ -43,6 +43,7 @@ async function fakeTrade (page: Page) {
   return fetches
 }
 
+// Runs in the default improved view: one row per price, ×2 on a pair.
 test('Bulk shows only multi-copy sellers and loads more pages on the click', async ({ overlay }) => {
   const fetches = await fakeTrade(overlay.page)
   await overlay.boot()
@@ -54,7 +55,7 @@ test('Bulk shows only multi-copy sellers and loads more pages on the click', asy
   // Opening the check fetched only the usual two pages.
   expect(fetches).toHaveLength(2)
 
-  const bulk = panel.getByRole('button', { name: 'Bulk' })
+  const bulk = panel.getByRole('button', { name: 'Bulk', exact: true })
   await expect(bulk).toHaveAttribute('aria-pressed', 'false')
   await bulk.click()
   await expect(bulk).toHaveAttribute('aria-pressed', 'true')
