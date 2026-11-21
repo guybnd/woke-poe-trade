@@ -79,7 +79,7 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     const rows = panel.locator('tbody tr')
     const names = () => rows.locator('td:first-child').allInnerTexts()
     await expect(rows).toHaveCount(3, { timeout: 10_000 })
-    expect(await names()).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
+    await expect.poll(names).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
     const price = panel.getByRole('button', { name: 'Price', exact: true })
     await price.click()
     await expect.poll(names).toEqual(['Headhunter', "Maven's Writ", 'Empower Support 4/20'])
@@ -87,7 +87,12 @@ test('the stash reader turns on, reads the picked tabs, and Net worth prices the
     await price.click()
     await expect.poll(names).toEqual(['Empower Support 4/20', "Maven's Writ", 'Headhunter'])
     await expect(panel.locator('th[aria-sort="ascending"]')).toContainText('Price')
-    await rows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true }).hover()
+    // hover() scrolls the table to the row, and a scroll hides the tooltip:
+    // scroll first and let the event pass, then hover (as item-tip.spec does).
+    const hh = rows.filter({ hasText: 'Headhunter' }).getByText('Headhunter', { exact: true })
+    await hh.scrollIntoViewIfNeeded()
+    await overlay.page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    await hh.hover()
     await expect(overlay.page.getByRole('tooltip')).toContainText('Headhunter')
     await overlay.snap('net worth sales sorted by price')
     await panel.getByRole('button', { name: 'When', exact: true }).click()
