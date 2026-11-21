@@ -237,7 +237,10 @@ onUnmounted(() => {
 })
 
 // Saved nights first, so the tail only replays what came after the last one.
-Promise.all([store.load(), store.loadMaps()]).then(() => {
+Promise.all([store.load(), store.loadMaps()]).then(async () => {
+  // After an app restart: the night as saved, then the tail adds what came after.
+  const saved = await store.readDraft()
+  if (!tracker.draft) tracker.draft = saved
   if (stopped) return
   // The character the last saved map was run on, until the log names one.
   const lastMap = store.maps.value[0]
