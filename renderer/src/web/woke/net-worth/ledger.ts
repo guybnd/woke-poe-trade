@@ -44,6 +44,10 @@ export interface LedgerPoint {
   netChaos: number | null
   // What changed most, for the hover: "12 × Divine Orb", "−4 × Maven's Writ".
   top: string[]
+  // What the read adds to profit per hour when that isn't netChaos (a
+  // purchase, spend.ts), and the chaos it left out as spent.
+  counted?: number
+  spent?: number
 }
 
 const MAX_POINTS = 3000
@@ -68,14 +72,18 @@ export function addPoint (points: LedgerPoint[], p: LedgerPoint): LedgerPoint[] 
     netChaos: p.netChaos == null ? null : round1(p.netChaos),
     byCategory: Object.fromEntries(Object.entries(p.byCategory).map(([k, v]) => [k, round1(v)])) as Record<Category, number>
   }
+  if (p.counted != null) small.counted = round1(p.counted)
+  else delete small.counted
+  if (p.spent) small.spent = round1(p.spent)
+  else delete small.spent
   return [...points.filter(x => x.at !== p.at), small]
     .sort((a, b) => a.at - b.at)
     .slice(-MAX_POINTS)
     .map(x => x.top.length && p.at - x.at > TOP_KEPT_MS ? { ...x, top: [] } : x)
 }
 
-export type ChartRange = '24h' | '7d' | 'league'
-const RANGE_MS: Record<ChartRange, number> = { '24h': 86_400_000, '7d': 7 * 86_400_000, 'league': Infinity }
+export type ChartRange = '3h' | '24h' | '7d' | 'league'
+const RANGE_MS: Record<ChartRange, number> = { '3h': 3 * 3_600_000, '24h': 86_400_000, '7d': 7 * 86_400_000, 'league': Infinity }
 
 export interface SeriesPoint {
   at: number
@@ -85,6 +93,8 @@ export interface SeriesPoint {
   top: string[]
   // From a day's last read, before refresh points were kept.
   daily: boolean
+  // Divines spent on a purchase at this read (spend.ts), for the marker.
+  spentDiv?: number
 }
 
 const toDiv = (chaos: number, rate: number | null, fallback: number | null) => {
@@ -110,7 +120,8 @@ export function seriesFor (points: LedgerPoint[], days: Record<string, DaySnapsh
       byCategory: catsDiv(p.byCategory, p.divine, divineNow),
       netDiv: p.netChaos == null ? null : toDiv(p.netChaos, p.divine, divineNow),
       top: p.top,
-      daily: false
+      daily: false,
+      ...(p.spent ? { spentDiv: toDiv(p.spent, p.divine, divineNow) } : {})
     })
   }
   return out.sort((a, b) => a.at - b.at)
@@ -191,6 +202,8 @@ export interface ChangeGroup {
   title: string
   netChaos: number
   lines: Array<DiffLine & { dir: 'add' | 'remove' }>
+  // Its reads' times, oldest first (the purchase switch finds them by time).
+  reads: number[]
 }
 
 export interface RunLike { name: string, enteredAt: number, mapMs: number }
@@ -236,7 +249,8 @@ export function groupByRuns (diffs: StashDiff[], runs: RunLike[], sessionStart: 
         key: `run:${idx}`,
         title: run ? `Map ${idx + 1} · ${run.name} · ${mmss(run.mapMs)}` : 'Before the first map',
         netChaos: ds.reduce((s, d) => s + d.netChaos, 0),
-        lines: rowsOf(ds)
+        lines: rowsOf(ds),
+        reads: ds.map(d => d.at)
       }
     })
 }
@@ -247,7 +261,8 @@ export function groupByRefresh (diffs: StashDiff[], n = 3): ChangeGroup[] {
     key: `read:${d.at}`,
     title: `Refresh ${clock(d.at)}${dayOf(d.at) === dayOf(Date.now()) ? '' : ` · ${new Date(d.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}`}`,
     netChaos: d.netChaos,
-    lines: rowsOf([d])
+    lines: rowsOf([d]),
+    reads: [d.at]
   }))
 }
 

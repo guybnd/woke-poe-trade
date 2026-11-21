@@ -51,7 +51,7 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" @spend="onChartSpend" />
             <div v-if="chartMode === 'category'" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -85,6 +85,7 @@
             <div :class="$style.colHead">
               <span :class="$style.caps">{{ session ? `Session · ${duration(session.ms)} · ${session.maps} maps` : 'Since last refresh' }}</span>
               <b v-if="session" class="w-num" :class="tone(session.div)">{{ signed(session.div) }}<Coin :chaos="!divine" /><template v-if="session.perHour != null"> · {{ fmt(session.perHour) }}<Coin :chaos="!divine" />/h</template></b>
+              <span v-if="session && session.spent > 0" :class="$style.spendNote" class="w-num" title="Purchases in this session: left out of its profit">spent {{ div(session.spent) }}<Coin :chaos="!divine" /></span>
             </div>
             <!-- The newest groups; the two latest open, the rest one row each. The
                  list scrolls inside, never stretching the window. -->
@@ -93,7 +94,7 @@
                 <div v-for="(g, i) in groups.slice(0, groupLimit)" :key="g.key" :class="$style.group">
                   <button type="button" :class="$style.groupHead" :aria-expanded="groupOpen(g.key, i)" @click="toggleGroup(g.key, i)">
                     <i :class="groupOpen(g.key, i) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" />
-                    <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template></span>
+                    <span class="w-trunc">{{ g.title }}<template v-if="!groupOpen(g.key, i)"> · {{ g.lines.length }} {{ g.lines.length === 1 ? 'change' : 'changes' }}</template><span v-if="spendRows(g).some(r => r.spent)" :class="$style.spendChip" title="A purchase: it counts 0 toward profit per hour and the session">purchase</span></span>
                     <b class="w-num" :class="tone(g.netChaos)" :title="inChaos(g.netChaos)">{{ signed(toDiv(g.netChaos)) }}<Coin :chaos="!divine" /></b>
                   </button>
                   <template v-if="groupOpen(g.key, i)">
@@ -103,6 +104,10 @@
                       <span class="w-num" :class="l.dir === 'add' ? 'w-up' : 'w-down'" :title="inChaos(l.chaos)">{{ l.dir === 'add' ? '+' : '−' }}{{ div(l.chaos) }}<Coin :chaos="!divine" /></span>
                     </div>
                     <div v-if="g.lines.length > 5" :class="$style.more">+{{ g.lines.length - 5 }} more</div>
+                    <div v-for="r in spendRows(g)" :key="'spend' + r.at" :class="$style.spendRow">
+                      <span class="w-trunc" :title="r.tip">{{ r.text }}</span>
+                      <button type="button" :class="$style.spendBtn" @click="setSpendMark(r.at, r.action.mark)">{{ r.action.label }}</button>
+                    </div>
                   </template>
                 </div>
                 <button v-if="groups.length > groupLimit" type="button" :class="$style.clear" class="text-xs" @click="groupLimit += GROUP_STEP">Show older ({{ groups.length - groupLimit }})</button>
@@ -210,7 +215,10 @@ import { CATEGORIES } from './valuation'
 import type { Category } from './valuation'
 import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, groupByRefresh, groupByRuns, liquidChaos, priceMoves, seriesFor } from './ledger'
 import type { ChartRange, PriceMove } from './ledger'
-import { divine, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, summary, tabValues, valuation, wantPrices } from './store'
+import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
+import { markAction, resolveSpends } from './spend'
+import type { SpendMark } from './spend'
+import type { ChangeGroup } from './ledger'
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
 import { UNREADABLE } from './tab-picker'
@@ -246,7 +254,7 @@ const CAT_COLOUR: Record<Category, string> = {
   other: 'var(--w-faint)'
 }
 const MODE_OPTIONS = [{ value: 'total', label: 'Total' }, { value: 'category', label: 'By category' }]
-const RANGE_OPTIONS = [{ value: '24h', label: '24h' }, { value: '7d', label: '7d' }, { value: 'league', label: 'League' }]
+const RANGE_OPTIONS = [{ value: '3h', label: '3h' }, { value: '24h', label: '24h' }, { value: '7d', label: '7d' }, { value: 'league', label: 'League' }]
 
 // ---------- the tab picker (WOKEPOET-209) ----------
 const picking = shallowRef(false)
@@ -445,18 +453,58 @@ const clock = setInterval(() => { now.value = Date.now() }, 30_000)
 onUnmounted(() => { clearInterval(clock) })
 // The session's total from every refresh in it (gains.ts keeps them all).
 const sessionChaos = shallowRef(0)
-watch([farming, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow], async () => {
+// Chaos left out as spent on purchases (spend.ts).
+const sessionSpent = shallowRef(0)
+watch([farming, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow, gainsNow], async () => {
   const s = farming.value
   const id = leagueNow.value
-  sessionChaos.value = s && id ? (await stashGainsBetween(id, s.startedAt, Date.now())).chaos : 0
+  const g = s && id ? await stashGainsBetween(id, s.startedAt, Date.now()) : null
+  sessionChaos.value = g?.chaos ?? 0
+  sessionSpent.value = g?.spent ?? 0
 }, { immediate: true })
 const session = computed(() => {
   const s = farming.value
   if (!s) return null
   const ms = elapsed(s, now.value)
   const divVal = toDiv(sessionChaos.value)
-  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null }
+  return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value }
 })
+const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
+// Every refresh's share of profit (spend.ts), worked out in time order.
+const shares = computed(() => resolveSpends(gainsNow.value))
+// The chart's purchase switch for a clicked point, and its click (amount in
+// the shown unit: divines, or chaos without a rate).
+function chartSpendAction (at: number) {
+  const x = gainAt.value.get(at)
+  return x ? markAction(x, shares.value.get(at)) : null
+}
+function onChartSpend (at: number, mark: SpendMark | null, amount?: number) {
+  // The chart shows each point at its own read's rate: back to chaos at it.
+  const g = gainAt.value.get(at)
+  const rate = g?.netDivine && g.netChaos ? g.netChaos / g.netDivine : divine.value
+  setSpendMark(at, mark, amount == null ? undefined : rate ? amount * rate : amount)
+}
+// A group's refreshes that are purchases, cancel one, or lost currency, each
+// with its switch. Losses where under 1 div of currency left get none here
+// (maps eat scarabs every refresh); the chart offers them all.
+function spendRows (g: ChangeGroup) {
+  const smallCash = divine.value ?? 150
+  return g.reads.flatMap(at => {
+    const x = gainAt.value.get(at)
+    const r = shares.value.get(at)
+    const action = x && markAction(x, r)
+    if (!x || !action) return []
+    if (!x.mark && !x.auto && !r?.back && !(x.cashChaos != null && x.cashChaos <= -smallCash)) return []
+    const spent = r?.spent ?? 0
+    const when = g.reads.length > 1 ? `${new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}: ` : ''
+    const text = spent > 0
+      ? `${when}Purchase, ${div(spent)} ${unit.value} not counted`
+      : r?.back
+        ? `${when}Back from a purchase, ${div(r.back)} ${unit.value} not counted`
+        : x.netChaos < 0 ? `${when}Counted as a loss` : `${when}Counted as profit`
+    return [{ at, action, spent, text, tip: 'Purchases count 0 toward profit per hour, the session and the session story' }]
+  })
+}
 const groups = computed(() => {
   const s = farming.value
   return s ? groupByRuns(ledger.value.diffs, s.runs ?? [], s.startedAt) : groupByRefresh(ledger.value.diffs, ledger.value.diffs.length)
@@ -682,6 +730,10 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .changesCol { display: flex; flex-direction: column; }
 .scrollBox { flex: 1 1 auto; min-height: 0; }
 .scroll { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.spendChip { margin-left: 6px; padding: 0 5px; border: 1px solid var(--w-info); color: var(--w-info); border-radius: 2px; font-size: var(--w-fs-xs); }
+.spendRow { display: flex; justify-content: space-between; gap: 6px; align-items: center; font-size: var(--w-fs-xs); color: var(--w-dim); }
+.spendBtn { color: var(--w-accent); text-decoration: underline; white-space: nowrap; background: none; border: 0; padding: 0; cursor: pointer; font-size: var(--w-fs-xs); }
+.spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }

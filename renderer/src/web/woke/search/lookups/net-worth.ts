@@ -48,6 +48,7 @@ export function netWorthLookup (glance: Glance | null): Lookup {
     const minutes = Math.max(0, Math.round((ctx.now - glance.at) / 60_000))
     const read = `From the stash read ${minutes < 1 ? 'just now' : `${formatDuration(minutes * 60_000)} ago`}.`
     const text = [rates.fromLog ? `${read} Hideout, town, closed and AFK time left out.` : `${read} Client.txt wasn't found: hideout time isn't left out.`]
+    text.push("Purchases count 0, not as a loss: a refresh where 10 div or more, mostly currency, left the stash. Mark or dismiss one in Net worth's change list or by clicking a chart point.")
     return [{
       id: 'answer:net-worth-per-hour',
       group: 'Answer',

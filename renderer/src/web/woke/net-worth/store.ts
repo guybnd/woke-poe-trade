@@ -10,11 +10,13 @@ import {
   addGain, baselineOf, diffStash, emptyHistory, emptyPrefs, gainOf, recordRead, sinceYesterday, tabSetOf, valueStash
 } from './valuation'
 import { stashGains, gainsKey } from './gains'
+import { classify, resolveSpends } from './spend'
+import type { SpendMark } from './spend'
 import { addPoint, keepDiff, topChanges, valueByTab } from './ledger'
 import { glanceKey, glanceRates, ledgerKey } from './glance'
 import type { Glance } from './glance'
 import type { LedgerPoint, TabValue } from './ledger'
-import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashTabLike, Valuation } from './valuation'
+import type { Baseline, NetWorthHistory, PricePrefs, StashDiff, StashGain, StashTabLike, Valuation } from './valuation'
 import type { ReaderStatus } from './widget'
 import { emptyMarks, feedMarks, playRates, startOfDay, trimMarks, RATE_WINDOWS } from './play-time'
 import type { PlayMarks, PlayRates } from './play-time'
@@ -40,6 +42,8 @@ const stash = shallowRef<CachedStash | null>(null)
 const history = shallowRef<NetWorthHistory>(emptyHistory())
 const ledgerRef = shallowRef<Ledger>(emptyLedger())
 const prefs = shallowRef<PricePrefs>(emptyPrefs())
+// Every refresh's net change (gains.ts), for the purchase switch.
+const gainsRef = shallowRef<StashGain[]>([])
 // The league those prefs are for: none while another league loads.
 let prefsFor: string | null = null
 const league = shallowRef<string | null>(null)
@@ -105,7 +109,8 @@ async function readMarks (now: number) {
 // A read that just landed counts even before the caller's clock ticks past it.
 // `withHub`: hideout and town time counts as play.
 export function ratesAt (now: number, withHub = false): PlayRates {
-  const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos }))
+  // A purchase adds at most 0 (spend.ts).
+  const points = ledgerRef.value.points.map(p => ({ at: p.at, netChaos: p.netChaos == null ? null : p.counted ?? p.netChaos }))
   const at = Math.max(now, points[points.length - 1]?.at ?? 0)
   return playRates(points, marks.value.marks, at, marksFromLog.value, withHub, marks.value.maps)
 }
@@ -124,19 +129,22 @@ export const tabValues = computed<TabValue[]>(() => {
   return valueByTab(stash.value.tabs, ninjaPriceOf(), prefs.value)
 })
 export const readerStatus = computed(() => status.value)
+export const gainsNow = computed(() => gainsRef.value)
 export const pricesReady = computed(() => ninja.updatedAt.value != null)
 
 async function loadLeague (id: string) {
   if (loadedFor === id) return
   loadedFor = id
   prefsFor = null
-  const [saved, cache, led, own] = await Promise.all([
+  const [saved, cache, led, own, gains] = await Promise.all([
     (hostRequest('doc-get', { collection: COLLECTION, key: id }) as Promise<NetWorthHistory | null>).catch(() => null),
     (hostRequest('stash-cache', { league: id }) as Promise<CachedStash | null>).catch(() => null),
     (hostRequest('doc-get', { collection: COLLECTION, key: ledgerKey(id) }) as Promise<Ledger | null>).catch(() => null),
-    (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined)
+    (hostRequest('doc-get', { collection: COLLECTION, key: prefsKey(id) }) as Promise<PricePrefs | null>).catch(() => undefined),
+    stashGains(id)
   ])
   if (loadedFor !== id) return
+  gainsRef.value = gains
   history.value = { ...emptyHistory(), ...(saved ?? {}) }
   ledgerRef.value = { ...emptyLedger(), ...(led ?? {}) }
   prefs.value = cleanPrefs(own ?? null)
@@ -166,11 +174,16 @@ async function countRead (id: string, readAt: number) {
   const since = history.value.countedReadAt
   let next = recordRead(history.value, v, divine.value, readAt)
   let diff: StashDiff | null = null
+  let gain: StashGain | null = null
   if (before && beforeTabs === tabs) {
     diff = diffStash(before, v, readAt)
     next = { ...next, lastDiff: diff }
-    // Every refresh's net change, for session profit elsewhere (gains.ts).
-    const gains = addGain(await stashGains(id), gainOf(diff, since, divine.value))
+    // Every refresh's net change, for session profit elsewhere (gains.ts),
+    // with the guess whether it's a purchase (spend.ts).
+    const old = await stashGains(id)
+    gain = gainOf(diff, since, divine.value, classify(diff, divine.value))
+    const gains = addGain(old, gain)
+    gainsRef.value = gains
     await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: gains }).catch(() => {})
   } else if (beforeTabs != null && beforeTabs !== tabs) {
     // Other tabs now: today's rate starts again from this read, so the
@@ -182,7 +195,7 @@ async function countRead (id: string, readAt: number) {
   const led = ledgerRef.value
   const tabNow = Object.fromEntries(tabValues.value.map(t => [t.id, t.chaos]))
   const nextLedger: Ledger = {
-    points: addPoint(led.points, { at: readAt, chaos: v.chaos, divine: divine.value, byCategory: { ...v.byCategory }, netChaos: diff?.netChaos ?? null, top: topChanges(diff) }),
+    points: withSpends(addPoint(led.points, { at: readAt, chaos: v.chaos, divine: divine.value, byCategory: { ...v.byCategory }, netChaos: diff?.netChaos ?? null, top: topChanges(diff) }), gainsRef.value),
     diffs: diff ? keepDiff(led.diffs, diff) : led.diffs,
     tabChaos: { prev: led.tabChaos.last, last: tabNow }
   }
@@ -190,24 +203,79 @@ async function countRead (id: string, readAt: number) {
   // point with old zones.
   await readMarks(Date.now())
   ledgerRef.value = nextLedger
-  const rates = ratesAt(readAt)
   const todayDiv = sinceYesterday(next, v.chaos, divine.value, readAt)
-  const g: Glance = {
-    league: id,
-    at: readAt,
-    chaos: v.chaos,
-    netChaos: diff?.netChaos ?? null,
-    divine: divine.value,
-    perHourChaos: rates.today.perHour,
-    rates: glanceRates(rates),
-    todayChaos: todayDiv != null && divine.value ? todayDiv * divine.value : null
-  }
-  glance.value = g
+  const g = glanceAt(id, readAt, v.chaos, diff?.netChaos ?? null, todayDiv != null && divine.value ? todayDiv * divine.value : null)
   await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: g }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: id, value: next }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: baseKey, value: baselineOf(v) }).catch(() => {})
   await hostRequest('doc-put', { collection: COLLECTION, key: tabsKey, value: tabs }).catch(() => {})
+}
+
+// The dock icon's number at a read (Ctrl+Space reads the saved one).
+function glanceAt (id: string, at: number, chaos: number, netChaos: number | null, todayChaos: number | null): Glance {
+  const rates = ratesAt(at)
+  const g: Glance = { league: id, at, chaos, netChaos, divine: divine.value, perHourChaos: rates.today.perHour, rates: glanceRates(rates), todayChaos }
+  glance.value = g
+  return g
+}
+
+// The points' purchase fields from the gains, worked out in time order
+// (spend.ts): a flip moves the refreshes after it too.
+function withSpends (points: LedgerPoint[], gains: StashGain[]): LedgerPoint[] {
+  const share = resolveSpends(gains)
+  return points.map(p => {
+    const r = share.get(p.at)
+    // Older than the oldest gain kept: left as it was.
+    if (!r) return p
+    const c = Math.round(r.counted * 10) / 10
+    const counted = p.netChaos != null && c !== p.netChaos ? c : undefined
+    const spent = r.spent ? Math.round(r.spent * 10) / 10 : undefined
+    if (p.counted === counted && p.spent === spent) return p
+    const next = { ...p }
+    delete next.counted
+    delete next.spent
+    if (counted != null) next.counted = counted
+    if (spent != null) next.spent = spent
+    return next
+  })
+}
+
+// Your call on a refresh (null: back to the guess), and with 'spend' how much
+// you spent (chaos; left out: the whole drop, or its currency part). Saves the
+// gain and the chart point, so profit per hour, the session and the session
+// story follow.
+export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: number) {
+  const id = loadedFor
+  if (!id) return
+  queue(async () => {
+    if (loadedFor !== id) return
+    const gains = await stashGains(id)
+    const i = gains.findIndex(g => g.at === at)
+    if (i < 0) return
+    const g: StashGain = { ...gains[i], mark: mark ?? undefined }
+    if (!mark) delete g.mark
+    if (mark === 'spend' && amountChaos != null && Number.isFinite(amountChaos) && amountChaos >= 0) g.markChaos = amountChaos
+    else delete g.markChaos
+    const nextGains = gains.map((x, j) => j === i ? g : x)
+    try {
+      await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: nextGains })
+    } catch {
+      toast("Couldn't save that. Try again")
+      return
+    }
+    gainsRef.value = nextGains
+    const led = ledgerRef.value
+    const nextLedger = { ...led, points: withSpends(led.points, nextGains) }
+    ledgerRef.value = nextLedger
+    await hostRequest('doc-put', { collection: COLLECTION, key: ledgerKey(id), value: nextLedger }).catch(() => {})
+    // The saved dock number follows, when this was the last read.
+    const last = glance.value
+    if (last && last.league === id) {
+      const saved = glanceAt(id, last.at, last.chaos, last.netChaos, last.todayChaos ?? null)
+      await hostRequest('doc-put', { collection: COLLECTION, key: glanceKey(id), value: saved }).catch(() => {})
+    }
+  })
 }
 
 function cleanPrefs (p: PricePrefs | null): PricePrefs {

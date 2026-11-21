@@ -1,6 +1,8 @@
 // Net worth data layer: values stash items, sums them by category, diffs two
 // reads and keeps daily snapshots. Knows nothing about how the stash was read
 // (the personal reader today; another source later) or about Vue.
+import { resolveSpends } from './spend'
+import type { SpendKind, SpendMark } from './spend'
 
 // The item fields valuing needs. The personal reader's records fit it.
 export interface StashItemLike {
@@ -214,7 +216,8 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
 }
 
 // What a read held, small enough to keep: count and unit price per thing.
-export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number }>
+// cat: where the item belongs (older baselines lack it).
+export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category }>
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
@@ -225,7 +228,7 @@ export function baselineOf (v: Valuation): Baseline {
   const out: Baseline = { [BASELINE_V2]: { name: '', icon: '', count: 0, unitChaos: 0 } }
   for (const l of [...v.lines, ...(v.unpricedLines ?? []), ...(v.ignoredLines ?? [])]) {
     const had = out[l.key]
-    out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos) }
+    out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
   }
   return out
 }
@@ -238,6 +241,9 @@ export interface StashDiff {
   removed: DiffLine[]
   // Added minus removed, at today's prices. Price moves alone don't count.
   netChaos: number
+  // The currency part of netChaos (spend.ts tells purchases from losses).
+  // Older diffs lack it.
+  cashChaos?: number
 }
 
 // Items that came or went between two reads (moving between tabs isn't a change).
@@ -250,22 +256,29 @@ export function diffStash (before: Baseline, after: Valuation, at: number): Stas
   // A baseline from before your prices lacks unpriced items: one you priced
   // since isn't new.
   const old = !before[BASELINE_V2]
+  let cash = 0
   for (const l of after.lines) {
     if (old && l.mine && before[l.key] == null) continue
     const had = before[l.key]?.count ?? 0
-    if (l.count > had && l.unitChaos > 0) added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
+    if (l.count > had && l.unitChaos > 0) {
+      added.push({ key: l.key, name: l.name, icon: l.icon, count: l.count - had, chaos: (l.count - had) * l.unitChaos })
+      if (l.category === 'currency') cash += (l.count - had) * l.unitChaos
+    }
   }
   for (const [key, b] of Object.entries(before)) {
     if (key === BASELINE_V2 || ignored.has(key)) continue
     const left = now.get(key)
     const has = left?.count ?? 0
     const unit = left ? left.unitChaos : after.ownPrices?.[key] ?? b.unitChaos
-    if (has < b.count && unit > 0) removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
+    if (has < b.count && unit > 0) {
+      removed.push({ key, name: b.name, icon: b.icon, count: b.count - has, chaos: (b.count - has) * unit })
+      if ((left?.category ?? b.cat) === 'currency') cash -= (b.count - has) * unit
+    }
   }
   const sum = (xs: DiffLine[]) => xs.reduce((s, x) => s + x.chaos, 0)
   added.sort((a, b) => b.chaos - a.chaos)
   removed.sort((a, b) => b.chaos - a.chaos)
-  return { at, added, removed, netChaos: sum(added) - sum(removed) }
+  return { at, added, removed, netChaos: sum(added) - sum(removed), cashChaos: cash }
 }
 
 // ---------- daily snapshots (for a profit graph later) ----------
@@ -334,12 +347,21 @@ export interface StashGain {
   netDivine: number | null
   added: number
   removed: number
+  // Purchases and their returns (spend.ts). Older gains lack them.
+  cashChaos?: number
+  auto?: SpendKind
+  mark?: SpendMark
+  markChaos?: number
+  topAddChaos?: number
 }
 
 const MAX_GAINS = 2000
 
-export function gainOf (diff: StashDiff, since: number | null, divine: number | null): StashGain {
+export function gainOf (diff: StashDiff, since: number | null, divine: number | null, guess: Pick<StashGain, 'auto'> = {}): StashGain {
   return {
+    ...guess,
+    cashChaos: diff.cashChaos,
+    topAddChaos: diff.added[0]?.chaos ?? 0,
     at: diff.at,
     since,
     netChaos: diff.netChaos,
@@ -354,12 +376,23 @@ export function addGain (gains: StashGain[], gain: StashGain): StashGain[] {
 }
 
 // Refreshes whose read landed in [from, to], summed. Gains are only seen at a
-// read, so a session's profit counts the reads inside it.
+// read, so a session's profit counts the reads inside it. Purchases count at
+// most 0 (spend.ts); `spent` is what they left out.
 export function gainsBetween (gains: StashGain[], from: number, to: number) {
+  // Worked out over every gain: a purchase before `from` can be cancelled inside.
+  const share = resolveSpends(gains)
   const inside = gains.filter(g => g.at >= from && g.at <= to)
-  const chaos = inside.reduce((s, g) => s + g.netChaos, 0)
-  const divine = inside.every(g => g.netDivine != null) ? inside.reduce((s, g) => s + g.netDivine!, 0) : null
-  return { chaos, divine, reads: inside.length, first: inside[0]?.at ?? null, last: inside[inside.length - 1]?.at ?? null }
+  const counted = (g: StashGain) => share.get(g.at)?.counted ?? g.netChaos
+  const chaos = inside.reduce((s, g) => s + counted(g), 0)
+  const spent = inside.reduce((s, g) => s + (share.get(g.at)?.spent ?? 0), 0)
+  // Each gain in divines at its own read's rate.
+  const divOf = (g: StashGain) => {
+    const c = counted(g)
+    if (c === g.netChaos) return g.netDivine!
+    return g.netChaos ? g.netDivine! * c / g.netChaos : 0
+  }
+  const divine = inside.every(g => g.netDivine != null) ? inside.reduce((s, g) => s + divOf(g), 0) : null
+  return { chaos, divine, spent, reads: inside.length, first: inside[0]?.at ?? null, last: inside[inside.length - 1]?.at ?? null }
 }
 
 // Which tabs a read covered: a baseline only compares with a read of the same tabs.
