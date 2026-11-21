@@ -23,6 +23,7 @@ subtasks:
   - WOKEPOET-438
   - WOKEPOET-439
   - WOKEPOET-440
+  - WOKEPOET-442
 ---
 Guy picked concept A (The Ledger) plus D (glance bar) on 2026-11-21. Mockups: https://claude.ai/artifact/S91TdBrGyCdFHcwWfN5xbS
 
