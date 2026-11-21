@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -25,6 +25,15 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-21T03:33:59.810Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-21T03:45:54.671Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/701 open; adversarial
+      review running. Guy corrected the mechanic: Nightmare maps spawn their
+      boss's quadrant vault ~54% (107/198 in his Client.txt). Mockups/picks:
+      https://claude.ai/artifact/JRyG3cdwwonZFeuM6Lys6s
+    id: a-2026-11-21t03-45-54-671z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
