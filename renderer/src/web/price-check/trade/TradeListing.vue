@@ -10,11 +10,11 @@
         <b v-else class="font-normal">{{ list.total }}{{ list.inexact ? '+' : '' }}</b>
       </div>
       <online-filter class="w-pc-online" :class="{ invisible: !list }" :filters="filters" api="trade" />
+      <button type="button" class="w-pc-bulk" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
+        :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
       <div class="w-pc-grow flex-1"></div>
       <!-- woke: the price check's prefix / suffix caps, editing its live filters. -->
       <slot name="toolbar" />
-      <button type="button" class="w-pc-bulk mr-1" :class="{ invisible: !list, on: bulk }" :aria-pressed="bulk"
-        :title="bulkTitle" @click="toggleBulk">Bulk<span v-if="bulkNote" class="ml-1">{{ bulkNote }}</span></button>
       <button type="button" class="w-icon-btn mr-1" :class="{ invisible: !list }" title="Search again: results are otherwise kept for 5 minutes"
         :disabled="fetching" @click="refresh"><i class="fas fa-sync-alt text-xs" /><span v-if="refreshNote" class="text-xs ml-1">{{ refreshNote }}</span></button>
       <trade-links :class="{ invisible: !list }"
@@ -181,7 +181,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
+import { defineAsyncComponent, defineComponent, computed, watch, onUnmounted, PropType, inject, shallowReactive, shallowRef, ShallowRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { hideTip, showTip } from '@/web/woke/ui/tooltip/tooltip'
 import { openItemMenu } from '@/web/woke/ui/tooltip/item-menu'
@@ -205,7 +205,6 @@ import OnlineFilter from './OnlineFilter.vue'
 import TradeLinks from './TradeLinks.vue'
 import { proposeSearchName } from '@/web/woke/trade-searches/propose-name'
 import PriceVerdict from '@/web/woke/price-insight/PriceVerdict.vue'
-import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
 import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
@@ -219,6 +218,9 @@ import '@/web/woke/price-insight/price-table.css'
 import { useCheckLog } from '@/web/woke/price-insight/useCheckLog'
 import { travelState, travelToHideout, travelNote } from '@/web/woke/hideout-travel/travel'
 import { isBlankRareSearch, ninjaFitsSearch, skipsTopMods, socketColoursOn } from '@/web/woke/price-insight/search-scope'
+
+// woke: the drivers load with the first price check, not at startup; results take longer.
+const loadDrivers = () => import('@/web/woke/price-insight/PriceDrivers.vue')
 
 const SIX_SOCKETS = new Set<string>([ItemCategory.BodyArmour, ItemCategory.Bow, ItemCategory.Staff, ItemCategory.Warstaff, ItemCategory.TwoHandedAxe, ItemCategory.TwoHandedMace, ItemCategory.TwoHandedSword])
 
@@ -385,7 +387,8 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
       const into = fetchResults.value
       fetching.value = true
       try {
-        while (_searchId === searchId && !enough() && canFetchMore(_searchResult)) {
+        for (;;) {
+          if (_searchId !== searchId || enough() || !canFetchMore(_searchResult)) break
           preventQueueCreation([{ count: 1, limiters: RATE_LIMIT_RULES.FETCH }])
           await fetchPage(_searchId, _searchResult, into)
         }
@@ -407,7 +410,7 @@ function useTradeApi (sameStats: (a: PricingResult, b: PricingResult) => boolean
 }
 
 export default defineComponent({
-  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers },
+  components: { OnlineFilter, TradeLinks, UiErrorBox, PriceVerdict, PriceDrivers: defineAsyncComponent(loadDrivers) },
   emits: ['reset'],
   props: {
     filters: {
@@ -431,6 +434,7 @@ export default defineComponent({
   setup (props, ctx) {
     const widget = computed(() => AppConfig<PriceCheckWidget>('price-check')!)
 
+    loadDrivers().catch(() => {})
     watch(() => props.item, (item) => {
       slowdown.reset(item)
     }, { immediate: true })
