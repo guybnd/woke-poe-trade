@@ -6,7 +6,7 @@
           <template #actions><WButton size="sm" @click="reload">Retry</WButton></template>
         </WBanner>
         <!-- Tonight's strip and totals stay on top of every tab (Session story's card). -->
-        <div v-if="storyOn" :class="$style.tonight" data-analytics-tonight><TonightBand pickable :selected="focusAt" @pick="pickMap" /></div>
+        <div v-if="storyOn" :class="$style.tonight" data-analytics-tonight><TonightBand pickable :selected="focusAt" :night-id="nightId" @pick="pickMap" /></div>
       </template>
       <template #tabs>
         <WTabs v-model="tab" :options="tabOptions" />
@@ -185,6 +185,9 @@
           </template>
         </template>
 
+        <!-- ===== Nights (Session story) ===== -->
+        <NightsList v-else-if="tab === 'nights'" :selected="nightId" @open="nightId = $event" />
+
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
         <!-- Only while the window is open: it reads every map day from disk, and the window mounts hidden at startup. -->
         <template v-else-if="tab === 'history'"><MapHistory v-if="config.wmWants === 'show'" :range="config.range" :league="league" :now="now" :focus="focusAt" @select="focusAt = $event" /></template>
@@ -253,6 +256,7 @@ import type { AnalyticsWidget, MapRun, SessionRecord } from './types'
 // Tonight's card, from Session story's own chunk (already loaded when Session
 // story is on), so it adds nothing to startup.
 const TonightBand = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.TonightBand))
+const NightsList = defineAsyncComponent(() => import('../session-story/WidgetSessionStory.vue').then(m => m.NightsList))
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('session-analytics').art ?? 'divine'
 
@@ -274,9 +278,11 @@ if (props.config.wmFlags[0] === 'uninitialized') {
 
 const storyOn = computed(() => isModuleOn(AppConfig(), 'session-story'))
 // With Session story on, the window opens on the maps you ran: tonight's strip sits above them.
-const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>(storyOn.value ? 'history' : 'strategies')
+const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'nights' | 'decks'>(storyOn.value ? 'history' : 'strategies')
 // A map picked on tonight's strip (or its row): Map history shows and scrolls to it.
 const focusAt = shallowRef<number | null>(null)
+// A saved night picked in Nights, shown on top; null: tonight.
+const nightId = shallowRef<string | null>(null)
 function pickMap (enteredAt: number) {
   tab.value = 'history'
   // The same map again still scrolls back to it.
@@ -284,9 +290,9 @@ function pickMap (enteredAt: number) {
   nextTick(() => { focusAt.value = enteredAt })
 }
 // Session story turned off while its tab shows: back to Strategies.
-watch(storyOn, (on) => { if (!on && tab.value === 'history') tab.value = 'strategies' })
+watch(storyOn, (on) => { if (!on && (tab.value === 'history' || tab.value === 'nights')) tab.value = 'strategies' })
 const tabOptions = computed(() => [
-  ...(storyOn.value ? [{ value: 'history', label: 'Map history' }] : []),
+  ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Nights' }] : []),
   { value: 'strategies', label: 'Strategies' },
   { value: 'sessions', label: 'Sessions' },
   { value: 'maps', label: 'Maps' },

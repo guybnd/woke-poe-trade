@@ -56,6 +56,7 @@ export default { widget: widgetSessionStorySpec }
 // Session story is on). Importing TonightBand.vue there directly would split it
 // into its own chunk and grow the startup bundle's preload lists.
 export { default as TonightBand } from './TonightBand.vue'
+export { default as NightsList } from './NightsList.vue'
 </script>
 
 <script setup lang="ts">

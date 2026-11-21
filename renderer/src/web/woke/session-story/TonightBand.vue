@@ -6,10 +6,18 @@
 
 <script setup lang="ts">
 // Session analytics gets this through WidgetSessionStory.vue's export.
+import { computed } from 'vue'
 import NightCard from './NightCard.vue'
 import { nightTitle, useNightList } from './nights'
 
-defineProps<{ pickable?: boolean, selected?: number | null }>()
+const props = defineProps<{
+  pickable?: boolean
+  selected?: number | null
+  // A saved night picked in Session analytics › Nights; none: tonight or the last night.
+  nightId?: string | null
+}>()
 const emit = defineEmits<{ pick: [enteredAt: number] }>()
-const { shown, farmOf } = useNightList()
+const nights = useNightList()
+const farmOf = nights.farmOf
+const shown = computed(() => (props.nightId && nights.list.value.find(n => n.story.id === props.nightId)) || nights.shown.value)
 </script>
