@@ -33,7 +33,7 @@
             <span :class="$style.mapsCount" class="w-num">{{ config.maps }}</span>
             <button type="button" class="w-icon-btn" aria-label="One map more" @click="changeMaps(config, 1); saveConfig()"><i class="fas fa-plus text-xs" /></button>
           </div>
-          <div v-for="line in config.items" :key="line.name" :class="$style.cardRow" @contextmenu.prevent="unbump(line)">
+          <div v-for="line in config.items" :key="line.name" v-item-tip="{ name: line.name, type: line.type, noMenu: true }" :class="$style.cardRow" @contextmenu.prevent="unbump(line)">
             <WIcon :src="art(line)" fallback="fas fa-hashtag" size="lg" />
             <div class="min-w-0">
               <div class="w-trunc">{{ line.name }}</div>
@@ -69,7 +69,7 @@
         <WEmpty v-if="!config.items.length" icon="fas fa-hashtag">Add the drops you want to count.</WEmpty>
         <div v-for="line in config.items" :key="line.name" :class="$style.panelRow">
           <WIcon :src="art(line)" fallback="fas fa-hashtag" size="lg" />
-          <div class="min-w-0 grow">
+          <div v-item-tip="{ name: line.name, type: line.type }" class="min-w-0 grow">
             <div class="w-trunc">{{ line.name }}</div>
             <div :class="$style.detail" class="w-dim w-trunc">{{ lineDetail(line, config.maps) }}</div>
           </div>
@@ -97,7 +97,7 @@ import Widget from '@/web/overlay/Widget.vue'
 import { saveConfig } from '@/web/Config'
 import { MainProcess } from '@/web/background/IPC'
 import { parseClipboard } from '@/parser'
-import { WPanel, WField, WButton, WEmpty, WIcon, toast } from '../ui'
+import { WPanel, WField, WButton, WEmpty, WIcon, toast, vItemTip } from '../ui'
 import { ninjaIcon, moduleIcon } from '../ui/game-icons'
 import { popupAnchor } from '../ui/window-anchor'
 import DockItem from '../dock/DockItem.vue'

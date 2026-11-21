@@ -79,7 +79,7 @@
           </label>
           <div v-if="priceGroups.length" :class="$style.prices">
             <div :class="$style.head">Prices</div>
-            <button v-for="g in priceGroups" :key="groupKey(g)" :class="$style.priceRow" @click="openSearch(g.name)">
+            <button v-for="g in priceGroups" :key="groupKey(g)" v-item-tip="groupTip(g)" :class="$style.priceRow" @click="openSearch(g.name)">
               <WIcon :src="ninjaIcon(g.type, g.name) ?? undefined" size="md" />
               <span :class="[$style.rowName, rarityClass(g.type)]">{{ g.name }}</span>
               <span :class="$style.priceSub">{{ g.variants.length > 1 ? `${g.variants.length} prices` : g.variants[0].variant }}</span>
@@ -195,9 +195,9 @@ import ToolIcon from './ToolIcon.vue'
 import { ICON_TOOL_NAMES, RAIL_DEFAULT_SIZE, RAIL_SIZES, RAIL_ZOOM, movePin, railAnchor, railDropEdge, stepRailSize, artFor, iconFor, allowsCopies, groupByModule, launcherEntries, migrateToRail, parseWidgetTitle, toolDescription } from './tools'
 import { pastedItemText } from '../search/pasted-item'
 import type { LauncherEntry, LauncherState, RailSize, TabBarConfig } from './tools'
-import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook } from '../ui'
+import { WIcon, WPrice, ninjaIcon, WOKE_LOOKS, isLookPicked, pickLook, vItemTip } from '../ui'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
-import { groupKey, rarityClass, searchPrices } from '../search/search'
+import { groupKey, groupTip, rarityClass, searchPrices } from '../search/search'
 import { searchRequest } from '../search/widget'
 import { usePriceText } from '../shared/price'
 

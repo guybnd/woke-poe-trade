@@ -56,8 +56,8 @@
         <div v-else :class="$style.log">
           <div v-for="t in leagueTrades.slice(0, 200)" :key="t.id" class="w-row" :class="$style.logRow" @contextmenu="logMenu($event, t)">
             <span class="w-faint w-num">{{ timeOf(t.at) }}</span>
-            <span class="w-trunc">{{ offerLabel({ item: t.item, qty: t.qty, bulk: t.qty !== 1 }) }}</span>
-            <span class="w-dim w-trunc text-xs">{{ t.dir === 'sell' ? t.who : `from ${t.who}` }}</span>
+            <span v-item-tip="t.qty !== 1 ? { name: t.item } : itemRefFromText(t.item)" class="w-trunc">{{ offerLabel({ item: t.item, qty: t.qty, bulk: t.qty !== 1 }) }}</span>
+            <span class="w-dim w-trunc text-xs" data-no-item-tip="a player's name">{{ t.dir === 'sell' ? t.who : `from ${t.who}` }}</span>
             <span class="w-num text-right whitespace-nowrap" :class="t.dir === 'sell' ? 'w-up' : 'w-down'">{{ t.dir === 'sell' ? '+' : '−' }}{{ priceLabel(t.price) }}</span>
           </div>
         </div>
@@ -84,7 +84,7 @@ import { MainProcess } from '@/web/background/IPC'
 import { AppConfig } from '@/web/Config'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WPanel, WTabs, WEmpty, WButton, WBanner, WSkeleton, WKbd, openMenu, toast } from '../ui'
+import { WPanel, WTabs, WEmpty, WButton, WBanner, WSkeleton, WKbd, openMenu, toast, vItemTip, itemRefFromText } from '../ui'
 import { gameIcon, moduleIcon } from '../ui/game-icons'
 import DockItem from '../dock/DockItem.vue'
 import type { DockMenuAction } from '../dock/dock'

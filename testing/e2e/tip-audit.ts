@@ -11,7 +11,8 @@
 // A name that rightly has no item tooltip (the price check's own heading, a
 // name inside an input) is allowed with `data-no-item-tip="why"` on it or a
 // parent. The reason is required: an empty one doesn't count. Text inside a
-// tooltip or a menu is never checked.
+// tooltip or a menu, and text the mouse can't reach (pointer-events: none),
+// is never checked.
 //
 // The harness fails the test with every gap it saw (harness.ts).
 import fs from 'node:fs'
@@ -76,6 +77,8 @@ export function installTipAudit (list: string[]) {
   const visible = (el: Element) => {
     const r = el.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) return false
+    // The mouse can't reach it (a glance bar, a popup that never takes the mouse).
+    if (getComputedStyle(el).pointerEvents === 'none') return false
     return !('checkVisibility' in el) || (el as HTMLElement).checkVisibility({ opacityProperty: true, visibilityProperty: true })
   }
 

@@ -19,7 +19,7 @@
     </div>
 
     <div v-for="s in sizes" :key="s.size" :class="$style.size">
-      <div :class="$style.sizeHead">{{ s.size }} Cluster Jewel <span class="w-faint text-xs">· {{ s.on }} rules on<template v-if="s.off"> · {{ s.off }} off</template></span></div>
+      <div :class="$style.sizeHead"><span v-item-tip="{ name: `${s.size} Cluster Jewel` }">{{ s.size }} Cluster Jewel</span> <span class="w-faint text-xs">· {{ s.on }} rules on<template v-if="s.off"> · {{ s.off }} off</template></span></div>
       <button v-for="r in s.rules" :key="r.tier" type="button" class="w-focusable" :class="$style.rule" :title="`Open the rule (${r.tier})`" @click="emit('open-rule', r.tier)">
         <span :class="$style.ruleHead">{{ r.head }}</span>
         <LabelPreview :text="`${s.size} Cluster Jewel`" :actions="r.block.actions" :extras="false" style="max-width: 100%; overflow: hidden;" />
@@ -46,7 +46,7 @@
 // at what price, the lines that sort passive types into top and good, and
 // your own picks.
 import { computed } from 'vue'
-import { WToggle, agoPhrase } from '../ui'
+import { WToggle, agoPhrase, vItemTip } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import { CLUSTER_PRICE_TYPE, MIN_LISTINGS, nodesOf, priceOnRule, rankOf, ruleKey } from './cluster-prices'
 import type { ClusterPin, ClusterPrice, ClusterPriceSettings } from './cluster-prices'

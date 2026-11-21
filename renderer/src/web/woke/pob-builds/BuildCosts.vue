@@ -23,7 +23,8 @@
           <span class="w-rarity-unique w-trunc">{{ r.item.name }}</span>
           <span class="ml-auto w-faint text-xs">no price</span>
         </WItemRow>
-        <button v-for="(r, i) in s.rares" :key="`r${i}`" type="button" :class="$style.line" class="w-focusable" :title="`Price check this ${r.item.base} with its stats`" @click="openPriceCheck(r.item, $event)">
+        <button v-for="(r, i) in s.rares" :key="`r${i}`" type="button" :class="$style.line" class="w-focusable" :title="`Price check this ${r.item.base} with its stats`" data-item-tip @click="openPriceCheck(r.item, $event)"
+          @mouseenter="showTip($event, { kind: 'item', item: r.item })" @mouseleave="hideTip">
           <span class="w-rarity-rare w-trunc">{{ r.item.base || r.item.name }}</span>
           <span class="ml-auto w-dim text-xs whitespace-nowrap"><i class="fas fa-search" /> {{ r.slot }}</span>
         </button>
@@ -37,6 +38,7 @@
 import { computed, onMounted } from 'vue'
 import { useOneOpen } from '../ui/fold'
 import { WInfo, WItemRow, WPrice } from '../ui'
+import { hideTip, showTip } from '../ui/tooltip/tooltip'
 import type { ItemTipRef } from '../ui'
 import { pobItemText } from './item-text'
 import { stageCosts } from './build-costs'

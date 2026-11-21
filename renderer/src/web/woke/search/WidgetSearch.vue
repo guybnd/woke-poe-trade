@@ -39,7 +39,7 @@
           </div>
           <div :class="$style.detail" class="w-scroll">
             <template v-if="selected?.kind === 'price'">
-              <div :class="$style.title">
+              <div v-item-tip="groupTip(selected.group)" :class="$style.title">
                 <WIcon :src="ninjaIcon(selected.group.type, selected.group.name) ?? ninjaArt(selected.group.type, selected.group.name)" size="lg" />
                 <span :class="rarityClass(selected.group.type)">{{ selected.group.name }}</span>
                 <span class="w-dim" :class="$style.small">{{ kindLabel(selected.group.type, selected.group.name) }}</span>
@@ -143,7 +143,7 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromText, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -302,7 +302,8 @@ function gameItems (): BaseType[] {
 function tipOf (entry: Entry) {
   if (entry.kind === 'price') return groupTip(entry.group)
   if (entry.kind === 'item') return { name: entry.info.refName }
-  if (entry.kind === 'lookup') return entry.card.tip ?? null
+  // A card about an item (a Viscera, a gem, a div card) shows that item.
+  if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromText(entry.card.title ?? entry.card.name)
   return null
 }
 

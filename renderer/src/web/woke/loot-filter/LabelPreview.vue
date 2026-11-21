@@ -1,5 +1,6 @@
 <template>
-  <span :class="$style.wrap">
+  <!-- A look swatch: the text is a sample of what the rule catches. A row that is one item puts the item tooltip around it. -->
+  <span :class="$style.wrap" data-no-item-tip="a filter label's look; its text is a sample, the row around it carries the item">
     <span :class="[$style.label, { [$style.hidden]: visibility === 'Hide' }]" :style="labelStyle">{{ text }}</span>
     <span v-if="extras && visibility !== 'Hide'" :class="$style.extras">
       <span v-if="style.effect" :title="`Beam: ${style.effect.color}${style.effect.temp ? ' (temporary)' : ''}`" :class="$style.beam" :style="{ background: poeColour(style.effect.color) }" />

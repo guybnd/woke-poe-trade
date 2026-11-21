@@ -123,7 +123,7 @@ export default { widget: widgetScarabFlipSpec }
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, defineComponent, h, inject, onUnmounted, shallowRef, watch, withDirectives } from 'vue'
 import type { PropType } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
@@ -395,7 +395,7 @@ const FlipName = defineComponent({
   setup (p) {
     return () => {
       const icon = gameIcon(p.item)
-      return h('span', { class: 'flex items-center gap-1 min-w-0', title: p.item }, [
+      return withDirectives(h('span', { class: 'flex items-center gap-1 min-w-0' }, [
         icon ? h('img', { src: icon, style: 'width: 20px; height: 20px; object-fit: contain; flex: none;', alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }) : null,
         h('span', { class: 'w-trunc' }, shortName(p.name)),
         p.rareCheap
@@ -407,7 +407,7 @@ const FlipName = defineComponent({
         p.source === 'yours'
           ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-info);', title: 'Your own weight, from Settings.' }, 'YOURS')
           : null
-      ])
+      ]), [[vItemTip, { name: p.item }]])
     }
   }
 })

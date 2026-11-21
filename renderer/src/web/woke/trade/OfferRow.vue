@@ -5,7 +5,7 @@
         <template v-if="oneLine">
           <img v-if="art && !artFailed" :src="art" alt="" :class="$style.art" @error="artFailed = true">
           <span v-if="dot" :class="[$style.dot, dot.up ? $style.dotUp : $style.dotDown]" :title="dot.title" />
-          <span :class="$style.whoShort" class="w-trunc">{{ offer.who }}</span>
+          <span :class="$style.whoShort" class="w-trunc" data-no-item-tip="a player's name">{{ offer.who }}</span>
           <span v-if="statusChip" :class="[$style.chip, statusChip.up && $style.up]">{{ statusChip.text }}</span>
           <span v-if="offer.repeats" :class="$style.chip" :title="`Whispered ${offer.repeats + 1} times`">×{{ offer.repeats + 1 }}</span>
           <span v-item-tip="tip" :class="$style.itemShort" class="w-trunc w-dim">{{ label }}</span>
@@ -13,7 +13,7 @@
         </template>
         <template v-else>
           <span :class="$style.line">
-            <span :class="$style.who" class="w-trunc">{{ offer.who }}</span>
+            <span :class="$style.who" class="w-trunc" data-no-item-tip="a player's name">{{ offer.who }}</span>
             <span v-if="statusChip" :class="[$style.chip, statusChip.up && $style.up, statusChip.down && $style.down]">{{ statusChip.text }}</span>
             <span v-if="offer.repeats" :class="$style.chip" :title="`Whispered ${offer.repeats + 1} times`">×{{ offer.repeats + 1 }}</span>
             <span v-if="!canReopen" class="w-faint w-num ml-auto whitespace-nowrap">{{ age }}</span>

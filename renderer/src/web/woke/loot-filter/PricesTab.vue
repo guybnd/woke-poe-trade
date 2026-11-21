@@ -118,7 +118,7 @@
       <WInfo text="Click one to see what you'd get." />
     </div>
     <template v-for="r in shown" :key="r.key">
-      <div v-if="done.has(r.key)" :class="[$style.row, $style.doneRow]">
+      <div v-if="done.has(r.key)" v-item-tip="baseTip(r.v.group.type, r.v.base)" :class="[$style.row, $style.doneRow]">
         <img v-if="r.icon" :src="r.icon" :class="$style.art" alt="">
         <span class="w-trunc text-sm">{{ r.v.base }}</span>
         <i class="fas fa-check w-faint text-xs" />

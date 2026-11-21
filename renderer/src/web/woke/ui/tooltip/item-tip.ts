@@ -36,6 +36,8 @@ export interface ItemTipRef {
   menu?: ItemMenuRef
   // How many of it (a stack, a stash line): the price strip adds their value.
   count?: number
+  // The row's right-click is its own (the drop counter's take-one-back): no item menu.
+  noMenu?: boolean
 }
 
 const SHOW_DELAY_MS = 60
@@ -245,7 +247,7 @@ function watchHoverZones () {
 // ---- right-click ----
 
 function menuRef (ref: ItemTipRef | null | undefined): ItemMenuRef | null {
-  if (!ref?.name) return null
+  if (!ref?.name || ref.noMenu) return null
   if (ref.menu) return ref.menu
   // A base's unique list or a price range isn't one item's price.
   return { name: ref.name, type: ref.type, variant: ref.variant, noPrice: ref.noPrice || !!ref.prices || !!ref.uniques }
@@ -261,6 +263,7 @@ function watchRightClicks () {
   document.addEventListener('contextmenu', (e) => {
     for (let el = e.target as Element | null; el; el = el.parentElement) {
       const ref = refs.get(el as HTMLElement)
+      if (ref?.noMenu) return
       if (ref?.name) { offerItem(e, menuRef(ref)); return }
     }
   }, true)
@@ -271,6 +274,7 @@ function watchRightClicks () {
 function menu (e: Event) {
   // The menu opens where the tooltip would be in the way.
   leave()
+  if (refs.get(e.currentTarget as HTMLElement)?.noMenu) return
   openItemMenu(e as MouseEvent, menuRef(refs.get(e.currentTarget as HTMLElement)))
 }
 

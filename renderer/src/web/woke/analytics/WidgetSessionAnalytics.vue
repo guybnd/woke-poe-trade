@@ -34,7 +34,7 @@
               </div>
               <button v-for="row in rows" :key="row.key" class="w-row px-0 w-full text-left" :class="[$style.stratGrid, row.key === selectedRow?.key ? $style.sel : '']"
                 @click="selectedKey = row.key" @contextmenu="strategyMenu($event, row)">
-                <span class="w-trunc">
+                <span class="w-trunc" data-no-item-tip="a strategy's name; some are named after the card or item they farm">
                   <WIcon v-if="row.kind === 'boss'" mechanic="maven" title="Boss run" class="mr-1" />{{ row.strategy }}
                 </span>
                 <span class="text-right w-num w-dim">{{ row.kind === 'boss' ? row.units.length : row.maps }}<span v-if="row.kind === 'boss'" class="w-faint text-xs"> k</span></span>
