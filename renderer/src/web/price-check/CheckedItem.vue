@@ -61,14 +61,15 @@
     </filters-block>
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
-      <div class="flex" style="min-width: 10rem;" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
+      <div class="flex" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
         <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
-        <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed. -->
-        <button v-if="canSearchBulk" class="btn ml-1 whitespace-nowrap" data-search-bulk
-          title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
-          @click="cancelSearchHover(); searchBulk()">Search bulk</button>
       </div>
+      <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed.
+           Outside the hover area above, so reaching it doesn't start a plain search. -->
+      <button v-if="canSearchBulk" class="btn ml-1 mr-auto whitespace-nowrap" data-search-bulk
+        title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
+        @click="cancelSearchHover(); searchBulk()">Search bulk</button>
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
            at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
       <template v-if="itemFilters.affixCaps && tradeAPI === 'trade'">
@@ -365,6 +366,7 @@ export default defineComponent({
       if (!searchWaiting || !doSearch.value) return
       searchWaiting = false
       service.execSearch(bulkWaiting)
+      bulkWaiting = false
     })
 
     watch(() => [props.item, doSearch.value, itemStats.value, itemFilters.value], (curr, prev) => {
