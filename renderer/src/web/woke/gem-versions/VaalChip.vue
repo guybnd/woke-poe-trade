@@ -33,6 +33,7 @@
         </tfoot>
       </table>
       <div v-if="r.unpriced" :class="$style.warn">{{ pct(r.unpriced) }} of outcomes have no poe.ninja price and count as 0.</div>
+      <div :class="$style.foot">Always assumes a clean {{ startText }} gem, whatever yours is. A lost level counts as a corrupted level 1.</div>
       <div :class="$style.foot">Community odds, 25% each: no change, Vaal form, level ±1, quality ±1 to 10 (max 23). poe.ninja prices.</div>
     </div>
   </Teleport>

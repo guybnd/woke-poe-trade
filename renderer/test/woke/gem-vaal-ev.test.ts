@@ -26,8 +26,8 @@ describe('vaal it', () => {
     expect(by.same.chance).toBeCloseTo(0.5)
     expect(by.same.label).toMatch(/no Vaal form/)
     expect(by['level-up']).toMatchObject({ chance: 0.125, chaos: 483 })
-    // A 19 levels back to 20.
-    expect(by['level-down']).toMatchObject({ chance: 0.125, chaos: 119 })
+    // A lost level is priced as a corrupted level 1 (none listed: the cheapest at or under it).
+    expect(by['level-down']).toMatchObject({ chance: 0.125, chaos: 1, est: 'priced as 1/0 clean' })
     expect(by['q-cap']).toMatchObject({ chaos: 180 })
     expect(by['q-cap'].chance).toBeCloseTo(0.1)
     expect(by['q-up'].label).toBe('Quality 21–22')
@@ -36,8 +36,7 @@ describe('vaal it', () => {
     expect(by['q-down']).toMatchObject({ chaos: 15 })
     expect(by['q-down'].chance).toBeCloseTo(0.125)
     expect(r.outcomes.reduce((s, o) => s + o.chance, 0)).toBeCloseTo(1)
-    // 0.625×119 + 0.125×483 + 0.1×180 + 0.025×119 + 0.125×15 − 1
-    expect(r.ev).toBeCloseTo(0.625 * 119 + 0.125 * 483 + 0.1 * 180 + 0.025 * 119 + 0.125 * 15 - 1)
+    expect(r.ev).toBeCloseTo(0.5 * 119 + 0.125 * 483 + 0.125 * 1 + 0.1 * 180 + 0.025 * 119 + 0.125 * 15 - 1)
     expect(r.profit).toBeCloseTo(r.ev - 116)
     expect(r.gain + r.same + r.lose).toBeCloseTo(1)
     expect(r.unpriced).toBe(0)
@@ -51,8 +50,8 @@ describe('vaal it', () => {
     expect(r.cost).toBe(2)
     // Level 21 has no row: no price, counted as nothing and said so.
     expect(r.outcomes.find(o => o.id === 'level-up')!.chaos).toBeNull()
-    // Level 21 and quality 10–19: nothing below them is listed.
-    expect(r.unpriced).toBeCloseTo(0.25)
+    // Level 21, level 19 and quality 10–19: nothing at or below them is listed.
+    expect(r.unpriced).toBeCloseTo(0.375)
   })
 
   it('needs a clean and a corrupted 20/20 price', () => {
@@ -64,7 +63,7 @@ describe('vaal it', () => {
 describe('vaal it in the search', async () => {
   const { vaalGemLookup } = await import('@/web/woke/search/lookups/vaal-gem')
   const items = [
-    ['20/20', 116], ['20/20c', 119], ['20/23c', 180], ['20c', 15], ['21/20c', 483]
+    ['1/20', 7], ['20/20', 116], ['20/20c', 119], ['20/23c', 180], ['20c', 15], ['21/20c', 483]
   ].map(([variant, chaos]) => ({ type: 'SkillGem', name: 'Tempest Shield', variant: variant as string, chaos: chaos as number }))
   const ctx = {
     price: (name: string) => name === 'Vaal Orb' ? 1 : null,
@@ -131,10 +130,10 @@ describe('vaal it on an exceptional support', () => {
     expect(r.now).toBe(7.1)
     const by = Object.fromEntries(r.outcomes.map(o => [o.id, o]))
     expect(by['level-up']).toMatchObject({ label: 'Level 4', chaos: 29 })
-    expect(by['level-down']).toMatchObject({ label: 'Level 2', chaos: 4 })
+    expect(by['level-down']).toMatchObject({ label: 'Level 2', chaos: 2.7, est: 'priced as 1/0 clean' })
     expect(by['q-cap']).toMatchObject({ chaos: 5 })
     // No 3/x corrupted row under 20: no less than the cheapest version.
-    expect(by['q-down']).toMatchObject({ chaos: 2.7, est: 'priced as 1/0' })
+    expect(by['q-down']).toMatchObject({ chaos: 2.7, est: 'priced as 1/0 clean' })
     expect(r.unpriced).toBe(0)
     expect(r.outcomes.reduce((s, o) => s + o.chance, 0)).toBeCloseTo(1)
   })
