@@ -18,6 +18,8 @@
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
       <woke-deck-verdict-chip :item="item" />
+      <!-- woke: Vaal it? on a 20/20 of this gem; outcomes on hover (Guy's pick V3, 2026-11-21). -->
+      <woke-vaal-chip v-if="isGem && tradeAPI === 'trade'" :item="item" :league="itemFilters.trade.league" />
       <woke-high-roll-chip v-if="item.rarity === 'Unique'" :item="item" :stats="itemStats" @search="searchAfterPreset" />
       <!-- woke: the poe.ninja price folded onto the name row; its chevron opens the card below. -->
       <price-trend v-if="showTrendCard && !ninjaCardOpen" inline
@@ -160,6 +162,7 @@ export default defineComponent({
     // Loads when the Flip tab is first opened.
     WokeSwapFlip: defineAsyncComponent(() => import('@/web/woke/harvest-swap/SwapFlip.vue')),
     WokeGemVersions: defineAsyncComponent(() => import('@/web/woke/gem-versions/GemVersions.vue')),
+    WokeVaalChip: defineAsyncComponent(() => import('@/web/woke/gem-versions/VaalChip.vue')),
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
     WTabs,

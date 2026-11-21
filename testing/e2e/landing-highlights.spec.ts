@@ -1124,7 +1124,7 @@ test('price check: a gem\'s other versions, priced', async ({ overlay }) => {
   await backdrop(overlay, 'frames/town-inventory.jpg')
   await overlay.copyItem(TRANSIENCE)
   const panel = overlay.widget('price-check')
-  await expect(panel.locator('[data-gem-versions]').getByRole('row')).toHaveCount(8)
+  await expect(panel.locator('[data-gem-versions]').getByRole('row')).toHaveCount(7)
   await expect(panel.locator('tbody').last()).toContainText('34', { timeout: 15_000 })
   await overlay.page.mouse.move(1900, 1060)
   await allflameLabel(overlay.page.locator('body'))
