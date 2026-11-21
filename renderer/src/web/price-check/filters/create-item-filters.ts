@@ -282,7 +282,7 @@ export function createFilters (
     }
   }
   // Any item that takes quality gets the box, so you can ask for more than it has (a 27% Twilight Regalia).
-  if (!filters.quality && takesQuality(item) && !item.isUnmodifiable) {
+  if (!filters.quality && takesQuality(item) && !item.mapCompletionReward) {
     filters.quality = suggestedQuality(item.quality ?? 0)
   }
 

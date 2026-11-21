@@ -48,7 +48,7 @@
       ref="filtersComponent"
       :filters="itemFilters"
       :stats="rowStats"
-      :on-strip="!!stripProps"
+      :on-strip="!!stripProps || !!item.mapCompletionReward"
       :item="item"
       :presets="presets"
       @preset="selectPreset"

@@ -103,7 +103,8 @@ const matches = computed(() => {
   const out: BaseType[] = []
   const seen = new Set<string>()
   for (const u of ITEMS_ITERATOR('"namespace":"UNIQUE"') as Generator<BaseType>) {
-    if (u.namespace !== 'UNIQUE' || seen.has(u.name) || !u.name.toLowerCase().includes(q)) continue
+    // Valdo rewards are foil uniques, never replicas.
+    if (u.namespace !== 'UNIQUE' || u.name.startsWith('Replica ') || seen.has(u.name) || !u.name.toLowerCase().includes(q)) continue
     seen.add(u.name)
     out.push(u)
   }
