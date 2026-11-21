@@ -92,7 +92,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
+import type { WidgetManager } from '@/web/overlay/interfaces'
 import { onSharedDataChange } from '../app/live-data'
 import { useFold } from '../ui/fold'
 import { AppConfig } from '@/web/Config'
@@ -170,6 +171,19 @@ function hoverVault (v: { id: string } | null, e: MouseEvent) {
 const hoverCard = computed(() => vaultBlocks.value.find(b => b.id === hovered.value?.id) ?? null)
 // Folding or switching views removes the tag under the pointer without a mouseleave.
 watch([open, gridOpen, bigTab], () => { hovered.value = null })
+// Never leave the card over the game: the overlay closing, the window losing
+// focus, a scroll or a drag all drop it (as VaalChip and HelpCard do).
+const wm = inject<WidgetManager | undefined>('wm', undefined)
+watch(() => wm?.active.value, (active) => { if (!active) hovered.value = null })
+const unhover = () => { hovered.value = null }
+window.addEventListener('blur', unhover)
+document.addEventListener('scroll', unhover, true)
+document.addEventListener('dragstart', unhover, true)
+onBeforeUnmount(() => {
+  window.removeEventListener('blur', unhover)
+  document.removeEventListener('scroll', unhover, true)
+  document.removeEventListener('dragstart', unhover, true)
+})
 // Every vault, the ones these maps spawn first, best typical pick first.
 const vaultBlocks = computed(() => {
   const t = vaultTable.value

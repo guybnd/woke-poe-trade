@@ -7,7 +7,7 @@
       <div :class="$style.head">
         <span :class="$style.name">{{ vault.name }}</span>
         <span class="w-dim">{{ vault.quadrant }}</span>
-        <span :class="$style.typical" title="">~{{ chaos(vault.typical) }} typical</span>
+        <span :class="$style.typical">~{{ chaos(vault.typical) }} typical</span>
       </div>
       <div v-for="r in vault.rewards" :key="r.text" :class="$style.row" :data-vault-reward="r.text">
         <WIcon :src="r.icon ? (itemArt({ name: r.icon }) ?? undefined) : undefined" :fallback="r.kind === 'unique' ? 'fas fa-ring' : 'fas fa-cube'" size="md" :class="r.kind === 'unique' && !r.icon ? $style.uniq : undefined" />
@@ -66,7 +66,7 @@ function chaos (n: number | null | undefined) {
   z-index: 1002;
   zoom: var(--w-ui-scale, 1);
   width: max-content;
-  max-width: min(520px, calc(100vw - 16px));
+  max-width: min(520px, calc((100vw - 16px) / var(--w-ui-scale, 1)));
   padding: 7px 10px 8px;
   pointer-events: none;
   background: var(--w-tip-bg);
