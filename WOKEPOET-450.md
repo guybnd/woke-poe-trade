@@ -22,6 +22,13 @@ history:
       Options A/B/C sent to Guy on a card in project thread
       cmsg_01TFAVQEVFL8KKQ8fhVfpfJo98Es9he4ogKwZ5Em98fm1G; waiting on his pick.
     id: a-2026-11-21t10-21-02-377z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T10:24:37.964Z'
+    comment: >-
+      Guy picked A (opt-in reader). Net worth integration mockups sent:
+      https://claude.ai/artifact/M9rk3zWppKwDT7eVb91bTm. Waiting on his pick.
+    id: a-2026-11-21t10-24-37-964z
 ---
 Guy asked whether the app can read pathofexile.com/trade/history (his sold items).
 
