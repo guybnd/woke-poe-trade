@@ -170,7 +170,7 @@ import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, keepSelection, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -833,7 +833,7 @@ const details = computed(() => {
   }
 })
 const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
-// The same result stays selected as you keep typing, while it still matches.
+// Each new query picks the top result (Guy, 2026-11-21).
 // After picking an example, its answer card is what it was picked for.
 let showAnswer = false
 // A jump from a beast's recipes picks this entry once the list has it.
@@ -847,15 +847,13 @@ watch(entries, (list) => {
   const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
   showAnswer = false
   const picked = id != null && id === pickedId ? selected.value : null
-  // The web search is only the fallback while you type: once "50d/" becomes
-  // "50d/c", its answer (or whatever now leads) is what you see.
-  // A refresh with the same query (prices, a ticking countdown) keeps your row.
+  // Each keystroke picks the top result; a refresh with the same query
+  // (prices, a ticking countdown) keeps the row you're on.
   const typed = query.value !== listQuery
   listQuery = query.value
-  const keep = keepSelection(list.find(e => e.id === id), list[0], typed, groupOf)
+  const keep = typed ? undefined : list.find(e => e.id === id)
   selected.value = wanted ?? answer ?? keep ?? picked ?? list[0] ?? null
 })
-const groupOf = (e: Entry) => e.kind === 'lookup' ? e.card.group : null
 
 function move (dir: 1 | -1) {
   const list = entries.value
