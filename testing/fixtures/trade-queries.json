@@ -3688,6 +3688,118 @@
    "type": "Crystal Belt"
   }
  },
+ "unique-belt-twice-corrupted.txt": {
+  "opened": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_4080418644",
+       "value": {
+        "min": 75
+       },
+       "disabled": true
+      },
+      {
+       "id": "implicit.stat_983749596",
+       "value": {
+        "min": 5
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_2901986750",
+       "value": {
+        "min": 13
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3910859570",
+       "value": {},
+       "disabled": true
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "true"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "String of Servitude",
+   "type": "Heavy Belt"
+  },
+  "allTicked": {
+   "status": {
+    "option": "securable"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": [
+      {
+       "id": "implicit.stat_4080418644",
+       "value": {
+        "min": 75
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_983749596",
+       "value": {
+        "min": 5
+       },
+       "disabled": false
+      },
+      {
+       "id": "implicit.stat_2901986750",
+       "value": {
+        "min": 13
+       },
+       "disabled": false
+      },
+      {
+       "id": "explicit.stat_3910859570",
+       "value": {},
+       "disabled": false
+      }
+     ]
+    }
+   ],
+   "filters": {
+    "misc_filters": {
+     "filters": {
+      "corrupted": {
+       "option": "true"
+      },
+      "foulborn_item": {
+       "option": "false"
+      },
+      "vestigial": {
+       "option": "false"
+      }
+     }
+    }
+   },
+   "name": "String of Servitude",
+   "type": "Heavy Belt"
+  }
+ },
  "unique-brutal-restraint-330.txt": {
   "opened": {
    "status": {
