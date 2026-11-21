@@ -21,6 +21,7 @@
           title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
           @click="showSkipped = !showSkipped">Vaults</WChip>
       </div>
+      <div v-if="notSaved" class="text-xs w-dim" data-history-not-saved>That map shows here once you start the next one.</div>
       <div>
         <div class="w-row w-row--head px-0" :class="$style.grid">
           <span>When</span><span>Map</span><span class="text-right">Time</span><span>Character</span><span>Met</span>
@@ -173,23 +174,28 @@ watch(() => [store.lastSaved.value, props.now], () => { if (on.value) readGains(
 const reads = computed(() => incomeRows(gains.value, maps.value).filter(r => inRange(r.at, props.range, props.now)))
 const items = computed(() => interleave(list.value, reads.value))
 const visible = computed(() => items.value.slice(0, limit.value))
-// The strip and the log can differ by a moment on when you entered.
-const NEAR_MS = 60_000
-const isFocus = (m: MapRecord) => props.focus != null && Math.abs(m.enteredAt - props.focus) <= NEAR_MS
-// Also once the maps have loaded: the tab may open on a pick.
-watch(() => [props.focus, loading.value] as const, async ([at, busy]) => {
-  if (at == null || busy) return
+// The strip and the log stamp a map with the same log line's time.
+const isFocus = (m: MapRecord) => props.focus != null && m.enteredAt === props.focus
+// A pick waits for the maps to load, then shows once (later loads don't jump back).
+let pending: number | null = null
+// The map isn't saved yet: Session story saves it when you start the next one.
+const notSaved = shallowRef(false)
+async function showPick () {
+  const at = pending
+  if (at == null || loading.value) return
+  pending = null
   // A chip that hides the map lets go; then page down to it and scroll there.
-  if (filter.value && !maps.value.some(m => isFocus(m) && matches(m))) filter.value = null
-  const idx = items.value.findIndex(it => it.kind === 'map' && isFocus(it.map))
+  const source = showSkipped.value ? inView.value : maps.value
+  if (filter.value && !source.some(m => m.enteredAt === at && matches(m))) filter.value = null
+  const idx = items.value.findIndex(it => it.kind === 'map' && it.map.enteredAt === at)
+  notSaved.value = idx < 0
   if (idx < 0) return
   if (idx >= limit.value) limit.value = idx + PAGE
   await nextTick()
-  const rows = root.value?.querySelectorAll<HTMLElement>('[data-map-at]') ?? []
-  for (const el of rows) {
-    if (Math.abs(Number(el.dataset.mapAt) - at) <= NEAR_MS) { el.scrollIntoView({ block: 'nearest' }); break }
-  }
-}, { immediate: true })
+  root.value?.querySelector<HTMLElement>(`[data-map-at="${at}"]`)?.scrollIntoView({ block: 'nearest' })
+}
+watch(() => props.focus, (at) => { pending = at ?? null; notSaved.value = false; showPick() }, { immediate: true })
+watch(loading, () => { showPick() })
 const signed = (chaos: number, rate: number | null) => `${chaos > 0 ? '+' : ''}${formatChaos(chaos, rate)}`
 // As the chip counts it: maps under 30 s (a quick look in) left out.
 const counted = computed(() => maps.value.filter(m => m.mapMs > 30_000))

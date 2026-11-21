@@ -125,6 +125,7 @@ function signed (chaos: number): string {
   width: 2px;
   background: var(--w-down);
   pointer-events: none;
+  z-index: 2;
 }
 .axis { display: flex; justify-content: space-between; padding: 0 var(--w-pad); font-size: 0.8em; }
 .totals {

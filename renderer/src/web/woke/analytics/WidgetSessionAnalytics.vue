@@ -221,7 +221,7 @@ export default { widget: widgetSessionAnalyticsSpec }
 
 <script setup lang="ts">
 import { popupAnchor } from '../ui/window-anchor'
-import { defineAsyncComponent, inject, computed, shallowRef, watch } from 'vue'
+import { defineAsyncComponent, inject, computed, nextTick, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
 import { formatDuration } from '../ui/format'
@@ -279,7 +279,9 @@ const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'decks'>
 const focusAt = shallowRef<number | null>(null)
 function pickMap (enteredAt: number) {
   tab.value = 'history'
-  focusAt.value = enteredAt
+  // The same map again still scrolls back to it.
+  focusAt.value = null
+  nextTick(() => { focusAt.value = enteredAt })
 }
 // Session story turned off while its tab shows: back to Strategies.
 watch(storyOn, (on) => { if (!on && tab.value === 'history') tab.value = 'strategies' })
