@@ -23,3 +23,4 @@
 - Session story no longer has a window of its own. Its dock icon is now called Session analytics and works the same way (tonight's card, the after-map line), and clicking it opens Session analytics. Its right-click menu has Map history and All nights.
 - Incarnation of Fear, Neglect and Dread fights (normal and Uber) no longer count as maps in Session story, the map toast, Map history, Farming and Net worth's map count. Boss runs now knows their arenas.
 - Ctrl+Space search: the tonight and "maps" cards only offer their Session analytics buttons while Session analytics is on, and the maps card says "Your last N maps" instead of claiming the last 2 days.
+- Session analytics nights use the game's AFK mode, like Net worth: 15 minutes AFK ends the night (chat no longer keeps it going), a shorter AFK is left out of the time played, and the night card shows it. The night card has Net worth's "Leave out hideout" box for its per hour and maps per hour.

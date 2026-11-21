@@ -19,19 +19,23 @@ function signed (chaos: number, divine: number | null): string {
   return `${chaos > 0 ? '+' : ''}${formatChaos(chaos, divine)}`
 }
 
+// AFK left out, as on the night card.
+const played = (s: NightStory) => s.endedAt - s.startedAt - (s.afkMs ?? 0)
+
 function rows (s: NightStory): LookupRow[] {
   const out: LookupRow[] = [
-    { label: 'Played', value: formatDuration(s.endedAt - s.startedAt) },
+    { label: 'Played', value: formatDuration(played(s)) },
     { label: 'Maps', value: String(s.maps.length) }
   ]
   if (s.profitChaos != null) out.push({ label: 'Profit', value: signed(s.profitChaos, s.divine) })
   if (s.best) out.push({ label: 'Best drop', value: `${s.best.name} · ${formatChaos(s.best.chaos, s.divine)}` })
-  const hours = (s.endedAt - s.startedAt) / 3_600_000
+  const hours = played(s) / 3_600_000
   if (s.maps.length) out.push({ label: 'Average map', value: formatClock(s.mapMs / s.maps.length) })
   if (hours >= 0.25) out.push({ label: 'Maps per hour', value: (s.maps.length / hours).toFixed(1) })
   for (const l of s.levelUps ?? []) out.push({ label: s.levelUps!.length > 1 ? l.char : 'Level', value: `${l.from} → ${l.to}` })
   out.push({ label: 'Deaths', value: String(s.deathsAt.length) })
   out.push({ label: 'Hideout', value: formatDuration(s.otherMs) })
+  if ((s.afkMs ?? 0) >= 60_000) out.push({ label: 'AFK', value: formatDuration(s.afkMs!) })
   if (s.longestBreakMs && s.longestBreakMs >= 60_000) out.push({ label: 'Longest break', value: formatClock(s.longestBreakMs) })
   return out
 }
@@ -46,7 +50,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       id: 'answer:session-story',
       group: 'Answer',
       name: live ? 'Tonight so far' : `Night of ${when}`,
-      sub: `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
+      sub: `${formatDuration(played(s))} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: 'fas fa-moon',
       sections: [{ rows: rows(s) }],
       // Session analytics holds tonight and Map history: only offered while it's on.

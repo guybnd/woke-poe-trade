@@ -8,13 +8,13 @@
       data-night-row @click="emit('open', n.story.id)">
       <span :class="$style.top">
         <span class="w-trunc">{{ n.live ? 'Tonight so far' : nightTitle(n.story) }}</span>
-        <span class="w-dim w-num">{{ formatDuration(n.story.endedAt - n.story.startedAt) }} · {{ n.story.maps.length }} {{ n.story.maps.length === 1 ? 'map' : 'maps' }}</span>
+        <span class="w-dim w-num">{{ formatDuration(n.story.endedAt - n.story.startedAt - (n.story.afkMs ?? 0)) }} · {{ n.story.maps.length }} {{ n.story.maps.length === 1 ? 'map' : 'maps' }}</span>
         <span v-if="profitOf(n.story) != null" class="w-num" :class="profitOf(n.story)! >= 0 ? 'w-up' : 'w-down'">
           {{ formatChaos(profitOf(n.story)!, n.story.divine) }}
         </span>
       </span>
       <span :class="$style.strip" aria-hidden="true">
-        <i v-for="(p, i) in n.story.strip" :key="i" :class="p.skipped ? $style.skipped : p.map == null ? $style.out : $style.map" :style="{ flexGrow: p.ms }" />
+        <i v-for="(p, i) in n.story.strip" :key="i" :class="p.afk ? $style.afk : p.skipped ? $style.skipped : p.map == null ? $style.out : $style.map" :style="{ flexGrow: p.ms }" />
       </span>
     </button>
   </div>
@@ -49,4 +49,5 @@ const { list, profitOf } = useNightList()
 .map { min-width: 1px; background: var(--w-accent); opacity: 0.75; }
 .out { min-width: 1px; background: var(--w-line); opacity: 0.6; }
 .skipped { min-width: 1px; background: var(--w-line); opacity: 0.3; }
+.afk { min-width: 1px; }
 </style>
