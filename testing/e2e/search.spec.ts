@@ -396,7 +396,7 @@ test("Trade site opens the price check's listings: Instant buyout, no Foulborn c
     w.open = (url: string) => { w.__opened = url; return null }
   })
   const opened = async () => {
-    await panel.getByText('Trade site').click()
+    await panel.getByRole('button', { name: /^Trade site/ }).click()
     const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
     return JSON.parse(new URL(url).searchParams.get('q') ?? '{}') as { query: Record<string, unknown> }
   }
