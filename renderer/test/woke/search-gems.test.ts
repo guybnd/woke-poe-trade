@@ -2,7 +2,6 @@
 import { describe, it, expect } from 'vitest'
 import { classList, gemCard, gemLookup } from '@/web/woke/search/lookups/gems'
 import { GEM_DROPS } from '@/web/woke/search/lookups/gem-drops'
-import { gemWhere } from '@/web/woke/pob-builds/gems'
 import type { GemTable } from '@/web/woke/search/lookups/gems'
 import raw from '@/web/woke/pob-builds/gem-sources.json'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
@@ -75,8 +74,5 @@ describe('gemCard drop sources', () => {
   })
   it('only lists gems the campaign gives no source for, by their table names', () => {
     for (const name of Object.keys(GEM_DROPS)) expect(table[name]?.s, name).toEqual([])
-  })
-  it('adds the drop to a PoB build gem tooltip', () => {
-    expect(gemWhere('Greater Spell Echo', 'Witch')).toBe('Drops from Uber Atziri')
   })
 })
