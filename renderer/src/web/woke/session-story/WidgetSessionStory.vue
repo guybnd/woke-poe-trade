@@ -2,7 +2,7 @@
   <Widget :config="config" move-handles="corners" :inline-edit="false" :readonly="true">
     <!-- A night is read from Client.txt: see story.ts. -->
     <!-- Session story has no window of its own: the icon opens Session analytics. -->
-    <DockItem ref="dockRef" id="session-story" title="Session analytics" :show="!!shown"
+    <DockItem ref="dockRef" id="session-story" title="Session analytics" :show="!!shown" :wm-id="analyticsId"
       :wake="store.finished.value" card-width="24rem" :menu="dockMenu" @activate="openAnalytics('history')">
       <template #card>
         <TonightBand />
@@ -35,7 +35,7 @@ export { default as NightsList } from './NightsList.vue'
 import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WButton } from '../ui'
+import { WButton, toast } from '../ui'
 import MapToast from './MapToast.vue'
 import GlanceBar from './GlanceBar.vue'
 import ChipSettings from './ChipSettings.vue'
@@ -61,7 +61,8 @@ import { setAreaSkip } from '../farming/farming'
 import { CHIP_CLOSE_TARGET } from './widget'
 import type { SessionStoryWidget } from './widget'
 import { MainProcess } from '@/web/background/IPC'
-import { saveConfig } from '@/web/Config'
+import { AppConfig, saveConfig } from '@/web/Config'
+import { isModuleOn } from '../modules'
 
 const props = defineProps<{ config: SessionStoryWidget }>()
 const wm = inject<WidgetManager>('wm')!
@@ -70,6 +71,8 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   Object.assign(props.config, initSessionStoryWidget(props.config.wmId))
 }
 hideWhilePlaying(props.config)
+// No window of its own: the tab bar and Ctrl+Space's tool list leave it out.
+if (!props.config.wmFlags.includes('menu::skip')) props.config.wmFlags = [...props.config.wmFlags, 'menu::skip']
 
 const store = useNights()
 // Vaults and other areas that aren't counted as maps (Settings); Farming,
@@ -274,14 +277,27 @@ function peekText (s: NightStory): string {
   return `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${profit}`
 }
 
-// Same choice as in Settings › Farming & sessions.
 // Session analytics on Map history or Nights; placed the first time if it isn't yet.
 function openAnalytics (id: 'history' | 'nights') {
+  // Its module off: nothing would open, so point at the switch instead.
+  if (!isModuleOn(AppConfig(), 'session-analytics')) {
+    toast('Turn on Session analytics (Settings › Farming & sessions) to see your maps and nights.', { ms: 4000 })
+    return
+  }
   openOverlay()
   if (!wm.widgets.value.some(w => w.wmType === ANALYTICS_TYPE)) wm.create(ANALYTICS_TYPE)
   savedOpenRequest.value = { tool: ANALYTICS_TYPE, id, at: Date.now() }
 }
+// The icon's own window is Session analytics, once it's placed: a click (also
+// while playing) opens it, like any dock icon with a window.
+const analyticsId = computed(() => isModuleOn(AppConfig(), 'session-analytics')
+  ? wm.widgets.value.find(w => w.wmType === ANALYTICS_TYPE)?.wmId
+  : undefined)
 const dockMenu = computed<DockMenuAction[]>(() => [{
+  label: 'Map history',
+  icon: 'fas fa-map',
+  action: () => openAnalytics('history')
+}, {
   label: 'All nights',
   icon: 'fas fa-list',
   action: () => openAnalytics('nights')
