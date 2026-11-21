@@ -60,7 +60,8 @@ export function installTipAudit (list: string[]) {
   const describe = (el: Element) => {
     const parts: string[] = []
     for (let e: Element | null = el, i = 0; e && e !== document.body && i < 5; e = e.parentElement, i++) {
-      const cls = [...e.classList].filter(c => !/^_|^\w+_\w+_\w{5}$/.test(c)).slice(0, 3).join('.')
+      // CSS module classes (_tierRow_a1b2c) by their name in the template ($tierRow).
+      const cls = [...e.classList].map(c => c.replace(/^_(.+)_[\w-]{5}$/, '$$$1')).slice(0, 3).join('.')
       parts.unshift(e.tagName.toLowerCase() + (e.id ? `#${e.id}` : '') + (cls ? `.${cls}` : ''))
     }
     return parts.join(' > ')
