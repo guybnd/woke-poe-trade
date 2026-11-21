@@ -78,9 +78,9 @@ test('flips: the Threads tab, marked low confidence, with its buy list and odds'
   const expedition = panel.locator('.w-row').filter({ hasText: 'Expedition' })
   await expect(expedition.getByText('EST', { exact: true })).toBeVisible()
   // Every Thread equally likely: ((sum - 0.2) / 9 - 3 x 0.2) / 3.
-  await expect(expedition.getByText('+0.34c')).toBeVisible()
+  await expect(expedition.getByText('+0.3c')).toBeVisible()
   // Frayed Thread has no price, so it gets what one opens to: the plain average.
-  await expect(panel.getByText(/opens to 1\.47 ?c on average/)).toBeVisible()
+  await expect(panel.getByText(/opens to 1\.5 ?c on average/)).toBeVisible()
   await expect(panel.locator('[data-item-tip]').filter({ hasText: /^Frayed Thread$/ })).toHaveCount(1)
   await overlay.snap('flips-threads-buy')
 

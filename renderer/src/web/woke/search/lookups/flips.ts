@@ -89,11 +89,13 @@ function bestCard (s: Settings, ctx: LookupContext): LookupCard {
     icon: 'fas fa-recycle',
     ...(best ? { tip: { name: best.item, type: best.family.ninjaType } } : {}),
     sections: best
-      ? [{ rows: [
-          { label: best.family.label, value: best.method.label },
-          { label: 'Buy', item: { name: best.item, type: best.family.ninjaType }, chaos: ctx.price(best.item), bulk: true },
-          { label: 'Profit per item', value: signed(best.profitEach) }
-        ] }, { text: ['By profit per item. The Flips panel also weighs how much trades a day.'] }]
+      ? [{
+          rows: [
+            { label: best.family.label, value: best.method.label },
+            { label: 'Buy', item: { name: best.item, type: best.family.ninjaType }, chaos: ctx.price(best.item), bulk: true },
+            { label: 'Profit per item', value: signed(best.profitEach) }
+          ]
+        }, { text: ['By profit per item. The Flips panel also weighs how much trades a day.'] }]
       : [{ text: ['No flip makes a profit at today\'s prices.'] }],
     actions: openAction(ctx)
   }
