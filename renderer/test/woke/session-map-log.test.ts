@@ -1,6 +1,6 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
-import { MapLog, keepMap, npcOf, tierLine, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
+import { MapLog, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
 import { chipLines, clampScale, compareMap } from '@/web/woke/session-story/chip'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
@@ -130,12 +130,6 @@ describe('maps from Client.txt', () => {
 })
 
 describe('map toast', () => {
-  it('names the tier like the map tooltip', () => {
-    expect(tierLine(83)).toBe('Tier 16 Map')
-    expect(tierLine(68)).toBe('Tier 1 Map')
-    expect(tierLine(84)).toBe('Area level 84')
-    expect(tierLine(45)).toBe('Area level 45')
-  })
   it('keeps its saved size in range', () => {
     expect(clampScale(undefined)).toBe(1)
     expect(clampScale(Number.NaN)).toBe(1)

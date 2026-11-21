@@ -7,40 +7,40 @@
     <div ref="el" :class="[$style.zone, resizing && $style.resizing]" data-map-toast-zone>
     <div :class="[$style.toast, 'w-enter']" :style="{ '--toast-scale': String(scale) }" data-map-toast role="status"
       @click="onDomClick">
-      <div :class="$style.head">
-        <div>{{ chip.rec.name }}</div>
-        <div>{{ tierLine(chip.rec.areaLevel) }}</div>
+      <div :class="$style.title">
+        <span :class="$style.titleName">{{ chip.rec.name }}</span><small>{{ tierText(chip.rec.areaLevel) }}</small>
       </div>
-      <div :class="$style.time" class="w-num" data-map-toast-time>{{ formatClock(chip.rec.mapMs) }}</div>
-      <div v-if="headDiff != null" :class="$style.delta" class="w-num">
-        <span :class="tone(headDiff)">{{ signed(headDiff) }}</span> <span :class="$style.label">{{ headLabel }}</span>
-      </div>
-      <div :class="$style.sep" />
-      <div :class="$style.mid">
+      <div :class="$style.row">
+        <div :class="$style.lead">
+          <div :class="$style.time" class="w-num" data-map-toast-time>{{ formatClock(chip.rec.mapMs) }}</div>
+          <div v-if="headDiff != null" :class="$style.delta" class="w-num">
+            <span :class="tone(headDiff)">{{ signed(headDiff) }}</span> <span :class="$style.label">{{ headLabel }}</span>
+          </div>
+        </div>
         <div v-if="chip.cmp.runs.length > 1" :class="$style.bars">
           <i v-for="(ms, i) in chip.cmp.runs" :key="i" :class="{ [$style.now]: i === chip.cmp.runs.length - 1 }"
             :style="{ height: `${Math.max(8, ms / barTop * 100)}%` }" />
           <span v-if="chip.cmp.hourAvg != null" :class="$style.avg" :style="{ bottom: `${chip.cmp.hourAvg / barTop * 100}%` }" />
         </div>
         <div :class="$style.props" class="w-num">
-          <div v-if="chip.cmp.hourAvg != null"><span :class="$style.label">1h average ({{ chip.cmp.hourRuns }}): </span>{{ formatClock(chip.cmp.hourAvg) }}</div>
-          <div v-else-if="chip.cmp.usual != null"><span :class="$style.label">Usual: </span>{{ formatClock(chip.cmp.usual) }}</div>
+          <div v-if="chip.cmp.hourAvg != null"><span :class="$style.label">1h avg ({{ chip.cmp.hourRuns }})</span><span>{{ formatClock(chip.cmp.hourAvg) }}</span></div>
+          <div v-else-if="chip.cmp.usual != null"><span :class="$style.label">Usual</span><span>{{ formatClock(chip.cmp.usual) }}</span></div>
           <div v-if="chip.cmp.prev">
-            <span :class="$style.label">Last<template v-if="chip.cmp.prev.name !== chip.rec.name"> ({{ chip.cmp.prev.name }})</template>: </span>{{ formatClock(chip.cmp.prev.mapMs) }}
-            <span :class="tone(chip.rec.mapMs - chip.cmp.prev.mapMs)">{{ signed(chip.rec.mapMs - chip.cmp.prev.mapMs) }}</span>
+            <span :class="$style.label" :title="chip.cmp.prev.name !== chip.rec.name ? chip.cmp.prev.name : undefined">Last</span>
+            <span>{{ formatClock(chip.cmp.prev.mapMs) }} <span :class="tone(chip.rec.mapMs - chip.cmp.prev.mapMs)">{{ signed(chip.rec.mapMs - chip.cmp.prev.mapMs) }}</span></span>
           </div>
-          <div v-if="chip.cmp.runs.length > 1"><span :class="$style.label">Best this hour: </span>{{ formatClock(chip.cmp.best) }}</div>
+          <div v-if="chip.cmp.runs.length > 1"><span :class="$style.label">Best</span><span>{{ formatClock(chip.cmp.best) }}</span></div>
         </div>
       </div>
-      <template v-if="tags.length">
-        <div :class="$style.sep" />
-        <div :class="$style.tags">
-          <template v-for="(t, i) in tags" :key="t.text"><template v-if="i"> · </template><span :class="t.tone && $style[t.tone]">{{ t.text }}</span></template>
-        </div>
-      </template>
-      <div :class="$style.close" data-map-toast-close>
-        <template v-if="closeKey">Click or <WKbd :keys="closeKey" /> to close</template>
-        <template v-else>Click to close</template>
+      <div :class="$style.rule" />
+      <div :class="$style.foot">
+        <span :class="$style.chips">
+          <span v-for="t in tags" :key="t.text" :class="[$style.chip, t.tone && $style[t.tone]]">{{ t.text }}</span>
+        </span>
+        <span :class="$style.close" data-map-toast-close>
+          <template v-if="closeKey"><WKbd :keys="closeKey" /> Dismiss</template>
+          <template v-else>Click to dismiss</template>
+        </span>
       </div>
       <span :class="$style.grip" data-map-toast-grip title="Drag to resize" @pointerdown="startResize" @click.stop />
     </div>
@@ -50,8 +50,8 @@
 </template>
 
 <script setup lang="ts">
-// The line about a map you just left, in the middle of the screen, drawn like
-// the map's own tooltip: the time big, then against the hour and the run before,
+// The line about a map you just left, in the middle of the screen, drawn as a
+// small game window (carved title bar, bronze edge, stone): the time big, then against the hour and the run before,
 // then what happened. It takes the mouse only once the pointer rests on it, so
 // a click-to-move across it still reaches the game; a click on it closes it,
 // and its corner resizes it.
@@ -59,7 +59,7 @@ import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { formatClock } from '../ui/format'
 import WKbd from '../ui/WKbd.vue'
 import { useHoverZone } from '../shared/hover'
-import { tierLine } from './map-log'
+import { tierText } from './map-log'
 import type { MapRecord } from './map-log'
 import { clampScale } from './chip'
 import type { MapCompare } from './chip'
@@ -146,7 +146,7 @@ const headDiff = computed(() => {
   const base = c.cmp.hourAvg ?? c.cmp.usual
   return base != null ? c.rec.mapMs - base : null
 })
-const headLabel = computed(() => props.chip?.cmp.hourAvg != null ? 'vs 1h average' : 'vs usual')
+const headLabel = computed(() => props.chip?.cmp.hourAvg != null ? 'vs 1h avg' : 'vs usual')
 const barTop = computed(() => Math.max(1, ...(props.chip?.cmp.runs ?? [1]), props.chip?.cmp.hourAvg ?? 0) * 1.05)
 
 const tags = computed(() => {
@@ -175,36 +175,43 @@ function tone (diff: number): string {
 }
 .zone { pointer-events: auto; }
 .resizing { padding: 400px; margin: -400px; }
-/* The game's map tooltip: rare header art, separators, grey labels and white values. */
+/* A small game window: the carved stone title bar, the thin bronze edge, the
+   stone floor. Game art, the same pieces as the game look's panels (poe-frame.css). */
 .toast {
-  position: relative; width: 340px; cursor: pointer; user-select: none; text-align: center;
-  background: rgba(0, 0, 0, 0.88); border: 1px solid #5f5243;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-  color: #f4ecdc; font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: 15px; line-height: 21px;
+  position: relative; width: 380px; cursor: pointer; user-select: none;
+  border: 10px solid transparent; border-image: url(/images/poe-ui/frame-thin.png) 11 / 10px round;
+  background: url(/images/poe-ui/stone.png) center / cover, #221c15;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), inset 0 0 22px 6px rgba(0, 0, 0, 0.6);
+  color: #e8dcc4; font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: 14px; line-height: 20px;
   zoom: calc(var(--w-ui-scale, 1) * var(--toast-scale, 1));
 }
-.head {
-  height: 54px; display: flex; flex-direction: column; justify-content: center;
-  color: #ffff77; font-size: 19px; line-height: 22px;
+.title {
+  height: 40px; margin: -10px -10px 0; padding: 0 76px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 18px; color: #e7d3a8; text-shadow: 0 1px 2px #000; white-space: nowrap;
   background:
-    url(/images/item-frame/header-double-rare-left.png) left / auto 100% no-repeat,
-    url(/images/item-frame/header-double-rare-right.png) right / auto 100% no-repeat,
-    url(/images/item-frame/header-double-rare-middle.png) center / auto 100% repeat-x;
+    url(/images/poe-ui/titlebar-left.png) left center / auto 100% no-repeat,
+    url(/images/poe-ui/titlebar-right.png) right center / auto 100% no-repeat,
+    url(/images/poe-ui/titlebar-middle.png) center / auto 100% repeat-x;
 }
-.head > div { padding: 0 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.time { font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: 46px; line-height: 1; padding-top: 6px; }
-.delta { font-size: 15px; margin-top: 3px; }
-.label { color: #7f7f7f; }
-.sep { height: 8px; width: 221px; max-width: 90%; margin: 3px auto; background: url(/images/item-frame/separator-rare.png) center / contain no-repeat; }
-.mid { display: flex; justify-content: center; align-items: flex-end; gap: 18px; padding: 2px 14px; }
+.titleName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.title small { flex: none; font-size: 13px; color: #a89670; }
+.row { display: flex; align-items: center; gap: 14px; padding: 10px 6px 4px; }
+.lead { flex: none; }
+.time { font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: 44px; line-height: 1; color: #e3c27d; text-shadow: 0 2px 4px #000; }
+.delta { font-size: 13px; margin-top: 2px; white-space: nowrap; }
+.label { color: #a2927a; }
 .bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 40px; flex: none; }
 .bars i { display: block; width: 9px; background: #5a4c3a; }
 .bars i.now { background: #e3c27d; }
 .avg { position: absolute; left: -3px; right: -3px; border-top: 1px dashed rgba(227, 194, 125, 0.7); }
-.props { min-width: 0; text-align: left; }
-.tags { color: #8888ff; padding: 0 12px; }
-.bad { color: var(--w-down, #e0675a); }
-.close { color: #7f7f7f; font-size: 13px; padding: 2px 0 8px; display: flex; gap: 6px; justify-content: center; align-items: center; }
+.props { flex: 1; min-width: 0; }
+.props > div { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.rule { height: 12px; margin: 4px 30px; background: url(/images/poe-ui/rule-h.png) center / 100% 100% no-repeat; opacity: 0.8; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 6px 2px; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.chip { border: 1px solid #5c4d39; padding: 0 6px; color: #cdbb98; background: rgba(0, 0, 0, 0.3); }
+.bad { color: var(--w-down, #e0675a); border-color: #6e3a32; }
+.close { flex: none; margin-left: auto; color: #8f8270; display: flex; gap: 5px; align-items: center; }
 .grip {
   position: absolute; right: 1px; bottom: 1px; width: 14px; height: 14px; cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 0 55%, rgba(227, 194, 125, 0.55) 55% 62%, transparent 62% 72%, rgba(227, 194, 125, 0.55) 72% 79%, transparent 79%);
