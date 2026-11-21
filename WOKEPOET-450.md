@@ -29,6 +29,14 @@ history:
       Guy picked A (opt-in reader). Net worth integration mockups sent:
       https://claude.ai/artifact/M9rk3zWppKwDT7eVb91bTm. Waiting on his pick.
     id: a-2026-11-21t10-24-37-964z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T10:27:35.583Z'
+    comment: >-
+      Guy picked A + C (Sold section + merged sale lines, plus a Holdings/Sales
+      switch with a per-type summary). Summary layout mockups sent:
+      https://claude.ai/artifact/UVx98gZ39f8EWwFFPmhzjS. Waiting on his pick.
+    id: a-2026-11-21t10-27-35-583z
 ---
 Guy asked whether the app can read pathofexile.com/trade/history (his sold items).
 
