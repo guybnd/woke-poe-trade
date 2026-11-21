@@ -2,13 +2,16 @@
   <WPanel size-key="net-worth" :title="config.wmTitle || 'Net worth'" icon="divine" width="44rem" max-height="85vh"
     :hotkey="config.hotkey" :busy="view === 'sales' ? salesReading : status?.running === true" :stale="view === 'sales' ? !!salesError : !!status?.error && !!v">
     <template #actions>
-      <!-- Your stash or your sales (pick C). -->
-      <TextTabs v-model="view" :options="VIEW_OPTIONS" :class="$style.viewTabs" />
       <!-- The read's age is in the footer: beside the title it ran into the game look's plaque. -->
       <WButton v-if="view === 'sales'" size="sm" icon="fas fa-sync-alt" :disabled="salesReading" :title="salesReadLine ? `Sales ${salesReadLine}` : undefined" @click="refreshSales">Refresh</WButton>
       <WButton v-else size="sm" icon="fas fa-sync-alt" :disabled="status?.running || showPicker" :title="readLine ? `Stash ${readLine}` : undefined" @click="refresh">Refresh</WButton>
       <WButton v-if="view !== 'sales'" size="sm" variant="ghost" icon="fas fa-layer-group" title="Choose which tabs to read" aria-label="Choose which tabs to read" :disabled="!status?.account || status?.running" @click="picking = true" />
       <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" title="Sections to show" aria-label="Sections to show" @click="openSections" />
+    </template>
+    <!-- Your stash or your sales (pick C), as window tabs: in the title bar the
+         switch ran under the game look's title plaque. -->
+    <template #tabs>
+      <WTabs v-model="view" :options="VIEW_OPTIONS" />
     </template>
     <template v-if="view === 'sales' && salesError" #banner>
       <WBanner :tone="salesError?.kind === 'rate-limited' ? 'warn' : 'error'">{{ salesErrorLine }}</WBanner>
@@ -234,7 +237,7 @@
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { AppConfig } from '@/web/Config'
 import { usePoeninja } from '@/web/background/Prices'
-import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WEmpty, WField, WPanel, WSpark, WTabs, openMenu, toast, vItemTip } from '../ui'
 import { tipFor, tipIndex } from './tips'
 import { agoPhrase, formatAmount, nowMinute } from '../ui/format'
 import { hostRequest } from '../shared/host'
@@ -848,7 +851,6 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .soldToday:hover { text-decoration: underline; }
 .soldHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--w-s2); width: 100%; margin-bottom: 4px; text-align: left; cursor: pointer; }
 .soldHead:hover .caps { color: var(--w-fg); }
-.viewTabs { margin-right: var(--w-s2); }
 .spendNote { margin-left: 6px; font-size: var(--w-fs-xs); color: var(--w-info); }
 .feedRow { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: var(--w-fs-sm); }
 .icon { width: 16px; height: 16px; object-fit: contain; flex: none; }
