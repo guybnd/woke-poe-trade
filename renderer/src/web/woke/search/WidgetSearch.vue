@@ -657,7 +657,12 @@ function act (action: LookupAction) {
     const w = wm.widgets.value.find(w => w.wmType === action.tool)
     if (w) wm.show(w.wmId)
   } else if ('open' in action) {
-    // The tool shows it; the palette steps aside.
+    // The tool shows it; the palette steps aside. No window of that tool yet
+    // (never placed): say so and stay open.
+    if (!wm.widgets.value.some(w => w.wmType === action.open.tool)) {
+      toast('Place that window from the dock first.', { ms: 2500 })
+      return
+    }
     savedOpenRequest.value = { ...action.open, at: Date.now() }
     wm.hide(props.config.wmId)
   } else if ('trade' in action) tradeBeast(action.trade)
