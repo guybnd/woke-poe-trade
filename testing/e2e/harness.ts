@@ -179,7 +179,8 @@ export class Overlay {
     // boot) first: it can still save its own settings on the way out, which
     // would land over the config written here.
     if (this.page.url() !== 'about:blank') {
-      this.pastGaps = await this.tipGaps()
+      // Only a booted page's: the default-config capture isn't any test's screen.
+      this.pastGaps = this.config ? await this.tipGaps() : []
       await this.page.goto('about:blank')
       await this.app.settled(300, 5000)
     }

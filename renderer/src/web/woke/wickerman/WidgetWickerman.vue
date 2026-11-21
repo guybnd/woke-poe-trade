@@ -21,7 +21,7 @@
           <button type="button" :class="[$style.row, open === v.name && $style.on, hereNames.has(v.name) && $style.here]"
             :title="versionsTitle(v)" data-woke-wickerman-row
             @click="open = open === v.name ? null : v.name">
-            <span v-item-tip="{ name: v.name }" class="min-w-0 w-trunc">{{ v.name }}</span>
+            <span v-item-tip="{ name: v.name, type: 'Viscera' }" class="min-w-0 w-trunc">{{ v.name }}</span>
             <span class="w-dim whitespace-nowrap">{{ v.slot }}</span>
             <span class="min-w-0 w-dim w-trunc text-xs">{{ sources(v) }}</span>
             <span :class="$style.mod">{{ v.tiers[levelTier(v, level)]?.text }}</span>

@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, reactive, ref, shallowRef, watch } from 'vue'
-import { WBanner, WButton, WChip, WInfo, WSegmented, WSelect, WSkeleton, WToggle, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
+import { WBanner, WButton, WChip, WInfo, WSegmented, WSelect, WSkeleton, WToggle, itemRefFromName, itemRefFromText, openMenu, toast, vItemTip } from '../ui'
 import type { ItemTipRef } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
@@ -263,10 +263,14 @@ function ruleName (d: ShownDrop): string {
 }
 
 // The drop's item tooltip, with which rule shows it underneath.
+const dropTips = new WeakMap<ShownDrop, ItemTipRef | null>()
 function dropTip (d: ShownDrop): ItemTipRef | null {
+  if (dropTips.has(d)) return dropTips.get(d)!
   const f = d.drop.facts
-  const ref = itemRefFromText(f.name) ?? (f.baseType ? itemRefFromText(f.baseType) : null)
-  return ref && { ...ref, note: describe(d) }
+  const ref = itemRefFromName(f.name) ?? (f.baseType ? itemRefFromName(f.baseType) : null)
+  const tip = ref && { ...ref, note: describe(d) }
+  dropTips.set(d, tip)
+  return tip
 }
 
 function describe (d: ShownDrop): string {

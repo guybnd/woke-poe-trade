@@ -32,6 +32,9 @@ export interface TipGap {
 
 let names: string[] | null = null
 
+// One-word uniques that are also plain words a label could be.
+const PLAIN_WORDS = new Set(['Ambition', 'Allure', 'Beauty', 'Cooperation', 'Curiosity', 'Fragility', 'Gluttony', 'Inertia', 'Pacifism', 'Perseverance', 'Pragmatism', 'Repentance', 'Skirmish', 'Voices', 'Obliteration', 'Singularity', 'Wanderlust', 'Southbound', 'Perfidy', 'Pyre', 'Rive', 'Praxis', 'Cortex', 'Powerlessness'])
+
 // Names that read as items. One-word gems, cards and bases ("Portal",
 // "Home", "Map", "Ring") are also plain words the UI uses, so only uniques
 // count with one word.
@@ -42,7 +45,7 @@ export function itemNames (): string[] {
     if (!line.trim()) continue
     const it = JSON.parse(line) as { refName: string, namespace: string }
     if (!['ITEM', 'UNIQUE', 'GEM', 'DIVINATION_CARD'].includes(it.namespace)) continue
-    if (!it.refName.includes(' ') && it.namespace !== 'UNIQUE') continue
+    if (!it.refName.includes(' ') && (it.namespace !== 'UNIQUE' || PLAIN_WORDS.has(it.refName))) continue
     out.add(it.refName)
   }
   names = [...out]

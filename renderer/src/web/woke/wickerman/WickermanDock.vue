@@ -11,7 +11,7 @@
         </div>
         <div v-for="h in here" :key="h.v.name" :class="$style.one">
           <div :class="$style.head">
-            <span v-item-tip="{ name: h.v.name }" class="min-w-0 w-trunc">{{ h.v.name }}</span>
+            <span v-item-tip="{ name: h.v.name, type: 'Viscera' }" class="min-w-0 w-trunc">{{ h.v.name }}</span>
             <span class="w-dim whitespace-nowrap">· {{ h.v.slot }}</span>
             <span class="ml-auto w-dim whitespace-nowrap w-trunc" :class="h.unsure && $style.unsure"
               :title="h.unsure ? 'Not confirmed' : undefined">{{ h.boss }}</span>

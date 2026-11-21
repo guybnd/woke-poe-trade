@@ -219,11 +219,12 @@ function enter (e: Event) {
   timer = setTimeout(() => {
     tipFor(ref).then(({ model, market, uniques, effects }) => {
       if (mine !== seq || !el.isConnected) return
-      if (model && ref.note) model = { ...model, sections: [...model.sections, ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] }
+      const note = ref.note ? [ref.note.split('\n').map(text => [{ text, tone: 'dim' as const }])] : []
+      if (model && note.length) model = { ...model, sections: [...model.sections, ...note] }
       if (model) showTipAt(el, { kind: 'lookup', model, market, uniques, effects })
       else if (ref.fallback) showTipAt(el, ref.fallback)
-      // No text for it, but a price is still worth showing.
-      else if (market) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: [] }, market })
+      // No text for it, but a price or the caller's note is still worth showing.
+      else if (market || note.length) showTipAt(el, { kind: 'lookup', model: { name: ref.name, frame: 'normal', sections: note }, market })
       else hideTip()
     }).catch(() => {
       if (mine !== seq) return

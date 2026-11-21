@@ -38,7 +38,7 @@ export { gameIcon, itemArt, mechanicIcon, ninjaIcon, CURRENCY_ICONS, MECHANIC_IC
 export { ago, agoPhrase, freshness, nowMinute, formatAmount, formatChaos, bulkPerDivine, formatUnitPrice, formatClock, formatDuration } from './format'
 export { vItemTip } from './tooltip/item-tip'
 export type { ItemTipRef } from './tooltip/item-tip'
-export { itemRefFromText } from './tooltip/item-text-ref'
+export { itemRefFromName, itemRefFromText } from './tooltip/item-text-ref'
 export { useCopy, copyText } from './copy'
 export { useMouseNav } from './mouse-nav'
 export { density } from './density'

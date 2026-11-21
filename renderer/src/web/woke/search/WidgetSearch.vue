@@ -143,7 +143,7 @@ import { notableOils, oilNames } from '@/web/price-check/filters/pseudo/anointme
 import { getTradeEndpoint } from '@/web/price-check/trade/common'
 import type { BaseType } from '@/assets/data/interfaces'
 import { createVirtualItem, ItemRarity } from '@/parser/ParsedItem'
-import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromText, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
+import { WPanel, WButton, WPrice, WDelta, WIcon, WKbd, itemRefFromName, ninjaIcon, nowMinute, toast, vItemTip } from '../ui'
 import { ninjaArt } from '../market/ninja-icons'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { copyText } from '../ui/copy'
@@ -303,7 +303,7 @@ function tipOf (entry: Entry) {
   if (entry.kind === 'price') return groupTip(entry.group)
   if (entry.kind === 'item') return { name: entry.info.refName }
   // A card about an item (a Viscera, a gem, a div card) shows that item.
-  if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromText(entry.card.title ?? entry.card.name)
+  if (entry.kind === 'lookup') return entry.card.tip ?? itemRefFromName(entry.card.title ?? entry.card.name)
   return null
 }
 
