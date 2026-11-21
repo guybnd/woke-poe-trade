@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-155
 title: 'F. Flips for 3.30: retire scarabs, add Threads, fix Delirium'
-status: Grooming
+status: In Progress
 priority: Medium
 effort: None
 assignee: unassigned
@@ -71,6 +71,20 @@ history:
     date: '2026-11-21T13:14:19.652Z'
     selfAttested: true
     id: c-2026-11-21t13-14-19-652z
+  - type: comment
+    user: Agent
+    comment: >-
+      Mockup with Guy's choices (Threads tab, Thread recipe, Astrolabes, Frayed
+      Thread): https://claude.ai/artifact/5EcnAvCUWUgW9Mop5mSMoz — building the
+      recommended options on woke/flips-330 meanwhile.
+    date: '2026-11-21T13:27:24.719Z'
+    selfAttested: true
+    id: c-2026-11-21t13-27-24-719z
+  - type: status_change
+    from: Grooming
+    to: In Progress
+    user: Agent
+    date: '2026-11-21T13:27:25.175Z'
 swimlane: null
 needsAction: null
 ---
