@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-454
 title: 'UI size: one slider that scales everything'
-status: In Progress
+status: Done
 priority: Medium
 effort: M
 assignee: unassigned
@@ -36,12 +36,47 @@ history:
     date: '2026-11-21T12:12:06.155Z'
     comment: Updated implementation link.
     id: a-2026-11-21t12-12-06-155z
+  - type: comment
+    user: Agent
+    comment: PR 736 merged (17b24d0e) after two adversarial review passes and green CI.
+    date: '2026-11-21T12:28:21.913Z'
+    completionComment: true
+    id: c-2026-11-21t12-28-21-913z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-21T12:28:21.913Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged PR 736: UI size (Settings › Look, toolbar cog menu −/+, Ctrl+Space
+      bigger/smaller) multiplies Panel size, price check zoom and Pinned size;
+      toolbar menu split; price check palette Size; Popover fixed under CSS
+      zoom. Option B (per-panel size) not built.
+    completionComment: true
+    date: '2026-11-21T12:28:32.086Z'
+    id: c-2026-11-21t12-28-32-086z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T12:28:32.502Z'
 needsAction: null
-claim:
-  holder: claude-code@guy-pc
-  claimedAt: '2026-11-21T11:47:04.166Z'
-  expiresAt: '2026-11-21T12:42:01.015Z'
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/736'
+reviewState: approved
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > **TL;DR** Guy wants one setting that makes the whole UI bigger. Add a master UI size on Look & icon row that multiplies Panel size, the price check window and Pinned size; fold the four existing size sliders under "Fine-tune"; add Size to the price check palette menu; Ctrl+Space entries.
 
