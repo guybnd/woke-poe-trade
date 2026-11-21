@@ -116,7 +116,7 @@
                     <!-- A sale takes the place of its item's removed line (sales.ts). -->
                     <div v-for="s in groupSales(g).sales" :key="'sale' + s.id" :class="$style.feedRow">
                       <img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" />
-                      <span v-item-tip="saleNameTip(s)" class="w-trunc" @mouseenter="onSaleEnter($event, s)" @mouseleave="onSaleLeave(s)">Sold {{ saleName(s) }}</span>
+                      <span v-item-tip="saleTip(s)" class="w-trunc">Sold {{ saleName(s) }}</span>
                       <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /></span>
                     </div>
                     <div v-for="l in groupSales(g).lines.slice(0, 5)" :key="l.dir + l.key" :class="$style.feedRow">
@@ -146,7 +146,7 @@
                 <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
               </button>
               <div v-for="s in recentSales" :key="s.id" :class="$style.moveRow">
-                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleNameTip(s)" class="w-trunc" @mouseenter="onSaleEnter($event, s)" @mouseleave="onSaleLeave(s)">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" class="text-xs" :class="marketTone(s)">{{ marketText(marketOf(s)) }}</span></span>
+                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleTip(s)" class="w-trunc">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" class="text-xs" :class="marketTone(s)">{{ marketText(marketOf(s)) }}</span></span>
                 <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
               </div>
             </div>
@@ -264,7 +264,7 @@ import Coin from './Coin.vue'
 import ItemTable from './ItemTable.vue'
 import HideChip from './HideChip.vue'
 import SalesView from './SalesView.vue'
-import { onSaleEnter, onSaleLeave, saleNameTip } from './sale-tip'
+import { saleTip } from './sale-tip'
 import { inRange, marketText, saleChaos, saleName, salesInWindow, totals, withoutSold } from './sales'
 import type { Sale } from './sales'
 import { loadSales, marketOf, rates as saleRates, sales, salesFailed, salesReading, salesReply } from './sales-store'
