@@ -7,7 +7,7 @@ effort: M
 assignee: unassigned
 tags: []
 createdBy: Agent
-updatedBy: claude-code@guy-pc
+updatedBy: Agent
 history:
   - type: activity
     user: Agent
@@ -24,6 +24,13 @@ history:
     to: In Progress
     user: claude-code@guy-pc
     date: '2026-11-21T11:47:04.166Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-21T11:53:12.156Z'
+    comment: >-
+      Options A/B/C decision card posted in the project thread (A recommended).
+      Option A built on branch woke/ui-size; review and CI running.
+    id: a-2026-11-21t11-53-12-156z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
