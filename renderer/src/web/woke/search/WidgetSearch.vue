@@ -151,6 +151,7 @@ import { convNumber, currencyConversions } from './conversions'
 import { MODULES, isModuleOn, isWidgetTypeOn } from '../modules'
 import { pressedKeys, sortKeys, isHotkeyTail, isModifierCode } from '../loot-filter/hotkey-match'
 import { whenIdle } from '../shared/perf'
+import { nudgeUiSize, uiSize } from '../ui/ui-size'
 import { PAGES } from '../settings/pages'
 import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
 import { pastedItemText } from './pasted-item'
@@ -405,6 +406,23 @@ function commandEntries (): ActionEntry[] {
     } else if (w.wmType === RUN_TIMER_TYPE) {
       add(w, 'Pause or resume the run timer', 'hotkeyPause', timerTarget(w.wmId, 'pause'))
     }
+  }
+  // UI size, one step at a time. The palette stays open: it grows with the
+  // rest, so the next step is one Enter away.
+  for (const [dir, steps] of [['bigger', 1], ['smaller', -1]] as const) {
+    out.push({
+      kind: 'command',
+      id: `c:ui-size-${dir}`,
+      name: `Make everything ${dir} (UI size)`,
+      sub: `UI size ${uiSize.value}%`,
+      icon: dir === 'bigger' ? 'fas fa-search-plus' : 'fas fa-search-minus',
+      about: `UI size one step ${dir}: panels, the price check, pinned things, menus and tooltips. Fine-tune in Settings > Look & icon row.`,
+      verb: 'Do it',
+      action: () => {
+        nudgeUiSize(steps)
+        toast(`UI size ${uiSize.value}%`, { ms: 1800 })
+      }
+    })
   }
   return out
 }

@@ -94,7 +94,7 @@ import BackgroundInfo from './BackgroundInfo.vue'
 import { MainProcess, Host } from '@/web/background/IPC'
 import { usePoeninja } from '../background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
-import { AppConfig } from '@/web/Config'
+import { AppConfig, rootFontPx } from '@/web/Config'
 import { ItemCategory, ItemRarity, parseClipboard, ParsedItem } from '@/parser'
 import RelatedItems from './related-items/RelatedItems.vue'
 import RateLimiterState from './trade/RateLimiterState.vue'
@@ -120,7 +120,7 @@ const DRAG_START_PX = 4
 const WINDOW_REM = 28.75
 // The game art keeps a buffer inside the frame; the window grows by it so the table keeps its room.
 function windowWidth () {
-  return WINDOW_REM * AppConfig().fontSize + (artShown() ? 2 * ART_FRAME_INSET : 0)
+  return WINDOW_REM * rootFontPx() + (artShown() ? 2 * ART_FRAME_INSET : 0)
 }
 
 export default defineComponent({
@@ -206,7 +206,7 @@ export default defineComponent({
           name: 'OVERLAY->MAIN::track-area',
           payload: {
             holdKey: props.config.hotkeyHold,
-            closeThreshold: 2.5 * AppConfig().fontSize,
+            closeThreshold: 2.5 * rootFontPx(),
             from: e.position,
             area: placed
               ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
