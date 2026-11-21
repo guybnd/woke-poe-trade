@@ -1,6 +1,6 @@
 // Search palette quick answers: currency maths, countdowns, web search.
 import { describe, it, expect } from 'vitest'
-import { countdownLookup, currencyLookup, NEXT_LEAGUE, parseCurrencyQuery, webLookup } from '@/web/woke/search/lookups/answers'
+import { countdownLookup, currencyLookup, currencyNamer, NEXT_LEAGUE, parseCurrencyQuery, webLookup } from '@/web/woke/search/lookups/answers'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
 
 const PRICES: Record<string, number> = { 'Chaos Orb': 1, 'Divine Orb': 240, 'Mirror of Kalandra': 120000, 'Orb of Annulment': 4, 'Orb of Alchemy': 0.25 }
@@ -106,5 +106,13 @@ describe('webLookup', () => {
       { label: 'Open poedb', url: 'https://poedb.tw/us/search?q=soul%20of%20lunaris' }
     ])
     expect(webLookup('x', ctx())).toEqual([])
+  })
+})
+
+describe('currencyNamer', () => {
+  it('knows the Chaos Orb by its whole name, though poe.ninja has no row for it', () => {
+    const exact = currencyNamer(['Divine Orb'])
+    expect(exact('chaos orb', true)).toBe('Chaos Orb')
+    expect(exact('Divine Orb', true)).toBe('Divine Orb')
   })
 })

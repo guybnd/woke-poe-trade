@@ -30,10 +30,11 @@ describe('evaluate', () => {
     expect(val('1.5m / 3')).toBe(500000)
   })
   it('reads percent', () => {
-    expect(val('50%')).toBe(0.5)
+    expect(val('50% * 2')).toBe(1)
     expect(val('200 + 10%')).toBeCloseTo(220)
     expect(val('200 - 10%')).toBeCloseTo(180)
     expect(val('15% * 200')).toBe(30)
+    expect(val('(200) + (10%)')).toBeCloseTo(220)
   })
   it('prices currency', () => {
     expect(evaluate('50d / 7', unit, price)).toEqual({ value: 50 * 240 / 7, units: ['Divine Orb'], deg: 1 })
@@ -56,6 +57,8 @@ describe('evaluate', () => {
     expect(evaluate('2 div * 3 div', unit, price)).toBeNull()
     expect(evaluate('2 div + 3', unit, price)).toBeNull()
     expect(evaluate('9 ^ 999', unit, price)).toBeNull()
+    expect(evaluate('20%', unit, price)).toBeNull()
+    expect(evaluate('('.repeat(5000) + '1', unit, price)).toBeNull()
   })
   it('needs a price for currency', () => {
     expect(evaluate('50d / 7', unit, () => null)).toBeNull()
@@ -87,6 +90,11 @@ describe('calcLookup', () => {
   it('answers other currency in chaos', () => {
     const [card] = calc('10 ex * 3', ctx())
     expect(card.name).toBe('10 ex * 3 = 360 c')
+  })
+  it('keeps small and tiny answers readable', () => {
+    expect(calc('1 c / 300', ctx())[0].name).toBe('1 c / 300 = 0.00333 c')
+    expect(calc('1 div / 100000', ctx())[0].actions[0]).toEqual({ label: 'Copy 0.00001', copy: '0.00001' })
+    expect(calc('1 / 3000000', ctx())[0].actions[0]).toEqual({ label: 'Copy 0.000000333', copy: '0.000000333' })
   })
   it('stays out of the way otherwise', () => {
     expect(calc('mageblood', ctx())).toEqual([])

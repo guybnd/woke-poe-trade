@@ -70,6 +70,8 @@ export function currencyNamer (currencyNames: readonly string[]) {
     const t = text.trim().toLowerCase().replace(/’/g, "'")
     const alias = ALIASES.get(t)
     if (alias) return alias
+    // poe.ninja has no row for the Chaos Orb itself; it's always 1.
+    if (t === 'chaos orb') return 'Chaos Orb'
     if (t.length < 3) return null
     if (exact) return currencyNames.find(n => n.toLowerCase() === t) ?? null
     // Only a name it can't be confused with: "10 orb" could be any orb.

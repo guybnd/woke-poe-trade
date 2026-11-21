@@ -73,7 +73,8 @@ export interface CalcResult {
 // bare number or "50 div" is left to the other answers).
 export function evaluate (text: string, unit: (word: string) => string | null, price: (name: string) => number | null): CalcResult | null {
   const toks = tokenize(text, unit)
-  if (!toks?.length) return null
+  // Nobody types a sum this long; a pasted wall of brackets mustn't recurse away.
+  if (!toks?.length || toks.length > 200) return null
   let i = 0
   let ops = 0
   const units = new Set<string>()
@@ -130,9 +131,9 @@ export function evaluate (text: string, unit: (word: string) => string | null, p
   }
   function postfix (): Val | null {
     const a = primary()
+    // "20%" on its own isn't a sum: it takes another sign to count.
     if (a && isOp('%')) {
       i++
-      ops++
       if (a.deg !== 0) return null
       return { v: a.v / 100, deg: 0, pct: true }
     }
@@ -167,7 +168,7 @@ export function evaluate (text: string, unit: (word: string) => string | null, p
       const a = expr()
       if (!a || !isOp(')')) return null
       i++
-      return { v: a.v, deg: a.deg }
+      return a
     }
     return null
   }
@@ -183,19 +184,25 @@ function tidy (n: number): number {
   return Number(n.toPrecision(12))
 }
 
-// "2,660", "7.142857", "0.000123": grouped, with the decimals that matter.
+// Small amounts keep three significant digits, so 1 div / 1000 isn't "0".
+function fewDecimals (t: number, decimals: number): boolean {
+  return t !== 0 && Math.abs(t) < 10 ** -Math.min(decimals, 6) * 100
+}
+
+// "2,660", "7.142857", "0.00417": grouped, with the decimals that matter.
 export function calcNumber (n: number, decimals = 6): string {
   const t = tidy(n)
   if (Math.abs(t) >= 1e15) return t.toExponential(6).replace(/\.?0+e/, 'e')
-  if (t !== 0 && Math.abs(t) < 1e-6) return t.toPrecision(3)
+  if (fewDecimals(t, decimals)) return t.toLocaleString('en-US', { maximumSignificantDigits: 3, maximumFractionDigits: 20 })
   return t.toLocaleString('en-US', { maximumFractionDigits: decimals })
 }
 
-// What Enter copies: the number as typed into a box, no grouping.
+// What Enter copies: the number as typed into a box, no grouping or exponent.
 function copyNumber (n: number, decimals = 6): string {
   const t = tidy(n)
-  if (Math.abs(t) >= 1e15 || (t !== 0 && Math.abs(t) < 1e-6)) return String(t)
-  return String(Number(t.toFixed(decimals)))
+  if (Math.abs(t) >= 1e15) return t.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: 0 })
+  if (fewDecimals(t, decimals)) return t.toLocaleString('en-US', { useGrouping: false, maximumSignificantDigits: 3, maximumFractionDigits: 20 })
+  return t.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: decimals })
 }
 
 export function calcLookup (unit: (word: string) => string | null): Lookup {
