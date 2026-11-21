@@ -203,12 +203,13 @@ export function totals (
 
 // Session story's skip list (the 3.30 vaults), handed in when that module
 // loads so its code stays out of startup JS. Until then: the vaults by id.
-interface AreaSkip { id: (areaId: string) => boolean, name: (name: string) => boolean }
+// `name` runs on "You have entered X." while in a map; true: X is skipped
+// (it has taken back the map counted for it).
+interface AreaSkip { id: (areaId: string) => boolean, name: (s: FarmingSession, name: string) => boolean }
 let skip: AreaSkip = { id: (areaId) => /^MapWorldsMemoryVault\d$/.test(areaId), name: () => false }
 export function setAreaSkip (check: AreaSkip): void { skip = check }
 
-// A map you farm: not on the skip list by area id. Areas skipped by name are
-// dropped in nameRun, once their name is logged.
+// A map you farm: not on the skip list by area id.
 export function isFarmedMap (areaId: string): boolean {
   return isMapArea(areaId) && !skip.id(areaId)
 }
@@ -330,16 +331,7 @@ export function startRun (s: FarmingSession, areaId: string, level: number, now:
 // Returns true when it changed the session.
 export function nameRun (s: FarmingSession, zoneName: string): boolean {
   const run = currentRun(s)
-  // An area skipped by name (Session story's list): its time isn't map time,
-  // and a map counted for it at this very zone change is taken back.
-  if (s.inMap && skip.name(zoneName)) {
-    s.inMap = false
-    if (run && !run.named && run.mapMs === 0 && run.enteredAt === s.lastZoneAt) {
-      s.runs!.pop()
-      s.maps = Math.max(0, s.maps - 1)
-    }
-    return true
-  }
+  if (s.inMap && skip.name(s, zoneName)) return true
   if (run && s.inMap && !run.named) {
     run.name = zoneName
     run.named = true

@@ -44,6 +44,21 @@ export function knownAreaName (areaId: string): string | null {
 
 export function skipVersion (): number { return version }
 
+// Farming's side of the list (see setAreaSkip in farming.ts): an area skipped
+// by name stops booking map time, and the map counted at this zone change
+// for it is taken back. Kept here, out of startup JS. Typed loosely so this
+// file imports nothing.
+export function farmingNameSkip (s: { inMap?: boolean, maps: number, runs?: Array<{ named?: boolean, mapMs: number, enteredAt: number }>, lastZoneAt?: number }, name: string): boolean {
+  if (!isSkippedArea(name)) return false
+  s.inMap = false
+  const run = s.runs?.[s.runs.length - 1]
+  if (run && !run.named && run.mapMs === 0 && run.enteredAt === s.lastZoneAt) {
+    s.runs!.pop()
+    s.maps = Math.max(0, s.maps - 1)
+  }
+  return true
+}
+
 // "Zealot's Vault, Scholar's Vault" or one per line, as typed in Settings.
 export function parseSkipAreas (text: string): string[] {
   const out: string[] = []

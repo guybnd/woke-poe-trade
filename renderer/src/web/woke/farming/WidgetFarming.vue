@@ -474,17 +474,13 @@ onGameLog((lines) => {
       sess.maps++
       const run = startRun(sess, ev.areaId, ev.areaLevel, nowTs)
       now.value = nowTs
-      // Built when shown: by then an area skipped by name ("You have entered"
-      // comes after loading) has taken this map back, and shows nothing.
-      setTimeout(() => {
-        if (currentRun(sess) !== run) return
-        const per = t.value.perMap
-        const prev = sess.runs && sess.runs.length >= 2 ? sess.runs[sess.runs.length - 2] : null
-        const text = prev
-          ? `Map ${sess.maps} · last map ${fmt(runResult(prev))}`
-          : `Map ${sess.maps}` + (per != null ? ` · ${fmt(per)} per map so far` : '')
-        dockRef.value?.peek(text)
-      }, 1500)
+      const per = t.value.perMap
+      const prev = sess.runs && sess.runs.length >= 2 ? sess.runs[sess.runs.length - 2] : null
+      const text = prev
+        ? `Map ${sess.maps} · last map ${fmt(runResult(prev))}`
+        : `Map ${sess.maps}` + (per != null ? ` · ${fmt(per)} per map so far` : '')
+      // Not if an area skipped by name took this map back meanwhile.
+      setTimeout(() => { if (currentRun(sess) === run) dockRef.value?.peek(text) }, 1500)
     }
     changed = true
   }
