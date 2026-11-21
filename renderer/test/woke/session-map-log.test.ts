@@ -77,6 +77,31 @@ describe('maps from Client.txt', () => {
     expect(log.current).toMatchObject({ name: 'Cemetery', char: 'alt', charLevel: 70 })
   })
 
+  it('marks a map whose Mirage you stepped into, once, as Client.txt logs it', () => {
+    const loading = (time: string, name: string) => info(time, `[LOADING SCREEN] (${name}) Duration = 1.75392 seconds`)
+    const { done, log } = follow([
+      area('17:51:27', 'MapWorldsFortress', '392018542'),
+      entered('17:51:28', 'Fortress'),
+      loading('17:51:28', 'Fortress'),
+      area('17:52:26', 'MapWorldsFortress', '392018542'),
+      entered('17:52:28', 'Fortress'),
+      loading('17:52:28', 'Mirage of Fortress'),
+      area('17:53:41', 'MapWorldsFortress', '392018542'),
+      entered('17:53:42', 'Fortress'),
+      loading('17:53:43', 'Fortress'),
+      area('17:54:10', 'MapWorldsFortress', '392018542'),
+      loading('17:54:12', 'Mirage of Fortress'),
+      area('17:54:40', 'MapWorldsFortress', '392018542'),
+      loading('17:54:42', 'Fortress'),
+      area('17:55:08', 'HideoutArenaSearingExarch', '1', 60),
+      loading('17:55:10', 'Mirage of Dunes'),
+      area('17:59:35', 'MapWorldsFortress', '288524962'),
+      info('17:59:40', '&<$7000> drccccshrineaboose: [LOADING SCREEN] (Mirage of Fortress) lol')
+    ])
+    expect(done.map(r => [r.name, r.npcs, r.mapMs])).toEqual([['Fortress', ['Mirage'], (3 * 60 + 41) * 1000]])
+    expect(log.current?.npcs).toEqual([])
+  })
+
   it("doesn't take a side area's name for the map", () => {
     const { log } = follow([
       area('21:00:00', 'MapWorldsStrand', '11'),
