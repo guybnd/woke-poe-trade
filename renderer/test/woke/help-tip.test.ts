@@ -70,20 +70,19 @@ describe('placeAtPointer (title hovers)', () => {
 
 describe('fillTipCard', () => {
   // A stand-in for the few DOM calls the card makes (tests run without a DOM).
-  interface FakeEl { tag: string, textContent: string, children: FakeEl[], attrs: Record<string, string>, ownerDocument: unknown, setAttribute: (k: string, v: string) => void, appendChild: (c: FakeEl) => void }
-  function el (tag: string): FakeEl {
-    const e: FakeEl = {
-      tag,
-      children: [],
-      attrs: {},
-      ownerDocument: { createElement: el },
-      setAttribute (k, v) { e.attrs[k] = v },
-      appendChild (c) { e.children.push(c) },
-      get textContent () { return this._text },
-      set textContent (v: string) { this._text = v; this.children = [] }
-    } as FakeEl & { _text: string }
-    return e
+  class FakeEl {
+    children: FakeEl[] = []
+    attrs: Record<string, string> = {}
+    ownerDocument = { createElement: (tag: string) => new FakeEl(tag) }
+    tag: string
+    private text = ''
+    constructor (tag: string) { this.tag = tag }
+    setAttribute (k: string, v: string) { this.attrs[k] = v }
+    appendChild (c: FakeEl) { this.children.push(c) }
+    get textContent () { return this.text }
+    set textContent (v: string) { this.text = v; this.children = [] }
   }
+  const el = (tag: string) => new FakeEl(tag)
   it('shows only the text without a shortcut', () => {
     const card = el('div')
     fillTipCard(card as unknown as HTMLElement, ' Open the poedb page. ', null)
