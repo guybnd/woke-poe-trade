@@ -159,8 +159,13 @@ onBeforeUnmount(onSharedDataChange(() => { vaultTable.value = null; readVaults()
 const bigTab = shallowRef<'frags' | 'vaults'>('frags')
 const TYPICAL_TIP = '~ = the estimated typical pick: the best of four offers, no weights are published.'
 const priceOf = (name: string, variant?: string) => px.value.price(name, variant)
-function vaultTitle (v: { name: string, typical: number | null }) {
-  return `${v.name} · ~${chaos(v.typical)} typical pick`
+// The hover: the vault's reward options and their prices, dearest first (Guy, 2026-11-21).
+function vaultTitle (v: { id: string }) {
+  const b = vaultBlocks.value.find(x => x.id === v.id)
+  if (!b) return undefined
+  const lines = b.rewards.map(r => `${r.text}${r.rare ? ' (rare)' : ''}: ${r.chaos != null ? chaos(r.chaos) : 'varies'}`)
+  return [`${b.name} · ${b.quadrant} · ~${chaos(b.typical)} typical pick`, ...lines].join('
+')
 }
 // Every vault, the ones these maps spawn first, best typical pick first.
 const vaultBlocks = computed(() => {
@@ -193,7 +198,7 @@ const copies = (d: DropRow) => (d.chance ?? 0) * d.qty
 
 function vaultOf (mapId: string) {
   const v = vaultTable.value ? vaultForNightmare(vaultTable.value, mapId) : null
-  return v ? { name: v.name, short: shortName(v), typical: typicalPick(v, priceOf) } : null
+  return v ? { id: v.id, name: v.name, short: shortName(v), typical: typicalPick(v, priceOf) } : null
 }
 const cols = computed(() => results.value.map(r => {
   const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
