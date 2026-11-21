@@ -242,6 +242,8 @@ import { BOSS_RUNS_TYPE } from '../boss-runs/widget'
 import type { BossRunsWidget } from '../boss-runs/widget'
 import { evaluateBoss, priceResolver } from '../boss-runs/calc'
 import { useSessionStore } from './store'
+import { onSavedOpen } from '../shared/saved-open'
+import { ANALYTICS_TYPE } from './types'
 import { tradeTotals, tradesInRange, useTradeLog } from '../trade/log-store'
 import { isModuleOn } from '../modules'
 import MapHistory from '../session-story/MapHistory.vue'
@@ -294,6 +296,14 @@ function pickMap (enteredAt: number) {
   focusAt.value = null
   nextTick(() => { focusAt.value = enteredAt })
 }
+// Ctrl+Space: "Open Map history", or a map's Show button ("map:<entered at>").
+onSavedOpen(ANALYTICS_TYPE, (id) => {
+  if (!storyOn.value) return
+  wm.show(props.config.wmId)
+  nightId.value = null
+  if (id.startsWith('map:')) pickMap(Number(id.slice(4)))
+  else tab.value = 'history'
+})
 // Session story turned off while its tab shows: back to Strategies.
 watch(storyOn, (on) => {
   if (on) return

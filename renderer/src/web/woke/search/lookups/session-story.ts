@@ -50,7 +50,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       sub: `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: 'fas fa-moon',
       sections: [{ rows: rows(s) }],
-      actions: [{ label: 'Open Session story', tool: SESSION_STORY_TYPE }]
+      actions: [{ label: 'Open Session story', tool: SESSION_STORY_TYPE }, { label: 'Map history', open: { tool: ANALYTICS_TYPE, id: 'history' } }]
     }]
   }
 }
@@ -75,10 +75,12 @@ export function mapsLookup (all: readonly MapRecord[]): Lookup {
       sections: [{
         rows: last.map(m => ({
           label: `${m.name} ${tierText(m.areaLevel)}`,
-          value: [formatClock(m.mapMs), m.deaths ? `${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : '', m.npcs.join(', ')].filter(Boolean).join(' · ')
+          value: [formatClock(m.mapMs), m.deaths ? `${m.deaths} ${m.deaths === 1 ? 'death' : 'deaths'}` : '', m.npcs.join(', ')].filter(Boolean).join(' · '),
+          // Opens Map history at that map's row.
+          action: { label: 'Show', open: { tool: ANALYTICS_TYPE, id: `map:${m.enteredAt}` } }
         }))
       }],
-      actions: [{ label: 'Open Session analytics', tool: ANALYTICS_TYPE }]
+      actions: [{ label: 'Open Map history', open: { tool: ANALYTICS_TYPE, id: 'history' } }]
     }]
   }
 }

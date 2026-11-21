@@ -18,3 +18,4 @@
 - Session analytics: click a map on tonight's strip to jump to its row in Map history (the row and the strip segment light up together; clicking a row marks it on the strip). Map history has chips for the mechanics you met (Delirium, Expedition, Zana…) and for maps with a death; click one to list only those.
 - Session analytics: a Nights tab lists every night with its own strip, time, maps and profit. Click one to show it at the top of the window, then click its maps to find them in Map history.
 - Session story: an optional bar at the top of the screen while you're in a map, with the map, its minutes and tonight's maps and profit. It never takes the mouse and sits alongside the after-map toast. Turn it on under the map settings (dock card › After a map, or Settings › Farming & sessions).
+- Ctrl+Space search: "maps" opens Map history, and each map in the card has a Show button that opens Map history at that map's row. The tonight card can open Map history too.
