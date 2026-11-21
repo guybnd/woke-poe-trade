@@ -36,6 +36,9 @@ export const shell = {
   async trashItem (p: string) { shellCalls.push({ op: 'trashItem', target: p }); await import('fs').then(fs => fs.promises.rm(p)) }
 }
 
+// Crash reports (main/src/woke/crash-reports.ts): never started here.
+export const crashReporter = { start () {} }
+
 export const powerMonitor = new EventEmitter()
 
 export const screen = Object.assign(new EventEmitter(), {
@@ -119,4 +122,4 @@ export const net = {
 export const session = { defaultSession: { webRequest: { onHeadersReceived () {} } } }
 export type Rectangle = { x: number, y: number, width: number, height: number }
 
-export default { app, shell, screen, powerMonitor, clipboard, globalShortcut, dialog, Menu, BrowserWindow, nativeImage, Tray, net, session }
+export default { app, shell, screen, crashReporter, powerMonitor, clipboard, globalShortcut, dialog, Menu, BrowserWindow, nativeImage, Tray, net, session }

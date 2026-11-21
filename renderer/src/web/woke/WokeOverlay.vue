@@ -11,6 +11,7 @@
   <GameTooltip />
   <HelpCard />
   <AppNotices />
+  <ReportDialog v-if="reportDialogOpen" />
   <!-- 3.30 Wickerman module (remove with the league). -->
   <WickermanDock v-if="wickermanOn" />
 </template>
@@ -28,6 +29,7 @@ import AtlasOverlay from './atlas/AtlasOverlay.vue'
 import GameTooltip from './ui/tooltip/GameTooltip.vue'
 import HelpCard from './ui/HelpCard.vue'
 import AppNotices from './app/AppNotices.vue'
+import { reportDialogOpen } from './app/report'
 import { MainProcess } from '@/web/background/IPC'
 import { AppConfig, pushHostConfig, saveConfigQuietly } from '@/web/Config'
 import { computed, defineAsyncComponent, onUnmounted } from 'vue'
@@ -35,6 +37,8 @@ import { isModuleOn } from './modules'
 import { toast } from './ui'
 import { LOOT_FILTER_SAMPLE_TARGET } from './loot-filter/widget'
 
+// Loaded when first opened: kept out of the startup JS (perf budget).
+const ReportDialog = defineAsyncComponent(() => import('./app/ReportDialog.vue'))
 const WickermanDock = defineAsyncComponent(() => import('./wickerman/WickermanDock.vue'))
 const wickermanOn = computed(() => isModuleOn(AppConfig(), 'wickerman'))
 

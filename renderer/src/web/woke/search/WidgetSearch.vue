@@ -144,6 +144,7 @@ import { whenIdle } from '../shared/perf'
 import { nudgeUiSize, uiSize } from '../ui/ui-size'
 import { PAGES } from '../settings/pages'
 import { settingsHits } from './settings-index'
+import { runUpdateCheck } from '../settings/update-check'
 import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
 import { pastedItemText } from './pasted-item'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
@@ -238,6 +239,7 @@ import type { GemTable } from './lookups/gems'
 import type { CardInfo } from './lookups/cards'
 import { loadTipBases, loadTipDrops, loadTipItems, loadTipUniques, loadTipVestigial } from '../ui/tooltip/item-tip'
 import { onSharedDataChange } from '../app/live-data'
+import { openReportDialog } from '../app/report'
 import { dropOf } from '../ui/tooltip/tip-content'
 import type { TipItem, TipPack } from '../ui/tooltip/tip-content'
 import { SEARCH_TARGET, searchRequest } from './widget'
@@ -413,6 +415,24 @@ function commandEntries (): ActionEntry[] {
       add(w, 'Pause or resume the run timer', 'hotkeyPause', timerTarget(w.wmId, 'pause'))
     }
   }
+  // Check for updates: the Install & updates page shows the answer on its row.
+  out.push({
+    kind: 'command',
+    id: 'c:check-updates',
+    name: 'Check for updates',
+    sub: `Version ${Host.version.value}`,
+    icon: 'fas fa-download',
+    about: 'Asks for a new version now and opens Settings > Install & updates with the answer.',
+    verb: 'Check now',
+    action: () => {
+      runUpdateCheck().catch(() => {})
+      const settings = wm.widgets.value.find(w => w.wmType === 'settings')
+      if (!settings) return
+      wm.setFlag(settings.wmId, 'settings::page=install', true)
+      wm.setFlag(settings.wmId, 'settings::find=Check for updates', true)
+      wm.show(settings.wmId)
+    }
+  })
   // UI size, one step at a time. The palette stays open: it grows with the
   // rest, so the next step is one Enter away.
   for (const [dir, steps] of [['bigger', 1], ['smaller', -1]] as const) {
@@ -430,6 +450,21 @@ function commandEntries (): ActionEntry[] {
       }
     })
   }
+  // The palette steps aside; the overlay stays open for the form.
+  out.push({
+    kind: 'command',
+    id: 'c:report-issue',
+    name: 'Report an issue',
+    sub: 'Bug or idea, on GitHub',
+    icon: 'fas fa-bug',
+    aliases: ['report', 'bug', 'issue', 'feedback', 'github', 'idea'],
+    about: 'Write up a bug or an idea. Opens a pre-filled GitHub issue in your browser; nothing is sent by itself.',
+    verb: 'Open',
+    action: () => {
+      wm.hide(props.config.wmId)
+      openReportDialog()
+    }
+  })
   return out
 }
 
@@ -757,6 +792,9 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     .filter(g => !listed.has(groupKey(g)))
   const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
+  const commands = searchNamed(commandEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q))
+  // A command and a setting row of the same name ("Check for updates"): the command does more.
+  const commandNames = new Set(commands.map(c => c.name.toLowerCase()))
   return arrangeSections<Entry>(q, {
     answer: cardSections(cards, ['Answer']),
     items: [
@@ -767,8 +805,8 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
     tools: searchNamed(toolEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q)),
     rest: [
-      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
-      { label: 'Settings', entries: settingEntries(q) as Entry[] }
+      { label: 'Do it now', entries: commands as Entry[] },
+      { label: 'Settings', entries: settingEntries(q).filter(e => !commandNames.has(e.name.toLowerCase())) as Entry[] }
     ],
     web: cardSections(cards, ['Search the web'])
   })

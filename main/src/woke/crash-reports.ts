@@ -2,14 +2,18 @@
 // offered for reporting on the next launch. Nothing leaves the PC unless the
 // player presses Report, which opens a pre-filled GitHub issue they can read
 // and edit before sending.
-import { app, crashReporter, shell } from 'electron'
+import { app, clipboard, crashReporter, shell } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { Logger } from '../RemoteLogger'
 import { appPrefs } from './app-prefs'
+import type { WokeIssueRequest } from '../../../ipc/woke-ops'
+import { buildIssue, scrubText, type BuiltIssue, type ScrubNames } from '../../../ipc/issue-report'
 
-export const ISSUES_URL = 'https://github.com/guybnd/woke-poe-trade/issues/new'
+// The scrubbing lives with the issue builder; tests import it from here too.
+export { scrubText, type ScrubNames }
+
 const KEEP = 20
 
 export type CrashKind = 'main-error' | 'overlay-gone' | 'process-gone' | 'native-crash' | 'manual'
@@ -41,8 +45,8 @@ function osLine () {
   return `${name} ${os.release()} ${process.arch}`
 }
 
-function lastLogLines (n = 60): string {
-  return (logger?.history ?? '').trimEnd().split('\n').slice(-n).join('\n')
+function lastLogLines (n = 60, from: Logger | null = logger): string {
+  return (from?.history ?? '').trimEnd().split('\n').slice(-n).join('\n')
 }
 
 function write (r: CrashReport) {
@@ -240,78 +244,69 @@ export function dismissCrashes () {
   }
 }
 
-// A public issue must not carry the player's name: their Windows user folder
-// shows up in paths, and the user name on its own in some errors.
-export interface ScrubNames { home?: string, user?: string }
-
-function escapeRe (s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
-
-export function scrubText (text: string, names: ScrubNames = localNames()): string {
-  let out = text
-  const home = names.home?.replace(/[\\/]+$/, '')
-  if (home && home.length > 3) {
-    // Either slash, any case (Windows paths).
-    const parts = home.split(/[\\/]+/).map(escapeRe)
-    out = out.replace(new RegExp(parts.join('[\\\\/]+'), 'gi'), '~')
-  }
-  // Any other user folder, e.g. from a path the game reported.
-  out = out.replace(/([A-Za-z]:[\\/]+Users[\\/]+)[^\\/\s"'<>]+/gi, '$1<user>')
-  out = out.replace(/(\/(?:home|Users)\/)[^/\s"'<>]+/g, '$1<user>')
-  // A pathofexile.com login cookie must never end up in a report.
-  out = out.replace(/(POESESSID[=:"'\s]+)[0-9a-f]{16,}/gi, '$1<hidden>')
-  const user = names.user
-  if (user && user.length >= 3) out = out.replace(new RegExp(`\\b${escapeRe(user)}\\b`, 'gi'), '<user>')
-  return out
-}
-
-function localNames (): ScrubNames {
+export function localNames (names: string[] = []): ScrubNames {
   let user: string | undefined
   try { user = os.userInfo().username } catch {}
-  return { home: os.homedir(), user }
+  return { home: os.homedir(), user, names }
+}
+
+export function crashIssue (r: CrashReport, context?: string, names: ScrubNames = localNames()): BuiltIssue {
+  const when = new Date(r.at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
+  const manual = r.kind === 'manual'
+  return buildIssue({
+    kind: manual ? 'bug' : 'crash',
+    title: manual ? 'Problem report' : `Crash: ${r.title}`,
+    prompt: manual ? 'What went wrong?' : 'What were you doing when it happened?',
+    hint: 'e.g. price checking a map, alt-tabbing, starting a map',
+    info: [
+      `Version: ${r.version} (Electron ${r.electron}, ${r.os})`,
+      `When: ${when}`,
+      manual ? null : `What happened: ${r.title}`,
+      context ?? null
+    ].filter((l): l is string => l != null),
+    error: manual ? '' : r.detail,
+    overlayErrors: r.rendererErrors.join('\n\n'),
+    log: r.log
+  }, names)
 }
 
 export function issueUrl (r: CrashReport, context?: string, names: ScrubNames = localNames()): string {
-  const scrub = (text: string) => scrubText(text, names)
-  const when = new Date(r.at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
-  const head = [
-    r.kind === 'manual' ? '**What went wrong?**' : '**What were you doing when it happened?**',
-    '<!-- e.g. price checking a map, alt-tabbing, starting a map -->',
-    '',
-    '',
-    '**Details** (added by the app)',
-    `- Version: ${r.version} (Electron ${r.electron}, ${r.os})`,
-    `- When: ${when}`,
-    r.kind === 'manual' ? null : `- What happened: ${scrub(r.title)}`,
-    context ? `- ${scrub(context)}` : null
-  ].filter(l => l != null).join('\n')
-
-  const block = (label: string, text: string) => text.trim()
-    ? `\n\n<details><summary>${label}</summary>\n\n\`\`\`\n${text.trim()}\n\`\`\`\n</details>`
-    : ''
-
-  const title = r.kind === 'manual' ? 'Problem report' : `Crash: ${scrub(r.title)}`
-  let logLines = scrub(r.log).split('\n')
-  // GitHub refuses very long URLs; drop the oldest log lines until it fits.
-  for (;;) {
-    const body = head +
-      block('Error', r.kind === 'manual' ? '' : scrub(r.detail).slice(0, 2500)) +
-      block('Overlay errors', scrub(r.rendererErrors.join('\n\n')).slice(0, 1500)) +
-      block('Log', logLines.join('\n'))
-    const url = `${ISSUES_URL}?${new URLSearchParams({ title, body, labels: r.kind === 'manual' ? 'bug' : 'crash' }).toString()}`
-    // Never cut inside a %XX escape: GitHub rejects a malformed URL.
-    if (url.length < 7000 || !logLines.length) return url.slice(0, 7900).replace(/%[0-9A-Fa-f]?$/, '')
-    logLines = logLines.slice(Math.ceil(logLines.length / 4))
-  }
+  return crashIssue(r, context, names).url
 }
 
-export async function openReport (id: string | null, context?: string) {
+export async function openReport (id: string | null, context?: string, names: string[] = []) {
   const report = id ? readReport(id) : recordCrash('manual', 'Problem report', '')
   if (!report) throw new Error('That report is gone')
   if (id) {
     report.seen = true
     write(report)
   }
-  await shell.openExternal(issueUrl(report, context))
+  const issue = crashIssue(report, context, localNames(names))
+  if (issue.clipboard) clipboard.writeText(issue.clipboard)
+  await shell.openExternal(issue.url)
+}
+
+// "Report an issue": the player's own report, with app info and the log if
+// they ticked them. `open` false only builds it, for the dialog's preview.
+export type IssueRequest = WokeIssueRequest
+
+export async function userIssue (args: IssueRequest | null | undefined, log: Logger | null = logger): Promise<BuiltIssue> {
+  const req = (args ?? {}) as Partial<IssueRequest>
+  const info = req.includeInfo
+    ? [`Version: ${app.getVersion()} (Electron ${process.versions.electron}, ${osLine()})`, ...(Array.isArray(req.info) ? req.info.filter(l => typeof l === 'string') : [])]
+    : undefined
+  const issue = buildIssue({
+    kind: req.kind === 'idea' ? 'idea' : 'bug',
+    title: String(req.title ?? ''),
+    text: String(req.text ?? ''),
+    info,
+    log: req.includeLog ? lastLogLines(200, log) : undefined
+  }, localNames(Array.isArray(req.names) ? req.names.filter(n => typeof n === 'string') : []))
+  if (req.open) {
+    if (issue.clipboard) clipboard.writeText(issue.clipboard)
+    await shell.openExternal(issue.url)
+  }
+  return issue
 }
 
 export async function openCrashFolder () {

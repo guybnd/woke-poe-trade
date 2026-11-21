@@ -1,7 +1,9 @@
-// Problem reports: crash prompts in the overlay and "Report a problem" in
-// Settings → About. The main process builds the GitHub issue (crash-reports.ts).
-import type { ComponentPublicInstance } from 'vue'
+// Problem reports: crash prompts in the overlay, and "Report an issue" in
+// Settings and Ctrl+Space (ReportDialog.vue). The main process builds the
+// GitHub issue (crash-reports.ts, with ipc/issue-report.ts).
+import { shallowRef, type ComponentPublicInstance } from 'vue'
 import { AppConfig } from '@/web/Config'
+import type { WokeIssue } from '@ipc/woke-ops'
 import { MODULES, isModuleOn } from '../modules'
 import { hostRequest } from '../shared/host'
 
@@ -10,9 +12,47 @@ export function toolsContext (): string {
   return `Tools on: ${on.length ? on.join(', ') : 'none'}`
 }
 
-// Opens a pre-filled GitHub issue for a saved crash, or a blank problem report.
-export async function reportProblem (crashId: string | null = null) {
-  await hostRequest('crash-report', { id: crashId, context: toolsContext() })
+// "Report an issue" dialog: open or not, shown while the overlay is.
+export const reportDialogOpen = shallowRef(false)
+export function openReportDialog () { reportDialogOpen.value = true }
+
+export interface IssueForm {
+  kind: 'bug' | 'idea'
+  title: string
+  text: string
+  includeInfo: boolean
+  includeLog: boolean
+}
+
+// The overlay's part of "Include app info": main adds version, Electron and OS.
+export function appInfoLines (): string[] {
+  const config = AppConfig()
+  return [toolsContext(), `League: ${config.leagueId || 'not set'}`]
+}
+
+// Names a public issue must not show: the PoE account and followed character.
+function privateNames (): string[] {
+  const config = AppConfig()
+  const out = [config.accountName.replace(/#\d+$/, ''), config.accountName]
+  for (const w of config.widgets as unknown as Array<{ wmType: string, charName?: unknown }>) {
+    if ((w.wmType === 'woke-campaign' || w.wmType === 'woke-run-timer') && typeof w.charName === 'string') out.push(w.charName)
+  }
+  return [...new Set(out.map(n => n.trim()).filter(Boolean))]
+}
+
+// open false: only build it, for the preview of what will be sent.
+export async function issueReport (form: IssueForm, open: boolean): Promise<WokeIssue> {
+  return await hostRequest('issue-report', {
+    ...form,
+    info: form.includeInfo ? appInfoLines() : undefined,
+    names: privateNames(),
+    open
+  })
+}
+
+// Opens a pre-filled GitHub issue for a saved crash.
+export async function reportProblem (crashId: string) {
+  await hostRequest('crash-report', { id: crashId, context: toolsContext(), names: privateNames() })
 }
 
 export async function openCrashFolder () {
