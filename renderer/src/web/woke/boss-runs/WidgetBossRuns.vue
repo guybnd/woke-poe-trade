@@ -83,10 +83,6 @@
               <input class="w-input" :value="fragsPerKill" :class="$style.input" style="width: 3rem;" inputmode="decimal"
                 @change="setFragsPerKill(($event.target as HTMLInputElement).value, $event)">
             </label>
-            <label v-if="isNightmare(sel.boss)" class="flex items-center gap-1 w-dim text-sm" title="Share of Nightmare maps followed by a Templar Vault. Measured at 54% (107 of 198 maps).">Vault %
-              <input class="w-input" :value="vaultChance" :class="$style.input" style="width: 3rem;" inputmode="decimal" data-boss-vault-chance
-                @change="setVaultChance(($event.target as HTMLInputElement).value, $event)">
-            </label>
             <label class="flex items-center gap-1 w-dim text-sm">Run time
               <input class="w-input" :value="formatRunTime(sel.runSeconds)" :class="$style.input" style="width: 4rem;" title="m:ss, or minutes"
                 @change="setRunTime(sel.boss.id, ($event.target as HTMLInputElement).value, $event)">
@@ -97,9 +93,6 @@
             <div><div :class="$style.k">Loot / run</div><div :class="$style.big"><WPrice :chaos="sel.hasRates ? sel.loot : null" :divine="divine" /></div></div>
             <div><div :class="$style.k">Profit / run</div><div :class="[$style.big, sel.profit >= 0 ? 'w-up' : 'w-down']"><WPrice :chaos="sel.ready ? sel.profit : null" :divine="divine" /></div></div>
             <div><div :class="$style.k">Per hour</div><div :class="[$style.big, sel.perHour >= 0 ? 'w-up' : 'w-down']"><WPrice :chaos="sel.ready ? sel.perHour : null" :divine="divine" /></div></div>
-          </div>
-          <div v-if="selVault" class="w-dim text-sm" style="padding: 0 var(--w-pad) 4px;" data-boss-vault>
-            Plus its vault: ~<WPrice :chaos="selVault.value" :divine="divine" /> a map ({{ selVault.vault.name }}, {{ selVault.chance }}% of maps × ~typical pick). The price check and Ctrl+Space count it; these numbers don't.
           </div>
           <div style="padding: 0 var(--w-pad);">
             <WTabs v-model="tab" :options="[{ value: 'drops', label: 'Drops' }, { value: 'kills', label: 'My kills', count: sel.kills }, { value: 'rates', label: 'Rates & sources' }]" />
@@ -288,8 +281,6 @@ import { poeWebApi } from '@/web/Config'
 import { BOSSES } from './bosses'
 import type { Boss } from './bosses'
 import { DEFAULT_FRAGMENTS_PER_KILL, FAVOURED_SHARE, isNightmare, nightmareBosses } from './nightmare'
-import { loadVaults, nightmareVaultValue, vaultChanceOf } from '../vaults/vaults'
-import type { VaultTable } from '../vaults/vaults'
 import DockItem from '../dock/DockItem.vue'
 import { showWithOverlay } from '../dock/dock'
 import type { DockMenuAction } from '../dock/dock'
@@ -382,18 +373,6 @@ function setFragsPerKill (text: string, e: Event) {
   if (Number.isFinite(rounded) && rounded > 0 && rounded <= 20) props.config.nightmareFrags = rounded
   else (e.target as HTMLInputElement).value = String(fragsPerKill.value)
 }
-// The Templar Vault a Nightmare map spawns about half the time (woke/vaults).
-const vaultChance = computed(() => vaultChanceOf(props.config.nightmareVaultChance))
-function setVaultChance (text: string, e: Event) {
-  const n = Math.round(Number(text.trim().replace(/[,%]/g, m => m === ',' ? '.' : '')))
-  if (Number.isFinite(n) && n >= 0 && n <= 100) props.config.nightmareVaultChance = n
-  else (e.target as HTMLInputElement).value = String(vaultChance.value)
-}
-const vaultTable = shallowRef<VaultTable | null>(null)
-loadVaults().then(t => { vaultTable.value = t }).catch(() => {})
-const selVault = computed(() => sel.value && isNightmare(sel.value.boss)
-  ? nightmareVaultValue(vaultTable.value, sel.value.boss.id, props.config.nightmareVaultChance, (n, v) => px.value.price(n, v))
-  : null)
 function estimateLabel (boss: Boss) {
   return boss.estimateSource?.label ?? ESTIMATE_SOURCE_LABEL
 }

@@ -46,8 +46,6 @@ export interface BossPrefs {
   skipThin?: boolean
   // Uber fragments a Nightmare (T17) boss drops a kill (unset: 2).
   nightmareFrags?: number
-  // Percent of Nightmare maps followed by a Templar Vault (unset: 54, measured).
-  nightmareVaultChance?: number
 }
 
 // 'unid' = unidentified trade listings; 'median' is the poe.ninja price.

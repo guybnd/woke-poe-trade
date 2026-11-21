@@ -151,21 +151,6 @@ export function vaultForNightmare (table: VaultTable, mapId: string): Vault | nu
   return null
 }
 
-// The setting, or the measured default when unset or out of range.
-export function vaultChanceOf (chance: number | undefined): number {
-  return chance != null && Number.isFinite(chance) && chance >= 0 && chance <= 100 ? chance : DEFAULT_NIGHTMARE_VAULT_CHANCE
-}
-
-// The vault's share of a Nightmare map's value: chance (percent) x typical pick.
-export function nightmareVaultValue (table: VaultTable | null, mapId: string, chance: number | undefined, price: PriceOf): { vault: Vault, value: number, chance: number } | null {
-  if (!table) return null
-  const vault = vaultForNightmare(table, mapId)
-  if (!vault) return null
-  const pct = vaultChanceOf(chance)
-  const typical = typicalPick(vault, price)
-  return { vault, value: typical == null ? 0 : typical * pct / 100, chance: pct }
-}
-
 // The Nightmare maps that spawn a vault ("Fortress, Citadel").
 export function nightmareMapsFor (table: VaultTable, v: Vault): string[] {
   return NIGHTMARE_MAPS.filter(m => vaultForNightmare(table, m.id)?.id === v.id).map(m => m.name.replace(/ Map$/, ''))

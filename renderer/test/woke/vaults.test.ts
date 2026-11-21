@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { nightmareMapsFor, nightmareVaultValue, rewardPrice, topReward, typicalPick, vaultChanceOf, vaultForFragment, vaultForNightmare, vaultsGiving, DEFAULT_NIGHTMARE_VAULT_CHANCE } from '@/web/woke/vaults/vaults'
+import { nightmareMapsFor, rewardPrice, topReward, typicalPick, vaultForFragment, vaultForNightmare, vaultsGiving } from '@/web/woke/vaults/vaults'
 import type { Vault, VaultTable } from '@/web/woke/vaults/vaults'
 import { vaultLookup } from '@/web/woke/search/lookups/vaults'
 import { nightmareLookup } from '@/web/woke/search/lookups/nightmare'
@@ -70,9 +70,16 @@ describe('prices and the typical pick', () => {
 
   it('is the expected best of four offers, rare ones a tenth as likely', () => {
     // Two rewards worth 10 and 0, equally likely: best of four is 10 unless all four are 0.
-    const v: Vault = { id: 'x', name: 'X', quadrant: 'N', bosses: [], wiki: '', rewards: [
-      { text: 'a', kind: 'c', items: [{ name: 'A' }] }, { text: 'b', kind: 'c' }
-    ] }
+    const v: Vault = {
+      id: 'x',
+      name: 'X',
+      quadrant: 'N',
+      bosses: [],
+      wiki: '',
+      rewards: [
+        { text: 'a', kind: 'c', items: [{ name: 'A' }] }, { text: 'b', kind: 'c' }
+      ]
+    }
     expect(typicalPick(v, n => n === 'A' ? 10 : null)).toBeCloseTo(10 * (1 - 0.5 ** 4))
     // A rare 100 next to a common 10: P(no rare in four) = (1/1.1)^4.
     const r: Vault = { ...v, rewards: [{ text: 'a', kind: 'c', items: [{ name: 'A' }] }, { text: 'r', kind: 'c', rare: true, items: [{ name: 'R' }] }] }
@@ -105,15 +112,6 @@ describe('which vault', () => {
     expect(nightmareMapsFor(TABLE, vault("Zealot's Vault"))).toEqual(['Citadel', 'Fortress'])
   })
 
-  it('values the vault at the chance times the typical pick', () => {
-    const typical = typicalPick(vault("Zealot's Vault"), price)!
-    expect(nightmareVaultValue(TABLE, 'nightmare-fortress', undefined, price)!.value).toBeCloseTo(typical * DEFAULT_NIGHTMARE_VAULT_CHANCE / 100)
-    expect(nightmareVaultValue(TABLE, 'nightmare-fortress', 20, price)!.value).toBeCloseTo(typical * 0.2)
-    expect(nightmareVaultValue(null, 'nightmare-fortress', 20, price)).toBeNull()
-    expect(vaultChanceOf(150)).toBe(DEFAULT_NIGHTMARE_VAULT_CHANCE)
-    expect(vaultChanceOf(0)).toBe(0)
-  })
-
   it('knows Arkhon’s Vault gives Nightmare Maps', () => {
     expect(vaultsGiving(TABLE, 'Nightmare Map').map(v => v.name)).toEqual(["Arkhon's Vault"])
   })
@@ -125,34 +123,44 @@ const ctx: LookupContext = { price, items: Object.entries(PRICES).map(([n, c]) =
 describe('search', () => {
   const lookup = vaultLookup(TABLE)
 
-  it('"vault" gives the overview, then each vault', () => {
-    const cards = lookup('vault', ctx)
-    expect(cards.map(c => c.name)).toEqual(['Templar Vaults', "Machinist's Vault", "Zealot's Vault", "Scholar's Vault", "Arkhon's Vault"])
-    expect(cards[0].sections[0].table!.rows).toHaveLength(4)
-    expect(lookup('templar vaults', ctx)[0].name).toBe('Templar Vaults')
+  it('"vault" gives one card with all four vaults, best typical pick first', () => {
+    for (const q of ['vault', 'vaul', 'Templar Vaults']) {
+      const cards = lookup(q, ctx)
+      expect(cards).toHaveLength(1)
+      expect(cards[0].name).toBe('Templar Vaults')
+    }
+    const [card] = lookup('vault', ctx)
+    const vaultSections = card.sections.filter(s => s.rows)
+    expect(vaultSections).toHaveLength(4)
+    expect(vaultSections[0].label).toMatch(/^Scholar's Vault · Southwest · ~\d+ c typical$/)
+    expect(vaultSections.find(s => s.label!.startsWith("Zealot's"))!.rows![0].label).toBe('From The Shaper, Uber Elder, Venarius; Citadel and Fortress Nightmare maps')
   })
 
-  it('a vault name finds its card, with Nightmare maps and every reward', () => {
+  it('a vault name puts that vault first, with every reward', () => {
     const [card] = lookup('zealot', ctx)
     expect(card.name).toBe("Zealot's Vault")
-    const rows = card.sections.flatMap(s => s.rows ?? [])
-    expect(rows.find(r => r.label === 'And Nightmare maps')?.value).toContain('Citadel, Fortress')
-    expect(card.sections[1].rows).toHaveLength(5)
-    expect(lookup("arkhon's vault", ctx)[0].name).toBe("Arkhon's Vault")
-    expect(lookup('vaul', ctx)[0].name).toBe('Templar Vaults')
+    const first = card.sections[0]
+    expect(first.label!.startsWith("Zealot's Vault · Northeast")).toBe(true)
+    expect(first.rows).toHaveLength(1 + 5)
+    expect(first.rows![1].label).toBe('Greater Multistrike Support · rare')
+    expect(lookup("arkhon's vault", ctx)[0].sections[0].label!.startsWith("Arkhon's Vault")).toBe(true)
     expect(lookup('zea', ctx)).toEqual([])
     expect(vaultLookup(null)('vault', ctx)).toEqual([])
   })
 
-  it('adds the vault to Nightmare map cards', () => {
+  it('names each Nightmare map’s vault without adding it to profit', () => {
     const items = [row('Map', 'Nightmare Map', 70), row('Fragment', 'Decaying Fragment', 79), row('Fragment', 'Synthesising Fragment', 13)]
     const c: LookupContext = { ...ctx, price: n => items.find(i => i.name === n)?.chaos ?? price(n), items }
     const [withVault] = nightmareLookup({} as BossPrefs, TABLE)('fortress', c)
     const [without] = nightmareLookup({} as BossPrefs)('fortress', c)
-    const loot = (card: typeof withVault) => card.sections[0].rows!.find(r => r.label.startsWith('Loot'))!.chaos!
-    const share = nightmareVaultValue(TABLE, 'nightmare-fortress', undefined, c.price)!.value
-    expect(loot(withVault) - loot(without)).toBeCloseTo(share)
-    expect(withVault.sections[0].rows!.some(r => r.label.startsWith("Zealot's Vault"))).toBe(true)
+    const profit = (card: typeof withVault) => card.sections[0].rows!.find(r => r.label === 'Profit per map')!.chaos
+    expect(profit(withVault)).toBe(profit(without))
+    const vaultRow = withVault.sections[0].rows!.find(r => r.label.startsWith("Vault: Zealot's Vault"))!
+    expect(vaultRow.chaos).toBeCloseTo(typicalPick(vault("Zealot's Vault"), c.price)!)
+    expect(vaultRow.action).toEqual({ label: 'Vault rewards', search: 'vault' })
+    const [overview] = nightmareLookup({} as BossPrefs, TABLE)('nightmare', c)
+    const subs = overview.sections.find(s => s.table)!.table!.rows.map(r => (r.cells[0] as { sub: string }).sub)
+    expect(subs.some(s => s.endsWith("Zealot's vault"))).toBe(true)
   })
 })
 
@@ -164,7 +172,7 @@ describe('build-vault-data', () => {
   })
 
   it('reads a vault page and flags rewards it has no price for', () => {
-    const text = `{{Query area infoboxes\n|where=areas.id="MapWorldsMemoryVault3"\n}}\n'''Arkhon's Vault''' is a ... that can appear after defeating a pinnacle boss in the southeast region ([[The Maven]], [[Sirus, Awakener of Worlds]]).\n\nIt contains multiple "Forbidden Reliquary" display cases which can grant one of the following rewards:\n\n* {{il|Valdo's Puzzle Box}}\n* [[Nightmare map]]s\n* Something new\n==Quests==`
+    const text = '{{Query area infoboxes\n|where=areas.id="MapWorldsMemoryVault3"\n}}\n\'\'\'Arkhon\'s Vault\'\'\' is a ... that can appear after defeating a pinnacle boss in the southeast region ([[The Maven]], [[Sirus, Awakener of Worlds]]).\n\nIt contains multiple "Forbidden Reliquary" display cases which can grant one of the following rewards:\n\n* {{il|Valdo\'s Puzzle Box}}\n* [[Nightmare map]]s\n* Something new\n==Quests=='
     const { vault: v, missing } = readVault("Arkhon's Vault", text)
     expect(v.id).toBe('MapWorldsMemoryVault3')
     expect(v.quadrant).toBe('Southeast')
