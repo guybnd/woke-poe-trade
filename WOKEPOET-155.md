@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - feature
 createdBy: Agent
-updatedBy: Agent
+updatedBy: Guy
 parentId: WOKEPOET-149
 history:
   - type: activity
@@ -120,6 +120,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T13:58:23.492Z'
+  - type: comment
+    user: Guy
+    comment: >-
+      Guy, 2026-11-21: "yes its fine", confirming the Flips 3.30 work and the
+      Thread recipe assumption (3 in, 1 of a different type).
+    date: '2026-11-21T14:24:13.245Z'
+    selfAttested: true
+    id: c-2026-11-21t14-24-13-245z
 swimlane: null
 needsAction: null
 reviewState: approved
