@@ -55,8 +55,17 @@ export function chipLines (rec: MapRecord, cmp: MapCompare, clock: (ms: number) 
   return parts.length ? [head, parts.join(' · ')] : [head]
 }
 
-// The map toast's saved size, kept between 60% and 200%; 1 = as designed.
-export function clampScale (s: unknown): number {
-  if (typeof s !== 'number' || !Number.isFinite(s)) return 1
-  return Math.round(Math.min(2, Math.max(0.6, s)) * 100) / 100
+// The map toast's saved size in its own px (before UI size and Panel size zoom
+// it): a bigger box gives the content room, it doesn't magnify it. Null: as
+// designed (400 wide with its frame, as tall as its content).
+export const TOAST_WIDTH = 400
+export const TOAST_SIZE = { minW: 340, maxW: 960, maxH: 600 }
+export type ToastSize = { w: number, h?: number }
+export function clampToastSize (s: unknown): ToastSize | null {
+  if (!s || typeof s !== 'object') return null
+  const { w, h } = s as { w?: unknown, h?: unknown }
+  if (typeof w !== 'number' || !Number.isFinite(w)) return null
+  const out: ToastSize = { w: Math.round(Math.min(TOAST_SIZE.maxW, Math.max(TOAST_SIZE.minW, w))) }
+  if (typeof h === 'number' && Number.isFinite(h) && h > 0) out.h = Math.round(Math.min(TOAST_SIZE.maxH, h))
+  return out
 }

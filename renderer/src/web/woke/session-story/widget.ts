@@ -14,8 +14,10 @@ export interface SessionStoryWidget extends Widget {
   chipSeconds?: number
   // No longer used: a click on the toast always closes it now. Old configs may hold it.
   chipClick?: boolean
-  // The toast's size, set by dragging its corner; 1 = as designed.
+  // No longer used: the corner zoomed the toast (PR 693). Old configs may hold it.
   chipScale?: number
+  // The toast's size in its own px, set by dragging its corner: more room, not bigger text.
+  chipSize?: { w: number, h?: number }
   // Where the toast sits (its top centre, share of the screen), set by dragging its title bar.
   chipPos?: { x: number, y: number }
   // Areas left out as maps, by the name the game logs (see skip-areas.ts); undefined: the defaults.

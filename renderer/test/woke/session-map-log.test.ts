@@ -1,7 +1,7 @@
 // Log lines are in the real Client.txt's shape (see death-recap.test.ts).
 import { describe, expect, it } from 'vitest'
 import { MapLog, keepMap, npcOf, tierText, usualMapMs } from '@/web/woke/session-story/map-log'
-import { chipLines, clampScale, compareMap } from '@/web/woke/session-story/chip'
+import { chipLines, clampToastSize, compareMap } from '@/web/woke/session-story/chip'
 import type { MapRecord } from '@/web/woke/session-story/map-log'
 
 const stamp = (time: string) => `2026/11/05 ${time} 18884906 1186a8a3`
@@ -206,11 +206,12 @@ describe('vaults in the map log', () => {
 
 describe('map toast', () => {
   it('keeps its saved size in range', () => {
-    expect(clampScale(undefined)).toBe(1)
-    expect(clampScale(Number.NaN)).toBe(1)
-    expect(clampScale('2')).toBe(1)
-    expect(clampScale(0.1)).toBe(0.6)
-    expect(clampScale(9)).toBe(2)
-    expect(clampScale(1.234)).toBe(1.23)
+    expect(clampToastSize(undefined)).toBe(null)
+    expect(clampToastSize(1.5)).toBe(null) // an old zoom value: back to as designed
+    expect(clampToastSize({ w: 'x' })).toBe(null)
+    expect(clampToastSize({ w: 100 })).toEqual({ w: 340 })
+    expect(clampToastSize({ w: 5000, h: 9000 })).toEqual({ w: 960, h: 600 })
+    expect(clampToastSize({ w: 512.4, h: 180.6 })).toEqual({ w: 512, h: 181 })
+    expect(clampToastSize({ w: 500, h: -3 })).toEqual({ w: 500 })
   })
 })

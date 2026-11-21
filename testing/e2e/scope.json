@@ -196,6 +196,9 @@
    "main/src/woke/map-scan.ts",
    "renderer/src/web/woke/map-mods/"
   ],
+  "map-toast-resize.spec.ts": [
+    "renderer/src/web/woke/session-story/"
+  ],
   "market-browser.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/web/woke/market/"

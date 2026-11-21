@@ -16,7 +16,7 @@
     </DockItem>
     <GlanceBar v-if="config.glance" :map="glanceMap" :since="glanceSince" :before="glanceBefore" :editing="wm.active.value" :pos="config.glancePos ?? null"
       @move="moveGlance" />
-    <MapToast :chip="chip" :close-key="config.chipKey || null" :scale="toastScale" @close="closeChip" @hold="holdChip" @resize="resizeChip"
+    <MapToast :chip="chip" :close-key="config.chipKey || null" :size="toastSize" @close="closeChip" @hold="holdChip" @resize="resizeChip"
       :pos="config.chipPos ?? null" @move="moveChip" />
   </Widget>
 </template>
@@ -51,7 +51,8 @@ import TonightBand from './TonightBand.vue'
 import { NIGHT_GAP_MS, NightTracker } from './story'
 import type { NightStory } from './story'
 import { MapLog } from './map-log'
-import { chipLines, clampScale, compareMap } from './chip'
+import { chipLines, clampToastSize, compareMap } from './chip'
+import type { ToastSize } from './chip'
 import type { MapCompare } from './chip'
 import type { MapRecord } from './map-log'
 import { useNights } from './store'
@@ -119,14 +120,14 @@ function holdChip (on: boolean) {
   else startChipTimer(Math.max(AFTER_HOLD_MS, chipEndsAt - Date.now()))
 }
 // Its size, from dragging its corner; saved when the drag ends.
-const toastScale = computed(() => clampScale(props.config.chipScale))
+const toastSize = computed(() => clampToastSize(props.config.chipSize))
 // Dragged by its title bar; saved when the drag ends.
 function moveChip (pos: { x: number, y: number }, done: boolean) {
   props.config.chipPos = pos
   if (done) saveConfig()
 }
-function resizeChip (scale: number, done: boolean) {
-  props.config.chipScale = scale
+function resizeChip (size: ToastSize, done: boolean) {
+  props.config.chipSize = size
   if (done) saveConfig()
 }
 onUnmounted(() => { clearTimeout(chipTimer) })
