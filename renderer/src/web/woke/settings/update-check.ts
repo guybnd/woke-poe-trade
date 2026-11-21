@@ -24,8 +24,8 @@ export function checkLine (r: WokeUpdateCheck): CheckLine {
       text: r.blocked
         ? `${r.version} is downloaded and waits while going back to the previous version.`
         : r.whenClosed
-        ? `${r.version} will install when Path of Exile is closed, or when you quit.`
-        : `${r.version} will install when you quit.`,
+          ? `${r.version} will install when Path of Exile is closed, or when you quit.`
+          : `${r.version} will install when you quit.`,
       link: null,
       tone: 'new'
     }

@@ -424,7 +424,7 @@ function commandEntries (): ActionEntry[] {
     about: 'Asks for a new version now and opens Settings > Install & updates with the answer.',
     verb: 'Check now',
     action: () => {
-      void runUpdateCheck()
+      runUpdateCheck().catch(() => {})
       const settings = wm.widgets.value.find(w => w.wmType === 'settings')
       if (!settings) return
       wm.setFlag(settings.wmId, 'settings::page=install', true)
