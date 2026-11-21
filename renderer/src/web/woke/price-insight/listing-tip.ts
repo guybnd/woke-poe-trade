@@ -32,6 +32,7 @@ export interface ListingItem {
   rarity?: string
   ilvl?: number
   corrupted?: boolean
+  doubleCorrupted?: boolean
   mirrored?: boolean
   influences?: Record<string, boolean>
   implicitMods?: ListingMod[]
@@ -182,6 +183,7 @@ export function listingTipItem (item: ListingItem): PobItem | null {
     ward: propNumber(item, p => p.name === 'Ward'),
     itemLevel: item.ilvl,
     corrupted: item.corrupted,
+    ...(item.doubleCorrupted ? { twiceCorrupted: true } : {}),
     mirrored: item.mirrored,
     influences: Object.keys(item.influences ?? {}).map(capitalize)
   }

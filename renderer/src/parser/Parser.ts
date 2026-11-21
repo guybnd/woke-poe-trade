@@ -500,12 +500,12 @@ function parseCorrupted (section: string[], item: ParsedItem) {
   if (section[0] === _$.CORRUPTED) {
     item.isCorrupted = true
     return 'SECTION_PARSED'
-  } else if (
+  } else if (section[0] === _$.TWICE_CORRUPTED || (
     section.length === 1 &&
     section[0].length > _$.CORRUPTED.length &&
     section[0].endsWith(_$.CORRUPTED) &&
     /^\p{Lu}\S*[\s-]$/u.test(section[0].slice(0, -_$.CORRUPTED.length))
-  ) {
+  )) {
     item.isCorrupted = true
     item.isTwiceCorrupted = true
     return 'SECTION_PARSED'

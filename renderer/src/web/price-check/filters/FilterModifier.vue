@@ -694,8 +694,8 @@ export default defineComponent({
   margin-left: 1.25rem;
 
   & > div {
-    color: theme('colors.gray.500');
-    background: theme('colors.gray.800');
+    color: var(--w-dim);
+    background: var(--w-pc-window);
     min-width: min-content;
     box-sizing: content-box;
     padding-right: theme('spacing.2');
@@ -706,7 +706,7 @@ export default defineComponent({
     inset: 0;
     content: '';
     pointer-events: none;
-    background: linear-gradient(to left, theme('colors.gray.800'), transparent 6rem);
+    background: linear-gradient(to left, var(--w-pc-window), transparent 6rem);
   }
 
   .filter:not(:hover) & {

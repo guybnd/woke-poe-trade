@@ -182,6 +182,8 @@ export interface PobItem {
   levelReq?: number
   catalystQuality?: number
   corrupted?: boolean
+  // A trade listing that is twice corrupted (3.30).
+  twiceCorrupted?: boolean
   mirrored?: boolean
   influences?: string[]
 }

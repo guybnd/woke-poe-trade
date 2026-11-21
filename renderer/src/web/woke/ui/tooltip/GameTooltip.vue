@@ -48,7 +48,7 @@
         <section v-if="listing.tail.length || item.corrupted || item.mirrored" :class="$style.block">
           <div v-for="t in listing.tail" :key="t.text" :class="t.kind === 'fractured' ? $style.fractured : $style.label">{{ t.text }}</div>
           <div v-if="item.mirrored" :class="$style.mod">Mirrored</div>
-          <div v-if="item.corrupted" :class="$style.corrupted">Corrupted</div>
+          <div v-if="item.corrupted" :class="$style.corrupted">{{ item.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</div>
         </section>
         <footer v-if="listing.foot.length" :class="$style.strip" class="w-num">
           <span v-for="s in listing.foot" :key="s.label"><span :class="$style.label">{{ `${s.label} ` }}</span><span :class="$style.value">{{ s.value }}</span></span>
@@ -92,7 +92,7 @@
         </section>
         <section v-if="item.corrupted || item.mirrored" :class="$style.block">
           <div v-if="item.mirrored" :class="$style.mod">Mirrored</div>
-          <div v-if="item.corrupted" :class="$style.corrupted">Corrupted</div>
+          <div v-if="item.corrupted" :class="$style.corrupted">{{ item.twiceCorrupted ? 'Twice Corrupted' : 'Corrupted' }}</div>
         </section>
         <footer v-if="weapon" :class="$style.strip" class="w-num">
           <span><span :class="$style.label">DPS </span><span :class="$style.value">{{ weapon.dps.toFixed(1) }}</span></span>

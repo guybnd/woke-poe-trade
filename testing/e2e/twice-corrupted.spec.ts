@@ -40,8 +40,8 @@ async function fakeTrade (page: Page) {
         listing: {
           indexed: new Date().toISOString(),
           fee: 1,
-          price: { amount: 30 + i, currency: 'chaos' },
-          account: { name: `seller${i}`, lastCharacterName: `char${i}` }
+          price: { amount: 30, currency: 'chaos' },
+          account: { name: 'seller', lastCharacterName: 'char' }
         }
       }))
     })
@@ -59,7 +59,7 @@ test('twice corrupted: the chip and each such listing say so', async ({ overlay 
 
   const rows = panel.locator('.w-pc-table tbody tr')
   await expect(rows.filter({ hasText: 'Twice Corrupted' })).toHaveCount(1)
-  // The once-corrupted copy keeps its own row and its plain tag.
+  // Same seller, same price: the once-corrupted copy still keeps its own row and plain tag.
   const once = rows.filter({ hasText: 'Corrupted' }).filter({ hasNotText: 'Twice' })
   await expect(once).toHaveCount(1)
   await overlay.snap('twice corrupted listing tag')
@@ -71,5 +71,7 @@ test('twice corrupted: the chip and each such listing say so', async ({ overlay 
 
   // The row keeps its item tooltip.
   await rows.filter({ hasText: 'Twice Corrupted' }).hover()
-  await expect(overlay.page.getByRole('tooltip')).toContainText('String of Servitude')
+  const tip = overlay.page.getByRole('tooltip')
+  await expect(tip).toContainText('String of Servitude')
+  await expect(tip).toContainText('Twice Corrupted')
 })
