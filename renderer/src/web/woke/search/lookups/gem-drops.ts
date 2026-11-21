@@ -76,7 +76,7 @@ export const GEM_DROPS: Record<string, GemDrop> = {
   'Empower Support': { sub: 'Drops anywhere (area level 38+)', text: ['Drops anywhere from area level 38. The Divine Font in the Merciless or Eternal Labyrinth sometimes offers to swap a support gem for a random Empower, Enhance or Enlighten. 3 Gemcutter\'s Mercy cards give one of the three.'] },
   'Enhance Support': { sub: 'Drops anywhere (area level 38+)', text: ['Drops anywhere from area level 38. The Divine Font in the Merciless or Eternal Labyrinth sometimes offers to swap a support gem for a random Empower, Enhance or Enlighten. 3 Gemcutter\'s Mercy cards give one of the three.'] },
   'Enlighten Support': { sub: 'Drops anywhere (area level 38+)', text: ['Drops anywhere from area level 38. The Divine Font in the Merciless or Eternal Labyrinth sometimes offers to swap a support gem for a random Empower, Enhance or Enlighten. 3 Gemcutter\'s Mercy cards give one of the three.'] },
-  Portal: { sub: 'Drops anywhere', text: ['No quest or vendor gives it: it drops anywhere from area level 10. 5 The Realm cards give one with quality.'] },
+  'Portal': { sub: 'Drops anywhere', text: ['No quest or vendor gives it: it drops anywhere from area level 10. 5 The Realm cards give one with quality.'] },
   'Block Chance Reduction Support': { sub: 'Vendor recipe', text: ['Vendor recipe only: Puncture plus any Dexterity shield with 20% quality.'] },
   'Elemental Penetration Support': { sub: 'Vendor recipe', text: ['Vendor recipe only: Replica Bitterdream (a Grand Heist unique) plus level 20 Fire, Cold and Lightning Penetration.'] },
   'Ancestral Protector': { sub: 'Removed from the game', text: ['Melee totems were removed in 3.25. Only old copies remain.'] },
