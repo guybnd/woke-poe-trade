@@ -9,7 +9,7 @@ import { BOSS_RUNS_TYPE } from '../../boss-runs/widget'
 import { matchRank } from '../search'
 import type { Lookup, LookupAction, LookupCard, LookupContext, LookupRow } from './types'
 import { DEFAULT_NIGHTMARE_VAULT_CHANCE, shortName, typicalPick, vaultForNightmare } from '../../vaults/vaults'
-import type { VaultTable } from '../../vaults/vaults'
+import type { Vault, VaultTable } from '../../vaults/vaults'
 
 // The boss behind each map, for searches by boss name (poedb, 3.30).
 const BOSS_NAMES: Record<string, string[]> = {
@@ -94,6 +94,15 @@ function vaultTag (r: BossResult, vaults: VaultTable | null): string {
   return v ? `${shortName(v)} vault` : ''
 }
 
+function vaultRow (vault: Vault, ctx: LookupContext): LookupRow {
+  const typical = typicalPick(vault, ctx.price)
+  return {
+    label: `Vault: ${vault.name}, ~${DEFAULT_NIGHTMARE_VAULT_CHANCE}% of maps · ~typical pick, not in profit`,
+    ...(typical != null ? { chaos: typical } : { value: 'varies', dim: true }),
+    action: { label: 'Vault rewards', search: shortName(vault) }
+  }
+}
+
 function mapCard (r: BossResult, prefs: BossPrefs, vaults: VaultTable | null, ctx: LookupContext): LookupCard {
   const vault = vaults ? vaultForNightmare(vaults, r.boss.id) : null
   const map = NIGHTMARE_MAPS.find(m => m.id === r.boss.id)!
@@ -109,7 +118,7 @@ function mapCard (r: BossResult, prefs: BossPrefs, vaults: VaultTable | null, ct
     { label: `Entry: ${NIGHTMARE_MAP}`, chaos: r.entryMissing.length ? null : r.entry, item: { name: NIGHTMARE_MAP } },
     { label: 'Loot per kill', chaos: r.loot },
     { label: 'Profit per map', chaos: r.entryMissing.length ? null : r.profit },
-    ...(vault ? [{ label: `Vault: ${vault.name}, ~${DEFAULT_NIGHTMARE_VAULT_CHANCE}% of maps · ~typical pick, not in profit`, chaos: typicalPick(vault, ctx.price), action: { label: 'Vault rewards', search: 'vault' } }] : [])
+    ...(vault ? [vaultRow(vault, ctx)] : [])
   ]
   return {
     id: `nightmare:${r.boss.id}`,

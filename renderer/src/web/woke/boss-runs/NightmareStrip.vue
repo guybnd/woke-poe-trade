@@ -250,7 +250,8 @@ const fragRows = computed(() => UBER_FRAGMENTS
 .barDown { background: var(--w-down); }
 .vault { color: var(--w-faint); font-size: var(--w-fs-xs); white-space: nowrap; }
 .tabs { align-self: flex-start; margin-top: 4px; }
-.vaults { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+/* Scrolls inside, so a tall list doesn't push the rest of the price check out of the window. */
+.vaults { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; max-height: 16em; overflow-y: auto; }
 .vblock { border-top: 1px solid var(--w-line); padding-top: 3px; }
 .vhead { display: flex; align-items: baseline; gap: 6px; }
 .vtitle { color: var(--w-gold); font-family: var(--w-caps-face); }

@@ -90,6 +90,7 @@ export function readVault (title, text) {
   const bosses = [...intro[2].matchAll(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g)].map(m => m[1])
   const list = /display cases which can grant one of the following rewards:\s*\n((?:\*[^\n]*\n?)+)/.exec(text)?.[1]
   if (!list) throw new Error(`${title}: no reward list`)
+  /** @type {string[]} */
   const missing = []
   const rewards = list.split('\n').filter(l => l.startsWith('*')).map(l => {
     const text = plain(l.slice(1))
@@ -110,6 +111,7 @@ export function readVault (title, text) {
 
 async function main () {
   const vaults = []
+  /** @type {string[]} */
   const missing = []
   for (const title of PAGES) {
     const r = readVault(title, await wikitext(title))

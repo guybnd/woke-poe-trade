@@ -10,7 +10,6 @@ import { nightmareLookup } from '@/web/woke/search/lookups/nightmare'
 import type { BossPrefs } from '@/web/woke/boss-runs/calc'
 import type { PriceItem } from '@/web/woke/market/types'
 import type { LookupContext } from '@/web/woke/search/lookups/types'
-// @ts-expect-error plain .mjs script
 import { plain, readVault } from '../../scripts/build-vault-data.mjs'
 
 const TABLE = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/data/league/vaults.json'), 'utf8')) as VaultTable
@@ -157,7 +156,7 @@ describe('search', () => {
     expect(profit(withVault)).toBe(profit(without))
     const vaultRow = withVault.sections[0].rows!.find(r => r.label.startsWith("Vault: Zealot's Vault"))!
     expect(vaultRow.chaos).toBeCloseTo(typicalPick(vault("Zealot's Vault"), c.price)!)
-    expect(vaultRow.action).toEqual({ label: 'Vault rewards', search: 'vault' })
+    expect(vaultRow.action).toEqual({ label: 'Vault rewards', search: "Zealot's" })
     const [overview] = nightmareLookup({} as BossPrefs, TABLE)('nightmare', c)
     const subs = overview.sections.find(s => s.table)!.table!.rows.map(r => (r.cells[0] as { sub: string }).sub)
     expect(subs.some(s => s.endsWith("Zealot's vault"))).toBe(true)
