@@ -26,29 +26,30 @@ const PAGES = ["Machinist's Vault", "Zealot's Vault", "Scholar's Vault", "Arkhon
 /**
  * poe.ninja names for a bullet. qty: copies (a range's middle); several items
  * are averaged (one of them, unknown which). variant '1': gems at level 1, as
- * the wiki gives no level.
- * @type {Record<string, { kind: string, items?: Array<{ name: string, variant?: string }>, qty?: number, note?: string }>}
+ * the wiki gives no level. icon: an item whose art stands for an unpriced
+ * reward (a priced one shows its first item's art).
+ * @type {Record<string, { kind: string, items?: Array<{ name: string, variant?: string }>, qty?: number, note?: string, icon?: string }>}
  */
 const PRICES = {
   'T3+ Unique weapon/jewellery': { kind: 'unique', note: 'Depends on the unique' },
   '11-20x Stacked Decks': { kind: 'currency', items: [{ name: 'Stacked Deck' }], qty: 15.5 },
-  '1-2x rarer divination cards': { kind: 'card', note: 'Depends on the card' },
+  '1-2x rarer divination cards': { kind: 'card', note: 'Depends on the card', icon: 'The Doctor' },
   'Greater Multistrike Support': { kind: 'gem', items: [{ name: 'Greater Multistrike Support', variant: '1' }] },
   'Invention Support': { kind: 'gem', items: [{ name: 'Invention Support', variant: '1' }] },
   'T3+ Unique armour/jewellery': { kind: 'unique', note: 'Depends on the unique' },
-  'Valuable gems (20/20, 21/20, Empower/Enhance/Enlighten)': { kind: 'gem', note: 'Depends on the gem' },
-  "Facetor's Lens (350m, 500m, 750m)": { kind: 'currency', note: 'Priced by stored experience; not on poe.ninja' },
-  '1-5x Valuable currency': { kind: 'currency', note: 'Depends on the currency' },
-  '20x regular currency': { kind: 'currency', note: 'Depends on the currency' },
+  'Valuable gems (20/20, 21/20, Empower/Enhance/Enlighten)': { kind: 'gem', note: 'Depends on the gem', icon: 'Enlighten Support' },
+  "Facetor's Lens (350m, 500m, 750m)": { kind: 'currency', note: 'Priced by stored experience; not on poe.ninja', icon: "Facetor's Lens" },
+  '1-5x Valuable currency': { kind: 'currency', note: 'Depends on the currency', icon: 'Divine Orb' },
+  '20x regular currency': { kind: 'currency', note: 'Depends on the currency', icon: 'Chaos Orb' },
   'Orb of Intention, Orb of Remembrance, Orb of Unravelling': { kind: 'currency', items: [{ name: 'Orb of Intention' }, { name: 'Orb of Remembrance' }, { name: 'Orb of Unravelling' }], note: 'One of the three' },
   'Reflecting Mist': { kind: 'currency', items: [{ name: 'Reflecting Mist' }] },
   "Valdo's Puzzle Box": { kind: 'fragment', items: [{ name: "Valdo's Puzzle Box" }] },
   'Greater Spell Cascade Support': { kind: 'gem', items: [{ name: 'Greater Spell Cascade Support', variant: '1' }] },
   'Cooldown Recovery Support': { kind: 'gem', items: [{ name: 'Cooldown Recovery Support', variant: '1' }] },
-  'Shaper Guardian/Elder Guardian/Conqueror maps': { kind: 'map', note: 'Depends on the map' },
-  'Synthesised maps (including Cortex)': { kind: 'map', note: 'Depends on the map' },
+  'Shaper Guardian/Elder Guardian/Conqueror maps': { kind: 'map', note: 'Depends on the map', icon: 'Shaper Guardian Map' },
+  'Synthesised maps (including Cortex)': { kind: 'map', note: 'Depends on the map', icon: 'Cortex' },
   'Nightmare maps': { kind: 'map', items: [{ name: 'Nightmare Map' }] },
-  '#x Threads': { kind: 'currency', note: 'Depends on the thread and how many' },
+  '#x Threads': { kind: 'currency', note: 'Depends on the thread and how many', icon: 'Abyss Thread' },
   'Uber Elder Fragments': { kind: 'fragment', items: [{ name: 'Fragment of Shape' }, { name: 'Fragment of Knowledge' }, { name: 'Fragment of Terror' }, { name: 'Fragment of Emptiness' }], note: 'One of the four' }
 }
 
@@ -102,6 +103,7 @@ export function readVault (title, text) {
       ...(RARE.has(text) ? { rare: true } : {}),
       ...(p?.items ? { items: p.items } : {}),
       ...(p?.qty ? { qty: p.qty } : {}),
+      ...(p?.icon ? { icon: p.icon } : {}),
       ...(p?.note ? { note: p.note } : p ? {} : { note: 'New on the wiki; not priced yet' })
     }
   })

@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { nightmareMapsFor, rewardPrice, topReward, typicalPick, vaultForFragment, vaultForNightmare, vaultsGiving } from '@/web/woke/vaults/vaults'
+import { nightmareMapsFor, rewardIcon, rewardPrice, topReward, typicalPick, vaultForFragment, vaultForNightmare, vaultsGiving } from '@/web/woke/vaults/vaults'
 import type { Vault, VaultTable } from '@/web/woke/vaults/vaults'
 import { vaultLookup } from '@/web/woke/search/lookups/vaults'
 import { nightmareLookup } from '@/web/woke/search/lookups/nightmare'
@@ -50,6 +50,16 @@ describe('vault table', () => {
     for (const v of TABLE.vaults) {
       for (const r of v.rewards) expect(r.items?.length || r.note, `${v.name}: ${r.text}`).toBeTruthy()
     }
+  })
+
+  it('gives every reward but the uniques an icon item', () => {
+    for (const v of TABLE.vaults) {
+      for (const r of v.rewards) {
+        if (r.kind === 'unique') expect(rewardIcon(r)).toBeNull()
+        else expect(rewardIcon(r), `${v.name}: ${r.text}`).toBeTruthy()
+      }
+    }
+    expect(rewardIcon(vault("Scholar's Vault").rewards.find(r => r.text === '1-5x Valuable currency')!)).toBe('Divine Orb')
   })
 
   it('marks the rewards the wiki calls rare', () => {

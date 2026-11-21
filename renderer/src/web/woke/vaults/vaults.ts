@@ -32,6 +32,8 @@ export interface VaultReward {
   items?: Array<{ name: string, variant?: string }>
   qty?: number
   note?: string
+  // An item whose art stands for an unpriced reward.
+  icon?: string
 }
 
 export interface Vault {
@@ -152,4 +154,9 @@ export function vaultForNightmare (table: VaultTable, mapId: string): Vault | nu
 // The Nightmare maps that spawn a vault ("Fortress, Citadel").
 export function nightmareMapsFor (table: VaultTable, v: Vault): string[] {
   return NIGHTMARE_MAPS.filter(m => vaultForNightmare(table, m.id)?.id === v.id).map(m => m.name.replace(/ Map$/, ''))
+}
+
+// The item whose art shows a reward: its own icon item, else its first item.
+export function rewardIcon (r: VaultReward): string | null {
+  return r.icon ?? r.items?.[0]?.name ?? null
 }

@@ -32,6 +32,7 @@
         {
           "text": "1-2x rarer divination cards",
           "kind": "card",
+          "icon": "The Doctor",
           "note": "Depends on the card"
         }
       ]
@@ -77,11 +78,13 @@
         {
           "text": "Valuable gems (20/20, 21/20, Empower/Enhance/Enlighten)",
           "kind": "gem",
+          "icon": "Enlighten Support",
           "note": "Depends on the gem"
         },
         {
           "text": "Facetor's Lens (350m, 500m, 750m)",
           "kind": "currency",
+          "icon": "Facetor's Lens",
           "note": "Priced by stored experience; not on poe.ninja"
         }
       ]
@@ -99,11 +102,13 @@
         {
           "text": "1-5x Valuable currency",
           "kind": "currency",
+          "icon": "Divine Orb",
           "note": "Depends on the currency"
         },
         {
           "text": "20x regular currency",
           "kind": "currency",
+          "icon": "Chaos Orb",
           "note": "Depends on the currency"
         },
         {
@@ -177,11 +182,13 @@
         {
           "text": "Shaper Guardian/Elder Guardian/Conqueror maps",
           "kind": "map",
+          "icon": "Shaper Guardian Map",
           "note": "Depends on the map"
         },
         {
           "text": "Synthesised maps (including Cortex)",
           "kind": "map",
+          "icon": "Cortex",
           "note": "Depends on the map"
         },
         {
@@ -205,6 +212,7 @@
         {
           "text": "#x Threads",
           "kind": "currency",
+          "icon": "Abyss Thread",
           "note": "Depends on the thread and how many"
         },
         {

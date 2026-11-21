@@ -27,3 +27,4 @@
 - After-map toast: drag it by its title bar to put it anywhere; its spot is kept (Show me with your last map in its settings brings it up to place).
 - Stacked decks: the big-hit popup can be dragged anywhere with the overlay open, and its spot is kept. Right-click the dock icon › Place the big-hit popup shows a sample to place.
 - Session analytics nights use the game's AFK mode, like Net worth: 15 minutes AFK ends the night (chat no longer keeps it going), a shorter AFK is left out of the time played, and the night card shows it. The night card has Net worth's "Leave out hideout" box for its per hour and maps per hour.
+- Nightmare map price check: hovering a map's vault shows its rewards as a list, one line each with the item's picture and price.
