@@ -11,6 +11,8 @@
       <line v-if="goalY != null" x1="0" :x2="W" :y1="goalY" :y2="goalY" :class="$style.goal" vector-effect="non-scaling-stroke" />
     </svg>
     <span v-for="m in marks" :key="m.at" :class="$style.mark" :style="{ left: m.x + '%', top: m.y + '%' }" />
+    <!-- Purchases (spend.ts): a dashed line, so a drop that isn't a loss reads as one. -->
+    <span v-for="m in spends" :key="'s' + m.at" :class="$style.spend" :style="{ left: m.x + '%' }" />
     <template v-if="shown">
       <span :class="$style.dot" :style="{ left: shown.x + '%', top: shown.y + '%' }" />
       <!-- Follows the mouse; a click keeps it open (pinned), and then its item
@@ -22,6 +24,7 @@
           <template v-for="(t, i) in shown.p.top" :key="i"><span v-item-tip="pinned && tipOf ? topTip(t) : null" :class="{ [$style.item]: !!pinned }">{{ t }}</span><template v-if="i < shown.p.top.length - 1">, </template></template>
         </span>
         <span v-else-if="shown.p.daily" class="w-dim">That day's last read</span>
+        <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin /> spent, not counted as a loss</span>
         <span v-if="!pinned && shown.p.top.length && tipOf" class="w-dim">Click to keep this open</span>
       </div>
     </template>
@@ -152,6 +155,8 @@ const marks = computed(() => props.mode !== 'total'
   ? []
   : props.series.filter(p => props.big.has(p.at)).map(p => ({ at: p.at, x: xOf(p.at) / W * 100, y: yOf(p.div) / H * 100 })))
 
+const spends = computed(() => props.series.filter(p => p.spentDiv).map(p => ({ at: p.at, x: xOf(p.at) / W * 100 })))
+
 function onMove (e: MouseEvent) {
   const el = box.value
   const s = props.series
@@ -181,6 +186,8 @@ function when (at: number) {
 .band { opacity: .55; }
 .goal { stroke: var(--w-up); stroke-width: 1; stroke-dasharray: 4 3; }
 .mark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); transform: translate(-50%, -50%); pointer-events: none; }
+.spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
+.spendText { color: var(--w-info); }
 .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--w-fg); box-shadow: 0 0 0 2px var(--w-panel-solid), 0 0 0 3px var(--w-gold); transform: translate(-50%, -50%); pointer-events: none; }
 .tip {
   position: absolute; z-index: 5; pointer-events: none;
