@@ -42,6 +42,13 @@ history:
     date: '2026-11-21T10:33:47.958Z'
     comment: Updated title. Updated description.
     id: a-2026-11-21t10-33-47-958z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T10:53:04.152Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/728 open; review fixes in
+      590144be; CI running.
+    id: a-2026-11-21t10-53-04-152z
 ---
 Guy's picks (2026-11-21): opt-in reader (A), Net worth integration A + C (mockups https://claude.ai/artifact/M9rk3zWppKwDT7eVb91bTm), per-type summary layout 1 "ranked bars" (https://claude.ai/artifact/UVx98gZ39f8EWwFFPmhzjS).
 
