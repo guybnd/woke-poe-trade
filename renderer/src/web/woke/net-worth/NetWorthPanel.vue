@@ -491,13 +491,16 @@ const farmingWidget = computed(() => AppConfig().widgets.find(x =>
 // Farming is retired (modules.ts), so the session is usually tonight's night
 // from Session story: it starts and ends by itself, with its maps as runs.
 const nightStore = useNights()
+// The night's time (AFK left out) runs to its last log line; past that, at
+// most this much more counts, so a long AFK doesn't drag profit per hour down.
+const NIGHT_TAIL_MS = 2 * 60_000
 interface PanelSession { startedAt: number, maps: number, runs: Array<{ name: string, enteredAt: number, mapMs: number }>, ms: (now: number) => number, endable: boolean }
 const farming = computed<PanelSession | null>(() => {
   const s = farmingWidget.value?.session
   if (s) return { startedAt: s.startedAt, maps: s.maps, runs: s.runs ?? [], ms: now => elapsed(s, now), endable: true }
   const n = isWidgetTypeOn(AppConfig(), SESSION_STORY_TYPE) ? nightStore.live.value : null
   if (!n) return null
-  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => Math.max(0, now - n.startedAt - (n.afkMs ?? 0)), endable: false }
+  return { startedAt: n.startedAt, maps: n.maps.length, runs: n.maps, ms: now => n.mapMs + n.otherMs + Math.min(Math.max(0, now - n.endedAt), NIGHT_TAIL_MS), endable: false }
 })
 // The session's clock moves while you sit in the hideout.
 const now = shallowRef(Date.now())
@@ -507,10 +510,14 @@ onUnmounted(() => { clearInterval(clock) })
 const sessionChaos = shallowRef(0)
 // Chaos left out as spent on purchases (spend.ts).
 const sessionSpent = shallowRef(0)
-watch([farming, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow, gainsNow], async () => {
+// Only its start matters here: the night's object is replaced every minute.
+let gainsAsk = 0
+watch([() => farming.value?.startedAt, () => ledger.value.points[ledger.value.points.length - 1]?.at, leagueNow, gainsNow], async () => {
   const s = farming.value
   const id = leagueNow.value
+  const ask = ++gainsAsk
   const g = s && id ? await stashGainsBetween(id, s.startedAt, Date.now()) : null
+  if (ask !== gainsAsk) return
   sessionChaos.value = g?.chaos ?? 0
   sessionSpent.value = g?.spent ?? 0
 }, { immediate: true })
