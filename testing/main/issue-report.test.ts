@@ -46,7 +46,7 @@ describe('buildIssue', () => {
     const issue = buildIssue({
       kind: 'bug',
       title: 'ENOENT C:\\Users\\Guy-Desktop\\a',
-      text: 'I am Zappy_Witch',
+      text: 'at C:\\Users\\Guy-Desktop\\x',
       info: ['League: x', 'by Guy-Desktop'],
       error: 'at C:\\Users\\Guy-Desktop\\b',
       overlayErrors: 'POESESSID: 0123456789abcdef0123',
@@ -55,6 +55,29 @@ describe('buildIssue', () => {
     const all = decodeURIComponent(issue.url.replace(/\+/g, ' '))
     expect(all).not.toMatch(/guy-desktop|zappy|someaccount|0123456789abcdef/i)
     expect(issue.title).toBe('ENOENT ~\\a')
+  })
+
+  it('keeps account and character names in what the player typed, hides them in the log', () => {
+    const issue = buildIssue({ kind: 'bug', title: 'Zappy_Witch can\'t level', text: 'SomeAccount here', log: 'Zappy_Witch has joined' }, names)
+    expect(issue.title).toBe('Zappy_Witch can\'t level')
+    expect(issue.body).toContain('SomeAccount here')
+    expect(issue.body).toContain('<name> has joined')
+  })
+
+  it('caps app info lines and never gives a link over the limit', () => {
+    const info = Array.from({ length: 50 }, () => '\\'.repeat(1000))
+    const issue = buildIssue({ kind: 'bug', title: '中'.repeat(500), info })
+    expect(issue.title.length).toBe(120)
+    expect(issue.url.length).toBeLessThanOrEqual(URL_LIMIT)
+    expect(() => decodeURIComponent(issue.url)).not.toThrow()
+    const tiny = buildIssue({ kind: 'bug', title: '中'.repeat(100) }, {}, 300)
+    expect(tiny.url.length).toBeLessThanOrEqual(300)
+    expect(() => decodeURIComponent(tiny.url)).not.toThrow()
+  })
+
+  it('crash reports keep the hint under the question', () => {
+    const issue = buildIssue({ kind: 'crash', title: 'x', prompt: 'What were you doing?', hint: 'e.g. alt-tabbing' })
+    expect(issue.body.startsWith('**What were you doing?**\n<!-- e.g. alt-tabbing -->')).toBe(true)
   })
 
   it('keeps a code block from being closed early by the log', () => {

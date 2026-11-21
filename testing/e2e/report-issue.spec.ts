@@ -17,7 +17,7 @@ async function openedUrl (fakeApp: FakeApp, from: number): Promise<URL> {
 
 test('from Settings: preview shows what is sent, and Open on GitHub opens the scrubbed issue', async ({ overlay, fakeApp }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
-  await overlay.boot({ overlayActive: true, patch: c => { c.accountName = 'Tester_Acc#1234' } })
+  await overlay.boot({ overlayActive: true })
   await overlay.widget('menu').locator('.fa-cog').click()
   const settings = overlay.widget('settings')
   await settings.getByText('Install & updates', { exact: true }).first().click()
@@ -26,17 +26,16 @@ test('from Settings: preview shows what is sent, and Open on GitHub opens the sc
   const dialog = overlay.page.getByRole('dialog', { name: 'Report an issue' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('textbox', { name: 'Title' }).fill('Price check & map scan freeze?')
-  await dialog.getByRole('textbox', { name: 'What happened' }).fill('Tester_Acc#1234 here. Log at C:\\Users\\Someone\\AppData\\x.txt')
+  await dialog.getByRole('textbox', { name: 'What happened' }).fill('It froze. Log at C:\\Users\\Someone\\AppData\\x.txt')
   await expect(dialog.getByRole('switch', { name: 'Include app info' })).toHaveAttribute('aria-checked', 'true')
   await expect(dialog.getByRole('switch', { name: 'Include recent log' })).toHaveAttribute('aria-checked', 'false')
 
   await dialog.getByRole('button', { name: 'Preview' }).click()
   const pre = dialog.locator('pre')
-  await expect(pre).toContainText('<name> here.')
   await expect(pre).toContainText('C:\\Users\\<user>\\AppData')
   await expect(pre).toContainText('Version: 0.0.0-test')
   await expect(pre).toContainText('League:')
-  await expect(pre).not.toContainText('Tester_Acc')
+  await expect(pre).not.toContainText('Someone')
   await overlay.snap('report-issue-preview')
   const shown = await pre.textContent()
 
@@ -46,9 +45,9 @@ test('from Settings: preview shows what is sent, and Open on GitHub opens the sc
   expect(url.searchParams.get('title')).toBe('Price check & map scan freeze?')
   expect(url.searchParams.get('labels')).toBe('bug')
   const body = url.searchParams.get('body')!
-  expect(body).toContain('<name> here.')
+  expect(body).toContain('It froze.')
   expect(body).toContain('Tools on:')
-  expect(body).not.toContain('Tester_Acc')
+  expect(body).not.toContain('Someone')
   // Exactly what the preview showed.
   expect(body).toBe(shown)
   await expect(dialog).toBeHidden()

@@ -1,6 +1,7 @@
 <template>
   <div v-if="reportDialogOpen && wm.active.value" ref="box" :class="$style.place" :style="spot ? { left: `${spot.x * 100}%`, top: `${spot.y * 100}%` } : undefined">
-  <div data-w-popup role="dialog" aria-label="Report an issue" :class="$style.dialog">
+  <!-- Keys stay in the dialog: Settings listens on the window (Esc, Ctrl+F). Esc closes only the dialog. -->
+  <div data-w-popup role="dialog" aria-label="Report an issue" :class="$style.dialog" @keydown.stop="onKey">
     <div ref="handle" :class="$style.head" title="Drag to move" @pointerdown="drag">
       <i class="fas fa-bug w-accent" />
       <span :class="$style.heading">Report an issue</span>
@@ -39,7 +40,7 @@
 <script setup lang="ts">
 // "Report an issue": a small pop-up over the overlay (Settings, Ctrl+Space).
 // It never sends anything itself: Open on GitHub opens a pre-filled issue.
-import { computed, inject, shallowRef, watch } from 'vue'
+import { computed, inject, onUnmounted, shallowRef, watch } from 'vue'
 import type { WokeIssue } from '@ipc/woke-ops'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import { WButton, WField, WSegmented, WToggle, toast } from '../ui'
@@ -96,7 +97,16 @@ async function send () {
   }
 }
 
+function onKey (e: KeyboardEvent) {
+  if (e.key === 'Escape') close()
+}
+
+onUnmounted(() => { clearTimeout(previewTimer); previewSeq++ })
+
 function close () {
+  clearTimeout(previewTimer)
+  previewSeq++
+  previewError.value = null
   reportDialogOpen.value = false
   previewOn.value = false
   preview.value = null
@@ -132,7 +142,8 @@ function drag (e: PointerEvent) {
   left: 50%;
   top: 18%;
   transform: translateX(-50%);
-  z-index: 997;
+  /* The pop-up band (AppNotices 1000, HelpCard 1002): panels' own z-index grows with use. */
+  z-index: 1001;
 }
 .dialog {
   width: 440px;

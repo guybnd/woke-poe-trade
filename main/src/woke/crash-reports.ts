@@ -45,8 +45,8 @@ function osLine () {
   return `${name} ${os.release()} ${process.arch}`
 }
 
-function lastLogLines (n = 60): string {
-  return (logger?.history ?? '').trimEnd().split('\n').slice(-n).join('\n')
+function lastLogLines (n = 60, from: Logger | null = logger): string {
+  return (from?.history ?? '').trimEnd().split('\n').slice(-n).join('\n')
 }
 
 function write (r: CrashReport) {
@@ -257,6 +257,7 @@ export function crashIssue (r: CrashReport, context?: string, names: ScrubNames 
     kind: manual ? 'bug' : 'crash',
     title: manual ? 'Problem report' : `Crash: ${r.title}`,
     prompt: manual ? 'What went wrong?' : 'What were you doing when it happened?',
+    hint: 'e.g. price checking a map, alt-tabbing, starting a map',
     info: [
       `Version: ${r.version} (Electron ${r.electron}, ${r.os})`,
       `When: ${when}`,
@@ -289,7 +290,8 @@ export async function openReport (id: string | null, context?: string, names: st
 // they ticked them. `open` false only builds it, for the dialog's preview.
 export type IssueRequest = WokeIssueRequest
 
-export async function userIssue (req: IssueRequest, log: Logger | null = logger): Promise<BuiltIssue> {
+export async function userIssue (args: IssueRequest | null | undefined, log: Logger | null = logger): Promise<BuiltIssue> {
+  const req = (args ?? {}) as Partial<IssueRequest>
   const info = req.includeInfo
     ? [`Version: ${app.getVersion()} (Electron ${process.versions.electron}, ${osLine()})`, ...(Array.isArray(req.info) ? req.info.filter(l => typeof l === 'string') : [])]
     : undefined

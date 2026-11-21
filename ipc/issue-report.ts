@@ -21,7 +21,10 @@ export interface ScrubNames {
 
 function escapeRe (s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
 
-export function scrubText (text: string, names: ScrubNames = {}): string {
+// `names.names` (account, character) are hidden only when `withNames`: the
+// log and error texts. What the player typed keeps its words, so a character
+// called "Bug" doesn't turn "Bug in price check" into "<name> in price check".
+export function scrubText (text: string, names: ScrubNames = {}, withNames = true): string {
   let out = text
   const home = names.home?.replace(/[\\/]+$/, '')
   if (home && home.length > 3) {
@@ -38,7 +41,7 @@ export function scrubText (text: string, names: ScrubNames = {}): string {
   if (user && user.length >= 3) out = out.replace(wholeWord(user), '<user>')
   // Account names can end in #1234; character names are letters and _.
   // Longest first, so "Name#1234" goes whole before "Name" alone.
-  const own = (names.names ?? []).map(n => n.trim()).filter(n => n.length >= 3).sort((a, b) => b.length - a.length)
+  const own = (withNames ? names.names ?? [] : []).map(n => n.trim()).filter(n => n.length >= 3).sort((a, b) => b.length - a.length)
   for (const n of own) out = out.replace(wholeWord(n), '<name>')
   return out
 }
@@ -58,6 +61,8 @@ export interface IssueDraft {
   text?: string
   // Shown above the player's text as the question to answer.
   prompt?: string
+  // A hidden hint under the question (an HTML comment), with room to answer.
+  hint?: string
   // "Details" lines: version, OS, modules, league. Added by the app.
   info?: string[]
   // Error text (a crash's stack).
@@ -86,6 +91,10 @@ function block (label: string, text: string): string {
   return t ? `\n\n<details><summary>${label}</summary>\n\n\`\`\`\n${t}\n\`\`\`\n</details>` : ''
 }
 
+function decodes (url: string): boolean {
+  try { decodeURIComponent(url); return true } catch { return false }
+}
+
 export function issueUrlFor (title: string, body: string, labels: string): string {
   return `${ISSUES_URL}?${new URLSearchParams({ title, body, labels }).toString()}`
 }
@@ -95,19 +104,23 @@ export function issueUrlFor (title: string, body: string, labels: string): strin
 // player's text, as a last resort.
 export function buildIssue (draft: IssueDraft, names: ScrubNames = {}, limit = URL_LIMIT): BuiltIssue {
   const scrub = (t: string) => scrubText(t, names)
+  const scrubTyped = (t: string) => scrubText(t, names, false)
   const labels = LABELS[draft.kind]
-  const title = scrub(draft.title.trim()).slice(0, 200) ||
+  // Capped before encoding: a non-Latin title triples in the link.
+  const title = scrubTyped(draft.title.trim()).slice(0, 120) ||
     (draft.kind === 'idea' ? 'Idea' : draft.kind === 'crash' ? 'Crash' : 'Problem report')
   const logAll = draft.log ? scrub(draft.log).trimEnd().split('\n') : []
   let error = draft.error ? scrub(draft.error).slice(0, 2500) : ''
   let overlayErrors = draft.overlayErrors ? scrub(draft.overlayErrors).slice(0, 1500) : ''
-  let text = scrub(draft.text?.trim() ?? '')
+  let text = scrubTyped(draft.text?.trim() ?? '')
+  // App info: a few short lines. The renderer sends them, so their size isn't trusted.
+  let info = (draft.info ?? []).slice(0, 12).map(l => scrubTyped(String(l)).slice(0, 300))
 
   const compose = (logLines: string[], cut: boolean, textCut: boolean) => {
     const head = [
-      draft.prompt ? `**${draft.prompt}**` : null,
+      draft.prompt ? `**${draft.prompt}**` + (draft.hint ? `\n<!-- ${draft.hint} -->\n\n` : '') : null,
       text ? text + (textCut ? '\n\n(cut short: too long for a link)' : '') : null,
-      draft.info?.length ? `**Details** (added by the app)\n${draft.info.map(l => `- ${scrub(l)}`).join('\n')}` : null
+      info.length ? `**Details** (added by the app)\n${info.map(l => `- ${l}`).join('\n')}` : null
     ].filter(p => p != null).join('\n\n')
     const logLabel = cut ? `Log (last ${logLines.length} of ${logAll.length} lines)` : 'Log'
     return head +
@@ -138,9 +151,19 @@ export function buildIssue (draft: IssueDraft, names: ScrubNames = {}, limit = U
       // Then the error texts (a stack full of escaped characters).
       error = error.slice(0, Math.floor(error.length * 0.75))
       overlayErrors = overlayErrors.slice(0, Math.floor(overlayErrors.length * 0.75))
+    } else if (info.length) {
+      info = info.slice(0, -1)
     } else {
-      // Nothing left to cut (a tiny limit): send it anyway.
-      return { url, title, body, labels, clipboard: cut ? logAll.join('\n') : null, logLines: logAll.length, logLinesShown: shown.length }
+      // Nothing left to cut: never hand GitHub a link it refuses. Cut the
+      // link itself, but not inside a %XX escape.
+      let short = url.slice(0, limit).replace(/%[0-9A-Fa-f]?$/, '')
+      // Nor inside a character's UTF-8 bytes (%E4%B8 without its %AD).
+      while (!decodes(short)) {
+        const less = short.replace(/%[0-9A-Fa-f]{2}$/, '')
+        if (less === short) break
+        short = less
+      }
+      return { url: short, title, body, labels, clipboard: cut ? logAll.join('\n') : null, logLines: logAll.length, logLinesShown: shown.length }
     }
   }
 }
