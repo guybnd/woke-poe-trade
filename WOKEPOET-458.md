@@ -23,6 +23,14 @@ history:
       https://claude.ai/artifact/BrGdR2fpDgeYRg4LvypVjF. Building A (scan box in
       Map mods' right column) meanwhile, branch woke/map-scan-merge.
     id: a-2026-11-21t13-23-11-793z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T14:10:39.382Z'
+    comment: >-
+      Guy picked layout B (own Scan tab in Map mods). PR
+      https://github.com/guybnd/woke-poe-trade/pull/738 reworked to B; review
+      fixes in; CI re-running.
+    id: a-2026-11-21t14-10-39-382z
 ---
 Guy's tool audit (2026-11-21) marked Map scan "improve". It reads map tooltips with OCR (Alt+S) and flags the danger mods, which Map mods already does from a copied item. Two tools do one job.
 
