@@ -405,7 +405,9 @@
   "search.spec.ts": [
    "main/src/woke/market-store.ts",
    "renderer/src/web/woke/market/",
-   "renderer/src/web/woke/search/"
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/shared/trade-status.ts",
+   "renderer/src/web/woke/ui/tooltip/item-menu-logic.ts"
   ],
   "stacked-decks.spec.ts": [
    "renderer/src/parser/",

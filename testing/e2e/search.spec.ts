@@ -371,6 +371,38 @@ test('a base lists its uniques with their prices', async ({ overlay }) => {
   await overlay.snap('search-priced-base')
 })
 
+test("Trade site opens the price check's listings: Instant buyout, no Foulborn copies for a plain unique, a unique map on its Map base", async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot(bootOptions())
+  await overlay.showScreen('screens/map-real-01.png')
+  await overlay.pressHotkey(SEARCH_KEY)
+  const { panel, box } = await waitForPrices(overlay)
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  const opened = async () => {
+    await panel.getByText('Trade site').click()
+    const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
+    return JSON.parse(new URL(url).searchParams.get('q') ?? '{}') as { query: Record<string, unknown> }
+  }
+
+  // A plain unique: Instant buyout (price check's default), Foulborn copies left out.
+  await box.fill('mageblood')
+  await panel.getByRole('button', { name: /^Mageblood/ }).first().click()
+  const plain = (await opened()).query
+  expect(plain.status).toEqual({ option: 'securable' })
+  expect(plain.filters).toEqual({ misc_filters: { filters: { foulborn_item: { option: 'false' } } } })
+
+  // A unique map: by name on the Map base, each with the "map" discriminator.
+  await box.fill('cortex')
+  await panel.getByRole('button', { name: /^Cortex/ }).first().click()
+  const map = (await opened()).query
+  expect(map.name).toEqual({ option: 'Cortex', discriminator: 'map' })
+  expect(map.type).toEqual({ option: 'Map', discriminator: 'map' })
+  expect(map.status).toEqual({ option: 'securable' })
+})
+
 test("a unique's details: variants, Foulborn kinds with what they replace, and its Vestigial mod", async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot(bootOptions())

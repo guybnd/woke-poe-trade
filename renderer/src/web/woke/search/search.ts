@@ -154,7 +154,17 @@ export function typeLabel (type: string): string {
 // Foulborn items share their unique's page and base.
 export const baseUniqueName = dataUniqueName
 
-export function tradeUrl (league: string, item: { name?: string, type?: string | { option: string, discriminator: string }, filters?: object }, host = 'www.pathofexile.com'): string {
+// Which listings a trade link shows, the same as the price check: Instant
+// buyout while its setting is on (the default), else any seller who's online.
+// Items sold only through the Currency Exchange (divination cards) have no
+// Instant buyout listings, so they show any online seller, as in the price check.
+export type TradeStatus = 'online' | 'securable' | 'available' | 'any'
+export function tradeStatusFor (merchantOnly: boolean | undefined, info?: { exchangeable?: true, tradeTag?: string }): 'securable' | 'available' {
+  if (merchantOnly === false) return 'available'
+  return info?.exchangeable && !info.tradeTag ? 'available' : 'securable'
+}
+
+export function tradeUrl (league: string, item: { name?: string | { option: string, discriminator: string }, type?: string | { option: string, discriminator: string }, filters?: object, status?: { option: TradeStatus } }, host = 'www.pathofexile.com'): string {
   const query = {
     query: { status: { option: 'online' }, ...item },
     sort: { price: 'asc' }

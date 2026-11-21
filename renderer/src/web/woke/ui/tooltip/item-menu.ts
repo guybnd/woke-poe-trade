@@ -18,6 +18,7 @@ import type { MarketTrackerWidget } from '../../market/widget'
 import { isWidgetTypeOn } from '../../modules'
 import { itemKey } from '../../market/types'
 import { tradeUrl } from '../../search/search'
+import { priceCheckTradeStatus } from '../../shared/trade-status'
 import { copyText } from '../copy'
 import { formatUnitPrice } from '../format'
 import { gameIcon } from '../game-icons'
@@ -25,7 +26,7 @@ import { offerMenuItem, openMenu, toast } from '../layer'
 import type { MenuItemAction, MenuItemHead } from '../layer'
 import { hideTip } from './tooltip'
 import { marketFor } from './item-tip'
-import { NS, infoOf, kindOf, nameClass, plainName, priceCheckInput, tradeQuery } from './item-menu-logic'
+import { NS, infoOf, kindOf, nameClass, plainName, priceCheckInput, tradeSearch } from './item-menu-logic'
 import type { ItemMenuRef } from './item-menu-logic'
 import { openPriceCheck } from './item-price-check'
 
@@ -46,7 +47,9 @@ export function openTrade (ref: ItemMenuRef) {
   const league = useLeagues().selectedId.value
   if (!league) { toast('Pick a league in the settings first'); return }
   const kind = kindOf(ref)
-  window.open(tradeUrl(league, tradeQuery(ref, kind, infoOf(ref, kind), AppConfig().language === 'en'), getTradeEndpoint()))
+  const info = infoOf(ref, kind)
+  const q = tradeSearch(ref, kind, info, AppConfig().language === 'en')
+  window.open(tradeUrl(league, { ...q, status: priceCheckTradeStatus(info) }, getTradeEndpoint()))
 }
 
 function screenPoint (e: MouseEvent) {
