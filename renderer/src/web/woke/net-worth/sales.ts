@@ -52,6 +52,8 @@ export function saleType (s: Pick<Sale, 'frameType' | 'typeLine' | 'mapTier'>): 
   if (f === 6) return 'cards'
   if (FRAGMENT.test(s.typeLine)) return 'fragments'
   if (s.mapTier || /\bMap\b/.test(s.typeLine)) return 'maps'
+  // Heist blueprints and contracts come as normal and magic items.
+  if (/\b(Blueprint|Contract):|^(Blueprint|Contract)\b/.test(s.typeLine)) return 'other'
   if (f === 5) return 'currency'
   if (f === 0 || f === 1 || f === 2) return 'gear'
   return 'other'
@@ -154,7 +156,10 @@ export function byType (sales: Sale[], rates: Rates): TypeRow[] {
 // 5% under. null without a poe.ninja price.
 export function versusMarket (saleChaosValue: number | null, ninjaEach: number | null, stack: number): number | null {
   if (saleChaosValue == null || ninjaEach == null || !(ninjaEach > 0)) return null
-  return saleChaosValue / (ninjaEach * Math.max(1, stack)) - 1
+  const v = saleChaosValue / (ninjaEach * Math.max(1, stack)) - 1
+  // Way off: poe.ninja's row is most likely another version of the item (a
+  // gem's level, a unique's links), so the comparison says nothing.
+  return v > 2 || v < -0.8 ? null : v
 }
 
 export function marketText (v: number | null): string {

@@ -31,6 +31,9 @@ describe('saleType', () => {
     expect(saleType(sale({ frameType: 0, typeLine: "Maven's Writ" }))).toBe('fragments')
     expect(saleType(sale({ frameType: 0, typeLine: 'Crimson Temple Map', mapTier: 16 }))).toBe('maps')
     expect(saleType(sale({ frameType: 7, typeLine: 'Something' }))).toBe('other')
+    expect(saleType(sale({ frameType: 1, typeLine: 'Supplemented Blueprint: Tunnels of Anxiety' }))).toBe('other')
+    expect(saleType(sale({ frameType: 0, typeLine: "Blueprint: Smuggler's Den" }))).toBe('other')
+    expect(saleType(sale({ frameType: 2, name: 'Doomed Trajectory', typeLine: 'Nightmare Map' }))).toBe('maps')
   })
 })
 
@@ -71,6 +74,8 @@ describe('prices and totals', () => {
     expect(versusMarket(95, 100, 1)).toBeCloseTo(-0.05)
     expect(versusMarket(120, 10, 12)).toBeCloseTo(0)
     expect(versusMarket(10, null, 1)).toBeNull()
+    // Another version of the item on poe.ninja (450% over): no comparison.
+    expect(versusMarket(44, 8, 1)).toBeNull()
     expect(marketText(-0.05)).toBe('5% under')
     expect(marketText(0.01)).toBe('at market')
     expect(marketText(0.2)).toBe('20% over')
