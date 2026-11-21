@@ -22,7 +22,7 @@ const tip = computed(() => {
   const head = e.verdict === 'unsure'
     ? `Looks safe, but ${e.unsure} line${e.unsure > 1 ? 's' : ''} couldn't be read clearly`
     : `${VERDICT_LABEL[e.verdict]} · juice ${e.juice}`
-  const mods = e.flagged.map(m => `${RATING_WORD[m.rating as keyof typeof RATING_WORD] ?? m.rating}: ${m.matcher}`)
+  const mods = e.flagged.map(m => `${RATING_WORD[m.rating as keyof typeof RATING_WORD] ?? m.rating}: ${m.text}`)
   const extra = e.rerolls ? [`Read ${e.rerolls + 1} times (rerolled in place)`] : []
   return [head, ...(mods.length ? mods : ['No rated mods']), ...extra].join('\n')
 })

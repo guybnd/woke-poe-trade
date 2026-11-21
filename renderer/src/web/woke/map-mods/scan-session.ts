@@ -29,7 +29,8 @@ export interface ScanEntry {
   rollN?: number
   // Number of lines read with low confidence; a "run" isn't trusted then.
   unsure: number
-  flagged: Array<{ matcher: string, label: string, rating: ModRating }>
+  // text: the line as read, with its numbers.
+  flagged: Array<{ matcher: string, text: string, label: string, rating: ModRating }>
 }
 
 export interface ScanReading { lines: string[], at: { x: number, y: number }, rolling?: boolean }
@@ -83,7 +84,7 @@ export function onReading (reading: ScanReading, alertOnPass: boolean) {
   const verdict = rateMods(scanned.mods, profile)
   const juice = juiceScore({ ...scanned.props, goodMods: verdict.good.length }, cfg?.weights ?? DEFAULT_JUICE_WEIGHTS)
   const flagged = [...verdict.deadly, ...verdict.warn, ...verdict.good]
-    .map(m => ({ matcher: m.matcher, label: shortLabel(m.matcher), rating: m.rating }))
+    .map(m => ({ matcher: m.matcher, text: m.text || m.matcher, label: shortLabel(m.matcher), rating: m.rating }))
   const label = verdict.deadly.length
     ? flagged.filter(f => f.rating === 'deadly').map(f => f.label).join(' · ')
     : scanned.tier ? `T${scanned.tier} map` : 'Map'
