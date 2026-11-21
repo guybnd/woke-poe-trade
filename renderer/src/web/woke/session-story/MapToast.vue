@@ -144,6 +144,8 @@ watch(() => props.chip, (c, old) => {
 // The zone grows while resizing and shrinks back after; padding isn't seen by
 // the size watcher, so send the new rect once the page has drawn it.
 watch(resizing, () => { hoverZonesMoved() })
+// Moved: main needs its new rect, or the pointer leaves the old one mid-drag.
+watch(() => props.pos, () => { hoverZonesMoved() })
 onUnmounted(() => { clearTimeout(armTimer); endResize?.() })
 
 function onPointerDown (e: PointerEvent) {
@@ -210,12 +212,19 @@ function startMove (e: PointerEvent) {
   const dy = e.clientY - box.top
   const at = (ev: PointerEvent) => ({
     x: Math.min(1, Math.max(0, (ev.clientX - dx) / window.innerWidth)),
-    y: Math.min(1 - box.height / window.innerHeight, Math.max(0, (ev.clientY - dy) / window.innerHeight))
+    y: Math.max(0, Math.min(1 - box.height / window.innerHeight, (ev.clientY - dy) / window.innerHeight))
   })
-  let last = props.pos ?? null
+  const x0 = e.clientX
+  const y0 = e.clientY
+  let last: { x: number, y: number } | null = null
   resizing.value = true
   try { handle.setPointerCapture(e.pointerId) } catch {}
-  const move = (ev: PointerEvent) => { last = at(ev); emit('move', last, false) }
+  // A press that barely moves is a click (it closes the toast, like anywhere else on it).
+  const move = (ev: PointerEvent) => {
+    if (!last && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return
+    last = at(ev)
+    emit('move', last, false)
+  }
   const detach = () => {
     handle.removeEventListener('pointermove', move)
     handle.removeEventListener('pointerup', up)
@@ -227,7 +236,8 @@ function startMove (e: PointerEvent) {
   function up () {
     if (endResize !== detach) return
     detach()
-    if (last) emit('move', last, true)
+    if (!last) { resizing.value = false; return }
+    emit('move', last, true)
     setTimeout(() => { resizing.value = false }, 0)
   }
   endResize = detach

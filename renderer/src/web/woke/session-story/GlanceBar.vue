@@ -53,19 +53,27 @@ function startDrag (e: PointerEvent) {
   const box = el.getBoundingClientRect()
   const dx = e.clientX - (box.left + box.width / 2)
   const dy = e.clientY - box.top
-  el.setPointerCapture(e.pointerId)
+  try { el.setPointerCapture(e.pointerId) } catch {}
   const at = (ev: PointerEvent) => ({
     x: Math.min(1, Math.max(0, (ev.clientX - dx) / window.innerWidth)),
-    y: Math.min(1 - box.height / window.innerHeight, Math.max(0, (ev.clientY - dy) / window.innerHeight))
+    y: Math.max(0, Math.min(1 - box.height / window.innerHeight, (ev.clientY - dy) / window.innerHeight))
   })
-  const move = (ev: PointerEvent) => emit('move', at(ev), false)
-  const up = (ev: PointerEvent) => {
+  let last: { x: number, y: number } | null = null
+  const move = (ev: PointerEvent) => { last = at(ev); emit('move', last, false) }
+  // pointerup, or the capture lost (the overlay closed mid-drag): ends it either way.
+  const up = () => {
     el.removeEventListener('pointermove', move)
     el.removeEventListener('pointerup', up)
-    emit('move', at(ev), true)
+    el.removeEventListener('pointercancel', up)
+    el.removeEventListener('lostpointercapture', up)
+    window.removeEventListener('pointerup', up)
+    if (last) emit('move', last, true)
   }
   el.addEventListener('pointermove', move)
   el.addEventListener('pointerup', up)
+  el.addEventListener('pointercancel', up)
+  el.addEventListener('lostpointercapture', up)
+  window.addEventListener('pointerup', up)
   e.preventDefault()
 }
 
