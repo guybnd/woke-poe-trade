@@ -12,7 +12,7 @@
 
     <div v-if="picks.length" :class="$style.picks">
       <span class="w-dim text-xs">Searched</span>
-      <WChip v-for="p in picks" :key="p.key" v-item-tip="{ ...itemRefFromText(p.item.name) ?? { name: p.item.name }, note: 'Click to take it off the ground' }" clickable @click="emit('drop-pick', p.key)">
+      <WChip v-for="p in picks" :key="p.key" v-item-tip="{ ...itemRefFromText(p.item.name) ?? { name: p.item.name }, note: 'Click to take it off the ground' }" clickable :title="`Take ${p.item.name} off the ground`" @click="emit('drop-pick', p.key)">
         {{ p.item.name }}<template v-if="p.item.gear"> · {{ p.rarity }}</template> <i class="fas fa-times" />
       </WChip>
     </div>

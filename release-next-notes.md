@@ -33,3 +33,4 @@
 - Price check: a Bulk button above the listings shows only sellers with 2 or more copies at one price. If fewer than 10 show, the click loads more listings (up to 100) right then; opening a check never loads extra.
 - Price check: Search bulk, next to Search, does both in one go: it searches with Bulk already on, loading more listings if fewer than 10 bulk sellers show.
 - Price check: the hideout and stash icons come first in each row, before the ×count, so they sit in one column.
+- Every list that names an item now shows the game's item tooltip on hover, including Wickerman's Viscera, Disenchant bases, Scarab flip, Boss runs entry items, the Drop counter, the Trade log, the build compare, the loot filter's drop preview and item search, the Ctrl+Space launcher's prices and search cards about an item.
