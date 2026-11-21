@@ -379,10 +379,11 @@ export function priceGroup (group: PriceGroup, items: PriceItem[], leaveOut?: (i
 }
 
 // 3.30 replaced scarabs with one Thread per mechanic ("Legion Thread"), which
-// poe.ninja lists under Fragment. Older leagues still list scarabs.
+// poe.ninja lists under its own Thread type (Fragment early in the league).
+// Older leagues still list scarabs.
 export function priceScarabs (family: RegExp, items: PriceItem[], limit = 8): PricedRow[] {
-  return priceGroup({ label: 'Threads', types: ['Scarab', 'Fragment'], match: family, limit }, items,
-    item => item.type === 'Fragment' && !/^\S+ Thread$/.test(item.name))
+  return priceGroup({ label: 'Threads', types: ['Scarab', 'Thread', 'Fragment'], match: family, limit }, items,
+    item => item.type !== 'Scarab' && !/^\S+ Thread$/.test(item.name))
 }
 
 export function expeditionRows (items: PriceItem[]): PricedRow[] {

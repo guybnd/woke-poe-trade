@@ -73,7 +73,7 @@ Pick a preset on first run (Mapper, Leveling, Trader, Everything or Price check 
 | Area | Module | What it does |
 | --- | --- | --- |
 | Economy | Market | Every poe.ninja price by category, plus movers and a watchlist |
-| Economy | Flips | Vendor recipes and Harvest rerolls worth doing: scarabs, catalysts, delirium orbs and more |
+| Economy | Flips | Vendor recipes and Harvest rerolls worth doing: threads, catalysts, delirium orbs and more |
 | Economy | Disenchant | Uniques with the most Thaumaturgic Dust per chaos, to buy and disenchant |
 | Economy | Wealthy Exile | The Wealthy Exile net worth site in an overlay window |
 | Economy | Drop counter | A tally of the drops you choose, and maps run |

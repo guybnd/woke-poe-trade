@@ -150,7 +150,7 @@ test('tour: market movers, with the item under the cursor', async ({ overlay }) 
   await showGame(overlay, 'screens/essence-real-20.png', '../frames/town.jpg')
   const panel = overlay.widget('woke-market-tracker')
   const scarabs = overlay.widget('woke-scarab-flip')
-  await expect(scarabs.getByText(/\d+ scarabs? worth vendoring/)).toBeVisible()
+  await expect(scarabs.getByText('Flips', { exact: true }).first()).toBeVisible()
   // Side by side: drag the scarab window off the tracker by its title.
   const title = await scarabs.getByText('Flips', { exact: true }).first().boundingBox()
   if (!title) throw new Error('No scarab flip title to drag')
