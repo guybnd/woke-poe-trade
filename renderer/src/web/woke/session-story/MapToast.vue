@@ -6,7 +6,7 @@
          past the old edge doesn't hand the mouse back to the game mid-drag. -->
     <div ref="el" :class="[$style.zone, resizing && $style.resizing]" data-map-toast-zone>
     <div :class="[$style.toast, 'w-enter']" :style="{ '--toast-scale': String(scale) }" data-map-toast role="status"
-      @click="onDomClick">
+      @pointerdown="onPointerDown" @click="onDomClick">
       <div :class="$style.title">
         <span :class="$style.titleName">{{ chip.rec.name }}</span><small>{{ tierText(chip.rec.areaLevel) }}</small>
       </div>
@@ -58,7 +58,7 @@
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { formatClock } from '../ui/format'
 import WKbd from '../ui/WKbd.vue'
-import { useHoverZone } from '../shared/hover'
+import { hoverZonesMoved, useHoverZone } from '../shared/hover'
 import { tierText } from './map-log'
 import type { MapRecord } from './map-log'
 import { clampScale } from './chip'
@@ -86,33 +86,66 @@ const resizing = shallowRef(false)
 const REST_MS = 250
 const armed = shallowRef(false)
 let armTimer: ReturnType<typeof setTimeout> | undefined
+// It came up under a cursor that was already there (you stood still in the
+// hideout): it doesn't arm or wait until the pointer leaves and comes back, or
+// the next click on the stash under it would close it instead.
+const UNDER_CURSOR_MS = 400
+let shownAt = 0
+let cameUnder = false
+// When the page itself saw the left button go down on it (the overlay had the
+// mouse), so main's report of the same press isn't acted on twice.
+let domDownAt = 0
 
 const inside = useHoverZone(el, {
   enabled: () => !!props.chip,
   activate: () => armed.value || resizing.value,
-  // A click the game also got (the mouse wasn't taken yet) still closes it. A
-  // taken click is left to the page, which knows whether it hit the corner.
-  onClick: (taken) => { if (!taken) emit('close') }
+  // A press the page didn't see (the mouse was with the game) closes it. One
+  // the page saw is left to the page, which knows if it hit the corner; the
+  // page's own event comes first, main's report after it.
+  onClick: () => {
+    setTimeout(() => {
+      if (Date.now() - domDownAt > 500 && props.chip) emit('close')
+    }, 60)
+  }
 })
 
 watch(inside, (on) => {
   clearTimeout(armTimer)
-  if (on) armTimer = setTimeout(() => { armed.value = true }, REST_MS)
+  if (on && Date.now() - shownAt < UNDER_CURSOR_MS) cameUnder = true
+  if (!on) cameUnder = false
+  const real = on && !cameUnder
+  if (real) armTimer = setTimeout(() => { armed.value = true }, REST_MS)
   else armed.value = false
-  emit('hold', on)
+  emit('hold', real)
 })
-watch(() => props.chip, (c) => { if (!c) { armed.value = false; resizing.value = false } })
-onUnmounted(() => { clearTimeout(armTimer) })
+watch(() => props.chip, (c, old) => {
+  if (c && c !== old) { shownAt = Date.now(); cameUnder = inside.value }
+  if (!c) {
+    armed.value = false
+    // Closed mid-drag (you went into a map): keep the size it had got to.
+    if (resizing.value) { endResize?.(); emit('resize', props.scale, true) }
+    resizing.value = false
+  }
+})
+// The zone grows while resizing and shrinks back after; padding isn't seen by
+// the size watcher, so send the new rect once the page has drawn it.
+watch(resizing, () => { hoverZonesMoved() })
+onUnmounted(() => { clearTimeout(armTimer); endResize?.() })
 
+function onPointerDown (e: PointerEvent) {
+  if (e.button === 0) domDownAt = Date.now()
+}
 function onDomClick (e: MouseEvent) {
   if (resizing.value || (e.target as HTMLElement).closest('[data-map-toast-grip]')) return
   emit('close')
 }
 
+let endResize: (() => void) | null = null
 // Grows from the top centre, so both sides move: a sideways drag counts twice.
 function startResize (e: PointerEvent) {
   e.preventDefault()
   e.stopPropagation()
+  domDownAt = Date.now()
   const grip = e.currentTarget as HTMLElement
   const box = grip.parentElement!.getBoundingClientRect()
   const x0 = e.clientX
@@ -127,17 +160,28 @@ function startResize (e: PointerEvent) {
     s = clampScale(s0 * Math.max(byW, byH))
     emit('resize', s, false)
   }
-  const up = () => {
+  const detach = () => {
     grip.removeEventListener('pointermove', move)
     grip.removeEventListener('pointerup', up)
     grip.removeEventListener('pointercancel', up)
+    grip.removeEventListener('lostpointercapture', up)
+    window.removeEventListener('pointerup', up)
+    endResize = null
+  }
+  // pointerup, or the capture lost when the game took the mouse back.
+  function up () {
+    if (endResize !== detach) return
+    detach()
     emit('resize', s, true)
     // The click that ends the drag comes after pointerup: keep it from closing.
     setTimeout(() => { resizing.value = false }, 0)
   }
+  endResize = detach
   grip.addEventListener('pointermove', move)
   grip.addEventListener('pointerup', up)
   grip.addEventListener('pointercancel', up)
+  grip.addEventListener('lostpointercapture', up)
+  window.addEventListener('pointerup', up)
 }
 
 const headDiff = computed(() => {
