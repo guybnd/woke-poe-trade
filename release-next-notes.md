@@ -9,3 +9,4 @@
 - Net worth: the chart has a 3h range, for a closer look at the last few hours.
 - Ctrl+Space search: gems the campaign doesn't give now say where they drop. Exceptional gems name their boss or vault (Greater Spell Echo: Uber Atziri), Empower/Enhance/Enlighten say where they drop, and old Awakened supports say they no longer drop and name their Greater replacement.
 - After-map toast: maps where you stepped into a Mirage get a Mirage chip, also shown in map history and Ctrl+Space search. A Mirage you skip isn't logged by the game, so it can't show.
+- Session analytics › Map history: a Vaults chip lists vault runs too (marked "not counted"); they stay out of the count and average.

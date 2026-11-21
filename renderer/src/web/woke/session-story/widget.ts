@@ -18,6 +18,8 @@ export interface SessionStoryWidget extends Widget {
   chipScale?: number
   // Areas left out as maps, by the name the game logs (see skip-areas.ts); undefined: the defaults.
   skipAreas?: string[]
+  // Session analytics › Map history also lists those areas (marked).
+  historySkipped?: boolean
   // A hotkey that closes it. Registered like any hotkey: the game no longer gets that key.
   chipKey?: string | null
 }

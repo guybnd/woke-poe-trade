@@ -107,18 +107,16 @@ export class MapLog {
       this.naming = false
       const side = staysInRun(ev.areaId) && this.inMap
       if (side) return
-      // A vault on the skip list, known by its id: not a map at all.
-      if (isSkippedArea(knownAreaName(ev.areaId))) {
-        this.leave(at)
-        return
-      }
       if (isMapArea(ev.areaId)) {
+        // A vault on the skip list is still saved (Map history can show it),
+        // but gets no toast and fires no map entry: see `skipped`.
+        const known = knownAreaName(ev.areaId)
         const key = `${ev.areaId}:${ev.seed ?? ''}`
         if (this.current?.key !== key) {
           this.finish(at)
           this.current = {
             key,
-            name: mapNameFromArea(ev.areaId),
+            name: known ?? mapNameFromArea(ev.areaId),
             areaLevel: ev.areaLevel,
             enteredAt: at,
             leftAt: at,
@@ -135,7 +133,7 @@ export class MapLog {
         // Back from a side area: still the same stretch inside.
         if (!this.inMap) {
           this.inMap = true
-          this.events.onEnter?.()
+          if (!this.skipped) this.events.onEnter?.()
           this.since = at
         }
         return
@@ -147,12 +145,6 @@ export class MapLog {
       // "You have entered Strand." names the map just generated.
       if (this.naming && this.inMap && this.current) {
         this.current.name = ev.name
-        // A vault on the skip list: not a map. Dropped before anything saw it
-        // leave, so there's no toast and nothing saved.
-        if (isSkippedArea(ev.name)) {
-          this.current = null
-          this.inMap = false
-        }
       }
       this.naming = false
       return
@@ -186,12 +178,17 @@ export class MapLog {
     if (npc && this.inMap && this.current && !this.current.npcs.includes(npc)) this.current.npcs.push(npc)
   }
 
+  // The current record is an area on the skip list (a vault): kept, never toasted.
+  private get skipped (): boolean {
+    return !!this.current && isSkippedArea(this.current.name)
+  }
+
   private leave (at: number): void {
     if (!this.inMap || !this.current) return
     this.current.mapMs += Math.max(0, at - this.since)
     this.current.leftAt = at
     this.inMap = false
-    this.events.onLeave(this.current)
+    if (!this.skipped) this.events.onLeave(this.current)
   }
 
   // Ends the current map (the night is over, or another map started).
