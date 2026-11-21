@@ -99,10 +99,11 @@ let domDownAt = 0
 const inside = useHoverZone(el, {
   enabled: () => !!props.chip,
   activate: () => armed.value || resizing.value,
-  // A press the page didn't see (the mouse was with the game) closes it. One
-  // the page saw is left to the page, which knows if it hit the corner; the
-  // page's own event comes first, main's report after it.
-  onClick: () => {
+  // A press the overlay took is left to the page, which knows if it hit the
+  // corner. One the game got too closes it, unless the page saw it as well
+  // (the overlay was open): the short wait lets the page's own event land.
+  onClick: (taken) => {
+    if (taken) return
     setTimeout(() => {
       if (Date.now() - domDownAt > 500 && props.chip) emit('close')
     }, 60)
@@ -119,7 +120,12 @@ watch(inside, (on) => {
   emit('hold', real)
 })
 watch(() => props.chip, (c, old) => {
-  if (c && c !== old) { shownAt = Date.now(); cameUnder = inside.value }
+  if (c && c !== old) {
+    shownAt = Date.now()
+    // A new toast in place of one under the pointer starts unarmed too.
+    cameUnder = inside.value
+    if (cameUnder) { clearTimeout(armTimer); armed.value = false; emit('hold', false) }
+  }
   if (!c) {
     armed.value = false
     // Closed mid-drag (you went into a map): keep the size it had got to.
@@ -250,8 +256,9 @@ function tone (diff: number): string {
 .avg { position: absolute; left: -3px; right: -3px; border-top: 1px dashed rgba(227, 194, 125, 0.7); }
 .props { flex: 1; min-width: 0; }
 .props > div { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
-.rule { height: 12px; margin: 4px 30px; background: url(/images/poe-ui/rule-h.png) center / 100% 100% no-repeat; opacity: 0.8; }
-.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 6px 2px; font-size: 13px; }
+.props > div > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rule { height: 1px; margin: 6px 24px 7px; background: linear-gradient(90deg, transparent, #8a7149, transparent); }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 14px 2px 6px; font-size: 13px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .chip { border: 1px solid #5c4d39; padding: 0 6px; color: #cdbb98; background: rgba(0, 0, 0, 0.3); }
 .bad { color: var(--w-down, #e0675a); border-color: #6e3a32; }
