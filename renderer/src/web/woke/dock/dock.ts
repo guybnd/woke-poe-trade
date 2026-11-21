@@ -104,7 +104,7 @@ export const DOCK_NAMES: Record<string, string> = {
   'mechanics': 'League mechanics',
   'wickerman': 'Wickerman',
   'death-recap': 'Death recap',
-  'session-story': 'Session story',
+  'session-story': 'Session analytics',
   'farming': 'Farming',
   'drop-counter': 'Drop counter',
   'stacked-decks': 'Stacked decks',

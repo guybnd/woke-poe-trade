@@ -19,5 +19,7 @@
 - Session analytics: a Nights tab lists every night with its own strip, time, maps and profit. Click one to show it at the top of the window, then click its maps to find them in Map history.
 - Session story: an optional bar at the top of the screen while you're in a map, with the map, its time so far and tonight's maps and profit. It never takes the mouse and sits alongside the after-map toast. Turn it on under the map settings (dock card › After a map, or Settings › Farming & sessions).
 - Ctrl+Space search: "maps" opens Map history, and each map in the card has a Show button that opens Map history at that map's row. The tonight card can open Map history too.
+- Session story: tonight's night carries on after the app restarts. Before, a restart rebuilt it from the end of the game's log only, so the map count dropped back to about a dozen maps.
+- Session story no longer has a window of its own. Its dock icon is now called Session analytics and works the same way (tonight's card, the after-map line), and clicking it opens Session analytics. Its right-click menu has Map history and All nights.
 - Incarnation of Fear, Neglect and Dread fights (normal and Uber) no longer count as maps in Session story, the map toast, Map history, Farming and Net worth's map count. Boss runs now knows their arenas.
-- Ctrl+Space search: the tonight and "maps" cards only offer Map history buttons while Session analytics is on, and the maps card says "Your last N maps" instead of claiming the last 2 days.
+- Ctrl+Space search: the tonight and "maps" cards only offer their Session analytics buttons while Session analytics is on, and the maps card says "Your last N maps" instead of claiming the last 2 days.

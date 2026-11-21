@@ -32,10 +32,10 @@ describe('Ctrl+Space maps card', () => {
 
   it('offers no Map history buttons while Session analytics is off', () => {
     const [card] = mapsLookup([map('Fortress', 2000)])('maps', ctx)
-    expect(card.actions).toEqual([{ label: 'Open Session story', tool: 'woke-session-story' }])
+    expect(card.actions).toEqual([])
     expect(card.sections[0].rows!.every(r => r.action == null)).toBe(true)
     const night = { id: '1', startedAt: 0, endedAt: 3_600_000, maps: [], strip: [], mapMs: 0, otherMs: 0, deathsAt: [], profitChaos: null, divine: null, best: null }
-    expect(sessionStoryLookup(null, night)('tonight', ctx)[0].actions).toEqual([{ label: 'Open Session story', tool: 'woke-session-story' }])
-    expect(sessionStoryLookup(null, night)('tonight', { ...ctx, tools: new Set(['woke-session-analytics']) })[0].actions).toHaveLength(2)
+    expect(sessionStoryLookup(null, night)('tonight', ctx)[0].actions).toEqual([])
+    expect(sessionStoryLookup(null, night)('tonight', { ...ctx, tools: new Set(['woke-session-analytics']) })[0].actions).toEqual([{ label: 'Open Session analytics', open: { tool: 'woke-session-analytics', id: 'history' } }])
   })
 })

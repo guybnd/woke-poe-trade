@@ -296,13 +296,14 @@ function pickMap (enteredAt: number) {
   focusAt.value = null
   nextTick(() => { focusAt.value = enteredAt })
 }
-// Ctrl+Space: "Open Map history", or a map's Show button ("map:<entered at>").
+// Ctrl+Space ("Open Map history", a map's Show button: "map:<entered at>") and
+// Session story's dock icon ("history", or "nights" from its menu).
 onSavedOpen(ANALYTICS_TYPE, (id) => {
   if (!storyOn.value) return
   wm.show(props.config.wmId)
   nightId.value = null
   if (id.startsWith('map:')) pickMap(Number(id.slice(4)))
-  else tab.value = 'history'
+  else tab.value = id === 'nights' ? 'nights' : 'history'
 })
 // Session story turned off while its tab shows: back to Strategies.
 watch(storyOn, (on) => {
