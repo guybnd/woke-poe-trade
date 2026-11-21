@@ -149,7 +149,7 @@
                 <span class="w-num text-xs w-dim">today <b :class="$style.saleNum">{{ div(soldToday.chaos) }}</b> · 7 days <b :class="$style.saleNum">{{ div(soldWeek.chaos) }}</b><Coin :chaos="!divine" /></span>
               </button>
               <div v-for="s in recentSales" :key="s.id" :class="$style.moveRow">
-                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleTip(s)" class="w-trunc">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" class="text-xs" :class="marketTone(s)">{{ marketText(marketOf(s)) }}</span></span>
+                <span :class="$style.moveName"><img v-if="s.icon" :src="s.icon" alt="" :class="$style.icon"><span v-else :class="$style.icon" /><span v-item-tip="saleTip(s)" class="w-trunc">{{ saleName(s) }}</span><span v-if="marketOf(s) != null" :class="[$style.saleTag, marketTone(s)]">{{ marketText(marketOf(s)) }}</span></span>
                 <span class="w-num" :class="$style.saleNum" :title="saleTitle(s)">{{ salePrice(s) }}<Coin v-if="saleChaosOf(s) != null" :chaos="!divine" /> · {{ clockOf(s.at) }}</span>
               </div>
             </div>
@@ -857,6 +857,9 @@ watch(() => splitParts.value.map(x => x.id).join(), () => { splitPick.value = nu
 .sessionFoot { display: flex; justify-content: space-between; align-items: center; gap: var(--w-s2); margin-top: var(--w-s2); }
 .catName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .moveName { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+/* A sale's "7% under" and price never wrap: the name is cut short instead. */
+.saleTag { flex: none; white-space: nowrap; font-size: var(--w-fs-xs); }
+.sideCol .moveRow > :global(.w-num) { flex: none; white-space: nowrap; }
 .catRow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5em; gap: 6px; align-items: center; width: 100%; padding: 2px 4px; font-size: var(--w-fs-sm); color: var(--w-fg); text-align: left; border-radius: var(--w-r-sm); cursor: pointer; }
 .catRow:hover { background: var(--w-panel-2); }
 .catRow i { display: block; height: 8px; min-width: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--w-gold) 50%, transparent), var(--w-gold)); }
