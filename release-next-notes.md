@@ -4,3 +4,4 @@
 - Session story: vaults (Zealot's, Scholar's, Arkhon's, Machinist's) no longer count as maps in the night summary, map toast, times and averages. Change the list in Settings › Farming & sessions.
 - Farming sessions, Session analytics, Net worth's map count, the drop counter and death recap no longer count vaults as maps either.
 - Ctrl+Space search: a calculator. Type a sum such as 70 * 38, (12 + 8) x 1.5 or 200 + 10% and the answer is the top row; Enter copies it. Currency works too: 50d / 7 or 2 div + 30c use poe.ninja prices.
+- Ctrl+Space search: every keystroke picks the top result, so Enter does what the first row says (a sum's answer, the best item match) instead of the web search row you had a moment before.
