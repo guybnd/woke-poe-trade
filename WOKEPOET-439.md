@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-439
 title: 'Session window 5: glance bar in maps and hideout card'
-status: Todo
+status: In Progress
 priority: None
 effort: M
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: claude-code@guy-pc
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -26,6 +26,21 @@ history:
     date: '2026-11-21T06:07:19.934Z'
     comment: Updated title. Updated description.
     id: a-2026-11-21t06-07-19-934z
+  - type: activity
+    user: claude-code@guy-pc
+    date: '2026-11-21T07:30:40.351Z'
+    comment: Claimed by claude-code@guy-pc
+    id: a-2026-11-21t07-30-40-351z
+  - type: status_change
+    from: Todo
+    to: In Progress
+    user: claude-code@guy-pc
+    date: '2026-11-21T07:30:40.351Z'
+needsAction: null
+claim:
+  holder: claude-code@guy-pc
+  claimedAt: '2026-11-21T07:30:40.351Z'
+  expiresAt: '2026-11-21T08:00:40.351Z'
 ---
 > TL;DR: thin glance bar while mapping and a short hideout card; open question whether it replaces the map toast.
 
