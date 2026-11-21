@@ -1,14 +1,14 @@
 ---
 id: WOKEPOET-440
 title: 'Session window 6: switch over and retire the old two windows'
-status: Todo
+status: In Progress
 priority: None
 effort: S
 assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: claude-code@guy-pc
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -42,7 +42,38 @@ history:
       (2) OK to point Session story's dock icon at the combined window on Map
       history, rename analytics to "Session" and remove the separate Session
       story panel? Default if no answer: keep both windows.
-swimlane: require-input
+  - type: comment
+    user: Agent
+    comment: >-
+      Guy 2026-11-21: Session story window can go; keep its dynamic dock icon,
+      labelled Session analytics, opening the combined window. Keep both glance
+      bar and toast.
+    date: '2026-11-21T08:28:29.019Z'
+    id: c-2026-11-21t08-28-29-019z
+  - type: swimlane_change
+    swimlane: require-input
+    action: cleared
+    user: Agent
+    date: '2026-11-21T08:28:29.019Z'
+    comment: >-
+      Guy 2026-11-21: Session story window can go; keep its dynamic dock icon,
+      labelled Session analytics, opening the combined window. Keep both glance
+      bar and toast.
+  - type: activity
+    user: claude-code@guy-pc
+    date: '2026-11-21T08:28:29.155Z'
+    comment: Claimed by claude-code@guy-pc
+    id: a-2026-11-21t08-28-29-155z
+  - type: status_change
+    from: Todo
+    to: In Progress
+    user: claude-code@guy-pc
+    date: '2026-11-21T08:28:29.155Z'
+swimlane: null
 needsAction: null
+claim:
+  holder: claude-code@guy-pc
+  claimedAt: '2026-11-21T08:28:29.155Z'
+  expiresAt: '2026-11-21T08:58:29.155Z'
 ---
 Point dock, settings and toasts at the new window; remove Session analytics and Session story widgets; migrate their saved config. Release note line.
