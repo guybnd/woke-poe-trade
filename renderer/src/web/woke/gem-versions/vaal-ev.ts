@@ -1,10 +1,10 @@
-// What a Vaal Orb on a 20/20 gem is worth on average (Guy, 2026-11-21: always
-// from a 20/20). Odds are the community's, GGG has published none: four
+// What a Vaal Orb on a max-level, 20% gem is worth on average (Guy,
+// 2026-11-21: from a 20/20, and 3/20 for exceptional supports). Odds are the community's, GGG has published none: four
 // results at 25% each, no change, the Vaal form, level +1 or -1, quality
 // +1 to +10 or -1 to -10 (cap 23). Prices come from the poe.ninja versions.
 import type { GemVersion } from './versions'
 
-export const VAAL_START = { level: 20, quality: 20 } as const
+const START_QUALITY = 20
 const QUALITY_CAP = 23
 const QUALITY_STEP = 10
 
@@ -16,12 +16,14 @@ export interface VaalOutcome {
   chaos: number | null
   // How the price was found when it isn't the version's own row.
   est?: string
-  // chaos minus the 20/20's price; null with no price.
+  // chaos minus the starting gem's price; null with no price.
   delta: number | null
 }
 
 export interface VaalEv {
-  // The clean 20/20's price: selling it as is.
+  // The gem it starts from: its max level, 20% quality.
+  start: { level: number, quality: number }
+  // That gem's clean price: selling it as is.
   now: number
   cost: number
   outcomes: VaalOutcome[]
@@ -52,7 +54,13 @@ export function corruptedPrice (rows: GemVersion[], vaal: boolean, level: number
 }
 
 export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm: boolean): VaalEv | null {
-  const { level, quality } = VAAL_START
+  // Max level: the highest clean level poe.ninja prices at 20% (20, or 3
+  // for an exceptional support, 5 for an awakened one).
+  const quality = START_QUALITY
+  const clean = rows.filter(r => !r.vaal && !r.corrupted && r.quality === quality)
+  if (!clean.length) return null
+  const level = Math.max(...clean.map(r => r.level))
+  if (level < 2) return null
   const now = rows.find(r => !r.vaal && !r.corrupted && r.level === level && r.quality === quality)?.chaos
   const same = corruptedPrice(rows, false, level, quality)
   if (now == null || same.chaos == null || same.est) return null
@@ -99,7 +107,17 @@ export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm:
   if (down.length) {
     const lo = Math.min(...down.map(([q]) => q))
     const hi = Math.max(...down.map(([q]) => q))
-    add('q-down', `Quality ${lo}–${hi}`, down.reduce((s, [, c]) => s + c, 0), corruptedPrice(rows, false, level, hi))
+    let p = corruptedPrice(rows, false, level, hi)
+    if (p.chaos == null) {
+      // poe.ninja rarely lists low-quality corrupted gems: no less than a
+      // version it beats on both level and quality (a clean 1/0).
+      const floor = rows.filter(r => !r.vaal && r.level <= level && r.quality <= hi)
+      if (floor.length) {
+        const f = floor.reduce((a, b) => b.chaos > a.chaos ? b : a)
+        p = { chaos: f.chaos, est: `priced as ${f.level}/${f.quality}${f.corrupted ? ' corrupted' : ''}` }
+      }
+    }
+    add('q-down', `Quality ${lo}–${hi}`, down.reduce((s, [, c]) => s + c, 0), p)
   }
 
   const ev = out.reduce((s, o) => s + o.chance * (o.chaos ?? 0), 0) - cost
@@ -108,6 +126,7 @@ export function vaalEv (rows: GemVersion[], vaalOrb: number | null, hasVaalForm:
   const gain = sum(o => o.delta != null && o.delta > band)
   const lose = sum(o => o.delta == null || o.delta < -band)
   return {
+    start: { level, quality },
     now,
     cost,
     outcomes: out,

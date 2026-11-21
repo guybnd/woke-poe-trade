@@ -18,7 +18,7 @@
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
       <woke-deck-verdict-chip :item="item" />
-      <!-- woke: Vaal it? on a 20/20 of this gem; outcomes on hover (Guy's pick V3, 2026-11-21). -->
+      <!-- woke: Vaal it? on a max-level 20% one of this gem; outcomes on hover (Guy's pick V3, 2026-11-21). -->
       <woke-vaal-chip v-if="isGem && tradeAPI === 'trade'" :item="item" :league="itemFilters.trade.league" />
       <woke-high-roll-chip v-if="item.rarity === 'Unique'" :item="item" :stats="itemStats" @search="searchAfterPreset" />
       <!-- woke: the poe.ninja price folded onto the name row; its chevron opens the card below. -->

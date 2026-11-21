@@ -1,4 +1,4 @@
-// Vaal it? on a 20/20 gem: outcomes, their odds and prices, and the average.
+// Vaal it? on a max-level 20% gem: outcomes, their odds and prices, and the average.
 import { describe, expect, it } from 'vitest'
 import { corruptedPrice, vaalEv } from '@/web/woke/gem-versions/vaal-ev'
 import { listVersions } from '@/web/woke/gem-versions/versions'
@@ -51,7 +51,7 @@ describe('vaal it', () => {
     expect(r.cost).toBe(2)
     // Level 21 has no row: no price, counted as nothing and said so.
     expect(r.outcomes.find(o => o.id === 'level-up')!.chaos).toBeNull()
-    // Level 21 and quality 10–19.
+    // Level 21 and quality 10–19: nothing below them is listed.
     expect(r.unpriced).toBeCloseTo(0.25)
   })
 
@@ -114,5 +114,45 @@ describe('vaal it search, narrow', async () => {
     expect(vaalGemLookup('vaal arc', ctx).map(c => c.id)).toEqual(['vaal-gem:Arc', 'vaal-gem:Arcane Cloak'])
     expect(vaalGemLookup('vaal fever', ctx).map(c => c.id)).toEqual(['vaal-gem:Corrupting Fever'])
     expect(vaalGemLookup('corrupting fever', ctx)).toEqual([])
+  })
+})
+
+describe('vaal it on an exceptional support', () => {
+  // Greater Multistrike Support on poe.ninja, Guy's screenshot 2026-11-21.
+  const name = 'Greater Multistrike Support'
+  const gms = listVersions([
+    row('1', 2.7, name), row('1/20', 4, name), row('1/23c', 5, name), row('3/20', 7.1, name),
+    row('3/20c', 4, name), row('3/23c', 5, name), row('4/20c', 29, name), row('4/23c', 34, name)
+  ], [], { vaal: false, level: 3, quality: 20, corrupted: false })
+
+  it('starts from level 3, and level 4 is the jackpot', () => {
+    const r = vaalEv(gms, 1, false)!
+    expect(r.start).toEqual({ level: 3, quality: 20 })
+    expect(r.now).toBe(7.1)
+    const by = Object.fromEntries(r.outcomes.map(o => [o.id, o]))
+    expect(by['level-up']).toMatchObject({ label: 'Level 4', chaos: 29 })
+    expect(by['level-down']).toMatchObject({ label: 'Level 2', chaos: 4 })
+    expect(by['q-cap']).toMatchObject({ chaos: 5 })
+    // No 3/x corrupted row under 20: no less than the cheapest version.
+    expect(by['q-down']).toMatchObject({ chaos: 2.7, est: 'priced as 1/0' })
+    expect(r.unpriced).toBe(0)
+    expect(r.outcomes.reduce((s, o) => s + o.chance, 0)).toBeCloseTo(1)
+  })
+})
+
+describe('vaal it start level', async () => {
+  const { vaalGemLookup } = await import('@/web/woke/search/lookups/vaal-gem')
+  it('starts an awakened gem at 5 and skips gems priced only at level 1', () => {
+    const aw = listVersions([row('1/20', 30, 'Awakened X'), row('5/20', 200, 'Awakened X'), row('5/20c', 150, 'Awakened X'), row('6/20c', 2000, 'Awakened X')], [], OWN)
+    const r = vaalEv(aw, 1, false)!
+    expect(r.start).toEqual({ level: 5, quality: 20 })
+    expect(r.outcomes.find(o => o.id === 'level-up')).toMatchObject({ label: 'Level 6', chaos: 2000 })
+    expect(vaalEv(listVersions([row('1/20', 3, 'Y'), row('1/20c', 2, 'Y')], [], OWN), 1, false)).toBeNull()
+  })
+  it('names the search card by its start', () => {
+    const items = [['3/20', 7.1], ['3/20c', 4], ['4/20c', 29], ['1', 2.7]].map(([variant, chaos]) => ({ type: 'SkillGem', name: 'Greater Multistrike Support', variant: variant as string, chaos: chaos as number }))
+    const only1 = [['1/20', 3], ['1/20c', 2]].map(([variant, chaos]) => ({ type: 'SkillGem', name: 'Greater Mud', variant: variant as string, chaos: chaos as number }))
+    const ctx = { price: () => null, items: [...items, ...only1], tools: new Set<string>(), divine: 210, now: 0, league: null }
+    expect(vaalGemLookup('vaal greater', ctx).map(c => c.name)).toEqual(['Greater Multistrike Support 3/20: Vaal it?'])
   })
 })

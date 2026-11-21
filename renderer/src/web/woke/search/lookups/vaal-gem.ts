@@ -1,4 +1,4 @@
-// "vaal <gem>" in the search: what a Vaal Orb on a 20/20 of that gem gives on
+// "vaal <gem>" in the search: what a Vaal Orb on a max-level 20% one of that gem gives on
 // average, the same numbers as the Vaal chip on a gem's price check.
 import { matchRank } from '../search'
 import { listVersions } from '../../gem-versions/versions'
@@ -19,18 +19,19 @@ export function vaalGemCard (name: string, ctx: LookupContext): LookupCard | nul
   const versions = listVersions(base, vaalRows, { vaal: false, level: 0, quality: 0, corrupted: false })
   const r = vaalEv(versions, ctx.price('Vaal Orb'), vaalRows.length > 0)
   if (!r) return null
+  const start = `${r.start.level}/${r.start.quality}`
   return {
     id: `vaal-gem:${name}`,
     group: 'Vaal it?',
-    name: `${name} 20/20: Vaal it?`,
-    title: `${name} 20/20: Vaal it?`,
+    name: `${name} ${start}: Vaal it?`,
+    title: `${name} ${start}: Vaal it?`,
     sub: `${signed(r.profit)}${r.unpriced ? '?' : ''} on average · ${Math.round(r.gain * 100)}% gain, ${Math.round(r.lose * 100)}% lose`,
     icon: 'fas fa-dice',
     tip: { name, type: 'SkillGem' },
     sections: [
       {
         rows: [
-          { label: 'Clean 20/20 sells for', chaos: r.now },
+          { label: `Clean ${start} sells for`, chaos: r.now },
           { label: 'Average after a Vaal Orb', chaos: r.ev },
           { label: 'Expected profit', value: signed(r.profit) }
         ]
@@ -59,7 +60,7 @@ export const vaalGemLookup: Lookup = (query, ctx) => {
   const q = m[1].trim()
   const names = new Set<string>()
   for (const i of ctx.items) {
-    if (i.type === 'SkillGem' && !i.name.startsWith('Vaal ') && /^20\/20$/.test(i.variant)) names.add(i.name)
+    if (i.type === 'SkillGem' && !i.name.startsWith('Vaal ') && /^(?:[2-9]|\d{2,})\/20$/.test(i.variant)) names.add(i.name)
   }
   const hits = [...names]
     .map(name => ({ name, rank: matchRank(name, q) }))

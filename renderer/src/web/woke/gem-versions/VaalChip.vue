@@ -1,14 +1,14 @@
 <template>
   <span v-if="r" ref="chip" :class="[$style.chip, r.unpriced ? $style.unsure : r.profit >= 0 ? $style.good : $style.bad]" tabindex="0" data-vaal-chip
     @mouseenter="show" @mouseleave="hide" @focus="onFocus" @blur="hide">
-    Vaal 20/20 <b class="w-num">{{ signed(r.profit) }}{{ r.unpriced ? '?' : '' }}</b>
+    Vaal {{ startText }} <b class="w-num">{{ signed(r.profit) }}{{ r.unpriced ? '?' : '' }}</b>
   </span>
   <Teleport to="body">
     <div v-if="r && open" ref="card" :class="[$style.card, 'w-pc-side', 'w-surface', 'w-corners']" :style="pos" role="tooltip" data-vaal-card>
       <div :class="$style.top">
         <span :class="$style.title">Vaal it?</span>
         <b :class="r.profit >= 0 ? 'w-up' : 'w-down'" class="w-num">{{ signed(r.profit) }}</b>
-        <span class="w-dim">avg <w-price :chaos="r.ev" :divine="divine" /> vs <w-price :chaos="r.now" :divine="divine" /> for a clean 20/20</span>
+        <span class="w-dim">avg <w-price :chaos="r.ev" :divine="divine" /> vs <w-price :chaos="r.now" :divine="divine" /> for a clean {{ startText }}</span>
       </div>
       <div :class="$style.strip">
         <span :class="$style.g" :style="{ width: pct(r.gain) }" />
@@ -19,7 +19,7 @@
         <span class="w-up">{{ pct(r.gain) }} gain</span><span>{{ pct(r.same) }} about the same</span><span class="w-down">{{ pct(r.lose) }} lose</span>
       </div>
       <table :class="$style.outs">
-        <thead><tr><th>Outcome</th><th>Chance</th><th>Price</th><th>vs 20/20</th></tr></thead>
+        <thead><tr><th>Outcome</th><th>Chance</th><th>Price</th><th>vs {{ startText }}</th></tr></thead>
         <tbody>
           <tr v-for="o of r.outcomes" :key="o.id">
             <td>{{ o.label }}<span v-if="o.est" :class="$style.est"> · {{ o.est }}</span></td>
@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-// Vaal it? on the gem's name row: what a Vaal Orb on a 20/20 of this gem
+// Vaal it? on the gem's name row: what a Vaal Orb on a max-level 20% one of this gem
 // gives on average (Guy's pick V3, 2026-11-21). The outcomes show on hover.
 import { computed, inject, nextTick, onUnmounted, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
@@ -55,6 +55,8 @@ const props = defineProps<{ item: ParsedItem, league: string }>()
 const isGem = computed(() => props.item.category === ItemCategory.Gem)
 const { forms, versions, divine, vaalOrb } = useGemVersions(() => props.item, () => props.league)
 const r = computed(() => isGem.value ? vaalEv(versions.value, vaalOrb.value, !!forms.value?.vaal) : null)
+
+const startText = computed(() => r.value ? `${r.value.start.level}/${r.value.start.quality}` : '')
 
 function signed (n: number): string {
   const t = formatChaos(Math.abs(n), divine.value)
