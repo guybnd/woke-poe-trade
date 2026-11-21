@@ -34,6 +34,17 @@ describe('a unique priced without game text', () => {
     expect(exact.baseTypeTrade).toBe(base)
   })
 
+  it.each(['Cortex', 'Replica Cortex'])('searches %s, which only drops corrupted, on the Map base with corrupted copies', (name) => {
+    const item = priceCheckInput({ name }, 'unique', ITEM_BY_REF('UNIQUE', name)![0])!.item!
+    expect(item.isCorrupted).toBe(true)
+    const filters = createFilters(item, OPTS)
+    expect(filters.corrupted?.search).toBe('any')
+    expect(filters.searchExact).toMatchObject({ nameTrade: name, baseTypeTrade: 'Map', discriminatorTrade: 'map' })
+    // Other unique maps still search uncorrupted copies.
+    const mao = priceCheckInput({ name: 'Mao Kun' }, 'unique', ITEM_BY_REF('UNIQUE', 'Mao Kun')![0])!.item!
+    expect(createFilters(mao, OPTS).corrupted?.search).toBe('not-corrupted')
+  })
+
   it('keeps a unique with no base data as before', () => {
     const info = { ...ITEM_BY_REF('UNIQUE', 'Mageblood')![0], unique: undefined }
     expect(virtualUnique(info).uniqueBase).toBeUndefined()

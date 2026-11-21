@@ -23,7 +23,7 @@ interface Rec { dir: 'in' | 'out', name: string, payload: unknown }
 
 // The demo's tools: the rail of a player who maps, plus the scanners.
 const WIDGETS = [
-  'woke-market-tracker', 'woke-session-analytics', 'woke-map-mods', 'woke-map-scan', 'woke-essence-scan',
+  'woke-market-tracker', 'woke-session-analytics', 'woke-map-mods', 'woke-essence-scan',
   'woke-atlas-strategies', 'woke-mechanics', 'woke-lab', 'woke-lab-gems', 'woke-scarab-flip', 'woke-trade', 'woke-regex-library', 'woke-trade-searches',
   'woke-boss-runs', 'woke-campaign', 'woke-run-timer'
 ]

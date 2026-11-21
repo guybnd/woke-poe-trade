@@ -22,6 +22,7 @@ import { carryRewordedRatings } from './woke/map-mods/rules'
 import type { ModRating } from './woke/map-mods/rules'
 import { movePopupsToNewSpot } from './woke/ui/window-anchor'
 import { foldMarketWindow } from './woke/market/widget'
+import { foldMapScan } from './woke/map-mods/scan'
 import type { WokeModulesConfig } from './woke/modules'
 import type { ItemCheckWidget } from './item-check/widget'
 import { BOOKMARKS_TARGET } from './woke/item-lookup/lookup'
@@ -578,6 +579,11 @@ function upgradeConfig (_config: Config): Config {
   // woke: Market is one window with Prices, Movers and Watchlist tabs, opening on Prices.
   if ((modules.woke?.version ?? 0) < 3) {
     foldMarketWindow(config.widgets as unknown as Array<Record<string, unknown> & { wmId: number, wmType: string }>)
+  }
+  // woke: Map scan is part of Map mods; its keys move there once.
+  // A config with no woke block (APT's own) has never had a Map scan window.
+  if (modules.woke && (modules.woke.version ?? 0) < 4) {
+    foldMapScan(config as unknown as Parameters<typeof foldMapScan>[0])
   }
   // woke: each tool has one name now.
   renameOldDefaultTitles(config.widgets as Array<{ wmType: string, wmTitle?: string }>)

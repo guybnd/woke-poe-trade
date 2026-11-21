@@ -123,6 +123,7 @@ export function initSetup (appUpdater: AppUpdater) {
   })
   registerWokeHandler('setup-open', async () => { openSetupWindow(); return true })
   registerWokeHandler('app-restart', async () => { restartApp(); return true })
+  registerWokeHandler('update-check', async () => await appUpdater.checkNow())
   // Going back to the previous release (Settings › About).
   registerWokeHandler('rollback-state', async () => await appUpdater.rollbackState())
   registerWokeHandler('rollback-start', async () => appUpdater.startRollback())

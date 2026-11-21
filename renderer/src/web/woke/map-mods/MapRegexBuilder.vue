@@ -6,9 +6,13 @@
         @update:model-value="config.activeProfile = Number($event)" title="Build profile" />
     </template>
     <template #tabs>
-      <WTabs v-model="mode" :options="modeOptions" />
+      <WTabs v-model="tab" :options="tabList" />
     </template>
-    <div :class="$style.split">
+    <!-- Scan: map scan's controls and every map it read (first window only). -->
+    <div v-if="scanTab" :class="$style.scanTab" class="w-scroll">
+      <MapScanBox :config="config" full />
+    </div>
+    <div v-else :class="$style.split">
       <!-- Left: find and rate mods. -->
       <div :class="$style.left">
         <div :class="$style.tools">
@@ -186,6 +190,8 @@ import { profileRegex } from './search'
 import { activeProfile, rewardsAsk } from './widget'
 import type { MapModsWidget } from './widget'
 import { moduleIcon } from '../ui/game-icons'
+import MapScanBox from './MapScanBox.vue'
+import { entries as scanEntries, isScanOwner } from './scan-session'
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('map-mods').art ?? 'map'
 
@@ -239,6 +245,18 @@ const shownPresets = computed(() => presetsOpen.value ? presets.value : presets.
 const search = shallowRef('')
 const filter = shallowRef('all')
 const mode = shallowRef<ModMode>('maps')
+// Map scan lives in the first Map mods window only.
+const scanOwner = computed(() => isScanOwner(props.config))
+// The Scan tab sits beside Maps, Heist and Charts; mode keeps the last of those.
+const scanTab = shallowRef(false)
+watch(scanOwner, (own) => { if (!own) scanTab.value = false })
+const tab = computed<string>({
+  get: () => scanTab.value ? 'scan' : mode.value,
+  set: (v) => {
+    scanTab.value = v === 'scan'
+    if (v !== 'scan') mode.value = v as ModMode
+  }
+})
 
 // Mods the player hurts themselves with vs. mods that add monsters/rewards.
 function isDanger (m: string) {
@@ -257,6 +275,13 @@ const modeOptions = computed(() => ([['maps', 'Maps'], ['heist', 'Heist'], ['cha
   label,
   count: modsForMode(value, profile.value).filter(m => modRatings(profile.value, value)[m]).length
 })))
+
+const tabList = computed(() => [
+  ...modeOptions.value,
+  ...(scanOwner.value
+    ? [{ value: 'scan', label: 'Scan', count: scanEntries.value.length || undefined, title: 'Map scan: read hovered maps on screen and see each verdict' }]
+    : [])
+])
 
 const filterOptions = computed(() => [
   { value: 'all', label: 'All' },
@@ -360,6 +385,7 @@ const rewardsEl = shallowRef<HTMLElement | null>(null)
 const flash = shallowRef(false)
 let flashTimer: ReturnType<typeof setTimeout> | undefined
 watch(rewardsAsk, async () => {
+  scanTab.value = false
   mode.value = 'maps'
   await nextTick()
   rewardsEl.value?.scrollIntoView({ block: 'nearest' })
@@ -431,6 +457,7 @@ function paste () {
 </script>
 
 <style module>
+.scanTab { flex: 1; min-height: 0; }
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 21rem;

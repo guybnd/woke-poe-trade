@@ -16,7 +16,7 @@
       <w-setting-row v-for="f in keys" :key="f.id" :label="f.label" show-hint :hint="f.off ? 'Module off' : undefined">
         <w-hotkey-cell :model-value="f.get()" :label="f.label" @update:model-value="f.set($event)" />
       </w-setting-row>
-      <w-setting-row v-if="!keys.length" label="No scan keys yet" show-hint hint="Turn on Essence scan above, or add Map scan on the Map mods page. Keys show here the next time settings opens." />
+      <w-setting-row v-if="!keys.length" label="No scan keys yet" show-hint hint="Turn on Essence scan or Map mods above. Keys show here the next time settings opens." />
     </w-setting-section>
   </div>
 </template>
@@ -31,12 +31,13 @@ import { hotkeyFields } from './hotkey-fields'
 
 const props = defineProps<{ config: Config }>()
 
-const scanModules = MODULES.filter(m => m.needs.includes('ocr'))
+// Map mods only reads the screen for map scan: its switch would turn off the
+// whole tool, so it's left to the Map mods page (clear its scan keys below).
+const scanModules = MODULES.filter(m => m.needs.includes('ocr') && m.id !== 'map-mods')
 function setOn (id: string, on: boolean) { setModuleOn(ensureWokeConfig(props.config), id, on) }
 
-const SCAN_TYPES = ['woke-map-scan', 'woke-essence-scan']
-const keys = computed(() => hotkeyFields(props.config).filter(f =>
-  SCAN_TYPES.some(t => props.config.widgets.some(w => w.wmType === t && f.id.startsWith(`${w.wmId}-`)))))
+// Essence scan's keys, and Map mods' scan keys (not its map check keys).
+const keys = computed(() => hotkeyFields(props.config).filter(f => f.scan))
 
 const ocr = shallowRef<{ ok: boolean, message: string | null } | null>(null)
 hostRequest('ocr-check', null)

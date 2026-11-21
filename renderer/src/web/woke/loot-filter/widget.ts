@@ -192,7 +192,7 @@ export function normalizeLootFilterWidget (w: LootFilterWidget) {
   if (!w.anchor) w.anchor = popupAnchor()
   if (w.sampleHotkey === undefined) w.sampleHotkey = null
   if (w.editorHotkey === undefined) w.editorHotkey = null
-  // Not Alt + R: that's Map scan's rolling mode.
+  // Not Alt + R: that's Map mods' scan rolling mode.
   if (w.reloadHotkey === undefined) w.reloadHotkey = 'Alt + Shift + R'
   if (typeof w.folder !== 'string') w.folder = ''
   if (typeof w.sourceName !== 'string') w.sourceName = ''

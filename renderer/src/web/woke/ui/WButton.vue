@@ -1,7 +1,7 @@
 <template>
   <component :is="href ? 'a' : 'button'" :type="href ? undefined : 'button'" :href="href" :target="href ? '_blank' : undefined"
     :class="['w-btn', `w-btn--${variant}`, { 'w-btn--sm': size === 'sm' }]">
-    <i v-if="icon" :class="icon" />
+    <i v-if="icon" :class="icon" aria-hidden="true" />
     <slot />
   </component>
 </template>

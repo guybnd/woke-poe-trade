@@ -77,15 +77,9 @@
                 </div>
                 <div v-if="conv.perDivine" class="w-dim" :class="$style.small">1 Divine Orb buys {{ convNumber(conv.perDivine) }}</div>
               </div>
-              <div :class="$style.acts">
-                <WButton v-if="tracker" size="sm" @click="openInMarket(selected.group.name)">Open in Market</WButton>
-                <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
-                <WButton v-if="infoFor(selected)" size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
-                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Price check</WButton>
-                <WButton size="sm" @click="openTrade(selected)">Trade site</WButton>
-                <WButton size="sm" @click="findInStash(selected.name)">Find in stash</WButton>
-                <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
-              </div>
+              <ItemActions :name="selected.name" :lookups="!!infoFor(selected)" :can-price="canPriceCheck(selected)" :market="!!tracker"
+                @trade="openTrade(selected)" @price="priceCheck(selected, cursorPoint($event))" @wiki="openLookup(selected, 'wiki')" @poedb="openLookup(selected, 'poedb')"
+                @stash="findInStash(selected.name)" @copy="copyName(selected.name)" @market="openInMarket(selected.group.name)" />
             </template>
             <template v-else-if="selected?.kind === 'item'">
               <div v-item-tip="{ name: selected.info.refName }" :class="$style.title"><WIcon :src="selected.info.icon" size="lg" /><span>{{ selected.name }}</span></div>
@@ -93,14 +87,9 @@
               <BaseUniques v-if="baseUniques" v-bind="baseUniques" :divine="divine" :no-price="snapshot ? 'No poe.ninja price' : 'No price'" @pick="pickUnique" />
               <UniqueDetails v-if="details" v-model:variant="pickedVariant" v-model:foul="pickedFoul" v-bind="details" :divine="divine" />
               <BeastRecipes v-if="beastBox" v-bind="beastBox" :price="beastPrice" :divine="divine" @recipe="openRecipe" @beast="openBeast" @trade="tradeBeast" />
-              <div :class="$style.acts">
-                <WButton size="sm" @click="openLookup(selected, 'wiki')">Wiki</WButton>
-                <WButton size="sm" @click="openLookup(selected, 'poedb')">poedb</WButton>
-                <WButton v-if="canPriceCheck(selected)" size="sm" @click="priceCheck(selected, $event)">Price check</WButton>
-                <WButton size="sm" @click="openTrade(selected)">Trade site</WButton>
-                <WButton size="sm" @click="findInStash(selected.name)">Find in stash</WButton>
-                <WButton size="sm" @click="copyName(selected.name)">Copy name</WButton>
-              </div>
+              <ItemActions :name="selected.name" lookups :can-price="canPriceCheck(selected)" :market="false"
+                @trade="openTrade(selected)" @price="priceCheck(selected, cursorPoint($event))" @wiki="openLookup(selected, 'wiki')" @poedb="openLookup(selected, 'poedb')"
+                @stash="findInStash(selected.name)" @copy="copyName(selected.name)" />
             </template>
             <LookupDetail v-else-if="selected?.kind === 'lookup'" :card="selected.card" :divine="divine" @act="act" />
             <template v-else-if="selected">
@@ -112,7 +101,8 @@
         </div>
         <div :class="$style.foot">
           <span><WKbd keys="Up" /> <WKbd keys="Down" /> move</span>
-          <span><WKbd keys="Enter" /> open</span>
+          <span><WKbd keys="Enter" /> {{ itemEntry() ? 'trade site' : 'open' }}</span>
+          <span v-if="itemEntry()"><WKbd keys="Ctrl + F" /> find in stash</span>
           <span><WKbd keys="Ctrl + P" /> pin to compare</span>
           <span><WKbd keys="Esc" /> back to game</span>
           <span class="ml-auto">{{ dataNote }}</span>
@@ -154,6 +144,7 @@ import { whenIdle } from '../shared/perf'
 import { nudgeUiSize, uiSize } from '../ui/ui-size'
 import { PAGES } from '../settings/pages'
 import { settingsHits } from './settings-index'
+import { runUpdateCheck } from '../settings/update-check'
 import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
 import { pastedItemText } from './pasted-item'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
@@ -167,13 +158,16 @@ import { lookupRequest } from '../item-lookup/lookup'
 import { tradeSearch, virtualUnique } from '../ui/tooltip/item-menu-logic'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { canPriceCheck as canCheckByName, cursorPoint, openPriceCheck } from '../ui/tooltip/item-price-check'
+import type { ScreenPoint } from '../ui/tooltip/item-price-check'
+import ItemActions from './ItemActions.vue'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
-import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
+import { rollHotkeyTarget, scanHotkeyTarget } from '../map-mods/scan'
+import { MAP_MODS_TYPE } from '../map-mods/widget'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -263,7 +257,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, keywords?: string[], action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -359,6 +353,10 @@ function pickUnique (entry: { id: string }) {
 watch(query, () => { pickedId = null })
 
 // ---- tools, commands, settings ----
+// Old names of tools folded into another: searching one finds the tool now.
+const TOOL_ALIASES: Record<string, string[]> = {
+  [MAP_MODS_TYPE]: ['Map scan', 'Map check']
+}
 function toolEntries (): ActionEntry[] {
   return wm.widgets.value
     .filter(w => !w.wmFlags.includes('menu::skip') && w.wmType !== 'item-search' && w.wmType !== 'settings' && isWidgetTypeOn(AppConfig(), w.wmType))
@@ -373,6 +371,7 @@ function toolEntries (): ActionEntry[] {
         sub: 'Tool',
         icon: `fas ${iconFor(w.wmType)}`,
         about: mod?.description ?? '',
+        aliases: TOOL_ALIASES[w.wmType],
         verb: 'Open',
         action: () => { wm.show(w.wmId) }
       }
@@ -405,8 +404,10 @@ function commandEntries (): ActionEntry[] {
     if (w.wmType === LOOT_FILTER_TYPE && w.neversink?.on) {
       add(w, 'Make the loot filter stricter', 'stricterHotkey', strictnessHotkeyTarget(w.wmId, 'stricter'))
       add(w, 'Make the loot filter looser', 'looserHotkey', strictnessHotkeyTarget(w.wmId, 'looser'))
-    } else if (w.wmType === MAP_SCAN_TYPE) {
-      add(w, 'Map scan on or off', 'hotkey', scanHotkeyTarget(w.wmId))
+    } else if (w.wmType === MAP_MODS_TYPE && w.wmId === wm.widgets.value.find(_ => _.wmType === MAP_MODS_TYPE)?.wmId) {
+      // Map scan runs in the first Map mods window only.
+      add(w, 'Map scan on or off', 'scanHotkey', scanHotkeyTarget(w.wmId))
+      add(w, 'Map scan: rolling mode on or off', 'scanRollHotkey', rollHotkeyTarget(w.wmId))
     } else if (w.wmType === ESSENCE_SCAN_TYPE) {
       add(w, 'Essence scan on or off', 'hotkey', essenceHotkeyTarget(w.wmId))
       add(w, 'Read every essence once', 'onceHotkey', essenceOnceTarget(w.wmId))
@@ -414,6 +415,24 @@ function commandEntries (): ActionEntry[] {
       add(w, 'Pause or resume the run timer', 'hotkeyPause', timerTarget(w.wmId, 'pause'))
     }
   }
+  // Check for updates: the Install & updates page shows the answer on its row.
+  out.push({
+    kind: 'command',
+    id: 'c:check-updates',
+    name: 'Check for updates',
+    sub: `Version ${Host.version.value}`,
+    icon: 'fas fa-download',
+    about: 'Asks for a new version now and opens Settings > Install & updates with the answer.',
+    verb: 'Check now',
+    action: () => {
+      runUpdateCheck().catch(() => {})
+      const settings = wm.widgets.value.find(w => w.wmType === 'settings')
+      if (!settings) return
+      wm.setFlag(settings.wmId, 'settings::page=install', true)
+      wm.setFlag(settings.wmId, 'settings::find=Check for updates', true)
+      wm.show(settings.wmId)
+    }
+  })
   // UI size, one step at a time. The palette stays open: it grows with the
   // rest, so the next step is one Enter away.
   for (const [dir, steps] of [['bigger', 1], ['smaller', -1]] as const) {
@@ -438,7 +457,7 @@ function commandEntries (): ActionEntry[] {
     name: 'Report an issue',
     sub: 'Bug or idea, on GitHub',
     icon: 'fas fa-bug',
-    keywords: ['report', 'bug', 'issue', 'feedback', 'github', 'idea'],
+    aliases: ['report', 'bug', 'issue', 'feedback', 'github', 'idea'],
     about: 'Write up a bug or an idea. Opens a pre-filled GitHub issue in your browser; nothing is sent by itself.',
     verb: 'Open',
     action: () => {
@@ -773,6 +792,9 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     .filter(g => !listed.has(groupKey(g)))
   const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
+  const commands = searchNamed(commandEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q))
+  // A command and a setting row of the same name ("Check for updates"): the command does more.
+  const commandNames = new Set(commands.map(c => c.name.toLowerCase()))
   return arrangeSections<Entry>(q, {
     answer: cardSections(cards, ['Answer']),
     items: [
@@ -781,10 +803,10 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
       { label: 'Other items', entries: other as Entry[] }
     ],
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
-    tools: searchNamed(toolEntries(), q, e => e.name),
+    tools: searchNamed(toolEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q)),
     rest: [
-      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => [e.name, ...(e.keywords ?? [])]) as Entry[] },
-      { label: 'Settings', entries: settingEntries(q) as Entry[] }
+      { label: 'Do it now', entries: commands as Entry[] },
+      { label: 'Settings', entries: settingEntries(q).filter(e => !commandNames.has(e.name.toLowerCase())) as Entry[] }
     ],
     web: cardSections(cards, ['Search the web'])
   })
@@ -954,9 +976,22 @@ function onKey (e: KeyboardEvent) {
     e.preventDefault()
     e.stopPropagation()
     move(e.key === 'ArrowDown' ? 1 : -1)
+  } else if (e.key === 'Enter' && e.ctrlKey && itemEntry()) {
+    e.preventDefault()
+    if (e.repeat) return
+    const entry = itemEntry()!
+    // From the keyboard there's no pointer: near the top of the window, as a paste opens it.
+    if (canPriceCheck(entry)) priceCheck(entry, { x: window.screenX + window.innerWidth / 2, y: window.screenY + 100 })
   } else if (e.key === 'Enter') {
     e.preventDefault()
-    if (selected.value) run(selected.value)
+    // Held down: one trade tab, not one per repeat.
+    if (selected.value && !e.repeat) run(selected.value)
+  } else if (e.code === 'KeyF' && e.ctrlKey && !e.shiftKey && !e.altKey && itemEntry()) {
+    e.preventDefault()
+    if (!e.repeat) findInStash(itemEntry()!.name)
+  } else if (e.code === 'KeyC' && e.ctrlKey && e.shiftKey && !e.altKey && itemEntry()) {
+    e.preventDefault()
+    if (!e.repeat) copyName(itemEntry()!.name)
   } else if (e.key === 'Escape') {
     // Main takes Esc first in the app; this is for the browser.
     e.stopPropagation()
@@ -967,13 +1002,17 @@ function onKey (e: KeyboardEvent) {
   }
 }
 
+// The selected row when it's an item, for the item actions' shortcuts.
+function itemEntry (): PriceEntry | ItemEntry | null {
+  const e = selected.value
+  return e?.kind === 'price' || e?.kind === 'item' ? e : null
+}
+
 function run (entry: Entry) {
   remember(entry)
-  if (entry.kind === 'price') {
-    if (tracker.value) openInMarket(entry.group.name)
-    else openTrade(entry)
-  } else if (entry.kind === 'item') {
-    openLookup(entry, 'wiki')
+  // An item: Trade site, the detail pane's main button.
+  if (entry.kind === 'price' || entry.kind === 'item') {
+    openTrade(entry)
   } else if (entry.kind === 'lookup') {
     if (entry.card.actions[0]) act(entry.card.actions[0])
   } else {
@@ -1114,26 +1153,26 @@ function openLookup (entry: PriceEntry | ItemEntry, tab: LookupTab) {
   if (!info) return
   lookupRequest.value = { item: info.namespace === 'UNIQUE' ? virtualUnique(info) : createVirtualItem({ rarity: ItemRarity.Normal, info }), tab }
 }
-async function priceCheck (entry: PriceEntry | ItemEntry, e: MouseEvent) {
+async function priceCheck (entry: PriceEntry | ItemEntry, at: ScreenPoint) {
   remember(entry)
   // A Viscera: priced as a copy of that version, so its strip can switch versions.
   const viscera = visceraOf(entry)
   if (viscera) {
     // The name as listed: poe.ninja calls a pinnacle Uber version "Greater ...".
     const name = entry.kind === 'price' ? entry.group.name : entry.info.refName
-    await openPriceCheck({ name, text: visceraItemText(viscera.v, viscera.tier, name) }, cursorPoint(e))
+    await openPriceCheck({ name, text: visceraItemText(viscera.v, viscera.tier, name) }, at)
     return
   }
   const info = infoFor(entry)
   if (info?.namespace !== 'UNIQUE') {
     // Gems, cards, currency, beasts: as the item menu's Price check does.
-    await openPriceCheck(menuRef(entry), cursorPoint(e), info)
+    await openPriceCheck(menuRef(entry), at, info)
     return
   }
   // Its mods as stat rows (English data only); one price row says which variant.
   // A Foulborn row is priced as its unique (the data has no Foulborn uniques).
   const variant = entry.kind === 'price' && entry.group.variants.length === 1 ? entry.group.variants[0].variant || undefined : undefined
-  await openPriceCheck({ name: info.refName, rarity: 'unique', variant }, cursorPoint(e), info)
+  await openPriceCheck({ name: info.refName, rarity: 'unique', variant }, at, info)
 }
 function openTrade (entry: PriceEntry | ItemEntry) {
   remember(entry)

@@ -23,7 +23,7 @@ async function boot (overlay: Overlay, patchMenu?: (menu: any) => void) { // esl
     widgets: [
       seed('woke-market-tracker', 'Market'),
       seed('woke-boss-runs', 'Boss runs'),
-      seed('woke-map-scan', 'Map scan'),
+      seed('woke-map-mods', 'Map mods'),
       seed('woke-loot-filter', 'Loot filter'),
       seed('woke-lab-gems', 'Lab gems'),
       seed('woke-challenges', 'Challenges')
@@ -42,7 +42,7 @@ async function boot (overlay: Overlay, patchMenu?: (menu: any) => void) { // esl
   const rail = overlay.widget('menu').locator('.w-surface').first()
   await expect(rail).toBeVisible()
   if (!patchMenu) {
-    for (const name of ['Market', 'Map scan', 'Loot filter', 'Challenges']) {
+    for (const name of ['Market', 'Map mods', 'Loot filter', 'Challenges']) {
       await expect(icon(overlay, name)).toHaveClass(/open/)
       await icon(overlay, name).click()
     }

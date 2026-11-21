@@ -21,7 +21,6 @@ import { LAB_TYPE } from './lab/lab'
 import { LEAGUE_INVEST_TYPE } from './league-invest/widget'
 import { LOOT_FILTER_TYPE } from './loot-filter/widget'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './map-mods/map-check'
-import { MAP_SCAN_TYPE } from './map-mods/scan'
 import { MAP_MODS_TYPE } from './map-mods/widget'
 import { MARKET_TRACKER_TYPE } from './market/widget'
 import { MECHANICS_TYPE } from './mechanics/widget'
@@ -137,12 +136,6 @@ export const widgetMapCheckSpec = {
   type: MAP_CHECK_TYPE,
   instances: 'single',
   initInstance: () => initMapCheckWidget(0)
-} satisfies WidgetSpec
-
-export const widgetMapScanSpec = {
-  type: MAP_SCAN_TYPE,
-  instances: 'multi',
-  trNameKey: 'Map scan'
 } satisfies WidgetSpec
 
 export const widgetEssenceScanSpec = {

@@ -60,10 +60,24 @@ test('prices are grouped, and the detail shows every variant and its actions', a
   await overlay.pressHotkey(SEARCH_KEY)
   const { panel, box } = await waitForPrices(overlay)
 
-  await expect(panel.getByText('Trade site')).toBeVisible()
+  await expect(panel.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Wiki', exact: true })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Price check', exact: true })).toBeVisible()
+  // Trade site leads; Open in Market comes last, as a quiet link.
+  const acts = panel.locator('[data-item-actions] button')
+  await expect(acts.first()).toContainText('Trade site')
+  await expect(acts.last()).toHaveText('Market')
+  await expect(panel.getByRole('button', { name: 'Copy name', exact: true })).toBeVisible()
   await overlay.snap('search-unique')
+
+  // Enter does what the main button does: the trade site, not the Market window.
+  await overlay.page.evaluate(() => {
+    const w = window as unknown as { open: (url: string) => null, __opened?: string }
+    w.open = (url: string) => { w.__opened = url; return null }
+  })
+  await box.press('Enter')
+  const opened = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
+  expect(opened).toContain('/trade/search/')
 
   // A gem: the Vaal orb button narrows it to corrupted variants.
   await box.fill('enlighten')
@@ -113,7 +127,7 @@ test('the launcher lists prices, and a click opens the palette on them', async (
   await overlay.page.getByRole('button', { name: /Headhunter/ }).click()
   const palette = overlay.widget('woke-search')
   await expect(palette.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Headhunter')
-  await expect(palette.getByText('Trade site')).toBeVisible()
+  await expect(palette.getByRole('button', { name: /^Trade site/ })).toBeVisible()
   expect(overlay.errors).toEqual([])
 })
 
@@ -382,7 +396,7 @@ test("Trade site opens the price check's listings: Instant buyout, no Foulborn c
     w.open = (url: string) => { w.__opened = url; return null }
   })
   const opened = async () => {
-    await panel.getByText('Trade site').click()
+    await panel.getByRole('button', { name: /^Trade site/ }).click()
     const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
     return JSON.parse(new URL(url).searchParams.get('q') ?? '{}') as { query: Record<string, unknown> }
   }
@@ -425,7 +439,7 @@ test("a unique's details: variants, Foulborn kinds with what they replace, and i
     w.open = (url: string) => { w.__opened = url; return null }
   })
   await panel.getByRole('button', { name: /^4 Flasks Rightmost/ }).click()
-  await panel.getByText('Trade site').click()
+  await panel.getByRole('button', { name: /^Trade site/ }).click()
   const url = await overlay.page.evaluate(() => (window as unknown as { __opened?: string }).__opened ?? '')
   expect(decodeURIComponent(url)).toContain('"foulborn_item":{"option":"true"}')
 

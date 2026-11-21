@@ -23,7 +23,7 @@ const widgets = [
   { wmId: 103, wmType: 'image-strip', wmTitle: 'Cheat sheets' },
   { wmId: 106, wmType: 'woke-boss-runs', wmTitle: 'Boss runs' },
   { wmId: 108, wmType: 'woke-market-tracker', wmTitle: 'Market' },
-  { wmId: 110, wmType: 'woke-map-scan', wmTitle: 'Map scan' },
+  { wmId: 110, wmType: 'woke-map-mods', wmTitle: 'Map mods' },
   { wmId: 118, wmType: 'woke-loot-filter', wmTitle: 'Loot filter' },
   { wmId: 119, wmType: 'woke-challenges', wmTitle: 'Challenges' }
 ]
@@ -57,7 +57,7 @@ describe('moving a config to the rail', () => {
 
   it('pins only one window of a type', () => {
     const config = menu()
-    migrateToRail(config, [...widgets, { wmId: 200, wmType: 'woke-map-scan', wmTitle: 'Map scan' }])
+    migrateToRail(config, [...widgets, { wmId: 200, wmType: 'woke-map-mods', wmTitle: 'Map mods' }])
     expect(config.pinned!.filter(id => id === 110 || id === 200)).toEqual([110])
   })
 
@@ -98,10 +98,10 @@ describe('launcher groups', () => {
     expect(groups[4].items).toEqual([{ wmType: 'image-strip' }])
   })
 
-  it('puts Lab gems under Campaign & lab, Map scan under Mapping and Wickerman under Economy', () => {
-    const groups = groupByModule([{ wmType: 'woke-lab-gems' }, { wmType: 'woke-map-scan' }, { wmType: 'woke-wickerman' }])
+  it('puts Lab gems under Campaign & lab, Map mods under Mapping and Wickerman under Economy', () => {
+    const groups = groupByModule([{ wmType: 'woke-lab-gems' }, { wmType: 'woke-map-mods' }, { wmType: 'woke-wickerman' }])
     expect(groups[0].items).toEqual([{ wmType: 'woke-wickerman' }])
-    expect(groups[1].items).toEqual([{ wmType: 'woke-map-scan' }])
+    expect(groups[1].items).toEqual([{ wmType: 'woke-map-mods' }])
     expect(groups[2].items).toEqual([{ wmType: 'woke-lab-gems' }])
   })
 
