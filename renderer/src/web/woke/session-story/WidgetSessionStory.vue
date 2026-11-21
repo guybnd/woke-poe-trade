@@ -6,8 +6,9 @@
       <template #card>
         <NightCard v-if="shown" :story="shown.story" :live="shown.live" :farm="farmOf(shown.story)" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)" />
         <div :class="$style.cardGear">
-          <button type="button" class="w-icon-btn text-xs" :class="{ 'w-accent': cardGear }" data-chip-gear-card
-            title="After a map: where its time shows and how it goes away" @click="cardGear = !cardGear"><i class="fas fa-cog" /> After a map</button>
+          <!-- A text button: an icon button is a fixed square, and its label wrapped word by word. -->
+          <WButton variant="ghost" size="sm" icon="fas fa-cog" :class="{ 'w-accent': cardGear }" data-chip-gear-card
+            title="After a map: where its time shows and how it goes away" @click="cardGear = !cardGear">After a map</WButton>
           <ChipSettings v-if="cardGear" :config="config" :show-me="showMe" :can-show="!!store.maps.value.length" live class="mt-1" />
         </div>
       </template>
@@ -57,7 +58,7 @@ export default { widget: widgetSessionStorySpec }
 import { computed, inject, nextTick, onUnmounted, shallowRef } from 'vue'
 import type { WidgetManager } from '@/web/overlay/interfaces'
 import Widget from '@/web/overlay/Widget.vue'
-import { WBanner, WEmpty, WPanel } from '../ui'
+import { WBanner, WButton, WEmpty, WPanel } from '../ui'
 import MapToast from './MapToast.vue'
 import ChipSettings from './ChipSettings.vue'
 import { formatChaos, formatClock, formatDuration, nowMinute } from '../ui/format'
