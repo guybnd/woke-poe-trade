@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupListings, sortRowsByValue, RowListing } from '@/web/woke/price-insight/listing-rows'
+import { groupListings, sortByValue, sortRowsByValue, RowListing } from '@/web/woke/price-insight/listing-rows'
 import { toChaos } from '@/web/woke/price-insight/insight'
 
 function listing (id: string, priceAmount: number, priceCurrency: string): RowListing {
@@ -71,5 +71,12 @@ describe('sortRowsByValue', () => {
     const rows = sortRowsByValue(groupListings(list, { now: 0, merge: true }), chaosOf)
     expect(rows.map(r => r.lead.id)).toEqual(['c150', 'd1-a'])
     expect(rows[1].count).toBe(2)
+  })
+})
+
+describe('sortByValue', () => {
+  it('sorts plain listings, as the new item panel does before taking the first six', () => {
+    const list = [listing('d1', 1, 'divine'), listing('c150', 150, 'chaos'), listing('c90', 90, 'chaos')]
+    expect(sortByValue(list, chaosOf).map(l => l.id)).toEqual(['c90', 'c150', 'd1'])
   })
 })

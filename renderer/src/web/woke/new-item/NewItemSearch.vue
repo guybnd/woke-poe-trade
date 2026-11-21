@@ -26,6 +26,9 @@ import { AppConfig, poeWebApi } from '@/web/Config'
 import { requestResults, requestTradeResultList } from '@/web/price-check/trade/pathofexile-trade'
 import type { PricingResult, TradeRequest } from '@/web/price-check/trade/pathofexile-trade'
 import { newItemNote, newItemTradeBody, newItemTradeUrl } from './query'
+import { useInsight } from '@/web/woke/price-insight/useInsight'
+import { toChaos } from '@/web/woke/price-insight/insight'
+import { sortByValue } from '@/web/woke/price-insight/listing-rows'
 import type { NewItemQuery } from './query'
 
 const props = defineProps<{ query: NewItemQuery, league: string }>()
@@ -36,6 +39,8 @@ const error = shallowRef('')
 const total = shallowRef(0)
 const rows = shallowRef<PricingResult[]>([])
 let run = 0
+// Only the poe.ninja rates: the trade site's order mixes chaos and divine by its own ratios.
+const { options: rates } = useInsight(shallowRef([]), computed(() => props.league))
 
 async function search () {
   const mine = ++run
@@ -48,7 +53,9 @@ async function search () {
       : []
     if (mine !== run) return
     total.value = found.total
-    rows.value = listed.filter(row => !row.isMine).slice(0, 6)
+    const opts = rates.value
+    const chaosOf = opts.divine ? (row: PricingResult) => toChaos(row.priceAmount, row.priceCurrency, opts) : null
+    rows.value = sortByValue(listed.filter(row => !row.isMine), chaosOf).slice(0, 6)
     state.value = 'done'
   } catch (e) {
     if (mine !== run) return
