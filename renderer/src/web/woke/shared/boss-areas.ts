@@ -35,7 +35,18 @@ const ARENAS: Arena[] = [
   { areaIds: ['MavenHub'], names: ["The Maven's Crucible"], bosses: ['feared'] },
   { areaIds: ['AtlasExilesBoss5'], names: ['Eye of the Storm'], bosses: ['sirus', 'uber-sirus'] },
   { areaIds: ['Synthesis_MapBoss'], names: ['Cortex'], bosses: ['venarius', 'uber-cortex'] },
-  { areaIds: [], names: ['The Feared'], bosses: ['feared'] }
+  { areaIds: [], names: ['The Feared'], bosses: ['feared'] },
+  // 3.30 Incarnations (poedb; MapWorldsMemoryBoss3 "Moment of Reverence" seen
+  // in a real Client.txt). Each has its own Uber area id; the name is shared.
+  { areaIds: ['MapWorldsMemoryBoss1'], names: [], bosses: ['incarnation-of-fear'] },
+  { areaIds: ['MapWorldsMemoryBoss1_Uber'], names: [], bosses: ['uber-incarnation-of-fear'] },
+  { areaIds: [], names: ['Moment of Trauma'], bosses: ['incarnation-of-fear', 'uber-incarnation-of-fear'] },
+  { areaIds: ['MapWorldsMemoryBoss2'], names: [], bosses: ['incarnation-of-neglect'] },
+  { areaIds: ['MapWorldsMemoryBoss2_Uber'], names: [], bosses: ['uber-incarnation-of-neglect'] },
+  { areaIds: [], names: ['Moment of Loneliness'], bosses: ['incarnation-of-neglect', 'uber-incarnation-of-neglect'] },
+  { areaIds: ['MapWorldsMemoryBoss3'], names: [], bosses: ['incarnation-of-dread'] },
+  { areaIds: ['MapWorldsMemoryBoss3_Uber'], names: [], bosses: ['uber-incarnation-of-dread'] },
+  { areaIds: [], names: ['Moment of Reverence'], bosses: ['incarnation-of-dread', 'uber-incarnation-of-dread'] }
 ]
 
 // By lower-cased area id.
