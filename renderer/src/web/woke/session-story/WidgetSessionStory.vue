@@ -163,20 +163,20 @@ const chipKeySub = MainProcess.onEvent('MAIN->CLIENT::widget-action', (e) => {
 })
 onUnmounted(() => { chipKeySub.abort() })
 // The glance bar (off unless turned on): the map you're in, from the map log.
-let inMap = false
 const glanceSince = shallowRef(0)
 const glanceMap = shallowRef<{ name: string, areaLevel: number } | null>(null)
-function syncGlance () {
-  const cur = inMap && live && props.config.glance ? mapLog.current : null
+// `replayed`: right after reading the log's tail, when you may already be in a map.
+function syncGlance (replayed = false) {
+  const cur = (live || replayed) && props.config.glance && mapLog.inCountedMap ? mapLog.current : null
   if (!cur) { glanceMap.value = null; return }
+  glanceSince.value = mapLog.enteredThisTime
   // The name comes a line after the area starts: update when it changes.
   if (glanceMap.value?.name !== cur.name || glanceMap.value.areaLevel !== cur.areaLevel) glanceMap.value = { name: cur.name, areaLevel: cur.areaLevel }
 }
-watch(() => props.config.glance, syncGlance)
+watch(() => props.config.glance, () => syncGlance(true))
 // Each map, for the chip and Session analytics' Map history.
 const mapLog = new MapLog({
   onLeave: (rec) => {
-    inMap = false
     if (!live) return
     const place = props.config.chipPlace ?? 'dock'
     // The toast in the middle takes the mouse only once the pointer rests on it.
@@ -189,8 +189,6 @@ const mapLog = new MapLog({
   // Into a map: the toast goes (it takes clicks, and a fight is no place for
   // that), and so does a dock line set to stay until then.
   onEnter: () => {
-    inMap = true
-    glanceSince.value = Date.now()
     if (live && (props.config.chipSeconds === 0 || chip.value)) closeChip()
   },
   onDone: (rec) => { store.addMap(rec).catch(() => {}) }
@@ -198,7 +196,6 @@ const mapLog = new MapLog({
 
 const tracker = new NightTracker((draft) => {
   mapLog.finish(draft.lastAt)
-  inMap = false
   syncGlance()
   store.finish(draft).then(async (story) => {
     // The icon only shows once the saved night is drawn; a peek before that is dropped.
@@ -262,6 +259,7 @@ Promise.all([store.load(), store.loadMaps()]).then(() => {
       }
       // A night that went quiet while the app was closed ends now.
       tracker.tick(Date.now())
+      syncGlance(true)
       syncLive()
       armQuiet()
     },

@@ -40,20 +40,21 @@ const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
 <style module>
 .bar {
   position: fixed;
-  top: 6px;
+  /* Below the dock's default row; the dock sits at z-index 900. */
+  top: 52px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: baseline;
   gap: 8px;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--w-fs-sm);
   white-space: nowrap;
   color: var(--w-fg);
   background: color-mix(in srgb, var(--w-panel) 86%, transparent);
   border: 1px solid var(--w-line);
   pointer-events: none;
-  z-index: 5;
+  z-index: 950;
 }
 .name { color: var(--w-accent); }
 .sep { width: 1px; align-self: stretch; background: var(--w-line); }

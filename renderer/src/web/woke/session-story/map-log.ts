@@ -95,6 +95,11 @@ export class MapLog {
 
   constructor (private readonly events: MapLogEvents) {}
 
+  // Inside a counted map right now (not a vault on the skip list), and since when
+  // (this time through the portal). Read by the glance bar.
+  get inCountedMap (): boolean { return this.inMap && !!this.current && !this.skipped }
+  get enteredThisTime (): number { return this.since }
+
   feed (line: string, fallbackAt: number): void {
     const at = lineTime(line) ?? fallbackAt
     // The game was closed, or nothing was written for a long time: the map
