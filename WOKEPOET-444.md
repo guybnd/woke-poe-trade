@@ -44,6 +44,13 @@ history:
     to: Done
     user: Agent
     date: '2026-11-21T08:08:00.795Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-21T08:25:28.378Z'
+    comment: >-
+      Follow-up PR 714 merged as 5d2c2aac:
+      https://github.com/guybnd/woke-poe-trade/pull/714
+    id: a-2026-11-21t08-25-28-378z
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/713'
 needsAction: null
 reviewState: approved
