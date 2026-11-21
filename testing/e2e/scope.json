@@ -400,6 +400,7 @@
    "renderer/src/web/woke/wickerman/"
   ],
   "search-settings.spec.ts": [
+   "main/src/woke/update-check.ts",
    "renderer/src/web/woke/search/",
    "renderer/src/web/woke/settings/"
   ],

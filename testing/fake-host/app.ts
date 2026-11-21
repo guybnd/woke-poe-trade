@@ -255,7 +255,12 @@ function fixtureProxy (app: FakeApp) {
   })
 }
 
-const fakeUpdater = { info: { state: 'update-not-available', checkedAt: 0 }, checkAtStartup () {} } as unknown as AppUpdater
+// "Check for updates" always finds a newer release here (search-settings.spec.ts).
+const fakeUpdater = {
+  info: { state: 'update-not-available', checkedAt: 0 },
+  checkAtStartup () {},
+  checkNow: async () => ({ kind: 'available', current: '0.0.0-test', version: '9.9.9', url: 'https://github.com/guybnd/woke-poe-trade/releases/tag/v9.9.9' })
+} as unknown as AppUpdater
 
 let started: FakeApp | null = null
 

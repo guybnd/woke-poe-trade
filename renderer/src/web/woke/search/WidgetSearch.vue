@@ -154,6 +154,7 @@ import { whenIdle } from '../shared/perf'
 import { nudgeUiSize, uiSize } from '../ui/ui-size'
 import { PAGES } from '../settings/pages'
 import { settingsHits } from './settings-index'
+import { checkLine, runUpdateCheck } from '../settings/update-check'
 import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
 import { pastedItemText } from './pasted-item'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
@@ -413,6 +414,27 @@ function commandEntries (): ActionEntry[] {
       add(w, 'Pause or resume the run timer', 'hotkeyPause', timerTarget(w.wmId, 'pause'))
     }
   }
+  // Check for updates: the Install & updates page shows the answer on its row.
+  out.push({
+    kind: 'command',
+    id: 'c:check-updates',
+    name: 'Check for updates',
+    sub: `Version ${Host.version.value}`,
+    icon: 'fas fa-download',
+    about: 'Asks for a new version now and opens Settings > Install & updates with the answer.',
+    verb: 'Check now',
+    action: () => {
+      const settings = wm.widgets.value.find(w => w.wmType === 'settings')
+      const done = runUpdateCheck()
+      if (!settings) {
+        void done.then(r => { toast(checkLine(r).text, { ms: 4000 }) })
+        return
+      }
+      wm.setFlag(settings.wmId, 'settings::page=install', true)
+      wm.setFlag(settings.wmId, 'settings::find=Check for updates', true)
+      wm.show(settings.wmId)
+    }
+  })
   // UI size, one step at a time. The palette stays open: it grows with the
   // rest, so the next step is one Enter away.
   for (const [dir, steps] of [['bigger', 1], ['smaller', -1]] as const) {
@@ -757,6 +779,9 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     .filter(g => !listed.has(groupKey(g)))
   const shownBases = new Set(bases.map(b => b.refName))
   const cards = lookupCards(q)
+  const commands = searchNamed(commandEntries(), q, e => e.name)
+  // A command and a setting row of the same name ("Check for updates"): the command does more.
+  const commandNames = new Set(commands.map(c => c.name.toLowerCase()))
   return arrangeSections<Entry>(q, {
     answer: cardSections(cards, ['Answer']),
     items: [
@@ -767,8 +792,8 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
     tools: searchNamed(toolEntries(), q, e => e.name),
     rest: [
-      { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
-      { label: 'Settings', entries: settingEntries(q) as Entry[] }
+      { label: 'Do it now', entries: commands as Entry[] },
+      { label: 'Settings', entries: settingEntries(q).filter(e => !commandNames.has(e.name.toLowerCase())) as Entry[] }
     ],
     web: cardSections(cards, ['Search the web'])
   })

@@ -352,7 +352,7 @@ export const PAGES: SettingsPage[] = shallowReactive<SettingsPage[]>([
     icon: { fa: 'fas fa-download' },
     description: 'Updates, starting with Windows, crash reports and the setup window.',
     parts: [InstallPage],
-    find: ['Auto update', 'Start with Windows', 'Crash reports', 'Setup window', 'Version']
+    find: ['Auto update', 'Check for updates', 'Start with Windows', 'Crash reports', 'Setup window', 'Version']
   },
   {
     id: 'performance',
