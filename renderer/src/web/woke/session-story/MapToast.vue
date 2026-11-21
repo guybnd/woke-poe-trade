@@ -5,7 +5,7 @@
     <!-- The hover zone. While you resize it grows a wide margin, so dragging out
          past the old edge doesn't hand the mouse back to the game mid-drag. -->
     <div ref="el" :class="[$style.zone, resizing && $style.resizing]" data-map-toast-zone>
-    <div :class="[$style.toast, 'w-enter']" :style="{ '--toast-scale': String(scale) }" data-map-toast role="status"
+    <div :class="[$style.toast, 'w-enter', size?.h && $style.tall]" :style="sizeStyle" data-map-toast role="status"
       @pointerdown="onPointerDown" @click="onDomClick">
       <!-- The title bar is its handle: drag it to move the toast (the spot is kept). -->
       <div :class="$style.title" data-map-toast-handle title="Drag to move" @pointerdown="startMove">
@@ -18,7 +18,7 @@
             <span :class="tone(headDiff)">{{ signed(headDiff) }}</span> <span :class="$style.label">{{ headLabel }}</span>
           </div>
         </div>
-        <div v-if="chip.cmp.runs.length > 1" :class="$style.bars">
+        <div v-if="chip.cmp.runs.length > 1" :class="$style.bars" data-map-toast-bars>
           <i v-for="(ms, i) in chip.cmp.runs" :key="i" :class="{ [$style.now]: i === chip.cmp.runs.length - 1 }"
             :style="{ height: `${Math.max(8, ms / barTop * 100)}%` }" />
           <span v-if="chip.cmp.hourAvg != null" :class="$style.avg" :style="{ bottom: `${chip.cmp.hourAvg / barTop * 100}%` }" />
@@ -62,15 +62,15 @@ import WKbd from '../ui/WKbd.vue'
 import { hoverZonesMoved, useHoverZone } from '../shared/hover'
 import { tierText } from './map-log'
 import type { MapRecord } from './map-log'
-import { clampScale } from './chip'
-import type { MapCompare } from './chip'
+import { TOAST_WIDTH, clampToastSize } from './chip'
+import type { MapCompare, ToastSize } from './chip'
 
 const props = defineProps<{
   chip: { rec: MapRecord, cmp: MapCompare } | null
   // The close hotkey, shown on it; null when none is set.
   closeKey: string | null
-  // Its saved size, 1 = as designed.
-  scale: number
+  // Its saved size in its own px; null: as designed.
+  size: ToastSize | null
   // Where it sits: its top centre as a share of the screen; null: as designed.
   pos?: { x: number, y: number } | null
 }>()
@@ -79,10 +79,14 @@ const emit = defineEmits<{
   // The pointer is on it (its timer waits) or left it.
   hold: [on: boolean]
   // Resizing: the new size; `done` when the drag ends (save then).
-  resize: [scale: number, done: boolean]
+  resize: [size: ToastSize, done: boolean]
   // Dragged by its title bar: the new spot; `done` when the drag ends (save then).
   move: [pos: { x: number, y: number }, done: boolean]
 }>()
+// Width and a floor for the height: the content spreads into the room.
+const sizeStyle = computed(() => props.size
+  ? { width: `${props.size.w}px`, minHeight: props.size.h ? `${props.size.h}px` : undefined }
+  : undefined)
 const placeStyle = computed(() => props.pos
   ? { top: `${props.pos.y * 100}%`, left: `${props.pos.x * 100}%`, right: 'auto', transform: 'translateX(-50%)' }
   : undefined)
@@ -136,8 +140,12 @@ watch(() => props.chip, (c, old) => {
   }
   if (!c) {
     armed.value = false
-    // Closed mid-drag (you went into a map): keep the size it had got to.
-    if (resizing.value) { endResize?.(); emit('resize', props.scale, true) }
+    // Closed mid-drag (you went into a map): save what it had got to.
+    if (resizing.value) {
+      endResize?.()
+      if (props.size) emit('resize', props.size, true)
+      else if (props.pos) emit('move', props.pos, true)
+    }
     resizing.value = false
   }
 })
@@ -158,22 +166,35 @@ function onDomClick (e: MouseEvent) {
 
 let endResize: (() => void) | null = null
 // Grows from the top centre, so both sides move: a sideways drag counts twice.
+// The size is in the toast's own px: the screen drag is divided by its zoom
+// (UI size, Panel size). Width and height give the content room; only those
+// settings make it bigger.
 function startResize (e: PointerEvent) {
   e.preventDefault()
   e.stopPropagation()
   domDownAt = Date.now()
   const grip = e.currentTarget as HTMLElement
-  const box = grip.parentElement!.getBoundingClientRect()
+  const toast = grip.parentElement!
+  const zoom = (toast as HTMLElement & { currentCSSZoom?: number }).currentCSSZoom || 1
+  const box = toast.getBoundingClientRect()
+  const w0 = box.width / zoom
+  const h0 = box.height / zoom
+  // The height the content needs: a saved height (a min-height) taken off.
+  const saved = toast.style.minHeight
+  toast.style.minHeight = ''
+  const natural = toast.getBoundingClientRect().height / zoom
+  toast.style.minHeight = saved
   const x0 = e.clientX
   const y0 = e.clientY
-  const s0 = props.scale
-  let s = s0
+  let s: ToastSize = { w: w0, h: props.size?.h }
   resizing.value = true
   try { grip.setPointerCapture(e.pointerId) } catch {}
   const move = (ev: PointerEvent) => {
-    const byW = (box.width + (ev.clientX - x0) * 2) / box.width
-    const byH = (box.height + (ev.clientY - y0)) / box.height
-    s = clampScale(s0 * Math.max(byW, byH))
+    const w = w0 + (ev.clientX - x0) * 2 / zoom
+    const h = h0 + (ev.clientY - y0) / zoom
+    // Only a height past what the content needs is kept: a sideways drag, or
+    // one back up to the content, leaves the height to the content.
+    s = clampToastSize({ w, h: h > natural + 12 ? h : undefined }) ?? { w: TOAST_WIDTH }
     emit('resize', s, false)
   }
   const detach = () => {
@@ -286,12 +307,13 @@ function tone (diff: number): string {
 /* A small game window: the carved stone title bar, the thin bronze edge, the
    stone floor. Game art, the same pieces as the game look's panels (poe-frame.css). */
 .toast {
-  position: relative; width: 380px; cursor: pointer; user-select: none;
+  position: relative; width: 400px; cursor: pointer; user-select: none; box-sizing: border-box;
+  display: flex; flex-direction: column;
   border: 10px solid transparent; border-image: url(/images/poe-ui/frame-thin.png) 11 / 10px round;
   background: url(/images/poe-ui/stone.png) center / cover, #221c15;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), inset 0 0 22px 6px rgba(0, 0, 0, 0.6);
   color: #e8dcc4; font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: calc(14px * var(--w-text-scale, 1)); line-height: calc(20px * var(--w-text-scale, 1));
-  zoom: calc(var(--w-ui-scale, 1) * var(--toast-scale, 1));
+  zoom: var(--w-ui-scale, 1);
 }
 .title {
   height: 40px; margin: -10px -10px 0; padding: 0 76px; display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -304,13 +326,15 @@ function tone (diff: number): string {
 .title { cursor: move; }
 .titleName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .title small { flex: none; font-size: calc(13px * var(--w-text-scale, 1)); color: #a89670; }
-.row { display: flex; align-items: center; gap: 14px; padding: 10px 6px 4px; }
+.row { flex: 1; display: flex; align-items: center; gap: 14px; padding: 10px 6px 4px; }
 .lead { flex: none; }
 .time { font-family: Fontin, FrizQuadrataC, Georgia, serif; font-size: calc(44px * var(--w-text-scale, 1)); line-height: 1; color: #e3c27d; text-shadow: 0 2px 4px #000; }
 .delta { font-size: calc(13px * var(--w-text-scale, 1)); margin-top: 2px; white-space: nowrap; }
 .label { color: #a2927a; }
-.bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 40px; flex: none; }
-.bars i { display: block; width: 9px; background: #5a4c3a; }
+.bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 40px; flex: 0 1 auto; min-width: 0; }
+/* Made taller by its corner: the bars take the row's height. */
+.tall .bars { align-self: stretch; height: auto; min-height: 40px; }
+.bars i { display: block; width: 9px; flex: 0 1 9px; min-width: 3px; background: #5a4c3a; }
 .bars i.now { background: #e3c27d; }
 .avg { position: absolute; left: -3px; right: -3px; border-top: 1px dashed rgba(227, 194, 125, 0.7); }
 .props { flex: 1; min-width: 0; }
