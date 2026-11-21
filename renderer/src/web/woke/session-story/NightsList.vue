@@ -4,7 +4,7 @@
     <WEmpty v-if="!list.length" icon="fas fa-moon">
       No nights yet. A night is read from the game's log, from your first map until it goes quiet for 15 minutes.
     </WEmpty>
-    <button v-for="n in list" :key="n.story.id" type="button" :class="[$style.row, { [$style.on]: n.story.id === (selected ?? list[0].story.id) }]"
+    <button v-for="n in list" :key="n.story.id" type="button" :class="[$style.row, { [$style.on]: selected ? n.story.id === selected : n.live }]"
       data-night-row @click="emit('open', n.story.id)">
       <span :class="$style.top">
         <span class="w-trunc">{{ n.live ? 'Tonight so far' : nightTitle(n.story) }}</span>
@@ -26,7 +26,7 @@ import { WEmpty } from '../ui'
 import { formatChaos, formatDuration } from '../ui/format'
 import { nightTitle, useNightList } from './nights'
 
-// The night shown on top; none: the newest.
+// The night picked to show on top; none: tonight.
 defineProps<{ selected?: string | null }>()
 const emit = defineEmits<{ open: [id: string] }>()
 const { list, profitOf } = useNightList()

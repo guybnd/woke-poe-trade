@@ -186,7 +186,7 @@
         </template>
 
         <!-- ===== Nights (Session story) ===== -->
-        <NightsList v-else-if="tab === 'nights'" :selected="nightId" @open="nightId = $event" />
+        <NightsList v-else-if="tab === 'nights'" :selected="nightId" @open="openNight" />
 
         <!-- ===== Stacked decks (woke/stacked-decks) ===== -->
         <!-- Only while the window is open: it reads every map day from disk, and the window mounts hidden at startup. -->
@@ -283,6 +283,11 @@ const tab = shallowRef<'strategies' | 'sessions' | 'maps' | 'history' | 'nights'
 const focusAt = shallowRef<number | null>(null)
 // A saved night picked in Nights, shown on top; null: tonight.
 const nightId = shallowRef<string | null>(null)
+function openNight (id: string) {
+  nightId.value = id
+  // A map picked on the night before isn't on this one's strip.
+  focusAt.value = null
+}
 function pickMap (enteredAt: number) {
   tab.value = 'history'
   // The same map again still scrolls back to it.
@@ -290,7 +295,11 @@ function pickMap (enteredAt: number) {
   nextTick(() => { focusAt.value = enteredAt })
 }
 // Session story turned off while its tab shows: back to Strategies.
-watch(storyOn, (on) => { if (!on && (tab.value === 'history' || tab.value === 'nights')) tab.value = 'strategies' })
+watch(storyOn, (on) => {
+  if (on) return
+  if (tab.value === 'history' || tab.value === 'nights') tab.value = 'strategies'
+  nightId.value = null
+})
 const tabOptions = computed(() => [
   ...(storyOn.value ? [{ value: 'history', label: 'Map history' }, { value: 'nights', label: 'Nights' }] : []),
   { value: 'strategies', label: 'Strategies' },

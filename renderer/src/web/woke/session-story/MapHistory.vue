@@ -21,7 +21,9 @@
           title="Also list vaults and other areas that aren't counted as maps (Settings › Farming & sessions). They stay out of the count and average."
           @click="showSkipped = !showSkipped">Vaults</WChip>
       </div>
-      <div v-if="notSaved" class="text-xs w-dim" data-history-not-saved>That map shows here once you start the next one.</div>
+      <div v-if="notSaved" class="text-xs w-dim" data-history-not-saved>
+        {{ notSaved === 'range' ? 'That map is outside this range. Pick League or All above to see it.' : 'That map shows here once you start the next one.' }}
+      </div>
       <div>
         <div class="w-row w-row--head px-0" :class="$style.grid">
           <span>When</span><span>Map</span><span class="text-right">Time</span><span>Character</span><span>Met</span>
@@ -178,8 +180,9 @@ const visible = computed(() => items.value.slice(0, limit.value))
 const isFocus = (m: MapRecord) => props.focus != null && m.enteredAt === props.focus
 // A pick waits for the maps to load, then shows once (later loads don't jump back).
 let pending: number | null = null
-// The map isn't saved yet: Session story saves it when you start the next one.
-const notSaved = shallowRef(false)
+// A pick with no row: not saved yet (Session story saves a map when you start
+// the next one), or outside the range or league picked above.
+const notSaved = shallowRef<false | 'range' | 'later'>(false)
 async function showPick () {
   const at = pending
   if (at == null || loading.value) return
@@ -188,8 +191,11 @@ async function showPick () {
   const source = showSkipped.value ? inView.value : maps.value
   if (filter.value && !source.some(m => m.enteredAt === at && matches(m))) filter.value = null
   const idx = items.value.findIndex(it => it.kind === 'map' && it.map.enteredAt === at)
-  notSaved.value = idx < 0
-  if (idx < 0) return
+  if (idx < 0) {
+    notSaved.value = all.value.some(m => m.enteredAt === at) || !inRange(at, props.range, props.now) ? 'range' : 'later'
+    return
+  }
+  notSaved.value = false
   if (idx >= limit.value) limit.value = idx + PAGE
   await nextTick()
   root.value?.querySelector<HTMLElement>(`[data-map-at="${at}"]`)?.scrollIntoView({ block: 'nearest' })
