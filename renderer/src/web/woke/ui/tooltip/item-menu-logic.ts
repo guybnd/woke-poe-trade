@@ -82,6 +82,10 @@ export function stackText (name: string, rarity: 'Currency' | 'Divination Card',
 
 export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 
+// Uniques that only ever drop corrupted (checked on the trade site): priced
+// without game text, they search corrupted copies, or the search finds none.
+const ALWAYS_CORRUPTED = new Set(['Cortex', 'Replica Cortex'])
+
 // A unique as the price check gets it from game text: with its base and the
 // base's category. Without the base the trade search sends the unique's name
 // as the base type, and the trade site answers "Unknown item base type".
@@ -90,10 +94,6 @@ export type PriceCheckInput = { clipboard: string, item?: ParsedItem }
 // them as stat rows, at the bottom of each roll range: the price check can
 // then filter by them though no rolls were copied. Every row starts unticked
 // (`rollsFromData`), as a low roll could look like a best one.
-// Uniques that only ever drop corrupted (checked on the trade site): priced
-// without game text, they search corrupted copies, or the search finds none.
-const ALWAYS_CORRUPTED = new Set(['Cortex', 'Replica Cortex'])
-
 export function virtualUnique (info: BaseType, mods?: UniqueModLines | null): ParsedItem {
   const item = virtualUniqueItem(info, mods)
   if (ALWAYS_CORRUPTED.has(info.refName)) item.isCorrupted = true
