@@ -31,11 +31,17 @@ history:
       Options A/B/C decision card posted in the project thread (A recommended).
       Option A built on branch woke/ui-size; review and CI running.
     id: a-2026-11-21t11-53-12-156z
+  - type: activity
+    user: Agent
+    date: '2026-11-21T12:12:06.155Z'
+    comment: Updated implementation link.
+    id: a-2026-11-21t12-12-06-155z
 needsAction: null
 claim:
   holder: claude-code@guy-pc
   claimedAt: '2026-11-21T11:47:04.166Z'
-  expiresAt: '2026-11-21T12:17:04.166Z'
+  expiresAt: '2026-11-21T12:42:01.015Z'
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/736'
 ---
 > **TL;DR** Guy wants one setting that makes the whole UI bigger. Add a master UI size on Look & icon row that multiplies Panel size, the price check window and Pinned size; fold the four existing size sliders under "Fine-tune"; add Size to the price check palette menu; Ctrl+Space entries.
 
