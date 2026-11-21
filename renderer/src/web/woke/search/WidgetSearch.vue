@@ -161,11 +161,12 @@ import type { ScreenPoint } from '../ui/tooltip/item-price-check'
 import ItemActions from './ItemActions.vue'
 import type { LookupTab } from '../item-lookup/lookup'
 import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
-import { MAP_SCAN_TYPE, scanHotkeyTarget } from '../map-mods/scan'
+import { rollHotkeyTarget, scanHotkeyTarget } from '../map-mods/scan'
+import { MAP_MODS_TYPE } from '../map-mods/widget'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
 import { RUN_TIMER_TYPE, hotkeyTarget as timerTarget } from '../campaign/run-timer'
 import { isFoulborn } from '../shared/item-identity'
-import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
+import { PRICE_GROUP_LIMIT, arrangeSections, baseUniqueName, bestName, changeSince, groupKey, groupTip, rarityClass, searchNamed, searchPrices, tradeUrl, typeLabel, uniquePrices } from './search'
 import { basesOfUnique, hasUniques, uniquesOnBase } from '../shared/uniques-on-base'
 import type { PriceGroup } from './search'
 import LookupDetail from './LookupDetail.vue'
@@ -254,7 +255,7 @@ const snapshot = useSearchSnapshot()
 interface Base { id: string, name: string, sub: string }
 interface PriceEntry extends Base { kind: 'price', group: PriceGroup }
 interface ItemEntry extends Base { kind: 'item', info: BaseType }
-interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, action: () => void }
+interface ActionEntry extends Base { kind: 'tool' | 'command' | 'setting', icon: string, about: string, verb: string, keys?: string | null, aliases?: string[], action: () => void }
 interface LookupEntry extends Base { kind: 'lookup', icon: string, card: LookupCard }
 type Entry = PriceEntry | ItemEntry | ActionEntry | LookupEntry
 
@@ -350,6 +351,10 @@ function pickUnique (entry: { id: string }) {
 watch(query, () => { pickedId = null })
 
 // ---- tools, commands, settings ----
+// Old names of tools folded into another: searching one finds the tool now.
+const TOOL_ALIASES: Record<string, string[]> = {
+  [MAP_MODS_TYPE]: ['Map scan', 'Map check']
+}
 function toolEntries (): ActionEntry[] {
   return wm.widgets.value
     .filter(w => !w.wmFlags.includes('menu::skip') && w.wmType !== 'item-search' && w.wmType !== 'settings' && isWidgetTypeOn(AppConfig(), w.wmType))
@@ -364,6 +369,7 @@ function toolEntries (): ActionEntry[] {
         sub: 'Tool',
         icon: `fas ${iconFor(w.wmType)}`,
         about: mod?.description ?? '',
+        aliases: TOOL_ALIASES[w.wmType],
         verb: 'Open',
         action: () => { wm.show(w.wmId) }
       }
@@ -396,8 +402,10 @@ function commandEntries (): ActionEntry[] {
     if (w.wmType === LOOT_FILTER_TYPE && w.neversink?.on) {
       add(w, 'Make the loot filter stricter', 'stricterHotkey', strictnessHotkeyTarget(w.wmId, 'stricter'))
       add(w, 'Make the loot filter looser', 'looserHotkey', strictnessHotkeyTarget(w.wmId, 'looser'))
-    } else if (w.wmType === MAP_SCAN_TYPE) {
-      add(w, 'Map scan on or off', 'hotkey', scanHotkeyTarget(w.wmId))
+    } else if (w.wmType === MAP_MODS_TYPE && w.wmId === wm.widgets.value.find(_ => _.wmType === MAP_MODS_TYPE)?.wmId) {
+      // Map scan runs in the first Map mods window only.
+      add(w, 'Map scan on or off', 'scanHotkey', scanHotkeyTarget(w.wmId))
+      add(w, 'Map scan: rolling mode on or off', 'scanRollHotkey', rollHotkeyTarget(w.wmId))
     } else if (w.wmType === ESSENCE_SCAN_TYPE) {
       add(w, 'Essence scan on or off', 'hotkey', essenceHotkeyTarget(w.wmId))
       add(w, 'Read every essence once', 'onceHotkey', essenceOnceTarget(w.wmId))
@@ -757,7 +765,7 @@ const sections = computed<Array<{ label: string, entries: Entry[], capped?: bool
       { label: 'Other items', entries: other as Entry[] }
     ],
     cards: cardSections(cards, null, ['Answer', 'Search the web']),
-    tools: searchNamed(toolEntries(), q, e => e.name),
+    tools: searchNamed(toolEntries(), q, e => bestName([e.name, ...(e.aliases ?? [])], q)),
     rest: [
       { label: 'Do it now', entries: searchNamed(commandEntries(), q, e => e.name) as Entry[] },
       { label: 'Settings', entries: settingEntries(q) as Entry[] }

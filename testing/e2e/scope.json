@@ -176,6 +176,13 @@
    "renderer/src/web/woke/map-mods/",
    "renderer/src/web/woke/regex-library/"
   ],
+  "map-mods-scan.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/map-mods/",
+   "renderer/src/web/woke/search/",
+   "renderer/src/web/woke/settings/"
+  ],
   "map-mods-tabs.spec.ts": [
    "main/src/woke/map-scan-vision.ts",
    "main/src/woke/map-scan.ts",
@@ -472,10 +479,10 @@
    "renderer/src/web/woke/trade/"
   ],
   "ui-size.spec.ts": [
-    "renderer/src/parser/",
-    "renderer/src/web/item-check/",
-    "renderer/src/web/price-check/",
-    "renderer/src/web/woke/pins/"
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/pins/"
   ],
   "valdo-map.spec.ts": [
    "renderer/src/parser/",

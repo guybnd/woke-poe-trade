@@ -25,21 +25,43 @@ export function parseScanHotkeyTarget (target: string): { wmId: number, roll: bo
   return m ? { wmId: Number(m[1]), roll: Boolean(m[2]) } : null
 }
 
-export function initMapScanWidget (w: MapScanWidget) {
-  w.wmTitle = 'Map scan'
-  // The panel shows with the overlay open; while you play, its dock icon does.
-  w.wmFlags = ['invisible-on-blur']
-  w.anchor = { pos: 'tr', x: 98, y: 12 }
-  w.hotkey = 'Alt + S'
-  w.rollHotkey = 'Alt + R'
-  w.alertOnPass = true
-}
+type WidgetRecord = Record<string, unknown> & { wmId: number, wmType: string }
 
-export function normalizeMapScanWidget (w: MapScanWidget) {
-  if (!w.anchor) w.anchor = { pos: 'tr', x: 98, y: 12 }
-  if (w.hotkey === undefined) w.hotkey = null
-  if (w.rollHotkey === undefined) w.rollHotkey = 'Alt + R'
-  if (typeof w.alertOnPass !== 'boolean') w.alertOnPass = true
+// Map scan is part of Map mods now (WOKEPOET-458). Once per config: its keys
+// and reroll alert move onto the first Map mods window (made if missing), and
+// its rail pin points at Map mods. A Map scan that was switched off moves no
+// keys. The old window stays in config, retired (modules.ts), never mounted.
+export function foldMapScan (config: { woke?: { off: string[] }, widgets: WidgetRecord[] }): void {
+  const widgets = config.widgets
+  const scan = widgets.find(w => w.wmType === MAP_SCAN_TYPE) as (WidgetRecord & Partial<MapScanWidget>) | undefined
+  // No Map scan: a Map mods window from before gets no scan keys (normalize),
+  // a new one the defaults (initMapModsWidget).
+  if (!scan) return
+  const off = config.woke?.off ?? []
+  const scanOn = !off.includes('map-scan')
+  let mapMods = widgets.find(w => w.wmType === 'woke-map-mods')
+  if (!mapMods && !scanOn) return
+  if (!mapMods) {
+    mapMods = { wmId: Math.max(0, ...widgets.map(w => w.wmId)) + 1, wmType: 'woke-map-mods', wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: ['uninitialized'] }
+    widgets.push(mapMods)
+  }
+  if (mapMods.scanHotkey === undefined) {
+    // Placed but never opened: it would have set up its default keys.
+    const fresh = Array.isArray(scan.wmFlags) && scan.wmFlags[0] === 'uninitialized'
+    mapMods.scanHotkey = !scanOn ? null : fresh ? 'Alt + S' : (scan.hotkey ?? null)
+    mapMods.scanRollHotkey = !scanOn ? null : fresh ? 'Alt + R' : (scan.rollHotkey ?? null)
+    mapMods.scanAlertOnPass = typeof scan.alertOnPass === 'boolean' ? scan.alertOnPass : true
+  }
+  // Scanning needs Map mods on now.
+  if (scanOn && config.woke && off.includes('map-mods')) config.woke.off = off.filter(id => id !== 'map-mods')
+  const target = mapMods.wmId
+  for (const w of widgets) {
+    const pinned = w.pinned
+    if (!Array.isArray(pinned) || !pinned.includes(scan.wmId)) continue
+    w.pinned = pinned.includes(target)
+      ? pinned.filter(id => id !== scan.wmId)
+      : pinned.map(id => id === scan.wmId ? target : id)
+  }
 }
 
 // Two readings closer than this (fraction of window height) are the same

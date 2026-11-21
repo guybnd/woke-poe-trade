@@ -25,8 +25,7 @@ Woke PoE Trade is a set of tools on one overlay. Each one is a module you can sw
 | Economy | Session analytics | Profit per map, strategy and hour over time |
 | Economy | Wickerman (3.30) | Viscera versions and drop sources: price check, Ctrl+Space, and a dock icon where a boss drops one |
 | Economy | Boss runs | Profit per boss kill |
-| Mapping | Map mods | Danger strip on price check and map regex |
-| Mapping | Map scan | Reads map tooltips on screen |
+| Mapping | Map mods | Danger strip on price check, map regex, and map scan (reads hovered maps on screen) |
 | Mapping | Session story | A summary card when you log off, a per map run toast, and your map history |
 | Mapping | Death recap | Where you died, and the mods of maps you checked |
 | Mapping | Essence scan | Reads essence monoliths and flags MEDS |

@@ -880,7 +880,7 @@ test('filter: today\'s prices, and the moves to pick from', async ({ overlay }) 
 
 test('maps: map scan marks what your build can\'t run', async ({ overlay }) => {
   test.skip(!haveOcr, 'OCR files missing: npm run get:ocr')
-  await overlay.boot({ widgets: [{ wmType: 'woke-map-scan' }, { wmType: 'woke-map-mods' }] })
+  await overlay.boot({ widgets: [{ wmType: 'woke-map-mods' }] })
   await overlay.showScreen('screens/map-real-07.png')
   await backdrop(overlay, 'landing/screenshot-0007.jpg')
   const cursor = cursorOf('map-real-07')

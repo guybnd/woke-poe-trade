@@ -55,7 +55,6 @@ export const wokeWidgets: WidgetComponent[] = [
   lazy(specs.widgetMechanicsSpec, () => import('./mechanics/WidgetMechanics.vue')),
   lazy(specs.widgetMapModsSpec, () => import('./map-mods/WidgetMapMods.vue')),
   lazy(specs.widgetMapCheckSpec, () => import('./map-mods/WidgetMapCheck.vue')),
-  lazy(specs.widgetMapScanSpec, () => import('./map-mods/WidgetMapScan.vue')),
   lazy(specs.widgetEssenceScanSpec, () => import('./essence-scan/WidgetEssenceScan.vue')),
   lazy(specs.widgetLabGemsSpec, () => import('./lab-gems/WidgetLabGems.vue')),
   lazy(specs.widgetLeagueInvestSpec, () => import('./league-invest/WidgetLeagueInvest.vue')),
