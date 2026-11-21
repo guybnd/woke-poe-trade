@@ -242,10 +242,11 @@ onUnmounted(() => { clearTimeout(hitTimer) })
 // The big-hit popup's spot: dragged with the overlay open, saved on drop.
 function moveHit (e: PointerEvent) {
   if (!wm.active.value) return
-  dragSpot(e, (e.currentTarget as HTMLElement).parentElement!, (spot, done) => {
+  const handle = e.currentTarget as HTMLElement
+  dragSpot(e, handle, (spot, done) => {
     props.config.hitPos = spot
     if (done) saveConfig()
-  })
+  }, handle.parentElement!)
 }
 // "Place the big-hit popup": a sample stays up while the overlay is open.
 const placing = shallowRef(false)
@@ -258,7 +259,8 @@ watch(() => wm.active.value, (on) => {
   if (!on && placing.value) { placing.value = false; hit.value = null }
 })
 function showHit (h: Omit<Hit, 'key'>) {
-  placing.value = false
+  // A real hit ends the sample, shown or not.
+  if (placing.value) { placing.value = false; hit.value = null }
   if (props.config.hitPopup) {
     hit.value = { ...h, key: ++hitKey }
     clearTimeout(hitTimer)
@@ -325,7 +327,6 @@ followGameLog({
 .action:hover { color: var(--w-fg); background: var(--w-line-soft); }
 .hitLayer { position: fixed; inset: 0; pointer-events: none; z-index: 1000; display: flex; justify-content: center; align-items: flex-start; padding-top: 24vh; }
 .hitMove { pointer-events: auto; cursor: move; user-select: none; }
-.hitStill { animation: none; }
 .hit {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -343,6 +344,7 @@ followGameLog({
 }
 .hitName { font-size: var(--w-fs-lg); }
 .hitValue { font-size: var(--w-fs-lg); color: var(--w-up); }
+.hit.hitStill { animation: none; }
 @keyframes hit-in-out {
   0% { opacity: 0; transform: translateY(-8px) scale(0.97); }
   6% { opacity: 1; transform: none; }

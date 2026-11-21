@@ -1,13 +1,14 @@
-// Dragging an on-screen pop-up by a handle (glance bar, big-hit popup): moves
+// Dragging an on-screen pop-up by a handle (the big-hit popup): moves
 // its top centre with the pointer, kept on screen, as a share of the screen so
 // the spot holds at any resolution. `onMove` gets each step; `done` once, when
 // the drag ends (pointer up, or the capture lost when the overlay closes).
 export interface Spot { x: number, y: number }
 
-export function dragSpot (e: PointerEvent, el: HTMLElement, onMove: (spot: Spot, done: boolean) => void): void {
+// `el` takes the pointer (the handle); `box` is what moves (measured), by default the same.
+export function dragSpot (e: PointerEvent, el: HTMLElement, onMove: (spot: Spot, done: boolean) => void, boxEl: HTMLElement = el): void {
   if (e.button !== 0) return
   e.preventDefault()
-  const box = el.getBoundingClientRect()
+  const box = boxEl.getBoundingClientRect()
   const dx = e.clientX - (box.left + box.width / 2)
   const dy = e.clientY - box.top
   try { el.setPointerCapture(e.pointerId) } catch {}
@@ -34,5 +35,5 @@ export function dragSpot (e: PointerEvent, el: HTMLElement, onMove: (spot: Spot,
 
 // Fixed-position style for a spot; none keeps the pop-up's own default place.
 export function spotStyle (spot: Spot | null | undefined): Record<string, string> | undefined {
-  return spot ? { position: 'fixed', left: `${spot.x * 100}%`, top: `${spot.y * 100}%`, transform: 'translateX(-50%)' } : undefined
+  return spot ? { position: 'fixed', left: `${spot.x * 100}%`, top: `${spot.y * 100}%`, width: 'max-content', transform: 'translateX(-50%)' } : undefined
 }
