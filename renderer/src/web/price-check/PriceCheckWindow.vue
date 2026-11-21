@@ -84,7 +84,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, PropType, shallowRef, watch, computed, nextTick, provide } from 'vue'
+import { defineAsyncComponent, defineComponent, inject, PropType, shallowRef, watch, computed, nextTick, provide } from 'vue'
 import { Result, ok, err } from 'neverthrow'
 import { useI18n } from 'vue-i18n'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
@@ -100,7 +100,6 @@ import RelatedItems from './related-items/RelatedItems.vue'
 import RateLimiterState from './trade/RateLimiterState.vue'
 import UnidentifiedResolver from './unidentified-resolver/UnidentifiedResolver.vue'
 import CheckPositionCircle from './CheckPositionCircle.vue'
-import NewItemSearch from '@/web/woke/new-item/NewItemSearch.vue'
 import UnreadableItem from '@/web/woke/new-item/UnreadableItem.vue'
 import { newItemQuery } from '@/web/woke/new-item/query'
 import AppTitleBar from '@/web/ui/AppTitlebar.vue'
@@ -165,7 +164,8 @@ export default defineComponent({
     CheckPositionCircle,
     ItemQuickPrice,
     UiErrorBox,
-    NewItemSearch,
+    // Only for items the game data doesn't know yet: loaded on first use.
+    NewItemSearch: defineAsyncComponent(() => import('@/web/woke/new-item/NewItemSearch.vue')),
     UnreadableItem,
     PriceStyleMenu,
     UiPopover
