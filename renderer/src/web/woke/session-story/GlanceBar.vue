@@ -4,7 +4,7 @@
     <div v-if="map" :class="$style.bar" class="w-num" data-glance-bar role="status">
       <span :class="$style.name">{{ map.name }}</span>
       <span class="w-dim">{{ tierText(map.areaLevel) }}</span>
-      <span>{{ minutes }}m</span>
+      <span data-glance-time>{{ formatClock(elapsed) }}</span>
       <template v-if="night">
         <span :class="$style.sep" />
         <span class="w-dim">Tonight</span>
@@ -17,8 +17,9 @@
 
 <script setup lang="ts">
 // Settings › Farming & sessions › "While in a map". Off unless turned on.
-import { computed } from 'vue'
-import { formatChaos, nowMinute } from '../ui/format'
+import { computed, onUnmounted, shallowRef } from 'vue'
+import { formatChaos, formatClock } from '../ui/format'
+import { tickWhile } from '../dock/dock'
 import { tierText } from './map-log'
 import type { MapRecord } from './map-log'
 import { useNightList } from './nights'
@@ -26,12 +27,15 @@ import { useNightList } from './nights'
 const props = defineProps<{
   // The map you're in, as Session story's map log has it; null in hideout or town.
   map: Pick<MapRecord, 'name' | 'areaLevel'> | null
-  // When you went in (this time through the portal).
+  // When you went in this time through the portal, and the map's time before that.
   since: number
+  before: number
 }>()
 
-// Minutes only: the shared half-minute clock, so the bar adds no timer of its own.
-const minutes = computed(() => Math.max(0, Math.floor((nowMinute.value - props.since) / 60_000)))
+// The map's time so far, like the after-map toast, ticking each second while the bar shows.
+const now = shallowRef(Date.now())
+onUnmounted(tickWhile(() => !!props.map, () => { now.value = Date.now() }, 1000))
+const elapsed = computed(() => props.before + Math.max(0, now.value - props.since))
 const nights = useNightList()
 const night = computed(() => nights.shown.value?.live ? nights.shown.value.story : null)
 const profit = computed(() => night.value ? nights.profitOf(night.value) : null)
