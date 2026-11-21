@@ -13,6 +13,27 @@ import tippy, { Instance, Placement } from 'tippy.js'
 import 'tippy.js/dist/tippy.css'
 import 'tippy.js/themes/light.css'
 
+// woke: Popper measures in screen px, but its offsets are applied inside the
+// popover's parent, which a CSS zoom (UI size, Panel size) scales again.
+// Dividing by that zoom keeps the popover on its target.
+type Offsets = { x?: number, y?: number } | undefined
+const UNZOOM = {
+  name: 'unzoom',
+  enabled: true,
+  phase: 'main' as const,
+  requires: ['popperOffsets'],
+  requiresIfExists: ['offset', 'preventOverflow', 'arrow', 'flip'],
+  fn ({ state }: { state: { elements: { popper: HTMLElement }, modifiersData: Record<string, Offsets> } }) {
+    const parent = state.elements.popper.parentElement as (HTMLElement & { currentCSSZoom?: number }) | null
+    const z = parent?.currentCSSZoom ?? 1
+    if (z === 1 || !z) return
+    const o = state.modifiersData.popperOffsets
+    if (o && o.x != null && o.y != null) { o.x /= z; o.y /= z }
+    const a = state.modifiersData.arrow
+    if (a) { if (a.x != null) a.x /= z; if (a.y != null) a.y /= z }
+  }
+}
+
 export default defineComponent({
   name: 'UiPopover',
   inheritAttrs: false,
@@ -67,6 +88,7 @@ export default defineComponent({
           : {}),
         popperOptions: {
           modifiers: [
+            UNZOOM,
             ...(props.boundary
               ? [{
                   name: 'preventOverflow',

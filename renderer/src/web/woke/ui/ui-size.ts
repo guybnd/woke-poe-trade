@@ -1,7 +1,9 @@
 // UI size: one setting that makes everything bigger or smaller together. It
-// multiplies the three sizes the user can fine-tune: Panel size (panel zoom,
-// scale.ts), the price check window size (the root font size, Config.ts) and
-// Pinned size (pins.ts). Text size stays apart: it is the fine-tune for text.
+// multiplies the sizes the user can fine-tune: Panel size (panel zoom,
+// scale.ts), the price check (a zoom on its content, --w-ui-size) and Pinned
+// size (pins.ts). Text size stays apart: it is the fine-tune for text.
+// Always a zoom, never the root font size: rem lengths inside a zoomed panel
+// would get it twice.
 // Stored like the theme: per origin in localStorage, shared by the overlay and
 // settings windows through the storage event.
 import { shallowRef, watch } from 'vue'
@@ -27,12 +29,21 @@ function readStored () {
 
 export const uiSize = shallowRef(readStored())
 
-// One step bigger or smaller (Ctrl+Space, the price check's palette).
+export function uiZoom (): number {
+  return uiSize.value / 100
+}
+
+// One step bigger or smaller (Ctrl+Space, the toolbar's menu).
 export function nudgeUiSize (steps: number) {
   uiSize.value = clampUiSize(uiSize.value + steps * UI_SIZE_STEP)
 }
 
+function apply (v: number) {
+  if (typeof document !== 'undefined') document.documentElement.style.setProperty('--w-ui-size', String(v / 100))
+}
+apply(uiSize.value)
 watch(uiSize, (v) => {
+  apply(v)
   try { localStorage.setItem(STORAGE_KEY, String(v)) } catch {}
 })
 // Config.ts imports this, and unit tests run without a window.

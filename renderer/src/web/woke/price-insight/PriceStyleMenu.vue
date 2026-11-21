@@ -24,7 +24,7 @@
           <span class="w-num" :class="$style.pct" data-price-size-pct>{{ windowPct }}%</span>
           <button :class="$style.step" data-price-size="bigger" title="Bigger" aria-label="Price check bigger"
             :disabled="windowPx >= MAX_WINDOW_PX" @click="stepSize(1)"><i class="fas fa-plus" /></button>
-          <span :class="$style.sizeNote">This window, map check and Settings. UI size in Settings sizes everything.</span>
+          <span :class="$style.sizeNote">This window, map check and Settings. UI size (toolbar menu, Settings) sizes everything.</span>
         </div>
         <div :class="$style.note">The look changes every panel, not just the price check.</div>
       </div>

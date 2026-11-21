@@ -1,5 +1,4 @@
 import { reactive as deepReactive, shallowRef, toRaw, watch } from 'vue'
-import { uiSize } from './woke/ui/ui-size'
 import { configForDisk } from './woke/shared/config-disk'
 import { Host } from '@/web/background/IPC'
 import { HostConfig, ShortcutAction } from '@ipc/types'
@@ -53,9 +52,9 @@ export function updateConfig (updates: Config) {
 }
 
 // The root font size sizes the price check, map check and settings window
-// (they are in rem): the price check window size times UI size.
+// (they are in rem): Settings > Look > Price check window size.
 export function rootFontPx (): number {
-  return (_config.value?.fontSize ?? 16) * uiSize.value / 100
+  return _config.value?.fontSize ?? 16
 }
 
 function applyFontSize () {
@@ -64,7 +63,7 @@ function applyFontSize () {
 }
 // Also when the price check's palette changes the size: the save (and its
 // echo) waits until the price check closes.
-watch(() => [uiSize.value, _config.value?.fontSize], applyFontSize)
+watch(() => _config.value?.fontSize, applyFontSize)
 
 export function saveConfig (opts?: { isTemporary: boolean }) {
   const rawConfig = toRaw(_config.value!)

@@ -8,21 +8,27 @@ function setUiSize (page: import('@playwright/test').Page, v: number) {
   }, v)
 }
 
-test('UI size grows the price check window and the panel zoom together', async ({ overlay }) => {
+test('UI size grows the price check window and the panel zoom together, never the root font', async ({ overlay }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
   const page = overlay.page
   const panel = page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
+  const row = page.getByText('178 / 1').first()
   const width = (await panel.boundingBox())!.width
+  const rowHeight = (await row.boundingBox())!.height
   const css = (name: string) => page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n), name)
   const zoomBefore = parseFloat(await css('--w-ui-scale'))
-  const remBefore = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))
+  const rem = () => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)
+  const remBefore = await rem()
 
   await setUiSize(page, 120)
-  await expect.poll(() => page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))).toBeCloseTo(remBefore * 1.2, 1)
-  expect(parseFloat(await css('--w-ui-scale'))).toBeCloseTo(zoomBefore * 1.2, 3)
   await expect.poll(async () => (await panel.boundingBox())!.width).toBeGreaterThan(width * 1.15)
+  expect(parseFloat(await css('--w-ui-scale'))).toBeCloseTo(zoomBefore * 1.2, 3)
+  expect(await css('--w-ui-size')).toBe('1.2')
+  // A zoom, not the root font: rem inside zoomed panels would grow twice.
+  expect(await rem()).toBe(remBefore)
+  expect((await row.boundingBox())!.height).toBeCloseTo(rowHeight * 1.2, 0)
 
   await setUiSize(page, 100)
   await expect.poll(async () => (await panel.boundingBox())!.width).toBeCloseTo(width, 0)

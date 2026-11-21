@@ -464,6 +464,13 @@
    "main/src/woke/trade-log.ts",
    "renderer/src/web/woke/trade/"
   ],
+  "ui-size.spec.ts": [
+    "renderer/src/parser/",
+    "renderer/src/web/item-check/",
+    "renderer/src/web/price-check/",
+    "renderer/src/web/woke/pins/",
+    "renderer/src/web/woke/ui/"
+  ],
   "valdo-map.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/price-check/",

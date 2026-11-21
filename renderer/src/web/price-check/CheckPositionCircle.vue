@@ -18,15 +18,19 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { uiZoom } from '@/web/woke/ui/ui-size'
 
 const props = defineProps<{
   position: { x: number, y: number }
 }>()
 
+// woke: it sits in the price check's body, which UI size zooms; screen px
+// are divided by the zoom so the circle stays on the cursor.
 const relativePos = computed(() => {
+  const z = uiZoom()
   return {
-    top: `calc(${props.position.y - window.screenY}px - 2.5rem)`,
-    left: `calc(${props.position.x - window.screenX}px - 2.5rem)`
+    top: `calc(${(props.position.y - window.screenY) / z}px - 2.5rem)`,
+    left: `calc(${(props.position.x - window.screenX) / z}px - 2.5rem)`
   }
 })
 </script>
