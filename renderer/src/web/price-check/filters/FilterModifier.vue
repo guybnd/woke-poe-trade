@@ -136,7 +136,7 @@ import { useStatActions } from '@/web/woke/price-insight/stat-actions'
 import { isFracturedOnly, setFracturedOnly } from '@/web/woke/price-insight/pseudo-split'
 import { tagQuality, useCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { onlyCatalysed } from '@/web/ui/catalyst-zone'
-import { AppConfig, rootFontPx } from '@/web/Config'
+import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, ParsedItem } from '@/parser'
 import { getTradeMaxQuality } from '@/parser/calc-q20.js'
 import { FilterTag, StatFilter, INTERNAL_TRADE_IDS, ItemHasEmptyModifier } from './interfaces'
@@ -422,7 +422,7 @@ export default defineComponent({
           ]
         }
       }),
-      fontSize: computed(() => rootFontPx()),
+      fontSize: computed(() => AppConfig().fontSize),
       isDisabled: computed(() => props.filter.disabled),
       text: computed(() => {
         if (!INTERNAL_TRADE_IDS.includes(props.filter.tradeId[0])) {

@@ -468,8 +468,7 @@
     "renderer/src/parser/",
     "renderer/src/web/item-check/",
     "renderer/src/web/price-check/",
-    "renderer/src/web/woke/pins/",
-    "renderer/src/web/woke/ui/"
+    "renderer/src/web/woke/pins/"
   ],
   "valdo-map.spec.ts": [
    "renderer/src/parser/",
