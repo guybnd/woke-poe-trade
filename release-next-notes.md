@@ -25,3 +25,4 @@
 - Ctrl+Space search: the tonight and "maps" cards only offer their Session analytics buttons while Session analytics is on, and the maps card says "Your last N maps" instead of claiming the last 2 days.
 - Session story's glance bar: drag it anywhere with the overlay open (it shows then even outside a map); its spot is kept. While you play it still never takes the mouse.
 - After-map toast: drag it by its title bar to put it anywhere; its spot is kept (Show me with your last map in its settings brings it up to place).
+- Stacked decks: the big-hit popup can be dragged anywhere with the overlay open, and its spot is kept. Right-click the dock icon › Place the big-hit popup shows a sample to place.

@@ -51,6 +51,8 @@ export interface StackedDecksWidget extends Widget {
   // Big hit: a popup at or above this many divines, and a sound if on.
   hitDiv: number
   hitPopup: boolean
+  // Where the big-hit popup sits (its top centre, share of the screen), set by dragging it.
+  hitPos?: { x: number, y: number }
   hitSound: boolean
   // Cards worth less than this (chaos) fold into one line under the list.
   // Missing: DEFAULT_CHEAP_UNDER. 0: every card listed.
