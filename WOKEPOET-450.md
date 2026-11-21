@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-450
 title: 'Sales in Net worth: trade history reader, Sold section, Sales view'
-status: Grooming
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -49,6 +49,49 @@ history:
       PR https://github.com/guybnd/woke-poe-trade/pull/728 open; review fixes in
       590144be; CI running.
     id: a-2026-11-21t10-53-04-152z
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged PR #728 (b4965510). The review findings are fixed and CI is green.
+      A visual check over CDP follows once the dev build pulls master.
+    date: '2026-11-21T11:08:01.222Z'
+    completionComment: true
+    id: c-2026-11-21t11-08-01-222z
+  - type: status_change
+    from: Grooming
+    to: Ready
+    user: Agent
+    date: '2026-11-21T11:08:01.222Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Merged PR #728. A trade history reader (/api/trade/history/{league}, kept
+      per league, rate-paced). In Net worth: a Sold section, Sold today, sale
+      dots on the chart, sale rows in the change list, and a Holdings/Sales
+      switch with ranked bars per type. Ctrl+Space finds past sales. An
+      adversarial review was done and its findings fixed.
+    completionComment: true
+    date: '2026-11-21T11:08:07.001Z'
+    id: c-2026-11-21t11-08-07-001z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T11:08:07.608Z'
+needsAction: null
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/728'
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Guy's picks (2026-11-21): opt-in reader (A), Net worth integration A + C (mockups https://claude.ai/artifact/M9rk3zWppKwDT7eVb91bTm), per-type summary layout 1 "ranked bars" (https://claude.ai/artifact/UVx98gZ39f8EWwFFPmhzjS).
 
