@@ -45,7 +45,7 @@
           </div>
         </template>
         <template v-else-if="clone && current">
-          <div class="w-rule-b" :class="$style.head">
+          <div class="w-rule-b" :class="$style.head" data-page-head>
             <span class="w-socket" :class="$style.headIcon"><w-icon :src="current.icon.art ?? undefined" :item="current.icon.item" :fallback="current.icon.fa" size="lg" /></span>
             <div>
               <div :class="$style.pageTitle">{{ current.name }}</div>
@@ -243,6 +243,8 @@ const nav = computed(() => GROUPS.map(g => {
 }))
 
 function open (id: string) {
+  // A scroll-to-a-setting still waiting for its row is for the page left behind.
+  clearTimeout(goTimer)
   query.value = ''
   if (id.startsWith('widget:') || PAGE_BY_ID.has(id)) {
     if (pageId.value !== id) quietUntil = Date.now() + 800
@@ -377,9 +379,11 @@ function findRow (root: HTMLElement, needle: string): Element | null {
   const el = [...root.querySelectorAll('[data-setting]')]
     .find(e => (e.getAttribute('data-setting') ?? '').toLowerCase().includes(needle))
   if (el) return el
+  // Any text on the page, past its title and description.
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
   let n: Node | null
   while ((n = walker.nextNode())) {
+    if (n.parentElement?.closest('[data-page-head]')) continue
     if ((n.textContent ?? '').toLowerCase().includes(needle)) return n.parentElement
   }
   return null

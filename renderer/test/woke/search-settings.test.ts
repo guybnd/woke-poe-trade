@@ -43,6 +43,16 @@ describe('settingsHits', () => {
   it('a label shows once, and a page is not listed again as its own label', () => {
     expect(names('account')).toEqual(['Account name'])
     expect(names('challenges')).toEqual(['Challenges'])
+    // "Hotkey list" is the Hotkeys page's old name.
+    expect(settingsHits([page('hotkeys', 'Hotkeys', ['Hotkey list'], ['Hotkey list'])], 'hotkey list').map(h => h.name)).toEqual(['Hotkeys'])
+  })
+
+  it('keeps the whole list while a word after "settings" is one letter', () => {
+    expect(names('settings h')).toEqual(names('settings'))
+  })
+
+  it('"config" is a search, not a settings word', () => {
+    expect(settingsHits([page('game', 'Game & league', ['production_Config.ini'])], 'config').map(h => h.name)).toEqual(['production_Config.ini'])
   })
 
   it('needs two letters, and plain words do not offer Open settings', () => {

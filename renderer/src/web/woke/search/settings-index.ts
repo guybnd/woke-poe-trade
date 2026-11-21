@@ -15,7 +15,8 @@ export interface SettingsHit {
 }
 
 // Words that mean the settings window itself.
-const WORDS = ['settings', 'setting', 'options', 'option', 'preferences', 'prefs', 'config', 'configuration']
+// Not "config": that finds production_Config.ini.
+const WORDS = ['settings', 'setting', 'options', 'option', 'preferences', 'prefs']
 // A word of the query names Settings: whole, or the start of one, 4 letters on ("sett").
 function isSettingsWord (w: string): boolean {
   return w.length >= 4 && WORDS.some(s => s.startsWith(w))
@@ -37,10 +38,9 @@ export function settingsHits (pages: readonly SettingsPage[], query: string): Se
   const open: SettingsHit = { id: 's:open', name: 'Open settings', sub: 'Settings', page: null, label: null }
   const pageHit = (page: SettingsPage): SettingsHit => ({ id: `s:${page.id}`, name: page.name, sub: 'Settings page', page, label: null })
 
-  if (!rest.length) return [open, ...pages.map(pageHit)]
-
   const q = rest.join(' ')
-  if (q.length < MIN_QUERY) return []
+  // "settings" alone, or "settings h" on the way to "settings hotkeys".
+  if (q.length < MIN_QUERY) return [open, ...pages.map(pageHit)]
   const mentionsSettings = rest.length < all.length
   const out: SettingsHit[] = []
   if (mentionsSettings || matchRank('Open settings', q) === 0) out.push(open)
@@ -53,13 +53,13 @@ export function settingsHits (pages: readonly SettingsPage[], query: string): Se
     .slice(0, PAGE_LIMIT)
   out.push(...pageHits.map(r => pageHit(r.page)))
 
-  // A label once, on its first page; a page's own name is its page hit.
+  // A label once, on its first page; a page's own name (or old name) is its page hit.
   const seen = new Set<string>()
   const labels: Array<{ hit: SettingsHit, rank: number }> = []
   for (const page of pages) {
     for (const label of page.find) {
       const k = label.toLowerCase()
-      if (seen.has(k) || k === page.name.toLowerCase()) continue
+      if (seen.has(k) || k === page.name.toLowerCase() || page.aliases?.some(a => a.toLowerCase() === k)) continue
       const rank = matchRank(label, q)
       if (rank < 0) continue
       seen.add(k)

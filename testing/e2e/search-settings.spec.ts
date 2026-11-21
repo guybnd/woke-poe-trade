@@ -18,7 +18,7 @@ test('"settings" lists Open settings and every page, and a page opens', async ({
   await box.fill('settings')
   await expect(panel.getByRole('button', { name: /^Open settings\s*Settings$/ })).toBeVisible()
   for (const name of ['Game & league', 'Hotkeys', 'Performance', 'About']) {
-    await expect(panel.getByRole('button', { name: new RegExp(`^${name}\s*Settings page$`) })).toBeVisible()
+    await expect(panel.getByRole('button', { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*Settings page$`) })).toBeVisible()
   }
   await overlay.snap('search-settings')
 
