@@ -43,3 +43,4 @@
 - Flips for 3.30: the Scarabs tab is gone and a Threads tab prices the new 3 for 1 Thread vendor recipe. Nobody has measured its odds yet, so every Thread counts as equally likely, the tab says so, and it stays out of the dock card's best flip; set your own weights in Settings. It also shows what a Frayed Thread opens to on average.
 - Flips: the Delirium tab uses the 11 orbs that drop in 3.30 (Threaded keeps the old Skittering odds), so removed orbs no longer skew the average. Catalysts leave out Sinistral and Dextral, which a recipe can't give.
 - Ctrl+Space search: type a flippable item ("legion thread", "fine delirium") to see what flipping it makes per item at today's price, or "flips" for the best flip right now. Vendor recipes add the Thread recipe and drop the removed 3 maps for a higher tier one.
+- League mechanics: each mechanic's Thread shows with its price again. poe.ninja moved Threads to their own list, so the card had stopped finding them.

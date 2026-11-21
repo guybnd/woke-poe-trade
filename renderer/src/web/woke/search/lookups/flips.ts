@@ -3,6 +3,7 @@
 // best one. Uses the Flips panel's own options and weights. The palette's prices
 // have no volume, so these rank by profit per item, not by supply.
 import { matchRank } from '../search'
+import { formatAmount } from '../../ui/format'
 import { DEFAULT_LIFEFORCE_PER_ITEM, FAMILIES, bestFlip, parseLifeforce, priceFlip, shortName } from '../../scarab-flip/families'
 import type { FlipFamily, FlipMethod, FlipResult } from '../../scarab-flip/families'
 import type { FlipOptions } from '../../scarab-flip/calc'
@@ -27,41 +28,46 @@ function settingsOf (config: ScarabFlipWidget | null): Settings {
   }
 }
 
+// The panel's own rounding, so both read the same.
 function signed (chaos: number): string {
-  const v = Math.abs(chaos) < 10 ? Number(chaos.toFixed(2)) : Math.round(chaos)
-  return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}c`
+  const text = formatAmount(Math.abs(chaos))
+  return `${chaos > 0 ? '+' : chaos < 0 ? '−' : ''}${text}c`
 }
 
 function openAction (ctx: LookupContext): LookupAction[] {
   return ctx.tools.has(SCARAB_FLIP_TYPE) ? [{ label: 'Open Flips', tool: SCARAB_FLIP_TYPE }] : []
 }
 
+interface MethodLine { row: LookupRow, profit: number | null }
+
 // One method's verdict for one item, or null when it can't be priced.
-function methodRow (method: FlipMethod, name: string, flip: FlipResult | null): LookupRow | null {
+function methodLine (method: FlipMethod, name: string, flip: FlipResult | null): MethodLine | null {
+  const verdict = (label: string, profit: number) =>
+    ({ row: { label, value: `${signed(profit)} each${profit > 0 ? '' : ', not worth it'}` }, profit })
   if (flip?.kind === 'pool') {
     const row = flip.model.rows.find(r => r.name === name)
-    if (!row) return null
-    return { label: method.label, value: `${signed(row.profitEach)} each${row.profitEach > 0 ? '' : ', not worth it'}` }
+    return row ? verdict(method.label, row.profitEach) : null
   }
   if (flip?.kind === 'upgrade') {
     const row = flip.rows.find(r => r.from === name)
-    if (!row) return null
-    return { label: `${method.label} to ${shortName(row.into)}`, value: `${signed(row.profitEach)} each${row.profitEach > 0 ? '' : ', not worth it'}` }
+    return row ? verdict(`${method.label} to ${shortName(row.into)}`, row.profitEach) : null
   }
-  if (flip?.kind === 'no-cost') return { label: method.label, value: `no ${method.lifeforce} lifeforce price yet`, dim: true }
+  if (flip?.kind === 'no-cost') return { row: { label: method.label, value: `no ${method.lifeforce} lifeforce price yet`, dim: true }, profit: null }
   return null
 }
 
 function itemCard (family: FlipFamily, name: string, s: Settings, ctx: LookupContext): LookupCard | null {
-  const rows: LookupRow[] = []
+  const lines: MethodLine[] = []
   for (const method of family.methods) {
     const flip = priceFlip(family, method, ctx.items as PriceItem[], new Map(), s.options, s.lifeforce, s.weights)
-    const row = methodRow(method, name, flip)
-    if (row) rows.push(row)
+    const line = methodLine(method, name, flip)
+    if (line) lines.push(line)
   }
-  if (!rows.length) return null
+  if (!lines.length) return null
+  const rows = lines.map(l => l.row)
+  // The method that pays most, when any pays.
+  const best = lines.reduce<MethodLine | null>((top, l) => l.profit != null && l.profit > 0 && (top == null || l.profit > top.profit!) ? l : top, null)?.row
   const price = ctx.price(name)
-  const best = rows.find(r => r.value?.startsWith('+'))
   return {
     id: `flip:${name}`,
     group: 'Flips',

@@ -33,7 +33,7 @@
       </div>
       <div v-if="warning" :class="[$style.note, $style.warning]">{{ warning }}</div>
       <div v-if="openerValue != null" :class="$style.note" class="w-num">
-        <span v-item-tip="{ name: family.opener!, type: 'Currency' }">{{ family.opener }}</span> opens to {{ fmt(openerValue) }} on average. It has no price to buy at.
+        <span v-item-tip="{ name: family.opener!, type: family.ninjaType }">{{ family.opener }}</span> opens to {{ fmt(openerValue) }} on average<template v-if="family.lowConfidence && !countOf('yours')">, with every result counted as equally likely</template>. It has no price to buy at.
       </div>
 
       <WSkeleton v-if="!snapshot" :rows="8" />
@@ -312,7 +312,7 @@ const buy = computed(() => sortFlips<FlipRow | UpgradeRow>(buyList(rows.value, p
 const rareCheap = computed(() => pool.value ? rareCheapList(pool.value) : [])
 const odds = computed(() => pool.value ? flipOdds(pool.value) : null)
 // What the family's opener is worth used: the average result, after the sell discount.
-const openerValue = computed(() => family.value.opener && odds.value ? odds.value.saleValue : null)
+const openerValue = computed(() => family.value.opener && odds.value && odds.value.saleValue > 0 ? odds.value.saleValue : null)
 // Both bars use one scale, so a long value bar means more than a long chance bar.
 const oddsScale = computed(() => Math.max(...(odds.value?.buckets ?? []).flatMap(b => [b.chance, b.valueShare]), 0.0001))
 
@@ -410,7 +410,7 @@ const FlipName = defineComponent({
           ? h('i', { class: 'fas fa-star w-warn', style: 'flex: none; font-size: calc(11px * var(--w-text-scale, 1));', title: 'Exceptionally rare and cheap: it may rise later, so think before flipping it' })
           : null,
         p.source === 'estimate'
-          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight: uses the average of the others. Change it in Settings.' }, 'EST')
+          ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-warn);', title: 'No measured weight, so this is an estimate. Change it in Settings.' }, 'EST')
           : null,
         p.source === 'yours'
           ? h('span', { class: 'w-num', style: WEIGHT_CHIP + 'color: var(--w-info);', title: 'Your own weight, from Settings.' }, 'YOURS')

@@ -29,7 +29,8 @@ describe('flips in search', () => {
     expect(card.tip).toEqual({ name: 'Expedition Thread', type: 'Thread' })
     const row = card.sections[1].rows![0]
     expect(row.label).toBe('Vendor 3 for 1')
-    expect(row.value).toBe(`+${Number((((4 + 3.6) / 2 - 0.6) / 3).toFixed(2))}c each`)
+    // ((4 + 3.6) / 2 - 3 x 0.2) / 3 = 1.07, in the panel's rounding.
+    expect(row.value).toBe('+1.1c each')
     // Threads have no measured weights, and the card says so.
     expect(card.sections[2].text![0]).toMatch(/Low confidence/)
     expect(card.actions).toEqual([{ label: 'Open Flips', tool: 'woke-scarab-flip' }])
@@ -42,7 +43,7 @@ describe('flips in search', () => {
 
   it('shows tier upgrades with their result', () => {
     const [card] = lookup('clear oil', ctx)
-    expect(card.sections[1].rows![0]).toEqual({ label: 'Vendor up a tier to Sepia Oil', value: '+0.67c each' })
+    expect(card.sections[1].rows![0]).toEqual({ label: 'Vendor up a tier to Sepia Oil', value: '+0.7c each' })
   })
 
   it('answers "flips" with the best one, leaving low-confidence families out', () => {

@@ -539,7 +539,8 @@ test('pob: the passive tree in the overlay', async ({ overlay }) => {
 // ---- 4. Market ----
 
 test('market: the flips window', async ({ overlay }) => {
-  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
+  await deliriumPrices(overlay.page)
+  await overlay.boot({ overlayActive: true, widgets: [{ wmType: 'woke-scarab-flip', wmWants: 'show', family: 'delirium', anchor: { pos: 'tl', x: 8, y: 8 } } as never] })
   await backdrop(overlay, 'frames/town.jpg')
   const panel = overlay.widget('woke-scarab-flip')
   await expect(panel.getByText(/ worth (vendoring|rerolling|upgrading)$/)).toBeVisible()
@@ -558,6 +559,7 @@ test('market: uniques worth disenchanting', async ({ overlay }) => {
 })
 
 test('market: flips to buy, outlined in your stash', async ({ overlay }) => {
+  await deliriumPrices(overlay.page)
   await overlay.boot({ widgets: [{ wmType: 'woke-scarab-flip', stashHotkey: 'Alt + J', stashTotals: false } as never] })
   await overlay.showScreen('screens/stash-delirium-real.png')
   await overlay.pressHotkey('Alt + J')

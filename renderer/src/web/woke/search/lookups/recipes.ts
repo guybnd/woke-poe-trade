@@ -86,7 +86,7 @@ export const RECIPES: Recipe[] = [
   R('Ring or amulet with more chaos resistance', ['A magic or rare ring or amulet with chaos resistance', 'An Amethyst Flask', '1 Orb of Augmentation'], { note: 'One tier higher.', words: 'chaos res' }),
   // ---- 5 to 1, maps, timeless ----
   R('One unidentified item of that base', ['5 magic (or 5 rare) items of the same base type'], { note: 'Lowest item level of the five; no influence.', words: '5 to 1, five to one' }),
-  R('Random Thread', ['3 Threads'], { note: 'A different type from the ones sold. Added in 3.30.0c.', words: 'thread recipe, thread vendor', base: true }),
+  R('Random Thread', ['3 Threads'], { note: 'Added in 3.30.0c. Taken to give a different type from the ones sold, like the old scarab recipe.', words: 'thread recipe, thread vendor', base: true }),
   R('Lethal Pride', ['10 Timeless Karui Splinter'], { words: 'timeless jewel' }),
   R('Brutal Restraint', ['10 Timeless Maraketh Splinter'], { words: 'timeless jewel' }),
   R('Elegant Hubris', ['10 Timeless Eternal Empire Splinter'], { words: 'timeless jewel' }),
