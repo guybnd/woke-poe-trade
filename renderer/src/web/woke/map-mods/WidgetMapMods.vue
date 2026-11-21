@@ -1,6 +1,8 @@
 <template>
   <Widget :config="config" move-handles="corners" :inline-edit="false">
     <MapRegexBuilder :config="config" />
+    <!-- Inside the window: a second root would drop its id and v-show. The
+         badge is teleported and the dock icon registers itself. -->
     <MapScanLayer v-if="scanOwner" :config="config" />
   </Widget>
 </template>

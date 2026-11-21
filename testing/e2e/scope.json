@@ -177,6 +177,8 @@
    "renderer/src/web/woke/regex-library/"
   ],
   "map-mods-scan.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/price-check/",
    "renderer/src/web/woke/map-mods/",
    "renderer/src/web/woke/search/",
    "renderer/src/web/woke/settings/"

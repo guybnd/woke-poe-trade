@@ -11,7 +11,7 @@
       <span>Show the verdict strip on price check and item info</span>
     </label>
 
-    <section class="flex flex-col gap-2" data-testid="map-scan-settings">
+    <section v-if="scanOwner" class="flex flex-col gap-2" data-testid="map-scan-settings">
       <span class="w-group-label flex items-center gap-2" style="padding: 0;">Map scan <w-info text="Scan mode reads the tooltip of the map under your mouse with on-screen text recognition, so no key press is needed per map, and puts a verdict next to it from the active profile. Rerolling a map in place reads it again.&#10;&#10;Rolling mode locks onto one map's tooltip and re-reads only that box, for long reroll sessions.&#10;&#10;Start and stop it from the Maps tab of the Map mods window too. It needs Windows and the OCR files (Settings › Screen reading)." /></span>
       <div class="grid gap-2 items-center" style="grid-template-columns: auto 1fr;">
         <span>Hotkey: scan mode on / off</span>
@@ -66,7 +66,7 @@ import { WButton, WField, WInfo, WSelect } from '../ui'
 import { everyStatLine } from './data'
 import { copyOfProfile, deadRatings } from './rules'
 import type { JuiceWeights } from './rules'
-import { activeProfile, normalizeMapModsWidget } from './widget'
+import { activeProfile, normalizeMapModsWidget, MAP_MODS_TYPE } from './widget'
 import type { MapModsWidget } from './widget'
 
 const WEIGHT_KEYS: Array<keyof JuiceWeights> = ['quantity', 'rarity', 'packSize', 'currency', 'scarabs', 'maps', 'divCards']
@@ -91,6 +91,8 @@ export default defineComponent({
     const w = computed(() => props.configWidget)
     const profile = computed(() => activeProfile(w.value))
     const dead = computed(() => deadRatings(profile.value.ratings, everyStatLine()))
+    // Only the first Map mods window scans: its keys are the ones that work.
+    const scanOwner = computed(() => props.configWidget.wmId === props.config.widgets.find(_ => _.wmType === MAP_MODS_TYPE)?.wmId)
     const profileOptions = computed(() => w.value.profiles.map(p => ({ value: String(p.id), label: p.name || 'Unnamed' })))
 
     function nextId () { return Math.max(0, ...w.value.profiles.map(p => p.id)) + 1 }
@@ -104,6 +106,7 @@ export default defineComponent({
         profile.value.ratings = Object.fromEntries(Object.entries(profile.value.ratings).filter(([m]) => !gone.has(m)))
       },
       profileOptions,
+      scanOwner,
       WEIGHT_KEYS,
       WEIGHT_LABELS,
       hotkey: configModelValue(() => props.configWidget, 'hotkey'),

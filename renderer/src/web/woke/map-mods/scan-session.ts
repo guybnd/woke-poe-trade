@@ -179,8 +179,15 @@ export function clearScan (): () => void {
   return () => { entries.value = before.entries; rolls.value = before.rolls }
 }
 
+// The scanning window went away: stop main's scanner and forget its state,
+// since its events aren't listened to any more.
 export function stopScan () {
   if (running.value) hostRequest('map-scan-stop', null).catch(() => {})
+  running.value = false
+  paused.value = false
+  rolling.value = false
+  locked.value = false
+  current.value = null
 }
 
 let ocrProbed = false
@@ -193,11 +200,9 @@ export function probeOcr () {
     .catch(() => {})
 }
 
-let statusProbed = false
-// Once per app: is a scan already running in main (the overlay reloaded mid-scan)?
+// On each mount of the scan layer: is a scan already running in main (the
+// overlay reloaded mid-scan)?
 export function probeScan () {
-  if (statusProbed) return
-  statusProbed = true
   hostRequest('map-scan-status', null)
     .then(s => { running.value = s.running; paused.value = Boolean(s.paused); rolling.value = Boolean(s.rolling) })
     .catch(() => {})

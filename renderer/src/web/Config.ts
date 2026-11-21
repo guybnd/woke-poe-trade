@@ -581,7 +581,8 @@ function upgradeConfig (_config: Config): Config {
     foldMarketWindow(config.widgets as unknown as Array<Record<string, unknown> & { wmId: number, wmType: string }>)
   }
   // woke: Map scan is part of Map mods; its keys move there once.
-  if ((modules.woke?.version ?? 0) < 4) {
+  // A config with no woke block (APT's own) has never had a Map scan window.
+  if (modules.woke && (modules.woke.version ?? 0) < 4) {
     foldMapScan(config as unknown as Parameters<typeof foldMapScan>[0])
   }
   // woke: each tool has one name now.

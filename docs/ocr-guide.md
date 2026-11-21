@@ -2,7 +2,7 @@
 title: OCR Guide
 ---
 
-Map scan, essence scan and death recap read the game screen with OCR.
+Map scan (in Map mods), essence scan and death recap read the game screen with OCR.
 The installer ships the OCR files, and if they go missing (an antivirus can
 remove them) the app downloads them again on its own the first time a scan
 starts. This guide is for setting them up by hand when that download fails.

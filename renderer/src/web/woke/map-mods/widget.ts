@@ -53,11 +53,24 @@ export function initMapModsWidget (w: MapModsWidget) {
   w.profiles = [defaultProfile()]
   w.weights = { ...DEFAULT_JUICE_WEIGHTS }
   // Kept when set already: Map scan's keys carried over (Config.ts), or null
-  // because Map scan was switched off.
-  if (w.scanHotkey === undefined) w.scanHotkey = 'Alt + S'
-  if (w.scanRollHotkey === undefined) w.scanRollHotkey = 'Alt + R'
+  // because Map scan was switched off. Otherwise the defaults, when no other
+  // window has them: only the first Map mods window scans, and a key another
+  // tool uses isn't taken over.
+  const taken = takenKeys(w)
+  if (w.scanHotkey === undefined) w.scanHotkey = taken.has('Alt + S') ? null : 'Alt + S'
+  if (w.scanRollHotkey === undefined) w.scanRollHotkey = taken.has('Alt + R') ? null : 'Alt + R'
   if (typeof w.scanAlertOnPass !== 'boolean') w.scanAlertOnPass = true
   importAptOnce(w)
+}
+
+// Hotkeys the rest of the config uses ("Alt + S"), and every key of another
+// Map mods window (only the first one scans). Empty when the config isn't loaded.
+function takenKeys (w: MapModsWidget): Set<string> {
+  try {
+    const others = AppConfig().widgets.filter(_ => _.wmId !== w.wmId)
+    if (others.some(_ => _.wmType === MAP_MODS_TYPE)) return new Set(['Alt + S', 'Alt + R'])
+    return new Set([...JSON.stringify(others).matchAll(/"((?:[A-Z][a-z]+ \+ )+\w+)"/g)].map(m => m[1]))
+  } catch { return new Set() }
 }
 
 // APT's item info map check is replaced by this module: bring its ratings over.

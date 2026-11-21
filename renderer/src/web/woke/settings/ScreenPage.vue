@@ -31,7 +31,9 @@ import { hotkeyFields } from './hotkey-fields'
 
 const props = defineProps<{ config: Config }>()
 
-const scanModules = MODULES.filter(m => m.needs.includes('ocr'))
+// Map mods only reads the screen for map scan: its switch would turn off the
+// whole tool, so it's left to the Map mods page (clear its scan keys below).
+const scanModules = MODULES.filter(m => m.needs.includes('ocr') && m.id !== 'map-mods')
 function setOn (id: string, on: boolean) { setModuleOn(ensureWokeConfig(props.config), id, on) }
 
 // Essence scan's keys, and Map mods' scan keys (not its map check keys).
