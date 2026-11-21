@@ -4,7 +4,7 @@
     <DockItem ref="dockRef" id="session-story" title="Session story" :show="!!shown" :wm-id="config.wmId"
       :wake="store.finished.value" card-width="24rem" :menu="dockMenu">
       <template #card>
-        <NightCard v-if="shown" :story="shown.story" :live="shown.live" :farm="farmOf(shown.story)" :title="shown.live ? 'Tonight so far' : nightTitle(shown.story)" />
+        <TonightBand />
         <div :class="$style.cardGear">
           <!-- A text button: an icon button is a fixed square, and its label wrapped word by word. -->
           <WButton variant="ghost" size="sm" icon="fas fa-cog" :class="{ 'w-accent': cardGear }" data-chip-gear-card
@@ -68,6 +68,7 @@ import { hideWhilePlaying, showWithOverlay } from '../dock/dock'
 import { lineTime } from '../campaign/log-tail'
 import { followGameLog } from '../shared/game-log'
 import NightCard from './NightCard.vue'
+import TonightBand from './TonightBand.vue'
 import { NIGHT_GAP_MS, NightTracker } from './story'
 import type { NightStory } from './story'
 import { MapLog } from './map-log'
