@@ -25,7 +25,16 @@
         </span>
         <span v-else-if="shown.p.daily" class="w-dim">That day's last read</span>
         <span v-if="shown.p.spentDiv" :class="$style.spendText">Purchase: {{ fmt(shown.p.spentDiv) }}<Coin /> spent, not counted as a loss</span>
-        <span v-if="!pinned && shown.p.top.length && tipOf" class="w-dim">Click to keep this open</span>
+        <span v-if="!pinned && (shown.p.top.length && tipOf || (!shown.p.daily && shown.p.netDiv != null && spendAction?.(shown.p.at)))" class="w-dim">Click to keep this open</span>
+        <!-- Purchases (spend.ts): mark a losing refresh as one, with how much,
+             or say a purchase wasn't one. -->
+        <div v-if="pinAction" :class="$style.spendBar">
+          <template v-if="pinAction.mark === 'spend'">
+            <label :class="$style.spendAmount">Spent <input id="ledger-spend-amount" v-model.number="amountDiv" type="number" min="0" step="0.1" :class="$style.spendInput" aria-label="Amount spent"><Coin /></label>
+            <button type="button" :class="$style.spendBtn" @click="markSpend('spend', amountDiv)">Mark as purchase</button>
+          </template>
+          <button v-else type="button" :class="$style.spendBtn" @click="markSpend(pinAction.mark)">{{ pinAction.label }}</button>
+        </div>
       </div>
     </template>
     <div v-if="series.length < 2" :class="$style.empty" class="w-dim text-xs">The line fills in as you refresh.</div>
@@ -44,6 +53,7 @@ import Coin from './Coin.vue'
 import { tipPlacement } from './ledger'
 import type { SeriesPoint } from './ledger'
 import type { Category } from './valuation'
+import type { SpendMark } from './spend'
 
 const props = defineProps<{
   series: SeriesPoint[]
@@ -57,7 +67,11 @@ const props = defineProps<{
   // Always open the hover card below the line (the dock card scrolls, so
   // one above the chart would be cut off).
   tipBelow?: boolean
+  // A clicked point's purchase switch (spend.ts); left out: none.
+  spendAction?: (at: number) => { label: string, mark: SpendMark | null } | null
 }>()
+// Mark or unmark a refresh as a purchase; amount in the chart's unit.
+const emit = defineEmits<{ spend: [at: number, mark: SpendMark | null, amount?: number] }>()
 
 const W = 400
 const H = 80
@@ -79,6 +93,24 @@ const pinned = shallowRef<At | null>(null)
 const shown = computed(() => pinned.value ?? hover.value)
 const tipEl = shallowRef<HTMLElement | null>(null)
 const topTip = (t: string) => { const x = parseTop(t); return props.tipOf!(x.name, Math.abs(x.count)) }
+
+const pinAction = computed(() => {
+  const p = pinned.value?.p
+  if (!p || p.daily || p.netDiv == null || !props.spendAction) return null
+  return props.spendAction(p.at)
+})
+// The amount box starts at the whole drop.
+const amountDiv = shallowRef(0)
+watch(() => pinned.value?.p.at, () => {
+  const n = pinned.value?.p.netDiv
+  amountDiv.value = n != null && n < 0 ? Math.round(-n * 10) / 10 : 0
+})
+function markSpend (mark: SpendMark | null, amount?: number) {
+  const p = pinned.value?.p
+  if (!p) return
+  emit('spend', p.at, mark, amount != null && Number.isFinite(amount) && amount >= 0 ? amount : undefined)
+  pinned.value = null
+}
 
 function onClick (e: MouseEvent) {
   if (tipEl.value?.contains(e.target as Node)) return
@@ -188,6 +220,10 @@ function when (at: number) {
 .mark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--w-up); transform: translate(-50%, -50%); pointer-events: none; }
 .spend { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--w-info); opacity: .8; pointer-events: none; }
 .spendText { color: var(--w-info); }
+.spendBar { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.spendAmount { display: inline-flex; align-items: center; gap: 4px; color: var(--w-dim); }
+.spendInput { width: 56px; background: var(--w-panel-solid); color: var(--w-fg); border: 1px solid var(--w-line-strong); border-radius: var(--w-r-sm); padding: 0 4px; font: inherit; }
+.spendBtn { color: var(--w-accent); text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
 .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--w-fg); box-shadow: 0 0 0 2px var(--w-panel-solid), 0 0 0 3px var(--w-gold); transform: translate(-50%, -50%); pointer-events: none; }
 .tip {
   position: absolute; z-index: 5; pointer-events: none;

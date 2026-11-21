@@ -78,3 +78,13 @@ describe('session and per hour', () => {
     expect(playRate(pts, [], 0, 2 * H).perHour).toBeCloseTo(4.5 * DIV)
   })
 })
+
+describe('a purchase marked with an amount', () => {
+  it('leaves that much out, the rest of the drop still counts', () => {
+    expect(countedChaos({ netChaos: -30 * DIV, mark: 'spend', markChaos: 20 * DIV })).toBe(-10 * DIV)
+    expect(countedChaos({ netChaos: -30 * DIV, mark: 'spend', markChaos: 50 * DIV })).toBe(0)
+    expect(spentChaos({ netChaos: -30 * DIV, mark: 'spend', markChaos: 20 * DIV })).toBe(20 * DIV)
+    // Small ones too: any losing refresh can be marked.
+    expect(countedChaos({ netChaos: -40, mark: 'spend', markChaos: 40 })).toBe(0)
+  })
+})

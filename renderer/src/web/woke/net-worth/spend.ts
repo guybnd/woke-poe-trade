@@ -30,21 +30,26 @@ export interface SpendFields {
   // For a return: the chaos that cancelled earlier purchases.
   back?: number
   mark?: SpendMark
+  // With mark 'spend': how much you said you spent (chaos), from the chart.
+  markChaos?: number
 }
 
 const bar = (divine: number | null) => SPEND_MIN_DIV * (divine && divine > 0 ? divine : FALLBACK_DIVINE)
 
 // A purchase counts its non-currency part, at most 0: currency in a priced
-// item kept in the stash is a swap, never profit.
-function purchaseCounts (net: number, cash: number | undefined): number {
+// item kept in the stash is a swap, never profit. With an amount you typed,
+// that much is left out (the rest of the drop still counts).
+function purchaseCounts (net: number, cash: number | undefined, amount?: number): number {
   if (net >= 0) return net
+  if (amount != null && amount >= 0) return Math.min(0, net + amount)
   return cash != null && cash < 0 ? Math.min(0, net - cash) : 0
 }
 
 // What a refresh adds to profit (chaos).
 export function countedChaos (g: SpendFields): number {
   if (g.mark === 'counted') return g.netChaos
-  if (g.mark === 'spend' || g.auto === 'spend') return purchaseCounts(g.netChaos, g.cashChaos)
+  if (g.mark === 'spend') return purchaseCounts(g.netChaos, g.cashChaos, g.markChaos)
+  if (g.auto === 'spend') return purchaseCounts(g.netChaos, g.cashChaos)
   if (g.auto === 'return') return g.netChaos - (g.back ?? 0)
   return g.netChaos
 }
@@ -53,10 +58,6 @@ export function countedChaos (g: SpendFields): number {
 export function spentChaos (g: SpendFields): number {
   if (g.mark === 'counted' || !(g.mark === 'spend' || g.auto === 'spend')) return 0
   return Math.max(0, countedChaos(g) - g.netChaos)
-}
-
-export function isPurchase (g: SpendFields): boolean {
-  return g.mark !== 'counted' && (g.mark === 'spend' || g.auto === 'spend')
 }
 
 // The switch on a refresh in the change list: what it says and the mark a
@@ -85,6 +86,12 @@ export function classify (
     if (open > 0) return { auto: 'return', back: Math.min(net, cash, open) }
   }
   return {}
+}
+
+// What a purchase marked from the chart would leave out by default: the
+// whole drop (chaos), or null when the refresh didn't lose anything.
+export function defaultSpend (g: SpendFields): number | null {
+  return g.netChaos < 0 ? -g.netChaos : null
 }
 
 // Spent in the window before `at` and not come back yet.

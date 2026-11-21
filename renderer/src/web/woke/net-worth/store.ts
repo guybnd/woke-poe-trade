@@ -229,9 +229,11 @@ function spendOfPoint (g: StashGain | null): { counted?: number, spent?: number 
   return spent ? { counted, spent } : { counted }
 }
 
-// Your call on a refresh (null: back to the guess). Saves the gain and the
-// chart point, so profit per hour, the session and the session story follow.
-export function setSpendMark (at: number, mark: SpendMark | null) {
+// Your call on a refresh (null: back to the guess), and with 'spend' how much
+// you spent (chaos; left out: the whole drop, or its currency part). Saves the
+// gain and the chart point, so profit per hour, the session and the session
+// story follow.
+export function setSpendMark (at: number, mark: SpendMark | null, amountChaos?: number) {
   const id = loadedFor
   if (!id) return
   queue(async () => {
@@ -241,6 +243,8 @@ export function setSpendMark (at: number, mark: SpendMark | null) {
     if (i < 0) return
     const g: StashGain = { ...gains[i], mark: mark ?? undefined }
     if (!mark) delete g.mark
+    if (mark === 'spend' && amountChaos != null && Number.isFinite(amountChaos) && amountChaos >= 0) g.markChaos = amountChaos
+    else delete g.markChaos
     const nextGains = gains.map((x, j) => j === i ? g : x)
     try {
       await hostRequest('doc-put', { collection: COLLECTION, key: gainsKey(id), value: nextGains })

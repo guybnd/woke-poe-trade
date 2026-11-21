@@ -352,6 +352,7 @@ export interface StashGain {
   auto?: SpendKind
   back?: number
   mark?: SpendMark
+  markChaos?: number
 }
 
 const MAX_GAINS = 2000

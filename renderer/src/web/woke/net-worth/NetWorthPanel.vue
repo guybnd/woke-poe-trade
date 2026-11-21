@@ -51,7 +51,7 @@
               </span>
               <TextTabs v-model="range" :options="RANGE_OPTIONS" />
             </div>
-            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" />
+            <LedgerChart :series="series" :big="big" :mode="chartMode as 'total' | 'category'" :goal-div="goal?.div ?? null" :height="shown.perHour ? undefined : chartH" :class="{ [$style.chartFill]: shown.perHour }" :tip-of="(name, count) => tipFor(tips, null, name, count)" :spend-action="chartSpendAction" @spend="onChartSpend" />
             <div v-if="chartMode === 'category'" :class="$style.legend">
               <span v-for="c in CATEGORIES" :key="c.id"><i :style="{ background: CAT_COLOUR[c.id] }" />{{ c.label }}</span>
             </div>
@@ -217,6 +217,7 @@ import { bigGains, change24h, filterLines, selectedFirst, toggleTab, goalEta, gr
 import type { ChartRange, PriceMove } from './ledger'
 import { divine, gainsNow, historyNow, leagueNow, ledger, ratesAt, setIgnored, setMyPrice, setSpendMark, summary, tabValues, valuation, wantPrices } from './store'
 import { countedChaos, markAction, spentChaos } from './spend'
+import type { SpendMark } from './spend'
 import type { ChangeGroup } from './ledger'
 import { SECTIONS, hideBelowChaosOf, hideBelowOf, sectionOn, setSection, valueFloor } from './widget'
 import type { NetWorthWidget, ReaderStatus } from './widget'
@@ -468,6 +469,15 @@ const session = computed(() => {
   const divVal = toDiv(sessionChaos.value)
   return { div: divVal, ms, maps: s.maps, perHour: ms >= 10 * 60_000 ? divVal / (ms / 3_600_000) : null, spent: sessionSpent.value }
 })
+// The chart's purchase switch for a clicked point, and its click (amount in
+// the shown unit: divines, or chaos without a rate).
+function chartSpendAction (at: number) {
+  const x = gainAt.value.get(at)
+  return x ? markAction(x) : null
+}
+function onChartSpend (at: number, mark: SpendMark | null, amount?: number) {
+  setSpendMark(at, mark, amount == null ? undefined : divine.value ? amount * divine.value : amount)
+}
 // A group's refreshes that are purchases, returns or losses, each with its
 // switch (spend.ts).
 const gainAt = computed(() => new Map(gainsNow.value.map(g => [g.at, g])))
