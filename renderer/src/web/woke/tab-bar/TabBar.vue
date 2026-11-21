@@ -137,7 +137,7 @@
           <div :class="[$style.chips, $style.chipsWrap]" data-rail-theme>
             <button v-for="t in WOKE_LOOKS" :key="t.id" type="button" class="w-chip" :class="[$style.chip, { on: isLookPicked(t) }]" :aria-pressed="isLookPicked(t)" :title="`${t.label}: ${t.hint}`" @click="pickLook(t)">{{ t.short }}</button>
           </div>
-          <div :class="$style.chipHead">UI size <span :class="$style.chipNote">every window, as in Settings</span></div>
+          <div :class="$style.chipHead">UI size <span :class="$style.chipNote">panels, price check, pins</span></div>
           <div :class="$style.chips" data-rail-ui-size>
             <button type="button" class="w-chip" :class="$style.chip" aria-label="Everything smaller" title="Everything smaller"
               :disabled="uiSize <= MIN_UI_SIZE" @click="nudgeUiSize(-1)"><i class="fas fa-minus" /></button>
