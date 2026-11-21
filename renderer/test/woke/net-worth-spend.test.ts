@@ -112,3 +112,13 @@ describe('session total', () => {
     expect(gainsBetween(gains, 1, 2 * H).chaos).toBe(0)
   })
 })
+
+describe('chart range', () => {
+  it('3h shows only the last three hours of refreshes', async () => {
+    const { seriesFor } = await import('@/web/woke/net-worth/ledger')
+    const cats = { currency: 0, fragments: 0, cards: 0, gear: 0, other: 0 }
+    const pt = (at: number) => ({ at, chaos: 100, divine: 100, byCategory: cats, netChaos: 0, top: [] })
+    const now = 10 * H
+    expect(seriesFor([pt(now - 4 * H), pt(now - 2 * H), pt(now - H)], {}, '3h', now, 100).map(p => p.at)).toEqual([now - 2 * H, now - H])
+  })
+})

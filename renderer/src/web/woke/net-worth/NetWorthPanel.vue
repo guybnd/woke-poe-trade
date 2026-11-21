@@ -254,7 +254,7 @@ const CAT_COLOUR: Record<Category, string> = {
   other: 'var(--w-faint)'
 }
 const MODE_OPTIONS = [{ value: 'total', label: 'Total' }, { value: 'category', label: 'By category' }]
-const RANGE_OPTIONS = [{ value: '24h', label: '24h' }, { value: '7d', label: '7d' }, { value: 'league', label: 'League' }]
+const RANGE_OPTIONS = [{ value: '3h', label: '3h' }, { value: '24h', label: '24h' }, { value: '7d', label: '7d' }, { value: 'league', label: 'League' }]
 
 // ---------- the tab picker (WOKEPOET-209) ----------
 const picking = shallowRef(false)

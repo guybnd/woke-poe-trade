@@ -82,8 +82,8 @@ export function addPoint (points: LedgerPoint[], p: LedgerPoint): LedgerPoint[] 
     .map(x => x.top.length && p.at - x.at > TOP_KEPT_MS ? { ...x, top: [] } : x)
 }
 
-export type ChartRange = '24h' | '7d' | 'league'
-const RANGE_MS: Record<ChartRange, number> = { '24h': 86_400_000, '7d': 7 * 86_400_000, 'league': Infinity }
+export type ChartRange = '3h' | '24h' | '7d' | 'league'
+const RANGE_MS: Record<ChartRange, number> = { '3h': 3 * 3_600_000, '24h': 86_400_000, '7d': 7 * 86_400_000, 'league': Infinity }
 
 export interface SeriesPoint {
   at: number
