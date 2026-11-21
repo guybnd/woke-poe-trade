@@ -41,6 +41,18 @@ export interface WokePathStat {
   modified: number | null
 }
 
+// "Check for updates" (main/src/woke/update-check.ts). An installed build
+// reports what electron-updater did; a portable or development build compares
+// with GitHub's latest release and links to its page.
+export type WokeUpdateCheck =
+  // skipped: a newer version automatic updates skip (gone back from it).
+  { kind: 'up-to-date', current: string, skipped?: string } |
+  { kind: 'available', current: string, version: string, url: string } |
+  { kind: 'downloading', current: string, version: string } |
+  // blocked: waits while going back to the previous version.
+  { kind: 'downloaded', current: string, version: string, whenClosed: boolean, blocked?: boolean } |
+  { kind: 'error', current: string, message: string }
+
 // Going back to the previous release (main/src/woke/rollback.ts).
 export interface WokeRollbackState {
   // An installed build: the portable exe and dev builds can't go back.
@@ -56,6 +68,30 @@ export interface WokeRollbackState {
   error: string | null
   // Automatic updates skip this version and older.
   skip: string | null
+}
+
+export interface WokeIssueRequest {
+  kind: 'bug' | 'idea'
+  title: string
+  text: string
+  includeInfo: boolean
+  includeLog: boolean
+  // Modules on, league.
+  info?: string[]
+  // Account and character names to hide.
+  names?: string[]
+  open: boolean
+}
+
+export interface WokeIssue {
+  url: string
+  title: string
+  body: string
+  labels: string
+  // The whole log, put on the clipboard when only its end fits in the link.
+  clipboard: string | null
+  logLines: number
+  logLinesShown: number
 }
 
 export interface WokePendingCrash {
@@ -135,6 +171,7 @@ export interface WokeOps {
   'setup-prefs-set': Op<Record<string, unknown>, Json>
   'setup-open': Op<NoArgs, Ok>
   'app-restart': Op<NoArgs, Ok>
+  'update-check': Op<NoArgs, WokeUpdateCheck>
   'rollback-state': Op<NoArgs, WokeRollbackState>
   'rollback-start': Op<NoArgs, WokeRollbackState>
   'rollback-cancel': Op<NoArgs, WokeRollbackState>
@@ -142,8 +179,10 @@ export interface WokeOps {
   'setup-finish': Op<NoArgs, Ok>
   'crash-pending': Op<NoArgs, WokePendingCrash | null>
   'crash-dismiss': Op<NoArgs, Ok>
-  'crash-report': Op<{ id?: string | null, context?: string }, Ok>
+  'crash-report': Op<{ id?: string | null, context?: string, names?: string[] }, Ok>
   'crash-folder': Op<NoArgs, Ok>
+  // "Report an issue": builds the GitHub link (open: false, for the preview) or opens it.
+  'issue-report': Op<WokeIssueRequest, WokeIssue>
   'renderer-error': Op<{ text: string }, Ok>
 
   // Screen readers

@@ -19,7 +19,7 @@ import { OverlayWindow } from '../../main/src/windowing/OverlayWindow'
 import { GameConfig } from '../../main/src/host-files/GameConfig'
 import { GameLogWatcher } from '../../main/src/host-files/GameLogWatcher'
 import { Shortcuts } from '../../main/src/shortcuts/Shortcuts'
-import { initWoke, initWokeOverlay } from '../../main/src/woke'
+import { initWoke, initWokeOverlay, registerWokeHandler } from '../../main/src/woke'
 import { KeyToElectron } from '../../ipc/KeyToCode'
 import type { IpcEvent } from '../../ipc/types'
 import type { AppUpdater } from '../../main/src/AppUpdater'
@@ -255,7 +255,12 @@ function fixtureProxy (app: FakeApp) {
   })
 }
 
-const fakeUpdater = { info: { state: 'update-not-available', checkedAt: 0 }, checkAtStartup () {} } as unknown as AppUpdater
+// "Check for updates" always finds a newer release here (search-settings.spec.ts).
+const fakeUpdater = {
+  info: { state: 'update-not-available', checkedAt: 0 },
+  checkAtStartup () {},
+  checkNow: async () => ({ kind: 'available', current: '0.0.0-test', version: '9.9.9', url: 'https://github.com/guybnd/woke-poe-trade/releases/tag/v9.9.9' })
+} as unknown as AppUpdater
 
 let started: FakeApp | null = null
 
@@ -285,6 +290,8 @@ export async function startFakeApp (opts: FakeAppOptions): Promise<FakeApp> {
   const poeWindow = new GameWindow()
   fixtureProxy(app)
   initWoke(eventPipe, logger, poeWindow, gameLogWatcher)
+  // The real app registers this in initSetup (setup.ts), which needs Electron windows.
+  registerWokeHandler('update-check', async () => await fakeUpdater.checkNow())
 
   const overlay = new OverlayWindow(eventPipe, logger, poeWindow)
   initWokeOverlay(eventPipe, overlay)
