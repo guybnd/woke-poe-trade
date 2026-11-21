@@ -23,7 +23,6 @@ test.use({ deviceScaleFactor: 2 })
 // with the names their rail icons carry.
 const RAIL: Record<string, string> = {
   'woke-market-tracker': 'Market',
-  'woke-farming': 'Farming',
   'woke-map-mods': 'Map mods',
   'woke-essence-scan': 'Essence scan',
   'woke-loot-filter': 'Loot filter',

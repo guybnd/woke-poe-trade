@@ -98,10 +98,10 @@ describe('launcher groups', () => {
     expect(groups[4].items).toEqual([{ wmType: 'image-strip' }])
   })
 
-  it('puts Lab gems under Campaign & lab, Farming under Mapping and Wickerman under Economy', () => {
-    const groups = groupByModule([{ wmType: 'woke-lab-gems' }, { wmType: 'woke-farming' }, { wmType: 'woke-wickerman' }])
+  it('puts Lab gems under Campaign & lab, Map scan under Mapping and Wickerman under Economy', () => {
+    const groups = groupByModule([{ wmType: 'woke-lab-gems' }, { wmType: 'woke-map-scan' }, { wmType: 'woke-wickerman' }])
     expect(groups[0].items).toEqual([{ wmType: 'woke-wickerman' }])
-    expect(groups[1].items).toEqual([{ wmType: 'woke-farming' }])
+    expect(groups[1].items).toEqual([{ wmType: 'woke-map-scan' }])
     expect(groups[2].items).toEqual([{ wmType: 'woke-lab-gems' }])
   })
 

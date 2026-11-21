@@ -329,7 +329,7 @@ const verdictSub = computed(() => {
 const profitTitle = computed(() => {
   const { inputs } = method.value
   if (method.value.id === 'upgrade') return `What each item you put in makes: the price of the next tier after your sell discount, minus ${inputs} of this one, divided by ${inputs}.`
-  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & investments.'
+  if (method.value.lifeforce) return 'What each item makes: the return of a reroll, minus the item and the lifeforce. Lifeforce per item is in Settings, under Market & flips.'
   return `What each item you put in makes: the return of a recipe, minus its ${inputs} items, divided by ${inputs}.`
 })
 

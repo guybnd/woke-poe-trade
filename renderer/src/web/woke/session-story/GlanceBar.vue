@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-// Settings › Farming & sessions › "While in a map". Off unless turned on.
+// Settings › Sessions › "While in a map". Off unless turned on.
 import { computed, onUnmounted, shallowRef } from 'vue'
 import { formatChaos, formatClock } from '../ui/format'
 import { tickWhile } from '../dock/dock'

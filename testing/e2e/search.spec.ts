@@ -87,7 +87,7 @@ test('prices are grouped, and the detail shows every variant and its actions', a
 
   await box.fill('market')
   await expect(panel.getByRole('button', { name: /Market\s*Tool/ })).toBeVisible()
-  await expect(panel.getByRole('button', { name: /Market & investments/ })).toBeVisible()
+  await expect(panel.getByRole('button', { name: /Market & flips/ })).toBeVisible()
   await overlay.snap('search-tools')
 
   await box.fill('astral plate')
