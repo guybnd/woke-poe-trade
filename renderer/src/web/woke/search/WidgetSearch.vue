@@ -833,13 +833,14 @@ const details = computed(() => {
   }
 })
 const convCols = computed(() => conv.value ? (conv.value.rows[0].chaos != null ? 1 : 0) + (conv.value.rows[0].div != null ? 1 : 0) : 1)
-// Each new query picks the top result (Guy, 2026-11-21).
+// Each new query picks the top result, so Enter does what the first row says.
 // After picking an example, its answer card is what it was picked for.
 let showAnswer = false
 // A jump from a beast's recipes picks this entry once the list has it.
 let wantEntry: ((e: Entry) => boolean) | null = null
-// The query the list was last built for.
+// The query the list was last built for, and the row picked only for being on top.
 let listQuery = ''
+let autoTop: Entry | null = null
 watch(entries, (list) => {
   const id = selected.value?.id
   const wanted = wantEntry ? list.find(wantEntry) : undefined
@@ -847,12 +848,16 @@ watch(entries, (list) => {
   const answer = showAnswer ? list.find(e => e.kind === 'lookup' && !['Search the web', 'Things to try'].includes(e.card.group)) : undefined
   showAnswer = false
   const picked = id != null && id === pickedId ? selected.value : null
-  // Each keystroke picks the top result; a refresh with the same query
-  // (prices, a ticking countdown) keeps the row you're on.
+  // Each keystroke picks the top result. A refresh with the same query
+  // (prices landing, a ticking countdown) keeps a row you moved to, but not
+  // one that was only on top: "50d/c" typed before prices load still ends
+  // on its answer once they do.
   const typed = query.value !== listQuery
   listQuery = query.value
-  const keep = typed ? undefined : list.find(e => e.id === id)
+  const chosen = selected.value != null && selected.value !== autoTop
+  const keep = typed || !chosen ? undefined : list.find(e => e.id === id)
   selected.value = wanted ?? answer ?? keep ?? picked ?? list[0] ?? null
+  autoTop = !wanted && !answer && !keep && !picked ? selected.value : null
 })
 
 function move (dir: 1 | -1) {
