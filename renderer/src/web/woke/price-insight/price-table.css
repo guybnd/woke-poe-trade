@@ -270,6 +270,7 @@
 }
 .w-pc-travel:hover, .w-pc-travel.w-pc-travel-on { color: var(--w-accent); border-color: var(--w-line-strong); background: var(--w-accent-soft); }
 .w-pc-travel:disabled { cursor: progress; }
+.w-pc-travel-gap { display: inline-block; flex: none; width: 1.25rem; }
 .w-pc-travel:focus-visible { outline: 1px solid var(--w-accent); outline-offset: 1px; }
 .w-pc-travel-note { display: inline-block; max-width: 11em; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: var(--w-accent); }
 .w-pc-travel-note.w-pc-travel-warn { color: var(--w-warn); }

@@ -123,8 +123,7 @@
               </td>
               <td class="px-2">
                 <span class="w-pc-count">
-                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
-                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
+                  <!-- woke: the hideout / stash icon first, so it stays in one place whatever the count. -->
                   <span v-if="!row.lead.hasFee" :class="$style.stashListing" :title="row.lead.hasNote ? 'Stash listing' : 'Stash listing without a price note'">
                     <img :class="$style.stashIcon" src="/images/stash.png">
                     <i v-if="!row.lead.hasNote" class="fas fa-question" />
@@ -134,6 +133,9 @@
                     :disabled="travelState(row.lead.hideoutToken)?.kind === 'sending'"
                     title="Travel to the seller's hideout" aria-label="Travel to the seller's hideout"
                     @click.stop="travel(row.lead)"><i class="fas fa-door-open" /></button>
+                  <span v-else-if="anyIcon" class="w-pc-travel-gap" aria-hidden="true" />
+                  <span v-if="showCountBar" class="w-pc-count-bar" :class="{ invisible: row.count < 2 }"><span :style="{ width: Math.round(row.count / maxCount * 100) + '%' }" /></span>
+                  <span v-if="row.count >= (improved ? 2 : 3)" class="w-pc-count-n"><span class="font-sans">×</span>{{ row.count }}</span>
                   <span v-if="improved && row.dropped && FIX_TAG[row.dropped]" class="w-pc-tag">{{ FIX_TAG[row.dropped] }}</span>
                   <span v-if="row.lead.corrupted" class="w-pc-tag">Corrupted</span>
                 </span>
@@ -489,6 +491,8 @@ export default defineComponent({
     const scrollEl = shallowRef<HTMLElement | null>(null)
     const { width: tableWidth } = useElementSize(scrollEl)
 
+    // A row without a stash or hideout icon keeps its room, so the counts line up.
+    const anyIcon = computed(() => groupedResults.value.some(r => !r.hasFee || (r.hideoutToken && !r.isMine)))
     // A tag or stash icon in the count column leaves less room, so check every listing.
     const otherColumnsWidth = computed(() => {
       const listings = groupedResults.value
@@ -501,7 +505,7 @@ export default defineComponent({
       if (showSockets.value && showColours.value) width += WIDTH_SOCKET_DOTS
       if (widget.value.showSeller) width += WIDTH_SELLER
       if (listings.some(r => r.corrupted || insight.value.dropped.has(r.id))) width += WIDTH_TAG
-      if (listings.some(r => !r.hasFee || r.hideoutToken)) width += WIDTH_STASH_ICON
+      if (anyIcon.value) width += WIDTH_STASH_ICON
       return width
     })
     const columnCap = computed(() =>
@@ -628,6 +632,7 @@ export default defineComponent({
       allStale,
       allInstant: computed(() => rows.value.every(r => r.lead.hasFee)),
       // The stat columns need the bar's room.
+      anyIcon,
       showCountBar: computed(() => improved.value && maxCount.value > 1 && !shownColumns.value.length),
       showItemLevel,
       showQuality,
@@ -743,7 +748,9 @@ export default defineComponent({
   filter: grayscale(1) opacity(0.5);
   display: inline-block;
   max-width: none;
+  width: 1.25rem;
   height: 1.25rem;
+  object-fit: contain;
   vertical-align: bottom;
 }
 
