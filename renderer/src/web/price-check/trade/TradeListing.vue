@@ -207,7 +207,7 @@ import PriceDrivers from '@/web/woke/price-insight/PriceDrivers.vue'
 import { priceView } from '@/web/woke/price-insight/view'
 import { useInsight } from '@/web/woke/price-insight/useInsight'
 import { buildInsight, FIX_TAG, toChaos } from '@/web/woke/price-insight/insight'
-import { groupListings, sortRowsByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
+import { groupListings, sortByValue, rowTitle, ListingRow } from '@/web/woke/price-insight/listing-rows'
 import { pickStatColumns, listingStatValue, listingStatLabel, formatStatValue, statTone, statColumnsThatFit, StatColumn } from '@/web/woke/price-insight/stat-columns'
 import { useSwap } from '@/web/woke/harvest-swap/useSwap'
 import { nowMinute } from '@/web/woke/ui/format'
@@ -448,7 +448,7 @@ export default defineComponent({
     // woke: improved merges a price into one row; classic stays one row per listing.
     // The trade site orders by its own currency ratios; re-sort what's fetched by
     // poe.ninja's rates so chaos and divine prices interleave by real value.
-    const rows = computed(() => sortRowsByValue(groupListings(groupedResults.value, {
+    const rows = computed(() => sortByValue(groupListings(groupedResults.value, {
       now: nowMinute.value,
       merge: improved.value,
       dropped: insight.value.dropped,
@@ -464,7 +464,7 @@ export default defineComponent({
         for (const col of shownColumns.value) parts.push(formatStatValue(statValue(r, col), col))
         return parts.join('|')
       }
-    }), insightOptions.value.divine ? (l) => toChaos(l.priceAmount, l.priceCurrency, insightOptions.value) : null))
+    }), insightOptions.value.divine ? (row) => toChaos(row.lead.priceAmount, row.lead.priceCurrency, insightOptions.value) : null))
 
     // Fading only helps when something stays bright: a dead market gets a note instead.
     const allStale = computed(() => rows.value.length > 0 && rows.value.every(r => r.band === 'stale'))

@@ -129,23 +129,7 @@ export function rowTitle<T extends RowListing> (row: ListingRow<T>): string | un
  */
 export function sortByValue<T> (items: readonly T[], chaosOf: ((item: T) => number | null) | null): T[] {
   if (!chaosOf) return [...items]
-  return items
-    .map((item, idx) => ({ item, idx, chaos: chaosOf(item) }))
-    .sort((a, b) => {
-      if (a.chaos == null || b.chaos == null) {
-        if (a.chaos != null) return -1
-        if (b.chaos != null) return 1
-        return a.idx - b.idx
-      }
-      return (a.chaos - b.chaos) || (a.idx - b.idx)
-    })
-    .map(e => e.item)
-}
-
-/** Rows by their lead's value: every member of a merged row has the same price. */
-export function sortRowsByValue<T extends RowListing> (
-  rows: ReadonlyArray<ListingRow<T>>,
-  chaosOf: ((l: T) => number | null) | null
-): Array<ListingRow<T>> {
-  return sortByValue(rows, chaosOf && (row => chaosOf(row.lead)))
+  // Unvalued items count as Infinity; two of them give NaN, which falls back to index order.
+  const value = items.map(item => chaosOf(item) ?? Infinity)
+  return items.map((_, i) => i).sort((a, b) => (value[a] - value[b]) || (a - b)).map(i => items[i])
 }
