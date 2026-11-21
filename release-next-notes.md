@@ -19,3 +19,4 @@
 - Session analytics: a Nights tab lists every night with its own strip, time, maps and profit. Click one to show it at the top of the window, then click its maps to find them in Map history.
 - Session story: an optional bar at the top of the screen while you're in a map, with the map, its minutes and tonight's maps and profit. It never takes the mouse and sits alongside the after-map toast. Turn it on under the map settings (dock card › After a map, or Settings › Farming & sessions).
 - Ctrl+Space search: "maps" opens Map history, and each map in the card has a Show button that opens Map history at that map's row. The tonight card can open Map history too.
+- Session story no longer has a window of its own. Its dock icon is now called Session analytics and works the same way (tonight's card, the after-map line), and clicking it opens Session analytics on Map history. Its menu's All nights opens the Nights tab.

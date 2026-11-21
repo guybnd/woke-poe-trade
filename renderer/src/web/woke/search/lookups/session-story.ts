@@ -1,6 +1,5 @@
 // The night so far, or the last one, from Session story.
 import { formatChaos, formatClock, formatDuration } from '../../ui/format'
-import { SESSION_STORY_TYPE } from '../../session-story/widget'
 import { ANALYTICS_TYPE } from '../../analytics/types'
 import type { NightStory } from '../../session-story/story'
 import { tierText, usualMapMs } from '../../session-story/map-log'
@@ -50,7 +49,7 @@ export function sessionStoryLookup (live: NightStory | null, last: NightStory | 
       sub: `${formatDuration(s.endedAt - s.startedAt)} · ${s.maps.length} maps${s.profitChaos != null ? ` · ${signed(s.profitChaos, s.divine)}` : ''}`,
       icon: 'fas fa-moon',
       sections: [{ rows: rows(s) }],
-      actions: [{ label: 'Open Session story', tool: SESSION_STORY_TYPE }, { label: 'Map history', open: { tool: ANALYTICS_TYPE, id: 'history' } }]
+      actions: [{ label: 'Open Session analytics', open: { tool: ANALYTICS_TYPE, id: 'history' } }]
     }]
   }
 }
