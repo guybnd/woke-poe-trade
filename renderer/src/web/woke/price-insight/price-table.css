@@ -25,6 +25,18 @@
 .w-pc-toolbar .w-pc-matched b { font-weight: 600; color: var(--w-fg); font-variant-numeric: tabular-nums; }
 /* The filter's label gives way first, so the controls on the right never clip. */
 .w-pc-toolbar .w-pc-online { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+/* Bulk: a small bordered chip like the affix caps; lit while on. */
+.w-pc-toolbar .w-pc-bulk {
+  padding: 0 6px;
+  border: 1px solid var(--w-chip-line);
+  border-radius: 3px;
+  color: var(--w-dim);
+  font-family: var(--w-label);
+  font-size: .85em;
+  line-height: 1.5;
+}
+.w-pc-toolbar .w-pc-bulk:hover { color: var(--w-fg); }
+.w-pc-toolbar .w-pc-bulk.on { color: var(--w-gold-hi, var(--w-fg)); border-color: var(--w-gold); }
 
 :root:not([data-woke-theme="classic"]) .w-pc-online-btn {
   display: inline-flex;

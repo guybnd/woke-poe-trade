@@ -294,6 +294,12 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "price-check-bulk.spec.ts": [
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/"
+  ],
   "price-check-poe-first.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
