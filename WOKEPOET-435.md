@@ -8,7 +8,7 @@ assignee: unassigned
 tags:
   - ui
 createdBy: Agent
-updatedBy: Agent
+updatedBy: claude-code@guy-pc
 parentId: WOKEPOET-434
 history:
   - type: activity
@@ -55,6 +55,6 @@ needsAction: null
 claim:
   holder: claude-code@guy-pc
   claimedAt: '2026-11-21T06:07:07.904Z'
-  expiresAt: '2026-11-21T06:49:54.768Z'
+  expiresAt: '2026-11-21T07:17:57.926Z'
 ---
 New Session window: live band (current map, timer, profit) + NightCard strip and totals on top; tabs Tonight / Nights / Maps / Strategies / Decks reuse the existing analytics tab bodies. Dock icon and map toast open it at Tonight. Old windows untouched.
