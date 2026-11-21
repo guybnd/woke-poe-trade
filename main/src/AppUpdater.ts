@@ -510,7 +510,9 @@ export class AppUpdater {
       return await checkLatestRelease(current, async (url, init) => await net.fetch(url, init))
     }
     await this.check()
-    return fromUpdaterInfo(this._info, current)
+    // The version this check skipped, while it is still skipped.
+    const skipped = this.loggedSkip != null && isSkipped(this.loggedSkip, this.rollback.skipped) ? this.loggedSkip : null
+    return fromUpdaterInfo(this._info, current, skipped)
   }
 
   private check = async () => {

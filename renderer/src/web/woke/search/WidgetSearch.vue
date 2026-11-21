@@ -154,7 +154,7 @@ import { whenIdle } from '../shared/perf'
 import { nudgeUiSize, uiSize } from '../ui/ui-size'
 import { PAGES } from '../settings/pages'
 import { settingsHits } from './settings-index'
-import { checkLine, runUpdateCheck } from '../settings/update-check'
+import { runUpdateCheck } from '../settings/update-check'
 import { ICON_TOOL_NAMES, iconFor, parseWidgetTitle } from '../tab-bar/tools'
 import { pastedItemText } from './pasted-item'
 import { holdPricesForSearch, useSearchSnapshot } from '../market/price-index'
@@ -424,12 +424,9 @@ function commandEntries (): ActionEntry[] {
     about: 'Asks for a new version now and opens Settings > Install & updates with the answer.',
     verb: 'Check now',
     action: () => {
+      void runUpdateCheck()
       const settings = wm.widgets.value.find(w => w.wmType === 'settings')
-      const done = runUpdateCheck()
-      if (!settings) {
-        void done.then(r => { toast(checkLine(r).text, { ms: 4000 }) })
-        return
-      }
+      if (!settings) return
       wm.setFlag(settings.wmId, 'settings::page=install', true)
       wm.setFlag(settings.wmId, 'settings::find=Check for updates', true)
       wm.show(settings.wmId)

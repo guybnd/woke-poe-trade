@@ -19,6 +19,14 @@ describe('fromUpdaterInfo', () => {
     expect(fromUpdaterInfo({ state: 'error', checkedAt: 1 }, CUR).kind).toBe('error')
     expect(fromUpdaterInfo({ state: 'checking-for-update' }, CUR).kind).toBe('error')
   })
+
+  it('names a skipped version and a download held by going back', () => {
+    expect(fromUpdaterInfo({ state: 'update-not-available', checkedAt: 1 }, CUR, '1.330.13'))
+      .toEqual({ kind: 'up-to-date', current: CUR, skipped: '1.330.13' })
+    expect(fromUpdaterInfo({ state: 'update-downloaded', version: '1.330.13', whenClosed: true, blocked: true }, CUR))
+      .toEqual({ kind: 'downloaded', current: CUR, version: '1.330.13', whenClosed: false, blocked: true })
+    expect(fromUpdaterInfo({ state: 'error', checkedAt: 1 }, CUR)).toMatchObject({ message: expect.not.stringMatching(/GitHub/) })
+  })
 })
 
 describe('fromLatestRelease', () => {

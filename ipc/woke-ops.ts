@@ -45,10 +45,12 @@ export interface WokePathStat {
 // reports what electron-updater did; a portable or development build compares
 // with GitHub's latest release and links to its page.
 export type WokeUpdateCheck =
-  { kind: 'up-to-date', current: string } |
+  // skipped: a newer version automatic updates skip (gone back from it).
+  { kind: 'up-to-date', current: string, skipped?: string } |
   { kind: 'available', current: string, version: string, url: string } |
   { kind: 'downloading', current: string, version: string } |
-  { kind: 'downloaded', current: string, version: string, whenClosed: boolean } |
+  // blocked: waits while going back to the previous version.
+  { kind: 'downloaded', current: string, version: string, whenClosed: boolean, blocked?: boolean } |
   { kind: 'error', current: string, message: string }
 
 // Going back to the previous release (main/src/woke/rollback.ts).

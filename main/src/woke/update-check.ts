@@ -16,20 +16,23 @@ export function releasePage (version: string): string {
 }
 
 const NO_ANSWER = "Couldn't reach GitHub. Check the connection and try again."
+const UPDATER_FAILED = 'The update check failed. Try again later.'
 
 // What electron-updater's state says once its check is done.
-export function fromUpdaterInfo (info: UpdateInfo, current: string): WokeUpdateCheck {
+export function fromUpdaterInfo (info: UpdateInfo, current: string, skipped: string | null = null): WokeUpdateCheck {
   switch (info.state) {
     case 'update-not-available':
-      return { kind: 'up-to-date', current }
+      return skipped ? { kind: 'up-to-date', current, skipped } : { kind: 'up-to-date', current }
     case 'update-available':
       return info.noDownloadReason == null
         ? { kind: 'downloading', current, version: info.version }
         : { kind: 'available', current, version: info.version, url: releasePage(info.version) }
     case 'update-downloaded':
-      return { kind: 'downloaded', current, version: info.version, whenClosed: info.whenClosed === true }
+      return info.blocked === true
+        ? { kind: 'downloaded', current, version: info.version, whenClosed: false, blocked: true }
+        : { kind: 'downloaded', current, version: info.version, whenClosed: info.whenClosed === true }
     case 'error':
-      return { kind: 'error', current, message: NO_ANSWER }
+      return { kind: 'error', current, message: UPDATER_FAILED }
     default:
       // Still checking (a check already under way didn't finish in time).
       return { kind: 'error', current, message: 'No answer yet. Try again in a moment.' }

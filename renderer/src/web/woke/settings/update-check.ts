@@ -13,11 +13,17 @@ export interface CheckLine {
 
 export function checkLine (r: WokeUpdateCheck): CheckLine {
   switch (r.kind) {
-    case 'up-to-date': return { text: `Up to date (${r.current}).`, link: null, tone: 'ok' }
+    case 'up-to-date': return {
+      text: r.skipped ? `Up to date (${r.current}). Skipping ${r.skipped}: you went back from it.` : `Up to date (${r.current}).`,
+      link: null,
+      tone: 'ok'
+    }
     case 'available': return { text: `${r.version} available.`, link: { label: 'Download', url: r.url }, tone: 'new' }
     case 'downloading': return { text: `Downloading ${r.version}.`, link: null, tone: 'new' }
     case 'downloaded': return {
-      text: r.whenClosed
+      text: r.blocked
+        ? `${r.version} is downloaded and waits while going back to the previous version.`
+        : r.whenClosed
         ? `${r.version} will install when Path of Exile is closed, or when you quit.`
         : `${r.version} will install when you quit.`,
       link: null,
