@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-155
 title: 'F. Flips for 3.30: retire scarabs, add Threads, fix Delirium'
-status: In Progress
+status: Done
 priority: Medium
 effort: None
 assignee: unassigned
@@ -85,8 +85,56 @@ history:
     to: In Progress
     user: Agent
     date: '2026-11-21T13:27:25.175Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 739 merged: Threads tab, no Scarabs, Delirium/Catalyst fixes,
+      Ctrl+Space flips, Threads on the mechanics card. Adversarial review done
+      and fixed; CI green.
+    date: '2026-11-21T13:58:09.118Z'
+    completionComment: true
+    id: c-2026-11-21t13-58-09-118z
+  - type: status_change
+    from: In Progress
+    to: Ready
+    user: Agent
+    date: '2026-11-21T13:58:09.118Z'
+  - type: comment
+    user: Agent
+    comment: >-
+      Flips for 3.30 (PR 739): Scarabs tab removed; Threads tab (3-for-1 vendor,
+      equal weights, low confidence, out of the dock best flip, Frayed Thread
+      opener line); Delirium cut to the 11 drop-enabled orbs (Threaded keeps
+      Skittering's weight); Sinistral/Dextral catalysts out; Ctrl+Space flip
+      cards and "flips"; Thread recipe in, 3-maps recipe out; old Scarab stash
+      tab gives a note; League mechanics card finds Threads under poe.ninja's
+      Thread type. Open: Guy to confirm the Thread recipe's exact rule (mockup
+      https://claude.ai/artifact/5EcnAvCUWUgW9Mop5mSMoz). Not done: main-process
+      scarab stash layout retirement (needs a 3.30 Fragment tab screenshot);
+      Astrolabes tab left out (400 Primal reroll never pays).
+    completionComment: true
+    date: '2026-11-21T13:58:23.104Z'
+    id: c-2026-11-21t13-58-23-104z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-21T13:58:23.492Z'
 swimlane: null
 needsAction: null
+reviewState: approved
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/739'
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 > TL;DR: the Scarabs tab already hides itself (#266). The other 3.30 changes Flips needs are below. The Threads tab waits on Guy's yes.
 
