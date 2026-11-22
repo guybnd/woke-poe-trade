@@ -7,8 +7,11 @@
           <span class="w-dim text-xs mr-1">I want</span>
           <WChip v-for="g in PLAN_GOALS" :key="g" clickable :active="state.goal === g" @click="setGoal(g)">{{ BONUS_LABEL[g] }}</WChip>
         </div>
-        <div class="w-dim text-xs w-full">
-          T17 mods that give it. Untick the ones your build can't run: they're avoided. Mods you rated avoid in Maps start unticked.
+        <div class="flex items-center gap-2 w-full">
+          <span class="w-dim text-xs flex-1">
+            T17 mods that give it. Untick the ones your build can't run: they're avoided. Mods you rated avoid in Maps start unticked.
+          </span>
+          <WButton v-if="handTicked" size="sm" variant="ghost" title="Tick and untick by your Maps ratings again" @click="resetTicks">Reset ticks</WButton>
         </div>
       </div>
       <div :class="$style.list" class="w-scroll">
@@ -66,7 +69,7 @@
           <span class="w-num" :class="search.tooLong ? 'w-down' : 'w-dim'">{{ search.tooLong ? 'too long' : `${search.length} / ${MAX_SEARCH_LENGTH}` }}</span>
         </div>
         <div v-if="search.tooLong" class="w-down text-xs">
-          The stash search can't count, so "{{ state.need }} of {{ ticked.size }}" needs a term per group of mods. Tick fewer mods, lower the counts, or use the trade search.
+          The stash search can't count, so "{{ state.need }} of {{ ticked.size }}" needs a term for every group of mods. Tick fewer mods, lower the counts, or use the trade search below.
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <WButton size="sm" variant="primary" :icon="copied ? 'fas fa-check' : 'far fa-copy'" :disabled="!usable" @click="copy">Copy</WButton>
@@ -76,7 +79,8 @@
       <section :class="$style.pane">
         <span class="w-group-label" style="padding: 0;">Trade search</span>
         <div class="w-dim text-xs">T17 maps with {{ tradeWords }}. The trade site counts the mods itself, so any number works.</div>
-        <WButton size="sm" variant="primary" icon="fas fa-external-link-alt" :disabled="!ticked.size" @click="openTrade">Search trade</WButton>
+        <div v-if="problem" class="w-warn text-xs">{{ problem }}</div>
+        <WButton size="sm" variant="primary" icon="fas fa-external-link-alt" :disabled="!ticked.size || !!problem" @click="openTrade">Search trade</WButton>
       </section>
     </div>
   </div>
@@ -93,7 +97,7 @@ import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { BONUS_LABEL, MORE_LABEL, bonusOf, bonusWords, loadMapBonuses, mapBonusData } from './bonuses'
 import type { BonusKey, MapBonusMod } from './bonuses'
-import { DEFAULT_PLANNER, PLAN_GOALS, isTicked, planRows, planStashSearch, planTradeQuery, toggled } from './planner'
+import { DEFAULT_PLANNER, PLAN_GOALS, isTicked, planProblem, planRows, planStashSearch, planTradeQuery, toggled } from './planner'
 import type { PlanGoal, PlanRow, PlannerState } from './planner'
 import { MAX_SEARCH_LENGTH } from './regex'
 import { allAreaMods, allMapNames } from './data'
@@ -106,7 +110,10 @@ const SHORT: Record<string, string> = { d: 'Drops', r: 'Rarity', p: 'Pack', curr
 
 loadMapBonuses().catch(() => {})
 const data = mapBonusData
-const state = computed<PlannerState>(() => ({ ...DEFAULT_PLANNER, ...props.profile.planner }))
+const state = computed<PlannerState>(() => {
+  const s = { ...DEFAULT_PLANNER, ...props.profile.planner }
+  return PLAN_GOALS.includes(s.goal) ? s : { ...s, goal: DEFAULT_PLANNER.goal }
+})
 function set (patch: Partial<PlannerState>) {
   props.profile.planner = { ...state.value, ...patch }
 }
@@ -129,6 +136,11 @@ function tipOf (r: PlanRow): string {
 }
 const countOptions = (max: number) => Array.from({ length: max + 1 }, (_, i) => ({ value: String(i), label: String(i) }))
 
+const problem = computed(() => planProblem(rows.value, ticked.value, state.value))
+const handTicked = computed(() => !!(state.value.on?.length || state.value.off?.length))
+function resetTicks () {
+  set({ on: [], off: [] })
+}
 const universe = computed(() => allAreaMods())
 const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames()))
 const usable = computed(() => !!search.value.text && !search.value.tooLong)
@@ -147,7 +159,7 @@ const tradeWords = computed(() => {
   const parts = [`${s.need} or more of the ${ticked.value.size} ticked mods`]
   if (s.pre) parts.push(`${s.pre}+ ticked prefixes`)
   if (s.suf) parts.push(`${s.suf}+ ticked suffixes`)
-  if (s.total) parts.push(`${s.total}%+ ${s.goal in MORE_LABEL ? `more ${MORE_LABEL[s.goal as keyof typeof MORE_LABEL]}` : BONUS_LABEL[s.goal].toLowerCase()}`)
+  if (s.total) parts.push(`${s.total}%+ more ${MORE_LABEL[s.goal]}`)
   return parts.join(', ')
 })
 const leagues = useLeagues()
@@ -155,6 +167,7 @@ function openTrade () {
   const league = leagues.selectedId.value
   if (!league) { toast('Pick a league in the settings first'); return }
   const q = planTradeQuery(rows.value, ticked.value, state.value)
+  if (!q) return
   window.open(tradeUrl(league, { ...q, status: priceCheckTradeStatus() }, getTradeEndpoint()))
 }
 </script>

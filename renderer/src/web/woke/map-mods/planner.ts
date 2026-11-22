@@ -14,8 +14,10 @@ import { MAX_SEARCH_LENGTH, MIN_PREFIX, TOOLTIP_LINES, atLeast, uniqueToken } fr
 import type { MinStat } from './regex'
 import type { ModRating } from './rules'
 
-export type PlanGoal = 'currency' | 'maps' | 'threads' | 'd' | 'r' | 'p'
-export const PLAN_GOALS: PlanGoal[] = ['currency', 'maps', 'threads', 'd', 'r', 'p']
+// Only T17 mods give these, each its own amount. Atlas Drops, rarity and pack
+// size come with every mod, so they're columns, not goals.
+export type PlanGoal = 'currency' | 'maps' | 'threads'
+export const PLAN_GOALS: PlanGoal[] = ['currency', 'maps', 'threads']
 
 export interface PlannerState {
   goal: PlanGoal
@@ -35,15 +37,12 @@ export interface PlannerState {
 export const DEFAULT_PLANNER: PlannerState = { goal: 'currency', need: 2, pre: 0, suf: 0, total: 0 }
 
 // The map property line each goal's total is on.
-export const GOAL_MIN: Record<PlanGoal, MinStat> = { currency: 'currency', maps: 'maps', threads: 'scarabs', d: 'quantity', r: 'rarity', p: 'packSize' }
+export const GOAL_MIN: Record<PlanGoal, MinStat> = { currency: 'currency', maps: 'maps', threads: 'scarabs' }
 // The trade site's filter for that total.
 const GOAL_TRADE: Record<PlanGoal, string> = {
   currency: 'pseudo.pseudo_map_more_currency_drops',
   maps: 'pseudo.pseudo_map_more_map_drops',
-  threads: 'pseudo.pseudo_map_more_scarab_drops',
-  d: 'item.map_atlas_drops',
-  r: 'item.map_item_rarity',
-  p: 'item.map_pack_size'
+  threads: 'pseudo.pseudo_map_more_scarab_drops'
 }
 
 export interface PlanRow {
@@ -108,15 +107,15 @@ function combos<T> (arr: T[], k: number): T[][] {
   return [...combos(rest, k - 1).map(c => [head, ...c]), ...combos(rest, k)]
 }
 
-// "At least k of these" as stash terms; null when there aren't k of them.
-// Too many terms to ever fit come back as Infinity-long.
-export function atLeastTerms (tokens: string[], k: number): string[] | null {
+// "At least k of these" as stash terms; null when there aren't k of them,
+// 'too-many' when it would take more terms than could ever fit.
+export function atLeastTerms (tokens: string[], k: number): string[] | null | 'too-many' {
   if (k <= 0) return []
   if (k > tokens.length) return null
   const size = tokens.length - k + 1
   if (size === tokens.length) return [`"${tokens.join('|')}"`]
-  // Past ~40 terms it's far over 250 characters anyway.
-  if (binomial(tokens.length, size) > 40) return ['…'.repeat(MAX_SEARCH_LENGTH + 1)]
+  // Even 3-letter tokens: 20 terms of 3 are over 250 characters.
+  if (binomial(tokens.length, size) > 20) return 'too-many'
   return combos(tokens, size).map(c => `"${c.join('|')}"`)
 }
 
@@ -124,6 +123,17 @@ function binomial (n: number, k: number): number {
   let r = 1
   for (let i = 1; i <= k; i++) r = r * (n - k + i) / i
   return r
+}
+
+// Why the counts can't be met by the ticked mods, for both searches.
+export function planProblem (rows: PlanRow[], ticked: Set<string>, state: PlannerState): string | null {
+  const on = rows.filter(r => ticked.has(r.key))
+  if (state.need > on.length) return `Tick at least ${state.need} mods.`
+  const pre = on.filter(r => r.prefix).length
+  if (state.pre > pre) return `Tick at least ${state.pre} prefixes (${pre} ticked).`
+  const suf = on.length - pre
+  if (state.suf > suf) return `Tick at least ${state.suf} suffixes (${suf} ticked).`
+  return null
 }
 
 export interface PlanSearch {
@@ -138,8 +148,9 @@ export interface PlanSearch {
 // `universe`: every map mod line, `extra`: other tooltip text (map names).
 export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: PlannerState, universe: string[], extra: string[]): PlanSearch {
   const tokens: Record<string, string> = {}
-  const own = new Map<string, string[]>()
-  for (const r of rows) own.set(r.key, r.matchers)
+  const none = (problem: string, tooLong = false): PlanSearch => ({ text: '', length: 0, tooLong, problem, tokens })
+  const problem = planProblem(rows, ticked, state)
+  if (problem) return none(problem)
   const tokenOf = (r: PlanRow): string | null => {
     const mine = new Set(r.matchers.map(m => m.toLowerCase()))
     const others = [...universe.filter(u => !mine.has(u.toLowerCase())), ...TOOLTIP_LINES, ...extra]
@@ -150,20 +161,20 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
     }
     return null
   }
-  const on = rows.filter(r => ticked.has(r.key))
-  const offRows = rows.filter(r => !ticked.has(r.key))
-  const onTok = on.map(r => ({ r, t: tokenOf(r) })).filter((x): x is { r: PlanRow, t: string } => !!x.t)
+  const on = rows.filter(r => ticked.has(r.key)).map(r => ({ r, t: tokenOf(r) }))
+  const lost = on.filter(x => !x.t).map(x => x.r.key)
+  if (lost.length) return none(`No stash search text for ${lost.join(', ')}. Untick it or use the trade search.`)
+  const onTok = on as Array<{ r: PlanRow, t: string }>
   const terms: string[] = []
-  const groups: Array<[string[] | null, string]> = [
-    [atLeastTerms(onTok.map(x => x.t), state.need), `Tick at least ${state.need} mods.`],
-    [atLeastTerms(onTok.filter(x => x.r.prefix).map(x => x.t), state.pre), `Tick at least ${state.pre} prefixes.`],
-    [atLeastTerms(onTok.filter(x => !x.r.prefix).map(x => x.t), state.suf), `Tick at least ${state.suf} suffixes.`]
-  ]
-  for (const [g, why] of groups) {
-    if (!g) return { text: '', length: 0, tooLong: false, problem: why, tokens }
-    terms.push(...g)
+  for (const g of [
+    atLeastTerms(onTok.map(x => x.t), state.need),
+    atLeastTerms(onTok.filter(x => x.r.prefix).map(x => x.t), state.pre),
+    atLeastTerms(onTok.filter(x => !x.r.prefix).map(x => x.t), state.suf)
+  ]) {
+    if (g === 'too-many') return none('Too many combinations for a stash search.', true)
+    if (g) terms.push(...g)
   }
-  const avoid = offRows.map(tokenOf).filter((t): t is string => !!t)
+  const avoid = rows.filter(r => !ticked.has(r.key)).map(tokenOf).filter((t): t is string => !!t)
   if (avoid.length) terms.push(`"!${[...new Set(avoid)].join('|')}"`)
   if (state.total > 0) terms.push(`"${MIN_PREFIX[GOAL_MIN[state.goal]]}${atLeast(state.total)}%"`)
   const text = [...new Set(terms)].join(' ')
@@ -173,25 +184,28 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
 // MAX filters the trade site takes in one search.
 const MAX_TRADE_FILTERS = 35
 
+// null when the counts can't be met (planProblem says why).
 export function planTradeQuery (rows: PlanRow[], ticked: Set<string>, state: PlannerState) {
+  if (planProblem(rows, ticked, state)) return null
   const ids = (list: PlanRow[]) => [...new Set(list.map(r => r.tradeId).filter((id): id is string => !!id))]
   const on = rows.filter(r => ticked.has(r.key))
   const stats: Array<{ type: string, value?: { min: number }, filters: Array<{ id: string, value?: { min: number } }> }> = []
+  // The total and the avoided mods first, so the counts are what a long list cuts.
+  if (state.total > 0) stats.push({ type: 'and', filters: [{ id: GOAL_TRADE[state.goal], value: { min: state.total } }] })
+  const off = ids(rows.filter(r => !ticked.has(r.key)))
+  if (off.length) stats.push({ type: 'not', filters: off.map(id => ({ id })) })
   const count = (list: PlanRow[], min: number) => {
     const f = ids(list)
-    if (min > 0 && f.length) stats.push({ type: 'count', value: { min: Math.min(min, f.length) }, filters: f.map(id => ({ id })) })
+    if (min > 0 && f.length) stats.push({ type: 'count', value: { min }, filters: f.map(id => ({ id })) })
   }
   count(on, state.need)
   count(on.filter(r => r.prefix), state.pre)
   count(on.filter(r => !r.prefix), state.suf)
-  const off = ids(rows.filter(r => !ticked.has(r.key)))
-  if (off.length) stats.push({ type: 'not', filters: off.map(id => ({ id })) })
-  if (state.total > 0) stats.push({ type: 'and', filters: [{ id: GOAL_TRADE[state.goal], value: { min: state.total } }] })
-  // Keep within the site's filter limit: drop from the end of the last groups.
   let used = 0
   for (const s of stats) {
     s.filters = s.filters.slice(0, Math.max(0, MAX_TRADE_FILTERS - used))
     used += s.filters.length
+    if (s.value) s.value.min = Math.min(s.value.min, s.filters.length)
   }
   return {
     filters: {

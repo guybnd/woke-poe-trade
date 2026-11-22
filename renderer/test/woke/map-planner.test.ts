@@ -27,7 +27,7 @@ describe('at least k of n', () => {
   it('passes exactly the maps with k or more', () => {
     const toks = ['a', 'b', 'c', 'd', 'e']
     for (const k of [1, 2, 3]) {
-      const terms = atLeastTerms(toks, k)!
+      const terms = atLeastTerms(toks, k) as string[]
       for (let n = 0; n <= toks.length; n++) {
         for (const have of subsets(toks, n)) expect(passes(terms, new Set(have)), `${k} of ${have.join()}`).toBe(n >= k)
       }
@@ -82,19 +82,25 @@ describe('planner searches', () => {
   it('says when the counts can\'t be met, and when it is too long', () => {
     expect(planStashSearch(rows, new Set(['Fecund']), { ...DEFAULT_PLANNER, need: 2 }, allAreaMods(), allMapNames()).problem).toBe('Tick at least 2 mods.')
     const many = new Set(rows.map(r => r.key))
-    expect(planStashSearch(rows, many, { ...DEFAULT_PLANNER, need: 3 }, allAreaMods(), allMapNames()).tooLong).toBe(true)
+    const long = planStashSearch(rows, many, { ...DEFAULT_PLANNER, need: 3 }, allAreaMods(), allMapNames())
+    expect(long).toMatchObject({ tooLong: true, text: '' })
+    // The trade search still works, and both refuse counts the ticks can't meet.
+    expect(planTradeQuery(rows, many, { ...DEFAULT_PLANNER, need: 3 })).not.toBeNull()
+    const twoSuffixes = new Set(['Fecund', 'of Imbibing'])
+    expect(planTradeQuery(rows, twoSuffixes, { ...DEFAULT_PLANNER, need: 1, suf: 2 })).toBeNull()
+    expect(planStashSearch(rows, twoSuffixes, { ...DEFAULT_PLANNER, need: 1, suf: 2 }, allAreaMods(), allMapNames()).problem).toBe('Tick at least 2 suffixes (1 ticked).')
   })
 
   it('trade query counts the ticked mods on T17 maps', () => {
     const q = planTradeQuery(rows, ticked, { ...DEFAULT_PLANNER, need: 2, pre: 1, total: 100 })
-    expect(q.filters.map_filters.filters.map_tier).toEqual({ min: 17, max: 17 })
-    const [count, pre, not, total] = q.stats
+    expect(q!.filters.map_filters.filters.map_tier).toEqual({ min: 17, max: 17 })
+    const [total, not, count, pre] = q!.stats
     expect(count).toMatchObject({ type: 'count', value: { min: 2 } })
     expect(count.filters).toHaveLength(4)
     expect(pre).toMatchObject({ type: 'count', value: { min: 1 } })
     expect(pre.filters).toHaveLength(2)
     expect(not.type).toBe('not')
     expect(total).toEqual({ type: 'and', filters: [{ id: 'pseudo.pseudo_map_more_currency_drops', value: { min: 100 } }] })
-    expect(q.stats.reduce((n, s) => n + s.filters.length, 0)).toBeLessThanOrEqual(35)
+    expect(q!.stats.reduce((n, s) => n + s.filters.length, 0)).toBeLessThanOrEqual(35)
   })
 })
