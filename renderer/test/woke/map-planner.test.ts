@@ -4,9 +4,9 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadGameData } from '../helpers/game-data'
-import { allAreaMods, allMapNames } from '@/web/woke/map-mods/data'
+import { allMapNames } from '@/web/woke/map-mods/data'
 import type { MapBonusData } from '@/web/woke/map-mods/bonuses'
-import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, toggled } from '@/web/woke/map-mods/planner'
+import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, toggled } from '@/web/woke/map-mods/planner'
 import type { PlannerState } from '@/web/woke/map-mods/planner'
 
 beforeAll(loadGameData)
@@ -61,6 +61,15 @@ describe('planner rows', () => {
   })
 })
 
+describe('pack size goal', () => {
+  it('lists the T17 mods with big pack size only', () => {
+    const rows = planRows(data, 'p')
+    expect(rows.length).toBeGreaterThan(5)
+    expect(rows.every(r => r.value >= 10)).toBe(true)
+    expect(rows[0].value).toBe(20)
+  })
+})
+
 describe('planner searches', () => {
   let rows: ReturnType<typeof planRows> = []
   beforeAll(() => { rows = planRows(data, 'currency') })
@@ -69,7 +78,7 @@ describe('planner searches', () => {
   const ticked = new Set(pick)
 
   it('builds a stash search that fits for 2 of 4, with a suffix and a total', () => {
-    const s = planStashSearch(rows, ticked, { ...DEFAULT_PLANNER, need: 2, suf: 1, total: 100 }, allAreaMods(), allMapNames())
+    const s = planStashSearch(rows, ticked, { ...DEFAULT_PLANNER, need: 2, suf: 1, total: 100 }, planUniverse(data), allMapNames())
     expect(s.problem).toBeUndefined()
     expect(s.tooLong).toBe(false)
     // 4 terms for 2-of-4, 1 for the suffixes, the avoided rest, the total.
@@ -79,16 +88,30 @@ describe('planner searches', () => {
     for (const k of pick) expect(s.tokens[k], k).toBeTruthy()
   })
 
+  it('short T17-only tokens fit 2 of 6 with an avoid and a total', () => {
+    const six = new Set(['of Defiance', 'Fecund', 'Stalwart', 'Ultimate', 'of the Juggernaut', 'of Imbibing'])
+    const s = planStashSearch(rows, six, { ...DEFAULT_PLANNER, need: 2, total: 100 }, planUniverse(data), allMapNames())
+    expect(s.tooLong).toBe(false)
+    // Each token stays unique among T17 lines: it can't count another mod.
+    const lines = planUniverse(data).map(l => l.toLowerCase())
+    for (const [mod, tok] of Object.entries(s.tokens)) {
+      const re = new RegExp(tok, 'i')
+      const row = rows.find(r => r.key === mod)!
+      const own = [...row.matchers, ...row.wordings].map(m => m.toLowerCase())
+      expect(lines.filter(l => !own.includes(l) && re.test(l.replace(/#/g, '10'))), mod).toEqual([])
+    }
+  })
+
   it('says when the counts can\'t be met, and when it is too long', () => {
-    expect(planStashSearch(rows, new Set(['Fecund']), { ...DEFAULT_PLANNER, need: 2 }, allAreaMods(), allMapNames()).problem).toBe('Tick at least 2 mods.')
+    expect(planStashSearch(rows, new Set(['Fecund']), { ...DEFAULT_PLANNER, need: 2 }, planUniverse(data), allMapNames()).problem).toBe('Tick at least 2 mods.')
     const many = new Set(rows.map(r => r.key))
-    const long = planStashSearch(rows, many, { ...DEFAULT_PLANNER, need: 3 }, allAreaMods(), allMapNames())
+    const long = planStashSearch(rows, many, { ...DEFAULT_PLANNER, need: 3 }, planUniverse(data), allMapNames())
     expect(long).toMatchObject({ tooLong: true, text: '' })
     // The trade search still works, and both refuse counts the ticks can't meet.
     expect(planTradeQuery(rows, many, { ...DEFAULT_PLANNER, need: 3 })).not.toBeNull()
     const twoSuffixes = new Set(['Fecund', 'of Imbibing'])
     expect(planTradeQuery(rows, twoSuffixes, { ...DEFAULT_PLANNER, need: 1, suf: 2 })).toBeNull()
-    expect(planStashSearch(rows, twoSuffixes, { ...DEFAULT_PLANNER, need: 1, suf: 2 }, allAreaMods(), allMapNames()).problem).toBe('Tick at least 2 suffixes (1 ticked).')
+    expect(planStashSearch(rows, twoSuffixes, { ...DEFAULT_PLANNER, need: 1, suf: 2 }, planUniverse(data), allMapNames()).problem).toBe('Tick at least 2 suffixes (1 ticked).')
   })
 
   it('trade query counts the ticked mods on T17 maps', () => {

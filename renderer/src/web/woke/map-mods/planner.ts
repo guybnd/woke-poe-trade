@@ -14,10 +14,11 @@ import { MAX_SEARCH_LENGTH, MIN_PREFIX, TOOLTIP_LINES, atLeast, uniqueToken } fr
 import type { MinStat } from './regex'
 import type { ModRating } from './rules'
 
-// Only T17 mods give these, each its own amount. Atlas Drops, rarity and pack
-// size come with every mod, so they're columns, not goals.
-export type PlanGoal = 'currency' | 'maps' | 'threads'
-export const PLAN_GOALS: PlanGoal[] = ['currency', 'maps', 'threads']
+// Only T17 mods give the more-X bonuses. Pack size comes with every mod, but a
+// few T17 mods give 17-20% against the usual 5%, so it's a goal too; Atlas Drops
+// and rarity barely differ, so they're columns only.
+export type PlanGoal = 'currency' | 'maps' | 'threads' | 'p'
+export const PLAN_GOALS: PlanGoal[] = ['currency', 'maps', 'threads', 'p']
 
 export interface PlannerState {
   goal: PlanGoal
@@ -37,12 +38,13 @@ export interface PlannerState {
 export const DEFAULT_PLANNER: PlannerState = { goal: 'currency', need: 2, pre: 0, suf: 0, total: 0 }
 
 // The map property line each goal's total is on.
-export const GOAL_MIN: Record<PlanGoal, MinStat> = { currency: 'currency', maps: 'maps', threads: 'scarabs' }
+export const GOAL_MIN: Record<PlanGoal, MinStat> = { currency: 'currency', maps: 'maps', threads: 'scarabs', p: 'packSize' }
 // The trade site's filter for that total.
 const GOAL_TRADE: Record<PlanGoal, string> = {
   currency: 'pseudo.pseudo_map_more_currency_drops',
   maps: 'pseudo.pseudo_map_more_map_drops',
-  threads: 'pseudo.pseudo_map_more_scarab_drops'
+  threads: 'pseudo.pseudo_map_more_scarab_drops',
+  p: 'item.map_pack_size'
 }
 
 export interface PlanRow {
@@ -50,13 +52,15 @@ export interface PlanRow {
   key: string
   // The mod's lines as Map mods lists them (this language), one per stat.
   matchers: string[]
+  // Every wording of those stats ("reduced" for "increased" too).
+  wordings: string[]
   // The trade site's stat for its first line.
   tradeId: string | null
   value: number
   prefix: boolean
 }
 
-let byRef: Map<string, { matchers: string[], tradeId: string | null }> | null = null
+let byRef: Map<string, { matchers: string[], all: string[], tradeId: string | null }> | null = null
 function statsOf (ref: string) {
   // Built once the stat data is in (an empty map would stick).
   if (!byRef?.size) {
@@ -65,6 +69,7 @@ function statsOf (ref: string) {
       if (!stat.fromAreaMods) continue
       byRef.set(stat.ref, {
         matchers: stat.matchers.filter(m => !m.negate).map(m => m.string),
+        all: stat.matchers.map(m => m.string),
         tradeId: stat.trade?.ids?.explicit?.[0] ?? null
       })
     }
@@ -72,7 +77,8 @@ function statsOf (ref: string) {
   return byRef.get(ref)
 }
 
-// T17 mods that give the goal, best first.
+// T17 mods that give a real share of the goal (half the best one's or more:
+// for pack size, the 17-20% ones, not the 5% every mod gives), best first.
 export function planRows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] {
   if (!data) return []
   const rows: PlanRow[] = []
@@ -83,9 +89,34 @@ export function planRows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] 
     const stats = mod.refs.map(statsOf)
     const matchers = stats.map(s => s?.matchers[0]).filter((m): m is string => !!m)
     if (!matchers.length) continue
-    rows.push({ mod, key: mod.n, matchers, tradeId: stats[0]?.tradeId ?? null, value, prefix: mod.g === 1 })
+    rows.push({ mod, key: mod.n, matchers, wordings: stats.flatMap(s => s?.all ?? []), tradeId: stats[0]?.tradeId ?? null, value, prefix: mod.g === 1 })
   }
-  return rows.sort((a, b) => b.value - a.value || a.key.localeCompare(b.key))
+  const best = Math.max(0, ...rows.map(r => r.value))
+  return rows.filter(r => r.value * 2 >= best).sort((a, b) => b.value - a.value || a.key.localeCompare(b.key))
+}
+
+// Other lines a T17 map's tooltip can show besides its T17 mods: its
+// corruption implicits (poedb, 3.30).
+const T17_OTHER_LINES = [
+  'Area contains # additional guarded Exquisite Vaal Vessels',
+  'Unique Monsters drop Corrupted Items',
+  "Players' Vaal Skills do not apply Soul Gain Prevention",
+  'Atlas Passives have #% increased Effect on Area',
+  'Area is affected by # additional random Unallocated Notable Atlas Passives'
+]
+
+// What a T17 map's search must not match by mistake. Only T17 mods roll on T17
+// maps (poedb: regular map mods have spawn weight 0 for uber_tier_map), so the
+// tokens need only differ from those, which makes them much shorter than
+// tokens unique among every map mod.
+export function planUniverse (data: MapBonusData | null): string[] {
+  if (!data) return []
+  const out = new Set<string>(T17_OTHER_LINES)
+  for (const mod of data.mods) {
+    if (!mod.t.includes('t17')) continue
+    for (const ref of mod.refs) for (const m of statsOf(ref)?.all ?? []) out.add(m)
+  }
+  return [...out]
 }
 
 export function isTicked (row: PlanRow, state: PlannerState, ratings: Record<string, ModRating>): boolean {
@@ -152,7 +183,7 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
   const problem = planProblem(rows, ticked, state)
   if (problem) return none(problem)
   const tokenOf = (r: PlanRow): string | null => {
-    const mine = new Set(r.matchers.map(m => m.toLowerCase()))
+    const mine = new Set([...r.matchers, ...r.wordings].map(m => m.toLowerCase()))
     const others = [...universe.filter(u => !mine.has(u.toLowerCase())), ...TOOLTIP_LINES, ...extra]
     // The first line that has a token of its own stands for the mod.
     for (const m of r.matchers) {

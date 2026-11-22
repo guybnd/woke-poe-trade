@@ -9,7 +9,7 @@
         </div>
         <div class="flex items-center gap-2 w-full">
           <span class="w-dim text-xs flex-1">
-            T17 mods that give it. Untick the ones your build can't run: they're avoided. Mods you rated avoid in Maps start unticked.
+            T17 mods that give it{{ state.goal === 'p' ? ' (the 17-20% ones; every mod gives about 5%)' : '' }}. Untick the ones your build can't run: they're avoided. Mods you rated avoid in Maps start unticked.
           </span>
           <WButton v-if="handTicked" size="sm" variant="ghost" title="Tick and untick by your Maps ratings again" @click="resetTicks">Reset ticks</WButton>
         </div>
@@ -97,10 +97,10 @@ import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { BONUS_LABEL, MORE_LABEL, bonusOf, bonusWords, loadMapBonuses, mapBonusData } from './bonuses'
 import type { BonusKey, MapBonusMod } from './bonuses'
-import { DEFAULT_PLANNER, PLAN_GOALS, isTicked, planProblem, planRows, planStashSearch, planTradeQuery, toggled } from './planner'
+import { DEFAULT_PLANNER, PLAN_GOALS, isTicked, planProblem, planRows, planStashSearch, planTradeQuery, planUniverse, toggled } from './planner'
 import type { PlanGoal, PlanRow, PlannerState } from './planner'
 import { MAX_SEARCH_LENGTH } from './regex'
-import { allAreaMods, allMapNames } from './data'
+import { allMapNames } from './data'
 import type { MapModProfile, ModRating } from './rules'
 
 const props = defineProps<{ profile: MapModProfile, ratings: Record<string, ModRating> }>()
@@ -141,7 +141,7 @@ const handTicked = computed(() => !!(state.value.on?.length || state.value.off?.
 function resetTicks () {
   set({ on: [], off: [] })
 }
-const universe = computed(() => allAreaMods())
+const universe = computed(() => planUniverse(data.value))
 const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames()))
 const usable = computed(() => !!search.value.text && !search.value.tooLong)
 
@@ -159,7 +159,7 @@ const tradeWords = computed(() => {
   const parts = [`${s.need} or more of the ${ticked.value.size} ticked mods`]
   if (s.pre) parts.push(`${s.pre}+ ticked prefixes`)
   if (s.suf) parts.push(`${s.suf}+ ticked suffixes`)
-  if (s.total) parts.push(`${s.total}%+ more ${MORE_LABEL[s.goal]}`)
+  if (s.total) parts.push(`${s.total}%+ ${s.goal === 'p' ? 'pack size' : `more ${MORE_LABEL[s.goal]}`}`)
   return parts.join(', ')
 })
 const leagues = useLeagues()
