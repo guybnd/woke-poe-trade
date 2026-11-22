@@ -8,14 +8,14 @@
       <component :is="c.filter ? 'button' : 'span'" v-for="c of model.bigs" :key="c.key"
         :type="c.filter ? 'button' : undefined" :data-cell="c.key"
         :class="[$style.big, cellClass(c)]" :title="cellTitle(c)">
-        <span><span :class="$style.v">{{ c.text }}</span> <span :class="$style.k">{{ c.label }}</span></span>
+        <span><span :class="$style.v">{{ c.text }}</span> <MaxMark :c="c" /> <span :class="$style.k">{{ c.label }}</span></span>
         <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
       </component>
       <span v-if="model.chips.length" :class="$style.chips">
         <component :is="c.filter ? 'button' : 'span'" v-for="c of model.chips" :key="c.key"
           :type="c.filter ? 'button' : undefined" :data-cell="c.key"
           :class="[$style.chip, cellClass(c)]" :title="cellTitle(c)">
-          <span>{{ c.text }} <span :class="$style.ck">{{ c.label }}</span></span>
+          <span>{{ c.text }} <MaxMark :c="c" /> <span :class="$style.ck">{{ c.label }}</span></span>
           <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
         </component>
       </span>
@@ -27,7 +27,7 @@
       <component :is="c.filter ? 'button' : 'span'" v-for="c of model.legend" :key="c.key"
         :type="c.filter ? 'button' : undefined" :data-cell="c.key"
         :class="[$style.mini, cellClass(c)]" :title="cellTitle(c)">
-        <span><i :class="$style.sw" :style="{ background: c.color }" /><span :class="$style.n">{{ c.text }}</span> {{ c.label }}</span>
+        <span><i :class="$style.sw" :style="{ background: c.color }" /><span :class="$style.n">{{ c.text }}</span> <MaxMark :c="c" /> {{ c.label }}</span>
         <span :class="[$style.track, { [$style.off]: c.fill == null }]"><b :style="barStyle(c)" /></span>
       </component>
     </div>
@@ -35,12 +35,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useCssModule } from 'vue'
+import { computed, h, useCssModule, type FunctionalComponent } from 'vue'
 import type { HeaderCell, HeaderModel } from './stat-header'
 import { notePick, pickFixed } from './stat-header'
 
 const props = defineProps<{ model: HeaderModel }>()
 const $style = useCssModule()
+
+// The max after a number: a quiet "/ 2410", or a MAX tag once it's there.
+const MaxMark: FunctionalComponent<{ c: HeaderCell }> = ({ c }) => {
+  if (!c.max) return null
+  return c.atMax
+    ? h('span', { class: $style.atmax, 'data-max': c.max }, 'MAX')
+    : h('span', { class: $style.mx, 'data-max': c.max }, ['/ ', h('b', c.max)])
+}
+MaxMark.props = ['c']
 
 const cells = computed(() => {
   const m = props.model
@@ -53,10 +62,15 @@ function cellClass (c: HeaderCell) {
 
 function cellTitle (c: HeaderCell) {
   const name = c.name ?? c.label
-  if (!c.filter) return `${name}: nothing on this item can change it`
+  const max = c.max
+    ? (c.atMax ? `${name} ${c.text}: at its max (${c.maxNote}).
+` : `${name} ${c.text} of a possible ${c.max}: max is ${c.maxNote}.
+`)
+    : ''
+  if (!c.filter) return max + `${name}: nothing on this item can change it`
   if (c.fixed && c.filter.disabled) return `${name} is the same on every copy unless a corruption, enchant or quality raised it. Click to search at least yours.`
   const bar = (c.fill == null) ? ' Grey bar: nothing on this item can roll it.' : ' Bar: how close its rolls came to their max.'
-  return (c.filter.disabled
+  return max + (c.filter.disabled
     ? `Click to search ${name}. Searches only when you press Search.`
     : `Click to stop searching ${name}.`) + bar
 }
@@ -117,6 +131,23 @@ function onClick (e: MouseEvent) {
   color: var(--w-dim);
 }
 .ck { letter-spacing: .05em; }
+/* The max after a number: quieter than the number, never competing with it. */
+.mx {
+  font: 500 var(--w-fs-sm, 12px) var(--w-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--w-faint);
+  white-space: nowrap;
+}
+.mx > b { font-weight: 500; color: var(--w-dim); }
+.atmax {
+  font: 700 var(--w-fs-xs) var(--w-small);
+  letter-spacing: .08em;
+  padding: 0 4px;
+  border-radius: var(--w-r-sm, 2px);
+  color: var(--w-accent-fg);
+  background: var(--w-gold-hi);
+  vertical-align: 2px;
+}
 .chips { margin-left: auto; display: flex; gap: 6px; }
 .chip {
   display: flex;
