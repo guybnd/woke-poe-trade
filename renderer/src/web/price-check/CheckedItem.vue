@@ -50,6 +50,7 @@
       ref="filtersComponent"
       :filters="itemFilters"
       :stats="rowStats"
+      :local-rows="localRows"
       :on-strip="!!stripProps || !!item.mapCompletionReward"
       :item="item"
       :presets="presets"
@@ -63,7 +64,7 @@
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
       <div class="flex" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
-        <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+        <button class="btn w-pc-primary" :class="{ 'w-pc-glow': searchGlow }" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
       <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed.
            Outside the hover area above, so reaching it doesn't start a plain search. -->
@@ -98,6 +99,7 @@
       :stale="resultsStale"
       :narrow="narrowed"
       :dim="resultsDimmed"
+      @glow="searchGlow = $event"
       @reset="resetTradeResults">
       <template v-if="itemFilters.affixCaps" #toolbar>
         <filter-affix-caps class="w-pc-caps" :caps="itemFilters.affixCaps" />
@@ -125,7 +127,7 @@
 </template>
 
 <script lang="ts">
-import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance, toRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
@@ -412,6 +414,10 @@ export default defineComponent({
     })
     const narrowed = computed(() => resultsState.value?.kind === 'narrowed' ? resultsState.value : null)
     const resultsDimmed = computed(() => resultsStale.value && resultsState.value?.kind === 'stale')
+    // The rows filtering here get a mark in the filters.
+    const localRows = computed(() => narrowed.value?.checks.map(c => toRaw(c.row)) ?? [])
+    // Search glows when only a new search can help: dimmed results, or a filtered list with nothing left to load.
+    const searchGlow = ref(false)
 
     watch(() => [props.item, JSON.stringify(itemFilters.value.trade)], (curr, prev) => {
       const cItem = curr[0]; const pItem = prev[0]
@@ -507,6 +513,8 @@ export default defineComponent({
       resultsState,
       resultsDimmed,
       narrowed,
+      localRows,
+      searchGlow,
       searchStatusSlot,
       doSearch,
       canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),

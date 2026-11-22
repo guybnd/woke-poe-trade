@@ -5,7 +5,7 @@ import { test, expect } from './harness'
 
 const LIMITS = { 'x-rate-limit-rules': 'Ip', 'x-rate-limit-ip': '100:1:0', 'x-rate-limit-ip-state': '1:1:0' }
 
-// Twelve listings with 115 to 126 maximum Life.
+// Thirty listings with 115 to 144 maximum Life; a check loads the first 20.
 async function fakeTrade (page: Page) {
   const calls = { search: 0, fetch: 0 }
   await page.route('**/api/trade/search/**', (route) => {
@@ -13,7 +13,7 @@ async function fakeTrade (page: Page) {
     return route.fulfill({
       contentType: 'application/json',
       headers: LIMITS,
-      body: JSON.stringify({ id: 'q', total: 40, result: Array.from({ length: 12 }, (_, i) => `r${i}`) })
+      body: JSON.stringify({ id: 'q', total: 30, result: Array.from({ length: 30 }, (_, i) => `r${i}`) })
     })
   })
   await page.route('**/api/trade/fetch/**', (route) => {
@@ -51,22 +51,27 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   await overlay.copyItem('items/rare-body-armour-es.txt')
   const panel = overlay.widget('price-check')
   await panel.getByRole('button', { name: 'Search', exact: true }).click()
-  await expect(panel).toContainText('Matched: 40')
+  await expect(panel).toContainText('Matched: 30')
   const listings = panel.locator('.w-pc-table tbody tr[data-item-tip]')
-  await expect(listings).toHaveCount(12)
+  await expect(listings).toHaveCount(20)
   const searches = calls.search
   const fetches = calls.fetch
 
-  const lifeMin = panel.locator('[data-stat-row]').filter({ hasText: 'total maximum Life' }).locator('input.w-roll-input').first()
+  const lifeRow = panel.locator('[data-stat-row]').filter({ hasText: 'total maximum Life' }).first()
+  const lifeMin = lifeRow.locator('input.w-roll-input').first()
   await lifeMin.fill('121')
 
-  // 121 to 126: six fit. No dimming, and the row says it was filtered here.
+  // 121 to 134 of the loaded 115 to 134: fourteen fit. Not dimmed; the count, the
+  // column header and the mod row say it's filtered here.
   const status = panel.locator('.w-pc-status')
-  await expect(status).toContainText('Filtered here')
-  await expect(status).toContainText('6 of 12 loaded fit')
-  await expect(listings).toHaveCount(6)
+  await expect(status).toContainText('14 of 20 here')
+  await expect(listings).toHaveCount(14)
   await expect(panel.locator('.w-pc-results-stale')).toHaveCount(0)
-  await expect(panel.locator('.w-pc-foot')).toContainText('6 of 12 loaded listings fit')
+  await expect(panel.locator('thead .w-pc-local-chip')).toHaveText('≥121')
+  await expect(lifeRow).toHaveClass(/w-pc-local-row/)
+  await expect(panel.locator('.w-pc-local-hint')).toHaveCount(0)
+  const search = panel.getByRole('button', { name: 'Search', exact: true })
+  await expect(search).not.toHaveClass(/w-pc-glow/)
 
   // A filtered row keeps the listing's tooltip.
   await listings.first().hover()
@@ -74,22 +79,33 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   await lifeMin.hover()
   await overlay.snap('filtered here')
 
-  // The hidden ones can be shown, faded.
-  await status.getByRole('button', { name: 'Show 6' }).click()
-  await expect(listings).toHaveCount(12)
-  await expect(panel.locator('.w-pc-table tbody tr.w-pc-local-out')).toHaveCount(6)
-  await status.getByRole('button', { name: 'Hide 6' }).click()
-  await expect(listings).toHaveCount(6)
+  // None of the loaded ones fit: Load 10 more fetches the last search's next page.
+  await lifeMin.fill('140')
+  const hint = panel.locator('.w-pc-local-hint')
+  await expect(hint).toContainText('None of the 20 loaded fit')
+  await overlay.snap('short list, more to load')
+  await hint.getByRole('button', { name: 'Load 10 more' }).click()
+  await expect(listings).toHaveCount(5)
+  await expect(status).toContainText('5 of 30 here')
+  expect(calls.fetch).toBe(fetches + 1)
+
+  // Nothing left to load: the hint points at Search, which glows.
+  await lifeMin.fill('150')
+  await expect(hint).toContainText('Search for these filters')
+  await expect(hint.getByRole('button', { name: 'Load 10 more' })).toHaveCount(0)
+  await expect(search).toHaveClass(/w-pc-glow/)
+  await overlay.snap('short list, nothing more to load')
 
   // Lower than the search went: those listings were never loaded.
   await lifeMin.fill('100')
-  await expect(status).toContainText('Needs a new search')
   await expect(panel.locator('.w-pc-results-stale').first()).toBeVisible()
-  await expect(listings).toHaveCount(12)
+  await expect(status).toHaveCount(0)
+  await expect(listings).toHaveCount(30)
+  await expect(search).toHaveClass(/w-pc-glow/)
   await overlay.snap('needs a new search')
 
-  // None of it spent a trade search.
+  // None of it ran a trade search.
   await overlay.page.waitForTimeout(300)
   expect(calls.search).toBe(searches)
-  expect(calls.fetch).toBe(fetches)
+  expect(calls.fetch).toBe(fetches + 1)
 })

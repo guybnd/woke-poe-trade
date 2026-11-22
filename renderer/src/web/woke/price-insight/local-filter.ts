@@ -9,6 +9,8 @@ import type { ListingItem } from './listing-tip'
 import { pickStatColumns, listingStatValue, StatColumn } from './stat-columns'
 
 export interface LocalCheck {
+  /** The live row, marked in the filters as filtering here. */
+  row: StatFilter
   column: StatColumn
   min: number | null
   max: number | null
@@ -105,6 +107,7 @@ export function compareToSearched (
     // The search adds a fractured mod's share back onto a total's numbers.
     const share = row.fracShare ?? 0
     checks.push({
+      row,
       column,
       min: min == null || !numberSent ? null : min + share,
       max: max == null || !numberSent ? null : max + share,
