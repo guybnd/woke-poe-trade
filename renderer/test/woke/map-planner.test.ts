@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { loadGameData } from '../helpers/game-data'
 import { allMapNames } from '@/web/woke/map-mods/data'
 import type { MapBonusData } from '@/web/woke/map-mods/bonuses'
-import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, toggled } from '@/web/woke/map-mods/planner'
+import { DEFAULT_PLANNER, atLeastTerms, isTicked, planRows, planStashSearch, planTradeQuery, planUniverse, ratedAvoid, toggled } from '@/web/woke/map-mods/planner'
 import type { PlannerState } from '@/web/woke/map-mods/planner'
 
 beforeAll(loadGameData)
@@ -67,6 +67,23 @@ describe('pack size goal', () => {
     expect(rows.length).toBeGreaterThan(5)
     expect(rows.every(r => r.value >= 10)).toBe(true)
     expect(rows[0].value).toBe(20)
+  })
+
+  it('searches trade by the map pack size filter, and still avoids rated mods left off the list', () => {
+    const rows = planRows(data, 'p')
+    const ticked = new Set(rows.map(r => r.key))
+    const all = planRows(data, 'currency')
+    const punishing = all.find(r => r.key === 'Punishing')!
+    const ratings = Object.fromEntries(punishing.matchers.map(m => [m, 'deadly' as const]))
+    const avoid = ratedAvoid(data, rows, ratings)
+    expect(avoid.map(r => r.key)).toEqual(['Punishing'])
+    const q = planTradeQuery(rows, ticked, { ...DEFAULT_PLANNER, goal: 'p', need: 1, total: 40 }, avoid)!
+    expect(q.filters.map_filters.filters).toEqual({ map_tier: { min: 17, max: 17 }, map_packsize: { min: 40 } })
+    expect(q.stats.some(s => s.filters.some(f => f.id.startsWith('item.')))).toBe(false)
+    expect(q.stats.find(s => s.type === 'not')!.filters).toEqual([{ id: punishing.tradeId }])
+    const s = planStashSearch(rows, ticked, { ...DEFAULT_PLANNER, goal: 'p', need: 1, total: 40 }, planUniverse(data), allMapNames(), avoid)
+    expect(s.text).toContain('"ze: .')
+    expect(s.text).toMatch(/"!/)
   })
 })
 

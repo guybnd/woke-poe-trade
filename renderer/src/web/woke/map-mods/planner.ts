@@ -40,11 +40,10 @@ export const DEFAULT_PLANNER: PlannerState = { goal: 'currency', need: 2, pre: 0
 // The map property line each goal's total is on.
 export const GOAL_MIN: Record<PlanGoal, MinStat> = { currency: 'currency', maps: 'maps', threads: 'scarabs', p: 'packSize' }
 // The trade site's filter for that total.
-const GOAL_TRADE: Record<PlanGoal, string> = {
+const GOAL_TRADE: Record<Exclude<PlanGoal, 'p'>, string> = {
   currency: 'pseudo.pseudo_map_more_currency_drops',
   maps: 'pseudo.pseudo_map_more_map_drops',
-  threads: 'pseudo.pseudo_map_more_scarab_drops',
-  p: 'item.map_pack_size'
+  threads: 'pseudo.pseudo_map_more_scarab_drops'
 }
 
 export interface PlanRow {
@@ -80,19 +79,30 @@ function statsOf (ref: string) {
 // T17 mods that give a real share of the goal (half the best one's or more:
 // for pack size, the 17-20% ones, not the 5% every mod gives), best first.
 export function planRows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] {
+  const rows = t17Rows(data, goal).filter(r => r.value > 0)
+  const best = Math.max(0, ...rows.map(r => r.value))
+  return rows.filter(r => r.value * 2 >= best).sort((a, b) => b.value - a.value || a.key.localeCompare(b.key))
+}
+
+// T17 mods the list leaves out that you rated avoid in Maps: the searches
+// still avoid them.
+export function ratedAvoid (data: MapBonusData | null, listed: PlanRow[], ratings: Record<string, ModRating>): PlanRow[] {
+  const shown = new Set(listed.map(r => r.key))
+  return t17Rows(data, 'currency').filter(r => !shown.has(r.key) && r.matchers.some(m => ratings[m] === 'deadly'))
+}
+
+function t17Rows (data: MapBonusData | null, goal: PlanGoal): PlanRow[] {
   if (!data) return []
   const rows: PlanRow[] = []
   for (const mod of data.mods) {
     if (!mod.t.includes('t17')) continue
     const value = bonusOf(mod, goal as BonusKey)
-    if (value <= 0) continue
     const stats = mod.refs.map(statsOf)
     const matchers = stats.map(s => s?.matchers[0]).filter((m): m is string => !!m)
     if (!matchers.length) continue
     rows.push({ mod, key: mod.n, matchers, wordings: stats.flatMap(s => s?.all ?? []), tradeId: stats[0]?.tradeId ?? null, value, prefix: mod.g === 1 })
   }
-  const best = Math.max(0, ...rows.map(r => r.value))
-  return rows.filter(r => r.value * 2 >= best).sort((a, b) => b.value - a.value || a.key.localeCompare(b.key))
+  return rows
 }
 
 // Other lines a T17 map's tooltip can show besides its T17 mods: its
@@ -177,7 +187,7 @@ export interface PlanSearch {
 }
 
 // `universe`: every map mod line, `extra`: other tooltip text (map names).
-export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: PlannerState, universe: string[], extra: string[]): PlanSearch {
+export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: PlannerState, universe: string[], extra: string[], alsoAvoid: PlanRow[] = []): PlanSearch {
   const tokens: Record<string, string> = {}
   const none = (problem: string, tooLong = false): PlanSearch => ({ text: '', length: 0, tooLong, problem, tokens })
   const problem = planProblem(rows, ticked, state)
@@ -205,7 +215,7 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
     if (g === 'too-many') return none('Too many combinations for a stash search.', true)
     if (g) terms.push(...g)
   }
-  const avoid = rows.filter(r => !ticked.has(r.key)).map(tokenOf).filter((t): t is string => !!t)
+  const avoid = [...rows.filter(r => !ticked.has(r.key)), ...alsoAvoid].map(tokenOf).filter((t): t is string => !!t)
   if (avoid.length) terms.push(`"!${[...new Set(avoid)].join('|')}"`)
   if (state.total > 0) terms.push(`"${MIN_PREFIX[GOAL_MIN[state.goal]]}${atLeast(state.total)}%"`)
   const text = [...new Set(terms)].join(' ')
@@ -216,14 +226,16 @@ export function planStashSearch (rows: PlanRow[], ticked: Set<string>, state: Pl
 const MAX_TRADE_FILTERS = 35
 
 // null when the counts can't be met (planProblem says why).
-export function planTradeQuery (rows: PlanRow[], ticked: Set<string>, state: PlannerState) {
+export function planTradeQuery (rows: PlanRow[], ticked: Set<string>, state: PlannerState, alsoAvoid: PlanRow[] = []) {
   if (planProblem(rows, ticked, state)) return null
   const ids = (list: PlanRow[]) => [...new Set(list.map(r => r.tradeId).filter((id): id is string => !!id))]
   const on = rows.filter(r => ticked.has(r.key))
   const stats: Array<{ type: string, value?: { min: number }, filters: Array<{ id: string, value?: { min: number } }> }> = []
   // The total and the avoided mods first, so the counts are what a long list cuts.
-  if (state.total > 0) stats.push({ type: 'and', filters: [{ id: GOAL_TRADE[state.goal], value: { min: state.total } }] })
-  const off = ids(rows.filter(r => !ticked.has(r.key)))
+  // Pack size is a map filter on the site, the more-X totals are stats.
+  const goalStat = state.goal === 'p' ? null : GOAL_TRADE[state.goal]
+  if (state.total > 0 && goalStat) stats.push({ type: 'and', filters: [{ id: goalStat, value: { min: state.total } }] })
+  const off = ids([...rows.filter(r => !ticked.has(r.key)), ...alsoAvoid])
   if (off.length) stats.push({ type: 'not', filters: off.map(id => ({ id })) })
   const count = (list: PlanRow[], min: number) => {
     const f = ids(list)
@@ -241,7 +253,12 @@ export function planTradeQuery (rows: PlanRow[], ticked: Set<string>, state: Pla
   return {
     filters: {
       type_filters: { filters: { category: { option: 'map' } } },
-      map_filters: { filters: { map_tier: { min: 17, max: 17 } } }
+      map_filters: {
+        filters: {
+          map_tier: { min: 17, max: 17 },
+          ...(state.goal === 'p' && state.total > 0 ? { map_packsize: { min: state.total } } : {})
+        }
+      }
     },
     stats: stats.filter(s => s.filters.length)
   }

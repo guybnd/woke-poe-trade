@@ -9,7 +9,7 @@
         </div>
         <div class="flex items-center gap-2 w-full">
           <span class="w-dim text-xs flex-1">
-            T17 mods that give it{{ state.goal === 'p' ? ' (the 17-20% ones; every mod gives about 5%)' : '' }}. Untick the ones your build can't run: they're avoided. Mods you rated avoid in Maps start unticked.
+            T17 mods that give it{{ state.goal === 'p' ? ' (the 17-20% ones; every mod gives about 5%)' : '' }}. Untick the ones your build can't run: they're avoided. Mods you rated avoid in Maps start unticked, and are avoided even when not listed.
           </span>
           <WButton v-if="handTicked" size="sm" variant="ghost" title="Tick and untick by your Maps ratings again" @click="resetTicks">Reset ticks</WButton>
         </div>
@@ -97,7 +97,7 @@ import { tradeUrl } from '../search/search'
 import { priceCheckTradeStatus } from '../shared/trade-status'
 import { BONUS_LABEL, MORE_LABEL, bonusOf, bonusWords, loadMapBonuses, mapBonusData } from './bonuses'
 import type { BonusKey, MapBonusMod } from './bonuses'
-import { DEFAULT_PLANNER, PLAN_GOALS, isTicked, planProblem, planRows, planStashSearch, planTradeQuery, planUniverse, toggled } from './planner'
+import { DEFAULT_PLANNER, PLAN_GOALS, isTicked, planProblem, planRows, planStashSearch, planTradeQuery, planUniverse, ratedAvoid, toggled } from './planner'
 import type { PlanGoal, PlanRow, PlannerState } from './planner'
 import { MAX_SEARCH_LENGTH } from './regex'
 import { allMapNames } from './data'
@@ -142,7 +142,9 @@ function resetTicks () {
   set({ on: [], off: [] })
 }
 const universe = computed(() => planUniverse(data.value))
-const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames()))
+// Mods you rated avoid that the list leaves out are still avoided.
+const alsoAvoid = computed(() => ratedAvoid(data.value, rows.value, props.ratings))
+const search = computed(() => planStashSearch(rows.value, ticked.value, state.value, universe.value, allMapNames(), alsoAvoid.value))
 const usable = computed(() => !!search.value.text && !search.value.tooLong)
 
 const { copied, copy: copyText } = useCopy(1200)
@@ -166,7 +168,7 @@ const leagues = useLeagues()
 function openTrade () {
   const league = leagues.selectedId.value
   if (!league) { toast('Pick a league in the settings first'); return }
-  const q = planTradeQuery(rows.value, ticked.value, state.value)
+  const q = planTradeQuery(rows.value, ticked.value, state.value, alsoAvoid.value)
   if (!q) return
   window.open(tradeUrl(league, { ...q, status: priceCheckTradeStatus() }, getTradeEndpoint()))
 }
