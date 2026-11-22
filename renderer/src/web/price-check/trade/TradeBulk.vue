@@ -13,12 +13,12 @@
         <span v-if="!result" class="text-gray-600">...</span>
         <div v-else class="flex items-center">
           <button class="btn flex items-center mr-1" :style="{ background: selectedCurr !== 'xchgChaos' ? 'transparent' : undefined }"
-            @click="pickCurr('xchgChaos')">
+            :disabled="!result.both && !result.xchgChaos.listed.value" @click="pickCurr('xchgChaos')">
             <img src="/images/chaos.png" :class="$style.currencyIcon">
             <span>{{ result.xchgChaos.listed.value?.total ?? '?' }}</span>
           </button>
           <button class="btn flex items-center mr-1" :style="{ background: selectedCurr !== 'xchgStable' ? 'transparent' : undefined }"
-            @click="pickCurr('xchgStable')">
+            :disabled="!result.both && !result.xchgStable.listed.value" @click="pickCurr('xchgStable')">
             <img src="/images/divine.png" :class="$style.currencyIcon">
             <span>{{ result.xchgStable.listed.value?.total ?? '?' }}</span>
           </button>
@@ -58,6 +58,9 @@
               <td colspan="100" class="px-2"><span class="w-pc-skel" :style="{ width: 30 + ((i * 17) % 45) + '%' }" /></td>
             </tr>
           </template>
+          <tr v-else-if="selectedFailed">
+            <td colspan="100" class="px-2 py-1" data-testid="bulk-side-failed">These offers didn't load. <button class="btn" @click="retrySide">Try again</button></td>
+          </tr>
           <template v-else>
             <tr v-for="result in selectedResults" :key="result.id"
               :class="{ [$style.marketRatioRow]: ('marketRatio' in result) }">
@@ -182,43 +185,40 @@ function useBulkApi () {
         : null)
     const items = shallowRef<PricingResult[]>(_result.value?.listed ?? [])
     const failed = shallowRef(false)
-    let requested: boolean = (_result.value != null)
+    let inFlight = false
 
+    // woke: loads start from a pick or the price comparison, never from inside a computed.
     function load (quiet = false) {
-      if (requested) return
-      requested = true
+      if (inFlight || _result.value != null) return
+      inFlight = true
       failed.value = false
-      // woke: a newer search replaces this one's results, so this has nothing to add.
+      // A newer search replaces this one's results, so this has nothing to add.
       const _searchId = searchId
       ;(async function () {
         try {
           const found = (await execBulkSearch(
-            item, filters, [have], { accountName: AppConfig().accountName }))[0]!
+            item, filters, [have], { accountName: AppConfig().accountName, wait: quiet }))[0]!
           if (_searchId !== searchId) return
           _result.value = shallowReactive(found)
           items.value = _result.value.listed
           const otherHave = (have === 'divine')
             ? result.value!.xchgChaos.listed.value
             : result.value!.xchgStable.listed.value
-          // fix best guess we did while making optimistic search
-          if (otherHave) otherHave.total -= _result.value.total
+          // The first search's count for the other side was a guess: it's
+          // everything that search found less this side.
+          if (otherHave && result.value!.both) otherHave.total = Math.max(0, otherHave.queryTotal - found.total)
         } catch (err) {
           if (_searchId !== searchId) return
-          if (quiet) {
-            // woke: loaded only to compare prices; a click on this side tries again.
-            requested = false
-            failed.value = true
-          } else {
-            error.value = (err as Error).message
-          }
+          // Loaded only to compare prices: the side shows it failed and a click retries.
+          failed.value = true
+          if (!quiet) error.value = (err as Error).message
+        } finally {
+          inFlight = false
         }
       })()
     }
 
-    const listedLazy = computed(() => {
-      if (!requested) load()
-      return items.value
-    })
+    const listedLazy = computed(() => items.value)
 
     return { listed: _result, listedLazy, load, failed }
   }
@@ -321,6 +321,7 @@ export default defineComponent({
     function pickCurr (curr: 'xchgChaos' | 'xchgStable') {
       userPicked = true
       selectedCurr.value = curr
+      result.value?.[curr].load()
     }
 
     watch(() => props.item, (item) => {
@@ -367,32 +368,35 @@ export default defineComponent({
     })
     const bulkInsight = computed(() => {
       if (!slowdown.isReady.value || !result.value || !marketsSettled.value) return null
-      // Read first: this is what starts the other currency's search when it is picked.
       const listed = result.value[selectedCurr.value].listedLazy.value
       return buildBulkInsight(listed, need.value)
     })
     const otherMarket = computed(() => {
       if (!bulkInsight.value) return null
       const curr = selectedCurr.value === 'xchgChaos' ? 'xchgStable' : 'xchgChaos'
+      const unit = curr === 'xchgChaos' ? 'c' : 'div'
+      if (result.value?.[curr].failed.value) return { unit, failed: true }
       const insight = insights[curr].value
-      return insight ? { unit: curr === 'xchgChaos' ? 'c' : 'div', fair: insight.fair, sellers: insight.sellers } : null
+      return insight ? { unit, fair: insight.fair, sellers: insight.sellers } : null
     })
 
     // woke: real rows only once loaded, with placeholder rows until then.
     const tableLoading = computed(() => {
-      // Read first: this is what starts the other currency's search when it is picked.
       const shown = selectedResults.value
       if (!slowdown.isReady.value || !result.value || !marketsSettled.value) return true
+      const side = result.value[selectedCurr.value]
       return shown.length === 0 || 'marketRatio' in shown[0]
-        ? result.value[selectedCurr.value].listed.value == null
+        ? side.listed.value == null && !side.failed.value
         : false
     })
 
     watch(result, (r) => {
       userPicked = false
       // The first search held the chaos side back: load it to compare prices.
-      if (r?.both && r.xchgChaos.listed.value == null) r.xchgChaos.load(true)
-      if (r?.both && r.xchgStable.listed.value == null) r.xchgStable.load(true)
+      if (r?.both) {
+        r.xchgChaos.load(true)
+        r.xchgStable.load(true)
+      }
     })
     watch(() => marketsSettled.value && result.value
       ? pickBulkMarket(
@@ -426,6 +430,8 @@ export default defineComponent({
       unitName: computed(() => selectedCurr.value === 'xchgChaos' ? 'chaos' : 'divine'),
       divineInChaos: computed(() => poeninja.xchgRate.value ?? null),
       pickCurr,
+      selectedFailed: computed(() => result.value?.[selectedCurr.value].failed.value === true && !result.value[selectedCurr.value].listed.value),
+      retrySide: () => result.value?.[selectedCurr.value].load(),
       error,
       retryIn,
       rateLimited,

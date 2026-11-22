@@ -109,9 +109,13 @@ describe('pickBulkMarket', () => {
     expect(pickBulkMarket(side(230, 10, 300), side(1, 20, 50), 209)).toBe('xchgStable')
   })
 
-  it('a market with a seller or two loses to a busier one', () => {
+  it('a market with a seller or two loses to a busier one when the prices are close', () => {
     expect(pickBulkMarket(side(150, 2), side(1, 20), 209)).toBe('xchgStable')
     expect(pickBulkMarket(side(150, 2), side(1, 2), 209)).toBe('xchgChaos')
+  })
+
+  it('a thin side far under the rest still wins', () => {
+    expect(pickBulkMarket(side(1, 2), side(1, 20), 180)).toBe('xchgChaos')
   })
 
   it('takes the only side with offers, and falls back to the offer count without a rate', () => {
