@@ -6,7 +6,7 @@
         <!-- woke: with a Generic/Base choice, clicking the name switches it: the category, or this base type. -->
         <!-- woke: a cluster jewel's title picks another size and type (WOKEPOET-366). -->
         <!-- The crystal the game puts on a Vestigial unique's nameplate. -->
-        <img v-if="item.isVestigial" class="filter-name-vestigial" src="/images/vestigial.png" alt="" title="Vestigial unique: it carries another unique's implicit">
+        <img v-if="item.isVestigial" class="filter-name-vestigial" src="/images/vestigial.png" alt="" title="Vestigial">
         <cluster-type-pick v-if="clusterSize && stats" :item="item" :filters="filters" :stats="stats" :own-size="clusterSize" />
         <button v-else-if="filters.searchRelaxed" type="button" class="filter-name-label filter-name-cycle" data-scope-cycle
           :data-rarity="item.rarity" :title="`${label}. Click to search ${filters.searchRelaxed.disabled ? 'any item of this category' : 'only this base type'}.`"

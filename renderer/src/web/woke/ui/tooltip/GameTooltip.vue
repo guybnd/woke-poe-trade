@@ -301,8 +301,8 @@ const lines = computed<string[]>(() => {
   if (gem.value) return [data.value?.name ?? gem.value.name]
   if (!item.value) return []
   // A Vestigial unique's base reads "Vestigial Great Crown", as in the game.
-  const base = item.value.vestigial && item.value.base && !item.value.base.startsWith('Vestigial ') ? `Vestigial ${item.value.base}` : item.value.base
-  return [item.value.name, base].filter(Boolean)
+  const { name, base, vestigial } = item.value
+  return [name, vestigial && !base.startsWith('Vestigial') ? 'Vestigial ' + base : base].filter(Boolean)
 })
 
 // The game's own header art. Other frames keep the plain colour band.
@@ -317,11 +317,9 @@ const headArt = computed(() => {
 })
 
 // The nameplate's icons: influences, or a Vestigial unique's crystal at both ends, as in the game.
-const isVestigial = computed(() => Boolean(item.value?.vestigial || item.value?.base?.startsWith('Vestigial ')))
 const plateArt = computed(() => {
-  const influences = (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`)
-  if (influences.length || !isVestigial.value) return influences
-  return ['/images/vestigial.png', '/images/vestigial.png']
+  const art = (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`)
+  return art.length || !item.value?.vestigial ? art : ['/images/vestigial.png', '/images/vestigial.png']
 })
 
 const itemProps = computed(() => {
