@@ -215,8 +215,9 @@ export default defineComponent({
       const parsed = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
       // Only for the in-game hotkey: a locked check or a pasted item opens the window.
       // The hotkey again on the item the card shows: live offers, without moving to the card.
-      const again = instant.value != null && !e.focusOverlay && e.clipboard === instantText &&
-        Date.now() - instantAt < AGAIN_MS
+      // Only while the card is up: once it closed (the mouse moved away), the hotkey shows it again.
+      const again = instant.value != null && props.config.wmWants === 'show' && !e.focusOverlay &&
+        e.clipboard === instantText && Date.now() - instantAt < AGAIN_MS
       const quick = !again && !e.live && !e.focusOverlay && parsed.isOk() && instantCheck(parsed.value)
       instantText = quick ? e.clipboard : ''
       instantAt = Date.now()
