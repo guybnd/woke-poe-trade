@@ -99,7 +99,7 @@ async function stubOpen (overlay: { page: import('@playwright/test').Page }) {
 }
 const DISCORD = 'https://discord.gg/XrUcvXrt4e'
 
-test('Join the Discord: from Settings and from Ctrl+Space', async ({ overlay }) => {
+test('Join the Discord: from Settings', async ({ overlay }) => {
   await overlay.page.setViewportSize({ width: 2560, height: 1440 })
   await overlay.boot({ overlayActive: true })
   const opened = await stubOpen(overlay)
@@ -109,7 +109,13 @@ test('Join the Discord: from Settings and from Ctrl+Space', async ({ overlay }) 
   await settings.getByRole('button', { name: 'Join the Discord' }).click()
   await expect.poll(opened).toEqual([DISCORD])
   await overlay.snap('discord-settings')
+})
 
+test('Join the Discord: from Ctrl+Space', async ({ overlay }) => {
+  await overlay.page.setViewportSize({ width: 2560, height: 1440 })
+  await overlay.boot({ widgets: [] })
+  const opened = await stubOpen(overlay)
+  await overlay.showScreen('screens/map-real-01.png')
   await overlay.pressHotkey('Ctrl + Space')
   const panel = overlay.widget('woke-search')
   const box = panel.getByRole('textbox', { name: 'Search', exact: true })
@@ -117,5 +123,5 @@ test('Join the Discord: from Settings and from Ctrl+Space', async ({ overlay }) 
   await box.fill('discord')
   await panel.getByRole('button', { name: /\sJoin the Discord\s*Questions and ideas, with other players$/ }).click()
   await box.press('Enter')
-  await expect.poll(opened).toEqual([DISCORD, DISCORD])
+  await expect.poll(opened).toEqual([DISCORD])
 })
