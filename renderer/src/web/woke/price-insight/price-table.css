@@ -221,9 +221,10 @@
 
 /* woke: results filtered here (local-filter.ts, Guy's pick C). The Search row's
    Matched count, one line in the row's own height, so nothing below moves. */
-.w-pc-status-slot { flex: 1 1 auto; min-width: 0; display: flex; margin: 0 var(--w-s2, 0.5rem); }
+/* No margins of its own: an empty slot takes no room, so the caps beside it stay put. */
+.w-pc-status-slot { flex: 1 1 0; min-width: 0; display: flex; }
 .w-pc-status {
-  display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; overflow: hidden;
+  display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; overflow: hidden; margin: 0 var(--w-s2, 0.5rem);
   white-space: nowrap; font-size: var(--w-fs-sm);
 }
 .w-pc-status b { font-weight: 400; }

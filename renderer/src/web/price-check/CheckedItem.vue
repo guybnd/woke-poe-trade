@@ -17,7 +17,7 @@
       </template>
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
-      <woke-deck-verdict-chip :item="item" />
+      <woke-deck-verdict-chip v-if="item.info.refName === 'Stacked Deck'" :item="item" />
       <!-- woke: Vaal it? on a max-level 20% one of this gem; outcomes on hover (Guy's pick V3, 2026-11-21). -->
       <woke-vaal-chip v-if="isGem && tradeAPI === 'trade'" :item="item" :league="itemFilters.trade.league" />
       <woke-high-roll-chip v-if="item.rarity === 'Unique'" :item="item" :stats="itemStats" @search="searchAfterPreset" />
@@ -141,12 +141,9 @@ import FilterAffixCaps from './filters/FilterAffixCaps.vue'
 import { createPresets } from './filters/create-presets'
 import PricePrediction from './price-prediction/PricePrediction.vue'
 import StackValue from './expected-value/StackValue.vue'
-import WokeDustChip from '@/web/woke/price-insight/DustChip.vue'
-import WokeDustVerdictChip from '@/web/woke/disenchant/DustVerdictChip.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
 import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
-import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
@@ -184,13 +181,14 @@ export default defineComponent({
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
     WTabs,
-    WokeDustChip,
-    WokeDustVerdictChip,
+    // woke: chips for a few kinds of item load with their first check (the startup JS budget).
+    WokeDustChip: defineAsyncComponent(() => import('@/web/woke/price-insight/DustChip.vue')),
+    WokeDustVerdictChip: defineAsyncComponent(() => import('@/web/woke/disenchant/DustVerdictChip.vue')),
     WokeRollPresets,
     WokeBuildFitChip,
     WokeHighRollChip: defineAsyncComponent(() => import('@/web/woke/price-insight/HighRollChip.vue')),
     WokeFilterVerdictChip,
-    WokeDeckVerdictChip,
+    WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     PricePrediction,
     TradeListing,
     TradeBulk,

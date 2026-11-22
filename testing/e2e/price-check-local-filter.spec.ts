@@ -67,7 +67,8 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   await expect(status).toContainText('14 of 20 here')
   await expect(listings).toHaveCount(14)
   await expect(panel.locator('.w-pc-results-stale')).toHaveCount(0)
-  await expect(panel.locator('thead .w-pc-local-chip')).toHaveText('≥121')
+  // Life may sit behind the header's +N: its chip names it there.
+  await expect(panel.locator('thead .w-pc-local-chip')).toHaveText(/^(Life )?≥121$/)
   await expect(lifeRow).toHaveClass(/w-pc-local-row/)
   await expect(panel.locator('.w-pc-local-hint')).toHaveCount(0)
   const search = panel.getByRole('button', { name: 'Search', exact: true })

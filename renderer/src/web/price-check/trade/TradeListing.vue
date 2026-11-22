@@ -79,7 +79,7 @@
               <div>{{ col.label }}<span v-if="localRange(col)" class="w-pc-local-chip" :title="`Filtered here: ${localRange(col)}`">{{ localRange(col) }}</span></div>
             </th>
             <th v-if="hiddenColumns.length" :class="[$style.tableHeading, 'w-pc-stat-head']" :title="hiddenColumns.map(col => col.title).join('\n')">
-              <div class="w-pc-stat-more">+{{ hiddenColumns.length }}</div>
+              <div class="w-pc-stat-more">+{{ hiddenColumns.length }}<span v-for="col in hiddenColumns.filter(c => localRange(c))" :key="col.key" class="w-pc-local-chip" :title="`${col.title}: filtered here, ${localRange(col)}`">{{ col.label }} {{ localRange(col) }}</span></div>
             </th>
             <th v-if="showSeller" class="w-full" :class="$style.tableHeading">
               <div class="px-2">{{ t(':seller') }}</div>
