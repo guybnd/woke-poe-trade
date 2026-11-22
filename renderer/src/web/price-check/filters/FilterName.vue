@@ -5,8 +5,6 @@
       <div class="filter-name-title" data-no-item-tip="the price check's own item, which the player is already hovering in game">
         <!-- woke: with a Generic/Base choice, clicking the name switches it: the category, or this base type. -->
         <!-- woke: a cluster jewel's title picks another size and type (WOKEPOET-366). -->
-        <!-- The crystal the game puts on a Vestigial unique's nameplate. -->
-        <img v-if="item.isVestigial" class="filter-name-vestigial" src="/images/vestigial.png" alt="" title="Vestigial">
         <cluster-type-pick v-if="clusterSize && stats" :item="item" :filters="filters" :stats="stats" :own-size="clusterSize" />
         <button v-else-if="filters.searchRelaxed" type="button" class="filter-name-label filter-name-cycle" data-scope-cycle
           :data-rarity="item.rarity" :title="`${label}. Click to search ${filters.searchRelaxed.disabled ? 'any item of this category' : 'only this base type'}.`"
@@ -256,12 +254,6 @@ export default defineComponent({
   text-overflow: ellipsis;
   font-size: calc(18px * var(--w-text-scale, 1));
   line-height: calc(24px * var(--w-text-scale, 1));
-}
-.filter-name-vestigial {
-  flex: none;
-  align-self: center;
-  width: calc(20px * var(--w-text-scale, 1));
-  height: calc(20px * var(--w-text-scale, 1));
 }
 .filter-name-cycle { cursor: pointer; text-align: left; min-width: 0; }
 .filter-name-cycle:hover { text-decoration: underline dotted; text-underline-offset: 4px; }

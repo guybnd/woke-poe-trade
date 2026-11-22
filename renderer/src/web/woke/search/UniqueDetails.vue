@@ -33,7 +33,7 @@
     </section>
 
     <section v-if="details.vestigial.length" :class="$style.sec">
-      <div :class="$style.head"><span><img src="/images/vestigial.png" alt="" :class="$style.vestIcon">Vestigial</span><span :class="$style.note">Enshrouded and charged in Timeless Conflict, it drops another unique of its slot with this</span></div>
+      <div :class="$style.head"><span>Vestigial</span><span :class="$style.note">Enshrouded and charged in Timeless Conflict, it drops another unique of its slot with this</span></div>
       <div v-for="(mod, i) in details.vestigial" :key="i" :class="$style.vestRow">
         <span v-if="details.vestigial.length > 1" :class="$style.note">{{ i === 0 ? 'One of' : 'or' }}</span>
         <span><span v-for="(l, j) in mod" :key="j" :class="$style.vest">{{ l }}</span></span>
@@ -102,7 +102,6 @@ const dropText = computed(() => {
 .kindPrice { justify-self: end; }
 .foul { color: var(--w-mod-foulborn); }
 .gone { color: var(--w-dim); text-decoration: line-through; }
-.vestIcon { width: 1.25em; height: 1.25em; margin-right: 4px; vertical-align: -0.3em; }
 .vestRow { display: flex; gap: var(--w-s2); align-items: baseline; }
 .vest { display: block; color: var(--w-mod-vestigial); }
 .facts { color: var(--w-dim); font-size: var(--w-fs-sm); }

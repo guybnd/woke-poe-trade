@@ -1,11 +1,11 @@
-// A Vestigial unique (Timeless Conflict variant): the game marks it with a
-// crystal on its nameplate, "Vestigial" before its base and its inherited
-// implicit in light purple. The price check and the tooltips do the same.
+// A Vestigial unique (Timeless Conflict variant): the game shows "Vestigial"
+// before its base and its inherited implicit in light purple. The price check
+// and the tooltips colour that implicit the same (Guy's pick C: no crystal icon).
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ModifierMechanic, ModifierType } from '@/parser/modifiers'
 import { initUiModFilters } from '@/web/price-check/filters/create-stat-filters'
 import { FilterTag } from '@/web/price-check/filters/interfaces'
-import { poeLook, poeSection, VESTIGIAL_ICON } from '@/web/woke/price-insight/poe-kind'
+import { poeLook, poeSection } from '@/web/woke/price-insight/poe-kind'
 import { listingTipItem } from '@/web/woke/price-insight/listing-tip'
 import type { ListingItem } from '@/web/woke/price-insight/listing-tip'
 import { listingDetail } from '@/web/woke/price-insight/listing-tip-detail'
@@ -91,7 +91,7 @@ describe('Vestigial unique', () => {
     const stats = initUiModFilters(item, { searchStatRange: 10 }).flatMap(f => 'stats' in f ? f.stats : [f])
     const row = stats.find(f => f.tag === FilterTag.Vestigial)!
     expect(row).toBeTruthy()
-    expect(poeLook(row)).toEqual({ kind: 'vestigial', label: 'Vestigial implicit', icon: VESTIGIAL_ICON })
+    expect(poeLook(row)).toEqual({ kind: 'vestigial', label: 'Vestigial implicit' })
     expect(poeSection(row)).toBe('implicit')
   })
 

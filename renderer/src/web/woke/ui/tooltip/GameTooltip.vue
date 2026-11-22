@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div v-if="tip" ref="el" :class="[$style.tip, frame, { [$style.wide]: listing || swap || itemCompare }]" :style="pos" role="tooltip">
       <header :class="[$style.head, { [$style.double]: lines.length > 1, [$style.art]: headArt }]" :style="headArt">
-        <img v-for="(src, i) in plateArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
+        <img v-for="(src, i) in influenceArt" :key="i" :src="src" alt="" :class="[$style.influence, i ? $style.right : $style.left]">
         <div v-for="(l, i) in lines" :key="i">{{ l }}</div>
       </header>
 
@@ -314,11 +314,7 @@ const headArt = computed(() => {
   return { backgroundImage: `${file('left')}, ${file('right')}, ${file('middle')}` }
 })
 
-// The nameplate's icons: influences, or a Vestigial unique's crystal at both ends, as in the game.
-const plateArt = computed(() => {
-  const art = (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`)
-  return art.length || !item.value?.vestigial ? art : ['/images/vestigial.png', '/images/vestigial.png']
-})
+const influenceArt = computed(() => (item.value?.influences ?? []).slice(0, 2).map(i => `/images/influence-${i}.png`))
 
 const itemProps = computed(() => {
   const i = item.value

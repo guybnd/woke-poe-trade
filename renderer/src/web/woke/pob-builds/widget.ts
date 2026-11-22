@@ -187,7 +187,7 @@ export interface PobItem {
   twiceCorrupted?: boolean
   mirrored?: boolean
   influences?: string[]
-  // A Vestigial unique: the game's crystal on both ends of its nameplate.
+  // A Vestigial unique (Timeless Conflict variant).
   vestigial?: boolean
 }
 
