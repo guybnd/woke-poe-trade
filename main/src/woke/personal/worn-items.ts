@@ -123,8 +123,8 @@ export function wornItem (raw: Raw): PobItem {
   const named = rarity === 'RARE' || rarity === 'UNIQUE' || rarity === 'RELIC'
 
   const enchants = lines(raw.enchantMods)
-  // A Vestigial unique's inherited implicit is flagged. Its base stays the plain one
-  // (PoB text, weapon stats); the tooltip adds "Vestigial".
+  // A Vestigial unique's inherited implicit is flagged. Its base stays the plain
+  // one, for PoB text and weapon stats.
   const implicitLines = modLines(raw.implicitMods)
   const implicits = implicitLines.map(m => m.text)
   // Older replies list fractured and crafted mods apart; newer ones flag them
