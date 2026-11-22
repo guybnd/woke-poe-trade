@@ -19,6 +19,8 @@ test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offer
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('Divine Orb')
   await expect(card).toContainText('180c')
+  // A divine's parts in chaos, for paying in div.
+  await expect(card.getByTestId('instant-ninja-parts')).toContainText('0.1 18c')
   await expect(overlay.page.locator('#price-window')).toHaveCount(0)
   await overlay.snap('divine orb instant check')
   // The mouse is tracked into the card, not the window.
@@ -169,9 +171,13 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
   const again = await box()
   // The mouse enters the window where it is now, not the docked spot.
   const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { x: number, y: number, width: number } }
-  expect(Math.abs(tracked.area.x - resized.x)).toBeLessThan(2)
+  // The area holds the window, and the related items' column beside it on one side.
+  const right = tracked.area.x + tracked.area.width
   expect(Math.abs(tracked.area.y - resized.y)).toBeLessThan(2)
-  expect(Math.abs(tracked.area.width - resized.width)).toBeLessThan(2)
+  expect(tracked.area.x).toBeLessThanOrEqual(resized.x + 2)
+  expect(right).toBeGreaterThanOrEqual(resized.x + resized.width - 2)
+  expect(Math.abs(tracked.area.x - resized.x) < 2 || Math.abs(right - resized.x - resized.width) < 2).toBe(true)
+  expect(tracked.area.width).toBeGreaterThan(resized.width)
   expect(Math.abs(again.x - resized.x)).toBeLessThan(2)
   expect(Math.abs(again.y - resized.y)).toBeLessThan(2)
   expect(Math.abs(again.width - resized.width)).toBeLessThan(2)

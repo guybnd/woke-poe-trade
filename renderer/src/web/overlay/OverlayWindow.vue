@@ -49,6 +49,7 @@ import { keepZorderUnderCap } from './zorder'
 import { usePoeninja } from '@/web/background/Prices'
 import { useLeagues } from '@/web/background/Leagues'
 import { handleLine } from '@/web/client-log/client-log'
+import { instantCardShown } from '@/web/woke/price-insight/view'
 
 type WMID = Widget['wmId']
 
@@ -284,6 +285,8 @@ export default defineComponent({
 
     const overlayBackground = computed<string | undefined>(() => {
       if (!active.value) return undefined
+      // woke: nothing behind the small poe.ninja card (Guy, 2026-11-22).
+      if (instantCardShown.value) return undefined
       return AppConfig().overlayBackground
     })
 

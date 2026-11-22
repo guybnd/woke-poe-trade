@@ -64,3 +64,43 @@ export function isUnidUniqueJewel (item: { rarity?: string, isUnidentified: bool
   return item.rarity === 'Unique' && item.isUnidentified && item.uniqueBase != null &&
     (item.category === 'Jewel' || item.category === 'Abyss Jewel')
 }
+
+// ---- How a poe.ninja price reads on the instant card and the verdict ----
+
+function num (v: number): string {
+  if (Math.round(v) >= 1000) return Math.round(v).toLocaleString('en-US')
+  if (v >= 100) return String(Math.round(v))
+  if (v >= 10) return String(Number(v.toFixed(1)))
+  return String(Number(v.toPrecision(2)))
+}
+
+export interface NinjaPrice {
+  /** "34c", "2.4 div", or "281 per c" for items under a chaos. */
+  main: string
+  /** `main` is the price of one ("each"); false for "N per c". */
+  each: boolean
+  /** The other way round: "225 per div", or "2,340c" for a div price. */
+  sub: string | null
+}
+
+/** One item at `chaos`, with `rate` chaos to a divine (unknown: undefined). A Divine Orb reads in chaos. */
+export function ninjaPrice (chaos: number, rate: number | undefined, divine = false): NinjaPrice {
+  if (!(chaos > 0)) return { main: '—', each: false, sub: null }
+  if (divine) return { main: `${num(chaos)}c`, each: true, sub: null }
+  // Under a chaos "0c" says nothing: how many a chaos buys does.
+  if (chaos < 1) return { main: `${num(1 / chaos)} per c`, each: false, sub: rate ? `${num(rate / chaos)} per div` : null }
+  if (rate && chaos >= rate * 0.94) return { main: `${num(chaos / rate)} div`, each: true, sub: `${num(chaos)}c` }
+  return { main: `${num(chaos)}c`, each: true, sub: rate ? `${num(rate / chaos)} per div` : null }
+}
+
+/** What a stack is worth: "238c", "1.4 div", "0.07c". */
+export function ninjaTotal (chaos: number, rate: number | undefined): string {
+  if (rate && chaos >= rate * 0.94) return `${num(chaos / rate)} div`
+  if (chaos < 1) return `${num(chaos)}c`
+  return `${num(chaos)}c`
+}
+
+/** A Divine Orb's parts in chaos: 0.1, 0.25, 0.5 and 0.75 div. */
+export function divineParts (rate: number): Array<{ part: string, chaos: string }> {
+  return [0.1, 0.25, 0.5, 0.75].map(f => ({ part: String(f), chaos: `${Math.round(rate * f)}c` }))
+}

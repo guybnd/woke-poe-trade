@@ -10,16 +10,24 @@
         <span :class="$style.badge" title="poe.ninja's price from the exchange, cached in the app. No trade search was used.">POE.NINJA</span>
       </div>
       <div :class="$style.value">
-        <span :class="$style.headline">{{ each }}</span>
-        <span :class="$style.dim">each</span>
+        <span :class="$style.headline" data-testid="instant-ninja-price">{{ price?.main }}</span>
+        <span v-if="price?.each" :class="$style.dim">each</span>
         <template v-if="weekChange != null">
           <span class="flex-1" />
           <w-spark :values="spark" :width="32" :height="14" />
           <span :class="weekChange >= 0 ? 'w-up' : 'w-down'">{{ weekChange >= 0 ? '▲' : '▼' }}{{ Math.abs(weekChange) }}%</span>
         </template>
       </div>
-      <div v-if="stack" :class="$style.dim">{{ stack }} for your {{ have }}<template v-if="age"> · {{ age }}</template></div>
-      <div v-else-if="age" :class="$style.dim">Updated {{ age }}</div>
+      <div v-if="price?.sub || stack" :class="$style.dim">
+        <template v-if="stack"><span :class="$style.fg">{{ stack }}</span> for your {{ have }}</template><template v-if="stack && price?.sub"> · </template>{{ price?.sub }}
+      </div>
+      <!-- A Divine Orb: its parts in chaos, for paying in div. -->
+      <div v-if="parts" :class="$style.parts" data-testid="instant-ninja-parts">
+        <span v-for="p in parts" :key="p.part"><span :class="$style.dim">{{ p.part }}</span> {{ p.chaos }}</span>
+      </div>
+      <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
+      <slot name="verdict" />
+      <div v-if="age" :class="$style.dim">poe.ninja, updated {{ age }}</div>
       <div :class="$style.row">
         <button type="button" class="btn w-pc-primary" :class="$style.btn" data-testid="instant-ninja-live" @click="$emit('live')">
           Live offers<w-kbd keys="Space" class="ml-2" />
@@ -36,7 +44,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { ParsedItem } from '@/parser'
-import { usePoeninja, displayRounding } from '@/web/background/Prices'
+import { usePoeninja } from '@/web/background/Prices'
+import { ninjaPrice, ninjaTotal, divineParts } from './ninja-first'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { WSpark, WKbd, agoPhrase, vItemTip } from '../ui'
 
@@ -50,7 +59,8 @@ const props = defineProps<{
   againKeys: string | null
 }>()
 const emit = defineEmits<{
-  live: []
+  /** `byKey`: Space or Enter, not a click. */
+  live: [byKey?: boolean]
   details: []
   close: []
   /** Where the card ended up, in the overlay's CSS px, so the mouse can be tracked into it. */
@@ -65,23 +75,18 @@ const RIGHT_GAP = 40
 const LEFT_GAP = 16
 const ABOVE = 12
 
-const { findPriceByQuery, autoCurrency, updatedAt } = usePoeninja()
+const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const info = computed(() => {
   const q = exactDetailsId(props.item)
-  return (q && findPriceByQuery(q)) || null
+  const row = q && findPriceByQuery(q)
+  return row && row.chaos > 0 ? row : null
 })
 
-function amount (chaos: number): string {
-  // A Divine Orb is priced in chaos, or it would read "1 div".
-  const p = props.item.info.refName === 'Divine Orb'
-    ? { min: chaos, currency: 'chaos' as const }
-    : autoCurrency(chaos)
-  return `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}`
-}
-
+const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.item.stackSize?.value ?? 1)
-const each = computed(() => info.value ? amount(info.value.chaos) : '')
-const stack = computed(() => info.value && have.value > 1 ? amount(info.value.chaos * have.value) : null)
+const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value) : null)
+const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
+const parts = computed(() => isDivine.value && info.value ? divineParts(info.value.chaos) : null)
 const age = computed(() => agoPhrase(updatedAt.value))
 const spark = computed(() => (info.value?.graph ?? []).filter((p): p is number => p != null))
 const weekChange = computed(() => spark.value.length ? Math.round(spark.value[spark.value.length - 1]) : null)
@@ -105,6 +110,7 @@ function place () {
 }
 // Related items load after the card, and change its size.
 let resize: ResizeObserver | undefined
+let stopKids: (() => void) | undefined
 
 function onKey (e: KeyboardEvent) {
   if (!props.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return
@@ -114,10 +120,35 @@ function onKey (e: KeyboardEvent) {
   if (t?.closest('input, textarea, select, [contenteditable]')) return
   if (e.key === ' ' || e.key === 'Enter') {
     e.preventDefault()
-    emit('live')
+    emit('live', true)
   } else if (e.key === 'Escape') {
     emit('close')
   }
+}
+
+// Room around the card and its related items that still counts as on them, so
+// a move between the two (or along an edge) doesn't hand the mouse back to the game.
+const TRACK_PAD = 24
+const CURSOR_CLEAR = 12
+
+// Everything the card shows: the card and the related items under it, which can
+// reach past the anchor's own box (it's capped at the screen's height).
+function shownRect (node: HTMLElement): DOMRect | null {
+  // Hidden (the widget is display:none): nothing to track.
+  if (!node.offsetWidth) return null
+  let { left, top, right, bottom } = node.getBoundingClientRect()
+  for (const child of node.querySelectorAll(':scope > *, :scope .w-pc-side')) {
+    const r = child.getBoundingClientRect()
+    if (!r.width || !r.height) continue
+    left = Math.min(left, r.left); top = Math.min(top, r.top)
+    right = Math.max(right, r.right); bottom = Math.max(bottom, r.bottom)
+  }
+  left -= TRACK_PAD; right += TRACK_PAD; top -= TRACK_PAD; bottom += TRACK_PAD
+  // Never over the item that was checked: a click or move there is for the game.
+  const { x } = props.at
+  if (left > x - TRACK_PAD) left = Math.max(left, x + CURSOR_CLEAR)
+  else right = Math.min(right, x - CURSOR_CLEAR)
+  return new DOMRect(left, top, right - left, bottom - top)
 }
 
 async function placeAndReport () {
@@ -125,7 +156,8 @@ async function placeAndReport () {
   await new Promise(resolve => requestAnimationFrame(resolve))
   place()
   await nextTick()
-  if (el.value) emit('placed', el.value.getBoundingClientRect())
+  const rect = el.value && shownRect(el.value)
+  if (rect) emit('placed', rect)
 }
 
 onMounted(() => {
@@ -133,11 +165,19 @@ onMounted(() => {
   placeAndReport()
   resize = new ResizeObserver(() => { placeAndReport() })
   resize.observe(el.value!)
+  // The related items appear after the card; watch them too, not only the anchor.
+  const kids = new MutationObserver(() => {
+    for (const child of el.value?.children ?? []) resize?.observe(child)
+  })
+  kids.observe(el.value!, { childList: true })
+  for (const child of el.value!.children) resize.observe(child)
+  stopKids = () => kids.disconnect()
 })
 watch(() => props.at, placeAndReport)
 onUnmounted(() => {
   document.removeEventListener('keydown', onKey)
   resize?.disconnect()
+  stopKids?.()
 })
 </script>
 
@@ -175,6 +215,8 @@ onUnmounted(() => {
 .value { display: flex; align-items: baseline; gap: 6px; }
 .headline { font-family: var(--w-num); font-size: calc(24px * var(--w-text-scale, 1)); line-height: 1.1; font-weight: 600; color: var(--w-accent); white-space: nowrap; }
 .dim { color: var(--w-dim); }
+.fg { color: var(--w-fg); }
+.parts { display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .row { display: flex; gap: 6px; margin-top: 2px; }
 .btn { display: inline-flex; align-items: center; }
 </style>

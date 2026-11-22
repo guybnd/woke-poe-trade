@@ -11,8 +11,8 @@
       </template>
     </div>
     <div :class="$style.value">
-      <span :class="$style.headline">{{ each }}</span>
-      <span :class="$style.each">each<template v-if="stack"> · {{ stack }} for your {{ have }}</template></span>
+      <span :class="$style.headline">{{ price?.main }}</span>
+      <span :class="$style.each"><template v-if="price?.each">each</template><template v-if="stack">{{ price?.each ? ' · ' : '' }}{{ stack }} for your {{ have }}</template><template v-if="price?.sub"> · {{ price.sub }}</template></span>
     </div>
     <div :class="$style.row">
       <button type="button" class="btn w-pc-primary" :class="$style.live" data-testid="ninja-verdict-live" @click="search">
@@ -27,7 +27,8 @@
 import { computed, inject } from 'vue'
 import type { ParsedItem } from '@/parser'
 import type { ItemFilters } from '@/web/price-check/filters/interfaces'
-import { usePoeninja, displayRounding } from '@/web/background/Prices'
+import { usePoeninja } from '@/web/background/Prices'
+import { ninjaPrice, ninjaTotal } from './ninja-first'
 import { WSpark, WKbd, agoPhrase } from '../ui'
 import { exactDetailsId } from '@/web/price-check/trends/getDetailsId'
 import { poeOn } from './window-style'
@@ -38,7 +39,7 @@ const props = defineProps<{
   api?: 'trade' | 'bulk'
 }>()
 
-const { findPriceByQuery, autoCurrency, updatedAt } = usePoeninja()
+const { findPriceByQuery, xchgRate, updatedAt } = usePoeninja()
 const search = inject<() => void>('price-check-search', () => {})
 
 const info = computed(() => {
@@ -47,17 +48,10 @@ const info = computed(() => {
   return row && row.chaos > 0 ? row : null
 })
 
-function amount (chaos: number): string {
-  // A Divine Orb is priced in chaos, or it would read "1 div".
-  const p = props.item.info.refName === 'Divine Orb'
-    ? { min: chaos, currency: 'chaos' as const }
-    : autoCurrency(chaos)
-  return `${displayRounding(p.min)}${p.currency === 'div' ? ' div' : 'c'}`
-}
-
+const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 const have = computed(() => props.filters.stackSize?.value ?? 1)
-const each = computed(() => info.value ? amount(info.value.chaos) : '')
-const stack = computed(() => info.value && have.value > 1 ? amount(info.value.chaos * have.value) : null)
+const price = computed(() => info.value ? ninjaPrice(info.value.chaos, xchgRate.value, isDivine.value) : null)
+const stack = computed(() => info.value && have.value > 1 ? ninjaTotal(info.value.chaos * have.value, isDivine.value ? undefined : xchgRate.value) : null)
 const age = computed(() => agoPhrase(updatedAt.value))
 const spark = computed(() => (info.value?.graph ?? []).filter((p): p is number => p != null))
 // poe.ninja's line is the % change since the first day, so its last point is the week's change.
