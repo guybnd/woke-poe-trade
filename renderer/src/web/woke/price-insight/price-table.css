@@ -236,20 +236,13 @@
   color: var(--w-info); font-size: 0.85em; white-space: nowrap;
 }
 .w-pc-local-row { box-shadow: inset 2px 0 0 var(--w-info); }
-/* A short filtered list: Load more from the last search, or a Search hint. */
+/* A short filtered list: a Search hint. */
 .w-pc-local-hint > td {
   padding-top: 6px; padding-bottom: 6px; white-space: normal;
   border-top: 1px dashed var(--w-line); background: color-mix(in srgb, var(--w-info) 7%, transparent);
 }
 .w-pc-local-hint > td > * { margin-right: 8px; vertical-align: middle; }
-.w-pc-local-faint { color: var(--w-faint); }
 .w-pc-local-go { color: var(--w-accent); }
-.w-pc-status-btn {
-  padding: 0 8px; border: 1px solid color-mix(in srgb, var(--w-info) 50%, transparent);
-  background: transparent; color: var(--w-info); font: inherit; cursor: pointer;
-}
-.w-pc-status-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--w-info) 18%, transparent); }
-.w-pc-status-btn:disabled { opacity: 0.6; cursor: default; }
 /* Only a new search can help: Search glows. */
 .btn.w-pc-glow { box-shadow: 0 0 0 1px var(--w-accent), 0 0 10px 2px color-mix(in srgb, var(--w-accent) 55%, transparent); }
 @media (prefers-reduced-motion: no-preference) {

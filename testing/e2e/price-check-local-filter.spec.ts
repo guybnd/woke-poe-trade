@@ -80,34 +80,24 @@ test('a raised min filters the loaded listings here; a lowered one asks for a ne
   await lifeMin.hover()
   await overlay.snap('filtered here')
 
-  // None of the loaded ones fit: Load 10 more fetches the last search's next page.
+  // None of the loaded ones fit, and the search found more: the hint points at Search, which glows.
   await lifeMin.fill('140')
   const hint = panel.locator('.w-pc-local-hint')
   await expect(hint).toContainText('None of the 20 loaded fit')
-  await overlay.snap('short list, more to load')
-  await hint.getByRole('button', { name: 'Load 10 more' }).click()
-  await expect(listings).toHaveCount(5)
-  await expect(status).toContainText('5 of 30 here')
-  expect(calls.fetch).toBe(fetches + 1)
-
-  // All 30 the search found are loaded: a search would find no more, so it isn't suggested.
-  await lifeMin.fill('150')
-  await expect(hint).toContainText('None of the 30 listings the search found fit')
-  await expect(hint.getByRole('button', { name: 'Load 10 more' })).toHaveCount(0)
-  await expect(hint).not.toContainText('Search for these filters')
-  await expect(search).not.toHaveClass(/w-pc-glow/)
-  await overlay.snap('short list, all loaded')
+  await expect(hint).toContainText('Search for these filters')
+  await expect(search).toHaveClass(/w-pc-glow/)
+  await overlay.snap('short list')
 
   // Lower than the search went: those listings were never loaded.
   await lifeMin.fill('100')
   await expect(panel.locator('.w-pc-results-stale').first()).toBeVisible()
   await expect(status).toHaveCount(0)
-  await expect(listings).toHaveCount(30)
+  await expect(listings).toHaveCount(20)
   await expect(search).toHaveClass(/w-pc-glow/)
   await overlay.snap('needs a new search')
 
   // None of it ran a trade search.
   await overlay.page.waitForTimeout(300)
   expect(calls.search).toBe(searches)
-  expect(calls.fetch).toBe(fetches + 1)
+  expect(calls.fetch).toBe(fetches)
 })
