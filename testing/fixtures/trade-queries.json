@@ -1,4 +1,54 @@
 {
+ "card-the-doctor.txt": {
+  "opened": {
+   "status": {
+    "option": "available"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "The Doctor"
+  },
+  "allTicked": {
+   "status": {
+    "option": "available"
+   },
+   "stats": [
+    {
+     "type": "and",
+     "filters": []
+    }
+   ],
+   "filters": {
+    "trade_filters": {
+     "filters": {
+      "price": {
+       "option": "chaos_divine"
+      },
+      "collapse": {
+       "option": "true"
+      }
+     }
+    }
+   },
+   "type": "The Doctor"
+  }
+ },
  "chart-sandy-seabed.txt": {
   "opened": {
    "status": {

@@ -89,6 +89,8 @@ test('price check side window: a row shows its tooltip and menu, a click price c
   await overlay.boot()
   await overlay.copyItem('items/essence-deafening-misery.txt')
   const page = overlay.page
+  // poe.ninja prices it, so the instant card shows, with the related items under it (WOKEPOET-480).
+  await expect(page.getByTestId('instant-ninja-card').locator('.w-pc-side')).toBeVisible({ timeout: 20_000 })
   const side = page.locator('.w-pc-side')
   await expect(side).toBeVisible({ timeout: 20_000 })
   const row = side.getByText(/^Shrieking Essence of Misery$/).first()

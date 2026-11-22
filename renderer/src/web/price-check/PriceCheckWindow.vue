@@ -6,6 +6,12 @@
     'flex-row': clickPosition === 'stash',
     'flex-row-reverse': clickPosition === 'inventory'
   }">
+    <instant-ninja-card v-if="instant && item?.isOk()" :key="instantKey" :item="item.value" :at="instant"
+      :active="config.wmWants === 'show'" :again-keys="config.hotkey ? `${config.hotkeyHold} + ${config.hotkey}` : null"
+      @placed="instantPlaced" @live="openWindow(true)" @details="openWindow(false)" @close="closePriceCheck">
+      <related-items :class="[$style.zoomed, $style.instantSide]" :item="item.value" click-position="stash" @check="checkRelated" />
+    </instant-ninja-card>
+    <template v-else>
     <div v-if="!isBrowserShown" class="layout-column shrink-0"
       :style="{ width: floating ? `${floating.gap}px` : 'var(--game-panel)' }">
     </div>
@@ -81,6 +87,7 @@
         <rate-limiter-state class="pointer-events-auto" />
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -114,11 +121,15 @@ import { uiZoom } from '@/web/woke/ui/ui-size'
 import '@/web/woke/price-insight/poe-mode.css'
 import { floatingArea, floatingLayout, movedPosition, resizedPosition } from './window-position'
 import { dispatchPriceCheck } from '@/web/woke/ui/tooltip/item-price-check'
+import { exactDetailsId } from './trends/getDetailsId'
+import { fixedPriceItem } from '@/web/woke/price-insight/ninja-first'
 
 type ParseError = { name: string; message: string; rawText: ParsedItem['rawText']; unsupported?: boolean }
 const UNSUPPORTED = 'woke.unsupported'
 
 const DRAG_START_PX = 4
+// woke: how long the price check hotkey pressed again on the instant card's item means "live offers".
+const AGAIN_MS = 15_000
 const WINDOW_REM = 28.75
 // The game art keeps a buffer inside the frame; the window grows by it so the table keeps its room.
 // Screen px: UI size zooms the title bar and body (.zoomed), not the frame.
@@ -169,6 +180,7 @@ export default defineComponent({
     UiErrorBox,
     // Only for items the game data doesn't know yet: loaded on first use.
     NewItemSearch: defineAsyncComponent(() => import('@/web/woke/new-item/NewItemSearch.vue')),
+    InstantNinjaCard: defineAsyncComponent(() => import('@/web/woke/price-insight/InstantNinjaCard.vue')),
     UnreadableItem,
     PriceStyleMenu,
     UiPopover
@@ -199,32 +211,28 @@ export default defineComponent({
       // First, so the area below is for the window as it will show: an open
       // browser forces the docked layout.
       closeBrowser()
-      if (Host.isElectron && !e.focusOverlay) {
-        // everything in CSS pixels
-        const width = windowWidth()
-        const screenX = ((e.position.x - window.screenX) > window.innerWidth / 2)
-          ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
-          : window.screenX + wm.poePanelWidth.value
-        const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
-        MainProcess.sendEvent({
-          name: 'OVERLAY->MAIN::track-area',
-          payload: {
-            holdKey: props.config.hotkeyHold,
-            closeThreshold: 2.5 * rootFontPx() * uiZoom(),
-            from: e.position,
-            area: placed
-              ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
-              : { x: screenX, y: window.screenY, width, height: window.innerHeight },
-            dpr: window.devicePixelRatio
-          }
-        })
+      // woke: an exchange item poe.ninja prices gets the small card by the item (instant check).
+      const parsed = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
+      // Only for the in-game hotkey: a locked check or a pasted item opens the window.
+      // The hotkey again on the item the card shows: live offers, without moving to the card.
+      const again = instant.value != null && !e.focusOverlay && e.clipboard === instantText &&
+        Date.now() - instantAt < AGAIN_MS
+      const quick = !again && !e.live && !e.focusOverlay && parsed.isOk() && instantCheck(parsed.value)
+      instantText = quick ? e.clipboard : ''
+      instantAt = Date.now()
+      instantKey.value += 1
+      instant.value = quick ? { x: e.position.x - window.screenX, y: e.position.y - window.screenY } : null
+      trackFrom = e.position
+      // The card's area is sent once it's placed (instantPlaced).
+      if (Host.isElectron && !e.focusOverlay && !quick) {
+        trackWindowArea(e.position)
       }
       wm.show(props.config.wmId)
       checkPosition.value = e.position
       advancedCheck.value = e.focusOverlay
-      liveCheck.value = e.live === true
+      liveCheck.value = e.live === true || again
 
-      item.value = (e.item ? ok(e.item as ParsedItem) : parseClipboard(e.clipboard))
+      item.value = parsed
         .andThen(item => (
           (item.category === ItemCategory.Sentinel && item.rarity !== ItemRarity.Unique))
           // woke: a known item that's not priced, so not searched by name either.
@@ -241,6 +249,58 @@ export default defineComponent({
         queuePricesFetch()
       }
     })
+
+    // woke: the instant check (InstantNinjaCard.vue): where the card sits, or null for the window.
+    const instant = shallowRef<{ x: number, y: number } | null>(null)
+    let trackFrom = { x: 0, y: 0 }
+    const poeninja = usePoeninja()
+    function instantCheck (it: ParsedItem): boolean {
+      const cfg = props.config
+      if (cfg.wokeNinjaFirst === false || cfg.wokeNinjaInstant === false) return false
+      if (!(it.info.tradeTag || fixedPriceItem(it)) || !leagues.selectedId.value) return false
+      // Its window says whether to open or sell them (stacked-decks/), which the card can't.
+      if (it.info.refName === 'Stacked Deck') return false
+      const q = exactDetailsId(it)
+      return Boolean(q && (poeninja.findPriceByQuery(q)?.chaos ?? 0) > 0)
+    }
+    // A new card each check, so it measures itself and reports its area again.
+    const instantKey = shallowRef(0)
+    let instantText = ''
+    let instantAt = 0
+    function sendTrackArea (from: { x: number, y: number }, area: { x: number, y: number, width: number, height: number }) {
+      MainProcess.sendEvent({
+        name: 'OVERLAY->MAIN::track-area',
+        payload: {
+          holdKey: props.config.hotkeyHold,
+          closeThreshold: 2.5 * rootFontPx() * uiZoom(),
+          from,
+          area,
+          dpr: window.devicePixelRatio
+        }
+      })
+    }
+    // The mouse is tracked into the window (docked or where it was moved), everything in CSS pixels.
+    function trackWindowArea (from: { x: number, y: number }) {
+      const width = windowWidth()
+      const screenX = ((from.x - window.screenX) > window.innerWidth / 2)
+        ? (window.screenX + window.innerWidth) - wm.poePanelWidth.value - width
+        : window.screenX + wm.poePanelWidth.value
+      const placed = floating.value ? floatingArea(floating.value, screenSize()) : null
+      sendTrackArea(from, placed
+        ? { ...placed, x: window.screenX + placed.x, y: window.screenY + placed.y }
+        : { x: screenX, y: window.screenY, width, height: window.innerHeight })
+    }
+    function instantPlaced (rect: DOMRect) {
+      if (!Host.isElectron || advancedCheck.value || !rect.width) return
+      sendTrackArea(trackFrom, { x: window.screenX + rect.x, y: window.screenY + rect.y, width: rect.width, height: rect.height })
+    }
+    // From the card to the window: Live offers searches, Details doesn't. The
+    // mouse is tracked into the window now, or leaving the card would close it.
+    function openWindow (live: boolean) {
+      liveCheck.value = live
+      instant.value = null
+      if (Host.isElectron && !advancedCheck.value) trackWindowArea(trackFrom)
+    }
 
     function handleIdentification (identified: ParsedItem) {
       item.value = ok(identified)
@@ -450,6 +510,10 @@ export default defineComponent({
       item,
       advancedCheck,
       liveCheck,
+      instant,
+      instantKey,
+      instantPlaced,
+      openWindow,
       handleIdentification,
       overlayKey,
       isLeagueSelected,
@@ -467,6 +531,8 @@ export default defineComponent({
 :global(#price-window [data-price-title-text]) { margin-left: auto; }
 .edgeX, .edgeY, .corner { position: absolute; z-index: 2; }
 .zoomed { zoom: var(--w-ui-size, 1); }
+/* Under the instant card, close to it. */
+.zoomed.instantSide { margin-top: 6px; }
 .edgeX { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: ew-resize; }
 .edgeY { left: 8px; right: 8px; bottom: 0; height: 5px; cursor: ns-resize; }
 .corner { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }

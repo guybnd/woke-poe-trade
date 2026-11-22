@@ -4,7 +4,7 @@
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
     <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsDimmed, 'w-pc-verdict-held': verdictHeld }">
-      <woke-ninja-verdict v-if="ninjaVerdictShown" :item="item" :filters="itemFilters" />
+      <woke-ninja-verdict v-if="ninjaVerdictShown" :item="item" :filters="itemFilters" :api="tradeAPI" />
       <div v-else-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
     </div>
     <filter-name
@@ -163,7 +163,7 @@ import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
 import { PriceCheckWidget } from '../overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { priceView, ninjaCardOpen } from '@/web/woke/price-insight/view'
-import { holdBulkSearch, isUnidUniqueJewel } from '@/web/woke/price-insight/ninja-first'
+import { holdBulkSearch, fixedPriceItem, isUnidUniqueJewel } from '@/web/woke/price-insight/ninja-first'
 import { exactDetailsId } from './trends/getDetailsId'
 import { usePoeninja } from '@/web/background/Prices'
 import { poeMode, poeOn, loadPoeKit } from '@/web/woke/price-insight/window-style'
@@ -363,7 +363,7 @@ export default defineComponent({
       ninjaChaos.value = readNinjaChaos(item)
       waitingForPrices = false
       if (!doSearch.value) return
-      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, unidJewel: isUnidUniqueJewel(item) }
+      const hold = { api: tradeAPI.value, enabled: widget.value.wokeNinjaFirst, live: props.live, fixed: fixedPriceItem(item) || isUnidUniqueJewel(item) }
       if (holdBulkSearch({ ...hold, chaos: ninjaChaos.value })) {
         doSearch.value = false
       } else if (ninjaChaos.value == null && pricesPending() && holdBulkSearch({ ...hold, chaos: 1 })) {
@@ -515,8 +515,7 @@ export default defineComponent({
 
     function handleSearchMouseenter (e: MouseEvent) {
       // woke: an exchange item poe.ninja prices searches only on a click (WOKEPOET-479).
-      // An unidentified unique jewel too (WOKEPOET-481).
-      if (ninjaVerdictShown.value || (ninjaChaos.value != null && tradeAPI.value === 'bulk' && widget.value.wokeNinjaFirst !== false)) return
+      if (ninjaHolds.value) return
       const from = e.relatedTarget as HTMLElement
       if ((filtersComponent.value.$el as HTMLElement).contains(from) ||
           (nameComponent.value.$el as HTMLElement).contains(from)) {
@@ -552,12 +551,16 @@ export default defineComponent({
     const wokeVerdictShown = computed(() => priceView.value === 'improved' && tradeAPI.value === 'trade' && searched.value != null)
     // woke: before an exchange search, poe.ninja's price is the verdict.
     // In Classic view too: it holds the search the same way.
-    const ninjaVerdictShown = computed(() => !doSearch.value && ninjaChaos.value != null &&
-      widget.value.wokeNinjaFirst !== false && (
-      // An unidentified unique jewel: poe.ninja's price, unidentified listings on a click.
-      isUnidUniqueJewel(props.item) || (tradeAPI.value === 'bulk' &&
+    // An unidentified unique jewel too (WOKEPOET-481): poe.ninja's price, unidentified listings on a click.
+    const isFixed = computed(() => fixedPriceItem(props.item) || isUnidUniqueJewel(props.item))
+    // An item poe.ninja prices whose search waits for a click: exchange items, and fixed ones (cards, beasts, keys).
+    const ninjaHolds = computed(() => ninjaChaos.value != null && widget.value.wokeNinjaFirst !== false &&
+      (tradeAPI.value === 'bulk' || isFixed.value))
+    const ninjaVerdictShown = computed(() => !doSearch.value && ninjaHolds.value && (isFixed.value
+      // A fixed item's listings bring their own verdict.
+      ? searched.value == null
       // A ticked stat makes the next search an item search, which the card doesn't offer.
-      apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'bulk')))
+      : apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'bulk'))
 
     return {
       proposeSearchName,

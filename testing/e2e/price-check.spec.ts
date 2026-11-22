@@ -7,19 +7,27 @@ import { test, expect } from './harness'
 // and shards (one file alone otherwise sets how short a shard can be).
 test.describe.configure({ mode: 'parallel' })
 
-test('currency: Ctrl+D shows the poe.ninja price, and bulk exchange offers on a click', async ({ overlay, fakeApp }) => {
+// The full window for currency, not the instant card by the item (WOKEPOET-480).
+const windowCheck = (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaInstant = false
+}
+
+test('currency: Ctrl+D shows the poe.ninja price by the item, and exchange offers on a click', async ({ overlay, fakeApp }) => {
   await overlay.boot()
   await overlay.copyItem('items/currency-divine.txt')
-  const panel = overlay.widget('price-check')
-  await expect(panel).toContainText('Divine Orb')
-  // poe.ninja's cached price is the verdict, and no exchange search ran (WOKEPOET-479).
-  const verdict = panel.getByTestId('ninja-verdict')
-  await expect(verdict).toContainText('POE.NINJA')
-  await expect(verdict).toContainText('180c')
-  await overlay.snap('divine orb ninja first')
+  // The instant check: a small card by the item, no window and no search (WOKEPOET-480).
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('Divine Orb')
+  await expect(card).toContainText('180c')
+  await expect(overlay.page.locator('#price-window')).toHaveCount(0)
+  await overlay.snap('divine orb instant check')
+  // The mouse is tracked into the card, not the window.
+  const tracked = await fakeApp.waitForReceived('OVERLAY->MAIN::track-area') as { area: { width: number } }
+  expect(tracked.area.width).toBeLessThan(400)
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
-  await panel.getByTestId('ninja-verdict-live').click()
-  await expect(verdict).toHaveCount(0)
+  await card.getByTestId('instant-ninja-live').click()
+  await expect(card).toHaveCount(0)
+  const panel = overlay.widget('price-check')
   // The five recorded exchange offers, cheapest first.
   await expect(panel).toContainText('Matched: 5')
   await expect(panel).toContainText('178 / 1')
@@ -33,8 +41,60 @@ test('currency: Ctrl+D shows the poe.ninja price, and bulk exchange offers on a 
   expect(JSON.parse(posted!.body).query.want).toEqual(['divine'])
 })
 
-test('the window can be dragged, resized, saved and put back', async ({ overlay, fakeApp }) => {
+test('currency: Space on the instant card searches, Details opens the window without a search', async ({ overlay, fakeApp }) => {
   await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toBeVisible()
+  await card.getByTestId('instant-ninja-details').click()
+  const panel = overlay.widget('price-check')
+  // The window, with poe.ninja's price as its verdict and still no search.
+  await expect(panel.getByTestId('ninja-verdict')).toContainText('180c')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/exchange/'))).toBe(false)
+
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toBeVisible()
+  await overlay.page.keyboard.press('Space')
+  await expect(panel).toContainText('Matched: 5')
+})
+
+test('divination card: the instant card shows the poe.ninja price and no trade search runs', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/card-the-doctor.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('The Doctor')
+  await expect(card).toContainText('for your 2')
+  await overlay.snap('the doctor instant check')
+  await card.getByTestId('instant-ninja-details').click()
+  await expect(overlay.widget('price-check').getByTestId('ninja-verdict')).toContainText('uses one trade search')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
+})
+
+test('currency: the price check hotkey again on the same item opens live offers', async ({ overlay }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/currency-divine.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card.getByTestId('instant-ninja-again')).toContainText('Ctrl')
+  await overlay.copyItem('items/currency-divine.txt')
+  await expect(card).toHaveCount(0)
+  await expect(overlay.widget('price-check')).toContainText('Matched: 5')
+})
+
+test('currency: with poe.ninja first off, Ctrl+D searches right away', async ({ overlay }) => {
+  await overlay.boot({
+    patch: (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaFirst = false
+    }
+  })
+  await overlay.copyItem('items/currency-divine.txt')
+  const panel = overlay.widget('price-check')
+  await expect(panel).toContainText('Matched: 5')
+  await expect(overlay.page.getByTestId('instant-ninja-card')).toHaveCount(0)
+  await expect(panel.getByTestId('ninja-verdict')).toHaveCount(0)
+})
+
+test('the window can be dragged, resized, saved and put back', async ({ overlay, fakeApp }) => {
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.page.locator('#price-window')
   await expect(panel).toContainText('Divine Orb')
@@ -101,7 +161,7 @@ test('the window can be dragged, resized, saved and put back', async ({ overlay,
 // Hiding the window starts a delayed chart redraw. A new check removes the chart first,
 // and the redraw then has nothing to measure: NaN in the svg, page errors.
 test('a price check right after closing the window draws no broken chart', async ({ overlay, fakeApp }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   const chart = panel.locator('.apexcharts-canvas svg')
@@ -321,7 +381,7 @@ test('Settings > Price check > Listings switches Classic and Improved', async ({
 })
 
 test('the poe.ninja card folds onto the name row and stays as left', async ({ overlay }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const panel = overlay.widget('price-check')
   const chip = panel.getByTitle(/^poe\.ninja price/)

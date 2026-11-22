@@ -88,7 +88,7 @@
           <input :checked="skipPicks.isPicked(s)" type="checkbox" :class="$style.check" :aria-label="`Pick ${s.base}`" @click="skipPicks.click($event, n)">
           <LabelPreview :text="s.base" :actions="lookOf(s.type, s.tier)" :extras="false" />
           <button type="button" :class="$style.link" class="w-focusable text-xs" :title="`Open ${groupLabel(s.type)} ${s.tier} in Rules`" @click="emit('open-rule', { type: s.type, tier: s.tier, base: s.base })">{{ groupLabel(s.type) }}, {{ tierLabel(s.tier) }} <i class="fas fa-external-link-alt" /></button>
-          <WChip :title="SKIP_WHY[s.reason].title">{{ SKIP_WHY[s.reason].label }}</WChip>
+          <WChip :title="skipChip(s).title">{{ skipChip(s).label }}</WChip>
           <WChip v-if="s.hides" :class="$style.bad" title="The tier its price says is hidden at your strictness">would hide it</WChip>
           <span class="grow" />
           <span class="w-faint text-xs">price says {{ tierLabel(s.wanted) }}</span>
@@ -177,7 +177,7 @@ import { usePoeninja } from '@/web/background/Prices'
 import LabelPreview from './LabelPreview.vue'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { ECONOMY_GROUPS, NET_GROUPS, livePriceMoves, lockKey, tierRank } from './economy'
+import { ECONOMY_GROUPS, NET_GROUPS, livePriceMoves, lockKey, swingText, tierRank } from './economy'
 import type { PriceMove, PriceSkip } from './economy'
 import { conditionSignature } from './edits'
 import { baseTipRef } from './base-tip'
@@ -208,8 +208,12 @@ const emit = defineEmits<{ (e: 'open-rule', rule: { type: string, tier: string, 
 const SKIP_WHY = {
   locked: { label: 'kept by you', short: 'you pressed Keep, or moved it by hand', title: 'You pressed Keep, or moved it yourself in Rules. Unlock lets prices move it again.' },
   thin: { label: 'thin market', short: 'too few trades to trust the price', title: 'poe.ninja had no price on 3 or more of the last 7 days, so this price is easy to fake' },
-  volatile: { label: 'price jumped', short: 'waits for the price to settle', title: 'It tripled or fell to a third this week, or doubled or halved in a day. It moves once the price settles.' }
+  volatile: { label: 'spiked or crashed', short: 'waits for the price to settle', title: 'It tripled or fell to a third this week, or doubled or halved in a day. It moves once the price settles.' }
 } as const
+
+function skipChip (s: PriceSkip) {
+  return s.reason === 'volatile' && s.swing ? swingText(s.chaos, s.swing) : SKIP_WHY[s.reason]
+}
 
 const openRow = ref<string | null>(null)
 const showMoved = useFold('filter-prices.moved')

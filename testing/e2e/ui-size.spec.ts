@@ -1,6 +1,11 @@
 // UI size: one setting that grows panels, the price check and pins together.
 import { test, expect } from './harness'
 
+// The full window for currency, not the instant card by the item (WOKEPOET-480).
+const windowCheck = (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaInstant = false
+}
+
 function setUiSize (page: import('@playwright/test').Page, v: number) {
   return page.evaluate((v) => {
     localStorage.setItem('woke.uiSize', String(v))
@@ -9,7 +14,7 @@ function setUiSize (page: import('@playwright/test').Page, v: number) {
 }
 
 test('UI size grows the price check window and the panel zoom together, never the root font', async ({ overlay }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const page = overlay.page
   const panel = page.locator('#price-window')
@@ -37,7 +42,7 @@ test('UI size grows the price check window and the panel zoom together, never th
 })
 
 test('The price check palette sizes that window', async ({ overlay }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const page = overlay.page
   const panel = page.locator('#price-window')

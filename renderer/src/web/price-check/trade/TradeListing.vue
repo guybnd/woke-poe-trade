@@ -171,14 +171,11 @@
                 </span>
               </td>
             </tr>
-            <!-- woke: few rows fit: load the last search's next page (a click, no new search), or suggest a search. -->
+            <!-- woke: few rows fit: suggest a search, unless the search's every listing is already here. -->
             <tr v-if="shortList" class="w-pc-local-hint">
               <td colspan="100" class="px-2">
                 <span>{{ fitCount ? `Only ${fitCount}` : 'None' }} of the {{ loadedCount }} {{ allLoaded ? 'listings the search found' : 'loaded' }} fit{{ allLoaded ? ': searching again finds no more' : '' }}.</span>
-                <button v-if="morePages" type="button" class="w-pc-status-btn" :disabled="fetching" @click="loadNextPage">{{ fetching ? 'Loading…' : 'Load 10 more' }}</button>
-                <span v-if="morePages" class="w-pc-local-faint">from the last search</span>
-                <span v-else-if="!allLoaded" class="w-pc-local-go">Search for these filters ↑</span>
-                <span v-if="loadNote" class="w-pc-local-faint">{{ loadNote }}</span>
+                <span v-if="!allLoaded" class="w-pc-local-go">Search for these filters ↑</span>
               </td>
             </tr>
           </template>
@@ -619,25 +616,16 @@ export default defineComponent({
       return Boolean(range && chaos != null && !row.dropped && chaos >= range.low && chaos <= range.high)
     }
 
-    // A page loaded for a filtered list keeps its hint row up, not loading rows.
-    const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length && !props.narrow))
+    const tableLoading = computed(() => !slowdown.isReady.value || (fetching.value && !rows.value.length))
     const listSettled = computed(() => !tableLoading.value && !fetching.value)
 
-    // woke: a filtered list this short gets the next page or a search suggested.
+    // woke: a filtered list this short suggests a search (Search glows).
     const shortList = computed(() => props.narrow != null && !!searchResult.value && !tableLoading.value && fitCount.value < SHORT_LIST)
     // Every listing the search found is loaded: the filter here is exact, a search finds nothing more.
-    const allLoaded = computed(() => !!searchResult.value && !morePages.value && loadedCount.value >= searchResult.value.total)
-    const glow = computed(() => props.dim || (shortList.value && !morePages.value && !allLoaded.value && !fetching.value))
+    const allLoaded = computed(() => !!searchResult.value && loadedCount.value >= searchResult.value.total)
+    const glow = computed(() => props.dim || (shortList.value && !allLoaded.value))
     watch(glow, (on) => { ctx.emit('glow', on) }, { immediate: true })
     onUnmounted(() => { ctx.emit('glow', false) })
-    const loadNote = shallowRef('')
-    async function loadNextPage () {
-      const before = fetchResults.value.length
-      loadNote.value = ''
-      // One page per click: done once anything new arrived.
-      const note = await loadMore(() => fetchResults.value.length > before)
-      if (note) loadNote.value = note
-    }
     // The tighter range on a column, for its header.
     function localRange (col: StatColumn): string | null {
       const check = props.narrow?.checks.find(c => c.column.key.slice(c.column.key.indexOf('|')) === col.key.slice(col.key.indexOf('|')))
@@ -744,9 +732,6 @@ export default defineComponent({
       bulkSellers: computed(() => bulkSellerCount(fitResults.value, sameKind)),
       shortList,
       allLoaded,
-      loadNextPage,
-      loadNote,
-      morePages,
       localRange,
       loadedCount,
       fitCount,

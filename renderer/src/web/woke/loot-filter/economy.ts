@@ -74,6 +74,8 @@ export interface PricePoint {
   thin: boolean
   // Jumped or crashed lately: a fixer's listing as often as a real move.
   volatile?: boolean
+  // The move that made it volatile.
+  swing?: PriceSwing
   // For uniques: which unique set the price.
   note?: string
 }
@@ -139,10 +141,14 @@ export function priceLookup (
   variants: VariantRule = 'market'
 ): PriceLookup {
   const find = priceFinder(items, variants)
+  const point = (i: PriceItem): PricePoint => {
+    const swing = priceSwing(i)
+    return { chaos: i.chaos, thin: isThin(i), volatile: swing != null, ...(swing ? { swing } : {}) }
+  }
   return (group, base) => {
     if (!group.unique) {
       const hit = find(group.ninja, base)
-      return hit ? { chaos: hit.chaos, thin: isThin(hit), volatile: isVolatile(hit) } : null
+      return hit ? point(hit) : null
     }
     // Replicas have their own NeverSink blocks above the unique tiers, so
     // they never land in them and must not set the base's price.
@@ -154,14 +160,42 @@ export function priceLookup (
     // "max": the base is worth what its best unique is worth, so a valuable
     // unique is never hidden because it shares a base with junk.
     const pick = priced.reduce((a, b) => (rule === 'max' ? b.chaos > a.chaos : b.chaos < a.chaos) ? b : a)
-    return { chaos: pick.chaos, thin: isThin(pick), volatile: isVolatile(pick), note: priced.length > 1 ? `${pick.name}, 1 of ${priced.length}` : pick.name }
+    return { ...point(pick), note: priced.length > 1 ? `${pick.name}, 1 of ${priced.length}` : pick.name }
   }
 }
 
+// How far a price moved: what it was a day or a week ago.
+export interface PriceSwing {
+  was: number
+  days: 1 | 7
+}
+
 // Tripled or fell to a third within the week, or doubled or halved in a day.
+// When both are true, the bigger move.
+export function priceSwing (i: { chaos: number, d1?: number, d7?: number }): PriceSwing | null {
+  const size = (from: number | undefined, by: number) =>
+    from != null && from > 0 && i.chaos > 0 && Math.abs(Math.log(i.chaos / from)) >= Math.log(by) - 1e-9 ? Math.abs(Math.log(i.chaos / from)) : 0
+  const week = size(i.d7, 3)
+  const day = size(i.d1, 2)
+  if (!week && !day) return null
+  return week >= day ? { was: i.d7!, days: 7 } : { was: i.d1!, days: 1 }
+}
+
 export function isVolatile (i: { chaos: number, d1?: number, d7?: number }): boolean {
-  const moved = (from: number | undefined, by: number) => from != null && from > 0 && (i.chaos / from >= by || i.chaos / from <= 1 / by)
-  return moved(i.d7, 3) || moved(i.d1, 2)
+  return priceSwing(i) != null
+}
+
+// Badge for a volatile price: "spiked +240% in a week", "crashed −70% in a day",
+// in poe.ninja's terms. The title says what it was and what it is.
+export function swingText (chaos: number, swing: PriceSwing): { label: string, title: string } {
+  const up = chaos >= swing.was
+  const pct = Math.round(Math.abs(chaos / swing.was - 1) * 100).toLocaleString('en-US')
+  const span = swing.days === 1 ? 'a day' : 'a week'
+  const c = (n: number) => `${n >= 100 ? Math.round(n).toLocaleString('en-US') : +n.toPrecision(3)}c`
+  return {
+    label: `${up ? 'spiked +' : 'crashed −'}${pct}% in ${span}`,
+    title: `${c(swing.was)} ${span} ago, ${c(chaos)} now. A move this fast is as often a price fixer as a real change, so it waits until the price settles.`
+  }
 }
 
 // What the net and the health list judge by: always a base's best unique, and
@@ -248,6 +282,8 @@ export interface PriceSkip {
   // Where the price alone would have put it.
   wanted: string
   reason: 'thin' | 'locked' | 'volatile'
+  // For 'volatile': how far the price moved.
+  swing?: PriceSwing
   // The tier the price says is hidden at this strictness.
   hides?: boolean
 }
@@ -369,13 +405,13 @@ export function planRetier (doc: FilterDoc, lookup: PriceLookup, opts: PlanOptio
       const to = anchors[target].tier
       const toBlocks = blocks.filter(b => b.tier === to)
       const hides = toBlocks.length > 0 && toBlocks.every(b => b.visibility === 'Hide')
-      const skip = (reason: PriceSkip['reason']) => plan.skipped.push({ type: group.type, base, tier: band.tier, chaos: price.chaos, wanted: to, reason, ...(hides ? { hides } : {}) })
+      const skip = (reason: PriceSkip['reason'], swing?: PriceSwing) => plan.skipped.push({ type: group.type, base, tier: band.tier, chaos: price.chaos, wanted: to, reason, ...(swing ? { swing } : {}), ...(hides ? { hides } : {}) })
       if (locked.has(lockKey(group.type, base))) {
         skip('locked')
       } else if (price.thin) {
         skip('thin')
       } else if (price.volatile) {
-        skip('volatile')
+        skip('volatile', price.swing)
       } else {
         plan.moves.push({ type: group.type, base, from: band.tier, to, chaos: price.chaos, note: price.note, ...(hides ? { hides } : {}) })
       }
