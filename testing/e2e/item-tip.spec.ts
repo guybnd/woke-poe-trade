@@ -154,7 +154,7 @@ test('a base in a unique tier lists the uniques it can drop as, with their price
 // Bringing a panel to the front gave it the top z-order plus one, for good: in
 // Guy's config Net worth reached 1004, over the tooltip's 1000, so its rows'
 // tooltips opened behind the window.
-test('a panel brought to the front a thousand times still draws under the tooltip of its rows', async ({ overlay }) => {
+test('a panel brought to the front a thousand times still draws under the tooltip of its rows (on load)', async ({ overlay }) => {
   const recorded = fs.readFileSync(DENSE, 'utf8')
   const [type, name, , chaos, graph] = ROWS[2]
   await overlay.page.route('**/dense/overviews*', (route) => route.fulfill({
@@ -183,15 +183,11 @@ test('a panel brought to the front a thousand times still draws under the toolti
   const panel = overlay.widget('woke-market-tracker')
   const row = panel.locator('.w-row', { hasText: name })
   await expect(row).toBeVisible()
-  const z = await panel.evaluate(el => {
-    for (let e: HTMLElement | null = el; e; e = e.parentElement) {
-      const v = parseInt(getComputedStyle(e).zIndex)
-      if (!Number.isNaN(v)) return v
-    }
-    return 0
-  })
-  expect(z).toBeLessThan(900)
-  await row.hover()
+  // The z-index is on the widget's inner box (Widget.vue), not its outer div.
+  const z = await panel.evaluate(el => getComputedStyle(el.firstElementChild!).zIndex)
+  expect(Number(z)).toBeLessThan(900)
+  // Near the row's top-left, so the tooltip (at the cursor + 16px) lands over the panel.
+  await row.hover({ position: { x: 8, y: 2 } })
   const tip = overlay.page.getByRole('tooltip')
   await expect(tip).toContainText(name)
   expect(await tipOnTop(overlay.page)).toBe(true)
