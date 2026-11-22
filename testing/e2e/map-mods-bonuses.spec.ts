@@ -47,5 +47,5 @@ test('the Planner lists T17 mods by bonus and builds a counted search', async ({
   const search = panel.getByTestId('map-planner-search')
   await expect(search.locator('code')).toContainText('"!')
   await expect(search.getByRole('button', { name: 'Copy' })).toBeEnabled()
-  await expect(planner.getByText('of the 4 ticked mods')).toBeVisible()
+  await expect(planner.getByText('of the 4 ticked mods', { exact: true })).toBeVisible()
 })
