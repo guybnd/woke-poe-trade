@@ -97,12 +97,17 @@ export function compareToSearched (
     if (query(filters, onlyThis) === live) continue
     const column = pickStatColumns([row])[0]
     if (!column) return STALE
+    // Several ids are searched as "any one of them" at the range; a column adds them up.
+    if (column.source.kind === 'mod' && !column.source.labels && row.tradeId.length > 1) return STALE
+    // Newly ticked: if the search ignores its number ({empty} ids), only having the stat counts.
+    const numberSent = !old.disabled ||
+      query(filters, stats.map((r, j) => j === i ? { ...row, roll: { ...row.roll!, min: undefined, max: undefined } } : r)) !== live
     // The search adds a fractured mod's share back onto a total's numbers.
     const share = row.fracShare ?? 0
     checks.push({
       column,
-      min: min == null ? null : min + share,
-      max: max == null ? null : max + share,
+      min: min == null || !numberSent ? null : min + share,
+      max: max == null || !numberSent ? null : max + share,
       required: old.disabled
     })
   }

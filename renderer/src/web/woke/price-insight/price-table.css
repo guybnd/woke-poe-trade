@@ -223,7 +223,7 @@
    One line in the row's own height, so nothing below moves. */
 .w-pc-status-slot { flex: 1 1 auto; min-width: 0; display: flex; justify-content: center; margin: 0 var(--w-s2, 0.5rem); }
 .w-pc-status {
-  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%;
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; overflow: hidden;
   padding: 0 6px; border-left: 2px solid currentColor; white-space: nowrap;
   font-size: var(--w-fs-sm); line-height: calc(20px * var(--w-text-scale, 1));
 }

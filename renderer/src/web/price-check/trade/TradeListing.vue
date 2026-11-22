@@ -5,7 +5,7 @@
       <span v-if="narrow" class="w-pc-status w-pc-status-local"
         :title="`Filtered from the ${loadedCount} listings already loaded, without a new search. They're still the cheapest that fit. Search for the full count.`">
         <b>Filtered here</b><span class="w-pc-status-note">{{ fitCount }} of {{ loadedCount }} loaded fit</span>
-        <button v-if="fitCount < loadedCount" type="button" class="w-pc-status-btn" :aria-pressed="showHidden"
+        <button v-if="fitCount < loadedCount && !bulk" type="button" class="w-pc-status-btn" :aria-pressed="showHidden"
           @click="showHidden = !showHidden">{{ showHidden ? 'Hide' : 'Show' }} {{ loadedCount - fitCount }}</button>
       </span>
       <span v-else class="w-pc-status w-pc-status-stale"
@@ -40,7 +40,7 @@
         :divine="divine"
         :loading="!list || tableLoading"
         :total="list ? list.total : null"
-        :log-key="logKey"
+        :log-key="narrow ? null : logKey"
         :league="filters.trade.league"
         :blank-search="blankSearch"
         :skips-top-mods="skipsTop"
@@ -496,7 +496,8 @@ export default defineComponent({
     const fits = (listing: PricingResult) => !props.narrow || listingFits(listing.listedItem, props.narrow.checks, props.item.category)
     const fitResults = computed(() => props.narrow ? groupedResults.value.filter(fits) : groupedResults.value)
     const showHidden = shallowRef(false)
-    watch(() => props.narrow == null, (none) => { if (none) showHidden.value = false })    const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
+    watch(() => props.narrow == null, (none) => { if (none) showHidden.value = false })
+    const loadedCount = computed(() => fetchResults.value.filter(r => r != null).length)
     const fitCount = computed(() => props.narrow ? fetchResults.value.filter(r => r != null && fits(r)).length : loadedCount.value)
     const statusSlot = inject<ShallowRef<HTMLElement | null>>('price-search-status-slot', shallowRef(null))
 
@@ -640,12 +641,18 @@ export default defineComponent({
     watch([() => props.stale, error], ([stale, err]) => { if (stale && err) ctx.emit('reset') })
     watch(error, (err) => { if (err) releaseVerdictHeight() })
     // Rows filtered here leave their room, so the window doesn't shrink and grow while you type.
+    // The verdict above the mods too: its text changes with what fits, and the mods mustn't move.
+    let heldForNarrow = false
     function holdTableHeight (hold: boolean) {
-      const el = scrollEl.value
-      if (el) el.style.minHeight = hold ? `${el.offsetHeight}px` : ''
+      // Only undo our own hold: a new search holds the verdict's height itself.
+      if (hold === heldForNarrow) return
+      heldForNarrow = hold
+      for (const el of [scrollEl.value, verdictSlot.value]) {
+        if (el) el.style.minHeight = hold ? `${el.offsetHeight}px` : ''
+      }
     }
-    watch(() => props.narrow != null, (on, was) => { if (on !== was) holdTableHeight(on) }, { flush: 'pre' })
-    watch(searchResult, () => { holdTableHeight(false) })
+    watch(() => props.narrow != null, (on) => { holdTableHeight(on) }, { flush: 'pre' })
+    watch(searchResult, () => { if (!props.narrow) holdTableHeight(false) })
     onUnmounted(releaseVerdictHeight)
 
     return {

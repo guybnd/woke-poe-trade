@@ -20,11 +20,12 @@ import { compareToSearched, listingFits, LocalCheck } from '@/web/woke/price-ins
 const OPTS = { league: 'x', merchantOnly: true, currency: null, collapseListings: 'api' as const, activateStockFilter: false, searchStatRange: 10, useEn: false }
 
 let armour: ParsedItem
-function setup () {
+function setup (prep?: (stats: FilterOrGroup[]) => void) {
   const { presets, active } = createPresets(armour, OPTS)
   const preset = presets.find(p => p.id === active)!
   const filters = preset.filters as ItemFilters
   const stats = preset.stats as FilterOrGroup[]
+  prep?.(stats)
   const searchedQuery = JSON.stringify(createTradeRequest(filters, stats))
   const searchedStats = JSON.parse(JSON.stringify(stats)) as FilterOrGroup[]
   const row = (text: RegExp) => stats.find(s => !s.group && text.test(s.statRef)) as StatFilter
@@ -116,5 +117,36 @@ describe('comparing the filters with the search on screen', () => {
     const res = row(/Fire Resistance|total Elemental Resistance|total Resistance/)
     res.roll!.min = 1
     expect(compare().kind).toBe('stale')
+  })
+})
+
+describe('what the search ignores', () => {
+  beforeAll(async () => {
+    await loadGameData()
+    armour = parseItem(fixture('items/rare-body-armour-es.txt'))
+  })
+
+  it('a ticked stat checks its number when the search sends it', () => {
+    const { row, compare } = setup()
+    const stun = row(/Stun and Block Recovery/)
+    stun.disabled = false
+    stun.roll!.min = 18
+    const checks = (compare() as { checks: LocalCheck[] }).checks
+    expect(checks[0].min).toBe(18)
+    expect(listingFits(listing(120, 17), checks, armour.category)).toBe(false)
+  })
+
+  it('an {empty} id only asks for the stat, so its number is not checked', () => {
+    const { row, compare } = setup(stats => {
+      const stun = stats.find(f => !f.group && /Stun and Block Recovery/.test(f.statRef)) as StatFilter
+      stun.tradeId = stun.tradeId.map(id => `{empty}${id}`)
+    })
+    const stun = row(/Stun and Block Recovery/)
+    stun.disabled = false
+    stun.roll!.min = 18
+    const checks = (compare() as { checks: LocalCheck[] }).checks
+    expect(checks[0]).toMatchObject({ min: null, required: true })
+    expect(listingFits(listing(120, 17), checks, armour.category)).toBe(true)
+    expect(listingFits(listing(120), checks, armour.category)).toBe(false)
   })
 })
