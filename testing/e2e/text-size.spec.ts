@@ -2,8 +2,13 @@
 // control (root font size) lives on as Price check window size.
 import { test, expect } from './harness'
 
+// The full window for currency, not the instant card by the item (WOKEPOET-480).
+const windowCheck = (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  config.widgets.find((w: { wmType: string }) => w.wmType === 'price-check').wokeNinjaInstant = false
+}
+
 test('Text size grows the text of price check and panels, not their width', async ({ overlay }) => {
-  await overlay.boot()
+  await overlay.boot({ patch: windowCheck })
   await overlay.copyItem('items/currency-divine.txt')
   const page = overlay.page
   const panel = page.locator('#price-window')
