@@ -300,7 +300,9 @@ const lines = computed<string[]>(() => {
   if (lookup.value) return [lookup.value.model.name, lookup.value.model.base ?? ''].filter(Boolean)
   if (gem.value) return [data.value?.name ?? gem.value.name]
   if (!item.value) return []
-  return [item.value.name, item.value.base].filter(Boolean)
+  // A Vestigial unique's base reads "Vestigial Great Crown", as in the game.
+  const base = item.value.vestigial && item.value.base && !item.value.base.startsWith('Vestigial ') ? `Vestigial ${item.value.base}` : item.value.base
+  return [item.value.name, base].filter(Boolean)
 })
 
 // The game's own header art. Other frames keep the plain colour band.
