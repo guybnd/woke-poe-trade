@@ -71,7 +71,7 @@ import type { WidgetManager } from '@/web/overlay/interfaces'
 import { useLeagues } from '@/web/background/Leagues'
 import { usePoeninja } from '@/web/background/Prices'
 import { ninjaArt } from './ninja-icons'
-import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, ninjaIcon, openMenu, vItemTip } from '../ui'
+import { WChip, WDelta, WEmpty, WField, WIcon, WPrice, WSegmented, WSkeleton, WSpark, itemArt, ninjaIcon, openMenu, vItemTip } from '../ui'
 import type { MenuEntry } from '../ui/layer'
 import WCorruptedFilter from '../ui/WCorruptedFilter.vue'
 import { rarityClass } from '../search/search'
@@ -251,9 +251,14 @@ function rowIcon (r: MarketRow): string | undefined {
 }
 
 // poe.ninja's art for the category: its chosen item, or its first with art.
+// The chosen item may live in another namespace (Forbidden Flame is a unique).
 function categoryIcon (c: Category): string | undefined {
-  for (const name of [ICON_ITEMS[c.type], ...c.sample]) {
-    if (!name) continue
+  const chosen = ICON_ITEMS[c.type]
+  if (chosen) {
+    const src = ninjaIcon(c.type, chosen) ?? ninjaArt(c.type, chosen) ?? itemArt({ name: chosen })
+    if (src) return src
+  }
+  for (const name of c.sample) {
     const src = ninjaIcon(c.type, name) ?? ninjaArt(c.type, name)
     if (src) return src
   }
@@ -282,10 +287,13 @@ function rowMenu (e: MouseEvent, r: MarketRow) {
 <style module>
 .split { display: flex; min-height: 0; height: 100%; }
 .side {
-  width: 12.5rem; flex: none; overflow-y: auto; padding: var(--w-s1);
+  /* As wide as the longest name, so none is cut off, but never more than a
+     third of a narrow window: the price table needs the room more. */
+  width: max-content; min-width: 11rem; max-width: min(18rem, 35%); flex: none;
+  overflow-y: auto; scrollbar-gutter: stable; padding: var(--w-s1);
   display: flex; flex-direction: column; gap: 1px; border-right: 1px solid var(--w-line);
 }
-.sec { padding: var(--w-s2) var(--w-s2) 2px; }
+.sec { padding: var(--w-s2) var(--w-s2) 2px; white-space: nowrap; }
 .cat {
   display: flex; align-items: center; gap: var(--w-s2); width: 100%; min-height: var(--w-row-h);
   padding: 0 var(--w-s2); border-radius: var(--w-r-sm); text-align: left; color: var(--w-dim);
@@ -293,7 +301,7 @@ function rowMenu (e: MouseEvent, r: MarketRow) {
 .cat:hover { background: var(--w-accent-soft); color: var(--w-fg); }
 .cat:focus-visible { outline: 1px solid var(--w-accent); }
 .on { background: var(--w-accent-soft); box-shadow: inset 2px 0 0 var(--w-accent); color: var(--w-fg); }
-.n { margin-left: auto; font-family: var(--w-num); font-size: var(--w-fs-xs); color: var(--w-faint); }
+.n { margin-left: auto; min-width: 4ch; text-align: right; font-family: var(--w-num); font-size: var(--w-fs-xs); color: var(--w-faint); }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--w-s2); padding: var(--w-s2) var(--w-pad); }
 .rows { flex: 1; min-height: 0; overflow-y: auto; }

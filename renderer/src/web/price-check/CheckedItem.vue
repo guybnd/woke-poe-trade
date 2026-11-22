@@ -3,7 +3,7 @@
   <div v-if="show && (!poeMode || poeOn)" class="p-4 layout-column min-h-0">
     <!-- woke: TradeListing puts the improved verdict here, the first thing in the window. -->
     <!-- The verdict's height from the start and through errors, so the mods don't move for either. -->
-    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsStale, 'w-pc-verdict-held': verdictHeld }">
+    <div ref="verdictSlot" class="w-pc-verdict-slot" :class="{ 'w-pc-results-stale': resultsDimmed, 'w-pc-verdict-held': verdictHeld }">
       <div v-if="verdictHeld && !searched" class="w-pc-verdict-wait">Search for listing prices</div>
     </div>
     <filter-name
@@ -17,7 +17,7 @@
       </template>
       <woke-build-fit-chip :item="item" />
       <woke-filter-verdict-chip :item="item" />
-      <woke-deck-verdict-chip :item="item" />
+      <woke-deck-verdict-chip v-if="item.info.refName === 'Stacked Deck'" :item="item" />
       <!-- woke: Vaal it? on a max-level 20% one of this gem; outcomes on hover (Guy's pick V3, 2026-11-21). -->
       <woke-vaal-chip v-if="isGem && tradeAPI === 'trade'" :item="item" :league="itemFilters.trade.league" />
       <woke-high-roll-chip v-if="item.rarity === 'Unique'" :item="item" :stats="itemStats" @search="searchAfterPreset" />
@@ -50,6 +50,7 @@
       ref="filtersComponent"
       :filters="itemFilters"
       :stats="rowStats"
+      :local-rows="localRows"
       :on-strip="!!stripProps || !!item.mapCompletionReward"
       :item="item"
       :presets="presets"
@@ -63,13 +64,15 @@
     <div v-if="!doSearch" class="flex justify-between items-center" :class="{ 'w-pc-search-row': resultsStale }">
       <div class="flex" @mouseenter="handleSearchMouseenter" @mouseleave="cancelSearchHover">
         <!-- woke: a click drops the hover's pending search, or an edit made right after re-searches. -->
-        <button class="btn w-pc-primary" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+        <button class="btn w-pc-primary" :class="{ 'w-pc-glow': searchGlow }" @click="cancelSearchHover(); doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
       </div>
       <!-- woke: one search that shows only sellers with 2+ copies, loading more listings as needed.
            Outside the hover area above, so reaching it doesn't start a plain search. -->
       <button v-if="canSearchBulk" class="btn ml-1 mr-auto whitespace-nowrap" data-search-bulk
         title="Search, then show only sellers with 2 or more copies at one price. Loads more listings (up to 100) if fewer than 10 sellers show."
         @click="cancelSearchHover(); searchBulk()">Search bulk</button>
+      <!-- woke: TradeListing says here whether the old results were filtered here or need a search. -->
+      <div ref="searchStatusSlot" class="w-pc-status-slot" />
       <!-- woke: the prefix / suffix caps ride the results bar; here while it waits for Search,
            at the same spot (the hidden refresh button keeps them there), so a scroll stays on them. -->
       <template v-if="itemFilters.affixCaps && tradeAPI === 'trade'">
@@ -94,6 +97,9 @@
       :stats="searched.stats"
       :item="item"
       :stale="resultsStale"
+      :narrow="narrowed"
+      :dim="resultsDimmed"
+      @glow="searchGlow = $event"
       @reset="resetTradeResults">
       <template v-if="itemFilters.affixCaps" #toolbar>
         <filter-affix-caps class="w-pc-caps" :caps="itemFilters.affixCaps" />
@@ -121,7 +127,7 @@
 </template>
 
 <script lang="ts">
-import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance } from 'vue'
+import { defineAsyncComponent, defineComponent, PropType, watch, ref, nextTick, computed, provide, shallowRef, onUnmounted, ComponentPublicInstance, toRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ItemRarity, ItemCategory, ParsedItem } from '@/parser'
 import TradeListing from './trade/TradeListing.vue'
@@ -135,12 +141,9 @@ import FilterAffixCaps from './filters/FilterAffixCaps.vue'
 import { createPresets } from './filters/create-presets'
 import PricePrediction from './price-prediction/PricePrediction.vue'
 import StackValue from './expected-value/StackValue.vue'
-import WokeDustChip from '@/web/woke/price-insight/DustChip.vue'
-import WokeDustVerdictChip from '@/web/woke/disenchant/DustVerdictChip.vue'
 import WokeRollPresets from '@/web/woke/price-insight/RollPresets.vue'
 import WokeBuildFitChip from '@/web/woke/pob-builds/BuildFitChip.vue'
 import WokeFilterVerdictChip from '@/web/woke/loot-filter/FilterVerdictChip.vue'
-import WokeDeckVerdictChip from '@/web/woke/stacked-decks/DeckVerdictChip.vue'
 import FilterName from './filters/FilterName.vue'
 import { provideSwap } from '@/web/woke/harvest-swap/useSwap'
 import { provideStatActions } from '@/web/woke/price-insight/stat-actions'
@@ -149,6 +152,10 @@ import { provideCatalystFilter } from '@/web/woke/price-insight/catalyst-filter'
 import { WTabs } from '@/web/woke/ui'
 import { CATEGORY_TO_TRADE_ID, createTradeRequest } from './trade/pathofexile-trade'
 import { rawClone } from '@/web/woke/raw-clone'
+import type { ResultsState } from '@/web/woke/price-insight/local-filter'
+// woke: loaded with the first search, not at startup (the startup JS budget).
+type LocalFilter = typeof import('@/web/woke/price-insight/local-filter')
+const loadLocalFilter = () => import('@/web/woke/price-insight/local-filter')
 import { AppConfig } from '@/web/Config'
 import { isModuleOn } from '@/web/woke/modules'
 import { FilterOrGroup, FilterPreset, ItemFilters } from './filters/interfaces'
@@ -174,13 +181,14 @@ export default defineComponent({
     WokeVisceraStrip: defineAsyncComponent(() => import('@/web/woke/wickerman/VisceraStrip.vue')),
     WokeNightmareStrip: defineAsyncComponent(() => import('@/web/woke/boss-runs/NightmareStrip.vue')),
     WTabs,
-    WokeDustChip,
-    WokeDustVerdictChip,
+    // woke: chips for a few kinds of item load with their first check (the startup JS budget).
+    WokeDustChip: defineAsyncComponent(() => import('@/web/woke/price-insight/DustChip.vue')),
+    WokeDustVerdictChip: defineAsyncComponent(() => import('@/web/woke/disenchant/DustVerdictChip.vue')),
     WokeRollPresets,
     WokeBuildFitChip,
     WokeHighRollChip: defineAsyncComponent(() => import('@/web/woke/price-insight/HighRollChip.vue')),
     WokeFilterVerdictChip,
-    WokeDeckVerdictChip,
+    WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     PricePrediction,
     TradeListing,
     TradeBulk,
@@ -207,6 +215,8 @@ export default defineComponent({
 
     const verdictSlot = shallowRef<HTMLElement | null>(null)
     provide('price-verdict-slot', verdictSlot)
+    const searchStatusSlot = shallowRef<HTMLElement | null>(null)
+    provide('price-search-status-slot', searchStatusSlot)
     provide('price-check-search', () => { nextTick(() => { doSearch.value = true }) })
 
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
@@ -390,13 +400,31 @@ export default defineComponent({
     }
     // Taken from the live rows when the search starts: the snapshot's copies lose
     // what the request reads off the rows themselves, so they never compare equal.
-    let searchedQuery: string | null = null
-    watch(() => searched.value, (snap) => { searchedQuery = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
+    const searchedQuery = shallowRef<string | null>(null)
+    watch(() => searched.value, (snap) => { searchedQuery.value = snap && tradeAPI.value === 'trade' ? liveQuery() : null }, { flush: 'sync' })
     watch(() => searched.value && tradeAPI.value === 'trade' ? liveQuery() : null, (now) => {
-      if (now != null && doSearch.value && searchedQuery != null && now !== searchedQuery) {
+      if (now != null && doSearch.value && searchedQuery.value != null && now !== searchedQuery.value) {
         doSearch.value = false
       }
     })
+    // woke: tighter ranges filter the listings already loaded (no search spent);
+    // anything the old search couldn't have returned keeps them dimmed for a new search.
+    const localFilter = shallowRef<LocalFilter | null>(null)
+    watch(searched, (snap) => {
+      if (snap && !localFilter.value) loadLocalFilter().then(mod => { localFilter.value = mod }, () => {})
+    })
+    const resultsState = computed<ResultsState | null>(() => {
+      if (!resultsStale.value || !searched.value) return null
+      // Until it loads, the results need a search as before.
+      if (!localFilter.value) return { kind: 'stale' }
+      return localFilter.value.compareToSearched(searchedQuery.value, searched.value.stats, itemFilters.value, itemStats.value)
+    })
+    const narrowed = computed(() => resultsState.value?.kind === 'narrowed' ? resultsState.value : null)
+    const resultsDimmed = computed(() => resultsStale.value && resultsState.value?.kind === 'stale')
+    // The rows filtering here get a mark in the filters.
+    const localRows = computed(() => narrowed.value?.checks.map(c => toRaw(c.row)) ?? [])
+    // Search glows when only a new search can help: dimmed results, or a filtered list with nothing left to load.
+    const searchGlow = ref(false)
 
     watch(() => [props.item, JSON.stringify(itemFilters.value.trade)], (curr, prev) => {
       const cItem = curr[0]; const pItem = prev[0]
@@ -489,6 +517,12 @@ export default defineComponent({
       stripProps,
       searched,
       resultsStale,
+      resultsState,
+      resultsDimmed,
+      narrowed,
+      localRows,
+      searchGlow,
+      searchStatusSlot,
       doSearch,
       canSearchBulk: computed(() => apiToSatisfySearch(props.item, itemStats.value, itemFilters.value) === 'trade'),
       searchBulk () {

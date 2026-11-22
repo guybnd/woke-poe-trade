@@ -39,12 +39,12 @@
             :group="filter"
             :item="item" />
           <component :is="poeKit!.FilterLinePoe" v-else-if="poeMode && filter.disabled" :key="`line_${filter.tag}_${filter.text}`"
-            :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
+            :class="{ [$style.hiddenRow]: isHiddenRow(filter), 'w-pc-local-row': isLocalRow(filter) }"
             :data-stat-row="i"
             :filter="filter"
             :item="item" />
           <filter-modifier v-else :key="`${filter.tag}_${filter.text}_${poeMode}`"
-            :class="{ [$style.hiddenRow]: isHiddenRow(filter) }"
+            :class="{ [$style.hiddenRow]: isHiddenRow(filter), 'w-pc-local-row': isLocalRow(filter) }"
             :data-stat-row="i"
             :filter="filter"
             :item="item"
@@ -122,6 +122,11 @@ export default defineComponent({
     onStrip: {
       type: Boolean,
       default: false
+    },
+    // woke: rows whose tighter range filters the loaded listings (local-filter.ts).
+    localRows: {
+      type: Array as PropType<readonly object[]>,
+      default: () => []
     },
     item: {
       type: Object as PropType<ParsedItem>,
@@ -283,6 +288,7 @@ export default defineComponent({
       showHidden,
       showFilterSources,
       isHiddenRow,
+      isLocalRow: (filter: object) => props.localRows.includes(toRaw(filter)),
       hiddenCount,
       sourcesShown: computed(() => showFilterSources.value ? sourcesFound.value : new Map<StatFilter, StatFilter['sources']>()),
       // No toggle when it would list nothing, a split total's mods being their own rows.
