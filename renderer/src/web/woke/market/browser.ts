@@ -79,8 +79,7 @@ export const ICON_ITEMS: Record<string, string> = {
   IncursionTemple: 'Chronicle of Atzoatl',
   ValdoMap: "Valdo's Puzzle Box",
   Scarab: 'Ambush Scarab',
-  Memory: 'Memory of Reverence',
-  ClusterJewel: 'Large Cluster Jewel'
+  Memory: 'Memory of Reverence'
 }
 
 const NAME_AT = /\{"name":"((?:[^"\\]|\\.)*)"/g

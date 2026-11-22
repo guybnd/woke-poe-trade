@@ -1,5 +1,5 @@
-// Every category in the Market window's side list has art: its chosen item
-// must exist in the item data, in any namespace (Forbidden Flame is a unique).
+// The Market window's side list: each category's chosen icon item must exist
+// in the item data, in any namespace (Forbidden Flame is a unique).
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ICON_ITEMS } from '@/web/woke/market/browser'
 import { itemArt, ninjaIcon } from '@/web/woke/ui/game-icons'
