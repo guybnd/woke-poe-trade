@@ -61,8 +61,9 @@
                 </span>
               </div>
               <!-- Rolled uniques drop unidentified: poe.ninja's row stands for that; a click checks real listings. -->
-              <div v-if="unidName" :class="[$style.grid, $style.row]" :title="unidTitle">
+              <div v-if="unidName" :class="[$style.grid, $style.row, { [$style.gridExtra]: extraRange }]" :title="unidTitle">
                 <span class="w-trunc">Unidentified on trade</span>
+                <span v-if="extraRange" />
                 <WPrice v-if="unidQuote" bulk :chaos="unidQuote.chaos" :divine="divine" class="text-right" />
                 <span v-else-if="tradePrices.pending(unidName)" class="text-right w-faint">…</span>
                 <span v-else class="text-right"><button class="w-icon-btn" title="Search trade for unidentified copies" aria-label="Search trade for unidentified copies" @click="lookUpUnid"><i class="fas fa-search" /></button></span>
@@ -1119,7 +1120,7 @@ const extraRange = computed(() => {
 const extraTitle = computed(() => extraRange.value ? `${extraRange.value.long}, from the prices this app saves about every 30 minutes (the Market window's range)` : undefined)
 const extraPrices = shallowRef<Record<string, number>>({})
 let extraSeq = 0
-watch([() => selected.value?.kind === 'price' ? selected.value.group : null, extraRange, () => snapshot.value?.ts], async ([group, r]) => {
+watch([() => selected.value?.kind === 'price' ? selected.value.group : null, extraRange, () => snapshot.value?.ts, leagues.selectedId], async ([group, r]) => {
   const mine = ++extraSeq
   const league = leagues.selectedId.value
   if (!group || !r || !league) { extraPrices.value = {}; return }

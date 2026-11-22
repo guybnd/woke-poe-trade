@@ -43,7 +43,9 @@ export function ninjaRange (chaos: number, graph: unknown, days: number): RangeT
   for (const v of tail) {
     if (typeof v === 'number' && Number.isFinite(v) && 1 + v / 100 > 0) trend.push(chaos * (1 + v / 100) / (1 + last / 100))
   }
-  const change = typeof first === 'number' && 1 + first / 100 > 0 ? ((1 + last / 100) / (1 + first / 100) - 1) * 100 : null
+  // All zeros: poe.ninja shows "Not enough data" (browser.ts weekChange).
+  const flat = graph.every(v => v == null || v === 0)
+  const change = !flat && typeof first === 'number' && 1 + first / 100 > 0 ? ((1 + last / 100) / (1 + first / 100) - 1) * 100 : null
   return { trend, change }
 }
 

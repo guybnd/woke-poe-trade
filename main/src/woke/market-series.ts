@@ -80,10 +80,16 @@ class LeaguePrices {
     const arr = new Float32Array(this.index.size).fill(NaN)
     prices.forEach((v, i) => { arr[i] = v })
     this.snaps.set(ts, arr)
-    // Drop the oldest read when over the limit.
-    while (this.snaps.size > this.keep) {
-      const oldest = Math.min(...this.snaps.keys())
-      this.snaps.delete(oldest)
+  }
+
+  // Over the limit, drop the oldest reads that the line being drawn doesn't use.
+  trim (inUse: number[]): void {
+    if (this.snaps.size <= this.keep) return
+    const keep = new Set(inUse)
+    const spare = [...this.snaps.keys()].filter(t => !keep.has(t)).sort((a, b) => a - b)
+    for (const t of spare) {
+      if (this.snaps.size <= this.keep) break
+      this.snaps.delete(t)
     }
   }
 
@@ -102,8 +108,10 @@ class LeaguePrices {
   }
 }
 
-// About 60 snapshots of ~12k prices each: a few MB at most.
+// Up to 3 days of half-hourly snapshots (~150) of ~12k prices each: ~7 MB.
 const leagues = new Map<string, LeaguePrices>()
+// Reads in progress, so two asks at once don't parse the same file twice.
+const reading = new Map<string, Promise<void>>()
 
 export async function priceSeries (
   league: string,
@@ -117,18 +125,29 @@ export async function priceSeries (
   if (!wanted.length) return { times: [], rows: {} }
   let prices = leagues.get(league)
   if (!prices) {
-    prices = new LeaguePrices(60)
+    prices = new LeaguePrices(160)
     leagues.set(league, prices)
   }
+  const into = prices
   for (const ts of wanted) {
-    if (prices.has(ts)) continue
-    const snap = await read.snapshot(ts)
-    if (snap && Array.isArray(snap.items)) prices.add(ts, snap.items)
+    if (into.has(ts)) continue
+    const id = `${league}\u0000${ts}`
+    let p = reading.get(id)
+    if (!p) {
+      p = (async () => {
+        const snap = await read.snapshot(ts)
+        if (snap && Array.isArray(snap.items)) into.add(ts, snap.items)
+      })().finally(() => { reading.delete(id) })
+      reading.set(id, p)
+    }
+    await p
   }
+  prices.trim(wanted)
   return prices.series(type, wanted, names?.length ? new Set(names) : undefined)
 }
 
 // For tests.
 export function resetSeriesCache (): void {
   leagues.clear()
+  reading.clear()
 }

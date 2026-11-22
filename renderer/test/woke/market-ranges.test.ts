@@ -25,6 +25,8 @@ describe('price ranges', () => {
     expect(three.trend).toHaveLength(4)
     expect(three.trend[3]).toBe(200)
     expect(ninjaRange(200, [null, 5], 3).change).toBeNull()
+    // All zeros reads as no data, as at 7 days.
+    expect(ninjaRange(1, [0, 0, 0, 0, 0, 0, 0], 3).change).toBeNull()
   })
 
   it('ends a saved line at the current price', () => {

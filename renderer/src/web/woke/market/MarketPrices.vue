@@ -149,7 +149,7 @@ const rangeTitle = computed(() => rangeInfo(range.value).local
   ? `Price line and change over the ${rangeLong.value.toLowerCase()}, from the prices this app saves about every 30 minutes. Click to sort.`
   : `poe.ninja's price line and change over the ${rangeLong.value.toLowerCase()}. Click to sort.`)
 const noDataTitle = computed(() => rangeInfo(range.value).local
-  ? 'No saved price from the start of this range: the app wasn't running then, or the item is new.'
+  ? "No saved price from the start of this range: the app wasn't running then, or the item is new."
   : 'poe.ninja has too few prices for this item.')
 
 const collector = useCollectorState()
@@ -189,6 +189,8 @@ const rows = computed<MarketRow[]>(() => {
   const r = range.value
   if (r === '7d') return parsed.value
   const own = saved.value
+  // While saved prices load, show "…" rather than poe.ninja's numbers first.
+  if (savedLoading.value && rangeInfo(r).local) return parsed.value.map(row => ({ ...row, trend: [], change: null }))
   return parsed.value.map(row => ({ ...row, ...rowRange(row, r, own) }))
 })
 const divine = computed(() => chunks.value ? poeninja.xchgRate.value || null : null)
