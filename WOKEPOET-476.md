@@ -51,6 +51,14 @@ history:
     to: Done
     user: Agent
     date: '2026-11-22T10:23:27.402Z'
+  - type: activity
+    user: Agent
+    date: '2026-11-22T11:49:03.523Z'
+    comment: >-
+      Follow-up PR https://github.com/guybnd/woke-poe-trade/pull/763 merged:
+      Load 10 more removed (Guy: a new search is better); short list points at
+      Search, which glows.
+    id: a-2026-11-22t11-49-03-523z
 needsAction: null
 reviewState: approved
 baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
