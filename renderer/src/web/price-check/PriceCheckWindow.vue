@@ -106,7 +106,6 @@ import { AppConfig, rootFontPx } from '@/web/Config'
 import { ItemCategory, ItemRarity, parseClipboard, ParsedItem } from '@/parser'
 import RelatedItems from './related-items/RelatedItems.vue'
 import RateLimiterState from './trade/RateLimiterState.vue'
-import UnidentifiedResolver from './unidentified-resolver/UnidentifiedResolver.vue'
 import CheckPositionCircle from './CheckPositionCircle.vue'
 import UnreadableItem from '@/web/woke/new-item/UnreadableItem.vue'
 import { newItemQuery } from '@/web/woke/new-item/query'
@@ -171,7 +170,8 @@ export default defineComponent({
   components: {
     AppTitleBar,
     CheckedItem,
-    UnidentifiedResolver,
+    // woke: loaded on the first price check, not at startup (it guesses from the art, WOKEPOET-481).
+    UnidentifiedResolver: defineAsyncComponent(() => import('./unidentified-resolver/UnidentifiedResolver.vue')),
     BackgroundInfo,
     RelatedItems,
     RateLimiterState,

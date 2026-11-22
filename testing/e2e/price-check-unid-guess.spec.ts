@@ -97,7 +97,7 @@ test('the art names the unique: poe.ninja price first, and Change picks another'
     await expect(panel).toContainText('Thread of Hope')
     // poe.ninja's price, and no trade search until a click.
     const verdict = panel.getByTestId('ninja-verdict')
-    await expect(verdict).toContainText('250c')
+    await expect(verdict).toContainText('150c')
     await expect(verdict).toContainText('uses one trade search')
     expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
     await overlay.snap('unid jewel guessed')
@@ -140,7 +140,7 @@ test('no art to read: the picker, dearest first with prices', async ({ overlay, 
     const tiles = picker.locator('button')
     await expect(tiles).toHaveCount(CRIMSON.length)
     await expect(tiles.nth(0)).toContainText('Thread of Hope')
-    await expect(tiles.nth(0)).toContainText('250c')
+    await expect(tiles.nth(0)).toContainText('150c')
     await expect(tiles.nth(1)).toContainText('Split Personality')
     await overlay.snap('unid jewel picker')
     await tiles.nth(1).click()
