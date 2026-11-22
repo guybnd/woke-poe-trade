@@ -65,7 +65,7 @@ const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numer
 // a chaos amount in the table's unit.
 export function heldNote (l: Pick<ValuedLine, 'heldSince' | 'ninjaChaos' | 'unitChaos'>, price: (chaos: number) => string): string | undefined {
   if (l.heldSince == null || l.ninjaChaos == null) return undefined
-  return `Held at the last read's price. poe.ninja says ${price(l.ninjaChaos)}, a jump of ${HOLD_RATIO}× or more in a thin market ` +
+  return `Held at the last read's price. poe.ninja says ${price(l.ninjaChaos)}, a jump of ${HOLD_RATIO}Ã— or more in a thin market ` +
     `(no price on 3+ of the last 7 days), which one fake listing can cause. Takes poe.ninja's price at ${clock(l.heldSince + HOLD_MS)} ` +
     'if it stays up, sooner if it falls back. Right-click to set your own price'
 }

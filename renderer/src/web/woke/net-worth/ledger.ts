@@ -125,12 +125,26 @@ export function priceSpikes (points: LedgerPoint[]): Set<number> {
   return out
 }
 
+// A glitched read at the read before's prices: its value plus what came in,
+// each category scaled alike. What changed and spends stay.
+function unglitched (points: LedgerPoint[]): LedgerPoint[] {
+  const spikes = priceSpikes(points)
+  if (!spikes.size) return points
+  return points.map((p, i) => {
+    if (!spikes.has(p.at)) return p
+    const a = points[i - 1]
+    const chaos = Math.max(0, a.chaos + (p.netChaos ?? 0))
+    const k = a.chaos > 0 ? chaos / a.chaos : 0
+    const byCategory = Object.fromEntries(Object.entries(a.byCategory).map(([c, v]) => [c, v * k])) as Record<Category, number>
+    return { ...p, chaos, byCategory }
+  })
+}
+
 // Refresh points in range, with days before the first one filled from the
-// daily snapshots. Values in divines, each at its own day's rate. Price
-// glitches (priceSpikes) are left out.
+// daily snapshots. Values in divines, each at its own day's rate. A read a
+// price glitch moved (priceSpikes) shows at the read before's prices.
 export function seriesFor (allPoints: LedgerPoint[], days: Record<string, DaySnapshot>, range: ChartRange, now: number, divineNow: number | null): SeriesPoint[] {
-  const spikes = priceSpikes(allPoints)
-  const points = spikes.size ? allPoints.filter(p => !spikes.has(p.at)) : allPoints
+  const points = unglitched(allPoints)
   const from = now - RANGE_MS[range]
   const firstPoint = points[0]?.at ?? Infinity
   const out: SeriesPoint[] = []

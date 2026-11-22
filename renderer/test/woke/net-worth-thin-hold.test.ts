@@ -82,6 +82,16 @@ describe('valuing with the last read', () => {
     expect(baselineOf(back)['The Witch'].heldSince).toBeUndefined()
   })
 
+  it('starts no hold when you remove your own price, or for an ignored item', () => {
+    const own = baselineOf(valueStash(tabs, glitch, { prices: { 'The Witch': 0.5 }, ignored: [] }))
+    expect(own['The Witch'].mine).toBe(true)
+    const v = valueStash(tabs, glitch, undefined, { before: own, now: T0 })
+    expect(v.lines.find(l => l.key === 'The Witch')!.unitChaos).toBe(7075)
+    const ign = valueStash(tabs, glitch, { prices: {}, ignored: ['The Witch'] }, { before, now: T0 })
+    expect(ign.ignoredLines.find(l => l.key === 'The Witch')!.unitChaos).toBe(7075)
+    expect(baselineOf(ign)['The Witch'].heldSince).toBeUndefined()
+  })
+
   it('never holds your own price, and no guard means poe.ninja\'s', () => {
     const v = valueStash(tabs, glitch, { prices: { 'The Witch': 3 }, ignored: [] }, { before, now: T0 })
     expect(v.lines.find(l => l.key === 'The Witch')!.unitChaos).toBe(3)
@@ -103,10 +113,14 @@ describe('priceSpikes', () => {
   // Guy's reads on 2026-11-22: 4 pm doubled by The Witch and Rain Tempter.
   const reads = [p(1, 82955, 1137), p(2, 196339, -4288), p(3, 100436, 7824), p(4, 100673, 238)]
 
-  it('finds the 4 pm read and leaves it out of the chart', () => {
+  it('finds the 4 pm read and charts it at the read before\'s prices', () => {
     expect([...priceSpikes(reads)]).toEqual([2])
     const s = seriesFor(reads, {}, 'league', 5, 214)
-    expect(s.map(x => x.at)).toEqual([1, 3, 4])
+    expect(s.map(x => x.at)).toEqual([1, 2, 3, 4])
+    expect(s[1].div * 214).toBeCloseTo(82955 - 4288)
+    expect(s[1].byCategory.cards * 214).toBeCloseTo(82955 - 4288)
+    // What came in at that read still shows.
+    expect(s[1].netDiv! * 214).toBeCloseTo(-4288)
   })
 
   it('keeps a real jump that stays, items coming in, and a drop that comes back by trading', () => {

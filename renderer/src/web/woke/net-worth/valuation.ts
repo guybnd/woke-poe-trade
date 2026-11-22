@@ -138,7 +138,7 @@ export interface HoldGuard { before: Baseline | null, now: number }
 
 // The held price and since when, or null to take poe.ninja's.
 export function holdJump (ninja: number, thin: boolean | undefined, prev: Baseline[string] | undefined, now: number): { chaos: number, since: number } | null {
-  if (!thin || !prev || !(prev.unitChaos > 0)) return null
+  if (!thin || !prev || prev.mine || !(prev.unitChaos > 0)) return null
   if (ninja < prev.unitChaos * HOLD_RATIO || ninja - prev.unitChaos < HOLD_MIN_JUMP) return null
   const since = prev.heldSince ?? now
   return now - since < HOLD_MS ? { chaos: prev.unitChaos, since } : null
@@ -205,8 +205,9 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
   for (const tab of tabs) {
     for (const item of tab.items) {
       const key = itemKey(item)
-      const price = priceItem(item, priceOf, prefs, key, guard)
       const off = ignored.has(key)
+      // An ignored item counts for nothing: no hold, so it can't outlive it.
+      const price = priceItem(item, priceOf, prefs, key, off ? undefined : guard)
       if (!price && !off) unpriced++
       const into = off ? ignoredLines : price ? lines : unpricedLines
       let line = into.get(key)
@@ -229,7 +230,7 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
           ninjaChaos: price?.ninja ?? null,
           state: off ? 'ignored' : price ? undefined : 'unpriced'
         }
-        if (price?.heldSince != null && !off) line.heldSince = price.heldSince
+        if (price?.heldSince != null) line.heldSince = price.heldSince
         into.set(key, line)
       }
       if (tab.id && !line.tabIds.includes(tab.id)) line.tabIds.push(tab.id)
@@ -251,7 +252,8 @@ export function valueStash (tabs: StashTabLike[], priceOf: PriceOf, prefs: Price
 // What a read held, small enough to keep: count and unit price per thing.
 // cat: where the item belongs (older baselines lack it).
 // heldSince: the price is held (holdJump) since then.
-export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number }>
+// mine: unitChaos is your own price, so it isn't the last poe.ninja price.
+export type Baseline = Record<string, { name: string, icon: string, count: number, unitChaos: number, cat?: Category, heldSince?: number, mine?: boolean }>
 
 // Marks a baseline that holds unpriced and ignored items too (see diffStash).
 export const BASELINE_V2 = '\u0000v2'
@@ -265,6 +267,7 @@ export function baselineOf (v: Valuation): Baseline {
     out[l.key] = { name: l.name, icon: l.icon, count: (had?.count ?? 0) + l.count, unitChaos: Math.max(had?.unitChaos ?? 0, l.unitChaos), cat: l.category }
     const since = l.heldSince ?? had?.heldSince
     if (since != null) out[l.key].heldSince = since
+    if (l.mine || had?.mine) out[l.key].mine = true
   }
   return out
 }
