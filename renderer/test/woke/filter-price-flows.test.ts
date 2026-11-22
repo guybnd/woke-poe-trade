@@ -7,7 +7,7 @@ import { useLootFilter } from '@/web/woke/loot-filter/store'
 import { initLootFilterWidget } from '@/web/woke/loot-filter/widget'
 import type { LootFilterWidget } from '@/web/woke/loot-filter/widget'
 import { SAFETY_RULE_TYPE } from '@/web/woke/loot-filter/safety'
-import { ECONOMY_GROUPS, applyPriceMoves, isVolatile, mergeMoves, planRetier } from '@/web/woke/loot-filter/economy'
+import { ECONOMY_GROUPS, applyPriceMoves, isVolatile, mergeMoves, planRetier, priceLookup, priceSwing, swingText } from '@/web/woke/loot-filter/economy'
 import type { PriceLookup, PriceMove } from '@/web/woke/loot-filter/economy'
 import { loadGameData } from '../helpers/game-data'
 import { LEVELS, neverSink } from '../helpers/neversink'
@@ -484,6 +484,30 @@ describe('planning moves', () => {
     expect(isVolatile({ chaos: 200, d1: 100 })).toBe(true)
     expect(isVolatile({ chaos: 150, d1: 100, d7: 100 })).toBe(false)
     expect(isVolatile({ chaos: 150 })).toBe(false)
+  })
+
+  it('says how far a held price moved, and over what span', () => {
+    expect(priceSwing({ chaos: 150, d1: 100, d7: 100 })).toBeNull()
+    expect(priceSwing({ chaos: 340, d7: 100 })).toEqual({ was: 100, days: 7 })
+    expect(priceSwing({ chaos: 30, d1: 100 })).toEqual({ was: 100, days: 1 })
+    // Both windows tripped: the bigger move wins.
+    expect(priceSwing({ chaos: 1000, d1: 400, d7: 100 })).toEqual({ was: 100, days: 7 })
+    expect(priceSwing({ chaos: 10, d1: 100, d7: 25 })).toEqual({ was: 100, days: 1 })
+    expect(swingText(340, { was: 100, days: 7 }).label).toBe('spiked +240% in a week')
+    expect(swingText(30, { was: 100, days: 1 }).label).toBe('crashed −70% in a day')
+    expect(swingText(1500, { was: 100, days: 7 }).label).toBe('spiked +1,400% in a week')
+    expect(swingText(30, { was: 100, days: 1 }).title).toMatch(/^100c a day ago, 30c now\./)
+    expect(swingText(0.6, { was: 0.2, days: 7 }).title).toMatch(/^0\.2c a week ago, 0\.6c now\./)
+  })
+
+  it('carries the swing from the price to the held row', () => {
+    const items = [{ type: 'DivinationCard', name: 'Mid One', variant: '', chaos: 1000, d7: 100 }]
+    const lookup = priceLookup(items, () => [])
+    const p = lookup(DIV, 'Mid One')
+    expect(p).toMatchObject({ volatile: true, swing: { was: 100, days: 7 } })
+    const jumpy: PriceLookup = (group, b) => b === 'Mid One' ? p : prices(base)(group, b)
+    const plan = planRetier(doc(), jumpy, { groups: [DIV] })
+    expect(plan.skipped[0]).toMatchObject({ base: 'Mid One', reason: 'volatile', swing: { was: 100, days: 7 } })
   })
 
   it('a new move starts from where the item is, when the stored one gave way', () => {
