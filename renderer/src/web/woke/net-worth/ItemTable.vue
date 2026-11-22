@@ -183,7 +183,12 @@ function colourOf (l: ValuedLine) {
 
 function tipOf (l: ValuedLine): ItemTipRef {
   const tabs = l.tabIds.map(nameOfTab)
-  const held = l.heldSince != null && l.ninjaChaos != null ? `Price held: poe.ninja's jumped to ${show('unit', l.ninjaChaos)} ${inChaos('unit') ? 'c' : 'd'} in a thin market` : undefined
+  const ninja = l.ninjaChaos != null ? `${show('unit', l.ninjaChaos)} ${inChaos('unit') ? 'c' : 'd'}` : ''
+  const held = l.heldSince == null || l.ninjaChaos == null
+    ? undefined
+    : l.heldKind === 'one-day'
+      ? `${l.unitChaos > 0 ? 'Price held' : 'Not counted'}: poe.ninja's ${ninja} is from only one day this week`
+      : `Price held: poe.ninja's jumped to ${ninja} in a thin market`
   const note = [tabs.length ? `In ${tabs.join(', ')}` : '', held ?? ''].filter(Boolean).join('. ')
   return lineTip(l, l.count, note || undefined)
 }

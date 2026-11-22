@@ -35,11 +35,15 @@ export function ninjaPriceOf (): PriceOf {
   const days = loaded ? feedDays(loaded.chunks) : undefined
   // Thin market (poe.ninja had no price on 3+ of the last 7 days): one fake
   // listing can set its price (valuation.ts holds a sudden jump).
-  const thin = (graph: unknown) => graphGaps(graph, days) >= THIN_GAPS
+  const gapsOf = (graph: unknown) => graphGaps(graph, days)
 
   function lookup (item: StashItemLike): Priced | null {
     const p = find(item)
-    if (p && thin(p.graph)) p.thin = true
+    if (p) {
+      const gaps = gapsOf(p.graph)
+      p.gaps = gaps
+      if (gaps >= THIN_GAPS) p.thin = true
+    }
     return p
   }
 

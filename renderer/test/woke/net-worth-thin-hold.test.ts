@@ -28,20 +28,20 @@ const glitch = pricesOf({
 describe('holdJump', () => {
   const prev = { name: 'x', icon: '', count: 1, unitChaos: 1 }
   it('holds a 5× jump in a thin market', () => {
-    expect(holdJump(7075, true, prev, T0)).toEqual({ chaos: 1, since: T0 })
-    expect(holdJump(5, true, prev, T0)).toEqual({ chaos: 1, since: T0 })
+    expect(holdJump(7075, { thin: true }, prev, T0)).toEqual({ chaos: 1, since: T0, kind: 'jump' })
+    expect(holdJump(5, { thin: true }, prev, T0)).toEqual({ chaos: 1, since: T0, kind: 'jump' })
   })
   it('takes the price when the market is not thin, the rise is under 5×, or under 1c', () => {
-    expect(holdJump(7075, false, prev, T0)).toBeNull()
-    expect(holdJump(4.9, true, prev, T0)).toBeNull()
-    expect(holdJump(0.9, true, { ...prev, unitChaos: 0.1 }, T0)).toBeNull()
-    expect(holdJump(7075, true, undefined, T0)).toBeNull()
-    expect(holdJump(7075, true, { ...prev, unitChaos: 0 }, T0)).toBeNull()
+    expect(holdJump(7075, { thin: false }, prev, T0)).toBeNull()
+    expect(holdJump(4.9, { thin: true }, prev, T0)).toBeNull()
+    expect(holdJump(0.9, { thin: true }, { ...prev, unitChaos: 0.1 }, T0)).toBeNull()
+    expect(holdJump(7075, { thin: true }, undefined, T0)).toBeNull()
+    expect(holdJump(7075, { thin: true }, { ...prev, unitChaos: 0 }, T0)).toBeNull()
   })
   it('takes the new price once it has been held 6 hours', () => {
     const held = { ...prev, heldSince: T0 }
-    expect(holdJump(7075, true, held, T0 + HOLD_MS - 1)).toEqual({ chaos: 1, since: T0 })
-    expect(holdJump(7075, true, held, T0 + HOLD_MS)).toBeNull()
+    expect(holdJump(7075, { thin: true }, held, T0 + HOLD_MS - 1)).toEqual({ chaos: 1, since: T0, kind: 'jump' })
+    expect(holdJump(7075, { thin: true }, held, T0 + HOLD_MS)).toBeNull()
   })
 })
 
@@ -104,6 +104,55 @@ describe('valuing with the last read', () => {
     expect(note).toContain('poe.ninja says 7075c')
     expect(note).toContain('thin market')
     expect(heldNote(v.lines.find(l => l.key === 'The Doctor')!, c => `${c}c`)).toBeUndefined()
+  })
+})
+
+describe('one-day prices', () => {
+  // poe.ninja on 2026-11-22: The Web was 2.25c (priced daily), dropped off the
+  // list for 8 hours, then came back at 28,886c priced on 1 of 7 days.
+  const web = (chaos: number, gaps: number): PriceOf => pricesOf({ 'The Web': { chaos, category: 'cards', thin: gaps >= 3, gaps } })
+  const webTab = [{ name: 'Cards', id: 't1', items: [card('The Web', 7)] }]
+  const none: PriceOf = () => null
+  const line = (v: ReturnType<typeof valueStash>) => [...v.lines, ...v.unpricedLines].find(l => l.key === 'The Web')!
+
+  it('keeps the last solid price through reads with no price, and holds the fake at it', () => {
+    let base = baselineOf(valueStash(webTab, web(2.25, 0), undefined, { before: null, now: T0 }))
+    expect(base['The Web'].ref).toBe(2.25)
+    base = baselineOf(valueStash(webTab, none, undefined, { before: base, now: T0 + H }))
+    expect(base['The Web'].unitChaos).toBe(0)
+    expect(base['The Web'].ref).toBe(2.25)
+    const v = valueStash(webTab, web(28886, 6), undefined, { before: base, now: T0 + 9 * H })
+    expect(line(v).unitChaos).toBe(2.25)
+    expect(line(v).heldKind).toBe('one-day')
+    expect(v.byCategory.cards).toBeCloseTo(7 * 2.25)
+    // Still one day, a day later: still held (no time limit).
+    const later = valueStash(webTab, web(28886, 6), undefined, { before: baselineOf(v), now: T0 + 40 * H })
+    expect(line(later).unitChaos).toBe(2.25)
+  })
+
+  it('counts nothing for a one-day price with no solid price to check it, including an old baseline', () => {
+    const fresh = valueStash(webTab, web(28886, 6), undefined, { before: null, now: T0 })
+    expect(line(fresh).unitChaos).toBe(0)
+    expect(fresh.chaos).toBe(0)
+    expect(heldNote(line(fresh), c => `${c}c`)).toContain('Not counted')
+    // A baseline from before refs, already holding the fake price.
+    const poisoned: Baseline = { 'The Web': { name: 'The Web', icon: '', count: 7, unitChaos: 28886, cat: 'cards' } }
+    expect(line(valueStash(webTab, web(28886, 6), undefined, { before: poisoned, now: T0 })).unitChaos).toBe(0)
+  })
+
+  it('counts a one-day price near the last solid price, a cheap one, and once poe.ninja has a second day', () => {
+    const base = baselineOf(valueStash(webTab, web(40, 1), undefined, { before: null, now: T0 }))
+    expect(line(valueStash(webTab, web(60, 6), undefined, { before: base, now: T0 })).unitChaos).toBe(60)
+    expect(line(valueStash(webTab, web(9, 6), undefined, { before: null, now: T0 })).unitChaos).toBe(9)
+    const held = baselineOf(valueStash(webTab, web(28886, 6), undefined, { before: null, now: T0 }))
+    // Priced a second day but still thin and a 5x jump over... nothing solid: taken.
+    expect(line(valueStash(webTab, web(28886, 5), undefined, { before: held, now: T0 + H })).unitChaos).toBe(28886)
+  })
+
+  it('a held price is never the solid one', () => {
+    const base = baselineOf(valueStash(webTab, web(2.25, 0), undefined, { before: null, now: T0 }))
+    const v = valueStash(webTab, web(28886, 6), undefined, { before: base, now: T0 })
+    expect(baselineOf(v)['The Web'].ref).toBe(2.25)
   })
 })
 
