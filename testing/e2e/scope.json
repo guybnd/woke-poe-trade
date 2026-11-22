@@ -343,6 +343,16 @@
    "renderer/src/web/item-check/",
    "renderer/src/web/price-check/"
   ],
+  "price-check-unid-guess.spec.ts": [
+   "main/src/shortcuts/",
+   "main/src/woke/unid-art-match.ts",
+   "main/src/woke/unid-art.ts",
+   "renderer/src/parser/",
+   "renderer/src/web/item-check/",
+   "renderer/src/web/price-check/",
+   "renderer/src/web/woke/price-insight/",
+   "testing/fake-host/"
+  ],
   "price-check-unique-by-name.spec.ts": [
    "renderer/src/parser/",
    "renderer/src/web/item-check/",
