@@ -12,6 +12,8 @@
     <div v-if="scanTab" :class="$style.scanTab" class="w-scroll">
       <MapScanBox :config="config" full />
     </div>
+    <!-- Planner: pick a bonus, tick the T17 mods that give it, say how many a map needs. -->
+    <MapPlanner v-else-if="plannerTab" :profile="profile" :ratings="mapRatings" />
     <div v-else :class="$style.split">
       <!-- Left: find and rate mods. -->
       <div :class="$style.left">
@@ -206,6 +208,7 @@ import { activeProfile, rewardsAsk } from './widget'
 import type { MapModsWidget } from './widget'
 import { moduleIcon } from '../ui/game-icons'
 import MapScanBox from './MapScanBox.vue'
+import MapPlanner from './MapPlanner.vue'
 import { entries as scanEntries, isScanOwner } from './scan-session'
 // The header shows the module's own art, the same as the dock and tab bar.
 const panelIcon = moduleIcon('map-mods').art ?? 'map'
@@ -265,11 +268,15 @@ const scanOwner = computed(() => isScanOwner(props.config))
 // The Scan tab sits beside Maps, Heist and Charts; mode keeps the last of those.
 const scanTab = shallowRef(false)
 watch(scanOwner, (own) => { if (!own) scanTab.value = false })
+// The Planner works on T17 maps, with the Maps ratings.
+const plannerTab = shallowRef(false)
+const mapRatings = computed(() => modRatings(profile.value, 'maps'))
 const tab = computed<string>({
-  get: () => scanTab.value ? 'scan' : mode.value,
+  get: () => scanTab.value ? 'scan' : plannerTab.value ? 'planner' : mode.value,
   set: (v) => {
     scanTab.value = v === 'scan'
-    if (v !== 'scan') mode.value = v as ModMode
+    plannerTab.value = v === 'planner'
+    if (v !== 'scan' && v !== 'planner') mode.value = v as ModMode
   }
 })
 
@@ -293,6 +300,7 @@ const modeOptions = computed(() => ([['maps', 'Maps'], ['heist', 'Heist'], ['cha
 
 const tabList = computed(() => [
   ...modeOptions.value,
+  { value: 'planner', label: 'Planner', title: 'Pick a bonus and how many T17 mods give it, get a stash and trade search' },
   ...(scanOwner.value
     ? [{ value: 'scan', label: 'Scan', count: scanEntries.value.length || undefined, title: 'Map scan: read hovered maps on screen and see each verdict' }]
     : [])
@@ -442,6 +450,7 @@ const flash = shallowRef(false)
 let flashTimer: ReturnType<typeof setTimeout> | undefined
 watch(rewardsAsk, async () => {
   scanTab.value = false
+  plannerTab.value = false
   mode.value = 'maps'
   await nextTick()
   rewardsEl.value?.scrollIntoView({ block: 'nearest' })

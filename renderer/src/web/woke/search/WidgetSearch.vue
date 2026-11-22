@@ -360,7 +360,7 @@ watch(query, () => { pickedId = null })
 // ---- tools, commands, settings ----
 // Old names of tools folded into another: searching one finds the tool now.
 const TOOL_ALIASES: Record<string, string[]> = {
-  [MAP_MODS_TYPE]: ['Map scan', 'Map check']
+  [MAP_MODS_TYPE]: ['Map scan', 'Map check', 'Map planner']
 }
 function toolEntries (): ActionEntry[] {
   return wm.widgets.value

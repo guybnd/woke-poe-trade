@@ -71,7 +71,8 @@ export function loadMapBonuses (): Promise<MapBonusData | null> {
 // Every map mod wording (the language's own) -> its stat ref.
 let refByMatcher: Map<string, string> | null = null
 function refOf (matcher: string): string | undefined {
-  if (!refByMatcher) {
+  // Built once the stat data is in (an empty map would stick).
+  if (!refByMatcher?.size) {
     refByMatcher = new Map()
     for (const stat of STATS_ITERATOR('AreaMods')) {
       if (!stat.fromAreaMods) continue
